@@ -52,6 +52,7 @@ import {
 import { EventsOn } from '../../../../wailsjs/runtime/runtime'
 import { EVENTS } from '../../../lib/constants'
 import { useUiStore } from '../../../stores/useUiStore'
+import { useSchedulerStore } from '../../../stores/useSchedulerStore'
 import type { models } from '../../../../wailsjs/go/models'
 
 // schedule:* event payload shapes (emitted by the Go engine via EventBus).
@@ -132,6 +133,11 @@ function GraphEditorInner({
   const [runStatus, setRunStatus] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const runStatusTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  // Read straight from the store rather than threading another prop through:
+  // the graph data itself still arrives via props from the tile's hook.
+  const schedulerError = useSchedulerStore((s) => s.error)
+  const clearSchedulerError = useSchedulerStore((s) => s.clearError)
 
   // ── Unsaved-changes guard ─────────────────────────────────────────────────
   const [showCloseConfirm, setShowCloseConfirm] = useState(false)
@@ -542,7 +548,10 @@ function GraphEditorInner({
   }, [setNodes, setEdges])
 
   // ── Save ──────────────────────────────────────────────────────────────────
-  const handleSave = useCallback(async (): Promise<string> => {
+  // Returns null when the save failed. The store records the message and the
+  // toolbar renders it, so there's nothing to report here — but the graph must
+  // not be marked clean, and callers must not act on a phantom id.
+  const handleSave = useCallback(async (): Promise<string | null> => {
     setSaving(true)
     try {
       const graph = flowToGraph(
@@ -555,6 +564,8 @@ function GraphEditorInner({
       setCreatedAt(saved.createdAt)
       setSavedSig(graphSignature({ name: graphName, enabled: graphEnabled }, nodes, edges))
       return saved.id
+    } catch {
+      return null
     } finally {
       setSaving(false)
     }
@@ -563,13 +574,18 @@ function GraphEditorInner({
   // ── Run now ───────────────────────────────────────────────────────────────
   const handleRun = useCallback(async () => {
     const id = await handleSave()
-    const rec = await onRun(id)
-    if (rec.status === 'skipped') {
-      showRunStatus('already running')
-    } else if (rec.status === 'failed') {
-      showRunStatus(`failed: ${rec.error || 'unknown error'}`)
-    } else {
-      showRunStatus(`done (${rec.nodes?.length ?? 0} nodes)`)
+    if (!id) return
+    try {
+      const rec = await onRun(id)
+      if (rec.status === 'skipped') {
+        showRunStatus('already running')
+      } else if (rec.status === 'failed') {
+        showRunStatus(`failed: ${rec.error || 'unknown error'}`)
+      } else {
+        showRunStatus(`done (${rec.nodes?.length ?? 0} nodes)`)
+      }
+    } catch {
+      /* store surfaces the error in the toolbar */
     }
   }, [handleSave, onRun, showRunStatus])
 
@@ -591,13 +607,23 @@ function GraphEditorInner({
     if (!graphId) return
     const next = !graphEnabled
     setGraphEnabled(next)
-    await onSetEnabled(graphId, next)
+    try {
+      await onSetEnabled(graphId, next)
+    } catch {
+      // Revert the optimistic flip so the toggle doesn't misreport backend state.
+      setGraphEnabled(!next)
+    }
   }, [graphId, graphEnabled, onSetEnabled])
 
   // ── Delete ────────────────────────────────────────────────────────────────
   const handleDelete = useCallback(async () => {
     if (!graphId) return
-    await onDelete(graphId)
+    try {
+      await onDelete(graphId)
+    } catch {
+      // Keep the graph loaded — it still exists on the backend.
+      return
+    }
     handleNew()
   }, [graphId, onDelete, handleNew])
 
@@ -808,7 +834,19 @@ function GraphEditorInner({
 
           <div className="flex-1" />
 
-          {runStatus && <span className="text-text-faint font-mono text-[10px]">{runStatus}</span>}
+          {/* IPC errors take the transient status slot and stay until dismissed. */}
+          {schedulerError ? (
+            <button
+              type="button"
+              onClick={clearSchedulerError}
+              className="text-danger font-mono text-[10px]"
+              title={`${schedulerError} — click to dismiss`}
+            >
+              scheduler error
+            </button>
+          ) : (
+            runStatus && <span className="text-text-faint font-mono text-[10px]">{runStatus}</span>
+          )}
 
           {(() => {
             const selCount =

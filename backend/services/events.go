@@ -22,6 +22,13 @@ const (
 	EventScheduleRunFinished  = "schedule:run-finished"
 	EventScheduleNotify       = "schedule:notify"
 
+	// EventScheduleNextRuns pushes graphID → next fire time (Unix ms). Unlike
+	// the other schedule:* events its payload is a bare map[string]int64 rather
+	// than a map[string]interface{} object, so it matches GetScheduleNextRuns()
+	// exactly and one frontend setter serves both the initial fetch and the
+	// push. Replaces the frontend's former 30s next-run poll.
+	EventScheduleNextRuns = "schedule:next-runs"
+
 	// Mod / plugin install lifecycle.
 	EventModInstallStarted  = "mod:install-started"  // {serverID, fileName}
 	EventModInstallProgress = "mod:install-progress" // {serverID, fileName, percent}

@@ -130,7 +130,12 @@ func (s *SchedulerService) SaveGraph(g models.Graph) (models.Graph, error) {
 	copy(graphs, s.graphs)
 	s.mu.Unlock()
 
-	return g, s.writeGraphs(graphs)
+	err := s.writeGraphs(graphs)
+	// Emit regardless of the write result: in-memory state already changed, so
+	// the new map is what the UI should show. Must run outside s.mu — see
+	// emitNextRuns.
+	s.emitNextRuns()
+	return g, err
 }
 
 func (s *SchedulerService) DeleteGraph(id string) error {
@@ -145,7 +150,10 @@ func (s *SchedulerService) DeleteGraph(id string) error {
 	graphs := make([]models.Graph, len(s.graphs))
 	copy(graphs, s.graphs)
 	s.mu.Unlock()
-	return s.writeGraphs(graphs)
+
+	err := s.writeGraphs(graphs)
+	s.emitNextRuns()
+	return err
 }
 
 func (s *SchedulerService) SetGraphEnabled(id string, enabled bool) error {
@@ -160,7 +168,10 @@ func (s *SchedulerService) SetGraphEnabled(id string, enabled bool) error {
 	graphs := make([]models.Graph, len(s.graphs))
 	copy(graphs, s.graphs)
 	s.mu.Unlock()
-	return s.writeGraphs(graphs)
+
+	err := s.writeGraphs(graphs)
+	s.emitNextRuns()
+	return err
 }
 
 // ─── Block registry ───────────────────────────────────────────────────────────
