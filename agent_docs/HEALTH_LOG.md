@@ -958,10 +958,17 @@ todo list, not a target.
   tiles) identified during a profiling pass.
 
 **P3 — Bound method missing `(T, error)` return**
-- Found during the 2026-07-18 convention audit (`agent_docs/CONVENTION_AUDIT.md`):
-  `GetAppVersion() string` (`app.go:151`) is the only method bound on the Wails
-  `App` struct that doesn't return `(T, error)` — the concrete instance of the
+- ✅ Found during the 2026-07-18 convention audit (`agent_docs/CONVENTION_AUDIT.md`):
+  `GetAppVersion() string` (`app.go:151`) was the only method bound on the Wails
+  `App` struct that didn't return `(T, error)` — the concrete instance of the
   Stable-pillar item "All Go methods bound to the Wails `App` struct return
-  `(T, error)`". Low-risk (a version string can't fail), but the odd one out.
-  Change to `(string, error)` and update the binding's caller
-  (`frontend/src/hooks/useUpdateCheck.ts` / the About pane) when convenient.
+  `(T, error)`". Changed to `func (a *App) GetAppVersion() (string, error)`,
+  returning `Version, nil`. No binding regeneration or caller changes were
+  needed: Wails' generated JS/TS for a `(T, error)`-returning method is
+  identical in shape to a bare-`T`-returning one (`Promise<T>`; the error
+  surfaces as a promise rejection, not a second tuple value), confirmed by
+  diffing against another `(T, error)` method's generated binding (e.g.
+  `GetAppSettings`). Both callers (`frontend/src/hooks/useUpdateCheck.ts:26`,
+  `frontend/src/components/SettingsModal.tsx:512`) already `await`/`.catch()`
+  the call, so a rejected promise is handled the same as today's resolved
+  value.
