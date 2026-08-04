@@ -184,11 +184,6 @@ current. Priorities mirror the pillars above.
   `eslint-plugin-react-hooks`'s full `recommended`/`recommended-latest` set (~60
   findings, mostly r3f scene code) once test coverage is in place.
 
-**P3**
-- `GetAppVersion() string` (`app.go`) is the only bound `App` method that doesn't
-  return `(T, error)` — change to `(string, error)` and update its caller
-  (`frontend/src/hooks/useUpdateCheck.ts` / the About pane) when convenient.
-
 **Release follow-ups** (deferred)
 - Release-tag-gated full `wails build` packaging job — stronger end-to-end
   confidence than the current `go build`/`pnpm build` CI smoke check.

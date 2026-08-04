@@ -148,8 +148,8 @@ func (a *App) OpenDataDir() error {
 
 // --- Updates ---
 
-func (a *App) GetAppVersion() string {
-	return Version
+func (a *App) GetAppVersion() (string, error) {
+	return Version, nil
 }
 
 func (a *App) CheckForUpdates() (models.UpdateInfo, error) {
