@@ -1,15 +1,19 @@
 import { create } from 'zustand'
 import type { AppSettings } from '../types'
 import { applySkin, BUILTIN_SKINS } from '../lib/theme'
+import { STATUS_DEFAULTS } from '../styles/tokens'
 import { GetAppSettings, SaveAppSettings } from '../../wailsjs/go/main/App'
 
+// One colour is stored per role for both themes, seeded from the dark defaults.
+// applySkin() compares against the same table to tell "never touched" from a real
+// choice, so these must come from there rather than being written out again.
 const DEFAULTS: AppSettings = {
   theme: 'dark',
   skinId: 'default',
-  accentColor: '#4ade80',
-  successColor: '#22c55e',
-  warningColor: '#f59e0b',
-  dangerColor: '#f87171',
+  accentColor: STATUS_DEFAULTS.dark.accent,
+  successColor: STATUS_DEFAULTS.dark.success,
+  warningColor: STATUS_DEFAULTS.dark.warning,
+  dangerColor: STATUS_DEFAULTS.dark.danger,
   backgroundStyle: 'solid',
   autoStartActiveServer: false,
   confirmBeforeStop: false,

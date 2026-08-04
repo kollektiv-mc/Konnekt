@@ -1,0 +1,164 @@
+{
+  "$schema": "./tokens.schema.json",
+  "version": 1,
+  "color": {
+    "surface": {
+      "bg-base": {
+        "dark": { "hex": "#05060a" },
+        "light": { "hex": "#f5f6fa" }
+      },
+      "bg-elevated": {
+        "dark": { "hex": "#12141e", "alpha": 0.82 },
+        "light": { "hex": "#eceef5", "alpha": 0.82 }
+      },
+      "bg-surface": {
+        "dark": { "hex": "#ffffff", "alpha": 0.025 },
+        "light": { "hex": "#000000", "alpha": 0.03 }
+      },
+      "hover-surface": {
+        "dark": { "hex": "#ffffff", "alpha": 0.05 },
+        "light": { "hex": "#000000", "alpha": 0.05 }
+      }
+    },
+    "border": {
+      "border-subtle": {
+        "dark": { "hex": "#ffffff", "alpha": 0.06 },
+        "light": { "hex": "#000000", "alpha": 0.09 }
+      },
+      "border-hover": {
+        "dark": { "hex": "#ffffff", "alpha": 0.12 },
+        "light": { "hex": "#000000", "alpha": 0.18 }
+      }
+    },
+    "text": {
+      "text-primary": {
+        "dark": { "hex": "#ffffff" },
+        "light": { "hex": "#0b0d12" }
+      },
+      "text-secondary": {
+        "dark": { "hex": "#ffffff", "alpha": 0.6 },
+        "light": { "hex": "#000000", "alpha": 0.65 }
+      },
+      "text-muted": {
+        "dark": { "hex": "#ffffff", "alpha": 0.4 },
+        "light": { "hex": "#000000", "alpha": 0.45 }
+      },
+      "text-faint": {
+        "dark": { "hex": "#ffffff", "alpha": 0.25 },
+        "light": { "hex": "#000000", "alpha": 0.3 }
+      }
+    },
+    "status": {
+      "accent": {
+        "dark": { "hex": "#4ade80" },
+        "light": null,
+        "userConfigurable": true
+      },
+      "success": {
+        "dark": { "hex": "#22c55e" },
+        "light": { "hex": "#16a34a" },
+        "userConfigurable": true
+      },
+      "warning": {
+        "dark": { "hex": "#f59e0b" },
+        "light": { "hex": "#d97706" },
+        "userConfigurable": true
+      },
+      "danger": {
+        "dark": { "hex": "#f87171" },
+        "light": { "hex": "#ef4444" },
+        "userConfigurable": true
+      },
+      "sun": {
+        "dark": { "hex": "#ffd84d" },
+        "light": null
+      }
+    }
+  },
+  "type": {
+    "family": {
+      "sans": [
+        "Ranade",
+        "system-ui",
+        "-apple-system",
+        "Segoe UI",
+        "Roboto",
+        "Helvetica Neue",
+        "Arial",
+        "sans-serif"
+      ],
+      "title": ["Excon", "@sans"],
+      "mono": [
+        "ui-monospace",
+        "Cascadia Code",
+        "SF Mono",
+        "Segoe UI Mono",
+        "Consolas",
+        "Liberation Mono",
+        "monospace"
+      ],
+      "display": ["Satoshi", "@sans"]
+    },
+    "size": {
+      "unit": "px",
+      "scale": {
+        "3xs": 9,
+        "2xs": 10,
+        "1xs": 11,
+        "xs": 12,
+        "sm": 14,
+        "lg": 18,
+        "xl": 20
+      }
+    },
+    "weight": {
+      "body": 400,
+      "medium": 500,
+      "semibold": 600,
+      "display": 900
+    }
+  },
+  "space": {
+    "unit": "px",
+    "scale": {
+      "0-5": 2,
+      "1": 4,
+      "1-5": 6,
+      "2": 8,
+      "3": 12,
+      "4": 16,
+      "5": 20,
+      "6": 24
+    }
+  },
+  "radius": {
+    "unit": "px",
+    "scale": {
+      "sm": 3,
+      "md": 6,
+      "lg": 8,
+      "panel": 10,
+      "xl": 12,
+      "pill": 9999
+    }
+  },
+  "border": {
+    "unit": "px",
+    "scale": {
+      "hairline": 0.5,
+      "thick": 1.5
+    }
+  },
+  "motion": {
+    "duration": {
+      "unit": "ms",
+      "scale": {
+        "fast": 150,
+        "panel": 280
+      }
+    },
+    "easing": {
+      "standard": [0.4, 0, 0.2, 1]
+    }
+  }
+}

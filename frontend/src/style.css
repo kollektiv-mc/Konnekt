@@ -1,45 +1,10 @@
 @import 'tailwindcss';
 
-/* Semantic tokens exposed as Tailwind utilities (bg-canvas, text-primary, ...).
-   Point at the CSS vars below rather than baking in values, so applySkin()'s
-   runtime overrides (theme/skin/accent) keep working unchanged.
-   Note: don't name a token "base" — it collides with Tailwind's built-in
-   `--text-base` font-size scale key and silently hijacks the `text-base`
-   utility into a text-color rule instead of a font-size rule. */
-@theme inline {
-  --color-canvas: var(--bg-base);
-  --color-elevated: var(--bg-elevated);
-  --color-surface: var(--bg-surface);
-  --color-hover: var(--hover-surface);
-  --color-border-subtle: var(--border-subtle);
-  --color-border-hover: var(--border-hover);
-  --color-text-primary: var(--text-primary);
-  --color-text-secondary: var(--text-secondary);
-  --color-text-muted: var(--text-muted);
-  --color-text-faint: var(--text-faint);
-  --color-accent: var(--accent);
-  --color-success: var(--success);
-  --color-warning: var(--warning);
-  --color-danger: var(--danger);
-  --color-sun: var(--sun);
-
-  /* Shared motion vocabulary — reuse these instead of inventing new
-     magic-number durations/easing per tile (HEALTH_CHECKLIST.md, Clean
-     pillar). --duration-fast matches the existing hover-transition timing
-     (e.g. border-color/transform on hover); --duration-panel/--ease-standard
-     match the mods tile's panel-slide (--ease-standard is Tailwind's
-     ease-in-out bezier, spelled out so non-Tailwind CSS can reuse it too). */
-  --duration-fast: 150ms;
-  --duration-panel: 280ms;
-  --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
-
-  --font-sans:
-    'Ranade', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-  --font-title: 'Excon', var(--font-sans);
-  --font-mono:
-    ui-monospace, 'Cascadia Code', 'SF Mono', 'Segoe UI Mono', Consolas, 'Liberation Mono',
-    monospace;
-}
+/* The design tokens — the @theme mapping and every themed value — are generated
+   from the suite's shared source. Do not add token definitions to this file; add
+   them to kollektiv/design/tokens.json and run `pnpm gen:tokens`. See
+   src/styles/tokens.css for why. Everything below is hand-authored component CSS. */
+@import './styles/tokens.css';
 
 @font-face {
   font-family: 'Satoshi';
@@ -65,48 +30,11 @@
   src: url('./assets/fonts/Ranade-Regular.woff2') format('woff2');
 }
 
-:root,
-[data-theme='dark'] {
-  --bg-base: #05060a;
-  --bg-elevated: rgba(18, 20, 30, 0.82);
-  --bg-surface: rgba(255, 255, 255, 0.025);
-  --border-subtle: rgba(255, 255, 255, 0.06);
-  --border-hover: rgba(255, 255, 255, 0.12);
-  --text-primary: #ffffff;
-  --text-secondary: rgba(255, 255, 255, 0.6);
-  --text-muted: rgba(255, 255, 255, 0.4);
-  --text-faint: rgba(255, 255, 255, 0.25);
-  --hover-surface: rgba(255, 255, 255, 0.05);
-  --accent-rgb: 74 222 128;
-  --accent: rgb(var(--accent-rgb));
-  --success-rgb: 34 197 94;
-  --success: rgb(var(--success-rgb));
-  --warning-rgb: 245 158 11;
-  --warning: rgb(var(--warning-rgb));
-  --danger-rgb: 248 113 113;
-  --danger: rgb(var(--danger-rgb));
+/* Runtime state, not a design token: applySkin() overwrites this on every call,
+   and its gradient form is composed from --accent-rgb rather than being a value
+   anyone picks. It lives here so the generated token file stays purely derived. */
+:root {
   --bg-gradient-overlay: none;
-  --sun-rgb: 255 216 77;
-  --sun: rgb(var(--sun-rgb));
-}
-
-[data-theme='light'] {
-  --bg-base: #f5f6fa;
-  --bg-elevated: rgba(236, 238, 245, 0.82);
-  --bg-surface: rgba(0, 0, 0, 0.03);
-  --border-subtle: rgba(0, 0, 0, 0.09);
-  --border-hover: rgba(0, 0, 0, 0.18);
-  --text-primary: #0b0d12;
-  --text-secondary: rgba(0, 0, 0, 0.65);
-  --text-muted: rgba(0, 0, 0, 0.45);
-  --text-faint: rgba(0, 0, 0, 0.3);
-  --hover-surface: rgba(0, 0, 0, 0.05);
-  --sun-rgb: 255 216 77;
-  --sun: rgb(var(--sun-rgb));
-  /* accent/success/warning/danger/overlay are set dynamically via JS */
-  --success-rgb: 22 163 74;
-  --warning-rgb: 217 119 6;
-  --danger-rgb: 239 68 68;
 }
 
 /* Native select option popup — background must be solid (transparent falls back to white).
@@ -407,7 +335,7 @@ input[type='number']::-webkit-outer-spin-button {
 }
 
 .splash-word {
-  font-family: 'Satoshi', var(--font-sans);
+  font-family: var(--font-display);
   font-weight: 900;
   font-size: clamp(48px, 9vw, 112px);
   letter-spacing: -0.02em;

@@ -1,5 +1,11 @@
+import { STATUS_DEFAULTS } from '../styles/tokens'
+
+// The preset lists are product UI — which alternatives Settings offers — so they
+// stay hand-authored. Only the first entry of each is a design decision, and it
+// comes from the generated token defaults rather than being restated here; a
+// second copy of #4ade80 is exactly the drift this pipeline exists to remove.
 export const ACCENT_PRESETS = [
-  { label: 'Green',  hex: '#4ade80' },
+  { label: 'Green',  hex: STATUS_DEFAULTS.dark.accent },
   { label: 'Blue',   hex: '#3b82f6' },
   { label: 'Violet', hex: '#8b5cf6' },
   { label: 'Amber',  hex: '#f59e0b' },
@@ -8,20 +14,20 @@ export const ACCENT_PRESETS = [
 ]
 
 export const SUCCESS_PRESETS = [
-  { label: 'Green',   hex: '#22c55e' },
+  { label: 'Green',   hex: STATUS_DEFAULTS.dark.success },
   { label: 'Emerald', hex: '#10b981' },
   { label: 'Teal',    hex: '#14b8a6' },
   { label: 'Lime',    hex: '#84cc16' },
 ]
 
 export const WARNING_PRESETS = [
-  { label: 'Amber',  hex: '#f59e0b' },
+  { label: 'Amber',  hex: STATUS_DEFAULTS.dark.warning },
   { label: 'Orange', hex: '#f97316' },
   { label: 'Yellow', hex: '#eab308' },
 ]
 
 export const DANGER_PRESETS = [
-  { label: 'Red',   hex: '#f87171' },
+  { label: 'Red',   hex: STATUS_DEFAULTS.dark.danger },
   { label: 'Rose',  hex: '#fb7185' },
   { label: 'Coral', hex: '#ef4444' },
 ]
@@ -149,11 +155,33 @@ export function applySkin(args: SkinApplyArgs): void {
   prevSkinTokenKeys = entries.map(([k]) => k)
   for (const [key, val] of entries) root.style.setProperty(key, val)
 
-  // User overrides (always on top of skin)
-  root.style.setProperty('--accent-rgb',  hexToRgbChannels(args.accentColor))
-  root.style.setProperty('--success-rgb', hexToRgbChannels(args.successColor))
-  root.style.setProperty('--warning-rgb', hexToRgbChannels(args.warningColor))
-  root.style.setProperty('--danger-rgb',  hexToRgbChannels(args.dangerColor))
+  // User overrides (always on top of skin).
+  //
+  // Only a *customised* colour is written. Writing all four unconditionally used to
+  // defeat the light-theme values in tokens.css: an inline style on :root beats any
+  // stylesheet rule, so [data-theme='light']'s darker success/warning/danger — the
+  // ones that carry contrast against a light canvas — never applied.
+  //
+  // The comparison is against the dark defaults specifically because settings
+  // persist one colour per role for both themes, seeded from that table (see
+  // useSettingsStore). A stored value equal to it means "never touched", so
+  // removing the property hands the choice back to the stylesheet, which is
+  // theme-aware. That also makes theme: 'system' correct for free — flipping
+  // appearance re-resolves through CSS with no JS involved.
+  const overrides: Record<string, string> = {
+    accent:  args.accentColor,
+    success: args.successColor,
+    warning: args.warningColor,
+    danger:  args.dangerColor,
+  }
+  for (const [role, chosen] of Object.entries(overrides)) {
+    if (chosen.toLowerCase() === STATUS_DEFAULTS.dark[role]) {
+      root.style.removeProperty(`--${role}-rgb`)
+    } else {
+      root.style.setProperty(`--${role}-rgb`, hexToRgbChannels(chosen))
+    }
+  }
+
   root.style.setProperty(
     '--bg-gradient-overlay',
     args.backgroundStyle === 'gradient'
