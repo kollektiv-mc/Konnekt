@@ -12,6 +12,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "check-bundle": "node scripts/check-bundle-size.mjs",
+    "gen:tokens": "node scripts/gen-tokens.mjs",
     "format": "prettier --write .",
     "format:check": "prettier --check ."
   },

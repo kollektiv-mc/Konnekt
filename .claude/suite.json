@@ -1,0 +1,37 @@
+{
+  "product": "Konnekt",
+  "kind": "wails-desktop",
+  "linear": {
+    "team": "KON"
+  },
+  "roadmap": "agent_docs/ROADMAP.md",
+  "tokens": {
+    "role": "consumer",
+    "source": "kollektiv",
+    "sourceFile": "tokens.source.json",
+    "generate": "pnpm gen:tokens",
+    "enforce": "migrating",
+    "paths": ["frontend/src/components/**", "frontend/src/tiles/**"]
+  },
+  "health": {
+    "commands": [
+      { "name": "typecheck", "run": "pnpm typecheck", "cwd": "frontend" },
+      { "name": "lint", "run": "pnpm lint", "cwd": "frontend" },
+      { "name": "test", "run": "pnpm test", "cwd": "frontend" },
+      { "name": "format", "run": "pnpm format:check", "cwd": "frontend" },
+      { "name": "bundle budget", "run": "pnpm check-bundle", "cwd": "frontend" },
+      { "name": "go vet", "run": "go vet ./..." },
+      { "name": "go test", "run": "go test ./..." }
+    ],
+    "generated": [
+      {
+        "regenerate": "pnpm gen:tokens",
+        "cwd": "frontend",
+        "expectCleanDiff": ["frontend/src/styles/tokens.css", "frontend/src/styles/tokens.ts"],
+        "requiresNetwork": false,
+        "diagnosis": "A non-empty diff means either frontend/src/styles/tokens.css or tokens.ts was hand-edited, or tokens.source.json was refreshed without regenerating. Both are bugs: the next run reverts the edit, and the underlying value never reaches Kommands.",
+        "reference": "frontend/scripts/gen-tokens.mjs"
+      }
+    ]
+  }
+}

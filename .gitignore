@@ -22,8 +22,10 @@ frontend/node_modules/
 testserver*/
 
 # Claude Code — commit the shared config (settings.json hooks + launch.json
-# dev-server presets); keep only personal permission overrides local.
+# dev-server presets + suite.json product facts); keep only personal permission
+# overrides and OMC session state local.
 .claude/settings.local.json
+.claude/.omc/
 
 # Graphify knowledge graph (regenerable via `graphify update .`)
 graphify-out/

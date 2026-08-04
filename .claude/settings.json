@@ -1,12 +1,12 @@
 {
   "extraKnownMarketplaces": {
-  "kollektiv": { "source": { "source": "github", "repo": "sandrogekeler/kollektiv" } },
-  "omc": { "source": { "source": "github", "repo": "Yeachan-Heo/oh-my-claudecode" } }
-},
-"enabledPlugins": {
-  "suite-kit@kollektiv": true,
-  "oh-my-claudecode@omc": true
-},
+    "kollektiv": { "source": { "source": "github", "repo": "kollektiv-mc/Kollektiv" } },
+    "omc": { "source": { "source": "github", "repo": "Yeachan-Heo/oh-my-claudecode" } }
+  },
+  "enabledPlugins": {
+    "suite-kit@kollektiv": true,
+    "oh-my-claudecode@omc": true
+  },
   "hooks": {
     "PreToolUse": [
       {
