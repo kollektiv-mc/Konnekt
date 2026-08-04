@@ -257,6 +257,9 @@ func (s *SchedulerService) runTimeTicker() {
 
 	for {
 		s.evaluateTimeTriggers(time.Now())
+		// Push the recomputed countdown to the UI. Safe here — evaluateTimeTriggers
+		// has released s.mu and s.cooldownMu by now (see emitNextRuns).
+		s.emitNextRuns()
 		select {
 		case <-ticker.C:
 		case <-s.stopTime:

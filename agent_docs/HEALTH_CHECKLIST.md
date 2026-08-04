@@ -127,8 +127,9 @@ wails build              # Production build smoke test
       configurable cap), backend stats history and console ring buffer
       (`backend/services/stats.go`, `backend/services/server.go`).
 - [ ] Poll cadences remain deliberate and haven't crept down accidentally: TPS
-      RCON poll (~15s, with server-flavor caching), stats tick (~10s),
-      scheduler next-run countdown (~30s).
+      RCON poll (~15s, with server-flavor caching), stats tick (~10s). The
+      scheduler's next-run countdown is no longer polled at all — the Go
+      per-minute ticker (and each graph mutation) pushes `schedule:next-runs`.
 - [ ] Expensive tile subtrees are memoized (`React.memo` / `useMemo` /
       `useCallback`) so parent re-renders don't cascade into them — pay
       particular attention to the 3D scenes (backups sphere, worlds planetary
@@ -144,13 +145,6 @@ wails build              # Production build smoke test
 The remaining, not-yet-closed follow-ups. Each item's full remediation write-up
 moves to `agent_docs/HEALTH_LOG.md` once it's done — keep this section short and
 current. Priorities mirror the pillars above.
-
-**P1 — Scheduler tile convention gaps** (`frontend/src/tiles/scheduler/`)
-- No `useSchedulerStore` — state lives in local `useState` in `useScheduler.ts`,
-  violating CLAUDE.md's one-Zustand-store-per-domain rule. Migrate to a store.
-- The 30s next-run poll in `useScheduler.ts` should be a Wails event, not
-  `useEffect` polling (CLAUDE.md's no-`useEffect`-polling rule).
-- `useScheduler` swallows IPC failures silently — surface an offline/error state.
 
 **P1 — Inline styles → Tailwind (Milestone 2, in progress)**
 - ~143 `style={{}}` remain across ~35 files. Remaining hotspots: worlds tile

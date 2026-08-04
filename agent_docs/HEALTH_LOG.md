@@ -951,7 +951,103 @@ todo list, not a target.
   switch; offline-error surfacing in `useScheduler`. (The `localStorage` →
   Go-file-I/O migration, `useScheduler`-hook test coverage, and the
   scheduler's inline-style Milestone-2 slice, all listed here previously,
-  have since been completed.)
+  have since been completed.) **All three of those remaining items are now
+  closed too — see "P1 — Scheduler tile convention gaps" below.**
+
+**P1 — Scheduler tile convention gaps** ✅ **closed**
+
+All three sub-items lived in the same 95-line file
+(`frontend/src/tiles/scheduler/useScheduler.ts`), so they were closed in one
+pass rather than rewriting it three times.
+
+- ✅ **`useSchedulerStore` shipped** (`frontend/src/stores/useSchedulerStore.ts`).
+  The five local `useState`s moved into a plain `create<T>((set, get) => …)`
+  store with no middleware, matching the other nine stores. `useScheduler.ts`
+  survives as a ~65-line lifecycle wrapper (mount hydration + the event
+  subscription) rather than being deleted: no store in this repo imports React
+  or the Wails runtime, and putting `EventsOn` in the store would have needed
+  module-level refcounting to unsubscribe. `index.tsx` and the
+  tile-self-contained rule are undisturbed.
+  - **Incidental bug fixed:** `Dashboard.tsx` renders the maximized tile *in
+    addition to* the grid copy, so `useScheduler()` was running twice with two
+    private copies of state — the minimized summary went stale while you edited
+    in the maximized editor, and there were two 30s intervals. Sharing one store
+    fixes that for free. `hydrate()` is idempotent via a
+    `if (get().hydrated || get().loading) return` guard that's sound because the
+    following `set` runs synchronously, before the first `await` — so two
+    same-tick mounts and StrictMode's double-mount both collapse to one fetch.
+    Covered by a "hydrates once across two concurrent mounts" test.
+- ✅ **30s poll → `schedule:next-runs` event.** New Go constant in
+  `backend/services/events.go` and a `emitNextRuns()` helper next to
+  `NextRuns()` in `scheduler_nextrun.go`, emitted through `EventBus` (never
+  `runtime.EventsEmit` directly) from four sites: `runTimeTicker`'s per-minute
+  loop and the three graph mutators (`SaveGraph`/`DeleteGraph`/
+  `SetGraphEnabled`). Deliberately **not** from run completion —
+  `scheduler_engine.go` never touches `lastFired`, and `NextRuns` reads it only
+  for `trigger.interval` nodes, whose sole writer is `maybeFireInterval` on the
+  ticker path. The frontend keeps exactly one `GetScheduleNextRuns()` fetch for
+  first paint (the ticker aligns to the next minute boundary, so the first push
+  can be up to 60s out) and is push-driven thereafter.
+  - **Payload shape is a bare `map[string]int64`**, unlike the other
+    `schedule:*` events' `map[string]interface{}` objects, so it matches
+    `GetScheduleNextRuns()` exactly and one frontend setter serves both paths.
+  - **Locking hazard, documented at `emitNextRuns`:** `sync.RWMutex` is not
+    reentrant, and `NextRuns` takes `s.mu.RLock` plus (via `nextInterval`)
+    `s.cooldownMu`. Emits therefore go *after* each mutator's `Unlock`, and
+    never inside `maybeFire*`/`cooldownAllows`. `TestGraphMutatorsEmitNextRuns`
+    is the deadlock guard — a misplaced emit hangs it instead of production.
+  - **Net cost is lower, not higher:** the recompute now runs once a minute
+    instead of twice, and `formatNextRun` only has minute resolution anyway, so
+    the old 30s cadence was rendering the same string twice.
+  - The `nextRuns` setter **always** writes a fresh object — no deep-equality
+    short-circuit. A `timeOfDay` graph's epoch is constant while its rendered
+    countdown ("in 2h" → "in 1h") is not, and `SchedulerSummary` only re-renders
+    on identity change, so an equality check would silently freeze the
+    countdown. Locked in by a test that was verified to fail when the
+    short-circuit is added back.
+- ✅ **IPC failures surfaced.** The store carries `error: string | null` — the
+  first store in the repo to do so, a deliberate departure from the
+  swallow-with-a-comment pattern of the other nine, because a dead bridge was
+  otherwise indistinguishable from "no graphs configured". (CLAUDE.md nominates
+  `useWailsCall()` for this; it's a React hook and can't be called inside a
+  store — and it has no other callers in the tree.) Read paths record the error
+  and keep last-good state; write paths record it **and rethrow**, which is what
+  lets `GraphEditor` revert optimistic UI. `previewNode` deliberately stays a
+  bare pass-through — `NodeDataPanel` already shows preview errors next to the
+  node they belong to, and they shouldn't raise a tile-wide banner.
+  - Surfaced minimized as a `text-danger` "scheduler unavailable" footer (with
+    the full message on hover) beside the still-rendered cached graph list, and
+    maximized as a click-to-dismiss chip in `GraphEditor`'s existing transient
+    status slot — no restructuring of that 900-line file.
+  - **`GraphEditor`'s four handlers gained catches.** The notable one:
+    `handleToggleEnabled` flipped `setGraphEnabled(next)` *before* awaiting the
+    IPC with no catch, so a failed toggle left the switch lying — it now
+    reverts. `handleSave` returns `string | null` so `handleRun` can't act on a
+    phantom id, and `handleDelete` no longer resets the editor when the delete
+    failed.
+- ✅ **Dead frontend surface removed.** `history` and `loading` were returned by
+  the hook and consumed by nobody — run history was fetched on mount *and* after
+  every run but never rendered. `GetScheduleRunHistory` is gone from the
+  frontend (two IPC round trips saved); Go still persists history and the
+  binding stays for a future run-log panel. `loading` was kept and finally given
+  a consumer: the summary now says `loading…` rather than
+  `maximize to add graphs` during first hydration. Hook surface: 11 keys, all
+  consumed, down from 12 with 4 unconsumed.
+- **Verification:** `go vet ./...`, `gofmt -l`, `go test -race ./backend/...`
+  (new: `TestNextRuns`, `TestEmitNextRuns`, `TestGraphMutatorsEmitNextRuns`,
+  `TestScheduleNextRunsEventName`), `pnpm typecheck`, `pnpm lint` (0 errors),
+  `pnpm test` (205 tests — 20 new in `useSchedulerStore.test.ts`, and
+  `useScheduler.test.ts` rewritten from a data test into a lifecycle test whose
+  "never polls next-runs on a timer" case is the regression guard on the deleted
+  interval), `pnpm build` + `pnpm check-bundle` (484.7 KB gzip entry, budget
+  550 KB). The `schedule:next-runs` string is asserted literally on **both**
+  sides — the `events.go` ↔ `constants.ts` mirror is hand-kept with no codegen
+  and a typo fails silently (no push, and the initial fetch still paints, so it
+  looks like it works). `wails generate module` was not needed: no bound-method
+  or `backend/models/` changes, and event names aren't codegen'd.
+  `frontend/src/lib/constants.ts` shows a large formatting-only diff — the
+  lefthook policy is format-on-touch, and Prettier collapsed that file's
+  long-standing manual column alignment.
 
 **P2 — Memoization pass**
 - Add `React.memo` to the most expensive tile components (3D scenes, chart

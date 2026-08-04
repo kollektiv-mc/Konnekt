@@ -5,10 +5,29 @@ import { GraphEditor } from './editor/GraphEditor'
 import type { TileProps } from '../../types'
 
 export function SchedulerTile({ maximized }: TileProps) {
-  const { graphs, blockDefs, nextRuns, saveGraph, deleteGraph, setEnabled, runGraph, previewNode } = useScheduler()
+  const {
+    graphs,
+    blockDefs,
+    nextRuns,
+    loading,
+    hydrated,
+    error,
+    saveGraph,
+    deleteGraph,
+    setEnabled,
+    runGraph,
+    previewNode,
+  } = useScheduler()
 
   if (!maximized) {
-    return <SchedulerSummary graphs={graphs} nextRuns={nextRuns} />
+    return (
+      <SchedulerSummary
+        graphs={graphs}
+        nextRuns={nextRuns}
+        loading={loading && !hydrated}
+        error={error}
+      />
+    )
   }
 
   return (
