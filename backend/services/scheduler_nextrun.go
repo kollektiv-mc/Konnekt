@@ -46,6 +46,22 @@ func (s *SchedulerService) NextRuns() (map[string]int64, error) {
 	return out, nil
 }
 
+// emitNextRuns pushes the current graphID → next-fire map to the frontend so
+// the scheduler tile's countdown stays fresh without polling.
+//
+// Callers MUST hold neither s.mu nor s.cooldownMu: NextRuns takes s.mu.RLock
+// and, via nextInterval, s.cooldownMu — and sync.RWMutex is not reentrant, so
+// emitting under either lock self-deadlocks. Emit after the mutator's Unlock,
+// and never from maybeFireInterval/maybeFireTimeOfDay/maybeFireCron/
+// cooldownAllows, all of which hold s.cooldownMu.
+func (s *SchedulerService) emitNextRuns() {
+	runs, err := s.NextRuns()
+	if err != nil {
+		return
+	}
+	s.bus.Emit(EventScheduleNextRuns, runs)
+}
+
 // nextFireForNode computes the next fire time for a single time-based trigger
 // node, honouring the in-memory lastFired bookkeeping. Returns the zero time
 // for non-time triggers or expressions that cannot match.

@@ -3,6 +3,10 @@ import type { models } from '../../../wailsjs/go/models'
 interface Props {
   graphs: models.Graph[]
   nextRuns: Record<string, number>
+  /** First hydration still in flight — distinct from "no graphs configured". */
+  loading?: boolean
+  /** IPC failure. Rendered alongside cached graphs rather than replacing them. */
+  error?: string | null
 }
 
 // Compact "in 5m" / "in 2h" / "in 3d" style relative time for a future ms epoch.
@@ -16,7 +20,7 @@ function formatNextRun(ms: number): string {
   return `in ${Math.round(hours / 24)}d`
 }
 
-export function SchedulerSummary({ graphs, nextRuns }: Props) {
+export function SchedulerSummary({ graphs, nextRuns, loading, error }: Props) {
   const enabled = graphs.filter((g) => g.enabled).length
 
   // Soonest upcoming scheduled run across all graphs.
@@ -43,7 +47,9 @@ export function SchedulerSummary({ graphs, nextRuns }: Props) {
       <div className="flex-1 overflow-y-auto px-2 pb-1">
         {graphs.length === 0 ? (
           <div className="flex h-full items-center justify-center">
-            <span className="text-text-faint font-mono text-xs">maximize to add graphs</span>
+            <span className="text-text-faint font-mono text-xs">
+              {loading ? 'loading…' : 'maximize to add graphs'}
+            </span>
           </div>
         ) : (
           graphs.slice(0, 8).map((g) => {
@@ -76,9 +82,15 @@ export function SchedulerSummary({ graphs, nextRuns }: Props) {
       </div>
 
       <div className="px-2 pb-1">
-        <span className="text-text-faint font-mono text-xs">
-          {soonest ? `next run ${formatNextRun(soonest)}` : 'maximize to edit'}
-        </span>
+        {error ? (
+          <span className="text-danger font-mono text-xs" title={error}>
+            scheduler unavailable
+          </span>
+        ) : (
+          <span className="text-text-faint font-mono text-xs">
+            {soonest ? `next run ${formatNextRun(soonest)}` : 'maximize to edit'}
+          </span>
+        )}
       </div>
     </div>
   )
