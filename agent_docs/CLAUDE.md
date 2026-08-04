@@ -110,12 +110,25 @@ changes. A lefthook pre-commit hook already runs Prettier + ESLint +
 files; CI (`.github/workflows/ci.yml`) re-runs typecheck/lint/build/test on
 every push and PR.
 
-**Definition of done:** after those gates pass, sanity-check the area you
-touched against the four pillars in `agent_docs/HEALTH_CHECKLIST.md`
-(Clean / Stable / Scalable / Performant), and confirm the change is in scope for
-the current milestone per `agent_docs/ROADMAP.md` (Alpha vs Beta — do not
-scaffold Beta features during Alpha). Track any gap you can't fix now under that
-checklist's `Open backlog`.
+**Definition of done:** run `/suite-kit:health` — it runs the gates above plus
+this repo's generated-file check, driven by `.claude/suite.json`, and reports a
+table. Then sanity-check the area you touched against the four pillars in
+`agent_docs/HEALTH_CHECKLIST.md` (Clean / Stable / Scalable / Performant), and
+confirm the change is in scope for the current milestone per
+`agent_docs/ROADMAP.md` (Alpha vs Beta — do not scaffold Beta features during
+Alpha). Track any gap you can't fix now under that checklist's `Open backlog`.
+
+## Task tracking
+
+Task tracking is **GitHub Issues**. Do not add a `TODO.md`.
+
+`agent_docs/ROADMAP.md` holds direction and sequencing; individual work items are
+issues. `/suite-kit:issue-sync` reconciles the two, matching on a
+`Source: agent_docs/ROADMAP.md § <section>` line in the issue body rather than on
+titles.
+
+Linear is a **downstream mirror**, written only by the GitHub → Linear sync
+routine. Never write to Linear directly from this repo.
 
 ## Local tooling
 

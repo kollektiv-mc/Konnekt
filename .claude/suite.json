@@ -1,9 +1,7 @@
 {
   "product": "Konnekt",
   "kind": "wails-desktop",
-  "linear": {
-    "team": "KON"
-  },
+  "tracking": "github-issues",
   "roadmap": "agent_docs/ROADMAP.md",
   "tokens": {
     "role": "consumer",
