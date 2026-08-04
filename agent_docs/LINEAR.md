@@ -1,10 +1,17 @@
 # Konnekt — Linear setup
 
 Referenced by `CLAUDE.md`. This is the decision record for how Konnekt's
-Linear workspace (**KonnektMC**, team key `KON`) is structured and kept in
+Linear workspace (**Kollektiv-MC**, team key `KON`) is structured and kept in
 sync with `agent_docs/ROADMAP.md` and the codebase. Keep it current when the
 structure changes — it's the source of truth the `/linear-sync` reconcile
 prompt reads against.
+
+The general reconcile rules — the `Source: <roadmap> § <section>` issue↔roadmap
+mapping convention and the PR magic-word convention — live once, in
+`kollektiv`'s `suite-kit` plugin (`plugins/suite-kit/skills/linear-sync/SKILL.md`),
+not here. This file covers only what's specific to Konnekt: its own initiative
+and project structure, labels, cycle cadence, and how the two sync layers below
+are wired for this repo.
 
 ## Structure
 
@@ -75,16 +82,6 @@ boundary). It:
 
 Run it manually any time with `/linear-sync` — the scheduled job and manual
 runs share this same prompt, so there's one source of truth for the
-reconcile logic.
-
-## Issue ↔ roadmap mapping convention
-
-Every issue created from a roadmap line carries a `Source: agent_docs/ROADMAP.md § <section>`
-line in its description, so the reconcile pass can match issues back to
-roadmap sections without guessing from titles alone.
-
-## PR convention
-
-Use Linear's magic words in PR titles/descriptions to drive the native sync:
-`Fixes KON-12`, `Closes KON-9`, `Part of KON-28`. See Linear's GitHub
-integration docs for the full magic-word list.
+reconcile logic. That prompt, and the `Source:`/magic-word conventions it
+depends on, are defined once in `suite-kit` — see the note at the top of this
+file rather than a restatement here.
