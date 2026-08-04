@@ -1,10 +1,29 @@
 # Konnekt — Linear setup
 
-Referenced by `CLAUDE.md`. This is the decision record for how Konnekt's
-Linear workspace (**KonnektMC**, team key `KON`) is structured and kept in
-sync with `agent_docs/ROADMAP.md` and the codebase. Keep it current when the
-structure changes — it's the source of truth the `/linear-sync` reconcile
-prompt reads against.
+Referenced by `CLAUDE.md`. This is the decision record for how Konnekt's Linear
+tracking is structured and kept in sync with `agent_docs/ROADMAP.md` and the
+codebase. Keep it current when the structure changes — it's what
+`/suite-kit:linear-sync` reconciles against.
+
+> **Current state, 2026-08-04.** The workspace this file described,
+> **KonnektMC**, was deleted and replaced by **Kollektiv-MC**, which is shared
+> across the suite. That workspace holds one team today, `KOL`; Konnekt's own
+> team, key `KON`, is declared in `.claude/suite.json` but **has not been
+> created yet**. Declaring a key and provisioning a team are separate steps.
+>
+> Until the team exists, `/suite-kit:linear-sync` reports it as unprovisioned
+> and stops rather than filing issues somewhere else. Every `KON-*` number
+> below and in merged PRs refers to the deleted workspace and resolves to
+> nothing — the new one renumbers from `KON-1`. Treat them as historical
+> labels, not as links.
+>
+> The structure below is the intended shape to rebuild, not a description of
+> what exists.
+
+Conventions shared with the rest of the suite — PR magic words, the
+`Source: <roadmap> § <section>` mapping rule, and the required permissions
+block — live in kollektiv's `docs/conventions.md`. What stays here is Konnekt's
+own project, milestone, and label structure.
 
 ## Structure
 
@@ -61,30 +80,22 @@ words (`Fixes KON-12`, `Closes KON-9`) move issues through the workflow
 automatically on PR open/merge. This needs no maintenance beyond using the
 magic words in PR descriptions.
 
-**Layer 2 — scheduled reconcile.** A recurring routine runs the prompt in
-`.claude/commands/linear-sync.md` on a 2-week cadence (aligned to the cycle
-boundary). It:
+**Layer 2 — scheduled reconcile.** `/suite-kit:linear-sync`, run manually or on a
+2-week cadence aligned to the cycle boundary. It reads `agent_docs/ROADMAP.md`
+and recent git history, creates issues for newly scoped `[ ]` items, moves
+shipped ones to Done, and posts a project status update.
 
-1. Reads `agent_docs/ROADMAP.md` and recent git history for what's shipped or
-   newly scoped.
-2. Reconciles Linear: new `[ ]` roadmap items with no matching issue get
-   created in the right project; items now `[x]` or closed by a merged PR get
-   their Linear issue moved to Done.
-3. Posts a project status update (shipped / in-progress / blocked / next) on
-   each active Beta-side project.
+This repo previously carried its own copy of that prompt at
+`.claude/commands/linear-sync.md`. It was **deleted**: it duplicated the plugin
+skill and had gone stale against the deleted `KonnektMC` workspace, so running
+it did nothing useful. One definition of the reconcile logic, in the plugin.
 
-Run it manually any time with `/linear-sync` — the scheduled job and manual
-runs share this same prompt, so there's one source of truth for the
-reconcile logic.
+## Conventions held elsewhere
 
-## Issue ↔ roadmap mapping convention
+The `Source: <roadmap> § <section>` mapping rule and the PR magic-word
+convention (`Fixes KON-12`, `Closes KON-9`, `Part of KON-28`) apply across the
+whole suite, not just here. They live in kollektiv's `docs/conventions.md`.
 
-Every issue created from a roadmap line carries a `Source: agent_docs/ROADMAP.md § <section>`
-line in its description, so the reconcile pass can match issues back to
-roadmap sections without guessing from titles alone.
-
-## PR convention
-
-Use Linear's magic words in PR titles/descriptions to drive the native sync:
-`Fixes KON-12`, `Closes KON-9`, `Part of KON-28`. See Linear's GitHub
-integration docs for the full magic-word list.
+They were previously written down here as though they were Konnekt's own, which
+is how a shared rule drifts: the copy that gets updated is whichever one the
+person happened to open.

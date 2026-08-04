@@ -1,11 +1,39 @@
 {
   "extraKnownMarketplaces": {
     "kollektiv": { "source": { "source": "github", "repo": "kollektiv-mc/Kollektiv" } },
-    "omc": { "source": { "source": "github", "repo": "Yeachan-Heo/oh-my-claudecode" } }
+    "superpowers": { "source": { "source": "github", "repo": "obra/superpowers" } }
   },
   "enabledPlugins": {
     "suite-kit@kollektiv": true,
-    "oh-my-claudecode@omc": true
+    "superpowers@superpowers": true
+  },
+  "permissions": {
+    "allow": [
+      "Bash(pnpm typecheck)",
+      "Bash(pnpm typecheck:*)",
+      "Bash(pnpm lint)",
+      "Bash(pnpm lint:*)",
+      "Bash(pnpm test)",
+      "Bash(pnpm test:*)",
+      "Bash(pnpm format:check)",
+      "Bash(pnpm check-bundle)",
+      "Bash(pnpm gen:tokens)",
+      "Bash(go vet:*)",
+      "Bash(go test:*)",
+      "Bash(gofmt:*)",
+      "Bash(git status)",
+      "Bash(git status:*)",
+      "Bash(git diff)",
+      "Bash(git diff:*)"
+    ],
+    "deny": [
+      "Read(./.env)",
+      "Read(./.env.*)",
+      "Read(./secrets/**)"
+    ],
+    "ask": [
+      "Bash(git push:*)"
+    ]
   },
   "hooks": {
     "PreToolUse": [

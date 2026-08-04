@@ -35,6 +35,17 @@ jobs:
       - run: pnpm build
       - run: pnpm check-bundle
 
+      # The token layer is generated from the vendored tokens.source.json and
+      # committed. A non-empty diff means either a generated file was
+      # hand-edited — that edit is destroyed on the next run, and whatever it
+      # was papering over survives — or tokens.source.json was refreshed
+      # without regenerating. .claude/suite.json has described this check for a
+      # while; until now only an agent running /suite-kit:health ever ran it.
+      - run: pnpm gen:tokens
+
+      - name: Token layer is in sync
+        run: git diff --exit-code src/styles/tokens.css src/styles/tokens.ts
+
   backend:
     runs-on: windows-latest
     steps:
