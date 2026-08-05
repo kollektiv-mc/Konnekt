@@ -1,14 +1,20 @@
 # Konnekt — Feature Roadmap
 
-This file is the full Alpha/Beta scope reference for Claude Code.
-When implementing any feature, check its status here first.
+Direction and sequencing. Individual Beta and Remote Access tasks live in
+[GitHub Issues](../../issues) — this file does not track those as a checklist
+anymore; match on the issue, not on a line here.
+
+The Alpha section below is kept in full as shipped history and technical
+reference: what exists, how it's built, and where. It predates the
+GitHub-Issues convention and isn't being rewritten to fit it — Alpha is
+complete, so there's nothing left to extract.
 
 Note: some Beta features (Settings page, theme toggle, desktop notifications)
 were shipped early during Alpha. Their status below reflects reality.
 
 ---
 
-## Status legend
+## Status legend (Alpha section only)
 
 - `[ ]` Not started
 - `[x]` Complete
@@ -16,7 +22,7 @@ were shipped early during Alpha. Their status below reflects reality.
 
 ---
 
-## Alpha
+## Alpha — complete
 
 ### Core infrastructure
 
@@ -151,7 +157,7 @@ were shipped early during Alpha. Their status below reflects reality.
   - [x] Raw text editor with dirty-tracking, save, revert; compact summary when not maximised
   - [x] Save writes directly to the config file; offers restart when server running
   - Go: backend/services/config_editor.go — ListConfigFiles / ReadConfigFile / WriteConfigFile
-  - (grouped fields / gamerule editor / MOTD preview moved to Beta — see "Tiles — beta")
+  - (grouped fields / gamerule editor / MOTD preview moved to Beta — see GitHub Issues)
 
 - [x] Notifications tile
   
@@ -168,124 +174,27 @@ were shipped early during Alpha. Their status below reflects reality.
 
 ## Beta
 
-Do not scaffold or implement these during Alpha.
-Beta work begins only after all Alpha tiles are complete and stable.
+Do not scaffold or implement these during Alpha (Alpha is done — this note is
+historical). Individual Beta tasks are filed in
+[GitHub Issues](../../issues), labelled `milestone:beta`.
 
-### Backups — beta hardening
+- **Backups — beta hardening.** Full-server vs world-only snapshots shipped;
+  remaining: per-world backup surfacing in the Worlds tile, the "World-specific"
+  segment in the Backups tile, a world-specific Scheduler backup action,
+  multi-dimension (`world_nether`/`world_the_end`) backup, retention/pruning,
+  cancel-in-progress, a concurrency guard, restore integrity checks, and
+  import from an external file.
+- **Tiles — beta.** Server Config tile enhancements (grouped fields, gamerule
+  editor, MOTD preview), a File explorer tile, an Audit log tile, a Mod/plugin
+  manager tile (Modrinth + CurseForge), a Player profiles tile, a Player skin
+  preview tile.
+- **Features — beta.** Public server IP via playit.gg tunnel, extended (24h/7-day)
+  performance history, routing desktop notifications through the originally
+  planned Wails `runtime.EventsEmit` path, configurable keyboard shortcuts,
+  and the Settings page's remaining items (global JVM defaults, backup
+  retention policy).
 
-- [x] Full-server snapshot (entire working dir: jar, plugins, configs, world) vs world-only
-  — Backups tile now zips `cfg.WorkingDir`; backups tagged `kind: "server" | "world"` in
-  meta.json; restore branches on kind; legacy backups derived from filename convention
-- [ ] Worlds tile: create / list / restore / delete **per-world** backups (currently only
-  create exists via `CreateWorldBackup`; world backups land in the shared backup dir but
-  are not surfaced in the Worlds tile)
-- [ ] Backups tile: view and manage **all world-specific backups** in the "World-specific"
-  segment (currently a note-only placeholder; replaces it with carousel + list)
-- [ ] Scheduler tile: world-specific backup action (choose target world, not just full-server)
-- [ ] Multi-dimension worlds: also back up `world_nether` / `world_the_end`
-  (Paper/Spigot/Bukkit split dimensions into sibling folders; `worldPath()`
-  currently zips only the single `level-name` folder — silent data loss on
-  those server types)
-- [ ] Retention / pruning policy: auto-delete backups by count, total size, or age
-- [ ] Cancel an in-progress backup
-- [ ] Concurrency guard in `CreateBackup` to prevent overlapping scheduled + manual runs
-- [ ] Integrity check / corrupt-zip detection on restore (beyond `zip.OpenReader` error)
-- [ ] Import / restore from an external backup file (drag-in or file picker)
-
-### Tiles — beta
-
-- [ ] Server Config tile — beta enhancements
-  
-  - The tile already shipped in Alpha as a general config-file editor; these are
-    deferred refinements on top of it.
-  - [ ] Grouped server.properties fields (General/Performance/World/Network/Gameplay)
-  - [ ] Gamerule editor (per-world, fetched via RCON when server is running)
-  - [ ] MOTD editor with live preview
-  - Go: backend/services/config_editor.go (extend existing service)
-
-- [ ] File explorer tile
-  
-  - Browse server directory tree
-  - View and edit text files (configs, logs) in-tile editor
-  - Upload files via drag-and-drop
-  - Delete files with confirmation
-  - Go: FileService with sandboxed path (server working dir only)
-
-- [ ] Audit log tile
-  
-  - Chronological log of all user-triggered actions
-  - Events: server start/stop/restart, commands sent, kicks, bans,
-    backups, config changes, file edits
-  - Go: AuditService appends to ~/.config/konnekt/audit.json
-  - Filter by event type, searchable
-
-- [ ] Mod / plugin manager tile
-  
-  - List .jar files in /mods or /plugins directory
-  - Enable / disable (move to /mods.disabled)
-  - Show mod name, version (parsed from fabric.mod.json / mcmod.info)
-  - Search and install mods from Modrinth (free, no API key) and CurseForge
-    (requires free API key from console.curseforge.com)
-  - Go: ModService downloads .jar to mods/ or plugins/, tracks installed mods
-    in ~/.config/konnekt/mods.json manifest
-  - CurseForge: resolve real download URL via /files/{fileId}/download-url
-    (CDN auth token required — do not use direct file links)
-  - Link to Modrinth/CurseForge page per installed mod
-  - No auto-update in beta — manual install and remove only
-
-- [ ] Player profiles tile
-  
-  - Per-player history: sessions, total playtime, first seen, last seen
-  - Notes field per player
-  - Go: PlayerHistoryService, records join/leave events from log stream
-  - Persists to ~/.config/konnekt/players.json
-
-- [ ] Player skin preview tile
-  
-  - Fetch skin from Mojang API (api.mojang.com) using player UUID
-  - Render 2D face sprite (front-facing head only for simplicity)
-  - Show for currently online players
-  - Cache skins locally, respect Mojang rate limits
-
-### Features — beta
-
-- [ ] Public server IP via tunnel (playit.gg)
-  
-  - Launches and manages the playit-agent binary as a child process
-  - Go: TunnelService — download agent on first use, persist auth token,
-    parse stdout to extract the public address (e.g. yourserver.joinmc.link)
-  - Frontend: shows tunnel status (connecting / active / stopped) and the
-    public address with a copy button
-  - playit.gg chosen: purpose-built for game servers, free tier gives a
-    persistent address (unlike ngrok free), no account required for basic use
-  - Agent binary cached in app data dir; user can also provide their own path
-  - Note: this exposes the Minecraft *game* port only. For remote access to the
-    Konnekt dashboard itself, see "Remote access — full dashboard over the web"
-    below (uses cloudflared for an HTTPS console URL).
-
-- [ ] Extended performance history (24h, 7-day) with persistent storage
-- [~] OS desktop notifications — shipped early, via WebView Notification API
-  (lib/notify.ts), not the planned Wails runtime.EventsEmit → OS notify route
-- [x] App auto-updater — manual "Check for updates" button (Settings → About)
-  + optional check-on-startup notification, both querying GitHub Releases
-  (`backend/services/update.go`'s `UpdateService`, no separate version DB).
-  "Download & Install" now downloads the release asset for the running
-  platform, verifies it against `checksums.txt` (SHA256), replaces the running
-  executable in place via `github.com/minio/selfupdate`, and relaunches — no
-  manual download. `.github/workflows/release.yml` (tag-triggered `wails
-  build`, `-ldflags "-X main.Version=$TAG"`) populates GitHub Releases with
-  the binary + checksums. Windows-first (the shipping target); other
-  platforms report a clear "not published yet" error instead of guessing an
-  asset name. Not yet: code-signing/notarization for the built binaries — see
-  `HEALTH_CHECKLIST.md`'s "Auto-updater" entry.
-- [x] Dark/light theme toggle — shipped early: light/dark/system + accent picker,
-  CSS variable tokens, persisted (lib/theme.ts, useSettingsStore)
-- [ ] Keyboard shortcuts (configurable, stored in settings)
-- [~] Settings page — shipped early: theme, accent colour, auto-start active server,
-  confirm-before-stop, console buffer/timestamps, crash/join notifications, open data dir.
-  Not yet: global JVM defaults, backup retention policy.
-
-### Remote access — full dashboard over the web
+## Remote access — full dashboard over the web
 
 Expose the entire Konnekt dashboard to a remote browser (phone/laptop) via a
 zero-config tunnel, secured with a password + session token. The remote client
@@ -316,47 +225,44 @@ only ongoing cost is the remote-readiness checklist under "Adding a tile" below.
     joined/left, server stopped), stats.go (snapshots), backup.go (started/
     progress/completed/failed/restore). The remote WS fan-out seam is marked in
     `Emit()` for Phase 1 — no service bypasses it.
-- [ ] **Phase 1 — `RemoteService` (backend/services/remote.go)**
-  - Embedded `net/http` server, off by default, started on demand, bound to
-    `127.0.0.1` (tunnel terminates TLS at the edge — see Phase 4).
-  - Serves the existing embedded `frontend/dist` (reuse `main.go`'s `embed.FS`).
-  - `POST /api/rpc` — generic reflection dispatcher over the bound `App`; body
-    `{method, args}` → invoke → `(result, error)` JSON. One dispatcher covers
-    all ~40 methods and stays correct as new ones are added.
-  - `GET /ws` — WebSocket subscribed to the EventBus; carries a replay buffer
-    (reuse the console buffer cap) so a reconnecting mobile client catches up.
-- [ ] **Phase 2 — Frontend remote runtime (lib/remoteRuntime.ts, loaded first)**
-  - Detect `window.go == null` → remote mode.
-  - Inject `window.go.main.App` proxy → POSTs to `/api/rpc`.
-  - Inject `window.runtime.EventsOn/Off/Emit` → backed by the WebSocket.
-  - Login gate renders before the dashboard mounts.
-  - **Highest-risk phase — build and prove on LAN first.**
-- [ ] **Phase 3 — Auth (password + token)**
-  - Password set in Settings → Remote Access; stored only as an argon2/bcrypt
-    hash in `~/.config/konnekt/remote.json` (never plaintext).
-  - `POST /api/login` verifies password → signed, expiring session token;
-    required on all `/api/rpc` and `/ws`. Rate-limit login with lockout/backoff.
-  - Recommended extra: desktop-side "approve new device" prompt on first
-    connection from an unknown client.
-- [ ] **Phase 4 — Tunnel transport (cloudflared)**
-  - `TunnelService` launches the cloudflared binary (download/cache on first
-    use), parses stdout for the public `https://<random>.trycloudflare.com` URL,
-    surfaces status + copy button. TLS handled at the Cloudflare edge.
-  - **Note:** distinct from the playit.gg item below — playit exposes the raw
-    Minecraft *game* TCP port; cloudflared exposes the *web console* (HTTPS).
-- [ ] **Phase 5 — Remote-mode adaptations**
-  - Disable/hide native-only methods that target the host machine
-    (`BrowseJarFile`, `BrowseDirectory`, `OpenDataDir`, `OpenBackupDir` →
-    `runtime.OpenFileDialog`/folder open), or replace with a server-side path
-    browser.
-  - WS auto-reconnect + token refresh + buffer replay for flaky mobile links.
-  - Multi-client behaviour (desktop + remote at once): state already lives in
-    Go; ensure every event broadcasts to all clients via the EventBus.
-  - Settings UI to enable remote access, set password, start/stop tunnel.
+
+Phases 1–5 (RemoteService, frontend remote runtime, auth, cloudflared tunnel,
+remote-mode adaptations) are filed in [GitHub Issues](../../issues), labelled
+`milestone:remote-access`.
 
 Open questions to resolve before build: single app-wide password vs per-user
 accounts (default: single); whether remote needs per-server sessions or just
 mirrors the one active server like the desktop does (default: mirror).
+
+## Later
+
+Breadth, once the foundations are proven. Ordering here is not fixed, and
+none of this is filed as issues yet — it's too early to scope precisely.
+
+- More vanilla commands — skeletons already exist; each needs editors,
+  presentation metadata, and a route
+- Additional deep argument types: `nbt_compound`, `block_state`, `loot_table`
+- **Version 2 support** — likely 1.21.5, which flips three trait flags. This is
+  the real test of the version model: if it turns into a refactor, the trait
+  design was wrong
+- More previews: entity placement, particle emitters, structure bounds
+- Command import — parse an existing command back into a value tree. Note this
+  inverts the preview contract's direction and needs its own design
+- Sharing: permalinks, saved commands
+- Multi-command scripts and function-file export
+
+---
+
+## Explicitly out of scope
+
+Recording these so they are not accidentally re-litigated:
+
+- **Bedrock Edition.** Different command syntax entirely; not a version trait.
+- **Versions before 1.20.5.** The `nbt` item format trait exists in the matrix for
+  completeness, but no pre-component version is supported.
+- **Server integration.** Kommands generates text; it does not connect to a server.
+- **Accounts, tiers, subscriptions.** Removed with the previous codebase and not
+  returning.
 
 ---
 
@@ -371,7 +277,9 @@ mirrors the one active server like the desktop does (default: mirror).
    never restructure the file
 4. If new Go data is needed:
    a. Add struct to `backend/models/` if it crosses the IPC boundary
-   b. Add method to relevant service in `backend/services/` c. Bind method on App struct in `backend/app.go` d. Run `wails generate module` to regenerate TS bindings
+   b. Add method to relevant service in `backend/services/`
+   c. Bind method on App struct in `backend/app.go`
+   d. Run `wails generate module` to regenerate TS bindings
    e. Import from `frontend/wailsjs/go/main/` in the tile
 5. Run `pnpm typecheck` and `go vet ./...` before marking done
 6. Remote-readiness (keeps the future Remote Access feature cheap — see below):
