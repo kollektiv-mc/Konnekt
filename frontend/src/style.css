@@ -106,6 +106,28 @@ input[type='number']::-webkit-outer-spin-button {
   scrollbar-color: var(--border-hover) transparent;
 }
 
+/* react-grid-layout's own stylesheet (imported in Dashboard.tsx, after this
+   file) hardcodes 200ms/100ms transition durations with a plain `ease`
+   curve. Re-pointed at the shared motion tokens so grid movement joins the
+   rest of the app's timing vocabulary instead of a one-off magic number
+   (agent_docs/HEALTH_CHECKLIST.md, Clean pillar). `!important` on the
+   duration/timing-function longhands only (never the `transition` shorthand
+   or `transition-property`) — RGL's own `.resizing` / `.react-draggable-dragging`
+   states disable animation via `transition-property: none`, and that longhand
+   is untouched here, so active drags/resizes stay instant as intended; only
+   the *rate* of the settle animation changes. `!important` is required
+   because this file loads before react-grid-layout's CSS in the bundle, so
+   equal-specificity rules would otherwise lose to the later import. */
+.react-grid-layout,
+.react-grid-item {
+  transition-duration: var(--duration-fast) !important;
+  transition-timing-function: var(--ease-standard) !important;
+}
+
+.react-grid-item.react-grid-placeholder {
+  transition-duration: var(--duration-fast) !important;
+}
+
 /* Drag/resize placeholder — replaces RGL's default red square */
 .react-grid-placeholder {
   background: var(--hover-surface) !important;

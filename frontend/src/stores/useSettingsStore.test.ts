@@ -1,8 +1,11 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import * as App from '../../wailsjs/go/main/App'
 import { useSettingsStore } from './useSettingsStore'
+import { TILE_REGISTRY } from '../tiles/registry'
 
 vi.mock('../../wailsjs/go/main/App')
+
+const ALL_TILE_IDS = TILE_REGISTRY.map((t) => t.id)
 
 const DEFAULTS = {
   theme: 'dark' as const,
@@ -22,6 +25,7 @@ const DEFAULTS = {
   schedulerPaletteClosedCategories: {},
   consoleQuickCommandsCollapsed: false,
   checkUpdatesOnStartup: true,
+  crateOrder: [] as string[],
 }
 
 describe('useSettingsStore', () => {
@@ -69,8 +73,17 @@ describe('useSettingsStore', () => {
       vi.mocked(App.GetAppSettings).mockRejectedValue(new Error('no wails bridge'))
       await useSettingsStore.getState().load()
       const { settings, loaded } = useSettingsStore.getState()
-      expect(settings).toEqual(DEFAULTS)
+      expect(settings).toEqual({ ...DEFAULTS, crateOrder: ALL_TILE_IDS })
       expect(loaded).toBe(true)
+    })
+
+    it('normalizes crateOrder: drops stale ids and appends newly-registered ones', async () => {
+      vi.mocked(App.GetAppSettings).mockResolvedValue({
+        ...DEFAULTS,
+        crateOrder: ['stale-tile', ...ALL_TILE_IDS.slice(0, -1)],
+      })
+      await useSettingsStore.getState().load()
+      expect(useSettingsStore.getState().settings.crateOrder).toEqual(ALL_TILE_IDS)
     })
   })
 
@@ -88,6 +101,29 @@ describe('useSettingsStore', () => {
       vi.mocked(App.SaveAppSettings).mockRejectedValue(new Error('disk full'))
       await useSettingsStore.getState().update({ notifyOnCrash: true })
       expect(useSettingsStore.getState().settings.notifyOnCrash).toBe(true)
+    })
+  })
+
+  describe('reorderCrate', () => {
+    it('moves a tile within its group and persists the result', () => {
+      useSettingsStore.setState({ settings: { ...DEFAULTS, crateOrder: ALL_TILE_IDS } })
+      const groupIds = new Set(TILE_REGISTRY.filter((t) => t.maximizable).map((t) => t.id))
+      const movedId = TILE_REGISTRY.find((t) => t.maximizable)!.id
+      useSettingsStore.getState().reorderCrate(movedId, 0, groupIds)
+      const { crateOrder } = useSettingsStore.getState().settings
+      const groupOrder = crateOrder.filter((id) => groupIds.has(id))
+      expect(groupOrder[0]).toBe(movedId)
+      expect(App.SaveAppSettings).toHaveBeenCalledWith(expect.objectContaining({ crateOrder }))
+    })
+
+    it('leaves ids outside the group in their original slots', () => {
+      useSettingsStore.setState({ settings: { ...DEFAULTS, crateOrder: ALL_TILE_IDS } })
+      const utilityIds = TILE_REGISTRY.filter((t) => !t.maximizable).map((t) => t.id)
+      const groupIds = new Set(TILE_REGISTRY.filter((t) => t.maximizable).map((t) => t.id))
+      const movedId = TILE_REGISTRY.find((t) => t.maximizable)!.id
+      useSettingsStore.getState().reorderCrate(movedId, 0, groupIds)
+      const { crateOrder } = useSettingsStore.getState().settings
+      expect(crateOrder.filter((id) => !groupIds.has(id))).toEqual(utilityIds)
     })
   })
 })

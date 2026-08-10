@@ -19,6 +19,7 @@ export interface AppSettings {
   schedulerPaletteClosedCategories: Record<string, boolean>
   consoleQuickCommandsCollapsed: boolean
   checkUpdatesOnStartup: boolean
+  crateOrder: string[]
 }
 
 export interface TileProps {
