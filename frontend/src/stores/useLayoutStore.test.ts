@@ -201,5 +201,17 @@ describe('useLayoutStore', () => {
       expect(useLayoutStore.getState().currentLayout).toEqual(layout)
       expect(App.SaveActiveLayout).toHaveBeenCalledWith(JSON.stringify(layout))
     })
+
+    it('still updates currentLayout without throwing when the binding throws synchronously', () => {
+      // The generated Wails binding dereferences window.go eagerly, so it
+      // throws synchronously (not a rejected promise) when window.go is
+      // undefined, e.g. outside the packaged app.
+      vi.mocked(App.SaveActiveLayout).mockImplementation(() => {
+        throw new TypeError("Cannot read properties of undefined (reading 'main')")
+      })
+      const layout = [{ i: 'y', x: 0, y: 0, w: 1, h: 1 } as LayoutItem]
+      expect(() => useLayoutStore.getState().updateLayout(layout)).not.toThrow()
+      expect(useLayoutStore.getState().currentLayout).toEqual(layout)
+    })
   })
 })

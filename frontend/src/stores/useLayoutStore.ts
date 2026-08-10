@@ -41,10 +41,12 @@ function compacted(layout: readonly LayoutItem[]): LayoutItem[] {
 
 // Persist the current on-screen layout independently of named presets, so
 // drags/resizes/removals survive a restart without overwriting the templates.
-function persistActiveLayout(layout: readonly LayoutItem[]) {
-  SaveActiveLayout(JSON.stringify(layout)).catch(() => {
+async function persistActiveLayout(layout: readonly LayoutItem[]) {
+  try {
+    await SaveActiveLayout(JSON.stringify(layout))
+  } catch {
     /* Wails IPC unavailable */
-  })
+  }
 }
 
 interface LayoutStore {
