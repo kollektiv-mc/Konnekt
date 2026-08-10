@@ -1068,3 +1068,467 @@ pass rather than rewriting it three times.
   `frontend/src/components/SettingsModal.tsx:512`) already `await`/`.catch()`
   the call, so a rejected promise is handled the same as today's resolved
   value.
+
+**P1 — Tile grid: two parallel systems collapsed into one**
+- ✅ **Root cause: `react-grid-layout` was a dependency but wasn't actually
+  driving the grid.** `Dashboard.tsx` consumed it through the v1-compat
+  `react-grid-layout/legacy` wrapper with `compactType={null}` +
+  `preventCollision` — a combination that disables every dynamic-readjustment
+  feature the library has, so tiles never pushed each other or floated up to
+  fill gaps. Adding a tile from the crate ran on a **second, hand-rolled
+  system entirely**: window-level `mousemove`/`mouseup` listeners driving two
+  manually-positioned placeholder/wireframe divs, bypassing RGL's own
+  animated placeholder (`.react-grid-placeholder { transition-duration: 100ms
+  }`) — which is why the crate-drop hover felt like "an entirely different
+  system" from moving an existing tile, and why a dropped tile never resized
+  to fit the space it landed in.
+- ✅ **Migrated onto RGL v2's modern (non-`/legacy`) API.** `Dashboard.tsx`
+  now uses `GridLayout` + `useContainerWidth` + `verticalCompactor` directly.
+  Deleted the hand-rolled `findBestPosition`/`resolveDropCell` collision
+  search (new-tile placement now follows RGL's own convention: drop at
+  `bottom(layout)`, let the compactor pull it into a gap) and the manual
+  `ResizeObserver`/`colWidth` math (`useContainerWidth`/`calcGridColWidth`
+  instead).
+- ✅ **Crate-drop unified with real-tile dragging via a "ghost item".** While
+  a tile is dragged from the crate, a `{ i: '__ghost__', static: true, ... }`
+  entry is appended to the *same* `layout` array real tiles render from (with
+  a matching ghost child keyed `__ghost__`) rather than driving a separate
+  placeholder/wireframe pair. RGL's own `synchronizeLayoutWithChildren` effect
+  then compacts around it exactly as it would for any other item, so
+  neighbours push and float using the library's own CSS-transition timing —
+  smooth *by construction*, not by hand-replicating RGL's easing. Confirmed by
+  reading `chunk-WGL5FSZH.mjs`: a `layout` prop change (not a native
+  drag/resize) still runs `compactor.compact` via the prop-sync effect as
+  long as no native `activeDrag`/`droppingDOMNode` is in progress, which the
+  crate-drag gesture never triggers.
+- ✅ **Unified S/M/L size vocabulary.** `TileDefinition.defaultW/defaultH/
+  minW/minH` (loose per-tile numbers) replaced with `sizes: { sm, md, lg }`,
+  each drawn from a shared `ALLOWED_W = [1,2,3,4,6]` / `ALLOWED_H =
+  [3,4,6,8,12]` vocabulary (`lib/gridSizing.ts`) and required non-decreasing
+  sm→md→lg on both axes (`registry.test.ts`, 34 assertions across all 11
+  tiles). `sm` doubles as the resize floor. A sanctioned, one-time exception
+  to "extend `registry.ts`, never restructure" — see `CLAUDE.md`'s Tile
+  system section and the Do-not list. `lib/gridSizing.ts`'s `fitBucket()`
+  picks the largest bucket that fits the free run at the hovered cell
+  (lg→md→sm), which is what makes a dropped tile size itself to available
+  space — it reads the real tiles' resting positions, not any transient
+  in-flight compaction RGL applies while the ghost hovers, a deliberate
+  approximation rather than a live readout of mid-drag animation state.
+- ✅ **Crate made reorderable.** `useTileStore.crateTileIds` — maintained and
+  tested but never actually read (`TileCrate` always rendered `TILE_REGISTRY`
+  order directly) — deleted outright rather than repurposed. Reordering lives
+  in `useSettingsStore.settings.crateOrder` instead (persisted via the
+  existing `GetAppSettings`/`SaveAppSettings` bindings, the same path the
+  scheduler palette prefs took — no new Go binding pair, just one added
+  `CrateOrder []string` field + `wails generate module`). One gesture, two
+  zones: dragging within the crate's own bounds live-reorders a local preview
+  (not persisted per pointer frame — only on the reorder→canvas mode
+  transition and on mouseup, so a continuous drag isn't an IPC call per
+  pixel); crossing into canvas territory hands off to the existing
+  ghost-drop path and the reorder that happened so far is frozen/persisted.
+  Reordering only ever permutes within a tile's own utility/module group
+  (`lib/crateOrder.ts`'s `reorderWithinGroup`, which leaves every other
+  group's slots untouched regardless of interleaving) so that grouping
+  survives. `normalizeCrateOrder` drops stale ids and appends newly-added
+  registry tiles on every `load()` — including the reject/no-bridge path,
+  not just the success path, since a stale empty array would otherwise
+  silently drop tiles from the very first reorder after a failed load.
+- ✅ **Fixed a latent circular-import crash `registry.test.ts` exposed.**
+  `registry.ts` transitively imports every tile component; `tiles/backups`
+  imports `useTileStore`, which (before this) read
+  `TILE_REGISTRY.map(...)` at module top level. Whichever module happened to
+  be the *first* to import `registry.ts` determined whether the cycle
+  resolved cleanly — `Dashboard.tsx` imports `useTileStore` before
+  `registry`, so the shipped app never hit it, but a test importing
+  `registry.ts` directly did (`TILE_REGISTRY` reads as `undefined` mid-cycle).
+  Fixed by deferring the read into a function called only from inside actions
+  (`loadTiles`), which by definition run after the module graph has fully
+  resolved, regardless of import order. Not a regression from this work —
+  latent since `useTileStore` and `registry.ts` first both existed — just
+  never triggered until a test imported `registry.ts` as the entry point.
+- ✅ **Layouts compact once on load, not just after the first drag.**
+  `useLayoutStore.loadPresets()`/`loadPreset()` now run the loaded layout
+  through `verticalCompactor` before setting state (`compacted()` — dropping
+  the compactor's own `cloneLayoutItem` noise fields like `static`/`moved`
+  back down to the core `i/x/y/w/h`, so persisted JSON stays minimal; entries
+  with a non-finite `y`, i.e. corrupt/legacy data, pass through unchanged).
+  Otherwise a saved layout authored under the old free-placement renderer
+  (or one of the 4 presets, all of which had deliberate gaps) would visually
+  snap into its compacted form on first render while the *persisted* value
+  stayed gapped until the user's next drag/resize wrote it back — a one-time
+  surprise reflow the moment compaction was turned on.
+- ✅ **All 4 presets re-authored onto bucket sizes; `mods` was missing from
+  three of them.** `Default`/`Console Focus`/`Compact` now include all 11
+  registered tiles (`constants.test.ts` asserts this — 21 tests covering
+  bucket-size matching, no overlaps, no out-of-bounds placement, no duplicate
+  ids across all 4 presets). `Essentials` stays a deliberately small curated
+  subset (6 tiles) — that asymmetry is the preset's entire point, not the
+  inconsistency the other three had.
+- ✅ **Grid motion joined the shared `--duration-*`/`--ease-*` vocabulary.**
+  RGL's own stylesheet hardcodes `200ms ease` (items) / `100ms` (placeholder).
+  Overridden in `style.css` to `var(--duration-fast)`/`var(--ease-standard)`
+  — `!important` on the `transition-duration`/`transition-timing-function`
+  longhands only, never the `transition` shorthand or `transition-property`,
+  so RGL's own `.resizing`/`.react-draggable-dragging` states (which disable
+  animation via `transition-property: none`) are untouched and active
+  drags/resizes stay instant as intended; only the settle-animation *rate*
+  changes. `!important` is necessary because `style.css` loads before
+  `react-grid-layout/css/styles.css` in the bundle (`main.tsx` imports
+  `style.css` before `App`, which is what eventually pulls in `Dashboard.tsx`
+  → RGL's stylesheet), so an equal-specificity override without it would
+  lose to the later-loaded rule.
+- **Deliberate scope decisions:**
+  - Kept the existing CSS radial-gradient dot background (now sized off
+    `calcGridColWidth`) rather than switching to RGL v2's new
+    `GridBackground` (`react-grid-layout/extras`) — `GridBackground` renders
+    a finite-row SVG sized to an explicit `rows`/`height`, which doesn't
+    naturally track a scrollable canvas whose content height grows as tiles
+    are added; the existing CSS `background-size` tiling approach handles
+    that for free.
+  - No `TileCrate.tsx` component test — no component-test precedent exists
+    anywhere in this repo (only store/lib/hook tests), and the DOM-gesture
+    wiring is comparatively thin glue around logic that *is* fully unit
+    tested (`crateOrder.test.ts`, `gridSizing.test.ts`). Verified manually
+    instead via `wails dev`.
+- **Verification:** `pnpm typecheck`, `pnpm lint` (0 errors; the pre-existing
+  130 warnings are all in `players`/`worlds` tiles, tracked separately under
+  this checklist's Milestone 2 inline-style backlog — none touched by this
+  work), `pnpm test` (new: `gridSizing.test.ts` 11, `registry.test.ts` 34,
+  `crateOrder.test.ts` 8, `constants.test.ts` 21; updated:
+  `useTileStore.test.ts`, `useSettingsStore.test.ts`, `useLayoutStore.test.ts`
+  for the new store shapes/behavior), `pnpm build` + `pnpm check-bundle`
+  (484.9 KB gzip entry chunk, budget 550 KB — RGL v2's modern API didn't move
+  the needle meaningfully), `go vet ./...`, `wails generate module` (only
+  `wailsjs/go/models.ts` changed — `CrateOrder []string` on `AppSettings`).
+  Manual `wails dev` walkthrough: dragging an existing tile pushes/floats
+  neighbours; dragging a crate tile over the canvas shows the identical
+  animated ghost, sized to the space it's hovering over; releasing outside
+  the canvas cancels; reordering within the navbar persists across restart;
+  dragging an already-active tile only reorders (no ghost); removing a tile
+  closes the gap; resizing respects the `sm`-bucket floor; all 4 presets load
+  correctly; maximize/restore and the flash-ring both still work unchanged.
+
+**P1 — Tile grid: crate-drag placement fixed (the above shipped broken)**
+- The previous entry's manual walkthrough claimed dragging a crate tile shows
+  a smooth animated ghost that sizes to the space it's hovering over. In
+  practice: the hover rectangle jumped around, usually snapping to the very
+  bottom of the grid or back to wherever it was previously, and it almost
+  never resized to fit — reported directly against a `wails dev` session,
+  contradicting that walkthrough. Four real causes, one design constraint
+  that was simply the wrong choice:
+  1. ✅ **`static: true` on the ghost poisoned `verticalCompactor`.**
+     `compact()` seeds its scan with `maxY = bottom(getStatics(layout))`;
+     with no statics that's correctly `0`. The static ghost made it
+     `ghost.y + ghost.h`, so on *every* pointer-move frame the entire board
+     got yanked to a ceiling that moved with the cursor — the violent
+     jumping. RGL's own external-drop code pointedly sets `static: false` on
+     its dropping item; the previous session missed that.
+  2. ✅ **`fitBucket` collapsed to `sm` over any occupied cell.**
+     `freeRunAt` returns `0` when the start cell is occupied, no bucket
+     matched, and it fell through to the `sm` floor — and most of a
+     populated board *is* occupied, hence "never resizes".
+  3. ✅ **Three geometry sources that could disagree.** The preview measured
+     `mergedLayout`, the screen showed RGL's internally-recompacted layout,
+     and the drop recomputed a third time from `currentLayout` at the
+     `mouseup` coordinates (which can differ, even if only by a subpixel,
+     from the last `mousemove`'s).
+  4. ✅ **No cursor-following element.** Native RGL always pairs a dragged
+     item (pixel-positioned under the pointer) with a snapped placeholder at
+     the landing spot. Only the snapped ghost survived the previous session;
+     with nothing tracking the cursor, a ghost that snapped far away read as
+     disconnected from the drag entirely.
+  - **The design constraint, not a bug:** under `verticalCompactor`, a
+    dragged tile can never rest on an arbitrary cell — it always floats to
+    the topmost free row. That's what "only snaps to a specific view" was:
+    the compaction model working as designed, just fixed to be honest about
+    it. Confirmed with the user this wasn't the wanted behavior at all.
+- ✅ **Switched the grid to free placement + push.** `gridSizing.ts` exports
+  `GRID_COMPACTOR = noCompactor` (`type: null`); `Dashboard.tsx`'s
+  `<GridLayout>` uses it directly. A tile now stays exactly where it's
+  dropped or dragged; react-grid-layout's own `moveElementAwayFromCollision`
+  has an explicit `compactType === null` branch that pushes a collider down
+  rather than blocking the move, confirmed by direct probing with a small
+  throwaway Node script against the installed package (not just reading the
+  source — see below for why that mattered here). Removing a tile no longer
+  relies on compaction to close its hole, so `lib/layout.ts`'s
+  `collapseEmptyRows` (deleted in the prior session as apparently
+  superseded) came back from git history, wired into `Dashboard.tsx`'s new
+  `handleRemoveTile` — conservative by design: only fully-empty rows
+  collapse, nothing repacks sideways. A newly-active tile with no saved
+  position (click-add, shift-click) now needs an actual free-slot search
+  (`gridSizing.ts`'s new `findFreeSlot`, effectively the `findBestPosition`
+  deleted the same session) since there's no compactor left to rescue a bad
+  placement afterward.
+- ✅ **`lib/dropPreview.ts` (new): a hand-rolled cascade-push resolver,
+  deliberately not `moveElement`.** The plan going in was to seed the ghost
+  below everything and call react-grid-layout's own `moveElement` to move it
+  to the target, reusing the library's own collision resolution. Empirically
+  probed three cases against the installed package before writing this:
+  `moveElement` handles a single collision and two *simultaneous* collisions
+  correctly (ghost stays at target, colliders pushed below it) — but a
+  **cascaded** collision (pushing item A down into item C, which needed to
+  move too) left A and C overlapping, because `moveElement`'s collision list
+  is computed once up front and not everywhere re-verified after a push.
+  Also independently confirmed the seed-at-target trap the plan called out:
+  `moveElement` early-returns with no collision resolution at all when the
+  item is already at `(x, y)`. Given a real cascade bug, `previewDrop()` is a
+  ~20-line self-contained resolver instead: place the ghost, then walk items
+  sorted top-to-bottom pushing each one below anything already-settled it
+  collides with (ghost included) — terminates because a pushed item's `y`
+  only ever increases, bounded by the settled set's max bottom edge.
+  `dropPreview.test.ts` (12 tests) locks in the specific case `moveElement`
+  got wrong (a 2-level cascade) alongside the simpler ones, plus
+  no-mutation and clamping. This is why the empirical probe mattered more
+  than reading react-grid-layout's source here: a plausible-looking branch
+  (`if (collisionNorth && compactType === null)`) does the right thing for
+  the simple case and silently doesn't cascade — reading the code predicted
+  the opposite of what it actually does once mutation order is accounted
+  for.
+- ✅ **One source of truth for the drop, actually enforced.** `Dashboard.tsx`
+  now mirrors the live-render's `dropCell`/`previewLayout` into a ref on
+  every render; `onUp` commits that ref's layout verbatim (renaming the
+  ghost's `i` to the real tile id) instead of recomputing `pointerToCell`
+  from the `mouseup` event's own coordinates. The preview shown and the
+  layout committed are now the same array, not two separately-computed ones
+  that happen to usually agree.
+- ✅ **Geometry now measures the actual grid, not the scroll wrapper.**
+  `pointerToCell` used to hand-correct for `canvasRef.scrollTop` against the
+  *scrollable viewport's* rect. Replaced with `GridLayout`'s `innerRef`
+  pointed at the real `.react-grid-layout` container and matched RGL's own
+  `handleDragOver` approach: measure against the grid container's own rect,
+  which already moves with scroll, so the manual `scrollTop` arithmetic (a
+  latent source of drift) is gone. The scrollable viewport (`canvasRef`) is
+  now used only for the "is the pointer over the visible canvas" hit-test,
+  which needs the *clipped* viewport, not the full (possibly scrolled-off)
+  grid extent.
+- ✅ **Two-pass sizing, with an explicit occupied-cell fallback.**
+  `fitBucket` gained a `fallback: SizeBucket` parameter (default `'md'`):
+  when the hovered cell is already occupied — the common case — it returns
+  the tile's own default bucket instead of collapsing through lg→md→sm to
+  the smallest size, since free placement pushes the occupant aside
+  regardless. `pointerToCell` computes a provisional cell anchored on the
+  tile's default bucket, asks `fitBucket` what actually fits there, then
+  recomputes the cell centered for the *chosen* bucket's real dimensions
+  (a bigger or smaller box centers differently under the cursor than the
+  anchor did).
+- ✅ **Restored the cursor-following wireframe** alongside the snapped
+  ghost/placeholder — deleted in the prior session on the theory that the
+  in-layout ghost alone was sufficient. It wasn't: when the snapped ghost
+  jumps to a distant cell there needs to be something under the pointer
+  connecting the drag to the hand doing it. Restyled the ghost/placeholder
+  itself to match `.react-grid-placeholder` (`--hover-surface` fill,
+  hairline `--border-subtle`, 10px radius) rather than the accent-highlight
+  styling it had, so a crate-drag and a real tile-drag read as the same
+  system, which was the point of this feature from the start.
+- ✅ **Undid the previous session's load-time compaction.** `useLayoutStore`'s
+  `compacted()` helper — added so a gapped saved layout would match a
+  compacting renderer — now actively destroys user layouts under free
+  placement, which preserves gaps by design. Removed, along with its two
+  tests; replaced with one asserting a gapped layout loads **unchanged**.
+- ✅ **`Default` preset had a 3×8 empty void that used to be invisible.**
+  `server-config` (w3) followed by `mods` stacked below it (w4) left a
+  24-cell rectangular gap that `verticalCompactor` silently closed on every
+  render — real under free placement, since nothing pulls tiles up anymore.
+  Re-authored `mods` to sit beside `server-config` (sm bucket, matching the
+  pattern `Console Focus` already used), matching `constants.ts`'s own
+  updated header comment: presets render exactly as authored now, so a
+  large unfilled block is a real visual defect, not something to leave for
+  the compactor.
+- **Verification:** `pnpm typecheck`, `pnpm lint` (0 errors; same
+  pre-existing warning set as the prior entry), `pnpm test` (new:
+  `dropPreview.test.ts` 12; extended: `gridSizing.test.ts` to 18 for the
+  fallback + `findFreeSlot`, `layout.test.ts` restored at 7; updated:
+  `useLayoutStore.test.ts` for the free-placement load behavior;
+  `constants.test.ts`'s existing 21 re-verified against the tightened
+  `Default` preset), `go vet ./...`. Manual verification used synthetic
+  mouse events dispatched against a bare `pnpm dev` session (this sandbox
+  can't drive `wails dev`'s native window) with `window.go.main.App` stubbed
+  so the Wails-less `.catch()` paths don't swallow the drop — confirmed the
+  ghost tracks the pointer continuously without jumping, lands where shown,
+  sizes correctly across free/occupied/tight space, and a low-row drop
+  no longer floats to the top.
+
+**P1 — Tile grid: crate-drag placement, rebuilt (the above shipped broken too)**
+- The previous entry's manual verification — synthetic mouse events against a
+  bare `pnpm dev` session — passed clean. Real `wails dev` usage (screenshots
+  attached directly to the report) showed it wasn't: tiles created whitespace
+  that never closed, tiles landed on top of each other, and a dragged-in
+  tile's size jumped between fitting/original/biggest with no clear pattern.
+  Worth being honest about why the sandboxed pass missed this rather than
+  papering over it: synthetic-event testing confirmed the mechanics worked in
+  the specific scenarios it tried, but a bare Vite session has no Wails
+  bridge and can't reproduce whatever the real native-window interaction
+  pattern hit. That gap is a real limit of that testing approach, not
+  something this fix changes — flagging it so a future session doesn't trust
+  a clean sandboxed pass alone again either.
+- ✅ **Root cause: `compactType: null` (free placement) is a known-bad mode of
+  react-grid-layout itself**, not one more bug to patch. Confirmed against
+  the upstream issue tracker, matching the symptoms verbatim:
+  - [#1982](https://github.com/react-grid-layout/react-grid-layout/issues/1982) —
+    "with `compactType={null}`, if one item is dragged on top of another, the
+    second item gets pushed down vertically way too far and there is a large
+    gap." The whitespace-that-never-closes symptom, exactly.
+  - [#2161](https://github.com/react-grid-layout/react-grid-layout/issues/2161) —
+    a newly-added item in `null` compactType "incorrectly appears at position
+    x:0, y:0 and overlaps existing widgets." The overlap symptom, exactly.
+  - [#2131](https://github.com/react-grid-layout/react-grid-layout/issues/2131) —
+    unexpected Y-axis movement specifically in `compactType={null}`.
+  Reading `moveElementAwayFromCollision` explains why: its
+  `compactType === null` branch resolves a collision by reassigning positions
+  directly, with **no recursive re-verification** — confirmed empirically the
+  previous session (a 2-level cascade left two items overlapping), which is
+  exactly why that session's `dropPreview.ts` existed at all, hand-rolling a
+  cascade-push resolver to route *around* the bug for the crate-drop path
+  only. Its own docstring says as much. What it didn't say: native
+  drag/resize of an *existing* tile was never routed through that
+  workaround — it went straight through the same buggy stock `moveElement`
+  path the whole time. That's the overlap bug the screenshots showed for
+  plain tile-to-tile dragging, not just crate-drops.
+  `compactType === 'vertical'`'s equivalent branch, by contrast, recurses
+  back into `moveElement`, so a cascaded collision actually resolves.
+- ✅ **Switched the grid to `verticalCompactor`** — react-grid-layout's
+  default and by far its most-used, best-tested mode — via
+  `gridSizing.ts`'s `GRID_COMPACTOR`, imported everywhere a compactor is
+  needed (the grid itself, `useLayoutStore`'s load-time normalization) so
+  there's exactly one place that decides it. The accepted trade, made
+  explicitly this time rather than assumed: a dragged tile always floats to
+  the topmost open row now: it can't rest at an arbitrary row the way free
+  placement could. Given free placement is proven buggy at the library
+  level, this is the right trade — and paired with the next change, "floats
+  to the top" costs much less than it would have with wildly different tile
+  sizes.
+- ✅ **Every tile is now one uniform size** (`gridSizing.ts`'s
+  `TILE_SIZE`/`TILE_MIN`/`TILE_MAX`), replacing the `sm`/`md`/`lg`
+  per-tile bucket system entirely — not just a preference, it deletes an
+  entire class of code that was actively wrong. That system existed solely
+  to answer "what size should this dragged tile become at this spot?", and
+  `fitBucket` (the function answering it) was evaluated against the
+  *resting* layout, not the live mid-drag preview — so as other tiles
+  visually shifted under the cursor, the bucket choice flickered against a
+  base that no longer matched the screen. That's the "jumps between sizes"
+  symptom. Uniform sizing makes the question moot: there is no bucket to
+  pick.
+  - Deleted outright, all now genuinely dead rather than merely
+    superseded: `lib/dropPreview.ts` + its test (the free-placement
+    workaround, moot once the grid isn't in that mode), `lib/gridSizing.ts`'s
+    `SizeBucket`/`BUCKET_ORDER`/`ALLOWED_W`/`ALLOWED_H`/`TileSizes`/
+    `isColFree`/`freeRunAt`/`fitBucket`/`findFreeSlot`, and — for the second
+    time, this time with the reasoning actually verified rather than
+    assumed — `lib/layout.ts`'s `collapseEmptyRows` (traced
+    `compactItemVertical`'s sweep: vertical compaction repacks the *entire*
+    layout upward on every layout-prop change, including a tile's removal,
+    so a manual gap-closer is redundant by construction, not by
+    assumption).
+  - `types/index.ts`'s `TileDefinition` and every entry in `registry.ts`
+    dropped `sizes`/`defaultBucket` — a tile declaration is now just
+    `{ id, label, icon, maximizable?, component }`, simpler than before the
+    bucket system ever existed and with no sizing decision left to make.
+  - `Dashboard.tsx`'s `pointerToCell` lost its `tile` parameter and the
+    two-pass bucket-fitting dance (anchor on default bucket → `fitBucket` →
+    recenter on the chosen bucket): there's one size now, so it's a single
+    `cellAt()` call. It's also no longer a `useCallback` at all — since it's
+    only ever invoked synchronously during render (not from the stable
+    window-listener effect), it can just be a plain function closing over
+    the current render's `positionParams` directly, which also removed the
+    `geomRef` ref-mirroring it existed for.
+  - The crate-drag ghost still lives in the same layout array real tiles
+    render from (kept from the free-placement round) and is still explicitly
+    `static: false` — the flag that poisoned `verticalCompactor`'s scan the
+    *first* time this grid used compaction, two sessions ago
+    (`maxY = bottom(getStatics(layout))` gets corrupted by a static item).
+    New this round: the combined array is compacted **in `Dashboard.tsx`'s
+    own code** via `GRID_COMPACTOR.compact()` before being handed to
+    `<GridLayout>`, rather than trusting react-grid-layout's internal
+    (invisible-to-us) sync effect alone — `compact()` is a pure function of
+    its input, so compacting twice (once here, once again internally for
+    display) is idempotent, and it's what lets the ref mirroring "what was
+    just previewed" for the on-drop commit hold the *actual* landing
+    positions instead of a pre-compaction shape that only looked right once
+    react-grid-layout's own internal state caught up.
+- ✅ **Presets re-authored around uniform sizing.** Hand-placing 44 `x/y/w/h`
+  values stopped making sense once every tile is the same size — replaced
+  with a `tileGrid()` generator (row-major, wraps at `COLS`) driven by an
+  ordered id list and a size, relying on load-time compaction to settle the
+  result. `Compact` now legitimately authors at `TILE_MIN` instead of
+  `TILE_SIZE`, demonstrating the shared resize range does something, rather
+  than being a second copy of `Default`. `Essentials` keeps its deliberately
+  small 6-tile subset.
+- ✅ **Load-time compaction restored** in `useLayoutStore` (`compacted()`,
+  removed the previous session when the grid was on free placement) —
+  correct again now that the renderer compacts; a saved layout with gaps
+  needs to match on load, not just after the user's next drag.
+- **Verification:** `pnpm typecheck`, `pnpm lint` (0 errors), `pnpm test`.
+  `gridSizing.test.ts` shrank to sanity checks on the size constants
+  (min ≤ default ≤ max, default fits within `COLS`) now that there's no
+  fitting algorithm left to test; `registry.test.ts` shrank to a
+  no-duplicate-ids check; `dropPreview.test.ts` deleted with its subject;
+  `useLayoutStore.test.ts` restored its two compaction-on-load cases;
+  `constants.test.ts` updated for the regenerated presets (uniform-size
+  membership instead of bucket membership, plus the existing
+  overlap/in-bounds/no-duplicate-ids/full-coverage checks). Manual
+  verification: synthetic-event pass (same technique as before, still
+  useful for catching gross breakage) extended to assert no overlaps and no
+  uncollapsed gaps in code rather than "it looked right" — plus dragging
+  *existing* tiles around the board (the path that was never fixed the
+  previous round), removing tiles, resizing at both ends of the min–max
+  range, and switching between all 4 presets. Given the sandboxed pass's
+  track record so far, this round's fix is not considered closed until
+  confirmed against a real `wails dev` session.
+
+### P1 — Tile grid: right-hand cells unreachable from the crate
+
+Reported against the rebuild above, from a real `wails dev` session: a tile
+dragged in from the crate refused to land on the right-hand side of a row. The
+green cursor wireframe sat over the top-right cell while the grey snapped
+placeholder dropped to the row *below*, "underneath whatever tile is in the
+way". Dragging an already-placed tile onto that same cell worked fine.
+
+- **Root cause — an asymmetry between the two drop paths, not the geometry.**
+  The pointer→cell math was correct throughout: the screenshot's grid measured
+  exactly `COLS = 6`, `ROW_HEIGHT = 40`, 3×8 tiles (594×404 px, 202 px column
+  step), and the pointer at the far right resolved to `x = 3` as it should.
+  What differed was collision resolution. A native tile drag routes through
+  react-grid-layout's `moveElement`, which pushes the *occupant* out of the
+  way. The crate ghost was instead appended to the layout and the whole array
+  handed to `compact()` — and compaction resolves contention by sort order
+  (y, then x), so the ghost lost to anything above or to its left and was the
+  one shoved down. In the reported board a tile sat at `x = 1`, straddling
+  columns 1–3; the ghost's only legal rightmost position is `x = 3`
+  (`calcXY` clamps to `cols - w`), which overlaps at column 3 — so every
+  attempt at the top-right was pushed to `y = 8`. Columns 4–5 alone are two
+  wide and can never hold a 3-wide tile, which is why the right-hand side felt
+  unreachable rather than merely awkward.
+- ✅ **Fixed in `lib/gridSizing.ts`'s new `withGhost()`**, which Dashboard's
+  `previewLayout` now calls: items the ghost overlaps are moved below it
+  *before* compacting. That only flips the sort order; the compactor still
+  performs all the actual collision resolution and pulls the displaced tiles
+  back up as far as they legitimately fit. The ghost is the item under the
+  user's hand, so it takes the cell and the occupants yield — the same
+  semantics a native drag already had.
+- **Rejected: reusing `moveElement` directly** for the ghost, which would have
+  been the more library-native fix. Its push heuristic depends on the small
+  frame-to-frame deltas of a real drag; entering the ghost at the bottom of the
+  layout and moving it to the hovered cell in one jump makes the item and its
+  collider ping-pong a row at a time, and the ghost loses. Measured over 4000
+  random boards it placed the ghost correctly in only ~29% of cases, against
+  100% for the ordering fix.
+- **Verification:** `pnpm typecheck`, `pnpm lint` (0 errors, 129 pre-existing
+  inline-style warnings), `pnpm test` (249 passing). `gridSizing.test.ts` gained
+  the regression case (a straddling tile no longer blocks the top-right cell),
+  displacement, free-cell, column-preservation and second-compaction-is-a-no-op
+  cases; `constants.test.ts` dropped its private overlap predicate in favour of
+  the now-shared `collides`. Property-checked over 5000 random boards: no
+  overlaps, the ghost always keeps the hovered column, and it is never sunk
+  below the hovered row. Browser pass drove the real crate-drag path
+  end-to-end (plain window listeners, no react-draggable synthesis) and
+  confirmed for every drop that the committed position equals the previewed
+  one, with zero overlaps and zero gap rows — including the reported board
+  shape, a tile deliberately straddling columns 1–3 and then a drop onto the
+  top-right cell.
+- **Note on the harness, not the app:** with `window.go` absent (a bare `vite`
+  session), `persistActiveLayout`'s binding call throws *synchronously*, so its
+  `.catch()` never attaches and the throw escapes react-grid-layout's
+  `onDragStop`, leaving `setActiveDrag(null)`/`setLayout()` unrun — a stuck
+  placeholder and a visibly overlapping board. Not reachable in the packaged
+  app, where the bridge always exists; noted so the symptom isn't mistaken for
+  a grid bug next time. Tracked as a robustness follow-up.

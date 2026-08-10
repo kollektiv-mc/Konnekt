@@ -62,7 +62,7 @@ stack and gopsutil's per-OS backends).
 |---|---|
 | `react`, `react-dom` | UI framework |
 | `zustand` | Per-domain state stores (`CLAUDE.md`'s "one Zustand store per domain" rule) |
-| `react-grid-layout` | Tile drag/resize/snap grid system |
+| `react-grid-layout` | Tile drag/resize grid system — used via its v2 modern API (`GridLayout`, `useContainerWidth`, `verticalCompactor` — its default, best-tested mode), not the `/legacy` v1-compat wrapper and not `noCompactor` free placement (tried and abandoned — see `agent_docs/HEALTH_LOG.md`'s "crate-drag placement, rebuilt" for the upstream-confirmed bugs that ruled it out) |
 | `recharts` | Performance-tile charts, lazy-loaded (`tiles/performance/charts.tsx`) |
 | `three`, `@react-three/fiber`, `@react-three/drei`, `@react-three/postprocessing`, `postprocessing` | Worlds tile's 3D planetary scene, lazy-loaded (`tiles/worlds/scene/`) |
 | `@xyflow/react` | Node-graph editor for the scheduler tile's block system (`tiles/scheduler/editor/`) |

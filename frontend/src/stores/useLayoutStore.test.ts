@@ -69,6 +69,36 @@ describe('useLayoutStore', () => {
       expect(useLayoutStore.getState().presets).toEqual(DEFAULT_LAYOUT_PRESETS)
       expect(useLayoutStore.getState().activePresetName).toBe('Default')
     })
+
+    it('compacts a gapped saved layout so it matches the (also-compacting) render', async () => {
+      // 'b' sits 3 empty rows below 'a' — Dashboard renders with vertical
+      // compaction, so the persisted layout must match that on load rather
+      // than only after the user's first drag.
+      const gapped = JSON.stringify([
+        { i: 'a', x: 0, y: 0, w: 2, h: 2 },
+        { i: 'b', x: 0, y: 5, w: 2, h: 2 },
+      ])
+      vi.mocked(App.GetActiveLayout).mockResolvedValue(gapped)
+      await useLayoutStore.getState().loadPresets()
+      expect(useLayoutStore.getState().currentLayout).toEqual([
+        { i: 'a', x: 0, y: 0, w: 2, h: 2 },
+        { i: 'b', x: 0, y: 2, w: 2, h: 2 },
+      ])
+    })
+
+    it('passes through entries with a non-finite y unchanged rather than compacting them', async () => {
+      // 'stale' has no y at all (JSON can't round-trip NaN/Infinity as
+      // numbers — a missing field is the realistic stand-in for corrupt data).
+      const withStale = JSON.stringify([
+        { i: 'a', x: 0, y: 5, w: 2, h: 2 },
+        { i: 'stale', x: 0, w: 2, h: 2 },
+      ])
+      vi.mocked(App.GetActiveLayout).mockResolvedValue(withStale)
+      await useLayoutStore.getState().loadPresets()
+      const { currentLayout } = useLayoutStore.getState()
+      expect(currentLayout.find((l) => l.i === 'a')).toEqual({ i: 'a', x: 0, y: 0, w: 2, h: 2 })
+      expect(currentLayout.find((l) => l.i === 'stale')).toEqual({ i: 'stale', x: 0, w: 2, h: 2 })
+    })
   })
 
   describe('savePreset', () => {
@@ -170,6 +200,18 @@ describe('useLayoutStore', () => {
       useLayoutStore.getState().updateLayout(layout)
       expect(useLayoutStore.getState().currentLayout).toEqual(layout)
       expect(App.SaveActiveLayout).toHaveBeenCalledWith(JSON.stringify(layout))
+    })
+
+    it('still updates currentLayout without throwing when the binding throws synchronously', () => {
+      // The generated Wails binding dereferences window.go eagerly, so it
+      // throws synchronously (not a rejected promise) when window.go is
+      // undefined, e.g. outside the packaged app.
+      vi.mocked(App.SaveActiveLayout).mockImplementation(() => {
+        throw new TypeError("Cannot read properties of undefined (reading 'main')")
+      })
+      const layout = [{ i: 'y', x: 0, y: 0, w: 1, h: 1 } as LayoutItem]
+      expect(() => useLayoutStore.getState().updateLayout(layout)).not.toThrow()
+      expect(useLayoutStore.getState().currentLayout).toEqual(layout)
     })
   })
 })

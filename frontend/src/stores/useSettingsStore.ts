@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import type { AppSettings } from '../types'
 import { applySkin, BUILTIN_SKINS } from '../lib/theme'
 import { STATUS_DEFAULTS } from '../styles/tokens'
+import { normalizeCrateOrder, reorderWithinGroup } from '../lib/crateOrder'
 import { GetAppSettings, SaveAppSettings } from '../../wailsjs/go/main/App'
 
 // One colour is stored per role for both themes, seeded from the dark defaults.
@@ -25,6 +26,7 @@ const DEFAULTS: AppSettings = {
   schedulerPaletteClosedCategories: {},
   consoleQuickCommandsCollapsed: false,
   checkUpdatesOnStartup: true,
+  crateOrder: [],
 }
 
 interface SettingsStore {
@@ -32,6 +34,7 @@ interface SettingsStore {
   loaded: boolean
   load: () => Promise<void>
   update: (patch: Partial<AppSettings>) => Promise<void>
+  reorderCrate: (id: string, toIndex: number, groupIds: ReadonlySet<string>) => void
 }
 
 const validThemes = ['light', 'dark', 'system'] as const
@@ -64,6 +67,11 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
     } catch {
       /* non-Wails context */
     }
+    // Normalized unconditionally (not just on the GetAppSettings success path)
+    // so reorderCrate always has a full permutation to operate on — leaving it
+    // `[]` after a failed/no-bridge load would silently drop tiles from any
+    // reorder performed before the next successful load.
+    settings = { ...settings, crateOrder: normalizeCrateOrder(settings.crateOrder) }
     applySkin(settings)
     set({ settings, loaded: true })
   },
@@ -77,5 +85,10 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
     } catch {
       /* best-effort */
     }
+  },
+
+  reorderCrate: (id, toIndex, groupIds) => {
+    const { crateOrder } = get().settings
+    get().update({ crateOrder: reorderWithinGroup(crateOrder, groupIds, id, toIndex) })
   },
 }))

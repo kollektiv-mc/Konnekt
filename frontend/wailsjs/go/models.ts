@@ -18,6 +18,7 @@ export namespace models {
 	    schedulerPaletteClosedCategories: Record<string, boolean>;
 	    consoleQuickCommandsCollapsed: boolean;
 	    checkUpdatesOnStartup: boolean;
+	    crateOrder: string[];
 	
 	    static createFrom(source: any = {}) {
 	        return new AppSettings(source);
@@ -42,6 +43,7 @@ export namespace models {
 	        this.schedulerPaletteClosedCategories = source["schedulerPaletteClosedCategories"];
 	        this.consoleQuickCommandsCollapsed = source["consoleQuickCommandsCollapsed"];
 	        this.checkUpdatesOnStartup = source["checkUpdatesOnStartup"];
+	        this.crateOrder = source["crateOrder"];
 	    }
 	}
 	export class AttrValue {

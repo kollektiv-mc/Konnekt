@@ -24,4 +24,7 @@ type AppSettings struct {
 	ConsoleQuickCommandsCollapsed bool `json:"consoleQuickCommandsCollapsed"`
 
 	CheckUpdatesOnStartup bool `json:"checkUpdatesOnStartup"`
+
+	// Display order of the tile crate's navbar list, by tile registry id.
+	CrateOrder []string `json:"crateOrder"`
 }
