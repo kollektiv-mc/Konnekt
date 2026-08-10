@@ -99,7 +99,13 @@ wails build              # Production build smoke test
       entry chunk, ~12% headroom over the measured post-split size), checked
       in CI (`frontend/scripts/check-bundle-size.mjs`, `pnpm check-bundle`).
 - [ ] `frontend/src/tiles/registry.ts` was extended, not restructured, when
-      new tiles were added.
+      new tiles were added. (Two sanctioned exceptions while the tile grid's
+      placement model was under active repair — see HEALTH_LOG.md: loose
+      per-tile `defaultW`/`defaultH`/`minW`/`minH` numbers became an
+      `sm`/`md`/`lg` bucket shape, then that shape was removed outright —
+      every tile now shares one size from `lib/gridSizing.ts`, and a
+      `TileDefinition` entry is just `{ id, label, icon, maximizable?,
+      component }`. The rule applies fully to that shape going forward.)
 - [ ] Each Zustand store still owns exactly one domain — no cross-domain state
       mixing creeping in.
 - [ ] Go structs in `backend/models/` remain the single source of truth for

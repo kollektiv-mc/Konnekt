@@ -19,6 +19,7 @@ export interface AppSettings {
   schedulerPaletteClosedCategories: Record<string, boolean>
   consoleQuickCommandsCollapsed: boolean
   checkUpdatesOnStartup: boolean
+  crateOrder: string[]
 }
 
 export interface TileProps {
@@ -30,10 +31,6 @@ export interface TileDefinition {
   id: string
   label: string
   icon: string
-  defaultW: number
-  defaultH: number
-  minW: number
-  minH: number
   maximizable?: boolean
   component: FC<TileProps>
 }

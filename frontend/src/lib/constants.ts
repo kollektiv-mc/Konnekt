@@ -1,3 +1,5 @@
+import { TILE_SIZE, TILE_MIN } from './gridSizing'
+
 export const DEFAULT_SERVER_ID = 'default'
 
 export const EVENTS = {
@@ -27,67 +29,83 @@ export const EVENTS = {
   UPDATE_PROGRESS: 'update:progress',
 } as const
 
+export const COLS = 6
+export const ROW_HEIGHT = 40
+
+// Every tile is the same size (see lib/gridSizing.ts's TILE_SIZE/TILE_MIN),
+// so a preset only needs to say *which* tiles and in *what order* — lay them
+// out row-major (wrapping at COLS) and let load-time compaction
+// (useLayoutStore's `compacted()`) settle the exact result. Hand-placing
+// x/y/w/h per tile stopped being meaningful the moment sizing went uniform.
+function tileGrid(ids: readonly string[], size: { w: number; h: number }): string {
+  const perRow = Math.max(1, Math.floor(COLS / size.w))
+  return JSON.stringify(
+    ids.map((i, idx) => ({
+      i,
+      x: (idx % perRow) * size.w,
+      y: Math.floor(idx / perRow) * size.h,
+      w: size.w,
+      h: size.h,
+    })),
+  )
+}
+
+const ALL_TILE_IDS = [
+  'console',
+  'stats',
+  'players',
+  'quick-commands',
+  'performance',
+  'scheduler',
+  'worlds',
+  'backups',
+  'server-config',
+  'notifications',
+  'mods',
+] as const
+
 export const DEFAULT_LAYOUT_PRESETS = [
   {
     name: 'Default',
-    layout: JSON.stringify([
-      { i: 'console', x: 0, y: 0, w: 3, h: 13 },
-      { i: 'quick-commands', x: 3, y: 0, w: 1, h: 6 },
-      { i: 'players', x: 4, y: 0, w: 2, h: 6 },
-      { i: 'performance', x: 3, y: 6, w: 3, h: 6 },
-      { i: 'stats', x: 3, y: 12, w: 1, h: 4 },
-      { i: 'scheduler', x: 4, y: 12, w: 2, h: 4 },
-      { i: 'notifications', x: 0, y: 13, w: 3, h: 3 },
-      { i: 'worlds', x: 0, y: 16, w: 3, h: 6 },
-      { i: 'backups', x: 3, y: 16, w: 3, h: 6 },
-      { i: 'server-config', x: 0, y: 22, w: 6, h: 5 },
-    ]),
+    layout: tileGrid(ALL_TILE_IDS, TILE_SIZE),
   },
   {
     name: 'Console Focus',
-    layout: JSON.stringify([
-      { i: 'console', x: 0, y: 0, w: 5, h: 15 },
-      { i: 'quick-commands', x: 5, y: 0, w: 1, h: 11 },
-      { i: 'stats', x: 5, y: 11, w: 1, h: 4 },
-      { i: 'notifications', x: 0, y: 15, w: 2, h: 2 },
-      { i: 'performance', x: 2, y: 15, w: 2, h: 2 },
-      { i: 'players', x: 4, y: 15, w: 2, h: 2 },
-      { i: 'server-config', x: 0, y: 17, w: 3, h: 8 },
-      { i: 'scheduler', x: 3, y: 17, w: 3, h: 8 },
-      { i: 'backups', x: 0, y: 25, w: 3, h: 6 },
-      { i: 'worlds', x: 3, y: 25, w: 3, h: 6 },
-    ]),
+    layout: tileGrid(
+      [
+        'console',
+        'quick-commands',
+        'stats',
+        'notifications',
+        'performance',
+        'players',
+        'scheduler',
+        'worlds',
+        'backups',
+        'server-config',
+        'mods',
+      ],
+      TILE_SIZE,
+    ),
   },
   {
+    // Same 11 tiles as Default, authored at the shared minimum size instead
+    // of the standard one — demonstrates the min..max resize range actually
+    // does something, rather than just being a second copy of Default.
     name: 'Compact',
-    layout: JSON.stringify([
-      { i: 'console', x: 0, y: 0, w: 3, h: 10 },
-      { i: 'stats', x: 3, y: 0, w: 1, h: 4 },
-      { i: 'players', x: 4, y: 0, w: 2, h: 4 },
-      { i: 'performance', x: 3, y: 4, w: 3, h: 4 },
-      { i: 'notifications', x: 3, y: 8, w: 3, h: 2 },
-      { i: 'quick-commands', x: 0, y: 10, w: 3, h: 4 },
-      { i: 'worlds', x: 3, y: 10, w: 3, h: 3 },
-      { i: 'scheduler', x: 3, y: 13, w: 3, h: 3 },
-      { i: 'server-config', x: 0, y: 14, w: 3, h: 5 },
-      { i: 'backups', x: 3, y: 16, w: 3, h: 3 },
-    ]),
+    layout: tileGrid(ALL_TILE_IDS, TILE_MIN),
   },
   {
+    // Deliberately a small curated subset (not all 11 tiles) — that's the
+    // point of "essentials". Only Default/Console Focus/Compact aim for
+    // full coverage.
     name: 'Essentials',
-    layout: JSON.stringify([
-      { i: 'console', x: 0, y: 0, w: 3, h: 16 },
-      { i: 'quick-commands', x: 3, y: 0, w: 2, h: 4 },
-      { i: 'stats', x: 5, y: 0, w: 1, h: 4 },
-      { i: 'performance', x: 3, y: 4, w: 3, h: 4 },
-      { i: 'players', x: 3, y: 8, w: 3, h: 4 },
-      { i: 'notifications', x: 3, y: 12, w: 3, h: 4 },
-    ]),
+    layout: tileGrid(
+      ['console', 'quick-commands', 'stats', 'performance', 'players', 'notifications'],
+      TILE_SIZE,
+    ),
   },
 ]
-
-export const COLS = 6
-export const ROW_HEIGHT = 40
 
 // Mirrors loaderTargetFolder() in backend/services/modservice.go
 export const PLUGIN_LOADERS = ['paper', 'spigot', 'bukkit', 'purpur', 'velocity'] as const

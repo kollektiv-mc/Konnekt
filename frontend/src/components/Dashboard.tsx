@@ -1,6 +1,12 @@
 import { useEffect, useMemo, useCallback, useRef, useState, Fragment, useLayoutEffect } from 'react'
-import { ReactGridLayout } from 'react-grid-layout/legacy'
+import { GridLayout, useContainerWidth, bottom } from 'react-grid-layout'
 import type { LayoutItem } from 'react-grid-layout'
+import {
+  calcXY,
+  calcGridColWidth,
+  calcGridItemWHPx,
+  type PositionParams,
+} from 'react-grid-layout/core'
 import 'react-grid-layout/css/styles.css'
 import { useTileStore } from '../stores/useTileStore'
 import { useLayoutStore } from '../stores/useLayoutStore'
@@ -9,56 +15,12 @@ import { useUiStore } from '../stores/useUiStore'
 import { TILE_REGISTRY } from '../tiles/registry'
 import { TileWrapper } from '../tiles/TileWrapper'
 import { COLS, ROW_HEIGHT } from '../lib/constants'
-
-function findBestPosition(
-  occupied: readonly LayoutItem[],
-  w: number,
-  h: number,
-  cols: number,
-): { x: number; y: number } {
-  const valid = occupied.filter((l) => isFinite(l.y))
-  for (let y = 0; y < 500; y++) {
-    for (let x = 0; x <= cols - w; x++) {
-      const fits = !valid.some((l) => x < l.x + l.w && x + w > l.x && y < l.y + l.h && y + h > l.y)
-      if (fits) return { x, y }
-    }
-  }
-  const maxY = valid.reduce((m, l) => Math.max(m, l.y + l.h), 0)
-  return { x: 0, y: maxY }
-}
-
-// Resolve a desired drop cell to the nearest free cell so a dropped tile never
-// lands on top of an existing one. RGL seeds the dropping item without a
-// collision check, so we guard the final placement here.
-function resolveDropCell(
-  occupied: readonly LayoutItem[],
-  desiredX: number,
-  desiredY: number,
-  w: number,
-  h: number,
-  cols: number,
-): { x: number; y: number } {
-  const valid = occupied.filter((l) => isFinite(l.y))
-  const fits = (x: number, y: number) =>
-    x >= 0 &&
-    x <= cols - w &&
-    y >= 0 &&
-    !valid.some((l) => x < l.x + l.w && x + w > l.x && y < l.y + l.h && y + h > l.y)
-  if (fits(desiredX, desiredY)) return { x: desiredX, y: desiredY }
-  for (let r = 1; r < 100; r++) {
-    for (let dy = -r; dy <= r; dy++) {
-      for (let dx = -r; dx <= r; dx++) {
-        if (Math.max(Math.abs(dx), Math.abs(dy)) !== r) continue
-        if (fits(desiredX + dx, desiredY + dy)) return { x: desiredX + dx, y: desiredY + dy }
-      }
-    }
-  }
-  return findBestPosition(valid, w, h, cols)
-}
+import { GRID_COMPACTOR, TILE_SIZE, TILE_MIN, TILE_MAX } from '../lib/gridSizing'
 
 const ANIM_MS = 120
-const MARGIN = 12
-const CONTAINER_PADDING = 12
+const GRID_MARGIN: readonly [number, number] = [12, 12]
+const GRID_CONTAINER_PADDING: readonly [number, number] = [12, 12]
+const GHOST_ID = '__ghost__'
 
 // Flip animation transform relative to the canvas container, not the viewport.
 function flipTransform(rect: DOMRect, containerRect: DOMRect, padding: number) {
@@ -71,6 +33,27 @@ function flipTransform(rect: DOMRect, containerRect: DOMRect, padding: number) {
   return `translate(${tx}px, ${ty}px) scale(${sx}, ${sy})`
 }
 
+// Pixel box a w x h item would occupy centered on (clientX, clientY),
+// translated into the grid cell it lands on. Measures against the RGL grid
+// container's own rect (not the scrollable viewport around it) — the grid
+// container's top moves with scroll exactly like RGL's own handleDragOver
+// does, so no manual scrollTop arithmetic is needed.
+function cellAt(
+  pp: PositionParams,
+  gridRect: DOMRect,
+  clientX: number,
+  clientY: number,
+  w: number,
+  h: number,
+) {
+  const colWidth = calcGridColWidth(pp)
+  const itemPxW = calcGridItemWHPx(w, colWidth, GRID_MARGIN[0])
+  const itemPxH = calcGridItemWHPx(h, ROW_HEIGHT, GRID_MARGIN[1])
+  const left = clientX - gridRect.left - itemPxW / 2
+  const top = clientY - gridRect.top - itemPxH / 2
+  return calcXY(pp, top, left, w, h)
+}
+
 export function Dashboard() {
   const { activeTileIds, loadTiles, removeTile } = useTileStore()
   const { currentLayout, updateLayout, loadPresets } = useLayoutStore()
@@ -80,9 +63,14 @@ export function Dashboard() {
 
   // containerRef: the positioned root used to anchor the absolute overlay
   const containerRef = useRef<HTMLDivElement>(null)
-  // canvasRef: the scrollable grid area — sized by ResizeObserver for RGL width
-  const canvasRef = useRef<HTMLDivElement>(null)
-  const [canvasWidth, setCanvasWidth] = useState(800)
+  // canvasRef: the scrollable viewport — used only to hit-test whether the
+  // pointer is over the visible canvas (it clips via overflow, so bounds
+  // here correctly exclude the scrolled-off part of a tall grid).
+  // gridRef: the actual .react-grid-layout container — used for the pixel
+  // math, since its own rect moves with scroll exactly like RGL's internal
+  // handleDragOver measures it, with no manual scrollTop needed.
+  const { width: canvasWidth, containerRef: canvasRef } = useContainerWidth({ initialWidth: 800 })
+  const gridRef = useRef<HTMLDivElement>(null)
   const [maximizedId, setMaximizedId] = useState<string | null>(null)
   const [closing, setClosing] = useState(false)
   const panelRef = useRef<HTMLDivElement>(null)
@@ -93,11 +81,20 @@ export function Dashboard() {
   // Live pointer position (viewport coords) while dragging a tile from the navbar.
   const [dragPointer, setDragPointer] = useState<{ x: number; y: number } | null>(null)
 
-  // colWidth mirrors RGL's calcGridColWidth exactly
-  const colWidth = useMemo(
-    () => (canvasWidth - MARGIN * (COLS - 1) - CONTAINER_PADDING * 2) / COLS,
+  const positionParams: PositionParams = useMemo(
+    () => ({
+      margin: GRID_MARGIN,
+      containerPadding: GRID_CONTAINER_PADDING,
+      containerWidth: canvasWidth,
+      cols: COLS,
+      rowHeight: ROW_HEIGHT,
+      maxRows: Infinity,
+    }),
     [canvasWidth],
   )
+  const colWidth = useMemo(() => calcGridColWidth(positionParams), [positionParams])
+  const colStep = colWidth + GRID_MARGIN[0]
+  const rowStep = ROW_HEIGHT + GRID_MARGIN[1]
 
   const openMaximize = useCallback((id: string, originRect?: DOMRect | null) => {
     if (originRect !== undefined) {
@@ -263,16 +260,6 @@ export function Dashboard() {
     return () => window.removeEventListener('keydown', handler)
   }, [maximizedId, closeMaximize])
 
-  useEffect(() => {
-    const el = canvasRef.current
-    if (!el) return
-    const observer = new ResizeObserver(([entry]) => {
-      setCanvasWidth(entry.contentRect.width)
-    })
-    observer.observe(el)
-    return () => observer.disconnect()
-  }, [])
-
   const tilesOnCanvas = useMemo(
     () =>
       activeTileIds
@@ -281,6 +268,13 @@ export function Dashboard() {
     [activeTileIds],
   )
 
+  // Real tiles only. A newly-active tile with no saved position (click-add,
+  // shift-click) goes in at the bottom — react-grid-layout's own convention
+  // for "no layout entry yet" — and the compactor below pulls it into the
+  // best gap. The whole array is run through the compactor before being
+  // returned, so mergedLayout is always the true resting state, never a raw
+  // pre-compaction shape that only looks right after react-grid-layout's own
+  // internal sync effect quietly fixes it up.
   const mergedLayout = useMemo(() => {
     const activeIds = new Set(tilesOnCanvas.map((t) => t.id))
     const savedItems = currentLayout.filter((l) => isFinite(l.y) && activeIds.has(l.i))
@@ -289,34 +283,50 @@ export function Dashboard() {
 
     for (const tile of tilesOnCanvas) {
       const saved = savedItems.find((l) => l.i === tile.id)
+      const constraints = { minW: TILE_MIN.w, minH: TILE_MIN.h, maxW: TILE_MAX.w, maxH: TILE_MAX.h }
       if (saved) {
-        result.push({ ...saved, minW: tile.minW, minH: tile.minH })
+        result.push({ ...saved, ...constraints })
       } else {
-        const { x, y } = findBestPosition(placed, tile.defaultW, tile.defaultH, COLS)
         const item: LayoutItem = {
           i: tile.id,
-          x,
-          y,
-          w: tile.defaultW,
-          h: tile.defaultH,
-          minW: tile.minW,
-          minH: tile.minH,
+          x: 0,
+          y: bottom(placed),
+          w: TILE_SIZE.w,
+          h: TILE_SIZE.h,
+          ...constraints,
         }
         result.push(item)
         placed.push(item)
       }
     }
 
-    return result
+    return [...GRID_COMPACTOR.compact(result, COLS)]
   }, [tilesOnCanvas, currentLayout])
 
-  // Free placement: persist exactly where the user drops/drags/resizes tiles.
+  // Persist exactly what's rendered — minW/minH/maxW/maxH are re-derived from
+  // the shared constants on every render (see mergedLayout above) and must
+  // never be the persisted source of truth.
   const persistLayout = useCallback(
     (layout: readonly LayoutItem[]) => {
-      const stripped = layout.map(({ minW: _mw, minH: _mh, ...rest }) => rest as LayoutItem)
+      const stripped = layout
+        .filter((l) => l.i !== GHOST_ID)
+        .map(({ minW: _mw, minH: _mh, maxW: _xw, maxH: _xh, ...rest }) => rest as LayoutItem)
       updateLayout(stripped)
     },
     [updateLayout],
+  )
+
+  // Removing a tile only ever touches activeTileIds; re-run the compactor on
+  // what's left so the persisted layout doesn't lag a render behind what's
+  // on screen (react-grid-layout's own internal state already reflects the
+  // gap closing — this just keeps our copy in sync with it).
+  const handleRemoveTile = useCallback(
+    (id: string) => {
+      removeTile(id)
+      const remaining = mergedLayout.filter((l) => l.i !== id)
+      persistLayout(GRID_COMPACTOR.compact(remaining, COLS))
+    },
+    [removeTile, mergedLayout, persistLayout],
   )
 
   // Tile being dragged from the navbar, if it isn't already on canvas
@@ -325,76 +335,73 @@ export function Dashboard() {
       ? TILE_REGISTRY.find((t) => t.id === draggingTileId)
       : undefined
 
-  const colStep = colWidth + MARGIN
-  const rowStep = ROW_HEIGHT + MARGIN
+  // Map a viewport point to the grid cell the dragged tile would land at.
+  // Every tile is the same size, so this is a single calculation — no more
+  // per-tile bucket-fitting. Returns null when the pointer is outside the
+  // visible canvas. A plain function (not memoized): it's only ever called
+  // synchronously during render for `dropCell` below, so it just closes over
+  // the current render's `positionParams` directly.
+  function pointerToCell(clientX: number, clientY: number) {
+    const canvas = canvasRef.current
+    const grid = gridRef.current
+    if (!canvas || !grid) return null
+    const viewport = canvas.getBoundingClientRect()
+    if (
+      clientX < viewport.left ||
+      clientX > viewport.right ||
+      clientY < viewport.top ||
+      clientY > viewport.bottom
+    ) {
+      return null
+    }
+    const gridRect = grid.getBoundingClientRect()
+    const cell = cellAt(positionParams, gridRect, clientX, clientY, TILE_SIZE.w, TILE_SIZE.h)
+    return { x: cell.x, y: cell.y, w: TILE_SIZE.w, h: TILE_SIZE.h }
+  }
 
-  // --- Mouse-driven drag-to-add (navbar → canvas) ----------------------------
-  // Geometry the window listeners need, kept in a ref so the once-mounted
-  // listeners always read current values without re-subscribing.
-  const geomRef = useRef({ colWidth, mergedLayout })
-  geomRef.current = { colWidth, mergedLayout }
+  const dropCell = dragPointer && draggingTile ? pointerToCell(dragPointer.x, dragPointer.y) : null
 
-  // Map a viewport point to the grid cell the tile would land on (its top-left),
-  // collision-resolved so it never lands on an existing tile. Returns null when
-  // the pointer is outside the canvas.
-  const pointerToCell = useCallback(
-    (clientX: number, clientY: number, tile: { defaultW: number; defaultH: number }) => {
-      const canvas = canvasRef.current
-      if (!canvas) return null
-      const rect = canvas.getBoundingClientRect()
-      if (
-        clientX < rect.left ||
-        clientX > rect.right ||
-        clientY < rect.top ||
-        clientY > rect.bottom
-      )
-        return null
-      const { colWidth: cw, mergedLayout: ml } = geomRef.current
-      const cStep = cw + MARGIN
-      const rStep = ROW_HEIGHT + MARGIN
-      const itemPxW = cStep * tile.defaultW - MARGIN
-      const itemPxH = rStep * tile.defaultH - MARGIN
-      // Cursor in scroll-content space, tile centered on it
-      const curX = clientX - rect.left
-      const curY = clientY - rect.top + canvas.scrollTop
-      const pxX = Math.max(0, curX - itemPxW / 2)
-      const pxY = Math.max(0, curY - itemPxH / 2)
-      const gx = Math.max(
-        0,
-        Math.min(Math.round((pxX - CONTAINER_PADDING) / cStep), COLS - tile.defaultW),
-      )
-      const gy = Math.max(0, Math.round((pxY - CONTAINER_PADDING) / rStep))
-      return resolveDropCell(ml, gx, gy, tile.defaultW, tile.defaultH, COLS)
-    },
-    [],
-  )
+  // Full preview of the board with the ghost placed at dropCell, run through
+  // the same compactor the grid itself uses — computed here (not left to
+  // react-grid-layout's own internal, invisible-to-us sync effect) so the
+  // ref below can mirror the *actual* positions for the on-drop commit.
+  // Compacting an already-compacted array is idempotent, so react-grid-layout
+  // compacting this again internally for display produces the same result.
+  const previewLayout = useMemo(() => {
+    if (!dropCell) return mergedLayout
+    const ghost: LayoutItem = {
+      i: GHOST_ID,
+      x: dropCell.x,
+      y: dropCell.y,
+      w: dropCell.w,
+      h: dropCell.h,
+    }
+    return [...GRID_COMPACTOR.compact([...mergedLayout, ghost], COLS)]
+  }, [mergedLayout, dropCell])
+
+  const previewRef = useRef<{ cell: typeof dropCell; layout: LayoutItem[] }>({
+    cell: null,
+    layout: mergedLayout,
+  })
+  previewRef.current = { cell: dropCell, layout: previewLayout }
 
   // Mounted once: track the pointer while dragging and perform the drop on
-  // release. Reads live state via getState() to stay closure-stable.
+  // release, committing the ref-mirrored preview above rather than
+  // recomputing pointerToCell from the mouseup event.
   useEffect(() => {
     const onMove = (e: MouseEvent) => {
       if (!useUiStore.getState().draggingTileId) return
       setDragPointer({ x: e.clientX, y: e.clientY })
     }
-    const onUp = (e: MouseEvent) => {
+    const onUp = () => {
       const id = useUiStore.getState().draggingTileId
       setDragPointer(null)
       if (!id) return
       useUiStore.getState().setDraggingTileId(null)
       if (useTileStore.getState().activeTileIds.includes(id)) return
-      const tile = TILE_REGISTRY.find((t) => t.id === id)
-      if (!tile) return
-      const cell = pointerToCell(e.clientX, e.clientY, tile)
+      const { cell, layout } = previewRef.current
       if (!cell) return // released outside the canvas → cancel
-      const cl = useLayoutStore.getState().currentLayout
-      const persisted: LayoutItem = {
-        i: id,
-        x: cell.x,
-        y: cell.y,
-        w: tile.defaultW,
-        h: tile.defaultH,
-      }
-      useLayoutStore.getState().updateLayout([...cl.filter((l) => l.i !== id), persisted])
+      persistLayout(layout.map((l) => (l.i === GHOST_ID ? { ...l, i: id } : l)))
       useTileStore.getState().addTile(id)
     }
     window.addEventListener('mousemove', onMove)
@@ -403,38 +410,23 @@ export function Dashboard() {
       window.removeEventListener('mousemove', onMove)
       window.removeEventListener('mouseup', onUp)
     }
-  }, [pointerToCell])
+  }, [persistLayout])
 
-  // Drop target cell + on-screen rectangles for the placeholder and wireframe.
-  const dropCell =
-    dragPointer && draggingTile ? pointerToCell(dragPointer.x, dragPointer.y, draggingTile) : null
-  const dragVisual =
-    dragPointer && draggingTile
-      ? (() => {
-          const itemPxW = colStep * draggingTile.defaultW - MARGIN
-          const itemPxH = rowStep * draggingTile.defaultH - MARGIN
-          // Wireframe: free-floating, centered on the cursor (viewport-fixed coords)
-          const wireframe = {
-            left: dragPointer.x - itemPxW / 2,
-            top: dragPointer.y - itemPxH / 2,
-            width: itemPxW,
-            height: itemPxH,
-          }
-          // Placeholder: snapped to the grid cell, inside the scrollable canvas
-          const placeholder = dropCell
-            ? (() => {
-                const scrollTop = canvasRef.current?.scrollTop ?? 0
-                return {
-                  left: colStep * dropCell.x + CONTAINER_PADDING,
-                  top: rowStep * dropCell.y + CONTAINER_PADDING - scrollTop,
-                  width: itemPxW,
-                  height: itemPxH,
-                }
-              })()
-            : null
-          return { wireframe, placeholder }
-        })()
-      : null
+  // Cursor-following wireframe, alongside the in-layout ghost/placeholder —
+  // matching native RGL's own pairing of "item under your hand" + "snapped
+  // landing spot". Every tile is the same size, so this never changes shape
+  // mid-drag.
+  const wireframeRect = useMemo(() => {
+    if (!dragPointer || !dropCell) return null
+    const itemPxW = calcGridItemWHPx(dropCell.w, colWidth, GRID_MARGIN[0])
+    const itemPxH = calcGridItemWHPx(dropCell.h, ROW_HEIGHT, GRID_MARGIN[1])
+    return {
+      left: dragPointer.x - itemPxW / 2,
+      top: dragPointer.y - itemPxH / 2,
+      width: itemPxW,
+      height: itemPxH,
+    }
+  }, [dragPointer, dropCell, colWidth])
 
   return (
     // containerRef is the positioned root for the absolute overlay — it covers
@@ -447,22 +439,24 @@ export function Dashboard() {
         style={{
           backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.08) 1px, transparent 1px)',
           backgroundSize: `${colStep}px ${rowStep}px`,
-          backgroundPosition: `${CONTAINER_PADDING}px ${CONTAINER_PADDING}px`,
+          backgroundPosition: `${GRID_CONTAINER_PADDING[0]}px ${GRID_CONTAINER_PADDING[1]}px`,
         }}
       >
-        <ReactGridLayout
-          layout={mergedLayout}
-          cols={COLS}
-          rowHeight={ROW_HEIGHT}
+        <GridLayout
+          innerRef={gridRef}
           width={canvasWidth}
-          compactType={null}
-          preventCollision
-          draggableHandle=".drag-handle"
+          layout={previewLayout}
+          compactor={GRID_COMPACTOR}
+          gridConfig={{
+            cols: COLS,
+            rowHeight: ROW_HEIGHT,
+            margin: GRID_MARGIN,
+            containerPadding: GRID_CONTAINER_PADDING,
+          }}
+          dragConfig={{ handle: '.drag-handle' }}
+          resizeConfig={{ handles: ['se'] }}
           onDragStop={persistLayout}
           onResizeStop={persistLayout}
-          margin={[MARGIN, MARGIN]}
-          containerPadding={[CONTAINER_PADDING, CONTAINER_PADDING]}
-          resizeHandles={['se']}
         >
           {tilesOnCanvas.map((tile) => {
             const TileComponent = tile.component
@@ -472,7 +466,7 @@ export function Dashboard() {
                   id={tile.id}
                   label={tile.label}
                   icon={tile.icon}
-                  onRemove={removeTile}
+                  onRemove={handleRemoveTile}
                   maximizable={tile.maximizable}
                   onToggleMaximize={toggleMaximize}
                   flash={flashTileId === tile.id}
@@ -482,25 +476,29 @@ export function Dashboard() {
               </div>
             )
           })}
-        </ReactGridLayout>
+          {dropCell && (
+            <div
+              key={GHOST_ID}
+              className="bg-hover border-border-subtle pointer-events-none h-full w-full rounded-[10px] border-[0.5px]"
+            />
+          )}
+        </GridLayout>
       </div>
 
-      {/* Grid placeholder — snapped, collision-free slot the tile will land in.
-          Absolute inside containerRef (subtracts scrollTop for the visible spot). */}
-      {dragVisual?.placeholder && (
-        <div
-          className="border-border-subtle pointer-events-none absolute z-10 rounded-[10px] border-[0.5px] bg-[rgba(255,255,255,0.06)]"
-          // eslint-disable-next-line no-restricted-syntax -- react-grid-layout drag placeholder position (top/left/width/height), computed per drag frame
-          style={{ ...dragVisual.placeholder }}
-        />
-      )}
-
-      {/* Wireframe — follows the cursor freely, like the tile being moved. */}
-      {dragVisual && (
+      {/* Cursor-following wireframe while dragging from the crate — pairs
+          with the snapped ghost/placeholder above exactly like native RGL
+          pairs a dragged item with its landing-spot placeholder. Positioned
+          against the viewport (fixed), not the scrollable canvas. */}
+      {wireframeRect && (
         <div
           className="border-accent bg-accent/6 pointer-events-none fixed z-[60] rounded-[10px] border-2"
-          // eslint-disable-next-line no-restricted-syntax -- react-grid-layout drag wireframe position (top/left/width/height), computed per drag frame
-          style={{ ...dragVisual.wireframe }}
+          // eslint-disable-next-line no-restricted-syntax -- cursor-following wireframe position, computed per drag frame
+          style={{
+            left: wireframeRect.left,
+            top: wireframeRect.top,
+            width: wireframeRect.width,
+            height: wireframeRect.height,
+          }}
         />
       )}
 
@@ -528,7 +526,7 @@ export function Dashboard() {
                     id={tile.id}
                     label={tile.label}
                     icon={tile.icon}
-                    onRemove={removeTile}
+                    onRemove={handleRemoveTile}
                     maximizable
                     maximized
                     onToggleMaximize={toggleMaximize}
