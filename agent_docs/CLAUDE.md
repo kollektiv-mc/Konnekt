@@ -83,6 +83,17 @@ here first is what lets the on-drop commit read the *actual* landing
 positions back out via a ref, rather than recomputing them separately at
 `mouseup` and risking the two disagreeing.
 
+Assembling that array is `gridSizing.ts`'s `withGhost`, and the ordering step
+in it is load-bearing: it moves whatever the ghost overlaps *below* the ghost
+before compacting. Compaction resolves contention by sort order (y, then x),
+so without that step a tile even one column to the ghost's left wins the cell
+and the ghost is the one shoved down — which made the right-hand side of a row
+unreachable from the crate whenever a tile straddled the middle columns, while
+dragging an already-placed tile onto the same cell worked fine. The ghost is
+the item under the user's hand, so it takes the cell and the occupants yield,
+matching what a native tile drag already did. The compactor still performs
+every bit of the actual collision resolution.
+
 ## IPC conventions
 
 - Bind Go methods on the `App` struct in `app.go` (repo root)

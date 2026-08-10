@@ -1474,3 +1474,61 @@ pass rather than rewriting it three times.
   range, and switching between all 4 presets. Given the sandboxed pass's
   track record so far, this round's fix is not considered closed until
   confirmed against a real `wails dev` session.
+
+### P1 — Tile grid: right-hand cells unreachable from the crate
+
+Reported against the rebuild above, from a real `wails dev` session: a tile
+dragged in from the crate refused to land on the right-hand side of a row. The
+green cursor wireframe sat over the top-right cell while the grey snapped
+placeholder dropped to the row *below*, "underneath whatever tile is in the
+way". Dragging an already-placed tile onto that same cell worked fine.
+
+- **Root cause — an asymmetry between the two drop paths, not the geometry.**
+  The pointer→cell math was correct throughout: the screenshot's grid measured
+  exactly `COLS = 6`, `ROW_HEIGHT = 40`, 3×8 tiles (594×404 px, 202 px column
+  step), and the pointer at the far right resolved to `x = 3` as it should.
+  What differed was collision resolution. A native tile drag routes through
+  react-grid-layout's `moveElement`, which pushes the *occupant* out of the
+  way. The crate ghost was instead appended to the layout and the whole array
+  handed to `compact()` — and compaction resolves contention by sort order
+  (y, then x), so the ghost lost to anything above or to its left and was the
+  one shoved down. In the reported board a tile sat at `x = 1`, straddling
+  columns 1–3; the ghost's only legal rightmost position is `x = 3`
+  (`calcXY` clamps to `cols - w`), which overlaps at column 3 — so every
+  attempt at the top-right was pushed to `y = 8`. Columns 4–5 alone are two
+  wide and can never hold a 3-wide tile, which is why the right-hand side felt
+  unreachable rather than merely awkward.
+- ✅ **Fixed in `lib/gridSizing.ts`'s new `withGhost()`**, which Dashboard's
+  `previewLayout` now calls: items the ghost overlaps are moved below it
+  *before* compacting. That only flips the sort order; the compactor still
+  performs all the actual collision resolution and pulls the displaced tiles
+  back up as far as they legitimately fit. The ghost is the item under the
+  user's hand, so it takes the cell and the occupants yield — the same
+  semantics a native drag already had.
+- **Rejected: reusing `moveElement` directly** for the ghost, which would have
+  been the more library-native fix. Its push heuristic depends on the small
+  frame-to-frame deltas of a real drag; entering the ghost at the bottom of the
+  layout and moving it to the hovered cell in one jump makes the item and its
+  collider ping-pong a row at a time, and the ghost loses. Measured over 4000
+  random boards it placed the ghost correctly in only ~29% of cases, against
+  100% for the ordering fix.
+- **Verification:** `pnpm typecheck`, `pnpm lint` (0 errors, 129 pre-existing
+  inline-style warnings), `pnpm test` (249 passing). `gridSizing.test.ts` gained
+  the regression case (a straddling tile no longer blocks the top-right cell),
+  displacement, free-cell, column-preservation and second-compaction-is-a-no-op
+  cases; `constants.test.ts` dropped its private overlap predicate in favour of
+  the now-shared `collides`. Property-checked over 5000 random boards: no
+  overlaps, the ghost always keeps the hovered column, and it is never sunk
+  below the hovered row. Browser pass drove the real crate-drag path
+  end-to-end (plain window listeners, no react-draggable synthesis) and
+  confirmed for every drop that the committed position equals the previewed
+  one, with zero overlaps and zero gap rows — including the reported board
+  shape, a tile deliberately straddling columns 1–3 and then a drop onto the
+  top-right cell.
+- **Note on the harness, not the app:** with `window.go` absent (a bare `vite`
+  session), `persistActiveLayout`'s binding call throws *synchronously*, so its
+  `.catch()` never attaches and the throw escapes react-grid-layout's
+  `onDragStop`, leaving `setActiveDrag(null)`/`setLayout()` unrun — a stuck
+  placeholder and a visibly overlapping board. Not reachable in the packaged
+  app, where the bridge always exists; noted so the symptom isn't mistaken for
+  a grid bug next time. Tracked as a robustness follow-up.

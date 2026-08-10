@@ -2,14 +2,10 @@ import { describe, it, expect } from 'vitest'
 import type { LayoutItem } from 'react-grid-layout'
 import { DEFAULT_LAYOUT_PRESETS, COLS } from './constants'
 import { TILE_REGISTRY } from '../tiles/registry'
-import { TILE_SIZE, TILE_MIN } from './gridSizing'
+import { TILE_SIZE, TILE_MIN, collides } from './gridSizing'
 
 const KNOWN_IDS = new Set(TILE_REGISTRY.map((t) => t.id))
 const KNOWN_SIZES = [TILE_SIZE, TILE_MIN]
-
-function overlaps(a: LayoutItem, b: LayoutItem): boolean {
-  return a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y
-}
 
 describe('DEFAULT_LAYOUT_PRESETS', () => {
   for (const preset of DEFAULT_LAYOUT_PRESETS) {
@@ -43,7 +39,7 @@ describe('DEFAULT_LAYOUT_PRESETS', () => {
       it('has no overlapping tiles', () => {
         for (let i = 0; i < layout.length; i++) {
           for (let j = i + 1; j < layout.length; j++) {
-            expect(overlaps(layout[i], layout[j])).toBe(false)
+            expect(collides(layout[i], layout[j])).toBe(false)
           }
         }
       })

@@ -15,7 +15,7 @@ import { useUiStore } from '../stores/useUiStore'
 import { TILE_REGISTRY } from '../tiles/registry'
 import { TileWrapper } from '../tiles/TileWrapper'
 import { COLS, ROW_HEIGHT } from '../lib/constants'
-import { GRID_COMPACTOR, TILE_SIZE, TILE_MIN, TILE_MAX } from '../lib/gridSizing'
+import { GRID_COMPACTOR, TILE_SIZE, TILE_MIN, TILE_MAX, withGhost } from '../lib/gridSizing'
 
 const ANIM_MS = 120
 const GRID_MARGIN: readonly [number, number] = [12, 12]
@@ -369,14 +369,7 @@ export function Dashboard() {
   // compacting this again internally for display produces the same result.
   const previewLayout = useMemo(() => {
     if (!dropCell) return mergedLayout
-    const ghost: LayoutItem = {
-      i: GHOST_ID,
-      x: dropCell.x,
-      y: dropCell.y,
-      w: dropCell.w,
-      h: dropCell.h,
-    }
-    return [...GRID_COMPACTOR.compact([...mergedLayout, ghost], COLS)]
+    return withGhost(mergedLayout, { i: GHOST_ID, ...dropCell }, COLS)
   }, [mergedLayout, dropCell])
 
   const previewRef = useRef<{ cell: typeof dropCell; layout: LayoutItem[] }>({
