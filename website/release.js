@@ -1,8 +1,6 @@
-/* Shared GitHub-release helpers for the download + changelog pages.
-   Mirrors the desktop updater's asset contract (backend/services/update.go)
-   and the release workflow's asset names (.github/workflows/release.yml). */
+/* Shared GitHub-release helpers for the download + changelog pages. */
 ;(function () {
-  var OWNER_REPO = 'sandrogekeler/Konnekt'
+  var OWNER_REPO = 'kollektiv-mc/Konnekt'
   var API = 'https://api.github.com/repos/' + OWNER_REPO
 
   // Platform metadata. `match` tests an asset's `name`; null = not built yet.

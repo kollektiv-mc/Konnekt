@@ -1,6 +1,5 @@
-/* Download page — detect platform, fetch the latest GitHub release, and wire
-   the primary + per-platform download buttons from the release's assets. All
-   version/size/date text comes from the fetched JSON; nothing is hard-coded. */
+/* Download page — detects platform and wires the download buttons from the
+   latest GitHub release's assets. */
 ;(function () {
   var R = window.KonnektRelease
   if (!R) return
@@ -29,14 +28,6 @@
     node.classList.add('is-hidden')
   }
 
-  function firstAvailable(assets) {
-    for (var i = 0; i < R.PLATFORMS.length; i++) {
-      var a = R.matchAsset(R.PLATFORMS[i], assets)
-      if (a) return { platform: R.PLATFORMS[i], asset: a }
-    }
-    return null
-  }
-
   function renderPrimaryAvailable(platform, asset, version) {
     primaryEl.innerHTML = ''
     primaryEl.appendChild(el('div', 'dl-os-icon', platform.tag))
@@ -53,40 +44,24 @@
     btn.setAttribute('download', '')
     primaryEl.appendChild(btn)
     var sub = el('p', 'dl-sub')
-    sub.appendChild(document.createTextNode('Not on ' + platform.name + '? '))
-    var link = el('a', null, 'See all downloads')
+    var link = el('a', null, 'All downloads')
     link.href = '#dl-grid'
     sub.appendChild(link)
     primaryEl.appendChild(sub)
   }
 
-  function renderPrimaryUnavailable(platform, fallback) {
+  function renderPrimaryUnavailable(platform) {
     primaryEl.innerHTML = ''
-    var name = platform ? platform.name : 'your platform'
     primaryEl.appendChild(el('div', 'dl-os-icon', platform ? platform.tag : '?'))
-    if (platform && platform.id === 'mac') {
-      primaryEl.appendChild(el('h2', null, 'macOS build coming soon'))
-      primaryEl.appendChild(el('p', 'dl-meta', "We don't publish a macOS build yet."))
-    } else {
-      primaryEl.appendChild(el('h2', null, 'Choose your platform'))
-      primaryEl.appendChild(
-        el('p', 'dl-meta', "We couldn't match a build to " + name + ' automatically.'),
-      )
-    }
-    if (fallback) {
-      var btn = el('a', 'btn btn-primary', 'Download ' + fallback.platform.name + ' build')
-      btn.href = fallback.asset.browser_download_url
-      btn.setAttribute('download', '')
-      primaryEl.appendChild(btn)
-    } else {
-      var gh = el('a', 'btn btn-secondary', 'Open releases on GitHub')
-      gh.href = R.RELEASES_URL
-      gh.target = '_blank'
-      gh.rel = 'noopener'
-      primaryEl.appendChild(gh)
-    }
+    var heading = platform ? 'No ' + platform.name + ' build yet' : 'Choose your platform'
+    primaryEl.appendChild(el('h2', null, heading))
+    var btn = el('a', 'btn btn-primary', 'Run from source')
+    btn.href = R.REPO_URL
+    btn.target = '_blank'
+    btn.rel = 'noopener'
+    primaryEl.appendChild(btn)
     var sub = el('p', 'dl-sub')
-    var link = el('a', null, 'See all downloads')
+    var link = el('a', null, 'All downloads')
     link.href = '#dl-grid'
     sub.appendChild(link)
     primaryEl.appendChild(sub)
@@ -133,18 +108,16 @@
       renderPrimaryAvailable(primary, primaryAsset, version)
       renderOthers(primary, assets)
     } else {
-      renderPrimaryUnavailable(primary, firstAvailable(assets))
+      renderPrimaryUnavailable(primary)
       renderOthers(null, assets)
     }
 
     footnoteEl.innerHTML = ''
-    footnoteEl.appendChild(document.createTextNode('Looking for older versions or checksums? '))
-    var relLink = el('a', null, 'Browse all releases on GitHub')
+    var relLink = el('a', null, 'All releases on GitHub')
     relLink.href = R.RELEASES_URL
     relLink.target = '_blank'
     relLink.rel = 'noopener'
     footnoteEl.appendChild(relLink)
-    footnoteEl.appendChild(document.createTextNode('.'))
 
     hide(loadingEl)
     show(contentEl)
@@ -161,8 +134,7 @@
     setPill('alpha · not yet released')
     errorEl.classList.remove('is-error')
     errorTitle.textContent = 'No public build yet'
-    errorMsg.textContent =
-      'Konnekt is still in alpha and no release has been published yet. Watch the repo to hear when the first build drops.'
+    errorMsg.textContent = 'No release has been published yet.'
     show(errorEl)
   }
 
@@ -183,8 +155,8 @@
       if (!res.ok) {
         showError(
           res.status === 403
-            ? "GitHub's rate limit was hit. Try again in a little while, or grab the build directly from GitHub."
-            : 'GitHub returned an unexpected status (' + res.status + ').',
+            ? 'GitHub rate limit hit. Try again later.'
+            : 'GitHub returned status ' + res.status + '.',
         )
         return
       }

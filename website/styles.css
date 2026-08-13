@@ -352,107 +352,6 @@ a {
   justify-content: center;
 }
 
-/* Solar-system motif — pure CSS, transform/opacity only, GPU-friendly.
-   Anchored to the bottom of the hero so it reads as an ambient arc behind
-   the content rather than a shape competing with the headline. */
-.solar {
-  position: absolute;
-  left: 50%;
-  bottom: 46px;
-  width: 0;
-  height: 0;
-  pointer-events: none;
-  z-index: 0;
-}
-
-.solar-orbit {
-  position: absolute;
-  border: 0.5px solid var(--border-subtle);
-  border-radius: 50%;
-  top: 50%;
-  left: 50%;
-}
-
-.solar-orbit-1 {
-  width: 104px;
-  height: 104px;
-  margin: -52px 0 0 -52px;
-}
-.solar-orbit-2 {
-  width: 160px;
-  height: 160px;
-  margin: -80px 0 0 -80px;
-}
-.solar-orbit-3 {
-  width: 210px;
-  height: 210px;
-  margin: -105px 0 0 -105px;
-}
-
-.solar-sun {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 56px;
-  height: 56px;
-  margin: -28px 0 0 -28px;
-  border-radius: 50%;
-  background: radial-gradient(circle at 35% 35%, var(--sun), rgb(var(--sun-rgb) / 0.35));
-  box-shadow: 0 0 44px 8px rgb(var(--sun-rgb) / 0.25);
-}
-
-.solar-planet {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 100%;
-  height: 100%;
-  margin: -50% 0 0 -50%;
-  animation: solar-spin linear infinite;
-  will-change: transform;
-}
-
-.solar-orbit-1 .solar-planet {
-  animation-duration: 18s;
-}
-.solar-orbit-2 .solar-planet {
-  animation-duration: 30s;
-  animation-direction: reverse;
-}
-.solar-orbit-3 .solar-planet {
-  animation-duration: 46s;
-}
-
-.solar-planet::after {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 50%;
-  width: 10px;
-  height: 10px;
-  margin-left: -5px;
-  border-radius: 50%;
-  background: radial-gradient(circle at 35% 35%, rgb(var(--accent-rgb) / 0.95), var(--accent));
-  box-shadow: 0 0 10px 1px rgb(var(--accent-rgb) / 0.35);
-}
-
-.solar-orbit-3 .solar-planet::after {
-  background: radial-gradient(circle at 35% 35%, #fff, var(--text-muted));
-  box-shadow: none;
-  width: 6px;
-  height: 6px;
-  margin-left: -3px;
-}
-
-@keyframes solar-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
-}
-
 /* ── Section shell ────────────────────────────────────────────────────── */
 section {
   padding: 88px 0;
@@ -482,12 +381,7 @@ section {
   margin: 0;
 }
 
-/* ── Feature tiles — reactive floating grid ───────────────────────────────
-   Title-only at rest; hover/focus enlarges the tile, lifts the title and
-   reveals the detail. tiles.js adds cursor pull (--pull-x/--pull-y), a
-   proximity glow (--glow) and a spotlight (--mx/--my). All effects are
-   custom-property driven so the pull and hover-scale compose in one
-   transform, and everything no-ops cleanly under reduced motion. */
+/* ── Feature tiles — static grid, everything visible at rest ─────────── */
 .feat-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
@@ -495,75 +389,9 @@ section {
 }
 
 .feat {
-  --pull-x: 0px;
-  --pull-y: 0px;
-  --scale: 1;
-  --glow: 0;
-  position: relative;
-  min-height: 248px;
   background: var(--bg-elevated);
   border: 0.5px solid var(--border-subtle);
   border-radius: 16px;
-  overflow: hidden;
-  outline: none;
-  cursor: default;
-  transform: translate3d(var(--pull-x), var(--pull-y), 0) scale(var(--scale));
-  box-shadow:
-    0 0 0 0.5px rgb(var(--accent-rgb) / calc(var(--glow) * 0.45)),
-    0 0 26px rgb(var(--accent-rgb) / calc(var(--glow) * 0.22));
-  transition:
-    transform var(--duration-panel) var(--ease-standard),
-    border-color var(--duration-fast) ease;
-  will-change: transform;
-}
-
-.feat:hover,
-.feat:focus-visible,
-.feat.is-active {
-  --scale: 1.06;
-  z-index: 5;
-  border-color: rgb(var(--accent-rgb) / 0.35);
-}
-
-/* Cursor-following spotlight wash inside the tile. */
-.feat-glow {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  border-radius: inherit;
-  background: radial-gradient(
-    200px circle at var(--mx, 50%) var(--my, 50%),
-    rgb(var(--accent-rgb) / 0.14),
-    transparent 68%
-  );
-  opacity: var(--glow, 0);
-  transition: opacity 200ms ease;
-}
-
-.feat-inner {
-  position: relative;
-  z-index: 1;
-  height: 100%;
-  min-height: 248px;
-  padding: 26px 24px;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  gap: 12px;
-  /* Subtle idle float, decoupled from the tile's pull/scale transform. */
-  animation: feat-float 7s ease-in-out infinite;
-  animation-delay: var(--float-delay, 0ms);
-  will-change: transform;
-}
-
-@keyframes feat-float {
-  0%,
-  100% {
-    transform: translateY(0);
-  }
-  50% {
-    transform: translateY(-5px);
-  }
 }
 
 .feat-icon {
@@ -573,13 +401,6 @@ section {
   color: var(--accent);
   opacity: 0.7;
   letter-spacing: 1px;
-  transition: opacity var(--duration-fast) ease;
-}
-
-.feat:hover .feat-icon,
-.feat:focus-visible .feat-icon,
-.feat.is-active .feat-icon {
-  opacity: 1;
 }
 
 .feat-title {
@@ -590,23 +411,14 @@ section {
   color: var(--text-primary);
 }
 
-.feat-detail {
-  max-height: 0;
-  opacity: 0;
-  overflow: hidden;
-  transform: translateY(6px);
-  transition:
-    max-height var(--duration-panel) var(--ease-standard),
-    opacity var(--duration-panel) var(--ease-standard),
-    transform var(--duration-panel) var(--ease-standard);
-}
-
-.feat:hover .feat-detail,
-.feat:focus-visible .feat-detail,
-.feat.is-active .feat-detail {
-  max-height: 220px;
-  opacity: 1;
-  transform: translateY(0);
+.feat-inner {
+  height: 100%;
+  min-height: 248px;
+  padding: 26px 24px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  gap: 12px;
 }
 
 .feat-detail p {
@@ -711,172 +523,84 @@ section {
   box-shadow: 0 0 8px rgb(var(--accent-rgb) / 0.6);
 }
 
-/* ── Interactive scheduler demo (node graph) ──────────────────────────────
-   Hand-rolled imitation of the app's @xyflow/react block editor
-   (frontend/src/tiles/scheduler/). Nodes are absolutely-positioned divs over
-   an SVG edge layer; scheduler-demo.js drives drag + connect. */
-.sched-demo {
-  position: relative;
+/* ── Scheduler node-graph animation — static SVG, CSS-driven ──────────── */
+.sf {
+  display: block;
   width: 100%;
-  aspect-ratio: 16 / 11;
-  overflow: hidden;
+  height: auto;
   background-color: var(--bg-base);
   background-image: radial-gradient(var(--border-subtle) 1px, transparent 1px);
   background-size: 20px 20px;
-  touch-action: none;
+}
+
+.sf-node rect {
+  fill: var(--bg-elevated);
+  stroke: var(--border-subtle);
+  stroke-width: 1.5;
+  animation: sf-lit 8s var(--ease-standard) infinite;
+  animation-delay: var(--d, 0s);
+}
+
+.sf-title {
   font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  fill: var(--text-primary);
 }
 
-.sched-edges {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  overflow: visible;
-  pointer-events: none;
+.sf-sub {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  fill: var(--text-muted);
 }
 
-.sched-edge {
+.sf-port {
+  fill: var(--pc, var(--text-muted));
+}
+
+.sf-edge {
   fill: none;
-  stroke: var(--text-faint);
+  stroke: var(--border-hover);
   stroke-width: 1.5;
 }
 
-.sched-edge.is-live {
+.sf-pulse {
+  fill: none;
   stroke: var(--accent);
+  stroke-width: 1.5;
+  stroke-dasharray: 12 100;
   filter: drop-shadow(0 0 3px rgb(var(--accent-rgb) / 0.6));
+  animation: sf-pulse 8s linear infinite;
+  animation-delay: var(--d, 0s);
 }
 
-.sched-edge.is-temp {
-  stroke: var(--accent);
-  stroke-dasharray: 4 3;
-}
-
-.sched-node {
-  position: absolute;
-  min-width: 148px;
-  background: var(--bg-elevated);
-  border: 1px solid var(--nc, #6b7280);
-  border-radius: 6px;
-  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45);
-  cursor: grab;
-  user-select: none;
-  touch-action: none;
-}
-
-.sched-node.dragging {
-  cursor: grabbing;
-  z-index: 20;
-}
-
-.sched-node.is-running {
-  animation: sched-run-pulse 1.2s ease-in-out infinite;
-}
-
-@keyframes sched-run-pulse {
+@keyframes sf-lit {
   0%,
+  8% {
+    stroke: var(--accent);
+    filter: drop-shadow(0 0 4px rgb(var(--accent-rgb) / 0.5));
+  }
+  25%,
   100% {
-    box-shadow:
-      0 0 0 1px var(--accent),
-      0 0 5px rgb(var(--accent-rgb) / 0.7);
-  }
-  50% {
-    box-shadow:
-      0 0 0 1px var(--accent),
-      0 0 16px rgb(var(--accent-rgb) / 0.85);
+    stroke: var(--border-subtle);
+    filter: none;
   }
 }
 
-.sched-node-header {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  height: 28px;
-  padding: 0 10px;
-  border-bottom: 0.5px solid rgb(255 255 255 / 0.08);
-}
-
-.sched-node-icon {
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 1px;
-  color: var(--nc, #9ca3af);
-}
-
-.sched-node-title {
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--text-primary);
-  white-space: nowrap;
-}
-
-.sched-node-body {
-  position: relative;
-  padding: 6px 0;
-}
-
-.sched-prow {
-  position: relative;
-  display: flex;
-  align-items: center;
-  height: 20px;
-  font-size: 9px;
-  color: var(--text-muted);
-}
-
-.sched-prow--in {
-  justify-content: flex-start;
-  padding-left: 12px;
-}
-
-.sched-prow--out {
-  justify-content: flex-end;
-  padding-right: 12px;
-  text-align: right;
-}
-
-.sched-port {
-  position: absolute;
-  top: 50%;
-  width: 9px;
-  height: 9px;
-  background: var(--pc, #60a5fa);
-  border: 1px solid rgb(255 255 255 / 0.2);
-  transform: translateY(-50%);
-  cursor: crosshair;
-  z-index: 2;
-}
-
-.sched-port--ctrl {
-  border-radius: 50%;
-}
-
-.sched-port--data {
-  border-radius: 2px;
-}
-
-.sched-port--in {
-  left: -5px;
-}
-
-.sched-port--out {
-  right: -5px;
-}
-
-.sched-port:hover {
-  box-shadow: 0 0 0 3px rgb(var(--accent-rgb) / 0.25);
-}
-
-.sched-hint {
-  position: absolute;
-  left: 12px;
-  bottom: 10px;
-  margin: 0;
-  font-family: var(--font-mono);
-  font-size: 10px;
-  color: var(--text-faint);
-  pointer-events: none;
-  letter-spacing: 0.03em;
+@keyframes sf-pulse {
+  0% {
+    stroke-dashoffset: 112;
+    opacity: 0;
+  }
+  2%,
+  18% {
+    opacity: 1;
+  }
+  20%,
+  100% {
+    stroke-dashoffset: 0;
+    opacity: 0;
+  }
 }
 
 /* ── CTA / Download ───────────────────────────────────────────────────── */
@@ -1374,11 +1098,6 @@ footer {
     padding: 120px 20px;
   }
 
-  .solar-orbit-2,
-  .solar-orbit-3 {
-    display: none;
-  }
-
   .footer-inner {
     flex-direction: column;
     align-items: flex-start;
@@ -1395,10 +1114,6 @@ footer {
     scroll-behavior: auto;
   }
 
-  .solar-planet {
-    animation: none !important;
-  }
-
   .reveal {
     opacity: 1 !important;
     transform: none !important;
@@ -1410,17 +1125,13 @@ footer {
     transform: none !important;
   }
 
-  .feat-inner {
+  .sf-node rect,
+  .sf-pulse {
     animation: none !important;
   }
 
-  .feat {
-    transform: none !important;
-    transition: border-color var(--duration-fast) ease;
-  }
-
-  .sched-node.is-running {
-    animation: none !important;
+  .sf-pulse {
+    opacity: 0;
   }
 
   .spinner {
@@ -1428,10 +1139,11 @@ footer {
   }
 }
 
-.reduce-motion .feat-inner {
+.reduce-motion .sf-node rect,
+.reduce-motion .sf-pulse {
   animation: none !important;
 }
 
-.reduce-motion .feat {
-  transform: none !important;
+.reduce-motion .sf-pulse {
+  opacity: 0;
 }
