@@ -1,6 +1,4 @@
-/* Changelog page — lists GitHub releases with their notes, the same source the
-   app's "What's new" reads. Release bodies are rendered by the sandboxed
-   Markdown renderer in markdown.js. */
+/* Changelog page — lists GitHub releases, rendered by markdown.js. */
 ;(function () {
   var R = window.KonnektRelease
   var MD = window.KonnektMarkdown
@@ -37,7 +35,7 @@
     if (notes) {
       body.innerHTML = MD.render(notes)
     } else {
-      body.appendChild(el('p', null, 'No release notes for this version.'))
+      body.appendChild(el('p', null, 'No notes.'))
     }
     wrap.appendChild(body)
     return wrap
@@ -63,8 +61,7 @@
     loadingEl.classList.add('is-hidden')
     errorEl.classList.remove('is-error')
     errorTitle.textContent = 'No releases yet'
-    errorMsg.textContent =
-      'Konnekt is still in alpha — once the first version ships, its notes will show up here automatically.'
+    errorMsg.textContent = 'No releases published yet.'
     errorEl.classList.remove('is-hidden')
   }
 
@@ -84,8 +81,8 @@
       if (!res.ok) {
         showError(
           res.status === 403
-            ? "GitHub's rate limit was hit. Try again in a little while."
-            : 'GitHub returned an unexpected status (' + res.status + ').',
+            ? 'GitHub rate limit hit. Try again later.'
+            : 'GitHub returned status ' + res.status + '.',
         )
         return
       }
