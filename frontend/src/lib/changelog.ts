@@ -20,6 +20,34 @@ export interface ChangelogEntry {
 // a safety net, not something to lean on when curating.
 export const CHANGELOG: readonly ChangelogEntry[] = [
   {
+    label: 'NeoForge & Forge server support',
+    date: '2026-08-14',
+    highlights: [
+      'Konnekt can now run NeoForge and modern Forge servers, which ship a run.sh/run.bat launcher instead of a runnable jar',
+      'Selecting a NeoForge or Forge installer jar now offers to install a server from it, with live installer output and an abort button',
+      'Hovering a server in the sidebar shows its Minecraft version, type, folder, launch file, and whether it is running',
+    ],
+    minor: [
+      '"Jar path" is now "Server File", and can be left empty for installs that have no server jar',
+      'A retried install now clears a truncated download left by an aborted one, instead of failing on it',
+      'Progress bars for work with no measurable progress now read empty until it finishes, rather than sitting full',
+      'RAM total now reflects an -Xmx set in a NeoForge/Forge install’s user_jvm_args.txt',
+    ],
+  },
+  {
+    label: 'Tile grid rebuild',
+    date: '2026-08-10',
+    highlights: [
+      'Every tile is now one size, and dropping a tile from the crate lands where you put it — including the right-hand side of a partly filled row',
+      'Tiles in the crate can be dragged into your own order',
+    ],
+    minor: [
+      'Scheduler surfaces backend errors instead of failing silently',
+      'A failed layout save no longer loses the current arrangement',
+      'Added an AI/personal-project disclaimer and a CC0 license',
+    ],
+  },
+  {
     label: 'In-place auto-updater',
     date: '2026-07-16',
     highlights: [

@@ -28,6 +28,7 @@ type App struct {
 	worldService        *services.WorldService
 	modService          *services.ModService
 	updateService       *services.UpdateService
+	installerService    *services.InstallerService
 	bus                 *services.EventBus
 	dataDir             string
 }
@@ -49,6 +50,8 @@ func NewApp() *App {
 	mods.SetBus(bus)
 	update := services.NewUpdateService()
 	update.SetBus(bus)
+	installer := services.NewInstallerService()
+	installer.SetBus(bus)
 	return &App{
 		serverService:       srv,
 		configService:       cfg,
@@ -61,6 +64,7 @@ func NewApp() *App {
 		worldService:        services.NewWorldService(cfg, srv, backup),
 		modService:          mods,
 		updateService:       update,
+		installerService:    installer,
 		bus:                 bus,
 	}
 }
@@ -93,15 +97,20 @@ func (a *App) startup(ctx context.Context) {
 	a.schedulerService.SetContext(ctx)
 	a.modService.SetContext(ctx)
 	a.modService.SetDataDir(a.dataDir)
+	a.installerService.SetContext(ctx)
 }
 
 // --- File dialogs ---
 
+// BrowseJarFile picks the server's entry point. Modern NeoForge/Forge installs
+// have no runnable jar — only run.sh/run.bat — so those are offered too; the
+// caller keeps the containing directory as the working dir either way.
 func (a *App) BrowseJarFile() (string, error) {
 	return runtime.OpenFileDialog(a.ctx, runtime.OpenDialogOptions{
-		Title: "Select Server JAR",
+		Title: "Select Server File",
 		Filters: []runtime.FileFilter{
-			{DisplayName: "JAR Files (*.jar)", Pattern: "*.jar"},
+			{DisplayName: "Server launcher (*.jar, run.sh, run.bat)", Pattern: "*.jar;*.sh;*.bat"},
+			{DisplayName: "All Files (*.*)", Pattern: "*.*"},
 		},
 	})
 }
@@ -194,6 +203,36 @@ func (a *App) ReadConfigFile(serverID string, relPath string) (string, error) {
 
 func (a *App) WriteConfigFile(serverID string, relPath string, content string) error {
 	return a.configEditorService.WriteConfigFile(serverID, relPath, content)
+}
+
+// --- Server install ---
+
+// InspectServerFile reports whether a picked file is a Forge/NeoForge installer
+// rather than a runnable server, so the UI can offer to install it.
+func (a *App) InspectServerFile(path string) (services.InstallerInfo, error) {
+	return services.InspectInstaller(path)
+}
+
+// InstallServer runs a Forge/NeoForge installer into targetDir. It returns as
+// soon as the installer starts; follow install:log / install:finished /
+// install:failed for the rest.
+func (a *App) InstallServer(jarPath string, targetDir string) error {
+	return a.installerService.InstallServer(jarPath, targetDir)
+}
+
+// AbortInstall kills a running installer. No-op when none is running.
+func (a *App) AbortInstall() error {
+	return a.installerService.Abort()
+}
+
+// GetServerSummary describes one configured server for the sidebar tooltip.
+// Unlike GetServerStatus, its Running field is specific to this server.
+func (a *App) GetServerSummary(serverID string) (models.ServerSummary, error) {
+	cfg, err := a.configService.GetServerConfig(serverID)
+	if err != nil {
+		return models.ServerSummary{}, err
+	}
+	return a.serverService.Summary(*cfg), nil
 }
 
 // --- Server lifecycle ---

@@ -26,6 +26,10 @@ export const EVENTS = {
   MOD_INSTALLED: 'mod:installed',
   MOD_INSTALL_FAILED: 'mod:install-failed',
   MOD_CHANGED: 'mod:changed',
+  INSTALL_STARTED: 'install:started',
+  INSTALL_LOG: 'install:log',
+  INSTALL_FINISHED: 'install:finished',
+  INSTALL_FAILED: 'install:failed',
   UPDATE_PROGRESS: 'update:progress',
 } as const
 

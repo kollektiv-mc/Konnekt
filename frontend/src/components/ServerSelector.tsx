@@ -1,6 +1,11 @@
 import { useEffect, useState } from 'react'
+import { EventsOn } from '../../wailsjs/runtime/runtime'
 import { useServerConfigStore } from '../stores/useServerConfigStore'
-import { BrowseJarFile, BrowseDirectory } from '../../wailsjs/go/main/App'
+import { BrowseJarFile, BrowseDirectory, InspectServerFile } from '../../wailsjs/go/main/App'
+import { ServerInstallModal } from './ServerInstallModal'
+import type { InstallerDetails, InstallResult } from './ServerInstallModal'
+import { ServerRow } from './ServerRow'
+import { EVENTS } from '../lib/constants'
 import type { ServerConfig } from '../types'
 
 interface FormState {
@@ -63,10 +68,44 @@ export function ServerSelector() {
   const [form, setForm] = useState<FormState>(emptyForm)
   const [advancedMode, setAdvancedMode] = useState(false)
   const [pendingDisconnect, setPendingDisconnect] = useState<string | null>(null)
+  const [installer, setInstaller] = useState<InstallerDetails | null>(null)
+  // What a just-finished install told us, so Save records the right loader and
+  // MC version instead of waiting for the first run to detect them.
+  const [installed, setInstalled] = useState<InstallResult | null>(null)
 
   useEffect(() => {
     loadConfigs().catch(console.error)
   }, [loadConfigs])
+
+  // Owned here rather than in the install modal so closing the modal mid-install
+  // still yields a configured server when the installer finishes.
+  useEffect(() => {
+    let off: (() => void) | undefined
+    try {
+      off = EventsOn(
+        EVENTS.INSTALL_FINISHED,
+        (d?: { targetDir?: string; mcVersion?: string; loader?: string }) => {
+          if (!d?.targetDir) return
+          const result = {
+            targetDir: d.targetDir,
+            mcVersion: d.mcVersion ?? '',
+            loader: d.loader ?? '',
+          }
+          setInstalled(result)
+          setForm((f) => ({ ...f, jarPath: '', workingDir: result.targetDir }))
+        },
+      )
+    } catch {
+      /* non-Wails context */
+    }
+    return () => {
+      try {
+        off?.()
+      } catch {
+        /* teardown no-op */
+      }
+    }
+  }, [])
 
   const openNew = () => {
     setForm(emptyForm)
@@ -93,28 +132,61 @@ export function ServerSelector() {
     setAdvancedMode((v) => !v)
   }
 
-  const submit = async () => {
-    const name = form.name.trim()
-    const jarPath = form.jarPath.trim()
-    const workingDir = form.workingDir.trim()
-    if (!name || !jarPath || !workingDir) return
+  // Shared by the Save button and the install modal's Add server, so the two
+  // cannot drift. Returns null when the form is too incomplete to save.
+  const buildConfig = (overrides: Partial<FormState> = {}): ServerConfig | null => {
+    const merged = { ...form, ...overrides }
+    const name = merged.name.trim()
+    const jarPath = merged.jarPath.trim()
+    const workingDir = merged.workingDir.trim()
+    // A NeoForge/Forge install has no runnable jar — the working dir is what the
+    // backend resolves the launch from, so only it and the name are required.
+    if (!name || !workingDir) return null
 
-    const id = editing === 'new' ? crypto.randomUUID() : editing!
+    const id = editing === 'new' || editing === null ? crypto.randomUUID() : editing
     const finalArgs = advancedMode
-      ? form.jvmArgs
-      : mergeRamIntoArgs(form.jvmArgs, form.minRam, form.maxRam)
+      ? merged.jvmArgs
+      : mergeRamIntoArgs(merged.jvmArgs, merged.minRam, merged.maxRam)
     const jvmArgs = finalArgs.trim() ? finalArgs.trim().split(/\s+/) : []
 
     const existing = configs.find((c) => c.id === id)
-    await saveConfig({
+    // A fresh install knows exactly what it laid down; prefer that over both
+    // the stored value and later log-based detection.
+    const fromInstall = installed?.targetDir === workingDir ? installed : null
+    return {
       id,
       name,
       jarPath,
       jvmArgs,
       workingDir,
-      mcVersion: existing?.mcVersion ?? '',
-      loader: existing?.loader ?? '',
+      mcVersion: fromInstall?.mcVersion || (existing?.mcVersion ?? ''),
+      loader: fromInstall?.loader || (existing?.loader ?? ''),
+    }
+  }
+
+  const submit = async () => {
+    const cfg = buildConfig()
+    if (!cfg) return
+    await saveConfig(cfg)
+    setInstalled(null)
+    setEditing(null)
+  }
+
+  // The install modal covers the sidebar, so it finishes the job itself rather
+  // than pointing at a Save button the user cannot see behind it.
+  const addInstalledServer = async () => {
+    if (!installed) return
+    const cfg = buildConfig({
+      workingDir: installed.targetDir,
+      jarPath: '',
+      // An unnamed server would fail the guard silently; name it after the folder.
+      name: form.name.trim() || baseOf(installed.targetDir),
     })
+    if (!cfg) return
+    await saveConfig(cfg)
+    await setActiveId(cfg.id)
+    setInstalled(null)
+    setInstaller(null)
     setEditing(null)
   }
 
@@ -128,9 +200,39 @@ export function ServerSelector() {
     return idx >= 0 ? filePath.substring(0, idx) : ''
   }
 
+  const baseOf = (filePath: string) => {
+    const trimmed = filePath.replace(/[\\/]+$/, '')
+    const idx = Math.max(trimmed.lastIndexOf('/'), trimmed.lastIndexOf('\\'))
+    return idx >= 0 ? trimmed.substring(idx + 1) : trimmed
+  }
+
+  const isLaunchScript = (filePath: string) =>
+    /[\\/]run\.(sh|bat|cmd)$/i.test(filePath) || /^run\.(sh|bat|cmd)$/i.test(filePath)
+
   const browseJar = async () => {
     const path = await BrowseJarFile().catch(() => '')
-    if (path) setForm((f) => ({ ...f, jarPath: path, workingDir: dirOf(path) }))
+    if (!path) return
+
+    // A Forge/NeoForge download is an installer, not a server — running it with
+    // -jar would start the installer. Offer to install instead.
+    const info = await InspectServerFile(path).catch(() => null)
+    if (info?.isInstaller) {
+      setInstaller({
+        jarPath: path,
+        loader: info.loader,
+        version: info.version,
+        mcVersion: info.mcVersion,
+      })
+      return
+    }
+
+    // Picking run.sh/run.bat only tells us where the install is — the backend
+    // resolves the launch from the directory, so leave the jar path empty.
+    setForm((f) => ({
+      ...f,
+      jarPath: isLaunchScript(path) ? '' : path,
+      workingDir: dirOf(path),
+    }))
   }
 
   const browseDir = async () => {
@@ -228,42 +330,20 @@ export function ServerSelector() {
       </div>
 
       {configs.map((cfg) => (
-        <div key={cfg.id} className="flex items-center gap-1">
-          <button
-            onClick={() => setActiveId(cfg.id)}
-            className={`flex flex-1 items-center gap-2 rounded px-2 py-1.5 text-left text-xs transition-all ${
-              cfg.id === activeId
-                ? 'text-accent bg-accent/10'
-                : 'text-white/60 hover:bg-white/5 hover:text-white'
-            }`}
-            title={cfg.jarPath}
-          >
-            <span
-              className={`h-1.5 w-1.5 shrink-0 rounded-full ${cfg.id === activeId ? 'bg-accent' : 'bg-white/20'}`}
-            />
-            <span className="truncate">{cfg.name}</span>
-          </button>
-          <button
-            onClick={() => openEdit(cfg)}
-            className="px-1 text-xs text-white/20 transition-colors hover:text-white/60"
-            title="Edit"
-          >
-            ✎
-          </button>
-          <button
-            onClick={() => setPendingDisconnect(cfg.id)}
-            className="px-1 text-xs text-white/20 transition-colors hover:text-red-400"
-            title="Disconnect"
-          >
-            ×
-          </button>
-        </div>
+        <ServerRow
+          key={cfg.id}
+          cfg={cfg}
+          active={cfg.id === activeId}
+          onSelect={() => setActiveId(cfg.id)}
+          onEdit={() => openEdit(cfg)}
+          onDisconnect={() => setPendingDisconnect(cfg.id)}
+        />
       ))}
 
       {editing !== null ? (
         <div className="border-border-subtle mt-1 flex flex-col gap-1.5 border-t-[0.5px] pt-2">
           {field('name', 'Name')}
-          {browseField('jarPath', 'Jar path', browseJar)}
+          {browseField('jarPath', 'Server File', browseJar)}
           {browseField('workingDir', 'Working dir', browseDir)}
           {advancedMode ? advancedField : ramFields}
           <button
@@ -295,6 +375,15 @@ export function ServerSelector() {
           <span>+</span>
           <span>Add server</span>
         </button>
+      )}
+
+      {installer && (
+        <ServerInstallModal
+          installer={installer}
+          suggestedDir={form.workingDir}
+          onAddServer={addInstalledServer}
+          onClose={() => setInstaller(null)}
+        />
       )}
 
       {pendingDisconnect &&

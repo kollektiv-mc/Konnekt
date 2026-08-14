@@ -51,7 +51,10 @@ were shipped early during Alpha. Their status below reflects reality.
 - [x] Stop server (clean process shutdown)
 - [x] Restart server
 - [x] Send command (write to process stdin)
-- [x] Multi-server instance support (multiple server configs)
+- [x] Multi-server instance support — multiple saved server *configs*, one
+  running at a time. `ServerService` is a singleton holding a single process,
+  console buffer and player map; `Start` refuses while another server runs.
+  Running several concurrently is [issue #57](../../issues/57), not Alpha scope.
 - [x] Server config storage (name, jar path, JVM args, working dir per server)
 - [x] Add / remove server instances from sidebar
 - [x] EULA acceptance prompt
@@ -237,8 +240,13 @@ mirrors the one active server like the desktop does (default: mirror).
 ## Later
 
 Breadth, once the foundations are proven. Ordering here is not fixed, and
-none of this is filed as issues yet — it's too early to scope precisely.
+most of this is not filed as issues yet — it's too early to scope precisely.
+Where an item does have an issue, it is linked.
 
+- **Concurrent multi-server** — run more than one server at a time
+  ([#57](../../issues/57)). Everything below `ServerService` assumes a single
+  process; the issue scopes only the first step (extracting per-server runtime
+  state into a `serverInstance`) and lists the open UI questions.
 - More vanilla commands — skeletons already exist; each needs editors,
   presentation metadata, and a route
 - Additional deep argument types: `nbt_compound`, `block_state`, `loot_table`

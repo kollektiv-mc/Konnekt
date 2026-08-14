@@ -83,3 +83,13 @@ export interface ServerStatus {
   ramUsed: number
   ramTotal: number
 }
+
+// At-a-glance description of one configured server (sidebar hover card).
+// Unlike ServerStatus.running, `running` here is specific to that server.
+export interface ServerSummary {
+  mcVersion: string
+  loader: string
+  workingDir: string
+  launchFile: string
+  running: boolean
+}

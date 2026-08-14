@@ -10,6 +10,16 @@ export function fmtBytes(b: number): string {
   return (b / 1024 / 1024).toFixed(1) + ' MB'
 }
 
+// Truncate from the front, keeping the tail. For a filesystem path the tail is
+// the identifying part, so "…/servers/neoforge-1.21" beats "/home/alex/Doc…".
+// Done in JS rather than with CSS `direction: rtl`, which reorders punctuation.
+export function truncateStart(text: string, max: number): string {
+  if (max <= 0) return ''
+  if (text.length <= max) return text
+  if (max === 1) return '…' // slice(-0) would return the whole string
+  return '…' + text.slice(-(max - 1))
+}
+
 export function relativeTime(iso: string): string {
   if (!iso) return ''
   const diff = Date.now() - new Date(iso).getTime()
