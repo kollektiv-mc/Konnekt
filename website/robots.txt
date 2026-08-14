@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://konnekt.pages.dev/sitemap.xml

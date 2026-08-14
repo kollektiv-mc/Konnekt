@@ -3,31 +3,73 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Download Konnekt</title>
-    <meta name="description" content="Download Konnekt, the local-first Minecraft server dashboard." />
+    <title>Download — Konnekt</title>
+    <meta
+      name="description"
+      content="Download Konnekt, the local-first Minecraft server dashboard. Windows and Linux builds, straight from GitHub Releases."
+    />
+    <link rel="canonical" href="https://konnekt.pages.dev/download.html" />
+
+    <meta property="og:site_name" content="Konnekt" />
+    <meta property="og:title" content="Download — Konnekt" />
+    <meta
+      property="og:description"
+      content="Download Konnekt, the local-first Minecraft server dashboard. Windows and Linux builds, straight from GitHub Releases."
+    />
+    <meta property="og:url" content="https://konnekt.pages.dev/download.html" />
+    <meta property="og:type" content="website" />
+    <meta property="og:image" content="https://konnekt.pages.dev/assets/img/social-card.png" />
+    <meta property="og:image:width" content="1715" />
+    <meta property="og:image:height" content="1123" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Download — Konnekt" />
+    <meta
+      name="twitter:description"
+      content="Download Konnekt, the local-first Minecraft server dashboard. Windows and Linux builds, straight from GitHub Releases."
+    />
+    <meta name="twitter:image" content="https://konnekt.pages.dev/assets/img/social-card.png" />
+
     <meta name="theme-color" content="#05060a" />
-    <link rel="stylesheet" href="./styles.css" />
+    <link rel="icon" type="image/svg+xml" href="/assets/img/favicon.svg" />
+    <link rel="apple-touch-icon" href="/assets/img/app-icon.png" />
+    <link rel="stylesheet" href="/styles.css" />
     <script>
       document.documentElement.className = document.documentElement.className.replace('no-js', '')
     </script>
   </head>
   <body>
-    <nav class="nav scrolled" id="nav">
+    <!-- Canonical nav. Byte-identical on every page, hrefs included — main.js
+         marks the current page and intercepts same-page anchors. -->
+    <nav class="nav" id="nav">
       <div class="nav-inner">
-        <a href="./index.html#top" class="wordmark">Konnekt</a>
-        <ul class="nav-links">
-          <li><a href="./index.html#features">Features</a></li>
-          <li><a href="./index.html#scheduler">Scheduler</a></li>
-          <li><a href="./changelog.html">Changelog</a></li>
-        </ul>
-        <div class="nav-actions">
-          <a
-            class="btn btn-secondary btn-sm"
-            href="https://github.com/kollektiv-mc/Konnekt"
-            target="_blank"
-            rel="noopener"
-            >View on GitHub</a
-          >
+        <a href="/index.html" class="wordmark">Konnekt</a>
+        <button
+          class="nav-toggle"
+          id="nav-toggle"
+          type="button"
+          aria-expanded="false"
+          aria-controls="nav-menu"
+          aria-label="Menu"
+        >
+          ≡
+        </button>
+        <div class="nav-menu" id="nav-menu">
+          <ul class="nav-links">
+            <li><a href="/index.html#features">Features</a></li>
+            <li><a href="/docs.html">Docs</a></li>
+            <li><a href="/roadmap.html">Roadmap</a></li>
+            <li><a href="/changelog.html">Changelog</a></li>
+          </ul>
+          <div class="nav-actions">
+            <a
+              class="btn btn-secondary btn-sm"
+              href="https://github.com/kollektiv-mc/Konnekt"
+              target="_blank"
+              rel="noopener"
+              >View on GitHub</a
+            >
+            <a class="btn btn-primary btn-sm" href="/download.html">Download</a>
+          </div>
         </div>
       </div>
     </nav>
@@ -72,29 +114,51 @@
           </p>
         </div>
 
-        <a class="subpage-back" href="./index.html">&larr; Back to home</a>
+        <a class="subpage-back" href="/index.html">&larr; Back to home</a>
       </div>
     </main>
 
+    <!-- Canonical footer. Identical on every page. -->
     <footer>
-      <div class="container footer-inner">
-        <div class="footer-left">
-          <span class="wordmark" style="font-size: 15px">Konnekt</span>
-          <span class="footer-tag">ALPHA</span>
+      <div class="container">
+        <div class="disclaimer">
+          <span class="disclaimer-badge">NOTE</span>
+          <p>
+            Konnekt is a personal side project, built to run its author's own Minecraft servers
+            rather than to match what a wider community might expect from it. Most of the code was
+            written by Claude with a human reading over its shoulder, so don't expect a
+            textbook-clean codebase. It's alpha software, released under
+            <a
+              href="https://github.com/kollektiv-mc/Konnekt/blob/main/LICENSE"
+              target="_blank"
+              rel="noopener"
+              >CC0</a
+            >
+            — fork it, extend it, rebuild it. <a href="/docs.html#disclaimer">Full statement</a>.
+          </p>
         </div>
-        <div class="footer-links">
-          <a href="https://github.com/kollektiv-mc/Konnekt" target="_blank" rel="noopener"
-            >GitHub</a
-          >
-          <a href="./index.html#features">Features</a>
-          <a href="./changelog.html">Changelog</a>
+        <div class="footer-inner">
+          <div class="footer-left">
+            <span class="wordmark" style="font-size: 15px">Konnekt</span>
+            <span class="footer-tag">ALPHA</span>
+          </div>
+          <div class="footer-links">
+            <a href="https://github.com/kollektiv-mc/Konnekt" target="_blank" rel="noopener"
+              >GitHub</a
+            >
+            <a href="/index.html#features">Features</a>
+            <a href="/docs.html">Docs</a>
+            <a href="/roadmap.html">Roadmap</a>
+            <a href="/download.html">Download</a>
+            <a href="/changelog.html">Changelog</a>
+          </div>
+          <span class="footer-copy">&copy; 2026 Konnekt</span>
         </div>
-        <span class="footer-copy">&copy; 2026 Konnekt</span>
       </div>
     </footer>
 
-    <script src="./main.js"></script>
-    <script src="./release.js"></script>
-    <script src="./download.js"></script>
+    <script src="/main.js"></script>
+    <script src="/release.js"></script>
+    <script src="/download.js"></script>
   </body>
 </html>

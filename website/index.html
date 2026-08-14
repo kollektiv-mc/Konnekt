@@ -8,42 +8,92 @@
       name="description"
       content="A tile-based desktop dashboard for your Minecraft server. Console, scheduler, worlds, backups. Local-first."
     />
-    <meta property="og:title" content="Konnekt" />
+    <link rel="canonical" href="https://konnekt.pages.dev/" />
+
+    <meta property="og:site_name" content="Konnekt" />
+    <meta property="og:title" content="Konnekt — Minecraft server dashboard" />
     <meta
       property="og:description"
-      content="A modular desktop dashboard for your Minecraft server."
+      content="A tile-based desktop dashboard for your Minecraft server. Console, scheduler, worlds, backups. Local-first."
     />
-    <meta property="og:image" content="./assets/img/visual-scheduler.png" />
+    <meta property="og:url" content="https://konnekt.pages.dev/" />
     <meta property="og:type" content="website" />
+    <meta property="og:image" content="https://konnekt.pages.dev/assets/img/social-card.png" />
+    <meta property="og:image:width" content="1715" />
+    <meta property="og:image:height" content="1123" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Konnekt — Minecraft server dashboard" />
+    <meta
+      name="twitter:description"
+      content="A tile-based desktop dashboard for your Minecraft server. Console, scheduler, worlds, backups. Local-first."
+    />
+    <meta name="twitter:image" content="https://konnekt.pages.dev/assets/img/social-card.png" />
+
     <meta name="theme-color" content="#05060a" />
-    <link rel="stylesheet" href="./styles.css" />
+    <link rel="icon" type="image/svg+xml" href="/assets/img/favicon.svg" />
+    <link rel="apple-touch-icon" href="/assets/img/app-icon.png" />
+    <link rel="stylesheet" href="/styles.css" />
     <script>
       document.documentElement.className = document.documentElement.className.replace('no-js', '')
     </script>
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "SoftwareApplication",
+        "name": "Konnekt",
+        "description": "A tile-based desktop dashboard for self-hosted Minecraft servers. Console, scheduling, worlds, backups and mods in one local-first app.",
+        "applicationCategory": "DeveloperApplication",
+        "operatingSystem": "Windows, Linux",
+        "url": "https://konnekt.pages.dev/",
+        "codeRepository": "https://github.com/kollektiv-mc/Konnekt",
+        "license": "https://creativecommons.org/publicdomain/zero/1.0/",
+        "screenshot": "https://konnekt.pages.dev/assets/img/social-card.png",
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD"
+        }
+      }
+    </script>
   </head>
   <body>
+    <!-- Canonical nav. Byte-identical on every page, hrefs included — main.js
+         marks the current page and intercepts same-page anchors. -->
     <nav class="nav" id="nav">
       <div class="nav-inner">
-        <a href="#top" class="wordmark">Konnekt</a>
-        <ul class="nav-links">
-          <li><a href="#features">Features</a></li>
-          <li><a href="#scheduler">Scheduler</a></li>
-          <li><a href="./download.html">Download</a></li>
-        </ul>
-        <div class="nav-actions">
-          <a
-            class="btn btn-secondary btn-sm"
-            href="https://github.com/kollektiv-mc/Konnekt"
-            target="_blank"
-            rel="noopener"
-            >View on GitHub</a
-          >
-          <a class="btn btn-primary btn-sm" href="./download.html">Download</a>
+        <a href="/index.html" class="wordmark">Konnekt</a>
+        <button
+          class="nav-toggle"
+          id="nav-toggle"
+          type="button"
+          aria-expanded="false"
+          aria-controls="nav-menu"
+          aria-label="Menu"
+        >
+          ≡
+        </button>
+        <div class="nav-menu" id="nav-menu">
+          <ul class="nav-links">
+            <li><a href="/index.html#features">Features</a></li>
+            <li><a href="/docs.html">Docs</a></li>
+            <li><a href="/roadmap.html">Roadmap</a></li>
+            <li><a href="/changelog.html">Changelog</a></li>
+          </ul>
+          <div class="nav-actions">
+            <a
+              class="btn btn-secondary btn-sm"
+              href="https://github.com/kollektiv-mc/Konnekt"
+              target="_blank"
+              rel="noopener"
+              >View on GitHub</a
+            >
+            <a class="btn btn-primary btn-sm" href="/download.html">Download</a>
+          </div>
         </div>
       </div>
     </nav>
 
-    <header class="hero" id="top">
+    <header class="hero section-full" id="top">
       <div class="hero-inner">
         <h1>
           <span class="hero-lead">
@@ -58,7 +108,7 @@
           Console, scheduling, worlds and backups in one local-first desktop app.
         </p>
         <div class="hero-actions hero-fade" style="--fade-delay: 1020ms">
-          <a class="btn btn-primary" href="./download.html">Download Konnekt</a>
+          <a class="btn btn-primary" href="/download.html">Download Konnekt</a>
           <a
             class="btn btn-secondary"
             href="https://github.com/kollektiv-mc/Konnekt"
@@ -70,7 +120,7 @@
       </div>
     </header>
 
-    <section id="features">
+    <section class="section-full" id="features">
       <div class="container">
         <div class="section-head reveal">
           <span class="eyebrow">&gt;_ features</span>
@@ -164,7 +214,7 @@
       </div>
     </section>
 
-    <section id="scheduler">
+    <section class="section-full" id="scheduler">
       <div class="container">
         <div class="spotlight">
           <div class="spotlight-media reveal">
@@ -245,36 +295,115 @@
       </div>
     </section>
 
-    <section class="cta" id="download">
+    <section class="section-full" id="privacy">
+      <div class="container">
+        <div class="section-head reveal">
+          <span class="eyebrow">[#] local-first</span>
+          <h2>Your server, your machine</h2>
+          <p>
+            Konnekt is a desktop app, not a hosted panel. There is no account, no server of ours
+            in the middle, and nothing to sign up for.
+          </p>
+        </div>
+        <div class="feat-grid">
+          <article class="feat reveal" style="--reveal-delay: 0ms">
+            <div class="feat-inner">
+              <span class="feat-icon" aria-hidden="true">⊘</span>
+              <h3 class="feat-title">No telemetry</h3>
+              <div class="feat-detail">
+                <ul>
+                  <li>No analytics or usage tracking</li>
+                  <li>No crash reporting</li>
+                  <li>Nothing phones home on launch</li>
+                </ul>
+              </div>
+            </div>
+          </article>
+
+          <article class="feat reveal" style="--reveal-delay: 60ms">
+            <div class="feat-inner">
+              <span class="feat-icon" aria-hidden="true">▤</span>
+              <h3 class="feat-title">Stays on disk</h3>
+              <div class="feat-detail">
+                <ul>
+                  <li>Your server directories, where they already are</li>
+                  <li>Settings and layouts as JSON in the app data folder</li>
+                  <li>Backups written wherever you point them</li>
+                </ul>
+              </div>
+            </div>
+          </article>
+
+          <article class="feat reveal" style="--reveal-delay: 120ms">
+            <div class="feat-inner">
+              <span class="feat-icon" aria-hidden="true">⇄</span>
+              <h3 class="feat-title">Network, only on request</h3>
+              <div class="feat-detail">
+                <ul>
+                  <li>GitHub, to check for a new release</li>
+                  <li>Modrinth, while you browse or install mods</li>
+                  <li>Your own server, over RCON</li>
+                </ul>
+              </div>
+            </div>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="cta section-full" id="download">
       <div class="container">
         <div class="cta-panel reveal">
           <span class="eyebrow">[&gt;] download</span>
           <h2>Get Konnekt</h2>
           <p>Free and open source.</p>
           <div class="cta-actions">
-            <a class="btn btn-primary" href="./download.html">Download Konnekt</a>
-            <a class="btn btn-secondary" href="./changelog.html">Changelog</a>
+            <a class="btn btn-primary" href="/download.html">Download Konnekt</a>
+            <a class="btn btn-secondary" href="/changelog.html">Changelog</a>
           </div>
         </div>
       </div>
     </section>
 
+    <!-- Canonical footer. Identical on every page. -->
     <footer>
-      <div class="container footer-inner">
-        <div class="footer-left">
-          <span class="wordmark" style="font-size: 15px">Konnekt</span>
-          <span class="footer-tag">ALPHA</span>
+      <div class="container">
+        <div class="disclaimer">
+          <span class="disclaimer-badge">NOTE</span>
+          <p>
+            Konnekt is a personal side project, built to run its author's own Minecraft servers
+            rather than to match what a wider community might expect from it. Most of the code was
+            written by Claude with a human reading over its shoulder, so don't expect a
+            textbook-clean codebase. It's alpha software, released under
+            <a
+              href="https://github.com/kollektiv-mc/Konnekt/blob/main/LICENSE"
+              target="_blank"
+              rel="noopener"
+              >CC0</a
+            >
+            — fork it, extend it, rebuild it. <a href="/docs.html#disclaimer">Full statement</a>.
+          </p>
         </div>
-        <div class="footer-links">
-          <a href="https://github.com/kollektiv-mc/Konnekt" target="_blank" rel="noopener">GitHub</a>
-          <a href="#features">Features</a>
-          <a href="./download.html">Download</a>
-          <a href="./changelog.html">Changelog</a>
+        <div class="footer-inner">
+          <div class="footer-left">
+            <span class="wordmark" style="font-size: 15px">Konnekt</span>
+            <span class="footer-tag">ALPHA</span>
+          </div>
+          <div class="footer-links">
+            <a href="https://github.com/kollektiv-mc/Konnekt" target="_blank" rel="noopener"
+              >GitHub</a
+            >
+            <a href="/index.html#features">Features</a>
+            <a href="/docs.html">Docs</a>
+            <a href="/roadmap.html">Roadmap</a>
+            <a href="/download.html">Download</a>
+            <a href="/changelog.html">Changelog</a>
+          </div>
+          <span class="footer-copy">&copy; 2026 Konnekt</span>
         </div>
-        <span class="footer-copy">&copy; 2026 Konnekt</span>
       </div>
     </footer>
 
-    <script src="./main.js"></script>
+    <script src="/main.js"></script>
   </body>
 </html>
