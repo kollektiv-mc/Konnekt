@@ -6,6 +6,8 @@ This is a personal side project — I built it to run my own Minecraft servers t
 
 I have no interest in gatekeeping any of this, so take the code and do what you want with it — fork it, extend it, rebuild it, whatever. It's released under [CC0](LICENSE), so there's no copyright to ask permission from.
 
+## About
+
 Konnekt is a cross-platform desktop control panel for self-hosted Minecraft servers. It wraps everything you'd normally do through a raw console, RCON, or SSH — starting servers, watching logs, managing worlds, scheduling backups, installing mods — into a single native app with a modular, drag-and-drop dashboard.
 
 It's built for Minecraft server admins and hobbyists who self-host vanilla, Paper/Spigot/Bukkit, or modded Fabric/Forge servers and want a real GUI instead of stitching together terminal windows and plugins.
