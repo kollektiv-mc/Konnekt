@@ -54,6 +54,12 @@
   --font-mono: ui-monospace, 'Cascadia Code', 'SF Mono', 'Segoe UI Mono', Consolas, monospace;
 
   --max-width: 1120px;
+
+  /* Layout rhythm. The nav is a fixed height (not padding-driven) so --nav-h is
+     a value the rest of the sheet can trust; --section-y is the one vertical
+     scale every section, sub-page and the footer derive from. */
+  --nav-h: 60px;
+  --section-y: clamp(56px, 6vh, 96px);
 }
 
 * {
@@ -65,13 +71,33 @@ html {
   scroll-behavior: smooth;
 }
 
+/* Sticky footer. Sub-pages used to fake this with `min-height: 100vh` on
+   <main>, which stretched short pages and left the footer stranded at the
+   viewport line while tall pages got no bottom gap at all. */
 body {
   margin: 0;
+  min-height: 100svh;
+  display: flex;
+  flex-direction: column;
   background: var(--bg-base);
   color: var(--text-primary);
   font-family: var(--font-sans);
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
+}
+
+body > main,
+body > header,
+body > section {
+  flex-shrink: 0;
+}
+
+body > main {
+  flex: 1 0 auto;
+}
+
+body > footer {
+  flex-shrink: 0;
 }
 
 img {
@@ -112,7 +138,12 @@ a {
   outline-offset: 2px;
 }
 
+/* `width: 100%` is load-bearing, not redundant: .section-full is a flex
+   column, and a flex item with `margin: 0 auto` on the cross axis opts out of
+   the default stretch — the container would shrink to fit its content and
+   collapse the auto-fit grids to a single column. */
 .container {
+  width: 100%;
   max-width: var(--max-width);
   margin: 0 auto;
   padding: 0 24px;
@@ -142,29 +173,24 @@ a {
 }
 
 /* ── Nav ──────────────────────────────────────────────────────────────── */
+/* Identical markup on every page, and identical *rendering* on every page:
+   fixed height, always solid, nothing that reacts to scroll. The old
+   transparent → .scrolled transition made the bar change size and colour
+   mid-load on sub-pages, which read as three different navbars. */
 .nav {
   position: fixed;
   top: 0;
   left: 0;
   right: 0;
   z-index: 100;
+  height: var(--nav-h);
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 18px 24px;
-  border-bottom: 0.5px solid transparent;
-  background: transparent;
-  transition:
-    background-color var(--duration-panel) var(--ease-standard),
-    border-color var(--duration-panel) var(--ease-standard),
-    padding var(--duration-panel) var(--ease-standard);
-}
-
-.nav.scrolled {
+  padding: 0 24px;
+  border-bottom: 0.5px solid var(--border-subtle);
   background: var(--bg-elevated);
   backdrop-filter: blur(12px);
-  border-bottom-color: var(--border-subtle);
-  padding: 12px 24px;
 }
 
 .nav-inner {
@@ -174,6 +200,37 @@ a {
   display: flex;
   align-items: center;
   justify-content: space-between;
+}
+
+/* Above the mobile breakpoint the menu wrapper is layout-transparent, so the
+   links and actions sit in .nav-inner's flex row exactly as before. */
+.nav-menu {
+  display: contents;
+}
+
+.nav-toggle {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: 0.5px solid var(--border-subtle);
+  border-radius: 8px;
+  background: var(--hover-surface);
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
+  transition:
+    color var(--duration-fast) ease,
+    border-color var(--duration-fast) ease;
+}
+
+.nav-toggle:hover {
+  color: var(--text-primary);
+  border-color: var(--border-hover);
 }
 
 .wordmark {
@@ -204,6 +261,25 @@ a {
 
 .nav-links a:hover {
   color: var(--text-primary);
+}
+
+/* Active page. Set by main.js from the URL, so the markup stays identical
+   across pages and cannot drift out of sync again. */
+.nav-links a[aria-current='page'] {
+  color: var(--text-primary);
+  position: relative;
+}
+
+.nav-links a[aria-current='page']::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -6px;
+  height: 1.5px;
+  border-radius: 1px;
+  background: var(--accent);
+  box-shadow: 0 0 8px rgb(var(--accent-rgb) / 0.6);
 }
 
 .nav-actions {
@@ -297,16 +373,28 @@ a {
   transition: none;
 }
 
-/* ── Hero ─────────────────────────────────────────────────────────────── */
-.hero {
+/* ── Full-viewport section shell ──────────────────────────────────────── */
+/* Every landing-page block — hero included — is one of these, so they all
+   share a height and a rhythm instead of each carrying its own padding.
+   The asymmetric top padding is what clears the fixed nav: because
+   `box-sizing: border-box` is global, the padding lives inside the 100svh, so
+   the same rule both nudges short centred sections clear of the bar and
+   guarantees clearance for sections that outgrow the viewport. */
+.section-full {
   position: relative;
-  min-height: 100vh;
   min-height: 100svh;
   display: flex;
-  align-items: center;
+  flex-direction: column;
   justify-content: center;
-  padding: 96px 24px;
-  box-sizing: border-box;
+  padding: calc(var(--nav-h) + var(--section-y)) 0 var(--section-y);
+  scroll-margin-top: var(--nav-h);
+}
+
+/* ── Hero ─────────────────────────────────────────────────────────────── */
+.hero {
+  padding-left: 24px;
+  padding-right: 24px;
+  align-items: center;
   overflow: hidden;
 }
 
@@ -429,11 +517,7 @@ a {
   }
 }
 
-/* ── Section shell ────────────────────────────────────────────────────── */
-section {
-  padding: 88px 0;
-}
-
+/* ── Section heads ────────────────────────────────────────────────────── */
 .section-head {
   text-align: center;
   max-width: 640px;
@@ -681,10 +765,6 @@ section {
 }
 
 /* ── CTA / Download ───────────────────────────────────────────────────── */
-.cta {
-  padding: 96px 0;
-}
-
 .cta-panel {
   max-width: 640px;
   margin: 0 auto;
@@ -724,7 +804,45 @@ section {
 /* ── Footer ───────────────────────────────────────────────────────────── */
 footer {
   border-top: 0.5px solid var(--border-subtle);
-  padding: 40px 0;
+  padding: calc(var(--section-y) * 0.55) 0;
+}
+
+/* Alpha / AI-built disclaimer, condensed from the README's "Fair warning".
+   Sits above the footer row on every page. */
+.disclaimer {
+  max-width: 720px;
+  margin: 0 auto calc(var(--section-y) * 0.5);
+  border: 0.5px solid rgb(var(--sun-rgb) / 0.28);
+  background: rgb(var(--sun-rgb) / 0.05);
+  border-radius: 12px;
+  padding: 18px 22px;
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+}
+
+.disclaimer-badge {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--sun);
+  border: 0.5px solid rgb(var(--sun-rgb) / 0.35);
+  background: rgb(var(--sun-rgb) / 0.08);
+  padding: 2px 8px;
+  border-radius: 5px;
+  letter-spacing: 0.05em;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.disclaimer p {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: var(--text-muted);
+}
+
+.disclaimer a {
+  color: var(--text-secondary);
 }
 
 .footer-inner {
@@ -775,11 +893,11 @@ footer {
   color: var(--text-faint);
 }
 
-/* ── Sub-page shell (download / changelog) ────────────────────────────── */
+/* ── Sub-page shell (download / changelog / docs / roadmap / 404) ─────── */
+/* Symmetric padding on the same scale as .section-full. Height is handled by
+   the body flex column, not a min-height here. */
 .subpage {
-  padding-top: 128px;
-  min-height: 100vh;
-  min-height: 100svh;
+  padding: calc(var(--nav-h) + var(--section-y)) 0 var(--section-y);
 }
 
 .subpage-head {
@@ -1148,7 +1266,7 @@ footer {
 .subpage-back {
   display: block;
   text-align: center;
-  margin: 44px auto 0;
+  margin: calc(var(--section-y) * 0.5) auto 0;
   font-size: 13px;
   color: var(--text-muted);
   text-decoration: none;
@@ -1158,6 +1276,195 @@ footer {
   color: var(--text-primary);
 }
 
+/* ── Docs / roadmap pages ─────────────────────────────────────────────── */
+.doc-page {
+  max-width: 780px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.doc-toc {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+  margin-bottom: 8px;
+}
+
+.doc-toc a {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  color: var(--text-muted);
+  text-decoration: none;
+  border: 0.5px solid var(--border-subtle);
+  background: var(--bg-surface);
+  border-radius: 999px;
+  padding: 5px 13px;
+  transition:
+    color var(--duration-fast) ease,
+    border-color var(--duration-fast) ease;
+}
+
+.doc-toc a:hover {
+  color: var(--text-primary);
+  border-color: var(--border-hover);
+}
+
+.doc-section {
+  background: var(--bg-elevated);
+  border: 0.5px solid var(--border-subtle);
+  border-radius: 16px;
+  padding: 28px 30px;
+  scroll-margin-top: calc(var(--nav-h) + 16px);
+}
+
+.doc-section > h2 {
+  font-family: var(--font-title);
+  font-weight: 500;
+  font-size: 20px;
+  color: var(--text-primary);
+  margin: 0 0 18px;
+  padding-bottom: 14px;
+  border-bottom: 0.5px solid var(--border-subtle);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+/* Status pills, shared by the roadmap groups and the platform table. */
+.tag {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 0.5px solid;
+  white-space: nowrap;
+}
+
+.tag-done {
+  color: var(--accent);
+  border-color: rgb(var(--accent-rgb) / 0.35);
+  background: rgb(var(--accent-rgb) / 0.08);
+}
+
+.tag-wip {
+  color: var(--sun);
+  border-color: rgb(var(--sun-rgb) / 0.35);
+  background: rgb(var(--sun-rgb) / 0.08);
+}
+
+.tag-later {
+  color: var(--text-muted);
+  border-color: var(--border-subtle);
+  background: var(--hover-surface);
+}
+
+.tag-no {
+  color: var(--danger);
+  border-color: rgb(var(--danger-rgb) / 0.3);
+  background: rgb(var(--danger-rgb) / 0.07);
+}
+
+/* Platform-support table on the docs page. Scrolls inside its own wrapper on
+   narrow screens rather than crushing the columns or widening the page. */
+.table-wrap {
+  overflow-x: auto;
+  margin: 0 0 12px;
+}
+
+.doc-table {
+  width: 100%;
+  min-width: 420px;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.doc-table th,
+.doc-table td {
+  text-align: left;
+  padding: 10px 12px 10px 0;
+  border-bottom: 0.5px solid var(--border-subtle);
+  vertical-align: top;
+}
+
+.doc-table th {
+  font-family: var(--font-title);
+  font-weight: 500;
+  font-size: 12px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.doc-table td {
+  color: var(--text-secondary);
+}
+
+.doc-table tr:last-child td {
+  border-bottom: none;
+}
+
+.doc-table code {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-primary);
+}
+
+/* FAQ disclosure list. */
+.faq {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.faq details {
+  border-bottom: 0.5px solid var(--border-subtle);
+}
+
+.faq details:last-child {
+  border-bottom: none;
+}
+
+.faq summary {
+  cursor: pointer;
+  list-style: none;
+  padding: 14px 0;
+  font-size: 14px;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.faq summary::-webkit-details-marker {
+  display: none;
+}
+
+.faq summary::before {
+  content: '+';
+  font-family: var(--font-mono);
+  color: var(--accent);
+  flex-shrink: 0;
+}
+
+.faq details[open] summary::before {
+  content: '−';
+}
+
+.faq details[open] summary {
+  padding-bottom: 6px;
+}
+
+.faq .md {
+  padding: 0 0 14px 22px;
+}
+
 /* ── Responsive ───────────────────────────────────────────────────────── */
 @media (max-width: 860px) {
   .spotlight {
@@ -1165,16 +1472,76 @@ footer {
     gap: 32px;
   }
 
-  .nav-links {
+  /* Full-viewport panels stop meaning anything here: the feature grid becomes
+     a single 6-tile column far taller than the viewport, while the CTA is a
+     few hundred pixels, so the rule would only add dead air. Longhands only —
+     a `padding` shorthand would wipe the hero's horizontal padding. */
+  .section-full {
+    min-height: 0;
+    justify-content: flex-start;
+    padding-top: var(--section-y);
+    padding-bottom: var(--section-y);
+  }
+
+  .hero {
+    padding-top: calc(var(--nav-h) + var(--section-y));
+  }
+
+  /* Disclosure menu. Replaces the old `.nav-links { display: none }`, which
+     left mobile with no way to reach anything but the wordmark. */
+  .nav-toggle {
+    display: inline-flex;
+  }
+
+  .nav-menu {
     display: none;
+    position: absolute;
+    top: var(--nav-h);
+    left: 0;
+    right: 0;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 18px;
+    padding: 20px 24px 24px;
+    /* Composites the translucent elevated tone over the opaque base: the same
+       colour as the bar, but solid. The bar can be 82% alpha because it's a
+       thin strip; a full dropdown over body copy cannot — and backdrop-filter
+       is not a guarantee (no blur without compositing support). */
+    background: linear-gradient(var(--bg-elevated), var(--bg-elevated)), var(--bg-base);
+    border-bottom: 0.5px solid var(--border-subtle);
+  }
+
+  .nav-menu.is-open {
+    display: flex;
+  }
+
+  .nav-links {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+  }
+
+  .nav-links a {
+    font-size: 15px;
+  }
+
+  .nav-links a[aria-current='page']::after {
+    bottom: -4px;
+  }
+
+  .nav-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .nav-actions .btn {
+    justify-content: center;
+    padding: 10px 18px;
+    font-size: 13px;
   }
 }
 
 @media (max-width: 560px) {
-  .hero {
-    padding: 120px 20px;
-  }
-
   .footer-inner {
     flex-direction: column;
     align-items: flex-start;
@@ -1182,6 +1549,15 @@ footer {
 
   .download-primary {
     padding: 26px 20px;
+  }
+
+  .disclaimer {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .doc-section {
+    padding: 22px 20px;
   }
 }
 

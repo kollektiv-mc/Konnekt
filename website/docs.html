@@ -1,0 +1,383 @@
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Docs — Konnekt</title>
+    <meta
+      name="description"
+      content="What Konnekt needs to run, which platforms are supported, how to get started, and how to build it from source."
+    />
+    <link rel="canonical" href="https://kollektiv-mc.github.io/Konnekt/docs.html" />
+
+    <meta property="og:site_name" content="Konnekt" />
+    <meta property="og:title" content="Docs — Konnekt" />
+    <meta
+      property="og:description"
+      content="What Konnekt needs to run, which platforms are supported, how to get started, and how to build it from source."
+    />
+    <meta property="og:url" content="https://kollektiv-mc.github.io/Konnekt/docs.html" />
+    <meta property="og:type" content="website" />
+    <meta
+      property="og:image"
+      content="https://kollektiv-mc.github.io/Konnekt/assets/img/social-card.png"
+    />
+    <meta property="og:image:width" content="1715" />
+    <meta property="og:image:height" content="1123" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Docs — Konnekt" />
+    <meta
+      name="twitter:description"
+      content="What Konnekt needs to run, which platforms are supported, how to get started, and how to build it from source."
+    />
+    <meta
+      name="twitter:image"
+      content="https://kollektiv-mc.github.io/Konnekt/assets/img/social-card.png"
+    />
+
+    <meta name="theme-color" content="#05060a" />
+    <link rel="icon" type="image/svg+xml" href="./assets/img/favicon.svg" />
+    <link rel="apple-touch-icon" href="./assets/img/app-icon.png" />
+    <link rel="stylesheet" href="./styles.css" />
+    <script>
+      document.documentElement.className = document.documentElement.className.replace('no-js', '')
+    </script>
+  </head>
+  <body>
+    <!-- Canonical nav. Byte-identical on every page, hrefs included — main.js
+         marks the current page and intercepts same-page anchors. -->
+    <nav class="nav" id="nav">
+      <div class="nav-inner">
+        <a href="./index.html" class="wordmark">Konnekt</a>
+        <button
+          class="nav-toggle"
+          id="nav-toggle"
+          type="button"
+          aria-expanded="false"
+          aria-controls="nav-menu"
+          aria-label="Menu"
+        >
+          ≡
+        </button>
+        <div class="nav-menu" id="nav-menu">
+          <ul class="nav-links">
+            <li><a href="./index.html#features">Features</a></li>
+            <li><a href="./docs.html">Docs</a></li>
+            <li><a href="./roadmap.html">Roadmap</a></li>
+            <li><a href="./changelog.html">Changelog</a></li>
+          </ul>
+          <div class="nav-actions">
+            <a
+              class="btn btn-secondary btn-sm"
+              href="https://github.com/kollektiv-mc/Konnekt"
+              target="_blank"
+              rel="noopener"
+              >View on GitHub</a
+            >
+            <a class="btn btn-primary btn-sm" href="./download.html">Download</a>
+          </div>
+        </div>
+      </div>
+    </nav>
+
+    <main class="subpage">
+      <div class="container">
+        <div class="subpage-head">
+          <span class="eyebrow">() docs</span>
+          <h1>Getting <span class="accent">started</span></h1>
+          <p>What Konnekt needs, where it runs, and how to point it at your first server.</p>
+        </div>
+
+        <div class="doc-page">
+          <nav class="doc-toc" aria-label="On this page">
+            <a href="#requirements">Requirements</a>
+            <a href="#platforms">Platform support</a>
+            <a href="#start">First server</a>
+            <a href="#build">Build from source</a>
+            <a href="#faq">FAQ</a>
+            <a href="#disclaimer">Fair warning</a>
+          </nav>
+
+          <section class="doc-section" id="requirements">
+            <h2>Requirements</h2>
+            <div class="md">
+              <p>
+                Konnekt ships as a single native binary. There is no runtime to install alongside
+                it — no Java, no Node, no Electron bundle.
+              </p>
+              <ul>
+                <li>
+                  <strong>A Minecraft server you already have.</strong> Konnekt manages an existing
+                  server directory and jar; it does not download or provision one for you.
+                </li>
+                <li>
+                  <strong>Java</strong> — required by the <em>server</em>, not by Konnekt. Whatever
+                  version your server jar needs is what you need installed.
+                </li>
+                <li>
+                  <strong>RCON enabled</strong> in <code>server.properties</code> if you want the
+                  player list, kick/ban and command features. Console streaming works without it.
+                </li>
+                <li><strong>64-bit Windows or Linux</strong> — see below.</li>
+              </ul>
+            </div>
+          </section>
+
+          <section class="doc-section" id="platforms">
+            <h2>Platform support</h2>
+            <div class="md">
+              <div class="table-wrap">
+                <table class="doc-table">
+                  <thead>
+                    <tr>
+                      <th>Platform</th>
+                      <th>Build</th>
+                      <th>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td>Windows (x86-64)</td>
+                      <td><code>konnekt-windows-amd64.exe</code></td>
+                      <td><span class="tag tag-done">Published</span></td>
+                    </tr>
+                    <tr>
+                      <td>Linux (x86-64)</td>
+                      <td><code>konnekt-linux-amd64</code></td>
+                      <td><span class="tag tag-done">Published</span></td>
+                    </tr>
+                    <tr>
+                      <td>Fedora / RHEL (x86-64)</td>
+                      <td><code>.x86_64.rpm</code></td>
+                      <td><span class="tag tag-done">Published</span></td>
+                    </tr>
+                    <tr>
+                      <td>macOS</td>
+                      <td>Build from source</td>
+                      <td><span class="tag tag-later">Not published</span></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <p>
+                Linux builds link against <code>webkit2gtk-4.1</code>, which covers Rocky/RHEL 10,
+                Fedora 36+, Ubuntu 22.04+ and Debian 12+. At runtime they need
+                <code>webkit2gtk4.1</code> and <code>gtk3</code>.
+              </p>
+              <p>
+                <strong>Rocky / RHEL 9 is not supported.</strong> EL9 never received
+                webkit2gtk-4.1 and EL10 dropped 4.0, and the two are not binary-compatible — so
+                there is no build that can satisfy both. This is a hard limit, not a gap waiting to
+                be filled.
+              </p>
+              <p>
+                macOS runs fine as a native app but is not published as a release yet; build it
+                with <code>wails build</code> like any other platform.
+              </p>
+            </div>
+          </section>
+
+          <section class="doc-section" id="start">
+            <h2>Your first server</h2>
+            <div class="md">
+              <ol>
+                <li>
+                  <strong>Add a server.</strong> Point Konnekt at the jar, set the working
+                  directory, and set the JVM arguments you want (heap size, flags).
+                </li>
+                <li>
+                  <strong>Accept the EULA.</strong> First-time setup walks you through it rather
+                  than failing silently on a missing <code>eula.txt</code>.
+                </li>
+                <li>
+                  <strong>Start it.</strong> The console tile streams the log live and takes
+                  commands inline.
+                </li>
+                <li>
+                  <strong>Arrange the dashboard.</strong> Drag, resize and snap tiles, crate the
+                  ones you don't want, and save the arrangement as a preset.
+                </li>
+              </ol>
+              <p>
+                Add as many servers as you like — each one starts, stops and restarts
+                independently.
+              </p>
+            </div>
+          </section>
+
+          <section class="doc-section" id="build">
+            <h2>Build from source</h2>
+            <div class="md">
+              <p>
+                Requires <a href="https://go.dev/" target="_blank" rel="noopener">Go</a>,
+                <a href="https://nodejs.org/" target="_blank" rel="noopener">Node.js</a> with
+                <a href="https://pnpm.io/" target="_blank" rel="noopener">pnpm</a>, and the
+                <a
+                  href="https://wails.io/docs/gettingstarted/installation"
+                  target="_blank"
+                  rel="noopener"
+                  >Wails CLI</a
+                >. On Linux you also need the <code>webkit2gtk</code> and <code>gtk3</code>
+                development packages.
+              </p>
+              <pre><code>git clone https://github.com/kollektiv-mc/Konnekt
+cd Konnekt
+pnpm install
+wails dev</code></pre>
+              <p>
+                Run <code>wails doctor</code> first — it reports exactly what your distro is
+                missing. If WebKit detection fails on a webkit2gtk-4.1 system, add the build tag:
+              </p>
+              <pre><code>wails build -tags webkit2_41
+wails dev -tags webkit2_41</code></pre>
+            </div>
+          </section>
+
+          <section class="doc-section" id="faq">
+            <h2>FAQ</h2>
+            <div class="faq">
+              <details>
+                <summary>Is it free?</summary>
+                <div class="md">
+                  <p>
+                    Yes, and more than free — it's released under
+                    <a
+                      href="https://github.com/kollektiv-mc/Konnekt/blob/main/LICENSE"
+                      target="_blank"
+                      rel="noopener"
+                      >CC0</a
+                    >, so there is no copyright to ask permission from. Fork it, extend it, rebuild
+                    it, ship it. No accounts, no tiers, no subscriptions — those are explicitly out
+                    of scope.
+                  </p>
+                </div>
+              </details>
+              <details>
+                <summary>Does it phone home?</summary>
+                <div class="md">
+                  <p>
+                    No. There is no telemetry, no analytics and no crash reporting. Konnekt makes
+                    network requests in exactly three cases: to GitHub when it checks for a new
+                    release, to Modrinth while you browse or install mods, and to your own server
+                    over RCON.
+                  </p>
+                </div>
+              </details>
+              <details>
+                <summary>Which server types work?</summary>
+                <div class="md">
+                  <p>
+                    Vanilla, Paper/Spigot/Bukkit, and modded Fabric, Forge and NeoForge. Konnekt
+                    detects the loader automatically when resolving mods. Bedrock Edition is out of
+                    scope — the command syntax is different enough that it would be a separate
+                    product.
+                  </p>
+                </div>
+              </details>
+              <details>
+                <summary>Where does it store my data?</summary>
+                <div class="md">
+                  <p>
+                    Your server files stay exactly where they are — Konnekt reads and writes them
+                    in place. Its own state (server definitions, tile layouts, presets, scheduled
+                    tasks) is plain JSON in the OS application-data directory. Nothing is kept in a
+                    cloud account, because there is no account.
+                  </p>
+                </div>
+              </details>
+              <details>
+                <summary>Is it stable?</summary>
+                <div class="md">
+                  <p>
+                    It's alpha. The core — multi-server management, console, stats, players,
+                    scheduling, worlds, backups, config editing and mods — is functional and in
+                    daily use by its author. Expect rough edges, and see the
+                    <a href="./roadmap.html">roadmap</a> for what's still moving.
+                  </p>
+                </div>
+              </details>
+              <details>
+                <summary>Can I manage a server on another machine?</summary>
+                <div class="md">
+                  <p>
+                    Not yet. Konnekt is a local-first desktop app and manages servers on the
+                    machine it runs on. A full dashboard over the web is on the
+                    <a href="./roadmap.html">roadmap</a> as a later item, not an alpha or beta
+                    one.
+                  </p>
+                </div>
+              </details>
+            </div>
+          </section>
+
+          <section class="doc-section" id="disclaimer">
+            <h2>Fair warning</h2>
+            <div class="md">
+              <p>
+                This is a personal side project which was built to run my own Minecraft servers the
+                way I want, rather than to match what a wider community might expect from it. Most
+                of the code comes from Claude, with me reading over its shoulder rather than
+                writing it myself; I'm not a programmer, just someone putting AI tools to use for
+                something I needed. So don't expect a polished, textbook-clean codebase. It works
+                for me, and that's the bar I'm holding it to.
+              </p>
+              <p>
+                I have no interest in gatekeeping any of this, so take the code and do what you
+                want with it — fork it, extend it, rebuild it, whatever. It's released under
+                <a
+                  href="https://github.com/kollektiv-mc/Konnekt/blob/main/LICENSE"
+                  target="_blank"
+                  rel="noopener"
+                  >CC0</a
+                >, so there's no copyright to ask permission from.
+              </p>
+            </div>
+          </section>
+        </div>
+
+        <a class="subpage-back" href="./index.html">&larr; Back to home</a>
+      </div>
+    </main>
+
+    <!-- Canonical footer. Identical on every page. -->
+    <footer>
+      <div class="container">
+        <div class="disclaimer">
+          <span class="disclaimer-badge">NOTE</span>
+          <p>
+            Konnekt is a personal side project, built to run its author's own Minecraft servers
+            rather than to match what a wider community might expect from it. Most of the code was
+            written by Claude with a human reading over its shoulder, so don't expect a
+            textbook-clean codebase. It's alpha software, released under
+            <a
+              href="https://github.com/kollektiv-mc/Konnekt/blob/main/LICENSE"
+              target="_blank"
+              rel="noopener"
+              >CC0</a
+            >
+            — fork it, extend it, rebuild it. <a href="./docs.html#disclaimer">Full statement</a>.
+          </p>
+        </div>
+        <div class="footer-inner">
+          <div class="footer-left">
+            <span class="wordmark" style="font-size: 15px">Konnekt</span>
+            <span class="footer-tag">ALPHA</span>
+          </div>
+          <div class="footer-links">
+            <a href="https://github.com/kollektiv-mc/Konnekt" target="_blank" rel="noopener"
+              >GitHub</a
+            >
+            <a href="./index.html#features">Features</a>
+            <a href="./docs.html">Docs</a>
+            <a href="./roadmap.html">Roadmap</a>
+            <a href="./download.html">Download</a>
+            <a href="./changelog.html">Changelog</a>
+          </div>
+          <span class="footer-copy">&copy; 2026 Konnekt</span>
+        </div>
+      </div>
+    </footer>
+
+    <script src="./main.js"></script>
+  </body>
+</html>

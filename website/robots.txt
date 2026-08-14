@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://kollektiv-mc.github.io/Konnekt/sitemap.xml
