@@ -16,9 +16,9 @@ It's built for Minecraft server admins and hobbyists who self-host vanilla, Pape
 
 ## Features
 
-### Multi-server management
+### Multi-server management (Alpha)
 
-Add and configure any number of server instances — jar path, JVM arguments, working directory — and start, stop, or restart them independently, with a guided EULA acceptance flow for first-time setup. (Alpha)
+Add and configure any number of server instances — jar path, JVM arguments, working directory — and start, stop, or restart them independently, with a guided EULA acceptance flow for first-time setup.
 
 ### Live console
 
