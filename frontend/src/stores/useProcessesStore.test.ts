@@ -28,6 +28,28 @@ describe('useProcessesStore', () => {
     })
   })
 
+  // Work with no measurable progress (the Forge/NeoForge installer) must read
+  // as empty while it runs — a full bar would claim progress we do not have.
+  it('an indeterminate process stays at 0% until it finishes', () => {
+    useProcessesStore.getState().start('install:/srv/mc', 'Installing server…', undefined, true)
+    expect(useProcessesStore.getState().processes['install:/srv/mc']).toMatchObject({
+      percent: 0,
+      status: 'running',
+      indeterminate: true,
+    })
+
+    useProcessesStore.getState().finish('install:/srv/mc', 'done')
+    expect(useProcessesStore.getState().processes['install:/srv/mc']).toMatchObject({
+      percent: 100,
+      status: 'done',
+    })
+  })
+
+  it('leaves indeterminate undefined for measurable work', () => {
+    useProcessesStore.getState().start('p1', 'Backing up')
+    expect(useProcessesStore.getState().processes.p1.indeterminate).toBeUndefined()
+  })
+
   it('filename survives updateProgress and finish', () => {
     useProcessesStore.getState().start('p1', 'Backing up', 'world_x.zip')
     useProcessesStore.getState().updateProgress('p1', 42)

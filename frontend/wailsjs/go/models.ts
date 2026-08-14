@@ -821,6 +821,26 @@ export namespace models {
 	        this.ramTotal = source["ramTotal"];
 	    }
 	}
+	export class ServerSummary {
+	    mcVersion: string;
+	    loader: string;
+	    workingDir: string;
+	    launchFile: string;
+	    running: boolean;
+	
+	    static createFrom(source: any = {}) {
+	        return new ServerSummary(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.mcVersion = source["mcVersion"];
+	        this.loader = source["loader"];
+	        this.workingDir = source["workingDir"];
+	        this.launchFile = source["launchFile"];
+	        this.running = source["running"];
+	    }
+	}
 	export class StatsSnapshot {
 	    timestamp: number;
 	    tps: number;
@@ -990,6 +1010,29 @@ export namespace models {
 		    }
 		    return a;
 		}
+	}
+
+}
+
+export namespace services {
+	
+	export class InstallerInfo {
+	    isInstaller: boolean;
+	    loader: string;
+	    version: string;
+	    mcVersion: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new InstallerInfo(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.isInstaller = source["isInstaller"];
+	        this.loader = source["loader"];
+	        this.version = source["version"];
+	        this.mcVersion = source["mcVersion"];
+	    }
 	}
 
 }

@@ -36,6 +36,13 @@ const (
 	EventModInstallFailed   = "mod:install-failed"   // {serverID, fileName, error}
 	EventModChanged         = "mod:changed"          // {serverID} — list changed (enable/disable/uninstall)
 
+	// Forge/NeoForge server-installer lifecycle. The installer reports no
+	// percentage, only log lines, so install:log is the progress signal.
+	EventInstallStarted  = "install:started"  // {targetDir}
+	EventInstallLog      = "install:log"      // {line}
+	EventInstallFinished = "install:finished" // {targetDir, mcVersion, loader}
+	EventInstallFailed   = "install:failed"   // {error}
+
 	// Self-update lifecycle.
 	EventUpdateProgress = "update:progress" // {percent}
 )

@@ -10,6 +10,16 @@ type ServerConfig struct {
 	Loader     string   `json:"loader"`    // fabric|forge|neoforge|quilt|paper|spigot|bukkit|purpur|velocity|vanilla
 }
 
+// ServerSummary is the at-a-glance description of a configured server, for the
+// sidebar hover tooltip. Running is per-server, unlike ServerStatus.Running.
+type ServerSummary struct {
+	MCVersion  string `json:"mcVersion"`
+	Loader     string `json:"loader"`
+	WorkingDir string `json:"workingDir"`
+	LaunchFile string `json:"launchFile"`
+	Running    bool   `json:"running"`
+}
+
 type ServerStatus struct {
 	Running    bool    `json:"running"`
 	Uptime     string  `json:"uptime"`

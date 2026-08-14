@@ -243,6 +243,51 @@ function App() {
     }
   }, [])
 
+  // Server-installer progress → sidebar ActiveProcesses. The modal owns the log
+  // itself; this keeps the work visible after the modal is dismissed.
+  useEffect(() => {
+    let c1: (() => void) | undefined
+    let c2: (() => void) | undefined
+    let c3: (() => void) | undefined
+    const key = (dir?: string) => 'install:' + (dir ?? '')
+    let current = key()
+    try {
+      c1 = EventsOn(EVENTS.INSTALL_STARTED, (d?: { targetDir?: string }) => {
+        current = key(d?.targetDir)
+        // The installer reports log lines, never a percentage — mark it
+        // indeterminate rather than showing a number we'd be inventing.
+        useProcessesStore.getState().start(current, 'Installing server…', undefined, true)
+      })
+      c2 = EventsOn(EVENTS.INSTALL_FINISHED, () => {
+        useProcessesStore.getState().finish(current, 'done')
+        emitNotification('info', 'Server installed')
+      })
+      c3 = EventsOn(EVENTS.INSTALL_FAILED, (d?: { error?: string }) => {
+        useProcessesStore.getState().finish(current, 'failed')
+        emitNotification('crash', `Server install failed${d?.error ? ': ' + d.error : ''}`)
+      })
+    } catch {
+      /* non-Wails context */
+    }
+    return () => {
+      try {
+        c1?.()
+      } catch {
+        /* teardown no-op */
+      }
+      try {
+        c2?.()
+      } catch {
+        /* teardown no-op */
+      }
+      try {
+        c3?.()
+      } catch {
+        /* teardown no-op */
+      }
+    }
+  }, [])
+
   // Scheduler notify block → in-app notification
   useEffect(() => {
     let cleanup: (() => void) | undefined

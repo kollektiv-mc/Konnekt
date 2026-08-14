@@ -132,9 +132,10 @@ func (s *ServerService) Start(serverID string, jarPath string, jvmArgs []string,
 		return fmt.Errorf("java not found in PATH — install Java and ensure it is accessible")
 	}
 
-	args := make([]string, 0, len(jvmArgs)+3)
-	args = append(args, jvmArgs...)
-	args = append(args, "-jar", jarPath, "--nogui")
+	args, err := resolveLaunch(jarPath, workingDir, jvmArgs)
+	if err != nil {
+		return err
+	}
 
 	s.cmd = exec.Command("java", args...)
 	if workingDir != "" {
@@ -174,8 +175,14 @@ func (s *ServerService) Start(serverID string, jarPath string, jvmArgs []string,
 	s.logBuf = s.logBuf[:0]
 	s.logBufMu.Unlock()
 
-	// Parse RAM total from JVM args
-	s.maxRAMMB = parseXmx(jvmArgs)
+	// Parse RAM total from JVM args. A NeoForge/Forge install keeps its -Xmx in
+	// user_jvm_args.txt, so fall back to that rather than parseXmx's 2048 default.
+	// Konnekt's own args go first — parseXmx takes the first -Xmx it can read, and
+	// the UI setting is the one that wins at the JVM too (see spliceJVMArgs).
+	effectiveArgs := make([]string, 0, len(jvmArgs)+4)
+	effectiveArgs = append(effectiveArgs, jvmArgs...)
+	effectiveArgs = append(effectiveArgs, userJVMArgs(workingDir)...)
+	s.maxRAMMB = parseXmx(effectiveArgs)
 
 	// Read server.properties for max-players and RCON config
 	props, _ := readProperties(filepath.Join(workingDir, "server.properties"))
@@ -477,6 +484,46 @@ func (s *ServerService) IsRunning() bool {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	return s.running
+}
+
+// Summary describes a configured server for display: what it is, where it
+// lives, what it launches from, and whether it is the one currently running.
+// Loader/version fall back to detection so a server that has never been
+// started still describes itself.
+func (s *ServerService) Summary(cfg models.ServerConfig) models.ServerSummary {
+	sum := models.ServerSummary{
+		MCVersion:  cfg.MCVersion,
+		Loader:     cfg.Loader,
+		WorkingDir: cfg.WorkingDir,
+		LaunchFile: describeLaunch(cfg.JarPath, cfg.WorkingDir),
+		Running:    cfg.ID != "" && s.ActiveServerID() == cfg.ID,
+	}
+
+	if sum.MCVersion == "" || sum.Loader == "" {
+		mv, ld := detectServerLoader(struct{ JarPath, WorkingDir string }{
+			JarPath:    cfg.JarPath,
+			WorkingDir: cfg.WorkingDir,
+		})
+		if sum.MCVersion == "" {
+			sum.MCVersion = mv
+		}
+		if sum.Loader == "" {
+			sum.Loader = ld
+		}
+	}
+	return sum
+}
+
+// ActiveServerID returns the ID of the server currently running, or "" when
+// none is. Callers that show per-server state need this: IsRunning alone says
+// only that *a* server is up, not which one.
+func (s *ServerService) ActiveServerID() string {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if !s.running {
+		return ""
+	}
+	return s.serverID
 }
 
 // PrepareForBackup flushes pending chunk writes to disk and disables auto-save

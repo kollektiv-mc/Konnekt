@@ -20,7 +20,9 @@ function useServerKind(serverId: string): { kind: 'mods' | 'plugins'; detecting:
   useEffect(() => {
     if (detected.current) return
     if (!config) return
-    if (config.loader || !config.jarPath) return
+    // A NeoForge/Forge install has no jar path — detection falls back to the
+    // working dir's logs, so gate on having neither rather than on the jar.
+    if (config.loader || (!config.jarPath && !config.workingDir)) return
 
     detected.current = true
     setDetecting(true)

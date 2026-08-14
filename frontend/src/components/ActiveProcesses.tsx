@@ -14,9 +14,18 @@ export function ActiveProcesses() {
             <span
               className={`shrink-0 font-mono text-xs ${p.status === 'failed' ? 'text-danger' : 'text-text-faint'}`}
             >
-              {p.status === 'running' ? `${p.percent}%` : p.status === 'done' ? '✓' : '✗'}
+              {p.status === 'running'
+                ? p.indeterminate
+                  ? '…'
+                  : `${p.percent}%`
+                : p.status === 'done'
+                  ? '✓'
+                  : '✗'}
             </span>
           </div>
+          {/* An indeterminate process holds percent at 0 while it runs, so the bar
+              reads empty until finish() sets it to 100 — never a full bar for work
+              whose progress we cannot actually measure. */}
           <div className="bg-border-subtle h-0.5 w-full overflow-hidden rounded-full">
             <div
               className={`h-full transition-all duration-300 ${p.status === 'failed' ? 'bg-danger' : 'bg-accent'}`}

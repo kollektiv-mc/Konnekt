@@ -1,5 +1,32 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
-import { fmtCount, fmtBytes, relativeTime } from './format'
+import { fmtCount, fmtBytes, relativeTime, truncateStart } from './format'
+
+describe('truncateStart', () => {
+  it('leaves short strings alone', () => {
+    expect(truncateStart('/srv/mc', 20)).toBe('/srv/mc')
+    expect(truncateStart('', 20)).toBe('')
+  })
+
+  it('keeps the tail, which is the identifying part of a path', () => {
+    expect(truncateStart('/home/alex/servers/neoforge', 12)).toBe('…rs/neoforge')
+  })
+
+  it('never exceeds the budget', () => {
+    const path = '/very/long/path/to/a/minecraft/server/directory'
+    for (const max of [1, 2, 5, 12, 30]) {
+      expect(truncateStart(path, max).length).toBe(max)
+    }
+  })
+
+  it('handles a string exactly at the budget', () => {
+    expect(truncateStart('abcde', 5)).toBe('abcde')
+    expect(truncateStart('abcdef', 5)).toBe('…cdef')
+  })
+
+  it('returns empty for a non-positive budget', () => {
+    expect(truncateStart('/srv/mc', 0)).toBe('')
+  })
+})
 
 describe('fmtCount', () => {
   it('renders small numbers as-is', () => {
