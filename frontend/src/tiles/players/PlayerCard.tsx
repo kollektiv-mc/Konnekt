@@ -13,15 +13,11 @@ export function PlayerCard({ player, onClick }: Props) {
   return (
     <button
       onClick={onClick}
-      className="flex flex-col items-center gap-1 p-2 rounded-lg hover:bg-white/5 active:bg-white/10 transition-colors text-center w-full cursor-pointer"
-      style={{ border: '0.5px solid var(--border-subtle)' }}
+      className="border-border-subtle flex w-full cursor-pointer flex-col items-center gap-1 rounded-lg border-[0.5px] p-2 text-center transition-colors hover:bg-white/5 active:bg-white/10"
     >
       <div className="relative">
         {imgFailed ? (
-          <div
-            className="w-8 h-8 rounded-sm flex items-center justify-center text-xs font-mono"
-            style={{ background: 'var(--bg-elevated)', color: 'var(--text-muted)' }}
-          >
+          <div className="bg-elevated text-text-muted flex h-8 w-8 items-center justify-center rounded-sm font-mono text-xs">
             {player.name[0]?.toUpperCase()}
           </div>
         ) : (
@@ -35,19 +31,10 @@ export function PlayerCard({ player, onClick }: Props) {
           />
         )}
         <div
-          className="absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full"
-          style={{
-            background: player.online ? '#4ade80' : 'var(--text-faint)',
-            border: '1.5px solid var(--bg-base)',
-          }}
+          className={`border-canvas absolute -right-0.5 -bottom-0.5 h-2 w-2 rounded-full border-[1.5px] ${player.online ? 'bg-accent' : 'bg-text-faint'}`}
         />
       </div>
-      <span
-        className="text-xs font-mono truncate w-full"
-        style={{ color: 'var(--text-secondary)' }}
-      >
-        {player.name}
-      </span>
+      <span className="text-text-secondary w-full truncate font-mono text-xs">{player.name}</span>
     </button>
   )
 }

@@ -9,10 +9,7 @@ interface Props {
 export function PlayerGrid({ players, onSelectPlayer }: Props) {
   if (players.length === 0) {
     return (
-      <div
-        className="flex h-full items-center justify-center font-mono text-xs"
-        style={{ color: 'var(--text-faint)' }}
-      >
+      <div className="text-text-faint flex h-full items-center justify-center font-mono text-xs">
         No players online
       </div>
     )
@@ -20,10 +17,7 @@ export function PlayerGrid({ players, onSelectPlayer }: Props) {
 
   return (
     <div className="flex-1 overflow-y-auto p-2">
-      <div
-        className="grid gap-1.5"
-        style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(72px, 1fr))' }}
-      >
+      <div className="grid grid-cols-[repeat(auto-fill,minmax(72px,1fr))] gap-1.5">
         {players.map((p) => (
           <PlayerCard key={p.name} player={p} onClick={() => onSelectPlayer(p)} />
         ))}

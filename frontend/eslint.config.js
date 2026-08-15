@@ -66,6 +66,7 @@ export default tseslint.config(
       'src/tiles/backups/**/*.tsx',
       'src/tiles/scheduler/**/*.tsx',
       'src/tiles/config/**/*.tsx',
+      'src/tiles/players/**/*.tsx',
     ],
     rules: {
       'no-restricted-syntax': [

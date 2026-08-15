@@ -21,10 +21,7 @@ function AvatarLarge({ player }: { player: Player }) {
   const key = player.uuid || player.name
   if (failed) {
     return (
-      <div
-        className="flex h-12 w-12 shrink-0 items-center justify-center rounded font-mono text-lg"
-        style={{ background: 'var(--bg-elevated)', color: 'var(--text-muted)' }}
-      >
+      <div className="bg-elevated text-text-muted flex h-12 w-12 shrink-0 items-center justify-center rounded font-mono text-lg">
         {player.name[0]?.toUpperCase()}
       </div>
     )
@@ -44,15 +41,11 @@ function AvatarLarge({ player }: { player: Player }) {
 function InfoRow({ label, value, dim }: { label: string; value: string; dim?: boolean }) {
   return (
     <div className="flex items-baseline gap-2 py-0.5">
-      <span
-        className="w-20 shrink-0 font-mono text-[10px] tracking-wider uppercase"
-        style={{ color: 'var(--text-faint)' }}
-      >
+      <span className="text-text-faint w-20 shrink-0 font-mono text-[10px] tracking-wider uppercase">
         {label}
       </span>
       <span
-        className="font-mono text-xs break-all"
-        style={{ color: dim ? 'var(--text-muted)' : 'var(--text-secondary)' }}
+        className={`font-mono text-xs break-all ${dim ? 'text-text-muted' : 'text-text-secondary'}`}
       >
         {value}
       </span>
@@ -117,60 +110,39 @@ export function PlayerDetailPopup({ player: initial, serverId, onClose, onMutate
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center"
-      style={{ background: 'rgba(0,0,0,0.6)' }}
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60"
       onMouseDown={(e) => e.target === e.currentTarget && onClose()}
     >
-      <div
-        className="flex w-88 flex-col gap-4 rounded-xl p-5 font-mono"
-        style={{
-          width: '22rem',
-          background: 'var(--bg-base)',
-          border: '0.5px solid rgba(255,255,255,0.1)',
-          boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
-        }}
-      >
+      {/* w-88 is 22rem — the same width the inline style used to restate. */}
+      <div className="bg-canvas flex w-88 flex-col gap-4 rounded-xl border-[0.5px] border-white/10 p-5 font-mono shadow-[0_8px_32px_rgba(0,0,0,0.5)]">
         {/* header */}
         <div className="flex items-start gap-3">
           <AvatarLarge player={player} />
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2">
-              <span
-                className="truncate text-sm font-semibold"
-                style={{ color: 'var(--text-primary)' }}
-              >
+              <span className="text-text-primary truncate text-sm font-semibold">
                 {player.name}
               </span>
               <div
-                className="h-1.5 w-1.5 shrink-0 rounded-full"
-                style={{ background: player.online ? '#4ade80' : 'var(--text-faint)' }}
+                className={`h-1.5 w-1.5 shrink-0 rounded-full ${player.online ? 'bg-accent' : 'bg-text-faint'}`}
               />
             </div>
             {player.uuid && (
-              <span
-                className="mt-0.5 block truncate font-mono text-[9px]"
-                style={{ color: 'var(--text-faint)' }}
-              >
+              <span className="text-text-faint mt-0.5 block truncate font-mono text-[9px]">
                 {player.uuid}
               </span>
             )}
           </div>
           <button
             onClick={onClose}
-            className="shrink-0 text-lg leading-none transition-colors"
-            style={{ color: 'var(--text-faint)' }}
-            onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--text-secondary)')}
-            onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--text-faint)')}
+            className="text-text-faint hover:text-text-secondary shrink-0 text-lg leading-none transition-colors"
           >
             ×
           </button>
         </div>
 
         {/* info */}
-        <div
-          className="flex flex-col gap-0.5"
-          style={{ borderTop: '0.5px solid var(--border-subtle)', paddingTop: '1rem' }}
-        >
+        <div className="border-border-subtle flex flex-col gap-0.5 border-t-[0.5px] pt-4">
           {player.ip && <InfoRow label="IP" value={player.ip} />}
           <InfoRow
             label="Status"
@@ -199,10 +171,7 @@ export function PlayerDetailPopup({ player: initial, serverId, onClose, onMutate
         </div>
 
         {/* actions */}
-        <div
-          className="flex flex-col gap-2"
-          style={{ borderTop: '0.5px solid var(--border-subtle)', paddingTop: '1rem' }}
-        >
+        <div className="border-border-subtle flex flex-col gap-2 border-t-[0.5px] pt-4">
           {pending ? (
             <>
               <input
@@ -214,30 +183,22 @@ export function PlayerDetailPopup({ player: initial, serverId, onClose, onMutate
                   if (e.key === 'Enter') submitAction()
                 }}
                 placeholder="Reason (optional)"
-                className="rounded px-2 py-1.5 font-mono text-xs transition-colors outline-none"
-                style={{
-                  background: 'var(--bg-elevated)',
-                  border: '0.5px solid var(--border-subtle)',
-                  color: 'var(--text-primary)',
-                }}
+                className="bg-elevated border-border-subtle text-text-primary rounded border-[0.5px] px-2 py-1.5 font-mono text-xs transition-colors outline-none"
               />
               <div className="flex gap-2">
                 <button
                   onClick={submitAction}
-                  className="flex-1 rounded border py-1.5 font-mono text-xs transition-colors"
-                  style={{
-                    borderColor:
-                      pending.action === 'kick' ? 'rgba(250,204,21,0.3)' : 'rgba(248,113,113,0.3)',
-                    color:
-                      pending.action === 'kick' ? 'rgba(250,204,21,0.8)' : 'rgba(248,113,113,0.8)',
-                  }}
+                  className={`flex-1 rounded border py-1.5 font-mono text-xs transition-colors ${
+                    pending.action === 'kick'
+                      ? 'border-yellow-400/30 text-yellow-400/80'
+                      : 'border-danger/30 text-danger/80'
+                  }`}
                 >
                   Confirm {pending.action}
                 </button>
                 <button
                   onClick={() => setPending(null)}
-                  className="px-3 py-1.5 font-mono text-xs transition-colors"
-                  style={{ color: 'var(--text-faint)' }}
+                  className="text-text-faint px-3 py-1.5 font-mono text-xs transition-colors"
                 >
                   Cancel
                 </button>
@@ -249,34 +210,13 @@ export function PlayerDetailPopup({ player: initial, serverId, onClose, onMutate
                 <>
                   <button
                     onClick={() => setPending({ action: 'kick', reason: '' })}
-                    className="flex-1 rounded border py-1.5 font-mono text-xs transition-colors"
-                    style={{ borderColor: 'rgba(250,204,21,0.25)', color: 'rgba(250,204,21,0.6)' }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.borderColor = 'rgba(250,204,21,0.5)'
-                      e.currentTarget.style.color = 'rgba(250,204,21,0.9)'
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.borderColor = 'rgba(250,204,21,0.25)'
-                      e.currentTarget.style.color = 'rgba(250,204,21,0.6)'
-                    }}
+                    className="flex-1 rounded border border-yellow-400/25 py-1.5 font-mono text-xs text-yellow-400/60 transition-colors hover:border-yellow-400/50 hover:text-yellow-400/90"
                   >
                     kick
                   </button>
                   <button
                     onClick={() => setPending({ action: 'ban', reason: '' })}
-                    className="flex-1 rounded border py-1.5 font-mono text-xs transition-colors"
-                    style={{
-                      borderColor: 'rgba(248,113,113,0.25)',
-                      color: 'rgba(248,113,113,0.6)',
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.borderColor = 'rgba(248,113,113,0.5)'
-                      e.currentTarget.style.color = 'rgba(248,113,113,0.9)'
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.borderColor = 'rgba(248,113,113,0.25)'
-                      e.currentTarget.style.color = 'rgba(248,113,113,0.6)'
-                    }}
+                    className="border-danger/25 text-danger/60 hover:border-danger/50 hover:text-danger/90 flex-1 rounded border py-1.5 font-mono text-xs transition-colors"
                   >
                     ban
                   </button>
@@ -285,16 +225,7 @@ export function PlayerDetailPopup({ player: initial, serverId, onClose, onMutate
               {player.banned && (
                 <button
                   onClick={handlePardon}
-                  className="flex-1 rounded border py-1.5 font-mono text-xs transition-colors"
-                  style={{ borderColor: 'rgba(74,222,128,0.25)', color: 'rgba(74,222,128,0.6)' }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.borderColor = 'rgba(74,222,128,0.5)'
-                    e.currentTarget.style.color = 'rgba(74,222,128,0.9)'
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.borderColor = 'rgba(74,222,128,0.25)'
-                    e.currentTarget.style.color = 'rgba(74,222,128,0.6)'
-                  }}
+                  className="border-accent/25 text-accent/60 hover:border-accent/50 hover:text-accent/90 flex-1 rounded border py-1.5 font-mono text-xs transition-colors"
                 >
                   pardon
                 </button>
