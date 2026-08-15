@@ -43,7 +43,11 @@
 
   function render(releases) {
     var visible = releases.filter(function (r) {
-      return !r.draft
+      // The rolling `snapshot` prerelease is a moving build of main, not a
+      // released version. It would sit at the top of this list wearing a
+      // LATEST badge, above the releases it isn't one of; it belongs on the
+      // download page instead.
+      return !r.draft && r.tag_name !== R.SNAPSHOT_TAG
     })
     if (!visible.length) {
       showEmpty()

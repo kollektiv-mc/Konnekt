@@ -1,0 +1,253 @@
+name: Snapshot
+
+# Rolling build of main, published as the `snapshot` prerelease so people can
+# run the newest code without building it themselves.
+#
+# It stays out of the way of the real releases by being a prerelease:
+# /releases/latest ignores prereleases, so neither the download page's primary
+# card (website/download.js) nor the in-app updater
+# (backend/services/update.go) ever resolves to a snapshot. The website's
+# changelog filters the tag out by name.
+on:
+  schedule:
+    # Nightly. The check job below exits early when main hasn't moved since the
+    # last snapshot, so an idle week costs one short job a day rather than
+    # three platform builds.
+    - cron: '0 4 * * *'
+  workflow_dispatch:
+
+# One snapshot at a time — a manual run during a scheduled one would race it
+# for the same tag.
+concurrency:
+  group: snapshot
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    outputs:
+      build: ${{ steps.decide.outputs.build }}
+      sha: ${{ steps.decide.outputs.sha }}
+      version: ${{ steps.decide.outputs.version }}
+      rpm_version: ${{ steps.decide.outputs.rpm_version }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - id: decide
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          sha="${{ github.sha }}"
+          short="${sha:0:7}"
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+
+          # version.go carries the base version ("0.1.0-dev"). The "-dev"
+          # marker is kept deliberately: app.go's install guard and the
+          # frontend's isDevBuild() both key off it, so a snapshot neither
+          # nags about updates nor tries to replace itself with the older
+          # stable binary. Snapshots are refreshed by downloading a new one.
+          base="$(sed -n 's/^var Version = "\([^"]*\)".*/\1/p' version.go | head -n1)"
+          base="${base%%-*}"
+          echo "version=${base}-dev.snapshot.${short}" >> "$GITHUB_OUTPUT"
+
+          # RPM versions can't contain "-"; "~" sorts before the base version,
+          # the same idiom release.yml uses for pre-release tags.
+          echo "rpm_version=${base}~dev.snapshot.${short}" >> "$GITHUB_OUTPUT"
+
+          # target_commitish is the commit the current snapshot was cut from.
+          # Absent (first run, or someone deleted the release) means build.
+          prev="$(gh api "repos/${{ github.repository }}/releases/tags/snapshot" \
+            --jq .target_commitish 2>/dev/null || true)"
+          if [ "$sha" = "$prev" ] && [ "${{ github.event_name }}" = 'schedule' ]; then
+            echo "main is unchanged since the last snapshot ($prev) — nothing to build."
+            echo "build=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "build=true" >> "$GITHUB_OUTPUT"
+          fi
+
+  build-windows:
+    needs: check
+    if: needs.check.outputs.build == 'true'
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
+
+      - run: pnpm install --frozen-lockfile
+        working-directory: frontend
+
+      - name: Install Wails CLI
+        run: go install github.com/wailsapp/wails/v2/cmd/wails@v2.12.0
+
+      - name: Build
+        shell: pwsh
+        run: wails build -ldflags "-X main.Version=${{ needs.check.outputs.version }}"
+
+      - name: Stage release asset
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path dist | Out-Null
+          Copy-Item build/bin/konnekt.exe dist/konnekt-windows-amd64.exe
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: konnekt-windows-amd64
+          path: dist/konnekt-windows-amd64.exe
+          if-no-files-found: error
+
+  build-linux:
+    needs: check
+    if: needs.check.outputs.build == 'true'
+    runs-on: ubuntu-latest
+    container: ubuntu:22.04
+    env:
+      DEBIAN_FRONTEND: noninteractive
+    steps:
+      # Same toolchain as release.yml's build-linux — webkit2gtk-4.1 pins the
+      # glibc 2.35 / libsoup3 floor this binary targets.
+      - name: Install build dependencies
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends \
+            git ca-certificates curl build-essential pkg-config \
+            libgtk-3-dev libwebkit2gtk-4.1-dev
+          # The workspace is bind-mounted from the host and owned by a
+          # different uid than this container's root, so git refuses to touch
+          # it — which breaks the VCS stamping in the go build that wails
+          # shells out to (exit 128).
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
+
+      - run: pnpm install --frozen-lockfile
+        working-directory: frontend
+
+      - name: Install Wails CLI
+        run: go install github.com/wailsapp/wails/v2/cmd/wails@v2.12.0
+
+      - name: Build
+        run: |
+          wails build -tags webkit2_41 \
+            -ldflags "-X main.Version=${{ needs.check.outputs.version }}"
+
+      - name: Stage release asset
+        run: |
+          mkdir -p dist
+          cp build/bin/konnekt dist/konnekt-linux-amd64
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: konnekt-linux-amd64
+          path: dist/konnekt-linux-amd64
+          if-no-files-found: error
+
+  package-rpm:
+    needs: [check, build-linux]
+    runs-on: ubuntu-latest
+    container: rockylinux/rockylinux:10
+    steps:
+      - name: Install packaging dependencies
+        run: dnf install -y git rpm-build rpmdevtools
+
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: konnekt-linux-amd64
+          path: dist
+
+      - name: Build RPM
+        run: |
+          rpmdev-setuptree
+          cp dist/konnekt-linux-amd64 build/appicon.png build/linux/konnekt.desktop ~/rpmbuild/SOURCES/
+          rpmbuild -bb build/linux/konnekt.spec --define "_version ${{ needs.check.outputs.rpm_version }}"
+
+          mkdir -p dist-rpm
+          cp ~/rpmbuild/RPMS/x86_64/*.rpm dist-rpm/
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: konnekt-rpm
+          path: dist-rpm/*.rpm
+          if-no-files-found: error
+
+  publish:
+    needs: [check, build-windows, build-linux, package-rpm]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: konnekt-*
+          path: dist
+          merge-multiple: true
+
+      - name: Checksums
+        working-directory: dist
+        run: sha256sum * > checksums.txt
+
+      # Delete and recreate rather than edit. `snapshot` has to end up pointing
+      # at a new commit with a fresh asset set, and editing a release can't move
+      # its tag — only re-creating it does that, replaces every asset and
+      # refreshes published_at in one step. --cleanup-tag drops the old tag so
+      # the new release can't inherit the old commit.
+      - name: Publish snapshot
+        working-directory: dist
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ needs.check.outputs.version }}
+          SHA: ${{ needs.check.outputs.sha }}
+          LATEST_URL: ${{ github.server_url }}/${{ github.repository }}/releases/latest
+        run: |
+          cat > notes.md <<EOF
+          Automatic build of \`main\`. Rebuilt nightly whenever there are new commits,
+          replacing whatever was here before.
+
+          Newer than the latest release, and untested: it may be broken in ways a
+          released build isn't. Back up your server directory before running it, and
+          use the [latest release]($LATEST_URL) for anything you care about.
+
+          Konnekt won't offer to update itself from a snapshot — download a new one
+          when you want the newest code, or install a release to go back to stable.
+
+          Version \`$VERSION\`, built from commit $SHA.
+          EOF
+
+          gh release delete snapshot --yes --cleanup-tag \
+            --repo "${{ github.repository }}" || true
+
+          gh release create snapshot konnekt-* checksums.txt \
+            --repo "${{ github.repository }}" \
+            --target "${{ needs.check.outputs.sha }}" \
+            --title "Snapshot — ${{ needs.check.outputs.version }}" \
+            --notes-file notes.md \
+            --prerelease

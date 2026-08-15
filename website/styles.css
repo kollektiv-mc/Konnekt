@@ -1202,6 +1202,36 @@ footer {
   margin-top: 2px;
 }
 
+/* Snapshot channel. Borrows .download-others' width and heading, and the
+   footer's .disclaimer box for the warning — the amber "read this" component
+   already exists, and a second one would just be the same box in a new name. */
+.download-snapshot {
+  margin-top: calc(var(--section-y) * 0.7);
+  animation-delay: 160ms;
+}
+
+.download-snapshot .disclaimer {
+  margin-bottom: 16px;
+}
+
+/* Amber platform icons. The two grids are otherwise identical components one
+   scroll apart, and which one you're looking at is the whole point. */
+.download-snapshot .dl-card-icon {
+  color: var(--sun);
+}
+
+.snapshot-meta {
+  text-align: center;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  color: var(--text-muted);
+  margin: 0 0 18px;
+}
+
+.download-snapshot .dl-footnote {
+  margin-top: 18px;
+}
+
 .dl-footnote {
   text-align: center;
   font-size: 12px;
