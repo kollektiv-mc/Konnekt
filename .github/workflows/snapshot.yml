@@ -275,19 +275,16 @@ jobs:
           LATEST_URL: ${{ github.server_url }}/${{ github.repository }}/releases/latest
         run: |
           cat > notes.md <<EOF
-          Automatic build of \`main\`. Rebuilt nightly whenever there are new commits,
-          replacing whatever was here before.
+          Automatic build of \`main\`, rebuilt nightly when there are new commits.
+          Each one replaces the last.
 
-          Newer than the latest release, and untested: it may be broken in ways a
-          released build isn't. Back up your server directory before running it, and
-          use the [latest release]($LATEST_URL) for anything you care about.
+          Untested, and newer than the [latest release]($LATEST_URL). It can be
+          broken. Back up your server directory before running it.
 
-          Konnekt won't offer to update itself from a snapshot — download a new one
-          when you want the newest code, or install a release to go back to stable.
+          Snapshots don't update themselves. Download a new one for the newest
+          code, or install a release to go back to stable.
 
-          Version \`$VERSION\`, built from commit $SHA.
-
-          ---
+          Version \`$VERSION\`, commit $SHA.
 
           EOF
           cat changes.md >> notes.md
@@ -298,6 +295,6 @@ jobs:
           gh release create snapshot konnekt-* checksums.txt \
             --repo "${{ github.repository }}" \
             --target "${{ needs.check.outputs.sha }}" \
-            --title "Snapshot — ${{ needs.check.outputs.version }}" \
+            --title "Snapshot ${{ needs.check.outputs.version }}" \
             --notes-file notes.md \
             --prerelease
