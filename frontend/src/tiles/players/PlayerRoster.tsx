@@ -1,9 +1,8 @@
-import { useEffect, useState } from 'react'
-import { GetPlayerRoster } from '../../../wailsjs/go/main/App'
+import { useState } from 'react'
 import type { Player } from '../../types'
 
 interface Props {
-  serverId: string
+  players: Player[]
   onSelectPlayer: (player: Player) => void
 }
 
@@ -15,7 +14,7 @@ function AvatarHead({ player }: { player: Player }) {
   if (failed) {
     return (
       <div
-        className="w-6 h-6 rounded-sm shrink-0 flex items-center justify-center text-[10px] font-mono"
+        className="flex h-6 w-6 shrink-0 items-center justify-center rounded-sm font-mono text-[10px]"
         style={{ background: 'var(--bg-elevated)', color: 'var(--text-muted)' }}
       >
         {player.name[0]?.toUpperCase()}
@@ -28,26 +27,15 @@ function AvatarHead({ player }: { player: Player }) {
       alt={player.name}
       width={24}
       height={24}
-      className="rounded-sm shrink-0"
+      className="shrink-0 rounded-sm"
       onError={() => setFailed(true)}
     />
   )
 }
 
-export function PlayerRoster({ serverId, onSelectPlayer }: Props) {
-  const [players, setPlayers] = useState<Player[]>([])
+export function PlayerRoster({ players, onSelectPlayer }: Props) {
   const [search, setSearch] = useState('')
   const [sortBy, setSortBy] = useState<SortKey>('name')
-
-  useEffect(() => {
-    const poll = async () => {
-      const list = await GetPlayerRoster(serverId).catch(() => null)
-      if (list) setPlayers(list)
-    }
-    poll()
-    const id = setInterval(poll, 3000)
-    return () => clearInterval(id)
-  }, [serverId])
 
   const filtered = players
     .filter((p) => p.name.toLowerCase().includes(search.toLowerCase()))
@@ -57,10 +45,10 @@ export function PlayerRoster({ serverId, onSelectPlayer }: Props) {
     })
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex h-full flex-col">
       {/* toolbar */}
       <div
-        className="flex gap-2 px-3 py-2 shrink-0"
+        className="flex shrink-0 gap-2 px-3 py-2"
         style={{ borderBottom: '0.5px solid var(--border-subtle)' }}
       >
         <input
@@ -68,7 +56,7 @@ export function PlayerRoster({ serverId, onSelectPlayer }: Props) {
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Search…"
-          className="flex-1 rounded px-2 py-1 text-xs font-mono outline-none transition-colors"
+          className="flex-1 rounded px-2 py-1 font-mono text-xs transition-colors outline-none"
           style={{
             background: 'var(--bg-elevated)',
             border: '0.5px solid var(--border-subtle)',
@@ -78,7 +66,7 @@ export function PlayerRoster({ serverId, onSelectPlayer }: Props) {
         <select
           value={sortBy}
           onChange={(e) => setSortBy(e.target.value as SortKey)}
-          className="rounded px-2 py-1 text-xs font-mono outline-none"
+          className="rounded px-2 py-1 font-mono text-xs outline-none"
           style={{
             background: 'var(--bg-elevated)',
             border: '0.5px solid var(--border-subtle)',
@@ -94,7 +82,7 @@ export function PlayerRoster({ serverId, onSelectPlayer }: Props) {
       <div className="flex-1 overflow-y-auto">
         {filtered.length === 0 ? (
           <div
-            className="flex items-center justify-center h-full text-xs font-mono"
+            className="flex h-full items-center justify-center font-mono text-xs"
             style={{ color: 'var(--text-faint)' }}
           >
             {search ? 'No matches' : 'No players online'}
@@ -104,34 +92,34 @@ export function PlayerRoster({ serverId, onSelectPlayer }: Props) {
             <button
               key={p.name}
               onClick={() => onSelectPlayer(p)}
-              className="flex items-center gap-3 px-4 py-2.5 hover:bg-white/5 transition-colors text-left w-full"
+              className="flex w-full items-center gap-3 px-4 py-2.5 text-left transition-colors hover:bg-white/5"
               style={{ borderBottom: '0.5px solid var(--border-subtle)' }}
             >
               <AvatarHead player={p} />
               <span
-                className="flex-1 text-xs font-mono truncate"
+                className="flex-1 truncate font-mono text-xs"
                 style={{ color: 'var(--text-secondary)' }}
               >
                 {p.name}
               </span>
-              <div className="flex items-center gap-1 shrink-0">
+              <div className="flex shrink-0 items-center gap-1">
                 {p.opLevel > 0 && (
-                  <span className="px-1.5 py-0.5 text-[10px] rounded border border-yellow-400/30 text-yellow-400/70 font-mono">
+                  <span className="rounded border border-yellow-400/30 px-1.5 py-0.5 font-mono text-[10px] text-yellow-400/70">
                     OP{p.opLevel}
                   </span>
                 )}
                 {p.banned && (
-                  <span className="px-1.5 py-0.5 text-[10px] rounded border border-red-400/30 text-red-400/70 font-mono">
+                  <span className="rounded border border-red-400/30 px-1.5 py-0.5 font-mono text-[10px] text-red-400/70">
                     BAN
                   </span>
                 )}
                 {p.whitelisted && (
-                  <span className="px-1.5 py-0.5 text-[10px] rounded border border-blue-400/30 text-blue-400/70 font-mono">
+                  <span className="rounded border border-blue-400/30 px-1.5 py-0.5 font-mono text-[10px] text-blue-400/70">
                     WL
                   </span>
                 )}
                 <div
-                  className="w-1.5 h-1.5 rounded-full ml-1"
+                  className="ml-1 h-1.5 w-1.5 rounded-full"
                   style={{ background: p.online ? '#4ade80' : 'var(--text-faint)' }}
                 />
               </div>
@@ -142,7 +130,7 @@ export function PlayerRoster({ serverId, onSelectPlayer }: Props) {
 
       {/* footer */}
       <div
-        className="px-3 py-1.5 shrink-0 text-[10px] font-mono"
+        className="shrink-0 px-3 py-1.5 font-mono text-[10px]"
         style={{ borderTop: '0.5px solid var(--border-subtle)', color: 'var(--text-faint)' }}
       >
         {players.length} online
