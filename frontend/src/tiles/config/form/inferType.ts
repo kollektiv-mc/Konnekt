@@ -1,4 +1,5 @@
-export type FieldType = 'boolean' | 'number' | 'string' | 'text' | 'enum' | 'list' | 'section' | 'motd'
+export type FieldType =
+  'boolean' | 'number' | 'string' | 'text' | 'enum' | 'list' | 'section' | 'motd'
 
 export interface ConfigField {
   path: (string | number)[]

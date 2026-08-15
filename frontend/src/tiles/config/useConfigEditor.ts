@@ -1,9 +1,5 @@
 import { useState, useCallback, useRef } from 'react'
-import {
-  ListConfigFiles,
-  ReadConfigFile,
-  WriteConfigFile,
-} from '../../../wailsjs/go/main/App'
+import { ListConfigFiles, ReadConfigFile, WriteConfigFile } from '../../../wailsjs/go/main/App'
 import type { ConfigFile } from '../../types'
 
 export function useConfigEditor(serverId: string) {

@@ -7,7 +7,7 @@ function valueToField(key: string, value: unknown, path: (string | number)[]): C
   if (value !== null && typeof value === 'object' && !Array.isArray(value)) {
     const obj = value as Record<string, unknown>
     const children: ConfigField[] = Object.entries(obj).map(([k, v]) =>
-      valueToField(k, v, [...path, k])
+      valueToField(k, v, [...path, k]),
     )
     return { path, label, type: 'section', value: null, children }
   }
@@ -27,9 +27,7 @@ function valueToField(key: string, value: unknown, path: (string | number)[]): C
 export function parseJsonFields(content: string): ConfigField[] {
   const obj = JSON.parse(content) as unknown
   if (obj === null || typeof obj !== 'object' || Array.isArray(obj)) return []
-  return Object.entries(obj as Record<string, unknown>).map(([k, v]) =>
-    valueToField(k, v, [k])
-  )
+  return Object.entries(obj as Record<string, unknown>).map(([k, v]) => valueToField(k, v, [k]))
 }
 
 /** Surgically replace the value at `path` inside the JSON string, preserving formatting. */
@@ -46,9 +44,9 @@ export function applyJsonEdit(content: string, path: (string | number)[], value:
   }
   const last = path[path.length - 1]
   if (Array.isArray(cursor)) {
-    (cursor as unknown[])[last as number] = value
+    ;(cursor as unknown[])[last as number] = value
   } else {
-    (cursor as Record<string, unknown>)[last as string] = value
+    ;(cursor as Record<string, unknown>)[last as string] = value
   }
   // Detect original indentation (2 or 4 spaces, or tab)
   const indentMatch = content.match(/^{\n([ \t]+)/m)

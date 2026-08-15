@@ -109,9 +109,9 @@ describe('AnimatedEdge', () => {
     expect(hoverStyle).not.toContain('stroke: var(--accent);')
 
     fireEvent.mouseLeave(interaction)
-    expect(container.querySelector('.react-flow__edge-path')?.getAttribute('style') ?? '').not.toContain(
-      'color-mix',
-    )
+    expect(
+      container.querySelector('.react-flow__edge-path')?.getAttribute('style') ?? '',
+    ).not.toContain('color-mix')
   })
 
   it('lets selection win over hover so they read as visually distinct states', () => {

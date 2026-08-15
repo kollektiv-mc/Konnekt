@@ -21,12 +21,14 @@ interface NotificationsStore {
 export const useNotificationsStore = create<NotificationsStore>((set) => ({
   items: [],
   push: (kind, text) => {
-    const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })
+    const timestamp = new Date().toLocaleTimeString([], {
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false,
+    })
     set((s) => ({
-      items: [
-        ...s.items.slice(-(MAX_ITEMS - 1)),
-        { id: ++notifId, timestamp, kind, text },
-      ],
+      items: [...s.items.slice(-(MAX_ITEMS - 1)), { id: ++notifId, timestamp, kind, text }],
     }))
   },
   clear: () => set({ items: [] }),

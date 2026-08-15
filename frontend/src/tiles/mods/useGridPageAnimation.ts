@@ -2,11 +2,11 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import type { ModProject } from './useMods'
 
 // Animation timing constants
-const PANEL_DURATION = 280  // ms — detail panel slide
-const CARD_ANIM = 130       // ms — tile fade+scale for panel open/close & initial load
-const EXIT_MS = 160         // per-tile exit duration
-const ENTER_MS = 140        // per-tile enter duration
-const COL_DELAY = 22        // stagger step per column (ms) — subtle sweep
+const PANEL_DURATION = 280 // ms — detail panel slide
+const CARD_ANIM = 130 // ms — tile fade+scale for panel open/close & initial load
+const EXIT_MS = 160 // per-tile exit duration
+const ENTER_MS = 140 // per-tile enter duration
+const COL_DELAY = 22 // stagger step per column (ms) — subtle sweep
 
 // Per-tile CSS driven by the current animation phase.
 //   idle  — panel open/close & initial load (scale from centre, random delay)
@@ -81,7 +81,12 @@ interface GridPageAnimation {
 }
 
 export function useGridPageAnimation({
-  results, total, loading, panelOpen, containerRef, onSearch,
+  results,
+  total,
+  loading,
+  panelOpen,
+  containerRef,
+  onSearch,
 }: Options): GridPageAnimation {
   // Keep onSearch stable without requiring callers to memoize
   const onSearchRef = useRef(onSearch)
@@ -95,7 +100,9 @@ export function useGridPageAnimation({
 
   // ── Per-tile idle animation delays — fresh random values each results load ───
   const tileDelaysRef = useRef<Record<string, number>>({})
-  useEffect(() => { tileDelaysRef.current = {} }, [displayResults])
+  useEffect(() => {
+    tileDelaysRef.current = {}
+  }, [displayResults])
   const getTileDelay = useCallback((id: string) => {
     if (!(id in tileDelaysRef.current)) {
       tileDelaysRef.current[id] = Math.round(Math.random() * 55)
@@ -109,7 +116,8 @@ export function useGridPageAnimation({
   const [pagePhase, _setPagePhase] = useState<'idle' | 'exit' | 'enter'>('idle')
   const pagePhaseRef = useRef<'idle' | 'exit' | 'enter'>('idle')
   const setPagePhase = useCallback((p: 'idle' | 'exit' | 'enter') => {
-    pagePhaseRef.current = p; _setPagePhase(p)
+    pagePhaseRef.current = p
+    _setPagePhase(p)
   }, [])
 
   // ── Column count (measured from container width for accurate stagger) ───────
@@ -136,7 +144,8 @@ export function useGridPageAnimation({
   const [gridVisible, _setGridVisible] = useState(false)
   const gridVisibleRef = useRef(false)
   const setGridVisible = useCallback((v: boolean) => {
-    gridVisibleRef.current = v; _setGridVisible(v)
+    gridVisibleRef.current = v
+    _setGridVisible(v)
   }, [])
   const hasOpenedRef = useRef(false)
   const closeTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
@@ -196,35 +205,43 @@ export function useGridPageAnimation({
     setPagePhase('enter')
     setGridVisible(false)
     // Two frames later: trigger the enter transition (start → end state).
-    requestAnimationFrame(() => requestAnimationFrame(() => {
-      setGridVisible(true)
-      clearTimeout(transTimerRef.current)
-      transTimerRef.current = setTimeout(
-        () => setPagePhase('idle'),
-        ENTER_MS + numColsRef.current * COL_DELAY + 60,
-      )
-    }))
+    requestAnimationFrame(() =>
+      requestAnimationFrame(() => {
+        setGridVisible(true)
+        clearTimeout(transTimerRef.current)
+        transTimerRef.current = setTimeout(
+          () => setPagePhase('idle'),
+          ENTER_MS + numColsRef.current * COL_DELAY + 60,
+        )
+      }),
+    )
   }, []) // stable: only uses refs and stable state setters
 
   // ── handlePage: kick off exit animation and fire the search ─────────────────
-  const handlePage = useCallback((offset: number) => {
-    const dir = offset > currentOffsetRef.current ? 'forward' : 'backward'
-    currentOffsetRef.current = offset
-    pageDirectionRef.current = dir
-    setPageDirection(dir)
-    clearTimeout(transTimerRef.current)
-    exitDoneRef.current = false
-    resultsDoneRef.current = false
-    inPageTransRef.current = true
-    pendingRef.current = null
-    setPagePhase('exit')
-    onSearchRef.current(offset)
-    // Exit timer: after all tiles have animated out, try to commit
-    transTimerRef.current = setTimeout(() => {
-      exitDoneRef.current = true
-      commitEnter()
-    }, EXIT_MS + numColsRef.current * COL_DELAY + 30)
-  }, [commitEnter])
+  const handlePage = useCallback(
+    (offset: number) => {
+      const dir = offset > currentOffsetRef.current ? 'forward' : 'backward'
+      currentOffsetRef.current = offset
+      pageDirectionRef.current = dir
+      setPageDirection(dir)
+      clearTimeout(transTimerRef.current)
+      exitDoneRef.current = false
+      resultsDoneRef.current = false
+      inPageTransRef.current = true
+      pendingRef.current = null
+      setPagePhase('exit')
+      onSearchRef.current(offset)
+      // Exit timer: after all tiles have animated out, try to commit
+      transTimerRef.current = setTimeout(
+        () => {
+          exitDoneRef.current = true
+          commitEnter()
+        },
+        EXIT_MS + numColsRef.current * COL_DELAY + 30,
+      )
+    },
+    [commitEnter],
+  )
 
   // ── Sync incoming results: buffer during page turn, apply directly otherwise ─
   useEffect(() => {
@@ -273,14 +290,19 @@ export function useGridPageAnimation({
         // Double-rAF: first frame React commits layoutOpen=true and browser lays out;
         // second frame the new container width is stable. Update numCols while tiles
         // are still hidden so the ResizeObserver finds no mismatch when it fires.
-        requestAnimationFrame(() => requestAnimationFrame(() => {
-          if (containerRef.current) {
-            const cols = Math.max(1, Math.floor((containerRef.current.getBoundingClientRect().width - 16) / 208))
-            setNumCols(cols)
-            numColsRef.current = cols
-          }
-          setGridVisible(true)
-        }))
+        requestAnimationFrame(() =>
+          requestAnimationFrame(() => {
+            if (containerRef.current) {
+              const cols = Math.max(
+                1,
+                Math.floor((containerRef.current.getBoundingClientRect().width - 16) / 208),
+              )
+              setNumCols(cols)
+              numColsRef.current = cols
+            }
+            setGridVisible(true)
+          }),
+        )
       }, CARD_ANIM)
     } else {
       if (!hasOpenedRef.current) return
@@ -289,14 +311,19 @@ export function useGridPageAnimation({
         setGridVisible(false)
         cardAnimTimerRef.current = setTimeout(() => {
           setLayoutOpen(false)
-          requestAnimationFrame(() => requestAnimationFrame(() => {
-            if (containerRef.current) {
-              const cols = Math.max(1, Math.floor((containerRef.current.getBoundingClientRect().width - 16) / 208))
-              setNumCols(cols)
-              numColsRef.current = cols
-            }
-            setGridVisible(true)
-          }))
+          requestAnimationFrame(() =>
+            requestAnimationFrame(() => {
+              if (containerRef.current) {
+                const cols = Math.max(
+                  1,
+                  Math.floor((containerRef.current.getBoundingClientRect().width - 16) / 208),
+                )
+                setNumCols(cols)
+                numColsRef.current = cols
+              }
+              setGridVisible(true)
+            }),
+          )
         }, CARD_ANIM)
       }, PANEL_DURATION - CARD_ANIM)
     }
@@ -307,7 +334,14 @@ export function useGridPageAnimation({
   }, [panelOpen])
 
   return {
-    displayResults, displayTotal, numCols, gridVisible, layoutOpen, pagePhase, pageDirection,
-    getTileDelay, handlePage,
+    displayResults,
+    displayTotal,
+    numCols,
+    gridVisible,
+    layoutOpen,
+    pagePhase,
+    pageDirection,
+    getTileDelay,
+    handlePage,
   }
 }

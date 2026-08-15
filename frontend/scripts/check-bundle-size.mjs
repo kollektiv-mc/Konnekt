@@ -36,13 +36,17 @@ if (!entry) {
   process.exit(1)
 }
 
-console.log(`\nEntry chunk (${entry.file}): ${entry.gzipKB.toFixed(1)} KB gzip (budget: ${ENTRY_BUDGET_KB} KB)`)
+console.log(
+  `\nEntry chunk (${entry.file}): ${entry.gzipKB.toFixed(1)} KB gzip (budget: ${ENTRY_BUDGET_KB} KB)`,
+)
 
 if (entry.gzipKB > ENTRY_BUDGET_KB) {
   console.error(
     `\n✖ Entry chunk exceeds the ${ENTRY_BUDGET_KB} KB gzip budget by ${(entry.gzipKB - ENTRY_BUDGET_KB).toFixed(1)} KB.`,
   )
-  console.error('  If this growth is expected, raise ENTRY_BUDGET_KB in scripts/check-bundle-size.mjs.')
+  console.error(
+    '  If this growth is expected, raise ENTRY_BUDGET_KB in scripts/check-bundle-size.mjs.',
+  )
   console.error('  If not, look for a new eager import that should be lazy-loaded instead.')
   process.exit(1)
 }

@@ -6,8 +6,11 @@ export function fmtBytes(n: number): string {
 
 export function fmtDate(ms: number): string {
   return new Date(ms).toLocaleString([], {
-    year: 'numeric', month: 'short', day: 'numeric',
-    hour: '2-digit', minute: '2-digit',
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
   })
 }
 

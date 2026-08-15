@@ -498,10 +498,12 @@ export function QuickCommandsPanel({ serverId, columns = 2 }: QuickCommandsPanel
                 onClick={submitModal}
                 className="rounded border-[0.5px] border-red-400/30 bg-red-400/15 px-3 py-1.5 text-xs text-red-400 transition-colors"
                 onMouseEnter={(e) => {
-                  ;(e.currentTarget as HTMLButtonElement).style.background = 'rgba(248,113,113,0.25)'
+                  ;(e.currentTarget as HTMLButtonElement).style.background =
+                    'rgba(248,113,113,0.25)'
                 }}
                 onMouseLeave={(e) => {
-                  ;(e.currentTarget as HTMLButtonElement).style.background = 'rgba(248,113,113,0.15)'
+                  ;(e.currentTarget as HTMLButtonElement).style.background =
+                    'rgba(248,113,113,0.15)'
                 }}
               >
                 {modal.type === 'kick' ? 'Kick' : 'Ban'}

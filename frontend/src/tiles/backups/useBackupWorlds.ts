@@ -14,13 +14,22 @@ export function useBackupWorlds(serverId: string, filename: string | undefined):
   const [nonce, setNonce] = useState(0)
 
   useEffect(() => {
-    if (!filename) { setWorlds([]); return }
+    if (!filename) {
+      setWorlds([])
+      return
+    }
     let cancelled = false
     GetBackupWorlds(serverId, filename)
-      .then(result => { if (!cancelled) setWorlds(result ?? []) })
-      .catch(() => { if (!cancelled) setWorlds([]) })
+      .then((result) => {
+        if (!cancelled) setWorlds(result ?? [])
+      })
+      .catch(() => {
+        if (!cancelled) setWorlds([])
+      })
     // Keep previous planets visible while the new ones load (no flash to empty).
-    return () => { cancelled = true }
+    return () => {
+      cancelled = true
+    }
   }, [serverId, filename, nonce])
 
   useEffect(() => {
@@ -33,7 +42,9 @@ export function useBackupWorlds(serverId: string, filename: string | undefined):
       c2 = EventsOn(EVENTS.BACKUP_FAILED, (data?: { serverID?: string }) => {
         if (data?.serverID === serverId) setNonce((n) => n + 1)
       })
-    } catch { /* Wails runtime unavailable in dev without backend */ }
+    } catch {
+      /* Wails runtime unavailable in dev without backend */
+    }
     return () => {
       c1?.()
       c2?.()
