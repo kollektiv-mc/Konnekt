@@ -269,8 +269,7 @@ Recording these so they are not accidentally re-litigated:
 - **Versions before 1.20.5.** The `nbt` item format trait exists in the matrix for
   completeness, but no pre-component version is supported.
 - **Server integration.** Kommands generates text; it does not connect to a server.
-- **Accounts, tiers, subscriptions.** Removed with the previous codebase and not
-  returning.
+- **Accounts, tiers, subscriptions.**
 
 ---
 
