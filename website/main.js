@@ -4,6 +4,30 @@
     document.documentElement.classList.add('reduce-motion')
   }
 
+  // ── Hero intro teardown ────────────────────────────────────────────────
+  // Once the intro finishes, mark the hero so CSS can drop the animations.
+  // A finished `forwards` animation still holds its last keyframe, and a
+  // filter or transform value — even an identity one — keeps the element on
+  // its own composited layer, which renders the text slightly soft. The
+  // keyframes end on `none` for this reason too; this is the guarantee.
+  var hero = document.querySelector('.hero')
+  if (hero) {
+    var heroAnims = hero.getAnimations ? hero.getAnimations({ subtree: true }) : []
+    if (heroAnims.length) {
+      Promise.allSettled(
+        heroAnims.map(function (a) {
+          return a.finished
+        }),
+      ).then(function () {
+        hero.classList.add('intro-done')
+      })
+    } else {
+      // No animations to wait on (reduced motion, or an engine without the
+      // Web Animations API) — the resting state is already correct.
+      hero.classList.add('intro-done')
+    }
+  }
+
   // ── Nav ────────────────────────────────────────────────────────────────
   // The nav markup is byte-identical on every page — including the link hrefs,
   // which are all fully qualified (./index.html#features) so they cannot drift

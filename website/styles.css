@@ -373,6 +373,113 @@ a {
   transition: none;
 }
 
+/* ── Page intro (plays on load; the counterpart to .reveal) ─────────────── */
+/* Pure CSS, so it works with JS disabled — unlike .reveal, which needs the
+   observer. Used for above-the-fold content and for anything the async
+   download/changelog fetches insert, which animates simply by entering the
+   DOM. Applied structurally below rather than via a class, so the markup stays
+   clean and download.js/changelog.js need no changes.
+   Ends on `transform: none` for the same reason the hero keyframes do: a
+   lingering transform holds a composited layer and softens text. */
+@keyframes intro-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.nav,
+.subpage-head,
+.doc-toc,
+.state-box,
+.download-primary,
+.download-others,
+.dl-footnote,
+.dl-grid > .dl-card,
+.changelog > .release {
+  animation: intro-in 460ms var(--ease-standard) both;
+}
+
+/* The nav is a fixed bar on every page; fading it is enough, sliding it would
+   read as lag once you start clicking between pages. */
+.nav {
+  animation-name: intro-fade;
+  animation-duration: 240ms;
+}
+
+@keyframes intro-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.subpage-head {
+  animation-delay: 40ms;
+}
+
+.doc-toc {
+  animation-delay: 110ms;
+}
+
+.state-box,
+.download-primary {
+  animation-delay: 60ms;
+}
+
+.download-others {
+  animation-delay: 120ms;
+}
+
+.dl-footnote {
+  animation-delay: 200ms;
+}
+
+/* Stagger the fetched lists. Capped at six so a long changelog doesn't leave
+   the last entry waiting. */
+.dl-grid > .dl-card:nth-child(1),
+.changelog > .release:nth-child(1) {
+  animation-delay: 0ms;
+}
+.dl-grid > .dl-card:nth-child(2),
+.changelog > .release:nth-child(2) {
+  animation-delay: 60ms;
+}
+.dl-grid > .dl-card:nth-child(3),
+.changelog > .release:nth-child(3) {
+  animation-delay: 120ms;
+}
+.dl-grid > .dl-card:nth-child(4),
+.changelog > .release:nth-child(4) {
+  animation-delay: 180ms;
+}
+.dl-grid > .dl-card:nth-child(5),
+.changelog > .release:nth-child(5) {
+  animation-delay: 240ms;
+}
+.dl-grid > .dl-card:nth-child(n + 6),
+.changelog > .release:nth-child(n + 6) {
+  animation-delay: 300ms;
+}
+
+/* Doc sections ride the existing observer instead, so the ones below the fold
+   animate on scroll rather than all firing at load. */
+.doc-page > .doc-section:nth-of-type(2) {
+  --reveal-delay: 70ms;
+}
+.doc-page > .doc-section:nth-of-type(3) {
+  --reveal-delay: 140ms;
+}
+.doc-page > .doc-section:nth-of-type(n + 4) {
+  --reveal-delay: 210ms;
+}
+
 /* ── Full-viewport section shell ──────────────────────────────────────── */
 /* Every landing-page block — hero included — is one of these, so they all
    share a height and a rhythm instead of each carrying its own padding.
@@ -448,6 +555,16 @@ a {
   --ty: -8px;
 }
 
+/* With `forwards` fill the element keeps whatever the last keyframe says, and
+   *any* filter or transform value — even an identity one — pins it to its own
+   composited layer, which drops subpixel text antialiasing and lets glyphs
+   resample at fractional offsets. That is what left "Run" and "like" looking
+   soft once the intro settled.
+   Writing the terminal keyframes as `none` is not on its own enough: a filter
+   list interpolates against `none` via each function's identity, so Chromium
+   resolves the filled value back to `blur(0px)`. The teardown that actually
+   clears the layer is `.hero.intro-done` below, driven from main.js. These
+   stay `none` because that is the honest resting value. */
 @keyframes hero-word-in {
   from {
     opacity: 0;
@@ -456,8 +573,8 @@ a {
   }
   to {
     opacity: 1;
-    filter: blur(0);
-    transform: translateY(0);
+    filter: none;
+    transform: none;
   }
 }
 
@@ -482,10 +599,23 @@ a {
   }
   100% {
     opacity: 1;
-    filter: blur(0);
-    transform: translateY(0) scale(1);
+    filter: none;
+    transform: none;
     text-shadow: 0 0 32px rgb(var(--accent-rgb) / 0.4);
   }
+}
+
+/* Belt and braces for the above: once the intro has finished, drop the
+   animations entirely so nothing is left holding a layer. The accent glow
+   survives because `.hero h1 .accent` carries the same text-shadow as a
+   resting style, not just as the animation's last frame. */
+.hero.intro-done .hw,
+.hero.intro-done .hero-mission,
+.hero.intro-done .hero-fade {
+  animation: none;
+  opacity: 1;
+  filter: none;
+  transform: none;
 }
 
 .hero p {
@@ -748,16 +878,21 @@ a {
   }
 }
 
+/* Travel occupies 7.5% of the 8s cycle (0.6s), not 20% (1.6s). The pulse
+   delays (1.4s / 3.4s / 5.4s, set per-edge in index.html) are correct as they
+   stand; the travel was simply too slow, so each pulse landed a full second
+   after the node it was heading for had already lit. 7.5% puts the arrivals at
+   2.0s / 4.0s / 6.0s — exactly the downstream node's `sf-lit` delay. */
 @keyframes sf-pulse {
   0% {
     stroke-dashoffset: 112;
     opacity: 0;
   }
-  2%,
-  18% {
+  1%,
+  6.5% {
     opacity: 1;
   }
-  20%,
+  7.5%,
   100% {
     stroke-dashoffset: 0;
     opacity: 0;
@@ -1493,8 +1628,13 @@ footer {
     display: inline-flex;
   }
 
+  /* Stays displayed and is hidden with visibility instead of `display: none`,
+     because `display` cannot transition. `visibility` (rather than opacity
+     alone) is what keeps the closed menu out of the tab order and the
+     accessibility tree; its transition is delayed by the fade duration so it
+     only flips to hidden once the fade has finished. */
   .nav-menu {
-    display: none;
+    display: flex;
     position: absolute;
     top: var(--nav-h);
     left: 0;
@@ -1509,10 +1649,44 @@ footer {
        is not a guarantee (no blur without compositing support). */
     background: linear-gradient(var(--bg-elevated), var(--bg-elevated)), var(--bg-base);
     border-bottom: 0.5px solid var(--border-subtle);
+    opacity: 0;
+    transform: translateY(-8px);
+    visibility: hidden;
+    pointer-events: none;
+    transition:
+      opacity 200ms var(--ease-standard),
+      transform 200ms var(--ease-standard),
+      visibility 0s linear 200ms;
   }
 
   .nav-menu.is-open {
-    display: flex;
+    opacity: 1;
+    transform: none;
+    visibility: visible;
+    pointer-events: auto;
+    transition-delay: 0s;
+  }
+
+  /* Items trail the panel slightly so the open reads as one motion. */
+  .nav-menu.is-open .nav-links li,
+  .nav-menu.is-open .nav-actions > .btn {
+    animation: intro-in 240ms var(--ease-standard) both;
+  }
+
+  .nav-menu.is-open .nav-links li:nth-child(2) {
+    animation-delay: 40ms;
+  }
+  .nav-menu.is-open .nav-links li:nth-child(3) {
+    animation-delay: 80ms;
+  }
+  .nav-menu.is-open .nav-links li:nth-child(4) {
+    animation-delay: 120ms;
+  }
+  .nav-menu.is-open .nav-actions > .btn:nth-child(1) {
+    animation-delay: 160ms;
+  }
+  .nav-menu.is-open .nav-actions > .btn:nth-child(2) {
+    animation-delay: 200ms;
   }
 
   .nav-links {
@@ -1589,11 +1763,26 @@ footer {
 
   .hw,
   .hero-mission,
-  .hero-fade {
+  .hero-fade,
+  .nav,
+  .subpage-head,
+  .doc-toc,
+  .state-box,
+  .download-primary,
+  .download-others,
+  .dl-footnote,
+  .dl-grid > .dl-card,
+  .changelog > .release,
+  .nav-menu.is-open .nav-links li,
+  .nav-menu.is-open .nav-actions > .btn {
     animation: none !important;
     opacity: 1 !important;
     filter: none !important;
     transform: none !important;
+  }
+
+  .nav-menu {
+    transition: none !important;
   }
 
   .spinner {
@@ -1612,9 +1801,24 @@ footer {
 
 .reduce-motion .hw,
 .reduce-motion .hero-mission,
-.reduce-motion .hero-fade {
+.reduce-motion .hero-fade,
+.reduce-motion .nav,
+.reduce-motion .subpage-head,
+.reduce-motion .doc-toc,
+.reduce-motion .state-box,
+.reduce-motion .download-primary,
+.reduce-motion .download-others,
+.reduce-motion .dl-footnote,
+.reduce-motion .dl-grid > .dl-card,
+.reduce-motion .changelog > .release,
+.reduce-motion .nav-menu.is-open .nav-links li,
+.reduce-motion .nav-menu.is-open .nav-actions > .btn {
   animation: none !important;
   opacity: 1 !important;
   filter: none !important;
   transform: none !important;
+}
+
+.reduce-motion .nav-menu {
+  transition: none !important;
 }
