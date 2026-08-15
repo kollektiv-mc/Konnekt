@@ -3,6 +3,11 @@
   var OWNER_REPO = 'kollektiv-mc/Konnekt'
   var API = 'https://api.github.com/repos/' + OWNER_REPO
 
+  // The rolling prerelease .github/workflows/snapshot.yml rebuilds from main
+  // (see the download page's snapshot section). It's a prerelease, so
+  // /releases/latest never returns it — it has to be fetched by tag.
+  var SNAPSHOT_TAG = 'snapshot'
+
   // Platform metadata. `match` tests an asset's `name`; null = not built yet.
   var PLATFORMS = [
     {
@@ -114,6 +119,8 @@
     OWNER_REPO: OWNER_REPO,
     RELEASES_URL: 'https://github.com/' + OWNER_REPO + '/releases',
     REPO_URL: 'https://github.com/' + OWNER_REPO,
+    SNAPSHOT_TAG: SNAPSHOT_TAG,
+    SNAPSHOT_URL: 'https://github.com/' + OWNER_REPO + '/releases/tag/' + SNAPSHOT_TAG,
     PLATFORMS: PLATFORMS,
     platformById: platformById,
     detectPlatform: detectPlatform,
@@ -125,6 +132,11 @@
     },
     fetchList: function () {
       return get('/releases?per_page=20')
+    },
+    // 404s whenever no snapshot has been published yet — callers treat that
+    // as "no snapshot channel", not as an error.
+    fetchSnapshot: function () {
+      return get('/releases/tags/' + SNAPSHOT_TAG)
     },
   }
 })()

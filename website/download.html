@@ -96,6 +96,29 @@
             <h3>All downloads</h3>
             <div class="dl-grid" id="dl-grid"></div>
           </div>
+
+          <!-- Snapshot channel — the rolling `snapshot` prerelease built from
+               main by .github/workflows/snapshot.yml. Stays hidden until
+               download.js confirms it exists and carries assets: it's a
+               convenience, and a missing one must not read as a broken page.
+               Lives inside #dl-content so a GitHub outage collapses to the one
+               error box rather than leaving this stranded under it. -->
+          <section class="download-others download-snapshot is-hidden" id="dl-snapshot">
+            <h3>Or run the latest build</h3>
+            <div class="disclaimer">
+              <span class="disclaimer-badge">UNSTABLE</span>
+              <p>
+                Built automatically from the newest code, so they carry features and fixes the
+                release above doesn't have yet. None of it is tested: a snapshot can be broken,
+                is replaced by the next one, and won't update itself. Back up your server
+                directory first.
+              </p>
+            </div>
+            <p class="snapshot-meta" id="dl-snapshot-meta"></p>
+            <div class="dl-grid" id="dl-snapshot-grid"></div>
+            <p class="dl-footnote" id="dl-snapshot-footnote"></p>
+          </section>
+
           <p class="dl-footnote" id="dl-footnote"></p>
         </div>
 

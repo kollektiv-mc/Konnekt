@@ -203,6 +203,15 @@ builds and publishes on `v*` tags; the in-app updater
 (`backend/services/update.go`) checks GitHub Releases. Only relevant when
 cutting a release.
 
+`.github/workflows/snapshot.yml` publishes the other channel: a nightly build
+of `main` (skipped when `main` hasn't moved), force-published to the rolling
+`snapshot` tag as a **prerelease**, which is what keeps it out of
+`/releases/latest` and therefore invisible to both the updater and the website's
+primary download card. Its version keeps the `-dev` marker
+(`0.1.0-dev.snapshot.<sha>`) so `app.go`'s install guard and the frontend's
+`isDevBuild()` treat a snapshot as having no update path — snapshots are
+refreshed by downloading a new one.
+
 ## Linux builds
 
 The published Linux release (`konnekt-linux-amd64` + an `.rpm`) is built with

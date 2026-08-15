@@ -122,4 +122,4 @@ export function groupByDate(entries: readonly ChangelogEntry[]): ChangelogEntry[
 
 // "Open GitHub for older changelogs" target — GitHub Releases, now that
 // .github/workflows/release.yml cuts them on every v* tag push.
-export const CHANGELOG_URL = 'https://github.com/sandrogekeler/Konnekt/releases'
+export const CHANGELOG_URL = 'https://github.com/kollektiv-mc/Konnekt/releases'
