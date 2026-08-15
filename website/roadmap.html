@@ -79,10 +79,7 @@
         <div class="subpage-head">
           <span class="eyebrow">[/] roadmap</span>
           <h1>Where it's <span class="accent">going</span></h1>
-          <p>
-            What's shipped, what's being worked on, and — just as usefully — what is deliberately
-            never going to be built.
-          </p>
+          <p>What's shipped, what's next, and what won't be built.</p>
         </div>
 
         <div class="doc-page">
@@ -99,49 +96,41 @@
               <span class="tag tag-done">Complete</span>
             </h2>
             <div class="md">
-              <p>
-                The alpha scope is finished and in daily use. Everything below ships in the current
-                build.
-              </p>
+              <p>In daily use. Everything below ships in the current build.</p>
               <ul>
                 <li>
-                  <strong>Multi-server management</strong> — any number of instances, each with its
-                  own jar, JVM arguments and working directory; independent start, stop and
-                  restart, with a guided EULA flow for first-time setup.
+                  <strong>Multi-server management.</strong> Any number of instances, each with its
+                  own jar, JVM arguments and working directory, plus a guided EULA flow. Start,
+                  stop and restart any of them.
                 </li>
                 <li>
-                  <strong>Live console</strong> — real-time log streaming, inline commands,
-                  colour-coded output, and custom quick-command buttons.
+                  <strong>Live console.</strong> Log streaming, inline commands, colour-coded
+                  output, custom quick-commands.
+                </li>
+                <li><strong>Stats.</strong> TPS, RAM and CPU, with an hour of history charted.</li>
+                <li><strong>Player list.</strong> Who's online, with kick and ban.</li>
+                <li>
+                  <strong>Node-graph scheduler.</strong> Triggers, conditions and actions on a
+                  canvas, with branching and live server values.
                 </li>
                 <li>
-                  <strong>Real-time stats and history</strong> — TPS, RAM and CPU, with an hour of
-                  performance history charted.
-                </li>
-                <li>
-                  <strong>Player list</strong> — who's online, with kick and ban.
-                </li>
-                <li>
-                  <strong>Node-graph scheduler</strong> — triggers, conditions and actions wired on
-                  a canvas, with branching and live server values.
-                </li>
-                <li>
-                  <strong>World management</strong> — switch the active world, inspect size, seed
+                  <strong>World management.</strong> Switch the active world, inspect size, seed
                   and type, jump between dimensions.
                 </li>
                 <li>
-                  <strong>Backups</strong> — manual and scheduled, with a visual restore carousel.
+                  <strong>Backups.</strong> Manual and scheduled, with a visual restore carousel.
                 </li>
                 <li>
-                  <strong>Config editor</strong> — <code>server.properties</code> as a form or as
-                  raw text, JSON and YAML aware.
+                  <strong>Config editor.</strong> <code>server.properties</code> as a form or raw
+                  text, JSON and YAML aware.
                 </li>
                 <li>
-                  <strong>Mods and plugins</strong> — search and install from Modrinth with
-                  dependency resolution, loader detection, and inline changelogs.
+                  <strong>Mods and plugins.</strong> Modrinth search and install, with dependency
+                  resolution, loader detection and inline changelogs.
                 </li>
                 <li>
-                  <strong>Tile dashboard</strong> — drag, resize, snap, crate unused tiles, and
-                  save layout presets.
+                  <strong>Tile dashboard.</strong> Drag, resize, snap, crate unused tiles, save
+                  layout presets.
                 </li>
                 <li><strong>Notifications</strong> and an in-app updater.</li>
               </ul>
@@ -155,7 +144,7 @@
             </h2>
             <div class="md">
               <p>
-                Individual beta items are tracked as
+                Tracked as
                 <a
                   href="https://github.com/kollektiv-mc/Konnekt/issues"
                   target="_blank"
@@ -166,30 +155,26 @@
               </p>
               <ul>
                 <li>
-                  <strong>Backups, hardened</strong> — per-world backups surfaced in the Worlds
-                  tile, multi-dimension coverage (nether and end), retention and pruning,
-                  cancel-in-progress, a concurrency guard, restore integrity checks, and import
-                  from an external file.
+                  <strong>Server switching.</strong> The worlds and mods tiles follow the active
+                  server; the console, scheduler and status tiles do not yet.
                 </li>
                 <li>
-                  <strong>New tiles</strong> — file explorer, audit log, a fuller mod/plugin
-                  manager (Modrinth plus CurseForge), player profiles, and skin previews.
+                  <strong>Backups, hardened.</strong> Per-world backups in the Worlds tile,
+                  multi-dimension coverage, retention and pruning, cancel-in-progress, a
+                  concurrency guard, restore integrity checks, import from an external file.
                 </li>
                 <li>
-                  <strong>Config editor enhancements</strong> — grouped fields, a gamerule editor,
-                  and an MOTD preview.
+                  <strong>New tiles.</strong> File explorer, audit log, a fuller mod manager
+                  (Modrinth plus CurseForge), player profiles, skin previews.
                 </li>
                 <li>
-                  <strong>Extended performance history</strong> — 24-hour and 7-day windows
-                  alongside the current hour.
+                  <strong>Config editor.</strong> Grouped fields, a gamerule editor, MOTD preview.
                 </li>
+                <li><strong>Extended history.</strong> 24-hour and 7-day performance windows.</li>
+                <li><strong>Public server IP</strong> via a playit.gg tunnel.</li>
                 <li>
-                  <strong>Public server IP</strong> via a playit.gg tunnel, for exposing a
-                  home-hosted server without touching your router.
-                </li>
-                <li>
-                  <strong>Configurable keyboard shortcuts</strong>, plus the remaining settings
-                  (global JVM defaults, backup retention policy).
+                  <strong>Configurable shortcuts</strong>, plus global JVM defaults and a backup
+                  retention policy.
                 </li>
               </ul>
             </div>
@@ -203,11 +188,8 @@
             <div class="md">
               <ul>
                 <li>
-                  <strong>Remote access — the full dashboard over the web.</strong> Konnekt is a
-                  local-first desktop app today and manages servers on the machine it runs on.
-                  Reaching a server on another box, through a browser, is a substantial piece of
-                  work with its own security surface, so it sits behind beta rather than inside
-                  it.
+                  <strong>Remote access.</strong> The full dashboard over the web, for servers on
+                  another machine. Konnekt is a local-first desktop app today.
                 </li>
               </ul>
             </div>
@@ -219,27 +201,13 @@
               <span class="tag tag-no">Won't build</span>
             </h2>
             <div class="md">
-              <p>Recorded so they don't get re-litigated:</p>
               <ul>
                 <li>
-                  <strong>Bedrock Edition.</strong> The command syntax is different enough that
-                  supporting it would mean a second product, not a compatibility flag.
+                  <strong>Bedrock Edition.</strong> Different command syntax; it would be a second
+                  product.
                 </li>
-                <li>
-                  <strong>Minecraft versions before 1.20.5.</strong> Nothing predating the
-                  component item format is supported.
-                </li>
-                <li>
-                  <strong>Accounts, tiers and subscriptions.</strong> Removed with a previous
-                  codebase and not coming back. Konnekt is
-                  <a href="/index.html#privacy">local-first</a> and
-                  <a
-                    href="https://github.com/kollektiv-mc/Konnekt/blob/main/LICENSE"
-                    target="_blank"
-                    rel="noopener"
-                    >CC0</a
-                  >; there is nothing to sell you.
-                </li>
+                <li><strong>Minecraft versions before 1.20.5.</strong></li>
+                <li><strong>Accounts, tiers and subscriptions.</strong></li>
               </ul>
             </div>
           </section>
@@ -255,17 +223,8 @@
         <div class="disclaimer">
           <span class="disclaimer-badge">NOTE</span>
           <p>
-            Konnekt is a personal side project, built to run its author's own Minecraft servers
-            rather than to match what a wider community might expect from it. Most of the code was
-            written by Claude with a human reading over its shoulder, so don't expect a
-            textbook-clean codebase. It's alpha software, released under
-            <a
-              href="https://github.com/kollektiv-mc/Konnekt/blob/main/LICENSE"
-              target="_blank"
-              rel="noopener"
-              >CC0</a
-            >
-            — fork it, extend it, rebuild it. <a href="/docs.html#disclaimer">Full statement</a>.
+            Alpha software. A personal side project, mostly written by Claude, released under
+            CC0. <a href="/docs.html#disclaimer">Full statement</a>.
           </p>
         </div>
         <div class="footer-inner">
