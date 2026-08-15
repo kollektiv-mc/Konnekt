@@ -1,0 +1,35 @@
+# Layout for GitHub's auto-generated release notes — used by the nightly
+# snapshot (.github/workflows/snapshot.yml) and by release.yml's
+# `--generate-notes` on tagged releases.
+#
+# Entries are merged pull requests, listed by title and sorted into the first
+# category whose label matches, so order matters here and "*" has to come last.
+# A PR with no type: label still appears, under "Other changes" — categories
+# sharpen the list as labelling gets more consistent, they don't gate what
+# shows up. This file is the one place section titles are decided; changing a
+# title here changes every future release's notes.
+changelog:
+  exclude:
+    # Not a label that exists yet — create it if you want an escape hatch for
+    # PRs that shouldn't show up in the notes at all.
+    labels:
+      - changelog:skip
+  categories:
+    - title: Features
+      labels:
+        - type:feature
+        - enhancement
+    - title: Fixes
+      labels:
+        - type:bug
+        - bug
+    - title: Documentation
+      labels:
+        - type:docs
+        - documentation
+    - title: Maintenance
+      labels:
+        - type:chore
+    - title: Other changes
+      labels:
+        - '*'
