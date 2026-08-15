@@ -6,7 +6,7 @@
     <title>Roadmap — Konnekt</title>
     <meta
       name="description"
-      content="What's shipped in Konnekt's alpha, what beta is working on, what comes later, and what is deliberately out of scope."
+      content="What's shipped in Konnekt's alpha, what beta is working on, what a full release needs, what comes later, and what is deliberately out of scope."
     />
     <link rel="canonical" href="https://konnekt.pages.dev/roadmap.html" />
 
@@ -14,7 +14,7 @@
     <meta property="og:title" content="Roadmap — Konnekt" />
     <meta
       property="og:description"
-      content="What's shipped in Konnekt's alpha, what beta is working on, what comes later, and what is deliberately out of scope."
+      content="What's shipped in Konnekt's alpha, what beta is working on, what a full release needs, what comes later, and what is deliberately out of scope."
     />
     <meta property="og:url" content="https://konnekt.pages.dev/roadmap.html" />
     <meta property="og:type" content="website" />
@@ -25,7 +25,7 @@
     <meta name="twitter:title" content="Roadmap — Konnekt" />
     <meta
       name="twitter:description"
-      content="What's shipped in Konnekt's alpha, what beta is working on, what comes later, and what is deliberately out of scope."
+      content="What's shipped in Konnekt's alpha, what beta is working on, what a full release needs, what comes later, and what is deliberately out of scope."
     />
     <meta name="twitter:image" content="https://konnekt.pages.dev/assets/img/social-card.png" />
 
@@ -86,6 +86,7 @@
           <nav class="doc-toc" aria-label="On this page">
             <a href="#alpha">Alpha</a>
             <a href="#beta">Beta</a>
+            <a href="#full-release">Full release</a>
             <a href="#later">Later</a>
             <a href="#no">Out of scope</a>
           </nav>
@@ -179,6 +180,44 @@
                 <li>
                   <strong>Additional alpha issues</strong> found in daily use, fixed as they
                   surface.
+                </li>
+              </ul>
+            </div>
+          </section>
+
+          <section class="doc-section reveal" id="full-release">
+            <h2>
+              <span>Full release</span>
+              <span class="tag tag-later">Planned</span>
+            </h2>
+            <div class="md">
+              <p>
+                Everything above, finished, plus the release work an alpha skips. Beta lands first.
+              </p>
+              <ul>
+                <li>
+                  <strong>No known data-loss bugs.</strong> Automated coverage on the paths that
+                  touch your server files: backups, restores, world switching, config writes.
+                </li>
+                <li>
+                  <strong>Published macOS builds.</strong> macOS builds from source today; a full
+                  release ships it alongside Windows and Linux.
+                </li>
+                <li>
+                  <strong>Installers and packages.</strong> A Windows installer and a Debian
+                  package, rather than a bare executable next to the existing <code>.rpm</code>.
+                </li>
+                <li>
+                  <strong>Signed builds.</strong> Signed on Windows, notarised on macOS, so a first
+                  launch doesn't trip an OS warning.
+                </li>
+                <li>
+                  <strong>Stable on-disk state.</strong> Versioned config with migrations, so
+                  servers, layouts, presets and scheduled tasks survive every update.
+                </li>
+                <li>
+                  <strong>Docs for every tile.</strong> The current docs cover getting started and
+                  little else.
                 </li>
               </ul>
             </div>
