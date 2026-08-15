@@ -1178,8 +1178,21 @@ footer {
   transform: translateY(-2px);
 }
 
-.dl-card.is-unavailable {
-  opacity: 0.55;
+/* Platforms with no asset on the release. This used to dim the card itself
+   with `opacity: 0.55`, which never actually rendered: .dl-card carries the
+   intro-in animation, and its final keyframe pins opacity to 1 — animations
+   outrank normal author declarations, so the card stayed at full strength.
+   The reduce-motion path pins the same property with an !important, so even
+   raising this to !important would only fix half the cases. Dimming the
+   contents sidesteps both, and losing the accent-green icon is the clearer
+   signal anyway. */
+.dl-card.is-unavailable .dl-card-icon,
+.dl-card.is-unavailable .dl-card-meta {
+  color: var(--text-faint);
+}
+
+.dl-card.is-unavailable .dl-card-name {
+  color: var(--text-muted);
 }
 
 .dl-card-icon {
