@@ -27,6 +27,8 @@ jobs:
     outputs:
       build: ${{ steps.decide.outputs.build }}
       sha: ${{ steps.decide.outputs.sha }}
+      short: ${{ steps.decide.outputs.short }}
+      prev: ${{ steps.decide.outputs.prev }}
       version: ${{ steps.decide.outputs.version }}
       rpm_version: ${{ steps.decide.outputs.rpm_version }}
     steps:
@@ -39,6 +41,7 @@ jobs:
           sha="${{ github.sha }}"
           short="${sha:0:7}"
           echo "sha=$sha" >> "$GITHUB_OUTPUT"
+          echo "short=$short" >> "$GITHUB_OUTPUT"
 
           # version.go carries the base version ("0.1.0-dev"). The "-dev"
           # marker is kept deliberately: app.go's install guard and the
@@ -55,8 +58,11 @@ jobs:
 
           # target_commitish is the commit the current snapshot was cut from.
           # Absent (first run, or someone deleted the release) means build.
+          # It's also the start of the range the release notes describe.
           prev="$(gh api "repos/${{ github.repository }}/releases/tags/snapshot" \
             --jq .target_commitish 2>/dev/null || true)"
+          echo "prev=$prev" >> "$GITHUB_OUTPUT"
+
           if [ "$sha" = "$prev" ] && [ "${{ github.event_name }}" = 'schedule' ]; then
             echo "main is unchanged since the last snapshot ($prev) — nothing to build."
             echo "build=false" >> "$GITHUB_OUTPUT"
@@ -215,6 +221,46 @@ jobs:
         working-directory: dist
         run: sha256sum * > checksums.txt
 
+      # Runs before the publish step deletes the old `snapshot` tag, because
+      # that tag is what marks the start of the range these notes describe:
+      # previous snapshot → this commit. Sections come from .github/release.yml.
+      #
+      # tag_name is a name that doesn't exist on purpose. generate-notes
+      # ignores target_commitish whenever tag_name already resolves to a tag,
+      # so passing "snapshot" here would describe the build being replaced
+      # rather than this one.
+      - name: Generate release notes
+        working-directory: dist
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          SERVER: ${{ github.server_url }}
+          SHA: ${{ needs.check.outputs.sha }}
+          SHORT: ${{ needs.check.outputs.short }}
+          PREV: ${{ needs.check.outputs.prev }}
+        run: |
+          args=(-f "tag_name=snapshot-$SHORT" -f "target_commitish=$SHA")
+          # No previous snapshot (first run, or the release was deleted) —
+          # let GitHub fall back to the last published release as the start.
+          if [ -n "$PREV" ]; then
+            args+=(-f previous_tag_name=snapshot)
+          fi
+
+          # Losing the notes must not cost the build itself; fall back to the
+          # compare view, which is the same information without the formatting.
+          if ! gh api --method POST "repos/$REPO/releases/generate-notes" \
+            "${args[@]}" --jq .body > changes.md; then
+            : > changes.md
+          fi
+
+          if [ ! -s changes.md ]; then
+            if [ -n "$PREV" ]; then
+              echo "**Full changelog**: $SERVER/$REPO/compare/$PREV...$SHA" > changes.md
+            else
+              echo "**Commits**: $SERVER/$REPO/commits/$SHA" > changes.md
+            fi
+          fi
+
       # Delete and recreate rather than edit. `snapshot` has to end up pointing
       # at a new commit with a fresh asset set, and editing a release can't move
       # its tag — only re-creating it does that, replaces every asset and
@@ -240,7 +286,11 @@ jobs:
           when you want the newest code, or install a release to go back to stable.
 
           Version \`$VERSION\`, built from commit $SHA.
+
+          ---
+
           EOF
+          cat changes.md >> notes.md
 
           gh release delete snapshot --yes --cleanup-tag \
             --repo "${{ github.repository }}" || true

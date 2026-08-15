@@ -169,6 +169,30 @@ this repo's GitHub Issues into the Apps team's Konnekt project and matching on a
 `Source: kollektiv-mc/konnekt#<number>` line in the Linear issue description
 rather than on titles. Never write to Linear directly from this repo.
 
+## Commits & pull requests
+
+**Merged pull request titles are the changelog.** The nightly snapshot
+(`.github/workflows/snapshot.yml`) asks GitHub to generate its release notes
+from the PRs merged since the last snapshot, and `release.yml` does the same on
+tagged releases. A PR title is therefore read by people who will never see the
+diff — write it for them, not for a reviewer.
+
+- **Title:** imperative mood, sentence case, no trailing period. Say what the
+  change does, not which files moved — "Support NeoForge and modern Forge
+  servers", not "Update serverlaunch.go". Keep it to one line that stands on
+  its own in a list. Conventional-Commit prefixes (`feat:`, `fix(scheduler):`)
+  appear in older history and are fine on commits, but a PR title should read
+  as a sentence, not a type tag.
+- **One `type:` label per PR** — `type:feature`, `type:bug`, `type:docs`,
+  `type:chore` — which is the only thing that sorts it into a section of the
+  generated notes. An unlabelled PR still appears, under "Other changes".
+  `.github/release.yml` owns that mapping and is the one place section titles
+  are decided; `changelog:skip` keeps a PR out of the notes entirely.
+- **Body:** why the change exists, what a reviewer should look at, and how it
+  was verified. None of it reaches the release notes, so detail is free here.
+- **Commit messages** follow the same title rule, with the reasoning in the
+  body. Nothing parses them — they're for whoever runs `git log`.
+
 ## Local tooling
 
 - **graphify** — the AST knowledge-graph tool this repo's Claude Code setup is
