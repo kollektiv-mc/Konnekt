@@ -7,3 +7,8 @@ node_modules
 # diff in the health check.
 src/styles/tokens.css
 src/styles/tokens.ts
+
+# Same reasoning, different generator: pnpm owns the lockfile's layout and
+# rewrites it on any dependency change, so a Prettier pass over it is undone
+# the next time anyone adds a package — while costing 3.3k lines of diff noise.
+pnpm-lock.yaml
