@@ -31,6 +31,11 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm typecheck
       - run: pnpm lint
+      # The lefthook pre-commit hook only formats *staged* files, so it can
+      # never clean anything already committed, nor the config files outside
+      # its *.{ts,tsx,css} glob. That gap is what let 33 files drift red
+      # unnoticed; this step is what stops it recurring.
+      - run: pnpm format:check
       - run: pnpm test
       - run: pnpm build
       - run: pnpm check-bundle

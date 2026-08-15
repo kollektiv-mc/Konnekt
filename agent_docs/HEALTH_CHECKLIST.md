@@ -23,7 +23,7 @@ Canonical gate set — declared in `.claude/suite.json` and run together by
 pnpm typecheck          # tsc --noEmit (from frontend/)
 pnpm lint               # ESLint (from frontend/)
 pnpm test               # vitest (from frontend/)
-pnpm format:check       # Prettier (frontend/) — see backlog: currently red
+pnpm format:check       # Prettier (from frontend/)
 pnpm check-bundle       # 550 KB gzip entry-chunk budget (from frontend/)
 go vet ./...            # Go static analysis (repo root)
 go test ./...           # Go tests (repo root)
@@ -48,7 +48,11 @@ tree.
 - [x] `pnpm lint` runs against a real ESLint config and passes.
 - [x] Formatting (Prettier/Biome or equivalent) is consistent and enforced,
       not manual (lefthook pre-commit hook: Prettier + ESLint + `tsc --noEmit`
-      on staged frontend files, `gofmt` + `go vet` on staged Go files).
+      on staged frontend files, `gofmt` + `go vet` on staged Go files). The
+      whole `frontend/` tree is Prettier-clean and CI runs `pnpm format:check`,
+      so this no longer depends on the hook alone — note the hook's glob is
+      `*.{ts,tsx,css}` and doesn't cover the HTML/JSON/`.mjs` that Prettier
+      itself does.
 - [x] `pnpm typecheck` has zero errors; no `any` anywhere (CLAUDE.md rule) —
       use `unknown` and narrow instead. One documented exception:
       `frontend/src/tiles/worlds/scene/Sun.tsx` (known `three`/`@react-three/fiber`
@@ -90,7 +94,7 @@ tree.
       job, a `backend` job on windows-latest, and a `backend-linux` job in a
       webkit2gtk-4.1 container — the only place `server_linux.go`/
       `server_unix.go`/`server_other.go` are compiled — plus the token-layer
-      sync check). Note CI does **not** run `pnpm format:check`; see backlog.
+      sync check, and `pnpm format:check`).
 - [ ] All Go methods bound to the Wails `App` struct return `(T, error)`, and
       errors are wrapped with context (`fmt.Errorf("...: %w", err)`).
 - [ ] Every `EventsOn` listener registered in a component is cleaned up on
@@ -190,15 +194,6 @@ current. Priorities mirror the pillars above.
   paths can be driven by an `httptest.Server`.
 - Coverage floor: no numeric threshold in CI yet — add one once a stable
   baseline exists across both suites.
-
-**P1 — `pnpm format:check` is red and unenforced**
-- 33 files fail `pnpm format:check` (frontend-wide). `.claude/suite.json` has
-  declared this gate for a while, but `ci.yml` never runs it, so nothing catches
-  the drift — the lefthook pre-commit hook only formats *staged* files, which
-  leaves everything already committed untouched.
-- Fix in that order: one repo-wide `pnpm format` pass as its own commit (a pure
-  formatting diff, easy to review and easy to skip in blame), then add
-  `pnpm format:check` to the CI `frontend` job so it cannot drift again.
 
 **P1 — Remaining `useEffect` polls that have events available**
 - Three 10s `setInterval` polls remain where the backend already emits a

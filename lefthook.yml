@@ -1,8 +1,13 @@
 # https://lefthook.dev/configuration/
 #
-# Runs incrementally on staged files only — this repo has a long-standing
-# formatting style that predates Prettier (see agent_docs/HEALTH_CHECKLIST.md),
-# so we format-on-touch rather than reformatting the whole tree at once.
+# Formats staged files on the way in. This used to be a migration strategy —
+# the repo had a formatting style predating Prettier, so it was cleaned
+# on-touch rather than all at once — but the tree is fully formatted now and
+# CI runs `pnpm format:check`, so this is ordinary maintenance: it fixes your
+# staged files locally instead of letting CI fail on them.
+#
+# Note the glob below is *.{ts,tsx,css}. Prettier itself also covers the
+# repo's HTML, JSON and .mjs; those are only checked in CI, not fixed here.
 pre-commit:
   parallel: true
   jobs:

@@ -1659,3 +1659,45 @@ existed** ✅
   guard, so a malformed payload can't produce "undefined joined the game"
   either. The *rendering* path is unchanged and already covered by
   `useNotificationsStore.test.ts`.
+
+**P1 — `pnpm format:check`: 33 files red, gate absent from CI** ✅ **closed**
+- ⚠️ **Correction to how the previous entry framed this.** It was recorded
+  as drift that "nothing catches", implying neglect. It wasn't: `lefthook.yml`
+  documented a deliberate strategy — the repo had a formatting style predating
+  Prettier, so it was cleaned *on touch* rather than reformatted wholesale. The
+  33 files were the unfinished remainder of that migration, not rot.
+- The strategy had two gaps that guaranteed it would never finish. The hook's
+  glob is `*.{ts,tsx,css}`, so `index.html`, both `tsconfig`s,
+  `scripts/check-bundle-size.mjs` and `package.json` could never be reached by
+  touching source files. And because the tree could therefore never go green,
+  `pnpm format:check` could never be added to CI — which is precisely what let
+  it sit unnoticed. Format-on-touch cannot converge on its own.
+- **`pnpm-lock.yaml` was 3,309 of the ~5,700 lines** Prettier wanted to change,
+  more than every source file combined. Added to `.prettierignore` rather than
+  formatted: pnpm owns its layout and rewrites it on any dependency change, so
+  the pass would be undone the next time anyone adds a package — the same
+  failure mode the file's existing comment already described for the generated
+  token layer. This is worth checking first in any future formatting sweep; the
+  headline file count was misleading until the tool-owned file was separated
+  out.
+- Then one formatting-only commit over the remaining 32 files (1,555+/836−),
+  and `pnpm format:check` added to the CI `frontend` job between `lint` and
+  `test`.
+- The worlds tile was included deliberately even though it's the next Milestone
+  2 slice. The instinct is to skip it to avoid churn-on-churn, but that's
+  backwards: leaving it unformatted means committing that slice trips lefthook,
+  so the slice arrives with formatting mixed into the migration. Formatting it
+  in its own commit first is what keeps that diff a pure migration.
+- **Verification worth reusing for any formatting-only change.** All three
+  Rollup chunk content hashes came out unchanged from the pre-format build
+  (`index--70hraTC.js`, `WorldsScene-CZWTdovg.js`, `charts-gPBNn07t.js`), and
+  the entry chunk was byte-identical at 1,639,435 bytes. Rollup derives those
+  hashes from compiled output, and JSX text-node whitespace — the one thing
+  Prettier can legitimately change that alters rendering — compiles into that
+  output. So identical hashes prove no rendering-visible whitespace moved in
+  **any** of the 32 files. That's strictly stronger than the browser
+  computed-style spot-check originally planned, which would have covered one
+  file; the harness was skipped as redundant. Alongside: typecheck clean, lint
+  unchanged at 0 errors / 97 warnings (formatting cannot add or remove an
+  inline style, so any movement there would have meant something real changed),
+  271/271 tests, token layer in sync.
