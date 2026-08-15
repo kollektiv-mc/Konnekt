@@ -96,23 +96,19 @@
             <h2>Requirements</h2>
             <div class="md">
               <p>
-                Konnekt ships as a single native binary. There is no runtime to install alongside
-                it — no Java, no Node, no Electron bundle.
+                Konnekt ships as a single native binary, with no runtime to install alongside it.
               </p>
               <ul>
                 <li>
                   <strong>A Minecraft server you already have.</strong> Konnekt manages an existing
-                  server directory and jar; it does not download or provision one for you.
+                  server directory and jar; it doesn't download one.
                 </li>
+                <li><strong>Java.</strong> Required by the <em>server</em>, not by Konnekt.</li>
                 <li>
-                  <strong>Java</strong> — required by the <em>server</em>, not by Konnekt. Whatever
-                  version your server jar needs is what you need installed.
+                  <strong>RCON enabled</strong> in <code>server.properties</code> for the player
+                  list, kick/ban and commands. Console streaming works without it.
                 </li>
-                <li>
-                  <strong>RCON enabled</strong> in <code>server.properties</code> if you want the
-                  player list, kick/ban and command features. Console streaming works without it.
-                </li>
-                <li><strong>64-bit Windows or Linux</strong> — see below.</li>
+                <li><strong>64-bit Windows or Linux.</strong></li>
               </ul>
             </div>
           </section>
@@ -154,19 +150,17 @@
                 </table>
               </div>
               <p>
-                Linux builds link against <code>webkit2gtk-4.1</code>, which covers Rocky/RHEL 10,
+                Linux builds link against <code>webkit2gtk-4.1</code>, covering Rocky/RHEL 10,
                 Fedora 36+, Ubuntu 22.04+ and Debian 12+. At runtime they need
                 <code>webkit2gtk4.1</code> and <code>gtk3</code>.
               </p>
               <p>
-                <strong>Rocky / RHEL 9 is not supported.</strong> EL9 never received
-                webkit2gtk-4.1 and EL10 dropped 4.0, and the two are not binary-compatible — so
-                there is no build that can satisfy both. This is a hard limit, not a gap waiting to
-                be filled.
+                <strong>Rocky/RHEL 9 is not supported.</strong> EL9 never received webkit2gtk-4.1
+                and EL10 dropped 4.0; the two aren't binary-compatible.
               </p>
               <p>
-                macOS runs fine as a native app but is not published as a release yet; build it
-                with <code>wails build</code> like any other platform.
+                macOS isn't published as a release yet, but builds from source with
+                <code>wails build</code>.
               </p>
             </div>
           </section>
@@ -176,25 +170,23 @@
             <div class="md">
               <ol>
                 <li>
-                  <strong>Add a server.</strong> Point Konnekt at the jar, set the working
-                  directory, and set the JVM arguments you want (heap size, flags).
+                  <strong>Add a server.</strong> Point Konnekt at the jar, working directory and
+                  JVM arguments.
+                </li>
+                <li><strong>Accept the EULA.</strong> First-time setup walks you through it.</li>
+                <li>
+                  <strong>Start it.</strong> The console streams the log live and takes commands
+                  inline.
                 </li>
                 <li>
-                  <strong>Accept the EULA.</strong> First-time setup walks you through it rather
-                  than failing silently on a missing <code>eula.txt</code>.
-                </li>
-                <li>
-                  <strong>Start it.</strong> The console tile streams the log live and takes
-                  commands inline.
-                </li>
-                <li>
-                  <strong>Arrange the dashboard.</strong> Drag, resize and snap tiles, crate the
-                  ones you don't want, and save the arrangement as a preset.
+                  <strong>Arrange the dashboard.</strong> Drag, resize and snap tiles, then save
+                  the layout as a preset.
                 </li>
               </ol>
               <p>
-                Add as many servers as you like — each one starts, stops and restarts
-                independently.
+                You can add as many servers as you like and start, stop and restart each one.
+                Switching the active server is incomplete in alpha: the worlds and mods tiles
+                follow your selection, but the console, scheduler and status do not yet.
               </p>
             </div>
           </section>
@@ -219,8 +211,8 @@ cd Konnekt
 pnpm install
 wails dev</code></pre>
               <p>
-                Run <code>wails doctor</code> first — it reports exactly what your distro is
-                missing. If WebKit detection fails on a webkit2gtk-4.1 system, add the build tag:
+                Run <code>wails doctor</code> first; it reports what your distro is missing. If
+                WebKit detection fails, add the build tag:
               </p>
               <pre><code>wails build -tags webkit2_41
 wails dev -tags webkit2_41</code></pre>
@@ -234,15 +226,14 @@ wails dev -tags webkit2_41</code></pre>
                 <summary>Is it free?</summary>
                 <div class="md">
                   <p>
-                    Yes, and more than free — it's released under
+                    Yes. Released under
                     <a
                       href="https://github.com/kollektiv-mc/Konnekt/blob/main/LICENSE"
                       target="_blank"
                       rel="noopener"
                       >CC0</a
-                    >, so there is no copyright to ask permission from. Fork it, extend it, rebuild
-                    it, ship it. No accounts, no tiers, no subscriptions — those are explicitly out
-                    of scope.
+                    >, so there's no copyright to ask permission from. No accounts, no tiers, no
+                    subscriptions.
                   </p>
                 </div>
               </details>
@@ -250,9 +241,8 @@ wails dev -tags webkit2_41</code></pre>
                 <summary>Does it phone home?</summary>
                 <div class="md">
                   <p>
-                    No. There is no telemetry, no analytics and no crash reporting. Konnekt makes
-                    network requests in exactly three cases: to GitHub when it checks for a new
-                    release, to Modrinth while you browse or install mods, and to your own server
+                    No telemetry, analytics or crash reporting. Konnekt reaches the network in
+                    three cases: GitHub for update checks, Modrinth for mods, and your own server
                     over RCON.
                   </p>
                 </div>
@@ -261,10 +251,8 @@ wails dev -tags webkit2_41</code></pre>
                 <summary>Which server types work?</summary>
                 <div class="md">
                   <p>
-                    Vanilla, Paper/Spigot/Bukkit, and modded Fabric, Forge and NeoForge. Konnekt
-                    detects the loader automatically when resolving mods. Bedrock Edition is out of
-                    scope — the command syntax is different enough that it would be a separate
-                    product.
+                    Vanilla, Paper/Spigot/Bukkit, and modded Fabric, Forge and NeoForge. The loader
+                    is detected automatically. Bedrock isn't supported.
                   </p>
                 </div>
               </details>
@@ -272,10 +260,8 @@ wails dev -tags webkit2_41</code></pre>
                 <summary>Where does it store my data?</summary>
                 <div class="md">
                   <p>
-                    Your server files stay exactly where they are — Konnekt reads and writes them
-                    in place. Its own state (server definitions, tile layouts, presets, scheduled
-                    tasks) is plain JSON in the OS application-data directory. Nothing is kept in a
-                    cloud account, because there is no account.
+                    Your server files stay where they are. Konnekt's own state (servers, layouts,
+                    presets, scheduled tasks) is JSON in the OS application-data directory.
                   </p>
                 </div>
               </details>
@@ -283,10 +269,8 @@ wails dev -tags webkit2_41</code></pre>
                 <summary>Is it stable?</summary>
                 <div class="md">
                   <p>
-                    It's alpha. The core — multi-server management, console, stats, players,
-                    scheduling, worlds, backups, config editing and mods — is functional and in
-                    daily use by its author. Expect rough edges, and see the
-                    <a href="/roadmap.html">roadmap</a> for what's still moving.
+                    It's alpha. The core is functional and in daily use, but expect rough edges.
+                    See the <a href="/roadmap.html">roadmap</a>.
                   </p>
                 </div>
               </details>
@@ -294,10 +278,8 @@ wails dev -tags webkit2_41</code></pre>
                 <summary>Can I manage a server on another machine?</summary>
                 <div class="md">
                   <p>
-                    Not yet. Konnekt is a local-first desktop app and manages servers on the
-                    machine it runs on. A full dashboard over the web is on the
-                    <a href="/roadmap.html">roadmap</a> as a later item, not an alpha or beta
-                    one.
+                    No. Konnekt manages servers on the machine it runs on. Web access is a later
+                    <a href="/roadmap.html">roadmap</a> item.
                   </p>
                 </div>
               </details>
@@ -339,17 +321,8 @@ wails dev -tags webkit2_41</code></pre>
         <div class="disclaimer">
           <span class="disclaimer-badge">NOTE</span>
           <p>
-            Konnekt is a personal side project, built to run its author's own Minecraft servers
-            rather than to match what a wider community might expect from it. Most of the code was
-            written by Claude with a human reading over its shoulder, so don't expect a
-            textbook-clean codebase. It's alpha software, released under
-            <a
-              href="https://github.com/kollektiv-mc/Konnekt/blob/main/LICENSE"
-              target="_blank"
-              rel="noopener"
-              >CC0</a
-            >
-            — fork it, extend it, rebuild it. <a href="/docs.html#disclaimer">Full statement</a>.
+            Alpha software. A personal side project, mostly written by Claude, released under
+            CC0. <a href="/docs.html#disclaimer">Full statement</a>.
           </p>
         </div>
         <div class="footer-inner">
