@@ -20,7 +20,7 @@ import (
 
 const (
 	updateAPIBase   = "https://api.github.com"
-	updateRepoPath  = "/repos/sandrogekeler/Konnekt/releases/latest"
+	updateRepoPath  = "/repos/kollektiv-mc/Konnekt/releases/latest"
 	updateUserAgent = "Konnekt-UpdateChecker"
 
 	updateChecksumsAssetName = "checksums.txt"

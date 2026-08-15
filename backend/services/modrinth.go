@@ -16,7 +16,7 @@ import (
 
 const (
 	modrinthBase      = "https://api.modrinth.com/v2"
-	modrinthUserAgent = "Konnekt/0.1 (github.com/sandrogekeler/konnekt)"
+	modrinthUserAgent = "Konnekt/0.1 (github.com/kollektiv-mc/konnekt)"
 	modrinthPageSize  = 20
 )
 
