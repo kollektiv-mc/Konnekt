@@ -13,7 +13,12 @@ import { Toggle } from './ui/Toggle'
 import { Segmented } from './ui/Segmented'
 import { ColorSwatch } from './ui/ColorSwatch'
 import { SettingRow } from './ui/SettingRow'
-import { OpenDataDir, GetAppVersion, CheckForUpdates, DownloadAndInstallUpdate } from '../../wailsjs/go/main/App'
+import {
+  OpenDataDir,
+  GetAppVersion,
+  CheckForUpdates,
+  DownloadAndInstallUpdate,
+} from '../../wailsjs/go/main/App'
 import { BrowserOpenURL, EventsOn } from '../../wailsjs/runtime/runtime'
 import type { models } from '../../wailsjs/go/models'
 import { CHANGELOG, CHANGELOG_URL, groupByDate } from '../lib/changelog'
@@ -519,7 +524,9 @@ function AboutPane() {
   // cleaned up on unmount so a closed Settings modal doesn't leak a listener.
   useEffect(() => {
     const off = EventsOn(EVENTS.UPDATE_PROGRESS, (d?: { percent?: number }) => {
-      setCheckState((prev) => (prev.status === 'downloading' ? { ...prev, percent: d?.percent ?? prev.percent } : prev))
+      setCheckState((prev) =>
+        prev.status === 'downloading' ? { ...prev, percent: d?.percent ?? prev.percent } : prev,
+      )
     })
     return () => off()
   }, [])

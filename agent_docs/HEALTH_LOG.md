@@ -647,15 +647,50 @@ todo list, not a target.
     screenshot tool itself timed out repeatedly in this environment;
     `preview_inspect`/computed-style checks were used instead, per the
     verification skill's own guidance to prefer them for style checks).
-- 143 `style={{}}` usages remain across 35 files. Continue tile-by-tile —
-  the remaining hotspots: worlds (45: `WorldHud.tsx` 19, `index.tsx` 15,
-  `scene/WorldsScene.tsx` 6, `scene/Planet.tsx` 5) and players (32:
-  `PlayerDetailPopup.tsx` 17, `PlayerRoster.tsx` 9, `PlayerCard.tsx` 4,
-  `PlayerGrid.tsx` 2). The rest (`App.tsx` 6, and already-migrated tiles'
-  documented exceptions) are accounted-for survivors, not backlog. worlds'
-  react-three-fiber scene code and players' server-scoped data mean both will
-  need `wails dev` + a configured server for full live verification, same
-  limitation as backups/mods/scheduler/config previously.
+- ✅ **Ninth slice done: the players tile** — all 32 occurrences across its
+  four components, reaching **zero** remaining inline styles with no
+  `eslint-disable` exceptions (nothing in the tile was genuinely computed).
+  `src/tiles/players/**/*.tsx` added to the ratcheted-`error` `files` glob in
+  `frontend/eslint.config.js`; `pnpm lint` passes with 0 errors. Global count
+  144 → 112, warnings 129 → 97 (exactly the 32 removed).
+  - The literal colours turned out to be tokens: `#4ade80` is exactly `--accent`
+    (`rgb(74 222 128)`) and `rgba(248,113,113,·)` is `--danger`, so the online
+    dots and the ban button now follow the theme instead of pinning dark-theme
+    values. `rgba(250,204,21,·)` is Tailwind's own `yellow-400`.
+  - **Refinement of the TileWrapper precedent on imperative hover handlers.**
+    That slice deliberately left `onMouseEnter`/`onMouseLeave` pairs alone —
+    they aren't the JSX `style` attribute the lint rule targets. Here the four
+    pairs in `PlayerDetailPopup.tsx` wrote *the very colours being converted*,
+    so leaving them would have left an inline style overriding the new
+    `className` from the first hover onward — the class would be dead code
+    that still looked right. Converted 1:1 to `hover:` utilities (same
+    properties, same values, same trigger). The distinction worth carrying
+    forward: leave imperative handlers when they touch properties nothing else
+    sets; convert them when they collide with the className you're introducing.
+  - The popup panel carried both `w-88` and an inline `width: '22rem'` — the
+    same value stated twice. Dropped the inline one; measured 352px after.
+  - **First server-scoped slice fully verifiable without `wails dev`**, because
+    the preceding commit lifted data fetching into the tile root: `PlayerCard`/
+    `PlayerGrid`/`PlayerRoster` became props-driven and render from a plain Vite
+    dev server. Verified every utility against the value it replaced via
+    computed styles in Chromium — `bg-accent` → `rgb(74, 222, 128)`,
+    `bg-text-faint` → `rgba(255,255,255,0.25)`, `bg-elevated` →
+    `rgba(18,20,30,0.82)`, `border-border-subtle` → `rgba(255,255,255,0.06)`,
+    `bg-canvas` → `rgb(5,6,10)`, the shadow byte-identical — plus non-zero
+    card (73.4×70) and row (1280×45) geometry per the TileWrapper 0-height
+    lesson.
+  - **Sub-pixel borders: verified equivalent, not assumed.** `border-[0.5px]`
+    and `border-[1.5px]` both report `1px` from `getComputedStyle`, which looks
+    like a regression against the old `0.5px`/`1.5px` inline values. An A/B in
+    the same page (inline vs utility, same declared width) returns `1px` for
+    both — it's Chrome's used-value rounding, identical before and after.
+    Worth remembering before "fixing" a hairline that was never broken.
+- 112 `style={{}}` remain across 33 files, but only **50 are backlog**: worlds
+  (44) and `App.tsx` (6). The other 62 live in directories already ratcheted to
+  `error`, so each is a lint-enforced documented exception rather than
+  unmigrated code. Worlds is the last tile and the hardest — react-three-fiber
+  scene code, and the only remaining cluster that still needs `wails dev` + a
+  configured server to verify properly.
 
 **P2 — React Compiler-readiness lint rules**
 - Revisit enabling `eslint-plugin-react-hooks`'s full `recommended`/
@@ -665,7 +700,22 @@ todo list, not a target.
   it currently surfaces are concentrated in the r3f scene code and would need
   a dedicated pass with test coverage in place first.
 
-**P2 — Missing `--font-mono` theme token**
+**P2 — Missing `--font-mono` theme token** ✅ **closed — overtaken by the
+token rework**
+- Closed on review 2026-08-15, resolved differently than the entry below
+  planned. The token layer was rebuilt in the meantime (`frontend/src/styles/
+  tokens.css`, generated from the vendored `tokens.source.json`), and it
+  registers `--font-mono` as a deliberate **system** monospace stack
+  (`ui-monospace, 'Cascadia Code', 'SF Mono', …`). `JetBrains` no longer
+  appears anywhere under `frontend/src/`, and the console tile's four inline
+  `fontFamily` exceptions are gone with it — that directory is at zero inline
+  styles.
+- So the gap this entry described no longer exists: bare `font-mono` now
+  resolves through a registered token rather than falling through to Tailwind's
+  default. Bundling JetBrains Mono as a webfont is now a **design** decision
+  owned upstream in `kollektiv/design/tokens.json`, not a Konnekt health gap —
+  if it's ever wanted, it changes there and arrives via `pnpm gen:tokens`.
+- Original entry, kept for context:
 - Found during the Milestone 2 third slice: `frontend/src/style.css`'s
   `@theme inline` block registers color tokens but has no `--font-mono`
   override, so the bare `font-mono` Tailwind utility (already used in several
@@ -1532,3 +1582,122 @@ way". Dragging an already-placed tile onto that same cell worked fine.
   placeholder and a visibly overlapping board. Not reachable in the packaged
   app, where the bridge always exists; noted so the symptom isn't mistaken for
   a grid bug next time. Tracked as a robustness follow-up.
+
+---
+
+### 2026-08-15 — Checklist re-baseline after an unpaused stretch of app work
+
+The checklist had not been touched for 25 commits (last at `a85f235`), while
+NeoForge/Forge support, tile-crate drag reordering, a rebuilt token layer, two
+new CI checks and an entire `website/` sub-project all landed. This pass
+audited the checklist's own claims before doing any work against it, on the
+principle that a stale yardstick measures nothing.
+
+**Claims that had gone stale, now corrected in the checklist:**
+- The Clean pillar pointed `--duration-*`/`--ease-*` at
+  `frontend/src/style.css`'s `@theme inline` block. Those tokens live in
+  `frontend/src/styles/tokens.css` now, and — more importantly — the whole
+  token layer is *generated*, so the gate is "reuse a token", never "edit one".
+- The "canonical local commands" block listed 5 commands. The real gate set is
+  the 7 in `.claude/suite.json` plus its generated-file check, run together by
+  `/suite-kit:health`.
+- The CI item predated the `backend-linux` job and the token-sync check.
+- The `--font-mono` backlog item was overtaken outright (closed above).
+
+**Claims re-verified as still true** (no action needed): zero
+`localStorage`/`sessionStorage` under `frontend/src`; no committed build
+artifacts; poll cadences unchanged (150ms console flush, 15s TPS, 10s stats,
+1min scheduler); Wails bindings exactly in sync at 83 bound methods ↔ 83
+declarations; and the inline-style census, which read 144/37 against a recorded
+"143 across 35" — close enough to trust.
+
+**New gaps the audit surfaced** (all now tracked in the checklist backlog):
+`pnpm format:check` is red on 33 files *and* absent from CI, so nothing catches
+it; `website/` has no lint, formatter or CI job at all; the generated
+`border-hairline`/`border-thick` utilities are used nowhere while every
+migrated file writes `border-[0.5px]`; and the dead `--panel-bg` item turned
+out to be a live light-theme bug rather than hygiene.
+
+**P1 — Players tile: 3s poll replaced with the events that already
+existed** ✅
+- `PlayerGrid.tsx` and `PlayerRoster.tsx` each ran `setInterval(poll, 3000)` —
+  the tightest cadence in the app by 5× (next is the 10s stats tick), and a
+  direct violation of `CLAUDE.md`'s "do not use `useEffect` for data that should
+  come from a Wails event listener".
+- The plumbing was already there and simply unused: `server.go` emits
+  `player:joined`/`player:left`, and it updates its live player map *before*
+  emitting, so a refresh triggered by either event always observes post-change
+  state. Added `tiles/players/usePlayers.ts` on the established per-tile hook
+  convention (`useWorlds`/`useBackups`/`useMods`): one `GetPlayerRoster` fetch
+  per server, then refetch on `player:joined`, `player:left`, `server:started`
+  and `server:stopped`, every listener released on unmount. Covered by
+  `usePlayers.test.ts` (9 tests) including an explicit "does not poll on an
+  interval" assertion under fake timers, so the regression can't come back
+  quietly.
+- The hook sits in the tile root because `index.tsx` renders Grid *or* Roster on
+  the `maximized` ternary — one fetch feeds whichever is mounted. The useful
+  side effect: `PlayerCard`/`PlayerGrid`/`PlayerRoster` became props-driven,
+  which is what let the style slice above be verified in a plain Vite server
+  instead of needing `wails dev`. Worth copying for the three remaining 10s
+  polls — lifting the fetch out is what makes a tile testable.
+- Kick/ban/pardon refresh through the hook: a kick does emit `player:left`, but
+  banning an *offline* player and pardoning only rewrite `banned-players.json`,
+  which no event covers.
+
+**P1 — `[object Object]` in player join/leave notifications** ✅
+- `server.go:275/282` emit `map[string]string{"name":…, "ip":…}`, so the
+  Wails payload is an object. `App.tsx`'s two handlers typed it as a bare
+  `(name: string)` and interpolated it straight into the message — every join
+  and leave toast read "[object Object] joined the game".
+- Found by diffing emit shapes against handler signatures across the whole
+  codebase: all ~35 other `EventsOn` handlers already destructure an object,
+  and these two were the only outliers. That sweep is cheap and worth repeating
+  whenever an event payload changes — the mismatch is invisible to `tsc`,
+  because Wails' generated `EventsOn` types its callback args as `any`.
+- Not reproducible outside a real server: it needs a live join. Fixed by
+  retyping both handlers to `(d?: { name?: string })` with an empty-payload
+  guard, so a malformed payload can't produce "undefined joined the game"
+  either. The *rendering* path is unchanged and already covered by
+  `useNotificationsStore.test.ts`.
+
+**P1 — `pnpm format:check`: 33 files red, gate absent from CI** ✅ **closed**
+- ⚠️ **Correction to how the previous entry framed this.** It was recorded
+  as drift that "nothing catches", implying neglect. It wasn't: `lefthook.yml`
+  documented a deliberate strategy — the repo had a formatting style predating
+  Prettier, so it was cleaned *on touch* rather than reformatted wholesale. The
+  33 files were the unfinished remainder of that migration, not rot.
+- The strategy had two gaps that guaranteed it would never finish. The hook's
+  glob is `*.{ts,tsx,css}`, so `index.html`, both `tsconfig`s,
+  `scripts/check-bundle-size.mjs` and `package.json` could never be reached by
+  touching source files. And because the tree could therefore never go green,
+  `pnpm format:check` could never be added to CI — which is precisely what let
+  it sit unnoticed. Format-on-touch cannot converge on its own.
+- **`pnpm-lock.yaml` was 3,309 of the ~5,700 lines** Prettier wanted to change,
+  more than every source file combined. Added to `.prettierignore` rather than
+  formatted: pnpm owns its layout and rewrites it on any dependency change, so
+  the pass would be undone the next time anyone adds a package — the same
+  failure mode the file's existing comment already described for the generated
+  token layer. This is worth checking first in any future formatting sweep; the
+  headline file count was misleading until the tool-owned file was separated
+  out.
+- Then one formatting-only commit over the remaining 32 files (1,555+/836−),
+  and `pnpm format:check` added to the CI `frontend` job between `lint` and
+  `test`.
+- The worlds tile was included deliberately even though it's the next Milestone
+  2 slice. The instinct is to skip it to avoid churn-on-churn, but that's
+  backwards: leaving it unformatted means committing that slice trips lefthook,
+  so the slice arrives with formatting mixed into the migration. Formatting it
+  in its own commit first is what keeps that diff a pure migration.
+- **Verification worth reusing for any formatting-only change.** All three
+  Rollup chunk content hashes came out unchanged from the pre-format build
+  (`index--70hraTC.js`, `WorldsScene-CZWTdovg.js`, `charts-gPBNn07t.js`), and
+  the entry chunk was byte-identical at 1,639,435 bytes. Rollup derives those
+  hashes from compiled output, and JSX text-node whitespace — the one thing
+  Prettier can legitimately change that alters rendering — compiles into that
+  output. So identical hashes prove no rendering-visible whitespace moved in
+  **any** of the 32 files. That's strictly stronger than the browser
+  computed-style spot-check originally planned, which would have covered one
+  file; the harness was skipped as redundant. Alongside: typecheck clean, lint
+  unchanged at 0 errors / 97 warnings (formatting cannot add or remove an
+  inline style, so any movement there would have meant something real changed),
+  271/271 tests, token layer in sync.

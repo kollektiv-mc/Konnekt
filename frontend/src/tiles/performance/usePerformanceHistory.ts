@@ -19,7 +19,9 @@ export function usePerformanceHistory(serverId: string): StatsSnapshot[] {
 
   useEffect(() => {
     GetStatsHistory(serverId)
-      .then((h) => { if (h?.length) setHistory(h as StatsSnapshot[]) })
+      .then((h) => {
+        if (h?.length) setHistory(h as StatsSnapshot[])
+      })
       .catch(() => {})
 
     let cancel: (() => void) | undefined
@@ -30,9 +32,13 @@ export function usePerformanceHistory(serverId: string): StatsSnapshot[] {
           return next.length > MAX_HISTORY ? next.slice(-MAX_HISTORY) : next
         })
       })
-    } catch { /* Wails runtime unavailable in dev without backend */ }
+    } catch {
+      /* Wails runtime unavailable in dev without backend */
+    }
 
-    return () => { cancel?.() }
+    return () => {
+      cancel?.()
+    }
   }, [serverId])
 
   return history

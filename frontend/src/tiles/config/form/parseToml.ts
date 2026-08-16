@@ -22,7 +22,7 @@ function tomlValueToField(key: string, value: unknown, path: (string | number)[]
   if (value !== null && typeof value === 'object' && !Array.isArray(value)) {
     const obj = value as Record<string, unknown>
     const children: ConfigField[] = Object.entries(obj).map(([k, v]) =>
-      tomlValueToField(k, v, [...path, k])
+      tomlValueToField(k, v, [...path, k]),
     )
     return { path, label, type: 'section', value: null, children }
   }
@@ -54,7 +54,9 @@ function toTomlLiteral(value: unknown): string {
   if (typeof value === 'boolean') return value ? 'true' : 'false'
   if (typeof value === 'number') return String(value)
   if (Array.isArray(value)) {
-    const items = value.map((v) => (typeof v === 'string' ? `"${v.replace(/"/g, '\\"')}"` : String(v)))
+    const items = value.map((v) =>
+      typeof v === 'string' ? `"${v.replace(/"/g, '\\"')}"` : String(v),
+    )
     return `[${items.join(', ')}]`
   }
   if (typeof value === 'string') return `"${value.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`
@@ -115,10 +117,17 @@ function findInlineComment(s: string): number {
   for (let i = 0; i < s.length; i++) {
     const c = s[i]
     if (inStr) {
-      if (c === '\\') { i++; continue }
+      if (c === '\\') {
+        i++
+        continue
+      }
       if (c === strChar) inStr = false
     } else {
-      if (c === '"' || c === "'") { inStr = true; strChar = c; continue }
+      if (c === '"' || c === "'") {
+        inStr = true
+        strChar = c
+        continue
+      }
       if (c === '#') return i
     }
   }

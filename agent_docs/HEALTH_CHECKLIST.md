@@ -17,14 +17,25 @@ See `agent_docs/CLAUDE.md` for architecture conventions and build commands, and
 `agent_docs/ROADMAP.md` for feature scope. This doc doesn't duplicate either —
 it's the quality gate that sits alongside them.
 
-Canonical local commands (from `CLAUDE.md`):
+Canonical gate set — declared in `.claude/suite.json` and run together by
+`/suite-kit:health`, which reports them as a table:
 ```bash
-go vet ./...           # Go static analysis (repo root)
-go test ./...           # Go tests
 pnpm typecheck          # tsc --noEmit (from frontend/)
 pnpm lint               # ESLint (from frontend/)
-wails build              # Production build smoke test
+pnpm test               # vitest (from frontend/)
+pnpm format:check       # Prettier (from frontend/)
+pnpm check-bundle       # 550 KB gzip entry-chunk budget (from frontend/)
+go vet ./...            # Go static analysis (repo root)
+go test ./...           # Go tests (repo root)
 ```
+Plus the generated-file check `suite.json` declares: `pnpm gen:tokens` then
+`git diff --exit-code src/styles/tokens.css src/styles/tokens.ts`. A non-empty
+diff means a generated token file was hand-edited (the next run reverts it) or
+`tokens.source.json` was refreshed without regenerating.
+
+Note `go vet`/`go test` need `frontend/dist` to exist first (`main.go`'s
+`//go:embed all:frontend/dist`), so run `pnpm build` before them in a clean
+tree.
 
 ---
 
@@ -37,7 +48,11 @@ wails build              # Production build smoke test
 - [x] `pnpm lint` runs against a real ESLint config and passes.
 - [x] Formatting (Prettier/Biome or equivalent) is consistent and enforced,
       not manual (lefthook pre-commit hook: Prettier + ESLint + `tsc --noEmit`
-      on staged frontend files, `gofmt` + `go vet` on staged Go files).
+      on staged frontend files, `gofmt` + `go vet` on staged Go files). The
+      whole `frontend/` tree is Prettier-clean and CI runs `pnpm format:check`,
+      so this no longer depends on the hook alone — note the hook's glob is
+      `*.{ts,tsx,css}` and doesn't cover the HTML/JSON/`.mjs` that Prettier
+      itself does.
 - [x] `pnpm typecheck` has zero errors; no `any` anywhere (CLAUDE.md rule) —
       use `unknown` and narrow instead. One documented exception:
       `frontend/src/tiles/worlds/scene/Sun.tsx` (known `three`/`@react-three/fiber`
@@ -51,10 +66,13 @@ wails build              # Production build smoke test
       rule flags remaining inline styles at `warn`; ratchet per directory to
       `error` as Milestone 2's migration clears each tile.
 - [ ] New transition/animation durations and easing curves reuse an existing
-      `--duration-*`/`--ease-*` token (`frontend/src/style.css`'s `@theme
-      inline` block) unless the motion is genuinely unique (e.g. a one-off
-      decorative loop) — no undocumented one-off magic numbers. This isn't
-      "all animations must look identical": a snappy hover, a panel
+      `--duration-*`/`--ease-*` token (`frontend/src/styles/tokens.css`'s plain
+      `@theme` block — the token layer is **generated** from the vendored
+      `tokens.source.json`, so the gate here is "reuse a token", never "edit
+      one"; changing a value is an upstream `kollektiv/design/tokens.json` edit
+      followed by `pnpm gen:tokens`) unless the motion is genuinely unique
+      (e.g. a one-off decorative loop) — no undocumented one-off magic numbers.
+      This isn't "all animations must look identical": a snappy hover, a panel
       slide/open-close, and a decorative splash/spin legitimately warrant
       different timing — the goal is a shared vocabulary for the common
       cases, not uniformity.
@@ -72,13 +90,18 @@ wails build              # Production build smoke test
 - [ ] Automated tests exist and pass for critical paths: RCON client, Modrinth
       API client, backup create/restore, config path-traversal guards,
       scheduler engine (Go); Zustand store logic and critical hooks (frontend).
-- [x] CI is green on every push/PR (see backlog: GitHub Actions).
+- [x] CI is green on every push/PR (`.github/workflows/ci.yml`: a `frontend`
+      job, a `backend` job on windows-latest, and a `backend-linux` job in a
+      webkit2gtk-4.1 container — the only place `server_linux.go`/
+      `server_unix.go`/`server_other.go` are compiled — plus the token-layer
+      sync check, and `pnpm format:check`).
 - [ ] All Go methods bound to the Wails `App` struct return `(T, error)`, and
       errors are wrapped with context (`fmt.Errorf("...: %w", err)`).
 - [ ] Every `EventsOn` listener registered in a component is cleaned up on
       unmount — no leaked subscriptions.
 - [ ] No frontend data is driven by `useEffect` polling when it should be a
-      Wails event listener (CLAUDE.md rule).
+      Wails event listener (CLAUDE.md rule). The players tile's 3s poll is
+      closed (see HEALTH_LOG); three 10s polls remain — see backlog.
 - [ ] Process lifecycle stays safe: Windows Job Object child cleanup intact
       (`backend/services/server_windows.go`), RCON dial/operation timeouts
       present (`backend/services/rcon.go`), Modrinth HTTP client keeps its
@@ -153,12 +176,17 @@ moves to `agent_docs/HEALTH_LOG.md` once it's done — keep this section short a
 current. Priorities mirror the pillars above.
 
 **P1 — Inline styles → Tailwind (Milestone 2, in progress)**
-- ~143 `style={{}}` remain across ~35 files. Remaining hotspots: worlds tile
-  (~45: `WorldHud.tsx`, `index.tsx`, `scene/`), players tile (~32:
-  `PlayerDetailPopup.tsx`, `PlayerRoster.tsx`, `PlayerCard.tsx`), `App.tsx` (6).
-  Continue tile-by-tile, then ratchet each directory's `no-restricted-syntax`
-  from `warn` → `error` in `frontend/eslint.config.js`. Conversion patterns and
-  per-slice lessons: see HEALTH_LOG.md's Milestone 2 slices.
+- 112 `style={{}}` remain across 33 files, but only **50 are actual backlog**:
+  the worlds tile (44 — `WorldHud.tsx` 19, `index.tsx` 15,
+  `scene/WorldsScene.tsx` 6, `scene/Planet.tsx` 4) and `App.tsx` (6). The other
+  62 sit in directories already ratcheted to `error`, so every one of them is a
+  documented, lint-enforced exception rather than unmigrated code.
+- Worlds is the last tile and the hardest: react-three-fiber scene code, and the
+  only cluster that still needs `wails dev` + a configured server to verify
+  properly. `App.tsx` is small and independent — a reasonable warm-up.
+- Then ratchet each directory's `no-restricted-syntax` from `warn` → `error`
+  in `frontend/eslint.config.js`. Conversion patterns and per-slice lessons: see
+  HEALTH_LOG.md's Milestone 2 slices.
 
 **P1 — Test-coverage follow-ups**
 - Modrinth HTTP-path coverage: `ModrinthClient` hardcodes `modrinthBase`; needs
@@ -167,15 +195,35 @@ current. Priorities mirror the pillars above.
 - Coverage floor: no numeric threshold in CI yet — add one once a stable
   baseline exists across both suites.
 
+**P1 — Remaining `useEffect` polls that have events available**
+- Three 10s `setInterval` polls remain where the backend already emits a
+  matching event: `tiles/stats/index.tsx` (polls `GetServerStatus` while
+  `stats:snapshot` is pushed by a 10s Go ticker — a straight duplicate),
+  `tiles/backups/useBackups.ts`, and `tiles/mods/useMods.ts` (both already
+  listen to their events *and* poll as a safety net).
+- `App.tsx:89`'s 150ms interval is **not** in scope — it batches console log
+  lines for render, which is a deliberate performance measure, not data polling.
+- The players tile's 3s poll is closed; see HEALTH_LOG for the shape to copy.
+
 **P2 — Cleanups**
-- Missing `--font-mono` theme token: bare `font-mono` (246 usages across 39
-  files) falls through to the OS monospace stack, and `style.css` has no
-  `@font-face` for JetBrains Mono. Blocked on bundling the font as a webfont
-  first, then registering `--font-mono` and auditing existing usages.
 - Dead `--panel-bg` CSS variable: `tiles/config/form/widgets.tsx`'s `Select`
-  references `var(--panel-bg, #0e1117)`; `--panel-bg` is undefined repo-wide, so
-  it always falls through to the literal. Register a real token or repoint to
-  `--bg-elevated`.
+  dropdown. Now documented in-code and rendered as a literal `bg-[#0e1117]`,
+  but that literal is opaque near-black, so the dropdown stays dark under the
+  **light** skin (where `--bg-elevated` is `rgba(236,238,245,0.82)`) — a live
+  theming bug, not just hygiene. Repoint to `bg-elevated`, checking the
+  dropdown still reads as opaque over content.
+- `border-hairline`/`border-thick` utilities are generated into
+  `styles/tokens.css` (with a comment arguing hairlines "need to be as reachable
+  as any colour utility, not an arbitrary `[0.5px]` value") but are used
+  **nowhere** — every migrated file uses `border-[0.5px]`/`border-b-[0.5px]`,
+  and no directional `border-t-hairline` exists to cover the common case. Either
+  adopt them across the migrated files or drop them upstream from
+  `tokens.source.json`; right now the token layer and the code disagree.
+- `GetPlayers` is now a dead binding: it and `GetPlayerRoster` are both one-line
+  calls to `playerService.GetRoster`, and nothing calls `GetPlayers` since the
+  players tile moved onto the hook. Removing it needs `wails generate module`
+  (the `wails` CLI isn't installed in the cloud sandbox). Bindings are currently
+  83/83 in sync, so the regen diff would be exactly that one removal.
 - Structured logging: replace ad-hoc `fmt.Errorf`-only backend reporting with
   `log/slog`, keeping `EventBus` for UI-facing notifications.
 - Memoization pass: add `React.memo`/`useMemo`/`useCallback` to the most
@@ -183,6 +231,16 @@ current. Priorities mirror the pillars above.
 - React Compiler-readiness lint rules: revisit enabling
   `eslint-plugin-react-hooks`'s full `recommended`/`recommended-latest` set (~60
   findings, mostly r3f scene code) once test coverage is in place.
+
+**P2 — `website/` has no gates at all**
+- The `website/` sub-project (~4,600 lines of HTML/CSS/JS added since the last
+  health pass) has no lint, no formatter, and no CI job, and it isn't mentioned
+  in `CLAUDE.md`'s project-structure block. It ships to konnekt.pages.dev, so
+  it's user-facing surface with strictly less checking than the app.
+- Minimum worth adding: Prettier over `website/**` (the config already exists),
+  and a link/asset sanity check so a renamed image or a dead internal href is
+  caught before deploy. Decide first whether it belongs in this repo's CI at
+  all, or in the Pages deploy — don't bolt a job on without that call.
 
 **Release follow-ups** (deferred)
 - Release-tag-gated full `wails build` packaging job — stronger end-to-end

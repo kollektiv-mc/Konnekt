@@ -1,5 +1,5 @@
 import React from 'react'
-import {createRoot} from 'react-dom/client'
+import { createRoot } from 'react-dom/client'
 import './style.css'
 import App from './App'
 import { ErrorBoundary } from './components/ErrorBoundary'
@@ -14,10 +14,10 @@ const root = createRoot(container!)
 // without per-tile changes. See agent_docs/ROADMAP.md "Remote access — Phase 2".
 
 root.render(
-    <React.StrictMode>
-        <ErrorBoundary>
-            <SplashScreen />
-            <App/>
-        </ErrorBoundary>
-    </React.StrictMode>
+  <React.StrictMode>
+    <ErrorBoundary>
+      <SplashScreen />
+      <App />
+    </ErrorBoundary>
+  </React.StrictMode>,
 )

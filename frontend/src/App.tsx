@@ -121,10 +121,12 @@ function App() {
   useEffect(() => {
     let cleanup: (() => void) | undefined
     try {
-      cleanup = EventsOn(EVENTS.PLAYER_JOINED, (name: string) => {
+      // server.go emits {name, ip} — not a bare string.
+      cleanup = EventsOn(EVENTS.PLAYER_JOINED, (d?: { name?: string }) => {
+        if (!d?.name) return
         const { settings } = useSettingsStore.getState()
         if (settings.notifyOnJoin) {
-          emitNotification('join', `${name} joined the game`)
+          emitNotification('join', `${d.name} joined the game`)
         }
       })
     } catch {
@@ -332,10 +334,12 @@ function App() {
   useEffect(() => {
     let cleanup: (() => void) | undefined
     try {
-      cleanup = EventsOn(EVENTS.PLAYER_LEFT, (name: string) => {
+      // server.go emits {name} — not a bare string.
+      cleanup = EventsOn(EVENTS.PLAYER_LEFT, (d?: { name?: string }) => {
+        if (!d?.name) return
         const { settings } = useSettingsStore.getState()
         if (settings.notifyOnJoin) {
-          emitNotification('join', `${name} left the game`)
+          emitNotification('join', `${d.name} left the game`)
         }
       })
     } catch {

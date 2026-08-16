@@ -5,30 +5,30 @@ import { STATUS_DEFAULTS } from '../styles/tokens'
 // comes from the generated token defaults rather than being restated here; a
 // second copy of #4ade80 is exactly the drift this pipeline exists to remove.
 export const ACCENT_PRESETS = [
-  { label: 'Green',  hex: STATUS_DEFAULTS.dark.accent },
-  { label: 'Blue',   hex: '#3b82f6' },
+  { label: 'Green', hex: STATUS_DEFAULTS.dark.accent },
+  { label: 'Blue', hex: '#3b82f6' },
   { label: 'Violet', hex: '#8b5cf6' },
-  { label: 'Amber',  hex: '#f59e0b' },
-  { label: 'Rose',   hex: '#f43f5e' },
-  { label: 'Cyan',   hex: '#22d3ee' },
+  { label: 'Amber', hex: '#f59e0b' },
+  { label: 'Rose', hex: '#f43f5e' },
+  { label: 'Cyan', hex: '#22d3ee' },
 ]
 
 export const SUCCESS_PRESETS = [
-  { label: 'Green',   hex: STATUS_DEFAULTS.dark.success },
+  { label: 'Green', hex: STATUS_DEFAULTS.dark.success },
   { label: 'Emerald', hex: '#10b981' },
-  { label: 'Teal',    hex: '#14b8a6' },
-  { label: 'Lime',    hex: '#84cc16' },
+  { label: 'Teal', hex: '#14b8a6' },
+  { label: 'Lime', hex: '#84cc16' },
 ]
 
 export const WARNING_PRESETS = [
-  { label: 'Amber',  hex: STATUS_DEFAULTS.dark.warning },
+  { label: 'Amber', hex: STATUS_DEFAULTS.dark.warning },
   { label: 'Orange', hex: '#f97316' },
   { label: 'Yellow', hex: '#eab308' },
 ]
 
 export const DANGER_PRESETS = [
-  { label: 'Red',   hex: STATUS_DEFAULTS.dark.danger },
-  { label: 'Rose',  hex: '#fb7185' },
+  { label: 'Red', hex: STATUS_DEFAULTS.dark.danger },
+  { label: 'Rose', hex: '#fb7185' },
   { label: 'Coral', hex: '#ef4444' },
 ]
 
@@ -51,10 +51,10 @@ export const BUILTIN_SKINS: SkinDefinition[] = [
     name: 'Midnight',
     previewColors: ['#010408', '#070a12', '#0d1018', '#818cf8'],
     tokens: {
-      '--bg-base':       '#010408',
-      '--bg-surface':    'rgba(255,255,255,0.018)',
+      '--bg-base': '#010408',
+      '--bg-surface': 'rgba(255,255,255,0.018)',
       '--border-subtle': 'rgba(255,255,255,0.045)',
-      '--border-hover':  'rgba(255,255,255,0.09)',
+      '--border-hover': 'rgba(255,255,255,0.09)',
       '--hover-surface': 'rgba(255,255,255,0.04)',
     },
   },
@@ -63,15 +63,15 @@ export const BUILTIN_SKINS: SkinDefinition[] = [
     name: 'Nord',
     previewColors: ['#2e3440', '#3b4252', '#4c566a', '#88c0d0'],
     tokens: {
-      '--bg-base':        '#2e3440',
-      '--bg-surface':     'rgba(255,255,255,0.04)',
-      '--border-subtle':  'rgba(255,255,255,0.07)',
-      '--border-hover':   'rgba(255,255,255,0.14)',
-      '--text-primary':   '#eceff4',
+      '--bg-base': '#2e3440',
+      '--bg-surface': 'rgba(255,255,255,0.04)',
+      '--border-subtle': 'rgba(255,255,255,0.07)',
+      '--border-hover': 'rgba(255,255,255,0.14)',
+      '--text-primary': '#eceff4',
       '--text-secondary': 'rgba(236,239,244,0.7)',
-      '--text-muted':     'rgba(236,239,244,0.45)',
-      '--text-faint':     'rgba(236,239,244,0.25)',
-      '--hover-surface':  'rgba(255,255,255,0.06)',
+      '--text-muted': 'rgba(236,239,244,0.45)',
+      '--text-faint': 'rgba(236,239,244,0.25)',
+      '--hover-surface': 'rgba(255,255,255,0.06)',
     },
   },
   {
@@ -79,15 +79,15 @@ export const BUILTIN_SKINS: SkinDefinition[] = [
     name: 'Solarized',
     previewColors: ['#002b36', '#073642', '#586e75', '#268bd2'],
     tokens: {
-      '--bg-base':        '#002b36',
-      '--bg-surface':     'rgba(255,255,255,0.03)',
-      '--border-subtle':  'rgba(255,255,255,0.07)',
-      '--border-hover':   'rgba(255,255,255,0.14)',
-      '--text-primary':   '#fdf6e3',
+      '--bg-base': '#002b36',
+      '--bg-surface': 'rgba(255,255,255,0.03)',
+      '--border-subtle': 'rgba(255,255,255,0.07)',
+      '--border-hover': 'rgba(255,255,255,0.14)',
+      '--text-primary': '#fdf6e3',
       '--text-secondary': 'rgba(253,246,227,0.65)',
-      '--text-muted':     'rgba(253,246,227,0.45)',
-      '--text-faint':     'rgba(253,246,227,0.28)',
-      '--hover-surface':  'rgba(255,255,255,0.04)',
+      '--text-muted': 'rgba(253,246,227,0.45)',
+      '--text-faint': 'rgba(253,246,227,0.28)',
+      '--hover-surface': 'rgba(255,255,255,0.04)',
     },
   },
   {
@@ -95,15 +95,15 @@ export const BUILTIN_SKINS: SkinDefinition[] = [
     name: 'Mocha',
     previewColors: ['#1c1917', '#292524', '#44403c', '#fb923c'],
     tokens: {
-      '--bg-base':        '#1c1917',
-      '--bg-surface':     'rgba(255,255,255,0.025)',
-      '--border-subtle':  'rgba(255,200,150,0.07)',
-      '--border-hover':   'rgba(255,200,150,0.14)',
-      '--text-primary':   '#faf7f0',
+      '--bg-base': '#1c1917',
+      '--bg-surface': 'rgba(255,255,255,0.025)',
+      '--border-subtle': 'rgba(255,200,150,0.07)',
+      '--border-hover': 'rgba(255,200,150,0.14)',
+      '--text-primary': '#faf7f0',
       '--text-secondary': 'rgba(250,247,240,0.65)',
-      '--text-muted':     'rgba(250,247,240,0.42)',
-      '--text-faint':     'rgba(250,247,240,0.25)',
-      '--hover-surface':  'rgba(255,200,150,0.05)',
+      '--text-muted': 'rgba(250,247,240,0.42)',
+      '--text-faint': 'rgba(250,247,240,0.25)',
+      '--hover-surface': 'rgba(255,200,150,0.05)',
     },
   },
 ]
@@ -141,7 +141,9 @@ export function applySkin(args: SkinApplyArgs): void {
   // Apply base mode
   if (args.theme === 'system') {
     const mq = window.matchMedia('(prefers-color-scheme: dark)')
-    const apply = () => { root.dataset.theme = mq.matches ? 'dark' : 'light' }
+    const apply = () => {
+      root.dataset.theme = mq.matches ? 'dark' : 'light'
+    }
     apply()
     mq.addEventListener('change', apply)
     systemThemeCleanup = () => mq.removeEventListener('change', apply)
@@ -169,10 +171,10 @@ export function applySkin(args: SkinApplyArgs): void {
   // theme-aware. That also makes theme: 'system' correct for free — flipping
   // appearance re-resolves through CSS with no JS involved.
   const overrides: Record<string, string> = {
-    accent:  args.accentColor,
+    accent: args.accentColor,
     success: args.successColor,
     warning: args.warningColor,
-    danger:  args.dangerColor,
+    danger: args.dangerColor,
   }
   for (const [role, chosen] of Object.entries(overrides)) {
     if (chosen.toLowerCase() === STATUS_DEFAULTS.dark[role]) {

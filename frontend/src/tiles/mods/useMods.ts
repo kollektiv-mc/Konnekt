@@ -1,10 +1,19 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { EventsOn } from '../../../wailsjs/runtime/runtime'
 import {
-  ModSearch, ModGetProject, ModGetVersions, ModGetAllVersions,
-  ModResolveDependencies, ModInstall, ModListInstalled,
-  ModSetEnabled, ModUninstall, ModCategories, ModMoreByAuthor,
-  ModCheckUpdates, ModInstallLocal,
+  ModSearch,
+  ModGetProject,
+  ModGetVersions,
+  ModGetAllVersions,
+  ModResolveDependencies,
+  ModInstall,
+  ModListInstalled,
+  ModSetEnabled,
+  ModUninstall,
+  ModCategories,
+  ModMoreByAuthor,
+  ModCheckUpdates,
+  ModInstallLocal,
 } from '../../../wailsjs/go/main/App'
 import { models } from '../../../wailsjs/go/models'
 import { EVENTS } from '../../lib/constants'
@@ -117,26 +126,29 @@ export function useMods(serverId: string): ModsState {
 
   const pollTimer = useRef<ReturnType<typeof setInterval> | null>(null)
 
-  const refreshInstalled = useCallback(async (silent = false) => {
-    if (!serverId) return
-    if (!silent) setInstalledLoading(true)
-    setInstalledError(null)
-    try {
-      const result = (await ModListInstalled(serverId) as InstalledMod[]) ?? []
-      // Sort by installedAt desc (newest first); unknowns (0) sink to bottom
-      result.sort((a, b) => {
-        if (a.installedAt === 0 && b.installedAt === 0) return 0
-        if (a.installedAt === 0) return 1
-        if (b.installedAt === 0) return -1
-        return b.installedAt - a.installedAt
-      })
-      setInstalled(result)
-    } catch (e) {
-      setInstalledError(String(e))
-    } finally {
-      if (!silent) setInstalledLoading(false)
-    }
-  }, [serverId])
+  const refreshInstalled = useCallback(
+    async (silent = false) => {
+      if (!serverId) return
+      if (!silent) setInstalledLoading(true)
+      setInstalledError(null)
+      try {
+        const result = ((await ModListInstalled(serverId)) as InstalledMod[]) ?? []
+        // Sort by installedAt desc (newest first); unknowns (0) sink to bottom
+        result.sort((a, b) => {
+          if (a.installedAt === 0 && b.installedAt === 0) return 0
+          if (a.installedAt === 0) return 1
+          if (b.installedAt === 0) return -1
+          return b.installedAt - a.installedAt
+        })
+        setInstalled(result)
+      } catch (e) {
+        setInstalledError(String(e))
+      } finally {
+        if (!silent) setInstalledLoading(false)
+      }
+    },
+    [serverId],
+  )
 
   const checkUpdates = useCallback(async () => {
     try {
@@ -158,11 +170,14 @@ export function useMods(serverId: string): ModsState {
     const offInstalled = EventsOn(EVENTS.MOD_INSTALLED, (d?: { serverID?: string }) => {
       if (!d?.serverID || d.serverID === serverId) refreshInstalled(true)
     })
-    const offProgress = EventsOn(EVENTS.MOD_INSTALL_PROGRESS, (d?: { serverID?: string; fileName?: string; percent?: number }) => {
-      if (d?.serverID === serverId && d.fileName) {
-        setInstallProgress(prev => ({ ...prev, [d.fileName!]: d.percent ?? 0 }))
-      }
-    })
+    const offProgress = EventsOn(
+      EVENTS.MOD_INSTALL_PROGRESS,
+      (d?: { serverID?: string; fileName?: string; percent?: number }) => {
+        if (d?.serverID === serverId && d.fileName) {
+          setInstallProgress((prev) => ({ ...prev, [d.fileName!]: d.percent ?? 0 }))
+        }
+      },
+    )
 
     return () => {
       if (pollTimer.current) clearInterval(pollTimer.current)
@@ -183,23 +198,28 @@ export function useMods(serverId: string): ModsState {
   }, [serverId])
 
   // Load categories once on mount
-  useEffect(() => { loadCategories() }, [loadCategories])
+  useEffect(() => {
+    loadCategories()
+  }, [loadCategories])
 
-  const search = useCallback(async (query: string, cats: string[], offset = 0, sort = '') => {
-    setSearchLoading(true)
-    setSearchError(null)
-    setSearchOffset(offset)
-    try {
-      const result = (await ModSearch(serverId, query, offset, cats, sort)) as ModSearchResult
-      setSearchResults(result?.hits ?? [])
-      setSearchTotal(result?.total ?? 0)
-    } catch (e) {
-      setSearchError(String(e))
-      setSearchResults([])
-    } finally {
-      setSearchLoading(false)
-    }
-  }, [serverId])
+  const search = useCallback(
+    async (query: string, cats: string[], offset = 0, sort = '') => {
+      setSearchLoading(true)
+      setSearchError(null)
+      setSearchOffset(offset)
+      try {
+        const result = (await ModSearch(serverId, query, offset, cats, sort)) as ModSearchResult
+        setSearchResults(result?.hits ?? [])
+        setSearchTotal(result?.total ?? 0)
+      } catch (e) {
+        setSearchError(String(e))
+        setSearchResults([])
+      } finally {
+        setSearchLoading(false)
+      }
+    },
+    [serverId],
+  )
 
   const selectProject = useCallback(async (hit: ModProject) => {
     // Show the hit data immediately (icon, title, downloads, etc.) while the full
@@ -210,13 +230,15 @@ export function useMods(serverId: string): ModsState {
       const proj = (await ModGetProject(hit.id)) as ModProject
       // Merge: use detail data but fall back to hit fields for anything the
       // detail endpoint doesn't return (e.g. follows from search hits).
-      setSelectedProject(models.ModProject.createFrom({
-        ...hit,
-        ...proj,
-        follows: proj.follows || hit.follows,
-        dateModified: proj.dateModified || hit.dateModified,
-        author: proj.author || hit.author,
-      }))
+      setSelectedProject(
+        models.ModProject.createFrom({
+          ...hit,
+          ...proj,
+          follows: proj.follows || hit.follows,
+          dateModified: proj.dateModified || hit.dateModified,
+          author: proj.author || hit.author,
+        }),
+      )
     } finally {
       setProjectLoading(false)
     }
@@ -227,15 +249,18 @@ export function useMods(serverId: string): ModsState {
     setVersions([])
   }, [])
 
-  const getVersions = useCallback(async (projectId: string) => {
-    setVersionsLoading(true)
-    try {
-      const v = (await ModGetVersions(serverId, projectId)) as ModVersion[]
-      setVersions(v ?? [])
-    } finally {
-      setVersionsLoading(false)
-    }
-  }, [serverId])
+  const getVersions = useCallback(
+    async (projectId: string) => {
+      setVersionsLoading(true)
+      try {
+        const v = (await ModGetVersions(serverId, projectId)) as ModVersion[]
+        setVersions(v ?? [])
+      } finally {
+        setVersionsLoading(false)
+      }
+    },
+    [serverId],
+  )
 
   const getAllVersions = useCallback(async (projectId: string) => {
     setVersionsLoading(true)
@@ -247,107 +272,150 @@ export function useMods(serverId: string): ModsState {
     }
   }, [])
 
-  const resolveDeps = useCallback(async (versionId: string): Promise<ResolvedDependency[]> => {
-    const deps = (await ModResolveDependencies(serverId, versionId)) as ResolvedDependency[]
-    return deps ?? []
-  }, [serverId])
+  const resolveDeps = useCallback(
+    async (versionId: string): Promise<ResolvedDependency[]> => {
+      const deps = (await ModResolveDependencies(serverId, versionId)) as ResolvedDependency[]
+      return deps ?? []
+    },
+    [serverId],
+  )
 
-  const install = useCallback(async (versionIds: string[]) => {
-    setInstalling(true)
-    setInstallError(null)
-    setInstallProgress({})
-    try {
-      await ModInstall(serverId, versionIds)
-    } catch (e) {
-      setInstallError(String(e))
-      throw e
-    } finally {
-      setInstalling(false)
+  const install = useCallback(
+    async (versionIds: string[]) => {
+      setInstalling(true)
+      setInstallError(null)
       setInstallProgress({})
-    }
-  }, [serverId])
-
-  const installLatest = useCallback(async (projectId: string) => {
-    // Fetch the latest compatible version and install it (with dep resolution).
-    setInstalling(true)
-    setInstallError(null)
-    setInstallProgress({})
-    try {
-      const v = (await ModGetVersions(serverId, projectId)) as ModVersion[]
-      if (!v || v.length === 0) throw new Error('No compatible version found')
-      const latest = v[0]
-      const deps = (await ModResolveDependencies(serverId, latest.id)) as ResolvedDependency[]
-      const nonTrivial = (deps ?? []).filter(d => !d.alreadyInstalled)
-      if (nonTrivial.length > 0) {
+      try {
+        await ModInstall(serverId, versionIds)
+      } catch (e) {
+        setInstallError(String(e))
+        throw e
+      } finally {
         setInstalling(false)
-        throw new DepsRequiredError(deps, latest.id)
+        setInstallProgress({})
       }
-      await ModInstall(serverId, [latest.id])
-    } catch (e: unknown) {
-      if (isDepsRequiredError(e)) throw e // re-throw for dep dialog
-      setInstallError(String(e))
-      throw e
-    } finally {
-      setInstalling(false)
+    },
+    [serverId],
+  )
+
+  const installLatest = useCallback(
+    async (projectId: string) => {
+      // Fetch the latest compatible version and install it (with dep resolution).
+      setInstalling(true)
+      setInstallError(null)
       setInstallProgress({})
-    }
-  }, [serverId])
+      try {
+        const v = (await ModGetVersions(serverId, projectId)) as ModVersion[]
+        if (!v || v.length === 0) throw new Error('No compatible version found')
+        const latest = v[0]
+        const deps = (await ModResolveDependencies(serverId, latest.id)) as ResolvedDependency[]
+        const nonTrivial = (deps ?? []).filter((d) => !d.alreadyInstalled)
+        if (nonTrivial.length > 0) {
+          setInstalling(false)
+          throw new DepsRequiredError(deps, latest.id)
+        }
+        await ModInstall(serverId, [latest.id])
+      } catch (e: unknown) {
+        if (isDepsRequiredError(e)) throw e // re-throw for dep dialog
+        setInstallError(String(e))
+        throw e
+      } finally {
+        setInstalling(false)
+        setInstallProgress({})
+      }
+    },
+    [serverId],
+  )
 
-  const setEnabled = useCallback(async (fileName: string, enabled: boolean) => {
-    await ModSetEnabled(serverId, fileName, enabled)
-  }, [serverId])
+  const setEnabled = useCallback(
+    async (fileName: string, enabled: boolean) => {
+      await ModSetEnabled(serverId, fileName, enabled)
+    },
+    [serverId],
+  )
 
-  const uninstall = useCallback(async (fileName: string) => {
-    await ModUninstall(serverId, fileName)
-  }, [serverId])
+  const uninstall = useCallback(
+    async (fileName: string) => {
+      await ModUninstall(serverId, fileName)
+    },
+    [serverId],
+  )
 
   const installLocal = useCallback(async () => {
     await ModInstallLocal(serverId)
   }, [serverId])
 
-  const changeVersion = useCallback(async (oldFileName: string, newVersionId: string) => {
-    setInstalling(true)
-    setInstallError(null)
-    setInstallProgress({})
-    try {
-      await ModInstall(serverId, [newVersionId])
-      // After installing the new version, remove the old file if names differ.
-      // The newly installed file name comes from the manifest refresh.
-      const updated = (await ModListInstalled(serverId) as InstalledMod[]) ?? []
-      const newMod = updated.find(m => m.versionId === newVersionId)
-      if (newMod && newMod.fileName !== oldFileName) {
-        await ModUninstall(serverId, oldFileName)
-      }
-    } catch (e) {
-      setInstallError(String(e))
-      throw e
-    } finally {
-      setInstalling(false)
+  const changeVersion = useCallback(
+    async (oldFileName: string, newVersionId: string) => {
+      setInstalling(true)
+      setInstallError(null)
       setInstallProgress({})
-      setUpdates(prev => {
-        const next = { ...prev }
-        delete next[oldFileName]
-        return next
-      })
-    }
-  }, [serverId])
+      try {
+        await ModInstall(serverId, [newVersionId])
+        // After installing the new version, remove the old file if names differ.
+        // The newly installed file name comes from the manifest refresh.
+        const updated = ((await ModListInstalled(serverId)) as InstalledMod[]) ?? []
+        const newMod = updated.find((m) => m.versionId === newVersionId)
+        if (newMod && newMod.fileName !== oldFileName) {
+          await ModUninstall(serverId, oldFileName)
+        }
+      } catch (e) {
+        setInstallError(String(e))
+        throw e
+      } finally {
+        setInstalling(false)
+        setInstallProgress({})
+        setUpdates((prev) => {
+          const next = { ...prev }
+          delete next[oldFileName]
+          return next
+        })
+      }
+    },
+    [serverId],
+  )
 
-  const moreByAuthor = useCallback(async (username: string, excludeProjectId: string): Promise<ModProject[]> => {
-    if (!username) return []
-    const result = (await ModMoreByAuthor(serverId, username, excludeProjectId)) as ModProject[]
-    return result ?? []
-  }, [serverId])
+  const moreByAuthor = useCallback(
+    async (username: string, excludeProjectId: string): Promise<ModProject[]> => {
+      if (!username) return []
+      const result = (await ModMoreByAuthor(serverId, username, excludeProjectId)) as ModProject[]
+      return result ?? []
+    },
+    [serverId],
+  )
 
   return {
-    installed, installedLoading, installedError, refreshInstalled,
-    setEnabled, uninstall, installLocal, changeVersion,
-    updates, checkUpdates,
-    searchResults, searchTotal, searchOffset, searchLoading, searchError, search,
+    installed,
+    installedLoading,
+    installedError,
+    refreshInstalled,
+    setEnabled,
+    uninstall,
+    installLocal,
+    changeVersion,
+    updates,
+    checkUpdates,
+    searchResults,
+    searchTotal,
+    searchOffset,
+    searchLoading,
+    searchError,
+    search,
     categories,
-    selectedProject, projectLoading, selectProject, clearProject,
-    versions, versionsLoading, getVersions, getAllVersions,
+    selectedProject,
+    projectLoading,
+    selectProject,
+    clearProject,
+    versions,
+    versionsLoading,
+    getVersions,
+    getAllVersions,
     resolveDeps,
-    install, installLatest, installProgress, installing, installError,
+    install,
+    installLatest,
+    installProgress,
+    installing,
+    installError,
     moreByAuthor,
   }
 }

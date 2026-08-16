@@ -1,32 +1,15 @@
-import { useEffect, useState } from 'react'
-import { GetPlayers } from '../../../wailsjs/go/main/App'
 import type { Player } from '../../types'
 import { PlayerCard } from './PlayerCard'
 
 interface Props {
-  serverId: string
+  players: Player[]
   onSelectPlayer: (player: Player) => void
 }
 
-export function PlayerGrid({ serverId, onSelectPlayer }: Props) {
-  const [players, setPlayers] = useState<Player[]>([])
-
-  useEffect(() => {
-    const poll = async () => {
-      const list = await GetPlayers(serverId).catch(() => null)
-      if (list) setPlayers(list)
-    }
-    poll()
-    const id = setInterval(poll, 3000)
-    return () => clearInterval(id)
-  }, [serverId])
-
+export function PlayerGrid({ players, onSelectPlayer }: Props) {
   if (players.length === 0) {
     return (
-      <div
-        className="flex items-center justify-center h-full text-xs font-mono"
-        style={{ color: 'var(--text-faint)' }}
-      >
+      <div className="text-text-faint flex h-full items-center justify-center font-mono text-xs">
         No players online
       </div>
     )
@@ -34,10 +17,7 @@ export function PlayerGrid({ serverId, onSelectPlayer }: Props) {
 
   return (
     <div className="flex-1 overflow-y-auto p-2">
-      <div
-        className="grid gap-1.5"
-        style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(72px, 1fr))' }}
-      >
+      <div className="grid grid-cols-[repeat(auto-fill,minmax(72px,1fr))] gap-1.5">
         {players.map((p) => (
           <PlayerCard key={p.name} player={p} onClick={() => onSelectPlayer(p)} />
         ))}

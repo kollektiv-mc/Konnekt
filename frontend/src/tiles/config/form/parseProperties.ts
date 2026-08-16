@@ -34,7 +34,13 @@ export function parsePropertiesFields(content: string): ConfigField[] {
 
     let section = sectionMap.get(sectionName)
     if (!section) {
-      section = { path: [sectionName], label: sectionName, type: 'section', value: null, children: [] }
+      section = {
+        path: [sectionName],
+        label: sectionName,
+        type: 'section',
+        value: null,
+        children: [],
+      }
       sectionMap.set(sectionName, section)
     }
 

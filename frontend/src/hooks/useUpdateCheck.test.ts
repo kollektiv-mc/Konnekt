@@ -49,9 +49,7 @@ describe('useUpdateCheck', () => {
       assets: [],
     } as unknown as models.UpdateInfo)
     renderHook(() => useUpdateCheck(true))
-    await waitFor(() =>
-      expect(useNotificationsStore.getState().items).toHaveLength(1),
-    )
+    await waitFor(() => expect(useNotificationsStore.getState().items).toHaveLength(1))
     expect(useNotificationsStore.getState().items[0]).toMatchObject({
       kind: 'info',
       text: expect.stringContaining('v0.2.0'),

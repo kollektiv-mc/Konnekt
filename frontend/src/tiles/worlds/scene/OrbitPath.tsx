@@ -18,13 +18,5 @@ export function OrbitPath({ radiusX, radiusZ, opacity = 0.12 }: Props) {
     return pts
   }, [radiusX, radiusZ])
 
-  return (
-    <Line
-      points={points}
-      color="white"
-      transparent
-      opacity={opacity}
-      lineWidth={0.5}
-    />
-  )
+  return <Line points={points} color="white" transparent opacity={opacity} lineWidth={0.5} />
 }
