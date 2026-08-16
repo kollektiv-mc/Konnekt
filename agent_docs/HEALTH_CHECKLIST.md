@@ -175,25 +175,35 @@ The remaining, not-yet-closed follow-ups. Each item's full remediation write-up
 moves to `agent_docs/HEALTH_LOG.md` once it's done — keep this section short and
 current. Priorities mirror the pillars above.
 
-**P1 — Inline styles → Tailwind (Milestone 2, in progress)**
-- 112 `style={{}}` remain across 33 files, but only **50 are actual backlog**:
-  the worlds tile (44 — `WorldHud.tsx` 19, `index.tsx` 15,
-  `scene/WorldsScene.tsx` 6, `scene/Planet.tsx` 4) and `App.tsx` (6). The other
-  62 sit in directories already ratcheted to `error`, so every one of them is a
-  documented, lint-enforced exception rather than unmigrated code.
-- Worlds is the last tile and the hardest: react-three-fiber scene code, and the
-  only cluster that still needs `wails dev` + a configured server to verify
-  properly. `App.tsx` is small and independent — a reasonable warm-up.
-- Then ratchet each directory's `no-restricted-syntax` from `warn` → `error`
-  in `frontend/eslint.config.js`. Conversion patterns and per-slice lessons: see
-  HEALTH_LOG.md's Milestone 2 slices.
+**P1 — Inline styles → Tailwind (Milestone 2, one file left)**
+- 71 `style={{}}` remain across the tree, but only **6 are actual backlog**, all
+  in `frontend/src/App.tsx`. The other 65 sit in directories ratcheted to
+  `error`, so every one is a documented, lint-enforced exception rather than
+  unmigrated code.
+- **Every tile directory is migrated and ratcheted**, worlds included. Count the
+  real backlog with `pnpm exec eslint src` — its `no-restricted-syntax` warnings
+  are the number that matters. A `grep 'style={{'` disagrees in both directions:
+  it counts the documented exceptions, and it misses the `style={SOME_CONST}`
+  form entirely (that form was 32 of the worlds tile's 51 in `WorldHud.tsx`
+  alone, which is why worlds was booked at 44 above and was really 78).
+- Conversion patterns and per-slice lessons: see HEALTH_LOG.md's Milestone 2
+  slices.
 
 **P1 — Test-coverage follow-ups**
-- Modrinth HTTP-path coverage: `ModrinthClient` hardcodes `modrinthBase`; needs
-  an injectable base URL before the 429/`Retry-After` retry + search-hit dedup
-  paths can be driven by an `httptest.Server`.
-- Coverage floor: no numeric threshold in CI yet — add one once a stable
-  baseline exists across both suites.
+- Backup create/restore orchestration (4/29 functions): `RestoreBackup`,
+  `CreateBackup`, the world-vs-server backup resolution, the meta.json round
+  trip. The guards beneath them (`validateFilename`, `unzipTo`'s zip-slip check)
+  are already tested; the flows that call them are not.
+- Config editor beyond `sandbox` (1/11 functions): `ReadConfigFile`/
+  `WriteConfigFile` end to end — that the guard is applied on both paths, that
+  JSON validation rejects before writing, that `backup`'s rotation keeps exactly
+  `backupKeep` copies. Note `sandbox` is a purely lexical check, so a symlink
+  inside the working directory still resolves outside it; decide whether that is
+  in scope before writing a test that pins today's behaviour.
+- RCON client (4/6 functions).
+- Coverage floor: no numeric threshold in CI yet. Baseline after the Modrinth
+  work: `backend/services` at **29.7%** of statements. Add a floor once the two
+  items above land, so the number it pins is one worth defending.
 
 **P1 — Remaining `useEffect` polls that have events available**
 - Three 10s `setInterval` polls remain where the backend already emits a
