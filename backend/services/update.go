@@ -35,9 +35,9 @@ var ErrUpdatePermission = errors.New("update install: insufficient permissions t
 // UpdateService checks GitHub Releases for a newer Konnekt version, and can
 // download + apply that update in place. GitHub Releases *is* the version
 // database here — each release is a git tag with per-platform binaries
-// attached as assets, no separate backend needed. baseURL is injectable
-// (unlike modrinth.go's hardcoded modrinthBase) so tests can point it at an
-// httptest.Server.
+// attached as assets, no separate backend needed. baseURL is injectable so
+// tests can point it at an httptest.Server — the same shape ModrinthClient
+// now uses.
 type UpdateService struct {
 	http    *http.Client
 	baseURL string
