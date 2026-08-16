@@ -35,6 +35,12 @@ const WHEEL_ZOOM_SENSITIVITY = 0.0012
 // Precomputed unit direction: offset applied from the focused body to place the camera eye
 const FOCUS_DIR = new THREE.Vector3(0, FOCUS_ELEV, FOCUS_BACK).normalize()
 
+// The scene's overlay buttons (← galaxy / ← system). Same hairline-outline shape as
+// WorldHud's buttons, one step roomier since these sit over the 3D view rather than
+// inside a panel.
+const NAV_BTN =
+  'border-hairline border-border-subtle text-text-muted text-1xs cursor-pointer rounded bg-transparent px-2.5 py-[3px] font-mono'
+
 function SlowStars({ zoomRef }: { zoomRef: React.MutableRefObject<number> }) {
   const groupRef = useRef<THREE.Group>(null)
   const fadeUniform = useRef<{ value: number } | null>(null)
@@ -311,42 +317,28 @@ export function WorldsScene({
   const hudWorld = focusName ? (worlds.find((w) => w.name === focusName) ?? null) : null
   const hudOpen = !!(focusName && selectedDimension)
 
-  const navBtn: React.CSSProperties = {
-    background: 'transparent',
-    border: '0.5px solid var(--border-subtle)',
-    color: 'var(--text-muted)',
-    borderRadius: 4,
-    padding: '3px 10px',
-    fontFamily: 'monospace',
-    fontSize: 11,
-    cursor: 'pointer',
-  }
-
   return (
-    <div style={{ width: '100%', height: '100%', position: 'relative' }}>
+    <div className="relative h-full w-full">
       {/* Entrance reveal — wrapper div so the WebGL drawing-buffer size (set by Canvas
           layout, already correct after the 220ms gate) is never affected by transform */}
       <div
         ref={wrapperRef}
-        style={{
-          position: 'absolute',
-          inset: 0,
-          opacity: revealed ? 1 : 0,
-          transition: revealed ? 'opacity 0.4s cubic-bezier(0.25,0,0.25,1)' : 'none',
-        }}
+        className={`absolute inset-0 ${
+          revealed
+            ? 'opacity-100 transition-opacity duration-[400ms] ease-[cubic-bezier(0.25,0,0.25,1)]'
+            : 'opacity-0 transition-none'
+        }`}
       >
         {/* ← galaxy button — only visible in planetary view when the HUD panel is closed */}
         {focusName && !hudOpen && (
-          <button
-            onClick={goBack}
-            style={{ position: 'absolute', top: 10, left: 10, zIndex: 20, ...navBtn }}
-          >
+          <button onClick={goBack} className={`${NAV_BTN} absolute top-2.5 left-2.5 z-20`}>
             ← galaxy
           </button>
         )}
 
         <Canvas
           camera={{ position: [0, 14, 5], fov: 50 }}
+          // eslint-disable-next-line no-restricted-syntax -- r3f's Canvas writes position/width/height/overflow inline on its own container div and spreads `style` after them, so a className cannot win the cascade for `position`
           style={{ position: 'absolute', inset: 0, background: '#050608' }}
         >
           <Suspense fallback={null}>
@@ -388,30 +380,16 @@ export function WorldsScene({
           Slides in from the LEFT; camera simultaneously shifts the planet into the right 2/3
           via setViewOffset (planet at ≈66.7% from left = centre of the right two-thirds). */}
         <div
-          style={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            bottom: 0,
-            width: '33.3333%',
-            background: 'var(--bg-surface)',
-            borderRight: '0.5px solid var(--border-subtle)',
-            display: 'flex',
-            flexDirection: 'column',
-            padding: '16px 20px 24px',
-            overflowY: 'auto',
-            transform: hudOpen ? 'translateX(0)' : 'translateX(-100%)',
-            transition: 'transform 0.25s cubic-bezier(0.25, 0, 0.25, 1)',
-            pointerEvents: hudOpen ? 'auto' : 'none',
-            zIndex: 10,
-          }}
+          className={`border-r-border-subtle bg-surface absolute top-0 bottom-0 left-0 z-10 flex w-1/3 flex-col overflow-y-auto border-r-[0.5px] px-5 pt-4 pb-6 transition-transform duration-[250ms] ease-[cubic-bezier(0.25,0,0.25,1)] ${
+            hudOpen ? 'pointer-events-auto translate-x-0' : 'pointer-events-none -translate-x-full'
+          }`}
         >
           {/* Navigation */}
-          <div style={{ display: 'flex', gap: 6, marginBottom: 20, flexShrink: 0 }}>
-            <button style={navBtn} onClick={goBack}>
+          <div className="mb-5 flex shrink-0 gap-1.5">
+            <button className={NAV_BTN} onClick={goBack}>
               ← galaxy
             </button>
-            <button style={navBtn} onClick={() => setSelectedDimension(null)}>
+            <button className={NAV_BTN} onClick={() => setSelectedDimension(null)}>
               ← system
             </button>
           </div>

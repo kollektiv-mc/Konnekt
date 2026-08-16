@@ -37,33 +37,25 @@ function fmtRelative(ms: number): string {
 
 type SwitchStep = 'idle' | 'confirm' | 'working' | 'delete-confirm' | 'rename' | 'duplicate'
 
-const CARD: React.CSSProperties = {
-  width: '100%',
-  fontFamily: 'monospace',
-  fontSize: 11,
-  color: 'var(--text-primary)',
-  userSelect: 'none',
-}
+const CARD = 'text-text-primary w-full font-mono text-1xs select-none'
 
-const ROW: React.CSSProperties = {
-  display: 'flex',
-  justifyContent: 'space-between',
-  gap: 8,
-  padding: '2px 0',
-}
+const ROW = 'flex justify-between gap-2 py-0.5'
 
-const LABEL: React.CSSProperties = { color: 'var(--text-faint)' }
+const LABEL = 'text-text-faint'
 
-const BTN = (danger = false): React.CSSProperties => ({
-  background: 'transparent',
-  border: `0.5px solid ${danger ? '#ef4444' : 'var(--border-subtle)'}`,
-  color: danger ? '#ef4444' : 'var(--text-muted)',
-  borderRadius: 3,
-  padding: '2px 7px',
-  cursor: 'pointer',
-  fontSize: 10,
-  fontFamily: 'monospace',
-})
+const SECTION = 'border-b-border-subtle mb-2 border-b-[0.5px] pb-1.5'
+
+const STACK = 'flex flex-col gap-1'
+
+// Split from the padding below so a variant (the ✕ close button) can set its own
+// without two arbitrary padding utilities racing each other in the cascade —
+// class-attribute order does not decide which of `px-[7px]`/`px-[5px]` wins.
+const BTN_BASE = 'border-hairline cursor-pointer rounded-sm bg-transparent font-mono text-2xs'
+const BTN_TONE = (danger: boolean) =>
+  danger ? 'border-[#ef4444] text-[#ef4444]' : 'border-border-subtle text-text-muted'
+
+const BTN = (danger = false) => `${BTN_BASE} ${BTN_TONE(danger)} px-[7px] py-0.5`
+const BTN_CLOSE = `${BTN_BASE} ${BTN_TONE(false)} px-[5px] py-px`
 
 export function WorldHud({
   world,
@@ -146,50 +138,31 @@ export function WorldHud({
   }
 
   return (
-    <div style={CARD}>
+    <div className={CARD}>
       {/* Header */}
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          marginBottom: 8,
-          borderBottom: '0.5px solid var(--border-subtle)',
-          paddingBottom: 6,
-        }}
-      >
-        <span
-          style={{ fontWeight: 700, color: world.active ? 'var(--accent)' : 'var(--text-primary)' }}
-        >
+      <div className={`${SECTION} flex items-center justify-between`}>
+        <span className={`font-bold ${world.active ? 'text-accent' : 'text-text-primary'}`}>
           {world.name}
           {dimension !== 'overworld' ? ` / ${dimLabel}` : ''}
-          {world.active && (
-            <span style={{ marginLeft: 4, fontSize: 9, color: 'var(--accent)' }}>◉ active</span>
-          )}
+          {world.active && <span className="text-accent text-3xs ml-1">◉ active</span>}
         </span>
-        <button style={{ ...BTN(), padding: '1px 5px' }} onClick={onClose}>
+        <button className={BTN_CLOSE} onClick={onClose}>
           ✕
         </button>
       </div>
 
       {/* Metadata */}
       {meta.found && (
-        <div
-          style={{
-            marginBottom: 8,
-            borderBottom: '0.5px solid var(--border-subtle)',
-            paddingBottom: 6,
-          }}
-        >
+        <div className={SECTION}>
           {meta.version && (
-            <div style={ROW}>
-              <span style={LABEL}>version</span>
+            <div className={ROW}>
+              <span className={LABEL}>version</span>
               <span>{meta.version}</span>
             </div>
           )}
           {meta.gameMode && (
-            <div style={ROW}>
-              <span style={LABEL}>mode</span>
+            <div className={ROW}>
+              <span className={LABEL}>mode</span>
               <span>
                 {meta.gameMode}
                 {meta.hardcore ? ' (hardcore)' : ''}
@@ -197,20 +170,20 @@ export function WorldHud({
             </div>
           )}
           {meta.difficulty && (
-            <div style={ROW}>
-              <span style={LABEL}>difficulty</span>
+            <div className={ROW}>
+              <span className={LABEL}>difficulty</span>
               <span>{meta.difficulty}</span>
             </div>
           )}
           {meta.seed && (
-            <div style={ROW}>
-              <span style={LABEL}>seed</span>
-              <span style={{ fontSize: 10 }}>{meta.seed}</span>
+            <div className={ROW}>
+              <span className={LABEL}>seed</span>
+              <span className="text-2xs">{meta.seed}</span>
             </div>
           )}
           {meta.lastPlayed > 0 && (
-            <div style={ROW}>
-              <span style={LABEL}>last play</span>
+            <div className={ROW}>
+              <span className={LABEL}>last play</span>
               <span>{fmtRelative(meta.lastPlayed)}</span>
             </div>
           )}
@@ -218,56 +191,50 @@ export function WorldHud({
       )}
 
       {/* Folder stats */}
-      <div
-        style={{
-          marginBottom: 8,
-          borderBottom: '0.5px solid var(--border-subtle)',
-          paddingBottom: 6,
-        }}
-      >
-        <div style={ROW}>
-          <span style={LABEL}>size</span>
+      <div className={SECTION}>
+        <div className={ROW}>
+          <span className={LABEL}>size</span>
           <span>{fmtBytes(world.totalSize)}</span>
         </div>
         {dim && dim.size !== world.totalSize && (
-          <div style={ROW}>
-            <span style={LABEL}>{dimLabel}</span>
+          <div className={ROW}>
+            <span className={LABEL}>{dimLabel}</span>
             <span>{fmtBytes(dim.size)}</span>
           </div>
         )}
-        <div style={ROW}>
-          <span style={LABEL}>modified</span>
+        <div className={ROW}>
+          <span className={LABEL}>modified</span>
           <span>{fmtRelative(world.modified)}</span>
         </div>
       </div>
 
       {/* Error */}
-      {err && <div style={{ color: '#ef4444', fontSize: 10, marginBottom: 6 }}>{err}</div>}
+      {err && <div className="text-2xs mb-1.5 text-[#ef4444]">{err}</div>}
 
       {/* Action steps */}
       {step === 'idle' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+        <div className={STACK}>
           {!world.active && (
-            <button style={BTN()} onClick={handleSetActive} disabled={busy}>
+            <button className={BTN()} onClick={handleSetActive} disabled={busy}>
               {busy ? '…' : 'set active'}
             </button>
           )}
           <button
-            style={BTN()}
+            className={BTN()}
             onClick={() => doAction(() => onBackup(world.name))}
             disabled={busy}
           >
             {busy ? '…' : 'backup'}
           </button>
           <button
-            style={BTN()}
+            className={BTN()}
             onClick={() => doAction(() => onOpenFolder(world.name))}
             disabled={busy}
           >
             open folder
           </button>
           <button
-            style={BTN()}
+            className={BTN()}
             onClick={() => {
               setInputVal(world.name + '_copy')
               setStep('rename')
@@ -277,7 +244,7 @@ export function WorldHud({
             rename
           </button>
           <button
-            style={BTN()}
+            className={BTN()}
             onClick={() => {
               setInputVal(world.name + '_copy')
               setStep('duplicate')
@@ -288,7 +255,7 @@ export function WorldHud({
           </button>
           {!world.active && (
             <button
-              style={BTN(true)}
+              className={BTN(true)}
               onClick={() => setStep('delete-confirm')}
               disabled={busy || running}
             >
@@ -299,99 +266,75 @@ export function WorldHud({
       )}
 
       {step === 'confirm' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-          <div style={{ color: 'var(--text-faint)', fontSize: 10, marginBottom: 4 }}>
-            Server is running. How to switch?
-          </div>
-          <button style={BTN()} onClick={switchAndRestart} disabled={busy}>
+        <div className={STACK}>
+          <div className="text-text-faint text-2xs mb-1">Server is running. How to switch?</div>
+          <button className={BTN()} onClick={switchAndRestart} disabled={busy}>
             {busy ? '…' : 'stop → switch → restart'}
           </button>
-          <button style={BTN()} onClick={switchStayOff} disabled={busy}>
+          <button className={BTN()} onClick={switchStayOff} disabled={busy}>
             {busy ? '…' : 'stop → switch (stay off)'}
           </button>
-          <button style={BTN(true)} onClick={() => setStep('idle')} disabled={busy}>
+          <button className={BTN(true)} onClick={() => setStep('idle')} disabled={busy}>
             cancel
           </button>
         </div>
       )}
 
       {step === 'delete-confirm' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-          <div style={{ color: '#ef4444', fontSize: 10, marginBottom: 4 }}>
-            Delete "{world.name}" permanently?
-          </div>
+        <div className={STACK}>
+          <div className="text-2xs mb-1 text-[#ef4444]">Delete "{world.name}" permanently?</div>
           <button
-            style={BTN(true)}
+            className={BTN(true)}
             onClick={() => doAction(() => onDelete(world.name))}
             disabled={busy}
           >
             {busy ? '…' : 'yes, delete'}
           </button>
-          <button style={BTN()} onClick={() => setStep('idle')}>
+          <button className={BTN()} onClick={() => setStep('idle')}>
             cancel
           </button>
         </div>
       )}
 
       {step === 'rename' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-          <div style={{ color: 'var(--text-faint)', fontSize: 10, marginBottom: 2 }}>New name:</div>
+        <div className={STACK}>
+          <div className="text-text-faint text-2xs mb-0.5">New name:</div>
           <input
             autoFocus
             value={inputVal}
             onChange={(e) => setInputVal(e.target.value)}
-            style={{
-              background: 'var(--bg-base)',
-              border: '0.5px solid var(--accent)',
-              color: 'var(--text-primary)',
-              borderRadius: 3,
-              padding: '3px 6px',
-              fontFamily: 'monospace',
-              fontSize: 11,
-              outline: 'none',
-            }}
+            className="bg-canvas border-accent text-text-primary border-hairline text-1xs rounded-sm px-1.5 py-[3px] font-mono outline-none"
           />
           <button
-            style={BTN()}
+            className={BTN()}
             onClick={() => doAction(() => onRename(world.name, inputVal))}
             disabled={busy || !inputVal}
           >
             {busy ? '…' : 'rename'}
           </button>
-          <button style={BTN(true)} onClick={() => setStep('idle')}>
+          <button className={BTN(true)} onClick={() => setStep('idle')}>
             cancel
           </button>
         </div>
       )}
 
       {step === 'duplicate' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-          <div style={{ color: 'var(--text-faint)', fontSize: 10, marginBottom: 2 }}>
-            Copy name:
-          </div>
+        <div className={STACK}>
+          <div className="text-text-faint text-2xs mb-0.5">Copy name:</div>
           <input
             autoFocus
             value={inputVal}
             onChange={(e) => setInputVal(e.target.value)}
-            style={{
-              background: 'var(--bg-base)',
-              border: '0.5px solid var(--accent)',
-              color: 'var(--text-primary)',
-              borderRadius: 3,
-              padding: '3px 6px',
-              fontFamily: 'monospace',
-              fontSize: 11,
-              outline: 'none',
-            }}
+            className="bg-canvas border-accent text-text-primary border-hairline text-1xs rounded-sm px-1.5 py-[3px] font-mono outline-none"
           />
           <button
-            style={BTN()}
+            className={BTN()}
             onClick={() => doAction(() => onDuplicate(world.name, inputVal))}
             disabled={busy || !inputVal}
           >
             {busy ? '…' : 'duplicate'}
           </button>
-          <button style={BTN(true)} onClick={() => setStep('idle')}>
+          <button className={BTN(true)} onClick={() => setStep('idle')}>
             cancel
           </button>
         </div>

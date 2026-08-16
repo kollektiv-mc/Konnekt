@@ -172,16 +172,14 @@ function MoonBody({
 
       {planetFocused && (
         <group ref={labelGroupRef}>
-          <Html center style={{ pointerEvents: 'none', userSelect: 'none' }} distanceFactor={10}>
+          <Html center className="pointer-events-none select-none" distanceFactor={10}>
+            {/* opacity-0 is only the first-frame value: useFrame above writes
+                labelSpanRef.style.opacity every frame, and inline beats the class. */}
             <span
               ref={labelSpanRef}
-              style={{
-                fontFamily: 'monospace',
-                fontSize: selected ? 7 : 9,
-                color,
-                whiteSpace: 'nowrap',
-                opacity: 0,
-              }}
+              className={`font-mono whitespace-nowrap opacity-0 ${selected ? 'text-[7px]' : 'text-3xs'}`}
+              // eslint-disable-next-line no-restricted-syntax -- per-dimension body colour, resolved at runtime from the scene palette
+              style={{ color }}
             >
               {label}
             </span>
@@ -368,16 +366,14 @@ export function Planet({
           Position updated imperatively each frame; opacity driven by cursor distance. */}
       {!focused && (
         <group ref={labelGroupRef}>
-          <Html center style={{ pointerEvents: 'none', userSelect: 'none' }} distanceFactor={10}>
+          <Html center className="pointer-events-none select-none" distanceFactor={10}>
+            {/* opacity-0 is only the first-frame value: useFrame above writes
+                labelSpanRef.style.opacity every frame, and inline beats the class. */}
             <span
               ref={labelSpanRef}
-              style={{
-                fontFamily: 'monospace',
-                fontSize: 9,
-                color,
-                whiteSpace: 'nowrap',
-                opacity: 0,
-              }}
+              className="text-3xs font-mono whitespace-nowrap opacity-0"
+              // eslint-disable-next-line no-restricted-syntax -- per-world planet colour, resolved at runtime from the scene palette
+              style={{ color }}
             >
               {label}
             </span>
