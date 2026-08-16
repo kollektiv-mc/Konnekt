@@ -351,6 +351,92 @@ a {
   pointer-events: none;
 }
 
+/* ── Tile glow — a soft accent light that follows the cursor ───────────── */
+/* One group selector rather than a class on every card, so the tiles
+   download.js and changelog.js render get it without either script changing.
+   main.js writes --mx/--my (px, tile-relative) on pointermove; the fallback
+   50%/50% keeps the glow centred if the pointer never moves — hovering via
+   keyboard focus, or a tile that appears under a stationary cursor. */
+.feat,
+.doc-section,
+.dl-card,
+.release,
+.cta-panel,
+.spotlight-media {
+  position: relative;
+  isolation: isolate;
+  --glow-size: 320px;
+  transition: border-color var(--duration-fast) ease;
+}
+
+.feat::before,
+.doc-section::before,
+.dl-card::before,
+.release::before,
+.cta-panel::before,
+.spotlight-media::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity var(--duration-panel) var(--ease-standard);
+  background: radial-gradient(
+    var(--glow-size) circle at var(--mx, 50%) var(--my, 50%),
+    rgb(var(--accent-rgb) / 0.14),
+    rgb(var(--accent-rgb) / 0.05) 45%,
+    transparent 72%
+  );
+}
+
+/* These surfaces are translucent, so the glow has to sit behind the content
+   rather than over it — an accent wash across body copy reads as a tint. */
+.feat > *,
+.doc-section > *,
+.dl-card > *,
+.release > *,
+.cta-panel > *,
+.spotlight-media > * {
+  position: relative;
+  z-index: 1;
+}
+
+.feat:hover,
+.doc-section:hover,
+.dl-card:hover,
+.release:hover,
+.cta-panel:hover,
+.spotlight-media:hover {
+  border-color: var(--border-hover);
+}
+
+.feat:hover::before,
+.doc-section:hover::before,
+.dl-card:hover::before,
+.release:hover::before,
+.cta-panel:hover::before,
+.spotlight-media:hover::before {
+  opacity: 1;
+}
+
+/* Smaller tiles want a tighter light — a 320px circle on a 60px-tall card is
+   a flat wash, not a glow. */
+.dl-card {
+  --glow-size: 200px;
+}
+
+/* A platform with no asset isn't a link; lighting it up on hover would offer
+   something that isn't there. */
+.dl-card.is-unavailable:hover {
+  border-color: var(--border-subtle);
+}
+
+.dl-card.is-unavailable::before {
+  display: none;
+}
+
 /* ── Reveal-on-scroll (progressive enhancement; visible by default) ─────── */
 .reveal {
   opacity: 0;
@@ -495,6 +581,130 @@ a {
   justify-content: center;
   padding: calc(var(--nav-h) + var(--section-y)) 0 var(--section-y);
   scroll-margin-top: var(--nav-h);
+}
+
+/* ── Section snapping (desktop, pointer devices only) ─────────────────── */
+/* The landing page is already a run of full-viewport panels; snapping is what
+   makes scrolling settle on one instead of leaving you between two. Only
+   .section-full carries a snap point, so the sub-pages (.subpage) are
+   untouched, and so is the footer — it simply scrolls to.
+   `proximity`, not `mandatory`: the feature grid outgrows the viewport on
+   shorter screens, and mandatory would keep yanking you off it. */
+@media (min-width: 861px) {
+  /* The section's own padding-top already clears the fixed nav, so it can sit
+     flush with the viewport top — both when snapped and when an anchor is
+     clicked. Below this breakpoint that padding drops to --section-y alone
+     (see the responsive block), and the base scroll-margin is needed again. */
+  .section-full {
+    scroll-margin-top: 0;
+  }
+}
+
+@media (min-width: 861px) and (pointer: fine) {
+  html {
+    scroll-snap-type: y proximity;
+  }
+
+  .section-full {
+    scroll-snap-align: start;
+  }
+}
+
+/* ── Section rail — the indicator for the above. Built by main.js from the
+   [data-nav] sections, so it only ever appears on the landing page. ─────── */
+.rail {
+  position: fixed;
+  right: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 90;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 0;
+}
+
+/* Hairline track behind the dots, the same weight as every other divider. */
+.rail::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: calc(50% - 0.5px);
+  width: 1px;
+  background: linear-gradient(var(--border-subtle), var(--border-hover), var(--border-subtle));
+}
+
+.rail-dot {
+  position: relative;
+  display: block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  /* One step brighter than the sheet's usual hairline: an indicator has to be
+     findable, and it sits alone against the page background rather than
+     dividing two surfaces. */
+  border: 1px solid var(--text-faint);
+  background: var(--bg-base);
+  transition:
+    background-color var(--duration-fast) ease,
+    border-color var(--duration-fast) ease,
+    box-shadow var(--duration-fast) ease,
+    transform var(--duration-fast) ease;
+}
+
+.rail-dot:hover {
+  border-color: var(--accent);
+  transform: scale(1.25);
+}
+
+.rail-dot[aria-current='true'] {
+  background: var(--accent);
+  border-color: var(--accent);
+  box-shadow: 0 0 8px rgb(var(--accent-rgb) / 0.6);
+}
+
+.rail-label {
+  position: absolute;
+  right: calc(100% + 12px);
+  top: 50%;
+  transform: translateY(-50%) translateX(6px);
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: var(--text-secondary);
+  background: var(--bg-elevated);
+  border: 0.5px solid var(--border-subtle);
+  backdrop-filter: blur(12px);
+  border-radius: 6px;
+  padding: 4px 9px;
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    opacity var(--duration-fast) ease,
+    transform var(--duration-fast) ease;
+}
+
+.rail-dot:hover .rail-label,
+.rail-dot:focus-visible .rail-label {
+  opacity: 1;
+  transform: translateY(-50%) translateX(0);
+}
+
+.rail-dot[aria-current='true'] .rail-label {
+  color: var(--text-primary);
+}
+
+/* Below the breakpoint the sections stop being viewport panels, so the rail
+   has nothing to indicate. `display: none` also keeps it out of the
+   accessibility tree there rather than leaving a hidden duplicate nav. */
+@media (max-width: 860px) {
+  .rail {
+    display: none;
+  }
 }
 
 /* ── Hero ─────────────────────────────────────────────────────────────── */
@@ -788,11 +998,18 @@ a {
 }
 
 /* ── Scheduler spotlight ──────────────────────────────────────────────── */
+/* Stacked, not split. A three-column node graph in half a 1120px container
+   left the nodes flush against their own backdrop with nothing between them;
+   giving the canvas the full container width is what buys the graph room, and
+   the section has the vertical space to spend since it's a 100svh panel. */
 .spotlight {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 48px;
-  align-items: center;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.spotlight .section-head {
+  margin-bottom: 34px;
 }
 
 .spotlight-media {
@@ -800,41 +1017,34 @@ a {
   border-radius: 16px;
   border: 0.5px solid var(--border-subtle);
   overflow: hidden;
-  background: var(--bg-elevated);
+  background-color: var(--bg-elevated);
   box-shadow: 0 24px 64px rgba(0, 0, 0, 0.5);
+  /* The canvas grid lives here rather than on the SVG, so the padding below
+     shows it continuing past the graph on every side. */
+  background-image: radial-gradient(var(--border-subtle) 1px, transparent 1px);
+  background-size: 24px 24px;
+  padding: 28px;
 }
 
-.spotlight-copy h2 {
-  font-family: var(--font-title);
-  font-weight: 500;
-  font-size: clamp(26px, 3.5vw, 34px);
-  letter-spacing: -0.01em;
-  margin: 12px 0 14px;
-}
-
-.spotlight-copy p {
-  color: var(--text-secondary);
-  font-size: 15px;
-  margin: 0 0 24px;
-}
-
-.spotlight-list {
+/* The four points, a row under the canvas. Same accent-dot marker as the old
+   vertical list; auto-fit collapses it to fewer columns without a media query. */
+.spotlight-points {
   list-style: none;
-  margin: 0;
+  margin: 34px 0 0;
   padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 14px 28px;
 }
 
-.spotlight-list li {
+.spotlight-points li {
   display: flex;
   gap: 10px;
   font-size: 13.5px;
   color: var(--text-secondary);
 }
 
-.spotlight-list li::before {
+.spotlight-points li::before {
   content: '';
   width: 6px;
   height: 6px;
@@ -850,9 +1060,6 @@ a {
   display: block;
   width: 100%;
   height: auto;
-  background-color: var(--bg-base);
-  background-image: radial-gradient(var(--border-subtle) 1px, transparent 1px);
-  background-size: 20px 20px;
 }
 
 .sf-node rect {
@@ -865,14 +1072,14 @@ a {
 
 .sf-title {
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: 14px;
   font-weight: 700;
   fill: var(--text-primary);
 }
 
 .sf-sub {
   font-family: var(--font-mono);
-  font-size: 9px;
+  font-size: 10.5px;
   fill: var(--text-muted);
 }
 
@@ -1122,7 +1329,7 @@ footer {
 /* ── Download page ────────────────────────────────────────────────────── */
 .download-primary {
   max-width: 560px;
-  margin: 0 auto 40px;
+  margin: 0 auto calc(var(--section-y) * 0.75);
   background: var(--bg-elevated);
   border: 0.5px solid var(--border-subtle);
   border-radius: 18px;
@@ -1248,14 +1455,23 @@ footer {
 
 /* Snapshot channel. Borrows .download-others' width and heading, and the
    footer's .disclaimer box for the warning — the amber "read this" component
-   already exists, and a second one would just be the same box in a new name. */
+   already exists, and a second one would just be the same box in a new name.
+   It is a second channel, not more of the same list, so the break above it is
+   explicit: a section's worth of space plus the same hairline rule the rest of
+   the sheet divides things with. Gap alone read as clutter. */
 .download-snapshot {
-  margin-top: calc(var(--section-y) * 0.7);
+  margin-top: calc(var(--section-y) * 1.4);
+  padding-top: calc(var(--section-y) * 0.7);
+  border-top: 0.5px solid var(--border-subtle);
   animation-delay: 160ms;
 }
 
+.download-snapshot h3 {
+  margin-bottom: 22px;
+}
+
 .download-snapshot .disclaimer {
-  margin-bottom: 16px;
+  margin-bottom: 20px;
 }
 
 /* Amber platform icons. The two grids are otherwise identical components one
@@ -1274,6 +1490,12 @@ footer {
 
 .download-snapshot .dl-footnote {
   margin-top: 18px;
+}
+
+/* Page-level "all releases" link. Without this it sits a line under the
+   snapshot section's own footnote and the two centred links read as a pair. */
+.download-snapshot + .dl-footnote {
+  margin-top: calc(var(--section-y) * 0.85);
 }
 
 .dl-footnote {
@@ -1676,9 +1898,24 @@ footer {
 
 /* ── Responsive ───────────────────────────────────────────────────────── */
 @media (max-width: 860px) {
-  .spotlight {
-    grid-template-columns: 1fr;
-    gap: 32px;
+  /* The graph is wide by nature. Scaling it down to a phone's width would put
+     the node labels under 6px, so the canvas scrolls sideways inside its own
+     border instead — the page itself never scrolls horizontally. */
+  .spotlight-media {
+    overflow-x: auto;
+    padding: 20px;
+  }
+
+  .sf {
+    min-width: 600px;
+  }
+
+  .spotlight .section-head {
+    margin-bottom: 26px;
+  }
+
+  .spotlight-points {
+    margin-top: 26px;
   }
 
   /* Full-viewport panels stop meaning anything here: the feature grid becomes
@@ -1816,6 +2053,9 @@ footer {
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto;
+    /* Snapping moves the page on its own after you stop scrolling, which is
+       exactly the kind of unrequested motion this query opts out of. */
+    scroll-snap-type: none;
   }
 
   .reveal {
@@ -1825,7 +2065,8 @@ footer {
   }
 
   .btn:hover,
-  .dl-card[href]:hover {
+  .dl-card[href]:hover,
+  .rail-dot:hover {
     transform: none !important;
   }
 
@@ -1865,6 +2106,11 @@ footer {
   .spinner {
     animation-duration: 2s;
   }
+}
+
+/* The class counterpart to the query above, set by main.js. */
+.reduce-motion {
+  scroll-snap-type: none !important;
 }
 
 .reduce-motion .sf-node rect,

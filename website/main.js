@@ -133,4 +133,154 @@
       observer.observe(el)
     })
   }
+
+  // ── Section rail ────────────────────────────────────────────────────────
+  // The indicator for the desktop scroll snapping (styles.css, .section-full).
+  // Sections opt in with data-nav="<label>", which only the landing page
+  // carries, so no sub-page grows a rail for sections it doesn't have. CSS
+  // hides it below 861px, where the sections stop being viewport panels and
+  // snapping is off.
+  //
+  // The dots are ordinary #hash links, so the delegated handler above already
+  // gives them smooth scrolling and a history entry — nothing to duplicate.
+  var sections = document.querySelectorAll('[data-nav][id]')
+
+  if (sections.length > 1) {
+    var rail = document.createElement('nav')
+    rail.className = 'rail'
+    rail.setAttribute('aria-label', 'Sections')
+
+    var dots = []
+    for (var s = 0; s < sections.length; s++) {
+      var dot = document.createElement('a')
+      dot.className = 'rail-dot'
+      dot.href = '#' + sections[s].id
+      var label = document.createElement('span')
+      label.className = 'rail-label'
+      label.textContent = sections[s].getAttribute('data-nav')
+      dot.appendChild(label)
+      rail.appendChild(dot)
+      dots.push(dot)
+    }
+
+    document.body.appendChild(rail)
+
+    var activeSection = null
+
+    var setActive = function (el) {
+      if (el === activeSection) return
+      activeSection = el
+      for (var i = 0; i < dots.length; i++) {
+        if (sections[i] === el) dots[i].setAttribute('aria-current', 'true')
+        else dots[i].removeAttribute('aria-current')
+      }
+    }
+
+    // Whichever section covers the middle of the viewport is the one you're
+    // looking at. Falling back to the nearest edge covers the gaps a snapped
+    // layout doesn't normally produce — a short last section above the footer,
+    // or the moment mid-scroll where no section spans the midpoint.
+    var currentSection = function () {
+      var mid = window.innerHeight / 2
+      var best = null
+      var bestDist = Infinity
+      for (var i = 0; i < sections.length; i++) {
+        var r = sections[i].getBoundingClientRect()
+        if (r.top <= mid && r.bottom >= mid) return sections[i]
+        var dist = Math.min(Math.abs(r.top - mid), Math.abs(r.bottom - mid))
+        if (dist < bestDist) {
+          bestDist = dist
+          best = sections[i]
+        }
+      }
+      return best
+    }
+
+    var railQueued = false
+
+    var updateRail = function () {
+      railQueued = false
+      setActive(currentSection())
+    }
+
+    var requestRail = function () {
+      if (railQueued) return
+      railQueued = true
+      window.requestAnimationFrame(updateRail)
+    }
+
+    // An observer on the same middle band as currentSection() wakes us only
+    // when a section crosses it, rather than on every scroll frame.
+    if ('IntersectionObserver' in window) {
+      var railObserver = new IntersectionObserver(requestRail, {
+        rootMargin: '-45% 0px -45% 0px',
+        threshold: 0,
+      })
+      for (var o = 0; o < sections.length; o++) {
+        railObserver.observe(sections[o])
+      }
+    } else {
+      window.addEventListener('scroll', requestRail, { passive: true })
+    }
+
+    window.addEventListener('resize', requestRail)
+    updateRail()
+  }
+
+  // ── Cursor glow on tiles ────────────────────────────────────────────────
+  // Feeds --mx/--my (tile-relative pixels) to the radial gradient in
+  // styles.css. One delegated listener rather than one per tile, so the cards
+  // download.js and changelog.js render later are covered without either
+  // script knowing about this. Mouse and pen only: on touch there is no hover
+  // to follow, and the glow would stick to whatever you last tapped.
+  var GLOW_SELECTOR = '.feat, .doc-section, .dl-card, .release, .cta-panel, .spotlight-media'
+
+  if (window.matchMedia('(hover: hover) and (pointer: fine)').matches) {
+    var glowTile = null
+    var glowX = 0
+    var glowY = 0
+    var glowQueued = false
+
+    var paintGlow = function () {
+      glowQueued = false
+      if (!glowTile) return
+      var rect = glowTile.getBoundingClientRect()
+      glowTile.style.setProperty('--mx', Math.round(glowX - rect.left) + 'px')
+      glowTile.style.setProperty('--my', Math.round(glowY - rect.top) + 'px')
+    }
+
+    document.addEventListener(
+      'pointermove',
+      function (e) {
+        if (e.pointerType && e.pointerType !== 'mouse' && e.pointerType !== 'pen') return
+
+        // Left values stay put on the tile you leave, so the glow fades out
+        // from where the cursor was instead of jumping to the tile's centre.
+        glowTile = e.target.closest ? e.target.closest(GLOW_SELECTOR) : null
+        if (!glowTile) return
+
+        glowX = e.clientX
+        glowY = e.clientY
+        if (!glowQueued) {
+          glowQueued = true
+          window.requestAnimationFrame(paintGlow)
+        }
+      },
+      { passive: true },
+    )
+
+    // A scroll moves the tile out from under a stationary cursor, and no
+    // pointermove follows. Recomputing from the same viewport coordinates
+    // keeps the light where the cursor actually is; it costs a frame only
+    // while a tile is hovered.
+    window.addEventListener(
+      'scroll',
+      function () {
+        if (!glowTile || glowQueued) return
+        glowQueued = true
+        window.requestAnimationFrame(paintGlow)
+      },
+      { passive: true },
+    )
+  }
 })()

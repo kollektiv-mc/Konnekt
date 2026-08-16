@@ -94,7 +94,9 @@
       </div>
     </nav>
 
-    <header class="hero section-full" id="top">
+    <!-- data-nav marks a section for the right-hand section rail main.js builds,
+         and supplies its label. Only this page carries them. -->
+    <header class="hero section-full" id="top" data-nav="Top">
       <div class="hero-inner">
         <h1>
           <span class="hero-lead">
@@ -121,7 +123,7 @@
       </div>
     </header>
 
-    <section class="section-full" id="about">
+    <section class="section-full" id="about" data-nav="About">
       <div class="container">
         <div class="section-head reveal">
           <span class="eyebrow">[i] about</span>
@@ -153,7 +155,7 @@
       </div>
     </section>
 
-    <section class="section-full" id="features">
+    <section class="section-full" id="features" data-nav="Features">
       <div class="container">
         <div class="section-head reveal">
           <span class="eyebrow">&gt;_ features</span>
@@ -247,88 +249,93 @@
       </div>
     </section>
 
-    <section class="section-full" id="scheduler">
+    <section class="section-full" id="scheduler" data-nav="Scheduler">
       <div class="container">
         <div class="spotlight">
-          <div class="spotlight-media reveal">
+          <div class="section-head reveal">
+            <span class="eyebrow">() scheduler</span>
+            <h2>Automate with a graph, not cron</h2>
+            <p>Wire triggers, conditions and commands on a canvas.</p>
+          </div>
+          <div class="spotlight-media reveal" style="--reveal-delay: 80ms">
             <!-- Node-graph motif. Static SVG, animated purely in CSS (.sf-* in
-                 styles.css); node colours mirror the app's blockMeta.ts. -->
+                 styles.css); node colours mirror the app's blockMeta.ts.
+                 Geometry: 60px horizontal and 50px vertical clear on the 900x360
+                 canvas, three
+                 196-wide columns at x=60/352/644 with 96px of edge run between
+                 them. The dotted backdrop is .spotlight-media's, not the SVG's,
+                 so it continues past the graph rather than stopping at it. -->
             <svg
               class="sf"
-              viewBox="0 0 524 300"
+              viewBox="0 0 900 360"
               role="img"
               aria-label="A node graph: a schedule trigger feeds a player-count condition, which branches into a server restart and a notification."
             >
-              <path class="sf-edge" d="M 138 152 C 167 152 167 152 196 152" />
-              <path class="sf-edge" d="M 326 142 C 355 142 355 72 384 72" />
-              <path class="sf-edge" d="M 326 162 C 355 162 355 232 384 232" />
+              <path class="sf-edge" d="M 256 180 C 304 180 304 180 352 180" />
+              <path class="sf-edge" d="M 548 166 C 596 166 596 83 644 83" />
+              <path class="sf-edge" d="M 548 194 C 596 194 596 277 644 277" />
 
               <path
                 class="sf-pulse"
                 pathLength="100"
                 style="--d: 1.4s"
-                d="M 138 152 C 167 152 167 152 196 152"
+                d="M 256 180 C 304 180 304 180 352 180"
               />
               <path
                 class="sf-pulse"
                 pathLength="100"
                 style="--d: 3.4s"
-                d="M 326 142 C 355 142 355 72 384 72"
+                d="M 548 166 C 596 166 596 83 644 83"
               />
               <path
                 class="sf-pulse"
                 pathLength="100"
                 style="--d: 5.4s"
-                d="M 326 162 C 355 162 355 232 384 232"
+                d="M 548 194 C 596 194 596 277 644 277"
               />
 
               <g class="sf-node" style="--nc: #7c3aed; --d: 0s">
-                <rect x="8" y="130" width="130" height="44" rx="7" />
-                <text class="sf-title" x="20" y="150">Schedule</text>
-                <text class="sf-sub" x="20" y="164">every 6h</text>
-                <circle class="sf-port" cx="138" cy="152" r="3.5" style="--pc: #7c3aed" />
+                <rect x="60" y="147" width="196" height="66" rx="10" />
+                <text class="sf-title" x="80" y="176">Schedule</text>
+                <text class="sf-sub" x="80" y="195">every 6h</text>
+                <circle class="sf-port" cx="256" cy="180" r="5" style="--pc: #7c3aed" />
               </g>
 
               <g class="sf-node" style="--nc: #b45309; --d: 2s">
-                <rect x="196" y="130" width="130" height="44" rx="7" />
-                <text class="sf-title" x="208" y="150">Players = 0</text>
-                <text class="sf-sub" x="208" y="164">condition</text>
-                <circle class="sf-port" cx="196" cy="152" r="3.5" style="--pc: #94a3b8" />
-                <circle class="sf-port" cx="326" cy="142" r="3.5" style="--pc: #22c55e" />
-                <circle class="sf-port" cx="326" cy="162" r="3.5" style="--pc: #f97316" />
+                <rect x="352" y="147" width="196" height="66" rx="10" />
+                <text class="sf-title" x="372" y="176">Players = 0</text>
+                <text class="sf-sub" x="372" y="195">condition</text>
+                <circle class="sf-port" cx="352" cy="180" r="5" style="--pc: #94a3b8" />
+                <circle class="sf-port" cx="548" cy="166" r="5" style="--pc: #22c55e" />
+                <circle class="sf-port" cx="548" cy="194" r="5" style="--pc: #f97316" />
               </g>
 
               <g class="sf-node" style="--nc: #0369a1; --d: 4s">
-                <rect x="384" y="50" width="130" height="44" rx="7" />
-                <text class="sf-title" x="396" y="70">Restart</text>
-                <text class="sf-sub" x="396" y="84">action</text>
-                <circle class="sf-port" cx="384" cy="72" r="3.5" style="--pc: #94a3b8" />
+                <rect x="644" y="50" width="196" height="66" rx="10" />
+                <text class="sf-title" x="664" y="79">Restart</text>
+                <text class="sf-sub" x="664" y="98">action</text>
+                <circle class="sf-port" cx="644" cy="83" r="5" style="--pc: #94a3b8" />
               </g>
 
               <g class="sf-node" style="--nc: #047857; --d: 6s">
-                <rect x="384" y="210" width="130" height="44" rx="7" />
-                <text class="sf-title" x="396" y="230">Notify</text>
-                <text class="sf-sub" x="396" y="244">discord</text>
-                <circle class="sf-port" cx="384" cy="232" r="3.5" style="--pc: #94a3b8" />
+                <rect x="644" y="244" width="196" height="66" rx="10" />
+                <text class="sf-title" x="664" y="273">Notify</text>
+                <text class="sf-sub" x="664" y="292">discord</text>
+                <circle class="sf-port" cx="644" cy="277" r="5" style="--pc: #94a3b8" />
               </g>
             </svg>
           </div>
-          <div class="spotlight-copy reveal" style="--reveal-delay: 80ms">
-            <span class="eyebrow">() scheduler</span>
-            <h2>Automate with a graph, not cron</h2>
-            <p>Wire triggers, conditions and commands on a canvas.</p>
-            <ul class="spotlight-list">
-              <li>Schedule, cron or event triggers</li>
-              <li>Branch on success or failure</li>
-              <li>Read live server values</li>
-              <li>Run now or in the background</li>
-            </ul>
-          </div>
+          <ul class="spotlight-points reveal" style="--reveal-delay: 140ms">
+            <li>Schedule, cron or event triggers</li>
+            <li>Branch on success or failure</li>
+            <li>Read live server values</li>
+            <li>Run now or in the background</li>
+          </ul>
         </div>
       </div>
     </section>
 
-    <section class="section-full" id="privacy">
+    <section class="section-full" id="privacy" data-nav="Local-first">
       <div class="container">
         <div class="section-head reveal">
           <span class="eyebrow">[#] local-first</span>
@@ -381,7 +388,7 @@
       </div>
     </section>
 
-    <section class="cta section-full" id="download">
+    <section class="cta section-full" id="download" data-nav="Download">
       <div class="container">
         <div class="cta-panel reveal">
           <span class="eyebrow">[&gt;] download</span>
