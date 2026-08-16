@@ -351,90 +351,98 @@ a {
   pointer-events: none;
 }
 
-/* ── Tile glow — a soft accent light that follows the cursor ───────────── */
+/* ── Tile glow — a soft accent light on the border, following the cursor ── */
 /* One group selector rather than a class on every card, so the tiles
    download.js and changelog.js render get it without either script changing.
    main.js writes --mx/--my (px, tile-relative) on pointermove; the fallback
-   50%/50% keeps the glow centred if the pointer never moves — hovering via
+   50%/50% keeps the light centred if the pointer never moves — hovering via
    keyboard focus, or a tile that appears under a stationary cursor. */
 .feat,
 .doc-section,
 .dl-card,
+.download-primary,
 .release,
 .cta-panel,
 .spotlight-media {
   position: relative;
-  isolation: isolate;
-  --glow-size: 320px;
+  --glow-size: 260px;
   transition: border-color var(--duration-fast) ease;
-}
-
-.feat::before,
-.doc-section::before,
-.dl-card::before,
-.release::before,
-.cta-panel::before,
-.spotlight-media::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-  border-radius: inherit;
-  pointer-events: none;
-  opacity: 0;
-  transition: opacity var(--duration-panel) var(--ease-standard);
-  background: radial-gradient(
-    var(--glow-size) circle at var(--mx, 50%) var(--my, 50%),
-    rgb(var(--accent-rgb) / 0.14),
-    rgb(var(--accent-rgb) / 0.05) 45%,
-    transparent 72%
-  );
-}
-
-/* These surfaces are translucent, so the glow has to sit behind the content
-   rather than over it — an accent wash across body copy reads as a tint. */
-.feat > *,
-.doc-section > *,
-.dl-card > *,
-.release > *,
-.cta-panel > *,
-.spotlight-media > * {
-  position: relative;
-  z-index: 1;
 }
 
 .feat:hover,
 .doc-section:hover,
 .dl-card:hover,
+.download-primary:hover,
 .release:hover,
 .cta-panel:hover,
 .spotlight-media:hover {
   border-color: var(--border-hover);
 }
 
-.feat:hover::before,
-.doc-section:hover::before,
-.dl-card:hover::before,
-.release:hover::before,
-.cta-panel:hover::before,
-.spotlight-media:hover::before {
-  opacity: 1;
+/* The ring is the gradient masked down to its own 1px padding: paint the
+   rectangle, then subtract the content box, leaving only the edge lit.
+   The whole thing is gated on that mask — without it the gradient would fill
+   the tile, which is the opposite of the intent — so browsers that can't do it
+   get the border-colour hover above and nothing else. */
+@supports (mask-composite: exclude) or (-webkit-mask-composite: xor) {
+  .feat::after,
+  .doc-section::after,
+  .dl-card::after,
+  .download-primary::after,
+  .release::after,
+  .cta-panel::after,
+  .spotlight-media::after {
+    content: '';
+    position: absolute;
+    /* Absolute children resolve against the padding box, so the half-pixel
+       pulls the ring back out over the host's own hairline instead of drawing
+       a second line just inside it. */
+    inset: -0.5px;
+    border-radius: inherit;
+    padding: 1px;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity var(--duration-panel) var(--ease-standard);
+    background: radial-gradient(
+      var(--glow-size) circle at var(--mx, 50%) var(--my, 50%),
+      rgb(var(--accent-rgb) / 0.45),
+      transparent 60%
+    );
+    -webkit-mask:
+      linear-gradient(#000 0 0) content-box,
+      linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask:
+      linear-gradient(#000 0 0) content-box,
+      linear-gradient(#000 0 0);
+    mask-composite: exclude;
+  }
+
+  .feat:hover::after,
+  .doc-section:hover::after,
+  .dl-card:hover::after,
+  .download-primary:hover::after,
+  .release:hover::after,
+  .cta-panel:hover::after,
+  .spotlight-media:hover::after {
+    opacity: 1;
+  }
+
+  /* A platform with no asset isn't a link; lighting it up on hover would offer
+     something that isn't there. */
+  .dl-card.is-unavailable::after {
+    display: none;
+  }
 }
 
-/* Smaller tiles want a tighter light — a 320px circle on a 60px-tall card is
-   a flat wash, not a glow. */
+/* Smaller tiles want a tighter light — a 260px circle on a 60px-tall card
+   lights the whole edge at once, which reads as a flat outline. */
 .dl-card {
-  --glow-size: 200px;
+  --glow-size: 180px;
 }
 
-/* A platform with no asset isn't a link; lighting it up on hover would offer
-   something that isn't there. */
 .dl-card.is-unavailable:hover {
   border-color: var(--border-subtle);
-}
-
-.dl-card.is-unavailable::before {
-  display: none;
 }
 
 /* ── Reveal-on-scroll (progressive enhancement; visible by default) ─────── */
@@ -1012,6 +1020,9 @@ a {
   margin-bottom: 34px;
 }
 
+/* The canvas grid used to live here as a background. It moved into the SVG so
+   it pans with the nodes, which also means the SVG now fills this box edge to
+   edge — the graph's breathing room is the margin inside its own viewBox. */
 .spotlight-media {
   position: relative;
   border-radius: 16px;
@@ -1019,11 +1030,6 @@ a {
   overflow: hidden;
   background-color: var(--bg-elevated);
   box-shadow: 0 24px 64px rgba(0, 0, 0, 0.5);
-  /* The canvas grid lives here rather than on the SVG, so the padding below
-     shows it continuing past the graph on every side. */
-  background-image: radial-gradient(var(--border-subtle) 1px, transparent 1px);
-  background-size: 24px 24px;
-  padding: 28px;
 }
 
 /* The four points, a row under the canvas. Same accent-dot marker as the old
@@ -1056,18 +1062,47 @@ a {
 }
 
 /* ── Scheduler node-graph animation — static SVG, CSS-driven ──────────── */
+/* One 24s master cycle drives everything: the reel pans one frame every 6s
+   (5s held, 1s gliding), and each frame's nodes and pulses are offset by that
+   frame's --t0, so a graph only ever animates while it is the one on screen.
+   Node delays inside a frame stay small and relative (--d), which is what
+   keeps five frames of timing readable in the markup. */
 .sf {
   display: block;
   width: 100%;
   height: auto;
 }
 
-.sf-node rect {
+.sf-reel {
+  animation: sf-pan 24s cubic-bezier(0.65, 0, 0.35, 1) infinite;
+}
+
+.sf-dot {
+  fill: var(--border-subtle);
+}
+
+/* Scoped to .sf-box rather than every rect in the group: .sf-bar is a rect too,
+   and it carries the flat category colour, not the node's animated stroke. */
+.sf-node .sf-box {
   fill: var(--bg-elevated);
   stroke: var(--border-subtle);
   stroke-width: 1.5;
-  animation: sf-lit 8s var(--ease-standard) infinite;
-  animation-delay: var(--d, 0s);
+  animation: sf-lit 24s var(--ease-standard) infinite;
+  animation-delay: calc(var(--t0, 0s) + var(--d, 0s));
+}
+
+/* The app draws a block's category as a left border (blockMeta.ts's
+   CATEGORY_BORDER_CLASS); inset a couple of units here so it reads inside the
+   rounded corner rather than fighting it. */
+.sf-bar {
+  fill: var(--nc, var(--text-faint));
+}
+
+.sf-caption {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  fill: var(--text-faint);
 }
 
 .sf-title {
@@ -1099,66 +1134,118 @@ a {
   stroke-width: 1.5;
   stroke-dasharray: 12 100;
   filter: drop-shadow(0 0 3px rgb(var(--accent-rgb) / 0.6));
-  animation: sf-pulse 8s linear infinite;
-  animation-delay: var(--d, 0s);
+  animation: sf-pulse 24s linear infinite;
+  animation-delay: calc(var(--t0, 0s) + var(--d, 0s));
 }
 
+/* Percentages of the 24s master cycle: lit for 0.6s, faded out by 1.9s. */
 @keyframes sf-lit {
   0%,
-  8% {
+  2.5% {
     stroke: var(--accent);
     filter: drop-shadow(0 0 4px rgb(var(--accent-rgb) / 0.5));
   }
-  25%,
+  8%,
   100% {
     stroke: var(--border-subtle);
     filter: none;
   }
 }
 
-/* Travel occupies 7.5% of the 8s cycle (0.6s), not 20% (1.6s). The pulse
-   delays (1.4s / 3.4s / 5.4s, set per-edge in index.html) are correct as they
-   stand; the travel was simply too slow, so each pulse landed a full second
-   after the node it was heading for had already lit. 7.5% puts the arrivals at
-   2.0s / 4.0s / 6.0s — exactly the downstream node's `sf-lit` delay. */
+/* Travel occupies 2.5% of the 24s cycle (0.6s). Each edge's pulse is set off
+   0.6s before the node it feeds lights up (index.html's per-element --d), so
+   the pulse lands exactly as its target comes on. */
 @keyframes sf-pulse {
   0% {
     stroke-dashoffset: 112;
     opacity: 0;
   }
-  1%,
-  6.5% {
+  0.33%,
+  2.17% {
     opacity: 1;
   }
-  7.5%,
+  2.5%,
   100% {
     stroke-dashoffset: 0;
     opacity: 0;
   }
 }
 
+/* Five frames stacked 360 apart, one pan every 6s: 5s held, 1s gliding. The
+   fifth is a copy of the first, so the jump back to 0 at the end of the cycle
+   lands on the identical picture and cannot be seen. */
+@keyframes sf-pan {
+  0%,
+  20.83% {
+    transform: translateY(0);
+  }
+  25%,
+  45.83% {
+    transform: translateY(-360px);
+  }
+  50%,
+  70.83% {
+    transform: translateY(-720px);
+  }
+  75%,
+  95.83% {
+    transform: translateY(-1080px);
+  }
+  100% {
+    transform: translateY(-1440px);
+  }
+}
+
 /* ── CTA / Download ───────────────────────────────────────────────────── */
+/* The page's last call to action, so it carries more weight than a section
+   panel: the hero's display face, an accent-lit word, and a faint accent wash
+   from the top edge. Everything here is a pattern the sheet already uses —
+   .subpage-head h1's type treatment and the token accent tints — just applied
+   to one more surface. */
 .cta-panel {
-  max-width: 640px;
+  max-width: 720px;
   margin: 0 auto;
   text-align: center;
-  background: var(--bg-elevated);
-  border: 0.5px solid var(--border-subtle);
+  background-color: var(--bg-elevated);
+  background-image: radial-gradient(
+    120% 90% at 50% 0%,
+    rgb(var(--accent-rgb) / 0.07),
+    transparent 62%
+  );
+  border: 0.5px solid rgb(var(--accent-rgb) / 0.18);
   border-radius: 20px;
-  padding: 56px 40px;
+  padding: 64px 48px;
 }
 
 .cta-panel h2 {
-  font-family: var(--font-title);
-  font-weight: 500;
-  font-size: clamp(24px, 3.5vw, 32px);
-  margin: 0 0 12px;
+  font-family: var(--font-display);
+  font-weight: 900;
+  font-size: clamp(30px, 4.5vw, 44px);
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+  margin: 0 0 14px;
+}
+
+.cta-panel h2 .accent {
+  color: var(--accent);
+  text-shadow: 0 0 32px rgb(var(--accent-rgb) / 0.4);
 }
 
 .cta-panel p {
   color: var(--text-secondary);
-  font-size: 14.5px;
-  margin: 0 0 28px;
+  font-size: 15.5px;
+  margin: 0 0 30px;
+}
+
+.cta-actions .btn {
+  font-size: 15px;
+  padding: 13px 26px;
+}
+
+/* The shared tile hover would swap the accent hairline for a white one, which
+   reads as the panel losing weight exactly when you reach for it. */
+.cta-panel:hover {
+  border-color: rgb(var(--accent-rgb) / 0.3);
 }
 
 .cta-actions {
@@ -1903,11 +1990,10 @@ footer {
      border instead — the page itself never scrolls horizontally. */
   .spotlight-media {
     overflow-x: auto;
-    padding: 20px;
   }
 
   .sf {
-    min-width: 600px;
+    min-width: 700px;
   }
 
   .spotlight .section-head {
@@ -2070,7 +2156,10 @@ footer {
     transform: none !important;
   }
 
-  .sf-node rect,
+  /* Parking the reel leaves the first frame showing; the rest sit below it and
+     are clipped by the SVG viewport. */
+  .sf-reel,
+  .sf-node .sf-box,
   .sf-pulse {
     animation: none !important;
   }
@@ -2113,7 +2202,8 @@ footer {
   scroll-snap-type: none !important;
 }
 
-.reduce-motion .sf-node rect,
+.reduce-motion .sf-reel,
+.reduce-motion .sf-node .sf-box,
 .reduce-motion .sf-pulse {
   animation: none !important;
 }

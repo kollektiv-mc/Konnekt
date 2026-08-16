@@ -233,7 +233,8 @@
   // download.js and changelog.js render later are covered without either
   // script knowing about this. Mouse and pen only: on touch there is no hover
   // to follow, and the glow would stick to whatever you last tapped.
-  var GLOW_SELECTOR = '.feat, .doc-section, .dl-card, .release, .cta-panel, .spotlight-media'
+  var GLOW_SELECTOR =
+    '.feat, .doc-section, .dl-card, .download-primary, .release, .cta-panel, .spotlight-media'
 
   if (window.matchMedia('(hover: hover) and (pointer: fine)').matches) {
     var glowTile = null
