@@ -672,6 +672,37 @@ a {
   margin: 0;
 }
 
+/* ── About facts — a plain row, deliberately not a .feat card grid ────── */
+/* The page already spends two grids of .feat cards; a third would read as
+   filler. `auto-fit` collapses this to one column on narrow screens without a
+   media query, the same way .feat-grid does. */
+.about-facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 28px 40px;
+  max-width: 880px;
+  margin: 0 auto;
+  padding-top: 34px;
+  border-top: 0.5px solid var(--border-subtle);
+}
+
+/* Mirrors .eyebrow rather than reusing it: these are terms in a definition
+   list, not a section eyebrow. */
+.about-fact dt {
+  font-family: var(--font-title);
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 10px;
+}
+
+.about-fact dd {
+  margin: 0;
+  font-size: 13.5px;
+  color: var(--text-secondary);
+}
+
 /* ── Feature tiles — static grid, everything visible at rest ─────────── */
 .feat-grid {
   display: grid;
@@ -1725,11 +1756,14 @@ footer {
   .nav-menu.is-open .nav-links li:nth-child(4) {
     animation-delay: 120ms;
   }
-  .nav-menu.is-open .nav-actions > .btn:nth-child(1) {
+  .nav-menu.is-open .nav-links li:nth-child(5) {
     animation-delay: 160ms;
   }
-  .nav-menu.is-open .nav-actions > .btn:nth-child(2) {
+  .nav-menu.is-open .nav-actions > .btn:nth-child(1) {
     animation-delay: 200ms;
+  }
+  .nav-menu.is-open .nav-actions > .btn:nth-child(2) {
+    animation-delay: 240ms;
   }
 
   .nav-links {
