@@ -685,12 +685,119 @@ todo list, not a target.
     the same page (inline vs utility, same declared width) returns `1px` for
     both — it's Chrome's used-value rounding, identical before and after.
     Worth remembering before "fixing" a hairline that was never broken.
-- 112 `style={{}}` remain across 33 files, but only **50 are backlog**: worlds
-  (44) and `App.tsx` (6). The other 62 live in directories already ratcheted to
-  `error`, so each is a lint-enforced documented exception rather than
-  unmigrated code. Worlds is the last tile and the hardest — react-three-fiber
-  scene code, and the only remaining cluster that still needs `wails dev` + a
-  configured server to verify properly.
+- ✅ **Tenth slice done: the worlds tile** (`frontend/src/tiles/worlds/**`) —
+  `WorldHud.tsx` 51 → 0, `index.tsx` 15 → 0, `scene/WorldsScene.tsx` 8 → 1,
+  `scene/Planet.tsx` 4 → 2, with `src/tiles/worlds/**/*.tsx` added to the
+  ratcheted-`error` glob. **Every tile directory is now migrated.**
+  - **This tile was booked at 44 and was really 78.** The 44 came from a
+    `grep 'style={{'`, which cannot see the `style={SOME_CONST}` form — and
+    `WorldHud.tsx` was built almost entirely from it (`CARD`, `ROW`, `LABEL`,
+    and a `BTN(danger)` factory returning `React.CSSProperties`, applied 32
+    times). ESLint's own `no-restricted-syntax` count is the honest number.
+    **Count with `pnpm exec eslint src`, not grep.**
+  - The `React.CSSProperties`-constant idiom converts cleanly to class strings
+    (`const ROW = 'flex justify-between gap-2 py-0.5'`) with one trap: a factory
+    that varied padding per call cannot be expressed by appending a second
+    padding utility. `{...BTN(), padding: '1px 5px'}` relied on object-spread
+    order; `${BTN()} px-[5px]` does not, because class-attribute order has no
+    bearing on which of `px-[7px]`/`px-[5px]` wins the cascade. Split into a
+    padding-less `BTN_BASE` plus explicit `BTN`/`BTN_CLOSE` variants.
+  - **Colour rule applied both ways.** `#22c55e` *is* `--success`'s dark value,
+    so it became `text-success`/`bg-success` — no change in the default theme,
+    and it now follows the light theme's darker green instead of staying too
+    pale. `#ef4444` is **not** `--danger`'s dark value (`#f87171`), so it stayed
+    a literal `text-[#ef4444]`, matching every prior slice. Take the token when
+    it is an exact match in the default theme; keep the literal when it is not,
+    rather than quietly restyling inside a mechanical pass.
+  - **Two third-party components write their own inline styles, and one of them
+    wins.** r3f's `<Canvas>` renders its container with
+    `style={{position:'relative', width, height, overflow, ...yourStyle}}`, so a
+    `className` can never beat that inline `position` — the Canvas keeps its
+    inline `style` behind a documented disable. drei's `<Html>` (non-`transform`
+    mode) merges only `position`/`transform` and passes `className` straight
+    through, so its `pointerEvents`/`userSelect` *did* convert. Check the
+    library's render call before assuming either way.
+  - `Planet.tsx`'s two label spans keep `style={{ color }}` (a per-world /
+    per-dimension runtime colour) and nothing else. Their `opacity: 0` became
+    `opacity-0`: it is only the first-frame value, since `useFrame` writes
+    `labelSpanRef.style.opacity` every frame and inline still beats a class.
+  - **Tailwind v4's `transition-transform` covers `translate`, not just
+    `transform`** — verified live, `transitionProperty` computes to
+    `"transform, translate, scale, rotate"`. This matters because
+    `-translate-x-full` sets the standalone `translate` property (the same v4
+    behaviour the eighth slice found for `-rotate-90`). Had the utility covered
+    only `transform`, the HUD panel's slide-in would have become an instant jump
+    with every test still green.
+  - `font-mono` replaced `fontFamily: 'monospace'`, which **is** a visible
+    change: this tile now renders in the app's registered stack like the other
+    246 `font-mono` usages instead of the host's generic default. Deliberate —
+    the inline value was the outlier.
+  - First use of the `border-hairline` utility, which had existed since the token
+    layer landed with **zero** callers (all 146 hairline borders are spelled as
+    arbitrary values). Both compute identically — Chrome reports `1px` either
+    way, since it rounds border widths to whole device pixels — so this is a
+    readability change, not a rendering one.
+  - **Not live-verifiable in the browser**, unlike the players slice: the tile
+    only mounts when `GetActiveTiles` returns it, and that is a Wails IPC call.
+    What *was* verified against the dev server instead: all 46 utility classes
+    the converted markup relies on exist in the compiled stylesheet (a class
+    Tailwind never generated would silently drop the style), and each computes to
+    its inline predecessor's value — `text-1xs/2xs/3xs` → 11/10/9px,
+    `text-text-faint` → `rgba(255,255,255,0.25)`, `w-1/3` → 33.33%,
+    `duration-[250ms]` + `ease-[cubic-bezier(0.25,0,0.25,1)]` → exactly the old
+    shorthand's timing.
+  - Verified: `pnpm typecheck` (0 errors), `pnpm lint` (0 errors), `pnpm test`,
+    `pnpm build` + `pnpm check-bundle` (well under budget), `prettier --check`
+    clean on every file touched.
+- 71 `style={{}}` remain across the tree, but only **6 are backlog** — all in
+  `App.tsx`. The other 65 live in directories ratcheted to `error`, so each is a
+  lint-enforced documented exception rather than unmigrated code.
+
+**P1 — Modrinth client: HTTP paths are testable, and now tested**
+- ✅ **`ModrinthClient.baseURL` is injectable**, the same shape `UpdateService`
+  has had all along. The production change is three lines — a field, a
+  constructor assignment, `c.baseURL + path` in `doJSON` — and it is what the
+  checklist's "needs an injectable base URL" item was waiting on. `update.go`'s
+  doc comment used to cite `modrinth.go`'s hardcoded base as the counter-example;
+  that sentence was true when written and is not now, so it was rewritten rather
+  than left as a trap for the next reader.
+- ✅ **`modrinth_test.go` goes from 7 tests to 28**, and `modrinth.go` from 2 of
+  17 functions covered to **15 of 17** — the two left return a struct literal and
+  a constant. `backend/services` coverage is now 29.7% of statements.
+- What the tests pin down, beyond the two paths the backlog named:
+  - **429 handling.** `Retry-After: 0` keeps them instant. Three separate facts:
+    a 429 followed by a 200 succeeds; three consecutive 429s produce "exceeded
+    retry limit"; and **`maxRetries` is a total attempt count, not
+    retries-after-the-first** — the counter says 3, not 4. That is the kind of
+    off-by-one a rewrite silently flips.
+  - **The backoff respects context cancellation.** With no `Retry-After` the
+    client waits its 2s default; the test cancels after 50ms and asserts a
+    cancelled-context error in well under 2s. It deliberately does *not* time the
+    2s default — asserting a wall-clock sleep buys a flaky test and nothing else.
+  - **Search dedup** collapses a repeated `project_id`, keeps the *first*
+    occurrence, and passes `total_hits`/`offset` through untouched.
+  - **`GetProject`'s author resolution**: Owner role wins over an earlier
+    Contributor; with no Owner the first member is the fallback; and a failing
+    `/members` lookup leaves the project intact with an empty author rather than
+    failing the call.
+  - **`ResolveDependencies`**, the largest untested block in the file and only
+    reachable over HTTP: `incompatible`/`embedded` skipped, `optional` returned
+    with `Required: false`, the `installed` map setting `AlreadyInstalled`,
+    transitive required deps followed breadth-first without re-resolving through
+    a cycle, and an empty filtered version query falling back to the unfiltered
+    one before giving up.
+  - **Which file a version resolves to** — `primary: true` beats file order, and
+    the first file is the fallback when nothing is marked primary. This decides
+    the download URL and the sha512 that gets verified.
+- **The tests were checked against broken code, not just passing code.**
+  Disabling the 429 branch failed 3 tests; disabling the dedup check failed 1;
+  dropping the `incompatible`/`embedded` skip failed 1. Each was restored and
+  re-run green. A suite written after the fact proves nothing until it has been
+  shown to fail.
+- A small helper, `writeString(t, w, body)`, wraps the `w.Write` in every fake
+  handler. CLAUDE.md's "no blank `_` error-ignores" rule does not stop at
+  non-test code, and 30-odd unchecked `w.Write` calls would have been the largest
+  cluster of them in the repo.
 
 **P2 — React Compiler-readiness lint rules**
 - Revisit enabling `eslint-plugin-react-hooks`'s full `recommended`/

@@ -35,14 +35,19 @@ var loaderProjectType = map[string]struct{ projectType, modrinthLoader string }{
 	"vanilla":  {"mod", ""},
 }
 
-// ModrinthClient implements ModProvider for the Modrinth v2 API.
+// ModrinthClient implements ModProvider for the Modrinth v2 API. baseURL is
+// injectable, the same way UpdateService's is, so tests can point the client at
+// an httptest.Server — the 429/Retry-After retry and the search-hit dedup are
+// only reachable through a real HTTP round-trip.
 type ModrinthClient struct {
-	http *http.Client
+	http    *http.Client
+	baseURL string
 }
 
 func NewModrinthClient() *ModrinthClient {
 	return &ModrinthClient{
-		http: &http.Client{Timeout: 30 * time.Second},
+		http:    &http.Client{Timeout: 30 * time.Second},
+		baseURL: modrinthBase,
 	}
 }
 
@@ -265,7 +270,7 @@ func (c *ModrinthClient) ResolveDependencies(
 // doJSON performs a GET against the Modrinth API, handling rate-limits (429)
 // with up to 3 retries and honoring the Retry-After header.
 func (c *ModrinthClient) doJSON(ctx context.Context, path string, out any) error {
-	reqURL := modrinthBase + path
+	reqURL := c.baseURL + path
 	const maxRetries = 3
 
 	for attempt := 0; attempt < maxRetries; attempt++ {
