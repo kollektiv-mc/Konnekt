@@ -617,15 +617,26 @@ a {
     scroll-snap-align: start;
   }
 
-  /* The footer needs a snap position of its own, or it cannot be reached.
-     It sits below the last section, and the scroll left past that section's
-     snap point is shorter than the proximity radius — so every attempt to
-     scroll down to the footer was pulled straight back up to #download, which
-     made the links in it unclickable. `end` aligns its bottom with the
-     viewport's, which is the document end.
-     The sibling selector is what keeps this to the landing page: the
-     sub-pages have no .section-full and so no snapping to rescue, and giving
-     their footer a snap point would tug the end of a long docs page. */
+  /* The last section gives up exactly the footer's height, so the two share
+     one viewport and the section's snap point *is* the document end. That
+     single position is the whole point: left at a full 100svh, the section's
+     snap point and the document end sit a footer's height apart, close enough
+     that the scroll is pulled between them — which reads as the download
+     section refusing to settle and sliding up under the fixed nav.
+     --footer-h comes from main.js. The floor keeps the panel from being
+     squeezed if the footer ever wraps tall. */
+  .cta {
+    min-height: max(420px, calc(100svh - var(--footer-h, 0px)));
+  }
+
+  /* Belt and braces for the position above, and the whole story without JS:
+     the footer still needs to be reachable, or the proximity radius pulls
+     every attempt to scroll to it back up to the last section and the links
+     in it cannot be clicked. With --footer-h set the two coincide, so this
+     costs nothing; without it, this is what saves the footer.
+     The sibling selector keeps it to the landing page: sub-pages have no
+     .section-full and so no snapping to rescue, and a snap point there would
+     tug at the end of a long docs page. */
   .section-full ~ footer {
     scroll-snap-align: end;
   }
@@ -744,6 +755,15 @@ a {
   pointer-events: none;
   -webkit-mask-image: linear-gradient(to bottom, transparent, #000 14%, #000 86%, transparent);
   mask-image: linear-gradient(to bottom, transparent, #000 14%, #000 86%, transparent);
+  /* Hidden until its section is actually in front of you — backdrop.js adds
+     .is-lit. A band of stars sliding past mid-scroll reads as debris on the
+     page rather than as depth behind it. */
+  opacity: 0;
+  transition: opacity 700ms var(--ease-standard);
+}
+
+.fx.is-lit {
+  opacity: 1;
 }
 
 /* The hero's own content already sits on z-index 1; the CTA's needs to. */
@@ -2187,6 +2207,12 @@ footer {
     transition: none !important;
   }
 
+  /* The backdrops still appear and disappear with their section, just without
+     the crossfade. */
+  .fx {
+    transition: none !important;
+  }
+
   .btn:hover,
   .dl-card[href]:hover,
   .rail-dot:hover {
@@ -2269,6 +2295,7 @@ footer {
   transform: none !important;
 }
 
-.reduce-motion .nav-menu {
+.reduce-motion .nav-menu,
+.reduce-motion .fx {
   transition: none !important;
 }

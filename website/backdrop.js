@@ -66,14 +66,39 @@
       },
     }
 
+    // A backdrop only shows once its section is properly in front of you: a
+    // strip of stars sliding past during a scroll reads as debris on the page,
+    // not as depth behind it. CSS fades the canvas; this decides when.
     if ('IntersectionObserver' in window) {
+      var lit = false
+
+      // Ratio alone is the wrong measure for a section taller than the
+      // viewport — it can never reach 1 — so this is the share of the *view*
+      // the section occupies once it is as large as the view can hold.
+      var thresholds = []
+      for (var s = 0; s <= 20; s++) thresholds.push(s / 20)
+
       new IntersectionObserver(
         function (entries) {
-          handle.visible = entries[0].isIntersecting
+          var e = entries[entries.length - 1]
+          var rootH = e.rootBounds ? e.rootBounds.height : window.innerHeight
+          var reach = Math.min(e.boundingClientRect.height, rootH) || 1
+          var covered = e.intersectionRect.height / reach
+
+          // Hysteresis, so resting exactly on the boundary cannot flicker.
+          if (!lit && covered >= 0.7) lit = true
+          else if (lit && covered < 0.45) lit = false
+          canvas.classList.toggle('is-lit', lit)
+
+          // Keep drawing a little either side of that, so the fade never
+          // reveals a frame that stopped updating.
+          handle.visible = covered > 0.05
           sync()
         },
-        { rootMargin: '10% 0px' },
+        { threshold: thresholds },
       ).observe(host)
+    } else {
+      canvas.classList.add('is-lit')
     }
 
     return handle
@@ -88,12 +113,7 @@
     var SPIN = 0.028 // radians per second, about one turn every four minutes
     var TILT = 0.34 // lean of the spin axis, so motion reads near the limb
 
-    // Nearest neighbours on a Fibonacci lattice sit a Fibonacci number of
-    // indices apart, so these offsets find them without an O(n^2) search.
-    var OFFSETS = [1, 2, 3, 5, 8, 13, 21, 34, 55, 89]
-
     var stars = []
-    var links = []
     var dust = []
     var ox = 0
     var oy = 0
@@ -108,9 +128,6 @@
       // this high. The per-frame cost is a transform each, and only the few
       // hundred that land in frame are ever drawn.
       var count = Math.round(clamp((w * h) / 200, 1800, 8000))
-      // Roughly 1.4 times the mean spacing at this count, so a point links to
-      // its immediate neighbours and nothing further.
-      var span = 2.8 * Math.sqrt(Math.PI / count)
       stars = []
 
       var golden = Math.PI * (3 - Math.sqrt(5))
@@ -132,36 +149,6 @@
           on: false,
         })
       }
-
-      links = []
-      for (var a = 0; a < stars.length; a++) {
-        for (var k = 0; k < OFFSETS.length; k++) {
-          var b = a + OFFSETS[k]
-          if (b >= stars.length) continue
-          var dx = stars[a].x - stars[b].x
-          var dy = stars[a].y - stars[b].y
-          var dz = stars[a].z - stars[b].z
-          if (dx * dx + dy * dy + dz * dz > span * span) continue
-          links.push({
-            a: a,
-            b: b,
-            period: 9 + Math.random() * 11,
-            phase: Math.random(),
-            // Each link is lit for a fraction of its own period, so at any
-            // moment only a scattering of them is on screen.
-            span: 0.1 + Math.random() * 0.06,
-          })
-        }
-      }
-      // Thin the set rather than draw every neighbour pair: the look wants
-      // occasional connections, not a wireframe.
-      for (var s = links.length - 1; s > 0; s--) {
-        var r = Math.floor(Math.random() * (s + 1))
-        var tmp = links[s]
-        links[s] = links[r]
-        links[r] = tmp
-      }
-      links = links.slice(0, Math.min(links.length, 900))
 
       // A little free-floating dust for the empty space outside the sphere.
       dust = []
@@ -213,31 +200,6 @@
             p.d > 0.02 && p.sx > -12 && p.sx < w + 12 && p.sy > -12 && p.sy < h + 12
         }
 
-        // Connections under the stars, so a line never covers a point.
-        ctx.lineWidth = 1
-        for (i = 0; i < links.length; i++) {
-          var l = links[i]
-          var pa = stars[l.a]
-          var pb = stars[l.b]
-          if (!pa.on || !pb.on) continue
-
-          var u = ((t / l.period + l.phase) % 1) / l.span
-          if (u > 1) continue
-
-          // Shoot out from one end, then fade the whole line away.
-          var grow = u < 0.5 ? u / 0.5 : 1
-          var fade = u < 0.5 ? 1 : 1 - (u - 0.5) / 0.5
-          var alpha = fade * fade * 0.26 * (0.55 + 0.45 * Math.min(pa.d + pb.d, 1))
-          if (alpha < 0.004) continue
-
-          ctx.globalAlpha = alpha
-          ctx.strokeStyle = 'rgb(' + accent + ')'
-          ctx.beginPath()
-          ctx.moveTo(pa.sx, pa.sy)
-          ctx.lineTo(pa.sx + (pb.sx - pa.sx) * grow, pa.sy + (pb.sy - pa.sy) * grow)
-          ctx.stroke()
-        }
-
         for (i = 0; i < stars.length; i++) {
           var s = stars[i]
           if (!s.on) continue
@@ -274,13 +236,14 @@
     }
   }
 
-  // ── Download: stars flying past ──────────────────────────────────────────
-  // Perspective this time, since the whole point is the approach. Kept
-  // deliberately thin: a low count, short streaks and low alpha, so it reads
-  // as motion at the edge of vision rather than a screensaver.
+  // ── Download: stars drifting past ────────────────────────────────────────
+  // Perspective this time, since the whole point is the approach. Kept very
+  // thin on purpose: a low count, short streaks, low alpha and a slow drift,
+  // so it reads as depth behind the panel rather than as travel. A faster
+  // version of this is genuinely uncomfortable to sit under while reading.
   function warpField() {
-    var SPEED = 0.5 // depth units per second
-    var MAX_STREAK = 46 // px, so a star near the camera doesn't smear
+    var SPEED = 0.14 // depth units per second, roughly seven seconds a star
+    var MAX_STREAK = 16 // px, so nothing ever smears into a line
     var stars = []
     var cx = 0
     var cy = 0
@@ -306,7 +269,7 @@
         // part of its approach happens off screen and the field reads as
         // nothing much; this keeps most of each star's life in view.
         focal = Math.max(w, h) * 0.22
-        var count = Math.round(clamp((w * h) / 12000, 28, 120))
+        var count = Math.round(clamp((w * h) / 21000, 18, 70))
         stars = []
         for (var i = 0; i < count; i++) {
           var s = {}
@@ -350,9 +313,9 @@
           }
 
           var near = 1 - s.z
-          ctx.globalAlpha = clamp(near * 0.75, 0, 0.55)
+          ctx.globalAlpha = clamp(near * 0.42, 0, 0.32)
           ctx.strokeStyle = s.hot ? 'rgb(' + accent + ')' : '#ffffff'
-          ctx.lineWidth = 0.7 + near
+          ctx.lineWidth = 0.6 + near * 0.5
           ctx.beginPath()
           ctx.moveTo(x1, y1)
           ctx.lineTo(x2, y2)
