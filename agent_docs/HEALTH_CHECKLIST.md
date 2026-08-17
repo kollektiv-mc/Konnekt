@@ -34,6 +34,14 @@ Plus the generated-file check `suite.json` declares: `pnpm gen:tokens` then
 diff means a generated token file was hand-edited (the next run reverts it) or
 `tokens.source.json` was refreshed without regenerating.
 
+And one invariant, `no literal border widths`: a grep for
+`\bborder(-[a-z]+)?-\[[0-9.]+px\]` over `frontend/src/components` and
+`frontend/src/tiles`, expected to find nothing. It is scoped to borders on
+purpose — see "The remaining arbitrary-value sweeps" in the backlog for why a
+broader pattern would be red on arrival. Note `ci.yml` does not invoke
+`suite-check.py` and this repo has not vendored `.claude/suite-check.py`, so
+invariants run under `/suite-kit:health`, not in CI.
+
 Note `go vet`/`go test` need `frontend/dist` to exist first (`main.go`'s
 `//go:embed all:frontend/dist`), so run `pnpm build` before them in a clean
 tree.
@@ -202,30 +210,69 @@ current. Priorities mirror the pillars above.
   truncates, so two saves in the same second leave **one** backup, not two.
   Harmless in hand-editing, wrong if anything ever writes config
   programmatically. Widening the stamp (or adding a counter suffix) is the fix.
-- Dead `--panel-bg` CSS variable: `tiles/config/form/widgets.tsx`'s `Select`
-  dropdown. Now documented in-code and rendered as a literal `bg-[#0e1117]`,
-  but that literal is opaque near-black, so the dropdown stays dark under the
-  **light** skin (where `--bg-elevated` is `rgba(236,238,245,0.82)`) — a live
-  theming bug, not just hygiene. Repoint to `bg-elevated`, checking the
-  dropdown still reads as opaque over content.
-- `border-hairline`/`border-thick` plus their new directional forms
-  (`border-t-hairline`, `border-r-hairline`, etc. — added when App.tsx's last
-  inline styles were migrated, closing Milestone 2) are generated into
-  `styles/tokens.css`, but adoption is still thin: 8 call sites (4 in the worlds
-  tile, 4 in `App.tsx`) against **166 literal `border-[0.5px]` occurrences,
-  spread over 164 lines in 41 files** — 91 all-sides, 47 `-b`, 15 `-t`, 7 `-l`,
-  6 `-r`. (Occurrences, not lines: two lines in `tiles/mods/InstalledPanel.tsx`
-  carry two each, so a `grep -c` reads 164 and a `grep -o` reads 166. Quote the
-  basis when re-measuring.) The directional gap that blocked adoption is closed;
-  what's left is a pure find-and-replace sweep, tile by tile — no further token
-  or generator work needed.
 - Structured logging: replace ad-hoc `fmt.Errorf`-only backend reporting with
-  `log/slog`, keeping `EventBus` for UI-facing notifications.
+  `log/slog`, keeping `EventBus` for UI-facing notifications. Note the starting
+  point is *no* logging layer at all rather than an ad-hoc one: zero `log`/`slog`
+  imports, one `fmt.Printf` (`scheduler.go:247`), and 132 `fmt.Errorf` across 21
+  files that are error *construction*, not logging. So this is additive — pick
+  the swallow and best-effort points — not a 132-site rewrite.
 - Memoization pass: add `React.memo`/`useMemo`/`useCallback` to the most
   expensive tile subtrees identified during a profiling pass.
 - React Compiler-readiness lint rules: revisit enabling
   `eslint-plugin-react-hooks`'s full `recommended`/`recommended-latest` set (~60
   findings, mostly r3f scene code) once test coverage is in place.
+
+**P2 — The remaining arbitrary-value sweeps**
+
+The border sweep closed 173 of the **356** `[Npx]` literals inside
+`suite.json`'s `tokens.paths`. These are the other 183, split by whether they
+are a pure find-and-replace. The `no literal border widths` invariant is scoped
+to borders precisely so it stays green while these are open; widen it as each
+one closes, and only then revisit `tokens.enforce: "strict"`.
+
+- **`text-[Npx]` font sizes — 111 sites.** 107 map exactly onto existing tokens:
+  `text-[10px]` ×65 → `text-2xs`, `text-[11px]` ×27 → `text-1xs`, `text-[9px]`
+  ×15 → `text-3xs`. The other 4 have no token — `text-[8px]` ×2, `text-[7px]`,
+  `text-[13px]` — so this is **blocked on an upstream decision** in
+  `kollektiv/design/tokens.json`: extend the scale, or judge each of the four a
+  mistake and snap it to an existing step. Not mechanical the way the borders
+  were, and approximating is explicitly the worst of the options.
+- **`rounded-[Npx]` radii — 9 sites.** `rounded-[10px]` ×7 → `rounded-panel` is a
+  straight swap; `rounded-[2px]` and `rounded-[7px]` need the same upstream call.
+- **Arbitrary sizing literals — 63 sites** (19 `w-`, 17 `h-`, 7 `min-w-`, 6
+  `py-`, 4 `px-`, 4 `min-h-`, 2 `max-h-`, 2 `translate-y-`, 1 `max-w-`, 1
+  `-left-`). Mostly layout dimensions rather than design values, and mostly
+  expressible on Tailwind's own spacing scale (`w-[22px]` → `w-5.5`,
+  `py-[3px]` → `py-0.75`) with no token work. Worth keeping separate so it is
+  not mistaken for a token sweep.
+- **Hand-written CSS still inlines border weights** — `tiles/scheduler/scheduler.css`
+  (29, 35, 48) and `style.css` (134, 215, 428, 460, 502, 506) use literal
+  `0.5px`/`1.5px` where `var(--border-hairline)`/`var(--border-thick)` are in
+  scope. Invisible to the Tailwind-class invariant by design, since that pattern
+  requires the bracket.
+- **Remaining colour literals.** `tiles/performance/index.tsx:296`'s sticky
+  `thead` (`bg-[#0a0c12]` — `bg-canvas` is arguably the right role, not
+  `bg-overlay`; needs a call), `tiles/scheduler/editor/NodeConfigPanel.tsx:58`'s
+  blue badge (`bg-[#1e3a5f]`/`text-[#60a5fa]`, no upstream equivalent) and `:56`'s
+  `text-[#ef4444]` (exactly `--danger`'s light value, so a straight `text-danger`),
+  `tiles/scheduler/editor/BlockNode.tsx`'s `border-[#ef4444]`, and the performance
+  chart axis/grid strokes (`rgba(255,255,255,0.3)`, close to `--text-faint`'s
+  0.25 but **not** equal — do not snap it).
+- **`gen-tokens.mjs`'s border utilities omit `border-style`.** Tailwind's own
+  width utility emits `border-style: var(--tw-border-style)` alongside the width;
+  the generated `@utility` emits width only. It works because preflight sets
+  `*{border:0 solid}`, verified in the built CSS and at runtime, but the two are
+  not drop-in equivalents. The fix is emitting `border-style: var(--tw-border-style, solid)`;
+  the `, solid` fallback is mandatory, because Tailwind registers the `@property`
+  for *its* utilities, not ours, so a bare `var()` would become a latent
+  no-border bug the day nothing else uses a core border utility.
+- **`BUILTIN_SKINS` override no elevated surface.** `lib/theme.ts`'s five skins
+  retheme `--bg-base`, `--bg-surface`, the borders and some text, but not
+  `--bg-elevated` or `--bg-overlay`, so floating panels do not track a skin. A
+  design decision rather than a bug, but currently written down nowhere.
+- **Stale in-code claim.** `tiles/worlds/index.tsx:14`'s comment says `SCENE_BG`
+  is "tracked as a token to add in HEALTH_CHECKLIST.md's backlog". It was not.
+  It is now, one item above; fix the comment when that file is next open.
 
 **P2 — `website/` has no gates at all**
 - The `website/` sub-project (~4,600 lines of HTML/CSS/JS added since the last
@@ -234,8 +281,21 @@ current. Priorities mirror the pillars above.
   it's user-facing surface with strictly less checking than the app.
 - Minimum worth adding: Prettier over `website/**` (the config already exists),
   and a link/asset sanity check so a renamed image or a dead internal href is
-  caught before deploy. Decide first whether it belongs in this repo's CI at
-  all, or in the Pages deploy — don't bolt a job on without that call.
+  caught before deploy.
+- **That call has been made: it belongs in this repo's CI**, as a job in
+  `.github/workflows/ci.yml` alongside `frontend` and `backend`. That is where
+  every other gate already lives, and it catches problems before merge rather
+  than at deploy. Note the deploy itself is configured externally — there is no
+  `wrangler.toml`, `_headers`, `_redirects` or deploy workflow anywhere in-repo,
+  so the Pages build is not somewhere this repo can add a check anyway.
+- Two traps for whoever picks this up. `frontend/package.json`'s `format` scripts
+  resolve `.` relative to `frontend/`, so they can never reach `website/` — the
+  job needs its own invocation, not a widened glob. And `lefthook.yml`'s
+  `*.{ts,tsx,css}` glob *would* match `website/styles.css` except that the job
+  carries `root: "frontend/"`, so adding the file type there does nothing.
+- Link/asset integrity is currently clean (every internal href, fragment anchor
+  and asset path resolves, and `sitemap.xml`'s five URLs all exist). Nothing
+  enforces it, which is the whole point of the item.
 
 **Release follow-ups** (deferred)
 - Release-tag-gated full `wails build` packaging job — stronger end-to-end
