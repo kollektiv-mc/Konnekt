@@ -1,6 +1,13 @@
-# Layout for GitHub's auto-generated release notes — used by the nightly
-# snapshot (.github/workflows/snapshot.yml) and by release.yml's
-# `--generate-notes` on tagged releases.
+# Layout for GitHub's auto-generated release notes — used by
+# workflows/release.yml's `--generate-notes` on tagged releases.
+#
+# The nightly snapshot no longer reads this file. It builds its own notes in
+# scripts/snapshot-notes.py, because GitHub's generator cannot leave out
+# website-only pull requests — the website ships to Cloudflare Pages, not into
+# the binary — and cannot sort an unlabelled pull request into anything but the
+# catch-all below. That script's section titles are a subset of the ones here
+# on purpose: a reader comparing a snapshot against a release should not have
+# to learn two vocabularies.
 #
 # Entries are merged pull requests, listed by title and sorted into the first
 # category whose label matches, so order matters here and "*" has to come last.

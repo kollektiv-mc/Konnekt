@@ -208,6 +208,11 @@ jobs:
     permissions:
       contents: write
     steps:
+      # Before the artifacts land: actions/checkout cleans the workspace, so
+      # running it second would delete them. Only needed for the notes script
+      # below — nothing else in this job reads the tree.
+      - uses: actions/checkout@v4
+
       - uses: actions/download-artifact@v4
         with:
           pattern: konnekt-*
@@ -220,16 +225,19 @@ jobs:
 
       # Baseline is the latest published release, not the previous snapshot —
       # a snapshot describes everything ahead of the release named on the
-      # download page, not just what changed since last night's build.
-      # generate-notes already excludes prereleases (like `snapshot` itself)
-      # when picking this automatically, so fetching it explicitly here just
-      # makes that dependency visible and keeps the fallback below consistent
-      # with the real call. Sections come from .github/release.yml.
+      # download page, not just what changed since last night's build. The
+      # releases/latest endpoint skips prereleases, so `snapshot` itself can
+      # never be the baseline.
       #
-      # tag_name is a name that doesn't exist on purpose. generate-notes
-      # ignores target_commitish whenever tag_name already resolves to a tag,
-      # so passing "snapshot" here would describe the build being replaced
-      # rather than this one.
+      # The notes are built by .github/scripts/snapshot-notes.py rather than by
+      # GitHub's releases/generate-notes, which cannot express either half of
+      # what a build's changelog needs: it has no idea which paths a pull
+      # request touched, so website-only work described a binary containing
+      # none of it, and it sorts on labels alone, so this repo's mostly
+      # unlabelled pull requests all landed in "Other changes". The script
+      # filters on changed paths and falls back to conventional-commit
+      # prefixes and then the title's leading verb. Tagged releases still use
+      # GitHub's generator and .github/release.yml.
       - name: Generate release notes
         working-directory: dist
         env:
@@ -237,19 +245,15 @@ jobs:
           REPO: ${{ github.repository }}
           SERVER: ${{ github.server_url }}
           SHA: ${{ needs.check.outputs.sha }}
-          SHORT: ${{ needs.check.outputs.short }}
         run: |
           base_tag="$(gh api "repos/$REPO/releases/latest" --jq .tag_name 2>/dev/null || true)"
 
-          args=(-f "tag_name=snapshot-$SHORT" -f "target_commitish=$SHA")
-          if [ -n "$base_tag" ]; then
-            args+=(-f "previous_tag_name=$base_tag")
-          fi
-
           # Losing the notes must not cost the build itself; fall back to the
-          # compare view, which is the same information without the formatting.
-          if ! gh api --method POST "repos/$REPO/releases/generate-notes" \
-            "${args[@]}" --jq .body > changes.md; then
+          # compare view, which is the same information without the shaping.
+          # The script exits non-zero when there is no baseline to measure
+          # from, which is the same path.
+          if ! BASE_TAG="$base_tag" python3 "$GITHUB_WORKSPACE/.github/scripts/snapshot-notes.py" \
+            > changes.md; then
             : > changes.md
           fi
 
