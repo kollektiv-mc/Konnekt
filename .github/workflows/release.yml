@@ -189,8 +189,13 @@ jobs:
           # this step used to be, and on the paths that get here — the very
           # first release, so no baseline, or an API failure — a full list
           # shaped by .github/release.yml beats an empty release body.
+          #
+          # Warn rather than fail: a release must not be blocked on its notes,
+          # but a body that quietly includes the website again should not look
+          # like a clean run either.
           if ! python3 "$GITHUB_WORKSPACE/.github/scripts/release-notes.py" > notes.md \
             || [ ! -s notes.md ]; then
+            echo "::warning::release-notes.py failed; falling back to GitHub's generated notes"
             rm -f notes.md
           fi
 

@@ -246,8 +246,13 @@ jobs:
           # Losing the notes must not cost the build itself. The commit list is
           # the same information without the shaping, and it needs no baseline
           # — which is one of the ways the script can bail.
+          #
+          # The warning is the point of the annotation: without it a degraded
+          # run is indistinguishable from a good one, which is how the first
+          # failure here went unnoticed until someone read the release body.
           if ! python3 "$GITHUB_WORKSPACE/.github/scripts/release-notes.py" > changes.md \
             || [ ! -s changes.md ]; then
+            echo "::warning::release-notes.py failed; the snapshot body falls back to a commit link"
             echo "**Commits**: $SERVER/$REPO/commits/$HEAD_REF" > changes.md
           fi
 

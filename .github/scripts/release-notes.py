@@ -38,6 +38,7 @@ import json
 import os
 import re
 import sys
+import time
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -90,9 +91,37 @@ CONVENTIONAL = re.compile(r"^([a-z]+)(?:\([^)]*\))?!?:\s*")
 
 API = os.environ.get("GITHUB_API_URL", "https://api.github.com").rstrip("/")
 
+# A hundred-odd calls go into one changelog, so a request that fails for a
+# reason unrelated to what was asked gets a few more chances before the run is
+# written off.
+RETRIES = 4
+BACKOFF_SECONDS = 2
+
+
+class ApiError(RuntimeError):
+    """A request that could not be completed, naming the request.
+
+    The path matters in the log: "HTTP Error 500" alone leaves whoever reads a
+    failed run with a hundred candidate calls and no way to choose between them.
+    """
+
+    def __init__(self, path: str, detail: object, code: int | None = None) -> None:
+        self.path = path
+        self.code = code
+        super().__init__(f"GET {path} -> {detail}")
+
 
 def api(path: str, **params: object) -> object:
-    """GET one page of the REST API, decoded."""
+    """GET one page of the REST API, decoded.
+
+    Retries the failures that say nothing about the request — 5xx, and the 429
+    or 403 the API answers with when it wants you to slow down. Describing one
+    release takes on the order of a hundred calls, so a single unlucky 500 costs
+    the whole changelog, and that is exactly how the first real run of this
+    script ended: one 500, no retry, notes replaced by a bare commit link. A 4xx
+    that means what it says is raised at once, because retrying a 404 only
+    delays the report.
+    """
     url = f"{API}{path}"
     if params:
         url += "?" + urllib.parse.urlencode(params)
@@ -101,24 +130,40 @@ def api(path: str, **params: object) -> object:
         headers={
             "Accept": "application/vnd.github+json",
             "Authorization": f"Bearer {os.environ['GH_TOKEN']}",
-            "User-Agent": "konnekt-snapshot-notes",
+            "User-Agent": "konnekt-release-notes",
             "X-GitHub-Api-Version": "2022-11-28",
         },
     )
-    with urllib.request.urlopen(request, timeout=60) as response:
-        return json.load(response)
+    for attempt in range(RETRIES):
+        try:
+            with urllib.request.urlopen(request, timeout=60) as response:
+                return json.load(response)
+        except urllib.error.HTTPError as error:
+            if (error.code < 500 and error.code not in (403, 429)) or attempt == RETRIES - 1:
+                raise ApiError(path, f"HTTP {error.code}", error.code) from error
+            detail = f"HTTP {error.code}"
+        except (urllib.error.URLError, TimeoutError, json.JSONDecodeError) as error:
+            if attempt == RETRIES - 1:
+                raise ApiError(path, error) from error
+            detail = str(error)
+        delay = BACKOFF_SECONDS * 2**attempt
+        print(f"GET {path} -> {detail}, retrying in {delay}s", file=sys.stderr)
+        time.sleep(delay)
+    raise AssertionError("unreachable")
 
 
 def commits_in_range(repo: str, base: str, head: str) -> list[dict]:
     """Every commit reachable from `head` but not `base`.
 
-    The compare endpoint caps a page at 250 commits and reports the true total,
-    so page until they agree. The page ceiling only exists so a bad range can't
-    spin forever; 2500 commits is far past any plausible snapshot window.
+    The compare endpoint reports the true total alongside a page of commits, so
+    page until the two agree. 100 per page is its documented ceiling; it does
+    serve more if asked, but there is nothing to gain from depending on that.
+    The page ceiling only exists so a bad range cannot spin forever, and 2500
+    commits is far past any plausible release window.
     """
     collected: list[dict] = []
-    for page in range(1, 11):
-        payload = api(f"/repos/{repo}/compare/{base}...{head}", page=page, per_page=250)
+    for page in range(1, 26):
+        payload = api(f"/repos/{repo}/compare/{base}...{head}", page=page, per_page=100)
         collected.extend(payload.get("commits") or [])
         if len(collected) >= payload.get("total_commits", 0) or not payload.get("commits"):
             break
@@ -206,7 +251,7 @@ def latest_release_tag(repo: str) -> str:
     """The newest published release's tag, or "" when there isn't one yet."""
     try:
         return (api(f"/repos/{repo}/releases/latest").get("tag_name") or "").strip()
-    except urllib.error.HTTPError as error:
+    except ApiError as error:
         if error.code == 404:  # a repo with no published release
             return ""
         raise
@@ -258,6 +303,6 @@ def main() -> int:
 if __name__ == "__main__":
     try:
         sys.exit(main())
-    except (urllib.error.URLError, urllib.error.HTTPError, KeyError, OSError) as error:
+    except (ApiError, KeyError, OSError) as error:
         print(f"could not build the changelog: {error}", file=sys.stderr)
         sys.exit(1)
