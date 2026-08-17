@@ -356,16 +356,22 @@ a {
    download.js and changelog.js render get it without either script changing.
    main.js writes --mx/--my (px, tile-relative) on pointermove; the fallback
    50%/50% keeps the light centred if the pointer never moves — hovering via
-   keyboard focus, or a tile that appears under a stationary cursor. */
+   keyboard focus, or a tile that appears under a stationary cursor.
+   --glow-rgb and --glow-border are the hue of the whole effect in one place,
+   so a family of tiles can be recoloured by overriding two values rather than
+   by restating the ring and the border rule (see the snapshot tiles below). */
 .feat,
 .doc-section,
 .dl-card,
 .download-primary,
 .release,
 .cta-panel,
-.spotlight-media {
+.spotlight-media,
+.spotlight-points li {
   position: relative;
   --glow-size: 260px;
+  --glow-rgb: var(--accent-rgb);
+  --glow-border: var(--border-hover);
   transition: border-color var(--duration-fast) ease;
 }
 
@@ -375,8 +381,9 @@ a {
 .download-primary:hover,
 .release:hover,
 .cta-panel:hover,
-.spotlight-media:hover {
-  border-color: var(--border-hover);
+.spotlight-media:hover,
+.spotlight-points li:hover {
+  border-color: var(--glow-border);
 }
 
 /* The ring is the gradient masked down to its own 1px padding: paint the
@@ -391,7 +398,8 @@ a {
   .download-primary::after,
   .release::after,
   .cta-panel::after,
-  .spotlight-media::after {
+  .spotlight-media::after,
+  .spotlight-points li::after {
     content: '';
     position: absolute;
     /* Absolute children resolve against the padding box, so the half-pixel
@@ -405,7 +413,7 @@ a {
     transition: opacity var(--duration-panel) var(--ease-standard);
     background: radial-gradient(
       var(--glow-size) circle at var(--mx, 50%) var(--my, 50%),
-      rgb(var(--accent-rgb) / 0.45),
+      rgb(var(--glow-rgb) / 0.45),
       transparent 60%
     );
     -webkit-mask:
@@ -424,7 +432,8 @@ a {
   .download-primary:hover::after,
   .release:hover::after,
   .cta-panel:hover::after,
-  .spotlight-media:hover::after {
+  .spotlight-media:hover::after,
+  .spotlight-points li:hover::after {
     opacity: 1;
   }
 
@@ -437,12 +446,24 @@ a {
 
 /* Smaller tiles want a tighter light — a 260px circle on a 60px-tall card
    lights the whole edge at once, which reads as a flat outline. */
-.dl-card {
+.dl-card,
+.spotlight-points li {
   --glow-size: 180px;
 }
 
 .dl-card.is-unavailable:hover {
   border-color: var(--border-subtle);
+}
+
+/* Everything in the snapshot channel lights amber instead of green. The two
+   download grids are the same component one scroll apart and the changelog's
+   snapshot entry is the same card as a release, so on the one page where
+   both appear the colour under the cursor is what says which you are on.
+   Same amber the badges and platform icons already use. */
+.download-snapshot .dl-card,
+.release-pending {
+  --glow-rgb: var(--sun-rgb);
+  --glow-border: rgb(var(--sun-rgb) / 0.45);
 }
 
 /* ── Reveal-on-scroll (progressive enhancement; visible by default) ─────── */
