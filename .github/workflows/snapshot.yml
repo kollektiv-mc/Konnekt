@@ -223,46 +223,32 @@ jobs:
         working-directory: dist
         run: sha256sum * > checksums.txt
 
-      # Baseline is the latest published release, not the previous snapshot —
-      # a snapshot describes everything ahead of the release named on the
-      # download page, not just what changed since last night's build. The
-      # releases/latest endpoint skips prereleases, so `snapshot` itself can
-      # never be the baseline.
+      # The notes come from .github/scripts/release-notes.py, which release.yml
+      # also calls, so a snapshot and the release it is ahead of are described
+      # the same way. GitHub's releases/generate-notes cannot express either
+      # half of what a build's changelog needs: it has no idea which paths a
+      # pull request touched, so website-only work described a binary
+      # containing none of it, and it sorts on labels alone, so this repo's
+      # mostly unlabelled pull requests all landed in "Other changes".
       #
-      # The notes are built by .github/scripts/snapshot-notes.py rather than by
-      # GitHub's releases/generate-notes, which cannot express either half of
-      # what a build's changelog needs: it has no idea which paths a pull
-      # request touched, so website-only work described a binary containing
-      # none of it, and it sorts on labels alone, so this repo's mostly
-      # unlabelled pull requests all landed in "Other changes". The script
-      # filters on changed paths and falls back to conventional-commit
-      # prefixes and then the title's leading verb. Tagged releases still use
-      # GitHub's generator and .github/release.yml.
+      # The script picks its own baseline — the latest published release, not
+      # the previous snapshot. A snapshot describes everything ahead of the
+      # release named on the download page, not just what changed since last
+      # night's build.
       - name: Generate release notes
         working-directory: dist
         env:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
           SERVER: ${{ github.server_url }}
-          SHA: ${{ needs.check.outputs.sha }}
+          HEAD_REF: ${{ needs.check.outputs.sha }}
         run: |
-          base_tag="$(gh api "repos/$REPO/releases/latest" --jq .tag_name 2>/dev/null || true)"
-
-          # Losing the notes must not cost the build itself; fall back to the
-          # compare view, which is the same information without the shaping.
-          # The script exits non-zero when there is no baseline to measure
-          # from, which is the same path.
-          if ! BASE_TAG="$base_tag" python3 "$GITHUB_WORKSPACE/.github/scripts/snapshot-notes.py" \
-            > changes.md; then
-            : > changes.md
-          fi
-
-          if [ ! -s changes.md ]; then
-            if [ -n "$base_tag" ]; then
-              echo "**Full changelog**: $SERVER/$REPO/compare/$base_tag...$SHA" > changes.md
-            else
-              echo "**Commits**: $SERVER/$REPO/commits/$SHA" > changes.md
-            fi
+          # Losing the notes must not cost the build itself. The commit list is
+          # the same information without the shaping, and it needs no baseline
+          # — which is one of the ways the script can bail.
+          if ! python3 "$GITHUB_WORKSPACE/.github/scripts/release-notes.py" > changes.md \
+            || [ ! -s changes.md ]; then
+            echo "**Commits**: $SERVER/$REPO/commits/$HEAD_REF" > changes.md
           fi
 
       # Delete and recreate rather than edit. `snapshot` has to end up pointing

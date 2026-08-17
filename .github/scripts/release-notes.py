@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
-"""Build the changelog body for the nightly `snapshot` prerelease.
+"""Build the changelog body for a release — the nightly `snapshot` prerelease
+and tagged releases alike.
 
-GitHub's own `releases/generate-notes` cannot do the two things a snapshot's
-changelog needs:
+GitHub's own `releases/generate-notes` cannot do the two things a shipped
+build's changelog needs:
 
   * It has no notion of *what* a pull request touched, so the website — which
     lives in this repo but ships to Cloudflare Pages, not into the binary —
@@ -12,21 +13,23 @@ changelog needs:
     handful that carry a label look like the only real work.
 
 So this script does the same job with the changed-path filter and the
-categorisation rules that a build's changelog actually wants. `.github/
-release.yml` is left alone: tagged releases still use GitHub's generator, and
-that file is what shapes them.
+categorisation rules a shipped build actually wants. Both workflows call it, so
+a snapshot and the release it is ahead of describe themselves the same way.
 
-Reads (all required unless noted):
+Reads:
 
-  GH_TOKEN   a token that can read this repository
-  REPO       owner/name
-  SHA        the commit the snapshot is built from
-  BASE_TAG   the release the changelog is measured from
-  SERVER     github.com base URL, for the compare link (optional)
+  GH_TOKEN   a token that can read this repository (required)
+  REPO       owner/name (required)
+  HEAD_REF   the commit or tag being described (required)
+  BASE_TAG   what to measure from. Defaults to the latest published release,
+             which is the right answer for both callers: that endpoint skips
+             prereleases, so `snapshot` can never become its own baseline, and
+             a tagged release's own entry does not exist yet when it runs.
+  SERVER     github.com base URL, for the compare link
 
-Writes the markdown body to stdout. Exits non-zero on any failure, including a
-missing BASE_TAG — the caller falls back to a plain compare link, which is the
-same information without the shaping.
+Writes the markdown body to stdout. Exits non-zero on any failure, including
+having no baseline to measure from — each caller has a fallback, so losing the
+notes never costs the build.
 """
 
 from __future__ import annotations
@@ -199,14 +202,24 @@ def entry(pull: dict, server: str, repo: str) -> str:
     return f"* {title}{byline} in {server}/{repo}/pull/{pull['number']}"
 
 
+def latest_release_tag(repo: str) -> str:
+    """The newest published release's tag, or "" when there isn't one yet."""
+    try:
+        return (api(f"/repos/{repo}/releases/latest").get("tag_name") or "").strip()
+    except urllib.error.HTTPError as error:
+        if error.code == 404:  # a repo with no published release
+            return ""
+        raise
+
+
 def main() -> int:
     repo = os.environ["REPO"]
-    head = os.environ["SHA"]
-    base = os.environ.get("BASE_TAG", "").strip()
+    head = os.environ["HEAD_REF"]
     server = os.environ.get("SERVER", "https://github.com").rstrip("/")
 
+    base = os.environ.get("BASE_TAG", "").strip() or latest_release_tag(repo)
     if not base:
-        print("no base tag to measure against", file=sys.stderr)
+        print("no published release to measure against", file=sys.stderr)
         return 1
 
     commits = commits_in_range(repo, base, head)
