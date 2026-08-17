@@ -1093,33 +1093,54 @@ a {
   box-shadow: 0 24px 64px rgba(0, 0, 0, 0.5);
 }
 
-/* The four points, a row under the canvas. Same accent-dot marker as the old
-   vertical list; auto-fit collapses it to fewer columns without a media query. */
+/* The four points, a row of tiles under the canvas. They were bare lines of
+   text on a bare grid, which read as slightly off centre under the graph: the
+   columns were centred but each label sat at the left of its own, so the row's
+   ink never lined up with anything. Boxing them puts an edge where the grid
+   already was. Same accent-dot marker as before, now inside the tile; auto-fit
+   collapses the row to fewer columns without a media query. */
 .spotlight-points {
   list-style: none;
-  margin: 34px 0 0;
+  margin: 24px 0 0;
   padding: 0;
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
-  gap: 14px 28px;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 14px;
 }
 
 .spotlight-points li {
-  display: flex;
-  gap: 10px;
-  font-size: 13.5px;
-  color: var(--text-secondary);
+  background: var(--bg-surface);
+  border: 0.5px solid var(--border-subtle);
+  border-radius: 12px;
+  padding: 16px 18px;
 }
 
-.spotlight-points li::before {
+.spotlight-points h3 {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-family: var(--font-title);
+  font-weight: 500;
+  font-size: 14px;
+  color: var(--text-primary);
+  margin: 0 0 7px;
+}
+
+.spotlight-points h3::before {
   content: '';
   width: 6px;
   height: 6px;
-  margin-top: 6px;
   border-radius: 50%;
   background: var(--accent);
   flex-shrink: 0;
   box-shadow: 0 0 8px rgb(var(--accent-rgb) / 0.6);
+}
+
+.spotlight-points p {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: var(--text-muted);
 }
 
 /* ── Scheduler node-graph animation — static SVG, CSS-driven ──────────── */
