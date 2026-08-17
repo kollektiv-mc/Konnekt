@@ -616,6 +616,19 @@ a {
   .section-full {
     scroll-snap-align: start;
   }
+
+  /* The footer needs a snap position of its own, or it cannot be reached.
+     It sits below the last section, and the scroll left past that section's
+     snap point is shorter than the proximity radius — so every attempt to
+     scroll down to the footer was pulled straight back up to #download, which
+     made the links in it unclickable. `end` aligns its bottom with the
+     viewport's, which is the document end.
+     The sibling selector is what keeps this to the landing page: the
+     sub-pages have no .section-full and so no snapping to rescue, and giving
+     their footer a snap point would tug the end of a long docs page. */
+  .section-full ~ footer {
+    scroll-snap-align: end;
+  }
 }
 
 /* ── Section rail — the indicator for the above. Built by main.js from the
