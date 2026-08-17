@@ -106,7 +106,7 @@ export function LayoutPresets() {
               onChange={(e) => setNewName(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleSave()}
               placeholder={activePresetName || 'Preset name...'}
-              className="bg-hover border-border-subtle text-text-primary min-w-0 flex-1 rounded border-[0.5px] px-2 py-1 text-xs outline-none"
+              className="bg-hover border-border-subtle text-text-primary border-hairline min-w-0 flex-1 rounded px-2 py-1 text-xs outline-none"
               onFocus={(e) => {
                 ;(e.target as HTMLInputElement).style.borderColor = 'var(--border-hover)'
               }}
@@ -117,7 +117,7 @@ export function LayoutPresets() {
             <button
               onClick={handleSave}
               disabled={saving}
-              className="border-border-subtle text-text-secondary shrink-0 rounded border-[0.5px] px-2 py-1 text-xs transition-colors disabled:opacity-40"
+              className="border-border-subtle text-text-secondary border-hairline shrink-0 rounded px-2 py-1 text-xs transition-colors disabled:opacity-40"
               onMouseEnter={(e) => {
                 ;(e.currentTarget as HTMLButtonElement).style.color = 'var(--text-primary)'
                 ;(e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--border-hover)'

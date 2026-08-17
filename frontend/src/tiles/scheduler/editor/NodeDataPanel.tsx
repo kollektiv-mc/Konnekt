@@ -44,7 +44,7 @@ export function NodeDataPanel({ graph, nodeId, onPreview }: Props) {
             {preview.attributes.map((a) => (
               <div
                 key={a.name}
-                className="bg-surface border-border-subtle flex items-center justify-between gap-2 rounded border-[0.5px] px-2 py-1"
+                className="bg-surface border-border-subtle border-hairline flex items-center justify-between gap-2 rounded px-2 py-1"
               >
                 <span
                   className={`font-mono text-xs ${a.writable ? 'text-text-primary' : 'text-text-muted'}`}
@@ -71,7 +71,7 @@ export function NodeDataPanel({ graph, nodeId, onPreview }: Props) {
       {/* Console */}
       <div className="flex flex-col gap-1">
         <span className={labelClass}>console</span>
-        <div className="bg-canvas border-border-subtle flex min-h-[26px] flex-col gap-0.5 rounded border-[0.5px] px-2 py-1 font-mono text-xs">
+        <div className="bg-canvas border-border-subtle border-hairline flex min-h-[26px] flex-col gap-0.5 rounded px-2 py-1 font-mono text-xs">
           {preview && preview.console && preview.console.length > 0 ? (
             preview.console.map((line, i) => {
               const isError = line.startsWith('ERROR') || line.startsWith('would fail')

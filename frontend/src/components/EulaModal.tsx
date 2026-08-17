@@ -35,7 +35,7 @@ export function EulaModal({ serverId, onClose }: Props) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
-      <div className="bg-canvas flex w-80 flex-col gap-4 rounded-xl border-[0.5px] border-amber-400/25 p-5 font-mono">
+      <div className="bg-canvas border-hairline flex w-80 flex-col gap-4 rounded-xl border-amber-400/25 p-5 font-mono">
         <div className="flex items-center gap-2.5">
           <span className="text-sm font-bold text-yellow-400">[!]</span>
           <span className="font-title text-text-primary text-sm font-semibold">EULA Required</span>
@@ -53,11 +53,11 @@ export function EulaModal({ serverId, onClose }: Props) {
           Read the Minecraft EULA →
         </button>
 
-        <div className="border-border-subtle flex gap-2 border-t-[0.5px] pt-1">
+        <div className="border-border-subtle border-t-hairline flex gap-2 pt-1">
           <button
             onClick={handleAccept}
             disabled={loading}
-            className="text-accent border-accent/30 flex-1 rounded border-[0.5px] py-1.5 text-xs transition-colors disabled:opacity-40"
+            className="text-accent border-accent/30 border-hairline flex-1 rounded py-1.5 text-xs transition-colors disabled:opacity-40"
             onMouseEnter={(e) => {
               ;(e.currentTarget as HTMLButtonElement).style.background =
                 'rgb(var(--accent-rgb) / 0.1)'

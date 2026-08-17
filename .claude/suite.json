@@ -22,6 +22,16 @@
       { "name": "go test", "run": "go test ./..." },
       { "name": "coverage floor", "run": "go run ./scripts/coverage-floor" }
     ],
+    "invariants": [
+      {
+        "name": "no literal border widths",
+        "grep": "\\bborder(-[a-z]+)?-\\[[0-9.]+px\\]",
+        "paths": ["frontend/src/components", "frontend/src/tiles"],
+        "expect": "no matches",
+        "diagnosis": "A hairline is the signature weight of this UI, and an inlined [0.5px] opts that edge out of the token layer: it can then only be changed by find-and-replace, and it diverges from Kommands, which reads the same upstream scale. Utilities exist for both weights and all four sides (border-hairline, border-thick, border-{t,r,b,l}-{hairline,thick}), generated into frontend/src/styles/tokens.css from tokens.source.json. A genuinely new weight is a value to add to kollektiv/design/tokens.json, never a literal to inline here. Scoped to borders on purpose: text-[Npx], rounded-[Npx] and the arbitrary sizing literals are separate sweeps still open in the checklist, so a broader pattern would be red on arrival.",
+        "reference": "agent_docs/HEALTH_CHECKLIST.md"
+      }
+    ],
     "generated": [
       {
         "regenerate": "pnpm gen:tokens",

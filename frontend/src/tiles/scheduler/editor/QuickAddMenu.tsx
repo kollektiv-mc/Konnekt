@@ -84,7 +84,7 @@ export function QuickAddMenu({ blockDefs, screenPos, onPick, onClose }: Props) {
   const activeColor = activeCategory ? (CATEGORY_COLOR[activeCategory] ?? '#6b7280') : '#6b7280'
 
   const panelClass =
-    'fixed z-[1001] w-40 bg-elevated border-[0.5px] border-border-subtle rounded-lg overflow-hidden shadow-[0_8px_24px_rgba(0,0,0,0.3)] backdrop-blur-md'
+    'fixed z-[1001] w-40 bg-elevated border-hairline border-border-subtle rounded-lg overflow-hidden shadow-[0_8px_24px_rgba(0,0,0,0.3)] backdrop-blur-md'
 
   return createPortal(
     <>
@@ -98,7 +98,7 @@ export function QuickAddMenu({ blockDefs, screenPos, onPick, onClose }: Props) {
         style={{ left: primaryLeft, top: primaryTop }}
       >
         {/* Search input */}
-        <div className="border-border-subtle flex items-center gap-1 border-b-[0.5px] px-3 py-[5px]">
+        <div className="border-border-subtle border-b-hairline flex items-center gap-1 px-3 py-[5px]">
           <span className="text-text-faint text-[9px]">⌕</span>
           <input
             ref={inputRef}

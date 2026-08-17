@@ -111,7 +111,7 @@ export function ConsoleTile({ serverId, maximized }: TileProps) {
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="search…"
-              className="bg-hover border-border-subtle text-text-primary flex-1 rounded border-[0.5px] px-2 py-0.5 font-mono text-xs outline-none"
+              className="bg-hover border-border-subtle text-text-primary border-hairline flex-1 rounded px-2 py-0.5 font-mono text-xs outline-none"
               onFocus={(e) => {
                 ;(e.target as HTMLInputElement).style.borderColor = 'var(--border-hover)'
               }}
@@ -168,7 +168,7 @@ export function ConsoleTile({ serverId, maximized }: TileProps) {
           value={input}
           onChange={(e) => setInput(e.target.value)}
           placeholder="Enter command..."
-          className="bg-hover border-border-subtle text-text-primary flex-1 rounded border-[0.5px] px-2 py-1 font-mono text-sm transition-colors outline-none"
+          className="bg-hover border-border-subtle text-text-primary border-hairline flex-1 rounded px-2 py-1 font-mono text-sm transition-colors outline-none"
           onFocus={(e) => {
             ;(e.target as HTMLInputElement).style.borderColor = 'var(--border-hover)'
           }}
@@ -178,7 +178,7 @@ export function ConsoleTile({ serverId, maximized }: TileProps) {
         />
         <button
           type="submit"
-          className="border-border-subtle text-text-secondary rounded border-[0.5px] px-3 py-1 text-xs transition-colors"
+          className="border-border-subtle text-text-secondary border-hairline rounded px-3 py-1 text-xs transition-colors"
           onMouseEnter={(e) => {
             ;(e.currentTarget as HTMLButtonElement).style.color = 'var(--text-primary)'
             ;(e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--border-hover)'
@@ -193,7 +193,7 @@ export function ConsoleTile({ serverId, maximized }: TileProps) {
         <button
           type="button"
           onClick={clear}
-          className="border-border-subtle text-text-faint rounded border-[0.5px] px-3 py-1 text-xs transition-colors"
+          className="border-border-subtle text-text-faint border-hairline rounded px-3 py-1 text-xs transition-colors"
           onMouseEnter={(e) => {
             ;(e.currentTarget as HTMLButtonElement).style.color = 'var(--text-secondary)'
             ;(e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--border-hover)'
@@ -218,14 +218,14 @@ export function ConsoleTile({ serverId, maximized }: TileProps) {
       {quickCommandsCollapsed ? (
         <button
           onClick={() => updateSettings({ consoleQuickCommandsCollapsed: false })}
-          className="border-border-subtle text-text-faint hover:text-text-secondary flex w-6 shrink-0 items-center justify-center border-l-[0.5px] transition-colors"
+          className="border-border-subtle text-text-faint hover:text-text-secondary border-l-hairline flex w-6 shrink-0 items-center justify-center transition-colors"
           title="Show quick commands"
         >
           <span className="font-mono text-[11px] select-none">‹</span>
         </button>
       ) : (
-        <div className="border-border-subtle flex w-56 shrink-0 flex-col border-l-[0.5px]">
-          <div className="border-border-subtle flex shrink-0 items-center justify-between border-b-[0.5px] px-3 py-2">
+        <div className="border-border-subtle border-l-hairline flex w-56 shrink-0 flex-col">
+          <div className="border-border-subtle border-b-hairline flex shrink-0 items-center justify-between px-3 py-2">
             <span className="text-text-secondary font-title text-xs font-medium">Commands</span>
             <button
               onClick={() => updateSettings({ consoleQuickCommandsCollapsed: true })}

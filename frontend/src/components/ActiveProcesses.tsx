@@ -6,7 +6,7 @@ export function ActiveProcesses() {
   if (list.length === 0) return null
 
   return (
-    <div className="border-border-subtle flex shrink-0 flex-col gap-2 border-t-[0.5px] px-3 py-2">
+    <div className="border-border-subtle border-t-hairline flex shrink-0 flex-col gap-2 px-3 py-2">
       {list.map((p) => (
         <div key={p.id} className="flex flex-col gap-1">
           <div className="flex items-center justify-between gap-1">

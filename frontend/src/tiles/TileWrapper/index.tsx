@@ -27,7 +27,7 @@ export function TileWrapper({
     <div className={`relative h-full ${maximized ? '' : 'tile-outer'}`}>
       {flash && <div className="tile-flash-ring" />}
       <div
-        className="tile-wrapper border-border-subtle bg-canvas flex h-full flex-col overflow-hidden rounded-[10px] border-[0.5px] bg-[linear-gradient(var(--bg-surface),var(--bg-surface))] transition-colors duration-150"
+        className="tile-wrapper border-border-subtle bg-canvas border-hairline flex h-full flex-col overflow-hidden rounded-[10px] bg-[linear-gradient(var(--bg-surface),var(--bg-surface))] transition-colors duration-150"
         onMouseEnter={
           maximized
             ? undefined
@@ -44,7 +44,7 @@ export function TileWrapper({
         }
       >
         <div
-          className={`drag-handle border-border-subtle flex shrink-0 items-center justify-between border-b-[0.5px] px-3 py-2 select-none ${
+          className={`drag-handle border-border-subtle border-b-hairline flex shrink-0 items-center justify-between px-3 py-2 select-none ${
             maximized ? 'cursor-default' : 'cursor-grab'
           }`}
           onDoubleClick={maximizable ? () => onToggleMaximize?.(id) : undefined}

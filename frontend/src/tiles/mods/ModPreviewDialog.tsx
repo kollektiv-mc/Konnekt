@@ -134,9 +134,9 @@ export function ModPreviewDialog({
       {/* Dialog — fixed height (not just a max-height cap) so the frame
           doesn't resize when Modrinth content/versions finish loading; the
           body's own overflow-y-auto absorbs the difference instead. */}
-      <div className="modal-panel-in bg-canvas border-border-subtle fixed top-1/2 left-1/2 z-[401] flex h-[560px] max-h-[calc(100vh-80px)] w-[600px] max-w-[calc(100vw-48px)] -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-xl border-[0.5px] shadow-[0_24px_64px_rgba(0,0,0,0.5)]">
+      <div className="modal-panel-in bg-canvas border-border-subtle border-hairline fixed top-1/2 left-1/2 z-[401] flex h-[560px] max-h-[calc(100vh-80px)] w-[600px] max-w-[calc(100vw-48px)] -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-xl shadow-[0_24px_64px_rgba(0,0,0,0.5)]">
         {/* Header */}
-        <div className="border-border-subtle flex shrink-0 items-start gap-3 border-b-[0.5px] px-4 pt-4 pb-3">
+        <div className="border-border-subtle border-b-hairline flex shrink-0 items-start gap-3 px-4 pt-4 pb-3">
           {icon ? (
             <img src={icon} alt="" className="h-[44px] w-[44px] shrink-0 rounded object-cover" />
           ) : (
@@ -176,7 +176,7 @@ export function ModPreviewDialog({
                   onOpenInBrowser()
                   onClose()
                 }}
-                className="border-border-subtle text-accent rounded border-[0.5px] bg-transparent px-2 py-1 font-mono text-xs whitespace-nowrap transition-colors"
+                className="border-border-subtle text-accent border-hairline rounded bg-transparent px-2 py-1 font-mono text-xs whitespace-nowrap transition-colors"
                 onMouseEnter={(e) => {
                   ;(e.currentTarget as HTMLElement).style.background =
                     'color-mix(in srgb, var(--accent) 10%, transparent)'
@@ -205,12 +205,12 @@ export function ModPreviewDialog({
 
         {/* Tabs (only for Modrinth mods) */}
         {isModrinth && (
-          <div className="border-border-subtle flex shrink-0 items-center gap-0 border-b-[0.5px] px-4">
+          <div className="border-border-subtle border-b-hairline flex shrink-0 items-center gap-0 px-4">
             {(['about', 'versions'] as Tab[]).map((t) => (
               <button
                 key={t}
                 onClick={() => setTab(t)}
-                className={`-mb-px border-b-[1.5px] bg-transparent px-3 py-2 font-mono text-xs capitalize transition-colors ${
+                className={`border-b-thick -mb-px bg-transparent px-3 py-2 font-mono text-xs capitalize transition-colors ${
                   tab === t ? 'text-accent border-accent' : 'text-text-muted border-transparent'
                 }`}
               >
@@ -277,7 +277,7 @@ export function ModPreviewDialog({
                     return (
                       <div
                         key={v.id}
-                        className={`border-border-subtle flex items-center gap-3 border-b-[0.5px] px-4 py-2.5 transition-colors ${
+                        className={`border-border-subtle border-b-hairline flex items-center gap-3 px-4 py-2.5 transition-colors ${
                           isCurrent
                             ? 'bg-[color-mix(in_srgb,var(--accent)_6%,transparent)]'
                             : 'bg-transparent'
@@ -315,7 +315,7 @@ export function ModPreviewDialog({
                           <button
                             onClick={() => handleVersionInstall(v.id)}
                             disabled={installing || changingVersion}
-                            className={`border-border-subtle text-text-secondary shrink-0 rounded border-[0.5px] px-2 py-0.5 text-xs transition-colors ${
+                            className={`border-border-subtle text-text-secondary border-hairline shrink-0 rounded px-2 py-0.5 text-xs transition-colors ${
                               installing || changingVersion ? 'opacity-50' : 'opacity-100'
                             }`}
                             onMouseEnter={(e) => {

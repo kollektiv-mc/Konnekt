@@ -698,7 +698,7 @@ function GraphEditorInner({
 
   // ── Toolbar button className helper ───────────────────────────────────────
   function btnClass(active = false, danger = false): string {
-    const base = 'cursor-pointer rounded border-[0.5px] px-2 py-0.5 text-[11px] font-mono'
+    const base = 'cursor-pointer rounded border-hairline px-2 py-0.5 text-[11px] font-mono'
     const borderClass = danger ? 'border-[#ef4444]' : 'border-border-subtle'
     if (active) return `${base} ${borderClass} bg-accent text-black`
     if (danger) return `${base} ${borderClass} bg-transparent text-[#ef4444]`
@@ -709,12 +709,12 @@ function GraphEditorInner({
     <SchedulerCtx.Provider value={ctxValue}>
       <div className="flex h-full flex-col">
         {/* ── Toolbar ──────────────────────────────────────────────────── */}
-        <div className="border-border-subtle bg-surface flex shrink-0 flex-wrap items-center gap-2 border-b-[0.5px] px-3 py-1.5">
+        <div className="border-border-subtle bg-surface border-b-hairline flex shrink-0 flex-wrap items-center gap-2 px-3 py-1.5">
           {/* Graph selector */}
           <div className="relative shrink-0">
             <button
               onClick={graphMenu.toggle}
-              className={`border-border-subtle text-text-primary flex max-w-[160px] shrink-0 items-center gap-1 rounded border-[0.5px] px-1.5 py-0.5 font-mono text-[11px] whitespace-nowrap transition-colors ${
+              className={`border-border-subtle text-text-primary border-hairline flex max-w-[160px] shrink-0 items-center gap-1 rounded px-1.5 py-0.5 font-mono text-[11px] whitespace-nowrap transition-colors ${
                 graphMenu.open ? 'bg-hover' : 'bg-canvas'
               }`}
             >
@@ -785,12 +785,12 @@ function GraphEditorInner({
               onChange={(e) => setGraphName(e.target.value)}
               onBlur={() => setNameEditing(false)}
               onKeyDown={(e) => e.key === 'Enter' && setNameEditing(false)}
-              className="bg-canvas border-accent text-text-primary w-[140px] rounded border-[0.5px] px-1.5 py-0.5 font-mono text-[11px] outline-none"
+              className="bg-canvas border-accent text-text-primary border-hairline w-[140px] rounded px-1.5 py-0.5 font-mono text-[11px] outline-none"
             />
           ) : (
             <span
               onClick={() => setNameEditing(true)}
-              className="text-text-muted border-border-subtle flex min-w-[60px] cursor-text items-center gap-1.5 border-b-[0.5px] border-dashed font-mono text-[11px]"
+              className="text-text-muted border-border-subtle border-b-hairline flex min-w-[60px] cursor-text items-center gap-1.5 border-dashed font-mono text-[11px]"
               title="Click to rename"
             >
               {graphName || 'Untitled'}
@@ -921,9 +921,9 @@ function GraphEditorInner({
 
           {/* Node config / data panel */}
           {selectedNode && (
-            <div className="border-border-subtle bg-canvas flex w-56 shrink-0 flex-col overflow-y-auto border-l-[0.5px]">
+            <div className="border-border-subtle bg-canvas border-l-hairline flex w-56 shrink-0 flex-col overflow-y-auto">
               {/* Tabs */}
-              <div className="border-border-subtle flex shrink-0 border-b-[0.5px]">
+              <div className="border-border-subtle border-b-hairline flex shrink-0">
                 {(['config', 'data'] as const).map((tab) => (
                   <button
                     key={tab}

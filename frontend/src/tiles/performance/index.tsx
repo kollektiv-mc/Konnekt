@@ -62,7 +62,7 @@ function CompactView({ history }: { history: StatsSnapshot[] }) {
         </div>
       )}
 
-      <div className="border-border-subtle min-h-0 flex-1 overflow-hidden rounded border-[0.5px]">
+      <div className="border-border-subtle border-hairline min-h-0 flex-1 overflow-hidden rounded">
         {sparkData.length > 1 ? (
           <Suspense fallback={<ChartFallback />}>
             <SparkChart data={sparkData} />

@@ -341,7 +341,7 @@ export function ServerSelector() {
       ))}
 
       {editing !== null ? (
-        <div className="border-border-subtle mt-1 flex flex-col gap-1.5 border-t-[0.5px] pt-2">
+        <div className="border-border-subtle border-t-hairline mt-1 flex flex-col gap-1.5 pt-2">
           {field('name', 'Name')}
           {browseField('jarPath', 'Server File', browseJar)}
           {browseField('workingDir', 'Working dir', browseDir)}
@@ -395,7 +395,7 @@ export function ServerSelector() {
               onClick={() => setPendingDisconnect(null)}
             >
               <div
-                className="bg-canvas border-border-subtle flex w-72 flex-col gap-4 rounded-xl border-[0.5px] p-5"
+                className="bg-canvas border-border-subtle border-hairline flex w-72 flex-col gap-4 rounded-xl p-5"
                 onClick={(e) => e.stopPropagation()}
               >
                 <div className="flex flex-col gap-1">

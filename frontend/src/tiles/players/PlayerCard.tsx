@@ -13,7 +13,7 @@ export function PlayerCard({ player, onClick }: Props) {
   return (
     <button
       onClick={onClick}
-      className="border-border-subtle flex w-full cursor-pointer flex-col items-center gap-1 rounded-lg border-[0.5px] p-2 text-center transition-colors hover:bg-white/5 active:bg-white/10"
+      className="border-border-subtle border-hairline flex w-full cursor-pointer flex-col items-center gap-1 rounded-lg p-2 text-center transition-colors hover:bg-white/5 active:bg-white/10"
     >
       <div className="relative">
         {imgFailed ? (
@@ -31,7 +31,7 @@ export function PlayerCard({ player, onClick }: Props) {
           />
         )}
         <div
-          className={`border-canvas absolute -right-0.5 -bottom-0.5 h-2 w-2 rounded-full border-[1.5px] ${player.online ? 'bg-accent' : 'bg-text-faint'}`}
+          className={`border-canvas border-thick absolute -right-0.5 -bottom-0.5 h-2 w-2 rounded-full ${player.online ? 'bg-accent' : 'bg-text-faint'}`}
         />
       </div>
       <span className="text-text-secondary w-full truncate font-mono text-xs">{player.name}</span>

@@ -19,7 +19,7 @@ const RUN_STATE_CLASS: Record<string, string> = {
   running: 'border-accent border-2',
   success: 'border-success border-2 shadow-[0_0_0_1px_#22c55e55,0_0_12px_#22c55e44]',
   failed: 'border-[#ef4444] border-2 shadow-[0_0_0_1px_#ef444466,0_0_12px_#ef444455]',
-  cycle: 'border-warning border-[1.5px] shadow-[0_0_0_1px_#f59e0b55]',
+  cycle: 'border-warning border-thick shadow-[0_0_0_1px_#f59e0b55]',
 }
 
 export const BlockNode = memo(function BlockNode({ data, selected }: NodeProps<BlockFlowNode>) {
@@ -115,7 +115,7 @@ export const BlockNode = memo(function BlockNode({ data, selected }: NodeProps<B
   } else if (inCycle) {
     borderClass = RUN_STATE_CLASS.cycle
   } else if (selected) {
-    borderClass = 'border-accent border-[1.5px]'
+    borderClass = 'border-accent border-thick'
   } else {
     borderClass = 'border'
     borderStyle = { borderColor: color }
@@ -164,7 +164,7 @@ export const BlockNode = memo(function BlockNode({ data, selected }: NodeProps<B
 
       {/* Config hint */}
       {hint !== undefined && (
-        <div className="text-text-faint border-border-subtle flex h-5 items-center truncate border-b-[0.5px] px-2.5 font-mono text-[9px]">
+        <div className="text-text-faint border-border-subtle border-b-hairline flex h-5 items-center truncate px-2.5 font-mono text-[9px]">
           {String(hint)}
         </div>
       )}

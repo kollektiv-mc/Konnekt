@@ -42,7 +42,7 @@ export function ServerTooltip({ summary, anchor }: Props) {
 
   return (
     <div
-      className="border-border-subtle bg-elevated pointer-events-none fixed z-[300] flex w-60 flex-col gap-1.5 rounded-lg border-[0.5px] px-3 py-2.5 shadow-[0_8px_24px_rgba(0,0,0,0.3)] backdrop-blur-md"
+      className="border-border-subtle bg-elevated border-hairline pointer-events-none fixed z-[300] flex w-60 flex-col gap-1.5 rounded-lg px-3 py-2.5 shadow-[0_8px_24px_rgba(0,0,0,0.3)] backdrop-blur-md"
       // eslint-disable-next-line no-restricted-syntax -- anchored to the hovered row's measured viewport position
       style={{ top: anchor.top, left: anchor.left }}
       role="tooltip"
@@ -51,7 +51,7 @@ export function ServerTooltip({ summary, anchor }: Props) {
       <Row label="Type">{loader}</Row>
       <Row label="Path">{truncateStart(summary.workingDir, PATH_MAX_CHARS) || '—'}</Row>
       <Row label="Launch">{summary.launchFile || '—'}</Row>
-      <div className="border-border-subtle flex items-center gap-1.5 border-t-[0.5px] pt-1.5">
+      <div className="border-border-subtle border-t-hairline flex items-center gap-1.5 pt-1.5">
         <span
           className={`h-1.5 w-1.5 shrink-0 rounded-full ${summary.running ? 'bg-accent' : 'bg-text-faint'}`}
         />

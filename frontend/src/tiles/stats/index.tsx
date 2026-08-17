@@ -17,7 +17,7 @@ function StatRow({
   className?: string
 }) {
   return (
-    <div className="border-border-subtle flex items-center justify-between border-b-[0.5px] py-1 last:border-0">
+    <div className="border-border-subtle border-b-hairline flex items-center justify-between py-1 last:border-0">
       <span className="text-text-muted text-xs">{label}</span>
       <span className={`font-mono text-sm font-medium ${className}`}>{value}</span>
     </div>

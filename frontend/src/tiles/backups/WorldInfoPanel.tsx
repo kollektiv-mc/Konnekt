@@ -46,7 +46,7 @@ export function WorldInfoPanel({ world, onClose }: WorldInfoPanelProps) {
 
   return (
     <div
-      className="border-l-border-subtle absolute top-0 right-0 bottom-0 z-20 flex w-[42%] min-w-[230px] flex-col overflow-y-auto border-l-[0.5px] bg-[color-mix(in_srgb,var(--bg-base)_97%,white)]"
+      className="border-l-border-subtle border-l-hairline absolute top-0 right-0 bottom-0 z-20 flex w-[42%] min-w-[230px] flex-col overflow-y-auto bg-[color-mix(in_srgb,var(--bg-base)_97%,white)]"
       // eslint-disable-next-line no-restricted-syntax -- slide-in animation driven by `visible` mount state
       style={{
         transform: visible ? 'translateX(0)' : 'translateX(100%)',
@@ -54,7 +54,7 @@ export function WorldInfoPanel({ world, onClose }: WorldInfoPanelProps) {
       }}
     >
       {/* Header */}
-      <div className="border-b-border-subtle flex shrink-0 items-start justify-between gap-2 border-b-[0.5px] px-4 pt-5 pb-4">
+      <div className="border-b-border-subtle border-b-hairline flex shrink-0 items-start justify-between gap-2 px-4 pt-5 pb-4">
         <div className="flex min-w-0 flex-col gap-1.5">
           <span className="text-text-primary truncate font-mono text-sm">{displayName}</span>
           {showFolder && (
@@ -83,7 +83,7 @@ export function WorldInfoPanel({ world, onClose }: WorldInfoPanelProps) {
 
       {/* Meta rows */}
       {hasMeta && (
-        <div className="border-b-border-subtle flex shrink-0 flex-col border-b-[0.5px] px-4 py-3">
+        <div className="border-b-border-subtle border-b-hairline flex shrink-0 flex-col px-4 py-3">
           {meta.gameMode && <Row label="mode" value={capitalize(meta.gameMode)} />}
           {meta.difficulty && <Row label="difficulty" value={capitalize(meta.difficulty)} />}
           {meta.version && <Row label="version" value={meta.version} />}
@@ -94,7 +94,7 @@ export function WorldInfoPanel({ world, onClose }: WorldInfoPanelProps) {
       )}
 
       {/* Size */}
-      <div className="border-b-border-subtle shrink-0 border-b-[0.5px] px-4 py-3">
+      <div className="border-b-border-subtle border-b-hairline shrink-0 px-4 py-3">
         <Row label="total size" value={fmtBytes(world.totalSize)} />
       </div>
 

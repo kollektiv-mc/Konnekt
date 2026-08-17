@@ -52,7 +52,7 @@ export function ServerInfoPanel({ backup, worlds, onClose }: ServerInfoPanelProp
 
   return (
     <div
-      className="border-l-border-subtle absolute top-0 right-0 bottom-0 z-20 flex w-[42%] min-w-[230px] flex-col overflow-y-auto border-l-[0.5px] bg-[color-mix(in_srgb,var(--bg-base)_97%,white)]"
+      className="border-l-border-subtle border-l-hairline absolute top-0 right-0 bottom-0 z-20 flex w-[42%] min-w-[230px] flex-col overflow-y-auto bg-[color-mix(in_srgb,var(--bg-base)_97%,white)]"
       // eslint-disable-next-line no-restricted-syntax -- slide-in animation driven by `visible` mount state
       style={{
         transform: visible ? 'translateX(0)' : 'translateX(100%)',
@@ -60,7 +60,7 @@ export function ServerInfoPanel({ backup, worlds, onClose }: ServerInfoPanelProp
       }}
     >
       {/* Header */}
-      <div className="border-b-border-subtle flex shrink-0 items-start justify-between gap-2 border-b-[0.5px] px-4 pt-5 pb-4">
+      <div className="border-b-border-subtle border-b-hairline flex shrink-0 items-start justify-between gap-2 px-4 pt-5 pb-4">
         <div className="flex min-w-0 flex-col gap-1.5">
           <span className="text-text-primary truncate font-mono text-sm">{displayLabel}</span>
           {backup.tags.length > 0 && (
@@ -86,7 +86,7 @@ export function ServerInfoPanel({ backup, worlds, onClose }: ServerInfoPanelProp
       </div>
 
       {/* Meta */}
-      <div className="border-b-border-subtle flex shrink-0 flex-col border-b-[0.5px] px-4 py-3">
+      <div className="border-b-border-subtle border-b-hairline flex shrink-0 flex-col px-4 py-3">
         <Row label="created" value={fmtDate(backup.createdAt)} />
         <Row label="size" value={fmtBytes(backup.sizeBytes)} />
         <Row label="file" value={backup.filename} mono />
@@ -95,7 +95,7 @@ export function ServerInfoPanel({ backup, worlds, onClose }: ServerInfoPanelProp
       {/* Worlds section */}
       <div className="flex flex-col">
         <button
-          className="border-b-border-subtle flex w-full shrink-0 items-center justify-between border-b-[0.5px] px-4 py-3 text-left"
+          className="border-b-border-subtle border-b-hairline flex w-full shrink-0 items-center justify-between px-4 py-3 text-left"
           onClick={() => setWorldsOpen((o) => !o)}
           onMouseEnter={(e) => {
             ;(e.currentTarget as HTMLButtonElement).style.background = 'rgba(255,255,255,0.025)'
@@ -158,7 +158,7 @@ function WorldRow({
   const displayName = world.meta?.found && world.meta.levelName ? world.meta.levelName : world.name
 
   return (
-    <div className="border-b-border-subtle border-b-[0.5px]">
+    <div className="border-b-border-subtle border-b-hairline">
       <button
         className="flex w-full items-center justify-between px-4 py-2 text-left"
         onClick={onToggle}
@@ -232,7 +232,7 @@ function DimRow({ kind, size }: { kind: string; size: number }) {
 
 function TagPill({ tag }: { tag: string }) {
   return (
-    <span className="text-accent inline-flex items-center rounded border-[0.5px] border-[color-mix(in_srgb,var(--accent)_30%,transparent)] bg-[color-mix(in_srgb,var(--accent)_12%,transparent)] px-1.5 py-px font-mono text-xs">
+    <span className="text-accent border-hairline inline-flex items-center rounded border-[color-mix(in_srgb,var(--accent)_30%,transparent)] bg-[color-mix(in_srgb,var(--accent)_12%,transparent)] px-1.5 py-px font-mono text-xs">
       #{tag}
     </span>
   )

@@ -43,7 +43,7 @@ const ROW = 'flex justify-between gap-2 py-0.5'
 
 const LABEL = 'text-text-faint'
 
-const SECTION = 'border-b-border-subtle mb-2 border-b-[0.5px] pb-1.5'
+const SECTION = 'border-b-border-subtle mb-2 border-b-hairline pb-1.5'
 
 const STACK = 'flex flex-col gap-1'
 

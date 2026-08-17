@@ -384,7 +384,7 @@ export function QuickCommandsPanel({ serverId, columns = 2 }: QuickCommandsPanel
         createPortal(
           <div
             ref={dropdownRef}
-            className="modal-panel-in fixed z-[9999] grid grid-cols-2 gap-1.5 overflow-y-auto rounded-[10px] border-[0.5px] border-white/10 bg-[#0d0e14] p-2.5 shadow-[0_8px_32px_rgba(0,0,0,0.5)]"
+            className="modal-panel-in border-hairline fixed z-[9999] grid grid-cols-2 gap-1.5 overflow-y-auto rounded-[10px] border-white/10 bg-[#0d0e14] p-2.5 shadow-[0_8px_32px_rgba(0,0,0,0.5)]"
             // eslint-disable-next-line no-restricted-syntax -- position computed from getBoundingClientRect, not visible to Tailwind's static scanner
             style={{
               top: dropdownPos.top,
@@ -414,7 +414,7 @@ export function QuickCommandsPanel({ serverId, columns = 2 }: QuickCommandsPanel
 
       {confirmAction && (
         <div className="modal-overlay-in fixed inset-0 z-50 flex items-center justify-center bg-black/60">
-          <div className="modal-panel-in border-border-subtle bg-canvas flex w-80 flex-col gap-4 rounded-xl border-[0.5px] p-5">
+          <div className="modal-panel-in border-border-subtle bg-canvas border-hairline flex w-80 flex-col gap-4 rounded-xl p-5">
             <div className="flex flex-col gap-1">
               <span className="text-text-primary text-sm font-semibold capitalize">
                 {confirmAction === 'stop' ? 'Stop server?' : 'Restart server?'}
@@ -443,7 +443,7 @@ export function QuickCommandsPanel({ serverId, columns = 2 }: QuickCommandsPanel
                   execLifecycle(confirmAction)
                   setConfirmAction(null)
                 }}
-                className="rounded border-[0.5px] border-red-400/30 bg-red-400/15 px-3 py-1.5 text-xs text-red-400 transition-colors"
+                className="border-hairline rounded border-red-400/30 bg-red-400/15 px-3 py-1.5 text-xs text-red-400 transition-colors"
                 onMouseEnter={(e) => {
                   ;(e.currentTarget as HTMLButtonElement).style.background =
                     'rgba(248,113,113,0.25)'
@@ -462,7 +462,7 @@ export function QuickCommandsPanel({ serverId, columns = 2 }: QuickCommandsPanel
 
       {modal && (
         <div className="modal-overlay-in fixed inset-0 z-50 flex items-center justify-center bg-black/60">
-          <div className="modal-panel-in border-border-subtle bg-canvas flex w-80 flex-col gap-3 rounded-xl border-[0.5px] p-5">
+          <div className="modal-panel-in border-border-subtle bg-canvas border-hairline flex w-80 flex-col gap-3 rounded-xl p-5">
             <h3 className="text-text-primary text-sm font-semibold capitalize">
               {modal.type} Player
             </h3>
@@ -472,14 +472,14 @@ export function QuickCommandsPanel({ serverId, columns = 2 }: QuickCommandsPanel
               onChange={(e) => setModal((m) => m && { ...m, playerName: e.target.value })}
               placeholder="Player name"
               autoFocus
-              className="bg-hover border-border-subtle text-text-primary rounded border-[0.5px] px-2 py-1.5 text-sm outline-none"
+              className="bg-hover border-border-subtle text-text-primary border-hairline rounded px-2 py-1.5 text-sm outline-none"
             />
             <input
               type="text"
               value={modal.reason}
               onChange={(e) => setModal((m) => m && { ...m, reason: e.target.value })}
               placeholder="Reason (optional)"
-              className="bg-hover border-border-subtle text-text-primary rounded border-[0.5px] px-2 py-1.5 text-sm outline-none"
+              className="bg-hover border-border-subtle text-text-primary border-hairline rounded px-2 py-1.5 text-sm outline-none"
             />
             <div className="flex justify-end gap-2">
               <button
@@ -496,7 +496,7 @@ export function QuickCommandsPanel({ serverId, columns = 2 }: QuickCommandsPanel
               </button>
               <button
                 onClick={submitModal}
-                className="rounded border-[0.5px] border-red-400/30 bg-red-400/15 px-3 py-1.5 text-xs text-red-400 transition-colors"
+                className="border-hairline rounded border-red-400/30 bg-red-400/15 px-3 py-1.5 text-xs text-red-400 transition-colors"
                 onMouseEnter={(e) => {
                   ;(e.currentTarget as HTMLButtonElement).style.background =
                     'rgba(248,113,113,0.25)'
