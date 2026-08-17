@@ -153,6 +153,11 @@ jobs:
     permissions:
       contents: write
     steps:
+      # Before the artifacts land: actions/checkout cleans the workspace, so
+      # running it second would delete them. Only needed for the notes script
+      # below — nothing else in this job reads the tree.
+      - uses: actions/checkout@v4
+
       - uses: actions/download-artifact@v4
         with:
           pattern: konnekt-*
@@ -163,30 +168,51 @@ jobs:
         working-directory: dist
         run: sha256sum * > checksums.txt
 
-      # --generate-notes (used below by gh release create) would compute the
-      # notes server-side with no chance to touch the result before they're
-      # attached to the release. Calling the same generator by hand first gets
-      # the identical notes as text, so the byline strip below can run on them.
+      # Same notes script as the nightly snapshot, so a release and the
+      # snapshot ahead of it are described the same way. It leaves out pull
+      # requests that only touched the website or the docs — neither ships in
+      # this build — and sorts the rest into Features, Fixes and Other changes
+      # by label, then conventional-commit prefix, then the title's leading
+      # verb, none of which GitHub's own generator can do.
+      #
+      # The baseline it picks is the latest published release, which is the
+      # previous one: this release's own entry doesn't exist yet.
       - name: Generate release notes
         working-directory: dist
         env:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
-          TAG: ${{ github.ref_name }}
+          SERVER: ${{ github.server_url }}
+          HEAD_REF: ${{ github.ref_name }}
         run: |
-          gh api --method POST "repos/$REPO/releases/generate-notes" \
-            -f "tag_name=$TAG" --jq .body > notes.md
-
-          # GitHub's generator appends " by @user in <PR URL>" to every bullet.
-          # That's attribution for the PR, not something a release's changelog
-          # needs to repeat — drop it, keeping just the title.
-          sed -i -E 's/ by @[^ ]+ in https:\/\/[^[:space:]]+$//' notes.md
+          # Fall back to GitHub's generator rather than to nothing. It is what
+          # this step used to be, and on the paths that get here — the very
+          # first release, so no baseline, or an API failure — a full list
+          # shaped by .github/release.yml beats an empty release body.
+          #
+          # Warn rather than fail: a release must not be blocked on its notes,
+          # but a body that quietly includes the website again should not look
+          # like a clean run either.
+          if ! python3 "$GITHUB_WORKSPACE/.github/scripts/release-notes.py" > notes.md \
+            || [ ! -s notes.md ]; then
+            echo "::warning::release-notes.py failed; falling back to GitHub's generated notes"
+            rm -f notes.md
+          fi
 
       - name: Publish release
         working-directory: dist
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "${{ github.ref_name }}" * \
-            --title "${{ github.ref_name }}" --notes-file notes.md \
+          if [ -f notes.md ]; then
+            notes=(--notes-file notes.md)
+          else
+            notes=(--generate-notes)
+          fi
+
+          # Assets are named rather than globbed with `*`, which would now pick
+          # up the notes.md written beside them. Same list snapshot.yml uploads.
+          gh release create "${{ github.ref_name }}" \
+            konnekt-* checksums.txt \
+            --title "${{ github.ref_name }}" "${notes[@]}" \
             --repo "${{ github.repository }}"

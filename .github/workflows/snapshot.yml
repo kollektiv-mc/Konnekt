@@ -208,6 +208,11 @@ jobs:
     permissions:
       contents: write
     steps:
+      # Before the artifacts land: actions/checkout cleans the workspace, so
+      # running it second would delete them. Only needed for the notes script
+      # below — nothing else in this job reads the tree.
+      - uses: actions/checkout@v4
+
       - uses: actions/download-artifact@v4
         with:
           pattern: konnekt-*
@@ -218,52 +223,37 @@ jobs:
         working-directory: dist
         run: sha256sum * > checksums.txt
 
-      # Baseline is the latest published release, not the previous snapshot —
-      # a snapshot describes everything ahead of the release named on the
-      # download page, not just what changed since last night's build.
-      # generate-notes already excludes prereleases (like `snapshot` itself)
-      # when picking this automatically, so fetching it explicitly here just
-      # makes that dependency visible and keeps the fallback below consistent
-      # with the real call. Sections come from .github/release.yml.
+      # The notes come from .github/scripts/release-notes.py, which release.yml
+      # also calls, so a snapshot and the release it is ahead of are described
+      # the same way. GitHub's releases/generate-notes cannot express either
+      # half of what a build's changelog needs: it has no idea which paths a
+      # pull request touched, so website-only work described a binary
+      # containing none of it, and it sorts on labels alone, so this repo's
+      # mostly unlabelled pull requests all landed in "Other changes".
       #
-      # tag_name is a name that doesn't exist on purpose. generate-notes
-      # ignores target_commitish whenever tag_name already resolves to a tag,
-      # so passing "snapshot" here would describe the build being replaced
-      # rather than this one.
+      # The script picks its own baseline — the latest published release, not
+      # the previous snapshot. A snapshot describes everything ahead of the
+      # release named on the download page, not just what changed since last
+      # night's build.
       - name: Generate release notes
         working-directory: dist
         env:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
           SERVER: ${{ github.server_url }}
-          SHA: ${{ needs.check.outputs.sha }}
-          SHORT: ${{ needs.check.outputs.short }}
+          HEAD_REF: ${{ needs.check.outputs.sha }}
         run: |
-          base_tag="$(gh api "repos/$REPO/releases/latest" --jq .tag_name 2>/dev/null || true)"
-
-          args=(-f "tag_name=snapshot-$SHORT" -f "target_commitish=$SHA")
-          if [ -n "$base_tag" ]; then
-            args+=(-f "previous_tag_name=$base_tag")
-          fi
-
-          # Losing the notes must not cost the build itself; fall back to the
-          # compare view, which is the same information without the formatting.
-          if ! gh api --method POST "repos/$REPO/releases/generate-notes" \
-            "${args[@]}" --jq .body > changes.md; then
-            : > changes.md
-          fi
-
-          # GitHub's generator appends " by @user in <PR URL>" to every bullet.
-          # That's attribution for the PR, not something a build's changelog
-          # needs to say twice a night — drop it, keeping just the title.
-          sed -i -E 's/ by @[^ ]+ in https:\/\/[^[:space:]]+$//' changes.md
-
-          if [ ! -s changes.md ]; then
-            if [ -n "$base_tag" ]; then
-              echo "**Full changelog**: $SERVER/$REPO/compare/$base_tag...$SHA" > changes.md
-            else
-              echo "**Commits**: $SERVER/$REPO/commits/$SHA" > changes.md
-            fi
+          # Losing the notes must not cost the build itself. The commit list is
+          # the same information without the shaping, and it needs no baseline
+          # — which is one of the ways the script can bail.
+          #
+          # The warning is the point of the annotation: without it a degraded
+          # run is indistinguishable from a good one, which is how the first
+          # failure here went unnoticed until someone read the release body.
+          if ! python3 "$GITHUB_WORKSPACE/.github/scripts/release-notes.py" > changes.md \
+            || [ ! -s changes.md ]; then
+            echo "::warning::release-notes.py failed; the snapshot body falls back to a commit link"
+            echo "**Commits**: $SERVER/$REPO/commits/$HEAD_REF" > changes.md
           fi
 
       # Delete and recreate rather than edit. `snapshot` has to end up pointing

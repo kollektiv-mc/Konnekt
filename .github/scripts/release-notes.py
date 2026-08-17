@@ -1,0 +1,310 @@
+#!/usr/bin/env python3
+"""Build the changelog body for a release — the nightly `snapshot` prerelease
+and tagged releases alike.
+
+GitHub's own `releases/generate-notes` cannot do the two things a shipped
+build's changelog needs:
+
+  * It has no notion of *what* a pull request touched, so the website — which
+    lives in this repo but ships to Cloudflare Pages, not into the binary —
+    fills the notes of a build that does not contain a line of it.
+  * It sorts purely by label, and this repo's pull requests are mostly
+    unlabelled, so every one of them lands in "Other changes" while the
+    handful that carry a label look like the only real work.
+
+So this script does the same job with the changed-path filter and the
+categorisation rules a shipped build actually wants. Both workflows call it, so
+a snapshot and the release it is ahead of describe themselves the same way.
+
+Reads:
+
+  GH_TOKEN   a token that can read this repository (required)
+  REPO       owner/name (required)
+  HEAD_REF   the commit or tag being described (required)
+  BASE_TAG   what to measure from. Defaults to the latest published release,
+             which is the right answer for both callers: that endpoint skips
+             prereleases, so `snapshot` can never become its own baseline, and
+             a tagged release's own entry does not exist yet when it runs.
+  SERVER     github.com base URL, for the compare link
+
+Writes the markdown body to stdout. Exits non-zero on any failure, including
+having no baseline to measure from — each caller has a fallback, so losing the
+notes never costs the build.
+"""
+
+from __future__ import annotations
+
+import json
+import os
+import re
+import sys
+import time
+import urllib.error
+import urllib.parse
+import urllib.request
+
+# Paths that never reach the binary: the marketing site, which ships to
+# Cloudflare Pages on its own, and the two documentation trees, which are read
+# in the repo. A pull request touching only these did not change the thing being
+# downloaded, so it is left out of the notes entirely. One touching both still
+# appears — its app-side half is real.
+#
+# agent_docs/ earns its place here rather than being pedantry: website work
+# routinely updates the roadmap alongside the page it describes, and on
+# website/ alone those pull requests came back as app changes through the back
+# door.
+NON_APP_PREFIXES = ("website/", "agent_docs/", "docs/")
+
+# Labels win over any guess made from the title, because a label is a
+# deliberate statement and a title is prose. Names come from the suite's
+# taxonomy in kollektiv's design/labels.json.
+FEATURE_LABELS = {"type:feature", "feature", "enhancement"}
+FIX_LABELS = {"type:bug", "bug"}
+OTHER_LABELS = {"type:chore", "type:docs", "chore", "documentation"}
+SKIP_LABELS = {"changelog:skip"}
+
+# Conventional-commit types, for the titles that carry one.
+FEATURE_TYPES = {"feat", "feature", "perf"}
+FIX_TYPES = {"fix", "bugfix", "hotfix"}
+OTHER_TYPES = {"chore", "docs", "test", "tests", "refactor", "ci", "build", "style", "revert"}
+
+# Last resort: the leading verb of the title. Most of this repo's pull requests
+# are unlabelled prose, and "Add X" really is a feature and "Fix X" really is a
+# fix. Deliberately short — a verb that does not clearly mean one or the other
+# ("Rework", "Update", "Make", "Migrate") belongs in "Other changes", which is
+# an honest answer rather than a wrong one.
+FEATURE_VERBS = {
+    "add", "adds", "added", "introduce", "introduces", "implement", "implements",
+    "support", "supports", "publish", "publishes", "enable", "enables", "surface",
+    "surfaces", "expose", "exposes", "allow", "allows", "ship", "ships",
+}
+FIX_VERBS = {
+    "fix", "fixes", "fixed", "correct", "corrects", "repair", "repairs", "resolve",
+    "resolves", "prevent", "prevents", "restore", "restores", "unbreak", "unbreaks",
+    "patch", "patches", "harden", "hardens",
+}
+
+FEATURES, FIXES, OTHER = "Features", "Fixes", "Other changes"
+SECTIONS = (FEATURES, FIXES, OTHER)
+
+CONVENTIONAL = re.compile(r"^([a-z]+)(?:\([^)]*\))?!?:\s*")
+
+API = os.environ.get("GITHUB_API_URL", "https://api.github.com").rstrip("/")
+
+# A hundred-odd calls go into one changelog, so a request that fails for a
+# reason unrelated to what was asked gets a few more chances before the run is
+# written off.
+RETRIES = 4
+BACKOFF_SECONDS = 2
+
+
+class ApiError(RuntimeError):
+    """A request that could not be completed, naming the request.
+
+    The path matters in the log: "HTTP Error 500" alone leaves whoever reads a
+    failed run with a hundred candidate calls and no way to choose between them.
+    """
+
+    def __init__(self, path: str, detail: object, code: int | None = None) -> None:
+        self.path = path
+        self.code = code
+        super().__init__(f"GET {path} -> {detail}")
+
+
+def api(path: str, **params: object) -> object:
+    """GET one page of the REST API, decoded.
+
+    Retries the failures that say nothing about the request — 5xx, and the 429
+    or 403 the API answers with when it wants you to slow down. Describing one
+    release takes on the order of a hundred calls, so a single unlucky 500 costs
+    the whole changelog, and that is exactly how the first real run of this
+    script ended: one 500, no retry, notes replaced by a bare commit link. A 4xx
+    that means what it says is raised at once, because retrying a 404 only
+    delays the report.
+    """
+    url = f"{API}{path}"
+    if params:
+        url += "?" + urllib.parse.urlencode(params)
+    request = urllib.request.Request(
+        url,
+        headers={
+            "Accept": "application/vnd.github+json",
+            "Authorization": f"Bearer {os.environ['GH_TOKEN']}",
+            "User-Agent": "konnekt-release-notes",
+            "X-GitHub-Api-Version": "2022-11-28",
+        },
+    )
+    for attempt in range(RETRIES):
+        try:
+            with urllib.request.urlopen(request, timeout=60) as response:
+                return json.load(response)
+        except urllib.error.HTTPError as error:
+            if (error.code < 500 and error.code not in (403, 429)) or attempt == RETRIES - 1:
+                raise ApiError(path, f"HTTP {error.code}", error.code) from error
+            detail = f"HTTP {error.code}"
+        except (urllib.error.URLError, TimeoutError, json.JSONDecodeError) as error:
+            if attempt == RETRIES - 1:
+                raise ApiError(path, error) from error
+            detail = str(error)
+        delay = BACKOFF_SECONDS * 2**attempt
+        print(f"GET {path} -> {detail}, retrying in {delay}s", file=sys.stderr)
+        time.sleep(delay)
+    raise AssertionError("unreachable")
+
+
+def commits_in_range(repo: str, base: str, head: str) -> list[dict]:
+    """Every commit reachable from `head` but not `base`.
+
+    The compare endpoint reports the true total alongside a page of commits, so
+    page until the two agree. 100 per page is its documented ceiling; it does
+    serve more if asked, but there is nothing to gain from depending on that.
+    The page ceiling only exists so a bad range cannot spin forever, and 2500
+    commits is far past any plausible release window.
+    """
+    collected: list[dict] = []
+    for page in range(1, 26):
+        payload = api(f"/repos/{repo}/compare/{base}...{head}", page=page, per_page=100)
+        collected.extend(payload.get("commits") or [])
+        if len(collected) >= payload.get("total_commits", 0) or not payload.get("commits"):
+            break
+    return collected
+
+
+def merged_pulls(repo: str, commits: list[dict]) -> list[dict]:
+    """The merged pull requests those commits came from, oldest merge first.
+
+    A commit can be associated with more than one pull request — its own, plus
+    any still-open branch that has it — so this keeps only merged ones, and
+    dedupes because every commit of a pull request names it.
+    """
+    pulls: dict[int, dict] = {}
+    for commit in commits:
+        for pull in api(f"/repos/{repo}/commits/{commit['sha']}/pulls", per_page=100):
+            if pull.get("merged_at") and pull["number"] not in pulls:
+                pulls[pull["number"]] = pull
+    return sorted(pulls.values(), key=lambda pull: (pull["merged_at"], pull["number"]))
+
+
+def touches_app(repo: str, number: int) -> bool:
+    """Whether a pull request changed anything outside the non-app paths.
+
+    Returns early on the first app-side file, so the common case — a pull
+    request that is mostly app work — costs one page. An unreadable or
+    absurdly large file list is reported as app-side: a changelog that keeps
+    something it could not classify is better than one that quietly drops it.
+    """
+    for page in range(1, 31):
+        files = api(f"/repos/{repo}/pulls/{number}/files", page=page, per_page=100)
+        if not files:
+            return False
+        for changed in files:
+            if not changed["filename"].startswith(NON_APP_PREFIXES):
+                return True
+        if len(files) < 100:
+            return False
+    return True
+
+
+def section_for(pull: dict) -> str | None:
+    """Which section a pull request belongs in, or None to leave it out."""
+    labels = {label["name"].lower() for label in pull.get("labels") or []}
+    if labels & SKIP_LABELS:
+        return None
+    if labels & FEATURE_LABELS:
+        return FEATURES
+    if labels & FIX_LABELS:
+        return FIXES
+    if labels & OTHER_LABELS:
+        return OTHER
+
+    title = (pull.get("title") or "").strip()
+    conventional = CONVENTIONAL.match(title)
+    if conventional:
+        kind = conventional.group(1)
+        if kind in FEATURE_TYPES:
+            return FEATURES
+        if kind in FIX_TYPES:
+            return FIXES
+        if kind in OTHER_TYPES:
+            return OTHER
+        # A prefix that isn't a conventional type is a scope someone wrote by
+        # hand ("website: ..."). Drop it so the verb check below reads the
+        # sentence rather than the scope.
+        title = title[conventional.end():].strip()
+
+    verb = re.sub(r"[^a-z]", "", title.split(" ")[0].lower()) if title else ""
+    if verb in FEATURE_VERBS:
+        return FEATURES
+    if verb in FIX_VERBS:
+        return FIXES
+    return OTHER
+
+
+def entry(pull: dict) -> str:
+    # GitHub's own generate-notes appends " by @user in <PR URL>" to every
+    # bullet, which is attribution for the PR, not something a changelog
+    # meant for users of the app needs repeated on every line. This mirrors
+    # that generator everywhere else, so it deliberately doesn't here.
+    title = " ".join((pull.get("title") or f"Pull request #{pull['number']}").split())
+    return f"* {title}"
+
+
+def latest_release_tag(repo: str) -> str:
+    """The newest published release's tag, or "" when there isn't one yet."""
+    try:
+        return (api(f"/repos/{repo}/releases/latest").get("tag_name") or "").strip()
+    except ApiError as error:
+        if error.code == 404:  # a repo with no published release
+            return ""
+        raise
+
+
+def main() -> int:
+    repo = os.environ["REPO"]
+    head = os.environ["HEAD_REF"]
+    server = os.environ.get("SERVER", "https://github.com").rstrip("/")
+
+    base = os.environ.get("BASE_TAG", "").strip() or latest_release_tag(repo)
+    if not base:
+        print("no published release to measure against", file=sys.stderr)
+        return 1
+
+    commits = commits_in_range(repo, base, head)
+    grouped: dict[str, list[str]] = {section: [] for section in SECTIONS}
+    skipped = 0
+
+    for pull in merged_pulls(repo, commits):
+        if not touches_app(repo, pull["number"]):
+            skipped += 1
+            continue
+        section = section_for(pull)
+        if section:
+            grouped[section].append(entry(pull))
+
+    lines = ["## What's changed", ""]
+    for section in SECTIONS:
+        if grouped[section]:
+            lines += [f"### {section}", *grouped[section], ""]
+
+    if not any(grouped.values()):
+        lines.append("No changes to the app since the last release.")
+        lines.append("")
+
+    if skipped:
+        noun = "pull request" if skipped == 1 else "pull requests"
+        lines.append(
+            f"_{skipped} website and documentation {noun} left out — neither ships in this build._"
+        )
+        lines.append("")
+
+    lines.append(f"**Full changelog**: {server}/{repo}/compare/{base}...{head}")
+    print("\n".join(lines))
+    return 0
+
+
+if __name__ == "__main__":
+    try:
+        sys.exit(main())
+    except (ApiError, KeyError, OSError) as error:
+        print(f"could not build the changelog: {error}", file=sys.stderr)
+        sys.exit(1)
