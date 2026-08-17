@@ -240,11 +240,13 @@ def section_for(pull: dict) -> str | None:
     return OTHER
 
 
-def entry(pull: dict, server: str, repo: str) -> str:
+def entry(pull: dict) -> str:
+    # GitHub's own generate-notes appends " by @user in <PR URL>" to every
+    # bullet, which is attribution for the PR, not something a changelog
+    # meant for users of the app needs repeated on every line. This mirrors
+    # that generator everywhere else, so it deliberately doesn't here.
     title = " ".join((pull.get("title") or f"Pull request #{pull['number']}").split())
-    author = (pull.get("user") or {}).get("login")
-    byline = f" by @{author}" if author else ""
-    return f"* {title}{byline} in {server}/{repo}/pull/{pull['number']}"
+    return f"* {title}"
 
 
 def latest_release_tag(repo: str) -> str:
@@ -277,7 +279,7 @@ def main() -> int:
             continue
         section = section_for(pull)
         if section:
-            grouped[section].append(entry(pull, server, repo))
+            grouped[section].append(entry(pull))
 
     lines = ["## What's changed", ""]
     for section in SECTIONS:
