@@ -1913,3 +1913,92 @@ generator emitting a directional form first.
   confirmed the border color re-themed (`rgba(0,0,0,0.09)` vs. the dark theme's
   white-based value) while `--accent` held constant, the same theme-dependent
   check that caught the neighbouring `--panel-bg` bug.
+
+---
+
+### 2026-08-17 — Last three data polls closed, and a checklist claim that was wrong
+
+Closes **P1 — Remaining `useEffect` polls that have events available**. Two of the
+three were what the checklist described. The third was not, and acting on the
+description as written would have shipped a visible bug.
+
+**⚠️ The checklist was wrong about the stats tile.** It read: `tiles/stats/index.tsx`
+"polls `GetServerStatus` while `stats:snapshot` is pushed by a 10s Go ticker — **a
+straight duplicate**". Three things falsify that, each independently sufficient:
+
+- `models.StatsSnapshot` carries Timestamp/TPS/RAM/CPU/Players. It has **no**
+  `Running`, `Uptime` or `MaxPlayers` — and the tile renders all three (the
+  online/offline dot, the uptime readout, `players / maxPlayers`).
+- `stats.go`'s ticker opened with `if !s.server.IsRunning() { continue }`, so
+  `stats:snapshot` **never fires while the server is stopped**. An event that is
+  silent precisely when the server goes down cannot be the thing that tells the UI
+  the server went down.
+- `setStatus` had exactly one caller in the whole tree — that poll. It was the sole
+  writer of `useServerStore.status`, not a redundant second one.
+
+Deleting the poll as described would have frozen the tile on its last-known Online
+state forever. Worth stating plainly because the item had sat in the backlog reading
+as a quick win: **the claim was checked before it was acted on, and it did not
+survive the check.** The two-minute grep that found it (`setStatus` call sites, then
+the two struct definitions side by side) is the cheap habit worth repeating.
+
+- ✅ **New `server:status` event** (`events.go`, `stats.go`). Emitted every tick from
+  the existing ticker, above the running guard, carrying the full
+  `models.ServerStatus` built from the same seven accessors `GetServerStatus()` uses
+  — so the pushed payload and the fetched one cannot drift. History recording stays
+  gated below the guard, unchanged.
+- **Why a new event instead of extending `stats:snapshot`.** Ungating the existing
+  emit was the smaller diff and was rejected: `usePerformanceHistory.ts` would start
+  charting zero rows while offline, `GetStatsHistory`'s 1-hour buffer would fill with
+  them, and `scheduler_triggers.go:64` subscribes to that event — an ungated emit
+  could fire scheduler triggers against a stopped server. A separate event costs a
+  dozen lines and touches none of it. Same shape as `EventScheduleNextRuns`, which
+  replaced the 30s next-run poll.
+- ✅ **`tiles/stats/useServerStatus.ts`** on the `usePlayers.ts` convention: one fetch
+  on mount, then `server:status` for the push and `server:started`/`server:stopped`
+  for an immediate refetch so a transition shows at once rather than up to a tick
+  later. `index.tsx` lost its `poll` callback and interval; rendering is untouched.
+- ✅ **`useBackups.ts` and `useMods.ts`**: polls deleted. These two *were* the
+  safety-net duplicates the checklist described — verified by tracing every backend
+  mutation path (`backup.go` 307/373/459, including the scheduler's
+  `Backup().CreateBackup`; `modservice.go` 261/499/540/781/791 covering install,
+  enable/disable and uninstall). The mount fetch already covered the remount case
+  their comments cited. `useMods` also shed a now-unused `useRef` import.
+  **Named cost:** a `.zip` or `.jar` dropped into the folder from outside the app is
+  no longer picked up within 10s. Both hooks still return `refresh`.
+- ✅ **Dead `GetPlayers` binding removed** (P2). It was byte-identical to
+  `GetPlayerRoster` and unreferenced outside generated bindings. Unblocked by noticing
+  the `wails` CLI *is* installed locally (v2.12.0) — the checklist had recorded it as
+  unavailable, which was a cloud-sandbox limitation generalised too far. `wails
+  generate module` produced exactly the one removal across `App.d.ts`/`App.js`,
+  confirming the 83/83 sync the checklist claimed.
+
+**Verification.** `stats.go`'s loop body was split into `tick()` so the 10s ticker is
+not in the way of testing it, and `backend/services/stats_test.go` now pins the
+behaviour the wrong claim would have broken: `server:status` fires while stopped with
+`Running: false`, `Uptime: "0s"` and a non-zero `MaxPlayers`; `stats:snapshot` and the
+history stay empty while stopped; both fire while running; and the pushed struct
+equals a field-for-field rebuild of what `GetServerStatus()` returns, so adding a
+field to only one side fails the test.
+
+**These tests were mutation-checked rather than trusted.** Moving the running guard
+back above the status emit — reproducing exactly the regression the checklist's
+framing invited — turns
+`TestTickEmitsServerStatusWhileStopped` red with "want 1 server:status while stopped,
+got 0". A test for a subtle ordering property is worth nothing until it has been seen
+to fail for the right reason.
+
+Rest: `pnpm test` 280/280 across 27 files (9 new in `useServerStatus.test.ts`,
+including a fake-timer `does not poll on an interval` assertion), typecheck, lint 0
+errors, `format:check`, `check-bundle` 487.1 KB gzip against the 550 KB budget,
+`gofmt`, `go vet`, `go test`, and a clean second `gen:tokens`. A repo-wide
+`setInterval` grep leaves only `App.tsx:89`'s 150ms console-log batcher, which is
+render batching rather than data fetching and was always out of scope.
+
+**Not verified end to end against a live server.** A `wails dev` run came up against a
+pre-existing dev instance already holding port 34115, so the bridge on offer was an
+older build (83 bound methods, `GetPlayers` still present) — spotted before drawing
+any conclusion from it. Rather than fight for the port, the behaviour went into the Go
+tests above, which pin it harder than a manual poke would. What remains genuinely
+unproven is the full offline → online → offline cycle against a real Minecraft server,
+which needs a server jar and a JRE.

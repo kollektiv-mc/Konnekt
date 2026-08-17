@@ -298,10 +298,6 @@ func (a *App) GetConsoleHistory(serverID string) ([]models.ConsoleLine, error) {
 	return a.serverService.GetConsoleHistory(), nil
 }
 
-func (a *App) GetPlayers(serverID string) ([]models.Player, error) {
-	return a.playerService.GetRoster(serverID)
-}
-
 func (a *App) GetPlayerRoster(serverID string) ([]models.Player, error) {
 	return a.playerService.GetRoster(serverID)
 }

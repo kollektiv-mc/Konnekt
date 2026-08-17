@@ -59,8 +59,6 @@ export function GetPlayerDetail(arg1:string,arg2:string):Promise<models.Player>;
 
 export function GetPlayerRoster(arg1:string):Promise<Array<models.Player>>;
 
-export function GetPlayers(arg1:string):Promise<Array<models.Player>>;
-
 export function GetScheduleBlockDefs():Promise<Array<models.BlockDef>>;
 
 export function GetScheduleGraphs():Promise<Array<models.Graph>>;

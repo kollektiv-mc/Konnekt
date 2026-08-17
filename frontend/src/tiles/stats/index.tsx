@@ -1,6 +1,4 @@
-import { useEffect, useCallback } from 'react'
-import { GetServerStatus } from '../../../wailsjs/go/main/App'
-import { useServerStore } from '../../stores/useServerStore'
+import { useServerStatus } from './useServerStatus'
 import type { TileProps } from '../../types'
 
 function tpsColor(tps: number): string {
@@ -27,18 +25,7 @@ function StatRow({
 }
 
 export function StatsTile({ serverId }: TileProps) {
-  const { status, setStatus } = useServerStore()
-
-  const poll = useCallback(async () => {
-    const s = await GetServerStatus(serverId).catch(() => null)
-    if (s) setStatus(s)
-  }, [serverId, setStatus])
-
-  useEffect(() => {
-    poll()
-    const id = setInterval(poll, 10_000)
-    return () => clearInterval(id)
-  }, [poll])
+  const { status } = useServerStatus(serverId)
 
   const ramPct = status.ramTotal > 0 ? (status.ramUsed / status.ramTotal) * 100 : 0
 

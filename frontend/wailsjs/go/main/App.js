@@ -114,10 +114,6 @@ export function GetPlayerRoster(arg1) {
   return window['go']['main']['App']['GetPlayerRoster'](arg1);
 }
 
-export function GetPlayers(arg1) {
-  return window['go']['main']['App']['GetPlayers'](arg1);
-}
-
 export function GetScheduleBlockDefs() {
   return window['go']['main']['App']['GetScheduleBlockDefs']();
 }

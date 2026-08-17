@@ -102,9 +102,13 @@ tree.
       errors are wrapped with context (`fmt.Errorf("...: %w", err)`).
 - [ ] Every `EventsOn` listener registered in a component is cleaned up on
       unmount — no leaked subscriptions.
-- [ ] No frontend data is driven by `useEffect` polling when it should be a
-      Wails event listener (CLAUDE.md rule). The players tile's 3s poll is
-      closed (see HEALTH_LOG); three 10s polls remain — see backlog.
+- [x] No frontend data is driven by `useEffect` polling when it should be a
+      Wails event listener (CLAUDE.md rule). Every data poll is closed: the
+      players tile's 3s poll, then the stats/backups/mods 10s polls (see
+      HEALTH_LOG). The only remaining `setInterval` under `src/` is
+      `App.tsx`'s 150ms console-log batcher, which is a render-batching
+      measure rather than data fetching. Check with
+      `grep -rn "setInterval" src --include=*.ts --include=*.tsx | grep -v test`.
 - [ ] Process lifecycle stays safe: Windows Job Object child cleanup intact
       (`backend/services/server_windows.go`), RCON dial/operation timeouts
       present (`backend/services/rcon.go`), Modrinth HTTP client keeps its
@@ -194,16 +198,6 @@ current. Priorities mirror the pillars above.
   work: `backend/services` at **29.7%** of statements. Add a floor once the two
   items above land, so the number it pins is one worth defending.
 
-**P1 — Remaining `useEffect` polls that have events available**
-- Three 10s `setInterval` polls remain where the backend already emits a
-  matching event: `tiles/stats/index.tsx` (polls `GetServerStatus` while
-  `stats:snapshot` is pushed by a 10s Go ticker — a straight duplicate),
-  `tiles/backups/useBackups.ts`, and `tiles/mods/useMods.ts` (both already
-  listen to their events *and* poll as a safety net).
-- `App.tsx:89`'s 150ms interval is **not** in scope — it batches console log
-  lines for render, which is a deliberate performance measure, not data polling.
-- The players tile's 3s poll is closed; see HEALTH_LOG for the shape to copy.
-
 **P2 — Cleanups**
 - Dead `--panel-bg` CSS variable: `tiles/config/form/widgets.tsx`'s `Select`
   dropdown. Now documented in-code and rendered as a literal `bg-[#0e1117]`,
@@ -222,11 +216,6 @@ current. Priorities mirror the pillars above.
   basis when re-measuring.) The directional gap that blocked adoption is closed;
   what's left is a pure find-and-replace sweep, tile by tile — no further token
   or generator work needed.
-- `GetPlayers` is now a dead binding: it and `GetPlayerRoster` are both one-line
-  calls to `playerService.GetRoster`, and nothing calls `GetPlayers` since the
-  players tile moved onto the hook. Removing it needs `wails generate module`
-  (the `wails` CLI isn't installed in the cloud sandbox). Bindings are currently
-  83/83 in sync, so the regen diff would be exactly that one removal.
 - Structured logging: replace ad-hoc `fmt.Errorf`-only backend reporting with
   `log/slog`, keeping `EventBus` for UI-facing notifications.
 - Memoization pass: add `React.memo`/`useMemo`/`useCallback` to the most
