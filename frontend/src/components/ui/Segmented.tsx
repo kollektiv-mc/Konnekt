@@ -22,7 +22,7 @@ export function Segmented<T extends string>({
 
   if (slide) {
     return (
-      <div className="border-border-subtle bg-hover relative flex shrink-0 overflow-hidden rounded-lg border-[0.5px]">
+      <div className="border-border-subtle bg-hover border-hairline relative flex shrink-0 overflow-hidden rounded-lg">
         <div
           className="bg-accent absolute top-0 bottom-0 rounded-[7px]"
           // eslint-disable-next-line no-restricted-syntax -- width/transform computed from options.length and activeIndex, not visible to Tailwind's static scanner
@@ -51,7 +51,7 @@ export function Segmented<T extends string>({
   }
 
   return (
-    <div className="border-border-subtle bg-hover flex shrink-0 overflow-hidden rounded-lg border-[0.5px]">
+    <div className="border-border-subtle bg-hover border-hairline flex shrink-0 overflow-hidden rounded-lg">
       {options.map((opt) => {
         const active = opt.value === value
         return (

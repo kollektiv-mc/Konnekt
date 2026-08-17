@@ -41,7 +41,7 @@ function ConfirmDialog({
         if (e.target === e.currentTarget) onCancel()
       }}
     >
-      <div className="bg-surface border-border-subtle mx-4 flex w-full max-w-xs flex-col gap-3 rounded-lg border-[0.5px] px-4 py-4">
+      <div className="bg-surface border-border-subtle border-hairline mx-4 flex w-full max-w-xs flex-col gap-3 rounded-lg px-4 py-4">
         <p className="text-text-secondary font-mono text-xs leading-relaxed">{message}</p>
         <div className="flex justify-end gap-2">
           <button
@@ -83,7 +83,7 @@ function ConfirmDialog({
 
 function TagPill({ tag, onRemove }: { tag: string; onRemove: () => void }) {
   return (
-    <span className="text-accent inline-flex items-center gap-0.5 rounded border-[0.5px] border-[color-mix(in_srgb,var(--accent)_30%,transparent)] bg-[color-mix(in_srgb,var(--accent)_12%,transparent)] px-1.5 py-px font-mono text-xs">
+    <span className="text-accent border-hairline inline-flex items-center gap-0.5 rounded border-[color-mix(in_srgb,var(--accent)_30%,transparent)] bg-[color-mix(in_srgb,var(--accent)_12%,transparent)] px-1.5 py-px font-mono text-xs">
       #{tag}
       <button
         onClick={(e) => {
@@ -164,7 +164,7 @@ function BackupRow({
   const displayLabel = backup.displayName || extractID(backup.filename)
 
   return (
-    <div className="border-b-border-subtle flex flex-col gap-1 border-b-[0.5px] px-3 py-2">
+    <div className="border-b-border-subtle border-b-hairline flex flex-col gap-1 px-3 py-2">
       {/* Name + tags row */}
       <div className="flex flex-wrap items-center gap-1.5">
         {editingName ? (
@@ -431,7 +431,7 @@ function BackupsTileExpanded({ serverId }: { serverId: string }) {
   return (
     <div className="relative flex h-full flex-col">
       {/* Header row */}
-      <div className="border-b-border-subtle flex shrink-0 items-center gap-2 border-b-[0.5px] px-3 py-2">
+      <div className="border-b-border-subtle border-b-hairline flex shrink-0 items-center gap-2 px-3 py-2">
         <Segmented
           options={[
             { value: 'server', label: 'Server' },
@@ -523,9 +523,9 @@ function BackupsTileExpanded({ serverId }: { serverId: string }) {
           )}
 
           {/* Search row */}
-          <div className="border-b-border-subtle shrink-0 border-b-[0.5px] px-3 py-2">
+          <div className="border-b-border-subtle border-b-hairline shrink-0 px-3 py-2">
             <div
-              className="border-border-subtle bg-canvas flex items-center gap-2 rounded border-[0.5px] px-2 py-1"
+              className="border-border-subtle bg-canvas border-hairline flex items-center gap-2 rounded px-2 py-1"
               onFocusCapture={(e) => {
                 ;(e.currentTarget as HTMLDivElement).style.borderColor = 'var(--accent)'
               }}
@@ -559,7 +559,7 @@ function BackupsTileExpanded({ serverId }: { serverId: string }) {
 
           {/* Error banner */}
           {actionError && (
-            <div className="text-danger border-b-border-subtle shrink-0 border-b-[0.5px] px-3 py-1 font-mono text-xs">
+            <div className="text-danger border-b-border-subtle border-b-hairline shrink-0 px-3 py-1 font-mono text-xs">
               {actionError}
             </div>
           )}
@@ -613,7 +613,7 @@ function BackupsTileExpanded({ serverId }: { serverId: string }) {
 
             {/* Hover-zone hint — opens explorer only when cursor enters this strip */}
             <div
-              className={`border-t-border-subtle absolute right-0 bottom-0 left-0 z-[5] flex h-14 cursor-pointer items-center justify-center border-t-[0.5px] bg-white/[2.5%] transition-opacity duration-[180ms] ease-[ease] ${panelOpen || anyFocus ? 'pointer-events-none opacity-0' : 'pointer-events-auto opacity-100'}`}
+              className={`border-t-border-subtle border-t-hairline absolute right-0 bottom-0 left-0 z-[5] flex h-14 cursor-pointer items-center justify-center bg-white/[2.5%] transition-opacity duration-[180ms] ease-[ease] ${panelOpen || anyFocus ? 'pointer-events-none opacity-0' : 'pointer-events-auto opacity-100'}`}
               onMouseEnter={() => setPanelOpen(true)}
             >
               <div className="bg-text-faint h-[3px] w-8 rounded-[2px] opacity-40" />
@@ -665,7 +665,7 @@ function BackupsTileExpanded({ serverId }: { serverId: string }) {
             {/* List panel — overlays bottom of carousel, GPU-accelerated slide only */}
             <div
               ref={listPanelRef}
-              className={`border-t-border-subtle bg-canvas absolute right-0 bottom-0 left-0 z-10 h-[42%] overflow-y-auto border-t-[0.5px] transition-transform duration-[220ms] ease-[ease] ${panelOpen ? 'translate-y-0' : 'translate-y-full'}`}
+              className={`border-t-border-subtle bg-canvas border-t-hairline absolute right-0 bottom-0 left-0 z-10 h-[42%] overflow-y-auto transition-transform duration-[220ms] ease-[ease] ${panelOpen ? 'translate-y-0' : 'translate-y-full'}`}
             >
               {filtered.map((b, idx) => (
                 <div

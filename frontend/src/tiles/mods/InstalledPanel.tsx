@@ -60,7 +60,7 @@ function SortMenu({ sort, onSort }: { sort: SortKey; onSort: (v: SortKey) => voi
     <div className="relative shrink-0">
       <button
         onClick={toggle}
-        className={`border-border-subtle text-text-muted flex items-center gap-1 rounded border-[0.5px] px-2 py-1 font-mono text-xs whitespace-nowrap transition-colors ${
+        className={`border-border-subtle text-text-muted border-hairline flex items-center gap-1 rounded px-2 py-1 font-mono text-xs whitespace-nowrap transition-colors ${
           open ? 'bg-hover' : 'bg-transparent'
         }`}
       >
@@ -122,7 +122,7 @@ function FilterMenu({
     <div className="relative shrink-0">
       <button
         onClick={toggle}
-        className={`border-border-subtle flex items-center gap-1 rounded border-[0.5px] px-2 py-1 font-mono text-xs whitespace-nowrap transition-colors ${
+        className={`border-border-subtle border-hairline flex items-center gap-1 rounded px-2 py-1 font-mono text-xs whitespace-nowrap transition-colors ${
           open ? 'bg-hover' : 'bg-transparent'
         } ${active ? 'text-accent' : 'text-text-muted'}`}
       >
@@ -130,7 +130,7 @@ function FilterMenu({
         Filter{active ? ' ·' : ''}
       </button>
       <Popover open={open} onClose={close}>
-        <div className="text-text-faint border-border-subtle border-b-[0.5px] px-3 py-1.5 font-mono text-xs text-[10px]">
+        <div className="text-text-faint border-border-subtle border-b-hairline px-3 py-1.5 font-mono text-xs text-[10px]">
           Status
         </div>
         {(['all', 'enabled', 'disabled'] as StatusFilter[]).map((v) => {
@@ -158,7 +158,7 @@ function FilterMenu({
             </button>
           )
         })}
-        <div className="text-text-faint border-border-subtle border-t-[0.5px] border-b-[0.5px] px-3 py-1.5 font-mono text-xs text-[10px]">
+        <div className="text-text-faint border-border-subtle border-t-hairline border-b-hairline px-3 py-1.5 font-mono text-xs text-[10px]">
           Source
         </div>
         {(['all', 'modrinth', 'local'] as SourceFilter[]).map((v) => {
@@ -281,7 +281,7 @@ export function InstalledPanel({
   return (
     <div className="flex h-full min-h-0 flex-col">
       {/* Toolbar */}
-      <div className="border-border-subtle flex shrink-0 flex-wrap items-center gap-2 border-b-[0.5px] px-3 py-2">
+      <div className="border-border-subtle border-b-hairline flex shrink-0 flex-wrap items-center gap-2 px-3 py-2">
         <span className="text-text-muted text-[11px]">⌕</span>
         <input
           value={search}
@@ -303,14 +303,14 @@ export function InstalledPanel({
           />
           <SortMenu sort={sortKey} onSort={setSortKey} />
           {/* Column picker */}
-          <div className="border-border-subtle flex shrink-0 items-center overflow-hidden rounded border-[0.5px]">
+          <div className="border-border-subtle border-hairline flex shrink-0 items-center overflow-hidden rounded">
             {([1, 2, 3, 4] as const).map((n) => (
               <button
                 key={n}
                 onClick={() => setNumCols(n)}
                 className={`flex h-6 w-[22px] items-center justify-center font-mono text-xs transition-colors ${
                   numCols === n ? 'bg-hover text-accent' : 'text-text-faint bg-transparent'
-                } ${n < 4 ? 'border-border-subtle border-r-[0.5px]' : 'border-r-[0.5px] border-transparent'}`}
+                } ${n < 4 ? 'border-border-subtle border-r-hairline' : 'border-r-hairline border-transparent'}`}
                 title={`${n} column${n > 1 ? 's' : ''}`}
               >
                 {n}
@@ -322,7 +322,7 @@ export function InstalledPanel({
 
       {/* Server-running hint */}
       {serverRunning && (
-        <div className="bg-warning/[0.08] text-warning border-border-subtle shrink-0 border-b-[0.5px] px-3 py-1.5 text-xs">
+        <div className="bg-warning/[0.08] text-warning border-border-subtle border-b-hairline shrink-0 px-3 py-1.5 text-xs">
           Changes take effect after server restart
         </div>
       )}
@@ -355,7 +355,7 @@ export function InstalledPanel({
           return (
             <div
               key={mod.fileName}
-              className={`bg-surface border-border-subtle group flex items-center gap-3 rounded-[10px] border-[0.5px] p-[10px_12px] transition-colors ${
+              className={`bg-surface border-border-subtle group border-hairline flex items-center gap-3 rounded-[10px] p-[10px_12px] transition-colors ${
                 mod.enabled ? 'opacity-100' : 'opacity-55'
               }`}
               onMouseEnter={(e) => {
@@ -433,7 +433,7 @@ export function InstalledPanel({
                 {mod.source === 'modrinth' && mod.projectId && (
                   <button
                     onClick={() => openPreview(mod)}
-                    className="border-border-subtle text-text-muted relative flex h-[26px] w-[26px] items-center justify-center rounded border-[0.5px] bg-transparent text-xs transition-colors"
+                    className="border-border-subtle text-text-muted border-hairline relative flex h-[26px] w-[26px] items-center justify-center rounded bg-transparent text-xs transition-colors"
                     title={
                       hasUpdate
                         ? `Update available: v${updateInfo.latestVersionNumber}`
@@ -448,7 +448,7 @@ export function InstalledPanel({
                   >
                     ◎
                     {hasUpdate && (
-                      <span className="bg-accent border-canvas absolute top-0.5 right-0.5 h-1.5 w-1.5 rounded-full border-[1.5px]" />
+                      <span className="bg-accent border-canvas border-thick absolute top-0.5 right-0.5 h-1.5 w-1.5 rounded-full" />
                     )}
                   </button>
                 )}
@@ -482,7 +482,7 @@ export function InstalledPanel({
                 ) : (
                   <button
                     onClick={() => setConfirmUninstall(mod.fileName)}
-                    className="border-border-subtle text-text-muted flex h-[26px] w-[26px] items-center justify-center rounded border-[0.5px] bg-transparent text-xs opacity-0 transition-colors group-hover:opacity-100"
+                    className="border-border-subtle text-text-muted border-hairline flex h-[26px] w-[26px] items-center justify-center rounded bg-transparent text-xs opacity-0 transition-colors group-hover:opacity-100"
                     title="Uninstall"
                     onMouseEnter={(e) => {
                       ;(e.currentTarget as HTMLElement).style.background =

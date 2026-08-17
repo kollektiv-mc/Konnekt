@@ -79,10 +79,10 @@ export function SettingsModal({ open, onClose }: Props) {
         if (e.target === overlayRef.current) onClose()
       }}
     >
-      <div className="modal-panel-in bg-canvas border-border-subtle flex h-[480px] w-[640px] overflow-hidden rounded-xl border-[0.5px] shadow-[0_24px_64px_rgba(0,0,0,0.5)]">
+      <div className="modal-panel-in bg-canvas border-border-subtle border-hairline flex h-[480px] w-[640px] overflow-hidden rounded-xl shadow-[0_24px_64px_rgba(0,0,0,0.5)]">
         {/* Left nav */}
-        <div className="bg-surface border-border-subtle flex w-40 shrink-0 flex-col gap-0.5 border-r-[0.5px] p-3">
-          <div className="border-border-subtle border-b-[0.5px] px-2 pt-1 pb-3">
+        <div className="bg-surface border-border-subtle border-r-hairline flex w-40 shrink-0 flex-col gap-0.5 p-3">
+          <div className="border-border-subtle border-b-hairline px-2 pt-1 pb-3">
             <span className="font-title text-text-muted text-xs font-semibold tracking-wider uppercase">
               Settings
             </span>
@@ -107,7 +107,7 @@ export function SettingsModal({ open, onClose }: Props) {
         {/* Right content */}
         <div className="flex min-w-0 flex-1 flex-col">
           {/* Header */}
-          <div className="border-border-subtle flex shrink-0 items-center justify-between border-b-[0.5px] px-5 py-3">
+          <div className="border-border-subtle border-b-hairline flex shrink-0 items-center justify-between px-5 py-3">
             <span className="text-text-primary text-sm font-semibold">
               {NAV.find((n) => n.id === section)?.label}
             </span>
@@ -160,7 +160,7 @@ function ColorField({
         />
       ))}
       <label
-        className="border-border-hover relative h-7 w-7 shrink-0 cursor-pointer overflow-hidden rounded-full border-[1.5px] border-dashed transition-transform hover:scale-110"
+        className="border-border-hover border-thick relative h-7 w-7 shrink-0 cursor-pointer overflow-hidden rounded-full border-dashed transition-transform hover:scale-110"
         // eslint-disable-next-line no-restricted-syntax -- value is an arbitrary runtime hex color, not a static token
         style={{
           background: isPreset ? 'var(--hover-surface)' : value,
@@ -197,7 +197,7 @@ function SkinCard({
   return (
     <button
       onClick={onClick}
-      className={`flex w-21 shrink-0 flex-col gap-1.5 rounded-lg border-[1.5px] p-2 transition-colors ${
+      className={`border-thick flex w-21 shrink-0 flex-col gap-1.5 rounded-lg p-2 transition-colors ${
         selected ? 'border-accent bg-accent/8' : 'border-border-subtle bg-hover'
       }`}
     >
@@ -222,7 +222,7 @@ function AppearancePane({ settings, update }: { settings: AppSettings; update: U
   return (
     <div>
       {/* Skin gallery */}
-      <div className="border-border-subtle border-b-[0.5px] py-3">
+      <div className="border-border-subtle border-b-hairline py-3">
         <span className="text-text-primary text-sm">Skin</span>
         <p className="text-text-muted mt-0.5 mb-3 text-xs">Built-in surface and border palette.</p>
         <div className="flex gap-2 overflow-x-auto pb-1">
@@ -247,7 +247,7 @@ function AppearancePane({ settings, update }: { settings: AppSettings; update: U
       </SettingRow>
 
       {/* Accent color */}
-      <div className="border-border-subtle border-b-[0.5px] py-3">
+      <div className="border-border-subtle border-b-hairline py-3">
         <div className="mb-3 flex items-center justify-between gap-4">
           <div>
             <span className="text-text-primary text-sm">Accent color</span>
@@ -269,7 +269,7 @@ function AppearancePane({ settings, update }: { settings: AppSettings; update: U
       </div>
 
       {/* Status colors */}
-      <div className="border-border-subtle border-b-[0.5px] py-3">
+      <div className="border-border-subtle border-b-hairline py-3">
         <span className="text-text-primary text-sm">Status colors</span>
         <p className="text-text-muted mt-0.5 mb-3 text-xs">
           Used for success, warnings, and errors across the app.
@@ -307,7 +307,7 @@ function AppearancePane({ settings, update }: { settings: AppSettings; update: U
       <div className="py-3">
         <div className="flex items-center gap-2">
           <span className="text-text-faint text-sm">Import custom skin…</span>
-          <span className="bg-hover text-text-faint border-border-subtle rounded border-[0.5px] px-1.5 py-0.5 text-[10px]">
+          <span className="bg-hover text-text-faint border-border-subtle border-hairline rounded px-1.5 py-0.5 text-[10px]">
             Coming soon
           </span>
         </div>
@@ -374,7 +374,7 @@ function ConsolePane({ settings, update }: { settings: AppSettings; update: Upda
           step={100}
           value={settings.consoleBufferLines}
           onChange={(e) => update({ consoleBufferLines: Math.max(100, Number(e.target.value)) })}
-          className="bg-hover border-border-subtle text-text-primary w-20 rounded border-[0.5px] px-2 py-1 text-right text-xs outline-none"
+          className="bg-hover border-border-subtle text-text-primary border-hairline w-20 rounded px-2 py-1 text-right text-xs outline-none"
         />
       </SettingRow>
     </div>
@@ -410,7 +410,7 @@ function ChangelogItem({ entry }: { entry: ChangelogEntry }) {
   })
 
   return (
-    <div className="border-border-subtle border-b-[0.5px] py-3 last:border-b-0">
+    <div className="border-border-subtle border-b-hairline py-3 last:border-b-0">
       <div className="flex items-center justify-between gap-4">
         <span className="text-text-primary text-sm">{entry.label}</span>
         <span className="text-text-muted shrink-0 text-xs">{formattedDate}</span>
@@ -471,7 +471,7 @@ function ChangelogPane() {
       </div>
 
       {earlier.length > 0 && (
-        <div className="border-border-subtle border-b-[0.5px] py-2">
+        <div className="border-border-subtle border-b-hairline py-2">
           <button
             onClick={() => setShowEarlier((v) => !v)}
             className="text-text-muted hover:text-text-secondary text-xs transition-colors"
@@ -490,7 +490,7 @@ function ChangelogPane() {
 
       <button
         onClick={openChangelog}
-        className="text-accent border-accent/30 bg-accent/10 hover:bg-accent/15 mt-3 rounded border-[0.5px] py-1.5 text-xs transition-colors"
+        className="text-accent border-accent/30 bg-accent/10 hover:bg-accent/15 border-hairline mt-3 rounded py-1.5 text-xs transition-colors"
       >
         View full changelog on GitHub ↗
       </button>
@@ -608,7 +608,7 @@ function AboutPane() {
         <button
           onClick={runCheck}
           disabled={checkState.status === 'checking' || checkState.status === 'downloading'}
-          className="text-accent border-accent/30 bg-accent/10 hover:bg-accent/15 rounded border-[0.5px] py-1.5 text-xs transition-colors disabled:opacity-50"
+          className="text-accent border-accent/30 bg-accent/10 hover:bg-accent/15 border-hairline rounded py-1.5 text-xs transition-colors disabled:opacity-50"
         >
           {checkState.status === 'checking' ? 'Checking…' : 'Check for updates'}
         </button>
@@ -622,7 +622,7 @@ function AboutPane() {
           </span>
         )}
         {checkState.status === 'available' && (
-          <div className="border-border-subtle flex flex-col gap-1.5 rounded border-[0.5px] p-2.5">
+          <div className="border-border-subtle border-hairline flex flex-col gap-1.5 rounded p-2.5">
             <span className="text-text-primary text-xs">
               Update available: {checkState.info.latestVersion}
             </span>
@@ -633,7 +633,7 @@ function AboutPane() {
             ) : (
               <button
                 onClick={() => runInstall(checkState.info)}
-                className="text-accent border-accent/30 bg-accent/10 hover:bg-accent/15 rounded border-[0.5px] py-1 text-[11px] transition-colors"
+                className="text-accent border-accent/30 bg-accent/10 hover:bg-accent/15 border-hairline rounded py-1 text-[11px] transition-colors"
               >
                 Download &amp; Install
               </button>
@@ -647,7 +647,7 @@ function AboutPane() {
           </div>
         )}
         {checkState.status === 'downloading' && (
-          <div className="border-border-subtle flex flex-col gap-1.5 rounded border-[0.5px] p-2.5">
+          <div className="border-border-subtle border-hairline flex flex-col gap-1.5 rounded p-2.5">
             <span className="text-text-primary text-xs">
               Downloading {checkState.info.latestVersion}… {checkState.percent}%
             </span>
@@ -664,12 +664,12 @@ function AboutPane() {
           </div>
         )}
         {checkState.status === 'installFailed' && (
-          <div className="border-border-subtle flex flex-col gap-1.5 rounded border-[0.5px] p-2.5">
+          <div className="border-border-subtle border-hairline flex flex-col gap-1.5 rounded p-2.5">
             <span className="text-danger text-xs">Couldn&apos;t install automatically.</span>
             <span className="text-text-muted text-[11px]">{checkState.message}</span>
             <button
               onClick={() => openRelease(checkState.info.releaseUrl)}
-              className="text-accent border-accent/30 bg-accent/10 hover:bg-accent/15 rounded border-[0.5px] py-1 text-[11px] transition-colors"
+              className="text-accent border-accent/30 bg-accent/10 hover:bg-accent/15 border-hairline rounded py-1 text-[11px] transition-colors"
             >
               Open release page ↗
             </button>

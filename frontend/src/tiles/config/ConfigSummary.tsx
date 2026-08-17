@@ -141,7 +141,7 @@ function PropRow({
   const colorClass = valueColorClass(type, rawVal)
 
   return (
-    <div className="border-border-subtle flex items-center gap-2 border-b-[0.5px] py-1">
+    <div className="border-border-subtle border-b-hairline flex items-center gap-2 py-1">
       <span className="text-text-muted min-w-0 flex-1 truncate text-xs" title={label}>
         {label}
       </span>
@@ -290,7 +290,7 @@ export function ConfigSummary({ serverId }: Props) {
         })}
       </div>
 
-      <div className="border-border-subtle flex shrink-0 items-center justify-start border-t-[0.5px] px-3 py-1">
+      <div className="border-border-subtle border-t-hairline flex shrink-0 items-center justify-start px-3 py-1">
         <button
           onClick={load}
           className="text-text-faint font-mono text-[10px] transition-colors"

@@ -61,7 +61,7 @@ function SortMenu({ sort, onSort }: SortMenuProps) {
     <div className="relative shrink-0">
       <button
         onClick={toggle}
-        className={`border-border-subtle flex shrink-0 items-center gap-1 rounded border-[0.5px] px-2 py-1 font-mono text-xs whitespace-nowrap transition-colors ${
+        className={`border-border-subtle border-hairline flex shrink-0 items-center gap-1 rounded px-2 py-1 font-mono text-xs whitespace-nowrap transition-colors ${
           open ? 'bg-hover' : 'bg-transparent'
         } ${sort ? 'text-accent' : 'text-text-muted'}`}
       >
@@ -120,7 +120,7 @@ function CategoriesMenu({ categories, selectedCats, onToggle, onClear }: Categor
     <div className="relative shrink-0">
       <button
         onClick={disabled ? undefined : toggle}
-        className={`border-border-subtle flex shrink-0 items-center gap-1 rounded border-[0.5px] px-2 py-1 font-mono text-xs whitespace-nowrap transition-colors ${
+        className={`border-border-subtle border-hairline flex shrink-0 items-center gap-1 rounded px-2 py-1 font-mono text-xs whitespace-nowrap transition-colors ${
           open ? 'bg-hover' : 'bg-transparent'
         } ${disabled ? 'text-text-faint cursor-default opacity-50' : count > 0 ? 'text-accent cursor-pointer opacity-100' : 'text-text-muted cursor-pointer opacity-100'}`}
       >
@@ -131,7 +131,7 @@ function CategoriesMenu({ categories, selectedCats, onToggle, onClear }: Categor
       <Popover open={open} onClose={close} width={200} maxHeight={300}>
         <button
           onClick={onClear}
-          className={`border-border-subtle flex w-full items-center gap-2 border-b-[0.5px] bg-transparent px-3 py-1.5 text-left font-mono text-xs transition-colors ${
+          className={`border-border-subtle border-b-hairline flex w-full items-center gap-2 bg-transparent px-3 py-1.5 text-left font-mono text-xs transition-colors ${
             count === 0 ? 'text-accent' : 'text-text-muted'
           }`}
           onMouseEnter={(e) => {
@@ -299,9 +299,9 @@ export function BrowsePanel({
   return (
     <div className="flex h-full min-h-0 flex-col">
       {/* Search bar + Sort + Categories controls */}
-      <div className="border-border-subtle flex shrink-0 items-center gap-2 border-b-[0.5px] px-3 py-2">
+      <div className="border-border-subtle border-b-hairline flex shrink-0 items-center gap-2 px-3 py-2">
         <div
-          className="border-border-subtle bg-canvas flex flex-1 items-center gap-2 rounded border-[0.5px] px-2 py-1"
+          className="border-border-subtle bg-canvas border-hairline flex flex-1 items-center gap-2 rounded px-2 py-1"
           onFocusCapture={(e) => {
             ;(e.currentTarget as HTMLDivElement).style.borderColor = 'var(--accent)'
           }}
@@ -343,12 +343,12 @@ export function BrowsePanel({
 
       {/* Active category chips — only shown when filters are active */}
       {selectedCats.length > 0 && (
-        <div className="border-border-subtle flex shrink-0 flex-wrap items-center gap-1.5 border-b-[0.5px] px-3 py-2">
+        <div className="border-border-subtle border-b-hairline flex shrink-0 flex-wrap items-center gap-1.5 px-3 py-2">
           {selectedCats.map((cat) => (
             <button
               key={cat}
               onClick={() => toggleCat(cat)}
-              className="text-accent flex shrink-0 items-center gap-1 rounded border-[0.5px] border-[color-mix(in_srgb,var(--accent)_35%,transparent)] bg-[color-mix(in_srgb,var(--accent)_15%,transparent)] px-2 py-0.5 font-mono text-xs font-semibold transition-colors"
+              className="text-accent border-hairline flex shrink-0 items-center gap-1 rounded border-[color-mix(in_srgb,var(--accent)_35%,transparent)] bg-[color-mix(in_srgb,var(--accent)_15%,transparent)] px-2 py-0.5 font-mono text-xs font-semibold transition-colors"
             >
               {cat}
               <span className="text-[10px] opacity-70">×</span>
@@ -356,7 +356,7 @@ export function BrowsePanel({
           ))}
           <button
             onClick={clearCats}
-            className="text-text-faint shrink-0 rounded border-[0.5px] border-transparent px-2 py-0.5 font-mono text-xs transition-colors"
+            className="text-text-faint border-hairline shrink-0 rounded border-transparent px-2 py-0.5 font-mono text-xs transition-colors"
             onMouseEnter={(e) => {
               ;(e.currentTarget as HTMLElement).style.color = 'var(--text-muted)'
             }}
@@ -427,8 +427,8 @@ export function BrowsePanel({
         <div
           className={`relative min-w-0 shrink-0 overflow-hidden ${
             layoutOpen
-              ? 'border-border-subtle border-l-[0.5px]'
-              : 'border-l-[0.5px] border-transparent'
+              ? 'border-border-subtle border-l-hairline'
+              : 'border-l-hairline border-transparent'
           }`}
           // eslint-disable-next-line no-restricted-syntax -- panelWidth is the live user-resized width
           style={{ width: layoutOpen ? panelWidth : 0 }}

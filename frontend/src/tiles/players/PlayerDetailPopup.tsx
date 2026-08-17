@@ -114,7 +114,7 @@ export function PlayerDetailPopup({ player: initial, serverId, onClose, onMutate
       onMouseDown={(e) => e.target === e.currentTarget && onClose()}
     >
       {/* w-88 is 22rem — the same width the inline style used to restate. */}
-      <div className="bg-canvas flex w-88 flex-col gap-4 rounded-xl border-[0.5px] border-white/10 p-5 font-mono shadow-[0_8px_32px_rgba(0,0,0,0.5)]">
+      <div className="bg-canvas border-hairline flex w-88 flex-col gap-4 rounded-xl border-white/10 p-5 font-mono shadow-[0_8px_32px_rgba(0,0,0,0.5)]">
         {/* header */}
         <div className="flex items-start gap-3">
           <AvatarLarge player={player} />
@@ -142,7 +142,7 @@ export function PlayerDetailPopup({ player: initial, serverId, onClose, onMutate
         </div>
 
         {/* info */}
-        <div className="border-border-subtle flex flex-col gap-0.5 border-t-[0.5px] pt-4">
+        <div className="border-border-subtle border-t-hairline flex flex-col gap-0.5 pt-4">
           {player.ip && <InfoRow label="IP" value={player.ip} />}
           <InfoRow
             label="Status"
@@ -171,7 +171,7 @@ export function PlayerDetailPopup({ player: initial, serverId, onClose, onMutate
         </div>
 
         {/* actions */}
-        <div className="border-border-subtle flex flex-col gap-2 border-t-[0.5px] pt-4">
+        <div className="border-border-subtle border-t-hairline flex flex-col gap-2 pt-4">
           {pending ? (
             <>
               <input
@@ -183,7 +183,7 @@ export function PlayerDetailPopup({ player: initial, serverId, onClose, onMutate
                   if (e.key === 'Enter') submitAction()
                 }}
                 placeholder="Reason (optional)"
-                className="bg-elevated border-border-subtle text-text-primary rounded border-[0.5px] px-2 py-1.5 font-mono text-xs transition-colors outline-none"
+                className="bg-elevated border-border-subtle text-text-primary border-hairline rounded px-2 py-1.5 font-mono text-xs transition-colors outline-none"
               />
               <div className="flex gap-2">
                 <button

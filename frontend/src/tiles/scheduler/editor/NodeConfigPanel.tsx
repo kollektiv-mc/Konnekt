@@ -62,7 +62,7 @@ export function NodeConfigPanel({ nodeId, data, def, edges, onChange }: Props) {
             </label>
 
             {isWired ? (
-              <div className="bg-canvas min-h-[26px] rounded border-[0.5px] border-[#1e3a5f] px-2 py-1 font-mono text-xs text-[#60a5fa]">
+              <div className="bg-canvas border-hairline min-h-[26px] rounded border-[#1e3a5f] px-2 py-1 font-mono text-xs text-[#60a5fa]">
                 ← data edge
               </div>
             ) : field.type === 'bool' ? (
@@ -79,7 +79,7 @@ export function NodeConfigPanel({ nodeId, data, def, edges, onChange }: Props) {
               <select
                 value={String(val)}
                 onChange={(e) => onChange(field.key, e.target.value)}
-                className="bg-canvas border-border-subtle text-text-primary rounded border-[0.5px] px-2 py-1 font-mono text-xs outline-none"
+                className="bg-canvas border-border-subtle text-text-primary border-hairline rounded px-2 py-1 font-mono text-xs outline-none"
               >
                 {field.options?.map((opt) => (
                   <option key={opt.value} value={opt.value}>
@@ -95,7 +95,7 @@ export function NodeConfigPanel({ nodeId, data, def, edges, onChange }: Props) {
                   value={String(val)}
                   placeholder="@server.motd or @myValue"
                   onChange={(e) => onChange(field.key, e.target.value)}
-                  className="bg-surface border-border-subtle text-text-primary rounded border-[0.5px] px-2 py-1 font-mono text-xs outline-none"
+                  className="bg-surface border-border-subtle text-text-primary border-hairline rounded px-2 py-1 font-mono text-xs outline-none"
                 />
                 <datalist id={`attrs-${nodeId}-${field.key}`}>
                   {field.options?.map((opt) => (
@@ -115,21 +115,21 @@ export function NodeConfigPanel({ nodeId, data, def, edges, onChange }: Props) {
                 onChange={(e) =>
                   onChange(field.key, e.target.value === '' ? '' : Number(e.target.value))
                 }
-                className="bg-surface border-border-subtle text-text-primary rounded border-[0.5px] px-2 py-1 font-mono text-xs outline-none"
+                className="bg-surface border-border-subtle text-text-primary border-hairline rounded px-2 py-1 font-mono text-xs outline-none"
               />
             ) : field.type === 'command' ? (
               <textarea
                 value={String(val)}
                 onChange={(e) => onChange(field.key, e.target.value)}
                 rows={2}
-                className="bg-surface border-border-subtle text-text-primary resize-none rounded border-[0.5px] px-2 py-1 font-mono text-xs outline-none"
+                className="bg-surface border-border-subtle text-text-primary border-hairline resize-none rounded px-2 py-1 font-mono text-xs outline-none"
               />
             ) : (
               <input
                 type="text"
                 value={String(val)}
                 onChange={(e) => onChange(field.key, e.target.value)}
-                className="bg-surface border-border-subtle text-text-primary rounded border-[0.5px] px-2 py-1 font-mono text-xs outline-none"
+                className="bg-surface border-border-subtle text-text-primary border-hairline rounded px-2 py-1 font-mono text-xs outline-none"
               />
             )}
           </div>

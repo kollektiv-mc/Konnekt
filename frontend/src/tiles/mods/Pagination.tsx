@@ -34,7 +34,7 @@ export function Pagination({ total, offset, onPage }: PaginationProps) {
   const pages = getPages()
 
   return (
-    <div className="border-border-subtle flex shrink-0 flex-wrap items-center justify-center gap-1 border-t-[0.5px] px-3 py-3">
+    <div className="border-border-subtle border-t-hairline flex shrink-0 flex-wrap items-center justify-center gap-1 px-3 py-3">
       {/* Prev */}
       <button
         disabled={currentPage === 1}

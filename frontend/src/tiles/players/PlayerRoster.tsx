@@ -44,18 +44,18 @@ export function PlayerRoster({ players, onSelectPlayer }: Props) {
   return (
     <div className="flex h-full flex-col">
       {/* toolbar */}
-      <div className="border-border-subtle flex shrink-0 gap-2 border-b-[0.5px] px-3 py-2">
+      <div className="border-border-subtle border-b-hairline flex shrink-0 gap-2 px-3 py-2">
         <input
           type="text"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Search…"
-          className="bg-elevated border-border-subtle text-text-primary flex-1 rounded border-[0.5px] px-2 py-1 font-mono text-xs transition-colors outline-none"
+          className="bg-elevated border-border-subtle text-text-primary border-hairline flex-1 rounded px-2 py-1 font-mono text-xs transition-colors outline-none"
         />
         <select
           value={sortBy}
           onChange={(e) => setSortBy(e.target.value as SortKey)}
-          className="bg-elevated border-border-subtle text-text-secondary rounded border-[0.5px] px-2 py-1 font-mono text-xs outline-none"
+          className="bg-elevated border-border-subtle text-text-secondary border-hairline rounded px-2 py-1 font-mono text-xs outline-none"
         >
           <option value="name">Name</option>
           <option value="opLevel">OP level</option>
@@ -73,7 +73,7 @@ export function PlayerRoster({ players, onSelectPlayer }: Props) {
             <button
               key={p.name}
               onClick={() => onSelectPlayer(p)}
-              className="border-border-subtle flex w-full items-center gap-3 border-b-[0.5px] px-4 py-2.5 text-left transition-colors hover:bg-white/5"
+              className="border-border-subtle border-b-hairline flex w-full items-center gap-3 px-4 py-2.5 text-left transition-colors hover:bg-white/5"
             >
               <AvatarHead player={p} />
               <span className="text-text-secondary flex-1 truncate font-mono text-xs">
@@ -105,7 +105,7 @@ export function PlayerRoster({ players, onSelectPlayer }: Props) {
       </div>
 
       {/* footer */}
-      <div className="border-border-subtle text-text-faint shrink-0 border-t-[0.5px] px-3 py-1.5 font-mono text-[10px]">
+      <div className="border-border-subtle text-text-faint border-t-hairline shrink-0 px-3 py-1.5 font-mono text-[10px]">
         {players.length} online
       </div>
     </div>

@@ -25,7 +25,7 @@ export function BlockPalette({ blockDefs, onAdd }: Props) {
   if (collapsed) {
     return (
       <div
-        className="bg-canvas border-border-subtle flex w-5 shrink-0 cursor-pointer items-center justify-center border-r-[0.5px]"
+        className="bg-canvas border-border-subtle border-r-hairline flex w-5 shrink-0 cursor-pointer items-center justify-center"
         onClick={toggleCollapsed}
         title="Expand blocks"
       >
@@ -35,7 +35,7 @@ export function BlockPalette({ blockDefs, onAdd }: Props) {
   }
 
   return (
-    <div className="bg-canvas border-border-subtle w-48 shrink-0 overflow-y-auto border-r-[0.5px]">
+    <div className="bg-canvas border-border-subtle border-r-hairline w-48 shrink-0 overflow-y-auto">
       <div className="px-2 py-2">
         <div className="text-text-faint mb-2 flex items-center font-mono text-xs">
           <span className="flex-1">blocks</span>
@@ -75,7 +75,7 @@ export function BlockPalette({ blockDefs, onAdd }: Props) {
                     onClick={() => onAdd(def)}
                     onDragStart={(e) => e.dataTransfer.setData('blockType', def.id)}
                     title={def.description}
-                    className="bg-surface border-border-subtle text-text-primary mb-0.5 cursor-pointer rounded border-[0.5px] px-2 py-1 font-mono text-[11px] select-none"
+                    className="bg-surface border-border-subtle text-text-primary border-hairline mb-0.5 cursor-pointer rounded px-2 py-1 font-mono text-[11px] select-none"
                     onMouseEnter={(e) =>
                       ((e.currentTarget as HTMLDivElement).style.borderColor = color)
                     }

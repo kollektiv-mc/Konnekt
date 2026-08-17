@@ -109,7 +109,7 @@ export function ServerInstallModal({ installer, suggestedDir, onAddServer, onClo
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
-      <div className="bg-canvas border-border-subtle flex w-[28rem] flex-col gap-3 rounded-xl border-[0.5px] p-5 font-mono">
+      <div className="bg-canvas border-border-subtle border-hairline flex w-[28rem] flex-col gap-3 rounded-xl p-5 font-mono">
         <div className="flex items-center gap-2.5">
           <span className="text-warning text-sm font-bold">[i]</span>
           <span className="font-title text-text-primary text-sm font-semibold">
@@ -128,13 +128,13 @@ export function ServerInstallModal({ installer, suggestedDir, onAddServer, onClo
             onChange={(e) => setTargetDir(e.target.value)}
             placeholder="Install directory"
             disabled={running || done}
-            className="bg-surface border-border-subtle text-text-primary placeholder-text-faint focus:border-border-hover min-w-0 flex-1 rounded border-[0.5px] px-2 py-1 font-mono text-xs transition-colors outline-none disabled:opacity-40"
+            className="bg-surface border-border-subtle text-text-primary placeholder-text-faint focus:border-border-hover border-hairline min-w-0 flex-1 rounded px-2 py-1 font-mono text-xs transition-colors outline-none disabled:opacity-40"
           />
           <button
             type="button"
             onClick={browse}
             disabled={running || done}
-            className="border-border-subtle text-text-muted hover:border-border-hover hover:text-text-primary shrink-0 rounded border-[0.5px] px-2 py-1 font-mono text-xs transition-colors disabled:opacity-40"
+            className="border-border-subtle text-text-muted hover:border-border-hover hover:text-text-primary border-hairline shrink-0 rounded px-2 py-1 font-mono text-xs transition-colors disabled:opacity-40"
             title="Browse"
           >
             …
@@ -144,7 +144,7 @@ export function ServerInstallModal({ installer, suggestedDir, onAddServer, onClo
         {log.length > 0 && (
           <div
             ref={logRef}
-            className="border-border-subtle bg-surface max-h-40 overflow-y-auto rounded border-[0.5px] p-2"
+            className="border-border-subtle bg-surface border-hairline max-h-40 overflow-y-auto rounded p-2"
           >
             {log.map((line, i) => (
               <div key={i} className="text-text-muted text-2xs leading-relaxed break-all">
@@ -157,18 +157,18 @@ export function ServerInstallModal({ installer, suggestedDir, onAddServer, onClo
         {phase === 'failed' && <span className="text-danger text-xs">{error}</span>}
         {done && <span className="text-accent text-xs">Install complete.</span>}
 
-        <div className="border-border-subtle flex gap-2 border-t-[0.5px] pt-2">
+        <div className="border-border-subtle border-t-hairline flex gap-2 pt-2">
           {done ? (
             <button
               onClick={onAddServer}
-              className="text-accent border-accent/30 hover:bg-accent/10 flex-1 rounded border-[0.5px] py-1.5 text-xs transition-colors"
+              className="text-accent border-accent/30 hover:bg-accent/10 border-hairline flex-1 rounded py-1.5 text-xs transition-colors"
             >
               Add server
             </button>
           ) : running ? (
             <button
               onClick={() => void AbortInstall().catch(() => {})}
-              className="text-danger border-danger/30 hover:bg-danger/10 flex-1 rounded border-[0.5px] py-1.5 text-xs transition-colors"
+              className="text-danger border-danger/30 hover:bg-danger/10 border-hairline flex-1 rounded py-1.5 text-xs transition-colors"
             >
               Abort install
             </button>
@@ -176,7 +176,7 @@ export function ServerInstallModal({ installer, suggestedDir, onAddServer, onClo
             <button
               onClick={install}
               disabled={!targetDir}
-              className="text-accent border-accent/30 hover:bg-accent/10 flex-1 rounded border-[0.5px] py-1.5 text-xs transition-colors disabled:opacity-40"
+              className="text-accent border-accent/30 hover:bg-accent/10 border-hairline flex-1 rounded py-1.5 text-xs transition-colors disabled:opacity-40"
             >
               {phase === 'failed' ? 'Retry install' : 'Install server'}
             </button>

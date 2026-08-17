@@ -3,7 +3,7 @@ import { fmtBytes, fmtDate, extractID } from './format'
 
 function TagPillReadOnly({ tag }: { tag: string }) {
   return (
-    <span className="text-accent inline-flex items-center rounded border-[0.5px] border-[color-mix(in_srgb,var(--accent)_30%,transparent)] bg-[color-mix(in_srgb,var(--accent)_12%,transparent)] px-1.5 py-px font-mono text-xs">
+    <span className="text-accent border-hairline inline-flex items-center rounded border-[color-mix(in_srgb,var(--accent)_30%,transparent)] bg-[color-mix(in_srgb,var(--accent)_12%,transparent)] px-1.5 py-px font-mono text-xs">
       #{tag}
     </span>
   )
@@ -32,8 +32,8 @@ export function BackupCard({
     <div
       className={`flex flex-col gap-2 rounded-[10px] px-5 py-3 select-none ${
         focused
-          ? 'min-h-[140px] w-[360px] border-[0.5px] border-[color-mix(in_srgb,var(--accent)_45%,transparent)] bg-[color-mix(in_srgb,var(--accent)_6%,var(--bg-surface))]'
-          : 'border-border-subtle bg-surface min-h-[96px] w-[260px] border-[0.5px]'
+          ? 'border-hairline min-h-[140px] w-[360px] border-[color-mix(in_srgb,var(--accent)_45%,transparent)] bg-[color-mix(in_srgb,var(--accent)_6%,var(--bg-surface))]'
+          : 'border-border-subtle bg-surface border-hairline min-h-[96px] w-[260px]'
       }`}
       // eslint-disable-next-line no-restricted-syntax -- mixed per-property durations/easings (width/min-height at 260ms bezier, padding/border-color/background at 200ms ease) can't be expressed as one Tailwind transition utility
       style={{
@@ -75,7 +75,7 @@ export function BackupCard({
               onRequestRestore()
             }}
             disabled={serverRunning}
-            className="text-accent flex-1 cursor-pointer rounded-md border-[0.5px] border-[color-mix(in_srgb,var(--accent)_35%,transparent)] bg-[color-mix(in_srgb,var(--accent)_10%,transparent)] py-1.5 font-mono text-xs disabled:cursor-not-allowed disabled:opacity-30"
+            className="text-accent border-hairline flex-1 cursor-pointer rounded-md border-[color-mix(in_srgb,var(--accent)_35%,transparent)] bg-[color-mix(in_srgb,var(--accent)_10%,transparent)] py-1.5 font-mono text-xs disabled:cursor-not-allowed disabled:opacity-30"
             title={serverRunning ? 'Stop the server before restoring' : 'Restore this backup'}
             onMouseEnter={(e) => {
               if (!serverRunning) (e.currentTarget as HTMLButtonElement).style.opacity = '0.75'
@@ -91,7 +91,7 @@ export function BackupCard({
               e.stopPropagation()
               onRequestDelete()
             }}
-            className="text-danger flex-1 cursor-pointer rounded-md border-[0.5px] border-[color-mix(in_srgb,var(--danger)_28%,transparent)] bg-[color-mix(in_srgb,var(--danger)_8%,transparent)] py-1.5 font-mono text-xs opacity-75"
+            className="text-danger border-hairline flex-1 cursor-pointer rounded-md border-[color-mix(in_srgb,var(--danger)_28%,transparent)] bg-[color-mix(in_srgb,var(--danger)_8%,transparent)] py-1.5 font-mono text-xs opacity-75"
             onMouseEnter={(e) => {
               ;(e.currentTarget as HTMLButtonElement).style.opacity = '1'
             }}

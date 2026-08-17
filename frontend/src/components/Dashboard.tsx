@@ -472,7 +472,7 @@ export function Dashboard() {
           {dropCell && (
             <div
               key={GHOST_ID}
-              className="bg-hover border-border-subtle pointer-events-none h-full w-full rounded-[10px] border-[0.5px]"
+              className="bg-hover border-border-subtle border-hairline pointer-events-none h-full w-full rounded-[10px]"
             />
           )}
         </GridLayout>

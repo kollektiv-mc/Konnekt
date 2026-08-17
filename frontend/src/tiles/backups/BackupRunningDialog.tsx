@@ -12,7 +12,7 @@ export function BackupRunningDialog({ onBackUpNow, onStopAndBackUp, onCancel }: 
         if (e.target === e.currentTarget) onCancel()
       }}
     >
-      <div className="bg-surface border-border-subtle mx-4 flex w-full max-w-xs flex-col gap-3 rounded-lg border-[0.5px] px-4 py-4">
+      <div className="bg-surface border-border-subtle border-hairline mx-4 flex w-full max-w-xs flex-col gap-3 rounded-lg px-4 py-4">
         <p className="text-text-secondary font-mono text-xs leading-relaxed">
           The server is running. Back up now and saves will be flushed first, or stop the server
           cleanly before backing up.

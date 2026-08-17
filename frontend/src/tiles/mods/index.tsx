@@ -186,7 +186,7 @@ function ModsExpanded({
   return (
     <div className="flex h-full min-h-0 flex-col">
       {/* Header */}
-      <div className="border-border-subtle flex shrink-0 items-center gap-2 border-b-[0.5px] px-3 py-2">
+      <div className="border-border-subtle border-b-hairline flex shrink-0 items-center gap-2 px-3 py-2">
         {view === 'browse' ? (
           <>
             <button
@@ -222,7 +222,7 @@ function ModsExpanded({
             <button
               onClick={handleRefresh}
               disabled={refreshing}
-              className={`text-text-muted border-border-subtle shrink-0 rounded border-[0.5px] bg-transparent px-2 py-1 font-mono text-xs transition-colors ${
+              className={`text-text-muted border-border-subtle border-hairline shrink-0 rounded bg-transparent px-2 py-1 font-mono text-xs transition-colors ${
                 refreshing ? 'opacity-50' : 'opacity-100'
               }`}
               title="Refresh"
@@ -238,7 +238,7 @@ function ModsExpanded({
             {/* Add Files button */}
             <button
               onClick={handleAddFiles}
-              className="text-text-secondary border-border-subtle shrink-0 rounded border-[0.5px] bg-transparent px-3 py-1 text-xs font-semibold transition-colors"
+              className="text-text-secondary border-border-subtle border-hairline shrink-0 rounded bg-transparent px-3 py-1 text-xs font-semibold transition-colors"
               onMouseEnter={(e) => {
                 ;(e.currentTarget as HTMLButtonElement).style.background = 'var(--hover-surface)'
               }}

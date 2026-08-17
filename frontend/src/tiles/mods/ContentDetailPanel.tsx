@@ -109,7 +109,7 @@ export function ContentDetailPanel({
 
       <div className="flex h-full w-full flex-col overflow-hidden bg-[color-mix(in_srgb,var(--bg-base)_97%,white)]">
         {/* Header */}
-        <div className="border-border-subtle flex shrink-0 items-start gap-2.5 border-b-[0.5px] px-4 pt-4 pb-3">
+        <div className="border-border-subtle border-b-hairline flex shrink-0 items-start gap-2.5 px-4 pt-4 pb-3">
           {project.iconUrl ? (
             <img
               src={project.iconUrl}
@@ -161,7 +161,7 @@ export function ContentDetailPanel({
         </div>
 
         {/* Install button */}
-        <div className="border-border-subtle shrink-0 border-b-[0.5px] px-4 py-2.5">
+        <div className="border-border-subtle border-b-hairline shrink-0 px-4 py-2.5">
           <button
             onClick={handleInstallClick}
             disabled={isInstalling}
@@ -175,7 +175,7 @@ export function ContentDetailPanel({
         </div>
 
         {/* Sub-tabs */}
-        <div className="border-border-subtle flex shrink-0 items-center gap-1 border-b-[0.5px] px-3 py-1.5">
+        <div className="border-border-subtle border-b-hairline flex shrink-0 items-center gap-1 px-3 py-1.5">
           {(['about', 'gallery', 'versions'] as const).map((t) => (
             <button
               key={t}
@@ -263,7 +263,7 @@ export function ContentDetailPanel({
                     setShowAllVersions(true)
                     onGetAllVersions(project.id)
                   }}
-                  className="text-text-muted border-border-subtle w-full border-t-[0.5px] py-2 text-center font-mono text-xs transition-colors"
+                  className="text-text-muted border-border-subtle border-t-hairline w-full py-2 text-center font-mono text-xs transition-colors"
                   onMouseEnter={(e) => {
                     ;(e.currentTarget as HTMLButtonElement).style.color = 'var(--text-secondary)'
                   }}
@@ -280,7 +280,7 @@ export function ContentDetailPanel({
           {/* More by author */}
           {tab === 'about' && moreByAuthorProjects.length > 0 && (
             <div className="px-4 pb-4">
-              <div className="text-text-secondary border-border-subtle mb-3 border-t-[0.5px] pt-3 text-xs font-semibold">
+              <div className="text-text-secondary border-border-subtle border-t-hairline mb-3 pt-3 text-xs font-semibold">
                 More by {project.author}
               </div>
               <div className="flex flex-col gap-2">
@@ -323,7 +323,7 @@ function VersionRow({
           : 'text-text-muted'
 
   return (
-    <div className="border-border-subtle flex items-start gap-2 border-b-[0.5px] px-4 py-2.5">
+    <div className="border-border-subtle border-b-hairline flex items-start gap-2 px-4 py-2.5">
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-2">
           <span className="text-text-primary text-xs font-medium">{version.versionNumber}</span>
@@ -347,7 +347,7 @@ function VersionRow({
       <button
         onClick={onInstall}
         disabled={installing}
-        className={`text-accent shrink-0 rounded border-[0.5px] border-[color-mix(in_srgb,var(--accent)_30%,transparent)] bg-[color-mix(in_srgb,var(--accent)_15%,transparent)] px-2.5 py-1 text-xs font-medium transition-opacity ${
+        className={`text-accent border-hairline shrink-0 rounded border-[color-mix(in_srgb,var(--accent)_30%,transparent)] bg-[color-mix(in_srgb,var(--accent)_15%,transparent)] px-2.5 py-1 text-xs font-medium transition-opacity ${
           installing ? 'opacity-50' : 'opacity-100'
         }`}
       >

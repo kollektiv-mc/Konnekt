@@ -177,7 +177,7 @@ export function TileCrate() {
           else itemRefs.current.delete(tile.id)
         }}
         onMouseDown={(e) => onMouseDown(tile, group, e)}
-        className={`hover:border-border-subtle flex cursor-grab items-center gap-2 rounded-lg border-[0.5px] border-transparent px-3 py-2 text-left transition-all ${
+        className={`hover:border-border-subtle border-hairline flex cursor-grab items-center gap-2 rounded-lg border-transparent px-3 py-2 text-left transition-all ${
           onCanvas
             ? 'text-text-primary hover:bg-hover bg-transparent'
             : 'text-text-secondary bg-black/20 hover:bg-black/10'
@@ -191,7 +191,7 @@ export function TileCrate() {
 
   return (
     <div ref={rootRef} className="flex flex-col">
-      <div className="border-border-subtle flex flex-col gap-1 border-b-[0.5px] p-2">
+      <div className="border-border-subtle border-b-hairline flex flex-col gap-1 p-2">
         {utilityTiles.map((t) => renderTile(t, utilityIds))}
       </div>
       <div className="flex flex-col gap-1 p-2">

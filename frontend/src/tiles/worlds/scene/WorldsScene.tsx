@@ -380,7 +380,7 @@ export function WorldsScene({
           Slides in from the LEFT; camera simultaneously shifts the planet into the right 2/3
           via setViewOffset (planet at ≈66.7% from left = centre of the right two-thirds). */}
         <div
-          className={`border-r-border-subtle bg-surface absolute top-0 bottom-0 left-0 z-10 flex w-1/3 flex-col overflow-y-auto border-r-[0.5px] px-5 pt-4 pb-6 transition-transform duration-[250ms] ease-[cubic-bezier(0.25,0,0.25,1)] ${
+          className={`border-r-border-subtle bg-surface border-r-hairline absolute top-0 bottom-0 left-0 z-10 flex w-1/3 flex-col overflow-y-auto px-5 pt-4 pb-6 transition-transform duration-[250ms] ease-[cubic-bezier(0.25,0,0.25,1)] ${
             hudOpen ? 'pointer-events-auto translate-x-0' : 'pointer-events-none -translate-x-full'
           }`}
         >

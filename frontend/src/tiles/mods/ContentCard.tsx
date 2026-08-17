@@ -85,10 +85,10 @@ export function ContentCard({
         onMouseLeave={() => setHovered(false)}
         className={`relative flex h-full w-full cursor-pointer flex-col rounded-[10px] p-2.5 text-left transition-all outline-none select-none ${
           selected
-            ? 'border-[0.5px] border-[color-mix(in_srgb,var(--accent)_40%,transparent)] bg-[color-mix(in_srgb,var(--accent)_8%,var(--bg-surface))]'
+            ? 'border-hairline border-[color-mix(in_srgb,var(--accent)_40%,transparent)] bg-[color-mix(in_srgb,var(--accent)_8%,var(--bg-surface))]'
             : hovered
-              ? 'bg-hover border-border-hover border-[0.5px]'
-              : 'bg-surface border-border-subtle border-[0.5px]'
+              ? 'bg-hover border-border-hover border-hairline'
+              : 'bg-surface border-border-subtle border-hairline'
         }`}
       >
         {/* Icon + title row */}
@@ -142,7 +142,7 @@ export function ContentCard({
             {visibleCategories.map((cat) => (
               <span
                 key={cat}
-                className="text-accent rounded border-[0.5px] border-[color-mix(in_srgb,var(--accent)_25%,transparent)] bg-[color-mix(in_srgb,var(--accent)_10%,transparent)] px-1.5 py-px font-mono text-xs text-[10px]"
+                className="text-accent border-hairline rounded border-[color-mix(in_srgb,var(--accent)_25%,transparent)] bg-[color-mix(in_srgb,var(--accent)_10%,transparent)] px-1.5 py-px font-mono text-xs text-[10px]"
               >
                 {cat}
               </span>
@@ -157,7 +157,7 @@ export function ContentCard({
           title={showGrey ? 'Already installed' : done ? 'Installed!' : 'Install latest version'}
           className={`absolute right-2 bottom-2 z-[1] flex h-[22px] w-[22px] items-center justify-center rounded-md bg-transparent pb-px text-[13px] leading-none [transition:opacity_200ms_ease] ${
             showGrey
-              ? 'border-border-subtle text-text-faint border-[0.5px]'
+              ? 'border-border-subtle text-text-faint border-hairline'
               : 'border-accent text-accent border'
           } ${busy || alreadyInstalled ? 'cursor-default' : 'cursor-pointer'} ${hovered ? 'opacity-100' : 'opacity-20'}`}
           onMouseEnter={(e) => {

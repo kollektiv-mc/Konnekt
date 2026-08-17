@@ -8,7 +8,7 @@ interface SettingRowProps {
 
 export function SettingRow({ label, description, children }: SettingRowProps) {
   return (
-    <div className="border-border-subtle flex items-center justify-between gap-4 border-b-[0.5px] py-3">
+    <div className="border-border-subtle border-b-hairline flex items-center justify-between gap-4 py-3">
       <div className="flex min-w-0 flex-col gap-0.5">
         <span className="text-text-primary text-sm">{label}</span>
         {description && <span className="text-text-muted text-xs">{description}</span>}
