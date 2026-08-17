@@ -2186,9 +2186,19 @@ indirection resolved and token selectors renamed back to their literal forms. Of
 3 token rules appearing — only 3, because the other 4 utilities were already
 emitted for the 8 pre-existing call sites — with the sole semantic delta being the
 `border-style` declaration described above. No literal border width remains in the
-compiled CSS. Finally, in a running app: 32 swept elements rendered, **zero**
-reporting `border-style: none` on an edge they declare a width for, every one
-`solid` on all four sides. That is the empirical form of the preflight argument.
+compiled CSS. Finally, in a running app with the Settings modal open — the
+densest screen in the tree at 20 occurrences, and the only place the
+`border-thick` + `border-dashed` pairing renders — **53** swept elements, **zero**
+reporting `border-style: none` or a zero used width on an edge they declare,
+identical in both themes. The dashed swatches report `dashed`, confirming that
+`border-dashed` sets the style directly and the pairing was never at risk.
+
+One trap in writing that check. It first reported a single broken edge: a row
+with `border-b-hairline` computing to `0px`. The class list ends
+`last:border-0`, the element is the last child, and its two siblings render
+`1px` — a deliberate "no divider after the final row", not a regression. Any
+audit of this kind has to exclude the `last:`/`first:` variants that zero a
+border on purpose, or it manufactures its own false positive.
 
 A digression that cost twenty minutes and is worth writing down: the base worktree
 would not build from the scratchpad path. esbuild's binary was present and
