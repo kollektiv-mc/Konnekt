@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useRef } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { EventsOn } from '../../../wailsjs/runtime/runtime'
 import {
   ModSearch,
@@ -124,8 +124,6 @@ export function useMods(serverId: string): ModsState {
   const [installing, setInstalling] = useState(false)
   const [installError, setInstallError] = useState<string | null>(null)
 
-  const pollTimer = useRef<ReturnType<typeof setInterval> | null>(null)
-
   const refreshInstalled = useCallback(
     async (silent = false) => {
       if (!serverId) return
@@ -159,10 +157,12 @@ export function useMods(serverId: string): ModsState {
     }
   }, [serverId])
 
-  // Initial load + polling + event-driven refresh
+  // Initial load + event-driven refresh. Not polled: modservice.go emits
+  // mod:changed on enable/disable and uninstall, and mod:installed plus
+  // mod:changed on install, so every path that alters the installed set is
+  // covered. This mount fetch handles remounts.
   useEffect(() => {
     refreshInstalled().then(() => checkUpdates())
-    pollTimer.current = setInterval(() => refreshInstalled(true), 10_000)
 
     const offChanged = EventsOn(EVENTS.MOD_CHANGED, (d?: { serverID?: string }) => {
       if (!d?.serverID || d.serverID === serverId) refreshInstalled(true)
@@ -180,7 +180,6 @@ export function useMods(serverId: string): ModsState {
     )
 
     return () => {
-      if (pollTimer.current) clearInterval(pollTimer.current)
       offChanged()
       offInstalled()
       offProgress()

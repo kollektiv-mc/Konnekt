@@ -91,6 +91,13 @@
     return (kb / 1024).toFixed(1) + ' MB'
   }
 
+  // A snapshot release records the commit it was cut from in target_commitish.
+  // Anything that isn't a full commit sha (a branch name, an older snapshot
+  // made by hand) is dropped rather than printed as-is.
+  function shortSha(value) {
+    return /^[0-9a-f]{40}$/i.test(value || '') ? value.slice(0, 7) : ''
+  }
+
   function formatDate(iso) {
     if (!iso) return ''
     var d = new Date(iso)
@@ -127,6 +134,7 @@
     matchAsset: matchAsset,
     formatBytes: formatBytes,
     formatDate: formatDate,
+    shortSha: shortSha,
     fetchLatest: function () {
       return get('/releases/latest')
     },

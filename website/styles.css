@@ -69,6 +69,13 @@
 html {
   background: var(--bg-base);
   scroll-behavior: smooth;
+  /* Hold the scrollbar's column open whether or not there is a scrollbar in
+     it. Without this, anything that grows the page past the viewport — opening
+     the snapshot notes, a fetch landing its cards — takes the scrollbar's width
+     out of the viewport and shifts every centred thing on the page sideways as
+     it appears. It is a couple of pixels, and it is the kind that reads as the
+     layout twitching rather than as a scrollbar arriving. */
+  scrollbar-gutter: stable;
 }
 
 /* Sticky footer. Sub-pages used to fake this with `min-height: 100vh` on
@@ -356,16 +363,22 @@ a {
    download.js and changelog.js render get it without either script changing.
    main.js writes --mx/--my (px, tile-relative) on pointermove; the fallback
    50%/50% keeps the light centred if the pointer never moves — hovering via
-   keyboard focus, or a tile that appears under a stationary cursor. */
+   keyboard focus, or a tile that appears under a stationary cursor.
+   --glow-rgb and --glow-border are the hue of the whole effect in one place,
+   so a family of tiles can be recoloured by overriding two values rather than
+   by restating the ring and the border rule (see the snapshot tiles below). */
 .feat,
 .doc-section,
 .dl-card,
 .download-primary,
 .release,
 .cta-panel,
-.spotlight-media {
+.spotlight-media,
+.spotlight-points li {
   position: relative;
   --glow-size: 260px;
+  --glow-rgb: var(--accent-rgb);
+  --glow-border: var(--border-hover);
   transition: border-color var(--duration-fast) ease;
 }
 
@@ -375,8 +388,9 @@ a {
 .download-primary:hover,
 .release:hover,
 .cta-panel:hover,
-.spotlight-media:hover {
-  border-color: var(--border-hover);
+.spotlight-media:hover,
+.spotlight-points li:hover {
+  border-color: var(--glow-border);
 }
 
 /* The ring is the gradient masked down to its own 1px padding: paint the
@@ -391,7 +405,8 @@ a {
   .download-primary::after,
   .release::after,
   .cta-panel::after,
-  .spotlight-media::after {
+  .spotlight-media::after,
+  .spotlight-points li::after {
     content: '';
     position: absolute;
     /* Absolute children resolve against the padding box, so the half-pixel
@@ -405,7 +420,7 @@ a {
     transition: opacity var(--duration-panel) var(--ease-standard);
     background: radial-gradient(
       var(--glow-size) circle at var(--mx, 50%) var(--my, 50%),
-      rgb(var(--accent-rgb) / 0.45),
+      rgb(var(--glow-rgb) / 0.45),
       transparent 60%
     );
     -webkit-mask:
@@ -424,7 +439,8 @@ a {
   .download-primary:hover::after,
   .release:hover::after,
   .cta-panel:hover::after,
-  .spotlight-media:hover::after {
+  .spotlight-media:hover::after,
+  .spotlight-points li:hover::after {
     opacity: 1;
   }
 
@@ -437,12 +453,24 @@ a {
 
 /* Smaller tiles want a tighter light — a 260px circle on a 60px-tall card
    lights the whole edge at once, which reads as a flat outline. */
-.dl-card {
+.dl-card,
+.spotlight-points li {
   --glow-size: 180px;
 }
 
 .dl-card.is-unavailable:hover {
   border-color: var(--border-subtle);
+}
+
+/* Everything in the snapshot channel lights amber instead of green. The two
+   download grids are the same component one scroll apart and the changelog's
+   snapshot entry is the same card as a release, so on the one page where
+   both appear the colour under the cursor is what says which you are on.
+   Same amber the badges and platform icons already use. */
+.download-snapshot .dl-card,
+.release-pending {
+  --glow-rgb: var(--sun-rgb);
+  --glow-border: rgb(var(--sun-rgb) / 0.45);
 }
 
 /* ── Reveal-on-scroll (progressive enhancement; visible by default) ─────── */
@@ -762,8 +790,12 @@ a {
   transition: opacity 700ms var(--ease-standard);
 }
 
+/* Asymmetric on purpose: slow out, quick back. Going dark is the expensive
+   direction to get wrong, so it takes its time and a dip that gets cancelled
+   barely darkens before it is; coming back is immediate. */
 .fx.is-lit {
   opacity: 1;
+  transition-duration: 260ms;
 }
 
 /* The hero's own content already sits on z-index 1; the CTA's needs to. */
@@ -1089,33 +1121,54 @@ a {
   box-shadow: 0 24px 64px rgba(0, 0, 0, 0.5);
 }
 
-/* The four points, a row under the canvas. Same accent-dot marker as the old
-   vertical list; auto-fit collapses it to fewer columns without a media query. */
+/* The four points, a row of tiles under the canvas. They were bare lines of
+   text on a bare grid, which read as slightly off centre under the graph: the
+   columns were centred but each label sat at the left of its own, so the row's
+   ink never lined up with anything. Boxing them puts an edge where the grid
+   already was. Same accent-dot marker as before, now inside the tile; auto-fit
+   collapses the row to fewer columns without a media query. */
 .spotlight-points {
   list-style: none;
-  margin: 34px 0 0;
+  margin: 24px 0 0;
   padding: 0;
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
-  gap: 14px 28px;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 14px;
 }
 
 .spotlight-points li {
-  display: flex;
-  gap: 10px;
-  font-size: 13.5px;
-  color: var(--text-secondary);
+  background: var(--bg-surface);
+  border: 0.5px solid var(--border-subtle);
+  border-radius: 12px;
+  padding: 16px 18px;
 }
 
-.spotlight-points li::before {
+.spotlight-points h3 {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-family: var(--font-title);
+  font-weight: 500;
+  font-size: 14px;
+  color: var(--text-primary);
+  margin: 0 0 7px;
+}
+
+.spotlight-points h3::before {
   content: '';
   width: 6px;
   height: 6px;
-  margin-top: 6px;
   border-radius: 50%;
   background: var(--accent);
   flex-shrink: 0;
   box-shadow: 0 0 8px rgb(var(--accent-rgb) / 0.6);
+}
+
+.spotlight-points p {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: var(--text-muted);
 }
 
 /* ── Scheduler node-graph animation — static SVG, CSS-driven ──────────── */
@@ -1508,16 +1561,6 @@ footer {
   padding: 13px 26px;
 }
 
-.download-primary .dl-sub {
-  margin: 16px 0 0;
-  font-size: 12px;
-  color: var(--text-faint);
-}
-
-.download-primary .dl-sub a {
-  color: var(--text-secondary);
-}
-
 .download-others {
   max-width: 720px;
   margin: 0 auto;
@@ -1602,10 +1645,13 @@ footer {
    already exists, and a second one would just be the same box in a new name.
    It is a second channel, not more of the same list, so the break above it is
    explicit: a section's worth of space plus the same hairline rule the rest of
-   the sheet divides things with. Gap alone read as clutter. */
+   the sheet divides things with. Gap alone read as clutter.
+   The two halves are equal so the rule sits centred in that space. They were
+   1.4 above and 0.7 below, which put it two thirds of the way down and read as
+   the snapshot section's lid rather than as a divider between two. */
 .download-snapshot {
-  margin-top: calc(var(--section-y) * 1.4);
-  padding-top: calc(var(--section-y) * 0.7);
+  margin-top: calc(var(--section-y) * 1.05);
+  padding-top: calc(var(--section-y) * 1.05);
   border-top: 0.5px solid var(--border-subtle);
   animation-delay: 160ms;
 }
@@ -1632,14 +1678,28 @@ footer {
   margin: 0 0 18px;
 }
 
-.download-snapshot .dl-footnote {
-  margin-top: 18px;
+/* Placeholder while the snapshot request is in flight. Deliberately one line
+   rather than a skeleton of the grid below: the section may turn out not to
+   exist at all, and a skeleton would have promised cards. It carries the same
+   top break as .download-snapshot so the swap barely moves the page. */
+.snapshot-loading {
+  max-width: 720px;
+  margin: calc(var(--section-y) * 1.05) auto 0;
+  padding-top: calc(var(--section-y) * 1.05);
+  border-top: 0.5px solid var(--border-subtle);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-muted);
+  animation: intro-in 460ms var(--ease-standard) both;
+  animation-delay: 160ms;
 }
 
-/* Page-level "all releases" link. Without this it sits a line under the
-   snapshot section's own footnote and the two centred links read as a pair. */
-.download-snapshot + .dl-footnote {
-  margin-top: calc(var(--section-y) * 0.85);
+.download-snapshot .dl-footnote {
+  margin-top: 18px;
 }
 
 .dl-footnote {
@@ -1686,6 +1746,17 @@ footer {
   border: 2px solid var(--border-hover);
   border-top-color: var(--accent);
   animation: spin 0.8s linear infinite;
+}
+
+/* Sits on a line of text rather than above one. Amber, because everything in
+   the snapshot channel is. */
+.spinner-inline {
+  width: 12px;
+  height: 12px;
+  margin: 0;
+  border-width: 1.5px;
+  border-top-color: var(--sun);
+  flex-shrink: 0;
 }
 
 @keyframes spin {
@@ -1750,6 +1821,82 @@ footer {
   font-family: var(--font-mono);
   font-size: 12px;
   color: var(--text-muted);
+}
+
+/* Snapshot entry — the same .release card, opened by clicking it. Amber
+   throughout, matching the download page's snapshot channel, and closed at
+   rest: it describes code that hasn't been released, so it should not be the
+   first thing read on a page about what has. */
+.changelog-snapshot {
+  margin-bottom: 28px;
+}
+
+/* The card's padding moves inward onto its parts. A <summary> only spans its
+   own content box, so with the padding on the card the clickable area stopped
+   at the line of text and the whole rim of the card — corners, edges, the band
+   above and below the title — did nothing when clicked. Zeroing it here and
+   giving the summary the same 28/30 lets the summary's own box reach the
+   card's edges, which is what makes the head clickable as a whole. */
+.release-pending {
+  border-color: rgb(var(--sun-rgb) / 0.2);
+  padding: 0;
+}
+
+.release-summary {
+  cursor: pointer;
+  list-style: none;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 28px 30px;
+}
+
+.release-summary::-webkit-details-marker {
+  display: none;
+}
+
+/* The FAQ's +/− marker. .release-version is already an inline flex row, so the
+   glyph becomes a flex item and picks up its gap rather than needing one. */
+.release-summary .release-version::before {
+  content: '+';
+  font-family: var(--font-mono);
+  font-size: 16px;
+  color: var(--sun);
+}
+
+.release-pending[open] .release-summary .release-version::before {
+  content: '−';
+}
+
+/* The rule that separates the head from the notes hangs off the notes, not off
+   an [open] state on the summary. Same line in the same place either way, but
+   the summary's own box stops changing size with `open` — which is what lets
+   main.js animate the card's height between the two states without the last
+   frame of a close landing on a different internal layout than the one it
+   settles into. */
+.release-pending > .md {
+  padding: 16px 30px 0;
+  border-top: 0.5px solid var(--border-subtle);
+}
+
+.release-latest.is-snapshot {
+  color: var(--sun);
+  border-color: rgb(var(--sun-rgb) / 0.35);
+  background: rgb(var(--sun-rgb) / 0.08);
+}
+
+/* Carries the card's bottom padding, since the card itself no longer has any. */
+.release-source {
+  margin: 18px 0 0;
+  padding: 0 30px 28px;
+  font-size: 12px;
+  color: var(--text-faint);
+}
+
+.release-source a {
+  color: var(--text-secondary);
 }
 
 /* Rendered-markdown body */
@@ -2032,11 +2179,12 @@ footer {
   content: '−';
 }
 
-.faq details[open] summary {
-  padding-bottom: 6px;
-}
-
+/* The 8px that used to come off the summary's padding when open, moved onto
+   the answer so it reads identically while leaving the summary one fixed size.
+   main.js animates the details' height between states, and a summary that
+   resizes with `open` puts the end of that animation 8px out. */
 .faq .md {
+  margin-top: -8px;
   padding: 0 0 14px 22px;
 }
 
@@ -2240,6 +2388,7 @@ footer {
   .state-box,
   .download-primary,
   .download-others,
+  .snapshot-loading,
   .dl-footnote,
   .dl-grid > .dl-card,
   .changelog > .release,
@@ -2284,6 +2433,7 @@ footer {
 .reduce-motion .state-box,
 .reduce-motion .download-primary,
 .reduce-motion .download-others,
+.reduce-motion .snapshot-loading,
 .reduce-motion .dl-footnote,
 .reduce-motion .dl-grid > .dl-card,
 .reduce-motion .changelog > .release,

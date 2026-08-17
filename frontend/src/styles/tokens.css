@@ -79,12 +79,39 @@
 }
 
 /* Hairline borders are the signature of this design language; they need to be
-   as reachable as any colour utility, not an arbitrary [0.5px] value. */
+   as reachable as any colour utility, not an arbitrary [0.5px] value. Per-side
+   variants exist alongside the all-sides one because call sites overwhelmingly
+   want one edge (a header divider, a panel's bottom rule), not all four; an
+   unused combination costs nothing since Tailwind only emits what a scan finds. */
 @utility border-hairline {
   border-width: var(--border-hairline);
 }
 @utility border-thick {
   border-width: var(--border-thick);
+}
+@utility border-t-hairline {
+  border-top-width: var(--border-hairline);
+}
+@utility border-t-thick {
+  border-top-width: var(--border-thick);
+}
+@utility border-r-hairline {
+  border-right-width: var(--border-hairline);
+}
+@utility border-r-thick {
+  border-right-width: var(--border-thick);
+}
+@utility border-b-hairline {
+  border-bottom-width: var(--border-hairline);
+}
+@utility border-b-thick {
+  border-bottom-width: var(--border-thick);
+}
+@utility border-l-hairline {
+  border-left-width: var(--border-hairline);
+}
+@utility border-l-thick {
+  border-left-width: var(--border-thick);
 }
 
 :root,

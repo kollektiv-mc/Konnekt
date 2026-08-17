@@ -88,6 +88,32 @@
           Loading…
         </div>
 
+        <!-- The rolling `snapshot` prerelease, whose notes cover everything on
+             main ahead of the newest release. It isn't a version, so it sits
+             above the list as a closed disclosure rather than joining it: this
+             page is a record of what shipped, and an entry that changes under
+             you every night isn't part of that record. Filled by changelog.js
+             and hidden until GitHub confirms a snapshot exists. -->
+        <div class="changelog changelog-snapshot is-hidden" id="cl-snapshot">
+          <details class="release release-pending">
+            <summary class="release-summary">
+              <span class="release-version"
+                >Unreleased <span class="release-latest is-snapshot">SNAPSHOT</span></span
+              >
+              <span class="release-date" id="cl-snapshot-meta"></span>
+            </summary>
+            <div class="md" id="cl-snapshot-body"></div>
+            <p class="release-source">
+              <a
+                href="https://github.com/kollektiv-mc/Konnekt/releases/tag/snapshot"
+                target="_blank"
+                rel="noopener"
+                >Snapshot notes on GitHub</a
+              >
+            </p>
+          </details>
+        </div>
+
         <div class="changelog is-hidden" id="cl-list"></div>
 
         <div class="state-box is-error is-hidden" id="cl-error">

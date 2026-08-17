@@ -98,6 +98,22 @@
             <div class="dl-grid" id="dl-grid"></div>
           </div>
 
+          <!-- Closes out the release channel, so it sits with the grid it
+               belongs to rather than at the foot of the page, where it read as
+               a second footnote to the snapshot section under it. -->
+          <p class="dl-footnote" id="dl-footnote"></p>
+
+          <!-- Placeholder for the section below. The snapshot is a second,
+               independent GitHub request, so it can still be in flight once the
+               release above has rendered; without this the page simply looked
+               like it had no snapshot channel until one appeared under the
+               cursor. Replaced by whichever outcome download.js reaches, the
+               empty one included. -->
+          <p class="snapshot-loading" id="dl-snapshot-loading" role="status">
+            <span class="spinner spinner-inline" aria-hidden="true"></span>
+            Loading snapshot builds…
+          </p>
+
           <!-- Snapshot channel — the rolling `snapshot` prerelease built from
                main by .github/workflows/snapshot.yml. Stays hidden until
                download.js confirms it exists and carries assets: it's a
@@ -119,8 +135,6 @@
             <div class="dl-grid" id="dl-snapshot-grid"></div>
             <p class="dl-footnote" id="dl-snapshot-footnote"></p>
           </section>
-
-          <p class="dl-footnote" id="dl-footnote"></p>
         </div>
 
         <!-- Error / empty -->
