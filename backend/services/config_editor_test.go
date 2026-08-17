@@ -1,10 +1,23 @@
 package services
 
 import (
+	"fmt"
+	"os"
 	"path/filepath"
+	"strings"
 	"testing"
+
+	"konnekt/backend/models"
 )
 
+// Known gap, deliberately not covered here: sandbox is a purely *lexical* check
+// (filepath.Clean plus a prefix test), so a symlink sitting inside the working
+// directory and pointing outside it passes and then resolves outside. Tracked in
+// agent_docs/HEALTH_CHECKLIST.md rather than fixed alongside these tests — this
+// is a local-first app where the user already owns the filesystem. A real fix has
+// to resolve the *parent* directory (sandbox runs for files that do not exist yet,
+// on the write path), and a test for it needs a skip guard because Windows gates
+// symlink creation behind Developer Mode or elevation.
 func TestConfigEditorSandbox(t *testing.T) {
 	s := &ConfigEditorService{}
 	workDir := filepath.Join("C:", "servers", "myserver")
@@ -38,5 +51,205 @@ func TestConfigEditorSandboxAllowsWorkDirItself(t *testing.T) {
 	}
 	if got != filepath.Clean(workDir) {
 		t.Errorf("sandbox(workDir, \".\") = %q, want %q", got, filepath.Clean(workDir))
+	}
+}
+
+// ─── Read / write / backup rotation ────────────────────────────────────────
+
+// newConfigEditorFixture returns a ConfigEditorService wired to temp dirs, plus
+// the server working directory its paths resolve against.
+func newConfigEditorFixture(t *testing.T) (*ConfigEditorService, string) {
+	t.Helper()
+	dataDir := t.TempDir()
+	workDir := t.TempDir()
+
+	cfgSvc := &ConfigService{}
+	cfgSvc.SetDataDir(dataDir)
+	if err := cfgSvc.SaveServerConfig(models.ServerConfig{
+		ID:         "srv1",
+		Name:       "Test",
+		WorkingDir: workDir,
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	return &ConfigEditorService{appConfig: cfgSvc, dataDir: dataDir}, workDir
+}
+
+func TestReadWriteConfigFileRoundTrip(t *testing.T) {
+	svc, workDir := newConfigEditorFixture(t)
+
+	if err := svc.WriteConfigFile("srv1", "server.properties", "level-name=world\n"); err != nil {
+		t.Fatalf("WriteConfigFile error: %v", err)
+	}
+
+	onDisk, err := os.ReadFile(filepath.Join(workDir, "server.properties"))
+	if err != nil {
+		t.Fatalf("reading the written file: %v", err)
+	}
+	if string(onDisk) != "level-name=world\n" {
+		t.Errorf("on-disk content = %q, want %q", onDisk, "level-name=world\n")
+	}
+
+	got, err := svc.ReadConfigFile("srv1", "server.properties")
+	if err != nil {
+		t.Fatalf("ReadConfigFile error: %v", err)
+	}
+	if got != "level-name=world\n" {
+		t.Errorf("ReadConfigFile = %q, want %q", got, "level-name=world\n")
+	}
+}
+
+// sandbox is unit-tested above; this pins that both public entry points actually
+// route through it.
+//
+// The escape target is a file that really exists outside the working directory.
+// Pointing at a non-existent path would make the read assertion pass even with
+// the guard removed, because os.ReadFile would fail on its own — the test has to
+// be able to tell "refused" apart from "missing".
+func TestConfigFileGuardAppliesOnBothPaths(t *testing.T) {
+	svc, workDir := newConfigEditorFixture(t)
+	secret := filepath.Join(filepath.Dir(workDir), "secret.txt")
+	writeFile(t, secret, "top secret")
+	escape := filepath.Join("..", "secret.txt")
+
+	if _, err := svc.ReadConfigFile("srv1", escape); err == nil {
+		t.Error("ReadConfigFile with a traversing path = nil error, want an error")
+	}
+	if err := svc.WriteConfigFile("srv1", escape, "overwritten"); err == nil {
+		t.Error("WriteConfigFile with a traversing path = nil error, want an error")
+	}
+	// The write must not have landed either.
+	body, err := os.ReadFile(secret)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(body) != "top secret" {
+		t.Errorf("file outside the working directory was modified: %q", body)
+	}
+}
+
+// The ordering is the point: validation runs before backup() and before the
+// write, so a rejected edit must leave the original file untouched.
+func TestWriteConfigFileRejectsInvalidJSONWithoutWriting(t *testing.T) {
+	svc, workDir := newConfigEditorFixture(t)
+	original := `{"valid": true}`
+	writeFile(t, filepath.Join(workDir, "config.json"), original)
+
+	err := svc.WriteConfigFile("srv1", "config.json", "{not valid json")
+	if err == nil {
+		t.Fatal("WriteConfigFile with invalid JSON = nil error, want an error")
+	}
+	if !strings.Contains(err.Error(), "invalid JSON") {
+		t.Errorf("error = %q, want it to mention invalid JSON", err)
+	}
+
+	after, readErr := os.ReadFile(filepath.Join(workDir, "config.json"))
+	if readErr != nil {
+		t.Fatal(readErr)
+	}
+	if string(after) != original {
+		t.Errorf("file was modified despite the error: %q, want %q", after, original)
+	}
+}
+
+// Only .json is validated today; other formats pass through untouched.
+func TestWriteConfigFileSkipsJSONValidationForOtherFormats(t *testing.T) {
+	svc, _ := newConfigEditorFixture(t)
+
+	if err := svc.WriteConfigFile("srv1", "server.properties", "{not valid json"); err != nil {
+		t.Errorf("WriteConfigFile on a non-JSON file = %v, want nil", err)
+	}
+}
+
+func TestWriteConfigFileBacksUpOnlyExistingFiles(t *testing.T) {
+	svc, workDir := newConfigEditorFixture(t)
+	backupDir := filepath.Join(svc.dataDir, "config_backups", "srv1")
+
+	// A brand-new file has nothing to preserve, so backup() returns early.
+	if err := svc.WriteConfigFile("srv1", "fresh.yml", "a: 1"); err != nil {
+		t.Fatal(err)
+	}
+	if entries, err := os.ReadDir(backupDir); err == nil && len(entries) != 0 {
+		t.Errorf("new file produced %d backup(s), want 0", len(entries))
+	}
+
+	// Overwriting it preserves the previous contents.
+	if err := svc.WriteConfigFile("srv1", "fresh.yml", "a: 2"); err != nil {
+		t.Fatal(err)
+	}
+	entries, err := os.ReadDir(backupDir)
+	if err != nil {
+		t.Fatalf("reading backup dir: %v", err)
+	}
+	if len(entries) != 1 {
+		t.Fatalf("overwrite produced %d backup(s), want 1", len(entries))
+	}
+	body, err := os.ReadFile(filepath.Join(backupDir, entries[0].Name()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(body) != "a: 1" {
+		t.Errorf("backup holds %q, want the pre-overwrite %q", body, "a: 1")
+	}
+
+	// The current file is the new content, not the backup.
+	current, err := os.ReadFile(filepath.Join(workDir, "fresh.yml"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(current) != "a: 2" {
+		t.Errorf("current file = %q, want %q", current, "a: 2")
+	}
+}
+
+// pruneBackups is driven directly rather than through repeated WriteConfigFile
+// calls: backup filenames carry a {escaped}.{20060102_150405}.bak timestamp at
+// one-second resolution and os.Create truncates, so two saves inside the same
+// second collide on one filename and only one backup survives. Going through the
+// public path would need a sleep per copy to produce distinct files.
+func TestPruneBackupsKeepsExactlyBackupKeep(t *testing.T) {
+	dir := t.TempDir()
+	const prefix = "server.properties"
+
+	var seeded []string
+	for i := 1; i <= 6; i++ {
+		name := fmt.Sprintf("%s.2026081%d_120000.bak", prefix, i)
+		writeFile(t, filepath.Join(dir, name), fmt.Sprintf("copy-%d", i))
+		seeded = append(seeded, name)
+	}
+	// A different config file's backups must not be collateral damage.
+	other := "bukkit.yml.20260810_120000.bak"
+	writeFile(t, filepath.Join(dir, other), "other")
+
+	svc := &ConfigEditorService{}
+	svc.pruneBackups(dir, prefix)
+
+	remaining := make(map[string]bool)
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, e := range entries {
+		remaining[e.Name()] = true
+	}
+
+	// The timestamp format sorts lexically in chronological order, so the three
+	// kept are the three newest.
+	var kept int
+	for i, name := range seeded {
+		want := i >= len(seeded)-backupKeep
+		if remaining[name] != want {
+			t.Errorf("%s present = %v, want %v", name, remaining[name], want)
+		}
+		if remaining[name] {
+			kept++
+		}
+	}
+	if kept != backupKeep {
+		t.Errorf("kept %d backups, want %d", kept, backupKeep)
+	}
+	if !remaining[other] {
+		t.Error("pruning removed a different config file's backup")
 	}
 }

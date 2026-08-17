@@ -90,9 +90,14 @@ tree.
 
 ## 2. Stable
 
-- [ ] Automated tests exist and pass for critical paths: RCON client, Modrinth
+- [x] Automated tests exist and pass for critical paths: RCON client, Modrinth
       API client, backup create/restore, config path-traversal guards,
       scheduler engine (Go); Zustand store logic and critical hooks (frontend).
+      `backend/services` sits at **36.7%** of statements, with a **35%** floor
+      enforced by the `backend` CI job. The floor is a ratchet: raise it as
+      coverage rises, never lower it to green a red build. Coverage is a proxy,
+      not the goal — prefer a test that would have caught a real bug over one
+      that only moves the number.
 - [x] CI is green on every push/PR (`.github/workflows/ci.yml`: a `frontend`
       job, a `backend` job on windows-latest, and a `backend-linux` job in a
       webkit2gtk-4.1 container — the only place `server_linux.go`/
@@ -182,23 +187,20 @@ The remaining, not-yet-closed follow-ups. Each item's full remediation write-up
 moves to `agent_docs/HEALTH_LOG.md` once it's done — keep this section short and
 current. Priorities mirror the pillars above.
 
-**P1 — Test-coverage follow-ups**
-- Backup create/restore orchestration (4/29 functions): `RestoreBackup`,
-  `CreateBackup`, the world-vs-server backup resolution, the meta.json round
-  trip. The guards beneath them (`validateFilename`, `unzipTo`'s zip-slip check)
-  are already tested; the flows that call them are not.
-- Config editor beyond `sandbox` (1/11 functions): `ReadConfigFile`/
-  `WriteConfigFile` end to end — that the guard is applied on both paths, that
-  JSON validation rejects before writing, that `backup`'s rotation keeps exactly
-  `backupKeep` copies. Note `sandbox` is a purely lexical check, so a symlink
-  inside the working directory still resolves outside it; decide whether that is
-  in scope before writing a test that pins today's behaviour.
-- RCON client (4/6 functions).
-- Coverage floor: no numeric threshold in CI yet. Baseline after the Modrinth
-  work: `backend/services` at **29.7%** of statements. Add a floor once the two
-  items above land, so the number it pins is one worth defending.
-
 **P2 — Cleanups**
+- `sandbox` (`config_editor.go`) is a purely **lexical** guard — `filepath.Clean`
+  plus a prefix test — so a symlink sitting inside the working directory and
+  pointing outside it passes the check and then resolves outside. Left open
+  deliberately: this is a local-first app where the user already owns the
+  filesystem, so a user symlinking their own config directory is a weak threat
+  model. A fix has to resolve the *parent* directory (`sandbox` runs for files
+  that do not exist yet, on the write path), and its test needs a skip guard
+  because Windows gates symlink creation behind Developer Mode or elevation.
+- Config-editor backups collide within a second. `backup()` names files
+  `{escaped}.{20060102_150405}.bak` at one-second resolution and `os.Create`
+  truncates, so two saves in the same second leave **one** backup, not two.
+  Harmless in hand-editing, wrong if anything ever writes config
+  programmatically. Widening the stamp (or adding a counter suffix) is the fix.
 - Dead `--panel-bg` CSS variable: `tiles/config/form/widgets.tsx`'s `Select`
   dropdown. Now documented in-code and rendered as a literal `bg-[#0e1117]`,
   but that literal is opaque near-black, so the dropdown stays dark under the

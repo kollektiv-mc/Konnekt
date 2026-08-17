@@ -2002,3 +2002,78 @@ any conclusion from it. Rather than fight for the port, the behaviour went into 
 tests above, which pin it harder than a manual poke would. What remains genuinely
 unproven is the full offline → online → offline cycle against a real Minecraft server,
 which needs a server jar and a JRE.
+
+---
+
+### 2026-08-17 — Backend test coverage, and a CI floor to hold it
+
+Closes **P1 — Test-coverage follow-ups**, the last P1 on the checklist. Unlike the
+polling item, this one's claims held up under checking: `go tool cover -func`
+confirmed backup.go at 4/29 functions, config_editor.go at 1/11 and rcon.go at 4/6
+exactly as recorded.
+
+- ✅ **`backup_test.go`** — a `newBackupFixture` helper (temp dataDir, seeded
+  `ConfigService`, zero-value `ServerService`) and seven tests over the
+  orchestration: a full create → corrupt → restore round trip, a missing working
+  directory, the refusal to restore while running, a traversing filename reaching
+  `RestoreBackup`, world-vs-server resolution through `ListBackups`, the meta.json
+  round trip including tag sanitising, and delete. **4/29 → 17/29.**
+- ✅ **`config_editor_test.go`** — read/write round trip, the guard on both entry
+  points, invalid JSON rejected *without* touching the file, non-JSON formats
+  skipping validation, backup-on-overwrite versus none-for-new-file, and
+  `pruneBackups` keeping exactly `backupKeep`. **1/11 → 6/11.**
+- ✅ **`rcon_test.go`** — a `fakeRconServer` on an ephemeral loopback port speaking
+  the real protocol via the existing `writePacket`/`readPacket` helpers, covering
+  the happy path with colour stripping, a rejected password, a dead port, and a
+  hang-up mid-auth. **4/6 → 6/6, the file is complete.**
+- `config.go` picked up 0/11 → 5/11 for free, exercised by the fixtures.
+- **Package coverage 31.2% → 36.7%.**
+
+**Every load-bearing assertion was mutation-checked** rather than trusted, and one
+of the four mutations found a bad test rather than confirming a good one:
+
+| Mutation | Result |
+|---|---|
+| `sandbox`'s prefix check removed | caught |
+| `WriteConfigFile`'s JSON validation skipped | caught |
+| `RestoreBackup`'s running check removed | caught |
+| `pruneBackups` off-by-one (keeps 4, not 3) | caught |
+
+The first mutation exposed that `TestConfigFileGuardAppliesOnBothPaths` was passing
+for the wrong reason: it aimed the traversal at a path that did not exist, so
+`ReadConfigFile` errored from `os.ReadFile` whether or not the guard ran. Rewritten
+to point at a file that genuinely exists outside the working directory and to assert
+the file is still intact afterwards, it now fails on all three counts when the guard
+goes. **A test that has never been seen to fail is a guess** — this is the second
+time in two changes that running the mutation has paid for itself.
+
+- ✅ **Coverage floor in CI**, `backend` job, set to **35%** — a little under the
+  36.7% measured so an unrelated refactor does not redden the build, and commented
+  as a ratchet. Scoped to `backend/services` rather than `./...` because the repo
+  root and `backend/models` have no test files and would dilute the figure with
+  packages the floor is not about.
+- **The floor step nearly shipped broken, in a way that would have looked
+  unrelated.** PowerShell splits an unquoted native-command argument on `=`, so
+  `go tool cover -func=coverage.out` came back "too many arguments" and
+  `go test -coverprofile=coverage.out` silently wrote its profile to a file named
+  `coverage`. Both arguments are now quoted, with a comment saying why so nobody
+  tidies the quotes away. Verified by running the step's script directly: exit 0
+  at the 35% floor, exit 1 with the intended message at an impossible 95% floor —
+  the gate is known to bite, not assumed to.
+
+**Two findings recorded on the backlog rather than fixed here.** `sandbox` is a
+purely lexical guard, so a symlink inside the working directory still resolves
+outside it — left open by decision, since the user already owns the filesystem on a
+local-first app, and noted with what a real fix would need. And config-editor
+backups collide within a second: the `20060102_150405` stamp plus a truncating
+`os.Create` means two saves in the same second leave one backup. That collision is
+also why `pruneBackups` is driven directly in its test instead of through repeated
+`WriteConfigFile` calls, which would have needed a sleep per copy.
+
+**Verification:** `go test ./backend/services/ -count=2` (twice, to catch order
+dependence between tests sharing temp dirs), `gofmt`, `go vet`, `go build`, and the
+frontend gates unchanged at 280/280 with typecheck, lint and format clean.
+**`-race` was not run**: it requires cgo and no gcc is present on this machine, and
+no CI job runs it either. The RCON fake-server goroutines are the only new
+concurrency, each bounded by `t.Cleanup` closing the listener, but that is an
+argument for low risk rather than evidence of none.
