@@ -381,47 +381,27 @@ function App() {
 
   return (
     <div className="flex h-screen overflow-hidden">
-      <aside
-        className="flex w-48 shrink-0 flex-col overflow-y-auto"
-        style={{ borderRight: '0.5px solid var(--border-subtle)' }}
-      >
-        <div
-          className="flex shrink-0 items-center justify-between px-3 py-3"
-          style={{ borderBottom: '0.5px solid var(--border-subtle)' }}
-        >
-          <span
-            className="text-sm tracking-tight"
-            style={{
-              color: 'var(--accent)',
-              fontFamily: "'Satoshi', var(--font-sans)",
-              fontWeight: 900,
-            }}
-          >
+      <aside className="border-r-hairline border-border-subtle flex w-48 shrink-0 flex-col overflow-y-auto">
+        <div className="border-b-hairline border-border-subtle flex shrink-0 items-center justify-between px-3 py-3">
+          <span className="text-accent font-display text-sm font-black tracking-tight">
             Konnekt
           </span>
           <button
             onClick={() => setSettingsOpen(true)}
-            className="flex h-6 w-6 items-center justify-center rounded text-sm transition-colors"
-            style={{ color: 'var(--text-muted)' }}
-            onMouseEnter={(e) => {
-              ;(e.currentTarget as HTMLButtonElement).style.color = 'var(--text-primary)'
-            }}
-            onMouseLeave={(e) => {
-              ;(e.currentTarget as HTMLButtonElement).style.color = 'var(--text-muted)'
-            }}
+            className="text-text-muted hover:text-text-primary flex h-6 w-6 items-center justify-center rounded text-sm transition-colors"
             title="Settings"
           >
             ⚙
           </button>
         </div>
-        <div style={{ borderBottom: '0.5px solid var(--border-subtle)' }}>
+        <div className="border-b-hairline border-border-subtle">
           <ServerSelector />
         </div>
         <div className="flex-1 overflow-y-auto">
           <TileCrate />
         </div>
         <ActiveProcesses />
-        <div style={{ borderTop: '0.5px solid var(--border-subtle)' }}>
+        <div className="border-t-hairline border-border-subtle">
           <LayoutPresets />
         </div>
       </aside>

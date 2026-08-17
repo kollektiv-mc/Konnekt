@@ -40,27 +40,50 @@ func (s *StatsService) run() {
 	defer ticker.Stop()
 
 	for range ticker.C {
-		if !s.server.IsRunning() {
-			continue
-		}
-		snap := models.StatsSnapshot{
-			Timestamp:  time.Now().UnixMilli(),
-			TPS:        s.server.CurrentTPS(),
-			RAMUsedMB:  s.server.RAMUsedMB(),
-			RAMTotalMB: s.server.RAMTotalMB(),
-			CPUPercent: s.server.CPUPercent(),
-			Players:    s.server.PlayerCount(),
-		}
-
-		s.mu.Lock()
-		if len(s.history) >= snapshotCap {
-			s.history = s.history[1:]
-		}
-		s.history = append(s.history, snap)
-		s.mu.Unlock()
-
-		s.bus.Emit(EventStatsSnapshot, snap)
+		s.tick()
 	}
+}
+
+// tick is one pass of the stats loop, split out from run() so the ticker
+// interval isn't in the way of testing it.
+func (s *StatsService) tick() {
+	// Status goes out every tick whether the server is up or not: this is what
+	// replaces the stats tile's frontend poll, and a stop has to reach the UI
+	// too. Same seven accessors GetServerStatus() reads, so the pushed payload
+	// and the fetched one cannot drift apart.
+	s.bus.Emit(EventServerStatus, models.ServerStatus{
+		Running:    s.server.IsRunning(),
+		Uptime:     s.server.Uptime(),
+		Players:    s.server.PlayerCount(),
+		MaxPlayers: s.server.MaxPlayers(),
+		TPS:        s.server.CurrentTPS(),
+		RAMUsed:    s.server.RAMUsedMB(),
+		RAMTotal:   s.server.RAMTotalMB(),
+	})
+
+	// History recording stays gated — an idle server has no meaningful TPS or
+	// RAM to chart, and stats:snapshot has in-process subscribers
+	// (scheduler_triggers.go) that should not fire against a stopped server.
+	if !s.server.IsRunning() {
+		return
+	}
+	snap := models.StatsSnapshot{
+		Timestamp:  time.Now().UnixMilli(),
+		TPS:        s.server.CurrentTPS(),
+		RAMUsedMB:  s.server.RAMUsedMB(),
+		RAMTotalMB: s.server.RAMTotalMB(),
+		CPUPercent: s.server.CPUPercent(),
+		Players:    s.server.PlayerCount(),
+	}
+
+	s.mu.Lock()
+	if len(s.history) >= snapshotCap {
+		s.history = s.history[1:]
+	}
+	s.history = append(s.history, snap)
+	s.mu.Unlock()
+
+	s.bus.Emit(EventStatsSnapshot, snap)
 }
 
 func (s *StatsService) GetStatsHistory() []models.StatsSnapshot {

@@ -92,6 +92,10 @@ jobs:
       - run: go test ./...
       - run: go build ./...
 
+      # Threshold and rationale live in the script, which .claude/suite.json also
+      # runs, so /suite-kit:health enforces the same floor locally.
+      - run: go run ./scripts/coverage-floor
+
   backend-linux:
     runs-on: ubuntu-latest
     container: ubuntu:22.04

@@ -9,6 +9,9 @@
   var errorEl = document.getElementById('cl-error')
   var errorMsg = document.getElementById('cl-error-msg')
   var errorTitle = document.getElementById('cl-error-title')
+  var snapshotEl = document.getElementById('cl-snapshot')
+  var snapshotMetaEl = document.getElementById('cl-snapshot-meta')
+  var snapshotBodyEl = document.getElementById('cl-snapshot-body')
 
   function el(tag, cls, text) {
     var n = document.createElement(tag)
@@ -39,6 +42,23 @@
     }
     wrap.appendChild(body)
     return wrap
+  }
+
+  // The snapshot's notes are generated against the newest release, not against
+  // the previous snapshot (.github/workflows/snapshot.yml), so the body is
+  // already "everything not yet released" and needs no assembling here.
+  function renderSnapshot(rel) {
+    var notes = (rel.body || '').trim()
+    if (!notes) return
+    snapshotBodyEl.innerHTML = MD.render(notes)
+
+    var built = R.formatDate(rel.published_at)
+    var sha = R.shortSha(rel.target_commitish)
+    snapshotMetaEl.textContent = [built ? 'built ' + built : '', sha ? 'commit ' + sha : '']
+      .filter(Boolean)
+      .join(' · ')
+
+    snapshotEl.classList.remove('is-hidden')
   }
 
   function render(releases) {
@@ -76,21 +96,37 @@
     errorEl.classList.remove('is-hidden')
   }
 
-  R.fetchList()
-    .then(function (res) {
-      if (res.status === 404) {
+  // Both requests are awaited together so the page resolves once. Rendering
+  // the snapshot on its own clock would drop a block in above the list after
+  // it had already been read. The snapshot is the optional half: a 404 (none
+  // published), a rate limit or an outage leaves it out and the list alone is
+  // still the changelog, so its failure is swallowed here rather than
+  // rejecting the pair.
+  Promise.all([
+    R.fetchList(),
+    R.fetchSnapshot().catch(function () {
+      return { ok: false, status: 0, data: null }
+    }),
+  ])
+    .then(function (results) {
+      var list = results[0]
+      var snapshot = results[1]
+
+      if (snapshot.ok && snapshot.data) renderSnapshot(snapshot.data)
+
+      if (list.status === 404) {
         showEmpty()
         return
       }
-      if (!res.ok) {
+      if (!list.ok) {
         showError(
-          res.status === 403
+          list.status === 403
             ? 'GitHub rate limit hit. Try again later.'
-            : 'GitHub returned status ' + res.status + '.',
+            : 'GitHub returned status ' + list.status + '.',
         )
         return
       }
-      render(Array.isArray(res.data) ? res.data : [])
+      render(Array.isArray(list.data) ? list.data : [])
     })
     .catch(function () {
       showError('Check your connection and try again.')

@@ -120,12 +120,13 @@ export function useBackups(serverId: string): BackupsState {
   }, [serverId])
 
   useEffect(() => {
+    // Event-driven, not polled: every backend path that changes the backup set
+    // emits (backup.go's create/restore/fail emits, including the scheduler's
+    // Backup().CreateBackup). This mount fetch covers the remount case a poll
+    // used to — compact ↔ maximized transitions create a new hook instance.
+    // Silent=true on event refreshes so they never flash a loading state, which
+    // would unmount the carousel.
     refresh()
-
-    // Poll every 10 s so the list stays fresh across mount/unmount cycles
-    // (compact ↔ maximized transitions create a new hook instance each time).
-    // Silent=true so polling never flashes a loading state (which would unmount the carousel).
-    const pollTimer = setInterval(() => refresh(true), 10_000)
 
     let c1: (() => void) | undefined
     let c2: (() => void) | undefined
@@ -149,7 +150,6 @@ export function useBackups(serverId: string): BackupsState {
     }
 
     return () => {
-      clearInterval(pollTimer)
       c1?.()
       c2?.()
       c3?.()

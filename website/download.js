@@ -14,6 +14,7 @@
   var gridEl = document.getElementById('dl-grid')
   var footnoteEl = document.getElementById('dl-footnote')
   var snapshotEl = document.getElementById('dl-snapshot')
+  var snapshotLoadingEl = document.getElementById('dl-snapshot-loading')
   var snapshotMetaEl = document.getElementById('dl-snapshot-meta')
   var snapshotGridEl = document.getElementById('dl-snapshot-grid')
   var snapshotFootnoteEl = document.getElementById('dl-snapshot-footnote')
@@ -47,11 +48,6 @@
     btn.href = asset.browser_download_url
     btn.setAttribute('download', '')
     primaryEl.appendChild(btn)
-    var sub = el('p', 'dl-sub')
-    var link = el('a', null, 'All downloads')
-    link.href = '#dl-grid'
-    sub.appendChild(link)
-    primaryEl.appendChild(sub)
   }
 
   function renderPrimaryUnavailable(platform) {
@@ -64,11 +60,6 @@
     btn.target = '_blank'
     btn.rel = 'noopener'
     primaryEl.appendChild(btn)
-    var sub = el('p', 'dl-sub')
-    var link = el('a', null, 'All downloads')
-    link.href = '#dl-grid'
-    sub.appendChild(link)
-    primaryEl.appendChild(sub)
   }
 
   function renderOthers(primaryPlatform, assets) {
@@ -99,13 +90,6 @@
   // above already says which platforms exist, and repeating "Coming soon"
   // here would read as a promise about snapshots specifically.
 
-  // A snapshot release records the commit it was cut from in target_commitish.
-  // Anything that isn't a full commit sha (a branch name, an older snapshot
-  // made by hand) is dropped rather than printed as-is.
-  function shortSha(value) {
-    return /^[0-9a-f]{40}$/i.test(value || '') ? value.slice(0, 7) : ''
-  }
-
   function renderSnapshot(rel) {
     snapshotGridEl.innerHTML = ''
     var count = 0
@@ -129,7 +113,7 @@
     // nothing to offer — leave the section hidden.
     if (!count) return
 
-    var sha = shortSha(rel.target_commitish)
+    var sha = R.shortSha(rel.target_commitish)
     var built = R.formatDate(rel.published_at)
     snapshotMetaEl.textContent = [built ? 'built ' + built : '', sha ? 'commit ' + sha : '']
       .filter(Boolean)
@@ -224,12 +208,15 @@
 
   // Second request, deliberately independent of the one above: a 404 (no
   // snapshot published), a rate limit or an outage leaves the section hidden
-  // and the release download working, which is what the page is for.
+  // and the release download working, which is what the page is for. Either
+  // way the placeholder goes: it says a request is in flight, so it must not
+  // outlive one.
   R.fetchSnapshot()
     .then(function (res) {
+      hide(snapshotLoadingEl)
       if (res.ok && res.data) renderSnapshot(res.data)
     })
     .catch(function () {
-      /* no snapshot section — nothing to report */
+      hide(snapshotLoadingEl)
     })
 })()

@@ -1808,3 +1808,323 @@ existed** ✅
   unchanged at 0 errors / 97 warnings (formatting cannot add or remove an
   inline style, so any movement there would have meant something real changed),
   271/271 tests, token layer in sync.
+
+---
+
+### 2026-08-17 — Milestone 2 closed: App.tsx's last inline styles
+
+`App.tsx` was the one file the previous re-baseline (2026-08-15) had already
+identified as the sole remaining backlog: 6 `style={{}}` attributes, all
+static, against 65 more across the tree that were already documented
+exceptions in ratcheted directories.
+
+**Why it wasn't a straight swap.** Four of the six are directional hairline
+borders (`borderRight`, `borderBottom` ×2, `borderTop`). The generated token
+layer only ever emitted the all-sides `border-hairline`/`border-thick`
+utilities — the exact gap the checklist's P2 "used nowhere" item had been
+tracking. So the last file in the migration and that backlog item were the
+same piece of work: App.tsx couldn't move to Tailwind utilities without the
+generator emitting a directional form first.
+
+- ✅ **`frontend/scripts/gen-tokens.mjs`**: added a `BORDER_SIDES = { t: 'top',
+  r: 'right', b: 'bottom', l: 'left' }` map and a second emission loop, so each
+  entry in `src.border.scale` now also gets `border-t-<name>`, `border-r-<name>`,
+  `border-b-<name>`, `border-l-<name>` alongside the existing all-sides rule.
+  Four sides, not `x`/`y` — a grep across the tree found 47 `-b`, 15 `-t`, 7
+  `-l`, 6 `-r` literal call sites and zero `-x`/`-y` ones, so axis utilities
+  would have recreated the same generated-but-unused problem this change was
+  closing. Unused combinations (e.g. `border-l-thick`, which nothing calls yet)
+  cost nothing: Tailwind v4 only emits a utility into the build when a scan
+  finds it in source.
+- **No upstream `kollektiv/design/tokens.json` edit was needed.** The `hairline`
+  (0.5) and `thick` (1.5) values already existed there; this only changed how
+  Konnekt's generator surfaces them as utilities. Ran `pnpm gen:tokens` and
+  confirmed a second run produced a byte-identical `tokens.css`/`tokens.ts` —
+  the generated-file check `.claude/suite.json` declares.
+- ✅ **`App.tsx`**: `border-r-hairline`, two `border-b-hairline`, and
+  `border-t-hairline` (all paired with `border-border-subtle`) replaced the
+  four inline borders. The accent wordmark's `color`/`fontFamily`/`fontWeight`
+  became `text-accent font-display font-black` (`--font-display` already
+  existed in the generated `@theme` block as `'Satoshi', var(--font-sans)`,
+  matching the literal exactly). The settings button's `color` plus two
+  `onMouseEnter`/`onMouseLeave` handlers that imperatively mutated
+  `style.color` became `text-text-muted hover:text-text-primary` — removing
+  imperative DOM style mutation, not just an attribute, since
+  `transition-colors` was already present on the element.
+- ✅ **`eslint.config.js`, inverted rather than extended.** The first pass simply
+  added `'src/App.tsx'` to the ratchet allowlist. A verification pass caught that
+  this left the migration enforced by an *opt-in* list: the global rule was still
+  `warn`, and `eslint --print-config` measured `src/main.tsx` at severity `1`
+  against `App.tsx`'s `2`. 78 of 79 `.tsx` files were covered, and — the part that
+  actually matters — every **new** file or tile directory would have defaulted to
+  `warn` until someone remembered to extend the list. An allowlist is the right
+  shape while ratcheting tile by tile and the wrong shape the moment it is
+  complete.
+- So the global block became `'error'` and the allowlist config object was
+  deleted outright. **Proven safe before the edit** by simulating the end state
+  with `eslint src --rule '{"no-restricted-syntax":["error",…]}'`, which forces
+  the rule on for every file: 0 errors. That works because each remaining
+  justified exception already carries a documented `eslint-disable-next-line`.
+  After the change all four spot-checked files (`App.tsx`, `main.tsx`,
+  `Dashboard.tsx`, `WorldHud.tsx`) measure severity `2`, and `eslint src` is
+  0 errors / 13 pre-existing unrelated `react-hooks/exhaustive-deps` warnings.
+  Milestone 2 is complete *and* self-maintaining, not a snapshot that decays
+  the next time a tile is added.
+- **Correction to how the P2 hairline item was framed.** It previously read
+  "used nowhere," which had already gone stale: the worlds slice
+  (`WorldHud.tsx`, `WorldsScene.tsx`) uses the all-sides `border-hairline` 4
+  times. The real disagreement was sharper than "nowhere" suggested — **166
+  literal `border-[0.5px]` occurrences, across 164 lines in 41 files**, against
+  those 4 — and the directional gap described above was the part actually
+  blocking further adoption. Restated in the checklist with today's numbers.
+  Note the occurrence/line split, because a first pass at this entry quoted 164
+  next to a per-side breakdown that summed to 166: `grep -c` counts *lines* and
+  `grep -o` counts *matches*, and two lines
+  (`tiles/mods/InstalledPanel.tsx:161` and `:313`) carry two each. Worth
+  stating the basis explicitly so the eventual sweep can check its own
+  arithmetic.
+- **Verification:** `pnpm exec eslint src` dropped from 6 `no-restricted-syntax`
+  warnings to 0, with 0 errors before, after, and under the forced-`error`
+  simulation (only the 13 pre-existing unrelated `react-hooks/exhaustive-deps`
+  warnings remain). `pnpm typecheck`, `pnpm lint`, `pnpm format:check` clean;
+  `pnpm test` 271/271; `pnpm build` then `pnpm check-bundle` at 487.2 KB gzip
+  entry chunk (550 KB budget); `go vet ./...` and `go test ./...` clean from the
+  repo root.
+- **`pnpm format:check` does not cover this file.** It runs `prettier --check .`
+  from `frontend/`, so nothing under `agent_docs/` is reached — the committed
+  markdown here has never been Prettier-clean and is deliberately outside its
+  remit. Recorded because a first pass at this entry cited a passing
+  `format:check` as evidence the docs were fine, and then shipped a `###`
+  heading wrapped onto a second line, which renders as a heading plus a stray
+  paragraph. Prose in `agent_docs/` is checked by reading it, not by a gate.
+- **Browser pass**, plain `vite` dev server (no Wails bridge, so the
+  `stats:snapshot`-listener console errors from `GetServerStatus` calls were
+  present and expected — the documented harness caveat from the tile-grid
+  entry above, unrelated to this change). Confirmed via computed styles rather
+  than a screenshot (the pane's compositor wasn't available in this session):
+  `--border-hairline` resolves to exactly `0.5px`; `border-right-width` etc.
+  report `1px` under `getComputedStyle` at `devicePixelRatio: 1`, which an
+  existing pre-migration `border-b-[0.5px]` literal elsewhere in the same page
+  does too — confirmed as Chrome's standing sub-pixel-border rounding, not a
+  regression, before trusting the rest of the pass. All four App.tsx dividers
+  landed on the correct edge (`border-r-hairline` on `<aside>`,
+  `border-b-hairline` on the header and the `ServerSelector` wrapper,
+  `border-t-hairline` above `LayoutPresets`). Toggled `data-theme="light"` and
+  confirmed the border color re-themed (`rgba(0,0,0,0.09)` vs. the dark theme's
+  white-based value) while `--accent` held constant, the same theme-dependent
+  check that caught the neighbouring `--panel-bg` bug.
+
+---
+
+### 2026-08-17 — Last three data polls closed, and a checklist claim that was wrong
+
+Closes **P1 — Remaining `useEffect` polls that have events available**. Two of the
+three were what the checklist described. The third was not, and acting on the
+description as written would have shipped a visible bug.
+
+**⚠️ The checklist was wrong about the stats tile.** It read: `tiles/stats/index.tsx`
+"polls `GetServerStatus` while `stats:snapshot` is pushed by a 10s Go ticker — **a
+straight duplicate**". Three things falsify that, each independently sufficient:
+
+- `models.StatsSnapshot` carries Timestamp/TPS/RAM/CPU/Players. It has **no**
+  `Running`, `Uptime` or `MaxPlayers` — and the tile renders all three (the
+  online/offline dot, the uptime readout, `players / maxPlayers`).
+- `stats.go`'s ticker opened with `if !s.server.IsRunning() { continue }`, so
+  `stats:snapshot` **never fires while the server is stopped**. An event that is
+  silent precisely when the server goes down cannot be the thing that tells the UI
+  the server went down.
+- `setStatus` had exactly one caller in the whole tree — that poll. It was the sole
+  writer of `useServerStore.status`, not a redundant second one.
+
+Deleting the poll as described would have frozen the tile on its last-known Online
+state forever. Worth stating plainly because the item had sat in the backlog reading
+as a quick win: **the claim was checked before it was acted on, and it did not
+survive the check.** The two-minute grep that found it (`setStatus` call sites, then
+the two struct definitions side by side) is the cheap habit worth repeating.
+
+- ✅ **New `server:status` event** (`events.go`, `stats.go`). Emitted every tick from
+  the existing ticker, above the running guard, carrying the full
+  `models.ServerStatus` built from the same seven accessors `GetServerStatus()` uses
+  — so the pushed payload and the fetched one cannot drift. History recording stays
+  gated below the guard, unchanged.
+- **Why a new event instead of extending `stats:snapshot`.** Ungating the existing
+  emit was the smaller diff and was rejected: `usePerformanceHistory.ts` would start
+  charting zero rows while offline, `GetStatsHistory`'s 1-hour buffer would fill with
+  them, and `scheduler_triggers.go:64` subscribes to that event — an ungated emit
+  could fire scheduler triggers against a stopped server. A separate event costs a
+  dozen lines and touches none of it. Same shape as `EventScheduleNextRuns`, which
+  replaced the 30s next-run poll.
+- ✅ **`tiles/stats/useServerStatus.ts`** on the `usePlayers.ts` convention: one fetch
+  on mount, then `server:status` for the push and `server:started`/`server:stopped`
+  for an immediate refetch so a transition shows at once rather than up to a tick
+  later. `index.tsx` lost its `poll` callback and interval; rendering is untouched.
+- ✅ **`useBackups.ts` and `useMods.ts`**: polls deleted. These two *were* the
+  safety-net duplicates the checklist described — verified by tracing every backend
+  mutation path (`backup.go` 307/373/459, including the scheduler's
+  `Backup().CreateBackup`; `modservice.go` 261/499/540/781/791 covering install,
+  enable/disable and uninstall). The mount fetch already covered the remount case
+  their comments cited. `useMods` also shed a now-unused `useRef` import.
+  **Named cost:** a `.zip` or `.jar` dropped into the folder from outside the app is
+  no longer picked up within 10s. Both hooks still return `refresh`.
+- ✅ **Dead `GetPlayers` binding removed** (P2). It was byte-identical to
+  `GetPlayerRoster` and unreferenced outside generated bindings. Unblocked by noticing
+  the `wails` CLI *is* installed locally (v2.12.0) — the checklist had recorded it as
+  unavailable, which was a cloud-sandbox limitation generalised too far. `wails
+  generate module` produced exactly the one removal across `App.d.ts`/`App.js`,
+  confirming the 83/83 sync the checklist claimed.
+
+**Verification.** `stats.go`'s loop body was split into `tick()` so the 10s ticker is
+not in the way of testing it, and `backend/services/stats_test.go` now pins the
+behaviour the wrong claim would have broken: `server:status` fires while stopped with
+`Running: false`, `Uptime: "0s"` and a non-zero `MaxPlayers`; `stats:snapshot` and the
+history stay empty while stopped; both fire while running; and the pushed struct
+equals a field-for-field rebuild of what `GetServerStatus()` returns, so adding a
+field to only one side fails the test.
+
+**These tests were mutation-checked rather than trusted.** Moving the running guard
+back above the status emit — reproducing exactly the regression the checklist's
+framing invited — turns
+`TestTickEmitsServerStatusWhileStopped` red with "want 1 server:status while stopped,
+got 0". A test for a subtle ordering property is worth nothing until it has been seen
+to fail for the right reason.
+
+Rest: `pnpm test` 280/280 across 27 files (9 new in `useServerStatus.test.ts`,
+including a fake-timer `does not poll on an interval` assertion), typecheck, lint 0
+errors, `format:check`, `check-bundle` 487.1 KB gzip against the 550 KB budget,
+`gofmt`, `go vet`, `go test`, and a clean second `gen:tokens`. A repo-wide
+`setInterval` grep leaves only `App.tsx:89`'s 150ms console-log batcher, which is
+render batching rather than data fetching and was always out of scope.
+
+**Not verified end to end against a live server.** A `wails dev` run came up against a
+pre-existing dev instance already holding port 34115, so the bridge on offer was an
+older build (83 bound methods, `GetPlayers` still present) — spotted before drawing
+any conclusion from it. Rather than fight for the port, the behaviour went into the Go
+tests above, which pin it harder than a manual poke would. What remains genuinely
+unproven is the full offline → online → offline cycle against a real Minecraft server,
+which needs a server jar and a JRE.
+
+---
+
+### 2026-08-17 — Backend test coverage, and a CI floor to hold it
+
+Closes **P1 — Test-coverage follow-ups**, the last P1 on the checklist. Unlike the
+polling item, this one's claims held up under checking: `go tool cover -func`
+confirmed backup.go at 4/29 functions, config_editor.go at 1/11 and rcon.go at 4/6
+exactly as recorded.
+
+- ✅ **`backup_test.go`** — a `newBackupFixture` helper (temp dataDir, seeded
+  `ConfigService`, zero-value `ServerService`) and seven tests over the
+  orchestration: a full create → corrupt → restore round trip, a missing working
+  directory, the refusal to restore while running, a traversing filename reaching
+  `RestoreBackup`, world-vs-server resolution through `ListBackups`, the meta.json
+  round trip including tag sanitising, and delete. **4/29 → 17/29.**
+- ✅ **`config_editor_test.go`** — read/write round trip, the guard on both entry
+  points, invalid JSON rejected *without* touching the file, non-JSON formats
+  skipping validation, backup-on-overwrite versus none-for-new-file, and
+  `pruneBackups` keeping exactly `backupKeep`. **1/11 → 6/11.**
+- ✅ **`rcon_test.go`** — a `fakeRconServer` on an ephemeral loopback port speaking
+  the real protocol via the existing `writePacket`/`readPacket` helpers, covering
+  the happy path with colour stripping, a rejected password, a dead port, and a
+  hang-up mid-auth. **4/6 → 6/6, the file is complete.**
+- `config.go` picked up 0/11 → 5/11 for free, exercised by the fixtures.
+- **Package coverage 31.2% → 36.7%.**
+
+**Every load-bearing assertion was mutation-checked** rather than trusted, and one
+of the four mutations found a bad test rather than confirming a good one:
+
+| Mutation | Result |
+|---|---|
+| `sandbox`'s prefix check removed | caught |
+| `WriteConfigFile`'s JSON validation skipped | caught |
+| `RestoreBackup`'s running check removed | caught |
+| `pruneBackups` off-by-one (keeps 4, not 3) | caught |
+
+The first mutation exposed that `TestConfigFileGuardAppliesOnBothPaths` was passing
+for the wrong reason: it aimed the traversal at a path that did not exist, so
+`ReadConfigFile` errored from `os.ReadFile` whether or not the guard ran. Rewritten
+to point at a file that genuinely exists outside the working directory and to assert
+the file is still intact afterwards, it now fails on all three counts when the guard
+goes. **A test that has never been seen to fail is a guess** — this is the second
+time in two changes that running the mutation has paid for itself.
+
+- ✅ **Coverage floor in CI**, `backend` job, set to **35%** — a little under the
+  36.7% measured so an unrelated refactor does not redden the build, and commented
+  as a ratchet. Scoped to `backend/services` rather than `./...` because the repo
+  root and `backend/models` have no test files and would dilute the figure with
+  packages the floor is not about.
+- **The floor step nearly shipped broken, in a way that would have looked
+  unrelated.** PowerShell splits an unquoted native-command argument on `=`, so
+  `go tool cover -func=coverage.out` came back "too many arguments" and
+  `go test -coverprofile=coverage.out` silently wrote its profile to a file named
+  `coverage`. Both arguments are now quoted, with a comment saying why so nobody
+  tidies the quotes away. Verified by running the step's script directly: exit 0
+  at the 35% floor, exit 1 with the intended message at an impossible 95% floor —
+  the gate is known to bite, not assumed to.
+
+**Two findings recorded on the backlog rather than fixed here.** `sandbox` is a
+purely lexical guard, so a symlink inside the working directory still resolves
+outside it — left open by decision, since the user already owns the filesystem on a
+local-first app, and noted with what a real fix would need. And config-editor
+backups collide within a second: the `20060102_150405` stamp plus a truncating
+`os.Create` means two saves in the same second leave one backup. That collision is
+also why `pruneBackups` is driven directly in its test instead of through repeated
+`WriteConfigFile` calls, which would have needed a sleep per copy.
+
+**Verification:** `go test ./backend/services/ -count=2` (twice, to catch order
+dependence between tests sharing temp dirs), `gofmt`, `go vet`, `go build`, and the
+frontend gates unchanged at 280/280 with typecheck, lint and format clean.
+**`-race` was not run**: it requires cgo and no gcc is present on this machine, and
+no CI job runs it either. The RCON fake-server goroutines are the only new
+concurrency, each bounded by `t.Cleanup` closing the listener, but that is an
+argument for low risk rather than evidence of none.
+
+---
+
+### 2026-08-17 — The coverage floor, rebuilt to match the repo's own gate shape
+
+A verification pass over the entry above found the floor was the right idea in the
+wrong shape, and fixing it turned up a Go API that does not do what its name
+suggests.
+
+**The floor did not run where the repo says done is measured.** It had been written
+as an inline PowerShell step in `ci.yml`, so it lived only in CI. But
+`agent_docs/CLAUDE.md` names `/suite-kit:health` the definition of done and the
+checklist calls `.claude/suite.json`'s set canonical — and the floor was in neither.
+The whole local gate set could pass green while CI reddened. The repo already had a
+precedent for exactly this kind of gate and it had not been followed:
+`pnpm check-bundle` is a *script* owning a documented constant, named in
+`suite.json` **and** CI. That is what a threshold gate looks like here.
+
+**The obvious fix does not work, and the reason is worth writing down.** The first
+attempt enforced the floor from a `TestMain` using `testing.Coverage()`, which would
+have ridden the existing `go test` gate with no new command at all. It reported
+**33.5%** where `go test -cover` reported **36.7%** for the same run. Not a rounding
+difference: `testing.Coverage()` predates the Go 1.20 coverage redesign, and its own
+doc comment says it "is not a replacement for the reports generated by
+'go test -cover' and 'go tool cover'". A floor has to be measured the way the number
+people quote is measured, or the gate and the docs disagree forever. Approach
+abandoned before it was committed, on the strength of one comparison that took a
+minute to run.
+
+- ✅ **`scripts/coverage-floor/main.go`** now owns the threshold and the reasoning,
+  mirroring `check-bundle-size.mjs`. It shells out to `go test -cover`, parses the
+  authoritative `coverage: NN.N% of statements` line, and fails below 35%.
+- ✅ Declared in **`.claude/suite.json`** as `coverage floor` and called from CI as
+  `go run ./scripts/coverage-floor`. One implementation, both gates.
+- The 33-line PowerShell step is gone, and with it the `=`-splitting hazard that had
+  needed a comment telling people not to remove its quotes: PowerShell splits an
+  unquoted native argument on `=`, so `go tool cover -func=x` answered "too many
+  arguments" and `go test -coverprofile=x` wrote to a file called `coverage`. That
+  step was also never testable here, because `pwsh` is not installed on this machine
+  and only Windows PowerShell 5.1 was available. A Go program has no such gap.
+
+**Verification.** The tool reports 36.7%, matching `go test -cover` exactly — the
+comparison the `TestMain` approach failed. Raising the constant to 95% fails with
+the intended message and exit 1; restoring it passes. With a test deliberately
+broken, the output leads with `--- FAIL: TestExecuteHappyPath` and the tool says
+"tests failed, coverage not judged" rather than rendering a coverage verdict, so a
+red package never becomes ambiguous between a broken test and a dipped number.
+`gofmt`, `go vet ./...`, `go build ./...` clean; `ci.yml` and `suite.json` both
+parse and the new command matches `healthCommand` in the suite schema.
+`scripts/validate-schemas.sh` could not run — `check-jsonschema` is not installed —
+so that is a skip, not a pass.

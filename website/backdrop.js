@@ -49,7 +49,11 @@
       canvas.height = Math.round(h * DPR)
       ctx.setTransform(DPR, 0, 0, DPR, 0, 0)
       effect.resize(ctx, w, h)
-      if (reduceMotion) effect.draw(ctx, w, h, 0, 0)
+      // Setting canvas.width above wipes the bitmap, so without a frame here
+      // the backdrop is blank until the loop next runs — a visible blink on
+      // any resize, and the whole backdrop under reduced motion, where there
+      // is no loop to wait for.
+      effect.draw(ctx, w, h, 0, 0)
     }
 
     if ('ResizeObserver' in window) {
@@ -85,9 +89,16 @@
           var reach = Math.min(e.boundingClientRect.height, rootH) || 1
           var covered = e.intersectionRect.height / reach
 
-          // Hysteresis, so resting exactly on the boundary cannot flicker.
-          if (!lit && covered >= 0.7) lit = true
-          else if (lit && covered < 0.45) lit = false
+          // Hysteresis, and a deliberately lopsided pair of it. Lighting still
+          // wants most of the section in front of you, but unlighting has to
+          // wait until it is all but gone: the landing page snaps, so one wheel
+          // notch moves the scroll twice — your own scroll, then the snap
+          // pulling it back — and the old 0.45 floor sat close enough to the
+          // top of the page for that round trip to cross it. Crossing it costs
+          // a 700ms fade out and another back in, which is what read as the
+          // backdrop blinking while you sat still.
+          if (!lit && covered >= 0.6) lit = true
+          else if (lit && covered < 0.08) lit = false
           canvas.classList.toggle('is-lit', lit)
 
           // Keep drawing a little either side of that, so the fade never
@@ -237,10 +248,13 @@
   }
 
   // ── Download: stars drifting past ────────────────────────────────────────
-  // Perspective this time, since the whole point is the approach. Kept very
-  // thin on purpose: a low count, short streaks, low alpha and a slow drift,
-  // so it reads as depth behind the panel rather than as travel. A faster
-  // version of this is genuinely uncomfortable to sit under while reading.
+  // Perspective this time, since the whole point is the approach. Kept thin on
+  // purpose: a low count, short streaks and a slow drift, so it reads as depth
+  // behind the panel rather than as travel. A faster version of this is
+  // genuinely uncomfortable to sit under while reading — which is why the
+  // brightness below is the only dial that has been opened up. At the original
+  // alpha the field was invisible on anything but a dark room and a good
+  // panel, so it was paying its frame cost for nothing.
   function warpField() {
     var SPEED = 0.14 // depth units per second, roughly seven seconds a star
     var MAX_STREAK = 16 // px, so nothing ever smears into a line
@@ -313,9 +327,9 @@
           }
 
           var near = 1 - s.z
-          ctx.globalAlpha = clamp(near * 0.42, 0, 0.32)
+          ctx.globalAlpha = clamp(near * 0.9, 0, 0.66)
           ctx.strokeStyle = s.hot ? 'rgb(' + accent + ')' : '#ffffff'
-          ctx.lineWidth = 0.6 + near * 0.5
+          ctx.lineWidth = 0.9 + near * 0.7
           ctx.beginPath()
           ctx.moveTo(x1, y1)
           ctx.lineTo(x2, y2)

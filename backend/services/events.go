@@ -1,10 +1,24 @@
 package services
 
 const (
-	EventLogLine          = "log:line"
-	EventServerStarted    = "server:started"
-	EventServerStopped    = "server:stopped"
-	EventEulaRequired     = "server:eula-required"
+	EventLogLine       = "log:line"
+	EventServerStarted = "server:started"
+	EventServerStopped = "server:stopped"
+	EventEulaRequired  = "server:eula-required"
+
+	// EventServerStatus pushes the full models.ServerStatus on every stats tick,
+	// running or not. Payload matches GetServerStatus() exactly, so one frontend
+	// setter serves both the initial fetch and the push. Replaces the stats
+	// tile's 10s GetServerStatus poll.
+	//
+	// Deliberately separate from stats:snapshot rather than folded into it:
+	// StatsSnapshot carries no Running/Uptime/MaxPlayers, and its emit is gated
+	// on the server actually running, so it can never report a stop. Ungating
+	// that emit instead would have filled the 1h history with offline zeroes and
+	// fired scheduler_triggers.go's stats:snapshot subscriber against a stopped
+	// server.
+	EventServerStatus = "server:status"
+
 	EventStatsSnapshot    = "stats:snapshot"
 	EventPlayerJoined     = "player:joined"
 	EventPlayerLeft       = "player:left"
