@@ -69,6 +69,13 @@
 html {
   background: var(--bg-base);
   scroll-behavior: smooth;
+  /* Hold the scrollbar's column open whether or not there is a scrollbar in
+     it. Without this, anything that grows the page past the viewport — opening
+     the snapshot notes, a fetch landing its cards — takes the scrollbar's width
+     out of the viewport and shifts every centred thing on the page sideways as
+     it appears. It is a couple of pixels, and it is the kind that reads as the
+     layout twitching rather than as a scrollbar arriving. */
+  scrollbar-gutter: stable;
 }
 
 /* Sticky footer. Sub-pages used to fake this with `min-height: 100vh` on
@@ -2172,11 +2179,12 @@ footer {
   content: '−';
 }
 
-.faq details[open] summary {
-  padding-bottom: 6px;
-}
-
+/* The 8px that used to come off the summary's padding when open, moved onto
+   the answer so it reads identically while leaving the summary one fixed size.
+   main.js animates the details' height between states, and a summary that
+   resizes with `open` puts the end of that animation 8px out. */
 .faq .md {
+  margin-top: -8px;
   padding: 0 0 14px 22px;
 }
 

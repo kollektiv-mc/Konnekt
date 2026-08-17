@@ -250,6 +250,62 @@
     publishFooterHeight()
   }
 
+  // ── Animated disclosures ────────────────────────────────────────────────
+  // <details> opens in one frame: the panel is simply there, and everything
+  // under it jumps down by its full height. This animates the element's own
+  // height between the two states instead, so the reveal reads as an opening
+  // and the content below slides rather than teleports.
+  //
+  // The element's height is animated rather than an inner wrapper's, which is
+  // what lets this work on the FAQ and the changelog's snapshot entry without
+  // either page's markup gaining a box to animate. `open` is driven by hand —
+  // the native toggle is what we are replacing — and stays true for the whole
+  // of a close, so there is something to animate down from.
+  if (!reduceMotion && document.body.animate) {
+    var DISCLOSURE_MS = 220
+
+    document.querySelectorAll('.faq details, details.release-pending').forEach(function (details) {
+      var summary = details.querySelector('summary')
+      if (!summary) return
+      var anim = null
+
+      summary.addEventListener('click', function (e) {
+        e.preventDefault()
+
+        // A click mid-flight measures from wherever the last one got to, so
+        // the reverse starts at the height actually on screen.
+        if (anim) anim.cancel()
+
+        var opening = !details.open
+        var from = details.getBoundingClientRect().height
+        var to
+
+        if (opening) {
+          details.open = true
+          to = details.getBoundingClientRect().height
+        } else {
+          // Both measurements happen in this one task, so the closed frame is
+          // never painted — the layout is read twice, the screen once.
+          details.open = false
+          to = details.getBoundingClientRect().height
+          details.open = true
+        }
+
+        details.style.overflow = 'hidden'
+        anim = details.animate(
+          { height: [from + 'px', to + 'px'] },
+          { duration: DISCLOSURE_MS, easing: 'cubic-bezier(0.4, 0, 0.2, 1)' },
+        )
+
+        anim.onfinish = function () {
+          anim = null
+          details.style.overflow = ''
+          if (!opening) details.open = false
+        }
+      })
+    })
+  }
+
   // ── Cursor glow on tiles ────────────────────────────────────────────────
   // Feeds --mx/--my (tile-relative pixels) to the radial gradient in
   // styles.css. One delegated listener rather than one per tile, so the cards
