@@ -253,6 +253,11 @@ jobs:
             : > changes.md
           fi
 
+          # GitHub's generator appends " by @user in <PR URL>" to every bullet.
+          # That's attribution for the PR, not something a build's changelog
+          # needs to say twice a night — drop it, keeping just the title.
+          sed -i -E 's/ by @[^ ]+ in https:\/\/[^[:space:]]+$//' changes.md
+
           if [ ! -s changes.md ]; then
             if [ -n "$base_tag" ]; then
               echo "**Full changelog**: $SERVER/$REPO/compare/$base_tag...$SHA" > changes.md

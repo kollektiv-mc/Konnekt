@@ -163,11 +163,30 @@ jobs:
         working-directory: dist
         run: sha256sum * > checksums.txt
 
+      # --generate-notes (used below by gh release create) would compute the
+      # notes server-side with no chance to touch the result before they're
+      # attached to the release. Calling the same generator by hand first gets
+      # the identical notes as text, so the byline strip below can run on them.
+      - name: Generate release notes
+        working-directory: dist
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          gh api --method POST "repos/$REPO/releases/generate-notes" \
+            -f "tag_name=$TAG" --jq .body > notes.md
+
+          # GitHub's generator appends " by @user in <PR URL>" to every bullet.
+          # That's attribution for the PR, not something a release's changelog
+          # needs to repeat — drop it, keeping just the title.
+          sed -i -E 's/ by @[^ ]+ in https:\/\/[^[:space:]]+$//' notes.md
+
       - name: Publish release
         working-directory: dist
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh release create "${{ github.ref_name }}" * \
-            --title "${{ github.ref_name }}" --generate-notes \
+            --title "${{ github.ref_name }}" --notes-file notes.md \
             --repo "${{ github.repository }}"
