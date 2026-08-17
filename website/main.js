@@ -227,6 +227,29 @@
     updateRail()
   }
 
+  // ── Footer height, published to the stylesheet ──────────────────────────
+  // The last landing-page section is sized to leave exactly enough room for
+  // the footer (styles.css, `.cta` in the snapping media query), so that
+  // section's snap point and the document end land on the same scroll
+  // position. Left to themselves they sit a footer's height apart — two snap
+  // points too close together, which is what made resting on the download
+  // section feel unreliable and kept sliding it up under the fixed nav.
+  var pageFooter = document.querySelector('body > footer')
+  if (pageFooter) {
+    var publishFooterHeight = function () {
+      document.documentElement.style.setProperty(
+        '--footer-h',
+        Math.round(pageFooter.getBoundingClientRect().height) + 'px',
+      )
+    }
+    if ('ResizeObserver' in window) {
+      new ResizeObserver(publishFooterHeight).observe(pageFooter)
+    } else {
+      window.addEventListener('resize', publishFooterHeight)
+    }
+    publishFooterHeight()
+  }
+
   // ── Cursor glow on tiles ────────────────────────────────────────────────
   // Feeds --mx/--my (tile-relative pixels) to the radial gradient in
   // styles.css. One delegated listener rather than one per tile, so the cards
