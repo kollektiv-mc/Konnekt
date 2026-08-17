@@ -762,8 +762,12 @@ a {
   transition: opacity 700ms var(--ease-standard);
 }
 
+/* Asymmetric on purpose: slow out, quick back. Going dark is the expensive
+   direction to get wrong, so it takes its time and a dip that gets cancelled
+   barely darkens before it is; coming back is immediate. */
 .fx.is-lit {
   opacity: 1;
+  transition-duration: 260ms;
 }
 
 /* The hero's own content already sits on z-index 1; the CTA's needs to. */
