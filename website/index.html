@@ -259,69 +259,292 @@
           </div>
           <div class="spotlight-media reveal" style="--reveal-delay: 80ms">
             <!-- Node-graph motif. Static SVG, animated purely in CSS (.sf-* in
-                 styles.css); node colours mirror the app's blockMeta.ts.
-                 Geometry: 60px horizontal and 50px vertical clear on the 900x360
-                 canvas, three
-                 196-wide columns at x=60/352/644 with 96px of edge run between
-                 them. The dotted backdrop is .spotlight-media's, not the SVG's,
-                 so it continues past the graph rather than stopping at it. -->
+                 styles.css). Node fills, the left category bar and the port
+                 colours all mirror the app's blockMeta.ts, and every block and
+                 port drawn here exists in backend/services/scheduler_blocks.go —
+                 these are four automations you could actually build, not props.
+                 Geometry: a 1040x360 frame with 55 units clear left and right,
+                 190x64 nodes, and five frames stacked 360 apart for the reel. -->
             <svg
               class="sf"
-              viewBox="0 0 900 360"
+              viewBox="0 0 1040 360"
               role="img"
-              aria-label="A node graph: a schedule trigger feeds a player-count condition, which branches into a server restart and a notification."
+              aria-label="A scheduler canvas panning through four automations: restart on crash, nightly backup when empty, warned timed restart, and a low-TPS alert."
             >
-              <path class="sf-edge" d="M 256 180 C 304 180 304 180 352 180" />
-              <path class="sf-edge" d="M 548 166 C 596 166 596 83 644 83" />
-              <path class="sf-edge" d="M 548 194 C 596 194 596 277 644 277" />
+              <defs>
+                <pattern id="sf-dots" width="24" height="24" patternUnits="userSpaceOnUse">
+                  <circle class="sf-dot" cx="1" cy="1" r="1" />
+                </pattern>
+              </defs>
 
-              <path
-                class="sf-pulse"
-                pathLength="100"
-                style="--d: 1.4s"
-                d="M 256 180 C 304 180 304 180 352 180"
-              />
-              <path
-                class="sf-pulse"
-                pathLength="100"
-                style="--d: 3.4s"
-                d="M 548 166 C 596 166 596 83 644 83"
-              />
-              <path
-                class="sf-pulse"
-                pathLength="100"
-                style="--d: 5.4s"
-                d="M 548 194 C 596 194 596 277 644 277"
-              />
+              <!-- One reel of five stacked frames, panned by .sf-reel in styles.css.
+                   The grid is a child of the reel, not a background on the canvas, so
+                   it travels with the nodes; 360 is a whole number of 24-unit pattern
+                   tiles, so it stays seamless across every frame. -->
+              <g class="sf-reel">
+                <rect class="sf-grid" x="0" y="0" width="1040" height="1800" fill="url(#sf-dots)" />
 
-              <g class="sf-node" style="--nc: #7c3aed; --d: 0s">
-                <rect x="60" y="147" width="196" height="66" rx="10" />
-                <text class="sf-title" x="80" y="176">Schedule</text>
-                <text class="sf-sub" x="80" y="195">every 6h</text>
-                <circle class="sf-port" cx="256" cy="180" r="5" style="--pc: #7c3aed" />
+                <!-- auto restart on crash -->
+                <g class="sf-frame" transform="translate(0 0)" style="--t0: 0s">
+                  <text class="sf-caption" x="55" y="340">AUTO RESTART ON CRASH</text>
+                  <path class="sf-edge" d="M 245 180 C 335 180 335 180 425 180" />
+                  <path class="sf-edge" d="M 615 166 C 705 166 705 84 795 84" />
+                  <path class="sf-edge" d="M 615 194 C 705 194 705 276 795 276" />
+                  <path
+                    class="sf-pulse"
+                    pathLength="100"
+                    style="--d: 0.85s"
+                    d="M 245 180 C 335 180 335 180 425 180"
+                  />
+                  <path
+                    class="sf-pulse"
+                    pathLength="100"
+                    style="--d: 1.95s"
+                    d="M 615 166 C 705 166 705 84 795 84"
+                  />
+                  <path
+                    class="sf-pulse"
+                    pathLength="100"
+                    style="--d: 2.25s"
+                    d="M 615 194 C 705 194 705 276 795 276"
+                  />
+                  <g class="sf-node" style="--nc: #7c3aed; --d: 0.35s">
+                    <rect class="sf-box" x="55" y="148" width="190" height="64" rx="10" />
+                    <rect class="sf-bar" x="63" y="162" width="3" height="36" rx="1.5" />
+                    <text class="sf-title" x="76" y="176">Server</text>
+                    <text class="sf-sub" x="76" y="195">crashed</text>
+                    <circle class="sf-port" cx="245" cy="180" r="5" style="--pc: #22c55e" />
+                  </g>
+                  <g class="sf-node" style="--nc: #0369a1; --d: 1.45s">
+                    <rect class="sf-box" x="425" y="148" width="190" height="64" rx="10" />
+                    <rect class="sf-bar" x="433" y="162" width="3" height="36" rx="1.5" />
+                    <text class="sf-title" x="446" y="176">Restart server</text>
+                    <text class="sf-sub" x="446" y="195">command</text>
+                    <circle class="sf-port" cx="425" cy="180" r="5" style="--pc: #7c3aed" />
+                    <circle class="sf-port" cx="615" cy="166" r="5" style="--pc: #22c55e" />
+                    <circle class="sf-port" cx="615" cy="194" r="5" style="--pc: #ef4444" />
+                  </g>
+                  <g class="sf-node" style="--nc: #047857; --d: 2.55s">
+                    <rect class="sf-box" x="795" y="52" width="190" height="64" rx="10" />
+                    <rect class="sf-bar" x="803" y="66" width="3" height="36" rx="1.5" />
+                    <text class="sf-title" x="816" y="80">Notify</text>
+                    <text class="sf-sub" x="816" y="99">info</text>
+                    <circle class="sf-port" cx="795" cy="84" r="5" style="--pc: #7c3aed" />
+                  </g>
+                  <g class="sf-node" style="--nc: #047857; --d: 2.85s">
+                    <rect class="sf-box" x="795" y="244" width="190" height="64" rx="10" />
+                    <rect class="sf-bar" x="803" y="258" width="3" height="36" rx="1.5" />
+                    <text class="sf-title" x="816" y="272">Notify</text>
+                    <text class="sf-sub" x="816" y="291">error</text>
+                    <circle class="sf-port" cx="795" cy="276" r="5" style="--pc: #7c3aed" />
+                  </g>
               </g>
-
-              <g class="sf-node" style="--nc: #b45309; --d: 2s">
-                <rect x="352" y="147" width="196" height="66" rx="10" />
-                <text class="sf-title" x="372" y="176">Players = 0</text>
-                <text class="sf-sub" x="372" y="195">condition</text>
-                <circle class="sf-port" cx="352" cy="180" r="5" style="--pc: #94a3b8" />
-                <circle class="sf-port" cx="548" cy="166" r="5" style="--pc: #22c55e" />
-                <circle class="sf-port" cx="548" cy="194" r="5" style="--pc: #f97316" />
+              <!-- nightly backup when empty -->
+              <g class="sf-frame" transform="translate(0 360)" style="--t0: 6s">
+                <text class="sf-caption" x="55" y="340">NIGHTLY BACKUP WHEN EMPTY</text>
+                <path class="sf-edge" d="M 245 180 C 273 180 273 180 301 180" />
+                <path class="sf-edge" d="M 491 166 C 519 166 519 124 547 124" />
+                <path class="sf-edge" d="M 737 124 C 765 124 765 124 793 124" />
+                <path
+                  class="sf-pulse"
+                  pathLength="100"
+                  style="--d: 0.85s"
+                  d="M 245 180 C 273 180 273 180 301 180"
+                />
+                <path
+                  class="sf-pulse"
+                  pathLength="100"
+                  style="--d: 1.95s"
+                  d="M 491 166 C 519 166 519 124 547 124"
+                />
+                <path
+                  class="sf-pulse"
+                  pathLength="100"
+                  style="--d: 3.05s"
+                  d="M 737 124 C 765 124 765 124 793 124"
+                />
+                <g class="sf-node" style="--nc: #7c3aed; --d: 0.35s">
+                  <rect class="sf-box" x="55" y="148" width="190" height="64" rx="10" />
+                  <rect class="sf-bar" x="63" y="162" width="3" height="36" rx="1.5" />
+                  <text class="sf-title" x="76" y="176">Time of day</text>
+                  <text class="sf-sub" x="76" y="195">04:00</text>
+                  <circle class="sf-port" cx="245" cy="180" r="5" style="--pc: #22c55e" />
+                </g>
+                <g class="sf-node" style="--nc: #b45309; --d: 1.45s">
+                  <rect class="sf-box" x="301" y="148" width="190" height="64" rx="10" />
+                  <rect class="sf-bar" x="309" y="162" width="3" height="36" rx="1.5" />
+                  <text class="sf-title" x="322" y="176">@players.count</text>
+                  <text class="sf-sub" x="322" y="195">condition == 0</text>
+                  <circle class="sf-port" cx="301" cy="180" r="5" style="--pc: #7c3aed" />
+                  <circle class="sf-port" cx="491" cy="166" r="5" style="--pc: #22c55e" />
+                  <circle class="sf-port" cx="491" cy="194" r="5" style="--pc: #f97316" />
+                </g>
+                <g class="sf-node" style="--nc: #0369a1; --d: 2.55s">
+                  <rect class="sf-box" x="547" y="92" width="190" height="64" rx="10" />
+                  <rect class="sf-bar" x="555" y="106" width="3" height="36" rx="1.5" />
+                  <text class="sf-title" x="568" y="120">Create backup</text>
+                  <text class="sf-sub" x="568" y="139">action</text>
+                  <circle class="sf-port" cx="547" cy="124" r="5" style="--pc: #7c3aed" />
+                  <circle class="sf-port" cx="737" cy="124" r="5" style="--pc: #22c55e" />
+                </g>
+                <g class="sf-node" style="--nc: #047857; --d: 3.65s">
+                  <rect class="sf-box" x="793" y="92" width="190" height="64" rx="10" />
+                  <rect class="sf-bar" x="801" y="106" width="3" height="36" rx="1.5" />
+                  <text class="sf-title" x="814" y="120">Notify</text>
+                  <text class="sf-sub" x="814" y="139">info</text>
+                  <circle class="sf-port" cx="793" cy="124" r="5" style="--pc: #7c3aed" />
+                </g>
               </g>
-
-              <g class="sf-node" style="--nc: #0369a1; --d: 4s">
-                <rect x="644" y="50" width="196" height="66" rx="10" />
-                <text class="sf-title" x="664" y="79">Restart</text>
-                <text class="sf-sub" x="664" y="98">action</text>
-                <circle class="sf-port" cx="644" cy="83" r="5" style="--pc: #94a3b8" />
+              <!-- timed restart with warning -->
+              <g class="sf-frame" transform="translate(0 720)" style="--t0: 12s">
+                <text class="sf-caption" x="55" y="340">TIMED RESTART WITH WARNING</text>
+                <path class="sf-edge" d="M 245 180 C 273 180 273 180 301 180" />
+                <path class="sf-edge" d="M 491 180 C 519 180 519 180 547 180" />
+                <path class="sf-edge" d="M 737 180 C 765 180 765 180 793 180" />
+                <path
+                  class="sf-pulse"
+                  pathLength="100"
+                  style="--d: 0.85s"
+                  d="M 245 180 C 273 180 273 180 301 180"
+                />
+                <path
+                  class="sf-pulse"
+                  pathLength="100"
+                  style="--d: 1.95s"
+                  d="M 491 180 C 519 180 519 180 547 180"
+                />
+                <path
+                  class="sf-pulse"
+                  pathLength="100"
+                  style="--d: 3.05s"
+                  d="M 737 180 C 765 180 765 180 793 180"
+                />
+                <g class="sf-node" style="--nc: #7c3aed; --d: 0.35s">
+                  <rect class="sf-box" x="55" y="148" width="190" height="64" rx="10" />
+                  <rect class="sf-bar" x="63" y="162" width="3" height="36" rx="1.5" />
+                  <text class="sf-title" x="76" y="176">Interval</text>
+                  <text class="sf-sub" x="76" y="195">every 6h</text>
+                  <circle class="sf-port" cx="245" cy="180" r="5" style="--pc: #22c55e" />
+                </g>
+                <g class="sf-node" style="--nc: #0369a1; --d: 1.45s">
+                  <rect class="sf-box" x="301" y="148" width="190" height="64" rx="10" />
+                  <rect class="sf-bar" x="309" y="162" width="3" height="36" rx="1.5" />
+                  <text class="sf-title" x="322" y="176">Broadcast</text>
+                  <text class="sf-sub" x="322" y="195">say restart 60s</text>
+                  <circle class="sf-port" cx="301" cy="180" r="5" style="--pc: #7c3aed" />
+                  <circle class="sf-port" cx="491" cy="180" r="5" style="--pc: #22c55e" />
+                </g>
+                <g class="sf-node" style="--nc: #0369a1; --d: 2.55s">
+                  <rect class="sf-box" x="547" y="148" width="190" height="64" rx="10" />
+                  <rect class="sf-bar" x="555" y="162" width="3" height="36" rx="1.5" />
+                  <text class="sf-title" x="568" y="176">Delay</text>
+                  <text class="sf-sub" x="568" y="195">60 seconds</text>
+                  <circle class="sf-port" cx="547" cy="180" r="5" style="--pc: #7c3aed" />
+                  <circle class="sf-port" cx="737" cy="180" r="5" style="--pc: #22c55e" />
+                </g>
+                <g class="sf-node" style="--nc: #0369a1; --d: 3.65s">
+                  <rect class="sf-box" x="793" y="148" width="190" height="64" rx="10" />
+                  <rect class="sf-bar" x="801" y="162" width="3" height="36" rx="1.5" />
+                  <text class="sf-title" x="814" y="176">Restart server</text>
+                  <text class="sf-sub" x="814" y="195">command</text>
+                  <circle class="sf-port" cx="793" cy="180" r="5" style="--pc: #7c3aed" />
+                </g>
               </g>
-
-              <g class="sf-node" style="--nc: #047857; --d: 6s">
-                <rect x="644" y="244" width="196" height="66" rx="10" />
-                <text class="sf-title" x="664" y="273">Notify</text>
-                <text class="sf-sub" x="664" y="292">discord</text>
-                <circle class="sf-port" cx="644" cy="277" r="5" style="--pc: #94a3b8" />
+              <!-- low tps alert -->
+              <g class="sf-frame" transform="translate(0 1080)" style="--t0: 18s">
+                <text class="sf-caption" x="55" y="340">LOW TPS ALERT</text>
+                <path class="sf-edge" d="M 245 180 C 335 180 335 180 425 180" />
+                <path class="sf-edge" d="M 615 180 C 705 180 705 180 795 180" />
+                <path
+                  class="sf-pulse"
+                  pathLength="100"
+                  style="--d: 0.85s"
+                  d="M 245 180 C 335 180 335 180 425 180"
+                />
+                <path
+                  class="sf-pulse"
+                  pathLength="100"
+                  style="--d: 1.95s"
+                  d="M 615 180 C 705 180 705 180 795 180"
+                />
+                <g class="sf-node" style="--nc: #7c3aed; --d: 0.35s">
+                  <rect class="sf-box" x="55" y="148" width="190" height="64" rx="10" />
+                  <rect class="sf-bar" x="63" y="162" width="3" height="36" rx="1.5" />
+                  <text class="sf-title" x="76" y="176">TPS below 14</text>
+                  <text class="sf-sub" x="76" y="195">trigger</text>
+                  <circle class="sf-port" cx="245" cy="180" r="5" style="--pc: #22c55e" />
+                </g>
+                <g class="sf-node" style="--nc: #0369a1; --d: 1.45s">
+                  <rect class="sf-box" x="425" y="148" width="190" height="64" rx="10" />
+                  <rect class="sf-bar" x="433" y="162" width="3" height="36" rx="1.5" />
+                  <text class="sf-title" x="446" y="176">save-all</text>
+                  <text class="sf-sub" x="446" y="195">rcon command</text>
+                  <circle class="sf-port" cx="425" cy="180" r="5" style="--pc: #7c3aed" />
+                  <circle class="sf-port" cx="615" cy="180" r="5" style="--pc: #22c55e" />
+                </g>
+                <g class="sf-node" style="--nc: #047857; --d: 2.55s">
+                  <rect class="sf-box" x="795" y="148" width="190" height="64" rx="10" />
+                  <rect class="sf-bar" x="803" y="162" width="3" height="36" rx="1.5" />
+                  <text class="sf-title" x="816" y="176">Notify</text>
+                  <text class="sf-sub" x="816" y="195">warning</text>
+                  <circle class="sf-port" cx="795" cy="180" r="5" style="--pc: #7c3aed" />
+                </g>
+              </g>
+              <!-- auto restart on crash -->
+              <g class="sf-frame" transform="translate(0 1440)" style="--t0: 24s">
+                <text class="sf-caption" x="55" y="340">AUTO RESTART ON CRASH</text>
+                <path class="sf-edge" d="M 245 180 C 335 180 335 180 425 180" />
+                <path class="sf-edge" d="M 615 166 C 705 166 705 84 795 84" />
+                <path class="sf-edge" d="M 615 194 C 705 194 705 276 795 276" />
+                <path
+                  class="sf-pulse"
+                  pathLength="100"
+                  style="--d: 0.85s"
+                  d="M 245 180 C 335 180 335 180 425 180"
+                />
+                <path
+                  class="sf-pulse"
+                  pathLength="100"
+                  style="--d: 1.95s"
+                  d="M 615 166 C 705 166 705 84 795 84"
+                />
+                <path
+                  class="sf-pulse"
+                  pathLength="100"
+                  style="--d: 2.25s"
+                  d="M 615 194 C 705 194 705 276 795 276"
+                />
+                <g class="sf-node" style="--nc: #7c3aed; --d: 0.35s">
+                  <rect class="sf-box" x="55" y="148" width="190" height="64" rx="10" />
+                  <rect class="sf-bar" x="63" y="162" width="3" height="36" rx="1.5" />
+                  <text class="sf-title" x="76" y="176">Server</text>
+                  <text class="sf-sub" x="76" y="195">crashed</text>
+                  <circle class="sf-port" cx="245" cy="180" r="5" style="--pc: #22c55e" />
+                </g>
+                <g class="sf-node" style="--nc: #0369a1; --d: 1.45s">
+                  <rect class="sf-box" x="425" y="148" width="190" height="64" rx="10" />
+                  <rect class="sf-bar" x="433" y="162" width="3" height="36" rx="1.5" />
+                  <text class="sf-title" x="446" y="176">Restart server</text>
+                  <text class="sf-sub" x="446" y="195">command</text>
+                  <circle class="sf-port" cx="425" cy="180" r="5" style="--pc: #7c3aed" />
+                  <circle class="sf-port" cx="615" cy="166" r="5" style="--pc: #22c55e" />
+                  <circle class="sf-port" cx="615" cy="194" r="5" style="--pc: #ef4444" />
+                </g>
+                <g class="sf-node" style="--nc: #047857; --d: 2.55s">
+                  <rect class="sf-box" x="795" y="52" width="190" height="64" rx="10" />
+                  <rect class="sf-bar" x="803" y="66" width="3" height="36" rx="1.5" />
+                  <text class="sf-title" x="816" y="80">Notify</text>
+                  <text class="sf-sub" x="816" y="99">info</text>
+                  <circle class="sf-port" cx="795" cy="84" r="5" style="--pc: #7c3aed" />
+                </g>
+                <g class="sf-node" style="--nc: #047857; --d: 2.85s">
+                  <rect class="sf-box" x="795" y="244" width="190" height="64" rx="10" />
+                  <rect class="sf-bar" x="803" y="258" width="3" height="36" rx="1.5" />
+                  <text class="sf-title" x="816" y="272">Notify</text>
+                  <text class="sf-sub" x="816" y="291">error</text>
+                  <circle class="sf-port" cx="795" cy="276" r="5" style="--pc: #7c3aed" />
+                </g>
+              </g>
               </g>
             </svg>
           </div>
@@ -392,7 +615,7 @@
       <div class="container">
         <div class="cta-panel reveal">
           <span class="eyebrow">[&gt;] download</span>
-          <h2>Get Konnekt</h2>
+          <h2>Get <span class="accent">Konnekt</span></h2>
           <p>Free and open source.</p>
           <div class="cta-actions">
             <a class="btn btn-primary" href="/download.html">Download Konnekt</a>
