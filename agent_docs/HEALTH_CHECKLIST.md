@@ -27,6 +27,7 @@ pnpm format:check       # Prettier (from frontend/)
 pnpm check-bundle       # 550 KB gzip entry-chunk budget (from frontend/)
 go vet ./...            # Go static analysis (repo root)
 go test ./...           # Go tests (repo root)
+go run ./scripts/coverage-floor   # backend/services coverage floor (repo root)
 ```
 Plus the generated-file check `suite.json` declares: `pnpm gen:tokens` then
 `git diff --exit-code src/styles/tokens.css src/styles/tokens.ts`. A non-empty
@@ -94,10 +95,10 @@ tree.
       API client, backup create/restore, config path-traversal guards,
       scheduler engine (Go); Zustand store logic and critical hooks (frontend).
       `backend/services` sits at **36.7%** of statements, with a **35%** floor
-      enforced by the `backend` CI job. The floor is a ratchet: raise it as
-      coverage rises, never lower it to green a red build. Coverage is a proxy,
-      not the goal — prefer a test that would have caught a real bug over one
-      that only moves the number.
+      owned by `scripts/coverage-floor` and run by both `/suite-kit:health` and
+      CI. The floor is a ratchet: raise it as coverage rises, never lower it to
+      green a red build. Coverage is a proxy, not the goal — prefer a test that
+      would have caught a real bug over one that only moves the number.
 - [x] CI is green on every push/PR (`.github/workflows/ci.yml`: a `frontend`
       job, a `backend` job on windows-latest, and a `backend-linux` job in a
       webkit2gtk-4.1 container — the only place `server_linux.go`/

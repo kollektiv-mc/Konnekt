@@ -92,39 +92,9 @@ jobs:
       - run: go test ./...
       - run: go build ./...
 
-      # Coverage floor for backend/services — the package agent_docs/
-      # HEALTH_CHECKLIST.md tracks. Scoped to that package on purpose: the repo
-      # root and backend/models carry no test files, so a ./... figure would be
-      # diluted by packages this floor is not about and would drift for reasons
-      # unrelated to test quality.
-      #
-      # The floor sits a little under the measured number so an unrelated
-      # refactor does not redden the build. It is a ratchet: raise it when
-      # coverage rises, never lower it to make a red build green.
-      #
-      # The -coverprofile=/-func= arguments are quoted deliberately. PowerShell
-      # splits an unquoted native-command argument on '=', which reaches the tool
-      # as two arguments: `go tool cover` answers "too many arguments" and
-      # `go test` writes its profile to a file named `coverage`. Both fail in
-      # ways that look unrelated to coverage, so leave the quotes alone.
-      - name: Coverage floor (backend/services)
-        shell: pwsh
-        run: |
-          $floor = 35.0
-          go test ./backend/services/ "-coverprofile=coverage.out"
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          $total = go tool cover "-func=coverage.out" | Select-String '^total:'
-          if (-not $total) {
-            Write-Host "Could not find a total line in the coverage profile."
-            exit 1
-          }
-          $pct = [double]($total.Line -replace '.*?([0-9.]+)%.*', '$1')
-          Write-Host "backend/services coverage: $pct% (floor: $floor%)"
-          if ($pct -lt $floor) {
-            Write-Host "Coverage $pct% is below the $floor% floor."
-            Write-Host "Add tests for what you changed, or justify moving the floor."
-            exit 1
-          }
+      # Threshold and rationale live in the script, which .claude/suite.json also
+      # runs, so /suite-kit:health enforces the same floor locally.
+      - run: go run ./scripts/coverage-floor
 
   backend-linux:
     runs-on: ubuntu-latest
