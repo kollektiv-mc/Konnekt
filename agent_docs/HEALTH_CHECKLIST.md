@@ -59,12 +59,15 @@ tree.
       cross-package type mismatch).
 - [ ] Nothing under `frontend/wailsjs/` has been hand-edited (it's
       auto-generated; regenerate via `wails generate module` instead).
-- [ ] No inline `style={{}}` beyond genuinely dynamic/computed values
+- [x] No inline `style={{}}` beyond genuinely dynamic/computed values
       (animation delays, transforms, react-grid-layout position props) —
       Tailwind utilities backed by CSS-variable tokens otherwise (see
-      CLAUDE.md's Code style section). `eslint.config.js`'s `no-restricted-syntax`
-      rule flags remaining inline styles at `warn`; ratchet per directory to
-      `error` as Milestone 2's migration clears each tile.
+      CLAUDE.md's Code style section). Milestone 2 is complete, and
+      `eslint.config.js` now sets `no-restricted-syntax` to `error` globally
+      with no per-directory allowlist, so a new file is covered the moment it
+      exists rather than when someone remembers to list it. Every remaining
+      justified exception carries a documented `eslint-disable-next-line`.
+      Verify with `pnpm exec eslint src` — expect 0 errors.
 - [ ] New transition/animation durations and easing curves reuse an existing
       `--duration-*`/`--ease-*` token (`frontend/src/styles/tokens.css`'s plain
       `@theme` block — the token layer is **generated** from the vendored
@@ -175,20 +178,6 @@ The remaining, not-yet-closed follow-ups. Each item's full remediation write-up
 moves to `agent_docs/HEALTH_LOG.md` once it's done — keep this section short and
 current. Priorities mirror the pillars above.
 
-**P1 — Inline styles → Tailwind (Milestone 2, one file left)**
-- 71 `style={{}}` remain across the tree, but only **6 are actual backlog**, all
-  in `frontend/src/App.tsx`. The other 65 sit in directories ratcheted to
-  `error`, so every one is a documented, lint-enforced exception rather than
-  unmigrated code.
-- **Every tile directory is migrated and ratcheted**, worlds included. Count the
-  real backlog with `pnpm exec eslint src` — its `no-restricted-syntax` warnings
-  are the number that matters. A `grep 'style={{'` disagrees in both directions:
-  it counts the documented exceptions, and it misses the `style={SOME_CONST}`
-  form entirely (that form was 32 of the worlds tile's 51 in `WorldHud.tsx`
-  alone, which is why worlds was booked at 44 above and was really 78).
-- Conversion patterns and per-slice lessons: see HEALTH_LOG.md's Milestone 2
-  slices.
-
 **P1 — Test-coverage follow-ups**
 - Backup create/restore orchestration (4/29 functions): `RestoreBackup`,
   `CreateBackup`, the world-vs-server backup resolution, the meta.json round
@@ -222,13 +211,17 @@ current. Priorities mirror the pillars above.
   **light** skin (where `--bg-elevated` is `rgba(236,238,245,0.82)`) — a live
   theming bug, not just hygiene. Repoint to `bg-elevated`, checking the
   dropdown still reads as opaque over content.
-- `border-hairline`/`border-thick` utilities are generated into
-  `styles/tokens.css` (with a comment arguing hairlines "need to be as reachable
-  as any colour utility, not an arbitrary `[0.5px]` value") but are used
-  **nowhere** — every migrated file uses `border-[0.5px]`/`border-b-[0.5px]`,
-  and no directional `border-t-hairline` exists to cover the common case. Either
-  adopt them across the migrated files or drop them upstream from
-  `tokens.source.json`; right now the token layer and the code disagree.
+- `border-hairline`/`border-thick` plus their new directional forms
+  (`border-t-hairline`, `border-r-hairline`, etc. — added when App.tsx's last
+  inline styles were migrated, closing Milestone 2) are generated into
+  `styles/tokens.css`, but adoption is still thin: 8 call sites (4 in the worlds
+  tile, 4 in `App.tsx`) against **166 literal `border-[0.5px]` occurrences,
+  spread over 164 lines in 41 files** — 91 all-sides, 47 `-b`, 15 `-t`, 7 `-l`,
+  6 `-r`. (Occurrences, not lines: two lines in `tiles/mods/InstalledPanel.tsx`
+  carry two each, so a `grep -c` reads 164 and a `grep -o` reads 166. Quote the
+  basis when re-measuring.) The directional gap that blocked adoption is closed;
+  what's left is a pure find-and-replace sweep, tile by tile — no further token
+  or generator work needed.
 - `GetPlayers` is now a dead binding: it and `GetPlayerRoster` are both one-line
   calls to `playerService.GetRoster`, and nothing calls `GetPlayers` since the
   players tile moved onto the hook. Removing it needs `wails generate module`

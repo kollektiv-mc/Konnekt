@@ -1808,3 +1808,108 @@ existed** ✅
   unchanged at 0 errors / 97 warnings (formatting cannot add or remove an
   inline style, so any movement there would have meant something real changed),
   271/271 tests, token layer in sync.
+
+---
+
+### 2026-08-17 — Milestone 2 closed: App.tsx's last inline styles
+
+`App.tsx` was the one file the previous re-baseline (2026-08-15) had already
+identified as the sole remaining backlog: 6 `style={{}}` attributes, all
+static, against 65 more across the tree that were already documented
+exceptions in ratcheted directories.
+
+**Why it wasn't a straight swap.** Four of the six are directional hairline
+borders (`borderRight`, `borderBottom` ×2, `borderTop`). The generated token
+layer only ever emitted the all-sides `border-hairline`/`border-thick`
+utilities — the exact gap the checklist's P2 "used nowhere" item had been
+tracking. So the last file in the migration and that backlog item were the
+same piece of work: App.tsx couldn't move to Tailwind utilities without the
+generator emitting a directional form first.
+
+- ✅ **`frontend/scripts/gen-tokens.mjs`**: added a `BORDER_SIDES = { t: 'top',
+  r: 'right', b: 'bottom', l: 'left' }` map and a second emission loop, so each
+  entry in `src.border.scale` now also gets `border-t-<name>`, `border-r-<name>`,
+  `border-b-<name>`, `border-l-<name>` alongside the existing all-sides rule.
+  Four sides, not `x`/`y` — a grep across the tree found 47 `-b`, 15 `-t`, 7
+  `-l`, 6 `-r` literal call sites and zero `-x`/`-y` ones, so axis utilities
+  would have recreated the same generated-but-unused problem this change was
+  closing. Unused combinations (e.g. `border-l-thick`, which nothing calls yet)
+  cost nothing: Tailwind v4 only emits a utility into the build when a scan
+  finds it in source.
+- **No upstream `kollektiv/design/tokens.json` edit was needed.** The `hairline`
+  (0.5) and `thick` (1.5) values already existed there; this only changed how
+  Konnekt's generator surfaces them as utilities. Ran `pnpm gen:tokens` and
+  confirmed a second run produced a byte-identical `tokens.css`/`tokens.ts` —
+  the generated-file check `.claude/suite.json` declares.
+- ✅ **`App.tsx`**: `border-r-hairline`, two `border-b-hairline`, and
+  `border-t-hairline` (all paired with `border-border-subtle`) replaced the
+  four inline borders. The accent wordmark's `color`/`fontFamily`/`fontWeight`
+  became `text-accent font-display font-black` (`--font-display` already
+  existed in the generated `@theme` block as `'Satoshi', var(--font-sans)`,
+  matching the literal exactly). The settings button's `color` plus two
+  `onMouseEnter`/`onMouseLeave` handlers that imperatively mutated
+  `style.color` became `text-text-muted hover:text-text-primary` — removing
+  imperative DOM style mutation, not just an attribute, since
+  `transition-colors` was already present on the element.
+- ✅ **`eslint.config.js`, inverted rather than extended.** The first pass simply
+  added `'src/App.tsx'` to the ratchet allowlist. A verification pass caught that
+  this left the migration enforced by an *opt-in* list: the global rule was still
+  `warn`, and `eslint --print-config` measured `src/main.tsx` at severity `1`
+  against `App.tsx`'s `2`. 78 of 79 `.tsx` files were covered, and — the part that
+  actually matters — every **new** file or tile directory would have defaulted to
+  `warn` until someone remembered to extend the list. An allowlist is the right
+  shape while ratcheting tile by tile and the wrong shape the moment it is
+  complete.
+- So the global block became `'error'` and the allowlist config object was
+  deleted outright. **Proven safe before the edit** by simulating the end state
+  with `eslint src --rule '{"no-restricted-syntax":["error",…]}'`, which forces
+  the rule on for every file: 0 errors. That works because each remaining
+  justified exception already carries a documented `eslint-disable-next-line`.
+  After the change all four spot-checked files (`App.tsx`, `main.tsx`,
+  `Dashboard.tsx`, `WorldHud.tsx`) measure severity `2`, and `eslint src` is
+  0 errors / 13 pre-existing unrelated `react-hooks/exhaustive-deps` warnings.
+  Milestone 2 is complete *and* self-maintaining, not a snapshot that decays
+  the next time a tile is added.
+- **Correction to how the P2 hairline item was framed.** It previously read
+  "used nowhere," which had already gone stale: the worlds slice
+  (`WorldHud.tsx`, `WorldsScene.tsx`) uses the all-sides `border-hairline` 4
+  times. The real disagreement was sharper than "nowhere" suggested — **166
+  literal `border-[0.5px]` occurrences, across 164 lines in 41 files**, against
+  those 4 — and the directional gap described above was the part actually
+  blocking further adoption. Restated in the checklist with today's numbers.
+  Note the occurrence/line split, because a first pass at this entry quoted 164
+  next to a per-side breakdown that summed to 166: `grep -c` counts *lines* and
+  `grep -o` counts *matches*, and two lines
+  (`tiles/mods/InstalledPanel.tsx:161` and `:313`) carry two each. Worth
+  stating the basis explicitly so the eventual sweep can check its own
+  arithmetic.
+- **Verification:** `pnpm exec eslint src` dropped from 6 `no-restricted-syntax`
+  warnings to 0, with 0 errors before, after, and under the forced-`error`
+  simulation (only the 13 pre-existing unrelated `react-hooks/exhaustive-deps`
+  warnings remain). `pnpm typecheck`, `pnpm lint`, `pnpm format:check` clean;
+  `pnpm test` 271/271; `pnpm build` then `pnpm check-bundle` at 487.2 KB gzip
+  entry chunk (550 KB budget); `go vet ./...` and `go test ./...` clean from the
+  repo root.
+- **`pnpm format:check` does not cover this file.** It runs `prettier --check .`
+  from `frontend/`, so nothing under `agent_docs/` is reached — the committed
+  markdown here has never been Prettier-clean and is deliberately outside its
+  remit. Recorded because a first pass at this entry cited a passing
+  `format:check` as evidence the docs were fine, and then shipped a `###`
+  heading wrapped onto a second line, which renders as a heading plus a stray
+  paragraph. Prose in `agent_docs/` is checked by reading it, not by a gate.
+- **Browser pass**, plain `vite` dev server (no Wails bridge, so the
+  `stats:snapshot`-listener console errors from `GetServerStatus` calls were
+  present and expected — the documented harness caveat from the tile-grid
+  entry above, unrelated to this change). Confirmed via computed styles rather
+  than a screenshot (the pane's compositor wasn't available in this session):
+  `--border-hairline` resolves to exactly `0.5px`; `border-right-width` etc.
+  report `1px` under `getComputedStyle` at `devicePixelRatio: 1`, which an
+  existing pre-migration `border-b-[0.5px]` literal elsewhere in the same page
+  does too — confirmed as Chrome's standing sub-pixel-border rounding, not a
+  regression, before trusting the rest of the pass. All four App.tsx dividers
+  landed on the correct edge (`border-r-hairline` on `<aside>`,
+  `border-b-hairline` on the header and the `ServerSelector` wrapper,
+  `border-t-hairline` above `LayoutPresets`). Toggled `data-theme="light"` and
+  confirmed the border color re-themed (`rgba(0,0,0,0.09)` vs. the dark theme's
+  white-based value) while `--accent` held constant, the same theme-dependent
+  check that caught the neighbouring `--panel-bg` bug.

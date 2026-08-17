@@ -35,41 +35,15 @@ export default tseslint.config(
       ],
       // Static styling should go through Tailwind utilities backed by the CSS-
       // variable token system; genuinely dynamic values (computed transforms,
-      // animation delays, RGL positions) are the sanctioned exception.
-      'no-restricted-syntax': [
-        'warn',
-        {
-          selector: "JSXAttribute[name.name='style']",
-          message:
-            'Prefer Tailwind utility classes over inline style={{}}. Inline styles are only for dynamic/computed values.',
-        },
-      ],
-    },
-  },
-  // Milestone 2 ratchet: these directories have been migrated off inline
-  // styles (agent_docs/HEALTH_CHECKLIST.md), so new ones there are a hard
-  // error. Remaining justified exceptions (genuinely dynamic values) carry a
-  // documented eslint-disable-next-line. Add more directories to this list
-  // as each is cleared. Flat config applies later entries' matching rules on
-  // top of earlier ones, so this must come after the global block.
-  {
-    files: [
-      'src/components/ui/**/*.tsx',
-      'src/components/*.tsx',
-      'src/tiles/TileWrapper/**/*.tsx',
-      'src/tiles/stats/**/*.tsx',
-      'src/tiles/notifications/**/*.tsx',
-      'src/tiles/quick-commands/**/*.tsx',
-      'src/tiles/performance/**/*.tsx',
-      'src/tiles/console/**/*.tsx',
-      'src/tiles/mods/**/*.tsx',
-      'src/tiles/backups/**/*.tsx',
-      'src/tiles/scheduler/**/*.tsx',
-      'src/tiles/config/**/*.tsx',
-      'src/tiles/players/**/*.tsx',
-      'src/tiles/worlds/**/*.tsx',
-    ],
-    rules: {
+      // animation delays, RGL positions) are the sanctioned exception and carry
+      // a documented eslint-disable-next-line.
+      //
+      // This is `error` for every file, with no per-directory allowlist. It was
+      // an allowlist while Milestone 2 ratcheted tile by tile; once the last
+      // file (App.tsx) was migrated, the list covered all but src/main.tsx and
+      // would have left every *new* file defaulting to `warn` — an opt-in gate
+      // that silently omits the code most likely to regress. Inverting it is
+      // what makes the migration self-maintaining instead of a snapshot.
       'no-restricted-syntax': [
         'error',
         {

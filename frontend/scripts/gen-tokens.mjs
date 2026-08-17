@@ -34,6 +34,10 @@ const UTILITY_ALIAS = {
   'hover-surface': 'hover',
 }
 
+// Directional border utilities: border-t-hairline, border-b-hairline, etc.
+// Four sides, not x/y — every call site in the tree wants one edge, never a pair.
+const BORDER_SIDES = { t: 'top', r: 'right', b: 'bottom', l: 'left' }
+
 // Tailwind's built-in font-size scale keys. A colour exposed under one of these
 // names produces --color-<key>, which generates a text-<key> *colour* utility that
 // silently shadows the font-size utility of the same name. This bit the codebase
@@ -239,11 +243,21 @@ function emitCss(src) {
 
   push()
   push(`/* Hairline borders are the signature of this design language; they need to be`)
-  push(`   as reachable as any colour utility, not an arbitrary [0.5px] value. */`)
+  push(`   as reachable as any colour utility, not an arbitrary [0.5px] value. Per-side`)
+  push(`   variants exist alongside the all-sides one because call sites overwhelmingly`)
+  push(`   want one edge (a header divider, a panel's bottom rule), not all four; an`)
+  push(`   unused combination costs nothing since Tailwind only emits what a scan finds. */`)
   for (const name of Object.keys(src.border.scale)) {
     push(`@utility border-${name} {`)
     push(`  border-width: var(--border-${name});`)
     push(`}`)
+  }
+  for (const [side, prop] of Object.entries(BORDER_SIDES)) {
+    for (const name of Object.keys(src.border.scale)) {
+      push(`@utility border-${side}-${name} {`)
+      push(`  border-${prop}-width: var(--border-${name});`)
+      push(`}`)
+    }
   }
 
   const emitTheme = (selector, mode) => {
