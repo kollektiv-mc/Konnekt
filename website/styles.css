@@ -1554,16 +1554,6 @@ footer {
   padding: 13px 26px;
 }
 
-.download-primary .dl-sub {
-  margin: 16px 0 0;
-  font-size: 12px;
-  color: var(--text-faint);
-}
-
-.download-primary .dl-sub a {
-  color: var(--text-secondary);
-}
-
 .download-others {
   max-width: 720px;
   margin: 0 auto;
@@ -1648,10 +1638,13 @@ footer {
    already exists, and a second one would just be the same box in a new name.
    It is a second channel, not more of the same list, so the break above it is
    explicit: a section's worth of space plus the same hairline rule the rest of
-   the sheet divides things with. Gap alone read as clutter. */
+   the sheet divides things with. Gap alone read as clutter.
+   The two halves are equal so the rule sits centred in that space. They were
+   1.4 above and 0.7 below, which put it two thirds of the way down and read as
+   the snapshot section's lid rather than as a divider between two. */
 .download-snapshot {
-  margin-top: calc(var(--section-y) * 1.4);
-  padding-top: calc(var(--section-y) * 0.7);
+  margin-top: calc(var(--section-y) * 1.05);
+  padding-top: calc(var(--section-y) * 1.05);
   border-top: 0.5px solid var(--border-subtle);
   animation-delay: 160ms;
 }
@@ -1678,14 +1671,28 @@ footer {
   margin: 0 0 18px;
 }
 
-.download-snapshot .dl-footnote {
-  margin-top: 18px;
+/* Placeholder while the snapshot request is in flight. Deliberately one line
+   rather than a skeleton of the grid below: the section may turn out not to
+   exist at all, and a skeleton would have promised cards. It carries the same
+   top break as .download-snapshot so the swap barely moves the page. */
+.snapshot-loading {
+  max-width: 720px;
+  margin: calc(var(--section-y) * 1.05) auto 0;
+  padding-top: calc(var(--section-y) * 1.05);
+  border-top: 0.5px solid var(--border-subtle);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-muted);
+  animation: intro-in 460ms var(--ease-standard) both;
+  animation-delay: 160ms;
 }
 
-/* Page-level "all releases" link. Without this it sits a line under the
-   snapshot section's own footnote and the two centred links read as a pair. */
-.download-snapshot + .dl-footnote {
-  margin-top: calc(var(--section-y) * 0.85);
+.download-snapshot .dl-footnote {
+  margin-top: 18px;
 }
 
 .dl-footnote {
@@ -1732,6 +1739,17 @@ footer {
   border: 2px solid var(--border-hover);
   border-top-color: var(--accent);
   animation: spin 0.8s linear infinite;
+}
+
+/* Sits on a line of text rather than above one. Amber, because everything in
+   the snapshot channel is. */
+.spinner-inline {
+  width: 12px;
+  height: 12px;
+  margin: 0;
+  border-width: 1.5px;
+  border-top-color: var(--sun);
+  flex-shrink: 0;
 }
 
 @keyframes spin {
@@ -1796,6 +1814,82 @@ footer {
   font-family: var(--font-mono);
   font-size: 12px;
   color: var(--text-muted);
+}
+
+/* Snapshot entry — the same .release card, opened by clicking it. Amber
+   throughout, matching the download page's snapshot channel, and closed at
+   rest: it describes code that hasn't been released, so it should not be the
+   first thing read on a page about what has. */
+.changelog-snapshot {
+  margin-bottom: 28px;
+}
+
+/* The card's padding moves inward onto its parts. A <summary> only spans its
+   own content box, so with the padding on the card the clickable area stopped
+   at the line of text and the whole rim of the card — corners, edges, the band
+   above and below the title — did nothing when clicked. Zeroing it here and
+   giving the summary the same 28/30 lets the summary's own box reach the
+   card's edges, which is what makes the head clickable as a whole. */
+.release-pending {
+  border-color: rgb(var(--sun-rgb) / 0.2);
+  padding: 0;
+}
+
+.release-summary {
+  cursor: pointer;
+  list-style: none;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 28px 30px;
+}
+
+.release-summary::-webkit-details-marker {
+  display: none;
+}
+
+/* The FAQ's +/− marker. .release-version is already an inline flex row, so the
+   glyph becomes a flex item and picks up its gap rather than needing one. */
+.release-summary .release-version::before {
+  content: '+';
+  font-family: var(--font-mono);
+  font-size: 16px;
+  color: var(--sun);
+}
+
+.release-pending[open] .release-summary .release-version::before {
+  content: '−';
+}
+
+/* The rule that separates the head from the notes hangs off the notes, not off
+   an [open] state on the summary. Same line in the same place either way, but
+   the summary's own box stops changing size with `open` — which is what lets
+   main.js animate the card's height between the two states without the last
+   frame of a close landing on a different internal layout than the one it
+   settles into. */
+.release-pending > .md {
+  padding: 16px 30px 0;
+  border-top: 0.5px solid var(--border-subtle);
+}
+
+.release-latest.is-snapshot {
+  color: var(--sun);
+  border-color: rgb(var(--sun-rgb) / 0.35);
+  background: rgb(var(--sun-rgb) / 0.08);
+}
+
+/* Carries the card's bottom padding, since the card itself no longer has any. */
+.release-source {
+  margin: 18px 0 0;
+  padding: 0 30px 28px;
+  font-size: 12px;
+  color: var(--text-faint);
+}
+
+.release-source a {
+  color: var(--text-secondary);
 }
 
 /* Rendered-markdown body */
@@ -2286,6 +2380,7 @@ footer {
   .state-box,
   .download-primary,
   .download-others,
+  .snapshot-loading,
   .dl-footnote,
   .dl-grid > .dl-card,
   .changelog > .release,
@@ -2330,6 +2425,7 @@ footer {
 .reduce-motion .state-box,
 .reduce-motion .download-primary,
 .reduce-motion .download-others,
+.reduce-motion .snapshot-loading,
 .reduce-motion .dl-footnote,
 .reduce-motion .dl-grid > .dl-card,
 .reduce-motion .changelog > .release,
