@@ -187,10 +187,11 @@ export function Select({ field, onChange }: { field: ConfigField; onChange: (v: 
           <span className="text-[10px] opacity-50">{open ? '▲' : '▼'}</span>
         </button>
 
-        {/* Dropdown panel. `--panel-bg` is never defined anywhere in the repo
-            (dead variable) — bg-[#0e1117] preserves its always-used fallback. */}
+        {/* Dropdown panel. bg-overlay rather than bg-elevated: this floats over
+            the form beneath it and has to occlude it, and bg-elevated is 0.82
+            alpha in both themes. */}
         {open && (
-          <div className="border-border-subtle absolute top-[calc(100%+4px)] right-0 z-50 min-w-full overflow-hidden rounded border bg-[#0e1117] shadow-[0_8px_24px_rgba(0,0,0,0.5)]">
+          <div className="border-border-subtle bg-overlay absolute top-[calc(100%+4px)] right-0 z-50 min-w-full overflow-hidden rounded border shadow-[0_8px_24px_rgba(0,0,0,0.5)]">
             {field.options?.map((opt) => (
               <button
                 key={opt}

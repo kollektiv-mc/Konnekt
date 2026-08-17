@@ -11,6 +11,17 @@ import {
 } from 'recharts'
 import { fmtTime } from './helpers'
 
+// Recharts takes inline style objects, so these cannot be Tailwind utilities.
+// They reference the same custom properties the utilities resolve to, which is
+// what keeps a tooltip readable under the light theme: it is a floating layer,
+// so it needs bg-overlay's opacity rather than bg-elevated's 0.82 alpha.
+const TOOLTIP_STYLE = {
+  backgroundColor: 'var(--bg-overlay)',
+  border: 'var(--border-hairline) solid var(--border-hover)',
+  borderRadius: 6,
+  color: 'var(--text-primary)',
+} as const
+
 export interface SparkDatum {
   ts: number
   tps: number | null
@@ -23,14 +34,7 @@ export function SparkChart({ data }: { data: SparkDatum[] }) {
     <ResponsiveContainer width="100%" height="100%">
       <LineChart data={data} margin={{ top: 2, right: 2, bottom: 2, left: 2 }}>
         <Tooltip
-          contentStyle={{
-            backgroundColor: '#0e1117',
-            border: '0.5px solid rgba(255,255,255,0.12)',
-            borderRadius: 6,
-            fontSize: 10,
-            color: '#fff',
-            padding: '4px 8px',
-          }}
+          contentStyle={{ ...TOOLTIP_STYLE, fontSize: 10, padding: '4px 8px' }}
           itemStyle={{ padding: '1px 0' }}
           formatter={(value, name) => {
             if (value === null) return ['—', name]
@@ -137,13 +141,7 @@ export function HistoryChart({
           width={36}
         />
         <Tooltip
-          contentStyle={{
-            backgroundColor: '#0e1117',
-            border: '0.5px solid rgba(255,255,255,0.12)',
-            borderRadius: 6,
-            fontSize: 11,
-            color: '#fff',
-          }}
+          contentStyle={{ ...TOOLTIP_STYLE, fontSize: 11 }}
           labelFormatter={(v) => fmtTime(v as number)}
           formatter={(value, name) => {
             const labels: Record<string, string> = {

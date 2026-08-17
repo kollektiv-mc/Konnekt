@@ -30,6 +30,7 @@ const SUPPORTED_VERSION = 1
 const UTILITY_ALIAS = {
   'bg-base': 'canvas',
   'bg-elevated': 'elevated',
+  'bg-overlay': 'overlay',
   'bg-surface': 'surface',
   'hover-surface': 'hover',
 }

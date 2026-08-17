@@ -11,6 +11,10 @@
         "dark": { "hex": "#12141e", "alpha": 0.82 },
         "light": { "hex": "#eceef5", "alpha": 0.82 }
       },
+      "bg-overlay": {
+        "dark": { "hex": "#10111a" },
+        "light": { "hex": "#eeeff6" }
+      },
       "bg-surface": {
         "dark": { "hex": "#ffffff", "alpha": 0.025 },
         "light": { "hex": "#000000", "alpha": 0.03 }
