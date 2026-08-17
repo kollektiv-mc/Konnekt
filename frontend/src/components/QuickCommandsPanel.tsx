@@ -384,7 +384,7 @@ export function QuickCommandsPanel({ serverId, columns = 2 }: QuickCommandsPanel
         createPortal(
           <div
             ref={dropdownRef}
-            className="modal-panel-in border-hairline fixed z-[9999] grid grid-cols-2 gap-1.5 overflow-y-auto rounded-[10px] border-white/10 bg-[#0d0e14] p-2.5 shadow-[0_8px_32px_rgba(0,0,0,0.5)]"
+            className="modal-panel-in border-hairline bg-overlay fixed z-[9999] grid grid-cols-2 gap-1.5 overflow-y-auto rounded-[10px] border-white/10 p-2.5 shadow-[0_8px_32px_rgba(0,0,0,0.5)]"
             // eslint-disable-next-line no-restricted-syntax -- position computed from getBoundingClientRect, not visible to Tailwind's static scanner
             style={{
               top: dropdownPos.top,

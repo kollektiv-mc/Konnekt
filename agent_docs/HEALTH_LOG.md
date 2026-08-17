@@ -2128,3 +2128,196 @@ red package never becomes ambiguous between a broken test and a dipped number.
 parse and the new command matches `healthCommand` in the suite schema.
 `scripts/validate-schemas.sh` could not run — `check-jsonschema` is not installed —
 so that is a skip, not a pass.
+
+---
+
+### 2026-08-17 — Border tokens adopted, and the overlay surface the set was missing
+
+Two backlog items closed together because they are the same class of defect: a
+generated token layer that almost nothing called, and a hardcoded colour that had
+no token to call. They also share a cause — every design value in this suite comes
+from `kollektiv/design/tokens.json`, and neither item could be fixed without going
+through it.
+
+**P2 — Border token adoption** ✅
+
+`border-hairline`/`border-thick` and all eight directional forms had been generated
+into `styles/tokens.css` since the token layer was rebuilt, against **8** call
+sites and **173** literal widths. The checklist's own numbers (166 × `0.5px` over
+164 lines in 41 files, plus 7 × `1.5px`) re-measured exactly, including the
+166-vs-164 delta from the two double-occurrence lines in `mods/InstalledPanel.tsx`.
+All 173 sat inside `frontend/src/components` and `frontend/src/tiles` — precisely
+`suite.json`'s `tokens.paths`, which is what let the ratchet below go green the
+moment the sweep landed.
+
+Scripted rather than hand-edited, with the guards worth restating: glob
+`src/**/*.tsx` and never `grep -rl` from the repo root, because this file and the
+checklist both quote the literal in prose and would be rewritten; keep the bracket
+in the pattern, because `style.css` and `scheduler.css` contain hand-authored
+`border: 0.5px solid` that a loose match turns into `border: hairline solid`;
+replace globally per line, or the two double-occurrence lines are half-done.
+
+**The swap is safe, but not by the mechanism it appears to use, and this is the
+part worth keeping.** Tailwind's own utility emits *two* declarations —
+`border-style: var(--tw-border-style)` alongside the width — while the generated
+`@utility` emits width only. CSS's initial `border-style` is `none`, which forces
+used width to zero, so on paper the swap deletes every border it touches. It does
+not, because preflight sets `*,:after,:before,::backdrop{border:0 solid}` on every
+element, so `border-style` is already `solid` before any utility runs. Both halves
+were confirmed in the built stylesheet. The consequence for anyone verifying a
+change like this: "the CSS is identical" is the wrong claim, and `getComputedStyle`
+alone is too weak, because at DPR 1 Chrome reports `1px` for both `0.5px` and
+`1.5px`. It takes both layers.
+
+*Verification, in the order it actually discriminates.* Applying the substitution
+table to `HEAD` reproduced the working tree byte for byte across all 41 files —
+strictly stronger than a diff review, and it rules out every stray edit at once.
+After Prettier (which reordered class names in 40 of the 41 files, since
+`prettier-plugin-tailwindcss` runs without a `tailwindStylesheet` and hoists
+token-backed classes it does not recognise), the same files still had an identical
+whitespace-token multiset to `HEAD`, so the reorder added, dropped and altered
+nothing. Note that check needs a tokeniser that splits on JSX punctuation: a naive
+whitespace split reports false differences, because the class moving to the front
+of an attribute is the one glued to the opening `className="`.
+
+Then a base worktree was built and the two stylesheets compared with the `var()`
+indirection resolved and token selectors renamed back to their literal forms. Of
+**1066** leaf rules the only differences were the 7 literal rules disappearing and
+3 token rules appearing — only 3, because the other 4 utilities were already
+emitted for the 8 pre-existing call sites — with the sole semantic delta being the
+`border-style` declaration described above. No literal border width remains in the
+compiled CSS. Finally, in a running app with the Settings modal open — the
+densest screen in the tree at 20 occurrences, and the only place the
+`border-thick` + `border-dashed` pairing renders — **53** swept elements, **zero**
+reporting `border-style: none` or a zero used width on an edge they declare,
+identical in both themes. The dashed swatches report `dashed`, confirming that
+`border-dashed` sets the style directly and the pairing was never at risk.
+
+One trap in writing that check. It first reported a single broken edge: a row
+with `border-b-hairline` computing to `0px`. The class list ends
+`last:border-0`, the element is the last child, and its two siblings render
+`1px` — a deliberate "no divider after the final row", not a regression. Any
+audit of this kind has to exclude the `last:`/`first:` variants that zero a
+border on purpose, or it manufactures its own false positive.
+
+A digression that cost twenty minutes and is worth writing down: the base worktree
+would not build from the scratchpad path. esbuild's binary was present and
+byte-identical to the working copy, but spawning it failed `ENOENT`, and
+`git worktree remove` then failed with "Filename too long". The scratchpad path
+plus `node_modules/.pnpm/@esbuild+win32-x64@…` exceeds Windows' 260-character
+limit. Re-creating the worktree at a short path built first try. If a Windows
+toolchain fails with `ENOENT` on a file you can see, measure the path before
+doubting the file.
+
+**The ratchet.** `.claude/suite.json` had no `invariants` array at all, while
+Kommands has carried `no literal hex` and `no literal px` since it was scaffolded.
+Copying those across was the obvious move and the wrong one: within Konnekt's own
+`tokens.paths` there are **356** arbitrary px literals, and this sweep closed 173.
+The other 183 — 111 `text-[Npx]`, 9 `rounded-[Npx]`, 63 sizing values — are
+separate sweeps, two of them blocked on an upstream decision about extending the
+scale. An invariant that is red the day it lands gets deleted the first time it is
+inconvenient, so the one added here matches borders and nothing else, and
+`tokens.enforce` stays `"migrating"`. The pattern reports 0 matches on the swept
+tree and 173 on the pre-sweep worktree, which is what makes it a check rather than
+a decoration; it correctly ignores `border-[color-mix(…)]`, arbitrary shadows,
+`min-w-[60px]`, `rounded-[10px]` and the hand-written `border: 0.5px solid`, and
+correctly catches a hypothetical `border-x-[0.5px]`, for which no utility exists.
+
+**P2 — Dead `--panel-bg`, and the light-theme dropdown** ✅
+
+The checklist recorded the fix as "repoint to `bg-elevated`, checking the dropdown
+still reads as opaque over content". Checking that is what showed the fix was
+wrong: `--bg-elevated` is `rgba(…, 0.82)` in **both** themes, not just light, so
+the dropdown would have gone translucent over the form it exists to cover. Every
+surface token was either translucent or the page background itself. There was
+nothing correct to point at, which made this a token to add rather than a call
+site to repair — the failure mode the suite's "a missing value is a token to add"
+rule exists for, arrived at from the opposite direction than usual.
+
+`bg-overlay` was added upstream, named for the role (the opaque surface *of* a
+floating layer, not the scrim *behind* a modal — `design/README.md` now says so,
+because that second reading is common) and given derived rather than chosen
+values: `bg-elevated` composited over `bg-base`, `#10111a` dark and `#eeeff6`
+light. Konnekt's shipping `#0e1117` is (−2, 0, −3) from the computed dark value,
+which is simultaneously evidence the literal always meant "opaque elevated
+surface" and the reason not to keep it: it is a number nobody could re-derive.
+
+The bug and the fix, measured in the running app under `[data-theme='light']`:
+panel `rgb(14, 17, 23)` on page `rgb(245, 246, 250)` with text `rgb(11, 13, 18)` —
+near-black on near-black — becoming `rgb(238, 239, 246)`, opaque. Dark is
+unchanged to within those 3/255.
+
+Two more call sites came along: `QuickCommandsPanel`'s floating grid, which is
+portalled to `document.body` and therefore worth confirming the custom property is
+still in scope (it is, `:root`), and the performance tile's two Recharts tooltips,
+which hardcoded background, border width, border colour and text colour, all
+dark-only. Those are inline style objects, so they now reference the same custom
+properties the utilities resolve to; their dark values are identical to the
+literals they replace, and the light theme is what gains.
+
+Left alone deliberately, each now tracked: the sticky `thead`'s `#0a0c12`, where
+`bg-canvas` may be the right role rather than `bg-overlay`; worlds' `SCENE_BG`;
+the scheduler's untokened blue badge; and the chart axis strokes, whose
+`rgba(255,255,255,0.3)` is *close* to `--text-faint`'s `0.25`. Snapping that one
+is exactly the approximation the checklist warns is worse than inlining, because
+it looks right in review.
+
+**Three defects in the suite tooling, found by trying to use it** ✅
+
+The upstream half of this work could not run at all, and fixing that turned up two
+more problems the first one had been masking. All three were repaired in
+kollektiv.
+
+`sync-tokens.sh` and five sibling scripts hard-required the spelling `python3`. A
+stock Windows install provides `python` and the `py` launcher and no `python3`, so
+every one of them aborted at its first real work. That is worse than an
+inconvenience: `sync-tokens.sh --check` is the *only* thing in the suite that can
+detect token drift, because a product's generator reads its own vendored copy and
+regenerates cleanly whether or not that copy is stale. A drift check that cannot
+run is not a drift check that passes. There is now one resolver, and it probes
+`python` for its major version rather than trusting it, since a `python` that is
+still Python 2 would otherwise fail somewhere inside a heredoc.
+
+With the scripts running, `sync-runner.sh` reported both products as "not cloned"
+on a workspace where both were present. Python opens stdout in text mode, so on
+Windows every `print` emits CRLF, and that CR rode into the shell variable:
+`dir="$root/$name"` became a path ending in a carriage return, a directory that
+does not exist. It is invisible in an `echo`. The same CR landed on
+`sync-tokens.sh`'s `role`, where the test against `source` could never match —
+harmless while every repo is a consumer, and a silent self-vendoring the day one
+is not.
+
+And `design/tokens.json` was compared byte for byte against each vendored copy
+while kollektiv carried no line-ending policy and Konnekt normalizes to LF. On a
+Windows checkout the source sat as CRLF and the comparison reported permanent
+drift on a workspace that had none — invisible in CI, which runs on Linux, so it
+had gone unnoticed since the token layer was created. Both repos now declare
+`* text=auto eol=lf` (as does Kommands, which had no `.gitattributes` at all), and
+both sync scripts strip CRs before comparing, so neither side alone has to be
+right. Every tracked file was already LF in the index, so none of that changed a
+blob.
+
+The end-to-end proof is that this change moved through the pipeline as designed:
+`sync-tokens.sh --check` reported real drift after `bg-overlay` was added, the
+sync vendored it into both products, and the check reported none afterwards —
+having first correctly distinguished that real drift from the line-ending false
+positive it used to report.
+
+**Gates.** typecheck clean; lint 0 errors and 13 warnings; 280/280 tests across 27
+files; Prettier clean; entry chunk 487.1 KB against the 550 KB budget;
+`gofmt`/`go vet`/`go test` clean; coverage floor 36.7% against 35%; token layer
+regenerates to a clean diff, checked twice to prove idempotence. lint and test
+counts were compared against the base worktree and are identical, which is the
+only way to claim "unchanged" honestly — the figures the plan for this work
+carried (97 warnings, 271 tests) were inherited from an older entry above and were
+already stale. `scripts/validate-schemas.sh` still cannot run here because
+`check-jsonschema` is not installed, so that remains a skip; the three manifests
+were validated against their schemas directly with `jsonschema` instead.
+
+**Not done, deliberately.** `adopt.sh` still writes a `python3 -m json.tool` health
+command into the manifest it scaffolds — the same portability problem one level
+removed, but fixing it means deciding what a newly adopted repo's JSON-validity
+check should be, which is not a rider on this. `sync-labels.sh --check` now runs
+and reports substantial label drift across all three repos; that is a real finding
+and a separate piece of work, and it writes to GitHub. Neither product has vendored
+`.claude/suite-check.py`, which kollektiv's roadmap already tracks.
