@@ -51,6 +51,47 @@ jobs:
       - name: Token layer is in sync
         run: git diff --exit-code src/styles/tokens.css src/styles/tokens.ts
 
+  # .claude/suite.json declares three sections. CI has always covered
+  # `commands` as literal steps above and in the backend jobs, but nothing ever
+  # ran `invariants` or `generated` — they only executed when a human invoked
+  # /suite-kit:health with the plugin installed. So the `no literal border
+  # widths` invariant guarded nothing on a push.
+  #
+  # This job runs those two sections through the vendored runner, which reads
+  # the same manifest the skill does. `commands` is deliberately left out: the
+  # backend legs below run on windows-latest and in a webkit2gtk container, and
+  # suite.json's flat command list cannot express that matrix. Running it here
+  # too would add a second failure surface for coverage CI already has.
+  invariants:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
+
+      # The `generated` section runs `pnpm gen:tokens` and diffs its output, so
+      # the frontend's dependencies have to be installed first.
+      - run: pnpm install --frozen-lockfile
+        working-directory: frontend
+
+      # --require-runnable turns a skip into a failure. Every check in these two
+      # sections can run here, so a skip means something broke in the setup
+      # above rather than a check that legitimately does not apply.
+      - name: Invariants and generated files
+        run: ./.claude/suite-check.py --section invariants --section generated --require-runnable
+
   backend:
     runs-on: windows-latest
     steps:

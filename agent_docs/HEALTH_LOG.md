@@ -16,6 +16,45 @@ grow. When a checklist `Open backlog` item is closed, move its write-up here.
 section below refers to the checklist as it read when these entries were
 written.
 
+## Index
+
+Entries under `Remediation backlog` are grouped by finding and were written
+before this log adopted dated entries; they carry no reliable date. Everything
+after them is dated. Newest last, in both groups.
+
+**By finding** — `## Remediation backlog`
+
+- [P0 — CI foundation](#p0-ci-foundation)
+- [P1 — CI blind spot: `@react-three/fiber`/`@types/three` resolution-dependent typecheck failure](#p1-ci-blind-spot-react-threefibertypesthree-resolution-dependent-typecheck-failure)
+- [P1 — Auto-updater: check, release pipeline, and in-place install all shipped](#p1-auto-updater-check-release-pipeline-and-in-place-install-all-shipped)
+- [Done — Lint/format enforcement (frontend)](#done-lintformat-enforcement-frontend)
+- [P1 — Inline styles → Tailwind utilities (Milestone 2)](#p1-inline-styles-tailwind-utilities-milestone-2)
+- [P1 — Modrinth client: HTTP paths are testable, and now tested](#p1-modrinth-client-http-paths-are-testable-and-now-tested)
+- [P2 — React Compiler-readiness lint rules](#p2-react-compiler-readiness-lint-rules)
+- [P1 — Test coverage + gate](#p1-test-coverage-gate)
+- [P1 — Code-split heavy tiles](#p1-code-split-heavy-tiles)
+- [P2 — Undocumented blank error-ignores](#p2-undocumented-blank-error-ignores)
+- [P2 — Structured logging](#p2-structured-logging)
+- [P2 — Repo hygiene](#p2-repo-hygiene)
+- [P1 — Scheduler node-system deep analysis](#p1-scheduler-node-system-deep-analysis)
+- [P1 — Scheduler tile convention gaps ✅ closed](#p1-scheduler-tile-convention-gaps-closed)
+- [P2 — Memoization pass](#p2-memoization-pass)
+- [P3 — Bound method missing `(T, error)` return](#p3-bound-method-missing-t-error-return)
+- [P1 — Tile grid: two parallel systems collapsed into one](#p1-tile-grid-two-parallel-systems-collapsed-into-one)
+- [P1 — Tile grid: crate-drag placement fixed (the above shipped broken)](#p1-tile-grid-crate-drag-placement-fixed-the-above-shipped-broken)
+- [P1 — Tile grid: crate-drag placement, rebuilt (the above shipped broken too)](#p1-tile-grid-crate-drag-placement-rebuilt-the-above-shipped-broken-too)
+- [P1 — Tile grid: right-hand cells unreachable from the crate](#p1-tile-grid-right-hand-cells-unreachable-from-the-crate)
+
+**By date**
+
+- [2026-08-15 — Checklist re-baseline after an unpaused stretch of app work](#2026-08-15-checklist-re-baseline-after-an-unpaused-stretch-of-app-work)
+- [2026-08-17 — Milestone 2 closed: App.tsx's last inline styles](#2026-08-17-milestone-2-closed-apptsxs-last-inline-styles)
+- [2026-08-17 — Last three data polls closed, and a checklist claim that was wrong](#2026-08-17-last-three-data-polls-closed-and-a-checklist-claim-that-was-wrong)
+- [2026-08-17 — Backend test coverage, and a CI floor to hold it](#2026-08-17-backend-test-coverage-and-a-ci-floor-to-hold-it)
+- [2026-08-17 — The coverage floor, rebuilt to match the repo's own gate shape](#2026-08-17-the-coverage-floor-rebuilt-to-match-the-repos-own-gate-shape)
+- [2026-08-17 — The border-token sweep, and the invariant that now holds it](#2026-08-17-the-border-token-sweep-and-the-invariant-that-now-holds-it)
+- [2026-08-18 — The dead `--panel-bg`, and why the recorded fix was wrong](#2026-08-18-the-dead-panel-bg-and-why-the-recorded-fix-was-wrong)
+
 ---
 
 ## Remediation backlog
@@ -24,7 +63,7 @@ Concrete, prioritized follow-ups based on the most recent review. This section
 *is* allowed to go stale/get checked off — unlike the checklist above, it's a
 todo list, not a target.
 
-**P0 — CI foundation**
+### P0 — CI foundation
 - ✅ Added `.github/workflows/ci.yml`: `frontend` job (ubuntu-latest —
   `pnpm typecheck` + `pnpm lint` + `pnpm build`) and `backend` job
   (windows-latest, matching the shipping target — `gofmt -l` + `go vet ./...` +
@@ -38,7 +77,7 @@ todo list, not a target.
   job, for stronger end-to-end confidence than the `go build`/`pnpm build`
   smoke check gives.
 
-**P1 — CI blind spot: `@react-three/fiber`/`@types/three` resolution-dependent typecheck failure**
+### P1 — CI blind spot: `@react-three/fiber`/`@types/three` resolution-dependent typecheck failure
 - Found 2026-07-16: `frontend/src/tiles/worlds/scene/Galaxy.tsx`'s new
   `LayoutScaleController` (from the worlds zoom-to-fit merge) called
   `.unproject(state.camera)` — R3F's `state.camera` type and the app's
@@ -67,7 +106,7 @@ todo list, not a target.
   the tree. `pnpm typecheck`/`pnpm build`/`pnpm lint` (0 errors)/`pnpm test`
   (165/165) all re-verified green after the removal.
 
-**P1 — Auto-updater: check, release pipeline, and in-place install all shipped**
+### P1 — Auto-updater: check, release pipeline, and in-place install all shipped
 - ✅ **In-app update check shipped.** `version.go` (package `main`) is the
   single source of the app's version (`var Version = "0.1.0-dev"`), also
   mirrored in `wails.json`'s `info.productVersion` for the built binary's
@@ -165,7 +204,7 @@ todo list, not a target.
   !linux`) sets `Setpgid` only, and `killTree` in `server_other.go` now
   signals the whole group via `syscall.Kill(-pid, ...)`.
 
-**Done — Lint/format enforcement (frontend)**
+### Done — Lint/format enforcement (frontend)
 - ✅ Migrated `frontend/` from Tailwind v3 (barely used) to v4, mapped the
   existing CSS-variable token system into `@theme inline`
   (`frontend/src/style.css`) so `applySkin()` keeps working unchanged.
@@ -197,7 +236,7 @@ todo list, not a target.
   justified exception (`frontend/src/tiles/worlds/scene/Sun.tsx` — a
   known `three`/`@react-three/fiber` cross-package type mismatch).
 
-**P1 — Inline styles → Tailwind utilities (Milestone 2)**
+### P1 — Inline styles → Tailwind utilities (Milestone 2)
 - ✅ First slice done: `frontend/src/components/ui/*` (5 files —
   `SettingRow`, `Toggle`, `Segmented` fully migrated; `ColorSwatch` and the
   animation-driven parts of `Popover` correctly stay inline as documented
@@ -753,7 +792,7 @@ todo list, not a target.
   `App.tsx`. The other 65 live in directories ratcheted to `error`, so each is a
   lint-enforced documented exception rather than unmigrated code.
 
-**P1 — Modrinth client: HTTP paths are testable, and now tested**
+### P1 — Modrinth client: HTTP paths are testable, and now tested
 - ✅ **`ModrinthClient.baseURL` is injectable**, the same shape `UpdateService`
   has had all along. The production change is three lines — a field, a
   constructor assignment, `c.baseURL + path` in `doJSON` — and it is what the
@@ -799,7 +838,7 @@ todo list, not a target.
   non-test code, and 30-odd unchecked `w.Write` calls would have been the largest
   cluster of them in the repo.
 
-**P2 — React Compiler-readiness lint rules**
+### P2 — React Compiler-readiness lint rules
 - Revisit enabling `eslint-plugin-react-hooks`'s full `recommended`/
   `recommended-latest` rule set (`purity`, `refs`, `set-state-in-effect`,
   `immutability`, etc.) — currently scoped down to classic `rules-of-hooks` +
@@ -848,7 +887,7 @@ token rework**
   deferred — now blocked on "bundle the font" as a prerequisite, not just
   "audit existing usages."
 
-**P1 — Test coverage + gate**
+### P1 — Test coverage + gate
 - ✅ Stood up the frontend test harness: `vitest` (pinned to `^3` — `vitest@4`
   requires Vite 6+, this repo is still on `vite@^5.4.21`) + `jsdom` +
   `@testing-library/react`/`dom`, wired via a `test` block in
@@ -935,7 +974,7 @@ token rework**
 - Deferred follow-up — **coverage floor**: still no numeric threshold in CI;
   add one once a stable baseline is established across both suites.
 
-**P1 — Code-split heavy tiles**
+### P1 — Code-split heavy tiles
 - ✅ **Correction to this item's original premise**: exploration found the
   backups tile has no three.js dependency at all — its "planets" are pure
   SVG/CSS (`frontend/src/tiles/backups/WireframeSphere.tsx`,
@@ -970,7 +1009,7 @@ token rework**
 - Unused dependency found during this pass, tracked separately: see
   "P2 — Repo hygiene" below (`uplot` / `skinview3d`).
 
-**P2 — Undocumented blank error-ignores**
+### P2 — Undocumented blank error-ignores
 - ✅ Resolved. All 28 blank `_ = ` / `_, _ = ` sites across
   `backend/services/{backup,config_editor,players,modservice,scheduler_blocks,
   scheduler_engine,server,server_windows,server_other}.go` now carry a
@@ -996,12 +1035,12 @@ token rework**
     returns nothing. Confirmed green on `main`:
     https://github.com/sandrogekeler/Konnekt/actions/runs/28629364439
 
-**P2 — Structured logging**
+### P2 — Structured logging
 - Replace ad-hoc `fmt.Errorf`-only error reporting on the backend with
   `log/slog` for diagnosable runtime logs, keeping the existing `EventBus`
   emissions for UI-facing notifications.
 
-**P2 — Repo hygiene**
+### P2 — Repo hygiene
 - ✅ `*.syso` added to `.gitignore` (`konnekt-res.syso` was untracked and
   uncovered).
 - ✅ Created `agent_docs/DEPENDENCIES.md` — policy + rationale table for every
@@ -1037,7 +1076,7 @@ token rework**
   (`--bg-elevated` looks like the closest semantic match) — deferred as out
   of scope for a pure style-migration pass.
 
-**P1 — Scheduler node-system deep analysis**
+### P1 — Scheduler node-system deep analysis
 - ✅ **Architecture confirmed sound.** Three parallel Explore agents mapped the
   xyflow editor, the Go engine, and the contract between them: it's a hybrid
   control-flow + data-flow graph interpreter — xyflow is a pure visual editor
@@ -1111,7 +1150,7 @@ token rework**
   have since been completed.) **All three of those remaining items are now
   closed too — see "P1 — Scheduler tile convention gaps" below.**
 
-**P1 — Scheduler tile convention gaps** ✅ **closed**
+### P1 — Scheduler tile convention gaps ✅ closed
 
 All three sub-items lived in the same 95-line file
 (`frontend/src/tiles/scheduler/useScheduler.ts`), so they were closed in one
@@ -1206,11 +1245,11 @@ pass rather than rewriting it three times.
   lefthook policy is format-on-touch, and Prettier collapsed that file's
   long-standing manual column alignment.
 
-**P2 — Memoization pass**
+### P2 — Memoization pass
 - Add `React.memo` to the most expensive tile components (3D scenes, chart
   tiles) identified during a profiling pass.
 
-**P3 — Bound method missing `(T, error)` return**
+### P3 — Bound method missing `(T, error)` return
 - ✅ Found during the 2026-07-18 convention audit (`agent_docs/CONVENTION_AUDIT.md`):
   `GetAppVersion() string` (`app.go:151`) was the only method bound on the Wails
   `App` struct that didn't return `(T, error)` — the concrete instance of the
@@ -1226,7 +1265,7 @@ pass rather than rewriting it three times.
   the call, so a rejected promise is handled the same as today's resolved
   value.
 
-**P1 — Tile grid: two parallel systems collapsed into one**
+### P1 — Tile grid: two parallel systems collapsed into one
 - ✅ **Root cause: `react-grid-layout` was a dependency but wasn't actually
   driving the grid.** `Dashboard.tsx` consumed it through the v1-compat
   `react-grid-layout/legacy` wrapper with `compactType={null}` +
@@ -1365,7 +1404,7 @@ pass rather than rewriting it three times.
   closes the gap; resizing respects the `sm`-bucket floor; all 4 presets load
   correctly; maximize/restore and the flash-ring both still work unchanged.
 
-**P1 — Tile grid: crate-drag placement fixed (the above shipped broken)**
+### P1 — Tile grid: crate-drag placement fixed (the above shipped broken)
 - The previous entry's manual walkthrough claimed dragging a crate tile shows
   a smooth animated ghost that sizes to the space it's hovering over. In
   practice: the hover rectangle jumped around, usually snapping to the very
@@ -1505,7 +1544,7 @@ pass rather than rewriting it three times.
   sizes correctly across free/occupied/tight space, and a low-row drop
   no longer floats to the top.
 
-**P1 — Tile grid: crate-drag placement, rebuilt (the above shipped broken too)**
+### P1 — Tile grid: crate-drag placement, rebuilt (the above shipped broken too)
 - The previous entry's manual verification — synthetic mouse events against a
   bare `pnpm dev` session — passed clean. Real `wails dev` usage (screenshots
   attached directly to the report) showed it wasn't: tiles created whitespace
@@ -2128,3 +2167,90 @@ red package never becomes ambiguous between a broken test and a dipped number.
 parse and the new command matches `healthCommand` in the suite schema.
 `scripts/validate-schemas.sh` could not run — `check-jsonschema` is not installed —
 so that is a skip, not a pass.
+
+### 2026-08-17 — The border-token sweep, and the invariant that now holds it
+
+**Closed:** the `Open backlog` entry tracking `border-hairline`/`border-thick`
+adoption, which had sat there recording a measurement instead of the work.
+
+**What it said.** 8 token call sites (4 in the worlds tile, 4 in `App.tsx`)
+against 166 literal `border-[0.5px]` occurrences over 164 lines in 41 files —
+91 all-sides, 47 `-b`, 15 `-t`, 7 `-l`, 6 `-r`. The entry carried a note about
+occurrences-vs-lines (two lines in `tiles/mods/InstalledPanel.tsx` carried two
+each, so `grep -c` read 164 and `grep -o` read 166) so a re-measure would quote
+the same basis.
+
+**What is true now.** Zero literals, 181 token call sites. Measured the same way:
+
+```bash
+grep -roE "border(-[a-z]+)?-\[0\.5px\]" src --include=*.tsx --include=*.ts | wc -l   # 0
+grep -roE "border(-[trbl])?-(hairline|thick)" src --include=*.tsx --include=*.ts | wc -l  # 181
+```
+
+The sweep landed in `9ad697a` ("Adopt the hairline and thick border tokens across
+the UI"). It was a find-and-replace, as the entry predicted — the directional
+utilities added when Milestone 2 closed were the thing that had blocked it.
+
+**Why the entry survived the work.** `3037182` ("Fail the health check on a new
+literal border width") added the `no literal border widths` invariant to
+`.claude/suite.json`, so a new literal is now caught mechanically rather than by
+someone re-reading the checklist. The backlog entry was then describing work that
+was both done and guarded, and its numbers had inverted — 166 literals against 8
+token call sites had become 0 against 181. This is the failure mode the checklist's
+own header warns about: it is a target, not a snapshot, and a precise measurement
+inside it goes stale the moment the work lands. Measurements belong here.
+
+The invariant is deliberately scoped to borders. `text-[Npx]`, `rounded-[Npx]` and
+the remaining arbitrary sizing literals are separate sweeps that have not run —
+118 hex literals and 183 arbitrary px values across 48 files under
+`frontend/src/components` and `frontend/src/tiles` as of this entry — so a broader
+pattern would have been red on arrival and would have taught everyone to ignore it.
+
+**Verification.** The two greps above, run from `frontend/`. The invariant itself
+is declared in `.claude/suite.json` and read by `/suite-kit:health`; note that
+until the runner is vendored and wired into CI, nothing runs it automatically —
+tracked in kollektiv's `docs/roadmap.md` § Enforcement.
+
+### 2026-08-18 — The dead `--panel-bg`, and why the recorded fix was wrong
+
+**Closed:** the `Open backlog` entry for `tiles/config/form/widgets.tsx`'s
+`Select` dropdown, which painted itself with a literal `bg-[#0e1117]` — the
+always-used fallback of a `--panel-bg` variable defined nowhere in the repo.
+Under the **light** skin that rendered a near-black panel behind near-black text.
+
+**The recorded remediation was wrong, and checking it is what showed that.** The
+entry said to repoint the dropdown at `bg-elevated`. But `bg-elevated` carries
+`alpha: 0.82` in *both* skins, so the dropdown would have gone translucent over
+the form it exists to cover — a different bug, and a subtler one. Every surface
+token in the set was either translucent or the page background itself, so there
+was nothing correct to point at. This was a token to add, not a call site to
+repair.
+
+**What landed.** `bg-overlay` was added upstream in `kollektiv/design/tokens.json`
+— the opaque surface *of* a floating layer, not the dimming scrim *behind* a
+modal. Its values are derived rather than picked: `bg-elevated` composited over
+`bg-base`, which is the colour an elevated panel already resolves to when it sits
+on the app background. Dark `#10111a`, light `#eeeff6`. The shipping `#0e1117`
+sat `(-2, 0, -3)` from the computed dark value, which is simultaneously evidence
+the literal always meant "opaque elevated surface" and the reason not to enshrine
+it: nobody could re-derive that number.
+
+Three things were needed here beyond vendoring it:
+
+- `frontend/scripts/gen-tokens.mjs` gained a `UTILITY_ALIAS` entry. Without it
+  `bg-overlay` fell through to its raw name and generated `--color-bg-overlay`,
+  so the utility would have been `bg-bg-overlay` while every sibling reads
+  `bg-elevated`, `bg-canvas`, `bg-surface`. The alias map is where a token name
+  becomes a Tailwind utility name, and a new token is not automatically in it.
+- The dropdown now uses `bg-overlay`.
+- `tiles/performance/charts.tsx` carried the **same** literal twice, in recharts
+  `contentStyle` props, alongside a hardcoded `rgba(255,255,255,0.12)` border and
+  `#fff` text. Same defect, same skin breakage, and not named in the backlog
+  entry — found by grepping for the literal rather than for the file. Those are
+  inline styles because recharts takes CSS objects, not classes, so they now read
+  `var(--bg-overlay)`, `var(--border-hover)` and `var(--text-primary)` and follow
+  the skin like everything else.
+
+**Verification.** `grep -rn "0e1117" frontend/src` returns nothing. `pnpm
+gen:tokens` leaves a clean diff, so the generated layer matches the vendored
+source. Full gate set green.

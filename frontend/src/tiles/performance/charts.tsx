@@ -24,11 +24,11 @@ export function SparkChart({ data }: { data: SparkDatum[] }) {
       <LineChart data={data} margin={{ top: 2, right: 2, bottom: 2, left: 2 }}>
         <Tooltip
           contentStyle={{
-            backgroundColor: '#0e1117',
-            border: '0.5px solid rgba(255,255,255,0.12)',
+            backgroundColor: 'var(--bg-overlay)',
+            border: 'var(--border-hairline) solid var(--border-hover)',
             borderRadius: 6,
             fontSize: 10,
-            color: '#fff',
+            color: 'var(--text-primary)',
             padding: '4px 8px',
           }}
           itemStyle={{ padding: '1px 0' }}
@@ -138,11 +138,11 @@ export function HistoryChart({
         />
         <Tooltip
           contentStyle={{
-            backgroundColor: '#0e1117',
-            border: '0.5px solid rgba(255,255,255,0.12)',
+            backgroundColor: 'var(--bg-overlay)',
+            border: 'var(--border-hairline) solid var(--border-hover)',
             borderRadius: 6,
             fontSize: 11,
-            color: '#fff',
+            color: 'var(--text-primary)',
           }}
           labelFormatter={(v) => fmtTime(v as number)}
           formatter={(value, name) => {
