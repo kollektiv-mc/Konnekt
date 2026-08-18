@@ -30,7 +30,7 @@
     <meta name="twitter:image" content="https://konnekt.pages.dev/assets/img/social-card.png" />
 
     <meta name="theme-color" content="#05060a" />
-    <link rel="icon" type="image/svg+xml" href="/assets/img/favicon.svg" />
+    <link rel="icon" type="image/png" href="/assets/img/favicon.png" />
     <link rel="apple-touch-icon" href="/assets/img/app-icon.png" />
     <link rel="stylesheet" href="/tokens.css" />
     <link rel="stylesheet" href="/styles.css" />
@@ -120,22 +120,35 @@
                download.js confirms it exists and carries assets: it's a
                convenience, and a missing one must not read as a broken page.
                Lives inside #dl-content so a GitHub outage collapses to the one
-               error box rather than leaving this stranded under it. -->
-          <section class="download-others download-snapshot is-hidden" id="dl-snapshot">
-            <h3>Or run the latest build</h3>
-            <div class="disclaimer">
-              <span class="disclaimer-badge">UNSTABLE</span>
-              <p>
-                Built automatically from the newest code, so they carry features and fixes the
-                release above doesn't have yet. None of it is properly tested: a snapshot can be
-                broken, is replaced by the next one, and won't update itself. Back up your server
-                directory first.
-              </p>
+               error box rather than leaving this stranded under it.
+
+               The same closed disclosure card as the changelog's pre-release
+               entry, and for the same reason: this page is about the build you
+               should be running, and an untested rolling build should not sit
+               open under it. main.js animates any details.release-pending, so
+               the shared class is what gives this one its open/close motion. -->
+          <details class="release release-pending download-snapshot is-hidden" id="dl-snapshot">
+            <summary class="release-summary">
+              <h3 class="release-version">
+                Or run the latest build
+                <span class="release-latest is-snapshot">SNAPSHOT</span>
+              </h3>
+              <span class="release-date" id="dl-snapshot-meta"></span>
+            </summary>
+            <div class="snapshot-body">
+              <div class="disclaimer">
+                <span class="disclaimer-badge">UNSTABLE</span>
+                <p>
+                  Built automatically from the newest code, so they carry features and fixes the
+                  release above doesn't have yet. None of it is properly tested: a snapshot can be
+                  broken, is replaced by the next one, and won't update itself. Back up your server
+                  directory first.
+                </p>
+              </div>
+              <div class="dl-grid" id="dl-snapshot-grid"></div>
+              <p class="dl-footnote" id="dl-snapshot-footnote"></p>
             </div>
-            <p class="snapshot-meta" id="dl-snapshot-meta"></p>
-            <div class="dl-grid" id="dl-snapshot-grid"></div>
-            <p class="dl-footnote" id="dl-snapshot-footnote"></p>
-          </section>
+          </details>
         </div>
 
         <!-- Error / empty -->
@@ -152,8 +165,6 @@
             >
           </p>
         </div>
-
-        <a class="subpage-back" href="/index.html">&larr; Back to home</a>
       </div>
     </main>
 
