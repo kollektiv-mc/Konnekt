@@ -34,6 +34,15 @@ Plus the generated-file check `suite.json` declares: `pnpm gen:tokens` then
 diff means a generated token file was hand-edited (the next run reverts it) or
 `tokens.source.json` was refreshed without regenerating.
 
+And the invariant `suite.json` declares, `no literal border widths` — a grep for
+`border-[Npx]` under `frontend/src/components` and `frontend/src/tiles` that must
+find nothing. Read that entry's `diagnosis` before judging a match; the rule is
+about the token layer, not the regex.
+
+Where the plugin is not installed — CI, a cloud container, an unattended agent —
+`.claude/suite-check.py` reads the same manifest and runs the same three sections
+(`commands`, `invariants`, `generated`). `--json` for one record per check.
+
 Note `go vet`/`go test` need `frontend/dist` to exist first (`main.go`'s
 `//go:embed all:frontend/dist`), so run `pnpm build` before them in a clean
 tree.
@@ -43,8 +52,10 @@ tree.
 ## 1. Clean
 
 - [x] `go vet ./...` and `gofmt -l .` report nothing.
-- [x] No blank `_ =` error-ignores in Go, except documented `//nolint` cases
-      (e.g. `backend/services/eventbus.go`). See backlog
+- [ ] No blank `_ =` error-ignores in Go, except documented `//nolint` cases
+      (e.g. `backend/services/eventbus.go`).
+      Verify: `grep -rn "_ = " --include=*.go app.go backend/ | grep -v nolint`
+      — expect no matches. Three remain in `app.go`; see backlog
       ("P2 — Undocumented blank error-ignores").
 - [x] `pnpm lint` runs against a real ESLint config and passes.
 - [x] Formatting (Prettier/Biome or equivalent) is consistent and enforced,
@@ -60,6 +71,8 @@ tree.
       cross-package type mismatch).
 - [ ] Nothing under `frontend/wailsjs/` has been hand-edited (it's
       auto-generated; regenerate via `wails generate module` instead).
+      Verify: run `wails generate module`, then
+      `git diff --exit-code frontend/wailsjs` — a non-empty diff is a hand edit.
 - [x] No inline `style={{}}` beyond genuinely dynamic/computed values
       (animation delays, transforms, react-grid-layout position props) —
       Tailwind utilities backed by CSS-variable tokens otherwise (see
@@ -80,14 +93,22 @@ tree.
       slide/open-close, and a decorative splash/spin legitimately warrant
       different timing — the goal is a shared vocabulary for the common
       cases, not uniformity.
+      Verify: from `frontend/`,
+      `grep -rnE "(duration|delay)-\[[0-9.]+m?s\]|ease-\[" src` — every match
+      must be a documented one-off, not a near-miss of an existing token.
 - [x] No committed build artifacts (`*.syso`, `frontend/dist/`, `build/bin/`)
       — `.gitignore` covers them.
 - [x] No stray root-level scratch/design docs left un-triaged (either promoted
       into `agent_docs/` or deleted once the work lands).
 - [ ] `agent_docs/CLAUDE.md` and `agent_docs/ROADMAP.md` still reflect the
       actual stack/structure/scope — update them when they drift.
+      Verify: read CLAUDE.md's "Project structure" against the real top-level
+      dirs under `frontend/src/` and `backend/`, and its "Build & dev commands"
+      table against `frontend/package.json`'s `scripts`.
 - [ ] No obviously dead code (unused exports, unreachable branches, orphaned
       files) left behind after refactors.
+      Verify: for each file the last refactor touched, `grep -rn "<exported
+      name>" src` — an export with no importer outside its own file is dead.
 
 ## 2. Stable
 
@@ -106,8 +127,13 @@ tree.
       sync check, and `pnpm format:check`).
 - [ ] All Go methods bound to the Wails `App` struct return `(T, error)`, and
       errors are wrapped with context (`fmt.Errorf("...: %w", err)`).
+      Verify: `grep -nE "^func \(a \*App\) [A-Z]" app.go` — every hit must end
+      in `error)` or `error {`. (`beforeClose`/`startup` are Wails lifecycle
+      hooks, not bound methods, and are exempt.)
 - [ ] Every `EventsOn` listener registered in a component is cleaned up on
       unmount — no leaked subscriptions.
+      Verify: from `frontend/`, `grep -rn "EventsOn" src` — each call site must
+      sit in a `useEffect` whose cleanup invokes the returned unsubscribe.
 - [x] No frontend data is driven by `useEffect` polling when it should be a
       Wails event listener (CLAUDE.md rule). Every data poll is closed: the
       players tile's 3s poll, then the stats/backups/mods 10s polls (see
@@ -119,15 +145,23 @@ tree.
       (`backend/services/server_windows.go`), RCON dial/operation timeouts
       present (`backend/services/rcon.go`), Modrinth HTTP client keeps its
       timeout + 429/`Retry-After` retry handling (`backend/services/modrinth.go`).
+      Verify: `grep -n "JobObject" backend/services/server_windows.go`,
+      `grep -n "Timeout" backend/services/rcon.go`, and
+      `grep -nE "Retry-After|429|Timeout" backend/services/modrinth.go` — all
+      three must still match.
 - [ ] `ErrorBoundary` wraps the app and the UI degrades gracefully when the
       Minecraft server process is offline or unreachable.
+      Verify: `grep -n "ErrorBoundary" frontend/src/main.tsx`, then run the app
+      with no server configured and confirm tiles render an offline state
+      rather than a blank panel.
 
 ## 3. Scalable / Future-proof
 
 - [x] Heavy per-tile dependencies are lazy-loaded on demand, following the
       existing pattern in `frontend/src/tiles/worlds/index.tsx` (`React.lazy`
-      + `Suspense`): worlds' three.js/@react-three scene, and now recharts
-      (performance tile — see backlog). The backups tile has **no** three.js
+      + `Suspense`): worlds' three.js/@react-three scene, and recharts
+      (performance tile, `tiles/performance/charts.tsx` — see HEALTH_LOG.md's
+      "P1 — Code-split heavy tiles"). The backups tile has **no** three.js
       dependency — its "planets" are pure SVG/CSS (`WireframeSphere.tsx`,
       `SolarSystem.tsx`); a repo-wide grep confirms `three`/`@react-three`
       appear only under `worlds/scene/`.
@@ -142,43 +176,72 @@ tree.
       every tile now shares one size from `lib/gridSizing.ts`, and a
       `TileDefinition` entry is just `{ id, label, icon, maximizable?,
       component }`. The rule applies fully to that shape going forward.)
+      Verify: `git diff main -- frontend/src/tiles/registry.ts` — added entries
+      only, with `TileDefinition`'s shape unchanged.
 - [ ] Each Zustand store still owns exactly one domain — no cross-domain state
       mixing creeping in.
+      Verify: from `frontend/`, `grep -rn "stores/" src/stores` — a store
+      importing another store's state is the failure.
 - [ ] Go structs in `backend/models/` remain the single source of truth for
       TypeScript types; bindings were regenerated (`wails generate module`)
       after backend model changes.
+      Verify: run `wails generate module`, then
+      `git diff --exit-code frontend/wailsjs/go/models.ts` — a diff means a
+      `backend/models/` change shipped without regenerating.
 - [ ] Dependencies (Go modules, npm packages) are reasonably current, with no
       unmaintained or duplicated libraries doing the same job.
+      Verify: `go list -m -u all` at the root and `pnpm outdated` from
+      `frontend/`; `pnpm why <pkg>` for anything suspected of being vendored
+      twice — the duplicate-`three` incident in HEALTH_LOG.md is the shape of
+      failure this catches.
 - [ ] New Go dependencies were checked against `agent_docs/DEPENDENCIES.md`
-      before being added (create this file if it doesn't exist yet — see
-      backlog).
+      before being added.
+      Verify: every direct require in `go.mod` appears in that file's inventory
+      table with a rationale, and nothing in the table has since been dropped.
 - [x] Local-first invariant holds: no `localStorage`/`sessionStorage` usage;
       all persistence goes through Go file I/O into the Wails app data dir.
       Repo-wide grep confirms zero occurrences under `frontend/src/`. The one
       violation found (scheduler `BlockPalette.tsx`'s palette-collapse and
       per-category-collapse prefs) has been migrated onto `AppSettings` →
       `app_settings.json`, the same Go-backed path console/notify prefs
-      already use — see backlog.
+      already use — see HEALTH_LOG.md's "P1 — Scheduler node-system deep
+      analysis".
+      Verify: from `frontend/`,
+      `grep -rn "localStorage\|sessionStorage" src` — expect no matches.
 
 ## 4. Performant
 
 - [ ] Console log lines are still batched (150ms flush window in `App.tsx`) so
       re-render rate stays bounded on busy servers.
+      Verify: from `frontend/`, `grep -n "setInterval" src/App.tsx` — the
+      batcher must still be there, and still be the only `setInterval` under
+      `src/` (see the Stable pillar's poll check).
 - [ ] Circular/ring buffers still cap memory growth: performance history
       (`usePerformanceHistory.ts`), console buffer (`useConsoleStore.ts`, user
       configurable cap), backend stats history and console ring buffer
       (`backend/services/stats.go`, `backend/services/server.go`).
+      Verify: each of those five sites must slice or shift when it appends —
+      `grep -nE "slice\(|\.shift\(|len\(.*\) >" ` over them. An unbounded
+      append is the failure.
 - [ ] Poll cadences remain deliberate and haven't crept down accidentally: TPS
       RCON poll (~15s, with server-flavor caching), stats tick (~10s). The
       scheduler's next-run countdown is no longer polled at all — the Go
       per-minute ticker (and each graph mutation) pushes `schedule:next-runs`.
+      Verify: `grep -rnE "time\.(NewTicker|Tick)\(" backend/services` — every
+      interval must match the cadence documented here, and a new one must be a
+      deliberate addition rather than a copied default.
 - [ ] Expensive tile subtrees are memoized (`React.memo` / `useMemo` /
       `useCallback`) so parent re-renders don't cascade into them — pay
       particular attention to the 3D scenes (backups sphere, worlds planetary
       system) and chart-heavy tiles.
+      Verify: React DevTools Profiler over a drag of the tile grid — a scene or
+      chart subtree that re-renders on an unrelated parent update is the
+      failure. Tracked as an open backlog item until a profiling pass runs.
 - [x] Production bundle has been profiled recently (e.g. `vite build` output
       or a bundle analyzer) and heavy libraries remain lazy rather than eager
       (three.js via Worlds, recharts via Performance — see Scalable pillar).
+      Verify: `pnpm build` from `frontend/`, then confirm `three` and `recharts`
+      land in their own chunks rather than the entry chunk.
 
 ---
 
@@ -187,6 +250,17 @@ tree.
 The remaining, not-yet-closed follow-ups. Each item's full remediation write-up
 moves to `agent_docs/HEALTH_LOG.md` once it's done — keep this section short and
 current. Priorities mirror the pillars above.
+
+**P2 — Undocumented blank error-ignores**
+- Three `_ =` error-ignores in `app.go` carry no `//nolint` comment explaining
+  why the error is safe to drop: the shutdown `serverService.Stop()`, the
+  data-dir `os.MkdirAll`, and the post-update `exec.Command(exePath).Start()`.
+  The 2026 sweep that documented the other 28 sites (HEALTH_LOG.md, "P2 —
+  Undocumented blank error-ignores") reported clean because its audit grep was
+  scoped to `backend --include="*.go"` — the repo-root files were never in
+  range. Re-run it as `grep -rn "_ = " --include=*.go app.go backend/ | grep -v
+  nolint`. Each of the three is plausibly deliberate; decide that per site and
+  write the reason down.
 
 **P2 — Cleanups**
 - `sandbox` (`config_editor.go`) is a purely **lexical** guard — `filepath.Clean`
@@ -202,23 +276,6 @@ current. Priorities mirror the pillars above.
   truncates, so two saves in the same second leave **one** backup, not two.
   Harmless in hand-editing, wrong if anything ever writes config
   programmatically. Widening the stamp (or adding a counter suffix) is the fix.
-- Dead `--panel-bg` CSS variable: `tiles/config/form/widgets.tsx`'s `Select`
-  dropdown. Now documented in-code and rendered as a literal `bg-[#0e1117]`,
-  but that literal is opaque near-black, so the dropdown stays dark under the
-  **light** skin (where `--bg-elevated` is `rgba(236,238,245,0.82)`) — a live
-  theming bug, not just hygiene. Repoint to `bg-elevated`, checking the
-  dropdown still reads as opaque over content.
-- `border-hairline`/`border-thick` plus their new directional forms
-  (`border-t-hairline`, `border-r-hairline`, etc. — added when App.tsx's last
-  inline styles were migrated, closing Milestone 2) are generated into
-  `styles/tokens.css`, but adoption is still thin: 8 call sites (4 in the worlds
-  tile, 4 in `App.tsx`) against **166 literal `border-[0.5px]` occurrences,
-  spread over 164 lines in 41 files** — 91 all-sides, 47 `-b`, 15 `-t`, 7 `-l`,
-  6 `-r`. (Occurrences, not lines: two lines in `tiles/mods/InstalledPanel.tsx`
-  carry two each, so a `grep -c` reads 164 and a `grep -o` reads 166. Quote the
-  basis when re-measuring.) The directional gap that blocked adoption is closed;
-  what's left is a pure find-and-replace sweep, tile by tile — no further token
-  or generator work needed.
 - Structured logging: replace ad-hoc `fmt.Errorf`-only backend reporting with
   `log/slog`, keeping `EventBus` for UI-facing notifications.
 - Memoization pass: add `React.memo`/`useMemo`/`useCallback` to the most

@@ -14,6 +14,7 @@
 @theme inline {
   --color-canvas: var(--bg-base);
   --color-elevated: var(--bg-elevated);
+  --color-overlay: var(--bg-overlay);
   --color-surface: var(--bg-surface);
   --color-hover: var(--hover-surface);
   --color-border-subtle: var(--border-subtle);
@@ -118,6 +119,7 @@
 [data-theme='dark'] {
   --bg-base: #05060a;
   --bg-elevated: rgba(18, 20, 30, 0.82);
+  --bg-overlay: #10111a;
   --bg-surface: rgba(255, 255, 255, 0.025);
   --hover-surface: rgba(255, 255, 255, 0.05);
   --border-subtle: rgba(255, 255, 255, 0.06);
@@ -141,6 +143,7 @@
 [data-theme='light'] {
   --bg-base: #f5f6fa;
   --bg-elevated: rgba(236, 238, 245, 0.82);
+  --bg-overlay: #eeeff6;
   --bg-surface: rgba(0, 0, 0, 0.03);
   --hover-surface: rgba(0, 0, 0, 0.05);
   --border-subtle: rgba(0, 0, 0, 0.09);
