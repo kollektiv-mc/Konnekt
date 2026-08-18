@@ -1010,6 +1010,37 @@ a {
   color: var(--text-secondary);
 }
 
+/* Each fact is a row of names rather than a sentence, so it is set as tags.
+   Square-cornered like .footer-tag and .disclaimer-badge, not the pill-shaped
+   .tag the roadmap and platform table use: those report a status, these are
+   just labels, and the one that *is* a status wears the amber below. */
+.fact-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.pill {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  padding: 2px 8px;
+  border-radius: 5px;
+  border: 0.5px solid var(--border-subtle);
+  background: var(--hover-surface);
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+/* The status fact, in the same amber the footer badge and the snapshot
+   channel already carry. */
+.pill-alpha {
+  color: var(--sun);
+  border-color: rgb(var(--sun-rgb) / 0.35);
+  background: rgb(var(--sun-rgb) / 0.08);
+}
+
 /* ── Feature tiles — static grid, everything visible at rest ─────────── */
 .feat-grid {
   display: grid;
@@ -1056,7 +1087,8 @@ a {
   margin: 0 0 12px;
 }
 
-.feat-detail code {
+.feat-detail code,
+.spotlight-points code {
   font-family: var(--font-mono);
   font-size: 12px;
   color: var(--text-primary);

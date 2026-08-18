@@ -129,27 +129,42 @@
           <span class="eyebrow">[i] about</span>
           <h2>Everything in one window</h2>
           <p>
-            Konnekt is a desktop control panel for self-hosted Minecraft servers. Starting them,
-            watching logs, moving worlds, scheduling backups, installing mods: the work you'd
-            otherwise do through a raw console, RCON or SSH.
+            Konnekt is a desktop app for Minecraft servers you host yourself. One window in place
+            of a terminal, an RCON client and a file browser sitting open side by side.
           </p>
           <p>
-            Built for admins and hobbyists who run their own servers and want a real GUI instead of
-            a stack of terminal windows and plugins.
+            The alternatives are a hosting panel you rent or a pile of tools you wire together.
+            Konnekt is neither: it runs on your own machine, against server folders you already
+            have. The dashboard is a grid of tiles you arrange yourself, and the automation is a
+            node graph rather than a cron line.
           </p>
         </div>
+        <!-- Names, not prose. Each fact is a row of .pill tags so the three read as
+             one component; Status is the same tag in the amber the footer badge and
+             the snapshot channel already use. -->
         <dl class="about-facts">
           <div class="about-fact reveal" style="--reveal-delay: 0ms">
             <dt>Servers</dt>
-            <dd>Vanilla, Paper, Spigot and Bukkit <br>+ Fabric and Neoforge</dd>
+            <dd class="fact-pills">
+              <span class="pill">Vanilla</span>
+              <span class="pill">Paper</span>
+              <span class="pill">Spigot</span>
+              <span class="pill">Bukkit</span>
+              <span class="pill">Fabric</span>
+              <span class="pill">NeoForge</span>
+            </dd>
           </div>
           <div class="about-fact reveal" style="--reveal-delay: 60ms">
             <dt>Platforms</dt>
-            <dd>Windows, Linux and MacOS</dd>
+            <dd class="fact-pills">
+              <span class="pill">Windows</span>
+              <span class="pill">Linux</span>
+              <span class="pill">macOS</span>
+            </dd>
           </div>
           <div class="about-fact reveal" style="--reveal-delay: 120ms">
             <dt>Status</dt>
-            <dd>In Alpha.<br>Essential tools work today</dd>
+            <dd class="fact-pills"><span class="pill pill-alpha">Alpha</span></dd>
           </div>
         </dl>
       </div>
@@ -168,9 +183,9 @@
               <h3 class="feat-title">Tile dashboard</h3>
               <div class="feat-detail">
                 <ul>
-                  <li>Drag, resize and snap tiles</li>
-                  <li>Save layout presets</li>
-                  <li>Crate unused tiles</li>
+                  <li>Drag, resize and snap every tile</li>
+                  <li>Crate the ones you are not using</li>
+                  <li>Save layouts as presets and switch between them</li>
                 </ul>
               </div>
             </div>
@@ -182,9 +197,9 @@
               <h3 class="feat-title">Live console</h3>
               <div class="feat-detail">
                 <ul>
-                  <li>Real-time log streaming</li>
-                  <li>Send commands inline</li>
-                  <li>Colour-coded output</li>
+                  <li>Log output streamed as the server writes it</li>
+                  <li>Type commands without leaving the tile</li>
+                  <li>Filter by level or search the buffer</li>
                 </ul>
               </div>
             </div>
@@ -192,13 +207,13 @@
 
           <article class="feat reveal" style="--reveal-delay: 120ms">
             <div class="feat-inner">
-              <span class="feat-icon" aria-hidden="true">◍</span>
-              <h3 class="feat-title">World management</h3>
+              <span class="feat-icon" aria-hidden="true">◎</span>
+              <h3 class="feat-title">Players</h3>
               <div class="feat-detail">
                 <ul>
-                  <li>Switch the active world</li>
-                  <li>Size, seed and type</li>
-                  <li>Jump between dimensions</li>
+                  <li>Who is online right now, from RCON</li>
+                  <li>Kick or ban with a reason attached</li>
+                  <li>Op level, whitelist and ban state per player</li>
                 </ul>
               </div>
             </div>
@@ -206,13 +221,13 @@
 
           <article class="feat reveal" style="--reveal-delay: 180ms">
             <div class="feat-inner">
-              <span class="feat-icon" aria-hidden="true">⟳</span>
-              <h3 class="feat-title">Backups</h3>
+              <span class="feat-icon" aria-hidden="true">∿</span>
+              <h3 class="feat-title">Performance</h3>
               <div class="feat-detail">
                 <ul>
-                  <li>Manual and scheduled</li>
-                  <li>Visual restore carousel</li>
-                  <li>Roll back in two clicks</li>
+                  <li>TPS, CPU and memory as the server runs</li>
+                  <li>An hour of history, charted</li>
+                  <li>Nothing to install on the server side</li>
                 </ul>
               </div>
             </div>
@@ -220,13 +235,13 @@
 
           <article class="feat reveal" style="--reveal-delay: 240ms">
             <div class="feat-inner">
-              <span class="feat-icon" aria-hidden="true">⚙</span>
-              <h3 class="feat-title">Config editor</h3>
+              <span class="feat-icon" aria-hidden="true">◍</span>
+              <h3 class="feat-title">World management</h3>
               <div class="feat-detail">
                 <ul>
-                  <li>Form UI for every setting</li>
-                  <li>Raw text mode</li>
-                  <li>JSON and YAML aware</li>
+                  <li>Every world drawn as its own planet</li>
+                  <li>Seed, version, difficulty and size read from level.dat</li>
+                  <li>Switch the active world, rename, duplicate or delete</li>
                 </ul>
               </div>
             </div>
@@ -234,13 +249,55 @@
 
           <article class="feat reveal" style="--reveal-delay: 300ms">
             <div class="feat-inner">
+              <span class="feat-icon" aria-hidden="true">⟳</span>
+              <h3 class="feat-title">Backups</h3>
+              <div class="feat-detail">
+                <ul>
+                  <li>On demand, or on a schedule you set</li>
+                  <li>Browse restore points as a carousel</li>
+                  <li>Roll a world back in two clicks</li>
+                </ul>
+              </div>
+            </div>
+          </article>
+
+          <article class="feat reveal" style="--reveal-delay: 360ms">
+            <div class="feat-inner">
+              <span class="feat-icon" aria-hidden="true">⚙</span>
+              <h3 class="feat-title">Config editor</h3>
+              <div class="feat-detail">
+                <ul>
+                  <li>server.properties as a real form, field by field</li>
+                  <li>Raw editing with syntax highlighting</li>
+                  <li>Paper, Spigot and mod configs in YAML, JSON and TOML</li>
+                </ul>
+              </div>
+            </div>
+          </article>
+
+          <article class="feat reveal" style="--reveal-delay: 420ms">
+            <div class="feat-inner">
               <span class="feat-icon" aria-hidden="true">◈</span>
               <h3 class="feat-title">Mods &amp; plugins</h3>
               <div class="feat-detail">
                 <ul>
-                  <li>Search and install from Modrinth</li>
-                  <li>Inline changelogs</li>
-                  <li>Dependency resolution</li>
+                  <li>Search and install straight from Modrinth</li>
+                  <li>Dependencies resolved before anything is written</li>
+                  <li>Descriptions and changelogs read in place</li>
+                </ul>
+              </div>
+            </div>
+          </article>
+
+          <article class="feat reveal" style="--reveal-delay: 480ms">
+            <div class="feat-inner">
+              <span class="feat-icon" aria-hidden="true">⧉</span>
+              <h3 class="feat-title">Multi-server</h3>
+              <div class="feat-detail">
+                <ul>
+                  <li>Every server you run, in one app</li>
+                  <li>Its own jar, directory and JVM arguments</li>
+                  <li>Switch which one the dashboard is pointed at</li>
                 </ul>
               </div>
             </div>
@@ -255,7 +312,7 @@
           <div class="section-head reveal">
             <span class="eyebrow">() scheduler</span>
             <h2>Automate with a graph</h2>
-            <p>Wire triggers, conditions and commands on a canvas.</p>
+            <p>Wire triggers, live server values, commands and conditions on a canvas.</p>
           </div>
           <div class="spotlight-media reveal" style="--reveal-delay: 80ms">
             <!-- Node-graph motif. Static SVG, animated purely in CSS (.sf-* in
@@ -548,22 +605,36 @@
               </g>
             </svg>
           </div>
+          <!-- One point per block category in scheduler_blocks.go: trigger, data,
+               action, control. Ordered the way a graph is built, left to right. -->
           <ul class="spotlight-points reveal" style="--reveal-delay: 140ms">
             <li>
               <h3>Triggers</h3>
-              <p>A time of day, a cron line, an interval, or a server event.</p>
+              <p>
+                A time of day, a cron line or an interval. Or an event: a crash, a player
+                joining, a backup finishing, TPS falling past a threshold.
+              </p>
             </li>
             <li>
-              <h3>Branching</h3>
-              <p>Every action forks into a success and a failure path.</p>
+              <h3>Attributes</h3>
+              <p>
+                Read <code>@tps</code>, <code>@players.count</code> or <code>@ram.left</code> mid
+                run. Write back to the MOTD, whitelist, gamemode or player cap.
+              </p>
             </li>
             <li>
-              <h3>Live values</h3>
-              <p>Read TPS, player count and other server state as it runs.</p>
+              <h3>Actions</h3>
+              <p>
+                Console and RCON commands, with the reply captured. Backups, delays,
+                notifications, and HTTP calls out to a webhook.
+              </p>
             </li>
             <li>
-              <h3>On demand</h3>
-              <p>Run a graph yourself, or leave it to the schedule.</p>
+              <h3>Conditions</h3>
+              <p>
+                Compare two values and take one of two paths. Do arithmetic on them first if you
+                need to. Every action forks on success or failure as well.
+              </p>
             </li>
           </ul>
         </div>
