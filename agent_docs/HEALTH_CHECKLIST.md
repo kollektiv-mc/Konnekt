@@ -105,6 +105,8 @@ tree.
       Verify: from `frontend/`,
       `grep -rnE "(duration|delay)-\[[0-9.]+m?s\]|ease-\[" src` — every match
       must be a documented one-off, not a near-miss of an existing token.
+      Twelve matches are currently undocumented; see backlog ("P2 — Motion
+      one-offs outside the token vocabulary").
 - [x] No committed build artifacts (`*.syso`, `frontend/dist/`, `build/bin/`)
       — `.gitignore` covers them.
 - [x] No stray root-level scratch/design docs left un-triaged (either promoted
@@ -260,6 +262,53 @@ tree.
 The remaining, not-yet-closed follow-ups. Each item's full remediation write-up
 moves to `agent_docs/HEALTH_LOG.md` once it's done — keep this section short and
 current. Priorities mirror the pillars above.
+
+**P2 — Motion one-offs outside the token vocabulary**
+- The motion vocabulary is three tokens: `--duration-fast` (150ms),
+  `--duration-panel` (280ms) and `--ease-standard`
+  (`cubic-bezier(0.4, 0, 0.2, 1)`). Against that, `grep -rnE
+  "(duration|delay)-\[[0-9.]+m?s\]|ease-\[" src` finds 12 matches, none of
+  them carrying a note saying why they are not a token. They are not all the
+  same problem, and the fix differs per group:
+  - **A near-miss that is not even a miss.** `tiles/mods/BrowsePanel.tsx:449`
+    spells `duration-[280ms]`, which *is* `--duration-panel`, and line 38
+    carries a hand-written comment telling the next reader to keep the two in
+    sync. Switching it to the `duration-panel` utility deletes both the
+    arbitrary value and the comment. `duration-fast`/`ease-standard` already
+    work as utilities (`components/LayoutPresets.tsx:51`,
+    `tiles/config/form/ConfigForm.tsx:33`), so nothing new is needed for this
+    one.
+  - **Near-misses that need a judgement call.** `duration-200`
+    (`tiles/backups/BackupCard.tsx:46`), `duration-300` and `duration-[180ms]`
+    (`tiles/backups/index.tsx:572`, `:616`), and `duration-[250ms]`
+    (`tiles/worlds/scene/WorldsScene.tsx:383`) all sit within ~50ms of an
+    existing token. Either round them onto the token or write down why the
+    difference is deliberate.
+  - **A repeated value with no token.** `duration-[220ms]` appears three times
+    in `tiles/backups/index.tsx` (`:580`, `:626`, `:668`) for the same
+    panel/tray motion. A value used three times is a vocabulary gap, not a
+    one-off.
+  - **`ease-[ease]`, six times** (`tiles/backups/BackupCard.tsx:46`,
+    `tiles/backups/index.tsx:572`, `:580`, `:616`, `:626`, `:668`). This is
+    CSS's plain `ease` keyword, `cubic-bezier(0.25, 0.1, 0.25, 1)` — a
+    *different* curve from `--ease-standard`, and Tailwind has no bare `ease`
+    utility, so the escape hatch is the only spelling available. Whether the
+    backups tile genuinely wants a second curve or just never reached for the
+    token is undecided, and undecided is the actual defect here.
+  - **Genuinely unique, and fine.** `tiles/backups/SolarSystem.tsx:152`/`:234`
+    (`duration-[350ms]` with an overshoot spring,
+    `cubic-bezier(0.34, 1.56, 0.64, 1)`) and
+    `tiles/worlds/scene/WorldsScene.tsx:328`/`:383`
+    (`cubic-bezier(0.25, 0, 0.25, 1)`) are decorative scene motion no shared
+    token should flatten. They need a comment saying so, not a change.
+- Note the constraint before starting: the token layer is **generated**. Adding
+  a duration or an easing is an edit to `kollektiv/design/tokens.json`
+  (`motion.duration.scale`, `motion.easing`), then kollektiv's
+  `scripts/sync-tokens.sh`, then `pnpm gen:tokens` here, committing all three
+  generated files. It cannot be done from this repo alone, and a hand edit to
+  `tokens.css` is reverted on the next run. So the parts that only reuse an
+  existing token or add a comment can land here; anything needing a new token
+  is gated on the upstream change.
 
 **P2 — Cleanups**
 - `sandbox` (`config_editor.go`) is a purely **lexical** guard — `filepath.Clean`
