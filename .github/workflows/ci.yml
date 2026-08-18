@@ -48,8 +48,11 @@ jobs:
       # while; until now only an agent running /suite-kit:health ever ran it.
       - run: pnpm gen:tokens
 
+      # ../website/tokens.css is the third output: the marketing site consumes the
+      # same token source as plain :root custom properties, having previously
+      # hand-copied them. It is outside this job's working-directory, hence the ..
       - name: Token layer is in sync
-        run: git diff --exit-code src/styles/tokens.css src/styles/tokens.ts
+        run: git diff --exit-code src/styles/tokens.css src/styles/tokens.ts ../website/tokens.css
 
   # .claude/suite.json declares three sections. CI has always covered
   # `commands` as literal steps above and in the backend jobs, but nothing ever

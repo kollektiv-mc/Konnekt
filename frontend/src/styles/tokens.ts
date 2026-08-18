@@ -5,7 +5,7 @@
  * never reach Kommands, which derives its tokens from the same source.
  *
  * To change a value: edit kollektiv/design/tokens.json, run its
- * scripts/sync-tokens.sh, then `pnpm gen:tokens` here.
+ * scripts/sync-tokens.sh, then `pnpm gen:tokens` from `frontend/`.
  */
 
 export type ThemeMode = 'dark' | 'light'
