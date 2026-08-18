@@ -444,11 +444,6 @@ a {
     opacity: 1;
   }
 
-  /* A platform with no asset isn't a link; lighting it up on hover would offer
-     something that isn't there. */
-  .dl-card.is-unavailable::after {
-    display: none;
-  }
 }
 
 /* Smaller tiles want a tighter light — a 260px circle on a 60px-tall card
@@ -456,10 +451,6 @@ a {
 .dl-card,
 .spotlight-points li {
   --glow-size: 180px;
-}
-
-.dl-card.is-unavailable:hover {
-  border-color: var(--border-subtle);
 }
 
 /* Everything in the snapshot channel lights amber instead of green. The two
@@ -979,26 +970,31 @@ a {
   margin: 0;
 }
 
-/* ── About facts — a plain row, deliberately not a .feat card grid ────── */
-/* The page already spends two grids of .feat cards; a third would read as
-   filler. `auto-fit` collapses this to one column on narrow screens without a
-   media query, the same way .feat-grid does. */
+/* ── About facts — the same card as .feat, one scroll up ─────────────── */
+/* These were a bare row on a rule, which read as a different kind of thing to
+   the feature cards directly below and never sat straight: the three facts
+   carry six tags, one and three, so any equal-column treatment left one column
+   mostly empty and pulled the row's ink off centre. As cards they inherit the
+   grid the features already use, and centring inside a bordered box gives the
+   uneven tag counts an edge to be even against. */
 .about-facts {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 28px 52px;
-  max-width: 880px;
-  margin: 0 auto;
-  padding-top: 34px;
-  border-top: 0.5px solid var(--border-subtle);
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 18px;
+  margin: 44px 0 0;
 }
 
-/* Each group is only as wide as its own tags, and the three are centred as a
-   cluster under the centred section head. An equal-column grid was tried first
-   and read as off-centre: the three facts carry six tags, three and one, so
-   equal thirds left the last column mostly empty and pushed the ink left. */
 .about-fact {
+  background: var(--bg-elevated);
+  border: 0.5px solid var(--border-subtle);
+  border-radius: 16px;
+  padding: 26px 24px;
+  min-height: 132px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
   text-align: center;
 }
 
@@ -1010,7 +1006,6 @@ a {
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--accent);
-  margin-bottom: 10px;
 }
 
 .about-fact dd {
@@ -1022,12 +1017,19 @@ a {
 /* Each fact is a row of names rather than a sentence, so it is set as tags.
    Square-cornered like .footer-tag and .disclaimer-badge, not the pill-shaped
    .tag the roadmap and platform table use: those report a status, these are
-   just labels, and the one that *is* a status wears the amber below. */
+   just labels, and the one that *is* a status wears the amber below. The
+   max-width breaks the six server tags 3 and 3 instead of leaving a widow. */
 .fact-pills {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
+  align-content: center;
   gap: 6px;
+  max-width: 232px;
+  /* Two tag rows plus the gap between them (2 x 21.75 + 6), held whether or
+     not the fact fills them, so the three dt labels land on one line across
+     the row instead of floating to wherever their own card's content centred. */
+  min-height: 49.5px;
 }
 
 .pill {
@@ -1630,6 +1632,13 @@ footer {
   display: flex;
   align-items: center;
   gap: 14px;
+  /* The release grid's cards are <button>: they pick which platform the
+     primary card shows rather than downloading straight off. The snapshot
+     grid's are still <a>, so both sets of UA defaults get flattened here. */
+  width: 100%;
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
   background: var(--bg-surface);
   border: 0.5px solid var(--border-subtle);
   border-radius: 12px;
@@ -1642,13 +1651,19 @@ footer {
     transform var(--duration-fast) ease;
 }
 
-.dl-card[href]:hover {
+.dl-card[href]:hover,
+button.dl-card:hover {
   border-color: var(--border-hover);
   background: var(--hover-surface);
   transform: translateY(-2px);
 }
 
-/* Platforms with no asset on the release. This used to dim the card itself
+/* Platforms with no asset on the release. The card is still selectable, and
+   still lights on hover: picking it is how you reach the build-from-source
+   card above, so it leads somewhere. Only the contents dim, to say there is no
+   binary behind this one.
+
+   The dimming used to be applied to the card itself
    with `opacity: 0.55`, which never actually rendered: .dl-card carries the
    intro-in animation, and its final keyframe pins opacity to 1 — animations
    outrank normal author declarations, so the card stayed at full strength.
@@ -1673,12 +1688,14 @@ footer {
 }
 
 .dl-card-name {
+  display: block;
   font-size: 13.5px;
   font-weight: 600;
   color: var(--text-primary);
 }
 
 .dl-card-meta {
+  display: block;
   font-family: var(--font-mono);
   font-size: 11px;
   color: var(--text-muted);

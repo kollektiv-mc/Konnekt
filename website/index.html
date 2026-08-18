@@ -139,9 +139,11 @@
             node graph rather than a cron line.
           </p>
         </div>
-        <!-- Names, not prose. Each fact is a row of .pill tags so the three read as
-             one component; Status is the same tag in the amber the footer badge and
-             the snapshot channel already use. -->
+        <!-- The three facts as cards, built from the same ingredients as .feat in
+             the features grid below, so a visitor meets one component twice rather
+             than two that nearly match. Status sits in the middle: it carries a
+             single tag, and bracketing it with the two multi-tag facts is what
+             makes the row read as even. -->
         <dl class="about-facts">
           <div class="about-fact reveal" style="--reveal-delay: 0ms">
             <dt>Servers</dt>
@@ -155,16 +157,16 @@
             </dd>
           </div>
           <div class="about-fact reveal" style="--reveal-delay: 60ms">
+            <dt>Status</dt>
+            <dd class="fact-pills"><span class="pill pill-alpha">Alpha</span></dd>
+          </div>
+          <div class="about-fact reveal" style="--reveal-delay: 120ms">
             <dt>Platforms</dt>
             <dd class="fact-pills">
               <span class="pill">Windows</span>
               <span class="pill">Linux</span>
               <span class="pill">macOS</span>
             </dd>
-          </div>
-          <div class="about-fact reveal" style="--reveal-delay: 120ms">
-            <dt>Status</dt>
-            <dd class="fact-pills"><span class="pill pill-alpha">Alpha</span></dd>
           </div>
         </dl>
       </div>

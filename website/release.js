@@ -41,7 +41,9 @@
       id: 'mac',
       name: 'macOS',
       tag: 'Mac',
-      desc: 'Coming soon',
+      // Not "Coming soon": it runs on macOS today, just not as a published
+      // asset. docs.html's platform table says the same thing.
+      desc: 'Build from source',
       match: null,
     },
   ]

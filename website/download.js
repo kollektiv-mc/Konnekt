@@ -1,5 +1,8 @@
 /* Download page — detects platform and wires the download buttons from the
-   latest GitHub release's assets. */
+   latest GitHub release's assets. The detected platform seeds the primary
+   card; the "All downloads" grid below switches it, so a visitor on Linux can
+   still reach the Windows build (or read how to build the one that isn't
+   published) without leaving for GitHub. */
 ;(function () {
   var R = window.KonnektRelease
   if (!R) return
@@ -33,6 +36,21 @@
     node.classList.add('is-hidden')
   }
 
+  // The release being shown. renderOthers' click handlers re-enter the render
+  // path long after fetchLatest resolved, so what they need is held here
+  // rather than passed down through every call.
+  var current = { assets: [], version: '' }
+
+  function selectPlatform(platform) {
+    var asset = R.matchAsset(platform, current.assets)
+    if (platform && asset) {
+      renderPrimaryAvailable(platform, asset, current.version)
+    } else {
+      renderPrimaryUnavailable(platform)
+    }
+    renderOthers(platform, current.assets)
+  }
+
   function renderPrimaryAvailable(platform, asset, version) {
     primaryEl.innerHTML = ''
     primaryEl.appendChild(el('div', 'dl-os-icon', platform.tag))
@@ -55,7 +73,7 @@
     primaryEl.appendChild(el('div', 'dl-os-icon', platform ? platform.tag : '?'))
     var heading = platform ? 'No ' + platform.name + ' build yet' : 'Choose your platform'
     primaryEl.appendChild(el('h2', null, heading))
-    var btn = el('a', 'btn btn-primary', 'Run from source')
+    var btn = el('a', 'btn btn-primary', 'Build from source')
     btn.href = R.REPO_URL
     btn.target = '_blank'
     btn.rel = 'noopener'
@@ -67,18 +85,17 @@
     R.PLATFORMS.forEach(function (p) {
       if (primaryPlatform && p.id === primaryPlatform.id) return
       var asset = R.matchAsset(p, assets)
-      var card = el(asset ? 'a' : 'div', 'dl-card')
-      if (asset) {
-        card.href = asset.browser_download_url
-        card.setAttribute('download', '')
-      } else {
-        card.className += ' is-unavailable'
-      }
+      var card = el('button', 'dl-card')
+      card.type = 'button'
+      if (!asset) card.className += ' is-unavailable'
+      card.addEventListener('click', function () {
+        selectPlatform(p)
+      })
       card.appendChild(el('span', 'dl-card-icon', p.tag))
-      var meta = el('div')
-      meta.appendChild(el('div', 'dl-card-name', p.name))
+      var meta = el('span')
+      meta.appendChild(el('span', 'dl-card-name', p.name))
       var line = asset ? p.desc + ' · ' + R.formatBytes(asset.size) : p.desc
-      meta.appendChild(el('div', 'dl-card-meta', line))
+      meta.appendChild(el('span', 'dl-card-meta', line))
       card.appendChild(meta)
       gridEl.appendChild(card)
     })
@@ -101,9 +118,9 @@
       card.href = asset.browser_download_url
       card.setAttribute('download', '')
       card.appendChild(el('span', 'dl-card-icon', p.tag))
-      var meta = el('div')
-      meta.appendChild(el('div', 'dl-card-name', p.name))
-      meta.appendChild(el('div', 'dl-card-meta', p.desc + ' · ' + R.formatBytes(asset.size)))
+      var meta = el('span')
+      meta.appendChild(el('span', 'dl-card-name', p.name))
+      meta.appendChild(el('span', 'dl-card-meta', p.desc + ' · ' + R.formatBytes(asset.size)))
       card.appendChild(meta)
       snapshotGridEl.appendChild(card)
       count++
@@ -140,17 +157,13 @@
       document.createTextNode(' ' + [version, date].filter(Boolean).join(' · ')),
     )
 
-    var detected = R.detectPlatform()
-    var primary = detected === 'unknown' ? null : R.platformById(detected)
-    var primaryAsset = R.matchAsset(primary, assets)
+    current.assets = assets
+    current.version = version
 
-    if (primary && primaryAsset) {
-      renderPrimaryAvailable(primary, primaryAsset, version)
-      renderOthers(primary, assets)
-    } else {
-      renderPrimaryUnavailable(primary)
-      renderOthers(null, assets)
-    }
+    // An undetected platform seeds nothing, so the grid below lists every
+    // platform and the primary card asks which one you want.
+    var detected = R.detectPlatform()
+    selectPlatform(detected === 'unknown' ? null : R.platformById(detected))
 
     footnoteEl.innerHTML = ''
     var relLink = el('a', null, 'All releases on GitHub')
