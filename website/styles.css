@@ -984,13 +984,22 @@ a {
    filler. `auto-fit` collapses this to one column on narrow screens without a
    media query, the same way .feat-grid does. */
 .about-facts {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 28px 40px;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 28px 52px;
   max-width: 880px;
   margin: 0 auto;
   padding-top: 34px;
   border-top: 0.5px solid var(--border-subtle);
+}
+
+/* Each group is only as wide as its own tags, and the three are centred as a
+   cluster under the centred section head. An equal-column grid was tried first
+   and read as off-centre: the three facts carry six tags, three and one, so
+   equal thirds left the last column mostly empty and pushed the ink left. */
+.about-fact {
+  text-align: center;
 }
 
 /* Mirrors .eyebrow rather than reusing it: these are terms in a definition
@@ -1017,6 +1026,7 @@ a {
 .fact-pills {
   display: flex;
   flex-wrap: wrap;
+  justify-content: center;
   gap: 6px;
 }
 
@@ -1073,7 +1083,11 @@ a {
 
 .feat-inner {
   height: 100%;
-  min-height: 248px;
+  /* Sized for the tallest card's content, not for slack. Every card now carries
+     an icon, a title and three single-line bullets, so 248px (tuned when the
+     bullets ran to two and three lines) left ~60px of dead space in all nine
+     and pushed the third row past the fold. */
+  min-height: 196px;
   padding: 26px 24px;
   display: flex;
   flex-direction: column;
@@ -1087,8 +1101,7 @@ a {
   margin: 0 0 12px;
 }
 
-.feat-detail code,
-.spotlight-points code {
+.feat-detail code {
   font-family: var(--font-mono);
   font-size: 12px;
   color: var(--text-primary);

@@ -185,7 +185,7 @@
                 <ul>
                   <li>Drag, resize and snap every tile</li>
                   <li>Crate the ones you are not using</li>
-                  <li>Save layouts as presets and switch between them</li>
+                  <li>Save and switch layout presets</li>
                 </ul>
               </div>
             </div>
@@ -197,9 +197,9 @@
               <h3 class="feat-title">Live console</h3>
               <div class="feat-detail">
                 <ul>
-                  <li>Log output streamed as the server writes it</li>
-                  <li>Type commands without leaving the tile</li>
-                  <li>Filter by level or search the buffer</li>
+                  <li>Live log streaming</li>
+                  <li>Send commands inline</li>
+                  <li>Filter and search output</li>
                 </ul>
               </div>
             </div>
@@ -211,9 +211,9 @@
               <h3 class="feat-title">Players</h3>
               <div class="feat-detail">
                 <ul>
-                  <li>Who is online right now, from RCON</li>
-                  <li>Kick or ban with a reason attached</li>
-                  <li>Op level, whitelist and ban state per player</li>
+                  <li>See who is online</li>
+                  <li>Kick or ban with a reason</li>
+                  <li>Op, whitelist and ban state</li>
                 </ul>
               </div>
             </div>
@@ -225,9 +225,9 @@
               <h3 class="feat-title">Performance</h3>
               <div class="feat-detail">
                 <ul>
-                  <li>TPS, CPU and memory as the server runs</li>
-                  <li>An hour of history, charted</li>
-                  <li>Nothing to install on the server side</li>
+                  <li>Live TPS, CPU and memory</li>
+                  <li>An hour of charted history</li>
+                  <li>No plugins to install</li>
                 </ul>
               </div>
             </div>
@@ -239,9 +239,9 @@
               <h3 class="feat-title">World management</h3>
               <div class="feat-detail">
                 <ul>
-                  <li>Every world drawn as its own planet</li>
-                  <li>Seed, version, difficulty and size read from level.dat</li>
-                  <li>Switch the active world, rename, duplicate or delete</li>
+                  <li>Each world as its own planet</li>
+                  <li>Seed, size and version</li>
+                  <li>Switch, rename or duplicate</li>
                 </ul>
               </div>
             </div>
@@ -253,9 +253,9 @@
               <h3 class="feat-title">Backups</h3>
               <div class="feat-detail">
                 <ul>
-                  <li>On demand, or on a schedule you set</li>
-                  <li>Browse restore points as a carousel</li>
-                  <li>Roll a world back in two clicks</li>
+                  <li>Manual or scheduled</li>
+                  <li>Browse restore points</li>
+                  <li>Roll back in two clicks</li>
                 </ul>
               </div>
             </div>
@@ -267,9 +267,9 @@
               <h3 class="feat-title">Config editor</h3>
               <div class="feat-detail">
                 <ul>
-                  <li>server.properties as a real form, field by field</li>
-                  <li>Raw editing with syntax highlighting</li>
-                  <li>Paper, Spigot and mod configs in YAML, JSON and TOML</li>
+                  <li>server.properties as a form</li>
+                  <li>Syntax-highlighted raw mode</li>
+                  <li>YAML, JSON and TOML aware</li>
                 </ul>
               </div>
             </div>
@@ -281,9 +281,9 @@
               <h3 class="feat-title">Mods &amp; plugins</h3>
               <div class="feat-detail">
                 <ul>
-                  <li>Search and install straight from Modrinth</li>
-                  <li>Dependencies resolved before anything is written</li>
-                  <li>Descriptions and changelogs read in place</li>
+                  <li>Install from Modrinth</li>
+                  <li>Dependencies resolve automatically</li>
+                  <li>Changelogs read inline</li>
                 </ul>
               </div>
             </div>
@@ -295,9 +295,9 @@
               <h3 class="feat-title">Multi-server</h3>
               <div class="feat-detail">
                 <ul>
-                  <li>Every server you run, in one app</li>
-                  <li>Its own jar, directory and JVM arguments</li>
-                  <li>Switch which one the dashboard is pointed at</li>
+                  <li>All your servers in one app</li>
+                  <li>Own jar, folder and JVM args</li>
+                  <li>Switch with one click</li>
                 </ul>
               </div>
             </div>
@@ -312,7 +312,7 @@
           <div class="section-head reveal">
             <span class="eyebrow">() scheduler</span>
             <h2>Automate with a graph</h2>
-            <p>Wire triggers, live server values, commands and conditions on a canvas.</p>
+            <p>Wire triggers, conditions and commands on a canvas.</p>
           </div>
           <div class="spotlight-media reveal" style="--reveal-delay: 80ms">
             <!-- Node-graph motif. Static SVG, animated purely in CSS (.sf-* in
@@ -610,31 +610,19 @@
           <ul class="spotlight-points reveal" style="--reveal-delay: 140ms">
             <li>
               <h3>Triggers</h3>
-              <p>
-                A time of day, a cron line or an interval. Or an event: a crash, a player
-                joining, a backup finishing, TPS falling past a threshold.
-              </p>
+              <p>A time, an interval, or something the server did.</p>
             </li>
             <li>
               <h3>Attributes</h3>
-              <p>
-                Read <code>@tps</code>, <code>@players.count</code> or <code>@ram.left</code> mid
-                run. Write back to the MOTD, whitelist, gamemode or player cap.
-              </p>
+              <p>Read live server values, and write settings back.</p>
             </li>
             <li>
               <h3>Actions</h3>
-              <p>
-                Console and RCON commands, with the reply captured. Backups, delays,
-                notifications, and HTTP calls out to a webhook.
-              </p>
+              <p>Commands, backups, delays, notifications, webhooks.</p>
             </li>
             <li>
               <h3>Conditions</h3>
-              <p>
-                Compare two values and take one of two paths. Do arithmetic on them first if you
-                need to. Every action forks on success or failure as well.
-              </p>
+              <p>Compare values and branch. Failures get their own path.</p>
             </li>
           </ul>
         </div>
@@ -669,9 +657,9 @@
               <h3 class="feat-title">Stays on disk</h3>
               <div class="feat-detail">
                 <ul>
-                  <li>Your server directories, where they already are</li>
-                  <li>Settings and layouts as JSON in the app data folder</li>
-                  <li>Backups written wherever you point them</li>
+                  <li>Your server folders, untouched</li>
+                  <li>Settings as JSON on your disk</li>
+                  <li>Backups where you point them</li>
                 </ul>
               </div>
             </div>
@@ -683,8 +671,8 @@
               <h3 class="feat-title">Network, only on request</h3>
               <div class="feat-detail">
                 <ul>
-                  <li>GitHub, to check for a new release</li>
-                  <li>Modrinth, while you browse or install mods</li>
+                  <li>GitHub, to check for updates</li>
+                  <li>Modrinth, when you browse mods</li>
                   <li>Your own server, over RCON</li>
                 </ul>
               </div>
