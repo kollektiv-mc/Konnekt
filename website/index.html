@@ -133,17 +133,16 @@
             of a terminal, an RCON client and a file browser sitting open side by side.
           </p>
           <p>
-            The alternatives are a hosting panel you rent or a pile of tools you wire together.
-            Konnekt is neither: it runs on your own machine, against server folders you already
-            have. The dashboard is a grid of tiles you arrange yourself, and the automation is a
-            node graph rather than a cron line.
+            Konnekt runs on your own machine, against server folders you already have. The
+            dashboard is a grid of tiles you arrange yourself, and the automation is a node graph
+            rather than a cron line.
           </p>
         </div>
-        <!-- The three facts as cards, built from the same ingredients as .feat in
-             the features grid below, so a visitor meets one component twice rather
-             than two that nearly match. Status sits in the middle: it carries a
-             single tag, and bracketing it with the two multi-tag facts is what
-             makes the row read as even. -->
+        <!-- Two facts, each a label over a row of tags and nothing else. They were
+             cards, which put a bordered box around six words and had them
+             competing with the feature grid one scroll below for the same kind of
+             attention. The alpha status they used to sit beside is already stated
+             by the footer badge and the disclaimer above it. -->
         <dl class="about-facts">
           <div class="about-fact reveal" style="--reveal-delay: 0ms">
             <dt>Servers</dt>
@@ -157,10 +156,6 @@
             </dd>
           </div>
           <div class="about-fact reveal" style="--reveal-delay: 60ms">
-            <dt>Status</dt>
-            <dd class="fact-pills"><span class="pill pill-alpha">Alpha</span></dd>
-          </div>
-          <div class="about-fact reveal" style="--reveal-delay: 120ms">
             <dt>Platforms</dt>
             <dd class="fact-pills">
               <span class="pill">Windows</span>
@@ -312,7 +307,10 @@
       <div class="container">
         <div class="spotlight">
           <div class="section-head reveal">
-            <span class="eyebrow">() scheduler</span>
+            <span class="eyebrow">
+              () scheduler
+              <span class="tag tag-alpha">Alpha</span>
+            </span>
             <h2>Automate with a graph</h2>
             <p>Wire triggers, conditions and commands on a canvas.</p>
           </div>
@@ -323,7 +321,11 @@
                  port drawn here exists in backend/services/scheduler_blocks.go —
                  these are four automations you could actually build, not props.
                  Geometry: a 1040x360 frame with 55 units clear left and right,
-                 190x64 nodes, and five frames stacked 360 apart for the reel. -->
+                 190x64 nodes, and five frames stacked 360 apart for the reel.
+                 Each .sf-pulse also declares its own path's length in its style
+                 attribute, rounded a couple of units up. Edit a `d` here and that
+                 number has to move with it, or the dash stops clearing the ends
+                 of the edge it runs along (styles.css, .sf-pulse). -->
             <svg
               class="sf"
               viewBox="0 0 1040 360"
@@ -351,20 +353,17 @@
                   <path class="sf-edge" d="M 615 194 C 705 194 705 276 795 276" />
                   <path
                     class="sf-pulse"
-                    pathLength="100"
-                    style="--d: 0.85s"
+                    style="--d: 0.85s; --len: 182px"
                     d="M 245 180 C 335 180 335 180 425 180"
                   />
                   <path
                     class="sf-pulse"
-                    pathLength="100"
-                    style="--d: 1.95s"
+                    style="--d: 1.95s; --len: 206px"
                     d="M 615 166 C 705 166 705 84 795 84"
                   />
                   <path
                     class="sf-pulse"
-                    pathLength="100"
-                    style="--d: 2.25s"
+                    style="--d: 2.25s; --len: 206px"
                     d="M 615 194 C 705 194 705 276 795 276"
                   />
                   <g class="sf-node" style="--nc: #7c3aed; --d: 0.35s">
@@ -406,20 +405,17 @@
                 <path class="sf-edge" d="M 737 124 C 765 124 765 124 793 124" />
                 <path
                   class="sf-pulse"
-                  pathLength="100"
-                  style="--d: 0.85s"
+                  style="--d: 0.85s; --len: 58px"
                   d="M 245 180 C 273 180 273 180 301 180"
                 />
                 <path
                   class="sf-pulse"
-                  pathLength="100"
-                  style="--d: 1.95s"
+                  style="--d: 1.95s; --len: 76px"
                   d="M 491 166 C 519 166 519 124 547 124"
                 />
                 <path
                   class="sf-pulse"
-                  pathLength="100"
-                  style="--d: 3.05s"
+                  style="--d: 3.05s; --len: 58px"
                   d="M 737 124 C 765 124 765 124 793 124"
                 />
                 <g class="sf-node" style="--nc: #7c3aed; --d: 0.35s">
@@ -462,20 +458,17 @@
                 <path class="sf-edge" d="M 737 180 C 765 180 765 180 793 180" />
                 <path
                   class="sf-pulse"
-                  pathLength="100"
-                  style="--d: 0.85s"
+                  style="--d: 0.85s; --len: 58px"
                   d="M 245 180 C 273 180 273 180 301 180"
                 />
                 <path
                   class="sf-pulse"
-                  pathLength="100"
-                  style="--d: 1.95s"
+                  style="--d: 1.95s; --len: 58px"
                   d="M 491 180 C 519 180 519 180 547 180"
                 />
                 <path
                   class="sf-pulse"
-                  pathLength="100"
-                  style="--d: 3.05s"
+                  style="--d: 3.05s; --len: 58px"
                   d="M 737 180 C 765 180 765 180 793 180"
                 />
                 <g class="sf-node" style="--nc: #7c3aed; --d: 0.35s">
@@ -516,14 +509,12 @@
                 <path class="sf-edge" d="M 615 180 C 705 180 705 180 795 180" />
                 <path
                   class="sf-pulse"
-                  pathLength="100"
-                  style="--d: 0.85s"
+                  style="--d: 0.85s; --len: 182px"
                   d="M 245 180 C 335 180 335 180 425 180"
                 />
                 <path
                   class="sf-pulse"
-                  pathLength="100"
-                  style="--d: 1.95s"
+                  style="--d: 1.95s; --len: 182px"
                   d="M 615 180 C 705 180 705 180 795 180"
                 />
                 <g class="sf-node" style="--nc: #7c3aed; --d: 0.35s">
@@ -557,20 +548,17 @@
                 <path class="sf-edge" d="M 615 194 C 705 194 705 276 795 276" />
                 <path
                   class="sf-pulse"
-                  pathLength="100"
-                  style="--d: 0.85s"
+                  style="--d: 0.85s; --len: 182px"
                   d="M 245 180 C 335 180 335 180 425 180"
                 />
                 <path
                   class="sf-pulse"
-                  pathLength="100"
-                  style="--d: 1.95s"
+                  style="--d: 1.95s; --len: 206px"
                   d="M 615 166 C 705 166 705 84 795 84"
                 />
                 <path
                   class="sf-pulse"
-                  pathLength="100"
-                  style="--d: 2.25s"
+                  style="--d: 2.25s; --len: 206px"
                   d="M 615 194 C 705 194 705 276 795 276"
                 />
                 <g class="sf-node" style="--nc: #7c3aed; --d: 0.35s">
