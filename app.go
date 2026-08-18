@@ -72,7 +72,11 @@ func NewApp() *App {
 func (a *App) beforeClose(ctx context.Context) bool {
 	a.schedulerService.StopScheduler()
 	if a.serverService.IsRunning() {
-		_ = a.serverService.Stop()
+		// Stop's only error path is "server not running", which the IsRunning
+		// guard above already covers and which a race can only make true — the
+		// benign direction. Every failure that matters (the process refusing
+		// the RCON stop) is handled inside Stop by killTree, not reported here.
+		_ = a.serverService.Stop() //nolint:errcheck // see above
 	}
 	return false
 }
@@ -89,7 +93,13 @@ func (a *App) startup(ctx context.Context) {
 		configDir = "."
 	}
 	a.dataDir = filepath.Join(configDir, "konnekt")
-	_ = os.MkdirAll(a.dataDir, 0755)
+	// Best-effort warm-up so the directory exists before the user goes looking
+	// for it. It is not the only thing that creates it: every write into the
+	// data dir goes through services.WriteDataFile, which re-creates it and
+	// reports a real error naming the directory. Failing here therefore costs
+	// nothing a later save would not report better, and startup is a Wails
+	// lifecycle hook with nowhere to return an error to anyway.
+	_ = os.MkdirAll(a.dataDir, 0755) //nolint:errcheck // see above
 	a.configService.SetDataDir(a.dataDir)
 	a.configEditorService.SetDataDir(a.dataDir)
 	a.backupService.SetDataDir(a.dataDir)
@@ -184,7 +194,13 @@ func (a *App) DownloadAndInstallUpdate() error {
 	go func() {
 		time.Sleep(500 * time.Millisecond)
 		if exePath, err := os.Executable(); err == nil {
-			_ = exec.Command(exePath).Start()
+			// Convenience relaunch only. The update is already installed on
+			// disk at this point, and this process must exit either way for
+			// the swapped binary to take effect, so a failed spawn leaves the
+			// user starting Konnekt by hand rather than losing the update.
+			// There is also no one left to tell: the frontend is a moment from
+			// being torn down by the Quit below.
+			_ = exec.Command(exePath).Start() //nolint:errcheck // see above
 		}
 		runtime.Quit(a.ctx)
 	}()
@@ -371,7 +387,7 @@ func (a *App) writeLayoutPresets(presets []models.LayoutPreset) error {
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(filepath.Join(a.dataDir, "layout_presets.json"), data, 0644)
+	return services.WriteDataFile(a.dataDir, "layout_presets.json", data)
 }
 
 // --- Active tiles ---
@@ -396,7 +412,7 @@ func (a *App) SaveActiveTiles(ids []string) error {
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(filepath.Join(a.dataDir, "active_tiles.json"), data, 0644)
+	return services.WriteDataFile(a.dataDir, "active_tiles.json", data)
 }
 
 // --- Active (working) layout ---
@@ -415,7 +431,7 @@ func (a *App) GetActiveLayout() (string, error) {
 }
 
 func (a *App) SaveActiveLayout(layout string) error {
-	return os.WriteFile(filepath.Join(a.dataDir, "active_layout.json"), []byte(layout), 0644)
+	return services.WriteDataFile(a.dataDir, "active_layout.json", []byte(layout))
 }
 
 // --- Backups ---
@@ -470,7 +486,7 @@ func (a *App) SaveCustomCommands(cmds []string) error {
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(filepath.Join(a.dataDir, "custom_commands.json"), data, 0644)
+	return services.WriteDataFile(a.dataDir, "custom_commands.json", data)
 }
 
 // --- Command buttons (unified, ordered, customizable) ---
@@ -487,7 +503,7 @@ func (a *App) GetCommandButtons() (string, error) {
 }
 
 func (a *App) SaveCommandButtons(data string) error {
-	return os.WriteFile(filepath.Join(a.dataDir, "command_buttons.json"), []byte(data), 0644)
+	return services.WriteDataFile(a.dataDir, "command_buttons.json", []byte(data))
 }
 
 // --- Scheduler ---
