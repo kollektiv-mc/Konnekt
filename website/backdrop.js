@@ -222,8 +222,7 @@
           p.d = p.y * st + zr * ct
           p.sx = ox + x * radius
           p.sy = oy + y * radius
-          p.on =
-            p.d > 0.02 && p.sx > -12 && p.sx < w + 12 && p.sy > -12 && p.sy < h + 12
+          p.on = p.d > 0.02 && p.sx > -12 && p.sx < w + 12 && p.sy > -12 && p.sy < h + 12
         }
 
         for (i = 0; i < stars.length; i++) {

@@ -18,6 +18,12 @@ pnpm for the frontend, Go modules for the backend.
 - `frontend/src/` splits into `components/`, `tiles/` (one folder each, plus
   `registry.ts`), `stores/`, `hooks/` and `lib/`.
 - `frontend/wailsjs/` is generated. Never edit it by hand.
+- `website/` is the marketing site at konnekt.pages.dev: plain HTML, CSS and
+  browser ES modules, no build step and no `package.json`. Cloudflare Pages
+  watches this branch and deploys it, configured outside this repo, so there is
+  no deploy workflow here and CI's `website` job is the only pre-merge gate.
+  `website/tokens.css` is generated (see Code style). Serve it locally with the
+  `website` preset in `.claude/launch.json`.
 
 ## Architecture rules
 
@@ -92,6 +98,8 @@ pnpm test             # vitest (run from frontend/)
 pnpm format           # Prettier --write (run from frontend/)
 pnpm check-bundle     # Enforce 550 KB gzip entry-chunk budget (run from frontend/)
 pnpm gen:tokens       # Regenerate the token layer from tokens.source.json (frontend/)
+pnpm format:website   # Prettier --check over website/ (run from frontend/)
+node scripts/check-website-links.mjs   # website hrefs/assets/sitemap (repo root)
 go vet ./...          # Go static analysis (repo root — single module)
 go test ./...         # Go tests (repo root)
 ```

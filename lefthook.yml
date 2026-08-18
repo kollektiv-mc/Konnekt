@@ -6,8 +6,9 @@
 # CI runs `pnpm format:check`, so this is ordinary maintenance: it fixes your
 # staged files locally instead of letting CI fail on them.
 #
-# Note the glob below is *.{ts,tsx,css}. Prettier itself also covers the
-# repo's HTML, JSON and .mjs; those are only checked in CI, not fixed here.
+# Note the frontend glob below is *.{ts,tsx,css}. Prettier itself also covers
+# the repo's JSON and .mjs; those are only checked in CI, not fixed here.
+# website/ has its own job at the bottom, with its own Prettier config.
 pre-commit:
   parallel: true
   jobs:
@@ -26,6 +27,19 @@ pre-commit:
       root: "frontend/"
       glob: "*.{ts,tsx}"
       run: pnpm run typecheck
+
+    # website/ is plain HTML/CSS/ES modules with its own Prettier config (no
+    # Tailwind, so no class-sorting plugin). Prettier itself still lives in
+    # frontend/ — one version in the repo, not two — hence the path rather than
+    # `pnpm exec`: the repo root has only lefthook in node_modules, and
+    # `pnpm --dir frontend exec` would change cwd and break {staged_files}.
+    # Running with root: "website/" also means Prettier's default ignore-file
+    # lookup finds website/.prettierignore on its own, so tokens.css is skipped.
+    - name: website format
+      root: "website/"
+      glob: "*.{html,css,js}"
+      run: node ../frontend/node_modules/prettier/bin/prettier.cjs --write {staged_files}
+      stage_fixed: true
 
     - name: go format
       glob: "*.go"

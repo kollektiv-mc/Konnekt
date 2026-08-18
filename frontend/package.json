@@ -14,7 +14,9 @@
     "check-bundle": "node scripts/check-bundle-size.mjs",
     "gen:tokens": "node scripts/gen-tokens.mjs",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "format:website": "prettier --check --ignore-path ../website/.prettierignore ../website",
+    "format:website:write": "prettier --write --ignore-path ../website/.prettierignore ../website"
   },
   "dependencies": {
     "@codemirror/lang-json": "^6.0.2",

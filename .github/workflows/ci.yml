@@ -54,6 +54,41 @@ jobs:
       - name: Token layer is in sync
         run: git diff --exit-code src/styles/tokens.css src/styles/tokens.ts ../website/tokens.css
 
+  # website/ ships to Cloudflare Pages, which watches this branch and is
+  # configured outside this repo, so there is no deploy workflow here to hang a
+  # check off. It has no build step, no package.json and no node_modules, so
+  # nothing else in this workflow would ever open one of its files: before this
+  # job it was the largest user-facing surface in the repo with no gate at all.
+  #
+  # Prettier comes from frontend/, the only place in the repo that has it. One
+  # version, two configs: website/.prettierrc.json is the frontend's minus the
+  # Tailwind class-sorting plugin, because the site is not Tailwind.
+  website:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
+
+      - run: pnpm install --frozen-lockfile
+        working-directory: frontend
+
+      - run: pnpm format:website
+        working-directory: frontend
+
+      # Zero dependencies, no network: resolves the site's own hrefs, CSS url()s
+      # and sitemap entries against the files on disk. A renamed image or a
+      # retitled section is otherwise only found by loading the page.
+      - run: node scripts/check-website-links.mjs
+
   # .claude/suite.json declares three sections. CI has always covered
   # `commands` as literal steps above and in the backend jobs, but nothing ever
   # ran `invariants` or `generated` — they only executed when a human invoked

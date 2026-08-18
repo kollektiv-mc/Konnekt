@@ -24,15 +24,19 @@ pnpm typecheck          # tsc --noEmit (from frontend/)
 pnpm lint               # ESLint (from frontend/)
 pnpm test               # vitest (from frontend/)
 pnpm format:check       # Prettier (from frontend/)
+pnpm format:website     # Prettier over website/ (from frontend/)
+node scripts/check-website-links.mjs   # website links/assets/sitemap (repo root)
 pnpm check-bundle       # 550 KB gzip entry-chunk budget (from frontend/)
 go vet ./...            # Go static analysis (repo root)
 go test ./...           # Go tests (repo root)
 go run ./scripts/coverage-floor   # backend/services coverage floor (repo root)
 ```
 Plus the generated-file check `suite.json` declares: `pnpm gen:tokens` then
-`git diff --exit-code src/styles/tokens.css src/styles/tokens.ts`. A non-empty
-diff means a generated token file was hand-edited (the next run reverts it) or
-`tokens.source.json` was refreshed without regenerating.
+`git diff --exit-code src/styles/tokens.css src/styles/tokens.ts
+../website/tokens.css`. A non-empty diff means a generated token file was
+hand-edited (the next run reverts it) or `tokens.source.json` was refreshed
+without regenerating. The third output is the marketing site's copy: the same
+values as plain `:root` custom properties, since that site has no Tailwind.
 
 And the invariant `suite.json` declares, `no literal border widths` — a grep for
 `border-[Npx]` under `frontend/src/components` and `frontend/src/tiles` that must
@@ -62,9 +66,13 @@ tree.
       not manual (lefthook pre-commit hook: Prettier + ESLint + `tsc --noEmit`
       on staged frontend files, `gofmt` + `go vet` on staged Go files). The
       whole `frontend/` tree is Prettier-clean and CI runs `pnpm format:check`,
-      so this no longer depends on the hook alone — note the hook's glob is
-      `*.{ts,tsx,css}` and doesn't cover the HTML/JSON/`.mjs` that Prettier
-      itself does.
+      so this no longer depends on the hook alone — note the frontend hook's
+      glob is `*.{ts,tsx,css}` and doesn't cover the JSON/`.mjs` that Prettier
+      itself does. `website/` is covered the same way, by its own
+      `website/.prettierrc.json` — identical to the frontend's except that it
+      drops the Tailwind class-sorting plugin, since the site is not Tailwind —
+      run as `pnpm format:website` in the `website` CI job and by a second
+      lefthook glob. One Prettier version in the repo, two configs.
 - [x] `pnpm typecheck` has zero errors; no `any` anywhere (CLAUDE.md rule) —
       use `unknown` and narrow instead. One documented exception:
       `frontend/src/tiles/worlds/scene/Sun.tsx` (known `three`/`@react-three/fiber`
@@ -121,10 +129,11 @@ tree.
       green a red build. Coverage is a proxy, not the goal — prefer a test that
       would have caught a real bug over one that only moves the number.
 - [x] CI is green on every push/PR (`.github/workflows/ci.yml`: a `frontend`
-      job, a `backend` job on windows-latest, and a `backend-linux` job in a
-      webkit2gtk-4.1 container — the only place `server_linux.go`/
-      `server_unix.go`/`server_other.go` are compiled — plus the token-layer
-      sync check, and `pnpm format:check`).
+      job, an `invariants` job running `.claude/suite-check.py` over the
+      manifest's `invariants` and `generated` sections, a `website` job
+      (Prettier plus the link/asset check), a `backend` job on windows-latest,
+      and a `backend-linux` job in a webkit2gtk-4.1 container — the only place
+      `server_linux.go`/`server_unix.go`/`server_other.go` are compiled).
 - [ ] All Go methods bound to the Wails `App` struct return `(T, error)`, and
       errors are wrapped with context (`fmt.Errorf("...: %w", err)`).
       Verify: `grep -nE "^func \(a \*App\) [A-Z]" app.go` — every hit must end
@@ -283,16 +292,6 @@ current. Priorities mirror the pillars above.
 - React Compiler-readiness lint rules: revisit enabling
   `eslint-plugin-react-hooks`'s full `recommended`/`recommended-latest` set (~60
   findings, mostly r3f scene code) once test coverage is in place.
-
-**P2 — `website/` has no gates at all**
-- The `website/` sub-project (~4,600 lines of HTML/CSS/JS added since the last
-  health pass) has no lint, no formatter, and no CI job, and it isn't mentioned
-  in `CLAUDE.md`'s project-structure block. It ships to konnekt.pages.dev, so
-  it's user-facing surface with strictly less checking than the app.
-- Minimum worth adding: Prettier over `website/**` (the config already exists),
-  and a link/asset sanity check so a renamed image or a dead internal href is
-  caught before deploy. Decide first whether it belongs in this repo's CI at
-  all, or in the Pages deploy — don't bolt a job on without that call.
 
 **Release follow-ups** (deferred)
 - Release-tag-gated full `wails build` packaging job — stronger end-to-end
