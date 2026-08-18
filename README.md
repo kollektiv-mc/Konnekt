@@ -1,3 +1,5 @@
+![Konnekt](docs/images/konnekt_banner.png)
+
 # Konnekt
 
 ## Fair warning
