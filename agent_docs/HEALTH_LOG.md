@@ -55,6 +55,7 @@ after them is dated. Newest last, in both groups.
 - [2026-08-17 — The border-token sweep, and the invariant that now holds it](#2026-08-17-the-border-token-sweep-and-the-invariant-that-now-holds-it)
 - [2026-08-18 — The dead `--panel-bg`, and why the recorded fix was wrong](#2026-08-18-the-dead-panel-bg-and-why-the-recorded-fix-was-wrong)
 - [2026-08-18 — The website stops hand-copying the token layer](#2026-08-18-the-website-stops-hand-copying-the-token-layer)
+- [2026-08-18 — website/ gets its first gates](#2026-08-18-website-gets-its-first-gates)
 
 ---
 
@@ -2363,3 +2364,129 @@ is the honest comparison, because it is the complete surface of what changed.
 command, one definition of "the token layer is in sync". CI's `invariants` job picks
 that up for free through `--section generated`; the `frontend` job's explicit
 `git diff --exit-code` step was extended with `../website/tokens.css` to match.
+
+---
+
+### 2026-08-18 — website/ gets its first gates
+
+**Closes:** `P2 — website/ has no gates at all`, the largest un-gated surface in
+the repo.
+
+**What it said, and what it actually meant.** The entry recorded ~4,600 lines of
+HTML/CSS/JS with no lint, no formatter and no CI job. It is now 6,028 lines, and
+"no gates" was exact rather than approximate. Every existing check missed it *by
+construction*, not by oversight:
+
+- `pnpm format:check` is `prettier --check .`, and every call site — CI's
+  `working-directory: frontend`, `suite.json`'s `"cwd": "frontend"`, lefthook's
+  `root: "frontend/"` — resolves `.` to `frontend/`. `website/` is a sibling.
+- `pnpm lint` is `eslint src`, and `eslint.config.js` globs `**/*.{ts,tsx}`. The
+  site's six modules are plain `.js`, so they would match zero config blocks even
+  if the script were pointed at them.
+- No workflow had a `website` job, and none had a `paths:` filter either, so a
+  website-only PR ran four jobs that never opened one of its files.
+
+**The question the entry demanded be answered first**, quoted: *"Decide first
+whether it belongs in this repo's CI at all, or in the Pages deploy — don't bolt
+a job on without that call."*
+
+Answer: **this repo's CI.** Cloudflare Pages watches the branch and is configured
+outside this repo — there is no deploy workflow here, no `wrangler.toml`, no
+`_headers`, nothing to hang a check off on the deploy side. Three separate files
+already state this in prose (`.github/release.yml`, `.github/scripts/release-notes.py`
+twice, and the checklist entry itself). So a pre-merge job is not the second-best
+place for the gate; it is the only place one can exist. It cannot block a bad deploy
+directly, but everything lands via PR, which makes it a real gate in practice.
+
+**Prettier: one version, two configs.** `website/.prettierrc.json` is byte-identical
+to `frontend/.prettierrc.json` except that it drops
+`"plugins": ["prettier-plugin-tailwindcss"]`. That one-line delta is the whole
+statement — same house style, no `class` sorting, because the site is not Tailwind
+and the plugin would reorder its `class` attributes against a config it cannot find.
+Prettier resolves config by walking up from each file, so `website/.prettierrc.json`
+is the nearest ancestor for every site file and the frontend's is never consulted;
+confirmed with `--find-config-path`.
+
+Prettier itself stays a `frontend` devDependency and is invoked as
+`prettier --check ../website` from there. Two behaviours were verified rather than
+assumed, and both shape the command:
+
+- **The target must be the bare directory, never a brace glob.** A glob naming
+  `*.xml` makes Prettier exit non-zero on `sitemap.xml` with
+  `No parser could be inferred`; a directory makes it silently skip every extension
+  it has no parser for (`.xml`, `.txt`, `.woff2`, `.png`, `.svg`).
+- **`--ignore-path ../website/.prettierignore` is mandatory, not tidiness.** Ignore
+  patterns resolve relative to the ignore file's own directory, so without the flag
+  Prettier reads `frontend/.prettierignore`, whose entries match nothing under
+  `website/`, and the generated `website/tokens.css` is reported dirty. With the
+  flag the file count drops from 9 to 8. The ignore entry exists because Prettier
+  wants to rewrap that file's two long font stacks, which the next `gen:tokens` run
+  would revert — the same reasoning as the token entries in
+  `frontend/.prettierignore`.
+
+**The reformat, measured.** 8 of 13 formattable files, **238 insertions and 234
+deletions**; `changelog.js`, `download.js`, `main.js`, `markdown.js` and `release.js`
+were already clean. `index.html` accounts for 198/197 of it. An earlier estimate of
+488 lines was taken before `0a5b519` landed and is not what this PR carries.
+
+It is provably whitespace-only. For each of the six pages, the tag sequence, the
+full attribute set and the visible text were extracted before and after and
+compared: **identical on all three, on all six pages** (730 tags and 906 attributes
+in `index.html` alone). The only two non-HTML changes are a line-join in
+`backdrop.js` — evidence that file had previously been formatted at width 80 — and
+one stray blank line before a closing brace in `styles.css`.
+
+**The link checker.** `scripts/check-website-links.mjs`, zero dependencies, no
+network, following `scripts/coverage-floor`'s precedent of a self-contained
+root-level script declared in `suite.json` and called from CI. Five rules: internal
+`href`/`src` (plus the `og:`/`twitter:` meta URLs) resolve to a file; `#fragments`
+resolve to an `id` on the page they point at; CSS `url()` resolves; `sitemap.xml`
+resolves in both directions; and every page links both required stylesheets.
+
+**It parses `.html`, `.css` and `sitemap.xml` only — never a `.js` file.** That one
+decision is what makes the href rule safe: `markdown.js` builds its anchor tags by
+string concatenation and `download.js` assembles release asset URLs from the GitHub
+API, so a JS-aware pass would have to guess which string fragments compose into a
+URL and would be wrong in both directions. It does not look. `<!-- -->` comments and
+`<script>` bodies are stripped before scanning, which removes that class of false
+positive permanently rather than relying on today's markup.
+
+The sitemap's reverse direction is the valuable half — it catches a page that
+shipped without anyone touching `sitemap.xml`. A page opts out by declaring
+`<meta name="robots" content="noindex">`, derived from the page itself rather than
+a hardcoded allowlist, so the exemption cannot go stale. `404.html` is the only page
+that uses it, and it does so correctly.
+
+Not checked, stated in the file header so each reads as a decision rather than an
+omission: anything a `.js` file builds at runtime, external URLs (fetching makes a
+flaky job, and a dead third-party link is not a build failure), unreferenced assets,
+duplicate ids, orphan pages, and whether a page renders.
+
+**Verification.** The checker is green on arrival: 6 pages, 176 internal references,
+3 CSS assets, sitemap in sync. Green on arrival is worth little on its own, so each
+rule was then broken in turn and the tree restored — a bad `href`, a bad
+`#fragment`, a renamed `woff2`, a page dropped from the sitemap, a `<loc>` pointing
+at a missing page, and a page missing `/tokens.css`. All six exit 1 with a message
+naming the file and the reference. Full gate set green afterwards, zero skips.
+
+**Wiring.** `suite.json` gains `website format` and `website links` under `commands`.
+The first declares `pnpm` with `cwd: frontend`, so `suite-check.py`'s `runnable()`
+probe finds `frontend/package.json` immediately and an absent `node_modules` becomes
+an honest SKIP rather than a failure. The second has no `cwd` and is spelled
+`node scripts/...` rather than `./scripts/...`: `node` is not in `PROJECT_MANIFESTS`,
+so it gets a PATH probe only, and the path form would take the `os.path.isfile`
+branch and need a shebang plus an exec bit Windows does not carry.
+
+CI gets a named `website` job rather than two steps bolted onto `frontend`. The
+backlog item is literally "no CI job", so a `website` entry in the PR status list is
+the visible closure, and a site failure should not surface as "frontend failed". No
+`paths:` filter: no job in this workflow has one, and path-filtered required checks
+are the classic stuck-pending trap. lefthook gets a matching `website format` job so
+the site is fixed locally the way `frontend/` is; it calls
+`node ../frontend/node_modules/prettier/bin/prettier.cjs` directly because the repo
+root has only lefthook in `node_modules`, and `pnpm --dir frontend exec` would change
+cwd and break `{staged_files}`.
+
+**Also corrected here.** The Stable pillar's CI item listed `frontend`, `backend` and
+`backend-linux` and had never mentioned the `invariants` job added in `f06ee2c`. It
+now names all five.

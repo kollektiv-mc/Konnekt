@@ -420,7 +420,6 @@ a {
   .spotlight-points li:hover::after {
     opacity: 1;
   }
-
 }
 
 /* Smaller tiles want a tighter light — a 260px circle on a 60px-tall card
