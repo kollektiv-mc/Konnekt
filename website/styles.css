@@ -23,36 +23,13 @@
   src: url('./assets/fonts/Ranade-Regular.woff2') format('woff2');
 }
 
-/* ── Design tokens — mirrors frontend/src/style.css's dark theme + motion
-   vocabulary exactly, so the site reads as the same product. ──────────── */
+/* ── Page vocabulary — everything here that is *not* a design token. The
+   token layer (colours, font stacks, durations, easings) is generated into
+   /tokens.css from the vendored tokens.source.json, and every page links it
+   ahead of this sheet. It used to be hand-copied into this block and had
+   already drifted. Never redeclare a token below: change it in
+   kollektiv/design/tokens.json and regenerate. ──────────────────── */
 :root {
-  --bg-base: #05060a;
-  --bg-elevated: rgba(18, 20, 30, 0.82);
-  --bg-surface: rgba(255, 255, 255, 0.025);
-  --border-subtle: rgba(255, 255, 255, 0.06);
-  --border-hover: rgba(255, 255, 255, 0.12);
-  --text-primary: #ffffff;
-  --text-secondary: rgba(255, 255, 255, 0.6);
-  --text-muted: rgba(255, 255, 255, 0.4);
-  --text-faint: rgba(255, 255, 255, 0.25);
-  --hover-surface: rgba(255, 255, 255, 0.05);
-  --accent-rgb: 74 222 128;
-  --accent: rgb(var(--accent-rgb));
-  --danger-rgb: 248 113 113;
-  --danger: rgb(var(--danger-rgb));
-  --sun-rgb: 255 216 77;
-  --sun: rgb(var(--sun-rgb));
-
-  --duration-fast: 150ms;
-  --duration-panel: 280ms;
-  --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
-
-  --font-sans:
-    'Ranade', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-  --font-title: 'Excon', var(--font-sans);
-  --font-display: 'Satoshi', var(--font-sans);
-  --font-mono: ui-monospace, 'Cascadia Code', 'SF Mono', 'Segoe UI Mono', Consolas, monospace;
-
   --max-width: 1120px;
 
   /* Layout rhythm. The nav is a fixed height (not padding-driven) so --nav-h is
@@ -327,7 +304,7 @@ a {
 .btn-primary {
   background: var(--accent);
   border-color: var(--accent);
-  color: #05060a;
+  color: var(--bg-base);
   font-weight: 600;
 }
 
@@ -901,7 +878,7 @@ a {
   top: 50%;
   width: 0;
   height: 0;
-  color: #ffffff;
+  color: var(--text-primary);
   opacity: 0;
   transition: opacity 900ms linear var(--in, 0s);
 }

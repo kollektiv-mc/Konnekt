@@ -4,6 +4,7 @@
 //
 //   tokens.source.json  ->  src/styles/tokens.css   (Tailwind theme + themed values)
 //                       ->  src/styles/tokens.ts    (the same defaults, for applySkin)
+//                       ->  ../website/tokens.css   (plain :root properties, dark only)
 //
 // The source is vendored from kollektiv/design/tokens.json by that repo's
 // scripts/sync-tokens.sh, and is deliberately tech-neutral: colours are
@@ -20,6 +21,7 @@ import { dirname } from 'node:path'
 const SOURCE = new URL('../../tokens.source.json', import.meta.url)
 const CSS_OUT = new URL('../src/styles/tokens.css', import.meta.url)
 const TS_OUT = new URL('../src/styles/tokens.ts', import.meta.url)
+const WEBSITE_OUT = new URL('../../website/tokens.css', import.meta.url)
 
 const SUPPORTED_VERSION = 1
 
@@ -170,7 +172,7 @@ const BANNER = (source) => `/* GENERATED FILE — DO NOT EDIT.
  * never reach Kommands, which derives its tokens from the same source.
  *
  * To change a value: edit kollektiv/design/tokens.json, run its
- * scripts/sync-tokens.sh, then \`pnpm gen:tokens\` here.
+ * scripts/sync-tokens.sh, then \`pnpm gen:tokens\` from \`frontend/\`.
  */`
 
 function emitCss(src) {
@@ -290,6 +292,65 @@ function emitCss(src) {
   return lines.join('\n')
 }
 
+// ── Website emission ────────────────────────────────────────────────────────
+
+// website/ is the marketing site: hand-written HTML and CSS, no build step, no
+// Tailwind. So it gets the same values as ordinary custom properties on :root —
+// no @theme, no @utility, no utility aliasing. The shape is otherwise identical
+// to emitCss's emitTheme block, channel triplets included, because
+// rgb(var(--accent-rgb) / 0.3) is how both sheets vary alpha from one token.
+//
+// This exists because website/styles.css used to hand-copy that block, under a
+// comment claiming it mirrored frontend/src/style.css — a file that has not held
+// tokens since the generated layer landed. It had already drifted: its
+// --font-mono was missing 'Liberation Mono'.
+//
+// Dark only. The site has no theme switcher and nothing sets data-theme, so a
+// [data-theme='light'] block here would be dead CSS that reads as if light mode
+// were supported. Adding one is a change to this function, not a hand edit there.
+//
+// Colours, font stacks and motion are the groups the site actually reads. Type
+// sizes, radius, space and border widths are Tailwind-scale concerns it has no
+// vocabulary for, and emitting them would invite a call site to reach for a
+// token the sheet does not otherwise speak.
+function emitWebsiteCss(src) {
+  const lines = []
+  const push = (line = '') => lines.push(line)
+
+  push(BANNER('tokens.source.json'))
+  push()
+  push(`/* Linked by every page ahead of /styles.css, which reads these and adds the`)
+  push(`   page vocabulary that is not a token (--max-width, --nav-h, --section-y). */`)
+  push(`:root {`)
+  for (const [group, tokens] of Object.entries(src.color)) {
+    for (const [name, token] of Object.entries(tokens)) {
+      if (group === 'status') {
+        push(`  --${name}-rgb: ${channels(token.dark.hex)};`)
+        push(`  --${name}: rgb(var(--${name}-rgb));`)
+      } else {
+        push(`  --${name}: ${css(token.dark)};`)
+      }
+    }
+  }
+
+  push()
+  for (const [name, families] of Object.entries(src.type.family)) {
+    push(`  --font-${name}: ${fontStack(families, src.type.family)};`)
+  }
+
+  push()
+  for (const [name, value] of Object.entries(src.motion.duration.scale)) {
+    push(`  --duration-${name}: ${scalar(value, src.motion.duration.unit)};`)
+  }
+  for (const [name, points] of Object.entries(src.motion.easing)) {
+    push(`  --ease-${name}: cubic-bezier(${points.join(', ')});`)
+  }
+  push(`}`)
+
+  push()
+  return lines.join('\n')
+}
+
 // ── TS emission ─────────────────────────────────────────────────────────────
 
 function emitTs(src) {
@@ -355,11 +416,14 @@ try {
 
 validate(src)
 
-for (const out of [CSS_OUT, TS_OUT]) {
+for (const out of [CSS_OUT, TS_OUT, WEBSITE_OUT]) {
   mkdirSync(dirname(fileURLToPath(out)), { recursive: true })
 }
 
 writeFileSync(CSS_OUT, emitCss(src))
 writeFileSync(TS_OUT, emitTs(src))
+writeFileSync(WEBSITE_OUT, emitWebsiteCss(src))
 
-console.log('gen-tokens: wrote src/styles/tokens.css and src/styles/tokens.ts')
+console.log(
+  'gen-tokens: wrote src/styles/tokens.css, src/styles/tokens.ts and ../website/tokens.css',
+)

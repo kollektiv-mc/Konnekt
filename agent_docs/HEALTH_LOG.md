@@ -54,6 +54,7 @@ after them is dated. Newest last, in both groups.
 - [2026-08-17 — The coverage floor, rebuilt to match the repo's own gate shape](#2026-08-17-the-coverage-floor-rebuilt-to-match-the-repos-own-gate-shape)
 - [2026-08-17 — The border-token sweep, and the invariant that now holds it](#2026-08-17-the-border-token-sweep-and-the-invariant-that-now-holds-it)
 - [2026-08-18 — The dead `--panel-bg`, and why the recorded fix was wrong](#2026-08-18-the-dead-panel-bg-and-why-the-recorded-fix-was-wrong)
+- [2026-08-18 — The website stops hand-copying the token layer](#2026-08-18-the-website-stops-hand-copying-the-token-layer)
 
 ---
 
@@ -2254,3 +2255,111 @@ Three things were needed here beyond vendoring it:
 **Verification.** `grep -rn "0e1117" frontend/src` returns nothing. `pnpm
 gen:tokens` leaves a clean diff, so the generated layer matches the vendored
 source. Full gate set green.
+
+---
+
+### 2026-08-18 — The website stops hand-copying the token layer
+
+**Closed:** not a checklist item. Found while scoping `P2 — website/ has no gates
+at all`, and worth fixing first because it is a correctness bug, not a missing gate.
+
+**What was there.** `website/styles.css` opened with a `:root` block of 21 design
+tokens under this comment:
+
+> Design tokens — mirrors `frontend/src/style.css`'s dark theme + motion vocabulary
+> exactly, so the site reads as the same product.
+
+Two things wrong with that. `frontend/src/style.css` has not held tokens since the
+generated layer landed, so the comment pointed at a file whose values had moved.
+And "exactly" was already false: the site's `--font-mono` read
+
+    ui-monospace, 'Cascadia Code', 'SF Mono', 'Segoe UI Mono', Consolas, monospace
+
+while `tokens.source.json` carries `Liberation Mono` between `Consolas` and
+`monospace`. **The mirror had drifted, silently, in the one direction nothing in
+the repo was watching.** `.claude/suite.json`'s `tokens.paths` is
+`frontend/src/components/**` + `frontend/src/tiles/**`, and its `generated` entry
+diffed only the two frontend outputs, so nothing noticed that a third consumer of
+the same token set existed at all. Two colours were hand-copied a second time
+further down the sheet: `.btn-primary`'s `color: #05060a` and `.wf-star`'s
+`color: #ffffff`.
+
+kollektiv's rule is that a design value is defined in one place. The marketing site
+was a third, unsynchronised consumer inside a repo that declares
+`tokens.role: "consumer"`.
+
+**What landed.** `frontend/scripts/gen-tokens.mjs` gained a third output,
+`website/tokens.css`, linked by all six pages ahead of `/styles.css`. The trimmed
+`:root` in `styles.css` now holds only what is genuinely not a token —
+`--max-width`, `--nav-h`, `--section-y`. The two stray literals became
+`var(--bg-base)` and `var(--text-primary)`.
+
+**The surprise: no new emit shape was needed.** The website wants space-separated
+channel triplets so `rgb(var(--accent-rgb) / 0.3)` can vary alpha from one token —
+and `emitCss`'s `emitTheme` already writes exactly `--accent-rgb: 74 222 128;` plus
+the `rgb(var())` alias. `channels()`, `css()`, `scalar()`, `fontStack()` and
+`BANNER()` all produced the right shapes untouched. `emitWebsiteCss` is
+`emitTheme(':root', 'dark')` minus the `@theme`/`@utility` scaffolding. Writing a
+separate root-level generator would have meant duplicating six helpers and
+`validate()` — recreating the hand-mirroring problem one level up.
+
+Three deliberate limits, stated in a comment on the function so they are decisions
+rather than omissions:
+
+- **Dark only.** Nothing on the site sets `data-theme` and there is no switcher, so
+  a `[data-theme='light']` block would be dead CSS that reads as if light mode
+  worked. Adding one is a change to the generator, not a hand edit downstream.
+- **Colours, font stacks and motion only.** Type sizes, radius, space and border
+  widths are Tailwind-scale concerns the sheet has no vocabulary for; emitting them
+  invites a call site to reach for a token the site does not otherwise speak.
+- **`--bg-overlay`, `--success` and `--warning` are emitted despite being unused.**
+  The generator emits the vocabulary, not an allowlist of today's usage — otherwise
+  "which tokens?" becomes a second thing that can drift.
+
+**`<link>`, not `@import`.** An `@import url('/tokens.css')` would be impossible to
+forget on a new page, which is a real advantage. It was rejected anyway: the
+preload scanner does not look inside CSS, so `tokens.css` would only be discovered
+after `styles.css` (64 KB) had been fetched and parsed — an extra round trip
+blocking first paint on every page of a marketing site. The failure mode `@import`
+prevents is catchable mechanically; the round trip is not recoverable. Generating
+into `styles.css` between markers was also rejected: a hand-edited file with a
+generated region makes `git status --porcelain -- website/styles.css` flag every
+legitimate hand edit as a generator failure.
+
+`BANNER`'s closing line changed from ``then `pnpm gen:tokens` here`` to ``then
+`pnpm gen:tokens` from `frontend/` `` — "here" is ambiguous in a banner that now
+also heads a file under `website/`. That is the only diff in the two frontend
+outputs.
+
+**Verification.** The site was served from a clean checkout of `HEAD` and from the
+working tree side by side, and every custom property resolved on
+`document.documentElement` was compared across the two:
+
+- **28 identical, 0 removed.**
+- **5 added**, all unused vocabulary: `--bg-overlay`, `--success`, `--success-rgb`,
+  `--warning`, `--warning-rgb`.
+- **4 changed, all font stacks.** `--font-mono` gained `'Liberation Mono'` — the
+  drift, corrected. The other three differ only in that `Roboto`, `Arial` and
+  `Consolas` are now quoted, which is identical CSS: a quoted `<string>` family
+  name and an unquoted `<custom-ident>` resolve to the same family.
+
+So the one real change on the deployed site is a Linux-only monospace fallback
+sitting behind five higher-priority families. `.btn-primary` still computes
+`rgb(5, 6, 10)` and `.wf-star` still computes `rgb(255, 255, 255)`. All six pages
+serve both sheets in order. `grep -nE '#[0-9a-fA-F]{6}' website/styles.css` returns
+only the `#000` mask/compositing literals in `linear-gradient(#000 0 0)` and the two
+`mask-image` fades, which are compositing black rather than a theme colour.
+
+A whole-document computed-style diff was attempted first and abandoned: `backdrop.js`
+generates a random number of star elements per load (46 in one run), so element
+counts do not match between two loads of the *same* build. The custom-property table
+is the honest comparison, because it is the complete surface of what changed.
+
+**Accepted exception.** `<meta name="theme-color" content="#05060a">` in all six
+`<head>`s stays a literal. A meta attribute cannot read a CSS variable.
+
+**Held by.** `.claude/suite.json`'s existing `generated` entry gained
+`website/tokens.css` rather than getting a second entry — same generator, same
+command, one definition of "the token layer is in sync". CI's `invariants` job picks
+that up for free through `--section generated`; the `frontend` job's explicit
+`git diff --exit-code` step was extended with `../website/tokens.css` to match.

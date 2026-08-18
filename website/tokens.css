@@ -1,0 +1,44 @@
+/* GENERATED FILE — DO NOT EDIT.
+ *
+ * Produced by frontend/scripts/gen-tokens.mjs from tokens.source.json, which is vendored
+ * from kollektiv/design/tokens.json. Hand edits are reverted by the next run and
+ * never reach Kommands, which derives its tokens from the same source.
+ *
+ * To change a value: edit kollektiv/design/tokens.json, run its
+ * scripts/sync-tokens.sh, then `pnpm gen:tokens` from `frontend/`.
+ */
+
+/* Linked by every page ahead of /styles.css, which reads these and adds the
+   page vocabulary that is not a token (--max-width, --nav-h, --section-y). */
+:root {
+  --bg-base: #05060a;
+  --bg-elevated: rgba(18, 20, 30, 0.82);
+  --bg-overlay: #10111a;
+  --bg-surface: rgba(255, 255, 255, 0.025);
+  --hover-surface: rgba(255, 255, 255, 0.05);
+  --border-subtle: rgba(255, 255, 255, 0.06);
+  --border-hover: rgba(255, 255, 255, 0.12);
+  --text-primary: #ffffff;
+  --text-secondary: rgba(255, 255, 255, 0.6);
+  --text-muted: rgba(255, 255, 255, 0.4);
+  --text-faint: rgba(255, 255, 255, 0.25);
+  --accent-rgb: 74 222 128;
+  --accent: rgb(var(--accent-rgb));
+  --success-rgb: 34 197 94;
+  --success: rgb(var(--success-rgb));
+  --warning-rgb: 245 158 11;
+  --warning: rgb(var(--warning-rgb));
+  --danger-rgb: 248 113 113;
+  --danger: rgb(var(--danger-rgb));
+  --sun-rgb: 255 216 77;
+  --sun: rgb(var(--sun-rgb));
+
+  --font-sans: 'Ranade', system-ui, -apple-system, 'Segoe UI', 'Roboto', 'Helvetica Neue', 'Arial', sans-serif;
+  --font-title: 'Excon', var(--font-sans);
+  --font-mono: ui-monospace, 'Cascadia Code', 'SF Mono', 'Segoe UI Mono', 'Consolas', 'Liberation Mono', monospace;
+  --font-display: 'Satoshi', var(--font-sans);
+
+  --duration-fast: 150ms;
+  --duration-panel: 280ms;
+  --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
+}

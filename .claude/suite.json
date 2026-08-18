@@ -36,9 +36,13 @@
       {
         "regenerate": "pnpm gen:tokens",
         "cwd": "frontend",
-        "expectCleanDiff": ["frontend/src/styles/tokens.css", "frontend/src/styles/tokens.ts"],
+        "expectCleanDiff": [
+          "frontend/src/styles/tokens.css",
+          "frontend/src/styles/tokens.ts",
+          "website/tokens.css"
+        ],
         "requiresNetwork": false,
-        "diagnosis": "A non-empty diff means either frontend/src/styles/tokens.css or tokens.ts was hand-edited, or tokens.source.json was refreshed without regenerating. Both are bugs: the next run reverts the edit, and the underlying value never reaches Kommands.",
+        "diagnosis": "A non-empty diff means one of the three generated token files was hand-edited, or tokens.source.json was refreshed without regenerating. Both are bugs: the next run reverts the edit, and the underlying value never reaches Kommands. website/tokens.css is the marketing site's copy, the same values as plain :root custom properties because that site has no Tailwind and no build step. It exists because website/styles.css used to hand-mirror the app's dark theme and had already drifted: its --font-mono was missing Liberation Mono.",
         "reference": "frontend/scripts/gen-tokens.mjs"
       }
     ]
