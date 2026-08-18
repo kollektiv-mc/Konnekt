@@ -1,13 +1,20 @@
 /* Landing-page backdrops: a very large sphere of stars behind the hero, and a
-   minimal warp field behind the download call to action. Canvas 2D and no
-   dependencies — the site has no build step, and neither effect is worth
-   pulling a WebGL library onto a marketing page.
+   minimal warp field behind the download call to action.
 
-   The canvases are created here rather than sitting in the markup: they are
-   decorative, so a page without JS simply doesn't have them and needs no
-   fallback. Both are pointer-transparent and aria-hidden, and both stop
-   drawing whenever their section is off screen or the tab is in the
-   background. */
+   They are built two different ways, on purpose. The sphere is several
+   thousand points that have to be transformed every frame, so it is canvas 2D
+   and a requestAnimationFrame loop; nothing else would draw it. The warp field
+   is a few dozen stars each travelling a fixed path, and it was the same kind
+   of loop until it became the one animation on the page that could stall. A
+   rAF loop runs on the main thread, so anything else competing for that thread
+   freezes it outright, while every CSS animation on this site keeps going on
+   the compositor. Now the field is CSS animations too: no per-frame JavaScript
+   and no canvas raster, just a transform and an opacity per star.
+
+   Either way the elements are created here rather than sitting in the markup:
+   they are decorative, so a page without JS simply doesn't have them and needs
+   no fallback. Both are pointer-transparent and aria-hidden, and both stop
+   when their section is off screen or the tab is in the background. */
 ;(function () {
   if (!document.createElement('canvas').getContext) return
 
@@ -22,6 +29,48 @@
 
   function clamp(v, lo, hi) {
     return v < lo ? lo : v > hi ? hi : v
+  }
+
+  // ── When is a section properly in front of you? ──────────────────────────
+  // A backdrop only shows once it is: a strip of stars sliding past during a
+  // scroll reads as debris on the page, not as depth behind it. Both backdrops
+  // ask the same question, so they ask it in the same place. onChange gets the
+  // answer and the raw coverage, and is called only when the answer changes.
+  function watch(host, onChange) {
+    if (!('IntersectionObserver' in window)) {
+      onChange(true, 1)
+      return
+    }
+
+    var lit = false
+
+    // Ratio alone is the wrong measure for a section taller than the viewport
+    // — it can never reach 1 — so this is the share of the *view* the section
+    // occupies once it is as large as the view can hold.
+    var thresholds = []
+    for (var s = 0; s <= 20; s++) thresholds.push(s / 20)
+
+    new IntersectionObserver(
+      function (entries) {
+        var e = entries[entries.length - 1]
+        var rootH = e.rootBounds ? e.rootBounds.height : window.innerHeight
+        var reach = Math.min(e.boundingClientRect.height, rootH) || 1
+        var covered = e.intersectionRect.height / reach
+
+        // Hysteresis, and a deliberately lopsided pair of it. Lighting still
+        // wants most of the section in front of you, but unlighting has to
+        // wait until it is all but gone: the landing page snaps, so one wheel
+        // notch moves the scroll twice — your own scroll, then the snap
+        // pulling it back — and the old 0.45 floor sat close enough to the
+        // top of the page for that round trip to cross it. Crossing it costs
+        // a 700ms fade out and another back in, which is what read as the
+        // backdrop blinking while you sat still.
+        if (!lit && covered >= 0.6) lit = true
+        else if (lit && covered < 0.08) lit = false
+        onChange(lit, covered)
+      },
+      { threshold: thresholds },
+    ).observe(host)
   }
 
   // ── Effect shell ─────────────────────────────────────────────────────────
@@ -70,47 +119,13 @@
       },
     }
 
-    // A backdrop only shows once its section is properly in front of you: a
-    // strip of stars sliding past during a scroll reads as debris on the page,
-    // not as depth behind it. CSS fades the canvas; this decides when.
-    if ('IntersectionObserver' in window) {
-      var lit = false
-
-      // Ratio alone is the wrong measure for a section taller than the
-      // viewport — it can never reach 1 — so this is the share of the *view*
-      // the section occupies once it is as large as the view can hold.
-      var thresholds = []
-      for (var s = 0; s <= 20; s++) thresholds.push(s / 20)
-
-      new IntersectionObserver(
-        function (entries) {
-          var e = entries[entries.length - 1]
-          var rootH = e.rootBounds ? e.rootBounds.height : window.innerHeight
-          var reach = Math.min(e.boundingClientRect.height, rootH) || 1
-          var covered = e.intersectionRect.height / reach
-
-          // Hysteresis, and a deliberately lopsided pair of it. Lighting still
-          // wants most of the section in front of you, but unlighting has to
-          // wait until it is all but gone: the landing page snaps, so one wheel
-          // notch moves the scroll twice — your own scroll, then the snap
-          // pulling it back — and the old 0.45 floor sat close enough to the
-          // top of the page for that round trip to cross it. Crossing it costs
-          // a 700ms fade out and another back in, which is what read as the
-          // backdrop blinking while you sat still.
-          if (!lit && covered >= 0.6) lit = true
-          else if (lit && covered < 0.08) lit = false
-          canvas.classList.toggle('is-lit', lit)
-
-          // Keep drawing a little either side of that, so the fade never
-          // reveals a frame that stopped updating.
-          handle.visible = covered > 0.05
-          sync()
-        },
-        { threshold: thresholds },
-      ).observe(host)
-    } else {
-      canvas.classList.add('is-lit')
-    }
+    watch(host, function (lit, covered) {
+      canvas.classList.toggle('is-lit', lit)
+      // Keep drawing a little either side of that, so the fade never reveals a
+      // frame that stopped updating.
+      handle.visible = covered > 0.05
+      sync()
+    })
 
     return handle
   }
@@ -251,94 +266,92 @@
   // Perspective this time, since the whole point is the approach. Kept thin on
   // purpose: a low count, short streaks and a slow drift, so it reads as depth
   // behind the panel rather than as travel. A faster version of this is
-  // genuinely uncomfortable to sit under while reading — which is why the
-  // brightness below is the only dial that has been opened up. At the original
-  // alpha the field was invisible on anything but a dark room and a good
-  // panel, so it was paying its frame cost for nothing.
-  function warpField() {
-    var SPEED = 0.14 // depth units per second, roughly seven seconds a star
-    var MAX_STREAK = 16 // px, so nothing ever smears into a line
-    var stars = []
-    var cx = 0
-    var cy = 0
-    var focal = 0
+  // genuinely uncomfortable to sit under while reading.
+  //
+  // No canvas and no loop. Each star is one element on one CSS animation, so
+  // the whole field runs on the compositor and keeps its timing through
+  // anything that ties up the main thread. All this has to do is create the
+  // elements, hand each one an angle, a radius and a start offset, and say when
+  // the section is in front of you; styles.css (.wf) does the rest.
+  //
+  // The projection the keyframes there encode is the same one the canvas used:
+  // a star sits at distance `focal * r / z` from the centre with z falling from
+  // 1 to 0.06 at 0.14 a second, which is the ~6.7s a star lasts. focal follows
+  // the section rather than the viewport, so it is published here in both the
+  // px form the distances need and the bare number the streak lengths do.
+  function warpStars(host) {
+    var FOCAL = 0.22 // of the section's longer side, as the canvas had it
+    var SPREAD = 3 // seconds between the first star arriving and the last
+    var LIFE = 6.714 // seconds a star takes from spawn to the near plane
 
-    function place(s, z) {
-      // Push the spawn ring away from the vanishing point: stars that appear
-      // dead centre crawl outward for seconds before they read as motion.
-      var angle = Math.random() * Math.PI * 2
-      var r = 0.25 + Math.random() * 0.75
-      s.x = Math.cos(angle) * r
-      s.y = Math.sin(angle) * r
-      s.z = z
-      s.hot = Math.random() < 0.14
+    var field = document.createElement('div')
+    field.className = 'wf'
+    field.setAttribute('aria-hidden', 'true')
+    host.insertBefore(field, host.firstChild)
+
+    var count = 0
+
+    function build(n) {
+      count = n
+      field.textContent = ''
+      var frag = document.createDocumentFragment()
+      for (var i = 0; i < n; i++) {
+        var star = document.createElement('span')
+        star.className = 'wf-star'
+        // Push the spawn ring away from the vanishing point: stars that appear
+        // dead centre crawl outward for seconds before they read as motion.
+        star.style.setProperty('--a', (Math.random() * 360).toFixed(1) + 'deg')
+        star.style.setProperty('--r', (0.25 + Math.random() * 0.75).toFixed(3))
+        // A negative delay starts the animation partway through, so the field
+        // is already in flight on the first frame rather than arriving as one
+        // wave — the same thing the canvas did by staggering initial depths.
+        star.style.setProperty('--t', (-Math.random() * LIFE).toFixed(2) + 's')
+        // And a delay of its own on the way in, which is the entrance: the
+        // field assembles star by star instead of appearing as one layer.
+        star.style.setProperty('--in', (Math.random() * SPREAD).toFixed(2) + 's')
+        if (Math.random() < 0.14) star.className += ' wf-hot'
+        star.appendChild(document.createElement('i'))
+        frag.appendChild(star)
+      }
+      field.appendChild(frag)
     }
 
-    return {
-      resize: function (ctx, w, h) {
-        cx = w / 2
-        cy = h / 2
-        // Short focal length on purpose. At a longer one a star crosses the
-        // frame edge while it is still far away and dim, so the fast, bright
-        // part of its approach happens off screen and the field reads as
-        // nothing much; this keeps most of each star's life in view.
-        focal = Math.max(w, h) * 0.22
-        var count = Math.round(clamp((w * h) / 21000, 18, 70))
-        stars = []
-        for (var i = 0; i < count; i++) {
-          var s = {}
-          // Stagger the initial depths so the field is already in flight on
-          // the first frame rather than arriving as one wave.
-          place(s, 0.08 + Math.random() * 0.92)
-          stars.push(s)
-        }
-      },
+    function resize() {
+      var rect = host.getBoundingClientRect()
+      var w = Math.round(rect.width)
+      var h = Math.round(rect.height)
+      if (!w || !h) return
 
-      draw: function (ctx, w, h, t, dt) {
-        ctx.clearRect(0, 0, w, h)
-        ctx.lineCap = 'round'
+      // Short focal length on purpose. At a longer one a star crosses the frame
+      // edge while it is still far away and dim, so the fast, bright part of
+      // its approach happens off screen and the field reads as nothing much.
+      var focal = Math.round(Math.max(w, h) * FOCAL)
+      field.style.setProperty('--focal', focal + 'px')
+      field.style.setProperty('--fn', String(focal))
 
-        for (var i = 0; i < stars.length; i++) {
-          var s = stars[i]
-          var was = s.z
-          s.z -= SPEED * dt
-          if (s.z <= 0.06) {
-            place(s, 1)
-            continue
-          }
-
-          var k = focal / s.z
-          var pk = focal / was
-          var x2 = cx + s.x * k
-          var y2 = cy + s.y * k
-          if (x2 < -40 || x2 > w + 40 || y2 < -40 || y2 > h + 40) {
-            place(s, 1)
-            continue
-          }
-
-          var x1 = cx + s.x * pk
-          var y1 = cy + s.y * pk
-          var dx = x2 - x1
-          var dy = y2 - y1
-          var len = Math.sqrt(dx * dx + dy * dy)
-          if (len > MAX_STREAK) {
-            x1 = x2 - (dx / len) * MAX_STREAK
-            y1 = y2 - (dy / len) * MAX_STREAK
-          }
-
-          var near = 1 - s.z
-          ctx.globalAlpha = clamp(near * 0.9, 0, 0.66)
-          ctx.strokeStyle = s.hot ? 'rgb(' + accent + ')' : '#ffffff'
-          ctx.lineWidth = 0.9 + near * 0.7
-          ctx.beginPath()
-          ctx.moveTo(x1, y1)
-          ctx.lineTo(x2, y2)
-          ctx.stroke()
-        }
-
-        ctx.globalAlpha = 1
-      },
+      // Denser than the canvas count for the same area. There, a star that left
+      // the frame respawned immediately; here it flies on to the end of its
+      // cycle unseen, so the same number of elements puts fewer of them on
+      // screen at any one time.
+      var n = Math.round(clamp((w * h) / 15000, 24, 96))
+      if (n !== count) build(n)
     }
+
+    if ('ResizeObserver' in window) {
+      new ResizeObserver(resize).observe(host)
+    } else {
+      window.addEventListener('resize', resize)
+    }
+    resize()
+
+    watch(host, function (lit, covered) {
+      field.classList.toggle('is-lit', lit)
+      // Paused a little either side of lighting, so the fade never reveals a
+      // field frozen mid-flight. Under reduced motion it stays paused for good,
+      // which leaves every star stopped at its own offset: a still starfield,
+      // which is the whole backdrop there.
+      field.classList.toggle('is-running', !reduceMotion && covered > 0.05)
+    })
   }
 
   // ── Runner ───────────────────────────────────────────────────────────────
@@ -379,7 +392,10 @@
   var hero = document.querySelector('.hero')
   var cta = document.querySelector('.cta')
   if (hero) effects.push(mount(hero, heroSphere()))
-  if (cta) effects.push(mount(cta, warpField()))
+  // Not part of the runner: it has no frame to draw. The browser pauses its
+  // animations in a background tab on its own, so there is nothing here to do
+  // for visibilitychange either.
+  if (cta) warpStars(cta)
   if (!effects.length) return
 
   document.addEventListener('visibilitychange', sync)

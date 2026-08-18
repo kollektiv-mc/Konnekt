@@ -663,16 +663,18 @@ a {
 
 /* ── Section rail — the indicator for the above. Built by main.js from the
    [data-nav] sections, so it only ever appears on the landing page. ─────── */
+/* `right` is 5px rather than the 16px this sat at because the links are no
+   longer 8px wide: each is a 32px target with the dot centred in it (below),
+   so the dot itself still lands about 20px in from the edge. */
 .rail {
   position: fixed;
-  right: 16px;
+  right: 5px;
   top: 50%;
   transform: translateY(-50%);
   z-index: 90;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 14px;
   padding: 12px 0;
 }
 
@@ -687,11 +689,32 @@ a {
   background: linear-gradient(var(--border-subtle), var(--border-hover), var(--border-subtle));
 }
 
+/* The link is the target, the ::before is the mark. An 8px dot is the right
+   size to read as an indicator and far too small to aim at, so the anchor
+   carries a 32x24 box instead and draws the dot in the middle of it. The rail
+   has no gap: consecutive targets meet exactly, which leaves the dots 24px
+   apart, near enough the 22px they sat at, with no dead strip between them to
+   fall into. Scaling on hover is on the mark and not the link, so a target
+   never grows over its neighbour's. */
 .rail-dot {
   position: relative;
   display: block;
+  width: 32px;
+  height: 24px;
+}
+
+.rail-dot::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  /* The sheet's reset is `*`, which does not reach pseudo-elements, so this
+     says it again: 8px has to stay the dot's outer size for the margin below
+     to centre it. */
+  box-sizing: border-box;
   width: 8px;
   height: 8px;
+  margin: -4px 0 0 -4px;
   border-radius: 50%;
   /* One step brighter than the sheet's usual hairline: an indicator has to be
      findable, and it sits alone against the page background rather than
@@ -705,20 +728,35 @@ a {
     transform var(--duration-fast) ease;
 }
 
-.rail-dot:hover {
+.rail-dot:hover::before {
   border-color: var(--accent);
   transform: scale(1.25);
 }
 
-.rail-dot[aria-current='true'] {
+.rail-dot[aria-current='true']::before {
   background: var(--accent);
   border-color: var(--accent);
   box-shadow: 0 0 8px rgb(var(--accent-rgb) / 0.6);
 }
 
+/* The sheet's focus ring would otherwise trace the invisible target rather
+   than the dot inside it. */
+.rail-dot:focus-visible {
+  outline: none;
+}
+
+.rail-dot:focus-visible::before {
+  outline: 1.5px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Anchored to the middle of the target, not its edge, so widening the target
+   again never moves the label: 16px left of centre is 12px clear of an 8px
+   dot, which is where this has always sat. */
 .rail-label {
   position: absolute;
-  right: calc(100% + 12px);
+  right: 50%;
+  margin-right: 16px;
   top: 50%;
   transform: translateY(-50%) translateX(6px);
   font-family: var(--font-mono);
@@ -787,6 +825,184 @@ a {
 .fx.is-lit {
   opacity: 1;
   transition-duration: 260ms;
+}
+
+/* ── Download warp field (backdrop.js, warpStars) ─────────────────────── */
+/* The hero's sphere is a canvas because a few thousand points leave no choice.
+   This is a few dozen stars each on one fixed path, and as a canvas it was the
+   only animation on the site that ran on the main thread: a busy tab or a
+   render in the background froze it outright while every CSS animation here
+   carried on. So it is CSS animations, one per star, composited and out of the
+   main thread's way — and the viewport-sized per-frame raster goes with it.
+
+   Geometry, matching the projection the canvas drew: a star sits at
+   `--focal * --r / z` from the centre, z falling 1 to 0.06 over one cycle.
+   backdrop.js publishes --focal (px, from the section's longer side) and --fn
+   (the same number, bare, for the unitless streak scale); each star carries its
+   angle, its radius, and the offsets that place it in the cycle and in the
+   entrance. */
+.wf {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+  /* Hidden until its section is in front of you — backdrop.js adds .is-lit.
+     Asymmetric on purpose, as the canvas backdrops are: slow out, instant back.
+     Going dark is the expensive direction to get wrong, and coming back is the
+     stars' own business (.wf-star below), not this layer's. */
+  opacity: 0;
+  transition: opacity 700ms var(--ease-standard);
+}
+
+.wf.is-lit {
+  opacity: 1;
+  transition-duration: 0s;
+}
+
+/* The section seams. The canvas had a linear-gradient mask for this; a mask
+   would force the whole field into one render surface and redraw it every
+   frame, which is the cost this rewrite exists to remove. Two static gradients
+   in the page's own background do the same job and never repaint. Both sit
+   above the stars and below .cta > .container, so the panel still covers them. */
+.wf::before,
+.wf::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 14%;
+  z-index: 1;
+}
+
+.wf::before {
+  top: 0;
+  background: linear-gradient(var(--bg-base), transparent);
+}
+
+.wf::after {
+  bottom: 0;
+  background: linear-gradient(transparent, var(--bg-base));
+}
+
+/* The star's wrapper is the centre of the field and its entrance: one opacity
+   delay per star, so the field assembles rather than appears. Only the way in
+   is staggered; on the way out .wf's own fade covers everything before these
+   get far.
+
+   It deliberately carries no transform. The rotation belongs to the star and
+   sat here at first, which reads better and costs the whole effect: a static
+   transform on the parent takes the child's animation off the compositor, and
+   putting 69 of them back on the main thread is the one thing this rewrite is
+   here to avoid. Measured at eight times the style recalc a frame. */
+.wf-star {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 0;
+  height: 0;
+  color: #ffffff;
+  opacity: 0;
+  transition: opacity 900ms linear var(--in, 0s);
+}
+
+/* A small minority tinted with the brand accent, as in the hero's sphere. */
+.wf-hot {
+  color: rgb(var(--accent-rgb));
+}
+
+.wf.is-lit .wf-star {
+  opacity: 1;
+}
+
+/* The star itself: a 1px seed the animation stretches into a streak. Scaling
+   about its right edge is what makes the streak trail the head rather than
+   lead it. */
+.wf-star > i {
+  position: absolute;
+  left: 0;
+  top: -0.5px;
+  width: 1px;
+  height: 1px;
+  background: currentColor;
+  transform-origin: 100% 50%;
+  animation: wf-fly 6.714s linear infinite;
+  animation-delay: var(--t, 0s);
+  animation-play-state: paused;
+}
+
+.wf.is-running .wf-star > i {
+  animation-play-state: running;
+}
+
+/* Distance is 1/z, so the stops are placed at the z values that curve reaches,
+   not at even intervals — nearly half of them in the last tenth of the flight,
+   where a star crosses most of the frame. The streak is the ground the star
+   covers in a frame, capped at 16 units so nothing smears into a line, and the
+   second scale figure is the line's own width. The rotation is constant through
+   all of it and belongs on the wrapper by rights; see .wf-star for why it is
+   repeated here instead. */
+@keyframes wf-fly {
+  0% {
+    transform: rotate(var(--a)) translateX(calc(var(--focal) * var(--r) * 1))
+      scale(min(16, var(--fn) * var(--r) * 0.002333), 0.9);
+    opacity: 0;
+  }
+  31.91% {
+    transform: rotate(var(--a)) translateX(calc(var(--focal) * var(--r) * 1.4286))
+      scale(min(16, var(--fn) * var(--r) * 0.004762), 1.11);
+    opacity: 0.27;
+  }
+  53.19% {
+    transform: rotate(var(--a)) translateX(calc(var(--focal) * var(--r) * 2))
+      scale(min(16, var(--fn) * var(--r) * 0.009333), 1.25);
+    opacity: 0.45;
+  }
+  65.96% {
+    transform: rotate(var(--a)) translateX(calc(var(--focal) * var(--r) * 2.6316))
+      scale(min(16, var(--fn) * var(--r) * 0.016159), 1.33);
+    opacity: 0.558;
+  }
+  74.47% {
+    transform: rotate(var(--a)) translateX(calc(var(--focal) * var(--r) * 3.3333))
+      scale(min(16, var(--fn) * var(--r) * 0.025926), 1.39);
+    opacity: 0.63;
+  }
+  80.85% {
+    transform: rotate(var(--a)) translateX(calc(var(--focal) * var(--r) * 4.1667))
+      scale(min(16, var(--fn) * var(--r) * 0.040509), 1.43);
+    opacity: 0.66;
+  }
+  86.17% {
+    transform: rotate(var(--a)) translateX(calc(var(--focal) * var(--r) * 5.2632))
+      scale(min(16, var(--fn) * var(--r) * 0.064635), 1.47);
+    opacity: 0.66;
+  }
+  90.43% {
+    transform: rotate(var(--a)) translateX(calc(var(--focal) * var(--r) * 6.6667))
+      scale(min(16, var(--fn) * var(--r) * 0.103704), 1.5);
+    opacity: 0.66;
+  }
+  93.62% {
+    transform: rotate(var(--a)) translateX(calc(var(--focal) * var(--r) * 8.3333))
+      scale(min(16, var(--fn) * var(--r) * 0.162037), 1.52);
+    opacity: 0.66;
+  }
+  96.28% {
+    transform: rotate(var(--a)) translateX(calc(var(--focal) * var(--r) * 10.5263))
+      scale(min(16, var(--fn) * var(--r) * 0.258541), 1.53);
+    opacity: 0.66;
+  }
+  98.4% {
+    transform: rotate(var(--a)) translateX(calc(var(--focal) * var(--r) * 13.3333))
+      scale(min(16, var(--fn) * var(--r) * 0.414815), 1.55);
+    opacity: 0.66;
+  }
+  100% {
+    transform: rotate(var(--a)) translateX(calc(var(--focal) * var(--r) * 16.6667))
+      scale(min(16, var(--fn) * var(--r) * 0.648148), 1.56);
+    opacity: 0.66;
+  }
 }
 
 /* The hero's own content already sits on z-index 1; the CTA's needs to. */
@@ -970,31 +1186,25 @@ a {
   margin: 0;
 }
 
-/* ── About facts — the same card as .feat, one scroll up ─────────────── */
-/* These were a bare row on a rule, which read as a different kind of thing to
-   the feature cards directly below and never sat straight: the three facts
-   carry six tags, one and three, so any equal-column treatment left one column
-   mostly empty and pulled the row's ink off centre. As cards they inherit the
-   grid the features already use, and centring inside a bordered box gives the
-   uneven tag counts an edge to be even against. */
+/* ── About facts — a label over a row of tags, no surface ─────────────── */
+/* Two clusters set side by side rather than two cards on a grid: with the box
+   gone there is no edge for an equal-column layout to be even against, and a
+   1fr column would strand each label in the middle of its own half. Sized to
+   their content and centred as a pair, they read as one line of the section
+   head rather than as tiles competing with the feature grid below. */
 .about-facts {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-  gap: 18px;
-  margin: 44px 0 0;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 32px 64px;
+  margin: 40px 0 0;
 }
 
 .about-fact {
-  background: var(--bg-elevated);
-  border: 0.5px solid var(--border-subtle);
-  border-radius: 16px;
-  padding: 26px 24px;
-  min-height: 132px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  gap: 14px;
+  gap: 12px;
   text-align: center;
 }
 
@@ -1017,19 +1227,14 @@ a {
 /* Each fact is a row of names rather than a sentence, so it is set as tags.
    Square-cornered like .footer-tag and .disclaimer-badge, not the pill-shaped
    .tag the roadmap and platform table use: those report a status, these are
-   just labels, and the one that *is* a status wears the amber below. The
-   max-width breaks the six server tags 3 and 3 instead of leaving a widow. */
+   just labels. The max-width breaks the six server tags 3 and 3 instead of
+   leaving a widow. */
 .fact-pills {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
-  align-content: center;
   gap: 6px;
   max-width: 232px;
-  /* Two tag rows plus the gap between them (2 x 21.75 + 6), held whether or
-     not the fact fills them, so the three dt labels land on one line across
-     the row instead of floating to wherever their own card's content centred. */
-  min-height: 49.5px;
 }
 
 .pill {
@@ -1043,14 +1248,6 @@ a {
   background: var(--hover-surface);
   color: var(--text-secondary);
   white-space: nowrap;
-}
-
-/* The status fact, in the same amber the footer badge and the snapshot
-   channel already carry. */
-.pill-alpha {
-  color: var(--sun);
-  border-color: rgb(var(--sun-rgb) / 0.35);
-  background: rgb(var(--sun-rgb) / 0.08);
 }
 
 /* ── Feature tiles — static grid, everything visible at rest ─────────── */
@@ -1289,10 +1486,23 @@ a {
   fill: none;
   stroke: var(--accent);
   stroke-width: 1.5;
-  stroke-dasharray: 12 100;
+  /* One dash, and a gap long enough that a second can never be on the path at
+     the same time. The dash is a fixed length in user units, not a share of the
+     path: these edges run from 56 to 204 units, and a `pathLength="100"` with a
+     percentage dasharray made the pulse on a short hop a third the size of the
+     one on a long sweep. --len is the path's own length, declared on the element
+     in index.html, and it is all the gap and the travel below need. */
+  --sf-dash: 16px;
+  stroke-dasharray: var(--sf-dash) calc(var(--len) + var(--sf-dash) * 2);
   filter: drop-shadow(0 0 3px rgb(var(--accent-rgb) / 0.6));
   animation: sf-pulse 24s linear infinite;
   animation-delay: calc(var(--t0, 0s) + var(--d, 0s));
+  /* The delay is dead time on every pulse and up to 24s of it on the last
+     frame's, and an element that has not started yet renders its own resting
+     state: dashoffset 0, which parks a lit dash across the source node's port
+     and leaves it there. `backwards` hands it the 0% frame for the wait
+     instead, where the dash is clear of the path altogether. */
+  animation-fill-mode: backwards;
 }
 
 /* Percentages of the 24s master cycle: lit for 0.6s, faded out by 1.9s. */
@@ -1311,20 +1521,20 @@ a {
 
 /* Travel occupies 2.5% of the 24s cycle (0.6s). Each edge's pulse is set off
    0.6s before the node it feeds lights up (index.html's per-element --d), so
-   the pulse lands exactly as its target comes on. */
+   the pulse lands exactly as its target comes on.
+
+   Both ends are past the path rather than on it: the dash starts one dash
+   length before the first unit and rests one past the last, so it emerges from
+   under the source port and disappears under the target one. Fading it in on
+   the spot instead is what made it show at the connector dot before it moved,
+   and it is why there is no opacity here to fade. */
 @keyframes sf-pulse {
   0% {
-    stroke-dashoffset: 112;
-    opacity: 0;
-  }
-  0.33%,
-  2.17% {
-    opacity: 1;
+    stroke-dashoffset: var(--sf-dash);
   }
   2.5%,
   100% {
-    stroke-dashoffset: 0;
-    opacity: 0;
+    stroke-dashoffset: calc(-1 * var(--len));
   }
 }
 
@@ -2137,7 +2347,12 @@ button.dl-card:hover {
   background: rgb(var(--accent-rgb) / 0.08);
 }
 
-.tag-wip {
+/* One rule, two names. The amber is what the footer badge and the snapshot
+   channel already mean by "not finished yet", and the roadmap's "In progress"
+   and the scheduler's "Alpha" are both that; naming the second one after the
+   first would put the wrong word in the markup. */
+.tag-wip,
+.tag-alpha {
   color: var(--sun);
   border-color: rgb(var(--sun-rgb) / 0.35);
   background: rgb(var(--sun-rgb) / 0.08);
@@ -2418,14 +2633,18 @@ button.dl-card:hover {
   }
 
   /* The backdrops still appear and disappear with their section, just without
-     the crossfade. */
-  .fx {
+     the crossfade, and the warp field's stars without their entrance. It is
+     never given .is-running here, so every star holds at its own offset in the
+     flight: a still starfield rather than an empty section. */
+  .fx,
+  .wf,
+  .wf-star {
     transition: none !important;
   }
 
   .btn:hover,
   .dl-card[href]:hover,
-  .rail-dot:hover {
+  .rail-dot:hover::before {
     transform: none !important;
   }
 
@@ -2508,6 +2727,8 @@ button.dl-card:hover {
 }
 
 .reduce-motion .nav-menu,
-.reduce-motion .fx {
+.reduce-motion .fx,
+.reduce-motion .wf,
+.reduce-motion .wf-star {
   transition: none !important;
 }
