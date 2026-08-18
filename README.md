@@ -3,12 +3,6 @@
 # Konnekt
 (Alpha)
 
-## Fair warning
-
-This is a personal side project which was built to run my own Minecraft servers the way I want, rather than to match what a wider community might expect from it. Most of the code comes from Claude, with me reading over its shoulder rather than writing it myself; I'm not a programmer, just someone putting AI tools to use for something I needed. So don't expect a polished, textbook-clean codebase. It works for me, and that's the bar I'm holding it to.
-
-I have no interest in gatekeeping any of this, so take the code and do what you want with it — fork it, extend it, rebuild it, whatever. It's released under [CC0](LICENSE), so there's no copyright to ask permission from.
-
 ## About
 
 Konnekt is a cross-platform desktop control panel for self-hosted Minecraft servers. It wraps everything you'd normally do through a raw console, RCON, or SSH — starting servers, watching logs, managing worlds, scheduling backups, installing mods — into a single native app with a modular, drag-and-drop dashboard.
@@ -16,6 +10,12 @@ Konnekt is a cross-platform desktop control panel for self-hosted Minecraft serv
 It's built for Minecraft server admins and hobbyists who self-host vanilla, Paper/Spigot/Bukkit, or modded Fabric/Forge servers and want a real GUI instead of stitching together terminal windows and plugins.
 
 > **Status:** Alpha. Core management, scheduling, worlds, backups, and mods are functional; see [Roadmap](#roadmap) for what's still coming.
+> 
+## Fair warning
+
+This is a personal side project which was built to run my own Minecraft servers the way I want, rather than to match what a wider community might expect from it. Most of the code comes from Claude, with me reading over its shoulder rather than writing it myself; I'm not a programmer, just someone putting AI tools to use for something I needed. So don't expect a polished, textbook-clean codebase. It works for me, and that's the bar I'm holding it to.
+
+I have no interest in gatekeeping any of this, so take the code and do what you want with it — fork it, extend it, rebuild it, whatever. It's released under [CC0](LICENSE), so there's no copyright to ask permission from.
 
 ## Features
 
