@@ -56,6 +56,7 @@ after them is dated. Newest last, in both groups.
 - [2026-08-18 — The dead `--panel-bg`, and why the recorded fix was wrong](#2026-08-18-the-dead-panel-bg-and-why-the-recorded-fix-was-wrong)
 - [2026-08-18 — The website stops hand-copying the token layer](#2026-08-18-the-website-stops-hand-copying-the-token-layer)
 - [2026-08-18 — website/ gets its first gates](#2026-08-18-website-gets-its-first-gates)
+- [2026-08-18 — Backup filenames that were not unique, and an id that was not random](#2026-08-18-backup-filenames-that-were-not-unique-and-an-id-that-was-not-random)
 
 ---
 
@@ -2490,3 +2491,104 @@ cwd and break `{staged_files}`.
 **Also corrected here.** The Stable pillar's CI item listed `frontend`, `backend` and
 `backend-linux` and had never mentioned the `invariants` job added in `f06ee2c`. It
 now names all five.
+
+---
+
+### 2026-08-18 — Backup filenames that were not unique, and an id that was not random
+
+**Closes:** the `Config-editor backups collide within a second` bullet under
+`P2 — Cleanups`. The larger half of this entry was not on the checklist at all: it
+was found by chasing a CI failure.
+
+**How it surfaced.** The `backend` job on windows-latest failed on PR #85, a
+website-only change that touches no Go:
+
+```
+--- FAIL: TestWorldAndServerBackupsResolveSeparately
+    backup_test.go:248: world backup = {Kind:"server" World:""}, want {world, world}
+```
+
+A server backup and a world backup had collapsed onto one filename, so the map keyed
+by filename held the server backup under both names. The obvious reading is a flaky
+test. It was not.
+
+**The defect.** `shortID()` built a fresh `rand.Source` on every call:
+
+```go
+src := rand.NewSource(time.Now().UnixNano())
+r := rand.New(src) //nolint:gosec
+return fmt.Sprintf("%05d", r.Intn(100000))
+```
+
+Windows' clock granularity is coarse enough that two consecutive calls read the
+identical `UnixNano`, and two generators seeded identically return the identical first
+number. Measured on Windows 11 over 100,000 back-to-back pairs: **99.01% identical
+ids, against 0.001% expected by chance**, with the identical-seed rate matching at
+99.01%. The id was not random. It was a function of the clock, which is the one thing
+it needed not to be, because the rest of the filename is a one-second timestamp.
+
+The regression test states it in-repo rather than in prose: against the old
+implementation, 1,000 draws produced **24 distinct ids and 976 consecutive repeats**.
+
+**Why it is data loss, not a flaky test.** Backup filenames are
+`{5-digit-id}_{DD_MM_YY_HHMMSS}.zip`, and `zipDirWithProgress` opened the destination
+with `os.Create`, which truncates. Two backups taken in the same second with the same
+id therefore produced one file: the second archive silently overwrote the first. Take
+a server backup and then a world backup, and the server backup is gone. The failing
+CI test was that scenario, caught by accident.
+
+**What landed.** Two independent layers, because the first one alone is a probability
+and the consequence is losing a user's backup.
+
+- `shortID()` now uses `math/rand/v2`'s top-level `rand.IntN`, which the runtime seeds
+  and which is safe for concurrent use. There is no seed left for a coarse clock to
+  poison. The `//nolint:gosec` went with it.
+- `reserveBackupFile` creates the archive with `O_CREATE|O_EXCL` and retries with a
+  fresh id if the name is taken, so a collision costs a loop iteration instead of a
+  backup. `zipDirWithProgress` now takes that already-open `*os.File` rather than a
+  path, which is what makes reserving the name and writing to it race-free.
+
+Both callers also now close the file before `os.Stat`, so the recorded size is the
+finished archive's, and a close error fails the backup instead of being dropped: a
+close error on a zip means a missing central directory, which is a corrupt archive.
+A failed zip removes the partial file rather than leaving it to be listed.
+
+**The sibling defect, fixed with it.** The checklist already recorded that
+`ConfigEditorService.backup()` had the same shape: a `{escaped}.{20060102_150405}.bak`
+stamp at one-second resolution written with `os.Create`. Four rapid saves left **one**
+backup rather than three, which the new test reproduces against the old code exactly.
+It now stamps milliseconds and creates with `O_EXCL`.
+
+The millisecond field is joined with an underscore rather than a dot, and that detail
+is load-bearing. `pruneBackups` deletes the lexicographically first name, relying on
+the stamp sorting in chronological order. `'.'` is 0x2E and `'_'` is 0x5F, so a legacy
+`…150405.bak` still sorts before a new `…150405_123.bak` from the same second and is
+still pruned first. Had it been `.123`, the new name would have sorted *first* and
+pruning would have started deleting the newest backups. There is a test pinning that
+ordering, since it is invisible in review.
+
+**A bug in the fix, caught by its own test.** The first attempt spelled the stamp
+`time.Now().Format("20060102_150405_000")`. Go's fractional-second layout is `.000` or
+`,000`; a `_000` is not a directive and formats as the literal text `000`. So every
+name inside a second was identical, `O_EXCL` rejected all 100 attempts, and the save
+failed outright. `TestRapidSavesEachKeepTheirOwnBackup` caught it immediately. The
+milliseconds are now appended by hand, and the reason is recorded next to the code.
+
+**Verification.** Every new test was run against the pre-fix implementation and
+observed to fail:
+
+| test | against the old code |
+|---|---|
+| `TestShortIDDoesNotRepeatOnConsecutiveCalls` | 976 repeats in 1,000 draws, 24 distinct ids |
+| `TestReserveBackupFileNeverTruncatesAnExistingFile` | returned the same name twice |
+| `TestRapidSavesEachKeepTheirOwnBackup` | four saves left 1 backup, want 3 |
+
+Worth recording honestly: `TestWorldAndServerBackupsResolveSeparately`, the test that
+actually failed in CI, still passes locally against the old code, 40 runs in a row. The
+zip work between the two `shortID()` calls lets the clock advance on this machine,
+while CI's smaller fixture fits both calls inside one timer tick. That is exactly why
+the new tests target `shortID` and `reserveBackupFile` directly instead: an end-to-end
+test of this defect is only as reliable as the host's timer, and the unit-level ones
+fail deterministically everywhere.
+
+Full gate set green, zero skips.
