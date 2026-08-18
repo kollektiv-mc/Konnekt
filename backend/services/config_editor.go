@@ -2,6 +2,7 @@ package services
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -254,8 +255,7 @@ func (s *ConfigEditorService) backup(serverID, abs, relPath string) error {
 		return err
 	}
 
-	ts := time.Now().Format("20060102_150405")
-	dst, err := os.Create(filepath.Join(backupDir, escaped+"."+ts+".bak"))
+	dst, err := createConfigBackupFile(backupDir, escaped)
 	if err != nil {
 		return err
 	}
@@ -272,6 +272,43 @@ func (s *ConfigEditorService) backup(serverID, abs, relPath string) error {
 
 	s.pruneBackups(backupDir, escaped)
 	return nil
+}
+
+// createConfigBackupFile creates the .bak copy under a name nothing else holds.
+//
+// The stamp used to be second resolution and the create used to be os.Create,
+// which truncates: two saves inside the same second collapsed onto one filename
+// and left one backup where there should have been two. Harmless while a human is
+// hand-editing, wrong the moment anything writes config programmatically.
+//
+// Milliseconds plus O_EXCL fix it from both ends. The milliseconds are joined with
+// an underscore rather than a dot on purpose: pruneBackups deletes the
+// lexicographically first name, relying on this stamp sorting in chronological
+// order, and '.' (0x2E) sorts before '_' (0x5F). So a legacy
+// "…150405.bak" still sorts before a new "…150405_123.bak" from the same second,
+// and the older file is still the one pruned first. With ".123" it would have
+// sorted after, and pruning would have started deleting the newest backups.
+//
+// The millisecond field is appended by hand because Go's fractional-second layout
+// is spelled ".000" or ",000": a "_000" in the layout string is not a directive at
+// all, and formats as the literal text 000.
+func createConfigBackupFile(backupDir, escaped string) (*os.File, error) {
+	for attempt := 0; attempt < 100; attempt++ {
+		now := time.Now()
+		ts := now.Format("20060102_150405") + fmt.Sprintf("_%03d", now.Nanosecond()/int(time.Millisecond))
+		path := filepath.Join(backupDir, escaped+"."+ts+".bak")
+		f, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0644)
+		if err == nil {
+			return f, nil
+		}
+		if !os.IsExist(err) {
+			return nil, err
+		}
+		// Same millisecond as an existing backup. Wait for the clock rather than
+		// spinning on it; on Windows the tick is coarse enough to matter.
+		time.Sleep(time.Millisecond)
+	}
+	return nil, errors.New("no free config backup filename after 100 attempts")
 }
 
 func (s *ConfigEditorService) pruneBackups(dir, prefix string) {

@@ -280,11 +280,6 @@ current. Priorities mirror the pillars above.
   model. A fix has to resolve the *parent* directory (`sandbox` runs for files
   that do not exist yet, on the write path), and its test needs a skip guard
   because Windows gates symlink creation behind Developer Mode or elevation.
-- Config-editor backups collide within a second. `backup()` names files
-  `{escaped}.{20060102_150405}.bak` at one-second resolution and `os.Create`
-  truncates, so two saves in the same second leave **one** backup, not two.
-  Harmless in hand-editing, wrong if anything ever writes config
-  programmatically. Widening the stamp (or adding a counter suffix) is the fix.
 - Structured logging: replace ad-hoc `fmt.Errorf`-only backend reporting with
   `log/slog`, keeping `EventBus` for UI-facing notifications.
 - Memoization pass: add `React.memo`/`useMemo`/`useCallback` to the most

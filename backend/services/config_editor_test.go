@@ -204,10 +204,11 @@ func TestWriteConfigFileBacksUpOnlyExistingFiles(t *testing.T) {
 }
 
 // pruneBackups is driven directly rather than through repeated WriteConfigFile
-// calls: backup filenames carry a {escaped}.{20060102_150405}.bak timestamp at
-// one-second resolution and os.Create truncates, so two saves inside the same
-// second collide on one filename and only one backup survives. Going through the
-// public path would need a sleep per copy to produce distinct files.
+// calls, so the seeded names can span six distinct days without six real saves.
+//
+// The names here are the legacy second-resolution shape on purpose. New backups
+// carry milliseconds (see createConfigBackupFile), and this pins that pruning still
+// works on the names already sitting in users' data directories.
 func TestPruneBackupsKeepsExactlyBackupKeep(t *testing.T) {
 	dir := t.TempDir()
 	const prefix = "server.properties"
@@ -251,5 +252,83 @@ func TestPruneBackupsKeepsExactlyBackupKeep(t *testing.T) {
 	}
 	if !remaining[other] {
 		t.Error("pruning removed a different config file's backup")
+	}
+}
+
+// backupKeep is 3, so three rapid saves must leave three distinct backups holding
+// the three distinct previous contents. They used to leave one: the stamp was
+// second resolution and os.Create truncates, so every save inside the same second
+// wrote over the last one's backup. Nothing sleeps here on purpose, since the
+// whole point is that same-second saves are now safe.
+func TestRapidSavesEachKeepTheirOwnBackup(t *testing.T) {
+	svc, _ := newConfigEditorFixture(t)
+	backupDir := filepath.Join(svc.dataDir, "config_backups", "srv1")
+
+	// The first write creates the file, so it backs nothing up. Each of the next
+	// three preserves the contents the one before it wrote.
+	for i := 1; i <= 4; i++ {
+		if err := svc.WriteConfigFile("srv1", "server.properties", fmt.Sprintf("motd=%d", i)); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	entries, err := os.ReadDir(backupDir)
+	if err != nil {
+		t.Fatalf("reading backup dir: %v", err)
+	}
+	if len(entries) != 3 {
+		names := make([]string, 0, len(entries))
+		for _, e := range entries {
+			names = append(names, e.Name())
+		}
+		t.Fatalf("four rapid saves left %d backup(s) %v, want 3", len(entries), names)
+	}
+
+	// One backup per previous revision, none lost to a collision.
+	got := make(map[string]bool, len(entries))
+	for _, e := range entries {
+		body, err := os.ReadFile(filepath.Join(backupDir, e.Name()))
+		if err != nil {
+			t.Fatal(err)
+		}
+		got[string(body)] = true
+	}
+	for i := 1; i <= 3; i++ {
+		if want := fmt.Sprintf("motd=%d", i); !got[want] {
+			t.Errorf("no backup holds %q; backups hold %v", want, got)
+		}
+	}
+}
+
+// The stamp gained milliseconds, joined with an underscore rather than a dot so
+// that a legacy second-resolution name still sorts before a same-second new one.
+// pruneBackups deletes the lexicographically first entry, so getting this backwards
+// would have made it delete the newest backups first.
+func TestConfigBackupNamesSortLegacyBeforeNewInTheSameSecond(t *testing.T) {
+	dir := t.TempDir()
+
+	f, err := createConfigBackupFile(dir, "server.properties")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := f.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	fresh := entries[0].Name()
+
+	// The legacy shape for the very same second the fresh one just used.
+	second := strings.SplitN(strings.TrimPrefix(fresh, "server.properties."), "_", 3)
+	if len(second) != 3 {
+		t.Fatalf("unexpected backup name %q", fresh)
+	}
+	legacy := fmt.Sprintf("server.properties.%s_%s.bak", second[0], second[1])
+
+	if !(legacy < fresh) {
+		t.Errorf("legacy %q does not sort before new %q; pruneBackups would delete the newer one first", legacy, fresh)
 	}
 }
