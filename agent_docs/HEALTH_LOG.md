@@ -57,6 +57,7 @@ after them is dated. Newest last, in both groups.
 - [2026-08-18 — The website stops hand-copying the token layer](#2026-08-18-the-website-stops-hand-copying-the-token-layer)
 - [2026-08-18 — website/ gets its first gates](#2026-08-18-website-gets-its-first-gates)
 - [2026-08-18 — Backup filenames that were not unique, and an id that was not random](#2026-08-18-backup-filenames-that-were-not-unique-and-an-id-that-was-not-random)
+- [2026-08-18 — The three error-ignores at the repo root, and the one directory everything persisted through](#2026-08-18-the-three-error-ignores-at-the-repo-root-and-the-one-directory-everything-persisted-through)
 
 ---
 
@@ -2592,3 +2593,109 @@ test of this defect is only as reliable as the host's timer, and the unit-level 
 fail deterministically everywhere.
 
 Full gate set green, zero skips.
+
+---
+
+### 2026-08-18 — The three error-ignores at the repo root, and the one directory everything persisted through
+
+**Closes:** `P2 — Undocumented blank error-ignores`. Two of the three sites were
+documentation. The third was not, and chasing why it was safe is most of this entry.
+
+**Where the three were.** The 2026 sweep documented 28 blank `_ =` sites across
+`backend/services` and reported clean, because its audit grep was scoped to
+`backend --include="*.go"`. `app.go` and the other repo-root files were never in
+range. Re-running it as the checklist now spells it — `grep -rn "_ = "
+--include=*.go app.go backend/ | grep -v nolint` — left exactly three:
+
+| site | verdict |
+|---|---|
+| `beforeClose`: `_ = a.serverService.Stop()` | safe, documented |
+| `startup`: `_ = os.MkdirAll(a.dataDir, 0755)` | **not safe as written** |
+| `DownloadAndInstallUpdate`: `_ = exec.Command(exePath).Start()` | safe, documented |
+
+`Stop()` has exactly one error return, `"server not running"`, and the call site
+already guards on `IsRunning()`. A race there can only make that error true, which is
+the benign direction; every failure that actually matters — the process ignoring the
+RCON `stop` — is handled *inside* `Stop` by the 8-second timeout and `killTree`, not
+reported back. The post-update relaunch is a convenience: the new binary is already
+on disk, this process has to exit either way for the swap to take effect, and the
+frontend is a moment from being torn down by the `runtime.Quit` on the next line, so
+there is nobody left to tell. Both now carry the reason in a `//nolint:errcheck`
+comment.
+
+**The third one was load-bearing.** `startup` creates the Wails app data directory
+and drops the error. Ten files are then written straight into that directory by five
+different owners:
+
+- `ConfigService` — `servers.json`, `active_server.json`, `app_settings.json`
+- `SchedulerService` — `scheduler.json`, `scheduler-history.json`
+- `App` itself — `layout_presets.json`, `active_tiles.json`, `active_layout.json`,
+  `custom_commands.json`, `command_buttons.json`
+
+Every one used a bare `os.WriteFile`, and **none** of them created the directory.
+That single discarded `MkdirAll` was the only thing standing between the app and an
+`ENOENT` on the server list, the active server, app settings, the tile layout and its
+presets, custom commands, command buttons, and the whole scheduler. The
+services that write *per-server* data — `backup.go`, `config_editor.go`,
+`modservice.go` — already `MkdirAll` their own destination before writing. The
+app-data writers were the ones that never did.
+
+Worth being precise about the failure, because "MkdirAll can fail" sounds theoretical.
+`os.UserConfigDir()` has already succeeded by that line, so the parent exists; what is
+left is a permissions failure, a full disk, or something non-directory sitting at
+`konnekt`. In any of those the app comes up looking *normal* — the reads return
+`os.IsNotExist` and each getter answers with its empty/default value, so the user sees
+a fresh install with their servers gone — and then every save fails with an error
+naming a file rather than the directory that is actually missing.
+
+**What landed.** One helper, `services.WriteDataFile(dir, name, data)`, now owns every
+write into the app data directory. It creates the directory first, so each writer is
+self-sufficient in the way the per-server ones already were, and it wraps both
+failures with context so the error names the directory it could not create rather
+than the file it could not open. That is what makes the startup `MkdirAll`'s new
+`//nolint` reason *true* rather than wishful: it is a warm-up so the directory exists
+before the user goes looking for it, and a failure there costs nothing a later save
+would not report better.
+
+The helper also refuses an empty `dir` instead of joining onto it. `filepath.Join("",
+name)` is a **relative** path, so the old code silently wrote the file into the
+process's working directory — in the shipped app, wherever the user launched Konnekt
+from. `scheduler_nextrun_test.go` already knew: it set a temp `dataDir` with the
+comment *"Without this, writeGraphs joins onto `""` and litters scheduler.json into
+the package directory."* A per-test workaround for a hazard that belonged in the
+writer. That comment now records the behaviour instead of the workaround.
+
+**Tests.** `ConfigService` had no test file at all, despite owning the server list and
+app settings. It has one now, and both new files were run against the pre-fix
+implementation:
+
+| test | against the old code |
+|---|---|
+| `TestWriteDataFileCreatesAMissingDataDir` | `ENOENT` on `servers.json` |
+| `TestWriteDataFileCreatesNestedParents` | `ENOENT` on `app_settings.json` |
+| `TestWriteDataFileRejectsAnUnsetDataDir` | no error, and `scheduler.json` in the cwd |
+| `TestServerConfigsRoundTripThroughAMissingDataDir` | `ENOENT` on save |
+| `TestSaveServerConfigUpsertsByID` | `ENOENT` on save |
+| `TestDeleteServerConfigLeavesTheOthers` | `ENOENT` on save |
+| `TestActiveServerIDRoundTripsThroughAMissingDataDir` | `ENOENT` on save |
+| `TestAppSettingsFallBackToDefaultsThenRoundTrip` | `ENOENT` on save |
+| `TestAppSettingsFillGapsInAnOlderFileWithDefaults` | `ENOENT` on setup |
+
+Recorded honestly: two of the new cases pass against the old code as well.
+`TestWriteDataFileOverwritesAnExistingFile` pins behaviour the change deliberately
+did not alter, and `TestWriteDataFileErrorNamesTheDirectoryItCouldNotCreate` passes
+either way because `os.WriteFile`'s `ENOTDIR` happens to contain the directory as a
+path prefix. They earn their place as regression pins, not as proof of the fix.
+
+`TestAppSettingsFillGapsInAnOlderFileWithDefaults` is the one unrelated to the data
+directory: `GetAppSettings` unmarshals *onto* a populated defaults struct, so a
+settings file written by an older build gets defaults for the keys it lacks rather
+than Go zero values. A zero `ConsoleBufferLines` would hand the console tile a
+0-line buffer. That behaviour was untested and is easy to break by refactoring the
+function into a plain `json.Unmarshal`.
+
+**Coverage.** `backend/services` moved 36.7% → **38.0%**, and the floor ratchets
+35% → **36%** to hold it. The floor's comment now carries the measurement history
+rather than a single stale figure.
+
+**Verification.** Full `/suite-kit:health` gate set green, 12/12, zero skips.

@@ -274,7 +274,7 @@ func (s *SchedulerService) writeHistory(history []models.RunRecord) error {
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(filepath.Join(s.dataDir, "scheduler-history.json"), data, 0644)
+	return WriteDataFile(s.dataDir, "scheduler-history.json", data)
 }
 
 func (s *SchedulerService) activeServerID() string {
@@ -307,7 +307,7 @@ func (s *SchedulerService) writeGraphs(graphs []models.Graph) error {
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(filepath.Join(s.dataDir, "scheduler.json"), data, 0644)
+	return WriteDataFile(s.dataDir, "scheduler.json", data)
 }
 
 // primitiveMap returns the fixed set of safe primitive executors available to

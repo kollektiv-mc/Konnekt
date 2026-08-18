@@ -56,11 +56,12 @@ tree.
 ## 1. Clean
 
 - [x] `go vet ./...` and `gofmt -l .` report nothing.
-- [ ] No blank `_ =` error-ignores in Go, except documented `//nolint` cases
+- [x] No blank `_ =` error-ignores in Go, except documented `//nolint` cases
       (e.g. `backend/services/eventbus.go`).
       Verify: `grep -rn "_ = " --include=*.go app.go backend/ | grep -v nolint`
-      — expect no matches. Three remain in `app.go`; see backlog
-      ("P2 — Undocumented blank error-ignores").
+      — expect no matches (test files aside; `_test.go` sites are excluded by
+      the sweep, as they were in 2026). The repo-root files are in range of
+      that grep now, which is what the 2026 sweep missed.
 - [x] `pnpm lint` runs against a real ESLint config and passes.
 - [x] Formatting (Prettier/Biome or equivalent) is consistent and enforced,
       not manual (lefthook pre-commit hook: Prettier + ESLint + `tsc --noEmit`
@@ -123,7 +124,7 @@ tree.
 - [x] Automated tests exist and pass for critical paths: RCON client, Modrinth
       API client, backup create/restore, config path-traversal guards,
       scheduler engine (Go); Zustand store logic and critical hooks (frontend).
-      `backend/services` sits at **36.7%** of statements, with a **35%** floor
+      `backend/services` sits at **38.0%** of statements, with a **36%** floor
       owned by `scripts/coverage-floor` and run by both `/suite-kit:health` and
       CI. The floor is a ratchet: raise it as coverage rises, never lower it to
       green a red build. Coverage is a proxy, not the goal — prefer a test that
@@ -259,17 +260,6 @@ tree.
 The remaining, not-yet-closed follow-ups. Each item's full remediation write-up
 moves to `agent_docs/HEALTH_LOG.md` once it's done — keep this section short and
 current. Priorities mirror the pillars above.
-
-**P2 — Undocumented blank error-ignores**
-- Three `_ =` error-ignores in `app.go` carry no `//nolint` comment explaining
-  why the error is safe to drop: the shutdown `serverService.Stop()`, the
-  data-dir `os.MkdirAll`, and the post-update `exec.Command(exePath).Start()`.
-  The 2026 sweep that documented the other 28 sites (HEALTH_LOG.md, "P2 —
-  Undocumented blank error-ignores") reported clean because its audit grep was
-  scoped to `backend --include="*.go"` — the repo-root files were never in
-  range. Re-run it as `grep -rn "_ = " --include=*.go app.go backend/ | grep -v
-  nolint`. Each of the three is plausibly deliberate; decide that per site and
-  write the reason down.
 
 **P2 — Cleanups**
 - `sandbox` (`config_editor.go`) is a purely **lexical** guard — `filepath.Clean`

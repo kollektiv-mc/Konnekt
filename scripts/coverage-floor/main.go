@@ -32,14 +32,16 @@ import (
 // diluted by packages the floor is not about.
 const targetPackage = "./backend/services/"
 
-// Measured coverage when the backup/config-editor/RCON tests landed was 36.7%;
-// floor = that minus a little headroom, so an unrelated refactor does not redden
-// the build. It is a ratchet: raise it when coverage rises, never lower it to make
-// a red build green.
+// Floor = the last measured figure minus a little headroom, so an unrelated
+// refactor does not redden the build. It is a ratchet: raise it when coverage
+// rises, never lower it to make a red build green.
+//
+//	36.7% -> floor 35.0  the backup/config-editor/RCON tests
+//	38.0% -> floor 36.0  ConfigService and WriteDataFile tests
 //
 // Coverage is a proxy, not the goal. A test that would have caught a real bug is
 // worth more than one that only moves this number.
-const floorPercent = 35.0
+const floorPercent = 36.0
 
 // Matches the tail of `go test -cover` output: "coverage: 36.7% of statements".
 var reCoverage = regexp.MustCompile(`coverage:\s+([0-9.]+)%\s+of\s+statements`)

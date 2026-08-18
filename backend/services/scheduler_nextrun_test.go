@@ -151,8 +151,10 @@ func TestEmitNextRuns(t *testing.T) {
 // so an emit misplaced under either lock hangs here instead of in production.
 func TestGraphMutatorsEmitNextRuns(t *testing.T) {
 	s := newTestScheduler(t)
-	// Without this, writeGraphs joins onto "" and litters scheduler.json into
-	// the package directory.
+	// The mutators below persist; without a data dir, WriteDataFile rejects the
+	// write and SaveGraph returns that error. (Before WriteDataFile it was
+	// worse and quieter: the write joined onto "" and littered scheduler.json
+	// into the package directory.)
 	s.dataDir = t.TempDir()
 
 	got := subscribeNextRuns(t, s)

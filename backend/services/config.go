@@ -83,7 +83,7 @@ func (s *ConfigService) writeServerConfigs(configs []models.ServerConfig) error 
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(filepath.Join(s.dataDir, "servers.json"), data, 0644)
+	return WriteDataFile(s.dataDir, "servers.json", data)
 }
 
 func (s *ConfigService) GetActiveServerID() (string, error) {
@@ -106,7 +106,7 @@ func (s *ConfigService) SetActiveServerID(id string) error {
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(filepath.Join(s.dataDir, "active_server.json"), data, 0644)
+	return WriteDataFile(s.dataDir, "active_server.json", data)
 }
 
 func (s *ConfigService) GetAppSettings() (models.AppSettings, error) {
@@ -142,5 +142,5 @@ func (s *ConfigService) SaveAppSettings(settings models.AppSettings) error {
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(filepath.Join(s.dataDir, "app_settings.json"), data, 0644)
+	return WriteDataFile(s.dataDir, "app_settings.json", data)
 }
