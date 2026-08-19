@@ -1,0 +1,47 @@
+{
+  "$comment": [
+    "What .github/scripts/release-notes.py needs to know that is true of this repo",
+    "and no other. The rules it applies - which label means which section, that an",
+    "unlabelled pull request never reaches Features - are the same across the suite",
+    "and live in the script. The paths below are Konnekt's own: Kommands has no",
+    "website/ or agent_docs/, and a shared list would be wrong for both.",
+    "",
+    "Deliberately not in .claude/suite.json: kollektiv's design/suite.schema.json",
+    "sets additionalProperties:false and its CI validates this repo's manifest",
+    "nightly, so a new key there is a change that has to land in kollektiv first.",
+    "This file has one consumer sitting next to it and needs no such coordination."
+  ],
+
+  "nonAppPaths": [
+    ".claude/",
+    ".github/",
+    ".gitattributes",
+    ".gitignore",
+    "CLAUDE.md",
+    "LICENSE",
+    "README.md",
+    "agent_docs/",
+    "docs/",
+    "lefthook.yml",
+    "scripts/",
+    "website/"
+  ],
+
+  "$nonAppPaths": [
+    "Prefixes, matched against each changed file. A pull request touching only",
+    "these did not change the binary being downloaded, so it is left out of the",
+    "notes and counted in the footer instead.",
+    "",
+    "website/ ships to Cloudflare Pages on its own. docs/ and agent_docs/ are read",
+    "in the repo. .github/ is CI and release tooling - the four pull requests that",
+    "built this very script described themselves to users as app changes before it",
+    "was listed here. .claude/ is agent configuration, scripts/ is repo tooling",
+    "(link check, coverage floor), and the root files are repo furniture; README.md",
+    "alone is what kept a website-only redesign in the notes.",
+    "",
+    "Not listed, on purpose: build/ holds the app icon, .desktop file and RPM spec,",
+    "which do ship. frontend/ build config (eslint, vite, package.json) does not",
+    "ship either, but excluding it by path would also hide real frontend work in",
+    "the same pull request - that case is what the type:chore label is for."
+  ]
+}

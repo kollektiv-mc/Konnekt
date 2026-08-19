@@ -225,11 +225,11 @@ jobs:
 
       # The notes come from .github/scripts/release-notes.py, which release.yml
       # also calls, so a snapshot and the release it is ahead of are described
-      # the same way. GitHub's releases/generate-notes cannot express either
-      # half of what a build's changelog needs: it has no idea which paths a
-      # pull request touched, so website-only work described a binary
-      # containing none of it, and it sorts on labels alone, so this repo's
-      # mostly unlabelled pull requests all landed in "Other changes".
+      # the same way. GitHub's releases/generate-notes cannot express what a
+      # build's changelog needs: it has no idea which paths a pull request
+      # touched, so website and CI work described a binary containing none of
+      # it, and it can only sort by label into headings, where this repo wants
+      # maintenance counted rather than listed.
       #
       # The script picks its own baseline — the latest published release, not
       # the previous snapshot. A snapshot describes everything ahead of the

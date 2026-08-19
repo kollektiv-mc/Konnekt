@@ -149,11 +149,32 @@ note to a reviewer.
 - **No em dashes** in titles, bodies or commit messages. Use a comma, a colon,
   or two sentences. Keep the prose plain and short.
 - **Label each PR** `type:feature`, `type:bug`, `type:docs` or `type:chore`.
-  That label is what files it under a heading in the notes; unlabelled PRs land
-  under "Other changes". Headings are defined in `.github/release.yml`.
+  Required, and CI's `pr-labelled` job fails a PR without one. The label alone
+  decides the section: only `type:feature` reaches "Features", and a title is
+  never read as a promotion to it. `type:chore` and `type:docs` are counted in
+  a footer line rather than listed, because they changed nothing a user can
+  observe. `changelog:skip` leaves a PR out entirely.
 - **Body:** why the change exists and how it was verified. It never reaches the
   notes, so detail is free.
 - Commit messages follow the same rules. Nothing parses them.
+
+**Keep one PR to one concern.** The notes list a merged PR once, under one
+heading, by its title, so a PR that carries a feature *and* a website pass *and*
+a CI tweak cannot be described honestly by any single line. Every bad entry in
+the first release window came from this: "Close Milestone 2, add a coverage
+floor, and polish the snapshot channel across the website" is three changes, and
+its title is public copy for none of them. Split it, or accept that it will be
+filed as a chore.
+
+**What reaches the notes at all.** `.github/scripts/release-notes.py` builds
+them, and drops any PR whose files are all under the prefixes in
+`.github/changelog.json` — `website/`, `docs/`, `agent_docs/`, `.github/`,
+`.claude/`, `scripts/` and the root repo furniture. None of that ships in the
+binary. Note `README.md` is on that list and `build/` is not: a one-line README
+edit used to be enough to pull an all-website PR into the notes, while `build/`
+holds the app icon and RPM spec, which do ship. The classifier's rules are
+suite-wide and live in the script; the path list is Konnekt's own and lives in
+that config. Both are covered by `.github/scripts/release-notes_test.py`.
 
 ## Local tooling
 

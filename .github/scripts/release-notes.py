@@ -2,19 +2,39 @@
 """Build the changelog body for a release — the nightly `snapshot` prerelease
 and tagged releases alike.
 
-GitHub's own `releases/generate-notes` cannot do the two things a shipped
-build's changelog needs:
+GitHub's own `releases/generate-notes` cannot do the things a shipped build's
+changelog needs:
 
   * It has no notion of *what* a pull request touched, so the website — which
     lives in this repo but ships to Cloudflare Pages, not into the binary —
     fills the notes of a build that does not contain a line of it.
-  * It sorts purely by label, and this repo's pull requests are mostly
-    unlabelled, so every one of them lands in "Other changes" while the
-    handful that carry a label look like the only real work.
+  * It sorts purely by label, so an unlabelled pull request can only land in the
+    catch-all, which is where nearly every one of them ended up.
 
 So this script does the same job with the changed-path filter and the
 categorisation rules a shipped build actually wants. Both workflows call it, so
 a snapshot and the release it is ahead of describe themselves the same way.
+
+What a reader of these notes is owed
+------------------------------------
+
+The notes describe *the binary they are about to download*. Everything here
+follows from that:
+
+  * Work that ships nowhere near the binary is not in the notes at all. The
+    paths that mean this are per-repo facts and live in .github/changelog.json,
+    not in this file.
+  * A `type:` label decides the section. A title is prose written for a
+    reviewer; a label is a deliberate statement about what the change is, and
+    CI's `pr-labelled` job is what makes it a reliable one.
+  * An unlabelled pull request can never reach Features. Guessing from the
+    leading verb once promoted "Add a Full release roadmap section and a nightly
+    snapshot build channel" — a website and CI change — into the section users
+    read first. A wrong Features entry costs more than a vague Other one, so the
+    guess is only allowed to reach the sections where being wrong is cheap.
+  * Maintenance and documentation are counted, not listed. `type:chore` and
+    `type:docs` are real work that changed nothing a user can observe; the
+    footer says how many there were and the full-changelog link has them all.
 
 Reads:
 
@@ -26,6 +46,8 @@ Reads:
              prereleases, so `snapshot` can never become its own baseline, and
              a tagged release's own entry does not exist yet when it runs.
   SERVER     github.com base URL, for the compare link
+  CONFIG     path to the per-repo config. Defaults to .github/changelog.json
+             next to this script.
 
 Writes the markdown body to stdout. Exits non-zero on any failure, including
 having no baseline to measure from — each caller has a fallback, so losing the
@@ -36,6 +58,7 @@ from __future__ import annotations
 
 import json
 import os
+import pathlib
 import re
 import sys
 import time
@@ -43,53 +66,52 @@ import urllib.error
 import urllib.parse
 import urllib.request
 
-# Paths that never reach the binary: the marketing site, which ships to
-# Cloudflare Pages on its own, and the two documentation trees, which are read
-# in the repo. A pull request touching only these did not change the thing being
-# downloaded, so it is left out of the notes entirely. One touching both still
-# appears — its app-side half is real.
-#
-# agent_docs/ earns its place here rather than being pedantry: website work
-# routinely updates the roadmap alongside the page it describes, and on
-# website/ alone those pull requests came back as app changes through the back
-# door.
-NON_APP_PREFIXES = ("website/", "agent_docs/", "docs/")
-
-# Labels win over any guess made from the title, because a label is a
+# Labels win over anything read out of the title, because a label is a
 # deliberate statement and a title is prose. Names come from the suite's
 # taxonomy in kollektiv's design/labels.json.
 FEATURE_LABELS = {"type:feature", "feature", "enhancement"}
 FIX_LABELS = {"type:bug", "bug"}
-OTHER_LABELS = {"type:chore", "type:docs", "chore", "documentation"}
+
+# Counted in the footer rather than listed. These are labels for work that
+# changed no observable behaviour, so a reader scanning for what is different
+# about this build gains nothing from the titles and loses the signal in them.
+QUIET_LABELS = {"type:chore", "type:docs", "chore", "documentation"}
+
+# The explicit escape hatch, for work that fits none of the above and should
+# simply not be mentioned. Not counted anywhere: the point of asking for silence
+# is silence.
 SKIP_LABELS = {"changelog:skip"}
 
-# Conventional-commit types, for the titles that carry one.
-FEATURE_TYPES = {"feat", "feature", "perf"}
-FIX_TYPES = {"fix", "bugfix", "hotfix"}
-OTHER_TYPES = {"chore", "docs", "test", "tests", "refactor", "ci", "build", "style", "revert"}
+# Conventional-commit types, for the titles that carry one. A prefix someone
+# typed on purpose is a statement in the way a bare verb is not, so `feat:` is
+# allowed to reach Features where "Add ..." is not.
+FEATURE_TYPES = {"feat", "feature"}
+FIX_TYPES = {"fix", "bugfix", "hotfix", "perf"}
+QUIET_TYPES = {"chore", "docs", "test", "tests", "refactor", "ci", "build", "style"}
 
-# Last resort: the leading verb of the title. Most of this repo's pull requests
-# are unlabelled prose, and "Add X" really is a feature and "Fix X" really is a
-# fix. Deliberately short — a verb that does not clearly mean one or the other
-# ("Rework", "Update", "Make", "Migrate") belongs in "Other changes", which is
-# an honest answer rather than a wrong one.
-FEATURE_VERBS = {
-    "add", "adds", "added", "introduce", "introduces", "implement", "implements",
-    "support", "supports", "publish", "publishes", "enable", "enables", "surface",
-    "surfaces", "expose", "exposes", "allow", "allows", "ship", "ships",
-}
+# Last resort, for an unlabelled title with no conventional prefix. Only fix
+# verbs are listed, and deliberately: see the module docstring on why nothing
+# reaches Features by guesswork. A title this does not match lands in "Other
+# changes", which is an honest answer rather than a wrong one — and a visible
+# one, since a correctly labelled repo leaves that section empty.
 FIX_VERBS = {
     "fix", "fixes", "fixed", "correct", "corrects", "repair", "repairs", "resolve",
     "resolves", "prevent", "prevents", "restore", "restores", "unbreak", "unbreaks",
-    "patch", "patches", "harden", "hardens",
+    "patch", "patches", "harden", "hardens", "stop", "stops",
 }
 
 FEATURES, FIXES, OTHER = "Features", "Fixes", "Other changes"
 SECTIONS = (FEATURES, FIXES, OTHER)
 
+# Sentinels for the two ways a pull request leaves the notes, kept apart from
+# the section names so the footer can say which happened.
+QUIET, SKIP = "quiet", "skip"
+
 CONVENTIONAL = re.compile(r"^([a-z]+)(?:\([^)]*\))?!?:\s*")
 
 API = os.environ.get("GITHUB_API_URL", "https://api.github.com").rstrip("/")
+
+DEFAULT_CONFIG = pathlib.Path(__file__).resolve().parent.parent / "changelog.json"
 
 # A hundred-odd calls go into one changelog, so a request that fails for a
 # reason unrelated to what was asked gets a few more chances before the run is
@@ -152,6 +174,28 @@ def api(path: str, **params: object) -> object:
     raise AssertionError("unreachable")
 
 
+def load_non_app_paths(config_path: pathlib.Path) -> tuple[str, ...]:
+    """The path prefixes that never reach the binary, from the repo's config.
+
+    Missing or malformed is a hard failure rather than an empty list. An empty
+    list is not a safe default here — it is the bug this filter exists to stop,
+    and it would produce notes that look fine while describing a build that
+    contains none of what they list. Both callers annotate the failure and fall
+    back to a commit link, which is at least visibly degraded.
+    """
+    try:
+        raw = json.loads(config_path.read_text())
+    except FileNotFoundError as error:
+        raise ApiError(str(config_path), "no such file — this repo has not been configured") from error
+    except json.JSONDecodeError as error:
+        raise ApiError(str(config_path), f"not valid JSON: {error}") from error
+
+    paths = raw.get("nonAppPaths")
+    if not isinstance(paths, list) or not all(isinstance(p, str) for p in paths):
+        raise ApiError(str(config_path), "nonAppPaths must be a list of strings")
+    return tuple(paths)
+
+
 def commits_in_range(repo: str, base: str, head: str) -> list[dict]:
     """Every commit reachable from `head` but not `base`.
 
@@ -185,7 +229,7 @@ def merged_pulls(repo: str, commits: list[dict]) -> list[dict]:
     return sorted(pulls.values(), key=lambda pull: (pull["merged_at"], pull["number"]))
 
 
-def touches_app(repo: str, number: int) -> bool:
+def touches_app(repo: str, number: int, non_app_paths: tuple[str, ...]) -> bool:
     """Whether a pull request changed anything outside the non-app paths.
 
     Returns early on the first app-side file, so the common case — a pull
@@ -198,24 +242,28 @@ def touches_app(repo: str, number: int) -> bool:
         if not files:
             return False
         for changed in files:
-            if not changed["filename"].startswith(NON_APP_PREFIXES):
+            if not changed["filename"].startswith(non_app_paths):
                 return True
         if len(files) < 100:
             return False
     return True
 
 
-def section_for(pull: dict) -> str | None:
-    """Which section a pull request belongs in, or None to leave it out."""
+def section_for(pull: dict) -> str:
+    """Which section a pull request belongs in, or QUIET / SKIP to leave it out.
+
+    Order matters: an explicit skip beats everything, then labels in descending
+    specificity, then a conventional-commit prefix, then the fix-verb guess.
+    """
     labels = {label["name"].lower() for label in pull.get("labels") or []}
     if labels & SKIP_LABELS:
-        return None
+        return SKIP
     if labels & FEATURE_LABELS:
         return FEATURES
     if labels & FIX_LABELS:
         return FIXES
-    if labels & OTHER_LABELS:
-        return OTHER
+    if labels & QUIET_LABELS:
+        return QUIET
 
     title = (pull.get("title") or "").strip()
     conventional = CONVENTIONAL.match(title)
@@ -225,19 +273,15 @@ def section_for(pull: dict) -> str | None:
             return FEATURES
         if kind in FIX_TYPES:
             return FIXES
-        if kind in OTHER_TYPES:
-            return OTHER
+        if kind in QUIET_TYPES:
+            return QUIET
         # A prefix that isn't a conventional type is a scope someone wrote by
         # hand ("website: ..."). Drop it so the verb check below reads the
         # sentence rather than the scope.
         title = title[conventional.end():].strip()
 
     verb = re.sub(r"[^a-z]", "", title.split(" ")[0].lower()) if title else ""
-    if verb in FEATURE_VERBS:
-        return FEATURES
-    if verb in FIX_VERBS:
-        return FIXES
-    return OTHER
+    return FIXES if verb in FIX_VERBS else OTHER
 
 
 def entry(pull: dict) -> str:
@@ -247,6 +291,25 @@ def entry(pull: dict) -> str:
     # that generator everywhere else, so it deliberately doesn't here.
     title = " ".join((pull.get("title") or f"Pull request #{pull['number']}").split())
     return f"* {title}"
+
+
+def footer(not_shipped: int, quiet: int) -> str:
+    """One line accounting for what was left out, or "" when nothing was.
+
+    Said out loud rather than passed over: a changelog that silently drops two
+    thirds of the merged work reads as a quiet release, and the reader has no
+    way to tell that from an accurate one.
+    """
+    clauses = []
+    if not_shipped:
+        clauses.append(f"{not_shipped} changed nothing that ships in this build")
+    if quiet:
+        clauses.append(f"{quiet} maintenance or documentation")
+    if not clauses:
+        return ""
+    total = not_shipped + quiet
+    noun = "pull request is" if total == 1 else "pull requests are"
+    return f"_{total} {noun} not listed: {', '.join(clauses)}._"
 
 
 def latest_release_tag(repo: str) -> str:
@@ -263,6 +326,9 @@ def main() -> int:
     repo = os.environ["REPO"]
     head = os.environ["HEAD_REF"]
     server = os.environ.get("SERVER", "https://github.com").rstrip("/")
+    config_path = pathlib.Path(os.environ.get("CONFIG") or DEFAULT_CONFIG)
+
+    non_app_paths = load_non_app_paths(config_path)
 
     base = os.environ.get("BASE_TAG", "").strip() or latest_release_tag(repo)
     if not base:
@@ -271,15 +337,22 @@ def main() -> int:
 
     commits = commits_in_range(repo, base, head)
     grouped: dict[str, list[str]] = {section: [] for section in SECTIONS}
-    skipped = 0
+    not_shipped = 0
+    quiet = 0
 
     for pull in merged_pulls(repo, commits):
-        if not touches_app(repo, pull["number"]):
-            skipped += 1
-            continue
         section = section_for(pull)
-        if section:
-            grouped[section].append(entry(pull))
+        if section == SKIP:
+            continue
+        # The path check costs a request per pull request, so it runs after the
+        # cheap label read — a skipped or quiet pull request never needs it.
+        if not touches_app(repo, pull["number"], non_app_paths):
+            not_shipped += 1
+            continue
+        if section == QUIET:
+            quiet += 1
+            continue
+        grouped[section].append(entry(pull))
 
     lines = ["## What's changed", ""]
     for section in SECTIONS:
@@ -287,15 +360,11 @@ def main() -> int:
             lines += [f"### {section}", *grouped[section], ""]
 
     if not any(grouped.values()):
-        lines.append("No changes to the app since the last release.")
-        lines.append("")
+        lines += ["No user-facing changes since the last release.", ""]
 
-    if skipped:
-        noun = "pull request" if skipped == 1 else "pull requests"
-        lines.append(
-            f"_{skipped} website and documentation {noun} left out — neither ships in this build._"
-        )
-        lines.append("")
+    accounting = footer(not_shipped, quiet)
+    if accounting:
+        lines += [accounting, ""]
 
     lines.append(f"**Full changelog**: {server}/{repo}/compare/{base}...{head}")
     print("\n".join(lines))

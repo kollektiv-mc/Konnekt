@@ -20,6 +20,7 @@
       { "name": "website format", "run": "pnpm format:website", "cwd": "frontend" },
       { "name": "website links", "run": "node scripts/check-website-links.mjs" },
       { "name": "bundle budget", "run": "pnpm check-bundle", "cwd": "frontend" },
+      { "name": "release notes", "run": "python3 .github/scripts/release-notes_test.py" },
       { "name": "go vet", "run": "go vet ./..." },
       { "name": "go test", "run": "go test ./..." },
       { "name": "coverage floor", "run": "go run ./scripts/coverage-floor" }
