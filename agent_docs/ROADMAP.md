@@ -27,9 +27,12 @@ were shipped early during Alpha. Their status below reflects reality.
 ### Core infrastructure
 
 - [x] Wails v2 app scaffold (Go + React + TypeScript + Vite)
-- [x] Tailwind CSS v3 design system (dark, #05060a base, #4ade80 accent)
+- [x] Tailwind CSS v4 design system (dark, #05060a base, #4ade80 accent),
+      backed by the generated token layer in `frontend/src/styles/`
 - [x] Custom scrollbar (4px, dark minimal, matches design scheme)
-- [x] JetBrains Mono + Inter fonts
+- [x] Satoshi (display), Excon (titles) and Ranade (body) webfonts; mono is the
+      native OS stack. JetBrains Mono and Inter were the original plan and were
+      never shipped
 - [x] Startup splash screen (Satoshi Black "Konnekt" in accent green, 1s fade+glow animation)
 - [x] Tile layout system (react-grid-layout, drag, resize, snap)
 - [x] Tile crate (inactive tiles panel, add/remove from canvas)

@@ -26,7 +26,10 @@ pnpm test               # vitest (from frontend/)
 pnpm format:check       # Prettier (from frontend/)
 pnpm format:website     # Prettier over website/ (from frontend/)
 node scripts/check-website-links.mjs   # website links/assets/sitemap (repo root)
+node scripts/check-release-notes-extract.mjs   # changelog page's body extract (repo root)
 pnpm check-bundle       # 550 KB gzip entry-chunk budget (from frontend/)
+pnpm check-tokens       # every token-named class compiles (from frontend/, after a build)
+python3 .github/scripts/release-notes_test.py  # release-notes classifier (repo root)
 go vet ./...            # Go static analysis (repo root)
 go test ./...           # Go tests (repo root)
 go run ./scripts/coverage-floor   # backend/services coverage floor (repo root)
@@ -106,14 +109,23 @@ tree.
       slide/open-close, and a decorative splash/spin legitimately warrant
       different timing — the goal is a shared vocabulary for the common
       cases, not uniformity.
-      Verify: from `frontend/`, all four of these, because a motion literal has
-      four spellings and the arbitrary-value one is the *least* common:
+      Verify: from `frontend/`, all **five** of these, because a motion literal
+      has five spellings and the arbitrary-value one is the *least* common:
       ```bash
       grep -rnE "(duration|delay)-\[[0-9.]+m?s\]|ease-\[" src   # arbitrary values
       grep -rnE "\b(duration|delay)-[0-9]+\b" src                # Tailwind's own scale
       grep -rnE "\[transition:[^]]*\]" src                       # arbitrary shorthand
       grep -rnE "transition:|animation:" src src/style.css        # inline + hand CSS
+      grep -rnE "\.style\.(transition|animation)\s*=" src         # direct DOM assignment
       ```
+      The fifth was added 2026-08-19. It has no colon after the property name,
+      so none of the other four can see it, and it is live: `Dashboard.tsx`
+      drives the whole tile maximise/minimise FLIP through it. Two greps have
+      now each been "the complete set" and each missed a spelling, so treat the
+      list as a floor, not a proof. Also chase symbolic constants to their
+      literal (`focusLayout.ts`'s `FOCUS_TRANSITION`,
+      `useGridPageAnimation.ts`'s `PANEL_DURATION`) — the grep sees the name,
+      not the value.
       Every match must be a documented one-off, not a near-miss of an existing
       token. See backlog ("P2 — Motion one-offs outside the token vocabulary").
 - [x] No committed build artifacts (`*.syso`, `frontend/dist/`, `build/bin/`)
@@ -204,9 +216,14 @@ tree.
       Verify: `grep -n "ErrorBoundary" frontend/src/main.tsx`, then run the app
       with no server configured and confirm tiles render an offline state
       rather than a blank panel. The grep half passes (`main.tsx:5`/`:18`/`:21`).
-      The second half stays unticked on purpose: it needs a running GUI, so a
-      headless agent cannot close it — leave it for a session at a desk rather
-      than ticking it on the grep alone.
+      The second half is now open on evidence rather than on absence of it: read
+      2026-08-19, the console tile really does render a blank panel offline and
+      the players tile cannot be told apart from an empty server — see backlog
+      ("P1 — Tiles that render an unreachable server as an empty one"). That
+      also corrects an assumption this line carried: the *verification* does not
+      need a GUI, since a jsdom render against a rejecting mocked binding
+      asserts the same thing. What needs a desk is the whole-app sweep, not the
+      per-tile check.
 
 ## 3. Scalable / Future-proof
 
@@ -324,103 +341,137 @@ The remaining, not-yet-closed follow-ups. Each item's full remediation write-up
 moves to `agent_docs/HEALTH_LOG.md` once it's done — keep this section short and
 current. Priorities mirror the pillars above.
 
-**P2 — Motion one-offs outside the token vocabulary**
+**P1 — Four stores swallow a failed write and keep the optimistic update**
+(found 2026-08-19)
+- `agent_docs/CLAUDE.md`'s IPC conventions say a store's "write actions rethrow
+  after recording the error, so an optimistic UI can revert", and name a bare
+  `catch {}` as the thing to avoid. `stores/useSchedulerStore.ts:124-165` does
+  exactly that and its own comment says every other store does not. It is right.
+- `useServerConfigStore.ts` (`saveConfig` :49, `deleteConfig` :64, `setActiveId`
+  :77), `useSettingsStore.ts` (`update` :85), `useLayoutStore.ts`
+  (`savePreset`/`deletePreset` :107-133) and `useTileStore.ts`
+  (`addTile`/`removeTile` :18-45) each catch the rejection with a `/* best-effort */`
+  comment and then apply the local update anyway. A failed `SaveServerConfig`
+  therefore shows the edit as saved, and it is gone on the next start, with no
+  error anywhere.
+- This is not speculative. `useSettingsStore.test.ts:100-103` *asserts* the
+  behaviour: "keeps the optimistic update even when SaveAppSettings rejects",
+  mocking a disk-full rejection and checking the toggle stays on. That test
+  encodes the bug, so fixing the stores means fixing the test with them.
+- Severity ranks by what is lost: server config (RCON credentials, working
+  directory, JVM args) worst, then settings (`confirmBeforeStop`,
+  `notifyOnCrash` are safety toggles a user would believe are on), then layout
+  and tiles, which are cosmetic. Each store needs the rethrow *and* its callers
+  need to revert, so this is a real piece of work, not a find-and-replace.
+
+**P1 — Tiles that render an unreachable server as an empty one** (found
+2026-08-19)
+- The Stable pillar's `ErrorBoundary` item asks that the UI "degrade gracefully
+  when the Minecraft server process is offline or unreachable" and has stayed
+  half-ticked because it needs a GUI. It does not, entirely: three tiles were
+  read directly and two are wrong.
+- `tiles/console/index.tsx` is the blank-panel case the item is about. With no
+  lines, the output region (`:132-143`) renders an empty `<div>` — no
+  placeholder, no offline text; a grep for `running`/`offline`/`disabled` in
+  that file returns nothing. The command input and Send button stay enabled, and
+  submitting offline fails into `.catch(console.error)` with no visible feedback.
+- The players tile renders an unreachable server identically to a server with
+  nobody on it: `usePlayers.ts:26` swallows the rejection, `players` stays `[]`,
+  and `PlayerGrid.tsx:13` shows "No players online" either way.
+- `tiles/stats/index.tsx` is fine — `useServerStore`'s `defaultStatus.running`
+  is `false`, so it shows its offline indicator on failure.
+- The verification half *is* closable headlessly, contrary to what this
+  checklist has assumed: `useUpdateCheck.test.ts:9` already shows the pattern
+  (`vi.mock('../../wailsjs/go/main/App')` plus `mockRejectedValue`), and a
+  jsdom render asserting an offline state needs no GUI. The console fix is a
+  code change first, then a test.
+
+**P2 — Motion one-offs outside the token vocabulary** (largely closed 2026-08-19)
 - The motion vocabulary is three tokens: `--duration-fast` (150ms),
   `--duration-panel` (280ms) and `--ease-standard`
-  (`cubic-bezier(0.4, 0, 0.2, 1)`).
-- **The "12 matches" this entry was written around is wrong, and the way it is
-  wrong matters.** That count comes from one grep,
-  `(duration|delay)-\[[0-9.]+m?s\]|ease-\[`, which only sees Tailwind's
-  *arbitrary-value* spelling — and one of its 12 hits is the prose comment at
-  `tiles/mods/BrowsePanel.tsx:38`, not a call site. A motion literal has four
-  spellings in this codebase and that grep sees one of them. Re-measured with
-  all four (the Clean pillar's verify block now lists them):
-  - **arbitrary values** — 11 real call sites, as itemised below.
-  - **Tailwind's own scale** — 15 more, invisible to the original grep because
-    `duration-300` has no brackets: `components/ActiveProcesses.tsx:31`,
-    `components/SettingsModal.tsx:656`, `components/ui/Segmented.tsx:41`,
-    `tiles/TileWrapper/index.tsx:30` (`duration-150`, which *is*
-    `--duration-fast` spelled as a scale step), `tiles/backups/BackupCard.tsx:46`,
-    `tiles/backups/ServerInfoPanel.tsx:111`/`:179`, `tiles/backups/index.tsx:518`/`:572`,
-    `tiles/config/form/widgets.tsx:38`/`:44`, `tiles/mods/index.tsx:96`/`:272`,
-    `tiles/performance/index.tsx:56`, `tiles/stats/index.tsx:71`.
-  - **arbitrary `[transition:...]` shorthand** — 2: `tiles/mods/BrowsePanel.tsx:442`
-    (`border-color_150ms_ease`) and `tiles/mods/ContentCard.tsx:158`
-    (`opacity_200ms_ease`).
-  - **inline `transition:` strings and hand-authored CSS** — ~15, and this is
-    where the sharpest cases live. `components/ui/Segmented.tsx:32` writes
-    `cubic-bezier(0.4, 0, 0.2, 1)` out longhand, which is `--ease-standard`
-    character for character. `src/style.css:166` and `:218` write bare `150ms`
-    thirty lines below the same file's own `var(--duration-fast)` usages at
-    `:123`/`:128`. `tiles/mods/useGridPageAnimation.ts:5` holds
-    `const PANEL_DURATION = 280`, and `:328` schedules a `setTimeout` off it,
-    so it is the real other half of BrowsePanel's "keep both in sync" comment —
-    which points at the class on line 449 instead, in a different file.
-  - Two files already do it right and are the pattern to copy:
-    `components/ui/Popover.tsx:30` and `components/ui/Collapsible.tsx:45` read
-    `var(--duration-fast)`/`var(--duration-panel)`/`var(--ease-standard)` from
-    inside an inline `transition:` string.
-- Also worth knowing before scoping: `frontend/src/styles/tokens.ts` (generated)
-  exports colours only. There is no JS-readable motion token, which is why
-  `useGridPageAnimation.ts` holds numbers. Emitting the motion scale into
-  `tokens.ts` is a `gen-tokens.mjs` change and lands in this repo.
-- The original per-group analysis of the arbitrary-value sites still stands:
-  - **A near-miss that is not even a miss.** `tiles/mods/BrowsePanel.tsx:449`
-    spells `duration-[280ms]`, which *is* `--duration-panel`, and line 38
-    carries a hand-written comment telling the next reader to keep the two in
-    sync. Switching it to the `duration-panel` utility deletes both the
-    arbitrary value and the comment. `duration-fast`/`ease-standard` already
-    work as utilities (`components/LayoutPresets.tsx:51`,
-    `tiles/config/form/ConfigForm.tsx:33`), so nothing new is needed for this
-    one.
-  - **Near-misses that need a judgement call.** `duration-200`
-    (`tiles/backups/BackupCard.tsx:46`), `duration-300` and `duration-[180ms]`
-    (`tiles/backups/index.tsx:572`, `:616`), and `duration-[250ms]`
-    (`tiles/worlds/scene/WorldsScene.tsx:383`) all sit within ~50ms of an
-    existing token. Either round them onto the token or write down why the
-    difference is deliberate.
-  - **A repeated value with no token.** `duration-[220ms]` appears three times
-    in `tiles/backups/index.tsx` (`:580`, `:626`, `:668`) for the same
-    panel/tray motion. A value used three times is a vocabulary gap, not a
-    one-off.
-  - **`ease-[ease]`, six times** (`tiles/backups/BackupCard.tsx:46`,
-    `tiles/backups/index.tsx:572`, `:580`, `:616`, `:626`, `:668`). This is
-    CSS's plain `ease` keyword, `cubic-bezier(0.25, 0.1, 0.25, 1)` — a
-    *different* curve from `--ease-standard`, and Tailwind has no bare `ease`
-    utility, so the escape hatch is the only spelling available. Whether the
-    backups tile genuinely wants a second curve or just never reached for the
-    token is undecided, and undecided is the actual defect here.
-  - **Genuinely unique, and fine.** `tiles/backups/SolarSystem.tsx:152`/`:234`
-    (`duration-[350ms]` with an overshoot spring,
-    `cubic-bezier(0.34, 1.56, 0.64, 1)`) and
-    `tiles/worlds/scene/WorldsScene.tsx:328`/`:383`
-    (`cubic-bezier(0.25, 0, 0.25, 1)`) are decorative scene motion no shared
-    token should flatten. They need a comment saying so, not a change.
-- Note the constraint before starting: the token layer is **generated**. Adding
-  a duration or an easing is an edit to `kollektiv/design/tokens.json`
-  (`motion.duration.scale`, `motion.easing`), then kollektiv's
-  `scripts/sync-tokens.sh`, then `pnpm gen:tokens` here, committing all three
-  generated files. It cannot be done from this repo alone, and a hand edit to
-  `tokens.css` is reverted on the next run. So the parts that only reuse an
-  existing token or add a comment can land here; anything needing a new token
-  is gated on the upstream change. (Checked 2026-08-19 against a read-only
-  clone of `kollektiv-mc/kollektiv`: `design/tokens.json` and this repo's
-  vendored `tokens.source.json` are byte-identical, so the vendored copy is not
-  stale and `motion` really does hold only those three values upstream too.)
-- One resolution needs no upstream change at all, and is probably the right
-  one: the three `duration-[220ms]` sites in `tiles/backups/index.tsx` are a
-  *single* choreographed motion — the solar system scaling down (`:580`), the
-  carousel riding up (`:626`) and the list panel sliding in (`:668`) all fire
-  off the same `panelOpen` flag and must stay in lockstep. That is a panel
-  open/close, which is exactly the role `--duration-panel` names. Adopting the
-  token keeps the three in lockstep by construction. Per kollektiv's
-  `design/README.md`, a token is named by **role**, never by appearance, so
-  "panel motion that happens to be 60ms quicker" is not a second role. The
-  overshoot curves are the genuine vocabulary gap:
-  `cubic-bezier(0.34,1.15,0.64,1)` appears at `ServerInfoPanel.tsx:59`,
-  `WorldInfoPanel.tsx:53` and `BackupCarousel.tsx:182`, and
-  `cubic-bezier(0.34,1.56,0.64,1)` at `SolarSystem.tsx:136`/`:152`/`:234` —
-  two near-identical springs, six sites, no token. That one *is* upstream work.
+  (`cubic-bezier(0.4, 0, 0.2, 1)`). What stays open is the part needing a value
+  the upstream source does not hold.
+- **Know this before touching a duration utility.** Tailwind v4 resolves
+  `duration-*` against the `--transition-duration-*` namespace and `delay-*`
+  against `--transition-delay-*`, never against `--duration-*`. `ease-*` *does*
+  read `--ease-*`, which is why `ease-standard` always worked and its duration
+  counterpart silently did not: `duration-fast` compiled to nothing and the
+  element fell back to Tailwind's own `--default-transition-duration`, which is
+  150ms, so the two `duration-fast` call sites looked correct by coincidence.
+  An earlier version of this entry called converting `duration-[280ms]` to
+  `duration-panel` a safe no-op; it would have regressed that panel to 150ms.
+  `gen-tokens.mjs` now emits `--transition-duration-<name>` alongside each
+  `--duration-<name>` from the same source value, and `.duration-fast` /
+  `.duration-panel` are real utilities in the built CSS. `--duration-*` remains
+  the name hand-written CSS and inline `transition:` strings read. Do not
+  hand-add a namespace; both spellings come from one `tokens.source.json` entry.
+- **Adopted, each verified in the built CSS** (2026-08-19): `BrowsePanel.tsx`'s
+  panel slide and resize-handle transition, `TileWrapper`'s border fade,
+  `style.css`'s `.tile-outer` and resize handle, `scheduler.css`'s node and edge
+  entrances (neither of which the previous version of this entry had found), and
+  `Segmented.tsx`'s longhand copy of `--ease-standard`. The three
+  `duration-[220ms]` values in `tiles/backups/index.tsx` are now
+  `duration-panel`: they are one choreographed motion off a single `panelOpen`
+  flag, so the token keeps them in lockstep by construction. That was a
+  deliberate 220 → 280ms change, the only visual change in the pass.
+- **Decided and annotated, not converted.** Each decorative site now carries a
+  comment saying why it keeps its literal: `SolarSystem.tsx`'s overshoot
+  springs, entrance rise and per-world float; `WorldsScene.tsx`'s 400ms scene
+  reveal; `WireframeSphere.tsx`'s idle spin; `scheduler.css`'s run pulse;
+  `style.css`'s flash ring and splash. `WorldsScene.tsx`'s 250ms HUD slide stays
+  250ms and now says why: it is hand-matched to the camera's exponential damp
+  (`MathUtils.damp` at lambda 4.5), which has no fixed duration to share a token
+  with. The six `ease-[ease]` sites in the backups tile stay too, with the
+  reason recorded at the top of the stage block — it is CSS's plain `ease`
+  keyword, `cubic-bezier(0.25, 0.1, 0.25, 1)`, a genuinely different curve, and
+  Tailwind ships no bare `ease` utility, so the escape hatch is the only
+  spelling available. Undecided was the defect; these are decided now.
+- **Still open, and genuinely upstream.** Two curves have no token and cannot
+  get one from this repo:
+  - `cubic-bezier(0.34,1.15,0.64,1)` — **seven** sites, not the three this entry
+    used to claim: `ServerInfoPanel.tsx:59`, `WorldInfoPanel.tsx:53`,
+    `BackupCarousel.tsx:182`, `BackupCard.tsx:41`, `focusLayout.ts:3` (behind the
+    `FOCUS_TRANSITION` constant, which is why a grep alone never saw it), and
+    `Dashboard.tsx:195`/`:216`.
+  - `cubic-bezier(0.4, 0, 1, 0.6)` — `Dashboard.tsx:239`/`:244`, an accelerate
+    curve for the tile minimise, unrelated to anything else here and
+    undocumented until now.
+  Adding either is an edit to `kollektiv/design/tokens.json`'s `motion.easing`,
+  then kollektiv's `scripts/sync-tokens.sh`, then `pnpm gen:tokens` here.
+- **Also still open, smaller.** Roughly 14 `duration-200`/`-300` values on
+  Tailwind's own numeric scale are near-misses nobody has ruled on. They read as
+  a token would, they just are not one. And `tokens.ts` still exports colours
+  only, so `useGridPageAnimation.ts`'s `PANEL_DURATION = 280` and
+  `Collapsible.tsx:27`'s bare `280` still hold numbers a JS-readable motion
+  export would replace — a `gen-tokens.mjs` change that lands in this repo
+  whenever it is wanted.
+- **The bug was isolated, and there is now a gate.** Swept 2026-08-19 for the
+  same defect in every other token group: built all 384 token-derived class names
+  from `tokens.source.json`, found the 61 `frontend/src` actually uses, and
+  checked each against the built CSS. **Zero dead.** Type sizes, radii, font
+  families, border widths and every colour utility all compile, and
+  `bg-canvas`/`text-text-muted` resolve through the `@theme inline` block by
+  textual substitution exactly as its comment says. Do not re-run that sweep by
+  hand: `pnpm check-tokens` (`frontend/scripts/check-token-classes.mjs`) is that
+  check, wired into `suite.json` and CI, and it was confirmed to fail on this
+  branch's own bug before being confirmed green.
+- **An upstream naming question, deliberately not acted on.** Tailwind v4.3.2
+  *does* read a `--border-width-*` namespace. The `@utility border-hairline`
+  rules exist only because the tokens are named `--border-hairline`. Renaming
+  them `--border-width-*` in `kollektiv/design/tokens.json` would let them
+  resolve automatically the way `ease-*` and `duration-*` now do, and delete that
+  block. It is a rename in the shared source and would move Kommands too, so it
+  belongs upstream. The generator's comment used to state the reasoning backwards
+  and now records this.
+- **Why no `suite.json` invariant for this.** An invariant is one regex that
+  must find nothing, with no judgement applied. Motion is not borders: the
+  decorative sites above are meant to keep their literals forever, so a motion
+  invariant needs a curated `exclude` list rather than the border rule's "just
+  don't write it" purity, and a comment containing the matched text is a
+  permanent false-failure risk. Before one could land, the numeric-scale
+  near-misses need a ruling and the decorative files need exclude-listing. Until
+  then it is red on arrival, exactly what the border invariant's own diagnosis
+  warns against.
 
 **P2 — A Go model the bindings never emit**
 - `frontend/wailsjs/go/main/App.d.ts:94` types `ModCheckUpdates` as
@@ -441,31 +492,55 @@ current. Priorities mirror the pillars above.
   not stale bindings. The fix is a signature the generator can see through
   (return a slice of a named struct rather than a map keyed by filename), which
   is an IPC shape change with frontend churn, so it is a deliberate piece of
-  work rather than a patch. A cheaper stopgap that catches the *next* one: grep
-  the generated `App.d.ts` for `models.` names absent from `models.ts` and make
-  that a `suite.json` invariant.
+  work rather than a patch.
+- Measured 2026-08-19, so nobody re-derives it. Comparing every `models.X` name
+  referenced in `App.d.ts` (22) against every name `models.ts` declares (34),
+  `ModUpdateInfo` is the **only** dangling one. Surveying all 82 bound methods
+  for the same shape turns up no second latent instance: only
+  `GetScheduleNextRuns` returns a map at all and its value is an `int64`, and no
+  bound method uses `[][]`, `interface{}` or `any`. So this is one isolated
+  occurrence, not a pattern spreading. (`services.InstallerInfo` looks dangling
+  and is not — `models.ts` declares two namespaces and `App.d.ts` imports both.)
+- The cheaper stopgap is **not** expressible as a `suite.json` invariant. An
+  invariant is one regex that must find nothing within a single file; this is a
+  set difference between two files. It would need a script (the shape of
+  `frontend/scripts/check-bundle-size.mjs`), a `health.commands` entry, and a
+  literal step in `ci.yml`'s `frontend` job, since that workflow deliberately
+  runs `suite-check.py` with `--section invariants --section generated` only.
+  And it would be **red on arrival** until `ModCheckUpdates` is reshaped or the
+  known case is explicitly excluded, so it has to ship with the real fix.
 - Related and lower severity: eight more hand-written redeclarations of Go
-  models sit in `frontend/src/types/index.ts` (seven) and
-  `tiles/performance/usePerformanceHistory.ts:6` (`StatsSnapshot`), where
-  `useMods.ts:21-25` and `useBackups.ts:15` already show the right shape by
-  aliasing `models.X`. All eight are in sync now, and structural typing does
-  catch a rename or a removal; what they miss silently is an **added** field.
+  models sit in `frontend/src/types/index.ts` (seven: `AppSettings`,
+  `LayoutPreset`, `ServerConfig`, `Player`, `ConfigFile`, `ServerStatus`,
+  `ServerSummary`) and `tiles/performance/usePerformanceHistory.ts:6`
+  (`StatsSnapshot`), where `useMods.ts:21-25` and `useBackups.ts:15` already
+  show the right shape by aliasing `models.X`. All eight are in sync now, and
+  structural typing does catch a rename or a removal; what they miss silently is
+  an **added** field. Checked 2026-08-19: every one of the eight *is* emitted
+  into `models.ts`, so all eight could be replaced with a one-line alias today,
+  with no IPC change. `ModUpdateInfo` is the only one that structurally cannot
+  be, which is the whole point of this entry.
 
-**P2 — An error sentinel with no caller**
-- `backend/services/update.go:33`'s `ErrUpdatePermission` is produced at
-  `:261` and matched by nobody: no `errors.Is` anywhere in the tree. Its doc
-  comment used to assert a contract ("Callers should fall back to opening the
-  release page for a manual download") that nothing implements; the comment now
-  describes the real situation instead.
-- It is not dead code, and deleting it would be wrong: the sentinel's text is
-  interpolated into the error the user actually sees. The defect is that the
-  only consumer is the frontend, across the Wails IPC boundary, where a Go
-  sentinel arrives as a plain message string, so `errors.Is` is structurally
-  unavailable to it. Realising the contract means giving the frontend something
-  structured to branch on: a typed field on a returned struct, or a documented
-  error-code prefix. `app.go:184` passes the error straight through and
-  `frontend/src/hooks/useUpdateCheck.ts:32` swallows it with a bare `catch {}`,
-  so both ends need the change together.
+**P3 — An error sentinel with no caller** (downgraded 2026-08-19: the premise
+was partly wrong)
+- `backend/services/update.go:37`'s `ErrUpdatePermission` is produced at `:265`
+  and matched by nobody: no `errors.Is` anywhere in the tree. That much holds.
+- What this entry used to say, and what is actually true: it named
+  `frontend/src/hooks/useUpdateCheck.ts:32` as swallowing the error with a bare
+  `catch {}`. That catch wraps `CheckForUpdates`, a path this sentinel can never
+  reach — permission checks only run inside `downloadAndApply`, reached only
+  from `DownloadAndInstallUpdate`. The real and only caller is
+  `SettingsModal.tsx`'s `runInstall` (`:567`), whose catch is **not** empty: it
+  records the message into an `installFailed` state and the render branch shows
+  "Couldn't install automatically", the message text, and a working "Open
+  release page" button. So the contract the doc comment described is broadly
+  implemented already.
+- What is genuinely missing is only *tailored* guidance: permission, checksum
+  and network failures all funnel into one branch distinguished by raw error
+  text, so the UI cannot say "try running as Administrator". Fixing that means a
+  structured field to branch on (`app.go:184` plus a model field plus a binding
+  regeneration) or a documented error-code prefix the frontend matches. Neither
+  is urgent, because nobody is currently stuck: the manual fallback works.
 
 **P2 — Cleanups**
 - `sandbox` (`config_editor.go`) is a purely **lexical** guard — `filepath.Clean`
@@ -476,13 +551,44 @@ current. Priorities mirror the pillars above.
   model. A fix has to resolve the *parent* directory (`sandbox` runs for files
   that do not exist yet, on the write path), and its test needs a skip guard
   because Windows gates symlink creation behind Developer Mode or elevation.
-- Structured logging: replace ad-hoc `fmt.Errorf`-only backend reporting with
-  `log/slog`, keeping `EventBus` for UI-facing notifications.
+  Checked 2026-08-19 for the worse version of this bug and it is not there:
+  `unzipTo` (`backend/services/backup.go:879`), the one place the backend
+  extracts an archive to disk, has a correct zip-slip guard using the
+  trailing-separator prefix form. Every other `archive/zip` use in the backend
+  (`installer.go`, `modjar.go`, `backup.go`'s metadata readers) opens entries
+  read-only and never writes to a caller-supplied path.
+- Structured logging: there is no retrievable log at all today, which is the
+  reason this matters. Counted 2026-08-19 across `app.go` and `backend/`: one
+  `fmt.Printf` (`scheduler.go:247`), one bare `println` (`main.go:35`), zero
+  `log.*`, zero `runtime.LogXxx`, and 46 `EventBus` emissions that are UI-facing
+  and live only while the window is open. `main.go` sets no `Logger` on
+  `options.App`, so both stdout writes vanish in a packaged GUI build. A bug
+  reporter has nothing to attach. `log/slog` is stdlib on Go 1.24, so no
+  dependency is added. The smallest valuable version is one logger writing to a
+  file in the app data dir plus the existing call sites moved onto it; the
+  "full sweep" framing is misleading, since there is almost nothing to convert —
+  the work is adding logging, not replacing it.
 - Memoization pass: add `React.memo`/`useMemo`/`useCallback` to the most
-  expensive tile subtrees identified during a profiling pass.
-- React Compiler-readiness lint rules: revisit enabling
-  `eslint-plugin-react-hooks`'s full `recommended`/`recommended-latest` set (~60
-  findings, mostly r3f scene code) once test coverage is in place.
+  expensive tile subtrees identified during a profiling pass. Baseline
+  2026-08-19: `React.memo` appears exactly once in the whole frontend
+  (`tiles/scheduler/editor/BlockNode.tsx:25`); `useMemo` 27 times, `useCallback`
+  101. The named subtrees (backups `SolarSystem`, worlds `WorldsScene`/`Planet`)
+  have none. Still GUI-gated — a re-render count needs the Profiler, and the r3f
+  scenes need a real WebGL context to mount.
+- React Compiler-readiness lint rules: **measured** 2026-08-19 rather than
+  estimated, and the previous note had it backwards. Running
+  `eslint-plugin-react-hooks@7.1.1`'s `recommended-latest` over `src` gives
+  **50** findings, not ~60 (`set-state-in-effect` 20, `refs` 16,
+  `exhaustive-deps` 13, `purity` 1) across 22 files — and only **3** are in r3f
+  scene code (`WorldsScene.tsx:275-276`, `Planet.tsx:339`, all the standard
+  imperative-ref-during-render pattern). The other 47 are ordinary app logic,
+  concentrated in `tiles/mods/useGridPageAnimation.ts` (8),
+  `tiles/backups/BackupCarousel.tsx` (7) and `tiles/mods/BrowsePanel.tsx` (7).
+  Its stated gate, "once test coverage is in place", cannot be met as written
+  either: the frontend has **no** coverage measurement at all (no `coverage` key
+  in `vite.config.ts`, no `@vitest/coverage-*` dependency). The 36%/38% floor is
+  `backend/services` only. Either stand up frontend coverage or re-gate this on
+  something that exists.
 
 **Release follow-ups** (deferred)
 - Release-tag-gated full `wails build` packaging job — stronger end-to-end

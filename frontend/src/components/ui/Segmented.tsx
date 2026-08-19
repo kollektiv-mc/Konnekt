@@ -29,7 +29,7 @@ export function Segmented<T extends string>({
           style={{
             width: `${100 / options.length}%`,
             transform: `translateX(${activeIndex * 100}%)`,
-            transition: 'transform 200ms cubic-bezier(0.4, 0, 0.2, 1)',
+            transition: 'transform 200ms var(--ease-standard)',
           }}
         />
         {options.map((opt) => {

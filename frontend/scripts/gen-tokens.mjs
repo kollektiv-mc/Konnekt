@@ -222,17 +222,30 @@ function emitCss(src) {
   push()
   push(`  /* Motion. Reuse these instead of inventing per-component durations`)
   push(`     (agent_docs/HEALTH_CHECKLIST.md, Clean pillar). --ease-standard is`)
-  push(`     Tailwind's ease-in-out bezier, spelled out so plain CSS can reuse it. */`)
+  push(`     Tailwind's ease-in-out bezier, spelled out so plain CSS can reuse it.`)
+  push(`     Each duration is emitted twice from one source value, because the two`)
+  push(`     names are read by different consumers. --duration-* is what hand-written`)
+  push(`     CSS and inline transition: strings read. Tailwind resolves its own`)
+  push(`     duration-* utilities against --transition-duration-* (and delay-* against`)
+  push(`     --transition-delay-*, unused here), never against --duration-*, so the`)
+  push(`     alias is what makes duration-fast work as a class the way ease-standard`)
+  push(`     already does from --ease-*. Without it the class compiles to nothing and`)
+  push(`     the element silently keeps Tailwind's --default-transition-duration. */`)
   for (const [name, value] of Object.entries(src.motion.duration.scale)) {
-    push(`  --duration-${name}: ${scalar(value, src.motion.duration.unit)};`)
+    const ms = scalar(value, src.motion.duration.unit)
+    push(`  --duration-${name}: ${ms};`)
+    push(`  --transition-duration-${name}: ${ms};`)
   }
   for (const [name, points] of Object.entries(src.motion.easing)) {
     push(`  --ease-${name}: cubic-bezier(${points.join(', ')});`)
   }
 
   push()
-  push(`  /* Border widths. Tailwind v4 has no --border-width-* namespace, so these are`)
-  push(`     plain custom properties surfaced as utilities by the @utility rules below. */`)
+  push(`  /* Border widths. Tailwind does read a --border-width-* namespace, but these`)
+  push(`     tokens are named --border-hairline/--border-thick, which it does not, so they`)
+  push(`     are plain custom properties surfaced by the @utility rules below. Naming them`)
+  push(`     --border-width-* upstream would make those rules unnecessary; that is a rename`)
+  push(`     in the shared source and would move Kommands too. */`)
   for (const [name, value] of Object.entries(src.border.scale)) {
     push(`  --border-${name}: ${scalar(value, src.border.unit)};`)
   }
@@ -384,6 +397,20 @@ ${table('dark')}
 ${table('light')}
   },
 }
+
+/**
+ * Durations in milliseconds, for the JS half of a motion that CSS drives.
+ *
+ * A \`setTimeout\` that has to land with a transition cannot read \`var(--duration-panel)\`,
+ * so before this existed the number was copied into the component and kept in step by
+ * a comment. Read from here instead: an upstream change to the token then moves both
+ * halves at once. Pure CSS should keep using the custom property.
+ */
+export const DURATION_MS = {
+${Object.entries(src.motion.duration.scale)
+  .map(([name, value]) => `  ${name}: ${value},`)
+  .join('\n')}
+} as const
 `
 }
 

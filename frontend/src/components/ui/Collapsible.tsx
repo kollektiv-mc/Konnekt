@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { DURATION_MS } from '../../styles/tokens'
 
 interface CollapsibleProps {
   open: boolean
@@ -24,7 +25,9 @@ export function Collapsible({ open, children, className }: CollapsibleProps) {
       setMaxHeight(`${h}px`)
       // Release to `none` once open so children that grow afterward (e.g.
       // nested sections) aren't re-clipped by a stale measured height.
-      const t = setTimeout(() => setMaxHeight('none'), 280) // --duration-panel
+      // Must outlast the max-height transition below, which reads --duration-panel.
+      // Same token, so the two cannot drift apart.
+      const t = setTimeout(() => setMaxHeight('none'), DURATION_MS.panel)
       return () => clearTimeout(t)
     }
     setMaxHeight(`${h}px`)

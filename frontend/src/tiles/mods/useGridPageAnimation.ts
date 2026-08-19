@@ -1,8 +1,14 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import type { ModProject } from './useMods'
+import { DURATION_MS } from '../../styles/tokens'
 
 // Animation timing constants
-const PANEL_DURATION = 280 // ms — detail panel slide
+//
+// PANEL_DURATION is the JS half of a motion CSS drives: BrowsePanel's detail panel
+// slides on the `duration-panel` utility, and the timeouts below have to land with
+// it, so both read the same token. The rest are this grid's own choreography, with
+// no shared vocabulary to reach for.
+const PANEL_DURATION = DURATION_MS.panel // detail panel slide
 const CARD_ANIM = 130 // ms — tile fade+scale for panel open/close & initial load
 const EXIT_MS = 160 // per-tile exit duration
 const ENTER_MS = 140 // per-tile enter duration

@@ -27,7 +27,7 @@ export function TileWrapper({
     <div className={`relative h-full ${maximized ? '' : 'tile-outer'}`}>
       {flash && <div className="tile-flash-ring" />}
       <div
-        className="tile-wrapper border-border-subtle bg-canvas border-hairline flex h-full flex-col overflow-hidden rounded-[10px] bg-[linear-gradient(var(--bg-surface),var(--bg-surface))] transition-colors duration-150"
+        className="tile-wrapper border-border-subtle bg-canvas border-hairline duration-fast flex h-full flex-col overflow-hidden rounded-[10px] bg-[linear-gradient(var(--bg-surface),var(--bg-surface))] transition-colors"
         onMouseEnter={
           maximized
             ? undefined

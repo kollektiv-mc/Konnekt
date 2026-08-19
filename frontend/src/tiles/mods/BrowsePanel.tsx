@@ -35,8 +35,6 @@ interface Props {
 const DEFAULT_PANEL_WIDTH = 440
 const MIN_PANEL_WIDTH = 300 // narrowest the detail panel can get
 const MIN_GRID_WIDTH = 232 // narrowest the grid can get: 1 card (200px) + padding (24px) + gap (8px)
-// Detail panel slide-in/out duration — kept as the `duration-[280ms]` class below;
-// update both together if this ever needs to change.
 
 const SORT_OPTIONS: { value: string; label: string }[] = [
   { value: '', label: 'Relevance' },
@@ -439,14 +437,14 @@ export function BrowsePanel({
               onMouseDown={handleResizeMouseDown}
               onMouseEnter={() => setResizeHover(true)}
               onMouseLeave={() => setResizeHover(false)}
-              className={`absolute top-0 bottom-0 -left-[3px] z-10 w-1.5 cursor-col-resize border-l-2 [transition:border-color_150ms_ease] ${
+              className={`absolute top-0 bottom-0 -left-[3px] z-10 w-1.5 cursor-col-resize border-l-2 [transition:border-color_var(--duration-fast)_ease] ${
                 resizeHover || resizeActive ? 'border-accent' : 'border-transparent'
               }`}
             />
           )}
 
           <div
-            className="h-full transition-transform duration-[280ms] ease-in-out will-change-transform"
+            className="duration-panel h-full transition-transform ease-in-out will-change-transform"
             // eslint-disable-next-line no-restricted-syntax -- width/transform depend on the live panelWidth
             style={{
               width: panelWidth,

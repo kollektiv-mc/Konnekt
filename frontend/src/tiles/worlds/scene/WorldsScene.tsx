@@ -320,7 +320,9 @@ export function WorldsScene({
   return (
     <div className="relative h-full w-full">
       {/* Entrance reveal — wrapper div so the WebGL drawing-buffer size (set by Canvas
-          layout, already correct after the 220ms gate) is never affected by transform */}
+          layout, already correct after the 220ms gate) is never affected by transform.
+          400ms on its own curve is a one-off scene reveal, deliberately outside the
+          motion token vocabulary (agent_docs/HEALTH_CHECKLIST.md, Clean pillar). */}
       <div
         ref={wrapperRef}
         className={`absolute inset-0 ${
@@ -378,7 +380,10 @@ export function WorldsScene({
 
         {/* HUD panel — outside Canvas so it receives pointer events normally.
           Slides in from the LEFT; camera simultaneously shifts the planet into the right 2/3
-          via setViewOffset (planet at ≈66.7% from left = centre of the right two-thirds). */}
+          via setViewOffset (planet at ≈66.7% from left = centre of the right two-thirds).
+          250ms is deliberate, not a near-miss of --duration-panel: it is hand-matched to the
+          camera's exponential damp above (MathUtils.damp at lambda 4.5), which has no fixed
+          duration to share a token with. Moving it to 280ms desyncs the panel from the shot. */}
         <div
           className={`border-r-border-subtle bg-surface border-r-hairline absolute top-0 bottom-0 left-0 z-10 flex w-1/3 flex-col overflow-y-auto px-5 pt-4 pb-6 transition-transform duration-[250ms] ease-[cubic-bezier(0.25,0,0.25,1)] ${
             hudOpen ? 'pointer-events-auto translate-x-0' : 'pointer-events-none -translate-x-full'

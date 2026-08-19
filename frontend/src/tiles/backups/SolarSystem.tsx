@@ -4,6 +4,12 @@ import type { WorldSystem } from './useBackupWorlds'
 import { FOCUS, FOCUS_TRANSITION } from './focusLayout'
 import type { FocusTarget } from './focusLayout'
 
+/* Motion here is deliberately off-token. The 1.56 overshoot spring, the entrance
+   rise and the per-world float are decorative scene motion; --duration-fast and
+   --duration-panel name UI roles (a hover, a panel opening) that a planet scene
+   should not be flattened into. See agent_docs/HEALTH_CHECKLIST.md's Clean pillar
+   — these are the documented one-offs, not near-misses of a token. */
+
 const RENDER_SCALE = 2.5
 
 const SUN_SIZE = 96

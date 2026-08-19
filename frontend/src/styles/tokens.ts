@@ -34,3 +34,16 @@ export const STATUS_DEFAULTS: Record<ThemeMode, Record<string, string>> = {
   sun: '#ffd84d',
   },
 }
+
+/**
+ * Durations in milliseconds, for the JS half of a motion that CSS drives.
+ *
+ * A `setTimeout` that has to land with a transition cannot read `var(--duration-panel)`,
+ * so before this existed the number was copied into the component and kept in step by
+ * a comment. Read from here instead: an upstream change to the token then moves both
+ * halves at once. Pure CSS should keep using the custom property.
+ */
+export const DURATION_MS = {
+  fast: 150,
+  panel: 280,
+} as const
