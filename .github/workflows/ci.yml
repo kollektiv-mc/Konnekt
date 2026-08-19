@@ -39,6 +39,10 @@ jobs:
       - run: pnpm test
       - run: pnpm build
       - run: pnpm check-bundle
+      # A token-named class that compiles to nothing looks fine in review and in
+      # the app, because it falls back to a Tailwind default. duration-fast was
+      # dead for as long as it existed and nobody noticed. Needs the build above.
+      - run: pnpm check-tokens
 
       # The token layer is generated from the vendored tokens.source.json and
       # committed. A non-empty diff means either a generated file was

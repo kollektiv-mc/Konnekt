@@ -78,8 +78,11 @@
   --transition-duration-panel: 280ms;
   --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
 
-  /* Border widths. Tailwind v4 has no --border-width-* namespace, so these are
-     plain custom properties surfaced as utilities by the @utility rules below. */
+  /* Border widths. Tailwind does read a --border-width-* namespace, but these
+     tokens are named --border-hairline/--border-thick, which it does not, so they
+     are plain custom properties surfaced by the @utility rules below. Naming them
+     --border-width-* upstream would make those rules unnecessary; that is a rename
+     in the shared source and would move Kommands too. */
   --border-hairline: 0.5px;
   --border-thick: 1.5px;
 

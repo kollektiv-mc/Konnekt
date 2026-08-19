@@ -241,8 +241,11 @@ function emitCss(src) {
   }
 
   push()
-  push(`  /* Border widths. Tailwind v4 has no --border-width-* namespace, so these are`)
-  push(`     plain custom properties surfaced as utilities by the @utility rules below. */`)
+  push(`  /* Border widths. Tailwind does read a --border-width-* namespace, but these`)
+  push(`     tokens are named --border-hairline/--border-thick, which it does not, so they`)
+  push(`     are plain custom properties surfaced by the @utility rules below. Naming them`)
+  push(`     --border-width-* upstream would make those rules unnecessary; that is a rename`)
+  push(`     in the shared source and would move Kommands too. */`)
   for (const [name, value] of Object.entries(src.border.scale)) {
     push(`  --border-${name}: ${scalar(value, src.border.unit)};`)
   }
@@ -394,6 +397,20 @@ ${table('dark')}
 ${table('light')}
   },
 }
+
+/**
+ * Durations in milliseconds, for the JS half of a motion that CSS drives.
+ *
+ * A \`setTimeout\` that has to land with a transition cannot read \`var(--duration-panel)\`,
+ * so before this existed the number was copied into the component and kept in step by
+ * a comment. Read from here instead: an upstream change to the token then moves both
+ * halves at once. Pure CSS should keep using the custom property.
+ */
+export const DURATION_MS = {
+${Object.entries(src.motion.duration.scale)
+  .map(([name, value]) => `  ${name}: ${value},`)
+  .join('\n')}
+} as const
 `
 }
 

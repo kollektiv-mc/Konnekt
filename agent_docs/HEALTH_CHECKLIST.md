@@ -27,6 +27,7 @@ pnpm format:check       # Prettier (from frontend/)
 pnpm format:website     # Prettier over website/ (from frontend/)
 node scripts/check-website-links.mjs   # website links/assets/sitemap (repo root)
 pnpm check-bundle       # 550 KB gzip entry-chunk budget (from frontend/)
+pnpm check-tokens       # every token-named class compiles (from frontend/, after a build)
 go vet ./...            # Go static analysis (repo root)
 go test ./...           # Go tests (repo root)
 go run ./scripts/coverage-floor   # backend/services coverage floor (repo root)
@@ -442,6 +443,24 @@ current. Priorities mirror the pillars above.
   `Collapsible.tsx:27`'s bare `280` still hold numbers a JS-readable motion
   export would replace — a `gen-tokens.mjs` change that lands in this repo
   whenever it is wanted.
+- **The bug was isolated, and there is now a gate.** Swept 2026-08-19 for the
+  same defect in every other token group: built all 384 token-derived class names
+  from `tokens.source.json`, found the 61 `frontend/src` actually uses, and
+  checked each against the built CSS. **Zero dead.** Type sizes, radii, font
+  families, border widths and every colour utility all compile, and
+  `bg-canvas`/`text-text-muted` resolve through the `@theme inline` block by
+  textual substitution exactly as its comment says. Do not re-run that sweep by
+  hand: `pnpm check-tokens` (`frontend/scripts/check-token-classes.mjs`) is that
+  check, wired into `suite.json` and CI, and it was confirmed to fail on this
+  branch's own bug before being confirmed green.
+- **An upstream naming question, deliberately not acted on.** Tailwind v4.3.2
+  *does* read a `--border-width-*` namespace. The `@utility border-hairline`
+  rules exist only because the tokens are named `--border-hairline`. Renaming
+  them `--border-width-*` in `kollektiv/design/tokens.json` would let them
+  resolve automatically the way `ease-*` and `duration-*` now do, and delete that
+  block. It is a rename in the shared source and would move Kommands too, so it
+  belongs upstream. The generator's comment used to state the reasoning backwards
+  and now records this.
 - **Why no `suite.json` invariant for this.** An invariant is one regex that
   must find nothing, with no judgement applied. Motion is not borders: the
   decorative sites above are meant to keep their literals forever, so a motion
