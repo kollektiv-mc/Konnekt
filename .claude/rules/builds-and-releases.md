@@ -26,12 +26,17 @@ refreshed by downloading a new one.
 
 ## Linux builds
 
-The published Linux release (`konnekt-linux-amd64` + an `.rpm`) is built with
+The Linux artifacts (`konnekt-linux-amd64` + an `.rpm`) are built with
 `-tags webkit2_41` against webkit2gtk-4.1 (see
 `.github/workflows/release.yml`'s `build-linux`/`package-rpm` jobs and
 `build/linux/`), which covers Rocky/RHEL 10, Fedora 36+, Ubuntu 22.04+, and
 Debian 12+. Rocky/RHEL 9 is not supported — it never received webkit2gtk-4.1
 and EL10 dropped 4.0, so the two aren't binary-compatible.
+
+They have only ever shipped on the `snapshot` prerelease. The `build-linux` and
+`package-rpm` jobs were added after the one tagged release, `v0.1.0-alpha.1`,
+was cut, so that release carries the Windows exe and nothing else. Nothing in
+`release.yml` is conditional, so the next `v*` tag attaches all three.
 
 On a Rocky Linux 10 dev machine (or any distro on the 4.1 side), if WebKit
 detection fails, build with:

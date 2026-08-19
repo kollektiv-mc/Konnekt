@@ -227,6 +227,15 @@ a {
   text-shadow: 0 0 16px rgb(var(--accent-rgb) / 0.35);
 }
 
+/* Keeps the wordmark and its badge together as one item of .nav-inner, which
+   is space-between: loose in that row, the badge would be pushed off across
+   the bar rather than sitting beside the name. */
+.nav-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
 .nav-links {
   display: flex;
   align-items: center;
@@ -709,10 +718,44 @@ a {
   transform: scale(1.25);
 }
 
+/* The current dot keeps the accent ring; the fill and the glow it used to carry
+   moved to the travelling mark below. */
 .rail-dot[aria-current='true']::before {
-  background: var(--accent);
   border-color: var(--accent);
+}
+
+/* One mark for the whole rail rather than lighting whichever dot is current and
+   unlighting the last. Two 8px dots crossfading in place read as a blink at this
+   size and say nothing about which way the page went; a mark that slides from
+   one to the next does, and it is the same gesture as the scroll that moved it.
+
+   It rides --rail-y, the centre of the current dot, which main.js measures off
+   the dot rather than multiplying an index by the 24px target height — the rail
+   would otherwise have two places that had to agree about that number.
+
+   Last child of .rail, so it paints over the dots; pointer-events off, so it
+   never takes a click meant for the target underneath it. */
+.rail::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 0;
+  box-sizing: border-box;
+  width: 8px;
+  height: 8px;
+  margin: -4px 0 0 -4px;
+  border-radius: 50%;
+  background: var(--accent);
+  border: 1px solid var(--accent);
   box-shadow: 0 0 8px rgb(var(--accent-rgb) / 0.6);
+  pointer-events: none;
+  transform: translateY(var(--rail-y, 0px));
+}
+
+/* The transition arrives a frame after the first placement (main.js), so the
+   mark starts on the section you loaded into instead of sliding down to it. */
+.rail.is-tracking::after {
+  transition: transform var(--duration-panel) var(--ease-standard);
 }
 
 /* The sheet's focus ring would otherwise trace the invisible target rather
@@ -917,62 +960,91 @@ a {
    covers in a frame, capped at 16 units so nothing smears into a line, and the
    second scale figure is the line's own width. The rotation is constant through
    all of it and belongs on the wrapper by rights; see .wf-star for why it is
-   repeated here instead. */
+   repeated here instead.
+
+   Every stop carries an easing, and that is not decoration. The stops are exact
+   points on the 1/z curve, but between them the animation is interpolated, and
+   `linear` interpolates in time: each segment then runs at its own constant
+   average speed and steps to the next one's at the stop. Measured off the
+   rendered matrix, that step was between 1.58x and 2x at every boundary, and
+   the boundaries fall 1.4s, 0.85s, 0.57s, 0.43s apart down the flight — which
+   is what read as the field jittering, stars running a little fast and then a
+   little slow every half second or so.
+
+   The fix is per-stop easing whose end slopes are the curve's own. With z
+   falling linearly and p = 1/z, a segment where z runs a to b has f'(0) = b/a
+   and f'(1) = a/b. A cubic-bezier at x1 = 1/3, x2 = 2/3 has f'(0) = 3*y1 and
+   f'(1) = 3*(1 - y2), so for k = b/a the stop wants y1 = k/3 and
+   y2 = 1 - 1/(3k). That is where each of these numbers comes from, and it makes
+   speed continuous across every boundary — no new stops, and the error inside a
+   segment drops from about 9% of its length to under 0.3%. Recompute them if a
+   stop ever moves. */
 @keyframes wf-fly {
   0% {
     transform: rotate(var(--a)) translateX(calc(var(--focal) * var(--r) * 1))
       scale(min(16, var(--fn) * var(--r) * 0.002333), 0.9);
     opacity: 0;
+    animation-timing-function: cubic-bezier(0.333, 0.233, 0.667, 0.524);
   }
   31.91% {
     transform: rotate(var(--a)) translateX(calc(var(--focal) * var(--r) * 1.4286))
       scale(min(16, var(--fn) * var(--r) * 0.004762), 1.11);
     opacity: 0.27;
+    animation-timing-function: cubic-bezier(0.333, 0.238, 0.667, 0.533);
   }
   53.19% {
     transform: rotate(var(--a)) translateX(calc(var(--focal) * var(--r) * 2))
       scale(min(16, var(--fn) * var(--r) * 0.009333), 1.25);
     opacity: 0.45;
+    animation-timing-function: cubic-bezier(0.333, 0.253, 0.667, 0.561);
   }
   65.96% {
     transform: rotate(var(--a)) translateX(calc(var(--focal) * var(--r) * 2.6316))
       scale(min(16, var(--fn) * var(--r) * 0.016159), 1.33);
     opacity: 0.558;
+    animation-timing-function: cubic-bezier(0.333, 0.263, 0.667, 0.578);
   }
   74.47% {
     transform: rotate(var(--a)) translateX(calc(var(--focal) * var(--r) * 3.3333))
       scale(min(16, var(--fn) * var(--r) * 0.025926), 1.39);
     opacity: 0.63;
+    animation-timing-function: cubic-bezier(0.333, 0.267, 0.667, 0.583);
   }
   80.85% {
     transform: rotate(var(--a)) translateX(calc(var(--focal) * var(--r) * 4.1667))
       scale(min(16, var(--fn) * var(--r) * 0.040509), 1.43);
     opacity: 0.66;
+    animation-timing-function: cubic-bezier(0.333, 0.264, 0.667, 0.579);
   }
   86.17% {
     transform: rotate(var(--a)) translateX(calc(var(--focal) * var(--r) * 5.2632))
       scale(min(16, var(--fn) * var(--r) * 0.064635), 1.47);
     opacity: 0.66;
+    animation-timing-function: cubic-bezier(0.333, 0.263, 0.667, 0.578);
   }
   90.43% {
     transform: rotate(var(--a)) translateX(calc(var(--focal) * var(--r) * 6.6667))
       scale(min(16, var(--fn) * var(--r) * 0.103704), 1.5);
     opacity: 0.66;
+    animation-timing-function: cubic-bezier(0.333, 0.267, 0.667, 0.583);
   }
   93.62% {
     transform: rotate(var(--a)) translateX(calc(var(--focal) * var(--r) * 8.3333))
       scale(min(16, var(--fn) * var(--r) * 0.162037), 1.52);
     opacity: 0.66;
+    animation-timing-function: cubic-bezier(0.333, 0.264, 0.667, 0.579);
   }
   96.28% {
     transform: rotate(var(--a)) translateX(calc(var(--focal) * var(--r) * 10.5263))
       scale(min(16, var(--fn) * var(--r) * 0.258541), 1.53);
     opacity: 0.66;
+    animation-timing-function: cubic-bezier(0.333, 0.263, 0.667, 0.578);
   }
   98.4% {
     transform: rotate(var(--a)) translateX(calc(var(--focal) * var(--r) * 13.3333))
       scale(min(16, var(--fn) * var(--r) * 0.414815), 1.55);
     opacity: 0.66;
+    animation-timing-function: cubic-bezier(0.333, 0.267, 0.667, 0.583);
   }
   100% {
     transform: rotate(var(--a)) translateX(calc(var(--focal) * var(--r) * 16.6667))
@@ -1138,10 +1210,17 @@ a {
 }
 
 /* ── Section heads ────────────────────────────────────────────────────── */
+/* The bottom margin is the gap to whatever the section leads into, and it is
+   set once here for all four of them. The scheduler used to override it to 34px
+   and everything else sat at 56px, which put the same three lines a different
+   distance from their content depending on which section you were looking at.
+   34px is the one that was right; nothing overrides it now, and any block that
+   follows a head must leave its own margin-top at 0 or it wins the collapse and
+   the gap grows again. */
 .section-head {
   text-align: center;
   max-width: 640px;
-  margin: 0 auto 56px;
+  margin: 0 auto 34px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -1173,7 +1252,10 @@ a {
   flex-wrap: wrap;
   justify-content: center;
   gap: 32px 64px;
-  margin: 40px 0 0;
+  /* No top margin: adjacent margins collapse to the larger of the two, so the
+     40px this carried outran .section-head's gap and made this one section sit
+     further from its head than the rest. The head owns that distance now. */
+  margin: 0;
 }
 
 .about-fact {
@@ -1201,16 +1283,24 @@ a {
 }
 
 /* Each fact is a row of names rather than a sentence, so it is set as tags.
-   Square-cornered like .footer-tag and .disclaimer-badge, not the pill-shaped
+   Square-cornered like .brand-tag and .disclaimer-badge, not the pill-shaped
    .tag the roadmap and platform table use: those report a status, these are
    just labels. The max-width breaks the six server tags 3 and 3 instead of
-   leaving a widow. */
+   leaving a widow.
+
+   The platform tags override it to 150px so they break 2 and 1, which puts
+   MACOS on the same line as BUKKIT FABRIC NEOFORGE and makes the two facts one
+   shape. That is the midpoint of the two widths it sits between — WINDOWS
+   LINUX is 122px and adding MACOS is 180px — so the mono stack has about 23%
+   either way before the break moves. A flex-basis: 100% break element does the
+   same job independently of the metrics, but it lands on a row of its own and
+   the row gap then pushes MACOS 6px below its opposite number. */
 .fact-pills {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
   gap: 6px;
-  max-width: 232px;
+  max-width: var(--pills-w, 232px);
 }
 
 .pill {
@@ -1325,10 +1415,6 @@ a {
   align-items: stretch;
 }
 
-.spotlight .section-head {
-  margin-bottom: 34px;
-}
-
 /* The canvas grid used to live here as a background. It moved into the SVG so
    it pans with the nodes, which also means the SVG now fills this box edge to
    edge — the graph's breathing room is the margin inside its own viewBox. */
@@ -1401,10 +1487,17 @@ a {
   display: block;
   width: 100%;
   height: auto;
+  /* A beat between arriving at the section and the graph starting to move, so
+     the two are read as separate events rather than one. Every animation below
+     folds this into its own delay, and a delay only counts down while the
+     animation is running — parked, they all sit at nothing elapsed — so this is
+     a second after you get here, not a second after the page loaded. */
+  --sf-start: 1s;
 }
 
 .sf-reel {
   animation: sf-pan 24s cubic-bezier(0.65, 0, 0.35, 1) infinite;
+  animation-delay: var(--sf-start);
 }
 
 .sf-dot {
@@ -1418,7 +1511,7 @@ a {
   stroke: var(--border-subtle);
   stroke-width: 1.5;
   animation: sf-lit 24s var(--ease-standard) infinite;
-  animation-delay: calc(var(--t0, 0s) + var(--d, 0s));
+  animation-delay: calc(var(--sf-start) + var(--t0, 0s) + var(--d, 0s));
 }
 
 /* The app draws a block's category as a left border (blockMeta.ts's
@@ -1472,13 +1565,45 @@ a {
   stroke-dasharray: var(--sf-dash) calc(var(--len) + var(--sf-dash) * 2);
   filter: drop-shadow(0 0 3px rgb(var(--accent-rgb) / 0.6));
   animation: sf-pulse 24s linear infinite;
-  animation-delay: calc(var(--t0, 0s) + var(--d, 0s));
+  animation-delay: calc(var(--sf-start) + var(--t0, 0s) + var(--d, 0s));
   /* The delay is dead time on every pulse and up to 24s of it on the last
      frame's, and an element that has not started yet renders its own resting
      state: dashoffset 0, which parks a lit dash across the source node's port
      and leaves it there. `backwards` hands it the 0% frame for the wait
      instead, where the dash is clear of the path altogether. */
   animation-fill-mode: backwards;
+}
+
+/* The 24s cycle is parked at its own start until you reach the section, rather
+   than running from page load. Arriving part-way through put the reel's glide
+   under a viewport that was itself still moving, and two scrolls at once is
+   unreadable — you cannot tell which of them moved the graph. Started here, the
+   first thing the cycle does is hold frame one for five seconds (sf-pan's 0% to
+   20.83%), so the first pan never lands during the scroll that brought you.
+
+   Paused rather than unnamed. .sf-pulse sets animation-fill-mode: backwards
+   precisely so the wait before its delay renders the 0% frame; with no
+   animation to fill from it would fall back to its own resting state instead,
+   which is a lit dash parked across every source port. Paused with nothing
+   elapsed is also what makes this a start rather than a resume.
+
+   .in-view comes from main.js's reveal observer, which fires once and then
+   stops watching, so the cycle starts on arrival and afterwards keeps its own
+   time. .no-js never gets that class and runs unconditionally; reduced motion
+   overrides all of it with `animation: none` further down. */
+.sf-reel,
+.sf-node .sf-box,
+.sf-pulse {
+  animation-play-state: paused;
+}
+
+.no-js .sf-reel,
+.no-js .sf-node .sf-box,
+.no-js .sf-pulse,
+.spotlight-media.in-view .sf-reel,
+.spotlight-media.in-view .sf-node .sf-box,
+.spotlight-media.in-view .sf-pulse {
+  animation-play-state: running;
 }
 
 /* Percentages of the 24s master cycle: lit for 0.6s, faded out by 1.9s. */
@@ -1549,6 +1674,17 @@ a {
   max-width: 720px;
   margin: 0 auto;
   text-align: center;
+  /* The same column and the same rhythm as .section-head, because that is what
+     the top of this panel is: an eyebrow, a heading and a line under it. The
+     two had drifted apart — 2px under the eyebrow here against 12px there, and
+     30px down to the buttons against 34px to a section's content — which put
+     the heading almost against the eyebrow while the buttons sat well clear.
+     12px between the three lines, and the rest of the 34px added back below
+     them, so each distance is written once. */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
   background-color: var(--bg-elevated);
   background-image: radial-gradient(
     120% 90% at 50% 0%,
@@ -1566,7 +1702,7 @@ a {
   font-size: clamp(30px, 4.5vw, 44px);
   line-height: 1.05;
   letter-spacing: -0.02em;
-  margin: 0 0 14px;
+  margin: 0;
 }
 
 .cta-panel h2 .accent {
@@ -1577,7 +1713,7 @@ a {
 .cta-panel p {
   color: var(--text-secondary);
   font-size: 15.5px;
-  margin: 0 0 30px;
+  margin: 0;
 }
 
 .cta-actions .btn {
@@ -1591,17 +1727,84 @@ a {
   border-color: rgb(var(--accent-rgb) / 0.3);
 }
 
+/* Two lights travelling the panel's edge, opposite each other, on the one call
+   to action the page has. Kept faint: this is meant to be noticed on the second
+   look, not to compete with the button under it.
+
+   Two layers, because it cannot be done in one. The lit part is a ring masked
+   to the panel's rounded rectangle, and the thing that moves is a conic
+   gradient spun about the centre — put both on the same element and rotating it
+   turns the mask too, so the rectangle itself visibly spins. So this element
+   holds the ring still, and its ::before does the turning underneath it.
+
+   Only a transform animates, which keeps the whole thing on the compositor. The
+   shorter way to write it — a registered <angle> custom property inside the
+   gradient, animated — repaints the gradient on the main thread every frame,
+   and getting animation off that thread is the reason the warp field below was
+   rewritten in the first place.
+
+   ::after on the panel is already the shared cursor-glow ring, so this is a
+   real element rather than the other pseudo. It carries the same inset and 1px
+   ring as that one, and sits under it. */
+.cta-glow {
+  position: absolute;
+  inset: -0.5px;
+  border-radius: inherit;
+  overflow: hidden;
+  pointer-events: none;
+  padding: 1px;
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  mask-composite: exclude;
+}
+
+/* Square, and wide enough that its inscribed area still covers the panel's
+   corners at every angle: it has to be at least as broad as the panel's
+   diagonal or the corners go dark twice a turn. 180% of the width clears that
+   at both the 720px panel and the narrow one, where the box is nearly square
+   and the diagonal is proportionally longest. overflow on the parent clips it
+   back to the panel, so the layer is not rastered at that size. */
+.cta-glow::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 180%;
+  aspect-ratio: 1;
+  background: conic-gradient(
+    from 0deg,
+    transparent 0deg,
+    rgb(var(--accent-rgb) / 0.5) 16deg,
+    transparent 42deg,
+    transparent 180deg,
+    rgb(var(--accent-rgb) / 0.5) 196deg,
+    transparent 222deg,
+    transparent 360deg
+  );
+  transform: translate(-50%, -50%) rotate(0deg);
+  animation: cta-glow-spin 14s linear infinite;
+}
+
+@keyframes cta-glow-spin {
+  to {
+    transform: translate(-50%, -50%) rotate(360deg);
+  }
+}
+
 .cta-actions {
   display: flex;
   gap: 12px;
   justify-content: center;
   flex-wrap: wrap;
-}
-
-.cta-note {
-  font-size: 11.5px;
-  color: var(--text-faint) !important;
-  margin: 20px 0 0 !important;
+  /* Stretched rather than centred as a flex item, so the buttons still wrap
+     against the panel's width the way they did when this was a block. */
+  align-self: stretch;
+  margin-top: calc(34px - 12px);
 }
 
 /* ── Footer ───────────────────────────────────────────────────────────── */
@@ -1662,7 +1865,8 @@ footer {
   gap: 12px;
 }
 
-.footer-tag {
+/* The alpha badge, worn by the wordmark in both the nav and the footer. */
+.brand-tag {
   font-family: var(--font-mono);
   font-size: 10.5px;
   color: var(--sun);
@@ -1818,6 +2022,19 @@ footer {
   display: flex;
   align-items: center;
   gap: 14px;
+  /* The two-line card's own height, rounded up. Only the card carrying a file
+     size runs to a second line, so without a floor the grid grew and shrank by
+     16px as that platform moved in and out of the selection — and it is the
+     selected card that leaves the grid, so every switch to or from it moved the
+     two cards that stayed put.
+
+     The floor belongs here and not on .dl-card-meta, which is where it started.
+     Reserving the second line inside the meta leaves a one-line card with the
+     empty half below its text, and align-items: center then centres a box whose
+     content sits in its top half — 17px of air above the name and 33px under the
+     meta. Held out here instead, the same reservation is slack the card centres
+     into, and one line sits exactly where two do. */
+  min-height: 90px;
   /* The release grid's cards are <button>: they pick which platform the
      primary card shows rather than downloading straight off. The snapshot
      grid's are still <a>, so both sets of UA defaults get flattened here. */
@@ -2113,17 +2330,31 @@ button.dl-card:hover {
   display: none;
 }
 
-/* The FAQ's +/− marker. .release-version is already an inline flex row, so the
-   glyph becomes a flex item and picks up its gap rather than needing one. */
+/* The FAQ's +/- marker at this card's larger scale; see .faq summary::before
+   for how it is built and why. .release-version is already an inline flex row,
+   so it becomes a flex item and picks up its gap rather than needing one. */
 .release-summary .release-version::before {
-  content: '+';
-  font-family: var(--font-mono);
-  font-size: 16px;
+  content: '';
+  width: 11px;
+  height: 11px;
+  flex-shrink: 0;
   color: var(--sun);
+  background:
+    linear-gradient(currentColor, currentColor) center / 100% 1.5px no-repeat,
+    linear-gradient(currentColor, currentColor) center / 1.5px 100% no-repeat;
+  transition: background-size var(--duration-fast) var(--ease-standard);
 }
 
 .release-pending[open] .release-summary .release-version::before {
-  content: '−';
+  background-size:
+    100% 1.5px,
+    1.5px 0%;
+}
+
+.release-pending[open].is-closing .release-summary .release-version::before {
+  background-size:
+    100% 1.5px,
+    1.5px 100%;
 }
 
 /* The rule that separates the head from the notes hangs off the notes, not off
@@ -2325,12 +2556,12 @@ button.dl-card:hover {
   background: rgb(var(--accent-rgb) / 0.08);
 }
 
-/* One rule, two names. The amber is what the footer badge and the snapshot
-   channel already mean by "not finished yet", and the roadmap's "In progress"
-   and the scheduler's "Alpha" are both that; naming the second one after the
-   first would put the wrong word in the markup. */
-.tag-wip,
-.tag-alpha {
+/* Amber is what the brand badge and the snapshot channel already mean by "not
+   finished yet", and the roadmap's "In progress" is that too. This carried a
+   second name, .tag-alpha, for the scheduler section's own Alpha badge; that
+   badge is gone, since the whole app is alpha and the wordmark says so on
+   every page. */
+.tag-wip {
   color: var(--sun);
   border-color: rgb(var(--sun-rgb) / 0.35);
   background: rgb(var(--sun-rgb) / 0.08);
@@ -2340,12 +2571,6 @@ button.dl-card:hover {
   color: var(--text-muted);
   border-color: var(--border-subtle);
   background: var(--hover-surface);
-}
-
-.tag-no {
-  color: var(--danger);
-  border-color: rgb(var(--danger-rgb) / 0.3);
-  background: rgb(var(--danger-rgb) / 0.07);
 }
 
 /* Platform-support table on the docs page. Scrolls inside its own wrapper on
@@ -2423,15 +2648,42 @@ button.dl-card:hover {
   display: none;
 }
 
+/* The +/- marker, drawn rather than set. It was a mono '+' swapped for a '−'
+   by `content`, which is not an animatable property, so the change landed in
+   one frame while the panel under it took 220ms. Two gradient layers in one
+   pseudo-element give the same cross with a height to animate: the horizontal
+   bar never moves and the vertical one collapses into it, which is the whole
+   gesture. One element, so it stays a single flex item and the summary's 10px
+   gap and .faq .md's matching 22px indent both still hold.
+
+   Timed off the shared motion tokens, not off main.js's 220ms panel: the
+   marker is the small confirmation that the click landed and wants to be ahead
+   of the panel, not in step with it. */
 .faq summary::before {
-  content: '+';
-  font-family: var(--font-mono);
-  color: var(--accent);
+  content: '';
+  width: 9px;
+  height: 9px;
   flex-shrink: 0;
+  color: var(--accent);
+  background:
+    linear-gradient(currentColor, currentColor) center / 100% 1.5px no-repeat,
+    linear-gradient(currentColor, currentColor) center / 1.5px 100% no-repeat;
+  transition: background-size var(--duration-fast) var(--ease-standard);
 }
 
 .faq details[open] summary::before {
-  content: '−';
+  background-size:
+    100% 1.5px,
+    1.5px 0%;
+}
+
+/* main.js holds `open` true for the length of a close, so this is what makes
+   the stroke grow back the moment you click rather than 220ms later. Without
+   JS the attribute is the only state there is, and the rule above is enough. */
+.faq details[open].is-closing summary::before {
+  background-size:
+    100% 1.5px,
+    1.5px 100%;
 }
 
 /* The 8px that used to come off the summary's padding when open, moved onto
@@ -2454,10 +2706,6 @@ button.dl-card:hover {
 
   .sf {
     min-width: 700px;
-  }
-
-  .spotlight .section-head {
-    margin-bottom: 26px;
   }
 
   .spotlight-points {
@@ -2585,6 +2833,15 @@ button.dl-card:hover {
     padding: 26px 20px;
   }
 
+  /* Two lines' worth, held whether or not there are two. The available card's
+     meta is a version, a size and a description and wraps at this width; "No
+     Linux build yet" does not, and without a floor the button would climb 18px
+     the moment you picked a platform with no build. Same reason the slot is
+     always rendered at all — see renderPrimaryUnavailable in download.js. */
+  .download-primary .dl-meta {
+    min-height: 36px;
+  }
+
   .disclaimer {
     flex-direction: column;
     gap: 10px;
@@ -2616,7 +2873,10 @@ button.dl-card:hover {
      flight: a still starfield rather than an empty section. */
   .fx,
   .wf,
-  .wf-star {
+  .wf-star,
+  .faq summary::before,
+  .release-summary .release-version::before,
+  .rail.is-tracking::after {
     transition: none !important;
   }
 
@@ -2627,10 +2887,12 @@ button.dl-card:hover {
   }
 
   /* Parking the reel leaves the first frame showing; the rest sit below it and
-     are clipped by the SVG viewport. */
+     are clipped by the SVG viewport. The call to action's two lights simply
+     stop where they started, which is still a lit edge. */
   .sf-reel,
   .sf-node .sf-box,
-  .sf-pulse {
+  .sf-pulse,
+  .cta-glow::before {
     animation: none !important;
   }
 
@@ -2676,7 +2938,8 @@ button.dl-card:hover {
 
 .reduce-motion .sf-reel,
 .reduce-motion .sf-node .sf-box,
-.reduce-motion .sf-pulse {
+.reduce-motion .sf-pulse,
+.reduce-motion .cta-glow::before {
   animation: none !important;
 }
 
@@ -2709,6 +2972,9 @@ button.dl-card:hover {
 .reduce-motion .nav-menu,
 .reduce-motion .fx,
 .reduce-motion .wf,
-.reduce-motion .wf-star {
+.reduce-motion .wf-star,
+.reduce-motion .faq summary::before,
+.reduce-motion .release-summary .release-version::before,
+.reduce-motion .rail.is-tracking::after {
   transition: none !important;
 }

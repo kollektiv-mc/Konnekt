@@ -166,13 +166,32 @@
     document.body.appendChild(rail)
 
     var activeSection = null
+    var railTracking = false
 
     var setActive = function (el) {
       if (el === activeSection) return
       activeSection = el
       for (var i = 0; i < dots.length; i++) {
-        if (sections[i] === el) dots[i].setAttribute('aria-current', 'true')
-        else dots[i].removeAttribute('aria-current')
+        if (sections[i] === el) {
+          dots[i].setAttribute('aria-current', 'true')
+          // Where the rail's travelling mark should be (styles.css, .rail::after).
+          // Measured off the dot rather than worked out from its index, so the
+          // rail's spacing stays a fact of one stylesheet rather than a number
+          // this file also has to know.
+          rail.style.setProperty('--rail-y', dots[i].offsetTop + dots[i].offsetHeight / 2 + 'px')
+        } else {
+          dots[i].removeAttribute('aria-current')
+        }
+      }
+
+      // The mark's transition is switched on a frame after it is first placed,
+      // so loading straight onto a section further down puts it there rather
+      // than sliding it the length of the rail to get there.
+      if (!railTracking) {
+        railTracking = true
+        window.requestAnimationFrame(function () {
+          rail.classList.add('is-tracking')
+        })
       }
     }
 
@@ -280,6 +299,13 @@
         var from = details.getBoundingClientRect().height
         var to
 
+        // `open` cannot say which way this is going: it is forced true for the
+        // whole of a close, below, so there is a height to animate down from.
+        // The marker in styles.css needs the answer at click time — keyed on
+        // [open] alone it would hold the minus for the full 220ms and snap
+        // back at the end — so the close direction gets a class of its own.
+        details.classList.toggle('is-closing', !opening)
+
         if (opening) {
           details.open = true
           to = details.getBoundingClientRect().height
@@ -300,7 +326,10 @@
         anim.onfinish = function () {
           anim = null
           details.style.overflow = ''
-          if (!opening) details.open = false
+          if (!opening) {
+            details.open = false
+            details.classList.remove('is-closing')
+          }
         }
       })
     })

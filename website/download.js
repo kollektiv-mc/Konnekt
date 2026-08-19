@@ -41,21 +41,109 @@
   // rather than passed down through every call.
   var current = { assets: [], version: '' }
 
-  function selectPlatform(platform) {
-    var asset = R.matchAsset(platform, current.assets)
-    if (platform && asset) {
-      renderPrimaryAvailable(platform, asset, current.version)
-    } else {
-      renderPrimaryUnavailable(platform)
+  // Everything the primary card says lives in here rather than directly in
+  // #dl-primary. The card is chrome — a border, a background and a shadow that
+  // should sit still while its contents change — and this is the one box that
+  // survives a re-render, so it is what the swap below animates.
+  var primaryInner = el('div', 'dl-primary-inner')
+  primaryEl.appendChild(primaryInner)
+
+  // ── Swapping the primary card ────────────────────────────────────────────
+  // Picking a platform rewrites the card's contents in one synchronous pass,
+  // which lands as a hard cut in the middle of a page where everything else
+  // arrives on an animation. A short fade and a shade of scale either side of
+  // the swap reads as the same card answering a different question.
+  //
+  // Only the contents, and only this card's. The card's own frame holds still,
+  // per primaryInner above; and the grid below is rebuilt element by element,
+  // so its cards already carry .dl-grid > .dl-card's staggered intro-in —
+  // fading the grid as a whole on top of that would just muddy it.
+  //
+  // The duration comes off the shared motion token rather than a number of its
+  // own, the way backdrop.js takes its colours off the palette tokens.
+  var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  var SWAP_MS =
+    parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--duration-fast')) ||
+    150
+  var SWAP_EASE = 'cubic-bezier(0.4, 0, 0.2, 1)'
+  var swapAnim = null
+  var swapTimer = 0
+  var seeded = false
+
+  function swapPrimary(render) {
+    // The first render is the page arriving, and .download-primary has its own
+    // intro-in for that. Anything without the Web Animations API, or asking for
+    // less motion, gets the plain swap.
+    if (!seeded || reduceMotion || !primaryInner.animate) {
+      seeded = true
+      render()
+      return
     }
-    renderOthers(platform, current.assets)
+
+    // A second click mid-swap replaces the first outright. Cancelling does not
+    // fire onfinish and the timer goes with it, so the render this one is
+    // carrying can never land after the one that overtook it.
+    if (swapAnim) swapAnim.cancel()
+    if (swapTimer) clearTimeout(swapTimer)
+
+    var applied = false
+
+    function apply() {
+      if (applied) return
+      applied = true
+      clearTimeout(swapTimer)
+      swapTimer = 0
+
+      render()
+
+      // Drops the forwards fill, so the card is back under its own styles
+      // before the way in starts from them.
+      swapAnim.cancel()
+      swapAnim = primaryInner.animate(
+        [
+          { opacity: 0, transform: 'scale(0.985)' },
+          { opacity: 1, transform: 'scale(1)' },
+        ],
+        { duration: Math.round(SWAP_MS * 1.4), easing: SWAP_EASE },
+      )
+      swapAnim.onfinish = function () {
+        swapAnim = null
+      }
+    }
+
+    swapAnim = primaryInner.animate(
+      [
+        { opacity: 1, transform: 'scale(1)' },
+        { opacity: 0, transform: 'scale(0.985)' },
+      ],
+      { duration: SWAP_MS, easing: SWAP_EASE, fill: 'forwards' },
+    )
+    swapAnim.onfinish = apply
+
+    // The card's contents are what the click was for, so they cannot be left
+    // waiting on a frame. An animation on a document that stops compositing
+    // holds at its last frame and never finishes; this puts the new platform on
+    // screen regardless, and is a no-op in the ordinary case where it already is.
+    swapTimer = setTimeout(apply, SWAP_MS + 400)
+  }
+
+  function selectPlatform(platform) {
+    swapPrimary(function () {
+      var asset = R.matchAsset(platform, current.assets)
+      if (platform && asset) {
+        renderPrimaryAvailable(platform, asset, current.version)
+      } else {
+        renderPrimaryUnavailable(platform)
+      }
+      renderOthers(platform, current.assets)
+    })
   }
 
   function renderPrimaryAvailable(platform, asset, version) {
-    primaryEl.innerHTML = ''
-    primaryEl.appendChild(el('div', 'dl-os-icon', platform.tag))
-    primaryEl.appendChild(el('h2', null, 'Konnekt for ' + platform.name))
-    primaryEl.appendChild(
+    primaryInner.innerHTML = ''
+    primaryInner.appendChild(el('div', 'dl-os-icon', platform.tag))
+    primaryInner.appendChild(el('h2', null, 'Konnekt for ' + platform.name))
+    primaryInner.appendChild(
       el(
         'p',
         'dl-meta',
@@ -65,19 +153,30 @@
     var btn = el('a', 'btn btn-primary', 'Download ' + platform.tag + ' build')
     btn.href = asset.browser_download_url
     btn.setAttribute('download', '')
-    primaryEl.appendChild(btn)
+    primaryInner.appendChild(btn)
   }
 
+  // The same four slots as above, filled differently. Nothing pins the card's
+  // height, so dropping the .dl-meta line here — as this used to — pulled the
+  // button up by a line and its 22px margin the moment you picked a platform
+  // with no build, which read as the card twitching rather than as an answer.
+  // The heading stays "Konnekt for ..." for the same reason: switching
+  // platforms should change what the card says about the build, not what it
+  // says it is about.
   function renderPrimaryUnavailable(platform) {
-    primaryEl.innerHTML = ''
-    primaryEl.appendChild(el('div', 'dl-os-icon', platform ? platform.tag : '?'))
-    var heading = platform ? 'No ' + platform.name + ' build yet' : 'Choose your platform'
-    primaryEl.appendChild(el('h2', null, heading))
+    primaryInner.innerHTML = ''
+    primaryInner.appendChild(el('div', 'dl-os-icon', platform ? platform.tag : '?'))
+    primaryInner.appendChild(
+      el('h2', null, platform ? 'Konnekt for ' + platform.name : 'Choose your platform'),
+    )
+    primaryInner.appendChild(
+      el('p', 'dl-meta', platform ? 'No ' + platform.name + ' build yet' : 'Pick a platform below'),
+    )
     var btn = el('a', 'btn btn-primary', 'Build from source')
     btn.href = R.REPO_URL
     btn.target = '_blank'
     btn.rel = 'noopener'
-    primaryEl.appendChild(btn)
+    primaryInner.appendChild(btn)
   }
 
   function renderOthers(primaryPlatform, assets) {

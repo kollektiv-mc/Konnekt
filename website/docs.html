@@ -43,7 +43,10 @@
          marks the current page and intercepts same-page anchors. -->
     <nav class="nav" id="nav">
       <div class="nav-inner">
-        <a href="/index.html" class="wordmark">Konnekt</a>
+        <span class="nav-brand">
+          <a href="/index.html" class="wordmark">Konnekt</a>
+          <span class="brand-tag">ALPHA</span>
+        </span>
         <button
           class="nav-toggle"
           id="nav-toggle"
@@ -136,12 +139,12 @@
                     <tr>
                       <td>Linux (x86-64)</td>
                       <td><code>konnekt-linux-amd64</code></td>
-                      <td><span class="tag tag-done">Published</span></td>
+                      <td><span class="tag tag-wip">Snapshot</span></td>
                     </tr>
                     <tr>
                       <td>Fedora / RHEL (x86-64)</td>
                       <td><code>.x86_64.rpm</code></td>
-                      <td><span class="tag tag-done">Published</span></td>
+                      <td><span class="tag tag-wip">Snapshot</span></td>
                     </tr>
                     <tr>
                       <td>macOS</td>
@@ -339,7 +342,7 @@ wails dev -tags webkit2_41</code></pre>
         <div class="footer-inner">
           <div class="footer-left">
             <span class="wordmark" style="font-size: 15px">Konnekt</span>
-            <span class="footer-tag">ALPHA</span>
+            <span class="brand-tag">ALPHA</span>
           </div>
           <div class="footer-links">
             <a href="https://github.com/kollektiv-mc/Konnekt" target="_blank" rel="noopener"

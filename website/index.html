@@ -62,7 +62,10 @@
          marks the current page and intercepts same-page anchors. -->
     <nav class="nav" id="nav">
       <div class="nav-inner">
-        <a href="/index.html" class="wordmark">Konnekt</a>
+        <span class="nav-brand">
+          <a href="/index.html" class="wordmark">Konnekt</a>
+          <span class="brand-tag">ALPHA</span>
+        </span>
         <button
           class="nav-toggle"
           id="nav-toggle"
@@ -158,7 +161,9 @@
           </div>
           <div class="about-fact reveal" style="--reveal-delay: 60ms">
             <dt>Platforms</dt>
-            <dd class="fact-pills">
+            <!-- Narrower than the servers' box so these break 2/1; see
+                 --pills-w in styles.css. -->
+            <dd class="fact-pills" style="--pills-w: 150px">
               <span class="pill">Windows</span>
               <span class="pill">Linux</span>
               <span class="pill">macOS</span>
@@ -173,6 +178,7 @@
         <div class="section-head reveal">
           <span class="eyebrow">&gt;_ features</span>
           <h2>What's inside</h2>
+          <p>The tools Konnekt gives you to run your servers.</p>
         </div>
         <div class="feat-grid" id="feat-grid">
           <article class="feat reveal" style="--reveal-delay: 0ms">
@@ -308,10 +314,7 @@
       <div class="container">
         <div class="spotlight">
           <div class="section-head reveal">
-            <span class="eyebrow">
-              () scheduler
-              <span class="tag tag-alpha">Alpha</span>
-            </span>
+            <span class="eyebrow">() scheduler</span>
             <h2>Automate with a graph</h2>
             <p>Wire triggers, conditions and commands on a canvas.</p>
           </div>
@@ -676,6 +679,10 @@
     <section class="cta section-full" id="download" data-nav="Download">
       <div class="container">
         <div class="cta-panel reveal">
+          <!-- Two lights running the panel's edge; see .cta-glow in styles.css.
+               Absolutely positioned, so it is out of flow and never becomes a
+               flex item of the panel. -->
+          <span class="cta-glow" aria-hidden="true"></span>
           <span class="eyebrow">[&gt;] download</span>
           <h2>Get <span class="accent">Konnekt</span></h2>
           <p>Free and open source.</p>
@@ -700,7 +707,7 @@
         <div class="footer-inner">
           <div class="footer-left">
             <span class="wordmark" style="font-size: 15px">Konnekt</span>
-            <span class="footer-tag">ALPHA</span>
+            <span class="brand-tag">ALPHA</span>
           </div>
           <div class="footer-links">
             <a href="https://github.com/kollektiv-mc/Konnekt" target="_blank" rel="noopener"

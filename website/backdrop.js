@@ -1,5 +1,6 @@
-/* Landing-page backdrops: a very large sphere of stars behind the hero, and a
-   minimal warp field behind the download call to action.
+/* Landing-page backdrops: a very large sphere of stars behind the hero, with
+   the occasional satellite passing across it, and a minimal warp field behind
+   the download call to action.
 
    They are built two different ways, on purpose. The sphere is several
    thousand points that have to be transformed every frame, so it is canvas 2D
@@ -21,14 +22,33 @@
   var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
   var DPR = Math.min(window.devicePixelRatio || 1, 2)
 
+  function token(name, fallback) {
+    return (getComputedStyle(document.documentElement).getPropertyValue(name) || fallback).trim()
+  }
+
   // Follow the token rather than hard-coding the green, so a palette change in
   // styles.css carries into the backdrops.
-  var accent = (
-    getComputedStyle(document.documentElement).getPropertyValue('--accent-rgb') || '74 222 128'
-  ).trim()
+  var accent = token('--accent-rgb', '74 222 128')
+
+  // One of these is drawn per satellite pass. Same rule as the accent above:
+  // every colour is a token, so the palette stays one file's business. White
+  // is in the list because it is what the rest of the sky already is, and a
+  // pass that happens to be white reads as the plainest of the set rather than
+  // as a colour missing.
+  var SAT_COLORS = [
+    '#ffffff',
+    'rgb(' + accent + ')',
+    'rgb(' + token('--sun-rgb', '255 216 77') + ')',
+    'rgb(' + token('--warning-rgb', '245 158 11') + ')',
+    'rgb(' + token('--danger-rgb', '248 113 113') + ')',
+  ]
 
   function clamp(v, lo, hi) {
     return v < lo ? lo : v > hi ? hi : v
+  }
+
+  function rand(lo, hi) {
+    return lo + Math.random() * (hi - lo)
   }
 
   // ── When is a section properly in front of you? ──────────────────────────
@@ -140,10 +160,58 @@
     var TILT = 0.34 // lean of the spin axis, so motion reads near the limb
 
     var stars = []
-    var dust = []
     var ox = 0
     var oy = 0
     var radius = 0
+
+    // ── One satellite at a time, passing ───────────────────────────────────
+    // A single point crossing the right of the frame on a shallow arc, then
+    // empty sky for a few seconds before the next one. It is drawn on this
+    // canvas rather than run as a CSS animation, which is the opposite of the
+    // call the warp field makes: main.js gates the hero's `intro-done` class
+    // on every animation inside .hero finishing, and an infinite one would
+    // never settle, leaving the headline on a composited layer for good. The
+    // loop this effect already runs costs one more point a frame.
+    var SAT_TRAVEL = [3, 4] // seconds for one pass
+    var SAT_GAP = [2.5, 6] // seconds of empty sky between passes
+    var SAT_FIRST = 2 // and before the first one, which is not left to chance
+    var SAT_FADE = 0.22 // share of a pass spent fading in, and again out
+
+    var sat = null
+    // Fixed for the opening so the first pass is part of arriving on the page:
+    // the hero's words are still settling in for the first second and a half,
+    // and this comes in just behind them. Every gap after it is random, so the
+    // rhythm is only ever set once. Counted in drawn time rather than wall
+    // clock — the runner does not tick while the hero is off screen or the tab
+    // is behind another, so this is two seconds of actually watching it.
+    var satWait = SAT_FIRST
+
+    // Everything is a fraction of the frame, so a resize mid-pass carries the
+    // satellite with the canvas instead of stranding it on a stale pixel path.
+    //
+    // It starts in the strip of empty sky at the top left, between the nav and
+    // the sphere's limb: the limb crosses the left of the frame at about 0.2h
+    // whatever the aspect ratio (see resize below for where that comes from),
+    // and .fx's mask is only fully open below 0.14h, so the band between those
+    // two is the whole of the opening. It ends low and right, where the limb
+    // has already dropped out of frame, and stays above the bottom 14% the
+    // mask fades out — a pass that ended in there would dim rather than fade.
+    function spawnSat() {
+      return {
+        x0: rand(0.1, 0.2),
+        y0: rand(0.15, 0.19),
+        x1: rand(0.8, 0.92),
+        y1: rand(0.68, 0.78),
+        // Lifted off the chord, and only ever upward. The straight line between
+        // those two points runs just under the limb through the middle of the
+        // frame; the arc is what carries the pass over the sphere rather than
+        // into it, which is the whole read.
+        bow: rand(0.1, 0.18),
+        life: rand(SAT_TRAVEL[0], SAT_TRAVEL[1]),
+        age: 0,
+        color: SAT_COLORS[Math.floor(Math.random() * SAT_COLORS.length)],
+      }
+    }
 
     function build(w, h) {
       // The crowding toward the limb is the whole illusion, and it is confined
@@ -173,19 +241,6 @@
           sy: 0,
           d: 0,
           on: false,
-        })
-      }
-
-      // A little free-floating dust for the empty space outside the sphere.
-      dust = []
-      var dustCount = Math.round(clamp((w * h) / 26000, 12, 60))
-      for (var d = 0; d < dustCount; d++) {
-        dust.push({
-          x: Math.random(),
-          y: Math.random(),
-          r: 0.4 + Math.random() * 0.7,
-          ph: Math.random() * Math.PI * 2,
-          sp: 0.3 + Math.random() * 0.7,
         })
       }
     }
@@ -241,19 +296,51 @@
           ctx.fillRect(s.sx, s.sy, size, size)
         }
 
-        ctx.fillStyle = '#ffffff'
-        for (i = 0; i < dust.length; i++) {
-          var g = dust[i]
-          g.y -= 0.0015 * dt
-          if (g.y < -0.02) {
-            g.y = 1.02
-            g.x = Math.random()
+        // Nothing else is painted out here. There was a field of drifting dust
+        // over the whole canvas, on the argument that it made the space
+        // outside the limb read as space rather than as a blank. At a
+        // sub-pixel size and 0.04 to 0.22 alpha it did not: a dozen or so
+        // points hung motionless above the planet and read as dirt on the
+        // screen. The sky is the flat background colour, and the one thing
+        // that crosses it is the satellite.
+
+        // Advanced by dt rather than read off t, so a pass pauses with the loop
+        // instead of carrying on unseen while the section is off screen. Under
+        // reduced motion there is no loop at all — draw() is called once with a
+        // dt of 0 — so nothing would spawn either way, but say so outright.
+        if (!reduceMotion) {
+          if (sat) {
+            sat.age += dt
+            if (sat.age >= sat.life) sat = null
+          } else {
+            satWait -= dt
+            if (satWait <= 0) {
+              sat = spawnSat()
+              satWait = rand(SAT_GAP[0], SAT_GAP[1])
+            }
           }
-          // Kept dimmer than the sphere's own stars: dust is what makes the
-          // space outside the limb read as space rather than as a blank, but
-          // too much of it blurs the edge between the two.
-          ctx.globalAlpha = 0.13 + 0.09 * Math.sin(t * g.sp + g.ph)
-          ctx.fillRect(g.x * w, g.y * h, g.r, g.r)
+        }
+
+        if (sat) {
+          var pr = sat.age / sat.life
+          // Zero at both ends and widest in the middle, so the arc leaves and
+          // rejoins the chord exactly where the pass begins and ends.
+          var lift = Math.sin(pr * Math.PI) * sat.bow
+          var satX = (sat.x0 + (sat.x1 - sat.x0) * pr) * w
+          var satY = (sat.y0 + (sat.y1 - sat.y0) * pr - lift) * h
+          // It begins and ends inside the frame, so both ends have to be a
+          // fade — appearing at full strength on a bare patch of sky is the
+          // one thing that would read as a glitch rather than as distance.
+          var fade = Math.min(1, pr / SAT_FADE, (1 - pr) / SAT_FADE)
+
+          // A core and the faintest halo, both fillRect like everything else
+          // here. A canvas shadow would light it far better and costs a blur
+          // pass a frame for a single point.
+          ctx.fillStyle = sat.color
+          ctx.globalAlpha = 0.1 * fade
+          ctx.fillRect(satX - 3, satY - 3, 6, 6)
+          ctx.globalAlpha = 0.9 * fade
+          ctx.fillRect(satX - 1, satY - 1, 2, 2)
         }
 
         ctx.globalAlpha = 1
