@@ -118,7 +118,7 @@ Konnekt integrates with popular server mods and plugins to extend its core featu
 ## Why Konnekt
 
 - **Local-first.** All app state is stored locally on disk — no account, no cloud dependency, no telemetry required to run your server.
-- **Cross-platform.** Built on [Wails](https://wails.io/); official builds ship for Windows and Linux (see [Platform support](#platform-support)), and it also runs as a native app on macOS from source.
+- **Cross-platform.** Built on [Wails](https://wails.io/); tagged releases ship a Windows build, the rolling snapshot channel adds Linux and an `.rpm` (see [Platform support](#platform-support)), and it also runs as a native app on macOS from source.
 - **One dashboard, not ten tools.** Console, stats, scheduling, worlds, backups, config, and mods all live in the same window instead of separate scripts and plugins.
 
 ## Tech stack
@@ -132,15 +132,20 @@ Konnekt integrates with popular server mods and plugins to extend its core featu
 
 ## Platform support
 
-Prebuilt releases are published for:
+Prebuilt binaries come from two channels: tagged releases, and the rolling
+`snapshot` prerelease rebuilt from `main`. Both are on the
+[releases page](https://github.com/kollektiv-mc/Konnekt/releases); the snapshot
+is a prerelease, so GitHub keeps it out of the default view.
 
-- **Windows** (`konnekt-windows-amd64.exe`)
+- **Windows** (`konnekt-windows-amd64.exe`) — tagged releases and snapshots.
 - **Linux** (`konnekt-linux-amd64`, plus an `.rpm` for Rocky/RHEL 10 and
-  Fedora), built against webkit2gtk-4.1 — this covers Rocky/RHEL 10, Fedora
-  36+, Ubuntu 22.04+, and Debian 12+. **Rocky/RHEL 9 is not supported**: EL9
-  never received webkit2gtk-4.1, and EL10 dropped webkit2gtk-4.0, so the two
-  are not binary-compatible.
-- **macOS** is not published as a release yet, but builds from source via
+  Fedora) — **snapshots only so far.** The release workflow builds both, but
+  those jobs landed after the one tagged release was cut, so the next tag is
+  the first to carry them. They are built against webkit2gtk-4.1, which covers
+  Rocky/RHEL 10, Fedora 36+, Ubuntu 22.04+, and Debian 12+. **Rocky/RHEL 9 is
+  not supported**: EL9 never received webkit2gtk-4.1, and EL10 dropped
+  webkit2gtk-4.0, so the two are not binary-compatible.
+- **macOS** is not published on either channel, but builds from source via
   `wails build` like any other platform.
 
 ## Getting started

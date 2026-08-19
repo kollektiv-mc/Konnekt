@@ -6,7 +6,7 @@
     <title>Roadmap — Konnekt</title>
     <meta
       name="description"
-      content="What's shipped in Konnekt's alpha, what beta is working on, what a full release needs, what comes later, and what is deliberately out of scope."
+      content="What's shipped in Konnekt's alpha, what beta is working on, what a full release needs, and what comes later."
     />
     <link rel="canonical" href="https://konnekt.pages.dev/roadmap.html" />
 
@@ -14,7 +14,7 @@
     <meta property="og:title" content="Roadmap — Konnekt" />
     <meta
       property="og:description"
-      content="What's shipped in Konnekt's alpha, what beta is working on, what a full release needs, what comes later, and what is deliberately out of scope."
+      content="What's shipped in Konnekt's alpha, what beta is working on, what a full release needs, and what comes later."
     />
     <meta property="og:url" content="https://konnekt.pages.dev/roadmap.html" />
     <meta property="og:type" content="website" />
@@ -25,7 +25,7 @@
     <meta name="twitter:title" content="Roadmap — Konnekt" />
     <meta
       name="twitter:description"
-      content="What's shipped in Konnekt's alpha, what beta is working on, what a full release needs, what comes later, and what is deliberately out of scope."
+      content="What's shipped in Konnekt's alpha, what beta is working on, what a full release needs, and what comes later."
     />
     <meta name="twitter:image" content="https://konnekt.pages.dev/assets/img/social-card.png" />
 
@@ -43,7 +43,10 @@
          marks the current page and intercepts same-page anchors. -->
     <nav class="nav" id="nav">
       <div class="nav-inner">
-        <a href="/index.html" class="wordmark">Konnekt</a>
+        <span class="nav-brand">
+          <a href="/index.html" class="wordmark">Konnekt</a>
+          <span class="brand-tag">ALPHA</span>
+        </span>
         <button
           class="nav-toggle"
           id="nav-toggle"
@@ -81,7 +84,7 @@
         <div class="subpage-head">
           <span class="eyebrow">[/] roadmap</span>
           <h1>Where it's <span class="accent">going</span></h1>
-          <p>What's shipped, what's next, and what won't be built.</p>
+          <p>What's shipped, and what's next.</p>
         </div>
 
         <div class="doc-page">
@@ -90,7 +93,6 @@
             <a href="#beta">Beta</a>
             <a href="#full-release">Full release</a>
             <a href="#later">Later</a>
-            <a href="#no">Out of scope</a>
           </nav>
 
           <section class="doc-section reveal" id="alpha">
@@ -239,23 +241,6 @@
               </ul>
             </div>
           </section>
-
-          <section class="doc-section reveal" id="no">
-            <h2>
-              <span>Explicitly out of scope</span>
-              <span class="tag tag-no">Won't build</span>
-            </h2>
-            <div class="md">
-              <ul>
-                <li>
-                  <strong>Bedrock Edition.</strong> Different command syntax; it would be a second
-                  product.
-                </li>
-                <li><strong>Minecraft versions before 1.20.5.</strong></li>
-                <li><strong>Accounts, tiers and subscriptions.</strong></li>
-              </ul>
-            </div>
-          </section>
         </div>
       </div>
     </main>
@@ -273,7 +258,7 @@
         <div class="footer-inner">
           <div class="footer-left">
             <span class="wordmark" style="font-size: 15px">Konnekt</span>
-            <span class="footer-tag">ALPHA</span>
+            <span class="brand-tag">ALPHA</span>
           </div>
           <div class="footer-links">
             <a href="https://github.com/kollektiv-mc/Konnekt" target="_blank" rel="noopener"
