@@ -120,11 +120,17 @@ tree.
       — `.gitignore` covers them.
 - [x] No stray root-level scratch/design docs left un-triaged (either promoted
       into `agent_docs/` or deleted once the work lands).
-- [ ] `agent_docs/CLAUDE.md` and `agent_docs/ROADMAP.md` still reflect the
+- [x] `agent_docs/CLAUDE.md` and `agent_docs/ROADMAP.md` still reflect the
       actual stack/structure/scope — update them when they drift.
       Verify: read CLAUDE.md's "Project structure" against the real top-level
       dirs under `frontend/src/` and `backend/`, and its "Build & dev commands"
-      table against `frontend/package.json`'s `scripts`.
+      table against `frontend/package.json`'s `scripts`. Then read ROADMAP.md's
+      **non-feature** sections too — "Later", "Explicitly out of scope" and
+      "Implementation notes" are the ones that rot unwatched, because nobody
+      re-reads them while shipping a feature. That is where a whole block of
+      *Kommands* roadmap had been sitting (see HEALTH_LOG, 2026-08-19): the
+      suite shares a design source and a docs shape, so prose copied between
+      products is a live failure mode here, not a hypothetical one.
 - [x] No obviously dead code (unused exports, unreachable branches, orphaned
       files) left behind after refactors.
       The per-file grep this line used to prescribe only finds what you already
@@ -158,15 +164,26 @@ tree.
       (Prettier plus the link/asset check), a `backend` job on windows-latest,
       and a `backend-linux` job in a webkit2gtk-4.1 container — the only place
       `server_linux.go`/`server_unix.go`/`server_other.go` are compiled).
-- [ ] All Go methods bound to the Wails `App` struct return `(T, error)`, and
+- [x] All Go methods bound to the Wails `App` struct return `(T, error)`, and
       errors are wrapped with context (`fmt.Errorf("...: %w", err)`).
+      82/82 as of 2026-08-19.
       Verify: `grep -nE "^func \(a \*App\) [A-Z]" app.go` — every hit must end
       in `error)` or `error {`. (`beforeClose`/`startup` are Wails lifecycle
       hooks, not bound methods, and are exempt.)
-- [ ] Every `EventsOn` listener registered in a component is cleaned up on
+- [x] Every `EventsOn` listener registered in a component is cleaned up on
       unmount — no leaked subscriptions.
       Verify: from `frontend/`, `grep -rn "EventsOn" src` — each call site must
       sit in a `useEffect` whose cleanup invokes the returned unsubscribe.
+      25 registrations across 12 files, all clean. Three spellings are in use
+      and a check has to know all three, or it reports a false leak: a single
+      `let cleanup` handle, numbered `c1…c5` handles, and an array drained in
+      the cleanup (`offs.push(...)` in `ServerInstallModal.tsx`, an array
+      literal in `tiles/stats/useServerStatus.ts`). Registration is always
+      synchronous inside the effect — no `await` before the handle is
+      captured — which is what rules out the unmount-before-assignment leak.
+      One asymmetry, noted not fixed: `useServerStatus.ts` wraps its whole
+      `forEach` in one `try`, so a throwing first `off()` would skip the rest,
+      where `ServerInstallModal.tsx` puts the `try` inside the loop.
 - [x] No frontend data is driven by `useEffect` polling when it should be a
       Wails event listener (CLAUDE.md rule). Every data poll is closed: the
       players tile's 3s poll, then the stats/backups/mods 10s polls (see
@@ -174,7 +191,7 @@ tree.
       `App.tsx`'s 150ms console-log batcher, which is a render-batching
       measure rather than data fetching. Check with
       `grep -rn "setInterval" src --include=*.ts --include=*.tsx | grep -v test`.
-- [ ] Process lifecycle stays safe: Windows Job Object child cleanup intact
+- [x] Process lifecycle stays safe: Windows Job Object child cleanup intact
       (`backend/services/server_windows.go`), RCON dial/operation timeouts
       present (`backend/services/rcon.go`), Modrinth HTTP client keeps its
       timeout + 429/`Retry-After` retry handling (`backend/services/modrinth.go`).
@@ -186,7 +203,10 @@ tree.
       Minecraft server process is offline or unreachable.
       Verify: `grep -n "ErrorBoundary" frontend/src/main.tsx`, then run the app
       with no server configured and confirm tiles render an offline state
-      rather than a blank panel.
+      rather than a blank panel. The grep half passes (`main.tsx:5`/`:18`/`:21`).
+      The second half stays unticked on purpose: it needs a running GUI, so a
+      headless agent cannot close it — leave it for a session at a desk rather
+      than ticking it on the grep alone.
 
 ## 3. Scalable / Future-proof
 
@@ -201,7 +221,7 @@ tree.
 - [x] Production bundle size stays within an agreed budget (550 KB gzip on the
       entry chunk, ~12% headroom over the measured post-split size), checked
       in CI (`frontend/scripts/check-bundle-size.mjs`, `pnpm check-bundle`).
-- [ ] `frontend/src/tiles/registry.ts` was extended, not restructured, when
+- [x] `frontend/src/tiles/registry.ts` was extended, not restructured, when
       new tiles were added. (Two sanctioned exceptions while the tile grid's
       placement model was under active repair — see HEALTH_LOG.md: loose
       per-tile `defaultW`/`defaultH`/`minW`/`minH` numbers became an
@@ -211,7 +231,7 @@ tree.
       component }`. The rule applies fully to that shape going forward.)
       Verify: `git diff main -- frontend/src/tiles/registry.ts` — added entries
       only, with `TileDefinition`'s shape unchanged.
-- [ ] Each Zustand store still owns exactly one domain — no cross-domain state
+- [x] Each Zustand store still owns exactly one domain — no cross-domain state
       mixing creeping in.
       Verify: from `frontend/`, `grep -rn "stores/" src/stores` — a store
       importing another store's state is the failure.
@@ -227,14 +247,24 @@ tree.
       A clean regeneration diff is therefore necessary, not sufficient; also
       grep the generated `App.d.ts` for `models.X` names that `models.ts` never
       declares.
-- [ ] Dependencies (Go modules, npm packages) are reasonably current, with no
+- [x] Dependencies (Go modules, npm packages) are reasonably current, with no
       unmaintained or duplicated libraries doing the same job.
       Verify: `go list -m -u all` at the root and `pnpm outdated` from
       `frontend/`; `pnpm why <pkg>` for anything suspected of being vendored
       twice — the duplicate-`three` incident in HEALTH_LOG.md is the shape of
-      failure this catches.
-- [ ] New Go dependencies were checked against `agent_docs/DEPENDENCIES.md`
-      before being added.
+      failure this catches. Checked 2026-08-19: everything is behind by a patch
+      or a minor, nothing by a major; `three`/`@types/three` remain single
+      copies, so that incident stays closed. Two duplicates exist and both are
+      benign — `react-is` (16/17, the usual transitive spread) and **`zustand`
+      4.5.7 alongside the app's 5.0.14**, pulled by `@xyflow/react` and by
+      `tunnel-rat` under `@react-three/drei`. Unlike the `three` case that is
+      not a hazard: it duplicated a *type* two packages had to agree on, while
+      these are private runtime stores nothing shares across the boundary.
+      Re-confirm rather than re-investigate. The one worth watching is
+      `wails/v2`, three minors behind at v2.12.0 — and note `go.mod`'s pin is
+      what the `frontend/wailsjs/` regeneration check must run against.
+- [x] New Go dependencies were checked against `agent_docs/DEPENDENCIES.md`
+      before being added. All four direct requires present, none dropped.
       Verify: every direct require in `go.mod` appears in that file's inventory
       table with a rationale, and nothing in the table has since been dropped.
 - [x] Local-first invariant holds: no `localStorage`/`sessionStorage` usage;
@@ -250,19 +280,19 @@ tree.
 
 ## 4. Performant
 
-- [ ] Console log lines are still batched (150ms flush window in `App.tsx`) so
+- [x] Console log lines are still batched (150ms flush window in `App.tsx`) so
       re-render rate stays bounded on busy servers.
       Verify: from `frontend/`, `grep -n "setInterval" src/App.tsx` — the
       batcher must still be there, and still be the only `setInterval` under
       `src/` (see the Stable pillar's poll check).
-- [ ] Circular/ring buffers still cap memory growth: performance history
+- [x] Circular/ring buffers still cap memory growth: performance history
       (`usePerformanceHistory.ts`), console buffer (`useConsoleStore.ts`, user
       configurable cap), backend stats history and console ring buffer
       (`backend/services/stats.go`, `backend/services/server.go`).
       Verify: each of those five sites must slice or shift when it appends —
       `grep -nE "slice\(|\.shift\(|len\(.*\) >" ` over them. An unbounded
       append is the failure.
-- [ ] Poll cadences remain deliberate and haven't crept down accidentally: TPS
+- [x] Poll cadences remain deliberate and haven't crept down accidentally: TPS
       RCON poll (~15s, with server-flavor caching), stats tick (~10s). The
       scheduler's next-run countdown is no longer polled at all — the Go
       per-minute ticker (and each graph mutation) pushes `schedule:next-runs`.
@@ -276,6 +306,10 @@ tree.
       Verify: React DevTools Profiler over a drag of the tile grid — a scene or
       chart subtree that re-renders on an unrelated parent update is the
       failure. Tracked as an open backlog item until a profiling pass runs.
+      Like the `ErrorBoundary` item above, this one needs a running GUI and so
+      cannot be closed from a headless session; a static "which subtrees lack
+      `React.memo`" pass would produce a list, not evidence, and the point of
+      the item is the evidence.
 - [x] Production bundle has been profiled recently (e.g. `vite build` output
       or a bundle analyzer) and heavy libraries remain lazy rather than eager
       (three.js via Worlds, recharts via Performance — see Scalable pillar).

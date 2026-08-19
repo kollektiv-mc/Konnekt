@@ -16,7 +16,9 @@ pnpm for the frontend, Go modules for the backend.
 - `backend/services/` holds process management, RCON, backups, scheduler,
   config, stats and updates; `backend/models/` holds structs auto-bound to TS.
 - `frontend/src/` splits into `components/`, `tiles/` (one folder each, plus
-  `registry.ts`), `stores/`, `hooks/` and `lib/`.
+  `registry.ts`), `stores/`, `hooks/`, `lib/`, `types/`, `assets/` and
+  `styles/` — the last holds the **generated** token layer (see Code style),
+  while the hand-authored component CSS stays in `style.css` beside it.
 - `frontend/wailsjs/` is generated. Never edit it by hand.
 - `website/` is the marketing site at konnekt.pages.dev: plain HTML, CSS and
   browser ES modules, no build step and no `package.json`. Cloudflare Pages
@@ -101,6 +103,7 @@ pnpm typecheck        # tsc --noEmit (run from frontend/)
 pnpm lint             # ESLint (run from frontend/)
 pnpm test             # vitest (run from frontend/)
 pnpm format           # Prettier --write (run from frontend/)
+pnpm format:check     # Prettier --check, the gate CI runs (from frontend/)
 pnpm check-bundle     # Enforce 550 KB gzip entry-chunk budget (run from frontend/)
 pnpm gen:tokens       # Regenerate the token layer from tokens.source.json (frontend/)
 pnpm format:website   # Prettier --check over website/ (run from frontend/)

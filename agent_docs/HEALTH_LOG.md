@@ -59,6 +59,7 @@ after them is dated. Newest last, in both groups.
 - [2026-08-18 — Backup filenames that were not unique, and an id that was not random](#2026-08-18-backup-filenames-that-were-not-unique-and-an-id-that-was-not-random)
 - [2026-08-18 — The three error-ignores at the repo root, and the one directory everything persisted through](#2026-08-18-the-three-error-ignores-at-the-repo-root-and-the-one-directory-everything-persisted-through)
 - [2026-08-19 — The dead code the per-file grep could never find](#2026-08-19-the-dead-code-the-per-file-grep-could-never-find)
+- [2026-08-19 — Another product's roadmap, and eight boxes nobody had ticked](#2026-08-19-another-products-roadmap-and-eight-boxes-nobody-had-ticked)
 
 ---
 
@@ -2809,3 +2810,101 @@ linux and nothing on windows. The frontend orphan sweep lists 27 test files,
 14 self-used exports described above. `backend/services` coverage moved 38.0% →
 **38.1%** — deleting uncovered functions can only raise the ratio, so the floor
 was left at 36%. Full gate set green, 12/12.
+
+---
+
+### 2026-08-19 — Another product's roadmap, and eight boxes nobody had ticked
+
+**Closed:** the Clean pillar's docs-drift item, the Stable pillar's `EventsOn`
+cleanup item, the Scalable pillar's dependency-currency item, and five more
+whose verify commands had simply never been run. The checklist went from
+15 ticked / 17 open to **28 ticked / 4 open**.
+
+**`ROADMAP.md` was carrying a chunk of Kommands.** Its "Later" section listed
+"More vanilla commands", `nbt_compound`/`block_state`/`loot_table` argument
+types, "Version 2 support — likely 1.21.5, which flips three trait flags",
+command import, permalinks and function-file export. Its "Explicitly out of
+scope" section was Kommands' list entire, ending on:
+
+> **Server integration.** Kommands generates text; it does not connect to a
+> server.
+
+in the roadmap of an application whose entire purpose is connecting to a
+Minecraft server. Only the first bullet of "Later" (concurrent multi-server,
+[#57](../../issues/57)) was Konnekt's.
+
+This is worth naming as a *class* rather than a one-off. The suite shares a
+design token source, a `suite.json` shape, a health-checklist format and a docs
+layout across Konnekt and Kommands, and that sharing is mostly good. Prose
+travelling with the structure is the cost. The checklist item said to read
+CLAUDE.md's "Project structure" and its command table — both feature-adjacent
+sections someone re-reads while shipping. The sections that actually rotted were
+"Later", "Explicitly out of scope" and "Implementation notes", which nobody
+opens during feature work. The verify step now says so.
+
+"Later" keeps its one real item. "Explicitly out of scope" was rewritten to
+record only decisions **already made elsewhere in this repo**, each with a
+pointer — local-first with no cloud backend (`CLAUDE.md`), Rocky/RHEL 9
+(`DEPENDENCIES.md` and the README), no second mobile frontend (the Remote access
+section) — with a line saying the section records decisions rather than making
+them. Inventing a scope boundary here would have been a worse failure than the
+one being fixed.
+
+Two smaller drifts in the same pass: CLAUDE.md's structure list named five
+directories under `frontend/src/` and there are eight, omitting `styles/` — the
+generated token layer, which the same file documents at length two sections
+later. And `pnpm format:check` was undocumented despite being a canonical gate
+in `.claude/suite.json`; `pnpm format` (the *write* variant) was listed in its
+place, so a contributor reading CLAUDE.md would not have known the command CI
+runs. ROADMAP's "Adding a tile" step 4c also said `backend/app.go`; `app.go` is
+at the repo root.
+
+**`EventsOn`: 25 registrations, 12 files, zero leaks.** Worth recording how the
+check has to be written, because a naive one reports false leaks: three
+spellings are in use — a single `let cleanup` handle, numbered `c1…c5` handles,
+and an array drained in the cleanup, itself spelled two ways (`offs.push(...)`
+in `ServerInstallModal.tsx`, an array literal in `useServerStatus.ts`). A first
+pass here flagged both array sites purely because their `Array<() => void>` type
+annotations broke the pattern matching the handle names. The property that
+actually matters is that registration is synchronous inside every effect: no
+`await` runs before a handle is captured, which is what rules out the
+unmount-before-assignment leak. One asymmetry left alone and noted in the
+checklist: `useServerStatus.ts` wraps its whole `forEach` in one `try`, so a
+throwing first `off()` would skip the rest, where `ServerInstallModal.tsx` puts
+the `try` inside the loop.
+
+**Dependencies: nothing stale, two duplicates, both benign.** Everything is
+behind by a patch or a minor, nothing by a major. `three`/`@types/three` are
+single copies, so that incident stays closed. But `pnpm why` turns up **two
+zustand versions** — 4.5.7 under `@xyflow/react` and under `tunnel-rat` (via
+`@react-three/drei`), alongside the app's own 5.0.14 — and zustand is exactly
+the library this project standardises on, so it reads alarming. It is not the
+`three` failure. That one duplicated a *type* two packages had to agree on
+structurally; these are private runtime stores nothing shares across the
+boundary. Recorded in the checklist so the next reviewer re-confirms in a minute
+instead of re-investigating. The dependency actually worth watching is
+`wails/v2`, three minors behind at v2.12.0 — and note the `frontend/wailsjs/`
+regeneration check has to run against whatever `go.mod` pins, or the diff
+measures the generator rather than the repo.
+
+**Five boxes were ticked purely by running what they already said to run:** 82/82
+bound methods return `(T, error)`; the Job Object / RCON timeout / Modrinth
+429-retry greps all still match; no store imports another store; all four direct
+Go requires appear in `DEPENDENCIES.md`; `TileDefinition` is still
+`{ id, label, icon, maximizable?, component }`; the 150ms console batcher is
+still the only `setInterval` under `src/`; all five ring buffers still slice or
+shift; the three Go tickers are still 10s, 60s and 15s. None of these needed
+work. They needed someone to run the command, which is its own finding about how
+the checklist gets used.
+
+**The four left open, and why each is honestly open.** Motion tokens (real work,
+re-scoped this session, partly gated on the upstream token source). The
+`ModUpdateInfo` binding hole (filed as its own backlog entry). `ErrorBoundary`'s
+offline-degradation half and the memoization profiling pass — both need a
+running GUI, so a headless session cannot close them. Both now say so in the
+checklist rather than sitting there looking merely neglected; the memoization
+one in particular could be faked with a static "which subtrees lack
+`React.memo`" list, and that would produce a list rather than the evidence the
+item is asking for.
+
+**Verification.** Full gate set green, 12/12.
