@@ -93,7 +93,25 @@ check("hand-written scope", notes.section_for(pull("website: fix the hero")), no
 check("hand-written scope, neutral verb", notes.section_for(pull("scheduler: rework next-runs")), notes.OTHER)
 
 # ── The path filter ────────────────────────────────────────────────────────
-NON_APP = notes.load_non_app_paths(HERE.parent / "changelog.json")
+# Against a fixture rather than the repo's own changelog.json, so this file is
+# byte-identical wherever it sits: in a product beside the script it tests, and
+# in kollektiv/plugins/suite-kit/ where it is the master copy and there is no
+# product config to read. The real config is checked separately at the bottom,
+# where it exists.
+NON_APP = (
+    ".claude/",
+    ".github/",
+    ".gitattributes",
+    ".gitignore",
+    "CLAUDE.md",
+    "LICENSE",
+    "README.md",
+    "agent_docs/",
+    "docs/",
+    "lefthook.yml",
+    "scripts/",
+    "website/",
+)
 
 
 def ships(*files: str) -> bool:
@@ -142,13 +160,27 @@ check(
 )
 
 # ── Config loading ─────────────────────────────────────────────────────────
-check("config is non-empty", len(NON_APP) > 0, True)
-check("config entries are strings", all(isinstance(p, str) for p in NON_APP), True)
 try:
     notes.load_non_app_paths(HERE / "does-not-exist.json")
     failures.append("missing config should raise")
 except notes.ApiError:
     pass
+
+# This repo's own config, when this copy is the one sitting in a product. In
+# kollektiv there is no product beside it, and the fixture above is the whole
+# test — a master copy has nothing of its own to validate.
+CONFIG = HERE.parent / "changelog.json"
+if CONFIG.exists():
+    configured = notes.load_non_app_paths(CONFIG)
+    check("config is non-empty", len(configured) > 0, True)
+    # The four path classes that leaked real pull requests into the notes. A
+    # product may add to this list, but dropping one of these reopens a bug
+    # that has already happened once.
+    for prefix in ("website/", ".github/", ".claude/", "README.md"):
+        check(f"config still excludes {prefix}", prefix in configured, True)
+    # And the one it must not exclude: build/ carries the app icon, the .desktop
+    # file and the RPM spec, all of which ship.
+    check("config does not exclude build/", any(p.startswith("build") for p in configured), False)
 
 # ── Report ─────────────────────────────────────────────────────────────────
 if failures:
