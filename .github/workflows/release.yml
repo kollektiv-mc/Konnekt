@@ -169,11 +169,15 @@ jobs:
         run: sha256sum * > checksums.txt
 
       # Same notes script as the nightly snapshot, so a release and the
-      # snapshot ahead of it are described the same way. It leaves out pull
-      # requests that only touched the website or the docs — neither ships in
-      # this build — and sorts the rest into Features, Fixes and Other changes
-      # by label, then conventional-commit prefix, then the title's leading
-      # verb, none of which GitHub's own generator can do.
+      # snapshot ahead of it are described the same way. It drops pull requests
+      # whose files are all under .github/changelog.json's nonAppPaths — the
+      # website, the docs, CI, agent config — because none of that ships in this
+      # build, and it files the rest by their type: label, counting maintenance
+      # and documentation in a footer line rather than listing them. GitHub's
+      # own generator can do neither.
+      #
+      # It reads that config relative to its own path, not the cwd, so the
+      # working-directory below does not reach it.
       #
       # The baseline it picks is the latest published release, which is the
       # previous one: this release's own entry doesn't exist yet.

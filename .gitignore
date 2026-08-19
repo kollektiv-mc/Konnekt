@@ -29,3 +29,7 @@ testserver*/
 
 # Graphify knowledge graph (regenerable via `graphify update .`)
 graphify-out/
+
+# Python bytecode, from .github/scripts/ test runs
+__pycache__/
+*.pyc

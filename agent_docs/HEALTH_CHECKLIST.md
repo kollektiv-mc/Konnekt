@@ -26,8 +26,10 @@ pnpm test               # vitest (from frontend/)
 pnpm format:check       # Prettier (from frontend/)
 pnpm format:website     # Prettier over website/ (from frontend/)
 node scripts/check-website-links.mjs   # website links/assets/sitemap (repo root)
+node scripts/check-release-notes-extract.mjs   # changelog page's body extract (repo root)
 pnpm check-bundle       # 550 KB gzip entry-chunk budget (from frontend/)
 pnpm check-tokens       # every token-named class compiles (from frontend/, after a build)
+python3 .github/scripts/release-notes_test.py  # release-notes classifier (repo root)
 go vet ./...            # Go static analysis (repo root)
 go test ./...           # Go tests (repo root)
 go run ./scripts/coverage-floor   # backend/services coverage floor (repo root)
@@ -587,25 +589,6 @@ was partly wrong)
   in `vite.config.ts`, no `@vitest/coverage-*` dependency). The 36%/38% floor is
   `backend/services` only. Either stand up frontend coverage or re-gate this on
   something that exists.
-
-**P3 — The two changelog paths do not share a vocabulary** (found 2026-08-19)
-- `.github/scripts/release-notes.py` writes the notes for both the snapshot and
-  tagged releases, and has three sections: Features, Fixes, Other changes.
-  `.github/release.yml`, the fallback used only when that script cannot run, has
-  five: it adds Documentation and Maintenance.
-- So a `type:docs` PR reads "Documentation" on one path and "Other changes" on
-  the other, and `type:chore` reads "Maintenance" or "Other changes". That is
-  precisely the failure `release.yml`'s own comment claims to have avoided:
-  "The titles are kept in step deliberately: a reader should not have to learn
-  two vocabularies depending on which path produced the notes they are looking
-  at." They are in step for Features and Fixes only.
-- Not fixed here because it is a decision, not a patch: either the script gains
-  the two sections or `release.yml` loses three, and that is a call about what a
-  release's changelog should show. `agent_docs/CLAUDE.md` has been corrected
-  either way — it used to point contributors at the fallback as the authority.
-- Smaller, same file: `release.yml`'s comment says `changelog:skip` is "Not a
-  label that exists yet". It exists, described as "Leave this pull request out
-  of the release notes entirely."
 
 **Release follow-ups** (deferred)
 - Release-tag-gated full `wails build` packaging job — stronger end-to-end

@@ -1,29 +1,35 @@
-# Layout for GitHub's auto-generated release notes. This is now a fallback, not
-# the normal path: neither the snapshot nor a tagged release reads this file
-# unless scripts/release-notes.py could not produce a body — the very first
+# Layout for GitHub's auto-generated release notes. This is a fallback, not the
+# normal path: neither the snapshot nor a tagged release reads this file unless
+# .github/scripts/release-notes.py could not produce a body — the very first
 # release, which has no baseline to measure from, or an API failure.
 #
 # Both workflows build their notes with that script instead, because GitHub's
-# generator cannot do either of the things a shipped build's changelog needs. It
-# cannot leave out website-only pull requests — the website lives in this repo
-# but ships to Cloudflare Pages, not into the binary — and it cannot sort an
-# unlabelled pull request into anything but the catch-all below, which is where
-# nearly every pull request here ended up.
+# generator cannot do what a shipped build's changelog needs. It cannot leave
+# out pull requests that changed nothing in the binary — the website lives in
+# this repo but ships to Cloudflare Pages, and CI, agent config and repo docs
+# ship nowhere — and it cannot tell a maintenance change from a user-facing one
+# beyond the label it was given.
 #
-# So the sections below are the degraded view, and the script's Features /
-# Fixes / Other changes are the real one. The titles are kept in step
-# deliberately: a reader should not have to learn two vocabularies depending on
-# which path produced the notes they are looking at.
+# So the sections below are the degraded view, and the script's Features / Fixes
+# / Other changes are the real one. Two differences are worth knowing when you
+# read a fallback body, because it will look noisier than usual:
+#
+#   * Everything appears, including website, docs and CI work. The script counts
+#     those in a footer line instead of listing them.
+#   * Maintenance and documentation get their own headings here rather than
+#     being folded into that count, because a heading is all this file can do.
+#
+# The titles are kept in step deliberately: a reader should not have to learn
+# two vocabularies depending on which path produced the notes they are looking
+# at.
 #
 # Entries are merged pull requests, listed by title and sorted into the first
 # category whose label matches, so order matters here and "*" has to come last.
-# A PR with no type: label still appears, under "Other changes" — categories
-# sharpen the list as labelling gets more consistent, they don't gate what
-# shows up.
+# CI's `pr-labelled` job requires a type: label on every pull request, so the
+# catch-all should stay empty in practice — if things start landing there, that
+# job is not doing its job.
 changelog:
   exclude:
-    # Not a label that exists yet — create it if you want an escape hatch for
-    # PRs that shouldn't show up in the notes at all.
     labels:
       - changelog:skip
   categories:
