@@ -167,8 +167,22 @@ wails build
 
 See [`agent_docs/ROADMAP.md`](agent_docs/ROADMAP.md) for the full scope.
 
+## Contributing
+
+Bug reports and feature requests go through
+[GitHub Issues](https://github.com/kollektiv-mc/Konnekt/issues/new/choose), which
+offers a short form for each. You do not need to be technical to file a good
+one: the forms ask only for things you can see, everything technical is
+optional, and a screenshot is often worth more than any of it.
+
+[`CONTRIBUTING.md`](CONTRIBUTING.md) covers what happens to an issue after you
+file it and how to send code. To report a vulnerability privately, see
+[`SECURITY.md`](SECURITY.md) rather than opening an issue.
+
 ## Documentation
 
+- [`CONTRIBUTING.md`](CONTRIBUTING.md) — how to report a bug, request a feature, or send code
+- [`SECURITY.md`](SECURITY.md) — supported versions and how to report a vulnerability
 - [`agent_docs/CLAUDE.md`](agent_docs/CLAUDE.md) — architecture and stack overview
 - [`agent_docs/ROADMAP.md`](agent_docs/ROADMAP.md) — full feature roadmap
 - [`agent_docs/DEPENDENCIES.md`](agent_docs/DEPENDENCIES.md) — dependency notes

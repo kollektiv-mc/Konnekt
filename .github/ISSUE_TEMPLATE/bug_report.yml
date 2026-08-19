@@ -1,0 +1,175 @@
+# Every required field here is one a reporter can answer without opening a
+# terminal, reading a stack trace or knowing what a log file is. The technical
+# fields are all optional and each says where to find the thing it asks for.
+# That ordering is the whole point: the two user-filed bugs this repo had before
+# these forms existed arrived as a single sentence each.
+#
+# Field ids double as URL query parameters, so the website form and the in-app
+# reporter can prefill this by linking to
+# /issues/new?template=bug_report.yml&app-version=...&os=... Renaming an id
+# silently breaks that prefill.
+#
+# The `area` options are the tile labels from frontend/src/tiles/registry.ts and
+# the `loader` options are the values in backend/models/server.go's Loader
+# comment. Keep them in step with those two files.
+name: Bug report
+description: Something in Konnekt is broken or does not behave the way you expected
+title: '[Bug]: '
+labels: ['type:bug', 'status:needs-triage']
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report this.
+
+        You do not need to be technical to write a good report. Answer what you can. Anything not
+        marked **Required** can be left blank, and "not sure" is a genuinely useful answer.
+
+  - type: checkboxes
+    id: preflight
+    attributes:
+      label: Before you start
+      options:
+        - label: I searched the existing issues and did not find this one
+          required: true
+        - label: This has happened more than once, or I can make it happen again
+          required: false
+
+  - type: input
+    id: summary
+    attributes:
+      label: What went wrong?
+      description: One sentence. There is room for the detail just below.
+      placeholder: The backup progress bar got stuck and never finished
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: What were you doing when it went wrong?
+      description: Plain English is perfect. Numbered steps help most, because they let us follow along.
+      placeholder: |
+        1. Opened the Backups tile
+        2. Clicked "Create backup"
+        3. The progress bar reached about 40% and stopped
+        4. Nothing happened after that and the button stayed greyed out
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: What did you expect to happen instead?
+      placeholder: The backup finishes and shows up in the list underneath.
+    validations:
+      required: true
+
+  - type: textarea
+    id: screenshot
+    attributes:
+      label: Screenshot or screen recording
+      description: |
+        Optional, and often the most useful thing you can add, because Konnekt is a visual app.
+        Drag an image or a video straight into this box and GitHub will upload it for you.
+
+  - type: input
+    id: app-version
+    attributes:
+      label: Which version of Konnekt?
+      description: Settings, then About. If you built it yourself, the branch or commit is fine.
+      placeholder: 0.1.0
+    validations:
+      required: true
+
+  - type: dropdown
+    id: os
+    attributes:
+      label: Which operating system?
+      options:
+        - Windows
+        - macOS
+        - Linux (Fedora or RHEL, installed from the .rpm)
+        - Linux (other)
+        - Not sure
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Which part of Konnekt?
+      description: Pick the closest one. The last option is a perfectly good answer.
+      options:
+        - Console
+        - Stats
+        - Players
+        - Commands
+        - Performance
+        - Scheduler
+        - Worlds
+        - Backups
+        - Config
+        - Notifications
+        - Plugins and Mods
+        - Tile layout and dashboard
+        - Settings
+        - Server setup and install
+        - Updater
+        - Something else, or not sure
+    validations:
+      required: true
+
+  - type: dropdown
+    id: loader
+    attributes:
+      label: What kind of server?
+      description: Only relevant if a Minecraft server was involved in the problem.
+      options:
+        - Vanilla
+        - Paper
+        - Spigot
+        - Bukkit
+        - Purpur
+        - Fabric
+        - Forge
+        - NeoForge
+        - Quilt
+        - Velocity
+        - Not applicable, or not sure
+
+  - type: input
+    id: mc-version
+    attributes:
+      label: Which Minecraft version?
+      placeholder: '1.21.1'
+
+  - type: dropdown
+    id: server-running
+    attributes:
+      label: Was your server running at the time?
+      options:
+        - 'Yes'
+        - 'No'
+        - Not sure
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Console output or error text
+      description: |
+        Optional. If you saw red text, or Konnekt showed an error message, paste it here.
+
+        Where to look: the **Console** tile shows your server's output, and Konnekt's own files
+        live in the app data folder, which **Settings, then Open data folder** will open for you.
+
+        Leave this blank if you did not see anything. Please do not paste your `server.properties`
+        file, because it contains your RCON password.
+      render: shell
+
+  - type: textarea
+    id: extra
+    attributes:
+      label: Anything else?
+      description: How often it happens, whether it started recently, anything you already tried.

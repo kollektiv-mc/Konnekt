@@ -25,6 +25,7 @@
       },
       { "name": "bundle budget", "run": "pnpm check-bundle", "cwd": "frontend" },
       { "name": "token classes", "run": "pnpm check-tokens", "cwd": "frontend" },
+      { "name": "issue templates", "run": "pnpm check-issue-templates", "cwd": "frontend" },
       { "name": "release notes", "run": "python3 .github/scripts/release-notes_test.py" },
       { "name": "go vet", "run": "go vet ./..." },
       { "name": "go test", "run": "go test ./..." },

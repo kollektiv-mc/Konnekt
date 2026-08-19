@@ -13,6 +13,7 @@
     "test:watch": "vitest",
     "check-bundle": "node scripts/check-bundle-size.mjs",
     "check-tokens": "node scripts/check-token-classes.mjs",
+    "check-issue-templates": "node scripts/check-issue-templates.mjs",
     "gen:tokens": "node scripts/gen-tokens.mjs",
     "format": "prettier --write .",
     "format:check": "prettier --check .",

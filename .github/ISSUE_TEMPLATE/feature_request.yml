@@ -1,0 +1,99 @@
+# Asks for the problem before the solution, deliberately. A request phrased only
+# as a solution ("add a button that does X") throws away the situation that
+# produced it, and the situation is the part that can actually be designed
+# against - often by something already planned, or by something better than the
+# button.
+#
+# The `area` options must stay identical to bug_report.yml's; the template check
+# in frontend/scripts/check-issue-templates.mjs enforces that.
+name: Feature request
+description: Suggest something Konnekt should be able to do
+title: '[Feature]: '
+labels: ['type:feature', 'status:needs-triage']
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Before writing, it is worth a look at the
+        [roadmap](https://konnekt.pages.dev/roadmap.html). It lists what is already planned for
+        Beta and, at the bottom, a few things that are deliberately out of scope. If your idea is
+        already there, adding a 👍 to the existing issue is more useful than a new one.
+
+  - type: checkboxes
+    id: preflight
+    attributes:
+      label: Before you start
+      options:
+        - label: I searched the existing issues and did not find this one
+          required: true
+        - label: I had a look at the roadmap
+          required: false
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem are you trying to solve?
+      description: |
+        Describe the situation you are in, not the feature you have in mind. This is the most
+        important field on the form.
+      placeholder: |
+        I run two servers and swap between them most days. Every time I switch, I have to stop the
+        first one, change the active server, and set up my tiles again, which takes long enough
+        that I often just do not bother.
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What would you like Konnekt to do?
+      description: Your idea for solving it. A rough sketch is fine, and so is "I do not know, but something".
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Which part of Konnekt?
+      description: Pick the closest one. The last option is a perfectly good answer.
+      options:
+        - Console
+        - Stats
+        - Players
+        - Commands
+        - Performance
+        - Scheduler
+        - Worlds
+        - Backups
+        - Config
+        - Notifications
+        - Plugins and Mods
+        - Tile layout and dashboard
+        - Settings
+        - Server setup and install
+        - Updater
+        - Something else, or not sure
+    validations:
+      required: true
+
+  - type: textarea
+    id: workaround
+    attributes:
+      label: How do you handle this today?
+      description: Whatever you do instead, even if it is "give up and use the terminal". It tells us how much the gap costs.
+
+  - type: dropdown
+    id: impact
+    attributes:
+      label: How much would this matter to you?
+      options:
+        - Nice to have
+        - I would use it often
+        - I cannot really use Konnekt without it
+
+  - type: textarea
+    id: extra
+    attributes:
+      label: Anything else?
+      description: Sketches, screenshots from other tools, links. Drag images straight into this box.
