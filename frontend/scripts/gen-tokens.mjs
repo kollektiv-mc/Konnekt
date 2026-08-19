@@ -356,7 +356,6 @@ function emitWebsiteCss(src) {
 function emitTs(src) {
   const status = src.color.status
   const roles = Object.keys(status)
-  const configurable = roles.filter((role) => status[role].userConfigurable)
 
   const table = (mode) =>
     roles
@@ -368,13 +367,6 @@ function emitTs(src) {
   return `${BANNER('tokens.source.json')}
 
 export type ThemeMode = 'dark' | 'light'
-
-/** Status roles the user can override at runtime from Settings. */
-export const CONFIGURABLE_STATUS_ROLES = [
-${configurable.map((role) => `  '${role}',`).join('\n')}
-] as const
-
-export type ConfigurableStatusRole = (typeof CONFIGURABLE_STATUS_ROLES)[number]
 
 /**
  * Per-theme defaults for the status colours.

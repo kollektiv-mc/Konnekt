@@ -58,6 +58,7 @@ after them is dated. Newest last, in both groups.
 - [2026-08-18 — website/ gets its first gates](#2026-08-18-website-gets-its-first-gates)
 - [2026-08-18 — Backup filenames that were not unique, and an id that was not random](#2026-08-18-backup-filenames-that-were-not-unique-and-an-id-that-was-not-random)
 - [2026-08-18 — The three error-ignores at the repo root, and the one directory everything persisted through](#2026-08-18-the-three-error-ignores-at-the-repo-root-and-the-one-directory-everything-persisted-through)
+- [2026-08-19 — The dead code the per-file grep could never find](#2026-08-19-the-dead-code-the-per-file-grep-could-never-find)
 
 ---
 
@@ -2699,3 +2700,112 @@ function into a plain `json.Unmarshal`.
 rather than a single stale figure.
 
 **Verification.** Full `/suite-kit:health` gate set green, 12/12, zero skips.
+
+---
+
+### 2026-08-19 — The dead code the per-file grep could never find
+
+**Closed:** the Clean pillar's "No obviously dead code (unused exports,
+unreachable branches, orphaned files) left behind after refactors", plus the
+Clean pillar's `frontend/wailsjs/` hand-edit check, which had simply never been
+run.
+
+**Why it had stayed open.** The item prescribed its own blind spot: *"for each
+file the last refactor touched, `grep -rn "<exported name>" src`."* That finds
+what you already suspect. It cannot find a file whose name nobody remembers,
+which is precisely what two of the ten findings were — `worlds/scene/WorldSystem.tsx`
+and `worlds/scene/useParallax.ts`, each two lines long, each a comment announcing
+its own supersession followed by `export {}`. Both carried an mtime months behind
+every sibling in `scene/`. Nothing pointed at them, so nothing would ever grep
+for them. The verify step is rewritten in the checklist to sweep the whole tree
+from both ends instead.
+
+**What the sweep actually was.** Go: `deadcode ./...` and
+`staticcheck -checks=U1000 ./...`, each under both `GOOS=linux` and
+`GOOS=windows` — either alone lies, because `staticcheck` on linux reports
+`server.go:94: field job is unused` and `job` is read four times in
+`server_windows.go`. Frontend: the import graph, listing files nothing imports,
+plus a reference count for all 238 exports across all 154 files. That last number
+needs care. 18 exports had zero references outside their own file, and 14 of them
+are live — the props-interface-beside-its-component convention produces exactly
+that signature. Dead means zero references *including* its own file. ESLint
+already covers what it structurally can (`no-unreachable` and `no-unused-vars`
+are on via `js.configs.recommended` and were clean), which is why every finding
+here is a whole export or a whole file.
+
+**The ten, and what each one cost.**
+
+| Site | Verdict |
+|---|---|
+| `worlds/scene/WorldSystem.tsx` | tombstone, deleted |
+| `worlds/scene/useParallax.ts` | tombstone, deleted |
+| `hooks/useWailsCall.ts` | deleted, docs amended — see below |
+| `lib/constants.ts` `DEFAULT_SERVER_ID` | one grep hit in the whole repo: its own declaration |
+| `tiles/backups/focusLayout.ts` `FOCUS_FADED_OPACITY` | its import-removal is written down at HEALTH_LOG.md:451; the export outlived it |
+| `styles/tokens.ts` `CONFIGURABLE_STATUS_ROLES` + `ConfigurableStatusRole` | generated — fixed at source |
+| `backend/services/backup.go` `rootBackupDir` | unreachable per both analyzers, and its doc comment still named two callers |
+| `backend/services/scheduler_triggers.go` `fireEventTriggers` | unreachable; its replacement's doc comment defined itself against it |
+| `backend/services/update.go` `ErrUpdatePermission` | **not** dead — see below |
+
+**`useWailsCall` was the only one with a decision attached.** It was not dead by
+accident. `agent_docs/CLAUDE.md` named it the convention ("Handle errors in
+frontend with a shared `useWailsCall()` hook") and `ROADMAP.md:46` marked it
+shipped, but the codebase went somewhere else: fetching migrated into Zustand
+stores and per-tile hooks, and a store cannot call a React hook — a constraint
+`useSchedulerStore.ts:24` had already written down, while still deferring to
+CLAUDE.md's nomination. So the primitive was built, the architecture moved, and
+the docs kept describing the plan. Deleting 35 unused lines is the small half of
+this; the real repair is that CLAUDE.md's IPC section now describes the
+convention the code actually follows — per-store/per-hook `loading`/`error`
+state, write actions rethrowing so an optimistic UI can revert — and names the
+bare `catch {}` as the thing to avoid. `ROADMAP.md:46` is reworded rather than
+unticked: typed IPC error handling did ship, just not in that shape.
+
+**Two more documentation lies fell out of the same sweep.** `ROADMAP.md:130`
+still described L0 of the worlds tile as "cursor parallax (useParallax lerps
+group rotation from pointer)" — a behaviour whose implementation had been a
+two-line tombstone for months; the per-planet proximity push in `Planet.tsx`'s
+`useFrame` replaced it. And `useSchedulerStore.ts:24`'s comment pointed at a
+CLAUDE.md line that no longer exists. Deleting code without reading what claims
+it is live leaves the docs lying, so both were corrected in the same change.
+
+**`ErrUpdatePermission` is the one that should not be deleted.** It looks dead —
+produced at `update.go:261`, matched by no `errors.Is` anywhere — but its text is
+interpolated into the error the user reads, so removing it removes a message.
+The real defect is that its doc comment asserted a caller contract ("Callers
+should fall back to opening the release page") that nothing implements, and
+structurally cannot: the only consumer is the frontend, across the Wails IPC
+boundary, where a Go sentinel arrives as a plain string. The comment now says
+that, and closing the contract properly is tracked in the checklist as
+"P2 — An error sentinel with no caller".
+
+**The generated pair needed fixing at the generator.** `CONFIGURABLE_STATUS_ROLES`
+and `ConfigurableStatusRole` live in `frontend/src/styles/tokens.ts`, which opens
+`GENERATED FILE — DO NOT EDIT` and is diffed by the suite's `generated` gate, so a
+hand edit would be reverted by the next `pnpm gen:tokens` *and* turn that gate
+red. They came from a hardcoded template literal at `gen-tokens.mjs:373`/`:377`,
+not from a value in `tokens.source.json`, so the fix landed here rather than
+upstream: the two lines and the `configurable` filter that existed only to feed
+them are gone, and the layer was regenerated. Worth recording why they can't be
+adopted instead of removed: the four configurable roles are four separate
+`accentColor`/`successColor`/`warningColor`/`dangerColor` fields on Go's
+`AppSettings`, so a runtime array of role names has nothing to drive.
+
+**The wailsjs box, closed by finally running it.** `wails generate module`
+produced a byte-identical tree: 82/82 bound methods, every emitted struct. The
+check needs the CLI version `go.mod` pins (v2.12.0) or the diff measures the
+generator, not the repo — the checklist now says so. Running it also turned up a
+gap the box does not cover, now tracked as "P2 — A Go model the bindings never
+emit": `App.d.ts:94` references `models.ModUpdateInfo`, which `models.ts` never
+declares, because Wails does not descend into a map value and `ModCheckUpdates`
+is the only place that struct appears. `skipLibCheck` hides the dangling
+reference and `useMods.ts:41-45` hand-copies the struct. Clean regeneration is
+necessary, not sufficient.
+
+**Verification.** `deadcode ./...` now prints nothing, and
+`staticcheck -checks=U1000 ./...` prints only the known `job` false positive on
+linux and nothing on windows. The frontend orphan sweep lists 27 test files,
+`main.tsx` and `vite-env.d.ts` and nothing else; the export sweep is down to the
+14 self-used exports described above. `backend/services` coverage moved 38.0% →
+**38.1%** — deleting uncovered functions can only raise the ratio, so the floor
+was left at 36%. Full gate set green, 12/12.

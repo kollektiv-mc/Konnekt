@@ -43,7 +43,9 @@ were shipped early during Alpha. Their status below reflects reality.
 - [x] Default presets: "Default", "Console Focus", "Compact", "Essentials"
 - [x] Persistence via Go JSON files (~/.config/konnekt/)
 - [x] All IPC bindings generated via wails generate module
-- [x] useWailsCall() hook for typed IPC error handling
+- [x] Typed IPC error handling — per-store / per-tile-hook `loading`/`error`
+  state. (A shared `useWailsCall()` hook shipped here first and was removed
+  unused; see `agent_docs/CLAUDE.md`'s IPC conventions.)
 
 ### Server management
 
@@ -127,7 +129,7 @@ were shipped early during Alpha. Their status below reflects reality.
 - [x] Worlds tile - 3D Solar-System World Manager
   - 3-level navigation: Galaxy (L0) → World system (L1) → Floating HUD card (L2)
   - L0: central Sun = server, each world save orbits it; active world wears rings;
-    cursor parallax (useParallax lerps group rotation from pointer).
+    per-planet proximity push to the cursor, inside `Planet.tsx`'s `useFrame`.
   - L1: overworld is the central body, nether/the_end are moons; OrbitControls.
   - L2: WorldHud (drei Html) anchored to the clicked body — metadata from level.dat
     (NBT reader: version, mode, difficulty, seed, last-played), size, modified, path;

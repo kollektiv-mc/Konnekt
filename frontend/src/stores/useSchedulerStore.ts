@@ -21,8 +21,8 @@ import { models } from '../../wailsjs/go/models'
  *    `catch { /* Wails IPC unavailable *\/ }`. The scheduler needs a real error
  *    surface (HEALTH_CHECKLIST P1: "useScheduler swallows IPC failures
  *    silently"), because a dead bridge is otherwise indistinguishable from "no
- *    graphs configured". CLAUDE.md nominates `useWailsCall()` for this, but
- *    that's a React hook and can't be called inside a store.
+ *    graphs configured". A shared `useWailsCall()` hook used to be nominated for
+ *    this; a store can't call a React hook, which is part of why it was removed.
  * 2. Write actions rethrow after recording `error`, so `GraphEditor` can revert
  *    its optimistic UI (a failed enable toggle used to leave the switch lying).
  *

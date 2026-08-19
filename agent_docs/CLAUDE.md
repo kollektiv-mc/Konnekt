@@ -53,7 +53,12 @@ Why the grid is built the way it is, and which parts are load-bearing:
 - Bind Go methods on the `App` struct in `app.go` (repo root)
 - Method names: `PascalCase` in Go → `PascalCase` in generated TS bindings
 - Always return `(T, error)` from bound Go methods
-- Handle errors in frontend with a shared `useWailsCall()` hook
+- Handle IPC errors where the data lives: a Zustand store or a per-tile hook
+  holds its own `loading`/`error` state and its write actions rethrow after
+  recording the error, so an optimistic UI can revert (see
+  `stores/useSchedulerStore.ts`). A shared `useWailsCall()` hook was tried and
+  removed: a store cannot call a React hook, which is where most fetching ended
+  up. Swallowing a rejection with a bare `catch {}` is the thing to avoid.
 - Re-run `wails generate module` after adding new bound methods
 
 ## Code style

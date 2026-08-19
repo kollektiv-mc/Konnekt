@@ -41,16 +41,6 @@ func (s *BackupService) SetDataDir(dir string) {
 	s.dataDir = dir
 }
 
-// rootBackupDir returns {dataDir}/backups/{serverID} — the parent for all
-// backup subdirectories. Used by ListBackups (legacy scan) and OpenBackupDir.
-func (s *BackupService) rootBackupDir(serverID string) (string, error) {
-	dir := filepath.Join(s.dataDir, "backups", serverID)
-	if err := os.MkdirAll(dir, 0755); err != nil {
-		return "", err
-	}
-	return dir, nil
-}
-
 // serverBackupDir returns {dataDir}/backups/{serverID}/server — where full-server backups are stored.
 func (s *BackupService) serverBackupDir(serverID string) (string, error) {
 	dir := filepath.Join(s.dataDir, "backups", serverID, "server")

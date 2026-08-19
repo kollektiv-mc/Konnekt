@@ -78,10 +78,14 @@ tree.
       use `unknown` and narrow instead. One documented exception:
       `frontend/src/tiles/worlds/scene/Sun.tsx` (known `three`/`@react-three/fiber`
       cross-package type mismatch).
-- [ ] Nothing under `frontend/wailsjs/` has been hand-edited (it's
+- [x] Nothing under `frontend/wailsjs/` has been hand-edited (it's
       auto-generated; regenerate via `wails generate module` instead).
       Verify: run `wails generate module`, then
       `git diff --exit-code frontend/wailsjs` — a non-empty diff is a hand edit.
+      Run this with the **same CLI version `go.mod` pins** (v2.12.0): a
+      different generator writes a diff that is a version difference, not a
+      hand edit. 82/82 bound methods and every emitted struct round-tripped
+      byte-identical.
 - [x] No inline `style={{}}` beyond genuinely dynamic/computed values
       (animation delays, transforms, react-grid-layout position props) —
       Tailwind utilities backed by CSS-variable tokens otherwise (see
@@ -102,11 +106,16 @@ tree.
       slide/open-close, and a decorative splash/spin legitimately warrant
       different timing — the goal is a shared vocabulary for the common
       cases, not uniformity.
-      Verify: from `frontend/`,
-      `grep -rnE "(duration|delay)-\[[0-9.]+m?s\]|ease-\[" src` — every match
-      must be a documented one-off, not a near-miss of an existing token.
-      Twelve matches are currently undocumented; see backlog ("P2 — Motion
-      one-offs outside the token vocabulary").
+      Verify: from `frontend/`, all four of these, because a motion literal has
+      four spellings and the arbitrary-value one is the *least* common:
+      ```bash
+      grep -rnE "(duration|delay)-\[[0-9.]+m?s\]|ease-\[" src   # arbitrary values
+      grep -rnE "\b(duration|delay)-[0-9]+\b" src                # Tailwind's own scale
+      grep -rnE "\[transition:[^]]*\]" src                       # arbitrary shorthand
+      grep -rnE "transition:|animation:" src src/style.css        # inline + hand CSS
+      ```
+      Every match must be a documented one-off, not a near-miss of an existing
+      token. See backlog ("P2 — Motion one-offs outside the token vocabulary").
 - [x] No committed build artifacts (`*.syso`, `frontend/dist/`, `build/bin/`)
       — `.gitignore` covers them.
 - [x] No stray root-level scratch/design docs left un-triaged (either promoted
@@ -116,10 +125,22 @@ tree.
       Verify: read CLAUDE.md's "Project structure" against the real top-level
       dirs under `frontend/src/` and `backend/`, and its "Build & dev commands"
       table against `frontend/package.json`'s `scripts`.
-- [ ] No obviously dead code (unused exports, unreachable branches, orphaned
+- [x] No obviously dead code (unused exports, unreachable branches, orphaned
       files) left behind after refactors.
-      Verify: for each file the last refactor touched, `grep -rn "<exported
-      name>" src` — an export with no importer outside its own file is dead.
+      The per-file grep this line used to prescribe only finds what you already
+      suspect, which is how a tombstone file survives: nobody greps for a name
+      they have forgotten. Sweep the whole tree instead, from both ends —
+      Go: `deadcode ./...` and `staticcheck -checks=U1000 ./...`, each under
+      **both** `GOOS=linux` and `GOOS=windows`, since the per-OS files
+      (`server_windows.go`) make either one alone produce false positives.
+      Frontend: build the import graph and list files nothing imports (expect
+      only `*.test.*`, `main.tsx`, `vite-env.d.ts`), then reference-count every
+      `export` across every other file. A zero-external-reference export is
+      **not** automatically dead — the props-interface-beside-its-component
+      convention accounts for ~14 of them; dead means zero references *including*
+      its own file. Note ESLint already covers what it structurally can
+      (`no-unreachable`, `no-unused-vars` are on via `js.configs.recommended`),
+      so findings here are always whole exports or whole files.
 
 ## 2. Stable
 
@@ -199,7 +220,13 @@ tree.
       after backend model changes.
       Verify: run `wails generate module`, then
       `git diff --exit-code frontend/wailsjs/go/models.ts` — a diff means a
-      `backend/models/` change shipped without regenerating.
+      `backend/models/` change shipped without regenerating. That half holds
+      (zero diff). The *source of truth* half does not: a struct Wails never
+      emits gets hand-copied instead, and `skipLibCheck` hides the dangling
+      reference — see backlog ("P2 — A Go model the bindings never emit").
+      A clean regeneration diff is therefore necessary, not sufficient; also
+      grep the generated `App.d.ts` for `models.X` names that `models.ts` never
+      declares.
 - [ ] Dependencies (Go modules, npm packages) are reasonably current, with no
       unmaintained or duplicated libraries doing the same job.
       Verify: `go list -m -u all` at the root and `pnpm outdated` from
@@ -266,10 +293,44 @@ current. Priorities mirror the pillars above.
 **P2 — Motion one-offs outside the token vocabulary**
 - The motion vocabulary is three tokens: `--duration-fast` (150ms),
   `--duration-panel` (280ms) and `--ease-standard`
-  (`cubic-bezier(0.4, 0, 0.2, 1)`). Against that, `grep -rnE
-  "(duration|delay)-\[[0-9.]+m?s\]|ease-\[" src` finds 12 matches, none of
-  them carrying a note saying why they are not a token. They are not all the
-  same problem, and the fix differs per group:
+  (`cubic-bezier(0.4, 0, 0.2, 1)`).
+- **The "12 matches" this entry was written around is wrong, and the way it is
+  wrong matters.** That count comes from one grep,
+  `(duration|delay)-\[[0-9.]+m?s\]|ease-\[`, which only sees Tailwind's
+  *arbitrary-value* spelling — and one of its 12 hits is the prose comment at
+  `tiles/mods/BrowsePanel.tsx:38`, not a call site. A motion literal has four
+  spellings in this codebase and that grep sees one of them. Re-measured with
+  all four (the Clean pillar's verify block now lists them):
+  - **arbitrary values** — 11 real call sites, as itemised below.
+  - **Tailwind's own scale** — 15 more, invisible to the original grep because
+    `duration-300` has no brackets: `components/ActiveProcesses.tsx:31`,
+    `components/SettingsModal.tsx:656`, `components/ui/Segmented.tsx:41`,
+    `tiles/TileWrapper/index.tsx:30` (`duration-150`, which *is*
+    `--duration-fast` spelled as a scale step), `tiles/backups/BackupCard.tsx:46`,
+    `tiles/backups/ServerInfoPanel.tsx:111`/`:179`, `tiles/backups/index.tsx:518`/`:572`,
+    `tiles/config/form/widgets.tsx:38`/`:44`, `tiles/mods/index.tsx:96`/`:272`,
+    `tiles/performance/index.tsx:56`, `tiles/stats/index.tsx:71`.
+  - **arbitrary `[transition:...]` shorthand** — 2: `tiles/mods/BrowsePanel.tsx:442`
+    (`border-color_150ms_ease`) and `tiles/mods/ContentCard.tsx:158`
+    (`opacity_200ms_ease`).
+  - **inline `transition:` strings and hand-authored CSS** — ~15, and this is
+    where the sharpest cases live. `components/ui/Segmented.tsx:32` writes
+    `cubic-bezier(0.4, 0, 0.2, 1)` out longhand, which is `--ease-standard`
+    character for character. `src/style.css:166` and `:218` write bare `150ms`
+    thirty lines below the same file's own `var(--duration-fast)` usages at
+    `:123`/`:128`. `tiles/mods/useGridPageAnimation.ts:5` holds
+    `const PANEL_DURATION = 280`, and `:328` schedules a `setTimeout` off it,
+    so it is the real other half of BrowsePanel's "keep both in sync" comment —
+    which points at the class on line 449 instead, in a different file.
+  - Two files already do it right and are the pattern to copy:
+    `components/ui/Popover.tsx:30` and `components/ui/Collapsible.tsx:45` read
+    `var(--duration-fast)`/`var(--duration-panel)`/`var(--ease-standard)` from
+    inside an inline `transition:` string.
+- Also worth knowing before scoping: `frontend/src/styles/tokens.ts` (generated)
+  exports colours only. There is no JS-readable motion token, which is why
+  `useGridPageAnimation.ts` holds numbers. Emitting the motion scale into
+  `tokens.ts` is a `gen-tokens.mjs` change and lands in this repo.
+- The original per-group analysis of the arbitrary-value sites still stands:
   - **A near-miss that is not even a miss.** `tiles/mods/BrowsePanel.tsx:449`
     spells `duration-[280ms]`, which *is* `--duration-panel`, and line 38
     carries a hand-written comment telling the next reader to keep the two in
@@ -308,7 +369,69 @@ current. Priorities mirror the pillars above.
   generated files. It cannot be done from this repo alone, and a hand edit to
   `tokens.css` is reverted on the next run. So the parts that only reuse an
   existing token or add a comment can land here; anything needing a new token
-  is gated on the upstream change.
+  is gated on the upstream change. (Checked 2026-08-19 against a read-only
+  clone of `kollektiv-mc/kollektiv`: `design/tokens.json` and this repo's
+  vendored `tokens.source.json` are byte-identical, so the vendored copy is not
+  stale and `motion` really does hold only those three values upstream too.)
+- One resolution needs no upstream change at all, and is probably the right
+  one: the three `duration-[220ms]` sites in `tiles/backups/index.tsx` are a
+  *single* choreographed motion — the solar system scaling down (`:580`), the
+  carousel riding up (`:626`) and the list panel sliding in (`:668`) all fire
+  off the same `panelOpen` flag and must stay in lockstep. That is a panel
+  open/close, which is exactly the role `--duration-panel` names. Adopting the
+  token keeps the three in lockstep by construction. Per kollektiv's
+  `design/README.md`, a token is named by **role**, never by appearance, so
+  "panel motion that happens to be 60ms quicker" is not a second role. The
+  overshoot curves are the genuine vocabulary gap:
+  `cubic-bezier(0.34,1.15,0.64,1)` appears at `ServerInfoPanel.tsx:59`,
+  `WorldInfoPanel.tsx:53` and `BackupCarousel.tsx:182`, and
+  `cubic-bezier(0.34,1.56,0.64,1)` at `SolarSystem.tsx:136`/`:152`/`:234` —
+  two near-identical springs, six sites, no token. That one *is* upstream work.
+
+**P2 — A Go model the bindings never emit**
+- `frontend/wailsjs/go/main/App.d.ts:94` types `ModCheckUpdates` as
+  `Promise<Record<string, models.ModUpdateInfo>>`, and `models.ts` never
+  declares `ModUpdateInfo`. Wails v2.12.0 walks a bound signature's parameter
+  and return types but does not descend into a **map value**, and
+  `ModCheckUpdates` (`app.go:638`) is the only place that struct appears. So the
+  generator emits a reference to a type it never wrote.
+- Nothing catches it. `tsconfig.json` sets `skipLibCheck: true`, which is what
+  keeps a dangling `models.X` in a `.d.ts` from being an error; the return type
+  degrades to `any`, and `frontend/src/tiles/mods/useMods.ts:41-45` keeps a
+  hand-written copy of the Go struct that `:153` casts the result onto. The two
+  agree today. A JSON-tag rename in `backend/models/mod.go` would leave them
+  disagreeing with a green `pnpm typecheck` and a green `pnpm lint`, surfacing
+  as `undefined` at `ModPreviewDialog.tsx:270` and `InstalledPanel.tsx:439`.
+- Note what this does *not* mean: `wails generate module` itself is clean, and
+  every other bound method round-trips. The hole is one generator limitation,
+  not stale bindings. The fix is a signature the generator can see through
+  (return a slice of a named struct rather than a map keyed by filename), which
+  is an IPC shape change with frontend churn, so it is a deliberate piece of
+  work rather than a patch. A cheaper stopgap that catches the *next* one: grep
+  the generated `App.d.ts` for `models.` names absent from `models.ts` and make
+  that a `suite.json` invariant.
+- Related and lower severity: eight more hand-written redeclarations of Go
+  models sit in `frontend/src/types/index.ts` (seven) and
+  `tiles/performance/usePerformanceHistory.ts:6` (`StatsSnapshot`), where
+  `useMods.ts:21-25` and `useBackups.ts:15` already show the right shape by
+  aliasing `models.X`. All eight are in sync now, and structural typing does
+  catch a rename or a removal; what they miss silently is an **added** field.
+
+**P2 — An error sentinel with no caller**
+- `backend/services/update.go:33`'s `ErrUpdatePermission` is produced at
+  `:261` and matched by nobody: no `errors.Is` anywhere in the tree. Its doc
+  comment used to assert a contract ("Callers should fall back to opening the
+  release page for a manual download") that nothing implements; the comment now
+  describes the real situation instead.
+- It is not dead code, and deleting it would be wrong: the sentinel's text is
+  interpolated into the error the user actually sees. The defect is that the
+  only consumer is the frontend, across the Wails IPC boundary, where a Go
+  sentinel arrives as a plain message string, so `errors.Is` is structurally
+  unavailable to it. Realising the contract means giving the frontend something
+  structured to branch on: a typed field on a returned struct, or a documented
+  error-code prefix. `app.go:184` passes the error straight through and
+  `frontend/src/hooks/useUpdateCheck.ts:32` swallows it with a bare `catch {}`,
+  so both ends need the change together.
 
 **P2 — Cleanups**
 - `sandbox` (`config_editor.go`) is a purely **lexical** guard — `filepath.Clean`

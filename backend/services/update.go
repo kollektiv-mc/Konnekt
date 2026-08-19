@@ -28,8 +28,12 @@ const (
 
 // ErrUpdatePermission signals that the running binary can't be replaced
 // in-place (e.g. an install under Program Files without an elevated
-// process). Callers should fall back to opening the release page for a
-// manual download.
+// process). It is wrapped into the returned error so its text reaches the
+// user, but nothing matches it with errors.Is: the only consumer is the
+// frontend, across the Wails IPC boundary, where a Go sentinel arrives as a
+// plain message string. Giving it a real caller means giving the frontend
+// something structured to branch on — see agent_docs/HEALTH_CHECKLIST.md's
+// "P2 — Cleanups".
 var ErrUpdatePermission = errors.New("update install: insufficient permissions to replace the running executable")
 
 // UpdateService checks GitHub Releases for a newer Konnekt version, and can
