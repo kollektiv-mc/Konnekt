@@ -163,7 +163,7 @@ input[type='number']::-webkit-outer-spin-button {
 }
 
 .tile-outer {
-  transition: transform 150ms;
+  transition: transform var(--duration-fast);
 }
 
 .tile-outer:hover {
@@ -184,6 +184,9 @@ input[type='number']::-webkit-outer-spin-button {
   border-radius: 11px;
   overflow: hidden;
   pointer-events: none;
+  /* The flash ring and splash below are one-off decorative sequences, deliberately
+     off-token: --duration-fast/--duration-panel name UI transition roles, and a
+     1.2s attention flash or a 3s conic sweep is neither. */
   animation: flash-ring-fade 1.2s ease forwards;
 }
 
@@ -215,7 +218,7 @@ input[type='number']::-webkit-outer-spin-button {
   border-right: 1.5px solid var(--border-hover);
   border-bottom: 1.5px solid var(--border-hover);
   border-radius: 0 0 3px 0;
-  transition: border-color 150ms;
+  transition: border-color var(--duration-fast);
 }
 
 .react-resizable-handle-se:hover {

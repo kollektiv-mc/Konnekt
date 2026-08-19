@@ -60,6 +60,7 @@ after them is dated. Newest last, in both groups.
 - [2026-08-18 — The three error-ignores at the repo root, and the one directory everything persisted through](#2026-08-18-the-three-error-ignores-at-the-repo-root-and-the-one-directory-everything-persisted-through)
 - [2026-08-19 — The dead code the per-file grep could never find](#2026-08-19-the-dead-code-the-per-file-grep-could-never-find)
 - [2026-08-19 — Another product's roadmap, and eight boxes nobody had ticked](#2026-08-19-another-products-roadmap-and-eight-boxes-nobody-had-ticked)
+- [2026-08-19 — The duration token Tailwind was never reading](#2026-08-19-the-duration-token-tailwind-was-never-reading)
 
 ---
 
@@ -2908,3 +2909,135 @@ one in particular could be faked with a static "which subtrees lack
 item is asking for.
 
 **Verification.** Full gate set green, 12/12.
+
+### 2026-08-19 — The duration token Tailwind was never reading
+
+**Closed:** most of the motion backlog entry. **Found on the way:** two defects
+that were not in the backlog at all, and four claims in it that were wrong.
+
+**`duration-fast` was a class that compiled to nothing.** The generated token
+layer emits `--duration-fast`/`--duration-panel` into `tokens.css`'s `@theme`
+block. Tailwind v4 does not read that namespace. Reading
+`node_modules/tailwindcss/dist/lib.js` directly: `duration-*` resolves against
+`--transition-duration-*` (then falls back to a bare integer, which is why
+`duration-150` works), `delay-*` against `--transition-delay-*`, and `ease-*`
+against `--ease-*`. Only the last one matches what the generator writes. So
+`ease-standard` genuinely worked and its duration counterpart silently did not:
+`.ease-standard{…}` was in the built CSS and `.duration-fast{` appeared nowhere
+in it, even though `LayoutPresets.tsx:51` and `ConfigForm.tsx:33` both carry the
+class and Tailwind had scanned both files.
+
+Nothing looked broken, which is why this survived. Tailwind's own
+`--default-transition-duration` is 150ms, exactly `--duration-fast`'s value, so
+both sites animated at the right speed by coincidence, through a hardcoded
+default rather than through the token. An upstream change to that value would
+never have reached them.
+
+The dangerous part was the checklist. It stated that "`duration-fast`/
+`ease-standard` already work as utilities … so nothing new is needed", and on
+that basis instructed the next session to convert `BrowsePanel.tsx`'s
+`duration-[280ms]` to `duration-panel`. That conversion would have regressed the
+panel from 280ms to 150ms, visibly, while reading as a cleanup. A wrong
+checklist claim is worse than a missing one, because it is acted on.
+
+**The fix is the shape `gen-tokens.mjs` already uses.** Border widths hit the
+identical problem, and the generator's own comment says so: "Tailwind v4 has no
+`--border-width-*` namespace, so these are plain custom properties surfaced as
+utilities by the `@utility` rules below." Motion needed the same acknowledgement
+in the form the duration API actually wants, so each duration is now emitted
+twice from one source entry: `--duration-<name>` for hand-written CSS and inline
+`transition:` strings, `--transition-duration-<name>` for Tailwind's utility
+resolver. They cannot drift, because one loop writes both. `.duration-fast` and
+`.duration-panel` are now in the built CSS, each reading its token. The
+`--transition-delay-*` namespace is documented in the generated comment but not
+emitted: nothing in the tree writes a `delay-*` utility, and `delay-fast` would
+name a role ("delay by the fast duration") the source does not have.
+
+**Then the adoptions that were finally safe.** Eight sites where the literal
+already equalled a token, each verified by grepping the built CSS rather than by
+eye: the mods panel slide and its resize handle, `TileWrapper`'s border fade,
+`style.css`'s `.tile-outer` and resize handle, `Segmented.tsx`'s longhand copy of
+`--ease-standard`, and two the previous analysis never found —
+`scheduler.css:83`'s `150ms` node entrance and `:96`'s `280ms` edge draw-in,
+which sat in plain hand CSS with nothing blocking them. The three
+`duration-[220ms]` values in the backups tile became `duration-panel`, which is
+the entry's own recommendation: they are one choreographed motion off a single
+`panelOpen` flag, so the token keeps them in lockstep instead of three numbers
+kept equal by hand. That is a real 220 → 280ms change and the only visual change
+in the pass.
+
+**The rest got decided rather than converted, which was the actual defect.** The
+entry said as much itself — "undecided is the actual defect here" — about the
+six `ease-[ease]` sites. They stay, with the reason written down: it is CSS's
+plain `ease` keyword, `cubic-bezier(0.25, 0.1, 0.25, 1)`, a genuinely different
+curve from `--ease-standard`, and Tailwind ships no bare `ease` utility, so the
+escape hatch is the only spelling there is. `WorldsScene.tsx`'s 250ms HUD slide
+also stays and now says why: it is hand-matched to the camera's exponential damp
+(`MathUtils.damp` at lambda 4.5), which has no fixed duration to share a token
+with, so rounding it to 280ms would desync the panel from the shot. Same for the
+decorative sites — the springs, the float, the spin, the pulse, the splash.
+
+**A fifth spelling, and why that keeps happening.** The previous session rewrote
+this entry specifically to fix a one-grep undercount, and listed four spellings
+as the complete set. There are five. `element.style.transition = '…'` has no
+colon after the property name, so none of the four greps can see it, and it is
+not obscure: `Dashboard.tsx` drives the entire tile maximise/minimise FLIP
+through it across six lines, including a `cubic-bezier(0.4, 0, 1, 0.6)` that
+appears nowhere else in the codebase and was undocumented until now. Two
+consecutive "complete" grep sets have each missed one, so the checklist now says
+to treat the list as a floor, and to chase symbolic constants to their literals —
+`focusLayout.ts`'s `FOCUS_TRANSITION` hid a seventh site of the spring curve
+behind a name, the same indirection the entry traced correctly for
+`PANEL_DURATION` and not here.
+
+**No invariant, deliberately.** A `suite.json` invariant is one regex that must
+find nothing, with no judgement applied. That fits border widths, which have no
+legitimate exceptions, and does not fit motion, where a decorative spin is
+supposed to keep its literal forever. It would need a curated exclude list, and a
+comment containing the matched text would be a permanent false failure. Red on
+arrival is what the border invariant's own diagnosis warns against, so the
+checklist records the preconditions instead of shipping a gate that fails.
+
+**Two defects found that were not backlog items.** Both are recorded as P1 and
+neither was touched here, because each is its own piece of work:
+
+Four stores swallow a failed write and keep the optimistic update, against
+CLAUDE.md's own IPC convention — `useServerConfigStore`, `useSettingsStore`,
+`useLayoutStore`, `useTileStore`, while `useSchedulerStore` does it correctly and
+its comment says the others do not. A failed `SaveServerConfig` shows the edit as
+saved and it is gone on the next start. `useSettingsStore.test.ts:100` *asserts*
+this behaviour, so the test encodes the bug and has to be fixed with the stores.
+
+The console tile renders a literally empty panel when there are no lines, with
+its command input still enabled and submissions failing into
+`.catch(console.error)`. That is precisely the "blank panel" the Stable pillar's
+`ErrorBoundary` item worries about, now pinned to a file. The players tile
+renders an unreachable server identically to an empty one. And the assumption
+that item carried — that closing it needs a GUI — is only half true: a jsdom
+render against a rejecting mocked binding asserts the same thing, and the pattern
+already exists in `useUpdateCheck.test.ts`.
+
+**Four checklist claims corrected while the evidence was fresh.** The
+`ErrUpdatePermission` entry named a swallow site on a path the sentinel cannot
+reach; the real caller already renders a working "Open release page" fallback, so
+the entry dropped to P3. The react-hooks entry said "~60 findings, mostly r3f
+scene code"; measured, it is 50, and 47 of them are ordinary app logic — its
+stated reason for deferring was backwards, and its gate ("once test coverage is
+in place") cannot be met because the frontend has no coverage measurement at all.
+The bindings entry proposed a `suite.json` invariant that cannot be one: it is a
+set difference between two files, not a single-file regex, and it would be red on
+arrival. And the `sandbox` entry gained the answer to the question it invites —
+archive extraction is properly zip-slip guarded (`backup.go:879`), so the symlink
+gap really is the lesser issue it was filed as.
+
+`ROADMAP.md` claimed Tailwind v3 and "JetBrains Mono + Inter fonts". The repo is
+on Tailwind v4 and ships Satoshi, Excon and Ranade with mono on the OS stack;
+JetBrains Mono was the original plan and was never bundled. Two weekly
+health-check issues (#18, #19) had both flagged the font line back in July and
+neither was actioned, which is its own small lesson about proposals that land
+somewhere nobody re-reads.
+
+**Verification.** Full gate set green, 12/12, from a baseline that was also 12/12
+before any change. `.duration-fast{--tw-duration:var(--transition-duration-fast)}`
+and the `.duration-panel` equivalent confirmed present in `dist/assets/*.css`,
+and every converted site grepped out of the built output rather than assumed.

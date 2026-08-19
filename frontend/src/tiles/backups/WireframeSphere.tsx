@@ -72,6 +72,8 @@ export function WireframeSphere({
               cy={cy}
               rx={r - 0.5}
               ry={r - 0.5}
+              // Decorative idle spin, deliberately off-token: spinDuration is a prop, seconds not
+              // milliseconds, and no shared duration would mean anything here.
               // eslint-disable-next-line no-restricted-syntax -- per-meridian spin animation computed from size/spinDuration props
               style={{
                 transformOrigin: `${cx}px ${cy}px`,

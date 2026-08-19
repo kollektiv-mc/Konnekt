@@ -564,7 +564,17 @@ function BackupsTileExpanded({ serverId }: { serverId: string }) {
             </div>
           )}
 
-          {/* Stage: carousel + slide-up list panel */}
+          {/* Stage: carousel + slide-up list panel.
+
+              The three duration-panel members below — the sky scaling down, the carousel
+              riding up, the list panel sliding in — are one choreographed motion off the
+              same panelOpen flag, so they share the token that names that role rather than
+              three copies of a number that must be kept equal by hand.
+
+              ease-[ease] throughout is deliberate and stays: it is CSS's plain `ease`
+              keyword, cubic-bezier(0.25, 0.1, 0.25, 1), a genuinely different curve from
+              --ease-standard. Tailwind ships no bare `ease` utility, so the arbitrary-value
+              escape hatch is the only spelling available for it — not a token near-miss. */}
           <div ref={stageRef} className="relative min-h-0 flex-1 overflow-hidden">
             {/* Dim overlay — fades in behind planets and panel when a panel is focused.
                 Made clickable when active so clicking outside the HUD closes it. */}
@@ -577,7 +587,7 @@ function BackupsTileExpanded({ serverId }: { serverId: string }) {
                 Scales down from top-center when the list panel opens so the sky
                 tucks above the rising carousel. */}
             <div
-              className={`pointer-events-none absolute inset-0 z-[3] origin-top transition-transform duration-[220ms] ease-[ease] ${panelOpen ? 'scale-[0.36]' : 'scale-100'}`}
+              className={`duration-panel pointer-events-none absolute inset-0 z-[3] origin-top transition-transform ease-[ease] ${panelOpen ? 'scale-[0.36]' : 'scale-100'}`}
             >
               <SolarSystem
                 key={focusedFilename}
@@ -623,7 +633,7 @@ function BackupsTileExpanded({ serverId }: { serverId: string }) {
                 z-4 when browsing so cards render above planet previews.
                 z-1 when a planet is focused so the dim overlay covers it. */}
             <div
-              className={`absolute right-0 left-0 h-[36%] transition-[bottom] duration-[220ms] ease-[ease] ${panelOpen ? 'bottom-[42%]' : 'bottom-[7%]'} ${anyFocus ? 'z-[1]' : 'z-[4]'}`}
+              className={`duration-panel absolute right-0 left-0 h-[36%] transition-[bottom] ease-[ease] ${panelOpen ? 'bottom-[42%]' : 'bottom-[7%]'} ${anyFocus ? 'z-[1]' : 'z-[4]'}`}
             >
               {loading && (
                 <div className="text-text-faint flex h-full items-center justify-center font-mono text-xs">
@@ -665,7 +675,7 @@ function BackupsTileExpanded({ serverId }: { serverId: string }) {
             {/* List panel — overlays bottom of carousel, GPU-accelerated slide only */}
             <div
               ref={listPanelRef}
-              className={`border-t-border-subtle bg-canvas border-t-hairline absolute right-0 bottom-0 left-0 z-10 h-[42%] overflow-y-auto transition-transform duration-[220ms] ease-[ease] ${panelOpen ? 'translate-y-0' : 'translate-y-full'}`}
+              className={`border-t-border-subtle bg-canvas border-t-hairline duration-panel absolute right-0 bottom-0 left-0 z-10 h-[42%] overflow-y-auto transition-transform ease-[ease] ${panelOpen ? 'translate-y-0' : 'translate-y-full'}`}
             >
               {filtered.map((b, idx) => (
                 <div
