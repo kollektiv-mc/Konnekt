@@ -137,6 +137,11 @@ jobs:
       # retitled section is otherwise only found by loading the page.
       - run: node scripts/check-website-links.mjs
 
+      # The changelog page shows only the "What's changed" section of a release
+      # body. A regex that cuts in the wrong place truncates the public
+      # changelog and looks like a short release rather than a bug.
+      - run: node scripts/check-release-notes-extract.mjs
+
   # .claude/suite.json declares three sections. CI has always covered
   # `commands` as literal steps above and in the backend jobs, but nothing ever
   # ran `invariants` or `generated` — they only executed when a human invoked

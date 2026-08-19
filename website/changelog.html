@@ -106,7 +106,27 @@
               >
               <span class="release-date" id="cl-snapshot-meta"></span>
             </summary>
-            <div class="md" id="cl-snapshot-body"></div>
+            <!-- Warning above the changes, then the changes. The warning used
+                 to arrive inside the release body, which the page now trims to
+                 its "What's changed" section (release.js's changesOnly). It is
+                 not decoration: this is the one entry on this page describing a
+                 build nobody tested, and it is read before the list of what is
+                 in it. Same .disclaimer component the download page's snapshot
+                 card uses.
+                 The wrapper is what carries the rule under the card head, since
+                 the body is no longer the .md alone. -->
+            <div class="snapshot-notes">
+              <div class="disclaimer">
+                <span class="disclaimer-badge">UNSTABLE</span>
+                <p>
+                  Built automatically from the newest code, so it carries changes the latest release
+                  doesn't have yet. None of it is properly tested: a snapshot can be broken, is
+                  replaced by the next one, and won't update itself. Back up your server directory
+                  first.
+                </p>
+              </div>
+              <div class="md" id="cl-snapshot-body"></div>
+            </div>
             <p class="release-source">
               <a
                 href="https://github.com/kollektiv-mc/Konnekt/releases/tag/snapshot"

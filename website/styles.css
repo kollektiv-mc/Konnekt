@@ -2375,6 +2375,23 @@ button.dl-card:hover {
   padding-bottom: 28px;
 }
 
+/* The changelog's snapshot card holds a warning above its changes, so the rule
+   and inset that .md carries on a plain release card move up to the wrapper
+   around both. .md is a grandchild here, which is why the > rule above stops
+   reaching it and it needs nothing of its own. */
+.release-pending > .snapshot-notes {
+  padding: 16px 30px 0;
+  border-top: 0.5px solid var(--border-subtle);
+}
+
+/* The page-level .disclaimer is a centred 720px block with a section's worth of
+   margin under it. Inside a card it is neither: full width of the body, and
+   only far enough from the changes to read as separate from them. */
+.snapshot-notes .disclaimer {
+  max-width: none;
+  margin: 0 0 18px;
+}
+
 .release-latest.is-snapshot {
   color: var(--sun);
   border-color: rgb(var(--sun-rgb) / 0.35);

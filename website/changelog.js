@@ -34,7 +34,7 @@
     wrap.appendChild(head)
 
     var body = el('div', 'md')
-    var notes = (rel.body || '').trim()
+    var notes = R.changesOnly(rel.body)
     if (notes) {
       body.innerHTML = MD.render(notes)
     } else {
@@ -47,8 +47,12 @@
   // The snapshot's notes are generated against the newest release, not against
   // the previous snapshot (.github/workflows/snapshot.yml), so the body is
   // already "everything not yet released" and needs no assembling here.
+  //
+  // Only the changes are shown. The body's preamble says what a snapshot is and
+  // that it can be broken, which this card already carries above — see the
+  // disclaimer in changelog.html, which used to be that preamble's job.
   function renderSnapshot(rel) {
-    var notes = (rel.body || '').trim()
+    var notes = R.changesOnly(rel.body)
     if (!notes) return
     snapshotBodyEl.innerHTML = MD.render(notes)
 
