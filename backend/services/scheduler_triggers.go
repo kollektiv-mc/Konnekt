@@ -73,40 +73,10 @@ func (s *SchedulerService) startTriggers() {
 	go s.runTimeTicker()
 }
 
-// fireEventTriggers finds enabled graphs with a trigger node of the given type
-// and launches a run for each, respecting the per-trigger cooldown.
-func (s *SchedulerService) fireEventTriggers(triggerType string, seedData map[string]interface{}, label string) {
-	s.mu.RLock()
-	graphs := make([]models.Graph, len(s.graphs))
-	copy(graphs, s.graphs)
-	s.mu.RUnlock()
-
-	for _, g := range graphs {
-		if !g.Enabled {
-			continue
-		}
-		for _, node := range g.Nodes {
-			if node.Type != triggerType {
-				continue
-			}
-			cooldownKey := g.ID + ":" + node.ID
-			if !s.cooldownAllows(cooldownKey, node.Config) {
-				continue
-			}
-			seed := map[string]map[string]interface{}{
-				node.ID:   seedData,
-				"trigger": seedData,
-			}
-			gCopy, nID := g, node.ID
-			go func() {
-				s.runGraph(gCopy, nID, label, seed)
-			}()
-		}
-	}
-}
-
-// fireTypedEventTriggers is like fireEventTriggers but also requires
-// node.Config["type"] == configType, enabling merged parametric trigger blocks.
+// fireTypedEventTriggers finds enabled graphs with a trigger node of the given
+// type whose node.Config["type"] == configType and launches a run for each,
+// respecting the per-trigger cooldown. The extra config match is what enables
+// merged parametric trigger blocks.
 func (s *SchedulerService) fireTypedEventTriggers(triggerType, configType string, seedData map[string]interface{}, label string) {
 	s.mu.RLock()
 	graphs := make([]models.Graph, len(s.graphs))

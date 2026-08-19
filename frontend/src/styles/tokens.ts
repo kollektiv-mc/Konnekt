@@ -10,16 +10,6 @@
 
 export type ThemeMode = 'dark' | 'light'
 
-/** Status roles the user can override at runtime from Settings. */
-export const CONFIGURABLE_STATUS_ROLES = [
-  'accent',
-  'success',
-  'warning',
-  'danger',
-] as const
-
-export type ConfigurableStatusRole = (typeof CONFIGURABLE_STATUS_ROLES)[number]
-
 /**
  * Per-theme defaults for the status colours.
  *

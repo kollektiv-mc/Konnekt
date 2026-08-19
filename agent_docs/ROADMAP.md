@@ -43,7 +43,9 @@ were shipped early during Alpha. Their status below reflects reality.
 - [x] Default presets: "Default", "Console Focus", "Compact", "Essentials"
 - [x] Persistence via Go JSON files (~/.config/konnekt/)
 - [x] All IPC bindings generated via wails generate module
-- [x] useWailsCall() hook for typed IPC error handling
+- [x] Typed IPC error handling — per-store / per-tile-hook `loading`/`error`
+  state. (A shared `useWailsCall()` hook shipped here first and was removed
+  unused; see `agent_docs/CLAUDE.md`'s IPC conventions.)
 
 ### Server management
 
@@ -127,7 +129,7 @@ were shipped early during Alpha. Their status below reflects reality.
 - [x] Worlds tile - 3D Solar-System World Manager
   - 3-level navigation: Galaxy (L0) → World system (L1) → Floating HUD card (L2)
   - L0: central Sun = server, each world save orbits it; active world wears rings;
-    cursor parallax (useParallax lerps group rotation from pointer).
+    per-planet proximity push to the cursor, inside `Planet.tsx`'s `useFrame`.
   - L1: overworld is the central body, nether/the_end are moons; OrbitControls.
   - L2: WorldHud (drei Html) anchored to the clicked body — metadata from level.dat
     (NBT reader: version, mode, difficulty, seed, last-played), size, modified, path;
@@ -247,29 +249,32 @@ Where an item does have an issue, it is linked.
   ([#57](../../issues/57)). Everything below `ServerService` assumes a single
   process; the issue scopes only the first step (extracting per-server runtime
   state into a `serverInstance`) and lists the open UI questions.
-- More vanilla commands — skeletons already exist; each needs editors,
-  presentation metadata, and a route
-- Additional deep argument types: `nbt_compound`, `block_state`, `loot_table`
-- **Version 2 support** — likely 1.21.5, which flips three trait flags. This is
-  the real test of the version model: if it turns into a refactor, the trait
-  design was wrong
-- More previews: entity placement, particle emitters, structure bounds
-- Command import — parse an existing command back into a value tree. Note this
-  inverts the preview contract's direction and needs its own design
-- Sharing: permalinks, saved commands
-- Multi-command scripts and function-file export
+
+Nothing else here is scoped yet. Add an item only once it has a shape worth
+writing down; a bare feature name belongs in a GitHub Issue, not here.
 
 ---
 
 ## Explicitly out of scope
 
-Recording these so they are not accidentally re-litigated:
+Recording these so they are not accidentally re-litigated. Every entry points at
+where the decision was actually made — this section records, it does not decide.
 
-- **Bedrock Edition.** Different command syntax entirely; not a version trait.
-- **Versions before 1.20.5.** The `nbt` item format trait exists in the matrix for
-  completeness, but no pre-component version is supported.
-- **Server integration.** Kommands generates text; it does not connect to a server.
-- **Accounts, tiers, subscriptions.**
+- **A cloud backend or hosted account system.** Konnekt is local-first: state
+  persists as JSON in the Wails app data directory and nothing calls home except
+  the update check and Modrinth. See `agent_docs/CLAUDE.md`'s opening line and
+  its "Do not" rule against `localStorage`/`sessionStorage`. Remote Access
+  (above) is a tunnel to the user's own machine, not a service.
+- **Rocky/RHEL 9 packaging.** EL9 never shipped webkit2gtk-4.1 and EL10 dropped
+  4.0, so one binary cannot span both. See `agent_docs/DEPENDENCIES.md` and the
+  README's Platform support section.
+- **A second frontend for mobile.** Remote Access serves the same responsive
+  build through a shim; there is no native app and no second bundle. See the
+  Remote access section above.
+
+Two things are deferred rather than out of scope, and are tracked in
+`agent_docs/HEALTH_CHECKLIST.md`'s "Release follow-ups": a macOS release leg,
+and code-signing/notarization.
 
 ---
 
@@ -285,7 +290,7 @@ Recording these so they are not accidentally re-litigated:
 4. If new Go data is needed:
    a. Add struct to `backend/models/` if it crosses the IPC boundary
    b. Add method to relevant service in `backend/services/`
-   c. Bind method on App struct in `backend/app.go`
+   c. Bind method on the App struct in `app.go` (repo root)
    d. Run `wails generate module` to regenerate TS bindings
    e. Import from `frontend/wailsjs/go/main/` in the tile
 5. Run `pnpm typecheck` and `go vet ./...` before marking done

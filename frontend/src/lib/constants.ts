@@ -1,7 +1,5 @@
 import { TILE_SIZE, TILE_MIN } from './gridSizing'
 
-export const DEFAULT_SERVER_ID = 'default'
-
 export const EVENTS = {
   LOG_LINE: 'log:line',
   SERVER_STARTED: 'server:started',

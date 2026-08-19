@@ -16,7 +16,9 @@ pnpm for the frontend, Go modules for the backend.
 - `backend/services/` holds process management, RCON, backups, scheduler,
   config, stats and updates; `backend/models/` holds structs auto-bound to TS.
 - `frontend/src/` splits into `components/`, `tiles/` (one folder each, plus
-  `registry.ts`), `stores/`, `hooks/` and `lib/`.
+  `registry.ts`), `stores/`, `hooks/`, `lib/`, `types/`, `assets/` and
+  `styles/` — the last holds the **generated** token layer (see Code style),
+  while the hand-authored component CSS stays in `style.css` beside it.
 - `frontend/wailsjs/` is generated. Never edit it by hand.
 - `website/` is the marketing site at konnekt.pages.dev: plain HTML, CSS and
   browser ES modules, no build step and no `package.json`. Cloudflare Pages
@@ -53,7 +55,12 @@ Why the grid is built the way it is, and which parts are load-bearing:
 - Bind Go methods on the `App` struct in `app.go` (repo root)
 - Method names: `PascalCase` in Go → `PascalCase` in generated TS bindings
 - Always return `(T, error)` from bound Go methods
-- Handle errors in frontend with a shared `useWailsCall()` hook
+- Handle IPC errors where the data lives: a Zustand store or a per-tile hook
+  holds its own `loading`/`error` state and its write actions rethrow after
+  recording the error, so an optimistic UI can revert (see
+  `stores/useSchedulerStore.ts`). A shared `useWailsCall()` hook was tried and
+  removed: a store cannot call a React hook, which is where most fetching ended
+  up. Swallowing a rejection with a bare `catch {}` is the thing to avoid.
 - Re-run `wails generate module` after adding new bound methods
 
 ## Code style
@@ -96,6 +103,7 @@ pnpm typecheck        # tsc --noEmit (run from frontend/)
 pnpm lint             # ESLint (run from frontend/)
 pnpm test             # vitest (run from frontend/)
 pnpm format           # Prettier --write (run from frontend/)
+pnpm format:check     # Prettier --check, the gate CI runs (from frontend/)
 pnpm check-bundle     # Enforce 550 KB gzip entry-chunk budget (run from frontend/)
 pnpm gen:tokens       # Regenerate the token layer from tokens.source.json (frontend/)
 pnpm format:website   # Prettier --check over website/ (run from frontend/)
