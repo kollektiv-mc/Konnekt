@@ -150,8 +150,17 @@ note to a reviewer.
 - **No em dashes** in titles, bodies or commit messages. Use a comma, a colon,
   or two sentences. Keep the prose plain and short.
 - **Label each PR** `type:feature`, `type:bug`, `type:docs` or `type:chore`.
-  That label is what files it under a heading in the notes; unlabelled PRs land
-  under "Other changes". Headings are defined in `.github/release.yml`.
+  `.github/scripts/release-notes.py` writes the notes and sorts on that label
+  first, so the choice that reaches a reader is feature vs fix vs everything
+  else: it has three sections, and `type:docs` and `type:chore` both read as
+  "Other changes". Unlabelled, it falls back to the title's leading verb, where
+  "Add" means a feature and "Fix" means a fix but "Make", "Update" and "Rework"
+  land in "Other changes" rather than guess. `changelog:skip` leaves a PR out
+  entirely. (`.github/release.yml`'s five categories are a fallback, used only
+  when the script cannot run.)
+- A PR touching only `website/`, `agent_docs/` or `docs/` never appears in the
+  notes: the site ships to Cloudflare Pages and the docs are read in the repo,
+  so neither changed the binary someone downloaded.
 - **Body:** why the change exists and how it was verified. It never reaches the
   notes, so detail is free.
 - Commit messages follow the same rules. Nothing parses them.
