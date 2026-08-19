@@ -100,6 +100,38 @@
     return /^[0-9a-f]{40}$/i.test(value || '') ? value.slice(0, 7) : ''
   }
 
+  // The "What's changed" section of a release body, and nothing else.
+  //
+  // .github/scripts/release-notes.py writes a body for two audiences at once.
+  // The list of what changed is for anyone; the rest is release plumbing —
+  // the snapshot's build preamble, the accounting line for the pull requests
+  // that were left out, the compare link. On GitHub those belong together.
+  // Here the page has already said which release this is, when it was built and
+  // where to read it in full, so repeating them turns a changelog entry into a
+  // wall with the changes buried in the middle.
+  //
+  // Cuts at the accounting footer, which is the first thing after the last
+  // section. Matched on "not listed" rather than the exact sentence so a
+  // reworded footer still ends the section instead of being rendered as content.
+  //
+  // A body with no "What's changed" heading is returned whole: hand-written
+  // notes are not this script's output and have no section to find, and showing
+  // them unchanged is better than showing nothing. v0.1.0-alpha.1 was that case
+  // until its notes were rewritten in this shape.
+  var CHANGES_HEADING = /^##\s+What's changed\s*$/im
+  var CHANGES_END = /^(?:_[^\n]*\bnot listed\b[^\n]*_|\*\*Full changelog\*\*)/im
+
+  function changesOnly(body) {
+    var text = String(body || '').replace(/\r\n/g, '\n')
+    var start = text.search(CHANGES_HEADING)
+    if (start === -1) return text.trim()
+
+    var rest = text.slice(start)
+    var end = rest.search(CHANGES_END)
+    if (end !== -1) rest = rest.slice(0, end)
+    return rest.trim()
+  }
+
   function formatDate(iso) {
     if (!iso) return ''
     var d = new Date(iso)
@@ -137,6 +169,7 @@
     formatBytes: formatBytes,
     formatDate: formatDate,
     shortSha: shortSha,
+    changesOnly: changesOnly,
     fetchLatest: function () {
       return get('/releases/latest')
     },

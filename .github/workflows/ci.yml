@@ -3,13 +3,61 @@ name: CI
 on:
   push:
     branches: [main]
+  # `labeled`/`unlabeled` are here for the pr-labelled job below: adding the
+  # missing label has to be able to turn that check green without an empty
+  # commit to re-trigger it. Listing types at all overrides the default set,
+  # so the three defaults are repeated.
   pull_request:
+    types: [opened, synchronize, reopened, labeled, unlabeled]
 
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
+  # Merged PR titles are the release notes, and a `type:` label is what files
+  # each one under a heading. Until now that was a review convention, and the
+  # result was that 24 of the 41 pull requests in the first release window
+  # carried no label at all — so .github/scripts/release-notes.py had to guess
+  # from the title, and guessing put a website polish pass and a CI change into
+  # the "Features" users read first.
+  #
+  # The label is the input that makes the generator's output correct, so it is
+  # checked in the same place as everything else the build depends on rather
+  # than left to whoever opens the pull request to remember.
+  pr-labelled:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      # Via env rather than interpolated into the script: label names are
+      # attacker-shaped text as far as a shell is concerned, and `${{ }}` inside
+      # a run block is substituted before bash ever sees it.
+      - name: 'A type: label decides where this lands in the release notes'
+        env:
+          LABELS: ${{ toJSON(github.event.pull_request.labels.*.name) }}
+        run: |
+          echo "labels: $LABELS"
+          if echo "$LABELS" | jq -e 'any(.[]; startswith("type:"))' > /dev/null; then
+            exit 0
+          fi
+          echo "::error::This pull request has no type: label, so the release notes cannot file it. Add type:feature, type:bug, type:chore or type:docs — see agent_docs/CLAUDE.md's 'Commits & pull requests'."
+          exit 1
+
+  # The classifier decides what every future release says about itself, and it
+  # is the one piece of release tooling that never runs until a release is being
+  # cut — which is the worst moment to find out it is wrong. These are pure,
+  # offline checks over the categorisation and the path filter.
+  release-notes:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - run: python3 .github/scripts/release-notes_test.py
+
   frontend:
     runs-on: ubuntu-latest
     defaults:
@@ -88,6 +136,11 @@ jobs:
       # and sitemap entries against the files on disk. A renamed image or a
       # retitled section is otherwise only found by loading the page.
       - run: node scripts/check-website-links.mjs
+
+      # The changelog page shows only the "What's changed" section of a release
+      # body. A regex that cuts in the wrong place truncates the public
+      # changelog and looks like a short release rather than a bug.
+      - run: node scripts/check-release-notes-extract.mjs
 
   # .claude/suite.json declares three sections. CI has always covered
   # `commands` as literal steps above and in the backend jobs, but nothing ever
