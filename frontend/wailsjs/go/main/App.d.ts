@@ -95,7 +95,7 @@ export function ListWorlds(arg1:string):Promise<Array<models.WorldSystem>>;
 
 export function ModCategories(arg1:string):Promise<Array<string>>;
 
-export function ModCheckUpdates(arg1:string):Promise<Record<string, models.ModUpdateInfo>>;
+export function ModCheckUpdates(arg1:string):Promise<Array<models.ModUpdateInfo>>;
 
 export function ModGetAllVersions(arg1:string):Promise<Array<models.ModVersion>>;
 
