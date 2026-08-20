@@ -55,6 +55,8 @@ export function GetCustomCommands():Promise<Array<string>>;
 
 export function GetLayoutPresets():Promise<Array<models.LayoutPreset>>;
 
+export function GetLogPath():Promise<string>;
+
 export function GetPlayerDetail(arg1:string,arg2:string):Promise<models.Player>;
 
 export function GetPlayerRoster(arg1:string):Promise<Array<models.Player>>;

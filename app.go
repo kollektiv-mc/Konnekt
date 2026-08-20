@@ -88,11 +88,9 @@ func (a *App) startup(ctx context.Context) {
 	a.statsService.SetContext(ctx)
 	a.backupService.SetContext(ctx)
 
-	configDir, err := os.UserConfigDir()
-	if err != nil {
-		configDir = "."
-	}
-	a.dataDir = filepath.Join(configDir, "konnekt")
+	// Same helper main() used to open the log, so the two cannot disagree about
+	// where the app's files live.
+	a.dataDir = services.DataDir()
 	// Best-effort warm-up so the directory exists before the user goes looking
 	// for it. It is not the only thing that creates it: every write into the
 	// data dir goes through services.WriteDataFile, which re-creates it and
@@ -163,6 +161,14 @@ func (a *App) SaveAppSettings(s models.AppSettings) error {
 
 func (a *App) OpenDataDir() error {
 	return services.OpenPath(a.dataDir)
+}
+
+// GetLogPath returns the app log's absolute path so the UI can tell a bug
+// reporter what to attach. Returns the path even when the file does not exist
+// yet: naming where it will be is more useful than an error, and the first
+// warning written creates it.
+func (a *App) GetLogPath() (string, error) {
+	return services.LogPath(a.dataDir), nil
 }
 
 // --- Updates ---

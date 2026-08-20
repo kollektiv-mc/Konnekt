@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"math/rand"
 	"os"
 	"path/filepath"
@@ -244,7 +245,7 @@ func (s *SchedulerService) addHistory(rec models.RunRecord) {
 
 	// Persist outside the lock; history is small and writes are infrequent.
 	if err := s.writeHistory(snapshot); err != nil {
-		fmt.Printf("scheduler: write history: %v\n", err)
+		slog.Error("scheduler: write history", "error", err)
 	}
 }
 

@@ -16,6 +16,7 @@ import { SettingRow } from './ui/SettingRow'
 import {
   OpenDataDir,
   GetAppVersion,
+  GetLogPath,
   CheckForUpdates,
   DownloadAndInstallUpdate,
 } from '../../wailsjs/go/main/App'
@@ -530,12 +531,21 @@ type UpdateCheckState =
 
 function AboutPane() {
   const [version, setVersion] = useState<string | null>(null)
+  const [logPath, setLogPath] = useState<string | null>(null)
   const [checkState, setCheckState] = useState<UpdateCheckState>({ status: 'idle' })
 
   useEffect(() => {
     GetAppVersion()
       .then(setVersion)
       .catch(() => setVersion(null))
+  }, [])
+
+  // The log is the one thing worth attaching to a bug report, so show where it
+  // is rather than making the user guess. Null outside a Wails context.
+  useEffect(() => {
+    GetLogPath()
+      .then(setLogPath)
+      .catch(() => setLogPath(null))
   }, [])
 
   // Streaming download progress, per CLAUDE.md's "no useEffect polling — use
@@ -621,6 +631,17 @@ function AboutPane() {
             ~/.config/konnekt ↗
           </button>
         </div>
+        {logPath && (
+          <div className="text-text-secondary flex items-center justify-between gap-3 text-xs">
+            <span className="shrink-0">Log file</span>
+            <span
+              className="text-text-muted truncate font-mono text-[11px]"
+              title={`${logPath} — attach this to a bug report`}
+            >
+              {logPath}
+            </span>
+          </div>
+        )}
       </div>
 
       <div className="flex flex-col gap-2">
