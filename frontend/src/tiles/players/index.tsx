@@ -7,14 +7,14 @@ import { usePlayers } from './usePlayers'
 
 export function PlayersTile({ serverId, maximized }: TileProps) {
   const [selected, setSelected] = useState<Player | null>(null)
-  const { players, refresh } = usePlayers(serverId)
+  const { players, reachable, refresh } = usePlayers(serverId)
 
   return (
     <div className="flex h-full flex-col">
       {maximized ? (
-        <PlayerRoster players={players} onSelectPlayer={setSelected} />
+        <PlayerRoster players={players} reachable={reachable} onSelectPlayer={setSelected} />
       ) : (
-        <PlayerGrid players={players} onSelectPlayer={setSelected} />
+        <PlayerGrid players={players} reachable={reachable} onSelectPlayer={setSelected} />
       )}
 
       {selected && (

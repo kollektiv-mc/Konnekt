@@ -3,14 +3,16 @@ import { PlayerCard } from './PlayerCard'
 
 interface Props {
   players: Player[]
+  /** False once a roster fetch has failed — see usePlayers. */
+  reachable: boolean
   onSelectPlayer: (player: Player) => void
 }
 
-export function PlayerGrid({ players, onSelectPlayer }: Props) {
+export function PlayerGrid({ players, reachable, onSelectPlayer }: Props) {
   if (players.length === 0) {
     return (
       <div className="text-text-faint flex h-full items-center justify-center font-mono text-xs">
-        No players online
+        {reachable ? 'No players online' : 'Server unreachable'}
       </div>
     )
   }

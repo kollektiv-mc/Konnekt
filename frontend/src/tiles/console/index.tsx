@@ -2,6 +2,8 @@ import { useEffect, useRef, useCallback, useMemo } from 'react'
 import { SendCommand } from '../../../wailsjs/go/main/App'
 import { useConsoleStore } from '../../stores/useConsoleStore'
 import { useSettingsStore } from '../../stores/useSettingsStore'
+import { useServerStore } from '../../stores/useServerStore'
+import { errMsg } from '../../lib/ipc'
 import { Segmented } from '../../components/ui/Segmented'
 import { QuickCommandsPanel } from '../../components/QuickCommandsPanel'
 import type { TileProps } from '../../types'
@@ -48,7 +50,13 @@ export function ConsoleTile({ serverId, maximized }: TileProps) {
   const [filterOpen, setFilterOpen] = useState(false)
   const [query, setQuery] = useState('')
   const [levelFilter, setLevelFilter] = useState<LevelFilter>('all')
+  const [sendError, setSendError] = useState<string | null>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
+  const running = useServerStore((s) => s.status.running)
+  const reachable = useServerStore((s) => s.reachable)
+  // A stopped server and an unreachable backend both mean "this console cannot
+  // take a command", but they are different sentences to put on screen.
+  const acceptsCommands = reachable && running
 
   const filtered = useMemo(() => {
     let result = lines
@@ -73,14 +81,23 @@ export function ConsoleTile({ serverId, maximized }: TileProps) {
     setAutoScroll(atBottom)
   }, [])
 
+  // A rejected command used to vanish into `.catch(console.error)`, so a typo'd
+  // or unroutable command looked identical to one the server had accepted and
+  // simply not replied to.
   const handleSubmit = useCallback(
     (e: React.FormEvent) => {
       e.preventDefault()
-      if (!input.trim()) return
-      SendCommand(serverId, input.trim()).catch(console.error)
+      if (!input.trim() || !acceptsCommands) return
+      const command = input.trim()
+      setSendError(null)
+      SendCommand(serverId, command).catch((err: unknown) => {
+        setSendError(errMsg(err))
+        // Put the command back so it can be retried without retyping.
+        setInput(command)
+      })
       setInput('')
     },
-    [input, serverId],
+    [input, serverId, acceptsCommands],
   )
 
   const consoleColumn = (
@@ -137,7 +154,18 @@ export function ConsoleTile({ serverId, maximized }: TileProps) {
         onScroll={handleScroll}
         className="min-h-0 flex-1 overflow-y-auto px-3 py-2 font-mono text-xs leading-5 select-text"
       >
-        {filtered.length === 0 && lines.length > 0 ? (
+        {lines.length === 0 ? (
+          // Was a bare empty <div>: an unreachable server, a stopped one and a
+          // server that simply has not logged anything yet all rendered as a
+          // blank panel (HEALTH_LOG.md, 2026-08-20).
+          <div className="text-text-faint py-2 font-mono text-xs">
+            {!reachable
+              ? 'Server unreachable — no output.'
+              : running
+                ? 'Waiting for output…'
+                : 'Server offline — start it to see output.'}
+          </div>
+        ) : filtered.length === 0 ? (
           <div className="text-text-faint py-2 font-mono text-xs">No matching lines</div>
         ) : (
           filtered.map((line) => (
@@ -161,14 +189,22 @@ export function ConsoleTile({ serverId, maximized }: TileProps) {
         </button>
       )}
 
+      {sendError && (
+        <div role="alert" className="text-danger mx-3 mb-1 font-mono text-xs">
+          Command failed: {sendError}
+        </div>
+      )}
+
       <form onSubmit={handleSubmit} className="flex gap-2 px-3 pt-1 pb-3">
         <span className="text-accent self-center font-mono text-sm">&gt;</span>
         <input
           type="text"
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          placeholder="Enter command..."
-          className="bg-hover border-border-subtle text-text-primary border-hairline flex-1 rounded px-2 py-1 font-mono text-sm transition-colors outline-none"
+          disabled={!acceptsCommands}
+          aria-label="Server command"
+          placeholder={acceptsCommands ? 'Enter command...' : 'Server offline'}
+          className="bg-hover border-border-subtle text-text-primary border-hairline flex-1 rounded px-2 py-1 font-mono text-sm transition-colors outline-none disabled:opacity-40"
           onFocus={(e) => {
             ;(e.target as HTMLInputElement).style.borderColor = 'var(--border-hover)'
           }}
@@ -178,7 +214,9 @@ export function ConsoleTile({ serverId, maximized }: TileProps) {
         />
         <button
           type="submit"
-          className="border-border-subtle text-text-secondary border-hairline rounded px-3 py-1 text-xs transition-colors"
+          disabled={!acceptsCommands}
+          title={acceptsCommands ? undefined : 'The server is not running'}
+          className="border-border-subtle text-text-secondary border-hairline rounded px-3 py-1 text-xs transition-colors disabled:opacity-40"
           onMouseEnter={(e) => {
             ;(e.currentTarget as HTMLButtonElement).style.color = 'var(--text-primary)'
             ;(e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--border-hover)'

@@ -18,13 +18,19 @@ import { EVENTS } from '../../lib/constants'
  */
 export function usePlayers(serverId: string) {
   const [players, setPlayers] = useState<Player[]>([])
+  const [reachable, setReachable] = useState(true)
 
   const refresh = useCallback(async () => {
     try {
       const list = await GetPlayerRoster(serverId)
       setPlayers(list ?? [])
+      setReachable(true)
     } catch {
-      /* Server unreachable — keep the last known roster rather than blanking it. */
+      // Keep the last known roster rather than blanking it, but stop presenting
+      // it as current. Swallowing this outright left an unreachable server
+      // rendering "No players online", identical to a server nobody is on
+      // (HEALTH_LOG.md, 2026-08-20).
+      setReachable(false)
     }
   }, [serverId])
 
@@ -53,5 +59,5 @@ export function usePlayers(serverId: string) {
     }
   }, [refresh])
 
-  return { players, refresh }
+  return { players, reachable, refresh }
 }
