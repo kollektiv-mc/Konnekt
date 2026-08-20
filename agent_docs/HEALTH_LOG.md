@@ -61,6 +61,8 @@ after them is dated. Newest last, in both groups.
 - [2026-08-19 — The dead code the per-file grep could never find](#2026-08-19-the-dead-code-the-per-file-grep-could-never-find)
 - [2026-08-19 — Another product's roadmap, and eight boxes nobody had ticked](#2026-08-19-another-products-roadmap-and-eight-boxes-nobody-had-ticked)
 - [2026-08-19 — The duration token Tailwind was never reading](#2026-08-19-the-duration-token-tailwind-was-never-reading)
+- [2026-08-20 — Four stores that showed a refused write as saved](#2026-08-20-four-stores-that-showed-a-refused-write-as-saved)
+- [2026-08-20 — The status every tile trusted and one tile owned](#2026-08-20-the-status-every-tile-trusted-and-one-tile-owned)
 
 ---
 
@@ -3041,3 +3043,171 @@ somewhere nobody re-reads.
 before any change. `.duration-fast{--tw-duration:var(--transition-duration-fast)}`
 and the `.duration-panel` equivalent confirmed present in `dist/assets/*.css`,
 and every converted site grepped out of the built output rather than assumed.
+
+### 2026-08-20 — Four stores that showed a refused write as saved
+
+**Closed:** the checklist's "P1 — Four stores swallow a failed write and keep the
+optimistic update".
+
+**What was there.** `useServerConfigStore`, `useSettingsStore`, `useLayoutStore`
+and `useTileStore` each caught a rejected Wails write with a
+`/* best-effort */` comment and then applied the local update anyway.
+`useSchedulerStore` was the only store in the folder that did not, and its own
+header comment said so.
+
+The severity ranks by what is lost, and the top of that list is worse than
+"a preference did not stick". A `ServerConfig` carries the working directory,
+the JVM args and the RCON credentials, and no other part of the app holds a
+copy. A refused `SaveServerConfig` left the edit on screen, the editor closed as
+though it had worked, and the whole thing was gone at the next start with
+nothing written anywhere. `useSettingsStore` is second and different in kind:
+`confirmBeforeStop` and `notifyOnCrash` are safety toggles, so a swallowed write
+left the user believing a guard was armed for the rest of the session.
+
+**The constraint that shaped the fix, which the backlog entry had not noticed.**
+`.claude/launch.json` defines a `frontend-dev` preset: a browser-only Vite server
+on port 5199 with no Go process behind it. The generated bindings dereference
+`window.go` directly (`frontend/wailsjs/go/main/App.js`), so *every* call throws
+there. Reverting on any rejection would have made that preview read-only — no
+tile addable, no setting changeable, no layout saveable — which is why the write
+paths were written the way they were. The swallow was not carelessness; it was
+the only behaviour that kept both cases working, chosen without noticing it
+broke the real one.
+
+So the two cases are now separated rather than collapsed. New `lib/ipc.ts` holds
+`hasWailsBridge()` (a presence check on `window.go`, never a call through it, so
+the "bindings only" rule still holds) and `errMsg()`, which is
+`useSchedulerStore`'s old private `msg` hoisted so there is one definition. No
+bridge means nothing was ever going to persist and the user is not being misled,
+so the optimistic value stands. A bridge present means a real failed write:
+revert, record, rethrow.
+
+**Both halves, because the store half alone is not a fix.** Every store gained
+`error`/`clearError` and the rethrow. Then the callers: the server editor stays
+open on a refused save with the message under it instead of closing as though it
+worked; `addInstalledServer` keeps the install modal up, since it covers the
+sidebar and dismissing it would hide both the error and the form that could
+retry; the preset name survives a failed save so a retry does not have to be
+retyped; and `Dashboard` now writes a tile's grid slot only after the tile write
+has landed, in both directions, so `activeTileIds` and the persisted layout
+cannot disagree about a tile that never arrived or never left.
+
+Three call sites deliberately swallow, and each says why in a comment rather
+than being left to look like the bug that was just removed:
+`useSettingsStore.reorderCrate`, `TileCrate`'s order commit and `BlockPalette`'s
+collapse toggles are all `void`-returning handlers driven by a mouse gesture,
+and `update` has already reverted the state by the time the rejection lands.
+`SettingsModal` wraps `update` once for all fourteen of its controls rather than
+fourteen times, and renders `error` as a banner.
+
+**The test that encoded the bug is split, not deleted.**
+`useSettingsStore.test.ts` asserted "keeps the optimistic update even when
+SaveAppSettings rejects", mocking a disk-full rejection and checking the toggle
+stayed on. Under the fix that assertion is still correct — for the no-bridge
+half, which is what jsdom is, since it has no `window.go`. So it became two
+tests: the original body under an honest name, and a new one with `window.go`
+stubbed that asserts the revert, the recorded message and the rethrow. The same
+pair is now on all four stores, plus tests for `lib/ipc.ts` itself.
+
+One thing worth writing down for the next person adding a store test here:
+`vi.clearAllMocks()` resets recorded calls but *not* implementations, so a
+`mockRejectedValue` armed by one test is still armed in the next.
+`useLayoutStore.test.ts` already re-armed its resolved values in `beforeEach`;
+the other three now do too, after a passing suite briefly hid a leak.
+
+**What is deliberately not symmetric.** `useLayoutStore`'s `persistActiveLayout`
+records the failure instead of rethrowing. Its callers are `loadPreset` and
+`updateLayout`, both `void` because react-grid-layout drives them from a
+drag/resize callback that cannot await, and there is nothing to revert into: the
+layout on screen is what the user just arranged by hand, and snapping it back
+under them would be worse than a stale file.
+
+**Verification.** Full gate set green. 316 frontend tests (from 280), entry chunk
+487.7 KB gzip against the 550 KB budget, `backend/services` coverage 38.1%
+against the 36% floor.
+
+### 2026-08-20 — The status every tile trusted and one tile owned
+
+**Closed:** the checklist's "P1 — Tiles that render an unreachable server as an
+empty one", and the second half of the Stable pillar's `ErrorBoundary` item.
+**Found on the way:** a third instance of the same defect that was not in the
+backlog, and is the worst of the three.
+
+**The two known cases.** `tiles/console/index.tsx` rendered an empty `<div>`
+when it had no lines, so a stopped server, an unreachable backend and a server
+that had simply not logged yet were the same blank panel. Its command input and
+Send button stayed enabled throughout, and a rejected `SendCommand` went to
+`.catch(console.error)` — invisible, so a command the server refused looked
+exactly like one it accepted and did not reply to. The players tile had the same
+shape: `usePlayers` swallowed the rejection, `players` stayed `[]`, and both
+views said "No players online", which is also what a healthy, idle server says.
+
+**The third case, found while looking for a signal to render.** Telling
+"unreachable" from "stopped" needs a trustworthy `running` flag, and the one
+that existed was not. `useServerStore` was written by exactly one place:
+`tiles/stats/useServerStatus.ts`. `App.tsx` registers eleven `EventsOn`
+listeners and `server:status` was not among them. Meanwhile five other
+components read `status.running` from that store — `tiles/mods/index.tsx`,
+`tiles/worlds/WorldHud.tsx`, `tiles/config/index.tsx`, `tiles/backups/index.tsx`
+and `tiles/backups/BackupsSummary.tsx`.
+
+Tiles are removable, and only four are active by default. Take Stats off the
+canvas and every one of those five reads the store's default `running: false`
+forever. The visible cost is not cosmetic: `BackupsSummary.handleCreateClick`
+shows its "stop the server first" dialog *only* when `status.running`, so with
+Stats removed it backs up a live world with no warning. That is a data-integrity
+guard silently disarmed by an unrelated UI action, and no test or gate would
+have caught it.
+
+The subscription moved to `App`, next to the settings hydration and the eleven
+listeners already there. The hook moved to `hooks/` with it, since a hook the
+app mounts should not live inside one tile's folder, and it became write-only:
+reading `status` there would have re-rendered the whole tree on every 10s tick.
+The stats tile now selects from the store like every other consumer.
+
+This is not a break with "tiles are self-contained". Server status is a shared
+domain with six readers; the stats tile was never its owner, it was just the
+first consumer and the hydration happened to end up there.
+
+**A second flag, because `running` cannot answer the question.** A stopped
+server answers and reports `running: false`; an unreachable backend reports
+nothing and leaves the last known numbers standing. Those are different states
+and the UI has to say different things about them, so `useServerStore` gained
+`reachable` alongside `status`, set by the same sync hook, and `usePlayers`
+tracks its own equivalent for the roster fetch. It starts optimistic so the UI
+does not flash an error during the first fetch. The stats tile picked this up
+too: it used to say "Offline" for an unreachable backend, which would have been
+a fresh inconsistency to leave behind.
+
+**The checklist was wrong about what this needed.** Both the `ErrorBoundary`
+item and this backlog entry said the verification wanted a desk and a running
+GUI. It wanted neither. `hooks/useUpdateCheck.test.ts` already showed the
+pattern, and the new tests are ordinary jsdom renders against rejecting mocked
+bindings: the console tile's three placeholder states, its disabled input, its
+refusal to call `SendCommand` while the server is down, and the failure banner
+with the command restored for a retry; plus both player views' empty-state
+wording. The command input gained an `aria-label` so the test can find it by
+role, which is a small accessibility improvement it should have had anyway.
+
+One incidental for whoever writes the next component test here: vitest runs with
+`globals: false`, so Testing Library cannot register its own auto-cleanup and
+the previous test's DOM is still mounted. `Collapsible.test.tsx` sidesteps this
+by scoping every query to its own `container`; the new files call `cleanup()` in
+an explicit `afterEach`. A suite that renders the same component twice and
+queries globally will otherwise fail with "found multiple elements", which reads
+as a component bug and is not one.
+
+**Still open after this.** The memoization item remains GUI-gated: it wants
+re-render counts from the Profiler and a real WebGL context, which no headless
+session can produce.
+
+**Verification.** Full gate set green. 316 frontend tests, 30 files.
+
+**Postscript, same day.** Re-baselining the checklist turned up one stale number
+worth recording rather than quietly correcting. The Stable pillar's `EventsOn`
+cleanup item claimed "25 registrations across 12 files". The real figure is
+**47 across 13** — `App.tsx` alone holds 19 — and it was already wrong before
+this session's changes, which moved a file without adding or removing a single
+registration. Every one of the 47 is still clean, so the tick was right and only
+the arithmetic was not; the line now carries the command that produces the
+number, so the next reader re-derives it instead of trusting it.
