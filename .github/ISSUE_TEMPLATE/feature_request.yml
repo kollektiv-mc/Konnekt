@@ -6,6 +6,12 @@
 #
 # The `area` options must stay identical to bug_report.yml's; the template check
 # in frontend/scripts/check-issue-templates.mjs enforces that.
+#
+# There used to be an `impact` dropdown here, asking how much this would matter to
+# you. It asked the same question the shared `priority` field now asks, in three
+# different words, and mapped to nothing at all: an answer went into the body and
+# no label, view or Linear field ever read it. `priority` is the same question with
+# somewhere to land.
 name: Feature request
 description: Suggest something Konnekt should be able to do
 title: '[Feature]: '
@@ -83,14 +89,19 @@ body:
       label: How do you handle this today?
       description: Whatever you do instead, even if it is "give up and use the terminal". It tells us how much the gap costs.
 
+  # >>> suite:priority. Vendored from kollektiv by scripts/sync-priority.sh. Edit it there.
   - type: dropdown
-    id: impact
+    id: priority
     attributes:
-      label: How much would this matter to you?
+      label: How urgent is this for you?
+      description: Your honest read. Triage may change it, and that is normal.
       options:
-        - Nice to have
-        - I would use it often
-        - I cannot really use Konnekt without it
+        - 'Blocking: I cannot use it and have no way around it'
+        - 'Significant: it costs me real time, but I can work around it'
+        - 'Minor: it would be nice, but it is not in my way'
+    validations:
+      required: true
+  # <<< suite:priority
 
   - type: textarea
     id: extra

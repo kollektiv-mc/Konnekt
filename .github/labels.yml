@@ -30,6 +30,33 @@
   color: 'ededed'
   description: Maintenance. Counted in the release-notes footer, not listed.
 
+# How urgent, and therefore what gets picked up next. Suite-wide: the names,
+# colours and meanings are kollektiv's `design/labels.json`, which
+# `scripts/sync-labels.sh` applies identically to all three repos and
+# `docs/conventions.md` § Priority explains. They are repeated here only so this
+# file stays a complete declaration of what the templates and the issue-priority
+# workflow rely on. A change belongs there, not here.
+#
+# Applied by .github/workflows/issue-priority.yml from the `priority` field the
+# issue forms carry, and by hand during triage. p0 is not on the forms: the suite
+# declares it `reporterSelectable: false`, so the generated option list omits it.
+#
+# p2's yellow is the same as status:needs-triage's below. That is not a mistake
+# waiting to be fixed here; the two files were coloured independently and the
+# suite's palette wins.
+- name: 'p0'
+  color: 'b60205'
+  description: Drop everything.
+- name: 'p1'
+  color: 'd93f0b'
+  description: High priority, next up.
+- name: 'p2'
+  color: 'fbca04'
+  description: Medium priority, normal queue.
+- name: 'p3'
+  color: 'c2e0c6'
+  description: Low priority, nice to have.
+
 # Where in the product. Applied during triage from the issue forms' `area`
 # dropdown, whose options come from frontend/src/tiles/registry.ts.
 - name: 'area:ui'

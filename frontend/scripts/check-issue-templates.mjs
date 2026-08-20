@@ -44,6 +44,8 @@ for (const [label, target] of [
 const problems = []
 const fail = (file, message) => problems.push({ file, message })
 
+const WORKFLOW = path.join(GITHUB_DIR, 'workflows', 'issue-priority.yml')
+
 function load(file, full) {
   try {
     return parse(readFileSync(full, 'utf8'))
@@ -120,6 +122,8 @@ if (files.includes('config.yml')) {
 // 3 — the forms themselves.
 let fieldCount = 0
 const areaOptions = new Map()
+const priorityField = new Map()
+const filesWork = new Set()
 
 for (const file of forms) {
   const doc = load(file, path.join(TEMPLATE_DIR, file))
@@ -135,6 +139,7 @@ for (const file of forms) {
     if (!declaredLabels.has(label)) {
       fail(file, `applies label "${label}", which labels.yml does not declare`)
     }
+    if (label.startsWith('type:')) filesWork.add(file)
   }
 
   if (!Array.isArray(doc.body) || doc.body.length === 0) {
@@ -180,6 +185,8 @@ for (const file of forms) {
         fail(file, `${where} (${el.id}) is a dropdown with no options`)
       } else if (el.id === 'area') {
         areaOptions.set(file, attrs.options)
+      } else if (el.id === 'priority') {
+        priorityField.set(file, el)
       }
     }
 
@@ -209,6 +216,107 @@ if (areaOptions.size > 1) {
   }
 }
 
+// 5 — the priority field, and the workflow that reads it back out.
+//
+// A form applies only the static `labels:` in its front matter, so the priority
+// answer is body text until .github/workflows/issue-priority.yml turns it into a
+// label. That makes the two files one mechanism split across two, joined by strings:
+// the field's `label:` becomes the heading the workflow greps for, and each option's
+// leading token is the key it matches. Either drifting leaves a form that still asks
+// the question and a workflow that no longer recognises any answer — which fails
+// silently, and looks fine in review.
+//
+// Checked against each other rather than against kollektiv's design/labels.json,
+// which is not on disk here. Whether these values still match the suite's is
+// scripts/sync-priority.sh --check's finding, in the one checkout holding both
+// sides; this is the half that can be verified in the product, which is where the
+// pre-merge gate has to run.
+{
+  const workflow = existsSync(WORKFLOW) ? readFileSync(WORKFLOW, 'utf8') : null
+
+  if (workflow === null) {
+    fail(
+      'workflows/issue-priority.yml',
+      'is missing, so nothing turns a priority answer into a label — vendor it with ' +
+        "kollektiv's scripts/sync-priority.sh",
+    )
+  }
+
+  const heading = workflow?.match(/^\s*HEADING:\s*'(.+)'\s*$/m)?.[1]
+  const mapBlock = workflow?.match(
+    /# >>> suite:priority-map\n[ \t]*PRIORITY_MAP: \|\n((?:.*\n)*?)[ \t]*# <<< suite:priority-map/,
+  )?.[1]
+  const map = new Map(
+    (mapBlock ?? '')
+      .split('\n')
+      .map((line) => line.trim().split(/\s+/))
+      .filter(([key, label]) => key && label)
+      .map(([key, label]) => [key, label]),
+  )
+
+  if (workflow !== null) {
+    if (heading === undefined) {
+      fail('workflows/issue-priority.yml', 'has no quoted HEADING, so it reads no field')
+    }
+    if (map.size === 0) {
+      fail('workflows/issue-priority.yml', 'has no suite:priority-map entries')
+    }
+    for (const label of map.values()) {
+      if (!declaredLabels.has(label)) {
+        fail(
+          'workflows/issue-priority.yml',
+          `maps an answer to "${label}", which labels.yml does not declare — GitHub would ` +
+            'invent it in default grey rather than erroring',
+        )
+      }
+    }
+  }
+
+  for (const file of forms) {
+    const el = priorityField.get(file)
+
+    if (!filesWork.has(file)) {
+      // A form with no type: label is not filing a work item, so it carries no
+      // priority — question.yml, deliberately. Flag the reverse, which is a form
+      // asking for a priority nothing will sort by.
+      if (el) fail(file, 'has a priority field but applies no type: label')
+      continue
+    }
+
+    if (!el) {
+      fail(
+        file,
+        "applies a type: label but has no priority field — splice it in with kollektiv's " +
+          'scripts/sync-priority.sh',
+      )
+      continue
+    }
+
+    if (el.validations?.required !== true) {
+      fail(file, 'its priority field is optional, so an issue can arrive with no priority at all')
+    }
+
+    if (heading !== undefined && el.attributes.label !== heading) {
+      fail(
+        file,
+        `its priority field is labelled "${el.attributes.label}" but ` +
+          `workflows/issue-priority.yml reads "${heading}"`,
+      )
+    }
+
+    for (const option of el.attributes.options ?? []) {
+      const key = String(option).trim().split(/\s+/)[0]
+      if (map.size > 0 && !map.has(key)) {
+        fail(
+          file,
+          `its priority option "${option}" starts with "${key}", which ` +
+            'workflows/issue-priority.yml does not map to any label',
+        )
+      }
+    }
+  }
+}
+
 if (problems.length > 0) {
   console.error(`\n✖ check-issue-templates: ${problems.length} problem(s) in .github/\n`)
   for (const { file, message } of problems) console.error(`  ${file}: ${message}`)
@@ -218,5 +326,5 @@ if (problems.length > 0) {
 
 console.log(
   `✓ .github/ISSUE_TEMPLATE: ${forms.length} forms, ${fieldCount} fields, ` +
-    `${declaredLabels.size} declared labels — all valid.`,
+    `${declaredLabels.size} declared labels, ${priorityField.size} priority fields — all valid.`,
 )

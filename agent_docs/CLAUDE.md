@@ -139,6 +139,25 @@ this repo's GitHub Issues into the Apps team's Konnekt project and matching on a
 `Source: kollektiv-mc/konnekt#<number>` line in the Linear issue description
 rather than on titles. Never write to Linear directly from this repo.
 
+**Every issue carries exactly one priority label**, `p0` through `p3`. No label is
+not a neutral middle: it mirrors into Linear as priority None, which sorts below
+`p3` and is indistinguishable from nobody wanting the work done. When you open an
+issue, apply the label **in the same call** that creates it, chosen against the
+rubric in kollektiv's `docs/conventions.md` § Priority. Unsure is `p2`, never
+nothing.
+
+The issue forms collect this from whoever files, and
+`.github/workflows/issue-priority.yml` turns their answer into the label. That path
+does not cover an issue opened through the API, which is how an agent opens one, so
+the same workflow comments on any issue that arrives without a priority. `p0` is
+maintainer-only and is not on the forms at all.
+
+The forms' `priority` field and that workflow are **vendored** from kollektiv by
+its `scripts/sync-priority.sh` and generated from its `design/labels.json`. Editing
+either here is reverted by the next sync, exactly like `tokens.source.json` and
+`.claude/suite-check.py`. `pnpm check-issue-templates` checks that the field and the
+workflow still agree with each other in this repo.
+
 ## Commits & pull requests
 
 Merged PR titles become the release notes, so a title is public copy, not a
@@ -227,6 +246,9 @@ during alpha.
 ## Do not
 
 - Do not edit files under `frontend/wailsjs/` — they are auto-generated
+- Do not edit the `priority` field between its `suite:priority` markers in
+  `.github/ISSUE_TEMPLATE/`, or `.github/workflows/issue-priority.yml` — both are
+  vendored from kollektiv (see Task tracking)
 - Do not call OS or filesystem operations from frontend TypeScript
 - Do not use `localStorage` or `sessionStorage` — persist via Go file I/O
   writing JSON to the Wails app data directory

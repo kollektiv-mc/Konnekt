@@ -9,6 +9,12 @@
 # /issues/new?template=bug_report.yml&app-version=...&os=... Renaming an id
 # silently breaks that prefill.
 #
+# The `priority` field near the bottom is not written here. It is spliced in between
+# its markers by kollektiv's scripts/sync-priority.sh, generated from that repo's
+# design/labels.json, and .github/workflows/issue-priority.yml turns the answer into
+# a p* label. Editing it in place is reverted by the next sync. Its `label:` text is
+# what that workflow matches on, so it is load-bearing in a way the rest is not.
+#
 # The `area` options are the tile labels from frontend/src/tiles/registry.ts and
 # the `loader` options are the values in backend/models/server.go's Loader
 # comment. Keep them in step with those two files.
@@ -167,6 +173,20 @@ body:
         Leave this blank if you did not see anything. Please do not paste your `server.properties`
         file, because it contains your RCON password.
       render: shell
+
+  # >>> suite:priority. Vendored from kollektiv by scripts/sync-priority.sh. Edit it there.
+  - type: dropdown
+    id: priority
+    attributes:
+      label: How urgent is this for you?
+      description: Your honest read. Triage may change it, and that is normal.
+      options:
+        - 'Blocking: I cannot use it and have no way around it'
+        - 'Significant: it costs me real time, but I can work around it'
+        - 'Minor: it would be nice, but it is not in my way'
+    validations:
+      required: true
+  # <<< suite:priority
 
   - type: textarea
     id: extra
