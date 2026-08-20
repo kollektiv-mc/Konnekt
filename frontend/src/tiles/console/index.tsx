@@ -217,7 +217,7 @@ export function ConsoleTile({ serverId, maximized }: TileProps) {
       {consoleColumn}
       {quickCommandsCollapsed ? (
         <button
-          onClick={() => updateSettings({ consoleQuickCommandsCollapsed: false })}
+          onClick={() => updateSettings({ consoleQuickCommandsCollapsed: false }).catch(() => {})}
           className="border-border-subtle text-text-faint hover:text-text-secondary border-l-hairline flex w-6 shrink-0 items-center justify-center transition-colors"
           title="Show quick commands"
         >
@@ -228,7 +228,9 @@ export function ConsoleTile({ serverId, maximized }: TileProps) {
           <div className="border-border-subtle border-b-hairline flex shrink-0 items-center justify-between px-3 py-2">
             <span className="text-text-secondary font-title text-xs font-medium">Commands</span>
             <button
-              onClick={() => updateSettings({ consoleQuickCommandsCollapsed: true })}
+              onClick={() =>
+                updateSettings({ consoleQuickCommandsCollapsed: true }).catch(() => {})
+              }
               className="text-text-faint hover:text-text-secondary text-xs transition-colors"
               title="Hide quick commands"
             >

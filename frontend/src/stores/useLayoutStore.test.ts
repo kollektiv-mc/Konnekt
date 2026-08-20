@@ -10,15 +10,25 @@ function layoutStr(id: string): string {
   return JSON.stringify([{ i: id, x: 0, y: 0, w: 1, h: 1 }])
 }
 
+// jsdom has no window.go, so `hasWailsBridge()` is false by default — the
+// `frontend-dev` preview case. Attach a stub for the real-rejection path.
+const attachBridge = () => Object.assign(window, { go: {} })
+
 describe('useLayoutStore', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    Reflect.deleteProperty(window, 'go')
     vi.mocked(App.GetActiveLayout).mockResolvedValue('')
     vi.mocked(App.GetLayoutPresets).mockResolvedValue([])
     vi.mocked(App.SaveActiveLayout).mockResolvedValue(undefined)
     vi.mocked(App.SaveLayoutPreset).mockResolvedValue(undefined)
     vi.mocked(App.DeleteLayoutPreset).mockResolvedValue(undefined)
-    useLayoutStore.setState({ presets: [], activePresetName: 'Default', currentLayout: [] })
+    useLayoutStore.setState({
+      presets: [],
+      activePresetName: 'Default',
+      currentLayout: [],
+      error: null,
+    })
   })
 
   describe('loadPresets', () => {
@@ -129,6 +139,32 @@ describe('useLayoutStore', () => {
         { name: 'B', layout: layoutStr('b') },
       ])
     })
+
+    it('does not list the preset and records the error when the backend rejects', async () => {
+      attachBridge()
+      useLayoutStore.setState({
+        presets: [{ name: 'A', layout: layoutStr('a') }],
+        activePresetName: 'A',
+        currentLayout: [{ i: 'b', x: 0, y: 0, w: 1, h: 1 } as LayoutItem],
+      })
+      vi.mocked(App.SaveLayoutPreset).mockRejectedValue(new Error('disk full'))
+      await expect(useLayoutStore.getState().savePreset('B')).rejects.toThrow('disk full')
+      const { presets, activePresetName, error } = useLayoutStore.getState()
+      expect(presets.map((p) => p.name)).toEqual(['A'])
+      expect(activePresetName).toBe('A')
+      expect(error).toBe('disk full')
+    })
+
+    it('still lists the preset when there is no Wails bridge to save to', async () => {
+      useLayoutStore.setState({
+        presets: [],
+        currentLayout: [{ i: 'b', x: 0, y: 0, w: 1, h: 1 } as LayoutItem],
+      })
+      vi.mocked(App.SaveLayoutPreset).mockRejectedValue(new Error('no wails bridge'))
+      await useLayoutStore.getState().savePreset('B')
+      expect(useLayoutStore.getState().presets.map((p) => p.name)).toEqual(['B'])
+      expect(useLayoutStore.getState().error).toBeNull()
+    })
   })
 
   describe('loadPreset', () => {
@@ -192,6 +228,22 @@ describe('useLayoutStore', () => {
       await useLayoutStore.getState().deletePreset('A')
       expect(useLayoutStore.getState().activePresetName).toBe('')
     })
+
+    it('keeps the preset listed and records the error when the backend rejects', async () => {
+      attachBridge()
+      useLayoutStore.setState({
+        presets: [
+          { name: 'A', layout: layoutStr('a') },
+          { name: 'B', layout: layoutStr('b') },
+        ],
+        activePresetName: 'A',
+      })
+      vi.mocked(App.DeleteLayoutPreset).mockRejectedValue(new Error('file in use'))
+      await expect(useLayoutStore.getState().deletePreset('A')).rejects.toThrow('file in use')
+      expect(useLayoutStore.getState().presets.map((p) => p.name)).toEqual(['A', 'B'])
+      expect(useLayoutStore.getState().activePresetName).toBe('A')
+      expect(useLayoutStore.getState().error).toBe('file in use')
+    })
   })
 
   describe('updateLayout', () => {
@@ -212,6 +264,18 @@ describe('useLayoutStore', () => {
       const layout = [{ i: 'y', x: 0, y: 0, w: 1, h: 1 } as LayoutItem]
       expect(() => useLayoutStore.getState().updateLayout(layout)).not.toThrow()
       expect(useLayoutStore.getState().currentLayout).toEqual(layout)
+    })
+
+    // Records rather than reverts: the layout on screen is what the user just
+    // arranged by hand, and react-grid-layout drives this from a drag callback
+    // that cannot await, so there is nothing to roll back into.
+    it('keeps the arranged layout and records the error when the backend rejects', async () => {
+      attachBridge()
+      vi.mocked(App.SaveActiveLayout).mockRejectedValue(new Error('disk full'))
+      const layout = [{ i: 'z', x: 0, y: 0, w: 1, h: 1 } as LayoutItem]
+      useLayoutStore.getState().updateLayout(layout)
+      expect(useLayoutStore.getState().currentLayout).toEqual(layout)
+      await vi.waitFor(() => expect(useLayoutStore.getState().error).toBe('disk full'))
     })
   })
 })

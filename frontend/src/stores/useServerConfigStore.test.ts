@@ -9,10 +9,20 @@ function cfg(id: string, name = id): ServerConfig {
   return { id, name, jarPath: '', jvmArgs: [], workingDir: '', mcVersion: '1.21', loader: 'paper' }
 }
 
+// jsdom has no window.go, so `hasWailsBridge()` is false by default — the
+// `frontend-dev` preview case. Attach a stub for the real-rejection path.
+const attachBridge = () => Object.assign(window, { go: {} })
+
 describe('useServerConfigStore', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    useServerConfigStore.setState({ configs: [], activeId: '' })
+    // clearAllMocks() resets calls, not implementations, so a rejection armed by
+    // one test would still be armed in the next.
+    vi.mocked(App.SaveServerConfig).mockResolvedValue(undefined)
+    vi.mocked(App.DeleteServerConfig).mockResolvedValue(undefined)
+    vi.mocked(App.SetActiveServerID).mockResolvedValue(undefined)
+    Reflect.deleteProperty(window, 'go')
+    useServerConfigStore.setState({ configs: [], activeId: '', error: null })
   })
 
   describe('loadConfigs', () => {
@@ -76,6 +86,35 @@ describe('useServerConfigStore', () => {
       await useServerConfigStore.getState().saveConfig(cfg('b'))
       expect(useServerConfigStore.getState().activeId).toBe('a')
     })
+
+    // The config carries the working directory, the JVM args and the RCON
+    // credentials, and nothing else in the app holds a copy. Showing a refused
+    // write as applied loses all of it at the next start with no error anywhere
+    // (HEALTH_LOG.md, 2026-08-20).
+    it('does not apply the edit and records the error when the backend rejects', async () => {
+      attachBridge()
+      useServerConfigStore.setState({ configs: [cfg('a', 'Old Name')], activeId: 'a' })
+      vi.mocked(App.SaveServerConfig).mockRejectedValue(new Error('permission denied'))
+      await expect(
+        useServerConfigStore.getState().saveConfig(cfg('a', 'New Name')),
+      ).rejects.toThrow('permission denied')
+      expect(useServerConfigStore.getState().configs).toEqual([cfg('a', 'Old Name')])
+      expect(useServerConfigStore.getState().error).toBe('permission denied')
+    })
+
+    it('keeps the config in memory when there is no Wails bridge to save to', async () => {
+      vi.mocked(App.SaveServerConfig).mockRejectedValue(new Error('no wails bridge'))
+      await useServerConfigStore.getState().saveConfig(cfg('a'))
+      expect(useServerConfigStore.getState().configs).toEqual([cfg('a')])
+      expect(useServerConfigStore.getState().error).toBeNull()
+    })
+
+    it('clears a stale error after a later save succeeds', async () => {
+      attachBridge()
+      useServerConfigStore.setState({ error: 'permission denied' })
+      await useServerConfigStore.getState().saveConfig(cfg('a'))
+      expect(useServerConfigStore.getState().error).toBeNull()
+    })
   })
 
   describe('deleteConfig', () => {
@@ -98,6 +137,16 @@ describe('useServerConfigStore', () => {
       await useServerConfigStore.getState().deleteConfig('a')
       expect(useServerConfigStore.getState().activeId).toBe('')
     })
+
+    it('keeps the config listed and records the error when the backend rejects', async () => {
+      attachBridge()
+      useServerConfigStore.setState({ configs: [cfg('a'), cfg('b')], activeId: 'a' })
+      vi.mocked(App.DeleteServerConfig).mockRejectedValue(new Error('file in use'))
+      await expect(useServerConfigStore.getState().deleteConfig('a')).rejects.toThrow('file in use')
+      expect(useServerConfigStore.getState().configs).toEqual([cfg('a'), cfg('b')])
+      expect(useServerConfigStore.getState().activeId).toBe('a')
+      expect(useServerConfigStore.getState().error).toBe('file in use')
+    })
   })
 
   describe('setActiveId', () => {
@@ -105,6 +154,15 @@ describe('useServerConfigStore', () => {
       await useServerConfigStore.getState().setActiveId('c')
       expect(useServerConfigStore.getState().activeId).toBe('c')
       expect(App.SetActiveServerID).toHaveBeenCalledWith('c')
+    })
+
+    it('keeps the previous active id and records the error when the backend rejects', async () => {
+      attachBridge()
+      useServerConfigStore.setState({ configs: [cfg('a'), cfg('b')], activeId: 'a' })
+      vi.mocked(App.SetActiveServerID).mockRejectedValue(new Error('disk full'))
+      await expect(useServerConfigStore.getState().setActiveId('b')).rejects.toThrow('disk full')
+      expect(useServerConfigStore.getState().activeId).toBe('a')
+      expect(useServerConfigStore.getState().error).toBe('disk full')
     })
   })
 })

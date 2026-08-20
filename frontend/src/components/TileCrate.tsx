@@ -17,6 +17,17 @@ function resolveGroup(order: readonly string[], ids: ReadonlySet<string>): TileD
     .filter((t): t is TileDefinition => t !== undefined)
 }
 
+// Committing a crate reorder. `update` reverts `crateOrder` itself if the write
+// is refused, and the next render reads the reverted value back, so there is
+// nothing to undo here — this only keeps a mouse handler from raising an
+// unhandled rejection.
+function persistCrateOrder(order: string[]) {
+  useSettingsStore
+    .getState()
+    .update({ crateOrder: order })
+    .catch(() => {})
+}
+
 interface Press {
   tile: TileDefinition
   group: ReadonlySet<string>
@@ -66,16 +77,26 @@ export function TileCrate() {
     // Utility tile: never fullscreen. Close any open fullscreen, then add it to
     // the canvas (best available spot) if absent, and flash it green.
     requestCloseMaximize()
-    if (!activeTileIds.includes(tile.id)) addTile(tile.id)
-    flashTile(tile.id)
+    place(tile)
   }
 
   // Shift-click: skip maximize entirely and add straight to the canvas — the
   // quick way to place a module tile without dragging it.
   const handleShiftClick = (tile: TileDefinition) => {
     requestCloseMaximize()
-    if (!activeTileIds.includes(tile.id)) addTile(tile.id)
-    flashTile(tile.id)
+    place(tile)
+  }
+
+  // A refused `addTile` leaves the crate as it was, so the flash would announce
+  // a placement that did not happen.
+  const place = (tile: TileDefinition) => {
+    if (activeTileIds.includes(tile.id)) {
+      flashTile(tile.id)
+      return
+    }
+    addTile(tile.id)
+      .then(() => flashTile(tile.id))
+      .catch(() => {})
   }
 
   const press = useRef<Press | null>(null)
@@ -125,7 +146,7 @@ export function TileCrate() {
         setDraggingTileId(p.tile.id)
         // Freeze whatever reordering happened before the tile left the crate
         // — Dashboard's own listeners take over the canvas-drop from here.
-        if (p.liveOrder) useSettingsStore.getState().update({ crateOrder: p.liveOrder })
+        if (p.liveOrder) persistCrateOrder(p.liveOrder)
       }
       p.mode = 'canvas'
     }
@@ -144,7 +165,7 @@ export function TileCrate() {
       return
     }
     if (p.mode === 'reorder' && p.liveOrder) {
-      useSettingsStore.getState().update({ crateOrder: p.liveOrder })
+      persistCrateOrder(p.liveOrder)
     }
     // mode === 'canvas': Dashboard's own mouseup handler performs the drop
     // and clears draggingTileId; nothing left to do here.

@@ -3,6 +3,7 @@ import type { LayoutItem } from 'react-grid-layout'
 import type { LayoutPreset } from '../types'
 import { DEFAULT_LAYOUT_PRESETS, COLS } from '../lib/constants'
 import { GRID_COMPACTOR } from '../lib/gridSizing'
+import { errMsg, hasWailsBridge } from '../lib/ipc'
 import {
   GetLayoutPresets,
   SaveLayoutPreset,
@@ -41,11 +42,24 @@ function compacted(layout: readonly LayoutItem[]): LayoutItem[] {
 
 // Persist the current on-screen layout independently of named presets, so
 // drags/resizes/removals survive a restart without overwriting the templates.
-async function persistActiveLayout(layout: readonly LayoutItem[]) {
+//
+// Records the failure rather than rethrowing: the only callers are `loadPreset`
+// and `updateLayout`, both of which return void because react-grid-layout drives
+// them from a drag/resize callback that cannot await. There is nothing to revert
+// either — the layout on screen is what the user just arranged by hand, and
+// snapping it back under them would be worse than a stale file.
+// Stays `async` with the call inside the `try`: with no bridge the generated
+// binding throws synchronously rather than rejecting, so a bare `.catch()` on
+// the returned promise would never see it.
+async function persistActiveLayout(
+  set: (partial: Partial<LayoutStore>) => void,
+  layout: readonly LayoutItem[],
+) {
   try {
     await SaveActiveLayout(JSON.stringify(layout))
-  } catch {
-    /* Wails IPC unavailable */
+  } catch (e) {
+    if (hasWailsBridge()) set({ error: errMsg(e) })
+    /* No bridge: nothing to persist to. */
   }
 }
 
@@ -53,17 +67,20 @@ interface LayoutStore {
   presets: LayoutPreset[]
   activePresetName: string
   currentLayout: LayoutItem[]
+  error: string | null
   loadPresets: () => Promise<void>
   savePreset: (name: string) => Promise<void>
   loadPreset: (name: string) => void
   deletePreset: (name: string) => Promise<void>
   updateLayout: (layout: readonly LayoutItem[]) => void
+  clearError: () => void
 }
 
 export const useLayoutStore = create<LayoutStore>((set, get) => ({
   presets: [],
   activePresetName: 'Default',
   currentLayout: [],
+  error: null,
 
   loadPresets: async () => {
     let remote: LayoutPreset[] = []
@@ -102,10 +119,15 @@ export const useLayoutStore = create<LayoutStore>((set, get) => ({
   savePreset: async (name: string) => {
     const { currentLayout } = get()
     const layoutStr = JSON.stringify(currentLayout)
+    set({ error: null })
     try {
       await SaveLayoutPreset(name, layoutStr)
-    } catch {
-      /* best-effort */
+    } catch (e) {
+      if (hasWailsBridge()) {
+        set({ error: errMsg(e) })
+        throw e
+      }
+      /* No bridge: nothing to persist to. */
     }
     const updated: LayoutPreset = { name, layout: layoutStr }
     set((s) => {
@@ -122,14 +144,19 @@ export const useLayoutStore = create<LayoutStore>((set, get) => ({
     if (!preset) return
     const layout = compacted(JSON.parse(preset.layout))
     set({ activePresetName: name, currentLayout: layout })
-    persistActiveLayout(layout)
+    persistActiveLayout(set, layout)
   },
 
   deletePreset: async (name: string) => {
+    set({ error: null })
     try {
       await DeleteLayoutPreset(name)
-    } catch {
-      /* best-effort */
+    } catch (e) {
+      if (hasWailsBridge()) {
+        set({ error: errMsg(e) })
+        throw e
+      }
+      /* No bridge: nothing to persist to. */
     }
     set((s) => {
       const presets = s.presets.filter((p) => p.name !== name)
@@ -146,6 +173,8 @@ export const useLayoutStore = create<LayoutStore>((set, get) => ({
 
   updateLayout: (layout: readonly LayoutItem[]) => {
     set({ currentLayout: layout as LayoutItem[] })
-    persistActiveLayout(layout)
+    persistActiveLayout(set, layout)
   },
+
+  clearError: () => set({ error: null }),
 }))

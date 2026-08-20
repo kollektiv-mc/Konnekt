@@ -62,7 +62,7 @@ function configToForm(cfg: ServerConfig): FormState {
 }
 
 export function ServerSelector() {
-  const { configs, activeId, loadConfigs, saveConfig, deleteConfig, setActiveId } =
+  const { configs, activeId, error, loadConfigs, saveConfig, deleteConfig, setActiveId } =
     useServerConfigStore()
   const [editing, setEditing] = useState<string | null>(null)
   const [form, setForm] = useState<FormState>(emptyForm)
@@ -164,10 +164,18 @@ export function ServerSelector() {
     }
   }
 
+  // A refused write leaves the editor open with the store's message under it.
+  // Closing it would show the edit as saved and lose it: the form holds the
+  // working directory, the JVM args and the RCON credentials, and nothing else
+  // in the app carries a copy.
   const submit = async () => {
     const cfg = buildConfig()
     if (!cfg) return
-    await saveConfig(cfg)
+    try {
+      await saveConfig(cfg)
+    } catch {
+      return
+    }
     setInstalled(null)
     setEditing(null)
   }
@@ -183,16 +191,33 @@ export function ServerSelector() {
       name: form.name.trim() || baseOf(installed.targetDir),
     })
     if (!cfg) return
-    await saveConfig(cfg)
-    await setActiveId(cfg.id)
+    try {
+      await saveConfig(cfg)
+      await setActiveId(cfg.id)
+    } catch {
+      // Keep the install modal up: it covers the sidebar, so dismissing it on a
+      // failed save would hide both the error and the form that could retry it.
+      return
+    }
     setInstalled(null)
     setInstaller(null)
     setEditing(null)
   }
 
   const handleDisconnect = async (id: string) => {
-    await deleteConfig(id)
+    try {
+      await deleteConfig(id)
+    } catch {
+      // Leave the confirm dialog open — the server is still connected.
+      return
+    }
     setPendingDisconnect(null)
+  }
+
+  const selectServer = (id: string) => {
+    // Selecting is idempotent and re-selectable, so there is nothing to revert;
+    // `error` renders below the list.
+    setActiveId(id).catch(() => {})
   }
 
   const dirOf = (filePath: string) => {
@@ -334,11 +359,22 @@ export function ServerSelector() {
           key={cfg.id}
           cfg={cfg}
           active={cfg.id === activeId}
-          onSelect={() => setActiveId(cfg.id)}
+          onSelect={() => selectServer(cfg.id)}
           onEdit={() => openEdit(cfg)}
           onDisconnect={() => setPendingDisconnect(cfg.id)}
         />
       ))}
+
+      {/* Sits outside the editor so a refused delete or select is visible too,
+          not only a refused save. */}
+      {error && (
+        <div
+          role="alert"
+          className="text-danger border-danger/20 bg-danger/10 border-hairline mt-1 rounded px-2 py-1 font-mono text-xs"
+        >
+          {error}
+        </div>
+      )}
 
       {editing !== null ? (
         <div className="border-border-subtle border-t-hairline mt-1 flex flex-col gap-1.5 pt-2">
