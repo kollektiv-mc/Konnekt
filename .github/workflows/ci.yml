@@ -187,6 +187,21 @@ jobs:
       - name: Invariants and generated files
         run: ./.claude/suite-check.py --section invariants --section generated --require-runnable
 
+      # Issue forms are the one user-facing surface in the repo that nothing
+      # else here opens: `pnpm format:check` runs from frontend/ and
+      # `format:website` from website/, so .github/ was never read by a gate.
+      # GitHub reports a broken form nowhere except /issues/new/choose, where it
+      # simply stops appearing, and it silently ignores a label a form asks for
+      # but the repo does not have. Both fail without anyone noticing.
+      #
+      # In this job rather than `frontend` (not app code) or `website` (not the
+      # website) because it is a repo-level check, and this job already installs
+      # the frontend's dependencies for the `generated` section above, which is
+      # what the script's YAML parser needs.
+      - name: Issue templates are valid
+        run: pnpm check-issue-templates
+        working-directory: frontend
+
   backend:
     runs-on: windows-latest
     steps:

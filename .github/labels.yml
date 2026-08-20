@@ -1,0 +1,87 @@
+# The label vocabulary this repo's tooling relies on.
+#
+# This file is a *declaration*, not a mirror: GitHub holds the live state and
+# nothing syncs this to it. It exists so the labels the issue forms apply are
+# reviewable in a diff, and so frontend/scripts/check-issue-templates.mjs can
+# fail a template that references a label which does not exist. That failure is
+# worth catching because GitHub silently ignores an unknown label rather than
+# erroring, so a typo means the label quietly never gets applied and triage
+# breaks with no signal at all.
+#
+# Only labels something depends on are listed. GitHub's remaining stock labels
+# (duplicate, good first issue, help wanted, invalid, wontfix) still exist on
+# the repo and are fine to use by hand; they are left out because no template,
+# workflow or script names them.
+
+# Sorts a merged pull request into a release-notes section. Required on every
+# pull request by CI's `pr-labelled` job, and read by
+# .github/scripts/release-notes.py and .github/release.yml. The issue forms
+# apply type:bug and type:feature on creation.
+- name: 'type:bug'
+  color: 'ededed'
+  description: Something is broken.
+- name: 'type:feature'
+  color: 'ededed'
+  description: New capability a user can observe.
+- name: 'type:docs'
+  color: 'ededed'
+  description: Documentation only. Counted in the release-notes footer, not listed.
+- name: 'type:chore'
+  color: 'ededed'
+  description: Maintenance. Counted in the release-notes footer, not listed.
+
+# Where in the product. Applied during triage from the issue forms' `area`
+# dropdown, whose options come from frontend/src/tiles/registry.ts.
+- name: 'area:ui'
+  color: 'ededed'
+  description: Frontend, tiles, layout.
+- name: 'area:agents'
+  color: 'ededed'
+  description: Agent configuration, .claude/, agent_docs/.
+
+# Which milestone in agent_docs/ROADMAP.md the work belongs to. Drives which
+# Linear milestone a mirrored issue lands in.
+- name: 'milestone:beta'
+  color: 'ededed'
+  description: Beta scope.
+- name: 'milestone:remote-access'
+  color: 'ededed'
+  description: Remote Access scope.
+
+# Triage state. Every issue form applies status:needs-triage on creation; the
+# other two are set by a maintainer. Coloured, unlike most of the set above,
+# because triage state is the one thing worth spotting at a glance in a list.
+- name: 'status:needs-triage'
+  color: 'fbca04'
+  description: Newly filed. Not yet reproduced, deduplicated or scoped.
+- name: 'status:needs-info'
+  color: 'c5def5'
+  description: Waiting on the reporter for something before it can go further.
+- name: 'status:confirmed'
+  color: '0e8a16'
+  description: Reproduced or accepted, and in scope. Ready to be worked on.
+
+# Applied by the Question issue form. GitHub stock label, used rather than a
+# `type:` one on purpose: the `type:` prefix drives the changelog categories and
+# the pr-labelled gate, and a question belongs in neither.
+- name: 'question'
+  color: 'd876e3'
+  description: Further information is requested
+
+- name: 'changelog:skip'
+  color: '8792a2'
+  description: Leave this pull request out of the release notes entirely.
+
+# GitHub stock labels that predate the type: scheme and duplicate it on issues
+# #52 and #53. .github/release.yml deliberately maps both spellings in its
+# fallback path, so retiring them means editing that file too. Left declared
+# until that cleanup happens.
+- name: 'bug'
+  color: 'd73a4a'
+  description: Something isn't working
+- name: 'enhancement'
+  color: 'a2eeef'
+  description: New feature or request
+- name: 'documentation'
+  color: '0075ca'
+  description: Improvements or additions to documentation

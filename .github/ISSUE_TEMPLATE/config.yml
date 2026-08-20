@@ -1,0 +1,26 @@
+# The chooser shown at /issues/new/choose.
+#
+# Blank issues are off, so every route into the tracker goes through a form and
+# a report arrives with a version, an OS and an area already attached instead of
+# as one line of prose. The Question form is what replaces the blank box: with
+# both it and blank issues gone, someone who cannot tell a bug from a
+# misunderstanding has nowhere to go, and simply does not file.
+#
+# contact_links are the cards shown beside the forms. They route the three
+# things that should never arrive as an untriaged issue: a vulnerability, a
+# question the docs already answer, and a request against something already
+# decided.
+blank_issues_enabled: false
+
+contact_links:
+  - name: Report a security vulnerability
+    url: https://github.com/kollektiv-mc/Konnekt/security/advisories/new
+    about: Report it privately through GitHub. Please do not open a public issue for a security problem.
+
+  - name: Docs and FAQ
+    url: https://konnekt.pages.dev/docs.html#faq
+    about: Requirements, platform support, building from source, and the questions that come up most.
+
+  - name: Roadmap
+    url: https://konnekt.pages.dev/roadmap.html
+    about: What has shipped, what is planned for Beta, and what is deliberately out of scope.

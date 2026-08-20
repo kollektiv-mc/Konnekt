@@ -1,0 +1,51 @@
+# The escape hatch. Blank issues are off (see config.yml), so without this form
+# anyone whose problem is not cleanly a bug or a feature has no way in at all,
+# and the usual outcome is that they file nothing.
+#
+# Labelled with the stock `question` label rather than a `type:` one on purpose:
+# the `type:` prefix drives .github/release.yml's changelog categories and CI's
+# pr-labelled gate, and a question has no business in either.
+name: Question or something else
+description: Ask for help, or report something that is not clearly a bug or a feature request
+title: '[Question]: '
+labels: ['question', 'status:needs-triage']
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        The [docs and FAQ](https://konnekt.pages.dev/docs.html#faq) cover setup, platform support
+        and building from source, so they are worth a quick look first. If they do not answer it,
+        ask here. A question that turns out to be a gap in the docs is a useful thing to receive.
+
+  - type: textarea
+    id: question
+    attributes:
+      label: What do you need help with?
+      description: As much or as little detail as you have.
+    validations:
+      required: true
+
+  - type: input
+    id: app-version
+    attributes:
+      label: Which version of Konnekt?
+      description: Settings, then About. Leave blank if it is not relevant.
+      placeholder: 0.1.0
+
+  - type: dropdown
+    id: os
+    attributes:
+      label: Which operating system?
+      options:
+        - Windows
+        - macOS
+        - Linux (Fedora or RHEL, installed from the .rpm)
+        - Linux (other)
+        - Not sure
+
+  - type: textarea
+    id: extra
+    attributes:
+      label: Anything else?
+      description: Screenshots help. Drag them straight into this box.
