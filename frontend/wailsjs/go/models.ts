@@ -541,6 +541,24 @@ export namespace models {
 		    return a;
 		}
 	}
+	export class ModUpdateInfo {
+	    fileName: string;
+	    updateAvailable: boolean;
+	    latestVersionId: string;
+	    latestVersionNumber: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new ModUpdateInfo(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.fileName = source["fileName"];
+	        this.updateAvailable = source["updateAvailable"];
+	        this.latestVersionId = source["latestVersionId"];
+	        this.latestVersionNumber = source["latestVersionNumber"];
+	    }
+	}
 	export class ModVersion {
 	    id: string;
 	    projectId: string;

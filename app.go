@@ -641,7 +641,7 @@ func (a *App) ModMoreByAuthor(serverID, username, excludeProjectID string) ([]mo
 	return a.modService.MoreByAuthor(serverID, username, excludeProjectID)
 }
 
-func (a *App) ModCheckUpdates(serverID string) (map[string]models.ModUpdateInfo, error) {
+func (a *App) ModCheckUpdates(serverID string) ([]models.ModUpdateInfo, error) {
 	return a.modService.CheckUpdates(serverID)
 }
 
