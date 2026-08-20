@@ -2,16 +2,37 @@ package main
 
 import (
 	"embed"
+	"log/slog"
 
 	"github.com/wailsapp/wails/v2"
+	"github.com/wailsapp/wails/v2/pkg/logger"
 	"github.com/wailsapp/wails/v2/pkg/options"
 	"github.com/wailsapp/wails/v2/pkg/options/assetserver"
+	"konnekt/backend/services"
 )
 
 //go:embed all:frontend/dist
 var assets embed.FS
 
 func main() {
+	// Before wails.Run, so a failure to start the window is itself logged
+	// somewhere retrievable. A packaged GUI build has no terminal attached, and
+	// this used to be a bare println into nothing.
+	dataDir := services.DataDir()
+	log, logErr := services.InitLogger(dataDir)
+	defer func() {
+		if err := services.CloseLogger(); err != nil {
+			log.Error("close log file", "error", err)
+		}
+	}()
+	if logErr != nil {
+		// Non-fatal by design: the logger falls back to stderr and the app still
+		// starts on a read-only data dir. Recorded so the degradation is visible
+		// rather than assumed.
+		log.Warn("file logging unavailable", "error", logErr)
+	}
+	log.Info("starting", "version", Version, "dataDir", dataDir)
+
 	app := NewApp()
 
 	err := wails.Run(&options.App{
@@ -24,14 +45,34 @@ func main() {
 			Assets: assets,
 		},
 		BackgroundColour: &options.RGBA{R: 5, G: 6, B: 10, A: 255},
-		OnStartup:        app.startup,
-		OnBeforeClose:    app.beforeClose,
+		// Wails' own runtime logging (asset server, bindings, IPC) joins the same
+		// file instead of a stdout nobody can read in a packaged build.
+		Logger:             slogWailsLogger{},
+		LogLevel:           logger.INFO,
+		LogLevelProduction: logger.INFO,
+		OnStartup:          app.startup,
+		OnBeforeClose:      app.beforeClose,
 		Bind: []interface{}{
 			app,
 		},
 	})
 
 	if err != nil {
-		println("Error:", err.Error())
+		log.Error("wails run", "error", err)
 	}
 }
+
+// slogWailsLogger adapts Wails' logger.Logger interface onto slog's default
+// logger, so the framework's own output lands in the same file as the app's.
+//
+// Wails' Print has no level and no newline contract — it is used for raw banner
+// output — so it maps to Info like everything else rather than being dropped.
+type slogWailsLogger struct{}
+
+func (slogWailsLogger) Print(message string)   { slog.Info(message, "src", "wails") }
+func (slogWailsLogger) Trace(message string)   { slog.Debug(message, "src", "wails", "lvl", "trace") }
+func (slogWailsLogger) Debug(message string)   { slog.Debug(message, "src", "wails") }
+func (slogWailsLogger) Info(message string)    { slog.Info(message, "src", "wails") }
+func (slogWailsLogger) Warning(message string) { slog.Warn(message, "src", "wails") }
+func (slogWailsLogger) Error(message string)   { slog.Error(message, "src", "wails") }
+func (slogWailsLogger) Fatal(message string)   { slog.Error(message, "src", "wails", "lvl", "fatal") }

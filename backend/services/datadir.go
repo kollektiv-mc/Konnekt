@@ -6,6 +6,25 @@ import (
 	"path/filepath"
 )
 
+// DataDir is the app data directory every persisted file lands in.
+//
+// Single source of truth because two callers need it at different times:
+// main() opens the log before wails.Run, and app.startup wires it into the
+// services. It used to be computed inline in startup only, which is fine right
+// up until a second caller has to agree with it.
+//
+// Falls back to "." on the platform lookup failing, matching the previous
+// inline behaviour: a relative data dir is bad, but refusing to start is worse
+// for a local-first app, and WriteDataFile still reports a real error naming
+// the directory on the first save.
+func DataDir() string {
+	configDir, err := os.UserConfigDir()
+	if err != nil {
+		configDir = "."
+	}
+	return filepath.Join(configDir, "konnekt")
+}
+
 // WriteDataFile writes data to {dir}/{name}, creating dir first if it is
 // missing.
 //

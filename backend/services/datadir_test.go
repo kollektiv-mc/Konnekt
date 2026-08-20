@@ -96,3 +96,15 @@ func TestWriteDataFileErrorNamesTheDirectoryItCouldNotCreate(t *testing.T) {
 		t.Errorf("error = %v, want it to name %s", err, blocker)
 	}
 }
+
+// DataDir exists so main() and app.startup cannot disagree about where the
+// app's files live; the value itself is os.UserConfigDir's, not ours to assert.
+func TestDataDirEndsInTheAppFolder(t *testing.T) {
+	dir := DataDir()
+	if filepath.Base(dir) != "konnekt" {
+		t.Errorf("expected the app folder to be named konnekt, got %q", dir)
+	}
+	if dir == "konnekt" {
+		t.Error("expected a parent directory, got a bare relative name")
+	}
+}
