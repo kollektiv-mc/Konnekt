@@ -5,7 +5,7 @@ import { DEFAULT_LAYOUT_PRESETS } from '../lib/constants'
 import { Collapsible } from './ui/Collapsible'
 
 export function LayoutPresets() {
-  const { presets, activePresetName, savePreset, loadPreset, loadPresets, deletePreset } =
+  const { presets, activePresetName, error, savePreset, loadPreset, loadPresets, deletePreset } =
     useLayoutStore()
   const [newName, setNewName] = useState('')
   const [saving, setSaving] = useState(false)
@@ -29,9 +29,20 @@ export function LayoutPresets() {
     const name = newName.trim() || activePresetName
     if (!name) return
     setSaving(true)
-    await savePreset(name)
-    setNewName('')
-    setSaving(false)
+    try {
+      await savePreset(name)
+      // Only clear the field on success, so a retry doesn't have to be retyped.
+      setNewName('')
+    } catch {
+      /* The store's `error` renders below. */
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const handleDelete = (name: string) => {
+    // Nothing local to revert: the store kept the preset in the list.
+    deletePreset(name).catch(() => {})
   }
 
   return (
@@ -83,7 +94,7 @@ export function LayoutPresets() {
               </button>
               {preset.name !== 'Default' && (
                 <button
-                  onClick={() => deletePreset(preset.name)}
+                  onClick={() => handleDelete(preset.name)}
                   className="text-text-faint px-1.5 text-xs transition-colors"
                   onMouseEnter={(e) => {
                     ;(e.currentTarget as HTMLButtonElement).style.color = '#f87171'
@@ -130,6 +141,12 @@ export function LayoutPresets() {
               Save
             </button>
           </div>
+
+          {error && (
+            <div role="alert" className="text-danger px-1 font-mono text-xs">
+              {error}
+            </div>
+          )}
 
           <button
             onClick={handleReset}

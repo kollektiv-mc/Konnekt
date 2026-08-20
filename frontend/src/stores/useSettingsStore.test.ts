@@ -28,10 +28,19 @@ const DEFAULTS = {
   crateOrder: [] as string[],
 }
 
+// `hasWailsBridge()` reads window.go's presence, and jsdom has none — so the
+// default here is the no-bridge case (the `frontend-dev` preview). Attach a stub
+// to exercise the real-backend-rejection path instead.
+const attachBridge = () => Object.assign(window, { go: {} })
+
 describe('useSettingsStore', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    useSettingsStore.setState({ settings: DEFAULTS, loaded: false })
+    // clearAllMocks() resets calls, not implementations, so a rejection armed by
+    // one test would still be armed in the next.
+    vi.mocked(App.SaveAppSettings).mockResolvedValue(undefined)
+    Reflect.deleteProperty(window, 'go')
+    useSettingsStore.setState({ settings: DEFAULTS, loaded: false, error: null })
   })
 
   describe('load', () => {
@@ -97,10 +106,41 @@ describe('useSettingsStore', () => {
       )
     })
 
-    it('keeps the optimistic update even when SaveAppSettings rejects', async () => {
-      vi.mocked(App.SaveAppSettings).mockRejectedValue(new Error('disk full'))
+    it('keeps the optimistic update when there is no Wails bridge to save to', async () => {
+      vi.mocked(App.SaveAppSettings).mockRejectedValue(new Error('no wails bridge'))
       await useSettingsStore.getState().update({ notifyOnCrash: true })
       expect(useSettingsStore.getState().settings.notifyOnCrash).toBe(true)
+      expect(useSettingsStore.getState().error).toBeNull()
+    })
+
+    // notifyOnCrash and confirmBeforeStop are safety toggles. This store used to
+    // keep the flipped switch after a refused write, so the user believed a
+    // guard was armed for the rest of the session and it was gone at the next
+    // start (HEALTH_LOG.md, 2026-08-20).
+    it('reverts the optimistic update and records the error when the backend rejects', async () => {
+      attachBridge()
+      vi.mocked(App.SaveAppSettings).mockRejectedValue(new Error('disk full'))
+      await expect(useSettingsStore.getState().update({ notifyOnCrash: true })).rejects.toThrow(
+        'disk full',
+      )
+      expect(useSettingsStore.getState().settings.notifyOnCrash).toBe(false)
+      expect(useSettingsStore.getState().error).toBe('disk full')
+    })
+
+    it('reverts every field of the patch, not just the one asserted on', async () => {
+      attachBridge()
+      vi.mocked(App.SaveAppSettings).mockRejectedValue(new Error('disk full'))
+      await expect(
+        useSettingsStore.getState().update({ theme: 'light', consoleBufferLines: 50 }),
+      ).rejects.toThrow()
+      expect(useSettingsStore.getState().settings).toEqual(DEFAULTS)
+    })
+
+    it('clears a stale error after a later write succeeds', async () => {
+      attachBridge()
+      useSettingsStore.setState({ error: 'disk full' })
+      await useSettingsStore.getState().update({ notifyOnJoin: true })
+      expect(useSettingsStore.getState().error).toBeNull()
     })
   })
 
@@ -114,6 +154,21 @@ describe('useSettingsStore', () => {
       const groupOrder = crateOrder.filter((id) => groupIds.has(id))
       expect(groupOrder[0]).toBe(movedId)
       expect(App.SaveAppSettings).toHaveBeenCalledWith(expect.objectContaining({ crateOrder }))
+    })
+
+    // It returns void because the crate calls it from a mousemove handler, so a
+    // rethrow here would surface as an unhandled rejection with nothing to catch
+    // it. `update` has already put the order back by the time this resolves.
+    it('swallows a refused write and leaves the order reverted', async () => {
+      attachBridge()
+      useSettingsStore.setState({ settings: { ...DEFAULTS, crateOrder: ALL_TILE_IDS } })
+      vi.mocked(App.SaveAppSettings).mockRejectedValue(new Error('disk full'))
+      const groupIds = new Set(TILE_REGISTRY.filter((t) => t.maximizable).map((t) => t.id))
+      const movedId = TILE_REGISTRY.filter((t) => t.maximizable).at(-1)!.id
+
+      expect(() => useSettingsStore.getState().reorderCrate(movedId, 0, groupIds)).not.toThrow()
+      await vi.waitFor(() => expect(useSettingsStore.getState().error).toBe('disk full'))
+      expect(useSettingsStore.getState().settings.crateOrder).toEqual(ALL_TILE_IDS)
     })
 
     it('leaves ids outside the group in their original slots', () => {

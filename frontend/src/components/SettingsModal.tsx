@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useSettingsStore } from '../stores/useSettingsStore'
 import type { AppSettings } from '../types'
 import {
@@ -56,9 +56,21 @@ interface Props {
 }
 
 export function SettingsModal({ open, onClose }: Props) {
-  const { settings, update } = useSettingsStore()
+  const { settings, error, update, clearError } = useSettingsStore()
   const [section, setSection] = useState<Section>('appearance')
   const overlayRef = useRef<HTMLDivElement>(null)
+
+  // Every control in every pane writes through this. The store has already put
+  // the control back by the time the rejection lands, so there is nothing local
+  // to revert — the swallow here just keeps a fire-and-forget `onChange` from
+  // raising an unhandled rejection, and `error` says what happened.
+  const save: UpdateFn = useCallback((patch) => update(patch).catch(() => {}), [update])
+
+  // A stale message from a previous visit would read as a failure of whatever
+  // the user is about to touch.
+  useEffect(() => {
+    if (open) clearError()
+  }, [open, clearError])
 
   useEffect(() => {
     if (!open) return
@@ -119,14 +131,21 @@ export function SettingsModal({ open, onClose }: Props) {
             </button>
           </div>
 
+          {error && (
+            <div
+              role="alert"
+              className="text-danger border-danger/20 bg-danger/10 border-b-hairline shrink-0 px-5 py-2 font-mono text-xs"
+            >
+              Couldn&apos;t save that setting: {error}
+            </div>
+          )}
+
           {/* Body */}
           <div className="flex-1 overflow-y-auto px-5 py-2">
-            {section === 'appearance' && <AppearancePane settings={settings} update={update} />}
-            {section === 'general' && <GeneralPane settings={settings} update={update} />}
-            {section === 'console' && <ConsolePane settings={settings} update={update} />}
-            {section === 'notifications' && (
-              <NotificationsPane settings={settings} update={update} />
-            )}
+            {section === 'appearance' && <AppearancePane settings={settings} update={save} />}
+            {section === 'general' && <GeneralPane settings={settings} update={save} />}
+            {section === 'console' && <ConsolePane settings={settings} update={save} />}
+            {section === 'notifications' && <NotificationsPane settings={settings} update={save} />}
             {section === 'changelog' && <ChangelogPane />}
             {section === 'about' && <AboutPane />}
           </div>

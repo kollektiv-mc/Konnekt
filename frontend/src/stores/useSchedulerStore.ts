@@ -10,21 +10,27 @@ import {
   PreviewScheduleNode,
 } from '../../wailsjs/go/main/App'
 import { models } from '../../wailsjs/go/models'
+import { errMsg } from '../lib/ipc'
 
 /**
  * Scheduler domain state, extracted from the scheduler tile's local `useState`
  * per CLAUDE.md's one-Zustand-store-per-domain rule.
  *
- * Two deliberate departures from the other stores in this folder:
+ * This store established the two patterns every store in this folder now
+ * follows (it was the only one that did until 2026-08-20 — see HEALTH_LOG.md):
  *
- * 1. `error` — every other store swallows IPC rejections with a bare
- *    `catch { /* Wails IPC unavailable *\/ }`. The scheduler needs a real error
- *    surface (HEALTH_CHECKLIST P1: "useScheduler swallows IPC failures
- *    silently"), because a dead bridge is otherwise indistinguishable from "no
- *    graphs configured". A shared `useWailsCall()` hook used to be nominated for
- *    this; a store can't call a React hook, which is part of why it was removed.
+ * 1. `error` — a real error surface, because a dead bridge is otherwise
+ *    indistinguishable from "no graphs configured". A shared `useWailsCall()`
+ *    hook used to be nominated for this; a store can't call a React hook, which
+ *    is part of why it was removed.
  * 2. Write actions rethrow after recording `error`, so `GraphEditor` can revert
  *    its optimistic UI (a failed enable toggle used to leave the switch lying).
+ *
+ * One difference remains, and it is deliberate: the other stores skip the
+ * revert when `hasWailsBridge()` is false, so the browser-only `frontend-dev`
+ * preview stays usable. The scheduler has nothing to keep optimistically —
+ * every write here goes to the backend and comes back authoritative — so it
+ * treats a no-bridge rejection as the failure it is.
  *
  * Event subscription deliberately lives in the `useScheduler` hook, not here:
  * no store in this folder imports React or the Wails runtime, and a listener
@@ -50,9 +56,6 @@ interface SchedulerStore {
   runGraph: (id: string) => Promise<models.RunRecord>
   previewNode: (g: models.Graph, nodeId: string) => Promise<models.NodePreview>
 }
-
-// Wails rejects with plain strings as often as with Errors.
-const msg = (e: unknown) => (e instanceof Error ? e.message : String(e))
 
 export const useSchedulerStore = create<SchedulerStore>((set, get) => ({
   graphs: [],
@@ -91,7 +94,7 @@ export const useSchedulerStore = create<SchedulerStore>((set, get) => ({
       })
     } catch (e) {
       // Keep last-good state; the tile renders cached graphs alongside the error.
-      set({ loading: false, error: msg(e) })
+      set({ loading: false, error: errMsg(e) })
     }
   },
 
@@ -122,7 +125,7 @@ export const useSchedulerStore = create<SchedulerStore>((set, get) => ({
       })
       return saved
     } catch (e) {
-      set({ error: msg(e) })
+      set({ error: errMsg(e) })
       throw e
     }
   },
@@ -133,7 +136,7 @@ export const useSchedulerStore = create<SchedulerStore>((set, get) => ({
       await DeleteScheduleGraph(id)
       set((s) => ({ graphs: s.graphs.filter((g) => g.id !== id) }))
     } catch (e) {
-      set({ error: msg(e) })
+      set({ error: errMsg(e) })
       throw e
     }
   },
@@ -150,7 +153,7 @@ export const useSchedulerStore = create<SchedulerStore>((set, get) => ({
         ),
       }))
     } catch (e) {
-      set({ error: msg(e) })
+      set({ error: errMsg(e) })
       throw e
     }
   },
@@ -160,7 +163,7 @@ export const useSchedulerStore = create<SchedulerStore>((set, get) => ({
     try {
       return await RunScheduleGraphNow(id)
     } catch (e) {
-      set({ error: msg(e) })
+      set({ error: errMsg(e) })
       throw e
     }
   },

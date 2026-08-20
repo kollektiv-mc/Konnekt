@@ -3,6 +3,7 @@ import type { AppSettings } from '../types'
 import { applySkin, BUILTIN_SKINS } from '../lib/theme'
 import { STATUS_DEFAULTS } from '../styles/tokens'
 import { normalizeCrateOrder, reorderWithinGroup } from '../lib/crateOrder'
+import { errMsg, hasWailsBridge } from '../lib/ipc'
 import { GetAppSettings, SaveAppSettings } from '../../wailsjs/go/main/App'
 
 // One colour is stored per role for both themes, seeded from the dark defaults.
@@ -32,9 +33,11 @@ const DEFAULTS: AppSettings = {
 interface SettingsStore {
   settings: AppSettings
   loaded: boolean
+  error: string | null
   load: () => Promise<void>
   update: (patch: Partial<AppSettings>) => Promise<void>
   reorderCrate: (id: string, toIndex: number, groupIds: ReadonlySet<string>) => void
+  clearError: () => void
 }
 
 const validThemes = ['light', 'dark', 'system'] as const
@@ -44,6 +47,7 @@ const validBgStyles = ['solid', 'gradient'] as const
 export const useSettingsStore = create<SettingsStore>((set, get) => ({
   settings: DEFAULTS,
   loaded: false,
+  error: null,
 
   load: async () => {
     let settings = { ...DEFAULTS }
@@ -76,19 +80,45 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
     set({ settings, loaded: true })
   },
 
+  /**
+   * Applies the patch before the write so the control the user just touched
+   * moves at once, then rolls the whole settings object back if the backend
+   * refuses it. `confirmBeforeStop` and `notifyOnCrash` are safety toggles a
+   * user would otherwise believe are on for the rest of the session and gone at
+   * the next start (HEALTH_LOG.md, 2026-08-20).
+   *
+   * Rethrows so a caller that owns extra local state can react. Callers with
+   * nothing of their own to undo can ignore it: the revert here has already put
+   * the control back, and `error` carries the reason.
+   *
+   * With no bridge (`frontend-dev`) the optimistic value stands — see
+   * `lib/ipc.ts`.
+   */
   update: async (patch) => {
-    const next = { ...get().settings, ...patch }
-    set({ settings: next })
+    const prev = get().settings
+    const next = { ...prev, ...patch }
+    set({ settings: next, error: null })
     applySkin(next)
     try {
       await SaveAppSettings(next)
-    } catch {
-      /* best-effort */
+    } catch (e) {
+      if (hasWailsBridge()) {
+        set({ settings: prev, error: errMsg(e) })
+        applySkin(prev)
+        throw e
+      }
+      /* No bridge: nothing to persist to, so keep the optimistic value. */
     }
   },
 
+  // Deliberately swallows: `update` has already reverted the order and recorded
+  // the reason, and this returns void because the crate calls it from a drag.
   reorderCrate: (id, toIndex, groupIds) => {
     const { crateOrder } = get().settings
-    get().update({ crateOrder: reorderWithinGroup(crateOrder, groupIds, id, toIndex) })
+    get()
+      .update({ crateOrder: reorderWithinGroup(crateOrder, groupIds, id, toIndex) })
+      .catch(() => {})
   },
+
+  clearError: () => set({ error: null }),
 }))

@@ -14,12 +14,14 @@ export function BlockPalette({ blockDefs, onAdd }: Props) {
 
   const categories = orderedCategories(blockDefs)
 
+  // Both swallow: `update` reverts the collapse state itself, so the panel
+  // springs back on a refused write and the settings modal shows why.
   function toggleCollapsed() {
-    update({ schedulerPaletteCollapsed: !collapsed })
+    update({ schedulerPaletteCollapsed: !collapsed }).catch(() => {})
   }
 
   function toggleCategory(cat: string) {
-    update({ schedulerPaletteClosedCategories: { ...closed, [cat]: !closed[cat] } })
+    update({ schedulerPaletteClosedCategories: { ...closed, [cat]: !closed[cat] } }).catch(() => {})
   }
 
   if (collapsed) {
