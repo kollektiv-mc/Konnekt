@@ -15,6 +15,7 @@ import { useProcessesStore } from './stores/useProcessesStore'
 import { emitNotification } from './lib/notify'
 import { prefetchHeavyChunks } from './lib/prefetch'
 import { useUpdateCheck } from './hooks/useUpdateCheck'
+import { useServerStatusSync } from './hooks/useServerStatus'
 import { EVENTS } from './lib/constants'
 
 function App() {
@@ -37,6 +38,11 @@ function App() {
   }, [])
 
   useUpdateCheck(settingsLoaded && checkUpdatesOnStartup)
+
+  // Mounted here, not in the stats tile: six components read the resulting
+  // status and tiles are removable, so tying it to one tile left the rest
+  // reading a stale offline default (see the hook's own comment).
+  useServerStatusSync(activeId)
 
   // Auto-start active server on launch
   useEffect(() => {
