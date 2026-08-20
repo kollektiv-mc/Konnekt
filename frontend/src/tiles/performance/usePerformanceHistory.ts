@@ -1,16 +1,12 @@
 import { useEffect, useState } from 'react'
 import { EventsOn } from '../../../wailsjs/runtime/runtime'
 import { GetStatsHistory } from '../../../wailsjs/go/main/App'
+import type { models } from '../../../wailsjs/go/models'
 import { EVENTS } from '../../lib/constants'
 
-export interface StatsSnapshot {
-  timestamp: number
-  tps: number
-  ramUsedMB: number
-  ramTotalMB: number
-  cpuPercent: number
-  players: number
-}
+// Aliased rather than redeclared, per the note in `types/index.ts`: a field
+// added to the Go struct would otherwise be silently missing here.
+export type StatsSnapshot = models.StatsSnapshot
 
 const MAX_HISTORY = 360
 
