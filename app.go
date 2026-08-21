@@ -163,6 +163,13 @@ func (a *App) OpenDataDir() error {
 	return services.OpenPath(a.dataDir)
 }
 
+// GetDataDir returns where the app's files actually live, for display next to
+// OpenDataDir's button. The About pane used to hard-code "~/.config/konnekt",
+// which is only true on Linux.
+func (a *App) GetDataDir() (string, error) {
+	return a.dataDir, nil
+}
+
 // GetLogPath returns the app log's absolute path so the UI can tell a bug
 // reporter what to attach. Returns the path even when the file does not exist
 // yet: naming where it will be is more useful than an error, and the first

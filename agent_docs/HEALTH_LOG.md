@@ -3253,12 +3253,13 @@ single-process desktop app with one log is the smaller of the two costs.
 inline in `startup` only. That is fine right up until a second caller has to
 agree with it, so it became `services.DataDir()`.
 
-**Adjacent, found while wiring the UI.** Settings > About's "Data directory"
-row hard-codes `~/.config/konnekt`, which is wrong on Windows and macOS. Not
-fixed here — it is a different concern from logging and wants its own binding —
-but recorded so it is not rediscovered as a surprise. The new "Log file" row
-next to it shows the real path from `GetLogPath`, so at least one line in that
-pane is true on every platform.
+**Adjacent, found while wiring the UI, then fixed.** Settings > About's "Data
+directory" row hard-coded `~/.config/konnekt`, which is only true on Linux. It
+was initially left alone as a separate concern, then folded in once it was clear
+it is the same defect this branch spent its second commit on: UI stating
+something it does not know to be true. `GetDataDir` joins `GetLogPath` and both
+rows now render backend-supplied paths, truncated with the full value in a
+`title`.
 
 **Verification.** Full gate set green. Nine new Go tests; `backend/services`
 coverage 38.6%, up from 38.1%, against the 36% floor.

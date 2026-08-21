@@ -16,6 +16,7 @@ import { SettingRow } from './ui/SettingRow'
 import {
   OpenDataDir,
   GetAppVersion,
+  GetDataDir,
   GetLogPath,
   CheckForUpdates,
   DownloadAndInstallUpdate,
@@ -532,6 +533,7 @@ type UpdateCheckState =
 function AboutPane() {
   const [version, setVersion] = useState<string | null>(null)
   const [logPath, setLogPath] = useState<string | null>(null)
+  const [dataDir, setDataDir] = useState<string | null>(null)
   const [checkState, setCheckState] = useState<UpdateCheckState>({ status: 'idle' })
 
   useEffect(() => {
@@ -540,9 +542,15 @@ function AboutPane() {
       .catch(() => setVersion(null))
   }, [])
 
-  // The log is the one thing worth attaching to a bug report, so show where it
-  // is rather than making the user guess. Null outside a Wails context.
+  // Both paths come from the backend rather than being written out here: the
+  // data-directory row used to hard-code "~/.config/konnekt", which is wrong on
+  // Windows and macOS. The log path is the one thing worth attaching to a bug
+  // report, so show where it is rather than making the user guess. Null outside
+  // a Wails context.
   useEffect(() => {
+    GetDataDir()
+      .then(setDataDir)
+      .catch(() => setDataDir(null))
     GetLogPath()
       .then(setLogPath)
       .catch(() => setLogPath(null))
@@ -626,9 +634,9 @@ function AboutPane() {
             onMouseLeave={(e) => {
               ;(e.currentTarget as HTMLButtonElement).style.color = 'var(--text-muted)'
             }}
-            title="Open config folder"
+            title={dataDir ? `Open ${dataDir}` : 'Open config folder'}
           >
-            ~/.config/konnekt ↗
+            <span className="max-w-56 truncate">{dataDir ?? 'Open folder'}</span> ↗
           </button>
         </div>
         {logPath && (
