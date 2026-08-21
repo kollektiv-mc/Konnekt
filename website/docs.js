@@ -20,7 +20,12 @@
   var reduceMotion = document.documentElement.classList.contains('reduce-motion')
 
   if (steps.length && !reduceMotion) {
-    var STEP_MS = 8500 // one full loop of a demo, hold and fade included
+    // Read from the stylesheet rather than repeated here, so changing how fast
+    // the demos play is one number in one file.
+    var stage = document.querySelector('.demo')
+    var DEMO_MS = parseFloat(getComputedStyle(stage).getPropertyValue('--demo-ms')) || 4600
+    var HOLD_MS = 1400 // how long the finished frame stays before moving on
+    var STEP_MS = DEMO_MS + HOLD_MS
     var RESUME_MS = 2000
     var at = 0
     var runTimer = null
@@ -68,12 +73,17 @@
 
     steps.forEach(function (step) {
       var take = function () {
+        if (pinned === step) return
         pinned = step
         window.clearTimeout(resumeTimer)
         stop()
         // Where the run picks up from, so it carries on past this card rather
         // than repeating it.
         at = playing().indexOf(step) + 1
+        // From the top, not from wherever the run had got to: the point of
+        // hovering is to watch the whole thing.
+        step.classList.remove('is-playing')
+        void step.offsetWidth
         show(step)
       }
       var release = function () {
