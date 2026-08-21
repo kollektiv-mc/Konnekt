@@ -60,9 +60,7 @@
     var isFolder = el.classList.contains('rm-node-folder')
     var details = isFolder ? el.querySelector(':scope > .rm-folder') : null
     var nameEl = el.querySelector('.rm-name')
-    var descEl = isFolder ? null : el.querySelector('.rm-desc')
     var name = nameEl.textContent
-    var desc = descEl ? descEl.textContent : ''
 
     var rec = {
       el: el,
@@ -70,9 +68,7 @@
       details: details,
       row: el.querySelector('.rm-row'),
       nameEl: nameEl,
-      descEl: descEl,
       name: name,
-      desc: desc,
       key: name.replace(/\/$/, '').toLowerCase(),
       stage: isFolder ? -1 : STAGES.indexOf(el.getAttribute('data-stage')),
       order: i,
@@ -111,7 +107,7 @@
 
     var path = rec.name
     for (var p = rec.parent; p; p = p.parent) path = p.name + ' ' + path
-    rec.hay = (path + ' ' + rec.desc).toLowerCase()
+    rec.hay = path.toLowerCase()
   }
 
   // Derived from the tree rather than stored: re-run after the sync adds rows
@@ -182,9 +178,9 @@
     return query !== '' || stageFiltered()
   }
 
-  // Rebuilt from text nodes rather than from a string of HTML: the names and
-  // descriptions are this page's own copy, but a <mark> assembled by
-  // concatenation is the habit that eventually meets text that isn't.
+  // Rebuilt from text nodes rather than from a string of HTML: the names are
+  // this page's own copy, but a <mark> assembled by concatenation is the habit
+  // that eventually meets text that isn't.
   function paint(el, text, q) {
     el.textContent = ''
     if (!q) {
@@ -221,7 +217,6 @@
     if (query !== lastQuery) {
       leaves.forEach(function (leaf) {
         paint(leaf.nameEl, leaf.name, query)
-        if (leaf.descEl) paint(leaf.descEl, leaf.desc, query)
       })
       lastQuery = query
     }
@@ -490,12 +485,12 @@
   apply()
 
   // ── GitHub sync ─────────────────────────────────────────────────────────
-  // The tree above is the editorial layer: its names, its one-line
-  // descriptions and its structure are written for this page, and none of that
-  // exists on an issue — the suite's label taxonomy stops at `area:ui`, so
-  // there is no per-tile information to build a hierarchy from, and an issue
-  // title reads like "Backups tile: manage all world-specific backups in the
-  // 'World-specific' segment", which is not a line for a marketing page.
+  // The tree above is the editorial layer: its names and its structure are
+  // written for this page, and none of that exists on an issue — the suite's
+  // label taxonomy stops at `area:ui`, so there is no per-tile information to
+  // build a hierarchy from, and an issue title reads like "Backups tile: manage
+  // all world-specific backups in the 'World-specific' segment", which is not a
+  // line for a marketing page.
   //
   // What GitHub is authoritative about is the other half: whether a planned
   // thing is done, and what has been filed since this page was written. That is
@@ -620,7 +615,6 @@
     link.setAttribute('aria-label', 'Issue ' + issue.number + ' on GitHub')
 
     row.appendChild(label)
-    row.appendChild(mk('span', 'rm-desc', 'Filed on GitHub'))
     row.appendChild(mk('span', 'tag tag-stage', STAGE_LABEL[stage]))
     row.appendChild(link)
     li.appendChild(row)
