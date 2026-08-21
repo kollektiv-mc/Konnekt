@@ -207,8 +207,9 @@ historical). Individual Beta tasks are filed in
   graph export/import, floating attribute and node manager panels, AND/OR
   logic for conditions, clearer live progress (trigger countdown bars, delay
   progress, data-node and data-wire highlighting), a far-zoom colored-block
-  overview, block naming and parameter-copy polish, and a block reference on
-  the website.
+  overview, a resizable minimap, block naming and parameter-copy polish,
+  folding the TPS threshold trigger into Read Attribute plus Condition, and
+  a block reference on the website.
 
 ## Remote access — full dashboard over the web
 
