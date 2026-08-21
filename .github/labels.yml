@@ -25,18 +25,25 @@
 # all (no -> chore/docs), was the app already meant to do it (yes -> bug),
 # otherwise feature. What went wrong before these were sharpened was #97, a
 # repair filed as a feature because the repair happened to add a row of UI.
+#
+# The four `type:` descriptions below are copied verbatim from kollektiv's
+# design/labels.json and have to stay that way. Unlike the rest of this file,
+# they are not only a declaration: scripts/sync-labels.sh runs `gh label edit`
+# from that source against every repo in the suite, so the live description a
+# person reads in the picker comes from there, and a local edit here is both
+# invisible and reported as drift on the next sync.
 - name: 'type:bug'
   color: 'ededed'
-  description: Something Konnekt already offered was broken. Still a bug when the repair adds new code.
+  description: Existing behavior is wrong. Still a bug when the repair adds new code or new UI.
 - name: 'type:feature'
   color: 'ededed'
-  description: Konnekt can now do something it never offered before.
+  description: 'New capability: the product can now do something it never offered.'
 - name: 'type:docs'
   color: 'ededed'
-  description: Documentation only. Counted in the release-notes footer, not listed.
+  description: Documentation only. Counted in the release notes, not listed.
 - name: 'type:chore'
   color: 'ededed'
-  description: 'No user-visible change: refactors, tests, CI, deps. Counted in the notes footer, not listed.'
+  description: 'No user-visible change: refactors, tests, CI, deps. Counted in the notes, not listed.'
 
 # Where in the product. Applied during triage from the issue forms' `area`
 # dropdown, whose options come from frontend/src/tiles/registry.ts.
