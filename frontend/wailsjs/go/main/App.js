@@ -102,6 +102,10 @@ export function GetCustomCommands() {
   return window['go']['main']['App']['GetCustomCommands']();
 }
 
+export function GetDataDir() {
+  return window['go']['main']['App']['GetDataDir']();
+}
+
 export function GetLayoutPresets() {
   return window['go']['main']['App']['GetLayoutPresets']();
 }

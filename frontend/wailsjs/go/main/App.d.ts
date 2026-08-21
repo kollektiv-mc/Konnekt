@@ -53,6 +53,8 @@ export function GetConsoleHistory(arg1:string):Promise<Array<models.ConsoleLine>
 
 export function GetCustomCommands():Promise<Array<string>>;
 
+export function GetDataDir():Promise<string>;
+
 export function GetLayoutPresets():Promise<Array<models.LayoutPreset>>;
 
 export function GetPlayerDetail(arg1:string,arg2:string):Promise<models.Player>;

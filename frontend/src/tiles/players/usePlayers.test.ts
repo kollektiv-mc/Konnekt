@@ -78,15 +78,34 @@ describe('usePlayers', () => {
     }
   })
 
-  it('keeps the last known roster when the call fails', async () => {
+  // Keeping the roster but dropping `reachable` is the point: an unreachable
+  // server used to render "No players online", identical to a server nobody is
+  // on (HEALTH_LOG.md, 2026-08-20).
+  it('keeps the last known roster but marks the server unreachable when the call fails', async () => {
     const { result } = renderHook(() => usePlayers('srv1'))
     await waitFor(() => expect(result.current.players).toHaveLength(1))
+    expect(result.current.reachable).toBe(true)
 
     vi.mocked(App.GetPlayerRoster).mockRejectedValue(new Error('server unreachable'))
     await act(async () => {
       handlers[EVENTS.PLAYER_LEFT]?.()
     })
 
+    expect(result.current.players).toEqual([player('Steve')])
+    expect(result.current.reachable).toBe(false)
+  })
+
+  it('marks the server reachable again once a later fetch succeeds', async () => {
+    vi.mocked(App.GetPlayerRoster).mockRejectedValue(new Error('server unreachable'))
+    const { result } = renderHook(() => usePlayers('srv1'))
+    await waitFor(() => expect(result.current.reachable).toBe(false))
+
+    vi.mocked(App.GetPlayerRoster).mockResolvedValue([player('Steve')])
+    await act(async () => {
+      handlers[EVENTS.SERVER_STARTED]?.()
+    })
+
+    await waitFor(() => expect(result.current.reachable).toBe(true))
     expect(result.current.players).toEqual([player('Steve')])
   })
 

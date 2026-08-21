@@ -71,6 +71,11 @@ Why the grid is built the way it is, and which parts are load-bearing:
   `hasWailsBridge()` separates the cases: no bridge keeps the optimistic value,
   a bridge-present rejection reverts, records and rethrows. Reads are unaffected
   and still degrade to defaults.
+- Two different questions about a server, and UI that renders "nothing here"
+  needs both: `useServerStore`'s `status.running` (the server answered and is
+  stopped) and `reachable` (the backend answered at all). Hydrated once in
+  `App` by `hooks/useServerStatus.ts` — do not re-tie that to a single tile's
+  mount, which is how five tiles once read a permanently stale `false`.
 - Re-run `wails generate module` after adding new bound methods
 
 ## Code style
