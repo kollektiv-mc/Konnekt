@@ -4,15 +4,21 @@
 // Budget covers only the entry chunk (dist/assets/index-*.js): the piece every
 // page load pays for. Lazy chunks (charts, WorldsScene, ...) are excluded by
 // design — they're fetched on demand, not on first paint.
+//
+// Measures the built output, so it needs a build matching the current sources.
+// lib/dist-freshness.mjs makes that true rather than assuming it: an unnoticed
+// stale dist/ here reports last month's sizes against today's budget, and the
+// same assumption in check-token-classes.mjs produced a confident wrong verdict.
 import { readdir, readFile } from 'node:fs/promises'
 import { gzipSync } from 'node:zlib'
 import path from 'node:path'
+import { ensureFreshDist } from './lib/dist-freshness.mjs'
 
 // Measured entry-chunk gzip size after the recharts code-split was 490.53 KB;
 // budget = that + ~12% headroom, rounded.
 const ENTRY_BUDGET_KB = 550
 
-const distAssets = path.join(import.meta.dirname, '..', 'dist', 'assets')
+const distAssets = await ensureFreshDist()
 
 const files = (await readdir(distAssets)).filter((f) => f.endsWith('.js'))
 
