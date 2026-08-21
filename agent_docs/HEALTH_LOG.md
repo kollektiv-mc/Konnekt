@@ -61,6 +61,7 @@ after them is dated. Newest last, in both groups.
 - [2026-08-19 — The dead code the per-file grep could never find](#2026-08-19-the-dead-code-the-per-file-grep-could-never-find)
 - [2026-08-19 — Another product's roadmap, and eight boxes nobody had ticked](#2026-08-19-another-products-roadmap-and-eight-boxes-nobody-had-ticked)
 - [2026-08-19 — The duration token Tailwind was never reading](#2026-08-19-the-duration-token-tailwind-was-never-reading)
+- [2026-08-20 — Four stores that showed a refused write as saved](#2026-08-20-four-stores-that-showed-a-refused-write-as-saved)
 
 ---
 
@@ -3041,3 +3042,84 @@ somewhere nobody re-reads.
 before any change. `.duration-fast{--tw-duration:var(--transition-duration-fast)}`
 and the `.duration-panel` equivalent confirmed present in `dist/assets/*.css`,
 and every converted site grepped out of the built output rather than assumed.
+
+### 2026-08-20 — Four stores that showed a refused write as saved
+
+**Closed:** the checklist's "P1 — Four stores swallow a failed write and keep the
+optimistic update".
+
+**What was there.** `useServerConfigStore`, `useSettingsStore`, `useLayoutStore`
+and `useTileStore` each caught a rejected Wails write with a
+`/* best-effort */` comment and then applied the local update anyway.
+`useSchedulerStore` was the only store in the folder that did not, and its own
+header comment said so.
+
+The severity ranks by what is lost, and the top of that list is worse than
+"a preference did not stick". A `ServerConfig` carries the working directory,
+the JVM args and the RCON credentials, and no other part of the app holds a
+copy. A refused `SaveServerConfig` left the edit on screen, the editor closed as
+though it had worked, and the whole thing was gone at the next start with
+nothing written anywhere. `useSettingsStore` is second and different in kind:
+`confirmBeforeStop` and `notifyOnCrash` are safety toggles, so a swallowed write
+left the user believing a guard was armed for the rest of the session.
+
+**The constraint that shaped the fix, which the backlog entry had not noticed.**
+`.claude/launch.json` defines a `frontend-dev` preset: a browser-only Vite server
+on port 5199 with no Go process behind it. The generated bindings dereference
+`window.go` directly (`frontend/wailsjs/go/main/App.js`), so *every* call throws
+there. Reverting on any rejection would have made that preview read-only — no
+tile addable, no setting changeable, no layout saveable — which is why the write
+paths were written the way they were. The swallow was not carelessness; it was
+the only behaviour that kept both cases working, chosen without noticing it
+broke the real one.
+
+So the two cases are now separated rather than collapsed. New `lib/ipc.ts` holds
+`hasWailsBridge()` (a presence check on `window.go`, never a call through it, so
+the "bindings only" rule still holds) and `errMsg()`, which is
+`useSchedulerStore`'s old private `msg` hoisted so there is one definition. No
+bridge means nothing was ever going to persist and the user is not being misled,
+so the optimistic value stands. A bridge present means a real failed write:
+revert, record, rethrow.
+
+**Both halves, because the store half alone is not a fix.** Every store gained
+`error`/`clearError` and the rethrow. Then the callers: the server editor stays
+open on a refused save with the message under it instead of closing as though it
+worked; `addInstalledServer` keeps the install modal up, since it covers the
+sidebar and dismissing it would hide both the error and the form that could
+retry; the preset name survives a failed save so a retry does not have to be
+retyped; and `Dashboard` now writes a tile's grid slot only after the tile write
+has landed, in both directions, so `activeTileIds` and the persisted layout
+cannot disagree about a tile that never arrived or never left.
+
+Three call sites deliberately swallow, and each says why in a comment rather
+than being left to look like the bug that was just removed:
+`useSettingsStore.reorderCrate`, `TileCrate`'s order commit and `BlockPalette`'s
+collapse toggles are all `void`-returning handlers driven by a mouse gesture,
+and `update` has already reverted the state by the time the rejection lands.
+`SettingsModal` wraps `update` once for all fourteen of its controls rather than
+fourteen times, and renders `error` as a banner.
+
+**The test that encoded the bug is split, not deleted.**
+`useSettingsStore.test.ts` asserted "keeps the optimistic update even when
+SaveAppSettings rejects", mocking a disk-full rejection and checking the toggle
+stayed on. Under the fix that assertion is still correct — for the no-bridge
+half, which is what jsdom is, since it has no `window.go`. So it became two
+tests: the original body under an honest name, and a new one with `window.go`
+stubbed that asserts the revert, the recorded message and the rethrow. The same
+pair is now on all four stores, plus tests for `lib/ipc.ts` itself.
+
+One thing worth writing down for the next person adding a store test here:
+`vi.clearAllMocks()` resets recorded calls but *not* implementations, so a
+`mockRejectedValue` armed by one test is still armed in the next.
+`useLayoutStore.test.ts` already re-armed its resolved values in `beforeEach`;
+the other three now do too, after a passing suite briefly hid a leak.
+
+**What is deliberately not symmetric.** `useLayoutStore`'s `persistActiveLayout`
+records the failure instead of rethrowing. Its callers are `loadPreset` and
+`updateLayout`, both `void` because react-grid-layout drives them from a
+drag/resize callback that cannot await, and there is nothing to revert into: the
+layout on screen is what the user just arranged by hand, and snapping it back
+under them would be worse than a stale file.
+
+**Verification.** Full gate set green. 301 frontend tests across 28 files, up
+from 280 across 27: 21 added, and the one that encoded the bug rewritten.

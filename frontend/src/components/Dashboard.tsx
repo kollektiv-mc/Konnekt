@@ -320,11 +320,15 @@ export function Dashboard() {
   // what's left so the persisted layout doesn't lag a render behind what's
   // on screen (react-grid-layout's own internal state already reflects the
   // gap closing — this just keeps our copy in sync with it).
+  // The layout write only happens once the tile write has landed: persisting a
+  // recompacted layout for a tile that is still active would close a gap the
+  // canvas still fills.
   const handleRemoveTile = useCallback(
     (id: string) => {
-      removeTile(id)
       const remaining = mergedLayout.filter((l) => l.i !== id)
-      persistLayout(GRID_COMPACTOR.compact(remaining, COLS))
+      removeTile(id)
+        .then(() => persistLayout(GRID_COMPACTOR.compact(remaining, COLS)))
+        .catch(() => {})
     },
     [removeTile, mergedLayout, persistLayout],
   )
@@ -394,8 +398,14 @@ export function Dashboard() {
       if (useTileStore.getState().activeTileIds.includes(id)) return
       const { cell, layout } = previewRef.current
       if (!cell) return // released outside the canvas → cancel
-      persistLayout(layout.map((l) => (l.i === GHOST_ID ? { ...l, i: id } : l)))
-      useTileStore.getState().addTile(id)
+      // Same ordering as handleRemoveTile: claim the grid slot only once the
+      // tile is actually active, or the persisted layout keeps a slot for a
+      // tile that never landed.
+      useTileStore
+        .getState()
+        .addTile(id)
+        .then(() => persistLayout(layout.map((l) => (l.i === GHOST_ID ? { ...l, i: id } : l))))
+        .catch(() => {})
     }
     window.addEventListener('mousemove', onMove)
     window.addEventListener('mouseup', onUp)
