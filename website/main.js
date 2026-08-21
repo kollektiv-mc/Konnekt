@@ -276,64 +276,79 @@
   // and the content below slides rather than teleports.
   //
   // The element's height is animated rather than an inner wrapper's, which is
-  // what lets this work on the FAQ and the changelog's snapshot entry without
-  // either page's markup gaining a box to animate. `open` is driven by hand —
-  // the native toggle is what we are replacing — and stays true for the whole
-  // of a close, so there is something to animate down from.
-  if (!reduceMotion && document.body.animate) {
-    var DISCLOSURE_MS = 220
+  // what lets this work on the FAQ, the changelog's snapshot entry and the
+  // roadmap's folder tree without any of them gaining a box to animate.
+  // `open` is driven by hand — the native toggle is what we are replacing —
+  // and stays true for the whole of a close, so there is something to animate
+  // down from.
+  //
+  // Exposed as a global so a page can bind its own disclosures at its own
+  // duration: roadmap.js takes the tree's folders at 140ms, because browsing a
+  // tree is several clicks deep and the panel duration is what you feel on
+  // each one. A no-op under reduced motion, so callers never test for it.
+  window.KonnektDisclose = function (details, duration) {
+    if (reduceMotion || !document.body.animate) return
+    // Scoped, so a folder that contains folders binds its own summary rather
+    // than the first one anywhere beneath it.
+    var summary = details.querySelector(':scope > summary')
+    if (!summary) return
 
-    document.querySelectorAll('.faq details, details.release-pending').forEach(function (details) {
-      var summary = details.querySelector('summary')
-      if (!summary) return
-      var anim = null
+    var ms = duration || 220
+    var anim = null
 
-      summary.addEventListener('click', function (e) {
-        e.preventDefault()
+    summary.addEventListener('click', function (e) {
+      e.preventDefault()
 
-        // A click mid-flight measures from wherever the last one got to, so
-        // the reverse starts at the height actually on screen.
-        if (anim) anim.cancel()
+      // A click mid-flight measures from wherever the last one got to, so
+      // the reverse starts at the height actually on screen.
+      if (anim) anim.cancel()
 
-        var opening = !details.open
-        var from = details.getBoundingClientRect().height
-        var to
+      var opening = !details.open
+      var from = details.getBoundingClientRect().height
+      var to
 
-        // `open` cannot say which way this is going: it is forced true for the
-        // whole of a close, below, so there is a height to animate down from.
-        // The marker in styles.css needs the answer at click time — keyed on
-        // [open] alone it would hold the minus for the full 220ms and snap
-        // back at the end — so the close direction gets a class of its own.
-        details.classList.toggle('is-closing', !opening)
+      // `open` cannot say which way this is going: it is forced true for the
+      // whole of a close, below, so there is a height to animate down from.
+      // The marker in styles.css needs the answer at click time — keyed on
+      // [open] alone it would hold the minus for the full duration and snap
+      // back at the end — so the close direction gets a class of its own.
+      details.classList.toggle('is-closing', !opening)
 
-        if (opening) {
-          details.open = true
-          to = details.getBoundingClientRect().height
-        } else {
-          // Both measurements happen in this one task, so the closed frame is
-          // never painted — the layout is read twice, the screen once.
+      if (opening) {
+        details.open = true
+        to = details.getBoundingClientRect().height
+      } else {
+        // Both measurements happen in this one task, so the closed frame is
+        // never painted — the layout is read twice, the screen once.
+        details.open = false
+        to = details.getBoundingClientRect().height
+        details.open = true
+      }
+
+      details.style.overflow = 'hidden'
+      anim = details.animate(
+        { height: [from + 'px', to + 'px'] },
+        { duration: ms, easing: 'cubic-bezier(0.4, 0, 0.2, 1)' },
+      )
+
+      anim.onfinish = function () {
+        anim = null
+        details.style.overflow = ''
+        if (!opening) {
           details.open = false
-          to = details.getBoundingClientRect().height
-          details.open = true
+          details.classList.remove('is-closing')
         }
-
-        details.style.overflow = 'hidden'
-        anim = details.animate(
-          { height: [from + 'px', to + 'px'] },
-          { duration: DISCLOSURE_MS, easing: 'cubic-bezier(0.4, 0, 0.2, 1)' },
-        )
-
-        anim.onfinish = function () {
-          anim = null
-          details.style.overflow = ''
-          if (!opening) {
-            details.open = false
-            details.classList.remove('is-closing')
-          }
-        }
-      })
+      }
     })
   }
+
+  document
+    .querySelectorAll(
+      '.faq details, details.release-pending, details.doc-collapse, .step-fold details',
+    )
+    .forEach(function (details) {
+      window.KonnektDisclose(details, 220)
+    })
 
   // ── Cursor glow on tiles ────────────────────────────────────────────────
   // Feeds --mx/--my (tile-relative pixels) to the radial gradient in
@@ -343,7 +358,7 @@
   // to follow, and the glow would stick to whatever you last tapped.
   var GLOW_SELECTOR =
     '.feat, .doc-section, .dl-card, .download-primary, .release, .cta-panel, ' +
-    '.spotlight-media, .spotlight-points li'
+    '.spotlight-media, .spotlight-points li, .rm-stage-card'
 
   if (window.matchMedia('(hover: hover) and (pointer: fine)').matches) {
     var glowTile = null

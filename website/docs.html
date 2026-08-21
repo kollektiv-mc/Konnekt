@@ -99,23 +99,29 @@
 
           <section class="doc-section reveal" id="requirements">
             <h2>Requirements</h2>
-            <div class="md">
-              <p>
-                Konnekt ships as a single native binary, with no runtime to install alongside it.
-              </p>
-              <ul>
-                <li>
-                  <strong>A Minecraft server you already have.</strong> Konnekt manages an existing
-                  server directory and jar; it doesn't download one.
-                </li>
-                <li><strong>Java.</strong> Required by the <em>server</em>, not by Konnekt.</li>
-                <li>
-                  <strong>RCON enabled</strong> in <code>server.properties</code> for the player
-                  list, kick/ban and commands. Console streaming works without it.
-                </li>
-                <li><strong>64-bit Windows or Linux.</strong></li>
-              </ul>
-            </div>
+            <p class="doc-lead">
+              Konnekt is one file, with no runtime to install beside it. Three things on top of
+              that:
+            </p>
+            <ul class="req-grid">
+              <li class="req">
+                <span class="req-icon" aria-hidden="true">◈</span>
+                <h3>A server jar</h3>
+                <p>
+                  The Minecraft server you already run. Konnekt manages it, it doesn't fetch one.
+                </p>
+              </li>
+              <li class="req">
+                <span class="req-icon" aria-hidden="true">◎</span>
+                <h3>Java</h3>
+                <p>Your <em>server</em> needs it to run. Konnekt itself doesn't.</p>
+              </li>
+              <li class="req">
+                <span class="req-icon" aria-hidden="true">▤</span>
+                <h3>Windows or Linux</h3>
+                <p>64-bit. macOS builds from source today.</p>
+              </li>
+            </ul>
           </section>
 
           <section class="doc-section reveal" id="platforms">
@@ -130,98 +136,239 @@
                       <th>Status</th>
                     </tr>
                   </thead>
+                  <!-- The status cells are authored with what is published today and
+                       corrected by docs.js from the GitHub releases API, so a new
+                       channel shows up here without an edit. -->
                   <tbody>
-                    <tr>
+                    <tr data-platform="windows">
                       <td>Windows (x86-64)</td>
                       <td><code>konnekt-windows-amd64.exe</code></td>
-                      <td><span class="tag tag-done">Published</span></td>
+                      <td data-stage="alpha"><span class="tag tag-stage">ALPHA</span></td>
                     </tr>
-                    <tr>
+                    <tr data-platform="linux">
                       <td>Linux (x86-64)</td>
                       <td><code>konnekt-linux-amd64</code></td>
-                      <td><span class="tag tag-wip">Snapshot</span></td>
+                      <td><span class="tag tag-wip">SNAPSHOT</span></td>
                     </tr>
-                    <tr>
+                    <tr data-platform="fedora">
                       <td>Fedora / RHEL (x86-64)</td>
                       <td><code>.x86_64.rpm</code></td>
-                      <td><span class="tag tag-wip">Snapshot</span></td>
+                      <td><span class="tag tag-wip">SNAPSHOT</span></td>
                     </tr>
-                    <tr>
+                    <tr data-platform="mac">
                       <td>macOS</td>
                       <td>Build from source</td>
-                      <td><span class="tag tag-later">Not published</span></td>
+                      <td><span class="tag tag-later">SOURCE</span></td>
                     </tr>
                   </tbody>
                 </table>
               </div>
-              <p>
-                Linux builds link against <code>webkit2gtk-4.1</code>, covering Rocky/RHEL 10,
-                Fedora 36+, Ubuntu 22.04+ and Debian 12+. At runtime they need
-                <code>webkit2gtk4.1</code> and <code>gtk3</code>.
-              </p>
-              <p>
-                <strong>Rocky/RHEL 9 is not supported.</strong> EL9 never received webkit2gtk-4.1
-                and EL10 dropped 4.0; the two aren't binary-compatible.
-              </p>
-              <p>
-                macOS isn't published as a release yet, but builds from source with
-                <code>wails build</code>.
-              </p>
+              <ul class="note-list">
+                <li>Rocky and RHEL 9 are not compatible.</li>
+                <li>Linux needs <code>webkit2gtk4.1</code> and <code>gtk3</code> at runtime.</li>
+                <li>macOS has no published build; it builds from source.</li>
+              </ul>
             </div>
           </section>
 
           <section class="doc-section reveal" id="start">
             <h2>Your first server</h2>
-            <div class="md">
-              <ol>
-                <li>
-                  <strong>Add a server.</strong> Point Konnekt at the jar, working directory and JVM
-                  arguments.
-                </li>
-                <li><strong>Accept the EULA.</strong> First-time setup walks you through it.</li>
-                <li>
-                  <strong>Start it.</strong> The console streams the log live and takes commands
-                  inline.
-                </li>
-                <li>
-                  <strong>Arrange the dashboard.</strong> Drag, resize and snap tiles, then save the
-                  layout as a preset.
-                </li>
-              </ol>
-              <p>
-                You can add as many servers as you like and start, stop and restart each one.
-                Switching the active server is incomplete in alpha: the worlds and mods tiles follow
-                your selection, but the console, scheduler and status do not yet.
-              </p>
-            </div>
+            <ol class="step-grid">
+              <li class="step" data-demo="add">
+                <!-- Mockups of the app's own panels, in its type and colours.
+                     Decorative: every word in them is repeated in the prose
+                     beside them, so a screen reader loses nothing by skipping
+                     them. -->
+                <div class="demo" aria-hidden="true">
+                  <div class="mock mock-form">
+                    <div class="mock-title">Servers</div>
+                    <div class="mock-field f1"><span class="mock-type">Survival</span></div>
+                    <div class="mock-field f2">
+                      <span class="mock-type">server.jar</span><span class="mock-browse">…</span>
+                    </div>
+                    <div class="mock-field f3">
+                      <span class="mock-type">/home/mc/survival</span
+                      ><span class="mock-browse">…</span>
+                    </div>
+                    <div class="mock-field f4"><span class="mock-type">-Xms1G -Xmx4G</span></div>
+                    <div class="mock-btn mock-add">Add server</div>
+                    <span class="mock-cursor"></span>
+                  </div>
+                </div>
+                <div class="step-body">
+                  <div class="step-head">
+                    <span class="step-n" aria-hidden="true">1</span>
+                    <h3>Add a server</h3>
+                  </div>
+                  <p>
+                    Point it at the jar and the folder it lives in, then name it and give it RAM.
+                  </p>
+                </div>
+              </li>
+
+              <!-- Optional, and folded away because of it: this step only
+                   happens if what you have is an installer rather than a
+                   server jar. -->
+              <li class="step step-fold" data-demo="install">
+                <details class="fold">
+                  <summary class="step-summary">
+                    <span class="doc-collapse-mark" aria-hidden="true"></span>
+                    <span class="step-n" aria-hidden="true">2</span>
+                    <h3>Install a server</h3>
+                    <span class="step-hint">Forge and NeoForge</span>
+                  </summary>
+                  <div class="step-inner">
+                    <div class="demo" aria-hidden="true">
+                      <div class="mock mock-install">
+                        <div class="mock-modal mock-modal-wide">
+                          <div class="mock-modal-head">
+                            <span class="mock-info">[i]</span><span>Installer detected</span>
+                          </div>
+                          <div class="mock-field i1">
+                            <span class="mock-type">/home/mc/forge</span
+                            ><span class="mock-browse">…</span>
+                          </div>
+                          <div class="mock-install-log">
+                            <span class="il1">Running installer…</span>
+                            <span class="il2">Extracting libraries</span>
+                            <span class="il3">Downloading server</span>
+                          </div>
+                          <div class="mock-bar"><span class="mock-bar-fill"></span></div>
+                          <div class="mock-modal-foot">
+                            <span class="mock-btn mock-install-btn">Install server</span>
+                            <span class="mock-btn mock-added-btn">Add server</span>
+                            <span class="mock-dismiss">Close</span>
+                          </div>
+                        </div>
+                        <span class="mock-cursor"></span>
+                      </div>
+                    </div>
+                    <div class="step-body">
+                      <p>
+                        Hand it a Forge or NeoForge installer instead and it runs the install for
+                        you, then adds what comes out.
+                      </p>
+                    </div>
+                  </div>
+                </details>
+              </li>
+
+              <li class="step" data-demo="start">
+                <div class="demo" aria-hidden="true">
+                  <div class="mock mock-console">
+                    <div class="mock-console-head">
+                      <span class="mock-status s-stopped">STOPPED</span>
+                      <span class="mock-status s-starting">STARTING</span>
+                      <span class="mock-status s-running">RUNNING</span>
+                      <span class="mock-btn mock-start">Start</span>
+                      <span class="mock-btn mock-stop">Stop</span>
+                    </div>
+                    <div class="mock-log">
+                      <span class="l1">Starting minecraft server 1.21</span>
+                      <span class="l2">Loading properties</span>
+                      <span class="l3">Preparing level "world"</span>
+                      <span class="l4">Done (6.129s)! For help, type "help"</span>
+                    </div>
+                    <span class="mock-cursor"></span>
+                  </div>
+                </div>
+                <div class="step-body">
+                  <div class="step-head">
+                    <span class="step-n" aria-hidden="true">3</span>
+                    <h3>Start it</h3>
+                  </div>
+                  <p>The console streams the log live and takes commands inline.</p>
+                </div>
+              </li>
+
+              <li class="step" data-demo="eula">
+                <div class="demo" aria-hidden="true">
+                  <div class="mock mock-eula">
+                    <div class="mock-behind">
+                      <span class="bl1">Starting minecraft server 1.21</span>
+                      <span class="bl2">Loading properties</span>
+                      <span class="bl3">You need to agree to the EULA</span>
+                      <span class="bl4">Stopping server</span>
+                    </div>
+                    <div class="mock-scrim"></div>
+                    <div class="mock-modal">
+                      <div class="mock-modal-head">
+                        <span class="mock-bang">[!]</span><span>EULA Required</span>
+                      </div>
+                      <p class="mock-modal-body">
+                        The Minecraft server requires you to accept the End User License Agreement
+                        before it can run.
+                      </p>
+                      <div class="mock-link">Read the Minecraft EULA →</div>
+                      <div class="mock-modal-foot">
+                        <span class="mock-btn mock-accept">Accept &amp; Restart</span>
+                        <span class="mock-dismiss">Dismiss</span>
+                      </div>
+                    </div>
+                    <span class="mock-cursor"></span>
+                  </div>
+                </div>
+                <div class="step-body">
+                  <div class="step-head">
+                    <span class="step-n" aria-hidden="true">4</span>
+                    <h3>Accept the EULA</h3>
+                  </div>
+                  <p>
+                    The server refuses to run until you do. Konnekt spots it in the log and offers
+                    to write it for you, then restarts.
+                  </p>
+                </div>
+              </li>
+            </ol>
+
+            <p class="step-note">
+              Player list and commands need <code>enable-rcon</code> on in
+              <code>server.properties</code> until
+              <a
+                href="https://github.com/kollektiv-mc/Konnekt/issues/99"
+                target="_blank"
+                rel="noopener"
+                >Konnekt sets it up for you</a
+              >.
+            </p>
           </section>
 
-          <section class="doc-section reveal" id="build">
-            <h2>Build from source</h2>
-            <div class="md">
-              <p>
-                Requires <a href="https://go.dev/" target="_blank" rel="noopener">Go</a>,
-                <a href="https://nodejs.org/" target="_blank" rel="noopener">Node.js</a> with
-                <a href="https://pnpm.io/" target="_blank" rel="noopener">pnpm</a>, and the
-                <a
-                  href="https://wails.io/docs/gettingstarted/installation"
-                  target="_blank"
-                  rel="noopener"
-                  >Wails CLI</a
-                >. On Linux you also need the <code>webkit2gtk</code> and <code>gtk3</code>
-                development packages.
-              </p>
-              <pre><code>git clone https://github.com/kollektiv-mc/Konnekt
+          <section class="doc-section fold-snapshot reveal" id="build">
+            <details class="doc-collapse">
+              <summary>
+                <span class="doc-collapse-mark" aria-hidden="true"></span>
+                <span>Build from source</span>
+                <span class="tag tag-wip">SNAPSHOT</span>
+              </summary>
+              <div class="md">
+                <p>
+                  A source build is the newest code, so it is a snapshot: newer than the release,
+                  and untested.
+                </p>
+                <p>
+                  Requires <a href="https://go.dev/" target="_blank" rel="noopener">Go</a>,
+                  <a href="https://nodejs.org/" target="_blank" rel="noopener">Node.js</a> with
+                  <a href="https://pnpm.io/" target="_blank" rel="noopener">pnpm</a>, and the
+                  <a
+                    href="https://wails.io/docs/gettingstarted/installation"
+                    target="_blank"
+                    rel="noopener"
+                    >Wails CLI</a
+                  >. On Linux you also need the <code>webkit2gtk</code> and <code>gtk3</code>
+                  development packages.
+                </p>
+                <pre><code>git clone https://github.com/kollektiv-mc/Konnekt
 cd Konnekt
 pnpm install
 wails dev</code></pre>
-              <p>
-                Run <code>wails doctor</code> first; it reports what your distro is missing. If
-                WebKit detection fails, add the build tag:
-              </p>
-              <pre><code>wails build -tags webkit2_41
+                <p>
+                  Run <code>wails doctor</code> first; it reports what your distro is missing. If
+                  WebKit detection fails, add the build tag:
+                </p>
+                <pre><code>wails build -tags webkit2_41
 wails dev -tags webkit2_41</code></pre>
-            </div>
+              </div>
+            </details>
           </section>
 
           <section class="doc-section reveal" id="faq">
@@ -361,5 +508,7 @@ wails dev -tags webkit2_41</code></pre>
     </footer>
 
     <script src="/main.js"></script>
+    <script src="/release.js"></script>
+    <script src="/docs.js"></script>
   </body>
 </html>
