@@ -65,6 +65,7 @@ after them is dated. Newest last, in both groups.
 - [2026-08-20 — The status every tile trusted and one tile owned](#2026-08-20-the-status-every-tile-trusted-and-one-tile-owned)
 - [2026-08-20 — A log a bug reporter can attach](#2026-08-20-a-log-a-bug-reporter-can-attach)
 - [2026-08-20 — The bound type TypeScript never saw](#2026-08-20-the-bound-type-typescript-never-saw)
+- [2026-08-21 — Wings survey, triage, and adoption planning](#2026-08-21-wings-survey-triage-and-adoption-planning)
 
 ---
 
@@ -3336,3 +3337,44 @@ described.
 **Verification.** Full gate set green, 16/16. 316 frontend tests, entry chunk
 487.9 KB gzip against the 550 KB budget, `backend/services` coverage 38.6%
 against the 36% floor.
+## 2026-08-21 — Wings survey, triage, and adoption planning
+
+Not a remediation session; recorded here because it produced the largest single
+batch of verified findings since the checklist re-baseline, and because the
+scheduler-deep-analysis precedent already established that analysis sessions
+belong in this log.
+
+**What was done.** A clean-room behavioral survey of Pterodactyl Wings (MIT, Go,
+~20.5k LOC) was produced by three isolated source-reading subagents and written
+to `survey/wings.md` under hard constraints: no Wings code, identifiers, layouts
+or algorithms — only observable behavior, so later sessions can consume it
+without contamination. Every surveyed feature was then argued both ways against
+Konnekt's actual code and trust model (single trusted local owner, no tenancy)
+in `survey/wings-triage.md`, grounded in a full backend sweep with file:line
+verification. The owner returned the form 2026-08-21: all 15 recommended
+adoptions accepted, all 21 rejections stood (revisit triggers preserved).
+
+**Adoption verdict in one line.** Most of Wings is landlord machinery Konnekt
+rightly rejects; what survived is mostly Konnekt bugs the comparison exposed,
+plus two owner-chosen features (close-time choice with re-adoption, past-session
+logs). The sweep also found four areas where Konnekt is already *ahead* of Wings:
+staged restore with rollback, backup quiescing, comment-preserving config
+editing, and event/getter parity.
+
+**Filed.** Issues #108–#121 (14 new), each carrying its own verified pointers,
+scope and acceptance; item 13 (per-server shaping) rides existing #57 rather
+than duplicating it. Reconciliations recorded rather than left to collide:
+#108 implements #101 and should close it; #99 became #117's prerequisite; #30's
+core need is structurally met by the staged extract (zip CRC fails corrupt
+archives before the swap touches the live dir), leaving only error surfacing —
+narrowing or closing it is the owner's call; #26 covers the sibling-dimension
+gap the sweep re-found. Cross-cutting constraints and sequencing:
+`agent_docs/WINGS_ADOPTION.md`. Backlog entries added to the checklist: the
+adoption set (P1/P2) and five P3 micro-findings from the sweep (stale RCON-stop
+comment, silent panic swallowing in the event bus, restore's 0700 mode and
+discarded aside copy, sticky MaxPlayers after stop, the "(+ siblings)" comment).
+
+**Verification.** Docs-only session: no code changed, no gates run. Every code
+claim in the triage, the issues and the backlog entries carries a file:line
+pointer verified against the tree on 2026-08-21; implementing sessions are
+instructed to re-verify before editing.
