@@ -61,6 +61,16 @@ Why the grid is built the way it is, and which parts are load-bearing:
   `stores/useSchedulerStore.ts`). A shared `useWailsCall()` hook was tried and
   removed: a store cannot call a React hook, which is where most fetching ended
   up. Swallowing a rejection with a bare `catch {}` is the thing to avoid.
+  The rethrow is only half the job — a caller that ignores it is the same bug
+  one level up, so the caller reverts, keeps its editor open, or says why it
+  deliberately does neither.
+- **One sanctioned exception, or it gets "fixed" back.** The generated bindings
+  dereference `window.go`, so with no Wails backend *every* call throws — which
+  is the `frontend-dev` preset in `.claude/launch.json`, a browser-only preview
+  with no Go process. Reverting there would make it read-only. `lib/ipc.ts`'s
+  `hasWailsBridge()` separates the cases: no bridge keeps the optimistic value,
+  a bridge-present rejection reverts, records and rethrows. Reads are unaffected
+  and still degrade to defaults.
 - Re-run `wails generate module` after adding new bound methods
 
 ## Code style

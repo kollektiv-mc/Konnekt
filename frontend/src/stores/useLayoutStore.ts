@@ -96,7 +96,11 @@ export const useLayoutStore = create<LayoutStore>((set, get) => ({
         try {
           await SaveLayoutPreset(p.name, p.layout)
         } catch {
-          /* best-effort */
+          // Not the swallowed-write bug the other actions had: this seeds the
+          // built-in presets on first run, and they are a compile-time constant
+          // rather than anything the user typed. A failure costs nothing that
+          // is not still in `DEFAULT_LAYOUT_PRESETS` and re-seeded next launch,
+          // so there is no state to revert and nothing to report.
         }
       }
       presets = DEFAULT_LAYOUT_PRESETS

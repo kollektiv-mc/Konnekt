@@ -29,6 +29,7 @@ node scripts/check-website-links.mjs   # website links/assets/sitemap (repo root
 node scripts/check-release-notes-extract.mjs   # changelog page's body extract (repo root)
 pnpm check-bundle       # 550 KB gzip entry-chunk budget (from frontend/)
 pnpm check-tokens       # every token-named class compiles (from frontend/, after a build)
+pnpm check-issue-templates   # .github/ISSUE_TEMPLATE forms + their labels (from frontend/)
 python3 .github/scripts/release-notes_test.py  # release-notes classifier (repo root)
 go vet ./...            # Go static analysis (repo root)
 go test ./...           # Go tests (repo root)
@@ -211,6 +212,20 @@ tree.
       `grep -n "Timeout" backend/services/rcon.go`, and
       `grep -nE "Retry-After|429|Timeout" backend/services/modrinth.go` — all
       three must still match.
+- [x] Store write actions record the failure and rethrow rather than applying
+      the optimistic update anyway, per `agent_docs/CLAUDE.md`'s IPC
+      conventions. All five stores that write comply as of 2026-08-20
+      (HEALTH_LOG); `useSchedulerStore` is the reference shape.
+      Verify: from `frontend/`,
+      `grep -rn "best-effort" src/stores` — expect no matches, and read any
+      `catch` in a write action against the rule. The rethrow is only half:
+      grep the action's callers too, since a store that rethrows into a caller
+      that ignores it is the same bug one level up.
+      Note the one sanctioned exception, or it will be "fixed" back: a rejection
+      with **no Wails bridge at all** (`lib/ipc.ts`'s `hasWailsBridge()`) keeps
+      the optimistic value, because that is the `frontend-dev` preset in
+      `.claude/launch.json` and hard-failing there makes the browser preview
+      read-only. Only a bridge-present rejection reverts.
 - [ ] `ErrorBoundary` wraps the app and the UI degrades gracefully when the
       Minecraft server process is offline or unreachable.
       Verify: `grep -n "ErrorBoundary" frontend/src/main.tsx`, then run the app
@@ -340,29 +355,6 @@ tree.
 The remaining, not-yet-closed follow-ups. Each item's full remediation write-up
 moves to `agent_docs/HEALTH_LOG.md` once it's done — keep this section short and
 current. Priorities mirror the pillars above.
-
-**P1 — Four stores swallow a failed write and keep the optimistic update**
-(found 2026-08-19)
-- `agent_docs/CLAUDE.md`'s IPC conventions say a store's "write actions rethrow
-  after recording the error, so an optimistic UI can revert", and name a bare
-  `catch {}` as the thing to avoid. `stores/useSchedulerStore.ts:124-165` does
-  exactly that and its own comment says every other store does not. It is right.
-- `useServerConfigStore.ts` (`saveConfig` :49, `deleteConfig` :64, `setActiveId`
-  :77), `useSettingsStore.ts` (`update` :85), `useLayoutStore.ts`
-  (`savePreset`/`deletePreset` :107-133) and `useTileStore.ts`
-  (`addTile`/`removeTile` :18-45) each catch the rejection with a `/* best-effort */`
-  comment and then apply the local update anyway. A failed `SaveServerConfig`
-  therefore shows the edit as saved, and it is gone on the next start, with no
-  error anywhere.
-- This is not speculative. `useSettingsStore.test.ts:100-103` *asserts* the
-  behaviour: "keeps the optimistic update even when SaveAppSettings rejects",
-  mocking a disk-full rejection and checking the toggle stays on. That test
-  encodes the bug, so fixing the stores means fixing the test with them.
-- Severity ranks by what is lost: server config (RCON credentials, working
-  directory, JVM args) worst, then settings (`confirmBeforeStop`,
-  `notifyOnCrash` are safety toggles a user would believe are on), then layout
-  and tiles, which are cosmetic. Each store needs the rethrow *and* its callers
-  need to revert, so this is a real piece of work, not a find-and-replace.
 
 **P1 — Tiles that render an unreachable server as an empty one** (found
 2026-08-19)
