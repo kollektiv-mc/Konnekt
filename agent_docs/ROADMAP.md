@@ -204,10 +204,11 @@ historical). Individual Beta tasks are filed in
 - **Scheduler — beta.** Editor quality-of-life on the shipped node graph:
   straight connections with reroute corner points, per-node renaming,
   copy/cut/paste, backdrops and sticky notes, a menu-based toolbar rework,
-  graph export/import, AND/OR logic for conditions, clearer live progress
-  (trigger countdown bars, delay progress, data-node and data-wire
-  highlighting), a far-zoom colored-block overview, block naming and
-  parameter-copy polish, and a block reference on the website.
+  graph export/import, floating attribute and node manager panels, AND/OR
+  logic for conditions, clearer live progress (trigger countdown bars, delay
+  progress, data-node and data-wire highlighting), a far-zoom colored-block
+  overview, block naming and parameter-copy polish, and a block reference on
+  the website.
 
 ## Remote access — full dashboard over the web
 
