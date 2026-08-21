@@ -2964,6 +2964,12 @@ button.dl-card:hover {
   border-color: rgb(var(--sun-rgb) / 0.4);
 }
 
+/* Including the cross that opens it, which took the green every other fold's
+   does and was the one green thing left on an amber card. */
+.doc-section.fold-snapshot .doc-collapse-mark {
+  color: var(--sun);
+}
+
 /* ── The demo stage ───────────────────────────────────────────────────── */
 /* A fixed panel beside the prose rather than above it: four steps stacked as
    columns would leave each one too narrow to read the mock-up in. What is
@@ -2974,9 +2980,15 @@ button.dl-card:hover {
    server running, the EULA up. That is what a card shows when it is not its
    turn, so a demo ending and a demo idle look the same, and the run can hand
    over without anything snapping back to an empty box. The animations play
-   once from empty and hold there. */
+   once from empty and hold there.
+
+   Getting from that finished frame back to empty is the wind-back below: a
+   card starting its turn eases itself clear over --demo-rewind-ms first, and
+   the animation is delayed by exactly that long so it takes over on the frame
+   the ease lands. */
 .demo {
   --demo-ms: 4600ms;
+  --demo-rewind-ms: 420ms;
   position: relative;
   flex: 0 0 217px;
   height: 158px;
@@ -3006,22 +3018,35 @@ button.dl-card:hover {
   margin: 0;
 }
 
-/* Interrupting a card mid-run — a hover taking over, the run moving on — drops
-   the animation, and the value underneath is the finished state. Easing that
-   last step stops the change reading as a cut. */
+/* Two moments use this, and both are a card changing state without an
+   animation driving it: one is a card being interrupted — a hover taking over,
+   the run moving on — where the animation is dropped and the value underneath
+   is the finished state again, and the other is the wind-back at the top of a
+   turn, where .is-playing names the empty frame and the animation has not
+   started yet. Easing covers both, so neither reads as a cut.
+
+   Every property any demo animates has to appear here, on every element that
+   animates it, or that one property is the thing that snaps while the rest of
+   the card eases — which reads as the whole card cutting. The field border
+   and the pointer were exactly that. */
 .mock-type,
+.mock-field,
 .mock-modal,
 .mock-scrim,
 .mock-status,
 .mock-btn,
 .mock-bar,
 .mock-bar-fill,
+.mock-cursor,
 .mock-log > span,
 .mock-behind > span,
 .mock-install-log > span {
   transition:
-    opacity 200ms var(--ease-standard),
-    background-color 200ms var(--ease-standard);
+    opacity var(--demo-rewind-ms) var(--ease-standard),
+    background-color var(--demo-rewind-ms) var(--ease-standard),
+    border-color var(--demo-rewind-ms) var(--ease-standard),
+    transform var(--demo-rewind-ms) var(--ease-standard),
+    width var(--demo-rewind-ms) var(--ease-standard);
 }
 
 .mock-title {
@@ -3383,6 +3408,26 @@ button.dl-card:hover {
   pointer-events: none;
 }
 
+/* Invisible at rest, but not *nowhere* at rest. Every other element's resting
+   value is already its animation's last frame, which is what lets a card that
+   loses its turn mid-run ease to that frame instead of cutting to it. The
+   pointer had no resting position at all, so an interrupted card teleported it
+   to the top-left corner on the way out while everything around it eased.
+   These are each cursor animation's own 100%: where it was left standing after
+   the click it just made. */
+.step[data-demo='add'] .mock-cursor {
+  transform: translate(42px, 124px) scale(1);
+}
+.step[data-demo='install'] .mock-cursor {
+  transform: translate(77px, 109px) scale(1);
+}
+.step[data-demo='start'] .mock-cursor {
+  transform: translate(161px, 15px) scale(1);
+}
+.step[data-demo='eula'] .mock-cursor {
+  transform: translate(73px, 120px) scale(1);
+}
+
 /* ── The run ──────────────────────────────────────────────────────────── */
 /* 4.6s, played once and held on the last frame — about twice the pace of the
    first pass at this, which spent three of its eight seconds holding a result
@@ -3390,7 +3435,16 @@ button.dl-card:hover {
 
    `forwards` is what makes the hand-over free: the animation's last frame and
    the element's resting value are the same picture, so docs.js can take the
-   class off whenever the run moves on without anything jumping. */
+   class off whenever the run moves on without anything jumping.
+
+   It is also, deliberately, not `both`. A backwards fill put the element on
+   the animation's 0% the instant .is-playing landed, which is a filled form
+   blinking blank and a modal vanishing between two frames. Instead each rule
+   below carries that 0% as a plain declaration and the animation waits
+   --demo-rewind-ms before it starts: the transition above eases the card back
+   to empty over the delay, and the animation picks it up from the frame it
+   arrives on. Those declarations have to stay equal to their own 0%, or the
+   seam opens up again. */
 @keyframes demo-focus-1 {
   0%,
   2% {
@@ -3543,34 +3597,39 @@ button.dl-card:hover {
 }
 
 .step[data-demo='add'].is-playing .f1 {
-  animation: demo-focus-1 var(--demo-ms) var(--ease-standard) both;
+  animation: demo-focus-1 var(--demo-ms) var(--ease-standard) var(--demo-rewind-ms) forwards;
 }
 .step[data-demo='add'].is-playing .f2 {
-  animation: demo-focus-2 var(--demo-ms) var(--ease-standard) both;
+  animation: demo-focus-2 var(--demo-ms) var(--ease-standard) var(--demo-rewind-ms) forwards;
 }
 .step[data-demo='add'].is-playing .f3 {
-  animation: demo-focus-3 var(--demo-ms) var(--ease-standard) both;
+  animation: demo-focus-3 var(--demo-ms) var(--ease-standard) var(--demo-rewind-ms) forwards;
 }
 .step[data-demo='add'].is-playing .f4 {
-  animation: demo-focus-4 var(--demo-ms) var(--ease-standard) both;
+  animation: demo-focus-4 var(--demo-ms) var(--ease-standard) var(--demo-rewind-ms) forwards;
 }
 .step[data-demo='add'].is-playing .f1 .mock-type {
-  animation: demo-type-1 var(--demo-ms) steps(14, end) both;
+  animation: demo-type-1 var(--demo-ms) steps(14, end) var(--demo-rewind-ms) forwards;
+  width: 0;
 }
 .step[data-demo='add'].is-playing .f2 .mock-type {
-  animation: demo-type-2 var(--demo-ms) steps(14, end) both;
+  animation: demo-type-2 var(--demo-ms) steps(14, end) var(--demo-rewind-ms) forwards;
+  width: 0;
 }
 .step[data-demo='add'].is-playing .f3 .mock-type {
-  animation: demo-type-3 var(--demo-ms) steps(18, end) both;
+  animation: demo-type-3 var(--demo-ms) steps(18, end) var(--demo-rewind-ms) forwards;
+  width: 0;
 }
 .step[data-demo='add'].is-playing .f4 .mock-type {
-  animation: demo-type-4 var(--demo-ms) steps(15, end) both;
+  animation: demo-type-4 var(--demo-ms) steps(15, end) var(--demo-rewind-ms) forwards;
+  width: 0;
 }
 .step[data-demo='add'].is-playing .mock-add {
-  animation: demo-press var(--demo-ms) var(--ease-standard) both;
+  animation: demo-press var(--demo-ms) var(--ease-standard) var(--demo-rewind-ms) forwards;
+  background-color: rgb(var(--accent-rgb) / 0);
 }
 .step[data-demo='add'].is-playing .mock-cursor {
-  animation: demo-cursor-add var(--demo-ms) var(--ease-standard) both;
+  animation: demo-cursor-add var(--demo-ms) var(--ease-standard) var(--demo-rewind-ms) forwards;
 }
 
 /* Step 2 — a folder is picked, the install runs, and the button becomes the
@@ -3728,34 +3787,43 @@ button.dl-card:hover {
 }
 
 .step[data-demo='install'].is-playing .mock-modal-wide {
-  animation: demo-install-in var(--demo-ms) var(--ease-standard) both;
+  animation: demo-install-in var(--demo-ms) var(--ease-standard) var(--demo-rewind-ms) forwards;
+  opacity: 0;
+  transform: scale(0.96);
 }
 .step[data-demo='install'].is-playing .i1 .mock-type {
-  animation: demo-type-install var(--demo-ms) steps(16, end) both;
+  animation: demo-type-install var(--demo-ms) steps(16, end) var(--demo-rewind-ms) forwards;
+  width: 0;
 }
 .step[data-demo='install'].is-playing .mock-cursor {
-  animation: demo-cursor-install var(--demo-ms) var(--ease-standard) both;
+  animation: demo-cursor-install var(--demo-ms) var(--ease-standard) var(--demo-rewind-ms) forwards;
 }
 .step[data-demo='install'].is-playing .mock-install-btn {
-  animation: demo-press-install var(--demo-ms) var(--ease-standard) both;
+  animation: demo-press-install var(--demo-ms) var(--ease-standard) var(--demo-rewind-ms) forwards;
+  opacity: 1;
+  background-color: rgb(var(--accent-rgb) / 0);
 }
 .step[data-demo='install'].is-playing .mock-added-btn {
-  animation: demo-swap-in var(--demo-ms) var(--ease-standard) both;
+  animation: demo-swap-in var(--demo-ms) var(--ease-standard) var(--demo-rewind-ms) forwards;
+  opacity: 0;
 }
 .step[data-demo='install'].is-playing .mock-bar {
-  animation: demo-bar var(--demo-ms) var(--ease-standard) both;
+  animation: demo-bar var(--demo-ms) var(--ease-standard) var(--demo-rewind-ms) forwards;
+  opacity: 0;
 }
 .step[data-demo='install'].is-playing .mock-bar-fill {
-  animation: demo-bar-fill var(--demo-ms) var(--ease-standard) both;
+  animation: demo-bar-fill var(--demo-ms) var(--ease-standard) var(--demo-rewind-ms) forwards;
+  width: 0;
 }
 .step[data-demo='install'].is-playing .il1 {
-  animation: demo-il-1 var(--demo-ms) var(--ease-standard) both;
+  animation: demo-il-1 var(--demo-ms) var(--ease-standard) var(--demo-rewind-ms) forwards;
 }
 .step[data-demo='install'].is-playing .il2 {
-  animation: demo-il-2 var(--demo-ms) var(--ease-standard) both;
+  animation: demo-il-2 var(--demo-ms) var(--ease-standard) var(--demo-rewind-ms) forwards;
 }
 .step[data-demo='install'].is-playing .il3 {
-  animation: demo-il-3 var(--demo-ms) var(--ease-standard) both;
+  animation: demo-il-3 var(--demo-ms) var(--ease-standard) var(--demo-rewind-ms) forwards;
+  opacity: 0;
 }
 
 /* Step 3 — Start is pressed, becomes Stop, and the status walks
@@ -3907,34 +3975,43 @@ button.dl-card:hover {
 }
 
 .step[data-demo='start'].is-playing .mock-cursor {
-  animation: demo-cursor-start var(--demo-ms) var(--ease-standard) both;
+  animation: demo-cursor-start var(--demo-ms) var(--ease-standard) var(--demo-rewind-ms) forwards;
 }
 .step[data-demo='start'].is-playing .mock-start {
-  animation: demo-press-start var(--demo-ms) var(--ease-standard) both;
+  animation: demo-press-start var(--demo-ms) var(--ease-standard) var(--demo-rewind-ms) forwards;
+  opacity: 1;
+  background-color: rgb(var(--accent-rgb) / 0);
 }
 .step[data-demo='start'].is-playing .mock-stop {
-  animation: demo-stop-in var(--demo-ms) var(--ease-standard) both;
+  animation: demo-stop-in var(--demo-ms) var(--ease-standard) var(--demo-rewind-ms) forwards;
+  opacity: 0;
 }
 .step[data-demo='start'].is-playing .s-stopped {
-  animation: demo-status-stopped var(--demo-ms) var(--ease-standard) both;
+  animation: demo-status-stopped var(--demo-ms) var(--ease-standard) var(--demo-rewind-ms) forwards;
+  opacity: 1;
 }
 .step[data-demo='start'].is-playing .s-starting {
-  animation: demo-status-starting var(--demo-ms) var(--ease-standard) both;
+  animation: demo-status-starting var(--demo-ms) var(--ease-standard) var(--demo-rewind-ms) forwards;
 }
 .step[data-demo='start'].is-playing .s-running {
-  animation: demo-status-running var(--demo-ms) var(--ease-standard) both;
+  animation: demo-status-running var(--demo-ms) var(--ease-standard) var(--demo-rewind-ms) forwards;
+  opacity: 0;
 }
 .step[data-demo='start'].is-playing .l1 {
-  animation: demo-line-1 var(--demo-ms) var(--ease-standard) both;
+  animation: demo-line-1 var(--demo-ms) var(--ease-standard) var(--demo-rewind-ms) forwards;
+  opacity: 0;
 }
 .step[data-demo='start'].is-playing .l2 {
-  animation: demo-line-2 var(--demo-ms) var(--ease-standard) both;
+  animation: demo-line-2 var(--demo-ms) var(--ease-standard) var(--demo-rewind-ms) forwards;
+  opacity: 0;
 }
 .step[data-demo='start'].is-playing .l3 {
-  animation: demo-line-3 var(--demo-ms) var(--ease-standard) both;
+  animation: demo-line-3 var(--demo-ms) var(--ease-standard) var(--demo-rewind-ms) forwards;
+  opacity: 0;
 }
 .step[data-demo='start'].is-playing .l4 {
-  animation: demo-line-4 var(--demo-ms) var(--ease-standard) both;
+  animation: demo-line-4 var(--demo-ms) var(--ease-standard) var(--demo-rewind-ms) forwards;
+  opacity: 0;
 }
 
 /* Step 4 — the log runs, the EULA line lands, and the modal comes up over a
@@ -4053,28 +4130,36 @@ button.dl-card:hover {
 }
 
 .step[data-demo='eula'].is-playing .bl1 {
-  animation: demo-behind-1 var(--demo-ms) var(--ease-standard) both;
+  animation: demo-behind-1 var(--demo-ms) var(--ease-standard) var(--demo-rewind-ms) forwards;
+  opacity: 0;
 }
 .step[data-demo='eula'].is-playing .bl2 {
-  animation: demo-behind-2 var(--demo-ms) var(--ease-standard) both;
+  animation: demo-behind-2 var(--demo-ms) var(--ease-standard) var(--demo-rewind-ms) forwards;
+  opacity: 0;
 }
 .step[data-demo='eula'].is-playing .bl3 {
-  animation: demo-behind-3 var(--demo-ms) var(--ease-standard) both;
+  animation: demo-behind-3 var(--demo-ms) var(--ease-standard) var(--demo-rewind-ms) forwards;
+  opacity: 0;
 }
 .step[data-demo='eula'].is-playing .bl4 {
-  animation: demo-behind-4 var(--demo-ms) var(--ease-standard) both;
+  animation: demo-behind-4 var(--demo-ms) var(--ease-standard) var(--demo-rewind-ms) forwards;
+  opacity: 0;
 }
 .step[data-demo='eula'].is-playing .mock-scrim {
-  animation: demo-scrim var(--demo-ms) var(--ease-standard) both;
+  animation: demo-scrim var(--demo-ms) var(--ease-standard) var(--demo-rewind-ms) forwards;
+  opacity: 0;
 }
 .step[data-demo='eula'].is-playing .mock-modal {
-  animation: demo-modal-in var(--demo-ms) var(--ease-standard) both;
+  animation: demo-modal-in var(--demo-ms) var(--ease-standard) var(--demo-rewind-ms) forwards;
+  opacity: 0;
+  transform: scale(0.94);
 }
 .step[data-demo='eula'].is-playing .mock-cursor {
-  animation: demo-cursor-eula var(--demo-ms) var(--ease-standard) both;
+  animation: demo-cursor-eula var(--demo-ms) var(--ease-standard) var(--demo-rewind-ms) forwards;
 }
 .step[data-demo='eula'].is-playing .mock-accept {
-  animation: demo-press-eula var(--demo-ms) var(--ease-standard) both;
+  animation: demo-press-eula var(--demo-ms) var(--ease-standard) var(--demo-rewind-ms) forwards;
+  background-color: rgb(var(--accent-rgb) / 0);
 }
 
 /* ── Build from source, collapsed ─────────────────────────────────────── */
