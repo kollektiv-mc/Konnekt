@@ -1,7 +1,8 @@
-/* Shared GitHub-release helpers for the download + changelog pages. */
+/* Shared GitHub helpers for the download, changelog and roadmap pages. */
 ;(function () {
   var OWNER_REPO = 'kollektiv-mc/Konnekt'
   var API = 'https://api.github.com/repos/' + OWNER_REPO
+  var SEARCH = 'https://api.github.com/search/issues'
 
   // The rolling prerelease .github/workflows/snapshot.yml rebuilds from main
   // (see the download page's snapshot section). It's a prerelease, so
@@ -156,6 +157,26 @@
     })
   }
 
+  // Issues, and only issues. /issues returns pull requests alongside them —
+  // one page of 100 is 49 issues and 45 pull requests today, and the roadmap's
+  // own issues drop off that first page as more land — so the roadmap asks
+  // search instead, which is the only endpoint that can say is:issue.
+  //
+  // Search carries its own rate limit, 10 a minute per address unauthenticated
+  // rather than the 60 an hour the rest of this file draws on. One call per
+  // page load sits well inside it. Add a second page when the repo passes 100
+  // issues; it is at 49.
+  function searchIssues() {
+    var url =
+      SEARCH + '?q=' + encodeURIComponent('repo:' + OWNER_REPO + ' is:issue') + '&per_page=100'
+    return fetch(url, { headers: { Accept: 'application/vnd.github+json' } }).then(function (res) {
+      if (!res.ok) return { ok: false, status: res.status, data: null }
+      return res.json().then(function (data) {
+        return { ok: true, status: res.status, data: (data && data.items) || [] }
+      })
+    })
+  }
+
   window.KonnektRelease = {
     OWNER_REPO: OWNER_REPO,
     RELEASES_URL: 'https://github.com/' + OWNER_REPO + '/releases',
@@ -181,5 +202,7 @@
     fetchSnapshot: function () {
       return get('/releases/tags/' + SNAPSHOT_TAG)
     },
+    ISSUES_URL: 'https://github.com/' + OWNER_REPO + '/issues',
+    fetchIssues: searchIssues,
   }
 })()

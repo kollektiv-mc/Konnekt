@@ -360,7 +360,8 @@ a {
 .release,
 .cta-panel,
 .spotlight-media,
-.spotlight-points li {
+.spotlight-points li,
+.rm-stage-card {
   position: relative;
   --glow-size: 260px;
   --glow-rgb: var(--accent-rgb);
@@ -375,7 +376,8 @@ a {
 .release:hover,
 .cta-panel:hover,
 .spotlight-media:hover,
-.spotlight-points li:hover {
+.spotlight-points li:hover,
+.rm-stage-card:hover {
   border-color: var(--glow-border);
 }
 
@@ -392,7 +394,8 @@ a {
   .release::after,
   .cta-panel::after,
   .spotlight-media::after,
-  .spotlight-points li::after {
+  .spotlight-points li::after,
+  .rm-stage-card::after {
     content: '';
     position: absolute;
     /* Absolute children resolve against the padding box, so the half-pixel
@@ -426,7 +429,8 @@ a {
   .release:hover::after,
   .cta-panel:hover::after,
   .spotlight-media:hover::after,
-  .spotlight-points li:hover::after {
+  .spotlight-points li:hover::after,
+  .rm-stage-card:hover::after {
     opacity: 1;
   }
 }
@@ -498,6 +502,9 @@ a {
 .download-others,
 .dl-footnote,
 .dl-grid > .dl-card,
+.rm-stages,
+.rm-explorer,
+.rm-note,
 .changelog > .release {
   animation: intro-in 460ms var(--ease-standard) both;
 }
@@ -522,8 +529,17 @@ a {
   animation-delay: 40ms;
 }
 
-.doc-toc {
+.doc-toc,
+.rm-stages {
   animation-delay: 110ms;
+}
+
+.rm-explorer {
+  animation-delay: 170ms;
+}
+
+.rm-note {
+  animation-delay: 230ms;
 }
 
 .state-box,
@@ -1869,9 +1885,9 @@ footer {
 .brand-tag {
   font-family: var(--font-mono);
   font-size: 10.5px;
-  color: var(--sun);
-  border: 0.5px solid rgb(var(--sun-rgb) / 0.35);
-  background: rgb(var(--sun-rgb) / 0.08);
+  color: var(--danger);
+  border: 0.5px solid rgb(var(--danger-rgb) / 0.35);
+  background: rgb(var(--danger-rgb) / 0.08);
   padding: 2px 8px;
   border-radius: 5px;
   letter-spacing: 0.05em;
@@ -2712,6 +2728,2099 @@ button.dl-card:hover {
   padding: 0 0 14px 22px;
 }
 
+/* ── Docs: requirement and step tiles ─────────────────────────────────── */
+/* This page used to be four walls of prose. Requirements and the first-server
+   walkthrough are both lists of discrete things, so they are tiles now, and
+   each step carries a small moving picture of the panel it describes. */
+.doc-lead {
+  margin: 0 0 18px;
+  font-size: 13.5px;
+  line-height: 1.6;
+  color: var(--text-secondary);
+}
+
+.req-grid,
+.step-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.req,
+.step {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px 16px 18px;
+  min-width: 0;
+  background: var(--bg-surface);
+  border: 0.5px solid var(--border-subtle);
+  border-radius: 12px;
+  transition: border-color var(--duration-fast) ease;
+}
+
+.req:hover,
+.step:hover {
+  border-color: var(--border-hover);
+}
+
+.req-icon {
+  font-family: var(--font-mono);
+  font-size: 15px;
+  line-height: 1;
+  color: var(--accent);
+}
+
+.req h3,
+.step h3 {
+  margin: 0;
+  font-family: var(--font-title);
+  font-weight: 500;
+  font-size: 14px;
+  color: var(--text-primary);
+}
+
+.req p,
+.step p {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: var(--text-muted);
+}
+
+/* Four steps stacked as columns would leave each too narrow to read its
+   mock-up in, so a step is a row: the panel at a fixed width, the prose taking
+   what is left. */
+.step-grid {
+  grid-template-columns: 1fr;
+}
+
+.step {
+  flex-direction: row;
+  align-items: center;
+  gap: 16px;
+}
+
+.step-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.step-head {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.step-n {
+  flex: 0 0 auto;
+  width: 20px;
+  height: 20px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  border: 0.5px solid rgb(var(--accent-rgb) / 0.35);
+  background: rgb(var(--accent-rgb) / 0.08);
+  color: var(--accent);
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+
+.step-note {
+  margin: 14px 0 0;
+  padding-top: 12px;
+  border-top: 0.5px solid var(--border-subtle);
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.step-note code {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+.step-note a {
+  color: var(--text-secondary);
+  text-decoration: underline;
+  text-decoration-color: var(--border-hover);
+}
+
+.step-note a:hover {
+  color: var(--accent);
+}
+
+/* Short facts under the platform table. A list rather than paragraphs, because
+   each is a separate thing to check rather than an argument to follow. */
+.note-list {
+  margin: 14px 0 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 12.5px;
+  color: var(--text-muted);
+}
+
+.note-list li {
+  position: relative;
+  padding-left: 14px;
+}
+
+.note-list li::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 8px;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--text-faint);
+}
+
+.note-list code {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  color: var(--text-secondary);
+}
+
+/* ── A step that folds ────────────────────────────────────────────────── */
+/* Installing is the optional step — it only happens when what you have is an
+   installer rather than a server jar — so it is folded away rather than given
+   the same weight as the three everyone does. Green edge because it is a step,
+   against the snapshot fold's amber further down the page. */
+/* Block, not the row .step is: this tile's child is the disclosure, and as a
+   flex item that <details> shrink-wraps to its summary instead of spanning the
+   card. The row layout belongs to .step-inner, inside it. */
+.step-fold {
+  display: block;
+  padding: 0;
+  border-color: rgb(var(--accent-rgb) / 0.22);
+}
+
+.step-fold:hover {
+  border-color: rgb(var(--accent-rgb) / 0.4);
+}
+
+.step-fold > .fold {
+  padding: 14px 16px 16px;
+}
+
+.step-summary {
+  cursor: pointer;
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.step-summary::-webkit-details-marker {
+  display: none;
+}
+
+.step-summary .doc-collapse-mark {
+  width: 9px;
+  height: 9px;
+}
+
+.step-hint {
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+.step-inner {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding-top: 14px;
+}
+
+/* The snapshot fold takes the colour of the tag it carries. */
+.doc-section.fold-snapshot {
+  border-color: rgb(var(--sun-rgb) / 0.22);
+}
+
+.doc-section.fold-snapshot:hover {
+  border-color: rgb(var(--sun-rgb) / 0.4);
+}
+
+/* ── The demo stage ───────────────────────────────────────────────────── */
+/* A fixed panel beside the prose rather than above it: four steps stacked as
+   columns would leave each one too narrow to read the mock-up in. What is
+   inside is the app's own type, spacing and colours at a smaller size — a
+   picture of the panel being described, not a working copy of it. */
+.demo {
+  position: relative;
+  flex: 0 0 217px;
+  height: 158px;
+  border-radius: 9px;
+  border: 0.5px solid var(--border-subtle);
+  background: var(--bg-base);
+  overflow: hidden;
+}
+
+/* Fixed width, centred, rather than filling the stage. The pointer in steps 3
+   and 4 travels to a button by coordinate, and a panel that reflowed with the
+   card would leave it clicking empty space at some width. This way one set of
+   coordinates is right everywhere. */
+.mock {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: 197px;
+  margin-left: -98px;
+  padding: 10px;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  color: var(--text-secondary);
+}
+
+.mock p {
+  margin: 0;
+}
+
+.mock-title {
+  margin-bottom: 7px;
+  font-family: var(--font-title);
+  font-size: 8px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+/* The app's own input: white/5 on a hairline, brighter while focused. */
+.mock-field {
+  height: 17px;
+  margin-bottom: 5px;
+  padding: 0 5px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--hover-surface);
+  border: 0.5px solid var(--border-subtle);
+  border-radius: 3px;
+  color: var(--text-primary);
+}
+
+.mock-browse {
+  margin-left: auto;
+  color: var(--text-faint);
+}
+
+/* Typed text is a width reveal in `ch`, stepped so it lands letter by letter
+   rather than sliding open. Each field sets --n to its own length. */
+.mock-type {
+  display: inline-block;
+  width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  vertical-align: bottom;
+}
+
+.f1 .mock-type {
+  --n: 8;
+}
+.f2 .mock-type {
+  --n: 10;
+}
+.f3 .mock-type {
+  --n: 17;
+}
+.f4 .mock-type {
+  --n: 13;
+}
+.i1 .mock-type {
+  --n: 14;
+}
+
+.mock-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 17px;
+  padding: 0 9px;
+  border-radius: 3px;
+  border: 0.5px solid rgb(var(--accent-rgb) / 0.3);
+  color: var(--accent);
+  font-size: 9px;
+}
+
+.mock-add {
+  margin-top: 2px;
+  align-self: flex-start;
+}
+
+/* ── Step 2: the installer ────────────────────────────────────────────── */
+.mock-install {
+  display: grid;
+  place-items: center;
+  background: rgb(0 0 0 / 0.45);
+}
+
+.mock-modal-wide {
+  width: 185px;
+  gap: 5px;
+}
+
+.mock-info {
+  color: var(--warning);
+  font-family: var(--font-mono);
+  font-weight: 700;
+}
+
+.mock-modal-wide .mock-field {
+  margin-bottom: 0;
+  height: 15px;
+}
+
+.mock-install-log {
+  display: grid;
+  height: 15px;
+  padding: 0 5px;
+  align-items: center;
+  border-radius: 3px;
+  background: var(--bg-surface);
+  border: 0.5px solid var(--border-subtle);
+  font-size: 7.5px;
+  color: var(--text-muted);
+}
+
+.mock-install-log > span {
+  grid-area: 1 / 1;
+  opacity: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* The installer reports no percentage — useProcessesStore holds it at zero
+   while it runs and only finish() sets it to 100 — so this bar stays empty
+   until the install is done rather than pretending to measure anything. */
+.mock-bar {
+  height: 2px;
+  border-radius: 999px;
+  background: var(--border-subtle);
+  overflow: hidden;
+  opacity: 0;
+}
+
+.mock-bar-fill {
+  display: block;
+  width: 0;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--accent);
+}
+
+.mock-install-btn,
+.mock-added-btn {
+  grid-area: 1 / 1;
+  height: 15px;
+  font-size: 8px;
+}
+
+.mock-added-btn {
+  opacity: 0;
+}
+
+.mock-modal-wide .mock-modal-foot {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 5px;
+}
+
+.mock-modal-wide .mock-dismiss {
+  grid-area: 1 / 2;
+}
+
+/* ── Step 4: the EULA modal ───────────────────────────────────────────── */
+/* The console it interrupts sits behind it, and dims as it arrives — which is
+   the order it happens in: the server starts, the log says what it wants, and
+   the modal comes up over it. */
+.mock-eula {
+  display: grid;
+  place-items: center;
+}
+
+.mock-behind {
+  position: absolute;
+  inset: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 8px;
+  color: var(--text-muted);
+}
+
+.mock-behind > span {
+  opacity: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mock-behind .bl3 {
+  color: var(--sun);
+}
+
+.mock-scrim {
+  position: absolute;
+  inset: 0;
+  background: rgb(0 0 0 / 0.55);
+  opacity: 0;
+}
+
+.mock-modal {
+  position: relative;
+  width: 172px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 9px;
+  border-radius: 7px;
+  background: var(--bg-overlay);
+  border: 0.5px solid rgb(var(--sun-rgb) / 0.25);
+  opacity: 0;
+  transform: scale(0.94);
+}
+
+.mock-modal-wide {
+  border-color: var(--border-subtle);
+}
+
+.mock-modal-head {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-family: var(--font-title);
+  font-size: 9px;
+  color: var(--text-primary);
+}
+
+.mock-bang {
+  color: var(--sun);
+  font-family: var(--font-mono);
+  font-weight: 700;
+}
+
+.mock .mock-modal-body {
+  font-size: 8px;
+  line-height: 1.5;
+  color: var(--text-secondary);
+}
+
+.mock-link {
+  font-size: 8px;
+  color: rgb(var(--sun-rgb) / 0.7);
+}
+
+.mock-modal-foot {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding-top: 5px;
+  border-top: 0.5px solid var(--border-subtle);
+}
+
+.mock-accept {
+  flex: 1;
+  height: 15px;
+  font-size: 8px;
+}
+
+.mock-dismiss {
+  padding: 0 4px;
+  font-size: 8px;
+  color: var(--text-faint);
+}
+
+/* ── Step 3: the console ──────────────────────────────────────────────── */
+/* Three status pills share one cell and cross-fade, since the text of a single
+   pill cannot be animated. Start and Stop share the other cell for the same
+   reason: pressing Start is what turns it into Stop. */
+.mock-console-head {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  padding-bottom: 7px;
+  margin-bottom: 8px;
+  border-bottom: 0.5px solid var(--border-subtle);
+}
+
+.mock-status {
+  grid-area: 1 / 1;
+  justify-self: start;
+  padding: 1px 6px;
+  border-radius: 999px;
+  border: 0.5px solid;
+  font-size: 8px;
+  letter-spacing: 0.06em;
+  opacity: 0;
+}
+
+.s-stopped {
+  color: var(--danger);
+  border-color: rgb(var(--danger-rgb) / 0.35);
+  background: rgb(var(--danger-rgb) / 0.08);
+  opacity: 1;
+}
+
+.s-starting {
+  color: var(--sun);
+  border-color: rgb(var(--sun-rgb) / 0.35);
+  background: rgb(var(--sun-rgb) / 0.08);
+}
+
+.s-running {
+  color: var(--accent);
+  border-color: rgb(var(--accent-rgb) / 0.35);
+  background: rgb(var(--accent-rgb) / 0.08);
+}
+
+.mock-start,
+.mock-stop {
+  grid-area: 1 / 2;
+  justify-self: end;
+  height: 15px;
+  font-size: 8px;
+}
+
+.mock-stop {
+  border-color: rgb(var(--danger-rgb) / 0.3);
+  color: var(--danger);
+  opacity: 0;
+}
+
+.mock-log {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 8px;
+  color: var(--text-muted);
+}
+
+.mock-log > span {
+  opacity: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mock-log .l4 {
+  color: var(--accent);
+}
+
+/* The pointer, drawn rather than an image so it takes the palette. */
+.mock-cursor {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  border: 1px solid var(--text-primary);
+  background: rgb(255 255 255 / 0.15);
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* ── The loop ─────────────────────────────────────────────────────────── */
+/* One 8.5s timeline, shared by all four demos: five seconds of action, three
+   holding the result, half a second fading back. 59% is the five-second mark
+   and 94% the eight-second one.
+
+   The stagger is written into the percentages rather than set with
+   animation-delay, deliberately: a delay shifts an element's whole cycle, so
+   four delayed fields would each reset at a different moment and the card would
+   never look the same way twice. Every element here shares one phase.
+
+   Nothing animates until docs.js adds .is-playing — on hover, or, where there
+   is no hover to go on, while the card is on screen. Taking the class off
+   removes the animations rather than pausing them, so the card drops back to
+   its first frame and the next hover starts from the top. */
+@keyframes demo-focus-1 {
+  0%,
+  2% {
+    border-color: var(--border-subtle);
+  }
+  4%,
+  12% {
+    border-color: rgb(var(--accent-rgb) / 0.45);
+  }
+  15%,
+  100% {
+    border-color: var(--border-subtle);
+  }
+}
+
+@keyframes demo-focus-2 {
+  0%,
+  10% {
+    border-color: var(--border-subtle);
+  }
+  12%,
+  20% {
+    border-color: rgb(var(--accent-rgb) / 0.45);
+  }
+  23%,
+  100% {
+    border-color: var(--border-subtle);
+  }
+}
+
+@keyframes demo-focus-3 {
+  0%,
+  18% {
+    border-color: var(--border-subtle);
+  }
+  20%,
+  28% {
+    border-color: rgb(var(--accent-rgb) / 0.45);
+  }
+  31%,
+  100% {
+    border-color: var(--border-subtle);
+  }
+}
+
+@keyframes demo-focus-4 {
+  0%,
+  26% {
+    border-color: var(--border-subtle);
+  }
+  28%,
+  38% {
+    border-color: rgb(var(--accent-rgb) / 0.45);
+  }
+  41%,
+  100% {
+    border-color: var(--border-subtle);
+  }
+}
+
+@keyframes demo-type-1 {
+  0%,
+  4% {
+    width: 0;
+  }
+  12%,
+  94% {
+    width: calc(var(--n) * 1ch);
+  }
+  100% {
+    width: 0;
+  }
+}
+
+@keyframes demo-type-2 {
+  0%,
+  12% {
+    width: 0;
+  }
+  20%,
+  94% {
+    width: calc(var(--n) * 1ch);
+  }
+  100% {
+    width: 0;
+  }
+}
+
+@keyframes demo-type-3 {
+  0%,
+  20% {
+    width: 0;
+  }
+  28%,
+  94% {
+    width: calc(var(--n) * 1ch);
+  }
+  100% {
+    width: 0;
+  }
+}
+
+@keyframes demo-type-4 {
+  0%,
+  28% {
+    width: 0;
+  }
+  38%,
+  94% {
+    width: calc(var(--n) * 1ch);
+  }
+  100% {
+    width: 0;
+  }
+}
+
+@keyframes demo-press {
+  0%,
+  50% {
+    background: transparent;
+    transform: scale(1);
+  }
+  54% {
+    background: rgb(var(--accent-rgb) / 0.2);
+    transform: scale(0.95);
+  }
+  60%,
+  94% {
+    background: rgb(var(--accent-rgb) / 0.1);
+    transform: scale(1);
+  }
+  100% {
+    background: transparent;
+    transform: scale(1);
+  }
+}
+
+/* Step 1 — the four fields fill in, then Add server is pressed. */
+.step[data-demo='add'].is-playing .f1 {
+  animation: demo-focus-1 8.5s var(--ease-standard) infinite;
+}
+.step[data-demo='add'].is-playing .f2 {
+  animation: demo-focus-2 8.5s var(--ease-standard) infinite;
+}
+.step[data-demo='add'].is-playing .f3 {
+  animation: demo-focus-3 8.5s var(--ease-standard) infinite;
+}
+.step[data-demo='add'].is-playing .f4 {
+  animation: demo-focus-4 8.5s var(--ease-standard) infinite;
+}
+
+.step[data-demo='add'].is-playing .f1 .mock-type {
+  animation: demo-type-1 8.5s steps(14, end) infinite;
+}
+.step[data-demo='add'].is-playing .f2 .mock-type {
+  animation: demo-type-2 8.5s steps(14, end) infinite;
+}
+.step[data-demo='add'].is-playing .f3 .mock-type {
+  animation: demo-type-3 8.5s steps(18, end) infinite;
+}
+.step[data-demo='add'].is-playing .f4 .mock-type {
+  animation: demo-type-4 8.5s steps(15, end) infinite;
+}
+
+.step[data-demo='add'].is-playing .mock-add {
+  animation: demo-press 8.5s var(--ease-standard) infinite;
+}
+
+/* Step 2 — a folder is picked, the install runs, and the button becomes the
+   one that adds what it produced. */
+@keyframes demo-install-in {
+  0% {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  8%,
+  94% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+}
+
+@keyframes demo-type-install {
+  0%,
+  10% {
+    width: 0;
+  }
+  22%,
+  94% {
+    width: calc(var(--n) * 1ch);
+  }
+  100% {
+    width: 0;
+  }
+}
+
+@keyframes demo-press-mid {
+  0%,
+  26% {
+    background: transparent;
+    opacity: 1;
+    transform: scale(1);
+  }
+  30% {
+    background: rgb(var(--accent-rgb) / 0.2);
+    opacity: 1;
+    transform: scale(0.95);
+  }
+  36%,
+  56% {
+    background: rgb(var(--accent-rgb) / 0.1);
+    opacity: 1;
+    transform: scale(1);
+  }
+  60%,
+  100% {
+    background: transparent;
+    opacity: 0;
+    transform: scale(1);
+  }
+}
+
+@keyframes demo-bar {
+  0%,
+  30% {
+    opacity: 0;
+  }
+  34%,
+  94% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes demo-bar-fill {
+  0%,
+  54% {
+    width: 0;
+  }
+  60%,
+  94% {
+    width: 100%;
+  }
+  100% {
+    width: 0;
+  }
+}
+
+@keyframes demo-il-1 {
+  0%,
+  32% {
+    opacity: 0;
+  }
+  36%,
+  42% {
+    opacity: 1;
+  }
+  46%,
+  100% {
+    opacity: 0;
+  }
+}
+@keyframes demo-il-2 {
+  0%,
+  44% {
+    opacity: 0;
+  }
+  48%,
+  54% {
+    opacity: 1;
+  }
+  58%,
+  100% {
+    opacity: 0;
+  }
+}
+@keyframes demo-il-3 {
+  0%,
+  56% {
+    opacity: 0;
+  }
+  60%,
+  94% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+@keyframes demo-swap-in {
+  0%,
+  56% {
+    opacity: 0;
+  }
+  62%,
+  94% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+.step[data-demo='install'].is-playing .mock-modal-wide {
+  animation: demo-install-in 8.5s var(--ease-standard) infinite;
+}
+.step[data-demo='install'].is-playing .i1 .mock-type {
+  animation: demo-type-install 8.5s steps(16, end) infinite;
+}
+.step[data-demo='install'].is-playing .mock-install-btn {
+  animation: demo-press-mid 8.5s var(--ease-standard) infinite;
+}
+.step[data-demo='install'].is-playing .mock-added-btn {
+  animation: demo-swap-in 8.5s var(--ease-standard) infinite;
+}
+.step[data-demo='install'].is-playing .mock-bar {
+  animation: demo-bar 8.5s var(--ease-standard) infinite;
+}
+.step[data-demo='install'].is-playing .mock-bar-fill {
+  animation: demo-bar-fill 8.5s var(--ease-standard) infinite;
+}
+.step[data-demo='install'].is-playing .il1 {
+  animation: demo-il-1 8.5s var(--ease-standard) infinite;
+}
+.step[data-demo='install'].is-playing .il2 {
+  animation: demo-il-2 8.5s var(--ease-standard) infinite;
+}
+.step[data-demo='install'].is-playing .il3 {
+  animation: demo-il-3 8.5s var(--ease-standard) infinite;
+}
+
+/* Steps 1 and 2 get the same pointer the other two have: it arrives, crosses to
+   the button the step is about, and presses it. */
+@keyframes demo-cursor-add {
+  0%,
+  36% {
+    opacity: 0;
+    transform: translate(150px, 40px) scale(1);
+  }
+  42% {
+    opacity: 1;
+    transform: translate(150px, 40px) scale(1);
+  }
+  50%,
+  52% {
+    opacity: 1;
+    transform: translate(42px, 124px) scale(1);
+  }
+  55% {
+    transform: translate(42px, 124px) scale(0.68);
+  }
+  60%,
+  90% {
+    opacity: 1;
+    transform: translate(42px, 124px) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(42px, 124px) scale(1);
+  }
+}
+
+@keyframes demo-cursor-install {
+  0%,
+  12% {
+    opacity: 0;
+    transform: translate(150px, 30px) scale(1);
+  }
+  18% {
+    opacity: 1;
+    transform: translate(150px, 30px) scale(1);
+  }
+  26%,
+  28% {
+    opacity: 1;
+    transform: translate(77px, 109px) scale(1);
+  }
+  31% {
+    transform: translate(77px, 109px) scale(0.68);
+  }
+  36%,
+  90% {
+    opacity: 1;
+    transform: translate(77px, 109px) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(77px, 109px) scale(1);
+  }
+}
+
+.step[data-demo='add'].is-playing .mock-cursor {
+  animation: demo-cursor-add 8.5s var(--ease-standard) infinite;
+}
+
+.step[data-demo='install'].is-playing .mock-cursor {
+  animation: demo-cursor-install 8.5s var(--ease-standard) infinite;
+}
+
+/* Step 3 — Start is pressed, becomes Stop, and the status walks
+   stopped → starting → running with the log filling in behind it. */
+@keyframes demo-cursor-start {
+  0%,
+  4% {
+    opacity: 0;
+    transform: translate(52px, 132px) scale(1);
+  }
+  10% {
+    opacity: 1;
+    transform: translate(52px, 132px) scale(1);
+  }
+  26%,
+  28% {
+    opacity: 1;
+    transform: translate(161px, 15px) scale(1);
+  }
+  31% {
+    transform: translate(161px, 15px) scale(0.68);
+  }
+  36%,
+  90% {
+    opacity: 1;
+    transform: translate(161px, 15px) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(161px, 15px) scale(1);
+  }
+}
+
+@keyframes demo-press-out {
+  0%,
+  28% {
+    background: transparent;
+    opacity: 1;
+    transform: scale(1);
+  }
+  32% {
+    background: rgb(var(--accent-rgb) / 0.2);
+    opacity: 1;
+    transform: scale(0.95);
+  }
+  36% {
+    background: rgb(var(--accent-rgb) / 0.1);
+    opacity: 1;
+    transform: scale(1);
+  }
+  42%,
+  100% {
+    background: transparent;
+    opacity: 0;
+    transform: scale(1);
+  }
+}
+
+@keyframes demo-stop-in {
+  0%,
+  38% {
+    opacity: 0;
+  }
+  44%,
+  94% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes demo-status-stopped {
+  0%,
+  32% {
+    opacity: 1;
+  }
+  38%,
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes demo-status-starting {
+  0%,
+  34% {
+    opacity: 0;
+  }
+  40%,
+  56% {
+    opacity: 1;
+  }
+  62%,
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes demo-status-running {
+  0%,
+  58% {
+    opacity: 0;
+  }
+  64%,
+  94% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes demo-line-1 {
+  0%,
+  38% {
+    opacity: 0;
+  }
+  42%,
+  94% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes demo-line-2 {
+  0%,
+  44% {
+    opacity: 0;
+  }
+  48%,
+  94% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes demo-line-3 {
+  0%,
+  50% {
+    opacity: 0;
+  }
+  54%,
+  94% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes demo-line-4 {
+  0%,
+  60% {
+    opacity: 0;
+  }
+  64%,
+  94% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+.step[data-demo='start'].is-playing .mock-cursor {
+  animation: demo-cursor-start 8.5s var(--ease-standard) infinite;
+}
+.step[data-demo='start'].is-playing .mock-start {
+  animation: demo-press-out 8.5s var(--ease-standard) infinite;
+}
+.step[data-demo='start'].is-playing .mock-stop {
+  animation: demo-stop-in 8.5s var(--ease-standard) infinite;
+}
+.step[data-demo='start'].is-playing .s-stopped {
+  animation: demo-status-stopped 8.5s var(--ease-standard) infinite;
+}
+.step[data-demo='start'].is-playing .s-starting {
+  animation: demo-status-starting 8.5s var(--ease-standard) infinite;
+}
+.step[data-demo='start'].is-playing .s-running {
+  animation: demo-status-running 8.5s var(--ease-standard) infinite;
+}
+.step[data-demo='start'].is-playing .l1 {
+  animation: demo-line-1 8.5s var(--ease-standard) infinite;
+}
+.step[data-demo='start'].is-playing .l2 {
+  animation: demo-line-2 8.5s var(--ease-standard) infinite;
+}
+.step[data-demo='start'].is-playing .l3 {
+  animation: demo-line-3 8.5s var(--ease-standard) infinite;
+}
+.step[data-demo='start'].is-playing .l4 {
+  animation: demo-line-4 8.5s var(--ease-standard) infinite;
+}
+
+/* Step 4 — the log runs, the EULA line lands, and the modal comes up over a
+   console that dims behind it. */
+@keyframes demo-behind-1 {
+  0% {
+    opacity: 0;
+  }
+  4%,
+  94% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes demo-behind-2 {
+  0%,
+  6% {
+    opacity: 0;
+  }
+  10%,
+  94% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes demo-behind-3 {
+  0%,
+  12% {
+    opacity: 0;
+  }
+  16%,
+  94% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes demo-behind-4 {
+  0%,
+  18% {
+    opacity: 0;
+  }
+  22%,
+  94% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes demo-scrim {
+  0%,
+  24% {
+    opacity: 0;
+  }
+  32%,
+  94% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes demo-modal-in {
+  0%,
+  26% {
+    opacity: 0;
+    transform: scale(0.94);
+  }
+  34%,
+  94% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(0.94);
+  }
+}
+
+@keyframes demo-cursor-eula {
+  0%,
+  34% {
+    opacity: 0;
+    transform: translate(146px, 134px) scale(1);
+  }
+  40% {
+    opacity: 1;
+    transform: translate(146px, 134px) scale(1);
+  }
+  56%,
+  58% {
+    opacity: 1;
+    transform: translate(73px, 120px) scale(1);
+  }
+  61% {
+    transform: translate(73px, 120px) scale(0.68);
+  }
+  66%,
+  90% {
+    opacity: 1;
+    transform: translate(73px, 120px) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(73px, 120px) scale(1);
+  }
+}
+
+@keyframes demo-press-late {
+  0%,
+  58% {
+    background: transparent;
+    transform: scale(1);
+  }
+  62% {
+    background: rgb(var(--accent-rgb) / 0.2);
+    transform: scale(0.95);
+  }
+  68%,
+  94% {
+    background: rgb(var(--accent-rgb) / 0.1);
+    transform: scale(1);
+  }
+  100% {
+    background: transparent;
+    transform: scale(1);
+  }
+}
+
+.step[data-demo='eula'].is-playing .bl1 {
+  animation: demo-behind-1 8.5s var(--ease-standard) infinite;
+}
+.step[data-demo='eula'].is-playing .bl2 {
+  animation: demo-behind-2 8.5s var(--ease-standard) infinite;
+}
+.step[data-demo='eula'].is-playing .bl3 {
+  animation: demo-behind-3 8.5s var(--ease-standard) infinite;
+}
+.step[data-demo='eula'].is-playing .bl4 {
+  animation: demo-behind-4 8.5s var(--ease-standard) infinite;
+}
+.step[data-demo='eula'].is-playing .mock-scrim {
+  animation: demo-scrim 8.5s var(--ease-standard) infinite;
+}
+.step[data-demo='eula'].is-playing .mock-modal {
+  animation: demo-modal-in 8.5s var(--ease-standard) infinite;
+}
+.step[data-demo='eula'].is-playing .mock-cursor {
+  animation: demo-cursor-eula 8.5s var(--ease-standard) infinite;
+}
+.step[data-demo='eula'].is-playing .mock-accept {
+  animation: demo-press-late 8.5s var(--ease-standard) infinite;
+}
+
+/* ── Build from source, collapsed ─────────────────────────────────────── */
+/* A tile that opens rather than a section that is always open: it is the part
+   of this page most readers never need. main.js animates the height, the same
+   as it does the FAQ, and a source build is a snapshot, which the tag says. */
+.doc-collapse > summary {
+  cursor: pointer;
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--font-title);
+  font-weight: 500;
+  font-size: 20px;
+  color: var(--text-primary);
+}
+
+.doc-collapse > summary::-webkit-details-marker {
+  display: none;
+}
+
+/* Beside the heading, not pushed to the far edge: the tag says what kind of
+   build this section produces, so it reads as part of the title. */
+.doc-collapse > summary .tag {
+  margin-right: auto;
+}
+
+/* The same drawn cross the FAQ uses, at the size this heading wants. */
+.doc-collapse-mark {
+  width: 11px;
+  height: 11px;
+  flex-shrink: 0;
+  color: var(--accent);
+  background:
+    linear-gradient(currentColor, currentColor) center / 100% 1.5px no-repeat,
+    linear-gradient(currentColor, currentColor) center / 1.5px 100% no-repeat;
+  transition: background-size var(--duration-fast) var(--ease-standard);
+}
+
+.doc-collapse[open] .doc-collapse-mark {
+  background-size:
+    100% 1.5px,
+    1.5px 0%;
+}
+
+.doc-collapse[open].is-closing .doc-collapse-mark {
+  background-size:
+    100% 1.5px,
+    1.5px 100%;
+}
+
+.doc-collapse > .md {
+  padding-top: 16px;
+}
+
+/* ── Docs responsive ──────────────────────────────────────────────────── */
+@media (max-width: 860px) {
+  .req-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .step,
+  .step-inner {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .demo {
+    flex: 0 0 auto;
+  }
+}
+
+/* ── Roadmap explorer ─────────────────────────────────────────────────── */
+/* The roadmap is a hierarchy already — dashboard, tiles, one tile's remaining
+   work — and was printed as four flat lists, one per stage, which is where the
+   shape got lost. This is the same content as a file tree: folders for where a
+   feature lives, a row per feature, and a chip for when it ships. Everything
+   below is layout and token colour; the behaviour is roadmap.js, and the tree
+   still opens and closes without it.
+
+   The whole component is kept together, responsive rules included, rather than
+   split across the sheet's own Responsive section: it is one self-contained
+   page and reading it in one place is worth more than the filing. */
+.rm-page {
+  max-width: 900px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+/* ── Stage legend, which is also the stage filter ──────────────────────── */
+/* --stage-rgb is the one hue each card is built from, the same trick the tile
+   glow uses: the count, the active tint and the cursor light all read it, so a
+   stage is recoloured in one line. */
+.rm-stage-card {
+  --stage-rgb: var(--accent-rgb);
+  --glow-rgb: var(--stage-rgb);
+  --glow-size: 200px;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  text-align: left;
+  padding: 13px 15px 14px;
+  border: 0.5px solid var(--border-subtle);
+  border-radius: 12px;
+  background-color: var(--bg-elevated);
+  color: var(--text-secondary);
+  font-family: var(--font-sans);
+  cursor: pointer;
+  transition:
+    border-color var(--duration-fast) ease,
+    background-color var(--duration-fast) ease;
+}
+
+.rm-stages {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+}
+
+/* The stage scale is a traffic light on how finished something is: alpha is
+   rough, beta is nearly there, a full release is stable, later is unscheduled.
+   Every value is an existing token — nothing new was added upstream for this,
+   and nothing here hard-codes a colour.
+
+   This is the only place the mapping lives. The chip, the dot, the leaf mark
+   and the card's cursor glow all read --stage-rgb, so a stage is recoloured by
+   editing one line. Keyed on the attribute alone rather than on a roadmap row,
+   so the docs page's platform table gets the same colours from the same source
+   when docs.js stamps a channel onto a cell. --stage-ink is the exception it needs: "later" has no hue
+   of its own, and white at chip opacity would read as the brightest of the
+   four rather than the quietest.
+
+   Yellow is deliberately shared with the snapshot channel — an unfinished
+   build and an unfinished feature mean the same thing by it. */
+[data-stage='alpha'],
+.rm-stage-alpha {
+  --stage-rgb: var(--danger-rgb);
+}
+
+[data-stage='beta'],
+.rm-stage-beta {
+  --stage-rgb: var(--sun-rgb);
+}
+
+[data-stage='release'],
+.rm-stage-release {
+  --stage-rgb: var(--accent-rgb);
+}
+
+[data-stage='later'],
+.rm-stage-later {
+  --stage-rgb: 255 255 255;
+  --stage-ink: var(--text-muted);
+}
+
+/* Layered as an image so the base --bg-elevated stays underneath: it is
+   translucent, and replacing it would drop the panel behind these cards. */
+.rm-stage-card[aria-pressed='true'] {
+  border-color: rgb(var(--stage-rgb) / 0.4);
+  background-image: linear-gradient(rgb(var(--stage-rgb) / 0.08), rgb(var(--stage-rgb) / 0.08));
+}
+
+.rm-stage-top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.rm-stage-title {
+  font-family: var(--font-title);
+  font-weight: 500;
+  font-size: 14px;
+  color: var(--text-primary);
+}
+
+.rm-stage-count {
+  font-family: var(--font-mono);
+  font-size: 15px;
+  color: var(--stage-ink, rgb(var(--stage-rgb) / 0.85));
+}
+
+.rm-stage-note {
+  font-size: 11.5px;
+  line-height: 1.45;
+  color: var(--text-muted);
+}
+
+/* ── Explorer shell ───────────────────────────────────────────────────── */
+/* Deliberately not in the cursor-glow group above: a 200px light tracking
+   across a card this tall reads as a smear rather than as a highlight. The
+   stage cards are in it, and they are the right size for it. */
+.rm-explorer {
+  background: var(--bg-elevated);
+  border: 0.5px solid var(--border-subtle);
+  border-radius: 16px;
+  padding: 14px 16px 18px;
+}
+
+.rm-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding-bottom: 12px;
+  border-bottom: 0.5px solid var(--border-subtle);
+}
+
+.rm-search {
+  flex: 1 1 200px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 30px;
+  padding: 0 10px;
+  background: var(--bg-surface);
+  border: 0.5px solid var(--border-subtle);
+  border-radius: 8px;
+  transition: border-color var(--duration-fast) ease;
+}
+
+.rm-search:focus-within {
+  border-color: rgb(var(--accent-rgb) / 0.5);
+}
+
+/* The ring belongs on the box, not on the input that fills it — an outline
+   inside a rounded field traces a rectangle through its corners. */
+.rm-search:has(:focus-visible) {
+  outline: 1.5px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.rm-search-icon {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-faint);
+}
+
+.rm-search-input {
+  flex: 1;
+  min-width: 0;
+  background: none;
+  border: none;
+  outline: none;
+  padding: 0;
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+}
+
+.rm-search-input::placeholder {
+  color: var(--text-faint);
+}
+
+.rm-sort,
+.rm-fold {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.rm-sort-label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+/* Same pill as .doc-toc's links, which is what the rest of the site uses for
+   "a small thing you can click". */
+.rm-sort-btn,
+.rm-fold-btn,
+.rm-dir,
+.rm-clear {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  color: var(--text-muted);
+  background: var(--bg-surface);
+  border: 0.5px solid var(--border-subtle);
+  border-radius: 999px;
+  padding: 4px 11px;
+  cursor: pointer;
+  transition:
+    color var(--duration-fast) ease,
+    border-color var(--duration-fast) ease,
+    background var(--duration-fast) ease;
+}
+
+.rm-sort-btn:hover,
+.rm-fold-btn:hover,
+.rm-dir:hover,
+.rm-clear:hover {
+  color: var(--text-primary);
+  border-color: var(--border-hover);
+}
+
+.rm-sort-btn[aria-pressed='true'] {
+  color: var(--accent);
+  border-color: rgb(var(--accent-rgb) / 0.35);
+  background: rgb(var(--accent-rgb) / 0.08);
+}
+
+.rm-dir {
+  padding: 4px 9px;
+  line-height: 0;
+}
+
+/* Drawn rather than set as a glyph, for the same reason the FAQ's marker is:
+   an arrow that flips wants a transform, and `content` cannot be animated. */
+.rm-dir-mark {
+  display: inline-block;
+  width: 0;
+  height: 0;
+  border-left: 3.5px solid transparent;
+  border-right: 3.5px solid transparent;
+  border-bottom: 5px solid currentColor;
+  transition: transform var(--duration-fast) var(--ease-standard);
+}
+
+.rm-dir[aria-pressed='true'] .rm-dir-mark {
+  transform: rotate(180deg);
+}
+
+.rm-status {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 12px 0 6px;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  color: var(--text-faint);
+}
+
+.rm-clear {
+  padding: 2px 9px;
+}
+
+/* ── The tree ─────────────────────────────────────────────────────────── */
+/* Depth is a custom property set once per level and inherited by everything
+   inside it, so a row's indent and its folder's guide line are both derived
+   from one number and cannot drift apart. Four levels is the tree's depth;
+   the fifth is there so a new one does not silently flatten. */
+.rm-tree,
+.rm-children {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.rm-tree {
+  --rm-depth: 0;
+}
+
+.rm-children {
+  --rm-depth: 1;
+  position: relative;
+}
+
+.rm-children .rm-children {
+  --rm-depth: 2;
+}
+
+.rm-children .rm-children .rm-children {
+  --rm-depth: 3;
+}
+
+.rm-children .rm-children .rm-children .rm-children {
+  --rm-depth: 4;
+}
+
+/* Drawn at the parent row's own indent, so a folder's contents hang off it. */
+.rm-children::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: calc(14px + (var(--rm-depth) - 1) * 16px);
+  width: 1px;
+  background: var(--border-subtle);
+}
+
+/* The indent lives inside the first column rather than on the row, which is
+   what keeps the description, chip and issue number in true columns however
+   deep the row sits. */
+.rm-row {
+  display: grid;
+  grid-template-columns: minmax(0, 310px) minmax(0, 1fr) 74px 38px;
+  align-items: center;
+  gap: 10px;
+  height: 28px;
+  padding-right: 10px;
+  border-radius: 6px;
+  transition: background var(--duration-fast) ease;
+}
+
+.rm-row:hover {
+  background: var(--hover-surface);
+}
+
+.rm-row-folder {
+  cursor: pointer;
+  list-style: none;
+}
+
+.rm-row-folder::-webkit-details-marker {
+  display: none;
+}
+
+.rm-label {
+  grid-column: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding-left: calc(12px + var(--rm-depth) * 16px);
+}
+
+.rm-name {
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.rm-row-folder .rm-name {
+  color: var(--text-primary);
+}
+
+.rm-row-folder .rm-label::before {
+  content: '';
+  flex: 0 0 auto;
+  width: 0;
+  height: 0;
+  border-left: 4.5px solid var(--text-muted);
+  border-top: 3.5px solid transparent;
+  border-bottom: 3.5px solid transparent;
+  transition: transform var(--duration-fast) var(--ease-standard);
+}
+
+.rm-folder[open] > .rm-row-folder .rm-label::before {
+  transform: rotate(90deg);
+}
+
+.rm-folder[open].is-closing > .rm-row-folder .rm-label::before {
+  transform: none;
+}
+
+/* Shipped features get a solid mark, planned ones a dashed one. It is the one
+   piece of status that survives filtering the chips down to a single stage,
+   and it is the tree saying which of these files actually exist yet. */
+.rm-row-leaf .rm-label::before {
+  content: '';
+  flex: 0 0 auto;
+  width: 7px;
+  height: 8px;
+  margin-left: 1px;
+  border: 1px dashed rgb(var(--stage-rgb) / 0.45);
+  border-radius: 1.5px;
+}
+
+[data-stage='alpha'] .rm-row-leaf .rm-label::before {
+  border-style: solid;
+  background: rgb(var(--stage-rgb) / 0.14);
+}
+
+.rm-desc {
+  grid-column: 2;
+  min-width: 0;
+  font-size: 12px;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.rm-row > .tag {
+  grid-column: 3;
+  justify-self: start;
+}
+
+.rm-count {
+  grid-column: 3;
+  justify-self: start;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-faint);
+}
+
+.rm-issue {
+  grid-column: 4;
+  justify-self: end;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-faint);
+  text-decoration: none;
+  transition: color var(--duration-fast) ease;
+}
+
+.rm-issue:hover {
+  color: var(--accent);
+}
+
+.rm-dots {
+  grid-column: 4;
+  justify-self: end;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.rm-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--text-faint);
+}
+
+.rm-dot-alpha {
+  background: var(--danger);
+}
+
+.rm-dot-beta {
+  background: var(--sun);
+}
+
+.rm-dot-release {
+  background: var(--accent);
+}
+
+/* One chip for all four stages, coloured by the row it sits in rather than by
+   a class of its own. The .tag-* modifiers above stay as they are: they mean
+   published, snapshot and not-published on the docs page's platform table,
+   which is a different question from how finished a feature is. */
+.tag-stage {
+  color: var(--stage-ink, rgb(var(--stage-rgb) / 0.9));
+  border-color: rgb(var(--stage-rgb) / 0.35);
+  background: rgb(var(--stage-rgb) / 0.08);
+}
+
+.rm-row mark {
+  background: rgb(var(--accent-rgb) / 0.18);
+  color: var(--text-primary);
+  border-radius: 2px;
+  padding: 0 1px;
+}
+
+/* A leaf whose issue has closed, marked by the GitHub sync in roadmap.js.
+   Deliberately not green: closed means merged, and green now means shipped in a
+   full release, which a merged Beta issue is not yet. The leaf's own marker
+   fills in the way a shipped one is, and the stage chip is left saying what it
+   said. */
+.rm-done {
+  flex: 0 0 auto;
+  font-size: 10px;
+  line-height: 1;
+  color: var(--text-muted);
+}
+
+.rm-node-leaf.is-done .rm-row-leaf .rm-label::before {
+  border-style: solid;
+  background: rgb(var(--stage-rgb) / 0.14);
+}
+
+/* Sits at the far end of the status line, and only appears once the sync has
+   actually landed — its absence is how the page says it is showing what it was
+   authored with and nothing more. */
+.rm-sync {
+  margin-left: auto;
+}
+
+.rm-node.is-filtered {
+  display: none;
+}
+
+.rm-empty {
+  margin: 22px 0 8px;
+  text-align: center;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.rm-note {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: var(--text-muted);
+}
+
+.rm-note a {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.rm-note a:hover {
+  text-decoration: underline;
+}
+
+/* Without JS the tree is still the whole roadmap, so the legend stays for what
+   it says; the controls go, rather than sit there doing nothing when clicked. */
+.no-js .rm-toolbar,
+.no-js .rm-status {
+  display: none;
+}
+
+.no-js .rm-stage-card {
+  cursor: default;
+  pointer-events: none;
+}
+
+/* ── Motion ───────────────────────────────────────────────────────────── */
+/* Rows fade in as their folder opens. Keyed on :not(.is-closing) because
+   main.js reopens the element for one task while it measures a close, and
+   without the guard that would replay this on every close. Staggered like the
+   download grid, and capped for the same reason: backups/ has eleven rows and
+   the last one should not be waiting on the first ten. */
+@keyframes rm-row-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.rm-folder[open]:not(.is-closing) > .rm-children > .rm-node {
+  animation: rm-row-in 110ms var(--ease-standard) both;
+}
+
+.rm-folder[open]:not(.is-closing) > .rm-children > .rm-node:nth-child(2) {
+  animation-delay: 14ms;
+}
+.rm-folder[open]:not(.is-closing) > .rm-children > .rm-node:nth-child(3) {
+  animation-delay: 28ms;
+}
+.rm-folder[open]:not(.is-closing) > .rm-children > .rm-node:nth-child(4) {
+  animation-delay: 42ms;
+}
+.rm-folder[open]:not(.is-closing) > .rm-children > .rm-node:nth-child(n + 5) {
+  animation-delay: 56ms;
+}
+
+/* One pass of accent, for a row arrived at by #hash. */
+@keyframes rm-target {
+  0%,
+  55% {
+    background: rgb(var(--accent-rgb) / 0.16);
+  }
+  100% {
+    background: transparent;
+  }
+}
+
+.rm-node.is-target > .rm-row,
+.rm-node.is-target > .rm-folder > .rm-row {
+  animation: rm-target 1200ms var(--ease-standard);
+}
+
+/* ── Roadmap responsive ───────────────────────────────────────────────── */
+@media (max-width: 860px) {
+  .rm-stages {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 560px) {
+  .rm-stages {
+    grid-template-columns: 1fr;
+  }
+
+  .rm-explorer {
+    padding: 12px 10px 16px;
+  }
+
+  /* The description drops to a line of its own rather than being squeezed out
+     of a column that no longer fits, so the row keeps its meaning and the page
+     still never scrolls sideways. */
+  .rm-row {
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    height: auto;
+    padding: 6px 8px 7px 0;
+    row-gap: 1px;
+  }
+
+  .rm-desc {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    white-space: normal;
+    font-size: 11.5px;
+    padding-left: calc(27px + var(--rm-depth) * 16px);
+  }
+
+  .rm-count,
+  .rm-row > .tag {
+    grid-column: 2;
+  }
+
+  .rm-issue,
+  .rm-dots {
+    grid-column: 3;
+  }
+}
+
 /* ── Responsive ───────────────────────────────────────────────────────── */
 @media (max-width: 860px) {
   /* The graph is wide by nature. Scaling it down to a phone's width would put
@@ -2893,6 +5002,8 @@ button.dl-card:hover {
   .wf-star,
   .faq summary::before,
   .release-summary .release-version::before,
+  .rm-row-folder .rm-label::before,
+  .rm-dir-mark,
   .rail.is-tracking::after {
     transition: none !important;
   }
@@ -2917,6 +5028,12 @@ button.dl-card:hover {
     opacity: 0;
   }
 
+  .rm-folder[open]:not(.is-closing) > .rm-children > .rm-node,
+  .rm-node.is-target > .rm-row,
+  .rm-node.is-target > .rm-folder > .rm-row,
+  .rm-stages,
+  .rm-explorer,
+  .rm-note,
   .hw,
   .hero-mission,
   .hero-fade,
@@ -2937,6 +5054,13 @@ button.dl-card:hover {
     opacity: 1 !important;
     filter: none !important;
     transform: none !important;
+  }
+
+  /* The highlight a #hash link leaves still has to be visible; it just stops
+     fading and is removed by roadmap.js on its own timer instead. */
+  .rm-node.is-target > .rm-row,
+  .rm-node.is-target > .rm-folder > .rm-row {
+    background: rgb(var(--accent-rgb) / 0.16);
   }
 
   .nav-menu {
@@ -2964,6 +5088,12 @@ button.dl-card:hover {
   opacity: 0;
 }
 
+.reduce-motion .rm-folder[open]:not(.is-closing) > .rm-children > .rm-node,
+.reduce-motion .rm-node.is-target > .rm-row,
+.reduce-motion .rm-node.is-target > .rm-folder > .rm-row,
+.reduce-motion .rm-stages,
+.reduce-motion .rm-explorer,
+.reduce-motion .rm-note,
 .reduce-motion .hw,
 .reduce-motion .hero-mission,
 .reduce-motion .hero-fade,
@@ -2986,12 +5116,19 @@ button.dl-card:hover {
   transform: none !important;
 }
 
+.reduce-motion .rm-node.is-target > .rm-row,
+.reduce-motion .rm-node.is-target > .rm-folder > .rm-row {
+  background: rgb(var(--accent-rgb) / 0.16);
+}
+
 .reduce-motion .nav-menu,
 .reduce-motion .fx,
 .reduce-motion .wf,
 .reduce-motion .wf-star,
 .reduce-motion .faq summary::before,
 .reduce-motion .release-summary .release-version::before,
+.reduce-motion .rm-row-folder .rm-label::before,
+.reduce-motion .rm-dir-mark,
 .reduce-motion .rail.is-tracking::after {
   transition: none !important;
 }
