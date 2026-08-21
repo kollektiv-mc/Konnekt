@@ -17,18 +17,33 @@
 # pull request by CI's `pr-labelled` job, and read by
 # .github/scripts/release-notes.py and .github/release.yml. The issue forms
 # apply type:bug and type:feature on creation.
+#
+# The label is the *only* input to that sorting - nothing reads the title - so
+# these descriptions have to be decidable by whoever applies one, in the label
+# picker, without opening a document. They are the short form of the ladder in
+# CONTRIBUTING.md and agent_docs/CLAUDE.md: can a user tell the difference at
+# all (no -> chore/docs), was the app already meant to do it (yes -> bug),
+# otherwise feature. What went wrong before these were sharpened was #97, a
+# repair filed as a feature because the repair happened to add a row of UI.
+#
+# The four `type:` descriptions below are copied verbatim from kollektiv's
+# design/labels.json and have to stay that way. Unlike the rest of this file,
+# they are not only a declaration: scripts/sync-labels.sh runs `gh label edit`
+# from that source against every repo in the suite, so the live description a
+# person reads in the picker comes from there, and a local edit here is both
+# invisible and reported as drift on the next sync.
 - name: 'type:bug'
   color: 'ededed'
-  description: Something is broken.
+  description: Existing behavior is wrong. Still a bug when the repair adds new code or new UI.
 - name: 'type:feature'
   color: 'ededed'
-  description: New capability a user can observe.
+  description: 'New capability: the product can now do something it never offered.'
 - name: 'type:docs'
   color: 'ededed'
-  description: Documentation only. Counted in the release-notes footer, not listed.
+  description: Documentation only. Counted in the release notes, not listed.
 - name: 'type:chore'
   color: 'ededed'
-  description: Maintenance. Counted in the release-notes footer, not listed.
+  description: 'No user-visible change: refactors, tests, CI, deps. Counted in the notes, not listed.'
 
 # Where in the product. Applied during triage from the issue forms' `area`
 # dropdown, whose options come from frontend/src/tiles/registry.ts.
