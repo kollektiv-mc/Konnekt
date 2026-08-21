@@ -1,6 +1,43 @@
 import type { FC } from 'react'
+import type { models } from '../../wailsjs/go/models'
 export type { LayoutItem } from 'react-grid-layout'
 
+/**
+ * Shapes that cross the IPC boundary are aliased from the generated bindings,
+ * never redeclared. A hand-written copy stays correct until someone *adds* a
+ * field in `backend/models/`: structural typing catches a rename or a removal,
+ * but a new field is silently absent on the TypeScript side, and `ModUpdateInfo`
+ * showed how long that survives (HEALTH_LOG.md, 2026-08-20). `tiles/mods/
+ * useMods.ts` and `tiles/backups/useBackups.ts` already aliased theirs.
+ *
+ * Two of these deliberately do not alias, and it is not an oversight — see
+ * AppSettings and ConfigFile below.
+ */
+export type LayoutPreset = models.LayoutPreset
+export type ServerConfig = models.ServerConfig
+export type Player = models.Player
+export type ServerStatus = models.ServerStatus
+
+/**
+ * At-a-glance description of one configured server (sidebar hover card).
+ * Unlike ServerStatus.running, `running` here is specific to that server.
+ */
+export type ServerSummary = models.ServerSummary
+
+/**
+ * Kept hand-written on purpose: `theme` and `backgroundStyle` are `string` in
+ * Go and string-literal unions here, and the narrowing is load-bearing.
+ * `useSettingsStore.load` validates the value coming off disk and casts to
+ * `AppSettings['backgroundStyle']`, `lib/theme.ts:118` matches on it, and
+ * `SettingsModal`'s `Segmented` controls are typed against these members.
+ * Aliasing would widen all of that back to `string` and delete the
+ * exhaustiveness checks — a downgrade wearing a cleanup's clothes.
+ *
+ * The backlog entry that proposed this cleanup claimed all eight duplicated
+ * models could be aliased; measured field-by-field, six could and these two
+ * could not. Every other member here matches `models.AppSettings` exactly, so
+ * an added field is still the failure mode to watch for.
+ */
 export interface AppSettings {
   theme: 'light' | 'dark' | 'system'
   skinId: string
@@ -22,6 +59,24 @@ export interface AppSettings {
   crateOrder: string[]
 }
 
+/**
+ * Also hand-written on purpose, for the same reason: `category` and `format`
+ * are `string` in Go, and the config tile switches on `format` to pick a
+ * CodeMirror language and a parser. Widening it to `string` would lose the
+ * compiler's check that every branch is handled.
+ */
+export interface ConfigFile {
+  relPath: string
+  name: string
+  category: 'server' | 'plugins' | 'mods'
+  source: string
+  format: 'properties' | 'yaml' | 'json' | 'json5' | 'toml' | 'text'
+  sizeBytes: number
+  modified: number
+}
+
+// Frontend-only shapes below: no Go counterpart, nothing to alias.
+
 export interface TileProps {
   serverId: string
   maximized?: boolean
@@ -33,63 +88,4 @@ export interface TileDefinition {
   icon: string
   maximizable?: boolean
   component: FC<TileProps>
-}
-
-export interface LayoutPreset {
-  name: string
-  layout: string
-}
-
-export interface ServerConfig {
-  id: string
-  name: string
-  jarPath: string
-  jvmArgs: string[]
-  workingDir: string
-  mcVersion: string
-  loader: string
-}
-
-export interface Player {
-  name: string
-  uuid: string
-  online: boolean
-  ip: string
-  lastOnline: number
-  opLevel: number
-  whitelisted: boolean
-  banned: boolean
-  banReason: string
-  primaryGroup: string
-  groups: string[]
-}
-
-export interface ConfigFile {
-  relPath: string
-  name: string
-  category: 'server' | 'plugins' | 'mods'
-  source: string
-  format: 'properties' | 'yaml' | 'json' | 'json5' | 'toml' | 'text'
-  sizeBytes: number
-  modified: number
-}
-
-export interface ServerStatus {
-  running: boolean
-  uptime: string
-  players: number
-  maxPlayers: number
-  tps: number
-  ramUsed: number
-  ramTotal: number
-}
-
-// At-a-glance description of one configured server (sidebar hover card).
-// Unlike ServerStatus.running, `running` here is specific to that server.
-export interface ServerSummary {
-  mcVersion: string
-  loader: string
-  workingDir: string
-  launchFile: string
-  running: boolean
 }

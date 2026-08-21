@@ -3,6 +3,8 @@ import type { Player } from '../../types'
 
 interface Props {
   players: Player[]
+  /** False once a roster fetch has failed — see usePlayers. */
+  reachable: boolean
   onSelectPlayer: (player: Player) => void
 }
 
@@ -30,7 +32,7 @@ function AvatarHead({ player }: { player: Player }) {
   )
 }
 
-export function PlayerRoster({ players, onSelectPlayer }: Props) {
+export function PlayerRoster({ players, reachable, onSelectPlayer }: Props) {
   const [search, setSearch] = useState('')
   const [sortBy, setSortBy] = useState<SortKey>('name')
 
@@ -66,7 +68,7 @@ export function PlayerRoster({ players, onSelectPlayer }: Props) {
       <div className="flex-1 overflow-y-auto">
         {filtered.length === 0 ? (
           <div className="text-text-faint flex h-full items-center justify-center font-mono text-xs">
-            {search ? 'No matches' : 'No players online'}
+            {search ? 'No matches' : reachable ? 'No players online' : 'Server unreachable'}
           </div>
         ) : (
           filtered.map((p) => (

@@ -102,8 +102,16 @@ export function GetCustomCommands() {
   return window['go']['main']['App']['GetCustomCommands']();
 }
 
+export function GetDataDir() {
+  return window['go']['main']['App']['GetDataDir']();
+}
+
 export function GetLayoutPresets() {
   return window['go']['main']['App']['GetLayoutPresets']();
+}
+
+export function GetLogPath() {
+  return window['go']['main']['App']['GetLogPath']();
 }
 
 export function GetPlayerDetail(arg1, arg2) {

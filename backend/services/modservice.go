@@ -45,7 +45,7 @@ type modManifestItem struct {
 const updateCacheTTL = 10 * time.Minute
 
 type updateCacheEntry struct {
-	result    map[string]models.ModUpdateInfo
+	result    []models.ModUpdateInfo
 	fetchedAt time.Time
 }
 
@@ -667,9 +667,14 @@ func (s *ModService) saveManifest(serverID string, m *modManifest) error {
 }
 
 // CheckUpdates fetches the latest compatible version for each Modrinth-sourced
-// installed mod and returns a map[fileName]ModUpdateInfo. Results are cached for
-// updateCacheTTL to avoid hammering the Modrinth API on every library open/poll.
-func (s *ModService) CheckUpdates(serverID string) (map[string]models.ModUpdateInfo, error) {
+// installed mod. Results are cached for updateCacheTTL to avoid hammering the
+// Modrinth API on every library open/poll.
+//
+// Returns a slice, not the map[fileName]ModUpdateInfo it used to: Wails' binding
+// generator does not descend into map values, so the map shape left
+// models.ModUpdateInfo undeclared on the TypeScript side. Each entry carries its
+// own FileName instead. See the type's own comment.
+func (s *ModService) CheckUpdates(serverID string) ([]models.ModUpdateInfo, error) {
 	s.cacheMu.Lock()
 	if s.updateCache != nil {
 		if entry, ok := s.updateCache[serverID]; ok && time.Since(entry.fetchedAt) < updateCacheTTL {
@@ -689,7 +694,7 @@ func (s *ModService) CheckUpdates(serverID string) (map[string]models.ModUpdateI
 		return nil, err
 	}
 
-	result := make(map[string]models.ModUpdateInfo, len(installed))
+	result := make([]models.ModUpdateInfo, 0, len(installed))
 	for _, mod := range installed {
 		if mod.Source != "modrinth" || mod.ProjectID == "" || mod.VersionID == "" {
 			continue
@@ -699,11 +704,12 @@ func (s *ModService) CheckUpdates(serverID string) (map[string]models.ModUpdateI
 			continue
 		}
 		latest := versions[0]
-		result[mod.FileName] = models.ModUpdateInfo{
+		result = append(result, models.ModUpdateInfo{
+			FileName:            mod.FileName,
 			UpdateAvailable:     latest.ID != mod.VersionID,
 			LatestVersionID:     latest.ID,
 			LatestVersionNumber: latest.VersionNumber,
-		}
+		})
 	}
 
 	s.cacheMu.Lock()

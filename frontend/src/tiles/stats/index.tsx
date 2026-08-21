@@ -1,4 +1,4 @@
-import { useServerStatus } from './useServerStatus'
+import { useServerStore } from '../../stores/useServerStore'
 import type { TileProps } from '../../types'
 
 function tpsColor(tps: number): string {
@@ -24,43 +24,43 @@ function StatRow({
   )
 }
 
-export function StatsTile({ serverId }: TileProps) {
-  const { status } = useServerStatus(serverId)
+// `serverId` is unused: the status this renders is hydrated once in App by
+// useServerStatusSync, so the tile is a pure reader of the shared store.
+export function StatsTile(_props: TileProps) {
+  const status = useServerStore((s) => s.status)
+  const reachable = useServerStore((s) => s.reachable)
 
   const ramPct = status.ramTotal > 0 ? (status.ramUsed / status.ramTotal) * 100 : 0
+  // A stopped server answers and says it is stopped; an unreachable backend
+  // says nothing, and the numbers below are whatever was last known.
+  const online = reachable && status.running
 
   return (
     <div className="flex h-full flex-col justify-between px-3 py-3">
       <div className="mb-3 flex items-center gap-2">
         <span
-          className={`h-2 w-2 rounded-full ${status.running ? 'bg-accent shadow-[0_0_6px_var(--accent)]' : 'bg-red-500'}`}
+          className={`h-2 w-2 rounded-full ${online ? 'bg-accent shadow-[0_0_6px_var(--accent)]' : 'bg-red-500'}`}
         />
-        <span
-          className={`text-sm font-semibold ${status.running ? 'text-accent' : 'text-red-400'}`}
-        >
-          {status.running ? 'Online' : 'Offline'}
+        <span className={`text-sm font-semibold ${online ? 'text-accent' : 'text-red-400'}`}>
+          {!reachable ? 'Unreachable' : status.running ? 'Online' : 'Offline'}
         </span>
-        {status.running && <span className="text-text-faint ml-auto text-xs">{status.uptime}</span>}
+        {online && <span className="text-text-faint ml-auto text-xs">{status.uptime}</span>}
       </div>
 
       <div className="flex-1">
         <StatRow label="Players" value={`${status.players} / ${status.maxPlayers}`} />
         <StatRow
           label="TPS"
-          value={status.running && status.tps >= 0 ? status.tps.toFixed(1) : '—'}
-          className={status.running && status.tps >= 0 ? tpsColor(status.tps) : ''}
+          value={online && status.tps >= 0 ? status.tps.toFixed(1) : '—'}
+          className={online && status.tps >= 0 ? tpsColor(status.tps) : ''}
         />
         <StatRow
           label="RAM"
-          value={
-            status.running
-              ? `${Math.round(status.ramUsed)} / ${Math.round(status.ramTotal)} MB`
-              : '—'
-          }
+          value={online ? `${Math.round(status.ramUsed)} / ${Math.round(status.ramTotal)} MB` : '—'}
         />
       </div>
 
-      {status.running && (
+      {online && (
         <div className="mt-2">
           <div className="text-text-faint mb-1 flex justify-between text-xs">
             <span>Memory</span>

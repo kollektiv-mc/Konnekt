@@ -71,6 +71,11 @@ Why the grid is built the way it is, and which parts are load-bearing:
   `hasWailsBridge()` separates the cases: no bridge keeps the optimistic value,
   a bridge-present rejection reverts, records and rethrows. Reads are unaffected
   and still degrade to defaults.
+- Two different questions about a server, and UI that renders "nothing here"
+  needs both: `useServerStore`'s `status.running` (the server answered and is
+  stopped) and `reachable` (the backend answered at all). Hydrated once in
+  `App` by `hooks/useServerStatus.ts` — do not re-tie that to a single tile's
+  mount, which is how five tiles once read a permanently stale `false`.
 - Re-run `wails generate module` after adding new bound methods
 
 ## Code style
@@ -99,6 +104,13 @@ Why the grid is built the way it is, and which parts are load-bearing:
   of `/styles.css`, and `website/styles.css` keeps only the page vocabulary that is
   not a token (`--max-width`, `--nav-h`, `--section-y`).
 - Go: `gofmt` enforced, errors always handled (no blank `_` ignores)
+- Backend diagnostics go through `log/slog`'s package-level functions
+  (`slog.Error("scheduler: write history", "error", err)`), never `fmt.Printf`
+  or `println`. `main()` points the default logger at `konnekt.log` in the app
+  data dir via `services.InitLogger`, because a packaged build has no terminal
+  and anything on stdout is lost. `EventBus` emissions are the UI's channel, not
+  a log: they die with the window. Writes to a *server process's* stdin
+  (`fmt.Fprintln(s.stdin, ...)`) are not diagnostics and stay as they are.
 - Heavy per-tile dependencies (three.js, recharts) are lazy-loaded via
   `React.lazy` + `Suspense` (see `frontend/src/tiles/worlds/index.tsx`); keep
   the entry bundle under the 550 KB gzip budget enforced by `pnpm check-bundle`.

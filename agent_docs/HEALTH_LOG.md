@@ -62,6 +62,9 @@ after them is dated. Newest last, in both groups.
 - [2026-08-19 — Another product's roadmap, and eight boxes nobody had ticked](#2026-08-19-another-products-roadmap-and-eight-boxes-nobody-had-ticked)
 - [2026-08-19 — The duration token Tailwind was never reading](#2026-08-19-the-duration-token-tailwind-was-never-reading)
 - [2026-08-20 — Four stores that showed a refused write as saved](#2026-08-20-four-stores-that-showed-a-refused-write-as-saved)
+- [2026-08-20 — The status every tile trusted and one tile owned](#2026-08-20-the-status-every-tile-trusted-and-one-tile-owned)
+- [2026-08-20 — A log a bug reporter can attach](#2026-08-20-a-log-a-bug-reporter-can-attach)
+- [2026-08-20 — The bound type TypeScript never saw](#2026-08-20-the-bound-type-typescript-never-saw)
 
 ---
 
@@ -3123,3 +3126,213 @@ under them would be worse than a stale file.
 
 **Verification.** Full gate set green. 301 frontend tests across 28 files, up
 from 280 across 27: 21 added, and the one that encoded the bug rewritten.
+
+### 2026-08-20 — The status every tile trusted and one tile owned
+
+**Closed:** the checklist's "P1 — Tiles that render an unreachable server as an
+empty one", and the second half of the Stable pillar's `ErrorBoundary` item.
+**Found on the way:** a third instance of the same defect that was not in the
+backlog, and is the worst of the three.
+
+**The two known cases.** `tiles/console/index.tsx` rendered an empty `<div>`
+when it had no lines, so a stopped server, an unreachable backend and a server
+that had simply not logged yet were the same blank panel. Its command input and
+Send button stayed enabled throughout, and a rejected `SendCommand` went to
+`.catch(console.error)` — invisible, so a command the server refused looked
+exactly like one it accepted and did not reply to. The players tile had the same
+shape: `usePlayers` swallowed the rejection, `players` stayed `[]`, and both
+views said "No players online", which is also what a healthy, idle server says.
+
+**The third case, found while looking for a signal to render.** Telling
+"unreachable" from "stopped" needs a trustworthy `running` flag, and the one
+that existed was not. `useServerStore` was written by exactly one place:
+`tiles/stats/useServerStatus.ts`. `App.tsx` registers eleven `EventsOn`
+listeners and `server:status` was not among them. Meanwhile five other
+components read `status.running` from that store — `tiles/mods/index.tsx`,
+`tiles/worlds/WorldHud.tsx`, `tiles/config/index.tsx`, `tiles/backups/index.tsx`
+and `tiles/backups/BackupsSummary.tsx`.
+
+Tiles are removable, and only four are active by default. Take Stats off the
+canvas and every one of those five reads the store's default `running: false`
+forever. The visible cost is not cosmetic: `BackupsSummary.handleCreateClick`
+shows its "stop the server first" dialog *only* when `status.running`, so with
+Stats removed it backs up a live world with no warning. That is a data-integrity
+guard silently disarmed by an unrelated UI action, and no test or gate would
+have caught it.
+
+The subscription moved to `App`, next to the settings hydration and the eleven
+listeners already there. The hook moved to `hooks/` with it, since a hook the
+app mounts should not live inside one tile's folder, and it became write-only:
+reading `status` there would have re-rendered the whole tree on every 10s tick.
+The stats tile now selects from the store like every other consumer.
+
+This is not a break with "tiles are self-contained". Server status is a shared
+domain with six readers; the stats tile was never its owner, it was just the
+first consumer and the hydration happened to end up there.
+
+**A second flag, because `running` cannot answer the question.** A stopped
+server answers and reports `running: false`; an unreachable backend reports
+nothing and leaves the last known numbers standing. Those are different states
+and the UI has to say different things about them, so `useServerStore` gained
+`reachable` alongside `status`, set by the same sync hook, and `usePlayers`
+tracks its own equivalent for the roster fetch. It starts optimistic so the UI
+does not flash an error during the first fetch. The stats tile picked this up
+too: it used to say "Offline" for an unreachable backend, which would have been
+a fresh inconsistency to leave behind.
+
+**The checklist was wrong about what this needed.** Both the `ErrorBoundary`
+item and this backlog entry said the verification wanted a desk and a running
+GUI. It wanted neither. `hooks/useUpdateCheck.test.ts` already showed the
+pattern, and the new tests are ordinary jsdom renders against rejecting mocked
+bindings: the console tile's three placeholder states, its disabled input, its
+refusal to call `SendCommand` while the server is down, and the failure banner
+with the command restored for a retry; plus both player views' empty-state
+wording. The command input gained an `aria-label` so the test can find it by
+role, which is a small accessibility improvement it should have had anyway.
+
+One incidental for whoever writes the next component test here: vitest runs with
+`globals: false`, so Testing Library cannot register its own auto-cleanup and
+the previous test's DOM is still mounted. `Collapsible.test.tsx` sidesteps this
+by scoping every query to its own `container`; the new files call `cleanup()` in
+an explicit `afterEach`. A suite that renders the same component twice and
+queries globally will otherwise fail with "found multiple elements", which reads
+as a component bug and is not one.
+
+**Still open after this.** The memoization item remains GUI-gated: it wants
+re-render counts from the Profiler and a real WebGL context, which no headless
+session can produce.
+
+**Adjacent, and the same defect one pane over.** Settings > About's "Data
+directory" row hard-coded `~/.config/konnekt`, which is only true on Linux. The
+button beside it opened the right folder all along, so the label was the only
+thing lying. A `GetDataDir` binding now backs it.
+
+**Verification.** Full gate set green. 316 frontend tests across 30 files.
+
+**Postscript, same day.** Re-baselining the checklist turned up one stale number
+worth recording rather than quietly correcting. The Stable pillar's `EventsOn`
+cleanup item claimed "25 registrations across 12 files". The real figure is
+**47 across 13** — `App.tsx` alone holds 19 — and it was already wrong before
+this session's changes, which moved a file without adding or removing a single
+registration. Every one of the 47 is still clean, so the tick was right and only
+the arithmetic was not; the line now carries the command that produces the
+number, so the next reader re-derives it instead of trusting it.
+
+### 2026-08-20 — A log a bug reporter can attach
+
+**Closed:** the checklist's "P2 — Cleanups: structured logging".
+
+**The count in the backlog was right, and worth restating because it is the
+whole argument.** Across `app.go` and `backend/`: one `fmt.Printf`
+(`scheduler.go:247`, a failed history write), one bare `println`
+(`main.go:35`, `wails.Run` failing to start the window), zero `log.*`, zero
+`runtime.LogXxx`, and 46 `EventBus` emissions. `main.go` set no `Logger` on
+`options.App`. A packaged GUI build has no terminal attached, so both stdout
+writes went nowhere, and the EventBus is UI-facing and lives only while the
+window is open. Someone reporting a bug had nothing to send.
+
+The backlog's framing — "the 'full sweep' framing is misleading, the work is
+adding logging, not replacing it" — held exactly. There were two call sites to
+move and a file to start writing.
+
+`backend/services/logging.go` opens `konnekt.log` in the app data dir and points
+`slog`'s default at it, writing to the file *and* stderr: the file is what a
+user attaches, stderr is what a developer running `wails dev` watches. Wails'
+own runtime logging joins through a small adapter on its `logger.Logger`
+interface, so asset-server and IPC failures land in the same place.
+
+**Three decisions worth keeping.** Opening the log is not allowed to be fatal:
+a read-only data dir must still start the app, so `InitLogger` falls back to
+stderr alone and *returns* the reason for `main` to log through that fallback,
+rather than swallowing it — the same "record it, do not hide it" rule this
+branch applied to the stores. Rotation is ten lines rather than a dependency
+(one previous file, 2 MiB cap), and that call is recorded in
+`DEPENDENCIES.md`'s "Considered and not added" so it gets revisited rather than
+rediscovered. And call sites use the package-level `slog.Info`/`slog.Error`
+rather than threading a logger through every constructor, which for a
+single-process desktop app with one log is the smaller of the two costs.
+
+**One thing the backlog did not mention.** `main()` needs the data dir before
+`wails.Run`, and `app.startup` needs the same directory after. It was computed
+inline in `startup` only. That is fine right up until a second caller has to
+agree with it, so it became `services.DataDir()`.
+
+**Adjacent, found while wiring the UI, then fixed.** Settings > About's "Data
+directory" row hard-coded `~/.config/konnekt`, which is only true on Linux. It
+was initially left alone as a separate concern, then folded in once it was clear
+it is the same defect this branch spent its second commit on: UI stating
+something it does not know to be true. `GetDataDir` joins `GetLogPath` and both
+rows now render backend-supplied paths, truncated with the full value in a
+`title`.
+
+**Verification.** Full gate set green. Nine new Go tests; `backend/services`
+coverage 38.6%, up from 38.1%, against the 36% floor.
+
+### 2026-08-20 — The bound type TypeScript never saw
+
+**Closed:** the checklist's "P2 — A Go model the bindings never emit", including
+the related eight-redeclarations note. **Found on the way:** one claim in that
+note that was wrong in a way that would have made things worse, and one tool
+assumption that was wrong in a way that made things easier.
+
+**The tooling first, because it changed what was possible.** Both this entry and
+the last session assumed the `wails` CLI was unavailable, which is why the fix
+kept being described as deferred work. It installs in one command
+(`go install github.com/wailsapp/wails/v2/cmd/wails@v2.12.0`, matching `go.mod`),
+and — the part worth recording — regenerating with **no** source change produces
+a **zero-byte diff** against what is committed. So the committed bindings are
+exactly reproducible, `wails generate module` really is clean as the entry
+claimed, and regenerating is a safe step rather than a leap.
+
+**The defect.** `ModCheckUpdates` returned `map[string]models.ModUpdateInfo`,
+keyed by file name. Wails v2.12.0 walks a bound signature's parameter and return
+types but does not descend into a **map value**, so `App.d.ts` referenced
+`models.ModUpdateInfo` while `models.ts` never declared it. `tsconfig`'s
+`skipLibCheck` kept the dangling reference from erroring, the return type
+degraded to `any`, and `useMods.ts` held a hand-written copy of the Go struct
+that a cast quietly reconciled.
+
+`ModUpdateInfo` now carries its own `FileName` and the method returns a slice,
+which the generator can see through. The hook indexes the list once by file
+name, so the two lookup sites are untouched.
+
+**Proved, not asserted.** With `latestVersionNumber` renamed to
+`latestVersionNum` in `backend/models/mod.go` and the bindings regenerated,
+`tsc` fails: *Property 'latestVersionNumber' does not exist on type
+'ModUpdateInfo'*. Before the change, that same rename typechecked green,
+linted green, and reached `ModPreviewDialog.tsx:270` and `InstalledPanel.tsx:439`
+as `undefined`.
+
+**The guard the backlog said could not exist.** It argued a check would have to
+be a script diffing two generated files, would need its own `health.commands`
+entry and a literal `ci.yml` step since that workflow runs `suite-check.py` with
+`--section invariants --section generated` only, and would be red on arrival.
+All true *of that approach*. Reflecting over the bound methods from Go needs
+none of it: `bindings_test.go` walks `App`'s real type graph for a struct
+reachable only through a map value. It rides the existing `go test ./...`, so no
+new gate wiring; it catches a *future* method with the same shape rather than
+only today's generated output; and it was confirmed to fail on the original
+signature before being confirmed green. Maps of primitives stay allowed, which
+is what `GetScheduleNextRuns` (`map[string]int64`) needs.
+
+**The claim that was wrong.** The entry said all eight hand-written model
+redeclarations "could be replaced with a one-line alias today". Measured field
+by field, **six could and two could not**. `AppSettings` and `ConfigFile` narrow
+Go `string`s to string-literal unions — `theme`, `backgroundStyle`, `category`,
+`format` — and that narrowing is load-bearing: `useSettingsStore.load` validates
+the value read off disk and casts to `AppSettings['backgroundStyle']`,
+`lib/theme.ts:118` matches on it, the config tile switches on `format` to pick a
+CodeMirror language and a parser, and `SettingsModal`'s `Segmented` controls are
+typed against those members. Aliasing them would have widened all of it back to
+`string` and deleted the exhaustiveness checks — a downgrade wearing a cleanup's
+clothes, and one the entry actively recommended. Both now stay hand-written with
+the reason written beside them.
+
+The other six are aliases, and that half is proved too: adding a field to
+`models.ServerStatus` and regenerating now fails `tsc` in three places. Before,
+it failed in none — which is precisely the silent-added-field hole the entry
+described.
+
+**Verification.** Full gate set green, 16/16. 316 frontend tests, entry chunk
+487.9 KB gzip against the 550 KB budget, `backend/services` coverage 38.6%
+against the 36% floor.
