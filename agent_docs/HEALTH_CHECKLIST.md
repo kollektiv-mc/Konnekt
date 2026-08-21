@@ -218,6 +218,16 @@ tree.
       `grep -n "Timeout" backend/services/rcon.go`, and
       `grep -nE "Retry-After|429|Timeout" backend/services/modrinth.go` — all
       three must still match.
+- [x] A failure that happens outside the window's lifetime still leaves a trace
+      on disk. A packaged GUI build has no terminal, so anything written to
+      stdout/stderr is gone, and `EventBus` emissions die with the window.
+      Verify: from the repo root,
+      `grep -rn "fmt.Print\|println(" app.go main.go backend/ --include=*.go | grep -v _test`
+      — expect nothing that is a diagnostic (writes to a server process's stdin
+      are not). New backend diagnostics go through `log/slog`, which
+      `services.InitLogger` points at `konnekt.log` in the app data dir.
+      Closed 2026-08-20 (HEALTH_LOG). Adding a log-rotation dependency is a
+      decided "no" — see `DEPENDENCIES.md`.
 - [x] Store write actions record the failure and rethrow rather than applying
       the optimistic update anyway, per `agent_docs/CLAUDE.md`'s IPC
       conventions. All five stores that write comply as of 2026-08-20
@@ -533,17 +543,6 @@ was partly wrong)
   trailing-separator prefix form. Every other `archive/zip` use in the backend
   (`installer.go`, `modjar.go`, `backup.go`'s metadata readers) opens entries
   read-only and never writes to a caller-supplied path.
-- Structured logging: there is no retrievable log at all today, which is the
-  reason this matters. Counted 2026-08-19 across `app.go` and `backend/`: one
-  `fmt.Printf` (`scheduler.go:247`), one bare `println` (`main.go:35`), zero
-  `log.*`, zero `runtime.LogXxx`, and 46 `EventBus` emissions that are UI-facing
-  and live only while the window is open. `main.go` sets no `Logger` on
-  `options.App`, so both stdout writes vanish in a packaged GUI build. A bug
-  reporter has nothing to attach. `log/slog` is stdlib on Go 1.24, so no
-  dependency is added. The smallest valuable version is one logger writing to a
-  file in the app data dir plus the existing call sites moved onto it; the
-  "full sweep" framing is misleading, since there is almost nothing to convert —
-  the work is adding logging, not replacing it.
 - Memoization pass: add `React.memo`/`useMemo`/`useCallback` to the most
   expensive tile subtrees identified during a profiling pass. Baseline
   2026-08-19: `React.memo` appears exactly once in the whole frontend

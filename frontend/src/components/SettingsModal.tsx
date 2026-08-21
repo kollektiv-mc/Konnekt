@@ -17,6 +17,7 @@ import {
   OpenDataDir,
   GetAppVersion,
   GetDataDir,
+  GetLogPath,
   CheckForUpdates,
   DownloadAndInstallUpdate,
 } from '../../wailsjs/go/main/App'
@@ -532,6 +533,7 @@ type UpdateCheckState =
 function AboutPane() {
   const [version, setVersion] = useState<string | null>(null)
   const [dataDir, setDataDir] = useState<string | null>(null)
+  const [logPath, setLogPath] = useState<string | null>(null)
   const [checkState, setCheckState] = useState<UpdateCheckState>({ status: 'idle' })
 
   useEffect(() => {
@@ -540,13 +542,17 @@ function AboutPane() {
       .catch(() => setVersion(null))
   }, [])
 
-  // Comes from the backend rather than being written out here: this row used to
-  // hard-code "~/.config/konnekt", which is only true on Linux. Null outside a
-  // Wails context.
+  // Both paths come from the backend rather than being written out here: the
+  // data-directory row used to hard-code "~/.config/konnekt", and the log is the
+  // one thing worth attaching to a bug report, so show where it is rather than
+  // making the user guess. Null outside a Wails context.
   useEffect(() => {
     GetDataDir()
       .then(setDataDir)
       .catch(() => setDataDir(null))
+    GetLogPath()
+      .then(setLogPath)
+      .catch(() => setLogPath(null))
   }, [])
 
   // Streaming download progress, per CLAUDE.md's "no useEffect polling — use
@@ -632,6 +638,17 @@ function AboutPane() {
             <span className="max-w-56 truncate">{dataDir ?? 'Open folder'}</span> ↗
           </button>
         </div>
+        {logPath && (
+          <div className="text-text-secondary flex items-center justify-between gap-3 text-xs">
+            <span className="shrink-0">Log file</span>
+            <span
+              className="text-text-muted truncate font-mono text-[11px]"
+              title={`${logPath} — attach this to a bug report`}
+            >
+              {logPath}
+            </span>
+          </div>
+        )}
       </div>
 
       <div className="flex flex-col gap-2">

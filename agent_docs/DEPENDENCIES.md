@@ -56,6 +56,12 @@ All other Go modules in `go.mod` are transitive (`// indirect`), pulled in by
 the three direct dependencies above (mostly Wails' own runtime/webview/toast
 stack and gopsutil's per-OS backends).
 
+**Considered and not added:** a log-rotation library (`lumberjack` and
+friends). `backend/services/logging.go` writes through stdlib `log/slog` on Go
+1.24 and does its own single-file rotation in ten lines, because one desktop
+client writing occasional lines does not need size-tiered archives. Revisit
+only if the log ever grows a real retention requirement.
+
 ### Frontend (`frontend/package.json`, direct dependencies)
 
 | Package | Rationale |
