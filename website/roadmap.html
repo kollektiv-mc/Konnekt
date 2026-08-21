@@ -99,7 +99,14 @@
              later, and an issue link where one exists; roadmap.js derives the
              counts, the dots, the stage totals and every id but the five area
              ones from the markup, so nothing here has to be counted or kept
-             unique by hand. -->
+             unique by hand.
+
+             data-search on a leaf is the words that should find it but are not
+             in its name. It was a printed description until the column was
+             costing the names the width to spell themselves out, and it is
+             worth keeping accurate: it is the only reason searching "stdout"
+             or "gamerules" returns anything. Nothing renders it, so it is
+             indexing, not copy, and it is not a place for a sentence. -->
         <div class="rm-page">
           <div class="rm-stages" role="group" aria-label="Filter by stage">
             <button
@@ -229,7 +236,11 @@
                                 ></span>
                               </summary>
                               <ul class="rm-children">
-                                <li class="rm-node rm-node-leaf" data-stage="alpha">
+                                <li
+                                  class="rm-node rm-node-leaf"
+                                  data-stage="alpha"
+                                  data-search="Server stdout as it happens"
+                                >
                                   <div class="rm-row rm-row-leaf">
                                     <span class="rm-label"
                                       ><span class="rm-name">live log streaming</span></span
@@ -237,7 +248,11 @@
                                     <span class="tag tag-stage">ALPHA</span>
                                   </div>
                                 </li>
-                                <li class="rm-node rm-node-leaf" data-stage="alpha">
+                                <li
+                                  class="rm-node rm-node-leaf"
+                                  data-stage="alpha"
+                                  data-search="Type straight into the running server"
+                                >
                                   <div class="rm-row rm-row-leaf">
                                     <span class="rm-label"
                                       ><span class="rm-name">inline command input</span></span
@@ -245,7 +260,11 @@
                                     <span class="tag tag-stage">ALPHA</span>
                                   </div>
                                 </li>
-                                <li class="rm-node rm-node-leaf" data-stage="alpha">
+                                <li
+                                  class="rm-node rm-node-leaf"
+                                  data-stage="alpha"
+                                  data-search="Save, list, weather, time, kick, ban"
+                                >
                                   <div class="rm-row rm-row-leaf">
                                     <span class="rm-label"
                                       ><span class="rm-name">quick commands</span></span
@@ -253,7 +272,11 @@
                                     <span class="tag tag-stage">ALPHA</span>
                                   </div>
                                 </li>
-                                <li class="rm-node rm-node-leaf" data-stage="alpha">
+                                <li
+                                  class="rm-node rm-node-leaf"
+                                  data-stage="alpha"
+                                  data-search="Your own buttons, stored per server"
+                                >
                                   <div class="rm-row rm-row-leaf">
                                     <span class="rm-label"
                                       ><span class="rm-name">custom commands</span></span
@@ -274,7 +297,11 @@
                                 ></span>
                               </summary>
                               <ul class="rm-children">
-                                <li class="rm-node rm-node-leaf" data-stage="alpha">
+                                <li
+                                  class="rm-node rm-node-leaf"
+                                  data-stage="alpha"
+                                  data-search="Running state, and how long for"
+                                >
                                   <div class="rm-row rm-row-leaf">
                                     <span class="rm-label"
                                       ><span class="rm-name">status and uptime</span></span
@@ -282,7 +309,11 @@
                                     <span class="tag tag-stage">ALPHA</span>
                                   </div>
                                 </li>
-                                <li class="rm-node rm-node-leaf" data-stage="alpha">
+                                <li
+                                  class="rm-node rm-node-leaf"
+                                  data-stage="alpha"
+                                  data-search="Live count from the log stream"
+                                >
                                   <div class="rm-row rm-row-leaf">
                                     <span class="rm-label"
                                       ><span class="rm-name">players online</span></span
@@ -290,7 +321,11 @@
                                     <span class="tag tag-stage">ALPHA</span>
                                   </div>
                                 </li>
-                                <li class="rm-node rm-node-leaf" data-stage="alpha">
+                                <li
+                                  class="rm-node rm-node-leaf"
+                                  data-stage="alpha"
+                                  data-search="Colour banded, RCON with a log fallback"
+                                >
                                   <div class="rm-row rm-row-leaf">
                                     <span class="rm-label"
                                       ><span class="rm-name">TPS and RAM</span></span
@@ -314,7 +349,11 @@
                                 ></span>
                               </summary>
                               <ul class="rm-children">
-                                <li class="rm-node rm-node-leaf" data-stage="alpha">
+                                <li
+                                  class="rm-node rm-node-leaf"
+                                  data-stage="alpha"
+                                  data-search="TPS, RAM and CPU charted"
+                                >
                                   <div class="rm-row rm-row-leaf">
                                     <span class="rm-label"
                                       ><span class="rm-name">1-hour history</span></span
@@ -322,7 +361,11 @@
                                     <span class="tag tag-stage">ALPHA</span>
                                   </div>
                                 </li>
-                                <li class="rm-node rm-node-leaf" data-stage="alpha">
+                                <li
+                                  class="rm-node rm-node-leaf"
+                                  data-stage="alpha"
+                                  data-search="Sortable, with toggleable series"
+                                >
                                   <div class="rm-row rm-row-leaf">
                                     <span class="rm-label"
                                       ><span class="rm-name">summary table</span></span
@@ -330,7 +373,11 @@
                                     <span class="tag tag-stage">ALPHA</span>
                                   </div>
                                 </li>
-                                <li class="rm-node rm-node-leaf" data-stage="beta">
+                                <li
+                                  class="rm-node rm-node-leaf"
+                                  data-stage="beta"
+                                  data-search="Longer windows, persisted to disk"
+                                >
                                   <div class="rm-row rm-row-leaf">
                                     <span class="rm-label"
                                       ><span class="rm-name">24-hour and 7-day history</span></span
@@ -360,7 +407,11 @@
                                 ></span>
                               </summary>
                               <ul class="rm-children">
-                                <li class="rm-node rm-node-leaf" data-stage="alpha">
+                                <li
+                                  class="rm-node rm-node-leaf"
+                                  data-stage="alpha"
+                                  data-search="Who is on, polled while the server runs"
+                                >
                                   <div class="rm-row rm-row-leaf">
                                     <span class="rm-label"
                                       ><span class="rm-name">online list</span></span
@@ -368,7 +419,11 @@
                                     <span class="tag tag-stage">ALPHA</span>
                                   </div>
                                 </li>
-                                <li class="rm-node rm-node-leaf" data-stage="alpha">
+                                <li
+                                  class="rm-node rm-node-leaf"
+                                  data-stage="alpha"
+                                  data-search="With an optional reason"
+                                >
                                   <div class="rm-row rm-row-leaf">
                                     <span class="rm-label"
                                       ><span class="rm-name">kick and ban</span></span
@@ -376,7 +431,11 @@
                                     <span class="tag tag-stage">ALPHA</span>
                                   </div>
                                 </li>
-                                <li class="rm-node rm-node-leaf" data-stage="beta">
+                                <li
+                                  class="rm-node rm-node-leaf"
+                                  data-stage="beta"
+                                  data-search="Playtime, history and per-player notes"
+                                >
                                   <div class="rm-row rm-row-leaf">
                                     <span class="rm-label"
                                       ><span class="rm-name">player profiles</span></span
@@ -392,7 +451,11 @@
                                     >
                                   </div>
                                 </li>
-                                <li class="rm-node rm-node-leaf" data-stage="beta">
+                                <li
+                                  class="rm-node rm-node-leaf"
+                                  data-stage="beta"
+                                  data-search="The skin a player wears, rendered in 3D"
+                                >
                                   <div class="rm-row rm-row-leaf">
                                     <span class="rm-label"
                                       ><span class="rm-name">skin preview</span></span
@@ -422,7 +485,11 @@
                                 ></span>
                               </summary>
                               <ul class="rm-children">
-                                <li class="rm-node rm-node-leaf" data-stage="alpha">
+                                <li
+                                  class="rm-node rm-node-leaf"
+                                  data-stage="alpha"
+                                  data-search="Every save orbiting the server"
+                                >
                                   <div class="rm-row rm-row-leaf">
                                     <span class="rm-label"
                                       ><span class="rm-name">3D world browser</span></span
@@ -430,7 +497,11 @@
                                     <span class="tag tag-stage">ALPHA</span>
                                   </div>
                                 </li>
-                                <li class="rm-node rm-node-leaf" data-stage="alpha">
+                                <li
+                                  class="rm-node rm-node-leaf"
+                                  data-stage="alpha"
+                                  data-search="Seed, size, game mode, last played"
+                                >
                                   <div class="rm-row rm-row-leaf">
                                     <span class="rm-label"
                                       ><span class="rm-name">world metadata</span></span
@@ -438,7 +509,11 @@
                                     <span class="tag tag-stage">ALPHA</span>
                                   </div>
                                 </li>
-                                <li class="rm-node rm-node-leaf" data-stage="alpha">
+                                <li
+                                  class="rm-node rm-node-leaf"
+                                  data-stage="alpha"
+                                  data-search="With a guided restart when running"
+                                >
                                   <div class="rm-row rm-row-leaf">
                                     <span class="rm-label"
                                       ><span class="rm-name">switch active world</span></span
@@ -446,7 +521,11 @@
                                     <span class="tag tag-stage">ALPHA</span>
                                   </div>
                                 </li>
-                                <li class="rm-node rm-node-leaf" data-stage="alpha">
+                                <li
+                                  class="rm-node rm-node-leaf"
+                                  data-stage="alpha"
+                                  data-search="Housekeeping without leaving the app"
+                                >
                                   <div class="rm-row rm-row-leaf">
                                     <span class="rm-label"
                                       ><span class="rm-name">rename, duplicate, delete</span></span
@@ -454,7 +533,11 @@
                                     <span class="tag tag-stage">ALPHA</span>
                                   </div>
                                 </li>
-                                <li class="rm-node rm-node-leaf" data-stage="beta">
+                                <li
+                                  class="rm-node rm-node-leaf"
+                                  data-stage="beta"
+                                  data-search="Create, list and restore from here"
+                                >
                                   <div class="rm-row rm-row-leaf">
                                     <span class="rm-label"
                                       ><span class="rm-name">per-world backups</span></span
@@ -484,7 +567,11 @@
                                 ></span>
                               </summary>
                               <ul class="rm-children">
-                                <li class="rm-node rm-node-leaf" data-stage="alpha">
+                                <li
+                                  class="rm-node rm-node-leaf"
+                                  data-stage="alpha"
+                                  data-search="Zip the server directory on demand"
+                                >
                                   <div class="rm-row rm-row-leaf">
                                     <span class="rm-label"
                                       ><span class="rm-name">manual backup</span></span
@@ -492,7 +579,11 @@
                                     <span class="tag tag-stage">ALPHA</span>
                                   </div>
                                 </li>
-                                <li class="rm-node rm-node-leaf" data-stage="alpha">
+                                <li
+                                  class="rm-node rm-node-leaf"
+                                  data-stage="alpha"
+                                  data-search="Driven by a scheduler graph"
+                                >
                                   <div class="rm-row rm-row-leaf">
                                     <span class="rm-label"
                                       ><span class="rm-name">scheduled backups</span></span
@@ -500,7 +591,11 @@
                                     <span class="tag tag-stage">ALPHA</span>
                                   </div>
                                 </li>
-                                <li class="rm-node rm-node-leaf" data-stage="alpha">
+                                <li
+                                  class="rm-node rm-node-leaf"
+                                  data-stage="alpha"
+                                  data-search="Extract and swap, rolled back on failure"
+                                >
                                   <div class="rm-row rm-row-leaf">
                                     <span class="rm-label"
                                       ><span class="rm-name">restore</span></span
@@ -508,7 +603,11 @@
                                     <span class="tag tag-stage">ALPHA</span>
                                   </div>
                                 </li>
-                                <li class="rm-node rm-node-leaf" data-stage="alpha">
+                                <li
+                                  class="rm-node rm-node-leaf"
+                                  data-stage="alpha"
+                                  data-search="A shared progress bar and notifications"
+                                >
                                   <div class="rm-row rm-row-leaf">
                                     <span class="rm-label"
                                       ><span class="rm-name">live progress</span></span
@@ -516,7 +615,11 @@
                                     <span class="tag tag-stage">ALPHA</span>
                                   </div>
                                 </li>
-                                <li class="rm-node rm-node-leaf" data-stage="beta">
+                                <li
+                                  class="rm-node rm-node-leaf"
+                                  data-stage="beta"
+                                  data-search="Include world_nether and world_the_end"
+                                >
                                   <div class="rm-row rm-row-leaf">
                                     <span class="rm-label"
                                       ><span class="rm-name">multi-dimension backup</span></span
@@ -532,7 +635,11 @@
                                     >
                                   </div>
                                 </li>
-                                <li class="rm-node rm-node-leaf" data-stage="beta">
+                                <li
+                                  class="rm-node rm-node-leaf"
+                                  data-stage="beta"
+                                  data-search="Keep the last few, drop the rest"
+                                >
                                   <div class="rm-row rm-row-leaf">
                                     <span class="rm-label"
                                       ><span class="rm-name">retention and pruning</span></span
@@ -548,7 +655,11 @@
                                     >
                                   </div>
                                 </li>
-                                <li class="rm-node rm-node-leaf" data-stage="beta">
+                                <li
+                                  class="rm-node rm-node-leaf"
+                                  data-stage="beta"
+                                  data-search="Stop a running backup cleanly"
+                                >
                                   <div class="rm-row rm-row-leaf">
                                     <span class="rm-label"
                                       ><span class="rm-name">cancel in progress</span></span
@@ -564,7 +675,11 @@
                                     >
                                   </div>
                                 </li>
-                                <li class="rm-node rm-node-leaf" data-stage="beta">
+                                <li
+                                  class="rm-node rm-node-leaf"
+                                  data-stage="beta"
+                                  data-search="One backup at a time, enforced"
+                                >
                                   <div class="rm-row rm-row-leaf">
                                     <span class="rm-label"
                                       ><span class="rm-name">concurrency guard</span></span
@@ -580,7 +695,11 @@
                                     >
                                   </div>
                                 </li>
-                                <li class="rm-node rm-node-leaf" data-stage="beta">
+                                <li
+                                  class="rm-node rm-node-leaf"
+                                  data-stage="beta"
+                                  data-search="Catch a corrupt zip before it lands"
+                                >
                                   <div class="rm-row rm-row-leaf">
                                     <span class="rm-label"
                                       ><span class="rm-name">restore integrity check</span></span
@@ -596,7 +715,11 @@
                                     >
                                   </div>
                                 </li>
-                                <li class="rm-node rm-node-leaf" data-stage="beta">
+                                <li
+                                  class="rm-node rm-node-leaf"
+                                  data-stage="beta"
+                                  data-search="Restore a zip from somewhere else"
+                                >
                                   <div class="rm-row rm-row-leaf">
                                     <span class="rm-label"
                                       ><span class="rm-name">import an external backup</span></span
@@ -612,7 +735,11 @@
                                     >
                                   </div>
                                 </li>
-                                <li class="rm-node rm-node-leaf" data-stage="beta">
+                                <li
+                                  class="rm-node rm-node-leaf"
+                                  data-stage="beta"
+                                  data-search="Per-world backups managed in one place"
+                                >
                                   <div class="rm-row rm-row-leaf">
                                     <span class="rm-label"
                                       ><span class="rm-name">world-specific segment</span></span
@@ -644,7 +771,11 @@
                                 ></span>
                               </summary>
                               <ul class="rm-children">
-                                <li class="rm-node rm-node-leaf" data-stage="alpha">
+                                <li
+                                  class="rm-node rm-node-leaf"
+                                  data-stage="alpha"
+                                  data-search="Drag blocks onto a canvas and wire them"
+                                >
                                   <div class="rm-row rm-row-leaf">
                                     <span class="rm-label"
                                       ><span class="rm-name">node graph editor</span></span
@@ -652,7 +783,11 @@
                                     <span class="tag tag-stage">ALPHA</span>
                                   </div>
                                 </li>
-                                <li class="rm-node rm-node-leaf" data-stage="alpha">
+                                <li
+                                  class="rm-node rm-node-leaf"
+                                  data-stage="alpha"
+                                  data-search="Seventeen blocks, branching, live values"
+                                >
                                   <div class="rm-row rm-row-leaf">
                                     <span class="rm-label"
                                       ><span class="rm-name"
@@ -662,7 +797,11 @@
                                     <span class="tag tag-stage">ALPHA</span>
                                   </div>
                                 </li>
-                                <li class="rm-node rm-node-leaf" data-stage="alpha">
+                                <li
+                                  class="rm-node rm-node-leaf"
+                                  data-stage="alpha"
+                                  data-search="What fired, and what fires next"
+                                >
                                   <div class="rm-row rm-row-leaf">
                                     <span class="rm-label"
                                       ><span class="rm-name">run history and next runs</span></span
@@ -670,7 +809,11 @@
                                     <span class="tag tag-stage">ALPHA</span>
                                   </div>
                                 </li>
-                                <li class="rm-node rm-node-leaf" data-stage="beta">
+                                <li
+                                  class="rm-node rm-node-leaf"
+                                  data-stage="beta"
+                                  data-search="Back up one world from a graph"
+                                >
                                   <div class="rm-row rm-row-leaf">
                                     <span class="rm-label"
                                       ><span class="rm-name"
@@ -702,7 +845,11 @@
                                 ></span>
                               </summary>
                               <ul class="rm-children">
-                                <li class="rm-node rm-node-leaf" data-stage="alpha">
+                                <li
+                                  class="rm-node rm-node-leaf"
+                                  data-stage="alpha"
+                                  data-search="properties, JSON, YAML and TOML"
+                                >
                                   <div class="rm-row rm-row-leaf">
                                     <span class="rm-label"
                                       ><span class="rm-name">config file list</span></span
@@ -710,7 +857,11 @@
                                     <span class="tag tag-stage">ALPHA</span>
                                   </div>
                                 </li>
-                                <li class="rm-node rm-node-leaf" data-stage="alpha">
+                                <li
+                                  class="rm-node rm-node-leaf"
+                                  data-stage="alpha"
+                                  data-search="Typed widgets, one per key"
+                                >
                                   <div class="rm-row rm-row-leaf">
                                     <span class="rm-label"
                                       ><span class="rm-name">form editor</span></span
@@ -718,7 +869,11 @@
                                     <span class="tag tag-stage">ALPHA</span>
                                   </div>
                                 </li>
-                                <li class="rm-node rm-node-leaf" data-stage="alpha">
+                                <li
+                                  class="rm-node rm-node-leaf"
+                                  data-stage="alpha"
+                                  data-search="Dirty tracking, save and revert"
+                                >
                                   <div class="rm-row rm-row-leaf">
                                     <span class="rm-label"
                                       ><span class="rm-name">raw text editor</span></span
@@ -726,7 +881,11 @@
                                     <span class="tag tag-stage">ALPHA</span>
                                   </div>
                                 </li>
-                                <li class="rm-node rm-node-leaf" data-stage="beta">
+                                <li
+                                  class="rm-node rm-node-leaf"
+                                  data-stage="beta"
+                                  data-search="Related keys collected into sections"
+                                >
                                   <div class="rm-row rm-row-leaf">
                                     <span class="rm-label"
                                       ><span class="rm-name">grouped fields</span></span
@@ -742,7 +901,11 @@
                                     >
                                   </div>
                                 </li>
-                                <li class="rm-node rm-node-leaf" data-stage="beta">
+                                <li
+                                  class="rm-node rm-node-leaf"
+                                  data-stage="beta"
+                                  data-search="Gamerules as toggles, not strings"
+                                >
                                   <div class="rm-row rm-row-leaf">
                                     <span class="rm-label"
                                       ><span class="rm-name">gamerule editor</span></span
@@ -758,7 +921,11 @@
                                     >
                                   </div>
                                 </li>
-                                <li class="rm-node rm-node-leaf" data-stage="beta">
+                                <li
+                                  class="rm-node rm-node-leaf"
+                                  data-stage="beta"
+                                  data-search="See the message before it ships"
+                                >
                                   <div class="rm-row rm-row-leaf">
                                     <span class="rm-label"
                                       ><span class="rm-name">MOTD preview</span></span
@@ -788,7 +955,11 @@
                                 ></span>
                               </summary>
                               <ul class="rm-children">
-                                <li class="rm-node rm-node-leaf" data-stage="alpha">
+                                <li
+                                  class="rm-node rm-node-leaf"
+                                  data-stage="alpha"
+                                  data-search="Find and add without opening a browser"
+                                >
                                   <div class="rm-row rm-row-leaf">
                                     <span class="rm-label"
                                       ><span class="rm-name"
@@ -798,7 +969,11 @@
                                     <span class="tag tag-stage">ALPHA</span>
                                   </div>
                                 </li>
-                                <li class="rm-node rm-node-leaf" data-stage="alpha">
+                                <li
+                                  class="rm-node rm-node-leaf"
+                                  data-stage="alpha"
+                                  data-search="Pulls in what a mod needs"
+                                >
                                   <div class="rm-row rm-row-leaf">
                                     <span class="rm-label"
                                       ><span class="rm-name">dependency resolution</span></span
@@ -806,7 +981,11 @@
                                     <span class="tag tag-stage">ALPHA</span>
                                   </div>
                                 </li>
-                                <li class="rm-node rm-node-leaf" data-stage="alpha">
+                                <li
+                                  class="rm-node rm-node-leaf"
+                                  data-stage="alpha"
+                                  data-search="Knows Fabric from Forge from Paper"
+                                >
                                   <div class="rm-row rm-row-leaf">
                                     <span class="rm-label"
                                       ><span class="rm-name">loader detection</span></span
@@ -814,7 +993,11 @@
                                     <span class="tag tag-stage">ALPHA</span>
                                   </div>
                                 </li>
-                                <li class="rm-node rm-node-leaf" data-stage="alpha">
+                                <li
+                                  class="rm-node rm-node-leaf"
+                                  data-stage="alpha"
+                                  data-search="Read what changed before updating"
+                                >
                                   <div class="rm-row rm-row-leaf">
                                     <span class="rm-label"
                                       ><span class="rm-name">inline changelogs</span></span
@@ -822,7 +1005,11 @@
                                     <span class="tag tag-stage">ALPHA</span>
                                   </div>
                                 </li>
-                                <li class="rm-node rm-node-leaf" data-stage="beta">
+                                <li
+                                  class="rm-node rm-node-leaf"
+                                  data-stage="beta"
+                                  data-search="A second source, and update management"
+                                >
                                   <div class="rm-row rm-row-leaf">
                                     <span class="rm-label"
                                       ><span class="rm-name"
@@ -855,7 +1042,11 @@
                                 ></span>
                               </summary>
                               <ul class="rm-children">
-                                <li class="rm-node rm-node-leaf" data-stage="alpha">
+                                <li
+                                  class="rm-node rm-node-leaf"
+                                  data-stage="alpha"
+                                  data-search="Reverse chronological and colour coded"
+                                >
                                   <div class="rm-row rm-row-leaf">
                                     <span class="rm-label"
                                       ><span class="rm-name">in-app feed</span></span
@@ -863,7 +1054,11 @@
                                     <span class="tag tag-stage">ALPHA</span>
                                   </div>
                                 </li>
-                                <li class="rm-node rm-node-leaf" data-stage="alpha">
+                                <li
+                                  class="rm-node rm-node-leaf"
+                                  data-stage="alpha"
+                                  data-search="Crashes, joins and failures at the OS level"
+                                >
                                   <div class="rm-row rm-row-leaf">
                                     <span class="rm-label"
                                       ><span class="rm-name">desktop notifications</span></span
@@ -874,7 +1069,11 @@
                               </ul>
                             </details>
                           </li>
-                          <li class="rm-node rm-node-leaf" data-stage="beta">
+                          <li
+                            class="rm-node rm-node-leaf"
+                            data-stage="beta"
+                            data-search="Browse and edit the server directory"
+                          >
                             <div class="rm-row rm-row-leaf">
                               <span class="rm-label"
                                 ><span class="rm-name">file explorer</span></span
@@ -890,7 +1089,11 @@
                               >
                             </div>
                           </li>
-                          <li class="rm-node rm-node-leaf" data-stage="beta">
+                          <li
+                            class="rm-node rm-node-leaf"
+                            data-stage="beta"
+                            data-search="A record of what the app did, and when"
+                          >
                             <div class="rm-row rm-row-leaf">
                               <span class="rm-label"><span class="rm-name">audit log</span></span>
                               <span class="tag tag-stage">BETA</span>
@@ -917,7 +1120,11 @@
                           ></span>
                         </summary>
                         <ul class="rm-children">
-                          <li class="rm-node rm-node-leaf" data-stage="alpha">
+                          <li
+                            class="rm-node rm-node-leaf"
+                            data-stage="alpha"
+                            data-search="Tiles land on a grid"
+                          >
                             <div class="rm-row rm-row-leaf">
                               <span class="rm-label"
                                 ><span class="rm-name">drag, resize and snap</span></span
@@ -925,13 +1132,21 @@
                               <span class="tag tag-stage">ALPHA</span>
                             </div>
                           </li>
-                          <li class="rm-node rm-node-leaf" data-stage="alpha">
+                          <li
+                            class="rm-node rm-node-leaf"
+                            data-stage="alpha"
+                            data-search="Park a tile without losing it"
+                          >
                             <div class="rm-row rm-row-leaf">
                               <span class="rm-label"><span class="rm-name">tile crate</span></span>
                               <span class="tag tag-stage">ALPHA</span>
                             </div>
                           </li>
-                          <li class="rm-node rm-node-leaf" data-stage="alpha">
+                          <li
+                            class="rm-node rm-node-leaf"
+                            data-stage="alpha"
+                            data-search="Fill the canvas, then restore"
+                          >
                             <div class="rm-row rm-row-leaf">
                               <span class="rm-label"
                                 ><span class="rm-name">maximise a tile</span></span
@@ -939,7 +1154,11 @@
                               <span class="tag tag-stage">ALPHA</span>
                             </div>
                           </li>
-                          <li class="rm-node rm-node-leaf" data-stage="alpha">
+                          <li
+                            class="rm-node rm-node-leaf"
+                            data-stage="alpha"
+                            data-search="Save, restore and delete named layouts"
+                          >
                             <div class="rm-row rm-row-leaf">
                               <span class="rm-label"
                                 ><span class="rm-name">layout presets</span></span
@@ -964,7 +1183,11 @@
                     ></span>
                   </summary>
                   <ul class="rm-children">
-                    <li class="rm-node rm-node-leaf" data-stage="alpha">
+                    <li
+                      class="rm-node rm-node-leaf"
+                      data-stage="alpha"
+                      data-search="Spawns Java, and shuts it down cleanly"
+                    >
                       <div class="rm-row rm-row-leaf">
                         <span class="rm-label"
                           ><span class="rm-name">start, stop, restart</span></span
@@ -972,7 +1195,11 @@
                         <span class="tag tag-stage">ALPHA</span>
                       </div>
                     </li>
-                    <li class="rm-node rm-node-leaf" data-stage="alpha">
+                    <li
+                      class="rm-node rm-node-leaf"
+                      data-stage="alpha"
+                      data-search="Jar, JVM arguments and directory each"
+                    >
                       <div class="rm-row rm-row-leaf">
                         <span class="rm-label"
                           ><span class="rm-name">multiple server configs</span></span
@@ -980,13 +1207,21 @@
                         <span class="tag tag-stage">ALPHA</span>
                       </div>
                     </li>
-                    <li class="rm-node rm-node-leaf" data-stage="alpha">
+                    <li
+                      class="rm-node rm-node-leaf"
+                      data-stage="alpha"
+                      data-search="Detects it, accepts it, restarts"
+                    >
                       <div class="rm-row rm-row-leaf">
                         <span class="rm-label"><span class="rm-name">EULA flow</span></span>
                         <span class="tag tag-stage">ALPHA</span>
                       </div>
                     </li>
-                    <li class="rm-node rm-node-leaf" data-stage="beta">
+                    <li
+                      class="rm-node rm-node-leaf"
+                      data-stage="beta"
+                      data-search="Enabled and configured on first run"
+                    >
                       <div class="rm-row rm-row-leaf">
                         <span class="rm-label"
                           ><span class="rm-name">RCON set up for you</span></span
@@ -1002,7 +1237,11 @@
                         >
                       </div>
                     </li>
-                    <li class="rm-node rm-node-leaf" data-stage="beta">
+                    <li
+                      class="rm-node rm-node-leaf"
+                      data-stage="beta"
+                      data-search="Every tile follows the active server"
+                    >
                       <div class="rm-row rm-row-leaf">
                         <span class="rm-label"
                           ><span class="rm-name">server switching everywhere</span></span
@@ -1010,7 +1249,11 @@
                         <span class="tag tag-stage">BETA</span>
                       </div>
                     </li>
-                    <li class="rm-node rm-node-leaf" data-stage="beta">
+                    <li
+                      class="rm-node rm-node-leaf"
+                      data-stage="beta"
+                      data-search="A playit.gg tunnel, for friends"
+                    >
                       <div class="rm-row rm-row-leaf">
                         <span class="rm-label"><span class="rm-name">public server IP</span></span>
                         <span class="tag tag-stage">BETA</span>
@@ -1024,7 +1267,11 @@
                         >
                       </div>
                     </li>
-                    <li class="rm-node rm-node-leaf" data-stage="later">
+                    <li
+                      class="rm-node rm-node-leaf"
+                      data-stage="later"
+                      data-search="More than one at a time"
+                    >
                       <div class="rm-row rm-row-leaf">
                         <span class="rm-label"
                           ><span class="rm-name">run servers concurrently</span></span
@@ -1053,13 +1300,21 @@
                     ></span>
                   </summary>
                   <ul class="rm-children">
-                    <li class="rm-node rm-node-leaf" data-stage="alpha">
+                    <li
+                      class="rm-node rm-node-leaf"
+                      data-stage="alpha"
+                      data-search="Skin the whole dashboard"
+                    >
                       <div class="rm-row rm-row-leaf">
                         <span class="rm-label"><span class="rm-name">theme</span></span>
                         <span class="tag tag-stage">ALPHA</span>
                       </div>
                     </li>
-                    <li class="rm-node rm-node-leaf" data-stage="alpha">
+                    <li
+                      class="rm-node rm-node-leaf"
+                      data-stage="alpha"
+                      data-search="Choose what is allowed to interrupt you"
+                    >
                       <div class="rm-row rm-row-leaf">
                         <span class="rm-label"
                           ><span class="rm-name">notification toggles</span></span
@@ -1067,7 +1322,11 @@
                         <span class="tag tag-stage">ALPHA</span>
                       </div>
                     </li>
-                    <li class="rm-node rm-node-leaf" data-stage="beta">
+                    <li
+                      class="rm-node rm-node-leaf"
+                      data-stage="beta"
+                      data-search="Rebind keys, stored with your settings"
+                    >
                       <div class="rm-row rm-row-leaf">
                         <span class="rm-label"
                           ><span class="rm-name">configurable shortcuts</span></span
@@ -1083,7 +1342,11 @@
                         >
                       </div>
                     </li>
-                    <li class="rm-node rm-node-leaf" data-stage="beta">
+                    <li
+                      class="rm-node rm-node-leaf"
+                      data-stage="beta"
+                      data-search="Defaults every new server inherits"
+                    >
                       <div class="rm-row rm-row-leaf">
                         <span class="rm-label"
                           ><span class="rm-name">global JVM defaults</span></span
@@ -1112,7 +1375,11 @@
                     ></span>
                   </summary>
                   <ul class="rm-children">
-                    <li class="rm-node rm-node-leaf" data-stage="alpha">
+                    <li
+                      class="rm-node rm-node-leaf"
+                      data-stage="alpha"
+                      data-search="One emit path, ready to fan out"
+                    >
                       <div class="rm-row rm-row-leaf">
                         <span class="rm-label"
                           ><span class="rm-name">event hub groundwork</span></span
@@ -1120,7 +1387,11 @@
                         <span class="tag tag-stage">ALPHA</span>
                       </div>
                     </li>
-                    <li class="rm-node rm-node-leaf" data-stage="later">
+                    <li
+                      class="rm-node rm-node-leaf"
+                      data-stage="later"
+                      data-search="An HTTP and WebSocket server in the app"
+                    >
                       <div class="rm-row rm-row-leaf">
                         <span class="rm-label"><span class="rm-name">remote service</span></span>
                         <span class="tag tag-stage">LATER</span>
@@ -1134,7 +1405,11 @@
                         >
                       </div>
                     </li>
-                    <li class="rm-node rm-node-leaf" data-stage="later">
+                    <li
+                      class="rm-node rm-node-leaf"
+                      data-stage="later"
+                      data-search="Tiles run remotely with no changes"
+                    >
                       <div class="rm-row rm-row-leaf">
                         <span class="rm-label"
                           ><span class="rm-name">browser runtime shim</span></span
@@ -1150,7 +1425,11 @@
                         >
                       </div>
                     </li>
-                    <li class="rm-node rm-node-leaf" data-stage="later">
+                    <li
+                      class="rm-node rm-node-leaf"
+                      data-stage="later"
+                      data-search="One password, then session tokens"
+                    >
                       <div class="rm-row rm-row-leaf">
                         <span class="rm-label"
                           ><span class="rm-name">password and token auth</span></span
@@ -1166,7 +1445,11 @@
                         >
                       </div>
                     </li>
-                    <li class="rm-node rm-node-leaf" data-stage="later">
+                    <li
+                      class="rm-node rm-node-leaf"
+                      data-stage="later"
+                      data-search="cloudflared, with no configuration"
+                    >
                       <div class="rm-row rm-row-leaf">
                         <span class="rm-label"><span class="rm-name">tunnel transport</span></span>
                         <span class="tag tag-stage">LATER</span>
@@ -1180,7 +1463,11 @@
                         >
                       </div>
                     </li>
-                    <li class="rm-node rm-node-leaf" data-stage="later">
+                    <li
+                      class="rm-node rm-node-leaf"
+                      data-stage="later"
+                      data-search="File pickers and downloads, remotely"
+                    >
                       <div class="rm-row rm-row-leaf">
                         <span class="rm-label"
                           ><span class="rm-name">remote-mode adaptations</span></span
@@ -1209,7 +1496,11 @@
                     ></span>
                   </summary>
                   <ul class="rm-children">
-                    <li class="rm-node rm-node-leaf" data-stage="alpha">
+                    <li
+                      class="rm-node rm-node-leaf"
+                      data-stage="alpha"
+                      data-search="One native binary each, per tag"
+                    >
                       <div class="rm-row rm-row-leaf">
                         <span class="rm-label"
                           ><span class="rm-name">windows and linux builds</span></span
@@ -1217,19 +1508,31 @@
                         <span class="tag tag-stage">ALPHA</span>
                       </div>
                     </li>
-                    <li class="rm-node rm-node-leaf" data-stage="alpha">
+                    <li
+                      class="rm-node rm-node-leaf"
+                      data-stage="alpha"
+                      data-search="Checksum verified, rolls back on failure"
+                    >
                       <div class="rm-row rm-row-leaf">
                         <span class="rm-label"><span class="rm-name">in-app updater</span></span>
                         <span class="tag tag-stage">ALPHA</span>
                       </div>
                     </li>
-                    <li class="rm-node rm-node-leaf" data-stage="alpha">
+                    <li
+                      class="rm-node rm-node-leaf"
+                      data-stage="alpha"
+                      data-search="Alongside the bare executables"
+                    >
                       <div class="rm-row rm-row-leaf">
                         <span class="rm-label"><span class="rm-name">rpm package</span></span>
                         <span class="tag tag-stage">ALPHA</span>
                       </div>
                     </li>
-                    <li class="rm-node rm-node-leaf" data-stage="release">
+                    <li
+                      class="rm-node rm-node-leaf"
+                      data-stage="release"
+                      data-search="Builds from source today"
+                    >
                       <div class="rm-row rm-row-leaf">
                         <span class="rm-label"
                           ><span class="rm-name">published macOS builds</span></span
@@ -1237,19 +1540,31 @@
                         <span class="tag tag-stage">RELEASE</span>
                       </div>
                     </li>
-                    <li class="rm-node rm-node-leaf" data-stage="release">
+                    <li
+                      class="rm-node rm-node-leaf"
+                      data-stage="release"
+                      data-search="Rather than a bare executable"
+                    >
                       <div class="rm-row rm-row-leaf">
                         <span class="rm-label"><span class="rm-name">windows installer</span></span>
                         <span class="tag tag-stage">RELEASE</span>
                       </div>
                     </li>
-                    <li class="rm-node rm-node-leaf" data-stage="release">
+                    <li
+                      class="rm-node rm-node-leaf"
+                      data-stage="release"
+                      data-search="A .deb beside the .rpm"
+                    >
                       <div class="rm-row rm-row-leaf">
                         <span class="rm-label"><span class="rm-name">debian package</span></span>
                         <span class="tag tag-stage">RELEASE</span>
                       </div>
                     </li>
-                    <li class="rm-node rm-node-leaf" data-stage="release">
+                    <li
+                      class="rm-node rm-node-leaf"
+                      data-stage="release"
+                      data-search="No warning on a first launch"
+                    >
                       <div class="rm-row rm-row-leaf">
                         <span class="rm-label"
                           ><span class="rm-name">signed and notarised builds</span></span
@@ -1257,7 +1572,11 @@
                         <span class="tag tag-stage">RELEASE</span>
                       </div>
                     </li>
-                    <li class="rm-node rm-node-leaf" data-stage="release">
+                    <li
+                      class="rm-node rm-node-leaf"
+                      data-stage="release"
+                      data-search="Migrations, so settings survive updates"
+                    >
                       <div class="rm-row rm-row-leaf">
                         <span class="rm-label"
                           ><span class="rm-name">versioned on-disk state</span></span
@@ -1265,7 +1584,11 @@
                         <span class="tag tag-stage">RELEASE</span>
                       </div>
                     </li>
-                    <li class="rm-node rm-node-leaf" data-stage="release">
+                    <li
+                      class="rm-node rm-node-leaf"
+                      data-stage="release"
+                      data-search="On backups, restores, worlds and config"
+                    >
                       <div class="rm-row rm-row-leaf">
                         <span class="rm-label"
                           ><span class="rm-name">data-loss test coverage</span></span
@@ -1273,7 +1596,11 @@
                         <span class="tag tag-stage">RELEASE</span>
                       </div>
                     </li>
-                    <li class="rm-node rm-node-leaf" data-stage="release">
+                    <li
+                      class="rm-node rm-node-leaf"
+                      data-stage="release"
+                      data-search="The current docs stop after getting started"
+                    >
                       <div class="rm-row rm-row-leaf">
                         <span class="rm-label"
                           ><span class="rm-name">docs for every tile</span></span

@@ -100,6 +100,13 @@
   // searching paths: typing "backups" should bring back the folder and
   // everything in it, not only the four rows whose own text happens to repeat
   // the word, so a leaf carries its ancestors' names.
+  //
+  // A leaf's data-search is the rest of it: the one-line description the row
+  // used to print, kept as an index once the column was dropped. "stdout" is
+  // not in any name on the page, and it is still the word someone types to
+  // find the console. Nothing paints it, so a row matched only through it
+  // comes back with no highlight on it — which is the honest thing for text
+  // the row is not showing.
   function linkNode(rec) {
     var parentList = rec.el.parentNode
     var parentNode = parentList === tree ? null : parentList.closest('.rm-node')
@@ -107,7 +114,7 @@
 
     var path = rec.name
     for (var p = rec.parent; p; p = p.parent) path = p.name + ' ' + path
-    rec.hay = path.toLowerCase()
+    rec.hay = (path + ' ' + (rec.el.getAttribute('data-search') || '')).toLowerCase()
   }
 
   // Derived from the tree rather than stored: re-run after the sync adds rows
@@ -485,12 +492,12 @@
   apply()
 
   // ── GitHub sync ─────────────────────────────────────────────────────────
-  // The tree above is the editorial layer: its names and its structure are
-  // written for this page, and none of that exists on an issue — the suite's
-  // label taxonomy stops at `area:ui`, so there is no per-tile information to
-  // build a hierarchy from, and an issue title reads like "Backups tile: manage
-  // all world-specific backups in the 'World-specific' segment", which is not a
-  // line for a marketing page.
+  // The tree above is the editorial layer: its names, its data-search terms and
+  // its structure are written for this page, and none of that exists on an
+  // issue — the suite's label taxonomy stops at `area:ui`, so there is no
+  // per-tile information to build a hierarchy from, and an issue title reads
+  // like "Backups tile: manage all world-specific backups in the
+  // 'World-specific' segment", which is not a line for a marketing page.
   //
   // What GitHub is authoritative about is the other half: whether a planned
   // thing is done, and what has been filed since this page was written. That is
