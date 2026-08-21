@@ -187,14 +187,20 @@ tree.
       unmount — no leaked subscriptions.
       Verify: from `frontend/`, `grep -rn "EventsOn" src` — each call site must
       sit in a `useEffect` whose cleanup invokes the returned unsubscribe.
-      25 registrations across 12 files, all clean. Three spellings are in use
-      and a check has to know all three, or it reports a false leak: a single
-      `let cleanup` handle, numbered `c1…c5` handles, and an array drained in
-      the cleanup (`offs.push(...)` in `ServerInstallModal.tsx`, an array
-      literal in `tiles/stats/useServerStatus.ts`). Registration is always
-      synchronous inside the effect — no `await` before the handle is
-      captured — which is what rules out the unmount-before-assignment leak.
-      One asymmetry, noted not fixed: `useServerStatus.ts` wraps its whole
+      **47 registrations across 13 files**, all clean. Recounted 2026-08-20:
+      this line said "25 across 12" and had been wrong for a while — `App.tsx`
+      alone holds 19. Count with
+      `grep -rn "EventsOn(" src --include=*.ts --include=*.tsx | grep -v "\.test\."`
+      and subtract nothing but comments; the import line spells it `EventsOn }`
+      and does not match.
+      Three spellings are in use and a check has to know all three, or it
+      reports a false leak: a single `let cleanup` handle, numbered `c1…c5`
+      handles, and an array drained in the cleanup (`offs.push(...)` in
+      `ServerInstallModal.tsx`, an array literal in `hooks/useServerStatus.ts`).
+      Registration is always synchronous inside the effect — no `await` before
+      the handle is captured — which is what rules out the
+      unmount-before-assignment leak.
+      One asymmetry, noted not fixed: `hooks/useServerStatus.ts` wraps its whole
       `forEach` in one `try`, so a throwing first `off()` would skip the rest,
       where `ServerInstallModal.tsx` puts the `try` inside the loop.
 - [x] No frontend data is driven by `useEffect` polling when it should be a
@@ -226,19 +232,19 @@ tree.
       the optimistic value, because that is the `frontend-dev` preset in
       `.claude/launch.json` and hard-failing there makes the browser preview
       read-only. Only a bridge-present rejection reverts.
-- [ ] `ErrorBoundary` wraps the app and the UI degrades gracefully when the
+- [x] `ErrorBoundary` wraps the app and the UI degrades gracefully when the
       Minecraft server process is offline or unreachable.
-      Verify: `grep -n "ErrorBoundary" frontend/src/main.tsx`, then run the app
-      with no server configured and confirm tiles render an offline state
-      rather than a blank panel. The grep half passes (`main.tsx:5`/`:18`/`:21`).
-      The second half is now open on evidence rather than on absence of it: read
-      2026-08-19, the console tile really does render a blank panel offline and
-      the players tile cannot be told apart from an empty server — see backlog
-      ("P1 — Tiles that render an unreachable server as an empty one"). That
-      also corrects an assumption this line carried: the *verification* does not
-      need a GUI, since a jsdom render against a rejecting mocked binding
-      asserts the same thing. What needs a desk is the whole-app sweep, not the
-      per-tile check.
+      Verify: `grep -n "ErrorBoundary" frontend/src/main.tsx` (`:5`/`:18`/`:21`),
+      then assert the per-tile offline states in jsdom rather than at a desk —
+      this line assumed a GUI for years and did not need one. See
+      `tiles/console/index.test.tsx` and `tiles/players/emptyStates.test.tsx`
+      for the pattern: mock the binding, reject it, assert the tile names the
+      state. Closed 2026-08-20 (HEALTH_LOG).
+      Two flags, not one: `useServerStore`'s `status.running` says whether the
+      server is up, `reachable` says whether the backend answered at all. A tile
+      that renders "nothing here" must branch on both, or an unreachable server
+      reads as a healthy idle one. `reachable` is hydrated in `App` by
+      `hooks/useServerStatus.ts` — never re-tie that to a single tile's mount.
 
 ## 3. Scalable / Future-proof
 
@@ -355,28 +361,6 @@ tree.
 The remaining, not-yet-closed follow-ups. Each item's full remediation write-up
 moves to `agent_docs/HEALTH_LOG.md` once it's done — keep this section short and
 current. Priorities mirror the pillars above.
-
-**P1 — Tiles that render an unreachable server as an empty one** (found
-2026-08-19)
-- The Stable pillar's `ErrorBoundary` item asks that the UI "degrade gracefully
-  when the Minecraft server process is offline or unreachable" and has stayed
-  half-ticked because it needs a GUI. It does not, entirely: three tiles were
-  read directly and two are wrong.
-- `tiles/console/index.tsx` is the blank-panel case the item is about. With no
-  lines, the output region (`:132-143`) renders an empty `<div>` — no
-  placeholder, no offline text; a grep for `running`/`offline`/`disabled` in
-  that file returns nothing. The command input and Send button stay enabled, and
-  submitting offline fails into `.catch(console.error)` with no visible feedback.
-- The players tile renders an unreachable server identically to a server with
-  nobody on it: `usePlayers.ts:26` swallows the rejection, `players` stays `[]`,
-  and `PlayerGrid.tsx:13` shows "No players online" either way.
-- `tiles/stats/index.tsx` is fine — `useServerStore`'s `defaultStatus.running`
-  is `false`, so it shows its offline indicator on failure.
-- The verification half *is* closable headlessly, contrary to what this
-  checklist has assumed: `useUpdateCheck.test.ts:9` already shows the pattern
-  (`vi.mock('../../wailsjs/go/main/App')` plus `mockRejectedValue`), and a
-  jsdom render asserting an offline state needs no GUI. The console fix is a
-  code change first, then a test.
 
 **P2 — Motion one-offs outside the token vocabulary** (largely closed 2026-08-19)
 - The motion vocabulary is three tokens: `--duration-fast` (150ms),
