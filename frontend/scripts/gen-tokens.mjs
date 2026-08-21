@@ -439,10 +439,34 @@ for (const out of [CSS_OUT, TS_OUT, WEBSITE_OUT]) {
   mkdirSync(dirname(fileURLToPath(out)), { recursive: true })
 }
 
-writeFileSync(CSS_OUT, emitCss(src))
-writeFileSync(TS_OUT, emitTs(src))
-writeFileSync(WEBSITE_OUT, emitWebsiteCss(src))
+// Written only when the bytes actually differ. An unconditional write produced
+// identical content with a new mtime, and the checks that read the built output
+// (scripts/lib/dist-freshness.mjs) treat a token file newer than dist/ as a stale
+// build. Since the health runner regenerates after running those checks, every
+// run left the next one a rebuild to do for no change at all. A generator that
+// only writes real changes is the fix, and is the better default anyway: the
+// timestamps now mean what they say.
+const OUTPUTS = [
+  ['src/styles/tokens.css', CSS_OUT, emitCss(src)],
+  ['src/styles/tokens.ts', TS_OUT, emitTs(src)],
+  ['../website/tokens.css', WEBSITE_OUT, emitWebsiteCss(src)],
+]
+
+const written = []
+for (const [label, out, contents] of OUTPUTS) {
+  let current
+  try {
+    current = readFileSync(out, 'utf8')
+  } catch {
+    current = null
+  }
+  if (current === contents) continue
+  writeFileSync(out, contents)
+  written.push(label)
+}
 
 console.log(
-  'gen-tokens: wrote src/styles/tokens.css, src/styles/tokens.ts and ../website/tokens.css',
+  written.length === 0
+    ? `gen-tokens: ${OUTPUTS.map(([label]) => label).join(', ')} are already current`
+    : `gen-tokens: wrote ${written.join(', ')}`,
 )

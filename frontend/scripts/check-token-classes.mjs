@@ -18,16 +18,21 @@
 // the generated CSS — the generator iterates the same structure), keep the ones
 // frontend/src actually uses, and assert each has a rule in the built CSS.
 //
-// Requires a prior `pnpm build`, same as check-bundle-size.mjs.
+// Reads the built CSS, so it needs a build that matches the current sources.
+// It no longer assumes one exists: lib/dist-freshness.mjs builds when dist/ is
+// missing or older than src/. That assumption is what made this check report
+// `duration-fast` as dead long after the fix that revived it, off a dist/ from
+// before the fix.
 //
 // Run with: pnpm check-tokens
 import { readdir, readFile } from 'node:fs/promises'
 import path from 'node:path'
+import { ensureFreshDist } from './lib/dist-freshness.mjs'
 
 const here = import.meta.dirname
 const SOURCE = path.join(here, '..', '..', 'tokens.source.json')
 const SRC_DIR = path.join(here, '..', 'src')
-const DIST_ASSETS = path.join(here, '..', 'dist', 'assets')
+const DIST_ASSETS = await ensureFreshDist()
 
 // Which Tailwind utility prefixes read which theme namespace. Taken from the
 // utility registrations in tailwindcss/dist/lib.js rather than from the docs, and
@@ -128,15 +133,9 @@ const sourceFiles = (await filesUnder(SRC_DIR, ['.ts', '.tsx', '.css'])).filter(
 )
 const sourceText = (await Promise.all(sourceFiles.map((f) => readFile(f, 'utf8')))).join('\n')
 
-let cssFiles
-try {
-  cssFiles = (await readdir(DIST_ASSETS)).filter((f) => f.endsWith('.css'))
-} catch {
-  console.error('✖ No dist/assets found. Run `pnpm build` first.')
-  process.exit(1)
-}
+const cssFiles = (await readdir(DIST_ASSETS)).filter((f) => f.endsWith('.css'))
 if (cssFiles.length === 0) {
-  console.error('✖ dist/assets has no CSS. Run `pnpm build` first.')
+  console.error('✖ dist/assets holds no CSS even after a build. Nothing to check against.')
   process.exit(1)
 }
 const builtCss = (

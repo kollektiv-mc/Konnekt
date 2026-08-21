@@ -465,6 +465,40 @@ current. Priorities mirror the pillars above.
   hand: `pnpm check-tokens` (`frontend/scripts/check-token-classes.mjs`) is that
   check, wired into `suite.json` and CI, and it was confirmed to fail on this
   branch's own bug before being confirmed green.
+- **The gate then reported that same bug as live, two days after it was fixed**
+  (2026-08-21). `pnpm check-tokens` named `duration-fast` and `duration-panel` as
+  compiling to nothing on a clean tree where the generator, `tokens.css` and
+  Tailwind were all correct: the built CSS carries
+  `.duration-fast{transition-duration:var(--transition-duration-fast)}` and
+  `--transition-duration-fast:.15s`, and a fresh build passes. What it read was a
+  `frontend/dist` from before the alias landed, so its verdict described the tree
+  as it had been, not as it was. Nothing in the token layer needed changing, and
+  a hand-edit of `tokens.css` chasing it would have been damage.
+- **The defect was the check's precondition, and it is now enforced.** Both
+  scripts that read `dist` rather than `src` said "requires a prior `pnpm build`"
+  in a comment and then trusted whatever was on disk, which is a hope, not a
+  precondition. `ci.yml` happens to satisfy it by running `pnpm build`
+  immediately before `check-bundle` and `check-tokens`; nothing satisfies it in a
+  local or agent run, which is where `/suite-kit:health` is the definition of
+  done. It lies in both directions, and the dangerous direction is the quiet one:
+  a `dist` still holding a rule the current sources no longer produce reports a
+  real regression as green, which is precisely what this check exists to catch.
+  `frontend/scripts/lib/dist-freshness.mjs` now compares source mtimes against
+  the build and rebuilds when the build is missing or older, so both checks
+  answer for the current tree or do not answer at all. Fresh `dist` means no
+  work, so CI is unaffected. Re-verified by rebuilding the pre-fix
+  `tokens.css` into `dist`, reproducing the two-class failure exactly, and
+  watching the guard rebuild and pass.
+- **`gen-tokens.mjs` now writes only when the bytes change**, which the above
+  made load-bearing. It used to rewrite all three outputs unconditionally, so an
+  identical regeneration still bumped their mtimes. The health runner regenerates
+  in its `generated` section *after* running `commands`, so with mtime-based
+  freshness every run would hand the next one a pointless ~10s rebuild. It also
+  now names which file it rewrote, which is a better drift signal than the old
+  fixed "wrote all three" line: a hand-edited `tokens.css` reports as exactly
+  that. Verified both ways — a clean tree reports "already current" and leaves
+  mtimes untouched, an appended line to `tokens.css` reports `wrote
+  src/styles/tokens.css` and restores it without touching the other two.
 - **An upstream naming question, deliberately not acted on.** Tailwind v4.3.2
   *does* read a `--border-width-*` namespace. The `@utility border-hairline`
   rules exist only because the tokens are named `--border-hairline`. Renaming
