@@ -63,6 +63,7 @@ after them is dated. Newest last, in both groups.
 - [2026-08-19 — The duration token Tailwind was never reading](#2026-08-19-the-duration-token-tailwind-was-never-reading)
 - [2026-08-20 — Four stores that showed a refused write as saved](#2026-08-20-four-stores-that-showed-a-refused-write-as-saved)
 - [2026-08-20 — The status every tile trusted and one tile owned](#2026-08-20-the-status-every-tile-trusted-and-one-tile-owned)
+- [2026-08-20 — A log a bug reporter can attach](#2026-08-20-a-log-a-bug-reporter-can-attach)
 
 ---
 
@@ -3215,3 +3216,53 @@ this session's changes, which moved a file without adding or removing a single
 registration. Every one of the 47 is still clean, so the tick was right and only
 the arithmetic was not; the line now carries the command that produces the
 number, so the next reader re-derives it instead of trusting it.
+
+### 2026-08-20 — A log a bug reporter can attach
+
+**Closed:** the checklist's "P2 — Cleanups: structured logging".
+
+**The count in the backlog was right, and worth restating because it is the
+whole argument.** Across `app.go` and `backend/`: one `fmt.Printf`
+(`scheduler.go:247`, a failed history write), one bare `println`
+(`main.go:35`, `wails.Run` failing to start the window), zero `log.*`, zero
+`runtime.LogXxx`, and 46 `EventBus` emissions. `main.go` set no `Logger` on
+`options.App`. A packaged GUI build has no terminal attached, so both stdout
+writes went nowhere, and the EventBus is UI-facing and lives only while the
+window is open. Someone reporting a bug had nothing to send.
+
+The backlog's framing — "the 'full sweep' framing is misleading, the work is
+adding logging, not replacing it" — held exactly. There were two call sites to
+move and a file to start writing.
+
+`backend/services/logging.go` opens `konnekt.log` in the app data dir and points
+`slog`'s default at it, writing to the file *and* stderr: the file is what a
+user attaches, stderr is what a developer running `wails dev` watches. Wails'
+own runtime logging joins through a small adapter on its `logger.Logger`
+interface, so asset-server and IPC failures land in the same place.
+
+**Three decisions worth keeping.** Opening the log is not allowed to be fatal:
+a read-only data dir must still start the app, so `InitLogger` falls back to
+stderr alone and *returns* the reason for `main` to log through that fallback,
+rather than swallowing it — the same "record it, do not hide it" rule this
+branch applied to the stores. Rotation is ten lines rather than a dependency
+(one previous file, 2 MiB cap), and that call is recorded in
+`DEPENDENCIES.md`'s "Considered and not added" so it gets revisited rather than
+rediscovered. And call sites use the package-level `slog.Info`/`slog.Error`
+rather than threading a logger through every constructor, which for a
+single-process desktop app with one log is the smaller of the two costs.
+
+**One thing the backlog did not mention.** `main()` needs the data dir before
+`wails.Run`, and `app.startup` needs the same directory after. It was computed
+inline in `startup` only. That is fine right up until a second caller has to
+agree with it, so it became `services.DataDir()`.
+
+**Adjacent, found while wiring the UI, then fixed.** Settings > About's "Data
+directory" row hard-coded `~/.config/konnekt`, which is only true on Linux. It
+was initially left alone as a separate concern, then folded in once it was clear
+it is the same defect this branch spent its second commit on: UI stating
+something it does not know to be true. `GetDataDir` joins `GetLogPath` and both
+rows now render backend-supplied paths, truncated with the full value in a
+`title`.
+
+**Verification.** Full gate set green. Nine new Go tests; `backend/services`
+coverage 38.6%, up from 38.1%, against the 36% floor.
