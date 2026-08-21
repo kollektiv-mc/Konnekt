@@ -100,7 +100,21 @@ type InstalledMod struct {
 }
 
 // ModUpdateInfo holds the result of an update check for one installed mod.
+//
+// FileName identifies which installed mod this is about. It used to be the key
+// of a map[string]ModUpdateInfo, which read naturally in Go and broke the
+// generated bindings: Wails v2.12.0 walks a bound signature's parameter and
+// return types but does not descend into a *map value*, so it emitted
+// `Record<string, models.ModUpdateInfo>` in App.d.ts while never declaring
+// ModUpdateInfo in models.ts. tsconfig's skipLibCheck kept that dangling
+// reference from being an error and the return type quietly degraded to `any`,
+// so a JSON-tag rename here would have surfaced as `undefined` in the mods UI
+// with a green typecheck and a green lint (HEALTH_LOG.md, 2026-08-20).
+//
+// Carrying the key inside the struct and returning a slice is what lets the
+// generator see the type at all. Keep it that way.
 type ModUpdateInfo struct {
+	FileName            string `json:"fileName"`
 	UpdateAvailable     bool   `json:"updateAvailable"`
 	LatestVersionID     string `json:"latestVersionId"`
 	LatestVersionNumber string `json:"latestVersionNumber"`

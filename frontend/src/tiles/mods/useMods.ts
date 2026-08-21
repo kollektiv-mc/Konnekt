@@ -38,11 +38,10 @@ export function isDepsRequiredError(e: unknown): e is DepsRequiredError {
   return e instanceof DepsRequiredError
 }
 
-export interface ModUpdateInfo {
-  updateAvailable: boolean
-  latestVersionId: string
-  latestVersionNumber: string
-}
+// Aliased, not redeclared: this was a hand-written copy of a Go struct, and
+// the `as Record<string, ModUpdateInfo>` cast below hid the fact that the
+// binding's own return type had silently degraded to `any`.
+export type ModUpdateInfo = models.ModUpdateInfo
 
 export interface InstallProgress {
   [fileName: string]: number // 0–100
@@ -150,8 +149,12 @@ export function useMods(serverId: string): ModsState {
 
   const checkUpdates = useCallback(async () => {
     try {
-      const result = (await ModCheckUpdates(serverId)) as Record<string, ModUpdateInfo>
-      setUpdates(result ?? {})
+      // The binding returns a flat list, each entry naming its own file; the
+      // tile looks entries up by file name, so index it once here rather than
+      // scanning per rendered row. See models.ModUpdateInfo for why the Go side
+      // cannot just return a map.
+      const result = await ModCheckUpdates(serverId)
+      setUpdates(Object.fromEntries((result ?? []).map((u) => [u.fileName, u])))
     } catch {
       // best-effort; UI degrades gracefully (no dots shown)
     }

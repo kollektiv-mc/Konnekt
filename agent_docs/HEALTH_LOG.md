@@ -64,6 +64,7 @@ after them is dated. Newest last, in both groups.
 - [2026-08-20 — Four stores that showed a refused write as saved](#2026-08-20-four-stores-that-showed-a-refused-write-as-saved)
 - [2026-08-20 — The status every tile trusted and one tile owned](#2026-08-20-the-status-every-tile-trusted-and-one-tile-owned)
 - [2026-08-20 — A log a bug reporter can attach](#2026-08-20-a-log-a-bug-reporter-can-attach)
+- [2026-08-20 — The bound type TypeScript never saw](#2026-08-20-the-bound-type-typescript-never-saw)
 
 ---
 
@@ -3266,3 +3267,72 @@ rows now render backend-supplied paths, truncated with the full value in a
 
 **Verification.** Full gate set green. Nine new Go tests; `backend/services`
 coverage 38.6%, up from 38.1%, against the 36% floor.
+
+### 2026-08-20 — The bound type TypeScript never saw
+
+**Closed:** the checklist's "P2 — A Go model the bindings never emit", including
+the related eight-redeclarations note. **Found on the way:** one claim in that
+note that was wrong in a way that would have made things worse, and one tool
+assumption that was wrong in a way that made things easier.
+
+**The tooling first, because it changed what was possible.** Both this entry and
+the last session assumed the `wails` CLI was unavailable, which is why the fix
+kept being described as deferred work. It installs in one command
+(`go install github.com/wailsapp/wails/v2/cmd/wails@v2.12.0`, matching `go.mod`),
+and — the part worth recording — regenerating with **no** source change produces
+a **zero-byte diff** against what is committed. So the committed bindings are
+exactly reproducible, `wails generate module` really is clean as the entry
+claimed, and regenerating is a safe step rather than a leap.
+
+**The defect.** `ModCheckUpdates` returned `map[string]models.ModUpdateInfo`,
+keyed by file name. Wails v2.12.0 walks a bound signature's parameter and return
+types but does not descend into a **map value**, so `App.d.ts` referenced
+`models.ModUpdateInfo` while `models.ts` never declared it. `tsconfig`'s
+`skipLibCheck` kept the dangling reference from erroring, the return type
+degraded to `any`, and `useMods.ts` held a hand-written copy of the Go struct
+that a cast quietly reconciled.
+
+`ModUpdateInfo` now carries its own `FileName` and the method returns a slice,
+which the generator can see through. The hook indexes the list once by file
+name, so the two lookup sites are untouched.
+
+**Proved, not asserted.** With `latestVersionNumber` renamed to
+`latestVersionNum` in `backend/models/mod.go` and the bindings regenerated,
+`tsc` fails: *Property 'latestVersionNumber' does not exist on type
+'ModUpdateInfo'*. Before the change, that same rename typechecked green,
+linted green, and reached `ModPreviewDialog.tsx:270` and `InstalledPanel.tsx:439`
+as `undefined`.
+
+**The guard the backlog said could not exist.** It argued a check would have to
+be a script diffing two generated files, would need its own `health.commands`
+entry and a literal `ci.yml` step since that workflow runs `suite-check.py` with
+`--section invariants --section generated` only, and would be red on arrival.
+All true *of that approach*. Reflecting over the bound methods from Go needs
+none of it: `bindings_test.go` walks `App`'s real type graph for a struct
+reachable only through a map value. It rides the existing `go test ./...`, so no
+new gate wiring; it catches a *future* method with the same shape rather than
+only today's generated output; and it was confirmed to fail on the original
+signature before being confirmed green. Maps of primitives stay allowed, which
+is what `GetScheduleNextRuns` (`map[string]int64`) needs.
+
+**The claim that was wrong.** The entry said all eight hand-written model
+redeclarations "could be replaced with a one-line alias today". Measured field
+by field, **six could and two could not**. `AppSettings` and `ConfigFile` narrow
+Go `string`s to string-literal unions — `theme`, `backgroundStyle`, `category`,
+`format` — and that narrowing is load-bearing: `useSettingsStore.load` validates
+the value read off disk and casts to `AppSettings['backgroundStyle']`,
+`lib/theme.ts:118` matches on it, the config tile switches on `format` to pick a
+CodeMirror language and a parser, and `SettingsModal`'s `Segmented` controls are
+typed against those members. Aliasing them would have widened all of it back to
+`string` and deleted the exhaustiveness checks — a downgrade wearing a cleanup's
+clothes, and one the entry actively recommended. Both now stay hand-written with
+the reason written beside them.
+
+The other six are aliases, and that half is proved too: adding a field to
+`models.ServerStatus` and regenerating now fails `tsc` in three places. Before,
+it failed in none — which is precisely the silent-added-field hole the entry
+described.
+
+**Verification.** Full gate set green, 16/16. 316 frontend tests, entry chunk
+487.9 KB gzip against the 550 KB budget, `backend/services` coverage 38.6%
+against the 36% floor.

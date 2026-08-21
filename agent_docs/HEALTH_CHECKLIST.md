@@ -88,8 +88,33 @@ tree.
       `git diff --exit-code frontend/wailsjs` — a non-empty diff is a hand edit.
       Run this with the **same CLI version `go.mod` pins** (v2.12.0): a
       different generator writes a diff that is a version difference, not a
-      hand edit. 82/82 bound methods and every emitted struct round-tripped
-      byte-identical.
+      hand edit. 83/83 bound methods and all 36 emitted structs round-tripped
+      byte-identical (re-verified 2026-08-20).
+      The CLI is not preinstalled in a cloud container and two sessions assumed
+      that made this uncheckable. It does not:
+      `go install github.com/wailsapp/wails/v2/cmd/wails@v2.12.0` takes one
+      command, and regenerating with no source change is the zero-diff baseline
+      that makes the check meaningful. Do that before concluding a binding fix
+      is out of reach.
+- [x] No bound method reaches a struct through a **map value**. Wails' generator
+      does not descend into one, so it emits a `Record<string, models.X>`
+      referencing an `X` it never declares; `skipLibCheck` hides the dangling
+      reference and the return type degrades to `any`.
+      Verify: `go test . -run NoBoundMethodHidesAStructInsideAMapValue`, which
+      reflects over `App`'s real type graph rather than diffing generated
+      output, so it also catches a *new* method with that shape. Maps of
+      primitives are fine and stay allowed. Closed 2026-08-20 (HEALTH_LOG).
+- [x] TypeScript shapes that cross IPC are **aliased** from `wailsjs/go/models`,
+      not redeclared by hand. Structural typing catches a renamed or removed
+      field; a field *added* on the Go side is silently missing from a copy.
+      Verify: from `frontend/`,
+      `grep -rn "^export interface" src/types/index.ts` — every entry should
+      either have no Go counterpart (`TileProps`, `TileDefinition`) or carry a
+      comment saying why it cannot alias. Two do: `AppSettings` and
+      `ConfigFile` narrow Go `string`s to string-literal unions that
+      `useSettingsStore`, `lib/theme.ts` and the config tile all depend on, so
+      aliasing them would widen the types and delete exhaustiveness checks. Do
+      not "finish the job" on those two.
 - [x] No inline `style={{}}` beyond genuinely dynamic/computed values
       (animation delays, transforms, react-grid-layout position props) —
       Tailwind utilities backed by CSS-variable tokens otherwise (see
@@ -283,18 +308,17 @@ tree.
       mixing creeping in.
       Verify: from `frontend/`, `grep -rn "stores/" src/stores` — a store
       importing another store's state is the failure.
-- [ ] Go structs in `backend/models/` remain the single source of truth for
+- [x] Go structs in `backend/models/` remain the single source of truth for
       TypeScript types; bindings were regenerated (`wails generate module`)
       after backend model changes.
       Verify: run `wails generate module`, then
       `git diff --exit-code frontend/wailsjs/go/models.ts` — a diff means a
-      `backend/models/` change shipped without regenerating. That half holds
-      (zero diff). The *source of truth* half does not: a struct Wails never
-      emits gets hand-copied instead, and `skipLibCheck` hides the dangling
-      reference — see backlog ("P2 — A Go model the bindings never emit").
-      A clean regeneration diff is therefore necessary, not sufficient; also
-      grep the generated `App.d.ts` for `models.X` names that `models.ts` never
-      declares.
+      `backend/models/` change shipped without regenerating. Both halves hold as
+      of 2026-08-20 (HEALTH_LOG). A clean regeneration diff is necessary but was
+      never sufficient: a struct Wails never emits used to get hand-copied
+      instead, with `skipLibCheck` hiding the dangling reference. The two items
+      under Clean now cover that — no bound method hides a struct in a map
+      value, and IPC shapes are aliased rather than retyped.
 - [x] Dependencies (Go modules, npm packages) are reasonably current, with no
       unmaintained or duplicated libraries doing the same job.
       Verify: `go list -m -u all` at the root and `pnpm outdated` from
@@ -458,54 +482,6 @@ current. Priorities mirror the pillars above.
   near-misses need a ruling and the decorative files need exclude-listing. Until
   then it is red on arrival, exactly what the border invariant's own diagnosis
   warns against.
-
-**P2 — A Go model the bindings never emit**
-- `frontend/wailsjs/go/main/App.d.ts:94` types `ModCheckUpdates` as
-  `Promise<Record<string, models.ModUpdateInfo>>`, and `models.ts` never
-  declares `ModUpdateInfo`. Wails v2.12.0 walks a bound signature's parameter
-  and return types but does not descend into a **map value**, and
-  `ModCheckUpdates` (`app.go:638`) is the only place that struct appears. So the
-  generator emits a reference to a type it never wrote.
-- Nothing catches it. `tsconfig.json` sets `skipLibCheck: true`, which is what
-  keeps a dangling `models.X` in a `.d.ts` from being an error; the return type
-  degrades to `any`, and `frontend/src/tiles/mods/useMods.ts:41-45` keeps a
-  hand-written copy of the Go struct that `:153` casts the result onto. The two
-  agree today. A JSON-tag rename in `backend/models/mod.go` would leave them
-  disagreeing with a green `pnpm typecheck` and a green `pnpm lint`, surfacing
-  as `undefined` at `ModPreviewDialog.tsx:270` and `InstalledPanel.tsx:439`.
-- Note what this does *not* mean: `wails generate module` itself is clean, and
-  every other bound method round-trips. The hole is one generator limitation,
-  not stale bindings. The fix is a signature the generator can see through
-  (return a slice of a named struct rather than a map keyed by filename), which
-  is an IPC shape change with frontend churn, so it is a deliberate piece of
-  work rather than a patch.
-- Measured 2026-08-19, so nobody re-derives it. Comparing every `models.X` name
-  referenced in `App.d.ts` (22) against every name `models.ts` declares (34),
-  `ModUpdateInfo` is the **only** dangling one. Surveying all 82 bound methods
-  for the same shape turns up no second latent instance: only
-  `GetScheduleNextRuns` returns a map at all and its value is an `int64`, and no
-  bound method uses `[][]`, `interface{}` or `any`. So this is one isolated
-  occurrence, not a pattern spreading. (`services.InstallerInfo` looks dangling
-  and is not — `models.ts` declares two namespaces and `App.d.ts` imports both.)
-- The cheaper stopgap is **not** expressible as a `suite.json` invariant. An
-  invariant is one regex that must find nothing within a single file; this is a
-  set difference between two files. It would need a script (the shape of
-  `frontend/scripts/check-bundle-size.mjs`), a `health.commands` entry, and a
-  literal step in `ci.yml`'s `frontend` job, since that workflow deliberately
-  runs `suite-check.py` with `--section invariants --section generated` only.
-  And it would be **red on arrival** until `ModCheckUpdates` is reshaped or the
-  known case is explicitly excluded, so it has to ship with the real fix.
-- Related and lower severity: eight more hand-written redeclarations of Go
-  models sit in `frontend/src/types/index.ts` (seven: `AppSettings`,
-  `LayoutPreset`, `ServerConfig`, `Player`, `ConfigFile`, `ServerStatus`,
-  `ServerSummary`) and `tiles/performance/usePerformanceHistory.ts:6`
-  (`StatsSnapshot`), where `useMods.ts:21-25` and `useBackups.ts:15` already
-  show the right shape by aliasing `models.X`. All eight are in sync now, and
-  structural typing does catch a rename or a removal; what they miss silently is
-  an **added** field. Checked 2026-08-19: every one of the eight *is* emitted
-  into `models.ts`, so all eight could be replaced with a one-line alias today,
-  with no IPC change. `ModUpdateInfo` is the only one that structurally cannot
-  be, which is the whole point of this entry.
 
 **P3 — An error sentinel with no caller** (downgraded 2026-08-19: the premise
 was partly wrong)
