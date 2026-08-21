@@ -252,6 +252,16 @@ Where an item does have an issue, it is linked.
   ([#57](../../issues/57)). Everything below `ServerService` assumes a single
   process; the issue scopes only the first step (extracting per-server runtime
   state into a `serverInstance`) and lists the open UI questions.
+- **Wings-survey adoption set** — 14 scoped issues
+  ([#108](../../issues/108)–[#121](../../issues/121)) from the clean-room
+  behavioral survey of Pterodactyl Wings: lifecycle state machine with ready
+  detection (implements [#101](../../issues/101)), power-action serialization,
+  stop escalation with force kill, console-capture hardening, manager narration,
+  free-space preflight, and the close-prompt + re-adopt-on-relaunch feature
+  (prerequisite [#99](../../issues/99)). Survey and decisions:
+  `survey/wings.md` + `survey/wings-triage.md`; constraints and sequencing for
+  implementing sessions: `agent_docs/WINGS_ADOPTION.md`. Per-server shaping is
+  a standing constraint shared with #57.
 
 Nothing else here is scoped yet. Add an item only once it has a shape worth
 writing down; a bare feature name belongs in a GitHub Issue, not here.

@@ -6,6 +6,9 @@ whether it belongs in Konnekt — a single-user local desktop app whose owner al
 fully controls the servers it manages, with no tenancy, no untrusted input, and no
 isolation boundary to defend.
 
+**Status: decided.** The owner returned this form on 2026-08-21; the outcome and the
+issue mapping are in the decision record at the end of the file.
+
 **How to use this file.** Every item carries an **Adopt / Reject** checkbox pair. The
 section an item sits in (Clear fit / Needs adaptation / Doesn't belong) is the
 *recommendation*; the ticked box is the *decision*. Items left with neither box ticked
@@ -52,7 +55,7 @@ than features to build.
 - **Note:** Adopt *with* the timeout Wings lacks, and shaped per-server (see owner
   answer on concurrency).
 
-- [ ] **Adopt**
+- [x] **Adopt**
 - [ ] **Reject**
 
 ### 2. One power-action lock per server; restart holds both legs (survey §3)
@@ -63,7 +66,7 @@ than features to build.
 - **Against:** A singleton could get by with a plain mutex — but concurrency is wanted
   eventually, so per-server is the right shape at the same cost.
 
-- [ ] **Adopt**
+- [x] **Adopt**
 - [ ] **Reject**
 
 ### 3. Graduated stop deadlines, escalation, explicit force-kill bypassing the lock (survey §5)
@@ -75,7 +78,7 @@ than features to build.
 - **Against:** Wings' 10-minute default is hosting-scale; a desktop app wants shorter,
   configurable numbers and a visible "force stop" button, not the full policy set.
 
-- [ ] **Adopt**
+- [x] **Adopt**
 - [ ] **Reject**
 
 ### 4. Crash reporting: capture and surface the exit code (survey §6, reporting slice only)
@@ -86,7 +89,7 @@ than features to build.
 - **Against:** Wings' OOM flag half is cgroup-specific; the desktop analogue (spotting
   OutOfMemoryError in the log) is optional extra.
 
-- [ ] **Adopt**
+- [x] **Adopt**
 - [ ] **Reject**
 
 ### 5. Console capture hardening: truncate-and-continue long lines, carriage-return normalization (survey §9)
@@ -96,7 +99,7 @@ than features to build.
   stray-carriage-return quirk Wings normalizes is Minecraft's own.
 - **Against:** None serious — a bug fix wearing a feature's clothes.
 
-- [ ] **Adopt**
+- [x] **Adopt**
 - [ ] **Reject**
 
 ### 6. Supervisor narration in the console stream (survey §14)
@@ -108,7 +111,7 @@ than features to build.
 - **Against:** Partially duplicates the notification feed; needs restraint to stay at
   lifecycle moments rather than chatter.
 
-- [ ] **Adopt**
+- [x] **Adopt**
 - [ ] **Reject**
 
 ### 7. Free-space preflight before backup, restore, and world duplication (survey's flagged gap)
@@ -118,7 +121,7 @@ than features to build.
 - **Against:** "Engineering without need" if disks are large — but the cost is low
   enough that the argument doesn't hold.
 
-- [ ] **Adopt**
+- [x] **Adopt**
 - [ ] **Reject**
 
 ### 8. Quiesce world duplication (survey §23's torn-region caveat, applied)
@@ -128,7 +131,7 @@ than features to build.
   covers it with a one-call reuse.
 - **Against:** None — bug-grade, found by the comparison.
 
-- [ ] **Adopt**
+- [x] **Adopt**
 - [ ] **Reject**
 
 ### 9. Atomic writes (temp file + rename) for config and app-data files (survey weakness list; Wings shares the flaw)
@@ -139,7 +142,7 @@ than features to build.
   not where it matters most.
 - **Against:** Windows rename fiddliness; the harm frequency is low.
 
-- [ ] **Adopt**
+- [x] **Adopt**
 - [ ] **Reject**
 
 ---
@@ -159,7 +162,7 @@ Recommended in principle; the mechanism must diverge from Wings.
   controlled via RCON only (Konnekt should offer to enable RCON) with console via log
   tailing. PID-reuse checks needed. Wings' principles transfer; its mechanism doesn't.
 
-- [ ] **Adopt**
+- [x] **Adopt**
 - [ ] **Reject**
 
 ### 11. Console history for stopped servers and past sessions (survey §13)
@@ -173,7 +176,7 @@ Recommended in principle; the mechanism must diverge from Wings.
   flavor already writes. Needs tail-reading for large files. Wings structurally cannot
   do this; Konnekt can.
 
-- [ ] **Adopt**
+- [x] **Adopt**
 - [ ] **Reject**
 
 ### 12. Cached, background-refreshed directory sizes (survey §17, caching pattern only)
@@ -184,7 +187,7 @@ Recommended in principle; the mechanism must diverge from Wings.
 - **Against / adaptation:** Cache invalidation complexity for something not yet reported
   slow. The quota *enforcement* attached to this in Wings stays rejected (item 20).
 
-- [ ] **Adopt**
+- [x] **Adopt**
 - [ ] **Reject**
 
 ### 13. Per-server shaping of lifecycle state, console buffer, and stats history (survey §1/§16, consequence of the concurrency answer)
@@ -195,7 +198,7 @@ Recommended in principle; the mechanism must diverge from Wings.
 - **Against:** This is architectural guidance, not a feature: don't build multi-process
   supervision now, just stop baking the singleton deeper.
 
-- [ ] **Adopt**
+- [x] **Adopt**
 - [ ] **Reject**
 
 ### 14. JVM memory-headroom warning (survey §30, the one portable piece of resource limits)
@@ -207,7 +210,7 @@ Recommended in principle; the mechanism must diverge from Wings.
 - **Against / adaptation:** Nanny UX for a knowledgeable owner; advisory only, since
   there is no enforcement to attach it to locally. Small, low priority.
 
-- [ ] **Adopt**
+- [x] **Adopt**
 - [ ] **Reject**
 
 ### 15. One-click "stop, then restore" (survey §25's stop-first, softened)
@@ -218,7 +221,7 @@ Recommended in principle; the mechanism must diverge from Wings.
   destructive operation. Adopt only as a convenience button on the refusal message,
   never as a silent auto-stop.
 
-- [ ] **Adopt**
+- [x] **Adopt**
 - [ ] **Reject**
 
 ---
@@ -431,3 +434,32 @@ item keeps the trigger.
 
 - [ ] **Adopt**
 - [ ] **Reject**
+
+---
+
+## Decision record (2026-08-21)
+
+The owner returned the form with **Adopt** ticked on all 15 recommended items (1-15)
+and no overrides in the "Doesn't belong" section, so items 16-36 stand rejected as
+recommended, revisit triggers intact. Tracking:
+
+| Item | Decision | Tracked by |
+|---|---|---|
+| 1. Lifecycle state machine + ready detection | Adopt | [#108](https://github.com/kollektiv-mc/Konnekt/issues/108) (implements [#101](https://github.com/kollektiv-mc/Konnekt/issues/101)) |
+| 2. Per-server power-action lock | Adopt | [#109](https://github.com/kollektiv-mc/Konnekt/issues/109) |
+| 3. Stop grace, escalation, force kill | Adopt | [#110](https://github.com/kollektiv-mc/Konnekt/issues/110) |
+| 4. Exit code on crash | Adopt | [#111](https://github.com/kollektiv-mc/Konnekt/issues/111) |
+| 5. Console capture hardening | Adopt | [#112](https://github.com/kollektiv-mc/Konnekt/issues/112) |
+| 6. Manager narration in console | Adopt | [#113](https://github.com/kollektiv-mc/Konnekt/issues/113) |
+| 7. Free-space preflight | Adopt | [#114](https://github.com/kollektiv-mc/Konnekt/issues/114) |
+| 8. Quiesce world duplication | Adopt | [#115](https://github.com/kollektiv-mc/Konnekt/issues/115) |
+| 9. Atomic config/app-data writes | Adopt | [#116](https://github.com/kollektiv-mc/Konnekt/issues/116) |
+| 10. Ask on close + re-adopt on relaunch | Adopt | [#117](https://github.com/kollektiv-mc/Konnekt/issues/117) (prerequisite [#99](https://github.com/kollektiv-mc/Konnekt/issues/99)) |
+| 11. Past-session logs in console tile | Adopt | [#118](https://github.com/kollektiv-mc/Konnekt/issues/118) |
+| 12. Cached directory sizes | Adopt | [#119](https://github.com/kollektiv-mc/Konnekt/issues/119) |
+| 13. Per-server shaping | Adopt | existing [#57](https://github.com/kollektiv-mc/Konnekt/issues/57) (standing constraint, no new issue) |
+| 14. JVM heap headroom warning | Adopt | [#120](https://github.com/kollektiv-mc/Konnekt/issues/120) |
+| 15. Stop-and-restore + start guard | Adopt | [#121](https://github.com/kollektiv-mc/Konnekt/issues/121) |
+| 16-36 | Reject (recommendation stood) | Revisit anchors: item 20 at [#33](https://github.com/kollektiv-mc/Konnekt/issues/33), item 21 at [#31](https://github.com/kollektiv-mc/Konnekt/issues/31), item 23 reconciled against [#30](https://github.com/kollektiv-mc/Konnekt/issues/30) |
+
+Implementation constraints, sequencing and reconciliations: `agent_docs/WINGS_ADOPTION.md`.

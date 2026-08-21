@@ -575,6 +575,39 @@ was partly wrong)
   `backend/services` only. Either stand up frontend coverage or re-gate this on
   something that exists.
 
+**P1/P2 — Wings-survey adoption set** (filed 2026-08-21)
+- 15 behaviors adopted from the Pterodactyl Wings clean-room survey
+  (`survey/wings.md`; decisions in `survey/wings-triage.md`), several of them
+  bug-grade findings the comparison exposed rather than features: a silently
+  dying console scanner (#112, P1), power-action races including a broken
+  restart-from-stopped (#109), an 8-second stop-then-SIGKILL that can kill a
+  world save (#110), a discarded exit code (#111), unquiesced world duplication
+  (#115), and non-atomic config writes (#116). Features: #108 (state machine,
+  implements #101), #113, #114, #117 (close prompt + re-adopt, prerequisite
+  #99), #118, #119, #120, #121; per-server shaping is a standing constraint
+  tracked by #57. Cross-cutting constraints, sequencing waves, and the #30/#26
+  reconciliations live in `agent_docs/WINGS_ADOPTION.md` — implementing sessions
+  read that file plus their one issue, nothing more. As each issue closes, its
+  write-up moves to HEALTH_LOG per convention.
+
+**P3 — Smaller findings from the 2026-08-21 backend sweep** (not worth
+individual issues; fix in passing when touching the file)
+- `app.go:76-78`'s comment claims the stop path falls back from RCON; the
+  implementation is stdin-only (`server.go:324-327`). Stale comment, fix when
+  #110 rewrites that path.
+- `eventbus.go:37-55`'s per-handler `recover()` swallows panics with no log
+  line — a handler crash is invisible even in `konnekt.log`. Add a `slog.Error`
+  inside the recover when next touching the file.
+- Restore leaves the restored directory with `os.MkdirTemp`'s 0700 mode rather
+  than the original's permissions, and deletes the `.bak-<timestamp>` aside copy
+  immediately on success (no retained undo) — `backup.go:411-431`. Neither is a
+  bug per se; both are choices worth revisiting alongside #121/#30.
+- `MaxPlayers()` keeps its last value after stop while every other status field
+  zeroes (`server.go` accessors) — cosmetic inconsistency.
+- `worlds.go:269`'s "(+ siblings)" comment overstates `CreateWorldBackup`, which
+  zips only the named folder; the behavior gap is #26, the comment is local rot
+  to fix when #26 lands.
+
 **Release follow-ups** (deferred)
 - Release-tag-gated full `wails build` packaging job — stronger end-to-end
   confidence than the current `go build`/`pnpm build` CI smoke check.
