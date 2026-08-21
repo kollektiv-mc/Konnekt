@@ -27,11 +27,17 @@ follows from that:
   * A `type:` label decides the section. A title is prose written for a
     reviewer; a label is a deliberate statement about what the change is, and
     CI's `pr-labelled` job is what makes it a reliable one.
-  * An unlabelled pull request can never reach Features. Guessing from the
-    leading verb once promoted "Add a Full release roadmap section and a nightly
-    snapshot build channel" — a website and CI change — into the section users
-    read first. A wrong Features entry costs more than a vague Other one, so the
-    guess is only allowed to reach the sections where being wrong is cheap.
+  * The title is never read. Guessing from the leading verb once promoted "Add
+    a Full release roadmap section and a nightly snapshot build channel" — a
+    website and CI change — into the section users read first, so the guess was
+    narrowed to the sections where being wrong is cheap, and has now been
+    removed outright. A verb is not a statement about what a change *is*:
+    plenty of repairs open with "Add" or "Write", and #97 "Write a log file a
+    bug reporter can attach" was a fix filed as a feature by a human reading it
+    the same way. An unlabelled pull request lands in "Other changes" rather
+    than being categorised from prose. Which label to apply is the author's
+    decision, and the ladder for making it belongs next to them, in the
+    product's CONTRIBUTING.md and pull request template.
   * Maintenance and documentation are counted, not listed. `type:chore` and
     `type:docs` are real work that changed nothing a user can observe; the
     footer says how many there were and the full-changelog link has them all.
@@ -59,16 +65,16 @@ from __future__ import annotations
 import json
 import os
 import pathlib
-import re
 import sys
 import time
 import urllib.error
 import urllib.parse
 import urllib.request
 
-# Labels win over anything read out of the title, because a label is a
-# deliberate statement and a title is prose. Names come from the suite's
-# taxonomy in kollektiv's design/labels.json.
+# Labels are the whole of the decision. A label is a deliberate statement about
+# what a change is; a title is copy written for a reader, and the two are not
+# the same claim. Names come from the suite's taxonomy in kollektiv's
+# design/labels.json.
 FEATURE_LABELS = {"type:feature", "feature", "enhancement"}
 FIX_LABELS = {"type:bug", "bug"}
 
@@ -82,32 +88,12 @@ QUIET_LABELS = {"type:chore", "type:docs", "chore", "documentation"}
 # is silence.
 SKIP_LABELS = {"changelog:skip"}
 
-# Conventional-commit types, for the titles that carry one. A prefix someone
-# typed on purpose is a statement in the way a bare verb is not, so `feat:` is
-# allowed to reach Features where "Add ..." is not.
-FEATURE_TYPES = {"feat", "feature"}
-FIX_TYPES = {"fix", "bugfix", "hotfix", "perf"}
-QUIET_TYPES = {"chore", "docs", "test", "tests", "refactor", "ci", "build", "style"}
-
-# Last resort, for an unlabelled title with no conventional prefix. Only fix
-# verbs are listed, and deliberately: see the module docstring on why nothing
-# reaches Features by guesswork. A title this does not match lands in "Other
-# changes", which is an honest answer rather than a wrong one — and a visible
-# one, since a correctly labelled repo leaves that section empty.
-FIX_VERBS = {
-    "fix", "fixes", "fixed", "correct", "corrects", "repair", "repairs", "resolve",
-    "resolves", "prevent", "prevents", "restore", "restores", "unbreak", "unbreaks",
-    "patch", "patches", "harden", "hardens", "stop", "stops",
-}
-
 FEATURES, FIXES, OTHER = "Features", "Fixes", "Other changes"
 SECTIONS = (FEATURES, FIXES, OTHER)
 
 # Sentinels for the two ways a pull request leaves the notes, kept apart from
 # the section names so the footer can say which happened.
 QUIET, SKIP = "quiet", "skip"
-
-CONVENTIONAL = re.compile(r"^([a-z]+)(?:\([^)]*\))?!?:\s*")
 
 API = os.environ.get("GITHUB_API_URL", "https://api.github.com").rstrip("/")
 
@@ -252,8 +238,14 @@ def touches_app(repo: str, number: int, non_app_paths: tuple[str, ...]) -> bool:
 def section_for(pull: dict) -> str:
     """Which section a pull request belongs in, or QUIET / SKIP to leave it out.
 
-    Order matters: an explicit skip beats everything, then labels in descending
-    specificity, then a conventional-commit prefix, then the fix-verb guess.
+    Labels, and nothing else. Order is by specificity: an explicit skip beats
+    everything, then feature, then fix, then quiet.
+
+    An unlabelled pull request lands in "Other changes". That is the honest
+    answer when nobody stated what the change was, and a visible one: CI's
+    `pr-labelled` job requires a `type:` label, so that section should be empty
+    in a healthy repo, and anything appearing there merged without the gate or
+    had its label stripped afterwards.
     """
     labels = {label["name"].lower() for label in pull.get("labels") or []}
     if labels & SKIP_LABELS:
@@ -264,24 +256,7 @@ def section_for(pull: dict) -> str:
         return FIXES
     if labels & QUIET_LABELS:
         return QUIET
-
-    title = (pull.get("title") or "").strip()
-    conventional = CONVENTIONAL.match(title)
-    if conventional:
-        kind = conventional.group(1)
-        if kind in FEATURE_TYPES:
-            return FEATURES
-        if kind in FIX_TYPES:
-            return FIXES
-        if kind in QUIET_TYPES:
-            return QUIET
-        # A prefix that isn't a conventional type is a scope someone wrote by
-        # hand ("website: ..."). Drop it so the verb check below reads the
-        # sentence rather than the scope.
-        title = title[conventional.end():].strip()
-
-    verb = re.sub(r"[^a-z]", "", title.split(" ")[0].lower()) if title else ""
-    return FIXES if verb in FIX_VERBS else OTHER
+    return OTHER
 
 
 def entry(pull: dict) -> str:

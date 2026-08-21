@@ -172,11 +172,37 @@ note to a reviewer.
 - **No em dashes** in titles, bodies or commit messages. Use a comma, a colon,
   or two sentences. Keep the prose plain and short.
 - **Label each PR** `type:feature`, `type:bug`, `type:docs` or `type:chore`.
-  Required, and CI's `pr-labelled` job fails a PR without one. The label alone
-  decides the section: only `type:feature` reaches "Features", and a title is
-  never read as a promotion to it. `type:chore` and `type:docs` are counted in
+  Required, and CI's `pr-labelled` job fails a PR without one. The label is the
+  *only* input to the section: the title is never read at all, by a verb, a
+  `feat:` prefix or anything else. `type:chore` and `type:docs` are counted in
   a footer line rather than listed, because they changed nothing a user can
-  observe. `changelog:skip` leaves a PR out entirely.
+  observe. `changelog:skip` leaves a PR out entirely, and does not replace a
+  `type:` label.
+
+**Which `type:` label.** Ask these in order and stop at the first yes:
+
+1. **Can a user of Konnekt tell the difference?** If nothing they can see, run
+   or click changed, it is `type:chore`, or `type:docs` for documentation and
+   nothing else. Refactors, tests, CI, tooling and dependency bumps stop here,
+   however large the diff.
+2. **Was Konnekt already meant to do this, and not doing it?** Then it is
+   `type:bug`. That covers anything the UI offers, the docs describe or the app
+   plainly implies, including things that fail silently.
+3. **Otherwise it is `type:feature`:** the app can now do something it never
+   offered.
+
+The size of the diff is not the test, and this is where it goes wrong: a repair
+that needed a new file, a new bound method and a new row of UI is still
+`type:bug`. #97 "Write a log file a bug reporter can attach" was filed as a
+feature on exactly that reasoning, and it was wrong. The app was already
+writing diagnostics, a packaged build with no terminal was throwing them away,
+and the change is the repair; the Settings > About row exists so the fix is
+usable, which makes it part of the fix. When the ladder feels ambiguous, revert
+the change in your head and ask what the user loses: something goes back to
+being broken is `type:bug`, they lose something they never had is
+`type:feature`, they cannot tell is `type:chore`. A change that is honestly
+half repair and half new capability is two PRs. Full version, with the rest of
+the cases, in `CONTRIBUTING.md`.
 - **Body:** why the change exists and how it was verified. It never reaches the
   notes, so detail is free.
 - Commit messages follow the same rules. Nothing parses them.
