@@ -1,9 +1,15 @@
 package services
 
 import (
+	"fmt"
+	"os/exec"
+	"runtime"
 	"strings"
+	"sync"
 	"testing"
 	"time"
+
+	"konnekt/backend/models"
 )
 
 // Use NewServerService, not a struct literal: streamOutput writes the player
@@ -156,5 +162,89 @@ func TestStreamOutputMatchersFireOnNormalizedLines(t *testing.T) {
 	s.mu.Unlock()
 	if !expected {
 		t.Error("'Stopping the server' did not set expectedStop")
+	}
+}
+
+// exitingCommand returns a real short-lived process that exits with code,
+// because faking os.ProcessState is not possible and a real Wait is the thing
+// under test.
+func exitingCommand(t *testing.T, code int) *exec.Cmd {
+	t.Helper()
+	if runtime.GOOS == "windows" {
+		return exec.Command("cmd", "/c", fmt.Sprintf("exit %d", code))
+	}
+	return exec.Command("sh", "-c", fmt.Sprintf("exit %d", code))
+}
+
+// startForExit wires the minimum waitForExit needs around a started cmd:
+// the cmd itself, the exited channel it closes, and the expectedStop intent.
+func startForExit(t *testing.T, s *ServerService, cmd *exec.Cmd, expected bool) {
+	t.Helper()
+	if err := cmd.Start(); err != nil {
+		t.Fatalf("start: %v", err)
+	}
+	s.mu.Lock()
+	s.cmd = cmd
+	s.exited = make(chan struct{})
+	s.expectedStop = expected
+	s.mu.Unlock()
+}
+
+// The bug behind issue #111: waitForExit discarded cmd.Wait's status, so the
+// single most useful JVM crash diagnostic never reached the user. An
+// unexpected exit must carry the code on the server:stopped payload, keep it
+// readable via GetLastStop, and drop a banner line into the console history.
+func TestWaitForExitReportsTheExitCodeOnUnexpectedStop(t *testing.T) {
+	s, bus := newServerFixture()
+
+	var mu sync.Mutex
+	var stops []any
+	bus.Subscribe(EventServerStopped, func(data any) {
+		mu.Lock()
+		stops = append(stops, data)
+		mu.Unlock()
+	})
+
+	startForExit(t, s, exitingCommand(t, 3), false)
+	s.waitForExit()
+
+	if got := s.GetLastStop(); got.Expected || got.ExitCode != 3 {
+		t.Errorf("GetLastStop() = %+v, want {Expected:false ExitCode:3}", got)
+	}
+
+	events := waitForCount(t, func() []any {
+		mu.Lock()
+		defer mu.Unlock()
+		return append([]any{}, stops...)
+	}, 1)
+	payload, ok := events[0].(models.ServerStopped)
+	if !ok {
+		t.Fatalf("server:stopped payload is %T, want models.ServerStopped", events[0])
+	}
+	if payload.Expected || payload.ExitCode != 3 {
+		t.Errorf("payload = %+v, want {Expected:false ExitCode:3}", payload)
+	}
+
+	history := s.GetConsoleHistory()
+	if len(history) == 0 || !strings.Contains(history[len(history)-1].Line, "exit code 3") {
+		t.Errorf("console history = %v, want a final banner naming exit code 3", history)
+	}
+}
+
+// A deliberate stop must show neither a banner nor a crash-shaped payload:
+// the acceptance case's other half.
+func TestWaitForExitNormalStopWritesNoBanner(t *testing.T) {
+	s, _ := newServerFixture()
+
+	startForExit(t, s, exitingCommand(t, 0), true)
+	s.waitForExit()
+
+	if got := s.GetLastStop(); !got.Expected || got.ExitCode != 0 {
+		t.Errorf("GetLastStop() = %+v, want {Expected:true ExitCode:0}", got)
+	}
+	for _, line := range s.GetConsoleHistory() {
+		if strings.Contains(line.Line, "[Konnekt]") {
+			t.Errorf("console history holds a banner on a deliberate stop: %q", line.Line)
+		}
 	}
 }

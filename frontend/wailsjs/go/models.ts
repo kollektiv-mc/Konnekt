@@ -839,6 +839,20 @@ export namespace models {
 	        this.ramTotal = source["ramTotal"];
 	    }
 	}
+	export class ServerStopped {
+	    expected: boolean;
+	    exitCode: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new ServerStopped(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.expected = source["expected"];
+	        this.exitCode = source["exitCode"];
+	    }
+	}
 	export class ServerSummary {
 	    mcVersion: string;
 	    loader: string;

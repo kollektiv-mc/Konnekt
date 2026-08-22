@@ -55,6 +55,8 @@ export function GetCustomCommands():Promise<Array<string>>;
 
 export function GetDataDir():Promise<string>;
 
+export function GetLastStop():Promise<models.ServerStopped>;
+
 export function GetLayoutPresets():Promise<Array<models.LayoutPreset>>;
 
 export function GetLogPath():Promise<string>;
