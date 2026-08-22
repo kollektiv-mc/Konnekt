@@ -42,6 +42,12 @@ func logPayload(t *testing.T, ev any) string {
 
 // The bug behind issue #112: one overlong line used to make Scan return false
 // and the goroutine exit, killing the console for the rest of the session.
+//
+// Content and order are asserted against the ring buffer, which streamOutput
+// writes synchronously. The bus delivers each emit in its own goroutine, so
+// cross-event order is not guaranteed there — events are awaited and matched
+// by content only. (The Wails runtime path in Emit is synchronous; only
+// in-process subscribers see unordered delivery.)
 func TestStreamOutputSurvivesOverlongLine(t *testing.T) {
 	s, bus := newServerFixture()
 	lines := collect(bus, EventLogLine)
@@ -49,20 +55,29 @@ func TestStreamOutputSurvivesOverlongLine(t *testing.T) {
 	giant := strings.Repeat("x", maxConsoleLine+1024)
 	s.streamOutput(strings.NewReader(giant + "\n[12:00:00] [Server thread/INFO]: Done (1.2s)!\n"))
 
-	events := waitForCount(t, lines, 2)
-	if got := logPayload(t, events[0]); got != giant[:maxConsoleLine] {
-		t.Errorf("first line is not truncated at the cap (len %d, want %d)", len(got), maxConsoleLine)
-	}
-	if got := logPayload(t, events[1]); !strings.Contains(got, "Done (1.2s)!") {
-		t.Errorf("streaming did not continue past the overlong line: got %q", got)
-	}
-
 	history := s.GetConsoleHistory()
 	if len(history) != 2 {
 		t.Fatalf("ring buffer holds %d lines, want 2", len(history))
 	}
-	if len(history[0].Line) != maxConsoleLine {
-		t.Errorf("ring buffer first line has len %d, want %d", len(history[0].Line), maxConsoleLine)
+	if history[0].Line != giant[:maxConsoleLine] {
+		t.Errorf("first line is not truncated at the cap (len %d, want %d)", len(history[0].Line), maxConsoleLine)
+	}
+	if !strings.Contains(history[1].Line, "Done (1.2s)!") {
+		t.Errorf("streaming did not continue past the overlong line: got %q", history[1].Line)
+	}
+
+	events := waitForCount(t, lines, 2)
+	var sawTruncated, sawDone bool
+	for _, ev := range events {
+		switch got := logPayload(t, ev); {
+		case got == giant[:maxConsoleLine]:
+			sawTruncated = true
+		case strings.Contains(got, "Done (1.2s)!"):
+			sawDone = true
+		}
+	}
+	if !sawTruncated || !sawDone {
+		t.Errorf("bus delivery incomplete: truncated=%v done=%v", sawTruncated, sawDone)
 	}
 }
 
@@ -72,15 +87,30 @@ func TestStreamOutputNormalizesCarriageReturns(t *testing.T) {
 
 	s.streamOutput(strings.NewReader("Preparing spawn area: 10%\rPreparing spawn area: 20%\rPreparing spawn area: 30%\n"))
 
-	events := waitForCount(t, lines, 3)
 	want := []string{
 		"Preparing spawn area: 10%",
 		"Preparing spawn area: 20%",
 		"Preparing spawn area: 30%",
 	}
+	history := s.GetConsoleHistory()
+	if len(history) != len(want) {
+		t.Fatalf("ring buffer holds %d lines %v, want %d", len(history), history, len(want))
+	}
 	for i, w := range want {
-		if got := logPayload(t, events[i]); got != w {
-			t.Errorf("line %d: got %q, want %q", i, got, w)
+		if history[i].Line != w {
+			t.Errorf("line %d: got %q, want %q", i, history[i].Line, w)
+		}
+	}
+
+	// Unordered on the bus: one goroutine per emit (see note above).
+	events := waitForCount(t, lines, 3)
+	seen := make(map[string]bool, len(events))
+	for _, ev := range events {
+		seen[logPayload(t, ev)] = true
+	}
+	for _, w := range want {
+		if !seen[w] {
+			t.Errorf("bus never delivered %q", w)
 		}
 	}
 }
