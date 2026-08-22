@@ -191,7 +191,7 @@ tree.
 - [x] Automated tests exist and pass for critical paths: RCON client, Modrinth
       API client, backup create/restore, config path-traversal guards,
       scheduler engine (Go); Zustand store logic and critical hooks (frontend).
-      `backend/services` sits at **38.0%** of statements, with a **36%** floor
+      `backend/services` sits at **40.1%** of statements, with a **38%** floor
       owned by `scripts/coverage-floor` and run by both `/suite-kit:health` and
       CI. The floor is a ratchet: raise it as coverage rises, never lower it to
       green a red build. Coverage is a proxy, not the goal — prefer a test that
@@ -579,7 +579,8 @@ was partly wrong)
 - 15 behaviors adopted from the Pterodactyl Wings clean-room survey
   (`survey/wings.md`; decisions in `survey/wings-triage.md`), several of them
   bug-grade findings the comparison exposed rather than features: a silently
-  dying console scanner (#112, P1), power-action races including a broken
+  dying console scanner (#112, P1 — closed 2026-08-22, HEALTH_LOG "The console
+  that died on one long line"), power-action races including a broken
   restart-from-stopped (#109), an 8-second stop-then-SIGKILL that can kill a
   world save (#110), a discarded exit code (#111), unquiesced world duplication
   (#115), and non-atomic config writes (#116). Features: #108 (state machine,

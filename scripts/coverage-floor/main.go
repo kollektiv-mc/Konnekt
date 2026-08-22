@@ -38,10 +38,11 @@ const targetPackage = "./backend/services/"
 //
 //	36.7% -> floor 35.0  the backup/config-editor/RCON tests
 //	38.0% -> floor 36.0  ConfigService and WriteDataFile tests
+//	40.1% -> floor 38.0  console split-func and streamOutput tests (#112)
 //
 // Coverage is a proxy, not the goal. A test that would have caught a real bug is
 // worth more than one that only moves this number.
-const floorPercent = 36.0
+const floorPercent = 38.0
 
 // Matches the tail of `go test -cover` output: "coverage: 36.7% of statements".
 var reCoverage = regexp.MustCompile(`coverage:\s+([0-9.]+)%\s+of\s+statements`)
