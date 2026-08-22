@@ -102,7 +102,7 @@ func (s *BackupService) saveMeta(dir string, m map[string]backupFileMeta) error 
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(filepath.Join(dir, "meta.json"), data, 0644)
+	return writeFileAtomic(filepath.Join(dir, "meta.json"), data, 0644)
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────

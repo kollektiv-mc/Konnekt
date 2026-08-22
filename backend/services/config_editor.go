@@ -224,7 +224,7 @@ func (s *ConfigEditorService) WriteConfigFile(serverID, relPath, content string)
 		return fmt.Errorf("backup failed: %w", err)
 	}
 
-	return os.WriteFile(abs, []byte(content), 0644)
+	return writeFileAtomic(abs, []byte(content), 0644)
 }
 
 func (s *ConfigEditorService) workingDir(serverID string) (string, error) {

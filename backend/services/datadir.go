@@ -43,6 +43,9 @@ func DataDir() string {
 // is a *relative* path: the old behaviour silently wrote the file into the
 // process's working directory — wherever the user happened to launch Konnekt
 // from — instead of failing.
+//
+// The write itself is atomic (writeFileAtomic): a crash mid-save leaves the
+// previous content intact rather than a truncated file.
 func WriteDataFile(dir, name string, data []byte) error {
 	if dir == "" {
 		return fmt.Errorf("write %s: data directory is not set", name)
@@ -51,7 +54,7 @@ func WriteDataFile(dir, name string, data []byte) error {
 		return fmt.Errorf("create data directory %s: %w", dir, err)
 	}
 	path := filepath.Join(dir, name)
-	if err := os.WriteFile(path, data, 0644); err != nil {
+	if err := writeFileAtomic(path, data, 0644); err != nil {
 		return fmt.Errorf("write %s: %w", path, err)
 	}
 	return nil

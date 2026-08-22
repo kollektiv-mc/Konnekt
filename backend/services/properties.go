@@ -41,7 +41,7 @@ func writeProperty(path, key, value string) error {
 		lines = append(lines, key+"="+value)
 	}
 
-	return os.WriteFile(path, []byte(strings.Join(lines, "\n")+"\n"), 0644)
+	return writeFileAtomic(path, []byte(strings.Join(lines, "\n")+"\n"), 0644)
 }
 
 // readProperties parses a Java-style key=value properties file.
