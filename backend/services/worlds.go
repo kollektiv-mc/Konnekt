@@ -12,9 +12,19 @@ import (
 	"konnekt/backend/models"
 )
 
+// serverGuard is the slice of ServerService the world operations need: the
+// running check that gates the destructive ones, and the save-quiesce pair
+// DuplicateWorld borrows from the backup path. An interface so a test can
+// assert the quiesce ordering without a real server process behind it.
+type serverGuard interface {
+	IsRunning() bool
+	PrepareForBackup() bool
+	ResumeSaves()
+}
+
 type WorldService struct {
 	config *ConfigService
-	server *ServerService
+	server serverGuard
 	backup *BackupService
 }
 
@@ -226,6 +236,9 @@ func (s *WorldService) RenameWorld(serverID, oldName, newName string) error {
 
 // DuplicateWorld copies the overworld folder + Paper/Spigot dimension siblings
 // to newName. A slow operation on large worlds; no progress reporting in alpha.
+// Unlike the other world operations it works while the server is running:
+// saves are flushed and paused around the copy (the backup path's quiesce),
+// so the duplicate cannot capture a region file mid-write.
 func (s *WorldService) DuplicateWorld(serverID, name, newName string) error {
 	if err := validateWorldName(name); err != nil {
 		return err
@@ -239,6 +252,10 @@ func (s *WorldService) DuplicateWorld(serverID, name, newName string) error {
 	}
 	if _, err := os.Stat(filepath.Join(cfg.WorkingDir, newName)); err == nil {
 		return fmt.Errorf("a world named %q already exists", newName)
+	}
+
+	if s.server != nil && s.server.PrepareForBackup() {
+		defer s.server.ResumeSaves()
 	}
 
 	for _, suffix := range []string{"", "_nether", "_the_end"} {
