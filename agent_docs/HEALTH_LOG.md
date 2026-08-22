@@ -66,6 +66,7 @@ after them is dated. Newest last, in both groups.
 - [2026-08-20 — A log a bug reporter can attach](#2026-08-20-a-log-a-bug-reporter-can-attach)
 - [2026-08-20 — The bound type TypeScript never saw](#2026-08-20-the-bound-type-typescript-never-saw)
 - [2026-08-21 — Wings survey, triage, and adoption planning](#2026-08-21-wings-survey-triage-and-adoption-planning)
+- [2026-08-22 — The console that died on one long line](#2026-08-22-the-console-that-died-on-one-long-line)
 
 ---
 
@@ -3378,3 +3379,62 @@ discarded aside copy, sticky MaxPlayers after stop, the "(+ siblings)" comment).
 claim in the triage, the issues and the backlog entries carries a file:line
 pointer verified against the tree on 2026-08-21; implementing sessions are
 instructed to re-verify before editing.
+
+### 2026-08-22 — The console that died on one long line
+
+**Closed: [#112](../../issues/112), the P1 that opens the Wings adoption set**
+(Wave 1 per `agent_docs/WINGS_ADOPTION.md` — chosen first because a silently
+dead console masks testing of everything else in the set).
+
+**The bug.** `streamOutput` scanned the server's stdout/stderr with a bare
+`bufio.NewScanner` and never checked `scanner.Err()`. The default 64 KiB token
+cap meant one longer line — a stack trace, a mod dumping JSON — made `Scan()`
+return false with `ErrTooLong` and the goroutine exit: console output stopped
+for the rest of the session, with nothing on screen and nothing in
+`konnekt.log`. Minecraft's habit of emitting stray mid-line `\r` (progress
+output sized to an assumed terminal width) compounded the risk by welding many
+logical lines into one enormous physical one, and made progress output render
+wrong even under the cap.
+
+**The fix** (`backend/services/consolescan.go` + three lines in
+`streamOutput`). A stateful `bufio.SplitFunc` (`newConsoleSplitFunc`) that
+treats `\n`, `\r\n` and bare `\r` all as line breaks, and — past
+`maxConsoleLine` (64 KiB, the same bound the scanner previously enforced by
+dying) — delivers the line truncated, discards the excess, and keeps
+scanning. Wings' own contract (survey §9), which lets a delivered chunk carry
+embedded newlines, was deliberately *not* adopted: the frontend batcher renders
+one row per emitted payload, so the backend splits before emitting and no
+frontend change was needed. Two design points worth keeping:
+
+- **No "request more data" lookahead for a trailing `\r`.** The obvious CRLF
+  lookahead (return `0, nil, nil` when `\r` is the last buffered byte)
+  deadlocks into `ErrTooLong` when the buffer is full. Instead a `skipNextLF`
+  flag consumes the `\r` immediately and swallows a leading `\n` on the next
+  call. Because the func always advances once `maxConsoleLine` bytes are
+  buffered without a terminator, the scanner's buffer never needs to grow past
+  the cap and `ErrTooLong` is structurally unreachable.
+- **`scanner.Err()` is now checked**, logged via the house slog idiom — except
+  `os.ErrClosed`, because `waitForExit`'s concurrent `cmd.Wait()` can close the
+  pipes before the readers drain, so that error is ordinary teardown on every
+  stop, not a defect.
+
+**Verification.** `backend/services/consolescan_test.go` runs every split case
+twice, once through a plain reader and once through `iotest.OneByteReader` so
+every terminator lands on a read boundary (that is what exercises
+`skipNextLF`), plus the issue's acceptance case, a 3 MiB single line at the
+real cap. `server_test.go` is the package's first — `streamOutput` fed directly
+with an `io.Reader` on a `NewServerService()` + ctx-less `EventBus` fixture
+(the `stats_test.go` idiom): streaming survives an overlong line, `\r` progress
+arrives as individual lines, and the line matchers (player join with UUID/IP
+accumulation, EULA detection, `expectedStop`) still fire on lines separated
+only by `\r` — the contract #108's ready detection will ride on. All three
+integration tests were run against the pre-fix `server.go` (via `git stash`)
+and failed exactly as the bug predicts — zero events after the giant line —
+then passed with the fix. Gates: `gofmt`/`go vet` clean, full `go test ./...`
+green, `backend/services` coverage 38.0% → **40.1%**, floor ratcheted 36% →
+**38%** per its own rule.
+
+**Left as found.** The other unbuffered scanners (`serverlaunch.go:161,333`,
+`properties.go`, `modjar.go`'s readers) parse bounded files or short-lived
+install streams, not an unbounded live console; same pattern, different blast
+radius, separate concern if ever worth fixing.

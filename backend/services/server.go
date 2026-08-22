@@ -3,9 +3,12 @@ package services
 import (
 	"bufio"
 	"context"
+	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"math"
+	"os"
 	"os/exec"
 	"path/filepath"
 	"regexp"
@@ -227,6 +230,8 @@ func (s *ServerService) Start(serverID string, jarPath string, jvmArgs []string,
 
 func (s *ServerService) streamOutput(r io.Reader) {
 	scanner := bufio.NewScanner(r)
+	scanner.Buffer(make([]byte, maxConsoleLine), maxConsoleLine)
+	scanner.Split(newConsoleSplitFunc(maxConsoleLine))
 	for scanner.Scan() {
 		line := scanner.Text()
 
@@ -287,6 +292,11 @@ func (s *ServerService) streamOutput(r io.Reader) {
 			s.logLastWarning = time.Now()
 			s.logTPSMu.Unlock()
 		}
+	}
+	// waitForExit's cmd.Wait() can close the pipes before these readers drain,
+	// so ErrClosed is ordinary teardown on every stop, not a defect.
+	if err := scanner.Err(); err != nil && !errors.Is(err, os.ErrClosed) {
+		slog.Error("console: stream scan", "error", err)
 	}
 }
 
