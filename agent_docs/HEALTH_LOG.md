@@ -67,6 +67,8 @@ after them is dated. Newest last, in both groups.
 - [2026-08-20 — The bound type TypeScript never saw](#2026-08-20-the-bound-type-typescript-never-saw)
 - [2026-08-21 — Wings survey, triage, and adoption planning](#2026-08-21-wings-survey-triage-and-adoption-planning)
 - [2026-08-22 — The console that died on one long line](#2026-08-22-the-console-that-died-on-one-long-line)
+- [2026-08-22 — The half-written file a crash could leave](#2026-08-22-the-half-written-file-a-crash-could-leave)
+- [2026-08-22 — The torn copy of a live world](#2026-08-22-the-torn-copy-of-a-live-world)
 
 ---
 
@@ -3438,3 +3440,78 @@ green, `backend/services` coverage 38.0% → **40.1%**, floor ratcheted 36% →
 `properties.go`, `modjar.go`'s readers) parse bounded files or short-lived
 install streams, not an unbounded live console; same pattern, different blast
 radius, separate concern if ever worth fixing.
+
+### 2026-08-22 — The half-written file a crash could leave
+
+**Closed: [#116](../../issues/116)** (Wings adoption Wave 1 per
+`agent_docs/WINGS_ADOPTION.md`; merged as PR #144).
+
+**The bug.** `WriteConfigFile` (`config_editor.go`), `writeProperty`
+(`properties.go`) and `WriteDataFile` (`datadir.go`) were bare `os.WriteFile`:
+truncate, then write. A crash or power loss mid-write corrupts the file in
+flight — and `WriteDataFile` alone carries the server list, app settings, tile
+layouts and presets, custom commands and the scheduler's graphs and history.
+The config-backup rotation protects the *previous* content, never the write in
+flight. Re-verifying the issue's pointers found a fourth site it did not name:
+`backup.go`'s `saveMeta` wrote each backup's `meta.json` the same way. The repo
+already held the cure in `modservice.go`'s `saveManifest` (temp + rename) —
+though that pattern leaves `os.CreateTemp`'s 0600 mode, fine for an internal
+manifest, wrong for `server.properties`.
+
+**The fix** (`backend/services/atomicwrite.go`; all four call sites
+converted). `writeFileAtomic(path, data, perm)`: a sibling temp file in the
+target's own directory (same filesystem, so the rename cannot cross a mount
+and lose atomicity), write, `f.Sync()` — without it a power loss can make the
+rename durable while the bytes are not, a correctly named empty file — close,
+chmod to the mode a direct `os.WriteFile` gave, then rename over the target.
+Two decisions worth keeping:
+
+- **No remove-then-rename fallback for Windows.** Go's `os.Rename` already
+  replaces an existing target there (MoveFileEx with
+  MOVEFILE_REPLACE_EXISTING); the gap between a remove and a rename is exactly
+  the torn-write window the helper exists to close. A sharing violation (the
+  target open in another process) surfaces as an error instead.
+- **`renameFile` is a package-level `var` holding `os.Rename`** — the
+  package's first seam of this kind, existing only so a test can simulate a
+  crash at the rename step. No test in the package runs parallel, so the swap
+  is safe.
+
+**Verification.** `atomicwrite_test.go`: round trip with a mode assertion
+(skipped on Windows), overwrite, no temp residue after success or failure, a
+missing parent failing before the target could be touched, and the acceptance
+case — a failing rename stub leaves the old content byte-identical with the
+temp removed. Full suite-check manifest green (16/16 on the PR).
+
+### 2026-08-22 — The torn copy of a live world
+
+**Closed: [#115](../../issues/115)** (Wings adoption Wave 1; merged as PR
+#145).
+
+**The bug.** `DuplicateWorld` was the one world operation with no
+`IsRunning()` guard and no quiescing — `SetActiveWorld`, `DeleteWorld` and
+`RenameWorld` all refuse while running. Duplicating a live world could copy
+region files mid-write and produce a torn duplicate. The backup path had
+already solved exactly this: `PrepareForBackup` (save-off, then save-all
+flush; RCON preferred, stdin fallback) and `ResumeSaves` (save-on), used as a
+defer pair in both backup paths. Per the issue's decision the fix quiesces
+rather than refuses: duplicating a live world is a legitimate ask and the
+machinery is proven.
+
+**The fix** (`backend/services/worlds.go`). The copy loop now sits inside the
+same `if s.server != nil && s.server.PrepareForBackup() { defer
+s.server.ResumeSaves() }` shape `backup.go` uses; `PrepareForBackup` no-ops
+(returns false) when the server is stopped, so that path is unchanged. To make
+the ordering testable, `WorldService.server` narrowed from `*ServerService` to
+a three-method in-package interface (`IsRunning`, `PrepareForBackup`,
+`ResumeSaves`) — `NewWorldService`'s signature and the `app.go` wiring are
+untouched, and nothing moved deeper into the singleton (WINGS_ADOPTION
+constraint 1).
+
+**Verification.** The package's first `worlds_test.go`: a fake guard whose
+callbacks assert position at call time — the destination must not exist when
+`PrepareForBackup` fires and must exist when `ResumeSaves` does — plus the
+`_nether` sibling copied, the stopped path resuming nothing, and an
+existing-name refusal that never touches saves. Full suite-check manifest
+green (16/16 on the PR). With both Wave 1 fixes merged, `backend/services`
+coverage stands at **41.1%** and the floor ratcheted 38% → **39%** in the
+closing pass recorded here.

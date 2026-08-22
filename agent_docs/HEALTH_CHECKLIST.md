@@ -191,7 +191,7 @@ tree.
 - [x] Automated tests exist and pass for critical paths: RCON client, Modrinth
       API client, backup create/restore, config path-traversal guards,
       scheduler engine (Go); Zustand store logic and critical hooks (frontend).
-      `backend/services` sits at **40.1%** of statements, with a **38%** floor
+      `backend/services` sits at **41.1%** of statements, with a **39%** floor
       owned by `scripts/coverage-floor` and run by both `/suite-kit:health` and
       CI. The floor is a ratchet: raise it as coverage rises, never lower it to
       green a red build. Coverage is a proxy, not the goal — prefer a test that
@@ -583,7 +583,9 @@ was partly wrong)
   that died on one long line"), power-action races including a broken
   restart-from-stopped (#109), an 8-second stop-then-SIGKILL that can kill a
   world save (#110), a discarded exit code (#111), unquiesced world duplication
-  (#115), and non-atomic config writes (#116). Features: #108 (state machine,
+  (#115 — closed 2026-08-22, HEALTH_LOG "The torn copy of a live world"), and
+  non-atomic config writes (#116 — closed 2026-08-22, HEALTH_LOG "The
+  half-written file a crash could leave"). Features: #108 (state machine,
   implements #101), #113, #114, #117 (close prompt + re-adopt, prerequisite
   #99), #118, #119, #120, #121; per-server shaping is a standing constraint
   tracked by #57. Cross-cutting constraints, sequencing waves, and the #30/#26
