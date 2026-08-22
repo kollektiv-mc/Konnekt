@@ -289,6 +289,12 @@ func (a *App) RestartServer(serverID string) error {
 	return a.serverService.Start(serverID, cfg.JarPath, cfg.JvmArgs, cfg.WorkingDir)
 }
 
+// GetLastStop reports the most recent stop's detail, the readable getter twin
+// of the server:stopped event payload. Zero value until a stop has happened.
+func (a *App) GetLastStop() (models.ServerStopped, error) {
+	return a.serverService.GetLastStop(), nil
+}
+
 func (a *App) AcceptEula(serverID string) error {
 	cfg, err := a.configService.GetServerConfig(serverID)
 	if err != nil {

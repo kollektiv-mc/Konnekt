@@ -100,6 +100,10 @@ type ServerService struct {
 	// (via Stop(), app quit, or the server's own "Stopping the server" log line).
 	// waitForExit reads it to emit {expected} in the server:stopped payload.
 	expectedStop bool
+
+	// lastStop is the most recent server:stopped payload, kept so GetLastStop
+	// can serve it as that event's readable getter twin.
+	lastStop models.ServerStopped
 }
 
 func NewServerService() *ServerService {
@@ -235,16 +239,7 @@ func (s *ServerService) streamOutput(r io.Reader) {
 	for scanner.Scan() {
 		line := scanner.Text()
 
-		ts := time.Now().Format("15:04:05")
-		// NB: emit precedes buffer append. A remote client that snapshots
-		// GetConsoleHistory then subscribes must dedup/order the seam line.
-		s.bus.Emit(EventLogLine, map[string]string{"timestamp": ts, "line": line})
-		s.logBufMu.Lock()
-		if len(s.logBuf) >= consoleCap {
-			s.logBuf = s.logBuf[1:]
-		}
-		s.logBuf = append(s.logBuf, models.ConsoleLine{Timestamp: ts, Line: line})
-		s.logBufMu.Unlock()
+		s.emitConsoleLine(line)
 
 		if strings.Contains(strings.ToLower(line), "eula.txt") {
 			s.bus.Emit(EventEulaRequired, nil)
@@ -300,9 +295,42 @@ func (s *ServerService) streamOutput(r io.Reader) {
 	}
 }
 
+// emitConsoleLine sends one line down the console channel: the log:line event
+// plus the ring buffer GetConsoleHistory replays to late subscribers.
+// NB: emit precedes buffer append. A remote client that snapshots
+// GetConsoleHistory then subscribes must dedup/order the seam line.
+func (s *ServerService) emitConsoleLine(line string) {
+	ts := time.Now().Format("15:04:05")
+	s.bus.Emit(EventLogLine, map[string]string{"timestamp": ts, "line": line})
+	s.logBufMu.Lock()
+	if len(s.logBuf) >= consoleCap {
+		s.logBuf = s.logBuf[1:]
+	}
+	s.logBuf = append(s.logBuf, models.ConsoleLine{Timestamp: ts, Line: line})
+	s.logBufMu.Unlock()
+}
+
+// exitLabel renders an exit code for the console banner. -1 is os/exec's
+// marker for a signal kill, so name that rather than showing the number.
+func exitLabel(code int) string {
+	if code == -1 {
+		return "killed by a signal"
+	}
+	return fmt.Sprintf("exit code %d", code)
+}
+
 func (s *ServerService) waitForExit() {
+	// Reap the process and keep its exit status: it is the single most useful
+	// JVM crash diagnostic. -1 means killed by a signal (or unobtainable),
+	// matching os.ProcessState.ExitCode.
+	exitCode := 0
 	if s.cmd != nil {
-		_ = s.cmd.Wait() //nolint:errcheck // reaps the exited process; exit status not needed here
+		err := s.cmd.Wait()
+		if ps := s.cmd.ProcessState; ps != nil {
+			exitCode = ps.ExitCode()
+		} else if err != nil {
+			exitCode = -1
+		}
 	}
 	s.closeJob()
 	close(s.exited)
@@ -318,8 +346,21 @@ func (s *ServerService) waitForExit() {
 	expected := s.expectedStop
 	s.running = false
 	s.cachedProc = nil
+	stop := models.ServerStopped{Expected: expected, ExitCode: exitCode}
+	s.lastStop = stop
 	s.mu.Unlock()
-	s.bus.Emit(EventServerStopped, map[string]bool{"expected": expected})
+	if !expected {
+		s.emitConsoleLine("[Konnekt] Server process exited unexpectedly (" + exitLabel(exitCode) + ")")
+	}
+	s.bus.Emit(EventServerStopped, stop)
+}
+
+// GetLastStop reports the most recent stop's detail, the readable getter twin
+// of the server:stopped event payload. Zero value until a stop has happened.
+func (s *ServerService) GetLastStop() models.ServerStopped {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.lastStop
 }
 
 func (s *ServerService) Stop() error {

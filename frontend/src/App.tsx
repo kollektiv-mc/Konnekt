@@ -105,12 +105,22 @@ function App() {
   useEffect(() => {
     let cleanup: (() => void) | undefined
     try {
-      cleanup = EventsOn(EVENTS.SERVER_STOPPED, (payload?: { expected?: boolean }) => {
-        const { settings } = useSettingsStore.getState()
-        if (!payload?.expected && settings.notifyOnCrash) {
-          emitNotification('crash', 'Server stopped unexpectedly')
-        }
-      })
+      cleanup = EventsOn(
+        EVENTS.SERVER_STOPPED,
+        (payload?: { expected?: boolean; exitCode?: number }) => {
+          const { settings } = useSettingsStore.getState()
+          if (!payload?.expected && settings.notifyOnCrash) {
+            const code = payload?.exitCode
+            const detail =
+              typeof code !== 'number'
+                ? ''
+                : code === -1
+                  ? ' (killed by a signal)'
+                  : ` (exit code ${code})`
+            emitNotification('crash', `Server stopped unexpectedly${detail}`)
+          }
+        },
+      )
     } catch {
       /* non-Wails context */
     }

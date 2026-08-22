@@ -30,6 +30,15 @@ type ServerStatus struct {
 	RAMTotal   float64 `json:"ramTotal"`
 }
 
+// ServerStopped is the server:stopped event payload, and what GetLastStop
+// returns as its readable getter twin. ExitCode follows os.ProcessState:
+// -1 means the process was killed by a signal (or the status was
+// unobtainable), anything else is the process's own exit code.
+type ServerStopped struct {
+	Expected bool `json:"expected"`
+	ExitCode int  `json:"exitCode"`
+}
+
 type StatsSnapshot struct {
 	Timestamp  int64   `json:"timestamp"`
 	TPS        float64 `json:"tps"`

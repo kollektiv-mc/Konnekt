@@ -106,6 +106,10 @@ export function GetDataDir() {
   return window['go']['main']['App']['GetDataDir']();
 }
 
+export function GetLastStop() {
+  return window['go']['main']['App']['GetLastStop']();
+}
+
 export function GetLayoutPresets() {
   return window['go']['main']['App']['GetLayoutPresets']();
 }

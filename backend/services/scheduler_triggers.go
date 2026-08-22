@@ -34,10 +34,10 @@ func (s *SchedulerService) startTriggers() {
 		s.fireTypedEventTriggers("trigger.server", "Started", map[string]interface{}{}, "event:server:started")
 	})
 	s.bus.Subscribe(EventServerStopped, func(data any) {
-		payload, _ := data.(map[string]bool)
+		payload, _ := data.(models.ServerStopped)
 		t := "Stopped"
 		label := "event:server:stopped"
-		if !payload["expected"] {
+		if !payload.Expected {
 			t = "Crashed"
 			label = "event:server:crashed"
 		}
