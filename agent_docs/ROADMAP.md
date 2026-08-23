@@ -271,6 +271,14 @@ Where an item does have an issue, it is linked.
   `survey/wings.md` + `survey/wings-triage.md`; constraints and sequencing for
   implementing sessions: `agent_docs/WINGS_ADOPTION.md`. Per-server shaping is
   a standing constraint shared with #57.
+- **World terrain previews** — render each world save's real terrain instead of
+  the flat-coloured sphere the Worlds tile draws today
+  ([#149](../../issues/149)). BlueMap was assessed and ruled out on the issue:
+  it needs a Minecraft client jar from Mojang, a Java runtime for what is a
+  read-only operation, and ships its own viewer UI. Building it needs no new Go
+  dependency, and `backend/services/nbt.go` already parses every tag type it
+  depends on. The issue scopes only a spawn-anchored thumbnail as the first
+  step, and records the region-format traps that make the rest fiddly.
 
 Nothing else here is scoped yet. Add an item only once it has a shape worth
 writing down; a bare feature name belongs in a GitHub Issue, not here.
