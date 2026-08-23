@@ -25,6 +25,12 @@ jobs:
   # The label is the input that makes the generator's output correct, so it is
   # checked in the same place as everything else the build depends on rather
   # than left to whoever opens the pull request to remember.
+  #
+  # The `area:` check is here for a different reason. It does not feed the
+  # release notes at all; it is the issue-side rule (agent_docs/CLAUDE.md's
+  # "Labelling an issue") holding on the pull request side too, so that what a
+  # change touches is recorded in the same vocabulary whether it is asked for or
+  # delivered. `.github/workflows/issue-labels.yml` is the other half.
   pr-labelled:
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
@@ -41,6 +47,20 @@ jobs:
             exit 0
           fi
           echo "::error::This pull request has no type: label, so the release notes cannot file it. Add type:feature, type:bug, type:chore or type:docs — see agent_docs/CLAUDE.md's 'Commits & pull requests'."
+          exit 1
+
+      # Its own step rather than an `and` in the one above, so a pull request
+      # missing both is told about both at once instead of fixing one and
+      # failing again on the other.
+      - name: 'An area: label says which part of Konnekt this touches'
+        env:
+          LABELS: ${{ toJSON(github.event.pull_request.labels.*.name) }}
+        run: |
+          echo "labels: $LABELS"
+          if echo "$LABELS" | jq -e 'any(.[]; startswith("area:"))' > /dev/null; then
+            exit 0
+          fi
+          echo "::error::This pull request has no area: label. Add the one matching the part of Konnekt it touches — see .github/labels.yml for the list, or agent_docs/CLAUDE.md's 'Labelling an issue'."
           exit 1
 
   # The classifier decides what every future release says about itself, and it
