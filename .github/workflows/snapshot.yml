@@ -190,7 +190,7 @@ jobs:
       - name: Build RPM
         run: |
           rpmdev-setuptree
-          cp dist/konnekt-linux-amd64 build/appicon.png build/linux/konnekt.desktop ~/rpmbuild/SOURCES/
+          cp dist/konnekt-linux-amd64 build/appicon-256.png build/linux/konnekt.desktop ~/rpmbuild/SOURCES/
           rpmbuild -bb build/linux/konnekt.spec --define "_version ${{ needs.check.outputs.rpm_version }}"
 
           mkdir -p dist-rpm
