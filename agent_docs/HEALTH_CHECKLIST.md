@@ -581,8 +581,10 @@ was partly wrong)
   bug-grade findings the comparison exposed rather than features: a silently
   dying console scanner (#112, P1 — closed 2026-08-22, HEALTH_LOG "The console
   that died on one long line"), power-action races including a broken
-  restart-from-stopped (#109), an 8-second stop-then-SIGKILL that can kill a
-  world save (#110), a discarded exit code (#111), unquiesced world duplication
+  restart-from-stopped (#109 — closed 2026-08-23, HEALTH_LOG "The power
+  actions that raced each other"), an 8-second stop-then-SIGKILL that can kill
+  a world save (#110), a discarded exit code (#111 — closed 2026-08-22 as PR
+  #147), unquiesced world duplication
   (#115 — closed 2026-08-22, HEALTH_LOG "The torn copy of a live world"), and
   non-atomic config writes (#116 — closed 2026-08-22, HEALTH_LOG "The
   half-written file a crash could leave"). Features: #108 (state machine,
@@ -595,9 +597,6 @@ was partly wrong)
 
 **P3 — Smaller findings from the 2026-08-21 backend sweep** (not worth
 individual issues; fix in passing when touching the file)
-- `app.go:76-78`'s comment claims the stop path falls back from RCON; the
-  implementation is stdin-only (`server.go:324-327`). Stale comment, fix when
-  #110 rewrites that path.
 - `eventbus.go:37-55`'s per-handler `recover()` swallows panics with no log
   line — a handler crash is invisible even in `konnekt.log`. Add a `slog.Error`
   inside the recover when next touching the file.

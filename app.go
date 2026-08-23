@@ -72,10 +72,13 @@ func NewApp() *App {
 func (a *App) beforeClose(ctx context.Context) bool {
 	a.schedulerService.StopScheduler()
 	if a.serverService.IsRunning() {
-		// Stop's only error path is "server not running", which the IsRunning
-		// guard above already covers and which a race can only make true — the
-		// benign direction. Every failure that matters (the process refusing
-		// the RCON stop) is handled inside Stop by killTree, not reported here.
+		// Stop's error paths here are "server not running" (the IsRunning guard
+		// covers it, and a race can only make it true — the benign direction)
+		// and "another power action is in progress" (quitting anyway is fine:
+		// the stdin stop is best-effort, and the Windows Job Object / Linux
+		// Pdeathsig tie the java tree to Konnekt's lifetime). A process that
+		// ignores the stdin stop is handled inside Stop by killTree, not
+		// reported here.
 		_ = a.serverService.Stop() //nolint:errcheck // see above
 	}
 	return false
@@ -279,14 +282,11 @@ func (a *App) StopServer(serverID string) error {
 }
 
 func (a *App) RestartServer(serverID string) error {
-	if err := a.serverService.Stop(); err != nil {
-		return err
-	}
 	cfg, err := a.configService.GetServerConfig(serverID)
 	if err != nil {
 		return err
 	}
-	return a.serverService.Start(serverID, cfg.JarPath, cfg.JvmArgs, cfg.WorkingDir)
+	return a.serverService.Restart(serverID, cfg.JarPath, cfg.JvmArgs, cfg.WorkingDir)
 }
 
 // GetLastStop reports the most recent stop's detail, the readable getter twin

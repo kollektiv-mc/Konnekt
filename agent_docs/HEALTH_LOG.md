@@ -3515,3 +3515,57 @@ existing-name refusal that never touches saves. Full suite-check manifest
 green (16/16 on the PR). With both Wave 1 fixes merged, `backend/services`
 coverage stands at **41.1%** and the floor ratcheted 38% → **39%** in the
 closing pass recorded here.
+
+### 2026-08-23 — The power actions that raced each other
+
+**Closed: [#109](../../issues/109)** (Wings adoption Wave 2, first of the
+lifecycle core; survey §3, triage item 2).
+
+**The bugs.** Three races in one family. Two concurrent Stops both passed the
+`running` check because `Stop` released `s.mu` before waiting on `exited`: the
+loser wrote "stop" into a closed stdin, closed it a second time, and both
+could schedule `killTree`. `waitForExit` closed `exited` *before* clearing
+`running`, so Restart's immediately-following Start could observe the stale
+flag and fail with "server already running" — a restart that stopped the
+server and then refused to start it. And `RestartServer` on a stopped server
+returned "server not running" without ever starting — from the UI and from the
+scheduler's `__restart__` block, which duplicated the same stop-then-start
+composition.
+
+**The fix** (`backend/services/server.go`, `app.go`,
+`backend/services/scheduler_blocks.go`,
+`frontend/src/components/QuickCommandsPanel.tsx`). One per-server power gate:
+a `powerMu` mutex acquired fail-fast (`TryLock`) by `Start`, `Stop` and the
+new `ServerService.Restart`, which holds it across both legs so nothing slips
+between them. The loser of a contended acquire gets the exported sentinel
+`ErrPowerActionInProgress`, whose message ("another power action is in
+progress") is the user-facing sentence: the quick-commands panel shows it
+verbatim, having gained the error surface it never had (its power buttons
+swallowed every rejection with `.catch(console.error)`) plus an in-flight
+disable so a double click cannot even leave the panel. Restart-from-stopped is
+a plain start per the owner decision, so the stop leg tolerates
+`errServerNotRunning` — which also covers a server crashing between the gate
+and the leg; `app.go`'s `RestartServer` and the scheduler's `__restart__` both
+delegate to the one implementation. `waitForExit` now closes `exited` dead
+last, after `running` is cleared and `server:stopped` is on the bus, so anyone
+the channel unblocks observes fully-torn-down state; the restart's stop leg
+still marks `expectedStop` first, so no crash notification fires (asserted).
+The gate and the new `launchCmd` seam sit in a commented per-instance block
+for #57 to move wholesale (WINGS_ADOPTION constraint 1); #110's force kill
+will bypass the gate by design, and the "server already running" check stays
+inside `start()` as that path's guard. The stale `beforeClose` comment
+claiming an RCON stop fallback (a P3 backlog bullet) was rewritten in passing.
+
+**Verification.** The package's first race-shaped tests, made deterministic by
+observing progress rather than timing: a fake running server whose `s.stdin`
+is an in-memory pipe (its EOF proves a stop is inside the gate) while the real
+process's stdin stays in the test's hand, so the 8-second killTree path is
+unreachable and nothing sleeps. Concurrent Stop/Stop, Restart-into-Restart
+(with the stop leg's `Expected: true` payload asserted), restart-from-stopped,
+exited-observes-stopped-state, Start-while-running, and the pinned "server not
+running" string contract — all green under `go test -race`. The `launchCmd`
+seam (production default: java PATH check + `resolveLaunch` + `exec.Command`)
+lets `start()` run a stdin-consuming shell process, giving the start body its
+first coverage: `backend/services` rose 41.1% → **43.8%**, floor ratcheted
+39% → **41%**. Frontend: three new panel tests (verbatim message render,
+double click sends once, error clears on the next action).
