@@ -41,6 +41,18 @@ of:
 | `status:confirmed` | Reproduced, or accepted as in scope. It is now on the list. |
 | *closed* | Duplicate, out of scope, or not a Konnekt bug. Always with a reason and a link. |
 
+Triage also puts three labels on it: what kind of change it is (`type:`), which
+part of the app it touches (`area:`), and how urgent it is (`p0`-`p3`). Nothing
+is expected of you here. The form already asks which part of Konnekt you mean,
+and the rest is our reading of it.
+
+We may also retitle the issue. Titles here are kept to a short noun phrase with
+the area left to the label, because the
+[roadmap page](https://konnekt.pages.dev/roadmap.html) lists them in a tree
+grouped by area and a title that repeats it reads badly there. That is a
+housekeeping edit, not a judgement on how you wrote it, and it never changes
+what you reported.
+
 An issue closed as out of scope is not a brush-off.
 [`agent_docs/ROADMAP.md`](agent_docs/ROADMAP.md) sets what Konnekt is trying to
 be, and its final section records the things that have been deliberately ruled
