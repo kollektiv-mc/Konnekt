@@ -24,6 +24,17 @@ import (
 
 const consoleCap = 2000
 
+// ErrPowerActionInProgress is returned when a power action (start, stop,
+// restart) arrives while another one is still in progress. The message is
+// shown verbatim in the UI, so keep it a readable sentence.
+var ErrPowerActionInProgress = errors.New("another power action is in progress")
+
+// errServerNotRunning backs Stop's long-standing "server not running" message
+// so Restart can tell "nothing to stop, skip the leg" from a real stop
+// failure. The exact string is a contract: frontend callers catch and ignore
+// it (the backups tile's stop-and-back-up, beforeClose's benign race).
+var errServerNotRunning = errors.New("server not running")
+
 var (
 	rePlayerJoin  = regexp.MustCompile(`]: (\w+) joined the game`)
 	rePlayerLeave = regexp.MustCompile(`]: (\w+) left the game`)
@@ -104,6 +115,24 @@ type ServerService struct {
 	// lastStop is the most recent server:stopped payload, kept so GetLastStop
 	// can serve it as that event's readable getter twin.
 	lastStop models.ServerStopped
+
+	// Power-action gate (#109) and launch seam. Per-instance state: both move
+	// wholesale into #57's serverInstance when that extraction lands.
+	//
+	// powerMu serializes Start, Stop and Restart end-to-end; Restart holds it
+	// across both legs. Acquired fail-fast only (TryLock): a second power
+	// action gets ErrPowerActionInProgress instead of queueing. waitForExit,
+	// the crash path, never touches it, so a dying process tears down freely
+	// even mid-action. #110's force kill will deliberately bypass it: TryLock,
+	// proceed regardless, unlock only if that TryLock succeeded.
+	powerMu sync.Mutex
+
+	// launchCmd builds the child process for start(). A test seam in the #115
+	// spirit: NewServerService wires defaultLaunchCmd (java PATH check +
+	// resolveLaunch + exec.Command), tests substitute a short-lived shell
+	// process so power-action tests run without java. Never reassigned outside
+	// NewServerService and tests.
+	launchCmd func(jarPath, workingDir string, jvmArgs []string) (*exec.Cmd, error)
 }
 
 func NewServerService() *ServerService {
@@ -112,7 +141,25 @@ func NewServerService() *ServerService {
 		presession: make(map[string]playerSession),
 		currentTPS: -1,
 		logTPS:     -1,
+		launchCmd:  defaultLaunchCmd,
 	}
+}
+
+// defaultLaunchCmd is the production launchCmd: require java on PATH, resolve
+// the launch arguments, and build the java process rooted in workingDir.
+func defaultLaunchCmd(jarPath, workingDir string, jvmArgs []string) (*exec.Cmd, error) {
+	if _, err := exec.LookPath("java"); err != nil {
+		return nil, fmt.Errorf("java not found in PATH — install Java and ensure it is accessible")
+	}
+	args, err := resolveLaunch(jarPath, workingDir, jvmArgs)
+	if err != nil {
+		return nil, err
+	}
+	cmd := exec.Command("java", args...)
+	if workingDir != "" {
+		cmd.Dir = workingDir
+	}
+	return cmd, nil
 }
 
 func (s *ServerService) SetContext(ctx context.Context) {
@@ -128,26 +175,44 @@ func (s *ServerService) SetBus(b *EventBus) {
 }
 
 func (s *ServerService) Start(serverID string, jarPath string, jvmArgs []string, workingDir string) error {
+	if !s.powerMu.TryLock() {
+		return ErrPowerActionInProgress
+	}
+	defer s.powerMu.Unlock()
+	return s.start(serverID, jarPath, jvmArgs, workingDir)
+}
+
+// Restart stops then starts under one continuous gate hold, so no other power
+// action can slip between the legs. On a stopped server the stop leg is
+// skipped: restart-from-stopped is a plain start (#109 owner decision), which
+// also covers a server that crashed between the gate and the stop leg.
+func (s *ServerService) Restart(serverID string, jarPath string, jvmArgs []string, workingDir string) error {
+	if !s.powerMu.TryLock() {
+		return ErrPowerActionInProgress
+	}
+	defer s.powerMu.Unlock()
+	if err := s.stop(); err != nil && !errors.Is(err, errServerNotRunning) {
+		return err
+	}
+	return s.start(serverID, jarPath, jvmArgs, workingDir)
+}
+
+// start is Start without the power gate. Callers hold powerMu.
+func (s *ServerService) start(serverID string, jarPath string, jvmArgs []string, workingDir string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
+	// Defense in depth behind the gate: also guards #110's future force-kill
+	// path, which deliberately bypasses powerMu.
 	if s.running {
 		return fmt.Errorf("server already running")
 	}
 
-	if _, err := exec.LookPath("java"); err != nil {
-		return fmt.Errorf("java not found in PATH — install Java and ensure it is accessible")
-	}
-
-	args, err := resolveLaunch(jarPath, workingDir, jvmArgs)
+	cmd, err := s.launchCmd(jarPath, workingDir, jvmArgs)
 	if err != nil {
 		return err
 	}
-
-	s.cmd = exec.Command("java", args...)
-	if workingDir != "" {
-		s.cmd.Dir = workingDir
-	}
+	s.cmd = cmd
 	s.exited = make(chan struct{})
 
 	stdin, err := s.cmd.StdinPipe()
@@ -333,7 +398,6 @@ func (s *ServerService) waitForExit() {
 		}
 	}
 	s.closeJob()
-	close(s.exited)
 
 	s.playersMu.Lock()
 	s.players = make(map[string]playerSession)
@@ -353,6 +417,13 @@ func (s *ServerService) waitForExit() {
 		s.emitConsoleLine("[Konnekt] Server process exited unexpectedly (" + exitLabel(exitCode) + ")")
 	}
 	s.bus.Emit(EventServerStopped, stop)
+
+	// Closed dead last: anyone unblocked by <-exited (Stop's wait, Restart's
+	// stop leg) observes fully-torn-down state — running already false, the
+	// stopped event already handed to the bus. Closing it earlier is the race
+	// Restart used to lose, failing its own start leg with "server already
+	// running" against a stale flag.
+	close(s.exited)
 }
 
 // GetLastStop reports the most recent stop's detail, the readable getter twin
@@ -364,10 +435,19 @@ func (s *ServerService) GetLastStop() models.ServerStopped {
 }
 
 func (s *ServerService) Stop() error {
+	if !s.powerMu.TryLock() {
+		return ErrPowerActionInProgress
+	}
+	defer s.powerMu.Unlock()
+	return s.stop()
+}
+
+// stop is Stop without the power gate. Callers hold powerMu.
+func (s *ServerService) stop() error {
 	s.mu.Lock()
 	if !s.running {
 		s.mu.Unlock()
-		return fmt.Errorf("server not running")
+		return errServerNotRunning
 	}
 
 	s.expectedStop = true
@@ -375,6 +455,9 @@ func (s *ServerService) Stop() error {
 	if s.stdin != nil {
 		_, _ = fmt.Fprintln(s.stdin, "stop") //nolint:errcheck // best-effort; the timeout + killTree fallback below is the real safety net
 		s.stdin.Close()
+		// Nil the handle so a SendCommand racing this shutdown gets a clean
+		// "server not running" instead of a write on a closed pipe.
+		s.stdin = nil
 	}
 
 	s.stopTPSPoll()
@@ -524,7 +607,7 @@ func (s *ServerService) SendCommand(command string) error {
 	defer s.mu.Unlock()
 
 	if !s.running || s.stdin == nil {
-		return fmt.Errorf("server not running")
+		return errServerNotRunning
 	}
 
 	_, err := fmt.Fprintln(s.stdin, command)

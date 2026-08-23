@@ -1,7 +1,9 @@
 package services
 
 import (
+	"errors"
 	"fmt"
+	"io"
 	"os/exec"
 	"runtime"
 	"strings"
@@ -246,5 +248,242 @@ func TestWaitForExitNormalStopWritesNoBanner(t *testing.T) {
 		if strings.Contains(line.Line, "[Konnekt]") {
 			t.Errorf("console history holds a banner on a deliberate stop: %q", line.Line)
 		}
+	}
+}
+
+// consumeStdinCommand returns a process that exits when its stdin closes —
+// stop()'s graceful path, with no 8-second killTree wait.
+func consumeStdinCommand(t *testing.T) *exec.Cmd {
+	t.Helper()
+	if runtime.GOOS == "windows" {
+		return exec.Command("cmd", "/c", "more")
+	}
+	return exec.Command("sh", "-c", "cat >/dev/null")
+}
+
+// fakeLaunch installs the launchCmd seam so every start() spawns a process
+// that exits when its stdin closes, letting the power-action tests run
+// without java on PATH.
+func fakeLaunch(t *testing.T, s *ServerService) {
+	t.Helper()
+	s.launchCmd = func(jarPath, workingDir string, jvmArgs []string) (*exec.Cmd, error) {
+		return consumeStdinCommand(t), nil
+	}
+}
+
+// fakeRunningServer wires a live child whose exit the TEST controls,
+// decoupled from the stdin stop() closes: the process's real stdin stays in
+// the test's hand (release closes it), while s.stdin is one end of an
+// in-memory pipe whose drain goroutine closes stopSeen at EOF. stopSeen
+// closing therefore proves a stop() has written its command and closed the
+// handle — the action is verifiably inside the gate, waiting on the exit —
+// which is what makes the contention tests deterministic rather than timed.
+func fakeRunningServer(t *testing.T, s *ServerService) (release func(), stopSeen chan struct{}) {
+	t.Helper()
+	cmd := consumeStdinCommand(t)
+	procStdin, err := cmd.StdinPipe()
+	if err != nil {
+		t.Fatalf("stdin pipe: %v", err)
+	}
+	if err := cmd.Start(); err != nil {
+		t.Fatalf("start: %v", err)
+	}
+
+	pr, pw := io.Pipe()
+	stopSeen = make(chan struct{})
+	go func() {
+		_, _ = io.Copy(io.Discard, pr) //nolint:errcheck // drain until EOF; EOF is the signal
+		close(stopSeen)
+	}()
+
+	s.mu.Lock()
+	s.cmd = cmd
+	s.stdin = pw
+	s.running = true
+	s.serverID = "srv1"
+	s.exited = make(chan struct{})
+	s.expectedStop = false
+	s.mu.Unlock()
+	go s.waitForExit()
+
+	var once sync.Once
+	release = func() { once.Do(func() { procStdin.Close() }) }
+	t.Cleanup(release)
+	return release, stopSeen
+}
+
+// The gate half of issue #109: with a stop mid-flight, a second Stop must
+// fail fast with the sentinel instead of writing into a closed stdin and
+// scheduling a second killTree.
+func TestConcurrentStopsSecondFailsFast(t *testing.T) {
+	s, _ := newServerFixture()
+	release, stopSeen := fakeRunningServer(t, s)
+
+	errCh := make(chan error, 1)
+	go func() { errCh <- s.Stop() }()
+
+	select {
+	case <-stopSeen:
+	case <-time.After(2 * time.Second):
+		t.Fatal("first Stop never reached its stdin close")
+	}
+
+	if err := s.Stop(); !errors.Is(err, ErrPowerActionInProgress) {
+		t.Fatalf("second Stop = %v, want ErrPowerActionInProgress", err)
+	}
+
+	release()
+	select {
+	case err := <-errCh:
+		if err != nil {
+			t.Fatalf("first Stop = %v, want nil", err)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("first Stop never returned")
+	}
+
+	if s.IsRunning() {
+		t.Error("IsRunning() = true after Stop completed")
+	}
+	// The gate must be released again: a third Stop reports the ordinary
+	// not-running error, not contention.
+	if err := s.Stop(); !errors.Is(err, errServerNotRunning) {
+		t.Errorf("third Stop = %v, want errServerNotRunning", err)
+	}
+}
+
+// Restart holds the gate across both legs, so a second Restart (the double
+// click) fails fast — and its stop leg must be marked expected, or every
+// restart would raise a crash notification.
+func TestRestartBackToBackSecondFailsFast(t *testing.T) {
+	s, bus := newServerFixture()
+	fakeLaunch(t, s)
+	stops := collect(bus, EventServerStopped)
+	release, stopSeen := fakeRunningServer(t, s)
+
+	dir := t.TempDir()
+	errCh := make(chan error, 1)
+	go func() { errCh <- s.Restart("srv1", "", nil, dir) }()
+
+	select {
+	case <-stopSeen:
+	case <-time.After(2 * time.Second):
+		t.Fatal("restart's stop leg never reached its stdin close")
+	}
+
+	if err := s.Restart("srv1", "", nil, dir); !errors.Is(err, ErrPowerActionInProgress) {
+		t.Fatalf("second Restart = %v, want ErrPowerActionInProgress", err)
+	}
+
+	release()
+	select {
+	case err := <-errCh:
+		if err != nil {
+			t.Fatalf("Restart = %v, want nil", err)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("Restart never returned")
+	}
+
+	if !s.IsRunning() {
+		t.Fatal("IsRunning() = false after Restart")
+	}
+
+	events := waitForCount(t, stops, 1)
+	payload, ok := events[0].(models.ServerStopped)
+	if !ok {
+		t.Fatalf("server:stopped payload is %T, want models.ServerStopped", events[0])
+	}
+	if !payload.Expected {
+		t.Error("restart's stop leg emitted Expected=false — a crash notification for a deliberate restart")
+	}
+
+	if err := s.Stop(); err != nil {
+		t.Errorf("cleanup Stop = %v, want nil", err)
+	}
+}
+
+// The decided half of #109: Restart on a stopped server is a plain start,
+// not the old "server not running" dead end.
+func TestRestartFromStoppedIsAPlainStart(t *testing.T) {
+	s, _ := newServerFixture()
+	fakeLaunch(t, s)
+
+	if err := s.Restart("srv1", "", nil, t.TempDir()); err != nil {
+		t.Fatalf("Restart from stopped = %v, want nil", err)
+	}
+	if !s.IsRunning() {
+		t.Fatal("IsRunning() = false after Restart from stopped")
+	}
+	if got := s.ActiveServerID(); got != "srv1" {
+		t.Errorf("ActiveServerID() = %q, want srv1", got)
+	}
+	if err := s.Stop(); err != nil {
+		t.Errorf("cleanup Stop = %v, want nil", err)
+	}
+}
+
+// The ordering half of #109: exited must close only after the stopped state
+// is visible, or Restart's start leg races a stale running flag and fails
+// with "server already running".
+func TestExitedObservesStoppedState(t *testing.T) {
+	s, _ := newServerFixture()
+	startForExit(t, s, exitingCommand(t, 0), true)
+	s.mu.Lock()
+	s.running = true
+	exited := s.exited
+	s.mu.Unlock()
+
+	go s.waitForExit()
+
+	select {
+	case <-exited:
+	case <-time.After(2 * time.Second):
+		t.Fatal("exited never closed")
+	}
+	if s.IsRunning() {
+		t.Error("IsRunning() = true after exited closed — the pre-#109 restart race")
+	}
+	if got := s.GetLastStop(); !got.Expected {
+		t.Errorf("GetLastStop() = %+v, want Expected:true", got)
+	}
+}
+
+// Start on a running server is still refused by the inner check when the gate
+// is free (defense in depth — it also guards #110's future gate-bypassing
+// kill path), and the refusal releases the gate.
+func TestStartWhileRunningRefused(t *testing.T) {
+	s, _ := newServerFixture()
+	fakeLaunch(t, s)
+	release, _ := fakeRunningServer(t, s)
+
+	err := s.Start("srv2", "", nil, t.TempDir())
+	if err == nil || !strings.Contains(err.Error(), "server already running") {
+		t.Fatalf("Start while running = %v, want 'server already running'", err)
+	}
+
+	s.mu.Lock()
+	exited := s.exited
+	s.mu.Unlock()
+	release()
+	select {
+	case <-exited:
+	case <-time.After(2 * time.Second):
+		t.Fatal("process never exited")
+	}
+	// The refusal released the gate: the next action reports ordinary state,
+	// not contention.
+	if err := s.Stop(); !errors.Is(err, errServerNotRunning) {
+		t.Errorf("Stop after teardown = %v, want errServerNotRunning", err)
+	}
+}
+
+// Pins the exact string: callers catch and ignore it by content today (the
+// backups tile's stop-and-back-up, beforeClose's benign race).
+func TestStopWhenNotRunningKeepsItsError(t *testing.T) {
+	s, _ := newServerFixture()
+	err := s.Stop()
+	if err == nil || err.Error() != "server not running" {
+		t.Fatalf("Stop on stopped = %v, want exactly 'server not running'", err)
 	}
 }

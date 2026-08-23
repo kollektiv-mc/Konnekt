@@ -9,6 +9,7 @@ import {
   StopServer,
   RestartServer,
 } from '../../wailsjs/go/main/App'
+import { errMsg } from '../lib/ipc'
 import { useSettingsStore } from '../stores/useSettingsStore'
 
 interface ModalState {
@@ -94,6 +95,8 @@ export function QuickCommandsPanel({ serverId, columns = 2 }: QuickCommandsPanel
   const [newCmd, setNewCmd] = useState('')
   const [modal, setModal] = useState<ModalState | null>(null)
   const [confirmAction, setConfirmAction] = useState<'stop' | 'restart' | null>(null)
+  const [lifecycleBusy, setLifecycleBusy] = useState<string | null>(null)
+  const [lifecycleError, setLifecycleError] = useState<string | null>(null)
   const [editing, setEditing] = useState(false)
   const [dropdownPos, setDropdownPos] = useState<DropdownPos | null>(null)
   const [overIndex, setOverIndex] = useState<number | null>(null)
@@ -193,16 +196,28 @@ export function QuickCommandsPanel({ serverId, columns = 2 }: QuickCommandsPanel
     [serverId],
   )
 
+  // A rejected power action used to vanish into `.catch(console.error)`, so a
+  // double-clicked button looked identical to an accepted one. The backend
+  // serializes power actions and rejects the loser with a message meant to be
+  // shown verbatim ("another power action is in progress"); lifecycleBusy is
+  // only the fast path that spares the round trip for clicks in this panel.
   const execLifecycle = useCallback(
     (action: string) => {
+      if (lifecycleBusy) return
       const fns: Record<string, () => Promise<void>> = {
         start: () => StartServer(serverId),
         stop: () => StopServer(serverId),
         restart: () => RestartServer(serverId),
       }
-      fns[action]?.().catch(console.error)
+      const fn = fns[action]
+      if (!fn) return
+      setLifecycleBusy(action)
+      setLifecycleError(null)
+      fn()
+        .catch((err: unknown) => setLifecycleError(errMsg(err)))
+        .finally(() => setLifecycleBusy(null))
     },
-    [serverId],
+    [serverId, lifecycleBusy],
   )
 
   const handleLifecycle = useCallback(
@@ -322,8 +337,9 @@ export function QuickCommandsPanel({ serverId, columns = 2 }: QuickCommandsPanel
                 <button
                   key={item.id}
                   onClick={() => run(item)}
+                  disabled={item.kind === 'lifecycle' && lifecycleBusy !== null}
                   title={item.value}
-                  className="truncate rounded border border-white/10 px-2 py-1.5 text-left text-xs text-white/70 transition-all hover:border-white/25 hover:bg-white/5 hover:text-white"
+                  className="truncate rounded border border-white/10 px-2 py-1.5 text-left text-xs text-white/70 transition-all hover:border-white/25 hover:bg-white/5 hover:text-white disabled:opacity-40"
                 >
                   {item.label}
                 </button>
@@ -334,6 +350,11 @@ export function QuickCommandsPanel({ serverId, columns = 2 }: QuickCommandsPanel
       </div>
 
       <div className="flex shrink-0 flex-col gap-1.5">
+        {lifecycleError && (
+          <div role="alert" className="text-danger text-xs">
+            Action failed: {lifecycleError}
+          </div>
+        )}
         {editing && (
           <div className="relative">
             <input
@@ -443,7 +464,8 @@ export function QuickCommandsPanel({ serverId, columns = 2 }: QuickCommandsPanel
                   execLifecycle(confirmAction)
                   setConfirmAction(null)
                 }}
-                className="border-hairline rounded border-red-400/30 bg-red-400/15 px-3 py-1.5 text-xs text-red-400 transition-colors"
+                disabled={lifecycleBusy !== null}
+                className="border-hairline rounded border-red-400/30 bg-red-400/15 px-3 py-1.5 text-xs text-red-400 transition-colors disabled:opacity-40"
                 onMouseEnter={(e) => {
                   ;(e.currentTarget as HTMLButtonElement).style.background =
                     'rgba(248,113,113,0.25)'
