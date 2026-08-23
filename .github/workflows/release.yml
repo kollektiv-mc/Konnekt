@@ -135,7 +135,7 @@ jobs:
           version="${version//-/~}"
 
           rpmdev-setuptree
-          cp dist/konnekt-linux-amd64 build/appicon.png build/linux/konnekt.desktop ~/rpmbuild/SOURCES/
+          cp dist/konnekt-linux-amd64 build/appicon-256.png build/linux/konnekt.desktop ~/rpmbuild/SOURCES/
           rpmbuild -bb build/linux/konnekt.spec --define "_version $version"
 
           mkdir -p dist-rpm
