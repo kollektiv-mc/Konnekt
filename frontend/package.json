@@ -14,6 +14,8 @@
     "check-bundle": "node scripts/check-bundle-size.mjs",
     "check-tokens": "node scripts/check-token-classes.mjs",
     "check-issue-templates": "node scripts/check-issue-templates.mjs",
+    "sync-labels": "node scripts/sync-labels.mjs",
+    "check-labels": "node scripts/sync-labels.mjs --check",
     "gen:tokens": "node scripts/gen-tokens.mjs",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
