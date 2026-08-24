@@ -1,0 +1,87 @@
+# Every issue carries three labels: one `type:`, one `area:` and one `p0`-`p3`.
+# This is the half of that rule GitHub cannot enforce.
+#
+# A pull request has a merge to block, so CI's `pr-labelled` job simply fails and
+# nothing lands unlabelled. An issue has no such gate: there is no check to go
+# red on and nothing to withhold, so the only honest thing a workflow can do is
+# say so where a person will read it.
+#
+# What made this worth automating is that the failure is invisible without it.
+# #94 found 31 of 32 open issues carrying no priority at all, and the cost was
+# not on GitHub: /suite-kit:suite-sync mirrors an unprioritised issue into Linear
+# at priority None, which sorts below p3 and reads as work nobody wants done.
+# Nothing surfaced that until somebody counted. The area label has the same
+# shape of consequence, one surface further out - website/roadmap.js files each
+# issue into a folder by it, and an issue without one lands in `requested/`.
+name: Issue labels
+
+on:
+  issues:
+    types: [labeled, unlabeled, reopened]
+
+# Only to comment. Nothing here edits labels: which area an issue belongs to and
+# how urgent it is are triage judgements, and a workflow guessing at either
+# would be worse than the gap it is closing.
+permissions:
+  issues: write
+
+jobs:
+  triad:
+    runs-on: ubuntu-latest
+    # `status:needs-triage` means nobody has read it yet, which is exactly when
+    # the three labels are legitimately missing. The forms stamp it on every
+    # issue they file, so checking before it clears would comment on every new
+    # issue the moment it arrives and train everyone to ignore the comment.
+    # Removing it is the act that says "triaged", and that is what this checks.
+    if: >-
+      github.event.issue.state == 'open'
+      && !contains(github.event.issue.labels.*.name, 'status:needs-triage')
+    steps:
+      # Via env rather than interpolated into the script: label names are
+      # attacker-shaped text as far as a shell is concerned, and `${{ }}` inside
+      # a run block is substituted before bash ever sees it. Same reasoning as
+      # ci.yml's pr-labelled job.
+      - name: Find which of the three are missing
+        id: check
+        env:
+          LABELS: ${{ toJSON(github.event.issue.labels.*.name) }}
+        run: |
+          echo "labels: $LABELS"
+          missing=""
+          add() { if [ -z "$missing" ]; then missing="$1"; else missing="$missing, $1"; fi; }
+          echo "$LABELS" | jq -e 'any(.[]; startswith("type:"))' > /dev/null || add "a \`type:\` label"
+          echo "$LABELS" | jq -e 'any(.[]; startswith("area:"))' > /dev/null || add "an \`area:\` label"
+          echo "$LABELS" | jq -e 'any(.[]; test("^p[0-3]$"))'    > /dev/null || add "a priority (\`p0\`-\`p3\`)"
+          echo "missing=$missing" >> "$GITHUB_OUTPUT"
+          if [ -n "$missing" ]; then
+            echo "missing: $missing"
+          else
+            echo "all three present"
+          fi
+
+      # One comment per issue, ever. The trigger fires on every label change, so
+      # without the marker check a triage pass that adds three labels one at a
+      # time would leave three identical comments behind it.
+      - name: Say so, once
+        if: steps.check.outputs.missing != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ISSUE: ${{ github.event.issue.number }}
+          REPO: ${{ github.repository }}
+          MISSING: ${{ steps.check.outputs.missing }}
+          MARKER: '<!-- konnekt-label-triad -->'
+        run: |
+          if gh issue view "$ISSUE" --repo "$REPO" --json comments \
+              --jq '.comments[].body' | grep -qF "$MARKER"; then
+            echo "already flagged, leaving it alone"
+            exit 0
+          fi
+          gh issue comment "$ISSUE" --repo "$REPO" --body "$(cat <<EOF
+          $MARKER
+          This issue has had \`status:needs-triage\` cleared but is still missing: **$MISSING**
+
+          Every issue carries one \`type:\`, one \`area:\` and one \`p0\`-\`p3\`. The area labels are listed in \`.github/labels.yml\`; the reasoning is under "Labelling an issue" in \`agent_docs/CLAUDE.md\`.
+
+          Worth doing rather than ignoring: the area label decides which folder this lands in on the [roadmap page](https://konnekt.pages.dev/roadmap.html), and an issue with no priority mirrors into Linear below \`p3\`, where it reads as work nobody wants done.
+          EOF
+          )"
