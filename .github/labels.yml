@@ -8,10 +8,30 @@
 # erroring, so a typo means the label quietly never gets applied and triage
 # breaks with no signal at all.
 #
+# Two owners, and the difference decides whether a local edit survives:
+#
+#   Suite-owned: `type:*`, `area:ui`, `area:agents`, `p0`-`p3` and
+#   `changelog:skip` come from kollektiv's design/labels.json. Its
+#   scripts/sync-labels.sh runs `gh label create`/`gh label edit` from that
+#   source against every repo in suite.repos.json, which lists Konnekt. The
+#   colors and descriptions below are copied verbatim from it and have to stay
+#   that way: a local edit is both invisible and reported as drift on the next
+#   sync. kollektiv's docs/conventions.md is blunt about the scope of this:
+#   "A repo does not invent its own type or priority labels."
+#
+#   Konnekt-owned: the per-area `area:*` labels, `milestone:*` and `status:*`.
+#   sync-labels.sh is explicitly non-destructive ("nothing here deletes a label
+#   — including ones outside this taxonomy, since a repo may carry its own
+#   labels this suite doesn't govern"), so these are safe to define here. They
+#   also have no sync of their own: creating them on GitHub is a manual
+#   `gh label create` per label, which is why this file is the only reviewable
+#   record of what should exist.
+#
 # Only labels something depends on are listed. GitHub's remaining stock labels
 # (duplicate, good first issue, help wanted, invalid, wontfix) still exist on
 # the repo and are fine to use by hand; they are left out because no template,
-# workflow or script names them.
+# workflow or script names them. The same goes for the suite's `blocked` and
+# `health-check`: they exist on the repo but nothing here reads them.
 
 # Sorts a merged pull request into a release-notes section. Required on every
 # pull request by CI's `pr-labelled` job, and read by
@@ -26,46 +46,141 @@
 # otherwise feature. What went wrong before these were sharpened was #97, a
 # repair filed as a feature because the repair happened to add a row of UI.
 #
-# The four `type:` descriptions below are copied verbatim from kollektiv's
-# design/labels.json and have to stay that way. Unlike the rest of this file,
-# they are not only a declaration: scripts/sync-labels.sh runs `gh label edit`
-# from that source against every repo in the suite, so the live description a
-# person reads in the picker comes from there, and a local edit here is both
-# invisible and reported as drift on the next sync.
+# Suite-owned. Verbatim from design/labels.json, colors included.
 - name: 'type:bug'
-  color: 'ededed'
+  color: 'eb5757'
   description: Existing behavior is wrong. Still a bug when the repair adds new code or new UI.
 - name: 'type:feature'
-  color: 'ededed'
+  color: 'bb87fc'
   description: 'New capability: the product can now do something it never offered.'
 - name: 'type:docs'
-  color: 'ededed'
+  color: '0b84a5'
   description: Documentation only. Counted in the release notes, not listed.
 - name: 'type:chore'
-  color: 'ededed'
+  color: '8792a2'
   description: 'No user-visible change: refactors, tests, CI, deps. Counted in the notes, not listed.'
 
-# Where in the product. Applied during triage from the issue forms' `area`
-# dropdown, whose options come from frontend/src/tiles/registry.ts.
+# Which part of the product. One per option in the issue forms' "Which part of
+# Konnekt?" dropdown, whose list comes from frontend/src/tiles/registry.ts plus
+# the four app-level areas that are not tiles.
+#
+# These exist because the area had nowhere else to live. website/roadmap.js
+# files each issue into a folder, and it used to read the area by parsing the
+# dropdown answer out of the issue *body* - a heading only the forms produce.
+# Every maintainer-filed issue therefore landed in `requested/` no matter what
+# it was about, and the area leaked into issue titles instead: fifteen
+# consecutive scheduler issues each said "scheduler" in the title, because
+# `area:ui` did not say which tile and nothing else could.
+#
+# One shared color on purpose: these answer one question, and a reader scanning
+# the list should see them as a family rather than fifteen unrelated tags.
+#
+# Konnekt-owned.
+- name: 'area:console'
+  color: 'bfd4f2'
+  description: Console tile - live output, log streaming.
+- name: 'area:commands'
+  color: 'bfd4f2'
+  description: Quick commands and custom command buttons.
+- name: 'area:stats'
+  color: 'bfd4f2'
+  description: Stats tile - live server figures.
+- name: 'area:players'
+  color: 'bfd4f2'
+  description: Players tile - roster, kick and ban.
+- name: 'area:performance'
+  color: 'bfd4f2'
+  description: Performance tile - charts and history.
+- name: 'area:scheduler'
+  color: 'bfd4f2'
+  description: Scheduler tile - graphs, blocks, triggers, the node editor.
+- name: 'area:worlds'
+  color: 'bfd4f2'
+  description: Worlds tile - world saves, dimensions, the 3D scene.
+- name: 'area:backups'
+  color: 'bfd4f2'
+  description: Backups tile - create, restore, retention.
+- name: 'area:config'
+  color: 'bfd4f2'
+  description: Server config tile - server.properties and the file editor.
+- name: 'area:notifications'
+  color: 'bfd4f2'
+  description: Notifications tile and OS desktop notifications.
+- name: 'area:mods'
+  color: 'bfd4f2'
+  description: Plugins and mods - Modrinth browsing, install, updates.
+- name: 'area:layout'
+  color: 'bfd4f2'
+  description: Tile layout and dashboard - the grid, presets, crate drag.
+- name: 'area:settings'
+  color: 'bfd4f2'
+  description: Settings page and app-level preferences.
+- name: 'area:server-setup'
+  color: 'bfd4f2'
+  description: Server setup, install and launch - jars, loaders, JVM args.
+- name: 'area:updater'
+  color: 'bfd4f2'
+  description: The in-app updater and its snapshot channel.
+
+# Suite-owned area labels. Verbatim from design/labels.json.
+#
+# `area:ui` is kept declared because the suite defines it and sync-labels.sh
+# recreates it, so deleting it here would be undone on the next run. Konnekt
+# does not apply it any more: "user-facing interface work" describes almost
+# every issue in this repo and so sorts nothing. Use a specific area instead.
+# The issues already carrying it are cleared in the #94 backfill pass.
+# `area:agents` is not a product area and stays in use as-is.
 - name: 'area:ui'
-  color: 'ededed'
-  description: Frontend, tiles, layout.
+  color: 'aed9e0'
+  description: User-facing interface work.
 - name: 'area:agents'
-  color: 'ededed'
-  description: Agent configuration, .claude/, agent_docs/.
+  color: 'f9e2ae'
+  description: suite-kit skills, agents, and Claude Code configuration.
 
 # Which milestone in agent_docs/ROADMAP.md the work belongs to. Drives which
-# Linear milestone a mirrored issue lands in.
+# Linear milestone a mirrored issue lands in, and which stage badge
+# website/roadmap.js prints.
+#
+# `milestone:later` exists because the roadmap page used to infer it: any issue
+# without `milestone:beta` was drawn as LATER, which collapsed three different
+# states into one badge - real Later scope, the five-phase Remote Access
+# programme, and "nobody has staged this yet". Stage is now something an issue
+# says rather than something the absence of a label implies.
+#
+# Konnekt-owned.
 - name: 'milestone:beta'
   color: 'ededed'
   description: Beta scope.
 - name: 'milestone:remote-access'
   color: 'ededed'
   description: Remote Access scope.
+- name: 'milestone:later'
+  color: 'ededed'
+  description: Later scope. Breadth, once the foundations are proven.
+
+# How urgent. Exactly one per issue, per kollektiv's docs/conventions.md
+# § Priority. Backfilling these onto the issues that predate the rule is #94.
+#
+# Suite-owned. Verbatim from design/labels.json, colors included - a repo does
+# not invent its own priority scale, and these four are the whole of it.
+- name: 'p0'
+  color: 'b60205'
+  description: Drop everything.
+- name: 'p1'
+  color: 'd93f0b'
+  description: High priority, next up.
+- name: 'p2'
+  color: 'fbca04'
+  description: Medium priority, normal queue.
+- name: 'p3'
+  color: 'c2e0c6'
+  description: Low priority, nice to have.
 
 # Triage state. Every issue form applies status:needs-triage on creation; the
 # other two are set by a maintainer. Coloured, unlike most of the set above,
 # because triage state is the one thing worth spotting at a glance in a list.
+#
+# Konnekt-owned.
 - name: 'status:needs-triage'
   color: 'fbca04'
   description: Newly filed. Not yet reproduced, deduplicated or scoped.
@@ -83,6 +198,7 @@
   color: 'd876e3'
   description: Further information is requested
 
+# Suite-owned. Verbatim from design/labels.json.
 - name: 'changelog:skip'
   color: '8792a2'
   description: Leave this pull request out of the release notes entirely.
