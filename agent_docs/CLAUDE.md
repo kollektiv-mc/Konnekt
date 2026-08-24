@@ -161,6 +161,50 @@ this repo's GitHub Issues into the Apps team's Konnekt project and matching on a
 `Source: kollektiv-mc/konnekt#<number>` line in the Linear issue description
 rather than on titles. Never write to Linear directly from this repo.
 
+### Labelling an issue
+
+Three labels, always: one `type:`, one `area:`, one `p0`-`p3`. Add a
+`milestone:` once the work is staged. Its absence means nobody has staged it,
+not Later.
+
+`type:` uses the same ladder as a pull request (below). `p0`-`p3` is the suite's
+scale, defined in kollektiv's `docs/conventions.md`, and a repo does not invent
+its own. `area:` is one of the per-area labels in `.github/labels.yml`, matching
+the issue forms' "Which part of Konnekt?" dropdown. Prefer a specific area over
+`area:ui`: the suite defines that one so it still exists, but "user-facing
+interface work" describes nearly every issue in this repo and so sorts nothing.
+
+The area label is load-bearing rather than decoration. `website/roadmap.js`
+files each issue into a folder by it.
+
+### Issue titles
+
+**Name the thing, do not describe the change.** An issue title is a leaf in a
+tree under a folder that already says which area it belongs to, so the area does
+not belong in the title as well.
+
+- No `in the X tile` suffix, no `X tile:` prefix, no `X — thing`.
+- A short noun phrase. If it reads as a sentence, it is too long.
+- No em dashes.
+
+| Instead of | Write |
+| --- | --- |
+| Make the scheduler minimap resizable | Resizable minimap |
+| Add a floating node manager panel to the scheduler editor | Floating node manager panel |
+| Show past-session server logs in the console tile | Past-session logs |
+| Render real terrain previews in the Worlds tile | Terrain previews |
+
+This is deliberately **not** the pull request rule below, which is imperative
+mood. A merged pull request title is a release-notes line and has to read as a
+sentence about what shipped; an issue title is an index entry. Different
+surface, different grammar, and the difference is on purpose.
+
+What went wrong without this: the area had nowhere to live except the title, so
+fifteen consecutive scheduler issues each said "scheduler" in theirs, and three
+competing shapes were in use at once (`thing in the X tile`, `X tile: thing`,
+`X — thing`). Across the 32 issues not filed through a form, titles averaged 8.2
+words and 24 of them named their own area.
+
 ## Commits & pull requests
 
 Merged PR titles become the release notes, so a title is public copy, not a
