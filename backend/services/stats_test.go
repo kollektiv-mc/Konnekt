@@ -74,6 +74,10 @@ func TestTickEmitsServerStatusWhileStopped(t *testing.T) {
 	if st.Uptime != "0s" {
 		t.Errorf("Uptime = %q, want %q", st.Uptime, "0s")
 	}
+	// Pins the zero-value contract: a service that never started is offline.
+	if st.State != "offline" {
+		t.Errorf("State = %q while stopped, want %q", st.State, "offline")
+	}
 	// MaxPlayers is the field stats:snapshot has no equivalent for; a zero here
 	// would blank the tile's "players / maxPlayers" readout.
 	if st.MaxPlayers != 20 {
@@ -131,6 +135,7 @@ func TestPushedStatusMatchesGetServerStatusShape(t *testing.T) {
 
 	fetched := models.ServerStatus{
 		Running:    server.IsRunning(),
+		State:      server.State(),
 		Uptime:     server.Uptime(),
 		Players:    server.PlayerCount(),
 		MaxPlayers: server.MaxPlayers(),

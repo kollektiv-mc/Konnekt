@@ -52,6 +52,31 @@ type playerSession struct {
 	ip   string
 }
 
+// serverState is the lifecycle vocabulary (#108), closed at four states.
+// The zero value is offline on purpose: tests construct bare &ServerService{}
+// values, and a service that has never started a server is offline.
+type serverState int
+
+const (
+	stateOffline serverState = iota
+	stateStarting
+	stateRunning
+	stateStopping
+)
+
+func (st serverState) String() string {
+	switch st {
+	case stateStarting:
+		return "starting"
+	case stateRunning:
+		return "running"
+	case stateStopping:
+		return "stopping"
+	default:
+		return "offline"
+	}
+}
+
 type ServerService struct {
 	ctx       context.Context
 	mu        sync.Mutex
@@ -116,8 +141,9 @@ type ServerService struct {
 	// can serve it as that event's readable getter twin.
 	lastStop models.ServerStopped
 
-	// Power-action gate (#109) and launch seam. Per-instance state: both move
-	// wholesale into #57's serverInstance when that extraction lands.
+	// Power-action gate (#109), launch seam and lifecycle state (#108).
+	// Per-instance state: all of it moves wholesale into #57's serverInstance
+	// when that extraction lands.
 	//
 	// powerMu serializes Start, Stop and Restart end-to-end; Restart holds it
 	// across both legs. Acquired fail-fast only (TryLock): a second power
@@ -133,6 +159,12 @@ type ServerService struct {
 	// process so power-action tests run without java. Never reassigned outside
 	// NewServerService and tests.
 	launchCmd func(jarPath, workingDir string, jvmArgs []string) (*exec.Cmd, error)
+
+	// state is the lifecycle machine's current value, guarded by mu and moved
+	// only through setStateLocked so every actual change emits server:state
+	// exactly once. Running stays the "process alive" flag; state refines it
+	// with the starting and stopping phases.
+	state serverState
 }
 
 func NewServerService() *ServerService {
@@ -242,6 +274,7 @@ func (s *ServerService) start(serverID string, jarPath string, jvmArgs []string,
 	s.startTime = time.Now()
 	s.serverID = serverID
 	s.expectedStop = false
+	s.setStateLocked(stateStarting, false)
 
 	s.logBufMu.Lock()
 	s.logBuf = s.logBuf[:0]
@@ -312,7 +345,14 @@ func (s *ServerService) streamOutput(r io.Reader) {
 
 		if reServerStop.MatchString(line) {
 			s.mu.Lock()
+			// The flag write is unconditional (any spelling of a deliberate
+			// shutdown marks intent); the state transition is gated so a late
+			// buffered line cannot drag an already-offline machine back to
+			// stopping.
 			s.expectedStop = true
+			if s.state == stateStarting || s.state == stateRunning {
+				s.setStateLocked(stateStopping, false)
+			}
 			s.mu.Unlock()
 		}
 
@@ -410,6 +450,7 @@ func (s *ServerService) waitForExit() {
 	expected := s.expectedStop
 	s.running = false
 	s.cachedProc = nil
+	s.setStateLocked(stateOffline, false)
 	stop := models.ServerStopped{Expected: expected, ExitCode: exitCode}
 	s.lastStop = stop
 	s.mu.Unlock()
@@ -451,6 +492,7 @@ func (s *ServerService) stop() error {
 	}
 
 	s.expectedStop = true
+	s.setStateLocked(stateStopping, false)
 
 	if s.stdin != nil {
 		_, _ = fmt.Fprintln(s.stdin, "stop") //nolint:errcheck // best-effort; the timeout + killTree fallback below is the real safety net
@@ -620,6 +662,26 @@ func (s *ServerService) IsRunning() bool {
 	return s.running
 }
 
+// setStateLocked moves the lifecycle state machine (#108). Callers hold s.mu.
+// Emits server:state only on an actual change, so subscribers never see a
+// duplicate transition; emitting under the lock follows start()'s existing
+// server:started emit (EventBus fans out in-process handlers in goroutines).
+func (s *ServerService) setStateLocked(next serverState, timedOut bool) {
+	if s.state == next {
+		return
+	}
+	s.state = next
+	s.bus.Emit(EventServerState, models.ServerStateChange{State: next.String(), TimedOut: timedOut})
+}
+
+// State reports the lifecycle phase as its wire spelling, the readable getter
+// twin of the server:state event (via GetServerStatus().State).
+func (s *ServerService) State() string {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.state.String()
+}
+
 // Summary describes a configured server for display: what it is, where it
 // lives, what it launches from, and whether it is the one currently running.
 // Loader/version fall back to detection so a server that has never been
@@ -709,10 +771,13 @@ func (s *ServerService) ResumeSaves() {
 }
 
 func (s *ServerService) Uptime() string {
-	if !s.running {
+	s.mu.Lock()
+	running, started := s.running, s.startTime
+	s.mu.Unlock()
+	if !running {
 		return "0s"
 	}
-	d := time.Since(s.startTime).Round(time.Second)
+	d := time.Since(started).Round(time.Second)
 	h := int(d.Hours())
 	m := int(d.Minutes()) % 60
 	sec := int(d.Seconds()) % 60

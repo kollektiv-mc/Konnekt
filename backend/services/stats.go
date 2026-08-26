@@ -49,10 +49,11 @@ func (s *StatsService) run() {
 func (s *StatsService) tick() {
 	// Status goes out every tick whether the server is up or not: this is what
 	// replaces the stats tile's frontend poll, and a stop has to reach the UI
-	// too. Same seven accessors GetServerStatus() reads, so the pushed payload
+	// too. Same eight accessors GetServerStatus() reads, so the pushed payload
 	// and the fetched one cannot drift apart.
 	s.bus.Emit(EventServerStatus, models.ServerStatus{
 		Running:    s.server.IsRunning(),
+		State:      s.server.State(),
 		Uptime:     s.server.Uptime(),
 		Players:    s.server.PlayerCount(),
 		MaxPlayers: s.server.MaxPlayers(),
