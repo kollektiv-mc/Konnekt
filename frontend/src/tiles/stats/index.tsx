@@ -24,6 +24,25 @@ function StatRow({
   )
 }
 
+// The status pill's five faces. Starting and stopping share the warning amber
+// (the label disambiguates); the transitional glow matches the accent dot's
+// arbitrary-shadow idiom.
+const PILL = {
+  unreachable: { label: 'Unreachable', dot: 'bg-red-500', text: 'text-red-400' },
+  offline: { label: 'Offline', dot: 'bg-red-500', text: 'text-red-400' },
+  starting: {
+    label: 'Starting',
+    dot: 'bg-warning shadow-[0_0_6px_var(--warning)]',
+    text: 'text-warning',
+  },
+  stopping: {
+    label: 'Stopping',
+    dot: 'bg-warning shadow-[0_0_6px_var(--warning)]',
+    text: 'text-warning',
+  },
+  online: { label: 'Online', dot: 'bg-accent shadow-[0_0_6px_var(--accent)]', text: 'text-accent' },
+} as const
+
 // `serverId` is unused: the status this renders is hydrated once in App by
 // useServerStatusSync, so the tile is a pure reader of the shared store.
 export function StatsTile(_props: TileProps) {
@@ -32,18 +51,28 @@ export function StatsTile(_props: TileProps) {
 
   const ramPct = status.ramTotal > 0 ? (status.ramUsed / status.ramTotal) * 100 : 0
   // A stopped server answers and says it is stopped; an unreachable backend
-  // says nothing, and the numbers below are whatever was last known.
+  // says nothing, and the numbers below are whatever was last known. The
+  // stats readouts stay keyed to running (a live process has real RAM and
+  // uptime through starting and stopping); only the pill reads the phase.
   const online = reachable && status.running
+  const pill =
+    PILL[
+      !reachable
+        ? 'unreachable'
+        : status.state === 'starting'
+          ? 'starting'
+          : status.state === 'stopping'
+            ? 'stopping'
+            : status.running
+              ? 'online'
+              : 'offline'
+    ]
 
   return (
     <div className="flex h-full flex-col justify-between px-3 py-3">
       <div className="mb-3 flex items-center gap-2">
-        <span
-          className={`h-2 w-2 rounded-full ${online ? 'bg-accent shadow-[0_0_6px_var(--accent)]' : 'bg-red-500'}`}
-        />
-        <span className={`text-sm font-semibold ${online ? 'text-accent' : 'text-red-400'}`}>
-          {!reachable ? 'Unreachable' : status.running ? 'Online' : 'Offline'}
-        </span>
+        <span className={`h-2 w-2 rounded-full ${pill.dot}`} />
+        <span className={`text-sm font-semibold ${pill.text}`}>{pill.label}</span>
         {online && <span className="text-text-faint ml-auto text-xs">{status.uptime}</span>}
       </div>
 

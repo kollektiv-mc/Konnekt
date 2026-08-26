@@ -6,6 +6,7 @@ export const EVENTS = {
   SERVER_STOPPED: 'server:stopped',
   EULA_REQUIRED: 'server:eula-required',
   SERVER_STATUS: 'server:status',
+  SERVER_STATE: 'server:state',
   STATS_SNAPSHOT: 'stats:snapshot',
   PLAYER_JOINED: 'player:joined',
   PLAYER_LEFT: 'player:left',

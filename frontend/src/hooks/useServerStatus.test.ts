@@ -13,6 +13,7 @@ vi.mock('../../wailsjs/runtime/runtime')
 function status(over: Partial<ServerStatus> = {}): ServerStatus {
   return {
     running: true,
+    state: 'running',
     uptime: '1m 0s',
     players: 2,
     maxPlayers: 20,
@@ -23,7 +24,14 @@ function status(over: Partial<ServerStatus> = {}): ServerStatus {
   }
 }
 
-const OFFLINE = status({ running: false, uptime: '0s', players: 0, tps: 0, ramUsed: 0 })
+const OFFLINE = status({
+  running: false,
+  state: 'offline',
+  uptime: '0s',
+  players: 0,
+  tps: 0,
+  ramUsed: 0,
+})
 
 const stored = () => useServerStore.getState().status
 
@@ -83,6 +91,23 @@ describe('useServerStatusSync', () => {
     expect(useServerStore.getState().reachable).toBe(true)
   })
 
+  // The phase event carries everything it announces, so it merges into the
+  // stored status directly — no follow-up binding call, and the other fields
+  // survive untouched.
+  it('applies a server:state push without refetching', async () => {
+    renderHook(() => useServerStatusSync('srv1'))
+    await waitFor(() => expect(stored().running).toBe(true))
+
+    await act(async () => {
+      handlers[EVENTS.SERVER_STATE]?.({ state: 'stopping', timedOut: false })
+    })
+
+    expect(stored().state).toBe('stopping')
+    expect(stored().uptime).toBe('1m 0s')
+    expect(App.GetServerStatus).toHaveBeenCalledTimes(1)
+    expect(useServerStore.getState().reachable).toBe(true)
+  })
+
   it.each([
     ['server started', EVENTS.SERVER_STARTED],
     ['server stopped', EVENTS.SERVER_STOPPED],
@@ -134,10 +159,10 @@ describe('useServerStatusSync', () => {
 
   it('unsubscribes every listener on unmount', async () => {
     const { unmount } = renderHook(() => useServerStatusSync('srv1'))
-    await waitFor(() => expect(EventsOn).toHaveBeenCalledTimes(3))
+    await waitFor(() => expect(EventsOn).toHaveBeenCalledTimes(4))
 
     unmount()
-    expect(off).toHaveBeenCalledTimes(3)
+    expect(off).toHaveBeenCalledTimes(4)
   })
 
   it('refetches when the server changes', async () => {
