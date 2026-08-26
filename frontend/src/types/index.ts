@@ -48,6 +48,7 @@ export interface AppSettings {
   backgroundStyle: 'solid' | 'gradient'
   autoStartActiveServer: boolean
   confirmBeforeStop: boolean
+  stopGraceSeconds: number
   consoleBufferLines: number
   consoleTimestamps: boolean
   notifyOnCrash: boolean

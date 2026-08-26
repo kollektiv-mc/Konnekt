@@ -72,3 +72,80 @@ describe('QuickCommandsPanel power actions', () => {
     await waitFor(() => expect(screen.queryByRole('alert')).toBeNull())
   })
 })
+
+const FORCE_ITEMS = JSON.stringify([
+  { id: '1', label: 'Stop', kind: 'lifecycle', value: 'stop' },
+  { id: '2', label: 'Force Stop', kind: 'lifecycle', value: 'force-stop' },
+])
+
+// #110's escape hatch. A graceful stop can now legitimately hold lifecycleBusy
+// for the whole grace window, so force stop must stay clickable while every
+// other lifecycle button is disabled — otherwise it cannot fire in the one
+// situation it exists for.
+describe('QuickCommandsPanel force stop', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    vi.mocked(App.GetCommandButtons).mockResolvedValue(FORCE_ITEMS)
+  })
+
+  it('fires while a graceful stop is still in flight', async () => {
+    let resolveStop!: () => void
+    vi.mocked(App.StopServer).mockImplementation(
+      () =>
+        new Promise<void>((res) => {
+          resolveStop = res
+        }),
+    )
+    vi.mocked(App.ForceStopServer).mockResolvedValue(undefined)
+    render(<QuickCommandsPanel serverId="srv1" />)
+
+    const stop = (await screen.findByRole('button', { name: 'Stop' })) as HTMLButtonElement
+    fireEvent.click(stop)
+    expect(stop.disabled).toBe(true)
+
+    // The wedged-case affordance appears, and the pinned Force Stop button
+    // stays enabled while everything else is locked out.
+    const pinned = screen.getByRole('button', { name: 'Force Stop' }) as HTMLButtonElement
+    expect(pinned.disabled).toBe(false)
+    fireEvent.click(screen.getByRole('button', { name: 'Force stop' }))
+
+    // Always through the confirm dialog; its confirm is exempt from the busy
+    // disable. Two "Force stop" buttons exist now (affordance + modal) — the
+    // modal's renders last.
+    const confirms = screen.getAllByRole('button', { name: 'Force stop' })
+    const confirm = confirms[confirms.length - 1] as HTMLButtonElement
+    expect(confirm.disabled).toBe(false)
+    fireEvent.click(confirm)
+    await waitFor(() => expect(App.ForceStopServer).toHaveBeenCalledTimes(1))
+
+    resolveStop()
+    await waitFor(() => expect(screen.queryByText('Stopping…')).toBeNull())
+    expect(stop.disabled).toBe(false)
+  })
+
+  it('always confirms, even with confirm-before-stop off', async () => {
+    vi.mocked(App.ForceStopServer).mockResolvedValue(undefined)
+    render(<QuickCommandsPanel serverId="srv1" />)
+
+    // The store default is confirmBeforeStop: false, so a plain stop would
+    // not confirm — force stop still must.
+    fireEvent.click(await screen.findByRole('button', { name: 'Force Stop' }))
+    expect(App.ForceStopServer).not.toHaveBeenCalled()
+    expect(screen.getByText('Force stop server?')).toBeTruthy()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Force stop' }))
+    await waitFor(() => expect(App.ForceStopServer).toHaveBeenCalledTimes(1))
+  })
+
+  it('surfaces a rejection in the alert area', async () => {
+    vi.mocked(App.ForceStopServer).mockRejectedValue('force stop failed')
+    render(<QuickCommandsPanel serverId="srv1" />)
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Force Stop' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Force stop' }))
+
+    await waitFor(() =>
+      expect(screen.getByRole('alert').textContent).toContain('force stop failed'),
+    )
+  })
+})

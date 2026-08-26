@@ -17,6 +17,7 @@ const DEFAULTS = {
   backgroundStyle: 'solid' as const,
   autoStartActiveServer: false,
   confirmBeforeStop: false,
+  stopGraceSeconds: 60,
   consoleBufferLines: 1000,
   consoleTimestamps: false,
   notifyOnCrash: false,
