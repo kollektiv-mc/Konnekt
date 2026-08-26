@@ -4,6 +4,7 @@ import (
 	"path/filepath"
 	"reflect"
 	"testing"
+	"time"
 
 	"konnekt/backend/models"
 )
@@ -177,5 +178,17 @@ func TestAppSettingsFillGapsInAnOlderFileWithDefaults(t *testing.T) {
 	}
 	if !got.CheckUpdatesOnStartup {
 		t.Error("CheckUpdatesOnStartup = false, want the default true for a key the file lacks")
+	}
+	if got.StopGraceSeconds != 60 {
+		t.Errorf("StopGraceSeconds = %d, want the default 60 for a key the file lacks", got.StopGraceSeconds)
+	}
+}
+
+// StopGrace is the duration form Stop's callers pass down; on a fresh install
+// it is the 60-second default.
+func TestStopGraceConvertsSecondsToDuration(t *testing.T) {
+	s := newTestConfigService(t)
+	if got := s.StopGrace(); got != 60*time.Second {
+		t.Errorf("StopGrace() = %s, want 60s", got)
 	}
 }
