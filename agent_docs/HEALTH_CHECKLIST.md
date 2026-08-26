@@ -583,7 +583,8 @@ was partly wrong)
   that died on one long line"), power-action races including a broken
   restart-from-stopped (#109 — closed 2026-08-23, HEALTH_LOG "The power
   actions that raced each other"), an 8-second stop-then-SIGKILL that can kill
-  a world save (#110), a discarded exit code (#111 — closed 2026-08-22 as PR
+  a world save (#110 — closed 2026-08-26, HEALTH_LOG "The stop that killed
+  mid-save"), a discarded exit code (#111 — closed 2026-08-22 as PR
   #147), unquiesced world duplication
   (#115 — closed 2026-08-22, HEALTH_LOG "The torn copy of a live world"), and
   non-atomic config writes (#116 — closed 2026-08-22, HEALTH_LOG "The
