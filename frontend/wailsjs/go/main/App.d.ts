@@ -35,6 +35,8 @@ export function DownloadAndInstallUpdate():Promise<void>;
 
 export function DuplicateWorld(arg1:string,arg2:string,arg3:string):Promise<void>;
 
+export function ForceStopServer(arg1:string):Promise<void>;
+
 export function GetActiveLayout():Promise<string>;
 
 export function GetActiveServerID():Promise<string>;

@@ -47,7 +47,7 @@ func TestStopFromStartingPassesThroughStopping(t *testing.T) {
 		t.Fatalf("State() after Start = %q, want starting", got)
 	}
 
-	if err := s.Stop(); err != nil {
+	if err := s.Stop(0); err != nil {
 		t.Fatalf("Stop = %v, want nil", err)
 	}
 	if got := s.State(); got != "offline" {
@@ -120,7 +120,7 @@ func TestBootReachesRunningOnDoneLine(t *testing.T) {
 		t.Fatalf("State() after the Done line = %q, want running", got)
 	}
 
-	if err := s.Stop(); err != nil {
+	if err := s.Stop(0); err != nil {
 		t.Fatalf("Stop = %v, want nil", err)
 	}
 
@@ -216,7 +216,7 @@ func TestStartingTimeoutPromotesToRunning(t *testing.T) {
 		t.Errorf("console history holds no timeout banner: %v", s.GetConsoleHistory())
 	}
 
-	if err := s.Stop(); err != nil {
+	if err := s.Stop(0); err != nil {
 		t.Errorf("cleanup Stop = %v, want nil", err)
 	}
 }
@@ -254,7 +254,7 @@ func TestReadySuppressesTheTimeout(t *testing.T) {
 		}
 	}
 
-	if err := s.Stop(); err != nil {
+	if err := s.Stop(0); err != nil {
 		t.Errorf("cleanup Stop = %v, want nil", err)
 	}
 }
@@ -303,7 +303,7 @@ func TestTPSPollRearmsAcrossBoots(t *testing.T) {
 	}
 
 	first := boot(1)
-	if err := s.Stop(); err != nil {
+	if err := s.Stop(0); err != nil {
 		t.Fatalf("Stop after boot 1 = %v, want nil", err)
 	}
 	select {
@@ -316,7 +316,7 @@ func TestTPSPollRearmsAcrossBoots(t *testing.T) {
 	if second == first {
 		t.Fatal("boot 2 reused boot 1's TPS gate instead of re-arming")
 	}
-	if err := s.Stop(); err != nil {
+	if err := s.Stop(0); err != nil {
 		t.Fatalf("Stop after boot 2 = %v, want nil", err)
 	}
 }

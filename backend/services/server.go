@@ -60,6 +60,16 @@ var (
 // pill that says Starting longer; too short means falsely claiming ready.
 const startingDeadline = 10 * time.Minute
 
+// stopGraceDefault bounds a graceful stop when no configured grace reaches
+// stop() (a zero from an unreadable settings file, tests passing 0). 60s
+// replaces the old fixed 8s, which a large world save could legitimately
+// exceed — getting killed mid-save for it (#110). maxStopGrace caps a wild
+// settings value at Wings' own user-stop deadline.
+const (
+	stopGraceDefault = 60 * time.Second
+	maxStopGrace     = 10 * time.Minute
+)
+
 // playerSession holds per-session data captured from log lines.
 type playerSession struct {
 	uuid string
@@ -163,8 +173,9 @@ type ServerService struct {
 	// across both legs. Acquired fail-fast only (TryLock): a second power
 	// action gets ErrPowerActionInProgress instead of queueing. waitForExit,
 	// the crash path, never touches it, so a dying process tears down freely
-	// even mid-action. #110's force kill will deliberately bypass it: TryLock,
-	// proceed regardless, unlock only if that TryLock succeeded.
+	// even mid-action. ForceStop (#110) deliberately bypasses it: TryLock,
+	// proceed regardless, unlock only if that TryLock succeeded — its reason
+	// to exist is a graceful stop wedged inside the gate.
 	powerMu sync.Mutex
 
 	// launchCmd builds the child process for start(). A test seam in the #115
@@ -185,6 +196,13 @@ type ServerService struct {
 	// in the launchCmd spirit: never reassigned outside NewServerService and
 	// tests.
 	startingTimeout time.Duration
+
+	// killTree is the platform process-tree kill (server_windows.go /
+	// server_other.go), behind a seam like launchCmd: the test fixtures'
+	// children lack the Setpgid/Job setup a real boot gets, so the genuine
+	// group kill would no-op there. Never reassigned outside NewServerService
+	// and tests.
+	killTree func(pid int)
 }
 
 func NewServerService() *ServerService {
@@ -195,6 +213,7 @@ func NewServerService() *ServerService {
 		logTPS:          -1,
 		launchCmd:       defaultLaunchCmd,
 		startingTimeout: startingDeadline,
+		killTree:        killTree,
 	}
 }
 
@@ -239,12 +258,13 @@ func (s *ServerService) Start(serverID string, jarPath string, jvmArgs []string,
 // action can slip between the legs. On a stopped server the stop leg is
 // skipped: restart-from-stopped is a plain start (#109 owner decision), which
 // also covers a server that crashed between the gate and the stop leg.
-func (s *ServerService) Restart(serverID string, jarPath string, jvmArgs []string, workingDir string) error {
+// grace bounds the stop leg exactly as it does Stop's.
+func (s *ServerService) Restart(serverID string, jarPath string, jvmArgs []string, workingDir string, grace time.Duration) error {
 	if !s.powerMu.TryLock() {
 		return ErrPowerActionInProgress
 	}
 	defer s.powerMu.Unlock()
-	if err := s.stop(); err != nil && !errors.Is(err, errServerNotRunning) {
+	if err := s.stop(grace); err != nil && !errors.Is(err, errServerNotRunning) {
 		return err
 	}
 	return s.start(serverID, jarPath, jvmArgs, workingDir)
@@ -255,8 +275,8 @@ func (s *ServerService) start(serverID string, jarPath string, jvmArgs []string,
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	// Defense in depth behind the gate: also guards #110's future force-kill
-	// path, which deliberately bypasses powerMu.
+	// Defense in depth behind the gate: also guards ForceStop's path, which
+	// deliberately bypasses powerMu (#110).
 	if s.running {
 		return fmt.Errorf("server already running")
 	}
@@ -505,16 +525,27 @@ func (s *ServerService) GetLastStop() models.ServerStopped {
 	return s.lastStop
 }
 
-func (s *ServerService) Stop() error {
+// Stop shuts the server down gracefully, waiting up to grace for it to save
+// and exit before force killing the process tree. grace <= 0 means the
+// default; callers with a configured value (ConfigService.StopGrace) pass it
+// through.
+func (s *ServerService) Stop(grace time.Duration) error {
 	if !s.powerMu.TryLock() {
 		return ErrPowerActionInProgress
 	}
 	defer s.powerMu.Unlock()
-	return s.stop()
+	return s.stop(grace)
 }
 
 // stop is Stop without the power gate. Callers hold powerMu.
-func (s *ServerService) stop() error {
+func (s *ServerService) stop(grace time.Duration) error {
+	if grace <= 0 {
+		grace = stopGraceDefault
+	}
+	if grace > maxStopGrace {
+		grace = maxStopGrace
+	}
+
 	s.mu.Lock()
 	if !s.running {
 		s.mu.Unlock()
@@ -538,13 +569,62 @@ func (s *ServerService) stop() error {
 	exited := s.exited
 	s.mu.Unlock()
 
+	// Two-stage wait so a slow world save is narrated instead of looking like
+	// a hang: a warning at half the grace, the kill at its end (#110). The
+	// state stays stopping throughout; waitForExit flips it offline.
+	half := grace / 2
 	select {
 	case <-exited:
-	case <-time.After(8 * time.Second):
-		killTree(pid)
-		<-exited
+		return nil
+	case <-time.After(half):
+	}
+	s.emitConsoleLine(fmt.Sprintf("[Konnekt] Still waiting for the server to stop (%s before force kill)", grace-half))
+
+	select {
+	case <-exited:
+		return nil
+	case <-time.After(grace - half):
+	}
+	s.emitConsoleLine(fmt.Sprintf("[Konnekt] Server did not stop within %s, force killing the process tree", grace))
+	s.killTree(pid)
+	<-exited
+	return nil
+}
+
+// ForceStop kills the server process tree immediately, the escape hatch for
+// a graceful stop that is wedged. It bypasses the power gate on purpose:
+// TryLock so a free gate is still claimed (keeping Start/Restart out for the
+// duration), proceed regardless when a stop already holds it, unlock only if
+// this call's own TryLock succeeded.
+//
+// A missing process is a successful force stop — deliberately unlike Stop's
+// pinned "server not running" error — because this call's contract is "make
+// it dead", and dead already is success. No stopTPSPoll here: waitForExit
+// runs it during the teardown this kill triggers, and it stays the single
+// writer of the offline transition, the stopped payload and the exited close.
+func (s *ServerService) ForceStop() error {
+	if s.powerMu.TryLock() {
+		defer s.powerMu.Unlock()
 	}
 
+	s.mu.Lock()
+	if !s.running {
+		s.mu.Unlock()
+		return nil
+	}
+	s.expectedStop = true
+	s.setStateLocked(stateStopping, false) // no-op if a graceful stop got here first
+	if s.stdin != nil {
+		s.stdin.Close()
+		s.stdin = nil
+	}
+	pid := s.cmd.Process.Pid
+	exited := s.exited
+	s.mu.Unlock()
+
+	s.emitConsoleLine("[Konnekt] Force stopping: killing the server process tree")
+	s.killTree(pid)
+	<-exited
 	return nil
 }
 

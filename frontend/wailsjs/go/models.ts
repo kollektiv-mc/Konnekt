@@ -10,6 +10,7 @@ export namespace models {
 	    backgroundStyle: string;
 	    autoStartActiveServer: boolean;
 	    confirmBeforeStop: boolean;
+	    stopGraceSeconds: number;
 	    consoleBufferLines: number;
 	    consoleTimestamps: boolean;
 	    notifyOnCrash: boolean;
@@ -35,6 +36,7 @@ export namespace models {
 	        this.backgroundStyle = source["backgroundStyle"];
 	        this.autoStartActiveServer = source["autoStartActiveServer"];
 	        this.confirmBeforeStop = source["confirmBeforeStop"];
+	        this.stopGraceSeconds = source["stopGraceSeconds"];
 	        this.consoleBufferLines = source["consoleBufferLines"];
 	        this.consoleTimestamps = source["consoleTimestamps"];
 	        this.notifyOnCrash = source["notifyOnCrash"];

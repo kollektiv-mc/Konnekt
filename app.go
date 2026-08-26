@@ -69,6 +69,14 @@ func NewApp() *App {
 	}
 }
 
+// quitStopGrace bounds the close-time stop. Deliberately NOT the user's
+// configurable stop grace: quitting the app must not hang for a minute or
+// ten, and the Windows Job Object / Linux Pdeathsig tie the java tree to
+// Konnekt's lifetime anyway, so the OS finishes whatever this best-effort
+// stop does not. 8 seconds preserves the pre-#110 quit behavior exactly.
+// #117 (ask on close, re-adopt on relaunch) will rewrite this path.
+const quitStopGrace = 8 * time.Second
+
 func (a *App) beforeClose(ctx context.Context) bool {
 	a.schedulerService.StopScheduler()
 	if a.serverService.IsRunning() {
@@ -79,7 +87,7 @@ func (a *App) beforeClose(ctx context.Context) bool {
 		// Pdeathsig tie the java tree to Konnekt's lifetime). A process that
 		// ignores the stdin stop is handled inside Stop by killTree, not
 		// reported here.
-		_ = a.serverService.Stop() //nolint:errcheck // see above
+		_ = a.serverService.Stop(quitStopGrace) //nolint:errcheck // see above
 	}
 	return false
 }
@@ -278,7 +286,7 @@ func (a *App) StartServer(serverID string) error {
 }
 
 func (a *App) StopServer(serverID string) error {
-	return a.serverService.Stop()
+	return a.serverService.Stop(a.configService.StopGrace())
 }
 
 func (a *App) RestartServer(serverID string) error {
@@ -286,7 +294,14 @@ func (a *App) RestartServer(serverID string) error {
 	if err != nil {
 		return err
 	}
-	return a.serverService.Restart(serverID, cfg.JarPath, cfg.JvmArgs, cfg.WorkingDir)
+	return a.serverService.Restart(serverID, cfg.JarPath, cfg.JvmArgs, cfg.WorkingDir, a.configService.StopGrace())
+}
+
+// ForceStopServer kills the server process tree immediately, bypassing the
+// power-action gate — the escape hatch for a stop that is wedged. serverID is
+// ignored like StopServer's (single active server).
+func (a *App) ForceStopServer(serverID string) error {
+	return a.serverService.ForceStop()
 }
 
 // GetLastStop reports the most recent stop's detail, the readable getter twin

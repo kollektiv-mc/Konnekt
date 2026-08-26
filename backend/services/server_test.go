@@ -259,7 +259,7 @@ func TestWaitForExitNormalStopWritesNoBanner(t *testing.T) {
 }
 
 // consumeStdinCommand returns a process that exits when its stdin closes —
-// stop()'s graceful path, with no 8-second killTree wait.
+// stop()'s graceful path, with no killTree wait at the end of the grace.
 func consumeStdinCommand(t *testing.T) *exec.Cmd {
 	t.Helper()
 	if runtime.GOOS == "windows" {
@@ -328,7 +328,7 @@ func TestConcurrentStopsSecondFailsFast(t *testing.T) {
 	release, stopSeen := fakeRunningServer(t, s)
 
 	errCh := make(chan error, 1)
-	go func() { errCh <- s.Stop() }()
+	go func() { errCh <- s.Stop(0) }()
 
 	select {
 	case <-stopSeen:
@@ -336,7 +336,7 @@ func TestConcurrentStopsSecondFailsFast(t *testing.T) {
 		t.Fatal("first Stop never reached its stdin close")
 	}
 
-	if err := s.Stop(); !errors.Is(err, ErrPowerActionInProgress) {
+	if err := s.Stop(0); !errors.Is(err, ErrPowerActionInProgress) {
 		t.Fatalf("second Stop = %v, want ErrPowerActionInProgress", err)
 	}
 
@@ -355,7 +355,7 @@ func TestConcurrentStopsSecondFailsFast(t *testing.T) {
 	}
 	// The gate must be released again: a third Stop reports the ordinary
 	// not-running error, not contention.
-	if err := s.Stop(); !errors.Is(err, errServerNotRunning) {
+	if err := s.Stop(0); !errors.Is(err, errServerNotRunning) {
 		t.Errorf("third Stop = %v, want errServerNotRunning", err)
 	}
 }
@@ -371,7 +371,7 @@ func TestRestartBackToBackSecondFailsFast(t *testing.T) {
 
 	dir := t.TempDir()
 	errCh := make(chan error, 1)
-	go func() { errCh <- s.Restart("srv1", "", nil, dir) }()
+	go func() { errCh <- s.Restart("srv1", "", nil, dir, 0) }()
 
 	select {
 	case <-stopSeen:
@@ -379,7 +379,7 @@ func TestRestartBackToBackSecondFailsFast(t *testing.T) {
 		t.Fatal("restart's stop leg never reached its stdin close")
 	}
 
-	if err := s.Restart("srv1", "", nil, dir); !errors.Is(err, ErrPowerActionInProgress) {
+	if err := s.Restart("srv1", "", nil, dir, 0); !errors.Is(err, ErrPowerActionInProgress) {
 		t.Fatalf("second Restart = %v, want ErrPowerActionInProgress", err)
 	}
 
@@ -406,7 +406,7 @@ func TestRestartBackToBackSecondFailsFast(t *testing.T) {
 		t.Error("restart's stop leg emitted Expected=false — a crash notification for a deliberate restart")
 	}
 
-	if err := s.Stop(); err != nil {
+	if err := s.Stop(0); err != nil {
 		t.Errorf("cleanup Stop = %v, want nil", err)
 	}
 }
@@ -417,7 +417,7 @@ func TestRestartFromStoppedIsAPlainStart(t *testing.T) {
 	s, _ := newServerFixture()
 	fakeLaunch(t, s)
 
-	if err := s.Restart("srv1", "", nil, t.TempDir()); err != nil {
+	if err := s.Restart("srv1", "", nil, t.TempDir(), 0); err != nil {
 		t.Fatalf("Restart from stopped = %v, want nil", err)
 	}
 	if !s.IsRunning() {
@@ -426,7 +426,7 @@ func TestRestartFromStoppedIsAPlainStart(t *testing.T) {
 	if got := s.ActiveServerID(); got != "srv1" {
 		t.Errorf("ActiveServerID() = %q, want srv1", got)
 	}
-	if err := s.Stop(); err != nil {
+	if err := s.Stop(0); err != nil {
 		t.Errorf("cleanup Stop = %v, want nil", err)
 	}
 }
@@ -481,7 +481,7 @@ func TestStartWhileRunningRefused(t *testing.T) {
 	}
 	// The refusal released the gate: the next action reports ordinary state,
 	// not contention.
-	if err := s.Stop(); !errors.Is(err, errServerNotRunning) {
+	if err := s.Stop(0); !errors.Is(err, errServerNotRunning) {
 		t.Errorf("Stop after teardown = %v, want errServerNotRunning", err)
 	}
 }
@@ -490,7 +490,7 @@ func TestStartWhileRunningRefused(t *testing.T) {
 // backups tile's stop-and-back-up, beforeClose's benign race).
 func TestStopWhenNotRunningKeepsItsError(t *testing.T) {
 	s, _ := newServerFixture()
-	err := s.Stop()
+	err := s.Stop(0)
 	if err == nil || err.Error() != "server not running" {
 		t.Fatalf("Stop on stopped = %v, want exactly 'server not running'", err)
 	}
