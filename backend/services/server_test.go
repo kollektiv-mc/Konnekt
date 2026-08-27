@@ -174,6 +174,57 @@ func TestStreamOutputMatchersFireOnNormalizedLines(t *testing.T) {
 	}
 }
 
+// Manager narration is marked structurally, not by its prefix: the console
+// tile styles and excludes it from server-output pattern matching off the
+// source marker, so a plugin printing "[Konnekt]" cannot pass for Konnekt
+// (#113). The counter-half pins the zero value: server output carries no
+// source key at all, so every path that predates the marker still reads as
+// server output.
+func TestNarrateMarksManagerLines(t *testing.T) {
+	s, bus := newServerFixture()
+	lines := collect(bus, EventLogLine)
+
+	s.Narrate("something happened")
+	s.emitConsoleLine("[12:00:00] [Server thread/INFO]: raw output")
+
+	events := waitForCount(t, lines, 2)
+	var sawManager, sawServer bool
+	for _, ev := range events {
+		m, ok := ev.(map[string]string)
+		if !ok {
+			t.Fatalf("log:line payload is %T, want map[string]string", ev)
+		}
+		switch m["source"] {
+		case sourceManager:
+			sawManager = true
+			if m["line"] != "[Konnekt] something happened" {
+				t.Errorf("manager line = %q, want the daemon tag prepended", m["line"])
+			}
+		case "":
+			sawServer = true
+			if _, present := m["source"]; present {
+				t.Error("server output carries a source key, want it omitted entirely")
+			}
+		default:
+			t.Errorf("unexpected source %q", m["source"])
+		}
+	}
+	if !sawManager || !sawServer {
+		t.Errorf("bus delivery incomplete: manager=%v server=%v", sawManager, sawServer)
+	}
+
+	history := s.GetConsoleHistory()
+	if len(history) != 2 {
+		t.Fatalf("ring buffer holds %d lines, want 2", len(history))
+	}
+	if history[0].Source != sourceManager {
+		t.Errorf("buffered manager line Source = %q, want %q", history[0].Source, sourceManager)
+	}
+	if history[1].Source != "" {
+		t.Errorf("buffered server line Source = %q, want empty", history[1].Source)
+	}
+}
+
 // exitingCommand returns a real short-lived process that exits with code,
 // because faking os.ProcessState is not possible and a real Wait is the thing
 // under test.

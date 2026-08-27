@@ -24,6 +24,11 @@ import (
 
 const consoleCap = 2000
 
+// sourceManager marks a console line Konnekt itself narrated, as opposed to
+// server process output (#113). It is the ConsoleLine.Source value and the
+// log:line payload's source key.
+const sourceManager = "manager"
+
 // ErrPowerActionInProgress is returned when a power action (start, stop,
 // restart) arrives while another one is still in progress. The message is
 // shown verbatim in the UI, so keep it a readable sentence.
@@ -450,18 +455,39 @@ func (s *ServerService) streamOutput(r io.Reader) {
 	}
 }
 
-// emitConsoleLine sends one line down the console channel: the log:line event
-// plus the ring buffer GetConsoleHistory replays to late subscribers.
+// Narrate speaks as Konnekt in the console (#113): the daemon tag plus the
+// source marker the UI styles apart from server output, so a manager line is
+// never mistaken for something the server printed. Exported because app.go
+// narrates the EULA write; Wails binds App methods only, so this adds no IPC
+// surface. Reserve it for lifecycle moments — the notification feed keeps its
+// own role, and chatter here costs the console its usefulness.
+func (s *ServerService) Narrate(line string) {
+	s.emitConsoleLineTagged("[Konnekt] "+line, sourceManager)
+}
+
+// emitConsoleLine sends one line of server output down the console channel.
+func (s *ServerService) emitConsoleLine(line string) {
+	s.emitConsoleLineTagged(line, "")
+}
+
+// emitConsoleLineTagged sends one line down the console channel: the log:line
+// event plus the ring buffer GetConsoleHistory replays to late subscribers.
+// The source key is omitted entirely when empty, so server output travels
+// exactly the payload it always has.
 // NB: emit precedes buffer append. A remote client that snapshots
 // GetConsoleHistory then subscribes must dedup/order the seam line.
-func (s *ServerService) emitConsoleLine(line string) {
+func (s *ServerService) emitConsoleLineTagged(line, source string) {
 	ts := time.Now().Format("15:04:05")
-	s.bus.Emit(EventLogLine, map[string]string{"timestamp": ts, "line": line})
+	payload := map[string]string{"timestamp": ts, "line": line}
+	if source != "" {
+		payload["source"] = source
+	}
+	s.bus.Emit(EventLogLine, payload)
 	s.logBufMu.Lock()
 	if len(s.logBuf) >= consoleCap {
 		s.logBuf = s.logBuf[1:]
 	}
-	s.logBuf = append(s.logBuf, models.ConsoleLine{Timestamp: ts, Line: line})
+	s.logBuf = append(s.logBuf, models.ConsoleLine{Timestamp: ts, Line: line, Source: source})
 	s.logBufMu.Unlock()
 }
 
@@ -505,7 +531,7 @@ func (s *ServerService) waitForExit() {
 	s.lastStop = stop
 	s.mu.Unlock()
 	if !expected {
-		s.emitConsoleLine("[Konnekt] Server process exited unexpectedly (" + exitLabel(exitCode) + ")")
+		s.Narrate("Server process exited unexpectedly (" + exitLabel(exitCode) + ")")
 	}
 	s.bus.Emit(EventServerStopped, stop)
 
@@ -578,14 +604,14 @@ func (s *ServerService) stop(grace time.Duration) error {
 		return nil
 	case <-time.After(half):
 	}
-	s.emitConsoleLine(fmt.Sprintf("[Konnekt] Still waiting for the server to stop (%s before force kill)", grace-half))
+	s.Narrate(fmt.Sprintf("Still waiting for the server to stop (%s before force kill)", grace-half))
 
 	select {
 	case <-exited:
 		return nil
 	case <-time.After(grace - half):
 	}
-	s.emitConsoleLine(fmt.Sprintf("[Konnekt] Server did not stop within %s, force killing the process tree", grace))
+	s.Narrate(fmt.Sprintf("Server did not stop within %s, force killing the process tree", grace))
 	s.killTree(pid)
 	<-exited
 	return nil
@@ -622,7 +648,7 @@ func (s *ServerService) ForceStop() error {
 	exited := s.exited
 	s.mu.Unlock()
 
-	s.emitConsoleLine("[Konnekt] Force stopping: killing the server process tree")
+	s.Narrate("Force stopping: killing the server process tree")
 	s.killTree(pid)
 	<-exited
 	return nil
@@ -842,7 +868,7 @@ func (s *ServerService) watchStarting(exited chan struct{}) {
 	}
 	s.mu.Unlock()
 	if promote {
-		s.emitConsoleLine(fmt.Sprintf("[Konnekt] No ready line seen after %s, treating the server as running", s.startingTimeout))
+		s.Narrate(fmt.Sprintf("No ready line seen after %s, treating the server as running", s.startingTimeout))
 	}
 }
 
