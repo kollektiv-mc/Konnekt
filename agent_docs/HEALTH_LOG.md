@@ -3699,3 +3699,76 @@ All green under `go test -race -count=3`. `backend/services` rose 45.2% →
 (force fires through the always-shown confirm while Stop is pending and
 disabled; confirms even with confirm-before-stop off; rejection reaches the
 alert), settings fixture extended; 330 passing.
+
+### 2026-08-27 — The console that learned to say what Konnekt was doing
+
+**Closed: [#113](../../issues/113)** (Wings adoption Wave 2, fourth of the
+lifecycle core; survey §14, triage item 6 — the survey's own
+"highest value-per-effort" item).
+
+**The gap.** The console carried process output and nothing else. Everything
+Konnekt itself did was invisible there: a backup ran with no trace, a restore
+swapped directories in silence, the quiesce paused world saves and then slept
+three unexplained seconds without RCON, and accepting the EULA said nothing.
+The events existed, but they went to toasts and the notification feed, so the
+one place a user already watches during trouble told them nothing about the
+manager standing behind the server.
+
+**The fix** (`backend/models/console.go`, `backend/services/server.go`,
+`backup.go`, `app.go`; frontend `useConsoleStore.ts`, `App.tsx`,
+`tiles/console/index.tsx`). `ConsoleLine` gains a `Source` field, empty for
+server output and `"manager"` for narration, mirrored as an optional `source`
+key on the `log:line` payload that is **omitted entirely** when empty, so the
+server-output path travels exactly the payload it always did and the
+`map[string]string` shape assertion still holds. The marker is structural
+rather than a prefix match on purpose: a plugin printing `[Konnekt]` cannot
+impersonate the manager, and the frontend needs the bit anyway to keep
+narration out of `classifyLine`'s substring heuristics, which would have read
+`[Konnekt] Backup failed: …` as a server error. Empty is the zero value, so
+any path predating or missing the marker still reads as server output.
+
+One exported entry point, `ServerService.Narrate`, owns the daemon tag and
+tags the source; `emitConsoleLine` stays the raw server path. The five
+existing banner sites from #110 and #111 (crash exit, both escalation stages,
+force stop, ready timeout) moved onto it with their text byte-identical.
+`BackupService` already held a concrete `*ServerService` in the same package,
+so backup, world backup and restore narrate through a nil-safe forwarder with
+no new wiring, and the scheduler's backup block and the worlds tile inherit it
+for free. Quiesce narration lives inside `PrepareForBackup`/`ResumeSaves`
+rather than at their three call sites, which covers world duplication too and
+leaves `WorldService`'s narrow `serverGuard` interface untouched; the
+stdin-fallback flush wait moved behind a `quiesceWait` seam so it is testable
+and can say how long it is waiting. `AcceptEula` narrates after a successful
+write via the exported method.
+
+Restraint is enforced as much as the narration is: guards that refuse before
+anything starts stay silent, progress percentages stay on their own channel,
+installer output keeps `install:log` (Wings §14 is explicit that install
+output does not belong in the console, which resolves the triage's "install
+steps" mention), and a stopped server's no-op quiesce says nothing. Worst case
+for a backup on a running server is five lines. On the frontend the store
+levels a line by the marker instead of its text, and the tile paints
+`manager` in its own colour; the level filter stays a *server log level*
+filter, so narration appears under All rather than being swept into Warn or
+Error.
+
+Known and accepted: restore narration is live-only in practice, since restore
+requires a stopped server and the ring buffer clears on the next Start. Two
+follow-ups were noted rather than folded in: `AcceptEula`'s raw `os.WriteFile`
+belongs in a service and should use `writeFileAtomic` (#116's shape), and
+`CreateBackup`'s post-zip `os.Stat` failure returns an error without emitting
+`backup:failed`.
+
+**Verification.** A clean round trip asserts the whole story in order from the
+ring buffer (backing up, finished, restoring, restore finished) with every
+entry marked `manager`, no failure line, and no quiesce line while the server
+is stopped. Restraint has its own tests: a refused backup narrates nothing, a
+stopped-server quiesce narrates nothing. A corrupt archive proves the failure
+wording names its stage and never claims success. The quiesce test pins all
+three lines in order behind a 1ms seam. `TestNarrateMarksManagerLines` pins
+both halves of the contract, including that server output carries no `source`
+key at all. Frontend: the store levels by marker not by words, carries it
+through `appendLine` and `loadHistory`, and the console tile got its first
+line-rendering tests (manager styling, and manager lines staying out of the
+Error filter). `backend/services` rose 45.7% → **46.3%**, floor ratcheted
+43.5% → **44%**; 335 frontend tests pass.
