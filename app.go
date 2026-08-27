@@ -316,7 +316,11 @@ func (a *App) AcceptEula(serverID string) error {
 		return err
 	}
 	content := "# EULA accepted via Konnekt\neula=true\n"
-	return os.WriteFile(filepath.Join(cfg.WorkingDir, "eula.txt"), []byte(content), 0644)
+	if err := os.WriteFile(filepath.Join(cfg.WorkingDir, "eula.txt"), []byte(content), 0644); err != nil {
+		return err
+	}
+	a.serverService.Narrate("EULA accepted, eula.txt written")
+	return nil
 }
 
 func (a *App) SendCommand(serverID string, command string) error {

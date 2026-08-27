@@ -239,6 +239,19 @@ func (s *BackupService) ListBackups(serverID string) ([]models.Backup, error) {
 	return all, nil
 }
 
+// narrate speaks as Konnekt in the console for the backup lifecycle (#113).
+// Nil-safe: fixtures wire a BackupService without a ServerService.
+func (s *BackupService) narrate(line string) {
+	if s.server != nil {
+		s.server.Narrate(line)
+	}
+}
+
+// sizeMB renders a byte count for a console line.
+func sizeMB(n int64) string {
+	return fmt.Sprintf("%.1f MB", float64(n)/(1024*1024))
+}
+
 func (s *BackupService) CreateBackup(serverID string) (models.Backup, error) {
 	cfg, err := s.config.GetServerConfig(serverID)
 	if err != nil {
@@ -262,6 +275,7 @@ func (s *BackupService) CreateBackup(serverID string) (models.Backup, error) {
 	destPath := filepath.Join(backupDir, filename)
 
 	s.bus.Emit(EventBackupStarted, map[string]string{"serverID": serverID, "filename": filename})
+	s.narrate("Backing up the server to " + filename)
 
 	if s.server != nil && s.server.PrepareForBackup() {
 		defer s.server.ResumeSaves()
@@ -291,6 +305,7 @@ func (s *BackupService) CreateBackup(serverID string) (models.Backup, error) {
 			"serverID": serverID,
 			"error":    zipErr.Error(),
 		})
+		s.narrate("Backup failed: " + zipErr.Error())
 		return models.Backup{}, zipErr
 	}
 
@@ -309,6 +324,7 @@ func (s *BackupService) CreateBackup(serverID string) (models.Backup, error) {
 		"serverID": serverID,
 		"filename": b.Filename,
 	})
+	s.narrate(fmt.Sprintf("Backup finished: %s (%s)", b.Filename, sizeMB(b.SizeBytes)))
 	return b, nil
 }
 
@@ -338,6 +354,7 @@ func (s *BackupService) CreateWorldBackup(serverID, worldName string) (models.Ba
 	destPath := filepath.Join(backupDir, filename)
 
 	s.bus.Emit(EventBackupStarted, map[string]string{"serverID": serverID, "filename": filename})
+	s.narrate(fmt.Sprintf("Backing up world %q to %s", worldName, filename))
 
 	if s.server != nil && s.server.PrepareForBackup() {
 		defer s.server.ResumeSaves()
@@ -365,6 +382,7 @@ func (s *BackupService) CreateWorldBackup(serverID, worldName string) (models.Ba
 			"serverID": serverID,
 			"error":    zipErr.Error(),
 		})
+		s.narrate("Backup failed: " + zipErr.Error())
 		return models.Backup{}, zipErr
 	}
 
@@ -384,6 +402,7 @@ func (s *BackupService) CreateWorldBackup(serverID, worldName string) (models.Ba
 		"serverID": serverID,
 		"filename": b.Filename,
 	})
+	s.narrate(fmt.Sprintf("Backup finished: %s (%s)", b.Filename, sizeMB(b.SizeBytes)))
 	return b, nil
 }
 
@@ -408,6 +427,7 @@ func (s *BackupService) RestoreBackup(serverID, filename string) error {
 	if kind == "server" {
 		// Full-server restore: replace the entire working directory.
 		workingDir := cfg.WorkingDir
+		s.narrate("Restoring the server from " + filename)
 		tmp, err := os.MkdirTemp(filepath.Dir(workingDir), "konnekt-restore-*")
 		if err != nil {
 			return err
@@ -416,6 +436,7 @@ func (s *BackupService) RestoreBackup(serverID, filename string) error {
 
 		if err := unzipTo(zipPath, tmp); err != nil {
 			s.bus.Emit(EventBackupFailed, map[string]string{"error": err.Error()})
+			s.narrate("Restore failed while extracting: " + err.Error())
 			return err
 		}
 
@@ -426,9 +447,11 @@ func (s *BackupService) RestoreBackup(serverID, filename string) error {
 		if err := os.Rename(tmp, workingDir); err != nil {
 			_ = os.Rename(aside, workingDir) //nolint:errcheck // best-effort rollback; err below is already the reported failure
 			s.bus.Emit(EventBackupFailed, map[string]string{"error": err.Error()})
+			s.narrate("Restore failed while swapping files, previous state kept: " + err.Error())
 			return err
 		}
 		_ = os.RemoveAll(aside) //nolint:errcheck // best-effort cleanup of the pre-restore backup dir; restore already succeeded
+		s.narrate("Restore finished, server files replaced")
 	} else {
 		// World-only restore: replace the target world folder.
 		// For named world backups use the stored world name; legacy server
@@ -443,6 +466,9 @@ func (s *BackupService) RestoreBackup(serverID, filename string) error {
 			}
 		}
 
+		worldLabel := filepath.Base(targetDir)
+		s.narrate(fmt.Sprintf("Restoring world %q from %s", worldLabel, filename))
+
 		tmp, err := os.MkdirTemp(filepath.Dir(targetDir), "konnekt-restore-*")
 		if err != nil {
 			return err
@@ -451,6 +477,7 @@ func (s *BackupService) RestoreBackup(serverID, filename string) error {
 
 		if err := unzipTo(zipPath, tmp); err != nil {
 			s.bus.Emit(EventBackupFailed, map[string]string{"error": err.Error()})
+			s.narrate("Restore failed while extracting: " + err.Error())
 			return err
 		}
 
@@ -461,9 +488,11 @@ func (s *BackupService) RestoreBackup(serverID, filename string) error {
 		if err := os.Rename(tmp, targetDir); err != nil {
 			_ = os.Rename(aside, targetDir) //nolint:errcheck // best-effort rollback; err below is already the reported failure
 			s.bus.Emit(EventBackupFailed, map[string]string{"error": err.Error()})
+			s.narrate("Restore failed while swapping files, previous state kept: " + err.Error())
 			return err
 		}
 		_ = os.RemoveAll(aside) //nolint:errcheck // best-effort cleanup of the pre-restore backup dir; restore already succeeded
+		s.narrate(fmt.Sprintf("Restore finished, world %q replaced", worldLabel))
 	}
 
 	s.bus.Emit(EventRestoreCompleted, map[string]string{"serverID": serverID, "filename": filename})

@@ -180,6 +180,98 @@ func TestCreateAndRestoreBackupRoundTrip(t *testing.T) {
 	if _, err := os.Stat(filepath.Join(workDir, "server.properties")); err != nil {
 		t.Errorf("server.properties was not restored: %v", err)
 	}
+
+	// The acceptance case for #113: watched in the console, the whole
+	// sequence reads as one story. Order comes from the ring buffer, which
+	// is written synchronously (the bus fans out per goroutine).
+	lines := consoleLines(svc.server)
+	wantOrder := []string{
+		"[Konnekt] Backing up the server to " + b.Filename,
+		"[Konnekt] Backup finished: " + b.Filename,
+		"[Konnekt] Restoring the server from " + b.Filename,
+		"[Konnekt] Restore finished, server files replaced",
+	}
+	at := -1
+	for _, want := range wantOrder {
+		found := -1
+		for i, line := range lines {
+			if i > at && strings.HasPrefix(line, want) {
+				found = i
+				break
+			}
+		}
+		if found == -1 {
+			t.Fatalf("narration missing or out of order: %q not after index %d in %v", want, at, lines)
+		}
+		at = found
+	}
+	for _, line := range lines {
+		if strings.Contains(line, "failed") {
+			t.Errorf("failure narrated on a clean round trip: %q", line)
+		}
+		// The fixture server is not running, so the quiesce stays silent.
+		if strings.Contains(line, "world saves") {
+			t.Errorf("quiesce narrated while the server is stopped: %q", line)
+		}
+	}
+	for _, entry := range svc.server.GetConsoleHistory() {
+		if entry.Source != sourceManager {
+			t.Errorf("narrated line %q has Source %q, want %q", entry.Line, entry.Source, sourceManager)
+		}
+	}
+}
+
+// Restraint, as a test: a guard that refuses before anything starts says
+// nothing in the console. The IPC error and its toast carry that case.
+func TestCreateBackupNarratesNothingWhenItRefuses(t *testing.T) {
+	svc, workDir := newBackupFixture(t)
+	if err := os.RemoveAll(workDir); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := svc.CreateBackup(testServerID); err == nil {
+		t.Fatal("CreateBackup with a missing working directory = nil error, want an error")
+	}
+	if lines := consoleLines(svc.server); len(lines) != 0 {
+		t.Errorf("console history = %v, want empty", lines)
+	}
+}
+
+// A corrupt archive fails during extraction, before the live directory is
+// touched, and the console says which stage went wrong.
+func TestRestoreBackupNarratesExtractFailure(t *testing.T) {
+	svc, workDir := newBackupFixture(t)
+	writeFile(t, filepath.Join(workDir, "world", "level.dat"), "data")
+	b, err := svc.CreateBackup(testServerID)
+	if err != nil {
+		t.Fatalf("CreateBackup error: %v", err)
+	}
+
+	zipPath, _, _, _, err := svc.findBackupFile(testServerID, b.Filename)
+	if err != nil {
+		t.Fatalf("findBackupFile error: %v", err)
+	}
+	writeFile(t, zipPath, "not a zip at all")
+
+	if err := svc.RestoreBackup(testServerID, b.Filename); err == nil {
+		t.Fatal("RestoreBackup over a corrupt archive = nil error, want an error")
+	}
+
+	var sawExtractFailure, sawFinished bool
+	for _, line := range consoleLines(svc.server) {
+		if strings.Contains(line, "[Konnekt] Restore failed while extracting") {
+			sawExtractFailure = true
+		}
+		if strings.Contains(line, "Restore finished") {
+			sawFinished = true
+		}
+	}
+	if !sawExtractFailure {
+		t.Errorf("no extract-failure narration: %v", consoleLines(svc.server))
+	}
+	if sawFinished {
+		t.Error("restore narrated success despite failing")
+	}
 }
 
 func TestCreateBackupMissingWorkingDir(t *testing.T) {

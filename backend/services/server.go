@@ -75,6 +75,10 @@ const (
 	maxStopGrace     = 10 * time.Minute
 )
 
+// quiesceFlushWait is the grace a stdin-driven save-all gets to reach disk
+// when RCON is unavailable, since that path has nothing to block on.
+const quiesceFlushWait = 3 * time.Second
+
 // playerSession holds per-session data captured from log lines.
 type playerSession struct {
 	uuid string
@@ -208,6 +212,12 @@ type ServerService struct {
 	// group kill would no-op there. Never reassigned outside NewServerService
 	// and tests.
 	killTree func(pid int)
+
+	// quiesceWait is how long PrepareForBackup gives a stdin save-all to
+	// flush when RCON is unavailable and there is nothing to block on. A test
+	// seam in the startingTimeout spirit: never reassigned outside
+	// NewServerService and tests.
+	quiesceWait time.Duration
 }
 
 func NewServerService() *ServerService {
@@ -219,6 +229,7 @@ func NewServerService() *ServerService {
 		launchCmd:       defaultLaunchCmd,
 		startingTimeout: startingDeadline,
 		killTree:        killTree,
+		quiesceWait:     quiesceFlushWait,
 	}
 }
 
@@ -929,6 +940,11 @@ func (s *ServerService) PrepareForBackup() bool {
 		return false
 	}
 
+	// Narrated here rather than at the three call sites (both backup paths and
+	// world duplication), so every quiesce says so once and WorldService's
+	// narrow serverGuard interface stays as it is.
+	s.Narrate("Pausing world saves and flushing to disk")
+
 	if rconOK {
 		_, _ = s.rcon.Execute(addr, pw, "save-off")       //nolint:errcheck // best-effort save-flush before backup; backup proceeds either way
 		_, _ = s.rcon.Execute(addr, pw, "save-all flush") //nolint:errcheck // best-effort save-flush before backup; backup proceeds either way
@@ -937,7 +953,10 @@ func (s *ServerService) PrepareForBackup() bool {
 
 	_ = s.SendCommand("save-off")       //nolint:errcheck // best-effort save-flush before backup; backup proceeds either way
 	_ = s.SendCommand("save-all flush") //nolint:errcheck // best-effort save-flush before backup; backup proceeds either way
-	time.Sleep(3 * time.Second)
+	// Without RCON there is nothing to block on, so this wait is the whole
+	// guarantee — and unexplained it reads as a hang.
+	s.Narrate(fmt.Sprintf("RCON unavailable, giving the save %s to flush", s.quiesceWait))
+	time.Sleep(s.quiesceWait)
 	return true
 }
 
@@ -953,6 +972,7 @@ func (s *ServerService) ResumeSaves() {
 	if !running {
 		return
 	}
+	s.Narrate("Resuming world saves")
 	if rconOK {
 		_, _ = s.rcon.Execute(addr, pw, "save-on") //nolint:errcheck // best-effort resume after backup
 		return

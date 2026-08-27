@@ -225,6 +225,61 @@ func TestNarrateMarksManagerLines(t *testing.T) {
 	}
 }
 
+// The quiesce is narrated inside PrepareForBackup/ResumeSaves rather than at
+// their three call sites, so a backup and a world duplication both explain
+// the pause. Without RCON the flush wait is pure sleep, which is the case
+// that most needs saying out loud.
+func TestPrepareForBackupNarratesTheQuiesce(t *testing.T) {
+	s, _ := newServerFixture()
+	release, _ := fakeRunningServer(t, s)
+	s.quiesceWait = time.Millisecond
+
+	if !s.PrepareForBackup() {
+		t.Fatal("PrepareForBackup on a running server = false, want true")
+	}
+	s.ResumeSaves()
+
+	want := []string{
+		"[Konnekt] Pausing world saves and flushing to disk",
+		"[Konnekt] RCON unavailable, giving the save 1ms to flush",
+		"[Konnekt] Resuming world saves",
+	}
+	got := consoleLines(s)
+	if len(got) != len(want) {
+		t.Fatalf("console history = %v, want exactly %v", got, want)
+	}
+	for i, w := range want {
+		if got[i] != w {
+			t.Errorf("line %d = %q, want %q", i, got[i], w)
+		}
+	}
+
+	s.mu.Lock()
+	exited := s.exited
+	s.mu.Unlock()
+	release()
+	select {
+	case <-exited:
+	case <-time.After(2 * time.Second):
+		t.Fatal("process never exited")
+	}
+}
+
+// Restraint: a stopped server has no saves to pause, so the quiesce no-ops
+// and says nothing.
+func TestPrepareForBackupWhileStoppedStaysSilent(t *testing.T) {
+	s, _ := newServerFixture()
+
+	if s.PrepareForBackup() {
+		t.Error("PrepareForBackup on a stopped server = true, want false")
+	}
+	s.ResumeSaves()
+
+	if lines := consoleLines(s); len(lines) != 0 {
+		t.Errorf("console history = %v, want empty", lines)
+	}
+}
+
 // exitingCommand returns a real short-lived process that exits with code,
 // because faking os.ProcessState is not possible and a real Wait is the thing
 // under test.
