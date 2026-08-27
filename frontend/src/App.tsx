@@ -73,13 +73,18 @@ function App() {
 
   // Batch log lines so the console re-renders at most ~7×/sec instead of once
   // per line — prevents render storms on busy servers.
-  const pendingLines = useRef<Array<{ timestamp: string; line: string }>>([])
+  const pendingLines = useRef<Array<{ timestamp: string; line: string; source?: string }>>([])
   useEffect(() => {
     let cleanup: (() => void) | undefined
     try {
-      cleanup = EventsOn(EVENTS.LOG_LINE, (data: { timestamp: string; line: string }) => {
-        pendingLines.current.push(data)
-      })
+      cleanup = EventsOn(
+        EVENTS.LOG_LINE,
+        // `source` marks a line Konnekt narrated rather than server output
+        // (#113); it is absent on server lines.
+        (data: { timestamp: string; line: string; source?: string }) => {
+          pendingLines.current.push(data)
+        },
+      )
     } catch {
       /* non-Wails context */
     }
