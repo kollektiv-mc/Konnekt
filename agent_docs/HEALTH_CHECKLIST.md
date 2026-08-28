@@ -590,7 +590,9 @@ was partly wrong)
   non-atomic config writes (#116 — closed 2026-08-22, HEALTH_LOG "The
   half-written file a crash could leave"). Features: #108 (state machine +
   ready detection, implements #101 — closed 2026-08-26, HEALTH_LOG "The
-  server that claimed running while still generating its world"), #113, #114,
+  server that claimed running while still generating its world"), #113
+  (manager narration — closed 2026-08-27, HEALTH_LOG "The console that
+  learned to say what Konnekt was doing"), #114,
   #117 (close prompt + re-adopt, prerequisite #99), #118, #119, #120, #121;
   per-server shaping is a standing constraint tracked by #57. Cross-cutting constraints, sequencing waves, and the #30/#26
   reconciliations live in `agent_docs/WINGS_ADOPTION.md` — implementing sessions

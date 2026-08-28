@@ -116,3 +116,39 @@ describe('ConsoleTile command failures', () => {
     expect(commandInput().value).toBe('stop')
   })
 })
+
+// #113: Konnekt's own narration has to read apart from server output, and the
+// level filter is a *server log level* filter, so manager lines belong under
+// All rather than being swept into Warn or Error.
+describe('ConsoleTile manager lines', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    useServerStore.setState({ status: ONLINE, reachable: true })
+    useConsoleStore.setState({ lines: [] })
+    useConsoleStore.getState().batchAppend([
+      { timestamp: '12:00:00', line: '[Konnekt] Backing up the server', source: 'manager' },
+      { timestamp: '12:00:01', line: '[12:00:01] [Server thread/ERROR]: boom' },
+    ])
+  })
+
+  it('styles a manager line apart from every server level', () => {
+    render(<ConsoleTile serverId="srv1" />)
+
+    // highlightQuery wraps the text in its own span, so the level class sits
+    // on the parent.
+    const managerLine = screen.getByText('[Konnekt] Backing up the server').parentElement
+    expect(managerLine?.className).toContain('text-sky-400')
+
+    const serverLine = screen.getByText('[12:00:01] [Server thread/ERROR]: boom').parentElement
+    expect(serverLine?.className).toContain('text-red-400')
+  })
+
+  it('keeps manager lines out of the server level filters', () => {
+    render(<ConsoleTile serverId="srv1" />)
+    fireEvent.click(screen.getByText('All'))
+    fireEvent.click(screen.getByRole('button', { name: 'Error' }))
+
+    expect(screen.getByText('[12:00:01] [Server thread/ERROR]: boom')).toBeTruthy()
+    expect(screen.queryByText('[Konnekt] Backing up the server')).toBeNull()
+  })
+})

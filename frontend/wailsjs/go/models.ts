@@ -242,6 +242,7 @@ export namespace models {
 	export class ConsoleLine {
 	    timestamp: string;
 	    line: string;
+	    source: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new ConsoleLine(source);
@@ -251,6 +252,7 @@ export namespace models {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.timestamp = source["timestamp"];
 	        this.line = source["line"];
+	        this.source = source["source"];
 	    }
 	}
 	

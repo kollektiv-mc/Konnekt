@@ -14,6 +14,9 @@ const LEVEL_CLASS = {
   warn: 'text-yellow-400',
   error: 'text-red-400',
   dim: 'text-[var(--text-secondary)]',
+  // Konnekt's own narration (#113), distinct from every server-output level
+  // so the manager's voice reads apart at a glance.
+  manager: 'text-sky-400 font-medium',
 } as const
 
 type LevelFilter = 'all' | 'warn' | 'error'
