@@ -598,6 +598,12 @@ was partly wrong)
   reconciliations live in `agent_docs/WINGS_ADOPTION.md` — implementing sessions
   read that file plus their one issue, nothing more. As each issue closes, its
   write-up moves to HEALTH_LOG per convention.
+- **Waves 1 and 2 are complete** (2026-08-28). Wave 1 was #112, #115, #116 and
+  #111; wave 2 ran #109 → #108 → #110 → #113 in that order, because the lock is
+  the choke point the state machine rides on, stop escalation needs both, and
+  narration tags the banners escalation writes. What remains is wave 3 (#114,
+  #119, #120, #121 — independent of each other, any order) and wave 4 (#118,
+  then #117 after #99 and the wave-2 state machine).
 
 **P3 — Smaller findings from the 2026-08-21 backend sweep** (not worth
 individual issues; fix in passing when touching the file)
@@ -613,6 +619,43 @@ individual issues; fix in passing when touching the file)
 - `worlds.go:269`'s "(+ siblings)" comment overstates `CreateWorldBackup`, which
   zips only the named folder; the behavior gap is #26, the comment is local rot
   to fix when #26 lands.
+
+**P2 — The changelog's stacked-PR guarantee is untested** (found 2026-08-28)
+- `.github/scripts/release-notes.py`'s `merged_pulls()` is what lets a pull
+  request merged into *another* pull request's branch keep its own entry: it
+  maps each commit in the range to the pull requests containing it and keeps
+  every merged one, deduped by number, with no base-branch filter. Wave 2 relied
+  on that — #157 was merged into #156's branch — and it held: run against the
+  real merge, the generator emits #155, #156 and #157 under their own titles in
+  their own sections.
+- Nothing pins that behavior. `release-notes_test.py` covers `section_for` and
+  `touches_app` only, so `merged_pulls` has no test at all and a refactor could
+  fold a stacked entry into its parent silently. Worth a regression test with
+  the two halves that matter: a merged PR associated with a commit earns an
+  entry, an unmerged one associated with the same commit does not.
+- The same guarantee also dies at the merge button. Squashing a parent rewrites
+  the child's commit hashes, GitHub then associates only the squashed commit
+  with the parent, and the child drops out of the notes entirely with its work
+  filed under the parent's title. `allow_squash_merge` is enabled on the
+  repository, so this is one wrong click. Worth a sentence in
+  `agent_docs/CLAUDE.md`'s "What reaches the notes at all" saying stacked pull
+  requests must land as merge commits.
+
+**P3 — Smaller findings from the wave 2 lifecycle work** (2026-08-26 to 08-28;
+not worth individual issues; fix in passing when touching the file)
+- `app.go`'s `AcceptEula` writes `eula.txt` with a raw `os.WriteFile` from
+  `package main` — the one place app code does its own file I/O rather than
+  going through a service, and it bypasses `writeFileAtomic`, so a crash
+  mid-write leaves a half-written EULA (#116's shape, applied everywhere else).
+- `backup.go`'s `CreateBackup` returns the post-zip `os.Stat` error without
+  emitting `backup:failed`, unlike every other failure path in the same
+  function: that one case fails with no event, no toast and no console
+  narration.
+- `useConsoleStore.ts`'s `classifyLine` keeps its own `/Done|joined the game/`
+  heuristic for colouring a line green, duplicating the backend's canonical
+  `reServerReady` (`server.go`) with looser matching that a chat message can
+  trip. Cosmetic only — the lifecycle state machine no longer depends on it —
+  but the two spellings can drift.
 
 **Release follow-ups** (deferred)
 - Release-tag-gated full `wails build` packaging job — stronger end-to-end
