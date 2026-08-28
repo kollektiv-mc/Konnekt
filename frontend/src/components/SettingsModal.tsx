@@ -361,6 +361,22 @@ function GeneralPane({ settings, update }: { settings: AppSettings; update: Upda
         />
       </SettingRow>
       <SettingRow
+        label="Stop grace period"
+        description="How long a stop may wait for the server to shut down and save before Konnekt force kills it (seconds)."
+      >
+        <input
+          type="number"
+          min={5}
+          max={600}
+          step={5}
+          value={settings.stopGraceSeconds}
+          onChange={(e) =>
+            update({ stopGraceSeconds: Math.min(600, Math.max(5, Number(e.target.value))) })
+          }
+          className="bg-hover border-border-subtle text-text-primary border-hairline w-20 rounded px-2 py-1 text-right text-xs outline-none"
+        />
+      </SettingRow>
+      <SettingRow
         label="Check for updates on startup"
         description="Silently check for a new release when Konnekt launches and notify if one is found."
       >

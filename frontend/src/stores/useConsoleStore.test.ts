@@ -26,6 +26,47 @@ describe('classifyLine', () => {
   })
 })
 
+// Manager lines are identified by the backend's source marker, never by
+// their text (#113). That is the whole point: "[Konnekt] Backup failed: ..."
+// would otherwise trip classifyLine's substring fallback and read as a
+// server error.
+describe('useConsoleStore manager lines', () => {
+  beforeEach(() => {
+    useConsoleStore.setState({ lines: [] })
+  })
+
+  const lines = () => useConsoleStore.getState().lines
+
+  it('levels a manager line by its marker, not its words', () => {
+    useConsoleStore.getState().batchAppend([
+      { timestamp: '12:00:00', line: '[Konnekt] Backup failed: disk error', source: 'manager' },
+      { timestamp: '12:00:01', line: '[12:00:01] [Server thread/ERROR]: boom' },
+    ])
+
+    expect(lines()[0].level).toBe('manager')
+    expect(lines()[1].level).toBe('error')
+  })
+
+  it('classifies a line with no marker as server output', () => {
+    useConsoleStore.getState().batchAppend([{ timestamp: '12:00:00', line: 'Done (1.2s)!' }])
+    useConsoleStore.getState().appendLine('12:00:01', 'Steve joined the game')
+
+    expect(lines()[0].level).toBe('success')
+    expect(lines()[1].level).toBe('success')
+  })
+
+  it('carries the marker through appendLine and loadHistory', () => {
+    useConsoleStore.getState().appendLine('12:00:00', '[Konnekt] Resuming world saves', 'manager')
+    expect(lines()[0].level).toBe('manager')
+
+    useConsoleStore.getState().loadHistory([
+      { timestamp: '11:59:00', line: '[Konnekt] Pausing world saves', source: 'manager' },
+      { timestamp: '11:59:01', line: '[12:00:00] [Server thread/WARN]: careful', source: '' },
+    ])
+    expect(lines().map((l) => l.level)).toEqual(['manager', 'warn'])
+  })
+})
+
 describe('useConsoleStore buffer capping', () => {
   beforeEach(() => {
     useConsoleStore.setState({ lines: [] })

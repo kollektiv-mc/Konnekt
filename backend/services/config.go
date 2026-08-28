@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"time"
 
 	"konnekt/backend/models"
 )
@@ -118,6 +119,7 @@ func (s *ConfigService) GetAppSettings() (models.AppSettings, error) {
 		WarningColor:                     "#f59e0b",
 		DangerColor:                      "#f87171",
 		BackgroundStyle:                  "solid",
+		StopGraceSeconds:                 60,
 		ConsoleBufferLines:               1000,
 		SchedulerPaletteCollapsed:        true,
 		SchedulerPaletteClosedCategories: map[string]bool{},
@@ -135,6 +137,17 @@ func (s *ConfigService) GetAppSettings() (models.AppSettings, error) {
 		return defaults, err
 	}
 	return settings, nil
+}
+
+// StopGrace returns the configured stop grace as a duration, for the callers
+// that pass it into ServerService.Stop/Restart. Settings unreadable → 0,
+// which stop() maps to its own default.
+func (s *ConfigService) StopGrace() time.Duration {
+	settings, err := s.GetAppSettings()
+	if err != nil {
+		return 0
+	}
+	return time.Duration(settings.StopGraceSeconds) * time.Second
 }
 
 func (s *ConfigService) SaveAppSettings(settings models.AppSettings) error {

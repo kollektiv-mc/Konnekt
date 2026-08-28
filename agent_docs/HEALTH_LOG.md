@@ -3633,3 +3633,142 @@ fixture moves the flag but not the state. `backend/services` rose 43.8% →
 listener asserted (apply-without-refetch, subscription tripwire moved 3 → 4)
 and the pill's five faces in jsdom, including Starting-while-`running:true`,
 which the old boolean pill could not render.
+
+### 2026-08-26 — The stop that killed mid-save
+
+**Closed: [#110](../../issues/110)** (Wings adoption Wave 2, third of the
+lifecycle core; survey §5, triage item 3).
+
+**The bug.** `stop()` wrote `stop` to stdin, waited a fixed 8 seconds, then
+SIGKILLed the process tree. A large world save legitimately exceeds 8
+seconds, so a routine stop could destroy the very data it was flushing —
+silently, since the wait had no narration and `killTree` was reachable only
+through that timeout. There was also no user-facing force kill at all: a
+genuinely hung server had no escape hatch except quitting Konnekt.
+
+**The fix** (`backend/services/server.go`, `config.go`, `scheduler_blocks.go`,
+`backend/models/settings.go`, `app.go`; frontend `SettingsModal.tsx`,
+`QuickCommandsPanel.tsx`, settings store/types). Wings §5's shape at desktop
+scale. The grace is a parameter: `Stop(grace)`/`Restart(..., grace)` with the
+configured `StopGraceSeconds` (default 60, Settings > General, clamped 5–600
+in the UI) passed down by the bound methods and the scheduler's stop/restart
+blocks via `ConfigService.StopGrace()`; zero maps to the 60s default inside
+`stop()` and a wild value clamps at Wings' own 10-minute user-stop deadline.
+`beforeClose` deliberately keeps a fixed 8-second `quitStopGrace` so quitting
+the app never hangs on the configurable value — the Job Object/Pdeathsig
+lifetime tie finishes what the best-effort close-time stop does not, and #117
+will rewrite that path anyway. The wait itself became two staged selects with
+the escalation narrated through the console ring buffer: a
+`[Konnekt] Still waiting…` warning at half the grace (the issue's open
+parameter, answered), the kill banner at its end. The state machine from
+#108 already holds `stopping` for the whole window, so the pill never lies.
+
+`ForceStop` is the escape hatch, bound as `ForceStopServer`: TryLock the
+power gate so a free gate is still claimed, proceed regardless when a
+graceful stop holds it (#109's documented plan, its comment now in the
+present tense), mark `expectedStop`, enter `stopping` (deduplicated if the
+graceful stop got there first), kill the tree, and wait for `waitForExit`'s
+ordinary teardown — it stays the single writer of the offline transition,
+the stopped payload and the exited close. A missing process is a successful
+force stop, deliberately unlike `Stop`'s pinned "server not running" error:
+this call's contract is "make it dead", and dead already is success. The
+frontend half: a pinnable Force Stop preset, an inline red button that
+appears while a stop or restart is in flight, and a confirmation it always
+shows regardless of `confirmBeforeStop` — exempt from the busy-disable on
+both the panel and the dialog, because a graceful stop now legitimately
+holds `lifecycleBusy` for the whole grace window and the wedged case is
+exactly when force stop must fire. `killTree` moved behind a per-instance
+seam (the `launchCmd` precedent): the test fixtures' children lack the
+Setpgid/Job setup a real boot gets, so the genuine group kill would have
+been an ESRCH no-op that hung every escalation test.
+
+Known consequence, accepted: the backups stop-and-back-up and worlds
+switch-and-restart flows await `StopServer` inline and now spin up to the
+configured grace during a slow save — that wait is the point.
+
+**Verification.** Escalation with an 80ms grace asserts both banners in
+order, the recorded kill pid, `Expected: true`, offline, and no crash
+banner; a stop inside the grace asserts silence and zero kills. Force stop:
+while a graceful `Stop(time.Hour)` is provably inside the gate (the fixture's
+stdin-EOF signal), `ForceStop` returns nil, both calls come home, the
+stopping transition is deduplicated to one event; idempotent-when-offline,
+starting-passes-through-stopping, and a deterministic gate-exclusion test
+that calls `Stop` from inside the kill seam while ForceStop's TryLock holds.
+All green under `go test -race -count=3`. `backend/services` rose 45.2% →
+**45.7%**, floor ratcheted 43% → **43.5%**. Frontend: three new panel tests
+(force fires through the always-shown confirm while Stop is pending and
+disabled; confirms even with confirm-before-stop off; rejection reaches the
+alert), settings fixture extended; 330 passing.
+
+### 2026-08-27 — The console that learned to say what Konnekt was doing
+
+**Closed: [#113](../../issues/113)** (Wings adoption Wave 2, fourth of the
+lifecycle core; survey §14, triage item 6 — the survey's own
+"highest value-per-effort" item).
+
+**The gap.** The console carried process output and nothing else. Everything
+Konnekt itself did was invisible there: a backup ran with no trace, a restore
+swapped directories in silence, the quiesce paused world saves and then slept
+three unexplained seconds without RCON, and accepting the EULA said nothing.
+The events existed, but they went to toasts and the notification feed, so the
+one place a user already watches during trouble told them nothing about the
+manager standing behind the server.
+
+**The fix** (`backend/models/console.go`, `backend/services/server.go`,
+`backup.go`, `app.go`; frontend `useConsoleStore.ts`, `App.tsx`,
+`tiles/console/index.tsx`). `ConsoleLine` gains a `Source` field, empty for
+server output and `"manager"` for narration, mirrored as an optional `source`
+key on the `log:line` payload that is **omitted entirely** when empty, so the
+server-output path travels exactly the payload it always did and the
+`map[string]string` shape assertion still holds. The marker is structural
+rather than a prefix match on purpose: a plugin printing `[Konnekt]` cannot
+impersonate the manager, and the frontend needs the bit anyway to keep
+narration out of `classifyLine`'s substring heuristics, which would have read
+`[Konnekt] Backup failed: …` as a server error. Empty is the zero value, so
+any path predating or missing the marker still reads as server output.
+
+One exported entry point, `ServerService.Narrate`, owns the daemon tag and
+tags the source; `emitConsoleLine` stays the raw server path. The five
+existing banner sites from #110 and #111 (crash exit, both escalation stages,
+force stop, ready timeout) moved onto it with their text byte-identical.
+`BackupService` already held a concrete `*ServerService` in the same package,
+so backup, world backup and restore narrate through a nil-safe forwarder with
+no new wiring, and the scheduler's backup block and the worlds tile inherit it
+for free. Quiesce narration lives inside `PrepareForBackup`/`ResumeSaves`
+rather than at their three call sites, which covers world duplication too and
+leaves `WorldService`'s narrow `serverGuard` interface untouched; the
+stdin-fallback flush wait moved behind a `quiesceWait` seam so it is testable
+and can say how long it is waiting. `AcceptEula` narrates after a successful
+write via the exported method.
+
+Restraint is enforced as much as the narration is: guards that refuse before
+anything starts stay silent, progress percentages stay on their own channel,
+installer output keeps `install:log` (Wings §14 is explicit that install
+output does not belong in the console, which resolves the triage's "install
+steps" mention), and a stopped server's no-op quiesce says nothing. Worst case
+for a backup on a running server is five lines. On the frontend the store
+levels a line by the marker instead of its text, and the tile paints
+`manager` in its own colour; the level filter stays a *server log level*
+filter, so narration appears under All rather than being swept into Warn or
+Error.
+
+Known and accepted: restore narration is live-only in practice, since restore
+requires a stopped server and the ring buffer clears on the next Start. Two
+follow-ups were noted rather than folded in: `AcceptEula`'s raw `os.WriteFile`
+belongs in a service and should use `writeFileAtomic` (#116's shape), and
+`CreateBackup`'s post-zip `os.Stat` failure returns an error without emitting
+`backup:failed`.
+
+**Verification.** A clean round trip asserts the whole story in order from the
+ring buffer (backing up, finished, restoring, restore finished) with every
+entry marked `manager`, no failure line, and no quiesce line while the server
+is stopped. Restraint has its own tests: a refused backup narrates nothing, a
+stopped-server quiesce narrates nothing. A corrupt archive proves the failure
+wording names its stage and never claims success. The quiesce test pins all
+three lines in order behind a 1ms seam. `TestNarrateMarksManagerLines` pins
+both halves of the contract, including that server output carries no `source`
+key at all. Frontend: the store levels by marker not by words, carries it
+through `appendLine` and `loadHistory`, and the console tile got its first
+line-rendering tests (manager styling, and manager lines staying out of the
+Error filter). `backend/services` rose 45.7% → **46.3%**, floor ratcheted
+43.5% → **44%**; 335 frontend tests pass.

@@ -8,6 +8,7 @@ import {
   StartServer,
   StopServer,
   RestartServer,
+  ForceStopServer,
 } from '../../wailsjs/go/main/App'
 import { errMsg } from '../lib/ipc'
 import { useSettingsStore } from '../stores/useSettingsStore'
@@ -24,7 +25,7 @@ interface CmdItem {
   id: string
   label: string
   kind: CmdKind
-  value: string // cmd string | 'start'|'stop'|'restart' | 'kick'|'ban'
+  value: string // cmd string | 'start'|'stop'|'restart'|'force-stop' | 'kick'|'ban'
 }
 
 type PresetTemplate = Omit<CmdItem, 'id'>
@@ -33,6 +34,7 @@ const PRESETS: PresetTemplate[] = [
   { label: 'Start', kind: 'lifecycle', value: 'start' },
   { label: 'Stop', kind: 'lifecycle', value: 'stop' },
   { label: 'Restart', kind: 'lifecycle', value: 'restart' },
+  { label: 'Force Stop', kind: 'lifecycle', value: 'force-stop' },
   { label: 'Save All', kind: 'cmd', value: 'save-all' },
   { label: 'List', kind: 'cmd', value: 'list' },
   { label: 'Set Day', kind: 'cmd', value: 'time set day' },
@@ -58,6 +60,26 @@ const DEFAULT_LABELS = new Set([
   'Kick Player',
   'Ban Player',
 ])
+
+type ConfirmableAction = 'stop' | 'restart' | 'force-stop'
+
+const CONFIRM_COPY: Record<ConfirmableAction, { title: string; body: string; button: string }> = {
+  stop: {
+    title: 'Stop server?',
+    body: 'This will stop the running server. Any unsaved progress may be lost.',
+    button: 'Stop',
+  },
+  restart: {
+    title: 'Restart server?',
+    body: 'This will restart the running server. Players will be briefly disconnected.',
+    button: 'Restart',
+  },
+  'force-stop': {
+    title: 'Force stop server?',
+    body: 'This kills the server process immediately. Progress since the last world save will be lost. Use this when a normal stop hangs.',
+    button: 'Force stop',
+  },
+}
 
 const newId = () =>
   typeof crypto !== 'undefined' && crypto.randomUUID
@@ -94,7 +116,7 @@ export function QuickCommandsPanel({ serverId, columns = 2 }: QuickCommandsPanel
   const [items, setItems] = useState<CmdItem[]>([])
   const [newCmd, setNewCmd] = useState('')
   const [modal, setModal] = useState<ModalState | null>(null)
-  const [confirmAction, setConfirmAction] = useState<'stop' | 'restart' | null>(null)
+  const [confirmAction, setConfirmAction] = useState<ConfirmableAction | null>(null)
   const [lifecycleBusy, setLifecycleBusy] = useState<string | null>(null)
   const [lifecycleError, setLifecycleError] = useState<string | null>(null)
   const [editing, setEditing] = useState(false)
@@ -220,8 +242,22 @@ export function QuickCommandsPanel({ serverId, columns = 2 }: QuickCommandsPanel
     [serverId, lifecycleBusy],
   )
 
+  // Force stop is exempt from lifecycleBusy on purpose: its reason to exist
+  // is a graceful stop still in flight (which holds lifecycleBusy for the
+  // whole grace window), and the backend call is idempotent. It always
+  // confirms, whatever confirmBeforeStop says — it discards unsaved world
+  // data.
+  const execForceStop = useCallback(() => {
+    setLifecycleError(null)
+    ForceStopServer(serverId).catch((err: unknown) => setLifecycleError(errMsg(err)))
+  }, [serverId])
+
   const handleLifecycle = useCallback(
     (action: string) => {
+      if (action === 'force-stop') {
+        setConfirmAction('force-stop')
+        return
+      }
       if (confirmBeforeStop && (action === 'stop' || action === 'restart')) {
         setConfirmAction(action as 'stop' | 'restart')
         return
@@ -337,7 +373,11 @@ export function QuickCommandsPanel({ serverId, columns = 2 }: QuickCommandsPanel
                 <button
                   key={item.id}
                   onClick={() => run(item)}
-                  disabled={item.kind === 'lifecycle' && lifecycleBusy !== null}
+                  disabled={
+                    item.kind === 'lifecycle' &&
+                    item.value !== 'force-stop' &&
+                    lifecycleBusy !== null
+                  }
                   title={item.value}
                   className="truncate rounded border border-white/10 px-2 py-1.5 text-left text-xs text-white/70 transition-all hover:border-white/25 hover:bg-white/5 hover:text-white disabled:opacity-40"
                 >
@@ -350,6 +390,19 @@ export function QuickCommandsPanel({ serverId, columns = 2 }: QuickCommandsPanel
       </div>
 
       <div className="flex shrink-0 flex-col gap-1.5">
+        {(lifecycleBusy === 'stop' || lifecycleBusy === 'restart') && (
+          <div className="flex items-center justify-between gap-2 text-xs">
+            <span className="text-text-muted">
+              {lifecycleBusy === 'stop' ? 'Stopping…' : 'Restarting…'}
+            </span>
+            <button
+              onClick={() => setConfirmAction('force-stop')}
+              className="border-hairline rounded border-red-400/30 bg-red-400/15 px-2 py-1 text-xs text-red-400 transition-colors hover:bg-red-400/25"
+            >
+              Force stop
+            </button>
+          </div>
+        )}
         {lifecycleError && (
           <div role="alert" className="text-danger text-xs">
             Action failed: {lifecycleError}
@@ -437,13 +490,11 @@ export function QuickCommandsPanel({ serverId, columns = 2 }: QuickCommandsPanel
         <div className="modal-overlay-in fixed inset-0 z-50 flex items-center justify-center bg-black/60">
           <div className="modal-panel-in border-border-subtle bg-canvas border-hairline flex w-80 flex-col gap-4 rounded-xl p-5">
             <div className="flex flex-col gap-1">
-              <span className="text-text-primary text-sm font-semibold capitalize">
-                {confirmAction === 'stop' ? 'Stop server?' : 'Restart server?'}
+              <span className="text-text-primary text-sm font-semibold">
+                {CONFIRM_COPY[confirmAction].title}
               </span>
               <span className="text-text-secondary text-xs">
-                {confirmAction === 'stop'
-                  ? 'This will stop the running server. Any unsaved progress may be lost.'
-                  : 'This will restart the running server. Players will be briefly disconnected.'}
+                {CONFIRM_COPY[confirmAction].body}
               </span>
             </div>
             <div className="flex justify-end gap-2">
@@ -461,10 +512,11 @@ export function QuickCommandsPanel({ serverId, columns = 2 }: QuickCommandsPanel
               </button>
               <button
                 onClick={() => {
-                  execLifecycle(confirmAction)
+                  if (confirmAction === 'force-stop') execForceStop()
+                  else execLifecycle(confirmAction)
                   setConfirmAction(null)
                 }}
-                disabled={lifecycleBusy !== null}
+                disabled={confirmAction !== 'force-stop' && lifecycleBusy !== null}
                 className="border-hairline rounded border-red-400/30 bg-red-400/15 px-3 py-1.5 text-xs text-red-400 transition-colors disabled:opacity-40"
                 onMouseEnter={(e) => {
                   ;(e.currentTarget as HTMLButtonElement).style.background =
@@ -475,7 +527,7 @@ export function QuickCommandsPanel({ serverId, columns = 2 }: QuickCommandsPanel
                     'rgba(248,113,113,0.15)'
                 }}
               >
-                {confirmAction === 'stop' ? 'Stop' : 'Restart'}
+                {CONFIRM_COPY[confirmAction].button}
               </button>
             </div>
           </div>

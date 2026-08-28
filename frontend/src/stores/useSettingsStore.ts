@@ -19,6 +19,7 @@ const DEFAULTS: AppSettings = {
   backgroundStyle: 'solid',
   autoStartActiveServer: false,
   confirmBeforeStop: false,
+  stopGraceSeconds: 60,
   consoleBufferLines: 1000,
   consoleTimestamps: false,
   notifyOnCrash: false,

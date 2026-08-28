@@ -5,7 +5,7 @@ export interface LogLine {
   id: number
   timestamp: string
   text: string
-  level: 'success' | 'warn' | 'error' | 'dim'
+  level: 'success' | 'warn' | 'error' | 'dim' | 'manager'
 }
 
 let lineId = 0
@@ -29,23 +29,31 @@ export function classifyLine(text: string): LogLine['level'] {
   return 'dim'
 }
 
+// A line Konnekt narrated carries the backend's source marker (#113), so it
+// is styled and filtered as manager output without classifyLine ever seeing
+// it — the pattern matching above is for server output, and "[Konnekt] Backup
+// failed: ..." would otherwise read as a server error.
+function levelFor(text: string, source?: string): LogLine['level'] {
+  return source === 'manager' ? 'manager' : classifyLine(text)
+}
+
 interface ConsoleStore {
   lines: LogLine[]
-  appendLine: (timestamp: string, text: string) => void
-  batchAppend: (incoming: Array<{ timestamp: string; line: string }>) => void
-  loadHistory: (lines: Array<{ timestamp: string; line: string }>) => void
+  appendLine: (timestamp: string, text: string, source?: string) => void
+  batchAppend: (incoming: Array<{ timestamp: string; line: string; source?: string }>) => void
+  loadHistory: (lines: Array<{ timestamp: string; line: string; source?: string }>) => void
   clear: () => void
 }
 
 export const useConsoleStore = create<ConsoleStore>((set) => ({
   lines: [],
-  appendLine: (timestamp, text) =>
+  appendLine: (timestamp, text, source) =>
     set((s) => {
       const max = useSettingsStore.getState().settings.consoleBufferLines || 1000
       return {
         lines: [
           ...s.lines.slice(-(max - 1)),
-          { id: ++lineId, timestamp, text, level: classifyLine(text) },
+          { id: ++lineId, timestamp, text, level: levelFor(text, source) },
         ],
       }
     }),
@@ -57,7 +65,7 @@ export const useConsoleStore = create<ConsoleStore>((set) => ({
         id: ++lineId,
         timestamp: l.timestamp,
         text: l.line,
-        level: classifyLine(l.line),
+        level: levelFor(l.line, l.source),
       }))
       const combined = [...s.lines, ...newLines]
       return { lines: combined.length > max ? combined.slice(-max) : combined }
@@ -73,7 +81,7 @@ export const useConsoleStore = create<ConsoleStore>((set) => ({
           id: ++lineId,
           timestamp: l.timestamp,
           text: l.line,
-          level: classifyLine(l.line),
+          level: levelFor(l.line, l.source),
         })),
       }
     }),

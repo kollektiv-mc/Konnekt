@@ -66,6 +66,10 @@ export function DuplicateWorld(arg1, arg2, arg3) {
   return window['go']['main']['App']['DuplicateWorld'](arg1, arg2, arg3);
 }
 
+export function ForceStopServer(arg1) {
+  return window['go']['main']['App']['ForceStopServer'](arg1);
+}
+
 export function GetActiveLayout() {
   return window['go']['main']['App']['GetActiveLayout']();
 }

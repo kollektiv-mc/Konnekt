@@ -24,6 +24,11 @@ import (
 
 const consoleCap = 2000
 
+// sourceManager marks a console line Konnekt itself narrated, as opposed to
+// server process output (#113). It is the ConsoleLine.Source value and the
+// log:line payload's source key.
+const sourceManager = "manager"
+
 // ErrPowerActionInProgress is returned when a power action (start, stop,
 // restart) arrives while another one is still in progress. The message is
 // shown verbatim in the UI, so keep it a readable sentence.
@@ -59,6 +64,20 @@ var (
 // worldgen on slow hardware legitimately takes minutes. Too long only means a
 // pill that says Starting longer; too short means falsely claiming ready.
 const startingDeadline = 10 * time.Minute
+
+// stopGraceDefault bounds a graceful stop when no configured grace reaches
+// stop() (a zero from an unreadable settings file, tests passing 0). 60s
+// replaces the old fixed 8s, which a large world save could legitimately
+// exceed — getting killed mid-save for it (#110). maxStopGrace caps a wild
+// settings value at Wings' own user-stop deadline.
+const (
+	stopGraceDefault = 60 * time.Second
+	maxStopGrace     = 10 * time.Minute
+)
+
+// quiesceFlushWait is the grace a stdin-driven save-all gets to reach disk
+// when RCON is unavailable, since that path has nothing to block on.
+const quiesceFlushWait = 3 * time.Second
 
 // playerSession holds per-session data captured from log lines.
 type playerSession struct {
@@ -163,8 +182,9 @@ type ServerService struct {
 	// across both legs. Acquired fail-fast only (TryLock): a second power
 	// action gets ErrPowerActionInProgress instead of queueing. waitForExit,
 	// the crash path, never touches it, so a dying process tears down freely
-	// even mid-action. #110's force kill will deliberately bypass it: TryLock,
-	// proceed regardless, unlock only if that TryLock succeeded.
+	// even mid-action. ForceStop (#110) deliberately bypasses it: TryLock,
+	// proceed regardless, unlock only if that TryLock succeeded — its reason
+	// to exist is a graceful stop wedged inside the gate.
 	powerMu sync.Mutex
 
 	// launchCmd builds the child process for start(). A test seam in the #115
@@ -185,6 +205,19 @@ type ServerService struct {
 	// in the launchCmd spirit: never reassigned outside NewServerService and
 	// tests.
 	startingTimeout time.Duration
+
+	// killTree is the platform process-tree kill (server_windows.go /
+	// server_other.go), behind a seam like launchCmd: the test fixtures'
+	// children lack the Setpgid/Job setup a real boot gets, so the genuine
+	// group kill would no-op there. Never reassigned outside NewServerService
+	// and tests.
+	killTree func(pid int)
+
+	// quiesceWait is how long PrepareForBackup gives a stdin save-all to
+	// flush when RCON is unavailable and there is nothing to block on. A test
+	// seam in the startingTimeout spirit: never reassigned outside
+	// NewServerService and tests.
+	quiesceWait time.Duration
 }
 
 func NewServerService() *ServerService {
@@ -195,6 +228,8 @@ func NewServerService() *ServerService {
 		logTPS:          -1,
 		launchCmd:       defaultLaunchCmd,
 		startingTimeout: startingDeadline,
+		killTree:        killTree,
+		quiesceWait:     quiesceFlushWait,
 	}
 }
 
@@ -239,12 +274,13 @@ func (s *ServerService) Start(serverID string, jarPath string, jvmArgs []string,
 // action can slip between the legs. On a stopped server the stop leg is
 // skipped: restart-from-stopped is a plain start (#109 owner decision), which
 // also covers a server that crashed between the gate and the stop leg.
-func (s *ServerService) Restart(serverID string, jarPath string, jvmArgs []string, workingDir string) error {
+// grace bounds the stop leg exactly as it does Stop's.
+func (s *ServerService) Restart(serverID string, jarPath string, jvmArgs []string, workingDir string, grace time.Duration) error {
 	if !s.powerMu.TryLock() {
 		return ErrPowerActionInProgress
 	}
 	defer s.powerMu.Unlock()
-	if err := s.stop(); err != nil && !errors.Is(err, errServerNotRunning) {
+	if err := s.stop(grace); err != nil && !errors.Is(err, errServerNotRunning) {
 		return err
 	}
 	return s.start(serverID, jarPath, jvmArgs, workingDir)
@@ -255,8 +291,8 @@ func (s *ServerService) start(serverID string, jarPath string, jvmArgs []string,
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	// Defense in depth behind the gate: also guards #110's future force-kill
-	// path, which deliberately bypasses powerMu.
+	// Defense in depth behind the gate: also guards ForceStop's path, which
+	// deliberately bypasses powerMu (#110).
 	if s.running {
 		return fmt.Errorf("server already running")
 	}
@@ -430,18 +466,39 @@ func (s *ServerService) streamOutput(r io.Reader) {
 	}
 }
 
-// emitConsoleLine sends one line down the console channel: the log:line event
-// plus the ring buffer GetConsoleHistory replays to late subscribers.
+// Narrate speaks as Konnekt in the console (#113): the daemon tag plus the
+// source marker the UI styles apart from server output, so a manager line is
+// never mistaken for something the server printed. Exported because app.go
+// narrates the EULA write; Wails binds App methods only, so this adds no IPC
+// surface. Reserve it for lifecycle moments — the notification feed keeps its
+// own role, and chatter here costs the console its usefulness.
+func (s *ServerService) Narrate(line string) {
+	s.emitConsoleLineTagged("[Konnekt] "+line, sourceManager)
+}
+
+// emitConsoleLine sends one line of server output down the console channel.
+func (s *ServerService) emitConsoleLine(line string) {
+	s.emitConsoleLineTagged(line, "")
+}
+
+// emitConsoleLineTagged sends one line down the console channel: the log:line
+// event plus the ring buffer GetConsoleHistory replays to late subscribers.
+// The source key is omitted entirely when empty, so server output travels
+// exactly the payload it always has.
 // NB: emit precedes buffer append. A remote client that snapshots
 // GetConsoleHistory then subscribes must dedup/order the seam line.
-func (s *ServerService) emitConsoleLine(line string) {
+func (s *ServerService) emitConsoleLineTagged(line, source string) {
 	ts := time.Now().Format("15:04:05")
-	s.bus.Emit(EventLogLine, map[string]string{"timestamp": ts, "line": line})
+	payload := map[string]string{"timestamp": ts, "line": line}
+	if source != "" {
+		payload["source"] = source
+	}
+	s.bus.Emit(EventLogLine, payload)
 	s.logBufMu.Lock()
 	if len(s.logBuf) >= consoleCap {
 		s.logBuf = s.logBuf[1:]
 	}
-	s.logBuf = append(s.logBuf, models.ConsoleLine{Timestamp: ts, Line: line})
+	s.logBuf = append(s.logBuf, models.ConsoleLine{Timestamp: ts, Line: line, Source: source})
 	s.logBufMu.Unlock()
 }
 
@@ -485,7 +542,7 @@ func (s *ServerService) waitForExit() {
 	s.lastStop = stop
 	s.mu.Unlock()
 	if !expected {
-		s.emitConsoleLine("[Konnekt] Server process exited unexpectedly (" + exitLabel(exitCode) + ")")
+		s.Narrate("Server process exited unexpectedly (" + exitLabel(exitCode) + ")")
 	}
 	s.bus.Emit(EventServerStopped, stop)
 
@@ -505,16 +562,27 @@ func (s *ServerService) GetLastStop() models.ServerStopped {
 	return s.lastStop
 }
 
-func (s *ServerService) Stop() error {
+// Stop shuts the server down gracefully, waiting up to grace for it to save
+// and exit before force killing the process tree. grace <= 0 means the
+// default; callers with a configured value (ConfigService.StopGrace) pass it
+// through.
+func (s *ServerService) Stop(grace time.Duration) error {
 	if !s.powerMu.TryLock() {
 		return ErrPowerActionInProgress
 	}
 	defer s.powerMu.Unlock()
-	return s.stop()
+	return s.stop(grace)
 }
 
 // stop is Stop without the power gate. Callers hold powerMu.
-func (s *ServerService) stop() error {
+func (s *ServerService) stop(grace time.Duration) error {
+	if grace <= 0 {
+		grace = stopGraceDefault
+	}
+	if grace > maxStopGrace {
+		grace = maxStopGrace
+	}
+
 	s.mu.Lock()
 	if !s.running {
 		s.mu.Unlock()
@@ -538,13 +606,62 @@ func (s *ServerService) stop() error {
 	exited := s.exited
 	s.mu.Unlock()
 
+	// Two-stage wait so a slow world save is narrated instead of looking like
+	// a hang: a warning at half the grace, the kill at its end (#110). The
+	// state stays stopping throughout; waitForExit flips it offline.
+	half := grace / 2
 	select {
 	case <-exited:
-	case <-time.After(8 * time.Second):
-		killTree(pid)
-		<-exited
+		return nil
+	case <-time.After(half):
+	}
+	s.Narrate(fmt.Sprintf("Still waiting for the server to stop (%s before force kill)", grace-half))
+
+	select {
+	case <-exited:
+		return nil
+	case <-time.After(grace - half):
+	}
+	s.Narrate(fmt.Sprintf("Server did not stop within %s, force killing the process tree", grace))
+	s.killTree(pid)
+	<-exited
+	return nil
+}
+
+// ForceStop kills the server process tree immediately, the escape hatch for
+// a graceful stop that is wedged. It bypasses the power gate on purpose:
+// TryLock so a free gate is still claimed (keeping Start/Restart out for the
+// duration), proceed regardless when a stop already holds it, unlock only if
+// this call's own TryLock succeeded.
+//
+// A missing process is a successful force stop — deliberately unlike Stop's
+// pinned "server not running" error — because this call's contract is "make
+// it dead", and dead already is success. No stopTPSPoll here: waitForExit
+// runs it during the teardown this kill triggers, and it stays the single
+// writer of the offline transition, the stopped payload and the exited close.
+func (s *ServerService) ForceStop() error {
+	if s.powerMu.TryLock() {
+		defer s.powerMu.Unlock()
 	}
 
+	s.mu.Lock()
+	if !s.running {
+		s.mu.Unlock()
+		return nil
+	}
+	s.expectedStop = true
+	s.setStateLocked(stateStopping, false) // no-op if a graceful stop got here first
+	if s.stdin != nil {
+		s.stdin.Close()
+		s.stdin = nil
+	}
+	pid := s.cmd.Process.Pid
+	exited := s.exited
+	s.mu.Unlock()
+
+	s.Narrate("Force stopping: killing the server process tree")
+	s.killTree(pid)
+	<-exited
 	return nil
 }
 
@@ -762,7 +879,7 @@ func (s *ServerService) watchStarting(exited chan struct{}) {
 	}
 	s.mu.Unlock()
 	if promote {
-		s.emitConsoleLine(fmt.Sprintf("[Konnekt] No ready line seen after %s, treating the server as running", s.startingTimeout))
+		s.Narrate(fmt.Sprintf("No ready line seen after %s, treating the server as running", s.startingTimeout))
 	}
 }
 
@@ -823,6 +940,11 @@ func (s *ServerService) PrepareForBackup() bool {
 		return false
 	}
 
+	// Narrated here rather than at the three call sites (both backup paths and
+	// world duplication), so every quiesce says so once and WorldService's
+	// narrow serverGuard interface stays as it is.
+	s.Narrate("Pausing world saves and flushing to disk")
+
 	if rconOK {
 		_, _ = s.rcon.Execute(addr, pw, "save-off")       //nolint:errcheck // best-effort save-flush before backup; backup proceeds either way
 		_, _ = s.rcon.Execute(addr, pw, "save-all flush") //nolint:errcheck // best-effort save-flush before backup; backup proceeds either way
@@ -831,7 +953,10 @@ func (s *ServerService) PrepareForBackup() bool {
 
 	_ = s.SendCommand("save-off")       //nolint:errcheck // best-effort save-flush before backup; backup proceeds either way
 	_ = s.SendCommand("save-all flush") //nolint:errcheck // best-effort save-flush before backup; backup proceeds either way
-	time.Sleep(3 * time.Second)
+	// Without RCON there is nothing to block on, so this wait is the whole
+	// guarantee — and unexplained it reads as a hang.
+	s.Narrate(fmt.Sprintf("RCON unavailable, giving the save %s to flush", s.quiesceWait))
+	time.Sleep(s.quiesceWait)
 	return true
 }
 
@@ -847,6 +972,7 @@ func (s *ServerService) ResumeSaves() {
 	if !running {
 		return
 	}
+	s.Narrate("Resuming world saves")
 	if rconOK {
 		_, _ = s.rcon.Execute(addr, pw, "save-on") //nolint:errcheck // best-effort resume after backup
 		return

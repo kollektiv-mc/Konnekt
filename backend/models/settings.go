@@ -12,6 +12,10 @@ type AppSettings struct {
 	AutoStartActiveServer bool `json:"autoStartActiveServer"`
 	ConfirmBeforeStop     bool `json:"confirmBeforeStop"`
 
+	// StopGraceSeconds is how long a graceful stop may wait for the server to
+	// shut down and save before the process tree is force killed (#110).
+	StopGraceSeconds int `json:"stopGraceSeconds"`
+
 	ConsoleBufferLines int  `json:"consoleBufferLines"`
 	ConsoleTimestamps  bool `json:"consoleTimestamps"`
 

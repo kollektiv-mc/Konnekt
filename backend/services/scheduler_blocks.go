@@ -316,13 +316,13 @@ func execCommand(e *ExecContext) ExecResult {
 		}
 		err = e.Server().Start(cfg.ID, cfg.JarPath, cfg.JvmArgs, cfg.WorkingDir)
 	case "__stop__":
-		err = e.Server().Stop()
+		err = e.Server().Stop(e.Config_().StopGrace())
 	case "__restart__":
 		cfg, cfgErr := e.Config_().GetServerConfig(e.ServerID)
 		if cfgErr != nil {
 			return ExecResult{Port: "onFailed", Err: cfgErr}
 		}
-		err = e.Server().Restart(cfg.ID, cfg.JarPath, cfg.JvmArgs, cfg.WorkingDir)
+		err = e.Server().Restart(cfg.ID, cfg.JarPath, cfg.JvmArgs, cfg.WorkingDir, e.Config_().StopGrace())
 	default:
 		err = e.Server().SendCommand(cmd)
 	}

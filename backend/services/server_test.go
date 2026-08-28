@@ -174,6 +174,112 @@ func TestStreamOutputMatchersFireOnNormalizedLines(t *testing.T) {
 	}
 }
 
+// Manager narration is marked structurally, not by its prefix: the console
+// tile styles and excludes it from server-output pattern matching off the
+// source marker, so a plugin printing "[Konnekt]" cannot pass for Konnekt
+// (#113). The counter-half pins the zero value: server output carries no
+// source key at all, so every path that predates the marker still reads as
+// server output.
+func TestNarrateMarksManagerLines(t *testing.T) {
+	s, bus := newServerFixture()
+	lines := collect(bus, EventLogLine)
+
+	s.Narrate("something happened")
+	s.emitConsoleLine("[12:00:00] [Server thread/INFO]: raw output")
+
+	events := waitForCount(t, lines, 2)
+	var sawManager, sawServer bool
+	for _, ev := range events {
+		m, ok := ev.(map[string]string)
+		if !ok {
+			t.Fatalf("log:line payload is %T, want map[string]string", ev)
+		}
+		switch m["source"] {
+		case sourceManager:
+			sawManager = true
+			if m["line"] != "[Konnekt] something happened" {
+				t.Errorf("manager line = %q, want the daemon tag prepended", m["line"])
+			}
+		case "":
+			sawServer = true
+			if _, present := m["source"]; present {
+				t.Error("server output carries a source key, want it omitted entirely")
+			}
+		default:
+			t.Errorf("unexpected source %q", m["source"])
+		}
+	}
+	if !sawManager || !sawServer {
+		t.Errorf("bus delivery incomplete: manager=%v server=%v", sawManager, sawServer)
+	}
+
+	history := s.GetConsoleHistory()
+	if len(history) != 2 {
+		t.Fatalf("ring buffer holds %d lines, want 2", len(history))
+	}
+	if history[0].Source != sourceManager {
+		t.Errorf("buffered manager line Source = %q, want %q", history[0].Source, sourceManager)
+	}
+	if history[1].Source != "" {
+		t.Errorf("buffered server line Source = %q, want empty", history[1].Source)
+	}
+}
+
+// The quiesce is narrated inside PrepareForBackup/ResumeSaves rather than at
+// their three call sites, so a backup and a world duplication both explain
+// the pause. Without RCON the flush wait is pure sleep, which is the case
+// that most needs saying out loud.
+func TestPrepareForBackupNarratesTheQuiesce(t *testing.T) {
+	s, _ := newServerFixture()
+	release, _ := fakeRunningServer(t, s)
+	s.quiesceWait = time.Millisecond
+
+	if !s.PrepareForBackup() {
+		t.Fatal("PrepareForBackup on a running server = false, want true")
+	}
+	s.ResumeSaves()
+
+	want := []string{
+		"[Konnekt] Pausing world saves and flushing to disk",
+		"[Konnekt] RCON unavailable, giving the save 1ms to flush",
+		"[Konnekt] Resuming world saves",
+	}
+	got := consoleLines(s)
+	if len(got) != len(want) {
+		t.Fatalf("console history = %v, want exactly %v", got, want)
+	}
+	for i, w := range want {
+		if got[i] != w {
+			t.Errorf("line %d = %q, want %q", i, got[i], w)
+		}
+	}
+
+	s.mu.Lock()
+	exited := s.exited
+	s.mu.Unlock()
+	release()
+	select {
+	case <-exited:
+	case <-time.After(2 * time.Second):
+		t.Fatal("process never exited")
+	}
+}
+
+// Restraint: a stopped server has no saves to pause, so the quiesce no-ops
+// and says nothing.
+func TestPrepareForBackupWhileStoppedStaysSilent(t *testing.T) {
+	s, _ := newServerFixture()
+
+	if s.PrepareForBackup() {
+		t.Error("PrepareForBackup on a stopped server = true, want false")
+	}
+	s.ResumeSaves()
+
+	if lines := consoleLines(s); len(lines) != 0 {
+		t.Errorf("console history = %v, want empty", lines)
+	}
+}
+
 // exitingCommand returns a real short-lived process that exits with code,
 // because faking os.ProcessState is not possible and a real Wait is the thing
 // under test.
@@ -259,7 +365,7 @@ func TestWaitForExitNormalStopWritesNoBanner(t *testing.T) {
 }
 
 // consumeStdinCommand returns a process that exits when its stdin closes —
-// stop()'s graceful path, with no 8-second killTree wait.
+// stop()'s graceful path, with no killTree wait at the end of the grace.
 func consumeStdinCommand(t *testing.T) *exec.Cmd {
 	t.Helper()
 	if runtime.GOOS == "windows" {
@@ -328,7 +434,7 @@ func TestConcurrentStopsSecondFailsFast(t *testing.T) {
 	release, stopSeen := fakeRunningServer(t, s)
 
 	errCh := make(chan error, 1)
-	go func() { errCh <- s.Stop() }()
+	go func() { errCh <- s.Stop(0) }()
 
 	select {
 	case <-stopSeen:
@@ -336,7 +442,7 @@ func TestConcurrentStopsSecondFailsFast(t *testing.T) {
 		t.Fatal("first Stop never reached its stdin close")
 	}
 
-	if err := s.Stop(); !errors.Is(err, ErrPowerActionInProgress) {
+	if err := s.Stop(0); !errors.Is(err, ErrPowerActionInProgress) {
 		t.Fatalf("second Stop = %v, want ErrPowerActionInProgress", err)
 	}
 
@@ -355,7 +461,7 @@ func TestConcurrentStopsSecondFailsFast(t *testing.T) {
 	}
 	// The gate must be released again: a third Stop reports the ordinary
 	// not-running error, not contention.
-	if err := s.Stop(); !errors.Is(err, errServerNotRunning) {
+	if err := s.Stop(0); !errors.Is(err, errServerNotRunning) {
 		t.Errorf("third Stop = %v, want errServerNotRunning", err)
 	}
 }
@@ -371,7 +477,7 @@ func TestRestartBackToBackSecondFailsFast(t *testing.T) {
 
 	dir := t.TempDir()
 	errCh := make(chan error, 1)
-	go func() { errCh <- s.Restart("srv1", "", nil, dir) }()
+	go func() { errCh <- s.Restart("srv1", "", nil, dir, 0) }()
 
 	select {
 	case <-stopSeen:
@@ -379,7 +485,7 @@ func TestRestartBackToBackSecondFailsFast(t *testing.T) {
 		t.Fatal("restart's stop leg never reached its stdin close")
 	}
 
-	if err := s.Restart("srv1", "", nil, dir); !errors.Is(err, ErrPowerActionInProgress) {
+	if err := s.Restart("srv1", "", nil, dir, 0); !errors.Is(err, ErrPowerActionInProgress) {
 		t.Fatalf("second Restart = %v, want ErrPowerActionInProgress", err)
 	}
 
@@ -406,7 +512,7 @@ func TestRestartBackToBackSecondFailsFast(t *testing.T) {
 		t.Error("restart's stop leg emitted Expected=false — a crash notification for a deliberate restart")
 	}
 
-	if err := s.Stop(); err != nil {
+	if err := s.Stop(0); err != nil {
 		t.Errorf("cleanup Stop = %v, want nil", err)
 	}
 }
@@ -417,7 +523,7 @@ func TestRestartFromStoppedIsAPlainStart(t *testing.T) {
 	s, _ := newServerFixture()
 	fakeLaunch(t, s)
 
-	if err := s.Restart("srv1", "", nil, t.TempDir()); err != nil {
+	if err := s.Restart("srv1", "", nil, t.TempDir(), 0); err != nil {
 		t.Fatalf("Restart from stopped = %v, want nil", err)
 	}
 	if !s.IsRunning() {
@@ -426,7 +532,7 @@ func TestRestartFromStoppedIsAPlainStart(t *testing.T) {
 	if got := s.ActiveServerID(); got != "srv1" {
 		t.Errorf("ActiveServerID() = %q, want srv1", got)
 	}
-	if err := s.Stop(); err != nil {
+	if err := s.Stop(0); err != nil {
 		t.Errorf("cleanup Stop = %v, want nil", err)
 	}
 }
@@ -481,7 +587,7 @@ func TestStartWhileRunningRefused(t *testing.T) {
 	}
 	// The refusal released the gate: the next action reports ordinary state,
 	// not contention.
-	if err := s.Stop(); !errors.Is(err, errServerNotRunning) {
+	if err := s.Stop(0); !errors.Is(err, errServerNotRunning) {
 		t.Errorf("Stop after teardown = %v, want errServerNotRunning", err)
 	}
 }
@@ -490,7 +596,7 @@ func TestStartWhileRunningRefused(t *testing.T) {
 // backups tile's stop-and-back-up, beforeClose's benign race).
 func TestStopWhenNotRunningKeepsItsError(t *testing.T) {
 	s, _ := newServerFixture()
-	err := s.Stop()
+	err := s.Stop(0)
 	if err == nil || err.Error() != "server not running" {
 		t.Fatalf("Stop on stopped = %v, want exactly 'server not running'", err)
 	}
