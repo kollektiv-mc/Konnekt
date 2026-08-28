@@ -3569,3 +3569,67 @@ lets `start()` run a stdin-consuming shell process, giving the start body its
 first coverage: `backend/services` rose 41.1% → **43.8%**, floor ratcheted
 39% → **41%**. Frontend: three new panel tests (verbatim message render,
 double click sends once, error clears on the next action).
+
+### 2026-08-26 — The server that claimed running while still generating its world
+
+**Closed: [#108](../../issues/108)**, and with it the user request in
+[#101](../../issues/101) (Wings adoption Wave 2, second of the lifecycle
+core; survey §1–2, triage item 1).
+
+**The gap.** `running = true` the instant `cmd.Start()` returned, so a server
+thirty seconds from accepting players was indistinguishable from one serving
+them: the pill said Online mid-worldgen, and the TPS poll waited an arbitrary
+fixed 15 seconds because nothing knew when the server was actually up.
+
+**The fix** (`backend/services/server.go`, `events.go`,
+`backend/models/server.go`, `app.go`, `stats.go`; frontend `constants.ts`,
+`useServerStore.ts`, `useServerStatus.ts`, `tiles/stats/index.tsx`). Wings'
+four-state lifecycle — offline, starting, running, stopping — as an int enum
+whose zero value is offline (bare `&ServerService{}` fixtures stay correct),
+living in the same commented per-instance block as #109's gate for #57 to
+move wholesale. All movement goes through one `setStateLocked` under `s.mu`
+that emits the new `server:state` event (`models.ServerStateChange`) only on
+an actual change, since the EventBus itself never dedups; the readable getter
+twin is the new `State` field on `GetServerStatus`, which the stats tick
+pushes too. Start enters starting; the running transition comes from the
+console scanner matching the Minecraft `]: Done (3.541s)!` family (one
+pattern covers vanilla/Fabric/Quilt/Paper/Forge; anchored on the log prefix
+so chat cannot spoof it; gated on starting so a late buffered line cannot
+resurrect a stopped server); `Stop()` and the server's own "Stopping the
+server" line enter stopping — the line's `expectedStop` write stays
+unconditional, so the crash contract is untouched (crash remains
+running-or-starting straight to offline); `waitForExit` enters offline before
+its close-`exited`-last ordering. The timeout Wings lacks: a `watchStarting`
+goroutine (armed per boot on its own `exited` channel) promotes a
+never-matched starting state to running after 10 minutes, flagged `TimedOut`
+on the event with a `[Konnekt]` banner in the console. The TPS poller now
+starts at readiness instead of spawn+15s, sampling immediately, with its
+`stopTPS`/`tpsOnce` re-arm moved alongside so a second boot polls again; it
+takes the stop channel and RCON coordinates as snapshots, closing two latent
+races (a later boot rewriting fields under a live poller), and `Uptime()`
+gained the lock it always needed against the stats ticker. Frontend: the pill
+becomes five faces (Unreachable / Starting / Online / Stopping / Offline,
+the transitional pair in the warning amber token); `Running` still means
+"process alive", so the console/backups/config/mods/worlds gating on it is
+untouched, and the `ServerStatus` alias picked the new field up from the
+regenerated bindings for free. Deliberately unchanged: the "Server started"
+notification stays keyed to spawn (a "server ready" notification is a clean
+follow-up), `QuickCommandsPanel.lifecycleBusy` stays (the gate owns
+correctness), and `useConsoleStore.classifyLine`'s cosmetic `/Done|…/`
+coloring keeps its own looser regex.
+
+**Verification.** Lifecycle tests driven through the real machinery — Start
+with the `launchCmd` seam, ready lines fed to `streamOutput` — assert the
+full starting→running→stopping→offline trace with exactly one event per
+transition, the never-started fixture ignoring a Done line, a table of ready
+regex flavors with the chat-spoof and no-prefix negatives, timeout promotion
+(30ms seam) with banner and `TimedOut`, ready suppressing the armed timer,
+stop-during-starting passing through stopping with `Expected: true`, and the
+TPS gate re-arming across two full boots — the regression the re-key was most
+likely to cause. All green under `go test -race -count=3`; the existing
+matcher test additionally pins that a stopping line on a never-started
+fixture moves the flag but not the state. `backend/services` rose 43.8% →
+**45.2%**, floor ratcheted 41% → **43%**. Frontend: the hook's fourth
+listener asserted (apply-without-refetch, subscription tripwire moved 3 → 4)
+and the pill's five faces in jsdom, including Starting-while-`running:true`,
+which the old boolean pill could not render.

@@ -161,9 +161,16 @@ func TestStreamOutputMatchersFireOnNormalizedLines(t *testing.T) {
 
 	s.mu.Lock()
 	expected := s.expectedStop
+	state := s.state
 	s.mu.Unlock()
 	if !expected {
 		t.Error("'Stopping the server' did not set expectedStop")
+	}
+	// The intent flag is unconditional, the state transition is not: this
+	// fixture never started, so the stopping line must not move it off offline
+	// (a late buffered line cannot drag a torn-down machine back to stopping).
+	if state != stateOffline {
+		t.Errorf("state = %v after a stopping line on a never-started fixture, want offline", state)
 	}
 }
 
@@ -303,6 +310,7 @@ func fakeRunningServer(t *testing.T, s *ServerService) (release func(), stopSeen
 	s.serverID = "srv1"
 	s.exited = make(chan struct{})
 	s.expectedStop = false
+	s.state = stateRunning // direct write, not the setter: a fixture mirrors a ready boot without emitting
 	s.mu.Unlock()
 	go s.waitForExit()
 

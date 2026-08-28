@@ -587,10 +587,11 @@ was partly wrong)
   #147), unquiesced world duplication
   (#115 — closed 2026-08-22, HEALTH_LOG "The torn copy of a live world"), and
   non-atomic config writes (#116 — closed 2026-08-22, HEALTH_LOG "The
-  half-written file a crash could leave"). Features: #108 (state machine,
-  implements #101), #113, #114, #117 (close prompt + re-adopt, prerequisite
-  #99), #118, #119, #120, #121; per-server shaping is a standing constraint
-  tracked by #57. Cross-cutting constraints, sequencing waves, and the #30/#26
+  half-written file a crash could leave"). Features: #108 (state machine +
+  ready detection, implements #101 — closed 2026-08-26, HEALTH_LOG "The
+  server that claimed running while still generating its world"), #113, #114,
+  #117 (close prompt + re-adopt, prerequisite #99), #118, #119, #120, #121;
+  per-server shaping is a standing constraint tracked by #57. Cross-cutting constraints, sequencing waves, and the #30/#26
   reconciliations live in `agent_docs/WINGS_ADOPTION.md` — implementing sessions
   read that file plus their one issue, nothing more. As each issue closes, its
   write-up moves to HEALTH_LOG per convention.

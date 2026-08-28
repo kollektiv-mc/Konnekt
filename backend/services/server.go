@@ -44,12 +44,51 @@ var (
 	reTPSForge    = regexp.MustCompile(`(?i)Mean TPS:\s*(\d+(?:\.\d+)?)`)
 	reTickQuery   = regexp.MustCompile(`(\d+(?:\.\d+)?)\s*ms\s*per tick`)
 	reServerStop  = regexp.MustCompile(`(?i)Stopping the server`)
+	// reServerReady is the Minecraft "Done (3.541s)!" ready line, shared by
+	// vanilla, Fabric, Quilt, Paper/Purpur and Forge/NeoForge (their log
+	// prefixes differ, the Done line does not). Anchored on "]: " like the
+	// player matchers so a chat message ("]: <Alex> Done (1s)!") cannot spoof
+	// readiness; [0-9.,] tolerates locale comma decimals. Case-sensitive on
+	// purpose — every flavor capitalizes Done.
+	reServerReady = regexp.MustCompile(`]: Done \([0-9.,]+s\)!`)
 )
+
+// startingDeadline bounds the starting state — the timeout Wings lacks: a
+// ready line that never matches (an exotic flavor, an old log format) must
+// resolve, not sit in starting forever. Generous on purpose: first-boot
+// worldgen on slow hardware legitimately takes minutes. Too long only means a
+// pill that says Starting longer; too short means falsely claiming ready.
+const startingDeadline = 10 * time.Minute
 
 // playerSession holds per-session data captured from log lines.
 type playerSession struct {
 	uuid string
 	ip   string
+}
+
+// serverState is the lifecycle vocabulary (#108), closed at four states.
+// The zero value is offline on purpose: tests construct bare &ServerService{}
+// values, and a service that has never started a server is offline.
+type serverState int
+
+const (
+	stateOffline serverState = iota
+	stateStarting
+	stateRunning
+	stateStopping
+)
+
+func (st serverState) String() string {
+	switch st {
+	case stateStarting:
+		return "starting"
+	case stateRunning:
+		return "running"
+	case stateStopping:
+		return "stopping"
+	default:
+		return "offline"
+	}
 }
 
 type ServerService struct {
@@ -116,8 +155,9 @@ type ServerService struct {
 	// can serve it as that event's readable getter twin.
 	lastStop models.ServerStopped
 
-	// Power-action gate (#109) and launch seam. Per-instance state: both move
-	// wholesale into #57's serverInstance when that extraction lands.
+	// Power-action gate (#109), launch seam and lifecycle state (#108).
+	// Per-instance state: all of it moves wholesale into #57's serverInstance
+	// when that extraction lands.
 	//
 	// powerMu serializes Start, Stop and Restart end-to-end; Restart holds it
 	// across both legs. Acquired fail-fast only (TryLock): a second power
@@ -133,15 +173,28 @@ type ServerService struct {
 	// process so power-action tests run without java. Never reassigned outside
 	// NewServerService and tests.
 	launchCmd func(jarPath, workingDir string, jvmArgs []string) (*exec.Cmd, error)
+
+	// state is the lifecycle machine's current value, guarded by mu and moved
+	// only through setStateLocked so every actual change emits server:state
+	// exactly once. Running stays the "process alive" flag; state refines it
+	// with the starting and stopping phases.
+	state serverState
+
+	// startingTimeout is how long a boot may sit in starting before
+	// watchStarting promotes it (startingDeadline in production). A test seam
+	// in the launchCmd spirit: never reassigned outside NewServerService and
+	// tests.
+	startingTimeout time.Duration
 }
 
 func NewServerService() *ServerService {
 	return &ServerService{
-		players:    make(map[string]playerSession),
-		presession: make(map[string]playerSession),
-		currentTPS: -1,
-		logTPS:     -1,
-		launchCmd:  defaultLaunchCmd,
+		players:         make(map[string]playerSession),
+		presession:      make(map[string]playerSession),
+		currentTPS:      -1,
+		logTPS:          -1,
+		launchCmd:       defaultLaunchCmd,
+		startingTimeout: startingDeadline,
 	}
 }
 
@@ -242,6 +295,7 @@ func (s *ServerService) start(serverID string, jarPath string, jvmArgs []string,
 	s.startTime = time.Now()
 	s.serverID = serverID
 	s.expectedStop = false
+	s.setStateLocked(stateStarting, false)
 
 	s.logBufMu.Lock()
 	s.logBuf = s.logBuf[:0]
@@ -282,16 +336,14 @@ func (s *ServerService) start(serverID string, jarPath string, jvmArgs []string,
 	s.logLastWarning = time.Time{}
 	s.logTPSMu.Unlock()
 
-	// Start TPS polling if RCON is configured
-	if s.rconEnabled && s.rconPassword != "" && s.rcon != nil {
-		s.stopTPS = make(chan struct{})
-		s.tpsOnce = sync.Once{}
-		go s.pollTPS()
-	}
+	// TPS polling starts at the running transition (enterRunningLocked), not
+	// here: the Done line is the real signal that RCON is up, where the old
+	// fixed 15s post-spawn delay was a guess.
 
 	go s.streamOutput(stdout)
 	go s.streamOutput(stderr)
 	go s.waitForExit()
+	go s.watchStarting(s.exited)
 
 	s.bus.Emit(EventServerStarted, nil)
 	return nil
@@ -312,7 +364,25 @@ func (s *ServerService) streamOutput(r io.Reader) {
 
 		if reServerStop.MatchString(line) {
 			s.mu.Lock()
+			// The flag write is unconditional (any spelling of a deliberate
+			// shutdown marks intent); the state transition is gated so a late
+			// buffered line cannot drag an already-offline machine back to
+			// stopping.
 			s.expectedStop = true
+			if s.state == stateStarting || s.state == stateRunning {
+				s.setStateLocked(stateStopping, false)
+			}
+			s.mu.Unlock()
+		}
+
+		if reServerReady.MatchString(line) {
+			s.mu.Lock()
+			// Gated on starting: output from a stopping or offline process is
+			// never a ready signal, so a late buffered Done line cannot
+			// resurrect a stopped server.
+			if s.state == stateStarting {
+				s.enterRunningLocked(false)
+			}
 			s.mu.Unlock()
 		}
 
@@ -410,6 +480,7 @@ func (s *ServerService) waitForExit() {
 	expected := s.expectedStop
 	s.running = false
 	s.cachedProc = nil
+	s.setStateLocked(stateOffline, false)
 	stop := models.ServerStopped{Expected: expected, ExitCode: exitCode}
 	s.lastStop = stop
 	s.mu.Unlock()
@@ -451,6 +522,7 @@ func (s *ServerService) stop() error {
 	}
 
 	s.expectedStop = true
+	s.setStateLocked(stateStopping, false)
 
 	if s.stdin != nil {
 		_, _ = fmt.Fprintln(s.stdin, "stop") //nolint:errcheck // best-effort; the timeout + killTree fallback below is the real safety net
@@ -493,31 +565,31 @@ func (s *ServerService) stopTPSPoll() {
 	s.logTPSMu.Unlock()
 }
 
-func (s *ServerService) pollTPS() {
-	select {
-	case <-time.After(15 * time.Second):
-	case <-s.stopTPS:
-		return
-	}
-
+// pollTPS samples TPS over RCON every 15s, starting immediately: it is spawned
+// at the running transition (startTPSPollLocked), so the first query lands at
+// readiness rather than after the old arbitrary post-spawn delay. stop is this
+// boot's own channel, passed in rather than re-read from the struct so a later
+// boot's re-arm never races this goroutine's select.
+func (s *ServerService) pollTPS(stop chan struct{}) {
 	ticker := time.NewTicker(15 * time.Second)
 	defer ticker.Stop()
 
 	for {
+		if tps, ok := s.queryTPSViaRcon(); ok {
+			s.tpsMu.Lock()
+			s.currentTPS = tps
+			s.tpsLastUpdate = time.Now()
+			s.tpsMu.Unlock()
+		} else {
+			s.tpsMu.Lock()
+			s.tpsLastUpdate = time.Time{}
+			s.tpsMu.Unlock()
+		}
+
 		select {
-		case <-s.stopTPS:
+		case <-stop:
 			return
 		case <-ticker.C:
-			if tps, ok := s.queryTPSViaRcon(); ok {
-				s.tpsMu.Lock()
-				s.currentTPS = tps
-				s.tpsLastUpdate = time.Now()
-				s.tpsMu.Unlock()
-			} else {
-				s.tpsMu.Lock()
-				s.tpsLastUpdate = time.Time{}
-				s.tpsMu.Unlock()
-			}
 		}
 	}
 }
@@ -527,10 +599,16 @@ func (s *ServerService) queryTPSViaRcon() (float64, bool) {
 	flavor := s.rconFlavor
 	s.tpsMu.RUnlock()
 
+	// Snapshot the RCON coordinates once: start() rewrites them under s.mu on
+	// every boot, and this runs on the poller goroutine.
+	s.mu.Lock()
+	addr, pw := s.rconAddr, s.rconPassword
+	s.mu.Unlock()
+
 	// Fast path: server flavor already known — one RCON call only.
 	switch flavor {
 	case "paper":
-		resp, err := s.rcon.Execute(s.rconAddr, s.rconPassword, "tps")
+		resp, err := s.rcon.Execute(addr, pw, "tps")
 		if err == nil {
 			if m := reTPSPaper.FindStringSubmatch(resp); m != nil {
 				if tps, e := strconv.ParseFloat(m[1], 64); e == nil {
@@ -540,7 +618,7 @@ func (s *ServerService) queryTPSViaRcon() (float64, bool) {
 		}
 		return 0, false
 	case "forge":
-		resp, err := s.rcon.Execute(s.rconAddr, s.rconPassword, "forge tps")
+		resp, err := s.rcon.Execute(addr, pw, "forge tps")
 		if err == nil {
 			if m := reTPSForge.FindStringSubmatch(resp); m != nil {
 				if tps, e := strconv.ParseFloat(m[1], 64); e == nil {
@@ -550,7 +628,7 @@ func (s *ServerService) queryTPSViaRcon() (float64, bool) {
 		}
 		return 0, false
 	case "vanilla":
-		resp, err := s.rcon.Execute(s.rconAddr, s.rconPassword, "tick query")
+		resp, err := s.rcon.Execute(addr, pw, "tick query")
 		if err == nil {
 			if m := reTickQuery.FindStringSubmatch(resp); m != nil {
 				if mspt, e := strconv.ParseFloat(m[1], 64); e == nil && mspt > 0 {
@@ -563,7 +641,7 @@ func (s *ServerService) queryTPSViaRcon() (float64, bool) {
 
 	// Detection path: try each flavor in turn, cache the first that succeeds.
 	// Paper/Spigot/Purpur: /tps → "TPS from last 1m, 5m, 15m: *20.0, 20.0, 20.0"
-	resp, err := s.rcon.Execute(s.rconAddr, s.rconPassword, "tps")
+	resp, err := s.rcon.Execute(addr, pw, "tps")
 	if err == nil {
 		if m := reTPSPaper.FindStringSubmatch(resp); m != nil {
 			if tps, e := strconv.ParseFloat(m[1], 64); e == nil {
@@ -575,7 +653,7 @@ func (s *ServerService) queryTPSViaRcon() (float64, bool) {
 		}
 	}
 	// NeoForge/Forge: /forge tps → "Mean TPS: 20.0 ..."
-	resp, err = s.rcon.Execute(s.rconAddr, s.rconPassword, "forge tps")
+	resp, err = s.rcon.Execute(addr, pw, "forge tps")
 	if err == nil {
 		if m := reTPSForge.FindStringSubmatch(resp); m != nil {
 			if tps, e := strconv.ParseFloat(m[1], 64); e == nil {
@@ -587,7 +665,7 @@ func (s *ServerService) queryTPSViaRcon() (float64, bool) {
 		}
 	}
 	// Vanilla 1.21+: /tick query → "Xms per tick"
-	resp, err = s.rcon.Execute(s.rconAddr, s.rconPassword, "tick query")
+	resp, err = s.rcon.Execute(addr, pw, "tick query")
 	if err != nil {
 		return 0, false
 	}
@@ -618,6 +696,74 @@ func (s *ServerService) IsRunning() bool {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	return s.running
+}
+
+// setStateLocked moves the lifecycle state machine (#108). Callers hold s.mu.
+// Emits server:state only on an actual change, so subscribers never see a
+// duplicate transition; emitting under the lock follows start()'s existing
+// server:started emit (EventBus fans out in-process handlers in goroutines).
+func (s *ServerService) setStateLocked(next serverState, timedOut bool) {
+	if s.state == next {
+		return
+	}
+	s.state = next
+	s.bus.Emit(EventServerState, models.ServerStateChange{State: next.String(), TimedOut: timedOut})
+}
+
+// State reports the lifecycle phase as its wire spelling, the readable getter
+// twin of the server:state event (via GetServerStatus().State).
+func (s *ServerService) State() string {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.state.String()
+}
+
+// enterRunningLocked is the starting→running transition: the state change plus
+// the TPS poller that readiness keys (#108). Callers hold s.mu and have
+// checked state == stateStarting.
+func (s *ServerService) enterRunningLocked(timedOut bool) {
+	s.setStateLocked(stateRunning, timedOut)
+	s.startTPSPollLocked()
+}
+
+// startTPSPollLocked arms and spawns the RCON TPS poller, replacing the old
+// fixed 15s post-spawn delay: by the Done line RCON is already listening
+// ("RCON running" precedes it). The tpsOnce/stopTPS re-arm lives here WITH the
+// spawn — split apart, stopTPSPoll would consume a stale Once and no-op on the
+// next boot. Callers hold s.mu. No-op without RCON config; the log-derived
+// TPS fallback covers that case, as before.
+func (s *ServerService) startTPSPollLocked() {
+	if !s.rconEnabled || s.rconPassword == "" || s.rcon == nil {
+		return
+	}
+	s.stopTPS = make(chan struct{})
+	s.tpsOnce = sync.Once{}
+	go s.pollTPS(s.stopTPS)
+}
+
+// watchStarting resolves a starting state whose ready line never matches — the
+// timeout Wings lacks: promote to running with the TimedOut flag and a console
+// banner rather than sticking in starting forever. exited is this boot's own
+// channel, captured under s.mu in start(), so a stop or crash of this boot
+// cancels the watcher without ever racing a later boot's channel.
+func (s *ServerService) watchStarting(exited chan struct{}) {
+	timer := time.NewTimer(s.startingTimeout)
+	defer timer.Stop()
+	select {
+	case <-exited:
+		return
+	case <-timer.C:
+	}
+
+	s.mu.Lock()
+	promote := s.state == stateStarting
+	if promote {
+		s.enterRunningLocked(true)
+	}
+	s.mu.Unlock()
+	if promote {
+		s.emitConsoleLine(fmt.Sprintf("[Konnekt] No ready line seen after %s, treating the server as running", s.startingTimeout))
+	}
 }
 
 // Summary describes a configured server for display: what it is, where it
@@ -709,10 +855,13 @@ func (s *ServerService) ResumeSaves() {
 }
 
 func (s *ServerService) Uptime() string {
-	if !s.running {
+	s.mu.Lock()
+	running, started := s.running, s.startTime
+	s.mu.Unlock()
+	if !running {
 		return "0s"
 	}
-	d := time.Since(s.startTime).Round(time.Second)
+	d := time.Since(started).Round(time.Second)
 	h := int(d.Hours())
 	m := int(d.Minutes()) % 60
 	sec := int(d.Seconds()) % 60

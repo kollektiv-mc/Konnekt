@@ -35,10 +35,13 @@ import type { ServerStatus } from '../types'
  * server going offline (see backend/services/events.go).
  *
  * server:started/server:stopped refetch immediately rather than waiting up to a
- * full tick, so a start or stop shows at once.
+ * full tick, so a start or stop shows at once. server:state carries the whole
+ * change it announces (the lifecycle phase, #108), so it is applied directly
+ * with no refetch — the backend emits it only on an actual transition.
  */
 export function useServerStatusSync(serverId: string) {
   const setStatus = useServerStore((s) => s.setStatus)
+  const setServerState = useServerStore((s) => s.setServerState)
   const setReachable = useServerStore((s) => s.setReachable)
 
   const refresh = useCallback(async () => {
@@ -68,6 +71,10 @@ export function useServerStatusSync(serverId: string) {
         }),
         EventsOn(EVENTS.SERVER_STARTED, refresh),
         EventsOn(EVENTS.SERVER_STOPPED, refresh),
+        EventsOn(EVENTS.SERVER_STATE, (p?: { state?: string }) => {
+          if (p?.state) setServerState(p.state)
+          setReachable(true)
+        }),
       ]
     } catch {
       /* non-Wails context */
@@ -79,5 +86,5 @@ export function useServerStatusSync(serverId: string) {
         /* teardown no-op */
       }
     }
-  }, [refresh, setStatus, setReachable])
+  }, [refresh, setStatus, setServerState, setReachable])
 }

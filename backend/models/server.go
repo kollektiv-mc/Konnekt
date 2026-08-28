@@ -20,14 +20,29 @@ type ServerSummary struct {
 	Running    bool   `json:"running"`
 }
 
+// ServerStatus's State is the lifecycle phase (offline|starting|running|
+// stopping, #108); Running stays "process alive" — true through starting,
+// running and stopping — because every consumer gating on "is there a live
+// process to talk to / stop first" reads it.
 type ServerStatus struct {
 	Running    bool    `json:"running"`
+	State      string  `json:"state"`
 	Uptime     string  `json:"uptime"`
 	Players    int     `json:"players"`
 	MaxPlayers int     `json:"maxPlayers"`
 	TPS        float64 `json:"tps"`
 	RAMUsed    float64 `json:"ramUsed"`
 	RAMTotal   float64 `json:"ramTotal"`
+}
+
+// ServerStateChange is the server:state event payload (#108). State is one of
+// offline|starting|running|stopping. TimedOut marks a running state reached by
+// the starting-timeout fallback rather than a matched ready line; its durable
+// record is the [Konnekt] console banner. Readable getter twin:
+// GetServerStatus().State.
+type ServerStateChange struct {
+	State    string `json:"state"`
+	TimedOut bool   `json:"timedOut"`
 }
 
 // ServerStopped is the server:stopped event payload, and what GetLastStop

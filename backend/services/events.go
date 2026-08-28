@@ -19,6 +19,12 @@ const (
 	// server.
 	EventServerStatus = "server:status"
 
+	// EventServerState announces a lifecycle transition (#108). Payload is
+	// models.ServerStateChange; emitted by setStateLocked only on an actual
+	// change, so subscribers never see duplicate transitions. Readable getter
+	// twin: GetServerStatus().State.
+	EventServerState = "server:state"
+
 	EventStatsSnapshot    = "stats:snapshot"
 	EventPlayerJoined     = "player:joined"
 	EventPlayerLeft       = "player:left"

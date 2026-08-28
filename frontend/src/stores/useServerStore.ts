@@ -6,11 +6,14 @@ interface ServerStore {
   /**
    * Whether the last status fetch or push actually reached the backend.
    *
-   * Separate from `status.running`, which answers a different question: a
-   * stopped server is reachable and reports `running: false`, while an
+   * Three axes, three different questions: `reachable` says the backend
+   * answered at all, `status.running` says a live server process exists (true
+   * through starting, running and stopping), and `status.state` refines that
+   * into the lifecycle phase (offline | starting | running | stopping, #108).
+   * A stopped server is reachable and reports `running: false`, while an
    * unreachable backend reports nothing at all and leaves `status` holding
    * whatever was last known. Tiles that render "nothing here" need to tell those
-   * two apart or they show an unreachable server as a healthy, idle one
+   * apart or they show an unreachable server as a healthy, idle one
    * (HEALTH_LOG.md, 2026-08-20).
    *
    * Optimistic at startup: `true` until a call actually fails, so the UI does
@@ -19,12 +22,15 @@ interface ServerStore {
   reachable: boolean
   players: Player[]
   setStatus: (status: ServerStatus) => void
+  /** Applies a server:state push, which carries only the phase. */
+  setServerState: (state: string) => void
   setReachable: (reachable: boolean) => void
   setPlayers: (players: Player[]) => void
 }
 
 const defaultStatus: ServerStatus = {
   running: false,
+  state: 'offline',
   uptime: '0s',
   players: 0,
   maxPlayers: 20,
@@ -38,6 +44,7 @@ export const useServerStore = create<ServerStore>((set) => ({
   reachable: true,
   players: [],
   setStatus: (status) => set({ status }),
+  setServerState: (state) => set((s) => ({ status: { ...s.status, state } })),
   setReachable: (reachable) => set({ reachable }),
   setPlayers: (players) => set({ players }),
 }))

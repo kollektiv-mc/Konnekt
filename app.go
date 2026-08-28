@@ -313,6 +313,7 @@ func (a *App) SendCommand(serverID string, command string) error {
 func (a *App) GetServerStatus(serverID string) (models.ServerStatus, error) {
 	return models.ServerStatus{
 		Running:    a.serverService.IsRunning(),
+		State:      a.serverService.State(),
 		Uptime:     a.serverService.Uptime(),
 		Players:    a.serverService.PlayerCount(),
 		MaxPlayers: a.serverService.MaxPlayers(),

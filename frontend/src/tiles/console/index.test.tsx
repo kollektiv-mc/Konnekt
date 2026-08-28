@@ -11,6 +11,7 @@ vi.mock('../../../wailsjs/runtime/runtime')
 
 const OFFLINE: ServerStatus = {
   running: false,
+  state: 'offline',
   uptime: '0s',
   players: 0,
   maxPlayers: 20,
@@ -18,7 +19,13 @@ const OFFLINE: ServerStatus = {
   ramUsed: 0,
   ramTotal: 2048,
 }
-const ONLINE: ServerStatus = { ...OFFLINE, running: true, uptime: '1m 0s', tps: 20 }
+const ONLINE: ServerStatus = {
+  ...OFFLINE,
+  running: true,
+  state: 'running',
+  uptime: '1m 0s',
+  tps: 20,
+}
 
 const sendButton = () => screen.getByRole('button', { name: 'Send' })
 const commandInput = () => screen.getByLabelText('Server command') as HTMLInputElement
