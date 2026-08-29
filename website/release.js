@@ -117,8 +117,10 @@
   //
   // A body with no "What's changed" heading is returned whole: hand-written
   // notes are not this script's output and have no section to find, and showing
-  // them unchanged is better than showing nothing. v0.1.0-alpha.1 was that case
-  // until its notes were rewritten in this shape.
+  // them unchanged is better than showing nothing. It is a fallback and not a
+  // second supported shape, because the whole body lands on the page, install
+  // steps and all. release.yml writes every release in the shape above, and a
+  // release edited by hand should keep it.
   var CHANGES_HEADING = /^##\s+What's changed\s*$/im
   var CHANGES_END = /^(?:_[^\n]*\bnot listed\b[^\n]*_|\*\*Full changelog\*\*)/im
 

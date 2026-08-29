@@ -63,7 +63,8 @@ jobs:
           # local `wails dev` build, and both services.IsInstallableBuild and
           # the frontend's isDevBuild() must classify a snapshot as installable:
           # it is a real checksummed binary and it updates itself.
-          echo "version=${base}-snapshot.${stamp}.${short}" >> "$GITHUB_OUTPUT"
+          version="${base}-snapshot.${stamp}.${short}"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
 
           # RPM versions can't contain "-"; "~" sorts before the base version,
           # the same idiom release.yml uses for pre-release tags. The timestamp
@@ -73,29 +74,23 @@ jobs:
           echo "rpm_version=${base}~snapshot.${stamp}.${short}" >> "$GITHUB_OUTPUT"
 
           # A snapshot is a prerelease of the *next* version, so version.go's
-          # base has to stay ahead of the newest published release. When it
-          # doesn't - the usual cause being a tag cut without the follow-up
-          # bump - every snapshot sorts below that release and the channel goes
-          # quiet: users are offered the stable build once and then told they
-          # are up to date forever. Nothing here can fix that, but an
-          # unexplained silent channel is worth one annotation.
+          # base has to keep this build above the newest published release.
+          # When it doesn't - the usual cause being a tag cut without the
+          # follow-up bump - every snapshot sorts below that release and the
+          # channel goes quiet: users are offered the stable build once and
+          # then told they are up to date forever. Nothing here can fix that,
+          # but an unexplained silent channel is worth one annotation.
           #
-          # Only a *final* release strands the channel. update.go's
-          # compareVersions ranks any prerelease below the plain core, so
-          # 0.1.0-snapshot.* still beats a 0.1.0-alpha.1 release and there is
-          # nothing to warn about. `sort -V` is used only to order the two
-          # cores, never to judge prerelease precedence, which it does not
-          # implement.
+          # The judgement is update.go's own, mirrored in the script rather
+          # than approximated in shell here. The version of this guard that was
+          # written in shell used `sort -V`, which does not implement
+          # prerelease precedence, and worked around that by only examining
+          # *final* releases - so a prerelease tag, which is every tag this
+          # repo has cut, was waved through and stranded the channel silently.
           latest="$(gh api "repos/${{ github.repository }}/releases/latest" \
             --jq .tag_name 2>/dev/null || true)"
-          latest="${latest#v}"
-          latest_core="${latest%%-*}"
-          if [ -n "$latest" ] && [ "$latest" = "$latest_core" ] \
-            && [ "$(printf '%s\n%s\n' "$latest_core" "$base" | sort -V | head -n1)" = "$base" ]; then
-            echo "::warning::version.go's base ($base) is not ahead of the newest release ($latest);" \
-              "snapshots sort below it and the snapshot channel will report 'up to date' forever." \
-              "Bump version.go and wails.json."
-          fi
+          VERSION="$version" LATEST="$latest" \
+            python3 "$GITHUB_WORKSPACE/.github/scripts/version-precedence.py"
 
           # target_commitish is the commit the current snapshot was cut from.
           # Absent (first run, or someone deleted the release) means build.
