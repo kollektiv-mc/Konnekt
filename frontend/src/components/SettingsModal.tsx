@@ -23,6 +23,7 @@ import {
 } from '../../wailsjs/go/main/App'
 import { BrowserOpenURL, EventsOn } from '../../wailsjs/runtime/runtime'
 import type { models } from '../../wailsjs/go/models'
+import { readOr } from '../lib/ipc'
 import { CHANGELOG, CHANGELOG_URL, groupByDate } from '../lib/changelog'
 import type { ChangelogEntry } from '../lib/changelog'
 import { EVENTS } from '../lib/constants'
@@ -80,11 +81,13 @@ export function SettingsModal({ open, onClose }: Props) {
   // Gated on `open` because this component is mounted for the whole session
   // (it renders null when closed), and an unconditional effect here would turn
   // a Settings-only lookup into an extra IPC call at app startup.
+  //
+  // Through `readOr` rather than a bare `.catch()`: with no Wails bridge the
+  // binding throws synchronously instead of rejecting, and the throw took the
+  // whole app down the moment Settings opened in the `frontend-dev` preset.
   useEffect(() => {
     if (!open) return
-    GetAppVersion()
-      .then(setVersion)
-      .catch(() => setVersion(null))
+    readOr(GetAppVersion, null).then(setVersion)
   }, [open])
 
   // A stale message from a previous visit would read as a failure of whatever
@@ -608,24 +611,35 @@ function AboutPane({ version }: { version: string | null }) {
   // one thing worth attaching to a bug report, so show where it is rather than
   // making the user guess. Null outside a Wails context.
   useEffect(() => {
-    GetDataDir()
-      .then(setDataDir)
-      .catch(() => setDataDir(null))
-    GetLogPath()
-      .then(setLogPath)
-      .catch(() => setLogPath(null))
+    readOr(GetDataDir, null).then(setDataDir)
+    readOr(GetLogPath, null).then(setLogPath)
   }, [])
 
   // Streaming download progress, per CLAUDE.md's "no useEffect polling — use
   // a Wails event listener" rule. Only applied while actively downloading;
   // cleaned up on unmount so a closed Settings modal doesn't leak a listener.
+  //
+  // Guarded the way every other subscription in the app is: the runtime
+  // helpers dereference `window.runtime` synchronously, so with no bridge
+  // subscribing throws and would take this pane down with it.
   useEffect(() => {
-    const off = EventsOn(EVENTS.UPDATE_PROGRESS, (d?: { percent?: number }) => {
-      setCheckState((prev) =>
-        prev.status === 'downloading' ? { ...prev, percent: d?.percent ?? prev.percent } : prev,
-      )
-    })
-    return () => off()
+    let off: (() => void) | undefined
+    try {
+      off = EventsOn(EVENTS.UPDATE_PROGRESS, (d?: { percent?: number }) => {
+        setCheckState((prev) =>
+          prev.status === 'downloading' ? { ...prev, percent: d?.percent ?? prev.percent } : prev,
+        )
+      })
+    } catch {
+      /* non-Wails context */
+    }
+    return () => {
+      try {
+        off?.()
+      } catch {
+        /* teardown no-op */
+      }
+    }
   }, [])
 
   const openFolder = () => {
