@@ -66,6 +66,20 @@ describe('applySkin theme and skin', () => {
 
   it('composes the gradient overlay from the accent channels', () => {
     applySkin({ ...base, backgroundStyle: 'gradient' })
-    expect(inline('--bg-gradient-overlay')).toContain('var(--accent-rgb)')
+    // Pinned in full, not matched loosely: the overlay is deliberately kept
+    // whisper-subtle, so the 0.07 alpha and the geometry are the decision. A
+    // change here should be a change someone meant to make.
+    expect(inline('--bg-gradient-overlay')).toBe(
+      'radial-gradient(ellipse at top right, rgb(var(--accent-rgb) / 0.07) 0%, transparent 65%)',
+    )
+  })
+
+  // Never covered before. This half of the setting was always correct; what was
+  // broken is that neither half reached the screen, because the Dashboard canvas
+  // painted an opaque --bg-base over the body that carries the overlay.
+  it('clears the gradient overlay for the solid background style', () => {
+    applySkin({ ...base, backgroundStyle: 'gradient' })
+    applySkin({ ...base, backgroundStyle: 'solid' })
+    expect(inline('--bg-gradient-overlay')).toBe('none')
   })
 })
