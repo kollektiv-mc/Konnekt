@@ -29,6 +29,7 @@ type App struct {
 	modService          *services.ModService
 	updateService       *services.UpdateService
 	installerService    *services.InstallerService
+	loaderService       *services.LoaderService
 	bus                 *services.EventBus
 	dataDir             string
 }
@@ -52,6 +53,8 @@ func NewApp() *App {
 	update.SetBus(bus)
 	installer := services.NewInstallerService()
 	installer.SetBus(bus)
+	loader := services.NewLoaderService(cfg, srv, backup, installer)
+	loader.SetBus(bus)
 	return &App{
 		serverService:       srv,
 		configService:       cfg,
@@ -65,6 +68,7 @@ func NewApp() *App {
 		modService:          mods,
 		updateService:       update,
 		installerService:    installer,
+		loaderService:       loader,
 		bus:                 bus,
 	}
 }
@@ -117,6 +121,8 @@ func (a *App) startup(ctx context.Context) {
 	a.modService.SetContext(ctx)
 	a.modService.SetDataDir(a.dataDir)
 	a.installerService.SetContext(ctx)
+	a.loaderService.SetContext(ctx)
+	a.loaderService.SetDataDir(a.dataDir)
 }
 
 // --- File dialogs ---
@@ -263,6 +269,27 @@ func (a *App) InstallServer(jarPath string, targetDir string) error {
 // AbortInstall kills a running installer. No-op when none is running.
 func (a *App) AbortInstall() error {
 	return a.installerService.Abort()
+}
+
+// --- Mod loader ---
+
+// GetLoaderStatus reports the loader build a server is on and whether Konnekt
+// can move it.
+func (a *App) GetLoaderStatus(serverID string) (models.LoaderStatus, error) {
+	return a.loaderService.Status(serverID)
+}
+
+// ListLoaderVersions lists the builds this server could move to, newest first.
+func (a *App) ListLoaderVersions(serverID string) ([]models.LoaderVersion, error) {
+	return a.loaderService.AvailableVersions(serverID)
+}
+
+// UpdateLoader moves a server to a different loader build in place. It returns
+// as soon as the update has been accepted; follow loader:update-finished /
+// loader:update-failed for the outcome and install:log for the installer's
+// output.
+func (a *App) UpdateLoader(req models.LoaderUpdateRequest) error {
+	return a.loaderService.Update(req)
 }
 
 // GetServerSummary describes one configured server for the sidebar tooltip.

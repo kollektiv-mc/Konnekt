@@ -63,6 +63,15 @@ const (
 	EventInstallFinished = "install:finished" // {targetDir, mcVersion, loader, loaderVersion}
 	EventInstallFailed   = "install:failed"   // {error}
 
+	// In-place mod loader update lifecycle. The installer's own output travels
+	// on install:log, which the update dialog and the first-install modal both
+	// render — but deliberately NOT on install:started/finished/failed, whose
+	// subscribers read them as "a new server was installed". See
+	// InstallerService.runInstaller.
+	EventLoaderUpdateStarted  = "loader:update-started"  // {serverID, from, to}
+	EventLoaderUpdateFinished = "loader:update-finished" // {serverID, version}
+	EventLoaderUpdateFailed   = "loader:update-failed"   // {serverID, error, rolledBack}
+
 	// Self-update lifecycle.
 	EventUpdateProgress = "update:progress" // {percent}
 )

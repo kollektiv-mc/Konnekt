@@ -8,6 +8,7 @@ import { ActiveProcesses } from './components/ActiveProcesses'
 import { ServerSelector } from './components/ServerSelector'
 import { EulaModal } from './components/EulaModal'
 import { SettingsModal } from './components/SettingsModal'
+import { useLoaderStore } from './stores/useLoaderStore'
 import { useServerConfigStore } from './stores/useServerConfigStore'
 import { useConsoleStore } from './stores/useConsoleStore'
 import { useSettingsStore } from './stores/useSettingsStore'
@@ -307,6 +308,60 @@ function App() {
         c3?.()
       } catch {
         /* teardown no-op */
+      }
+    }
+  }, [])
+
+  // Loader update → the update dialog's log and outcome, plus the sidebar chip.
+  // Its log rides on install:log, which the installer emits for both a first
+  // install and an update; the loader:update-* events are what tell the two
+  // apart, so the log listener is only armed while an update is running.
+  useEffect(() => {
+    const offs: Array<() => void> = []
+    const key = (id?: string) => 'loader:' + (id ?? '')
+    let current = key()
+    try {
+      offs.push(
+        EventsOn(EVENTS.LOADER_UPDATE_STARTED, (d?: { serverID?: string; to?: string }) => {
+          current = key(d?.serverID)
+          // The installer reports log lines, never a percentage.
+          useProcessesStore
+            .getState()
+            .start(current, `Updating loader to ${d?.to ?? ''}…`, undefined, true)
+        }),
+      )
+      offs.push(
+        EventsOn(EVENTS.LOADER_UPDATE_FINISHED, (d?: { version?: string }) => {
+          useProcessesStore.getState().finish(current, 'done')
+          useLoaderStore.getState().finishUpdate()
+          emitNotification('info', `Loader updated to ${d?.version ?? 'a new build'}`)
+        }),
+      )
+      offs.push(
+        EventsOn(EVENTS.LOADER_UPDATE_FAILED, (d?: { error?: string; rolledBack?: boolean }) => {
+          useProcessesStore.getState().finish(current, 'failed')
+          useLoaderStore
+            .getState()
+            .failUpdate(d?.error ?? 'The loader update failed.', d?.rolledBack ?? false)
+          emitNotification('crash', `Loader update failed${d?.error ? ': ' + d.error : ''}`)
+        }),
+      )
+      offs.push(
+        EventsOn(EVENTS.INSTALL_LOG, (d?: { line?: string }) => {
+          if (useLoaderStore.getState().phase !== 'running') return
+          useLoaderStore.getState().appendLog(d?.line ?? '')
+        }),
+      )
+    } catch {
+      /* non-Wails context */
+    }
+    return () => {
+      for (const off of offs) {
+        try {
+          off()
+        } catch {
+          /* teardown no-op */
+        }
       }
     }
   }, [])

@@ -1,8 +1,9 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { EventsOn } from '../../wailsjs/runtime/runtime'
 import { AbortInstall, BrowseDirectory, InstallServer } from '../../wailsjs/go/main/App'
 import { EVENTS } from '../lib/constants'
 import { LOADER_LABELS } from '../lib/loaders'
+import { InstallLog } from './InstallLog'
 
 export interface InstallerDetails {
   jarPath: string
@@ -49,7 +50,6 @@ export function ServerInstallModal({ installer, suggestedDir, onAddServer, onClo
   const [phase, setPhase] = useState<'idle' | 'running' | 'done' | 'failed'>('idle')
   const [log, setLog] = useState<string[]>([])
   const [error, setError] = useState('')
-  const logRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     const offs: Array<() => void> = []
@@ -81,11 +81,6 @@ export function ServerInstallModal({ installer, suggestedDir, onAddServer, onClo
       }
     }
   }, [])
-
-  // Follow the tail as the installer talks.
-  useEffect(() => {
-    logRef.current?.scrollTo({ top: logRef.current.scrollHeight })
-  }, [log])
 
   const browse = async () => {
     const path = await BrowseDirectory().catch(() => '')
@@ -142,18 +137,7 @@ export function ServerInstallModal({ installer, suggestedDir, onAddServer, onClo
           </button>
         </div>
 
-        {log.length > 0 && (
-          <div
-            ref={logRef}
-            className="border-border-subtle bg-surface border-hairline max-h-40 overflow-y-auto rounded p-2"
-          >
-            {log.map((line, i) => (
-              <div key={i} className="text-text-muted text-2xs leading-relaxed break-all">
-                {line}
-              </div>
-            ))}
-          </div>
-        )}
+        <InstallLog lines={log} />
 
         {phase === 'failed' && <span className="text-danger text-xs">{error}</span>}
         {done && <span className="text-accent text-xs">Install complete.</span>}

@@ -118,6 +118,10 @@ export function GetLayoutPresets() {
   return window['go']['main']['App']['GetLayoutPresets']();
 }
 
+export function GetLoaderStatus(arg1) {
+  return window['go']['main']['App']['GetLoaderStatus'](arg1);
+}
+
 export function GetLogPath() {
   return window['go']['main']['App']['GetLogPath']();
 }
@@ -184,6 +188,10 @@ export function ListBackups(arg1) {
 
 export function ListConfigFiles(arg1) {
   return window['go']['main']['App']['ListConfigFiles'](arg1);
+}
+
+export function ListLoaderVersions(arg1) {
+  return window['go']['main']['App']['ListLoaderVersions'](arg1);
 }
 
 export function ListWorlds(arg1) {
@@ -340,6 +348,10 @@ export function StopServer(arg1) {
 
 export function UpdateBackupMeta(arg1, arg2, arg3, arg4) {
   return window['go']['main']['App']['UpdateBackupMeta'](arg1, arg2, arg3, arg4);
+}
+
+export function UpdateLoader(arg1) {
+  return window['go']['main']['App']['UpdateLoader'](arg1);
 }
 
 export function WriteConfigFile(arg1, arg2, arg3) {

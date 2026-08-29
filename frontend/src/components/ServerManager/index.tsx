@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useServerConfigStore } from '../../stores/useServerConfigStore'
 import { ServerInstallModal } from '../ServerInstallModal'
 import type { InstallerDetails, InstallResult } from '../ServerInstallModal'
+import { LoaderPanel } from './LoaderPanel'
 import { ServerDetail } from './ServerDetail'
 import { ServerEditForm } from './ServerEditForm'
 import { ServerList, NEW_SERVER } from './ServerList'
@@ -108,12 +109,17 @@ export function ServerManager({
 
           <div className="flex-1 overflow-y-auto px-5 py-4">
             {!isNew && (
-              <div className="mb-5">
+              <div className="mb-5 flex flex-col gap-5">
                 <ServerDetail config={current} refreshKey={savedAt} />
+                <LoaderPanel
+                  config={current}
+                  refreshKey={savedAt}
+                  onUpdated={() => setSavedAt(Date.now())}
+                />
                 {current.id !== activeId && (
                   <button
                     onClick={() => void setActiveId(current.id).catch(() => {})}
-                    className="text-text-muted border-border-subtle hover:border-border-hover hover:text-text-primary border-hairline mt-3 rounded px-2.5 py-1 text-xs transition-colors"
+                    className="text-text-muted border-border-subtle hover:border-border-hover hover:text-text-primary border-hairline self-start rounded px-2.5 py-1 text-xs transition-colors"
                   >
                     Make active
                   </button>
