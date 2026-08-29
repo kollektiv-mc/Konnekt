@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import { applySkin, BUILTIN_SKINS } from './theme'
+import { applySkin, BUILTIN_SKINS, resolveSkin, skinSupportsLight } from './theme'
 import { STATUS_DEFAULTS } from '../styles/tokens'
 
 const base = {
@@ -15,9 +15,31 @@ const base = {
 const root = () => document.documentElement
 const inline = (prop: string) => root().style.getPropertyValue(prop)
 
+/**
+ * jsdom ships no `matchMedia`, so `theme: 'system'` threw here rather than
+ * resolving — which is why no test had ever exercised that branch. The stub is
+ * the smallest surface applySkin actually uses: a `matches` flag standing in for
+ * the OS preference, plus the listener pair it registers and cleans up.
+ */
+function stubMatchMedia(prefersDark: boolean) {
+  const listeners = new Set<() => void>()
+  const mql = {
+    matches: prefersDark,
+    addEventListener: (_: string, fn: () => void) => listeners.add(fn),
+    removeEventListener: (_: string, fn: () => void) => listeners.delete(fn),
+  }
+  window.matchMedia = (() => mql) as unknown as typeof window.matchMedia
+  // Flips the OS preference and notifies, the way a real change event would.
+  return (nowPrefersDark: boolean) => {
+    mql.matches = nowPrefersDark
+    for (const fn of listeners) fn()
+  }
+}
+
 beforeEach(() => {
   root().removeAttribute('style')
   delete root().dataset.theme
+  stubMatchMedia(false)
 })
 
 describe('applySkin status colours', () => {
@@ -87,6 +109,91 @@ describe('applySkin theme and skin', () => {
     applySkin({ ...base, backgroundStyle: 'gradient' })
     applySkin({ ...base, backgroundStyle: 'solid' })
     expect(inline('--bg-gradient-overlay')).toBe('none')
+  })
+})
+
+// A skin writes its tokens as inline custom properties on <html>, which outrank
+// [data-theme='light']'s rules for the same properties. So a dark-only skin
+// under the light theme keeps its dark surfaces while every token it does not
+// override flips to a light value — Midnight, which overrides no text ramp,
+// ended up painting near-black text on a near-black canvas. applySkin is the
+// only place that sees every way that combination can arise, so it is where the
+// combination is refused.
+describe('applySkin light-mode clamp', () => {
+  const darkOnly = BUILTIN_SKINS.filter((s) => !s.supportsLight)
+
+  it('has exactly one skin solved against the light theme', () => {
+    expect(BUILTIN_SKINS.filter((s) => s.supportsLight).map((s) => s.id)).toEqual(['default'])
+  })
+
+  it('keeps light mode for the default skin', () => {
+    applySkin({ ...base, theme: 'light', skinId: 'default' })
+    expect(root().dataset.theme).toBe('light')
+  })
+
+  // Settings refuses to store this pairing, so reaching it means a hand-edited
+  // settings file — or one written by a build that predates the flag.
+  it.each(darkOnly)('renders $id dark even when light is stored', (skin) => {
+    applySkin({ ...base, theme: 'light', skinId: skin.id })
+    expect(root().dataset.theme).toBe('dark')
+  })
+
+  // jsdom's matchMedia reports matches: false for '(prefers-color-scheme: dark)',
+  // i.e. a light OS — the case no stored value can guard, because the user never
+  // chose light here at all.
+  it.each(darkOnly)('renders $id dark under system on a light OS', (skin) => {
+    applySkin({ ...base, theme: 'system', skinId: skin.id })
+    expect(root().dataset.theme).toBe('dark')
+  })
+
+  it('follows a light OS again as soon as the skin allows it', () => {
+    applySkin({ ...base, theme: 'system', skinId: 'midnight' })
+    expect(root().dataset.theme).toBe('dark')
+
+    applySkin({ ...base, theme: 'system', skinId: 'default' })
+    expect(root().dataset.theme).toBe('light')
+  })
+
+  // The clamp has to live inside the change listener too, not only in the first
+  // resolve: a dark-only skin must survive the OS flipping under it.
+  it('holds a dark-only skin dark across a live OS change', () => {
+    const setPrefersDark = stubMatchMedia(false)
+    applySkin({ ...base, theme: 'system', skinId: 'midnight' })
+    expect(root().dataset.theme).toBe('dark')
+
+    setPrefersDark(true)
+    expect(root().dataset.theme).toBe('dark')
+
+    setPrefersDark(false)
+    expect(root().dataset.theme).toBe('dark')
+  })
+
+  it('still tracks a live OS change for a skin that supports light', () => {
+    const setPrefersDark = stubMatchMedia(false)
+    applySkin({ ...base, theme: 'system', skinId: 'default' })
+    expect(root().dataset.theme).toBe('light')
+
+    setPrefersDark(true)
+    expect(root().dataset.theme).toBe('dark')
+  })
+
+  it('never clamps dark, which every skin supports', () => {
+    for (const skin of BUILTIN_SKINS) {
+      applySkin({ ...base, theme: 'dark', skinId: skin.id })
+      expect(root().dataset.theme).toBe('dark')
+    }
+  })
+})
+
+describe('resolveSkin', () => {
+  it('falls back to the default skin for an unknown id', () => {
+    expect(resolveSkin('no-such-skin').id).toBe('default')
+    expect(skinSupportsLight('no-such-skin')).toBe(true)
+  })
+
+  it('answers from the skin table rather than from the id', () => {
+    expect(skinSupportsLight('default')).toBe(true)
+    expect(skinSupportsLight('midnight')).toBe(false)
   })
 })
 

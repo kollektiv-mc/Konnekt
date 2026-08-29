@@ -49,13 +49,7 @@ export function LayoutPresets() {
     <div className="flex flex-col gap-2 overflow-hidden p-2">
       <button
         onClick={() => setCollapsed((c) => !c)}
-        className="font-title text-text-muted flex w-full items-center justify-between px-1 text-xs font-medium tracking-wider uppercase transition-colors"
-        onMouseEnter={(e) => {
-          ;(e.currentTarget as HTMLButtonElement).style.color = 'var(--text-secondary)'
-        }}
-        onMouseLeave={(e) => {
-          ;(e.currentTarget as HTMLButtonElement).style.color = 'var(--text-muted)'
-        }}
+        className="font-title text-text-muted hover:text-text-secondary flex w-full cursor-pointer items-center justify-between px-1 text-xs font-medium tracking-wider uppercase transition-colors"
       >
         <span>Layouts</span>
         <span
@@ -69,39 +63,31 @@ export function LayoutPresets() {
         <div className="flex min-h-0 min-w-0 flex-col gap-2">
           {presets.map((preset) => (
             <div key={preset.name} className="flex items-center gap-1">
+              {/* Same treatment as the server list above it in this sidebar
+                  (components/ServerRow.tsx), and for the same reason: it is the
+                  same control. It used to hand-roll hover through
+                  onMouseEnter/onMouseLeave writing element.style.background,
+                  guarded on `!== activePresetName`. Both halves of that guard
+                  were bugs. Selecting a preset while hovering it left the
+                  inline grey in place, and an inline style outranks the class,
+                  so the active row rendered grey instead of accent. The
+                  matching mouse-leave then saw the row as active, skipped the
+                  reset, and stranded that grey there for good — one more row
+                  each time the selection moved. */}
               <button
                 onClick={() => loadPreset(preset.name)}
-                className={`flex-1 rounded px-3 py-1.5 text-left text-xs transition-all ${
+                className={`flex-1 cursor-pointer rounded px-3 py-1.5 text-left text-xs transition-all ${
                   preset.name === activePresetName
                     ? 'text-accent bg-accent/10'
-                    : 'text-text-secondary bg-transparent'
+                    : 'text-text-secondary hover:bg-hover hover:text-text-primary bg-transparent'
                 }`}
-                onMouseEnter={(e) => {
-                  if (preset.name !== activePresetName) {
-                    ;(e.currentTarget as HTMLButtonElement).style.color = 'var(--text-primary)'
-                    ;(e.currentTarget as HTMLButtonElement).style.background =
-                      'var(--hover-surface)'
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (preset.name !== activePresetName) {
-                    ;(e.currentTarget as HTMLButtonElement).style.color = 'var(--text-secondary)'
-                    ;(e.currentTarget as HTMLButtonElement).style.background = 'transparent'
-                  }
-                }}
               >
                 {preset.name}
               </button>
               {preset.name !== 'Default' && (
                 <button
                   onClick={() => handleDelete(preset.name)}
-                  className="text-text-faint px-1.5 text-xs transition-colors"
-                  onMouseEnter={(e) => {
-                    ;(e.currentTarget as HTMLButtonElement).style.color = '#f87171'
-                  }}
-                  onMouseLeave={(e) => {
-                    ;(e.currentTarget as HTMLButtonElement).style.color = 'var(--text-faint)'
-                  }}
+                  className="text-text-faint hover:text-danger cursor-pointer px-1.5 text-xs transition-colors"
                   title="Delete preset"
                 >
                   ×
@@ -117,26 +103,12 @@ export function LayoutPresets() {
               onChange={(e) => setNewName(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleSave()}
               placeholder={activePresetName || 'Preset name...'}
-              className="bg-hover border-border-subtle text-text-primary border-hairline min-w-0 flex-1 rounded px-2 py-1 text-xs outline-none"
-              onFocus={(e) => {
-                ;(e.target as HTMLInputElement).style.borderColor = 'var(--border-hover)'
-              }}
-              onBlur={(e) => {
-                ;(e.target as HTMLInputElement).style.borderColor = 'var(--border-subtle)'
-              }}
+              className="bg-hover border-border-subtle text-text-primary hover:border-border-hover focus:border-border-hover border-hairline min-w-0 flex-1 rounded px-2 py-1 text-xs transition-colors outline-none"
             />
             <button
               onClick={handleSave}
               disabled={saving}
-              className="border-border-subtle text-text-secondary border-hairline shrink-0 rounded px-2 py-1 text-xs transition-colors disabled:opacity-40"
-              onMouseEnter={(e) => {
-                ;(e.currentTarget as HTMLButtonElement).style.color = 'var(--text-primary)'
-                ;(e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--border-hover)'
-              }}
-              onMouseLeave={(e) => {
-                ;(e.currentTarget as HTMLButtonElement).style.color = 'var(--text-secondary)'
-                ;(e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--border-subtle)'
-              }}
+              className="border-border-subtle text-text-secondary enabled:hover:border-border-hover enabled:hover:text-text-primary border-hairline shrink-0 cursor-pointer rounded px-2 py-1 text-xs transition-colors disabled:cursor-not-allowed disabled:opacity-40"
             >
               Save
             </button>
@@ -151,13 +123,7 @@ export function LayoutPresets() {
           <button
             onClick={handleReset}
             disabled={resetting}
-            className="text-text-faint mt-1 px-1 text-left text-xs transition-colors disabled:opacity-40"
-            onMouseEnter={(e) => {
-              ;(e.currentTarget as HTMLButtonElement).style.color = 'var(--text-muted)'
-            }}
-            onMouseLeave={(e) => {
-              ;(e.currentTarget as HTMLButtonElement).style.color = 'var(--text-faint)'
-            }}
+            className="text-text-faint enabled:hover:text-text-muted mt-1 cursor-pointer px-1 text-left text-xs transition-colors disabled:cursor-not-allowed disabled:opacity-40"
           >
             {resetting ? 'Resetting…' : '↺ Reset to defaults'}
           </button>

@@ -4,6 +4,8 @@ import * as App from '../../wailsjs/go/main/App'
 import { EventsOn } from '../../wailsjs/runtime/runtime'
 import type { models } from '../../wailsjs/go/models'
 import { SettingsModal } from './SettingsModal'
+import { useSettingsStore } from '../stores/useSettingsStore'
+import type { AppSettings } from '../types'
 
 vi.mock('../../wailsjs/go/main/App')
 vi.mock('../../wailsjs/runtime/runtime', () => ({
@@ -133,5 +135,117 @@ describe('SettingsModal with no Wails bridge', () => {
     // which exists only when there is a path to show, stays out.
     expect(screen.getByRole('button', { name: /Open folder/ })).toBeTruthy()
     expect(screen.queryByText('Log file')).toBeNull()
+  })
+})
+
+// Only the Default skin is solved against the light theme. The rest write their
+// tokens as inline custom properties on <html>, which outrank
+// [data-theme='light'], so light mode left them with dark surfaces and whatever
+// light-theme tokens they happened not to override — near-black text on a
+// near-black canvas, for Midnight. `applySkin` refuses the combination; these
+// cover the half of the answer the user can actually see.
+describe('SettingsModal skin and light mode', () => {
+  const settings = (patch: Partial<AppSettings>) => {
+    useSettingsStore.setState({
+      settings: { ...useSettingsStore.getState().settings, ...patch },
+      error: null,
+    })
+  }
+  const openAppearance = () => render(<SettingsModal open onClose={() => {}} />)
+  const modeOption = (label: RegExp) => screen.getByRole('button', { name: label })
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    vi.mocked(App.GetAppVersion).mockResolvedValue('0.1.0')
+    vi.mocked(App.SaveAppSettings).mockResolvedValue(undefined)
+    vi.mocked(EventsOn).mockImplementation(noop)
+    // jsdom ships no matchMedia, which applySkin needs for theme: 'system'.
+    window.matchMedia = (() => ({
+      matches: false,
+      addEventListener: () => {},
+      removeEventListener: () => {},
+    })) as unknown as typeof window.matchMedia
+    settings({ theme: 'dark', skinId: 'default' })
+  })
+
+  it('offers light mode for the default skin', () => {
+    settings({ skinId: 'default' })
+    openAppearance()
+
+    expect(modeOption(/Light/).hasAttribute('disabled')).toBe(false)
+    expect(screen.getByText('Light, dark, or follow your OS preference.')).toBeTruthy()
+  })
+
+  it('disables light mode for a dark-only skin and says why', () => {
+    settings({ skinId: 'midnight' })
+    openAppearance()
+
+    expect(modeOption(/Light/).hasAttribute('disabled')).toBe(true)
+    expect(screen.getByText(/Midnight is a dark-only skin/)).toBeTruthy()
+  })
+
+  // The decision here: System stays available rather than being taken away from
+  // a user whose OS is dark. applySkin resolves it to dark while the skin needs
+  // that, without discarding the preference.
+  it('leaves dark and system selectable for a dark-only skin', () => {
+    settings({ skinId: 'forest' })
+    openAppearance()
+
+    expect(modeOption(/Dark/).hasAttribute('disabled')).toBe(false)
+    expect(modeOption(/System/).hasAttribute('disabled')).toBe(false)
+  })
+
+  // One patch rather than two writes: the store applies the skin on every
+  // update, so a follow-up write would paint a frame of light-mode-on-a-dark-
+  // skin before correcting itself.
+  it('switches to dark in the same write when a dark-only skin is picked in light mode', async () => {
+    settings({ theme: 'light', skinId: 'default' })
+    openAppearance()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Midnight' }))
+
+    await waitFor(() => expect(App.SaveAppSettings).toHaveBeenCalledTimes(1))
+    const written = vi.mocked(App.SaveAppSettings).mock.calls[0][0]
+    expect(written.skinId).toBe('midnight')
+    expect(written.theme).toBe('dark')
+    expect(useSettingsStore.getState().settings.theme).toBe('dark')
+  })
+
+  it('leaves a theme that is not light alone when the skin changes', async () => {
+    settings({ theme: 'system', skinId: 'default' })
+    openAppearance()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Nord' }))
+
+    await waitFor(() => expect(App.SaveAppSettings).toHaveBeenCalledTimes(1))
+    expect(useSettingsStore.getState().settings.theme).toBe('system')
+    expect(useSettingsStore.getState().settings.skinId).toBe('nord')
+  })
+
+  // Unreachable through the UI, which writes `dark` along with the skin. A
+  // settings file predating the flag, or hand-edited, still lands here, and
+  // showing Light as the selected mode would describe a mode applySkin is
+  // actively refusing to render.
+  it('shows a stored-but-refused light mode as dark', () => {
+    settings({ theme: 'light', skinId: 'midnight' })
+    openAppearance()
+
+    const dark = modeOption(/Dark/)
+    const light = modeOption(/Light/)
+    expect(dark.className).toContain('bg-accent')
+    expect(light.className).not.toContain('bg-accent')
+    expect(light.hasAttribute('disabled')).toBe(true)
+    // The stored preference is displayed differently, not discarded.
+    expect(useSettingsStore.getState().settings.theme).toBe('light')
+  })
+
+  it('does not touch the theme when the skin picked supports light', async () => {
+    settings({ theme: 'light', skinId: 'default' })
+    openAppearance()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Default' }))
+
+    await waitFor(() => expect(App.SaveAppSettings).toHaveBeenCalledTimes(1))
+    expect(useSettingsStore.getState().settings.theme).toBe('light')
   })
 })
