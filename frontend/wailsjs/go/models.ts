@@ -425,6 +425,62 @@ export namespace models {
 	        this.layout = source["layout"];
 	    }
 	}
+	export class LoaderStatus {
+	    loader: string;
+	    installedVersion: string;
+	    mcVersion: string;
+	    source: string;
+	    managed: boolean;
+	    reason: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new LoaderStatus(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.loader = source["loader"];
+	        this.installedVersion = source["installedVersion"];
+	        this.mcVersion = source["mcVersion"];
+	        this.source = source["source"];
+	        this.managed = source["managed"];
+	        this.reason = source["reason"];
+	    }
+	}
+	export class LoaderUpdateRequest {
+	    serverId: string;
+	    version: string;
+	    fullBackup: boolean;
+	
+	    static createFrom(source: any = {}) {
+	        return new LoaderUpdateRequest(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.serverId = source["serverId"];
+	        this.version = source["version"];
+	        this.fullBackup = source["fullBackup"];
+	    }
+	}
+	export class LoaderVersion {
+	    version: string;
+	    mcVersion: string;
+	    stable: boolean;
+	    latest: boolean;
+	
+	    static createFrom(source: any = {}) {
+	        return new LoaderVersion(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.version = source["version"];
+	        this.mcVersion = source["mcVersion"];
+	        this.stable = source["stable"];
+	        this.latest = source["latest"];
+	    }
+	}
 	export class ModDependency {
 	    projectId: string;
 	    versionId: string;
@@ -805,6 +861,7 @@ export namespace models {
 	    workingDir: string;
 	    mcVersion: string;
 	    loader: string;
+	    loaderVersion: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new ServerConfig(source);
@@ -819,6 +876,7 @@ export namespace models {
 	        this.workingDir = source["workingDir"];
 	        this.mcVersion = source["mcVersion"];
 	        this.loader = source["loader"];
+	        this.loaderVersion = source["loaderVersion"];
 	    }
 	}
 	export class ServerStatus {
@@ -867,6 +925,8 @@ export namespace models {
 	    workingDir: string;
 	    launchFile: string;
 	    running: boolean;
+	    loaderVersion: string;
+	    loaderSource: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new ServerSummary(source);
@@ -879,6 +939,8 @@ export namespace models {
 	        this.workingDir = source["workingDir"];
 	        this.launchFile = source["launchFile"];
 	        this.running = source["running"];
+	        this.loaderVersion = source["loaderVersion"];
+	        this.loaderSource = source["loaderSource"];
 	    }
 	}
 	export class StatsSnapshot {

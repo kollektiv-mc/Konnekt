@@ -8,6 +8,16 @@ type ServerConfig struct {
 	WorkingDir string   `json:"workingDir"`
 	MCVersion  string   `json:"mcVersion"` // e.g. "1.20.1"; empty = undetected
 	Loader     string   `json:"loader"`    // fabric|forge|neoforge|quilt|paper|spigot|bukkit|purpur|velocity|vanilla
+
+	// LoaderVersion is the loader's own build, e.g. "21.1.72" for NeoForge or
+	// "1.20.1-47.2.0" for Forge. Empty for loaders that have no such build
+	// (vanilla, Paper) and for installs Konnekt has not detected one from.
+	//
+	// Stored rather than always detected because detection reads the install
+	// directory, which a stopped-and-moved server may no longer have; the
+	// stored value is the last thing Konnekt knew for certain. Detection still
+	// wins when it finds something, since the disk is the truth.
+	LoaderVersion string `json:"loaderVersion"`
 }
 
 // ServerSummary is the at-a-glance description of a configured server, for the
@@ -18,6 +28,16 @@ type ServerSummary struct {
 	WorkingDir string `json:"workingDir"`
 	LaunchFile string `json:"launchFile"`
 	Running    bool   `json:"running"`
+
+	// LoaderVersion is the loader build, and LoaderSource says where it came
+	// from: "script" (parsed out of run.sh/run.bat, so it is exactly what the
+	// next start will use), "libraries" (found under libraries/ when no script
+	// is readable), "config" (the last value Konnekt stored, the install
+	// directory having yielded nothing) or "" when it is unknown. The UI shows
+	// the distinction because a config-sourced version can be stale in a way a
+	// script-sourced one cannot.
+	LoaderVersion string `json:"loaderVersion"`
+	LoaderSource  string `json:"loaderSource"`
 }
 
 // ServerStatus's State is the lifecycle phase (offline|starting|running|

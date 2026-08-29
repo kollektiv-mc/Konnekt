@@ -61,6 +61,8 @@ export function GetLastStop():Promise<models.ServerStopped>;
 
 export function GetLayoutPresets():Promise<Array<models.LayoutPreset>>;
 
+export function GetLoaderStatus(arg1:string):Promise<models.LoaderStatus>;
+
 export function GetLogPath():Promise<string>;
 
 export function GetPlayerDetail(arg1:string,arg2:string):Promise<models.Player>;
@@ -94,6 +96,8 @@ export function KickPlayer(arg1:string,arg2:string,arg3:string):Promise<void>;
 export function ListBackups(arg1:string):Promise<Array<models.Backup>>;
 
 export function ListConfigFiles(arg1:string):Promise<Array<models.ConfigFile>>;
+
+export function ListLoaderVersions(arg1:string):Promise<Array<models.LoaderVersion>>;
 
 export function ListWorlds(arg1:string):Promise<Array<models.WorldSystem>>;
 
@@ -172,5 +176,7 @@ export function StartServer(arg1:string):Promise<void>;
 export function StopServer(arg1:string):Promise<void>;
 
 export function UpdateBackupMeta(arg1:string,arg2:string,arg3:string,arg4:Array<string>):Promise<models.Backup>;
+
+export function UpdateLoader(arg1:models.LoaderUpdateRequest):Promise<void>;
 
 export function WriteConfigFile(arg1:string,arg2:string,arg3:string):Promise<void>;

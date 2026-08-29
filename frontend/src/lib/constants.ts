@@ -30,6 +30,9 @@ export const EVENTS = {
   INSTALL_LOG: 'install:log',
   INSTALL_FINISHED: 'install:finished',
   INSTALL_FAILED: 'install:failed',
+  LOADER_UPDATE_STARTED: 'loader:update-started',
+  LOADER_UPDATE_FINISHED: 'loader:update-finished',
+  LOADER_UPDATE_FAILED: 'loader:update-failed',
   UPDATE_PROGRESS: 'update:progress',
 } as const
 

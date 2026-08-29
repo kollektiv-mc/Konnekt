@@ -143,35 +143,101 @@ func (s *InstallerService) SetBus(b *EventBus)             { s.bus = b }
 // EventInstallFinished or EventInstallFailed; everything the installer prints
 // arrives as EventInstallLog in between.
 func (s *InstallerService) InstallServer(jarPath, targetDir string) error {
+	info, err := s.claim(jarPath, targetDir)
+	if err != nil {
+		return err
+	}
+
+	s.bus.Emit(EventInstallStarted, map[string]any{"targetDir": targetDir})
+
+	wait, err := s.spawn(jarPath, targetDir)
+	if err != nil {
+		s.finish(false, targetDir, info, err)
+		return err
+	}
+
+	go func() {
+		err := wait()
+		s.finish(err == nil, targetDir, info, err)
+	}()
+
+	return nil
+}
+
+// runInstaller is InstallServer's blocking twin: it runs the installer to
+// completion and returns its error, emitting EventInstallLog and nothing else.
+//
+// The missing install:started / install:finished / install:failed are the point.
+// Those events mean "a server was installed" to their subscribers — ServerSelector
+// reacts to install:finished by opening the manager on the add-server form with
+// the result filled in — so a loader update firing them would announce a new
+// server that nobody asked for and overwrite whatever was in that form. An
+// update reports itself through its own loader:update-* events instead, and
+// reuses install:log so the same log view serves both.
+func (s *InstallerService) runInstaller(jarPath, targetDir string) error {
+	if _, err := s.claim(jarPath, targetDir); err != nil {
+		return err
+	}
+
+	wait, err := s.spawn(jarPath, targetDir)
+	if err != nil {
+		s.release()
+		return err
+	}
+
+	err = wait()
+	aborted := s.release()
+	if aborted {
+		return fmt.Errorf("install aborted")
+	}
+	return err
+}
+
+// claim validates the request and takes the single-install lock. The caller owns
+// releasing it, through finish or release.
+func (s *InstallerService) claim(jarPath, targetDir string) (InstallerInfo, error) {
 	if jarPath == "" || targetDir == "" {
-		return fmt.Errorf("installer jar and target directory are both required")
+		return InstallerInfo{}, fmt.Errorf("installer jar and target directory are both required")
 	}
 
 	info, _ := InspectInstaller(jarPath)
 	if !info.IsInstaller {
-		return fmt.Errorf("%s is not a Forge/NeoForge installer", filepath.Base(jarPath))
+		return info, fmt.Errorf("%s is not a Forge/NeoForge installer", filepath.Base(jarPath))
 	}
 
 	if _, err := exec.LookPath("java"); err != nil {
-		return fmt.Errorf("java not found in PATH — install Java and ensure it is accessible")
+		return info, fmt.Errorf("java not found in PATH — install Java and ensure it is accessible")
 	}
 
 	s.mu.Lock()
 	if s.running {
 		s.mu.Unlock()
-		return fmt.Errorf("an install is already running")
+		return info, fmt.Errorf("an install is already running")
 	}
 	s.running = true
 	s.aborted = false
 	s.mu.Unlock()
 
 	if err := os.MkdirAll(targetDir, 0755); err != nil {
-		s.finish(false, targetDir, info, fmt.Errorf("create %s: %w", targetDir, err))
-		return err
+		s.release()
+		return info, fmt.Errorf("create %s: %w", targetDir, err)
 	}
+	return info, nil
+}
 
-	s.bus.Emit(EventInstallStarted, map[string]any{"targetDir": targetDir})
+// release drops the single-install lock without emitting a lifecycle event,
+// reporting whether the run was aborted. finish is the emitting counterpart.
+func (s *InstallerService) release() bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.running = false
+	s.cmd = nil
+	return s.aborted
+}
 
+// spawn starts the installer and returns a function that waits for it, having
+// first drained both pipes into EventInstallLog.
+func (s *InstallerService) spawn(jarPath, targetDir string) (func() error, error) {
 	for _, removed := range repairPartialInstall(targetDir) {
 		s.bus.Emit(EventInstallLog, map[string]any{
 			"line": "Removed truncated " + removed + " from an earlier attempt.",
@@ -183,20 +249,17 @@ func (s *InstallerService) InstallServer(jarPath, targetDir string) error {
 
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
-		s.finish(false, targetDir, info, err)
-		return err
+		return nil, err
 	}
 	stderr, err := cmd.StderrPipe()
 	if err != nil {
-		s.finish(false, targetDir, info, err)
-		return err
+		return nil, err
 	}
 
 	configureProcAttr(cmd) // own process group, so Abort's killTree reaches children
 
 	if err := cmd.Start(); err != nil {
-		s.finish(false, targetDir, info, fmt.Errorf("start installer: %w", err))
-		return err
+		return nil, fmt.Errorf("start installer: %w", err)
 	}
 
 	s.mu.Lock()
@@ -208,13 +271,10 @@ func (s *InstallerService) InstallServer(jarPath, targetDir string) error {
 	go func() { defer wg.Done(); s.streamLog(stdout) }()
 	go func() { defer wg.Done(); s.streamLog(stderr) }()
 
-	go func() {
+	return func() error {
 		wg.Wait() // drain both pipes before Wait closes them
-		err := cmd.Wait()
-		s.finish(err == nil, targetDir, info, err)
-	}()
-
-	return nil
+		return cmd.Wait()
+	}, nil
 }
 
 func (s *InstallerService) streamLog(r io.Reader) {
@@ -296,10 +356,14 @@ func (s *InstallerService) finish(ok bool, targetDir string, info InstallerInfo,
 	}
 
 	if ok {
+		// loaderVersion is what the installer just laid down. Emitting it saves
+		// the config from having to re-derive the build from the install
+		// directory, and is the only moment it is known for certain.
 		s.bus.Emit(EventInstallFinished, map[string]any{
-			"targetDir": targetDir,
-			"mcVersion": info.MCVersion,
-			"loader":    info.Loader,
+			"targetDir":     targetDir,
+			"mcVersion":     info.MCVersion,
+			"loader":        info.Loader,
+			"loaderVersion": info.Version,
 		})
 		return
 	}
