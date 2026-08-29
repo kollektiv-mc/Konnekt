@@ -435,9 +435,16 @@ export function Dashboard() {
     // containerRef is the positioned root for the absolute overlay — it covers
     // only the canvas area, so the navbar stays visible during fullscreen.
     <div ref={containerRef} className="relative h-full w-full overflow-hidden">
+      {/* No background-color on purpose. `body` already paints --bg-base *and*
+          the Settings > Appearance background overlay (style.css's
+          --bg-gradient-overlay), so this element stays transparent to let the
+          overlay reach the screen — the sidebar in App.tsx has always worked
+          this way. Adding `bg-canvas` back here paints an identical colour, so
+          it looks like a no-op in review, and silently turns the Background
+          setting into a no-op instead: the canvas covers the whole <main>. */}
       <div
         ref={canvasRef}
-        className="bg-canvas h-full w-full overflow-y-auto bg-local"
+        className="h-full w-full overflow-y-auto bg-local"
         // eslint-disable-next-line no-restricted-syntax -- background-size/position track the live grid col/row step (canvasWidth-dependent), not static
         style={{
           backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.08) 1px, transparent 1px)',
