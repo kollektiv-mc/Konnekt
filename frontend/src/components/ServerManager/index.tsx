@@ -3,6 +3,8 @@ import { useInstallStore } from '../../stores/useInstallStore'
 import { useLoaderStore } from '../../stores/useLoaderStore'
 import { useServerConfigStore } from '../../stores/useServerConfigStore'
 import { useUiStore } from '../../stores/useUiStore'
+import { IconButton } from '../ui/IconButton'
+import { CloseIcon } from '../ui/icons'
 import { LoaderPanel } from './LoaderPanel'
 import { ServerDetail } from './ServerDetail'
 import { ServerEditForm } from './ServerEditForm'
@@ -108,13 +110,9 @@ export function ServerManager() {
             <span className="font-title text-text-primary truncate text-sm font-medium">
               {isNew ? 'Add a server' : current.name}
             </span>
-            <button
-              onClick={closeServerManager}
-              className="text-text-faint hover:text-text-primary flex h-6 w-6 items-center justify-center rounded text-sm transition-colors"
-              title="Close"
-            >
-              ×
-            </button>
+            <IconButton onClick={closeServerManager} title="Close">
+              <CloseIcon />
+            </IconButton>
           </div>
 
           <div className="flex-1 overflow-y-auto px-5 py-4">

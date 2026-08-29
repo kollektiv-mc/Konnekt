@@ -1,6 +1,8 @@
 import { useEffect } from 'react'
 import { useServerConfigStore } from '../stores/useServerConfigStore'
 import { useUiStore } from '../stores/useUiStore'
+import { IconButton } from './ui/IconButton'
+import { ExpandIcon } from './ui/icons'
 import { ServerRow } from './ServerRow'
 import { NEW_SERVER } from './ServerManager/ServerList'
 
@@ -37,13 +39,12 @@ export function ServerSelector() {
         <span className="font-title text-text-muted text-xs font-medium tracking-wider uppercase">
           Servers
         </span>
-        <button
+        <IconButton
           onClick={() => openServerManager(activeId || NEW_SERVER)}
-          className="text-text-faint hover:text-text-primary flex h-5 w-5 items-center justify-center rounded text-xs transition-colors"
           title="Manage servers"
         >
-          ⤢
-        </button>
+          <ExpandIcon />
+        </IconButton>
       </div>
 
       {configs.map((cfg) => (
@@ -68,7 +69,7 @@ export function ServerSelector() {
 
       <button
         onClick={() => openServerManager(NEW_SERVER)}
-        className="text-text-faint hover:bg-hover hover:text-text-secondary mt-1 flex items-center gap-1.5 rounded px-2 py-1.5 text-xs transition-colors"
+        className="text-text-faint hover:bg-hover hover:text-text-secondary mx-1 mt-1 flex items-center gap-1.5 rounded px-2 py-1.5 text-xs transition-colors"
       >
         <span>+</span>
         <span>Add server</span>

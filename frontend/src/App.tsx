@@ -24,6 +24,8 @@ import { prefetchHeavyChunks } from './lib/prefetch'
 import { useUpdateCheck } from './hooks/useUpdateCheck'
 import { useServerStatusSync } from './hooks/useServerStatus'
 import { useNavWidth } from './hooks/useNavWidth'
+import { IconButton } from './components/ui/IconButton'
+import { GearIcon } from './components/ui/icons'
 import { EVENTS } from './lib/constants'
 
 function App() {
@@ -531,13 +533,9 @@ function App() {
           <span className="text-accent font-display text-sm font-black tracking-tight">
             Konnekt
           </span>
-          <button
-            onClick={() => setSettingsOpen(true)}
-            className="text-text-muted hover:text-text-primary flex h-6 w-6 items-center justify-center rounded text-sm transition-colors"
-            title="Settings"
-          >
-            ⚙
-          </button>
+          <IconButton onClick={() => setSettingsOpen(true)} title="Settings">
+            <GearIcon />
+          </IconButton>
         </div>
         <div className="border-b-hairline border-border-subtle">
           <ServerSelector />
