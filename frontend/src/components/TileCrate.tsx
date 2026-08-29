@@ -249,7 +249,7 @@ export function TileCrate() {
           else itemRefs.current.delete(tile.id)
         }}
         onMouseDown={(e) => onMouseDown(tile, group, e)}
-        className={`hover:border-border-subtle border-hairline flex cursor-grab items-center gap-2 rounded-lg px-3 py-2 text-left transition-all ${
+        className={`hover:border-border-subtle border-hairline flex cursor-default items-center gap-2 rounded-lg px-3 py-2 text-left transition-all ${
           onCanvas
             ? 'text-text-primary hover:bg-hover bg-transparent'
             : 'text-text-secondary bg-black/20 hover:bg-black/10'
