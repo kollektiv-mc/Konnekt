@@ -1,25 +1,21 @@
 import { useEffect, useState } from 'react'
 import { useLoaderStore } from '../../stores/useLoaderStore'
-import type { LoaderVersion } from '../../stores/useLoaderStore'
 import { loaderLabel } from '../../lib/loaders'
-import { LoaderUpdateDialog } from './LoaderUpdateDialog'
 import type { ServerConfig } from '../../types'
 
 interface Props {
   config: ServerConfig
   /** Bumped by the manager after an update, to re-read the installed build. */
   refreshKey?: number
-  onUpdated: () => void
 }
 
 /**
  * The loader section of the server detail: which build is installed, which are
  * available, and the control that moves between them.
  */
-export function LoaderPanel({ config, refreshKey = 0, onUpdated }: Props) {
-  const { status, versions, loading, error, load } = useLoaderStore()
+export function LoaderPanel({ config, refreshKey = 0 }: Props) {
+  const { status, versions, loading, error, load, openUpdate } = useLoaderStore()
   const [showBeta, setShowBeta] = useState(false)
-  const [target, setTarget] = useState<LoaderVersion | null>(null)
 
   useEffect(() => {
     load(config.id).catch(() => {
@@ -96,7 +92,7 @@ export function LoaderPanel({ config, refreshKey = 0, onUpdated }: Props) {
                   <span className="text-text-faint text-2xs shrink-0">installed</span>
                 ) : (
                   <button
-                    onClick={() => setTarget(v)}
+                    onClick={() => openUpdate(config, installed, v)}
                     className="text-text-muted border-border-subtle hover:border-border-hover hover:text-text-primary border-hairline text-2xs shrink-0 rounded px-2 py-0.5 transition-colors"
                   >
                     Update
@@ -106,19 +102,6 @@ export function LoaderPanel({ config, refreshKey = 0, onUpdated }: Props) {
             )
           })}
         </div>
-      )}
-
-      {target && (
-        <LoaderUpdateDialog
-          serverId={config.id}
-          serverName={config.name}
-          from={installed}
-          target={target}
-          onClose={() => {
-            setTarget(null)
-            onUpdated()
-          }}
-        />
       )}
     </div>
   )

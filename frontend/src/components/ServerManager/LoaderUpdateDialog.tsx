@@ -1,16 +1,6 @@
 import { useState } from 'react'
 import { useLoaderStore } from '../../stores/useLoaderStore'
-import type { LoaderVersion } from '../../stores/useLoaderStore'
 import { InstallLog } from '../InstallLog'
-
-interface Props {
-  serverId: string
-  serverName: string
-  /** The build currently installed, for the "from → to" line. */
-  from: string
-  target: LoaderVersion
-  onClose: () => void
-}
 
 /**
  * The confirm-and-watch dialog for an in-place loader update.
@@ -18,10 +8,19 @@ interface Props {
  * It names the files that get rewritten rather than saying "this may modify
  * your server": those three are exactly what the backend snapshots, so the
  * warning and the safety net describe the same thing.
+ *
+ * A view over `useLoaderStore`, rendered from App rather than from the panel
+ * that starts the update. That is what makes closing free — the update keeps
+ * running, the log keeps filling, and the sidebar's process row opens this
+ * again — and what puts it above a maximized tile.
  */
-export function LoaderUpdateDialog({ serverId, serverName, from, target, onClose }: Props) {
-  const { phase, log, updateError, rolledBack, startUpdate, reset } = useLoaderStore()
+export function LoaderUpdateDialog() {
+  const { serverName, from, target, phase, log, updateError, rolledBack, startUpdate, hideDialog } =
+    useLoaderStore()
   const [fullBackup, setFullBackup] = useState(false)
+
+  // openUpdate always sets one; this keeps the rest free of optional chaining.
+  if (!target) return null
 
   const running = phase === 'running'
   const done = phase === 'done'
@@ -30,12 +29,7 @@ export function LoaderUpdateDialog({ serverId, serverName, from, target, onClose
   const begin = () => {
     // The store records the refusal and the dialog renders it; rethrowing past
     // a click handler would only surface as an unhandled rejection.
-    startUpdate(serverId, target.version, fullBackup).catch(() => {})
-  }
-
-  const close = () => {
-    reset()
-    onClose()
+    startUpdate(useLoaderStore.getState().serverId, target.version, fullBackup).catch(() => {})
   }
 
   return (
@@ -84,7 +78,8 @@ export function LoaderUpdateDialog({ serverId, serverName, from, target, onClose
 
         {running && (
           <p className="text-text-secondary text-xs">
-            Updating to {target.version}. Leaving this open is not required.
+            Updating to {target.version}. Closing this does not stop it: the sidebar keeps the
+            update, and clicking there brings this back.
           </p>
         )}
 
@@ -126,10 +121,11 @@ export function LoaderUpdateDialog({ serverId, serverName, from, target, onClose
               Try again
             </button>
           )}
+          {/* Never disabled. The copy above says closing is free, and with the
+              state in the store and a process row to reopen from, it is. */}
           <button
-            onClick={close}
-            disabled={running}
-            className="text-text-faint hover:text-text-secondary px-3 py-1.5 text-xs transition-colors disabled:opacity-40"
+            onClick={hideDialog}
+            className="text-text-faint hover:text-text-secondary px-3 py-1.5 text-xs transition-colors"
           >
             {done ? 'Done' : phase === 'idle' ? 'Cancel' : 'Close'}
           </button>

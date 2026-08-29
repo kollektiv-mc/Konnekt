@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { BrowseJarFile, BrowseDirectory, InspectServerFile } from '../../../wailsjs/go/main/App'
+import { useInstallStore } from '../../stores/useInstallStore'
 import { useServerConfigStore } from '../../stores/useServerConfigStore'
 import {
   baseOf,
@@ -8,7 +9,7 @@ import {
   mergeRamIntoArgs,
   parseRamFromArgs,
 } from '../../lib/serverForm'
-import type { InstallerDetails, InstallResult } from '../ServerInstallModal'
+import type { InstallResult } from '../ServerInstallModal'
 import type { ServerConfig } from '../../types'
 
 interface FormState {
@@ -47,8 +48,6 @@ interface Props {
   config: ServerConfig | null
   /** A just-finished install, whose values outrank both the form and the store. */
   installed: InstallResult | null
-  /** Raised when Browse picks a Forge/NeoForge installer rather than a server. */
-  onInstallerDetected: (details: InstallerDetails) => void
   onSaved: (cfg: ServerConfig) => void
   onCancel?: () => void
   /** Label for the primary button; the install flow calls it "Add server". */
@@ -67,12 +66,12 @@ interface Props {
 export function ServerEditForm({
   config,
   installed,
-  onInstallerDetected,
   onSaved,
   onCancel,
   submitLabel = 'Save',
 }: Props) {
   const saveConfig = useServerConfigStore((s) => s.saveConfig)
+  const openInstaller = useInstallStore((s) => s.openFor)
   const [form, setForm] = useState<FormState>(config ? configToForm(config) : emptyForm)
   const [advancedMode, setAdvancedMode] = useState(
     config ? config.jvmArgs.some((a) => !a.startsWith('-Xms') && !a.startsWith('-Xmx')) : false,
@@ -161,12 +160,15 @@ export function ServerEditForm({
     // -jar would start the installer. Offer to install instead.
     const info = await InspectServerFile(path).catch(() => null)
     if (info?.isInstaller) {
-      onInstallerDetected({
-        jarPath: path,
-        loader: info.loader,
-        version: info.version,
-        mcVersion: info.mcVersion,
-      })
+      openInstaller(
+        {
+          jarPath: path,
+          loader: info.loader,
+          version: info.version,
+          mcVersion: info.mcVersion,
+        },
+        form.workingDir,
+      )
       return
     }
 

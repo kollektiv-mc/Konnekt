@@ -18,6 +18,22 @@ interface UiStore {
   // true blocks the close and takes over showing its own confirm UI.
   closeGuard: (() => boolean) | null
   setCloseGuard: (fn: (() => boolean) | null) => void
+
+  // The server manager, and the sidebar's disconnect confirm.
+  //
+  // Held here rather than in the sidebar that opens them because both render at
+  // app level: a `fixed` overlay inside <aside> loses to the maximized-tile
+  // overlay inside <main>, which carries the same z-50 and comes later in the
+  // document. SettingsModal only sits on top because App renders it after
+  // <main>, and these now do the same.
+  serverManagerOpen: boolean
+  /** A config id, or the add-server sentinel. */
+  serverManagerSelection: string
+  openServerManager: (selection: string) => void
+  closeServerManager: () => void
+  /** Id of the server whose disconnect is awaiting confirmation. */
+  pendingDisconnect: string | null
+  setPendingDisconnect: (id: string | null) => void
 }
 
 export const useUiStore = create<UiStore>((set) => ({
@@ -41,4 +57,13 @@ export const useUiStore = create<UiStore>((set) => ({
 
   closeGuard: null,
   setCloseGuard: (fn) => set({ closeGuard: fn }),
+
+  serverManagerOpen: false,
+  serverManagerSelection: '',
+  openServerManager: (selection) =>
+    set({ serverManagerOpen: true, serverManagerSelection: selection }),
+  closeServerManager: () => set({ serverManagerOpen: false }),
+
+  pendingDisconnect: null,
+  setPendingDisconnect: (id) => set({ pendingDisconnect: id }),
 }))

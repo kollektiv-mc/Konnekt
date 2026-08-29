@@ -1,7 +1,10 @@
 import { describe, it, expect, afterEach, beforeEach, vi } from 'vitest'
 import { render, screen, fireEvent, waitFor, cleanup } from '@testing-library/react'
 import * as App from '../../../wailsjs/go/main/App'
+import { useInstallStore } from '../../stores/useInstallStore'
+import { useLoaderStore } from '../../stores/useLoaderStore'
 import { useServerConfigStore } from '../../stores/useServerConfigStore'
+import { useUiStore } from '../../stores/useUiStore'
 import { ServerManager } from './index'
 import { NEW_SERVER } from './ServerList'
 import type { ServerConfig } from '../../types'
@@ -38,19 +41,9 @@ const summary = (over: Partial<Awaited<ReturnType<typeof App.GetServerSummary>>>
     ...over,
   }) as Awaited<ReturnType<typeof App.GetServerSummary>>
 
-const noop = () => {}
-
-function renderManager(over: Partial<React.ComponentProps<typeof ServerManager>> = {}) {
-  return render(
-    <ServerManager
-      open
-      initialSelection="alpha"
-      installed={null}
-      onInstalledConsumed={noop}
-      onClose={noop}
-      {...over}
-    />,
-  )
+function renderManager({ open = true, selection = 'alpha' } = {}) {
+  useUiStore.setState({ serverManagerOpen: open, serverManagerSelection: selection })
+  return render(<ServerManager />)
 }
 
 describe('ServerManager', () => {
@@ -63,6 +56,8 @@ describe('ServerManager', () => {
       activeId: 'alpha',
       error: null,
     })
+    useInstallStore.setState({ open: false, result: null })
+    useLoaderStore.setState({ dialogOpen: false, status: null, versions: [] })
   })
 
   it('renders nothing when closed', () => {
@@ -133,7 +128,7 @@ describe('ServerManager', () => {
   })
 
   it('will not save a new server without a name and a working directory', async () => {
-    renderManager({ initialSelection: NEW_SERVER })
+    renderManager({ selection: NEW_SERVER })
     fireEvent.click(await screen.findByRole('button', { name: 'Add server' }))
 
     await waitFor(() => expect(App.SaveServerConfig).not.toHaveBeenCalled())
@@ -142,15 +137,15 @@ describe('ServerManager', () => {
   // The install reports the build it laid down; recording it here is what keeps
   // a fresh server from starting life with an unknown loader version.
   it('records a finished install, naming the server after its folder', async () => {
-    renderManager({
-      initialSelection: NEW_SERVER,
-      installed: {
+    useInstallStore.setState({
+      result: {
         targetDir: '/srv/newsmp',
         mcVersion: '1.21.1',
         loader: 'neoforge',
         loaderVersion: '21.1.209',
       },
     })
+    renderManager({ selection: NEW_SERVER })
 
     await waitFor(() => expect(screen.getByDisplayValue('/srv/newsmp')).toBeTruthy())
     fireEvent.click(screen.getByRole('button', { name: 'Add server' }))

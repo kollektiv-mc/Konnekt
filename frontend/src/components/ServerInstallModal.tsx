@@ -1,8 +1,6 @@
-import { useEffect, useState } from 'react'
-import { EventsOn } from '../../wailsjs/runtime/runtime'
 import { AbortInstall, BrowseDirectory, InstallServer } from '../../wailsjs/go/main/App'
-import { EVENTS } from '../lib/constants'
 import { LOADER_LABELS } from '../lib/loaders'
+import { useInstallStore } from '../stores/useInstallStore'
 import { InstallLog } from './InstallLog'
 
 export interface InstallerDetails {
@@ -20,15 +18,6 @@ export interface InstallResult {
   loaderVersion: string
 }
 
-interface Props {
-  installer: InstallerDetails
-  /** Working dir already typed into the form, used to pre-fill the target. */
-  suggestedDir?: string
-  /** Adds the installed server to the sidebar and closes. */
-  onAddServer: () => void
-  onClose: () => void
-}
-
 function describe({ loader, version, mcVersion }: InstallerDetails): string {
   const name = LOADER_LABELS[loader] ?? 'Forge/NeoForge'
   const ver = version ? ` ${version}` : ''
@@ -41,46 +30,24 @@ function describe({ loader, version, mcVersion }: InstallerDetails): string {
  * offers to run it properly (`--installServer` into a directory the user picks)
  * instead of letting Konnekt launch the installer as if it were a jar.
  *
- * Closing never blocks: the install keeps going and stays visible as the
- * sidebar process chip, and ServerSelector owns the finish event so a closed
- * modal still yields a configured server.
+ * A view over `useInstallStore` and nothing more. It used to hold the phase,
+ * the log and the error itself, which made its own promise — that closing never
+ * blocks — false in the way that mattered: the install kept running and every
+ * trace of it was gone. Now closing hides, the sidebar's process row brings it
+ * back, and App owns the event listeners.
+ *
+ * Rendered from App, after <main>, so it sits above a maximized tile.
  */
-export function ServerInstallModal({ installer, suggestedDir, onAddServer, onClose }: Props) {
-  const [targetDir, setTargetDir] = useState(suggestedDir ?? '')
-  const [phase, setPhase] = useState<'idle' | 'running' | 'done' | 'failed'>('idle')
-  const [log, setLog] = useState<string[]>([])
-  const [error, setError] = useState('')
+export function ServerInstallModal() {
+  const { installer, targetDir, phase, log, error, setTargetDir, begin, hide, fail } =
+    useInstallStore()
 
-  useEffect(() => {
-    const offs: Array<() => void> = []
-    try {
-      offs.push(
-        EventsOn(EVENTS.INSTALL_LOG, (d?: { line?: string }) => {
-          setLog((l) => [...l.slice(-499), d?.line ?? ''])
-        }),
-      )
-      // ServerSelector owns INSTALL_FINISHED — it has to survive this modal
-      // being closed mid-install. Here we only reflect it in the local phase.
-      offs.push(EventsOn(EVENTS.INSTALL_FINISHED, () => setPhase('done')))
-      offs.push(
-        EventsOn(EVENTS.INSTALL_FAILED, (d?: { error?: string }) => {
-          setPhase('failed')
-          setError(d?.error ?? 'The installer failed.')
-        }),
-      )
-    } catch {
-      /* non-Wails context */
-    }
-    return () => {
-      for (const off of offs) {
-        try {
-          off()
-        } catch {
-          /* teardown no-op */
-        }
-      }
-    }
-  }, [])
+  // openFor always sets one; this is the "never happens" guard that keeps the
+  // rest of the component free of optional chaining.
+  if (!installer) return null
+
+  const running = phase === 'running'
+  const done = phase === 'done'
 
   const browse = async () => {
     const path = await BrowseDirectory().catch(() => '')
@@ -89,22 +56,16 @@ export function ServerInstallModal({ installer, suggestedDir, onAddServer, onClo
 
   const install = async () => {
     if (!targetDir) return
-    setPhase('running')
-    setError('')
-    setLog([])
+    begin()
     try {
       await InstallServer(installer.jarPath, targetDir)
     } catch (err) {
-      setPhase('failed')
-      setError(String(err))
+      fail(String(err))
     }
   }
 
-  const running = phase === 'running'
-  const done = phase === 'done'
-
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
+    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60">
       <div className="bg-canvas border-border-subtle border-hairline flex w-[28rem] flex-col gap-3 rounded-xl p-5 font-mono">
         <div className="flex items-center gap-2.5">
           <span className="text-warning text-sm font-bold">[i]</span>
@@ -142,10 +103,19 @@ export function ServerInstallModal({ installer, suggestedDir, onAddServer, onClo
         {phase === 'failed' && <span className="text-danger text-xs">{error}</span>}
         {done && <span className="text-accent text-xs">Install complete.</span>}
 
+        {running && (
+          <span className="text-text-muted text-2xs">
+            Closing this does not stop the install. The sidebar keeps it, and clicking there brings
+            this back.
+          </span>
+        )}
+
         <div className="border-border-subtle border-t-hairline flex gap-2 pt-2">
           {done ? (
+            // The add-server form is already open behind this, filled in by the
+            // install:finished listener, so finishing here is just a dismissal.
             <button
-              onClick={onAddServer}
+              onClick={hide}
               className="text-accent border-accent/30 hover:bg-accent/10 border-hairline flex-1 rounded py-1.5 text-xs transition-colors"
             >
               Add server
@@ -167,7 +137,7 @@ export function ServerInstallModal({ installer, suggestedDir, onAddServer, onClo
             </button>
           )}
           <button
-            onClick={onClose}
+            onClick={hide}
             className="text-text-faint hover:text-text-secondary px-3 py-1.5 text-xs transition-colors"
           >
             {done ? 'Not now' : 'Close'}

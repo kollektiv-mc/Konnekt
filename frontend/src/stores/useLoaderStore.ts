@@ -23,7 +23,19 @@ interface LoaderStore {
   /** Whether the failure put the previous launch files back. */
   rolledBack: boolean
 
+  /** Whether the update dialog is on screen. Independent of `phase`. */
+  dialogOpen: boolean
+  /** What the dialog is about, kept here so it survives being closed. */
+  target: LoaderVersion | null
+  serverId: string
+  serverName: string
+  /** The build installed when the update was opened, for the "from" line. */
+  from: string
+
   load: (serverId: string) => Promise<void>
+  openUpdate: (server: { id: string; name: string }, from: string, target: LoaderVersion) => void
+  hideDialog: () => void
+  showDialog: () => void
   startUpdate: (serverId: string, version: string, fullBackup: boolean) => Promise<void>
   appendLog: (line: string) => void
   finishUpdate: () => void
@@ -52,8 +64,33 @@ export const useLoaderStore = create<LoaderStore>((set) => ({
   log: [],
   updateError: null,
   rolledBack: false,
+  dialogOpen: false,
+  target: null,
+  serverId: '',
+  serverName: '',
+  from: '',
 
   reset: () => set({ phase: 'idle', log: [], updateError: null, rolledBack: false }),
+
+  // Opening the dialog for a build is where a run's bookkeeping is cleared —
+  // not on close. Closing has to keep the log and the outcome, or reopening a
+  // failure from its process row would show an empty dialog instead of the
+  // error it exists to carry.
+  openUpdate: (server, from, target) =>
+    set({
+      dialogOpen: true,
+      serverId: server.id,
+      serverName: server.name,
+      from,
+      target,
+      phase: 'idle',
+      log: [],
+      updateError: null,
+      rolledBack: false,
+    }),
+
+  hideDialog: () => set({ dialogOpen: false }),
+  showDialog: () => set({ dialogOpen: true }),
 
   load: async (serverId: string) => {
     set({ loading: true, error: null })

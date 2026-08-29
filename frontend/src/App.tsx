@@ -6,9 +6,15 @@ import { TileCrate } from './components/TileCrate'
 import { LayoutPresets } from './components/LayoutPresets'
 import { ActiveProcesses } from './components/ActiveProcesses'
 import { ServerSelector } from './components/ServerSelector'
+import { ServerManager, NEW_SERVER } from './components/ServerManager'
+import { ServerInstallModal } from './components/ServerInstallModal'
+import { LoaderUpdateDialog } from './components/ServerManager/LoaderUpdateDialog'
+import { DisconnectConfirm } from './components/DisconnectConfirm'
 import { EulaModal } from './components/EulaModal'
 import { SettingsModal } from './components/SettingsModal'
+import { useInstallStore } from './stores/useInstallStore'
 import { useLoaderStore } from './stores/useLoaderStore'
+import { useUiStore } from './stores/useUiStore'
 import { useServerConfigStore } from './stores/useServerConfigStore'
 import { useConsoleStore } from './stores/useConsoleStore'
 import { useSettingsStore } from './stores/useSettingsStore'
@@ -23,6 +29,8 @@ function App() {
   const { activeId } = useServerConfigStore()
   const settingsLoaded = useSettingsStore((s) => s.loaded)
   const checkUpdatesOnStartup = useSettingsStore((s) => s.settings.checkUpdatesOnStartup)
+  const installOpen = useInstallStore((s) => s.open)
+  const loaderDialogOpen = useLoaderStore((s) => s.dialogOpen)
   const [eulaRequired, setEulaRequired] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const autoStarted = useRef(false)
@@ -172,9 +180,10 @@ function App() {
     let c5: (() => void) | undefined
     try {
       c1 = EventsOn(EVENTS.BACKUP_STARTED, (data?: { serverID?: string; filename?: string }) => {
-        useProcessesStore
-          .getState()
-          .start(data?.serverID ?? 'backup', 'Backing up world…', data?.filename)
+        useProcessesStore.getState().start(data?.serverID ?? 'backup', 'Backing up world…', {
+          filename: data?.filename,
+          view: { kind: 'tile', tileId: 'backups' },
+        })
       })
       c2 = EventsOn(EVENTS.BACKUP_PROGRESS, (data?: { serverID?: string; percent?: number }) => {
         useProcessesStore.getState().updateProgress(data?.serverID ?? 'backup', data?.percent ?? 0)
@@ -234,7 +243,9 @@ function App() {
           const key = 'mod:' + (d?.serverID ?? '')
           const store = useProcessesStore.getState()
           if (!store.processes[key]) {
-            store.start(key, `Downloading ${d?.fileName ?? 'mod'}…`)
+            store.start(key, `Downloading ${d?.fileName ?? 'mod'}…`, {
+              view: { kind: 'tile', tileId: 'mods' },
+            })
           }
           store.updateProgress(key, d?.percent ?? 0)
         },
@@ -267,47 +278,66 @@ function App() {
     }
   }, [])
 
-  // Server-installer progress → sidebar ActiveProcesses. The modal owns the log
-  // itself; this keeps the work visible after the modal is dismissed.
+  // Server installer → the install modal's state, the sidebar row, and the
+  // add-server form. All of it lives here rather than in the modal because the
+  // modal can be dismissed mid-install and the work carries on.
   useEffect(() => {
-    let c1: (() => void) | undefined
-    let c2: (() => void) | undefined
-    let c3: (() => void) | undefined
+    const offs: Array<() => void> = []
     const key = (dir?: string) => 'install:' + (dir ?? '')
     let current = key()
     try {
-      c1 = EventsOn(EVENTS.INSTALL_STARTED, (d?: { targetDir?: string }) => {
-        current = key(d?.targetDir)
-        // The installer reports log lines, never a percentage — mark it
-        // indeterminate rather than showing a number we'd be inventing.
-        useProcessesStore.getState().start(current, 'Installing server…', undefined, true)
-      })
-      c2 = EventsOn(EVENTS.INSTALL_FINISHED, () => {
-        useProcessesStore.getState().finish(current, 'done')
-        emitNotification('info', 'Server installed')
-      })
-      c3 = EventsOn(EVENTS.INSTALL_FAILED, (d?: { error?: string }) => {
-        useProcessesStore.getState().finish(current, 'failed')
-        emitNotification('crash', `Server install failed${d?.error ? ': ' + d.error : ''}`)
-      })
+      offs.push(
+        EventsOn(EVENTS.INSTALL_STARTED, (d?: { targetDir?: string }) => {
+          current = key(d?.targetDir)
+          // The installer reports log lines, never a percentage — mark it
+          // indeterminate rather than showing a number we'd be inventing.
+          useProcessesStore.getState().start(current, 'Installing server…', {
+            indeterminate: true,
+            view: { kind: 'install' },
+          })
+        }),
+      )
+      offs.push(
+        EventsOn(
+          EVENTS.INSTALL_FINISHED,
+          (d?: {
+            targetDir?: string
+            mcVersion?: string
+            loader?: string
+            loaderVersion?: string
+          }) => {
+            useProcessesStore.getState().finish(current, 'done')
+            emitNotification('info', 'Server installed')
+            if (!d?.targetDir) return
+            useInstallStore.getState().finish({
+              targetDir: d.targetDir,
+              mcVersion: d.mcVersion ?? '',
+              loader: d.loader ?? '',
+              loaderVersion: d.loaderVersion ?? '',
+            })
+            // Put the add-server form up behind the modal, filled in, so
+            // "Add server" there is a dismissal rather than a handoff.
+            useUiStore.getState().openServerManager(NEW_SERVER)
+          },
+        ),
+      )
+      offs.push(
+        EventsOn(EVENTS.INSTALL_FAILED, (d?: { error?: string }) => {
+          useProcessesStore.getState().finish(current, 'failed')
+          useInstallStore.getState().fail(d?.error ?? 'The installer failed.')
+          emitNotification('crash', `Server install failed${d?.error ? ': ' + d.error : ''}`)
+        }),
+      )
     } catch {
       /* non-Wails context */
     }
     return () => {
-      try {
-        c1?.()
-      } catch {
-        /* teardown no-op */
-      }
-      try {
-        c2?.()
-      } catch {
-        /* teardown no-op */
-      }
-      try {
-        c3?.()
-      } catch {
-        /* teardown no-op */
+      for (const off of offs) {
+        try {
+          off()
+        } catch {
+          /* teardown no-op */
+        }
       }
     }
   }, [])
@@ -325,9 +355,10 @@ function App() {
         EventsOn(EVENTS.LOADER_UPDATE_STARTED, (d?: { serverID?: string; to?: string }) => {
           current = key(d?.serverID)
           // The installer reports log lines, never a percentage.
-          useProcessesStore
-            .getState()
-            .start(current, `Updating loader to ${d?.to ?? ''}…`, undefined, true)
+          useProcessesStore.getState().start(current, `Updating loader to ${d?.to ?? ''}…`, {
+            indeterminate: true,
+            view: { kind: 'loader', serverId: d?.serverID ?? '' },
+          })
         }),
       )
       offs.push(
@@ -346,10 +377,19 @@ function App() {
           emitNotification('crash', `Loader update failed${d?.error ? ': ' + d.error : ''}`)
         }),
       )
+      // install:log carries the installer's output for both a first install
+      // and a loader update — the backend reuses it deliberately so one log
+      // view serves both. The two can never run at once (both hold the
+      // installer's single-run guard), so whichever is in its running phase
+      // owns the line.
       offs.push(
         EventsOn(EVENTS.INSTALL_LOG, (d?: { line?: string }) => {
-          if (useLoaderStore.getState().phase !== 'running') return
-          useLoaderStore.getState().appendLog(d?.line ?? '')
+          const line = d?.line ?? ''
+          if (useLoaderStore.getState().phase === 'running') {
+            useLoaderStore.getState().appendLog(line)
+          } else if (useInstallStore.getState().phase === 'running') {
+            useInstallStore.getState().appendLog(line)
+          }
         }),
       )
     } catch {
@@ -488,6 +528,16 @@ function App() {
       {eulaRequired && <EulaModal serverId={activeId} onClose={() => setEulaRequired(false)} />}
 
       <SettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} />
+
+      {/* Every overlay below is rendered here, after <main>, on purpose. A
+          fixed overlay inside <aside> carries the same z-50 as the
+          maximized-tile overlay inside <main> and comes earlier in the
+          document, so the tile wins the tie and the overlay opens underneath
+          it. Document order is what puts these on top. */}
+      <ServerManager />
+      <DisconnectConfirm />
+      {installOpen && <ServerInstallModal />}
+      {loaderDialogOpen && <LoaderUpdateDialog />}
     </div>
   )
 }

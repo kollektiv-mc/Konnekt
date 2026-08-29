@@ -46,7 +46,6 @@ describe('LoaderPanel', () => {
       version('21.1.209', { latest: true }),
       version('21.1.72'),
     ])
-    vi.mocked(App.UpdateLoader).mockResolvedValue(undefined)
     useLoaderStore.setState({
       status: null,
       versions: [],
@@ -56,11 +55,16 @@ describe('LoaderPanel', () => {
       log: [],
       updateError: null,
       rolledBack: false,
+      dialogOpen: false,
+      target: null,
+      serverId: '',
+      serverName: '',
+      from: '',
     })
   })
 
   it('lists stable builds and marks the installed one', async () => {
-    render(<LoaderPanel config={cfg} onUpdated={() => {}} />)
+    render(<LoaderPanel config={cfg} />)
 
     await waitFor(() => expect(screen.getByText('21.1.209')).toBeTruthy())
     expect(screen.getByText('installed')).toBeTruthy()
@@ -70,7 +74,7 @@ describe('LoaderPanel', () => {
   })
 
   it('reveals betas on request', async () => {
-    render(<LoaderPanel config={cfg} onUpdated={() => {}} />)
+    render(<LoaderPanel config={cfg} />)
     await waitFor(() => expect(screen.getByText('21.1.209')).toBeTruthy())
 
     fireEvent.click(screen.getByRole('checkbox', { name: /betas/i }))
@@ -84,7 +88,7 @@ describe('LoaderPanel', () => {
     vi.mocked(App.GetLoaderStatus).mockResolvedValue(
       status({ managed: false, reason: 'Konnekt cannot update paper servers yet.' }),
     )
-    render(<LoaderPanel config={cfg} onUpdated={() => {}} />)
+    render(<LoaderPanel config={cfg} />)
 
     await waitFor(() =>
       expect(screen.getByText('Konnekt cannot update paper servers yet.')).toBeTruthy(),
@@ -94,7 +98,7 @@ describe('LoaderPanel', () => {
 
   it('offers a retry when the version fetch fails', async () => {
     vi.mocked(App.ListLoaderVersions).mockRejectedValue('maven is unreachable')
-    render(<LoaderPanel config={cfg} onUpdated={() => {}} />)
+    render(<LoaderPanel config={cfg} />)
 
     await waitFor(() => expect(screen.getByText(/maven is unreachable/)).toBeTruthy())
 
@@ -104,86 +108,32 @@ describe('LoaderPanel', () => {
     await waitFor(() => expect(screen.getByText('21.1.209')).toBeTruthy())
   })
 
-  // The dialog names the exact files the backend snapshots, so the warning and
-  // the safety net cannot drift apart.
-  it('names what the update rewrites before starting it', async () => {
-    render(<LoaderPanel config={cfg} onUpdated={() => {}} />)
+  // The panel raises the update; App renders the dialog. That split is what
+  // lets the dialog outlive both this panel and the manager around it.
+  it('raises the update on the store rather than rendering a dialog', async () => {
+    render(<LoaderPanel config={cfg} />)
     await waitFor(() => expect(screen.getByText('21.1.209')).toBeTruthy())
 
     fireEvent.click(screen.getByRole('button', { name: 'Update' }))
 
-    expect(screen.getByText('run.sh')).toBeTruthy()
-    expect(screen.getByText('user_jvm_args.txt')).toBeTruthy()
-    expect(screen.getByText(/puts them back if the install fails/)).toBeTruthy()
-    // Nothing has been asked of the backend yet.
+    const s = useLoaderStore.getState()
+    expect(s.dialogOpen).toBe(true)
+    expect(s.target?.version).toBe('21.1.209')
+    expect(s.from).toBe('21.1.72')
+    expect(s.serverId).toBe('srv1')
+    expect(s.serverName).toBe('smp')
+    // Nothing has been asked of the backend yet — that is the dialog's job.
     expect(App.UpdateLoader).not.toHaveBeenCalled()
+    expect(screen.queryByText(/Update to 21\.1\.209/)).toBeNull()
   })
 
-  it('starts the update with the backup choice, defaulting to off', async () => {
-    render(<LoaderPanel config={cfg} onUpdated={() => {}} />)
-    await waitFor(() => expect(screen.getByText('21.1.209')).toBeTruthy())
-    fireEvent.click(screen.getByRole('button', { name: 'Update' }))
+  // A finished update changes which build is installed.
+  it('re-reads the install when refreshKey changes', async () => {
+    const { rerender } = render(<LoaderPanel config={cfg} refreshKey={1} />)
+    await waitFor(() => expect(App.GetLoaderStatus).toHaveBeenCalledTimes(1))
 
-    fireEvent.click(screen.getByRole('button', { name: /Update to 21\.1\.209/ }))
+    rerender(<LoaderPanel config={cfg} refreshKey={2} />)
 
-    await waitFor(() => expect(App.UpdateLoader).toHaveBeenCalledTimes(1))
-    expect(App.UpdateLoader).toHaveBeenCalledWith({
-      serverId: 'srv1',
-      version: '21.1.209',
-      fullBackup: false,
-    })
-  })
-
-  it('opts into a full backup when asked', async () => {
-    render(<LoaderPanel config={cfg} onUpdated={() => {}} />)
-    await waitFor(() => expect(screen.getByText('21.1.209')).toBeTruthy())
-    fireEvent.click(screen.getByRole('button', { name: 'Update' }))
-
-    fireEvent.click(screen.getByRole('checkbox', { name: /Back up the whole server/ }))
-    fireEvent.click(screen.getByRole('button', { name: /Update to 21\.1\.209/ }))
-
-    await waitFor(() =>
-      expect(App.UpdateLoader).toHaveBeenCalledWith(expect.objectContaining({ fullBackup: true })),
-    )
-  })
-
-  // The outcome arrives as an event, not as the call's return value.
-  it('shows the outcome once the event lands', async () => {
-    render(<LoaderPanel config={cfg} onUpdated={() => {}} />)
-    await waitFor(() => expect(screen.getByText('21.1.209')).toBeTruthy())
-    fireEvent.click(screen.getByRole('button', { name: 'Update' }))
-    fireEvent.click(screen.getByRole('button', { name: /Update to 21\.1\.209/ }))
-
-    await waitFor(() => expect(useLoaderStore.getState().phase).toBe('running'))
-    useLoaderStore.getState().finishUpdate()
-
-    await waitFor(() => expect(screen.getByText(/Now on 21\.1\.209/)).toBeTruthy())
-  })
-
-  // Whether the rollback happened decides what the user has to do next, so the
-  // dialog says which it was rather than only that it failed.
-  it('says whether a failure rolled back', async () => {
-    render(<LoaderPanel config={cfg} onUpdated={() => {}} />)
-    await waitFor(() => expect(screen.getByText('21.1.209')).toBeTruthy())
-    fireEvent.click(screen.getByRole('button', { name: 'Update' }))
-    fireEvent.click(screen.getByRole('button', { name: /Update to 21\.1\.209/ }))
-
-    await waitFor(() => expect(useLoaderStore.getState().phase).toBe('running'))
-    useLoaderStore.getState().failUpdate('the installer exited 1', true)
-
-    await waitFor(() => expect(screen.getByText('the installer exited 1')).toBeTruthy())
-    expect(screen.getByText(/previous launch files were restored/)).toBeTruthy()
-  })
-
-  it('says when nothing was changed', async () => {
-    render(<LoaderPanel config={cfg} onUpdated={() => {}} />)
-    await waitFor(() => expect(screen.getByText('21.1.209')).toBeTruthy())
-    fireEvent.click(screen.getByRole('button', { name: 'Update' }))
-    fireEvent.click(screen.getByRole('button', { name: /Update to 21\.1\.209/ }))
-
-    await waitFor(() => expect(useLoaderStore.getState().phase).toBe('running'))
-    useLoaderStore.getState().failUpdate('the download is not a NeoForge installer', false)
-
-    await waitFor(() => expect(screen.getByText(/Nothing was changed/)).toBeTruthy())
+    await waitFor(() => expect(App.GetLoaderStatus).toHaveBeenCalledTimes(2))
   })
 })

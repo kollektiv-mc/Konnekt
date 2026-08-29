@@ -16,8 +16,12 @@ interface Props {
 export function InstallLog({ lines, maxHeight = 'max-h-40' }: Props) {
   const ref = useRef<HTMLDivElement>(null)
 
+  // scrollTop rather than scrollTo: the behaviour is identical for a jump to
+  // the bottom, and scrollTo is not implemented in jsdom, so the smoother-
+  // looking call makes the component impossible to render in a test.
   useEffect(() => {
-    ref.current?.scrollTo({ top: ref.current.scrollHeight })
+    const el = ref.current
+    if (el) el.scrollTop = el.scrollHeight
   }, [lines])
 
   if (lines.length === 0) return null
