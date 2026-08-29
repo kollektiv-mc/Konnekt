@@ -137,14 +137,18 @@ export function EditorPanel({
 
   if (!file) {
     return (
-      <div className="flex flex-1 items-center justify-center">
+      <div className="lazy-panel-in flex flex-1 items-center justify-center">
         <span className="text-text-faint font-mono text-xs">Select a file to edit</span>
       </div>
     )
   }
 
   return (
-    <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
+    // lazy-panel-in: CodeMirror is a Suspense chunk, so the editor lands in one
+    // frame — fade it in rather than snapping it into the empty pane
+    // (style.css). Both return paths carry it so switching between them does
+    // not restart the animation.
+    <div className="lazy-panel-in flex min-w-0 flex-1 flex-col overflow-hidden">
       {/* Header */}
       <div className="border-border-subtle flex shrink-0 flex-wrap items-center gap-2 border-b px-3 py-1.5">
         <span

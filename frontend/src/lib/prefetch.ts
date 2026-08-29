@@ -94,6 +94,11 @@ export function warmSequentially(loaders: ReadonlyArray<() => Promise<unknown>>)
 
 let started = false
 
+// Deliberately drops the canceller, and the guard is module-level rather than a
+// ref: warming is a once-per-page-load side effect, not component state. Wiring
+// it to an effect cleanup would make StrictMode's double-invoke cancel the queue
+// on the first teardown and then hit the guard on the way back in, leaving dev
+// builds with no warm-up at all.
 export function prefetchHeavyChunks(): void {
   if (started) return
   started = true

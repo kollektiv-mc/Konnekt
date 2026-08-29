@@ -27,8 +27,9 @@ pnpm format:check       # Prettier (from frontend/)
 pnpm format:website     # Prettier over website/ (from frontend/)
 node scripts/check-website-links.mjs   # website links/assets/sitemap (repo root)
 node scripts/check-release-notes-extract.mjs   # changelog page's body extract (repo root)
-pnpm check-bundle       # 550 KB gzip entry-chunk budget (from frontend/)
+pnpm check-bundle       # 165 KB gzip entry-chunk budget (from frontend/)
 pnpm check-tokens       # every token-named class compiles (from frontend/, after a build)
+pnpm check-prefetch     # lazy tile chunks all appear in the warm list (from frontend/)
 pnpm check-issue-templates   # .github/ISSUE_TEMPLATE forms + their labels (from frontend/)
 python3 .github/scripts/release-notes_test.py  # release-notes classifier (repo root)
 go vet ./...            # Go static analysis (repo root)
@@ -285,15 +286,32 @@ tree.
 
 - [x] Heavy per-tile dependencies are lazy-loaded on demand, following the
       existing pattern in `frontend/src/tiles/worlds/index.tsx` (`React.lazy`
-      + `Suspense`): worlds' three.js/@react-three scene, and recharts
-      (performance tile, `tiles/performance/charts.tsx` — see HEALTH_LOG.md's
-      "P1 — Code-split heavy tiles"). The backups tile has **no** three.js
-      dependency — its "planets" are pure SVG/CSS (`WireframeSphere.tsx`,
-      `SolarSystem.tsx`); a repo-wide grep confirms `three`/`@react-three`
-      appear only under `worlds/scene/`.
-- [x] Production bundle size stays within an agreed budget (550 KB gzip on the
+      + `Suspense`). Five chunks, one per heavy library: worlds'
+      three.js/@react-three scene, recharts (`tiles/performance/charts.tsx`),
+      `@xyflow` (`tiles/scheduler/editor/GraphEditor.tsx`), CodeMirror plus the
+      yaml/toml parsers (`tiles/config/EditorPanel.tsx`) and the
+      react-markdown/parse5 pipeline (`tiles/mods/MarkdownBody.tsx`) — see
+      HEALTH_LOG.md's "P1 — Code-split heavy tiles" and 2026-08-29.
+      Being in the entry chunk is not the same as being paid for at launch and
+      it is not free at open either: V8 compiles a function on first call, so an
+      eagerly-bundled editor still costs its compile on the first open, with no
+      chunk for the warm-up to reach. That is why "it is already in the bundle"
+      is not a reason to skip the split.
+      Verify: `pnpm build` from `frontend/`, then confirm each of the five names
+      exactly one chunk. `pnpm check-prefetch` holds the other half — it asserts
+      the `lazy()` specifiers and the warm list resolve to the same modules,
+      which a grep cannot check.
+      The backups tile has **no** three.js dependency — its "planets" are pure
+      SVG/CSS (`WireframeSphere.tsx`, `SolarSystem.tsx`); a repo-wide grep
+      confirms `three`/`@react-three` appear only under `worlds/scene/`.
+- [x] Production bundle size stays within an agreed budget (165 KB gzip on the
       entry chunk, ~12% headroom over the measured post-split size), checked
       in CI (`frontend/scripts/check-bundle-size.mjs`, `pnpm check-bundle`).
+      Ratchet it down after a split, the way the coverage floor ratchets up: it
+      sat at 550 KB against a 145 KB chunk for the length of one commit, which
+      is a budget that would have waved through 3.7x growth. The check covers
+      the **entry chunk only** — see the backlog for what that leaves uncovered
+      now that there are six chunks.
 - [x] `frontend/src/tiles/registry.ts` was extended, not restructured, when
       new tiles were added. (Two sanctioned exceptions while the tile grid's
       placement model was under active repair — see HEALTH_LOG.md: loose
@@ -395,9 +413,17 @@ tree.
       user has interacted in the last 500ms. The failure this guards against is
       specific and was live: a warm-up that fired everything at once, one to
       three seconds after launch, landed on the user's first scroll.
-      Verify: every `React.lazy` specifier under `src/tiles/` appears verbatim
-      in `prefetch.ts`'s `CHUNKS` — a path that differs by a directory hop
-      resolves to a second copy of the module and warms nothing.
+      Verify: `pnpm check-prefetch`
+      (`frontend/scripts/check-prefetch-chunks.mjs`), which resolves every
+      `React.lazy` specifier under `src/tiles/` and every entry in
+      `prefetch.ts`'s `CHUNKS` to a real file and asserts the two sets match.
+      It is a gate rather than a line here because the failure has no symptom: a
+      warm path that differs from the lazy path by a directory hop resolves to a
+      second copy of the module, so the build succeeds, the tile opens, and the
+      warm-up silently buys nothing. Reads source, so it needs no build.
+      Confirmed to fail in both directions — a lazy chunk missing from the warm
+      list, and a warm entry whose lazy declaration is gone — and to refuse to
+      pass vacuously if its own pattern ever stops matching.
 
 ---
 
@@ -406,6 +432,80 @@ tree.
 The remaining, not-yet-closed follow-ups. Each item's full remediation write-up
 moves to `agent_docs/HEALTH_LOG.md` once it's done — keep this section short and
 current. Priorities mirror the pillars above.
+
+**P2 — What is still open from the first-scroll work** (filed 2026-08-29)
+
+The warm-up's own contribution to the first scroll is closed (HEALTH_LOG,
+2026-08-29). These are the parts that measuring found and the change did not
+close, recorded here rather than in the log because the log is the record of
+what *is* closed.
+
+- **recharts' first mount, ~95ms, lands wherever the Performance tile's history
+  IPC lands.** The tile renders its spark chart only once `GetStatsHistory`
+  resolves, so nothing warms it first: the `lazy()` factory is not called until
+  there is data to draw. On a 4x-throttled build that is about 580ms in, inside
+  the splash, and a real user does not feel it — but the trigger is an IPC
+  round trip, so on a slower machine it moves, and the splash is a fixed 1000ms
+  that does not move with it. Fixing it properly means the chart's first render
+  not being gated on its data, which is a tile change, not a prefetch change.
+- **A tile's cold/warm gap is mostly first-mount work, not the chunk.** Warming
+  the scheduler chunk took its cold blocking from 235ms to 147ms; warm is 61ms.
+  The remaining ~85ms is V8 compiling the subtree's functions on first call,
+  `@xyflow` measuring its container, and React's first reconciliation — none of
+  which a module-level warm-up can pay in advance, because only rendering pays
+  it. Pre-rendering the subtree off-screen is the only lever left and it is a
+  bad trade for a WebGL/canvas surface. Treat the gap as a floor unless someone
+  has a better idea.
+- **Deferral moves work rather than deleting it.** A queue that steps aside for
+  every interaction has to run in the gaps between them, so an action taken
+  immediately after a scroll can still catch it mid-chunk. Raising the quiet
+  window from 500ms to 1000ms was measured and changed nothing, so it stayed.
+
+**P2 — The bundle budget covers one chunk out of six** (filed 2026-08-29)
+
+`check-bundle` asserts the entry chunk only, which was the whole story when the
+lazy chunks were two rarely-opened tiles. It is not any more: there are five,
+and `lib/prefetch.ts` evaluates all of them during idle time after launch, so
+a lazy chunk that doubles is now a startup cost as well as an on-demand one.
+Nothing watches that. What is missing is a second budget — plausibly a cap on
+total warmed bytes — and the number wants picking against a real machine rather
+than guessed here. The measurement harness described in HEALTH_LOG (2026-08-29)
+is how to pick it.
+
+**P2 — One `ErrorBoundary` for eleven tiles, and now five lazy chunks**
+(filed 2026-08-29)
+
+`main.tsx` wraps the whole app in a single `ErrorBoundary` whose fallback is a
+full-screen "render error". So any tile that throws — or any lazy chunk that
+fails to load — replaces the entire dashboard, with no way back short of a
+relaunch. That was already true for worlds and performance; the 2026-08-29
+split took the count of lazy boundaries from two to five, on tiles people open
+routinely, which is what makes it worth writing down now.
+
+The trigger is remote rather than hypothetical: the frontend is `go:embed`ed and
+served locally, so a chunk request does not 404 in a well-formed build. It is
+the *blast radius* that is wrong, not the likelihood. A boundary inside
+`TileWrapper`'s content slot would turn "the app is gone" into "one tile says it
+failed", and the wrapper is already the single place every tile renders through
+(the same argument issue #164 makes for the wheel handler). Deliberately not
+done as part of the split: it changes what happens for every tile error, not
+just a chunk load, and what a dead tile should offer — a retry, a remove — is a
+design question rather than a mechanical one.
+
+**P3 — Evidence for the memoization item above** (filed 2026-08-29)
+
+The Performant pillar's memoization item says it cannot be closed from a
+headless session. That is half right. `Dashboard` rebuilds all eleven tile
+elements on every `maximizedId`, `closing` and — during a crate drag — every
+`dragPointer` mousemove, so React re-renders the whole canvas including recharts
+each time. A `useMemo` over the tile elements plus ref-reads for
+`toggleMaximize`/`handleRemoveTile` (both currently depend on state that changes
+on exactly the renders the memo would need to survive) was built and measured
+during the 2026-08-29 work: **5 dropped frames to 3** across a scripted crate
+drag, and no measurable effect on either first-scroll or first-open. It was
+reverted to keep that change to one concern. So a harness can measure it after
+all, the win is real but small, and the shape of the fix is known — what is not
+known is whether it matters on a real GPU, which is still a GUI question.
 
 **P2 — Motion one-offs outside the token vocabulary** (largely closed 2026-08-19)
 - The motion vocabulary is three tokens: `--duration-fast` (150ms),

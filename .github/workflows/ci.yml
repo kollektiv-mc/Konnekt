@@ -105,6 +105,11 @@ jobs:
       # unnoticed; this step is what stops it recurring.
       - run: pnpm format:check
       - run: pnpm test
+      # A warm-list specifier that drifts from its React.lazy path resolves to a
+      # second copy of the module: the build succeeds, the tile opens, and the
+      # warm-up silently stops doing anything. Source-only, so it runs here
+      # rather than after the build.
+      - run: pnpm check-prefetch
       - run: pnpm build
       - run: pnpm check-bundle
       # A token-named class that compiles to nothing looks fine in review and in

@@ -13,6 +13,7 @@
     "test:watch": "vitest",
     "check-bundle": "node scripts/check-bundle-size.mjs",
     "check-tokens": "node scripts/check-token-classes.mjs",
+    "check-prefetch": "node scripts/check-prefetch-chunks.mjs",
     "check-issue-templates": "node scripts/check-issue-templates.mjs",
     "sync-labels": "node scripts/sync-labels.mjs",
     "check-labels": "node scripts/sync-labels.mjs --check",

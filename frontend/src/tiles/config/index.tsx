@@ -3,7 +3,6 @@ import { RestartServer } from '../../../wailsjs/go/main/App'
 import { useServerStore } from '../../stores/useServerStore'
 import type { TileProps } from '../../types'
 import { FileList } from './FileList'
-
 import { useConfigEditor } from './useConfigEditor'
 import { ConfigSummary } from './ConfigSummary'
 

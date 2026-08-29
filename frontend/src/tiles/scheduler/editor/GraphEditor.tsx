@@ -707,7 +707,10 @@ function GraphEditorInner({
 
   return (
     <SchedulerCtx.Provider value={ctxValue}>
-      <div className="flex h-full flex-col">
+      {/* lazy-panel-in: this whole editor is a Suspense chunk, so it lands in
+          one frame — fade it in rather than snapping the canvas over the
+          tile's surface (style.css). */}
+      <div className="lazy-panel-in flex h-full flex-col">
         {/* ── Toolbar ──────────────────────────────────────────────────── */}
         <div className="border-border-subtle bg-surface border-b-hairline flex shrink-0 flex-wrap items-center gap-2 px-3 py-1.5">
           {/* Graph selector */}

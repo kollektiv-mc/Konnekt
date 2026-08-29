@@ -3974,7 +3974,10 @@ The warm-up's own contribution to the first scroll is gone, which was the
 reported regression. The remaining 110ms is cause 2 — recharts' first mount,
 which the Performance tile triggers itself and no warm-up can get ahead of.
 
-**Three things a later session should not have to rediscover.**
+**Three things a later session should not have to rediscover.** All three are
+also filed in the checklist's `Open backlog` ("What is still open from the
+first-scroll work"), since this file is the record of what closed and they did
+not.
 
 - **The cold/warm gap on a tile is not mostly the chunk.** Warming the scheduler
   chunk removes about a third of its cold cost; the rest is first-mount work
@@ -3990,13 +3993,43 @@ which the Performance tile triggers itself and no warm-up can get ahead of.
   resolves to a second copy of the module and warms nothing, silently. The
   checklist's Performant pillar now names that as the thing to verify.
 
+**A Suspense boundary is a visual change, not just a loading one.** Splitting the
+scheduler meant the editor arrived a frame later than the panel, so the tile's
+grey surface settled and then the darker canvas snapped over it. `style.css`'s
+`.lazy-panel-in` fades a lazily-arrived panel in over `--duration-fast`, on the
+scheduler editor's root and both of the config editor's, reusing the shape and
+the token `scheduler.css`'s node entrance already uses rather than inventing a
+second timing. Opacity, not a transform, and for a concrete reason: a transform
+on a still-mounting panel is what made WebView2 size the WebGL layer wrong in
+the worlds tile, and React Flow measures its container on mount the same way.
+
+**The specifier match is a test, not a comment.** A warm path that differs from
+its `lazy()` path by a directory hop resolves to a second copy of the module:
+the build succeeds, the tile opens, the warm-up buys nothing, and nothing
+anywhere says so. That is the same silent shape as a token class compiling to no
+rule, which is why `check-token-classes.mjs` exists, so this got the same
+treatment: `pnpm check-prefetch`, wired into CI and `.claude/suite.json`
+alongside it. It resolves both sets to real files and compares them, reads
+source so it needs no build, and refuses to pass vacuously if its own pattern
+stops matching. Confirmed to fail on a dropped warm entry, on a specifier
+drifted to a different real module, and on a typo'd one before being confirmed
+green. It started as a vitest case and moved: the frontend `tsconfig` carries no
+`@types/node`, and adding one to let a test read the source tree would have been
+a dependency bought to avoid using the `scripts/` directory that already exists
+for exactly this.
+
 **Verification.** `warmSequentially` is exported for its own sake — it returns a
 canceller — and `lib/prefetch.test.ts` covers five behaviours over jsdom's
 `setTimeout` fallback path (which is also the path a WebView without
 `requestIdleCallback` takes): one chunk at a time, holding off under sustained
 wheel events, a rejected chunk not stalling the queue behind it, cancelling
-detaching every listener it attached, and completion doing the same.
-`ModAboutBody.test.tsx`'s three cases became async, since the markdown now
-arrives through a Suspense boundary. Typecheck, lint (no new warnings against
-main's 13), the full frontend suite and `pnpm check-bundle` against the new
-165KB budget all pass.
+detaching every listener it attached, and completion doing the same. Two more
+hold the specifier invariant above. `prefetchHeavyChunks` deliberately drops the
+canceller and keeps its guard at module scope, which is worth not "fixing": wired
+to an effect cleanup, StrictMode's double-invoke would cancel the queue on the
+first teardown and then hit the guard on the way back in, leaving dev builds with
+no warm-up at all. `ModAboutBody.test.tsx`'s three cases became async, since the
+markdown now arrives through a Suspense boundary. Typecheck, lint (no new
+warnings against main's 13), the full frontend suite, `pnpm check-bundle` against
+the new 165KB budget, and a source-map pass confirming each of the five heavy
+libraries lands in exactly one chunk with no second copy, all pass.
