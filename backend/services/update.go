@@ -19,12 +19,56 @@ import (
 )
 
 const (
-	updateAPIBase   = "https://api.github.com"
-	updateRepoPath  = "/repos/kollektiv-mc/Konnekt/releases/latest"
-	updateUserAgent = "Konnekt-UpdateChecker"
+	updateAPIBase = "https://api.github.com"
+	// The stable channel. /releases/latest skips prereleases by definition,
+	// which is what keeps the rolling `snapshot` prerelease off it.
+	updateRepoPath = "/repos/kollektiv-mc/Konnekt/releases/latest"
+	// The snapshot channel, addressed by tag because that is the only way to
+	// reach a prerelease. `snapshot` is a rolling literal that .github/workflows/
+	// snapshot.yml deletes and recreates on every nightly build.
+	updateSnapshotPath = "/repos/kollektiv-mc/Konnekt/releases/tags/snapshot"
+	updateUserAgent    = "Konnekt-UpdateChecker"
 
 	updateChecksumsAssetName = "checksums.txt"
+
+	// The two legal values of models.AppSettings.UpdateChannel, mirrored by the
+	// frontend's hand-narrowed AppSettings['updateChannel'] union.
+	UpdateChannelStable   = "stable"
+	UpdateChannelSnapshot = "snapshot"
+
+	// snapshotVersionMarker is what snapshot.yml stamps into a snapshot build:
+	// <base>-snapshot.<YYYYMMDDHHMM>.<sha7>. devVersionMarker is what an
+	// unstamped `wails dev` build carries. They are disjoint on purpose, so
+	// that "is this installable" and "is this a snapshot" are separate
+	// questions with separate answers.
+	snapshotVersionMarker = "-snapshot."
+	devVersionMarker      = "-dev"
 )
+
+// IsSnapshotVersion reports whether v is a build from the snapshot channel.
+func IsSnapshotVersion(v string) bool { return strings.Contains(v, snapshotVersionMarker) }
+
+func isLocalDevVersion(v string) bool { return strings.Contains(v, devVersionMarker) }
+
+// IsInstallableBuild reports whether the running build has a published artifact
+// behind it. Everything except a local `wails dev` build does: a snapshot is a
+// real, downloadable, checksummed binary and can replace itself in place. The
+// IsSnapshotVersion arm is belt-and-braces (under the current stamp a snapshot
+// carries no "-dev" at all) so reintroducing that marker cannot silently
+// re-strand the snapshot channel the way it did before.
+func IsInstallableBuild(v string) bool { return IsSnapshotVersion(v) || !isLocalDevVersion(v) }
+
+// EffectiveChannel resolves the channel a check actually runs on. A build that
+// is itself a snapshot follows the snapshot channel whatever the setting says,
+// because otherwise a snapshot could never update itself, which is the whole
+// point of the channel. An empty setting (a settings file written before the
+// field existed) means stable, as does any value that isn't recognised.
+func EffectiveChannel(setting, currentVersion string) string {
+	if IsSnapshotVersion(currentVersion) || setting == UpdateChannelSnapshot {
+		return UpdateChannelSnapshot
+	}
+	return UpdateChannelStable
+}
 
 // ErrUpdatePermission signals that the running binary can't be replaced
 // in-place (e.g. an install under Program Files without an elevated
@@ -64,66 +108,162 @@ type ghAsset struct {
 }
 
 type ghRelease struct {
-	TagName     string    `json:"tag_name"`
+	TagName string `json:"tag_name"`
+	// Name is the release title. On the snapshot channel it is the only place
+	// the version can come from — see releaseVersion.
+	Name        string    `json:"name"`
 	HTMLURL     string    `json:"html_url"`
 	Body        string    `json:"body"`
 	PublishedAt string    `json:"published_at"`
 	Assets      []ghAsset `json:"assets"`
 }
 
-// CheckForUpdates compares currentVersion (e.g. "0.1.0" or "0.1.0-dev")
-// against the latest published GitHub release. A 404 (no releases exist
-// yet) reports "up to date" rather than an error — that's the expected
-// state until the project cuts its first release.
-func (s *UpdateService) CheckForUpdates(ctx context.Context, currentVersion string) (models.UpdateInfo, error) {
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, s.baseURL+updateRepoPath, nil)
+// releaseVersion returns the version a release advertises on channel.
+//
+// A tagged release carries it in tag_name. The snapshot release cannot: its tag
+// is the rolling literal "snapshot", which is not a version at all, so
+// snapshot.yml publishes the bare version string as the release *title* and
+// this reads it from there.
+//
+// The title's shape is checked rather than trusted. Anything that is not a
+// single snapshot-formatted token (a hand-edited title, or the pre-2026-08
+// "Snapshot 0.1.0-dev.snapshot.<sha>" format) yields "", which makes the
+// snapshot simply not a candidate. Failing closed is the right call: the
+// alternative is comparing a sentence against a version.
+func releaseVersion(r ghRelease, channel string) string {
+	if channel != UpdateChannelSnapshot {
+		return r.TagName
+	}
+	name := strings.TrimSpace(r.Name)
+	if strings.ContainsAny(name, " \t") || !IsSnapshotVersion(name) {
+		return ""
+	}
+	return name
+}
+
+// candidate is one release the checker could offer: the version it advertises
+// and the channel it was found on.
+type candidate struct {
+	channel string
+	version string
+	rel     ghRelease
+}
+
+// fetchCandidate GETs one release endpoint. ok=false with a nil error means
+// "nothing usable published here" — either a 404, which is the expected state
+// before a channel's first publish, or a 200 whose version can't be read.
+func (s *UpdateService) fetchCandidate(ctx context.Context, path, channel string) (candidate, bool, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, s.baseURL+path, nil)
 	if err != nil {
-		return models.UpdateInfo{}, fmt.Errorf("update check: build request: %w", err)
+		return candidate{}, false, fmt.Errorf("update check: build request: %w", err)
 	}
 	req.Header.Set("User-Agent", updateUserAgent)
 	req.Header.Set("Accept", "application/vnd.github+json")
 
 	resp, err := s.http.Do(req)
 	if err != nil {
-		return models.UpdateInfo{}, fmt.Errorf("update check: %w", err)
+		return candidate{}, false, fmt.Errorf("update check: %w", err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode == http.StatusNotFound {
-		return models.UpdateInfo{CurrentVersion: currentVersion, LatestVersion: currentVersion}, nil
+		return candidate{}, false, nil
 	}
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return models.UpdateInfo{}, fmt.Errorf("update check: read response: %w", err)
+		return candidate{}, false, fmt.Errorf("update check: read response: %w", err)
 	}
 
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return models.UpdateInfo{}, fmt.Errorf("update check: HTTP %d: %s", resp.StatusCode, truncate(string(body), 200))
+		return candidate{}, false, fmt.Errorf("update check: HTTP %d: %s", resp.StatusCode, truncate(string(body), 200))
 	}
 
 	var raw ghRelease
 	if err := json.Unmarshal(body, &raw); err != nil {
-		return models.UpdateInfo{}, fmt.Errorf("update check: decode response: %w", err)
+		return candidate{}, false, fmt.Errorf("update check: decode response: %w", err)
 	}
 
-	assets := make([]models.UpdateAsset, 0, len(raw.Assets))
-	for _, a := range raw.Assets {
+	version := releaseVersion(raw, channel)
+	if version == "" {
+		return candidate{}, false, nil
+	}
+	return candidate{channel: channel, version: version, rel: raw}, true, nil
+}
+
+// resolveCandidate picks the release to offer on channel.
+//
+// Stable asks /releases/latest and nothing else. The snapshot endpoint is never
+// even contacted, so opting out of snapshots is real rather than cosmetic.
+//
+// Snapshot asks both and takes the higher version, ties going to stable. That
+// carries a snapshot user onto a stable release the moment one overtakes their
+// build, instead of stranding them on a channel that has fallen behind.
+//
+// An error comes back only when every endpoint consulted failed. A snapshot
+// user whose /releases/latest lookup is rate-limited still gets the snapshot,
+// and vice versa: a background check that half worked is worth more than one
+// that reports nothing. The cost is that a half-rate-limited check looks like a
+// clean result, which is the trade being made deliberately.
+func (s *UpdateService) resolveCandidate(ctx context.Context, channel string) (candidate, bool, error) {
+	stable, stableOK, stableErr := s.fetchCandidate(ctx, updateRepoPath, UpdateChannelStable)
+	if channel != UpdateChannelSnapshot {
+		return stable, stableOK, stableErr
+	}
+
+	snap, snapOK, snapErr := s.fetchCandidate(ctx, updateSnapshotPath, UpdateChannelSnapshot)
+
+	switch {
+	case stableOK && snapOK:
+		if compareVersions(snap.version, stable.version) > 0 {
+			return snap, true, nil
+		}
+		return stable, true, nil
+	case stableOK:
+		return stable, true, nil
+	case snapOK:
+		return snap, true, nil
+	case stableErr != nil:
+		return candidate{}, false, stableErr
+	case snapErr != nil:
+		return candidate{}, false, snapErr
+	default:
+		return candidate{}, false, nil // neither channel has published anything yet
+	}
+}
+
+// CheckForUpdates compares currentVersion (e.g. "0.1.0", "0.1.0-dev" or
+// "0.1.0-snapshot.202608290400.a1b2c3d") against the newest release on the
+// channel resolved from channelSetting. A channel with nothing published yet
+// reports "up to date" rather than an error — that's the expected state until
+// the project cuts its first release on it.
+func (s *UpdateService) CheckForUpdates(ctx context.Context, currentVersion, channelSetting string) (models.UpdateInfo, error) {
+	channel := EffectiveChannel(channelSetting, currentVersion)
+
+	c, ok, err := s.resolveCandidate(ctx, channel)
+	if err != nil {
+		return models.UpdateInfo{}, err
+	}
+	if !ok {
+		// Channel is still reported, so the UI can say what was checked.
+		return models.UpdateInfo{CurrentVersion: currentVersion, LatestVersion: currentVersion, Channel: channel}, nil
+	}
+
+	assets := make([]models.UpdateAsset, 0, len(c.rel.Assets))
+	for _, a := range c.rel.Assets {
 		assets = append(assets, models.UpdateAsset{Name: a.Name, DownloadURL: a.DownloadURL, Size: a.Size})
 	}
 
-	info := models.UpdateInfo{
-		CurrentVersion: currentVersion,
-		LatestVersion:  raw.TagName,
-		ReleaseURL:     raw.HTMLURL,
-		ReleaseNotes:   raw.Body,
-		PublishedAt:    raw.PublishedAt,
-		Assets:         assets,
-	}
-	if raw.TagName != "" && compareVersions(raw.TagName, currentVersion) > 0 {
-		info.UpdateAvailable = true
-	}
-	return info, nil
+	return models.UpdateInfo{
+		CurrentVersion:  currentVersion,
+		LatestVersion:   c.version,
+		UpdateAvailable: compareVersions(c.version, currentVersion) > 0,
+		Channel:         c.channel,
+		ReleaseURL:      c.rel.HTMLURL,
+		ReleaseNotes:    c.rel.Body,
+		PublishedAt:     c.rel.PublishedAt,
+		Assets:          assets,
+	}, nil
 }
 
 // platformAssetNameFor returns the release asset name expected for goos/goarch,
@@ -218,10 +358,22 @@ func (p *progressReader) Read(buf []byte) (int, error) {
 // handles the Windows "can't overwrite a running exe" rename dance and rolls
 // back automatically on a failed write. The caller is responsible for
 // relaunching the process afterward; this method never restarts anything
-// itself. currentVersion gates dev builds the same way CheckForUpdates does
-// (a "-dev" build has nothing installable to update to).
-func (s *UpdateService) DownloadAndInstallUpdate(ctx context.Context, currentVersion string) error {
-	info, err := s.CheckForUpdates(ctx, currentVersion)
+// itself.
+//
+// It re-runs CheckForUpdates rather than trusting anything the frontend passed
+// back. That also gives the "installs the release it offered" guarantee for
+// free: resolution is a pure function of (currentVersion, channelSetting) plus
+// GitHub's state, and info.Assets are that candidate's assets, so the platform
+// asset and the checksums.txt below both come from the release that was
+// offered. No separate snapshot gate is needed either, because on the stable
+// channel resolveCandidate never contacts the snapshot endpoint at all.
+//
+// One consequence worth naming: if the nightly republishes between the check
+// and the install, this picks up the newer snapshot. Binary and checksums still
+// come from one release, so the install is consistent, just newer than the
+// version the UI named.
+func (s *UpdateService) DownloadAndInstallUpdate(ctx context.Context, currentVersion, channelSetting string) error {
+	info, err := s.CheckForUpdates(ctx, currentVersion, channelSetting)
 	if err != nil {
 		return fmt.Errorf("update install: check failed: %w", err)
 	}

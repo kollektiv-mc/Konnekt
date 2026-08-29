@@ -29,6 +29,11 @@ type AppSettings struct {
 
 	CheckUpdatesOnStartup bool `json:"checkUpdatesOnStartup"`
 
+	// UpdateChannel is "stable" or "snapshot". A build that is itself a
+	// snapshot follows the snapshot channel regardless of what this says (see
+	// services.EffectiveChannel), or it could never update itself.
+	UpdateChannel string `json:"updateChannel"`
+
 	// Display order of the tile crate's navbar list, by tile registry id.
 	CrateOrder []string `json:"crateOrder"`
 }

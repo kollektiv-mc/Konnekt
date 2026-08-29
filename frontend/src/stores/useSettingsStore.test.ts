@@ -26,6 +26,7 @@ const DEFAULTS = {
   schedulerPaletteClosedCategories: {},
   consoleQuickCommandsCollapsed: false,
   checkUpdatesOnStartup: true,
+  updateChannel: 'stable' as const,
   crateOrder: [] as string[],
 }
 
@@ -77,6 +78,23 @@ describe('useSettingsStore', () => {
       })
       await useSettingsStore.getState().load()
       expect(useSettingsStore.getState().settings.backgroundStyle).toBe('solid')
+    })
+
+    it('falls back to the default updateChannel when the backend value is invalid', async () => {
+      vi.mocked(App.GetAppSettings).mockResolvedValue({
+        ...DEFAULTS,
+        updateChannel: 'nonsense' as never,
+      })
+      await useSettingsStore.getState().load()
+      expect(useSettingsStore.getState().settings.updateChannel).toBe('stable')
+    })
+
+    // A settings file written before the field existed unmarshals it as "",
+    // which must not reach the Segmented control as a third, unselectable value.
+    it('falls back to the default updateChannel when the backend omits it', async () => {
+      vi.mocked(App.GetAppSettings).mockResolvedValue({ ...DEFAULTS, updateChannel: '' as never })
+      await useSettingsStore.getState().load()
+      expect(useSettingsStore.getState().settings.updateChannel).toBe('stable')
     })
 
     it('falls back to defaults and still marks loaded when GetAppSettings rejects', async () => {

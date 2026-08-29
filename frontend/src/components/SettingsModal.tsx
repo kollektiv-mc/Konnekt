@@ -26,7 +26,7 @@ import type { models } from '../../wailsjs/go/models'
 import { CHANGELOG, CHANGELOG_URL, groupByDate } from '../lib/changelog'
 import type { ChangelogEntry } from '../lib/changelog'
 import { EVENTS } from '../lib/constants'
-import { isDevBuild } from '../hooks/useUpdateCheck'
+import { isDevBuild, isSnapshotVersion } from '../hooks/useUpdateCheck'
 
 type UpdateFn = (patch: Partial<AppSettings>) => Promise<void>
 
@@ -47,6 +47,11 @@ const THEME_OPTIONS = [
   { value: 'system' as const, label: '⊙ System' },
 ]
 
+const UPDATE_CHANNEL_OPTIONS = [
+  { value: 'stable' as const, label: 'Stable' },
+  { value: 'snapshot' as const, label: 'Snapshot' },
+]
+
 const BG_STYLE_OPTIONS = [
   { value: 'solid' as const, label: 'Solid' },
   { value: 'gradient' as const, label: 'Gradient' },
@@ -61,12 +66,26 @@ export function SettingsModal({ open, onClose }: Props) {
   const { settings, error, update, clearError } = useSettingsStore()
   const [section, setSection] = useState<Section>('appearance')
   const overlayRef = useRef<HTMLDivElement>(null)
+  // Fetched once here rather than in each pane: General needs it to say whether
+  // this build already follows the snapshot channel, and About both displays it
+  // and gates the install button on it. Null outside a Wails context.
+  const [version, setVersion] = useState<string | null>(null)
 
   // Every control in every pane writes through this. The store has already put
   // the control back by the time the rejection lands, so there is nothing local
   // to revert — the swallow here just keeps a fire-and-forget `onChange` from
   // raising an unhandled rejection, and `error` says what happened.
   const save: UpdateFn = useCallback((patch) => update(patch).catch(() => {}), [update])
+
+  // Gated on `open` because this component is mounted for the whole session
+  // (it renders null when closed), and an unconditional effect here would turn
+  // a Settings-only lookup into an extra IPC call at app startup.
+  useEffect(() => {
+    if (!open) return
+    GetAppVersion()
+      .then(setVersion)
+      .catch(() => setVersion(null))
+  }, [open])
 
   // A stale message from a previous visit would read as a failure of whatever
   // the user is about to touch.
@@ -145,11 +164,13 @@ export function SettingsModal({ open, onClose }: Props) {
           {/* Body */}
           <div className="flex-1 overflow-y-auto px-5 py-2">
             {section === 'appearance' && <AppearancePane settings={settings} update={save} />}
-            {section === 'general' && <GeneralPane settings={settings} update={save} />}
+            {section === 'general' && (
+              <GeneralPane settings={settings} update={save} version={version} />
+            )}
             {section === 'console' && <ConsolePane settings={settings} update={save} />}
             {section === 'notifications' && <NotificationsPane settings={settings} update={save} />}
             {section === 'changelog' && <ChangelogPane />}
-            {section === 'about' && <AboutPane />}
+            {section === 'about' && <AboutPane version={version} />}
           </div>
         </div>
       </div>
@@ -339,7 +360,15 @@ function AppearancePane({ settings, update }: { settings: AppSettings; update: U
 
 // ─── General ─────────────────────────────────────────────────────────────────
 
-function GeneralPane({ settings, update }: { settings: AppSettings; update: UpdateFn }) {
+function GeneralPane({
+  settings,
+  update,
+  version,
+}: {
+  settings: AppSettings
+  update: UpdateFn
+  version: string | null
+}) {
   return (
     <div>
       <SettingRow
@@ -383,6 +412,25 @@ function GeneralPane({ settings, update }: { settings: AppSettings; update: Upda
         <Toggle
           checked={settings.checkUpdatesOnStartup}
           onChange={(v) => update({ checkUpdatesOnStartup: v })}
+        />
+      </SettingRow>
+      <SettingRow
+        label="Update channel"
+        description={
+          isSnapshotVersion(version ?? '')
+            ? 'Snapshot builds are rebuilt from the newest code every night. They are untested and can be broken. This build is one, so it follows the snapshot channel until you install a release.'
+            : 'Snapshot builds are rebuilt from the newest code every night. They are untested and can be broken.'
+        }
+      >
+        {/* Deliberately shows the stored setting even on a snapshot build,
+            where the service overrides it. Forcing the displayed value to
+            "Snapshot" would misreport what is on disk and what happens once a
+            release is installed. The description says so instead. */}
+        <Segmented
+          options={UPDATE_CHANNEL_OPTIONS}
+          value={settings.updateChannel}
+          onChange={(v) => update({ updateChannel: v })}
+          compact
         />
       </SettingRow>
     </div>
@@ -546,17 +594,14 @@ type UpdateCheckState =
   | { status: 'installFailed'; info: models.UpdateInfo; message: string }
   | { status: 'error' }
 
-function AboutPane() {
-  const [version, setVersion] = useState<string | null>(null)
+function AboutPane({ version }: { version: string | null }) {
   const [dataDir, setDataDir] = useState<string | null>(null)
   const [logPath, setLogPath] = useState<string | null>(null)
   const [checkState, setCheckState] = useState<UpdateCheckState>({ status: 'idle' })
-
-  useEffect(() => {
-    GetAppVersion()
-      .then(setVersion)
-      .catch(() => setVersion(null))
-  }, [])
+  // Second click of the snapshot install confirm. Not folded into
+  // UpdateCheckState: it is a property of the button, not of the check, and a
+  // seventh variant would have to be threaded through every other branch.
+  const [confirmSnapshot, setConfirmSnapshot] = useState(false)
 
   // Both paths come from the backend rather than being written out here: the
   // data-directory row used to hard-code "~/.config/konnekt", and the log is the
@@ -600,6 +645,9 @@ function AboutPane() {
   }
 
   const runCheck = async () => {
+    // A fresh check must not inherit a confirmation the user gave for a release
+    // they are no longer being offered.
+    setConfirmSnapshot(false)
     setCheckState({ status: 'checking' })
     try {
       const info = await CheckForUpdates()
@@ -687,12 +735,46 @@ function AboutPane() {
         {checkState.status === 'available' && (
           <div className="border-border-subtle border-hairline flex flex-col gap-1.5 rounded p-2.5">
             <span className="text-text-primary text-xs">
-              Update available: {checkState.info.latestVersion}
+              {checkState.info.channel === 'snapshot' ? 'Snapshot available' : 'Update available'}:{' '}
+              {checkState.info.latestVersion}
             </span>
+            {checkState.info.channel === 'snapshot' && (
+              <span className="bg-warning/[0.08] text-warning border-border-subtle border-hairline rounded px-2 py-1 text-[11px]">
+                Rebuilt from the newest code and untested. It can be broken. Back up your server
+                directory first.
+              </span>
+            )}
             {isDevBuild(version ?? '') ? (
               <span className="text-text-muted text-[11px]">
                 Not available in dev builds — restart via a packaged build to install updates.
               </span>
+            ) : checkState.info.channel === 'snapshot' ? (
+              // Two steps on purpose. A misclick here swaps a working install
+              // for untested nightly code, and the warning above is only worth
+              // anything if something stops the click that follows it.
+              !confirmSnapshot ? (
+                <button
+                  onClick={() => setConfirmSnapshot(true)}
+                  className="text-warning border-warning/30 bg-warning/10 hover:bg-warning/15 border-hairline rounded py-1 text-[11px] transition-colors"
+                >
+                  Install snapshot…
+                </button>
+              ) : (
+                <div className="flex gap-1.5">
+                  <button
+                    onClick={() => runInstall(checkState.info)}
+                    className="text-warning border-warning/30 bg-warning/10 hover:bg-warning/15 border-hairline flex-1 rounded py-1 text-[11px] transition-colors"
+                  >
+                    Install it anyway
+                  </button>
+                  <button
+                    onClick={() => setConfirmSnapshot(false)}
+                    className="text-text-muted hover:text-text-secondary border-border-subtle border-hairline rounded px-2 py-1 text-[11px] transition-colors"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              )
             ) : (
               <button
                 onClick={() => runInstall(checkState.info)}

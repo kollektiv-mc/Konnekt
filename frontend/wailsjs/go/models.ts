@@ -19,6 +19,7 @@ export namespace models {
 	    schedulerPaletteClosedCategories: Record<string, boolean>;
 	    consoleQuickCommandsCollapsed: boolean;
 	    checkUpdatesOnStartup: boolean;
+	    updateChannel: string;
 	    crateOrder: string[];
 	
 	    static createFrom(source: any = {}) {
@@ -45,6 +46,7 @@ export namespace models {
 	        this.schedulerPaletteClosedCategories = source["schedulerPaletteClosedCategories"];
 	        this.consoleQuickCommandsCollapsed = source["consoleQuickCommandsCollapsed"];
 	        this.checkUpdatesOnStartup = source["checkUpdatesOnStartup"];
+	        this.updateChannel = source["updateChannel"];
 	        this.crateOrder = source["crateOrder"];
 	    }
 	}
@@ -921,6 +923,7 @@ export namespace models {
 	    currentVersion: string;
 	    latestVersion: string;
 	    updateAvailable: boolean;
+	    channel: string;
 	    releaseUrl: string;
 	    releaseNotes: string;
 	    publishedAt: string;
@@ -935,6 +938,7 @@ export namespace models {
 	        this.currentVersion = source["currentVersion"];
 	        this.latestVersion = source["latestVersion"];
 	        this.updateAvailable = source["updateAvailable"];
+	        this.channel = source["channel"];
 	        this.releaseUrl = source["releaseUrl"];
 	        this.releaseNotes = source["releaseNotes"];
 	        this.publishedAt = source["publishedAt"];

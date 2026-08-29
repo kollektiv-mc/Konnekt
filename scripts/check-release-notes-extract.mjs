@@ -48,7 +48,12 @@ Each one replaces the last.
 Untested, and newer than the [latest release](https://example.com). It can be
 broken. Back up your server directory before running it.
 
-Version \`0.1.0-dev.snapshot.00400f8\`, commit 00400f866e6d0e90d695cc08b4b0d538d5d21ad1.
+Snapshots update themselves: this one will offer you the next
+snapshot, and a stable release once one overtakes it. Installing a
+release puts you back on whichever channel Settings > General is set
+to.
+
+Version \`0.1.0-snapshot.202608290400.00400f8\`, commit 00400f866e6d0e90d695cc08b4b0d538d5d21ad1.
 
 ## What's changed
 
