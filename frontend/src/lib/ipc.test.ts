@@ -1,5 +1,5 @@
 import { describe, it, expect, afterEach } from 'vitest'
-import { errMsg, hasWailsBridge } from './ipc'
+import { errMsg, hasWailsBridge, readOr } from './ipc'
 
 afterEach(() => {
   Reflect.deleteProperty(window, 'go')
@@ -28,5 +28,26 @@ describe('hasWailsBridge', () => {
   it('is true once the Wails backend has injected window.go', () => {
     Object.assign(window, { go: {} })
     expect(hasWailsBridge()).toBe(true)
+  })
+})
+
+describe('readOr', () => {
+  it('returns the value when the call resolves', async () => {
+    await expect(readOr(() => Promise.resolve('0.1.0'), null)).resolves.toBe('0.1.0')
+  })
+
+  it('falls back when the call rejects', async () => {
+    await expect(readOr(() => Promise.reject(new Error('no server')), null)).resolves.toBeNull()
+  })
+
+  // The reason this helper exists. A generated binding with no bridge behind it
+  // throws while dereferencing `window.go`, before there is a promise to reject,
+  // so a `.catch()` on the call site never runs and the throw escapes.
+  it('falls back when the call throws synchronously, as a binding with no bridge does', async () => {
+    await expect(
+      readOr(() => {
+        throw new TypeError("Cannot read properties of undefined (reading 'main')")
+      }, null),
+    ).resolves.toBeNull()
   })
 })

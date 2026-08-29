@@ -29,3 +29,28 @@ export const errMsg = (e: unknown) => (e instanceof Error ? e.message : String(e
 export function hasWailsBridge(): boolean {
   return typeof window !== 'undefined' && 'go' in window
 }
+
+/**
+ * Run a bound read, falling back to `fallback` however it fails.
+ *
+ * Same root cause as `hasWailsBridge()`, from the other side. Because the
+ * generated bindings dereference `window.go` synchronously, a call with no
+ * bridge throws before a promise exists, so a trailing `.catch()` is attached
+ * to nothing and the throw escapes. In an effect that reaches the nearest error
+ * boundary: opening Settings in the browser-only `frontend-dev` preset used to
+ * unmount the whole app on `GetAppVersion()`, past a `.catch()` that read as if
+ * it handled exactly this.
+ *
+ * Awaiting inside the wrapper turns that synchronous throw into a rejection, so
+ * one handler covers it and a real backend failure alike — which is what reads
+ * want, since both mean the same thing to them: no value, show the unavailable
+ * state. Writes still branch on `hasWailsBridge()`, because there the two cases
+ * mean different things.
+ */
+export async function readOr<T, F>(call: () => Promise<T>, fallback: F): Promise<T | F> {
+  try {
+    return await call()
+  } catch {
+    return fallback
+  }
+}
