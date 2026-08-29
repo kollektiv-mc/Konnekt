@@ -1,11 +1,17 @@
-import { useState, useRef, useCallback } from 'react'
+import { useState, useRef, useCallback, lazy, Suspense } from 'react'
 import { RestartServer } from '../../../wailsjs/go/main/App'
 import { useServerStore } from '../../stores/useServerStore'
 import type { TileProps } from '../../types'
 import { FileList } from './FileList'
-import { EditorPanel } from './EditorPanel'
+
 import { useConfigEditor } from './useConfigEditor'
 import { ConfigSummary } from './ConfigSummary'
+
+// CodeMirror plus the yaml/toml parsers behind it are ~1.4 MB of source and
+// only the maximized editor renders them, so they load on demand rather than
+// on every launch. Warmed during idle by lib/prefetch.ts, which names this
+// exact specifier.
+const EditorPanel = lazy(() => import('./EditorPanel').then((m) => ({ default: m.EditorPanel })))
 
 const SIDEBAR_MIN = 140
 const SIDEBAR_MAX = 480
@@ -119,19 +125,21 @@ export function ConfigTile({ serverId, maximized }: TileProps) {
       />
 
       {/* Editor panel */}
-      <EditorPanel
-        file={selectedFile}
-        content={content}
-        onChange={setContent}
-        isDirty={isDirty}
-        loading={loadingContent}
-        saving={saving}
-        saveError={saveError}
-        isRunning={status.running}
-        onSave={handleSaveAndMaybeRestart}
-        onRevert={revert}
-        onRestart={handleRestart}
-      />
+      <Suspense fallback={<div className="min-w-0 flex-1" />}>
+        <EditorPanel
+          file={selectedFile}
+          content={content}
+          onChange={setContent}
+          isDirty={isDirty}
+          loading={loadingContent}
+          saving={saving}
+          saveError={saveError}
+          isRunning={status.running}
+          onSave={handleSaveAndMaybeRestart}
+          onRevert={revert}
+          onRestart={handleRestart}
+        />
+      </Suspense>
     </div>
   )
 }

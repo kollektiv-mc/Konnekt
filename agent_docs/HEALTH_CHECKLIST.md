@@ -383,10 +383,21 @@ tree.
       `React.memo`" pass would produce a list, not evidence, and the point of
       the item is the evidence.
 - [x] Production bundle has been profiled recently (e.g. `vite build` output
-      or a bundle analyzer) and heavy libraries remain lazy rather than eager
-      (three.js via Worlds, recharts via Performance — see Scalable pillar).
-      Verify: `pnpm build` from `frontend/`, then confirm `three` and `recharts`
-      land in their own chunks rather than the entry chunk.
+      or a bundle analyzer) and heavy libraries remain lazy rather than eager:
+      three.js via Worlds, recharts via Performance, `@xyflow` via the scheduler
+      editor, CodeMirror via the config editor and react-markdown/parse5 via mod
+      descriptions (see Scalable pillar).
+      Verify: `pnpm build` from `frontend/`, then confirm each of those five
+      lands in its own chunk rather than the entry chunk. `pnpm check-bundle`
+      holds the entry at 165 KB gzip, which is the number that actually fails.
+- [x] The lazy chunks are warmed at a moment the user cannot feel.
+      `lib/prefetch.ts` warms one chunk per idle slot and defers whenever the
+      user has interacted in the last 500ms. The failure this guards against is
+      specific and was live: a warm-up that fired everything at once, one to
+      three seconds after launch, landed on the user's first scroll.
+      Verify: every `React.lazy` specifier under `src/tiles/` appears verbatim
+      in `prefetch.ts`'s `CHUNKS` — a path that differs by a directory hop
+      resolves to a second copy of the module and warms nothing.
 
 ---
 

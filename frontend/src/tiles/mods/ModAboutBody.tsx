@@ -1,8 +1,4 @@
-import type { ComponentPropsWithoutRef } from 'react'
-import ReactMarkdown from 'react-markdown'
-import remarkGfm from 'remark-gfm'
-import rehypeRaw from 'rehype-raw'
-import { BrowserOpenURL } from '../../../wailsjs/runtime/runtime'
+import { lazy, Suspense } from 'react'
 
 interface Props {
   body: string
@@ -10,44 +6,25 @@ interface Props {
   loading: boolean
 }
 
-type AnchorProps = ComponentPropsWithoutRef<'a'>
+// react-markdown with rehype-raw drags in the full HTML parser (parse5 and the
+// micromark/mdast pipeline, ~650 KB of source) and only a mod description ever
+// renders it, so it loads on demand rather than on every launch. Warmed during
+// idle by lib/prefetch.ts, which names this exact specifier.
+const MarkdownBody = lazy(() => import('./MarkdownBody').then((m) => ({ default: m.MarkdownBody })))
 
-function MarkdownLink({ href, children, ...rest }: AnchorProps) {
-  const external = !!href && /^https?:\/\//i.test(href)
-  return (
-    <a
-      href={href}
-      {...rest}
-      onClick={(e) => {
-        if (!external) return
-        e.preventDefault()
-        try {
-          BrowserOpenURL(href!)
-        } catch {
-          /* non-Wails context (e.g. pnpm dev preview) */
-        }
-      }}
-    >
-      {children}
-    </a>
-  )
+function Placeholder() {
+  return <div className="text-text-muted animate-pulse text-xs">Loading details…</div>
 }
 
 export function ModAboutBody({ body, description, loading }: Props) {
   if (loading && !body) {
-    return <div className="text-text-muted animate-pulse text-xs">Loading details…</div>
+    return <Placeholder />
   }
   if (body) {
     return (
-      <div className="mod-body">
-        <ReactMarkdown
-          remarkPlugins={[remarkGfm]}
-          rehypePlugins={[rehypeRaw]}
-          components={{ a: MarkdownLink }}
-        >
-          {body}
-        </ReactMarkdown>
-      </div>
+      <Suspense fallback={<Placeholder />}>
+        <MarkdownBody body={body} />
+      </Suspense>
     )
   }
   if (description) {

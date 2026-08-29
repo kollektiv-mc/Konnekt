@@ -14,9 +14,11 @@ import { gzipSync } from 'node:zlib'
 import path from 'node:path'
 import { ensureFreshDist } from './lib/dist-freshness.mjs'
 
-// Measured entry-chunk gzip size after the recharts code-split was 490.53 KB;
-// budget = that + ~12% headroom, rounded.
-const ENTRY_BUDGET_KB = 550
+// Measured entry-chunk gzip size after the scheduler/config/mods code-split was
+// 145.0 KB; budget = that + ~12% headroom, rounded. It was 550 KB when the
+// entry still carried CodeMirror, @xyflow and the markdown pipeline eagerly —
+// leaving it there now would let the chunk grow 3.7x before anything noticed.
+const ENTRY_BUDGET_KB = 165
 
 const distAssets = await ensureFreshDist()
 
