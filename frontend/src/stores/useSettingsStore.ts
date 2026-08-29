@@ -3,6 +3,7 @@ import type { AppSettings } from '../types'
 import { applySkin, BUILTIN_SKINS } from '../lib/theme'
 import { STATUS_DEFAULTS } from '../styles/tokens'
 import { normalizeCrateOrder, reorderWithinGroup } from '../lib/crateOrder'
+import { clampNavWidth, NAV_WIDTH_DEFAULT } from '../lib/navWidth'
 import { errMsg, hasWailsBridge } from '../lib/ipc'
 import { GetAppSettings, SaveAppSettings } from '../../wailsjs/go/main/App'
 
@@ -30,6 +31,7 @@ const DEFAULTS: AppSettings = {
   checkUpdatesOnStartup: true,
   updateChannel: 'stable',
   crateOrder: [],
+  navWidth: NAV_WIDTH_DEFAULT,
 }
 
 interface SettingsStore {
@@ -80,11 +82,17 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
     } catch {
       /* non-Wails context */
     }
-    // Normalized unconditionally (not just on the GetAppSettings success path)
-    // so reorderCrate always has a full permutation to operate on — leaving it
-    // `[]` after a failed/no-bridge load would silently drop tiles from any
-    // reorder performed before the next successful load.
-    settings = { ...settings, crateOrder: normalizeCrateOrder(settings.crateOrder) }
+    // Both normalizations run unconditionally (not just on the GetAppSettings
+    // success path) so the rest of the app never sees an unusable value:
+    // leaving `crateOrder` at `[]` would let a reorder performed before the
+    // next successful load silently drop tiles, and a `navWidth` of 0 — what a
+    // settings file written before that field existed unmarshals to — would
+    // render the navbar with no width at all.
+    settings = {
+      ...settings,
+      crateOrder: normalizeCrateOrder(settings.crateOrder),
+      navWidth: clampNavWidth(settings.navWidth, window.innerWidth),
+    }
     applySkin(settings)
     set({ settings, loaded: true })
   },
