@@ -80,24 +80,26 @@ export const ALL_TILE_IDS = [
 export const DEFAULT_LAYOUT_PRESETS = [
   {
     // Hand-authored rather than generated: this one uses the resize range on
-    // purpose. Two columns, each packed top to bottom — the tiles you watch
-    // (quick-commands, console, performance, stats) sit above the fold, and
-    // server-config takes the full TILE_MAX height because its form is long.
+    // purpose. Two columns, each packed top to bottom with no gaps. The left
+    // column gives console the full TILE_MAX height, because a log you cannot
+    // scroll far enough back in is the tile that gets resized first; the right
+    // column stacks the at-a-glance readouts (quick-commands, stats,
+    // performance) above the fold and the management tiles below them.
     // Transcribed from a working arrangement; `tileGrid()` cannot express the
     // varying heights, so edit the coordinates directly if this changes.
     name: 'Default',
     layout: JSON.stringify([
-      { i: 'quick-commands', x: 0, y: 0, w: 3, h: 4 },
-      { i: 'console', x: 0, y: 4, w: 3, h: 8 },
-      { i: 'notifications', x: 0, y: 12, w: 3, h: 4 },
-      { i: 'mods', x: 0, y: 16, w: 3, h: 8 },
-      { i: 'server-config', x: 0, y: 24, w: 3, h: 16 },
-      { i: 'performance', x: 3, y: 0, w: 3, h: 4 },
-      { i: 'stats', x: 3, y: 4, w: 3, h: 4 },
-      { i: 'players', x: 3, y: 8, w: 3, h: 8 },
-      { i: 'scheduler', x: 3, y: 16, w: 3, h: 8 },
-      { i: 'worlds', x: 3, y: 24, w: 3, h: 8 },
-      { i: 'backups', x: 3, y: 32, w: 3, h: 8 },
+      { i: 'console', x: 0, y: 0, w: 3, h: 16 },
+      { i: 'notifications', x: 0, y: 16, w: 3, h: 4 },
+      { i: 'backups', x: 0, y: 20, w: 3, h: 7 },
+      { i: 'mods', x: 0, y: 27, w: 3, h: 13 },
+      { i: 'quick-commands', x: 3, y: 0, w: 3, h: 6 },
+      { i: 'stats', x: 3, y: 6, w: 3, h: 5 },
+      { i: 'performance', x: 3, y: 11, w: 3, h: 5 },
+      { i: 'players', x: 3, y: 16, w: 3, h: 8 },
+      { i: 'scheduler', x: 3, y: 24, w: 3, h: 5 },
+      { i: 'worlds', x: 3, y: 29, w: 3, h: 4 },
+      { i: 'server-config', x: 3, y: 33, w: 3, h: 8 },
     ]),
   },
   {
