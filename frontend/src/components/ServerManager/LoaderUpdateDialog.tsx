@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useLoaderStore } from '../../stores/useLoaderStore'
+import { useServerConfigStore } from '../../stores/useServerConfigStore'
 import { InstallLog } from '../InstallLog'
 
 /**
@@ -13,23 +14,61 @@ import { InstallLog } from '../InstallLog'
  * that starts the update. That is what makes closing free — the update keeps
  * running, the log keeps filling, and the sidebar's process row opens this
  * again — and what puts it above a maximized tile.
+ *
+ * **A job outranks a pending selection.** A running update is the thing the
+ * sidebar row points at, so if one exists this shows it whatever the panel was
+ * last clicked on. Picking a second version while one runs used to overwrite
+ * the running job here, which is how the row came to open a refusal instead of
+ * the update it belonged to.
  */
 export function LoaderUpdateDialog() {
-  const { serverName, from, target, phase, log, updateError, rolledBack, startUpdate, hideDialog } =
-    useLoaderStore()
+  const {
+    phase,
+    log,
+    updateError,
+    rolledBack,
+    jobServerId,
+    jobFrom,
+    jobTarget,
+    pending,
+    startError,
+    versions,
+    startUpdate,
+    openUpdate,
+    hideDialog,
+  } = useLoaderStore()
+  const configs = useServerConfigStore((s) => s.configs)
   const [fullBackup, setFullBackup] = useState(false)
 
-  // openUpdate always sets one; this keeps the rest free of optional chaining.
-  if (!target) return null
-
+  const hasJob = phase !== 'idle'
   const running = phase === 'running'
   const done = phase === 'done'
   const failed = phase === 'failed'
 
+  // Nothing to show: no job, and no version picked.
+  if (!hasJob && !pending) return null
+
+  // One source for the name, so a job recovered from an event alone still has
+  // one — the event carries an id, not a name.
+  const serverId = hasJob ? jobServerId : pending!.serverId
+  const serverName = configs.find((c) => c.id === serverId)?.name ?? 'This server'
+  const version = hasJob ? jobTarget : pending!.target.version
+  const from = hasJob ? jobFrom : pending!.from
+
   const begin = () => {
+    if (!pending) return
     // The store records the refusal and the dialog renders it; rethrowing past
     // a click handler would only surface as an unhandled rejection.
-    startUpdate(useLoaderStore.getState().serverId, target.version, fullBackup).catch(() => {})
+    startUpdate(pending.serverId, pending.target.version, fullBackup).catch(() => {})
+  }
+
+  // Retrying turns the failed job back into a pending selection, so it goes
+  // through the same confirm as any other start. Needs the full LoaderVersion,
+  // which the job only knows as a string — absent if the list has not loaded,
+  // in which case the panel is the way back.
+  const retryTarget = failed ? versions.find((v) => v.version === jobTarget) : undefined
+  const retry = () => {
+    if (retryTarget) openUpdate({ id: jobServerId, name: serverName }, jobFrom, retryTarget)
   }
 
   return (
@@ -42,13 +81,13 @@ export function LoaderUpdateDialog() {
           </span>
         </div>
 
-        {phase === 'idle' && (
+        {!hasJob && pending && (
           <>
             <p className="text-text-secondary text-xs leading-relaxed">
               {serverName} will move from{' '}
               <span className="text-text-primary">{from || 'an unknown build'}</span> to{' '}
-              <span className="text-accent">{target.version}</span>
-              {!target.stable && <span className="text-warning"> (beta)</span>}.
+              <span className="text-accent">{version}</span>
+              {!pending.target.stable && <span className="text-warning"> (beta)</span>}.
             </p>
             <p className="text-text-muted text-2xs leading-relaxed">
               This runs the official installer in the server folder. It rewrites{' '}
@@ -78,12 +117,22 @@ export function LoaderUpdateDialog() {
 
         {running && (
           <p className="text-text-secondary text-xs">
-            Updating to {target.version}. Closing this does not stop it: the sidebar keeps the
-            update, and clicking there brings this back.
+            {serverName} is updating from{' '}
+            <span className="text-text-primary">{from || 'an unknown build'}</span> to{' '}
+            <span className="text-accent">{version}</span>. Closing this does not stop it: the
+            sidebar keeps the update, and clicking there brings this back.
           </p>
         )}
 
         <InstallLog lines={log} maxHeight="max-h-56" />
+
+        {/* A refused start, not an outcome — it sits beside whatever else is on
+            screen rather than replacing it. */}
+        {startError && (
+          <span className="text-warning text-2xs break-words">
+            Could not start another update: {startError}
+          </span>
+        )}
 
         {failed && (
           <div className="flex flex-col gap-1">
@@ -100,22 +149,23 @@ export function LoaderUpdateDialog() {
 
         {done && (
           <span className="text-accent text-xs">
-            Now on {target.version}. Start the server to pick it up.
+            Now on {version}. Start the server to pick it up.
           </span>
         )}
 
         <div className="border-border-subtle border-t-hairline flex gap-2 pt-2">
-          {phase === 'idle' && (
+          {!hasJob && pending && (
             <button
               onClick={begin}
-              className="text-accent border-accent/30 hover:bg-accent/10 border-hairline flex-1 rounded py-1.5 text-xs transition-colors"
+              disabled={pending.starting}
+              className="text-accent border-accent/30 hover:bg-accent/10 border-hairline flex-1 rounded py-1.5 text-xs transition-colors disabled:opacity-40"
             >
-              Update to {target.version}
+              {pending.starting ? 'Starting…' : `Update to ${version}`}
             </button>
           )}
-          {failed && (
+          {retryTarget && (
             <button
-              onClick={begin}
+              onClick={retry}
               className="text-accent border-accent/30 hover:bg-accent/10 border-hairline flex-1 rounded py-1.5 text-xs transition-colors"
             >
               Try again
@@ -127,7 +177,7 @@ export function LoaderUpdateDialog() {
             onClick={hideDialog}
             className="text-text-faint hover:text-text-secondary px-3 py-1.5 text-xs transition-colors"
           >
-            {done ? 'Done' : phase === 'idle' ? 'Cancel' : 'Close'}
+            {done ? 'Done' : !hasJob ? 'Cancel' : 'Close'}
           </button>
         </div>
       </div>

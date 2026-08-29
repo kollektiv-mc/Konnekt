@@ -55,11 +55,12 @@ describe('LoaderPanel', () => {
       log: [],
       updateError: null,
       rolledBack: false,
+      jobServerId: '',
+      jobFrom: '',
+      jobTarget: '',
       dialogOpen: false,
-      target: null,
-      serverId: '',
-      serverName: '',
-      from: '',
+      pending: null,
+      startError: null,
     })
   })
 
@@ -118,13 +119,41 @@ describe('LoaderPanel', () => {
 
     const s = useLoaderStore.getState()
     expect(s.dialogOpen).toBe(true)
-    expect(s.target?.version).toBe('21.1.209')
-    expect(s.from).toBe('21.1.72')
-    expect(s.serverId).toBe('srv1')
-    expect(s.serverName).toBe('smp')
+    expect(s.pending?.target.version).toBe('21.1.209')
+    expect(s.pending?.from).toBe('21.1.72')
+    expect(s.pending?.serverId).toBe('srv1')
     // Nothing has been asked of the backend yet — that is the dialog's job.
     expect(App.UpdateLoader).not.toHaveBeenCalled()
     expect(screen.queryByText(/Update to 21\.1\.209/)).toBeNull()
+  })
+
+  // The backend allows one update at a time and refuses a second, so offering
+  // the button is a promise it cannot keep. This is the guard that keeps the
+  // everyday path away from the store logic entirely.
+  describe('while an update is running', () => {
+    beforeEach(() => {
+      useLoaderStore.getState().jobStarted({ serverId: 'srv1', from: '21.1.72', to: '21.1.209' })
+    })
+
+    it('disables the Update buttons', async () => {
+      render(<LoaderPanel config={cfg} />)
+      await waitFor(() => expect(screen.getByText('21.1.209')).toBeTruthy())
+
+      for (const button of screen.getAllByRole('button', { name: 'Update' })) {
+        expect((button as HTMLButtonElement).disabled).toBe(true)
+      }
+    })
+
+    it('says why, and offers to show the update', async () => {
+      useLoaderStore.getState().hideDialog()
+      render(<LoaderPanel config={cfg} />)
+      await waitFor(() => expect(screen.getByText('21.1.209')).toBeTruthy())
+
+      expect(screen.getByText('An update is already running.')).toBeTruthy()
+      fireEvent.click(screen.getByRole('button', { name: 'Show it' }))
+
+      expect(useLoaderStore.getState().dialogOpen).toBe(true)
+    })
   })
 
   // A finished update changes which build is installed.

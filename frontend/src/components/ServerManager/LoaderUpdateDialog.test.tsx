@@ -3,7 +3,9 @@ import { render, screen, fireEvent, waitFor, cleanup } from '@testing-library/re
 import * as App from '../../../wailsjs/go/main/App'
 import { useLoaderStore } from '../../stores/useLoaderStore'
 import type { LoaderVersion } from '../../stores/useLoaderStore'
+import { useServerConfigStore } from '../../stores/useServerConfigStore'
 import { LoaderUpdateDialog } from './LoaderUpdateDialog'
+import type { ServerConfig } from '../../types'
 
 vi.mock('../../../wailsjs/go/main/App')
 
@@ -11,24 +13,49 @@ vi.mock('../../../wailsjs/go/main/App')
 // afterEach and a previous test's DOM would still be mounted.
 afterEach(cleanup)
 
-const target = {
-  version: '21.1.209',
-  mcVersion: '1.21.1',
-  stable: true,
-  latest: true,
-} as LoaderVersion
+const version = (v: string, over: Partial<LoaderVersion> = {}): LoaderVersion =>
+  ({ version: v, mcVersion: '1.21.1', stable: true, latest: false, ...over }) as LoaderVersion
 
-function openOn(over: Partial<ReturnType<typeof useLoaderStore.getState>> = {}) {
+const cfg: ServerConfig = {
+  id: 'srv1',
+  name: 'smp',
+  jarPath: '',
+  jvmArgs: [],
+  workingDir: '/srv/smp',
+  mcVersion: '1.21.1',
+  loader: 'neoforge',
+  loaderVersion: '21.1.72',
+}
+
+/** The store as a pending confirm leaves it. */
+function pendingOn(target = '21.1.209') {
   useLoaderStore.setState({
     dialogOpen: true,
-    serverId: 'srv1',
-    serverName: 'smp',
-    from: '21.1.72',
-    target,
+    pending: { serverId: 'srv1', from: '21.1.72', target: version(target), starting: false },
+    startError: null,
     phase: 'idle',
     log: [],
     updateError: null,
     rolledBack: false,
+    jobServerId: '',
+    jobFrom: '',
+    jobTarget: '',
+  })
+}
+
+/** The store as a live update leaves it. */
+function jobOn(over: Partial<ReturnType<typeof useLoaderStore.getState>> = {}) {
+  useLoaderStore.setState({
+    dialogOpen: true,
+    pending: null,
+    startError: null,
+    phase: 'running',
+    log: ['downloading…'],
+    updateError: null,
+    rolledBack: false,
+    jobServerId: 'srv1',
+    jobFrom: '21.1.72',
+    jobTarget: '21.1.209',
     ...over,
   })
 }
@@ -37,7 +64,15 @@ describe('LoaderUpdateDialog', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     vi.mocked(App.UpdateLoader).mockResolvedValue(undefined)
-    openOn()
+    useServerConfigStore.setState({ configs: [cfg], activeId: 'srv1', error: null })
+    useLoaderStore.setState({ versions: [version('21.1.209'), version('21.1.100')] })
+    pendingOn()
+  })
+
+  it('renders nothing with neither a job nor a selection', () => {
+    useLoaderStore.setState({ pending: null, phase: 'idle', dialogOpen: true })
+    const { container } = render(<LoaderUpdateDialog />)
+    expect(container.firstChild).toBeNull()
   })
 
   // The dialog names the exact files the backend snapshots, so the warning and
@@ -49,6 +84,11 @@ describe('LoaderUpdateDialog', () => {
     expect(screen.getByText('user_jvm_args.txt')).toBeTruthy()
     expect(screen.getByText(/puts them back if the install fails/)).toBeTruthy()
     expect(App.UpdateLoader).not.toHaveBeenCalled()
+  })
+
+  it('names the server from the config rather than a stored copy', () => {
+    render(<LoaderUpdateDialog />)
+    expect(screen.getByText(/smp will move from/)).toBeTruthy()
   })
 
   it('starts the update with the backup choice, defaulting to off', async () => {
@@ -75,10 +115,37 @@ describe('LoaderUpdateDialog', () => {
     )
   })
 
-  // The reported bug: the dialog said closing was free while the button that
-  // would have done it was disabled.
+  // The sidebar row exists because a job exists, so opening it must land on
+  // that job whatever the panel was last clicked on.
+  it('a running job outranks a version picked afterwards', () => {
+    jobOn()
+    useLoaderStore.setState({
+      pending: { serverId: 'srv1', from: '21.1.72', target: version('21.1.100'), starting: false },
+    })
+    render(<LoaderUpdateDialog />)
+
+    expect(screen.getByText(/smp is updating from/)).toBeTruthy()
+    expect(screen.getByText('21.1.209')).toBeTruthy()
+    expect(screen.queryByRole('button', { name: /Update to 21\.1\.100/ })).toBeNull()
+  })
+
+  // A refusal is an attempt, not an outcome: it sits beside the live job
+  // instead of replacing it.
+  it('shows a refused start as a notice beside the running job', () => {
+    jobOn({ startError: 'a loader update is already running' })
+    render(<LoaderUpdateDialog />)
+
+    expect(screen.getByText(/Could not start another update/)).toBeTruthy()
+    expect(screen.getByText(/a loader update is already running/)).toBeTruthy()
+    // Still the running job, not a failure.
+    expect(screen.getByText(/smp is updating from/)).toBeTruthy()
+    expect(screen.getByText('downloading…')).toBeTruthy()
+  })
+
+  // The reported bug from the round before: the dialog said closing was free
+  // while the button that would have done it was disabled.
   it('lets you close while the update is running', () => {
-    openOn({ phase: 'running', log: ['downloading…'] })
+    jobOn()
     render(<LoaderUpdateDialog />)
 
     const close = screen.getByRole('button', { name: 'Close' })
@@ -86,7 +153,6 @@ describe('LoaderUpdateDialog', () => {
 
     fireEvent.click(close)
 
-    // Hidden, not reset — the run is still going and the row reopens it.
     const s = useLoaderStore.getState()
     expect(s.dialogOpen).toBe(false)
     expect(s.phase).toBe('running')
@@ -94,14 +160,13 @@ describe('LoaderUpdateDialog', () => {
   })
 
   it('says so, rather than claiming the update stops', () => {
-    openOn({ phase: 'running' })
+    jobOn()
     render(<LoaderUpdateDialog />)
     expect(screen.getByText(/Closing this does not stop it/)).toBeTruthy()
   })
 
-  // Reopening after a failure is the whole reason close must not reset.
   it('still shows the outcome when reopened', () => {
-    openOn({ phase: 'failed', updateError: 'the installer exited 1', rolledBack: true })
+    jobOn({ phase: 'failed', updateError: 'the installer exited 1', rolledBack: true })
     const { unmount } = render(<LoaderUpdateDialog />)
 
     fireEvent.click(screen.getByRole('button', { name: 'Close' }))
@@ -114,20 +179,40 @@ describe('LoaderUpdateDialog', () => {
     expect(screen.getByText(/previous launch files were restored/)).toBeTruthy()
   })
 
-  it('shows the outcome once the event lands', () => {
-    openOn({ phase: 'done' })
+  it('reports the version that ran', () => {
+    jobOn({ phase: 'done' })
     render(<LoaderUpdateDialog />)
     expect(screen.getByText(/Now on 21\.1\.209/)).toBeTruthy()
   })
 
   it('says when nothing was changed', () => {
-    openOn({
+    jobOn({
       phase: 'failed',
       updateError: 'the download is not a NeoForge installer',
       rolledBack: false,
     })
     render(<LoaderUpdateDialog />)
     expect(screen.getByText(/Nothing was changed/)).toBeTruthy()
+  })
+
+  // Retrying turns the failed job back into a confirm for the same build.
+  it('offers a retry that goes through the confirm again', () => {
+    jobOn({ phase: 'failed', updateError: 'the installer exited 1', rolledBack: true })
+    render(<LoaderUpdateDialog />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Try again' }))
+
+    const s = useLoaderStore.getState()
+    expect(s.phase).toBe('idle')
+    expect(s.pending?.target.version).toBe('21.1.209')
+  })
+
+  it('omits the retry when the build is no longer in the list', () => {
+    useLoaderStore.setState({ versions: [] })
+    jobOn({ phase: 'failed', updateError: 'the installer exited 1', rolledBack: false })
+    render(<LoaderUpdateDialog />)
+
+    expect(screen.queryByRole('button', { name: 'Try again' })).toBeNull()
   })
 
   it('surfaces a refusal the backend returned straight away', async () => {

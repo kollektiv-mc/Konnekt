@@ -14,8 +14,11 @@ interface Props {
  * available, and the control that moves between them.
  */
 export function LoaderPanel({ config, refreshKey = 0 }: Props) {
-  const { status, versions, loading, error, load, openUpdate } = useLoaderStore()
+  const { status, versions, loading, error, load, openUpdate, phase, showDialog } = useLoaderStore()
   const [showBeta, setShowBeta] = useState(false)
+  // The backend allows one loader update at a time, globally, and refuses a
+  // second. Offering the button anyway is a promise it cannot keep.
+  const updateRunning = phase === 'running'
 
   useEffect(() => {
     load(config.id).catch(() => {
@@ -93,7 +96,8 @@ export function LoaderPanel({ config, refreshKey = 0 }: Props) {
                 ) : (
                   <button
                     onClick={() => openUpdate(config, installed, v)}
-                    className="text-text-muted border-border-subtle hover:border-border-hover hover:text-text-primary border-hairline text-2xs shrink-0 rounded px-2 py-0.5 transition-colors"
+                    disabled={updateRunning}
+                    className="text-text-muted border-border-subtle hover:border-border-hover hover:text-text-primary border-hairline text-2xs shrink-0 rounded px-2 py-0.5 transition-colors disabled:cursor-default disabled:opacity-30 disabled:hover:border-inherit disabled:hover:text-inherit"
                   >
                     Update
                   </button>
@@ -101,6 +105,18 @@ export function LoaderPanel({ config, refreshKey = 0 }: Props) {
               </div>
             )
           })}
+        </div>
+      )}
+
+      {updateRunning && (
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-text-muted text-2xs">An update is already running.</span>
+          <button
+            onClick={showDialog}
+            className="text-accent hover:text-accent/80 text-2xs shrink-0 transition-colors"
+          >
+            Show it
+          </button>
         </div>
       )}
     </div>

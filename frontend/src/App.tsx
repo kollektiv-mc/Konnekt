@@ -352,14 +352,25 @@ function App() {
     let current = key()
     try {
       offs.push(
-        EventsOn(EVENTS.LOADER_UPDATE_STARTED, (d?: { serverID?: string; to?: string }) => {
-          current = key(d?.serverID)
-          // The installer reports log lines, never a percentage.
-          useProcessesStore.getState().start(current, `Updating loader to ${d?.to ?? ''}…`, {
-            indeterminate: true,
-            view: { kind: 'loader', serverId: d?.serverID ?? '' },
-          })
-        }),
+        EventsOn(
+          EVENTS.LOADER_UPDATE_STARTED,
+          (d?: { serverID?: string; from?: string; to?: string }) => {
+            current = key(d?.serverID)
+            // The event is the only thing that knows a job exists, and it
+            // carries the job's identity — which is why the store takes it from
+            // here rather than from whatever the dialog was last pointed at.
+            useLoaderStore.getState().jobStarted({
+              serverId: d?.serverID ?? '',
+              from: d?.from ?? '',
+              to: d?.to ?? '',
+            })
+            // The installer reports log lines, never a percentage.
+            useProcessesStore.getState().start(current, `Updating loader to ${d?.to ?? ''}…`, {
+              indeterminate: true,
+              view: { kind: 'loader', serverId: d?.serverID ?? '' },
+            })
+          },
+        ),
       )
       offs.push(
         EventsOn(EVENTS.LOADER_UPDATE_FINISHED, (d?: { version?: string }) => {
