@@ -803,6 +803,7 @@ export namespace models {
 	    workingDir: string;
 	    mcVersion: string;
 	    loader: string;
+	    loaderVersion: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new ServerConfig(source);
@@ -817,6 +818,7 @@ export namespace models {
 	        this.workingDir = source["workingDir"];
 	        this.mcVersion = source["mcVersion"];
 	        this.loader = source["loader"];
+	        this.loaderVersion = source["loaderVersion"];
 	    }
 	}
 	export class ServerStatus {
@@ -865,6 +867,8 @@ export namespace models {
 	    workingDir: string;
 	    launchFile: string;
 	    running: boolean;
+	    loaderVersion: string;
+	    loaderSource: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new ServerSummary(source);
@@ -877,6 +881,8 @@ export namespace models {
 	        this.workingDir = source["workingDir"];
 	        this.launchFile = source["launchFile"];
 	        this.running = source["running"];
+	        this.loaderVersion = source["loaderVersion"];
+	        this.loaderSource = source["loaderSource"];
 	    }
 	}
 	export class StatsSnapshot {

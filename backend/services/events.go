@@ -60,7 +60,7 @@ const (
 	// percentage, only log lines, so install:log is the progress signal.
 	EventInstallStarted  = "install:started"  // {targetDir}
 	EventInstallLog      = "install:log"      // {line}
-	EventInstallFinished = "install:finished" // {targetDir, mcVersion, loader}
+	EventInstallFinished = "install:finished" // {targetDir, mcVersion, loader, loaderVersion}
 	EventInstallFailed   = "install:failed"   // {error}
 
 	// Self-update lifecycle.

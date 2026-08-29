@@ -908,6 +908,16 @@ func (s *ServerService) Summary(cfg models.ServerConfig) models.ServerSummary {
 			sum.Loader = ld
 		}
 	}
+
+	// The install directory is the truth about which build launches, so it wins
+	// over the stored value. The stored value is the fallback for a server whose
+	// directory is gone or unreadable, where the last thing Konnekt recorded
+	// beats showing nothing — flagged as "config" so the UI can say it is not a
+	// live reading.
+	sum.LoaderVersion, sum.LoaderSource = detectLoaderVersion(cfg.JarPath, cfg.WorkingDir)
+	if sum.LoaderVersion == "" && cfg.LoaderVersion != "" {
+		sum.LoaderVersion, sum.LoaderSource = cfg.LoaderVersion, "config"
+	}
 	return sum
 }
 

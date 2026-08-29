@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { EventsOn } from '../../wailsjs/runtime/runtime'
 import { AbortInstall, BrowseDirectory, InstallServer } from '../../wailsjs/go/main/App'
 import { EVENTS } from '../lib/constants'
+import { LOADER_LABELS } from '../lib/loaders'
 
 export interface InstallerDetails {
   jarPath: string
@@ -14,6 +15,8 @@ export interface InstallResult {
   targetDir: string
   mcVersion: string
   loader: string
+  /** The loader build the installer laid down, e.g. "21.1.72". */
+  loaderVersion: string
 }
 
 interface Props {
@@ -24,8 +27,6 @@ interface Props {
   onAddServer: () => void
   onClose: () => void
 }
-
-const LOADER_LABELS: Record<string, string> = { neoforge: 'NeoForge', forge: 'Forge' }
 
 function describe({ loader, version, mcVersion }: InstallerDetails): string {
   const name = LOADER_LABELS[loader] ?? 'Forge/NeoForge'

@@ -7,6 +7,7 @@ import (
 	"slices"
 	"strings"
 	"testing"
+	"time"
 )
 
 // argfileName is the argfile the resolver looks for on this platform; fixtures
@@ -295,5 +296,174 @@ func TestUserJVMArgs(t *testing.T) {
 	}
 	if got := userJVMArgs(t.TempDir()); got != nil {
 		t.Errorf("userJVMArgs(no file) = %v, want nil", got)
+	}
+}
+
+// --- detectLoaderVersion ---
+
+// forgeInstall lays out a modern Forge install, whose argfile directory is
+// named "<mc>-<forge>" rather than NeoForge's bare build number.
+func forgeInstall(t *testing.T, dir, version string) {
+	t.Helper()
+	rel := filepath.Join("libraries", "net", "minecraftforge", "forge", version)
+	writeFile(t, filepath.Join(dir, rel, "unix_args.txt"), "-p\nlibraries/x.jar\n")
+	writeFile(t, filepath.Join(dir, rel, "win_args.txt"), "-p\nlibraries/x.jar\n")
+	writeFile(t, filepath.Join(dir, "user_jvm_args.txt"), "-Xmx4G\n")
+	writeFile(t, filepath.Join(dir, "run.sh"), "#!/usr/bin/env sh\n"+
+		"java @user_jvm_args.txt @libraries/net/minecraftforge/forge/"+version+"/unix_args.txt \"$@\"\n")
+}
+
+func TestDetectLoaderVersionFromScript(t *testing.T) {
+	dir := t.TempDir()
+	neoForgeInstall(t, dir, "21.1.72")
+
+	version, source := detectLoaderVersion("", dir)
+	if version != "21.1.72" || source != "script" {
+		t.Errorf("detectLoaderVersion = (%q, %q), want (\"21.1.72\", \"script\")", version, source)
+	}
+}
+
+// The script is what runs, so it outranks anything else sitting under
+// libraries/ — including a newer build the last installer run left behind
+// without rewriting the launcher. This is the case that would silently report
+// the wrong version if detection glob'd libraries/ first.
+func TestDetectLoaderVersionScriptOutranksLibraries(t *testing.T) {
+	dir := t.TempDir()
+	neoForgeInstall(t, dir, "21.1.72")
+
+	newer := filepath.Join("libraries", "net", "neoforged", "neoforge", "21.1.209")
+	writeFile(t, filepath.Join(dir, newer, argfileName()), "-p\nlibraries/x.jar\n")
+	// Make the stray build unambiguously the newest on disk.
+	future := time.Now().Add(time.Hour)
+	if err := os.Chtimes(filepath.Join(dir, newer, argfileName()), future, future); err != nil {
+		t.Fatalf("chtimes: %v", err)
+	}
+
+	version, source := detectLoaderVersion("", dir)
+	if version != "21.1.72" || source != "script" {
+		t.Errorf("detectLoaderVersion = (%q, %q), want the version run.sh names", version, source)
+	}
+}
+
+func TestDetectLoaderVersionFromLibraries(t *testing.T) {
+	dir := t.TempDir()
+	neoForgeInstall(t, dir, "21.1.72")
+	// No readable launcher: detection has to fall back to libraries/.
+	for _, name := range []string{"run.sh", "run.bat"} {
+		if err := os.Remove(filepath.Join(dir, name)); err != nil {
+			t.Fatalf("remove %s: %v", name, err)
+		}
+	}
+
+	version, source := detectLoaderVersion("", dir)
+	if version != "21.1.72" || source != "libraries" {
+		t.Errorf("detectLoaderVersion = (%q, %q), want (\"21.1.72\", \"libraries\")", version, source)
+	}
+}
+
+// Several builds can sit side by side after repeated installs. argfileTokens
+// picks the newest by mtime rather than by version string, because "21.1.9"
+// sorts above "21.1.72" lexically; detection inherits that and must agree.
+func TestDetectLoaderVersionPicksNewestLibrariesBuild(t *testing.T) {
+	dir := t.TempDir()
+	base := filepath.Join(dir, "libraries", "net", "neoforged", "neoforge")
+	writeFile(t, filepath.Join(base, "21.1.9", argfileName()), "-p\nlibraries/x.jar\n")
+	writeFile(t, filepath.Join(base, "21.1.72", argfileName()), "-p\nlibraries/x.jar\n")
+
+	older := time.Now().Add(-time.Hour)
+	if err := os.Chtimes(filepath.Join(base, "21.1.9", argfileName()), older, older); err != nil {
+		t.Fatalf("chtimes: %v", err)
+	}
+
+	version, source := detectLoaderVersion("", dir)
+	if version != "21.1.72" || source != "libraries" {
+		t.Errorf("detectLoaderVersion = (%q, %q), want the newest build by mtime", version, source)
+	}
+}
+
+// A configured server jar wins in resolveLaunch, and a -jar launch uses no
+// argfile — so naming a build found under libraries/ would report a version
+// the next start will not use.
+func TestDetectLoaderVersionDeclinesForJarLaunch(t *testing.T) {
+	dir := t.TempDir()
+	neoForgeInstall(t, dir, "21.1.72")
+	jar := filepath.Join(dir, "server.jar")
+	writeFile(t, jar, "")
+
+	version, source := detectLoaderVersion(jar, dir)
+	if version != "" || source != "" {
+		t.Errorf("detectLoaderVersion = (%q, %q), want empty for a -jar launch", version, source)
+	}
+}
+
+// A stale jar path falls through to the script in resolveLaunch, so detection
+// has to follow it there rather than giving up.
+func TestDetectLoaderVersionFollowsStaleJarToScript(t *testing.T) {
+	dir := t.TempDir()
+	neoForgeInstall(t, dir, "21.1.72")
+
+	version, source := detectLoaderVersion(filepath.Join(dir, "gone.jar"), dir)
+	if version != "21.1.72" || source != "script" {
+		t.Errorf("detectLoaderVersion = (%q, %q), want the script's version", version, source)
+	}
+}
+
+// Pointing straight at run.sh means its own directory is the install.
+func TestDetectLoaderVersionFromLaunchScriptPath(t *testing.T) {
+	dir := t.TempDir()
+	neoForgeInstall(t, dir, "21.1.72")
+
+	version, source := detectLoaderVersion(filepath.Join(dir, "run.sh"), "")
+	if version != "21.1.72" || source != "script" {
+		t.Errorf("detectLoaderVersion = (%q, %q), want (\"21.1.72\", \"script\")", version, source)
+	}
+}
+
+// run.bat writes its argfile path with backslashes. Konnekt may be reading it
+// from Linux, where filepath does not treat those as separators.
+func TestDetectLoaderVersionReadsWindowsPathSeparators(t *testing.T) {
+	dir := t.TempDir()
+	neoForgeInstall(t, dir, "21.1.72")
+	if err := os.Remove(filepath.Join(dir, "run.sh")); err != nil {
+		t.Fatalf("remove run.sh: %v", err)
+	}
+
+	version, source := detectLoaderVersion("", dir)
+	if version != "21.1.72" || source != "script" {
+		t.Errorf("detectLoaderVersion = (%q, %q), want the version run.bat names", version, source)
+	}
+}
+
+func TestDetectLoaderVersionForge(t *testing.T) {
+	dir := t.TempDir()
+	forgeInstall(t, dir, "1.20.1-47.2.0")
+
+	version, source := detectLoaderVersion("", dir)
+	if version != "1.20.1-47.2.0" || source != "script" {
+		t.Errorf("detectLoaderVersion = (%q, %q), want Forge's own build identifier", version, source)
+	}
+}
+
+func TestDetectLoaderVersionUnknown(t *testing.T) {
+	dir := t.TempDir()
+	vanillaJar := filepath.Join(dir, "server.jar")
+	writeFile(t, vanillaJar, "")
+
+	for _, tc := range []struct {
+		name    string
+		jarPath string
+		dir     string
+	}{
+		{"nothing configured", "", ""},
+		{"empty directory", "", dir},
+		{"vanilla jar", vanillaJar, dir},
+		{"directory that does not exist", "", filepath.Join(dir, "nope")},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			version, source := detectLoaderVersion(tc.jarPath, tc.dir)
+			if version != "" || source != "" {
+				t.Errorf("detectLoaderVersion = (%q, %q), want empty", version, source)
+			}
+		})
 	}
 }

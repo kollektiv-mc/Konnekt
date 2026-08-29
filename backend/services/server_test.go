@@ -601,3 +601,54 @@ func TestStopWhenNotRunningKeepsItsError(t *testing.T) {
 		t.Fatalf("Stop on stopped = %v, want exactly 'server not running'", err)
 	}
 }
+
+// Summary reports the loader build from the install directory when it can, and
+// falls back to the stored value only when the directory yields nothing —
+// flagged as "config" so the UI can say it is not a live reading.
+func TestSummaryLoaderVersion(t *testing.T) {
+	installed := t.TempDir()
+	neoForgeInstall(t, installed, "21.1.72")
+
+	srv, _ := newServerFixture()
+
+	for _, tc := range []struct {
+		name       string
+		cfg        models.ServerConfig
+		wantVer    string
+		wantSource string
+	}{
+		{
+			name:       "detected from the install",
+			cfg:        models.ServerConfig{ID: "a", WorkingDir: installed},
+			wantVer:    "21.1.72",
+			wantSource: "script",
+		},
+		{
+			// The stored value is stale here on purpose: the disk is the truth.
+			name:       "detection outranks a stored value",
+			cfg:        models.ServerConfig{ID: "a", WorkingDir: installed, LoaderVersion: "21.1.9"},
+			wantVer:    "21.1.72",
+			wantSource: "script",
+		},
+		{
+			name:       "stored value when the directory is gone",
+			cfg:        models.ServerConfig{ID: "a", WorkingDir: t.TempDir(), LoaderVersion: "21.1.9"},
+			wantVer:    "21.1.9",
+			wantSource: "config",
+		},
+		{
+			name:       "nothing known",
+			cfg:        models.ServerConfig{ID: "a", WorkingDir: t.TempDir()},
+			wantVer:    "",
+			wantSource: "",
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			sum := srv.Summary(tc.cfg)
+			if sum.LoaderVersion != tc.wantVer || sum.LoaderSource != tc.wantSource {
+				t.Errorf("Summary loader = (%q, %q), want (%q, %q)",
+					sum.LoaderVersion, sum.LoaderSource, tc.wantVer, tc.wantSource)
+			}
+		})
+	}
+}

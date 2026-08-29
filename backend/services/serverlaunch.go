@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"runtime"
 	"strings"
 )
@@ -339,4 +340,77 @@ func userJVMArgs(dir string) []string {
 		out = append(out, strings.Fields(line)...)
 	}
 	return out
+}
+
+// --- Loader version detection ---
+
+// reLoaderArgfile pulls the loader build out of an argfile path. Both projects
+// lay their argfile down under a directory named for the exact version being
+// launched, so the path is the record: no file has to be opened and no log has
+// to have been written yet.
+//
+//	libraries/net/neoforged/neoforge/21.1.72/unix_args.txt   -> "21.1.72"
+//	libraries/net/minecraftforge/forge/1.20.1-47.2.0/win_args.txt -> "1.20.1-47.2.0"
+var reLoaderArgfile = regexp.MustCompile(`(?:net/neoforged/neoforge|net/minecraftforge/forge)/([^/]+)/[^/]*args\.txt$`)
+
+// detectLoaderVersion reports the loader build a server will launch with, and
+// where that answer came from ("script", "libraries", or "" when unknown).
+//
+// It walks resolveLaunch's order rather than a convenient one, so the version
+// reported is always the version that will actually be used. That matters most
+// in the case it deliberately declines: a configured server *jar* wins over a
+// launcher script in resolveLaunch, and a `-jar` launch involves no loader
+// argfile at all, so reporting a build found under libraries/ would name a
+// version the next start is not going to use.
+//
+// Forge builds are returned in the form Forge itself names them
+// ("1.20.1-47.2.0"), not reduced the way installer.go's loaderVersion reduces
+// install_profile.json, because here the directory name is the identifier the
+// install is keyed by.
+func detectLoaderVersion(jarPath, workingDir string) (version, source string) {
+	jarPath = strings.TrimSpace(jarPath)
+	dir := strings.TrimSpace(workingDir)
+
+	if isLaunchScript(jarPath) {
+		if dir == "" {
+			dir = filepath.Dir(jarPath)
+		}
+	} else if jarPath != "" && strings.EqualFold(filepath.Ext(jarPath), ".jar") {
+		if _, err := os.Stat(jarPath); err == nil {
+			return "", "" // launches with -jar; no loader argfile involved
+		}
+		// Missing jar: resolveLaunch falls through to the script, so we do too.
+	}
+
+	if dir == "" {
+		return "", ""
+	}
+
+	for _, name := range launchScriptNames() {
+		tokens, err := parseLaunchScript(filepath.Join(dir, name))
+		if err != nil || len(tokens) == 0 {
+			continue
+		}
+		if v := loaderVersionFromTokens(tokens); v != "" {
+			return v, "script"
+		}
+	}
+
+	if v := loaderVersionFromTokens(argfileTokens(dir)); v != "" {
+		return v, "libraries"
+	}
+	return "", ""
+}
+
+// loaderVersionFromTokens finds the first argfile token naming a loader build.
+// Backslashes are normalised first so a Windows-style path in run.bat is read
+// correctly even when Konnekt itself is running on Linux, matching baseName.
+func loaderVersionFromTokens(tokens []string) string {
+	for _, t := range tokens {
+		normalised := strings.ReplaceAll(strings.TrimPrefix(t, "@"), "\\", "/")
+		if m := reLoaderArgfile.FindStringSubmatch(normalised); m != nil {
+			return m[1]
+		}
+	}
+	return ""
 }

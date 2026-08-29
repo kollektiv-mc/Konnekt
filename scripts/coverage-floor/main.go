@@ -44,10 +44,11 @@ const targetPackage = "./backend/services/"
 //	45.2% -> floor 43.0  lifecycle state machine and ready-detection tests (#108)
 //	45.7% -> floor 43.5  stop escalation and force-stop tests (#110)
 //	46.3% -> floor 44.0  console narration and quiesce tests (#113)
+//	47.3% -> floor 45.0  loader version detection and Summary tests
 //
 // Coverage is a proxy, not the goal. A test that would have caught a real bug is
 // worth more than one that only moves this number.
-const floorPercent = 44.0
+const floorPercent = 45.0
 
 // Matches the tail of `go test -cover` output: "coverage: 36.7% of statements".
 var reCoverage = regexp.MustCompile(`coverage:\s+([0-9.]+)%\s+of\s+statements`)

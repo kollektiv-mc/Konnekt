@@ -6,7 +6,16 @@ import type { ServerConfig } from '../types'
 vi.mock('../../wailsjs/go/main/App')
 
 function cfg(id: string, name = id): ServerConfig {
-  return { id, name, jarPath: '', jvmArgs: [], workingDir: '', mcVersion: '1.21', loader: 'paper' }
+  return {
+    id,
+    name,
+    jarPath: '',
+    jvmArgs: [],
+    workingDir: '',
+    mcVersion: '1.21',
+    loader: 'paper',
+    loaderVersion: '',
+  }
 }
 
 // jsdom has no window.go, so `hasWailsBridge()` is false by default — the

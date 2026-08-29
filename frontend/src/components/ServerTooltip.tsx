@@ -1,18 +1,6 @@
 import { truncateStart } from '../lib/format'
+import { loaderLabel } from '../lib/loaders'
 import type { ServerSummary } from '../types'
-
-const LOADER_LABELS: Record<string, string> = {
-  neoforge: 'NeoForge',
-  forge: 'Forge',
-  fabric: 'Fabric',
-  quilt: 'Quilt',
-  paper: 'Paper',
-  spigot: 'Spigot',
-  bukkit: 'Bukkit',
-  purpur: 'Purpur',
-  velocity: 'Velocity',
-  vanilla: 'Vanilla',
-}
 
 const PATH_MAX_CHARS = 34
 
@@ -38,7 +26,7 @@ interface Props {
 export function ServerTooltip({ summary, anchor }: Props) {
   if (!summary) return null
 
-  const loader = LOADER_LABELS[summary.loader] ?? (summary.loader || 'Unknown')
+  const loader = loaderLabel(summary.loader)
 
   return (
     <div
@@ -49,6 +37,7 @@ export function ServerTooltip({ summary, anchor }: Props) {
     >
       <Row label="Version">{summary.mcVersion || '—'}</Row>
       <Row label="Type">{loader}</Row>
+      {summary.loaderVersion && <Row label="Build">{summary.loaderVersion}</Row>}
       <Row label="Path">{truncateStart(summary.workingDir, PATH_MAX_CHARS) || '—'}</Row>
       <Row label="Launch">{summary.launchFile || '—'}</Row>
       <div className="border-border-subtle border-t-hairline flex items-center gap-1.5 pt-1.5">

@@ -296,10 +296,14 @@ func (s *InstallerService) finish(ok bool, targetDir string, info InstallerInfo,
 	}
 
 	if ok {
+		// loaderVersion is what the installer just laid down. Emitting it saves
+		// the config from having to re-derive the build from the install
+		// directory, and is the only moment it is known for certain.
 		s.bus.Emit(EventInstallFinished, map[string]any{
-			"targetDir": targetDir,
-			"mcVersion": info.MCVersion,
-			"loader":    info.Loader,
+			"targetDir":     targetDir,
+			"mcVersion":     info.MCVersion,
+			"loader":        info.Loader,
+			"loaderVersion": info.Version,
 		})
 		return
 	}
