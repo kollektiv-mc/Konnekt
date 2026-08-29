@@ -421,11 +421,29 @@ func TestDeleteBackupRemovesFile(t *testing.T) {
 // measured over 100,000 back-to-back pairs, against 0.001% expected by chance.
 //
 // This asserts the property the filename scheme actually depends on, rather than
-// the implementation: consecutive ids differ. It fails against the old version on
-// the first iteration on Windows, and is loose enough not to be flaky on a correct
-// one, where a repeat inside 1,000 draws from 100,000 is possible but rare.
+// the implementation: ids come from the whole space rather than from the clock. It
+// fails against the old version on the first iteration on Windows.
+//
+// It does not assert that consecutive ids never repeat, which is what it used to do
+// and what made it flaky. 1,000 draws are 999 consecutive pairs, each a 1-in-100,000
+// chance of matching, so a correct generator trips that assertion with probability
+// 1-(1-1e-5)^999, about 1%: roughly one CI run in a hundred, and it did fail one.
+// Do not re-tighten it to zero. The two assertions below are what a low-entropy
+// generator actually fails, both by hundreds rather than by one:
+//
+//   - maxRepeats 3 is unreachable by chance. The repeat count is Poisson with
+//     lambda = 999*1e-5 = 0.01, so P(4 or more) is about 4e-10. A replica of the
+//     old clock-derived id scores 981.
+//   - 900 distinct of 1,000 leaves ample room for chance collisions and is the
+//     stronger check anyway. A clock-derived id collapses to a handful of values.
+//
+// Neither is fixed by seeding: math/rand/v2's top-level functions take no seed, and
+// pinning one would test a recorded sequence instead of the generator.
 func TestShortIDDoesNotRepeatOnConsecutiveCalls(t *testing.T) {
-	const draws = 1000
+	const (
+		draws      = 1000
+		maxRepeats = 3
+	)
 
 	repeats := 0
 	prev := shortID()
@@ -442,11 +460,9 @@ func TestShortIDDoesNotRepeatOnConsecutiveCalls(t *testing.T) {
 		prev = id
 	}
 
-	if repeats > 0 {
-		t.Errorf("shortID() repeated the previous id %d time(s) in %d draws, want 0", repeats, draws)
+	if repeats > maxRepeats {
+		t.Errorf("shortID() repeated the previous id %d time(s) in %d draws, want at most %d", repeats, draws, maxRepeats)
 	}
-	// A clock-derived id collapses to a handful of distinct values; a real one
-	// spreads across the space. 900 of 1000 leaves ample room for chance collisions.
 	if len(seen) < 900 {
 		t.Errorf("shortID() produced %d distinct ids in %d draws, want at least 900", len(seen), draws)
 	}
