@@ -12,9 +12,12 @@ import { ServerList, NEW_SERVER } from './ServerList'
  * The server manager: every configured server, what each one actually is on
  * disk, and the editor for it.
  *
- * The sidebar remains the quick switcher. Editing lives here because the
- * sidebar is 12rem wide, which is what made the old inline form cramped, and
- * because one editor cannot drift from itself.
+ * The sidebar remains the quick switcher. Editing lives here because the sidebar
+ * is narrow — 192px by default, and never more than 30% of the window — which is
+ * what made the old inline form cramped, and because one editor cannot drift
+ * from itself. Disconnecting lives here for a different reason: as a second icon
+ * on a sidebar row it was one click from the control that merely selects a
+ * server, and said nothing about which server it would remove.
  *
  * Rendered from App, after <main>, and that position is load-bearing: a fixed
  * overlay in the sidebar carries the same z-50 as the maximized-tile overlay
@@ -24,7 +27,12 @@ import { ServerList, NEW_SERVER } from './ServerList'
  */
 export function ServerManager() {
   const { configs, activeId, error, clearError, setActiveId } = useServerConfigStore()
-  const { serverManagerOpen: open, serverManagerSelection, closeServerManager } = useUiStore()
+  const {
+    serverManagerOpen: open,
+    serverManagerSelection,
+    closeServerManager,
+    setPendingDisconnect,
+  } = useUiStore()
   const installOpen = useInstallStore((s) => s.open)
   const installResult = useInstallStore((s) => s.result)
   const clearResult = useInstallStore((s) => s.clearResult)
@@ -53,6 +61,15 @@ export function ServerManager() {
   useEffect(() => {
     if (loaderPhase === 'done') setRefreshKey(Date.now())
   }, [loaderPhase])
+
+  // A disconnect performed from in here leaves `selected` pointing at a config
+  // that no longer exists, which the render below reads as the add-server case
+  // — so confirming a removal would silently turn the panel into a blank new
+  // server form. Fall back to whichever server is active instead.
+  useEffect(() => {
+    if (!open || selected === NEW_SERVER) return
+    if (!configs.some((c) => c.id === selected)) setSelected(activeId || NEW_SERVER)
+  }, [open, selected, configs, activeId])
 
   useEffect(() => {
     if (!open) return
@@ -105,14 +122,24 @@ export function ServerManager() {
               <div className="mb-5 flex flex-col gap-5">
                 <ServerDetail config={current} refreshKey={refreshKey} />
                 <LoaderPanel config={current} refreshKey={refreshKey} />
-                {current.id !== activeId && (
+                <div className="flex items-center gap-2">
+                  {current.id !== activeId && (
+                    <button
+                      onClick={() => void setActiveId(current.id).catch(() => {})}
+                      className="text-text-muted border-border-subtle hover:border-border-hover hover:text-text-primary border-hairline rounded px-2.5 py-1 text-xs transition-colors"
+                    >
+                      Make active
+                    </button>
+                  )}
+                  {/* Raises the confirm rather than deleting. That dialog is a
+                      sibling of this modal in App, so it lands on top of it. */}
                   <button
-                    onClick={() => void setActiveId(current.id).catch(() => {})}
-                    className="text-text-muted border-border-subtle hover:border-border-hover hover:text-text-primary border-hairline self-start rounded px-2.5 py-1 text-xs transition-colors"
+                    onClick={() => setPendingDisconnect(current.id)}
+                    className="text-text-muted border-border-subtle hover:border-danger/40 hover:text-danger border-hairline rounded px-2.5 py-1 text-xs transition-colors"
                   >
-                    Make active
+                    Disconnect
                   </button>
-                )}
+                </div>
               </div>
             )}
 

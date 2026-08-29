@@ -4,9 +4,12 @@ import { useUiStore } from '../stores/useUiStore'
 /**
  * Confirms removing a server from Konnekt.
  *
- * Rendered from App rather than beside the × that raises it: a fixed overlay
- * inside the sidebar carries the same z-50 as the maximized-tile overlay and
- * comes earlier in the document, so it opened underneath an open tile.
+ * Raised from the server manager, and rendered from App rather than inside it:
+ * a fixed overlay nested in another overlay's subtree cannot escape it, and
+ * this has to sit above the manager (z-50) that opens it. Before the manager
+ * existed the same call was raised from the sidebar, where an overlay carrying
+ * the same z-50 as the maximized-tile overlay lost the tie on document order
+ * and opened underneath an open tile.
  */
 export function DisconnectConfirm() {
   const { configs, deleteConfig } = useServerConfigStore()

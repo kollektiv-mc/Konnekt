@@ -72,12 +72,11 @@ describe('ServerSelector', () => {
     expect(s.serverManagerSelection).toBe('new')
   })
 
-  it('disconnect raises the confirm rather than deleting', () => {
+  // Disconnect moved into the manager, one step behind the edit control,
+  // rather than sitting a click away from the control that selects a server.
+  it('offers no disconnect of its own', () => {
     render(<ServerSelector />)
-    fireEvent.click(screen.getAllByTitle('Disconnect')[0])
-
-    expect(useUiStore.getState().pendingDisconnect).toBe('alpha')
-    expect(App.DeleteServerConfig).not.toHaveBeenCalled()
+    expect(screen.queryByTitle('Disconnect')).toBeNull()
   })
 
   // Every overlay moved to App: a fixed overlay in the sidebar carries the same
