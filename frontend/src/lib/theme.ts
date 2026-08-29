@@ -4,6 +4,9 @@ import { STATUS_DEFAULTS } from '../styles/tokens'
 // stay hand-authored. Only the first entry of each is a design decision, and it
 // comes from the generated token defaults rather than being restated here; a
 // second copy of #4ade80 is exactly the drift this pipeline exists to remove.
+//
+// This one is `as const` because skins pair with an accent by naming a label
+// below, and the literal types are what make a mistyped name a compile error.
 export const ACCENT_PRESETS = [
   { label: 'Green', hex: STATUS_DEFAULTS.dark.accent },
   { label: 'Blue', hex: '#3b82f6' },
@@ -11,7 +14,20 @@ export const ACCENT_PRESETS = [
   { label: 'Amber', hex: '#f59e0b' },
   { label: 'Rose', hex: '#f43f5e' },
   { label: 'Cyan', hex: '#22d3ee' },
-]
+] as const satisfies readonly { label: string; hex: string }[]
+
+type AccentLabel = (typeof ACCENT_PRESETS)[number]['label']
+
+/**
+ * The hex an accent preset label stands for. Skins pair with an accent through
+ * this rather than by repeating the value: a second copy of #8b5cf6 is the same
+ * drift the presets themselves avoid by taking their first entry from the
+ * generated token defaults. A mistyped label is a type error, not a silent
+ * fallback, which matters for a hand-authored lookup table nobody re-reads.
+ */
+function accentPreset(label: AccentLabel): string {
+  return ACCENT_PRESETS.find((p) => p.label === label)!.hex
+}
 
 export const SUCCESS_PRESETS = [
   { label: 'Green', hex: STATUS_DEFAULTS.dark.success },
@@ -53,6 +69,14 @@ export interface SkinDefinition {
    * both themes only has to say so here.
    */
   supportsLight: boolean
+  /**
+   * The accent the skin ships with, applied when the skin is picked. Skins are
+   * designed around a hue, so leaving the previous skin's accent behind read as
+   * a half-applied theme. It is a starting point, not a lock: the accent picker
+   * sits directly below the gallery and overrides this until the next skin
+   * switch.
+   */
+  accent: string
 }
 
 export const BUILTIN_SKINS: SkinDefinition[] = [
@@ -64,6 +88,7 @@ export const BUILTIN_SKINS: SkinDefinition[] = [
     // That is what makes this the one skin light mode is designed against.
     tokens: {},
     supportsLight: true,
+    accent: accentPreset('Green'),
   },
   {
     id: 'midnight',
@@ -79,6 +104,7 @@ export const BUILTIN_SKINS: SkinDefinition[] = [
       '--hover-surface': 'rgba(255,255,255,0.04)',
     },
     supportsLight: false,
+    accent: accentPreset('Violet'),
   },
   {
     id: 'nord',
@@ -98,6 +124,7 @@ export const BUILTIN_SKINS: SkinDefinition[] = [
       '--hover-surface': 'rgba(255,255,255,0.06)',
     },
     supportsLight: false,
+    accent: accentPreset('Blue'),
   },
   {
     id: 'solarized',
@@ -120,6 +147,7 @@ export const BUILTIN_SKINS: SkinDefinition[] = [
       '--hover-surface': 'rgba(255,210,200,0.05)',
     },
     supportsLight: false,
+    accent: accentPreset('Rose'),
   },
   {
     id: 'mocha',
@@ -139,6 +167,7 @@ export const BUILTIN_SKINS: SkinDefinition[] = [
       '--hover-surface': 'rgba(255,170,110,0.06)',
     },
     supportsLight: false,
+    accent: accentPreset('Amber'),
   },
   {
     id: 'forest',
@@ -161,6 +190,7 @@ export const BUILTIN_SKINS: SkinDefinition[] = [
       '--hover-surface': 'rgba(163,230,175,0.07)',
     },
     supportsLight: false,
+    accent: accentPreset('Green'),
   },
 ]
 

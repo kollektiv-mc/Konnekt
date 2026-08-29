@@ -1,10 +1,11 @@
 import { describe, it, expect, afterEach, beforeEach, vi } from 'vitest'
-import { render, screen, fireEvent, waitFor, cleanup } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor, cleanup, within } from '@testing-library/react'
 import * as App from '../../wailsjs/go/main/App'
 import { EventsOn } from '../../wailsjs/runtime/runtime'
 import type { models } from '../../wailsjs/go/models'
 import { SettingsModal } from './SettingsModal'
 import { useSettingsStore } from '../stores/useSettingsStore'
+import { BUILTIN_SKINS, resolveSkin } from '../lib/theme'
 import type { AppSettings } from '../types'
 
 vi.mock('../../wailsjs/go/main/App')
@@ -265,5 +266,86 @@ describe('SettingsModal skin and light mode', () => {
 
     await waitFor(() => expect(App.SaveAppSettings).toHaveBeenCalledTimes(1))
     expect(useSettingsStore.getState().settings.theme).toBe('light')
+  })
+})
+
+// Each skin is designed around a hue, so picking one brings its accent with it.
+describe('SettingsModal skin accent pairing', () => {
+  const settings = (patch: Partial<AppSettings>) => {
+    useSettingsStore.setState({
+      settings: { ...useSettingsStore.getState().settings, ...patch },
+      error: null,
+    })
+  }
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    vi.mocked(App.GetAppVersion).mockResolvedValue('0.1.0')
+    vi.mocked(App.SaveAppSettings).mockResolvedValue(undefined)
+    vi.mocked(EventsOn).mockImplementation(noop)
+    settings({ theme: 'dark', skinId: 'default', accentColor: resolveSkin('default').accent })
+  })
+
+  it.each(BUILTIN_SKINS.filter((s) => s.id !== 'default'))(
+    'switches the accent to $id’s when the skin is picked',
+    async (skin) => {
+      render(<SettingsModal open onClose={() => {}} />)
+
+      fireEvent.click(screen.getByRole('button', { name: skin.name }))
+
+      await waitFor(() => expect(App.SaveAppSettings).toHaveBeenCalledTimes(1))
+      const written = vi.mocked(App.SaveAppSettings).mock.calls[0][0]
+      expect(written.skinId).toBe(skin.id)
+      expect(written.accentColor).toBe(skin.accent)
+      expect(useSettingsStore.getState().settings.accentColor).toBe(skin.accent)
+    },
+  )
+
+  // One write, not two. The store calls applySkin on every update, so a separate
+  // accent write would paint a frame of the new skin under the old accent.
+  it('carries the skin, its accent and the forced theme in a single patch', async () => {
+    settings({ theme: 'light', skinId: 'default' })
+    render(<SettingsModal open onClose={() => {}} />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Midnight' }))
+
+    await waitFor(() => expect(App.SaveAppSettings).toHaveBeenCalledTimes(1))
+    const written = vi.mocked(App.SaveAppSettings).mock.calls[0][0]
+    expect(written).toMatchObject({
+      skinId: 'midnight',
+      accentColor: resolveSkin('midnight').accent,
+      theme: 'dark',
+    })
+  })
+
+  // The paired accent is one of the swatches on offer, so the picker rings it as
+  // selected rather than falling through to the custom "+" slot. Scoped to the
+  // accent section because the status pickers below reuse some of the same
+  // labels ('Amber' is also a warning preset, 'Rose' also a danger one).
+  it('selects the matching swatch in the accent picker', async () => {
+    render(<SettingsModal open onClose={() => {}} />)
+    fireEvent.click(screen.getByRole('button', { name: 'Midnight' }))
+    await waitFor(() => expect(App.SaveAppSettings).toHaveBeenCalledTimes(1))
+
+    const violet = resolveSkin('midnight').accent
+    const section = within(
+      screen.getByText('Accent color').closest('div.border-b-hairline') as HTMLElement,
+    )
+    expect(section.getByTitle('Violet').style.outline).toBe(`2.5px solid ${violet}`)
+    expect(section.getByTitle('Custom color').style.outline).toBe('2.5px solid transparent')
+    // And the skin's own previous accent has let go of the ring.
+    expect(section.getByTitle('Green').style.outline).toBe('2.5px solid transparent')
+  })
+
+  // A deliberate accent survives everything except the next skin switch, which
+  // is the trade the pairing makes.
+  it('leaves the accent alone when something other than the skin changes', async () => {
+    settings({ skinId: 'nord', accentColor: '#ff0000' })
+    render(<SettingsModal open onClose={() => {}} />)
+
+    fireEvent.click(screen.getByRole('button', { name: /System/ }))
+
+    await waitFor(() => expect(App.SaveAppSettings).toHaveBeenCalledTimes(1))
+    expect(useSettingsStore.getState().settings.accentColor).toBe('#ff0000')
   })
 })

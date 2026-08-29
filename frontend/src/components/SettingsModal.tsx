@@ -50,19 +50,27 @@ const THEME_OPTIONS = [
 ]
 
 /**
- * The patch a skin card sends. A dark-only skin picked while the stored theme is
- * `light` carries `theme: 'dark'` along with it, in one patch rather than two
- * writes: the store calls `applySkin` on every update, so a second write would
- * paint a frame of light-mode-on-a-dark-skin before correcting itself.
+ * The patch a skin card sends: everything the skin decides, in one write.
+ *
+ * The accent always comes along, because each skin is designed around a hue and
+ * keeping the previous one read as a half-applied theme. It is a starting point
+ * rather than a lock, since the accent picker below overrides it and that choice
+ * then stands until the next skin switch.
+ *
+ * A dark-only skin picked while the stored theme is `light` also carries
+ * `theme: 'dark'`. One patch rather than two writes throughout: the store calls
+ * `applySkin` on every update, so a follow-up write would paint a frame of the
+ * old accent, or of light-mode-on-a-dark-skin, before correcting itself.
  *
  * `system` is deliberately left alone. It is still a legitimate choice here, and
  * `applySkin` resolves it to dark for as long as a dark-only skin is active
  * without destroying the preference the user set.
  */
 function skinPatch(skinId: string, theme: AppSettings['theme']): Partial<AppSettings> {
-  return theme === 'light' && !resolveSkin(skinId).supportsLight
-    ? { skinId, theme: 'dark' }
-    : { skinId }
+  const skin = resolveSkin(skinId)
+  const patch: Partial<AppSettings> = { skinId, accentColor: skin.accent }
+  if (theme === 'light' && !skin.supportsLight) patch.theme = 'dark'
+  return patch
 }
 
 const UPDATE_CHANNEL_OPTIONS = [
@@ -207,7 +215,7 @@ function ColorField({
 }: {
   value: string
   onChange: (hex: string) => void
-  presets: { label: string; hex: string }[]
+  presets: readonly { label: string; hex: string }[]
 }) {
   const isPreset = presets.some((p) => p.hex.toLowerCase() === value.toLowerCase())
   return (

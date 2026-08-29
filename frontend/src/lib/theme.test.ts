@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import { applySkin, BUILTIN_SKINS, resolveSkin, skinSupportsLight } from './theme'
+import { ACCENT_PRESETS, applySkin, BUILTIN_SKINS, resolveSkin, skinSupportsLight } from './theme'
 import { STATUS_DEFAULTS } from '../styles/tokens'
 
 const base = {
@@ -194,6 +194,49 @@ describe('resolveSkin', () => {
   it('answers from the skin table rather than from the id', () => {
     expect(skinSupportsLight('default')).toBe(true)
     expect(skinSupportsLight('midnight')).toBe(false)
+  })
+})
+
+// Each skin is designed around a hue, so picking one carries its accent. Two
+// things have to hold for that to look deliberate rather than arbitrary.
+describe('skin accent pairing', () => {
+  const PAIRS: Record<string, string> = {
+    default: 'Green',
+    midnight: 'Violet',
+    nord: 'Blue',
+    solarized: 'Rose',
+    mocha: 'Amber',
+    forest: 'Green',
+  }
+
+  it('pairs every skin, with none left to inherit whatever came before', () => {
+    expect(Object.keys(PAIRS).sort()).toEqual(BUILTIN_SKINS.map((s) => s.id).sort())
+    for (const skin of BUILTIN_SKINS) expect(skin.accent).toBeTruthy()
+  })
+
+  // The one that matters for the UI: an accent that is not a preset would leave
+  // every swatch unselected and light up ColorField's custom "+" slot instead,
+  // so the gallery and the picker would disagree about what is active.
+  it.each(BUILTIN_SKINS)('gives $id an accent the picker already offers', (skin) => {
+    const hexes = ACCENT_PRESETS.map((p) => p.hex.toLowerCase())
+    expect(hexes).toContain(skin.accent.toLowerCase())
+  })
+
+  it.each(BUILTIN_SKINS)('gives $id the intended preset', (skin) => {
+    const preset = ACCENT_PRESETS.find((p) => p.hex === skin.accent)
+    expect(preset?.label).toBe(PAIRS[skin.id])
+  })
+
+  // Green is the generated token default, so applySkin removes the inline
+  // override for it rather than writing one. Worth stating: it means the two
+  // green skins resolve their accent through tokens.css like an untouched
+  // install, and the four others write a channel triplet.
+  it('writes an inline accent for a skin whose accent is not the token default', () => {
+    applySkin({ ...base, skinId: 'midnight', accentColor: resolveSkin('midnight').accent })
+    expect(inline('--accent-rgb')).toBe('139 92 246')
+
+    applySkin({ ...base, skinId: 'forest', accentColor: resolveSkin('forest').accent })
+    expect(inline('--accent-rgb')).toBe('')
   })
 })
 
