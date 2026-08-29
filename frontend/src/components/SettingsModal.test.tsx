@@ -168,20 +168,38 @@ describe('SettingsModal skin and light mode', () => {
     settings({ theme: 'dark', skinId: 'default' })
   })
 
+  const MODE_DESCRIPTION = 'Light, dark, or follow your OS preference.'
+
   it('offers light mode for the default skin', () => {
     settings({ skinId: 'default' })
     openAppearance()
 
     expect(modeOption(/Light/).hasAttribute('disabled')).toBe(false)
-    expect(screen.getByText('Light, dark, or follow your OS preference.')).toBeTruthy()
   })
 
-  it('disables light mode for a dark-only skin and says why', () => {
+  it('disables light mode for a dark-only skin', () => {
     settings({ skinId: 'midnight' })
     openAppearance()
 
     expect(modeOption(/Light/).hasAttribute('disabled')).toBe(true)
-    expect(screen.getByText(/Midnight is a dark-only skin/)).toBeTruthy()
+  })
+
+  // The disabled option is the whole signal. A description that grew a second
+  // line for the dark-only case reflowed every row below it as the skin changed,
+  // so the copy is fixed and the lock speaks for itself.
+  it('keeps the Mode description fixed across skins so the pane does not reflow', () => {
+    settings({ skinId: 'default' })
+    const { unmount } = openAppearance()
+    expect(screen.getAllByText(MODE_DESCRIPTION)).toHaveLength(1)
+    unmount()
+
+    for (const skinId of ['midnight', 'nord', 'forest']) {
+      settings({ skinId })
+      const view = openAppearance()
+      expect(screen.getAllByText(MODE_DESCRIPTION)).toHaveLength(1)
+      expect(screen.queryByText(/dark-only/)).toBeNull()
+      view.unmount()
+    }
   })
 
   // The decision here: System stays available rather than being taken away from

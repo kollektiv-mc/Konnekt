@@ -315,15 +315,10 @@ function AppearancePane({ settings, update }: { settings: AppSettings; update: U
         </div>
       </div>
 
-      {/* Mode */}
-      <SettingRow
-        label="Mode"
-        description={
-          activeSkin.supportsLight
-            ? 'Light, dark, or follow your OS preference.'
-            : `${activeSkin.name} is a dark-only skin, so System stays dark. Switch to the Default skin for light mode.`
-        }
-      >
+      {/* Mode. The description is deliberately fixed rather than explaining the
+          dark-only case: a two-line variant reflows every row below it as the
+          skin changes. The greyed-out Light option carries that on its own. */}
+      <SettingRow label="Mode" description="Light, dark, or follow your OS preference.">
         <Segmented
           options={themeOptions}
           value={shownTheme}
