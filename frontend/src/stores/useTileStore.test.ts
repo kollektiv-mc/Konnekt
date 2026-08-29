@@ -1,10 +1,12 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import * as App from '../../wailsjs/go/main/App'
 import { useTileStore } from './useTileStore'
+import { ALL_TILE_IDS } from '../lib/constants'
 
 vi.mock('../../wailsjs/go/main/App')
 
-const DEFAULT_ACTIVE = ['console', 'stats', 'players', 'quick-commands']
+// A fresh install opens on the full board (see useTileStore.loadTiles).
+const DEFAULT_ACTIVE = [...ALL_TILE_IDS]
 
 // jsdom has no window.go, so `hasWailsBridge()` is false by default — the
 // `frontend-dev` preview case. Attach a stub for the real-rejection path.
@@ -27,13 +29,13 @@ describe('useTileStore', () => {
       expect(useTileStore.getState().activeTileIds).toEqual(['console', 'worlds'])
     })
 
-    it('falls back to the 4 default tiles when the saved list is empty', async () => {
+    it('falls back to the full tile set when the saved list is empty', async () => {
       vi.mocked(App.GetActiveTiles).mockResolvedValue([])
       await useTileStore.getState().loadTiles()
       expect(useTileStore.getState().activeTileIds).toEqual(DEFAULT_ACTIVE)
     })
 
-    it('falls back to the 4 default tiles when GetActiveTiles rejects', async () => {
+    it('falls back to the full tile set when GetActiveTiles rejects', async () => {
       vi.mocked(App.GetActiveTiles).mockRejectedValue(new Error('no wails bridge'))
       await useTileStore.getState().loadTiles()
       expect(useTileStore.getState().activeTileIds).toEqual(DEFAULT_ACTIVE)
