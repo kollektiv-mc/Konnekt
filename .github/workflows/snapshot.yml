@@ -4,10 +4,13 @@ name: Snapshot
 # run the newest code without building it themselves.
 #
 # It stays out of the way of the real releases by being a prerelease:
-# /releases/latest ignores prereleases, so neither the download page's primary
-# card (website/download.js) nor the in-app updater
-# (backend/services/update.go) ever resolves to a snapshot. The website's
+# /releases/latest ignores prereleases, so the download page's primary card
+# (website/download.js) never resolves to a snapshot, and the website's
 # changelog filters the tag out by name.
+#
+# The in-app updater (backend/services/update.go) does reach it, but only
+# deliberately: it asks for /releases/tags/snapshot by name, and only on the
+# snapshot channel. A stable install never sends that request at all.
 on:
   schedule:
     # Nightly. The check job below exits early when main hasn't moved since the
@@ -42,18 +45,57 @@ jobs:
           echo "sha=$sha" >> "$GITHUB_OUTPUT"
           echo "short=$short" >> "$GITHUB_OUTPUT"
 
-          # version.go carries the base version ("0.1.0-dev"). The "-dev"
-          # marker is kept deliberately: app.go's install guard and the
-          # frontend's isDevBuild() both key off it, so a snapshot neither
-          # nags about updates nor tries to replace itself with the older
-          # stable binary. Snapshots are refreshed by downloading a new one.
+          # version.go carries the base version ("0.1.0-dev"); take its core.
           base="$(sed -n 's/^var Version = "\([^"]*\)".*/\1/p' version.go | head -n1)"
           base="${base%%-*}"
-          echo "version=${base}-dev.snapshot.${short}" >> "$GITHUB_OUTPUT"
+
+          # The commit's own date, UTC, fixed width. That timestamp is the only
+          # reason two snapshots can be ordered at all: update.go's
+          # compareVersions falls back to a string compare between two
+          # prerelease suffixes, and a bare sha sorts alphabetically, which says
+          # nothing about which build is newer. Taken from the commit rather
+          # than `date -u` so re-running this workflow on an unchanged main
+          # produces the same version instead of nagging every snapshot user
+          # about a build they already have.
+          stamp="$(TZ=UTC git show -s --format=%cd --date=format-local:%Y%m%d%H%M "$sha")"
+
+          # Deliberately NOT "-dev". That marker now means one thing only, a
+          # local `wails dev` build, and both services.IsInstallableBuild and
+          # the frontend's isDevBuild() must classify a snapshot as installable:
+          # it is a real checksummed binary and it updates itself.
+          echo "version=${base}-snapshot.${stamp}.${short}" >> "$GITHUB_OUTPUT"
 
           # RPM versions can't contain "-"; "~" sorts before the base version,
-          # the same idiom release.yml uses for pre-release tags.
-          echo "rpm_version=${base}~dev.snapshot.${short}" >> "$GITHUB_OUTPUT"
+          # the same idiom release.yml uses for pre-release tags. The timestamp
+          # also fixes an older wart: consecutive snapshot RPMs used to differ
+          # only by sha, which rpmvercmp orders arbitrarily, so `dnf upgrade`
+          # could refuse a newer build.
+          echo "rpm_version=${base}~snapshot.${stamp}.${short}" >> "$GITHUB_OUTPUT"
+
+          # A snapshot is a prerelease of the *next* version, so version.go's
+          # base has to stay ahead of the newest published release. When it
+          # doesn't - the usual cause being a tag cut without the follow-up
+          # bump - every snapshot sorts below that release and the channel goes
+          # quiet: users are offered the stable build once and then told they
+          # are up to date forever. Nothing here can fix that, but an
+          # unexplained silent channel is worth one annotation.
+          #
+          # Only a *final* release strands the channel. update.go's
+          # compareVersions ranks any prerelease below the plain core, so
+          # 0.1.0-snapshot.* still beats a 0.1.0-alpha.1 release and there is
+          # nothing to warn about. `sort -V` is used only to order the two
+          # cores, never to judge prerelease precedence, which it does not
+          # implement.
+          latest="$(gh api "repos/${{ github.repository }}/releases/latest" \
+            --jq .tag_name 2>/dev/null || true)"
+          latest="${latest#v}"
+          latest_core="${latest%%-*}"
+          if [ -n "$latest" ] && [ "$latest" = "$latest_core" ] \
+            && [ "$(printf '%s\n%s\n' "$latest_core" "$base" | sort -V | head -n1)" = "$base" ]; then
+            echo "::warning::version.go's base ($base) is not ahead of the newest release ($latest);" \
+              "snapshots sort below it and the snapshot channel will report 'up to date' forever." \
+              "Bump version.go and wails.json."
+          fi
 
           # target_commitish is the commit the current snapshot was cut from.
           # Absent (first run, or someone deleted the release) means build.
@@ -276,20 +318,36 @@ jobs:
           Untested, and newer than the [latest release]($LATEST_URL). It can be
           broken. Back up your server directory before running it.
 
-          Snapshots don't update themselves. Download a new one for the newest
-          code, or install a release to go back to stable.
+          Snapshots update themselves: this one will offer you the next
+          snapshot, and a stable release once one overtakes it. Installing a
+          release puts you back on whichever channel Settings > General is set
+          to.
 
           Version \`$VERSION\`, commit $SHA.
 
           EOF
           cat changes.md >> notes.md
 
+          # The title below is load-bearing and nothing else in CI checks it,
+          # so check it here. A malformed version reaches users as a channel
+          # that silently reports "up to date" forever, which is far worse than
+          # a failed build.
+          if ! printf '%s' "$VERSION" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+-snapshot\.[0-9]{12}\.[0-9a-f]{7}$'; then
+            echo "::error::computed version '$VERSION' is not a valid snapshot version"
+            exit 1
+          fi
+
           gh release delete snapshot --yes --cleanup-tag \
             --repo "${{ github.repository }}" || true
 
+          # The title is the bare version string and the updater parses it as
+          # one (backend/services/update.go's releaseVersion). The tag cannot
+          # carry it: `snapshot` is a rolling literal, deliberately not a
+          # version. Do NOT decorate this. A title with a space in it is
+          # rejected as unparseable and the whole snapshot channel goes quiet.
           gh release create snapshot konnekt-* checksums.txt \
             --repo "${{ github.repository }}" \
             --target "${{ needs.check.outputs.sha }}" \
-            --title "Snapshot ${{ needs.check.outputs.version }}" \
+            --title "$VERSION" \
             --notes-file notes.md \
             --prerelease

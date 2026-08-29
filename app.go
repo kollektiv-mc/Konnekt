@@ -7,7 +7,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"strings"
 	"time"
 
 	"github.com/wailsapp/wails/v2/pkg/runtime"
@@ -196,20 +195,36 @@ func (a *App) GetAppVersion() (string, error) {
 }
 
 func (a *App) CheckForUpdates() (models.UpdateInfo, error) {
-	return a.updateService.CheckForUpdates(a.ctx, Version)
+	return a.updateService.CheckForUpdates(a.ctx, Version, a.updateChannel())
+}
+
+// updateChannel reads the configured update channel. Unreadable settings fall
+// back to stable, the conservative answer, and one a snapshot build overrides
+// for itself inside the service (services.EffectiveChannel). Unexported on
+// purpose: the frontend already reads the channel off GetAppSettings(), and a
+// bound method here would be a second source of the same value.
+func (a *App) updateChannel() string {
+	s, err := a.configService.GetAppSettings()
+	if err != nil {
+		return services.UpdateChannelStable
+	}
+	return s.UpdateChannel
 }
 
 // DownloadAndInstallUpdate downloads the latest release's binary for this
 // platform, verifies it, and replaces the running executable in place. On
 // success it relaunches the app and quits this process — the frontend won't
-// see a resolved promise in that case, only a live app restart. A dev build
-// (wails dev, no ldflags-stamped tag) has no installable artifact, so it's
-// rejected up front rather than attempting a check that would trivially fail.
+// see a resolved promise in that case, only a live app restart. A local
+// `wails dev` build (no ldflags-stamped version) has no installable artifact,
+// so it's rejected up front rather than attempting a check that would
+// trivially fail. A snapshot is not one of those: it is a real checksummed
+// binary published on the rolling `snapshot` prerelease, and it can replace
+// itself, so the gate is IsInstallableBuild rather than a "-dev" substring.
 func (a *App) DownloadAndInstallUpdate() error {
-	if strings.Contains(Version, "-dev") {
-		return fmt.Errorf("update install: not available in dev builds")
+	if !services.IsInstallableBuild(Version) {
+		return fmt.Errorf("update install: not available in local dev builds")
 	}
-	if err := a.updateService.DownloadAndInstallUpdate(a.ctx, Version); err != nil {
+	if err := a.updateService.DownloadAndInstallUpdate(a.ctx, Version, a.updateChannel()); err != nil {
 		return err
 	}
 

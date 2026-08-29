@@ -20,6 +20,20 @@ export interface ChangelogEntry {
 // a safety net, not something to lean on when curating.
 export const CHANGELOG: readonly ChangelogEntry[] = [
   {
+    label: 'Snapshot builds update themselves',
+    date: '2026-08-29',
+    highlights: [
+      'Snapshot builds can now install the next snapshot from inside Konnekt, instead of being downloaded again by hand',
+      'Settings > General has an update channel, so a stable build can follow snapshots too',
+      'Installing a snapshot warns that it is untested nightly code and asks twice before replacing your build',
+    ],
+    minor: [
+      'A snapshot build is offered a stable release once one overtakes it, so the channel is not a one-way door',
+      'Snapshot versions are now dated (0.1.0-snapshot.<date>.<commit>) so newer ones sort correctly, including for the .rpm',
+      'On a stable build, leaving the channel on Stable means Konnekt never asks GitHub about snapshots at all',
+    ],
+  },
+  {
     label: 'NeoForge & Forge server support',
     date: '2026-08-14',
     highlights: [

@@ -2,11 +2,22 @@ import { useEffect, useRef } from 'react'
 import { CheckForUpdates, GetAppVersion } from '../../wailsjs/go/main/App'
 import { emitNotification } from '../lib/notify'
 
-// A dev build (wails dev, no ldflags override baking in a real tag) has no
-// installable artifact to update to — skip the check entirely rather than
-// notify about an "update" the user can't act on.
+// A build from the snapshot channel, stamped `<base>-snapshot.<date>.<sha7>`
+// by .github/workflows/snapshot.yml. Mirrors backend/services/update.go's
+// IsSnapshotVersion.
+export function isSnapshotVersion(version: string): boolean {
+  return version.includes('-snapshot.')
+}
+
+// A local `wails dev` build (no ldflags override baking in a real version) has
+// no installable artifact to update to — skip the check entirely rather than
+// notify about an "update" the user can't act on. A snapshot is not one of
+// these: it is a real checksummed binary that can replace itself. The
+// isSnapshotVersion exclusion is belt-and-braces, since the current snapshot
+// stamp carries no "-dev" at all, and keeps this honest if that marker ever
+// comes back.
 export function isDevBuild(version: string): boolean {
-  return version.includes('-dev')
+  return version.includes('-dev') && !isSnapshotVersion(version)
 }
 
 // One-shot startup check, gated by the "check for updates on startup"
@@ -27,7 +38,12 @@ export function useUpdateCheck(enabled: boolean): void {
         if (isDevBuild(version)) return
         const info = await CheckForUpdates()
         if (info.updateAvailable) {
-          emitNotification('info', `Update available: ${info.latestVersion}`)
+          // Name the channel: a snapshot is untested nightly code, and the
+          // notification is the only place that is said before the user opens
+          // Settings.
+          const label =
+            info.channel === 'snapshot' ? 'Snapshot update available' : 'Update available'
+          emitNotification('info', `${label}: ${info.latestVersion}`)
         }
       } catch {
         /* non-Wails context, offline, or no releases yet — silent background check */

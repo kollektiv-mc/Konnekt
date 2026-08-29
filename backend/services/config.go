@@ -124,6 +124,7 @@ func (s *ConfigService) GetAppSettings() (models.AppSettings, error) {
 		SchedulerPaletteCollapsed:        true,
 		SchedulerPaletteClosedCategories: map[string]bool{},
 		CheckUpdatesOnStartup:            true,
+		UpdateChannel:                    UpdateChannelStable,
 	}
 	data, err := os.ReadFile(filepath.Join(s.dataDir, "app_settings.json"))
 	if os.IsNotExist(err) {

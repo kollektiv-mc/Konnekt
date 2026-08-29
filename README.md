@@ -137,6 +137,11 @@ Prebuilt binaries come from two channels: tagged releases, and the rolling
 [releases page](https://github.com/kollektiv-mc/Konnekt/releases); the snapshot
 is a prerelease, so GitHub keeps it out of the default view.
 
+Both channels update in place from inside the app. Stable is the default;
+Settings > General switches to snapshots, and a snapshot build follows that
+channel on its own. Installing a snapshot warns first, because it is untested
+nightly code.
+
 - **Windows** (`konnekt-windows-amd64.exe`) — tagged releases and snapshots.
 - **Linux** (`konnekt-linux-amd64`, plus an `.rpm` for Rocky/RHEL 10 and
   Fedora) — **snapshots only so far.** The release workflow builds both, but
