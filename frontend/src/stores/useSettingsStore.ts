@@ -28,6 +28,7 @@ const DEFAULTS: AppSettings = {
   schedulerPaletteClosedCategories: {},
   consoleQuickCommandsCollapsed: false,
   checkUpdatesOnStartup: true,
+  updateChannel: 'stable',
   crateOrder: [],
 }
 
@@ -44,6 +45,7 @@ interface SettingsStore {
 const validThemes = ['light', 'dark', 'system'] as const
 const validSkinIds = BUILTIN_SKINS.map((s) => s.id)
 const validBgStyles = ['solid', 'gradient'] as const
+const validChannels = ['stable', 'snapshot'] as const
 
 export const useSettingsStore = create<SettingsStore>((set, get) => ({
   settings: DEFAULTS,
@@ -61,12 +63,18 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
       const backgroundStyle = (validBgStyles as readonly string[]).includes(s.backgroundStyle)
         ? (s.backgroundStyle as AppSettings['backgroundStyle'])
         : DEFAULTS.backgroundStyle
+      // Also covers the settings file written before this field existed, where
+      // `updateChannel` arrives as "" rather than absent.
+      const updateChannel = (validChannels as readonly string[]).includes(s.updateChannel)
+        ? (s.updateChannel as AppSettings['updateChannel'])
+        : DEFAULTS.updateChannel
       settings = {
         ...DEFAULTS,
         ...s,
         theme,
         skinId,
         backgroundStyle,
+        updateChannel,
         schedulerPaletteClosedCategories: s.schedulerPaletteClosedCategories ?? {},
       }
     } catch {

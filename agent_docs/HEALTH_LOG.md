@@ -69,6 +69,11 @@ after them is dated. Newest last, in both groups.
 - [2026-08-22 — The console that died on one long line](#2026-08-22-the-console-that-died-on-one-long-line)
 - [2026-08-22 — The half-written file a crash could leave](#2026-08-22-the-half-written-file-a-crash-could-leave)
 - [2026-08-22 — The torn copy of a live world](#2026-08-22-the-torn-copy-of-a-live-world)
+- [2026-08-23 — The power actions that raced each other](#2026-08-23-the-power-actions-that-raced-each-other)
+- [2026-08-26 — The server that claimed running while still generating its world](#2026-08-26-the-server-that-claimed-running-while-still-generating-its-world)
+- [2026-08-26 — The stop that killed mid-save](#2026-08-26-the-stop-that-killed-mid-save)
+- [2026-08-27 — The console that learned to say what Konnekt was doing](#2026-08-27-the-console-that-learned-to-say-what-konnekt-was-doing)
+- [2026-08-29 — The channel a snapshot could never update through](#2026-08-29-the-channel-a-snapshot-could-never-update-through)
 
 ---
 
@@ -3772,3 +3777,114 @@ through `appendLine` and `loadHistory`, and the console tile got its first
 line-rendering tests (manager styling, and manager lines staying out of the
 Error filter). `backend/services` rose 45.7% → **46.3%**, floor ratcheted
 43.5% → **44%**; 335 frontend tests pass.
+
+
+### 2026-08-29 — The channel a snapshot could never update through
+
+**The gap.** Konnekt published two channels and could only update through one.
+The updater asked GitHub for `/releases/latest`, which skips prereleases by
+definition, so the rolling `snapshot` prerelease was invisible to it. On top of
+that a snapshot binary was stamped `0.1.0-dev.snapshot.<sha7>`, and three
+separate places read the `-dev` substring as "no installable artifact":
+`app.go`'s install guard, `useUpdateCheck`'s `isDevBuild()`, and the About
+pane's "Not available in dev builds" branch. A snapshot was therefore a one-way
+download. It never checked, never nagged, and could not replace itself; the only
+way to move forward was to visit the download page again.
+
+Underneath that sat a problem no amount of plumbing would have fixed. Two
+snapshots differed only by commit sha, and `compareVersions` falls back to
+`strings.Compare` on the prerelease suffix, so `…snapshot.00400f8` against
+`…snapshot.abc1234` sorted alphabetically by sha. Any snapshot self-update built
+on that string would have been guessing which build was newer.
+
+**The fix** (`backend/services/update.go`, `backend/models/update.go`,
+`backend/models/settings.go`, `backend/services/config.go`, `app.go`,
+`.github/workflows/snapshot.yml`; frontend `hooks/useUpdateCheck.ts`,
+`components/SettingsModal.tsx`, `stores/useSettingsStore.ts`, `types/index.ts`).
+
+The version format changed first, because the rest depends on it. A snapshot is
+now `<base>-snapshot.<YYYYMMDDHHMM>.<sha7>`, the timestamp taken from the
+commit's own UTC date rather than `date -u` so a re-run on an unchanged `main`
+produces the same version instead of nagging everyone about a build they
+already have. Fixed width and all digits means the existing string compare
+orders it correctly, so `compareVersions` needed no change at all; every pair
+was checked and pinned in its table, including the one that matters most,
+stable beating a snapshot of the same core. Dropping `-dev` was the other half:
+that marker now means one thing, a local `wails dev` build, and
+`IsInstallableBuild` replaces the three substring checks that used to conflate
+the two.
+
+The snapshot release's version cannot come from its tag, since `snapshot` is a
+rolling literal, so the workflow publishes the bare version as the release
+**title** and `releaseVersion` reads it from there. That is a contract held
+together by prose, so it fails closed rather than trusting: a title that is not
+a single snapshot-shaped token yields `""` and the snapshot is simply not a
+candidate. That is also what makes the migration window safe, since the
+already-published release still carries the old `Snapshot 0.1.0-dev.snapshot.…`
+title until the next nightly, and a client on the new code quietly falls back to
+stable rather than parsing a sentence as a version. The publish step greps the
+computed version against the expected shape before creating the release, because
+nothing else in CI defends a title the updater parses.
+
+Channel resolution is deliberately asymmetric. Stable asks `/releases/latest`
+and nothing else, so the snapshot endpoint is never contacted at all and opting
+out is real rather than cosmetic; there is a test whose handler fails if that
+request is ever made. Snapshot asks both and takes the higher version, ties
+going to stable, which carries a snapshot user back to stable the moment a
+release overtakes their build instead of stranding them on a channel that has
+fallen behind. An error surfaces only when every endpoint consulted failed: a
+snapshot user whose `/releases/latest` lookup is rate-limited still gets the
+snapshot.
+
+`DownloadAndInstallUpdate` gained the channel argument but not a snapshot gate,
+and deliberately so. It already re-ran the check rather than trusting the
+frontend, and resolution is a pure function of the version, the setting and
+GitHub's state, so the assets it installs are by construction the offered
+release's. A test publishes identically named assets at different URLs on both
+releases to hold that, since it is exactly the invariant a later refactor would
+break silently.
+
+The UI is one `Segmented` row under Settings > General and a two-step confirm in
+About. The control keeps showing the stored setting even on a snapshot build,
+where the service overrides it; forcing the display to "Snapshot" would misreport
+both what is on disk and what happens after a release is installed, so the
+description says it instead. The confirm is two clicks because a setting that is
+a foot-gun by design needs something between the warning and the install, and
+the component test that pins it asserts the first click does *not* reach
+`DownloadAndInstallUpdate`.
+
+Known and accepted:
+
+- **Snapshots already in the wild are stranded.** They run the old binary, bail
+  on `isDevBuild` before checking, and would show "not available in dev builds"
+  even if they did. Nothing shipped here can reach them; those users download
+  once by hand. The classification is pinned in tests rather than left implicit.
+- **The snapshot channel can move a user backwards in commits.** `0.2.0` beats
+  `0.2.0-snapshot.…`, so a snapshot user is offered a stable build containing
+  fewer commits than the one they run. That is the intended "stable caught up"
+  behaviour and the alternative is never leaving the channel, but it is a
+  downgrade wearing a version bump.
+- **The channel stalls if `version.go`'s base is not bumped after a release.**
+  Snapshots are prereleases of that base, so a stale base sorts every snapshot
+  below the release and the channel reports "up to date" forever. Self-healing
+  once bumped, but invisible, so the workflow now emits a `::warning::` when the
+  base is not ahead of the newest release and the rule file carries it as a
+  post-release step.
+- **Two unauthenticated GitHub calls per snapshot check** rather than one,
+  against a 60/hr per-IP limit. Fine for a one-shot startup check and a manual
+  one, but the lenient error rule means a half-rate-limited check reads as a
+  clean result.
+
+**Verification.** Go: `compareVersions`' table gained seven snapshot orderings;
+`IsSnapshotVersion`, `IsInstallableBuild`, `EffectiveChannel` and
+`releaseVersion` each got a table including the legacy stamp; eleven httptest
+cases cover both-newer resolution, the stable channel never touching the
+snapshot endpoint, a snapshot build forcing the channel past a stable setting,
+a missing snapshot tag, an unparseable title, both channels empty, either
+endpoint failing alone, both failing, and assets coming from the offered
+release. `backend/services` rose 46.3% → **46.7%**, floor ratcheted 44% →
+**44.5%**. Frontend: `isDevBuild` has a regression pin for the snapshot stamp
+and one for the legacy stamp, the hook has a snapshot-build case, the settings
+store validates the new field including the empty value an older settings file
+produces, and a new `SettingsModal.test.tsx` holds the two-step confirm. 345
+frontend tests pass.

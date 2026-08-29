@@ -25,8 +25,9 @@ export type ServerStatus = models.ServerStatus
 export type ServerSummary = models.ServerSummary
 
 /**
- * Kept hand-written on purpose: `theme` and `backgroundStyle` are `string` in
- * Go and string-literal unions here, and the narrowing is load-bearing.
+ * Kept hand-written on purpose: `theme`, `backgroundStyle` and `updateChannel`
+ * are `string` in Go and string-literal unions here, and the narrowing is
+ * load-bearing.
  * `useSettingsStore.load` validates the value coming off disk and casts to
  * `AppSettings['backgroundStyle']`, `lib/theme.ts:118` matches on it, and
  * `SettingsModal`'s `Segmented` controls are typed against these members.
@@ -34,7 +35,7 @@ export type ServerSummary = models.ServerSummary
  * exhaustiveness checks — a downgrade wearing a cleanup's clothes.
  *
  * The backlog entry that proposed this cleanup claimed all eight duplicated
- * models could be aliased; measured field-by-field, six could and these two
+ * models could be aliased; measured field-by-field, six could and these three
  * could not. Every other member here matches `models.AppSettings` exactly, so
  * an added field is still the failure mode to watch for.
  */
@@ -57,6 +58,7 @@ export interface AppSettings {
   schedulerPaletteClosedCategories: Record<string, boolean>
   consoleQuickCommandsCollapsed: boolean
   checkUpdatesOnStartup: boolean
+  updateChannel: 'stable' | 'snapshot'
   crateOrder: string[]
 }
 

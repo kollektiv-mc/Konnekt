@@ -15,14 +15,53 @@ builds and publishes on `v*` tags; the in-app updater
 (`backend/services/update.go`) checks GitHub Releases. Only relevant when
 cutting a release.
 
+**After cutting a tag, bump `version.go`'s base and `wails.json`'s
+`productVersion`.** This is not cosmetic. A snapshot is stamped as a prerelease
+of that base, so once `v0.2.0` ships and the base is still `0.2.0`, every
+snapshot sorts *below* the release: snapshot users are offered the stable build
+once and then told they are up to date forever. The snapshot workflow emits a
+`::warning::` when the base is not ahead of the newest release, which is the
+only visible symptom.
+
+## The snapshot channel
+
 `.github/workflows/snapshot.yml` publishes the other channel: a nightly build
 of `main` (skipped when `main` hasn't moved), force-published to the rolling
-`snapshot` tag as a **prerelease**, which is what keeps it out of
-`/releases/latest` and therefore invisible to both the updater and the website's
-primary download card. Its version keeps the `-dev` marker
-(`0.1.0-dev.snapshot.<sha>`) so `app.go`'s install guard and the frontend's
-`isDevBuild()` treat a snapshot as having no update path — snapshots are
-refreshed by downloading a new one.
+`snapshot` tag as a **prerelease**. The prerelease flag keeps it out of
+`/releases/latest`, and so out of the website's primary download card and its
+changelog list.
+
+The updater does reach it, but only deliberately. It asks for
+`/releases/tags/snapshot` by name, and only on the snapshot channel: a stable
+install never sends that request at all. The channel is
+`models.AppSettings.UpdateChannel` (`"stable"` by default, set under Settings >
+General), except that a build which *is* a snapshot always follows the snapshot
+channel regardless — see `services.EffectiveChannel`. On that channel the
+updater takes whichever of the two releases has the higher version, ties going
+to stable, so a snapshot user is carried back to stable once a release
+overtakes their build.
+
+Two things about the format are load-bearing:
+
+- **The version is `<base>-snapshot.<YYYYMMDDHHMM>.<sha7>`**, stamped from the
+  commit's own UTC date. `compareVersions` falls back to a string compare
+  between two prerelease suffixes, so without that fixed-width timestamp two
+  snapshots sort by sha, which says nothing about which is newer. It is
+  deliberately **not** `-dev`: that marker now means one thing only, a local
+  `wails dev` build, and both `services.IsInstallableBuild` and the frontend's
+  `isDevBuild()` must classify a snapshot as installable.
+- **The release title is the bare version string**, and the updater parses it as
+  one (`releaseVersion`). The tag cannot carry it, since `snapshot` is a rolling
+  literal. Do not decorate the title: a title with a space in it is rejected as
+  unparseable and the channel silently goes quiet. The publish step greps the
+  computed version against the expected shape before creating the release,
+  which is the only guard on this.
+
+Snapshots published before 2026-08 used `0.1.0-dev.snapshot.<sha>` and a
+`Snapshot <version>` title. Those builds run the old binary and cannot
+self-update; the title format is rejected rather than misparsed, so a client on
+the new code falls back to stable during the window between merging and the next
+nightly.
 
 ## Linux builds
 
