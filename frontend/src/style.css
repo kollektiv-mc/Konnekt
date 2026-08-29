@@ -208,6 +208,33 @@ input[type='number']::-webkit-outer-spin-button {
   animation: flash-ring-spin 3s linear infinite;
 }
 
+/* A panel that arrives through a Suspense boundary — the scheduler's graph
+   editor and the config editor, both of which live in their own lazy chunk
+   (see tiles/scheduler/index.tsx and tiles/config/index.tsx). The whole
+   surface appears in one frame when the chunk lands, and without this it
+   reads as the tile's grey settling and then a darker canvas snapping over
+   it. Same shape and the same token as scheduler.css's node entrance, so the
+   editor's own nodes fade in on the beat after this rather than to a second
+   timing nobody chose.
+
+   Opacity rather than a transform on purpose: a transform on a panel that is
+   still mounting is what made WebView2 allocate the WebGL layer at the wrong
+   size in the worlds tile (see Dashboard.tsx's expand animation), and React
+   Flow measures its container on mount the same way. Opacity does not touch
+   layout, so there is nothing to mis-measure. */
+@keyframes lazy-panel-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.lazy-panel-in {
+  animation: lazy-panel-fade-in var(--duration-fast) ease-out both;
+}
+
 /* Custom tile resize handle — replaces RGL's default invisible SVG */
 .react-resizable-handle-se {
   background-image: none;

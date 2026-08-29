@@ -31,9 +31,13 @@ see `agent_docs/CLAUDE.md`'s "Linux builds" section for why.
   utilities for styling — see `CLAUDE.md`'s Code style section) over a new
   library that does the same job differently.
 - Heavy/rarely-used dependencies must be lazy-loaded (`React.lazy` +
-  `Suspense`), per the existing `worlds` (three.js) and `performance`
-  (recharts) pattern — see the Scalable pillar in `HEALTH_CHECKLIST.md`.
-- Check the production bundle budget (`pnpm check-bundle`, 550 KB gzip entry
+  `Suspense`), per the existing `worlds` (three.js), `performance` (recharts),
+  `scheduler` (`@xyflow`), `config` (CodeMirror) and `mods` (react-markdown)
+  pattern — see the Scalable pillar in `HEALTH_CHECKLIST.md`. Splitting it out
+  is half the job: add the same import specifier to `frontend/src/lib/prefetch.ts`
+  so it is warmed during idle time, or the cost simply moves to the first time
+  the tile is opened.
+- Check the production bundle budget (`pnpm check-bundle`, 165 KB gzip entry
   chunk) isn't blown by the addition.
 - Record the addition here with a one-line rationale in the same PR.
 
@@ -71,10 +75,10 @@ only if the log ever grows a real retention requirement.
 | `react-grid-layout` | Tile drag/resize grid system — used via its v2 modern API (`GridLayout`, `useContainerWidth`, `verticalCompactor` — its default, best-tested mode), not the `/legacy` v1-compat wrapper and not `noCompactor` free placement (tried and abandoned — see `agent_docs/HEALTH_LOG.md`'s "crate-drag placement, rebuilt" for the upstream-confirmed bugs that ruled it out) |
 | `recharts` | Performance-tile charts, lazy-loaded (`tiles/performance/charts.tsx`) |
 | `three`, `@react-three/fiber`, `@react-three/drei`, `@react-three/postprocessing`, `postprocessing` | Worlds tile's 3D planetary scene, lazy-loaded (`tiles/worlds/scene/`) |
-| `@xyflow/react` | Node-graph editor for the scheduler tile's block system (`tiles/scheduler/editor/`) |
-| `@codemirror/lang-json`, `@codemirror/lang-yaml`, `@codemirror/state`, `@codemirror/view`, `@uiw/react-codemirror` | server.properties / config file editor (`tiles/config/EditorPanel.tsx`) |
-| `react-markdown`, `remark-gfm`, `rehype-raw` | Rendering mod descriptions / changelogs in the mods tile |
-| `smol-toml`, `yaml` | Parsing server config formats in the config tile |
+| `@xyflow/react` | Node-graph editor for the scheduler tile's block system (`tiles/scheduler/editor/`), lazy-loaded behind the maximized editor (`tiles/scheduler/index.tsx`) |
+| `@codemirror/lang-json`, `@codemirror/lang-yaml`, `@codemirror/state`, `@codemirror/view`, `@uiw/react-codemirror` | server.properties / config file editor, lazy-loaded behind the maximized editor (`tiles/config/EditorPanel.tsx`) |
+| `react-markdown`, `remark-gfm`, `rehype-raw` | Rendering mod descriptions / changelogs in the mods tile, lazy-loaded (`tiles/mods/MarkdownBody.tsx`). `rehype-raw` is what pulls in parse5 and the full HTML parser, which is most of the weight |
+| `smol-toml`, `yaml` | Parsing server config formats in the config tile; reached only through the lazy `EditorPanel` chunk |
 
 Dev-only tooling (build, lint, format, test — Vite, TypeScript, ESLint,
 Prettier, Vitest, Tailwind, etc.) isn't itemized here; it's inspectable

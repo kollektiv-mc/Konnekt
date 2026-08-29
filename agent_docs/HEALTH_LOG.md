@@ -74,6 +74,7 @@ after them is dated. Newest last, in both groups.
 - [2026-08-26 — The stop that killed mid-save](#2026-08-26-the-stop-that-killed-mid-save)
 - [2026-08-27 — The console that learned to say what Konnekt was doing](#2026-08-27-the-console-that-learned-to-say-what-konnekt-was-doing)
 - [2026-08-29 — The channel a snapshot could never update through](#2026-08-29-the-channel-a-snapshot-could-never-update-through)
+- [2026-08-29 — The warm-up that moved the stutter onto the first scroll](#2026-08-29-the-warm-up-that-moved-the-stutter-onto-the-first-scroll)
 
 ---
 
@@ -3888,3 +3889,147 @@ and one for the legacy stamp, the hook has a snapshot-build case, the settings
 store validates the new field including the empty value an older settings file
 produces, and a new `SettingsModal.test.tsx` holds the two-step confirm. 345
 frontend tests pass.
+
+### 2026-08-29 — The warm-up that moved the stutter onto the first scroll
+
+**The report.** "The first scroll and opening of specific tiles is always laggy,
+and not as smooth as when having opened or scrolled to them once." Filed as
+still-present after an earlier round had already addressed it.
+
+That earlier round is `frontend/src/lib/prefetch.ts`, added to warm the two lazy
+chunks (`WorldsScene`, `charts`) so the first tile open would not pay a cold
+fetch and evaluate. It did that. It also moved the cost somewhere worse.
+
+**Measuring it rather than guessing.** The production bundle boots in plain
+Chromium once `window.go.main.App` and `window.runtime` are shimmed, so the
+whole thing is measurable headlessly: serve `frontend/dist`, throttle the CPU 4x
+over CDP, and record `longtask` entries and `requestAnimationFrame` gaps across
+a scripted scroll and a scripted maximize. Cold and warm are the same scripted
+action run twice. Every number below is the median of five launches at that
+throttle, and the ratio between them is what matters, not the absolute value.
+
+**Two independent causes, each about 95ms of blocked main thread, and they
+add.** A 2x2 (warm-up on/off, Performance tile placed/not) separates them
+cleanly. First scroll, worst frame and total blocking:
+
+| | Performance tile placed | not placed |
+| --- | --- | --- |
+| warm-up on (what shipped) | 150ms / 189ms | 167ms / 97ms |
+| warm-up off | 133ms / 96ms | **17ms / 0ms** |
+
+1. **The warm-up itself.** `requestIdleCallback(warm, { timeout: 3000 })` fired
+   one callback that kicked off both imports at once. Evaluating 1.3MB of
+   module source is not an idle-sized piece of work, and one to three seconds
+   after launch is exactly when a user makes their first scroll. The warm-up
+   was landing on it.
+2. **The Performance tile's own `charts` chunk.** Its Suspense boundary resolves
+   about a second in and recharts' first render blocks ~95ms, in the same
+   window. Nothing to do with the warm-up; it happens whether or not the
+   warm-up runs.
+
+**And a third cause, for the tiles half of the report.** The warm-up warmed the
+two chunks that were already split. The tiles that actually stutter are the ones
+that were never split at all. Attributing the entry chunk through its source map:
+
+| in the entry chunk | source bytes | used by |
+| --- | --- | --- |
+| CodeMirror + `@lezer` + `yaml` | ~1.4MB | the config tile's editor, only when maximized |
+| react-markdown, `rehype-raw`, parse5, micromark | ~650KB | a mod description |
+| `@xyflow/react` + `@xyflow/system` | ~370KB | the scheduler's graph editor, only when maximized |
+
+4.49MB of source, 1.64MB minified, 501KB gzip against a 550KB budget. None of it
+is needed to paint the dashboard, and being in the entry chunk does not make it
+free at open: V8 compiles a function lazily, on first call, so the cost lands on
+the first open regardless and there is no chunk for a warm-up to reach.
+
+**The fix, in three parts.**
+
+- **Split the three heavy tile bodies** behind `React.lazy`, matching what
+  worlds and performance already did: `scheduler/editor/GraphEditor`,
+  `config/EditorPanel`, and a new `mods/MarkdownBody` extracted from
+  `ModAboutBody` (the shell keeps the loading, description and empty branches,
+  so the only thing behind the boundary is the markdown renderer). Entry chunk
+  **501KB → 145KB gzip**; startup blocking **723ms → 427ms** at 4x.
+- **Rewrite the warm-up as a paced queue.** One chunk per idle slot instead of
+  everything at once, and never start one within 500ms of a wheel, pointerdown,
+  keydown or scroll. `scroll` is in that list because the canvas is the app's
+  only scroller and staying out of its way is the point; a capture-phase
+  listener on `window` sees element scroll events even though they do not
+  bubble. `pointermove` is deliberately *not* in it — the pointer crossing the
+  window is not an interaction, and counting it as one starves the queue for as
+  long as the mouse keeps moving. Five chunks are warmed now, not two.
+- **Ratchet the bundle budget** 550KB → 165KB. Left at 550 it would have let the
+  entry chunk grow 3.7x before anything noticed.
+
+**What it buys, and what it does not.**
+
+| | before | after |
+| --- | --- | --- |
+| startup blocking | 723ms | 427ms |
+| first scroll, warm-up's own contribution | 97ms blocking, 1 dropped frame | **0ms, 0 dropped** |
+| first scroll, all causes | 196ms blocking, 2 dropped | 110ms, 1 dropped |
+| first scheduler open | 300ms worst frame / 213ms blocking | 200ms / 147ms |
+
+The warm-up's own contribution to the first scroll is gone, which was the
+reported regression. The remaining 110ms is cause 2 — recharts' first mount,
+which the Performance tile triggers itself and no warm-up can get ahead of.
+
+**Three things a later session should not have to rediscover.** All three are
+also filed in the checklist's `Open backlog` ("What is still open from the
+first-scroll work"), since this file is the record of what closed and they did
+not.
+
+- **The cold/warm gap on a tile is not mostly the chunk.** Warming the scheduler
+  chunk removes about a third of its cold cost; the rest is first-mount work
+  that only rendering can pay — V8 compiling the subtree's functions on first
+  call, `@xyflow` measuring, React's first reconciliation. Cold 147ms against
+  warm 70ms is what is left after the chunk is already in memory.
+- **Deferral moves work, it does not delete it.** A queue that steps aside for
+  every interaction has to run in the gaps between them, and an action taken
+  immediately after a scroll can still catch it mid-chunk. Raising the quiet
+  window to 1000ms was tried and changed nothing measurable, so it stayed at 500.
+- **`prefetch.ts`'s specifiers are load-bearing.** Vite keys a chunk by resolved
+  specifier; a warm path that differs from the `lazy()` path by a directory hop
+  resolves to a second copy of the module and warms nothing, silently. The
+  checklist's Performant pillar now names that as the thing to verify.
+
+**A Suspense boundary is a visual change, not just a loading one.** Splitting the
+scheduler meant the editor arrived a frame later than the panel, so the tile's
+grey surface settled and then the darker canvas snapped over it. `style.css`'s
+`.lazy-panel-in` fades a lazily-arrived panel in over `--duration-fast`, on the
+scheduler editor's root and both of the config editor's, reusing the shape and
+the token `scheduler.css`'s node entrance already uses rather than inventing a
+second timing. Opacity, not a transform, and for a concrete reason: a transform
+on a still-mounting panel is what made WebView2 size the WebGL layer wrong in
+the worlds tile, and React Flow measures its container on mount the same way.
+
+**The specifier match is a test, not a comment.** A warm path that differs from
+its `lazy()` path by a directory hop resolves to a second copy of the module:
+the build succeeds, the tile opens, the warm-up buys nothing, and nothing
+anywhere says so. That is the same silent shape as a token class compiling to no
+rule, which is why `check-token-classes.mjs` exists, so this got the same
+treatment: `pnpm check-prefetch`, wired into CI and `.claude/suite.json`
+alongside it. It resolves both sets to real files and compares them, reads
+source so it needs no build, and refuses to pass vacuously if its own pattern
+stops matching. Confirmed to fail on a dropped warm entry, on a specifier
+drifted to a different real module, and on a typo'd one before being confirmed
+green. It started as a vitest case and moved: the frontend `tsconfig` carries no
+`@types/node`, and adding one to let a test read the source tree would have been
+a dependency bought to avoid using the `scripts/` directory that already exists
+for exactly this.
+
+**Verification.** `warmSequentially` is exported for its own sake — it returns a
+canceller — and `lib/prefetch.test.ts` covers five behaviours over jsdom's
+`setTimeout` fallback path (which is also the path a WebView without
+`requestIdleCallback` takes): one chunk at a time, holding off under sustained
+wheel events, a rejected chunk not stalling the queue behind it, cancelling
+detaching every listener it attached, and completion doing the same. Two more
+hold the specifier invariant above. `prefetchHeavyChunks` deliberately drops the
+canceller and keeps its guard at module scope, which is worth not "fixing": wired
+to an effect cleanup, StrictMode's double-invoke would cancel the queue on the
+first teardown and then hit the guard on the way back in, leaving dev builds with
+no warm-up at all. `ModAboutBody.test.tsx`'s three cases became async, since the
+markdown now arrives through a Suspense boundary. Typecheck, lint (no new
+warnings against main's 13), the full frontend suite, `pnpm check-bundle` against
+the new 165KB budget, and a source-map pass confirming each of the five heavy
+libraries lands in exactly one chunk with no second copy, all pass.

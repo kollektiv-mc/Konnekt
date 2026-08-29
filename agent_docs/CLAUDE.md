@@ -111,9 +111,16 @@ Why the grid is built the way it is, and which parts are load-bearing:
   and anything on stdout is lost. `EventBus` emissions are the UI's channel, not
   a log: they die with the window. Writes to a *server process's* stdin
   (`fmt.Fprintln(s.stdin, ...)`) are not diagnostics and stay as they are.
-- Heavy per-tile dependencies (three.js, recharts) are lazy-loaded via
-  `React.lazy` + `Suspense` (see `frontend/src/tiles/worlds/index.tsx`); keep
-  the entry bundle under the 550 KB gzip budget enforced by `pnpm check-bundle`.
+- Heavy per-tile dependencies are lazy-loaded via `React.lazy` + `Suspense`
+  (see `frontend/src/tiles/worlds/index.tsx`): three.js, recharts, `@xyflow`
+  (scheduler editor), CodeMirror (config editor) and the react-markdown/parse5
+  pipeline (mod descriptions). Keep the entry bundle under the 165 KB gzip
+  budget enforced by `pnpm check-bundle`. A new lazy chunk belongs in
+  `lib/prefetch.ts`'s warm list too, spelled with the same specifier — that
+  file is what makes the first open of a tile cheap, and it warms one chunk per
+  idle slot and never while the user is interacting. `pnpm check-prefetch`
+  enforces that pairing; a specifier that drifts resolves to a second copy of
+  the module and warms nothing, with no other symptom.
 
 ## Build & dev commands
 
@@ -126,8 +133,9 @@ pnpm lint             # ESLint (run from frontend/)
 pnpm test             # vitest (run from frontend/)
 pnpm format           # Prettier --write (run from frontend/)
 pnpm format:check     # Prettier --check, the gate CI runs (from frontend/)
-pnpm check-bundle     # Enforce 550 KB gzip entry-chunk budget (run from frontend/)
+pnpm check-bundle     # Enforce 165 KB gzip entry-chunk budget (run from frontend/)
 pnpm check-tokens     # Assert every token-named class compiles (run from frontend/)
+pnpm check-prefetch   # Assert every lazy tile chunk is in the warm list (frontend/)
 pnpm gen:tokens       # Regenerate the token layer from tokens.source.json (frontend/)
 pnpm format:website   # Prettier --check over website/ (run from frontend/)
 node scripts/check-website-links.mjs   # website hrefs/assets/sitemap (repo root)
