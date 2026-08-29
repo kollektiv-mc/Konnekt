@@ -23,6 +23,7 @@ import { emitNotification } from './lib/notify'
 import { prefetchHeavyChunks } from './lib/prefetch'
 import { useUpdateCheck } from './hooks/useUpdateCheck'
 import { useServerStatusSync } from './hooks/useServerStatus'
+import { useNavWidth } from './hooks/useNavWidth'
 import { EVENTS } from './lib/constants'
 
 function App() {
@@ -33,6 +34,7 @@ function App() {
   const loaderDialogOpen = useLoaderStore((s) => s.dialogOpen)
   const [eulaRequired, setEulaRequired] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
+  const { width: navWidth, onHandleMouseDown, onHandleDoubleClick } = useNavWidth()
   const autoStarted = useRef(false)
   const lowTpsWarned = useRef(false)
 
@@ -508,7 +510,11 @@ function App() {
 
   return (
     <div className="flex h-screen overflow-hidden">
-      <aside className="border-r-hairline border-border-subtle flex w-48 shrink-0 flex-col overflow-y-auto">
+      <aside
+        className="border-r-hairline border-border-subtle flex shrink-0 flex-col overflow-y-auto"
+        // eslint-disable-next-line no-restricted-syntax -- navWidth is a live drag-computed value
+        style={{ width: navWidth }}
+      >
         <div className="border-b-hairline border-border-subtle flex shrink-0 items-center justify-between px-3 py-3">
           <span className="text-accent font-display text-sm font-black tracking-tight">
             Konnekt
@@ -532,6 +538,20 @@ function App() {
           <LayoutPresets />
         </div>
       </aside>
+      {/* Straddles the navbar's border on a negative margin, so it is 4px of
+          grab area that costs the layout nothing and the canvas does not shift
+          the moment the pointer nears it. `relative` is what keeps <main> from
+          taking the half that overlaps it, since a later sibling would
+          otherwise win the hit test. */}
+      <div
+        role="separator"
+        aria-orientation="vertical"
+        aria-label="Resize navbar"
+        title="Drag to resize, double-click to reset"
+        onMouseDown={onHandleMouseDown}
+        onDoubleClick={onHandleDoubleClick}
+        className="hover:bg-accent active:bg-accent relative z-10 -mx-0.5 w-1 shrink-0 cursor-col-resize bg-transparent transition-colors"
+      />
       <main className="flex-1 overflow-hidden">
         <Dashboard />
       </main>

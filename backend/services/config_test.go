@@ -182,6 +182,13 @@ func TestAppSettingsFillGapsInAnOlderFileWithDefaults(t *testing.T) {
 	if got.StopGraceSeconds != 60 {
 		t.Errorf("StopGraceSeconds = %d, want the default 60 for a key the file lacks", got.StopGraceSeconds)
 	}
+	// The frontend resolves a 0 to the same default, so this is the second of
+	// two belts rather than the only one. It is here because the file written
+	// back by the next SaveAppSettings carries whatever came out of here, and
+	// a 0 persisted once is a 0 every launch after.
+	if got.NavWidth != DefaultNavWidth {
+		t.Errorf("NavWidth = %d, want the default %d for a key the file lacks", got.NavWidth, DefaultNavWidth)
+	}
 }
 
 // StopGrace is the duration form Stop's callers pass down; on a fresh install

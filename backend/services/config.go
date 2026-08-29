@@ -110,6 +110,12 @@ func (s *ConfigService) SetActiveServerID(id string) error {
 	return WriteDataFile(s.dataDir, "active_server.json", data)
 }
 
+// DefaultNavWidth is the left navbar's width in CSS pixels for a settings file
+// that has never carried one. It matches the frontend's NAV_WIDTH_DEFAULT
+// (frontend/src/lib/navWidth.ts), which is what a reset falls back to; the two
+// are separate constants because neither side can import the other's.
+const DefaultNavWidth = 192
+
 func (s *ConfigService) GetAppSettings() (models.AppSettings, error) {
 	defaults := models.AppSettings{
 		Theme:                            "dark",
@@ -125,6 +131,7 @@ func (s *ConfigService) GetAppSettings() (models.AppSettings, error) {
 		SchedulerPaletteClosedCategories: map[string]bool{},
 		CheckUpdatesOnStartup:            true,
 		UpdateChannel:                    UpdateChannelStable,
+		NavWidth:                         DefaultNavWidth,
 	}
 	data, err := os.ReadFile(filepath.Join(s.dataDir, "app_settings.json"))
 	if os.IsNotExist(err) {

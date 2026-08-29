@@ -28,6 +28,7 @@ const DEFAULTS = {
   checkUpdatesOnStartup: true,
   updateChannel: 'stable' as const,
   crateOrder: [] as string[],
+  navWidth: 192,
 }
 
 // `hasWailsBridge()` reads window.go's presence, and jsdom has none — so the
