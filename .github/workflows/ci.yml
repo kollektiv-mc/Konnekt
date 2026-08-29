@@ -63,10 +63,11 @@ jobs:
           echo "::error::This pull request has no area: label. Add the one matching the part of Konnekt it touches — see .github/labels.yml for the list, or agent_docs/CLAUDE.md's 'Labelling an issue'."
           exit 1
 
-  # The classifier decides what every future release says about itself, and it
-  # is the one piece of release tooling that never runs until a release is being
-  # cut — which is the worst moment to find out it is wrong. These are pure,
-  # offline checks over the categorisation and the path filter.
+  # Release tooling never runs until a release is being cut — which is the worst
+  # moment to find out it is wrong. Both scripts are pure and offline, so both
+  # can be checked on every push instead: the classifier decides what every
+  # future release says about itself, and the version guard decides whether
+  # anyone is told when a tag has stranded the snapshot channel.
   release-notes:
     runs-on: ubuntu-latest
     steps:
@@ -77,6 +78,8 @@ jobs:
           python-version: '3.12'
 
       - run: python3 .github/scripts/release-notes_test.py
+
+      - run: python3 .github/scripts/version-precedence_test.py
 
   frontend:
     runs-on: ubuntu-latest

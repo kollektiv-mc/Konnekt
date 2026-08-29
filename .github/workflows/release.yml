@@ -192,31 +192,62 @@ jobs:
           # Fall back to GitHub's generator rather than to nothing. It is what
           # this step used to be, and on the paths that get here — the very
           # first release, so no baseline, or an API failure — a full list
-          # shaped by .github/release.yml beats an empty release body.
+          # shaped by .github/release.yml beats an empty release body. A commit
+          # link is the floor under that.
           #
           # Warn rather than fail: a release must not be blocked on its notes,
           # but a body that quietly includes the website again should not look
           # like a clean run either.
-          if ! python3 "$GITHUB_WORKSPACE/.github/scripts/release-notes.py" > notes.md \
-            || [ ! -s notes.md ]; then
+          if ! python3 "$GITHUB_WORKSPACE/.github/scripts/release-notes.py" > changes.md \
+            || [ ! -s changes.md ]; then
             echo "::warning::release-notes.py failed; falling back to GitHub's generated notes"
-            rm -f notes.md
+            if ! gh api --method POST "repos/$REPO/releases/generate-notes" \
+              -f tag_name="$HEAD_REF" --jq .body > changes.md || [ ! -s changes.md ]; then
+              echo "::warning::generate-notes failed too; the body falls back to a commit link"
+              echo "**Commits**: $SERVER/$REPO/commits/$HEAD_REF" > changes.md
+            fi
           fi
 
       - name: Publish release
         working-directory: dist
         env:
           GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          TAG: ${{ github.ref_name }}
         run: |
-          if [ -f notes.md ]; then
-            notes=(--notes-file notes.md)
-          else
-            notes=(--generate-notes)
-          fi
+          # The preamble, the same way snapshot.yml writes one. The notes
+          # script produces what changed and nothing else, which is what the
+          # website's changelog wants — website/release.js trims a body to that
+          # section — but on the GitHub page it left a reader no answer to
+          # which file do I want, and is it safe to run. v0.1.0-alpha.1 had all
+          # of that hand-written, and nothing carried it forward.
+          #
+          # The pre-release line is decided by the tag, so it is right for as
+          # long as the tags are and there is nothing to remember to delete.
+          : > notes.md
+          case "$TAG" in
+            *-*) printf '%s\n\n' \
+              "Pre-release. Expect rough edges and breaking changes between versions." \
+              >> notes.md ;;
+          esac
+
+          cat >> notes.md <<EOF
+          Windows, Linux and Fedora/RHEL builds are attached below. macOS builds
+          from source. The binaries are unsigned, so Windows SmartScreen warns
+          on first launch: choose More info, then Run anyway.
+
+          Check a download against \`checksums.txt\` before running it.
+
+          Konnekt updates itself from these releases. Settings > General chooses
+          between the stable and snapshot channels.
+
+          EOF
+          cat changes.md >> notes.md
 
           # Assets are named rather than globbed with `*`, which would now pick
-          # up the notes.md written beside them. Same list snapshot.yml uploads.
-          gh release create "${{ github.ref_name }}" \
+          # up the changes.md and notes.md written beside them. Same list
+          # snapshot.yml uploads.
+          gh release create "$TAG" \
             konnekt-* checksums.txt \
-            --title "${{ github.ref_name }}" "${notes[@]}" \
-            --repo "${{ github.repository }}"
+            --title "$TAG" --notes-file notes.md \
+            --repo "$REPO"

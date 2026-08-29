@@ -1,6 +1,7 @@
 ---
 paths:
   - ".github/workflows/**"
+  - ".github/scripts/**"
   - "version.go"
   - "wails.json"
   - "build/**"
@@ -15,13 +16,38 @@ builds and publishes on `v*` tags; the in-app updater
 (`backend/services/update.go`) checks GitHub Releases. Only relevant when
 cutting a release.
 
-**After cutting a tag, bump `version.go`'s base and `wails.json`'s
-`productVersion`.** This is not cosmetic. A snapshot is stamped as a prerelease
-of that base, so once `v0.2.0` ships and the base is still `0.2.0`, every
-snapshot sorts *below* the release: snapshot users are offered the stable build
-once and then told they are up to date forever. The snapshot workflow emits a
-`::warning::` when the base is not ahead of the newest release, which is the
-only visible symptom.
+**`version.go`'s base is the version being worked towards, not the last one
+released, and `wails.json`'s `productVersion` mirrors it.** This is not
+cosmetic. A snapshot is stamped `<base>-snapshot.<stamp>.<sha>`, so the base
+has to be a version its snapshots can still outrank. `0.2.0-snapshot.*` beats
+`v0.2.0-alpha.1` and loses to `v0.2.0`, which is right in both directions: a
+base level with the core of a *prerelease* tag is fine, and the bump is due
+when a final release of that core ships or when a tag jumps the core ahead.
+Get it wrong and snapshot users are offered the stable build once and then told
+they are up to date forever.
+
+`.github/scripts/version-precedence.py` is what notices, applying
+`update.go`'s own `compareVersions` rules to the snapshot about to be built.
+The snapshot workflow runs it nightly and it emits a `::warning::`, which is
+the only visible symptom. Do not reimplement that comparison in shell: the
+version of this guard that was, used `sort -V`, which has no notion of
+prerelease precedence, and covered for that by only examining *final*
+releases, so every prerelease tag skipped the check. `version-precedence_test.py`
+runs the Go function's own test table through the Python in CI, which is what
+keeps the two answering the same.
+
+## Release notes
+
+`.github/scripts/release-notes.py` writes the body for both channels, and
+`agent_docs/CLAUDE.md` covers what reaches it. Its output starts at
+`## What's changed` and is nothing but the changes, because that section is all
+the website's changelog shows (`website/release.js`'s `changesOnly`).
+
+Each workflow prepends its own preamble: `snapshot.yml` says what a snapshot is
+and that it can be broken, `release.yml` says which assets are attached, that
+they are unsigned, and how to check one against `checksums.txt`, plus a
+pre-release line when the tag carries a suffix. Anything a reader needs on the
+GitHub page but not on the changelog page belongs there.
 
 ## The snapshot channel
 
