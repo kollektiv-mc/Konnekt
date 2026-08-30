@@ -77,7 +77,11 @@ export function LayoutPresets() {
       </div>
 
       <Collapsible open={!collapsed} className="min-w-0">
-        <div className="flex min-h-0 min-w-0 flex-col gap-2 px-3 pb-2">
+        {/* pt-3 rather than nothing: the panel opens upwards, so its topmost
+            preset is what meets the section above it, and flush against that
+            row it reads as part of the list rather than as the top of its own
+            container. */}
+        <div className="flex min-h-0 min-w-0 flex-col gap-2 px-3 pt-3 pb-2">
           {presets.map((preset) => (
             <div key={preset.name} className="flex items-center gap-1">
               {/* Same treatment as the server list above it in this sidebar
