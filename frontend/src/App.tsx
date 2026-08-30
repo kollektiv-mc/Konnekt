@@ -529,7 +529,7 @@ function App() {
         // eslint-disable-next-line no-restricted-syntax -- navWidth is a live drag-computed value
         style={{ width: navWidth }}
       >
-        <div className="border-b-hairline border-border-subtle flex shrink-0 items-center justify-between py-3 pr-3 pl-5">
+        <div className="border-b-hairline border-border-subtle flex shrink-0 items-center justify-between px-3 py-3">
           <span className="text-accent font-display text-sm font-black tracking-tight">
             Konnekt
           </span>

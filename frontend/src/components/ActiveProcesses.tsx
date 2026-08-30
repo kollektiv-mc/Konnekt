@@ -50,7 +50,7 @@ export function ActiveProcesses() {
         const failed = p.status === 'failed'
         const clickable = p.view !== undefined
         return (
-          <div key={p.id} className="flex flex-col gap-1 px-2">
+          <div key={p.id} className="flex flex-col gap-1">
             <div className="flex items-center justify-between gap-1">
               {clickable ? (
                 <button
