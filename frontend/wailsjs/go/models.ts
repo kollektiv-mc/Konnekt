@@ -884,6 +884,7 @@ export namespace models {
 	export class ServerStatus {
 	    running: boolean;
 	    state: string;
+	    serverId: string;
 	    uptime: string;
 	    players: number;
 	    maxPlayers: number;
@@ -899,6 +900,7 @@ export namespace models {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.running = source["running"];
 	        this.state = source["state"];
+	        this.serverId = source["serverId"];
 	        this.uptime = source["uptime"];
 	        this.players = source["players"];
 	        this.maxPlayers = source["maxPlayers"];

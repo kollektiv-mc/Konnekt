@@ -14,6 +14,7 @@ function status(over: Partial<ServerStatus> = {}): ServerStatus {
   return {
     running: true,
     state: 'running',
+    serverId: 'srv1',
     uptime: '1m 0s',
     players: 2,
     maxPlayers: 20,

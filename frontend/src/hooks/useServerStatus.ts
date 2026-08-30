@@ -71,8 +71,8 @@ export function useServerStatusSync(serverId: string) {
         }),
         EventsOn(EVENTS.SERVER_STARTED, refresh),
         EventsOn(EVENTS.SERVER_STOPPED, refresh),
-        EventsOn(EVENTS.SERVER_STATE, (p?: { state?: string }) => {
-          if (p?.state) setServerState(p.state)
+        EventsOn(EVENTS.SERVER_STATE, (p?: { state?: string; serverId?: string }) => {
+          if (p?.state) setServerState(p.state, p.serverId ?? '')
           setReachable(true)
         }),
       ]

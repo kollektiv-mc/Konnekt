@@ -1,6 +1,7 @@
 import { useCallback, useRef, useState } from 'react'
 import { GetServerSummary } from '../../wailsjs/go/main/App'
 import { useHoverDelay } from '../hooks/useHoverDelay'
+import { PHASE_DOT, PHASE_LABEL, type ServerPhase } from '../lib/serverState'
 import { IconButton } from './ui/IconButton'
 import { PencilIcon } from './ui/icons'
 import { ServerTooltip } from './ServerTooltip'
@@ -14,7 +15,10 @@ const TOOLTIP_HEIGHT_PX = 140
 
 interface Props {
   cfg: ServerConfig
+  /** Selected in the sidebar. Nothing to do with whether it is running. */
   active: boolean
+  /** This server's own lifecycle phase, which is what the dot reports. */
+  phase: ServerPhase
   onSelect: () => void
   onEdit: () => void
 }
@@ -32,7 +36,7 @@ interface Props {
  * `×` to say which of the two it was. It lives in the manager now, behind the
  * edit control, where the server it would remove is named on screen.
  */
-export function ServerRow({ cfg, active, onSelect, onEdit }: Props) {
+export function ServerRow({ cfg, active, phase, onSelect, onEdit }: Props) {
   const rowRef = useRef<HTMLDivElement>(null)
   const [summary, setSummary] = useState<ServerSummary | null>(null)
   const [anchor, setAnchor] = useState({ top: 0, left: 0 })
@@ -77,10 +81,8 @@ export function ServerRow({ cfg, active, onSelect, onEdit }: Props) {
       >
         {/* The dot sits in the same gutter the crate's icons do, so both
             lists put their labels in one column. */}
-        <span className="flex w-7 shrink-0 justify-start">
-          <span
-            className={`h-1.5 w-1.5 rounded-full ${active ? 'bg-accent' : 'bg-text-faint'}`}
-          />
+        <span className="flex w-7 shrink-0 justify-start" title={PHASE_LABEL[phase]}>
+          <span className={`h-1.5 w-1.5 rounded-full ${PHASE_DOT[phase]}`} />
         </span>
         <span className="truncate">{cfg.name}</span>
       </button>

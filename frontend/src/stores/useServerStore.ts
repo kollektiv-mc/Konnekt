@@ -22,8 +22,13 @@ interface ServerStore {
   reachable: boolean
   players: Player[]
   setStatus: (status: ServerStatus) => void
-  /** Applies a server:state push, which carries only the phase. */
-  setServerState: (state: string) => void
+  /**
+   * Applies a server:state push. It carries the phase and whose it is, and
+   * both are needed: the sidebar has to light the right row on the starting
+   * transition rather than waiting up to a full status tick to learn which
+   * server the phase belongs to.
+   */
+  setServerState: (state: string, serverId: string) => void
   setReachable: (reachable: boolean) => void
   setPlayers: (players: Player[]) => void
 }
@@ -31,6 +36,7 @@ interface ServerStore {
 const defaultStatus: ServerStatus = {
   running: false,
   state: 'offline',
+  serverId: '',
   uptime: '0s',
   players: 0,
   maxPlayers: 20,
@@ -44,7 +50,7 @@ export const useServerStore = create<ServerStore>((set) => ({
   reachable: true,
   players: [],
   setStatus: (status) => set({ status }),
-  setServerState: (state) => set((s) => ({ status: { ...s.status, state } })),
+  setServerState: (state, serverId) => set((s) => ({ status: { ...s.status, state, serverId } })),
   setReachable: (reachable) => set({ reachable }),
   setPlayers: (players) => set({ players }),
 }))

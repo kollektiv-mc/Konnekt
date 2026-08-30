@@ -824,7 +824,11 @@ func (s *ServerService) setStateLocked(next serverState, timedOut bool) {
 		return
 	}
 	s.state = next
-	s.bus.Emit(EventServerState, models.ServerStateChange{State: next.String(), TimedOut: timedOut})
+	s.bus.Emit(EventServerState, models.ServerStateChange{
+		State:    next.String(),
+		TimedOut: timedOut,
+		ServerID: s.serverID,
+	})
 }
 
 // State reports the lifecycle phase as its wire spelling, the readable getter

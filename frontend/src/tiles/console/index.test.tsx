@@ -12,6 +12,7 @@ vi.mock('../../../wailsjs/runtime/runtime')
 const OFFLINE: ServerStatus = {
   running: false,
   state: 'offline',
+  serverId: '',
   uptime: '0s',
   players: 0,
   maxPlayers: 20,

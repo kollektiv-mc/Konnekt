@@ -45,8 +45,15 @@ type ServerSummary struct {
 // running and stopping — because every consumer gating on "is there a live
 // process to talk to / stop first" reads it.
 type ServerStatus struct {
-	Running    bool    `json:"running"`
-	State      string  `json:"state"`
+	Running bool   `json:"running"`
+	State   string `json:"state"`
+
+	// ServerID is which configured server the process belongs to, or "" when
+	// none is up. Running/State describe the one process this build can have
+	// (#57 is what makes that plural), so without an id a caller looking at a
+	// *list* of servers cannot tell which row the state belongs to.
+	ServerID string `json:"serverId"`
+
 	Uptime     string  `json:"uptime"`
 	Players    int     `json:"players"`
 	MaxPlayers int     `json:"maxPlayers"`
@@ -63,6 +70,12 @@ type ServerStatus struct {
 type ServerStateChange struct {
 	State    string `json:"state"`
 	TimedOut bool   `json:"timedOut"`
+
+	// ServerID as in ServerStatus. Carried on the event too, not just on the
+	// polled status: the sidebar dot has to light on the starting transition,
+	// and waiting for the next 10s status tick to learn whose it is would show
+	// every server as offline for most of a boot.
+	ServerID string `json:"serverId"`
 }
 
 // ServerStopped is the server:stopped event payload, and what GetLastStop
