@@ -547,6 +547,8 @@ function App() {
           {/* Horizontal padding comes from .scroll-stable, which nets the
               scrollbar's reserved gutter out of it so the cards sit evenly
               between the navbar's edges whether or not the platform reserves one.
+              It is the same 12px this py-3 is, so the column is inset equally on
+              all three sides.
 
               py-3, matching Dashboard.tsx's GRID_CONTAINER_PADDING[1] — keep the
               two in step, it is module-private there and reaching it from here

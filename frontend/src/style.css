@@ -128,12 +128,18 @@ body {
    the platform actually reserves, since it is 4px with classic bars and zero
    with overlay ones. Nothing breaks if that number is wrong or never arrives —
    max() cannot go negative, the fallback pads as though nothing were reserved,
-   and either way the reflow is already fixed by the line above. */
+   and either way the reflow is already fixed by the line above.
+
+   0.75rem, matching Dashboard.tsx's GRID_CONTAINER_PADDING and the py-3 the
+   navbar's column carries — the two card columns are read side by side and an
+   inset that differs by four pixels between them reads as one of them being
+   cramped. It was 0.5rem while the navbar had a header block above it, when
+   only the vertical rhythm was being matched. */
 .scroll-stable {
   overflow-y: scroll;
   scrollbar-gutter: stable;
-  padding-left: 0.5rem;
-  padding-right: max(0px, 0.5rem - var(--scrollbar-gutter, 0px));
+  padding-left: 0.75rem;
+  padding-right: max(0px, 0.75rem - var(--scrollbar-gutter, 0px));
 }
 
 /* Hide native number input spinners — custom ▲▼ buttons used instead */
