@@ -46,7 +46,9 @@ export function LayoutPresets() {
   }
 
   return (
-    <div className="flex flex-col gap-2 overflow-hidden p-2">
+    // px-3/px-2 rather than p-2/px-3, matching the crate: the row box starts on
+    // the navbar's 12px edge and the label sits in its own 20px column.
+    <div className="flex flex-col gap-2 overflow-hidden px-3 py-2">
       <button
         onClick={() => setCollapsed((c) => !c)}
         className="font-title text-text-muted flex w-full items-center justify-between px-1 text-xs font-medium tracking-wider uppercase transition-colors"
@@ -71,7 +73,9 @@ export function LayoutPresets() {
             <div key={preset.name} className="flex items-center gap-1">
               <button
                 onClick={() => loadPreset(preset.name)}
-                className={`flex-1 rounded px-3 py-1.5 text-left text-xs transition-all ${
+                // Truncates rather than wraps: a wrapped name makes its row
+                // taller than the others and re-flows the list.
+                className={`flex-1 truncate rounded px-2 py-1.5 text-left text-xs transition-all ${
                   preset.name === activePresetName
                     ? 'text-accent bg-accent/10'
                     : 'text-text-secondary bg-transparent'
