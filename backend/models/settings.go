@@ -36,4 +36,11 @@ type AppSettings struct {
 
 	// Display order of the tile crate's navbar list, by tile registry id.
 	CrateOrder []string `json:"crateOrder"`
+
+	// NavWidth is the left navbar's width in CSS pixels. The frontend clamps
+	// it to a floor and to a fraction of the window width before use, so a
+	// value written by a wider window cannot survive into a narrower one
+	// (frontend/src/lib/navWidth.ts). Zero means "never set" and resolves to
+	// the default the same way.
+	NavWidth int `json:"navWidth"`
 }
