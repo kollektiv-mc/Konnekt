@@ -54,26 +54,30 @@ export function LayoutPresets() {
     // pins the header to the bottom edge and lets the presets stack above it,
     // while the DOM keeps the disclosure button ahead of the content it
     // controls.
-    //
-    // px-3/px-2 rather than p-2/px-3, matching the crate: the row box starts on
-    // the navbar's 12px edge.
-    <div className="flex flex-col-reverse gap-2 overflow-hidden px-3 py-2">
-      <button
-        onClick={() => setCollapsed((c) => !c)}
-        className="font-title text-text-muted hover:text-text-secondary flex w-full cursor-pointer items-center justify-between px-1 text-xs font-medium tracking-wider uppercase transition-colors"
-      >
-        <span>Layouts</span>
-        {/* Swaps the glyph the way every other collapsible in the app does
-            (the console and notification filters, the scheduler palette),
-            rather than rotating one. A rotation turns the glyph about its box
-            centre, and a triangle's ink is not centred in its box, so the
-            rotated state sat visibly off-axis. Points up rather than down:
-            this panel opens upwards. */}
-        <span>{collapsed ? '▴' : '▾'}</span>
-      </button>
+    <div className="flex flex-col-reverse overflow-hidden">
+      {/* The section rule belongs to the header, not to the section, because
+          the header is the part that stays put. Carried on App's wrapper it
+          sat at the top of a box that grows upwards, so opening the panel
+          walked the line two hundred pixels up the navbar and left it
+          introducing the crate rather than the presets underneath it. */}
+      <div className="border-t-hairline border-border-subtle shrink-0 px-3 py-2">
+        <button
+          onClick={() => setCollapsed((c) => !c)}
+          className="font-title text-text-muted hover:text-text-secondary flex w-full cursor-pointer items-center justify-between text-xs font-medium tracking-wider uppercase transition-colors"
+        >
+          <span>Layouts</span>
+          {/* The same 24px box the gear and expand controls use, so the
+              navbar's right-hand column does not break at the last row. The
+              glyph swaps rather than rotating, the way every other collapsible
+              in the app does: a rotation turns it about its box centre, and a
+              triangle's ink is not centred in its box. It points up because
+              this is the one panel that opens upwards. */}
+          <span className="flex h-6 w-6 items-center justify-center">{collapsed ? '▴' : '▾'}</span>
+        </button>
+      </div>
 
       <Collapsible open={!collapsed} className="min-w-0">
-        <div className="flex min-h-0 min-w-0 flex-col gap-2">
+        <div className="flex min-h-0 min-w-0 flex-col gap-2 px-3 pb-2">
           {presets.map((preset) => (
             <div key={preset.name} className="flex items-center gap-1">
               {/* Same treatment as the server list above it in this sidebar
@@ -130,7 +134,7 @@ export function LayoutPresets() {
           </div>
 
           {error && (
-            <div role="alert" className="text-danger px-1 font-mono text-xs">
+            <div role="alert" className="text-danger font-mono text-xs">
               {error}
             </div>
           )}

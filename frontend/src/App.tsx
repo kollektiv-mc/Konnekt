@@ -544,9 +544,9 @@ function App() {
           <TileCrate />
         </div>
         <ActiveProcesses />
-        <div className="border-t-hairline border-border-subtle">
-          <LayoutPresets />
-        </div>
+        {/* No rule here: the layouts panel carries its own, on its header,
+            which is the part of it that stays still while it opens. */}
+        <LayoutPresets />
       </aside>
       {/* Straddles the navbar's border on a negative margin, so it is 4px of
           grab area that costs the layout nothing and the canvas does not shift
