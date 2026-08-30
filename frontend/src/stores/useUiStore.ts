@@ -11,6 +11,14 @@ interface UiStore {
   // Which module is mid-drag, so Dashboard can size the RGL drop placeholder.
   draggingTileId: string | null
   setDraggingTileId: (id: string | null) => void
+  // The same drag while it is still *inside* the crate, before it reaches the
+  // canvas. Deliberately a second field rather than a phase on the one above:
+  // `draggingTileId` means "a tile is being dropped onto the grid" and drives
+  // the ghost, the drop cell and the commit, and widening it to cover a
+  // reorder would put a ghost on the canvas for a drag that never left the
+  // navbar. What both share is the drag preview and hover suppression.
+  crateDragId: string | null
+  setCrateDragId: (id: string | null) => void
   // Tile to briefly glow green on the canvas (utility-tile click).
   flashTileId: string | null
   flashTile: (id: string) => void
@@ -46,6 +54,9 @@ export const useUiStore = create<UiStore>((set) => ({
 
   draggingTileId: null,
   setDraggingTileId: (id) => set({ draggingTileId: id }),
+
+  crateDragId: null,
+  setCrateDragId: (id) => set({ crateDragId: id }),
 
   flashTileId: null,
   flashTile: (id) => {

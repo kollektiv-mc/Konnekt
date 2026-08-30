@@ -34,7 +34,17 @@ function App() {
   const loaderDialogOpen = useLoaderStore((s) => s.dialogOpen)
   const [eulaRequired, setEulaRequired] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
-  const { width: navWidth, onHandleMouseDown, onHandleDoubleClick } = useNavWidth()
+  const { width: navWidth, resizing, onHandleMouseDown, onHandleDoubleClick } = useNavWidth()
+  // Any drag that moves the navbar or something inside it. While one is in
+  // flight nothing in there should light up under the pointer: the row being
+  // reordered has its own accent outline to keep, and a resize drags the
+  // pointer straight across every row on its way. Suppressing at the container
+  // rather than per-rule because it is the same answer for all of them, and
+  // because a `hover:` variant outranks whatever base class it is fighting.
+  // The gestures themselves are on window listeners and read rects, so nothing
+  // here depends on the navbar being hit-testable mid-drag.
+  const crateDragging = useUiStore((s) => s.crateDragId !== null || s.draggingTileId !== null)
+  const navFrozen = resizing || crateDragging
   const autoStarted = useRef(false)
   const lowTpsWarned = useRef(false)
 
@@ -511,7 +521,9 @@ function App() {
   return (
     <div className="flex h-screen overflow-hidden">
       <aside
-        className="border-r-hairline border-border-subtle flex shrink-0 flex-col overflow-y-auto"
+        className={`border-r-hairline border-border-subtle flex shrink-0 flex-col overflow-y-auto ${
+          navFrozen ? 'pointer-events-none' : ''
+        }`}
         // eslint-disable-next-line no-restricted-syntax -- navWidth is a live drag-computed value
         style={{ width: navWidth }}
       >

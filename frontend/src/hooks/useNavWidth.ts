@@ -100,5 +100,5 @@ export function useNavWidth() {
     commit(clampNavWidth(NAV_WIDTH_DEFAULT, viewportWidth()))
   }, [commit])
 
-  return { width, onHandleMouseDown, onHandleDoubleClick }
+  return { width, resizing: dragWidth !== null, onHandleMouseDown, onHandleDoubleClick }
 }
