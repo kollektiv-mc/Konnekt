@@ -561,6 +561,12 @@ function App() {
               the two columns finally begin on one line. It was py-2 under a 52px
               header, which put them a header apart.
 
+              gap-3, which is Dashboard.tsx's GRID_MARGIN[1] and the same 12px
+              again. The column's inset and the space between its cards are one
+              rhythm, the canvas's, so nothing in either column is measured
+              against a value the other does not use. It was gap-2, left over
+              from when the whole column was on an 8px scale.
+
               One scrolling column for all four sections, rather than a fixed
               server list, a scrolling crate and a panel pinned to the bottom
               edge. Each section draws its own card now, so the rules that used to
@@ -568,7 +574,7 @@ function App() {
               as the separation. Layouts is in here with the rest rather than
               pinned below: pinned, it had to grow upwards to keep its header
               still, which is not a shape a tile can have. */}
-          <div className="scroll-stable flex flex-1 flex-col gap-2 py-3">
+          <div className="scroll-stable flex flex-1 flex-col gap-3 py-3">
             <ServerSelector />
             <TileCrate />
             <LayoutPresets />
