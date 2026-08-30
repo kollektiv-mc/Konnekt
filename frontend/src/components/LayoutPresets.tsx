@@ -1,8 +1,13 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useLayoutStore } from '../stores/useLayoutStore'
 import { SaveLayoutPreset } from '../../wailsjs/go/main/App'
 import { DEFAULT_LAYOUT_PRESETS } from '../lib/constants'
 import { Collapsible } from './ui/Collapsible'
+import { IconButton } from './ui/IconButton'
+import { CloseIcon } from './ui/icons'
+
+// How long an armed reset stays armed.
+const RESET_CONFIRM_MS = 4000
 
 export function LayoutPresets() {
   const { presets, activePresetName, error, savePreset, loadPreset, loadPresets, deletePreset } =
@@ -11,6 +16,16 @@ export function LayoutPresets() {
   const [saving, setSaving] = useState(false)
   const [resetting, setResetting] = useState(false)
   const [collapsed, setCollapsed] = useState(true)
+  const [confirmingReset, setConfirmingReset] = useState(false)
+
+  // An armed reset disarms itself. A destructive control left primed is a trap
+  // for the next click that lands near it, and the user has already moved on
+  // by the time this fires.
+  useEffect(() => {
+    if (!confirmingReset) return
+    const t = setTimeout(() => setConfirmingReset(false), RESET_CONFIRM_MS)
+    return () => clearTimeout(t)
+  }, [confirmingReset])
 
   const handleReset = async () => {
     setResetting(true)
@@ -23,6 +38,18 @@ export function LayoutPresets() {
     } finally {
       setResetting(false)
     }
+  }
+
+  // First click arms, second performs. Reset rewrites every default preset and
+  // switches the canvas out from under you, which is not something to do on a
+  // stray click at the very bottom of the navbar.
+  const handleResetClick = () => {
+    if (!confirmingReset) {
+      setConfirmingReset(true)
+      return
+    }
+    setConfirmingReset(false)
+    void handleReset()
   }
 
   const handleSave = async () => {
@@ -46,23 +73,43 @@ export function LayoutPresets() {
   }
 
   return (
-    // px-3/px-2 rather than p-2/px-3, matching the crate: the row box starts on
-    // the navbar's 12px edge and the label sits in its own 20px column.
-    <div className="flex flex-col gap-2 overflow-hidden px-3 py-2">
-      <button
-        onClick={() => setCollapsed((c) => !c)}
-        className="font-title text-text-muted hover:text-text-secondary flex w-full cursor-pointer items-center justify-between px-1 text-xs font-medium tracking-wider uppercase transition-colors"
-      >
-        <span>Layouts</span>
-        <span
-          className={`duration-fast ease-standard inline-block transition-transform ${collapsed ? '-rotate-90' : 'rotate-0'}`}
+    // flex-col-reverse, so the list grows *upwards*. This is the last section
+    // in the navbar, so expanding it downwards is not an option — the panel
+    // would push its own header up the screen every time it opened. Reversing
+    // pins the header to the bottom edge and lets the presets stack above it,
+    // while the DOM keeps the disclosure button ahead of the content it
+    // controls.
+    <div className="flex flex-col-reverse overflow-hidden">
+      {/* The section rule belongs to the header, not to the section, because
+          the header is the part that stays put. Carried on App's wrapper it
+          sat at the top of a box that grows upwards, so opening the panel
+          walked the line two hundred pixels up the navbar and left it
+          introducing the crate rather than the presets underneath it. */}
+      <div className="border-t-hairline border-border-subtle shrink-0 px-3 py-2">
+        <button
+          onClick={() => {
+            setCollapsed((c) => !c)
+            setConfirmingReset(false)
+          }}
+          className="font-title text-text-muted hover:text-text-secondary flex w-full cursor-pointer items-center justify-between text-xs font-medium tracking-wider uppercase transition-colors"
         >
-          ▾
-        </span>
-      </button>
+          <span>Layouts</span>
+          {/* The same 24px box the gear and expand controls use, so the
+              navbar's right-hand column does not break at the last row. The
+              glyph swaps rather than rotating, the way every other collapsible
+              in the app does: a rotation turns it about its box centre, and a
+              triangle's ink is not centred in its box. It points up because
+              this is the one panel that opens upwards. */}
+          <span className="flex h-6 w-6 items-center justify-center">{collapsed ? '▴' : '▾'}</span>
+        </button>
+      </div>
 
       <Collapsible open={!collapsed} className="min-w-0">
-        <div className="flex min-h-0 min-w-0 flex-col gap-2">
+        {/* The panel opens upwards, so this edge is what meets the section
+            above it. The same rule the header carries, closing the container
+            at the other end; the padding inside it keeps the first preset off
+            the line. */}
+        <div className="border-t-hairline border-border-subtle flex min-h-0 min-w-0 flex-col gap-2 px-3 pt-3 pb-2">
           {presets.map((preset) => (
             <div key={preset.name} className="flex items-center gap-1">
               {/* Same treatment as the server list above it in this sidebar
@@ -89,13 +136,13 @@ export function LayoutPresets() {
                 {preset.name}
               </button>
               {preset.name !== 'Default' && (
-                <button
+                <IconButton
                   onClick={() => handleDelete(preset.name)}
-                  className="text-text-faint hover:text-danger cursor-pointer px-1.5 text-xs transition-colors"
                   title="Delete preset"
+                  tone="danger"
                 >
-                  ×
-                </button>
+                  <CloseIcon />
+                </IconButton>
               )}
             </div>
           ))}
@@ -119,17 +166,24 @@ export function LayoutPresets() {
           </div>
 
           {error && (
-            <div role="alert" className="text-danger px-1 font-mono text-xs">
+            <div role="alert" className="text-danger font-mono text-xs">
               {error}
             </div>
           )}
 
+          {/* Never wraps. This row sits at the bottom of a panel the user can
+              drag narrow, and a second line here would move the header the
+              whole panel is anchored to. Hover comes from Tailwind rather than
+              a mouse handler writing an inline colour, because the armed state
+              changes the colour too and an inline one would outrank it. */}
           <button
-            onClick={handleReset}
+            onClick={handleResetClick}
             disabled={resetting}
-            className="text-text-faint enabled:hover:text-text-muted mt-1 cursor-pointer px-1 text-left text-xs transition-colors disabled:cursor-not-allowed disabled:opacity-40"
+            className={`mt-1 cursor-pointer truncate text-left text-xs whitespace-nowrap transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${
+              confirmingReset ? 'text-danger' : 'text-text-faint enabled:hover:text-text-muted'
+            }`}
           >
-            {resetting ? 'Resetting…' : '↺ Reset to defaults'}
+            {resetting ? 'Resetting…' : confirmingReset ? '↺ Confirm reset' : '↺ Reset to defaults'}
           </button>
         </div>
       </Collapsible>
