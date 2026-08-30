@@ -272,13 +272,18 @@ note to a reviewer.
   servers", not "Update serverlaunch.go".
 - **No em dashes** in titles, bodies or commit messages. Use a comma, a colon,
   or two sentences. Keep the prose plain and short.
-- **Label each PR** `type:feature`, `type:bug`, `type:docs` or `type:chore`.
-  Required, and CI's `pr-labelled` job fails a PR without one. The label is the
-  *only* input to the section: the title is never read at all, by a verb, a
-  `feat:` prefix or anything else. `type:chore` and `type:docs` are counted in
-  a footer line rather than listed, because they changed nothing a user can
-  observe. `changelog:skip` leaves a PR out entirely, and does not replace a
-  `type:` label.
+- **Label each PR twice**: one `type:feature`, `type:bug`, `type:docs` or
+  `type:chore`, *and* one `area:` from `.github/labels.yml`. CI's `pr-labelled`
+  job checks the two separately and fails on either, so a PR carrying only a
+  `type:` is still red — which is how this line came to say both, after a PR
+  that had one went red on the other. The `area:` half feeds nothing in the
+  release notes; it is the issue-side rule under "Labelling an issue" holding on
+  the PR side, so a specific area beats `area:ui` here for the same reason.
+  The `type:` label is the *only* input to the release-notes section: the title
+  is never read at all, by a verb, a `feat:` prefix or anything else.
+  `type:chore` and `type:docs` are counted in a footer line rather than listed,
+  because they changed nothing a user can observe. `changelog:skip` leaves a PR
+  out entirely, and does not replace a `type:` label.
 
 **Which `type:` label.** Ask these in order and stop at the first yes:
 
