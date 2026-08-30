@@ -7,6 +7,7 @@ import { TILE_REGISTRY } from '../tiles/registry'
 import { dropIndexAt, homeIndexIn, reorderWithinGroup } from '../lib/crateOrder'
 import { DURATION_MS } from '../styles/tokens'
 import { Icon } from './ui/Icon'
+import { NavSection } from './ui/NavSection'
 
 // Pixels the pointer must travel before a press becomes a drag (vs a click).
 const DRAG_THRESHOLD = 5
@@ -263,12 +264,30 @@ export function TileCrate() {
           else itemRefs.current.delete(tile.id)
         }}
         onMouseDown={(e) => onMouseDown(tile, group, e)}
-        className={`border-hairline flex cursor-default items-center gap-2 rounded-lg px-2 py-2 text-left transition-all ${
+        // The recess means "this one is out on the canvas" — the row is the
+        // socket the tile was pulled from, so it reads as empty while the tile
+        // is elsewhere and fills back in when it comes home. It used to be the
+        // other way round, which said the opposite of what the drag does.
+        //
+        // The label stays `text-text-primary` in both states. Dimming it
+        // alongside the background made an off-canvas row read as disabled,
+        // and every one of these rows is clickable whichever side it is on:
+        // the background is what carries the state, on its own.
+        className={`border-hairline text-text-primary flex cursor-default items-center gap-2 rounded-lg px-2 py-2 text-left transition-all ${
           dragging ? '' : 'hover:border-border-subtle'
         } ${
+          // A row still in the crate is a thing sitting in a tray: it carries
+          // the soft grey. A row whose tile is out on the canvas is an empty
+          // slot, so it carries nothing and reads as flat.
+          //
+          // This is the opposite of the recess that shipped first, which put
+          // the dark fill on the on-canvas rows. That read as disabled rather
+          // than as absent — a filled box says "here is something" whichever
+          // direction the fill goes, and the row that has something is the one
+          // still holding a tile.
           onCanvas
-            ? `text-text-primary bg-transparent ${dragging ? '' : 'hover:bg-hover'}`
-            : `text-text-secondary bg-black/20 ${dragging ? '' : 'hover:bg-black/10'}`
+            ? `bg-transparent ${dragging ? '' : 'hover:bg-hover'}`
+            : `bg-hover ${dragging ? '' : 'hover:bg-white/10'}`
         } ${
           // The border colour is picked here rather than appended to a
           // `border-transparent` base: both are border-colour utilities, and
@@ -328,14 +347,31 @@ export function TileCrate() {
   }
 
   return (
-    // px-3 on the group and px-2 on the row, rather than p-2 and px-3: same
-    // 20px icon column as before, but the row box now starts at 12px like every
-    // other box in the navbar instead of poking 4px out to their left.
-    <div ref={rootRef} className="flex flex-col">
-      <div className="border-border-subtle border-b-hairline flex flex-col gap-1 px-3 py-2">
-        {renderGroup(utilityTiles, utilityIds)}
-      </div>
-      <div className="flex flex-col gap-1 px-3 py-2">{renderGroup(moduleTiles, moduleIds)}</div>
+    // Two sections rather than two groups separated by a rule, and the split is
+    // the one the crate already made: a widget is a tile that never goes
+    // fullscreen, a tile is one that does. `rootRef` stays around both, because
+    // "is the pointer still inside the crate" is a question about the whole
+    // navbar list, not about one section — dragging a row from one section
+    // across the other is still a reorder, and only the drop index is
+    // per-group.
+    //
+    // Collapsing a section takes its rows out of reach rather than out of the
+    // DOM. Nothing downstream minds: `dropIndexFor` measures only the dragged
+    // row's own siblings, so a collapsed section contributes no rect to the
+    // other's drop calculation, and the navbar is `pointer-events-none` for the
+    // whole of any drag, so neither header can be clicked mid-gesture.
+    //
+    // p-1 on the group, against the px-3/py-2 these carried as bare groups: the
+    // section card around them supplies the inset that padding used to, and
+    // doubling the two costs the labels 16px of a navbar that is only 176px
+    // wide at its narrowest. The rows keep their own px-2.
+    <div ref={rootRef} className="flex flex-col gap-2">
+      <NavSection id="widgets" title="Widgets">
+        <div className="flex flex-col gap-1 p-1">{renderGroup(utilityTiles, utilityIds)}</div>
+      </NavSection>
+      <NavSection id="tiles" title="Tiles">
+        <div className="flex flex-col gap-1 p-1">{renderGroup(moduleTiles, moduleIds)}</div>
+      </NavSection>
     </div>
   )
 }

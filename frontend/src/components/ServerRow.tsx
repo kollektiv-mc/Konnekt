@@ -59,13 +59,40 @@ export function ServerRow({ cfg, active, onSelect, onEdit }: Props) {
   return (
     <div
       ref={rowRef}
-      className="flex items-center gap-1 px-1"
+      className="flex items-center gap-1 pr-2"
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
     >
+      {/* pr-2 on the row, not px-2. Only the right half of that padding was
+          doing anything — it sets the edit control's column, 12px inside the
+          card with every other trailing control in the navbar — while the left
+          half pushed this row's rectangle 8px inside the crate rows', which is
+          the misalignment between the two lists. The button takes the 8px back
+          as padding, so the rectangle moves and the dot does not.
+
+          Only the left of that pair positions anything, so the right gives its
+          width back to the name: pr-2.5 cost twelve pixels of "NeoForge 1.21.1"
+          to pad a gap that already has the row's own gap-1 in it.
+
+          pl-2 rather than the 18px it took to sit the dot on the crate rows'
+          glyph centre. That centre belongs to a 16px glyph in a 24px box, and
+          buying into it with a 6px dot meant 18px of empty pill before the dot
+          — a gap wide enough to read as a mistake, to align a mark that is a
+          third the size of the ones it was aligning with. This card is its own
+          collapsible and does not owe them that column.
+
+          8px is where it lands instead, matching this row's own py-1.5 more
+          nearly than 12px did — a mark with more space to its left than above
+          and below it reads as pushed right, whatever column it is on.
+
+          min-w-0 is what lets the name actually truncate. The span inside carries
+          `truncate`, but this button's own overflow is visible, so its intrinsic
+          minimum is the full width of a nowrap label and it refuses to shrink
+          past it — which pushed the edit control out of the section beside a
+          name as ordinary as "NeoForge 1.21.1", at the navbar's 176px floor. */}
       <button
         onClick={onSelect}
-        className={`flex flex-1 items-center gap-2 rounded px-2 py-1.5 text-left text-xs transition-all ${
+        className={`flex min-w-0 flex-1 items-center gap-2 rounded py-1.5 pr-1 pl-2 text-left text-xs transition-all ${
           active
             ? 'text-accent bg-accent/10'
             : 'text-text-secondary hover:bg-hover hover:text-text-primary'

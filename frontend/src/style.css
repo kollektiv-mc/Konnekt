@@ -74,7 +74,20 @@ body {
   box-sizing: border-box;
 }
 
-/* Custom scrollbar — Chromium/WebView2 */
+/* Custom scrollbar — Chromium/WebView2.
+
+   The thumb rests at --border-subtle and brightens to --text-faint's 25% under
+   the pointer. Resting, it is therefore the same value as the card borders it
+   runs alongside — as quiet as a hairline, which is the right weight for a 4px
+   column the height of the navbar. It sat at 25% for a while, on the reasoning
+   that this is the value the UI gives ink meant to be present without being
+   read. That reasoning ignores mass: 25% is right for a 1.5px icon stroke, and
+   the same 25% on a bar this size was the loudest thing in the column. Alpha is
+   not weight.
+
+   6% rather than a literal 5%: the difference is under three levels of grey on
+   this background, and a token that already means "a line you are not meant to
+   look at" says why the value is what it is in a way a number cannot. */
 ::-webkit-scrollbar {
   width: 4px;
   height: 4px;
@@ -85,8 +98,42 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--border-hover);
+  background: var(--border-subtle);
   border-radius: 2px;
+}
+
+/* A scroll container whose width other things are measured against.
+
+   Chromium has no way to draw a classic scrollbar on top of content. A styled
+   ::-webkit-scrollbar is always a classic bar — it takes its width out of the
+   content box — and `overflow: overlay`, which did put one on top, was removed
+   in 106. A negative-margin reclaim can fake it, and did here for a while, but
+   only by knowing the gutter's exact width at runtime; where that guess was
+   wrong the contents ended up under the bar or short of it, which is worse than
+   the problem.
+
+   So the bar keeps its gutter and the gutter is simply always there. That is
+   what fixes the actual complaint — a bar appearing when a section expands and
+   reflowing every card beside it — because there is nothing to appear: the
+   space is reserved whether or not anything scrolls, and the track is
+   transparent, so a container that does not scroll still looks bare.
+
+   Both declarations say the same thing on purpose. `overflow-y: scroll` is
+   universal; `scrollbar-gutter: stable` states the intent and is what a browser
+   with overlay scrollbars honours, where `scroll` alone would reserve nothing.
+
+   The horizontal padding lives here rather than at the call site because the
+   gutter is part of it: a reserved gutter is right margin, so it comes out of
+   the right padding and the two sides stay even. lib/scrollbar.ts measures what
+   the platform actually reserves, since it is 4px with classic bars and zero
+   with overlay ones. Nothing breaks if that number is wrong or never arrives —
+   max() cannot go negative, the fallback pads as though nothing were reserved,
+   and either way the reflow is already fixed by the line above. */
+.scroll-stable {
+  overflow-y: scroll;
+  scrollbar-gutter: stable;
+  padding-left: 0.5rem;
+  padding-right: max(0px, 0.5rem - var(--scrollbar-gutter, 0px));
 }
 
 /* Hide native number input spinners — custom ▲▼ buttons used instead */
@@ -100,11 +147,16 @@ input[type='number']::-webkit-outer-spin-button {
   background: var(--text-faint);
 }
 
-/* Firefox */
-* {
-  scrollbar-width: thin;
-  scrollbar-color: var(--border-hover) transparent;
-}
+/* No `scrollbar-width` / `scrollbar-color` here, deliberately.
+
+   Chromium takes the standard properties as an either/or: set one to anything
+   but its initial value and it stops applying ::-webkit-scrollbar at all. This
+   file used to set both for Firefox's benefit, which quietly threw away the
+   4px width and the thumb colour above — measured, the bar was `thin`, the
+   platform's own ~10px, and the reclaim below was wrong by the
+   difference. Konnekt ships in a WebView, WebKit on Linux and macOS and
+   Chromium on Windows, so ::-webkit-scrollbar is the path that is always there
+   and the standard properties buy a browser this app never runs in. */
 
 /* react-grid-layout's own stylesheet (imported in Dashboard.tsx, after this
    file) hardcodes 200ms/100ms transition durations with a plain `ease`

@@ -134,6 +134,24 @@ Why the grid is built the way it is, and which parts are load-bearing:
   marketing site, which has no Tailwind and no build step; every page links it ahead
   of `/styles.css`, and `website/styles.css` keeps only the page vocabulary that is
   not a token (`--max-width`, `--nav-h`, `--section-y`).
+- **`font-variant-numeric` does nothing here, so do not reach for it.** Measured
+  against the shipped `.woff2` files: `Ranade-Regular` (`--font-sans`) and
+  `Excon-Medium` (`--font-title`) expose no `lnum`, `onum`, `tnum` or `pnum`
+  feature at all, so `lining-nums`/`tabular-nums` compile to dead CSS on every
+  surface that matters. Only `Satoshi-Black` (`--font-display`) has `tnum`/`pnum`,
+  and it sets one string, the `Konnekt` wordmark, which has no digits in it.
+  Two consequences worth knowing before someone tries again:
+  Ranade's digits are *already* lining — the reason `2` looks a shade taller than
+  `1` is optical overshoot, 11 units of a 1000-unit em, which is 0.12px at this
+  UI's 12px body size and is deliberate in every typeface. No feature turns it
+  off, and there is nothing to fix.
+  Ranade's digits are, however, **proportional**: nine distinct advance widths,
+  `1` at 446 units against `4` at 713, a ~3.2px spread at 12px. A number that
+  changes in place therefore jitters, and `tabular-nums` cannot fix it because
+  the font has no `tnum`. The answer already in use is `font-mono` for any live
+  readout — the stats tile's `StatRow`, the performance tile's values and table,
+  `ActiveProcesses`' percentages. Keep new numeric readouts on that path rather
+  than adding a font feature the fonts do not carry.
 - Go: `gofmt` enforced, errors always handled (no blank `_` ignores)
 - Backend diagnostics go through `log/slog`'s package-level functions
   (`slog.Error("scheduler: write history", "error", err)`), never `fmt.Printf`
@@ -254,13 +272,18 @@ note to a reviewer.
   servers", not "Update serverlaunch.go".
 - **No em dashes** in titles, bodies or commit messages. Use a comma, a colon,
   or two sentences. Keep the prose plain and short.
-- **Label each PR** `type:feature`, `type:bug`, `type:docs` or `type:chore`.
-  Required, and CI's `pr-labelled` job fails a PR without one. The label is the
-  *only* input to the section: the title is never read at all, by a verb, a
-  `feat:` prefix or anything else. `type:chore` and `type:docs` are counted in
-  a footer line rather than listed, because they changed nothing a user can
-  observe. `changelog:skip` leaves a PR out entirely, and does not replace a
-  `type:` label.
+- **Label each PR twice**: one `type:feature`, `type:bug`, `type:docs` or
+  `type:chore`, *and* one `area:` from `.github/labels.yml`. CI's `pr-labelled`
+  job checks the two separately and fails on either, so a PR carrying only a
+  `type:` is still red — which is how this line came to say both, after a PR
+  that had one went red on the other. The `area:` half feeds nothing in the
+  release notes; it is the issue-side rule under "Labelling an issue" holding on
+  the PR side, so a specific area beats `area:ui` here for the same reason.
+  The `type:` label is the *only* input to the release-notes section: the title
+  is never read at all, by a verb, a `feat:` prefix or anything else.
+  `type:chore` and `type:docs` are counted in a footer line rather than listed,
+  because they changed nothing a user can observe. `changelog:skip` leaves a PR
+  out entirely, and does not replace a `type:` label.
 
 **Which `type:` label.** Ask these in order and stop at the first yes:
 

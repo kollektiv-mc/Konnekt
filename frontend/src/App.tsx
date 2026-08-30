@@ -539,7 +539,40 @@ function App() {
         // eslint-disable-next-line no-restricted-syntax -- navWidth is a live drag-computed value
         style={{ width: navWidth }}
       >
-        <div className="border-b-hairline border-border-subtle flex shrink-0 items-center justify-between px-3 py-3">
+        {/* Two things at once: the rule lands on the same line as the first
+            tile's header rule, and the wordmark sits in the middle of the space
+            above it.
+
+            The rule is the arithmetic. A tile's header rule sits at the grid's
+            12px container padding (Dashboard.tsx's GRID_CONTAINER_PADDING[1] —
+            keep the two in step, it is module-private there and reaching it
+            from here would mean an inline style the lint rule restricts), plus
+            the tile card's own top border, plus py-2 around a 24px control row:
+            52px and one hairline. This header reaches the same total from a
+            different shape — a transparent top hairline and py-3.5 around the
+            same 24px row — which is what leaves the content centred in its own
+            box while the rule stays put.
+
+            The transparent hairline is what makes that exact rather than nearly
+            right: without one the two boxes differ by a hairline, and a hairline
+            is 0.5px at 2x and 1px at 1x, so any integer padding picked to absorb
+            it is only correct on one of them. Borrowing the same token is
+            correct on both.
+
+            The cost is that the wordmark no longer shares a baseline with the
+            first tile's title, sitting 6px above it. Being centred in the navbar
+            is the more visible of the two, since nothing sits beside the
+            wordmark to compare it against.
+
+            pr-5 plus a transparent right hairline, for the same reason and by
+            the same arithmetic sideways: 8px of card inset, the card's own
+            border, and the 12px a card header insets its own controls. That is
+            what puts the gear in the same column as the manage-servers expand
+            and every row control below it.
+            pl-3 stays — the wordmark is a brand mark in a bar, not a list item,
+            and indenting it to 24px to chase the section chevrons would read as
+            an indent rather than as alignment. */}
+        <div className="border-b-hairline border-t-hairline border-r-hairline border-b-border-subtle flex shrink-0 items-center justify-between border-t-transparent border-r-transparent py-3.5 pr-5 pl-3">
           <span className="text-accent font-display text-sm font-black tracking-tight">
             Konnekt
           </span>
@@ -547,16 +580,26 @@ function App() {
             <Icon icon={Settings} />
           </IconButton>
         </div>
-        <div className="border-b-hairline border-border-subtle">
+        {/* Horizontal padding comes from .scroll-stable, which nets the
+            scrollbar's reserved gutter out of it so the cards sit evenly
+            between the navbar's edges whether or not the platform reserves one.
+
+            One scrolling column for all four sections, rather than a fixed
+            server list, a scrolling crate and a panel pinned to the bottom
+            edge. Each section draws its own card now, so the rules that used to
+            separate them are gone, and the gap between the cards is what reads
+            as the separation. Layouts is in here with the rest rather than
+            pinned below: pinned, it had to grow upwards to keep its header
+            still, which is not a shape a tile can have. */}
+        <div className="scroll-stable flex flex-1 flex-col gap-2 py-2">
           <ServerSelector />
-        </div>
-        <div className="flex-1 overflow-y-auto">
           <TileCrate />
+          <LayoutPresets />
         </div>
+        {/* Stays outside the scroller and below it: live work is status, not a
+            section, and it has to be visible while the column above is
+            scrolled somewhere else. */}
         <ActiveProcesses />
-        {/* No rule here: the layouts panel carries its own, on its header,
-            which is the part of it that stays still while it opens. */}
-        <LayoutPresets />
       </aside>
       {/* Straddles the navbar's border on a negative margin, so it is 4px of
           grab area that costs the layout nothing and the canvas does not shift

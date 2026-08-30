@@ -189,6 +189,14 @@ func TestAppSettingsFillGapsInAnOlderFileWithDefaults(t *testing.T) {
 	if got.NavWidth != DefaultNavWidth {
 		t.Errorf("NavWidth = %d, want the default %d for a key the file lacks", got.NavWidth, DefaultNavWidth)
 	}
+	// The navbar opens on Servers and Tiles and folds Widgets and Layouts away.
+	// Only the closed ones are named: a key that is not there is open, so this
+	// map is the whole first-run shape and asserting it whole is what catches a
+	// section quietly changing sides.
+	want := map[string]bool{"widgets": true, "layouts": true}
+	if !reflect.DeepEqual(got.NavClosedSections, want) {
+		t.Errorf("NavClosedSections = %v, want %v for a key the file lacks", got.NavClosedSections, want)
+	}
 }
 
 // StopGrace is the duration form Stop's callers pass down; on a fresh install
