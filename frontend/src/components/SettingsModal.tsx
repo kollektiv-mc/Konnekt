@@ -144,7 +144,7 @@ export function SettingsModal({ open, onClose }: Props) {
         {/* Left nav */}
         <div className="bg-surface border-border-subtle border-r-hairline flex w-40 shrink-0 flex-col gap-0.5 p-3">
           <div className="border-border-subtle border-b-hairline px-2 pt-1 pb-3">
-            <span className="font-title text-text-muted text-xs font-semibold tracking-wider uppercase">
+            <span className="font-title text-text-muted text-xs font-medium tracking-wider uppercase">
               Settings
             </span>
           </div>
