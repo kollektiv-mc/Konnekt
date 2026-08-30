@@ -79,7 +79,7 @@ export function ServerSelector() {
 
         <button
           onClick={() => openServerManager(NEW_SERVER)}
-          className="text-text-faint hover:bg-hover hover:text-text-secondary mt-1 flex items-center gap-2 rounded py-1.5 pr-1 pl-4.5 text-xs transition-colors"
+          className="text-text-faint hover:bg-hover hover:text-text-secondary mt-1 flex items-center gap-2 rounded py-1.5 pr-1 pl-3 text-xs transition-colors"
         >
           {/* Sized to the status dot above it, not to the glyph, so this row's
               label starts in the same column as the server names. The plus
