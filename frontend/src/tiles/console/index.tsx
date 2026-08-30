@@ -7,17 +7,80 @@ import { errMsg } from '../../lib/ipc'
 import { Segmented } from '../../components/ui/Segmented'
 import { QuickCommandsPanel } from '../../components/QuickCommandsPanel'
 import type { TileProps } from '../../types'
+import type { LogLine, ManagerOutcome } from '../../stores/useConsoleStore'
 import { useState } from 'react'
 
-const LEVEL_CLASS = {
+// Server output only. Konnekt's own narration (#113) does not take a level
+// class at all: it renders as its own block below.
+const LEVEL_CLASS: Record<Exclude<LogLine['level'], 'manager'>, string> = {
   success: 'text-accent',
   warn: 'text-yellow-400',
   error: 'text-red-400',
   dim: 'text-[var(--text-secondary)]',
-  // Konnekt's own narration (#113), distinct from every server-output level
-  // so the manager's voice reads apart at a glance.
-  manager: 'text-sky-400 font-medium',
-} as const
+}
+
+// Konnekt's narration is boxed rather than merely tinted. A differently
+// coloured line is easy to scroll straight past in a thousand lines of server
+// output, and an outlined block with a status dot is not; the block is also
+// what lets the line drop the "[Konnekt] " text tag it used to carry, since
+// the box already says who is speaking.
+//
+// The dot says how the work went, which the tag never did. Its colours are the
+// status tokens from Settings > Appearance, so narration retints with the rest
+// of the app and follows the light theme's darker variants — unlike the raw
+// text-sky-400 this replaced, which sat outside the token layer entirely.
+const OUTCOME_STYLE: Record<ManagerOutcome, { block: string; dot: string; label: string }> = {
+  progress: {
+    block: 'border-warning/40 bg-warning/[0.07]',
+    dot: 'bg-warning',
+    label: 'Konnekt, in progress',
+  },
+  ok: {
+    block: 'border-success/40 bg-success/[0.07]',
+    dot: 'bg-success',
+    label: 'Konnekt, finished',
+  },
+  failed: {
+    block: 'border-danger/40 bg-danger/[0.07]',
+    dot: 'bg-danger',
+    label: 'Konnekt, failed',
+  },
+}
+
+// w-fit keeps the block the width of what it says rather than a full-width
+// band: a run of them (a backup narrates up to five) reads as discrete blocks
+// inset in the stream instead of banding the panel. max-w-full is what lets a
+// long line still wrap inside the box.
+function ManagerLine({
+  line,
+  query,
+  showTimestamp,
+}: {
+  line: LogLine
+  query: string
+  showTimestamp: boolean
+}) {
+  const style = OUTCOME_STYLE[line.outcome ?? 'progress']
+  return (
+    <div
+      className={`border-hairline my-1 flex w-fit max-w-full items-start gap-2 rounded-md px-2 py-1 ${style.block}`}
+    >
+      {showTimestamp && <span className="text-text-faint h-5 shrink-0">{line.timestamp}</span>}
+      {/* The dot is the only thing naming the outcome and it sits in no
+          labelled control, so it is named rather than aria-hidden. The h-5 box
+          matches leading-5, which centres it on the first line however far the
+          text wraps — no magic offset to re-tune when the type scale moves. */}
+      <span className="flex h-5 shrink-0 items-center">
+        <span
+          role="img"
+          aria-label={style.label}
+          className={`h-1.5 w-1.5 rounded-full ${style.dot}`}
+        />
+      </span>
+      <span className="text-text-primary min-w-0 flex-1">{highlightQuery(line.text, query)}</span>
+    </div>
+  )
+}
 
 type LevelFilter = 'all' | 'warn' | 'error'
 
@@ -171,12 +234,18 @@ export function ConsoleTile({ serverId, maximized }: TileProps) {
         ) : filtered.length === 0 ? (
           <div className="text-text-faint py-2 font-mono text-xs">No matching lines</div>
         ) : (
-          filtered.map((line) => (
-            <div key={line.id} className="flex gap-2">
-              {showTimestamps && <span className="text-text-faint shrink-0">{line.timestamp}</span>}
-              <span className={LEVEL_CLASS[line.level]}>{highlightQuery(line.text, query)}</span>
-            </div>
-          ))
+          filtered.map((line) =>
+            line.level === 'manager' ? (
+              <ManagerLine key={line.id} line={line} query={query} showTimestamp={showTimestamps} />
+            ) : (
+              <div key={line.id} className="flex gap-2">
+                {showTimestamps && (
+                  <span className="text-text-faint shrink-0">{line.timestamp}</span>
+                )}
+                <span className={LEVEL_CLASS[line.level]}>{highlightQuery(line.text, query)}</span>
+              </div>
+            ),
+          )
         )}
       </div>
 

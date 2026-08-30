@@ -76,6 +76,7 @@ after them is dated. Newest last, in both groups.
 - [2026-08-29 — The channel a snapshot could never update through](#2026-08-29-the-channel-a-snapshot-could-never-update-through)
 - [2026-08-29 — The warm-up that moved the stutter onto the first scroll](#2026-08-29-the-warm-up-that-moved-the-stutter-onto-the-first-scroll)
 - [2026-08-30 — The catch attached to a call that never returned](#2026-08-30-the-catch-attached-to-a-call-that-never-returned)
+- [2026-08-30 — The narration you had to read to know whether it worked](#2026-08-30-the-narration-you-had-to-read-to-know-whether-it-worked)
 
 ---
 
@@ -4128,3 +4129,91 @@ effect keyed on that value. It was masked before, since the tile could not
 render at all in this preset. Filed as [#209](../../issues/209). A separate
 sweep of the worlds scene's camera, prompted during the same session, is
 [#208](../../issues/208).
+
+
+### 2026-08-30 — The narration you had to read to know whether it worked
+
+**The gap.** #113 gave the console Konnekt's own voice, and it worked: a backup,
+a restore, a quiesce and a crash all say so now. What it could not say was how
+any of them went. `ConsoleLine.Source` marks *who* spoke, and that was the whole
+of the marker, so "Backup finished: world.zip (412.7 MB)" and "Backup failed:
+disk error" arrived identical as far as the UI was concerned — one `manager`
+level, one colour, `text-sky-400`. Telling them apart meant reading the sentence,
+which is exactly what a user scrolling a thousand lines of server output during
+trouble is least able to do.
+
+Two smaller things came with it. The `[Konnekt] ` tag every narrated line
+carried was pure presentation duplicating a marker that was already structural,
+and it cost eleven columns on every line in the one panel where width is
+scarce. And `text-sky-400` is a raw Tailwind palette colour: it sat outside the
+token layer entirely, so narration was the one thing in the app that ignored
+Settings > Appearance and kept its dark-theme blue on a light canvas.
+
+**The fix** (`backend/models/console.go`, `backend/services/server.go`,
+`backup.go`, `loader.go`, `app.go`; frontend `useConsoleStore.ts`, `App.tsx`,
+`tiles/console/index.tsx`). `ConsoleLine` gains `Outcome` — `progress`, `ok`,
+`failed` — mirrored as an optional `outcome` key on the `log:line` payload,
+omitted entirely when empty, exactly the contract `source` already had. So
+server output travels the payload it always has and the `map[string]string`
+shape assertion still holds.
+
+The outcome is structural for the same reason the source marker is: classifying
+it from the wording would read "Backup failed: …" by the word `failed`, which is
+the substring heuristic #113 removed. The narrator knows what happened, so the
+narrator says it. `Narrate` keeps its name and now means progress; `NarrateDone`
+and `NarrateFailed` are its twins, and picking one at each of the twenty call
+sites is the whole of the classification. `BackupService` and `LoaderService`
+grew matching nil-safe forwarders.
+
+Three lines resist the three-way split and stay yellow deliberately: the
+force-kill escalation, the ready-line timeout fallback, and "Resuming world
+saves". Green would claim a clean finish and red would claim a break; none of
+the three is either, and yellow is the only one of the three that overstates
+nothing. A manager line with a missing or unrecognised outcome falls back to
+progress on the same reasoning — a line from a path predating the marker gets a
+dot, but never an invented verdict.
+
+On the frontend the narration stops being a coloured line and becomes its own
+block: hairline outline, faint tint, a status dot, `w-fit` so a run of them
+reads as discrete blocks rather than banding the panel. The `[Konnekt] ` tag is
+gone, because the block already says who is speaking and the dot says how it
+went. Colours are `--success`/`--warning`/`--danger`, which `applySkin()`
+overrides at runtime, so narration now retints with the user's chosen status
+colours and picks up the light theme's darker variants. The dot carries
+`role="img"` and a name — it is the only thing stating the outcome and sits in
+no labelled control, unlike the `aria-hidden` icons inside an `IconButton`. Its
+`h-5` wrapper matches `leading-5`, which centres it on the first line however
+far the text wraps, with no offset to re-tune when the type scale moves.
+
+The level filter is untouched: it stays a *server log level* filter, so
+narration still appears under All rather than being swept into Warn or Error.
+
+**Known and accepted:** the console's server-output levels still use raw
+`text-yellow-400` / `text-red-400` / `text-[var(--text-secondary)]`, so a WARN
+line does not follow the user's warning colour the way a narration block now
+does. That is the same gap this entry closes for narration, one level over, and
+it was left alone rather than widened into a second concern in one change.
+
+**Verification.** Go: `TestNarrateMarksManagerLines` now pins both markers and
+both zero values (server output carries neither key), and a new
+`TestNarrateVerbsCarryTheirOutcome` pins verb to outcome. The backup round trip
+asserts the outcome sequence progress → ok → progress → ok alongside the
+existing ordering, and the corrupt-archive case asserts the failure line is
+marked `failed` rather than merely worded that way. The two "no banner at all"
+assertions moved off the `[Konnekt]` substring onto `Source == sourceManager`,
+which is what they meant. `backend/services` coverage 49.9%, floor 47%.
+
+Frontend: the store tests cover all three outcomes, the progress fallback for a
+missing or unknown value, and both markers through `appendLine` and
+`loadHistory`; the tile tests assert the block, the per-outcome outline and dot
+colour, and the dot's accessible name. 607 tests across 47 files, up from 603;
+lint holds at 13 warnings, byte-identical to before. Entry chunk 150.4 KB gzip
+against the 165 KB budget, and `check-tokens` confirms every token class
+compiles. The emitted CSS was checked directly to confirm the utilities resolve
+through `var(--success)` rather than baking the value at build time, which would
+have silently broken `applySkin()`.
+
+Then the real thing, rendered in Chromium at both themes against a seeded
+console: server output in its four levels interleaved with all three narration
+outcomes. The blocks read at a glance in both, and the light theme picks up its
+darker status variants as intended.

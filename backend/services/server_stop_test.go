@@ -57,10 +57,10 @@ func TestStopEscalatesThroughBannersToKill(t *testing.T) {
 	lines := consoleLines(s)
 	warnAt, killAt := -1, -1
 	for i, line := range lines {
-		if strings.Contains(line, "[Konnekt] Still waiting for the server to stop") {
+		if strings.Contains(line, "Still waiting for the server to stop") {
 			warnAt = i
 		}
-		if strings.Contains(line, "[Konnekt] Server did not stop within") {
+		if strings.Contains(line, "Server did not stop within") {
 			killAt = i
 		}
 		if strings.Contains(line, "exited unexpectedly") {
@@ -108,9 +108,9 @@ func TestStopWithinGraceWritesNoBanners(t *testing.T) {
 		t.Fatal("Stop never returned")
 	}
 
-	for _, line := range consoleLines(s) {
-		if strings.Contains(line, "[Konnekt]") {
-			t.Errorf("banner on a stop that finished inside the grace: %q", line)
+	for _, line := range s.GetConsoleHistory() {
+		if line.Source == sourceManager {
+			t.Errorf("banner on a stop that finished inside the grace: %q", line.Line)
 		}
 	}
 	if got := kills(); len(got) != 0 {
@@ -163,7 +163,7 @@ func TestForceStopWhileGracefulStopWedged(t *testing.T) {
 
 	var banner bool
 	for _, line := range consoleLines(s) {
-		if strings.Contains(line, "[Konnekt] Force stopping") {
+		if strings.Contains(line, "Force stopping") {
 			banner = true
 		}
 	}

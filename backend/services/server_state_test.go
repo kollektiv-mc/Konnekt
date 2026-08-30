@@ -208,7 +208,7 @@ func TestStartingTimeoutPromotesToRunning(t *testing.T) {
 
 	var banner bool
 	for _, line := range s.GetConsoleHistory() {
-		if strings.Contains(line.Line, "[Konnekt] No ready line seen") {
+		if strings.Contains(line.Line, "No ready line seen") {
 			banner = true
 		}
 	}
@@ -249,7 +249,7 @@ func TestReadySuppressesTheTimeout(t *testing.T) {
 		}
 	}
 	for _, line := range s.GetConsoleHistory() {
-		if strings.Contains(line.Line, "[Konnekt] No ready line seen") {
+		if strings.Contains(line.Line, "No ready line seen") {
 			t.Errorf("timeout banner written although ready matched first: %q", line.Line)
 		}
 	}

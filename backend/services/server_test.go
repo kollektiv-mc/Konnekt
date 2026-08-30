@@ -174,12 +174,13 @@ func TestStreamOutputMatchersFireOnNormalizedLines(t *testing.T) {
 	}
 }
 
-// Manager narration is marked structurally, not by its prefix: the console
-// tile styles and excludes it from server-output pattern matching off the
-// source marker, so a plugin printing "[Konnekt]" cannot pass for Konnekt
-// (#113). The counter-half pins the zero value: server output carries no
-// source key at all, so every path that predates the marker still reads as
-// server output.
+// Manager narration is marked structurally, never by its wording: the console
+// tile boxes it, dots it and excludes it from server-output pattern matching
+// off the source marker, so a plugin printing "[Konnekt]" cannot pass for
+// Konnekt (#113). The narration itself carries no tag at all any more — the
+// marker is the whole identification, and the outcome is what the dot reads.
+// The counter-half pins the zero value: server output carries neither key, so
+// every path that predates the markers still reads as server output.
 func TestNarrateMarksManagerLines(t *testing.T) {
 	s, bus := newServerFixture()
 	lines := collect(bus, EventLogLine)
@@ -197,13 +198,19 @@ func TestNarrateMarksManagerLines(t *testing.T) {
 		switch m["source"] {
 		case sourceManager:
 			sawManager = true
-			if m["line"] != "[Konnekt] something happened" {
-				t.Errorf("manager line = %q, want the daemon tag prepended", m["line"])
+			if m["line"] != "something happened" {
+				t.Errorf("manager line = %q, want it carried verbatim with no tag", m["line"])
+			}
+			if m["outcome"] != outcomeProgress {
+				t.Errorf("manager outcome = %q, want %q", m["outcome"], outcomeProgress)
 			}
 		case "":
 			sawServer = true
 			if _, present := m["source"]; present {
 				t.Error("server output carries a source key, want it omitted entirely")
+			}
+			if _, present := m["outcome"]; present {
+				t.Error("server output carries an outcome key, want it omitted entirely")
 			}
 		default:
 			t.Errorf("unexpected source %q", m["source"])
@@ -220,8 +227,35 @@ func TestNarrateMarksManagerLines(t *testing.T) {
 	if history[0].Source != sourceManager {
 		t.Errorf("buffered manager line Source = %q, want %q", history[0].Source, sourceManager)
 	}
+	if history[0].Outcome != outcomeProgress {
+		t.Errorf("buffered manager line Outcome = %q, want %q", history[0].Outcome, outcomeProgress)
+	}
 	if history[1].Source != "" {
 		t.Errorf("buffered server line Source = %q, want empty", history[1].Source)
+	}
+	if history[1].Outcome != "" {
+		t.Errorf("buffered server line Outcome = %q, want empty", history[1].Outcome)
+	}
+}
+
+// Each narration verb picks the outcome the console paints as its dot, so
+// "finished" is green and "failed" is red without the UI reading the wording.
+func TestNarrateVerbsCarryTheirOutcome(t *testing.T) {
+	s, _ := newServerFixture()
+
+	s.Narrate("working")
+	s.NarrateDone("done")
+	s.NarrateFailed("broke")
+
+	want := []string{outcomeProgress, outcomeOK, outcomeFailed}
+	history := s.GetConsoleHistory()
+	if len(history) != len(want) {
+		t.Fatalf("ring buffer holds %d lines, want %d", len(history), len(want))
+	}
+	for i, w := range want {
+		if history[i].Outcome != w {
+			t.Errorf("line %d (%q) Outcome = %q, want %q", i, history[i].Line, history[i].Outcome, w)
+		}
 	}
 }
 
@@ -240,9 +274,9 @@ func TestPrepareForBackupNarratesTheQuiesce(t *testing.T) {
 	s.ResumeSaves()
 
 	want := []string{
-		"[Konnekt] Pausing world saves and flushing to disk",
-		"[Konnekt] RCON unavailable, giving the save 1ms to flush",
-		"[Konnekt] Resuming world saves",
+		"Pausing world saves and flushing to disk",
+		"RCON unavailable, giving the save 1ms to flush",
+		"Resuming world saves",
 	}
 	got := consoleLines(s)
 	if len(got) != len(want) {
@@ -358,7 +392,7 @@ func TestWaitForExitNormalStopWritesNoBanner(t *testing.T) {
 		t.Errorf("GetLastStop() = %+v, want {Expected:true ExitCode:0}", got)
 	}
 	for _, line := range s.GetConsoleHistory() {
-		if strings.Contains(line.Line, "[Konnekt]") {
+		if line.Source == sourceManager {
 			t.Errorf("console history holds a banner on a deliberate stop: %q", line.Line)
 		}
 	}

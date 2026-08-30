@@ -17,6 +17,7 @@ import { useLoaderStore } from './stores/useLoaderStore'
 import { useUiStore } from './stores/useUiStore'
 import { useServerConfigStore } from './stores/useServerConfigStore'
 import { useConsoleStore } from './stores/useConsoleStore'
+import type { IncomingLine } from './stores/useConsoleStore'
 import { useSettingsStore } from './stores/useSettingsStore'
 import { useProcessesStore } from './stores/useProcessesStore'
 import { emitNotification } from './lib/notify'
@@ -104,15 +105,16 @@ function App() {
 
   // Batch log lines so the console re-renders at most ~7×/sec instead of once
   // per line — prevents render storms on busy servers.
-  const pendingLines = useRef<Array<{ timestamp: string; line: string; source?: string }>>([])
+  const pendingLines = useRef<IncomingLine[]>([])
   useEffect(() => {
     let cleanup: (() => void) | undefined
     try {
       cleanup = EventsOn(
         EVENTS.LOG_LINE,
         // `source` marks a line Konnekt narrated rather than server output
-        // (#113); it is absent on server lines.
-        (data: { timestamp: string; line: string; source?: string }) => {
+        // (#113) and `outcome` says how that went; both are absent on server
+        // lines.
+        (data: IncomingLine) => {
           pendingLines.current.push(data)
         },
       )
