@@ -76,13 +76,18 @@ body {
 
 /* Custom scrollbar — Chromium/WebView2.
 
-   The thumb is --border-hover, 12% white, and brightens to --text-faint's 25%
-   under the pointer. It sat at 25% at rest for a while, on the reasoning that
-   this is the value the UI gives ink that should be present without being read.
-   That reasoning ignores mass: 25% is right for a 1.5px icon stroke, and the
-   same 25% on a 4px column running the height of the navbar is a far heavier
-   mark than the pencils beside it, which is why it read as the loudest thing in
-   the column. Alpha is not weight. */
+   The thumb rests at --border-subtle and brightens to --text-faint's 25% under
+   the pointer. Resting, it is therefore the same value as the card borders it
+   runs alongside — as quiet as a hairline, which is the right weight for a 4px
+   column the height of the navbar. It sat at 25% for a while, on the reasoning
+   that this is the value the UI gives ink meant to be present without being
+   read. That reasoning ignores mass: 25% is right for a 1.5px icon stroke, and
+   the same 25% on a bar this size was the loudest thing in the column. Alpha is
+   not weight.
+
+   6% rather than a literal 5%: the difference is under three levels of grey on
+   this background, and a token that already means "a line you are not meant to
+   look at" says why the value is what it is in a way a number cannot. */
 ::-webkit-scrollbar {
   width: 4px;
   height: 4px;
@@ -93,7 +98,7 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--border-hover);
+  background: var(--border-subtle);
   border-radius: 2px;
 }
 
