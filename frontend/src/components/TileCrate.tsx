@@ -59,7 +59,8 @@ interface Drop {
 
 export function TileCrate() {
   const { activeTileIds, addTile } = useTileStore()
-  const { requestMaximize, requestCloseMaximize, flashTile, setDraggingTileId } = useUiStore()
+  const { requestMaximize, requestCloseMaximize, flashTile, setDraggingTileId, setCrateDragId } =
+    useUiStore()
   const crateOrder = useSettingsStore((s) => s.settings.crateOrder)
 
   // Where the dragged row *would* land, not where anything has moved to.
@@ -178,6 +179,7 @@ export function TileCrate() {
     }
     if (withinCrateBounds(e.clientX, e.clientY)) {
       if (p.mode === 'canvas') setDraggingTileId(null)
+      if (p.mode !== 'reorder') setCrateDragId(p.tile.id)
       p.mode = 'reorder'
       const index = dropIndexFor(p, e.clientY)
       p.index = index
@@ -186,6 +188,7 @@ export function TileCrate() {
       setDrop((d) => (d && d.id === p.tile.id && d.index === index ? d : { id: p.tile.id, index }))
     } else {
       if (p.mode !== 'canvas') {
+        setCrateDragId(null)
         setDraggingTileId(p.tile.id)
         // No half-applied reorder to freeze on the way out: the crate still
         // holds the persisted order, and the gap this was aiming at is simply
@@ -203,6 +206,7 @@ export function TileCrate() {
     const p = press.current
     press.current = null
     setDrop(null)
+    setCrateDragId(null)
     if (!p) return
     if (!p.dragging) {
       if (p.shiftKey) handleShiftClick(p.tile)
@@ -241,6 +245,12 @@ export function TileCrate() {
   const renderTile = (tile: TileDefinition, group: ReadonlySet<string>) => {
     const onCanvas = activeTileIds.includes(tile.id)
     const held = drop?.id === tile.id
+    // Mid-drag the hover styles come off entirely rather than being overridden.
+    // `hover:border-border-subtle` is a variant, so it outranks the held row's
+    // `border-accent` however the two are ordered in the class string — which
+    // is what made the green outline vanish the moment the pointer sat on the
+    // row it belonged to.
+    const dragging = drop !== null
     return (
       <button
         key={tile.id}
@@ -249,10 +259,12 @@ export function TileCrate() {
           else itemRefs.current.delete(tile.id)
         }}
         onMouseDown={(e) => onMouseDown(tile, group, e)}
-        className={`hover:border-border-subtle border-hairline flex cursor-default items-center gap-2 rounded-lg px-3 py-2 text-left transition-all ${
+        className={`border-hairline flex cursor-default items-center gap-2 rounded-lg px-3 py-2 text-left transition-all ${
+          dragging ? '' : 'hover:border-border-subtle'
+        } ${
           onCanvas
-            ? 'text-text-primary hover:bg-hover bg-transparent'
-            : 'text-text-secondary bg-black/20 hover:bg-black/10'
+            ? `text-text-primary bg-transparent ${dragging ? '' : 'hover:bg-hover'}`
+            : `text-text-secondary bg-black/20 ${dragging ? '' : 'hover:bg-black/10'}`
         } ${
           // The border colour is picked here rather than appended to a
           // `border-transparent` base: both are border-colour utilities, and
