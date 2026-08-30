@@ -1,10 +1,13 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useLayoutStore } from '../stores/useLayoutStore'
 import { SaveLayoutPreset } from '../../wailsjs/go/main/App'
 import { DEFAULT_LAYOUT_PRESETS } from '../lib/constants'
 import { Collapsible } from './ui/Collapsible'
 import { IconButton } from './ui/IconButton'
 import { CloseIcon } from './ui/icons'
+
+// How long an armed reset stays armed.
+const RESET_CONFIRM_MS = 4000
 
 export function LayoutPresets() {
   const { presets, activePresetName, error, savePreset, loadPreset, loadPresets, deletePreset } =
@@ -13,6 +16,16 @@ export function LayoutPresets() {
   const [saving, setSaving] = useState(false)
   const [resetting, setResetting] = useState(false)
   const [collapsed, setCollapsed] = useState(true)
+  const [confirmingReset, setConfirmingReset] = useState(false)
+
+  // An armed reset disarms itself. A destructive control left primed is a trap
+  // for the next click that lands near it, and the user has already moved on
+  // by the time this fires.
+  useEffect(() => {
+    if (!confirmingReset) return
+    const t = setTimeout(() => setConfirmingReset(false), RESET_CONFIRM_MS)
+    return () => clearTimeout(t)
+  }, [confirmingReset])
 
   const handleReset = async () => {
     setResetting(true)
@@ -25,6 +38,18 @@ export function LayoutPresets() {
     } finally {
       setResetting(false)
     }
+  }
+
+  // First click arms, second performs. Reset rewrites every default preset and
+  // switches the canvas out from under you, which is not something to do on a
+  // stray click at the very bottom of the navbar.
+  const handleResetClick = () => {
+    if (!confirmingReset) {
+      setConfirmingReset(true)
+      return
+    }
+    setConfirmingReset(false)
+    void handleReset()
   }
 
   const handleSave = async () => {
@@ -62,7 +87,10 @@ export function LayoutPresets() {
           introducing the crate rather than the presets underneath it. */}
       <div className="border-t-hairline border-border-subtle shrink-0 px-3 py-2">
         <button
-          onClick={() => setCollapsed((c) => !c)}
+          onClick={() => {
+            setCollapsed((c) => !c)
+            setConfirmingReset(false)
+          }}
           className="font-title text-text-muted flex w-full items-center justify-between text-xs font-medium tracking-wider uppercase transition-colors"
           onMouseEnter={(e) => {
             ;(e.currentTarget as HTMLButtonElement).style.color = 'var(--text-secondary)'
@@ -83,11 +111,11 @@ export function LayoutPresets() {
       </div>
 
       <Collapsible open={!collapsed} className="min-w-0">
-        {/* pt-3 rather than nothing: the panel opens upwards, so its topmost
-            preset is what meets the section above it, and flush against that
-            row it reads as part of the list rather than as the top of its own
-            container. */}
-        <div className="flex min-h-0 min-w-0 flex-col gap-2 px-3 pt-3 pb-2">
+        {/* The panel opens upwards, so this edge is what meets the section
+            above it. The same rule the header carries, closing the container
+            at the other end; the padding inside it keeps the first preset off
+            the line. */}
+        <div className="border-t-hairline border-border-subtle flex min-h-0 min-w-0 flex-col gap-2 px-3 pt-3 pb-2">
           {presets.map((preset) => (
             <div key={preset.name} className="flex items-center gap-1">
               <button
@@ -165,18 +193,19 @@ export function LayoutPresets() {
             </div>
           )}
 
+          {/* Never wraps. This row sits at the bottom of a panel the user can
+              drag narrow, and a second line here would move the header the
+              whole panel is anchored to. Hover comes from Tailwind rather than
+              a mouse handler writing an inline colour, because the armed state
+              changes the colour too and an inline one would outrank it. */}
           <button
-            onClick={handleReset}
+            onClick={handleResetClick}
             disabled={resetting}
-            className="text-text-faint mt-1 text-left text-xs transition-colors disabled:opacity-40"
-            onMouseEnter={(e) => {
-              ;(e.currentTarget as HTMLButtonElement).style.color = 'var(--text-muted)'
-            }}
-            onMouseLeave={(e) => {
-              ;(e.currentTarget as HTMLButtonElement).style.color = 'var(--text-faint)'
-            }}
+            className={`mt-1 truncate text-left text-xs whitespace-nowrap transition-colors disabled:opacity-40 ${
+              confirmingReset ? 'text-danger' : 'text-text-faint hover:text-text-muted'
+            }`}
           >
-            {resetting ? 'Resetting…' : '↺ Reset to defaults'}
+            {resetting ? 'Resetting…' : confirmingReset ? '↺ Confirm reset' : '↺ Reset to defaults'}
           </button>
         </div>
       </Collapsible>
