@@ -4,7 +4,7 @@ import { useTileStore } from '../stores/useTileStore'
 import { useUiStore } from '../stores/useUiStore'
 import { useSettingsStore } from '../stores/useSettingsStore'
 import { TILE_REGISTRY } from '../tiles/registry'
-import { dropIndexAt, reorderWithinGroup } from '../lib/crateOrder'
+import { dropIndexAt, homeIndexIn, reorderWithinGroup } from '../lib/crateOrder'
 import { DURATION_MS } from '../styles/tokens'
 
 // Pixels the pointer must travel before a press becomes a drag (vs a click).
@@ -214,6 +214,9 @@ export function TileCrate() {
       return
     }
     if (p.mode === 'reorder' && p.index !== null) {
+      // Released on its own slot: the order is already what it would be
+      // written as, so there is nothing to persist and nothing to animate.
+      if (p.index === homeIndexIn(order, p.group, p.tile.id)) return
       const next = reorderWithinGroup(order, p.group, p.tile.id, p.index)
       // Measured before the commit, because the commit is what moves them.
       flipFrom.current = new Map(
@@ -290,7 +293,15 @@ export function TileCrate() {
    */
   const renderGroup = (tiles: TileDefinition[], group: ReadonlySet<string>) => {
     const marker = <div key="drop" className="bg-accent -my-[3px] h-0.5 shrink-0 rounded-full" />
-    const active = drop !== null && group.has(drop.id)
+    // No marker for the drop that puts the row back where it started. Both
+    // gaps touching a row mean that same index — it cannot land above itself
+    // and below itself at different places — so a marker drawn for it has to
+    // pick one of the two and promise a move that will not happen. It used to
+    // pick the gap below, which is why the space above a held row never lit up
+    // while the space below it always did, for a drag that changed nothing
+    // either way. Drawing nothing says what is actually true.
+    const active =
+      drop !== null && group.has(drop.id) && drop.index !== homeIndexIn(order, group, drop.id)
     const out: React.ReactNode[] = []
     let siblingIndex = 0
     for (const tile of tiles) {

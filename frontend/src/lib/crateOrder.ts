@@ -61,3 +61,26 @@ export function dropIndexAt(rows: readonly (RowBox | null)[], clientY: number): 
   }
   return index
 }
+
+/**
+ * Where `id` currently sits among the members of its group.
+ *
+ * This is also the one insertion index that changes nothing:
+ * `reorderWithinGroup(order, groupIds, id, homeIndexIn(order, groupIds, id))`
+ * returns `order` unchanged. The crate uses it to tell a drop that would move
+ * the row from one that would put it back where it started.
+ *
+ * Note the gaps either side of a row both mean this index — a row cannot land
+ * above itself and below itself at different places — so a marker drawn for it
+ * has to pick one of the two, and either choice promises a move that will not
+ * happen. Drawing nothing is the honest answer.
+ *
+ * Returns -1 when `id` is not in the group.
+ */
+export function homeIndexIn(
+  order: readonly string[],
+  groupIds: ReadonlySet<string>,
+  id: string,
+): number {
+  return order.filter((x) => groupIds.has(x)).indexOf(id)
+}
