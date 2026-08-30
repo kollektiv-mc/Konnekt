@@ -3,6 +3,8 @@ import { useLayoutStore } from '../stores/useLayoutStore'
 import { SaveLayoutPreset } from '../../wailsjs/go/main/App'
 import { DEFAULT_LAYOUT_PRESETS } from '../lib/constants'
 import { Collapsible } from './ui/Collapsible'
+import { IconButton } from './ui/IconButton'
+import { CloseIcon } from './ui/icons'
 
 export function LayoutPresets() {
   const { presets, activePresetName, error, savePreset, loadPreset, loadPresets, deletePreset } =
@@ -46,19 +48,28 @@ export function LayoutPresets() {
   }
 
   return (
+    // flex-col-reverse, so the list grows *upwards*. This is the last section
+    // in the navbar, so expanding it downwards is not an option — the panel
+    // would push its own header up the screen every time it opened. Reversing
+    // pins the header to the bottom edge and lets the presets stack above it,
+    // while the DOM keeps the disclosure button ahead of the content it
+    // controls.
+    //
     // px-3/px-2 rather than p-2/px-3, matching the crate: the row box starts on
-    // the navbar's 12px edge and the label sits in its own 20px column.
-    <div className="flex flex-col gap-2 overflow-hidden px-3 py-2">
+    // the navbar's 12px edge.
+    <div className="flex flex-col-reverse gap-2 overflow-hidden px-3 py-2">
       <button
         onClick={() => setCollapsed((c) => !c)}
         className="font-title text-text-muted hover:text-text-secondary flex w-full cursor-pointer items-center justify-between px-1 text-xs font-medium tracking-wider uppercase transition-colors"
       >
         <span>Layouts</span>
-        <span
-          className={`duration-fast ease-standard inline-block transition-transform ${collapsed ? '-rotate-90' : 'rotate-0'}`}
-        >
-          ▾
-        </span>
+        {/* Swaps the glyph the way every other collapsible in the app does
+            (the console and notification filters, the scheduler palette),
+            rather than rotating one. A rotation turns the glyph about its box
+            centre, and a triangle's ink is not centred in its box, so the
+            rotated state sat visibly off-axis. Points up rather than down:
+            this panel opens upwards. */}
+        <span>{collapsed ? '▴' : '▾'}</span>
       </button>
 
       <Collapsible open={!collapsed} className="min-w-0">
@@ -89,13 +100,13 @@ export function LayoutPresets() {
                 {preset.name}
               </button>
               {preset.name !== 'Default' && (
-                <button
+                <IconButton
                   onClick={() => handleDelete(preset.name)}
-                  className="text-text-faint hover:text-danger cursor-pointer px-1.5 text-xs transition-colors"
                   title="Delete preset"
+                  tone="danger"
                 >
-                  ×
-                </button>
+                  <CloseIcon />
+                </IconButton>
               )}
             </div>
           ))}
