@@ -4,6 +4,7 @@ import { TILE_REGISTRY } from './registry'
 import { ServerRow } from '../components/ServerRow'
 import { ServerDetail } from '../components/ServerManager/ServerDetail'
 import { TitleBar } from '../components/TitleBar'
+import { useCommandsSync } from '../hooks/useCommandsSync'
 import { GetStatsHistory } from '../../wailsjs/go/main/App'
 import { WindowMinimise } from '../../wailsjs/runtime/runtime'
 import type { ServerConfig } from '../types'
@@ -74,6 +75,20 @@ describe('no Wails bridge', () => {
 
   it('renders the server manager detail panel', () => {
     expect(() => render(<ServerDetail config={CONFIG} />)).not.toThrow()
+  })
+
+  // Mounted in App, so a throw here is not one broken widget: it reaches the
+  // app-level ErrorBoundary and replaces the whole window with "render error".
+  // That is what shipped in #222, where this hook's EventsOn was the only one
+  // of the app's 48 without the try/catch the other 47 carry — nothing caught
+  // it because no test rendered App, or this hook, with no bridge. A hook needs
+  // a host component to be mounted at all.
+  it('mounts the commands sync, whose listener would otherwise take App down', () => {
+    function Host() {
+      useCommandsSync()
+      return <div>host</div>
+    }
+    expect(() => render(<Host />)).not.toThrow()
   })
 
   // The title bar is the one place that calls the *runtime* bindings rather

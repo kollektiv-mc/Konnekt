@@ -27,15 +27,35 @@ export function useCommandsSync(): void {
     const reload = useCommandsStore.getState().reload
     const refresh = useCommandsStore.getState().refreshKommands
 
-    const off = EventsOn(EVENTS.COMMANDS_CHANGED, () => {
-      void reload()
-    })
+    // Guarded like every other listener in the app, and for the reason
+    // lib/ipc.ts gives: the generated runtime binding dereferences
+    // `window.runtime` synchronously, so with no Wails process behind the page
+    // it throws a TypeError rather than rejecting. Thrown from an effect body
+    // that reaches the app-level ErrorBoundary, and this hook is mounted in
+    // `App`, so the unguarded call replaced the entire window with "render
+    // error" in the browser-only `frontend-dev` preset.
+    //
+    // The focus listener stays outside the try: it is a DOM event, it is what
+    // makes the preset's own reload path work, and `refresh` handles its own
+    // failure.
+    let off: (() => void) | undefined
+    try {
+      off = EventsOn(EVENTS.COMMANDS_CHANGED, () => {
+        void reload()
+      })
+    } catch {
+      /* non-Wails context */
+    }
     const onFocus = () => {
       void refresh()
     }
     window.addEventListener('focus', onFocus)
     return () => {
-      off()
+      try {
+        off?.()
+      } catch {
+        /* teardown no-op */
+      }
       window.removeEventListener('focus', onFocus)
     }
   }, [])
