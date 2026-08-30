@@ -90,7 +90,7 @@ export function LayoutPresets() {
     >
       <div className="flex min-w-0 flex-col gap-2 p-1 pt-2">
         {presets.map((preset) => (
-          // pr-2 here and pl-3 on the button, for the reason ServerRow's row
+          // pr-2 here and pl-2 on the button, for the reason ServerRow's row
           // carries the same pair: only the right half of the row's padding is
           // load-bearing, setting the delete control's column, while the left
           // half pushed this rectangle 8px inside the crate rows'. The button
@@ -111,7 +111,7 @@ export function LayoutPresets() {
               onClick={() => loadPreset(preset.name)}
               // Truncates rather than wraps: a wrapped name makes its row
               // taller than the others and re-flows the list.
-              className={`flex-1 cursor-pointer truncate rounded py-1.5 pr-1 pl-3 text-left text-xs transition-all ${
+              className={`flex-1 cursor-pointer truncate rounded py-1.5 pr-1 pl-2 text-left text-xs transition-all ${
                 preset.name === activePresetName
                   ? 'text-accent bg-accent/10'
                   : 'text-text-secondary hover:bg-hover hover:text-text-primary bg-transparent'

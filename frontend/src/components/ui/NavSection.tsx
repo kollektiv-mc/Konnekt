@@ -4,6 +4,10 @@ import { ChevronDown } from '../../lib/icons'
 import { Collapsible } from './Collapsible'
 import { Icon } from './Icon'
 
+// Height a closed section keeps, so its header's rule and the card's bottom
+// border stay visibly two lines rather than merging into one thick one.
+const COLLAPSED_SLIVER_PX = 6
+
 interface NavSectionProps {
   /**
    * Persistence key, and the only thing that ties a card to its remembered
@@ -77,10 +81,13 @@ export function NavSection({ id, title, action, onToggle, children }: NavSection
           type="button"
           onClick={toggle}
           aria-expanded={!closed}
-          className="flex min-w-0 flex-1 cursor-pointer items-center gap-2 py-2 pl-3 text-left select-none"
+          className="flex min-w-0 flex-1 cursor-pointer items-center gap-2 py-2 pl-2 text-left select-none"
         >
-          {/* Sized and placed exactly as a tile header's icon: pl-3, a bare
-              size="sm" glyph, gap-2 to the title. It spent a while in the 24px
+          {/* A bare size="sm" glyph with gap-2 to the title, as a tile header
+              has, but at pl-2 rather than that header's pl-3: 12px of left
+              against the 9 or 10 this bar leaves above and below the same ink
+              read as the whole header sitting too far right. The canvas has
+              room for a wider margin; a 176px navbar does not. It spent a while in the 24px
               box a crate row puts its glyph in, to share that column, but the
               box is 10px wider than the 14px glyph inside it, so it pushed the
               chevron 5px and the title 11px right of where the canvas's tile
@@ -105,7 +112,16 @@ export function NavSection({ id, title, action, onToggle, children }: NavSection
         {action}
       </div>
 
-      <Collapsible open={!closed}>{children}</Collapsible>
+      {/* A closed panel keeps a sliver rather than vanishing. With nothing
+          left, this card's bottom border sat a pixel under the header's rule
+          and the two read as one thick line — an artefact, not a state. Six
+          pixels of panel is a band of the card's own surface between the two,
+          which is what says the contents are folded away behind the header
+          rather than gone. It is the body's own padding showing, so no row
+          peeks out mid-fold. */}
+      <Collapsible open={!closed} collapsedHeight={COLLAPSED_SLIVER_PX}>
+        {children}
+      </Collapsible>
     </div>
   )
 }

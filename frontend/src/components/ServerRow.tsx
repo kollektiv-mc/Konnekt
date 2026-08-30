@@ -74,17 +74,16 @@ export function ServerRow({ cfg, active, onSelect, onEdit }: Props) {
           width back to the name: pr-2.5 cost twelve pixels of "NeoForge 1.21.1"
           to pad a gap that already has the row's own gap-1 in it.
 
-          pl-3 rather than the 18px it took to sit the dot on the crate rows'
+          pl-2 rather than the 18px it took to sit the dot on the crate rows'
           glyph centre. That centre belongs to a 16px glyph in a 24px box, and
           buying into it with a 6px dot meant 18px of empty pill before the dot
           — a gap wide enough to read as a mistake, to align a mark that is a
           third the size of the ones it was aligning with. This card is its own
           collapsible and does not owe them that column.
 
-          12px is where it lands instead, which is what a crate row leaves
-          between its own rectangle and its glyph's ink. The two lists keep the
-          same left margin without the dot pretending to be a glyph slot, and
-          the name gets the 6px back.
+          8px is where it lands instead, matching this row's own py-1.5 more
+          nearly than 12px did — a mark with more space to its left than above
+          and below it reads as pushed right, whatever column it is on.
 
           min-w-0 is what lets the name actually truncate. The span inside carries
           `truncate`, but this button's own overflow is visible, so its intrinsic
@@ -93,7 +92,7 @@ export function ServerRow({ cfg, active, onSelect, onEdit }: Props) {
           name as ordinary as "NeoForge 1.21.1", at the navbar's 176px floor. */}
       <button
         onClick={onSelect}
-        className={`flex min-w-0 flex-1 items-center gap-2 rounded py-1.5 pr-1 pl-3 text-left text-xs transition-all ${
+        className={`flex min-w-0 flex-1 items-center gap-2 rounded py-1.5 pr-1 pl-2 text-left text-xs transition-all ${
           active
             ? 'text-accent bg-accent/10'
             : 'text-text-secondary hover:bg-hover hover:text-text-primary'

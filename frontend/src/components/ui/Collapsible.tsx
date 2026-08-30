@@ -3,6 +3,16 @@ import { DURATION_MS } from '../../styles/tokens'
 
 interface CollapsibleProps {
   open: boolean
+  /**
+   * Height the panel keeps when closed, instead of disappearing entirely.
+   *
+   * For a panel inside a bordered card: with nothing left, the header's rule
+   * and the card's own bottom border end up a pixel apart and read as one
+   * thick line rather than as a closed panel. A few pixels of the panel still
+   * showing is the difference between a rendering artefact and a deliberate
+   * sliver of something folded away behind the header.
+   */
+  collapsedHeight?: number
   children: React.ReactNode
   className?: string
 }
@@ -21,9 +31,10 @@ const RELEASE_FALLBACK_MS = DURATION_MS.panel + 120
 // be simpler but leaves a residual sliver on Wails' WebKit WebView (see the
 // backups-tile revert in git history, "Fixes #5") — max-height is the
 // deliberate choice here.
-export function Collapsible({ open, children, className }: CollapsibleProps) {
+export function Collapsible({ open, collapsedHeight = 0, children, className }: CollapsibleProps) {
   const innerRef = useRef<HTMLDivElement>(null)
-  const [maxHeight, setMaxHeight] = useState(open ? 'none' : '0px')
+  const closedHeight = `${collapsedHeight}px`
+  const [maxHeight, setMaxHeight] = useState(open ? 'none' : closedHeight)
 
   // Which toggle each queued callback belongs to. Cancelling handles is not
   // enough on its own and this is the bug that made a fast reopen swallow an
@@ -61,14 +72,14 @@ export function Collapsible({ open, children, className }: CollapsibleProps) {
     let inner = 0
     const outer = requestAnimationFrame(() => {
       inner = requestAnimationFrame(() => {
-        if (gen.current === mine) setMaxHeight('0px')
+        if (gen.current === mine) setMaxHeight(closedHeight)
       })
     })
     return () => {
       cancelAnimationFrame(outer)
       cancelAnimationFrame(inner)
     }
-  }, [open])
+  }, [open, closedHeight])
 
   return (
     <div
