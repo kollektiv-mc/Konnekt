@@ -262,7 +262,7 @@ export function TileCrate() {
           else itemRefs.current.delete(tile.id)
         }}
         onMouseDown={(e) => onMouseDown(tile, group, e)}
-        className={`border-hairline flex cursor-default items-center gap-2 rounded-lg px-3 py-2 text-left transition-all ${
+        className={`border-hairline flex cursor-default items-center gap-2 rounded-lg px-2 py-2 text-left transition-all ${
           dragging ? '' : 'hover:border-border-subtle'
         } ${
           onCanvas
@@ -276,8 +276,12 @@ export function TileCrate() {
           held ? 'border-accent/60 opacity-40' : 'border-transparent'
         }`}
       >
-        <span className="w-6 text-center text-base">{tile.icon}</span>
-        <span className="flex-1 text-xs font-medium">{tile.label}</span>
+        <span className="w-6 shrink-0 text-center text-base">{tile.icon}</span>
+        {/* Truncates rather than wraps. A label that wraps makes its row taller
+            than every other row, which moves the gaps the drop marker is
+            measured against and re-flows the list the moment the navbar is
+            dragged narrow. */}
+        <span className="flex-1 truncate text-xs font-medium">{tile.label}</span>
       </button>
     )
   }
@@ -317,11 +321,14 @@ export function TileCrate() {
   }
 
   return (
+    // px-3 on the group and px-2 on the row, rather than p-2 and px-3: same
+    // 20px icon column as before, but the row box now starts at 12px like every
+    // other box in the navbar instead of poking 4px out to their left.
     <div ref={rootRef} className="flex flex-col">
-      <div className="border-border-subtle border-b-hairline flex flex-col gap-1 p-2">
+      <div className="border-border-subtle border-b-hairline flex flex-col gap-1 px-3 py-2">
         {renderGroup(utilityTiles, utilityIds)}
       </div>
-      <div className="flex flex-col gap-1 p-2">{renderGroup(moduleTiles, moduleIds)}</div>
+      <div className="flex flex-col gap-1 px-3 py-2">{renderGroup(moduleTiles, moduleIds)}</div>
     </div>
   )
 }
