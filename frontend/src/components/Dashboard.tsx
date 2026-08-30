@@ -22,6 +22,11 @@ const GRID_MARGIN: readonly [number, number] = [12, 12]
 const GRID_CONTAINER_PADDING: readonly [number, number] = [12, 12]
 const GHOST_ID = '__ghost__'
 
+// The drag preview's size while the gesture is still inside the crate. Small
+// enough to read as "carrying a row", not as a tile that has already landed —
+// the growth into the tile footprint is what says it has.
+const CRATE_CHIP = { width: 116, height: 32 }
+
 // Flip animation transform relative to the canvas container, not the viewport.
 function flipTransform(rect: DOMRect, containerRect: DOMRect, padding: number) {
   const fullW = containerRect.width - padding * 2
@@ -58,8 +63,14 @@ export function Dashboard() {
   const { activeTileIds, loadTiles, removeTile } = useTileStore()
   const { currentLayout, updateLayout, loadPresets } = useLayoutStore()
   const { activeId: serverId } = useServerConfigStore()
-  const { maximizeRequest, clearMaximizeRequest, closeRequest, draggingTileId, flashTileId } =
-    useUiStore()
+  const {
+    maximizeRequest,
+    clearMaximizeRequest,
+    closeRequest,
+    draggingTileId,
+    crateDragId,
+    flashTileId,
+  } = useUiStore()
 
   // containerRef: the positioned root used to anchor the absolute overlay
   const containerRef = useRef<HTMLDivElement>(null)
@@ -387,7 +398,11 @@ export function Dashboard() {
   // recomputing pointerToCell from the mouseup event.
   useEffect(() => {
     const onMove = (e: MouseEvent) => {
-      if (!useUiStore.getState().draggingTileId) return
+      const ui = useUiStore.getState()
+      // crateDragId is tracked as well so the drag preview keeps following the
+      // pointer while it is still over the navbar. Nothing below reads it: the
+      // drop cell, the ghost and the commit are all still draggingTileId's.
+      if (!ui.draggingTileId && !ui.crateDragId) return
       setDragPointer({ x: e.clientX, y: e.clientY })
     }
     const onUp = () => {
@@ -430,6 +445,28 @@ export function Dashboard() {
       height: itemPxH,
     }
   }, [dragPointer, dropCell, colWidth])
+
+  // The preview's geometry in both phases. Over the crate it is CRATE_CHIP;
+  // once the pointer is over the canvas it becomes the landing tile's real
+  // size, and the transition on the element does the growing.
+  const dragPreview = useMemo(() => {
+    if (!dragPointer) return null
+    if (wireframeRect) {
+      return {
+        x: wireframeRect.left + wireframeRect.width / 2,
+        y: wireframeRect.top + wireframeRect.height / 2,
+        width: wireframeRect.width,
+        height: wireframeRect.height,
+      }
+    }
+    // No landing footprint to grow into: either the pointer is still over the
+    // crate, or it is over the canvas dragging a tile that is already placed
+    // there and so has nowhere to land. Both keep the chip — a preview that
+    // vanished halfway through the gesture would read as the drag being
+    // dropped rather than as "this one is already on the board".
+    if (!crateDragId && !draggingTileId) return null
+    return { x: dragPointer.x, y: dragPointer.y, ...CRATE_CHIP }
+  }, [dragPointer, wireframeRect, crateDragId, draggingTileId])
 
   return (
     // containerRef is the positioned root for the absolute overlay — it covers
@@ -495,19 +532,27 @@ export function Dashboard() {
         </GridLayout>
       </div>
 
-      {/* Cursor-following wireframe while dragging from the crate — pairs
-          with the snapped ghost/placeholder above exactly like native RGL
-          pairs a dragged item with its landing-spot placeholder. Positioned
-          against the viewport (fixed), not the scrollable canvas. */}
-      {wireframeRect && (
+      {/* Cursor-following wireframe, from the moment the drag starts in the
+          crate to the moment it lands. Over the navbar it is a chip; over the
+          canvas it is the tile's own footprint, paired with the snapped
+          ghost/placeholder above exactly like native RGL pairs a dragged item
+          with its landing-spot placeholder.
+
+          One element for both, not two that swap: it is anchored at the
+          pointer and centred with a transform, so only width and height
+          change between the two states and the transition on them reads as
+          the chip growing into the tile. Position is left off that transition
+          — a lagging preview is worse than no preview. Fixed, so it can sit
+          over the navbar as well as the scrollable canvas. */}
+      {dragPreview && (
         <div
-          className="border-accent bg-accent/6 pointer-events-none fixed z-[60] rounded-[10px] border-2"
-          // eslint-disable-next-line no-restricted-syntax -- cursor-following wireframe position, computed per drag frame
+          className="border-accent bg-accent/6 duration-panel ease-standard pointer-events-none fixed z-[60] -translate-x-1/2 -translate-y-1/2 rounded-[10px] border-2 transition-[width,height]"
+          // eslint-disable-next-line no-restricted-syntax -- cursor-following preview geometry, computed per drag frame
           style={{
-            left: wireframeRect.left,
-            top: wireframeRect.top,
-            width: wireframeRect.width,
-            height: wireframeRect.height,
+            left: dragPreview.x,
+            top: dragPreview.y,
+            width: dragPreview.width,
+            height: dragPreview.height,
           }}
         />
       )}
