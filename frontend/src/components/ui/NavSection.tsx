@@ -67,38 +67,37 @@ export function NavSection({ id, title, action, onToggle, children }: NavSection
           rounds the tint into the corner for free. Hovering the action lights
           the bar too; that is the right reading, and the action's own hover
           square stacking on top is what marks it as the more specific target. */}
-      {/* The transparent left hairline is what puts the chevron on the same
-          column as the row glyphs below it. A crate row carries one for its
-          drag accent, so its glyph box starts a hairline further in than this
-          bar's did; borrowing the same token here rather than padding by an
-          integer keeps the two together at 1x and 2x alike. It carries the
-          section title onto the tile labels' column as a bonus.
-
-          The tint still reaches the card's edge through it: a background paints
-          under its own border box, and this border has no colour. */}
-      <div className="border-border-subtle hover:bg-hover border-b-hairline border-l-hairline flex shrink-0 items-center gap-1 border-l-transparent pr-3 transition-colors">
+      {/* The tint sits on the bar, not on the button inside it, so it reaches
+          the card's rounded corners instead of stopping short of them. Hovering
+          the action lights the bar too; that is the right reading, and the
+          action's own hover square stacking on top is what marks it as the more
+          specific target. */}
+      <div className="border-border-subtle hover:bg-hover border-b-hairline flex shrink-0 items-center gap-1 pr-3 transition-colors">
         <button
           type="button"
           onClick={toggle}
           aria-expanded={!closed}
           className="flex min-w-0 flex-1 cursor-pointer items-center gap-2 py-2 pl-3 text-left select-none"
         >
-          {/* Where a tile header carries its icon, and in the same 24x24 box the
-              crate rows put theirs in — a bare 16px glyph here starts its ink
-              4px left of every row below it, which was half the stagger down
-              this navbar. One glyph that rotates rather than two that swap: a
-              lucide chevron's ink is centred in its box, so the rotation is a
-              turn rather than a lurch, and a disclosure marker that *travels*
+          {/* Sized and placed exactly as a tile header's icon: pl-3, a bare
+              size="sm" glyph, gap-2 to the title. It spent a while in the 24px
+              box a crate row puts its glyph in, to share that column, but the
+              box is 10px wider than the 14px glyph inside it, so it pushed the
+              chevron 5px and the title 11px right of where the canvas's tile
+              headers put theirs. A header labels its card; it does not belong
+              on the column its rows use.
+
+              One glyph that rotates rather than two that swap: a lucide
+              chevron's ink is centred in its box, so the rotation is a turn
+              rather than a lurch, and a disclosure marker that *travels*
               between its two states is the part that reads as a hinge. */}
-          <span className="flex h-6 w-6 shrink-0 items-center justify-center">
-            <Icon
-              icon={ChevronDown}
-              size="sm"
-              className={`text-text-muted duration-fast transition-transform ${
-                closed ? '-rotate-90' : ''
-              }`}
-            />
-          </span>
+          <Icon
+            icon={ChevronDown}
+            size="sm"
+            className={`text-text-muted duration-fast shrink-0 transition-transform ${
+              closed ? '-rotate-90' : ''
+            }`}
+          />
           <span className="font-title text-text-secondary truncate text-xs font-medium">
             {title}
           </span>

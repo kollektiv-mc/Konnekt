@@ -4,6 +4,11 @@ import './style.css'
 import App from './App'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import { SplashScreen } from './components/SplashScreen'
+import { applyScrollbarWidth } from './lib/scrollbar'
+
+// Before first paint, so `.scroll-overlay` in style.css reclaims exactly the
+// gutter this platform reserves and not a guess at it.
+applyScrollbarWidth()
 
 const container = document.getElementById('root')
 

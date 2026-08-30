@@ -578,7 +578,7 @@ function App() {
             as the separation. Layouts is in here with the rest rather than
             pinned below: pinned, it had to grow upwards to keep its header
             still, which is not a shape a tile can have. */}
-        <div className="flex flex-1 flex-col gap-2 overflow-y-auto p-2">
+        <div className="scroll-overlay flex flex-1 flex-col gap-2 p-2">
           <ServerSelector />
           <TileCrate />
           <LayoutPresets />

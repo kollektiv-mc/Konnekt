@@ -74,7 +74,27 @@ body {
   box-sizing: border-box;
 }
 
-/* Custom scrollbar — Chromium/WebView2 */
+/* Custom scrollbar — Chromium/WebView2.
+
+   The thumb is --text-faint, the 25% white the rest of the UI uses for ink that
+   should be present without being read. It was --border-hover (12%), which on a
+   4px bar over a near-black panel was close enough to nothing that people
+   scrolled past the end of a list without knowing there was one. */
+/* How much a scrollbar actually takes out of a scroll container's content box,
+   measured at startup by lib/scrollbar.ts. Not the same number as the width
+   below, and not a constant: it is that width on a platform with classic
+   scrollbars and zero on one with overlay bars. Only `.scroll-overlay` reads
+   it, and 0px is the safe way to be wrong — no reclaim costs a container a few
+   pixels, an over-large one puts its contents outside it.
+
+   The bar's own width stays a literal below. Pointing ::-webkit-scrollbar at
+   this property makes the measurement circular: the gutter would be measured
+   from a scrollbar whose width is the gutter, so it settles at zero and the
+   bars disappear. */
+:root {
+  --scrollbar-gutter: 0px;
+}
+
 ::-webkit-scrollbar {
   width: 4px;
   height: 4px;
@@ -85,8 +105,38 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--border-hover);
+  background: var(--text-faint);
   border-radius: 2px;
+}
+
+/* Overlay scrolling, for a container whose width other things are measured
+   against.
+
+   A styled ::-webkit-scrollbar is always a *classic* scrollbar in Chromium: it
+   takes its width out of the content box, so the bar appearing when a section
+   is expanded reflows everything beside it — in the navbar that is every card
+   getting 4px narrower and then wider again. Chromium removed `overflow:
+   overlay` in 106 and there is no CSS property that puts a classic bar on top,
+   so this does it in two halves.
+
+   `overflow-y: scroll` keeps the gutter reserved whether or not there is
+   anything to scroll, which is what stops the reflow; the track is transparent,
+   so a container that does not scroll still looks bare. The children then take
+   that gutter back with a negative margin, so they keep the width they have
+   when no bar is present and the bar sits in the container's own padding
+   instead of inside the content.
+
+   Per-container rather than global on purpose: the reclaim is a negative margin
+   on direct children, and what that does depends on the container's padding and
+   on what its children are — the dashboard canvas holds react-grid-layout's
+   absolutely positioned items and must not get it. Adding it to a scroller is
+   one class. */
+.scroll-overlay {
+  overflow-y: scroll;
+}
+
+.scroll-overlay > * {
+  margin-right: calc(-1 * var(--scrollbar-gutter));
 }
 
 /* Hide native number input spinners — custom ▲▼ buttons used instead */
@@ -97,14 +147,19 @@ input[type='number']::-webkit-outer-spin-button {
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--text-faint);
+  background: var(--text-muted);
 }
 
-/* Firefox */
-* {
-  scrollbar-width: thin;
-  scrollbar-color: var(--border-hover) transparent;
-}
+/* No `scrollbar-width` / `scrollbar-color` here, deliberately.
+
+   Chromium takes the standard properties as an either/or: set one to anything
+   but its initial value and it stops applying ::-webkit-scrollbar at all. This
+   file used to set both for Firefox's benefit, which quietly threw away the
+   4px width and the thumb colour above — measured, the bar was `thin`, the
+   platform's own ~10px, and the reclaim below was wrong by the
+   difference. Konnekt ships in a WebView, WebKit on Linux and macOS and
+   Chromium on Windows, so ::-webkit-scrollbar is the path that is always there
+   and the standard properties buy a browser this app never runs in. */
 
 /* react-grid-layout's own stylesheet (imported in Dashboard.tsx, after this
    file) hardcodes 200ms/100ms transition durations with a plain `ease`
