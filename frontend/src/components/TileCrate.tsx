@@ -5,6 +5,7 @@ import { useUiStore } from '../stores/useUiStore'
 import { useSettingsStore } from '../stores/useSettingsStore'
 import { TILE_REGISTRY } from '../tiles/registry'
 import { reorderWithinGroup } from '../lib/crateOrder'
+import { Icon } from './ui/Icon'
 
 // Pixels the pointer must travel before a press becomes a drag (vs a click).
 const DRAG_THRESHOLD = 5
@@ -204,7 +205,7 @@ export function TileCrate() {
             : 'text-text-secondary bg-black/20 hover:bg-black/10'
         }`}
       >
-        <span className="w-6 text-center text-base">{tile.icon}</span>
+        <Icon icon={tile.icon} size="md" className="mx-1" />
         <span className="flex-1 text-xs font-medium">{tile.label}</span>
       </button>
     )

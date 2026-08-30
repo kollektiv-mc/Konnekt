@@ -24,6 +24,8 @@ import { prefetchHeavyChunks } from './lib/prefetch'
 import { useUpdateCheck } from './hooks/useUpdateCheck'
 import { useServerStatusSync } from './hooks/useServerStatus'
 import { EVENTS } from './lib/constants'
+import { Settings } from './lib/icons'
+import { Icon } from './components/ui/Icon'
 
 function App() {
   const { activeId } = useServerConfigStore()
@@ -517,8 +519,9 @@ function App() {
             onClick={() => setSettingsOpen(true)}
             className="text-text-muted hover:text-text-primary flex h-6 w-6 items-center justify-center rounded text-sm transition-colors"
             title="Settings"
+            aria-label="Settings"
           >
-            ⚙
+            <Icon icon={Settings} size="sm" />
           </button>
         </div>
         <div className="border-b-hairline border-border-subtle">

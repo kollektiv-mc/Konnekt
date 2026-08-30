@@ -1,4 +1,5 @@
 import type { FC } from 'react'
+import type { LucideIcon } from '../lib/icons'
 import type { models } from '../../wailsjs/go/models'
 export type { LayoutItem } from 'react-grid-layout'
 
@@ -88,7 +89,12 @@ export interface TileProps {
 export interface TileDefinition {
   id: string
   label: string
-  icon: string
+  /**
+   * The glyph itself, not a name to look up — same shape as `component` below,
+   * and for the same reason: a lookup table is a second place to keep in step
+   * and a runtime failure when the two drift. Sourced from `lib/icons.ts`.
+   */
+  icon: LucideIcon
   maximizable?: boolean
   component: FC<TileProps>
 }

@@ -1,9 +1,12 @@
 import type { ReactNode } from 'react'
+import type { LucideIcon } from '../../lib/icons'
+import { Maximize2, Minimize2, X } from '../../lib/icons'
+import { Icon } from '../../components/ui/Icon'
 
 interface TileWrapperProps {
   id: string
   label: string
-  icon: string
+  icon: LucideIcon
   onRemove: (id: string) => void
   children: ReactNode
   maximizable?: boolean
@@ -51,7 +54,7 @@ export function TileWrapper({
           title={maximizable && !maximized ? 'Double-click to maximize' : undefined}
         >
           <div className="flex items-center gap-2">
-            <span className="text-sm leading-none">{icon}</span>
+            <Icon icon={icon} size="sm" className="text-text-muted" />
             <span className="text-text-secondary font-title text-xs font-medium">{label}</span>
           </div>
           <div className="flex items-center gap-1">
@@ -67,8 +70,9 @@ export function TileWrapper({
                   ;(e.currentTarget as HTMLButtonElement).style.color = 'var(--text-faint)'
                 }}
                 title={maximized ? 'Restore tile' : 'Maximize tile'}
+                aria-label={maximized ? 'Restore tile' : 'Maximize tile'}
               >
-                {maximized ? '⤡' : '⤢'}
+                <Icon icon={maximized ? Minimize2 : Maximize2} size="xs" />
               </button>
             )}
             {!maximized && (
@@ -83,8 +87,9 @@ export function TileWrapper({
                   ;(e.currentTarget as HTMLButtonElement).style.color = 'var(--text-faint)'
                 }}
                 title="Remove tile"
+                aria-label="Remove tile"
               >
-                ×
+                <Icon icon={X} size="sm" />
               </button>
             )}
           </div>

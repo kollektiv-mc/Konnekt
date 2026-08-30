@@ -3,6 +3,8 @@ import { useLayoutStore } from '../stores/useLayoutStore'
 import { SaveLayoutPreset } from '../../wailsjs/go/main/App'
 import { DEFAULT_LAYOUT_PRESETS } from '../lib/constants'
 import { Collapsible } from './ui/Collapsible'
+import { ChevronDown, X } from '../lib/icons'
+import { Icon } from './ui/Icon'
 
 export function LayoutPresets() {
   const { presets, activePresetName, error, savePreset, loadPreset, loadPresets, deletePreset } =
@@ -52,11 +54,11 @@ export function LayoutPresets() {
         className="font-title text-text-muted hover:text-text-secondary flex w-full cursor-pointer items-center justify-between px-1 text-xs font-medium tracking-wider uppercase transition-colors"
       >
         <span>Layouts</span>
-        <span
-          className={`duration-fast ease-standard inline-block transition-transform ${collapsed ? '-rotate-90' : 'rotate-0'}`}
-        >
-          ▾
-        </span>
+        <Icon
+          icon={ChevronDown}
+          size="xs"
+          className={`duration-fast ease-standard transition-transform ${collapsed ? '-rotate-90' : 'rotate-0'}`}
+        />
       </button>
 
       <Collapsible open={!collapsed} className="min-w-0">
@@ -89,8 +91,9 @@ export function LayoutPresets() {
                   onClick={() => handleDelete(preset.name)}
                   className="text-text-faint hover:text-danger cursor-pointer px-1.5 text-xs transition-colors"
                   title="Delete preset"
+                  aria-label={`Delete preset ${preset.name}`}
                 >
-                  ×
+                  <Icon icon={X} size="xs" />
                 </button>
               )}
             </div>

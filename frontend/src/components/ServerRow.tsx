@@ -3,6 +3,8 @@ import { GetServerSummary } from '../../wailsjs/go/main/App'
 import { useHoverDelay } from '../hooks/useHoverDelay'
 import { ServerTooltip } from './ServerTooltip'
 import type { ServerConfig, ServerSummary } from '../types'
+import { Pencil, X } from '../lib/icons'
+import { Icon } from './ui/Icon'
 
 // Re-read rather than trust a cached summary for longer than this — the
 // running flag changes underneath us when a server starts or stops.
@@ -70,15 +72,17 @@ export function ServerRow({ cfg, active, onSelect, onEdit, onDisconnect }: Props
         onClick={onEdit}
         className="text-text-faint hover:text-text-secondary px-1 text-xs transition-colors"
         title="Edit"
+        aria-label="Edit server"
       >
-        ✎
+        <Icon icon={Pencil} size="xs" />
       </button>
       <button
         onClick={onDisconnect}
         className="text-text-faint px-1 text-xs transition-colors hover:text-red-400"
         title="Disconnect"
+        aria-label="Disconnect server"
       >
-        ×
+        <Icon icon={X} size="xs" />
       </button>
 
       {hovered && <ServerTooltip summary={summary} anchor={anchor} />}

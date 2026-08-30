@@ -3,6 +3,8 @@ import { useServerConfigStore } from '../stores/useServerConfigStore'
 import { useUiStore } from '../stores/useUiStore'
 import { ServerRow } from './ServerRow'
 import { NEW_SERVER } from './ServerManager/ServerList'
+import { SlidersHorizontal } from '../lib/icons'
+import { Icon } from './ui/Icon'
 
 /**
  * The sidebar's server switcher.
@@ -39,8 +41,9 @@ export function ServerSelector() {
           onClick={() => openServerManager(activeId || NEW_SERVER)}
           className="text-text-faint hover:text-text-primary flex h-5 w-5 items-center justify-center rounded text-xs transition-colors"
           title="Manage servers"
+          aria-label="Manage servers"
         >
-          ⤢
+          <Icon icon={SlidersHorizontal} size="xs" />
         </button>
       </div>
 
