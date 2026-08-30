@@ -25,6 +25,7 @@ const DEFAULTS = {
   schedulerPaletteCollapsed: true,
   schedulerPaletteClosedCategories: {},
   consoleQuickCommandsCollapsed: false,
+  navClosedSections: {} as Record<string, boolean>,
   checkUpdatesOnStartup: true,
   updateChannel: 'stable' as const,
   crateOrder: [] as string[],

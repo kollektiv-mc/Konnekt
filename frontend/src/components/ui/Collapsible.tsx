@@ -7,6 +7,14 @@ interface CollapsibleProps {
   className?: string
 }
 
+// Net for the release below, not the thing that normally performs it: a
+// transition that never runs fires no `transitionend`, and an open panel left
+// capped at its measured height would re-clip children that grow afterwards.
+// Deliberately longer than the transition, so the real event wins the race in
+// every case where there is one — a fallback that fires first is not a fallback,
+// it is the old bug with extra steps.
+const RELEASE_FALLBACK_MS = DURATION_MS.panel + 120
+
 // WebKit-safe vertical collapse: animates `max-height` between 0 and the
 // *measured* content height (not a fixed magic number), so open/close travel
 // the same distance and feel symmetric. `grid-template-rows: 0fr/1fr` would
@@ -17,31 +25,63 @@ export function Collapsible({ open, children, className }: CollapsibleProps) {
   const innerRef = useRef<HTMLDivElement>(null)
   const [maxHeight, setMaxHeight] = useState(open ? 'none' : '0px')
 
+  // Which toggle each queued callback belongs to. Cancelling handles is not
+  // enough on its own and this is the bug that made a fast reopen swallow an
+  // animation: the collapse below queues a frame that queues *another* frame,
+  // and by the time a cleanup runs the outer handle may already have fired,
+  // leaving the inner one scheduled under a handle nothing is holding. That
+  // stale frame then wrote `0px` over a panel that was opening again, and the
+  // open path's release timer 280ms later snapped it back up with no motion at
+  // all. Every callback now carries the generation it was queued in and drops
+  // out once a later toggle has bumped it, so a stale frame cannot write
+  // whether or not its handle was reachable.
+  const gen = useRef(0)
+
   useEffect(() => {
     const el = innerRef.current
     if (!el) return
+    const mine = ++gen.current
     const h = el.scrollHeight
+
     if (open) {
       setMaxHeight(`${h}px`)
       // Release to `none` once open so children that grow afterward (e.g.
-      // nested sections) aren't re-clipped by a stale measured height.
-      // Must outlast the max-height transition below, which reads --duration-panel.
-      // Same token, so the two cannot drift apart.
-      const t = setTimeout(() => setMaxHeight('none'), DURATION_MS.panel)
+      // nested sections) aren't re-clipped by a stale measured height. The
+      // transition end is what normally does it (see onTransitionEnd below);
+      // this only covers the cases where none arrives.
+      const t = setTimeout(() => {
+        if (gen.current === mine) setMaxHeight('none')
+      }, RELEASE_FALLBACK_MS)
       return () => clearTimeout(t)
     }
+
     setMaxHeight(`${h}px`)
     // Force a reflow frame at the measured height before collapsing to 0,
     // so the close direction actually animates instead of jumping from `none`.
-    const raf = requestAnimationFrame(() => {
-      requestAnimationFrame(() => setMaxHeight('0px'))
+    let inner = 0
+    const outer = requestAnimationFrame(() => {
+      inner = requestAnimationFrame(() => {
+        if (gen.current === mine) setMaxHeight('0px')
+      })
     })
-    return () => cancelAnimationFrame(raf)
+    return () => {
+      cancelAnimationFrame(outer)
+      cancelAnimationFrame(inner)
+    }
   }, [open])
 
   return (
     <div
       className={`ui-collapsible overflow-hidden ${className ?? ''}`}
+      // The cap comes off when the open transition genuinely finishes, rather
+      // than when a timer started one commit earlier guesses that it has. That
+      // timer always fired a frame or two early — it starts at commit, the
+      // transition starts at the next style flush — so the last pixels of every
+      // open were a jump rather than a glide.
+      onTransitionEnd={(e) => {
+        if (e.target !== e.currentTarget || e.propertyName !== 'max-height') return
+        if (open) setMaxHeight('none')
+      }}
       // eslint-disable-next-line no-restricted-syntax -- maxHeight is a measured runtime value (WebKit-safe collapse; see comment above), not visible to Tailwind's static scanner
       style={{
         maxHeight,

@@ -18,6 +18,7 @@ export namespace models {
 	    schedulerPaletteCollapsed: boolean;
 	    schedulerPaletteClosedCategories: Record<string, boolean>;
 	    consoleQuickCommandsCollapsed: boolean;
+	    navClosedSections: Record<string, boolean>;
 	    checkUpdatesOnStartup: boolean;
 	    updateChannel: string;
 	    crateOrder: string[];
@@ -46,6 +47,7 @@ export namespace models {
 	        this.schedulerPaletteCollapsed = source["schedulerPaletteCollapsed"];
 	        this.schedulerPaletteClosedCategories = source["schedulerPaletteClosedCategories"];
 	        this.consoleQuickCommandsCollapsed = source["consoleQuickCommandsCollapsed"];
+	        this.navClosedSections = source["navClosedSections"];
 	        this.checkUpdatesOnStartup = source["checkUpdatesOnStartup"];
 	        this.updateChannel = source["updateChannel"];
 	        this.crateOrder = source["crateOrder"];

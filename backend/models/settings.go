@@ -27,6 +27,12 @@ type AppSettings struct {
 
 	ConsoleQuickCommandsCollapsed bool `json:"consoleQuickCommandsCollapsed"`
 
+	// NavClosedSections marks which navbar sections the user has collapsed,
+	// keyed by section id ("servers", "widgets", "tiles", "layouts"). Absent
+	// means open, so a settings file written before this field existed opens
+	// every section, which is the state it was last seen in.
+	NavClosedSections map[string]bool `json:"navClosedSections"`
+
 	CheckUpdatesOnStartup bool `json:"checkUpdatesOnStartup"`
 
 	// UpdateChannel is "stable" or "snapshot". A build that is itself a

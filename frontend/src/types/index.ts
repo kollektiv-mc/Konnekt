@@ -58,6 +58,7 @@ export interface AppSettings {
   schedulerPaletteCollapsed: boolean
   schedulerPaletteClosedCategories: Record<string, boolean>
   consoleQuickCommandsCollapsed: boolean
+  navClosedSections: Record<string, boolean>
   checkUpdatesOnStartup: boolean
   updateChannel: 'stable' | 'snapshot'
   crateOrder: string[]

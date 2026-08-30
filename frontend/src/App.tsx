@@ -538,16 +538,22 @@ function App() {
             <Icon icon={Settings} />
           </IconButton>
         </div>
-        <div className="border-b-hairline border-border-subtle">
+        {/* One scrolling column for all four sections, rather than a fixed
+            server list, a scrolling crate and a panel pinned to the bottom
+            edge. Each section draws its own card now, so the rules that used to
+            separate them are gone, and the gap between the cards is what reads
+            as the separation. Layouts is in here with the rest rather than
+            pinned below: pinned, it had to grow upwards to keep its header
+            still, which is not a shape a tile can have. */}
+        <div className="flex flex-1 flex-col gap-2 overflow-y-auto p-2">
           <ServerSelector />
-        </div>
-        <div className="flex-1 overflow-y-auto">
           <TileCrate />
+          <LayoutPresets />
         </div>
+        {/* Stays outside the scroller and below it: live work is status, not a
+            section, and it has to be visible while the column above is
+            scrolled somewhere else. */}
         <ActiveProcesses />
-        {/* No rule here: the layouts panel carries its own, on its header,
-            which is the part of it that stays still while it opens. */}
-        <LayoutPresets />
       </aside>
       {/* Straddles the navbar's border on a negative margin, so it is 4px of
           grab area that costs the layout nothing and the canvas does not shift

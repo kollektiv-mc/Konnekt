@@ -28,6 +28,7 @@ const DEFAULTS: AppSettings = {
   schedulerPaletteCollapsed: true,
   schedulerPaletteClosedCategories: {},
   consoleQuickCommandsCollapsed: false,
+  navClosedSections: {},
   checkUpdatesOnStartup: true,
   updateChannel: 'stable',
   crateOrder: [],
@@ -78,6 +79,7 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
         backgroundStyle,
         updateChannel,
         schedulerPaletteClosedCategories: s.schedulerPaletteClosedCategories ?? {},
+        navClosedSections: s.navClosedSections ?? {},
       }
     } catch {
       /* non-Wails context */

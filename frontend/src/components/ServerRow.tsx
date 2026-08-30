@@ -63,9 +63,14 @@ export function ServerRow({ cfg, active, onSelect, onEdit }: Props) {
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
     >
+      {/* min-w-0 is what lets the name actually truncate. The span inside carries
+          `truncate`, but this button's own overflow is visible, so its intrinsic
+          minimum is the full width of a nowrap label and it refuses to shrink
+          past it — which pushed the edit control out of the section beside a
+          name as ordinary as "NeoForge 1.21.1", at the navbar's 176px floor. */}
       <button
         onClick={onSelect}
-        className={`flex flex-1 items-center gap-2 rounded px-2 py-1.5 text-left text-xs transition-all ${
+        className={`flex min-w-0 flex-1 items-center gap-2 rounded px-2 py-1.5 text-left text-xs transition-all ${
           active
             ? 'text-accent bg-accent/10'
             : 'text-text-secondary hover:bg-hover hover:text-text-primary'
