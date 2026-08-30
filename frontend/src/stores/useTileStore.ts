@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { errMsg, hasWailsBridge } from '../lib/ipc'
+import { ALL_TILE_IDS } from '../lib/constants'
 import { GetActiveTiles, SaveActiveTiles } from '../../wailsjs/go/main/App'
 
 interface TileStore {
@@ -24,7 +25,11 @@ export const useTileStore = create<TileStore>((set, get) => ({
     } catch {
       /* Wails IPC unavailable */
     }
-    const active = saved.length > 0 ? saved : ['console', 'stats', 'players', 'quick-commands']
+    // A fresh install opens on the full board, matching the 'Default' preset
+    // in lib/constants.ts — which positions every tile, so seeding a smaller
+    // set here would leave most of that preset unrendered (Dashboard's
+    // mergedLayout filters the layout by activeTileIds).
+    const active = saved.length > 0 ? saved : [...ALL_TILE_IDS]
     set({ activeTileIds: active })
   },
 

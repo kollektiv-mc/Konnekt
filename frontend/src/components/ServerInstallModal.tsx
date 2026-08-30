@@ -69,7 +69,7 @@ export function ServerInstallModal() {
       <div className="bg-canvas border-border-subtle border-hairline flex w-[28rem] flex-col gap-3 rounded-xl p-5 font-mono">
         <div className="flex items-center gap-2.5">
           <span className="text-warning text-sm font-bold">[i]</span>
-          <span className="font-title text-text-primary text-sm font-semibold">
+          <span className="font-title text-text-primary text-sm font-medium">
             Installer detected
           </span>
         </div>

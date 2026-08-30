@@ -91,13 +91,7 @@ export function LayoutPresets() {
             setCollapsed((c) => !c)
             setConfirmingReset(false)
           }}
-          className="font-title text-text-muted flex w-full items-center justify-between text-xs font-medium tracking-wider uppercase transition-colors"
-          onMouseEnter={(e) => {
-            ;(e.currentTarget as HTMLButtonElement).style.color = 'var(--text-secondary)'
-          }}
-          onMouseLeave={(e) => {
-            ;(e.currentTarget as HTMLButtonElement).style.color = 'var(--text-muted)'
-          }}
+          className="font-title text-text-muted hover:text-text-secondary flex w-full cursor-pointer items-center justify-between text-xs font-medium tracking-wider uppercase transition-colors"
         >
           <span>Layouts</span>
           {/* The same 24px box the gear and expand controls use, so the
@@ -118,28 +112,26 @@ export function LayoutPresets() {
         <div className="border-t-hairline border-border-subtle flex min-h-0 min-w-0 flex-col gap-2 px-3 pt-3 pb-2">
           {presets.map((preset) => (
             <div key={preset.name} className="flex items-center gap-1">
+              {/* Same treatment as the server list above it in this sidebar
+                  (components/ServerRow.tsx), and for the same reason: it is the
+                  same control. It used to hand-roll hover through
+                  onMouseEnter/onMouseLeave writing element.style.background,
+                  guarded on `!== activePresetName`. Both halves of that guard
+                  were bugs. Selecting a preset while hovering it left the
+                  inline grey in place, and an inline style outranks the class,
+                  so the active row rendered grey instead of accent. The
+                  matching mouse-leave then saw the row as active, skipped the
+                  reset, and stranded that grey there for good — one more row
+                  each time the selection moved. */}
               <button
                 onClick={() => loadPreset(preset.name)}
                 // Truncates rather than wraps: a wrapped name makes its row
                 // taller than the others and re-flows the list.
-                className={`flex-1 truncate rounded px-2 py-1.5 text-left text-xs transition-all ${
+                className={`flex-1 cursor-pointer truncate rounded px-2 py-1.5 text-left text-xs transition-all ${
                   preset.name === activePresetName
                     ? 'text-accent bg-accent/10'
-                    : 'text-text-secondary bg-transparent'
+                    : 'text-text-secondary hover:bg-hover hover:text-text-primary bg-transparent'
                 }`}
-                onMouseEnter={(e) => {
-                  if (preset.name !== activePresetName) {
-                    ;(e.currentTarget as HTMLButtonElement).style.color = 'var(--text-primary)'
-                    ;(e.currentTarget as HTMLButtonElement).style.background =
-                      'var(--hover-surface)'
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (preset.name !== activePresetName) {
-                    ;(e.currentTarget as HTMLButtonElement).style.color = 'var(--text-secondary)'
-                    ;(e.currentTarget as HTMLButtonElement).style.background = 'transparent'
-                  }
-                }}
               >
                 {preset.name}
               </button>
@@ -162,26 +154,12 @@ export function LayoutPresets() {
               onChange={(e) => setNewName(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleSave()}
               placeholder={activePresetName || 'Preset name...'}
-              className="bg-hover border-border-subtle text-text-primary border-hairline min-w-0 flex-1 rounded px-2 py-1 text-xs outline-none"
-              onFocus={(e) => {
-                ;(e.target as HTMLInputElement).style.borderColor = 'var(--border-hover)'
-              }}
-              onBlur={(e) => {
-                ;(e.target as HTMLInputElement).style.borderColor = 'var(--border-subtle)'
-              }}
+              className="bg-hover border-border-subtle text-text-primary hover:border-border-hover focus:border-border-hover border-hairline min-w-0 flex-1 rounded px-2 py-1 text-xs transition-colors outline-none"
             />
             <button
               onClick={handleSave}
               disabled={saving}
-              className="border-border-subtle text-text-secondary border-hairline shrink-0 rounded px-2 py-1 text-xs transition-colors disabled:opacity-40"
-              onMouseEnter={(e) => {
-                ;(e.currentTarget as HTMLButtonElement).style.color = 'var(--text-primary)'
-                ;(e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--border-hover)'
-              }}
-              onMouseLeave={(e) => {
-                ;(e.currentTarget as HTMLButtonElement).style.color = 'var(--text-secondary)'
-                ;(e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--border-subtle)'
-              }}
+              className="border-border-subtle text-text-secondary enabled:hover:border-border-hover enabled:hover:text-text-primary border-hairline shrink-0 cursor-pointer rounded px-2 py-1 text-xs transition-colors disabled:cursor-not-allowed disabled:opacity-40"
             >
               Save
             </button>
@@ -201,8 +179,8 @@ export function LayoutPresets() {
           <button
             onClick={handleResetClick}
             disabled={resetting}
-            className={`mt-1 truncate text-left text-xs whitespace-nowrap transition-colors disabled:opacity-40 ${
-              confirmingReset ? 'text-danger' : 'text-text-faint hover:text-text-muted'
+            className={`mt-1 cursor-pointer truncate text-left text-xs whitespace-nowrap transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${
+              confirmingReset ? 'text-danger' : 'text-text-faint enabled:hover:text-text-muted'
             }`}
           >
             {resetting ? 'Resetting…' : confirmingReset ? '↺ Confirm reset' : '↺ Reset to defaults'}

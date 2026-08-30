@@ -52,7 +52,7 @@ export function IconButton({
       onMouseDown={onMouseDown}
       title={title}
       aria-label={title}
-      className={`flex h-6 w-6 shrink-0 items-center justify-center rounded transition-colors ${TONES[tone]} ${className}`}
+      className={`flex h-6 w-6 shrink-0 cursor-pointer items-center justify-center rounded transition-colors ${TONES[tone]} ${className}`}
     >
       {children}
     </button>
