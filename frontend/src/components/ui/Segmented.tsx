@@ -1,6 +1,8 @@
 interface Option<T extends string> {
   value: T
   label: string
+  /** Rendered greyed and unclickable. The caller is responsible for saying why. */
+  disabled?: boolean
 }
 
 interface SegmentedProps<T extends string> {
@@ -10,6 +12,14 @@ interface SegmentedProps<T extends string> {
   compact?: boolean
   slide?: boolean
 }
+
+// An inactive segment sits transparent on the track's own `bg-hover`, so a
+// second `bg-hover` on top composites to a visibly lighter step rather than
+// painting the same colour twice. The slide variant deliberately takes the text
+// half only: its accent pill is absolutely positioned *under* the buttons, and a
+// background on a hovered segment would occlude the pill as it travels past.
+const HOVER = 'hover:bg-hover hover:text-text-primary'
+const HOVER_TEXT_ONLY = 'hover:text-text-primary'
 
 export function Segmented<T extends string>({
   options,
@@ -38,9 +48,14 @@ export function Segmented<T extends string>({
             <button
               key={opt.value}
               onClick={() => onChange(opt.value)}
-              className={`relative z-10 flex-1 bg-transparent text-xs whitespace-nowrap transition-colors duration-200 ${
+              disabled={opt.disabled}
+              className={`relative z-10 flex-1 cursor-pointer bg-transparent text-xs whitespace-nowrap transition-colors duration-200 disabled:cursor-not-allowed disabled:opacity-40 ${
                 compact ? 'px-2 py-px' : 'px-3 py-1'
-              } ${active ? 'text-canvas font-semibold' : 'text-text-muted font-normal'}`}
+              } ${
+                active
+                  ? 'text-canvas font-semibold'
+                  : `text-text-muted font-normal ${opt.disabled ? '' : HOVER_TEXT_ONLY}`
+              }`}
             >
               {opt.label}
             </button>
@@ -58,10 +73,13 @@ export function Segmented<T extends string>({
           <button
             key={opt.value}
             onClick={() => onChange(opt.value)}
-            className={`text-xs transition-colors ${compact ? 'px-2 py-px' : 'px-3 py-1'} ${
+            disabled={opt.disabled}
+            className={`cursor-pointer text-xs transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${
+              compact ? 'px-2 py-px' : 'px-3 py-1'
+            } ${
               active
                 ? 'bg-accent text-canvas font-semibold'
-                : 'text-text-muted bg-transparent font-normal'
+                : `text-text-muted bg-transparent font-normal ${opt.disabled ? '' : HOVER}`
             }`}
           >
             {opt.label}

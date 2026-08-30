@@ -4,6 +4,9 @@ import { STATUS_DEFAULTS } from '../styles/tokens'
 // stay hand-authored. Only the first entry of each is a design decision, and it
 // comes from the generated token defaults rather than being restated here; a
 // second copy of #4ade80 is exactly the drift this pipeline exists to remove.
+//
+// This one is `as const` because skins pair with an accent by naming a label
+// below, and the literal types are what make a mistyped name a compile error.
 export const ACCENT_PRESETS = [
   { label: 'Green', hex: STATUS_DEFAULTS.dark.accent },
   { label: 'Blue', hex: '#3b82f6' },
@@ -11,7 +14,20 @@ export const ACCENT_PRESETS = [
   { label: 'Amber', hex: '#f59e0b' },
   { label: 'Rose', hex: '#f43f5e' },
   { label: 'Cyan', hex: '#22d3ee' },
-]
+] as const satisfies readonly { label: string; hex: string }[]
+
+type AccentLabel = (typeof ACCENT_PRESETS)[number]['label']
+
+/**
+ * The hex an accent preset label stands for. Skins pair with an accent through
+ * this rather than by repeating the value: a second copy of #8b5cf6 is the same
+ * drift the presets themselves avoid by taking their first entry from the
+ * generated token defaults. A mistyped label is a type error, not a silent
+ * fallback, which matters for a hand-authored lookup table nobody re-reads.
+ */
+function accentPreset(label: AccentLabel): string {
+  return ACCENT_PRESETS.find((p) => p.label === label)!.hex
+}
 
 export const SUCCESS_PRESETS = [
   { label: 'Green', hex: STATUS_DEFAULTS.dark.success },
@@ -37,6 +53,30 @@ export interface SkinDefinition {
   name: string
   previewColors: [string, string, string, string]
   tokens: Record<string, string>
+  /**
+   * Whether the skin has been solved against the light theme.
+   *
+   * A skin writes its tokens as inline custom properties on `<html>`, which
+   * outrank `[data-theme='light']`'s rules for the same properties in
+   * tokens.css. So a skin keeps its dark surfaces under the light theme while
+   * every token it does *not* override flips to a light value. Midnight was the
+   * proof: it overrides surfaces and borders but no text ramp, so light mode
+   * painted `--text-primary: #0b0d12` onto `--bg-base: #010408`. The four
+   * skins that do carry a text ramp stayed readable but still picked up the
+   * darkened status colours meant for a light canvas.
+   *
+   * A flag rather than an `id === 'default'` check, so a skin authored against
+   * both themes only has to say so here.
+   */
+  supportsLight: boolean
+  /**
+   * The accent the skin ships with, applied when the skin is picked. Skins are
+   * designed around a hue, so leaving the previous skin's accent behind read as
+   * a half-applied theme. It is a starting point, not a lock: the accent picker
+   * sits directly below the gallery and overrides this until the next skin
+   * switch.
+   */
+  accent: string
 }
 
 export const BUILTIN_SKINS: SkinDefinition[] = [
@@ -44,7 +84,11 @@ export const BUILTIN_SKINS: SkinDefinition[] = [
     id: 'default',
     name: 'Default',
     previewColors: ['#05060a', '#0d0f16', '#1a1d26', '#4ade80'],
+    // No overrides at all, so both themes resolve entirely through tokens.css.
+    // That is what makes this the one skin light mode is designed against.
     tokens: {},
+    supportsLight: true,
+    accent: accentPreset('Green'),
   },
   {
     id: 'midnight',
@@ -59,6 +103,8 @@ export const BUILTIN_SKINS: SkinDefinition[] = [
       '--border-hover': 'rgba(255,255,255,0.09)',
       '--hover-surface': 'rgba(255,255,255,0.04)',
     },
+    supportsLight: false,
+    accent: accentPreset('Violet'),
   },
   {
     id: 'nord',
@@ -77,6 +123,8 @@ export const BUILTIN_SKINS: SkinDefinition[] = [
       '--text-faint': 'rgba(236,239,244,0.25)',
       '--hover-surface': 'rgba(255,255,255,0.06)',
     },
+    supportsLight: false,
+    accent: accentPreset('Blue'),
   },
   {
     id: 'solarized',
@@ -98,6 +146,8 @@ export const BUILTIN_SKINS: SkinDefinition[] = [
       '--text-faint': 'rgba(253,246,227,0.28)',
       '--hover-surface': 'rgba(255,210,200,0.05)',
     },
+    supportsLight: false,
+    accent: accentPreset('Rose'),
   },
   {
     id: 'mocha',
@@ -116,6 +166,8 @@ export const BUILTIN_SKINS: SkinDefinition[] = [
       '--text-faint': 'rgba(250,243,234,0.25)',
       '--hover-surface': 'rgba(255,170,110,0.06)',
     },
+    supportsLight: false,
+    accent: accentPreset('Amber'),
   },
   {
     id: 'forest',
@@ -137,6 +189,8 @@ export const BUILTIN_SKINS: SkinDefinition[] = [
       '--text-faint': 'rgba(230,242,230,0.26)',
       '--hover-surface': 'rgba(163,230,175,0.07)',
     },
+    supportsLight: false,
+    accent: accentPreset('Green'),
   },
 ]
 
@@ -158,6 +212,20 @@ function hexToRgbChannels(hex: string): string {
   return `${r} ${g} ${b}`
 }
 
+/** The skin a stored id resolves to, falling back to Default for an unknown one. */
+export function resolveSkin(skinId: string): SkinDefinition {
+  return BUILTIN_SKINS.find((s) => s.id === skinId) ?? BUILTIN_SKINS[0]
+}
+
+/**
+ * Whether light mode is offerable for a skin. Settings reads this to disable
+ * the Light option; `applySkin` enforces the same answer regardless of what is
+ * on disk.
+ */
+export function skinSupportsLight(skinId: string): boolean {
+  return resolveSkin(skinId).supportsLight
+}
+
 let prevSkinTokenKeys: string[] = []
 let systemThemeCleanup: (() => void) | null = null
 
@@ -170,21 +238,30 @@ export function applySkin(args: SkinApplyArgs): void {
   // Clear previous skin token overrides
   for (const key of prevSkinTokenKeys) root.style.removeProperty(key)
 
+  // Resolved before the mode, because a dark-only skin overrides it. Settings
+  // already refuses to *store* light for such a skin, but this is the only
+  // place that sees every path in: a settings file hand-edited to
+  // `{ theme: "light", skinId: "midnight" }`, and `system` on a light OS, which
+  // no stored value can guard. See SkinDefinition.supportsLight for what the
+  // combination actually renders as.
+  const skin = resolveSkin(args.skinId)
+
   // Apply base mode
   if (args.theme === 'system') {
     const mq = window.matchMedia('(prefers-color-scheme: dark)')
     const apply = () => {
-      root.dataset.theme = mq.matches ? 'dark' : 'light'
+      root.dataset.theme = mq.matches || !skin.supportsLight ? 'dark' : 'light'
     }
     apply()
+    // Still registered for a dark-only skin: the listener is cheap, and it is
+    // what makes a later switch back to Default follow the OS without a reload.
     mq.addEventListener('change', apply)
     systemThemeCleanup = () => mq.removeEventListener('change', apply)
   } else {
-    root.dataset.theme = args.theme
+    root.dataset.theme = args.theme === 'light' && !skin.supportsLight ? 'dark' : args.theme
   }
 
   // Apply skin token overrides
-  const skin = BUILTIN_SKINS.find((s) => s.id === args.skinId) ?? BUILTIN_SKINS[0]
   const entries = Object.entries(skin.tokens)
   prevSkinTokenKeys = entries.map(([k]) => k)
   for (const [key, val] of entries) root.style.setProperty(key, val)

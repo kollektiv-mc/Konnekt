@@ -7,6 +7,7 @@ import {
   WARNING_PRESETS,
   DANGER_PRESETS,
   BUILTIN_SKINS,
+  resolveSkin,
 } from '../lib/theme'
 import type { SkinDefinition } from '../lib/theme'
 import { Toggle } from './ui/Toggle'
@@ -47,6 +48,30 @@ const THEME_OPTIONS = [
   { value: 'dark' as const, label: '◐ Dark' },
   { value: 'system' as const, label: '⊙ System' },
 ]
+
+/**
+ * The patch a skin card sends: everything the skin decides, in one write.
+ *
+ * The accent always comes along, because each skin is designed around a hue and
+ * keeping the previous one read as a half-applied theme. It is a starting point
+ * rather than a lock, since the accent picker below overrides it and that choice
+ * then stands until the next skin switch.
+ *
+ * A dark-only skin picked while the stored theme is `light` also carries
+ * `theme: 'dark'`. One patch rather than two writes throughout: the store calls
+ * `applySkin` on every update, so a follow-up write would paint a frame of the
+ * old accent, or of light-mode-on-a-dark-skin, before correcting itself.
+ *
+ * `system` is deliberately left alone. It is still a legitimate choice here, and
+ * `applySkin` resolves it to dark for as long as a dark-only skin is active
+ * without destroying the preference the user set.
+ */
+function skinPatch(skinId: string, theme: AppSettings['theme']): Partial<AppSettings> {
+  const skin = resolveSkin(skinId)
+  const patch: Partial<AppSettings> = { skinId, accentColor: skin.accent }
+  if (theme === 'light' && !skin.supportsLight) patch.theme = 'dark'
+  return patch
+}
 
 const UPDATE_CHANNEL_OPTIONS = [
   { value: 'stable' as const, label: 'Stable' },
@@ -128,10 +153,10 @@ export function SettingsModal({ open, onClose }: Props) {
               <button
                 key={item.id}
                 onClick={() => setSection(item.id)}
-                className={`rounded-lg px-2 py-1.5 text-left text-sm transition-colors ${
+                className={`cursor-pointer rounded-lg px-2 py-1.5 text-left text-sm transition-colors ${
                   section === item.id
                     ? 'text-accent bg-accent/10'
-                    : 'text-text-secondary bg-transparent'
+                    : 'text-text-secondary hover:bg-hover hover:text-text-primary bg-transparent'
                 }`}
               >
                 {item.label}
@@ -149,7 +174,7 @@ export function SettingsModal({ open, onClose }: Props) {
             </span>
             <button
               onClick={onClose}
-              className="text-text-muted flex h-6 w-6 items-center justify-center rounded text-sm transition-colors"
+              className="text-text-muted hover:bg-hover hover:text-text-primary flex h-6 w-6 cursor-pointer items-center justify-center rounded text-sm transition-colors"
             >
               ×
             </button>
@@ -190,7 +215,7 @@ function ColorField({
 }: {
   value: string
   onChange: (hex: string) => void
-  presets: { label: string; hex: string }[]
+  presets: readonly { label: string; hex: string }[]
 }) {
   const isPreset = presets.some((p) => p.hex.toLowerCase() === value.toLowerCase())
   return (
@@ -242,8 +267,10 @@ function SkinCard({
   return (
     <button
       onClick={onClick}
-      className={`border-thick flex w-21 shrink-0 flex-col gap-1.5 rounded-lg p-2 transition-colors ${
-        selected ? 'border-accent bg-accent/8' : 'border-border-subtle bg-hover'
+      className={`border-thick flex w-21 shrink-0 cursor-pointer flex-col gap-1.5 rounded-lg p-2 transition-colors ${
+        selected
+          ? 'border-accent bg-accent/8'
+          : 'border-border-subtle hover:border-border-hover bg-hover'
       }`}
     >
       <div className="flex h-[18px] gap-0.5 overflow-hidden rounded-sm">
@@ -264,6 +291,20 @@ function SkinCard({
 // ─── Appearance ───────────────────────────────────────────────────────────────
 
 function AppearancePane({ settings, update }: { settings: AppSettings; update: UpdateFn }) {
+  // Only the Default skin is solved against the light theme; the rest write
+  // inline token overrides that outrank it (see SkinDefinition.supportsLight).
+  // Offering Light for those would offer a mode the app then refuses to render.
+  const activeSkin = resolveSkin(settings.skinId)
+  const themeOptions = THEME_OPTIONS.map((opt) =>
+    opt.value === 'light' && !activeSkin.supportsLight ? { ...opt, disabled: true } : opt,
+  )
+  // The stored value, except where applySkin is overriding it. Picking a
+  // dark-only skin writes `dark` outright, so this only differs for a settings
+  // file that predates the flag or was hand-edited — where showing Light both
+  // selected and disabled would describe a mode the app is not in.
+  const shownTheme =
+    settings.theme === 'light' && !activeSkin.supportsLight ? 'dark' : settings.theme
+
   return (
     <div>
       {/* Skin gallery */}
@@ -276,17 +317,19 @@ function AppearancePane({ settings, update }: { settings: AppSettings; update: U
               key={skin.id}
               skin={skin}
               selected={settings.skinId === skin.id}
-              onClick={() => update({ skinId: skin.id })}
+              onClick={() => update(skinPatch(skin.id, settings.theme))}
             />
           ))}
         </div>
       </div>
 
-      {/* Mode */}
+      {/* Mode. The description is deliberately fixed rather than explaining the
+          dark-only case: a two-line variant reflows every row below it as the
+          skin changes. The greyed-out Light option carries that on its own. */}
       <SettingRow label="Mode" description="Light, dark, or follow your OS preference.">
         <Segmented
-          options={THEME_OPTIONS}
-          value={settings.theme}
+          options={themeOptions}
+          value={shownTheme}
           onChange={(theme) => update({ theme })}
         />
       </SettingRow>
@@ -405,7 +448,7 @@ function GeneralPane({
           onChange={(e) =>
             update({ stopGraceSeconds: Math.min(600, Math.max(5, Number(e.target.value))) })
           }
-          className="bg-hover border-border-subtle text-text-primary border-hairline w-20 rounded px-2 py-1 text-right text-xs outline-none"
+          className="bg-hover border-border-subtle text-text-primary hover:border-border-hover focus:border-border-hover border-hairline w-20 rounded px-2 py-1 text-right text-xs transition-colors outline-none"
         />
       </SettingRow>
       <SettingRow
@@ -462,7 +505,7 @@ function ConsolePane({ settings, update }: { settings: AppSettings; update: Upda
           step={100}
           value={settings.consoleBufferLines}
           onChange={(e) => update({ consoleBufferLines: Math.max(100, Number(e.target.value)) })}
-          className="bg-hover border-border-subtle text-text-primary border-hairline w-20 rounded px-2 py-1 text-right text-xs outline-none"
+          className="bg-hover border-border-subtle text-text-primary hover:border-border-hover focus:border-border-hover border-hairline w-20 rounded px-2 py-1 text-right text-xs transition-colors outline-none"
         />
       </SettingRow>
     </div>
