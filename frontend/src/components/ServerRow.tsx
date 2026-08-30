@@ -1,6 +1,8 @@
 import { useCallback, useRef, useState } from 'react'
 import { GetServerSummary } from '../../wailsjs/go/main/App'
 import { useHoverDelay } from '../hooks/useHoverDelay'
+import { IconButton } from './ui/IconButton'
+import { PencilIcon } from './ui/icons'
 import { ServerTooltip } from './ServerTooltip'
 import type { ServerConfig, ServerSummary } from '../types'
 
@@ -56,7 +58,7 @@ export function ServerRow({ cfg, active, onSelect, onEdit }: Props) {
   return (
     <div
       ref={rowRef}
-      className="flex items-center gap-1"
+      className="flex items-center gap-1 px-1"
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
     >
@@ -73,13 +75,9 @@ export function ServerRow({ cfg, active, onSelect, onEdit }: Props) {
         />
         <span className="truncate">{cfg.name}</span>
       </button>
-      <button
-        onClick={onEdit}
-        className="text-text-faint hover:text-text-secondary px-1 text-xs transition-colors"
-        title="Edit"
-      >
-        ✎
-      </button>
+      <IconButton onClick={onEdit} title="Edit">
+        <PencilIcon />
+      </IconButton>
 
       {hovered && <ServerTooltip summary={summary} anchor={anchor} />}
     </div>
