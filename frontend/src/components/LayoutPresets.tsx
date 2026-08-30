@@ -83,7 +83,6 @@ export function LayoutPresets() {
     <NavSection
       id="layouts"
       title="Layouts"
-      count={presets.length}
       // A reset armed and then closed away would still be armed when the
       // section is reopened, which is the trap the timeout below exists to
       // avoid. Closing disarms it, exactly as the old inline toggle did.
@@ -91,7 +90,11 @@ export function LayoutPresets() {
     >
       <div className="flex min-w-0 flex-col gap-2 p-1 pt-2">
         {presets.map((preset) => (
-          <div key={preset.name} className="flex items-center gap-1">
+          // px-2 here and px-1 on the button, for the reason ServerRow's row
+          // carries the same pair: the row's padding sets the delete control's
+          // column and the button's sets the name's, and the two are the
+          // navbar's columns, not this panel's.
+          <div key={preset.name} className="flex items-center gap-1 px-2">
             {/* Same treatment as the server list above it in this sidebar
                   (components/ServerRow.tsx), and for the same reason: it is the
                   same control. It used to hand-roll hover through
@@ -107,7 +110,7 @@ export function LayoutPresets() {
               onClick={() => loadPreset(preset.name)}
               // Truncates rather than wraps: a wrapped name makes its row
               // taller than the others and re-flows the list.
-              className={`flex-1 cursor-pointer truncate rounded px-2 py-1.5 text-left text-xs transition-all ${
+              className={`flex-1 cursor-pointer truncate rounded px-1 py-1.5 text-left text-xs transition-all ${
                 preset.name === activePresetName
                   ? 'text-accent bg-accent/10'
                   : 'text-text-secondary hover:bg-hover hover:text-text-primary bg-transparent'
@@ -127,7 +130,7 @@ export function LayoutPresets() {
           </div>
         ))}
 
-        <div className="mt-1 flex gap-1">
+        <div className="mt-1 flex gap-1 px-2">
           <input
             type="text"
             value={newName}
@@ -146,7 +149,7 @@ export function LayoutPresets() {
         </div>
 
         {error && (
-          <div role="alert" className="text-danger font-mono text-xs">
+          <div role="alert" className="text-danger px-2 font-mono text-xs">
             {error}
           </div>
         )}
@@ -159,7 +162,7 @@ export function LayoutPresets() {
         <button
           onClick={handleResetClick}
           disabled={resetting}
-          className={`mt-1 cursor-pointer truncate text-left text-xs whitespace-nowrap transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${
+          className={`mt-1 cursor-pointer truncate px-3 text-left text-xs whitespace-nowrap transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${
             confirmingReset ? 'text-danger' : 'text-text-faint enabled:hover:text-text-muted'
           }`}
         >

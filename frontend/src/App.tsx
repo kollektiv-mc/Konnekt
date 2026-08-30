@@ -530,7 +530,29 @@ function App() {
         // eslint-disable-next-line no-restricted-syntax -- navWidth is a live drag-computed value
         style={{ width: navWidth }}
       >
-        <div className="border-b-hairline border-border-subtle flex shrink-0 items-center justify-between px-3 py-3">
+        {/* Measures as exactly the box a tile header at the top of the canvas
+            does, so the two rules are one line and the two titles one baseline:
+            mt-3 for Dashboard.tsx's GRID_CONTAINER_PADDING[1] (keep the two in
+            step — it is module-private there, and reaching it from here would
+            mean an inline style the lint rule restricts), then the same py-2
+            around the same 24px control row.
+
+            The transparent top hairline is the part that makes that exact
+            rather than nearly right: a tile's header sits below its card's own
+            top border, and without one here the two boxes differ by a hairline.
+            A hairline is 0.5px at 2x and 1px at 1x, so any integer padding
+            picked to absorb it is only correct on one of them; borrowing the
+            same token is correct on both.
+
+            pr-5 plus a transparent right hairline, for the same reason and by
+            the same arithmetic sideways: 8px of card inset, the card's own
+            border, and the 12px a card header insets its own controls. That is
+            what puts the gear in the same column as the manage-servers expand
+            and every row control below it.
+            pl-3 stays — the wordmark is a brand mark in a bar, not a list item,
+            and indenting it to 24px to chase the section chevrons would read as
+            an indent rather than as alignment. */}
+        <div className="border-b-hairline border-t-hairline border-r-hairline border-b-border-subtle mt-3 flex shrink-0 items-center justify-between border-t-transparent border-r-transparent py-2 pr-5 pl-3">
           <span className="text-accent font-display text-sm font-black tracking-tight">
             Konnekt
           </span>

@@ -59,18 +59,24 @@ export function ServerRow({ cfg, active, onSelect, onEdit }: Props) {
   return (
     <div
       ref={rowRef}
-      className="flex items-center gap-1 px-1"
+      className="flex items-center gap-1 px-2"
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
     >
-      {/* min-w-0 is what lets the name actually truncate. The span inside carries
+      {/* px-2 on the row and px-1 in here, rather than the other way round: the
+          row's padding is what sets the edit control's column (12px inside the
+          card, with every other trailing control in the navbar) and the
+          button's is what sets the status dot's (16px, with every other leading
+          glyph). Swapping the two around is width-neutral for the name.
+
+          min-w-0 is what lets the name actually truncate. The span inside carries
           `truncate`, but this button's own overflow is visible, so its intrinsic
           minimum is the full width of a nowrap label and it refuses to shrink
           past it — which pushed the edit control out of the section beside a
           name as ordinary as "NeoForge 1.21.1", at the navbar's 176px floor. */}
       <button
         onClick={onSelect}
-        className={`flex min-w-0 flex-1 items-center gap-2 rounded px-2 py-1.5 text-left text-xs transition-all ${
+        className={`flex min-w-0 flex-1 items-center gap-2 rounded px-1 py-1.5 text-left text-xs transition-all ${
           active
             ? 'text-accent bg-accent/10'
             : 'text-text-secondary hover:bg-hover hover:text-text-primary'

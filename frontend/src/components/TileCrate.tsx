@@ -276,8 +276,12 @@ export function TileCrate() {
         className={`border-hairline text-text-primary flex cursor-default items-center gap-2 rounded-lg px-2 py-2 text-left transition-all ${
           dragging ? '' : 'hover:border-border-subtle'
         } ${
+          // Hovering lifts an on-canvas row out of its recess rather than
+          // lightening the recess: the same gesture the drag makes, and the
+          // read is "this one is already out there". A row still in the crate
+          // has nothing to lift out of, so it takes the soft grey instead.
           onCanvas
-            ? `bg-black/20 ${dragging ? '' : 'hover:bg-black/10'}`
+            ? `bg-black/20 ${dragging ? '' : 'hover:bg-transparent'}`
             : `bg-transparent ${dragging ? '' : 'hover:bg-hover'}`
         } ${
           // The border colour is picked here rather than appended to a
@@ -357,10 +361,10 @@ export function TileCrate() {
     // doubling the two costs the labels 16px of a navbar that is only 176px
     // wide at its narrowest. The rows keep their own px-2.
     <div ref={rootRef} className="flex flex-col gap-2">
-      <NavSection id="widgets" title="Widgets" count={utilityTiles.length}>
+      <NavSection id="widgets" title="Widgets">
         <div className="flex flex-col gap-1 p-1">{renderGroup(utilityTiles, utilityIds)}</div>
       </NavSection>
-      <NavSection id="tiles" title="Tiles" count={moduleTiles.length}>
+      <NavSection id="tiles" title="Tiles">
         <div className="flex flex-col gap-1 p-1">{renderGroup(moduleTiles, moduleIds)}</div>
       </NavSection>
     </div>

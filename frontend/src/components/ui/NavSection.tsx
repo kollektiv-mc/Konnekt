@@ -12,8 +12,6 @@ interface NavSectionProps {
    */
   id: string
   title: string
-  /** Rendered faintly at the right of the header; the point of it is the collapsed state. */
-  count?: number
   /** The section's own control, e.g. Servers' manage-servers expand. Never nested in the toggle. */
   action?: ReactNode
   /**
@@ -45,7 +43,7 @@ interface NavSectionProps {
  * TileWrapper's inline hover-border writes, which is a dashboard change
  * hitchhiking on a navbar one.
  */
-export function NavSection({ id, title, count, action, onToggle, children }: NavSectionProps) {
+export function NavSection({ id, title, action, onToggle, children }: NavSectionProps) {
   const closed = useSettingsStore((s) => s.settings.navClosedSections[id] === true)
   const update = useSettingsStore((s) => s.update)
 
@@ -61,31 +59,40 @@ export function NavSection({ id, title, count, action, onToggle, children }: Nav
 
   return (
     <div className="border-border-subtle bg-canvas hover:border-border-hover border-hairline duration-fast rounded-panel flex shrink-0 flex-col overflow-hidden bg-[linear-gradient(var(--bg-surface),var(--bg-surface))] transition-colors">
-      <div className="border-border-subtle border-b-hairline flex shrink-0 items-center gap-1 pr-3">
+      {/* The tint sits on the bar, not on the button inside it. On the button it
+          stopped 12px short of the card's right edge — 50px short where a
+          section has an action — so it cut off exactly where the card's rounded
+          corner begins, which is the one place a background most needs to
+          reach. The bar spans the full width and the card's overflow-hidden
+          rounds the tint into the corner for free. Hovering the action lights
+          the bar too; that is the right reading, and the action's own hover
+          square stacking on top is what marks it as the more specific target. */}
+      <div className="border-border-subtle hover:bg-hover border-b-hairline flex shrink-0 items-center gap-1 pr-3 transition-colors">
         <button
           type="button"
           onClick={toggle}
           aria-expanded={!closed}
-          className="hover:bg-hover flex min-w-0 flex-1 cursor-pointer items-center gap-2 py-2 pl-3 text-left transition-colors select-none"
+          className="flex min-w-0 flex-1 cursor-pointer items-center gap-2 py-2 pl-3 text-left select-none"
         >
-          {/* Where a tile header carries its icon. One glyph that rotates
-              rather than two that swap: a lucide chevron's ink is centred in
-              its box, so the rotation is a turn rather than a lurch, and a
-              disclosure marker that *travels* between its two states is the
-              part that reads as a hinge. */}
-          <Icon
-            icon={ChevronDown}
-            size="sm"
-            className={`text-text-muted duration-fast shrink-0 transition-transform ${
-              closed ? '-rotate-90' : ''
-            }`}
-          />
+          {/* Where a tile header carries its icon, and in the same 24x24 box the
+              crate rows put theirs in — a bare 16px glyph here starts its ink
+              4px left of every row below it, which was half the stagger down
+              this navbar. One glyph that rotates rather than two that swap: a
+              lucide chevron's ink is centred in its box, so the rotation is a
+              turn rather than a lurch, and a disclosure marker that *travels*
+              between its two states is the part that reads as a hinge. */}
+          <span className="flex h-6 w-6 shrink-0 items-center justify-center">
+            <Icon
+              icon={ChevronDown}
+              size="sm"
+              className={`text-text-muted duration-fast transition-transform ${
+                closed ? '-rotate-90' : ''
+              }`}
+            />
+          </span>
           <span className="font-title text-text-secondary truncate text-xs font-medium">
             {title}
           </span>
-          {count !== undefined && (
-            <span className="text-text-faint text-2xs ml-auto shrink-0 pl-1">{count}</span>
-          )}
         </button>
         {action}
       </div>

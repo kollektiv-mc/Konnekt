@@ -95,7 +95,7 @@ export const TILE_REGISTRY: TileDefinition[] = [
   },
   {
     id: 'mods',
-    label: 'Plugins & Mods',
+    label: 'Plugins',
     icon: Blocks,
     maximizable: true,
     component: ModsTile,

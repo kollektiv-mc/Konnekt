@@ -146,13 +146,4 @@ describe('NavSection', () => {
     })
     expect(onToggle).toHaveBeenCalledWith(false)
   })
-
-  it('shows the count beside the title', () => {
-    render(
-      <NavSection id="tiles" title="Tiles" count={9}>
-        <div>body</div>
-      </NavSection>,
-    )
-    expect(screen.getByRole('button', { name: /Tiles/ }).textContent).toContain('9')
-  })
 })
