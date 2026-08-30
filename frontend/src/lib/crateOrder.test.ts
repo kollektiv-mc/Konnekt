@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { dropIndexAt, normalizeCrateOrder, reorderWithinGroup } from './crateOrder'
+import { dropIndexAt, homeIndexIn, normalizeCrateOrder, reorderWithinGroup } from './crateOrder'
 import { TILE_REGISTRY } from '../tiles/registry'
 
 const ALL_IDS = TILE_REGISTRY.map((t) => t.id)
@@ -102,6 +102,50 @@ describe('dropIndexAt', () => {
       const i = dropIndexAt(rows, y)
       expect(i).toBeGreaterThanOrEqual(0)
       expect(i).toBeLessThanOrEqual(rows.length)
+    }
+  })
+})
+
+describe('homeIndexIn', () => {
+  const order = ['a', 'b', 'c', 'd', 'e']
+  const groupA = new Set(['a', 'c', 'e'])
+
+  it('is the position within the group, not within the whole order', () => {
+    expect(homeIndexIn(order, groupA, 'a')).toBe(0)
+    expect(homeIndexIn(order, groupA, 'c')).toBe(1)
+    expect(homeIndexIn(order, groupA, 'e')).toBe(2)
+  })
+
+  it('is -1 for an id outside the group', () => {
+    expect(homeIndexIn(order, groupA, 'b')).toBe(-1)
+    expect(homeIndexIn(order, groupA, 'nope')).toBe(-1)
+  })
+
+  // The property the crate relies on: this index, and only this index, is the
+  // drop that leaves the list exactly as it was.
+  //
+  // Bounded by the group's real index domain — `dropIndexAt` returns at most
+  // one index per sibling, so for a group of n that is 0..n-1. Anything past
+  // it is clamped by `reorderWithinGroup` and folds onto the last slot, which
+  // for the last member *is* its home index. Testing past the domain would be
+  // asserting against the clamp, not against the property.
+  it('is the one index reorderWithinGroup leaves unchanged', () => {
+    const members = [...groupA]
+    for (const id of members) {
+      const home = homeIndexIn(order, groupA, id)
+      expect(reorderWithinGroup(order, groupA, id, home)).toEqual(order)
+      for (let i = 0; i < members.length; i++) {
+        if (i === home) continue
+        expect(reorderWithinGroup(order, groupA, id, i)).not.toEqual(order)
+      }
+    }
+  })
+
+  it('holds for the real registry groups', () => {
+    const ids = new Set(ALL_IDS)
+    for (const id of ALL_IDS) {
+      const home = homeIndexIn(ALL_IDS, ids, id)
+      expect(reorderWithinGroup(ALL_IDS, ids, id, home)).toEqual(ALL_IDS)
     }
   })
 })
