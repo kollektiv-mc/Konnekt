@@ -2,7 +2,7 @@ import { describe, it, expect, afterEach, beforeEach } from 'vitest'
 import { render, screen, cleanup } from '@testing-library/react'
 import { useServerStore } from '../../stores/useServerStore'
 import type { ServerStatus } from '../../types'
-import { StatsTile } from './index'
+import { Vitals } from './Vitals'
 
 const BASE: ServerStatus = {
   running: false,
@@ -23,7 +23,11 @@ afterEach(cleanup)
 // becomes five faces, keyed on the lifecycle phase the backend now tracks.
 // Running stays "process alive", so Starting and Stopping render with
 // running: true — exactly the case the old boolean pill could not show.
-describe('StatsTile status pill', () => {
+//
+// Moved here from tiles/stats when the tile became Overview (#211): the pill is
+// now `Vitals`, which is both the tile's compact face and the first card of its
+// maximized roll-up.
+describe('Vitals status pill', () => {
   beforeEach(() => {
     useServerStore.setState({ status: BASE, reachable: true })
   })
@@ -36,13 +40,13 @@ describe('StatsTile status pill', () => {
     ['Unreachable', { ...BASE, running: true, state: 'running' }, false],
   ] as [string, ServerStatus, boolean][])('labels the pill %s', (label, status, reachable) => {
     useServerStore.setState({ status, reachable })
-    render(<StatsTile serverId="srv1" />)
+    render(<Vitals />)
     expect(screen.getByText(label)).toBeTruthy()
   })
 
   it('does not show Online for a booting server the way the boolean pill did', () => {
     useServerStore.setState({ status: { ...BASE, running: true, state: 'starting' } })
-    render(<StatsTile serverId="srv1" />)
+    render(<Vitals />)
     expect(screen.queryByText('Online')).toBeNull()
   })
 
@@ -51,7 +55,7 @@ describe('StatsTile status pill', () => {
       status: { ...BASE, running: true, state: 'starting' },
       reachable: false,
     })
-    render(<StatsTile serverId="srv1" />)
+    render(<Vitals />)
     expect(screen.getByText('Unreachable')).toBeTruthy()
     expect(screen.queryByText('Starting')).toBeNull()
   })

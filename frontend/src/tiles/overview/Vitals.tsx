@@ -1,5 +1,4 @@
 import { useServerStore } from '../../stores/useServerStore'
-import type { TileProps } from '../../types'
 
 function tpsColor(tps: number): string {
   if (tps >= 18) return 'text-accent'
@@ -43,9 +42,17 @@ const PILL = {
   online: { label: 'Online', dot: 'bg-accent shadow-[0_0_6px_var(--accent)]', text: 'text-accent' },
 } as const
 
-// `serverId` is unused: the status this renders is hydrated once in App by
-// useServerStatusSync, so the tile is a pure reader of the shared store.
-export function StatsTile(_props: TileProps) {
+/**
+ * The server's vitals: status pill, players, TPS, RAM, memory bar.
+ *
+ * This is the Overview tile's compact face, unchanged from when the tile was
+ * called Stats, and it is also the first card of the maximized roll-up — the
+ * same component both times rather than a second copy sized differently. It
+ * reads `useServerStore` and nothing else, which is why an Overview sitting on
+ * the canvas costs no IPC at all; every other summary in the roll-up mounts
+ * only once the tile is maximized.
+ */
+export function Vitals() {
   const status = useServerStore((s) => s.status)
   const reachable = useServerStore((s) => s.reachable)
 

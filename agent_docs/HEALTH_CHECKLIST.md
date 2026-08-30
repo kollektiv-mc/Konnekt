@@ -509,6 +509,33 @@ done as part of the split: it changes what happens for every tile error, not
 just a chunk load, and what a dead tile should offer — a retry, a remove — is a
 design question rather than a mechanical one.
 
+Half of the mechanism landed with the Overview tile (#211): `ErrorBoundary` now
+takes an optional `fallback`, and the Overview panel wraps each summary card in
+its own, because that panel is the one place mounting ten tile subtrees side by
+side. The item stays open — a tile on the canvas is still unwrapped, and it is
+`TileWrapper`'s content slot that would fix that for every tile at once. What is
+left is the design question, not the plumbing.
+
+**P3 — A maximized Overview holds a second copy of each summary's data**
+(filed 2026-08-30)
+
+Dashboard mounts a maximized tile twice — once in the grid, once in the overlay
+— so while Overview is open, every summary in its roll-up runs its mount fetch
+alongside the copy the canvas already has. That is `+1` each of
+`GetPlayerRoster`, `ListWorlds`, `ListBackups`, `ReadConfigFile` and
+`GetStatsHistory` (the last also a second 360-entry ring buffer), plus mods'
+`ModListInstalled` and its two Modrinth round trips, `ModCheckUpdates` and
+`ModCategories`. Scheduler and notifications cost nothing: both already read a
+store.
+
+Bounded, because the compact face of Overview is store-only and none of this
+fires until the tile is actually maximized. #212 hoists backups, worlds and
+performance into stores and removes most of it; it scopes `useMods` out as a
+different problem (it fetches per query, not per mount), so the Modrinth pair is
+the part that survives it. `ModCategories` in particular feeds only the Browse
+panel and has no business firing for a summary — that is the narrow fix if
+someone wants one before #212.
+
 **P3 — Evidence for the memoization item above** (filed 2026-08-29)
 
 The Performant pillar's memoization item says it cannot be closed from a

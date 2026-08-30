@@ -46,6 +46,14 @@ Every tile is the same size, from `lib/gridSizing.ts`. To add one: create
 `frontend/src/tiles/MyTile/index.tsx` + `types.ts`, then extend (never
 restructure) `frontend/src/tiles/registry.ts`. No layout changes needed.
 
+If the tile has a compact face worth rolling up, export it from its own file
+and register it as the entry's `summary`. The Overview tile
+(`frontend/src/tiles/overview/`) renders `TILE_REGISTRY.filter((t) =>
+t.summary)` and never reimplements one, so that slot is the whole contract —
+see `.claude/rules/tile-system.md` for when to omit it. Overview's own id is
+`stats`, deliberately: it is persisted verbatim in three JSON files under the
+app data dir.
+
 Why the grid is built the way it is, and which parts are load-bearing:
 `.claude/rules/tile-system.md`, which loads on its own when you open a tile,
 `gridSizing.ts` or `Dashboard.tsx`. Read it before changing placement code.

@@ -66,6 +66,9 @@ function tileGrid(ids: readonly string[], size: { w: number; h: number }): strin
 // full-coverage presets below cannot drift apart.
 export const ALL_TILE_IDS = [
   'console',
+  // The Overview tile. Its id stays 'stats' because it is persisted verbatim
+  // here, in the presets below, and in three JSON files under the app data dir
+  // — see the comment on its entry in `tiles/registry.ts`.
   'stats',
   'players',
   'quick-commands',

@@ -10,10 +10,28 @@ paths:
 Adding a new tile:
 1. Create `frontend/src/tiles/MyTile/index.tsx` and `types.ts`
 2. Register it in `frontend/src/tiles/registry.ts` with `id`, `label`, `icon`,
-   optionally `maximizable`, and `component` — extend this file, never
-   restructure it. There is no sizing decision to make: every tile shares the
-   same size (see below).
+   optionally `maximizable` and `summary`, and `component` — extend this file,
+   never restructure it. There is no sizing decision to make: every tile shares
+   the same size (see below).
 3. No changes to core layout system required
+
+`summary` is the tile's compact face, and the Overview tile
+(`tiles/overview/`) renders `TILE_REGISTRY.filter((t) => t.summary)` — reading
+the registry rather than keeping a roster of its own, so a tile added later
+cannot leave a stale Overview behind. Export that view from its own file, since
+the tile root and Overview each mount it, and keep it clear of whatever sits
+behind `lazy()` for the maximized face: `WorldsSummary` is separate from
+`scene/WorldsScene` precisely so a roll-up of the worlds never reaches three.js.
+Omit `summary` when the unmaximized face *is* the whole tile — the console's
+live log stream and the command button grid summarise nothing, and rolling the
+console up would put a `log:line` subscription inside Overview.
+
+Overview's compact face is the server's vitals and reads only `useServerStore`;
+every other summary mounts only when Overview is maximized. That split is
+load-bearing rather than cosmetic. Each summary fetches on mount, so hanging
+them off `maximized` is what stops a burst of Go calls (and a heavy lazy chunk
+or two) firing merely because Overview sits on the canvas — which, on a fresh
+install, it does.
 
 Every tile is the same size — one shared default, and one shared min/max
 resize range, from `lib/gridSizing.ts`'s `TILE_SIZE`/`TILE_MIN`/`TILE_MAX`.

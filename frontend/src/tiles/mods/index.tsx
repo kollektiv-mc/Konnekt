@@ -1,44 +1,14 @@
-import { useEffect, useRef, useState } from 'react'
+import { useState } from 'react'
 import type { TileProps } from '../../types'
 import { useMods } from './useMods'
 import type { InstalledMod } from './useMods'
 import { InstalledPanel } from './InstalledPanel'
 import { BrowsePanel } from './BrowsePanel'
 import { useServerStore } from '../../stores/useServerStore'
-import { useServerConfigStore } from '../../stores/useServerConfigStore'
 import { useProcessesStore } from '../../stores/useProcessesStore'
-import { DetectServerLoader } from '../../../wailsjs/go/main/App'
-import { models } from '../../../wailsjs/go/models'
-import { PLUGIN_LOADERS } from '../../lib/constants'
-import { readOr } from '../../lib/ipc'
-
-function useServerKind(serverId: string): { kind: 'mods' | 'plugins'; detecting: boolean } {
-  const config = useServerConfigStore((s) => s.configs.find((c) => c.id === serverId))
-  const saveConfig = useServerConfigStore((s) => s.saveConfig)
-  const [detecting, setDetecting] = useState(false)
-  const detected = useRef(false)
-
-  useEffect(() => {
-    if (detected.current) return
-    if (!config) return
-    // A NeoForge/Forge install has no jar path — detection falls back to the
-    // working dir's logs, so gate on having neither rather than on the jar.
-    if (config.loader || (!config.jarPath && !config.workingDir)) return
-
-    detected.current = true
-    setDetecting(true)
-    readOr(() => DetectServerLoader(serverId), null)
-      .then((cfg) => {
-        if (cfg) saveConfig(cfg)
-      })
-      .finally(() => setDetecting(false))
-  }, [serverId, config, saveConfig])
-
-  const kind = (PLUGIN_LOADERS as readonly string[]).includes(config?.loader ?? '')
-    ? 'plugins'
-    : 'mods'
-  return { kind, detecting }
-}
+import { ModsSummary } from './ModsSummary'
+import { useServerKind } from './useServerKind'
+import { modToProject } from './modToProject'
 
 export function ModsTile({ serverId, maximized }: TileProps) {
   const mods = useMods(serverId)
@@ -58,80 +28,6 @@ export function ModsTile({ serverId, maximized }: TileProps) {
   }
 
   return <ModsExpanded serverId={serverId} mods={mods} running={running} kind={kind} />
-}
-
-// --- Compact (non-maximized) view ---
-
-function ModsSummary({
-  serverId,
-  mods,
-  running,
-  kind,
-  detecting,
-}: {
-  serverId: string
-  mods: ReturnType<typeof useMods>
-  running: boolean
-  kind: 'mods' | 'plugins'
-  detecting: boolean
-}) {
-  const { installed, installedLoading, installProgress, setEnabled, uninstall, updates } = mods
-  const noun = kind === 'plugins' ? 'plugin' : 'mod'
-  const nounPlural = kind === 'plugins' ? 'plugins' : 'mods'
-  const modProcess = useProcessesStore((s) => s.processes['mod:' + serverId])
-
-  return (
-    <div className="flex h-full min-h-0 flex-col">
-      <div className="flex shrink-0 items-center justify-between px-3 py-2">
-        <span className="text-text-secondary text-xs font-semibold">
-          {detecting
-            ? 'Detecting server type…'
-            : `${installed.length} ${installed.length !== 1 ? nounPlural : noun}`}
-        </span>
-        {running && (
-          <span className="text-text-muted text-xs text-[10px]">restart needed for changes</span>
-        )}
-      </div>
-      {modProcess?.status === 'running' && (
-        <div className="bg-border-subtle h-0.5 w-full shrink-0">
-          <div
-            className="bg-accent h-full transition-all duration-300"
-            // eslint-disable-next-line no-restricted-syntax -- width is a live download-progress percent
-            style={{ width: `${modProcess.percent}%` }}
-          />
-        </div>
-      )}
-      <div className="min-h-0 flex-1 overflow-y-auto">
-        <InstalledPanel
-          mods={installed}
-          loading={installedLoading}
-          error={mods.installedError}
-          installProgress={installProgress}
-          installing={mods.installing}
-          serverRunning={running}
-          kind={kind}
-          updates={updates}
-          onSetEnabled={setEnabled}
-          onUninstall={uninstall}
-          onChangeVersion={mods.changeVersion}
-          selectedProject={mods.selectedProject}
-          projectLoading={mods.projectLoading}
-          versions={mods.versions}
-          versionsLoading={mods.versionsLoading}
-          installError={mods.installError}
-          onSelectProject={(mod) => mods.selectProject(modToProject(mod))}
-          onClearProject={mods.clearProject}
-          onGetVersions={mods.getVersions}
-          onGetAllVersions={mods.getAllVersions}
-          onResolveDeps={mods.resolveDeps}
-          onInstall={mods.install}
-          onOpenInBrowser={() => {
-            /* no-op in compact view */
-          }}
-        />
-      </div>
-    </div>
-  )
 }
 
 // --- Maximized (full) view ---
@@ -335,24 +231,4 @@ function ModsExpanded({
       </div>
     </div>
   )
-}
-
-// Build a minimal ModProject shell from an InstalledMod so useMods.selectProject
-// can show the mod in the detail panel / content browser.
-function modToProject(mod: InstalledMod) {
-  return models.ModProject.createFrom({
-    id: mod.projectId,
-    slug: mod.projectId,
-    title: mod.displayName,
-    description: '',
-    body: '',
-    iconUrl: mod.iconUrl || '',
-    author: '',
-    projectType: mod.targetFolder === 'plugins' ? 'plugin' : 'mod',
-    downloads: 0,
-    follows: 0,
-    dateModified: '',
-    categories: [],
-    gallery: [],
-  })
 }
