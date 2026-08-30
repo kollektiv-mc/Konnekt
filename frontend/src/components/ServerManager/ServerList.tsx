@@ -15,7 +15,7 @@ interface Props {
 export function ServerList({ configs, selected, activeId, onSelect }: Props) {
   return (
     <div className="bg-surface border-border-subtle border-r-hairline flex w-48 shrink-0 flex-col p-3">
-      <span className="font-title text-text-muted border-border-subtle border-b-hairline px-2 pt-1 pb-3 text-xs font-semibold tracking-wider uppercase">
+      <span className="font-title text-text-muted border-border-subtle border-b-hairline px-2 pt-1 pb-3 text-xs font-medium tracking-wider uppercase">
         Servers
       </span>
 

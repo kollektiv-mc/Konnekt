@@ -88,7 +88,7 @@ export function ServerManager() {
 
         <div className="flex min-w-0 flex-1 flex-col">
           <div className="border-border-subtle border-b-hairline flex shrink-0 items-center justify-between px-5 py-3">
-            <span className="font-title text-text-primary truncate text-sm font-semibold">
+            <span className="font-title text-text-primary truncate text-sm font-medium">
               {isNew ? 'Add a server' : current.name}
             </span>
             <button

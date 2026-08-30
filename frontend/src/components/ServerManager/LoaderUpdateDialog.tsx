@@ -76,7 +76,7 @@ export function LoaderUpdateDialog() {
       <div className="bg-canvas border-border-subtle border-hairline flex w-[30rem] flex-col gap-3 rounded-xl p-5 font-mono">
         <div className="flex items-center gap-2.5">
           <span className="text-warning text-sm font-bold">[!]</span>
-          <span className="font-title text-text-primary text-sm font-semibold">
+          <span className="font-title text-text-primary text-sm font-medium">
             {done ? 'Loader updated' : failed ? 'Update failed' : 'Update the loader'}
           </span>
         </div>
