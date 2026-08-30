@@ -16,6 +16,7 @@
 // directory hop resolves to a second copy of the module and the warm-up buys
 // nothing at all. Ordered cheapest and most likely first, three.js last.
 const CHUNKS: ReadonlyArray<() => Promise<unknown>> = [
+  () => import('../tiles/quick-commands/library/CommandLibrary'),
   () => import('../tiles/performance/charts'),
   () => import('../tiles/scheduler/editor/GraphEditor'),
   () => import('../tiles/config/EditorPanel'),

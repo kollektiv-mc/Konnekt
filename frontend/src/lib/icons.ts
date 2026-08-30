@@ -41,4 +41,14 @@ export {
   Settings,
   SlidersHorizontal,
   X,
+  // Commands tile: the button grid, the maximized library, and link state.
+  Check,
+  GripVertical,
+  Link2,
+  Link2Off,
+  Plus,
+  RotateCcw,
+  Search,
+  Trash2,
+  TriangleAlert,
 } from 'lucide-react'

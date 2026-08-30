@@ -49,6 +49,7 @@ export const TILE_REGISTRY: TileDefinition[] = [
     id: 'quick-commands',
     label: 'Commands',
     icon: Command,
+    maximizable: true,
     component: QuickCommandsTile,
   },
   {

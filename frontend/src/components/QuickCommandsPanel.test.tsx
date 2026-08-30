@@ -1,15 +1,22 @@
 import { describe, it, expect, afterEach, beforeEach, vi } from 'vitest'
 import { render, screen, fireEvent, waitFor, cleanup } from '@testing-library/react'
 import * as App from '../../wailsjs/go/main/App'
+import { models } from '../../wailsjs/go/models'
 import { QuickCommandsPanel } from './QuickCommandsPanel'
+import { useCommandsStore } from '../stores/useCommandsStore'
 
 vi.mock('../../wailsjs/go/main/App')
 
-const LIFECYCLE_ITEMS = JSON.stringify([
-  { id: '1', label: 'Start', kind: 'lifecycle', value: 'start' },
-  { id: '2', label: 'Stop', kind: 'lifecycle', value: 'stop' },
-  { id: '3', label: 'Restart', kind: 'lifecycle', value: 'restart' },
-])
+// Seeded: true so hydrate takes these verbatim instead of the first-launch seed
+// path. The two are different states now — see models.CommandButtonSet.
+const LIFECYCLE_ITEMS = models.CommandButtonSet.createFrom({
+  seeded: true,
+  items: [
+    { id: '1', label: 'Start', kind: 'lifecycle', value: 'start' },
+    { id: '2', label: 'Stop', kind: 'lifecycle', value: 'stop' },
+    { id: '3', label: 'Restart', kind: 'lifecycle', value: 'restart' },
+  ],
+})
 
 // Vitest runs with `globals: false`, so RTL cannot register its own auto-cleanup
 // afterEach and a previous test's DOM would still be mounted.
@@ -22,7 +29,14 @@ afterEach(cleanup)
 describe('QuickCommandsPanel power actions', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    // The button list is a module-level store now (the tile is mounted twice
+    // while maximized), so its hydrate latch survives between tests and would
+    // make every case after the first render whatever the first one fetched.
+    useCommandsStore.setState({ items: [], hydrated: false, loading: false, error: null })
     vi.mocked(App.GetCommandButtons).mockResolvedValue(LIFECYCLE_ITEMS)
+    vi.mocked(App.RefreshKommands).mockResolvedValue(
+      models.KommandsStatus.createFrom({ installed: false }),
+    )
   })
 
   it('shows a rejected power action verbatim', async () => {
@@ -73,10 +87,13 @@ describe('QuickCommandsPanel power actions', () => {
   })
 })
 
-const FORCE_ITEMS = JSON.stringify([
-  { id: '1', label: 'Stop', kind: 'lifecycle', value: 'stop' },
-  { id: '2', label: 'Force Stop', kind: 'lifecycle', value: 'force-stop' },
-])
+const FORCE_ITEMS = models.CommandButtonSet.createFrom({
+  seeded: true,
+  items: [
+    { id: '1', label: 'Stop', kind: 'lifecycle', value: 'stop' },
+    { id: '2', label: 'Force Stop', kind: 'lifecycle', value: 'force-stop' },
+  ],
+})
 
 // #110's escape hatch. A graceful stop can now legitimately hold lifecycleBusy
 // for the whole grace window, so force stop must stay clickable while every
@@ -85,7 +102,11 @@ const FORCE_ITEMS = JSON.stringify([
 describe('QuickCommandsPanel force stop', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    useCommandsStore.setState({ items: [], hydrated: false, loading: false, error: null })
     vi.mocked(App.GetCommandButtons).mockResolvedValue(FORCE_ITEMS)
+    vi.mocked(App.RefreshKommands).mockResolvedValue(
+      models.KommandsStatus.createFrom({ installed: false }),
+    )
   })
 
   it('fires while a graceful stop is still in flight', async () => {

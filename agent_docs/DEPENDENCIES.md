@@ -60,6 +60,17 @@ All other Go modules in `go.mod` are transitive (`// indirect`), pulled in by
 the three direct dependencies above (mostly Wails' own runtime/webview/toast
 stack and gopsutil's per-OS backends).
 
+**Considered and not added:** a filesystem-watch library (`fsnotify`). The
+Kommands link reader (`backend/services/kommands.go`) has to notice when
+`os.UserConfigDir()/kommands/saved-commands.json` changes, which is the textbook
+case for one. It does an `os.Stat` mtime-and-size comparison instead: one small
+file, checked on startup, on window focus and on a 30s timer, and the responsive
+path is the focus refresh rather than the timer. A watch would buy latency
+nobody can perceive here in exchange for a dependency with per-platform
+backends. Revisit if a second or third shared file appears (#213 Phase 1's
+marker file, #218's run-request file) and the poll starts to look like a loop
+rather than a check.
+
 **Considered and not added:** a log-rotation library (`lumberjack` and
 friends). `backend/services/logging.go` writes through stdlib `log/slog` on Go
 1.24 and does its own single-file rotation in ten lines, because one desktop

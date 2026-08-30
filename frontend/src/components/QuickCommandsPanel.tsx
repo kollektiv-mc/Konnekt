@@ -1,101 +1,12 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import {
-  SendCommand,
-  GetCommandButtons,
-  SaveCommandButtons,
-  GetCustomCommands,
-  StartServer,
-  StopServer,
-  RestartServer,
-  ForceStopServer,
-} from '../../wailsjs/go/main/App'
-import { errMsg, hasWailsBridge } from '../lib/ipc'
-import { useSettingsStore } from '../stores/useSettingsStore'
-
-interface ModalState {
-  type: 'kick' | 'ban'
-  playerName: string
-  reason: string
-}
-
-type CmdKind = 'cmd' | 'lifecycle' | 'special'
-
-interface CmdItem {
-  id: string
-  label: string
-  kind: CmdKind
-  value: string // cmd string | 'start'|'stop'|'restart'|'force-stop' | 'kick'|'ban'
-}
-
-type PresetTemplate = Omit<CmdItem, 'id'>
-
-const PRESETS: PresetTemplate[] = [
-  { label: 'Start', kind: 'lifecycle', value: 'start' },
-  { label: 'Stop', kind: 'lifecycle', value: 'stop' },
-  { label: 'Restart', kind: 'lifecycle', value: 'restart' },
-  { label: 'Force Stop', kind: 'lifecycle', value: 'force-stop' },
-  { label: 'Save All', kind: 'cmd', value: 'save-all' },
-  { label: 'List', kind: 'cmd', value: 'list' },
-  { label: 'Set Day', kind: 'cmd', value: 'time set day' },
-  { label: 'Set Night', kind: 'cmd', value: 'time set night' },
-  { label: 'Clear Weather', kind: 'cmd', value: 'weather clear' },
-  { label: 'Rain', kind: 'cmd', value: 'weather rain' },
-  { label: 'Freeze Time', kind: 'cmd', value: 'gamerule doDaylightCycle false' },
-  { label: 'Unfreeze Time', kind: 'cmd', value: 'gamerule doDaylightCycle true' },
-  { label: 'Peaceful', kind: 'cmd', value: 'difficulty peaceful' },
-  { label: 'Kick Player', kind: 'special', value: 'kick' },
-  { label: 'Ban Player', kind: 'special', value: 'ban' },
-]
-
-const DEFAULT_LABELS = new Set([
-  'Start',
-  'Stop',
-  'Restart',
-  'Save All',
-  'List',
-  'Set Day',
-  'Clear Weather',
-  'Freeze Time',
-  'Kick Player',
-  'Ban Player',
-])
-
-type ConfirmableAction = 'stop' | 'restart' | 'force-stop'
-
-const CONFIRM_COPY: Record<ConfirmableAction, { title: string; body: string; button: string }> = {
-  stop: {
-    title: 'Stop server?',
-    body: 'This will stop the running server. Any unsaved progress may be lost.',
-    button: 'Stop',
-  },
-  restart: {
-    title: 'Restart server?',
-    body: 'This will restart the running server. Players will be briefly disconnected.',
-    button: 'Restart',
-  },
-  'force-stop': {
-    title: 'Force stop server?',
-    body: 'This kills the server process immediately. Progress since the last world save will be lost. Use this when a normal stop hangs.',
-    button: 'Force stop',
-  },
-}
-
-const newId = () =>
-  typeof crypto !== 'undefined' && crypto.randomUUID
-    ? crypto.randomUUID()
-    : `c${Date.now()}-${Math.random().toString(36).slice(2)}`
-
-function makeItem(t: PresetTemplate): CmdItem {
-  return { id: newId(), ...t }
-}
-
-function arrayMove<T>(arr: T[], from: number, to: number): T[] {
-  const next = arr.slice()
-  const [moved] = next.splice(from, 1)
-  next.splice(to, 0, moved)
-  return next
-}
+import { SendCommand } from '../../wailsjs/go/main/App'
+import { Icon } from './ui/Icon'
+import { GripVertical, Plus, X } from '../lib/icons'
+import { useCommandsStore, type CommandButton } from '../stores/useCommandsStore'
+import { KickBanDialog, LifecycleConfirmDialog } from './commands/CommandDialogs'
+import { PRESETS, makeItem, type PresetTemplate } from './commands/presets'
+import { useLifecycle } from './commands/useLifecycle'
 
 interface DropdownPos {
   // Only one of top/bottom is set depending on which direction has more room.
@@ -112,60 +23,42 @@ interface QuickCommandsPanelProps {
   columns?: 1 | 2
 }
 
+/**
+ * The compact command grid: press a button, the command goes to the server.
+ *
+ * Shared rather than living under `tiles/quick-commands/` because the console
+ * tile embeds it as its right-hand rail. The maximized half of the tile is a
+ * separate, lazily-loaded component (`tiles/quick-commands/library/`); this one
+ * stays deliberately small, since it renders inside a grid cell.
+ *
+ * The button list itself lives in `useCommandsStore`, not here. Once the tile
+ * became maximizable, Dashboard began rendering the maximized copy *in addition
+ * to* the grid copy, so component-local state would have diverged between two
+ * simultaneous mounts of this same component.
+ */
 export function QuickCommandsPanel({ serverId, columns = 2 }: QuickCommandsPanelProps) {
-  const [items, setItems] = useState<CmdItem[]>([])
+  const items = useCommandsStore((s) => s.items)
+  const hydrate = useCommandsStore((s) => s.hydrate)
+  const add = useCommandsStore((s) => s.add)
+  const remove = useCommandsStore((s) => s.remove)
+  const reorder = useCommandsStore((s) => s.reorder)
+
   const [newCmd, setNewCmd] = useState('')
-  const [modal, setModal] = useState<ModalState | null>(null)
-  const [confirmAction, setConfirmAction] = useState<ConfirmableAction | null>(null)
-  const [lifecycleBusy, setLifecycleBusy] = useState<string | null>(null)
-  const [lifecycleError, setLifecycleError] = useState<string | null>(null)
+  const [modal, setModal] = useState<'kick' | 'ban' | null>(null)
   const [editing, setEditing] = useState(false)
   const [dropdownPos, setDropdownPos] = useState<DropdownPos | null>(null)
   const [overIndex, setOverIndex] = useState<number | null>(null)
   const dragIndex = useRef<number | null>(null)
   const presetsButtonRef = useRef<HTMLButtonElement>(null)
   const dropdownRef = useRef<HTMLDivElement>(null)
-  const confirmBeforeStop = useSettingsStore((s) => s.settings.confirmBeforeStop)
+
+  const lifecycle = useLifecycle(serverId)
 
   useEffect(() => {
-    let cancelled = false
-    ;(async () => {
-      try {
-        const raw = await GetCommandButtons()
-        if (raw) {
-          const parsed = JSON.parse(raw) as CmdItem[]
-          if (Array.isArray(parsed) && !cancelled) {
-            setItems(parsed)
-            return
-          }
-        }
-      } catch (err) {
-        console.error(err)
-      }
-      const seed = PRESETS.filter((p) => DEFAULT_LABELS.has(p.label)).map(makeItem)
-      try {
-        const legacy = await GetCustomCommands()
-        for (const cmd of legacy) {
-          if (cmd && cmd.trim()) seed.push(makeItem({ label: cmd, kind: 'cmd', value: cmd }))
-        }
-      } catch (err) {
-        console.error(err)
-      }
-      if (cancelled) return
-      setItems(seed)
-      // A write, so `hasWailsBridge()` rather than a bare `.catch()` (see
-      // lib/ipc.ts). With no bridge the binding throws synchronously, past the
-      // `.catch()` and out of this IIFE as an unhandled rejection on every
-      // launch of the browser-only `frontend-dev` preset. The seed above is
-      // already applied optimistically and nothing was going to persist.
-      if (hasWailsBridge()) {
-        SaveCommandButtons(JSON.stringify(seed)).catch(console.error)
-      }
-    })()
-    return () => {
-      cancelled = true
-    }
-  }, [])
+    // Idempotent in the store, which is what lets this run from every mount —
+    // both copies of the tile plus the console's rail — without racing.
+    void hydrate()
+  }, [hydrate])
 
   // Close the presets dropdown when clicking outside of it.
   useEffect(() => {
@@ -213,11 +106,6 @@ export function QuickCommandsPanel({ serverId, columns = 2 }: QuickCommandsPanel
     }
   }, [dropdownPos])
 
-  const persist = useCallback((next: CmdItem[]) => {
-    setItems(next)
-    SaveCommandButtons(JSON.stringify(next)).catch(console.error)
-  }, [])
-
   const send = useCallback(
     (cmd: string) => {
       SendCommand(serverId, cmd).catch(console.error)
@@ -225,87 +113,31 @@ export function QuickCommandsPanel({ serverId, columns = 2 }: QuickCommandsPanel
     [serverId],
   )
 
-  // A rejected power action used to vanish into `.catch(console.error)`, so a
-  // double-clicked button looked identical to an accepted one. The backend
-  // serializes power actions and rejects the loser with a message meant to be
-  // shown verbatim ("another power action is in progress"); lifecycleBusy is
-  // only the fast path that spares the round trip for clicks in this panel.
-  const execLifecycle = useCallback(
-    (action: string) => {
-      if (lifecycleBusy) return
-      const fns: Record<string, () => Promise<void>> = {
-        start: () => StartServer(serverId),
-        stop: () => StopServer(serverId),
-        restart: () => RestartServer(serverId),
-      }
-      const fn = fns[action]
-      if (!fn) return
-      setLifecycleBusy(action)
-      setLifecycleError(null)
-      fn()
-        .catch((err: unknown) => setLifecycleError(errMsg(err)))
-        .finally(() => setLifecycleBusy(null))
-    },
-    [serverId, lifecycleBusy],
-  )
-
-  // Force stop is exempt from lifecycleBusy on purpose: its reason to exist
-  // is a graceful stop still in flight (which holds lifecycleBusy for the
-  // whole grace window), and the backend call is idempotent. It always
-  // confirms, whatever confirmBeforeStop says — it discards unsaved world
-  // data.
-  const execForceStop = useCallback(() => {
-    setLifecycleError(null)
-    ForceStopServer(serverId).catch((err: unknown) => setLifecycleError(errMsg(err)))
-  }, [serverId])
-
-  const handleLifecycle = useCallback(
-    (action: string) => {
-      if (action === 'force-stop') {
-        setConfirmAction('force-stop')
-        return
-      }
-      if (confirmBeforeStop && (action === 'stop' || action === 'restart')) {
-        setConfirmAction(action as 'stop' | 'restart')
-        return
-      }
-      execLifecycle(action)
-    },
-    [confirmBeforeStop, execLifecycle],
-  )
-
   const run = useCallback(
-    (item: CmdItem) => {
+    (item: CommandButton) => {
       if (item.kind === 'special') {
-        setModal({ type: item.value as 'kick' | 'ban', playerName: '', reason: '' })
+        setModal(item.value as 'kick' | 'ban')
       } else if (item.kind === 'lifecycle') {
-        handleLifecycle(item.value)
+        lifecycle.request(item.value)
       } else {
         send(item.value)
       }
     },
-    [handleLifecycle, send],
+    [lifecycle, send],
   )
 
   const addCustom = useCallback(() => {
     const v = newCmd.trim()
     if (!v) return
-    persist([...items, makeItem({ label: v, kind: 'cmd', value: v })])
+    void add(makeItem({ label: v, kind: 'cmd', value: v })).catch(console.error)
     setNewCmd('')
-  }, [newCmd, items, persist])
+  }, [newCmd, add])
 
   const addPreset = useCallback(
     (t: PresetTemplate) => {
-      persist([...items, makeItem(t)])
+      void add(makeItem(t)).catch(console.error)
     },
-    [items, persist],
-  )
-
-  const removeItem = useCallback(
-    (id: string) => {
-      persist(items.filter((it) => it.id !== id))
-    },
-    [items, persist],
+    [add],
   )
 
   const onDrop = useCallback(
@@ -313,18 +145,11 @@ export function QuickCommandsPanel({ serverId, columns = 2 }: QuickCommandsPanel
       const from = dragIndex.current
       dragIndex.current = null
       setOverIndex(null)
-      if (from === null || from === to) return
-      persist(arrayMove(items, from, to))
+      if (from === null) return
+      void reorder(from, to).catch(console.error)
     },
-    [items, persist],
+    [reorder],
   )
-
-  const submitModal = useCallback(() => {
-    if (!modal) return
-    const cmd = `${modal.type} ${modal.playerName}${modal.reason ? ' ' + modal.reason : ''}`
-    send(cmd)
-    setModal(null)
-  }, [modal, send])
 
   const toggleEdit = useCallback(() => {
     setEditing((e) => !e)
@@ -335,7 +160,7 @@ export function QuickCommandsPanel({ serverId, columns = 2 }: QuickCommandsPanel
     <div className="flex h-full flex-col gap-2 px-3 py-2">
       <div className="min-h-0 flex-1 overflow-y-auto">
         {items.length === 0 ? (
-          <div className="flex h-full items-center justify-center text-xs text-white/25">
+          <div className="text-text-faint flex h-full items-center justify-center text-xs">
             Press Edit to add commands.
           </div>
         ) : (
@@ -359,21 +184,22 @@ export function QuickCommandsPanel({ serverId, columns = 2 }: QuickCommandsPanel
                     dragIndex.current = null
                     setOverIndex(null)
                   }}
-                  className={`flex cursor-grab items-center gap-1 rounded border px-2 py-1.5 text-xs text-white/70 transition-colors ${
-                    overIndex === i ? 'border-white/40 bg-white/10' : 'border-white/10'
+                  className={`text-text-secondary flex cursor-grab items-center gap-1 rounded border px-2 py-1.5 text-xs transition-colors ${
+                    overIndex === i ? 'border-border-hover bg-hover' : 'border-border-subtle'
                   }`}
                 >
-                  <span className="leading-none text-white/25 select-none">⠿</span>
+                  <Icon icon={GripVertical} size="xs" className="text-text-faint shrink-0" />
                   <span className="flex-1 truncate" title={item.value}>
                     {item.label}
                   </span>
                   <button
-                    onClick={() => removeItem(item.id)}
+                    onClick={() => void remove(item.id).catch(console.error)}
                     onMouseDown={(e) => e.stopPropagation()}
-                    className="px-1 leading-none text-white/30 transition-colors hover:text-red-400"
+                    className="text-text-faint hover:text-danger px-1 transition-colors"
                     title="Remove"
+                    aria-label={`Remove ${item.label}`}
                   >
-                    ×
+                    <Icon icon={X} size="xs" />
                   </button>
                 </div>
               ) : (
@@ -383,10 +209,10 @@ export function QuickCommandsPanel({ serverId, columns = 2 }: QuickCommandsPanel
                   disabled={
                     item.kind === 'lifecycle' &&
                     item.value !== 'force-stop' &&
-                    lifecycleBusy !== null
+                    lifecycle.busy !== null
                   }
                   title={item.value}
-                  className="truncate rounded border border-white/10 px-2 py-1.5 text-left text-xs text-white/70 transition-all hover:border-white/25 hover:bg-white/5 hover:text-white disabled:opacity-40"
+                  className="border-border-subtle text-text-secondary hover:border-border-hover hover:bg-hover hover:text-text-primary truncate rounded border px-2 py-1.5 text-left text-xs transition-all disabled:opacity-40"
                 >
                   {item.label}
                 </button>
@@ -397,22 +223,22 @@ export function QuickCommandsPanel({ serverId, columns = 2 }: QuickCommandsPanel
       </div>
 
       <div className="flex shrink-0 flex-col gap-1.5">
-        {(lifecycleBusy === 'stop' || lifecycleBusy === 'restart') && (
+        {(lifecycle.busy === 'stop' || lifecycle.busy === 'restart') && (
           <div className="flex items-center justify-between gap-2 text-xs">
             <span className="text-text-muted">
-              {lifecycleBusy === 'stop' ? 'Stopping…' : 'Restarting…'}
+              {lifecycle.busy === 'stop' ? 'Stopping…' : 'Restarting…'}
             </span>
             <button
-              onClick={() => setConfirmAction('force-stop')}
-              className="border-hairline rounded border-red-400/30 bg-red-400/15 px-2 py-1 text-xs text-red-400 transition-colors hover:bg-red-400/25"
+              onClick={() => lifecycle.setConfirmAction('force-stop')}
+              className="border-hairline text-danger border-danger/30 bg-danger/15 hover:bg-danger/25 rounded px-2 py-1 text-xs transition-colors"
             >
               Force stop
             </button>
           </div>
         )}
-        {lifecycleError && (
+        {lifecycle.error && (
           <div role="alert" className="text-danger text-xs">
-            Action failed: {lifecycleError}
+            Action failed: {lifecycle.error}
           </div>
         )}
         {editing && (
@@ -423,14 +249,15 @@ export function QuickCommandsPanel({ serverId, columns = 2 }: QuickCommandsPanel
               onChange={(e) => setNewCmd(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && addCustom()}
               placeholder="Add command..."
-              className="w-full rounded border border-white/10 bg-white/5 px-2 py-1 pr-7 font-mono text-xs text-white placeholder-white/25 transition-colors outline-none focus:border-white/20"
+              className="border-border-subtle bg-hover text-text-primary placeholder-text-faint focus:border-border-hover w-full rounded border px-2 py-1 pr-7 font-mono text-xs transition-colors outline-none"
             />
             <button
               onClick={addCustom}
               title="Add command"
-              className="absolute top-1/2 right-1.5 -translate-y-1/2 text-sm leading-none text-white/35 transition-colors hover:text-white/80"
+              aria-label="Add command"
+              className="text-text-muted hover:text-text-primary absolute top-1/2 right-1.5 -translate-y-1/2 transition-colors"
             >
-              +
+              <Icon icon={Plus} size="xs" />
             </button>
           </div>
         )}
@@ -441,8 +268,8 @@ export function QuickCommandsPanel({ serverId, columns = 2 }: QuickCommandsPanel
               onClick={openPresets}
               className={`rounded border px-2 py-1 text-xs transition-colors ${
                 dropdownPos
-                  ? 'border-white/25 bg-white/5 text-white'
-                  : 'border-white/10 text-white/60 hover:border-white/25 hover:text-white'
+                  ? 'border-border-hover bg-hover text-text-primary'
+                  : 'border-border-subtle text-text-secondary hover:border-border-hover hover:text-text-primary'
               }`}
             >
               + Presets
@@ -452,8 +279,8 @@ export function QuickCommandsPanel({ serverId, columns = 2 }: QuickCommandsPanel
             onClick={toggleEdit}
             className={`ml-auto rounded border px-2 py-1 text-xs transition-colors ${
               editing
-                ? 'border-white/25 bg-white/5 text-white'
-                : 'border-white/10 text-white/60 hover:border-white/25 hover:text-white'
+                ? 'border-border-hover bg-hover text-text-primary'
+                : 'border-border-subtle text-text-secondary hover:border-border-hover hover:text-text-primary'
             }`}
           >
             {editing ? 'Done' : 'Edit'}
@@ -465,7 +292,7 @@ export function QuickCommandsPanel({ serverId, columns = 2 }: QuickCommandsPanel
         createPortal(
           <div
             ref={dropdownRef}
-            className="modal-panel-in border-hairline fixed z-[9999] grid grid-cols-2 gap-1.5 overflow-y-auto rounded-[10px] border-white/10 bg-[#0d0e14] p-2.5 shadow-[0_8px_32px_rgba(0,0,0,0.5)]"
+            className="modal-panel-in border-hairline border-border-subtle bg-canvas fixed z-[9999] grid grid-cols-2 gap-1.5 overflow-y-auto rounded-[10px] p-2.5 shadow-[0_8px_32px_rgba(0,0,0,0.5)]"
             // eslint-disable-next-line no-restricted-syntax -- position computed from getBoundingClientRect, not visible to Tailwind's static scanner
             style={{
               top: dropdownPos.top,
@@ -484,7 +311,7 @@ export function QuickCommandsPanel({ serverId, columns = 2 }: QuickCommandsPanel
                   setDropdownPos(null)
                 }}
                 title={p.value}
-                className="truncate rounded border border-white/10 px-2 py-1.5 text-left text-xs text-white/70 transition-all hover:border-white/25 hover:bg-white/5 hover:text-white"
+                className="border-border-subtle text-text-secondary hover:border-border-hover hover:bg-hover hover:text-text-primary truncate rounded border px-2 py-1.5 text-left text-xs transition-all"
               >
                 {p.label}
               </button>
@@ -493,105 +320,24 @@ export function QuickCommandsPanel({ serverId, columns = 2 }: QuickCommandsPanel
           document.body,
         )}
 
-      {confirmAction && (
-        <div className="modal-overlay-in fixed inset-0 z-50 flex items-center justify-center bg-black/60">
-          <div className="modal-panel-in border-border-subtle bg-canvas border-hairline flex w-80 flex-col gap-4 rounded-xl p-5">
-            <div className="flex flex-col gap-1">
-              <span className="text-text-primary text-sm font-semibold">
-                {CONFIRM_COPY[confirmAction].title}
-              </span>
-              <span className="text-text-secondary text-xs">
-                {CONFIRM_COPY[confirmAction].body}
-              </span>
-            </div>
-            <div className="flex justify-end gap-2">
-              <button
-                onClick={() => setConfirmAction(null)}
-                className="text-text-muted px-3 py-1.5 text-xs transition-colors"
-                onMouseEnter={(e) => {
-                  ;(e.currentTarget as HTMLButtonElement).style.color = 'var(--text-primary)'
-                }}
-                onMouseLeave={(e) => {
-                  ;(e.currentTarget as HTMLButtonElement).style.color = 'var(--text-muted)'
-                }}
-              >
-                Cancel
-              </button>
-              <button
-                onClick={() => {
-                  if (confirmAction === 'force-stop') execForceStop()
-                  else execLifecycle(confirmAction)
-                  setConfirmAction(null)
-                }}
-                disabled={confirmAction !== 'force-stop' && lifecycleBusy !== null}
-                className="border-hairline rounded border-red-400/30 bg-red-400/15 px-3 py-1.5 text-xs text-red-400 transition-colors disabled:opacity-40"
-                onMouseEnter={(e) => {
-                  ;(e.currentTarget as HTMLButtonElement).style.background =
-                    'rgba(248,113,113,0.25)'
-                }}
-                onMouseLeave={(e) => {
-                  ;(e.currentTarget as HTMLButtonElement).style.background =
-                    'rgba(248,113,113,0.15)'
-                }}
-              >
-                {CONFIRM_COPY[confirmAction].button}
-              </button>
-            </div>
-          </div>
-        </div>
+      {lifecycle.confirmAction && (
+        <LifecycleConfirmDialog
+          action={lifecycle.confirmAction}
+          busy={lifecycle.busy !== null}
+          onCancel={() => lifecycle.setConfirmAction(null)}
+          onConfirm={lifecycle.runConfirmed}
+        />
       )}
 
       {modal && (
-        <div className="modal-overlay-in fixed inset-0 z-50 flex items-center justify-center bg-black/60">
-          <div className="modal-panel-in border-border-subtle bg-canvas border-hairline flex w-80 flex-col gap-3 rounded-xl p-5">
-            <h3 className="text-text-primary text-sm font-semibold capitalize">
-              {modal.type} Player
-            </h3>
-            <input
-              type="text"
-              value={modal.playerName}
-              onChange={(e) => setModal((m) => m && { ...m, playerName: e.target.value })}
-              placeholder="Player name"
-              autoFocus
-              className="bg-hover border-border-subtle text-text-primary border-hairline rounded px-2 py-1.5 text-sm outline-none"
-            />
-            <input
-              type="text"
-              value={modal.reason}
-              onChange={(e) => setModal((m) => m && { ...m, reason: e.target.value })}
-              placeholder="Reason (optional)"
-              className="bg-hover border-border-subtle text-text-primary border-hairline rounded px-2 py-1.5 text-sm outline-none"
-            />
-            <div className="flex justify-end gap-2">
-              <button
-                onClick={() => setModal(null)}
-                className="text-text-muted px-3 py-1.5 text-xs transition-colors"
-                onMouseEnter={(e) => {
-                  ;(e.currentTarget as HTMLButtonElement).style.color = 'var(--text-primary)'
-                }}
-                onMouseLeave={(e) => {
-                  ;(e.currentTarget as HTMLButtonElement).style.color = 'var(--text-muted)'
-                }}
-              >
-                Cancel
-              </button>
-              <button
-                onClick={submitModal}
-                className="border-hairline rounded border-red-400/30 bg-red-400/15 px-3 py-1.5 text-xs text-red-400 transition-colors"
-                onMouseEnter={(e) => {
-                  ;(e.currentTarget as HTMLButtonElement).style.background =
-                    'rgba(248,113,113,0.25)'
-                }}
-                onMouseLeave={(e) => {
-                  ;(e.currentTarget as HTMLButtonElement).style.background =
-                    'rgba(248,113,113,0.15)'
-                }}
-              >
-                {modal.type === 'kick' ? 'Kick' : 'Ban'}
-              </button>
-            </div>
-          </div>
-        </div>
+        <KickBanDialog
+          type={modal}
+          onCancel={() => setModal(null)}
+          onSubmit={(cmd) => {
+            send(cmd)
+            setModal(null)
+          }}
+        />
       )}
     </div>
   )
