@@ -1,11 +1,13 @@
 import type { ReactNode } from 'react'
+import type { LucideIcon } from '../../lib/icons'
 import { IconButton } from '../../components/ui/IconButton'
-import { CloseIcon, CollapseIcon, ExpandIcon } from '../../components/ui/icons'
+import { Maximize2, Minimize2, X } from '../../lib/icons'
+import { Icon } from '../../components/ui/Icon'
 
 interface TileWrapperProps {
   id: string
   label: string
-  icon: string
+  icon: LucideIcon
   onRemove: (id: string) => void
   children: ReactNode
   maximizable?: boolean
@@ -53,7 +55,7 @@ export function TileWrapper({
           title={maximizable && !maximized ? 'Double-click to maximize' : undefined}
         >
           <div className="flex items-center gap-2">
-            <span className="text-sm leading-none">{icon}</span>
+            <Icon icon={icon} size="sm" className="text-text-muted" />
             <span className="text-text-secondary font-title text-xs font-medium">{label}</span>
           </div>
           <div className="flex items-center gap-1">
@@ -65,7 +67,7 @@ export function TileWrapper({
                 onMouseDown={(e) => e.stopPropagation()}
                 title={maximized ? 'Restore tile' : 'Maximize tile'}
               >
-                {maximized ? <CollapseIcon /> : <ExpandIcon />}
+                {maximized ? <Icon icon={Minimize2} /> : <Icon icon={Maximize2} />}
               </IconButton>
             )}
             {!maximized && (
@@ -74,7 +76,7 @@ export function TileWrapper({
                 onMouseDown={(e) => e.stopPropagation()}
                 title="Remove tile"
               >
-                <CloseIcon />
+                <Icon icon={X} />
               </IconButton>
             )}
           </div>

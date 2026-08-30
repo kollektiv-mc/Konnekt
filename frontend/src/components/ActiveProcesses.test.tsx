@@ -89,7 +89,7 @@ describe('ActiveProcesses', () => {
     finish('p1', 'failed')
     render(<ActiveProcesses />)
 
-    const dismiss = screen.getByRole('button', { name: '×' })
+    const dismiss = screen.getByRole('button', { name: 'Dismiss' })
     fireEvent.click(dismiss)
 
     expect(useProcessesStore.getState().processes.p1).toBeUndefined()
@@ -98,7 +98,7 @@ describe('ActiveProcesses', () => {
   it('has no dismiss while a job is still running', () => {
     useProcessesStore.getState().start('p1', 'Backing up world…')
     render(<ActiveProcesses />)
-    expect(screen.queryByRole('button', { name: '×' })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Dismiss' })).toBeNull()
   })
 
   it('shows a pulse for indeterminate work and a percentage otherwise', () => {

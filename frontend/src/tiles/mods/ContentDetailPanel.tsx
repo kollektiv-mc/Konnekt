@@ -6,7 +6,8 @@ import { ContentCard } from './ContentCard'
 import { ModAboutBody } from './ModAboutBody'
 import { fmtCount, fmtBytes, relativeTime } from '../../lib/format'
 import { IconButton } from '../../components/ui/IconButton'
-import { CloseIcon } from '../../components/ui/icons'
+import { X } from '../../lib/icons'
+import { Icon } from '../../components/ui/Icon'
 
 interface Props {
   project: ModProject
@@ -149,7 +150,7 @@ export function ContentDetailPanel({
           </div>
 
           <IconButton onClick={onClose} title="Close">
-            <CloseIcon />
+            <Icon icon={X} />
           </IconButton>
         </div>
 

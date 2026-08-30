@@ -33,6 +33,7 @@
     "@react-three/postprocessing": "^3.0.4",
     "@uiw/react-codemirror": "^4.25.10",
     "@xyflow/react": "^12.11.0",
+    "lucide-react": "^1.37.0",
     "postprocessing": "^6.39.1",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",

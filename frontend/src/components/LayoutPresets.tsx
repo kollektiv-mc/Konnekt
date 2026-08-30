@@ -4,7 +4,8 @@ import { SaveLayoutPreset } from '../../wailsjs/go/main/App'
 import { DEFAULT_LAYOUT_PRESETS } from '../lib/constants'
 import { Collapsible } from './ui/Collapsible'
 import { IconButton } from './ui/IconButton'
-import { CloseIcon } from './ui/icons'
+import { ChevronDown, ChevronUp, X } from '../lib/icons'
+import { Icon } from './ui/Icon'
 
 // How long an armed reset stays armed.
 const RESET_CONFIRM_MS = 4000
@@ -97,10 +98,14 @@ export function LayoutPresets() {
           {/* The same 24px box the gear and expand controls use, so the
               navbar's right-hand column does not break at the last row. The
               glyph swaps rather than rotating, the way every other collapsible
-              in the app does: a rotation turns it about its box centre, and a
-              triangle's ink is not centred in its box. It points up because
-              this is the one panel that opens upwards. */}
-          <span className="flex h-6 w-6 items-center justify-center">{collapsed ? '▴' : '▾'}</span>
+              in the app does. It points up because this is the one panel that
+              opens upwards. (The original reason to swap rather than rotate was
+              that a triangle glyph's ink is not centred in its box; a lucide
+              chevron's is, so rotating would work now too. Swapping is kept
+              because it still reads clearer and matches the other panels.) */}
+          <span className="flex h-6 w-6 items-center justify-center">
+            <Icon icon={collapsed ? ChevronUp : ChevronDown} />
+          </span>
         </button>
       </div>
 
@@ -141,7 +146,7 @@ export function LayoutPresets() {
                   title="Delete preset"
                   tone="danger"
                 >
-                  <CloseIcon />
+                  <Icon icon={X} />
                 </IconButton>
               )}
             </div>

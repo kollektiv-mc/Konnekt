@@ -6,6 +6,7 @@ import { useSettingsStore } from '../stores/useSettingsStore'
 import { TILE_REGISTRY } from '../tiles/registry'
 import { dropIndexAt, homeIndexIn, reorderWithinGroup } from '../lib/crateOrder'
 import { DURATION_MS } from '../styles/tokens'
+import { Icon } from './ui/Icon'
 
 // Pixels the pointer must travel before a press becomes a drag (vs a click).
 const DRAG_THRESHOLD = 5
@@ -276,7 +277,13 @@ export function TileCrate() {
           held ? 'border-accent/60 opacity-40' : 'border-transparent'
         }`}
       >
-        <span className="w-6 shrink-0 text-center text-base">{tile.icon}</span>
+        {/* The column keeps the 24x24 box the text glyph's line box used to
+            make (text-base at Tailwind's 1.5 line-height), so swapping a
+            16px icon in changes neither the icon column's width nor the row's
+            height — which is what the drop marker below is measured against. */}
+        <span className="flex h-6 w-6 shrink-0 items-center justify-center">
+          <Icon icon={tile.icon} />
+        </span>
         {/* Truncates rather than wraps. A label that wraps makes its row taller
             than every other row, which moves the gaps the drop marker is
             measured against and re-flows the list the moment the navbar is

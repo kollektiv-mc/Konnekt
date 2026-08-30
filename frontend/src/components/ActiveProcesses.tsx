@@ -3,6 +3,8 @@ import { useLoaderStore } from '../stores/useLoaderStore'
 import { useProcessesStore } from '../stores/useProcessesStore'
 import type { ProcessView } from '../stores/useProcessesStore'
 import { useUiStore } from '../stores/useUiStore'
+import { CircleCheck, CircleX, X } from '../lib/icons'
+import { Icon } from './ui/Icon'
 
 /**
  * Opens whatever a process's row points at.
@@ -65,26 +67,33 @@ export function ActiveProcesses() {
                   {p.label}
                 </span>
               )}
-              <span
-                className={`shrink-0 font-mono text-xs ${failed ? 'text-danger' : 'text-text-faint'}`}
-              >
-                {p.status === 'running'
-                  ? p.indeterminate
-                    ? '…'
-                    : `${p.percent}%`
-                  : p.status === 'done'
-                    ? '✓'
-                    : '✗'}
-              </span>
+              {/* A percentage is text and an outcome is a glyph, so they are
+                  two elements rather than one span switching between them.
+                  The outcome carries the row's state on its own — nothing
+                  beside it says "done" — so it is the one icon here that is
+                  labelled rather than aria-hidden. */}
+              {p.status === 'running' ? (
+                <span className="text-text-faint shrink-0 font-mono text-xs">
+                  {p.indeterminate ? '…' : `${p.percent}%`}
+                </span>
+              ) : (
+                <Icon
+                  icon={failed ? CircleX : CircleCheck}
+                  size="sm"
+                  className={failed ? 'text-danger' : 'text-text-faint'}
+                  label={failed ? 'Failed' : 'Completed'}
+                />
+              )}
               {/* A success clears itself; a failure waits, so it needs a way
                   out that is not "wait three seconds and lose the error". */}
               {failed && (
                 <button
                   onClick={() => dismiss(p.id)}
                   title="Dismiss"
-                  className="text-text-faint hover:text-text-secondary shrink-0 px-0.5 font-mono text-xs transition-colors"
+                  aria-label="Dismiss"
+                  className="text-text-faint hover:text-text-secondary shrink-0 px-0.5 transition-colors"
                 >
-                  ×
+                  <Icon icon={X} size="xs" />
                 </button>
               )}
             </div>

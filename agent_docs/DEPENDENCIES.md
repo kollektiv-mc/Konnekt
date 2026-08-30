@@ -72,6 +72,7 @@ only if the log ever grows a real retention requirement.
 |---|---|
 | `react`, `react-dom` | UI framework |
 | `zustand` | Per-domain state stores (`CLAUDE.md`'s "one Zustand store per domain" rule) |
+| `lucide-react` | The app's icon set (`lib/icons.ts` re-exports it; `components/ui/Icon.tsx` is the only render path). ISC, `sideEffects: false`, so the entry chunk pays only for the icons re-exported: measured 2.6 KB gzip for the 20 in use, against 1600+ available. Chosen over hand-vendoring the SVGs because the shipped path data is the same data lucide.dev serves, verified icon-by-icon when this landed, so there is nothing to transcribe and nothing to drift |
 | `react-grid-layout` | Tile drag/resize grid system — used via its v2 modern API (`GridLayout`, `useContainerWidth`, `verticalCompactor` — its default, best-tested mode), not the `/legacy` v1-compat wrapper and not `noCompactor` free placement (tried and abandoned — see `agent_docs/HEALTH_LOG.md`'s "crate-drag placement, rebuilt" for the upstream-confirmed bugs that ruled it out) |
 | `recharts` | Performance-tile charts, lazy-loaded (`tiles/performance/charts.tsx`) |
 | `three`, `@react-three/fiber`, `@react-three/drei`, `@react-three/postprocessing`, `postprocessing` | Worlds tile's 3D planetary scene, lazy-loaded (`tiles/worlds/scene/`) |

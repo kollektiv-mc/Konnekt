@@ -2,7 +2,8 @@ import { useEffect } from 'react'
 import { useServerConfigStore } from '../stores/useServerConfigStore'
 import { useUiStore } from '../stores/useUiStore'
 import { IconButton } from './ui/IconButton'
-import { ExpandIcon } from './ui/icons'
+import { Maximize2 } from '../lib/icons'
+import { Icon } from './ui/Icon'
 import { ServerRow } from './ServerRow'
 import { NEW_SERVER } from './ServerManager/ServerList'
 
@@ -43,7 +44,7 @@ export function ServerSelector() {
           onClick={() => openServerManager(activeId || NEW_SERVER)}
           title="Manage servers"
         >
-          <ExpandIcon />
+          <Icon icon={Maximize2} />
         </IconButton>
       </div>
 

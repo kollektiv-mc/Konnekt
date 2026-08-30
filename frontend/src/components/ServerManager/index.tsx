@@ -4,7 +4,8 @@ import { useLoaderStore } from '../../stores/useLoaderStore'
 import { useServerConfigStore } from '../../stores/useServerConfigStore'
 import { useUiStore } from '../../stores/useUiStore'
 import { IconButton } from '../ui/IconButton'
-import { CloseIcon } from '../ui/icons'
+import { X } from '../../lib/icons'
+import { Icon } from '../ui/Icon'
 import { LoaderPanel } from './LoaderPanel'
 import { ServerDetail } from './ServerDetail'
 import { ServerEditForm } from './ServerEditForm'
@@ -111,7 +112,7 @@ export function ServerManager() {
               {isNew ? 'Add a server' : current.name}
             </span>
             <IconButton onClick={closeServerManager} title="Close">
-              <CloseIcon />
+              <Icon icon={X} />
             </IconButton>
           </div>
 

@@ -25,7 +25,8 @@ import { useUpdateCheck } from './hooks/useUpdateCheck'
 import { useServerStatusSync } from './hooks/useServerStatus'
 import { useNavWidth } from './hooks/useNavWidth'
 import { IconButton } from './components/ui/IconButton'
-import { GearIcon } from './components/ui/icons'
+import { Settings } from './lib/icons'
+import { Icon } from './components/ui/Icon'
 import { EVENTS } from './lib/constants'
 
 function App() {
@@ -534,7 +535,7 @@ function App() {
             Konnekt
           </span>
           <IconButton onClick={() => setSettingsOpen(true)} title="Settings">
-            <GearIcon />
+            <Icon icon={Settings} />
           </IconButton>
         </div>
         <div className="border-b-hairline border-border-subtle">

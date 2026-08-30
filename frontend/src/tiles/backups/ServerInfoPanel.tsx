@@ -3,7 +3,8 @@ import type { Backup } from './useBackups'
 import type { WorldSystem } from './useBackupWorlds'
 import { fmtBytes, fmtDate, extractID } from './format'
 import { IconButton } from '../../components/ui/IconButton'
-import { CloseIcon } from '../../components/ui/icons'
+import { X } from '../../lib/icons'
+import { Icon } from '../../components/ui/Icon'
 
 const KIND_COLOR: Record<string, string> = {
   overworld: '#22c55e',
@@ -74,7 +75,7 @@ export function ServerInfoPanel({ backup, worlds, onClose }: ServerInfoPanelProp
           )}
         </div>
         <IconButton onClick={onClose} title="Close" className="mt-0.5">
-          <CloseIcon />
+          <Icon icon={X} />
         </IconButton>
       </div>
 

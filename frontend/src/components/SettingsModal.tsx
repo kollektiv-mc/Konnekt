@@ -14,7 +14,8 @@ import { Toggle } from './ui/Toggle'
 import { Segmented } from './ui/Segmented'
 import { ColorSwatch } from './ui/ColorSwatch'
 import { IconButton } from './ui/IconButton'
-import { CloseIcon } from './ui/icons'
+import { X } from '../lib/icons'
+import { Icon } from './ui/Icon'
 import { SettingRow } from './ui/SettingRow'
 import {
   OpenDataDir,
@@ -175,7 +176,7 @@ export function SettingsModal({ open, onClose }: Props) {
               {NAV.find((n) => n.id === section)?.label}
             </span>
             <IconButton onClick={onClose} title="Close">
-              <CloseIcon />
+              <Icon icon={X} />
             </IconButton>
           </div>
 

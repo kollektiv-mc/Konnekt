@@ -2,7 +2,8 @@ import { useCallback, useRef, useState } from 'react'
 import { GetServerSummary } from '../../wailsjs/go/main/App'
 import { useHoverDelay } from '../hooks/useHoverDelay'
 import { IconButton } from './ui/IconButton'
-import { PencilIcon } from './ui/icons'
+import { Pencil } from '../lib/icons'
+import { Icon } from './ui/Icon'
 import { ServerTooltip } from './ServerTooltip'
 import type { ServerConfig, ServerSummary } from '../types'
 
@@ -76,7 +77,7 @@ export function ServerRow({ cfg, active, onSelect, onEdit }: Props) {
         <span className="truncate">{cfg.name}</span>
       </button>
       <IconButton onClick={onEdit} title="Edit">
-        <PencilIcon />
+        <Icon icon={Pencil} />
       </IconButton>
 
       {hovered && <ServerTooltip summary={summary} anchor={anchor} />}
