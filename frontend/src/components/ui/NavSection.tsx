@@ -72,8 +72,19 @@ export function NavSection({ id, title, action, onToggle, children }: NavSection
           the action lights the bar too; that is the right reading, and the
           action's own hover square stacking on top is what marks it as the more
           specific target. */}
+      {/* pr-2, which puts the action's *ink* 12px inside the card and not its
+          box. `action` is always an IconButton, and an IconButton is a 24px
+          square around a 16px glyph, so its four transparent pixels have to
+          come out of this padding or the icon reads as sitting further from the
+          card's edge than the card sits from the navbar's — which it did, at
+          16.5px against the card's own 12px, and which is exactly how far
+          "slightly offset" turned out to be. Every other trailing control in
+          the navbar is on this column (ServerRow, LayoutPresets); move one and
+          move all three. A section with no action just has 8px of trailing
+          space nothing is drawn in, since the hover tint fills the bar rather
+          than this box. */}
       <div
-        className={`hover:bg-hover border-b-hairline flex shrink-0 items-center gap-1 pr-3 transition-colors ${
+        className={`hover:bg-hover border-b-hairline flex shrink-0 items-center gap-1 pr-2 transition-colors ${
           // The rule separates the header from the panel, so a closed section
           // has nothing for it to separate: left drawn, it lands a pixel above
           // the card's own bottom border and the two read as one thick edge.

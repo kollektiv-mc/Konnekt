@@ -59,16 +59,22 @@ export function ServerRow({ cfg, active, onSelect, onEdit }: Props) {
   return (
     <div
       ref={rowRef}
-      className="flex items-center gap-1 pr-2"
+      className="flex items-center gap-1 pr-1"
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
     >
-      {/* pr-2 on the row, not px-2. Only the right half of that padding was
-          doing anything — it sets the edit control's column, 12px inside the
-          card with every other trailing control in the navbar — while the left
-          half pushed this row's rectangle 8px inside the crate rows', which is
-          the misalignment between the two lists. The button takes the 8px back
-          as padding, so the rectangle moves and the dot does not.
+      {/* pr-1 on the row, not px-1. Only the right half of that padding was
+          doing anything — with the list's own p-1 it sets the edit control's
+          column, shared with every other trailing control in the navbar
+          (ui/NavSection's action, LayoutPresets' delete) — while the left half
+          pushed this row's rectangle 8px inside the crate rows', which is the
+          misalignment between the two lists. The button takes the 8px back as
+          padding, so the rectangle moves and the dot does not.
+
+          8px to the box, which is 12px to the ink: an IconButton is a 24px
+          square around a 16px glyph, so a box on the card's own 12px inset drew
+          its icon at 16.5px and read as pushed left of everything else on the
+          right edge. It was pr-2 while the column was measured to the box.
 
           Only the left of that pair positions anything, so the right gives its
           width back to the name: pr-2.5 cost twelve pixels of "NeoForge 1.21.1"

@@ -365,7 +365,15 @@ export function TileCrate() {
     // section card around them supplies the inset that padding used to, and
     // doubling the two costs the labels 16px of a navbar that is only 176px
     // wide at its narrowest. The rows keep their own px-2.
-    <div ref={rootRef} className="flex flex-col gap-2">
+    // gap-3, not the column's own gap: this wrapper renders two section cards
+    // where the navbar's scroller sees one child, so the gap between Widgets
+    // and Tiles is set here and nowhere else. It has to be the same 12px the
+    // scroller puts between its children, or the four cards in that column are
+    // 12px apart except for the one pair that is 8px. That is exactly what
+    // happened when the column moved to gap-3 and this did not: measuring the
+    // scroller's children counted three cards and found both gaps equal, while
+    // the eye counted four and found one short.
+    <div ref={rootRef} className="flex flex-col gap-3">
       <NavSection id="widgets" title="Widgets">
         <div className="flex flex-col gap-1 p-1">{renderGroup(utilityTiles, utilityIds)}</div>
       </NavSection>

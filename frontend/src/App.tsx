@@ -26,9 +26,7 @@ import { useUpdateCheck } from './hooks/useUpdateCheck'
 import { useServerStatusSync } from './hooks/useServerStatus'
 import { useCommandsSync } from './hooks/useCommandsSync'
 import { useNavWidth } from './hooks/useNavWidth'
-import { IconButton } from './components/ui/IconButton'
-import { Settings } from './lib/icons'
-import { Icon } from './components/ui/Icon'
+import { TitleBar } from './components/TitleBar'
 import { EVENTS } from './lib/constants'
 import { hasWailsBridge } from './lib/ipc'
 
@@ -533,97 +531,81 @@ function App() {
   }, [])
 
   return (
-    <div className="flex h-screen overflow-hidden">
-      <aside
-        className={`border-r-hairline border-border-subtle flex shrink-0 flex-col overflow-y-auto ${
-          navFrozen ? 'pointer-events-none' : ''
-        }`}
-        // eslint-disable-next-line no-restricted-syntax -- navWidth is a live drag-computed value
-        style={{ width: navWidth }}
-      >
-        {/* Two things at once: the rule lands on the same line as the first
-            tile's header rule, and the wordmark sits in the middle of the space
-            above it.
+    // A column now, not a row: the app draws its own title bar across the top
+    // (see components/TitleBar.tsx and main.go's Frameless), and the navbar and
+    // the canvas share the space under it. min-h-0 on the row is what keeps the
+    // navbar's own scroller scrolling instead of growing the flex item past the
+    // viewport.
+    <div className="flex h-screen flex-col overflow-hidden">
+      <TitleBar onOpenSettings={() => setSettingsOpen(true)} />
+      <div className="flex min-h-0 flex-1 overflow-hidden">
+        <aside
+          className={`border-r-hairline border-border-subtle flex shrink-0 flex-col overflow-y-auto ${
+            navFrozen ? 'pointer-events-none' : ''
+          }`}
+          // eslint-disable-next-line no-restricted-syntax -- navWidth is a live drag-computed value
+          style={{ width: navWidth }}
+        >
+          {/* Horizontal padding comes from .scroll-stable, which nets the
+              scrollbar's reserved gutter out of it so the cards sit evenly
+              between the navbar's edges whether or not the platform reserves one.
+              It is the same 12px this py-3 is, so the column is inset equally on
+              all three sides.
 
-            The rule is the arithmetic. A tile's header rule sits at the grid's
-            12px container padding (Dashboard.tsx's GRID_CONTAINER_PADDING[1] —
-            keep the two in step, it is module-private there and reaching it
-            from here would mean an inline style the lint rule restricts), plus
-            the tile card's own top border, plus py-2 around a 24px control row:
-            52px and one hairline. This header reaches the same total from a
-            different shape — a transparent top hairline and py-3.5 around the
-            same 24px row — which is what leaves the content centred in its own
-            box while the rule stays put.
+              py-3, matching Dashboard.tsx's GRID_CONTAINER_PADDING[1] — keep the
+              two in step, it is module-private there and reaching it from here
+              would mean an inline style the lint rule restricts. That is the
+              whole point of the title bar: with the wordmark and the gear moved
+              up into it, this column has no header left to clear, so its first
+              card starts at the same 12px inset as the canvas's first tile and
+              the two columns finally begin on one line. It was py-2 under a 52px
+              header, which put them a header apart.
 
-            The transparent hairline is what makes that exact rather than nearly
-            right: without one the two boxes differ by a hairline, and a hairline
-            is 0.5px at 2x and 1px at 1x, so any integer padding picked to absorb
-            it is only correct on one of them. Borrowing the same token is
-            correct on both.
+              gap-3, which is Dashboard.tsx's GRID_MARGIN[1] and the same 12px
+              again. The column's inset and the space between its cards are one
+              rhythm, the canvas's, so nothing in either column is measured
+              against a value the other does not use. It was gap-2, left over
+              from when the whole column was on an 8px scale.
 
-            The cost is that the wordmark no longer shares a baseline with the
-            first tile's title, sitting 6px above it. Being centred in the navbar
-            is the more visible of the two, since nothing sits beside the
-            wordmark to compare it against.
+              One scrolling column for all four sections, rather than a fixed
+              server list, a scrolling crate and a panel pinned to the bottom
+              edge. Each section draws its own card now, so the rules that used to
+              separate them are gone, and the gap between the cards is what reads
+              as the separation. Layouts is in here with the rest rather than
+              pinned below: pinned, it had to grow upwards to keep its header
+              still, which is not a shape a tile can have. */}
+          <div className="scroll-stable flex flex-1 flex-col gap-3 py-3">
+            <ServerSelector />
+            <TileCrate />
+            <LayoutPresets />
+          </div>
+          {/* Stays outside the scroller and below it: live work is status, not a
+              section, and it has to be visible while the column above is
+              scrolled somewhere else. */}
+          <ActiveProcesses />
+        </aside>
+        {/* Straddles the navbar's border on a negative margin, so it is 4px of
+            grab area that costs the layout nothing and the canvas does not shift
+            the moment the pointer nears it. `relative` is what keeps <main> from
+            taking the half that overlaps it, since a later sibling would
+            otherwise win the hit test.
 
-            pr-5 plus a transparent right hairline, for the same reason and by
-            the same arithmetic sideways: 8px of card inset, the card's own
-            border, and the 12px a card header insets its own controls. That is
-            what puts the gear in the same column as the manage-servers expand
-            and every row control below it.
-            pl-3 stays — the wordmark is a brand mark in a bar, not a list item,
-            and indenting it to 24px to chase the section chevrons would read as
-            an indent rather than as alignment. */}
-        <div className="border-b-hairline border-t-hairline border-r-hairline border-b-border-subtle flex shrink-0 items-center justify-between border-t-transparent border-r-transparent py-3.5 pr-5 pl-3">
-          <span className="text-accent font-display text-sm font-black tracking-tight">
-            Konnekt
-          </span>
-          <IconButton onClick={() => setSettingsOpen(true)} title="Settings">
-            <Icon icon={Settings} />
-          </IconButton>
+            What lights up is the hairline inside, not the whole grab area: the
+            target wants to be forgiving, the line it draws does not. */}
+        <div
+          role="separator"
+          aria-orientation="vertical"
+          aria-label="Resize navbar"
+          onMouseDown={onHandleMouseDown}
+          onDoubleClick={onHandleDoubleClick}
+          className="group relative z-10 -mx-0.5 flex w-1 shrink-0 cursor-col-resize justify-center bg-transparent"
+        >
+          <div className="group-hover:bg-accent group-active:bg-accent h-full w-px transition-colors" />
         </div>
-        {/* Horizontal padding comes from .scroll-stable, which nets the
-            scrollbar's reserved gutter out of it so the cards sit evenly
-            between the navbar's edges whether or not the platform reserves one.
-
-            One scrolling column for all four sections, rather than a fixed
-            server list, a scrolling crate and a panel pinned to the bottom
-            edge. Each section draws its own card now, so the rules that used to
-            separate them are gone, and the gap between the cards is what reads
-            as the separation. Layouts is in here with the rest rather than
-            pinned below: pinned, it had to grow upwards to keep its header
-            still, which is not a shape a tile can have. */}
-        <div className="scroll-stable flex flex-1 flex-col gap-2 py-2">
-          <ServerSelector />
-          <TileCrate />
-          <LayoutPresets />
-        </div>
-        {/* Stays outside the scroller and below it: live work is status, not a
-            section, and it has to be visible while the column above is
-            scrolled somewhere else. */}
-        <ActiveProcesses />
-      </aside>
-      {/* Straddles the navbar's border on a negative margin, so it is 4px of
-          grab area that costs the layout nothing and the canvas does not shift
-          the moment the pointer nears it. `relative` is what keeps <main> from
-          taking the half that overlaps it, since a later sibling would
-          otherwise win the hit test.
-
-          What lights up is the hairline inside, not the whole grab area: the
-          target wants to be forgiving, the line it draws does not. */}
-      <div
-        role="separator"
-        aria-orientation="vertical"
-        aria-label="Resize navbar"
-        onMouseDown={onHandleMouseDown}
-        onDoubleClick={onHandleDoubleClick}
-        className="group relative z-10 -mx-0.5 flex w-1 shrink-0 cursor-col-resize justify-center bg-transparent"
-      >
-        <div className="group-hover:bg-accent group-active:bg-accent h-full w-px transition-colors" />
+        <main className="flex-1 overflow-hidden">
+          <Dashboard />
+        </main>
       </div>
-      <main className="flex-1 overflow-hidden">
-        <Dashboard />
-      </main>
 
       {eulaRequired && <EulaModal serverId={activeId} onClose={() => setEulaRequired(false)} />}
 

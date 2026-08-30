@@ -53,6 +53,24 @@ func main() {
 		AssetServer: &assetserver.Options{
 			Assets: assets,
 		},
+		// The system title bar is replaced by the app's own
+		// (frontend/src/components/TitleBar.tsx), so the wordmark, the settings
+		// gear and the window controls share one bar and the navbar's first card
+		// starts level with the dashboard's first tile.
+		//
+		// Frameless is not "no window management": Wails' injected runtime keeps
+		// both halves of what the system bar did. A mousedown on an element whose
+		// computed --wails-draggable is "drag" posts WM_NCLBUTTONDOWN/HTCAPTION on
+		// Windows and gtk_window_begin_move_drag on Linux, so the window manager
+		// runs the move and Aero Snap / GNOME edge tiling still work. And because
+		// DisableResize is false, the runtime arms its own 6px resize border
+		// around the webview, which is why nothing here has to redraw one.
+		//
+		// Windows keeps its shadow and rounded corners: those come from
+		// windows.Options.DisableFramelessWindowDecorations, left at its false
+		// default. Linux/GTK draws neither for an undecorated window, and there
+		// is no option that brings them back.
+		Frameless:        true,
 		BackgroundColour: &options.RGBA{R: 5, G: 6, B: 10, A: 255},
 		// Windows takes its icon from the resource compiled into the exe from
 		// build/windows/icon.ico, and macOS from the .icns Wails generates into

@@ -51,4 +51,12 @@ export {
   Search,
   Trash2,
   TriangleAlert,
+  // Window controls, in the app's own title bar. Deliberately not Maximize2 /
+  // Minimize2, which the tile header already uses: the two bars sit one above
+  // the other and the same glyph in both would say the window and the tile do
+  // the same thing. Square / Copy are the chrome shapes every desktop draws
+  // there, and Minus is the one glyph both conventions agree on.
+  Copy,
+  Minus,
+  Square,
 } from 'lucide-react'

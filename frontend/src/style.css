@@ -128,12 +128,18 @@ body {
    the platform actually reserves, since it is 4px with classic bars and zero
    with overlay ones. Nothing breaks if that number is wrong or never arrives —
    max() cannot go negative, the fallback pads as though nothing were reserved,
-   and either way the reflow is already fixed by the line above. */
+   and either way the reflow is already fixed by the line above.
+
+   0.75rem, matching Dashboard.tsx's GRID_CONTAINER_PADDING and the py-3 the
+   navbar's column carries — the two card columns are read side by side and an
+   inset that differs by four pixels between them reads as one of them being
+   cramped. It was 0.5rem while the navbar had a header block above it, when
+   only the vertical rhythm was being matched. */
 .scroll-stable {
   overflow-y: scroll;
   scrollbar-gutter: stable;
-  padding-left: 0.5rem;
-  padding-right: max(0px, 0.5rem - var(--scrollbar-gutter, 0px));
+  padding-left: 0.75rem;
+  padding-right: max(0px, 0.75rem - var(--scrollbar-gutter, 0px));
 }
 
 /* Hide native number input spinners — custom ▲▼ buttons used instead */
@@ -611,4 +617,30 @@ input[type='number']::-webkit-outer-spin-button {
 /* First heading needs no top margin */
 .mod-body > *:first-child {
   margin-top: 0;
+}
+
+/* The frameless window's drag regions.
+
+   Wails' injected runtime decides whether a mousedown starts a window move by
+   reading one CSS custom property off `e.target` — `--wails-draggable`, which
+   has to compute to exactly `drag`. It reads the *target* and never walks up
+   the tree, but the property is a custom property, so it inherits: setting it
+   once on the title bar covers everything drawn inside it, the `<svg>` a click
+   on an icon actually lands on included.
+
+   That inheritance is the reason the second class exists. Without it the close
+   button would be as draggable as the empty bar around it, and pressing it
+   would move the window instead. Any value other than `drag` switches the
+   behaviour off; `no-drag` is what Wails' own docs name it.
+
+   Both live here rather than as inline styles because they are static values,
+   which is what eslint's no-restricted-syntax rule is there to keep out of the
+   components. The property name is Wails' default (options.CSSDragProperty),
+   left unset in main.go — change one and this has to change with it. */
+.titlebar-drag {
+  --wails-draggable: drag;
+}
+
+.titlebar-no-drag {
+  --wails-draggable: no-drag;
 }

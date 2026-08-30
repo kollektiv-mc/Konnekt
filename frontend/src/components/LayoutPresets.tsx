@@ -90,12 +90,14 @@ export function LayoutPresets() {
     >
       <div className="flex min-w-0 flex-col gap-2 p-1 pt-2">
         {presets.map((preset) => (
-          // pr-2 here and pl-2 on the button, for the reason ServerRow's row
+          // pr-1 here and pl-2 on the button, for the reason ServerRow's row
           // carries the same pair: only the right half of the row's padding is
           // load-bearing, setting the delete control's column, while the left
           // half pushed this rectangle 8px inside the crate rows'. The button
-          // takes those 8px back so the name does not move with it.
-          <div key={preset.name} className="flex items-center gap-1 pr-2">
+          // takes those 8px back so the name does not move with it. 8px to the
+          // box is 12px to the icon inside it — see ServerRow for why the
+          // column is measured to the ink.
+          <div key={preset.name} className="flex items-center gap-1 pr-1">
             {/* Same treatment as the server list above it in this sidebar
                   (components/ServerRow.tsx), and for the same reason: it is the
                   same control. It used to hand-roll hover through
