@@ -7,8 +7,10 @@ import { NEW_SERVER } from './ServerManager/ServerList'
 /**
  * The sidebar's server switcher.
  *
- * Selecting, and three intents: open the manager, open it on a server, ask to
- * disconnect one. Everything it used to render as an overlay — the manager, the
+ * Selecting, and two intents: open the manager, or open it on a server.
+ * Disconnecting was a third until it moved into the manager itself, where the
+ * server being removed is named rather than being whichever row the `×` was
+ * next to. Everything it used to render as an overlay — the manager, the
  * install modal, the disconnect confirm — moved to App, because a fixed overlay
  * inside <aside> loses to the maximized-tile overlay inside <main>. It also
  * used to own the install-finished result, on the reasoning that this component
@@ -17,7 +19,7 @@ import { NEW_SERVER } from './ServerManager/ServerList'
  */
 export function ServerSelector() {
   const { configs, activeId, error, loadConfigs, setActiveId } = useServerConfigStore()
-  const { openServerManager, setPendingDisconnect } = useUiStore()
+  const openServerManager = useUiStore((s) => s.openServerManager)
 
   useEffect(() => {
     loadConfigs().catch(console.error)
@@ -51,7 +53,6 @@ export function ServerSelector() {
           active={cfg.id === activeId}
           onSelect={() => selectServer(cfg.id)}
           onEdit={() => openServerManager(cfg.id)}
-          onDisconnect={() => setPendingDisconnect(cfg.id)}
         />
       ))}
 
