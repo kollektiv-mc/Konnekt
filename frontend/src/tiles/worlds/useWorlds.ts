@@ -44,11 +44,17 @@ export function useWorlds() {
 
   // Re-scan after server lifecycle and backup events that may affect world state.
   useEffect(() => {
-    const off1 = EventsOn(EVENTS.SERVER_STOPPED, refresh)
-    const off2 = EventsOn(EVENTS.BACKUP_COMPLETED, refresh)
+    let off1: (() => void) | undefined
+    let off2: (() => void) | undefined
+    try {
+      off1 = EventsOn(EVENTS.SERVER_STOPPED, refresh)
+      off2 = EventsOn(EVENTS.BACKUP_COMPLETED, refresh)
+    } catch {
+      /* Wails runtime unavailable in dev without backend */
+    }
     return () => {
-      off1()
-      off2()
+      off1?.()
+      off2?.()
     }
   }, [refresh])
 

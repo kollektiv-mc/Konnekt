@@ -28,6 +28,7 @@ import { IconButton } from './components/ui/IconButton'
 import { Settings } from './lib/icons'
 import { Icon } from './components/ui/Icon'
 import { EVENTS } from './lib/constants'
+import { hasWailsBridge } from './lib/ipc'
 
 function App() {
   const { activeId } = useServerConfigStore()
@@ -73,9 +74,15 @@ function App() {
     if (!settingsLoaded || !activeId || autoStarted.current) return
     if (useSettingsStore.getState().settings.autoStartActiveServer) {
       autoStarted.current = true
-      StartServer(activeId).catch(() => {
-        /* already running or no server */
-      })
+      // A write, so `hasWailsBridge()` rather than `readOr` (see lib/ipc.ts).
+      // With no bridge the binding throws synchronously, past this `.catch()`
+      // and out of the effect; there was also never a server to start, so
+      // there is nothing to report and nothing to retry.
+      if (hasWailsBridge()) {
+        StartServer(activeId).catch(() => {
+          /* already running or no server */
+        })
+      }
     }
   }, [settingsLoaded, activeId])
 
