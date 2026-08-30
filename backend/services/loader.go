@@ -245,7 +245,7 @@ func (s *LoaderService) runUpdate(cfg models.ServerConfig, req models.LoaderUpda
 			"error":      err.Error(),
 			"rolledBack": snapshot,
 		})
-		s.narrate("Loader update failed: " + err.Error())
+		s.narrateFailed("Loader update failed: " + err.Error())
 		return
 	}
 
@@ -253,7 +253,7 @@ func (s *LoaderService) runUpdate(cfg models.ServerConfig, req models.LoaderUpda
 		"serverID": cfg.ID,
 		"version":  req.Version,
 	})
-	s.narrate(fmt.Sprintf("Loader updated to %s", req.Version))
+	s.narrateDone(fmt.Sprintf("Loader updated to %s", req.Version))
 }
 
 // updateWithRollback runs the update, returning whether a snapshot was restored
@@ -446,10 +446,23 @@ func (s *LoaderService) log(line string) {
 }
 
 // narrate marks a milestone in the server console, the same way backups and
-// the EULA prompt do (#113).
+// the EULA prompt do (#113); narrateDone and narrateFailed close the milestone
+// out with the outcome the console paints as a status dot.
 func (s *LoaderService) narrate(line string) {
 	if s.srv != nil {
 		s.srv.Narrate(line)
+	}
+}
+
+func (s *LoaderService) narrateDone(line string) {
+	if s.srv != nil {
+		s.srv.NarrateDone(line)
+	}
+}
+
+func (s *LoaderService) narrateFailed(line string) {
+	if s.srv != nil {
+		s.srv.NarrateFailed(line)
 	}
 }
 

@@ -119,28 +119,62 @@ describe('ConsoleTile command failures', () => {
 
 // #113: Konnekt's own narration has to read apart from server output, and the
 // level filter is a *server log level* filter, so manager lines belong under
-// All rather than being swept into Warn or Error.
+// All rather than being swept into Warn or Error. The narration is now boxed
+// with a status dot rather than tinted, and carries no "[Konnekt] " tag: the
+// block says who is speaking and the dot says how it went.
 describe('ConsoleTile manager lines', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     useServerStore.setState({ status: ONLINE, reachable: true })
     useConsoleStore.setState({ lines: [] })
     useConsoleStore.getState().batchAppend([
-      { timestamp: '12:00:00', line: '[Konnekt] Backing up the server', source: 'manager' },
+      {
+        timestamp: '12:00:00',
+        line: 'Backing up the server',
+        source: 'manager',
+        outcome: 'progress',
+      },
       { timestamp: '12:00:01', line: '[12:00:01] [Server thread/ERROR]: boom' },
     ])
   })
 
-  it('styles a manager line apart from every server level', () => {
+  // highlightQuery wraps the text in its own span, so the styling sits on the
+  // parent; the manager block is one level up again from that.
+  const managerBlock = (text: string) =>
+    screen.getByText(text).parentElement?.parentElement as HTMLElement
+
+  it('boxes a manager line instead of tinting it like a server level', () => {
     render(<ConsoleTile serverId="srv1" />)
 
-    // highlightQuery wraps the text in its own span, so the level class sits
-    // on the parent.
-    const managerLine = screen.getByText('[Konnekt] Backing up the server').parentElement
-    expect(managerLine?.className).toContain('text-sky-400')
+    const block = managerBlock('Backing up the server')
+    expect(block.className).toContain('border-hairline')
+    expect(block.className).toContain('rounded-md')
 
     const serverLine = screen.getByText('[12:00:01] [Server thread/ERROR]: boom').parentElement
     expect(serverLine?.className).toContain('text-red-400')
+    expect(serverLine?.className).not.toContain('border-hairline')
+  })
+
+  // The dot is the only thing naming the outcome, so it has to be reachable to
+  // a screen reader rather than decorative.
+  it('names the outcome on the status dot', () => {
+    render(<ConsoleTile serverId="srv1" />)
+    expect(screen.getByRole('img', { name: 'Konnekt, in progress' })).toBeTruthy()
+  })
+
+  it('paints the dot and outline per outcome', () => {
+    useConsoleStore.setState({ lines: [] })
+    useConsoleStore.getState().batchAppend([
+      { timestamp: '12:00:00', line: 'Backup finished', source: 'manager', outcome: 'ok' },
+      { timestamp: '12:00:01', line: 'Backup failed', source: 'manager', outcome: 'failed' },
+    ])
+    render(<ConsoleTile serverId="srv1" />)
+
+    expect(managerBlock('Backup finished').className).toContain('border-success/40')
+    expect(screen.getByRole('img', { name: 'Konnekt, finished' }).className).toContain('bg-success')
+
+    expect(managerBlock('Backup failed').className).toContain('border-danger/40')
+    expect(screen.getByRole('img', { name: 'Konnekt, failed' }).className).toContain('bg-danger')
   })
 
   it('keeps manager lines out of the server level filters', () => {
@@ -149,6 +183,6 @@ describe('ConsoleTile manager lines', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Error' }))
 
     expect(screen.getByText('[12:00:01] [Server thread/ERROR]: boom')).toBeTruthy()
-    expect(screen.queryByText('[Konnekt] Backing up the server')).toBeNull()
+    expect(screen.queryByText('Backing up the server')).toBeNull()
   })
 })

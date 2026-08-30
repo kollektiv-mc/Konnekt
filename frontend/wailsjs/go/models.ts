@@ -247,6 +247,7 @@ export namespace models {
 	    timestamp: string;
 	    line: string;
 	    source: string;
+	    outcome: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new ConsoleLine(source);
@@ -257,6 +258,7 @@ export namespace models {
 	        this.timestamp = source["timestamp"];
 	        this.line = source["line"];
 	        this.source = source["source"];
+	        this.outcome = source["outcome"];
 	    }
 	}
 	

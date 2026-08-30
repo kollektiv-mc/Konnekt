@@ -186,10 +186,10 @@ func TestCreateAndRestoreBackupRoundTrip(t *testing.T) {
 	// is written synchronously (the bus fans out per goroutine).
 	lines := consoleLines(svc.server)
 	wantOrder := []string{
-		"[Konnekt] Backing up the server to " + b.Filename,
-		"[Konnekt] Backup finished: " + b.Filename,
-		"[Konnekt] Restoring the server from " + b.Filename,
-		"[Konnekt] Restore finished, server files replaced",
+		"Backing up the server to " + b.Filename,
+		"Backup finished: " + b.Filename,
+		"Restoring the server from " + b.Filename,
+		"Restore finished, server files replaced",
 	}
 	at := -1
 	for _, want := range wantOrder {
@@ -214,9 +214,16 @@ func TestCreateAndRestoreBackupRoundTrip(t *testing.T) {
 			t.Errorf("quiesce narrated while the server is stopped: %q", line)
 		}
 	}
-	for _, entry := range svc.server.GetConsoleHistory() {
+	// Every line is marked as Konnekt's, and its outcome says which dot the
+	// console paints: the sequence is start, done, start, done.
+	wantOutcomes := []string{outcomeProgress, outcomeOK, outcomeProgress, outcomeOK}
+	history := svc.server.GetConsoleHistory()
+	for i, entry := range history {
 		if entry.Source != sourceManager {
 			t.Errorf("narrated line %q has Source %q, want %q", entry.Line, entry.Source, sourceManager)
+		}
+		if i < len(wantOutcomes) && entry.Outcome != wantOutcomes[i] {
+			t.Errorf("line %d (%q) has Outcome %q, want %q", i, entry.Line, entry.Outcome, wantOutcomes[i])
 		}
 	}
 }
@@ -258,11 +265,14 @@ func TestRestoreBackupNarratesExtractFailure(t *testing.T) {
 	}
 
 	var sawExtractFailure, sawFinished bool
-	for _, line := range consoleLines(svc.server) {
-		if strings.Contains(line, "[Konnekt] Restore failed while extracting") {
+	for _, entry := range svc.server.GetConsoleHistory() {
+		if strings.Contains(entry.Line, "Restore failed while extracting") {
 			sawExtractFailure = true
+			if entry.Outcome != outcomeFailed {
+				t.Errorf("failure line %q has Outcome %q, want %q", entry.Line, entry.Outcome, outcomeFailed)
+			}
 		}
-		if strings.Contains(line, "Restore finished") {
+		if strings.Contains(entry.Line, "Restore finished") {
 			sawFinished = true
 		}
 	}

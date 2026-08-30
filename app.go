@@ -361,7 +361,7 @@ func (a *App) AcceptEula(serverID string) error {
 	if err := os.WriteFile(filepath.Join(cfg.WorkingDir, "eula.txt"), []byte(content), 0644); err != nil {
 		return err
 	}
-	a.serverService.Narrate("EULA accepted, eula.txt written")
+	a.serverService.NarrateDone("EULA accepted, eula.txt written")
 	return nil
 }
 

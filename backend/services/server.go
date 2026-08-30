@@ -29,6 +29,18 @@ const consoleCap = 2000
 // log:line payload's source key.
 const sourceManager = "manager"
 
+// The outcome of a narrated line: work started, work finished, work failed.
+// Carried alongside sourceManager as ConsoleLine.Outcome and the log:line
+// payload's outcome key, and painted by the UI as a green/yellow/red status
+// dot. This is what the "[Konnekt] " text prefix became: a plugin could print
+// the prefix but cannot print a marker, and a dot costs no line width in a
+// stream where every other line is server output.
+const (
+	outcomeProgress = "progress"
+	outcomeOK       = "ok"
+	outcomeFailed   = "failed"
+)
+
 // ErrPowerActionInProgress is returned when a power action (start, stop,
 // restart) arrives while another one is still in progress. The message is
 // shown verbatim in the UI, so keep it a readable sentence.
@@ -466,39 +478,62 @@ func (s *ServerService) streamOutput(r io.Reader) {
 	}
 }
 
-// Narrate speaks as Konnekt in the console (#113): the daemon tag plus the
-// source marker the UI styles apart from server output, so a manager line is
-// never mistaken for something the server printed. Exported because app.go
-// narrates the EULA write; Wails binds App methods only, so this adds no IPC
-// surface. Reserve it for lifecycle moments — the notification feed keeps its
-// own role, and chatter here costs the console its usefulness.
+// Narrate speaks as Konnekt in the console (#113) for work that is under way:
+// the source marker the UI styles apart from server output, so a manager line
+// is never mistaken for something the server printed, plus the progress
+// outcome. NarrateDone and NarrateFailed are the same thing for work that
+// finished and work that did not; pick the one that matches, because the
+// outcome is the whole of what the reader sees at a glance.
+//
+// Exported because app.go narrates the EULA write; Wails binds App methods
+// only, so this adds no IPC surface. Reserve them for lifecycle moments — the
+// notification feed keeps its own role, and chatter here costs the console its
+// usefulness.
 func (s *ServerService) Narrate(line string) {
-	s.emitConsoleLineTagged("[Konnekt] "+line, sourceManager)
+	s.narrate(outcomeProgress, line)
+}
+
+// NarrateDone narrates work that completed successfully.
+func (s *ServerService) NarrateDone(line string) {
+	s.narrate(outcomeOK, line)
+}
+
+// NarrateFailed narrates work that failed. The line still names its stage, so
+// it says which step broke rather than only that something did.
+func (s *ServerService) NarrateFailed(line string) {
+	s.narrate(outcomeFailed, line)
+}
+
+func (s *ServerService) narrate(outcome, line string) {
+	s.emitConsoleLineTagged(line, sourceManager, outcome)
 }
 
 // emitConsoleLine sends one line of server output down the console channel.
 func (s *ServerService) emitConsoleLine(line string) {
-	s.emitConsoleLineTagged(line, "")
+	s.emitConsoleLineTagged(line, "", "")
 }
 
 // emitConsoleLineTagged sends one line down the console channel: the log:line
 // event plus the ring buffer GetConsoleHistory replays to late subscribers.
-// The source key is omitted entirely when empty, so server output travels
-// exactly the payload it always has.
+// The source and outcome keys are omitted entirely when empty, so server
+// output travels exactly the payload it always has.
 // NB: emit precedes buffer append. A remote client that snapshots
 // GetConsoleHistory then subscribes must dedup/order the seam line.
-func (s *ServerService) emitConsoleLineTagged(line, source string) {
+func (s *ServerService) emitConsoleLineTagged(line, source, outcome string) {
 	ts := time.Now().Format("15:04:05")
 	payload := map[string]string{"timestamp": ts, "line": line}
 	if source != "" {
 		payload["source"] = source
+	}
+	if outcome != "" {
+		payload["outcome"] = outcome
 	}
 	s.bus.Emit(EventLogLine, payload)
 	s.logBufMu.Lock()
 	if len(s.logBuf) >= consoleCap {
 		s.logBuf = s.logBuf[1:]
 	}
-	s.logBuf = append(s.logBuf, models.ConsoleLine{Timestamp: ts, Line: line, Source: source})
+	s.logBuf = append(s.logBuf, models.ConsoleLine{Timestamp: ts, Line: line, Source: source, Outcome: outcome})
 	s.logBufMu.Unlock()
 }
 
@@ -542,7 +577,7 @@ func (s *ServerService) waitForExit() {
 	s.lastStop = stop
 	s.mu.Unlock()
 	if !expected {
-		s.Narrate("Server process exited unexpectedly (" + exitLabel(exitCode) + ")")
+		s.NarrateFailed("Server process exited unexpectedly (" + exitLabel(exitCode) + ")")
 	}
 	s.bus.Emit(EventServerStopped, stop)
 
