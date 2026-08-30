@@ -4,10 +4,6 @@ import { ChevronDown } from '../../lib/icons'
 import { Collapsible } from './Collapsible'
 import { Icon } from './Icon'
 
-// Height a closed section keeps, so its header's rule and the card's bottom
-// border stay visibly two lines rather than merging into one thick one.
-const COLLAPSED_SLIVER_PX = 6
-
 interface NavSectionProps {
   /**
    * Persistence key, and the only thing that ties a card to its remembered
@@ -76,7 +72,20 @@ export function NavSection({ id, title, action, onToggle, children }: NavSection
           the action lights the bar too; that is the right reading, and the
           action's own hover square stacking on top is what marks it as the more
           specific target. */}
-      <div className="border-border-subtle hover:bg-hover border-b-hairline flex shrink-0 items-center gap-1 pr-3 transition-colors">
+      <div
+        className={`hover:bg-hover border-b-hairline flex shrink-0 items-center gap-1 pr-3 transition-colors ${
+          // The rule separates the header from the panel, so a closed section
+          // has nothing for it to separate: left drawn, it lands a pixel above
+          // the card's own bottom border and the two read as one thick edge.
+          // The colour goes rather than the width, so the header keeps its
+          // height and the line fades out with the panel instead of vanishing
+          // the instant it is clicked. One bottom-colour utility, picked rather
+          // than layered over a base — which of two border-colour utilities
+          // wins is decided by their order in the generated stylesheet, not by
+          // their order here.
+          closed ? 'border-b-transparent' : 'border-b-border-subtle'
+        }`}
+      >
         <button
           type="button"
           onClick={toggle}
@@ -112,16 +121,7 @@ export function NavSection({ id, title, action, onToggle, children }: NavSection
         {action}
       </div>
 
-      {/* A closed panel keeps a sliver rather than vanishing. With nothing
-          left, this card's bottom border sat a pixel under the header's rule
-          and the two read as one thick line — an artefact, not a state. Six
-          pixels of panel is a band of the card's own surface between the two,
-          which is what says the contents are folded away behind the header
-          rather than gone. It is the body's own padding showing, so no row
-          peeks out mid-fold. */}
-      <Collapsible open={!closed} collapsedHeight={COLLAPSED_SLIVER_PX}>
-        {children}
-      </Collapsible>
+      <Collapsible open={!closed}>{children}</Collapsible>
     </div>
   )
 }

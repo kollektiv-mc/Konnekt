@@ -241,55 +241,6 @@ describe('Collapsible', () => {
     expect(outerOf(container).style.maxHeight).toBe('0px')
   })
 
-  // A panel inside a bordered card cannot collapse to nothing: its header's
-  // rule and the card's own bottom border land a pixel apart and read as one
-  // thick line. The sliver is what keeps them two.
-  describe('collapsedHeight', () => {
-    it('rests at the given height rather than zero', () => {
-      const { container, rerender } = render(
-        <Collapsible open={true} collapsedHeight={6}>
-          <div>content</div>
-        </Collapsible>,
-      )
-      mockScrollHeight(container, 120)
-      act(() => {
-        rerender(
-          <Collapsible open={false} collapsedHeight={6}>
-            <div>content</div>
-          </Collapsible>,
-        )
-      })
-      act(() => {
-        vi.runAllTimers()
-      })
-      expect(outerOf(container).style.maxHeight).toBe('6px')
-    })
-
-    // Mounting closed runs the same path as closing: clamp to the measured
-    // height, then travel to the resting one. jsdom measures 0, so the only
-    // thing worth asserting here is where it comes to rest.
-    it('settles at that height when mounted closed', () => {
-      const { container } = render(
-        <Collapsible open={false} collapsedHeight={6}>
-          <div>content</div>
-        </Collapsible>,
-      )
-      act(() => {
-        vi.runAllTimers()
-      })
-      expect(outerOf(container).style.maxHeight).toBe('6px')
-    })
-
-    it('still collapses to nothing when it is not asked for', () => {
-      const { container } = render(
-        <Collapsible open={false}>
-          <div>content</div>
-        </Collapsible>,
-      )
-      expect(outerOf(container).style.maxHeight).toBe('0px')
-    })
-  })
-
   it('merges a caller-provided className alongside the base classes', () => {
     const { container } = render(
       <Collapsible open={false} className="pl-2">
