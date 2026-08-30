@@ -80,21 +80,6 @@ body {
    should be present without being read. It was --border-hover (12%), which on a
    4px bar over a near-black panel was close enough to nothing that people
    scrolled past the end of a list without knowing there was one. */
-/* How much a scrollbar actually takes out of a scroll container's content box,
-   measured at startup by lib/scrollbar.ts. Not the same number as the width
-   below, and not a constant: it is that width on a platform with classic
-   scrollbars and zero on one with overlay bars. Only `.scroll-overlay` reads
-   it, and 0px is the safe way to be wrong — no reclaim costs a container a few
-   pixels, an over-large one puts its contents outside it.
-
-   The bar's own width stays a literal below. Pointing ::-webkit-scrollbar at
-   this property makes the measurement circular: the gutter would be measured
-   from a scrollbar whose width is the gutter, so it settles at zero and the
-   bars disappear. */
-:root {
-  --scrollbar-gutter: 0px;
-}
-
 ::-webkit-scrollbar {
   width: 4px;
   height: 4px;
@@ -109,34 +94,38 @@ body {
   border-radius: 2px;
 }
 
-/* Overlay scrolling, for a container whose width other things are measured
-   against.
+/* A scroll container whose width other things are measured against.
 
-   A styled ::-webkit-scrollbar is always a *classic* scrollbar in Chromium: it
-   takes its width out of the content box, so the bar appearing when a section
-   is expanded reflows everything beside it — in the navbar that is every card
-   getting 4px narrower and then wider again. Chromium removed `overflow:
-   overlay` in 106 and there is no CSS property that puts a classic bar on top,
-   so this does it in two halves.
+   Chromium has no way to draw a classic scrollbar on top of content. A styled
+   ::-webkit-scrollbar is always a classic bar — it takes its width out of the
+   content box — and `overflow: overlay`, which did put one on top, was removed
+   in 106. A negative-margin reclaim can fake it, and did here for a while, but
+   only by knowing the gutter's exact width at runtime; where that guess was
+   wrong the contents ended up under the bar or short of it, which is worse than
+   the problem.
 
-   `overflow-y: scroll` keeps the gutter reserved whether or not there is
-   anything to scroll, which is what stops the reflow; the track is transparent,
-   so a container that does not scroll still looks bare. The children then take
-   that gutter back with a negative margin, so they keep the width they have
-   when no bar is present and the bar sits in the container's own padding
-   instead of inside the content.
+   So the bar keeps its gutter and the gutter is simply always there. That is
+   what fixes the actual complaint — a bar appearing when a section expands and
+   reflowing every card beside it — because there is nothing to appear: the
+   space is reserved whether or not anything scrolls, and the track is
+   transparent, so a container that does not scroll still looks bare.
 
-   Per-container rather than global on purpose: the reclaim is a negative margin
-   on direct children, and what that does depends on the container's padding and
-   on what its children are — the dashboard canvas holds react-grid-layout's
-   absolutely positioned items and must not get it. Adding it to a scroller is
-   one class. */
-.scroll-overlay {
+   Both declarations say the same thing on purpose. `overflow-y: scroll` is
+   universal; `scrollbar-gutter: stable` states the intent and is what a browser
+   with overlay scrollbars honours, where `scroll` alone would reserve nothing.
+
+   The horizontal padding lives here rather than at the call site because the
+   gutter is part of it: a reserved gutter is right margin, so it comes out of
+   the right padding and the two sides stay even. lib/scrollbar.ts measures what
+   the platform actually reserves, since it is 4px with classic bars and zero
+   with overlay ones. Nothing breaks if that number is wrong or never arrives —
+   max() cannot go negative, the fallback pads as though nothing were reserved,
+   and either way the reflow is already fixed by the line above. */
+.scroll-stable {
   overflow-y: scroll;
-}
-
-.scroll-overlay > * {
-  margin-right: calc(-1 * var(--scrollbar-gutter));
+  scrollbar-gutter: stable;
+  padding-left: 0.5rem;
+  padding-right: max(0px, 0.5rem - var(--scrollbar-gutter, 0px));
 }
 
 /* Hide native number input spinners — custom ▲▼ buttons used instead */

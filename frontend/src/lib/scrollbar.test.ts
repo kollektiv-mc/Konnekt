@@ -26,9 +26,9 @@ describe('measureScrollbarWidth', () => {
 })
 
 describe('applyScrollbarWidth', () => {
-  // `.scroll-overlay` reclaims exactly this much for its children, so the
-  // property has to carry a unit — a bare number in calc() is invalid and the
-  // declaration would be dropped, silently taking the reclaim with it.
+  // `.scroll-stable` subtracts this inside a max(), so the property has to
+  // carry a unit — a bare number there is invalid and drops the whole
+  // declaration, taking the container's right padding with it.
   it('publishes the measurement as a px length', () => {
     applyScrollbarWidth()
     const value = document.documentElement.style.getPropertyValue('--scrollbar-gutter')

@@ -571,14 +571,18 @@ function App() {
             <Icon icon={Settings} />
           </IconButton>
         </div>
-        {/* One scrolling column for all four sections, rather than a fixed
+        {/* Horizontal padding comes from .scroll-stable, which nets the
+            scrollbar's reserved gutter out of it so the cards sit evenly
+            between the navbar's edges whether or not the platform reserves one.
+
+            One scrolling column for all four sections, rather than a fixed
             server list, a scrolling crate and a panel pinned to the bottom
             edge. Each section draws its own card now, so the rules that used to
             separate them are gone, and the gap between the cards is what reads
             as the separation. Layouts is in here with the rest rather than
             pinned below: pinned, it had to grow upwards to keep its header
             still, which is not a shape a tile can have. */}
-        <div className="scroll-overlay flex flex-1 flex-col gap-2 p-2">
+        <div className="scroll-stable flex flex-1 flex-col gap-2 py-2">
           <ServerSelector />
           <TileCrate />
           <LayoutPresets />
