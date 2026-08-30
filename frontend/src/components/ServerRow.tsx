@@ -59,25 +59,25 @@ export function ServerRow({ cfg, active, onSelect, onEdit }: Props) {
   return (
     <div
       ref={rowRef}
-      className="flex items-center gap-1 px-2"
+      className="flex items-center gap-1 pr-2"
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
     >
-      {/* px-2 on the row and px-1 in here, rather than the other way round: the
-          row's padding is what sets the edit control's column (12px inside the
-          card, with every other trailing control in the navbar) and the
-          button's is what sets the status dot's.
+      {/* pr-2 on the row, not px-2. Only the right half of that padding was
+          doing anything — it sets the edit control's column, 12px inside the
+          card with every other trailing control in the navbar — while the left
+          half pushed this row's rectangle 8px inside the crate rows', which is
+          the misalignment between the two lists. The button takes the 8px back
+          as padding, so the rectangle moves and the dot does not.
 
           Only the left of that pair positions anything, so the right gives its
           width back to the name: pr-2.5 cost twelve pixels of "NeoForge 1.21.1"
           to pad a gap that already has the row's own gap-1 in it.
 
-          pl-2.5 is not a round number because the column it has to hit is not
+          pl-4.5 is not a round number because the column it has to hit is not
           set here: a crate row centres a 16px glyph in a 24px box, so its ink
           sits on a centre 34px from the navbar's edge, and a bare 6px dot only
-          shares that centre from 10px inside its button. px-1 put the dot on
-          the same centre as nothing at all and left it crammed against the
-          pill's rounded edge.
+          shares that centre from 18px inside a rectangle that starts at 13.
 
           min-w-0 is what lets the name actually truncate. The span inside carries
           `truncate`, but this button's own overflow is visible, so its intrinsic
@@ -86,7 +86,7 @@ export function ServerRow({ cfg, active, onSelect, onEdit }: Props) {
           name as ordinary as "NeoForge 1.21.1", at the navbar's 176px floor. */}
       <button
         onClick={onSelect}
-        className={`flex min-w-0 flex-1 items-center gap-2 rounded py-1.5 pr-1 pl-2.5 text-left text-xs transition-all ${
+        className={`flex min-w-0 flex-1 items-center gap-2 rounded py-1.5 pr-1 pl-4.5 text-left text-xs transition-all ${
           active
             ? 'text-accent bg-accent/10'
             : 'text-text-secondary hover:bg-hover hover:text-text-primary'

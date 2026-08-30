@@ -67,7 +67,16 @@ export function NavSection({ id, title, action, onToggle, children }: NavSection
           rounds the tint into the corner for free. Hovering the action lights
           the bar too; that is the right reading, and the action's own hover
           square stacking on top is what marks it as the more specific target. */}
-      <div className="border-border-subtle hover:bg-hover border-b-hairline flex shrink-0 items-center gap-1 pr-3 transition-colors">
+      {/* The transparent left hairline is what puts the chevron on the same
+          column as the row glyphs below it. A crate row carries one for its
+          drag accent, so its glyph box starts a hairline further in than this
+          bar's did; borrowing the same token here rather than padding by an
+          integer keeps the two together at 1x and 2x alike. It carries the
+          section title onto the tile labels' column as a bonus.
+
+          The tint still reaches the card's edge through it: a background paints
+          under its own border box, and this border has no colour. */}
+      <div className="border-border-subtle hover:bg-hover border-b-hairline border-l-hairline flex shrink-0 items-center gap-1 border-l-transparent pr-3 transition-colors">
         <button
           type="button"
           onClick={toggle}
