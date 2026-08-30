@@ -75,6 +75,7 @@ after them is dated. Newest last, in both groups.
 - [2026-08-27 — The console that learned to say what Konnekt was doing](#2026-08-27-the-console-that-learned-to-say-what-konnekt-was-doing)
 - [2026-08-29 — The channel a snapshot could never update through](#2026-08-29-the-channel-a-snapshot-could-never-update-through)
 - [2026-08-29 — The warm-up that moved the stutter onto the first scroll](#2026-08-29-the-warm-up-that-moved-the-stutter-onto-the-first-scroll)
+- [2026-08-30 — The catch attached to a call that never returned](#2026-08-30-the-catch-attached-to-a-call-that-never-returned)
 
 ---
 
@@ -4033,3 +4034,97 @@ markdown now arrives through a Suspense boundary. Typecheck, lint (no new
 warnings against main's 13), the full frontend suite, `pnpm check-bundle` against
 the new 165KB budget, and a source-map pass confirming each of the five heavy
 libraries lands in exactly one chunk with no second copy, all pass.
+
+
+### 2026-08-30 — The catch attached to a call that never returned
+
+**Closed: [#184](../../issues/184)**
+
+**The gap.** The Stable pillar said the UI "degrades gracefully when the
+Minecraft server process is offline or unreachable", and it was ticked. In the
+browser-only `frontend-dev` preset it did not degrade at all: clicking
+Performance replaced the entire dashboard with `render error / Cannot read
+properties of undefined (reading 'main')`.
+
+The mechanism is one line of generated code. Every binding is
+`return window['go']['main']['App'][...](...)`, so with no `window.go` the call
+throws `TypeError` *before a promise exists*. A trailing `.catch()` is therefore
+attached to a call that never returned and never runs, and from a `useEffect`
+body the throw walks up to the app-level `ErrorBoundary`, whose fallback is
+`h-screen`. `lib/ipc.ts` already existed for exactly this, with `readOr()` for
+reads and `hasWailsBridge()` for writes, and `SettingsModal.tsx` already used
+it. These sites had never been converted.
+
+**The fix.** Six reads now go through `readOr()`
+(`tiles/performance/usePerformanceHistory.ts`,
+`tiles/players/PlayerDetailPopup.tsx`, `tiles/backups/useBackupWorlds.ts`,
+`tiles/mods/index.tsx`, `components/ServerRow.tsx`,
+`components/ServerManager/ServerDetail.tsx`); one write branches on
+`hasWailsBridge()` (`App.tsx`'s auto-start effect).
+
+Two things the issue's list did not have, both found by auditing rather than
+by trusting it. `ServerManager/ServerDetail.tsx` is a **seventh** site of
+identical shape — `GetServerSummary(...).then().catch().finally()` driven by
+`useEffect(load, ...)` — that nobody had noticed. And the issue's closing note
+to "check any new one" of the `EventsOn` registrations turned out to be live:
+`window.runtime` fails the same way, and three effects registered without a
+try/catch, in `tiles/worlds/useWorlds.ts`, `tiles/mods/useMods.ts` and
+`tiles/scheduler/editor/GraphEditor.tsx`. Those are why the worlds and mods
+tiles still died after all seven binding sites were fixed. They now use the
+`let off: (() => void) | undefined` + try/catch idiom their neighbours already
+use, rather than a fourth spelling: the checklist's own EventsOn item notes
+that a checker has to know every spelling in use, and adding one makes that
+worse.
+
+One site of [#185](../../issues/185) came with it, because the gate below could
+not land without it: `QuickCommandsPanel.tsx:156` seeds default command buttons
+with `SaveCommandButtons(...)` inside an async IIFE, outside its try blocks, so
+with no bridge it rejected the IIFE's own promise on every launch. It is a
+write, so it branches on `hasWailsBridge()`. The rest of #185 is event-handler
+scope — reachable only by clicking, not by mounting — and stays open there.
+
+**The gate.** A checklist line asking a reader to remember is what let seven
+sites accumulate, so this closes with a test rather than a note:
+`tiles/noBridge.test.tsx` mounts all eleven registry tiles, plain and maximized,
+plus `ServerRow` and `ServerDetail`, and asserts none of them throws. It mocks
+**nothing**. jsdom has no `window.go`, so the real generated bindings fail there
+exactly as they do in the preset; an automock would resolve `undefined` instead
+of throwing and every case would pass vacuously. The same reasoning as
+`check-prefetch`'s empty-set guard, and the file carries the same kind of
+premise assertion: it first checks that the real binding still throws.
+
+**Known and accepted:**
+
+- The gate covers **mount**, not interaction. A binding called from a click
+  handler still rejects unhandled, which is the rest of #185.
+- Tiles that reach their own error state under no bridge render the raw
+  `TypeError` text as their message (visible in the backups tile). That is the
+  tile's error copy, not this defect, and was left alone.
+- `QuickCommandsPanel`'s two reads at `:134`/`:147` are inside a `try`, so they
+  are caught, but they still `console.error` the raw TypeError on every launch
+  of the preset. Caught and noisy beats uncaught; not widened here.
+- The app-level `ErrorBoundary` is still the only one. This removes the live
+  trigger, not the blast radius: the P2 backlog item for a boundary inside
+  `TileWrapper`'s content slot is unchanged, and its file is currently hot.
+
+**Verification.** All 17 checks in `.claude/suite.json` pass via
+`.claude/suite-check.py`. Frontend suite 603 tests across 47 files, up from 578;
+lint holds at 13 warnings, byte-identical to the count on a stashed tree, and
+typecheck and `format:check` are clean. The gate was confirmed non-vacuous by
+reverting the `usePerformanceHistory` fix alone and watching exactly the two
+performance cases go red, then restoring.
+
+Then the reproduction the issue names, driven in Chromium against
+`vite --port 5199`. Before: `render error` on screen after load, two uncaught
+`pageerror`s, and the run could not proceed past it. After: no `render error` at
+any point, **zero** uncaught page errors, and every tile added from the crate —
+Performance, Players, Backups, Plugins & Mods, Worlds, Scheduler, Config —
+renders its own unavailable state inside its own tile while the app stays up.
+
+That last run also surfaced a defect this change did not cause and did not fix:
+the performance tile spins a render loop whenever its history is empty, because
+`index.tsx:113` anchors on `Date.now()` per render and feeds it to a `setState`
+effect keyed on that value. It was masked before, since the tile could not
+render at all in this preset. Filed as [#209](../../issues/209). A separate
+sweep of the worlds scene's camera, prompted during the same session, is
+[#208](../../issues/208).

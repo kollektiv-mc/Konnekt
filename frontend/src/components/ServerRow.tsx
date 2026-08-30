@@ -6,6 +6,7 @@ import { Pencil } from '../lib/icons'
 import { Icon } from './ui/Icon'
 import { ServerTooltip } from './ServerTooltip'
 import type { ServerConfig, ServerSummary } from '../types'
+import { readOr } from '../lib/ipc'
 
 // Re-read rather than trust a cached summary for longer than this — the
 // running flag changes underneath us when a server starts or stops.
@@ -44,14 +45,13 @@ export function ServerRow({ cfg, active, onSelect, onEdit }: Props) {
       })
     }
     if (Date.now() - fetchedAt.current < SUMMARY_TTL_MS) return
-    GetServerSummary(cfg.id)
-      .then((s) => {
-        fetchedAt.current = Date.now()
-        setSummary(s)
-      })
-      .catch(() => {
-        /* Wails IPC unavailable */
-      })
+    // Only stamp `fetchedAt` on a real value: stamping it for the fallback too
+    // would let the TTL above suppress the retry for five seconds after a miss.
+    readOr(() => GetServerSummary(cfg.id), null).then((s) => {
+      if (!s) return
+      fetchedAt.current = Date.now()
+      setSummary(s)
+    })
   }, [cfg.id])
 
   const { hovered, onMouseEnter, onMouseLeave } = useHoverDelay(1000, prime)

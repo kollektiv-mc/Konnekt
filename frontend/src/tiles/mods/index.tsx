@@ -10,6 +10,7 @@ import { useProcessesStore } from '../../stores/useProcessesStore'
 import { DetectServerLoader } from '../../../wailsjs/go/main/App'
 import { models } from '../../../wailsjs/go/models'
 import { PLUGIN_LOADERS } from '../../lib/constants'
+import { readOr } from '../../lib/ipc'
 
 function useServerKind(serverId: string): { kind: 'mods' | 'plugins'; detecting: boolean } {
   const config = useServerConfigStore((s) => s.configs.find((c) => c.id === serverId))
@@ -26,9 +27,10 @@ function useServerKind(serverId: string): { kind: 'mods' | 'plugins'; detecting:
 
     detected.current = true
     setDetecting(true)
-    DetectServerLoader(serverId)
-      .then((cfg) => saveConfig(cfg))
-      .catch(() => {})
+    readOr(() => DetectServerLoader(serverId), null)
+      .then((cfg) => {
+        if (cfg) saveConfig(cfg)
+      })
       .finally(() => setDetecting(false))
   }, [serverId, config, saveConfig])
 

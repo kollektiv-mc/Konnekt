@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { GetServerSummary } from '../../../wailsjs/go/main/App'
 import { LOADER_LABELS } from '../../lib/loaders'
 import type { ServerConfig, ServerSummary } from '../../types'
+import { readOr } from '../../lib/ipc'
 
 /**
  * How the reported loader build was arrived at. A build read out of run.sh is
@@ -42,13 +43,11 @@ export function ServerDetail({ config, refreshKey = 0 }: Props) {
 
   const load = useCallback(() => {
     setLoading(true)
-    GetServerSummary(config.id)
+    // Reads degrade to defaults rather than surfacing an error: the panel below
+    // still renders everything the stored config knows. `readOr` also covers the
+    // no-bridge case, where the binding throws before a `.catch()` can attach.
+    readOr(() => GetServerSummary(config.id), null)
       .then((s) => setSummary(s))
-      .catch(() => {
-        // Reads degrade to defaults rather than surfacing an error: the panel
-        // below still renders everything the stored config knows.
-        setSummary(null)
-      })
       .finally(() => setLoading(false))
   }, [config.id])
 

@@ -3,6 +3,7 @@ import { GetBackupWorlds } from '../../../wailsjs/go/main/App'
 import type { models } from '../../../wailsjs/go/models'
 import { EventsOn } from '../../../wailsjs/runtime/runtime'
 import { EVENTS } from '../../lib/constants'
+import { readOr } from '../../lib/ipc'
 
 export type WorldSystem = models.WorldSystem
 
@@ -19,13 +20,12 @@ export function useBackupWorlds(serverId: string, filename: string | undefined):
       return
     }
     let cancelled = false
-    GetBackupWorlds(serverId, filename)
-      .then((result) => {
-        if (!cancelled) setWorlds(result ?? [])
-      })
-      .catch(() => {
-        if (!cancelled) setWorlds([])
-      })
+    // The fallback collapses what used to be a then/catch pair setting the same
+    // empty list, and covers the no-bridge case the `.catch()` could not: the
+    // binding threw before there was a promise to attach it to.
+    readOr(() => GetBackupWorlds(serverId, filename), []).then((result) => {
+      if (!cancelled) setWorlds(result ?? [])
+    })
     // Keep previous planets visible while the new ones load (no flash to empty).
     return () => {
       cancelled = true

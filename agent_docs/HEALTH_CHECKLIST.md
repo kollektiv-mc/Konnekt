@@ -281,6 +281,23 @@ tree.
       that renders "nothing here" must branch on both, or an unreachable server
       reads as a healthy idle one. `reachable` is hydrated in `App` by
       `hooks/useServerStatus.ts` — never re-tie that to a single tile's mount.
+      A third case both of those miss: **no Wails bridge at all**. The generated
+      bindings dereference `window.go` synchronously, so with no backend a call
+      throws `TypeError` *before a promise exists* — the trailing `.catch()` is
+      attached to a call that never returned, and from a `useEffect` body the
+      throw reaches this boundary and replaces the whole dashboard with "render
+      error". That is the `frontend-dev` preset, a sanctioned mode, so "degrades
+      gracefully" was false here while this line read as closed. Seven read sites
+      and three bare `EventsOn` registrations were live (#184, closed 2026-08-30
+      — HEALTH_LOG). Reads go through `lib/ipc.ts`'s `readOr()`, writes branch on
+      `hasWailsBridge()`, and `EventsOn` stays in its try/catch.
+      Verify: `pnpm test` runs `tiles/noBridge.test.tsx`, which mounts every
+      registry tile — plain and maximized — plus `ServerRow` and `ServerDetail`
+      against the **real** bindings with no `window.go`, and asserts none of them
+      throws. It mocks nothing, deliberately: an automock resolves `undefined`
+      instead of throwing, which is the one thing that would make every case in
+      it pass vacuously, so the file also asserts up front that the real binding
+      still throws. Confirmed to fail when any one fix is reverted.
 
 ## 3. Scalable / Future-proof
 

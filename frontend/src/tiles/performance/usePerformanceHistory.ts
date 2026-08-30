@@ -3,6 +3,7 @@ import { EventsOn } from '../../../wailsjs/runtime/runtime'
 import { GetStatsHistory } from '../../../wailsjs/go/main/App'
 import type { models } from '../../../wailsjs/go/models'
 import { EVENTS } from '../../lib/constants'
+import { readOr } from '../../lib/ipc'
 
 // Aliased rather than redeclared, per the note in `types/index.ts`: a field
 // added to the Go struct would otherwise be silently missing here.
@@ -14,11 +15,13 @@ export function usePerformanceHistory(serverId: string): StatsSnapshot[] {
   const [history, setHistory] = useState<StatsSnapshot[]>([])
 
   useEffect(() => {
-    GetStatsHistory(serverId)
-      .then((h) => {
-        if (h?.length) setHistory(h as StatsSnapshot[])
-      })
-      .catch(() => {})
+    // Through `readOr` rather than a bare `.catch()`: with no Wails bridge the
+    // binding throws synchronously instead of rejecting, so the `.catch()` was
+    // attached to a call that never returned and the throw escaped this effect
+    // to the app-level ErrorBoundary. See lib/ipc.ts.
+    readOr(() => GetStatsHistory(serverId), null).then((h) => {
+      if (h?.length) setHistory(h as StatsSnapshot[])
+    })
 
     let cancel: (() => void) | undefined
     try {
