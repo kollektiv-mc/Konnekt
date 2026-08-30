@@ -375,7 +375,6 @@ func (a *App) GetServerStatus(serverID string) (models.ServerStatus, error) {
 	return models.ServerStatus{
 		Running:    a.serverService.IsRunning(),
 		State:      a.serverService.State(),
-		ServerID:   a.serverService.ActiveServerID(),
 		Uptime:     a.serverService.Uptime(),
 		Players:    a.serverService.PlayerCount(),
 		MaxPlayers: a.serverService.MaxPlayers(),

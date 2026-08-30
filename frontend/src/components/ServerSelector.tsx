@@ -1,7 +1,5 @@
 import { useEffect } from 'react'
 import { useServerConfigStore } from '../stores/useServerConfigStore'
-import { useServerStore } from '../stores/useServerStore'
-import { phaseFor } from '../lib/serverState'
 import { useUiStore } from '../stores/useUiStore'
 import { IconButton } from './ui/IconButton'
 import { ExpandIcon } from './ui/icons'
@@ -24,10 +22,6 @@ import { NEW_SERVER } from './ServerManager/ServerList'
 export function ServerSelector() {
   const { configs, activeId, error, loadConfigs, setActiveId } = useServerConfigStore()
   const openServerManager = useUiStore((s) => s.openServerManager)
-  // Only one server can hold the process in this build (#57), so one status
-  // answers for the whole list — `phaseFor` is what maps it onto each row.
-  const status = useServerStore((s) => s.status)
-  const reachable = useServerStore((s) => s.reachable)
 
   useEffect(() => {
     loadConfigs().catch(console.error)
@@ -58,7 +52,6 @@ export function ServerSelector() {
           key={cfg.id}
           cfg={cfg}
           active={cfg.id === activeId}
-          phase={phaseFor(cfg.id, status, reachable)}
           onSelect={() => selectServer(cfg.id)}
           onEdit={() => openServerManager(cfg.id)}
         />

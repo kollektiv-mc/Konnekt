@@ -7,7 +7,6 @@ import { StatsTile } from './index'
 const BASE: ServerStatus = {
   running: false,
   state: 'offline',
-  serverId: '',
   uptime: '0s',
   players: 0,
   maxPlayers: 20,
