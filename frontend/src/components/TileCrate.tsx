@@ -261,7 +261,11 @@ export function TileCrate() {
           held ? 'border-accent/60 opacity-40' : 'border-transparent'
         }`}
       >
-        <span className="w-6 shrink-0 text-center text-base">{tile.icon}</span>
+        {/* Monospace and left-aligned, which is what makes this a column.
+            Centred proportional text put these marks' ink anywhere from 21px
+            to 28px depending on which characters they happen to use, and the
+            eye reads that scatter, not the box they are centred in. */}
+        <span className="w-7 shrink-0 text-left font-mono text-sm leading-none">{tile.icon}</span>
         {/* Truncates rather than wraps. A label that wraps makes its row taller
             than every other row, which moves the gaps the drop marker is
             measured against and re-flows the list the moment the navbar is

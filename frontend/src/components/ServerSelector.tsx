@@ -34,8 +34,8 @@ export function ServerSelector() {
   }
 
   return (
-    <div className="flex flex-col gap-1 p-2">
-      <div className="mb-1 flex items-center justify-between px-1">
+    <div className="flex flex-col gap-1 px-3 py-2">
+      <div className="mb-1 flex items-center justify-between pr-0 pl-2">
         <span className="font-title text-text-muted text-xs font-medium tracking-wider uppercase">
           Servers
         </span>
@@ -69,12 +69,11 @@ export function ServerSelector() {
 
       <button
         onClick={() => openServerManager(NEW_SERVER)}
-        className="text-text-faint hover:bg-hover hover:text-text-secondary mx-1 mt-1 flex items-center gap-2 rounded px-2 py-1.5 text-xs transition-colors"
+        className="text-text-faint hover:bg-hover hover:text-text-secondary mt-1 flex items-center gap-2 rounded px-2 py-1.5 text-xs transition-colors"
       >
-        {/* Sized to the status dot above it, not to the glyph, so this row's
-            label starts in the same column as the server names. The plus
-            overflows its 6px box symmetrically and stays centred on the dot. */}
-        <span className="w-1.5 text-center">+</span>
+        {/* The same gutter every navbar row uses, so this row's label starts
+            in the column the server names do. */}
+        <span className="w-7 shrink-0 text-left font-mono text-sm leading-none">+</span>
         <span>Add server</span>
       </button>
     </div>

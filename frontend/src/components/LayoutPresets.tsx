@@ -47,11 +47,11 @@ export function LayoutPresets() {
 
   return (
     // px-3/px-2 rather than p-2/px-3, matching the crate: the row box starts on
-    // the navbar's 12px edge and the label sits in its own 20px column.
+    // the navbar's 12px edge and its label on the shared 20px ink column.
     <div className="flex flex-col gap-2 overflow-hidden px-3 py-2">
       <button
         onClick={() => setCollapsed((c) => !c)}
-        className="font-title text-text-muted flex w-full items-center justify-between px-1 text-xs font-medium tracking-wider uppercase transition-colors"
+        className="font-title text-text-muted flex w-full items-center justify-between pr-0 pl-2 text-xs font-medium tracking-wider uppercase transition-colors"
         onMouseEnter={(e) => {
           ;(e.currentTarget as HTMLButtonElement).style.color = 'var(--text-secondary)'
         }}
@@ -147,7 +147,7 @@ export function LayoutPresets() {
           </div>
 
           {error && (
-            <div role="alert" className="text-danger px-1 font-mono text-xs">
+            <div role="alert" className="text-danger px-2 font-mono text-xs">
               {error}
             </div>
           )}
@@ -155,7 +155,7 @@ export function LayoutPresets() {
           <button
             onClick={handleReset}
             disabled={resetting}
-            className="text-text-faint mt-1 px-1 text-left text-xs transition-colors disabled:opacity-40"
+            className="text-text-faint mt-1 px-2 text-left text-xs transition-colors disabled:opacity-40"
             onMouseEnter={(e) => {
               ;(e.currentTarget as HTMLButtonElement).style.color = 'var(--text-muted)'
             }}

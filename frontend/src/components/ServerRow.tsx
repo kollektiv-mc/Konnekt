@@ -22,6 +22,11 @@ interface Props {
 /**
  * One server in the sidebar's switcher.
  *
+ * The background says which server is selected; the dot says what that server
+ * is doing. They were the same colour on the same row before, both driven by
+ * selection, so a stopped server you had clicked looked exactly like a running
+ * one.
+ *
  * Selecting and editing, and nothing else. Disconnecting used to be a second
  * icon here, one click from the row you select a server with and with only a
  * `×` to say which of the two it was. It lives in the manager now, behind the
@@ -58,7 +63,7 @@ export function ServerRow({ cfg, active, onSelect, onEdit }: Props) {
   return (
     <div
       ref={rowRef}
-      className="flex items-center gap-1 px-1"
+      className="flex items-center gap-1"
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
     >
@@ -70,9 +75,13 @@ export function ServerRow({ cfg, active, onSelect, onEdit }: Props) {
             : 'text-text-secondary hover:bg-hover hover:text-text-primary'
         }`}
       >
-        <span
-          className={`h-1.5 w-1.5 shrink-0 rounded-full ${active ? 'bg-accent' : 'bg-text-faint'}`}
-        />
+        {/* The dot sits in the same gutter the crate's icons do, so both
+            lists put their labels in one column. */}
+        <span className="flex w-7 shrink-0 justify-start">
+          <span
+            className={`h-1.5 w-1.5 rounded-full ${active ? 'bg-accent' : 'bg-text-faint'}`}
+          />
+        </span>
         <span className="truncate">{cfg.name}</span>
       </button>
       <IconButton onClick={onEdit} title="Edit">
