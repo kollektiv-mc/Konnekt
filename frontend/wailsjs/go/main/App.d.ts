@@ -49,13 +49,15 @@ export function GetAppVersion():Promise<string>;
 
 export function GetBackupWorlds(arg1:string,arg2:string):Promise<Array<models.WorldSystem>>;
 
-export function GetCommandButtons():Promise<string>;
+export function GetCommandButtons():Promise<models.CommandButtonSet>;
 
 export function GetConsoleHistory(arg1:string):Promise<Array<models.ConsoleLine>>;
 
 export function GetCustomCommands():Promise<Array<string>>;
 
 export function GetDataDir():Promise<string>;
+
+export function GetKommandsCommands():Promise<Array<models.KommandsSavedCommand>>;
 
 export function GetLastStop():Promise<models.ServerStopped>;
 
@@ -139,6 +141,8 @@ export function PreviewScheduleNode(arg1:models.Graph,arg2:string):Promise<model
 
 export function ReadConfigFile(arg1:string,arg2:string):Promise<string>;
 
+export function RefreshKommands():Promise<models.KommandsStatus>;
+
 export function RenameWorld(arg1:string,arg2:string,arg3:string):Promise<void>;
 
 export function RestartServer(arg1:string):Promise<void>;
@@ -153,9 +157,7 @@ export function SaveActiveTiles(arg1:Array<string>):Promise<void>;
 
 export function SaveAppSettings(arg1:models.AppSettings):Promise<void>;
 
-export function SaveCommandButtons(arg1:string):Promise<void>;
-
-export function SaveCustomCommands(arg1:Array<string>):Promise<void>;
+export function SaveCommandButtons(arg1:Array<models.CommandButton>):Promise<void>;
 
 export function SaveLayoutPreset(arg1:string,arg2:string):Promise<void>;
 

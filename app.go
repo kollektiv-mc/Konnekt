@@ -29,6 +29,8 @@ type App struct {
 	updateService       *services.UpdateService
 	installerService    *services.InstallerService
 	loaderService       *services.LoaderService
+	commandsService     *services.CommandsService
+	kommandsService     *services.KommandsService
 	bus                 *services.EventBus
 	dataDir             string
 }
@@ -54,6 +56,10 @@ func NewApp() *App {
 	installer.SetBus(bus)
 	loader := services.NewLoaderService(cfg, srv, backup, installer)
 	loader.SetBus(bus)
+	commands := services.NewCommandsService()
+	commands.SetBus(bus)
+	kommands := services.NewKommandsService(commands)
+	kommands.SetBus(bus)
 	return &App{
 		serverService:       srv,
 		configService:       cfg,
@@ -68,6 +74,8 @@ func NewApp() *App {
 		updateService:       update,
 		installerService:    installer,
 		loaderService:       loader,
+		commandsService:     commands,
+		kommandsService:     kommands,
 		bus:                 bus,
 	}
 }
@@ -82,6 +90,9 @@ const quitStopGrace = 8 * time.Second
 
 func (a *App) beforeClose(ctx context.Context) bool {
 	a.schedulerService.StopScheduler()
+	// Before the server stop below, so a poll cannot land mid-shutdown and
+	// rewrite command_buttons.json while the app is on its way out.
+	a.kommandsService.Stop()
 	if a.serverService.IsRunning() {
 		// Stop's error paths here are "server not running" (the IsRunning guard
 		// covers it, and a race can only make it true — the benign direction)
@@ -122,6 +133,12 @@ func (a *App) startup(ctx context.Context) {
 	a.installerService.SetContext(ctx)
 	a.loaderService.SetContext(ctx)
 	a.loaderService.SetDataDir(a.dataDir)
+	a.commandsService.SetDataDir(a.dataDir)
+	// Reads Kommands' shared file on a slack timer for as long as the app
+	// lives. The responsive path is RefreshKommands, which the frontend calls
+	// on window focus; this only catches an edit made while Konnekt already
+	// has focus. ctx is the Wails lifetime, so the goroutine ends with the app.
+	a.kommandsService.Start(ctx)
 }
 
 // --- File dialogs ---
@@ -562,29 +579,46 @@ func (a *App) GetCustomCommands() ([]string, error) {
 	return cmds, nil
 }
 
-func (a *App) SaveCustomCommands(cmds []string) error {
-	data, err := json.Marshal(cmds)
-	if err != nil {
-		return err
-	}
-	return services.WriteDataFile(a.dataDir, "custom_commands.json", data)
-}
-
 // --- Command buttons (unified, ordered, customizable) ---
 
-func (a *App) GetCommandButtons() (string, error) {
-	data, err := os.ReadFile(filepath.Join(a.dataDir, "command_buttons.json"))
-	if os.IsNotExist(err) {
-		return "", nil
-	}
-	if err != nil {
-		return "", err
-	}
-	return string(data), nil
+// GetCommandButtons returns the button list plus whether a file existed at all.
+//
+// This used to return the file's raw bytes as a string, with the shape known
+// only to the frontend. It is typed now because Go has to read individual items
+// to resolve Kommands links (#213 Phase 4); the on-disk format is unchanged.
+//
+// The Seeded flag replaces what used to be an empty-string check. That check
+// could not tell a first launch from a user who had deleted every button, and
+// only got the second case right by accident.
+func (a *App) GetCommandButtons() (models.CommandButtonSet, error) {
+	return a.commandsService.Get()
 }
 
-func (a *App) SaveCommandButtons(data string) error {
-	return services.WriteDataFile(a.dataDir, "command_buttons.json", []byte(data))
+func (a *App) SaveCommandButtons(items []models.CommandButton) error {
+	return a.commandsService.Save(items)
+}
+
+// RefreshKommands re-reads Kommands' shared file now rather than waiting for
+// the background poll, and reports what it found.
+//
+// Called on window focus, which is the case the 30s timer is deliberately too
+// slow for: the user tabs to Kommands, saves, and tabs back expecting the
+// change to be there.
+// GetKommandsCommands returns what Kommands currently has saved, from the last
+// successful read.
+//
+// This is what makes a link creatable: the library lists these and binds a
+// button to one by id. It also carries models.KommandsSavedCommand into the
+// generated TypeScript, which no other bound method's type graph reaches.
+func (a *App) GetKommandsCommands() ([]models.KommandsSavedCommand, error) {
+	return a.kommandsService.Saved(), nil
+}
+
+func (a *App) RefreshKommands() (models.KommandsStatus, error) {
+	if err := a.kommandsService.Poll(true); err != nil {
+		return a.kommandsService.Status(), err
+	}
+	return a.kommandsService.Status(), nil
 }
 
 // --- Scheduler ---

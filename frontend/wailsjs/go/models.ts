@@ -220,6 +220,101 @@ export namespace models {
 		    return a;
 		}
 	}
+	export class CommandLink {
+	    source: string;
+	    id: string;
+	    revision: number;
+	    status: string;
+	    prevLabel?: string;
+	    prevValue?: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new CommandLink(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.source = source["source"];
+	        this.id = source["id"];
+	        this.revision = source["revision"];
+	        this.status = source["status"];
+	        this.prevLabel = source["prevLabel"];
+	        this.prevValue = source["prevValue"];
+	    }
+	}
+	export class CommandButton {
+	    id: string;
+	    label: string;
+	    kind: string;
+	    value: string;
+	    group?: string;
+	    link?: CommandLink;
+	
+	    static createFrom(source: any = {}) {
+	        return new CommandButton(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.label = source["label"];
+	        this.kind = source["kind"];
+	        this.value = source["value"];
+	        this.group = source["group"];
+	        this.link = this.convertValues(source["link"], CommandLink);
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	export class CommandButtonSet {
+	    seeded: boolean;
+	    items: CommandButton[];
+	
+	    static createFrom(source: any = {}) {
+	        return new CommandButtonSet(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.seeded = source["seeded"];
+	        this.items = this.convertValues(source["items"], CommandButton);
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	
 	
 	export class ConfigFile {
 	    relPath: string;
@@ -415,6 +510,56 @@ export namespace models {
 	        this.enabled = source["enabled"];
 	        this.sizeBytes = source["sizeBytes"];
 	        this.installedAt = source["installedAt"];
+	    }
+	}
+	export class KommandsSavedCommand {
+	    id: string;
+	    revision: number;
+	    label: string;
+	    command: string;
+	    updatedAt: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new KommandsSavedCommand(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.revision = source["revision"];
+	        this.label = source["label"];
+	        this.command = source["command"];
+	        this.updatedAt = source["updatedAt"];
+	    }
+	}
+	export class KommandsStatus {
+	    installed: boolean;
+	    path: string;
+	    unsupported: boolean;
+	    version: number;
+	    error: string;
+	    savedCount: number;
+	    linkedCount: number;
+	    rejected: number;
+	    brokenCount: number;
+	    changedCount: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new KommandsStatus(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.installed = source["installed"];
+	        this.path = source["path"];
+	        this.unsupported = source["unsupported"];
+	        this.version = source["version"];
+	        this.error = source["error"];
+	        this.savedCount = source["savedCount"];
+	        this.linkedCount = source["linkedCount"];
+	        this.rejected = source["rejected"];
+	        this.brokenCount = source["brokenCount"];
+	        this.changedCount = source["changedCount"];
 	    }
 	}
 	export class LayoutPreset {

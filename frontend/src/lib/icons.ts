@@ -41,6 +41,16 @@ export {
   Settings,
   SlidersHorizontal,
   X,
+  // Commands tile: the button grid, the maximized library, and link state.
+  Check,
+  GripVertical,
+  Link2,
+  Link2Off,
+  Plus,
+  RotateCcw,
+  Search,
+  Trash2,
+  TriangleAlert,
   // Window controls, in the app's own title bar. Deliberately not Maximize2 /
   // Minimize2, which the tile header already uses: the two bars sit one above
   // the other and the same glyph in both would say the window and the tile do

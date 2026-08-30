@@ -24,6 +24,7 @@ import { emitNotification } from './lib/notify'
 import { prefetchHeavyChunks } from './lib/prefetch'
 import { useUpdateCheck } from './hooks/useUpdateCheck'
 import { useServerStatusSync } from './hooks/useServerStatus'
+import { useCommandsSync } from './hooks/useCommandsSync'
 import { useNavWidth } from './hooks/useNavWidth'
 import { TitleBar } from './components/TitleBar'
 import { EVENTS } from './lib/constants'
@@ -67,6 +68,7 @@ function App() {
   // status and tiles are removable, so tying it to one tile left the rest
   // reading a stale offline default (see the hook's own comment).
   useServerStatusSync(activeId)
+  useCommandsSync()
 
   // Auto-start active server on launch
   useEffect(() => {

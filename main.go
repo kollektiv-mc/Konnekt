@@ -93,6 +93,7 @@ func main() {
 		LogLevelProduction: logger.INFO,
 		OnStartup:          app.startup,
 		OnBeforeClose:      app.beforeClose,
+		SingleInstanceLock: singleInstanceLock(app),
 		Bind: []interface{}{
 			app,
 		},

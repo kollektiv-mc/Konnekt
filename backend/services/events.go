@@ -72,6 +72,13 @@ const (
 	EventLoaderUpdateFinished = "loader:update-finished" // {serverID, version}
 	EventLoaderUpdateFailed   = "loader:update-failed"   // {serverID, error, rolledBack}
 
+	// EventCommandsChanged says the Commands tile's button list was changed by
+	// something other than the user editing it here — today only a linked command
+	// being updated in Kommands. Payload is {source}. The frontend re-reads rather
+	// than applying a payload, because the merge has already happened on disk and
+	// two code paths computing the same result is how they drift.
+	EventCommandsChanged = "commands:changed"
+
 	// Self-update lifecycle.
 	EventUpdateProgress = "update:progress" // {percent}
 )
