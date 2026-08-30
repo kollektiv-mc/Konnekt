@@ -110,6 +110,10 @@ export function GetDataDir() {
   return window['go']['main']['App']['GetDataDir']();
 }
 
+export function GetKommandsCommands() {
+  return window['go']['main']['App']['GetKommandsCommands']();
+}
+
 export function GetLastStop() {
   return window['go']['main']['App']['GetLastStop']();
 }
@@ -274,6 +278,10 @@ export function ReadConfigFile(arg1, arg2) {
   return window['go']['main']['App']['ReadConfigFile'](arg1, arg2);
 }
 
+export function RefreshKommands() {
+  return window['go']['main']['App']['RefreshKommands']();
+}
+
 export function RenameWorld(arg1, arg2, arg3) {
   return window['go']['main']['App']['RenameWorld'](arg1, arg2, arg3);
 }
@@ -304,10 +312,6 @@ export function SaveAppSettings(arg1) {
 
 export function SaveCommandButtons(arg1) {
   return window['go']['main']['App']['SaveCommandButtons'](arg1);
-}
-
-export function SaveCustomCommands(arg1) {
-  return window['go']['main']['App']['SaveCustomCommands'](arg1);
 }
 
 export function SaveLayoutPreset(arg1, arg2) {
