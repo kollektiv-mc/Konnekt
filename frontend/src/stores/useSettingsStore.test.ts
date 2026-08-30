@@ -25,7 +25,7 @@ const DEFAULTS = {
   schedulerPaletteCollapsed: true,
   schedulerPaletteClosedCategories: {},
   consoleQuickCommandsCollapsed: false,
-  navClosedSections: {} as Record<string, boolean>,
+  navClosedSections: { widgets: true, layouts: true } as Record<string, boolean>,
   checkUpdatesOnStartup: true,
   updateChannel: 'stable' as const,
   crateOrder: [] as string[],
@@ -97,6 +97,20 @@ describe('useSettingsStore', () => {
       vi.mocked(App.GetAppSettings).mockResolvedValue({ ...DEFAULTS, updateChannel: '' as never })
       await useSettingsStore.getState().load()
       expect(useSettingsStore.getState().settings.updateChannel).toBe('stable')
+    })
+
+    // The navbar's first-run shape: Servers and Tiles open, Widgets and Layouts
+    // folded away. Only the closed ones are named, since a key that is not
+    // there is open, so asserting the map whole is what catches a section
+    // quietly changing sides. Kept in step with services.GetAppSettings, which
+    // is what a real install reads; this is the no-bridge path.
+    it('opens on Servers and Tiles with Widgets and Layouts folded away', async () => {
+      vi.mocked(App.GetAppSettings).mockRejectedValue(new Error('no bridge'))
+      await useSettingsStore.getState().load()
+      expect(useSettingsStore.getState().settings.navClosedSections).toEqual({
+        widgets: true,
+        layouts: true,
+      })
     })
 
     it('falls back to defaults and still marks loaded when GetAppSettings rejects', async () => {

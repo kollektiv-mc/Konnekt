@@ -28,7 +28,11 @@ const DEFAULTS: AppSettings = {
   schedulerPaletteCollapsed: true,
   schedulerPaletteClosedCategories: {},
   consoleQuickCommandsCollapsed: false,
-  navClosedSections: {},
+  // Servers and Tiles open, Widgets and Layouts closed: the two a first run
+  // wants to see are the server it is about to start and the tiles it can
+  // place, and the other two are there when they are looked for. Kept in step
+  // with services.GetAppSettings, which is what a real install reads.
+  navClosedSections: { widgets: true, layouts: true },
   checkUpdatesOnStartup: true,
   updateChannel: 'stable',
   crateOrder: [],
@@ -79,7 +83,7 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
         backgroundStyle,
         updateChannel,
         schedulerPaletteClosedCategories: s.schedulerPaletteClosedCategories ?? {},
-        navClosedSections: s.navClosedSections ?? {},
+        navClosedSections: s.navClosedSections ?? DEFAULTS.navClosedSections,
       }
     } catch {
       /* non-Wails context */

@@ -129,7 +129,7 @@ func (s *ConfigService) GetAppSettings() (models.AppSettings, error) {
 		ConsoleBufferLines:               1000,
 		SchedulerPaletteCollapsed:        true,
 		SchedulerPaletteClosedCategories: map[string]bool{},
-		NavClosedSections:                map[string]bool{},
+		NavClosedSections:                map[string]bool{"widgets": true, "layouts": true},
 		CheckUpdatesOnStartup:            true,
 		UpdateChannel:                    UpdateChannelStable,
 		NavWidth:                         DefaultNavWidth,

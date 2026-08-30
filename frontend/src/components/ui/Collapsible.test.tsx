@@ -21,9 +21,9 @@ function mockScrollHeight(container: HTMLElement, height: number) {
   Object.defineProperty(innerOf(container), 'scrollHeight', { configurable: true, value: height })
 }
 
-// The collapse path defers through two nested animation frames, so the frames
-// have to be fake for a test to land in between them — which is exactly where
-// the reopen race below lives. Vitest does not fake rAF by default.
+// Vitest does not fake rAF by default, and these still fake it: the component
+// no longer schedules frames itself, but advancing them is how the tests below
+// step a toggle sequence without waiting on real time.
 const TO_FAKE = [
   'setTimeout',
   'clearTimeout',
@@ -140,13 +140,38 @@ describe('Collapsible', () => {
     expect(outerOf(container).style.maxHeight).toBe('120px')
   })
 
-  it('re-clamps to the measured height and animates back to 0 when closed', () => {
+  // Watches the flush the collapse forces, and reports the inline max-height
+  // standing at that moment — which is the whole mechanism: the browser has to
+  // have computed a real starting height before the target lands.
+  function watchCollapse(container: HTMLElement, renderedHeight: number) {
+    const outer = outerOf(container)
+    const seen: { pinned: string | null; flushes: number } = { pinned: null, flushes: 0 }
+    outer.getBoundingClientRect = () => ({ height: renderedHeight }) as DOMRect
+    Object.defineProperty(outer, 'offsetHeight', {
+      configurable: true,
+      get: () => {
+        seen.flushes++
+        seen.pinned = outer.style.maxHeight
+        return renderedHeight
+      },
+    })
+    return seen
+  }
+
+  // An open panel sits at `max-height: none`, which does not interpolate, so
+  // going straight to `0px` is a cut rather than a collapse. This used to wait
+  // two animation frames for a measured height to be painted, which holds while
+  // frames are cheap: under a 6x CPU throttle it failed on 74 of 220 closes,
+  // always closing, never opening. Pinning the height and reading a layout
+  // property makes the browser compute it there and then instead.
+  it('pins the height it is at and forces a flush before collapsing', () => {
     const { container, rerender } = render(
       <Collapsible open={true}>
         <div>content</div>
       </Collapsible>,
     )
     mockScrollHeight(container, 180)
+    const seen = watchCollapse(container, 180)
 
     act(() => {
       rerender(
@@ -155,23 +180,41 @@ describe('Collapsible', () => {
         </Collapsible>,
       )
     })
-    // Clamped to the measured height first (forces a reflow frame at a real
-    // height instead of jumping straight from `none`, so the collapse animates).
-    expect(outerOf(container).style.maxHeight).toBe('180px')
 
-    act(() => {
-      vi.runAllTimers()
-    })
+    expect(seen.flushes).toBeGreaterThan(0)
+    expect(seen.pinned).toBe('180px')
     expect(outerOf(container).style.maxHeight).toBe('0px')
   })
 
-  // The reported glitch, reproduced exactly: reopen in the one-frame gap
-  // between the collapse's two animation frames. The outer frame has already
-  // fired, so cancelling its handle does nothing, and the inner one it queued
-  // used to land anyway and write `0px` over a panel that was opening. The
-  // fallback timer then snapped it back up with no motion at all — which is the
-  // "sometimes it just cuts away" this pins down.
-  it('a reopen between the collapse frames leaves the panel open', () => {
+  // Caught mid-open, the start is where it has got to, not where it was going.
+  // Pinning the full height would snap the panel open before collapsing it.
+  it('collapses from the height it has reached, not the one it was heading for', () => {
+    const { container, rerender } = render(
+      <Collapsible open={true}>
+        <div>content</div>
+      </Collapsible>,
+    )
+    mockScrollHeight(container, 180)
+    const seen = watchCollapse(container, 60)
+
+    act(() => {
+      rerender(
+        <Collapsible open={false}>
+          <div>content</div>
+        </Collapsible>,
+      )
+    })
+
+    expect(seen.pinned).toBe('60px')
+    expect(outerOf(container).style.maxHeight).toBe('0px')
+  })
+
+  // The collapse used to defer through two animation frames, and a reopen
+  // landing between them wrote `0px` over a panel that was opening. There are
+  // no frames left to land between — it is all synchronous now — but the
+  // behaviour is worth holding: a toggle immediately after another one ends
+  // where the last toggle asked for.
+  it('a reopen right after a close leaves the panel open', () => {
     const { container, rerender } = render(
       <Collapsible open={true}>
         <div>content</div>
@@ -212,8 +255,8 @@ describe('Collapsible', () => {
     expect(outerOf(container).style.maxHeight).toBe('none')
   })
 
-  // The other half of that race: the rescued panel must still close normally,
-  // rather than the cancelled collapse having eaten the next one.
+  // The other half: the rescued panel must still close normally, rather than
+  // the abandoned collapse having eaten the next one.
   it('closing again after such a reopen still collapses', () => {
     const { container, rerender } = render(
       <Collapsible open={true}>
