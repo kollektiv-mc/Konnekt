@@ -7,6 +7,11 @@ interface Props {
   children: ReactNode
   tone?: 'muted' | 'danger'
   className?: string
+  /**
+   * For a control sitting on a drag handle, which needs to stop the press
+   * reaching the handle behind it (see `tiles/TileWrapper`).
+   */
+  onMouseDown?: (e: React.MouseEvent) => void
 }
 
 const TONES = {
@@ -26,12 +31,25 @@ const TONES = {
  *
  * `h-6 w-6` with a 16px icon leaves a 4px ring of hit area around the ink, so
  * the hover background reads as a target rather than tracing the glyph.
+ *
+ * Where this belongs: a control that closes, expands or restores a panel,
+ * dialog or tile. Not the small `×` that clears a search field or drops one
+ * chip from a list — those live inside dense rows at their own scale, and a
+ * 24px box would set the height of the row around them.
  */
-export function IconButton({ onClick, title, children, tone = 'muted', className = '' }: Props) {
+export function IconButton({
+  onClick,
+  title,
+  children,
+  tone = 'muted',
+  className = '',
+  onMouseDown,
+}: Props) {
   return (
     <button
       type="button"
       onClick={onClick}
+      onMouseDown={onMouseDown}
       title={title}
       aria-label={title}
       className={`flex h-6 w-6 shrink-0 items-center justify-center rounded transition-colors ${TONES[tone]} ${className}`}

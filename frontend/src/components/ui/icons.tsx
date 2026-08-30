@@ -66,6 +66,15 @@ export function PencilIcon() {
   )
 }
 
+/** Return something maximized to its normal size. The mirror of ExpandIcon. */
+export function CollapseIcon() {
+  return (
+    <svg {...BOX}>
+      <path {...STROKE} d="M13.5 6.5h-4v-4M9.5 6.5 14 2M2.5 9.5h4v4M6.5 9.5 2 14" />
+    </svg>
+  )
+}
+
 /** Close, dismiss, remove. */
 export function CloseIcon() {
   return (
