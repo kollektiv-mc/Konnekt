@@ -159,4 +159,28 @@ describe('ServerManager', () => {
       mcVersion: '1.21.1',
     })
   })
+
+  // Removing a server is destructive and irreversible from in here, so this
+  // control raises the confirm and nothing else.
+  it('disconnect raises the confirm rather than deleting', () => {
+    renderManager()
+    fireEvent.click(screen.getByRole('button', { name: 'Disconnect' }))
+
+    expect(useUiStore.getState().pendingDisconnect).toBe('alpha')
+    expect(App.DeleteServerConfig).not.toHaveBeenCalled()
+  })
+
+  // Confirming leaves `selected` pointing at a config that is gone, and the
+  // add-server form is what the panel renders for a selection it cannot
+  // resolve — so without the fallback a removal silently becomes "add a
+  // server", with the removed name still in the header until it repaints.
+  it('falls back to the active server when the selected one is disconnected', async () => {
+    renderManager({ selection: 'beta' })
+    await waitFor(() => expect(screen.getByDisplayValue('/srv/beta')).toBeTruthy())
+
+    useServerConfigStore.setState({ configs: [cfg('alpha')] })
+
+    await waitFor(() => expect(screen.getByDisplayValue('/srv/alpha')).toBeTruthy())
+    expect(screen.queryByText('Add a server')).toBeNull()
+  })
 })

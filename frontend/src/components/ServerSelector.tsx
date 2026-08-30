@@ -1,16 +1,19 @@
 import { useEffect } from 'react'
 import { useServerConfigStore } from '../stores/useServerConfigStore'
 import { useUiStore } from '../stores/useUiStore'
+import { IconButton } from './ui/IconButton'
+import { Maximize2 } from '../lib/icons'
+import { Icon } from './ui/Icon'
 import { ServerRow } from './ServerRow'
 import { NEW_SERVER } from './ServerManager/ServerList'
-import { SlidersHorizontal } from '../lib/icons'
-import { Icon } from './ui/Icon'
 
 /**
  * The sidebar's server switcher.
  *
- * Selecting, and three intents: open the manager, open it on a server, ask to
- * disconnect one. Everything it used to render as an overlay — the manager, the
+ * Selecting, and two intents: open the manager, or open it on a server.
+ * Disconnecting was a third until it moved into the manager itself, where the
+ * server being removed is named rather than being whichever row the `×` was
+ * next to. Everything it used to render as an overlay — the manager, the
  * install modal, the disconnect confirm — moved to App, because a fixed overlay
  * inside <aside> loses to the maximized-tile overlay inside <main>. It also
  * used to own the install-finished result, on the reasoning that this component
@@ -19,7 +22,7 @@ import { Icon } from './ui/Icon'
  */
 export function ServerSelector() {
   const { configs, activeId, error, loadConfigs, setActiveId } = useServerConfigStore()
-  const { openServerManager, setPendingDisconnect } = useUiStore()
+  const openServerManager = useUiStore((s) => s.openServerManager)
 
   useEffect(() => {
     loadConfigs().catch(console.error)
@@ -37,14 +40,12 @@ export function ServerSelector() {
         <span className="font-title text-text-muted text-xs font-medium tracking-wider uppercase">
           Servers
         </span>
-        <button
+        <IconButton
           onClick={() => openServerManager(activeId || NEW_SERVER)}
-          className="text-text-faint hover:text-text-primary flex h-5 w-5 items-center justify-center rounded text-xs transition-colors"
           title="Manage servers"
-          aria-label="Manage servers"
         >
-          <Icon icon={SlidersHorizontal} size="xs" />
-        </button>
+          <Icon icon={Maximize2} />
+        </IconButton>
       </div>
 
       {configs.map((cfg) => (
@@ -54,7 +55,6 @@ export function ServerSelector() {
           active={cfg.id === activeId}
           onSelect={() => selectServer(cfg.id)}
           onEdit={() => openServerManager(cfg.id)}
-          onDisconnect={() => setPendingDisconnect(cfg.id)}
         />
       ))}
 
@@ -70,9 +70,12 @@ export function ServerSelector() {
 
       <button
         onClick={() => openServerManager(NEW_SERVER)}
-        className="text-text-faint hover:bg-hover hover:text-text-secondary mt-1 flex items-center gap-1.5 rounded px-2 py-1.5 text-xs transition-colors"
+        className="text-text-faint hover:bg-hover hover:text-text-secondary mx-1 mt-1 flex items-center gap-2 rounded px-2 py-1.5 text-xs transition-colors"
       >
-        <span>+</span>
+        {/* Sized to the status dot above it, not to the glyph, so this row's
+            label starts in the same column as the server names. The plus
+            overflows its 6px box symmetrically and stays centred on the dot. */}
+        <span className="w-1.5 text-center">+</span>
         <span>Add server</span>
       </button>
     </div>

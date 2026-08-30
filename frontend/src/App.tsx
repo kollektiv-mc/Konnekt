@@ -23,9 +23,11 @@ import { emitNotification } from './lib/notify'
 import { prefetchHeavyChunks } from './lib/prefetch'
 import { useUpdateCheck } from './hooks/useUpdateCheck'
 import { useServerStatusSync } from './hooks/useServerStatus'
-import { EVENTS } from './lib/constants'
+import { useNavWidth } from './hooks/useNavWidth'
+import { IconButton } from './components/ui/IconButton'
 import { Settings } from './lib/icons'
 import { Icon } from './components/ui/Icon'
+import { EVENTS } from './lib/constants'
 
 function App() {
   const { activeId } = useServerConfigStore()
@@ -35,6 +37,17 @@ function App() {
   const loaderDialogOpen = useLoaderStore((s) => s.dialogOpen)
   const [eulaRequired, setEulaRequired] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
+  const { width: navWidth, resizing, onHandleMouseDown, onHandleDoubleClick } = useNavWidth()
+  // Any drag that moves the navbar or something inside it. While one is in
+  // flight nothing in there should light up under the pointer: the row being
+  // reordered has its own accent outline to keep, and a resize drags the
+  // pointer straight across every row on its way. Suppressing at the container
+  // rather than per-rule because it is the same answer for all of them, and
+  // because a `hover:` variant outranks whatever base class it is fighting.
+  // The gestures themselves are on window listeners and read rects, so nothing
+  // here depends on the navbar being hit-testable mid-drag.
+  const crateDragging = useUiStore((s) => s.crateDragId !== null || s.draggingTileId !== null)
+  const navFrozen = resizing || crateDragging
   const autoStarted = useRef(false)
   const lowTpsWarned = useRef(false)
 
@@ -510,19 +523,20 @@ function App() {
 
   return (
     <div className="flex h-screen overflow-hidden">
-      <aside className="border-r-hairline border-border-subtle flex w-48 shrink-0 flex-col overflow-y-auto">
+      <aside
+        className={`border-r-hairline border-border-subtle flex shrink-0 flex-col overflow-y-auto ${
+          navFrozen ? 'pointer-events-none' : ''
+        }`}
+        // eslint-disable-next-line no-restricted-syntax -- navWidth is a live drag-computed value
+        style={{ width: navWidth }}
+      >
         <div className="border-b-hairline border-border-subtle flex shrink-0 items-center justify-between px-3 py-3">
           <span className="text-accent font-display text-sm font-black tracking-tight">
             Konnekt
           </span>
-          <button
-            onClick={() => setSettingsOpen(true)}
-            className="text-text-muted hover:text-text-primary flex h-6 w-6 items-center justify-center rounded text-sm transition-colors"
-            title="Settings"
-            aria-label="Settings"
-          >
-            <Icon icon={Settings} size="sm" />
-          </button>
+          <IconButton onClick={() => setSettingsOpen(true)} title="Settings">
+            <Icon icon={Settings} />
+          </IconButton>
         </div>
         <div className="border-b-hairline border-border-subtle">
           <ServerSelector />
@@ -531,10 +545,28 @@ function App() {
           <TileCrate />
         </div>
         <ActiveProcesses />
-        <div className="border-t-hairline border-border-subtle">
-          <LayoutPresets />
-        </div>
+        {/* No rule here: the layouts panel carries its own, on its header,
+            which is the part of it that stays still while it opens. */}
+        <LayoutPresets />
       </aside>
+      {/* Straddles the navbar's border on a negative margin, so it is 4px of
+          grab area that costs the layout nothing and the canvas does not shift
+          the moment the pointer nears it. `relative` is what keeps <main> from
+          taking the half that overlaps it, since a later sibling would
+          otherwise win the hit test.
+
+          What lights up is the hairline inside, not the whole grab area: the
+          target wants to be forgiving, the line it draws does not. */}
+      <div
+        role="separator"
+        aria-orientation="vertical"
+        aria-label="Resize navbar"
+        onMouseDown={onHandleMouseDown}
+        onDoubleClick={onHandleDoubleClick}
+        className="group relative z-10 -mx-0.5 flex w-1 shrink-0 cursor-col-resize justify-center bg-transparent"
+      >
+        <div className="group-hover:bg-accent group-active:bg-accent h-full w-px transition-colors" />
+      </div>
       <main className="flex-1 overflow-hidden">
         <Dashboard />
       </main>

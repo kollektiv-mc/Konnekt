@@ -1,10 +1,11 @@
 import { useCallback, useRef, useState } from 'react'
 import { GetServerSummary } from '../../wailsjs/go/main/App'
 import { useHoverDelay } from '../hooks/useHoverDelay'
+import { IconButton } from './ui/IconButton'
+import { Pencil } from '../lib/icons'
+import { Icon } from './ui/Icon'
 import { ServerTooltip } from './ServerTooltip'
 import type { ServerConfig, ServerSummary } from '../types'
-import { Pencil, X } from '../lib/icons'
-import { Icon } from './ui/Icon'
 
 // Re-read rather than trust a cached summary for longer than this — the
 // running flag changes underneath us when a server starts or stops.
@@ -17,10 +18,17 @@ interface Props {
   active: boolean
   onSelect: () => void
   onEdit: () => void
-  onDisconnect: () => void
 }
 
-export function ServerRow({ cfg, active, onSelect, onEdit, onDisconnect }: Props) {
+/**
+ * One server in the sidebar's switcher.
+ *
+ * Selecting and editing, and nothing else. Disconnecting used to be a second
+ * icon here, one click from the row you select a server with and with only a
+ * `×` to say which of the two it was. It lives in the manager now, behind the
+ * edit control, where the server it would remove is named on screen.
+ */
+export function ServerRow({ cfg, active, onSelect, onEdit }: Props) {
   const rowRef = useRef<HTMLDivElement>(null)
   const [summary, setSummary] = useState<ServerSummary | null>(null)
   const [anchor, setAnchor] = useState({ top: 0, left: 0 })
@@ -51,7 +59,7 @@ export function ServerRow({ cfg, active, onSelect, onEdit, onDisconnect }: Props
   return (
     <div
       ref={rowRef}
-      className="flex items-center gap-1"
+      className="flex items-center gap-1 px-1"
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
     >
@@ -68,22 +76,9 @@ export function ServerRow({ cfg, active, onSelect, onEdit, onDisconnect }: Props
         />
         <span className="truncate">{cfg.name}</span>
       </button>
-      <button
-        onClick={onEdit}
-        className="text-text-faint hover:text-text-secondary px-1 text-xs transition-colors"
-        title="Edit"
-        aria-label="Edit server"
-      >
-        <Icon icon={Pencil} size="xs" />
-      </button>
-      <button
-        onClick={onDisconnect}
-        className="text-text-faint px-1 text-xs transition-colors hover:text-red-400"
-        title="Disconnect"
-        aria-label="Disconnect server"
-      >
-        <Icon icon={X} size="xs" />
-      </button>
+      <IconButton onClick={onEdit} title="Edit">
+        <Icon icon={Pencil} />
+      </IconButton>
 
       {hovered && <ServerTooltip summary={summary} anchor={anchor} />}
     </div>

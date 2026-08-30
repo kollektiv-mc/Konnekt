@@ -13,6 +13,9 @@ import type { SkinDefinition } from '../lib/theme'
 import { Toggle } from './ui/Toggle'
 import { Segmented } from './ui/Segmented'
 import { ColorSwatch } from './ui/ColorSwatch'
+import { IconButton } from './ui/IconButton'
+import { X } from '../lib/icons'
+import { Icon } from './ui/Icon'
 import { SettingRow } from './ui/SettingRow'
 import {
   OpenDataDir,
@@ -172,12 +175,9 @@ export function SettingsModal({ open, onClose }: Props) {
             <span className="text-text-primary text-sm font-semibold">
               {NAV.find((n) => n.id === section)?.label}
             </span>
-            <button
-              onClick={onClose}
-              className="text-text-muted hover:bg-hover hover:text-text-primary flex h-6 w-6 cursor-pointer items-center justify-center rounded text-sm transition-colors"
-            >
-              ×
-            </button>
+            <IconButton onClick={onClose} title="Close">
+              <Icon icon={X} />
+            </IconButton>
           </div>
 
           {error && (

@@ -21,6 +21,7 @@ export namespace models {
 	    checkUpdatesOnStartup: boolean;
 	    updateChannel: string;
 	    crateOrder: string[];
+	    navWidth: number;
 	
 	    static createFrom(source: any = {}) {
 	        return new AppSettings(source);
@@ -48,6 +49,7 @@ export namespace models {
 	        this.checkUpdatesOnStartup = source["checkUpdatesOnStartup"];
 	        this.updateChannel = source["updateChannel"];
 	        this.crateOrder = source["crateOrder"];
+	        this.navWidth = source["navWidth"];
 	    }
 	}
 	export class AttrValue {

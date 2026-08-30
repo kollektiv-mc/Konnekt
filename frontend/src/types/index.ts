@@ -61,6 +61,7 @@ export interface AppSettings {
   checkUpdatesOnStartup: boolean
   updateChannel: 'stable' | 'snapshot'
   crateOrder: string[]
+  navWidth: number
 }
 
 /**

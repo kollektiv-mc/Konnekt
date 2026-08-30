@@ -9,6 +9,9 @@ import type {
 import { DependencyDialog } from './DependencyDialog'
 import { ModAboutBody } from './ModAboutBody'
 import { fmtCount, fmtBytes, relativeTime } from '../../lib/format'
+import { IconButton } from '../../components/ui/IconButton'
+import { X } from '../../lib/icons'
+import { Icon } from '../../components/ui/Icon'
 
 interface Props {
   mod: InstalledMod
@@ -188,18 +191,9 @@ export function ModPreviewDialog({
                 Open in Browser
               </button>
             )}
-            <button
-              onClick={onClose}
-              className="text-text-muted flex h-6 w-6 items-center justify-center rounded bg-transparent text-xs transition-colors"
-              onMouseEnter={(e) => {
-                ;(e.currentTarget as HTMLElement).style.background = 'var(--hover-surface)'
-              }}
-              onMouseLeave={(e) => {
-                ;(e.currentTarget as HTMLElement).style.background = 'transparent'
-              }}
-            >
-              ✕
-            </button>
+            <IconButton onClick={onClose} title="Close">
+              <Icon icon={X} />
+            </IconButton>
           </div>
         </div>
 

@@ -2,6 +2,9 @@ import { useState, useEffect } from 'react'
 import type { Backup } from './useBackups'
 import type { WorldSystem } from './useBackupWorlds'
 import { fmtBytes, fmtDate, extractID } from './format'
+import { IconButton } from '../../components/ui/IconButton'
+import { X } from '../../lib/icons'
+import { Icon } from '../../components/ui/Icon'
 
 const KIND_COLOR: Record<string, string> = {
   overworld: '#22c55e',
@@ -71,18 +74,9 @@ export function ServerInfoPanel({ backup, worlds, onClose }: ServerInfoPanelProp
             </div>
           )}
         </div>
-        <button
-          onClick={onClose}
-          className="text-text-faint mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded font-mono text-xs"
-          onMouseEnter={(e) => {
-            ;(e.currentTarget as HTMLButtonElement).style.color = 'var(--text-secondary)'
-          }}
-          onMouseLeave={(e) => {
-            ;(e.currentTarget as HTMLButtonElement).style.color = 'var(--text-faint)'
-          }}
-        >
-          ✕
-        </button>
+        <IconButton onClick={onClose} title="Close" className="mt-0.5">
+          <Icon icon={X} />
+        </IconButton>
       </div>
 
       {/* Meta */}

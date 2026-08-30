@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import type { LucideIcon } from '../../lib/icons'
+import { IconButton } from '../../components/ui/IconButton'
 import { Maximize2, Minimize2, X } from '../../lib/icons'
 import { Icon } from '../../components/ui/Icon'
 
@@ -58,39 +59,25 @@ export function TileWrapper({
             <span className="text-text-secondary font-title text-xs font-medium">{label}</span>
           </div>
           <div className="flex items-center gap-1">
+            {/* stopPropagation: these sit on the drag handle, so without it a
+                press on one starts dragging the tile. */}
             {maximizable && (
-              <button
+              <IconButton
                 onClick={() => onToggleMaximize?.(id)}
                 onMouseDown={(e) => e.stopPropagation()}
-                className="text-text-faint flex h-5 w-5 items-center justify-center text-xs leading-none transition-colors"
-                onMouseEnter={(e) => {
-                  ;(e.currentTarget as HTMLButtonElement).style.color = 'var(--text-secondary)'
-                }}
-                onMouseLeave={(e) => {
-                  ;(e.currentTarget as HTMLButtonElement).style.color = 'var(--text-faint)'
-                }}
                 title={maximized ? 'Restore tile' : 'Maximize tile'}
-                aria-label={maximized ? 'Restore tile' : 'Maximize tile'}
               >
-                <Icon icon={maximized ? Minimize2 : Maximize2} size="xs" />
-              </button>
+                {maximized ? <Icon icon={Minimize2} /> : <Icon icon={Maximize2} />}
+              </IconButton>
             )}
             {!maximized && (
-              <button
+              <IconButton
                 onClick={() => onRemove(id)}
                 onMouseDown={(e) => e.stopPropagation()}
-                className="text-text-faint flex h-5 w-5 items-center justify-center text-sm leading-none transition-colors"
-                onMouseEnter={(e) => {
-                  ;(e.currentTarget as HTMLButtonElement).style.color = 'var(--text-secondary)'
-                }}
-                onMouseLeave={(e) => {
-                  ;(e.currentTarget as HTMLButtonElement).style.color = 'var(--text-faint)'
-                }}
                 title="Remove tile"
-                aria-label="Remove tile"
               >
-                <Icon icon={X} size="sm" />
-              </button>
+                <Icon icon={X} />
+              </IconButton>
             )}
           </div>
         </div>

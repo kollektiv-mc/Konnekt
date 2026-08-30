@@ -1,6 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
 import { GetPlayerDetail, KickPlayer, BanPlayer, PardonPlayer } from '../../../wailsjs/go/main/App'
 import type { Player } from '../../types'
+import { IconButton } from '../../components/ui/IconButton'
+import { X } from '../../lib/icons'
+import { Icon } from '../../components/ui/Icon'
 
 interface Props {
   player: Player
@@ -133,12 +136,9 @@ export function PlayerDetailPopup({ player: initial, serverId, onClose, onMutate
               </span>
             )}
           </div>
-          <button
-            onClick={onClose}
-            className="text-text-faint hover:text-text-secondary shrink-0 text-lg leading-none transition-colors"
-          >
-            ×
-          </button>
+          <IconButton onClick={onClose} title="Close">
+            <Icon icon={X} />
+          </IconButton>
         </div>
 
         {/* info */}
