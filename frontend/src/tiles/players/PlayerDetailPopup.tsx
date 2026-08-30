@@ -4,6 +4,7 @@ import type { Player } from '../../types'
 import { IconButton } from '../../components/ui/IconButton'
 import { X } from '../../lib/icons'
 import { Icon } from '../../components/ui/Icon'
+import { readOr } from '../../lib/ipc'
 
 interface Props {
   player: Player
@@ -73,9 +74,9 @@ export function PlayerDetailPopup({ player: initial, serverId, onClose, onMutate
 
   // fetch fresh detail on open
   useEffect(() => {
-    GetPlayerDetail(serverId, initial.name)
-      .then((p) => setPlayer(p))
-      .catch(() => {})
+    readOr(() => GetPlayerDetail(serverId, initial.name), null).then((p) => {
+      if (p) setPlayer(p)
+    })
   }, [serverId, initial.name])
 
   // ESC to close

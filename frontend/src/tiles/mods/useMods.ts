@@ -167,25 +167,32 @@ export function useMods(serverId: string): ModsState {
   useEffect(() => {
     refreshInstalled().then(() => checkUpdates())
 
-    const offChanged = EventsOn(EVENTS.MOD_CHANGED, (d?: { serverID?: string }) => {
-      if (!d?.serverID || d.serverID === serverId) refreshInstalled(true)
-    })
-    const offInstalled = EventsOn(EVENTS.MOD_INSTALLED, (d?: { serverID?: string }) => {
-      if (!d?.serverID || d.serverID === serverId) refreshInstalled(true)
-    })
-    const offProgress = EventsOn(
-      EVENTS.MOD_INSTALL_PROGRESS,
-      (d?: { serverID?: string; fileName?: string; percent?: number }) => {
-        if (d?.serverID === serverId && d.fileName) {
-          setInstallProgress((prev) => ({ ...prev, [d.fileName!]: d.percent ?? 0 }))
-        }
-      },
-    )
+    let offChanged: (() => void) | undefined
+    let offInstalled: (() => void) | undefined
+    let offProgress: (() => void) | undefined
+    try {
+      offChanged = EventsOn(EVENTS.MOD_CHANGED, (d?: { serverID?: string }) => {
+        if (!d?.serverID || d.serverID === serverId) refreshInstalled(true)
+      })
+      offInstalled = EventsOn(EVENTS.MOD_INSTALLED, (d?: { serverID?: string }) => {
+        if (!d?.serverID || d.serverID === serverId) refreshInstalled(true)
+      })
+      offProgress = EventsOn(
+        EVENTS.MOD_INSTALL_PROGRESS,
+        (d?: { serverID?: string; fileName?: string; percent?: number }) => {
+          if (d?.serverID === serverId && d.fileName) {
+            setInstallProgress((prev) => ({ ...prev, [d.fileName!]: d.percent ?? 0 }))
+          }
+        },
+      )
+    } catch {
+      /* Wails runtime unavailable in dev without backend */
+    }
 
     return () => {
-      offChanged()
-      offInstalled()
-      offProgress()
+      offChanged?.()
+      offInstalled?.()
+      offProgress?.()
     }
   }, [serverId, refreshInstalled])
 

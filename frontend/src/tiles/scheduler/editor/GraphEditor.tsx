@@ -271,38 +271,48 @@ function GraphEditorInner({
       setFiredEdges(new Set())
     }
 
-    const offRunStart = EventsOn(EVENTS.SCHEDULE_RUN_STARTED, (p: RunEvt) => {
-      if (p.graphId !== graphIdRef.current) return
-      if (clearTimer.current) clearTimeout(clearTimer.current)
-      reset()
-    })
-    const offNodeStart = EventsOn(EVENTS.SCHEDULE_NODE_STARTED, (p: NodeEvt) => {
-      if (p.graphId !== graphIdRef.current) return
-      setNodeRunState((m) => new Map(m).set(p.nodeId, 'running'))
-    })
-    const offNodeFin = EventsOn(EVENTS.SCHEDULE_NODE_FINISHED, (p: NodeEvt) => {
-      if (p.graphId !== graphIdRef.current) return
-      setNodeRunState((m) => new Map(m).set(p.nodeId, p.status === 'failed' ? 'failed' : 'success'))
-      const fired = `ctrl:${p.firedPort ?? ''}`
-      setFiredEdges((s) => {
-        const next = new Set(s)
-        for (const e of edgesRef.current) {
-          if (e.source === p.nodeId && (e.sourceHandle ?? '') === fired) next.add(e.id)
-        }
-        return next
+    let offRunStart: (() => void) | undefined
+    let offNodeStart: (() => void) | undefined
+    let offNodeFin: (() => void) | undefined
+    let offRunFin: (() => void) | undefined
+    try {
+      offRunStart = EventsOn(EVENTS.SCHEDULE_RUN_STARTED, (p: RunEvt) => {
+        if (p.graphId !== graphIdRef.current) return
+        if (clearTimer.current) clearTimeout(clearTimer.current)
+        reset()
       })
-    })
-    const offRunFin = EventsOn(EVENTS.SCHEDULE_RUN_FINISHED, (p: RunEvt) => {
-      if (p.graphId !== graphIdRef.current) return
-      if (clearTimer.current) clearTimeout(clearTimer.current)
-      clearTimer.current = setTimeout(reset, RUN_CLEAR_MS)
-    })
+      offNodeStart = EventsOn(EVENTS.SCHEDULE_NODE_STARTED, (p: NodeEvt) => {
+        if (p.graphId !== graphIdRef.current) return
+        setNodeRunState((m) => new Map(m).set(p.nodeId, 'running'))
+      })
+      offNodeFin = EventsOn(EVENTS.SCHEDULE_NODE_FINISHED, (p: NodeEvt) => {
+        if (p.graphId !== graphIdRef.current) return
+        setNodeRunState((m) =>
+          new Map(m).set(p.nodeId, p.status === 'failed' ? 'failed' : 'success'),
+        )
+        const fired = `ctrl:${p.firedPort ?? ''}`
+        setFiredEdges((s) => {
+          const next = new Set(s)
+          for (const e of edgesRef.current) {
+            if (e.source === p.nodeId && (e.sourceHandle ?? '') === fired) next.add(e.id)
+          }
+          return next
+        })
+      })
+      offRunFin = EventsOn(EVENTS.SCHEDULE_RUN_FINISHED, (p: RunEvt) => {
+        if (p.graphId !== graphIdRef.current) return
+        if (clearTimer.current) clearTimeout(clearTimer.current)
+        clearTimer.current = setTimeout(reset, RUN_CLEAR_MS)
+      })
+    } catch {
+      /* Wails runtime unavailable in dev without backend */
+    }
 
     return () => {
-      offRunStart()
-      offNodeStart()
-      offNodeFin()
-      offRunFin()
+      offRunStart?.()
+      offNodeStart?.()
+      offNodeFin?.()
+      offRunFin?.()
       if (clearTimer.current) clearTimeout(clearTimer.current)
     }
   }, [])

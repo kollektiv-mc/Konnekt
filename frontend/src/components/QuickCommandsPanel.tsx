@@ -10,7 +10,7 @@ import {
   RestartServer,
   ForceStopServer,
 } from '../../wailsjs/go/main/App'
-import { errMsg } from '../lib/ipc'
+import { errMsg, hasWailsBridge } from '../lib/ipc'
 import { useSettingsStore } from '../stores/useSettingsStore'
 
 interface ModalState {
@@ -153,7 +153,14 @@ export function QuickCommandsPanel({ serverId, columns = 2 }: QuickCommandsPanel
       }
       if (cancelled) return
       setItems(seed)
-      SaveCommandButtons(JSON.stringify(seed)).catch(console.error)
+      // A write, so `hasWailsBridge()` rather than a bare `.catch()` (see
+      // lib/ipc.ts). With no bridge the binding throws synchronously, past the
+      // `.catch()` and out of this IIFE as an unhandled rejection on every
+      // launch of the browser-only `frontend-dev` preset. The seed above is
+      // already applied optimistically and nothing was going to persist.
+      if (hasWailsBridge()) {
+        SaveCommandButtons(JSON.stringify(seed)).catch(console.error)
+      }
     })()
     return () => {
       cancelled = true
