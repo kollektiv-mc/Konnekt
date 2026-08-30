@@ -540,16 +540,20 @@ function App() {
           grab area that costs the layout nothing and the canvas does not shift
           the moment the pointer nears it. `relative` is what keeps <main> from
           taking the half that overlaps it, since a later sibling would
-          otherwise win the hit test. */}
+          otherwise win the hit test.
+
+          What lights up is the hairline inside, not the whole grab area: the
+          target wants to be forgiving, the line it draws does not. */}
       <div
         role="separator"
         aria-orientation="vertical"
         aria-label="Resize navbar"
-        title="Drag to resize, double-click to reset"
         onMouseDown={onHandleMouseDown}
         onDoubleClick={onHandleDoubleClick}
-        className="hover:bg-accent active:bg-accent relative z-10 -mx-0.5 w-1 shrink-0 cursor-col-resize bg-transparent transition-colors"
-      />
+        className="group relative z-10 -mx-0.5 flex w-1 shrink-0 cursor-col-resize justify-center bg-transparent"
+      >
+        <div className="group-hover:bg-accent group-active:bg-accent h-full w-px transition-colors" />
+      </div>
       <main className="flex-1 overflow-hidden">
         <Dashboard />
       </main>
