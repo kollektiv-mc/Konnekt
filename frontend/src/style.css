@@ -612,3 +612,29 @@ input[type='number']::-webkit-outer-spin-button {
 .mod-body > *:first-child {
   margin-top: 0;
 }
+
+/* The frameless window's drag regions.
+
+   Wails' injected runtime decides whether a mousedown starts a window move by
+   reading one CSS custom property off `e.target` — `--wails-draggable`, which
+   has to compute to exactly `drag`. It reads the *target* and never walks up
+   the tree, but the property is a custom property, so it inherits: setting it
+   once on the title bar covers everything drawn inside it, the `<svg>` a click
+   on an icon actually lands on included.
+
+   That inheritance is the reason the second class exists. Without it the close
+   button would be as draggable as the empty bar around it, and pressing it
+   would move the window instead. Any value other than `drag` switches the
+   behaviour off; `no-drag` is what Wails' own docs name it.
+
+   Both live here rather than as inline styles because they are static values,
+   which is what eslint's no-restricted-syntax rule is there to keep out of the
+   components. The property name is Wails' default (options.CSSDragProperty),
+   left unset in main.go — change one and this has to change with it. */
+.titlebar-drag {
+  --wails-draggable: drag;
+}
+
+.titlebar-no-drag {
+  --wails-draggable: no-drag;
+}

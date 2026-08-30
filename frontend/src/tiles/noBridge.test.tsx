@@ -3,7 +3,9 @@ import { render, cleanup, fireEvent } from '@testing-library/react'
 import { TILE_REGISTRY } from './registry'
 import { ServerRow } from '../components/ServerRow'
 import { ServerDetail } from '../components/ServerManager/ServerDetail'
+import { TitleBar } from '../components/TitleBar'
 import { GetStatsHistory } from '../../wailsjs/go/main/App'
+import { WindowMinimise } from '../../wailsjs/runtime/runtime'
 import type { ServerConfig } from '../types'
 
 // The browser-only `frontend-dev` preset, reproduced.
@@ -72,5 +74,20 @@ describe('no Wails bridge', () => {
 
   it('renders the server manager detail panel', () => {
     expect(() => render(<ServerDetail config={CONFIG} />)).not.toThrow()
+  })
+
+  // The title bar is the one place that calls the *runtime* bindings rather
+  // than the generated Go ones, and they fail the same way for the same reason:
+  // `window.runtime` is as absent here as `window.go`. Worth its own case
+  // because a title bar that threw would take the whole window's chrome with
+  // it, and because pressing Close in the preview must be a no-op rather than
+  // an error — there is no window to quit.
+  it('renders the title bar, and its window controls no-op', () => {
+    expect('runtime' in window).toBe(false)
+    expect(() => WindowMinimise()).toThrow(TypeError)
+
+    const { getByRole } = render(<TitleBar onOpenSettings={() => {}} />)
+    expect(() => fireEvent.click(getByRole('button', { name: 'Minimize window' }))).not.toThrow()
+    expect(() => fireEvent.click(getByRole('button', { name: 'Close window' }))).not.toThrow()
   })
 })
