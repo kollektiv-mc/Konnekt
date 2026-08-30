@@ -276,13 +276,18 @@ export function TileCrate() {
         className={`border-hairline text-text-primary flex cursor-default items-center gap-2 rounded-lg px-2 py-2 text-left transition-all ${
           dragging ? '' : 'hover:border-border-subtle'
         } ${
-          // Hovering lifts an on-canvas row out of its recess rather than
-          // lightening the recess: the same gesture the drag makes, and the
-          // read is "this one is already out there". A row still in the crate
-          // has nothing to lift out of, so it takes the soft grey instead.
+          // A row still in the crate is a thing sitting in a tray: it carries
+          // the soft grey. A row whose tile is out on the canvas is an empty
+          // slot, so it carries nothing and reads as flat.
+          //
+          // This is the opposite of the recess that shipped first, which put
+          // the dark fill on the on-canvas rows. That read as disabled rather
+          // than as absent — a filled box says "here is something" whichever
+          // direction the fill goes, and the row that has something is the one
+          // still holding a tile.
           onCanvas
-            ? `bg-black/20 ${dragging ? '' : 'hover:bg-transparent'}`
-            : `bg-transparent ${dragging ? '' : 'hover:bg-hover'}`
+            ? `bg-transparent ${dragging ? '' : 'hover:bg-hover'}`
+            : `bg-hover ${dragging ? '' : 'hover:bg-white/10'}`
         } ${
           // The border colour is picked here rather than appended to a
           // `border-transparent` base: both are border-colour utilities, and
