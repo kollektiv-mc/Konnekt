@@ -243,7 +243,12 @@ func NewServerService() *ServerService {
 	// app.go's EULA write all narrate on paths reachable before a first boot),
 	// and an empty-id instance keeps that true without every accessor growing a
 	// nil check.
+	//
+	// Registered in the map, not just held as current, so instanceFor("") returns
+	// this instance rather than minting a second empty one. current is always an
+	// instance the map holds; a real server id is never "".
 	s.current = newServerInstance("", s.instanceDeps)
+	s.instances[""] = s.current
 	return s
 }
 
@@ -317,18 +322,28 @@ func (s *ServerService) instanceFor(serverID string) *serverInstance {
 // worst case is refusing a start that could have proceeded. The single running
 // flag this replaces had the same property.
 func (s *ServerService) anyRunning() bool {
+	return len(s.runningInstances()) > 0
+}
+
+// runningInstances is anyRunning's two-beat scan, shared with StopRunning:
+// snapshot the pointers under s.mu, release it, then ask each instance, because
+// reading an instance's running flag needs its own lock and the order
+// (powerMu -> s.mu -> instance.mu) forbids holding s.mu there.
+func (s *ServerService) runningInstances() []*serverInstance {
 	s.mu.Lock()
 	insts := make([]*serverInstance, 0, len(s.instances))
 	for _, inst := range s.instances {
 		insts = append(insts, inst)
 	}
 	s.mu.Unlock()
+
+	var running []*serverInstance
 	for _, inst := range insts {
 		if inst.IsRunning() {
-			return true
+			running = append(running, inst)
 		}
 	}
-	return false
+	return running
 }
 
 func (s *ServerService) Start(serverID string, jarPath string, jvmArgs []string, workingDir string) error {
@@ -396,7 +411,11 @@ func (s *ServerService) Restart(serverID string, jarPath string, jvmArgs []strin
 		return ErrPowerActionInProgress
 	}
 	defer s.powerMu.Unlock()
-	if err := s.cur().stop(grace); err != nil && !errors.Is(err, errServerNotRunning) {
+	// The stop leg targets the server being restarted, not whichever one is
+	// running (#239). Restarting B while A was up used to stop A and boot B,
+	// because the leg went through the ambient current instance; a second server
+	// being up is a refusal, the same one Start gives.
+	if err := s.instanceFor(serverID).stop(grace); err != nil && !errors.Is(err, errServerNotRunning) {
 		return err
 	}
 	return s.startInstance(serverID, jarPath, jvmArgs, workingDir)
@@ -711,6 +730,35 @@ func (s *serverInstance) waitForExit() {
 	close(exited)
 }
 
+// status assembles the whole ServerStatus in one pass.
+//
+// One mu hold covers every scalar that lock guards, and it is released before
+// the gopsutil read and before the players and TPS locks — the ordering each
+// accessor here already follows on its own. Assembling it in one place rather
+// than calling eight accessors is what stops a payload mixing values from either
+// side of a stop, and it is why GetServerStatus and the stats tick can no longer
+// drift apart: they are the same read now, not two lists kept in step by hand.
+func (s *serverInstance) status() models.ServerStatus {
+	s.mu.Lock()
+	running, state, started := s.running, s.state, s.startTime
+	maxPlayers, maxRAM, proc := s.maxPlayers, s.maxRAMMB, s.cachedProc
+	s.mu.Unlock()
+
+	if maxPlayers == 0 {
+		maxPlayers = 20
+	}
+	return models.ServerStatus{
+		Running:    running,
+		State:      state.String(),
+		Uptime:     uptimeSince(running, started),
+		Players:    s.PlayerCount(),
+		MaxPlayers: maxPlayers,
+		TPS:        s.CurrentTPS(),
+		RAMUsed:    ramUsedMB(proc),
+		RAMTotal:   float64(maxRAM),
+	}
+}
+
 // GetLastStop reports the most recent stop's detail, the readable getter twin
 // of the server:stopped event payload. Zero value until a stop has happened.
 func (s *serverInstance) GetLastStop() models.ServerStopped {
@@ -723,12 +771,35 @@ func (s *serverInstance) GetLastStop() models.ServerStopped {
 // and exit before force killing the process tree. grace <= 0 means the
 // default; callers with a configured value (ConfigService.StopGrace) pass it
 // through.
-func (s *ServerService) Stop(grace time.Duration) error {
+func (s *ServerService) Stop(serverID string, grace time.Duration) error {
 	if !s.powerMu.TryLock() {
 		return ErrPowerActionInProgress
 	}
 	defer s.powerMu.Unlock()
-	return s.cur().stop(grace)
+	return s.instanceFor(serverID).stop(grace)
+}
+
+// StopRunning stops whatever is running, for the one caller that legitimately
+// has no id: quitting the app. Scoping the close-time stop to the *selected*
+// server instead would skip the graceful stop whenever the running server was
+// not the selected one, and the Job Object or Pdeathsig would then kill the JVM
+// with no expectedStop marked and no world save — a crash notification for a
+// deliberate quit, and lost chunks.
+//
+// Returns nil when nothing is running, following ForceStop's "already dead is
+// success". A loop today over at most one instance; correct unchanged when #57
+// allows several.
+func (s *ServerService) StopRunning(grace time.Duration) error {
+	if !s.powerMu.TryLock() {
+		return ErrPowerActionInProgress
+	}
+	defer s.powerMu.Unlock()
+	for _, inst := range s.runningInstances() {
+		if err := inst.stop(grace); err != nil && !errors.Is(err, errServerNotRunning) {
+			return err
+		}
+	}
+	return nil
 }
 
 // stop is Stop without the power gate. Callers hold powerMu.
@@ -796,11 +867,11 @@ func (s *serverInstance) stop(grace time.Duration) error {
 // it dead", and dead already is success. No stopTPSPoll here: waitForExit
 // runs it during the teardown this kill triggers, and it stays the single
 // writer of the offline transition, the stopped payload and the exited close.
-func (s *ServerService) ForceStop() error {
+func (s *ServerService) ForceStop(serverID string) error {
 	if s.powerMu.TryLock() {
 		defer s.powerMu.Unlock()
 	}
-	return s.cur().forceStop()
+	return s.instanceFor(serverID).forceStop()
 }
 
 // forceStop is ForceStop without the gate. The running check is inside the
@@ -1146,6 +1217,13 @@ func (s *serverInstance) Uptime() string {
 	s.mu.Lock()
 	running, started := s.running, s.startTime
 	s.mu.Unlock()
+	return uptimeSince(running, started)
+}
+
+// uptimeSince renders a boot's age, or "0s" when nothing is running. Split out
+// so Uptime and status() cannot drift; callers snapshot the two fields under mu
+// and format outside it.
+func uptimeSince(running bool, started time.Time) string {
 	if !running {
 		return "0s"
 	}
@@ -1321,7 +1399,13 @@ func (s *serverInstance) RAMUsedMB() float64 {
 	s.mu.Lock()
 	proc := s.cachedProc
 	s.mu.Unlock()
+	return ramUsedMB(proc)
+}
 
+// ramUsedMB reads resident memory off a gopsutil handle. Split out for the same
+// reason as uptimeSince, and it takes the handle rather than the instance so the
+// syscall provably happens with no lock held.
+func ramUsedMB(proc *process.Process) float64 {
 	if proc == nil {
 		return 0
 	}
@@ -1432,29 +1516,74 @@ func propInt(props map[string]string, key string, def int) int {
 // that is the last-started instance rather than the running one, and why it is
 // never nil.
 
-func (s *ServerService) GetLastStop() models.ServerStopped { return s.cur().GetLastStop() }
-func (s *ServerService) SendCommand(command string) error  { return s.cur().SendCommand(command) }
-func (s *ServerService) IsRunning() bool                   { return s.cur().IsRunning() }
-func (s *ServerService) State() string                     { return s.cur().State() }
-func (s *ServerService) ActiveServerID() string            { return s.cur().ActiveServerID() }
-func (s *ServerService) PrepareForBackup() bool            { return s.cur().PrepareForBackup() }
-func (s *ServerService) ResumeSaves()                      { s.cur().ResumeSaves() }
-func (s *ServerService) Uptime() string                    { return s.cur().Uptime() }
-func (s *ServerService) GetActivePlayers() []models.Player { return s.cur().GetActivePlayers() }
-func (s *ServerService) PlayerCount() int                  { return s.cur().PlayerCount() }
-func (s *ServerService) MaxPlayers() int                   { return s.cur().MaxPlayers() }
-func (s *ServerService) CurrentTPS() float64               { return s.cur().CurrentTPS() }
-func (s *ServerService) RAMUsedMB() float64                { return s.cur().RAMUsedMB() }
-func (s *ServerService) RAMTotalMB() float64               { return s.cur().RAMTotalMB() }
-func (s *ServerService) CPUPercent() float64               { return s.cur().CPUPercent() }
-func (s *ServerService) Narrate(line string)               { s.cur().Narrate(line) }
-func (s *ServerService) NarrateDone(line string)           { s.cur().NarrateDone(line) }
-func (s *ServerService) NarrateFailed(line string)         { s.cur().NarrateFailed(line) }
-
-func (s *ServerService) RconConfig() (addr, password string, ok bool) {
-	return s.cur().RconConfig()
+// Status reports on the server it names, running or not. An id with no instance
+// yet gets an inert one, so an unknown server and a configured-but-never-started
+// one answer identically and there is no second definition of "offline" to drift.
+//
+// Never an error: the frontend's useServerStatusSync reads a rejection as
+// "the backend did not answer" and paints the tile unreachable, which is exactly
+// the distinction useServerStore's doc comment exists to keep apart from "the
+// server answered and is stopped".
+func (s *ServerService) Status(serverID string) models.ServerStatus {
+	return s.instanceFor(serverID).status()
 }
 
-func (s *ServerService) GetConsoleHistory() []models.ConsoleLine {
-	return s.cur().GetConsoleHistory()
+// CurrentServerID is the id the serverID-less callers answer for: the last
+// server started, or "" before the first start. The one ambient primitive, named
+// so a caller cannot reach for it by accident — StatsService needs it because a
+// 10s ticker carries no id, and App.GetLastStop needs it because it is bound
+// without a parameter.
+func (s *ServerService) CurrentServerID() string {
+	return s.cur().id
+}
+
+func (s *ServerService) GetLastStop(serverID string) models.ServerStopped {
+	return s.instanceFor(serverID).GetLastStop()
+}
+func (s *ServerService) SendCommand(serverID, command string) error {
+	return s.instanceFor(serverID).SendCommand(command)
+}
+func (s *ServerService) IsRunning(serverID string) bool {
+	return s.instanceFor(serverID).IsRunning()
+}
+func (s *ServerService) State(serverID string) string { return s.instanceFor(serverID).State() }
+func (s *ServerService) ActiveServerID() string       { return s.cur().ActiveServerID() }
+func (s *ServerService) PrepareForBackup(serverID string) bool {
+	return s.instanceFor(serverID).PrepareForBackup()
+}
+func (s *ServerService) ResumeSaves(serverID string)   { s.instanceFor(serverID).ResumeSaves() }
+func (s *ServerService) Uptime(serverID string) string { return s.instanceFor(serverID).Uptime() }
+func (s *ServerService) GetActivePlayers(serverID string) []models.Player {
+	return s.instanceFor(serverID).GetActivePlayers()
+}
+func (s *ServerService) PlayerCount(serverID string) int {
+	return s.instanceFor(serverID).PlayerCount()
+}
+func (s *ServerService) MaxPlayers(serverID string) int { return s.instanceFor(serverID).MaxPlayers() }
+func (s *ServerService) CurrentTPS(serverID string) float64 {
+	return s.instanceFor(serverID).CurrentTPS()
+}
+func (s *ServerService) RAMUsedMB(serverID string) float64 {
+	return s.instanceFor(serverID).RAMUsedMB()
+}
+func (s *ServerService) RAMTotalMB(serverID string) float64 {
+	return s.instanceFor(serverID).RAMTotalMB()
+}
+func (s *ServerService) CPUPercent(serverID string) float64 {
+	return s.instanceFor(serverID).CPUPercent()
+}
+func (s *ServerService) Narrate(serverID, line string) { s.instanceFor(serverID).Narrate(line) }
+func (s *ServerService) NarrateDone(serverID, line string) {
+	s.instanceFor(serverID).NarrateDone(line)
+}
+func (s *ServerService) NarrateFailed(serverID, line string) {
+	s.instanceFor(serverID).NarrateFailed(line)
+}
+
+func (s *ServerService) RconConfig(serverID string) (addr, password string, ok bool) {
+	return s.instanceFor(serverID).RconConfig()
+}
+
+func (s *ServerService) GetConsoleHistory(serverID string) []models.ConsoleLine {
+	return s.instanceFor(serverID).GetConsoleHistory()
 }

@@ -39,22 +39,22 @@ func readBuiltinAttribute(deps serviceDeps, serverID, name string) (interface{},
 	srv := deps.server
 	switch name {
 	case "tps":
-		return srv.CurrentTPS(), nil
+		return srv.CurrentTPS(serverID), nil
 	case "players.count":
-		return float64(srv.PlayerCount()), nil
+		return float64(srv.PlayerCount(serverID)), nil
 	case "ram.used":
-		return srv.RAMUsedMB(), nil
+		return srv.RAMUsedMB(serverID), nil
 	case "ram.left":
-		return srv.RAMTotalMB() - srv.RAMUsedMB(), nil
+		return srv.RAMTotalMB(serverID) - srv.RAMUsedMB(serverID), nil
 	case "ram.total":
-		return srv.RAMTotalMB(), nil
+		return srv.RAMTotalMB(serverID), nil
 	case "server.status":
-		if srv.IsRunning() {
+		if srv.IsRunning(serverID) {
 			return float64(1), nil
 		}
 		return float64(0), nil
 	case "players.max":
-		return float64(srv.MaxPlayers()), nil
+		return float64(srv.MaxPlayers(serverID)), nil
 	case "server.whitelist", "server.port", "server.gamemode", "server.motd", "server.world":
 		cfg, err := deps.config.GetServerConfig(serverID)
 		if err != nil {

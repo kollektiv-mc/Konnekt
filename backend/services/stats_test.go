@@ -55,7 +55,7 @@ func TestTickEmitsServerStatusWhileStopped(t *testing.T) {
 	statuses := collect(bus, EventServerStatus)
 	snapshots := collect(bus, EventStatsSnapshot)
 
-	if server.IsRunning() {
+	if server.IsRunning(server.CurrentServerID()) {
 		t.Fatal("fixture server should start stopped")
 	}
 	stats.tick()
@@ -87,7 +87,7 @@ func TestTickEmitsServerStatusWhileStopped(t *testing.T) {
 	if n := len(snapshots()); n != 0 {
 		t.Errorf("stats:snapshot should stay gated while stopped, got %d", n)
 	}
-	if n := len(stats.GetStatsHistory()); n != 0 {
+	if n := len(stats.GetStatsHistory(server.CurrentServerID())); n != 0 {
 		t.Errorf("history should stay empty while stopped, got %d entries", n)
 	}
 }
@@ -115,7 +115,7 @@ func TestTickEmitsBothWhileRunning(t *testing.T) {
 	if n := len(snapshots()); n != 1 {
 		t.Errorf("want 1 stats:snapshot while running, got %d", n)
 	}
-	if n := len(stats.GetStatsHistory()); n != 1 {
+	if n := len(stats.GetStatsHistory(server.CurrentServerID())); n != 1 {
 		t.Errorf("want 1 history entry while running, got %d", n)
 	}
 }
@@ -134,16 +134,12 @@ func TestPushedStatusMatchesGetServerStatusShape(t *testing.T) {
 	}
 	pushed := got[0].(models.ServerStatus)
 
-	fetched := models.ServerStatus{
-		Running:    server.IsRunning(),
-		State:      server.State(),
-		Uptime:     server.Uptime(),
-		Players:    server.PlayerCount(),
-		MaxPlayers: server.MaxPlayers(),
-		TPS:        server.CurrentTPS(),
-		RAMUsed:    server.RAMUsedMB(),
-		RAMTotal:   server.RAMTotalMB(),
-	}
+	// Both sides are now one read (ServerService.Status), where they used to be
+	// two hand-kept lists of eight accessors. The drift this test was written to
+	// catch is structurally impossible, so what it pins now is that the push and
+	// the fetch still resolve the *same server* — which is the thing #239 could
+	// get wrong.
+	fetched := server.Status(server.CurrentServerID())
 	if pushed != fetched {
 		t.Errorf("pushed %+v != fetched %+v", pushed, fetched)
 	}

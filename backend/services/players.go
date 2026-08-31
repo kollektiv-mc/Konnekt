@@ -110,7 +110,7 @@ func (s *PlayerService) GetRoster(serverID string) ([]models.Player, error) {
 	wl := whitelistIndex(loadJSON[whitelistEntry](filepath.Join(dir, "whitelist.json")))
 	bans := banIndex(loadJSON[bannedPlayerEntry](filepath.Join(dir, "banned-players.json")))
 
-	online := s.server.GetActivePlayers()
+	online := s.server.GetActivePlayers(serverID)
 	result := make([]models.Player, 0, len(online))
 	for _, p := range online {
 		decorate(&p, dir, ops, wl, bans)
@@ -131,7 +131,7 @@ func (s *PlayerService) GetDetail(serverID, name string) (models.Player, error) 
 	bans := banIndex(loadJSON[bannedPlayerEntry](filepath.Join(dir, "banned-players.json")))
 
 	var p models.Player
-	for _, op := range s.server.GetActivePlayers() {
+	for _, op := range s.server.GetActivePlayers(serverID) {
 		if strings.EqualFold(op.Name, name) {
 			p = op
 			break

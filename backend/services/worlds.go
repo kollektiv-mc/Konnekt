@@ -17,9 +17,9 @@ import (
 // DuplicateWorld borrows from the backup path. An interface so a test can
 // assert the quiesce ordering without a real server process behind it.
 type serverGuard interface {
-	IsRunning() bool
-	PrepareForBackup() bool
-	ResumeSaves()
+	IsRunning(serverID string) bool
+	PrepareForBackup(serverID string) bool
+	ResumeSaves(serverID string)
 }
 
 type WorldService struct {
@@ -139,7 +139,7 @@ func (s *WorldService) SetActiveWorld(serverID, name string) error {
 	if err := validateWorldName(name); err != nil {
 		return err
 	}
-	if s.server.IsRunning() {
+	if s.server.IsRunning(serverID) {
 		return errors.New("stop the server before switching worlds")
 	}
 	cfg, err := s.config.GetServerConfig(serverID)
@@ -159,7 +159,7 @@ func (s *WorldService) DeleteWorld(serverID, name string) error {
 	if err := validateWorldName(name); err != nil {
 		return err
 	}
-	if s.server.IsRunning() {
+	if s.server.IsRunning(serverID) {
 		return errors.New("stop the server before deleting a world")
 	}
 	cfg, err := s.config.GetServerConfig(serverID)
@@ -197,7 +197,7 @@ func (s *WorldService) RenameWorld(serverID, oldName, newName string) error {
 	if oldName == newName {
 		return nil
 	}
-	if s.server.IsRunning() {
+	if s.server.IsRunning(serverID) {
 		return errors.New("stop the server before renaming a world")
 	}
 	cfg, err := s.config.GetServerConfig(serverID)
@@ -254,8 +254,8 @@ func (s *WorldService) DuplicateWorld(serverID, name, newName string) error {
 		return fmt.Errorf("a world named %q already exists", newName)
 	}
 
-	if s.server != nil && s.server.PrepareForBackup() {
-		defer s.server.ResumeSaves()
+	if s.server != nil && s.server.PrepareForBackup(serverID) {
+		defer s.server.ResumeSaves(serverID)
 	}
 
 	for _, suffix := range []string{"", "_nether", "_the_end"} {
