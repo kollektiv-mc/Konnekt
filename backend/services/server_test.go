@@ -62,6 +62,33 @@ func waitForCount(t *testing.T, got func() []any, n int) []any {
 	return events
 }
 
+// waitForConsoleLine polls a server's ring until a line containing want shows up.
+//
+// Narration that follows a lifecycle transition is not on the ring the instant
+// that transition's event arrives. setStateLocked emits while holding mu and the
+// narrating call happens after the unlock, so a bus subscriber can observe the
+// state change before the banner is written. Asserting the ring straight after
+// waitForCount therefore races the narrating goroutine — rarely, and only under
+// load, which is the worst shape of flaky test to own: it went red once on a
+// loaded CI runner after ~1100 clean local runs.
+//
+// Only positive assertions need this. A test asserting a banner is *absent* is
+// safe as it stands, since a late write could only make it pass wrongly, never
+// fail wrongly, and waiting there would invert its meaning.
+func waitForConsoleLine(t *testing.T, s *ServerService, serverID, want string) {
+	t.Helper()
+	deadline := time.Now().Add(2 * time.Second)
+	for time.Now().Before(deadline) {
+		for _, line := range s.GetConsoleHistory(serverID) {
+			if strings.Contains(line.Line, want) {
+				return
+			}
+		}
+		time.Sleep(5 * time.Millisecond)
+	}
+	t.Errorf("console history holds no line containing %q: %v", want, s.GetConsoleHistory(serverID))
+}
+
 func logPayload(t *testing.T, ev any) string {
 	t.Helper()
 	m, ok := ev.(map[string]string)

@@ -206,15 +206,10 @@ func TestStartingTimeoutPromotesToRunning(t *testing.T) {
 		t.Error("TimedOut = false on a timeout-promoted running state")
 	}
 
-	var banner bool
-	for _, line := range s.GetConsoleHistory(fixtureServerID) {
-		if strings.Contains(line.Line, "No ready line seen") {
-			banner = true
-		}
-	}
-	if !banner {
-		t.Errorf("console history holds no timeout banner: %v", s.GetConsoleHistory(fixtureServerID))
-	}
+	// Waited for rather than read once: watchStarting narrates the banner after
+	// the running transition it emits, so the state event this test already
+	// waited on does not imply the line is on the ring yet.
+	waitForConsoleLine(t, s, fixtureServerID, "No ready line seen")
 
 	if err := s.Stop(fixtureServerID, 0); err != nil {
 		t.Errorf("cleanup Stop = %v, want nil", err)
