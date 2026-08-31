@@ -355,6 +355,14 @@ export function TileCrate() {
     // across the other is still a reorder, and only the drop index is
     // per-group.
     //
+    // A section with no rows does not render at all. Nothing is currently
+    // registered with `maximizable` unset, so Widgets is hidden today and comes
+    // back on its own the moment something is — no list to keep in step, and
+    // the same rule for both, so neither can strand an empty card. It went
+    // empty when the Overview tile became maximizable (#211): `stats` was the
+    // only widget, and an empty card with a chevron that opens onto nothing is
+    // worse than no card.
+    //
     // Collapsing a section takes its rows out of reach rather than out of the
     // DOM. Nothing downstream minds: `dropIndexFor` measures only the dragged
     // row's own siblings, so a collapsed section contributes no rect to the
@@ -365,21 +373,26 @@ export function TileCrate() {
     // section card around them supplies the inset that padding used to, and
     // doubling the two costs the labels 16px of a navbar that is only 176px
     // wide at its narrowest. The rows keep their own px-2.
-    // gap-3, not the column's own gap: this wrapper renders two section cards
+    // gap-3, not the column's own gap: this wrapper renders its section cards
     // where the navbar's scroller sees one child, so the gap between Widgets
     // and Tiles is set here and nowhere else. It has to be the same 12px the
     // scroller puts between its children, or the four cards in that column are
     // 12px apart except for the one pair that is 8px. That is exactly what
     // happened when the column moved to gap-3 and this did not: measuring the
     // scroller's children counted three cards and found both gaps equal, while
-    // the eye counted four and found one short.
+    // the eye counted four and found one short. With one section rendered the
+    // gap simply has nothing to sit between, which is the point.
     <div ref={rootRef} className="flex flex-col gap-3">
-      <NavSection id="widgets" title="Widgets">
-        <div className="flex flex-col gap-1 p-1">{renderGroup(utilityTiles, utilityIds)}</div>
-      </NavSection>
-      <NavSection id="tiles" title="Tiles">
-        <div className="flex flex-col gap-1 p-1">{renderGroup(moduleTiles, moduleIds)}</div>
-      </NavSection>
+      {utilityTiles.length > 0 && (
+        <NavSection id="widgets" title="Widgets">
+          <div className="flex flex-col gap-1 p-1">{renderGroup(utilityTiles, utilityIds)}</div>
+        </NavSection>
+      )}
+      {moduleTiles.length > 0 && (
+        <NavSection id="tiles" title="Tiles">
+          <div className="flex flex-col gap-1 p-1">{renderGroup(moduleTiles, moduleIds)}</div>
+        </NavSection>
+      )}
     </div>
   )
 }

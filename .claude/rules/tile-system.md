@@ -15,6 +15,30 @@ Adding a new tile:
    same size (see below).
 3. No changes to core layout system required
 
+A new tile does **not** appear in the Overview tile, and that is deliberate.
+Overview (`tiles/overview/`) is a designed dashboard of six chosen sections —
+status, CPU/RAM/players, roster, active world, recent backups, armed schedules
+— not a roll-up of whatever the registry happens to hold. A registry-driven
+roll-up was built first (#211's own approach) and read as a second copy of the
+canvas: it said what each tile says, in each tile's words, and answered "how is
+this server doing" no faster than the canvas already did. Adding a section is a
+deliberate edit to `OverviewPanel.tsx`, not a field on a registry entry.
+
+Overview is also the **one sanctioned exception** to "tiles are self-contained,
+no cross-tile dependencies" (`agent_docs/CLAUDE.md`). It imports four other
+tiles' hooks and presentational components. Three rules keep that from rotting:
+it only ever reads, never writes through another tile's actions; it never
+imports a tile's *lazy* half, which is why `WorldSection` uses `useWorlds` and
+nothing under `worlds/scene/`; and every section is wrapped in its own
+`ErrorBoundary`, so one tile's domain failing cannot take the panel.
+
+Overview's compact face is the server's vitals and reads only `useServerStore`;
+every section of the dashboard mounts only when the tile is maximized. That
+split is load-bearing rather than cosmetic. Each section fetches on mount, so
+hanging them off `maximized` is what stops a burst of Go calls (and the recharts
+chunk) firing merely because Overview sits on the canvas — which, on a fresh
+install, it does.
+
 Every tile is the same size — one shared default, and one shared min/max
 resize range, from `lib/gridSizing.ts`'s `TILE_SIZE`/`TILE_MIN`/`TILE_MAX`.
 This is deliberate, not a placeholder: it removes an entire class of

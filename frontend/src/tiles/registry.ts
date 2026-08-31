@@ -7,14 +7,14 @@ import {
   FileSliders,
   Gauge,
   MessageCircleWarning,
-  SquareActivity,
+  LayoutDashboard,
   SquareChevronRight,
   UsersRound,
   Workflow,
 } from '../lib/icons'
 import { ConsoleTile } from './console'
 import { ModsTile } from './mods'
-import { StatsTile } from './stats'
+import { OverviewTile } from './overview'
 import { PlayersTile } from './players'
 import { QuickCommandsTile } from './quick-commands'
 import { PerformanceTile } from './performance'
@@ -33,10 +33,17 @@ export const TILE_REGISTRY: TileDefinition[] = [
     component: ConsoleTile,
   },
   {
+    // `id` stays 'stats' deliberately, though the tile is now Overview. It is
+    // persisted verbatim in active_tiles.json, layout_presets.json and
+    // active_layout.json (app.go), and in the latter two it lives *inside* the
+    // serialized react-grid-layout string — so renaming it means a read-time
+    // rewrite that has to live forever, in exchange for a string no user ever
+    // sees. The tile's name is `label`. See lib/constants.ts's ALL_TILE_IDS.
     id: 'stats',
-    label: 'Stats',
-    icon: SquareActivity,
-    component: StatsTile,
+    label: 'Overview',
+    icon: LayoutDashboard,
+    maximizable: true,
+    component: OverviewTile,
   },
   {
     id: 'players',

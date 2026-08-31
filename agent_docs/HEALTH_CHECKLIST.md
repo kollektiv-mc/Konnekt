@@ -509,6 +509,41 @@ done as part of the split: it changes what happens for every tile error, not
 just a chunk load, and what a dead tile should offer — a retry, a remove — is a
 design question rather than a mechanical one.
 
+Half of the mechanism landed with the Overview tile (#211): `ErrorBoundary` now
+takes an optional `fallback`, and the Overview panel wraps each of its sections
+in its own, because that panel is the one place mounting five tile-domain
+subtrees side by side. The item stays open — a tile on the canvas is still
+unwrapped, and it is `TileWrapper`'s content slot that would fix that for every
+tile at once. What is left is the design question, not the plumbing.
+
+**P3 — A maximized Overview holds a second copy of its sections' data**
+(filed 2026-08-30)
+
+Dashboard mounts a maximized tile twice — once in the grid, once in the overlay
+— so while Overview is open, each of its sections runs its mount fetch
+alongside the copy the canvas already has: `+1` each of `GetStatsHistory` (also
+a second 360-entry ring buffer), `GetPlayerRoster`, `ListWorlds` and
+`ListBackups`. The status band and the schedules section cost nothing; both read
+a store.
+
+Bounded, because Overview's compact face is store-only and none of it fires
+until the tile is actually maximized. #212 hoists backups, worlds and
+performance into stores and closes most of it. The earlier roll-up version of
+this tile also double-fetched mods, including two Modrinth round trips; the
+dashboard does not touch mods at all, so that half is gone.
+
+**P3 — Five copies of `fmtBytes`** (filed 2026-08-30)
+
+`lib/format.ts`, `tiles/backups/format.ts`, `tiles/backups/BackupsSummary.tsx`,
+`tiles/worlds/WorldHud.tsx` and `tiles/worlds/WorldsSummary.tsx` each define
+one, and they disagree: two stop at MB and render a 4 GB world save as
+"4096.0 MB". The shared one in `lib/format.ts` grew a GB tier for the Overview
+panel, so the fix is to point the other four at it and delete them — mechanical,
+but it touches three tiles, so it is its own change rather than a rider on this
+one. Same shape for the relative-time helpers: `relativeMs`/`untilMs` now live in
+`lib/format.ts`, while `BackupsSummary` and `SchedulerSummary` still carry
+private copies.
+
 **P3 — Evidence for the memoization item above** (filed 2026-08-29)
 
 The Performant pillar's memoization item says it cannot be closed from a

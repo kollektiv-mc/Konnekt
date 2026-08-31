@@ -30,7 +30,11 @@ pnpm for the frontend, Go modules for the backend.
 ## Architecture rules
 
 - **Tiles are self-contained**: each tile in `frontend/src/tiles/` owns its own
-  data fetching, state, and rendering. No cross-tile dependencies.
+  data fetching, state, and rendering. No cross-tile dependencies, with one
+  sanctioned exception: the Overview tile reads other tiles' hooks and
+  presentational components, because a dashboard of the whole server cannot be
+  built any other way. Read-only, never a tile's lazy half, every section behind
+  its own `ErrorBoundary`.
 - **Go owns all side effects**: process spawning, file I/O, RCON, scheduling.
   Never call OS-level operations from the frontend.
 - **IPC via generated bindings only**: always import from `wailsjs/go/` — never
@@ -45,6 +49,15 @@ pnpm for the frontend, Go modules for the backend.
 Every tile is the same size, from `lib/gridSizing.ts`. To add one: create
 `frontend/src/tiles/MyTile/index.tsx` + `types.ts`, then extend (never
 restructure) `frontend/src/tiles/registry.ts`. No layout changes needed.
+
+A new tile does not appear in the Overview tile
+(`frontend/src/tiles/overview/`) — that is a designed dashboard of six chosen
+sections, not a roll-up of the registry, and adding one is a deliberate edit to
+`OverviewPanel.tsx`. Overview is also the one sanctioned exception to the
+no-cross-tile-dependencies rule below: it reads four other tiles' hooks, never
+writes through them, and never imports a tile's lazy half. Its own id is
+`stats`, deliberately: it is persisted verbatim in three JSON files under the
+app data dir. See `.claude/rules/tile-system.md`.
 
 Why the grid is built the way it is, and which parts are load-bearing:
 `.claude/rules/tile-system.md`, which loads on its own when you open a tile,

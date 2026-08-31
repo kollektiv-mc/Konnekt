@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest'
 import { render } from '@testing-library/react'
 import { TILE_REGISTRY } from './registry'
 import { Icon } from '../components/ui/Icon'
+import { ALL_TILE_IDS } from '../lib/constants'
 
 // Renamed from registry.test.ts when `icon` became a component: asserting an
 // icon renders means rendering JSX, which needs the .tsx extension.
@@ -23,5 +24,17 @@ describe('TILE_REGISTRY', () => {
   it.each(TILE_REGISTRY.map((t) => [t.id, t] as const))('renders the %s icon', (_id, tile) => {
     const { container } = render(<Icon icon={tile.icon} />)
     expect(container.querySelector('svg')).not.toBeNull()
+  })
+
+  // The Overview tile's id is 'stats' on purpose (#211): it is persisted
+  // verbatim in active_tiles.json, layout_presets.json and active_layout.json,
+  // so renaming it drops the tile from every existing install's canvas and
+  // leaves a dead entry in every saved layout preset. An innocent-looking
+  // rename has no other symptom, which is why it gets a test rather than only
+  // the comment in registry.ts.
+  it('keeps the Overview tile on the persisted id', () => {
+    const overview = TILE_REGISTRY.find((t) => t.label === 'Overview')
+    expect(overview?.id).toBe('stats')
+    expect(ALL_TILE_IDS).toContain('stats')
   })
 })

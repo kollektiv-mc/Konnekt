@@ -1,5 +1,4 @@
 import { useServerStore } from '../../stores/useServerStore'
-import type { TileProps } from '../../types'
 
 function tpsColor(tps: number): string {
   if (tps >= 18) return 'text-accent'
@@ -27,7 +26,11 @@ function StatRow({
 // The status pill's five faces. Starting and stopping share the warning amber
 // (the label disambiguates); the transitional glow matches the accent dot's
 // arbitrary-shadow idiom.
-const PILL = {
+//
+// Exported because the Overview panel's status band wears the same five. Two
+// copies of this map is how Starting ends up amber in one place and green in
+// the other.
+export const PILL = {
   unreachable: { label: 'Unreachable', dot: 'bg-red-500', text: 'text-red-400' },
   offline: { label: 'Offline', dot: 'bg-red-500', text: 'text-red-400' },
   starting: {
@@ -43,9 +46,16 @@ const PILL = {
   online: { label: 'Online', dot: 'bg-accent shadow-[0_0_6px_var(--accent)]', text: 'text-accent' },
 } as const
 
-// `serverId` is unused: the status this renders is hydrated once in App by
-// useServerStatusSync, so the tile is a pure reader of the shared store.
-export function StatsTile(_props: TileProps) {
+/**
+ * The server's vitals: status pill, players, TPS, RAM, memory bar.
+ *
+ * This is the Overview tile's compact face, unchanged from when the tile was
+ * called Stats. It reads `useServerStore` and nothing else, which is why an
+ * Overview sitting on the canvas costs no IPC at all — every section of the
+ * maximized dashboard fetches on mount, and none of them mount until the user
+ * asks for it.
+ */
+export function Vitals() {
   const status = useServerStore((s) => s.status)
   const reachable = useServerStore((s) => s.reachable)
 

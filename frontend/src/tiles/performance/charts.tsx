@@ -216,3 +216,158 @@ export function HistoryChart({
     </ResponsiveContainer>
   )
 }
+
+// ─── overview chart ──────────────────────────────────────────────────────────
+
+export interface OverviewDatum {
+  ts: number
+  cpu: number | null
+  ramPct: number | null
+  players: number | null
+}
+
+// Recessive grid and axis ink, shared by both plots below so they read as one
+// figure rather than two charts that happen to be stacked.
+const AXIS_TICK = { fill: 'var(--text-faint)', fontSize: 9 }
+const GRID_STROKE = 'var(--border-subtle)'
+// Both plots reserve the same gutter for their Y axis, which is the only thing
+// keeping the two time axes in vertical register.
+const Y_WIDTH = 30
+const PLOT_MARGIN = { top: 4, right: 8, bottom: 0, left: 0 }
+
+const TOOLTIP_STYLE = {
+  backgroundColor: 'var(--bg-overlay)',
+  border: 'var(--border-hairline) solid var(--border-hover)',
+  borderRadius: 6,
+  fontSize: 10,
+  color: 'var(--text-primary)',
+  padding: '4px 8px',
+}
+
+/**
+ * CPU, RAM and player count over the last hour, as small multiples: two
+ * percentages on one 0-100 plot, and the player count on its own strip below,
+ * sharing the time axis.
+ *
+ * The player count is deliberately *not* a third line on the first plot. It is
+ * a count, not a percentage, so putting it there needs either a second y-scale
+ * — which invents a correlation out of whatever alignment the two scales happen
+ * to land on — or normalising it against max-players, which renders 3-of-20 as
+ * 15% and reads as a third utilisation line. Neither is true. Separate plot,
+ * shared x domain, and the reader compares by time rather than by height.
+ *
+ * Colours come from the app's four semantic tokens, which is all there is:
+ * `tokens.css` is generated from a vendored source and carries no categorical
+ * ramp. Green and amber are the only pair of them that clears both the
+ * colourblind and normal-vision separation thresholds — amber against red, what
+ * `SparkChart` above uses for RAM and CPU, does not. The players strip takes
+ * recessive text ink rather than a fourth hue: it is one series in its own plot,
+ * so it needs no separation from anything, and staying grey keeps it reading as
+ * context for the plot above.
+ */
+export function OverviewChart({ data, maxPlayers }: { data: OverviewDatum[]; maxPlayers: number }) {
+  // A server with no max reported yet would collapse the strip's domain to
+  // [0, 0] and draw the line along the top edge.
+  const playerMax = Math.max(maxPlayers || 20, 1)
+
+  return (
+    <div className="flex h-full flex-col">
+      <div className="min-h-0 flex-[3]">
+        <ResponsiveContainer width="100%" height="100%">
+          <LineChart data={data} margin={PLOT_MARGIN}>
+            <CartesianGrid stroke={GRID_STROKE} strokeDasharray="2 4" vertical={false} />
+            <XAxis dataKey="ts" hide />
+            <YAxis
+              width={Y_WIDTH}
+              domain={[0, 100]}
+              ticks={[0, 50, 100]}
+              tick={AXIS_TICK}
+              tickLine={false}
+              axisLine={false}
+              tickFormatter={(v) => `${v}%`}
+            />
+            <Tooltip
+              contentStyle={TOOLTIP_STYLE}
+              itemStyle={{ padding: '1px 0' }}
+              formatter={(value, name) => {
+                if (value === null) return ['—', name]
+                const labels: Record<string, string> = { cpu: 'CPU', ramPct: 'RAM' }
+                return [`${(value as number).toFixed(1)}%`, labels[name as string] ?? name]
+              }}
+              labelFormatter={(_, payload) => {
+                const ts = payload?.[0]?.payload?.ts as number | undefined
+                return ts ? fmtTime(ts) : ''
+              }}
+              separator=": "
+            />
+            <Line
+              type="monotone"
+              dataKey="cpu"
+              stroke="var(--warning)"
+              strokeWidth={2}
+              dot={false}
+              connectNulls={false}
+              isAnimationActive={false}
+            />
+            <Line
+              type="monotone"
+              dataKey="ramPct"
+              stroke="var(--accent)"
+              strokeWidth={2}
+              dot={false}
+              connectNulls={false}
+              isAnimationActive={false}
+            />
+          </LineChart>
+        </ResponsiveContainer>
+      </div>
+
+      <div className="min-h-0 flex-1">
+        <ResponsiveContainer width="100%" height="100%">
+          <LineChart data={data} margin={PLOT_MARGIN}>
+            <CartesianGrid stroke={GRID_STROKE} strokeDasharray="2 4" vertical={false} />
+            <XAxis
+              dataKey="ts"
+              tick={AXIS_TICK}
+              tickLine={false}
+              axisLine={false}
+              minTickGap={48}
+              tickFormatter={(ts) => fmtTime(ts as number)}
+            />
+            <YAxis
+              width={Y_WIDTH}
+              domain={[0, playerMax]}
+              ticks={[0, playerMax]}
+              tick={AXIS_TICK}
+              tickLine={false}
+              axisLine={false}
+              allowDecimals={false}
+            />
+            <Tooltip
+              contentStyle={TOOLTIP_STYLE}
+              itemStyle={{ padding: '1px 0' }}
+              formatter={(value) => [String(value ?? '—'), 'Players']}
+              labelFormatter={(_, payload) => {
+                const ts = payload?.[0]?.payload?.ts as number | undefined
+                return ts ? fmtTime(ts) : ''
+              }}
+              separator=": "
+            />
+            {/* A player count is an integer that steps when someone joins or
+                leaves. A monotone spline would draw a smooth ramp between two
+                samples and imply half a player in between. */}
+            <Line
+              type="stepAfter"
+              dataKey="players"
+              stroke="var(--text-secondary)"
+              strokeWidth={2}
+              dot={false}
+              connectNulls={false}
+              isAnimationActive={false}
+            />
+          </LineChart>
+        </ResponsiveContainer>
+      </div>
+    </div>
+  )
+}
