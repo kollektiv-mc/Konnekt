@@ -102,7 +102,8 @@ func (s *ModService) Search(serverID, query string, offset int, categories []str
 		return models.ModSearchResult{}, err
 	}
 	q := models.ModSearchQuery{Query: query, Offset: offset, Categories: categories, Sort: sort}
-	return s.provider.Search(s.ctx, q, cfg.MCVersion, cfg.Loader)
+	mcVersion, loader := resolveTarget(cfg)
+	return s.provider.Search(s.ctx, q, mcVersion, loader)
 }
 
 func (s *ModService) Categories(serverID string) ([]string, error) {
@@ -115,8 +116,9 @@ func (s *ModService) Categories(serverID string) ([]string, error) {
 	// So for plugin loaders we fall back to "mod" categories — they work as search
 	// facets regardless of project type.
 	cfg, _ := s.serverConfig(serverID)
+	_, loader := resolveTarget(cfg)
 	projectType := "mod"
-	if info, ok := loaderProjectType[cfg.Loader]; ok && info.projectType != "plugin" {
+	if info, ok := loaderProjectType[loader]; ok && info.projectType != "plugin" {
 		projectType = info.projectType
 	}
 	var names []string
@@ -134,8 +136,9 @@ func (s *ModService) MoreByAuthor(serverID, username, excludeProjectID string) (
 		return nil, err
 	}
 	cfg, _ := s.serverConfig(serverID)
+	_, loader := resolveTarget(cfg)
 	projectType := ""
-	if info, ok := loaderProjectType[cfg.Loader]; ok {
+	if info, ok := loaderProjectType[loader]; ok {
 		projectType = info.projectType
 	}
 
@@ -164,7 +167,8 @@ func (s *ModService) GetVersions(serverID, projectID string) ([]models.ModVersio
 	if err != nil {
 		return nil, err
 	}
-	return s.provider.GetVersions(s.ctx, projectID, cfg.MCVersion, cfg.Loader)
+	mcVersion, loader := resolveTarget(cfg)
+	return s.provider.GetVersions(s.ctx, projectID, mcVersion, loader)
 }
 
 func (s *ModService) GetAllVersions(projectID string) ([]models.ModVersion, error) {
@@ -184,7 +188,8 @@ func (s *ModService) ResolveDependencies(serverID, versionID string) ([]models.R
 			installedMap[m.ProjectID] = true
 		}
 	}
-	return s.provider.ResolveDependencies(s.ctx, versionID, cfg.MCVersion, cfg.Loader, installedMap)
+	mcVersion, loader := resolveTarget(cfg)
+	return s.provider.ResolveDependencies(s.ctx, versionID, mcVersion, loader, installedMap)
 }
 
 // Install downloads and installs one or more Modrinth version IDs to the server's
@@ -574,20 +579,41 @@ func (s *ModService) Uninstall(serverID, fileName string) error {
 	return nil
 }
 
-// DetectServerLoader auto-detects MC version and loader from the server's jar
-// and logs, then returns a ServerConfig with those fields filled. The caller
-// should treat the result as a suggestion for the UI pre-fill.
+// DetectServerLoader auto-detects MC version and loader from the server's
+// install and logs, then returns a ServerConfig with those fields filled. The
+// caller should treat the result as a suggestion for the UI pre-fill.
+//
+// Detection fills gaps; it does not overwrite. A run that finds the loader but
+// not the Minecraft version used to blank a version that was already known,
+// which is worse than the gap it was trying to close — and the frontend
+// persists whatever comes back.
+//
+// The one thing it does overwrite is a jarPath pointing at a Forge/NeoForge
+// installer. That is not a preference to respect: resolveLaunch already refuses
+// to start from one, the install it produced launches from run.sh, and leaving
+// it set is what fed detectFromJar the installer in the first place.
 func (s *ModService) DetectServerLoader(serverID string) (models.ServerConfig, error) {
 	cfg, err := s.cfg.GetServerConfig(serverID)
 	if err != nil {
 		return models.ServerConfig{}, err
 	}
+
+	if info, ierr := InspectInstaller(cfg.JarPath); ierr == nil && info.IsInstaller {
+		cfg.JarPath = ""
+	}
+
+	cfg.MCVersion, cfg.Loader = sanitizeTarget(cfg.MCVersion, cfg.Loader)
+
 	mcVersion, loader := detectServerLoader(struct{ JarPath, WorkingDir string }{
 		JarPath:    cfg.JarPath,
 		WorkingDir: cfg.WorkingDir,
 	})
-	cfg.MCVersion = mcVersion
-	cfg.Loader = loader
+	if cfg.MCVersion == "" {
+		cfg.MCVersion = mcVersion
+	}
+	if cfg.Loader == "" {
+		cfg.Loader = loader
+	}
 	return *cfg, nil
 }
 
@@ -609,12 +635,16 @@ func (s *ModService) workingDir(serverID string) (string, error) {
 	return cfg.WorkingDir, nil
 }
 
+// loaderForServer is the loader an install/scan should assume, resolved the same
+// way every Modrinth query resolves it. It decides mods/ versus plugins/, so a
+// stale label would put a plugin in the wrong folder.
 func (s *ModService) loaderForServer(serverID string) (string, error) {
 	cfg, err := s.cfg.GetServerConfig(serverID)
 	if err != nil {
 		return "", err
 	}
-	return cfg.Loader, nil
+	_, loader := resolveTarget(*cfg)
+	return loader, nil
 }
 
 // findJarFolder returns "mods" or "plugins" depending on where the jar lives.
@@ -727,12 +757,14 @@ func (s *ModService) CheckUpdates(serverID string) ([]models.ModUpdateInfo, erro
 		return nil, err
 	}
 
+	mcVersion, loader := resolveTarget(cfg)
+
 	result := make([]models.ModUpdateInfo, 0, len(installed))
 	for _, mod := range installed {
 		if mod.Source != "modrinth" || mod.ProjectID == "" || mod.VersionID == "" {
 			continue
 		}
-		versions, verr := s.provider.GetVersions(s.ctx, mod.ProjectID, cfg.MCVersion, cfg.Loader)
+		versions, verr := s.provider.GetVersions(s.ctx, mod.ProjectID, mcVersion, loader)
 		if verr != nil || len(versions) == 0 {
 			continue
 		}

@@ -18,6 +18,7 @@ interface Props {
   projectLoading: boolean
   versions: ModVersion[]
   versionsLoading: boolean
+  versionsError?: string | null
   installing: boolean
   installError: string | null
   onSearch: (query: string, categories: string[], offset?: number, sort?: string) => void
@@ -184,6 +185,7 @@ export function BrowsePanel({
   projectLoading,
   versions,
   versionsLoading,
+  versionsError,
   installing,
   installError,
   onSearch,
@@ -457,6 +459,7 @@ export function BrowsePanel({
                 projectLoading={projectLoading}
                 versions={versions}
                 versionsLoading={versionsLoading}
+                versionsError={versionsError}
                 installing={installing}
                 installError={installError}
                 moreByAuthorProjects={moreProjects}

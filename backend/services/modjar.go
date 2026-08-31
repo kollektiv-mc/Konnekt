@@ -333,11 +333,72 @@ func filenameHeuristic(jarPath string) models.JarMeta {
 
 // --- Server loader detection ---
 
-// detectServerLoader inspects a server jar and (as fallback) the server's latest
-// log to suggest an MCVersion and Loader for ServerConfig. Returns the suggested
-// values; the caller should treat them as pre-filled defaults, not authoritative.
+// reMCVersion is the shape of a Minecraft version: "1.21", "1.21.1", and the
+// pre-release/snapshot forms Mojang ships ("1.21.2-pre1", "24w40a").
+//
+// It exists because a version string has to be *validated*, not merely found.
+// Every value detection produces here ends up as a Modrinth `versions:` facet
+// and a `game_versions` filter, and Modrinth answers a game version it has
+// never heard of with an empty list and HTTP 200 — no error to surface, no way
+// for the UI to tell "this mod has no build for you" apart from "Konnekt asked
+// a nonsense question". So a value that cannot be a Minecraft version must not
+// be reported as one. See detectFromJar's version.json handling for the case
+// that made this necessary.
+var (
+	reMCRelease  = regexp.MustCompile(`^1\.[0-9]+(\.[0-9]+)?(-(pre|rc)[0-9]+)?$`)
+	reMCSnapshot = regexp.MustCompile(`^[0-9]{2}w[0-9]{2}[a-z]$`)
+)
+
+func isMCVersion(v string) bool {
+	return reMCRelease.MatchString(v) || reMCSnapshot.MatchString(v)
+}
+
+// sanitizeTarget drops a stored (MCVersion, Loader) pair that cannot be right.
+//
+// A stored Minecraft version that is not a Minecraft version condemns the
+// loader recorded beside it: the two are always written together, by a single
+// detection run, so a provably wrong version means that run's other answer is
+// worth no more than its first. Discarding both lets detection re-derive them.
+//
+// This is the exact shape a Forge/NeoForge installer used to leave behind —
+// MCVersion "neoforge-21.1.233" and Loader "vanilla", from an installer's
+// version.json read as a server's — and it has to be repaired on read, because
+// nothing re-derives a config once it has been written.
+func sanitizeTarget(mcVersion, loader string) (string, string) {
+	if mcVersion != "" && !isMCVersion(mcVersion) {
+		return "", ""
+	}
+	return mcVersion, loader
+}
+
+// detectServerLoader inspects a server's install and (as fallback) its latest
+// log to suggest an MCVersion and Loader for ServerConfig. Returns the
+// suggested values; the caller should treat them as pre-filled defaults, not
+// authoritative.
+//
+// The order is deliberate, cheapest and most certain first:
+//
+//  1. The configured jar, which answers outright for a vanilla or Fabric server
+//     and identifies a Forge/NeoForge *installer* rather than misreading it.
+//  2. The loader build under libraries/, which NeoForge and Forge encode in the
+//     argfile path. This needs no log and no prior start, so it is the answer
+//     for a modern NeoForge install — which has no runnable jar at all — the
+//     moment it is added.
+//  3. The latest log, which is the only source for a server Konnekt can read
+//     nothing else about, and the least reliable of the three.
 func detectServerLoader(cfg struct{ JarPath, WorkingDir string }) (mcVersion, loader string) {
 	mcVersion, loader = detectFromJar(cfg.JarPath)
+
+	if mcVersion == "" || loader == "" {
+		mv, ld := detectFromInstallDir(cfg.JarPath, cfg.WorkingDir)
+		if mcVersion == "" {
+			mcVersion = mv
+		}
+		if loader == "" {
+			loader = ld
+		}
+	}
+
 	if mcVersion == "" || loader == "" {
 		mv, ld := detectFromLog(cfg.WorkingDir)
 		if mcVersion == "" {
@@ -350,10 +411,82 @@ func detectServerLoader(cfg struct{ JarPath, WorkingDir string }) (mcVersion, lo
 	return
 }
 
+// resolveTarget is the (Minecraft version, loader) pair every Modrinth query is
+// filtered by, with the same detection fallback ServerService.Summary has used
+// all along.
+//
+// Reading the stored pair alone is how a server that was described wrongly once
+// stays described wrongly forever: nothing re-derives it, and the two fields are
+// invisible in the UI, so a stale or malformed value silently filters every
+// search and version list down to nothing. Modrinth answers an unknown game
+// version with an empty list and HTTP 200, so the failure arrives looking like
+// "there is nothing for your server" rather than like a bug.
+//
+// A stored value still wins when it is plausible: the user can override both
+// fields in the server editor, and an override is the whole point of having one.
+func resolveTarget(cfg models.ServerConfig) (mcVersion, loader string) {
+	mcVersion, loader = sanitizeTarget(cfg.MCVersion, cfg.Loader)
+	if mcVersion != "" && loader != "" {
+		return mcVersion, loader
+	}
+
+	detectedMC, detectedLoader := detectServerLoader(struct{ JarPath, WorkingDir string }{
+		JarPath:    cfg.JarPath,
+		WorkingDir: cfg.WorkingDir,
+	})
+	if mcVersion == "" {
+		mcVersion = detectedMC
+	}
+	if loader == "" {
+		loader = detectedLoader
+	}
+	return mcVersion, loader
+}
+
+// detectFromInstallDir reads the loader build a Forge/NeoForge install launches
+// with, and derives the Minecraft version and loader from it.
+//
+// Both projects name the argfile directory after the exact build, and
+// detectLoaderVersion already parses that out of the launcher script. Forge
+// writes the Minecraft version into the build string itself ("1.20.1-47.2.0");
+// NeoForge encodes it as <mcMinor>.<mcPatch>.<build>, which mcVersionForNeoForge
+// already converts ("21.1.233" -> "1.21.1"). This is the join between those two
+// existing pieces, and it is what lets a modern NeoForge server — which has no
+// runnable jar at all — describe itself correctly before it is ever started.
+func detectFromInstallDir(jarPath, workingDir string) (mcVersion, loader string) {
+	version, source := detectLoaderVersion(jarPath, workingDir)
+	if version == "" || source == "" {
+		return "", ""
+	}
+
+	// Forge writes "<mc>-<build>"; NeoForge writes "<mcMinor>.<mcPatch>.<build>".
+	if mc, _, ok := strings.Cut(version, "-"); ok && isMCVersion(mc) {
+		return mc, "forge"
+	}
+	if mc := mcVersionForNeoForge(version); mc != "" {
+		return mc, "neoforge"
+	}
+	return "", ""
+}
+
 func detectFromJar(jarPath string) (mcVersion, loader string) {
 	if jarPath == "" {
 		return
 	}
+
+	// A Forge/NeoForge installer is not a server, and reading it as one is
+	// actively harmful rather than merely useless: its version.json carries the
+	// loader *profile* name ("neoforge-21.1.233") in the same "id" field a
+	// vanilla server jar uses for the Minecraft version, and it carries none of
+	// the loader markers below. Read naively it yields
+	// mcVersion="neoforge-21.1.233", loader="vanilla" — two wrong answers that
+	// look confident, get persisted, and then filter every Modrinth query down
+	// to nothing. InspectInstaller reads install_profile.json and answers
+	// correctly, so ask it first.
+	if info, err := InspectInstaller(jarPath); err == nil && info.IsInstaller {
+		return info.MCVersion, info.Loader
+	}
+
 	r, err := zip.OpenReader(jarPath)
 	if err != nil {
 		return
@@ -365,9 +498,11 @@ func detectFromJar(jarPath string) (mcVersion, loader string) {
 		entries[f.Name] = f
 	}
 
-	// Vanilla / Fabric server jars embed version.json with {"id":"1.20.1"}
+	// Vanilla / Fabric server jars embed version.json with {"id":"1.20.1"}.
+	// Validated rather than trusted: "id" is whatever profile the jar belongs
+	// to, and only a vanilla-lineage jar makes that a Minecraft version.
 	if f, ok := entries["version.json"]; ok {
-		if v := readVersionJSON(f); v != "" {
+		if v := readVersionJSON(f); isMCVersion(v) {
 			mcVersion = v
 		}
 	}
@@ -408,6 +543,11 @@ func detectFromJar(jarPath string) (mcVersion, loader string) {
 		}
 	}
 
+	// A jar carrying a real Minecraft version and none of the loader markers is
+	// a vanilla server jar. This is a positive finding, not a fallback: it used
+	// to fire on *any* jar that yielded a version-shaped string, which is how an
+	// installer came to be labelled vanilla. isMCVersion above is what makes the
+	// inference sound.
 	if loader == "" && mcVersion != "" {
 		loader = "vanilla"
 	}
@@ -438,7 +578,23 @@ var (
 	reLogNeoForge   = regexp.MustCompile(`(?i)NeoForge`)
 	reLogMCVersion2 = regexp.MustCompile(`(?i)Starting minecraft server version ([0-9]+\.[0-9]+(?:\.[0-9]+)?)`)
 	reLogLoadingMC  = regexp.MustCompile(`(?i)Loading Minecraft\s+([0-9]+\.[0-9]+(?:\.[0-9]+)?)`)
+
+	// FML puts the Minecraft version on ModLauncher's argument line, which is
+	// the *first* line of a Forge/NeoForge log. Every other pattern here waits
+	// for vanilla's "Starting minecraft server version", which on a large
+	// modpack lands thousands of lines later, after all the mod scanning.
+	// Matching the args line means the version and the loader are both settled
+	// on line one, instead of the loader matching immediately and the version
+	// never arriving.
+	reLogFMLMCVersion = regexp.MustCompile(`--fml\.mcVersion[,\s]+([0-9]+\.[0-9]+(?:\.[0-9]+)?)`)
 )
+
+// logScanLines bounds detectFromLog. The version line on a heavily modded
+// NeoForge server sits well past a thousand lines of mixin and mod-scan output,
+// and the old 500-line cap stopped short of it — which left the loader detected
+// (it matches on line one) and the Minecraft version empty. Reading is cheap
+// and bounded either way; the scan stops as soon as both answers are in hand.
+const logScanLines = 5000
 
 func detectFromLog(workingDir string) (mcVersion, loader string) {
 	logPath := filepath.Join(workingDir, "logs", "latest.log")
@@ -452,17 +608,25 @@ func detectFromLog(workingDir string) (mcVersion, loader string) {
 	sc.Buffer(make([]byte, 1024*1024), 1024*1024)
 
 	lineCount := 0
-	for sc.Scan() && lineCount < 500 { // only scan the first 500 lines
+	for sc.Scan() && lineCount < logScanLines {
 		line := sc.Text()
 		lineCount++
 
 		if mcVersion == "" {
-			if m := reLogMCVersion.FindStringSubmatch(line); m != nil {
+			if m := reLogFMLMCVersion.FindStringSubmatch(line); m != nil {
+				mcVersion = m[1]
+			} else if m := reLogMCVersion.FindStringSubmatch(line); m != nil {
 				mcVersion = m[1]
 			} else if m := reLogMCVersion2.FindStringSubmatch(line); m != nil {
 				mcVersion = m[1]
 			} else if m := reLogLoadingMC.FindStringSubmatch(line); m != nil {
 				mcVersion = m[1]
+			}
+			// Every pattern above is version-shaped, but a log is the least
+			// trustworthy source here and the cost of a wrong answer is an
+			// empty mods tile, so hold them to the same bar as the jar.
+			if mcVersion != "" && !isMCVersion(mcVersion) {
+				mcVersion = ""
 			}
 		}
 
