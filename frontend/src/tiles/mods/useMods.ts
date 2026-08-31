@@ -325,10 +325,22 @@ export function useMods(serverId: string): ModsState {
     }
   }, [])
 
+  // Records into installError before rethrowing, like every other write here.
+  // It is the first call a version switch makes, and a rejection used to reach
+  // an empty catch in ModPreviewDialog with nothing written anywhere: the
+  // Switch button did nothing at all, twice, and stayed enabled. Modrinth
+  // answers 429 often enough, and refuses to resolve a dependency whose project
+  // has no published version, that "silently" is the wrong way to fail here.
   const resolveDeps = useCallback(
     async (versionId: string): Promise<ResolvedDependency[]> => {
-      const deps = (await ModResolveDependencies(serverId, versionId)) as ResolvedDependency[]
-      return deps ?? []
+      setInstallError(null)
+      try {
+        const deps = (await ModResolveDependencies(serverId, versionId)) as ResolvedDependency[]
+        return deps ?? []
+      } catch (e) {
+        setInstallError(String(e))
+        throw e
+      }
     },
     [serverId],
   )
@@ -398,6 +410,14 @@ export function useMods(serverId: string): ModsState {
     await ModInstallLocal(serverId)
   }, [serverId])
 
+  // Installing *is* the switch: ModInstall removes the file the new one
+  // supersedes (same project, or same mod id in the same folder) as part of the
+  // install, so there is no second call to make here. This used to list the
+  // installed mods afterwards, find the new file by version id and uninstall
+  // the old one from the frontend — which left both jars on disk whenever that
+  // lookup came back empty, and the duplicate mod id is what a server refuses
+  // to start on. Deciding it in Go also covers the browse-side install of a mod
+  // that is already on disk, which never went through this function at all.
   const changeVersion = useCallback(
     async (oldFileName: string, newVersionId: string) => {
       setInstalling(true)
@@ -405,13 +425,6 @@ export function useMods(serverId: string): ModsState {
       setInstallProgress({})
       try {
         await ModInstall(serverId, [newVersionId])
-        // After installing the new version, remove the old file if names differ.
-        // The newly installed file name comes from the manifest refresh.
-        const updated = ((await ModListInstalled(serverId)) as InstalledMod[]) ?? []
-        const newMod = updated.find((m) => m.versionId === newVersionId)
-        if (newMod && newMod.fileName !== oldFileName) {
-          await ModUninstall(serverId, oldFileName)
-        }
       } catch (e) {
         setInstallError(String(e))
         throw e

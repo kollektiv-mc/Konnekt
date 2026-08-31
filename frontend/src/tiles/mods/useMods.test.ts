@@ -121,3 +121,85 @@ describe('useMods version lookups', () => {
     expect(result.current.versionsError).toBeNull()
   })
 })
+
+// Switching a mod's version starts with a dependency check, and Modrinth
+// answers 429 often enough to matter. A rejection here used to reach an empty
+// catch in ModPreviewDialog with nothing recorded anywhere: the Switch button
+// did nothing, stayed enabled, and did nothing again on the next click.
+describe('useMods dependency resolution', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    vi.mocked(App.ModListInstalled).mockResolvedValue([])
+    vi.mocked(App.ModCheckUpdates).mockResolvedValue([])
+    vi.mocked(App.ModCategories).mockResolvedValue([])
+    vi.mocked(App.ModRescan).mockResolvedValue(undefined)
+  })
+
+  it('records why a dependency check failed, and still rethrows', async () => {
+    vi.mocked(App.ModResolveDependencies).mockRejectedValue(new Error('modrinth: HTTP 429'))
+    const { result } = renderHook(() => useMods('srv1'))
+
+    await act(async () => {
+      await expect(result.current.resolveDeps('ver2')).rejects.toThrow('429')
+    })
+
+    expect(result.current.installError).toContain('429')
+  })
+
+  it('clears a stale error when the check is retried and works', async () => {
+    vi.mocked(App.ModResolveDependencies).mockRejectedValueOnce(new Error('modrinth: HTTP 429'))
+    vi.mocked(App.ModResolveDependencies).mockResolvedValue([])
+    const { result } = renderHook(() => useMods('srv1'))
+
+    await act(async () => {
+      await expect(result.current.resolveDeps('ver2')).rejects.toThrow()
+    })
+    expect(result.current.installError).not.toBeNull()
+
+    await act(async () => {
+      expect(await result.current.resolveDeps('ver2')).toEqual([])
+    })
+    expect(result.current.installError).toBeNull()
+  })
+})
+
+// The switch itself is one call: ModInstall replaces the file the new version
+// supersedes. It used to be three — install, list, uninstall the old file by
+// name — and the last two were skipped whenever the lookup in between came back
+// empty, which is how two jars of one mod ended up in mods/.
+describe('useMods version switching', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    vi.mocked(App.ModListInstalled).mockResolvedValue([])
+    vi.mocked(App.ModCheckUpdates).mockResolvedValue([])
+    vi.mocked(App.ModCategories).mockResolvedValue([])
+    vi.mocked(App.ModRescan).mockResolvedValue(undefined)
+    vi.mocked(App.ModInstall).mockResolvedValue(undefined)
+  })
+
+  it('installs the new version and leaves the old file to the backend', async () => {
+    const { result } = renderHook(() => useMods('srv1'))
+
+    await act(async () => {
+      await result.current.changeVersion('EssentialsX-2.21.0.jar', 'ver2')
+    })
+
+    expect(App.ModInstall).toHaveBeenCalledWith('srv1', ['ver2'])
+    expect(App.ModUninstall).not.toHaveBeenCalled()
+    expect(result.current.installError).toBeNull()
+  })
+
+  it('records a failed switch and rethrows so the dialog stays open', async () => {
+    vi.mocked(App.ModInstall).mockRejectedValue(new Error('sha512 mismatch'))
+    const { result } = renderHook(() => useMods('srv1'))
+
+    await act(async () => {
+      await expect(result.current.changeVersion('EssentialsX-2.21.0.jar', 'ver2')).rejects.toThrow(
+        'sha512 mismatch',
+      )
+    })
+
+    expect(result.current.installError).toContain('sha512 mismatch')
+    expect(result.current.installing).toBe(false)
+  })
+})

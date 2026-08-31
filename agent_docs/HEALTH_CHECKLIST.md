@@ -516,6 +516,25 @@ subtrees side by side. The item stays open — a tile on the canvas is still
 unwrapped, and it is `TileWrapper`'s content slot that would fix that for every
 tile at once. What is left is the design question, not the plumbing.
 
+**P2 — Modal stacking is nine files' worth of literal z-index** (filed 2026-08-31)
+
+Every overlay picks its own number — 50, 60, 70, 150, 200, 300, 400, 1000, 9999
+— and the only record of which has to beat which is a comment on the loser after
+it lost. `DisconnectConfirm.tsx` and the scheduler's `CloseConfirmDialog.tsx`
+both carry one. The mods tile then shipped a pair that disagreed with no comment
+at all: `ModPreviewDialog` at 400/401 opening a `DependencyDialog` at 50, so
+switching the version of a mod with a missing dependency mounted the confirm
+dialog *under* the backdrop and read, exactly, as nothing happening. Raising the
+dialog to `z-[500]` closes that instance, and `ModPreviewDialog.test.tsx` pins
+the ordering, but only for that pair.
+
+What is missing is a small named scale that every overlay reads from, so "above
+the thing that opened me" is expressible rather than guessed. It does not belong
+in `tokens.source.json`: that file is vendored from kollektiv and a
+Konnekt-only value there is reverted on the next sync. A Konnekt-owned module
+next to `lib/gridSizing.ts` is the right shape — the tile grid already solved
+the same problem by naming its constants in one place.
+
 **P3 — A maximized Overview holds a second copy of its sections' data**
 (filed 2026-08-30)
 

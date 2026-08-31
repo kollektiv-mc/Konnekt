@@ -49,6 +49,13 @@ type modManifestItem struct {
 	DependencyOf []string `json:"dependencyOf,omitempty"`
 }
 
+// modManifestVersion is the manifest's schema version, and the trigger for the
+// one-time re-identification in identifyUnknownLocked. Version 2 is where
+// primary-file identity moved from the file's name to its hash: every row
+// version 1 wrote for a jar a modpack had renamed is missing a version id, and
+// only a re-check can put it back.
+const modManifestVersion = 2
+
 const updateCacheTTL = 10 * time.Minute
 
 type updateCacheEntry struct {
@@ -215,7 +222,7 @@ func (s *ModService) Install(serverID string, versionIDs []string) error {
 
 	manifest, err := s.loadManifest(serverID)
 	if err != nil {
-		manifest = &modManifest{Version: 1}
+		manifest = &modManifest{Version: modManifestVersion}
 	}
 
 	// Cache project title + icon per project ID to avoid duplicate API calls.
@@ -250,6 +257,34 @@ func (s *ModService) Install(serverID string, versionIDs []string) error {
 			return err
 		}
 
+		// Read the jar Konnekt just wrote. Its mod id is what recognises the
+		// copy this install replaces when that copy came from somewhere the
+		// provider cannot identify by hash — a CurseForge build of the same mod
+		// is the usual case, and a modpack folder is full of them.
+		meta, _ := parseJarMeta(finalPath, loader)
+
+		// Take out the file this one supersedes before anything is announced.
+		// Two jars of one mod in mods/ is not a cosmetic duplicate: the server
+		// refuses to start on the duplicate mod id. This is what installing over
+		// a modpack's own copy produced every time, because the name Modrinth
+		// serves a file under is rarely the name the pack shipped it as.
+		wasDisabled, err := s.removeSuperseded(workDir, manifest, targetFolder, safeFileName, version.ProjectID, meta.ID)
+		if err != nil {
+			return err
+		}
+
+		// A superseded file that was switched off stays switched off. A pack
+		// ships its client-only mods disabled, and quietly re-enabling one
+		// because its version changed is a server that stops booting for a
+		// reason nobody asked for.
+		installedName := safeFileName
+		if wasDisabled {
+			installedName = safeFileName + ".disabled"
+			if err := os.Rename(finalPath, filepath.Join(targetDir, installedName)); err != nil {
+				return fmt.Errorf("keep %s disabled: %w", safeFileName, err)
+			}
+		}
+
 		// Resolve the real mod name (project title) and icon URL.
 		displayName := version.Name
 		iconURL := ""
@@ -276,9 +311,10 @@ func (s *ModService) Install(serverID string, versionIDs []string) error {
 		// also keeps a multi-mod install honest — if the third download fails,
 		// the first two are on disk *and* in the manifest.
 		manifest.upsert(modManifestItem{
-			FileName:      safeFileName,
+			FileName:      installedName,
 			DisplayName:   displayName,
 			IconURL:       iconURL,
+			ModID:         meta.ID,
 			Source:        "modrinth",
 			Provider:      "modrinth",
 			ProjectID:     version.ProjectID,
@@ -288,7 +324,7 @@ func (s *ModService) Install(serverID string, versionIDs []string) error {
 			HashChecked:   true,
 			Loader:        loader,
 			TargetFolder:  targetFolder,
-			Enabled:       true,
+			Enabled:       !wasDisabled,
 			InstalledAt:   time.Now().UnixMilli(),
 		})
 		if err := s.saveManifest(serverID, manifest); err != nil {
@@ -297,13 +333,107 @@ func (s *ModService) Install(serverID string, versionIDs []string) error {
 
 		s.bus.Emit(EventModInstalled, map[string]any{
 			"serverID": serverID,
-			"fileName": safeFileName,
+			"fileName": installedName,
 		})
 	}
 
 	s.clearUpdateCache(serverID)
 	s.bus.Emit(EventModChanged, map[string]any{"serverID": serverID})
 	return nil
+}
+
+// removeSuperseded deletes the files the jar being installed replaces and drops
+// their manifest rows. It reports whether what it removed was switched off,
+// which is the state the caller carries over to the new file.
+//
+// Identity is asked two ways, because the copy being replaced may be one Konnekt
+// installed or one that arrived with a modpack:
+//
+//   - The same project, where the existing row is that project's *primary*
+//     file. A row with no version id is a secondary file — an EssentialsX module
+//     belongs to the EssentialsX project without being the EssentialsX jar — and
+//     removing one because its parent was updated would uninstall a plugin the
+//     user still has.
+//   - The same mod id, as the jars themselves declare it. This is what catches
+//     the copy the provider has never seen: a CurseForge build of the same mod
+//     hashes to nothing Modrinth knows, so its row has no project at all. Only a
+//     mod id parsed out of real jar metadata is used — filenameHeuristic leaves
+//     the field empty rather than guessing one from the file name.
+//
+// Nothing outside the target folder is touched. mods/ and plugins/ hold
+// different kinds of content and a name can legitimately appear in both.
+func (s *ModService) removeSuperseded(workDir string, manifest *modManifest, targetFolder, newFileName, projectID, modID string) (bool, error) {
+	// Whether the new file inherits a .disabled suffix is decided by what was
+	// actually removed, and one enabled copy is enough to keep it enabled: the
+	// folder that holds both an old jar and its disabled predecessor is a folder
+	// where the enabled one is the one in use.
+	sawEnabled, sawDisabled := false, false
+
+	remove := func(base string) error {
+		for _, name := range []string{base, base + ".disabled"} {
+			path := filepath.Join(workDir, targetFolder, name)
+			if err := sandboxCheck(workDir, path); err != nil {
+				return err
+			}
+			if _, err := os.Stat(path); err != nil {
+				continue
+			}
+			if strings.HasSuffix(name, ".disabled") {
+				sawDisabled = true
+			} else {
+				sawEnabled = true
+			}
+			if err := os.Remove(path); err != nil {
+				return fmt.Errorf("remove superseded %s: %w", name, err)
+			}
+		}
+		manifest.removeByBase(base)
+		return nil
+	}
+
+	// Same name, already there but switched off. The download wrote the enabled
+	// name beside it, so without this the folder ends up holding both.
+	disabledTwin := filepath.Join(workDir, targetFolder, newFileName+".disabled")
+	if _, err := os.Stat(disabledTwin); err == nil {
+		if err := sandboxCheck(workDir, disabledTwin); err != nil {
+			return false, err
+		}
+		if err := os.Remove(disabledTwin); err != nil {
+			return false, fmt.Errorf("remove superseded %s: %w", newFileName+".disabled", err)
+		}
+		manifest.removeByBase(newFileName)
+		sawDisabled = true
+	}
+
+	// Ranged over a copy: remove() rewrites manifest.Items as it goes.
+	for _, it := range append([]modManifestItem(nil), manifest.Items...) {
+		base := strings.TrimSuffix(it.FileName, ".disabled")
+		if base == newFileName {
+			continue // the file the download just overwrote in place
+		}
+		if it.TargetFolder != "" && it.TargetFolder != targetFolder {
+			continue
+		}
+		samePrimary := projectID != "" && it.ProjectID == projectID && it.VersionID != ""
+		sameMod := modID != "" && strings.EqualFold(it.ModID, modID)
+		if !samePrimary && !sameMod {
+			continue
+		}
+		switch s.findJarFolder(workDir, base) {
+		case "":
+			manifest.removeByBase(base) // the row outlived its file
+			continue
+		case targetFolder: // the file this install replaces
+		default:
+			continue // the same mod in the other folder is a different install
+		}
+		slog.Info("mods: replacing an existing copy", "old", base, "new", newFileName, "folder", targetFolder)
+		if err := remove(base); err != nil {
+			return false, err
+		}
+	}
+
+	return sawDisabled && !sawEnabled, nil
 }
 
 // downloadVerified streams a file from url to finalPath, verifying the sha512
@@ -693,7 +823,7 @@ func (s *ModService) manifestPath(serverID string) string {
 func (s *ModService) loadManifest(serverID string) (*modManifest, error) {
 	data, err := os.ReadFile(s.manifestPath(serverID))
 	if os.IsNotExist(err) {
-		return &modManifest{Version: 1}, nil
+		return &modManifest{Version: modManifestVersion}, nil
 	}
 	if err != nil {
 		return nil, err
@@ -815,7 +945,7 @@ func (s *ModService) InstallLocal(serverID string, filePaths []string) error {
 
 	manifest, err := s.loadManifest(serverID)
 	if err != nil {
-		manifest = &modManifest{Version: 1}
+		manifest = &modManifest{Version: modManifestVersion}
 	}
 
 	copied := make([]string, 0, len(filePaths))

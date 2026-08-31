@@ -99,7 +99,11 @@ export function ModPreviewDialog({
         await onChangeVersion(mod.fileName, versionId)
         onClose()
       } catch {
-        // error surfaced via installError prop
+        // Both calls record into installError before they rethrow, and the
+        // versions tab renders it below — so there is nothing to do here except
+        // stay open on the failed version. This used to be true of
+        // onChangeVersion only: a dependency check that could not run left this
+        // catch with nothing to show, and the button went back to looking idle.
       } finally {
         setChangingVersion(false)
       }
@@ -254,6 +258,18 @@ export function ModPreviewDialog({
           ) : (
             // Versions tab
             <div>
+              {/* Above the list rather than inside it. The failures that land
+                  here — a dependency check that could not reach Modrinth, a
+                  switch that failed — used to render only in the branch that
+                  draws the versions, so the same error was invisible whenever
+                  the list was empty or still loading. */}
+              {installError && <div className="text-danger px-4 py-2 text-xs">{installError}</div>}
+              {!canSwitchVersion && (
+                <div className="text-text-muted border-border-subtle border-b-hairline px-4 py-2 text-xs">
+                  This jar is one of a release{'\u2019'}s extra files rather than the release
+                  itself, so there is no version to switch it to.
+                </div>
+              )}
               {versionsLoading ? (
                 <div className="text-text-muted px-4 py-6 text-xs">Loading versions…</div>
               ) : versionsError ? (
@@ -282,9 +298,6 @@ export function ModPreviewDialog({
                 </div>
               ) : (
                 <>
-                  {installError && (
-                    <div className="text-danger px-4 py-2 text-xs">{installError}</div>
-                  )}
                   {versions.map((v) => {
                     const isCurrent = v.id === mod.versionId
                     const isLatestUpdate =

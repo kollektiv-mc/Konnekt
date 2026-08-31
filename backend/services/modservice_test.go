@@ -125,10 +125,11 @@ func newModFixture(t *testing.T, provider ModProvider) (*ModService, string) {
 	return s, workDir
 }
 
-// writePluginJar writes a real (tiny) plugin jar: a zip carrying a plugin.yml,
-// which is what parseJarMeta reads for a Paper server. The bytes are unique per
-// name, so hashes differ between fixtures the way real jars do.
-func writePluginJar(t *testing.T, dir, fileName, pluginName, version string) string {
+// pluginJarBytes is a real (tiny) plugin jar: a zip carrying a plugin.yml,
+// which is what parseJarMeta reads for a Paper server. Separate from the write
+// below because a download and the file it lands as have to be the same bytes,
+// the way they are when the file really came off the CDN.
+func pluginJarBytes(t *testing.T, pluginName, version string) []byte {
 	t.Helper()
 	var buf bytes.Buffer
 	zw := zip.NewWriter(&buf)
@@ -142,12 +143,36 @@ func writePluginJar(t *testing.T, dir, fileName, pluginName, version string) str
 	if err := zw.Close(); err != nil {
 		t.Fatalf("close zip: %v", err)
 	}
+	return buf.Bytes()
+}
 
-	path := filepath.Join(dir, fileName)
-	if err := os.WriteFile(path, buf.Bytes(), 0644); err != nil {
+// writePluginJar writes one of those jars and reports its hash. The bytes are
+// unique per name, so hashes differ between fixtures the way real jars do.
+func writePluginJar(t *testing.T, dir, fileName, pluginName, version string) string {
+	t.Helper()
+	jar := pluginJarBytes(t, pluginName, version)
+	if err := os.WriteFile(filepath.Join(dir, fileName), jar, 0644); err != nil {
 		t.Fatalf("write jar: %v", err)
 	}
-	return hashOf(buf.Bytes())
+	return hashOf(jar)
+}
+
+// jarServer stands in for the CDN: the bytes registered for each path, and 404
+// for anything else, so a wrong URL fails as a wrong URL rather than as a hash
+// mismatch.
+func jarServer(t *testing.T, files map[string][]byte) *httptest.Server {
+	t.Helper()
+	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		jar, ok := files[r.URL.Path]
+		if !ok {
+			t.Errorf("unexpected download path %q", r.URL.Path)
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
+		if _, err := w.Write(jar); err != nil {
+			t.Errorf("serve jar: %v", err)
+		}
+	}))
 }
 
 func hashOf(b []byte) string {
@@ -564,5 +589,248 @@ func TestFileSHA512CachedMatchesContentAndFollowsChanges(t *testing.T) {
 	}
 	if want := hashOf([]byte("second-and-longer")); got != want {
 		t.Errorf("hash after rewrite = %s, want %s", got, want)
+	}
+}
+
+// --- Identity of a jar somebody else named ---
+
+// A modpack rarely ships a mod under the file name Modrinth serves it as, and
+// the first version of this decided "is this the version's primary file?" by
+// comparing those two names. Every renamed jar came out of that as a secondary
+// file: project, icon and version number intact — so the row looked completely
+// right — but no version id, which is what the Switch button and every update
+// check are gated on. The bytes are the thing that answers this question.
+func TestRescanIdentifiesARenamedPrimaryFileByItsHash(t *testing.T) {
+	provider := &fakeModProvider{
+		projects: map[string]models.ModProject{"ess": {ID: "ess", Title: "EssentialsX"}},
+	}
+	s, workDir := newModFixture(t, provider)
+
+	hash := writePluginJar(t, filepath.Join(workDir, "plugins"), "essentialsx.jar", "Essentials", "2.21.0")
+	provider.byHash = map[string]models.ModVersion{
+		hash: {ID: "ver1", ProjectID: "ess", VersionNumber: "2.21.0",
+			FileName: "EssentialsX-2.21.0.jar", SHA512: hash},
+	}
+
+	if err := s.Rescan(testServerID); err != nil {
+		t.Fatalf("Rescan: %v", err)
+	}
+
+	mod := installedByFile(t, s)["essentialsx.jar"]
+	if mod.VersionID != "ver1" {
+		t.Errorf("versionID = %q, want ver1: the file name differs from Modrinth's but the bytes are the primary file", mod.VersionID)
+	}
+	if mod.ProjectID != "ess" || mod.DisplayName != "EssentialsX" {
+		t.Errorf("projectID/displayName = %q/%q, want ess/EssentialsX", mod.ProjectID, mod.DisplayName)
+	}
+}
+
+// The rows the name comparison already wrote are marked modrinth, which is what
+// the scan's skip looks for, so nothing would ever revisit them. The manifest's
+// schema version is what gets them looked at once more — and only once.
+func TestRescanRevisitsRowsFiledBeforeTheHashRule(t *testing.T) {
+	provider := &fakeModProvider{
+		projects: map[string]models.ModProject{"ess": {ID: "ess", Title: "EssentialsX"}},
+	}
+	s, workDir := newModFixture(t, provider)
+
+	hash := writePluginJar(t, filepath.Join(workDir, "plugins"), "essentialsx.jar", "Essentials", "2.21.0")
+	provider.byHash = map[string]models.ModVersion{
+		hash: {ID: "ver1", ProjectID: "ess", VersionNumber: "2.21.0",
+			FileName: "EssentialsX-2.21.0.jar", SHA512: hash},
+	}
+	if err := s.saveManifest(testServerID, &modManifest{Version: 1, Items: []modManifestItem{{
+		FileName: "essentialsx.jar", DisplayName: "EssentialsX", Source: "modrinth",
+		Provider: "modrinth", ProjectID: "ess", VersionNumber: "2.21.0", SHA512: hash,
+		HashChecked: true, TargetFolder: "plugins", Enabled: true, InstalledAt: 1,
+	}}}); err != nil {
+		t.Fatalf("saveManifest: %v", err)
+	}
+
+	if err := s.Rescan(testServerID); err != nil {
+		t.Fatalf("Rescan: %v", err)
+	}
+	if got := installedByFile(t, s)["essentialsx.jar"].VersionID; got != "ver1" {
+		t.Errorf("versionID after the migrating scan = %q, want ver1", got)
+	}
+
+	// A second service over the same data directory starts with no folder
+	// signature, so it scans from scratch — and must find nothing left to ask
+	// about. Re-hashing every jar in a pack on every launch is the cost of
+	// getting this wrong.
+	s2 := NewModService(s.cfg, nil)
+	s2.SetDataDir(s.dataDir)
+	s2.SetBus(NewEventBus())
+	s2.SetContext(context.Background())
+	s2.provider = provider
+	provider.hashCalls = 0
+
+	if err := s2.Rescan(testServerID); err != nil {
+		t.Fatalf("second Rescan: %v", err)
+	}
+	if provider.hashCalls != 0 {
+		t.Errorf("provider asked about %d batch(es) on the next scan, want 0: the migration is meant to run once", provider.hashCalls)
+	}
+}
+
+// --- Replacing the copy already on disk ---
+
+// Installing a mod the server already has used to leave both jars in place:
+// Konnekt wrote the file under the name Modrinth serves, beside the one the
+// modpack shipped. Two jars declaring one mod id is not a cosmetic duplicate —
+// the server refuses to start on it.
+func TestInstallReplacesTheCopyAlreadyOnDisk(t *testing.T) {
+	newJar := pluginJarBytes(t, "Essentials", "2.22.0")
+	files := jarServer(t, map[string][]byte{"/ess-2.22.0": newJar})
+	defer files.Close()
+
+	provider := &fakeModProvider{
+		versions: map[string]models.ModVersion{
+			"ver2": {ID: "ver2", ProjectID: "ess", VersionNumber: "2.22.0",
+				FileName: "EssentialsX-2.22.0.jar", FileURL: files.URL + "/ess-2.22.0", SHA512: hashOf(newJar)},
+		},
+		projects: map[string]models.ModProject{"ess": {ID: "ess", Title: "EssentialsX"}},
+	}
+	s, workDir := newModFixture(t, provider)
+
+	oldHash := writePluginJar(t, filepath.Join(workDir, "plugins"), "essentialsx.jar", "Essentials", "2.21.0")
+	provider.byHash = map[string]models.ModVersion{
+		oldHash: {ID: "ver1", ProjectID: "ess", VersionNumber: "2.21.0",
+			FileName: "EssentialsX-2.21.0.jar", SHA512: oldHash},
+	}
+	if err := s.Rescan(testServerID); err != nil {
+		t.Fatalf("Rescan: %v", err)
+	}
+
+	if err := s.Install(testServerID, []string{"ver2"}); err != nil {
+		t.Fatalf("Install: %v", err)
+	}
+
+	installed := installedByFile(t, s)
+	if _, ok := installed["essentialsx.jar"]; ok {
+		t.Error("the copy the pack shipped is still in plugins/ beside the new one")
+	}
+	if got := installed["EssentialsX-2.22.0.jar"].VersionID; got != "ver2" {
+		t.Errorf("new file's versionID = %q, want ver2", got)
+	}
+	if len(installed) != 1 {
+		t.Errorf("plugins/ holds %d files, want 1", len(installed))
+	}
+}
+
+// The copy being replaced may be one no provider can name: a CurseForge build
+// hashes to nothing Modrinth's index has seen, so its row carries no project at
+// all. What both jars still agree on is the id in their own metadata.
+func TestInstallReplacesACopyItCanOnlyRecogniseByModID(t *testing.T) {
+	newJar := pluginJarBytes(t, "Essentials", "2.22.0")
+	files := jarServer(t, map[string][]byte{"/ess-2.22.0": newJar})
+	defer files.Close()
+
+	provider := &fakeModProvider{
+		versions: map[string]models.ModVersion{
+			"ver2": {ID: "ver2", ProjectID: "ess", VersionNumber: "2.22.0",
+				FileName: "EssentialsX-2.22.0.jar", FileURL: files.URL + "/ess-2.22.0", SHA512: hashOf(newJar)},
+		},
+		projects: map[string]models.ModProject{"ess": {ID: "ess", Title: "EssentialsX"}},
+	}
+	s, workDir := newModFixture(t, provider)
+
+	// Not in byHash: the provider does not recognise these bytes.
+	writePluginJar(t, filepath.Join(workDir, "plugins"), "Essentials-curseforge.jar", "Essentials", "2.20.0")
+	if err := s.Rescan(testServerID); err != nil {
+		t.Fatalf("Rescan: %v", err)
+	}
+	if got := installedByFile(t, s)["Essentials-curseforge.jar"].Source; got != "local" {
+		t.Fatalf("source = %q, want local: this fixture is about the unrecognised copy", got)
+	}
+
+	if err := s.Install(testServerID, []string{"ver2"}); err != nil {
+		t.Fatalf("Install: %v", err)
+	}
+
+	if _, ok := installedByFile(t, s)["Essentials-curseforge.jar"]; ok {
+		t.Error("the unrecognised copy of the same plugin survived the install")
+	}
+}
+
+// A secondary file belongs to a project without being that project's jar —
+// EssentialsX ships its modules that way. Updating EssentialsX must not
+// uninstall EssentialsXChat, which is what matching on the project alone would
+// do. The row's empty version id is the signal, and it is why the project match
+// insists on a primary file.
+func TestInstallLeavesASecondaryFileOfTheSameProjectAlone(t *testing.T) {
+	newJar := pluginJarBytes(t, "Essentials", "2.22.0")
+	files := jarServer(t, map[string][]byte{"/ess-2.22.0": newJar})
+	defer files.Close()
+
+	provider := &fakeModProvider{
+		versions: map[string]models.ModVersion{
+			"ver2": {ID: "ver2", ProjectID: "ess", VersionNumber: "2.22.0",
+				FileName: "EssentialsX-2.22.0.jar", FileURL: files.URL + "/ess-2.22.0", SHA512: hashOf(newJar)},
+		},
+		projects: map[string]models.ModProject{"ess": {ID: "ess", Title: "EssentialsX"}},
+	}
+	s, workDir := newModFixture(t, provider)
+
+	chatHash := writePluginJar(t, filepath.Join(workDir, "plugins"), "EssentialsXChat-2.21.0.jar", "EssentialsChat", "2.21.0")
+	provider.byHash = map[string]models.ModVersion{
+		// The version's own file is the primary EssentialsX jar; this hash is a
+		// second file shipped alongside it.
+		chatHash: {ID: "ver1", ProjectID: "ess", VersionNumber: "2.21.0",
+			FileName: "EssentialsX-2.21.0.jar", SHA512: hashOf(pluginJarBytes(t, "Essentials", "2.21.0"))},
+	}
+	if err := s.Rescan(testServerID); err != nil {
+		t.Fatalf("Rescan: %v", err)
+	}
+
+	if err := s.Install(testServerID, []string{"ver2"}); err != nil {
+		t.Fatalf("Install: %v", err)
+	}
+
+	if _, ok := installedByFile(t, s)["EssentialsXChat-2.21.0.jar"]; !ok {
+		t.Error("updating EssentialsX uninstalled its chat module, which is a different plugin")
+	}
+}
+
+// A pack ships its client-only mods switched off. Replacing one because its
+// version changed must not quietly switch it back on: that is a server that
+// stops booting for a reason nobody asked for.
+func TestInstallKeepsASupersededFileDisabled(t *testing.T) {
+	newJar := pluginJarBytes(t, "Essentials", "2.22.0")
+	files := jarServer(t, map[string][]byte{"/ess-2.22.0": newJar})
+	defer files.Close()
+
+	provider := &fakeModProvider{
+		versions: map[string]models.ModVersion{
+			"ver2": {ID: "ver2", ProjectID: "ess", VersionNumber: "2.22.0",
+				FileName: "EssentialsX-2.22.0.jar", FileURL: files.URL + "/ess-2.22.0", SHA512: hashOf(newJar)},
+		},
+		projects: map[string]models.ModProject{"ess": {ID: "ess", Title: "EssentialsX"}},
+	}
+	s, workDir := newModFixture(t, provider)
+
+	oldHash := writePluginJar(t, filepath.Join(workDir, "plugins"), "essentialsx.jar.disabled", "Essentials", "2.21.0")
+	provider.byHash = map[string]models.ModVersion{
+		oldHash: {ID: "ver1", ProjectID: "ess", VersionNumber: "2.21.0",
+			FileName: "EssentialsX-2.21.0.jar", SHA512: oldHash},
+	}
+	if err := s.Rescan(testServerID); err != nil {
+		t.Fatalf("Rescan: %v", err)
+	}
+
+	if err := s.Install(testServerID, []string{"ver2"}); err != nil {
+		t.Fatalf("Install: %v", err)
+	}
+
+	installed := installedByFile(t, s)
+	mod, ok := installed["EssentialsX-2.22.0.jar.disabled"]
+	if !ok {
+		t.Fatalf("installed files = %v, want the new version to land disabled like the one it replaced", installed)
+	}
+	if mod.Enabled {
+		t.Error("the new file reports itself enabled")
+	}
+	if len(installed) != 1 {
+		t.Errorf("plugins/ holds %d files, want 1", len(installed))
 	}
 }
