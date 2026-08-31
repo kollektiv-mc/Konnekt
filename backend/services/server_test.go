@@ -824,3 +824,178 @@ func TestSummaryLoaderVersion(t *testing.T) {
 		})
 	}
 }
+
+func TestParseLoginAddress(t *testing.T) {
+	cases := []struct {
+		name string
+		addr string
+		want string
+	}{
+		{"ipv4", "127.0.0.1:54321", "127.0.0.1"},
+		{"ipv4 routable", "203.0.113.9:25565", "203.0.113.9"},
+		// JDK 14 and later bracket the literal (JDK-8225499).
+		{"ipv6 bracketed loopback", "[0:0:0:0:0:0:0:1]:54321", "::1"},
+		{"ipv6 bracketed global", "[2001:db8::1]:25565", "2001:db8::1"},
+		// Before that there were no brackets and the port ran straight on, the
+		// shape Minecraft's own MC-13120 was filed about.
+		{"ipv6 unbracketed loopback", "0:0:0:0:0:0:0:1:54321", "::1"},
+		{"ipv6 unbracketed already compressed", "::1:54321", "::1"},
+		{"ipv4 mapped normalises to v4", "[::ffff:127.0.0.1]:54321", "127.0.0.1"},
+		// Not addresses. The caller keeps the join and drops the IP.
+		{"hostname", "example.com:25565", ""},
+		{"empty", "", ""},
+		{"port only", ":25565", ""},
+		{"garbage", "not-an-address", ""},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := parseLoginAddress(tc.addr); got != tc.want {
+				t.Errorf("parseLoginAddress(%q) = %q, want %q", tc.addr, got, tc.want)
+			}
+		})
+	}
+}
+
+// A Bedrock player behind Geyser and Floodgate. Their Java-side name carries
+// Floodgate's default "." prefix, which the old \w+ name class could not match,
+// so every Bedrock player on a crossplay server was invisible (#228).
+func TestStreamOutputTracksBedrockPlayer(t *testing.T) {
+	s, bus := newServerFixture()
+	joined := collect(bus, EventPlayerJoined)
+	left := collect(bus, EventPlayerLeft)
+
+	s.streamOutput(strings.NewReader(strings.Join([]string{
+		"[17:22:56 INFO]: UUID of player .Snadrochka is 00000000-0000-0000-0009-01f34a8b2c7d",
+		"[17:22:59 INFO]: \x1b[38;2;255;255;85m.Snadrochka joined the game\x1b[0m",
+		"[17:22:59 INFO]: .Snadrochka[/127.0.0.1:62436] logged in with entity id 86",
+	}, "\n")))
+
+	waitForCount(t, joined, 1)
+	roster := s.GetActivePlayers()
+	if len(roster) != 1 {
+		t.Fatalf("GetActivePlayers() returned %d players, want 1", len(roster))
+	}
+	if roster[0].Name != ".Snadrochka" {
+		t.Errorf("roster name = %q, want .Snadrochka", roster[0].Name)
+	}
+	if roster[0].UUID != "00000000-0000-0000-0009-01f34a8b2c7d" {
+		t.Errorf("roster uuid = %q", roster[0].UUID)
+	}
+	if roster[0].IP != "127.0.0.1" {
+		t.Errorf("roster ip = %q, want 127.0.0.1", roster[0].IP)
+	}
+
+	s.streamOutput(strings.NewReader(
+		"[17:40:00 INFO]: \x1b[38;2;255;255;85m.Snadrochka left the game\x1b[0m\n"))
+
+	waitForCount(t, left, 1)
+	if got := s.PlayerCount(); got != 0 {
+		t.Errorf("PlayerCount() = %d after the Bedrock player left, want 0", got)
+	}
+}
+
+// The name sits directly against the "]: " anchor precisely so chat and plugin
+// broadcasts cannot pass for a server line. Widening the name class for
+// Bedrock prefixes must not have opened that up, so each of these has to
+// register nobody at all.
+func TestPlayerMatchersRejectSpoofedLines(t *testing.T) {
+	cases := []struct {
+		name string
+		line string
+	}{
+		{"chat message quoting a join", "[12:00:00 INFO]: <Alex> Bob joined the game"},
+		{"chat message quoting a leave", "[12:00:00 INFO]: <Alex> Bob left the game"},
+		{"name-colon chat format", "[12:00:00 INFO]: Alex: joined the game"},
+		{"rank tag before the name", "[12:00:00 INFO]: [Lobby] Bob joined the game"},
+		{"chat quoting a disconnect", "[12:00:00 INFO]: <Alex> Bob lost connection: Disconnected"},
+		{"chat quoting a login line", "[12:00:00 INFO]: <Alex> Bob[/127.0.0.1:1] logged in with entity id 1"},
+		{"chat quoting a uuid line", "[12:00:00 INFO]: <Alex> UUID of player Bob is 069a79f4-44e9-4726-a5be-fca90e38aaf5"},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			s, _ := newServerFixture()
+			s.streamOutput(strings.NewReader(tc.line + "\n"))
+
+			// Both maps, not just the count: a spoof that only reached the
+			// pre-join accumulator would still be a spoof that landed.
+			s.playersMu.RLock()
+			online, pre := len(s.players), len(s.presession)
+			s.playersMu.RUnlock()
+			if online != 0 {
+				t.Errorf("%q put %d players online", tc.line, online)
+			}
+			if pre != 0 {
+				t.Errorf("%q created %d pre-join entries", tc.line, pre)
+			}
+		})
+	}
+}
+
+// An IPv6 client, in both the shapes the JDK has printed (#229). The old
+// dotted-quad pattern matched neither, so the address was lost and the line
+// was no use as a join signal either.
+func TestStreamOutputReadsIPv6LoginAddress(t *testing.T) {
+	cases := []struct {
+		name string
+		line string
+		want string
+	}{
+		{
+			name: "bracketed, JDK 14 and later",
+			line: "[12:00:00 INFO]: Alex[/[0:0:0:0:0:0:0:1]:54321] logged in with entity id 261",
+			want: "::1",
+		},
+		{
+			name: "unbracketed, before JDK 14",
+			line: "[12:00:00 INFO]: Alex[/0:0:0:0:0:0:0:1:54321] logged in with entity id 261",
+			want: "::1",
+		},
+		{
+			name: "global address",
+			line: "[12:00:00 INFO]: Alex[/[2001:db8::1]:25565] logged in with entity id 261",
+			want: "2001:db8::1",
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			s, bus := newServerFixture()
+			joined := collect(bus, EventPlayerJoined)
+
+			s.streamOutput(strings.NewReader(tc.line + "\n"))
+
+			waitForCount(t, joined, 1)
+			roster := s.GetActivePlayers()
+			if len(roster) != 1 {
+				t.Fatalf("GetActivePlayers() returned %d players, want 1", len(roster))
+			}
+			if roster[0].IP != tc.want {
+				t.Errorf("roster ip = %q, want %q", roster[0].IP, tc.want)
+			}
+		})
+	}
+}
+
+// The login line is a join signal first and an address second, so an address
+// that will not parse costs the IP and nothing else.
+func TestStreamOutputRegistersJoinWhenLoginAddressIsUnreadable(t *testing.T) {
+	s, bus := newServerFixture()
+	joined := collect(bus, EventPlayerJoined)
+
+	s.streamOutput(strings.NewReader(
+		"[12:00:00 INFO]: Alex[/proxy.example.com:25565] logged in with entity id 261\n"))
+
+	waitForCount(t, joined, 1)
+	roster := s.GetActivePlayers()
+	if len(roster) != 1 {
+		t.Fatalf("GetActivePlayers() returned %d players, want 1", len(roster))
+	}
+	if roster[0].Name != "Alex" {
+		t.Errorf("roster name = %q, want Alex", roster[0].Name)
+	}
+	if roster[0].IP != "" {
+		t.Errorf("roster ip = %q, want empty for an address that does not parse", roster[0].IP)
+	}
+}

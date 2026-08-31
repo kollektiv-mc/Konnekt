@@ -8,6 +8,7 @@ import (
 	"io"
 	"log/slog"
 	"math"
+	"net"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -52,6 +53,31 @@ var ErrPowerActionInProgress = errors.New("another power action is in progress")
 // it (the backups tile's stop-and-back-up, beforeClose's benign race).
 var errServerNotRunning = errors.New("server not running")
 
+// rePlayerName is the name capture every player matcher shares, so the
+// reasoning below lives in one place instead of being re-derived at each
+// regex.
+//
+// \w is exactly the Java username charset ([0-9A-Za-z_]), which is why it was
+// enough on its own until Bedrock crossplay (#228): Floodgate prefixes a
+// Bedrock player's Java-side name, "." by default, and replaces spaces in the
+// gamertag with underscores, so "Steve" arrives as ".Steve" and matched
+// nothing.
+//
+// The dot is added and nothing else, deliberately. What keeps a chat message
+// from spoofing a server line is that the name sits directly against the
+// "]: " anchor, so every character this class gains is one some plugin's
+// broadcast format can exploit. Four in particular stay out: "<" and ">",
+// or "]: <Alex> Bob joined the game" registers Alex; "[" and "]", or a
+// "[Lobby] Bob joined" broadcast registers the rank tag. So does ":", which
+// is subtler — chat plugins that format messages as "Name: message" would
+// otherwise let a player type "joined the game" and register themselves.
+//
+// The cost is that a Floodgate prefix other than the default is still not
+// matched. The config takes any string and "*" and "~" do get used. That is a
+// deliberate limit, not an oversight: the anchor is worth more than the
+// coverage.
+const rePlayerName = `([\w.]+)`
+
 var (
 	// Player matchers. All anchored on "]: " followed directly by the name, so
 	// a chat message ("]: <Alex> Bob joined the game") cannot spoof one — the
@@ -67,11 +93,17 @@ var (
 	// they back the broadcasts up. Both paths are idempotent, and which one
 	// lands first is not fixed — vanilla logs the login line before the join
 	// broadcast, Paper logs it after.
-	rePlayerJoin  = regexp.MustCompile(`]: (\w+) joined the game`)
-	rePlayerLeave = regexp.MustCompile(`]: (\w+) left the game`)
-	rePlayerUUID  = regexp.MustCompile(`]: UUID of player (\w+) is ([0-9a-f-]{36})`)
-	rePlayerLogin = regexp.MustCompile(`]: (\w+)\[/(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}):\d+\] logged in`)
-	rePlayerLost  = regexp.MustCompile(`]: (\w+) lost connection:`)
+	rePlayerJoin  = regexp.MustCompile(`]: ` + rePlayerName + ` joined the game`)
+	rePlayerLeave = regexp.MustCompile(`]: ` + rePlayerName + ` left the game`)
+	rePlayerUUID  = regexp.MustCompile(`]: UUID of player ` + rePlayerName + ` is ([0-9a-f-]{36})`)
+	// The address is captured whole and parsed by parseLoginAddress rather
+	// than being spelled out here. A dotted quad used to be, which meant an
+	// IPv6 player matched nothing at all and so was not merely missing an IP
+	// but untracked on a server whose join broadcast a plugin had silenced
+	// (#229). The line's worth as a join signal must not hang on the address
+	// format.
+	rePlayerLogin = regexp.MustCompile(`]: ` + rePlayerName + `\[/(\S+)\] logged in`)
+	rePlayerLost  = regexp.MustCompile(`]: ` + rePlayerName + ` lost connection:`)
 	reTPSPaper    = regexp.MustCompile(`TPS from.*?:\s*[*‡]*\s*(\d+(?:\.\d+)?)`)
 	reTPSForge    = regexp.MustCompile(`(?i)Mean TPS:\s*(\d+(?:\.\d+)?)`)
 	reTickQuery   = regexp.MustCompile(`(\d+(?:\.\d+)?)\s*ms\s*per tick`)
@@ -457,9 +489,13 @@ func (s *ServerService) streamOutput(r io.Reader) {
 			s.recordPlayerField(m[1], func(sess *playerSession) { sess.uuid = m[2] })
 		} else if m := rePlayerLogin.FindStringSubmatch(line); m != nil {
 			// Carries the IP and, on a server whose join broadcast a plugin
-			// silenced, doubles as the join itself.
-			name, ip := m[1], m[2]
-			s.recordPlayerField(name, func(sess *playerSession) { sess.ip = ip })
+			// silenced, doubles as the join itself. An address that will not
+			// parse is left unset rather than dropping the line, so the join
+			// still lands.
+			name := m[1]
+			if ip := parseLoginAddress(m[2]); ip != "" {
+				s.recordPlayerField(name, func(sess *playerSession) { sess.ip = ip })
+			}
 			if sess, joined := s.promotePlayer(name); joined {
 				s.bus.Emit(EventPlayerJoined, map[string]string{"name": name, "ip": sess.ip})
 			}
@@ -1065,6 +1101,40 @@ func (s *ServerService) Uptime() string {
 		return fmt.Sprintf("%dm %ds", m, sec)
 	}
 	return fmt.Sprintf("%ds", sec)
+}
+
+// parseLoginAddress pulls the client IP out of the "host:port" payload of a
+// login line, normalised, or "" when it does not hold an address at all.
+//
+// The format is Java's InetSocketAddress.toString() and it comes in two
+// shapes, because JDK 14 changed it (JDK-8225499). Konnekt manages whatever
+// server directory it is pointed at, old versions on old JREs included, so
+// both are read:
+//
+//	127.0.0.1:54321              IPv4, either era
+//	[0:0:0:0:0:0:0:1]:54321      IPv6, JDK 14 and later
+//	0:0:0:0:0:0:0:1:54321        IPv6, before that (Minecraft's own MC-13120)
+//
+// The last of those has no separator left to distinguish address from port,
+// which is what MC-13120 is about. Splitting on the final colon settles it:
+// the port is always present, so the last colon is always the one in front of
+// it. net.ParseIP then decides whether what remains is really an address,
+// which is the check the old dotted-quad pattern was doing implicitly, and
+// IP.String turns 0:0:0:0:0:0:0:1 into ::1 for display.
+//
+// Returning "" rather than an error is the point: the caller still has a join
+// to record, and an address it cannot read must not cost it the player.
+func parseLoginAddress(addr string) string {
+	host := addr
+	if i := strings.LastIndex(addr, ":"); i >= 0 {
+		host = addr[:i]
+	}
+	host = strings.TrimSuffix(strings.TrimPrefix(host, "["), "]")
+	ip := net.ParseIP(host)
+	if ip == nil {
+		return ""
+	}
+	return ip.String()
 }
 
 // recordPlayerField applies one piece of a player's connection detail — the
