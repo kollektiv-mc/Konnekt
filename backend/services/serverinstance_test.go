@@ -39,8 +39,11 @@ func TestStoppedInstanceKeepsItsConsole(t *testing.T) {
 	if !hasLine(s.instanceFor(fixtureServerID).GetConsoleHistory(), "srv1 said something") {
 		t.Error("srv1's console was cleared by srv2's boot — the whole point of the split")
 	}
-	if hasLine(s.GetConsoleHistory(), "srv1 said something") {
-		t.Error("srv2's console carries srv1's output; the getter should answer for the current server only")
+	// And the getter now names its server, so srv2's console is srv2's alone.
+	// Before #239 this asked whichever instance was current and could not have
+	// told the two apart.
+	if hasLine(s.GetConsoleHistory("srv2"), "srv1 said something") {
+		t.Error("srv2's console carries srv1's output; the getter answers for the server it names")
 	}
 }
 
@@ -61,7 +64,7 @@ func TestRebootingTheSameServerClearsItsConsole(t *testing.T) {
 	}
 	t.Cleanup(func() { _ = s.StopRunning(0) }) //nolint:errcheck // teardown
 
-	if hasLine(s.GetConsoleHistory(), "first boot") {
+	if hasLine(s.GetConsoleHistory(fixtureServerID), "first boot") {
 		t.Error("re-booting a server kept its previous session's console; start() must still clear the ring")
 	}
 }
@@ -84,7 +87,7 @@ func TestReusedInstanceResetsExpectedStop(t *testing.T) {
 	release()
 	waitStopped(t, srv1)
 
-	if !s.GetLastStop().Expected {
+	if !s.GetLastStop(fixtureServerID).Expected {
 		t.Fatal("fixture did not record the deliberate stop")
 	}
 
@@ -96,7 +99,7 @@ func TestReusedInstanceResetsExpectedStop(t *testing.T) {
 	release2()
 	waitStopped(t, srv1)
 
-	if s.GetLastStop().Expected {
+	if s.GetLastStop(fixtureServerID).Expected {
 		t.Error("a crash on a reused instance reported as expected — stale expectedStop")
 	}
 }
@@ -131,7 +134,7 @@ func TestStartClearsExpectedStopOnAReusedInstance(t *testing.T) {
 // manager reproduces that by putting current back.
 func TestFailedStartLeavesTheReadableStateAlone(t *testing.T) {
 	s, _ := newServerFixture()
-	s.Narrate("something worth keeping")
+	s.Narrate(fixtureServerID, "something worth keeping")
 
 	s.launchCmd = func(string, string, []string) (*exec.Cmd, error) {
 		return nil, errors.New("no java here")
@@ -140,7 +143,7 @@ func TestFailedStartLeavesTheReadableStateAlone(t *testing.T) {
 	if err := s.Start("srv1", "", nil, t.TempDir()); err == nil {
 		t.Fatal("Start = nil error, want the launch failure")
 	}
-	if !hasLine(s.GetConsoleHistory(), "something worth keeping") {
+	if !hasLine(s.GetConsoleHistory(fixtureServerID), "something worth keeping") {
 		t.Error("a failed start moved the console off the instance the UI was reading")
 	}
 }

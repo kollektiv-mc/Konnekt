@@ -74,7 +74,7 @@ func (s *StatsService) tick() {
 		TPS:        st.TPS,
 		RAMUsedMB:  st.RAMUsed,
 		RAMTotalMB: st.RAMTotal,
-		CPUPercent: s.server.CPUPercent(),
+		CPUPercent: s.server.CPUPercent(id),
 		Players:    st.Players,
 	}
 

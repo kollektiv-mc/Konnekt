@@ -33,7 +33,7 @@ func recordKillTree(t *testing.T, s *ServerService, onKill ...func()) func() []i
 }
 
 func consoleLines(s *ServerService) []string {
-	history := s.GetConsoleHistory()
+	history := s.GetConsoleHistory(fixtureServerID)
 	lines := make([]string, len(history))
 	for i, l := range history {
 		lines[i] = l.Line
@@ -74,10 +74,10 @@ func TestStopEscalatesThroughBannersToKill(t *testing.T) {
 	if got := kills(); len(got) != 1 || got[0] != wantPid {
 		t.Errorf("killTree calls = %v, want exactly [%d]", got, wantPid)
 	}
-	if got := s.GetLastStop(); !got.Expected {
+	if got := s.GetLastStop(fixtureServerID); !got.Expected {
 		t.Errorf("GetLastStop() = %+v, want Expected:true", got)
 	}
-	if got := s.State(); got != "offline" {
+	if got := s.State(fixtureServerID); got != "offline" {
 		t.Errorf("State() = %q, want offline", got)
 	}
 }
@@ -108,7 +108,7 @@ func TestStopWithinGraceWritesNoBanners(t *testing.T) {
 		t.Fatal("Stop never returned")
 	}
 
-	for _, line := range s.GetConsoleHistory() {
+	for _, line := range s.GetConsoleHistory(fixtureServerID) {
 		if line.Source == sourceManager {
 			t.Errorf("banner on a stop that finished inside the grace: %q", line.Line)
 		}
@@ -157,7 +157,7 @@ func TestForceStopWhileGracefulStopWedged(t *testing.T) {
 	if seen["stopping"] != 1 || seen["offline"] != 1 {
 		t.Errorf("state events = %v, want stopping and offline exactly once each", seen)
 	}
-	if got := s.GetLastStop(); !got.Expected {
+	if got := s.GetLastStop(fixtureServerID); !got.Expected {
 		t.Errorf("GetLastStop() = %+v, want Expected:true — a force stop is deliberate", got)
 	}
 
@@ -219,7 +219,7 @@ func TestForceStopFromStartingPassesThroughStopping(t *testing.T) {
 	if got := kills(); len(got) != 1 {
 		t.Errorf("killTree calls = %v, want exactly one", got)
 	}
-	if got := s.GetLastStop(); !got.Expected {
+	if got := s.GetLastStop(fixtureServerID); !got.Expected {
 		t.Errorf("GetLastStop() = %+v, want Expected:true", got)
 	}
 }

@@ -33,10 +33,16 @@ func curInst(s *ServerService) *serverInstance { return s.cur() }
 
 // Use NewServerService, not a struct literal: streamOutput writes the player
 // maps, and a nil map write panics.
+//
+// The fixture claims fixtureServerID as current, so curInst(s) and the id-taking
+// manager methods address the same instance. Without that, a test that drives
+// the instance directly and asserts through the manager silently exercises two
+// different servers — which is exactly the confusion #239 exists to remove.
 func newServerFixture() (*ServerService, *EventBus) {
 	s := NewServerService()
 	bus := NewEventBus() // no ctx: Emit skips the Wails runtime and only fans out in-process
 	s.SetBus(bus)
+	s.setCurrent(s.instanceFor(fixtureServerID))
 	return s, bus
 }
 
@@ -80,7 +86,7 @@ func TestStreamOutputSurvivesOverlongLine(t *testing.T) {
 	giant := strings.Repeat("x", maxConsoleLine+1024)
 	curInst(s).streamOutput(strings.NewReader(giant + "\n[12:00:00] [Server thread/INFO]: Done (1.2s)!\n"))
 
-	history := s.GetConsoleHistory()
+	history := s.GetConsoleHistory(fixtureServerID)
 	if len(history) != 2 {
 		t.Fatalf("ring buffer holds %d lines, want 2", len(history))
 	}
@@ -117,7 +123,7 @@ func TestStreamOutputNormalizesCarriageReturns(t *testing.T) {
 		"Preparing spawn area: 20%",
 		"Preparing spawn area: 30%",
 	}
-	history := s.GetConsoleHistory()
+	history := s.GetConsoleHistory(fixtureServerID)
 	if len(history) != len(want) {
 		t.Fatalf("ring buffer holds %d lines %v, want %d", len(history), history, len(want))
 	}
@@ -224,10 +230,10 @@ func TestStreamOutputTracksPaperColouredSession(t *testing.T) {
 		t.Errorf("player:joined name = %q, want Snadrochka", m["name"])
 	}
 
-	if got := s.PlayerCount(); got != 1 {
+	if got := s.PlayerCount(fixtureServerID); got != 1 {
 		t.Errorf("PlayerCount() = %d, want 1 — this is the count the overview, performance and stats history all read", got)
 	}
-	roster := s.GetActivePlayers()
+	roster := s.GetActivePlayers(fixtureServerID)
 	if len(roster) != 1 {
 		t.Fatalf("GetActivePlayers() returned %d players, want 1", len(roster))
 	}
@@ -257,7 +263,7 @@ func TestStreamOutputTracksPaperColouredSession(t *testing.T) {
 	if len(events) != 1 {
 		t.Fatalf("player:left fired %d times for one disconnect, want 1", len(events))
 	}
-	if got := s.PlayerCount(); got != 0 {
+	if got := s.PlayerCount(fixtureServerID); got != 0 {
 		t.Errorf("PlayerCount() = %d after the disconnect, want 0", got)
 	}
 }
@@ -274,7 +280,7 @@ func TestStreamOutputMatchesColouredBroadcastWithoutLoginLine(t *testing.T) {
 		"[17:22:59 INFO]: \x1b[38;2;255;255;85mSnadrochka joined the game\x1b[0m\n"))
 
 	waitForCount(t, joined, 1)
-	if got := s.PlayerCount(); got != 1 {
+	if got := s.PlayerCount(fixtureServerID); got != 1 {
 		t.Fatalf("PlayerCount() = %d after a coloured join broadcast, want 1", got)
 	}
 
@@ -282,7 +288,7 @@ func TestStreamOutputMatchesColouredBroadcastWithoutLoginLine(t *testing.T) {
 		"[17:40:00 INFO]: \x1b[38;2;255;255;85mSnadrochka left the game\x1b[0m\n"))
 
 	waitForCount(t, left, 1)
-	if got := s.PlayerCount(); got != 0 {
+	if got := s.PlayerCount(fixtureServerID); got != 0 {
 		t.Errorf("PlayerCount() = %d after a coloured leave broadcast, want 0", got)
 	}
 }
@@ -340,7 +346,7 @@ func TestNarrateMarksManagerLines(t *testing.T) {
 	s, bus := newServerFixture()
 	lines := collect(bus, EventLogLine)
 
-	s.Narrate("something happened")
+	s.Narrate(fixtureServerID, "something happened")
 	curInst(s).emitConsoleLine("[12:00:00] [Server thread/INFO]: raw output")
 
 	events := waitForCount(t, lines, 2)
@@ -375,7 +381,7 @@ func TestNarrateMarksManagerLines(t *testing.T) {
 		t.Errorf("bus delivery incomplete: manager=%v server=%v", sawManager, sawServer)
 	}
 
-	history := s.GetConsoleHistory()
+	history := s.GetConsoleHistory(fixtureServerID)
 	if len(history) != 2 {
 		t.Fatalf("ring buffer holds %d lines, want 2", len(history))
 	}
@@ -398,12 +404,12 @@ func TestNarrateMarksManagerLines(t *testing.T) {
 func TestNarrateVerbsCarryTheirOutcome(t *testing.T) {
 	s, _ := newServerFixture()
 
-	s.Narrate("working")
-	s.NarrateDone("done")
-	s.NarrateFailed("broke")
+	s.Narrate(fixtureServerID, "working")
+	s.NarrateDone(fixtureServerID, "done")
+	s.NarrateFailed(fixtureServerID, "broke")
 
 	want := []string{outcomeProgress, outcomeOK, outcomeFailed}
-	history := s.GetConsoleHistory()
+	history := s.GetConsoleHistory(fixtureServerID)
 	if len(history) != len(want) {
 		t.Fatalf("ring buffer holds %d lines, want %d", len(history), len(want))
 	}
@@ -512,7 +518,7 @@ func TestWaitForExitReportsTheExitCodeOnUnexpectedStop(t *testing.T) {
 	startForExit(t, s, exitingCommand(t, 3), false)
 	curInst(s).waitForExit()
 
-	if got := s.GetLastStop(); got.Expected || got.ExitCode != 3 {
+	if got := s.GetLastStop(fixtureServerID); got.Expected || got.ExitCode != 3 {
 		t.Errorf("GetLastStop() = %+v, want {Expected:false ExitCode:3}", got)
 	}
 
@@ -529,7 +535,7 @@ func TestWaitForExitReportsTheExitCodeOnUnexpectedStop(t *testing.T) {
 		t.Errorf("payload = %+v, want {Expected:false ExitCode:3}", payload)
 	}
 
-	history := s.GetConsoleHistory()
+	history := s.GetConsoleHistory(fixtureServerID)
 	if len(history) == 0 || !strings.Contains(history[len(history)-1].Line, "exit code 3") {
 		t.Errorf("console history = %v, want a final banner naming exit code 3", history)
 	}
@@ -543,10 +549,10 @@ func TestWaitForExitNormalStopWritesNoBanner(t *testing.T) {
 	startForExit(t, s, exitingCommand(t, 0), true)
 	curInst(s).waitForExit()
 
-	if got := s.GetLastStop(); !got.Expected || got.ExitCode != 0 {
+	if got := s.GetLastStop(fixtureServerID); !got.Expected || got.ExitCode != 0 {
 		t.Errorf("GetLastStop() = %+v, want {Expected:true ExitCode:0}", got)
 	}
-	for _, line := range s.GetConsoleHistory() {
+	for _, line := range s.GetConsoleHistory(fixtureServerID) {
 		if line.Source == sourceManager {
 			t.Errorf("console history holds a banner on a deliberate stop: %q", line.Line)
 		}
@@ -754,7 +760,7 @@ func TestExitedObservesStoppedState(t *testing.T) {
 	if s.IsRunning(fixtureServerID) {
 		t.Error("IsRunning() = true after exited closed — the pre-#109 restart race")
 	}
-	if got := s.GetLastStop(); !got.Expected {
+	if got := s.GetLastStop(fixtureServerID); !got.Expected {
 		t.Errorf("GetLastStop() = %+v, want Expected:true", got)
 	}
 }
@@ -896,7 +902,7 @@ func TestStreamOutputTracksBedrockPlayer(t *testing.T) {
 	}, "\n")))
 
 	waitForCount(t, joined, 1)
-	roster := s.GetActivePlayers()
+	roster := s.GetActivePlayers(fixtureServerID)
 	if len(roster) != 1 {
 		t.Fatalf("GetActivePlayers() returned %d players, want 1", len(roster))
 	}
@@ -914,7 +920,7 @@ func TestStreamOutputTracksBedrockPlayer(t *testing.T) {
 		"[17:40:00 INFO]: \x1b[38;2;255;255;85m.Snadrochka left the game\x1b[0m\n"))
 
 	waitForCount(t, left, 1)
-	if got := s.PlayerCount(); got != 0 {
+	if got := s.PlayerCount(fixtureServerID); got != 0 {
 		t.Errorf("PlayerCount() = %d after the Bedrock player left, want 0", got)
 	}
 }
@@ -991,7 +997,7 @@ func TestStreamOutputReadsIPv6LoginAddress(t *testing.T) {
 			curInst(s).streamOutput(strings.NewReader(tc.line + "\n"))
 
 			waitForCount(t, joined, 1)
-			roster := s.GetActivePlayers()
+			roster := s.GetActivePlayers(fixtureServerID)
 			if len(roster) != 1 {
 				t.Fatalf("GetActivePlayers() returned %d players, want 1", len(roster))
 			}
@@ -1012,7 +1018,7 @@ func TestStreamOutputRegistersJoinWhenLoginAddressIsUnreadable(t *testing.T) {
 		"[12:00:00 INFO]: Alex[/proxy.example.com:25565] logged in with entity id 261\n"))
 
 	waitForCount(t, joined, 1)
-	roster := s.GetActivePlayers()
+	roster := s.GetActivePlayers(fixtureServerID)
 	if len(roster) != 1 {
 		t.Fatalf("GetActivePlayers() returned %d players, want 1", len(roster))
 	}

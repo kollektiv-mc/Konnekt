@@ -335,7 +335,7 @@ func execCommand(e *ExecContext) ExecResult {
 }
 
 func execRcon(e *ExecContext) ExecResult {
-	addr, pw, ok := e.Server().RconConfig()
+	addr, pw, ok := e.Server().RconConfig(e.ServerID)
 	if !ok {
 		return ExecResult{Port: "onFailed", Err: fmt.Errorf("RCON not enabled or not running")}
 	}

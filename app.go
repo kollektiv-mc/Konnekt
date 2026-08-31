@@ -371,8 +371,13 @@ func (a *App) ForceStopServer(serverID string) error {
 
 // GetLastStop reports the most recent stop's detail, the readable getter twin
 // of the server:stopped event payload. Zero value until a stop has happened.
+//
+// Bound without a serverID and with no frontend caller, so it answers for the
+// current server rather than growing a parameter nothing would pass. When #233
+// puts an id on server:stopped, this getter should take one too and the two stay
+// twins.
 func (a *App) GetLastStop() (models.ServerStopped, error) {
-	return a.serverService.GetLastStop(), nil
+	return a.serverService.GetLastStop(a.serverService.CurrentServerID()), nil
 }
 
 func (a *App) AcceptEula(serverID string) error {
@@ -384,7 +389,7 @@ func (a *App) AcceptEula(serverID string) error {
 	if err := os.WriteFile(filepath.Join(cfg.WorkingDir, "eula.txt"), []byte(content), 0644); err != nil {
 		return err
 	}
-	a.serverService.NarrateDone("EULA accepted, eula.txt written")
+	a.serverService.NarrateDone(serverID, "EULA accepted, eula.txt written")
 	return nil
 }
 
@@ -405,11 +410,13 @@ func (a *App) GetStatsHistory(serverID string) ([]models.StatsSnapshot, error) {
 	return a.statsService.GetStatsHistory(), nil
 }
 
-// GetConsoleHistory backfills the console for a client that connected mid-session
-// (remote-access seam). serverID is ignored — single active server, like
-// GetStatsHistory. No desktop caller yet; pair with useConsoleStore.loadHistory.
+// GetConsoleHistory backfills the console for a client that connected
+// mid-session (remote-access seam), and now returns the named server's ring
+// rather than whichever one was current (#239). Each server keeps its own since
+// #232, so this is what makes them reachable. No desktop caller yet; pair with
+// useConsoleStore.loadHistory.
 func (a *App) GetConsoleHistory(serverID string) ([]models.ConsoleLine, error) {
-	return a.serverService.GetConsoleHistory(), nil
+	return a.serverService.GetConsoleHistory(serverID), nil
 }
 
 func (a *App) GetPlayerRoster(serverID string) ([]models.Player, error) {

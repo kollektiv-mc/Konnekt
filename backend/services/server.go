@@ -1549,35 +1549,53 @@ func (s *ServerService) CurrentServerID() string {
 	return s.cur().id
 }
 
-func (s *ServerService) GetLastStop() models.ServerStopped { return s.cur().GetLastStop() }
+func (s *ServerService) GetLastStop(serverID string) models.ServerStopped {
+	return s.instanceFor(serverID).GetLastStop()
+}
 func (s *ServerService) SendCommand(serverID, command string) error {
 	return s.instanceFor(serverID).SendCommand(command)
 }
 func (s *ServerService) IsRunning(serverID string) bool {
 	return s.instanceFor(serverID).IsRunning()
 }
-func (s *ServerService) State() string          { return s.cur().State() }
-func (s *ServerService) ActiveServerID() string { return s.cur().ActiveServerID() }
+func (s *ServerService) State(serverID string) string { return s.instanceFor(serverID).State() }
+func (s *ServerService) ActiveServerID() string       { return s.cur().ActiveServerID() }
 func (s *ServerService) PrepareForBackup(serverID string) bool {
 	return s.instanceFor(serverID).PrepareForBackup()
 }
-func (s *ServerService) ResumeSaves(serverID string)       { s.instanceFor(serverID).ResumeSaves() }
-func (s *ServerService) Uptime() string                    { return s.cur().Uptime() }
-func (s *ServerService) GetActivePlayers() []models.Player { return s.cur().GetActivePlayers() }
-func (s *ServerService) PlayerCount() int                  { return s.cur().PlayerCount() }
-func (s *ServerService) MaxPlayers() int                   { return s.cur().MaxPlayers() }
-func (s *ServerService) CurrentTPS() float64               { return s.cur().CurrentTPS() }
-func (s *ServerService) RAMUsedMB() float64                { return s.cur().RAMUsedMB() }
-func (s *ServerService) RAMTotalMB() float64               { return s.cur().RAMTotalMB() }
-func (s *ServerService) CPUPercent() float64               { return s.cur().CPUPercent() }
-func (s *ServerService) Narrate(line string)               { s.cur().Narrate(line) }
-func (s *ServerService) NarrateDone(line string)           { s.cur().NarrateDone(line) }
-func (s *ServerService) NarrateFailed(line string)         { s.cur().NarrateFailed(line) }
-
-func (s *ServerService) RconConfig() (addr, password string, ok bool) {
-	return s.cur().RconConfig()
+func (s *ServerService) ResumeSaves(serverID string)   { s.instanceFor(serverID).ResumeSaves() }
+func (s *ServerService) Uptime(serverID string) string { return s.instanceFor(serverID).Uptime() }
+func (s *ServerService) GetActivePlayers(serverID string) []models.Player {
+	return s.instanceFor(serverID).GetActivePlayers()
+}
+func (s *ServerService) PlayerCount(serverID string) int {
+	return s.instanceFor(serverID).PlayerCount()
+}
+func (s *ServerService) MaxPlayers(serverID string) int { return s.instanceFor(serverID).MaxPlayers() }
+func (s *ServerService) CurrentTPS(serverID string) float64 {
+	return s.instanceFor(serverID).CurrentTPS()
+}
+func (s *ServerService) RAMUsedMB(serverID string) float64 {
+	return s.instanceFor(serverID).RAMUsedMB()
+}
+func (s *ServerService) RAMTotalMB(serverID string) float64 {
+	return s.instanceFor(serverID).RAMTotalMB()
+}
+func (s *ServerService) CPUPercent(serverID string) float64 {
+	return s.instanceFor(serverID).CPUPercent()
+}
+func (s *ServerService) Narrate(serverID, line string) { s.instanceFor(serverID).Narrate(line) }
+func (s *ServerService) NarrateDone(serverID, line string) {
+	s.instanceFor(serverID).NarrateDone(line)
+}
+func (s *ServerService) NarrateFailed(serverID, line string) {
+	s.instanceFor(serverID).NarrateFailed(line)
 }
 
-func (s *ServerService) GetConsoleHistory() []models.ConsoleLine {
-	return s.cur().GetConsoleHistory()
+func (s *ServerService) RconConfig(serverID string) (addr, password string, ok bool) {
+	return s.instanceFor(serverID).RconConfig()
+}
+
+func (s *ServerService) GetConsoleHistory(serverID string) []models.ConsoleLine {
+	return s.instanceFor(serverID).GetConsoleHistory()
 }
