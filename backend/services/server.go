@@ -243,7 +243,12 @@ func NewServerService() *ServerService {
 	// app.go's EULA write all narrate on paths reachable before a first boot),
 	// and an empty-id instance keeps that true without every accessor growing a
 	// nil check.
+	//
+	// Registered in the map, not just held as current, so instanceFor("") returns
+	// this instance rather than minting a second empty one. current is always an
+	// instance the map holds; a real server id is never "".
 	s.current = newServerInstance("", s.instanceDeps)
+	s.instances[""] = s.current
 	return s
 }
 
@@ -711,6 +716,35 @@ func (s *serverInstance) waitForExit() {
 	close(exited)
 }
 
+// status assembles the whole ServerStatus in one pass.
+//
+// One mu hold covers every scalar that lock guards, and it is released before
+// the gopsutil read and before the players and TPS locks — the ordering each
+// accessor here already follows on its own. Assembling it in one place rather
+// than calling eight accessors is what stops a payload mixing values from either
+// side of a stop, and it is why GetServerStatus and the stats tick can no longer
+// drift apart: they are the same read now, not two lists kept in step by hand.
+func (s *serverInstance) status() models.ServerStatus {
+	s.mu.Lock()
+	running, state, started := s.running, s.state, s.startTime
+	maxPlayers, maxRAM, proc := s.maxPlayers, s.maxRAMMB, s.cachedProc
+	s.mu.Unlock()
+
+	if maxPlayers == 0 {
+		maxPlayers = 20
+	}
+	return models.ServerStatus{
+		Running:    running,
+		State:      state.String(),
+		Uptime:     uptimeSince(running, started),
+		Players:    s.PlayerCount(),
+		MaxPlayers: maxPlayers,
+		TPS:        s.CurrentTPS(),
+		RAMUsed:    ramUsedMB(proc),
+		RAMTotal:   float64(maxRAM),
+	}
+}
+
 // GetLastStop reports the most recent stop's detail, the readable getter twin
 // of the server:stopped event payload. Zero value until a stop has happened.
 func (s *serverInstance) GetLastStop() models.ServerStopped {
@@ -1158,6 +1192,13 @@ func (s *serverInstance) Uptime() string {
 	s.mu.Lock()
 	running, started := s.running, s.startTime
 	s.mu.Unlock()
+	return uptimeSince(running, started)
+}
+
+// uptimeSince renders a boot's age, or "0s" when nothing is running. Split out
+// so Uptime and status() cannot drift; callers snapshot the two fields under mu
+// and format outside it.
+func uptimeSince(running bool, started time.Time) string {
 	if !running {
 		return "0s"
 	}
@@ -1333,7 +1374,13 @@ func (s *serverInstance) RAMUsedMB() float64 {
 	s.mu.Lock()
 	proc := s.cachedProc
 	s.mu.Unlock()
+	return ramUsedMB(proc)
+}
 
+// ramUsedMB reads resident memory off a gopsutil handle. Split out for the same
+// reason as uptimeSince, and it takes the handle rather than the instance so the
+// syscall provably happens with no lock held.
+func ramUsedMB(proc *process.Process) float64 {
 	if proc == nil {
 		return 0
 	}
@@ -1443,6 +1490,27 @@ func propInt(props map[string]string, key string, def int) int {
 // They all answer from cur(). See the comment on ServerService.current for why
 // that is the last-started instance rather than the running one, and why it is
 // never nil.
+
+// Status reports on the server it names, running or not. An id with no instance
+// yet gets an inert one, so an unknown server and a configured-but-never-started
+// one answer identically and there is no second definition of "offline" to drift.
+//
+// Never an error: the frontend's useServerStatusSync reads a rejection as
+// "the backend did not answer" and paints the tile unreachable, which is exactly
+// the distinction useServerStore's doc comment exists to keep apart from "the
+// server answered and is stopped".
+func (s *ServerService) Status(serverID string) models.ServerStatus {
+	return s.instanceFor(serverID).status()
+}
+
+// CurrentServerID is the id the serverID-less callers answer for: the last
+// server started, or "" before the first start. The one ambient primitive, named
+// so a caller cannot reach for it by accident — StatsService needs it because a
+// 10s ticker carries no id, and App.GetLastStop needs it because it is bound
+// without a parameter.
+func (s *ServerService) CurrentServerID() string {
+	return s.cur().id
+}
 
 func (s *ServerService) GetLastStop() models.ServerStopped { return s.cur().GetLastStop() }
 func (s *ServerService) SendCommand(command string) error  { return s.cur().SendCommand(command) }

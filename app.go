@@ -395,17 +395,11 @@ func (a *App) SendCommand(serverID string, command string) error {
 
 // --- Status and players ---
 
+// GetServerStatus reports on the server it names, not on whichever one happens
+// to be running (#239). A stopped or unknown server answers offline rather than
+// failing: the frontend treats a rejection as an unreachable backend.
 func (a *App) GetServerStatus(serverID string) (models.ServerStatus, error) {
-	return models.ServerStatus{
-		Running:    a.serverService.IsRunning(),
-		State:      a.serverService.State(),
-		Uptime:     a.serverService.Uptime(),
-		Players:    a.serverService.PlayerCount(),
-		MaxPlayers: a.serverService.MaxPlayers(),
-		TPS:        a.serverService.CurrentTPS(),
-		RAMUsed:    a.serverService.RAMUsedMB(),
-		RAMTotal:   a.serverService.RAMTotalMB(),
-	}, nil
+	return a.serverService.Status(serverID), nil
 }
 
 func (a *App) GetStatsHistory(serverID string) ([]models.StatsSnapshot, error) {

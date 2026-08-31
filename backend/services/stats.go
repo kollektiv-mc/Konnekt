@@ -47,34 +47,35 @@ func (s *StatsService) run() {
 // tick is one pass of the stats loop, split out from run() so the ticker
 // interval isn't in the way of testing it.
 func (s *StatsService) tick() {
+	// A 10s ticker carries no server id, so this reports on the current server —
+	// the one a successful start last claimed. Deliberately not the sidebar
+	// selection: useServerConfigStore falls back to configs[0].id without
+	// persisting it, so active_server.json is empty for a user who never opens
+	// the selector, and the push would describe "" forever.
+	id := s.server.CurrentServerID()
+
 	// Status goes out every tick whether the server is up or not: this is what
 	// replaces the stats tile's frontend poll, and a stop has to reach the UI
-	// too. Same eight accessors GetServerStatus() reads, so the pushed payload
-	// and the fetched one cannot drift apart.
-	s.bus.Emit(EventServerStatus, models.ServerStatus{
-		Running:    s.server.IsRunning(),
-		State:      s.server.State(),
-		Uptime:     s.server.Uptime(),
-		Players:    s.server.PlayerCount(),
-		MaxPlayers: s.server.MaxPlayers(),
-		TPS:        s.server.CurrentTPS(),
-		RAMUsed:    s.server.RAMUsedMB(),
-		RAMTotal:   s.server.RAMTotalMB(),
-	})
+	// too. One read shared with GetServerStatus, so the pushed payload and the
+	// fetched one cannot drift apart — which this comment used to assert by hand.
+	st := s.server.Status(id)
+	s.bus.Emit(EventServerStatus, st)
 
 	// History recording stays gated — an idle server has no meaningful TPS or
 	// RAM to chart, and stats:snapshot has in-process subscribers
 	// (scheduler_triggers.go) that should not fire against a stopped server.
-	if !s.server.IsRunning() {
+	if !st.Running {
 		return
 	}
+	// Derived from the same status read, so the two events cannot disagree about
+	// TPS or RAM within one tick.
 	snap := models.StatsSnapshot{
 		Timestamp:  time.Now().UnixMilli(),
-		TPS:        s.server.CurrentTPS(),
-		RAMUsedMB:  s.server.RAMUsedMB(),
-		RAMTotalMB: s.server.RAMTotalMB(),
+		TPS:        st.TPS,
+		RAMUsedMB:  st.RAMUsed,
+		RAMTotalMB: st.RAMTotal,
 		CPUPercent: s.server.CPUPercent(),
-		Players:    s.server.PlayerCount(),
+		Players:    st.Players,
 	}
 
 	s.mu.Lock()
