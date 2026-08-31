@@ -53,10 +53,25 @@ var ErrPowerActionInProgress = errors.New("another power action is in progress")
 var errServerNotRunning = errors.New("server not running")
 
 var (
+	// Player matchers. All anchored on "]: " followed directly by the name, so
+	// a chat message ("]: <Alex> Bob joined the game") cannot spoof one — the
+	// same guard reServerReady documents below. Lines reach these already run
+	// through stripANSI, without which a chat plugin's colour sequence sits in
+	// that gap and none of them match at all.
+	//
+	// Joins and leaves are each matched on two lines rather than one. The
+	// broadcasts ("joined the game", "left the game") are the obvious signal
+	// but they belong to a plugin as much as to the server: Essentials can
+	// reword or silence either. The server core's own connection lines
+	// ("logged in with entity id", "lost connection:") cannot be reworded, so
+	// they back the broadcasts up. Both paths are idempotent, and which one
+	// lands first is not fixed — vanilla logs the login line before the join
+	// broadcast, Paper logs it after.
 	rePlayerJoin  = regexp.MustCompile(`]: (\w+) joined the game`)
 	rePlayerLeave = regexp.MustCompile(`]: (\w+) left the game`)
 	rePlayerUUID  = regexp.MustCompile(`]: UUID of player (\w+) is ([0-9a-f-]{36})`)
 	rePlayerLogin = regexp.MustCompile(`]: (\w+)\[/(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}):\d+\] logged in`)
+	rePlayerLost  = regexp.MustCompile(`]: (\w+) lost connection:`)
 	reTPSPaper    = regexp.MustCompile(`TPS from.*?:\s*[*‡]*\s*(\d+(?:\.\d+)?)`)
 	reTPSForge    = regexp.MustCompile(`(?i)Mean TPS:\s*(\d+(?:\.\d+)?)`)
 	reTickQuery   = regexp.MustCompile(`(\d+(?:\.\d+)?)\s*ms\s*per tick`)
@@ -402,7 +417,11 @@ func (s *ServerService) streamOutput(r io.Reader) {
 	scanner.Buffer(make([]byte, maxConsoleLine), maxConsoleLine)
 	scanner.Split(newConsoleSplitFunc(maxConsoleLine))
 	for scanner.Scan() {
-		line := scanner.Text()
+		// Stripped once, here, before anything reads the line: the matchers
+		// below all need it, and so does the console tile, which rendered the
+		// escape bytes as literal text. See stripANSI for why a piped stdout
+		// carries ANSI at all.
+		line := stripANSI(scanner.Text())
 
 		s.emitConsoleLine(line)
 
@@ -435,34 +454,37 @@ func (s *ServerService) streamOutput(r io.Reader) {
 		}
 
 		if m := rePlayerUUID.FindStringSubmatch(line); m != nil {
-			name, uuid := m[1], m[2]
-			s.playersMu.Lock()
-			sess := s.presession[name]
-			sess.uuid = uuid
-			s.presession[name] = sess
-			s.playersMu.Unlock()
+			s.recordPlayerField(m[1], func(sess *playerSession) { sess.uuid = m[2] })
 		} else if m := rePlayerLogin.FindStringSubmatch(line); m != nil {
+			// Carries the IP and, on a server whose join broadcast a plugin
+			// silenced, doubles as the join itself.
 			name, ip := m[1], m[2]
-			s.playersMu.Lock()
-			sess := s.presession[name]
-			sess.ip = ip
-			s.presession[name] = sess
-			s.playersMu.Unlock()
+			s.recordPlayerField(name, func(sess *playerSession) { sess.ip = ip })
+			if sess, joined := s.promotePlayer(name); joined {
+				s.bus.Emit(EventPlayerJoined, map[string]string{"name": name, "ip": sess.ip})
+			}
 		} else if m := rePlayerJoin.FindStringSubmatch(line); m != nil {
+			// On Paper this broadcast precedes the login line, so the IP is
+			// genuinely not known yet and rides out empty — the same
+			// best-effort the player:left payload has always had. The roster
+			// gets it a line later, so anything that needs the IP reliably
+			// should read GetActivePlayers rather than this payload.
 			name := m[1]
-			s.playersMu.Lock()
-			s.players[name] = s.presession[name]
-			ip := s.presession[name].ip
-			delete(s.presession, name)
-			s.playersMu.Unlock()
-			s.bus.Emit(EventPlayerJoined, map[string]string{"name": name, "ip": ip})
+			if sess, joined := s.promotePlayer(name); joined {
+				s.bus.Emit(EventPlayerJoined, map[string]string{"name": name, "ip": sess.ip})
+			}
 		} else if m := rePlayerLeave.FindStringSubmatch(line); m != nil {
-			name := m[1]
-			s.playersMu.Lock()
-			delete(s.players, name)
-			delete(s.presession, name)
-			s.playersMu.Unlock()
-			s.bus.Emit(EventPlayerLeft, map[string]string{"name": name})
+			if name := m[1]; s.removePlayer(name) {
+				s.bus.Emit(EventPlayerLeft, map[string]string{"name": name})
+			}
+		} else if m := rePlayerLost.FindStringSubmatch(line); m != nil {
+			// The core's own disconnect line. Also printed for a connection
+			// that failed before joining, which removePlayer reports as the
+			// no-op it is, so no player:left goes out for a player who was
+			// never online.
+			if name := m[1]; s.removePlayer(name) {
+				s.bus.Emit(EventPlayerLeft, map[string]string{"name": name})
+			}
 		}
 		if strings.Contains(line, "Can't keep up") {
 			s.logTPSMu.Lock()
@@ -1043,6 +1065,66 @@ func (s *ServerService) Uptime() string {
 		return fmt.Sprintf("%dm %ds", m, sec)
 	}
 	return fmt.Sprintf("%ds", sec)
+}
+
+// recordPlayerField applies one piece of a player's connection detail — the
+// UUID line, the IP off the login line — to the live session if the player is
+// already online, and to the pre-join accumulator otherwise.
+//
+// Which map holds them is genuinely not knowable from the line: vanilla logs
+// "logged in with entity id" before the join broadcast, Paper logs it after.
+// Writing unconditionally to presession, as this used to, meant Paper's IP
+// landed in an entry the join had already consumed and deleted, so the roster
+// showed every player with a blank IP and a stale presession entry leaked
+// until they disconnected.
+func (s *ServerService) recordPlayerField(name string, set func(*playerSession)) {
+	s.playersMu.Lock()
+	defer s.playersMu.Unlock()
+	if sess, online := s.players[name]; online {
+		set(&sess)
+		s.players[name] = sess
+		return
+	}
+	sess := s.presession[name]
+	set(&sess)
+	s.presession[name] = sess
+}
+
+// promotePlayer marks name online, folding in whatever the pre-join lines
+// accumulated, and reports whether this call was the transition. Two lines can
+// each signal a join, so the bool is what keeps player:joined to one emit per
+// connection.
+//
+// Fields already on the live session win: on a second promotion the pre-join
+// entry is stale by definition.
+func (s *ServerService) promotePlayer(name string) (playerSession, bool) {
+	s.playersMu.Lock()
+	defer s.playersMu.Unlock()
+	sess, already := s.players[name]
+	pre := s.presession[name]
+	if sess.uuid == "" {
+		sess.uuid = pre.uuid
+	}
+	if sess.ip == "" {
+		sess.ip = pre.ip
+	}
+	s.players[name] = sess
+	delete(s.presession, name)
+	return sess, !already
+}
+
+// removePlayer takes name offline and reports whether they were online to
+// begin with, so the second of the two disconnect lines emits nothing and a
+// connection that failed before joining emits nothing at all. The pre-join
+// entry goes either way: a half-finished login that never completes must not
+// outlive the attempt.
+func (s *ServerService) removePlayer(name string) bool {
+	s.playersMu.Lock()
+	defer s.playersMu.Unlock()
+	_, online := s.players[name]
+	delete(s.players, name)
+	delete(s.presession, name)
+	return online
 }
 
 func (s *ServerService) GetActivePlayers() []models.Player {
