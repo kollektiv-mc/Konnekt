@@ -639,6 +639,10 @@ func TestModrinthResolveDependenciesFailsWhenNoVersionExists(t *testing.T) {
 	ts := mrAPI(t, map[string]string{
 		"/version/root":      `{"id":"root","dependencies":[{"project_id":"A","dependency_type":"required"}]}`,
 		"/project/A/version": `[]`,
+		// Looked up only because the resolution failed: the error a user reads
+		// has to name the mod they need to go and fetch.
+		"/project/A":         `{"id":"A","title":"Alpha"}`,
+		"/project/A/members": `[]`,
 	})
 	defer ts.Close()
 
@@ -649,7 +653,60 @@ func TestModrinthResolveDependenciesFailsWhenNoVersionExists(t *testing.T) {
 		t.Fatal("ResolveDependencies = nil error, want a failure when a required dep has no version at all")
 	}
 	if !strings.Contains(err.Error(), "no version found") {
-		t.Errorf("error = %v, want it to name the unresolvable dependency", err)
+		t.Errorf("error = %v, want it to say what went wrong", err)
+	}
+	if !strings.Contains(err.Error(), "Alpha") {
+		t.Errorf("error = %v, want it to name the mod rather than only its project id", err)
+	}
+}
+
+// One entry in somebody else's dependency graph that cannot be resolved used to
+// end the whole resolution, and the switch with it. It is only fatal for a
+// dependency that is required and missing: an optional one that cannot be
+// resolved is not something to install, and not a reason to refuse.
+func TestModrinthResolveDependenciesSurvivesAnUnresolvableOptionalDep(t *testing.T) {
+	ts := mrAPI(t, map[string]string{
+		"/version/root": `{"id":"root","dependencies":[
+			{"project_id":"REQ","version_id":"reqv","dependency_type":"required"},
+			{"project_id":"OPT","dependency_type":"optional"}
+		]}`,
+		"/version/reqv":        `{"id":"reqv","project_id":"REQ"}`,
+		"/project/REQ":         `{"id":"REQ","title":"Required Mod"}`,
+		"/project/REQ/members": `[]`,
+		"/project/OPT/version": `[]`,
+	})
+	defer ts.Close()
+
+	got, err := newTestClient(ts).ResolveDependencies(
+		context.Background(), "root", "1.20.1", "fabric", nil,
+	)
+	if err != nil {
+		t.Fatalf("ResolveDependencies error: %v, want the unresolvable optional dep skipped", err)
+	}
+	if len(got) != 1 || got[0].ProjectID != "REQ" {
+		t.Fatalf("resolved = %+v, want only the required dependency", got)
+	}
+}
+
+// The same, for a dependency the server already has. Resolving it is how the
+// dialog labels the row and how its own dependencies get walked, but the answer
+// changes nothing about what has to be installed — so a project that has since
+// been emptied on Modrinth must not block a mod that is already working.
+func TestModrinthResolveDependenciesSurvivesAnUnresolvableInstalledDep(t *testing.T) {
+	ts := mrAPI(t, map[string]string{
+		"/version/root":      `{"id":"root","dependencies":[{"project_id":"A","dependency_type":"required"}]}`,
+		"/project/A/version": `[]`,
+	})
+	defer ts.Close()
+
+	got, err := newTestClient(ts).ResolveDependencies(
+		context.Background(), "root", "1.20.1", "fabric", map[string]bool{"A": true},
+	)
+	if err != nil {
+		t.Fatalf("ResolveDependencies error: %v, want a dep the server already has to be skipped", err)
+	}
+	if len(got) != 0 {
+		t.Errorf("resolved = %+v, want nothing to install", got)
 	}
 }
 

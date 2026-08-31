@@ -516,6 +516,43 @@ subtrees side by side. The item stays open — a tile on the canvas is still
 unwrapped, and it is `TileWrapper`'s content slot that would fix that for every
 tile at once. What is left is the design question, not the plumbing.
 
+**P2 — Modal stacking is nine files' worth of literal z-index** (filed 2026-08-31)
+
+Every overlay picks its own number — 50, 60, 70, 150, 200, 300, 400, 1000, 9999
+— and the only record of which has to beat which is a comment on the loser after
+it lost. `DisconnectConfirm.tsx` and the scheduler's `CloseConfirmDialog.tsx`
+both carry one. The mods tile then shipped a pair that disagreed with no comment
+at all: `ModPreviewDialog` at 400/401 opening a `DependencyDialog` at 50, so
+switching the version of a mod with a missing dependency mounted the confirm
+dialog *under* the backdrop and read, exactly, as nothing happening. Raising the
+dialog to `z-[500]` closes that instance, and `ModPreviewDialog.test.tsx` pins
+the ordering, but only for that pair.
+
+What is missing is a small named scale that every overlay reads from, so "above
+the thing that opened me" is expressible rather than guessed. It does not belong
+in `tokens.source.json`: that file is vendored from kollektiv and a
+Konnekt-only value there is reverted on the next sync. A Konnekt-owned module
+next to `lib/gridSizing.ts` is the right shape — the tile grid already solved
+the same problem by naming its constants in one place.
+
+**P3 — Dependency resolution is serial, unbounded in time, and silent while it
+runs** (filed 2026-08-31)
+
+`ResolveDependencies` walks the graph one project at a time, two or three HTTP
+round trips each, and the dialog it feeds shows nothing until the whole walk is
+done. A standalone mod costs a handful of requests; an addon with a deep
+required tree (a Create addon walks all of Create's) costs tens, and Modrinth
+rate-limits at 300/min with a back-off on top. Nothing is wrong with the result
+— `seen[projectID]` bounds the walk to one visit per project, so it terminates —
+but pressing Switch on such a mod is several seconds of a button that looks
+idle.
+
+Deliberately *not* fixed by capping the walk's depth, which was the first idea
+and is a bad one: the cap has nothing to terminate (the visit-once rule already
+does that) and would silently drop required dependencies past it, which is worse
+than being slow. The levers are resolving siblings concurrently, and giving the
+dialog something to show while it waits.
+
 **P3 — A maximized Overview holds a second copy of its sections' data**
 (filed 2026-08-30)
 

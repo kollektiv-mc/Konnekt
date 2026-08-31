@@ -136,12 +136,28 @@ func (s *ModService) identifyUnknownLocked(serverID string) (bool, error) {
 
 	manifest, err := s.loadManifest(serverID)
 	if err != nil || manifest == nil {
-		manifest = &modManifest{Version: 1}
+		manifest = &modManifest{Version: modManifestVersion}
 	}
 	index := make(map[string]*modManifestItem, len(manifest.Items))
 	for i := range manifest.Items {
 		it := &manifest.Items[i]
 		index[it.FileName] = it
+	}
+
+	// One-time re-identification of rows written by the version that decided
+	// primary-ness by file name (see isPrimary below). Those rows are already
+	// marked modrinth, which is exactly what the skip below looks for, so
+	// nothing would ever look at them again — and the mods that lost their
+	// version id are the ones a modpack renamed, which is most of a pack.
+	recheck := make(map[string]bool)
+	migrating := manifest.Version < modManifestVersion
+	if migrating {
+		for i := range manifest.Items {
+			if it := &manifest.Items[i]; it.Source == "modrinth" && it.VersionID == "" {
+				recheck[it.FileName] = true
+			}
+		}
+		manifest.Version = modManifestVersion
 	}
 
 	type candidate struct {
@@ -152,7 +168,7 @@ func (s *ModService) identifyUnknownLocked(serverID string) (bool, error) {
 	byHash := make(map[string][]int) // hash → indexes into candidates
 
 	for _, jar := range scanJarFiles(workDir) {
-		if item, ok := index[jar.name]; ok && (item.Source == "modrinth" || item.HashChecked) {
+		if item, ok := index[jar.name]; ok && !recheck[jar.name] && (item.Source == "modrinth" || item.HashChecked) {
 			continue
 		}
 		hash, herr := fileSHA512Cached(jar.path)
@@ -167,6 +183,11 @@ func (s *ModService) identifyUnknownLocked(serverID string) (bool, error) {
 	}
 
 	if len(candidates) == 0 {
+		if migrating {
+			// Nothing to look up, but the manifest still has to record that the
+			// migration ran or every scan from here on repeats this pass.
+			return false, s.saveManifest(serverID, manifest)
+		}
 		return false, nil
 	}
 
@@ -225,7 +246,20 @@ func (s *ModService) identifyUnknownLocked(serverID string) (bool, error) {
 			// CheckUpdates already requires a VersionID, so leaving it empty is
 			// what keeps that offer off the table. The project link, icon and
 			// version number are all still true and all still shown.
+			//
+			// The question is asked of the *bytes*, not the file name.
+			// mrVersionToModel carries the primary file's own hash, and this jar
+			// was found by hashing it, so the two matching is what "this file is
+			// that file" means. Comparing names instead is what shipped first,
+			// and it answered "secondary" for every jar a launcher or modpack
+			// had renamed on the way in: the row kept its project and its icon,
+			// lost its version id, and with it the Switch button in the preview
+			// dialog and every update check. The name comparison stays as the
+			// fallback for a provider that reports no hash.
 			isPrimary := strings.EqualFold(version.FileName, c.jar.bareName)
+			if version.SHA512 != "" {
+				isPrimary = strings.EqualFold(version.SHA512, c.hash)
+			}
 			if isPrimary {
 				item.VersionID = version.ID
 			}

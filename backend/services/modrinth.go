@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -249,25 +250,31 @@ func (c *ModrinthClient) ResolveDependencies(
 			seen[dep.ProjectID] = true
 
 			required := dep.DependencyType == "required"
+			alreadyInstalled := installed[dep.ProjectID]
 
-			// Resolve to a concrete version
-			var depVersion models.ModVersion
-			if dep.VersionID != "" {
-				depVersion, err = c.GetVersion(ctx, dep.VersionID)
-				if err != nil {
-					return nil, fmt.Errorf("fetching dep version %s: %w", dep.VersionID, err)
+			depVersion, derr := c.dependencyVersion(ctx, dep, mcVersion, loader)
+			if derr != nil {
+				// Fatal only for a dependency that is required *and* not
+				// already on the server: that is the one nobody can proceed
+				// without being told about. Any failure used to end the whole
+				// resolution, so a single rotted entry in somebody else's
+				// dependency graph — a pinned version that has since been
+				// deleted, a project with no published build — made a mod
+				// unswitchable, even when the entry was optional or named
+				// something the server already had. A mod with a deep required
+				// tree walks enough graphs for that to be a matter of time.
+				if required && !alreadyInstalled {
+					return nil, c.describeDependency(ctx, dep.ProjectID, derr)
 				}
-			} else {
-				// Pick the latest compatible version for this project
-				versions, err := c.GetVersions(ctx, dep.ProjectID, mcVersion, loader)
-				if err != nil || len(versions) == 0 {
-					// Fall back to any version if no compatible one found
-					versions, err = c.GetAllVersions(ctx, dep.ProjectID)
-					if err != nil || len(versions) == 0 {
-						return nil, fmt.Errorf("no version found for dependency %s", dep.ProjectID)
-					}
-				}
-				depVersion = versions[0]
+				slog.Warn("modrinth: leaving a dependency unresolved",
+					"project", dep.ProjectID, "required", required,
+					"installed", alreadyInstalled, "error", derr)
+				// Dropped rather than carried as a row with no version. The
+				// confirm dialog's only two statements about a dependency are
+				// "install this one" and "already there", and neither is true
+				// of a version nobody can name — offered as a checkbox, it
+				// would put an empty version id into the install list.
+				continue
 			}
 
 			// Fetch project title
@@ -282,7 +289,7 @@ func (c *ModrinthClient) ResolveDependencies(
 				ProjectTitle:     title,
 				Version:          depVersion,
 				Required:         required,
-				AlreadyInstalled: installed[dep.ProjectID],
+				AlreadyInstalled: alreadyInstalled,
 			})
 
 			// Queue required deps' transitive deps
@@ -293,6 +300,42 @@ func (c *ModrinthClient) ResolveDependencies(
 	}
 
 	return result, nil
+}
+
+// dependencyVersion is the version a dependency resolves to: the one the graph
+// pins, else the newest build matching this server, else the newest build there
+// is. The unfiltered fallback is what covers a dependency published under a
+// loader or Minecraft version the server is not described with.
+func (c *ModrinthClient) dependencyVersion(ctx context.Context, dep models.ModDependency, mcVersion, loader string) (models.ModVersion, error) {
+	if dep.VersionID != "" {
+		v, err := c.GetVersion(ctx, dep.VersionID)
+		if err != nil {
+			return models.ModVersion{}, fmt.Errorf("fetching dep version %s: %w", dep.VersionID, err)
+		}
+		return v, nil
+	}
+
+	versions, err := c.GetVersions(ctx, dep.ProjectID, mcVersion, loader)
+	if err != nil || len(versions) == 0 {
+		versions, err = c.GetAllVersions(ctx, dep.ProjectID)
+		if err != nil || len(versions) == 0 {
+			return models.ModVersion{}, fmt.Errorf("no version found for dependency %s", dep.ProjectID)
+		}
+	}
+	return versions[0], nil
+}
+
+// describeDependency puts the mod's name in front of a resolution failure. The
+// lookup happens here rather than up front so the two requests it costs are
+// only spent on a path that has already failed — and this error is the one the
+// user reads, where "no version found for dependency AABBCCDD" tells them
+// nothing about which mod to go and fetch.
+func (c *ModrinthClient) describeDependency(ctx context.Context, projectID string, cause error) error {
+	proj, err := c.GetProject(ctx, projectID)
+	if err != nil || proj.Title == "" {
+		return cause
+	}
+	return fmt.Errorf("%s: %w", proj.Title, cause)
 }
 
 // --- HTTP helper ---
