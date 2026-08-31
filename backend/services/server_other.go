@@ -4,8 +4,8 @@ package services
 
 import "syscall"
 
-func (s *ServerService) createJob() {}
-func (s *ServerService) closeJob()  {}
+func (s *serverInstance) createJob() {}
+func (s *serverInstance) closeJob()  {}
 
 // killTree signals the whole process group rooted at pid (see server_linux.go /
 // server_unix.go, which put the Java process in its own group via Setpgid before

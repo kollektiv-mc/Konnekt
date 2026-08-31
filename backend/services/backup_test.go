@@ -137,7 +137,7 @@ func newBackupFixture(t *testing.T) (*BackupService, string) {
 
 	return &BackupService{
 		config:  cfgSvc,
-		server:  &ServerService{},
+		server:  NewServerService(),
 		dataDir: dataDir,
 	}, workDir
 }
@@ -303,9 +303,10 @@ func TestRestoreBackupRefusesWhileServerRunning(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	svc.server.mu.Lock()
-	svc.server.running = true
-	svc.server.mu.Unlock()
+	in := curInst(svc.server)
+	in.mu.Lock()
+	in.running = true
+	in.mu.Unlock()
 
 	err = svc.RestoreBackup(testServerID, b.Filename)
 	if err == nil {

@@ -81,7 +81,7 @@ func TestStoppingLineEntersStopping(t *testing.T) {
 	states := collect(bus, EventServerState)
 	release, _ := fakeRunningServer(t, s)
 
-	s.streamOutput(strings.NewReader("[12:00:00] [Server thread/INFO]: Stopping the server\n"))
+	curInst(s).streamOutput(strings.NewReader("[12:00:00] [Server thread/INFO]: Stopping the server\n"))
 
 	events := waitForCount(t, states, 1)
 	if p := statePayload(t, events[0]); p.State != "stopping" || p.TimedOut {
@@ -93,9 +93,9 @@ func TestStoppingLineEntersStopping(t *testing.T) {
 
 	// Tear the fixture's child down and wait for its exit so the goroutines
 	// finish inside the test.
-	s.mu.Lock()
-	exited := s.exited
-	s.mu.Unlock()
+	curInst(s).mu.Lock()
+	exited := curInst(s).exited
+	curInst(s).mu.Unlock()
 	release()
 	select {
 	case <-exited:
@@ -115,7 +115,7 @@ func TestBootReachesRunningOnDoneLine(t *testing.T) {
 	if err := s.Start("srv1", "", nil, t.TempDir()); err != nil {
 		t.Fatalf("Start = %v, want nil", err)
 	}
-	s.streamOutput(strings.NewReader("[12:00:00] [Server thread/INFO]: Done (3.541s)! For help, type \"help\"\n"))
+	curInst(s).streamOutput(strings.NewReader("[12:00:00] [Server thread/INFO]: Done (3.541s)! For help, type \"help\"\n"))
 	if got := s.State(); got != "running" {
 		t.Fatalf("State() after the Done line = %q, want running", got)
 	}
@@ -144,7 +144,7 @@ func TestReadyLineIgnoredOutsideStarting(t *testing.T) {
 	s, bus := newServerFixture()
 	states := collect(bus, EventServerState)
 
-	s.streamOutput(strings.NewReader("[12:00:00] [Server thread/INFO]: Done (1.2s)!\n"))
+	curInst(s).streamOutput(strings.NewReader("[12:00:00] [Server thread/INFO]: Done (1.2s)!\n"))
 
 	if got := s.State(); got != "offline" {
 		t.Fatalf("State() = %q after a Done line on a never-started fixture, want offline", got)
@@ -234,7 +234,7 @@ func TestReadySuppressesTheTimeout(t *testing.T) {
 	if err := s.Start("srv1", "", nil, t.TempDir()); err != nil {
 		t.Fatalf("Start = %v, want nil", err)
 	}
-	s.streamOutput(strings.NewReader("[12:00:00] [Server thread/INFO]: Done (0.4s)!\n"))
+	curInst(s).streamOutput(strings.NewReader("[12:00:00] [Server thread/INFO]: Done (0.4s)!\n"))
 
 	time.Sleep(400 * time.Millisecond) // let the armed timer fire and no-op
 
@@ -275,9 +275,9 @@ func TestTPSPollRearmsAcrossBoots(t *testing.T) {
 	}
 
 	tpsGate := func() (ch chan struct{}, closed bool) {
-		s.mu.Lock()
-		ch = s.stopTPS
-		s.mu.Unlock()
+		curInst(s).mu.Lock()
+		ch = curInst(s).stopTPS
+		curInst(s).mu.Unlock()
 		if ch == nil {
 			return nil, false
 		}
@@ -294,7 +294,7 @@ func TestTPSPollRearmsAcrossBoots(t *testing.T) {
 		if err := s.Start("srv1", "", nil, dir); err != nil {
 			t.Fatalf("boot %d: Start = %v, want nil", n, err)
 		}
-		s.streamOutput(strings.NewReader("[12:00:00] [Server thread/INFO]: Done (1.0s)!\n"))
+		curInst(s).streamOutput(strings.NewReader("[12:00:00] [Server thread/INFO]: Done (1.0s)!\n"))
 		ch, closed := tpsGate()
 		if ch == nil || closed {
 			t.Fatalf("boot %d: TPS gate after ready = (%v, closed=%v), want a fresh open channel", n, ch, closed)
@@ -328,10 +328,10 @@ func TestStateEmitsOnlyOnActualChange(t *testing.T) {
 	s, bus := newServerFixture()
 	states := collect(bus, EventServerState)
 
-	s.mu.Lock()
-	s.setStateLocked(stateStopping, false)
-	s.setStateLocked(stateStopping, false)
-	s.mu.Unlock()
+	curInst(s).mu.Lock()
+	curInst(s).setStateLocked(stateStopping, false)
+	curInst(s).setStateLocked(stateStopping, false)
+	curInst(s).mu.Unlock()
 
 	events := waitForCount(t, states, 1)
 	// Give a would-be duplicate a moment to arrive before counting.

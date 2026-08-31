@@ -40,7 +40,7 @@ func collect(bus *EventBus, event string) func() []any {
 
 func newStatsFixture() (*StatsService, *ServerService, *EventBus) {
 	bus := NewEventBus() // no ctx: Emit skips the Wails runtime and only fans out in-process
-	server := &ServerService{}
+	server := NewServerService()
 	stats := NewStatsService(server)
 	stats.SetBus(bus)
 	return stats, server, bus
@@ -97,10 +97,11 @@ func TestTickEmitsBothWhileRunning(t *testing.T) {
 	statuses := collect(bus, EventServerStatus)
 	snapshots := collect(bus, EventStatsSnapshot)
 
-	server.mu.Lock()
-	server.running = true
-	server.startTime = time.Now()
-	server.mu.Unlock()
+	in := curInst(server)
+	in.mu.Lock()
+	in.running = true
+	in.startTime = time.Now()
+	in.mu.Unlock()
 
 	stats.tick()
 

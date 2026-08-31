@@ -145,8 +145,8 @@ type playerSession struct {
 }
 
 // serverState is the lifecycle vocabulary (#108), closed at four states.
-// The zero value is offline on purpose: tests construct bare &ServerService{}
-// values, and a service that has never started a server is offline.
+// The zero value is offline on purpose: a serverInstance that has never booted
+// is offline, which is what lets newServerInstance leave the field alone.
 type serverState int
 
 const (
@@ -169,127 +169,82 @@ func (st serverState) String() string {
 	}
 }
 
+// ServerService manages the app's server runtimes. It owns one serverInstance
+// per configured server (keyed by id) and delegates every per-server question to
+// one of them; the runtime state itself lives in serverinstance.go (#232).
+//
+// Still one running server at a time: start() refuses while any instance is
+// live, exactly as it did when this struct held the process directly. What the
+// map buys now is that a stopped server keeps its own console and stats rather
+// than having them cleared by the next server's boot.
 type ServerService struct {
-	ctx       context.Context
+	// Shared with every instance. The seams live here so a test that reassigns
+	// one after an instance exists still reaches it — see instanceDeps.
+	*instanceDeps
+
+	// ctx is set by SetContext for the Wails wiring convention app.go follows,
+	// and read by nothing. It was already unused on the singleton; it stays on
+	// the manager because it is not per-server state.
+	ctx context.Context
+
+	// mu guards instances and current, and nothing else. The lock order is
+	// powerMu -> mu -> instance.mu -> the instance's fine-grained mutexes, so mu
+	// is only ever held long enough to look up or create a *serverInstance
+	// pointer and is released before calling into one.
 	mu        sync.Mutex
-	cmd       *exec.Cmd
-	stdin     io.WriteCloser
-	running   bool
-	startTime time.Time
-	serverID  string
-	exited    chan struct{} // closed by waitForExit when the child process exits
+	instances map[string]*serverInstance
 
-	playersMu  sync.RWMutex
-	players    map[string]playerSession // online players
-	presession map[string]playerSession // pre-join accumulator (UUID/IP before "joined the game")
-
-	// stats fields — set on Start, read by accessors
-	maxRAMMB   int
-	maxPlayers int
-
-	// RCON config — read from server.properties on Start
-	rconEnabled  bool
-	rconAddr     string
-	rconPassword string
-
-	// live TPS — -1 means unknown / RCON unavailable; tpsLastUpdate tracks freshness
-	tpsMu         sync.RWMutex
-	currentTPS    float64
-	tpsLastUpdate time.Time
-
-	// TPS poll goroutine lifecycle
-	stopTPS    chan struct{}
-	tpsOnce    sync.Once
-	rcon       *RconService
-	rconFlavor string // "paper", "forge", "vanilla", or "" (unknown — re-detect next poll)
-
-	// log-derived TPS fallback (always active while server is running)
-	logTPSMu       sync.RWMutex
-	logTPS         float64
-	logLastWarning time.Time
-
-	// cached gopsutil process handle — set on Start, cleared on exit
-	cachedProc *process.Process
-
-	// console ring buffer for remote-client backfill on connect (GetConsoleHistory).
-	// Cap is fixed (consoleCap), independent of the frontend's consoleBufferLines
-	// setting; loadHistory re-clamps on display. Cleared on each Start.
-	logBuf   []models.ConsoleLine
-	logBufMu sync.RWMutex
-
-	bus *EventBus
-
-	// Windows Job Object handle (uintptr so server.go compiles cross-platform).
-	// When non-zero, the OS kills the entire Java process tree automatically
-	// if Konnekt exits for any reason (crash, SIGKILL, etc.).
-	job uintptr
-
-	// expectedStop is set to true when the server is being stopped intentionally
-	// (via Stop(), app quit, or the server's own "Stopping the server" log line).
-	// waitForExit reads it to emit {expected} in the server:stopped payload.
-	expectedStop bool
-
-	// lastStop is the most recent server:stopped payload, kept so GetLastStop
-	// can serve it as that event's readable getter twin.
-	lastStop models.ServerStopped
-
-	// Power-action gate (#109), launch seam and lifecycle state (#108).
-	// Per-instance state: all of it moves wholesale into #57's serverInstance
-	// when that extraction lands.
+	// current is the instance every serverID-less accessor answers from: the most
+	// recently started server, or an empty-id placeholder before the first start.
+	// Never nil.
 	//
+	// "Most recently started" rather than "the running one" is what preserves the
+	// pre-split behaviour exactly. Nothing clears the console ring on exit — only
+	// start() clears it — so GetConsoleHistory and GetLastStop have always kept
+	// answering for a server after it stopped, and answering from the running
+	// instance instead would blank the console on every stop. The accessors that
+	// *are* gated on running (Uptime, IsRunning, ActiveServerID, SendCommand)
+	// still read false off this same instance and return what they always did.
+	//
+	// The placeholder matters: BackupService, LoaderService and ModService all
+	// narrate on paths reachable before any server has been started, and those
+	// lines have always landed in the console history.
+	current *serverInstance
+
 	// powerMu serializes Start, Stop and Restart end-to-end; Restart holds it
-	// across both legs. Acquired fail-fast only (TryLock): a second power
-	// action gets ErrPowerActionInProgress instead of queueing. waitForExit,
-	// the crash path, never touches it, so a dying process tears down freely
-	// even mid-action. ForceStop (#110) deliberately bypasses it: TryLock,
-	// proceed regardless, unlock only if that TryLock succeeded — its reason
-	// to exist is a graceful stop wedged inside the gate.
+	// across both legs. Acquired fail-fast only (TryLock): a second power action
+	// gets ErrPowerActionInProgress instead of queueing. waitForExit, the crash
+	// path, never touches it, so a dying process tears down freely even mid-action.
+	// ForceStop (#110) deliberately bypasses it: TryLock, proceed regardless,
+	// unlock only if that TryLock succeeded — its reason to exist is a graceful
+	// stop wedged inside the gate.
+	//
+	// Deliberately on the manager rather than per-instance, unlike the rest of the
+	// state this split moved. Its job is "one power action app-wide", which is the
+	// invariant keeping one-server-at-a-time true; per-instance gates would let a
+	// Start(B) past the gate while Start(A) was still in flight and change the
+	// error the caller sees. It becomes per-instance when concurrent servers land
+	// and the manager gains a different guard (#57).
 	powerMu sync.Mutex
-
-	// launchCmd builds the child process for start(). A test seam in the #115
-	// spirit: NewServerService wires defaultLaunchCmd (java PATH check +
-	// resolveLaunch + exec.Command), tests substitute a short-lived shell
-	// process so power-action tests run without java. Never reassigned outside
-	// NewServerService and tests.
-	launchCmd func(jarPath, workingDir string, jvmArgs []string) (*exec.Cmd, error)
-
-	// state is the lifecycle machine's current value, guarded by mu and moved
-	// only through setStateLocked so every actual change emits server:state
-	// exactly once. Running stays the "process alive" flag; state refines it
-	// with the starting and stopping phases.
-	state serverState
-
-	// startingTimeout is how long a boot may sit in starting before
-	// watchStarting promotes it (startingDeadline in production). A test seam
-	// in the launchCmd spirit: never reassigned outside NewServerService and
-	// tests.
-	startingTimeout time.Duration
-
-	// killTree is the platform process-tree kill (server_windows.go /
-	// server_other.go), behind a seam like launchCmd: the test fixtures'
-	// children lack the Setpgid/Job setup a real boot gets, so the genuine
-	// group kill would no-op there. Never reassigned outside NewServerService
-	// and tests.
-	killTree func(pid int)
-
-	// quiesceWait is how long PrepareForBackup gives a stdin save-all to
-	// flush when RCON is unavailable and there is nothing to block on. A test
-	// seam in the startingTimeout spirit: never reassigned outside
-	// NewServerService and tests.
-	quiesceWait time.Duration
 }
 
 func NewServerService() *ServerService {
-	return &ServerService{
-		players:         make(map[string]playerSession),
-		presession:      make(map[string]playerSession),
-		currentTPS:      -1,
-		logTPS:          -1,
-		launchCmd:       defaultLaunchCmd,
-		startingTimeout: startingDeadline,
-		killTree:        killTree,
-		quiesceWait:     quiesceFlushWait,
+	s := &ServerService{
+		instanceDeps: &instanceDeps{
+			launchCmd:       defaultLaunchCmd,
+			startingTimeout: startingDeadline,
+			killTree:        killTree,
+			quiesceWait:     quiesceFlushWait,
+		},
+		instances: make(map[string]*serverInstance),
 	}
+	// The bootstrap current, under the empty id: narration before any server has
+	// started has always reached the console (BackupService, LoaderService and
+	// app.go's EULA write all narrate on paths reachable before a first boot),
+	// and an empty-id instance keeps that true without every accessor growing a
+	// nil check.
+	s.current = newServerInstance("", s.instanceDeps)
+	return s
 }
 
 // defaultLaunchCmd is the production launchCmd: require java on PATH, resolve
@@ -313,6 +268,9 @@ func (s *ServerService) SetContext(ctx context.Context) {
 	s.ctx = ctx
 }
 
+// SetRcon and SetBus write through the shared instanceDeps, so every instance
+// (existing and future) sees them. Both are called once during startup, before
+// SetContext starts anything.
 func (s *ServerService) SetRcon(r *RconService) {
 	s.rcon = r
 }
@@ -321,12 +279,111 @@ func (s *ServerService) SetBus(b *EventBus) {
 	s.bus = b
 }
 
+// cur is the instance every serverID-less method answers from. See the comment
+// on ServerService.current for why it is the last-started instance rather than
+// the running one.
+func (s *ServerService) cur() *serverInstance {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.current
+}
+
+// instanceFor returns the instance for serverID, creating and retaining it on
+// first use. Retained for the life of the process: an instance holds a console
+// ring and an hour of stats, which is the whole point of keeping it past its
+// process, and evicting one would silently lose a console someone is about to
+// read.
+func (s *ServerService) instanceFor(serverID string) *serverInstance {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if inst, ok := s.instances[serverID]; ok {
+		return inst
+	}
+	inst := newServerInstance(serverID, s.instanceDeps)
+	s.instances[serverID] = inst
+	return inst
+}
+
+// anyRunning reports whether any instance has a live process. This is the
+// app-wide "one server at a time" refusal that used to be a single bool.
+//
+// Two beats on purpose: snapshot the pointers under s.mu, release it, then ask
+// each instance. Reading an instance's running flag needs its own mu, and the
+// lock order (powerMu -> s.mu -> instance.mu) forbids holding s.mu there.
+//
+// Start and Restart hold powerMu across this, so no other power action can race
+// it. The only concurrent writer is waitForExit on the crash path, which by
+// design never takes powerMu — and it can only turn a true into a false, so the
+// worst case is refusing a start that could have proceeded. The single running
+// flag this replaces had the same property.
+func (s *ServerService) anyRunning() bool {
+	s.mu.Lock()
+	insts := make([]*serverInstance, 0, len(s.instances))
+	for _, inst := range s.instances {
+		insts = append(insts, inst)
+	}
+	s.mu.Unlock()
+	for _, inst := range insts {
+		if inst.IsRunning() {
+			return true
+		}
+	}
+	return false
+}
+
 func (s *ServerService) Start(serverID string, jarPath string, jvmArgs []string, workingDir string) error {
 	if !s.powerMu.TryLock() {
 		return ErrPowerActionInProgress
 	}
 	defer s.powerMu.Unlock()
-	return s.start(serverID, jarPath, jvmArgs, workingDir)
+	return s.startInstance(serverID, jarPath, jvmArgs, workingDir)
+}
+
+// startInstance is Start without the power gate. Callers hold powerMu, which is
+// what makes the check-then-claim below safe without a second gate: two starts
+// cannot interleave, and the only gate-bypassing path (ForceStop) starts nothing.
+//
+// current is claimed *before* the boot and put back if it fails. Both halves
+// matter. ForceStop deliberately bypasses powerMu so it can rescue a wedged
+// boot, and it targets cur() — if current only moved on success, a force-stop
+// during a boot would aim at the previous server and silently do nothing, which
+// is the exact case ForceStop exists for (#110). And a failed start must leave
+// the readable state alone: the pre-split code cleared logBuf only *after*
+// cmd.Start() succeeded, so a refused boot never touched the console, the RCON
+// config or max-players. Restoring current is what keeps that true.
+func (s *ServerService) startInstance(serverID string, jarPath string, jvmArgs []string, workingDir string) error {
+	if s.anyRunning() {
+		return fmt.Errorf("server already running")
+	}
+	inst := s.instanceFor(serverID)
+	prev := s.setCurrent(inst)
+	if err := inst.start(jarPath, jvmArgs, workingDir); err != nil {
+		s.restoreCurrent(inst, prev)
+		return err
+	}
+	return nil
+}
+
+// setCurrent claims inst as the instance the serverID-less accessors answer
+// from, returning the one it replaced.
+func (s *ServerService) setCurrent(inst *serverInstance) *serverInstance {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	prev := s.current
+	s.current = inst
+	return prev
+}
+
+// restoreCurrent undoes a setCurrent whose boot then failed, but only if nothing
+// else has claimed current since. Nothing can today, since powerMu is held
+// throughout; the guard is there so that stays true if a later change lets a
+// second claimant in.
+func (s *ServerService) restoreCurrent(claimed, prev *serverInstance) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.current == claimed && prev != nil {
+		s.current = prev
+	}
 }
 
 // Restart stops then starts under one continuous gate hold, so no other power
@@ -339,14 +396,14 @@ func (s *ServerService) Restart(serverID string, jarPath string, jvmArgs []strin
 		return ErrPowerActionInProgress
 	}
 	defer s.powerMu.Unlock()
-	if err := s.stop(grace); err != nil && !errors.Is(err, errServerNotRunning) {
+	if err := s.cur().stop(grace); err != nil && !errors.Is(err, errServerNotRunning) {
 		return err
 	}
-	return s.start(serverID, jarPath, jvmArgs, workingDir)
+	return s.startInstance(serverID, jarPath, jvmArgs, workingDir)
 }
 
 // start is Start without the power gate. Callers hold powerMu.
-func (s *ServerService) start(serverID string, jarPath string, jvmArgs []string, workingDir string) error {
+func (s *serverInstance) start(jarPath string, jvmArgs []string, workingDir string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -388,7 +445,6 @@ func (s *ServerService) start(serverID string, jarPath string, jvmArgs []string,
 
 	s.running = true
 	s.startTime = time.Now()
-	s.serverID = serverID
 	s.expectedStop = false
 	s.setStateLocked(stateStarting, false)
 
@@ -444,7 +500,7 @@ func (s *ServerService) start(serverID string, jarPath string, jvmArgs []string,
 	return nil
 }
 
-func (s *ServerService) streamOutput(r io.Reader) {
+func (s *serverInstance) streamOutput(r io.Reader) {
 	scanner := bufio.NewScanner(r)
 	scanner.Buffer(make([]byte, maxConsoleLine), maxConsoleLine)
 	scanner.Split(newConsoleSplitFunc(maxConsoleLine))
@@ -547,27 +603,27 @@ func (s *ServerService) streamOutput(r io.Reader) {
 // only, so this adds no IPC surface. Reserve them for lifecycle moments — the
 // notification feed keeps its own role, and chatter here costs the console its
 // usefulness.
-func (s *ServerService) Narrate(line string) {
+func (s *serverInstance) Narrate(line string) {
 	s.narrate(outcomeProgress, line)
 }
 
 // NarrateDone narrates work that completed successfully.
-func (s *ServerService) NarrateDone(line string) {
+func (s *serverInstance) NarrateDone(line string) {
 	s.narrate(outcomeOK, line)
 }
 
 // NarrateFailed narrates work that failed. The line still names its stage, so
 // it says which step broke rather than only that something did.
-func (s *ServerService) NarrateFailed(line string) {
+func (s *serverInstance) NarrateFailed(line string) {
 	s.narrate(outcomeFailed, line)
 }
 
-func (s *ServerService) narrate(outcome, line string) {
+func (s *serverInstance) narrate(outcome, line string) {
 	s.emitConsoleLineTagged(line, sourceManager, outcome)
 }
 
 // emitConsoleLine sends one line of server output down the console channel.
-func (s *ServerService) emitConsoleLine(line string) {
+func (s *serverInstance) emitConsoleLine(line string) {
 	s.emitConsoleLineTagged(line, "", "")
 }
 
@@ -577,7 +633,7 @@ func (s *ServerService) emitConsoleLine(line string) {
 // output travels exactly the payload it always has.
 // NB: emit precedes buffer append. A remote client that snapshots
 // GetConsoleHistory then subscribes must dedup/order the seam line.
-func (s *ServerService) emitConsoleLineTagged(line, source, outcome string) {
+func (s *serverInstance) emitConsoleLineTagged(line, source, outcome string) {
 	ts := time.Now().Format("15:04:05")
 	payload := map[string]string{"timestamp": ts, "line": line}
 	if source != "" {
@@ -604,7 +660,7 @@ func exitLabel(code int) string {
 	return fmt.Sprintf("exit code %d", code)
 }
 
-func (s *ServerService) waitForExit() {
+func (s *serverInstance) waitForExit() {
 	// Reap the process and keep its exit status: it is the single most useful
 	// JVM crash diagnostic. -1 means killed by a signal (or unobtainable),
 	// matching os.ProcessState.ExitCode.
@@ -633,6 +689,14 @@ func (s *ServerService) waitForExit() {
 	s.setStateLocked(stateOffline, false)
 	stop := models.ServerStopped{Expected: expected, ExitCode: exitCode}
 	s.lastStop = stop
+	// Captured under the lock, closed below without it. Reading s.exited at the
+	// close instead is a data race the -race detector catches: clearing running
+	// above is what lets the next Start through, and that Start writes a fresh
+	// s.exited under this same lock while the unguarded read is still pending.
+	// Losing it would close the *new* boot's channel, so that boot's Stop would
+	// return at once and watchStarting would give up immediately. Closing the
+	// channel this boot created is what the line always meant.
+	exited := s.exited
 	s.mu.Unlock()
 	if !expected {
 		s.NarrateFailed("Server process exited unexpectedly (" + exitLabel(exitCode) + ")")
@@ -644,12 +708,12 @@ func (s *ServerService) waitForExit() {
 	// stopped event already handed to the bus. Closing it earlier is the race
 	// Restart used to lose, failing its own start leg with "server already
 	// running" against a stale flag.
-	close(s.exited)
+	close(exited)
 }
 
 // GetLastStop reports the most recent stop's detail, the readable getter twin
 // of the server:stopped event payload. Zero value until a stop has happened.
-func (s *ServerService) GetLastStop() models.ServerStopped {
+func (s *serverInstance) GetLastStop() models.ServerStopped {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	return s.lastStop
@@ -664,11 +728,11 @@ func (s *ServerService) Stop(grace time.Duration) error {
 		return ErrPowerActionInProgress
 	}
 	defer s.powerMu.Unlock()
-	return s.stop(grace)
+	return s.cur().stop(grace)
 }
 
 // stop is Stop without the power gate. Callers hold powerMu.
-func (s *ServerService) stop(grace time.Duration) error {
+func (s *serverInstance) stop(grace time.Duration) error {
 	if grace <= 0 {
 		grace = stopGraceDefault
 	}
@@ -736,7 +800,14 @@ func (s *ServerService) ForceStop() error {
 	if s.powerMu.TryLock() {
 		defer s.powerMu.Unlock()
 	}
+	return s.cur().forceStop()
+}
 
+// forceStop is ForceStop without the gate. The running check is inside the
+// instance's own lock, so a graceful stop that lands between the manager picking
+// this instance and this call is still resolved atomically: a server already
+// gone reports success.
+func (s *serverInstance) forceStop() error {
 	s.mu.Lock()
 	if !s.running {
 		s.mu.Unlock()
@@ -758,7 +829,7 @@ func (s *ServerService) ForceStop() error {
 	return nil
 }
 
-func (s *ServerService) stopTPSPoll() {
+func (s *serverInstance) stopTPSPoll() {
 	s.tpsOnce.Do(func() {
 		if s.stopTPS != nil {
 			close(s.stopTPS)
@@ -780,7 +851,7 @@ func (s *ServerService) stopTPSPoll() {
 // readiness rather than after the old arbitrary post-spawn delay. stop is this
 // boot's own channel, passed in rather than re-read from the struct so a later
 // boot's re-arm never races this goroutine's select.
-func (s *ServerService) pollTPS(stop chan struct{}) {
+func (s *serverInstance) pollTPS(stop chan struct{}) {
 	ticker := time.NewTicker(15 * time.Second)
 	defer ticker.Stop()
 
@@ -804,7 +875,7 @@ func (s *ServerService) pollTPS(stop chan struct{}) {
 	}
 }
 
-func (s *ServerService) queryTPSViaRcon() (float64, bool) {
+func (s *serverInstance) queryTPSViaRcon() (float64, bool) {
 	s.tpsMu.RLock()
 	flavor := s.rconFlavor
 	s.tpsMu.RUnlock()
@@ -890,7 +961,7 @@ func (s *ServerService) queryTPSViaRcon() (float64, bool) {
 	return 0, false
 }
 
-func (s *ServerService) SendCommand(command string) error {
+func (s *serverInstance) SendCommand(command string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -902,7 +973,7 @@ func (s *ServerService) SendCommand(command string) error {
 	return err
 }
 
-func (s *ServerService) IsRunning() bool {
+func (s *serverInstance) IsRunning() bool {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	return s.running
@@ -912,7 +983,7 @@ func (s *ServerService) IsRunning() bool {
 // Emits server:state only on an actual change, so subscribers never see a
 // duplicate transition; emitting under the lock follows start()'s existing
 // server:started emit (EventBus fans out in-process handlers in goroutines).
-func (s *ServerService) setStateLocked(next serverState, timedOut bool) {
+func (s *serverInstance) setStateLocked(next serverState, timedOut bool) {
 	if s.state == next {
 		return
 	}
@@ -922,7 +993,7 @@ func (s *ServerService) setStateLocked(next serverState, timedOut bool) {
 
 // State reports the lifecycle phase as its wire spelling, the readable getter
 // twin of the server:state event (via GetServerStatus().State).
-func (s *ServerService) State() string {
+func (s *serverInstance) State() string {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	return s.state.String()
@@ -931,7 +1002,7 @@ func (s *ServerService) State() string {
 // enterRunningLocked is the starting→running transition: the state change plus
 // the TPS poller that readiness keys (#108). Callers hold s.mu and have
 // checked state == stateStarting.
-func (s *ServerService) enterRunningLocked(timedOut bool) {
+func (s *serverInstance) enterRunningLocked(timedOut bool) {
 	s.setStateLocked(stateRunning, timedOut)
 	s.startTPSPollLocked()
 }
@@ -942,7 +1013,7 @@ func (s *ServerService) enterRunningLocked(timedOut bool) {
 // spawn — split apart, stopTPSPoll would consume a stale Once and no-op on the
 // next boot. Callers hold s.mu. No-op without RCON config; the log-derived
 // TPS fallback covers that case, as before.
-func (s *ServerService) startTPSPollLocked() {
+func (s *serverInstance) startTPSPollLocked() {
 	if !s.rconEnabled || s.rconPassword == "" || s.rcon == nil {
 		return
 	}
@@ -956,7 +1027,7 @@ func (s *ServerService) startTPSPollLocked() {
 // banner rather than sticking in starting forever. exited is this boot's own
 // channel, captured under s.mu in start(), so a stop or crash of this boot
 // cancels the watcher without ever racing a later boot's channel.
-func (s *ServerService) watchStarting(exited chan struct{}) {
+func (s *serverInstance) watchStarting(exited chan struct{}) {
 	timer := time.NewTimer(s.startingTimeout)
 	defer timer.Stop()
 	select {
@@ -1005,13 +1076,13 @@ func (s *ServerService) Summary(cfg models.ServerConfig) models.ServerSummary {
 // ActiveServerID returns the ID of the server currently running, or "" when
 // none is. Callers that show per-server state need this: IsRunning alone says
 // only that *a* server is up, not which one.
-func (s *ServerService) ActiveServerID() string {
+func (s *serverInstance) ActiveServerID() string {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if !s.running {
 		return ""
 	}
-	return s.serverID
+	return s.id
 }
 
 // PrepareForBackup flushes pending chunk writes to disk and disables auto-save
@@ -1020,7 +1091,7 @@ func (s *ServerService) ActiveServerID() string {
 // fixed grace period when RCON is unavailable. Returns true if saving was paused
 // — the caller must then call ResumeSaves once the copy is done. No-op (returns
 // false) when the server is not running.
-func (s *ServerService) PrepareForBackup() bool {
+func (s *serverInstance) PrepareForBackup() bool {
 	s.mu.Lock()
 	running := s.running
 	rconOK := s.rconEnabled && s.rconPassword != "" && s.rcon != nil
@@ -1053,7 +1124,7 @@ func (s *ServerService) PrepareForBackup() bool {
 
 // ResumeSaves re-enables auto-save after a backup. Safe to call when the server
 // is no longer running (no-op).
-func (s *ServerService) ResumeSaves() {
+func (s *serverInstance) ResumeSaves() {
 	s.mu.Lock()
 	running := s.running
 	rconOK := s.rconEnabled && s.rconPassword != "" && s.rcon != nil
@@ -1071,7 +1142,7 @@ func (s *ServerService) ResumeSaves() {
 	_ = s.SendCommand("save-on") //nolint:errcheck // best-effort resume after backup
 }
 
-func (s *ServerService) Uptime() string {
+func (s *serverInstance) Uptime() string {
 	s.mu.Lock()
 	running, started := s.running, s.startTime
 	s.mu.Unlock()
@@ -1135,7 +1206,7 @@ func parseLoginAddress(addr string) string {
 // landed in an entry the join had already consumed and deleted, so the roster
 // showed every player with a blank IP and a stale presession entry leaked
 // until they disconnected.
-func (s *ServerService) recordPlayerField(name string, set func(*playerSession)) {
+func (s *serverInstance) recordPlayerField(name string, set func(*playerSession)) {
 	s.playersMu.Lock()
 	defer s.playersMu.Unlock()
 	if sess, online := s.players[name]; online {
@@ -1155,7 +1226,7 @@ func (s *ServerService) recordPlayerField(name string, set func(*playerSession))
 //
 // Fields already on the live session win: on a second promotion the pre-join
 // entry is stale by definition.
-func (s *ServerService) promotePlayer(name string) (playerSession, bool) {
+func (s *serverInstance) promotePlayer(name string) (playerSession, bool) {
 	s.playersMu.Lock()
 	defer s.playersMu.Unlock()
 	sess, already := s.players[name]
@@ -1176,7 +1247,7 @@ func (s *ServerService) promotePlayer(name string) (playerSession, bool) {
 // connection that failed before joining emits nothing at all. The pre-join
 // entry goes either way: a half-finished login that never completes must not
 // outlive the attempt.
-func (s *ServerService) removePlayer(name string) bool {
+func (s *serverInstance) removePlayer(name string) bool {
 	s.playersMu.Lock()
 	defer s.playersMu.Unlock()
 	_, online := s.players[name]
@@ -1185,7 +1256,7 @@ func (s *ServerService) removePlayer(name string) bool {
 	return online
 }
 
-func (s *ServerService) GetActivePlayers() []models.Player {
+func (s *serverInstance) GetActivePlayers() []models.Player {
 	s.playersMu.RLock()
 	defer s.playersMu.RUnlock()
 	list := make([]models.Player, 0, len(s.players))
@@ -1200,13 +1271,13 @@ func (s *ServerService) GetActivePlayers() []models.Player {
 	return list
 }
 
-func (s *ServerService) PlayerCount() int {
+func (s *serverInstance) PlayerCount() int {
 	s.playersMu.RLock()
 	defer s.playersMu.RUnlock()
 	return len(s.players)
 }
 
-func (s *ServerService) MaxPlayers() int {
+func (s *serverInstance) MaxPlayers() int {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if s.maxPlayers == 0 {
@@ -1215,7 +1286,7 @@ func (s *ServerService) MaxPlayers() int {
 	return s.maxPlayers
 }
 
-func (s *ServerService) CurrentTPS() float64 {
+func (s *serverInstance) CurrentTPS() float64 {
 	s.tpsMu.RLock()
 	rconTPS := s.currentTPS
 	lastUpdate := s.tpsLastUpdate
@@ -1227,7 +1298,7 @@ func (s *ServerService) CurrentTPS() float64 {
 	return s.currentLogTPS()
 }
 
-func (s *ServerService) currentLogTPS() float64 {
+func (s *serverInstance) currentLogTPS() float64 {
 	s.logTPSMu.RLock()
 	logTPS := s.logTPS
 	lastWarning := s.logLastWarning
@@ -1246,7 +1317,7 @@ func (s *ServerService) currentLogTPS() float64 {
 	return logTPS + (20.0-logTPS)*(elapsed/60.0)
 }
 
-func (s *ServerService) RAMUsedMB() float64 {
+func (s *serverInstance) RAMUsedMB() float64 {
 	s.mu.Lock()
 	proc := s.cachedProc
 	s.mu.Unlock()
@@ -1261,13 +1332,13 @@ func (s *ServerService) RAMUsedMB() float64 {
 	return float64(mem.RSS) / 1024 / 1024
 }
 
-func (s *ServerService) RAMTotalMB() float64 {
+func (s *serverInstance) RAMTotalMB() float64 {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	return float64(s.maxRAMMB)
 }
 
-func (s *ServerService) CPUPercent() float64 {
+func (s *serverInstance) CPUPercent() float64 {
 	s.mu.Lock()
 	proc := s.cachedProc
 	s.mu.Unlock()
@@ -1285,7 +1356,7 @@ func (s *ServerService) CPUPercent() float64 {
 // RconConfig returns the RCON address and password parsed from server.properties
 // when the server last started. ok is false when RCON is not enabled or the
 // server has never been started. Used by the scheduler's rcon primitive.
-func (s *ServerService) RconConfig() (addr, password string, ok bool) {
+func (s *serverInstance) RconConfig() (addr, password string, ok bool) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if !s.rconEnabled || s.rconPassword == "" {
@@ -1294,7 +1365,7 @@ func (s *ServerService) RconConfig() (addr, password string, ok bool) {
 	return s.rconAddr, s.rconPassword, true
 }
 
-func (s *ServerService) GetConsoleHistory() []models.ConsoleLine {
+func (s *serverInstance) GetConsoleHistory() []models.ConsoleLine {
 	s.logBufMu.RLock()
 	defer s.logBufMu.RUnlock()
 	out := make([]models.ConsoleLine, len(s.logBuf))
@@ -1347,4 +1418,43 @@ func propInt(props map[string]string, key string, def int) int {
 		return def
 	}
 	return n
+}
+
+// --- Delegators ---
+//
+// Every method below kept the exact signature it had when ServerService held one
+// server's runtime directly, because eight consumers call them with no server id
+// (App, StatsService, BackupService, PlayerService, WorldService, LoaderService,
+// ModService and the scheduler's ExecContext). Threading an id through those call
+// sites is #233's job, not this split's.
+//
+// They all answer from cur(). See the comment on ServerService.current for why
+// that is the last-started instance rather than the running one, and why it is
+// never nil.
+
+func (s *ServerService) GetLastStop() models.ServerStopped { return s.cur().GetLastStop() }
+func (s *ServerService) SendCommand(command string) error  { return s.cur().SendCommand(command) }
+func (s *ServerService) IsRunning() bool                   { return s.cur().IsRunning() }
+func (s *ServerService) State() string                     { return s.cur().State() }
+func (s *ServerService) ActiveServerID() string            { return s.cur().ActiveServerID() }
+func (s *ServerService) PrepareForBackup() bool            { return s.cur().PrepareForBackup() }
+func (s *ServerService) ResumeSaves()                      { s.cur().ResumeSaves() }
+func (s *ServerService) Uptime() string                    { return s.cur().Uptime() }
+func (s *ServerService) GetActivePlayers() []models.Player { return s.cur().GetActivePlayers() }
+func (s *ServerService) PlayerCount() int                  { return s.cur().PlayerCount() }
+func (s *ServerService) MaxPlayers() int                   { return s.cur().MaxPlayers() }
+func (s *ServerService) CurrentTPS() float64               { return s.cur().CurrentTPS() }
+func (s *ServerService) RAMUsedMB() float64                { return s.cur().RAMUsedMB() }
+func (s *ServerService) RAMTotalMB() float64               { return s.cur().RAMTotalMB() }
+func (s *ServerService) CPUPercent() float64               { return s.cur().CPUPercent() }
+func (s *ServerService) Narrate(line string)               { s.cur().Narrate(line) }
+func (s *ServerService) NarrateDone(line string)           { s.cur().NarrateDone(line) }
+func (s *ServerService) NarrateFailed(line string)         { s.cur().NarrateFailed(line) }
+
+func (s *ServerService) RconConfig() (addr, password string, ok bool) {
+	return s.cur().RconConfig()
+}
+
+func (s *ServerService) GetConsoleHistory() []models.ConsoleLine {
+	return s.cur().GetConsoleHistory()
 }
