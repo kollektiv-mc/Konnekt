@@ -58,6 +58,11 @@ export function ModPreviewDialog({
   const [changingVersion, setChangingVersion] = useState(false)
 
   const isModrinth = mod.source === 'modrinth' && !!mod.projectId
+  // Versions stay browsable for anything with a project, but switching needs a
+  // version to switch *from*: a secondary file of a version (an EssentialsX
+  // module, say) has a project and no version of its own, and "switching" it
+  // would download the primary jar over a plugin that is not the same plugin.
+  const canSwitchVersion = isModrinth && !!mod.versionId
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -305,7 +310,7 @@ export function ModPreviewDialog({
                             {v.datePublished ? ` · ${relativeTime(v.datePublished)}` : ''}
                           </div>
                         </div>
-                        {!isCurrent && (
+                        {!isCurrent && canSwitchVersion && (
                           <button
                             onClick={() => handleVersionInstall(v.id)}
                             disabled={installing || changingVersion}

@@ -93,6 +93,8 @@ func (a *App) beforeClose(ctx context.Context) bool {
 	// Before the server stop below, so a poll cannot land mid-shutdown and
 	// rewrite command_buttons.json while the app is on its way out.
 	a.kommandsService.Stop()
+	// Same reasoning for the mod folder scan and its manifest writes.
+	a.modService.Stop()
 	if a.serverService.IsRunning() {
 		// Stop's error paths here are "server not running" (the IsRunning guard
 		// covers it, and a race can only make it true — the benign direction)
@@ -130,6 +132,11 @@ func (a *App) startup(ctx context.Context) {
 	a.schedulerService.SetContext(ctx)
 	a.modService.SetContext(ctx)
 	a.modService.SetDataDir(a.dataDir)
+	// Watches every server's mods/ and plugins/ folder for as long as the app
+	// lives, so a jar dropped in from outside Konnekt is noticed and identified
+	// rather than sitting there unlisted. The responsive path is ModRescan,
+	// which the frontend calls on window focus.
+	a.modService.Start(ctx)
 	a.installerService.SetContext(ctx)
 	a.loaderService.SetContext(ctx)
 	a.loaderService.SetDataDir(a.dataDir)
@@ -732,6 +739,18 @@ func (a *App) ModInstall(serverID string, versionIDs []string) error {
 
 func (a *App) ModListInstalled(serverID string) ([]models.InstalledMod, error) {
 	return a.modService.ListInstalled(serverID)
+}
+
+// ModRescan looks at the server's mod folders now rather than waiting out the
+// background scan's 30s tick, identifying anything that arrived from outside
+// Konnekt. Called on window focus and when the mods tile mounts, which is the
+// case the timer is deliberately too slack for: a user drags a jar into
+// plugins/ in their file manager and switches straight back to the app.
+//
+// Emits mod:changed itself when something moved, so the caller does not have to
+// re-read on the strength of having asked.
+func (a *App) ModRescan(serverID string) error {
+	return a.modService.Rescan(serverID)
 }
 
 func (a *App) ModSetEnabled(serverID, fileName string, enabled bool) error {

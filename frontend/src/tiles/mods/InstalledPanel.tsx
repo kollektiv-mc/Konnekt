@@ -429,8 +429,12 @@ export function InstalledPanel({
 
               {/* Actions */}
               <div className="flex shrink-0 items-center gap-1.5">
-                {/* Change version button */}
-                {mod.source === 'modrinth' && mod.projectId && (
+                {/* Change version button. versionId, not just projectId: a
+                    file identified by its hash as a *secondary* file of a
+                    version (EssentialsX ships its modules that way) knows its
+                    project but is not itself a version, so there is nothing to
+                    switch between. */}
+                {mod.source === 'modrinth' && mod.projectId && mod.versionId && (
                   <button
                     onClick={() => openPreview(mod)}
                     className="border-border-subtle text-text-muted border-hairline relative flex h-[26px] w-[26px] items-center justify-center rounded bg-transparent text-xs transition-colors"

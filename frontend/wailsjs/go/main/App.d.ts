@@ -121,6 +121,8 @@ export function ModListInstalled(arg1:string):Promise<Array<models.InstalledMod>
 
 export function ModMoreByAuthor(arg1:string,arg2:string,arg3:string):Promise<Array<models.ModProject>>;
 
+export function ModRescan(arg1:string):Promise<void>;
+
 export function ModResolveDependencies(arg1:string,arg2:string):Promise<Array<models.ResolvedDependency>>;
 
 export function ModSearch(arg1:string,arg2:string,arg3:number,arg4:Array<string>,arg5:string):Promise<models.ModSearchResult>;
