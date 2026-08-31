@@ -51,6 +51,13 @@ func (s *ConfigService) GetServerConfig(id string) (*models.ServerConfig, error)
 }
 
 func (s *ConfigService) SaveServerConfig(cfg models.ServerConfig) error {
+	// The Minecraft version and loader are what every Modrinth query is filtered
+	// by, and a value that is not a Minecraft version filters all of them down to
+	// nothing while Modrinth still answers 200 — a failure with no error to show.
+	// Rejecting the pair on the way in means it cannot be stored again, from
+	// detection or from the editor, whatever either of them believes.
+	cfg.MCVersion, cfg.Loader = sanitizeTarget(cfg.MCVersion, cfg.Loader)
+
 	configs, err := s.GetServerConfigs()
 	if err != nil {
 		return err

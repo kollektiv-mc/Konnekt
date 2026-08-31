@@ -21,6 +21,7 @@ interface Props {
   projectLoading: boolean
   versions: ModVersion[]
   versionsLoading: boolean
+  versionsError?: string | null
   installing: boolean
   installError: string | null
   onClose: () => void
@@ -41,6 +42,7 @@ export function ModPreviewDialog({
   projectLoading,
   versions,
   versionsLoading,
+  versionsError,
   installing,
   installError,
   onClose,
@@ -254,9 +256,29 @@ export function ModPreviewDialog({
             <div>
               {versionsLoading ? (
                 <div className="text-text-muted px-4 py-6 text-xs">Loading versions…</div>
+              ) : versionsError ? (
+                <div className="px-4 py-6">
+                  <div className="text-danger text-xs">
+                    Could not load versions: {versionsError}
+                  </div>
+                  <button
+                    onClick={handleLoadAllVersions}
+                    className="text-text-muted mt-2 font-mono text-xs transition-colors"
+                  >
+                    Show all versions
+                  </button>
+                </div>
               ) : versions.length === 0 ? (
-                <div className="text-text-muted px-4 py-6 text-xs">
-                  No compatible versions found.
+                <div className="px-4 py-6">
+                  <div className="text-text-muted text-xs">
+                    No versions match this server{'\u2019'}s Minecraft version and loader.
+                  </div>
+                  <button
+                    onClick={handleLoadAllVersions}
+                    className="text-text-muted mt-2 font-mono text-xs transition-colors"
+                  >
+                    Show all versions
+                  </button>
                 </div>
               ) : (
                 <>

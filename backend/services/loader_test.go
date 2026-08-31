@@ -242,9 +242,15 @@ func TestLoaderStatus(t *testing.T) {
 			want:   "Konnekt cannot update paper servers yet.",
 		},
 		{
-			name:   "an undetected loader",
-			mutate: func(c *models.ServerConfig) { c.Loader = "" },
-			want:   "Konnekt has not detected which loader this server uses.",
+			// Nothing stored and nothing on disk to derive it from. The working
+			// directory has to go too: an empty Loader alone is no longer
+			// "unknown", since a NeoForge install names its own build in the
+			// argfile path and Status now reads it.
+			name: "an undetected loader",
+			mutate: func(c *models.ServerConfig) {
+				c.Loader, c.WorkingDir = "", ""
+			},
+			want: "Konnekt has not detected which loader this server uses.",
 		},
 		{
 			name:   "a directory with no install in it",
@@ -325,8 +331,16 @@ func TestLoaderAvailableVersions(t *testing.T) {
 
 // An undetected Minecraft version shows everything rather than nothing, which
 // would look like the fetch had failed.
+//
+// The install directory is pointed away from the NeoForge install for this, so
+// there is genuinely nothing to detect: that is the real shape of the case (a
+// server whose directory has been moved or removed), and it is the only one
+// left now that a present install derives its own Minecraft version.
 func TestLoaderAvailableVersionsWithoutMCVersion(t *testing.T) {
-	f := newLoaderFixture(t, func(c *models.ServerConfig) { c.MCVersion = "" })
+	gone := t.TempDir()
+	f := newLoaderFixture(t, func(c *models.ServerConfig) {
+		c.MCVersion, c.WorkingDir = "", gone
+	})
 	f.provider.versions = []models.LoaderVersion{
 		{Version: "21.1.209", MCVersion: "1.21.1"},
 		{Version: "20.4.237", MCVersion: "1.20.4"},

@@ -1123,25 +1123,13 @@ func (s *serverInstance) watchStarting(exited chan struct{}) {
 // Loader/version fall back to detection so a server that has never been
 // started still describes itself.
 func (s *ServerService) Summary(cfg models.ServerConfig) models.ServerSummary {
+	mcVersion, loader := resolveTarget(cfg)
 	sum := models.ServerSummary{
-		MCVersion:  cfg.MCVersion,
-		Loader:     cfg.Loader,
+		MCVersion:  mcVersion,
+		Loader:     loader,
 		WorkingDir: cfg.WorkingDir,
 		LaunchFile: describeLaunch(cfg.JarPath, cfg.WorkingDir),
 		Running:    cfg.ID != "" && s.ActiveServerID() == cfg.ID,
-	}
-
-	if sum.MCVersion == "" || sum.Loader == "" {
-		mv, ld := detectServerLoader(struct{ JarPath, WorkingDir string }{
-			JarPath:    cfg.JarPath,
-			WorkingDir: cfg.WorkingDir,
-		})
-		if sum.MCVersion == "" {
-			sum.MCVersion = mv
-		}
-		if sum.Loader == "" {
-			sum.Loader = ld
-		}
 	}
 
 	// The install directory is the truth about which build launches, so it wins

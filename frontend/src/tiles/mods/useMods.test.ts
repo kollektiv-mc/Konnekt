@@ -65,3 +65,59 @@ describe('useMods folder rescan', () => {
     expect(result.current.installedError).toBeNull()
   })
 })
+
+// A failed version lookup and a mod with no build for this server both left
+// `versions` empty, so the panel rendered "No compatible versions found." for
+// each — and the rejection escaped unhandled. They are different answers, and
+// telling them apart is what made a server described with a bogus Minecraft
+// version diagnosable instead of just quiet.
+describe('useMods version lookups', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    vi.mocked(App.ModListInstalled).mockResolvedValue([])
+    vi.mocked(App.ModCheckUpdates).mockResolvedValue([])
+    vi.mocked(App.ModCategories).mockResolvedValue([])
+    vi.mocked(App.ModRescan).mockResolvedValue(undefined)
+  })
+
+  it('records why a version lookup failed instead of reporting no versions', async () => {
+    vi.mocked(App.ModGetVersions).mockRejectedValue(new Error('modrinth: HTTP 429'))
+    const { result } = renderHook(() => useMods('srv1'))
+
+    await act(async () => {
+      await result.current.getVersions('AABBCCDD')
+    })
+
+    expect(result.current.versions).toEqual([])
+    expect(result.current.versionsError).toContain('429')
+    expect(result.current.versionsLoading).toBe(false)
+  })
+
+  it('leaves no error behind when a project genuinely has no matching build', async () => {
+    vi.mocked(App.ModGetVersions).mockResolvedValue([])
+    const { result } = renderHook(() => useMods('srv1'))
+
+    await act(async () => {
+      await result.current.getVersions('AABBCCDD')
+    })
+
+    expect(result.current.versions).toEqual([])
+    expect(result.current.versionsError).toBeNull()
+  })
+
+  it('clears a stale error when the unfiltered list is asked for', async () => {
+    vi.mocked(App.ModGetVersions).mockRejectedValue(new Error('modrinth: HTTP 429'))
+    vi.mocked(App.ModGetAllVersions).mockResolvedValue([])
+    const { result } = renderHook(() => useMods('srv1'))
+
+    await act(async () => {
+      await result.current.getVersions('AABBCCDD')
+    })
+    expect(result.current.versionsError).not.toBeNull()
+
+    await act(async () => {
+      await result.current.getAllVersions('AABBCCDD')
+    })
+    expect(result.current.versionsError).toBeNull()
+  })
+})

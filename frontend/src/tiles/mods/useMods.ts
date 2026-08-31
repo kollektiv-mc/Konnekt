@@ -84,6 +84,7 @@ interface ModsState {
   // Versions
   versions: ModVersion[]
   versionsLoading: boolean
+  versionsError: string | null
   getVersions: (projectId: string) => Promise<void>
   getAllVersions: (projectId: string) => Promise<void>
 
@@ -120,6 +121,7 @@ export function useMods(serverId: string): ModsState {
 
   const [versions, setVersions] = useState<ModVersion[]>([])
   const [versionsLoading, setVersionsLoading] = useState(false)
+  const [versionsError, setVersionsError] = useState<string | null>(null)
 
   const [installProgress, setInstallProgress] = useState<InstallProgress>({})
   const [installing, setInstalling] = useState(false)
@@ -285,14 +287,23 @@ export function useMods(serverId: string): ModsState {
   const clearProject = useCallback(() => {
     setSelectedProject(null)
     setVersions([])
+    setVersionsError(null)
   }, [])
 
+  // A rejection here used to leave `versions` empty with nothing else changed,
+  // so a failed call and a mod with no build for this server rendered as the
+  // same "No compatible versions found." — and the rejection escaped unhandled.
+  // They are different answers and the panel has to be able to tell them apart.
   const getVersions = useCallback(
     async (projectId: string) => {
       setVersionsLoading(true)
+      setVersionsError(null)
       try {
         const v = (await ModGetVersions(serverId, projectId)) as ModVersion[]
         setVersions(v ?? [])
+      } catch (e) {
+        setVersionsError(String(e))
+        setVersions([])
       } finally {
         setVersionsLoading(false)
       }
@@ -302,9 +313,13 @@ export function useMods(serverId: string): ModsState {
 
   const getAllVersions = useCallback(async (projectId: string) => {
     setVersionsLoading(true)
+    setVersionsError(null)
     try {
       const v = (await ModGetAllVersions(projectId)) as ModVersion[]
       setVersions(v ?? [])
+    } catch (e) {
+      setVersionsError(String(e))
+      setVersions([])
     } finally {
       setVersionsLoading(false)
     }
@@ -446,6 +461,7 @@ export function useMods(serverId: string): ModsState {
     clearProject,
     versions,
     versionsLoading,
+    versionsError,
     getVersions,
     getAllVersions,
     resolveDeps,

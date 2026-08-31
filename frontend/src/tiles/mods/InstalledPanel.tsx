@@ -30,6 +30,7 @@ interface Props {
   projectLoading: boolean
   versions: ModVersion[]
   versionsLoading: boolean
+  versionsError?: string | null
   installError: string | null
   onSelectProject: (mod: InstalledMod) => Promise<void>
   onClearProject: () => void
@@ -209,6 +210,7 @@ export function InstalledPanel({
   projectLoading,
   versions,
   versionsLoading,
+  versionsError,
   installError,
   onSelectProject,
   onClearProject,
@@ -516,6 +518,7 @@ export function InstalledPanel({
           projectLoading={projectLoading}
           versions={versions}
           versionsLoading={versionsLoading}
+          versionsError={versionsError}
           installing={installing}
           installError={installError}
           onClose={closePreview}

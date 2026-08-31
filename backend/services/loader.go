@@ -97,13 +97,14 @@ func (s *LoaderService) Status(serverID string) (models.LoaderStatus, error) {
 		version, source = cfg.LoaderVersion, "config"
 	}
 
+	mcVersion, loaderName := resolveTarget(*cfg)
 	status := models.LoaderStatus{
-		Loader:           cfg.Loader,
+		Loader:           loaderName,
 		InstalledVersion: version,
-		MCVersion:        cfg.MCVersion,
+		MCVersion:        mcVersion,
 		Source:           source,
 	}
-	status.Managed, status.Reason = s.manageable(cfg.Loader, source)
+	status.Managed, status.Reason = s.manageable(loaderName, source)
 	return status, nil
 }
 
@@ -133,9 +134,10 @@ func (s *LoaderService) AvailableVersions(serverID string) ([]models.LoaderVersi
 	if err != nil {
 		return nil, err
 	}
-	provider, ok := s.providers[cfg.Loader]
+	_, loaderName := resolveTarget(*cfg)
+	provider, ok := s.providers[loaderName]
 	if !ok {
-		return nil, fmt.Errorf("Konnekt cannot list versions for %q servers", cfg.Loader)
+		return nil, fmt.Errorf("Konnekt cannot list versions for %q servers", loaderName)
 	}
 
 	all, err := s.cachedVersions(provider)
@@ -144,13 +146,15 @@ func (s *LoaderService) AvailableVersions(serverID string) ([]models.LoaderVersi
 	}
 
 	// An undetected Minecraft version means no filter rather than no results:
-	// showing everything lets the user pick, showing nothing looks broken.
-	if cfg.MCVersion == "" {
+	// showing everything lets the user pick, showing nothing looks broken. A
+	// malformed one is the same situation, and resolveTarget turns it into one.
+	mcVersion, _ := resolveTarget(*cfg)
+	if mcVersion == "" {
 		return all, nil
 	}
 	out := make([]models.LoaderVersion, 0, len(all))
 	for _, v := range all {
-		if v.MCVersion == cfg.MCVersion {
+		if v.MCVersion == mcVersion {
 			out = append(out, v)
 		}
 	}
@@ -203,14 +207,19 @@ func (s *LoaderService) Update(req models.LoaderUpdateRequest) error {
 	}
 
 	version, source := detectLoaderVersion(cfg.JarPath, cfg.WorkingDir)
-	if managed, reason := s.manageable(cfg.Loader, source); !managed {
+	_, loaderName := resolveTarget(*cfg)
+	if managed, reason := s.manageable(loaderName, source); !managed {
 		return fmt.Errorf("%s", reason)
 	}
 	if version == req.Version {
 		return fmt.Errorf("%s is already on %s", cfg.Name, req.Version)
 	}
 
-	provider := s.providers[cfg.Loader]
+	provider := s.providers[loaderName]
+
+	// Carry the resolved loader into the update so the console narration and the
+	// snapshot marker name what this server actually runs, not a stale label.
+	cfg.Loader = loaderName
 
 	s.mu.Lock()
 	if s.updating {
