@@ -99,17 +99,4 @@ export interface TileDefinition {
   icon: LucideIcon
   maximizable?: boolean
   component: FC<TileProps>
-  /**
-   * The tile's compact roll-up, rendered by the Overview tile's maximized
-   * panel (`tiles/overview/OverviewPanel.tsx`), which lists
-   * `TILE_REGISTRY.filter((t) => t.summary)` rather than a hand-kept roster of
-   * its own — so a tile added later cannot leave a stale Overview behind.
-   *
-   * Opt-in rather than "render `component` at `maximized: false`", because for
-   * some tiles the unmaximized face *is* the whole tile: a live console or the
-   * command button grid is not a summary of anything, and rolling it up would
-   * subscribe Overview to the log stream. A tile with nothing to contribute
-   * simply omits this.
-   */
-  summary?: FC<TileProps>
 }

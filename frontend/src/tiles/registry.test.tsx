@@ -26,17 +26,6 @@ describe('TILE_REGISTRY', () => {
     expect(container.querySelector('svg')).not.toBeNull()
   })
 
-  // A summary is rendered by the Overview panel as a component. A tile that
-  // registered something else (a string, a stale export) would typecheck
-  // nowhere now, but past a loosened type it would only fail at render — and
-  // only once someone maximized Overview.
-  it('registers every summary as a component', () => {
-    for (const tile of TILE_REGISTRY) {
-      if (tile.summary === undefined) continue
-      expect(typeof tile.summary).toBe('function')
-    }
-  })
-
   // The Overview tile's id is 'stats' on purpose (#211): it is persisted
   // verbatim in active_tiles.json, layout_presets.json and active_layout.json,
   // so renaming it drops the tile from every existing install's canvas and

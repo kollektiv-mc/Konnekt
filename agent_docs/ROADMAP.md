@@ -309,22 +309,14 @@ and code-signing/notarization.
    its own local state shape
 3. Register in `frontend/src/tiles/registry.ts` — extend the array,
    never restructure the file
-4. Give the entry a `summary` if the tile has a compact face worth rolling up.
-   The Overview tile renders `TILE_REGISTRY.filter((t) => t.summary)`, so this
-   is what keeps it current — a tile added without one is simply absent from
-   Overview, never stale. Export the compact view from its own file (the tile
-   root and Overview both mount it) and keep it clear of anything behind
-   `lazy()` that only the maximized face needs. Omit `summary` when the
-   unmaximized face *is* the whole tile: the console's live log and the command
-   button grid summarise nothing.
-5. If new Go data is needed:
+4. If new Go data is needed:
    a. Add struct to `backend/models/` if it crosses the IPC boundary
    b. Add method to relevant service in `backend/services/`
    c. Bind method on the App struct in `app.go` (repo root)
    d. Run `wails generate module` to regenerate TS bindings
    e. Import from `frontend/wailsjs/go/main/` in the tile
-6. Run `pnpm typecheck` and `go vet ./...` before marking done
-7. Remote-readiness (keeps the future Remote Access feature cheap — see below):
+5. Run `pnpm typecheck` and `go vet ./...` before marking done
+6. Remote-readiness (keeps the future Remote Access feature cheap — see below):
    a. Fetch data only through generated bindings — never raw `window.go`
    b. Emit/consume events through `EventBus`, never `runtime.EventsEmit` directly
    c. Any native-only method (file dialog, OS file/folder open, host path access)

@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
-import { fmtCount, fmtBytes, relativeTime, truncateStart } from './format'
+import { fmtCount, fmtBytes, relativeMs, relativeTime, truncateStart, untilMs } from './format'
 
 describe('truncateStart', () => {
   it('leaves short strings alone', () => {
@@ -106,5 +106,62 @@ describe('relativeTime', () => {
 
   it('renders years ago', () => {
     expect(relativeTime('2024-07-02T12:00:00.000Z')).toBe('2y ago')
+  })
+})
+
+// A world save and a full-server backup zip are routinely gigabytes. Without a
+// GB tier the Overview panel renders "4096.0 MB", which is why this one exists.
+describe('fmtBytes at gigabyte scale', () => {
+  const GB = 1024 ** 3
+
+  it('switches to GB at exactly one gigabyte', () => {
+    expect(fmtBytes(GB - 1)).toBe('1024.0 MB')
+    expect(fmtBytes(GB)).toBe('1.00 GB')
+  })
+
+  it('keeps two decimals, so 4.25 GB does not read as 4.2', () => {
+    expect(fmtBytes(4.25 * GB)).toBe('4.25 GB')
+    expect(fmtBytes(12 * GB)).toBe('12.00 GB')
+  })
+})
+
+describe('relativeMs / untilMs', () => {
+  const NOW = new Date('2026-07-02T12:00:00.000Z')
+  const MIN = 60_000
+  const HOUR = 60 * MIN
+
+  beforeEach(() => {
+    vi.useFakeTimers()
+    vi.setSystemTime(NOW)
+  })
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  it('reads a past timestamp backwards', () => {
+    expect(relativeMs(NOW.getTime() - 30_000)).toBe('just now')
+    expect(relativeMs(NOW.getTime() - 12 * MIN)).toBe('12m ago')
+    expect(relativeMs(NOW.getTime() - 3 * HOUR)).toBe('3h ago')
+    expect(relativeMs(NOW.getTime() - 50 * HOUR)).toBe('2d ago')
+  })
+
+  it('reads a future timestamp forwards', () => {
+    expect(untilMs(NOW.getTime() + 5 * MIN)).toBe('in 5m')
+    expect(untilMs(NOW.getTime() + 6 * HOUR)).toBe('in 6h')
+    expect(untilMs(NOW.getTime() + 72 * HOUR)).toBe('in 3d')
+  })
+
+  // A next-run time the backend has not recomputed yet is in the past, and
+  // "in -4m" would be worse than useless on a countdown.
+  it('says now rather than counting backwards once a run time has passed', () => {
+    expect(untilMs(NOW.getTime() - MIN)).toBe('now')
+    expect(untilMs(NOW.getTime())).toBe('now')
+  })
+
+  // untilMs rounds where relativeMs floors: a countdown reading "in 59m" when
+  // it is 59 minutes 40 seconds out is precise about the wrong thing.
+  it('rounds the countdown to the coarser unit', () => {
+    expect(untilMs(NOW.getTime() + 59.7 * MIN)).toBe('in 1h')
+    expect(relativeMs(NOW.getTime() - 59.7 * MIN)).toBe('59m ago')
   })
 })

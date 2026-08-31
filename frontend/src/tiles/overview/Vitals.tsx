@@ -26,7 +26,11 @@ function StatRow({
 // The status pill's five faces. Starting and stopping share the warning amber
 // (the label disambiguates); the transitional glow matches the accent dot's
 // arbitrary-shadow idiom.
-const PILL = {
+//
+// Exported because the Overview panel's status band wears the same five. Two
+// copies of this map is how Starting ends up amber in one place and green in
+// the other.
+export const PILL = {
   unreachable: { label: 'Unreachable', dot: 'bg-red-500', text: 'text-red-400' },
   offline: { label: 'Offline', dot: 'bg-red-500', text: 'text-red-400' },
   starting: {
@@ -46,11 +50,10 @@ const PILL = {
  * The server's vitals: status pill, players, TPS, RAM, memory bar.
  *
  * This is the Overview tile's compact face, unchanged from when the tile was
- * called Stats, and it is also the first card of the maximized roll-up — the
- * same component both times rather than a second copy sized differently. It
- * reads `useServerStore` and nothing else, which is why an Overview sitting on
- * the canvas costs no IPC at all; every other summary in the roll-up mounts
- * only once the tile is maximized.
+ * called Stats. It reads `useServerStore` and nothing else, which is why an
+ * Overview sitting on the canvas costs no IPC at all — every section of the
+ * maximized dashboard fetches on mount, and none of them mount until the user
+ * asks for it.
  */
 export function Vitals() {
   const status = useServerStore((s) => s.status)
