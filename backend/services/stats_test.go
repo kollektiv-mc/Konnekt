@@ -87,7 +87,7 @@ func TestTickEmitsServerStatusWhileStopped(t *testing.T) {
 	if n := len(snapshots()); n != 0 {
 		t.Errorf("stats:snapshot should stay gated while stopped, got %d", n)
 	}
-	if n := len(stats.GetStatsHistory()); n != 0 {
+	if n := len(stats.GetStatsHistory(server.CurrentServerID())); n != 0 {
 		t.Errorf("history should stay empty while stopped, got %d entries", n)
 	}
 }
@@ -115,7 +115,7 @@ func TestTickEmitsBothWhileRunning(t *testing.T) {
 	if n := len(snapshots()); n != 1 {
 		t.Errorf("want 1 stats:snapshot while running, got %d", n)
 	}
-	if n := len(stats.GetStatsHistory()); n != 1 {
+	if n := len(stats.GetStatsHistory(server.CurrentServerID())); n != 1 {
 		t.Errorf("want 1 history entry while running, got %d", n)
 	}
 }

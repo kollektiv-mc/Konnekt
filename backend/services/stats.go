@@ -15,14 +15,17 @@ type StatsService struct {
 	server *ServerService
 	bus    *EventBus
 
+	// history is keyed by server: an unkeyed ring made GetStatsHistory unable to
+	// honour the id it is given, and left one server's chart backfilling an hour
+	// of another's samples (#239). Roughly 17 KB per server at snapshotCap.
 	mu      sync.Mutex
-	history []models.StatsSnapshot
+	history map[string][]models.StatsSnapshot
 }
 
 func NewStatsService(server *ServerService) *StatsService {
 	return &StatsService{
 		server:  server,
-		history: make([]models.StatsSnapshot, 0, snapshotCap),
+		history: make(map[string][]models.StatsSnapshot),
 	}
 }
 
@@ -79,19 +82,23 @@ func (s *StatsService) tick() {
 	}
 
 	s.mu.Lock()
-	if len(s.history) >= snapshotCap {
-		s.history = s.history[1:]
+	ring := s.history[id]
+	if len(ring) >= snapshotCap {
+		ring = ring[1:]
 	}
-	s.history = append(s.history, snap)
+	s.history[id] = append(ring, snap)
 	s.mu.Unlock()
 
 	s.bus.Emit(EventStatsSnapshot, snap)
 }
 
-func (s *StatsService) GetStatsHistory() []models.StatsSnapshot {
+func (s *StatsService) GetStatsHistory(serverID string) []models.StatsSnapshot {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	out := make([]models.StatsSnapshot, len(s.history))
-	copy(out, s.history)
+	ring := s.history[serverID]
+	// Non-nil even when empty: this crosses Wails, where a nil slice marshals to
+	// null rather than [].
+	out := make([]models.StatsSnapshot, len(ring))
+	copy(out, ring)
 	return out
 }

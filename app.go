@@ -362,9 +362,11 @@ func (a *App) RestartServer(serverID string) error {
 	return a.serverService.Restart(serverID, cfg.JarPath, cfg.JvmArgs, cfg.WorkingDir, a.configService.StopGrace())
 }
 
-// ForceStopServer kills the server process tree immediately, bypassing the
-// power-action gate — the escape hatch for a stop that is wedged. serverID is
-// ignored like StopServer's (single active server).
+// ForceStopServer kills the named server's process tree immediately, bypassing
+// the power-action gate — the escape hatch for a stop that is wedged. It targets
+// the current instance rather than scanning for a running one on purpose: during
+// a boot the running flag is still false, and a force stop that no-opped on a
+// wedged boot would miss the case it exists for.
 func (a *App) ForceStopServer(serverID string) error {
 	return a.serverService.ForceStop(serverID)
 }
@@ -407,7 +409,7 @@ func (a *App) GetServerStatus(serverID string) (models.ServerStatus, error) {
 }
 
 func (a *App) GetStatsHistory(serverID string) ([]models.StatsSnapshot, error) {
-	return a.statsService.GetStatsHistory(), nil
+	return a.statsService.GetStatsHistory(serverID), nil
 }
 
 // GetConsoleHistory backfills the console for a client that connected
