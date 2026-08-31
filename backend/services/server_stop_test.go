@@ -49,7 +49,7 @@ func TestStopEscalatesThroughBannersToKill(t *testing.T) {
 	release, _ := fakeRunningServer(t, s)
 	kills := recordKillTree(t, s, release)
 
-	wantPid := s.cmd.Process.Pid
+	wantPid := curInst(s).cmd.Process.Pid
 	if err := s.Stop(80 * time.Millisecond); err != nil {
 		t.Fatalf("Stop = %v, want nil", err)
 	}

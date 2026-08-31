@@ -14,6 +14,17 @@ import (
 	"konnekt/backend/models"
 )
 
+// curInst is the instance a fixture's manager currently answers from: the
+// per-server runtime these tests used to read straight off ServerService before
+// it moved to serverInstance (#232).
+//
+// Deliberately resolved at each use rather than hoisted into a local. A
+// successful Start swaps the manager's current instance from the bootstrap one
+// to the one keyed by the server id, so a handle captured before a Start would
+// go on inspecting the wrong instance — silently, since both are valid objects.
+// TestTPSPollRearmsAcrossBoots is where that would bite first.
+func curInst(s *ServerService) *serverInstance { return s.cur() }
+
 // Use NewServerService, not a struct literal: streamOutput writes the player
 // maps, and a nil map write panics.
 func newServerFixture() (*ServerService, *EventBus) {
@@ -61,7 +72,7 @@ func TestStreamOutputSurvivesOverlongLine(t *testing.T) {
 	lines := collect(bus, EventLogLine)
 
 	giant := strings.Repeat("x", maxConsoleLine+1024)
-	s.streamOutput(strings.NewReader(giant + "\n[12:00:00] [Server thread/INFO]: Done (1.2s)!\n"))
+	curInst(s).streamOutput(strings.NewReader(giant + "\n[12:00:00] [Server thread/INFO]: Done (1.2s)!\n"))
 
 	history := s.GetConsoleHistory()
 	if len(history) != 2 {
@@ -93,7 +104,7 @@ func TestStreamOutputNormalizesCarriageReturns(t *testing.T) {
 	s, bus := newServerFixture()
 	lines := collect(bus, EventLogLine)
 
-	s.streamOutput(strings.NewReader("Preparing spawn area: 10%\rPreparing spawn area: 20%\rPreparing spawn area: 30%\n"))
+	curInst(s).streamOutput(strings.NewReader("Preparing spawn area: 10%\rPreparing spawn area: 20%\rPreparing spawn area: 30%\n"))
 
 	want := []string{
 		"Preparing spawn area: 10%",
@@ -138,7 +149,7 @@ func TestStreamOutputMatchersFireOnNormalizedLines(t *testing.T) {
 		"[12:00:00] [Server thread/INFO]: Stopping the server",
 	}, "\r") // \r separators: matchers see lines only if normalization splits them
 
-	s.streamOutput(strings.NewReader(input))
+	curInst(s).streamOutput(strings.NewReader(input))
 
 	events := waitForCount(t, joined, 1)
 	m, ok := events[0].(map[string]string)
@@ -150,19 +161,19 @@ func TestStreamOutputMatchersFireOnNormalizedLines(t *testing.T) {
 	}
 	waitForCount(t, eula, 1)
 
-	s.playersMu.RLock()
-	sess, online := s.players["Alex"]
-	s.playersMu.RUnlock()
+	curInst(s).playersMu.RLock()
+	sess, online := curInst(s).players["Alex"]
+	curInst(s).playersMu.RUnlock()
 	if !online {
 		t.Error("Alex missing from the players map")
 	} else if sess.uuid != "069a79f4-44e9-4726-a5be-fca90e38aaf5" {
 		t.Errorf("Alex's uuid = %q", sess.uuid)
 	}
 
-	s.mu.Lock()
-	expected := s.expectedStop
-	state := s.state
-	s.mu.Unlock()
+	curInst(s).mu.Lock()
+	expected := curInst(s).expectedStop
+	state := curInst(s).state
+	curInst(s).mu.Unlock()
 	if !expected {
 		t.Error("'Stopping the server' did not set expectedStop")
 	}
@@ -191,7 +202,7 @@ func TestStreamOutputTracksPaperColouredSession(t *testing.T) {
 		"[17:23:35 INFO]: <\x1b[38;2;170;0;0mSnadrochka\x1b[0m> test",
 	}, "\n")
 
-	s.streamOutput(strings.NewReader(input))
+	curInst(s).streamOutput(strings.NewReader(input))
 
 	events := waitForCount(t, joined, 1)
 	// Exactly one: the join broadcast and the login line both signal a join,
@@ -222,16 +233,16 @@ func TestStreamOutputTracksPaperColouredSession(t *testing.T) {
 	if roster[0].IP != "127.0.0.1" {
 		t.Errorf("roster ip = %q, want 127.0.0.1", roster[0].IP)
 	}
-	s.playersMu.RLock()
-	stale := len(s.presession)
-	s.playersMu.RUnlock()
+	curInst(s).playersMu.RLock()
+	stale := len(curInst(s).presession)
+	curInst(s).playersMu.RUnlock()
 	if stale != 0 {
 		t.Errorf("presession holds %d stale entries after a completed join, want 0", stale)
 	}
 
 	// Paper prints the core disconnect line first, then the coloured
 	// broadcast. Both are leave signals; only the first may emit.
-	s.streamOutput(strings.NewReader(strings.Join([]string{
+	curInst(s).streamOutput(strings.NewReader(strings.Join([]string{
 		"[17:40:00 INFO]: Snadrochka lost connection: Disconnected",
 		"[17:40:00 INFO]: \x1b[38;2;255;255;85mSnadrochka left the game\x1b[0m",
 	}, "\n")))
@@ -253,7 +264,7 @@ func TestStreamOutputMatchesColouredBroadcastWithoutLoginLine(t *testing.T) {
 	joined := collect(bus, EventPlayerJoined)
 	left := collect(bus, EventPlayerLeft)
 
-	s.streamOutput(strings.NewReader(
+	curInst(s).streamOutput(strings.NewReader(
 		"[17:22:59 INFO]: \x1b[38;2;255;255;85mSnadrochka joined the game\x1b[0m\n"))
 
 	waitForCount(t, joined, 1)
@@ -261,7 +272,7 @@ func TestStreamOutputMatchesColouredBroadcastWithoutLoginLine(t *testing.T) {
 		t.Fatalf("PlayerCount() = %d after a coloured join broadcast, want 1", got)
 	}
 
-	s.streamOutput(strings.NewReader(
+	curInst(s).streamOutput(strings.NewReader(
 		"[17:40:00 INFO]: \x1b[38;2;255;255;85mSnadrochka left the game\x1b[0m\n"))
 
 	waitForCount(t, left, 1)
@@ -276,7 +287,7 @@ func TestStreamOutputEmitsConsoleLinesWithoutEscapes(t *testing.T) {
 	s, bus := newServerFixture()
 	lines := collect(bus, EventLogLine)
 
-	s.streamOutput(strings.NewReader(
+	curInst(s).streamOutput(strings.NewReader(
 		"[17:10:36 INFO]: [Essentials] \x1b[38;2;255;170;0mFetching version information...\x1b[0m\n"))
 
 	events := waitForCount(t, lines, 1)
@@ -293,7 +304,7 @@ func TestStreamOutputIgnoresLostConnectionForPlayerWhoNeverJoined(t *testing.T) 
 	s, bus := newServerFixture()
 	left := collect(bus, EventPlayerLeft)
 
-	s.streamOutput(strings.NewReader(strings.Join([]string{
+	curInst(s).streamOutput(strings.NewReader(strings.Join([]string{
 		"[17:22:56 INFO]: UUID of player Alex is 069a79f4-44e9-4726-a5be-fca90e38aaf5",
 		"[17:22:57 INFO]: Alex lost connection: Internal Exception",
 	}, "\n")))
@@ -301,9 +312,9 @@ func TestStreamOutputIgnoresLostConnectionForPlayerWhoNeverJoined(t *testing.T) 
 	if events := left(); len(events) != 0 {
 		t.Errorf("player:left fired %d times for a login that never completed, want 0", len(events))
 	}
-	s.playersMu.RLock()
-	online, stale := len(s.players), len(s.presession)
-	s.playersMu.RUnlock()
+	curInst(s).playersMu.RLock()
+	online, stale := len(curInst(s).players), len(curInst(s).presession)
+	curInst(s).playersMu.RUnlock()
 	if online != 0 {
 		t.Errorf("players holds %d entries, want 0", online)
 	}
@@ -324,7 +335,7 @@ func TestNarrateMarksManagerLines(t *testing.T) {
 	lines := collect(bus, EventLogLine)
 
 	s.Narrate("something happened")
-	s.emitConsoleLine("[12:00:00] [Server thread/INFO]: raw output")
+	curInst(s).emitConsoleLine("[12:00:00] [Server thread/INFO]: raw output")
 
 	events := waitForCount(t, lines, 2)
 	var sawManager, sawServer bool
@@ -426,9 +437,9 @@ func TestPrepareForBackupNarratesTheQuiesce(t *testing.T) {
 		}
 	}
 
-	s.mu.Lock()
-	exited := s.exited
-	s.mu.Unlock()
+	curInst(s).mu.Lock()
+	exited := curInst(s).exited
+	curInst(s).mu.Unlock()
 	release()
 	select {
 	case <-exited:
@@ -470,11 +481,11 @@ func startForExit(t *testing.T, s *ServerService, cmd *exec.Cmd, expected bool) 
 	if err := cmd.Start(); err != nil {
 		t.Fatalf("start: %v", err)
 	}
-	s.mu.Lock()
-	s.cmd = cmd
-	s.exited = make(chan struct{})
-	s.expectedStop = expected
-	s.mu.Unlock()
+	curInst(s).mu.Lock()
+	curInst(s).cmd = cmd
+	curInst(s).exited = make(chan struct{})
+	curInst(s).expectedStop = expected
+	curInst(s).mu.Unlock()
 }
 
 // The bug behind issue #111: waitForExit discarded cmd.Wait's status, so the
@@ -493,7 +504,7 @@ func TestWaitForExitReportsTheExitCodeOnUnexpectedStop(t *testing.T) {
 	})
 
 	startForExit(t, s, exitingCommand(t, 3), false)
-	s.waitForExit()
+	curInst(s).waitForExit()
 
 	if got := s.GetLastStop(); got.Expected || got.ExitCode != 3 {
 		t.Errorf("GetLastStop() = %+v, want {Expected:false ExitCode:3}", got)
@@ -524,7 +535,7 @@ func TestWaitForExitNormalStopWritesNoBanner(t *testing.T) {
 	s, _ := newServerFixture()
 
 	startForExit(t, s, exitingCommand(t, 0), true)
-	s.waitForExit()
+	curInst(s).waitForExit()
 
 	if got := s.GetLastStop(); !got.Expected || got.ExitCode != 0 {
 		t.Errorf("GetLastStop() = %+v, want {Expected:true ExitCode:0}", got)
@@ -558,7 +569,7 @@ func fakeLaunch(t *testing.T, s *ServerService) {
 
 // fakeRunningServer wires a live child whose exit the TEST controls,
 // decoupled from the stdin stop() closes: the process's real stdin stays in
-// the test's hand (release closes it), while s.stdin is one end of an
+// the test's hand (release closes it), while curInst(s).stdin is one end of an
 // in-memory pipe whose drain goroutine closes stopSeen at EOF. stopSeen
 // closing therefore proves a stop() has written its command and closed the
 // handle — the action is verifiably inside the gate, waiting on the exit —
@@ -581,16 +592,23 @@ func fakeRunningServer(t *testing.T, s *ServerService) (release func(), stopSeen
 		close(stopSeen)
 	}()
 
-	s.mu.Lock()
-	s.cmd = cmd
-	s.stdin = pw
-	s.running = true
-	s.serverID = "srv1"
-	s.exited = make(chan struct{})
-	s.expectedStop = false
-	s.state = stateRunning // direct write, not the setter: a fixture mirrors a ready boot without emitting
-	s.mu.Unlock()
-	go s.waitForExit()
+	// Claim the instance for "srv1" and make it current, which is what a real
+	// Start does before booting — the id is the map key now, not a field a
+	// fixture can write (#232). Hoisted into a local deliberately: this is the
+	// one place that wants the instance it just claimed rather than whatever is
+	// current later.
+	in := s.instanceFor("srv1")
+	s.setCurrent(in)
+
+	in.mu.Lock()
+	in.cmd = cmd
+	in.stdin = pw
+	in.running = true
+	in.exited = make(chan struct{})
+	in.expectedStop = false
+	in.state = stateRunning // direct write, not the setter: a fixture mirrors a ready boot without emitting
+	in.mu.Unlock()
+	go in.waitForExit()
 
 	var once sync.Once
 	release = func() { once.Do(func() { procStdin.Close() }) }
@@ -715,12 +733,12 @@ func TestRestartFromStoppedIsAPlainStart(t *testing.T) {
 func TestExitedObservesStoppedState(t *testing.T) {
 	s, _ := newServerFixture()
 	startForExit(t, s, exitingCommand(t, 0), true)
-	s.mu.Lock()
-	s.running = true
-	exited := s.exited
-	s.mu.Unlock()
+	curInst(s).mu.Lock()
+	curInst(s).running = true
+	exited := curInst(s).exited
+	curInst(s).mu.Unlock()
 
-	go s.waitForExit()
+	go curInst(s).waitForExit()
 
 	select {
 	case <-exited:
@@ -748,9 +766,9 @@ func TestStartWhileRunningRefused(t *testing.T) {
 		t.Fatalf("Start while running = %v, want 'server already running'", err)
 	}
 
-	s.mu.Lock()
-	exited := s.exited
-	s.mu.Unlock()
+	curInst(s).mu.Lock()
+	exited := curInst(s).exited
+	curInst(s).mu.Unlock()
 	release()
 	select {
 	case <-exited:
@@ -865,7 +883,7 @@ func TestStreamOutputTracksBedrockPlayer(t *testing.T) {
 	joined := collect(bus, EventPlayerJoined)
 	left := collect(bus, EventPlayerLeft)
 
-	s.streamOutput(strings.NewReader(strings.Join([]string{
+	curInst(s).streamOutput(strings.NewReader(strings.Join([]string{
 		"[17:22:56 INFO]: UUID of player .Snadrochka is 00000000-0000-0000-0009-01f34a8b2c7d",
 		"[17:22:59 INFO]: \x1b[38;2;255;255;85m.Snadrochka joined the game\x1b[0m",
 		"[17:22:59 INFO]: .Snadrochka[/127.0.0.1:62436] logged in with entity id 86",
@@ -886,7 +904,7 @@ func TestStreamOutputTracksBedrockPlayer(t *testing.T) {
 		t.Errorf("roster ip = %q, want 127.0.0.1", roster[0].IP)
 	}
 
-	s.streamOutput(strings.NewReader(
+	curInst(s).streamOutput(strings.NewReader(
 		"[17:40:00 INFO]: \x1b[38;2;255;255;85m.Snadrochka left the game\x1b[0m\n"))
 
 	waitForCount(t, left, 1)
@@ -916,13 +934,13 @@ func TestPlayerMatchersRejectSpoofedLines(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			s, _ := newServerFixture()
-			s.streamOutput(strings.NewReader(tc.line + "\n"))
+			curInst(s).streamOutput(strings.NewReader(tc.line + "\n"))
 
 			// Both maps, not just the count: a spoof that only reached the
 			// pre-join accumulator would still be a spoof that landed.
-			s.playersMu.RLock()
-			online, pre := len(s.players), len(s.presession)
-			s.playersMu.RUnlock()
+			curInst(s).playersMu.RLock()
+			online, pre := len(curInst(s).players), len(curInst(s).presession)
+			curInst(s).playersMu.RUnlock()
 			if online != 0 {
 				t.Errorf("%q put %d players online", tc.line, online)
 			}
@@ -964,7 +982,7 @@ func TestStreamOutputReadsIPv6LoginAddress(t *testing.T) {
 			s, bus := newServerFixture()
 			joined := collect(bus, EventPlayerJoined)
 
-			s.streamOutput(strings.NewReader(tc.line + "\n"))
+			curInst(s).streamOutput(strings.NewReader(tc.line + "\n"))
 
 			waitForCount(t, joined, 1)
 			roster := s.GetActivePlayers()
@@ -984,7 +1002,7 @@ func TestStreamOutputRegistersJoinWhenLoginAddressIsUnreadable(t *testing.T) {
 	s, bus := newServerFixture()
 	joined := collect(bus, EventPlayerJoined)
 
-	s.streamOutput(strings.NewReader(
+	curInst(s).streamOutput(strings.NewReader(
 		"[12:00:00 INFO]: Alex[/proxy.example.com:25565] logged in with entity id 261\n"))
 
 	waitForCount(t, joined, 1)

@@ -33,7 +33,7 @@ type jobobjectBasicLimitInformation struct {
 // createJob creates a Windows Job Object, sets JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE
 // so the OS kills the entire Java process tree when this process exits for any reason,
 // then assigns the freshly started Java process to the job.
-func (s *ServerService) createJob() {
+func (s *serverInstance) createJob() {
 	job, err := windows.CreateJobObject(nil, nil)
 	if err != nil {
 		return
@@ -69,7 +69,7 @@ func (s *ServerService) createJob() {
 }
 
 // closeJob releases the Job Object handle after the Java process has exited normally.
-func (s *ServerService) closeJob() {
+func (s *serverInstance) closeJob() {
 	if s.job != 0 {
 		_ = windows.CloseHandle(windows.Handle(s.job)) //nolint:errcheck // normal teardown; the process is exiting regardless
 		s.job = 0

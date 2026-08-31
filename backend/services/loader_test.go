@@ -356,10 +356,14 @@ func TestLoaderAvailableVersionsUnsupportedLoader(t *testing.T) {
 func TestLoaderUpdateRefusals(t *testing.T) {
 	t.Run("while the server is running", func(t *testing.T) {
 		f := newLoaderFixture(t)
-		f.srv.mu.Lock()
-		f.srv.running = true
-		f.srv.serverID = f.serverID
-		f.srv.mu.Unlock()
+		// The instance's id is its map key now, so the fixture claims the real
+		// instance for this server rather than writing an id onto whichever one
+		// happened to be current (#232).
+		in := f.srv.instanceFor(f.serverID)
+		f.srv.setCurrent(in)
+		in.mu.Lock()
+		in.running = true
+		in.mu.Unlock()
 
 		err := f.svc.Update(models.LoaderUpdateRequest{ServerID: f.serverID, Version: "21.1.209"})
 		if err == nil {
