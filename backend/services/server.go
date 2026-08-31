@@ -322,18 +322,28 @@ func (s *ServerService) instanceFor(serverID string) *serverInstance {
 // worst case is refusing a start that could have proceeded. The single running
 // flag this replaces had the same property.
 func (s *ServerService) anyRunning() bool {
+	return len(s.runningInstances()) > 0
+}
+
+// runningInstances is anyRunning's two-beat scan, shared with StopRunning:
+// snapshot the pointers under s.mu, release it, then ask each instance, because
+// reading an instance's running flag needs its own lock and the order
+// (powerMu -> s.mu -> instance.mu) forbids holding s.mu there.
+func (s *ServerService) runningInstances() []*serverInstance {
 	s.mu.Lock()
 	insts := make([]*serverInstance, 0, len(s.instances))
 	for _, inst := range s.instances {
 		insts = append(insts, inst)
 	}
 	s.mu.Unlock()
+
+	var running []*serverInstance
 	for _, inst := range insts {
 		if inst.IsRunning() {
-			return true
+			running = append(running, inst)
 		}
 	}
-	return false
+	return running
 }
 
 func (s *ServerService) Start(serverID string, jarPath string, jvmArgs []string, workingDir string) error {
@@ -401,7 +411,11 @@ func (s *ServerService) Restart(serverID string, jarPath string, jvmArgs []strin
 		return ErrPowerActionInProgress
 	}
 	defer s.powerMu.Unlock()
-	if err := s.cur().stop(grace); err != nil && !errors.Is(err, errServerNotRunning) {
+	// The stop leg targets the server being restarted, not whichever one is
+	// running (#239). Restarting B while A was up used to stop A and boot B,
+	// because the leg went through the ambient current instance; a second server
+	// being up is a refusal, the same one Start gives.
+	if err := s.instanceFor(serverID).stop(grace); err != nil && !errors.Is(err, errServerNotRunning) {
 		return err
 	}
 	return s.startInstance(serverID, jarPath, jvmArgs, workingDir)
@@ -757,12 +771,35 @@ func (s *serverInstance) GetLastStop() models.ServerStopped {
 // and exit before force killing the process tree. grace <= 0 means the
 // default; callers with a configured value (ConfigService.StopGrace) pass it
 // through.
-func (s *ServerService) Stop(grace time.Duration) error {
+func (s *ServerService) Stop(serverID string, grace time.Duration) error {
 	if !s.powerMu.TryLock() {
 		return ErrPowerActionInProgress
 	}
 	defer s.powerMu.Unlock()
-	return s.cur().stop(grace)
+	return s.instanceFor(serverID).stop(grace)
+}
+
+// StopRunning stops whatever is running, for the one caller that legitimately
+// has no id: quitting the app. Scoping the close-time stop to the *selected*
+// server instead would skip the graceful stop whenever the running server was
+// not the selected one, and the Job Object or Pdeathsig would then kill the JVM
+// with no expectedStop marked and no world save — a crash notification for a
+// deliberate quit, and lost chunks.
+//
+// Returns nil when nothing is running, following ForceStop's "already dead is
+// success". A loop today over at most one instance; correct unchanged when #57
+// allows several.
+func (s *ServerService) StopRunning(grace time.Duration) error {
+	if !s.powerMu.TryLock() {
+		return ErrPowerActionInProgress
+	}
+	defer s.powerMu.Unlock()
+	for _, inst := range s.runningInstances() {
+		if err := inst.stop(grace); err != nil && !errors.Is(err, errServerNotRunning) {
+			return err
+		}
+	}
+	return nil
 }
 
 // stop is Stop without the power gate. Callers hold powerMu.
@@ -830,11 +867,11 @@ func (s *serverInstance) stop(grace time.Duration) error {
 // it dead", and dead already is success. No stopTPSPoll here: waitForExit
 // runs it during the teardown this kill triggers, and it stays the single
 // writer of the offline transition, the stopped payload and the exited close.
-func (s *ServerService) ForceStop() error {
+func (s *ServerService) ForceStop(serverID string) error {
 	if s.powerMu.TryLock() {
 		defer s.powerMu.Unlock()
 	}
-	return s.cur().forceStop()
+	return s.instanceFor(serverID).forceStop()
 }
 
 // forceStop is ForceStop without the gate. The running check is inside the
@@ -1513,7 +1550,9 @@ func (s *ServerService) CurrentServerID() string {
 }
 
 func (s *ServerService) GetLastStop() models.ServerStopped { return s.cur().GetLastStop() }
-func (s *ServerService) SendCommand(command string) error  { return s.cur().SendCommand(command) }
+func (s *ServerService) SendCommand(serverID, command string) error {
+	return s.instanceFor(serverID).SendCommand(command)
+}
 func (s *ServerService) IsRunning() bool                   { return s.cur().IsRunning() }
 func (s *ServerService) State() string                     { return s.cur().State() }
 func (s *ServerService) ActiveServerID() string            { return s.cur().ActiveServerID() }

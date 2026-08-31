@@ -316,7 +316,7 @@ func execCommand(e *ExecContext) ExecResult {
 		}
 		err = e.Server().Start(cfg.ID, cfg.JarPath, cfg.JvmArgs, cfg.WorkingDir)
 	case "__stop__":
-		err = e.Server().Stop(e.Config_().StopGrace())
+		err = e.Server().Stop(e.ServerID, e.Config_().StopGrace())
 	case "__restart__":
 		cfg, cfgErr := e.Config_().GetServerConfig(e.ServerID)
 		if cfgErr != nil {
@@ -324,7 +324,7 @@ func execCommand(e *ExecContext) ExecResult {
 		}
 		err = e.Server().Restart(cfg.ID, cfg.JarPath, cfg.JvmArgs, cfg.WorkingDir, e.Config_().StopGrace())
 	default:
-		err = e.Server().SendCommand(cmd)
+		err = e.Server().SendCommand(e.ServerID, cmd)
 	}
 
 	if err != nil {
@@ -409,7 +409,7 @@ func execWriteAttribute(e *ExecContext) ExecResult {
 		if value == "true" || value == "1" {
 			cmd = "whitelist on"
 		}
-		_ = e.Server().SendCommand(cmd) //nolint:errcheck // UX nicety only; writeProperty above already persisted the source of truth
+		_ = e.Server().SendCommand(e.ServerID, cmd) //nolint:errcheck // UX nicety only; writeProperty above already persisted the source of truth
 	case "server.port":
 		if writeErr := writeProperty(propsPath, "server-port", value); writeErr != nil {
 			return ExecResult{Port: "onFailed", Err: writeErr}
@@ -418,7 +418,7 @@ func execWriteAttribute(e *ExecContext) ExecResult {
 		if writeErr := writeProperty(propsPath, "gamemode", value); writeErr != nil {
 			return ExecResult{Port: "onFailed", Err: writeErr}
 		}
-		_ = e.Server().SendCommand("defaultgamemode " + value) //nolint:errcheck // UX nicety only; writeProperty above already persisted the source of truth
+		_ = e.Server().SendCommand(e.ServerID, "defaultgamemode "+value) //nolint:errcheck // UX nicety only; writeProperty above already persisted the source of truth
 	case "server.world":
 		if writeErr := writeProperty(propsPath, "level-name", value); writeErr != nil {
 			return ExecResult{Port: "onFailed", Err: writeErr}

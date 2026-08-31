@@ -95,16 +95,15 @@ func (a *App) beforeClose(ctx context.Context) bool {
 	a.kommandsService.Stop()
 	// Same reasoning for the mod folder scan and its manifest writes.
 	a.modService.Stop()
-	if a.serverService.IsRunning() {
-		// Stop's error paths here are "server not running" (the IsRunning guard
-		// covers it, and a race can only make it true — the benign direction)
-		// and "another power action is in progress" (quitting anyway is fine:
-		// the stdin stop is best-effort, and the Windows Job Object / Linux
-		// Pdeathsig tie the java tree to Konnekt's lifetime). A process that
-		// ignores the stdin stop is handled inside Stop by killTree, not
-		// reported here.
-		_ = a.serverService.Stop(quitStopGrace) //nolint:errcheck // see above
-	}
+	// StopRunning rather than a named stop: quitting has no server id to give,
+	// and scoping this to the *selected* server would skip the graceful stop
+	// whenever the running one was not selected (#239). Its error paths are
+	// "server not running" (a race can only make that true, the benign
+	// direction) and "another power action is in progress" — quitting anyway is
+	// fine, since the stdin stop is best-effort and the Windows Job Object /
+	// Linux Pdeathsig tie the java tree to Konnekt's lifetime. A process that
+	// ignores the stdin stop is handled inside stop by killTree, not here.
+	_ = a.serverService.StopRunning(quitStopGrace) //nolint:errcheck // see above
 	return false
 }
 
@@ -352,7 +351,7 @@ func (a *App) StartServer(serverID string) error {
 }
 
 func (a *App) StopServer(serverID string) error {
-	return a.serverService.Stop(a.configService.StopGrace())
+	return a.serverService.Stop(serverID, a.configService.StopGrace())
 }
 
 func (a *App) RestartServer(serverID string) error {
@@ -367,7 +366,7 @@ func (a *App) RestartServer(serverID string) error {
 // power-action gate — the escape hatch for a stop that is wedged. serverID is
 // ignored like StopServer's (single active server).
 func (a *App) ForceStopServer(serverID string) error {
-	return a.serverService.ForceStop()
+	return a.serverService.ForceStop(serverID)
 }
 
 // GetLastStop reports the most recent stop's detail, the readable getter twin
@@ -390,7 +389,7 @@ func (a *App) AcceptEula(serverID string) error {
 }
 
 func (a *App) SendCommand(serverID string, command string) error {
-	return a.serverService.SendCommand(command)
+	return a.serverService.SendCommand(serverID, command)
 }
 
 // --- Status and players ---
@@ -423,16 +422,16 @@ func (a *App) GetPlayerDetail(serverID string, name string) (models.Player, erro
 
 func (a *App) KickPlayer(serverID string, name string, reason string) error {
 	cmd := fmt.Sprintf("kick %s %s", name, reason)
-	return a.serverService.SendCommand(cmd)
+	return a.serverService.SendCommand(serverID, cmd)
 }
 
 func (a *App) BanPlayer(serverID string, name string, reason string) error {
 	cmd := fmt.Sprintf("ban %s %s", name, reason)
-	return a.serverService.SendCommand(cmd)
+	return a.serverService.SendCommand(serverID, cmd)
 }
 
 func (a *App) PardonPlayer(serverID string, name string) error {
-	return a.serverService.SendCommand(fmt.Sprintf("pardon %s", name))
+	return a.serverService.SendCommand(serverID, fmt.Sprintf("pardon %s", name))
 }
 
 // --- Layout presets ---

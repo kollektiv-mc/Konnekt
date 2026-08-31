@@ -50,7 +50,7 @@ func TestStopEscalatesThroughBannersToKill(t *testing.T) {
 	kills := recordKillTree(t, s, release)
 
 	wantPid := curInst(s).cmd.Process.Pid
-	if err := s.Stop(80 * time.Millisecond); err != nil {
+	if err := s.Stop(fixtureServerID, 80*time.Millisecond); err != nil {
 		t.Fatalf("Stop = %v, want nil", err)
 	}
 
@@ -90,7 +90,7 @@ func TestStopWithinGraceWritesNoBanners(t *testing.T) {
 	kills := recordKillTree(t, s)
 
 	errCh := make(chan error, 1)
-	go func() { errCh <- s.Stop(time.Hour) }()
+	go func() { errCh <- s.Stop(fixtureServerID, time.Hour) }()
 
 	select {
 	case <-stopSeen:
@@ -129,7 +129,7 @@ func TestForceStopWhileGracefulStopWedged(t *testing.T) {
 	kills := recordKillTree(t, s, release)
 
 	errCh := make(chan error, 1)
-	go func() { errCh <- s.Stop(time.Hour) }()
+	go func() { errCh <- s.Stop(fixtureServerID, time.Hour) }()
 
 	select {
 	case <-stopSeen:
@@ -137,7 +137,7 @@ func TestForceStopWhileGracefulStopWedged(t *testing.T) {
 		t.Fatal("graceful Stop never reached its stdin close")
 	}
 
-	if err := s.ForceStop(); err != nil {
+	if err := s.ForceStop(fixtureServerID); err != nil {
 		t.Fatalf("ForceStop while a stop holds the gate = %v, want nil", err)
 	}
 
@@ -178,7 +178,7 @@ func TestForceStopWhenOfflineIsIdempotent(t *testing.T) {
 	s, bus := newServerFixture()
 	states := collect(bus, EventServerState)
 
-	if err := s.ForceStop(); err != nil {
+	if err := s.ForceStop(fixtureServerID); err != nil {
 		t.Fatalf("ForceStop on an offline server = %v, want nil", err)
 	}
 	if events := states(); len(events) != 0 {
@@ -203,7 +203,7 @@ func TestForceStopFromStartingPassesThroughStopping(t *testing.T) {
 	// stdin-consuming fixture process; the seam only records.
 	kills := recordKillTree(t, s)
 
-	if err := s.ForceStop(); err != nil {
+	if err := s.ForceStop(fixtureServerID); err != nil {
 		t.Fatalf("ForceStop = %v, want nil", err)
 	}
 
@@ -234,10 +234,10 @@ func TestForceStopWithFreeGateExcludesOtherActions(t *testing.T) {
 	recordKillTree(t, s, func() {
 		// Runs while ForceStop holds powerMu (its TryLock succeeded on the
 		// free gate), so this deterministically observes the exclusion.
-		raced = s.Stop(0)
+		raced = s.Stop(fixtureServerID, 0)
 	}, release)
 
-	if err := s.ForceStop(); err != nil {
+	if err := s.ForceStop(fixtureServerID); err != nil {
 		t.Fatalf("ForceStop = %v, want nil", err)
 	}
 	if !errors.Is(raced, ErrPowerActionInProgress) {

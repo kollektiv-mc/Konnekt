@@ -14,6 +14,12 @@ import (
 	"konnekt/backend/models"
 )
 
+// fixtureServerID is the server the fixtures below boot and claim. Named rather
+// than repeated as a literal because every id-taking call in these tests has to
+// name the same one the fixture claimed, and a typo would silently address an
+// inert instance instead of failing.
+const fixtureServerID = "srv1"
+
 // curInst is the instance a fixture's manager currently answers from: the
 // per-server runtime these tests used to read straight off ServerService before
 // it moved to serverInstance (#232).
@@ -597,7 +603,7 @@ func fakeRunningServer(t *testing.T, s *ServerService) (release func(), stopSeen
 	// fixture can write (#232). Hoisted into a local deliberately: this is the
 	// one place that wants the instance it just claimed rather than whatever is
 	// current later.
-	in := s.instanceFor("srv1")
+	in := s.instanceFor(fixtureServerID)
 	s.setCurrent(in)
 
 	in.mu.Lock()
@@ -624,7 +630,7 @@ func TestConcurrentStopsSecondFailsFast(t *testing.T) {
 	release, stopSeen := fakeRunningServer(t, s)
 
 	errCh := make(chan error, 1)
-	go func() { errCh <- s.Stop(0) }()
+	go func() { errCh <- s.Stop(fixtureServerID, 0) }()
 
 	select {
 	case <-stopSeen:
@@ -632,7 +638,7 @@ func TestConcurrentStopsSecondFailsFast(t *testing.T) {
 		t.Fatal("first Stop never reached its stdin close")
 	}
 
-	if err := s.Stop(0); !errors.Is(err, ErrPowerActionInProgress) {
+	if err := s.Stop(fixtureServerID, 0); !errors.Is(err, ErrPowerActionInProgress) {
 		t.Fatalf("second Stop = %v, want ErrPowerActionInProgress", err)
 	}
 
@@ -651,7 +657,7 @@ func TestConcurrentStopsSecondFailsFast(t *testing.T) {
 	}
 	// The gate must be released again: a third Stop reports the ordinary
 	// not-running error, not contention.
-	if err := s.Stop(0); !errors.Is(err, errServerNotRunning) {
+	if err := s.Stop(fixtureServerID, 0); !errors.Is(err, errServerNotRunning) {
 		t.Errorf("third Stop = %v, want errServerNotRunning", err)
 	}
 }
@@ -702,7 +708,7 @@ func TestRestartBackToBackSecondFailsFast(t *testing.T) {
 		t.Error("restart's stop leg emitted Expected=false — a crash notification for a deliberate restart")
 	}
 
-	if err := s.Stop(0); err != nil {
+	if err := s.Stop(fixtureServerID, 0); err != nil {
 		t.Errorf("cleanup Stop = %v, want nil", err)
 	}
 }
@@ -722,7 +728,7 @@ func TestRestartFromStoppedIsAPlainStart(t *testing.T) {
 	if got := s.ActiveServerID(); got != "srv1" {
 		t.Errorf("ActiveServerID() = %q, want srv1", got)
 	}
-	if err := s.Stop(0); err != nil {
+	if err := s.Stop(fixtureServerID, 0); err != nil {
 		t.Errorf("cleanup Stop = %v, want nil", err)
 	}
 }
@@ -777,7 +783,7 @@ func TestStartWhileRunningRefused(t *testing.T) {
 	}
 	// The refusal released the gate: the next action reports ordinary state,
 	// not contention.
-	if err := s.Stop(0); !errors.Is(err, errServerNotRunning) {
+	if err := s.Stop(fixtureServerID, 0); !errors.Is(err, errServerNotRunning) {
 		t.Errorf("Stop after teardown = %v, want errServerNotRunning", err)
 	}
 }
@@ -786,7 +792,7 @@ func TestStartWhileRunningRefused(t *testing.T) {
 // backups tile's stop-and-back-up, beforeClose's benign race).
 func TestStopWhenNotRunningKeepsItsError(t *testing.T) {
 	s, _ := newServerFixture()
-	err := s.Stop(0)
+	err := s.Stop(fixtureServerID, 0)
 	if err == nil || err.Error() != "server not running" {
 		t.Fatalf("Stop on stopped = %v, want exactly 'server not running'", err)
 	}

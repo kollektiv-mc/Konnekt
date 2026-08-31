@@ -22,7 +22,7 @@ func TestStoppedInstanceKeepsItsConsole(t *testing.T) {
 	fakeLaunch(t, s)
 
 	release, _ := fakeRunningServer(t, s)
-	srv1 := s.instanceFor("srv1")
+	srv1 := s.instanceFor(fixtureServerID)
 	srv1.emitConsoleLine("srv1 said something")
 
 	release()
@@ -31,12 +31,12 @@ func TestStoppedInstanceKeepsItsConsole(t *testing.T) {
 	if err := s.Start("srv2", "", nil, t.TempDir()); err != nil {
 		t.Fatalf("Start srv2: %v", err)
 	}
-	t.Cleanup(func() { _ = s.Stop(0) }) //nolint:errcheck // teardown
+	t.Cleanup(func() { _ = s.StopRunning(0) }) //nolint:errcheck // teardown
 
 	// Re-resolved through the map rather than reusing the pointer above, so this
 	// pins that the manager *retained* the instance, not merely that the object
 	// still exists because the test is holding it.
-	if !hasLine(s.instanceFor("srv1").GetConsoleHistory(), "srv1 said something") {
+	if !hasLine(s.instanceFor(fixtureServerID).GetConsoleHistory(), "srv1 said something") {
 		t.Error("srv1's console was cleared by srv2's boot — the whole point of the split")
 	}
 	if hasLine(s.GetConsoleHistory(), "srv1 said something") {
@@ -51,7 +51,7 @@ func TestRebootingTheSameServerClearsItsConsole(t *testing.T) {
 	fakeLaunch(t, s)
 
 	release, _ := fakeRunningServer(t, s)
-	srv1 := s.instanceFor("srv1")
+	srv1 := s.instanceFor(fixtureServerID)
 	srv1.emitConsoleLine("first boot")
 	release()
 	waitStopped(t, srv1)
@@ -59,7 +59,7 @@ func TestRebootingTheSameServerClearsItsConsole(t *testing.T) {
 	if err := s.Start("srv1", "", nil, t.TempDir()); err != nil {
 		t.Fatalf("Start srv1 again: %v", err)
 	}
-	t.Cleanup(func() { _ = s.Stop(0) }) //nolint:errcheck // teardown
+	t.Cleanup(func() { _ = s.StopRunning(0) }) //nolint:errcheck // teardown
 
 	if hasLine(s.GetConsoleHistory(), "first boot") {
 		t.Error("re-booting a server kept its previous session's console; start() must still clear the ring")
@@ -77,7 +77,7 @@ func TestReusedInstanceResetsExpectedStop(t *testing.T) {
 
 	// First boot, stopped deliberately: marks expectedStop true.
 	release, _ := fakeRunningServer(t, s)
-	srv1 := s.instanceFor("srv1")
+	srv1 := s.instanceFor(fixtureServerID)
 	srv1.mu.Lock()
 	srv1.expectedStop = true
 	srv1.mu.Unlock()
@@ -107,7 +107,7 @@ func TestStartClearsExpectedStopOnAReusedInstance(t *testing.T) {
 	s, _ := newServerFixture()
 	fakeLaunch(t, s)
 
-	in := s.instanceFor("srv1")
+	in := s.instanceFor(fixtureServerID)
 	in.mu.Lock()
 	in.expectedStop = true
 	in.mu.Unlock()
@@ -115,7 +115,7 @@ func TestStartClearsExpectedStopOnAReusedInstance(t *testing.T) {
 	if err := s.Start("srv1", "", nil, t.TempDir()); err != nil {
 		t.Fatalf("Start: %v", err)
 	}
-	t.Cleanup(func() { _ = s.Stop(0) }) //nolint:errcheck // teardown
+	t.Cleanup(func() { _ = s.StopRunning(0) }) //nolint:errcheck // teardown
 
 	in.mu.Lock()
 	stale := in.expectedStop
@@ -152,7 +152,7 @@ func TestRetainedInstanceLeavesNoGoroutineRunning(t *testing.T) {
 	fakeLaunch(t, s)
 
 	release, _ := fakeRunningServer(t, s)
-	in := s.instanceFor("srv1")
+	in := s.instanceFor(fixtureServerID)
 	release()
 	waitStopped(t, in)
 
@@ -177,11 +177,11 @@ func TestRetainedInstanceLeavesNoGoroutineRunning(t *testing.T) {
 // Two servers, two instances, one map.
 func TestInstanceForIsKeyedAndStable(t *testing.T) {
 	s, _ := newServerFixture()
-	a, b := s.instanceFor("srv1"), s.instanceFor("srv2")
+	a, b := s.instanceFor(fixtureServerID), s.instanceFor("srv2")
 	if a == b {
 		t.Fatal("two ids returned the same instance")
 	}
-	if again := s.instanceFor("srv1"); again != a {
+	if again := s.instanceFor(fixtureServerID); again != a {
 		t.Error("instanceFor is not stable for one id")
 	}
 	if a.id != "srv1" || b.id != "srv2" {
