@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -25,21 +26,27 @@ type modManifest struct {
 }
 
 type modManifestItem struct {
-	FileName      string   `json:"fileName"`
-	DisplayName   string   `json:"displayName"`
-	IconURL       string   `json:"iconUrl,omitempty"`
-	ModID         string   `json:"modId"`
-	Source        string   `json:"source"`   // "modrinth" | "local"
-	Provider      string   `json:"provider"` // "modrinth" | ""
-	ProjectID     string   `json:"projectId"`
-	VersionID     string   `json:"versionId"`
-	VersionNumber string   `json:"versionNumber"`
-	SHA512        string   `json:"sha512"`
-	Loader        string   `json:"loader"`
-	TargetFolder  string   `json:"targetFolder"` // "mods" | "plugins"
-	Enabled       bool     `json:"enabled"`
-	InstalledAt   int64    `json:"installedAt"` // unix ms
-	DependencyOf  []string `json:"dependencyOf,omitempty"`
+	FileName      string `json:"fileName"`
+	DisplayName   string `json:"displayName"`
+	IconURL       string `json:"iconUrl,omitempty"`
+	ModID         string `json:"modId"`
+	Source        string `json:"source"`   // "modrinth" | "local"
+	Provider      string `json:"provider"` // "modrinth" | ""
+	ProjectID     string `json:"projectId"`
+	VersionID     string `json:"versionId"`
+	VersionNumber string `json:"versionNumber"`
+	SHA512        string `json:"sha512"`
+	// HashChecked records that this file's SHA-512 was put to the provider and
+	// answered — whether or not the provider recognised it. It is what stops
+	// identifyUnknown from re-asking about a genuinely hand-built jar on every
+	// scan, and it is deliberately set only on an answer: a lookup that failed
+	// because the network was down leaves it false, so the next scan retries.
+	HashChecked  bool     `json:"hashChecked,omitempty"`
+	Loader       string   `json:"loader"`
+	TargetFolder string   `json:"targetFolder"` // "mods" | "plugins"
+	Enabled      bool     `json:"enabled"`
+	InstalledAt  int64    `json:"installedAt"` // unix ms
+	DependencyOf []string `json:"dependencyOf,omitempty"`
 }
 
 const updateCacheTTL = 10 * time.Minute
@@ -60,6 +67,17 @@ type ModService struct {
 	mu          sync.Mutex // serializes installs + manifest writes
 	cacheMu     sync.Mutex
 	updateCache map[string]updateCacheEntry // serverID → cached update results
+
+	// lastSig is the folder fingerprint each server was last seen with, so a
+	// scan that finds nothing moved can stop before it hashes anything.
+	sigMu   sync.Mutex
+	lastSig map[string]uint64
+
+	// stop closes once, from beforeClose. ctx cancellation covers the same
+	// ground, but a test cannot wait out a 30-second tick to prove the scan
+	// ends.
+	stop     chan struct{}
+	stopOnce sync.Once
 }
 
 func NewModService(cfg *ConfigService, srv *ServerService) *ModService {
@@ -67,6 +85,8 @@ func NewModService(cfg *ConfigService, srv *ServerService) *ModService {
 		cfg:      cfg,
 		srv:      srv,
 		provider: NewModrinthClient(),
+		lastSig:  make(map[string]uint64),
+		stop:     make(chan struct{}),
 	}
 }
 
@@ -241,7 +261,15 @@ func (s *ModService) Install(serverID string, versionIDs []string) error {
 			}
 		}
 
-		// Record in manifest
+		// Record in manifest, and write it before announcing the install.
+		//
+		// The order is the whole point. Every mod:installed subscriber answers
+		// it by calling ListInstalled, which reads this file from disk: a row
+		// written after the emit is a row that refresh cannot see, and the mod
+		// renders as an unmanaged local jar with no icon, no project link and
+		// no update check (#52). Saving per file rather than once at the end
+		// also keeps a multi-mod install honest — if the third download fails,
+		// the first two are on disk *and* in the manifest.
 		manifest.upsert(modManifestItem{
 			FileName:      safeFileName,
 			DisplayName:   displayName,
@@ -252,11 +280,15 @@ func (s *ModService) Install(serverID string, versionIDs []string) error {
 			VersionID:     version.ID,
 			VersionNumber: version.VersionNumber,
 			SHA512:        version.SHA512,
+			HashChecked:   true,
 			Loader:        loader,
 			TargetFolder:  targetFolder,
 			Enabled:       true,
 			InstalledAt:   time.Now().UnixMilli(),
 		})
+		if err := s.saveManifest(serverID, manifest); err != nil {
+			return err
+		}
 
 		s.bus.Emit(EventModInstalled, map[string]any{
 			"serverID": serverID,
@@ -265,7 +297,8 @@ func (s *ModService) Install(serverID string, versionIDs []string) error {
 	}
 
 	s.clearUpdateCache(serverID)
-	return s.saveManifest(serverID, manifest)
+	s.bus.Emit(EventModChanged, map[string]any{"serverID": serverID})
+	return nil
 }
 
 // downloadVerified streams a file from url to finalPath, verifying the sha512
@@ -753,6 +786,7 @@ func (s *ModService) InstallLocal(serverID string, filePaths []string) error {
 		manifest = &modManifest{Version: 1}
 	}
 
+	copied := make([]string, 0, len(filePaths))
 	for _, srcPath := range filePaths {
 		safeFileName := filepath.Base(srcPath)
 		if !strings.HasSuffix(safeFileName, ".jar") {
@@ -783,16 +817,32 @@ func (s *ModService) InstallLocal(serverID string, filePaths []string) error {
 			Enabled:      true,
 			InstalledAt:  time.Now().UnixMilli(),
 		})
-
-		s.bus.Emit(EventModInstalled, map[string]any{
-			"serverID": serverID,
-			"fileName": safeFileName,
-		})
+		copied = append(copied, safeFileName)
 	}
 
 	if err := s.saveManifest(serverID, manifest); err != nil {
 		return err
 	}
+
+	// "Local" here means "the user picked it from disk", not "nothing knows what
+	// it is". A file chosen in the picker is usually a Modrinth download that
+	// went through the browser instead of this app, so ask before settling for
+	// the local label. Best-effort: an unidentified jar is exactly what this
+	// path used to produce, and an install must not fail because Modrinth is
+	// unreachable.
+	if _, err := s.identifyUnknownLocked(serverID); err != nil {
+		slog.Warn("mods: identify picked files", "server", serverID, "error", err)
+	}
+
+	// Announced only once the manifest is on disk. Every subscriber answers
+	// these by re-reading it; see the ordering note in Install.
+	for _, fileName := range copied {
+		s.bus.Emit(EventModInstalled, map[string]any{
+			"serverID": serverID,
+			"fileName": fileName,
+		})
+	}
+
 	s.clearUpdateCache(serverID)
 	s.bus.Emit(EventModChanged, map[string]any{"serverID": serverID})
 	return nil

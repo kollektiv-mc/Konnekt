@@ -1,6 +1,7 @@
 package services
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -180,6 +181,35 @@ func (c *ModrinthClient) GetVersion(ctx context.Context, versionID string) (mode
 	return mrVersionToModel(raw), nil
 }
 
+// modrinthHashBatch bounds one /version_files request. Modrinth publishes no
+// hard cap, so this is a self-imposed one: a fresh modpack drop can be 300 jars
+// and a single request carrying all of them is the kind of thing that earns a
+// rate-limit.
+const modrinthHashBatch = 100
+
+func (c *ModrinthClient) GetVersionsByHashes(ctx context.Context, hashes []string) (map[string]models.ModVersion, error) {
+	out := make(map[string]models.ModVersion, len(hashes))
+	for start := 0; start < len(hashes); start += modrinthHashBatch {
+		end := min(start+modrinthHashBatch, len(hashes))
+
+		body := struct {
+			Hashes    []string `json:"hashes"`
+			Algorithm string   `json:"algorithm"`
+		}{Hashes: hashes[start:end], Algorithm: "sha512"}
+
+		// Keyed by the hash that was asked about. A hash Modrinth does not know
+		// is simply absent, which is the answer we want rather than an error.
+		var raw map[string]mrVersion
+		if err := c.doJSONPost(ctx, "/version_files", body, &raw); err != nil {
+			return nil, err
+		}
+		for hash, v := range raw {
+			out[hash] = mrVersionToModel(v)
+		}
+	}
+	return out, nil
+}
+
 func (c *ModrinthClient) ResolveDependencies(
 	ctx context.Context,
 	versionID, mcVersion, loader string,
@@ -270,15 +300,38 @@ func (c *ModrinthClient) ResolveDependencies(
 // doJSON performs a GET against the Modrinth API, handling rate-limits (429)
 // with up to 3 retries and honoring the Retry-After header.
 func (c *ModrinthClient) doJSON(ctx context.Context, path string, out any) error {
+	return c.do(ctx, http.MethodGet, path, nil, out)
+}
+
+// doJSONPost is doJSON with a JSON request body. It exists so the one piece of
+// this that is easy to get wrong — the 429 back-off — has a single
+// implementation; the body is re-encoded per attempt because a retry cannot
+// re-read a consumed reader.
+func (c *ModrinthClient) doJSONPost(ctx context.Context, path string, body, out any) error {
+	encoded, err := json.Marshal(body)
+	if err != nil {
+		return fmt.Errorf("modrinth: encode request: %w", err)
+	}
+	return c.do(ctx, http.MethodPost, path, encoded, out)
+}
+
+func (c *ModrinthClient) do(ctx context.Context, method, path string, body []byte, out any) error {
 	reqURL := c.baseURL + path
 	const maxRetries = 3
 
 	for attempt := 0; attempt < maxRetries; attempt++ {
-		req, err := http.NewRequestWithContext(ctx, http.MethodGet, reqURL, nil)
+		var reqBody io.Reader
+		if body != nil {
+			reqBody = bytes.NewReader(body)
+		}
+		req, err := http.NewRequestWithContext(ctx, method, reqURL, reqBody)
 		if err != nil {
 			return fmt.Errorf("modrinth: build request: %w", err)
 		}
 		req.Header.Set("User-Agent", modrinthUserAgent)
+		if body != nil {
+			req.Header.Set("Content-Type", "application/json")
+		}
 
 		resp, err := c.http.Do(req)
 		if err != nil {

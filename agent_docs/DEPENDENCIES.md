@@ -71,6 +71,17 @@ backends. Revisit if a second or third shared file appears (#213 Phase 1's
 marker file, #218's run-request file) and the poll starts to look like a loop
 rather than a check.
 
+Revisited once, for the mod folder scan (`backend/services/modidentify.go`,
+#52): a jar dropped into `mods/` or `plugins/` from a file manager announces
+itself to nobody, so `ModService` compares a name/size/mtime fingerprint of
+those two directories on the same 30s cadence. Still not fsnotify, and for a
+sharper reason than the Kommands case. A watch reports *that* something
+changed, which is the cheap half; the expensive half is hashing the new jar and
+asking Modrinth what it is, and that has to be gated on a comparison against
+known state either way. An unchanged folder costs one `os.ReadDir` per server
+and stops there. Two pollers is the count at which this entry starts to look
+thin — a third means read it again.
+
 **Considered and not added:** a log-rotation library (`lumberjack` and
 friends). `backend/services/logging.go` writes through stdlib `log/slog` on Go
 1.24 and does its own single-file rotation in ten lines, because one desktop

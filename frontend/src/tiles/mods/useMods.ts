@@ -14,9 +14,11 @@ import {
   ModMoreByAuthor,
   ModCheckUpdates,
   ModInstallLocal,
+  ModRescan,
 } from '../../../wailsjs/go/main/App'
 import { models } from '../../../wailsjs/go/models'
 import { EVENTS } from '../../lib/constants'
+import { readOr } from '../../lib/ipc'
 
 export type ModProject = models.ModProject
 export type ModVersion = models.ModVersion
@@ -160,10 +162,11 @@ export function useMods(serverId: string): ModsState {
     }
   }, [serverId])
 
-  // Initial load + event-driven refresh. Not polled: modservice.go emits
-  // mod:changed on enable/disable and uninstall, and mod:installed plus
-  // mod:changed on install, so every path that alters the installed set is
-  // covered. This mount fetch handles remounts.
+  // Initial load + event-driven refresh. Not polled from here: modservice.go
+  // emits mod:changed on enable/disable and uninstall, mod:installed plus
+  // mod:changed on install, and mod:changed again when its folder scan finds a
+  // file that arrived from outside the app — so every path that alters the
+  // installed set reaches this listener. This mount fetch handles remounts.
   useEffect(() => {
     refreshInstalled().then(() => checkUpdates())
 
@@ -195,6 +198,32 @@ export function useMods(serverId: string): ModsState {
       offProgress?.()
     }
   }, [serverId, refreshInstalled])
+
+  // A jar copied into mods/ or plugins/ from a file manager announces itself to
+  // nobody: there is no install to emit an event, so the list above would not
+  // know it exists until the tile remounted. Asking the backend to look covers
+  // the two moments that matter — opening the tile, and tabbing back after
+  // dropping the file in. It emits mod:changed when something moved, so the
+  // listener above stays the one place that re-reads.
+  //
+  // The backend also scans on its own 30s timer for the case where Konnekt
+  // already had focus; this is only the responsive half.
+  useEffect(() => {
+    if (!serverId) return
+    const rescan = () => {
+      // readOr, not a trailing .catch(): with no Wails bridge the generated
+      // binding dereferences window.go and throws *before a promise exists*, so
+      // a .catch() would be attached to nothing and the throw would escape this
+      // effect to the app's ErrorBoundary (lib/ipc.ts, #184). Awaiting inside
+      // readOr turns it into a rejection, which is right for both cases anyway:
+      // a rescan is a refresh, and failing one costs freshness and nothing else.
+      // The next focus tries again.
+      void readOr(() => ModRescan(serverId), undefined)
+    }
+    rescan()
+    window.addEventListener('focus', rescan)
+    return () => window.removeEventListener('focus', rescan)
+  }, [serverId])
 
   const loadCategories = useCallback(async () => {
     if (!serverId) return

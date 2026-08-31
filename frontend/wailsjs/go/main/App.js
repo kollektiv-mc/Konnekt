@@ -238,6 +238,10 @@ export function ModMoreByAuthor(arg1, arg2, arg3) {
   return window['go']['main']['App']['ModMoreByAuthor'](arg1, arg2, arg3);
 }
 
+export function ModRescan(arg1) {
+  return window['go']['main']['App']['ModRescan'](arg1);
+}
+
 export function ModResolveDependencies(arg1, arg2) {
   return window['go']['main']['App']['ModResolveDependencies'](arg1, arg2);
 }

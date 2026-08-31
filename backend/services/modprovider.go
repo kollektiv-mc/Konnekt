@@ -28,6 +28,16 @@ type ModProvider interface {
 	// GetVersion fetches a single version by ID.
 	GetVersion(ctx context.Context, versionID string) (models.ModVersion, error)
 
+	// GetVersionsByHashes identifies files by their content, mapping each
+	// SHA-512 the registry recognises to the version that ships it. This is the
+	// only way to recognise a jar Konnekt did not download itself, and the only
+	// way to recognise a version's secondary files at all — EssentialsX ships
+	// its modules that way, so EssentialsXChat.jar is a file of the EssentialsX
+	// version rather than a project of its own, and no filename could resolve
+	// it. Hashes the registry does not know are simply absent from the result;
+	// that is an answer, not an error.
+	GetVersionsByHashes(ctx context.Context, hashes []string) (map[string]models.ModVersion, error)
+
 	// ResolveDependencies walks the dependency graph of a version breadth-first,
 	// dedupes by projectID, and picks a compatible version per dependency.
 	// Already-installed project IDs are passed in to set AlreadyInstalled flags.

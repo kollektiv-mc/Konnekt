@@ -2,9 +2,11 @@ package services
 
 import (
 	"context"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"strconv"
 	"strings"
 	"sync/atomic"
 	"testing"
@@ -657,5 +659,89 @@ func writeString(t *testing.T, w http.ResponseWriter, body string) {
 	t.Helper()
 	if _, err := w.Write([]byte(body)); err != nil {
 		t.Errorf("writing test response: %v", err)
+	}
+}
+
+// --- Identification by file hash ---
+
+func TestModrinthGetVersionsByHashesAsksBySHA512(t *testing.T) {
+	var gotMethod, gotPath, gotBody string
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotMethod, gotPath = r.Method, r.URL.Path
+		body, err := io.ReadAll(r.Body)
+		if err != nil {
+			t.Errorf("read body: %v", err)
+		}
+		gotBody = string(body)
+		writeString(t, w, `{
+			"aaa":{"id":"ver1","project_id":"proj1","version_number":"2.21.0",
+				"files":[{"filename":"EssentialsX-2.21.0.jar","url":"https://x.test/e.jar","primary":true,"hashes":{"sha512":"aaa"}}]}
+		}`)
+	}))
+	defer ts.Close()
+
+	got, err := newTestClient(ts).GetVersionsByHashes(context.Background(), []string{"aaa", "bbb"})
+	if err != nil {
+		t.Fatalf("GetVersionsByHashes: %v", err)
+	}
+
+	if gotMethod != http.MethodPost || gotPath != "/version_files" {
+		t.Errorf("request = %s %s, want POST /version_files", gotMethod, gotPath)
+	}
+	if !strings.Contains(gotBody, `"algorithm":"sha512"`) {
+		t.Errorf("body = %s, want it to name the sha512 algorithm", gotBody)
+	}
+	if !strings.Contains(gotBody, `"aaa"`) || !strings.Contains(gotBody, `"bbb"`) {
+		t.Errorf("body = %s, want both hashes asked about in one request", gotBody)
+	}
+
+	// A hash Modrinth does not recognise is absent, not an error: that is the
+	// answer for a jar somebody built themselves.
+	if len(got) != 1 {
+		t.Fatalf("got %d versions, want 1", len(got))
+	}
+	v, ok := got["aaa"]
+	if !ok {
+		t.Fatal("result is not keyed by the hash that was asked about")
+	}
+	if v.ID != "ver1" || v.ProjectID != "proj1" || v.FileName != "EssentialsX-2.21.0.jar" {
+		t.Errorf("version = %+v, want ver1/proj1/EssentialsX-2.21.0.jar", v)
+	}
+}
+
+func TestModrinthGetVersionsByHashesBatches(t *testing.T) {
+	var requests int32
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		atomic.AddInt32(&requests, 1)
+		writeString(t, w, `{}`)
+	}))
+	defer ts.Close()
+
+	hashes := make([]string, modrinthHashBatch+1)
+	for i := range hashes {
+		hashes[i] = "hash" + strconv.Itoa(i)
+	}
+	if _, err := newTestClient(ts).GetVersionsByHashes(context.Background(), hashes); err != nil {
+		t.Fatalf("GetVersionsByHashes: %v", err)
+	}
+
+	// A modpack folder is hundreds of jars, and one request carrying all of
+	// them is how you earn a rate-limit.
+	if got := atomic.LoadInt32(&requests); got != 2 {
+		t.Errorf("requests for %d hashes = %d, want 2", len(hashes), got)
+	}
+}
+
+func TestModrinthGetVersionsByHashesSurfacesHTTPErrors(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusBadGateway)
+		writeString(t, w, "upstream down")
+	}))
+	defer ts.Close()
+
+	// Identification must be able to tell "not recognised" from "could not
+	// ask": only the first is an answer worth remembering.
+	if _, err := newTestClient(ts).GetVersionsByHashes(context.Background(), []string{"aaa"}); err == nil {
+		t.Fatal("GetVersionsByHashes = nil error, want the HTTP failure surfaced")
 	}
 }
