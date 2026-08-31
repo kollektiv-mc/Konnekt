@@ -535,6 +535,24 @@ Konnekt-only value there is reverted on the next sync. A Konnekt-owned module
 next to `lib/gridSizing.ts` is the right shape — the tile grid already solved
 the same problem by naming its constants in one place.
 
+**P3 — Dependency resolution is serial, unbounded in time, and silent while it
+runs** (filed 2026-08-31)
+
+`ResolveDependencies` walks the graph one project at a time, two or three HTTP
+round trips each, and the dialog it feeds shows nothing until the whole walk is
+done. A standalone mod costs a handful of requests; an addon with a deep
+required tree (a Create addon walks all of Create's) costs tens, and Modrinth
+rate-limits at 300/min with a back-off on top. Nothing is wrong with the result
+— `seen[projectID]` bounds the walk to one visit per project, so it terminates —
+but pressing Switch on such a mod is several seconds of a button that looks
+idle.
+
+Deliberately *not* fixed by capping the walk's depth, which was the first idea
+and is a bad one: the cap has nothing to terminate (the visit-once rule already
+does that) and would silently drop required dependencies past it, which is worse
+than being slow. The levers are resolving siblings concurrently, and giving the
+dialog something to show while it waits.
+
 **P3 — A maximized Overview holds a second copy of its sections' data**
 (filed 2026-08-30)
 
