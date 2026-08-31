@@ -14,6 +14,7 @@ interface Props {
   projectLoading: boolean
   versions: ModVersion[]
   versionsLoading: boolean
+  versionsError?: string | null
   installing: boolean
   installError: string | null
   moreByAuthorProjects: ModProject[]
@@ -34,6 +35,7 @@ export function ContentDetailPanel({
   projectLoading,
   versions,
   versionsLoading,
+  versionsError,
   installing,
   installError,
   moreByAuthorProjects,
@@ -238,9 +240,14 @@ export function ContentDetailPanel({
                   Loading versions…
                 </div>
               )}
-              {!versionsLoading && versions.length === 0 && (
+              {!versionsLoading && versionsError && (
+                <div className="text-danger px-4 py-3 text-xs">
+                  Could not load versions: {versionsError}
+                </div>
+              )}
+              {!versionsLoading && !versionsError && versions.length === 0 && (
                 <div className="text-text-muted px-4 py-3 text-xs">
-                  No compatible versions found.
+                  No versions match this server{'\u2019'}s Minecraft version and loader.
                 </div>
               )}
               {versions.map((v) => (
@@ -251,7 +258,11 @@ export function ContentDetailPanel({
                   installing={isInstalling}
                 />
               ))}
-              {!showAllVersions && versions.length > 0 && (
+              {/* Not gated on there being versions to widen: an empty filtered
+                  list is exactly when someone needs to see the unfiltered one,
+                  and hiding the button there left no way out of a server
+                  described with the wrong Minecraft version. */}
+              {!showAllVersions && !versionsLoading && (
                 <button
                   onClick={() => {
                     setShowAllVersions(true)

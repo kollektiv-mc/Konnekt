@@ -9,6 +9,7 @@ import {
   mergeRamIntoArgs,
   parseRamFromArgs,
 } from '../../lib/serverForm'
+import { LOADER_LABELS } from '../../lib/loaders'
 import type { InstallResult } from '../ServerInstallModal'
 import type { ServerConfig } from '../../types'
 
@@ -19,6 +20,11 @@ interface FormState {
   jvmArgs: string // canonical full expression, always kept in sync
   minRam: string
   maxRam: string
+  // Both empty means "let the backend work it out". They are editable because
+  // detection can be wrong, and when it is, every Modrinth query in the mods
+  // tile is filtered by the wrong pair with nothing on screen to say so.
+  loader: string
+  mcVersion: string
 }
 
 const emptyForm: FormState = {
@@ -28,6 +34,8 @@ const emptyForm: FormState = {
   jvmArgs: '-Xms512M -Xmx2G',
   minRam: '512M',
   maxRam: '2G',
+  loader: '',
+  mcVersion: '',
 }
 
 function configToForm(cfg: ServerConfig): FormState {
@@ -40,6 +48,8 @@ function configToForm(cfg: ServerConfig): FormState {
     jvmArgs,
     minRam,
     maxRam,
+    loader: cfg.loader,
+    mcVersion: cfg.mcVersion,
   }
 }
 
@@ -90,7 +100,13 @@ export function ServerEditForm({
   // because a modern NeoForge/Forge install has no runnable jar.
   useEffect(() => {
     if (!installed) return
-    setForm((f) => ({ ...f, jarPath: '', workingDir: installed.targetDir }))
+    setForm((f) => ({
+      ...f,
+      jarPath: '',
+      workingDir: installed.targetDir,
+      loader: installed.loader || f.loader,
+      mcVersion: installed.mcVersion || f.mcVersion,
+    }))
   }, [installed])
 
   const toggleAdvanced = () => {
@@ -128,8 +144,11 @@ export function ServerEditForm({
       jarPath,
       jvmArgs,
       workingDir,
-      mcVersion: fromInstall?.mcVersion || (config?.mcVersion ?? ''),
-      loader: fromInstall?.loader || (config?.loader ?? ''),
+      // The form wins over the stored value: it is where an override is typed,
+      // and it is seeded from the stored value anyway. A fresh install still
+      // outranks both, since it knows exactly what it laid down.
+      mcVersion: fromInstall?.mcVersion || merged.mcVersion.trim(),
+      loader: fromInstall?.loader || merged.loader,
       loaderVersion: fromInstall?.loaderVersion || (config?.loaderVersion ?? ''),
     }
   }
@@ -186,6 +205,25 @@ export function ServerEditForm({
     if (path) setForm((f) => ({ ...f, workingDir: path }))
   }
 
+  // Browse routes an installer to the install flow; a typed or pasted path used
+  // to skip that check entirely and be saved as the server file. That is how an
+  // installer jar ends up in the config, and reading one as a server yields a
+  // loader profile name ("neoforge-21.1.233") where a Minecraft version belongs.
+  // Checked on blur rather than per keystroke: this opens a zip.
+  const checkTypedJar = async () => {
+    const path = form.jarPath.trim()
+    if (!path || path === config?.jarPath) return
+
+    const info = await InspectServerFile(path).catch(() => null)
+    if (!info?.isInstaller) return
+
+    setForm((f) => ({ ...f, jarPath: '', workingDir: f.workingDir || dirOf(path) }))
+    openInstaller(
+      { jarPath: path, loader: info.loader, version: info.version, mcVersion: info.mcVersion },
+      form.workingDir || dirOf(path),
+    )
+  }
+
   const inputClass =
     'bg-surface border-border-subtle text-text-primary placeholder-text-faint focus:border-border-hover border-hairline w-full min-w-0 rounded px-2 py-1.5 font-mono text-xs transition-colors outline-none'
 
@@ -216,6 +254,7 @@ export function ServerEditForm({
               setForm((f) => ({ ...f, [key]: val }))
             }
           }}
+          onBlur={key === 'jarPath' ? checkTypedJar : undefined}
           placeholder={placeholder}
           className={inputClass}
         />
@@ -245,6 +284,41 @@ export function ServerEditForm({
 
       {browseField('jarPath', 'Server file', 'server.jar or run.sh', browseJar)}
       {browseField('workingDir', 'Working directory', 'Install folder', browseDir)}
+
+      {/* Left alone these are detected from the install. They are here because
+          when detection is wrong there is otherwise no way to tell, and no way
+          to correct it: the pair filters every mod search and version list. */}
+      <div className="flex gap-2">
+        <div className="flex-1">
+          {labelled(
+            'Loader',
+            <select
+              value={form.loader}
+              onChange={(e) => setForm((f) => ({ ...f, loader: e.target.value }))}
+              className={inputClass}
+            >
+              <option value="">Detect automatically</option>
+              {Object.entries(LOADER_LABELS).map(([value, label]) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
+            </select>,
+          )}
+        </div>
+        <div className="flex-1">
+          {labelled(
+            'Minecraft',
+            <input
+              type="text"
+              value={form.mcVersion}
+              onChange={(e) => setForm((f) => ({ ...f, mcVersion: e.target.value }))}
+              placeholder="Detected"
+              className={inputClass}
+            />,
+          )}
+        </div>
+      </div>
 
       {advancedMode ? (
         labelled(

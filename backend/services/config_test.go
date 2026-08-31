@@ -207,3 +207,52 @@ func TestStopGraceConvertsSecondsToDuration(t *testing.T) {
 		t.Errorf("StopGrace() = %s, want 60s", got)
 	}
 }
+
+// The Minecraft version and loader filter every Modrinth query, and a value
+// that is not a Minecraft version filters all of them away while Modrinth still
+// answers 200 — an empty mods tile with no error anywhere. Refusing the pair on
+// the way in is what stops it being stored a second time, whether it came from
+// detection or from someone typing it into the editor.
+func TestSaveServerConfigRefusesAnImpossibleVersionPair(t *testing.T) {
+	s := newTestConfigService(t)
+
+	// The shape a NeoForge installer's version.json used to leave behind.
+	if err := s.SaveServerConfig(models.ServerConfig{
+		ID:        "srv1",
+		Name:      "smp",
+		MCVersion: "neoforge-21.1.233",
+		Loader:    "vanilla",
+	}); err != nil {
+		t.Fatalf("save: %v", err)
+	}
+
+	got, err := s.GetServerConfig("srv1")
+	if err != nil {
+		t.Fatalf("read back: %v", err)
+	}
+	if got.MCVersion != "" || got.Loader != "" {
+		t.Errorf("stored (%q, %q), want both dropped so detection can re-derive them",
+			got.MCVersion, got.Loader)
+	}
+	if got.Name != "smp" {
+		t.Errorf("Name = %q, want the rest of the config untouched", got.Name)
+	}
+}
+
+func TestSaveServerConfigKeepsAPlausibleVersionPair(t *testing.T) {
+	s := newTestConfigService(t)
+
+	if err := s.SaveServerConfig(models.ServerConfig{
+		ID: "srv1", MCVersion: "1.21.1", Loader: "neoforge",
+	}); err != nil {
+		t.Fatalf("save: %v", err)
+	}
+
+	got, err := s.GetServerConfig("srv1")
+	if err != nil {
+		t.Fatalf("read back: %v", err)
+	}
+	if got.MCVersion != "1.21.1" || got.Loader != "neoforge" {
+		t.Errorf("stored (%q, %q), want it kept verbatim", got.MCVersion, got.Loader)
+	}
+}

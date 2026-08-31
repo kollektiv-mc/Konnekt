@@ -18,18 +18,34 @@ function useServerKind(serverId: string): { kind: 'mods' | 'plugins'; detecting:
   const [detecting, setDetecting] = useState(false)
   const detected = useRef(false)
 
+  // Asked once per mount, not once per lifetime. The old gate skipped this
+  // whenever a loader was stored, so a server described wrongly once stayed
+  // that way: nothing re-derived it, and the two fields are what every Modrinth
+  // query is filtered by.
+  //
+  // The backend decides what is worth keeping — it fills gaps, drops a stored
+  // pair whose Minecraft version is not one, and clears a jar path pointing at
+  // an installer. Validating any of that here would mean a second copy of those
+  // rules on this side of the bridge, free to drift from the copy that counts.
+  // So the answer is simply compared with what is stored, and written only when
+  // it differs.
   useEffect(() => {
     if (detected.current) return
     if (!config) return
     // A NeoForge/Forge install has no jar path — detection falls back to the
-    // working dir's logs, so gate on having neither rather than on the jar.
-    if (config.loader || (!config.jarPath && !config.workingDir)) return
+    // working dir, so gate on having neither rather than on the jar.
+    if (!config.jarPath && !config.workingDir) return
 
     detected.current = true
     setDetecting(true)
     readOr(() => DetectServerLoader(serverId), null)
       .then((cfg) => {
-        if (cfg) saveConfig(cfg)
+        if (!cfg) return
+        const unchanged =
+          cfg.loader === config.loader &&
+          cfg.mcVersion === config.mcVersion &&
+          cfg.jarPath === config.jarPath
+        if (!unchanged) saveConfig(cfg)
       })
       .finally(() => setDetecting(false))
   }, [serverId, config, saveConfig])
@@ -118,6 +134,7 @@ function ModsSummary({
           projectLoading={mods.projectLoading}
           versions={mods.versions}
           versionsLoading={mods.versionsLoading}
+          versionsError={mods.versionsError}
           installError={mods.installError}
           onSelectProject={(mod) => mods.selectProject(modToProject(mod))}
           onClearProject={mods.clearProject}
@@ -297,6 +314,7 @@ function ModsExpanded({
             projectLoading={mods.projectLoading}
             versions={mods.versions}
             versionsLoading={mods.versionsLoading}
+            versionsError={mods.versionsError}
             installError={mods.installError}
             onSelectProject={(mod) => mods.selectProject(modToProject(mod))}
             onClearProject={mods.clearProject}
@@ -318,6 +336,7 @@ function ModsExpanded({
             projectLoading={mods.projectLoading}
             versions={mods.versions}
             versionsLoading={mods.versionsLoading}
+            versionsError={mods.versionsError}
             installing={mods.installing}
             installError={mods.installError}
             onSearch={mods.search}
