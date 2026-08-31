@@ -95,16 +95,15 @@ func (a *App) beforeClose(ctx context.Context) bool {
 	a.kommandsService.Stop()
 	// Same reasoning for the mod folder scan and its manifest writes.
 	a.modService.Stop()
-	if a.serverService.IsRunning() {
-		// Stop's error paths here are "server not running" (the IsRunning guard
-		// covers it, and a race can only make it true — the benign direction)
-		// and "another power action is in progress" (quitting anyway is fine:
-		// the stdin stop is best-effort, and the Windows Job Object / Linux
-		// Pdeathsig tie the java tree to Konnekt's lifetime). A process that
-		// ignores the stdin stop is handled inside Stop by killTree, not
-		// reported here.
-		_ = a.serverService.Stop(quitStopGrace) //nolint:errcheck // see above
-	}
+	// StopRunning rather than a named stop: quitting has no server id to give,
+	// and scoping this to the *selected* server would skip the graceful stop
+	// whenever the running one was not selected (#239). Its error paths are
+	// "server not running" (a race can only make that true, the benign
+	// direction) and "another power action is in progress" — quitting anyway is
+	// fine, since the stdin stop is best-effort and the Windows Job Object /
+	// Linux Pdeathsig tie the java tree to Konnekt's lifetime. A process that
+	// ignores the stdin stop is handled inside stop by killTree, not here.
+	_ = a.serverService.StopRunning(quitStopGrace) //nolint:errcheck // see above
 	return false
 }
 
@@ -352,7 +351,7 @@ func (a *App) StartServer(serverID string) error {
 }
 
 func (a *App) StopServer(serverID string) error {
-	return a.serverService.Stop(a.configService.StopGrace())
+	return a.serverService.Stop(serverID, a.configService.StopGrace())
 }
 
 func (a *App) RestartServer(serverID string) error {
@@ -363,17 +362,24 @@ func (a *App) RestartServer(serverID string) error {
 	return a.serverService.Restart(serverID, cfg.JarPath, cfg.JvmArgs, cfg.WorkingDir, a.configService.StopGrace())
 }
 
-// ForceStopServer kills the server process tree immediately, bypassing the
-// power-action gate — the escape hatch for a stop that is wedged. serverID is
-// ignored like StopServer's (single active server).
+// ForceStopServer kills the named server's process tree immediately, bypassing
+// the power-action gate — the escape hatch for a stop that is wedged. It targets
+// the current instance rather than scanning for a running one on purpose: during
+// a boot the running flag is still false, and a force stop that no-opped on a
+// wedged boot would miss the case it exists for.
 func (a *App) ForceStopServer(serverID string) error {
-	return a.serverService.ForceStop()
+	return a.serverService.ForceStop(serverID)
 }
 
 // GetLastStop reports the most recent stop's detail, the readable getter twin
 // of the server:stopped event payload. Zero value until a stop has happened.
+//
+// Bound without a serverID and with no frontend caller, so it answers for the
+// current server rather than growing a parameter nothing would pass. When #233
+// puts an id on server:stopped, this getter should take one too and the two stay
+// twins.
 func (a *App) GetLastStop() (models.ServerStopped, error) {
-	return a.serverService.GetLastStop(), nil
+	return a.serverService.GetLastStop(a.serverService.CurrentServerID()), nil
 }
 
 func (a *App) AcceptEula(serverID string) error {
@@ -385,38 +391,34 @@ func (a *App) AcceptEula(serverID string) error {
 	if err := os.WriteFile(filepath.Join(cfg.WorkingDir, "eula.txt"), []byte(content), 0644); err != nil {
 		return err
 	}
-	a.serverService.NarrateDone("EULA accepted, eula.txt written")
+	a.serverService.NarrateDone(serverID, "EULA accepted, eula.txt written")
 	return nil
 }
 
 func (a *App) SendCommand(serverID string, command string) error {
-	return a.serverService.SendCommand(command)
+	return a.serverService.SendCommand(serverID, command)
 }
 
 // --- Status and players ---
 
+// GetServerStatus reports on the server it names, not on whichever one happens
+// to be running (#239). A stopped or unknown server answers offline rather than
+// failing: the frontend treats a rejection as an unreachable backend.
 func (a *App) GetServerStatus(serverID string) (models.ServerStatus, error) {
-	return models.ServerStatus{
-		Running:    a.serverService.IsRunning(),
-		State:      a.serverService.State(),
-		Uptime:     a.serverService.Uptime(),
-		Players:    a.serverService.PlayerCount(),
-		MaxPlayers: a.serverService.MaxPlayers(),
-		TPS:        a.serverService.CurrentTPS(),
-		RAMUsed:    a.serverService.RAMUsedMB(),
-		RAMTotal:   a.serverService.RAMTotalMB(),
-	}, nil
+	return a.serverService.Status(serverID), nil
 }
 
 func (a *App) GetStatsHistory(serverID string) ([]models.StatsSnapshot, error) {
-	return a.statsService.GetStatsHistory(), nil
+	return a.statsService.GetStatsHistory(serverID), nil
 }
 
-// GetConsoleHistory backfills the console for a client that connected mid-session
-// (remote-access seam). serverID is ignored — single active server, like
-// GetStatsHistory. No desktop caller yet; pair with useConsoleStore.loadHistory.
+// GetConsoleHistory backfills the console for a client that connected
+// mid-session (remote-access seam), and now returns the named server's ring
+// rather than whichever one was current (#239). Each server keeps its own since
+// #232, so this is what makes them reachable. No desktop caller yet; pair with
+// useConsoleStore.loadHistory.
 func (a *App) GetConsoleHistory(serverID string) ([]models.ConsoleLine, error) {
-	return a.serverService.GetConsoleHistory(), nil
+	return a.serverService.GetConsoleHistory(serverID), nil
 }
 
 func (a *App) GetPlayerRoster(serverID string) ([]models.Player, error) {
@@ -429,16 +431,16 @@ func (a *App) GetPlayerDetail(serverID string, name string) (models.Player, erro
 
 func (a *App) KickPlayer(serverID string, name string, reason string) error {
 	cmd := fmt.Sprintf("kick %s %s", name, reason)
-	return a.serverService.SendCommand(cmd)
+	return a.serverService.SendCommand(serverID, cmd)
 }
 
 func (a *App) BanPlayer(serverID string, name string, reason string) error {
 	cmd := fmt.Sprintf("ban %s %s", name, reason)
-	return a.serverService.SendCommand(cmd)
+	return a.serverService.SendCommand(serverID, cmd)
 }
 
 func (a *App) PardonPlayer(serverID string, name string) error {
-	return a.serverService.SendCommand(fmt.Sprintf("pardon %s", name))
+	return a.serverService.SendCommand(serverID, fmt.Sprintf("pardon %s", name))
 }
 
 // --- Layout presets ---

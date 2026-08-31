@@ -16,20 +16,28 @@ type fakeServerGuard struct {
 	calls     []string
 	onPrepare func()
 	onResume  func()
+	ids       []string
 }
 
-func (f *fakeServerGuard) IsRunning() bool { return f.running }
+// ids records which server each call named, so a test can assert the quiesce
+// reached the server being worked on rather than merely that it happened (#239).
+func (f *fakeServerGuard) IsRunning(serverID string) bool {
+	f.ids = append(f.ids, serverID)
+	return f.running
+}
 
-func (f *fakeServerGuard) PrepareForBackup() bool {
+func (f *fakeServerGuard) PrepareForBackup(serverID string) bool {
 	f.calls = append(f.calls, "prepare")
+	f.ids = append(f.ids, serverID)
 	if f.onPrepare != nil {
 		f.onPrepare()
 	}
 	return f.running
 }
 
-func (f *fakeServerGuard) ResumeSaves() {
+func (f *fakeServerGuard) ResumeSaves(serverID string) {
 	f.calls = append(f.calls, "resume")
+	f.ids = append(f.ids, serverID)
 	if f.onResume != nil {
 		f.onResume()
 	}

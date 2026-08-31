@@ -217,7 +217,7 @@ func TestCreateAndRestoreBackupRoundTrip(t *testing.T) {
 	// Every line is marked as Konnekt's, and its outcome says which dot the
 	// console paints: the sequence is start, done, start, done.
 	wantOutcomes := []string{outcomeProgress, outcomeOK, outcomeProgress, outcomeOK}
-	history := svc.server.GetConsoleHistory()
+	history := svc.server.GetConsoleHistory(testServerID)
 	for i, entry := range history {
 		if entry.Source != sourceManager {
 			t.Errorf("narrated line %q has Source %q, want %q", entry.Line, entry.Source, sourceManager)
@@ -265,7 +265,7 @@ func TestRestoreBackupNarratesExtractFailure(t *testing.T) {
 	}
 
 	var sawExtractFailure, sawFinished bool
-	for _, entry := range svc.server.GetConsoleHistory() {
+	for _, entry := range svc.server.GetConsoleHistory(testServerID) {
 		if strings.Contains(entry.Line, "Restore failed while extracting") {
 			sawExtractFailure = true
 			if entry.Outcome != outcomeFailed {
@@ -303,7 +303,11 @@ func TestRestoreBackupRefusesWhileServerRunning(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	in := curInst(svc.server)
+	// The instance for the server being restored, not whichever one is current:
+	// the refusal now names its server (#239), so marking the wrong one running
+	// would let the restore through — which is the behaviour this test exists to
+	// forbid.
+	in := svc.server.instanceFor(testServerID)
 	in.mu.Lock()
 	in.running = true
 	in.mu.Unlock()

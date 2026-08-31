@@ -43,14 +43,14 @@ func TestStopFromStartingPassesThroughStopping(t *testing.T) {
 	if err := s.Start("srv1", "", nil, t.TempDir()); err != nil {
 		t.Fatalf("Start = %v, want nil", err)
 	}
-	if got := s.State(); got != "starting" {
+	if got := s.State(fixtureServerID); got != "starting" {
 		t.Fatalf("State() after Start = %q, want starting", got)
 	}
 
-	if err := s.Stop(0); err != nil {
+	if err := s.Stop(fixtureServerID, 0); err != nil {
 		t.Fatalf("Stop = %v, want nil", err)
 	}
-	if got := s.State(); got != "offline" {
+	if got := s.State(fixtureServerID); got != "offline" {
 		t.Fatalf("State() after Stop = %q, want offline", got)
 	}
 
@@ -69,7 +69,7 @@ func TestStopFromStartingPassesThroughStopping(t *testing.T) {
 			t.Errorf("TimedOut set on a %s transition with no timeout involved", p.State)
 		}
 	}
-	if got := s.GetLastStop(); !got.Expected {
+	if got := s.GetLastStop(fixtureServerID); !got.Expected {
 		t.Errorf("GetLastStop() = %+v, want Expected:true — the stop marked intent", got)
 	}
 }
@@ -87,7 +87,7 @@ func TestStoppingLineEntersStopping(t *testing.T) {
 	if p := statePayload(t, events[0]); p.State != "stopping" || p.TimedOut {
 		t.Errorf("payload = %+v, want {State:stopping TimedOut:false}", p)
 	}
-	if got := s.State(); got != "stopping" {
+	if got := s.State(fixtureServerID); got != "stopping" {
 		t.Errorf("State() = %q, want stopping", got)
 	}
 
@@ -116,11 +116,11 @@ func TestBootReachesRunningOnDoneLine(t *testing.T) {
 		t.Fatalf("Start = %v, want nil", err)
 	}
 	curInst(s).streamOutput(strings.NewReader("[12:00:00] [Server thread/INFO]: Done (3.541s)! For help, type \"help\"\n"))
-	if got := s.State(); got != "running" {
+	if got := s.State(fixtureServerID); got != "running" {
 		t.Fatalf("State() after the Done line = %q, want running", got)
 	}
 
-	if err := s.Stop(0); err != nil {
+	if err := s.Stop(fixtureServerID, 0); err != nil {
 		t.Fatalf("Stop = %v, want nil", err)
 	}
 
@@ -146,7 +146,7 @@ func TestReadyLineIgnoredOutsideStarting(t *testing.T) {
 
 	curInst(s).streamOutput(strings.NewReader("[12:00:00] [Server thread/INFO]: Done (1.2s)!\n"))
 
-	if got := s.State(); got != "offline" {
+	if got := s.State(fixtureServerID); got != "offline" {
 		t.Fatalf("State() = %q after a Done line on a never-started fixture, want offline", got)
 	}
 	if events := states(); len(events) != 0 {
@@ -207,16 +207,16 @@ func TestStartingTimeoutPromotesToRunning(t *testing.T) {
 	}
 
 	var banner bool
-	for _, line := range s.GetConsoleHistory() {
+	for _, line := range s.GetConsoleHistory(fixtureServerID) {
 		if strings.Contains(line.Line, "No ready line seen") {
 			banner = true
 		}
 	}
 	if !banner {
-		t.Errorf("console history holds no timeout banner: %v", s.GetConsoleHistory())
+		t.Errorf("console history holds no timeout banner: %v", s.GetConsoleHistory(fixtureServerID))
 	}
 
-	if err := s.Stop(0); err != nil {
+	if err := s.Stop(fixtureServerID, 0); err != nil {
 		t.Errorf("cleanup Stop = %v, want nil", err)
 	}
 }
@@ -248,13 +248,13 @@ func TestReadySuppressesTheTimeout(t *testing.T) {
 			t.Error("TimedOut set although the ready line matched first")
 		}
 	}
-	for _, line := range s.GetConsoleHistory() {
+	for _, line := range s.GetConsoleHistory(fixtureServerID) {
 		if strings.Contains(line.Line, "No ready line seen") {
 			t.Errorf("timeout banner written although ready matched first: %q", line.Line)
 		}
 	}
 
-	if err := s.Stop(0); err != nil {
+	if err := s.Stop(fixtureServerID, 0); err != nil {
 		t.Errorf("cleanup Stop = %v, want nil", err)
 	}
 }
@@ -303,7 +303,7 @@ func TestTPSPollRearmsAcrossBoots(t *testing.T) {
 	}
 
 	first := boot(1)
-	if err := s.Stop(0); err != nil {
+	if err := s.Stop(fixtureServerID, 0); err != nil {
 		t.Fatalf("Stop after boot 1 = %v, want nil", err)
 	}
 	select {
@@ -316,7 +316,7 @@ func TestTPSPollRearmsAcrossBoots(t *testing.T) {
 	if second == first {
 		t.Fatal("boot 2 reused boot 1's TPS gate instead of re-arming")
 	}
-	if err := s.Stop(0); err != nil {
+	if err := s.Stop(fixtureServerID, 0); err != nil {
 		t.Fatalf("Stop after boot 2 = %v, want nil", err)
 	}
 }
