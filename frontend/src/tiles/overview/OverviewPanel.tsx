@@ -31,13 +31,20 @@ interface Props {
  * width and the status needs to be where the eye starts. The four blocks below
  * are `auto-fit`, so they go 4 across, then 2x2, then a single column, without
  * a breakpoint anywhere.
+ *
+ * Slack height goes to the graph. Everything here used to be a fixed size,
+ * which left roughly a third of a maximized tile empty below the blocks; the
+ * chart is the one element that gets better with more of it, since it is the
+ * only one plotting a range rather than listing a handful of rows. `min-h-56`
+ * is what stops `flex-1` collapsing it under the blocks when the panel is
+ * short — past that the container scrolls rather than crushing anything.
  */
 export function OverviewPanel({ serverId }: Props) {
   return (
     <div className="flex h-full flex-col gap-3 overflow-y-auto p-3">
       <StatusBand />
 
-      <div className="h-56 shrink-0">
+      <div className="min-h-56 flex-1">
         <PerformanceSection serverId={serverId} />
       </div>
 
