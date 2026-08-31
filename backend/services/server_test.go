@@ -174,6 +174,144 @@ func TestStreamOutputMatchersFireOnNormalizedLines(t *testing.T) {
 	}
 }
 
+// A real Paper server with a chat plugin, which is where this broke: the join
+// and leave broadcasts arrive wrapped in ANSI colour, Paper's console prefix
+// is "[HH:MM:SS INFO]:" rather than log4j's "[HH:MM:SS] [thread/INFO]:", and
+// the login line comes *after* the join broadcast instead of before it. The
+// lines are verbatim from the report, escapes included.
+func TestStreamOutputTracksPaperColouredSession(t *testing.T) {
+	s, bus := newServerFixture()
+	joined := collect(bus, EventPlayerJoined)
+	left := collect(bus, EventPlayerLeft)
+
+	input := strings.Join([]string{
+		"[17:22:56 INFO]: UUID of player Snadrochka is 5d818448-9c12-4adb-b41b-bda6a2d5938d",
+		"[17:22:59 INFO]: \x1b[38;2;255;255;85mSnadrochka joined the game\x1b[0m",
+		"[17:22:59 INFO]: Snadrochka[/127.0.0.1:62436] logged in with entity id 86 at ([world]-18.44, 79.74, 41.76)",
+		"[17:23:35 INFO]: <\x1b[38;2;170;0;0mSnadrochka\x1b[0m> test",
+	}, "\n")
+
+	s.streamOutput(strings.NewReader(input))
+
+	events := waitForCount(t, joined, 1)
+	// Exactly one: the join broadcast and the login line both signal a join,
+	// and only the first of them may emit.
+	if len(events) != 1 {
+		t.Fatalf("player:joined fired %d times for one connection, want 1", len(events))
+	}
+	m, ok := events[0].(map[string]string)
+	if !ok {
+		t.Fatalf("player:joined payload is %T, want map[string]string", events[0])
+	}
+	if m["name"] != "Snadrochka" {
+		t.Errorf("player:joined name = %q, want Snadrochka", m["name"])
+	}
+
+	if got := s.PlayerCount(); got != 1 {
+		t.Errorf("PlayerCount() = %d, want 1 — this is the count the overview, performance and stats history all read", got)
+	}
+	roster := s.GetActivePlayers()
+	if len(roster) != 1 {
+		t.Fatalf("GetActivePlayers() returned %d players, want 1", len(roster))
+	}
+	if roster[0].UUID != "5d818448-9c12-4adb-b41b-bda6a2d5938d" {
+		t.Errorf("roster uuid = %q", roster[0].UUID)
+	}
+	// The IP arrives on a line Paper prints after the join, so it has to land
+	// on the live session rather than on the pre-join entry the join consumed.
+	if roster[0].IP != "127.0.0.1" {
+		t.Errorf("roster ip = %q, want 127.0.0.1", roster[0].IP)
+	}
+	s.playersMu.RLock()
+	stale := len(s.presession)
+	s.playersMu.RUnlock()
+	if stale != 0 {
+		t.Errorf("presession holds %d stale entries after a completed join, want 0", stale)
+	}
+
+	// Paper prints the core disconnect line first, then the coloured
+	// broadcast. Both are leave signals; only the first may emit.
+	s.streamOutput(strings.NewReader(strings.Join([]string{
+		"[17:40:00 INFO]: Snadrochka lost connection: Disconnected",
+		"[17:40:00 INFO]: \x1b[38;2;255;255;85mSnadrochka left the game\x1b[0m",
+	}, "\n")))
+
+	events = waitForCount(t, left, 1)
+	if len(events) != 1 {
+		t.Fatalf("player:left fired %d times for one disconnect, want 1", len(events))
+	}
+	if got := s.PlayerCount(); got != 0 {
+		t.Errorf("PlayerCount() = %d after the disconnect, want 0", got)
+	}
+}
+
+// The coloured broadcast on its own, with no login line to fall back on: this
+// is the isolated stripANSI path, and without the strip nothing here matches
+// and the player is never recorded at all.
+func TestStreamOutputMatchesColouredBroadcastWithoutLoginLine(t *testing.T) {
+	s, bus := newServerFixture()
+	joined := collect(bus, EventPlayerJoined)
+	left := collect(bus, EventPlayerLeft)
+
+	s.streamOutput(strings.NewReader(
+		"[17:22:59 INFO]: \x1b[38;2;255;255;85mSnadrochka joined the game\x1b[0m\n"))
+
+	waitForCount(t, joined, 1)
+	if got := s.PlayerCount(); got != 1 {
+		t.Fatalf("PlayerCount() = %d after a coloured join broadcast, want 1", got)
+	}
+
+	s.streamOutput(strings.NewReader(
+		"[17:40:00 INFO]: \x1b[38;2;255;255;85mSnadrochka left the game\x1b[0m\n"))
+
+	waitForCount(t, left, 1)
+	if got := s.PlayerCount(); got != 0 {
+		t.Errorf("PlayerCount() = %d after a coloured leave broadcast, want 0", got)
+	}
+}
+
+// The console tile renders what log:line carries, so the escapes have to be
+// gone by the time the line is emitted, not merely ignored by the matchers.
+func TestStreamOutputEmitsConsoleLinesWithoutEscapes(t *testing.T) {
+	s, bus := newServerFixture()
+	lines := collect(bus, EventLogLine)
+
+	s.streamOutput(strings.NewReader(
+		"[17:10:36 INFO]: [Essentials] \x1b[38;2;255;170;0mFetching version information...\x1b[0m\n"))
+
+	events := waitForCount(t, lines, 1)
+	got := logPayload(t, events[0])
+	want := "[17:10:36 INFO]: [Essentials] Fetching version information..."
+	if got != want {
+		t.Errorf("log:line = %q, want %q", got, want)
+	}
+}
+
+// A connection that drops before joining logs the same "lost connection" line
+// as a real disconnect. Nobody was online, so nothing may be announced.
+func TestStreamOutputIgnoresLostConnectionForPlayerWhoNeverJoined(t *testing.T) {
+	s, bus := newServerFixture()
+	left := collect(bus, EventPlayerLeft)
+
+	s.streamOutput(strings.NewReader(strings.Join([]string{
+		"[17:22:56 INFO]: UUID of player Alex is 069a79f4-44e9-4726-a5be-fca90e38aaf5",
+		"[17:22:57 INFO]: Alex lost connection: Internal Exception",
+	}, "\n")))
+
+	if events := left(); len(events) != 0 {
+		t.Errorf("player:left fired %d times for a login that never completed, want 0", len(events))
+	}
+	s.playersMu.RLock()
+	online, stale := len(s.players), len(s.presession)
+	s.playersMu.RUnlock()
+	if online != 0 {
+		t.Errorf("players holds %d entries, want 0", online)
+	}
+	if stale != 0 {
+		t.Errorf("presession holds %d entries after a failed login, want 0", stale)
+	}
+}
+
 // Manager narration is marked structurally, never by its wording: the console
 // tile boxes it, dots it and excludes it from server-output pattern matching
 // off the source marker, so a plugin printing "[Konnekt]" cannot pass for

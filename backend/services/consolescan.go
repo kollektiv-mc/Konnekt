@@ -1,6 +1,9 @@
 package services
 
-import "bufio"
+import (
+	"bufio"
+	"strings"
+)
 
 // maxConsoleLine caps a single delivered console line at 64 KiB, the same
 // bound bufio.Scanner applied implicitly before it had a split function. The
@@ -73,4 +76,98 @@ func newConsoleSplitFunc(maxLine int) bufio.SplitFunc {
 		}
 		return 0, nil, nil
 	}
+}
+
+// ansiEscape is ESC, the byte every sequence stripANSI removes starts with.
+const ansiEscape = 0x1b
+
+// stripANSI removes ANSI escape sequences from a line of server output.
+//
+// A pipe is not a terminal, so this ought to be unnecessary, and on a bare
+// vanilla server it is. It is not on a real one: Paper's terminal appender
+// translates plugin colour codes to ANSI regardless, so an Essentials join
+// broadcast arrives as
+//
+//	]: \x1b[38;2;255;255;85mAlex joined the game\x1b[0m
+//
+// which is why this exists. Every line matcher in streamOutput is anchored on
+// "]: " followed directly by real text — deliberately, so chat cannot spoof a
+// server line — and an SGR sequence sitting in that gap defeats all of them at
+// once. The player matchers were the visible casualty: joins went unrecorded,
+// so the roster, the player count on the overview and performance tiles, the
+// recorded history and the scheduler's player triggers all read empty on any
+// server with a chat plugin installed.
+//
+// Stripping here rather than launching the JVM with -Dterminal.ansi=false:
+// that flag is Paper and jline specific, and Forge, NeoForge and Fabric each
+// use a different appender.
+//
+// Handles CSI (the SGR colour sequences above, and anything else shaped like
+// them) and OSC; any other escape is dropped as the usual two bytes. A
+// sequence left unterminated at the end of the line takes the rest of the line
+// with it, which is what an unterminated sequence means. Minecraft strips
+// control characters from chat, so no ESC here can have come from a player.
+//
+// Section-sign colour codes (§a) are left alone on purpose: unlike ESC they
+// are ordinary text a player can type, and eating one out of a chat line would
+// be a worse bug than the colour code showing.
+func stripANSI(s string) string {
+	// The overwhelmingly common case, and this runs on every console line.
+	if !strings.ContainsRune(s, ansiEscape) {
+		return s
+	}
+	var b strings.Builder
+	b.Grow(len(s))
+	for i := 0; i < len(s); {
+		if s[i] != ansiEscape {
+			b.WriteByte(s[i])
+			i++
+			continue
+		}
+		i += ansiSeqLen(s[i:])
+	}
+	return b.String()
+}
+
+// ansiSeqLen returns the length in bytes of the escape sequence starting at
+// the front of s, which begins with ESC. Never returns 0, so callers advance.
+func ansiSeqLen(s string) int {
+	if len(s) < 2 {
+		return len(s) // a trailing ESC with nothing after it
+	}
+	switch s[1] {
+	case '[': // CSI: parameter bytes 0x30-0x3f, final 0x40-0x7e
+		//
+		// ECMA-48 also allows intermediate bytes (0x20-0x2f) between the
+		// parameters and the final, and they are deliberately not accepted
+		// here. Space is one of them, so "\x1b[38 joined the game" — a colour
+		// sequence cut short, followed by ordinary log text — would parse as a
+		// complete CSI ending at the "j" and eat a word out of the line. Log
+		// appenders emit digits and semicolons and nothing else, so the cost
+		// of narrowing this is a couple of stray bytes surviving from a kind
+		// of sequence a Minecraft server does not produce, against a word
+		// silently vanishing from the console.
+		for i := 2; i < len(s); i++ {
+			switch {
+			case s[i] >= 0x40 && s[i] <= 0x7e:
+				return i + 1
+			case s[i] < 0x30 || s[i] > 0x3f:
+				// Malformed or cut short: consume what has been read and
+				// resume on this byte rather than swallowing the rest.
+				return i
+			}
+		}
+	case ']': // OSC: terminated by BEL, or by ST (ESC \)
+		for i := 2; i < len(s); i++ {
+			if s[i] == 0x07 {
+				return i + 1
+			}
+			if s[i] == ansiEscape && i+1 < len(s) && s[i+1] == '\\' {
+				return i + 2
+			}
+		}
+	default:
+		return 2 // two-byte escape: ESC c, ESC =, and friends
+	}
+	return len(s) // unterminated CSI or OSC
 }
