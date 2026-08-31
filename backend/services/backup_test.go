@@ -303,7 +303,11 @@ func TestRestoreBackupRefusesWhileServerRunning(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	in := curInst(svc.server)
+	// The instance for the server being restored, not whichever one is current:
+	// the refusal now names its server (#239), so marking the wrong one running
+	// would let the restore through — which is the behaviour this test exists to
+	// forbid.
+	in := svc.server.instanceFor(testServerID)
 	in.mu.Lock()
 	in.running = true
 	in.mu.Unlock()

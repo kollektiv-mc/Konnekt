@@ -292,8 +292,8 @@ func (s *BackupService) CreateBackup(serverID string) (models.Backup, error) {
 	s.bus.Emit(EventBackupStarted, map[string]string{"serverID": serverID, "filename": filename})
 	s.narrate("Backing up the server to " + filename)
 
-	if s.server != nil && s.server.PrepareForBackup() {
-		defer s.server.ResumeSaves()
+	if s.server != nil && s.server.PrepareForBackup(serverID) {
+		defer s.server.ResumeSaves(serverID)
 	}
 
 	var lastPct int = -1
@@ -371,8 +371,8 @@ func (s *BackupService) CreateWorldBackup(serverID, worldName string) (models.Ba
 	s.bus.Emit(EventBackupStarted, map[string]string{"serverID": serverID, "filename": filename})
 	s.narrate(fmt.Sprintf("Backing up world %q to %s", worldName, filename))
 
-	if s.server != nil && s.server.PrepareForBackup() {
-		defer s.server.ResumeSaves()
+	if s.server != nil && s.server.PrepareForBackup(serverID) {
+		defer s.server.ResumeSaves(serverID)
 	}
 
 	var lastPct int = -1
@@ -425,7 +425,7 @@ func (s *BackupService) RestoreBackup(serverID, filename string) error {
 	if err := validateFilename(filename); err != nil {
 		return err
 	}
-	if s.server.IsRunning() {
+	if s.server.IsRunning(serverID) {
 		return errors.New("stop the server before restoring a backup")
 	}
 

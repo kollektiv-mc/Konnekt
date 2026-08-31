@@ -423,10 +423,10 @@ func TestPrepareForBackupNarratesTheQuiesce(t *testing.T) {
 	release, _ := fakeRunningServer(t, s)
 	s.quiesceWait = time.Millisecond
 
-	if !s.PrepareForBackup() {
+	if !s.PrepareForBackup(fixtureServerID) {
 		t.Fatal("PrepareForBackup on a running server = false, want true")
 	}
-	s.ResumeSaves()
+	s.ResumeSaves(fixtureServerID)
 
 	want := []string{
 		"Pausing world saves and flushing to disk",
@@ -459,10 +459,10 @@ func TestPrepareForBackupNarratesTheQuiesce(t *testing.T) {
 func TestPrepareForBackupWhileStoppedStaysSilent(t *testing.T) {
 	s, _ := newServerFixture()
 
-	if s.PrepareForBackup() {
+	if s.PrepareForBackup(fixtureServerID) {
 		t.Error("PrepareForBackup on a stopped server = true, want false")
 	}
-	s.ResumeSaves()
+	s.ResumeSaves(fixtureServerID)
 
 	if lines := consoleLines(s); len(lines) != 0 {
 		t.Errorf("console history = %v, want empty", lines)
@@ -652,7 +652,7 @@ func TestConcurrentStopsSecondFailsFast(t *testing.T) {
 		t.Fatal("first Stop never returned")
 	}
 
-	if s.IsRunning() {
+	if s.IsRunning(fixtureServerID) {
 		t.Error("IsRunning() = true after Stop completed")
 	}
 	// The gate must be released again: a third Stop reports the ordinary
@@ -695,7 +695,7 @@ func TestRestartBackToBackSecondFailsFast(t *testing.T) {
 		t.Fatal("Restart never returned")
 	}
 
-	if !s.IsRunning() {
+	if !s.IsRunning(fixtureServerID) {
 		t.Fatal("IsRunning() = false after Restart")
 	}
 
@@ -722,7 +722,7 @@ func TestRestartFromStoppedIsAPlainStart(t *testing.T) {
 	if err := s.Restart("srv1", "", nil, t.TempDir(), 0); err != nil {
 		t.Fatalf("Restart from stopped = %v, want nil", err)
 	}
-	if !s.IsRunning() {
+	if !s.IsRunning(fixtureServerID) {
 		t.Fatal("IsRunning() = false after Restart from stopped")
 	}
 	if got := s.ActiveServerID(); got != "srv1" {
@@ -751,7 +751,7 @@ func TestExitedObservesStoppedState(t *testing.T) {
 	case <-time.After(2 * time.Second):
 		t.Fatal("exited never closed")
 	}
-	if s.IsRunning() {
+	if s.IsRunning(fixtureServerID) {
 		t.Error("IsRunning() = true after exited closed — the pre-#109 restart race")
 	}
 	if got := s.GetLastStop(); !got.Expected {

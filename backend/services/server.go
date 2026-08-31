@@ -1553,11 +1553,15 @@ func (s *ServerService) GetLastStop() models.ServerStopped { return s.cur().GetL
 func (s *ServerService) SendCommand(serverID, command string) error {
 	return s.instanceFor(serverID).SendCommand(command)
 }
-func (s *ServerService) IsRunning() bool                   { return s.cur().IsRunning() }
-func (s *ServerService) State() string                     { return s.cur().State() }
-func (s *ServerService) ActiveServerID() string            { return s.cur().ActiveServerID() }
-func (s *ServerService) PrepareForBackup() bool            { return s.cur().PrepareForBackup() }
-func (s *ServerService) ResumeSaves()                      { s.cur().ResumeSaves() }
+func (s *ServerService) IsRunning(serverID string) bool {
+	return s.instanceFor(serverID).IsRunning()
+}
+func (s *ServerService) State() string          { return s.cur().State() }
+func (s *ServerService) ActiveServerID() string { return s.cur().ActiveServerID() }
+func (s *ServerService) PrepareForBackup(serverID string) bool {
+	return s.instanceFor(serverID).PrepareForBackup()
+}
+func (s *ServerService) ResumeSaves(serverID string)       { s.instanceFor(serverID).ResumeSaves() }
 func (s *ServerService) Uptime() string                    { return s.cur().Uptime() }
 func (s *ServerService) GetActivePlayers() []models.Player { return s.cur().GetActivePlayers() }
 func (s *ServerService) PlayerCount() int                  { return s.cur().PlayerCount() }

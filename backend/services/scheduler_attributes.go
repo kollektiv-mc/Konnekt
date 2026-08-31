@@ -49,7 +49,7 @@ func readBuiltinAttribute(deps serviceDeps, serverID, name string) (interface{},
 	case "ram.total":
 		return srv.RAMTotalMB(), nil
 	case "server.status":
-		if srv.IsRunning() {
+		if srv.IsRunning(serverID) {
 			return float64(1), nil
 		}
 		return float64(0), nil
