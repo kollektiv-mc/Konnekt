@@ -180,15 +180,14 @@ func TestDetectFromInstallDirNeoForge(t *testing.T) {
 	}
 }
 
+// forgeInstall (serverlaunch_test.go) writes both unix_args.txt and
+// win_args.txt, which matters: argfileTokens picks its filename by GOOS, so a
+// fixture carrying only one of them finds nothing on the other platform. The
+// hand-rolled unix-only fixture this replaced passed locally and failed on the
+// Windows runner for exactly that reason.
 func TestDetectFromInstallDirForge(t *testing.T) {
 	dir := t.TempDir()
-	argDir := filepath.Join(dir, "libraries", "net", "minecraftforge", "forge", "1.20.1-47.2.0")
-	if err := os.MkdirAll(argDir, 0755); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(filepath.Join(argDir, "unix_args.txt"), []byte("-p libraries/foo\n"), 0644); err != nil {
-		t.Fatal(err)
-	}
+	forgeInstall(t, dir, "1.20.1-47.2.0")
 
 	mc, loader := detectFromInstallDir("", dir)
 	if mc != "1.20.1" || loader != "forge" {
