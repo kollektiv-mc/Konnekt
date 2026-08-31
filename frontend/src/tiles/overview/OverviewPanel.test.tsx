@@ -126,26 +126,71 @@ describe('OverviewPanel', () => {
     expect(screen.queryByText('spawn')).toBeNull()
   })
 
-  it('lists the last backup and no more than three behind it', async () => {
+  describe('backups block', () => {
     const now = Date.now()
-    vi.mocked(App.ListBackups).mockResolvedValue(
-      // Newest first, as backend/services/backup.go sorts them.
-      Array.from({ length: 6 }, (_, i) => ({
+    const backup = (i: number, over: Partial<models.Backup> = {}) =>
+      ({
         filename: `b${i}.zip`,
         createdAt: now - i * 3_600_000,
         sizeBytes: 1024 ** 3,
         displayName: '',
         tags: [],
         kind: 'server',
-      })) as unknown as models.Backup[],
-    )
+        ...over,
+      }) as unknown as models.Backup
 
-    render(<OverviewTile serverId="srv1" maximized />)
+    it('leads with the latest, then no more than three behind it', async () => {
+      vi.mocked(App.ListBackups).mockResolvedValue(
+        // Newest first, as backend/services/backup.go sorts them.
+        Array.from({ length: 6 }, (_, i) => backup(i)),
+      )
 
-    expect(await screen.findByText('just now')).toBeTruthy()
-    expect(screen.getByText('3h ago')).toBeTruthy()
-    // Four shown, so the fifth and sixth are not.
-    expect(screen.queryByText('4h ago')).toBeNull()
+      render(<OverviewTile serverId="srv1" maximized />)
+
+      // The latest carries relative and absolute time on one line; the rows
+      // behind it carry the relative half alone.
+      expect(await screen.findByText(/just now · /)).toBeTruthy()
+      expect(screen.getByText('3h ago')).toBeTruthy()
+      // One latest plus three older, so the fifth and sixth are not drawn.
+      expect(screen.queryByText('4h ago')).toBeNull()
+    })
+
+    it('gives the latest its size and an absolute date, not just a relative one', async () => {
+      vi.mocked(App.ListBackups).mockResolvedValue([backup(0, { sizeBytes: 2.5 * 1024 ** 3 })])
+
+      render(<OverviewTile serverId="srv1" maximized />)
+
+      expect(await screen.findByText('2.50 GB')).toBeTruthy()
+      // Relative and absolute share a line; the absolute half is what survives
+      // a backup being days old, when "3d ago" stops being useful on its own.
+      expect(screen.getByText(/just now · /)).toBeTruthy()
+    })
+
+    // Per-world backups already exist — the Worlds tile's Backup action writes
+    // kind: "world" — and filtering them out put real backups behind a heading
+    // that says "Backups".
+    it('shows world backups alongside server ones, tagged', async () => {
+      vi.mocked(App.ListBackups).mockResolvedValue([
+        backup(0, { kind: 'world', world: 'survival' }),
+        backup(1),
+      ])
+
+      render(<OverviewTile serverId="srv1" maximized />)
+
+      expect(await screen.findByText('survival')).toBeTruthy()
+      expect(screen.getByText('server')).toBeTruthy()
+    })
+
+    it('keeps the latest at two lines with only one backup', async () => {
+      vi.mocked(App.ListBackups).mockResolvedValue([backup(0)])
+
+      render(<OverviewTile serverId="srv1" maximized />)
+
+      // Both halves present with nothing behind them, so the block does not
+      // change shape as backups accumulate.
+      expect(await screen.findByText('1.00 GB')).toBeTruthy()
+      expect(screen.getByText(/just now · /)).toBeTruthy()
+    })
   })
 
   it('lists only the schedules that are enabled', async () => {
