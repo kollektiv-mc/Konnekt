@@ -32,7 +32,18 @@ function ExpandedView({ history }: { history: StatsSnapshot[] }) {
   const [sortDir, setSortDir] = useState<SortDir>('desc')
   const [hidden, setHidden] = useState<Set<string>>(new Set())
 
-  const anchor = history.length > 0 ? history[history.length - 1].timestamp : Date.now()
+  // The right edge of the time window: the newest sample, or the clock when
+  // there is nothing to anchor to. Memoized on `history` so the clock is read
+  // only when the history changes, never per render. Read per render, an empty
+  // history made `cutoff` a fresh value every time, the effect below fired on
+  // every render, and its setState scheduled the next one — a loop that ran
+  // for as long as the tile was open on a server with no samples, with
+  // nothing to stop it in a production build (#209). The invariant: a render
+  // must not be able to change its own effect's dependency.
+  const anchor = useMemo(
+    () => (history.length > 0 ? history[history.length - 1].timestamp : Date.now()),
+    [history],
+  )
   const cutoff = anchor - range * 60 * 1000
 
   // Animated cutoff — drives the XAxis domain and chart data filter.
