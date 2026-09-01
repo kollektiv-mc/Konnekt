@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -215,6 +216,38 @@ func (a *App) GetDataDir() (string, error) {
 // warning written creates it.
 func (a *App) GetLogPath() (string, error) {
 	return services.LogPath(a.dataDir), nil
+}
+
+// LogClientError writes an error the frontend caught into konnekt.log, next to
+// the backend's own diagnostics. React reports a caught render error through
+// console.error, and an uncaught exception or an unhandled rejection goes to
+// the WebView's console; a packaged build has neither a terminal nor devtools,
+// so until this existed a tile crash the user could see on screen was still
+// one they could not attach to a bug report (#245). origin names the path that
+// caught it: "render" for an ErrorBoundary, "error" and "unhandledrejection"
+// for the window listeners. stack carries the JS stack and, for a render
+// error, React's component stack, which is what names the tile.
+//
+// Clamped rather than trusted: a stack from a minified bundle is long and a
+// component stack can be longer, and one line must not be able to eat the log
+// on its own. Never fails: a logger that can fail is a second error to log.
+func (a *App) LogClientError(origin, message, stack string) error {
+	slog.Error("frontend: uncaught error",
+		"origin", clampForLog(origin, 64),
+		"message", clampForLog(message, 1024),
+		"stack", clampForLog(stack, 8192),
+	)
+	return nil
+}
+
+// clampForLog truncates s to at most max runes, marking the cut, so a clamp
+// never splits a multi-byte character.
+func clampForLog(s string, max int) string {
+	r := []rune(s)
+	if len(r) <= max {
+		return s
+	}
+	return string(r[:max]) + "...[truncated]"
 }
 
 // --- Updates ---

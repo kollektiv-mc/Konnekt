@@ -89,8 +89,10 @@ tree.
       `git diff --exit-code frontend/wailsjs` — a non-empty diff is a hand edit.
       Run this with the **same CLI version `go.mod` pins** (v2.12.0): a
       different generator writes a diff that is a version difference, not a
-      hand edit. 83/83 bound methods and all 36 emitted structs round-tripped
-      byte-identical (re-verified 2026-08-20).
+      hand edit. 92/92 bound methods and all 45 emitted structs round-tripped
+      byte-identical (re-verified 2026-09-01, in a cloud container, with the
+      CLI installed by the command below in about two minutes and the
+      no-change regeneration taking six seconds).
       The CLI is not preinstalled in a cloud container and two sessions assumed
       that made this uncheckable. It does not:
       `go install github.com/wailsapp/wails/v2/cmd/wails@v2.12.0` takes one
@@ -254,6 +256,16 @@ tree.
       `services.InitLogger` points at `konnekt.log` in the app data dir.
       Closed 2026-08-20 (HEALTH_LOG). Adding a log-rotation dependency is a
       decided "no" — see `DEPENDENCIES.md`.
+      The frontend half closed 2026-09-01 (#245, HEALTH_LOG "The crash you
+      could see but not send"): a render error any `ErrorBoundary` catches, an
+      exception that escapes to the window and a promise nobody handles all
+      reach the same file through one bound method, `LogClientError`, via
+      `lib/clientErrors.ts`. The reporter returns before touching the binding
+      when there is no bridge, and never throws or rejects itself, because it
+      runs from inside error handlers.
+      Verify: `lib/clientErrors.test.ts` plus the reporting case in
+      `components/ErrorBoundary.test.tsx`; on the Go side
+      `go test . -run LogClientError` pins the line and the per-field clamp.
 - [x] Store write actions record the failure and rethrow rather than applying
       the optimistic update anyway, per `agent_docs/CLAUDE.md`'s IPC
       conventions. All five stores that write comply as of 2026-08-20

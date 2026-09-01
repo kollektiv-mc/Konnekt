@@ -1,4 +1,5 @@
-import { Component, type ReactNode } from 'react'
+import { Component, type ErrorInfo, type ReactNode } from 'react'
+import { reportClientError } from '../lib/clientErrors'
 
 interface Props {
   children: ReactNode
@@ -27,6 +28,15 @@ export class ErrorBoundary extends Component<Props, State> {
 
   static getDerivedStateFromError(error: Error): State {
     return { error }
+  }
+
+  // What the screen shows is decided above; this is what the log gets. React
+  // reports a caught error through console.error, which a packaged build
+  // discards, so without this a crash the user can see is one they cannot
+  // attach to a report (#245). The component stack is the part worth having:
+  // it names the tile, where a minified JS stack does not.
+  componentDidCatch(error: Error, info: ErrorInfo) {
+    reportClientError('render', error, info.componentStack ?? undefined)
   }
 
   render() {
