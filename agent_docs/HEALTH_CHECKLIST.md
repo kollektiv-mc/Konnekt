@@ -192,9 +192,9 @@ tree.
 - [x] Automated tests exist and pass for critical paths: RCON client, Modrinth
       API client, backup create/restore, config path-traversal guards,
       scheduler engine (Go); Zustand store logic and critical hooks (frontend).
-      `backend/services` sits at **41.1%** of statements, with a **39%** floor
-      owned by `scripts/coverage-floor` and run by both `/suite-kit:health` and
-      CI. The floor is a ratchet: raise it as coverage rises, never lower it to
+      `backend/services` sits at **59.7%** of statements (2026-09-01), with a
+      **49%** floor owned by `scripts/coverage-floor` and run by both
+      `/suite-kit:health` and CI. The floor is a ratchet: raise it as coverage rises, never lower it to
       green a red build. Coverage is a proxy, not the goal — prefer a test that
       would have caught a real bug over one that only moves the number.
 - [x] CI is green on every push/PR (`.github/workflows/ci.yml`: a `frontend`
@@ -298,6 +298,21 @@ tree.
       instead of throwing, which is the one thing that would make every case in
       it pass vacuously, so the file also asserts up front that the real binding
       still throws. Confirmed to fail when any one fix is reverted.
+      Every tile also renders inside its own boundary (closed 2026-09-01,
+      HEALTH_LOG "The tile that took the dashboard with it"): `TileWrapper`
+      wraps its content slot, the one place both the canvas copy and the
+      maximized copy render through, so a tile that throws, or a lazy chunk
+      that fails to load, shows "tile failed to render" with the message and a
+      Retry inside its own frame, while the header's Remove and
+      Maximize/Restore stay live above it. `main.tsx`'s boundary is what is
+      left for `App` itself and the chrome around the grid. The Overview keeps
+      its per-section boundaries on top of that: one readout going dark should
+      not blank the other four.
+      Verify: `tiles/TileWrapper/index.test.tsx` renders a throwing child and a
+      rejected `lazy()` import through the wrapper *inside* the app-level
+      boundary and asserts the app's "render error" never appears. Confirmed
+      to fail seven of eight cases against the wrapper without the boundary;
+      the eighth is the nothing-throws control.
 
 ## 3. Scalable / Future-proof
 
@@ -489,33 +504,6 @@ total warmed bytes — and the number wants picking against a real machine rathe
 than guessed here. The measurement harness described in HEALTH_LOG (2026-08-29)
 is how to pick it.
 
-**P2 — One `ErrorBoundary` for eleven tiles, and now five lazy chunks**
-(filed 2026-08-29)
-
-`main.tsx` wraps the whole app in a single `ErrorBoundary` whose fallback is a
-full-screen "render error". So any tile that throws — or any lazy chunk that
-fails to load — replaces the entire dashboard, with no way back short of a
-relaunch. That was already true for worlds and performance; the 2026-08-29
-split took the count of lazy boundaries from two to five, on tiles people open
-routinely, which is what makes it worth writing down now.
-
-The trigger is remote rather than hypothetical: the frontend is `go:embed`ed and
-served locally, so a chunk request does not 404 in a well-formed build. It is
-the *blast radius* that is wrong, not the likelihood. A boundary inside
-`TileWrapper`'s content slot would turn "the app is gone" into "one tile says it
-failed", and the wrapper is already the single place every tile renders through
-(the same argument issue #164 makes for the wheel handler). Deliberately not
-done as part of the split: it changes what happens for every tile error, not
-just a chunk load, and what a dead tile should offer — a retry, a remove — is a
-design question rather than a mechanical one.
-
-Half of the mechanism landed with the Overview tile (#211): `ErrorBoundary` now
-takes an optional `fallback`, and the Overview panel wraps each of its sections
-in its own, because that panel is the one place mounting five tile-domain
-subtrees side by side. The item stays open — a tile on the canvas is still
-unwrapped, and it is `TileWrapper`'s content slot that would fix that for every
-tile at once. What is left is the design question, not the plumbing.
-
 **P2 — Modal stacking is nine files' worth of literal z-index** (filed 2026-08-31)
 
 Every overlay picks its own number — 50, 60, 70, 150, 200, 300, 400, 1000, 9999
@@ -569,7 +557,7 @@ performance into stores and closes most of it. The earlier roll-up version of
 this tile also double-fetched mods, including two Modrinth round trips; the
 dashboard does not touch mods at all, so that half is gone.
 
-**P3 — Five copies of `fmtBytes`** (filed 2026-08-30)
+**P3 — Five copies of `fmtBytes`** (filed 2026-08-30, re-verified 2026-09-01)
 
 `lib/format.ts`, `tiles/backups/format.ts`, `tiles/backups/BackupsSummary.tsx`,
 `tiles/worlds/WorldHud.tsx` and `tiles/worlds/WorldsSummary.tsx` each define
@@ -579,7 +567,10 @@ panel, so the fix is to point the other four at it and delete them — mechanica
 but it touches three tiles, so it is its own change rather than a rider on this
 one. Same shape for the relative-time helpers: `relativeMs`/`untilMs` now live in
 `lib/format.ts`, while `BackupsSummary` and `SchedulerSummary` still carry
-private copies.
+private copies, spelled `fmtRelTime` and `formatNextRun`, so a grep for the
+shared names finds neither. Still five copies with three behaviours as of
+2026-09-01: two stop at MB, `WorldsSummary` rounds KB to a whole number, and
+only `lib/format.ts` and `WorldHud` agree.
 
 **P3 — Evidence for the memoization item above** (filed 2026-08-29)
 
@@ -815,7 +806,9 @@ individual issues; fix in passing when touching the file)
   immediately on success (no retained undo) — `backup.go:411-431`. Neither is a
   bug per se; both are choices worth revisiting alongside #121/#30.
 - `MaxPlayers()` keeps its last value after stop while every other status field
-  zeroes (`server.go` accessors) — cosmetic inconsistency.
+  zeroes — cosmetic inconsistency. Since #232 the accessor lives on
+  `serverInstance` (`server.go`); re-checked 2026-09-01 and nothing zeroes
+  `maxPlayers` on stop there either, so the finding moved with the code.
 - `worlds.go:269`'s "(+ siblings)" comment overstates `CreateWorldBackup`, which
   zips only the named folder; the behavior gap is #26, the comment is local rot
   to fix when #26 lands.

@@ -1,6 +1,7 @@
-import type { ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
 import type { LucideIcon } from '../../lib/icons'
 import { IconButton } from '../../components/ui/IconButton'
+import { ErrorBoundary } from '../../components/ErrorBoundary'
 import { Maximize2, Minimize2, X } from '../../lib/icons'
 import { Icon } from '../../components/ui/Icon'
 
@@ -27,6 +28,12 @@ export function TileWrapper({
   flash,
   onToggleMaximize,
 }: TileWrapperProps) {
+  // Bumped by the fallback's Retry. The boundary is keyed on it, so a bump
+  // unmounts the failed subtree and mounts the tile again from scratch —
+  // fresh state, fresh effects — rather than asking the same instance to try
+  // once more with whatever it had when it threw.
+  const [attempt, setAttempt] = useState(0)
+
   return (
     <div className={`relative h-full ${maximized ? '' : 'tile-outer'}`}>
       {flash && <div className="tile-flash-ring" />}
@@ -81,8 +88,47 @@ export function TileWrapper({
             )}
           </div>
         </div>
-        <div className="min-h-0 flex-1 overflow-hidden">{children}</div>
+        {/* The boundary sits inside the frame and around the content only.
+            Every tile renders through this slot — the canvas copy and the
+            maximized copy alike (Dashboard.tsx) — so this one boundary is what
+            keeps a tile that throws, or a lazy chunk that fails to load, from
+            reaching the app-level boundary in main.tsx and replacing the whole
+            dashboard with "render error". The header stays live above it, so
+            Remove and Maximize/Restore still work on a failed tile; the
+            fallback adds Retry. */}
+        <div className="min-h-0 flex-1 overflow-hidden">
+          <ErrorBoundary
+            key={attempt}
+            fallback={(error) => (
+              <TileFallback error={error} onRetry={() => setAttempt((n) => n + 1)} />
+            )}
+          >
+            {children}
+          </ErrorBoundary>
+        </div>
       </div>
+    </div>
+  )
+}
+
+/**
+ * What a tile shows in place of content that threw. The header above it still
+ * names the tile, so this says what happened and what can be done about it,
+ * in the same lowercase mono register as the app's other unavailable states
+ * ("unavailable" in an Overview section, "render error" at app level).
+ */
+function TileFallback({ error, onRetry }: { error: Error; onRetry: () => void }) {
+  return (
+    <div className="flex h-full flex-col items-center justify-center gap-3 px-4 text-center font-mono text-xs">
+      <div className="text-danger">tile failed to render</div>
+      <div className="text-text-faint max-w-full break-all">{error.message}</div>
+      <button
+        type="button"
+        onClick={onRetry}
+        className="border-border-subtle text-text-faint hover:text-text-secondary border-hairline rounded px-3 py-1 transition-colors"
+      >
+        Retry
+      </button>
     </div>
   )
 }
