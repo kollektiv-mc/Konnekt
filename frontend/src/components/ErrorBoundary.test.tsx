@@ -1,11 +1,15 @@
 import { describe, it, expect, afterEach, beforeEach, vi } from 'vitest'
 import { render, cleanup, screen } from '@testing-library/react'
 import { ErrorBoundary } from './ErrorBoundary'
+import { reportClientError } from '../lib/clientErrors'
+
+vi.mock('../lib/clientErrors', () => ({ reportClientError: vi.fn() }))
 
 afterEach(cleanup)
 
 beforeEach(() => {
   vi.spyOn(console, 'error').mockImplementation(() => {})
+  vi.mocked(reportClientError).mockClear()
 })
 afterEach(() => {
   vi.restoreAllMocks()
@@ -55,5 +59,19 @@ describe('ErrorBoundary', () => {
     expect(screen.getByText('caught: kaput')).toBeTruthy()
     expect(fallback).toHaveBeenCalledWith(expect.any(Error))
     expect(fallback.mock.calls[0][0].message).toBe('kaput')
+  })
+
+  it('reports what it caught, with the component stack that names the subtree', () => {
+    render(
+      <ErrorBoundary fallback={null}>
+        <Broken />
+      </ErrorBoundary>,
+    )
+    expect(reportClientError).toHaveBeenCalledTimes(1)
+    const [origin, error, componentStack] = vi.mocked(reportClientError).mock.calls[0]
+    expect(origin).toBe('render')
+    expect(error).toBeInstanceOf(Error)
+    expect((error as Error).message).toBe('kaput')
+    expect(componentStack).toContain('Broken')
   })
 })

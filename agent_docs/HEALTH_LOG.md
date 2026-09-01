@@ -79,6 +79,7 @@ after them is dated. Newest last, in both groups.
 - [2026-08-30 — The narration you had to read to know whether it worked](#2026-08-30-the-narration-you-had-to-read-to-know-whether-it-worked)
 - [2026-09-01 — The tile that took the dashboard with it](#2026-09-01-the-tile-that-took-the-dashboard-with-it)
 - [2026-09-01 — The chart that rendered once per tick of the clock](#2026-09-01-the-chart-that-rendered-once-per-tick-of-the-clock)
+- [2026-09-01 — The crash you could see but not send](#2026-09-01-the-crash-you-could-see-but-not-send)
 
 ---
 
@@ -4358,4 +4359,83 @@ Frontend suite 693 tests across 57 files, up from 691 across 56; lint holds at
 `format:check` clean. Entry chunk 154.3 KB gzip against the 165 KB budget,
 unchanged to the tenth of a kilobyte, and `check-tokens` and `check-prefetch`
 green. Go is untouched and re-run anyway: `go vet` and `go test` clean,
+`backend/services` at 59.6% against the 49% floor.
+
+
+### 2026-09-01 — The crash you could see but not send
+
+**Closed: [#245](../../issues/245)**, filed earlier the same day from the
+per-tile boundary work.
+
+**The gap.** `konnekt.log` exists so a bug reporter has something to attach
+(#97, 2026-08-20), and it captured the backend only. React reports a caught
+render error through `console.error`; an uncaught exception or an unhandled
+rejection goes to the WebView's console. A packaged build has neither a
+terminal nor devtools, so all three went nowhere. The per-tile boundary made a
+tile crash *visible*, "tile failed to render" with the message in the tile's
+own frame, and left it exactly as unreportable as before: the same mechanism as
+#97, the diagnostic exists and the packaged build throws it away.
+
+**The fix.** One bound method, `LogClientError(origin, message, stack)` on
+`App`, writing one `slog.Error` line tagged `frontend:` through the default
+logger `services.InitLogger` already points at the file. Each field is clamped
+to a rune budget (64, 1024, 8192) so a minified stack plus a component stack
+cannot eat the log on its own, and the method cannot fail, because a logger
+that can fail is a second error to log.
+
+On the frontend, `lib/clientErrors.ts` is the one path in. `reportClientError`
+returns before touching the binding when there is no bridge, which is the
+browser-only preset where the binding would throw synchronously, and otherwise
+fires it and swallows both a synchronous throw and a rejection, since it runs
+from inside error handlers and has nothing to revert and nobody to rethrow to;
+that empty catch is the contract, not the swallowed write the IPC conventions
+warn against. `ErrorBoundary.componentDidCatch` calls it with React's component
+stack, which is the part worth having: a production JS stack is minified, the
+component stack names the tile. Every boundary in the tree, app-level,
+Overview section and tile, goes through that one hook. `main.tsx` installs
+window `error` and `unhandledrejection` listeners before React mounts, so an
+exception that escapes and a promise nobody handles, which is the shape of
+every binding called from a click handler without a catch (#185), land in the
+same file. Nothing is logged twice: React 19 routes an error no boundary caught
+through `reportError`, which fires the window listener, and an error a boundary
+did catch reaches `componentDidCatch` and never fires it.
+
+**Known and accepted.**
+
+- No dedupe or rate limit. A tile retried repeatedly logs repeatedly, bounded
+  by the log's 2 MiB rotation and the per-line clamp.
+- Production stacks are minified and stay so. Source maps are not shipped and
+  this does not propose to; the message and the component stack carry the
+  triage value.
+- With no bridge nothing is logged, by design. The preset has a devtools
+  console and no log file to reach.
+
+**Verification.** `lib/clientErrors.test.ts` (7 cases): silent with no bridge,
+forwards origin, message, stack and detail with one, takes a non-Error reason,
+never throws when the binding throws synchronously, never leaves a rejection
+unhandled when it rejects, the window listeners forward both event types until
+uninstalled, and a withheld error object falls back to the event message.
+`ErrorBoundary.test.tsx` gains the case that a caught error is reported with a
+component stack naming the subtree. On the Go side `client_error_test.go` pins
+the line on the default logger, the clamp on every field and that the clamp
+cuts on rune boundaries.
+
+Two things found by writing those tests rather than by reading. Vitest's jsdom
+environment re-raises a window `error` event that carries an error object as an
+uncaught exception whenever no user `error` listener is registered, so the
+"after uninstall, nothing is forwarded" probe has to use the rejection event;
+the first draft used another `ErrorEvent` and failed the run from outside any
+test. And the bindings regeneration the checklist's Clean pillar asks for was
+run both ways here: the pinned CLI installed in a cloud container in about two
+minutes, regenerating with no source change produced a byte-identical tree in
+six seconds, and regenerating after the Go change produced exactly the one new
+method in `App.d.ts` and `App.js`, nothing else. 92/92 bound methods and 45
+emitted structs; the checklist said 83 and 36, which had been stale since the
+multi-server and loader work landed.
+
+Frontend suite 713 tests across 60 files, up from 705 across 59 on the branch
+this stacks on; lint holds at 14 warnings, byte-identical to the count before
+this change; typecheck and `format:check` clean. Entry chunk 154.7 KB gzip
+against the 165 KB budget, up 0.2 KB for the reporter, and `check-tokens` and
+`check-prefetch` green. `gofmt`, `go vet` and `go test` clean,
 `backend/services` at 59.6% against the 49% floor.

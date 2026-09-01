@@ -202,6 +202,10 @@ export function ListWorlds(arg1) {
   return window['go']['main']['App']['ListWorlds'](arg1);
 }
 
+export function LogClientError(arg1, arg2, arg3) {
+  return window['go']['main']['App']['LogClientError'](arg1, arg2, arg3);
+}
+
 export function ModCategories(arg1) {
   return window['go']['main']['App']['ModCategories'](arg1);
 }
