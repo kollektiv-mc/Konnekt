@@ -77,6 +77,7 @@ after them is dated. Newest last, in both groups.
 - [2026-08-29 — The warm-up that moved the stutter onto the first scroll](#2026-08-29-the-warm-up-that-moved-the-stutter-onto-the-first-scroll)
 - [2026-08-30 — The catch attached to a call that never returned](#2026-08-30-the-catch-attached-to-a-call-that-never-returned)
 - [2026-08-30 — The narration you had to read to know whether it worked](#2026-08-30-the-narration-you-had-to-read-to-know-whether-it-worked)
+- [2026-09-01 — The tile that took the dashboard with it](#2026-09-01-the-tile-that-took-the-dashboard-with-it)
 
 ---
 
@@ -4217,3 +4218,86 @@ Then the real thing, rendered in Chromium at both themes against a seeded
 console: server output in its four levels interleaved with all three narration
 outcomes. The blocks read at a glance in both, and the light theme picks up its
 darker status variants as intended.
+
+
+### 2026-09-01 — The tile that took the dashboard with it
+
+**Closed:** the P2 backlog item "One `ErrorBoundary` for eleven tiles, and now
+five lazy chunks" (filed 2026-08-29).
+
+**The gap.** `main.tsx` wraps the whole app in one `ErrorBoundary` whose
+fallback is a full-screen "render error", and until the Overview tile (#211)
+put a boundary around each of its sections, that was the only one in the tree.
+So any tile that threw during render replaced the entire dashboard — every
+other tile, the sidebar, the title bar — with two lines of monospace, and the
+only way back was a relaunch. That was already true for the two original lazy
+tiles; the 2026-08-29 split took the lazy count to five, on tiles people open
+routinely, and #184 removed the one *live* trigger (a binding called with no
+bridge) without touching the blast radius. What kept the item open was a design
+question rather than plumbing: what should a dead tile offer?
+
+**The answer** turned out to be smaller than the question. The header of every
+tile is rendered by `TileWrapper` *above* its content slot and already carries
+Remove and Maximize/Restore. With the boundary placed around the content slot
+alone (`tiles/TileWrapper/index.tsx`), "remove" costs nothing and needs no new
+UI, and maximizing a failed grid tile is a fresh mount of the same tile in the
+overlay, which is a retry by another name. What the fallback adds is one
+control: Retry, which bumps a counter the boundary is keyed on, so the failed
+subtree is unmounted and the tile mounts again from scratch, fresh state and
+fresh effects, rather than the same instance being asked to try again with
+whatever it had when it threw. The copy is "tile failed to render" plus the
+error message, in the lowercase mono register of the Overview's "unavailable"
+and the app's "render error"; the header above it already names the tile.
+
+`ErrorBoundary`'s `fallback` now also accepts a function of the error, which
+is what lets the tile show the message. The node form the Overview passes and
+the full-screen default are unchanged.
+
+Why the wrapper and not eleven tiles: `TileWrapper` is the one component every
+tile renders through, canvas copy and maximized copy alike (`Dashboard.tsx`),
+the same argument #164 makes for its wheel handler. One boundary there covers a
+tile that exists today and one added next month, with nothing to remember. The
+Overview's per-section boundaries stay on top of it: the wrapper's would keep a
+throwing section from reaching the app but would blank the other four with it,
+and one readout going dark should not cost the rest. (`Section.tsx`'s comment
+said the app-level boundary was "the only other one"; it now says this.)
+
+**Known and accepted.**
+
+- Retry after a *failed chunk load* remounts the tile but cannot make React
+  re-request the chunk: `lazy()` caches a rejected factory and rethrows it on
+  every later render. The frontend is `go:embed`ed and served locally, so a
+  chunk request does not fail in a well-formed build; for that case the
+  boundary's job is containment, which the test pins, not recovery.
+- Retry counts nothing and backs off nothing. A tile that throws
+  deterministically fails again on every press, inside its own frame, which is
+  the correct answer for a render bug and needs no cleverness.
+- The fallback sits inside the tile's `overflow-hidden` frame, so a very long
+  message wraps with `break-all` and is clipped past that rather than scrolled.
+- React reports a caught error through `console.error`, which in a packaged
+  WebView build goes nowhere. `konnekt.log` (2026-08-20) captures the backend
+  only, so a tile crash a user can now *see* is still one they cannot attach to
+  a report. Filed as [#245](../../issues/245): same mechanism as #97, the
+  diagnostic exists and the packaged build throws it away.
+- #234 will key the tile tree by server; when it does, a server switch remounts
+  the wrapper and its boundary with it, which is the right reset for a tile
+  that failed on one server's data. Nothing here has to change for that.
+
+**Verification.** `tiles/TileWrapper/index.test.tsx` renders a throwing child
+and a rejected `lazy()` import inside a `Suspense`, through the wrapper,
+*inside* the app-level boundary, and asserts the app's "render error" never
+appears while the tile's header, Remove, Maximize and Restore all keep working;
+Retry is driven by a flag the test flips rather than a "throws N times"
+counter, because React retries a failed render once before handing it to a
+boundary and a counter would have to know that number. Run against the wrapper
+from before this change, seven of the eight cases fail and the eighth is the
+nothing-throws control. `components/ErrorBoundary.test.tsx` covers the three
+fallback forms directly.
+
+Frontend suite 703 tests across 58 files, up from 691 across 56; lint holds at
+14 warnings, byte-identical to the count on the tree before this change, and
+typecheck and `format:check` are clean. Entry chunk 154.5 KB gzip against the
+165 KB budget, `check-tokens` and `check-prefetch` green, the three generated
+token files already current, and the border invariant finds nothing. Go is
+untouched and re-run anyway against the fresh `dist`: `go vet` and `go test`
+clean, `backend/services` at 59.7% against the 49% floor.

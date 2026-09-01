@@ -28,9 +28,9 @@ interface Props {
  * animation lands, and handles a tile that is not on the canvas at all.
  *
  * Each body gets its own `ErrorBoundary`. This panel mounts five independent
- * tile-domain subtrees side by side, and the app-level boundary in `main.tsx`
- * is the only other one, so an unguarded section throwing would take the whole
- * window.
+ * tile-domain subtrees side by side; `TileWrapper`'s boundary around the whole
+ * tile would keep a throwing section from reaching the app, but it would blank
+ * the other four with it, and one readout going dark should not cost the rest.
  */
 export function Section({ tileId, label, icon, meta, children }: Props) {
   const requestMaximize = useUiStore((s) => s.requestMaximize)
