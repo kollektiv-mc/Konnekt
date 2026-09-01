@@ -77,6 +77,7 @@ after them is dated. Newest last, in both groups.
 - [2026-08-29 — The warm-up that moved the stutter onto the first scroll](#2026-08-29-the-warm-up-that-moved-the-stutter-onto-the-first-scroll)
 - [2026-08-30 — The catch attached to a call that never returned](#2026-08-30-the-catch-attached-to-a-call-that-never-returned)
 - [2026-08-30 — The narration you had to read to know whether it worked](#2026-08-30-the-narration-you-had-to-read-to-know-whether-it-worked)
+- [2026-09-01 — The chart that rendered once per tick of the clock](#2026-09-01-the-chart-that-rendered-once-per-tick-of-the-clock)
 
 ---
 
@@ -4217,3 +4218,60 @@ Then the real thing, rendered in Chromium at both themes against a seeded
 console: server output in its four levels interleaved with all three narration
 outcomes. The blocks read at a glance in both, and the light theme picks up its
 darker status variants as intended.
+
+
+### 2026-09-01 — The chart that rendered once per tick of the clock
+
+**Closed: [#209](../../issues/209)**, filed from the 2026-08-30 no-bridge work.
+
+**The gap.** The Performance tile's maximized view anchors its time window on
+the newest sample, or on `Date.now()` when there is no sample to anchor to. It
+read the clock per render, and fed the cutoff derived from it to a `setState`
+effect keyed on that cutoff. With history empty, every render therefore
+produced a fresh cutoff, the effect fired, its `setState` scheduled the next
+render, and that render read the clock again. Each render scheduled the next
+for as long as consecutive renders landed in different milliseconds.
+
+Two things about the shape of this are worth recording, because the issue got
+one of them wrong and the other decides how much it mattered.
+
+The issue said React "eventually cuts it off". It does not. Checked in the
+installed `react-dom` 19.2.7 rather than from memory: the `setState`-inside-
+`useEffect` guard is a development-only `console.error` after fifty nested
+updates that resets its counter and carries on, and the production build
+carries no such check at all. The two warnings the issue saw in Chromium were
+that counter wrapping twice. In a packaged build the loop is silent, unbounded,
+and burns a core until the tile is closed.
+
+And the mount alone does not start it. The effect's first `setState` carries
+the value the state was initialised with, so React bails out. What starts it is
+any re-render from above, and Dashboard's maximize animation supplies several
+while the overlay opens; one is enough. So the condition is exactly: the
+Performance tile maximized, and no history. `stats.go` emits no snapshot while
+a server is stopped, so a server that has never run has no history at all, and
+every maximize on one spun until the tile was closed. The compact summary and
+the Overview's section do not have the anchor and never spun.
+
+**The fix** (`tiles/performance/index.tsx`) memoizes the anchor on `history`,
+so the clock is read only when the history changes. The invariant it restores
+is the one the issue named: a render must not be able to change its own
+effect's dependency. Keying the effect on `history.length` was the other
+candidate and was rejected; it hides the dependency rather than removing it.
+
+**Verification.** `tiles/performance/index.test.tsx`, the folder's first test,
+renders the tile maximized with no bridge so history stays empty, re-renders it
+once from above, stubs `Date.now` to advance on every call, and after 250ms
+asserts the maximized view read the clock fewer than ten times and React's
+loop warning never fired. It renders through `createRoot` with the act
+environment off rather than through Testing Library: `render` runs inside
+`act()`, which keeps flushing effects until the tree goes quiet, so the loop
+would have hung the test instead of failing it. Against the unfixed code the
+count was **288** in the 250ms window; the first draft, without the parent
+re-render, passed vacuously, which is how the mount bail-out above was found.
+
+Frontend suite 693 tests across 57 files, up from 691 across 56; lint holds at
+14 warnings, byte-identical to the count before this change; typecheck and
+`format:check` clean. Entry chunk 154.3 KB gzip against the 165 KB budget,
+unchanged to the tenth of a kilobyte, and `check-tokens` and `check-prefetch`
+green. Go is untouched and re-run anyway: `go vet` and `go test` clean,
+`backend/services` at 59.6% against the 49% floor.
