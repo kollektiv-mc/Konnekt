@@ -194,8 +194,13 @@ historical). Individual Beta tasks are filed in
   import from an external file.
 - **Tiles — beta.** Server Config tile enhancements (grouped fields, gamerule
   editor, MOTD preview), a File explorer tile, an Audit log tile, a Mod/plugin
-  manager tile (Modrinth + CurseForge), a Player profiles tile, a Player skin
-  preview tile.
+  manager tile (Modrinth + Hangar + CurseForge), a Player profiles tile, a
+  Player skin preview tile. Hangar is PaperMC's own plugin repository and is
+  sequenced ahead of CurseForge: its API is public and unmetered where
+  CurseForge's needs a per-developer key a desktop binary cannot hold, and it
+  is the source that covers Paper/Velocity plugins Modrinth does not carry.
+  SpigotMC is deliberately not on this list, and the reason is under
+  "Explicitly out of scope" below.
 - **Features — beta.** Public server IP via playit.gg tunnel, extended (24h/7-day)
   performance history, routing desktop notifications through the originally
   planned Wails `runtime.EventsEmit` path, configurable keyboard shortcuts,
@@ -284,9 +289,19 @@ where the decision was actually made — this section records, it does not decid
 
 - **A cloud backend or hosted account system.** Konnekt is local-first: state
   persists as JSON in the Wails app data directory and nothing calls home except
-  the update check and Modrinth. See `agent_docs/CLAUDE.md`'s opening line and
-  its "Do not" rule against `localStorage`/`sessionStorage`. Remote Access
-  (above) is a tunnel to the user's own machine, not a service.
+  the update check and the content providers behind the mods tile (Modrinth
+  today; Hangar and CurseForge under Beta). See `agent_docs/CLAUDE.md`'s
+  opening line and its "Do not" rule against `localStorage`/`sessionStorage`.
+  Remote Access (above) is a tunnel to the user's own machine, not a service.
+- **SpigotMC as a content source.** SpigotMC publishes no API. The only route
+  is Spiget, a third-party mirror, and it cannot support the mods tile's
+  identification path: it indexes no file hashes, so a jar already sitting in
+  `plugins/` could only be matched by name. Its download endpoint also
+  redirects to an arbitrary off-site URL for resources flagged `external`,
+  premium resources cannot be fetched at all, and some of the most-installed
+  plugins block automated download outright. Hangar covers the same audience
+  with an official API, per-platform dependencies and a SHA-256 index. Revisit
+  only if SpigotMC ships a first-party API.
 - **Rocky/RHEL 9 packaging.** EL9 never shipped webkit2gtk-4.1 and EL10 dropped
   4.0, so one binary cannot span both. See `agent_docs/DEPENDENCIES.md` and the
   README's Platform support section.
