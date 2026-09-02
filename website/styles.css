@@ -3342,23 +3342,13 @@ button.dl-card:hover {
    beside the three app panels above it.
 
    Centred where every Konnekt panel here is left-aligned, which is the thing
-   that says at a glance that you have left the app. */
+   that says at a glance that you have left the app, and the only thing: the
+   stage keeps the same --bg-base the other three sit on, so four cards in a
+   row still read as one set. */
 .mock-join {
   display: flex;
   flex-direction: column;
   text-align: center;
-}
-
-/* The ground it sits on, and the other half of that signal. It goes on the
-   stage rather than on .mock, which is 20px narrower than the tile and would
-   leave a lighter strip down either side of it. The grid is a nod at what
-   Minecraft draws its menus over rather than a copy of it: one pixel every
-   eight, at an alpha you read as a texture and not as lines. */
-.step[data-demo='join'] .demo {
-  background:
-    repeating-linear-gradient(90deg, rgb(255 255 255 / 0.012) 0 1px, transparent 1px 8px),
-    repeating-linear-gradient(180deg, rgb(255 255 255 / 0.012) 0 1px, transparent 1px 8px),
-    var(--bg-overlay);
 }
 
 .mock-join-title {
@@ -4037,14 +4027,14 @@ button.dl-card:hover {
    step 1's two field animations. */
 @keyframes demo-focus-join {
   0%,
-  20% {
+  6% {
     border-color: var(--border-subtle);
   }
-  26%,
-  70% {
+  12%,
+  48% {
     border-color: rgb(var(--accent-rgb) / 0.45);
   }
-  76%,
+  55%,
   100% {
     border-color: var(--border-subtle);
   }
@@ -4052,75 +4042,44 @@ button.dl-card:hover {
 
 @keyframes demo-type-join {
   0%,
-  32% {
+  18% {
     width: 0;
   }
-  56%,
+  44%,
   100% {
     width: calc(var(--n) * 1ch);
   }
 }
 
-/* It waits in the field until the address is finished rather than leaving at
-   the first letter, so the two halves read as one action: the pointer put the
-   caret there, and the text arrives under it. */
+/* The same shape as step 1's: the field takes focus and fills itself, and the
+   pointer is only in the panel for the click at the end of it. It is there to
+   say which button gets pressed, not to mime the typing. */
 @keyframes demo-cursor-join {
   0%,
-  8% {
+  56% {
     opacity: 0;
-    transform: translate(160px, 140px) scale(1);
+    transform: translate(150px, 138px) scale(1);
   }
-  14% {
+  62% {
     opacity: 1;
-    transform: translate(160px, 140px) scale(1);
+    transform: translate(150px, 138px) scale(1);
   }
-  22%,
-  24% {
-    opacity: 1;
-    transform: translate(36px, 65px) scale(1);
-  }
-  28% {
-    opacity: 1;
-    transform: translate(36px, 65px) scale(0.68);
-  }
-  32%,
-  58% {
-    opacity: 1;
-    transform: translate(36px, 65px) scale(1);
-  }
-  70%,
-  74% {
+  78%,
+  80% {
     opacity: 1;
     transform: translate(94px, 93px) scale(1);
-  }
-  78% {
-    opacity: 1;
-    transform: translate(94px, 93px) scale(0.68);
   }
   84% {
     opacity: 1;
+    transform: translate(94px, 93px) scale(0.68);
+  }
+  90% {
+    opacity: 1;
     transform: translate(94px, 93px) scale(1);
   }
   100% {
     opacity: 0;
     transform: translate(94px, 93px) scale(1);
-  }
-}
-
-@keyframes demo-press-join {
-  0%,
-  74% {
-    background-color: rgb(var(--accent-rgb) / 0);
-    transform: scale(1);
-  }
-  78% {
-    background-color: rgb(var(--accent-rgb) / 0.2);
-    transform: scale(0.95);
-  }
-  84%,
-  100% {
-    background-color: rgb(var(--accent-rgb) / 0.1);
-    transform: scale(1);
   }
 }
 
@@ -4135,7 +4094,7 @@ button.dl-card:hover {
   animation: demo-cursor-join var(--demo-ms) var(--ease-standard) var(--demo-rewind-ms) forwards;
 }
 .step[data-demo='join'].is-playing .mock-join-go {
-  animation: demo-press-join var(--demo-ms) var(--ease-standard) var(--demo-rewind-ms) forwards;
+  animation: demo-press var(--demo-ms) var(--ease-standard) var(--demo-rewind-ms) forwards;
   background-color: rgb(var(--accent-rgb) / 0);
 }
 
