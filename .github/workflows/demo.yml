@@ -37,6 +37,12 @@ on:
     types: [published]
   workflow_dispatch:
 
+# The job reads the repository and talks to Cloudflare with Cloudflare's own
+# token, so the GITHUB_TOKEN needs nothing beyond checkout. Declared rather than
+# left to the default, which is what CodeQL flags.
+permissions:
+  contents: read
+
 concurrency:
   group: demo-${{ github.ref }}
   cancel-in-progress: true
