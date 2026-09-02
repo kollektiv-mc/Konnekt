@@ -1196,11 +1196,25 @@ a {
   transform: none;
 }
 
+/* Measured, not guessed. At 17px Ranade the line is 637px whole, 390px up to
+   "backups in" and 428px once "one" joins it, so any measure in [390, 428)
+   breaks it after "in" and leaves "one local-first desktop app." whole on the
+   second line. 560px put "desktop app." alone down there. 408px is the middle
+   of that window; a wider render than measured costs an extra line rather than
+   a sideways scroll, which is why this is a measure and not a <br>. Retune it
+   if the sentence changes. */
 .hero p {
   font-size: 17px;
   color: var(--text-secondary);
-  max-width: 560px;
+  max-width: 408px;
   margin: 0;
+}
+
+/* The pill sits above the title as the hero's first element, so it wants the
+   gap under it to be the hero's rhythm rather than .hero-inner's 22px between
+   two blocks of running text. */
+.hero-version {
+  margin-bottom: 2px;
 }
 
 .hero-actions {
@@ -1257,45 +1271,26 @@ a {
   margin: 0;
 }
 
-/* ── About, set as two columns ────────────────────────────────────────── */
-/* The one section on this page that is not centred. It is the first thing
-   after the hero and so the first look at the app, and a screenshot below a
-   centred paragraph is a second scroll rather than the same glance. Set beside
-   it, the shot carries the claim the heading makes in words.
+/* ── About, stacked ──────────────────────────────────────────────────── */
+/* Title, then the app, then what it is, then what it runs on. It is the first
+   section after the hero and so the first look anyone gets, and the shot is
+   what the heading is claiming, so it comes before the sentences that say the
+   same thing in words.
 
-   Not equal halves: the copy wants a readable measure and the shot wants every
-   pixel it can get, since a dashboard of tiles shrunk to half a page stops
-   being legible as one. 5/6 is where a tile in the shot is still readable at
-   this max-width. */
-.about-split {
-  display: grid;
-  grid-template-columns: minmax(0, 5fr) minmax(0, 6fr);
-  align-items: center;
-  gap: 52px;
-}
-
-.about-copy {
+   One centred column like every other section on this page, but the shot takes
+   the container's full width rather than the copy's measure: it is a dashboard
+   of tiles, and shrunk to a reading column a tile stops being legible as one. */
+.about-stack {
   display: flex;
   flex-direction: column;
+  align-items: center;
   gap: 34px;
 }
 
-/* Left-aligned and left-packed, against the centred block every other section
-   on this page uses. The bottom margin goes with it: .about-facts is a sibling
-   inside the column now, and the column's gap owns that distance. */
-.about-split .section-head {
-  text-align: left;
-  align-items: flex-start;
-  max-width: none;
-  margin: 0;
-}
-
-/* At this column's width the heading is a hair too wide for one line and
-   breaks to "Everything in one / window", leaving one word on its own.
-   Balancing splits it evenly instead. It degrades to the same ragged break it
-   already has, so nothing is riding on support for it. */
-.about-split .section-head h2 {
-  text-wrap: balance;
+/* The head owns 34px of space below itself everywhere else on the page; here
+   the stack's own gap does, or the two would collapse into one larger one. */
+.about-stack .section-head {
+  margin-bottom: 0;
 }
 
 /* No frame around it. The screenshot is of the whole window and carries its own
@@ -1303,6 +1298,7 @@ a {
    second edge a few pixels outside the one in the picture. line-height: 0 is
    what keeps the inline image from leaving a strip of leading under it. */
 .about-shot {
+  width: 100%;
   margin: 0;
   line-height: 0;
 }
@@ -1311,6 +1307,22 @@ a {
   display: block;
   width: 100%;
   height: auto;
+}
+
+/* The paragraphs left .section-head so the shot could sit between them and the
+   title, so they carry its measure and type themselves now. */
+.about-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-width: 640px;
+  text-align: center;
+}
+
+.about-copy p {
+  margin: 0;
+  font-size: 15px;
+  color: var(--text-secondary);
 }
 
 /* ── About facts — a label over a row of tags, no surface ─────────────── */
@@ -1373,20 +1385,6 @@ a {
   justify-content: center;
   gap: 6px;
   max-width: var(--pills-w, 232px);
-}
-
-/* Inside the split column the pair packs left with the copy above it, rather
-   than centring as it did across a full-width section. The --pills-w widths
-   above still hold, so the two facts still break 3/3 and 2/1 into the same
-   shape. */
-.about-split .about-facts,
-.about-split .fact-pills {
-  justify-content: flex-start;
-}
-
-.about-split .about-fact {
-  align-items: flex-start;
-  text-align: left;
 }
 
 .pill {
@@ -4857,32 +4855,6 @@ button.dl-card:hover {
 
 /* ── Responsive ───────────────────────────────────────────────────────── */
 @media (max-width: 860px) {
-  /* One column, and the copy keeps the top: the shot is the evidence for what
-     the heading claims, and evidence reads after the claim. It also stays
-     centred here, because a left-packed block in a full-width column is just a
-     ragged right edge. */
-  .about-split {
-    grid-template-columns: 1fr;
-    gap: 36px;
-  }
-
-  .about-split .section-head {
-    text-align: center;
-    align-items: center;
-    max-width: 640px;
-    margin: 0 auto;
-  }
-
-  .about-split .about-facts,
-  .about-split .fact-pills {
-    justify-content: center;
-  }
-
-  .about-split .about-fact {
-    align-items: center;
-    text-align: center;
-  }
-
   /* The graph is wide by nature. Scaling it down to a phone's width would put
      the node labels under 6px, so the canvas scrolls sideways inside its own
      border instead — the page itself never scrolls horizontally. */
