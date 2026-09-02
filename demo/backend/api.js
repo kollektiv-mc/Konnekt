@@ -11,23 +11,25 @@
  * than something clever: a binding added upstream should break the demo build
  * loudly, not surface as a tile that mysteriously does nothing.
  *
- * Two groups of writes deliberately succeed rather than refusing, because
+ * Three groups of writes deliberately succeed rather than refusing, because
  * refusing them would break the interaction the demo exists to show — see
- * `mutate` below.
+ * `mutate` below, and state.js for the two lifecycle calls.
  */
 
 import { showDemoNotice } from "./toast.js";
 import * as modrinth from "./modrinth.js";
 import * as state from "./state.js";
+import * as frame from "./frame.js";
 import {
   SERVER_ID,
   SERVER_CONFIG,
-  SERVER_STATUS,
-  SERVER_SUMMARY,
+  SERVER_CONFIGS,
   STATS_HISTORY,
   PLAYERS,
+  configFor,
+  summaryFor,
 } from "./fixtures/server.js";
-import { WORLDS, BACKUP_WORLDS } from "./fixtures/worlds.js";
+import { WORLDS, BACKUP_WORLDS, CREATIVE_WORLDS } from "./fixtures/worlds.js";
 import { BACKUPS } from "./fixtures/backups.js";
 import { INSTALLED_MODS, MOD_UPDATES } from "./fixtures/mods.js";
 import { CONFIG_FILES, readConfigFile } from "./fixtures/config.js";
@@ -62,28 +64,39 @@ const mutate =
   async (...args) =>
     structuredClone(await fn(...args));
 
+/** Only the first server has history, a roster, backups and plugins; the
+ *  second is offline and empty, which is what makes a switch visible. */
+const survival = (id) => id === SERVER_ID;
+
 export const api = {
   // ── Server lifecycle ──────────────────────────────────────────────────
-  // The demo shows a server that is already running. Nothing starts it.
-  StartServer: refuse("Starting a server"),
-  StopServer: refuse("Stopping a server"),
+  // Start and Stop succeed against state.js, which replays a boot log and
+  // moves the status through starting, running, stopping and offline with
+  // the same events the Go side emits. Everything else that acts on a
+  // process keeps refusing, commands included: a console that answers `list`
+  // from a table would be a script pretending to be a server.
+  StartServer: mutate((id) => state.startServer(id)),
+  StopServer: mutate((id) => state.stopServer(id)),
   RestartServer: refuse("Restarting a server"),
   ForceStopServer: refuse("Force stopping a server"),
   SendCommand: refuse("Sending a command"),
   AcceptEula: refuse("Accepting the EULA"),
-  GetServerStatus: read(SERVER_STATUS),
-  GetServerSummary: read(SERVER_SUMMARY),
-  GetLastStop: read({ expected: true, exitCode: 0 }),
-  GetStatsHistory: read(STATS_HISTORY),
+  GetServerStatus: read((id) => state.status(id)),
+  GetServerSummary: read((id) => ({
+    ...summaryFor(id),
+    running: state.running(id),
+  })),
+  GetLastStop: read(() => state.lastStop(state.activeServer())),
+  GetStatsHistory: read((id) => (survival(id) ? STATS_HISTORY : [])),
   GetConsoleHistory: read([]), // console is fed by log:line; see events.js
 
   // ── Servers ───────────────────────────────────────────────────────────
-  GetServerConfigs: read([SERVER_CONFIG]),
-  GetActiveServerID: read(SERVER_ID),
-  SetActiveServerID: mutate(() => undefined),
+  GetServerConfigs: read(SERVER_CONFIGS),
+  GetActiveServerID: read(() => state.activeServer()),
+  SetActiveServerID: mutate((id) => state.setActiveServer(id)),
   SaveServerConfig: refuse("Editing a server"),
   DeleteServerConfig: refuse("Removing a server"),
-  DetectServerLoader: read(SERVER_CONFIG),
+  DetectServerLoader: read((id) => configFor(id)),
   InspectServerFile: read({
     isInstaller: false,
     loader: "",
@@ -94,27 +107,36 @@ export const api = {
   AbortInstall: refuse("Cancelling an install"),
 
   // ── Loader ────────────────────────────────────────────────────────────
-  GetLoaderStatus: read({
-    loader: "paper",
-    installedVersion: "",
-    mcVersion: "1.21.1",
+  GetLoaderStatus: read((id) => ({
+    loader: configFor(id).loader,
+    installedVersion: configFor(id).loaderVersion,
+    mcVersion: configFor(id).mcVersion,
     source: "",
     managed: false,
-    reason: "Konnekt cannot update paper servers yet.",
-  }),
+    reason: `Konnekt cannot update ${configFor(id).loader} servers yet.`,
+  })),
   ListLoaderVersions: read([]),
   UpdateLoader: refuse("Updating the loader"),
 
   // ── Players ───────────────────────────────────────────────────────────
-  GetPlayerRoster: read(PLAYERS),
-  GetPlayerDetail: read(async () => PLAYERS[0]),
+  // A stopped server has nobody online, whatever the fixture says.
+  GetPlayerRoster: read((id) =>
+    !survival(id)
+      ? []
+      : state.running(id)
+        ? PLAYERS
+        : PLAYERS.map((p) => ({ ...p, online: false })),
+  ),
+  GetPlayerDetail: read(
+    async (_id, name) => PLAYERS.find((p) => p.name === name) ?? PLAYERS[0],
+  ),
   KickPlayer: refuse("Kicking a player"),
   BanPlayer: refuse("Banning a player"),
   PardonPlayer: refuse("Pardoning a player"),
 
   // ── Worlds ────────────────────────────────────────────────────────────
-  ListWorlds: read(WORLDS),
-  GetBackupWorlds: read(BACKUP_WORLDS),
+  ListWorlds: read((id) => (survival(id) ? WORLDS : CREATIVE_WORLDS)),
+  GetBackupWorlds: read((id) => (survival(id) ? BACKUP_WORLDS : [])),
   SetActiveWorld: refuse("Switching worlds"),
   RenameWorld: refuse("Renaming a world"),
   DuplicateWorld: refuse("Duplicating a world"),
@@ -123,7 +145,7 @@ export const api = {
   OpenWorldFolder: refuse("Opening the world folder"),
 
   // ── Backups ───────────────────────────────────────────────────────────
-  ListBackups: read(BACKUPS),
+  ListBackups: read((id) => (survival(id) ? BACKUPS : [])),
   CreateBackup: refuse("Creating a backup"),
   RestoreBackup: refuse("Restoring a backup"),
   DeleteBackup: refuse("Deleting a backup"),
@@ -157,29 +179,29 @@ export const api = {
 
   // ── Mods and plugins ──────────────────────────────────────────────────
   // Browsing is live; installing is not.
-  ModListInstalled: read(INSTALLED_MODS),
-  ModCheckUpdates: read(MOD_UPDATES),
+  ModListInstalled: read((id) => (survival(id) ? INSTALLED_MODS : [])),
+  ModCheckUpdates: read((id) => (survival(id) ? MOD_UPDATES : [])),
   ModRescan: async () => undefined, // a no-op scan is honest: nothing changed
-  ModSearch: (_id, query, offset, categories, sort) =>
+  ModSearch: (id, query, offset, categories, sort) =>
     modrinth.search(
       query,
       offset,
       categories,
       sort,
-      SERVER_CONFIG.loader,
-      SERVER_CONFIG.mcVersion,
+      configFor(id).loader,
+      configFor(id).mcVersion,
     ),
   ModGetProject: (projectID) => modrinth.getProject(projectID),
-  ModGetVersions: (_id, projectID) =>
+  ModGetVersions: (id, projectID) =>
     modrinth.getVersions(
       projectID,
-      SERVER_CONFIG.loader,
-      SERVER_CONFIG.mcVersion,
+      configFor(id).loader,
+      configFor(id).mcVersion,
     ),
   ModGetAllVersions: (projectID) => modrinth.getAllVersions(projectID),
-  ModCategories: () => modrinth.categories(SERVER_CONFIG.loader),
-  ModMoreByAuthor: (_id, username, exclude) =>
-    modrinth.moreByAuthor(username, exclude, SERVER_CONFIG.loader),
+  ModCategories: (id) => modrinth.categories(configFor(id).loader),
+  ModMoreByAuthor: (id, username, exclude) =>
+    modrinth.moreByAuthor(username, exclude, configFor(id).loader),
   ModResolveDependencies: read([]),
   ModInstall: refuse("Installing a plugin"),
   ModInstallLocal: refuse("Adding a local file"),
@@ -212,10 +234,11 @@ export const api = {
   // interaction; refusing it would make the board read as broken. Empty reads
   // are not laziness — useTileStore falls back to ALL_TILE_IDS and
   // useLayoutStore seeds DEFAULT_LAYOUT_PRESETS, so the demo inherits the
-  // app's own shipped defaults and cannot drift from them.
-  GetActiveTiles: read([]),
+  // app's own shipped defaults and cannot drift from them. The one exception
+  // is a `?tile=` link (frame.js), which answers both reads with that tile.
+  GetActiveTiles: read(() => frame.activeTiles()),
   SaveActiveTiles: mutate(() => undefined),
-  GetActiveLayout: read(""),
+  GetActiveLayout: read(() => frame.activeLayout()),
   SaveActiveLayout: mutate(() => undefined),
   GetLayoutPresets: read([]),
   SaveLayoutPreset: mutate(() => undefined),

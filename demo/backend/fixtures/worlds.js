@@ -118,3 +118,36 @@ export const BACKUP_WORLDS = WORLDS.map((w) => ({
   dimensions: w.dimensions.map((d) => ({ ...d, size: 0, modified: 0 })),
   meta: { ...w.meta, lastPlayed: hoursAgo(1) },
 }));
+
+/* The second server's one world, an overworld alone: the flat creative build
+   world that server exists for, and the case WorldsScene skips the planetary
+   view for. */
+export const CREATIVE_WORLDS = [
+  {
+    name: "Creative",
+    active: true,
+    totalSize: Math.round(640 * MB),
+    modified: daysAgo(1),
+    dimensions: [
+      {
+        kind: "overworld",
+        path: "/home/mc/creative/Creative",
+        size: Math.round(640 * MB),
+        modified: daysAgo(1),
+      },
+    ],
+    meta: {
+      found: true,
+      levelName: "Creative",
+      version: "1.21.1",
+      gameMode: "creative",
+      difficulty: "peaceful",
+      hardcore: false,
+      lastPlayed: daysAgo(1),
+      seed: "creative-flat",
+      spawnX: 0,
+      spawnY: 64,
+      spawnZ: 0,
+    },
+  },
+];
