@@ -143,12 +143,12 @@ export function ModPreviewDialog({
       )}
 
       {/* Backdrop */}
-      <div className="modal-overlay-in fixed inset-0 z-[400] bg-black/65" onClick={onClose} />
+      <div className="modal-overlay-in z-modal fixed inset-0 bg-black/65" onClick={onClose} />
 
       {/* Dialog — fixed height (not just a max-height cap) so the frame
           doesn't resize when Modrinth content/versions finish loading; the
           body's own overflow-y-auto absorbs the difference instead. */}
-      <div className="modal-panel-in bg-canvas border-border-subtle border-hairline fixed top-1/2 left-1/2 z-[401] flex h-[560px] max-h-[calc(100vh-80px)] w-[600px] max-w-[calc(100vw-48px)] -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-xl shadow-[0_24px_64px_rgba(0,0,0,0.5)]">
+      <div className="modal-panel-in bg-canvas border-border-subtle border-hairline z-modal fixed top-1/2 left-1/2 flex h-[560px] max-h-[calc(100vh-80px)] w-[600px] max-w-[calc(100vw-48px)] -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-xl shadow-[0_24px_64px_rgba(0,0,0,0.5)]">
         {/* Header */}
         <div className="border-border-subtle border-b-hairline flex shrink-0 items-start gap-3 px-4 pt-4 pb-3">
           {icon ? (

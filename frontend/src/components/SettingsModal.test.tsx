@@ -6,6 +6,7 @@ import type { models } from '../../wailsjs/go/models'
 import { SettingsModal } from './SettingsModal'
 import { useSettingsStore } from '../stores/useSettingsStore'
 import { BUILTIN_SKINS, resolveSkin } from '../lib/theme'
+import { declaredLayer } from '../lib/layers'
 import type { AppSettings } from '../types'
 
 vi.mock('../../wailsjs/go/main/App')
@@ -347,5 +348,15 @@ describe('SettingsModal skin accent pairing', () => {
 
     await waitFor(() => expect(App.SaveAppSettings).toHaveBeenCalledTimes(1))
     expect(useSettingsStore.getState().settings.accentColor).toBe('#ff0000')
+  })
+})
+
+// A backdropped surface that replaces the dashboard, so it sits on the modal
+// layer: above the maximized-tile overlay by value, whatever App renders first.
+describe('SettingsModal layering', () => {
+  it('opens on the modal layer', () => {
+    render(<SettingsModal open onClose={() => {}} />)
+    const overlay = screen.getByRole('button', { name: 'About' }).closest('.fixed')
+    expect(declaredLayer(overlay?.className ?? '')).toBe('modal')
   })
 })

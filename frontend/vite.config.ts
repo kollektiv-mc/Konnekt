@@ -18,5 +18,10 @@ export default defineConfig({
   test: {
     environment: 'jsdom',
     include: ['src/**/*.test.ts', 'src/**/*.test.tsx'],
+    // Vitest replaces every CSS import with an empty string unless told
+    // otherwise, `?raw` included, and lib/layers.test.ts reads style.css that
+    // way to pin the layering scale to lib/layers.ts. Only the raw read is let
+    // through, so a plain CSS import in a component still costs nothing.
+    css: { include: [/\?raw$/] },
   },
 })

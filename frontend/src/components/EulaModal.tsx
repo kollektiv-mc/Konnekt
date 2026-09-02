@@ -34,7 +34,7 @@ export function EulaModal({ serverId, onClose }: Props) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
+    <div className="z-modal fixed inset-0 flex items-center justify-center bg-black/60">
       <div className="bg-canvas border-hairline flex w-80 flex-col gap-4 rounded-xl border-amber-400/25 p-5 font-mono">
         <div className="flex items-center gap-2.5">
           <span className="text-sm font-bold text-yellow-400">[!]</span>

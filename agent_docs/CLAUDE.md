@@ -142,11 +142,29 @@ Why the grid is built the way it is, and which parts are load-bearing:
   Kommands. To add or change a token, edit it there, run kollektiv's
   `scripts/sync-tokens.sh`, then regenerate and commit all three files. A hand edit
   is reverted on the next run and never reaches the other product.
-  `frontend/src/style.css` keeps the hand-authored component CSS and nothing else.
+  `frontend/src/style.css` keeps the hand-authored component CSS and nothing else,
+  bar the one `@theme` block for the overlay layering scale (next bullet).
   `website/tokens.css` is the same values as plain `:root` custom properties for the
   marketing site, which has no Tailwind and no build step; every page links it ahead
   of `/styles.css`, and `website/styles.css` keeps only the page vocabulary that is
   not a token (`--max-width`, `--nav-h`, `--section-y`).
+- **An overlay's z-index is a layer name, never a number.** `lib/layers.ts` is
+  the scale, five values in one place: `z-overlay` (the maximized tile),
+  `z-modal` (a backdropped surface that replaces the dashboard), `z-dialog` (a
+  confirm on top of a modal), `z-popover` (menus, tooltips, the two portals, the
+  crate drag preview) and `z-splash`. The classes exist because `style.css`
+  declares the same numbers as `--z-index-*` in its one hand-authored `@theme`
+  block, which Tailwind v4's `z-*` utility resolves; `lib/layers.test.ts` pins
+  the two spellings together and `pnpm check-tokens` asserts each class
+  compiles. Rule of thumb: if it opens another surface it is a modal, and what
+  it opens is a dialog. A value only orders things in one stacking context, so
+  rendering from `App`, after `<main>`, is still what puts a surface over the
+  grid; the scale settles the order among surfaces that share a context, which
+  used to be document order and lost twice (the server manager under a
+  maximized tile, a dependency dialog under the preview that opened it). A
+  tile's own sibling order (`z-[1]` to `z-[9]`, `z-10`, `z-20`, the backup
+  carousel) stays on bare numbers, because those never compete with anything
+  outside the tile. Konnekt-only, so it is not in `tokens.source.json`.
 - **`font-variant-numeric` does nothing here, so do not reach for it.** Measured
   against the shipped `.woff2` files: `Ranade-Regular` (`--font-sans`) and
   `Excon-Medium` (`--font-title`) expose no `lnum`, `onum`, `tnum` or `pnum`

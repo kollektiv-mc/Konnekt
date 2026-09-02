@@ -114,7 +114,7 @@ export function PlayerDetailPopup({ player: initial, serverId, onClose, onMutate
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60"
+      className="z-modal fixed inset-0 flex items-center justify-center bg-black/60"
       onMouseDown={(e) => e.target === e.currentTarget && onClose()}
     >
       {/* w-88 is 22rem — the same width the inline style used to restate. */}

@@ -138,7 +138,7 @@ export function SettingsModal({ open, onClose }: Props) {
   return (
     <div
       ref={overlayRef}
-      className="modal-overlay-in fixed inset-0 z-50 flex items-center justify-center bg-[rgba(0,0,0,0.65)]"
+      className="modal-overlay-in z-modal fixed inset-0 flex items-center justify-center bg-[rgba(0,0,0,0.65)]"
       onClick={(e) => {
         if (e.target === overlayRef.current) onClose()
       }}

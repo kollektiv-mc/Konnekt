@@ -4,6 +4,7 @@ import * as App from '../../wailsjs/go/main/App'
 import { models } from '../../wailsjs/go/models'
 import { QuickCommandsPanel } from './QuickCommandsPanel'
 import { useCommandsStore } from '../stores/useCommandsStore'
+import { declaredLayer } from '../lib/layers'
 
 vi.mock('../../wailsjs/go/main/App')
 
@@ -168,5 +169,33 @@ describe('QuickCommandsPanel force stop', () => {
     await waitFor(() =>
       expect(screen.getByRole('alert').textContent).toContain('force stop failed'),
     )
+  })
+})
+
+// The presets dropdown is portaled to document.body so it escapes the tile's
+// stacking context (a grid tile is transformed, a maximized one sits inside
+// the overlay), and z-popover is what carries it over the maximize overlay.
+// Both halves have to hold: a portal on a bare number is back to guessing.
+describe('QuickCommandsPanel presets dropdown', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    useCommandsStore.setState({ items: [], hydrated: false, loading: false, error: null })
+    vi.mocked(App.GetCommandButtons).mockResolvedValue(LIFECYCLE_ITEMS)
+    vi.mocked(App.RefreshKommands).mockResolvedValue(
+      models.KommandsStatus.createFrom({ installed: false }),
+    )
+  })
+
+  it('opens on the popover layer, outside the tile', async () => {
+    const { container } = render(<QuickCommandsPanel serverId="srv1" />)
+    await screen.findByRole('button', { name: 'Start' })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Edit' }))
+    fireEvent.click(screen.getByRole('button', { name: '+ Presets' }))
+
+    const dropdown = document.body.querySelector('.modal-panel-in.fixed')
+    expect(dropdown).not.toBeNull()
+    expect(container.contains(dropdown)).toBe(false)
+    expect(declaredLayer(dropdown?.className ?? '')).toBe('popover')
   })
 })

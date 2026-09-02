@@ -292,7 +292,7 @@ export function CommandLibrary({ serverId }: { serverId: string }) {
       </div>
 
       {forking && (
-        <div className="modal-overlay-in fixed inset-0 z-50 flex items-center justify-center bg-black/60">
+        <div className="modal-overlay-in z-dialog fixed inset-0 flex items-center justify-center bg-black/60">
           <div className="modal-panel-in border-border-subtle bg-canvas border-hairline flex w-96 flex-col gap-4 rounded-xl p-5">
             <div className="flex flex-col gap-1">
               <span className="text-text-primary text-sm font-semibold">

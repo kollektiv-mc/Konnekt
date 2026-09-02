@@ -24,7 +24,7 @@ interface ConfirmDialogProps {
 export function LifecycleConfirmDialog({ action, busy, onCancel, onConfirm }: ConfirmDialogProps) {
   const copy = CONFIRM_COPY[action]
   return (
-    <div className="modal-overlay-in fixed inset-0 z-50 flex items-center justify-center bg-black/60">
+    <div className="modal-overlay-in z-dialog fixed inset-0 flex items-center justify-center bg-black/60">
       <div className="modal-panel-in border-border-subtle bg-canvas border-hairline flex w-80 flex-col gap-4 rounded-xl p-5">
         <div className="flex flex-col gap-1">
           <span className="text-text-primary text-sm font-semibold">{copy.title}</span>
@@ -65,7 +65,7 @@ export function KickBanDialog({ type, onCancel, onSubmit }: KickBanDialogProps) 
   const submit = () => onSubmit(`${type} ${playerName}${reason ? ' ' + reason : ''}`)
 
   return (
-    <div className="modal-overlay-in fixed inset-0 z-50 flex items-center justify-center bg-black/60">
+    <div className="modal-overlay-in z-dialog fixed inset-0 flex items-center justify-center bg-black/60">
       <div className="modal-panel-in border-border-subtle bg-canvas border-hairline flex w-80 flex-col gap-3 rounded-xl p-5">
         <h3 className="text-text-primary text-sm font-semibold capitalize">{type} Player</h3>
         <input

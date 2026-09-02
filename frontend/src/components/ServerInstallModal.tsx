@@ -65,7 +65,7 @@ export function ServerInstallModal() {
   }
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60">
+    <div className="z-dialog fixed inset-0 flex items-center justify-center bg-black/60">
       <div className="bg-canvas border-border-subtle border-hairline flex w-[28rem] flex-col gap-3 rounded-xl p-5 font-mono">
         <div className="flex items-center gap-2.5">
           <span className="text-warning text-sm font-bold">[i]</span>

@@ -30,10 +30,10 @@ interface UiStore {
   // The server manager, and the sidebar's disconnect confirm.
   //
   // Held here rather than in the sidebar that opens them because both render at
-  // app level: a `fixed` overlay inside <aside> loses to the maximized-tile
-  // overlay inside <main>, which carries the same z-50 and comes later in the
-  // document. SettingsModal only sits on top because App renders it after
-  // <main>, and these now do the same.
+  // app level: <aside> goes pointer-events-none during a navbar resize or a
+  // crate drag, and a `fixed` overlay inside it would inherit that. Which one
+  // ends up on top is the layering scale's call (lib/layers.ts); it used to be
+  // document order, which is how the manager opened under a maximized tile.
   serverManagerOpen: boolean
   /** A config id, or the add-server sentinel. */
   serverManagerSelection: string
