@@ -146,6 +146,111 @@
     })
   }
 
+  // DD/MM/YY, in UTC. A merge timestamp near midnight would otherwise name a
+  // different day depending on who is reading, and the date beside a changelog
+  // line is a fact about the merge rather than about the reader's evening.
+  function formatShortDate(iso) {
+    if (!iso) return ''
+    var d = new Date(iso)
+    if (isNaN(d)) return ''
+    function pad(n) {
+      return (n < 10 ? '0' : '') + n
+    }
+    return (
+      pad(d.getUTCDate()) +
+      '/' +
+      pad(d.getUTCMonth() + 1) +
+      '/' +
+      String(d.getUTCFullYear()).slice(2)
+    )
+  }
+
+  // ── Merged pull requests, by title ─────────────────────────────────────
+  // The title is the only key a release body offers: release-notes.py writes
+  // each bullet as the pull request's title with its whitespace collapsed and
+  // nothing else, deliberately, so the notes are not a wall of attribution.
+  // Matching back on it is exact rather than fuzzy — measured against the live
+  // snapshot, all 54 of its bullets resolved to a pull request.
+  //
+  // Paging costs requests, and the rest of this file draws on 60 an hour
+  // unauthenticated, so the map is cached for an hour: a reader who reloads or
+  // comes back spends nothing, and a first visit spends three. A browser with
+  // storage blocked pays the requests every time and is otherwise unaffected.
+  var PULLS_KEY = 'konnekt:merged-pulls:v1'
+  var PULLS_TTL_MS = 60 * 60 * 1000
+  var PULLS_PER_PAGE = 100
+  // A stop for a repo that has grown past what the short-page check would
+  // reach in a sane number of requests. Three pages covers every closed pull
+  // request today.
+  var PULLS_MAX_PAGES = 5
+
+  function readPullCache() {
+    try {
+      var entry = JSON.parse(window.localStorage.getItem(PULLS_KEY))
+      if (!entry || Date.now() - entry.at > PULLS_TTL_MS) return null
+      return entry.byTitle || null
+    } catch (e) {
+      return null // no storage, a quota error, or an entry from an older shape
+    }
+  }
+
+  function writePullCache(byTitle) {
+    try {
+      window.localStorage.setItem(PULLS_KEY, JSON.stringify({ at: Date.now(), byTitle: byTitle }))
+    } catch (e) {
+      /* The map is still good for this page load. */
+    }
+  }
+
+  function normalizeTitle(text) {
+    return String(text || '')
+      .split(/\s+/)
+      .join(' ')
+      .trim()
+  }
+
+  // Resolves to a { title: { number, mergedAt } } map, and to whatever it had
+  // when something goes wrong: a partial map decorates the lines it can and
+  // leaves the rest alone, which is the same thing an empty one does.
+  function fetchMergedPulls() {
+    var cached = readPullCache()
+    if (cached) return Promise.resolve(cached)
+
+    var byTitle = {}
+    function page(n) {
+      if (n > PULLS_MAX_PAGES) return Promise.resolve(byTitle)
+      return fetch(API + '/pulls?state=closed&per_page=' + PULLS_PER_PAGE + '&page=' + n, {
+        headers: { Accept: 'application/vnd.github+json' },
+      })
+        .then(function (res) {
+          if (!res.ok) return byTitle
+          return res.json().then(function (list) {
+            if (!Array.isArray(list) || !list.length) return byTitle
+            list.forEach(function (pull) {
+              if (!pull.merged_at) return
+              var title = normalizeTitle(pull.title)
+              // The list comes back newest first, and first seen wins. Two
+              // merged pull requests sharing a title is rare enough that
+              // either is as defensible as the other.
+              if (title && !byTitle[title]) {
+                byTitle[title] = { number: pull.number, mergedAt: pull.merged_at }
+              }
+            })
+            // A short page is the end of the list.
+            return list.length < PULLS_PER_PAGE ? byTitle : page(n + 1)
+          })
+        })
+        .catch(function () {
+          return byTitle
+        })
+    }
+
+    return page(1).then(function (map) {
+      if (Object.keys(map).length) writePullCache(map)
+      return map
+    })
+  }
+
   // Resolves to { ok, status, data }. `ok:false, status:404` = no release yet.
   function get(path) {
     return fetch(API + path, {
@@ -191,7 +296,13 @@
     matchAsset: matchAsset,
     formatBytes: formatBytes,
     formatDate: formatDate,
+    formatShortDate: formatShortDate,
+    normalizeTitle: normalizeTitle,
     shortSha: shortSha,
+    fetchMergedPulls: fetchMergedPulls,
+    pullUrl: function (number) {
+      return 'https://github.com/' + OWNER_REPO + '/pull/' + number
+    },
     changesOnly: changesOnly,
     fetchLatest: function () {
       return get('/releases/latest')

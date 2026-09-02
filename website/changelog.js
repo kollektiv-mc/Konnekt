@@ -20,6 +20,52 @@
     return n
   }
 
+  // ── One line, one pull request ─────────────────────────────────────────
+  // Each bullet in a generated release body is a merged pull request's title,
+  // so a title that resolves against the map turns its whole line into a link
+  // to that pull request with the merge date after it. A line that resolves
+  // against nothing is left exactly as it renders now: hand-written notes
+  // (v0.1.0-alpha.1 has no generated section at all) and a rate-limited fetch
+  // both land there, and an invented date would be worse than none.
+  //
+  // The whole line is the target rather than the date alone. What a reader
+  // wants is the change, not a stamp at the end of it, and a 7-character hit
+  // area beside a sentence is the worse click of the two.
+  function decorate(root, pulls) {
+    if (!pulls) return
+    ;[].slice.call(root.querySelectorAll('.md li')).forEach(function (li) {
+      // A title carrying its own markdown link would nest anchors, which is
+      // invalid and would swallow the inner one's target. Rare, and cheaper to
+      // skip than to unpick.
+      if (li.querySelector('a') || li.querySelector('.change-pr')) return
+
+      // textContent against the pull request's own title, both whitespace
+      // collapsed, which is exactly what release-notes.py wrote the bullet
+      // from. A title carrying markdown would render to something other than
+      // its source and miss — none of the repo's 113 merged titles has a
+      // backtick, asterisk or bracket in it, and a miss costs a plain line.
+      var pull = pulls[R.normalizeTitle(li.textContent)]
+      if (!pull) return
+
+      var link = el('a', 'change-pr')
+      link.href = R.pullUrl(pull.number)
+      link.target = '_blank'
+      link.rel = 'noopener'
+      while (li.firstChild) link.appendChild(li.firstChild)
+
+      var short = R.formatShortDate(pull.mergedAt)
+      if (short) {
+        var stamp = el('span', 'change-date', short)
+        // The long date and the number, for anyone who wants to know what the
+        // line points at before clicking it.
+        stamp.title = 'Merged ' + R.formatDate(pull.mergedAt) + ' in #' + pull.number
+        link.appendChild(document.createTextNode(' '))
+        link.appendChild(stamp)
+      }
+      li.appendChild(link)
+    })
+  }
+
   function renderRelease(rel, isLatest) {
     var wrap = el('article', 'release')
 
@@ -100,6 +146,15 @@
     errorEl.classList.remove('is-hidden')
   }
 
+  // In flight from the first frame alongside the pair below, but deliberately
+  // not part of it: the dates are decoration on a page that is a changelog
+  // without them, and three more requests are not worth holding the first paint
+  // for. It decorates whatever has rendered by the time it lands, and on a
+  // repeat visit the cache makes that the first frame anyway.
+  var pullsPromise = R.fetchMergedPulls().catch(function () {
+    return null
+  })
+
   // Both requests are awaited together so the page resolves once. Rendering
   // the snapshot on its own clock would drop a block in above the list after
   // it had already been read. The snapshot is the optional half: a 404 (none
@@ -134,5 +189,17 @@
     })
     .catch(function () {
       showError('Check your connection and try again.')
+    })
+    // After the page has resolved either way, and swallowing its own failures:
+    // this runs past the catch above, so a throw in here would otherwise put
+    // "check your connection" over a changelog that rendered fine.
+    .then(function () {
+      return pullsPromise
+        .then(function (pulls) {
+          decorate(document, pulls)
+        })
+        .catch(function () {
+          /* The lines stay as they rendered. */
+        })
     })
 })()
