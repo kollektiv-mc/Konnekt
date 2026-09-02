@@ -149,12 +149,19 @@
             <h2>Everything in one window</h2>
           </div>
           <figure class="about-shot reveal" style="--reveal-delay: 60ms">
-            <img
-              src="/assets/img/overview.png"
-              alt="Konnekt's dashboard: a grid of tiles over one server, among them the live console, server stats and performance history."
-              loading="lazy"
-              decoding="async"
-            />
+            <!-- A button, not a bare image with a click handler: it opens
+                 something, so it is reachable by keyboard and announces itself
+                 as doing so. main.js copies this image's own src and alt into
+                 the overlay, so the enlarged view cannot drift from it. -->
+            <button class="about-shot-open" type="button" id="about-shot-open">
+              <img
+                src="/assets/img/overview.png"
+                alt="Konnekt's dashboard: a grid of tiles over one server, among them the live console, server stats and performance history."
+                loading="lazy"
+                decoding="async"
+              />
+              <span class="about-shot-hint" aria-hidden="true">Enlarge</span>
+            </button>
           </figure>
           <div class="about-copy reveal" style="--reveal-delay: 120ms">
             <p>
@@ -750,6 +757,20 @@
         </div>
       </div>
     </footer>
+
+    <!-- The enlarged screenshot. Empty and hidden until it is opened, and
+         filled from the figure above so there is one source for the file and
+         one for the alt text. Above the nav's z-index 100; see .shot-lightbox. -->
+    <div
+      class="shot-lightbox is-hidden"
+      id="shot-lightbox"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Konnekt's dashboard, enlarged"
+      tabindex="-1"
+    >
+      <img id="shot-lightbox-img" alt="" />
+    </div>
 
     <script src="/release.js"></script>
     <script src="/main.js"></script>
