@@ -4,6 +4,32 @@
     document.documentElement.classList.add('reduce-motion')
   }
 
+  // ── Hero release pill ──────────────────────────────────────────────────
+  // The same pill the download page carries over its own title, off the same
+  // release and the same helper, so the two pages cannot name different
+  // versions. Enhancement: the markup ships saying "checking latest…", and a
+  // rate limit, an outage or no release at all leaves it saying that rather
+  // than an error — the pill is provenance, not a control.
+  var heroVersion = document.getElementById('hero-version')
+  if (heroVersion && window.KonnektRelease) {
+    window.KonnektRelease.fetchLatest()
+      .then(function (res) {
+        if (!res.ok || !res.data) return
+        var text = [res.data.tag_name, window.KonnektRelease.formatDate(res.data.published_at)]
+          .filter(Boolean)
+          .join(' \u00b7 ')
+        if (!text) return
+        heroVersion.innerHTML = ''
+        var dot = document.createElement('span')
+        dot.className = 'dot'
+        heroVersion.appendChild(dot)
+        heroVersion.appendChild(document.createTextNode(' ' + text))
+      })
+      .catch(function () {
+        /* The markup already says what it says. */
+      })
+  }
+
   // ── Hero intro teardown ────────────────────────────────────────────────
   // Once the intro finishes, mark the hero so CSS can drop the animations.
   // A finished `forwards` animation still holds its last keyframe, and a
