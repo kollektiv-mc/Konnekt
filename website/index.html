@@ -229,132 +229,340 @@
           <h2>What's inside</h2>
           <p>The tools Konnekt gives you to run your servers.</p>
         </div>
-        <div class="feat-grid" id="feat-grid">
-          <article class="feat reveal" style="--reveal-delay: 0ms">
-            <div class="feat-inner">
-              <span class="feat-icon" aria-hidden="true">▦</span>
-              <h3 class="feat-title">Tile dashboard</h3>
-              <div class="feat-detail">
-                <ul>
-                  <li>Drag, resize and snap every tile</li>
-                  <li>Crate the ones you are not using</li>
-                  <li>Save and switch layout presets</li>
-                </ul>
-              </div>
-            </div>
-          </article>
+        <!-- The features, each shown running rather than described: a row of
+             tabs, one box that plays the picked feature's clip, and the three
+             points that go with it. The clips are filmed from the demo by
+             demo/record.mjs on every build of it and served beside it under
+             /scenes/, so what plays here can never be older than the demo the
+             button opens; scripts/check-website-scenes.mjs holds the two lists
+             together. The scheduler section below is the same shape around a
+             drawn reel. This one is footage.
 
-          <article class="feat reveal" style="--reveal-delay: 60ms">
-            <div class="feat-inner">
-              <span class="feat-icon" aria-hidden="true">&gt;_</span>
-              <h3 class="feat-title">Live console</h3>
-              <div class="feat-detail">
-                <ul>
-                  <li>Live log streaming</li>
-                  <li>Send commands inline</li>
-                  <li>Filter and search output</li>
-                </ul>
-              </div>
-            </div>
-          </article>
-
-          <article class="feat reveal" style="--reveal-delay: 120ms">
-            <div class="feat-inner">
-              <span class="feat-icon" aria-hidden="true">◎</span>
-              <h3 class="feat-title">Players</h3>
-              <div class="feat-detail">
-                <ul>
-                  <li>See who is online</li>
-                  <li>Kick or ban with a reason</li>
-                  <li>Op, whitelist and ban state</li>
-                </ul>
-              </div>
-            </div>
-          </article>
-
-          <article class="feat reveal" style="--reveal-delay: 180ms">
-            <div class="feat-inner">
-              <span class="feat-icon" aria-hidden="true">∿</span>
-              <h3 class="feat-title">Performance</h3>
-              <div class="feat-detail">
-                <ul>
-                  <li>Live TPS, CPU and memory</li>
-                  <li>An hour of charted history</li>
-                  <li>No plugins to install</li>
-                </ul>
-              </div>
-            </div>
-          </article>
-
-          <article class="feat reveal" style="--reveal-delay: 240ms">
-            <div class="feat-inner">
-              <span class="feat-icon" aria-hidden="true">◍</span>
-              <h3 class="feat-title">World management</h3>
-              <div class="feat-detail">
-                <ul>
-                  <li>Each world as its own planet</li>
-                  <li>Seed, size and version</li>
-                  <li>Switch, rename or duplicate</li>
-                </ul>
-              </div>
-            </div>
-          </article>
-
-          <article class="feat reveal" style="--reveal-delay: 300ms">
-            <div class="feat-inner">
-              <span class="feat-icon" aria-hidden="true">⟳</span>
-              <h3 class="feat-title">Backups</h3>
-              <div class="feat-detail">
-                <ul>
-                  <li>Manual or scheduled</li>
-                  <li>Browse restore points</li>
-                  <li>Roll back in two clicks</li>
-                </ul>
-              </div>
-            </div>
-          </article>
-
-          <article class="feat reveal" style="--reveal-delay: 360ms">
-            <div class="feat-inner">
-              <span class="feat-icon" aria-hidden="true">⚙</span>
-              <h3 class="feat-title">Config editor</h3>
-              <div class="feat-detail">
-                <ul>
-                  <li>server.properties as a form</li>
-                  <li>Syntax-highlighted raw mode</li>
-                  <li>YAML, JSON and TOML aware</li>
-                </ul>
-              </div>
-            </div>
-          </article>
-
-          <article class="feat reveal" style="--reveal-delay: 420ms">
-            <div class="feat-inner">
-              <span class="feat-icon" aria-hidden="true">◈</span>
-              <h3 class="feat-title">Mods &amp; plugins</h3>
-              <div class="feat-detail">
-                <ul>
-                  <li>Install from Modrinth</li>
-                  <li>Dependencies resolve automatically</li>
-                  <li>Changelogs read inline</li>
-                </ul>
-              </div>
-            </div>
-          </article>
-
-          <article class="feat reveal" style="--reveal-delay: 480ms">
-            <div class="feat-inner">
-              <span class="feat-icon" aria-hidden="true">⧉</span>
-              <h3 class="feat-title">Multi-server</h3>
-              <div class="feat-detail">
-                <ul>
-                  <li>All your servers in one app</li>
-                  <li>Own jar, folder and JVM args</li>
-                  <li>Switch with one click</li>
-                </ul>
-              </div>
-            </div>
-          </article>
+             Every tab's points stay in the markup, hidden, so the page reads
+             whole without JS and to a crawler; main.js swaps which one shows
+             and which clip plays. data-tile is the tile the demo opens on
+             (?tile=, demo/backend/frame.js); empty means the dashboard. -->
+        <div class="showcase" data-demo="https://konnekt-demo.pages.dev">
+          <div class="showcase-tabs reveal" role="tablist" aria-label="Features">
+            <button
+              class="showcase-tab"
+              role="tab"
+              type="button"
+              id="showcase-tab-dashboard"
+              aria-selected="true"
+              aria-controls="showcase-panel-dashboard"
+              data-scene="dashboard"
+              data-tile=""
+            >
+              Tile dashboard</button
+            ><button
+              class="showcase-tab"
+              role="tab"
+              type="button"
+              id="showcase-tab-console"
+              aria-selected="false"
+              aria-controls="showcase-panel-console"
+              tabindex="-1"
+              data-scene="console"
+              data-tile="console"
+            >
+              Live console</button
+            ><button
+              class="showcase-tab"
+              role="tab"
+              type="button"
+              id="showcase-tab-players"
+              aria-selected="false"
+              aria-controls="showcase-panel-players"
+              tabindex="-1"
+              data-scene="players"
+              data-tile="players"
+            >
+              Players</button
+            ><button
+              class="showcase-tab"
+              role="tab"
+              type="button"
+              id="showcase-tab-performance"
+              aria-selected="false"
+              aria-controls="showcase-panel-performance"
+              tabindex="-1"
+              data-scene="performance"
+              data-tile="performance"
+            >
+              Performance</button
+            ><button
+              class="showcase-tab"
+              role="tab"
+              type="button"
+              id="showcase-tab-worlds"
+              aria-selected="false"
+              aria-controls="showcase-panel-worlds"
+              tabindex="-1"
+              data-scene="worlds"
+              data-tile="worlds"
+            >
+              Worlds</button
+            ><button
+              class="showcase-tab"
+              role="tab"
+              type="button"
+              id="showcase-tab-backups"
+              aria-selected="false"
+              aria-controls="showcase-panel-backups"
+              tabindex="-1"
+              data-scene="backups"
+              data-tile="backups"
+            >
+              Backups</button
+            ><button
+              class="showcase-tab"
+              role="tab"
+              type="button"
+              id="showcase-tab-config"
+              aria-selected="false"
+              aria-controls="showcase-panel-config"
+              tabindex="-1"
+              data-scene="config"
+              data-tile="server-config"
+            >
+              Config editor</button
+            ><button
+              class="showcase-tab"
+              role="tab"
+              type="button"
+              id="showcase-tab-mods"
+              aria-selected="false"
+              aria-controls="showcase-panel-mods"
+              tabindex="-1"
+              data-scene="mods"
+              data-tile="mods"
+            >
+              Mods &amp; plugins</button
+            ><button
+              class="showcase-tab"
+              role="tab"
+              type="button"
+              id="showcase-tab-servers"
+              aria-selected="false"
+              aria-controls="showcase-panel-servers"
+              tabindex="-1"
+              data-scene="servers"
+              data-tile=""
+            >
+              Multi-server
+            </button>
+          </div>
+          <figure class="showcase-media reveal" style="--reveal-delay: 80ms">
+            <!-- Muted and inline is what every browser allows to autoplay
+                 (main.js only plays it while it is on screen); no controls,
+                 because the tabs are the controls and the demo is the thing
+                 to interact with. The first feature's sources are here so the
+                 poster shows without JS; the rest are built from data-demo. -->
+            <video
+              class="showcase-video"
+              muted
+              playsinline
+              preload="none"
+              poster="https://konnekt-demo.pages.dev/scenes/dashboard.webp"
+              aria-label="Tile dashboard, in action"
+            >
+              <source
+                src="https://konnekt-demo.pages.dev/scenes/dashboard.webm"
+                type="video/webm"
+              />
+              <source src="https://konnekt-demo.pages.dev/scenes/dashboard.mp4" type="video/mp4" />
+            </video>
+            <a
+              class="btn btn-secondary btn-sm showcase-open"
+              href="https://konnekt-demo.pages.dev/"
+              target="_blank"
+              rel="noopener"
+              >Open in the demo</a
+            >
+          </figure>
+          <ul
+            class="showcase-points reveal"
+            style="--reveal-delay: 140ms"
+            role="tabpanel"
+            id="showcase-panel-dashboard"
+            aria-labelledby="showcase-tab-dashboard"
+          >
+            <li>
+              <h3>Drag, resize and snap every tile</h3>
+              <p>Pick a tile up by its title bar and the rest of the grid makes room.</p>
+            </li>
+            <li>
+              <h3>Crate the ones you are not using</h3>
+              <p>Close a tile and it waits in the sidebar until you want it back.</p>
+            </li>
+            <li>
+              <h3>Save and switch layout presets</h3>
+              <p>Console focus, compact, essentials, or your own, one click apart.</p>
+            </li>
+          </ul>
+          <ul
+            class="showcase-points"
+            role="tabpanel"
+            id="showcase-panel-console"
+            aria-labelledby="showcase-tab-console"
+            hidden
+          >
+            <li>
+              <h3>Live log streaming</h3>
+              <p>
+                Every line the server prints, as it prints it, with Konnekt's own narration boxed.
+              </p>
+            </li>
+            <li>
+              <h3>Send commands inline</h3>
+              <p>Type at the prompt and the reply lands in the same stream.</p>
+            </li>
+            <li>
+              <h3>Filter and search output</h3>
+              <p>Narrow the scrollback to one kind of line, or to a word.</p>
+            </li>
+          </ul>
+          <ul
+            class="showcase-points"
+            role="tabpanel"
+            id="showcase-panel-players"
+            aria-labelledby="showcase-tab-players"
+            hidden
+          >
+            <li>
+              <h3>See who is online</h3>
+              <p>A card per player, lit while they are on.</p>
+            </li>
+            <li>
+              <h3>Kick or ban with a reason</h3>
+              <p>The reason goes with the command, and the roster follows when they go.</p>
+            </li>
+            <li>
+              <h3>Op, whitelist and ban state</h3>
+              <p>Each player's standing, in one panel.</p>
+            </li>
+          </ul>
+          <ul
+            class="showcase-points"
+            role="tabpanel"
+            id="showcase-panel-performance"
+            aria-labelledby="showcase-tab-performance"
+            hidden
+          >
+            <li>
+              <h3>Live TPS, CPU and memory</h3>
+              <p>Read straight off the process and the tick, nothing installed on the server.</p>
+            </li>
+            <li>
+              <h3>An hour of charted history</h3>
+              <p>A sample every ten seconds, kept for an hour, so a dip has a shape.</p>
+            </li>
+            <li>
+              <h3>No plugins to install</h3>
+              <p>Konnekt watches the process it started; the server never knows.</p>
+            </li>
+          </ul>
+          <ul
+            class="showcase-points"
+            role="tabpanel"
+            id="showcase-panel-worlds"
+            aria-labelledby="showcase-tab-worlds"
+            hidden
+          >
+            <li>
+              <h3>Each world as its own planet</h3>
+              <p>Its nether and end as moons, sized by what they take on disk.</p>
+            </li>
+            <li>
+              <h3>Seed, size and version</h3>
+              <p>Read from the level data, not typed in.</p>
+            </li>
+            <li>
+              <h3>Switch, rename or duplicate</h3>
+              <p>Change the active world without opening server.properties.</p>
+            </li>
+          </ul>
+          <ul
+            class="showcase-points"
+            role="tabpanel"
+            id="showcase-panel-backups"
+            aria-labelledby="showcase-tab-backups"
+            hidden
+          >
+            <li>
+              <h3>Manual or scheduled</h3>
+              <p>Back up now, or let a schedule do it with world saves paused.</p>
+            </li>
+            <li>
+              <h3>Browse restore points</h3>
+              <p>A carousel of every backup, tagged and searchable.</p>
+            </li>
+            <li>
+              <h3>Roll back in two clicks</h3>
+              <p>Restore with the server stopped, and that backup is the world.</p>
+            </li>
+          </ul>
+          <ul
+            class="showcase-points"
+            role="tabpanel"
+            id="showcase-panel-config"
+            aria-labelledby="showcase-tab-config"
+            hidden
+          >
+            <li>
+              <h3>server.properties as a form</h3>
+              <p>Every setting under a name you can read, not a key you have to know.</p>
+            </li>
+            <li>
+              <h3>Syntax-highlighted raw mode</h3>
+              <p>The file itself, in an editor, when the form is not enough.</p>
+            </li>
+            <li>
+              <h3>YAML, JSON and TOML aware</h3>
+              <p>Plugin and mod configs open in the same place.</p>
+            </li>
+          </ul>
+          <ul
+            class="showcase-points"
+            role="tabpanel"
+            id="showcase-panel-mods"
+            aria-labelledby="showcase-tab-mods"
+            hidden
+          >
+            <li>
+              <h3>Install from Modrinth</h3>
+              <p>Search, pick a version, and it lands in the right folder.</p>
+            </li>
+            <li>
+              <h3>Dependencies resolve automatically</h3>
+              <p>What a plugin needs comes along with it.</p>
+            </li>
+            <li>
+              <h3>Changelogs read inline</h3>
+              <p>See what a version changed before you take it.</p>
+            </li>
+          </ul>
+          <ul
+            class="showcase-points"
+            role="tabpanel"
+            id="showcase-panel-servers"
+            aria-labelledby="showcase-tab-servers"
+            hidden
+          >
+            <li>
+              <h3>All your servers in one app</h3>
+              <p>Survival, creative, a test server: one list in the sidebar.</p>
+            </li>
+            <li>
+              <h3>Own jar, folder and JVM args</h3>
+              <p>Each server keeps its own launch settings.</p>
+            </li>
+            <li>
+              <h3>Switch with one click</h3>
+              <p>The whole dashboard follows the server you pick.</p>
+            </li>
+          </ul>
         </div>
       </div>
     </section>

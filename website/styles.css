@@ -361,6 +361,8 @@ a {
 .cta-panel,
 .spotlight-media,
 .spotlight-points li,
+.showcase-media,
+.showcase-points li,
 .rm-stage-card {
   position: relative;
   --glow-size: 260px;
@@ -377,6 +379,8 @@ a {
 .cta-panel:hover,
 .spotlight-media:hover,
 .spotlight-points li:hover,
+.showcase-media:hover,
+.showcase-points li:hover,
 .rm-stage-card:hover {
   border-color: var(--glow-border);
 }
@@ -395,6 +399,8 @@ a {
   .cta-panel::after,
   .spotlight-media::after,
   .spotlight-points li::after,
+  .showcase-media::after,
+  .showcase-points li::after,
   .rm-stage-card::after {
     content: '';
     position: absolute;
@@ -430,6 +436,8 @@ a {
   .cta-panel:hover::after,
   .spotlight-media:hover::after,
   .spotlight-points li:hover::after,
+  .showcase-media:hover::after,
+  .showcase-points li:hover::after,
   .rm-stage-card:hover::after {
     opacity: 1;
   }
@@ -438,7 +446,8 @@ a {
 /* Smaller tiles want a tighter light — a 260px circle on a 60px-tall card
    lights the whole edge at once, which reads as a flat outline. */
 .dl-card,
-.spotlight-points li {
+.spotlight-points li,
+.showcase-points li {
   --glow-size: 180px;
 }
 
@@ -1685,7 +1694,8 @@ a {
 /* The canvas grid used to live here as a background. It moved into the SVG so
    it pans with the nodes, which also means the SVG now fills this box edge to
    edge — the graph's breathing room is the margin inside its own viewBox. */
-.spotlight-media {
+.spotlight-media,
+.showcase-media {
   position: relative;
   border-radius: 16px;
   border: 0.5px solid var(--border-subtle);
@@ -1700,7 +1710,8 @@ a {
    ink never lined up with anything. Boxing them puts an edge where the grid
    already was. Same accent-dot marker as before, now inside the tile; auto-fit
    collapses the row to fewer columns without a media query. */
-.spotlight-points {
+.spotlight-points,
+.showcase-points {
   list-style: none;
   margin: 24px 0 0;
   padding: 0;
@@ -1709,14 +1720,16 @@ a {
   gap: 14px;
 }
 
-.spotlight-points li {
+.spotlight-points li,
+.showcase-points li {
   background: var(--bg-surface);
   border: 0.5px solid var(--border-subtle);
   border-radius: 12px;
   padding: 16px 18px;
 }
 
-.spotlight-points h3 {
+.spotlight-points h3,
+.showcase-points h3 {
   display: flex;
   align-items: center;
   gap: 9px;
@@ -1727,7 +1740,8 @@ a {
   margin: 0 0 7px;
 }
 
-.spotlight-points h3::before {
+.spotlight-points h3::before,
+.showcase-points h3::before {
   content: '';
   width: 6px;
   height: 6px;
@@ -1737,11 +1751,102 @@ a {
   box-shadow: 0 0 8px rgb(var(--accent-rgb) / 0.6);
 }
 
-.spotlight-points p {
+.spotlight-points p,
+.showcase-points p {
   margin: 0;
   font-size: 12.5px;
   line-height: 1.55;
   color: var(--text-muted);
+}
+
+/* ── Feature showcase ─────────────────────────────────────────────────── */
+/* The scheduler spotlight's shape — one media box over a row of point tiles —
+   with a row of tabs above it picking which feature the box shows, and the
+   box holding footage of the demo (demo/record.mjs) rather than a drawn reel.
+   The media and point rules above are shared with the spotlight on purpose,
+   so the two sections cannot drift apart in radius, border or rhythm. */
+.showcase {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+}
+
+/* Nine labels in one row at the container's width, wrapping to two on a
+   narrower one. Mono at the eyebrow's size, so they read as a strip of
+   options rather than as headings competing with the section's. */
+.showcase-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+  margin: 0 0 18px;
+}
+
+.showcase-tab {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.02em;
+  color: var(--text-muted);
+  background: transparent;
+  border: 0.5px solid transparent;
+  border-radius: 999px;
+  padding: 6px 11px;
+  cursor: pointer;
+  transition:
+    color var(--duration-fast) var(--ease-standard),
+    background-color var(--duration-fast) var(--ease-standard),
+    border-color var(--duration-fast) var(--ease-standard);
+}
+
+.showcase-tab:hover {
+  color: var(--text-primary);
+  background: var(--hover-surface);
+}
+
+.showcase-tab[aria-selected='true'] {
+  color: var(--accent);
+  border-color: rgb(var(--accent-rgb) / 0.35);
+  background: rgb(var(--accent-rgb) / 0.08);
+}
+
+/* Every clip is the same size, one tile across the grid at nine rows
+   (demo/record.mjs's CROP), so the box holds that ratio and never reflows
+   when the tab changes. The poster fills it before playback the same way. */
+.showcase-media {
+  aspect-ratio: 1224 / 456;
+  margin: 0;
+}
+
+.showcase-video {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  background: var(--bg-elevated);
+}
+
+/* Bottom right, inside the picture: the way out of the clip and into the
+   thing it is a clip of. Above the glow ring, which is the box's ::after, and
+   opaque with an edge and a shadow, because that corner is where a tile keeps
+   its own buttons and a translucent button read as one of them. */
+.showcase-open {
+  position: absolute;
+  right: 14px;
+  bottom: 14px;
+  z-index: 2;
+  background: var(--bg-surface);
+  border-color: var(--border-hover);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.55);
+}
+
+.showcase-open:hover {
+  background: var(--hover-surface);
+}
+
+/* The tabpanels hide with the attribute the markup and main.js both use;
+   grid would otherwise win over `hidden` on a <ul> that is display: grid. */
+.showcase-points[hidden] {
+  display: none;
 }
 
 /* ── Scheduler node-graph animation — static SVG, CSS-driven ──────────── */
