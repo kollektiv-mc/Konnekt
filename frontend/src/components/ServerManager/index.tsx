@@ -22,11 +22,14 @@ import { ServerList, NEW_SERVER } from './ServerList'
  * on a sidebar row it was one click from the control that merely selects a
  * server, and said nothing about which server it would remove.
  *
- * Rendered from App, after <main>, and that position is load-bearing: a fixed
- * overlay in the sidebar carries the same z-50 as the maximized-tile overlay
- * but comes earlier in the document, so the tile won and the manager opened
- * underneath it. SettingsModal has always been rendered here for the same
- * reason.
+ * Rendered from App, after <main>, and that position is still load-bearing,
+ * for two reasons that are not the z-index: <aside> goes pointer-events-none
+ * while the navbar is resized or a crate drag is in flight, and a nested
+ * overlay would inherit that; and an overlay opened from inside another
+ * overlay's subtree is clamped in that overlay's stacking context, so it could
+ * never reach a dialog rendered beside it. The order above the maximized tile
+ * is z-modal over z-overlay (lib/layers.ts), not position in App.tsx. It used
+ * to be the latter, and the manager opened underneath an open tile.
  */
 export function ServerManager() {
   const { configs, activeId, error, clearError, setActiveId } = useServerConfigStore()
@@ -93,7 +96,7 @@ export function ServerManager() {
   return (
     <div
       ref={overlayRef}
-      className="modal-overlay-in fixed inset-0 z-50 flex items-center justify-center bg-[rgba(0,0,0,0.65)]"
+      className="modal-overlay-in z-modal fixed inset-0 flex items-center justify-center bg-[rgba(0,0,0,0.65)]"
       onClick={(e) => {
         if (e.target === overlayRef.current) closeServerManager()
       }}

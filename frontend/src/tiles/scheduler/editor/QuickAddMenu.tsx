@@ -84,12 +84,15 @@ export function QuickAddMenu({ blockDefs, screenPos, onPick, onClose }: Props) {
   const activeColor = activeCategory ? (CATEGORY_COLOR[activeCategory] ?? '#6b7280') : '#6b7280'
 
   const panelClass =
-    'fixed z-[1001] w-40 bg-elevated border-hairline border-border-subtle rounded-lg overflow-hidden shadow-[0_8px_24px_rgba(0,0,0,0.3)] backdrop-blur-md'
+    'fixed z-popover w-40 bg-elevated border-hairline border-border-subtle rounded-lg overflow-hidden shadow-[0_8px_24px_rgba(0,0,0,0.3)] backdrop-blur-md'
 
+  // Portaled to body so the menu escapes the maximized tile's stacking
+  // context; z-popover carries it over the maximize overlay (lib/layers.ts).
+  // Backdrop and panels share the value: the panels are later siblings.
   return createPortal(
     <>
       {/* Dismiss backdrop */}
-      <div className="fixed inset-0 z-[1000]" onClick={onClose} />
+      <div className="z-popover fixed inset-0" onClick={onClose} />
 
       {/* Primary panel */}
       <div

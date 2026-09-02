@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, afterEach } from 'vitest'
 import { render, fireEvent, waitFor, cleanup } from '@testing-library/react'
 import { models } from '../../../wailsjs/go/models'
+import { LAYER, declaredLayer } from '../../lib/layers'
 import { ModPreviewDialog } from './ModPreviewDialog'
 
 vi.mock('../../../wailsjs/runtime/runtime')
@@ -51,22 +52,25 @@ function renderDialog(props: Partial<Parameters<typeof ModPreviewDialog>[0]> = {
   )
 }
 
-// The z-index a node declares, read off its class list. jsdom computes no
-// layout and Tailwind's classes never reach it as CSS, so the declared value is
-// the only thing there is to compare — which is exactly the axis the bug was
-// on, so it is the right thing to pin.
+// The layer a node declares, read off its class list and resolved through
+// lib/layers.ts. jsdom computes no layout and Tailwind's classes never reach it
+// as CSS, so the declared value is the only thing there is to compare — which
+// is exactly the axis the bug was on, so it is the right thing to pin. A bare
+// number is not accepted on purpose: a surface that regresses to a literal has
+// left the scale, and that should fail here rather than be compared.
 function declaredZ(el: Element | null): number {
-  const found = /(?:^|\s)z-(?:\[(\d+)\]|(\d+))(?:\s|$)/.exec(el?.className ?? '')
-  if (!found) throw new Error(`no z-index class on ${el?.className ?? 'a missing element'}`)
-  return Number(found[1] ?? found[2])
+  const layer = declaredLayer(el?.className ?? '')
+  if (!layer) throw new Error(`no z-<layer> class on ${el?.className || 'a missing element'}`)
+  return LAYER[layer]
 }
 
 describe('ModPreviewDialog', () => {
-  // The bug: the dependency dialog was z-50 and this one is z-[400]/z-[401], so
-  // confirming a switch that needed a dependency mounted the confirm dialog
+  // The bug: the dependency dialog was z-50 and this one was z-[400]/z-[401],
+  // so confirming a switch that needed a dependency mounted the confirm dialog
   // *under* this dialog's backdrop. All the user saw was the page dimming a
   // second time, and the next click landed on the backdrop and closed
-  // everything — a version switch that silently could not be made.
+  // everything — a version switch that silently could not be made. Now the
+  // pair is z-dialog over z-modal, and this pins that the scale still says so.
   it('opens the dependency dialog above itself', async () => {
     const { getByText, findByText } = renderDialog({
       onResolveDeps: vi.fn().mockResolvedValue([

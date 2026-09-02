@@ -79,9 +79,10 @@ describe('ServerSelector', () => {
     expect(screen.queryByTitle('Disconnect')).toBeNull()
   })
 
-  // Every overlay moved to App: a fixed overlay in the sidebar carries the same
-  // z-50 as the maximized-tile overlay in <main> and comes earlier in the
-  // document, so it opened underneath an open tile.
+  // Every overlay moved to App: <aside> goes pointer-events-none during a
+  // navbar resize or crate drag, and before the layering scale (lib/layers.ts)
+  // a fixed overlay in it lost the z-50 tie with the maximized-tile overlay on
+  // document order and opened underneath an open tile.
   it('renders no overlay of its own', () => {
     const { container } = render(<ServerSelector />)
     useUiStore.setState({ serverManagerOpen: true, pendingDisconnect: 'alpha' })

@@ -288,11 +288,14 @@ export function QuickCommandsPanel({ serverId, columns = 2 }: QuickCommandsPanel
         </div>
       </div>
 
+      {/* Portaled to body so the dropdown escapes the tile's stacking context
+          (a grid tile is transformed, a maximized one sits inside the overlay);
+          z-popover is what carries it over the maximize overlay (lib/layers.ts). */}
       {dropdownPos &&
         createPortal(
           <div
             ref={dropdownRef}
-            className="modal-panel-in border-hairline border-border-subtle bg-canvas fixed z-[9999] grid grid-cols-2 gap-1.5 overflow-y-auto rounded-[10px] p-2.5 shadow-[0_8px_32px_rgba(0,0,0,0.5)]"
+            className="modal-panel-in border-hairline border-border-subtle bg-canvas z-popover fixed grid grid-cols-2 gap-1.5 overflow-y-auto rounded-[10px] p-2.5 shadow-[0_8px_32px_rgba(0,0,0,0.5)]"
             // eslint-disable-next-line no-restricted-syntax -- position computed from getBoundingClientRect, not visible to Tailwind's static scanner
             style={{
               top: dropdownPos.top,

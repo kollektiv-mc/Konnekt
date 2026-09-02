@@ -5,6 +5,7 @@ import { useLoaderStore } from '../../stores/useLoaderStore'
 import type { LoaderVersion } from '../../stores/useLoaderStore'
 import { useServerConfigStore } from '../../stores/useServerConfigStore'
 import { LoaderUpdateDialog } from './LoaderUpdateDialog'
+import { declaredLayer } from '../../lib/layers'
 import type { ServerConfig } from '../../types'
 
 vi.mock('../../../wailsjs/go/main/App')
@@ -89,6 +90,13 @@ describe('LoaderUpdateDialog', () => {
   it('names the server from the config rather than a stored copy', () => {
     render(<LoaderUpdateDialog />)
     expect(screen.getByText(/smp will move from/)).toBeTruthy()
+  })
+
+  // Opened from the server manager, so it has to sit on the layer above it.
+  it('opens on the dialog layer', () => {
+    render(<LoaderUpdateDialog />)
+    const overlay = screen.getByText(/smp will move from/).closest('.fixed')
+    expect(declaredLayer(overlay?.className ?? '')).toBe('dialog')
   })
 
   it('starts the update with the backup choice, defaulting to off', async () => {

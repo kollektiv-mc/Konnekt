@@ -16,11 +16,15 @@ export function Popover({
   children,
 }: PopoverProps) {
   const alignClass = align === 'left' ? 'left-0 origin-top-left' : 'right-0 origin-top-right'
+  // Backdrop and panel both on z-popover: the panel is the later sibling, so
+  // one value orders them (lib/layers.ts). Every Popover today lives inside a
+  // tile, so the value orders it against the tile, never against an app-level
+  // modal.
   return (
     <>
-      {open && <div className="fixed inset-0 z-[200]" onClick={onClose} />}
+      {open && <div className="z-popover fixed inset-0" onClick={onClose} />}
       <div
-        className={`border-border-subtle bg-elevated border-hairline absolute top-[calc(100%_+_4px)] z-[201] overflow-hidden rounded-lg shadow-[0_8px_24px_rgba(0,0,0,0.3)] backdrop-blur-md ${alignClass}`}
+        className={`border-border-subtle bg-elevated border-hairline z-popover absolute top-[calc(100%_+_4px)] overflow-hidden rounded-lg shadow-[0_8px_24px_rgba(0,0,0,0.3)] backdrop-blur-md ${alignClass}`}
         // eslint-disable-next-line no-restricted-syntax -- width prop + open-driven animation are runtime-computed, not visible to Tailwind's static scanner
         style={{
           minWidth: width,

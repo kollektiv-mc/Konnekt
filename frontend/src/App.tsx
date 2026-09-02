@@ -611,11 +611,15 @@ function App() {
 
       <SettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} />
 
-      {/* Every overlay below is rendered here, after <main>, on purpose. A
-          fixed overlay inside <aside> carries the same z-50 as the
-          maximized-tile overlay inside <main> and comes earlier in the
-          document, so the tile wins the tie and the overlay opens underneath
-          it. Document order is what puts these on top. */}
+      {/* Every overlay below is rendered here, after <main>, on purpose, and
+          for two reasons that are not the z-index: <aside> goes
+          pointer-events-none while the navbar is resized or a crate drag is
+          in flight, and a nested overlay would inherit that; and an overlay
+          opened from inside another overlay's subtree is clamped in that
+          overlay's stacking context. Which of these sits above the maximized
+          tile is the layering scale's call (lib/layers.ts: z-modal and
+          z-dialog over z-overlay), not document order. It used to be the
+          latter, which is how the manager opened underneath an open tile. */}
       <ServerManager />
       <DisconnectConfirm />
       {installOpen && <ServerInstallModal />}

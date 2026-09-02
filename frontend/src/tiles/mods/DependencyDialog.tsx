@@ -43,16 +43,15 @@ export function DependencyDialog({ primaryVersionId, dependencies, onConfirm, on
   const required = dependencies.filter((d) => d.required)
   const optional = dependencies.filter((d) => !d.required)
 
-  // z-[500], above every surface that can open this. The mods tile's preview
-  // dialog (ModPreviewDialog, backdrop z-[400] and panel z-[401]) is the one
-  // that made the number load-bearing: at z-50 this rendered *underneath* that
-  // backdrop, so switching the version of a mod with a missing dependency
+  // z-dialog because ModPreviewDialog (z-modal) is one of the surfaces that
+  // opens this, and it renders before that dialog's backdrop, so the value is
+  // what carries it (lib/layers.ts). Before the scale this was z-50 under a
+  // z-[400] backdrop: switching the version of a mod with a missing dependency
   // showed nothing but a second dim layer over the page, and the next click
   // landed on the backdrop and closed everything. The browse-side callers
-  // (ContentCard, ContentDetailPanel) sit inside the tile and are unaffected
-  // by the raise.
+  // (ContentCard, ContentDetailPanel) have nothing above tile content to clear.
   return (
-    <div className="modal-overlay-in fixed inset-0 z-[500] flex items-center justify-center bg-black/65">
+    <div className="modal-overlay-in z-dialog fixed inset-0 flex items-center justify-center bg-black/65">
       <div className="modal-panel-in bg-canvas border-border-subtle w-full max-w-md rounded-xl border p-5">
         <h2 className="text-text-primary mb-1 text-sm font-semibold">Dependencies</h2>
         <p className="text-text-muted mb-4 text-xs">
