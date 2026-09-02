@@ -1,0 +1,1016 @@
+[
+  {
+    "id": "action.backup",
+    "category": "action",
+    "label": "Create Backup",
+    "description": "Creates a backup of the active server's world.",
+    "isTrigger": false,
+    "controlInputs": [
+      "trigger"
+    ],
+    "controlOutputs": [
+      "onComplete",
+      "onFailed"
+    ],
+    "dataInputs": null,
+    "dataOutputs": [
+      {
+        "id": "filename",
+        "label": "Backup filename",
+        "type": "string"
+      }
+    ],
+    "configSchema": null,
+    "source": "native"
+  },
+  {
+    "id": "action.command",
+    "category": "action",
+    "label": "Command",
+    "description": "Sends a command to the server, or manages the server lifecycle via presets.",
+    "isTrigger": false,
+    "controlInputs": [
+      "trigger"
+    ],
+    "controlOutputs": [
+      "onComplete",
+      "onFailed"
+    ],
+    "dataInputs": [
+      {
+        "id": "command",
+        "label": "Command",
+        "type": "string"
+      }
+    ],
+    "dataOutputs": [
+      {
+        "id": "command",
+        "label": "Command sent",
+        "type": "string"
+      }
+    ],
+    "configSchema": [
+      {
+        "key": "preset",
+        "label": "Preset",
+        "type": "select",
+        "default": "",
+        "options": [
+          {
+            "label": "— none —",
+            "value": ""
+          },
+          {
+            "label": "Start Server",
+            "value": "__start__"
+          },
+          {
+            "label": "Stop Server",
+            "value": "__stop__"
+          },
+          {
+            "label": "Restart Server",
+            "value": "__restart__"
+          },
+          {
+            "label": "Save All",
+            "value": "save-all"
+          },
+          {
+            "label": "Freeze Time",
+            "value": "time set 18000"
+          },
+          {
+            "label": "Set Day",
+            "value": "time set day"
+          },
+          {
+            "label": "Set Night",
+            "value": "time set night"
+          }
+        ]
+      },
+      {
+        "key": "command",
+        "label": "Command",
+        "type": "command"
+      }
+    ],
+    "source": "native"
+  },
+  {
+    "id": "action.delay",
+    "category": "action",
+    "label": "Delay",
+    "description": "Waits for the specified number of seconds.",
+    "isTrigger": false,
+    "controlInputs": [
+      "trigger"
+    ],
+    "controlOutputs": [
+      "onComplete",
+      "onFailed"
+    ],
+    "dataInputs": [
+      {
+        "id": "seconds",
+        "label": "Seconds",
+        "type": "number"
+      }
+    ],
+    "dataOutputs": null,
+    "configSchema": [
+      {
+        "key": "seconds",
+        "label": "Seconds",
+        "type": "number",
+        "default": 5,
+        "required": true
+      }
+    ],
+    "source": "native"
+  },
+  {
+    "id": "action.httpRequest",
+    "category": "action",
+    "label": "HTTP Request",
+    "description": "Sends an HTTP request (webhooks, APIs, playit, etc.).",
+    "isTrigger": false,
+    "controlInputs": [
+      "trigger"
+    ],
+    "controlOutputs": [
+      "onComplete",
+      "onFailed"
+    ],
+    "dataInputs": [
+      {
+        "id": "url",
+        "label": "URL",
+        "type": "string"
+      },
+      {
+        "id": "body",
+        "label": "Request body",
+        "type": "string"
+      },
+      {
+        "id": "contentType",
+        "label": "Content-Type",
+        "type": "string"
+      }
+    ],
+    "dataOutputs": [
+      {
+        "id": "status",
+        "label": "HTTP status",
+        "type": "number"
+      },
+      {
+        "id": "body",
+        "label": "Response body",
+        "type": "string"
+      }
+    ],
+    "configSchema": [
+      {
+        "key": "method",
+        "label": "Method",
+        "type": "select",
+        "default": "POST",
+        "options": [
+          {
+            "label": "GET",
+            "value": "GET"
+          },
+          {
+            "label": "POST",
+            "value": "POST"
+          },
+          {
+            "label": "PUT",
+            "value": "PUT"
+          },
+          {
+            "label": "PATCH",
+            "value": "PATCH"
+          },
+          {
+            "label": "DELETE",
+            "value": "DELETE"
+          }
+        ]
+      },
+      {
+        "key": "url",
+        "label": "URL",
+        "type": "string",
+        "required": true
+      },
+      {
+        "key": "body",
+        "label": "Request body",
+        "type": "string"
+      },
+      {
+        "key": "contentType",
+        "label": "Content-Type",
+        "type": "string",
+        "default": "application/json"
+      }
+    ],
+    "source": "native"
+  },
+  {
+    "id": "action.rcon",
+    "category": "action",
+    "label": "RCON Command",
+    "description": "Sends a command via RCON and captures the response.",
+    "isTrigger": false,
+    "controlInputs": [
+      "trigger"
+    ],
+    "controlOutputs": [
+      "onComplete",
+      "onFailed"
+    ],
+    "dataInputs": [
+      {
+        "id": "command",
+        "label": "Command",
+        "type": "string"
+      }
+    ],
+    "dataOutputs": [
+      {
+        "id": "response",
+        "label": "Response",
+        "type": "string"
+      }
+    ],
+    "configSchema": [
+      {
+        "key": "preset",
+        "label": "Preset",
+        "type": "select",
+        "default": "",
+        "options": [
+          {
+            "label": "— none —",
+            "value": ""
+          },
+          {
+            "label": "Save All",
+            "value": "save-all"
+          },
+          {
+            "label": "Freeze Time",
+            "value": "time set 18000"
+          },
+          {
+            "label": "Set Day",
+            "value": "time set day"
+          },
+          {
+            "label": "Set Night",
+            "value": "time set night"
+          }
+        ]
+      },
+      {
+        "key": "command",
+        "label": "Command",
+        "type": "command",
+        "required": true
+      }
+    ],
+    "source": "native"
+  },
+  {
+    "id": "control.condition",
+    "category": "control",
+    "label": "Condition",
+    "description": "Branches based on a comparison.",
+    "isTrigger": false,
+    "controlInputs": [
+      "trigger"
+    ],
+    "controlOutputs": [
+      "onTrue",
+      "onFalse"
+    ],
+    "dataInputs": [
+      {
+        "id": "left",
+        "label": "A",
+        "type": "string"
+      },
+      {
+        "id": "right",
+        "label": "B",
+        "type": "string"
+      }
+    ],
+    "dataOutputs": null,
+    "configSchema": [
+      {
+        "key": "left",
+        "label": "Left value",
+        "type": "string",
+        "required": true
+      },
+      {
+        "key": "op",
+        "label": "Operator",
+        "type": "select",
+        "default": "eq",
+        "options": [
+          {
+            "label": "==",
+            "value": "eq"
+          },
+          {
+            "label": "!=",
+            "value": "ne"
+          },
+          {
+            "label": "\u003e",
+            "value": "gt"
+          },
+          {
+            "label": "\u003c",
+            "value": "lt"
+          },
+          {
+            "label": "contains",
+            "value": "contains"
+          }
+        ]
+      },
+      {
+        "key": "right",
+        "label": "Right value",
+        "type": "string",
+        "required": true
+      }
+    ],
+    "source": "native"
+  },
+  {
+    "id": "data.constant",
+    "category": "data",
+    "label": "Constant",
+    "description": "Outputs a fixed typed value.",
+    "isTrigger": false,
+    "controlInputs": null,
+    "controlOutputs": null,
+    "dataInputs": null,
+    "dataOutputs": [
+      {
+        "id": "value",
+        "label": "Value",
+        "type": "auto"
+      }
+    ],
+    "configSchema": [
+      {
+        "key": "type",
+        "label": "Type",
+        "type": "select",
+        "default": "String",
+        "options": [
+          {
+            "label": "String",
+            "value": "String"
+          },
+          {
+            "label": "Float",
+            "value": "Float"
+          },
+          {
+            "label": "Integer",
+            "value": "Integer"
+          },
+          {
+            "label": "Boolean",
+            "value": "Boolean"
+          }
+        ]
+      },
+      {
+        "key": "value",
+        "label": "Value",
+        "type": "string",
+        "required": true
+      }
+    ],
+    "source": "native"
+  },
+  {
+    "id": "data.mathOp",
+    "category": "data",
+    "label": "Math",
+    "description": "Performs arithmetic on two values.",
+    "isTrigger": false,
+    "controlInputs": null,
+    "controlOutputs": null,
+    "dataInputs": [
+      {
+        "id": "a",
+        "label": "A",
+        "type": "number"
+      },
+      {
+        "id": "b",
+        "label": "B",
+        "type": "number"
+      }
+    ],
+    "dataOutputs": [
+      {
+        "id": "result",
+        "label": "Result",
+        "type": "number"
+      }
+    ],
+    "configSchema": [
+      {
+        "key": "a",
+        "label": "A",
+        "type": "number",
+        "default": 0
+      },
+      {
+        "key": "op",
+        "label": "Operator",
+        "type": "select",
+        "default": "add",
+        "options": [
+          {
+            "label": "+ add",
+            "value": "add"
+          },
+          {
+            "label": "- subtract",
+            "value": "sub"
+          },
+          {
+            "label": "× multiply",
+            "value": "mul"
+          },
+          {
+            "label": "÷ divide",
+            "value": "div"
+          },
+          {
+            "label": "% mod",
+            "value": "mod"
+          },
+          {
+            "label": "Δ difference",
+            "value": "diff"
+          }
+        ]
+      },
+      {
+        "key": "b",
+        "label": "B",
+        "type": "number",
+        "default": 0
+      }
+    ],
+    "source": "native"
+  },
+  {
+    "id": "data.randomNumber",
+    "category": "data",
+    "label": "Random Number",
+    "description": "Outputs a random number between min and max.",
+    "isTrigger": false,
+    "controlInputs": null,
+    "controlOutputs": null,
+    "dataInputs": [
+      {
+        "id": "min",
+        "label": "Min",
+        "type": "number"
+      },
+      {
+        "id": "max",
+        "label": "Max",
+        "type": "number"
+      }
+    ],
+    "dataOutputs": [
+      {
+        "id": "value",
+        "label": "Value",
+        "type": "number"
+      }
+    ],
+    "configSchema": [
+      {
+        "key": "min",
+        "label": "Min",
+        "type": "number",
+        "default": 1
+      },
+      {
+        "key": "max",
+        "label": "Max",
+        "type": "number",
+        "default": 100
+      }
+    ],
+    "source": "native"
+  },
+  {
+    "id": "data.serverAttribute",
+    "category": "data",
+    "label": "Read Attribute",
+    "description": "Reads a live server attribute or a custom in-flow attribute defined upstream.",
+    "isTrigger": false,
+    "controlInputs": null,
+    "controlOutputs": null,
+    "dataInputs": null,
+    "dataOutputs": [
+      {
+        "id": "value",
+        "label": "Value",
+        "type": "auto"
+      }
+    ],
+    "configSchema": [
+      {
+        "key": "attribute",
+        "label": "Attribute",
+        "type": "attribute",
+        "default": "tps",
+        "required": true,
+        "options": [
+          {
+            "label": "@tps",
+            "value": "tps"
+          },
+          {
+            "label": "@players.count",
+            "value": "players.count"
+          },
+          {
+            "label": "@ram.used (MB)",
+            "value": "ram.used"
+          },
+          {
+            "label": "@ram.left (MB)",
+            "value": "ram.left"
+          },
+          {
+            "label": "@server.status",
+            "value": "server.status"
+          },
+          {
+            "label": "@players.max",
+            "value": "players.max"
+          },
+          {
+            "label": "@ram.total (MB)",
+            "value": "ram.total"
+          },
+          {
+            "label": "@server.whitelist",
+            "value": "server.whitelist"
+          },
+          {
+            "label": "@server.port",
+            "value": "server.port"
+          },
+          {
+            "label": "@server.gamemode",
+            "value": "server.gamemode"
+          },
+          {
+            "label": "@server.motd",
+            "value": "server.motd"
+          },
+          {
+            "label": "@server.world",
+            "value": "server.world"
+          }
+        ]
+      },
+      {
+        "key": "type",
+        "label": "Data type",
+        "type": "select",
+        "default": "auto",
+        "options": [
+          {
+            "label": "Auto",
+            "value": "auto"
+          },
+          {
+            "label": "String",
+            "value": "string"
+          },
+          {
+            "label": "Number",
+            "value": "number"
+          },
+          {
+            "label": "Boolean",
+            "value": "bool"
+          }
+        ]
+      }
+    ],
+    "source": "native"
+  },
+  {
+    "id": "data.writeAttribute",
+    "category": "data",
+    "label": "Write Attribute",
+    "description": "Writes a server attribute (e.g. @server.motd) or defines a custom in-flow attribute (@myvalue). Value may be an expression like @{ @players.count * 2 }.",
+    "isTrigger": false,
+    "controlInputs": [
+      "trigger"
+    ],
+    "controlOutputs": [
+      "onComplete",
+      "onFailed"
+    ],
+    "dataInputs": [
+      {
+        "id": "value",
+        "label": "Value",
+        "type": "string"
+      }
+    ],
+    "dataOutputs": null,
+    "configSchema": [
+      {
+        "key": "attribute",
+        "label": "Attribute",
+        "type": "attribute",
+        "default": "server.motd",
+        "required": true,
+        "options": [
+          {
+            "label": "@players.max",
+            "value": "players.max"
+          },
+          {
+            "label": "@server.motd",
+            "value": "server.motd"
+          },
+          {
+            "label": "@server.whitelist",
+            "value": "server.whitelist"
+          },
+          {
+            "label": "@server.port",
+            "value": "server.port"
+          },
+          {
+            "label": "@server.gamemode",
+            "value": "server.gamemode"
+          },
+          {
+            "label": "@server.world",
+            "value": "server.world"
+          }
+        ]
+      },
+      {
+        "key": "value",
+        "label": "Value",
+        "type": "string",
+        "required": true
+      }
+    ],
+    "source": "native"
+  },
+  {
+    "id": "action.notify",
+    "category": "notify",
+    "label": "Notify",
+    "description": "Sends an in-app notification.",
+    "isTrigger": false,
+    "controlInputs": [
+      "trigger"
+    ],
+    "controlOutputs": [
+      "onComplete"
+    ],
+    "dataInputs": [
+      {
+        "id": "message",
+        "label": "Message",
+        "type": "string"
+      }
+    ],
+    "dataOutputs": null,
+    "configSchema": [
+      {
+        "key": "kind",
+        "label": "Kind",
+        "type": "select",
+        "default": "info",
+        "options": [
+          {
+            "label": "Info",
+            "value": "info"
+          },
+          {
+            "label": "Warning",
+            "value": "warn"
+          },
+          {
+            "label": "Error",
+            "value": "error"
+          }
+        ]
+      },
+      {
+        "key": "message",
+        "label": "Message",
+        "type": "string",
+        "required": true
+      }
+    ],
+    "source": "native"
+  },
+  {
+    "id": "trigger.backup",
+    "category": "trigger",
+    "label": "Backup",
+    "description": "Fires when a backup completes or fails.",
+    "isTrigger": true,
+    "controlInputs": null,
+    "controlOutputs": [
+      "onComplete",
+      "onFailed"
+    ],
+    "dataInputs": [
+      {
+        "id": "cooldownSeconds",
+        "label": "Cooldown",
+        "type": "number"
+      }
+    ],
+    "dataOutputs": [
+      {
+        "id": "filename",
+        "label": "Backup filename",
+        "type": "string"
+      }
+    ],
+    "configSchema": [
+      {
+        "key": "cooldownSeconds",
+        "label": "Cooldown (seconds)",
+        "type": "number",
+        "default": 300
+      }
+    ],
+    "source": "native"
+  },
+  {
+    "id": "trigger.cron",
+    "category": "trigger",
+    "label": "Cron Schedule",
+    "description": "Fires on a cron expression (m h dom mon dow).",
+    "isTrigger": true,
+    "controlInputs": null,
+    "controlOutputs": [
+      "onComplete"
+    ],
+    "dataInputs": [
+      {
+        "id": "cron",
+        "label": "Cron",
+        "type": "string"
+      }
+    ],
+    "dataOutputs": null,
+    "configSchema": [
+      {
+        "key": "cron",
+        "label": "Cron expression",
+        "type": "string",
+        "default": "0 * * * *",
+        "required": true
+      }
+    ],
+    "source": "native"
+  },
+  {
+    "id": "trigger.interval",
+    "category": "trigger",
+    "label": "Interval",
+    "description": "Fires repeatedly on a fixed interval.",
+    "isTrigger": true,
+    "controlInputs": null,
+    "controlOutputs": [
+      "onComplete"
+    ],
+    "dataInputs": [
+      {
+        "id": "intervalMinutes",
+        "label": "Interval",
+        "type": "number"
+      }
+    ],
+    "dataOutputs": null,
+    "configSchema": [
+      {
+        "key": "intervalMinutes",
+        "label": "Interval (minutes)",
+        "type": "number",
+        "default": 60,
+        "required": true
+      }
+    ],
+    "source": "native"
+  },
+  {
+    "id": "trigger.player",
+    "category": "trigger",
+    "label": "Player",
+    "description": "Fires when a player joins or leaves the server.",
+    "isTrigger": true,
+    "controlInputs": null,
+    "controlOutputs": [
+      "onComplete"
+    ],
+    "dataInputs": [
+      {
+        "id": "cooldownSeconds",
+        "label": "Cooldown",
+        "type": "number"
+      }
+    ],
+    "dataOutputs": [
+      {
+        "id": "playerName",
+        "label": "Player name",
+        "type": "string"
+      },
+      {
+        "id": "playerIP",
+        "label": "Player IP",
+        "type": "string"
+      }
+    ],
+    "configSchema": [
+      {
+        "key": "type",
+        "label": "Type",
+        "type": "select",
+        "default": "Joined",
+        "required": true,
+        "options": [
+          {
+            "label": "Joined",
+            "value": "Joined"
+          },
+          {
+            "label": "Left",
+            "value": "Left"
+          }
+        ]
+      },
+      {
+        "key": "cooldownSeconds",
+        "label": "Cooldown (seconds)",
+        "type": "number",
+        "default": 300
+      }
+    ],
+    "source": "native"
+  },
+  {
+    "id": "trigger.server",
+    "category": "trigger",
+    "label": "Server",
+    "description": "Fires when the server starts, stops, or crashes.",
+    "isTrigger": true,
+    "controlInputs": null,
+    "controlOutputs": [
+      "onComplete"
+    ],
+    "dataInputs": [
+      {
+        "id": "cooldownSeconds",
+        "label": "Cooldown",
+        "type": "number"
+      }
+    ],
+    "dataOutputs": null,
+    "configSchema": [
+      {
+        "key": "type",
+        "label": "Type",
+        "type": "select",
+        "default": "Stopped",
+        "required": true,
+        "options": [
+          {
+            "label": "Stopped",
+            "value": "Stopped"
+          },
+          {
+            "label": "Started",
+            "value": "Started"
+          },
+          {
+            "label": "Crashed",
+            "value": "Crashed"
+          }
+        ]
+      },
+      {
+        "key": "cooldownSeconds",
+        "label": "Cooldown (seconds)",
+        "type": "number",
+        "default": 300
+      }
+    ],
+    "source": "native"
+  },
+  {
+    "id": "trigger.timeOfDay",
+    "category": "trigger",
+    "label": "Time of Day",
+    "description": "Fires once per day at a specific time.",
+    "isTrigger": true,
+    "controlInputs": null,
+    "controlOutputs": [
+      "onComplete"
+    ],
+    "dataInputs": [
+      {
+        "id": "time",
+        "label": "Time",
+        "type": "string"
+      }
+    ],
+    "dataOutputs": null,
+    "configSchema": [
+      {
+        "key": "time",
+        "label": "Time (HH:MM)",
+        "type": "string",
+        "default": "00:00",
+        "required": true
+      }
+    ],
+    "source": "native"
+  },
+  {
+    "id": "trigger.tpsThreshold",
+    "category": "trigger",
+    "label": "TPS Below Threshold",
+    "description": "Fires when TPS drops below a threshold.",
+    "isTrigger": true,
+    "controlInputs": null,
+    "controlOutputs": [
+      "onComplete"
+    ],
+    "dataInputs": [
+      {
+        "id": "threshold",
+        "label": "Threshold",
+        "type": "number"
+      },
+      {
+        "id": "cooldownSeconds",
+        "label": "Cooldown",
+        "type": "number"
+      }
+    ],
+    "dataOutputs": [
+      {
+        "id": "tps",
+        "label": "Current TPS",
+        "type": "number"
+      }
+    ],
+    "configSchema": [
+      {
+        "key": "threshold",
+        "label": "TPS threshold",
+        "type": "number",
+        "default": 14,
+        "required": true
+      },
+      {
+        "key": "cooldownSeconds",
+        "label": "Cooldown (seconds)",
+        "type": "number",
+        "default": 300
+      }
+    ],
+    "source": "native"
+  }
+]
