@@ -33,3 +33,4 @@ graphify-out/
 # Python bytecode, from .github/scripts/ test runs
 __pycache__/
 *.pyc
+demo/dist/
