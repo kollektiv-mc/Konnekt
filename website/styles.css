@@ -1318,18 +1318,12 @@ a {
 /* Title, then the app, then what it is, then what it runs on. It is the first
    section after the hero and so the first look anyone gets, and the shot is
    what the heading is claiming, so it comes before the sentences that say the
-   same thing in words.
-
-   One centred column like every other section on this page, but the shot takes
-   the container's full width rather than the copy's measure: it is a dashboard
-   of tiles, and shrunk to a reading column a tile stops being legible as one. */
+   same thing in words. */
 .about-stack {
-  /* One measure for the shot and the copy, so "the window is as wide as the
-     text under it" is a relationship in the sheet rather than two numbers that
-     happen to agree. At the container's full width the shot was 1072px and
-     670px tall, which pushed the copy and the tags off the screen and left the
-     app's own type too small to read anyway; enlarging is what the click is
-     for. */
+  /* The copy's measure, which the shot deliberately does not share: a
+     dashboard of tiles set to a reading column stops being legible as one. The
+     shot takes the container instead and gives its height back by fading out
+     rather than by shrinking. */
   --about-measure: 640px;
   display: flex;
   flex-direction: column;
@@ -1343,18 +1337,13 @@ a {
   margin-bottom: 0;
 }
 
-/* No frame around it. The screenshot is of the whole window and carries its own
-   rounded chrome on a ground this page already uses, so a border here draws a
-   second edge a few pixels outside the one in the picture. line-height: 0 is
-   what keeps the inline image from leaving a strip of leading under it. */
 .about-shot {
   width: 100%;
-  max-width: var(--about-measure);
   margin: 0;
   line-height: 0;
 }
 
-/* The button is the picture: no chrome of its own, and the image fills it. */
+/* The button is the picture: no chrome of its own, and the frame fills it. */
 .about-shot-open {
   position: relative;
   display: block;
@@ -1365,49 +1354,79 @@ a {
   color: inherit;
   font: inherit;
   cursor: zoom-in;
-  border-radius: 10px;
 }
 
-.about-shot-open img {
+/* The window is shown from the top down and dissolves before it ends.
+   Full width the whole screenshot is 670px tall, which pushed the copy and the
+   tags off the screen; sized down to fit, the app's own type was too small to
+   read. This keeps the width — the header, the sidebar and the chart are the
+   part worth reading at any size — and gives the height back at the bottom,
+   where the picture is a row of small tiles.
+ *
+   Cropping alone would draw a hard edge across the middle of the app. The mask
+   ends it in the page instead, so there is no edge to notice.
+ *
+   The ratio is the image's own 1440x900 with 60% of the height kept, so the
+   crop follows the picture rather than a pixel height that is only right at one
+   width. -webkit- included: unprefixed mask-image is Safari 15.4 and later. */
+.about-shot-frame {
+  display: block;
+  overflow: hidden;
+  aspect-ratio: 1440 / 540;
+  -webkit-mask-image: linear-gradient(to bottom, #000 50%, transparent 97%);
+  mask-image: linear-gradient(to bottom, #000 50%, transparent 97%);
+}
+
+/* Taller than its frame and clipped by it. It grows from the top on hover, so
+   the edge that is pinned stays pinned and only the faded end moves. */
+.about-shot-frame img {
   display: block;
   width: 100%;
   height: auto;
-  border-radius: inherit;
+  transform-origin: top center;
   transition: transform var(--duration-panel) var(--ease-standard);
 }
 
-.about-shot-open:hover img,
-.about-shot-open:focus-visible img {
-  transform: scale(1.01);
+.about-shot-open:hover .about-shot-frame img,
+.about-shot-open:focus-visible .about-shot-frame img {
+  transform: scale(1.012);
 }
 
 .about-shot-open:focus-visible {
   outline: 0.5px solid rgb(var(--accent-rgb) / 0.6);
   outline-offset: 4px;
+  border-radius: 10px;
 }
 
-/* Says the picture is a control, and only while you are on it. It sits over
-   the shot's own dark ground, which every skin here shares. */
+/* Says the picture is a control, and only while you are on it. A sibling of
+   the frame rather than a child, or the mask that dissolves the bottom of the
+   picture would dissolve the label with it — which is also why it can sit down
+   there at all: by that point the screenshot has faded to nothing and this is
+   on the page's own ground. */
 .about-shot-hint {
   position: absolute;
-  right: 10px;
-  bottom: 10px;
-  padding: 3px 9px;
+  left: 50%;
+  bottom: 0;
+  transform: translateX(-50%);
+  padding: 3px 10px;
   border-radius: 999px;
   border: 0.5px solid var(--border-subtle);
-  background: rgb(0 0 0 / 0.55);
+  background: var(--bg-surface);
   font-family: var(--font-mono);
   font-size: 10.5px;
   line-height: 1.6;
   letter-spacing: 0.04em;
-  color: var(--text-secondary);
+  color: var(--text-muted);
   opacity: 0;
-  transition: opacity var(--duration-fast) ease;
+  transition:
+    opacity var(--duration-fast) ease,
+    color var(--duration-fast) ease;
 }
 
 .about-shot-open:hover .about-shot-hint,
 .about-shot-open:focus-visible .about-shot-hint {
   opacity: 1;
+  color: var(--text-secondary);
 }
 
 /* Nothing hovers on a touch screen, and the cursor that says "this enlarges"
@@ -1423,7 +1442,15 @@ a {
 /* Over the nav, which is the highest thing on this site at 100. Larger than
    the page's copy of it but deliberately not the whole screen: the padding and
    the 88vh cap leave the site visible around it, which is also what says that
-   clicking out there is what closes it. */
+   clicking out there is what closes it.
+ *
+   Opacity and visibility rather than `display: none`, so it eases both ways
+   off one class. A displayed element cannot transition from display:none, which
+   is why the first pass opened on a keyframe and then vanished on the close
+   with nothing to animate. The visibility delay is the whole trick: it flips to
+   visible immediately on the way in, and waits out the fade on the way back, so
+   the overlay leaves the accessibility tree and the hit-testing only once it is
+   actually gone. */
 .shot-lightbox {
   position: fixed;
   inset: 0;
@@ -1433,7 +1460,21 @@ a {
   padding: 6vh 6vw;
   background: rgb(0 0 0 / 0.72);
   cursor: zoom-out;
-  animation: shot-lightbox-in 180ms var(--ease-standard) both;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition:
+    opacity 220ms var(--ease-standard),
+    visibility 0s linear 220ms;
+}
+
+.shot-lightbox.is-open {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transition:
+    opacity 220ms var(--ease-standard),
+    visibility 0s linear 0s;
 }
 
 .shot-lightbox img {
@@ -1443,24 +1484,16 @@ a {
   height: auto;
   border-radius: 12px;
   cursor: default;
-  animation: shot-lightbox-img-in 220ms var(--ease-standard) both;
+  transform: scale(0.96);
+  transition: transform 260ms var(--ease-standard);
 }
 
-@keyframes shot-lightbox-in {
-  from {
-    opacity: 0;
-  }
-}
-
-@keyframes shot-lightbox-img-in {
-  from {
-    opacity: 0;
-    transform: scale(0.97);
-  }
+.shot-lightbox.is-open img {
+  transform: scale(1);
 }
 
 /* The paragraphs left .section-head so the shot could sit between them and the
-   title, so they carry its measure and type themselves now. */
+   title, so they carry their own measure and type now. */
 .about-copy {
   display: flex;
   flex-direction: column;
@@ -5331,14 +5364,21 @@ button.dl-card:hover {
 .reduce-motion .dl-grid > .dl-card,
 .reduce-motion .changelog > .release,
 .reduce-motion .nav-menu.is-open .nav-links li,
-.reduce-motion .nav-menu.is-open .nav-actions > .btn,
-.reduce-motion .shot-lightbox,
-.reduce-motion .shot-lightbox img,
-.reduce-motion .about-shot-open img {
+.reduce-motion .nav-menu.is-open .nav-actions > .btn {
   animation: none !important;
   opacity: 1 !important;
   filter: none !important;
   transform: none !important;
+}
+
+/* Not in the list above, which forces opacity: 1: the overlay is hidden by
+   opacity now rather than by display, so joining it would pin the enlarged
+   screenshot over the page permanently. Dropping the transitions is the whole
+   of what reduced motion wants here, and it opens and closes at once. */
+.reduce-motion .shot-lightbox,
+.reduce-motion .shot-lightbox img,
+.reduce-motion .about-shot-frame img {
+  transition: none !important;
 }
 
 .reduce-motion .rm-node.is-target > .rm-row,

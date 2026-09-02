@@ -108,7 +108,7 @@
       // description have one home each.
       lightboxImg.src = source.currentSrc || source.src
       lightboxImg.alt = source.alt
-      lightbox.classList.remove('is-hidden')
+      lightbox.classList.add('is-open')
       // The page behind must not scroll under a fixed overlay: a wheel over
       // the backdrop would otherwise move the section you came from.
       document.documentElement.style.overflow = 'hidden'
@@ -116,8 +116,8 @@
     }
 
     var closeShot = function () {
-      if (lightbox.classList.contains('is-hidden')) return
-      lightbox.classList.add('is-hidden')
+      if (!lightbox.classList.contains('is-open')) return
+      lightbox.classList.remove('is-open')
       document.documentElement.style.overflow = ''
       // Back to the control that opened it, or a keyboard user is dropped at
       // the top of the document.
