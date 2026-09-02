@@ -3348,6 +3348,8 @@ button.dl-card:hover {
 .mock-join {
   display: flex;
   flex-direction: column;
+  justify-content: center;
+  gap: 20px;
   text-align: center;
 }
 
@@ -3357,10 +3359,11 @@ button.dl-card:hover {
   color: var(--text-primary);
 }
 
-/* Centred in whatever is left under the title, the way the screen this is of
-   sits its one column in the middle of the window. */
+/* The title and this sit as one centred group rather than the title pinning to
+   the top with this centred under it, which left the whole panel reading high
+   against the three beside it. The screen this is of has a tall window to
+   spend; a 158px tile does not. */
 .mock-join-body {
-  margin: auto 0;
   display: flex;
   flex-direction: column;
   gap: 4px;
@@ -3432,7 +3435,7 @@ button.dl-card:hover {
   transform: translate(161px, 15px) scale(1);
 }
 .step[data-demo='join'] .mock-cursor {
-  transform: translate(94px, 93px) scale(1);
+  transform: translate(94px, 106px) scale(1);
 }
 
 /* ── The run ──────────────────────────────────────────────────────────── */
@@ -4058,28 +4061,28 @@ button.dl-card:hover {
   0%,
   56% {
     opacity: 0;
-    transform: translate(150px, 138px) scale(1);
+    transform: translate(155px, 146px) scale(1);
   }
   62% {
     opacity: 1;
-    transform: translate(150px, 138px) scale(1);
+    transform: translate(155px, 146px) scale(1);
   }
   78%,
   80% {
     opacity: 1;
-    transform: translate(94px, 93px) scale(1);
+    transform: translate(94px, 106px) scale(1);
   }
   84% {
     opacity: 1;
-    transform: translate(94px, 93px) scale(0.68);
+    transform: translate(94px, 106px) scale(0.68);
   }
   90% {
     opacity: 1;
-    transform: translate(94px, 93px) scale(1);
+    transform: translate(94px, 106px) scale(1);
   }
   100% {
     opacity: 0;
-    transform: translate(94px, 93px) scale(1);
+    transform: translate(94px, 106px) scale(1);
   }
 }
 
