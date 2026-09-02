@@ -2544,6 +2544,46 @@ button.dl-card:hover {
   text-decoration: underline;
 }
 
+/* ── A changelog line that resolved to a pull request ──────────────────── */
+/* changelog.js wraps the whole line rather than a number at the end of it: the
+   thing a reader wants is the change, and a seven-character hit area beside a
+   sentence is the worse of the two clicks. So it opts out of .md a's accent and
+   underline at rest — a page of sentences in accent green with a rule under
+   each is not a changelog — and takes the accent on hover instead, which is the
+   affordance. */
+/* Qualified with .md, or `.md a`'s accent wins on specificity and every line
+   is green before you touch it — which is the whole thing this rule is for. */
+.md a.change-pr {
+  color: inherit;
+  text-decoration: none;
+  transition: color var(--duration-fast) ease;
+}
+
+.md a.change-pr:hover,
+.md a.change-pr:focus-visible {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+/* Soft and small, and out of the sentence's way: it is provenance, not part of
+   the line. Mono because it is a fixed-width stamp under a proportional face,
+   and nowrap so a date never breaks across two lines on its own. */
+.change-date {
+  margin-left: 2px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-faint);
+  white-space: nowrap;
+  transition: color var(--duration-fast) ease;
+}
+
+/* It lifts with the line rather than ahead of it, so the row still reads as
+   one thing to click. */
+.md a.change-pr:hover .change-date,
+.md a.change-pr:focus-visible .change-date {
+  color: rgb(var(--accent-rgb) / 0.6);
+}
+
 .md code {
   font-family: var(--font-mono);
   font-size: 12.5px;
