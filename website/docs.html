@@ -175,10 +175,11 @@
             <h2>Your first server</h2>
             <ol class="step-grid">
               <li class="step" data-demo="add">
-                <!-- Mockups of the app's own panels, in its type and colours.
-                     Decorative: every word in them is repeated in the prose
-                     beside them, so a screen reader loses nothing by skipping
-                     them. -->
+                <!-- Mockups of the app's own panels, in its type and colours,
+                     bar the last one, which is Minecraft's join screen because
+                     that is where joining happens. Decorative: what they say is
+                     said in the prose beside them too, so a screen reader loses
+                     nothing by skipping them. -->
                 <div class="demo" aria-hidden="true">
                   <div class="mock mock-form">
                     <div class="mock-title">Servers</div>
@@ -220,7 +221,7 @@
                   <div class="step-inner">
                     <div class="demo" aria-hidden="true">
                       <div class="mock mock-install">
-                        <div class="mock-modal mock-modal-wide">
+                        <div class="mock-modal">
                           <div class="mock-modal-head">
                             <span class="mock-info">[i]</span><span>Installer detected</span>
                           </div>
@@ -281,29 +282,18 @@
                 </div>
               </li>
 
-              <li class="step" data-demo="eula">
+              <!-- The one panel here that is not Konnekt's. Joining happens in
+                   Minecraft, so this is its Direct Connection screen rather than
+                   one of the app's, drawn in this page's type and tokens. -->
+              <li class="step" data-demo="join">
                 <div class="demo" aria-hidden="true">
-                  <div class="mock mock-eula">
-                    <div class="mock-behind">
-                      <span class="bl1">Starting minecraft server 1.21</span>
-                      <span class="bl2">Loading properties</span>
-                      <span class="bl3">You need to agree to the EULA</span>
-                      <span class="bl4">Stopping server</span>
-                    </div>
-                    <div class="mock-scrim"></div>
-                    <div class="mock-modal">
-                      <div class="mock-modal-head">
-                        <span class="mock-bang">[!]</span><span>EULA Required</span>
-                      </div>
-                      <p class="mock-modal-body">
-                        The Minecraft server requires you to accept the End User License Agreement
-                        before it can run.
-                      </p>
-                      <div class="mock-link">Read the Minecraft EULA →</div>
-                      <div class="mock-modal-foot">
-                        <span class="mock-btn mock-accept">Accept &amp; Restart</span>
-                        <span class="mock-dismiss">Dismiss</span>
-                      </div>
+                  <div class="mock mock-join">
+                    <div class="mock-join-title">Direct Connection</div>
+                    <div class="mock-join-body">
+                      <div class="mock-join-label">Server Address</div>
+                      <div class="mock-field j1"><span class="mock-type">localhost</span></div>
+                      <div class="mock-btn mock-join-go">Join Server</div>
+                      <div class="mock-btn mock-join-cancel">Cancel</div>
                     </div>
                     <span class="mock-cursor"></span>
                   </div>
@@ -311,11 +301,12 @@
                 <div class="step-body">
                   <div class="step-head">
                     <span class="step-n" aria-hidden="true">4</span>
-                    <h3>Accept the EULA</h3>
+                    <h3>Join it</h3>
                   </div>
                   <p>
-                    The server refuses to run until you do. Konnekt spots it in the log and offers
-                    to write it for you, then restarts.
+                    The server runs on the machine you are sitting at, so its address is
+                    <code>localhost</code>. Put that into Minecraft under Multiplayer, Direct
+                    Connection as the Server Address, then Join Server.
                   </p>
                 </div>
               </li>
@@ -405,6 +396,17 @@ wails dev -tags webkit2_41</code></pre>
                   <p>
                     Vanilla, Paper/Spigot/Bukkit, and modded Fabric, Forge and NeoForge. The loader
                     is detected automatically. Bedrock isn't supported.
+                  </p>
+                </div>
+              </details>
+              <details>
+                <summary>The server stops as soon as I start it</summary>
+                <div class="md">
+                  <p>
+                    On a first run that is almost always the EULA: Minecraft will not start until
+                    you have accepted it, and says so in the log on its way out. Konnekt watches for
+                    that line and offers to write <code>eula.txt</code> for you, then starts the
+                    server again.
                   </p>
                 </div>
               </details>
