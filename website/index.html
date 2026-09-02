@@ -102,6 +102,17 @@
          and supplies its label. Only this page carries them. -->
     <header class="hero section-full" id="top" data-nav="Top">
       <div class="hero-inner">
+        <!-- The same pill the download page wears over its own title, filled
+             from the same release by the same helper, so the front page cannot
+             claim a version the download page disagrees with. It says
+             "checking latest…" until GitHub answers and stays on that if it
+             never does. -->
+        <span
+          class="version-pill hero-version hero-fade"
+          id="hero-version"
+          style="--fade-delay: 120ms"
+          ><span class="dot"></span> checking latest…</span
+        >
         <h1>
           <span class="hero-lead">
             <span class="hw" style="--i: 0">Run</span>
@@ -129,47 +140,74 @@
 
     <section class="section-full" id="about" data-nav="About">
       <div class="container">
-        <div class="section-head reveal">
-          <span class="eyebrow">[i] about</span>
-          <h2>Everything in one window</h2>
-          <p>
-            Konnekt is a desktop app for Minecraft servers you host yourself. One window in place of
-            a terminal, an RCON client and a file browser sitting open side by side.
-          </p>
-          <p>
-            Konnekt runs on your own machine, against server folders you already have. The dashboard
-            is a grid of tiles you arrange yourself, and the automation is a node graph rather than
-            a cron line.
-          </p>
+        <!-- Title, then the app, then what it is, then what it runs. The shot
+             takes the full column: it is a dashboard of tiles, and at half a
+             page a tile stops being legible as one. -->
+        <div class="about-stack">
+          <div class="section-head reveal">
+            <span class="eyebrow">[i] about</span>
+            <h2>Everything in one window</h2>
+          </div>
+          <figure class="about-shot reveal" style="--reveal-delay: 60ms">
+            <!-- A button, not a bare image with a click handler: it opens
+                 something, so it is reachable by keyboard and announces itself
+                 as doing so. main.js copies this image's own src and alt into
+                 the overlay, so the enlarged view cannot drift from it. -->
+            <button class="about-shot-open" type="button" id="about-shot-open">
+              <!-- The frame is what crops and fades; the hint is its sibling
+                   rather than its child, or the mask would dissolve the label
+                   along with the bottom of the picture. -->
+              <span class="about-shot-frame">
+                <img
+                  src="/assets/img/overview.png"
+                  alt="Konnekt's dashboard: a grid of tiles over one server, among them the live console, server stats and performance history."
+                  loading="lazy"
+                  decoding="async"
+                />
+              </span>
+              <span class="about-shot-hint" aria-hidden="true">Enlarge</span>
+            </button>
+          </figure>
+          <div class="about-copy reveal" style="--reveal-delay: 120ms">
+            <p>
+              Konnekt is a desktop app for Minecraft servers you host yourself. One window in place
+              of a terminal, an RCON client and a file browser sitting open side by side.
+            </p>
+            <p>
+              Konnekt runs on your own machine, against server folders you already have. The
+              dashboard is a grid of tiles you arrange yourself, and the automation is a node graph
+              rather than a cron line.
+            </p>
+          </div>
+          <!-- Two facts, each a label over a row of tags and nothing else. They were
+               cards, which put a bordered box around six words and had them
+               competing with the feature grid one scroll below for the same kind of
+               attention. The alpha status they used to sit beside is already stated
+               by the footer badge and the disclaimer above it. -->
+          <dl class="about-facts">
+            <div class="about-fact reveal" style="--reveal-delay: 180ms">
+              <dt>Servers</dt>
+              <dd class="fact-pills">
+                <span class="pill">Vanilla</span>
+                <span class="pill">Paper</span>
+                <span class="pill">Spigot</span>
+                <span class="pill">Bukkit</span>
+                <span class="pill">Fabric</span>
+                <span class="pill">NeoForge</span>
+              </dd>
+            </div>
+            <div class="about-fact reveal" style="--reveal-delay: 240ms">
+              <dt>Platforms</dt>
+              <!-- Narrower than the servers' box so these break 2/1; see
+                   --pills-w in styles.css. -->
+              <dd class="fact-pills" style="--pills-w: 150px">
+                <span class="pill">Windows</span>
+                <span class="pill">Linux</span>
+                <span class="pill">macOS</span>
+              </dd>
+            </div>
+          </dl>
         </div>
-        <!-- Two facts, each a label over a row of tags and nothing else. They were
-             cards, which put a bordered box around six words and had them
-             competing with the feature grid one scroll below for the same kind of
-             attention. The alpha status they used to sit beside is already stated
-             by the footer badge and the disclaimer above it. -->
-        <dl class="about-facts">
-          <div class="about-fact reveal" style="--reveal-delay: 0ms">
-            <dt>Servers</dt>
-            <dd class="fact-pills">
-              <span class="pill">Vanilla</span>
-              <span class="pill">Paper</span>
-              <span class="pill">Spigot</span>
-              <span class="pill">Bukkit</span>
-              <span class="pill">Fabric</span>
-              <span class="pill">NeoForge</span>
-            </dd>
-          </div>
-          <div class="about-fact reveal" style="--reveal-delay: 60ms">
-            <dt>Platforms</dt>
-            <!-- Narrower than the servers' box so these break 2/1; see
-                 --pills-w in styles.css. -->
-            <dd class="fact-pills" style="--pills-w: 150px">
-              <span class="pill">Windows</span>
-              <span class="pill">Linux</span>
-              <span class="pill">macOS</span>
-            </dd>
-          </div>
-        </dl>
       </div>
     </section>
 
@@ -725,6 +763,21 @@
       </div>
     </footer>
 
+    <!-- The enlarged screenshot. Empty and hidden until it is opened, and
+         filled from the figure above so there is one source for the file and
+         one for the alt text. Above the nav's z-index 100; see .shot-lightbox. -->
+    <div
+      class="shot-lightbox"
+      id="shot-lightbox"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Konnekt's dashboard, enlarged"
+      tabindex="-1"
+    >
+      <img id="shot-lightbox-img" alt="" />
+    </div>
+
+    <script src="/release.js"></script>
     <script src="/main.js"></script>
     <!-- Landing page only: the hero and download backdrops. -->
     <script src="/backdrop.js"></script>

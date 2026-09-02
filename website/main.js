@@ -4,6 +4,139 @@
     document.documentElement.classList.add('reduce-motion')
   }
 
+  // ── Hero release pill ──────────────────────────────────────────────────
+  // The same pill the download page carries over its own title, off the same
+  // release and the same helper, so the two pages cannot name different
+  // versions. Enhancement: the markup ships saying "checking latest…", and a
+  // rate limit, an outage or no release at all leaves it saying that rather
+  // than an error — the pill is provenance, not a control.
+  var heroVersion = document.getElementById('hero-version')
+  if (heroVersion && window.KonnektRelease) {
+    window.KonnektRelease.fetchLatest()
+      .then(function (res) {
+        if (!res.ok || !res.data) return
+        var text = [res.data.tag_name, window.KonnektRelease.formatDate(res.data.published_at)]
+          .filter(Boolean)
+          .join(' \u00b7 ')
+        if (!text) return
+        heroVersion.innerHTML = ''
+        var dot = document.createElement('span')
+        dot.className = 'dot'
+        heroVersion.appendChild(dot)
+        heroVersion.appendChild(document.createTextNode(' ' + text))
+      })
+      .catch(function () {
+        /* The markup already says what it says. */
+      })
+  }
+
+  // ── The pill lights as the pointer nears it ────────────────────────────
+  // --near is 0 beyond FAR_PX and 1 within NEAR_PX, measured to the pill's
+  // nearest edge rather than its centre: it is a wide, short box, and a centre
+  // measurement would have it dark while the pointer sat on one end of it.
+  //
+  // Gated on the same hover query the CSS uses, so a touch device installs no
+  // listener at all and keeps the lit state the stylesheet gives it. Reduced
+  // motion pins --near through CSS instead of here, so this stays one rule.
+  var pill = document.getElementById('hero-version')
+  var finePointer =
+    window.matchMedia && window.matchMedia('(hover: hover) and (pointer: fine)').matches
+
+  if (pill && finePointer && !reduceMotion) {
+    var NEAR_PX = 130 // fully lit at or inside this
+    var FAR_PX = 520 // fully faded at or beyond it
+    var pillX = 0
+    var pillY = 0
+    var pillQueued = false
+
+    var paintPill = function () {
+      pillQueued = false
+      var rect = pill.getBoundingClientRect()
+      // Distance to the rectangle, which is 0 anywhere inside it.
+      var dx = Math.max(rect.left - pillX, 0, pillX - rect.right)
+      var dy = Math.max(rect.top - pillY, 0, pillY - rect.bottom)
+      var dist = Math.sqrt(dx * dx + dy * dy)
+      var near = 1 - (dist - NEAR_PX) / (FAR_PX - NEAR_PX)
+      pill.style.setProperty('--near', Math.max(0, Math.min(1, near)).toFixed(3))
+    }
+
+    window.addEventListener(
+      'pointermove',
+      function (e) {
+        pillX = e.clientX
+        pillY = e.clientY
+        if (!pillQueued) {
+          pillQueued = true
+          window.requestAnimationFrame(paintPill)
+        }
+      },
+      { passive: true },
+    )
+
+    // A pointer that leaves the window stops sending moves, which would leave
+    // the pill lit at whatever it last read. The transition covers the drop.
+    document.addEventListener('pointerleave', function () {
+      pill.style.setProperty('--near', '0')
+    })
+
+    // Scrolling moves the pill out from under a stationary pointer and fires
+    // no pointermove, the same way the tile glow has to recompute.
+    window.addEventListener(
+      'scroll',
+      function () {
+        if (pillQueued) return
+        pillQueued = true
+        window.requestAnimationFrame(paintPill)
+      },
+      { passive: true },
+    )
+  }
+
+  // ── The enlarged screenshot ────────────────────────────────────────────
+  // The about section's shot is sized to the copy under it so the whole
+  // section fits on a screen, which leaves the app's own type too small to
+  // read. This is where you read it.
+  var shotButton = document.getElementById('about-shot-open')
+  var lightbox = document.getElementById('shot-lightbox')
+  var lightboxImg = document.getElementById('shot-lightbox-img')
+
+  if (shotButton && lightbox && lightboxImg) {
+    var openShot = function () {
+      var source = shotButton.querySelector('img')
+      if (!source) return
+      // Copied rather than duplicated in the markup, so the file and the
+      // description have one home each.
+      lightboxImg.src = source.currentSrc || source.src
+      lightboxImg.alt = source.alt
+      lightbox.classList.add('is-open')
+      // The page behind must not scroll under a fixed overlay: a wheel over
+      // the backdrop would otherwise move the section you came from.
+      document.documentElement.style.overflow = 'hidden'
+      lightbox.focus()
+    }
+
+    var closeShot = function () {
+      if (!lightbox.classList.contains('is-open')) return
+      lightbox.classList.remove('is-open')
+      document.documentElement.style.overflow = ''
+      // Back to the control that opened it, or a keyboard user is dropped at
+      // the top of the document.
+      shotButton.focus()
+    }
+
+    shotButton.addEventListener('click', openShot)
+
+    // Anywhere but the picture. The backdrop is the whole overlay, and the
+    // image sits on top of it, so this is the test for "outside the image".
+    lightbox.addEventListener('click', function (e) {
+      if (e.target !== lightboxImg) closeShot()
+    })
+
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape') closeShot()
+    })
+  }
+
   // ── Hero intro teardown ────────────────────────────────────────────────
   // Once the intro finishes, mark the hero so CSS can drop the animations.
   // A finished `forwards` animation still holds its last keyframe, and a

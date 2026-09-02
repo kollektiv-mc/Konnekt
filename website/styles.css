@@ -1196,11 +1196,68 @@ a {
   transform: none;
 }
 
+/* Measured, not guessed. At 17px Ranade the line is 637px whole, 390px up to
+   "backups in" and 428px once "one" joins it, so any measure in [390, 428)
+   breaks it after "in" and leaves "one local-first desktop app." whole on the
+   second line. 560px put "desktop app." alone down there. 408px is the middle
+   of that window; a wider render than measured costs an extra line rather than
+   a sideways scroll, which is why this is a measure and not a <br>. Retune it
+   if the sentence changes. */
 .hero p {
   font-size: 17px;
   color: var(--text-secondary);
-  max-width: 560px;
+  max-width: 408px;
   margin: 0;
+}
+
+/* The pill sits above the title as the hero's first element, so it wants the
+   gap under it to be the hero's rhythm rather than .hero-inner's 22px between
+   two blocks of running text. */
+.hero-version {
+  margin-bottom: 2px;
+}
+
+/* Faded until the pointer comes near, and lit when it arrives. main.js writes
+   --near, 0 far and 1 on top of it, from the pointer's distance to the pill's
+   nearest edge.
+ *
+ * The fade is in the ink rather than in opacity, which .hero-fade is already
+ * animating: a finished `forwards` animation holds its last keyframe and beats
+ * a plain declaration, so an opacity here would do nothing until the intro
+ * teardown dropped the animation and then snap. Colour, border and background
+ * are free, and on a pill that is only those three it looks the same.
+ *
+ * Behind a hover query on purpose. A touch device has no pointer to come near,
+ * and would be left reading a version number at a third of its contrast
+ * forever, so it gets the lit state and no listener. */
+@media (hover: hover) and (pointer: fine) {
+  /* Qualified with .version-pill, which sets the same three properties at the
+     same specificity and further down the sheet, so a bare .hero-version here
+     computes --near correctly and then loses every colour to it. */
+  .version-pill.hero-version {
+    --near: 0;
+    color: rgb(var(--accent-rgb) / calc(0.32 + 0.68 * var(--near)));
+    border-color: rgb(var(--accent-rgb) / calc(0.1 + 0.25 * var(--near)));
+    background: rgb(var(--accent-rgb) / calc(0.02 + 0.06 * var(--near)));
+    transition:
+      color 120ms linear,
+      border-color 120ms linear,
+      background-color 120ms linear;
+  }
+
+  .version-pill.hero-version .dot {
+    background: rgb(var(--accent-rgb) / calc(0.32 + 0.68 * var(--near)));
+    box-shadow: 0 0 8px rgb(var(--accent-rgb) / calc(0.15 + 0.55 * var(--near)));
+    transition:
+      background-color 120ms linear,
+      box-shadow 120ms linear;
+  }
+
+  /* A pointer is not a reason to dim a version number for someone who has
+     asked for less of this sort of thing. */
+  .reduce-motion .version-pill.hero-version {
+    --near: 1;
+  }
 }
 
 .hero-actions {
@@ -1255,6 +1312,200 @@ a {
   color: var(--text-secondary);
   font-size: 15px;
   margin: 0;
+}
+
+/* ── About, stacked ──────────────────────────────────────────────────── */
+/* Title, then the app, then what it is, then what it runs on. It is the first
+   section after the hero and so the first look anyone gets, and the shot is
+   what the heading is claiming, so it comes before the sentences that say the
+   same thing in words. */
+.about-stack {
+  /* The copy's measure, which the shot deliberately does not share: a
+     dashboard of tiles set to a reading column stops being legible as one. The
+     shot takes the container instead and gives its height back by fading out
+     rather than by shrinking. */
+  --about-measure: 640px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 34px;
+}
+
+/* The head owns 34px of space below itself everywhere else on the page; here
+   the stack's own gap does, or the two would collapse into one larger one. */
+.about-stack .section-head {
+  margin-bottom: 0;
+}
+
+.about-shot {
+  width: 100%;
+  margin: 0;
+  line-height: 0;
+}
+
+/* The button is the picture: no chrome of its own, and the frame fills it. */
+.about-shot-open {
+  position: relative;
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  cursor: zoom-in;
+}
+
+/* The window is shown from the top down and dissolves before it ends.
+   Full width the whole screenshot is 670px tall, which pushed the copy and the
+   tags off the screen; sized down to fit, the app's own type was too small to
+   read. This keeps the width — the header, the sidebar and the chart are the
+   part worth reading at any size — and gives the height back at the bottom,
+   where the picture is a row of small tiles.
+ *
+   Cropping alone would draw a hard edge across the middle of the app. The mask
+   ends it in the page instead, so there is no edge to notice.
+ *
+   The ratio is the image's own 1440x900 with 60% of the height kept, so the
+   crop follows the picture rather than a pixel height that is only right at one
+   width. -webkit- included: unprefixed mask-image is Safari 15.4 and later. */
+.about-shot-frame {
+  display: block;
+  overflow: hidden;
+  aspect-ratio: 1440 / 540;
+  -webkit-mask-image: linear-gradient(to bottom, #000 50%, transparent 97%);
+  mask-image: linear-gradient(to bottom, #000 50%, transparent 97%);
+}
+
+/* Taller than its frame and clipped by it. It grows from the top on hover, so
+   the edge that is pinned stays pinned and only the faded end moves. */
+.about-shot-frame img {
+  display: block;
+  width: 100%;
+  height: auto;
+  transform-origin: top center;
+  transition: transform var(--duration-panel) var(--ease-standard);
+}
+
+.about-shot-open:hover .about-shot-frame img,
+.about-shot-open:focus-visible .about-shot-frame img {
+  transform: scale(1.012);
+}
+
+.about-shot-open:focus-visible {
+  outline: 0.5px solid rgb(var(--accent-rgb) / 0.6);
+  outline-offset: 4px;
+  border-radius: 10px;
+}
+
+/* Says the picture is a control, and only while you are on it. A sibling of
+   the frame rather than a child, or the mask that dissolves the bottom of the
+   picture would dissolve the label with it — which is also why it can sit down
+   there at all: by that point the screenshot has faded to nothing and this is
+   on the page's own ground. */
+.about-shot-hint {
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  transform: translateX(-50%);
+  padding: 3px 10px;
+  border-radius: 999px;
+  border: 0.5px solid var(--border-subtle);
+  background: var(--bg-surface);
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  line-height: 1.6;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+  opacity: 0;
+  transition:
+    opacity var(--duration-fast) ease,
+    color var(--duration-fast) ease;
+}
+
+.about-shot-open:hover .about-shot-hint,
+.about-shot-open:focus-visible .about-shot-hint {
+  opacity: 1;
+  color: var(--text-secondary);
+}
+
+/* Nothing hovers on a touch screen, and the cursor that says "this enlarges"
+   is not there either — so the label stays up, which is the only affordance
+   left on the device where the shot is smallest and least readable. */
+@media (hover: none) {
+  .about-shot-hint {
+    opacity: 1;
+  }
+}
+
+/* ── The enlarged shot ────────────────────────────────────────────────── */
+/* Over the nav, which is the highest thing on this site at 100. Larger than
+   the page's copy of it but deliberately not the whole screen: the padding and
+   the 88vh cap leave the site visible around it, which is also what says that
+   clicking out there is what closes it.
+ *
+   Opacity and visibility rather than `display: none`, so it eases both ways
+   off one class. A displayed element cannot transition from display:none, which
+   is why the first pass opened on a keyframe and then vanished on the close
+   with nothing to animate. The visibility delay is the whole trick: it flips to
+   visible immediately on the way in, and waits out the fade on the way back, so
+   the overlay leaves the accessibility tree and the hit-testing only once it is
+   actually gone. */
+.shot-lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: grid;
+  place-items: center;
+  padding: 6vh 6vw;
+  background: rgb(0 0 0 / 0.72);
+  cursor: zoom-out;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition:
+    opacity 220ms var(--ease-standard),
+    visibility 0s linear 220ms;
+}
+
+.shot-lightbox.is-open {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transition:
+    opacity 220ms var(--ease-standard),
+    visibility 0s linear 0s;
+}
+
+.shot-lightbox img {
+  max-width: min(100%, 1500px);
+  max-height: 88vh;
+  width: auto;
+  height: auto;
+  border-radius: 12px;
+  cursor: default;
+  transform: scale(0.96);
+  transition: transform 260ms var(--ease-standard);
+}
+
+.shot-lightbox.is-open img {
+  transform: scale(1);
+}
+
+/* The paragraphs left .section-head so the shot could sit between them and the
+   title, so they carry their own measure and type now. */
+.about-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-width: var(--about-measure);
+  text-align: center;
+}
+
+.about-copy p {
+  margin: 0;
+  font-size: 15px;
+  color: var(--text-secondary);
 }
 
 /* ── About facts — a label over a row of tags, no surface ─────────────── */
@@ -5078,6 +5329,16 @@ button.dl-card:hover {
   opacity: 1 !important;
   filter: none !important;
   transform: none !important;
+}
+
+/* Not in the list above, which forces opacity: 1: the overlay is hidden by
+   opacity now rather than by display, so joining it would pin the enlarged
+   screenshot over the page permanently. Dropping the transitions is the whole
+   of what reduced motion wants here, and it opens and closes at once. */
+.reduce-motion .shot-lightbox,
+.reduce-motion .shot-lightbox img,
+.reduce-motion .about-shot-frame img {
+  transition: none !important;
 }
 
 .reduce-motion .rm-node.is-target > .rm-row,
