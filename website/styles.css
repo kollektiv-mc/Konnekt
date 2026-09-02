@@ -1257,6 +1257,62 @@ a {
   margin: 0;
 }
 
+/* ── About, set as two columns ────────────────────────────────────────── */
+/* The one section on this page that is not centred. It is the first thing
+   after the hero and so the first look at the app, and a screenshot below a
+   centred paragraph is a second scroll rather than the same glance. Set beside
+   it, the shot carries the claim the heading makes in words.
+
+   Not equal halves: the copy wants a readable measure and the shot wants every
+   pixel it can get, since a dashboard of tiles shrunk to half a page stops
+   being legible as one. 5/6 is where a tile in the shot is still readable at
+   this max-width. */
+.about-split {
+  display: grid;
+  grid-template-columns: minmax(0, 5fr) minmax(0, 6fr);
+  align-items: center;
+  gap: 52px;
+}
+
+.about-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 34px;
+}
+
+/* Left-aligned and left-packed, against the centred block every other section
+   on this page uses. The bottom margin goes with it: .about-facts is a sibling
+   inside the column now, and the column's gap owns that distance. */
+.about-split .section-head {
+  text-align: left;
+  align-items: flex-start;
+  max-width: none;
+  margin: 0;
+}
+
+/* At this column's width the heading is a hair too wide for one line and
+   breaks to "Everything in one / window", leaving one word on its own.
+   Balancing splits it evenly instead. It degrades to the same ragged break it
+   already has, so nothing is riding on support for it. */
+.about-split .section-head h2 {
+  text-wrap: balance;
+}
+
+/* No frame around it. The screenshot is of the whole window and carries its own
+   rounded chrome on a ground this page already uses, so a border here draws a
+   second edge a few pixels outside the one in the picture. line-height: 0 is
+   what keeps the inline image from leaving a strip of leading under it. */
+.about-shot {
+  margin: 0;
+  line-height: 0;
+}
+
+.about-shot img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
 /* ── About facts — a label over a row of tags, no surface ─────────────── */
 /* Two clusters set side by side rather than two cards on a grid: with the box
    gone there is no edge for an equal-column layout to be even against, and a
@@ -1317,6 +1373,20 @@ a {
   justify-content: center;
   gap: 6px;
   max-width: var(--pills-w, 232px);
+}
+
+/* Inside the split column the pair packs left with the copy above it, rather
+   than centring as it did across a full-width section. The --pills-w widths
+   above still hold, so the two facts still break 3/3 and 2/1 into the same
+   shape. */
+.about-split .about-facts,
+.about-split .fact-pills {
+  justify-content: flex-start;
+}
+
+.about-split .about-fact {
+  align-items: flex-start;
+  text-align: left;
 }
 
 .pill {
@@ -4848,6 +4918,32 @@ button.dl-card:hover {
 
 /* ── Responsive ───────────────────────────────────────────────────────── */
 @media (max-width: 860px) {
+  /* One column, and the copy keeps the top: the shot is the evidence for what
+     the heading claims, and evidence reads after the claim. It also stays
+     centred here, because a left-packed block in a full-width column is just a
+     ragged right edge. */
+  .about-split {
+    grid-template-columns: 1fr;
+    gap: 36px;
+  }
+
+  .about-split .section-head {
+    text-align: center;
+    align-items: center;
+    max-width: 640px;
+    margin: 0 auto;
+  }
+
+  .about-split .about-facts,
+  .about-split .fact-pills {
+    justify-content: center;
+  }
+
+  .about-split .about-fact {
+    align-items: center;
+    text-align: center;
+  }
+
   /* The graph is wide by nature. Scaling it down to a phone's width would put
      the node labels under 6px, so the canvas scrolls sideways inside its own
      border instead — the page itself never scrolls horizontally. */
