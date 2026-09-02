@@ -15,7 +15,8 @@
 // token files round-trip, not that the CSS they produce yields working utilities.
 //
 // Method: build the candidate class names from tokens.source.json (the source, not
-// the generated CSS — the generator iterates the same structure), keep the ones
+// the generated CSS — the generator iterates the same structure) plus the overlay
+// layers from src/style.css's one hand-authored @theme block, keep the ones
 // frontend/src actually uses, and assert each has a rule in the built CSS.
 //
 // Reads the built CSS, so it needs a build that matches the current sources.
@@ -108,6 +109,13 @@ for (const name of Object.keys(src.motion.easing)) add(`ease-${name}`, 'motion')
 for (const name of Object.keys(src.border.scale)) {
   for (const prefix of BORDER_WIDTH_PREFIXES) add(`${prefix}-${name}`, 'border width')
 }
+// The overlay layering scale is Konnekt-only, so it is declared in style.css
+// rather than tokens.source.json (see src/lib/layers.ts). Same failure mode as
+// everything above: z-* reads --z-index-*, and a name that does not resolve
+// leaves every overlay at z-index auto, which is the maximized tile swallowing
+// modals again.
+const styleCss = await readFile(path.join(SRC_DIR, 'style.css'), 'utf8')
+for (const [, name] of styleCss.matchAll(/--z-index-([a-z][a-z0-9-]*):/g)) add(`z-${name}`, 'layer')
 
 // A class name's boundary must not treat `-` as a separator. Otherwise the text
 // `var(--border-hover)` reads as a use of a class called `border-hover`, and every

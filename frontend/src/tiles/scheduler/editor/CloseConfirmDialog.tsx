@@ -8,8 +8,9 @@ interface Props {
 }
 
 // Shown when closing the maximized scheduler (Escape / backdrop / restore
-// button / navbar) while the graph has unsaved changes. Sits above the
-// maximize backdrop (z-50) so its buttons stay clickable.
+// button / navbar) while the graph has unsaved changes. z-dialog, inside the
+// maximize overlay's own stacking context, so the value orders it against the
+// editor, not against the app (lib/layers.ts).
 export function CloseConfirmDialog({ saving, onCancel, onDiscard, onSaveAndClose }: Props) {
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -23,7 +24,7 @@ export function CloseConfirmDialog({ saving, onCancel, onDiscard, onSaveAndClose
   }, [onCancel])
 
   return (
-    <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/65">
+    <div className="z-dialog fixed inset-0 flex items-center justify-center bg-black/65">
       <div className="bg-canvas border-border-subtle w-full max-w-md rounded-xl border p-5">
         <h2 className="text-text-primary mb-1 text-sm font-semibold">Unsaved changes</h2>
         <p className="text-text-muted mb-4 text-xs">

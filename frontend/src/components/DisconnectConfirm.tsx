@@ -5,11 +5,12 @@ import { useUiStore } from '../stores/useUiStore'
  * Confirms removing a server from Konnekt.
  *
  * Raised from the server manager, and rendered from App rather than inside it:
- * a fixed overlay nested in another overlay's subtree cannot escape it, and
- * this has to sit above the manager (z-50) that opens it. Before the manager
- * existed the same call was raised from the sidebar, where an overlay carrying
- * the same z-50 as the maximized-tile overlay lost the tie on document order
- * and opened underneath an open tile.
+ * a fixed overlay nested in another overlay's subtree cannot escape that
+ * overlay's stacking context. Above the manager (z-modal) as z-dialog, per
+ * lib/layers.ts. Before the manager existed the same call was raised from the
+ * sidebar, where an overlay carrying the same z-50 as the maximized-tile
+ * overlay lost the tie on document order and opened underneath an open tile;
+ * the scale is what replaced that tie.
  */
 export function DisconnectConfirm() {
   const { configs, deleteConfig } = useServerConfigStore()
@@ -32,7 +33,7 @@ export function DisconnectConfirm() {
 
   return (
     <div
-      className="fixed inset-0 z-[60] flex items-center justify-center bg-[rgba(0,0,0,0.6)]"
+      className="z-dialog fixed inset-0 flex items-center justify-center bg-[rgba(0,0,0,0.6)]"
       onClick={() => setPendingDisconnect(null)}
     >
       <div

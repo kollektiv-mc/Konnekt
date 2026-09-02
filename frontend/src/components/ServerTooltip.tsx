@@ -22,6 +22,8 @@ interface Props {
 /**
  * Hover card for a sidebar server row. Fixed-positioned because the sidebar is
  * only 12rem wide and clips its own overflow — the card has to escape it.
+ * z-popover because the navbar stays hoverable while a tile is maximized, so
+ * the card has to clear the maximize overlay (lib/layers.ts).
  */
 export function ServerTooltip({ summary, anchor }: Props) {
   if (!summary) return null
@@ -30,7 +32,7 @@ export function ServerTooltip({ summary, anchor }: Props) {
 
   return (
     <div
-      className="border-border-subtle bg-elevated border-hairline pointer-events-none fixed z-[300] flex w-60 flex-col gap-1.5 rounded-lg px-3 py-2.5 shadow-[0_8px_24px_rgba(0,0,0,0.3)] backdrop-blur-md"
+      className="border-border-subtle bg-elevated border-hairline z-popover pointer-events-none fixed flex w-60 flex-col gap-1.5 rounded-lg px-3 py-2.5 shadow-[0_8px_24px_rgba(0,0,0,0.3)] backdrop-blur-md"
       // eslint-disable-next-line no-restricted-syntax -- anchored to the hovered row's measured viewport position
       style={{ top: anchor.top, left: anchor.left }}
       role="tooltip"

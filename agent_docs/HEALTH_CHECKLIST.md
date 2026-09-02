@@ -127,6 +127,25 @@ tree.
       exists rather than when someone remembers to list it. Every remaining
       justified exception carries a documented `eslint-disable-next-line`.
       Verify with `pnpm exec eslint src` — expect 0 errors.
+- [x] Every app-wide overlay carries a named layer from `lib/layers.ts`
+      (`z-overlay`, `z-modal`, `z-dialog`, `z-popover`, `z-splash`), never a
+      literal. Closed 2026-09-02 (HEALTH_LOG "The overlays that took turns
+      losing"). The scale is Konnekt-only, so it lives as the one hand-authored
+      `@theme` block in `style.css`, mirrored from the module and pinned to it
+      by `lib/layers.test.ts`; `pnpm check-tokens` asserts each class compiles.
+      Verify: from `frontend/`, both of these must print nothing:
+      ```bash
+      grep -rnE "['\"\`][^'\"\`]*\bz-(\[[0-9]{2,}\]|[3-9]0|100)\b" src --include='*.tsx' --include='*.ts' | grep -v '\.test\.' | grep -v tiles/backups/BackupCarousel.tsx
+      grep -rnE "z-index:\s*[0-9]" src
+      ```
+      The first matches a z-token inside a quoted class string, so a comment
+      that names an old number for history is left alone. Two-plus-digit
+      arbitrary values and the bare 30 to 100 stops are overlay numbers;
+      `z-[1]` to `z-[9]`, `z-10` and `z-20` are a tile's own sibling scale and
+      are allowed. The carousel's `z-[150]` arrows sit over cards whose
+      computed index tops out at 100, inside one tile, and are the one
+      documented exception. Tests are excluded because `layers.test.ts`
+      asserts that a bare number resolves to no layer.
 - [ ] New transition/animation durations and easing curves reuse an existing
       `--duration-*`/`--ease-*` token (`frontend/src/styles/tokens.css`'s plain
       `@theme` block — the token layer is **generated** from the vendored
@@ -207,7 +226,8 @@ tree.
       `server_linux.go`/`server_unix.go`/`server_other.go` are compiled).
 - [x] All Go methods bound to the Wails `App` struct return `(T, error)`, and
       errors are wrapped with context (`fmt.Errorf("...: %w", err)`).
-      82/82 as of 2026-08-19.
+      92/92 as of 2026-09-02 (this line said 82 for two weeks while the Clean
+      pillar's regeneration check already counted 92).
       Verify: `grep -nE "^func \(a \*App\) [A-Z]" app.go` — every hit must end
       in `error)` or `error {`. (`beforeClose`/`startup` are Wails lifecycle
       hooks, not bound methods, and are exempt.)
@@ -508,32 +528,18 @@ what *is* closed.
 **P2 — The bundle budget covers one chunk out of six** (filed 2026-08-29)
 
 `check-bundle` asserts the entry chunk only, which was the whole story when the
-lazy chunks were two rarely-opened tiles. It is not any more: there are five,
-and `lib/prefetch.ts` evaluates all of them during idle time after launch, so
+lazy chunks were two rarely-opened tiles. It is not any more: there are six
+(re-counted 2026-09-02; the quick-commands library was added after this was
+filed), and `lib/prefetch.ts` evaluates all of them during idle time after launch, so
 a lazy chunk that doubles is now a startup cost as well as an on-demand one.
 Nothing watches that. What is missing is a second budget — plausibly a cap on
 total warmed bytes — and the number wants picking against a real machine rather
 than guessed here. The measurement harness described in HEALTH_LOG (2026-08-29)
-is how to pick it.
-
-**P2 — Modal stacking is nine files' worth of literal z-index** (filed 2026-08-31)
-
-Every overlay picks its own number — 50, 60, 70, 150, 200, 300, 400, 1000, 9999
-— and the only record of which has to beat which is a comment on the loser after
-it lost. `DisconnectConfirm.tsx` and the scheduler's `CloseConfirmDialog.tsx`
-both carry one. The mods tile then shipped a pair that disagreed with no comment
-at all: `ModPreviewDialog` at 400/401 opening a `DependencyDialog` at 50, so
-switching the version of a mod with a missing dependency mounted the confirm
-dialog *under* the backdrop and read, exactly, as nothing happening. Raising the
-dialog to `z-[500]` closes that instance, and `ModPreviewDialog.test.tsx` pins
-the ordering, but only for that pair.
-
-What is missing is a small named scale that every overlay reads from, so "above
-the thing that opened me" is expressible rather than guessed. It does not belong
-in `tokens.source.json`: that file is vendored from kollektiv and a
-Konnekt-only value there is reverted on the next sync. A Konnekt-owned module
-next to `lib/gridSizing.ts` is the right shape — the tile grid already solved
-the same problem by naming its constants in one place.
+is how to pick it. One correction (2026-09-02): the bytes are not what needs a
+machine, since the entry budget was set as measured plus headroom from a
+headless build and the same works here; what needs a machine is whether the
+warm-up's *time* is acceptable, which is a separate question and the one the
+harness answers.
 
 **P3 — Dependency resolution is serial, unbounded in time, and silent while it
 runs** (filed 2026-08-31)
@@ -582,7 +588,17 @@ one. Same shape for the relative-time helpers: `relativeMs`/`untilMs` now live i
 private copies, spelled `fmtRelTime` and `formatNextRun`, so a grep for the
 shared names finds neither. Still five copies with three behaviours as of
 2026-09-01: two stop at MB, `WorldsSummary` rounds KB to a whole number, and
-only `lib/format.ts` and `WorldHud` agree.
+only `lib/format.ts` and `WorldHud` agree. Re-mapped 2026-09-02 ahead of the
+fix: no private copy has a test, every existing assertion pins the canonical
+helper, so the merge cannot break a green test and can only change pixels.
+Three things the fix has to know. `WorldHud`'s `fmtRelative` is `relativeMs`
+plus an `if (!ms) return '—'` guard, and that guard is load-bearing:
+`meta.lastPlayed` is genuinely `0` for a never-played world, and `relativeMs(0)`
+renders as twenty thousand days ago. `fmtDate` is the next duplicate down,
+two copies with different output (`tiles/backups/format.ts:7` and
+`tiles/players/PlayerDetailPopup.tsx:60`) and no shared home yet. And the Go
+side has the same defect in `backup.go`'s `sizeMB`, which narrates every backup
+size into the console in MB, so a 4 GiB zip reads `4096.0 MB` there too.
 
 **P3 — Evidence for the memoization item above** (filed 2026-08-29)
 
@@ -838,6 +854,14 @@ individual issues; fix in passing when touching the file)
   fold a stacked entry into its parent silently. Worth a regression test with
   the two halves that matter: a merged PR associated with a commit earns an
   entry, an unmerged one associated with the same commit does not.
+- Where the test lands (2026-09-02): not here first. `release-notes_test.py`
+  says in its own comments that it is byte-identical wherever it sits, with the
+  master copy in `kollektiv/plugins/suite-kit/`, so a case added in this repo is
+  reverted on the next sync exactly like a hand-edited token. Write it upstream,
+  then sync. The file's own stance that "mocking the API would only test the
+  mock" also needs a sentence when that happens: `merged_pulls` has no pure
+  sub-predicate to mirror the way `touches_app` does, so a fake `api` is the
+  only shape a test of it can take.
 - The same guarantee also dies at the merge button. Squashing a parent rewrites
   the child's commit hashes, GitHub then associates only the squashed commit
   with the parent, and the child drops out of the notes entirely with its work
@@ -861,6 +885,50 @@ not worth individual issues; fix in passing when touching the file)
   `reServerReady` (`server.go`) with looser matching that a chat message can
   trip. Cosmetic only — the lifecycle state machine no longer depends on it —
   but the two spellings can drift.
+
+**P3 — Smaller findings from the 2026-09-02 backlog assessment** (not worth
+individual issues unless marked; fix in passing when touching the file)
+- `CreateWorldBackup` (`backup.go:406-409`) has the same silent post-zip
+  `os.Stat` failure as `CreateBackup` (`:329-332`, the entry above): no
+  `backup:failed`, no narration, and `backup:started` has already gone out, so
+  the UI's in-progress state never clears. Fix both together. While there, the
+  `backup:failed` payload comes in two shapes, `map[string]interface{}` with a
+  `serverID` (`:321`, `:398`) and `map[string]string` without one (`:455`,
+  `:466`, `:496`, `:507`); pick one.
+- `AcceptEula` (`app.go`) does not guard an empty `cfg.WorkingDir`, so
+  `filepath.Join("", "eula.txt")` is a relative path into the process CWD, the
+  exact case `datadir.go` guards elsewhere. Same fix as the atomic-write entry
+  above, and note `writeFileAtomic` is unexported while `app.go` is
+  `package main`: the fix is a service method, not a swap.
+- `worlds.go`'s wrong "(+ siblings)" comment is on `BackupWorld` at `:286`, not
+  `:269` as the entry above says. `DuplicateWorld` a few lines up does iterate
+  the `_nether`/`_the_end` suffixes, so the sibling concept is real in that
+  file and only the backup path ignores it. The behaviour gap is #26.
+- `MaxPlayers()` keeping its value after stop is asserted as wanted by
+  `stats_test.go:81-84` ("a zero here would blank the tile's players /
+  maxPlayers readout"), so the remedy for the inconsistency above is a comment
+  on `waitForExit` naming `maxPlayers` and `maxRAMMB` as the two deliberate
+  survivors of an otherwise exhaustive reset, not a behaviour change.
+- **A `fixed` overlay inside a grid tile is tile-sized, not viewport-sized**
+  (found designing the layering scale; worth an issue). react-grid-layout
+  v2.2.3 defaults `useCSSTransforms` to true and `Dashboard.tsx` passes no
+  override, so every non-maximized tile is positioned with `transform:
+  translate()`, and `style.css`'s `.tile-outer:hover` adds a second transform.
+  A transformed ancestor is the containing block for `position: fixed`, so
+  `PlayerDetailPopup`, `ModPreviewDialog` reached through the compact
+  `InstalledPanel`, and the command confirms raised from the grid copies of the
+  quick-commands and console tiles all open inside the tile's own box. The
+  layering scale cannot change this: a value orders things in a stacking
+  context, it does not pick the containing block. The fix is a portal, the way
+  `QuickAddMenu` and the presets dropdown already escape, or a decision that
+  in-tile is the intended look.
+- **The EULA modal can open under the server manager or Settings** (worth an
+  issue, `type:bug`). `server:eula-required` is event-raised, and `EulaModal`
+  renders first among App's overlays on the same `z-modal` layer as the two
+  surfaces a user might have open when a server starts, so it loses on
+  document order. One class, `z-modal` to `z-dialog`, fixes it; it was kept
+  out of the layering-scale change so that change stays a chore with no
+  visible behaviour of its own.
 
 **Release follow-ups** (deferred)
 - Release-tag-gated full `wails build` packaging job — stronger end-to-end

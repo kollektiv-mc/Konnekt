@@ -80,6 +80,7 @@ after them is dated. Newest last, in both groups.
 - [2026-09-01 — The tile that took the dashboard with it](#2026-09-01-the-tile-that-took-the-dashboard-with-it)
 - [2026-09-01 — The chart that rendered once per tick of the clock](#2026-09-01-the-chart-that-rendered-once-per-tick-of-the-clock)
 - [2026-09-01 — The crash you could see but not send](#2026-09-01-the-crash-you-could-see-but-not-send)
+- [2026-09-02 — The overlays that took turns losing](#2026-09-02-the-overlays-that-took-turns-losing)
 
 ---
 
@@ -4439,3 +4440,105 @@ this change; typecheck and `format:check` clean. Entry chunk 154.7 KB gzip
 against the 165 KB budget, up 0.2 KB for the reporter, and `check-tokens` and
 `check-prefetch` green. `gofmt`, `go vet` and `go test` clean,
 `backend/services` at 59.6% against the 49% floor.
+
+
+### 2026-09-02 — The overlays that took turns losing
+
+**Closed: [#178](../../issues/178)**, and the P2 backlog item "Modal stacking
+is nine files' worth of literal z-index" (filed 2026-08-31).
+
+**The gap.** Fifteen distinct z-index values across `frontend/src`, thirteen
+surfaces sharing `z-50`, and the only record of which had to beat which was a
+comment on the loser, written after it lost. It lost twice on the record: the
+server manager opened underneath a maximized tile because both were `z-50` and
+`<aside>` comes before `<main>`, and the mods tile's dependency dialog opened
+underneath the preview that raised it, at `z-50` against a `z-[400]` backdrop.
+Each fix was local, move the manager to App level, raise the dialog to
+`z-[500]`. Neither was a rule, and the next `fixed` overlay written inside a
+tile or the sidebar would have rolled the same dice.
+
+**The fix.** Five named layers in one place, `lib/layers.ts`: `overlay` (the
+maximized tile) 100, `modal` 200, `dialog` 300, `popover` 400, `splash` 500,
+with the table of what goes where and the rule of thumb that if a surface opens
+another it is a modal and what it opens is a dialog. Production reads them as
+classes, `z-modal` and so on, because the inline-style lint rule makes
+`style={{ zIndex }}` an error everywhere and the existing test read the value
+off `className`. The classes exist because `style.css` declares the same
+numbers as `--z-index-*` in its one hand-authored `@theme` block, the namespace
+Tailwind v4's `z` utility resolves, checked in the tagged v4.3.2 source rather
+than remembered. Two spellings of one scale, so `lib/layers.test.ts` reads the
+CSS and asserts it equals the module, and `check-token-classes.mjs` now takes
+`z-<name>` from that block as candidates, so "the class compiles to a rule"
+holds for the scale the way it holds for the colours.
+
+Twenty-five sites converted, each checked against what it actually competes
+with rather than given its old number back. Three of those checks changed the
+answer a naive conversion would have given. The crate drag preview is
+`z-popover`, not `z-overlay`: it renders before the maximize overlay in the
+same context, so an equal value would draw it under a tile maximized mid-drag,
+and a pointer-attached transient is what the popover layer is for. The
+`EulaModal` stays `z-modal`, which keeps today's order, although it is
+event-raised and can open under the manager or Settings (both `z-modal`,
+rendered later); one class fixes that and it is filed separately, so this
+change stays a chore with no visible behaviour of its own. And the three
+backdrop-plus-panel pairs (200/201, 400/401, 1000/1001) collapse to one value
+each, because the panel is the later sibling. The intra-tile numbers stay: the
+backups tile's `z-[1]` to `z-[9]`, the in-tile scrims and side panels at `z-10`
+and `z-20`, the carousel's computed index and its `z-[150]` arrows all order
+siblings inside one tile and never compare with the root context, and a named
+layer would claim something false about them.
+
+The four "document order is what puts these on top" comments were wrong the
+moment the scale existed and now say what is still true: rendering from App is
+still required, because `<aside>` goes `pointer-events-none` during a navbar
+resize or a crate drag and an overlay nested in another overlay's subtree
+cannot escape its stacking context; the order among those App-level surfaces
+is the scale's.
+
+**Known and accepted.**
+
+- A value only orders things in one stacking context. A surface rendered
+  inside a tile is clamped inside the maximize overlay whatever it carries,
+  exactly as the old 400, 500 and 9999 were. The scale does not change where
+  anything renders; the two portals still escape by being portals.
+- Prettier's Tailwind plugin does not know the new classes and sorts them to
+  the front of each class string, the same treatment every token class
+  (`bg-canvas`, `border-hairline`) already gets. Pointing the plugin at
+  `style.css` would teach it the whole theme and re-sort every file in the
+  repo, which is a change of its own.
+- Vitest empties every CSS import unless told otherwise, `?raw` included.
+  `vite.config.ts` now lets a `?raw` read through, and only that, so the drift
+  test reads the same file the build compiles; a plain CSS import in a
+  component still costs nothing.
+- `check-tokens` covers the namespace failure (declared and used, no rule
+  emitted), which is the silent one: every overlay drops to `auto` and the
+  maximized tile swallows modals again. A misspelled declaration is the drift
+  test's to catch, and a misspelled class at a call site is caught only by a
+  test that renders that component and asserts its layer, which five now do.
+- Found designing this and filed rather than fixed: react-grid-layout v2.2.3
+  defaults `useCSSTransforms` on and `Dashboard` passes no override, so every
+  grid copy of a tile is a transformed element, and a transformed ancestor is
+  the containing block for `position: fixed`. `PlayerDetailPopup`, the compact
+  `InstalledPanel`'s preview and the command confirms raised from grid tiles
+  therefore open inside the tile's box, not the viewport. The scale cannot
+  change that; a portal can. Recorded in the checklist's Open backlog.
+
+**Verification.** `lib/layers.test.ts` (4 cases) pins the CSS to the module,
+the order, the splash rule and that a bare number resolves to no layer;
+confirmed to fail when one declared value drifts. `ModPreviewDialog.test.tsx`'s
+`declaredZ` now resolves names through the module and throws on a literal, and
+`DisconnectConfirm.test.tsx` (new) pins the pair that caused the original bug,
+the confirm above the manager that raised it; each confirmed to fail with its
+dialog put back on the literal it used to carry. `SettingsModal`,
+`LoaderUpdateDialog` and the presets dropdown each assert their layer, the last
+also that it is portaled out of its tile. `pnpm check-tokens` confirmed to name
+all five layer classes as used-but-uncompiled when the declarations are moved
+out of `@theme`, then green. The Clean pillar's new grep prints nothing.
+
+Frontend suite 722 tests across 62 files, up from 713 across 60; lint holds at
+14 warnings, byte-identical to the count before this change; typecheck and
+`format:check` clean. Entry chunk 154.7 KB gzip against the 165 KB budget,
+unchanged to the tenth of a kilobyte; `check-tokens` counts 68 token classes in
+use, 5 of them layers, all compiled; `check-prefetch` green over six chunks. Go
+is untouched and re-run anyway against the fresh `dist`: `go vet` and `go test`
+clean, `backend/services` at 59.6% against the 49% floor.

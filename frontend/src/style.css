@@ -3,8 +3,26 @@
 /* The design tokens — the @theme mapping and every themed value — are generated
    from the suite's shared source. Do not add token definitions to this file; add
    them to kollektiv/design/tokens.json and run `pnpm gen:tokens`. See
-   src/styles/tokens.css for why. Everything below is hand-authored component CSS. */
+   src/styles/tokens.css for why. Everything below is hand-authored component CSS,
+   with one exception: the overlay layering scale in the @theme block that follows
+   is Konnekt-only (a value that exists in one product is reverted on the next
+   token sync), so it lives here, mirrored from src/lib/layers.ts, which documents
+   it, and pinned to that module by src/lib/layers.test.ts. */
 @import './styles/tokens.css';
+
+/* The overlay layering scale. Tailwind v4's z-* utility resolves --z-index-*, so
+   these five declarations are what make `z-overlay` through `z-splash` real
+   classes; `pnpm check-tokens` asserts each compiles to a rule. Plain @theme, not
+   inline, so the custom properties exist for hand-written CSS too (.splash-overlay
+   below reads one). Which layer is for what, and what the scale does not decide:
+   src/lib/layers.ts. */
+@theme {
+  --z-index-overlay: 100;
+  --z-index-modal: 200;
+  --z-index-dialog: 300;
+  --z-index-popover: 400;
+  --z-index-splash: 500;
+}
 
 @font-face {
   font-family: 'Satoshi';
@@ -347,7 +365,7 @@ input[type='number']::-webkit-outer-spin-button {
 .splash-overlay {
   position: fixed;
   inset: 0;
-  z-index: 9999;
+  z-index: var(--z-index-splash);
   display: flex;
   align-items: center;
   justify-content: center;

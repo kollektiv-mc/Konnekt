@@ -543,10 +543,13 @@ export function Dashboard() {
           change between the two states and the transition on them reads as
           the chip growing into the tile. Position is left off that transition
           — a lagging preview is worse than no preview. Fixed, so it can sit
-          over the navbar as well as the scrollable canvas. */}
+          over the navbar as well as the scrollable canvas, and z-popover, not
+          z-overlay: it renders before the maximize overlay below, so at an
+          equal value it would draw under a tile maximized mid-drag, and a
+          pointer-attached transient is what that layer is for. */}
       {dragPreview && (
         <div
-          className="border-accent bg-accent/6 duration-panel ease-standard pointer-events-none fixed z-[60] -translate-x-1/2 -translate-y-1/2 rounded-[10px] border-2 transition-[width,height]"
+          className="border-accent bg-accent/6 duration-panel ease-standard z-popover pointer-events-none fixed -translate-x-1/2 -translate-y-1/2 rounded-[10px] border-2 transition-[width,height]"
           // eslint-disable-next-line no-restricted-syntax -- cursor-following preview geometry, computed per drag frame
           style={{
             left: dragPreview.x,
@@ -564,14 +567,15 @@ export function Dashboard() {
           const TileComponent = tile.component
           return (
             <Fragment>
-              {/* Backdrop — animated separately from panel so only the bg fades */}
+              {/* Backdrop — animated separately from panel so only the bg fades. Both
+                  on z-overlay: an App-level modal clears them by value (lib/layers.ts). */}
               <div
                 ref={backdropRef}
-                className="absolute inset-0 z-50"
+                className="z-overlay absolute inset-0"
                 onClick={!closing ? closeMaximize : undefined}
               />
               {/* Panel — pointer-events-none on container so backdrop receives clicks */}
-              <div className="pointer-events-none absolute inset-0 z-50 flex items-center justify-center p-6">
+              <div className="z-overlay pointer-events-none absolute inset-0 flex items-center justify-center p-6">
                 <div
                   ref={panelRef}
                   className="pointer-events-auto h-full w-full"
