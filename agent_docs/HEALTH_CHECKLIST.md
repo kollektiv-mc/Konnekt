@@ -575,7 +575,7 @@ performance into stores and closes most of it. The earlier roll-up version of
 this tile also double-fetched mods, including two Modrinth round trips; the
 dashboard does not touch mods at all, so that half is gone.
 
-**P3 — Five copies of `fmtBytes`** (filed 2026-08-30, re-verified 2026-09-01)
+**P3 — Five copies of `fmtBytes`** (filed 2026-08-30, re-verified 2026-09-01, issue #260)
 
 `lib/format.ts`, `tiles/backups/format.ts`, `tiles/backups/BackupsSummary.tsx`,
 `tiles/worlds/WorldHud.tsx` and `tiles/worlds/WorldsSummary.tsx` each define
@@ -828,7 +828,7 @@ was partly wrong)
 individual issues; fix in passing when touching the file)
 - `eventbus.go:37-55`'s per-handler `recover()` swallows panics with no log
   line — a handler crash is invisible even in `konnekt.log`. Add a `slog.Error`
-  inside the recover when next touching the file.
+  inside the recover when next touching the file. Filed as #261.
 - Restore leaves the restored directory with `os.MkdirTemp`'s 0700 mode rather
   than the original's permissions, and deletes the `.bak-<timestamp>` aside copy
   immediately on success (no retained undo) — `backup.go:411-431`. Neither is a
@@ -841,7 +841,7 @@ individual issues; fix in passing when touching the file)
   zips only the named folder; the behavior gap is #26, the comment is local rot
   to fix when #26 lands.
 
-**P2 — The changelog's stacked-PR guarantee is untested** (found 2026-08-28)
+**P2 — The changelog's stacked-PR guarantee is untested** (found 2026-08-28, issue #263)
 - `.github/scripts/release-notes.py`'s `merged_pulls()` is what lets a pull
   request merged into *another* pull request's branch keep its own entry: it
   maps each commit in the range to the pull requests containing it and keeps
@@ -894,23 +894,26 @@ individual issues unless marked; fix in passing when touching the file)
   the UI's in-progress state never clears. Fix both together. While there, the
   `backup:failed` payload comes in two shapes, `map[string]interface{}` with a
   `serverID` (`:321`, `:398`) and `map[string]string` without one (`:455`,
-  `:466`, `:496`, `:507`); pick one.
+  `:466`, `:496`, `:507`); pick one. Filed as #258.
 - `AcceptEula` (`app.go`) does not guard an empty `cfg.WorkingDir`, so
   `filepath.Join("", "eula.txt")` is a relative path into the process CWD, the
   exact case `datadir.go` guards elsewhere. Same fix as the atomic-write entry
   above, and note `writeFileAtomic` is unexported while `app.go` is
-  `package main`: the fix is a service method, not a swap.
+  `package main`: the fix is a service method, not a swap. Filed as #259.
 - `worlds.go`'s wrong "(+ siblings)" comment is on `BackupWorld` at `:286`, not
   `:269` as the entry above says. `DuplicateWorld` a few lines up does iterate
   the `_nether`/`_the_end` suffixes, so the sibling concept is real in that
-  file and only the backup path ignores it. The behaviour gap is #26.
+  file and only the backup path ignores it. The behaviour gap is #26; the
+  comment is #262, together with the `MaxPlayers` one below.
 - `MaxPlayers()` keeping its value after stop is asserted as wanted by
   `stats_test.go:81-84` ("a zero here would blank the tile's players /
   maxPlayers readout"), so the remedy for the inconsistency above is a comment
   on `waitForExit` naming `maxPlayers` and `maxRAMMB` as the two deliberate
-  survivors of an otherwise exhaustive reset, not a behaviour change.
+  survivors of an otherwise exhaustive reset, not a behaviour change. Filed
+  as #262.
 - **A `fixed` overlay inside a grid tile is tile-sized, not viewport-sized**
-  (found designing the layering scale; worth an issue). react-grid-layout
+  (found designing the layering scale; filed as #257, which says what to check
+  at a desk before anything is changed). react-grid-layout
   v2.2.3 defaults `useCSSTransforms` to true and `Dashboard.tsx` passes no
   override, so every non-maximized tile is positioned with `transform:
   translate()`, and `style.css`'s `.tile-outer:hover` adds a second transform.
@@ -922,8 +925,8 @@ individual issues unless marked; fix in passing when touching the file)
   context, it does not pick the containing block. The fix is a portal, the way
   `QuickAddMenu` and the presets dropdown already escape, or a decision that
   in-tile is the intended look.
-- **The EULA modal can open under the server manager or Settings** (worth an
-  issue, `type:bug`). `server:eula-required` is event-raised, and `EulaModal`
+- **The EULA modal can open under the server manager or Settings** (filed as
+  #256, with the start paths still to be checked at a desk). `server:eula-required` is event-raised, and `EulaModal`
   renders first among App's overlays on the same `z-modal` layer as the two
   surfaces a user might have open when a server starts, so it loses on
   document order. One class, `z-modal` to `z-dialog`, fixes it; it was kept

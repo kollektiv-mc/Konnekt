@@ -4479,7 +4479,7 @@ same context, so an equal value would draw it under a tile maximized mid-drag,
 and a pointer-attached transient is what the popover layer is for. The
 `EulaModal` stays `z-modal`, which keeps today's order, although it is
 event-raised and can open under the manager or Settings (both `z-modal`,
-rendered later); one class fixes that and it is filed separately, so this
+rendered later); one class fixes that and it is filed as #256, so this
 change stays a chore with no visible behaviour of its own. And the three
 backdrop-plus-panel pairs (200/201, 400/401, 1000/1001) collapse to one value
 each, because the panel is the later sibling. The intra-tile numbers stay: the
@@ -4521,7 +4521,7 @@ is the scale's.
   the containing block for `position: fixed`. `PlayerDetailPopup`, the compact
   `InstalledPanel`'s preview and the command confirms raised from grid tiles
   therefore open inside the tile's box, not the viewport. The scale cannot
-  change that; a portal can. Recorded in the checklist's Open backlog.
+  change that; a portal can. Filed as #257, marked as needing a desk check.
 
 **Verification.** `lib/layers.test.ts` (4 cases) pins the CSS to the module,
 the order, the splash rule and that a bare number resolves to no layer;
