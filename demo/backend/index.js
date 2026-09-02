@@ -21,7 +21,7 @@
 
 import { api } from "./api.js";
 import * as events from "./events.js";
-import { startStatusTicker } from "./state.js";
+import { startStatusTicker, playerJoined, playerLeft } from "./state.js";
 import {
   CONSOLE_LINES,
   SERVER_ID,
@@ -159,3 +159,10 @@ window.setTimeout(() => {
   seedNotifications();
   startStatusTicker();
 }, REPLAY_DELAY_MS);
+
+// ── The scene hook ──────────────────────────────────────────────────────
+// What the website's clips need that no control in the app can do, because
+// it is the server's side of the conversation: a player leaving or arriving.
+// demo/scenes/*.mjs calls these through Playwright; nothing in the app reads
+// them, and a visitor never sees them.
+window.konnektDemo = { playerJoined, playerLeft };

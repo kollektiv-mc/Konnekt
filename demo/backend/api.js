@@ -119,14 +119,7 @@ export const api = {
   UpdateLoader: refuse("Updating the loader"),
 
   // ── Players ───────────────────────────────────────────────────────────
-  // A stopped server has nobody online, whatever the fixture says.
-  GetPlayerRoster: read((id) =>
-    !survival(id)
-      ? []
-      : state.running(id)
-        ? PLAYERS
-        : PLAYERS.map((p) => ({ ...p, online: false })),
-  ),
+  GetPlayerRoster: read((id) => state.players(id)),
   GetPlayerDetail: read(
     async (_id, name) => PLAYERS.find((p) => p.name === name) ?? PLAYERS[0],
   ),

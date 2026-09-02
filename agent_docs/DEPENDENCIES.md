@@ -108,6 +108,16 @@ Prettier, Vitest, Tailwind, etc.) isn't itemized here; it's inspectable
 directly from `devDependencies` in `frontend/package.json` and doesn't ship in
 the production bundle.
 
+One devDependency earns a line anyway, because it pulls a browser: `playwright`
+drives `demo/record.mjs`, which films the website's feature clips from the
+built demo in CI. It lives in `frontend/package.json` because that is the only
+`package.json` in the repo with tooling in it, and `demo/` resolves it from
+there. Pinned exactly, since each Playwright version ships its own Chromium
+build and the clips should come out the same everywhere. Not `puppeteer`: the
+scenes are written as gestures against the real UI, and Playwright's locators
+by role and name, its stepped pointer moves and its per-context device scale
+are what make those gestures survive a restyle.
+
 ## Removed
 
 - `uplot` — was listed as a direct dependency but never imported under

@@ -34,3 +34,5 @@ graphify-out/
 __pycache__/
 *.pyc
 demo/dist/
+# The recorder's frames (demo/record.mjs), kept only with DEMO_KEEP_FRAMES
+demo/.frames/

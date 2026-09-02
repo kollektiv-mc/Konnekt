@@ -19,6 +19,7 @@ import {
   STARTED_AT,
   CREATIVE_ID,
   CREATIVE_STATUS,
+  PLAYERS,
   configFor,
   bootLines,
   STOP_LINES,
@@ -179,6 +180,39 @@ export function stopServer(id) {
     ],
   ]);
 }
+
+// ── Players ─────────────────────────────────────────────────────────────
+/* The roster is the fixture's until somebody leaves or arrives. Nothing in the
+   app can make that happen — players come and go on the server's side — so it
+   is reachable only through the scene hook index.js exposes for the website's
+   clips, and it does what server.go does when it sees a login line: fixes the
+   roster, then emits the event the tiles refresh on. A stopped server has
+   nobody online whatever the roster says. */
+let roster = structuredClone(PLAYERS);
+
+export const players = (id) =>
+  id !== SERVER_ID
+    ? []
+    : running(id)
+      ? roster
+      : roster.map((p) => ({ ...p, online: false }));
+
+function setOnline(name, online) {
+  const p = roster.find((x) => x.name === name);
+  if (!p || p.online === online) return;
+  p.online = online;
+  p.lastOnline = Date.now();
+  const r = rec(SERVER_ID);
+  r.status = {
+    ...r.status,
+    players: roster.filter((x) => x.online).length,
+  };
+  events.EventsEmit(online ? "player:joined" : "player:left", { name });
+  events.EventsEmit("server:status", status(SERVER_ID));
+}
+
+export const playerJoined = (name) => setOnline(name, true);
+export const playerLeft = (name) => setOnline(name, false);
 
 /* stats.go pushes server:status every ten seconds whether or not the server
    is up. This is that tick, and it is what keeps the uptime counting after a

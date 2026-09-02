@@ -8,9 +8,14 @@
 # Three triggers, deliberately. A release is what the demo is *of*, so a tag
 # rebuilds it and the demo can never be older than the newest build; main keeps
 # it honest between releases; and a pull request that touches the demo runs the
-# build and its two checks without publishing, so a binding the demo does not
-# answer is red before it merges rather than after. None of them ever writes
-# frontend/dist, which main.go embeds and check-bundle measures.
+# build, its checks and the recording without publishing, so a binding the demo
+# does not answer or a scene that cannot find its controls is red before it
+# merges rather than after. None of them ever writes frontend/dist, which
+# main.go embeds and check-bundle measures.
+#
+# The website's feature clips are filmed here too (demo/record.mjs), from the
+# very build that is published, and shipped beside it under /scenes/. That is
+# what keeps them from ever being older than the demo they sit next to.
 
 name: demo
 
@@ -84,6 +89,27 @@ jobs:
       # same bargain the token layer makes in ci.yml.
       - name: The generated block palette is in sync
         run: git diff --exit-code demo/backend/fixtures/blockdefs.json
+
+      # ── The clips ────────────────────────────────────────────────────────
+      # The runner image ships Chromium but no ffmpeg, and demo/record.mjs
+      # wants libvpx-vp9, libx264 and libwebp, which Ubuntu's package has.
+      # Playwright's own Chromium is the one its devDependency pins, so the
+      # recording runs on the same build everywhere; --with-deps installs the
+      # shared libraries it needs on the runner.
+      - name: Install ffmpeg
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y -q --no-install-recommends ffmpeg
+
+      - name: Install the recorder's browser
+        run: pnpm exec playwright install --with-deps chromium
+        working-directory: frontend
+
+      # Films every scene under demo/scenes/ against demo/dist and writes the
+      # clips into it. A scene whose tile has moved its controls fails here,
+      # which is the point of running it on every pull request.
+      - name: Film the scenes
+        run: node demo/record.mjs
 
       # frontend/dist is what main.go embeds and what check-bundle-size.mjs
       # measures. The demo builds to demo/dist via --outDir, and this is the
