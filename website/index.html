@@ -129,47 +129,63 @@
 
     <section class="section-full" id="about" data-nav="About">
       <div class="container">
-        <div class="section-head reveal">
-          <span class="eyebrow">[i] about</span>
-          <h2>Everything in one window</h2>
-          <p>
-            Konnekt is a desktop app for Minecraft servers you host yourself. One window in place of
-            a terminal, an RCON client and a file browser sitting open side by side.
-          </p>
-          <p>
-            Konnekt runs on your own machine, against server folders you already have. The dashboard
-            is a grid of tiles you arrange yourself, and the automation is a node graph rather than
-            a cron line.
-          </p>
+        <!-- The one section on this page set as two columns rather than a
+             centred block. It is the first thing after the hero, so it is also
+             the first look at the app: the shot carries the claim the heading
+             makes in words, and the two read together. -->
+        <div class="about-split">
+          <div class="about-copy">
+            <div class="section-head reveal">
+              <span class="eyebrow">[i] about</span>
+              <h2>Everything in one window</h2>
+              <p>
+                Konnekt is a desktop app for Minecraft servers you host yourself. One window in
+                place of a terminal, an RCON client and a file browser sitting open side by side.
+              </p>
+              <p>
+                Konnekt runs on your own machine, against server folders you already have. The
+                dashboard is a grid of tiles you arrange yourself, and the automation is a node
+                graph rather than a cron line.
+              </p>
+            </div>
+            <!-- Two facts, each a label over a row of tags and nothing else. They were
+                 cards, which put a bordered box around six words and had them
+                 competing with the feature grid one scroll below for the same kind of
+                 attention. The alpha status they used to sit beside is already stated
+                 by the footer badge and the disclaimer above it. -->
+            <dl class="about-facts">
+              <div class="about-fact reveal" style="--reveal-delay: 0ms">
+                <dt>Servers</dt>
+                <dd class="fact-pills">
+                  <span class="pill">Vanilla</span>
+                  <span class="pill">Paper</span>
+                  <span class="pill">Spigot</span>
+                  <span class="pill">Bukkit</span>
+                  <span class="pill">Fabric</span>
+                  <span class="pill">NeoForge</span>
+                </dd>
+              </div>
+              <div class="about-fact reveal" style="--reveal-delay: 60ms">
+                <dt>Platforms</dt>
+                <!-- Narrower than the servers' box so these break 2/1; see
+                     --pills-w in styles.css. -->
+                <dd class="fact-pills" style="--pills-w: 150px">
+                  <span class="pill">Windows</span>
+                  <span class="pill">Linux</span>
+                  <span class="pill">macOS</span>
+                </dd>
+              </div>
+            </dl>
+          </div>
+          <figure class="about-shot reveal" style="--reveal-delay: 120ms">
+            <img
+              src="/assets/img/overview.png"
+              alt="Konnekt's dashboard: a grid of tiles over one server, among them the live console, server stats and performance history."
+              loading="lazy"
+              decoding="async"
+            />
+          </figure>
         </div>
-        <!-- Two facts, each a label over a row of tags and nothing else. They were
-             cards, which put a bordered box around six words and had them
-             competing with the feature grid one scroll below for the same kind of
-             attention. The alpha status they used to sit beside is already stated
-             by the footer badge and the disclaimer above it. -->
-        <dl class="about-facts">
-          <div class="about-fact reveal" style="--reveal-delay: 0ms">
-            <dt>Servers</dt>
-            <dd class="fact-pills">
-              <span class="pill">Vanilla</span>
-              <span class="pill">Paper</span>
-              <span class="pill">Spigot</span>
-              <span class="pill">Bukkit</span>
-              <span class="pill">Fabric</span>
-              <span class="pill">NeoForge</span>
-            </dd>
-          </div>
-          <div class="about-fact reveal" style="--reveal-delay: 60ms">
-            <dt>Platforms</dt>
-            <!-- Narrower than the servers' box so these break 2/1; see
-                 --pills-w in styles.css. -->
-            <dd class="fact-pills" style="--pills-w: 150px">
-              <span class="pill">Windows</span>
-              <span class="pill">Linux</span>
-              <span class="pill">macOS</span>
-            </dd>
-          </div>
-        </dl>
       </div>
     </section>
 
