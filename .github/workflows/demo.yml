@@ -5,10 +5,12 @@
 # built bundle into it would take that property away. The demo is its own
 # Cloudflare Pages project instead, and the site links out to it.
 #
-# Two triggers, deliberately. A release is what the demo is *of*, so a tag
+# Three triggers, deliberately. A release is what the demo is *of*, so a tag
 # rebuilds it and the demo can never be older than the newest build; main keeps
-# it honest between releases. Neither ever writes frontend/dist, which main.go
-# embeds and check-bundle measures.
+# it honest between releases; and a pull request that touches the demo runs the
+# build and its two checks without publishing, so a binding the demo does not
+# answer is red before it merges rather than after. None of them ever writes
+# frontend/dist, which main.go embeds and check-bundle measures.
 
 name: demo
 
@@ -17,6 +19,15 @@ on:
     branches: [main]
     # Nothing else can change what the demo renders. A website-only or docs-only
     # push would otherwise rebuild and redeploy it for no reason.
+    paths:
+      - "frontend/**"
+      - "demo/**"
+      - "backend/services/scheduler_blocks.go"
+      - ".github/workflows/demo.yml"
+  # The same four paths, listed twice because a workflow cannot share a list
+  # between two events. The publish step below is gated on the event, so this
+  # never deploys.
+  pull_request:
     paths:
       - "frontend/**"
       - "demo/**"
