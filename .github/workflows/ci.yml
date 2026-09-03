@@ -169,6 +169,13 @@ jobs:
       # retitled section is otherwise only found by loading the page.
       - run: node scripts/check-website-links.mjs
 
+      # The home page's feature showcase plays clips the demo's build films
+      # (demo/record.mjs) and serves from another Pages project, which the link
+      # checker above skips as external. This holds the page's tabs and
+      # demo/scenes/ to one list, so a renamed scene is red here rather than a
+      # poster that never loads on the live site.
+      - run: node scripts/check-website-scenes.mjs
+
       # The changelog page shows only the "What's changed" section of a release
       # body. A regex that cuts in the wrong place truncates the public
       # changelog and looks like a short release rather than a bug.
