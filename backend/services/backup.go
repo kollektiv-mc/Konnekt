@@ -264,9 +264,47 @@ func (s *BackupService) narrateFailed(serverID, line string) {
 	}
 }
 
-// sizeMB renders a byte count for a console line.
-func sizeMB(n int64) string {
-	return fmt.Sprintf("%.1f MB", float64(n)/(1024*1024))
+// humanSize renders a byte count for a console line in the unit a person would
+// pick: a 4 GiB zip reads "4.00 GB", not "4096.0 MB" (#260). Same tiers and
+// decimals as the frontend's fmtBytes (lib/format.ts), so the console and the
+// tile agree on a size.
+func humanSize(n int64) string {
+	const kb, mb, gb = 1 << 10, 1 << 20, 1 << 30
+	switch {
+	case n >= gb:
+		return fmt.Sprintf("%.2f GB", float64(n)/gb)
+	case n >= mb:
+		return fmt.Sprintf("%.1f MB", float64(n)/mb)
+	case n >= kb:
+		return fmt.Sprintf("%.1f KB", float64(n)/kb)
+	}
+	return fmt.Sprintf("%d B", n)
+}
+
+// statFile is os.Stat, swapped by tests to fail the size read after a backup's
+// archive has closed. It exists only as that seam.
+var statFile = os.Stat
+
+// emitFailed sends backup:failed in the one shape every listener reads:
+// serverID and error. The restore paths used to send a map[string]string with
+// only the error, so a listener filtering by server (the worlds tile's
+// useBackupWorlds) never saw a failed restore (#258).
+func (s *BackupService) emitFailed(serverID string, err error) {
+	s.bus.Emit(EventBackupFailed, map[string]interface{}{
+		"serverID": serverID,
+		"error":    err.Error(),
+	})
+}
+
+// failBackup is the one exit for a backup that has already announced itself
+// with backup:started: it emits backup:failed so the UI's in-progress row
+// clears, narrates the line to the console, and hands the error back. Every
+// failure after that emit goes through here (#258); the ones before it return
+// plain errors, because nothing has been shown yet.
+func (s *BackupService) failBackup(serverID, line string, err error) error {
+	s.emitFailed(serverID, err)
+	s.narrateFailed(serverID, line+": "+err.Error())
+	return err
 }
 
 func (s *BackupService) CreateBackup(serverID string) (models.Backup, error) {
@@ -318,17 +356,14 @@ func (s *BackupService) CreateBackup(serverID string) (models.Backup, error) {
 	}
 	if zipErr != nil {
 		_ = os.Remove(destPath) //nolint:errcheck // best-effort cleanup of a partial archive; the error below is what matters
-		s.bus.Emit(EventBackupFailed, map[string]interface{}{
-			"serverID": serverID,
-			"error":    zipErr.Error(),
-		})
-		s.narrateFailed(serverID, "Backup failed: "+zipErr.Error())
-		return models.Backup{}, zipErr
+		return models.Backup{}, s.failBackup(serverID, "Backup failed", zipErr)
 	}
 
-	info, err := os.Stat(destPath)
+	// The archive is complete at this point, so it is left in place: the
+	// failure is in reporting its size, not in what was written.
+	info, err := statFile(destPath)
 	if err != nil {
-		return models.Backup{}, err
+		return models.Backup{}, s.failBackup(serverID, "Backup failed reading the finished archive", err)
 	}
 	b := models.Backup{
 		Filename:  filename,
@@ -341,7 +376,7 @@ func (s *BackupService) CreateBackup(serverID string) (models.Backup, error) {
 		"serverID": serverID,
 		"filename": b.Filename,
 	})
-	s.narrateDone(serverID, fmt.Sprintf("Backup finished: %s (%s)", b.Filename, sizeMB(b.SizeBytes)))
+	s.narrateDone(serverID, fmt.Sprintf("Backup finished: %s (%s)", b.Filename, humanSize(b.SizeBytes)))
 	return b, nil
 }
 
@@ -395,17 +430,14 @@ func (s *BackupService) CreateWorldBackup(serverID, worldName string) (models.Ba
 	}
 	if zipErr != nil {
 		_ = os.Remove(destPath) //nolint:errcheck // best-effort cleanup of a partial archive; the error below is what matters
-		s.bus.Emit(EventBackupFailed, map[string]interface{}{
-			"serverID": serverID,
-			"error":    zipErr.Error(),
-		})
-		s.narrateFailed(serverID, "Backup failed: "+zipErr.Error())
-		return models.Backup{}, zipErr
+		return models.Backup{}, s.failBackup(serverID, "Backup failed", zipErr)
 	}
 
-	info, err := os.Stat(destPath)
+	// The archive is complete at this point, so it is left in place: the
+	// failure is in reporting its size, not in what was written.
+	info, err := statFile(destPath)
 	if err != nil {
-		return models.Backup{}, err
+		return models.Backup{}, s.failBackup(serverID, "Backup failed reading the finished archive", err)
 	}
 	b := models.Backup{
 		Filename:  filename,
@@ -419,7 +451,7 @@ func (s *BackupService) CreateWorldBackup(serverID, worldName string) (models.Ba
 		"serverID": serverID,
 		"filename": b.Filename,
 	})
-	s.narrateDone(serverID, fmt.Sprintf("Backup finished: %s (%s)", b.Filename, sizeMB(b.SizeBytes)))
+	s.narrateDone(serverID, fmt.Sprintf("Backup finished: %s (%s)", b.Filename, humanSize(b.SizeBytes)))
 	return b, nil
 }
 
@@ -452,7 +484,7 @@ func (s *BackupService) RestoreBackup(serverID, filename string) error {
 		defer os.RemoveAll(tmp)
 
 		if err := unzipTo(zipPath, tmp); err != nil {
-			s.bus.Emit(EventBackupFailed, map[string]string{"error": err.Error()})
+			s.emitFailed(serverID, err)
 			s.narrateFailed(serverID, "Restore failed while extracting: "+err.Error())
 			return err
 		}
@@ -463,7 +495,7 @@ func (s *BackupService) RestoreBackup(serverID, filename string) error {
 		}
 		if err := os.Rename(tmp, workingDir); err != nil {
 			_ = os.Rename(aside, workingDir) //nolint:errcheck // best-effort rollback; err below is already the reported failure
-			s.bus.Emit(EventBackupFailed, map[string]string{"error": err.Error()})
+			s.emitFailed(serverID, err)
 			s.narrateFailed(serverID, "Restore failed while swapping files, previous state kept: "+err.Error())
 			return err
 		}
@@ -493,7 +525,7 @@ func (s *BackupService) RestoreBackup(serverID, filename string) error {
 		defer os.RemoveAll(tmp)
 
 		if err := unzipTo(zipPath, tmp); err != nil {
-			s.bus.Emit(EventBackupFailed, map[string]string{"error": err.Error()})
+			s.emitFailed(serverID, err)
 			s.narrateFailed(serverID, "Restore failed while extracting: "+err.Error())
 			return err
 		}
@@ -504,7 +536,7 @@ func (s *BackupService) RestoreBackup(serverID, filename string) error {
 		}
 		if err := os.Rename(tmp, targetDir); err != nil {
 			_ = os.Rename(aside, targetDir) //nolint:errcheck // best-effort rollback; err below is already the reported failure
-			s.bus.Emit(EventBackupFailed, map[string]string{"error": err.Error()})
+			s.emitFailed(serverID, err)
 			s.narrateFailed(serverID, "Restore failed while swapping files, previous state kept: "+err.Error())
 			return err
 		}

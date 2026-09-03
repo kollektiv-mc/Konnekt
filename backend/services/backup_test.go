@@ -2,6 +2,7 @@ package services
 
 import (
 	"archive/zip"
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -559,5 +560,147 @@ func TestReserveBackupFileNeverTruncatesAnExistingFile(t *testing.T) {
 	}
 	if string(got) != "original-contents" {
 		t.Errorf("existing backup = %q, want it untouched", got)
+	}
+}
+
+// ─── backup:failed after the archive closes (#258) ──────────────────────────
+
+// failStat swaps the post-zip size read so it fails: the one failure path out
+// of five that used to return its error with no event and no narration, while
+// backup:started had already put an in-progress row on screen.
+func failStat(t *testing.T) {
+	t.Helper()
+	orig := statFile
+	statFile = func(string) (os.FileInfo, error) { return nil, errors.New("stat exploded") }
+	t.Cleanup(func() { statFile = orig })
+}
+
+// withBus wires a real bus into the fixture, which deliberately has none, and
+// returns the collector for backup:failed.
+func withBus(svc *BackupService) func() []any {
+	bus := NewEventBus() // no ctx: Emit skips the Wails runtime and only fans out in-process
+	svc.bus = bus
+	return collect(bus, EventBackupFailed)
+}
+
+func assertBackupFailedReported(t *testing.T, svc *BackupService, failed func() []any) {
+	t.Helper()
+	got := failed()
+	if len(got) != 1 {
+		t.Fatalf("backup:failed emitted %d times, want 1", len(got))
+	}
+	payload, ok := got[0].(map[string]interface{})
+	if !ok {
+		t.Fatalf("backup:failed payload is %T, want map[string]interface{}", got[0])
+	}
+	if payload["serverID"] != testServerID {
+		t.Errorf("serverID = %v, want %q", payload["serverID"], testServerID)
+	}
+	if msg, _ := payload["error"].(string); !strings.Contains(msg, "stat exploded") {
+		t.Errorf("error = %q, want the stat failure", msg)
+	}
+
+	var sawFailed, sawFinished bool
+	for _, entry := range svc.server.GetConsoleHistory(testServerID) {
+		if strings.Contains(entry.Line, "Backup failed") && strings.Contains(entry.Line, "stat exploded") {
+			sawFailed = true
+			if entry.Outcome != outcomeFailed {
+				t.Errorf("failure line %q has Outcome %q, want %q", entry.Line, entry.Outcome, outcomeFailed)
+			}
+		}
+		if strings.Contains(entry.Line, "Backup finished") {
+			sawFinished = true
+		}
+	}
+	if !sawFailed {
+		t.Errorf("no failure narration: %v", consoleLines(svc.server))
+	}
+	if sawFinished {
+		t.Error("backup narrated success despite failing")
+	}
+}
+
+func TestCreateBackupReportsAFailedSizeRead(t *testing.T) {
+	svc, workDir := newBackupFixture(t)
+	writeFile(t, filepath.Join(workDir, "world", "level.dat"), "data")
+	failed := withBus(svc)
+	failStat(t)
+
+	if _, err := svc.CreateBackup(testServerID); err == nil {
+		t.Fatal("CreateBackup with a failing size read = nil error, want an error")
+	}
+	assertBackupFailedReported(t, svc, failed)
+}
+
+func TestCreateWorldBackupReportsAFailedSizeRead(t *testing.T) {
+	svc, workDir := newBackupFixture(t)
+	writeFile(t, filepath.Join(workDir, "world", "level.dat"), "data")
+	failed := withBus(svc)
+	failStat(t)
+
+	if _, err := svc.CreateWorldBackup(testServerID, "world"); err == nil {
+		t.Fatal("CreateWorldBackup with a failing size read = nil error, want an error")
+	}
+	assertBackupFailedReported(t, svc, failed)
+}
+
+// Every backup:failed carries the server it belongs to. The restore paths used
+// to send only the error, so a listener that filters by serverID never saw a
+// failed restore and the worlds tile kept a stale list.
+func TestRestoreBackupFailureNamesItsServer(t *testing.T) {
+	svc, workDir := newBackupFixture(t)
+	writeFile(t, filepath.Join(workDir, "world", "level.dat"), "data")
+	b, err := svc.CreateBackup(testServerID)
+	if err != nil {
+		t.Fatalf("CreateBackup error: %v", err)
+	}
+	zipPath, _, _, _, err := svc.findBackupFile(testServerID, b.Filename)
+	if err != nil {
+		t.Fatalf("findBackupFile error: %v", err)
+	}
+	writeFile(t, zipPath, "not a zip at all")
+	failed := withBus(svc)
+
+	if err := svc.RestoreBackup(testServerID, b.Filename); err == nil {
+		t.Fatal("RestoreBackup over a corrupt archive = nil error, want an error")
+	}
+	got := failed()
+	if len(got) != 1 {
+		t.Fatalf("backup:failed emitted %d times, want 1", len(got))
+	}
+	payload, ok := got[0].(map[string]interface{})
+	if !ok {
+		t.Fatalf("backup:failed payload is %T, want map[string]interface{}", got[0])
+	}
+	if payload["serverID"] != testServerID {
+		t.Errorf("serverID = %v, want %q", payload["serverID"], testServerID)
+	}
+	if msg, _ := payload["error"].(string); msg == "" {
+		t.Error("error is empty")
+	}
+}
+
+// The console narrates every finished backup's size, and it used to say
+// "4096.0 MB" for a 4 GiB zip (#260).
+func TestHumanSize(t *testing.T) {
+	const kb, mb, gb = 1 << 10, 1 << 20, 1 << 30
+	cases := []struct {
+		n    int64
+		want string
+	}{
+		{0, "0 B"},
+		{1023, "1023 B"},
+		{kb, "1.0 KB"},
+		{kb + kb/2, "1.5 KB"},
+		{mb, "1.0 MB"},
+		{mb * 5 / 2, "2.5 MB"},
+		{gb - 1, "1024.0 MB"},
+		{gb, "1.00 GB"},
+		{gb * 17 / 4, "4.25 GB"},
+	}
+	for _, c := range cases {
+		if got := humanSize(c.n); got != c.want {
+			t.Errorf("humanSize(%d) = %q, want %q", c.n, got, c.want)
+		}
 	}
 }
