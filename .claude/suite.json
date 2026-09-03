@@ -19,6 +19,7 @@
       { "name": "format", "run": "pnpm format:check", "cwd": "frontend" },
       { "name": "website format", "run": "pnpm format:website", "cwd": "frontend" },
       { "name": "website links", "run": "node scripts/check-website-links.mjs" },
+      { "name": "website scenes", "run": "node scripts/check-website-scenes.mjs" },
       {
         "name": "release notes extract",
         "run": "node scripts/check-release-notes-extract.mjs"

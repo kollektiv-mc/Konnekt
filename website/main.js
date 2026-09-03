@@ -483,6 +483,167 @@
       window.KonnektDisclose(details, 220)
     })
 
+  // ── Feature showcase ────────────────────────────────────────────────────
+  // Nine tabs, one <video>, nine tabpanels. The clips come from the demo's
+  // own build (demo/record.mjs) and live beside it, so this only ever asks
+  // for <demo>/scenes/<id>.webm|mp4|webp.
+  //
+  // The origin and the scenes are constants here rather than attributes read
+  // back off the page. A URL assembled from DOM text is what CodeQL reports
+  // as text reinterpreted as HTML, and the point stands even for text this
+  // page wrote itself: nothing that reaches a src or an href should have
+  // passed through the document first. scripts/check-website-scenes.mjs
+  // holds this table to the tabs' data-scene order and to demo/scenes/, so
+  // the three cannot drift apart.
+  //
+  // What plays is decided the way the docs page's step demos are: one at a
+  // time, in the order written, and only while the box is on screen. A clip
+  // that ends hands over to the next tab, unless a visitor has picked one —
+  // then that one loops, because a pick is a request to watch it, not the
+  // sequence. Hovering the box holds the current clip the same way. Reduced
+  // motion never plays anything: the tabs still switch the poster and the
+  // points, and the demo link is the way to see it move.
+  var DEMO = 'https://konnekt-demo.pages.dev'
+  var SCENES = [
+    { id: 'dashboard', tile: '' },
+    { id: 'console', tile: 'console' },
+    { id: 'players', tile: 'players' },
+    { id: 'performance', tile: 'performance' },
+    { id: 'worlds', tile: 'worlds' },
+    { id: 'backups', tile: 'backups' },
+    { id: 'config', tile: 'server-config' },
+    { id: 'mods', tile: 'mods' },
+    { id: 'servers', tile: '' },
+  ]
+  var showcase = document.querySelector('.showcase')
+  var showcaseTabs = showcase ? [].slice.call(showcase.querySelectorAll('[role="tab"]')) : []
+  // A tab count that is not the table's means the page and this script have
+  // drifted; the check above would have said so, but nothing below may guess.
+  if (showcase && showcaseTabs.length === SCENES.length) {
+    var tabs = showcaseTabs
+    var panels = [].slice.call(showcase.querySelectorAll('[role="tabpanel"]'))
+    var media = showcase.querySelector('.showcase-media')
+    var video = showcase.querySelector('video')
+    var openLink = showcase.querySelector('.showcase-open')
+    var current = Math.max(
+      0,
+      tabs.findIndex(function (t) {
+        return t.getAttribute('aria-selected') === 'true'
+      }),
+    )
+    var picked = false // a visitor chose a tab; the clip loops instead of moving on
+    var hovering = false
+    var onScreen = false
+
+    var canPlay = function () {
+      return onScreen && !reduceMotion && video && typeof video.play === 'function'
+    }
+
+    var play = function () {
+      if (!canPlay()) return
+      var p = video.play()
+      if (p && p.catch) {
+        p.catch(function () {
+          /* Autoplay refused, or the source is unreachable: the poster stays. */
+        })
+      }
+    }
+
+    var show = function (i, andPlay) {
+      current = (i + tabs.length) % tabs.length
+      var tab = tabs[current]
+      var scene = SCENES[current]
+
+      tabs.forEach(function (t, k) {
+        var on = k === current
+        t.setAttribute('aria-selected', on ? 'true' : 'false')
+        t.tabIndex = on ? 0 : -1
+      })
+      panels.forEach(function (panel) {
+        panel.hidden = panel.id !== tab.getAttribute('aria-controls')
+      })
+      if (openLink) openLink.href = DEMO + '/' + (scene.tile ? '?tile=' + scene.tile : '')
+
+      if (video) {
+        // Sources are rebuilt rather than swapped in place: a <video> only
+        // re-evaluates its <source> children on load().
+        video.pause()
+        video.poster = DEMO + '/scenes/' + scene.id + '.webp'
+        video.setAttribute('aria-label', tab.textContent + ', in action')
+        while (video.firstChild) video.removeChild(video.firstChild)
+        ;[
+          ['webm', 'video/webm'],
+          ['mp4', 'video/mp4'],
+        ].forEach(function (kind) {
+          var source = document.createElement('source')
+          source.src = DEMO + '/scenes/' + scene.id + '.' + kind[0]
+          source.type = kind[1]
+          video.appendChild(source)
+        })
+        video.load()
+        if (andPlay) play()
+      }
+    }
+
+    tabs.forEach(function (tab, i) {
+      tab.addEventListener('click', function () {
+        picked = true
+        show(i, true)
+      })
+      // The tabs pattern: arrows move, Home and End jump, focus follows.
+      tab.addEventListener('keydown', function (e) {
+        var to = null
+        if (e.key === 'ArrowRight') to = i + 1
+        else if (e.key === 'ArrowLeft') to = i - 1
+        else if (e.key === 'Home') to = 0
+        else if (e.key === 'End') to = tabs.length - 1
+        if (to === null) return
+        e.preventDefault()
+        picked = true
+        show(to, true)
+        tabs[current].focus()
+      })
+    })
+
+    if (video) {
+      video.addEventListener('ended', function () {
+        if (picked || hovering) {
+          video.currentTime = 0
+          play()
+        } else {
+          show(current + 1, true)
+        }
+      })
+    }
+
+    if (media) {
+      media.addEventListener('mouseenter', function () {
+        hovering = true
+      })
+      media.addEventListener('mouseleave', function () {
+        hovering = false
+      })
+    }
+
+    // Plays only while the box is in front of you, and picks up where it
+    // left off when you come back. The same band the backdrops use.
+    if ('IntersectionObserver' in window && media) {
+      new IntersectionObserver(
+        function (entries) {
+          var visible = entries[0].isIntersecting
+          if (visible === onScreen) return
+          onScreen = visible
+          if (visible) play()
+          else if (video) video.pause()
+        },
+        { threshold: 0.4 },
+      ).observe(media)
+    } else {
+      onScreen = true
+      play()
+    }
+  }
+
   // ── Cursor glow on tiles ────────────────────────────────────────────────
   // Feeds --mx/--my (tile-relative pixels) to the radial gradient in
   // styles.css. One delegated listener rather than one per tile, so the cards
@@ -491,7 +652,8 @@
   // to follow, and the glow would stick to whatever you last tapped.
   var GLOW_SELECTOR =
     '.feat, .doc-section, .dl-card, .download-primary, .release, .cta-panel, ' +
-    '.spotlight-media, .spotlight-points li, .rm-stage-card'
+    '.spotlight-media, .spotlight-points li, .showcase-media, .showcase-points li, ' +
+    '.rm-stage-card'
 
   if (window.matchMedia('(hover: hover) and (pointer: fine)').matches) {
     var glowTile = null
