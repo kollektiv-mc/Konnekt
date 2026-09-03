@@ -227,6 +227,38 @@ func (s *ConfigEditorService) WriteConfigFile(serverID, relPath, content string)
 	return writeFileAtomic(abs, []byte(content), 0644)
 }
 
+// eulaContent is what AcceptEula writes. Mojang's server only reads the
+// eula=true line; the comment says who wrote it.
+const eulaContent = "# EULA accepted via Konnekt\neula=true\n"
+
+// AcceptEula writes eula.txt into the server's working directory.
+//
+// It lives here rather than in app.go because that was the one place app code
+// did its own file I/O, with a bare os.WriteFile and no check that the
+// directory was set (#259). Atomic like every other server-file write since
+// #116, so a crash mid-write cannot leave a half-written eula.txt the server
+// then refuses; and an unset working directory is an error, because
+// filepath.Join("", "eula.txt") is the relative path "eula.txt" and would land
+// wherever the process happened to be launched from, the same case
+// WriteDataFile guards for the data dir.
+//
+// Not routed through sandbox or the config_backups snapshot: the path is a
+// constant, and the previous eula.txt holds nothing worth an undo copy.
+func (s *ConfigEditorService) AcceptEula(serverID string) error {
+	workDir, err := s.workingDir(serverID)
+	if err != nil {
+		return err
+	}
+	if workDir == "" {
+		return fmt.Errorf("accept EULA for %s: working directory is not set", serverID)
+	}
+	path := filepath.Join(workDir, "eula.txt")
+	if err := writeFileAtomic(path, []byte(eulaContent), 0644); err != nil {
+		return fmt.Errorf("write %s: %w", path, err)
+	}
+	return nil
+}
+
 func (s *ConfigEditorService) workingDir(serverID string) (string, error) {
 	cfg, err := s.appConfig.GetServerConfig(serverID)
 	if err != nil {

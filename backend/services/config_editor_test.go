@@ -332,3 +332,88 @@ func TestConfigBackupNamesSortLegacyBeforeNewInTheSameSecond(t *testing.T) {
 		t.Errorf("legacy %q does not sort before new %q; pruneBackups would delete the newer one first", legacy, fresh)
 	}
 }
+
+// ─── AcceptEula ─────────────────────────────────────────────────────────────
+
+func TestAcceptEulaWritesTheFile(t *testing.T) {
+	svc, workDir := newConfigEditorFixture(t)
+
+	if err := svc.AcceptEula("srv1"); err != nil {
+		t.Fatalf("AcceptEula error: %v", err)
+	}
+	data, err := os.ReadFile(filepath.Join(workDir, "eula.txt"))
+	if err != nil {
+		t.Fatalf("reading eula.txt: %v", err)
+	}
+	if !strings.Contains(string(data), "eula=true\n") {
+		t.Errorf("eula.txt = %q, want it to carry eula=true", data)
+	}
+	// Atomic writes leave no temp file beside the target.
+	entries, err := os.ReadDir(workDir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, e := range entries {
+		if e.Name() != "eula.txt" {
+			t.Errorf("unexpected file %q beside eula.txt", e.Name())
+		}
+	}
+}
+
+// filepath.Join("", "eula.txt") is the relative path "eula.txt", so the old
+// app.go write landed in the process's current directory for a server whose
+// working directory was never set. Now it is a refusal that names the cause.
+func TestAcceptEulaRefusesAnUnsetWorkingDir(t *testing.T) {
+	svc, _ := newConfigEditorFixture(t)
+	if err := svc.appConfig.SaveServerConfig(models.ServerConfig{ID: "srv1", Name: "Test", WorkingDir: ""}); err != nil {
+		t.Fatal(err)
+	}
+	cwd := t.TempDir()
+	t.Chdir(cwd)
+
+	err := svc.AcceptEula("srv1")
+	if err == nil {
+		t.Fatal("AcceptEula with an unset working directory = nil error, want an error")
+	}
+	if !strings.Contains(err.Error(), "working directory") {
+		t.Errorf("error %q does not name the working directory", err)
+	}
+	if _, statErr := os.Stat(filepath.Join(cwd, "eula.txt")); !os.IsNotExist(statErr) {
+		t.Errorf("eula.txt was written into the process's current directory (stat err %v)", statErr)
+	}
+}
+
+func TestAcceptEulaFailsForAnUnknownServer(t *testing.T) {
+	svc, _ := newConfigEditorFixture(t)
+	if err := svc.AcceptEula("nope"); err == nil {
+		t.Fatal("AcceptEula for an unknown server = nil error, want an error")
+	}
+}
+
+// A crash at the rename step must leave the previous eula.txt intact rather
+// than a truncated one: the same contract atomicwrite_test.go pins, exercised
+// through this caller because it is the one that used to bypass it.
+func TestAcceptEulaFailedRenameLeavesTheOldFileIntact(t *testing.T) {
+	svc, workDir := newConfigEditorFixture(t)
+	path := filepath.Join(workDir, "eula.txt")
+	if err := os.WriteFile(path, []byte("eula=false\n"), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	orig := renameFile
+	renameFile = func(oldpath, newpath string) error {
+		return fmt.Errorf("simulated crash before rename")
+	}
+	t.Cleanup(func() { renameFile = orig })
+
+	if err := svc.AcceptEula("srv1"); err == nil {
+		t.Fatal("AcceptEula with a failing rename = nil error, want an error")
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("reading eula.txt after the failed write: %v", err)
+	}
+	if string(data) != "eula=false\n" {
+		t.Errorf("eula.txt = %q after a failed write, want the old content untouched", data)
+	}
+}
