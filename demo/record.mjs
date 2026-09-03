@@ -285,19 +285,25 @@ async function film(scene) {
   };
 
   const started = Date.now();
+  // Cleared once the scene is done: a live timer keeps the process alive
+  // until it fires, and this one is four minutes long. The first CI run
+  // spent three and a half of them idle after the last clip was written.
+  let timer;
   try {
     await Promise.race([
       scene.run(ctx),
-      new Promise((_, reject) =>
-        setTimeout(
+      new Promise((_, reject) => {
+        timer = setTimeout(
           () => reject(new Error(`took longer than ${SCENE_TIMEOUT_MS}ms`)),
           SCENE_TIMEOUT_MS,
-        ),
-      ),
+        );
+      }),
     ]);
     await wait(scene.hold ?? HOLD_MS);
   } catch (e) {
     fail(`${scene.id}: ${e.message}`);
+  } finally {
+    clearTimeout(timer);
   }
   filming = false;
   await capturing;
