@@ -1,23 +1,31 @@
-// Holds the home page's feature showcase and demo/scenes/ to one list.
+// Holds the home page's feature showcase, main.js's scene table and
+// demo/scenes/ to one list.
 //
-// The showcase (website/index.html) names a scene per tab in data-scene and
-// asks the demo for <demo>/scenes/<id>.webm, .mp4 and .webp; demo/record.mjs
-// films exactly the scenes demo/scenes/index.mjs exports. Nothing else ties
-// the two: the site has no build, the link checker skips external URLs by
-// design, and the clips live on another Pages project. A scene renamed on
-// either side would therefore show up as a box with a poster that never
-// loads, on the live site, and nowhere earlier. This is the earlier.
+// The showcase (website/index.html) has a tab per scene, named in data-scene.
+// main.js carries the demo's origin and the same scenes in the same order,
+// each with the tile its "Open in the demo" link frames, as constants: a URL
+// built from text read off the page is what CodeQL reports as DOM text
+// reinterpreted as HTML, so nothing there reads the attributes back.
+// demo/record.mjs films exactly the scenes demo/scenes/index.mjs exports.
+// Nothing else ties the three: the site has no build, the link checker skips
+// external URLs by design, and the clips live on another Pages project. A
+// scene renamed on any side would therefore show up as a box with a poster
+// that never loads, on the live site, and nowhere earlier. This is the
+// earlier.
 //
 // What it checks:
-//   1. The tabs name the scenes, all of them, in the recorder's order
-//   2. Each tab's data-tile is the tile its scene frames (the ?tile= link)
-//   3. The markup's own clip URLs (the first tab's sources and poster) are
+//   1. main.js's table names the scenes, all of them, in the recorder's order
+//   2. Each entry's tile is the tile its scene frames (the ?tile= link)
+//   3. The tabs name the same scenes in the same order
+//   4. The markup's own clip URLs (the first tab's sources and poster) are
 //      the demo origin plus /scenes/<first id>
-//   4. The hero's "Try the demo" points at the same origin
+//   5. The hero's "Try the demo" points at the same origin
 //
 // Zero dependencies, same as check-website-links.mjs. The scene modules are
 // imported for real rather than parsed: they are plain data with no browser
-// globals, and importing is the check that they load at all.
+// globals, and importing is the check that they load at all. main.js is
+// parsed by regex, the same bargain the link checker makes with the HTML:
+// the input is this repo's own hand-written source, Prettier-normalised.
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
@@ -34,41 +42,49 @@ const { SCENES } = await import(
 const problems = [];
 const fail = (m) => problems.push(m);
 
-const showcase = html.match(/<div class="showcase"[^>]*\bdata-demo="([^"]+)"/);
-if (!showcase) {
+const js = readFileSync(path.join(ROOT, "website/main.js"), "utf8");
+const demo = (js.match(/\bvar DEMO = '([^']+)'/) || [])[1];
+const table = js.match(/\bvar SCENES = \[([\s\S]*?)\n\s*\]/);
+if (!demo || !table) {
   console.error(
-    'check-website-scenes: no <div class="showcase" data-demo=…> in website/index.html',
+    "check-website-scenes: no `var DEMO = '…'` or `var SCENES = [ … ]` in website/main.js",
   );
   process.exit(1);
 }
-const demo = showcase[1];
-if (demo.endsWith("/")) fail(`data-demo "${demo}" should not end in a slash`);
+if (demo.endsWith("/")) fail(`DEMO "${demo}" should not end in a slash`);
+const jsScenes = [
+  ...table[1].matchAll(/\{\s*id:\s*'([^']*)',\s*tile:\s*'([^']*)'\s*\}/g),
+].map((m) => ({ id: m[1], tile: m[2] }));
 
-// 1 + 2 — the tabs
-const tabs = [
-  ...html.matchAll(/<button\b[^>]*\bclass="showcase-tab"[^>]*>/g),
-].map(([tag]) => ({
-  scene: (tag.match(/\bdata-scene="([^"]*)"/) || [])[1],
-  tile: (tag.match(/\bdata-tile="([^"]*)"/) || [])[1],
-}));
-const siteIds = tabs.map((t) => t.scene);
+// 1 + 2 — main.js's table against the recorder's scenes
 const sceneIds = SCENES.map((s) => s.id);
-if (siteIds.join(",") !== sceneIds.join(",")) {
+const jsIds = jsScenes.map((s) => s.id);
+if (jsIds.join(",") !== sceneIds.join(",")) {
   fail(
-    `the tabs and demo/scenes/index.mjs disagree\n    site:  ${siteIds.join(", ")}\n    demo:  ${sceneIds.join(", ")}`,
+    `main.js's SCENES and demo/scenes/index.mjs disagree\n    main.js: ${jsIds.join(", ")}\n    demo:    ${sceneIds.join(", ")}`,
   );
 }
-for (const tab of tabs) {
-  const scene = SCENES.find((s) => s.id === tab.scene);
+for (const entry of jsScenes) {
+  const scene = SCENES.find((s) => s.id === entry.id);
   if (!scene) continue;
   const tile = scene.frame.tile ?? "";
-  if (tab.tile !== tile)
+  if (entry.tile !== tile)
     fail(
-      `tab "${tab.scene}" has data-tile="${tab.tile}" but the scene frames "${tile}"`,
+      `main.js has tile '${entry.tile}' for "${entry.id}" but the scene frames "${tile}"`,
     );
 }
 
-// 3 — the clip URLs the markup carries itself
+// 3 — the tabs
+const tabs = [
+  ...html.matchAll(/<button\b[^>]*\bclass="showcase-tab"[^>]*>/g),
+].map(([tag]) => (tag.match(/\bdata-scene="([^"]*)"/) || [])[1]);
+if (tabs.join(",") !== sceneIds.join(",")) {
+  fail(
+    `the tabs and demo/scenes/index.mjs disagree\n    site:  ${tabs.join(", ")}\n    demo:  ${sceneIds.join(", ")}`,
+  );
+}
+
+// 4 — the clip URLs the markup carries itself
 const first = sceneIds[0];
 const media =
   html.match(/<figure class="showcase-media[\s\S]*?<\/figure>/)?.[0] ?? "";
@@ -77,7 +93,7 @@ for (const [, url] of media.matchAll(/\b(?:src|poster)="([^"]+)"/g)) {
   if (!url.startsWith(want)) fail(`clip URL "${url}" is not under ${want}…`);
 }
 
-// 4 — one demo origin on the page
+// 5 — one demo origin on the page
 for (const [, href] of html.matchAll(
   /<a\b[^>]*\bhref="([^"]+)"[^>]*>\s*Try the demo/g,
 )) {

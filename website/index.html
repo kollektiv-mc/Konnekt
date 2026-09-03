@@ -240,9 +240,10 @@
 
              Every tab's points stay in the markup, hidden, so the page reads
              whole without JS and to a crawler; main.js swaps which one shows
-             and which clip plays. data-tile is the tile the demo opens on
-             (?tile=, demo/backend/frame.js); empty means the dashboard. -->
-        <div class="showcase" data-demo="https://konnekt-demo.pages.dev">
+             and which clip plays. The demo's origin and the tile each tab opens
+             the demo on (?tile=, demo/backend/frame.js) live in main.js, as
+             constants, so no URL is ever built from text read off this page. -->
+        <div class="showcase">
           <div class="showcase-tabs reveal" role="tablist" aria-label="Features">
             <button
               class="showcase-tab"
@@ -252,7 +253,6 @@
               aria-selected="true"
               aria-controls="showcase-panel-dashboard"
               data-scene="dashboard"
-              data-tile=""
             >
               Tile dashboard</button
             ><button
@@ -264,7 +264,6 @@
               aria-controls="showcase-panel-console"
               tabindex="-1"
               data-scene="console"
-              data-tile="console"
             >
               Live console</button
             ><button
@@ -276,7 +275,6 @@
               aria-controls="showcase-panel-players"
               tabindex="-1"
               data-scene="players"
-              data-tile="players"
             >
               Players</button
             ><button
@@ -288,7 +286,6 @@
               aria-controls="showcase-panel-performance"
               tabindex="-1"
               data-scene="performance"
-              data-tile="performance"
             >
               Performance</button
             ><button
@@ -300,7 +297,6 @@
               aria-controls="showcase-panel-worlds"
               tabindex="-1"
               data-scene="worlds"
-              data-tile="worlds"
             >
               Worlds</button
             ><button
@@ -312,7 +308,6 @@
               aria-controls="showcase-panel-backups"
               tabindex="-1"
               data-scene="backups"
-              data-tile="backups"
             >
               Backups</button
             ><button
@@ -324,7 +319,6 @@
               aria-controls="showcase-panel-config"
               tabindex="-1"
               data-scene="config"
-              data-tile="server-config"
             >
               Config editor</button
             ><button
@@ -336,7 +330,6 @@
               aria-controls="showcase-panel-mods"
               tabindex="-1"
               data-scene="mods"
-              data-tile="mods"
             >
               Mods &amp; plugins</button
             ><button
@@ -348,7 +341,6 @@
               aria-controls="showcase-panel-servers"
               tabindex="-1"
               data-scene="servers"
-              data-tile=""
             >
               Multi-server
             </button>

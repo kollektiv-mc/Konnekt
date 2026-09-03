@@ -486,7 +486,15 @@
   // ── Feature showcase ────────────────────────────────────────────────────
   // Nine tabs, one <video>, nine tabpanels. The clips come from the demo's
   // own build (demo/record.mjs) and live beside it, so this only ever asks
-  // for <demo>/scenes/<id>.webm|mp4|webp; which id is the tab's data-scene.
+  // for <demo>/scenes/<id>.webm|mp4|webp.
+  //
+  // The origin and the scenes are constants here rather than attributes read
+  // back off the page. A URL assembled from DOM text is what CodeQL reports
+  // as text reinterpreted as HTML, and the point stands even for text this
+  // page wrote itself: nothing that reaches a src or an href should have
+  // passed through the document first. scripts/check-website-scenes.mjs
+  // holds this table to the tabs' data-scene order and to demo/scenes/, so
+  // the three cannot drift apart.
   //
   // What plays is decided the way the docs page's step demos are: one at a
   // time, in the order written, and only while the box is on screen. A clip
@@ -495,10 +503,24 @@
   // sequence. Hovering the box holds the current clip the same way. Reduced
   // motion never plays anything: the tabs still switch the poster and the
   // points, and the demo link is the way to see it move.
+  var DEMO = 'https://konnekt-demo.pages.dev'
+  var SCENES = [
+    { id: 'dashboard', tile: '' },
+    { id: 'console', tile: 'console' },
+    { id: 'players', tile: 'players' },
+    { id: 'performance', tile: 'performance' },
+    { id: 'worlds', tile: 'worlds' },
+    { id: 'backups', tile: 'backups' },
+    { id: 'config', tile: 'server-config' },
+    { id: 'mods', tile: 'mods' },
+    { id: 'servers', tile: '' },
+  ]
   var showcase = document.querySelector('.showcase')
-  if (showcase) {
-    var demo = showcase.getAttribute('data-demo')
-    var tabs = [].slice.call(showcase.querySelectorAll('[role="tab"]'))
+  var showcaseTabs = showcase ? [].slice.call(showcase.querySelectorAll('[role="tab"]')) : []
+  // A tab count that is not the table's means the page and this script have
+  // drifted; the check above would have said so, but nothing below may guess.
+  if (showcase && showcaseTabs.length === SCENES.length) {
+    var tabs = showcaseTabs
     var panels = [].slice.call(showcase.querySelectorAll('[role="tabpanel"]'))
     var media = showcase.querySelector('.showcase-media')
     var video = showcase.querySelector('video')
@@ -530,8 +552,7 @@
     var show = function (i, andPlay) {
       current = (i + tabs.length) % tabs.length
       var tab = tabs[current]
-      var id = tab.getAttribute('data-scene')
-      var tile = tab.getAttribute('data-tile')
+      var scene = SCENES[current]
 
       tabs.forEach(function (t, k) {
         var on = k === current
@@ -541,13 +562,13 @@
       panels.forEach(function (panel) {
         panel.hidden = panel.id !== tab.getAttribute('aria-controls')
       })
-      if (openLink) openLink.href = demo + '/' + (tile ? '?tile=' + tile : '')
+      if (openLink) openLink.href = DEMO + '/' + (scene.tile ? '?tile=' + scene.tile : '')
 
       if (video) {
         // Sources are rebuilt rather than swapped in place: a <video> only
         // re-evaluates its <source> children on load().
         video.pause()
-        video.poster = demo + '/scenes/' + id + '.webp'
+        video.poster = DEMO + '/scenes/' + scene.id + '.webp'
         video.setAttribute('aria-label', tab.textContent + ', in action')
         while (video.firstChild) video.removeChild(video.firstChild)
         ;[
@@ -555,7 +576,7 @@
           ['mp4', 'video/mp4'],
         ].forEach(function (kind) {
           var source = document.createElement('source')
-          source.src = demo + '/scenes/' + id + '.' + kind[0]
+          source.src = DEMO + '/scenes/' + scene.id + '.' + kind[0]
           source.type = kind[1]
           video.appendChild(source)
         })
