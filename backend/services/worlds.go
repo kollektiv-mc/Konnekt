@@ -283,7 +283,10 @@ func (s *WorldService) OpenWorldFolder(serverID, name string) error {
 	return OpenPath(filepath.Join(cfg.WorkingDir, name))
 }
 
-// BackupWorld zips the target world (+ siblings) via BackupService.
+// BackupWorld zips the named world folder via BackupService. Only that folder:
+// the _nether and _the_end siblings DuplicateWorld iterates are not included,
+// so a "world" backup of a multi-dimension save is the overworld alone. That
+// gap is #26; this comment stops claiming it is closed.
 func (s *WorldService) BackupWorld(serverID, name string) (models.Backup, error) {
 	if err := validateWorldName(name); err != nil {
 		return models.Backup{}, err

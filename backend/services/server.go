@@ -706,6 +706,12 @@ func (s *serverInstance) waitForExit() {
 	s.running = false
 	s.cachedProc = nil
 	s.setStateLocked(stateOffline, false)
+	// Of the fields status() reads, everything is reset or gated here except
+	// maxPlayers and maxRAMMB, which keep the values the last boot read from
+	// server.properties and the JVM args. Deliberate: the stats tile renders
+	// "players / maxPlayers" while the server is down, and a reset would drop a
+	// configured 50 to the 20 default until the next start (stats_test.go pins
+	// the readout). The next Start overwrites both from the same files.
 	stop := models.ServerStopped{Expected: expected, ExitCode: exitCode}
 	s.lastStop = stop
 	// Captured under the lock, closed below without it. Reading s.exited at the
