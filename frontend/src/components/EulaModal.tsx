@@ -34,7 +34,11 @@ export function EulaModal({ serverId, onClose }: Props) {
   }
 
   return (
-    <div className="z-modal fixed inset-0 flex items-center justify-center bg-black/60">
+    // z-dialog, not z-modal: this is raised by server:eula-required rather than
+    // a click, so it can open while the server manager or Settings is already
+    // up (a scheduled start, or a Start clicked seconds before opening either),
+    // and those are modals it has to win against (lib/layers.ts, #256).
+    <div className="z-dialog fixed inset-0 flex items-center justify-center bg-black/60">
       <div className="bg-canvas border-hairline flex w-80 flex-col gap-4 rounded-xl border-amber-400/25 p-5 font-mono">
         <div className="flex items-center gap-2.5">
           <span className="text-sm font-bold text-yellow-400">[!]</span>
