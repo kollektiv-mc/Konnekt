@@ -24,6 +24,25 @@ export function truncateStart(text: string, max: number): string {
   return '…' + text.slice(-(max - 1))
 }
 
+/**
+ * "Jul 2, 2026, 12:00 PM" for an epoch-ms timestamp, in the user's locale.
+ *
+ * The backups tile and the players popup each carried one of these with
+ * different output (the popup joined toLocaleDateString and toLocaleTimeString
+ * by hand); this is the backups spelling, which had the more callers. A falsy
+ * input is the caller's to guard, the same way as `relativeMs`: a world that
+ * was never played has `lastPlayed` 0, and 0 is a real date here, 1970.
+ */
+export function fmtDate(ms: number): string {
+  return new Date(ms).toLocaleString([], {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+}
+
 export function relativeTime(iso: string): string {
   if (!iso) return ''
   const diff = Date.now() - new Date(iso).getTime()

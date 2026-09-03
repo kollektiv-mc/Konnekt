@@ -3,6 +3,7 @@ import { StopServer, StartServer } from '../../../wailsjs/go/main/App'
 import { useServerConfigStore } from '../../stores/useServerConfigStore'
 import { useServerStore } from '../../stores/useServerStore'
 import type { WorldSystem } from './useWorlds'
+import { fmtBytes, relativeMs } from '../../lib/format'
 
 interface Props {
   world: WorldSystem
@@ -17,23 +18,9 @@ interface Props {
   onRefresh: () => void
 }
 
-function fmtBytes(n: number): string {
-  if (n < 1024) return `${n} B`
-  if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`
-  if (n < 1024 * 1024 * 1024) return `${(n / (1024 * 1024)).toFixed(1)} MB`
-  return `${(n / (1024 * 1024 * 1024)).toFixed(2)} GB`
-}
-
-function fmtRelative(ms: number): string {
-  if (!ms) return '—'
-  const diff = Date.now() - ms
-  const m = Math.floor(diff / 60_000)
-  if (m < 1) return 'just now'
-  if (m < 60) return `${m}m ago`
-  const h = Math.floor(m / 60)
-  if (h < 24) return `${h}h ago`
-  return `${Math.floor(h / 24)}d ago`
-}
+// The guard is load-bearing: `meta.lastPlayed` is 0 for a world that was
+// never played, and `relativeMs(0)` reads as twenty thousand days ago.
+const fmtRelative = (ms: number) => (ms ? relativeMs(ms) : '—')
 
 type SwitchStep = 'idle' | 'confirm' | 'working' | 'delete-confirm' | 'rename' | 'duplicate'
 

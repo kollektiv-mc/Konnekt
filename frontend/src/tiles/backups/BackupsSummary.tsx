@@ -3,22 +3,7 @@ import { StopServer } from '../../../wailsjs/go/main/App'
 import { useServerStore } from '../../stores/useServerStore'
 import { BackupRunningDialog } from './BackupRunningDialog'
 import { useBackups } from './useBackups'
-
-function fmtBytes(n: number): string {
-  if (n < 1024) return `${n} B`
-  if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`
-  return `${(n / (1024 * 1024)).toFixed(1)} MB`
-}
-
-function fmtRelTime(ms: number): string {
-  const diff = Date.now() - ms
-  const m = Math.floor(diff / 60000)
-  if (m < 1) return 'just now'
-  if (m < 60) return `${m}m ago`
-  const h = Math.floor(m / 60)
-  if (h < 24) return `${h}h ago`
-  return `${Math.floor(h / 24)}d ago`
-}
+import { fmtBytes, relativeMs } from '../../lib/format'
 
 interface Props {
   serverId: string
@@ -76,7 +61,7 @@ export function BackupsSummary({ serverId }: Props) {
           <>
             <div className="text-text-faint font-mono text-xs">Last full backup</div>
             <div className="text-text-secondary font-mono text-sm">
-              {fmtRelTime(latest.createdAt)}
+              {relativeMs(latest.createdAt)}
             </div>
             <div className="text-text-faint font-mono text-xs">
               {fmtBytes(latest.sizeBytes)} · {serverBackups.length} total

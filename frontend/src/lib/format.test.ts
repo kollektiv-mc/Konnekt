@@ -1,5 +1,13 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
-import { fmtCount, fmtBytes, relativeMs, relativeTime, truncateStart, untilMs } from './format'
+import {
+  fmtCount,
+  fmtBytes,
+  fmtDate,
+  relativeMs,
+  relativeTime,
+  truncateStart,
+  untilMs,
+} from './format'
 
 describe('truncateStart', () => {
   it('leaves short strings alone', () => {
@@ -163,5 +171,22 @@ describe('relativeMs / untilMs', () => {
   it('rounds the countdown to the coarser unit', () => {
     expect(untilMs(NOW.getTime() + 59.7 * MIN)).toBe('in 1h')
     expect(relativeMs(NOW.getTime() - 59.7 * MIN)).toBe('59m ago')
+  })
+})
+
+// Two copies used to exist with different output; this is the one shape now.
+// Locale and zone are the runner's, so the assertions pin the parts every
+// locale carries rather than a literal string.
+describe('fmtDate', () => {
+  it('renders the date and the minute', () => {
+    const out = fmtDate(Date.UTC(2026, 6, 2, 12, 34))
+    expect(out).toContain('2026')
+    expect(out).toMatch(/\d{1,2}:\d{2}/)
+  })
+
+  // Not a helper concern: a never-played world's lastPlayed is 0 and 0 is a
+  // real date, so the caller guards, the same contract relativeMs has.
+  it('treats 0 as the epoch rather than as missing', () => {
+    expect(fmtDate(0)).toContain('1970')
   })
 })
