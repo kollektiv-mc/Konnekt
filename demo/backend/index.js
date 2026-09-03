@@ -21,6 +21,7 @@
 
 import { api } from "./api.js";
 import * as events from "./events.js";
+import { startStatusTicker, playerJoined, playerLeft } from "./state.js";
 import {
   CONSOLE_LINES,
   SERVER_ID,
@@ -106,8 +107,9 @@ window.runtime = {
 // buffered in App.tsx. This is the scrollback, delivered the only way in.
 //
 // It runs once, on a timer long enough for App.tsx to have subscribed, and
-// then nothing further is emitted. No line arrives after this: the demo shows
-// a console with history in it, not a server pretending to still be running.
+// then nothing further is emitted unless a visitor presses Stop or Start
+// (state.js). The demo shows a console with history in it, not a server
+// pretending to still be running.
 const REPLAY_DELAY_MS = 400;
 
 function replayConsole() {
@@ -155,4 +157,12 @@ function seedNotifications() {
 window.setTimeout(() => {
   replayConsole();
   seedNotifications();
+  startStatusTicker();
 }, REPLAY_DELAY_MS);
+
+// ── The scene hook ──────────────────────────────────────────────────────
+// What the website's clips need that no control in the app can do, because
+// it is the server's side of the conversation: a player leaving or arriving.
+// demo/scenes/*.mjs calls these through Playwright; nothing in the app reads
+// them, and a visitor never sees them.
+window.konnektDemo = { playerJoined, playerLeft };

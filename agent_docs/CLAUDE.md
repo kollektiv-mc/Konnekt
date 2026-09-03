@@ -20,6 +20,15 @@ pnpm for the frontend, Go modules for the backend.
   `styles/` — the last holds the **generated** token layer (see Code style),
   while the hand-authored component CSS stays in `style.css` beside it.
 - `frontend/wailsjs/` is generated. Never edit it by hand.
+- `demo/` is the browser demo: the untouched frontend built by Vite with a
+  shim (`demo/backend/`) loaded ahead of it that answers `window.go` and
+  `window.runtime` from fixtures. Nothing under `frontend/src/` imports it.
+  `demo/build.mjs` regenerates the scheduler palette from Go, cross-checks the
+  shim's method table against the generated bindings and its tile list against
+  `lib/constants.ts`, and fails on drift. `demo/record.mjs` films the scenes
+  under `demo/scenes/` from that build into `demo/dist/scenes/`, which is what
+  the website's feature section plays. `.github/workflows/demo.yml` builds,
+  records and publishes to its own Cloudflare Pages project, `konnekt-demo`.
 - `website/` is the marketing site at konnekt.pages.dev: plain HTML, CSS and
   browser ES modules, no build step and no `package.json`. Cloudflare Pages
   watches this branch and deploys it, configured outside this repo, so there is
@@ -219,6 +228,8 @@ pnpm check-prefetch   # Assert every lazy tile chunk is in the warm list (fronte
 pnpm gen:tokens       # Regenerate the token layer from tokens.source.json (frontend/)
 pnpm format:website   # Prettier --check over website/ (run from frontend/)
 node scripts/check-website-links.mjs   # website hrefs/assets/sitemap (repo root)
+node demo/build.mjs   # Build the browser demo into demo/dist, with its drift checks (repo root)
+node demo/record.mjs  # Film the website's clips from demo/dist; needs ffmpeg (repo root)
 go vet ./...          # Go static analysis (repo root — single module)
 go test ./...         # Go tests (repo root)
 ```

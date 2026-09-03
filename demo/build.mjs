@@ -86,6 +86,38 @@ if (missing.length || extra.length) {
 }
 console.log(`demo: all ${bound.size} bound methods answered`);
 
+// ── 2b. The deep link's tile list must be the app's ──────────────────────
+// frame.js copies lib/constants.ts's ALL_TILE_IDS by hand, because it runs in
+// a browser with no bundler to import through. Same shape of check as the
+// bindings above, same reason: a tile renamed upstream should be a red build
+// here, not a `?tile=` link that quietly opens the default dashboard.
+const ids = (src, quote) =>
+  [
+    ...src
+      .replace(/\/\*[\s\S]*?\*\//g, "")
+      .replace(/\/\/[^\n]*/g, "")
+      .match(/TILE_IDS = \[([^\]]*)\]/)[1]
+      .matchAll(new RegExp(`${quote}([\\w-]+)${quote}`, "g")),
+  ].map((m) => m[1]);
+const upstreamTiles = ids(
+  readFileSync(path.join(FRONTEND, "src/lib/constants.ts"), "utf8"),
+  "'",
+);
+const framedTiles = ids(
+  readFileSync(path.join(DEMO, "backend/frame.js"), "utf8"),
+  '"',
+);
+if (upstreamTiles.join(",") !== framedTiles.join(",")) {
+  console.error(
+    "\ndemo: frame.js's TILE_IDS differs from lib/constants.ts's ALL_TILE_IDS.\n" +
+      `  app:  ${upstreamTiles.join(", ")}\n` +
+      `  demo: ${framedTiles.join(", ")}\n` +
+      "Copy the app's list into demo/backend/frame.js.",
+  );
+  process.exit(1);
+}
+console.log(`demo: all ${framedTiles.length} tile ids match the app`);
+
 // ── 3. Build the app, then wrap it ───────────────────────────────────────
 rmSync(OUT, { recursive: true, force: true });
 mkdirSync(OUT, { recursive: true });

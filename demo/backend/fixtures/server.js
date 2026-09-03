@@ -27,20 +27,59 @@ export const SERVER_CONFIG = {
   loaderVersion: "",
 };
 
+/* A second server, so that switching is something the demo can show. Fabric,
+   so the plugins tile's noun changes with it, and offline, so the switch reads
+   as a change of server rather than a re-skin: an offline dashboard is a
+   visibly different picture, and an honest one, since nothing but the Start
+   button brings it up. */
+export const CREATIVE_ID = "demo-creative";
+
+export const CREATIVE_CONFIG = {
+  id: CREATIVE_ID,
+  name: "Creative",
+  jarPath: "/home/mc/creative/fabric-server-mc.1.21.1-loader.0.16.5.jar",
+  jvmArgs: ["-Xms1G", "-Xmx4G"],
+  workingDir: "/home/mc/creative",
+  mcVersion: "1.21.1",
+  loader: "fabric",
+  loaderVersion: "0.16.5",
+};
+
+export const SERVER_CONFIGS = [SERVER_CONFIG, CREATIVE_CONFIG];
+
+/** The config behind an id the app passed, falling back to the first server. */
+export const configFor = (id) =>
+  SERVER_CONFIGS.find((c) => c.id === id) ?? SERVER_CONFIG;
+
 /* Running, deliberately. An offline dashboard is a dashboard of empty states —
    the console reads "Server offline — start it to see output" with a dead
    input, players shows nothing, performance says "start the server to begin
-   recording". Nothing simulates a *start*: StartServer still refuses. This is
-   simply the state the demo is in when you arrive. */
+   recording". This is the state the demo is in when you arrive; state.js owns
+   it from there, and the Stop and Start buttons move it. */
 export const SERVER_STATUS = {
   running: true,
   state: "running",
-  uptime: "3h 12m",
+  uptime: "3h 12m 0s",
   players: 4,
   maxPlayers: 20,
   tps: 19.8,
   ramUsed: 4312,
   ramTotal: 6144,
+};
+
+/* What "3h 12m" means as an instant, so the readout keeps counting from it
+   rather than sitting on a string. */
+export const STARTED_AT = now - (3 * 60 + 12) * 60_000;
+
+export const CREATIVE_STATUS = {
+  running: false,
+  state: "offline",
+  uptime: "0s",
+  players: 0,
+  maxPlayers: 20,
+  tps: 0,
+  ramUsed: 0,
+  ramTotal: 4096,
 };
 
 export const SERVER_SUMMARY = {
@@ -52,6 +91,19 @@ export const SERVER_SUMMARY = {
   loaderVersion: "",
   loaderSource: "",
 };
+
+export const CREATIVE_SUMMARY = {
+  mcVersion: "1.21.1",
+  loader: "fabric",
+  workingDir: "/home/mc/creative",
+  launchFile: "fabric-server-mc.1.21.1-loader.0.16.5.jar",
+  running: false,
+  loaderVersion: "0.16.5",
+  loaderSource: "",
+};
+
+export const summaryFor = (id) =>
+  id === CREATIVE_ID ? CREATIVE_SUMMARY : SERVER_SUMMARY;
 
 /* Both performance charts need at least two points, and the maximized view
    offers a 1h window, so this covers an hour at 30s spacing. Generated rather
@@ -153,35 +205,74 @@ export const PLAYERS = [
   },
 ];
 
+/* What a server prints between the jar starting and its ready line. Replayed
+   at boot as the top of the scrollback, and again, live, whenever the Start
+   button is pressed (state.js). The handful of lines that differ between the
+   two servers come from BOOT_PROFILE; the rest is the same for both, as it is
+   for any two servers of the same version. */
+const BOOT_PROFILE = {
+  [SERVER_ID]: {
+    gameType: "SURVIVAL",
+    level: "Overworld",
+    port: 25565,
+    loaderLine: "Paper: Using Java 21 (Eclipse Adoptium 21.0.4+7)",
+  },
+  [CREATIVE_ID]: {
+    gameType: "CREATIVE",
+    level: "Creative",
+    port: 25566,
+    loaderLine: "Loading Minecraft 1.21.1 with Fabric Loader 0.16.5",
+  },
+};
+
+export const bootLines = (id) => {
+  const { gameType, level, port, loaderLine } =
+    BOOT_PROFILE[id] ?? BOOT_PROFILE[SERVER_ID];
+  return [
+    `Starting minecraft server version ${configFor(id).mcVersion}`,
+    "Loading properties",
+    `Default game type: ${gameType}`,
+    "Generating keypair",
+    `Starting Minecraft server on *:${port}`,
+    "Using epoll channel type",
+    loaderLine,
+    `Preparing level "${level}"`,
+    "Preparing start region for dimension minecraft:overworld",
+    "Preparing spawn area: 4%",
+    "Preparing spawn area: 41%",
+    "Preparing spawn area: 88%",
+    "Time elapsed: 3841 ms",
+    "Preparing start region for dimension minecraft:the_nether",
+    "Time elapsed: 902 ms",
+    "Preparing start region for dimension minecraft:the_end",
+    "Time elapsed: 611 ms",
+    "[Sodium] Loaded configuration file",
+    "[Lithium] Applying 47 mixin patches",
+    "[FerriteCore] Reduced memory footprint by 312 MB",
+    'Done (6.129s)! For help, type "help"',
+  ];
+};
+
+/* What a graceful stop prints, in the order Paper prints it. */
+export const STOP_LINES = [
+  "Stopping the server",
+  "Stopping server",
+  "Saving players",
+  "Saving worlds",
+  'Saving chunks for level "Overworld"/minecraft:overworld',
+  'Saving chunks for level "Overworld"/minecraft:the_nether',
+  'Saving chunks for level "Overworld"/minecraft:the_end',
+  "ThreadedAnvilChunkStorage: All dimensions are saved",
+];
+
 /* The console's scrollback. There is no fetch path into the console —
    GetConsoleHistory is bound in Go but imported nowhere in src/ — so this is
-   replayed as log:line events once at boot and then nothing more is emitted.
-   Static, as the console tile is meant to be here: no simulated server.
-   `source: 'manager'` lines are Konnekt's own narration, which the tile draws
-   as a boxed block rather than a plain line. */
+   replayed as log:line events once at boot, and after that only the Start and
+   Stop buttons add to it. `source: 'manager'` lines are Konnekt's own
+   narration, which the tile draws as a boxed block rather than a plain line. */
 export const CONSOLE_LINES = [
   ["manager", "Starting Survival", "ok"],
-  [null, "Starting minecraft server version 1.21.1"],
-  [null, "Loading properties"],
-  [null, "Default game type: SURVIVAL"],
-  [null, "Generating keypair"],
-  [null, "Starting Minecraft server on *:25565"],
-  [null, "Using epoll channel type"],
-  [null, "Paper: Using Java 21 (Eclipse Adoptium 21.0.4+7)"],
-  [null, 'Preparing level "Overworld"'],
-  [null, "Preparing start region for dimension minecraft:overworld"],
-  [null, "Preparing spawn area: 4%"],
-  [null, "Preparing spawn area: 41%"],
-  [null, "Preparing spawn area: 88%"],
-  [null, "Time elapsed: 3841 ms"],
-  [null, "Preparing start region for dimension minecraft:the_nether"],
-  [null, "Time elapsed: 902 ms"],
-  [null, "Preparing start region for dimension minecraft:the_end"],
-  [null, "Time elapsed: 611 ms"],
-  [null, "[Sodium] Loaded configuration file"],
-  [null, "[Lithium] Applying 47 mixin patches"],
-  [null, "[FerriteCore] Reduced memory footprint by 312 MB"],
-  [null, 'Done (6.129s)! For help, type "help"'],
+  ...bootLines(SERVER_ID).map((line) => [null, line]),
   [null, "Timings Reset"],
   [
     null,
