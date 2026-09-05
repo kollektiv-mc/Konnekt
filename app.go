@@ -415,13 +415,11 @@ func (a *App) GetLastStop() (models.ServerStopped, error) {
 	return a.serverService.GetLastStop(a.serverService.CurrentServerID()), nil
 }
 
+// AcceptEula writes the server's eula.txt through the config editor service
+// (atomic write, empty-directory guard) and narrates it: app.go does no file
+// I/O of its own, so a crash cannot leave a torn flag file (#259).
 func (a *App) AcceptEula(serverID string) error {
-	cfg, err := a.configService.GetServerConfig(serverID)
-	if err != nil {
-		return err
-	}
-	content := "# EULA accepted via Konnekt\neula=true\n"
-	if err := os.WriteFile(filepath.Join(cfg.WorkingDir, "eula.txt"), []byte(content), 0644); err != nil {
+	if err := a.configEditorService.AcceptEula(serverID); err != nil {
 		return err
 	}
 	a.serverService.NarrateDone(serverID, "EULA accepted, eula.txt written")
