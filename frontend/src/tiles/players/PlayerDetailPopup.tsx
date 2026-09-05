@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { GetPlayerDetail, KickPlayer, BanPlayer, PardonPlayer } from '../../../wailsjs/go/main/App'
 import type { Player } from '../../types'
 import { IconButton } from '../../components/ui/IconButton'
@@ -112,7 +113,11 @@ export function PlayerDetailPopup({ player: initial, serverId, onClose, onMutate
     onMutated()
   }
 
-  return (
+  // Portaled to body: the grid copy of the tile is transformed by
+  // react-grid-layout, and a transformed ancestor is the containing block for
+  // `fixed`, so rendered inline this covered the tile's own box rather than
+  // the window (#257). z-modal is what carries it over the maximize overlay.
+  return createPortal(
     <div
       className="z-modal fixed inset-0 flex items-center justify-center bg-black/60"
       onMouseDown={(e) => e.target === e.currentTarget && onClose()}
@@ -235,6 +240,7 @@ export function PlayerDetailPopup({ player: initial, serverId, onClose, onMutate
           )}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }

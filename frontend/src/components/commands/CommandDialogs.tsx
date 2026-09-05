@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { createPortal } from 'react-dom'
 import { CONFIRM_COPY, type ConfirmableAction } from './presets'
 
 /**
@@ -11,6 +12,12 @@ import { CONFIRM_COPY, type ConfirmableAction } from './presets'
  * `onMouseEnter` / `style.background` pairs this replaced. Those existed to get
  * past `eslint.config.js`'s ban on inline `style={{}}`, but the rule is about
  * static styling belonging in classes, and a hover colour is exactly that.
+ *
+ * Both are portaled to body. The compact panel sits in a grid tile that
+ * react-grid-layout positions with a transform, and a transformed ancestor is
+ * the containing block for `fixed`, so rendered inline a Stop confirm covered
+ * the tile's own box rather than the window (#257). z-dialog is what orders
+ * them above the maximize overlay and the surfaces that raise them.
  */
 
 interface ConfirmDialogProps {
@@ -23,7 +30,7 @@ interface ConfirmDialogProps {
 
 export function LifecycleConfirmDialog({ action, busy, onCancel, onConfirm }: ConfirmDialogProps) {
   const copy = CONFIRM_COPY[action]
-  return (
+  return createPortal(
     <div className="modal-overlay-in z-dialog fixed inset-0 flex items-center justify-center bg-black/60">
       <div className="modal-panel-in border-border-subtle bg-canvas border-hairline flex w-80 flex-col gap-4 rounded-xl p-5">
         <div className="flex flex-col gap-1">
@@ -48,7 +55,8 @@ export function LifecycleConfirmDialog({ action, busy, onCancel, onConfirm }: Co
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }
 
@@ -64,7 +72,7 @@ export function KickBanDialog({ type, onCancel, onSubmit }: KickBanDialogProps) 
   const [reason, setReason] = useState('')
   const submit = () => onSubmit(`${type} ${playerName}${reason ? ' ' + reason : ''}`)
 
-  return (
+  return createPortal(
     <div className="modal-overlay-in z-dialog fixed inset-0 flex items-center justify-center bg-black/60">
       <div className="modal-panel-in border-border-subtle bg-canvas border-hairline flex w-80 flex-col gap-3 rounded-xl p-5">
         <h3 className="text-text-primary text-sm font-semibold capitalize">{type} Player</h3>
@@ -98,6 +106,7 @@ export function KickBanDialog({ type, onCancel, onSubmit }: KickBanDialogProps) 
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }
