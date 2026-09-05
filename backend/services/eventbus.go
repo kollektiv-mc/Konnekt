@@ -2,6 +2,7 @@ package services
 
 import (
 	"context"
+	"log/slog"
 	"sync"
 
 	"github.com/wailsapp/wails/v2/pkg/runtime"
@@ -26,8 +27,11 @@ func (b *EventBus) SetContext(ctx context.Context) {
 }
 
 // Subscribe registers an in-process handler for an event. Handlers are called
-// in their own goroutines so a slow handler never stalls the emitter. Handlers
-// must be panic-safe — the goroutine recovers panics and discards them.
+// in their own goroutines so a slow handler never stalls the emitter. A handler
+// that panics is contained, never the emitter's or another handler's problem,
+// but not silently: the goroutine recovers and logs the panic with the event
+// name, because the subscribers today are the scheduler's triggers and a
+// trigger that stops firing with no line in konnekt.log is undiagnosable.
 func (b *EventBus) Subscribe(event string, handler func(data any)) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
@@ -48,7 +52,11 @@ func (b *EventBus) Emit(event string, data any) {
 	for _, h := range handlers {
 		h := h
 		go func() {
-			defer func() { recover() }() //nolint:errcheck
+			defer func() {
+				if r := recover(); r != nil {
+					slog.Error("eventbus: handler panicked", "event", event, "panic", r)
+				}
+			}()
 			h(data)
 		}()
 	}
