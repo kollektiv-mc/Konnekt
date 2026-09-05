@@ -1,4 +1,5 @@
 import type { models } from '../../../wailsjs/go/models'
+import { untilMs } from '../../lib/format'
 
 interface Props {
   graphs: models.Graph[]
@@ -7,17 +8,6 @@ interface Props {
   loading?: boolean
   /** IPC failure. Rendered alongside cached graphs rather than replacing them. */
   error?: string | null
-}
-
-// Compact "in 5m" / "in 2h" / "in 3d" style relative time for a future ms epoch.
-function formatNextRun(ms: number): string {
-  const diff = ms - Date.now()
-  if (diff <= 0) return 'now'
-  const mins = Math.round(diff / 60_000)
-  if (mins < 60) return `in ${mins}m`
-  const hours = Math.round(mins / 60)
-  if (hours < 24) return `in ${hours}h`
-  return `in ${Math.round(hours / 24)}d`
 }
 
 export function SchedulerSummary({ graphs, nextRuns, loading, error }: Props) {
@@ -69,7 +59,7 @@ export function SchedulerSummary({ graphs, nextRuns, loading, error }: Props) {
                     className="text-text-faint shrink-0 font-mono text-xs"
                     title="Next scheduled run"
                   >
-                    {formatNextRun(next)}
+                    {untilMs(next)}
                   </span>
                 )}
               </div>
@@ -88,7 +78,7 @@ export function SchedulerSummary({ graphs, nextRuns, loading, error }: Props) {
           </span>
         ) : (
           <span className="text-text-faint font-mono text-xs">
-            {soonest ? `next run ${formatNextRun(soonest)}` : 'maximize to edit'}
+            {soonest ? `next run ${untilMs(soonest)}` : 'maximize to edit'}
           </span>
         )}
       </div>

@@ -698,3 +698,27 @@ func TestRestoreFailureCarriesTheServerID(t *testing.T) {
 		t.Error("restore failure payload has no error")
 	}
 }
+
+// The console used to narrate every size in MB, so a 4 GiB archive read
+// "4096.0 MB". The tiers mirror frontend/src/lib/format.ts's fmtBytes so the
+// console line and the tile agree (#260).
+func TestFmtBytesTiers(t *testing.T) {
+	cases := []struct {
+		n    int64
+		want string
+	}{
+		{0, "0 B"},
+		{1023, "1023 B"},
+		{1024, "1.0 KB"},
+		{1536, "1.5 KB"},
+		{1 << 20, "1.0 MB"},
+		{(1 << 30) - 1, "1024.0 MB"},
+		{1 << 30, "1.00 GB"},
+		{4 << 30, "4.00 GB"},
+	}
+	for _, tc := range cases {
+		if got := fmtBytes(tc.n); got != tc.want {
+			t.Errorf("fmtBytes(%d) = %q, want %q", tc.n, got, tc.want)
+		}
+	}
+}

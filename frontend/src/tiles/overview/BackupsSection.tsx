@@ -1,7 +1,6 @@
 import type { ReactNode } from 'react'
 import { Database } from '../../lib/icons'
-import { fmtBytes, relativeMs } from '../../lib/format'
-import { fmtDate } from '../backups/format'
+import { fmtBytes, fmtDate, relativeMs } from '../../lib/format'
 import { useBackups } from '../backups/useBackups'
 import type { Backup } from '../backups/useBackups'
 import { Section, SectionEmpty } from './Section'
