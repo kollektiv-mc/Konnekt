@@ -65,6 +65,18 @@ function declaredZ(el: Element | null): number {
 }
 
 describe('ModPreviewDialog', () => {
+  // The bug behind #257: opened from the compact InstalledPanel, this 600px
+  // dialog rendered inline in a grid tile that react-grid-layout transforms,
+  // and a transformed ancestor is the containing block for `fixed`, so it was
+  // clamped to the tile's box. The portal is what gets it out; the layer
+  // assertions below are what keep it ordered once it is there.
+  it('renders outside the tile that opened it', () => {
+    const { container, getByText } = renderDialog()
+    const panel = getByText('EssentialsX').closest('.fixed')
+    expect(panel).not.toBeNull()
+    expect(container.contains(panel)).toBe(false)
+  })
+
   // The bug: the dependency dialog was z-50 and this one was z-[400]/z-[401],
   // so confirming a switch that needed a dependency mounted the confirm dialog
   // *under* this dialog's backdrop. All the user saw was the page dimming a
