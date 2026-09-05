@@ -15,11 +15,13 @@
 // |---------|-----------------------------------------------------------------|
 // | overlay | the maximized-tile backdrop and panel (Dashboard)               |
 // | modal   | a backdropped surface that replaces what is under it:           |
-// |         | SettingsModal, ServerManager, EulaModal, ModPreviewDialog,      |
+// |         | SettingsModal, ServerManager, ModPreviewDialog,                 |
 // |         | PlayerDetailPopup                                               |
 // | dialog  | a confirm or progress box that opens on top of a modal:         |
 // |         | DisconnectConfirm, ServerInstallModal, LoaderUpdateDialog,      |
-// |         | DependencyDialog, CloseConfirmDialog, the command confirms      |
+// |         | DependencyDialog, CloseConfirmDialog, the command confirms,     |
+// |         | and EulaModal, which is raised by an event rather than a click  |
+// |         | and so has to beat whichever modal was already open (#256)      |
 // | popover | an anchored transient with no modal backdrop: Popover,          |
 // |         | ServerTooltip, QuickAddMenu, the presets dropdown, the config   |
 // |         | select panel, the crate drag preview                            |
