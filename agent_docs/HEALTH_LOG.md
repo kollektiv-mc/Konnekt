@@ -81,6 +81,7 @@ after them is dated. Newest last, in both groups.
 - [2026-09-01 — The chart that rendered once per tick of the clock](#2026-09-01-the-chart-that-rendered-once-per-tick-of-the-clock)
 - [2026-09-01 — The crash you could see but not send](#2026-09-01-the-crash-you-could-see-but-not-send)
 - [2026-09-02 — The overlays that took turns losing](#2026-09-02-the-overlays-that-took-turns-losing)
+- [2026-09-05 — The overlay the tile kept, and six smaller repairs](#2026-09-05-the-overlay-the-tile-kept-and-six-smaller-repairs)
 
 ---
 
@@ -4542,3 +4543,145 @@ unchanged to the tenth of a kilobyte; `check-tokens` counts 68 token classes in
 use, 5 of them layers, all compiled; `check-prefetch` green over six chunks. Go
 is untouched and re-run anyway against the fresh `dist`: `go vet` and `go test`
 clean, `backend/services` at 59.6% against the 49% floor.
+
+### 2026-09-05 — The overlay the tile kept, and six smaller repairs
+
+**Closed: [#256](../../issues/256), [#257](../../issues/257),
+[#258](../../issues/258), [#259](../../issues/259), [#260](../../issues/260),
+[#261](../../issues/261), [#262](../../issues/262)**, and the documentation
+half of [#263](../../issues/263). Every one was already in the checklist's Open
+backlog. The session's first job was to check each claim against the tree at
+3beb290 before touching anything, and every claim held, with one upgrade: #257
+went from inferred to measured.
+
+**The gap, in three parts.**
+
+*Four failures that reported nothing.* `CreateBackup` and `CreateWorldBackup`
+emitted `backup:started`, then on a Stat failure after the zip closed returned
+the error and emitted nothing, so the in-progress row the frontend had shown
+never cleared, with no toast and no console line. `EventBus.Emit` recovered a
+panicking subscriber and discarded it, so a scheduler trigger that crashed on an
+event simply stopped firing with nothing in `konnekt.log`. `AcceptEula` in
+`app.go` wrote `eula.txt` with a raw `os.WriteFile`, the one file left outside
+`writeFileAtomic` after #116, and joined an unchecked `cfg.WorkingDir`, so an
+unconfigured server wrote the flag into whatever directory Konnekt was launched
+from. And two comments said things the code had stopped doing: `BackupWorld`
+claimed to zip the dimension siblings it does not, and nothing said why
+`maxPlayers` and `maxRAMMB` survive the stop reset that clears every other
+per-run field.
+
+*Five formatters, three behaviours.* Five copies of `fmtBytes`, four untested,
+two stopping at MB so a 4 GiB archive read `4096.0 MB` on the Backups tile, the
+primary surface for gigabyte-scale objects; three private relative-time helpers
+under three names; two `fmtDate`s with different output because the player
+popup joined a date and a time by hand and lost the locale's own separator. The
+Go side narrated every backup size in MB too.
+
+*The overlay the tile kept.* #257 was filed on 2026-09-02 as inferred from
+react-grid-layout's `useCSSTransforms` default and a CSS rule, with a desk
+check still owed. This session ran the check instead of waiting for a desk: the
+browser demo, built from the same tree, under headless Chromium at 1440x900
+with one tile framed in the grid through the recorder's own `?tile=<id>&h=9`
+door. The grid item carried `transform: matrix(1, 0, 0, 1, 12, 12)`, and the
+player popup's `fixed inset-0` backdrop measured 204,47 1224x456, the tile's
+box to the pixel, not the window. The Stop confirm raised from the
+quick-commands tile measured the same. In the screenshot the backdrop dims the
+Players tile alone and the popup is centred inside it. A z-index cannot change
+that: it orders things inside one stacking context and never picks the
+containing block. #256 was the neighbouring finding from the same layering
+work: the EULA prompt is raised by a console line a second or two after any
+start click, so it can open while the server manager or Settings is up, and on
+the same `z-modal` layer, rendered first, it lost that tie on document order.
+
+**The fix.** One commit per issue on the branch, so each can be read, reverted
+or cherry-picked alone.
+
+- #258: every failure after `backup:started` goes through one `failBackup`
+  helper (remove the partial archive, emit, narrate), so a further path cannot
+  skip the emit; the Stat sits behind a `statBackup` seam so a test can fail
+  it. While there, `backup:failed` had two payload shapes, the create paths
+  with a `serverID` and the four restore paths without one, so `App.tsx`'s
+  processes row and `useBackupWorlds`' refresh never reacted to a restore
+  failure. One shape now, from every emit.
+- #259: `ConfigEditorService.AcceptEula` resolves the working directory,
+  refuses an empty one and writes through `writeFileAtomic`; `app.go` calls it
+  and narrates. Deliberately not `WriteConfigFile`, which snapshots the previous
+  file into `config_backups` and prunes, right for a file the user edits and
+  noise for a one-line flag. The empty-directory guard lives in the shared
+  `workingDir` helper, so every config-editor path now says "has no working
+  directory" instead of the sandbox's misleading "path outside working
+  directory".
+- #261: `slog.Error` inside the recover, naming the event and the panic value;
+  the contract comment on `Subscribe` says so.
+- #262: the two comments say what the code does.
+- #260: every caller reads `lib/format.ts`, which gained `fmtDate`, and the
+  copies are deleted. `relativeMs` and `fmtDate` treat an epoch of 0 as never
+  and render a dash, which is the guard the Worlds HUD kept in a private
+  wrapper (a never-played world has `lastPlayed` 0 and read as twenty thousand
+  days ago) and the player popup kept in its own formatter; neither wrapper
+  exists now and no caller can forget it. `backup.go`'s `sizeMB` became a
+  `fmtBytes` with the same tiers as the frontend, so console and tile agree.
+- #257: `PlayerDetailPopup`, `ModPreviewDialog` (its dependency dialog inside
+  it) and the two command dialogs render through `createPortal` to
+  `document.body`, the way the scheduler's quick-add menu and the
+  quick-commands presets dropdown already escaped their tile, keeping their
+  layer classes so the scale still orders them. The caveat in `lib/layers.ts`
+  records the rule: an overlay raised from inside a tile is a portal.
+- #256: `EulaModal` carries `z-dialog`. One class, the table moved with it.
+- #263: `agent_docs/CLAUDE.md` says stacked pull requests land as merge
+  commits and why. The other two halves, the repository's merge-method
+  setting and the `merged_pulls` test upstream in kollektiv, are not changes
+  in this tree, so the issue stays open.
+
+**Known and accepted.**
+
+- A restore failure now clears a processes row it never opened (`finish` is a
+  no-op on an unknown id) and still toasts as "Backup failed", because
+  `RestoreBackup` has no event of its own. Filed as #280 rather than widened
+  into #258.
+- The console tile's Stop is an icon button the probe did not find by text.
+  It raises the same `LifecycleConfirmDialog` from the same panel, so it is the
+  same case and the same fix. `ModPreviewDialog` was not driven in the demo
+  either (the installed list needs a Modrinth-matched fixture); its test
+  asserts the portal, and at 600px wide it was the worst-clipped of the four.
+- Re-run after the fix, the same probe measured both overlays at 0,0 1440x900
+  and outside the grid item, which is the end-to-end proof the unit tests
+  cannot give: jsdom computes no layout, so they assert the portal and the
+  layer class and stop.
+- Found while moving `EulaModal` and filed rather than fixed: 70
+  `onMouseEnter` / `onMouseLeave` handlers across 29 files write
+  `el.style.background` or `el.style.color` directly to get past the
+  inline-style lint rule the rule cannot see (#279).
+- The rest of the Open backlog was re-verified line by line against today's
+  tree and the entries that had no issue now do: #281 to #287. The
+  memoization evidence entry was not re-measured; `Dashboard` has since gained
+  `useMemo`s the 2026-08-29 note predates, and the checklist now says so.
+- The eight commits share one branch, which is the session's constraint, not
+  the convention: a pull request from it carries seven concerns and the notes
+  would file it under one `type:`. Cherry-pick per commit if an entry per
+  issue is wanted.
+- `graphify update .` was not run: graphify is not installed in this
+  container, and `graphify-out/` is gitignored, so nothing in the tree is
+  behind.
+
+**Verification.** Every gate in `.claude/suite.json`, run against a fresh
+`pnpm build`: typecheck, lint (0 errors, 14 warnings, byte-identical to the
+count before this session), Prettier over `frontend/` and `website/`, the
+website link and scene checks, the release-notes extract and its Python tests,
+the bundle budget, the token-class check, the prefetch warm list, the issue
+templates, `go vet`, `go test`, the coverage floor, the generated-token diff
+(all three files already current) and the border invariant. All green.
+
+Frontend suite 729 tests across 65 files, up from 722 across 62: the new
+files are `EulaModal.test.tsx`, `PlayerDetailPopup.test.tsx` and
+`CommandDialogs.test.tsx`, plus cases in `format.test.ts` and
+`ModPreviewDialog.test.tsx`. Entry chunk 154.5 KB gzip against the 165 KB
+budget, down 0.2 KB from 154.7 with the formatter copies gone; `check-tokens`
+counts 68 token classes in use, 5 of them layers, all compiled; `check-prefetch`
+green over six chunks. Backend: `eventbus_test.go` is the package's first (3
+cases), `backup_test.go` gains the Stat-failure table (2 cases), the
+restore-payload case and the `fmtBytes` tier table, `config_editor_test.go`
+gains the atomic EULA write and the empty-directory refusal;
+`backend/services` at 59.9% against the 49% floor, up from 59.6%. The #257
+probe before and after the fix is the acceptance test: 1224x456 in the tile,
+then 1440x900 over the window.
