@@ -1,12 +1,7 @@
 import type { TileProps } from '../../types'
 import { useWorlds } from './useWorlds'
 import type { WorldSystem } from './useWorlds'
-
-function fmtBytes(n: number): string {
-  if (n < 1024 * 1024) return `${(n / 1024).toFixed(0)} KB`
-  if (n < 1024 * 1024 * 1024) return `${(n / (1024 * 1024)).toFixed(1)} MB`
-  return `${(n / (1024 * 1024 * 1024)).toFixed(2)} GB`
-}
+import { fmtBytes } from '../../lib/format'
 
 interface Props {
   worlds: WorldSystem[]

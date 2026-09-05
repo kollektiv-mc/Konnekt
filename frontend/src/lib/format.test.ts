@@ -1,5 +1,13 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
-import { fmtCount, fmtBytes, relativeMs, relativeTime, truncateStart, untilMs } from './format'
+import {
+  fmtCount,
+  fmtBytes,
+  fmtDate,
+  relativeMs,
+  relativeTime,
+  truncateStart,
+  untilMs,
+} from './format'
 
 describe('truncateStart', () => {
   it('leaves short strings alone', () => {
@@ -163,5 +171,37 @@ describe('relativeMs / untilMs', () => {
   it('rounds the countdown to the coarser unit', () => {
     expect(untilMs(NOW.getTime() + 59.7 * MIN)).toBe('in 1h')
     expect(relativeMs(NOW.getTime() - 59.7 * MIN)).toBe('59m ago')
+  })
+})
+
+// Both epoch-ms helpers treat 0 as "never" rather than as 1970. A world that
+// was never played has lastPlayed 0 (Go's zero value for an int64), and
+// relativeMs(0) used to render as twenty thousand days ago; the Worlds HUD
+// carried its own wrapper for exactly that, and the player popup its own date
+// formatter with the same guard (#260).
+describe('epoch zero means never', () => {
+  it('renders a dash for 0', () => {
+    expect(relativeMs(0)).toBe('—')
+    expect(fmtDate(0)).toBe('—')
+  })
+})
+
+describe('fmtDate', () => {
+  // One toLocaleString call with both option sets, so the separator between
+  // date and time is the locale's own rather than a hand-joined space. The
+  // exact text depends on the runtime locale; what is pinned is that it is
+  // the single-call form, which is the reconciliation the two copies needed.
+  it('formats date and time in one locale call', () => {
+    const ms = Date.UTC(2026, 6, 2, 12, 34)
+    expect(fmtDate(ms)).toBe(
+      new Date(ms).toLocaleString([], {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+      }),
+    )
+    expect(fmtDate(ms)).toMatch(/2026/)
   })
 })
