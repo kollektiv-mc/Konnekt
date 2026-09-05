@@ -512,6 +512,7 @@ what *is* closed.
   round trip, so on a slower machine it moves, and the splash is a fixed 1000ms
   that does not move with it. Fixing it properly means the chart's first render
   not being gated on its data, which is a tile change, not a prefetch change.
+  Filed as #286 (2026-09-05).
 - **A tile's cold/warm gap is mostly first-mount work, not the chunk.** Warming
   the scheduler chunk took its cold blocking from 235ms to 147ms; warm is 61ms.
   The remaining ~85ms is V8 compiling the subtree's functions on first call,
@@ -540,6 +541,7 @@ machine, since the entry budget was set as measured plus headroom from a
 headless build and the same works here; what needs a machine is whether the
 warm-up's *time* is acceptable, which is a separate question and the one the
 harness answers.
+Filed as #281 (2026-09-05).
 
 **P3 — Dependency resolution is serial, unbounded in time, and silent while it
 runs** (filed 2026-08-31)
@@ -558,6 +560,7 @@ and is a bad one: the cap has nothing to terminate (the visit-once rule already
 does that) and would silently drop required dependencies past it, which is worse
 than being slow. The levers are resolving siblings concurrently, and giving the
 dialog something to show while it waits.
+Filed as #282 (2026-09-05).
 
 **P3 — A maximized Overview holds a second copy of its sections' data**
 (filed 2026-08-30)
@@ -575,31 +578,6 @@ performance into stores and closes most of it. The earlier roll-up version of
 this tile also double-fetched mods, including two Modrinth round trips; the
 dashboard does not touch mods at all, so that half is gone.
 
-**P3 — Five copies of `fmtBytes`** (filed 2026-08-30, re-verified 2026-09-01, issue #260)
-
-`lib/format.ts`, `tiles/backups/format.ts`, `tiles/backups/BackupsSummary.tsx`,
-`tiles/worlds/WorldHud.tsx` and `tiles/worlds/WorldsSummary.tsx` each define
-one, and they disagree: two stop at MB and render a 4 GB world save as
-"4096.0 MB". The shared one in `lib/format.ts` grew a GB tier for the Overview
-panel, so the fix is to point the other four at it and delete them — mechanical,
-but it touches three tiles, so it is its own change rather than a rider on this
-one. Same shape for the relative-time helpers: `relativeMs`/`untilMs` now live in
-`lib/format.ts`, while `BackupsSummary` and `SchedulerSummary` still carry
-private copies, spelled `fmtRelTime` and `formatNextRun`, so a grep for the
-shared names finds neither. Still five copies with three behaviours as of
-2026-09-01: two stop at MB, `WorldsSummary` rounds KB to a whole number, and
-only `lib/format.ts` and `WorldHud` agree. Re-mapped 2026-09-02 ahead of the
-fix: no private copy has a test, every existing assertion pins the canonical
-helper, so the merge cannot break a green test and can only change pixels.
-Three things the fix has to know. `WorldHud`'s `fmtRelative` is `relativeMs`
-plus an `if (!ms) return '—'` guard, and that guard is load-bearing:
-`meta.lastPlayed` is genuinely `0` for a never-played world, and `relativeMs(0)`
-renders as twenty thousand days ago. `fmtDate` is the next duplicate down,
-two copies with different output (`tiles/backups/format.ts:7` and
-`tiles/players/PlayerDetailPopup.tsx:60`) and no shared home yet. And the Go
-side has the same defect in `backup.go`'s `sizeMB`, which narrates every backup
-size into the console in MB, so a 4 GiB zip reads `4096.0 MB` there too.
-
 **P3 — Evidence for the memoization item above** (filed 2026-08-29)
 
 The Performant pillar's memoization item says it cannot be closed from a
@@ -614,6 +592,9 @@ drag, and no measurable effect on either first-scroll or first-open. It was
 reverted to keep that change to one concern. So a harness can measure it after
 all, the win is real but small, and the shape of the fix is known — what is not
 known is whether it matters on a real GPU, which is still a GUI question.
+Not re-measured on 2026-09-05: `Dashboard` has since gained `useMemo`s for
+`tilesOnCanvas` and `mergedLayout`, so the eleven-elements claim above may be
+stale; re-measure with the same scripted drag before acting on it.
 
 **P2 — Motion one-offs outside the token vocabulary** (largely closed 2026-08-19)
 - The motion vocabulary is three tokens: `--duration-fast` (150ms),
@@ -667,6 +648,7 @@ known is whether it matters on a real GPU, which is still a GUI question.
     undocumented until now.
   Adding either is an edit to `kollektiv/design/tokens.json`'s `motion.easing`,
   then kollektiv's `scripts/sync-tokens.sh`, then `pnpm gen:tokens` here.
+  Filed as #285 (2026-09-05), labelled blocked for that reason.
 - **Also still open, smaller.** Roughly 14 `duration-200`/`-300` values on
   Tailwind's own numeric scale are near-misses nobody has ruled on. They read as
   a token would, they just are not one. And `tokens.ts` still exports colours
@@ -756,6 +738,7 @@ was partly wrong)
   structured field to branch on (`app.go:184` plus a model field plus a binding
   regeneration) or a documented error-code prefix the frontend matches. Neither
   is urgent, because nobody is currently stuck: the manual fallback works.
+  Filed as #284 (2026-09-05).
 
 **P2 — Cleanups**
 - `sandbox` (`config_editor.go`) is a purely **lexical** guard — `filepath.Clean`
@@ -772,6 +755,7 @@ was partly wrong)
   trailing-separator prefix form. Every other `archive/zip` use in the backend
   (`installer.go`, `modjar.go`, `backup.go`'s metadata readers) opens entries
   read-only and never writes to a caller-supplied path.
+  Filed as #283 (2026-09-05).
 - Memoization pass: add `React.memo`/`useMemo`/`useCallback` to the most
   expensive tile subtrees identified during a profiling pass. Baseline
   2026-08-19: `React.memo` appears exactly once in the whole frontend
@@ -793,6 +777,7 @@ was partly wrong)
   in `vite.config.ts`, no `@vitest/coverage-*` dependency). The 36%/38% floor is
   `backend/services` only. Either stand up frontend coverage or re-gate this on
   something that exists.
+  Filed as #287 (2026-09-05), coverage first.
 
 **P1/P2 — Wings-survey adoption set** (filed 2026-08-21)
 - 15 behaviors adopted from the Pterodactyl Wings clean-room survey
@@ -824,114 +809,56 @@ was partly wrong)
   #119, #120, #121 — independent of each other, any order) and wave 4 (#118,
   then #117 after #99 and the wave-2 state machine).
 
-**P3 — Smaller findings from the 2026-08-21 backend sweep** (not worth
-individual issues; fix in passing when touching the file)
-- `eventbus.go:37-55`'s per-handler `recover()` swallows panics with no log
-  line — a handler crash is invisible even in `konnekt.log`. Add a `slog.Error`
-  inside the recover when next touching the file. Filed as #261.
+**P3 — Smaller findings from the 2026-08-21 backend sweep** (what is left of
+it; the eventbus recover, the `MaxPlayers` comment and the `worlds.go` comment
+closed 2026-09-05 as #261 and #262)
 - Restore leaves the restored directory with `os.MkdirTemp`'s 0700 mode rather
   than the original's permissions, and deletes the `.bak-<timestamp>` aside copy
   immediately on success (no retained undo) — `backup.go:411-431`. Neither is a
   bug per se; both are choices worth revisiting alongside #121/#30.
-- `MaxPlayers()` keeps its last value after stop while every other status field
-  zeroes — cosmetic inconsistency. Since #232 the accessor lives on
-  `serverInstance` (`server.go`); re-checked 2026-09-01 and nothing zeroes
-  `maxPlayers` on stop there either, so the finding moved with the code.
-- `worlds.go:269`'s "(+ siblings)" comment overstates `CreateWorldBackup`, which
-  zips only the named folder; the behavior gap is #26, the comment is local rot
-  to fix when #26 lands.
 
-**P2 — The changelog's stacked-PR guarantee is untested** (found 2026-08-28, issue #263)
-- `.github/scripts/release-notes.py`'s `merged_pulls()` is what lets a pull
-  request merged into *another* pull request's branch keep its own entry: it
-  maps each commit in the range to the pull requests containing it and keeps
-  every merged one, deduped by number, with no base-branch filter. Wave 2 relied
-  on that — #157 was merged into #156's branch — and it held: run against the
-  real merge, the generator emits #155, #156 and #157 under their own titles in
-  their own sections.
-- Nothing pins that behavior. `release-notes_test.py` covers `section_for` and
-  `touches_app` only, so `merged_pulls` has no test at all and a refactor could
-  fold a stacked entry into its parent silently. Worth a regression test with
-  the two halves that matter: a merged PR associated with a commit earns an
-  entry, an unmerged one associated with the same commit does not.
-- Where the test lands (2026-09-02): not here first. `release-notes_test.py`
-  says in its own comments that it is byte-identical wherever it sits, with the
-  master copy in `kollektiv/plugins/suite-kit/`, so a case added in this repo is
-  reverted on the next sync exactly like a hand-edited token. Write it upstream,
-  then sync. The file's own stance that "mocking the API would only test the
-  mock" also needs a sentence when that happens: `merged_pulls` has no pure
-  sub-predicate to mirror the way `touches_app` does, so a fake `api` is the
-  only shape a test of it can take.
-- The same guarantee also dies at the merge button. Squashing a parent rewrites
-  the child's commit hashes, GitHub then associates only the squashed commit
-  with the parent, and the child drops out of the notes entirely with its work
-  filed under the parent's title. `allow_squash_merge` is enabled on the
-  repository, so this is one wrong click. Worth a sentence in
-  `agent_docs/CLAUDE.md`'s "What reaches the notes at all" saying stacked pull
-  requests must land as merge commits.
+**P2 — The changelog's stacked-PR guarantee is untested** (found 2026-08-28,
+issue #263; the documentation half closed 2026-09-05)
+- `.github/scripts/release-notes.py`'s `merged_pulls()` gives a pull request
+  merged into *another* pull request's branch its own entry. Nothing pins it:
+  `release-notes_test.py` covers `section_for` and `touches_app` only. The test
+  cannot be added here first: the file is byte-identical to its master copy in
+  `kollektiv/plugins/suite-kit/`, so a case added in this repo is reverted on
+  the next sync. Write it upstream (a dict-driven fake `api` is the only shape
+  it can take, and the file's "mocking the API would only test the mock" stance
+  needs a sentence saying why this one gets a stub), then sync.
+- The guarantee also dies at the merge button: a squash rewrites the child's
+  commits and it drops out of the notes. `agent_docs/CLAUDE.md` now says stacked
+  pull requests land as merge commits. The repository still allows squash and
+  rebase merges; restricting it to "Create a merge commit" is an admin setting,
+  not a change in this tree.
 
 **P3 — Smaller findings from the wave 2 lifecycle work** (2026-08-26 to 08-28;
-not worth individual issues; fix in passing when touching the file)
-- `app.go`'s `AcceptEula` writes `eula.txt` with a raw `os.WriteFile` from
-  `package main` — the one place app code does its own file I/O rather than
-  going through a service, and it bypasses `writeFileAtomic`, so a crash
-  mid-write leaves a half-written EULA (#116's shape, applied everywhere else).
-- `backup.go`'s `CreateBackup` returns the post-zip `os.Stat` error without
-  emitting `backup:failed`, unlike every other failure path in the same
-  function: that one case fails with no event, no toast and no console
-  narration.
+what is left of it after #258 and #259 closed on 2026-09-05; fix in passing
+when touching the file)
 - `useConsoleStore.ts`'s `classifyLine` keeps its own `/Done|joined the game/`
   heuristic for colouring a line green, duplicating the backend's canonical
   `reServerReady` (`server.go`) with looser matching that a chat message can
   trip. Cosmetic only — the lifecycle state machine no longer depends on it —
   but the two spellings can drift.
 
-**P3 — Smaller findings from the 2026-09-02 backlog assessment** (not worth
-individual issues unless marked; fix in passing when touching the file)
-- `CreateWorldBackup` (`backup.go:406-409`) has the same silent post-zip
-  `os.Stat` failure as `CreateBackup` (`:329-332`, the entry above): no
-  `backup:failed`, no narration, and `backup:started` has already gone out, so
-  the UI's in-progress state never clears. Fix both together. While there, the
-  `backup:failed` payload comes in two shapes, `map[string]interface{}` with a
-  `serverID` (`:321`, `:398`) and `map[string]string` without one (`:455`,
-  `:466`, `:496`, `:507`); pick one. Filed as #258.
-- `AcceptEula` (`app.go`) does not guard an empty `cfg.WorkingDir`, so
-  `filepath.Join("", "eula.txt")` is a relative path into the process CWD, the
-  exact case `datadir.go` guards elsewhere. Same fix as the atomic-write entry
-  above, and note `writeFileAtomic` is unexported while `app.go` is
-  `package main`: the fix is a service method, not a swap. Filed as #259.
-- `worlds.go`'s wrong "(+ siblings)" comment is on `BackupWorld` at `:286`, not
-  `:269` as the entry above says. `DuplicateWorld` a few lines up does iterate
-  the `_nether`/`_the_end` suffixes, so the sibling concept is real in that
-  file and only the backup path ignores it. The behaviour gap is #26; the
-  comment is #262, together with the `MaxPlayers` one below.
-- `MaxPlayers()` keeping its value after stop is asserted as wanted by
-  `stats_test.go:81-84` ("a zero here would blank the tile's players /
-  maxPlayers readout"), so the remedy for the inconsistency above is a comment
-  on `waitForExit` naming `maxPlayers` and `maxRAMMB` as the two deliberate
-  survivors of an otherwise exhaustive reset, not a behaviour change. Filed
-  as #262.
-- **A `fixed` overlay inside a grid tile is tile-sized, not viewport-sized**
-  (found designing the layering scale; filed as #257, which says what to check
-  at a desk before anything is changed). react-grid-layout
-  v2.2.3 defaults `useCSSTransforms` to true and `Dashboard.tsx` passes no
-  override, so every non-maximized tile is positioned with `transform:
-  translate()`, and `style.css`'s `.tile-outer:hover` adds a second transform.
-  A transformed ancestor is the containing block for `position: fixed`, so
-  `PlayerDetailPopup`, `ModPreviewDialog` reached through the compact
-  `InstalledPanel`, and the command confirms raised from the grid copies of the
-  quick-commands and console tiles all open inside the tile's own box. The
-  layering scale cannot change this: a value orders things in a stacking
-  context, it does not pick the containing block. The fix is a portal, the way
-  `QuickAddMenu` and the presets dropdown already escape, or a decision that
-  in-tile is the intended look.
-- **The EULA modal can open under the server manager or Settings** (filed as
-  #256, with the start paths still to be checked at a desk). `server:eula-required` is event-raised, and `EulaModal`
-  renders first among App's overlays on the same `z-modal` layer as the two
-  surfaces a user might have open when a server starts, so it loses on
-  document order. One class, `z-modal` to `z-dialog`, fixes it; it was kept
-  out of the layering-scale change so that change stays a chore with no
-  visible behaviour of its own.
+**P3 — Smaller findings from the 2026-09-05 backlog session** (each filed;
+fix in passing or take the issue)
+- **Hover colours are still inline, one step removed.** 70 `onMouseEnter` /
+  `onMouseLeave` handlers across 29 files write `el.style.background` or
+  `el.style.color` directly, about 130 `.style.<prop> =` assignments in 24
+  files, to get past the inline-style lint rule that the rule cannot see.
+  `CommandDialogs.tsx` already converted its pair to `hover:` classes and says
+  so; the rest did not follow. `Dashboard.tsx`'s transforms and `Planet.tsx`'s
+  scene writes are genuinely computed and stay. Filed as #279.
+- **A failed restore toasts as a failed backup.** `RestoreBackup` has no
+  failure event of its own and emits `backup:failed`; `App.tsx` toasts every
+  one of those as "Backup failed", while the console line beside it says
+  "Restore failed while extracting". The scheduler's `trigger.backup` also
+  sees it. Filed as #280.
+- `untilMs(0)` reads "now" while `relativeMs(0)` and `fmtDate(0)` now read a
+  dash. Every caller guards `next > 0` today, so not worth an issue; move the
+  guard into the helper the day a caller stops.
 
 **Release follow-ups** (deferred)
 - Release-tag-gated full `wails build` packaging job — stronger end-to-end
