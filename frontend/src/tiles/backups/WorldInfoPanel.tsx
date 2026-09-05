@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import type { WorldSystem } from './useBackupWorlds'
-import { fmtBytes, fmtDate } from './format'
+import { fmtBytes, fmtDate } from '../../lib/format'
 import { IconButton } from '../../components/ui/IconButton'
 import { X } from '../../lib/icons'
 import { Icon } from '../../components/ui/Icon'

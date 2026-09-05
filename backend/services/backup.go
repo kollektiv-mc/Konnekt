@@ -264,9 +264,22 @@ func (s *BackupService) narrateFailed(serverID, line string) {
 	}
 }
 
-// sizeMB renders a byte count for a console line.
-func sizeMB(n int64) string {
-	return fmt.Sprintf("%.1f MB", float64(n)/(1024*1024))
+// fmtBytes renders a byte count for a console line, in the tiers
+// frontend/src/lib/format.ts uses, so the console and the tiles agree on a
+// size: a 4 GiB archive is "4.00 GB" in both, where this used to narrate
+// "4096.0 MB" (#260).
+func fmtBytes(n int64) string {
+	const kb, mb, gb = 1 << 10, 1 << 20, 1 << 30
+	switch {
+	case n < kb:
+		return fmt.Sprintf("%d B", n)
+	case n < mb:
+		return fmt.Sprintf("%.1f KB", float64(n)/kb)
+	case n < gb:
+		return fmt.Sprintf("%.1f MB", float64(n)/mb)
+	default:
+		return fmt.Sprintf("%.2f GB", float64(n)/gb)
+	}
 }
 
 func (s *BackupService) CreateBackup(serverID string) (models.Backup, error) {
@@ -341,7 +354,7 @@ func (s *BackupService) CreateBackup(serverID string) (models.Backup, error) {
 		"serverID": serverID,
 		"filename": b.Filename,
 	})
-	s.narrateDone(serverID, fmt.Sprintf("Backup finished: %s (%s)", b.Filename, sizeMB(b.SizeBytes)))
+	s.narrateDone(serverID, fmt.Sprintf("Backup finished: %s (%s)", b.Filename, fmtBytes(b.SizeBytes)))
 	return b, nil
 }
 
@@ -419,7 +432,7 @@ func (s *BackupService) CreateWorldBackup(serverID, worldName string) (models.Ba
 		"serverID": serverID,
 		"filename": b.Filename,
 	})
-	s.narrateDone(serverID, fmt.Sprintf("Backup finished: %s (%s)", b.Filename, sizeMB(b.SizeBytes)))
+	s.narrateDone(serverID, fmt.Sprintf("Backup finished: %s (%s)", b.Filename, fmtBytes(b.SizeBytes)))
 	return b, nil
 }
 
