@@ -706,6 +706,11 @@ func (s *serverInstance) waitForExit() {
 	s.running = false
 	s.cachedProc = nil
 	s.setStateLocked(stateOffline, false)
+	// Two per-run fields deliberately survive this reset: maxPlayers and
+	// maxRAMMB keep what the last boot read from server.properties and the JVM
+	// args, so a stopped server's status still reads "0 / 20" and its RAM
+	// ceiling rather than blanking (stats_test.go pins MaxPlayers at 20 while
+	// stopped). Start re-reads both before the next process is spawned.
 	stop := models.ServerStopped{Expected: expected, ExitCode: exitCode}
 	s.lastStop = stop
 	// Captured under the lock, closed below without it. Reading s.exited at the

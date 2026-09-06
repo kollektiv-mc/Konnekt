@@ -283,7 +283,9 @@ func (s *WorldService) OpenWorldFolder(serverID, name string) error {
 	return OpenPath(filepath.Join(cfg.WorkingDir, name))
 }
 
-// BackupWorld zips the target world (+ siblings) via BackupService.
+// BackupWorld zips the named world folder via BackupService. Only that folder:
+// the Paper/Spigot dimension siblings that DeleteWorld, RenameWorld and
+// DuplicateWorld walk are not included in the archive yet (#26).
 func (s *WorldService) BackupWorld(serverID, name string) (models.Backup, error) {
 	if err := validateWorldName(name); err != nil {
 		return models.Backup{}, err
