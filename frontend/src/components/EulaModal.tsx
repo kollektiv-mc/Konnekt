@@ -33,8 +33,14 @@ export function EulaModal({ serverId, onClose }: Props) {
     }
   }
 
+  // z-dialog, not z-modal: this prompt is raised by the server:eula-required
+  // event rather than by a click, so it can open while the server manager or
+  // Settings (both z-modal, rendered after it) is already up. On the same layer
+  // it lost that tie on document order and the server appeared to refuse to
+  // start with no prompt (#256). What opens on top of a modal is a dialog, by
+  // the scale's own rule (lib/layers.ts).
   return (
-    <div className="z-modal fixed inset-0 flex items-center justify-center bg-black/60">
+    <div className="z-dialog fixed inset-0 flex items-center justify-center bg-black/60">
       <div className="bg-canvas border-hairline flex w-80 flex-col gap-4 rounded-xl border-amber-400/25 p-5 font-mono">
         <div className="flex items-center gap-2.5">
           <span className="text-sm font-bold text-yellow-400">[!]</span>
