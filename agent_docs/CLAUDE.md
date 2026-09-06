@@ -372,6 +372,13 @@ edit used to be enough to pull an all-website PR into the notes, while `build/`
 holds the app icon and RPM spec, which do ship. The classifier's rules are
 suite-wide and live in the script; the path list is Konnekt's own and lives in
 that config. Both are covered by `.github/scripts/release-notes_test.py`.
+A pull request merged into *another* pull request's branch keeps its own entry,
+because the script maps each commit in the release range to every merged pull
+request containing it. That only survives a **merge commit**: squashing or
+rebasing the parent rewrites the child's commits, GitHub then associates only
+the new commits with the parent, and the child's work is filed under the
+parent's title with no line of its own. Stacked pull requests land as merge
+commits, never squashed (#263).
 
 ## Local tooling
 
