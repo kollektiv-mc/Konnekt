@@ -33,16 +33,23 @@
 //
 // Two things the scale does not do, and why.
 //
-// A value only orders things that share a stacking context. The maximized-tile
-// overlay is one (it is positioned and carries a z-index), so a surface rendered
-// inside a tile is clamped inside it whatever number it carries; the values that
-// used to sit at 400, 500 and 9999 inside tiles never escaped it either, and the
-// grid copy of a tile is transformed by react-grid-layout, which clamps a
-// `fixed` descendant the same way. Rendering from App, after <main>, is still
-// what puts a surface above the grid, and the two portals (QuickAddMenu, the
-// presets dropdown) escape their tile the same way. What the scale settles is
-// the order among surfaces that do share a context, which used to be decided by
-// document order, and lost twice.
+// A value only orders things that share a stacking context, and it never picks
+// the containing block. The maximized-tile overlay is a stacking context (it is
+// positioned and carries a z-index), so a surface rendered inside a tile is
+// clamped inside it whatever number it carries; the values that used to sit at
+// 400, 500 and 9999 inside tiles never escaped it either. The grid copy of a
+// tile is worse: react-grid-layout positions it with `transform: translate()`,
+// and a transformed ancestor is the containing block for `position: fixed`, so
+// a `fixed inset-0` overlay written inline in a tile covered the tile's own box
+// rather than the window (#257, measured in the demo as a 1224x456 backdrop on
+// a 1440x900 viewport). The rule that follows: an overlay raised from inside a
+// tile renders through a portal to document.body and keeps its layer class.
+// PlayerDetailPopup, ModPreviewDialog, the command confirms, QuickAddMenu and
+// the presets dropdown all do, and a test on each asserts it renders outside
+// its tile. Rendering from App, after <main>, puts an app-level surface above
+// the grid for the same reason. What the scale settles is the order among
+// surfaces that do share a context, which used to be decided by document
+// order, and lost twice.
 //
 // The scale is for surfaces that compete app-wide. A tile's own sibling order
 // (the backups tile's z-[1] to z-[9], the in-tile scrims and side panels at

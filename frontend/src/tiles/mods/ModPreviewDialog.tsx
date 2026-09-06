@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import { createPortal } from 'react-dom'
 import type {
   InstalledMod,
   ModProject,
@@ -131,7 +132,12 @@ export function ModPreviewDialog({
   const description = project?.description || ''
   const body = project?.body || ''
 
-  return (
+  // Portaled to body, dependency dialog included: the compact InstalledPanel
+  // lives in a grid tile that react-grid-layout transforms, and a transformed
+  // ancestor is the containing block for `fixed`, so rendered inline this
+  // 600px dialog was clamped to the tile's box (#257). The layer classes are
+  // what order it against the maximize overlay and its own dependency dialog.
+  return createPortal(
     <>
       {deps && (
         <DependencyDialog
@@ -386,6 +392,7 @@ export function ModPreviewDialog({
           )}
         </div>
       </div>
-    </>
+    </>,
+    document.body,
   )
 }
