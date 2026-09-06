@@ -1,6 +1,7 @@
 package services
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -330,5 +331,75 @@ func TestConfigBackupNamesSortLegacyBeforeNewInTheSameSecond(t *testing.T) {
 
 	if !(legacy < fresh) {
 		t.Errorf("legacy %q does not sort before new %q; pruneBackups would delete the newer one first", legacy, fresh)
+	}
+}
+
+// ─── eula.txt ─────────────────────────────────────────────────────────────
+
+// The write behind #259: eula.txt used to be a raw os.WriteFile from app.go, the
+// one file the app wrote without going through writeFileAtomic after #116. The
+// rename seam simulates the crash and the file must be untouched by it.
+func TestAcceptEulaWritesTheFlagAtomically(t *testing.T) {
+	svc, workDir := newConfigEditorFixture(t)
+
+	if err := svc.AcceptEula("srv1"); err != nil {
+		t.Fatalf("AcceptEula: %v", err)
+	}
+	got, err := os.ReadFile(filepath.Join(workDir, "eula.txt"))
+	if err != nil {
+		t.Fatalf("read eula.txt: %v", err)
+	}
+	if !strings.Contains(string(got), "eula=true\n") {
+		t.Errorf("eula.txt = %q, want it to contain eula=true", got)
+	}
+
+	// Seed a different content so the failed rewrite has something to tear.
+	if err := os.WriteFile(filepath.Join(workDir, "eula.txt"), []byte("eula=false\n"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	orig := renameFile
+	renameFile = func(oldpath, newpath string) error {
+		return errors.New("simulated crash at rename")
+	}
+	t.Cleanup(func() { renameFile = orig })
+
+	if err := svc.AcceptEula("srv1"); err == nil {
+		t.Fatal("AcceptEula with a failing rename = nil, want an error")
+	}
+	got, err = os.ReadFile(filepath.Join(workDir, "eula.txt"))
+	if err != nil {
+		t.Fatalf("read eula.txt after failed write: %v", err)
+	}
+	if string(got) != "eula=false\n" {
+		t.Errorf("eula.txt after a failed write = %q, want the old content intact", got)
+	}
+	if names := readDirNames(t, workDir); len(names) != 1 || names[0] != "eula.txt" {
+		t.Errorf("working dir holds %v, want only eula.txt (no temp file left behind)", names)
+	}
+}
+
+// filepath.Join("", "eula.txt") is the relative path eula.txt, so an
+// unconfigured server used to write into whatever directory Konnekt was
+// launched from. Every config-editor path resolves the working directory
+// through the same helper, so the read path is asserted alongside.
+func TestConfigEditorRefusesAnEmptyWorkingDir(t *testing.T) {
+	svc, _ := newConfigEditorFixture(t)
+	if err := svc.appConfig.SaveServerConfig(models.ServerConfig{ID: "bare", Name: "Bare"}); err != nil {
+		t.Fatal(err)
+	}
+
+	err := svc.AcceptEula("bare")
+	if err == nil {
+		t.Fatal("AcceptEula on a server with no working directory = nil, want an error")
+	}
+	if !strings.Contains(err.Error(), "no working directory") {
+		t.Errorf("error = %q, want it to name the missing working directory", err)
+	}
+	if _, statErr := os.Stat("eula.txt"); statErr == nil {
+		t.Error("eula.txt was written into the process's working directory")
+	}
+
+	if _, err := svc.ReadConfigFile("bare", "server.properties"); err == nil || !strings.Contains(err.Error(), "no working directory") {
+		t.Errorf("ReadConfigFile on an empty working dir = %v, want the same refusal", err)
 	}
 }

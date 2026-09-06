@@ -227,12 +227,41 @@ func (s *ConfigEditorService) WriteConfigFile(serverID, relPath, content string)
 	return writeFileAtomic(abs, []byte(content), 0644)
 }
 
+// workingDir resolves a server's working directory and refuses an empty one.
+// filepath.Join("", rel) is the relative path rel, so an unconfigured server
+// would otherwise read and write files in whatever directory Konnekt was
+// launched from, the same case datadir.go guards for the app data dir. The
+// sandbox happened to reject the empty case too, but as "path outside working
+// directory", which names the wrong problem.
 func (s *ConfigEditorService) workingDir(serverID string) (string, error) {
 	cfg, err := s.appConfig.GetServerConfig(serverID)
 	if err != nil {
 		return "", err
 	}
+	if cfg.WorkingDir == "" {
+		return "", fmt.Errorf("server %q has no working directory", serverID)
+	}
 	return cfg.WorkingDir, nil
+}
+
+// eulaContent is what AcceptEula writes. The server reads only the eula=true
+// line; the comment records who wrote it.
+const eulaContent = "# EULA accepted via Konnekt\neula=true\n"
+
+// AcceptEula writes eula.txt into the server's working directory, atomically.
+// The file is what the server checks before it will boot, and a raw
+// os.WriteFile could leave a half-written one for a crash between open and
+// close (#259, the shape #116 closed everywhere else). Deliberately not
+// WriteConfigFile: that path snapshots the previous file into config_backups
+// and prunes, right for a file the user edits and noise for a one-line flag.
+// The working directory is not created here: an unconfigured or deleted
+// server directory is a failure to report, not one to paper over.
+func (s *ConfigEditorService) AcceptEula(serverID string) error {
+	wd, err := s.workingDir(serverID)
+	if err != nil {
+		return err
+	}
+	return writeFileAtomic(filepath.Join(wd, "eula.txt"), []byte(eulaContent), 0644)
 }
 
 func (s *ConfigEditorService) sandbox(workDir, relPath string) (string, error) {
