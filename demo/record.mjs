@@ -249,6 +249,9 @@ async function film(scene) {
   const ctx = {
     page,
     tile: tile ? page.locator(`[data-tile-id="${tile}"]`) : null,
+    // Where the clip starts out cut from, so a scene that moves the frame
+    // with setCrop can put it back, and size it against the frame's height.
+    frame: { x: crop.x, y: crop.y, width: CROP.width, height: CROP.height },
     emit: (name, payload) =>
       page.evaluate(
         ([n, p]) => window.runtime.EventsEmit(n, p),
