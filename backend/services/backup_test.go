@@ -2,10 +2,12 @@ package services
 
 import (
 	"archive/zip"
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"konnekt/backend/models"
 )
@@ -559,5 +561,140 @@ func TestReserveBackupFileNeverTruncatesAnExistingFile(t *testing.T) {
 	}
 	if string(got) != "original-contents" {
 		t.Errorf("existing backup = %q, want it untouched", got)
+	}
+}
+
+// ─── Failure paths after backup:started ───────────────────────────────────
+
+// subscribeBackupFailed wires a real bus into the fixture and returns a channel
+// that receives every backup:failed payload. The fixture leaves the bus nil
+// because most flows do not need one; these do, since the event is the thing
+// under test.
+func subscribeBackupFailed(t *testing.T, svc *BackupService) <-chan map[string]interface{} {
+	t.Helper()
+	bus := NewEventBus() // no ctx: Emit skips the Wails runtime and only fans out in-process
+	svc.bus = bus
+	failed := make(chan map[string]interface{}, 4)
+	bus.Subscribe(EventBackupFailed, func(data any) {
+		payload, _ := data.(map[string]interface{})
+		failed <- payload
+	})
+	return failed
+}
+
+func awaitBackupFailed(t *testing.T, failed <-chan map[string]interface{}) map[string]interface{} {
+	t.Helper()
+	select {
+	case p := <-failed:
+		return p
+	case <-time.After(2 * time.Second):
+		t.Fatal("no backup:failed event")
+		return nil
+	}
+}
+
+// The bug behind #258: CreateBackup and CreateWorldBackup emitted
+// backup:started, then on a Stat failure after the zip closed returned the
+// error and emitted nothing, so the frontend's in-progress row never cleared
+// and the console said nothing. Every failure past backup:started now goes
+// through failBackup, and this pins the one that used to skip it.
+func TestBackupStatFailureEmitsFailedNarratesAndRemovesTheArchive(t *testing.T) {
+	cases := []struct {
+		name string
+		run  func(svc *BackupService) (models.Backup, error)
+		dir  func(svc *BackupService) (string, error)
+	}{
+		{
+			name: "server backup",
+			run:  func(svc *BackupService) (models.Backup, error) { return svc.CreateBackup(testServerID) },
+			dir:  func(svc *BackupService) (string, error) { return svc.serverBackupDir(testServerID) },
+		},
+		{
+			name: "world backup",
+			run: func(svc *BackupService) (models.Backup, error) {
+				return svc.CreateWorldBackup(testServerID, "world")
+			},
+			dir: func(svc *BackupService) (string, error) { return svc.worldBackupDir(testServerID, "world") },
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			svc, workDir := newBackupFixture(t)
+			writeFile(t, filepath.Join(workDir, "world", "level.dat"), "level")
+			failed := subscribeBackupFailed(t, svc)
+
+			orig := statBackup
+			statBackup = func(string) (os.FileInfo, error) {
+				return nil, errors.New("simulated stat failure")
+			}
+			t.Cleanup(func() { statBackup = orig })
+
+			if _, err := tc.run(svc); err == nil {
+				t.Fatal("expected an error from the failing Stat, got nil")
+			}
+
+			payload := awaitBackupFailed(t, failed)
+			if payload["serverID"] != testServerID {
+				t.Errorf("payload serverID = %v, want %q", payload["serverID"], testServerID)
+			}
+			if msg, _ := payload["error"].(string); !strings.Contains(msg, "simulated stat failure") {
+				t.Errorf("payload error = %q, want the stat failure", msg)
+			}
+
+			var narrated bool
+			for _, line := range consoleLines(svc.server) {
+				if strings.HasPrefix(line, "Backup failed: simulated stat failure") {
+					narrated = true
+				}
+			}
+			if !narrated {
+				t.Errorf("console never said the backup failed; lines: %v", consoleLines(svc.server))
+			}
+
+			dir, err := tc.dir(svc)
+			if err != nil {
+				t.Fatal(err)
+			}
+			entries, err := os.ReadDir(dir)
+			if err != nil {
+				t.Fatal(err)
+			}
+			for _, e := range entries {
+				if strings.HasSuffix(e.Name(), ".zip") {
+					t.Errorf("archive %s left behind after a failed backup", e.Name())
+				}
+			}
+		})
+	}
+}
+
+// The restore paths used to emit {error} alone. App.tsx clears the processes
+// row by serverID and useBackupWorlds refreshes only on a matching serverID,
+// so a restore failure reached neither. One shape now, from every emit.
+func TestRestoreFailureCarriesTheServerID(t *testing.T) {
+	svc, workDir := newBackupFixture(t)
+	writeFile(t, filepath.Join(workDir, "world", "level.dat"), "level")
+
+	b, err := svc.CreateBackup(testServerID)
+	if err != nil {
+		t.Fatalf("CreateBackup: %v", err)
+	}
+	dir, err := svc.serverBackupDir(testServerID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Truncate the archive so unzipTo fails inside RestoreBackup.
+	writeFile(t, filepath.Join(dir, b.Filename), "not a zip")
+
+	failed := subscribeBackupFailed(t, svc)
+	if err := svc.RestoreBackup(testServerID, b.Filename); err == nil {
+		t.Fatal("expected RestoreBackup to fail on a truncated archive")
+	}
+	payload := awaitBackupFailed(t, failed)
+	if payload["serverID"] != testServerID {
+		t.Errorf("restore failure payload serverID = %v, want %q", payload["serverID"], testServerID)
+	}
+	if msg, _ := payload["error"].(string); msg == "" {
+		t.Error("restore failure payload has no error")
 	}
 }

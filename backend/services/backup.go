@@ -269,6 +269,37 @@ func sizeMB(n int64) string {
 	return fmt.Sprintf("%.1f MB", float64(n)/(1024*1024))
 }
 
+// statBackup is os.Stat, swapped by tests to fail the one step after the zip
+// is closed. It exists only as that seam.
+var statBackup = os.Stat
+
+// failBackup is every way CreateBackup and CreateWorldBackup can fail once
+// backup:started has gone out. The frontend shows an in-progress row from that
+// event and clears it only on backup:completed or backup:failed, so a path that
+// returned without emitting left the row spinning with no toast and no console
+// line (#258): the Stat on the finished archive did exactly that, twice.
+// Routing every late failure through here is what keeps a sixth path from
+// skipping the emit. The archive is removed because "failed" has to mean "no
+// archive": ListBackups stats every file it finds, and one the service could
+// not stat itself would surface there as a backup.
+func (s *BackupService) failBackup(serverID, destPath string, err error) error {
+	_ = os.Remove(destPath) //nolint:errcheck // best-effort cleanup of a partial archive; err is what the caller reports
+	s.emitBackupFailed(serverID, err)
+	s.narrateFailed(serverID, "Backup failed: "+err.Error())
+	return err
+}
+
+// emitBackupFailed is the one shape backup:failed has. App.tsx reads both keys
+// (the error for the toast, the serverID to clear the processes row) and
+// useBackupWorlds refreshes only when the serverID matches; the restore paths
+// used to send {error} alone, so neither matched them.
+func (s *BackupService) emitBackupFailed(serverID string, err error) {
+	s.bus.Emit(EventBackupFailed, map[string]interface{}{
+		"serverID": serverID,
+		"error":    err.Error(),
+	})
+}
+
 func (s *BackupService) CreateBackup(serverID string) (models.Backup, error) {
 	cfg, err := s.config.GetServerConfig(serverID)
 	if err != nil {
@@ -317,18 +348,12 @@ func (s *BackupService) CreateBackup(serverID string) (models.Backup, error) {
 		zipErr = closeErr
 	}
 	if zipErr != nil {
-		_ = os.Remove(destPath) //nolint:errcheck // best-effort cleanup of a partial archive; the error below is what matters
-		s.bus.Emit(EventBackupFailed, map[string]interface{}{
-			"serverID": serverID,
-			"error":    zipErr.Error(),
-		})
-		s.narrateFailed(serverID, "Backup failed: "+zipErr.Error())
-		return models.Backup{}, zipErr
+		return models.Backup{}, s.failBackup(serverID, destPath, zipErr)
 	}
 
-	info, err := os.Stat(destPath)
+	info, err := statBackup(destPath)
 	if err != nil {
-		return models.Backup{}, err
+		return models.Backup{}, s.failBackup(serverID, destPath, err)
 	}
 	b := models.Backup{
 		Filename:  filename,
@@ -394,18 +419,12 @@ func (s *BackupService) CreateWorldBackup(serverID, worldName string) (models.Ba
 		zipErr = closeErr
 	}
 	if zipErr != nil {
-		_ = os.Remove(destPath) //nolint:errcheck // best-effort cleanup of a partial archive; the error below is what matters
-		s.bus.Emit(EventBackupFailed, map[string]interface{}{
-			"serverID": serverID,
-			"error":    zipErr.Error(),
-		})
-		s.narrateFailed(serverID, "Backup failed: "+zipErr.Error())
-		return models.Backup{}, zipErr
+		return models.Backup{}, s.failBackup(serverID, destPath, zipErr)
 	}
 
-	info, err := os.Stat(destPath)
+	info, err := statBackup(destPath)
 	if err != nil {
-		return models.Backup{}, err
+		return models.Backup{}, s.failBackup(serverID, destPath, err)
 	}
 	b := models.Backup{
 		Filename:  filename,
@@ -452,7 +471,7 @@ func (s *BackupService) RestoreBackup(serverID, filename string) error {
 		defer os.RemoveAll(tmp)
 
 		if err := unzipTo(zipPath, tmp); err != nil {
-			s.bus.Emit(EventBackupFailed, map[string]string{"error": err.Error()})
+			s.emitBackupFailed(serverID, err)
 			s.narrateFailed(serverID, "Restore failed while extracting: "+err.Error())
 			return err
 		}
@@ -463,7 +482,7 @@ func (s *BackupService) RestoreBackup(serverID, filename string) error {
 		}
 		if err := os.Rename(tmp, workingDir); err != nil {
 			_ = os.Rename(aside, workingDir) //nolint:errcheck // best-effort rollback; err below is already the reported failure
-			s.bus.Emit(EventBackupFailed, map[string]string{"error": err.Error()})
+			s.emitBackupFailed(serverID, err)
 			s.narrateFailed(serverID, "Restore failed while swapping files, previous state kept: "+err.Error())
 			return err
 		}
@@ -493,7 +512,7 @@ func (s *BackupService) RestoreBackup(serverID, filename string) error {
 		defer os.RemoveAll(tmp)
 
 		if err := unzipTo(zipPath, tmp); err != nil {
-			s.bus.Emit(EventBackupFailed, map[string]string{"error": err.Error()})
+			s.emitBackupFailed(serverID, err)
 			s.narrateFailed(serverID, "Restore failed while extracting: "+err.Error())
 			return err
 		}
@@ -504,7 +523,7 @@ func (s *BackupService) RestoreBackup(serverID, filename string) error {
 		}
 		if err := os.Rename(tmp, targetDir); err != nil {
 			_ = os.Rename(aside, targetDir) //nolint:errcheck // best-effort rollback; err below is already the reported failure
-			s.bus.Emit(EventBackupFailed, map[string]string{"error": err.Error()})
+			s.emitBackupFailed(serverID, err)
 			s.narrateFailed(serverID, "Restore failed while swapping files, previous state kept: "+err.Error())
 			return err
 		}
