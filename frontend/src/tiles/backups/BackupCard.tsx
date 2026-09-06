@@ -1,5 +1,6 @@
 import type { Backup } from './useBackups'
-import { fmtBytes, fmtDate, extractID } from './format'
+import { extractID } from './format'
+import { fmtBytes, fmtDate } from '../../lib/format'
 
 function TagPillReadOnly({ tag }: { tag: string }) {
   return (

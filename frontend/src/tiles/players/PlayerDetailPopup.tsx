@@ -5,6 +5,7 @@ import { IconButton } from '../../components/ui/IconButton'
 import { X } from '../../lib/icons'
 import { Icon } from '../../components/ui/Icon'
 import { readOr } from '../../lib/ipc'
+import { fmtDate } from '../../lib/format'
 
 interface Props {
   player: Player
@@ -54,16 +55,6 @@ function InfoRow({ label, value, dim }: { label: string; value: string; dim?: bo
         {value}
       </span>
     </div>
-  )
-}
-
-function formatDate(ms: number): string {
-  if (!ms) return '—'
-  const d = new Date(ms)
-  return (
-    d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }) +
-    ' ' +
-    d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })
   )
 }
 
@@ -151,7 +142,7 @@ export function PlayerDetailPopup({ player: initial, serverId, onClose, onMutate
               player.online
                 ? 'Online'
                 : player.lastOnline
-                  ? `Last seen ${formatDate(player.lastOnline)}`
+                  ? `Last seen ${fmtDate(player.lastOnline)}`
                   : 'Offline'
             }
           />

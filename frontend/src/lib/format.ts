@@ -48,6 +48,11 @@ export function relativeTime(iso: string): string {
  * of this before it was worth sharing.
  */
 export function relativeMs(ms: number): string {
+  // 0 is Go's zero value for an int64 epoch and means "never" (a world that
+  // was never played, a player never seen), not 1 January 1970: without this
+  // it renders as twenty thousand days ago. Every caller used to guard it
+  // itself, or forgot to.
+  if (!ms) return '—'
   const mins = Math.floor((Date.now() - ms) / 60_000)
   if (mins < 1) return 'just now'
   if (mins < 60) return `${mins}m ago`
@@ -63,6 +68,27 @@ export function relativeMs(ms: number): string {
  * Rounds rather than floors, so a run 59 minutes out reads "in 1h" instead of
  * "in 59m" — this is a countdown, and the coarse unit is the honest one.
  */
+/**
+ * "Sep 5, 2026, 06:30 PM" in the user's locale, for an epoch-ms timestamp.
+ *
+ * One `toLocaleString` call with both the date and the time options, so the
+ * separator between them is the locale's own. The backups tile and the player
+ * popup each had a copy, and the popup's joined `toLocaleDateString` and
+ * `toLocaleTimeString` with a space by hand, so the two disagreed on every
+ * backup card that also showed a last-seen time. The zero guard is the same
+ * one `relativeMs` carries, for the same reason.
+ */
+export function fmtDate(ms: number): string {
+  if (!ms) return '—'
+  return new Date(ms).toLocaleString([], {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+}
+
 export function untilMs(ms: number): string {
   const diff = ms - Date.now()
   if (diff <= 0) return 'now'

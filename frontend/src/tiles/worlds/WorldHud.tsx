@@ -3,6 +3,7 @@ import { StopServer, StartServer } from '../../../wailsjs/go/main/App'
 import { useServerConfigStore } from '../../stores/useServerConfigStore'
 import { useServerStore } from '../../stores/useServerStore'
 import type { WorldSystem } from './useWorlds'
+import { fmtBytes, relativeMs } from '../../lib/format'
 
 interface Props {
   world: WorldSystem
@@ -15,24 +16,6 @@ interface Props {
   onOpenFolder: (name: string) => Promise<void>
   onBackup: (name: string) => Promise<void>
   onRefresh: () => void
-}
-
-function fmtBytes(n: number): string {
-  if (n < 1024) return `${n} B`
-  if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`
-  if (n < 1024 * 1024 * 1024) return `${(n / (1024 * 1024)).toFixed(1)} MB`
-  return `${(n / (1024 * 1024 * 1024)).toFixed(2)} GB`
-}
-
-function fmtRelative(ms: number): string {
-  if (!ms) return '—'
-  const diff = Date.now() - ms
-  const m = Math.floor(diff / 60_000)
-  if (m < 1) return 'just now'
-  if (m < 60) return `${m}m ago`
-  const h = Math.floor(m / 60)
-  if (h < 24) return `${h}h ago`
-  return `${Math.floor(h / 24)}d ago`
 }
 
 type SwitchStep = 'idle' | 'confirm' | 'working' | 'delete-confirm' | 'rename' | 'duplicate'
@@ -184,7 +167,7 @@ export function WorldHud({
           {meta.lastPlayed > 0 && (
             <div className={ROW}>
               <span className={LABEL}>last play</span>
-              <span>{fmtRelative(meta.lastPlayed)}</span>
+              <span>{relativeMs(meta.lastPlayed)}</span>
             </div>
           )}
         </div>
@@ -204,7 +187,7 @@ export function WorldHud({
         )}
         <div className={ROW}>
           <span className={LABEL}>modified</span>
-          <span>{fmtRelative(world.modified)}</span>
+          <span>{relativeMs(world.modified)}</span>
         </div>
       </div>
 
