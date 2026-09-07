@@ -118,6 +118,15 @@ scenes are written as gestures against the real UI, and Playwright's locators
 by role and name, its stepped pointer moves and its per-context device scale
 are what make those gestures survive a restyle.
 
+A second one earns a line because a gate rests on it: `@vitest/coverage-v8`
+is what `pnpm test:coverage` measures with, and the floor in `vite.config.ts`
+is compared against its numbers (#287). The v8 provider rather than
+`@vitest/coverage-istanbul` because it instruments nothing at build time, so
+`pnpm test` stays as fast as it was and the coverage run costs only the
+report; it is also Vitest's own default. Its version has to match `vitest`'s
+exactly, so it carries the same caret range as `vitest` and the lockfile pins
+them to one version; bump the two together.
+
 ## Removed
 
 - `uplot` — was listed as a direct dependency but never imported under

@@ -220,6 +220,7 @@ wails generate module # Regenerate TS bindings after Go changes
 pnpm typecheck        # tsc --noEmit (run from frontend/)
 pnpm lint             # ESLint (run from frontend/)
 pnpm test             # vitest (run from frontend/)
+pnpm test:coverage    # vitest with the coverage floor, per-directory table (frontend/)
 pnpm format           # Prettier --write (run from frontend/)
 pnpm format:check     # Prettier --check, the gate CI runs (from frontend/)
 pnpm check-bundle     # Enforce 165 KB gzip entry-chunk budget (run from frontend/)
@@ -405,6 +406,11 @@ commits, never squashed (#263).
   `httptest.Server` for HTTP clients (see `update_test.go`, `modrinth_test.go`).
 - New logic (Go services, Zustand store logic, pure helpers) should ship with
   tests.
+- Both sides hold a coverage floor: `go run ./scripts/coverage-floor` for
+  `backend/services`, `pnpm test:coverage` for `frontend/src` (the threshold
+  lives in `vite.config.ts`). Each is a ratchet: raise it as coverage rises,
+  never lower it to make a build pass. The frontend table is per directory,
+  which is what says which tile is bare.
 
 ## Versioning & releases
 
