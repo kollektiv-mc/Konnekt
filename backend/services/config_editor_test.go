@@ -11,14 +11,11 @@ import (
 	"konnekt/backend/models"
 )
 
-// Known gap, deliberately not covered here: sandbox is a purely *lexical* check
-// (filepath.Clean plus a prefix test), so a symlink sitting inside the working
-// directory and pointing outside it passes and then resolves outside. Tracked in
-// agent_docs/HEALTH_CHECKLIST.md rather than fixed alongside these tests — this
-// is a local-first app where the user already owns the filesystem. A real fix has
-// to resolve the *parent* directory (sandbox runs for files that do not exist yet,
-// on the write path), and a test for it needs a skip guard because Windows gates
-// symlink creation behind Developer Mode or elevation.
+// The lexical half of sandbox, filepath.Clean plus a prefix test, exercised
+// against a working directory that does not exist on disk. That is also what
+// pins the fallback: with nothing to resolve through, the string answer
+// stands. The physical half, a symlink inside the working directory pointing
+// outside it (#283), is TestConfigEditorSandboxRefusesSymlinkEscape below.
 func TestConfigEditorSandbox(t *testing.T) {
 	s := &ConfigEditorService{}
 	workDir := filepath.Join("C:", "servers", "myserver")
@@ -75,6 +72,93 @@ func newConfigEditorFixture(t *testing.T) (*ConfigEditorService, string) {
 	}
 
 	return &ConfigEditorService{appConfig: cfgSvc, dataDir: dataDir}, workDir
+}
+
+// symlinkOrSkip creates the link or skips the test: Windows gates symlink
+// creation behind Developer Mode or elevation, and a test that cannot make its
+// fixture has nothing to say.
+func symlinkOrSkip(t *testing.T, target, link string) {
+	t.Helper()
+	if err := os.Symlink(target, link); err != nil {
+		t.Skipf("cannot create a symlink here: %v", err)
+	}
+}
+
+// The physical half of sandbox (#283). The lexical test passes every path
+// below, because as strings they all sit under the working directory; only
+// resolving what is on disk tells the escapes from the rest.
+func TestConfigEditorSandboxRefusesSymlinkEscape(t *testing.T) {
+	s := &ConfigEditorService{}
+	workDir := t.TempDir()
+	outside := t.TempDir()
+	writeFile(t, filepath.Join(outside, "secret.txt"), "secret")
+	if err := os.MkdirAll(filepath.Join(workDir, "real"), 0755); err != nil {
+		t.Fatal(err)
+	}
+	symlinkOrSkip(t, outside, filepath.Join(workDir, "link"))
+	symlinkOrSkip(t, filepath.Join(outside, "secret.txt"), filepath.Join(workDir, "props.yml"))
+	symlinkOrSkip(t, filepath.Join(workDir, "real"), filepath.Join(workDir, "inner"))
+
+	refused := []string{
+		filepath.Join("link", "secret.txt"),        // an existing file through an escaping directory link
+		filepath.Join("link", "new.yml"),           // a file that does not exist yet, through the same link (the write path)
+		filepath.Join("link", "deeper", "new.yml"), // nor its parent
+		"props.yml", // the file itself is the link
+	}
+	for _, rel := range refused {
+		if _, err := s.sandbox(workDir, rel); !errors.Is(err, errOutsideWorkDir) {
+			t.Errorf("sandbox(%q) error = %v, want errOutsideWorkDir", rel, err)
+		}
+	}
+
+	// A link that stays inside is a layout, not an escape, and the path handed
+	// back is the lexical one so the caller's I/O still goes through the link.
+	allowed := []string{"server.properties", filepath.Join("inner", "a.yml"), filepath.Join("real", "b.yml"), "."}
+	for _, rel := range allowed {
+		got, err := s.sandbox(workDir, rel)
+		if err != nil {
+			t.Errorf("sandbox(%q) error = %v, want nil", rel, err)
+			continue
+		}
+		if want := filepath.Clean(filepath.Join(workDir, rel)); got != want {
+			t.Errorf("sandbox(%q) = %q, want the lexical path %q", rel, got, want)
+		}
+	}
+}
+
+// Both public entry points refuse a symlink escape, the way
+// TestConfigFileGuardAppliesOnBothPaths pins them for "..". The target really
+// exists outside, for the same reason that test gives: the read has to be told
+// apart from a plain miss, and the write has to be shown not to have landed.
+func TestConfigFileGuardRefusesSymlinkOnBothPaths(t *testing.T) {
+	svc, workDir := newConfigEditorFixture(t)
+	outside := t.TempDir()
+	secret := filepath.Join(outside, "secret.txt")
+	writeFile(t, secret, "top secret")
+	symlinkOrSkip(t, outside, filepath.Join(workDir, "link"))
+	symlinkOrSkip(t, secret, filepath.Join(workDir, "server.properties"))
+
+	for _, rel := range []string{filepath.Join("link", "secret.txt"), "server.properties"} {
+		if _, err := svc.ReadConfigFile("srv1", rel); !errors.Is(err, errOutsideWorkDir) {
+			t.Errorf("ReadConfigFile(%q) error = %v, want errOutsideWorkDir", rel, err)
+		}
+		if err := svc.WriteConfigFile("srv1", rel, "overwritten"); !errors.Is(err, errOutsideWorkDir) {
+			t.Errorf("WriteConfigFile(%q) error = %v, want errOutsideWorkDir", rel, err)
+		}
+	}
+	body, err := os.ReadFile(secret)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(body) != "top secret" {
+		t.Errorf("file outside the working directory was modified: %q", body)
+	}
+	// And the link itself survived: writeFileAtomic renames over its target,
+	// which would have replaced the link with a plain file had the guard let
+	// the write through.
+	if fi, err := os.Lstat(filepath.Join(workDir, "server.properties")); err != nil || fi.Mode()&os.ModeSymlink == 0 {
+		t.Errorf("server.properties is no longer a symlink (err=%v)", err)
+	}
 }
 
 func TestReadWriteConfigFileRoundTrip(t *testing.T) {
