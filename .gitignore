@@ -13,6 +13,7 @@ frontend/node_modules/
 *.test
 *.syso
 coverage.out
+frontend/coverage/
 
 # Editor
 .DS_Store

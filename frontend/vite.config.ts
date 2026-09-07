@@ -23,5 +23,23 @@ export default defineConfig({
     // way to pin the layering scale to lib/layers.ts. Only the raw read is let
     // through, so a plain CSS import in a component still costs nothing.
     css: { include: [/\?raw$/] },
+    // `pnpm test:coverage` (#287). Source only: wailsjs/ is generated and sits
+    // outside src/, styles/tokens.ts is generated, main.tsx is the mount call,
+    // and a test file measures nothing. The v8 provider instruments nothing at
+    // build time, so `pnpm test` stays exactly as fast as it was.
+    coverage: {
+      provider: 'v8',
+      include: ['src/**/*.{ts,tsx}'],
+      exclude: ['src/**/*.test.{ts,tsx}', 'src/styles/tokens.ts', 'src/main.tsx', 'src/**/*.d.ts'],
+      reporter: ['text', 'text-summary'],
+      // The floor, held the way scripts/coverage-floor holds the Go one: set a
+      // few points under the first measurement, raised as coverage rises,
+      // never lowered to make a build pass. Measured 2026-09-07 on 733 tests:
+      // 53.7% of lines, 80.5% of branches, 49.9% of functions, with repeat
+      // runs landing between 53.1% and 53.7%, so the floor leaves room for that
+      // spread. Lines only, the one number the Go floor also uses, so the two
+      // read the same way.
+      thresholds: { lines: 50 },
+    },
   },
 })

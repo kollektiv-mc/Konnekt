@@ -108,6 +108,11 @@ jobs:
       # unnoticed; this step is what stops it recurring.
       - run: pnpm format:check
       - run: pnpm test
+      # The frontend's coverage floor (#287), the way `go run ./scripts/coverage-floor`
+      # holds the backend's: vite.config.ts owns the threshold. A second run of
+      # the suite rather than folding coverage into `pnpm test`, so a floor
+      # failure and a test failure stay separate steps.
+      - run: pnpm test:coverage
       # A warm-list specifier that drifts from its React.lazy path resolves to a
       # second copy of the module: the build succeeds, the tile opens, and the
       # warm-up silently stops doing anything. Source-only, so it runs here
