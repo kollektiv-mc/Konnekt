@@ -15,6 +15,7 @@ export const EVENTS = {
   BACKUP_COMPLETED: 'backup:completed',
   BACKUP_FAILED: 'backup:failed',
   RESTORE_COMPLETED: 'backup:restore-completed',
+  RESTORE_FAILED: 'backup:restore-failed',
   SCHEDULE_RUN_STARTED: 'schedule:run-started',
   SCHEDULE_NODE_STARTED: 'schedule:node-started',
   SCHEDULE_NODE_FINISHED: 'schedule:node-finished',
