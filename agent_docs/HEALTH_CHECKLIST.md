@@ -512,7 +512,7 @@ what *is* closed.
   round trip, so on a slower machine it moves, and the splash is a fixed 1000ms
   that does not move with it. Fixing it properly means the chart's first render
   not being gated on its data, which is a tile change, not a prefetch change.
-  Filed as #286 (2026-09-05).
+  Filed as #285 (2026-09-05).
 - **A tile's cold/warm gap is mostly first-mount work, not the chunk.** Warming
   the scheduler chunk took its cold blocking from 235ms to 147ms; warm is 61ms.
   The remaining ~85ms is V8 compiling the subtree's functions on first call,
@@ -648,7 +648,7 @@ stale; re-measure with the same scripted drag before acting on it.
     undocumented until now.
   Adding either is an edit to `kollektiv/design/tokens.json`'s `motion.easing`,
   then kollektiv's `scripts/sync-tokens.sh`, then `pnpm gen:tokens` here.
-  Filed as #285 (2026-09-05), labelled blocked for that reason.
+  Filed as #286 (2026-09-05), labelled blocked for that reason.
 - **Also still open, smaller.** Roughly 14 `duration-200`/`-300` values on
   Tailwind's own numeric scale are near-misses nobody has ruled on. They read as
   a token would, they just are not one. And `tokens.ts` still exports colours
