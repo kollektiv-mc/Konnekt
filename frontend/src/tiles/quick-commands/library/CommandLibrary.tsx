@@ -11,6 +11,7 @@ import {
 } from '../../../stores/useCommandsStore'
 import { useUiStore } from '../../../stores/useUiStore'
 import { SendCommand } from '../../../../wailsjs/go/main/App'
+import { hasWailsBridge } from '../../../lib/ipc'
 import { CommandRow } from './CommandRow'
 import { KommandsPanel } from './KommandsPanel'
 import type { LibraryFilter } from '../types'
@@ -75,7 +76,8 @@ export function CommandLibrary({ serverId }: { serverId: string }) {
 
   const send = useCallback(
     (cmd: string) => {
-      SendCommand(serverId, cmd).catch(console.error)
+      // Same split as QuickCommandsPanel's send, for the same reason (#185).
+      if (hasWailsBridge()) SendCommand(serverId, cmd).catch(console.error)
     },
     [serverId],
   )
