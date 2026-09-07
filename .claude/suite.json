@@ -31,7 +31,8 @@
       { "name": "release notes", "run": "python3 .github/scripts/release-notes_test.py" },
       { "name": "go vet", "run": "go vet ./..." },
       { "name": "go test", "run": "go test ./..." },
-      { "name": "coverage floor", "run": "go run ./scripts/coverage-floor" }
+      { "name": "coverage floor", "run": "go run ./scripts/coverage-floor" },
+      { "name": "frontend coverage floor", "run": "pnpm test:coverage", "cwd": "frontend" }
     ],
     "invariants": [
       {

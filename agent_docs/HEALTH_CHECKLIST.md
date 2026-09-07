@@ -35,6 +35,7 @@ python3 .github/scripts/release-notes_test.py  # release-notes classifier (repo 
 go vet ./...            # Go static analysis (repo root)
 go test ./...           # Go tests (repo root)
 go run ./scripts/coverage-floor   # backend/services coverage floor (repo root)
+pnpm test:coverage      # frontend/src coverage floor, threshold in vite.config.ts (from frontend/)
 ```
 Plus the generated-file check `suite.json` declares: `pnpm gen:tokens` then
 `git diff --exit-code src/styles/tokens.css src/styles/tokens.ts
@@ -215,8 +216,12 @@ tree.
       scheduler engine (Go); Zustand store logic and critical hooks (frontend).
       `backend/services` sits at **59.7%** of statements (2026-09-01), with a
       **49%** floor owned by `scripts/coverage-floor` and run by both
-      `/suite-kit:health` and CI. The floor is a ratchet: raise it as coverage rises, never lower it to
-      green a red build. Coverage is a proxy, not the goal — prefer a test that
+      `/suite-kit:health` and CI. `frontend/src` sits at **53.7%** of lines
+      (2026-09-07, the first measurement; repeat runs land between 53.1% and
+      53.7%, so the number moves by about half a point), with a **50%** floor owned by
+      `vite.config.ts` and run as `pnpm test:coverage` by the same two. Each
+      floor is a ratchet: raise it as coverage rises, never lower it to green
+      a red build. Coverage is a proxy, not the goal — prefer a test that
       would have caught a real bug over one that only moves the number.
 - [x] CI is green on every push/PR (`.github/workflows/ci.yml`: a `frontend`
       job, an `invariants` job running `.claude/suite-check.py` over the
@@ -772,12 +777,15 @@ was partly wrong)
   imperative-ref-during-render pattern). The other 47 are ordinary app logic,
   concentrated in `tiles/mods/useGridPageAnimation.ts` (8),
   `tiles/backups/BackupCarousel.tsx` (7) and `tiles/mods/BrowsePanel.tsx` (7).
-  Its stated gate, "once test coverage is in place", cannot be met as written
-  either: the frontend has **no** coverage measurement at all (no `coverage` key
-  in `vite.config.ts`, no `@vitest/coverage-*` dependency). The 36%/38% floor is
-  `backend/services` only. Either stand up frontend coverage or re-gate this on
-  something that exists.
-  Filed as #287 (2026-09-05), coverage first.
+  Its stated gate, "once test coverage is in place", could not be met as
+  written until 2026-09-07, when #287 stood the measurement up:
+  `pnpm test:coverage` reports 53.7% of `frontend/src` lines on 733 tests,
+  with a 50% floor in `vite.config.ts` (HEALTH_LOG, 2026-09-07). The gate is
+  now concrete. The three files carrying most of the findings sit in the two
+  barest directories, `tiles/backups` at 29.7% and `tiles/mods` at 36.4% of
+  lines, so a refactor there today runs without a net. Enable the rules once
+  those two directories are covered at or above the floor, and take the r3f
+  three separately, since a WebGL scene cannot be covered in jsdom at all.
 
 **P1/P2 — Wings-survey adoption set** (filed 2026-08-21)
 - 15 behaviors adopted from the Pterodactyl Wings clean-room survey
