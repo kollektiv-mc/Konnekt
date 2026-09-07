@@ -590,30 +590,42 @@ func TestReserveBackupFileNeverTruncatesAnExistingFile(t *testing.T) {
 
 // ─── Failure paths after backup:started ───────────────────────────────────
 
-// subscribeBackupFailed wires a real bus into the fixture and returns a channel
-// that receives every backup:failed payload. The fixture leaves the bus nil
-// because most flows do not need one; these do, since the event is the thing
-// under test.
-func subscribeBackupFailed(t *testing.T, svc *BackupService) <-chan map[string]interface{} {
+// subscribeFailed wires a real bus into the fixture (once; later calls reuse
+// it) and returns a channel that receives every payload of the named event.
+// The fixture leaves the bus nil because most flows do not need one; these
+// do, since the event is the thing under test.
+func subscribeFailed(t *testing.T, svc *BackupService, event string) <-chan map[string]interface{} {
 	t.Helper()
-	bus := NewEventBus() // no ctx: Emit skips the Wails runtime and only fans out in-process
-	svc.bus = bus
+	if svc.bus == nil {
+		svc.bus = NewEventBus() // no ctx: Emit skips the Wails runtime and only fans out in-process
+	}
 	failed := make(chan map[string]interface{}, 4)
-	bus.Subscribe(EventBackupFailed, func(data any) {
+	svc.bus.Subscribe(event, func(data any) {
 		payload, _ := data.(map[string]interface{})
 		failed <- payload
 	})
 	return failed
 }
 
-func awaitBackupFailed(t *testing.T, failed <-chan map[string]interface{}) map[string]interface{} {
+func awaitFailed(t *testing.T, failed <-chan map[string]interface{}, event string) map[string]interface{} {
 	t.Helper()
 	select {
 	case p := <-failed:
 		return p
 	case <-time.After(2 * time.Second):
-		t.Fatal("no backup:failed event")
+		t.Fatalf("no %s event", event)
 		return nil
+	}
+}
+
+// assertNoEvent is the other half: subscribers run on goroutines, so this
+// waits long enough for a stray emit to have arrived before calling it absent.
+func assertNoEvent(t *testing.T, ch <-chan map[string]interface{}, event string) {
+	t.Helper()
+	select {
+	case p := <-ch:
+		t.Errorf("unexpected %s event: %v", event, p)
+	case <-time.After(200 * time.Millisecond):
 	}
 }
 
@@ -645,7 +657,7 @@ func TestBackupStatFailureEmitsFailedNarratesAndRemovesTheArchive(t *testing.T) 
 		t.Run(tc.name, func(t *testing.T) {
 			svc, workDir := newBackupFixture(t)
 			writeFile(t, filepath.Join(workDir, "world", "level.dat"), "level")
-			failed := subscribeBackupFailed(t, svc)
+			failed := subscribeFailed(t, svc, EventBackupFailed)
 
 			orig := statBackup
 			statBackup = func(string) (os.FileInfo, error) {
@@ -657,7 +669,7 @@ func TestBackupStatFailureEmitsFailedNarratesAndRemovesTheArchive(t *testing.T) 
 				t.Fatal("expected an error from the failing Stat, got nil")
 			}
 
-			payload := awaitBackupFailed(t, failed)
+			payload := awaitFailed(t, failed, EventBackupFailed)
 			if payload["serverID"] != testServerID {
 				t.Errorf("payload serverID = %v, want %q", payload["serverID"], testServerID)
 			}
@@ -692,10 +704,12 @@ func TestBackupStatFailureEmitsFailedNarratesAndRemovesTheArchive(t *testing.T) 
 	}
 }
 
-// The restore paths used to emit {error} alone. App.tsx clears the processes
-// row by serverID and useBackupWorlds refreshes only on a matching serverID,
-// so a restore failure reached neither. One shape now, from every emit.
-func TestRestoreFailureCarriesTheServerID(t *testing.T) {
+// A failed restore has its own event. It used to emit backup:failed, which
+// App.tsx toasts as "Backup failed" while the console line beside it says
+// "Restore failed", and which the scheduler routes to trigger.backup's onFailed
+// port (#280). The payload keeps the shape #258 gave it: App.tsx reads the
+// error for the toast and the serverID to scope it.
+func TestRestoreFailureEmitsRestoreFailedNotBackupFailed(t *testing.T) {
 	svc, workDir := newBackupFixture(t)
 	writeFile(t, filepath.Join(workDir, "world", "level.dat"), "level")
 
@@ -710,15 +724,68 @@ func TestRestoreFailureCarriesTheServerID(t *testing.T) {
 	// Truncate the archive so unzipTo fails inside RestoreBackup.
 	writeFile(t, filepath.Join(dir, b.Filename), "not a zip")
 
-	failed := subscribeBackupFailed(t, svc)
+	restoreFailed := subscribeFailed(t, svc, EventRestoreFailed)
+	backupFailed := subscribeFailed(t, svc, EventBackupFailed)
 	if err := svc.RestoreBackup(testServerID, b.Filename); err == nil {
 		t.Fatal("expected RestoreBackup to fail on a truncated archive")
 	}
-	payload := awaitBackupFailed(t, failed)
+	payload := awaitFailed(t, restoreFailed, EventRestoreFailed)
 	if payload["serverID"] != testServerID {
 		t.Errorf("restore failure payload serverID = %v, want %q", payload["serverID"], testServerID)
 	}
 	if msg, _ := payload["error"].(string); msg == "" {
 		t.Error("restore failure payload has no error")
+	}
+	assertNoEvent(t, backupFailed, EventBackupFailed)
+}
+
+// The restore that failed before it had anything to extract narrated
+// "Restoring…" and then nothing: the staging-directory and set-aside failures
+// returned bare, with no event and no console line, the shape #258 closed for
+// backups. Every failure after the opening narration now goes through
+// failRestore, and this pins the earliest of them.
+func TestRestoreStagingFailureEmitsAndNarrates(t *testing.T) {
+	svc, workDir := newBackupFixture(t)
+	writeFile(t, filepath.Join(workDir, "world", "level.dat"), "level")
+
+	b, err := svc.CreateBackup(testServerID)
+	if err != nil {
+		t.Fatalf("CreateBackup: %v", err)
+	}
+
+	orig := mkdirTempRestore
+	mkdirTempRestore = func(string, string) (string, error) {
+		return "", errors.New("disk full")
+	}
+	t.Cleanup(func() { mkdirTempRestore = orig })
+
+	restoreFailed := subscribeFailed(t, svc, EventRestoreFailed)
+	err = svc.RestoreBackup(testServerID, b.Filename)
+	if err == nil {
+		t.Fatal("expected RestoreBackup to fail when the staging directory cannot be made")
+	}
+	if !strings.Contains(err.Error(), "disk full") {
+		t.Errorf("RestoreBackup error = %q, want the staging error", err)
+	}
+	payload := awaitFailed(t, restoreFailed, EventRestoreFailed)
+	if payload["serverID"] != testServerID {
+		t.Errorf("payload serverID = %v, want %q", payload["serverID"], testServerID)
+	}
+
+	var sawFailure bool
+	for _, entry := range svc.server.GetConsoleHistory(testServerID) {
+		if strings.Contains(entry.Line, "Restore failed while preparing a staging directory") {
+			sawFailure = true
+			if entry.Outcome != outcomeFailed {
+				t.Errorf("failure line %q has Outcome %q, want %q", entry.Line, entry.Outcome, outcomeFailed)
+			}
+		}
+	}
+	if !sawFailure {
+		t.Errorf("no staging-failure narration: %v", consoleLines(svc.server))
+	}
+	// The world is untouched: nothing was moved aside before the failure.
+	if _, err := os.Stat(filepath.Join(workDir, "world", "level.dat")); err != nil {
+		t.Errorf("world touched by a restore that failed before staging: %v", err)
 	}
 }

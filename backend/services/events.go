@@ -33,6 +33,7 @@ const (
 	EventBackupCompleted  = "backup:completed"
 	EventBackupFailed     = "backup:failed"
 	EventRestoreCompleted = "backup:restore-completed"
+	EventRestoreFailed    = "backup:restore-failed"
 
 	// Scheduler lifecycle — emitted through EventBus so the frontend and future
 	// remote WebSocket clients can observe graph execution in real time.

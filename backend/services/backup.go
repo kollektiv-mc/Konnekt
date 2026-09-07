@@ -286,6 +286,11 @@ func fmtBytes(n int64) string {
 // is closed. It exists only as that seam.
 var statBackup = os.Stat
 
+// mkdirTempRestore is os.MkdirTemp, swapped by tests to fail the staging step
+// a restore takes before it has anything to extract: the one restore failure
+// that used to return with no event and no console line (#280).
+var mkdirTempRestore = os.MkdirTemp
+
 // failBackup is every way CreateBackup and CreateWorldBackup can fail once
 // backup:started has gone out. The frontend shows an in-progress row from that
 // event and clears it only on backup:completed or backup:failed, so a path that
@@ -302,12 +307,36 @@ func (s *BackupService) failBackup(serverID, destPath string, err error) error {
 	return err
 }
 
-// emitBackupFailed is the one shape backup:failed has. App.tsx reads both keys
-// (the error for the toast, the serverID to clear the processes row) and
-// useBackupWorlds refreshes only when the serverID matches; the restore paths
-// used to send {error} alone, so neither matched them.
+// failRestore is failBackup's twin for the restore paths (#280). A restore
+// narrates "Restoring…" before it touches anything, so every failure after
+// that line has to narrate and emit, or the console says a restore began and
+// never says what became of it: the staging-directory and set-aside failures
+// used to return bare. The event is restore's own. It used to be
+// backup:failed, which App.tsx toasts as "Backup failed" and the scheduler
+// routes to trigger.backup's onFailed port, both wrong for a restore. The
+// staging directory needs no cleanup here: the caller defers its removal.
+func (s *BackupService) failRestore(serverID, during string, err error) error {
+	s.emitRestoreFailed(serverID, err)
+	s.narrateFailed(serverID, "Restore failed while "+during+": "+err.Error())
+	return err
+}
+
+// emitBackupFailed and emitRestoreFailed share one payload shape. App.tsx
+// reads both keys (the error for the toast, the serverID to clear the
+// processes row) and useBackupWorlds refreshes only when the serverID
+// matches; the restore paths used to send {error} alone, so neither matched
+// them (#258), and then sent it as backup:failed, so a failed restore toasted
+// as a failed backup (#280).
 func (s *BackupService) emitBackupFailed(serverID string, err error) {
-	s.bus.Emit(EventBackupFailed, map[string]interface{}{
+	s.emitFailed(EventBackupFailed, serverID, err)
+}
+
+func (s *BackupService) emitRestoreFailed(serverID string, err error) {
+	s.emitFailed(EventRestoreFailed, serverID, err)
+}
+
+func (s *BackupService) emitFailed(event, serverID string, err error) {
+	s.bus.Emit(event, map[string]interface{}{
 		"serverID": serverID,
 		"error":    err.Error(),
 	})
@@ -477,27 +506,23 @@ func (s *BackupService) RestoreBackup(serverID, filename string) error {
 		// Full-server restore: replace the entire working directory.
 		workingDir := cfg.WorkingDir
 		s.narrate(serverID, "Restoring the server from "+filename)
-		tmp, err := os.MkdirTemp(filepath.Dir(workingDir), "konnekt-restore-*")
+		tmp, err := mkdirTempRestore(filepath.Dir(workingDir), "konnekt-restore-*")
 		if err != nil {
-			return err
+			return s.failRestore(serverID, "preparing a staging directory", err)
 		}
 		defer os.RemoveAll(tmp)
 
 		if err := unzipTo(zipPath, tmp); err != nil {
-			s.emitBackupFailed(serverID, err)
-			s.narrateFailed(serverID, "Restore failed while extracting: "+err.Error())
-			return err
+			return s.failRestore(serverID, "extracting", err)
 		}
 
 		aside := workingDir + ".bak-" + time.Now().Format("20060102-150405")
 		if err := os.Rename(workingDir, aside); err != nil && !os.IsNotExist(err) {
-			return err
+			return s.failRestore(serverID, "moving the current files aside", err)
 		}
 		if err := os.Rename(tmp, workingDir); err != nil {
 			_ = os.Rename(aside, workingDir) //nolint:errcheck // best-effort rollback; err below is already the reported failure
-			s.emitBackupFailed(serverID, err)
-			s.narrateFailed(serverID, "Restore failed while swapping files, previous state kept: "+err.Error())
-			return err
+			return s.failRestore(serverID, "swapping files, previous state kept", err)
 		}
 		_ = os.RemoveAll(aside) //nolint:errcheck // best-effort cleanup of the pre-restore backup dir; restore already succeeded
 		s.narrateDone(serverID, "Restore finished, server files replaced")
@@ -518,27 +543,23 @@ func (s *BackupService) RestoreBackup(serverID, filename string) error {
 		worldLabel := filepath.Base(targetDir)
 		s.narrate(serverID, fmt.Sprintf("Restoring world %q from %s", worldLabel, filename))
 
-		tmp, err := os.MkdirTemp(filepath.Dir(targetDir), "konnekt-restore-*")
+		tmp, err := mkdirTempRestore(filepath.Dir(targetDir), "konnekt-restore-*")
 		if err != nil {
-			return err
+			return s.failRestore(serverID, "preparing a staging directory", err)
 		}
 		defer os.RemoveAll(tmp)
 
 		if err := unzipTo(zipPath, tmp); err != nil {
-			s.emitBackupFailed(serverID, err)
-			s.narrateFailed(serverID, "Restore failed while extracting: "+err.Error())
-			return err
+			return s.failRestore(serverID, "extracting", err)
 		}
 
 		aside := targetDir + ".bak-" + time.Now().Format("20060102-150405")
 		if err := os.Rename(targetDir, aside); err != nil && !os.IsNotExist(err) {
-			return err
+			return s.failRestore(serverID, "moving the current files aside", err)
 		}
 		if err := os.Rename(tmp, targetDir); err != nil {
 			_ = os.Rename(aside, targetDir) //nolint:errcheck // best-effort rollback; err below is already the reported failure
-			s.emitBackupFailed(serverID, err)
-			s.narrateFailed(serverID, "Restore failed while swapping files, previous state kept: "+err.Error())
-			return err
+			return s.failRestore(serverID, "swapping files, previous state kept", err)
 		}
 		_ = os.RemoveAll(aside) //nolint:errcheck // best-effort cleanup of the pre-restore backup dir; restore already succeeded
 		s.narrateDone(serverID, fmt.Sprintf("Restore finished, world %q replaced", worldLabel))
