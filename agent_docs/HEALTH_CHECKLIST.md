@@ -531,23 +531,6 @@ what *is* closed.
   immediately after a scroll can still catch it mid-chunk. Raising the quiet
   window from 500ms to 1000ms was measured and changed nothing, so it stayed.
 
-**P2 — The bundle budget covers one chunk out of six** (filed 2026-08-29)
-
-`check-bundle` asserts the entry chunk only, which was the whole story when the
-lazy chunks were two rarely-opened tiles. It is not any more: there are six
-(re-counted 2026-09-02; the quick-commands library was added after this was
-filed), and `lib/prefetch.ts` evaluates all of them during idle time after launch, so
-a lazy chunk that doubles is now a startup cost as well as an on-demand one.
-Nothing watches that. What is missing is a second budget — plausibly a cap on
-total warmed bytes — and the number wants picking against a real machine rather
-than guessed here. The measurement harness described in HEALTH_LOG (2026-08-29)
-is how to pick it. One correction (2026-09-02): the bytes are not what needs a
-machine, since the entry budget was set as measured plus headroom from a
-headless build and the same works here; what needs a machine is whether the
-warm-up's *time* is acceptable, which is a separate question and the one the
-harness answers.
-Filed as #281 (2026-09-05).
-
 **P3 — Dependency resolution is serial, unbounded in time, and silent while it
 runs** (filed 2026-08-31)
 
@@ -565,6 +548,11 @@ and is a bad one: the cap has nothing to terminate (the visit-once rule already
 does that) and would silently drop required dependencies past it, which is worse
 than being slow. The levers are resolving siblings concurrently, and giving the
 dialog something to show while it waits.
+Re-verified 2026-09-07: the walk is `ModrinthClient.ResolveDependencies` in
+`modrinth.go`, behind the `ModProvider` interface, not `modservice.go` as the
+issue's pointer says (the loop it cites is `Install`'s), and the client already
+backs off on 429 with three retries, so any fan-out has to stay small. Beta's
+#251 reshapes that interface, so progress reporting should not be baked into it.
 Filed as #282 (2026-09-05).
 
 **P3 — A maximized Overview holds a second copy of its sections' data**
@@ -743,24 +731,17 @@ was partly wrong)
   structured field to branch on (`app.go:184` plus a model field plus a binding
   regeneration) or a documented error-code prefix the frontend matches. Neither
   is urgent, because nobody is currently stuck: the manual fallback works.
+  Re-verified 2026-09-07 against the Wails source in the module cache rather
+  than the docs, which the proxy blocks: v2.12.0, the version in `go.mod`, has
+  `options.App.ErrorFormatter func(error) any`, which serialises a Go error
+  to arbitrary JSON in the rejection, and `main.go` does not set it. That is
+  the structured field with no model type and no binding regeneration. It is
+  global, though: it has to fall back to `err.Error()` for every other error,
+  and `lib/ipc.ts`'s `errMsg` has to learn the shape. selfupdate exports no
+  checksum sentinel, so that kind is classified by text with a test pinning it.
   Filed as #284 (2026-09-05).
 
 **P2 — Cleanups**
-- `sandbox` (`config_editor.go`) is a purely **lexical** guard — `filepath.Clean`
-  plus a prefix test — so a symlink sitting inside the working directory and
-  pointing outside it passes the check and then resolves outside. Left open
-  deliberately: this is a local-first app where the user already owns the
-  filesystem, so a user symlinking their own config directory is a weak threat
-  model. A fix has to resolve the *parent* directory (`sandbox` runs for files
-  that do not exist yet, on the write path), and its test needs a skip guard
-  because Windows gates symlink creation behind Developer Mode or elevation.
-  Checked 2026-08-19 for the worse version of this bug and it is not there:
-  `unzipTo` (`backend/services/backup.go:879`), the one place the backend
-  extracts an archive to disk, has a correct zip-slip guard using the
-  trailing-separator prefix form. Every other `archive/zip` use in the backend
-  (`installer.go`, `modjar.go`, `backup.go`'s metadata readers) opens entries
-  read-only and never writes to a caller-supplied path.
-  Filed as #283 (2026-09-05).
 - Memoization pass: add `React.memo`/`useMemo`/`useCallback` to the most
   expensive tile subtrees identified during a profiling pass. Baseline
   2026-08-19: `React.memo` appears exactly once in the whole frontend
@@ -859,11 +840,6 @@ fix in passing or take the issue)
   `CommandDialogs.tsx` already converted its pair to `hover:` classes and says
   so; the rest did not follow. `Dashboard.tsx`'s transforms and `Planet.tsx`'s
   scene writes are genuinely computed and stay. Filed as #279.
-- **A failed restore toasts as a failed backup.** `RestoreBackup` has no
-  failure event of its own and emits `backup:failed`; `App.tsx` toasts every
-  one of those as "Backup failed", while the console line beside it says
-  "Restore failed while extracting". The scheduler's `trigger.backup` also
-  sees it. Filed as #280.
 - `untilMs(0)` reads "now" while `relativeMs(0)` and `fmtDate(0)` now read a
   dash. Every caller guards `next > 0` today, so not worth an issue; move the
   guard into the helper the day a caller stops.

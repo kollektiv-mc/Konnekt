@@ -4689,3 +4689,136 @@ gains the atomic EULA write and the empty-directory refusal;
 `backend/services` at 59.9% against the 49% floor, up from 59.6%. The #257
 probe before and after the fix is the acceptance test: 1224x456 in the tile,
 then 1440x900 over the window.
+
+### 2026-09-07 — The restore that failed as a backup, and four smaller repairs
+
+**Closed: [#280](../../issues/280), [#281](../../issues/281),
+[#283](../../issues/283), [#185](../../issues/185) and
+[#287](../../issues/287)**, plus a two-number correction to the checklist
+itself. The session's first job was to check every claim in the Open backlog
+against the tree at 365821d before touching anything. Most held. The ones that
+did not are the more useful record, so they come first.
+
+**What did not hold.**
+
+- The checklist filed the recharts first-mount entry as #286 and the motion
+  easing entry as #285. GitHub has them the other way round. Fixed.
+- #185's site list was stale: the `QuickCommandsPanel` sites it named moved
+  into `useCommandsStore` with #184, and the console tile's send is gated on
+  `reachable`, which is false without a bridge, so it never reaches the
+  binding. Six sites were live, and one more the list never had: the player
+  refresh after a pardon, a read with the same bare `.catch()`.
+- #282 says the serial walk is in `modservice.go` and cites
+  `for _, versionID := range versionIDs` as it. That loop is `Install`'s. The
+  walk is `ModrinthClient.ResolveDependencies` in `modrinth.go`, behind the
+  `ModProvider` interface, and the client already backs off on 429. Recorded
+  under the checklist entry; the issue itself is the user's to correct.
+- #284's "model type plus binding regeneration" is not the honest shape any
+  more. Wails v2.12.0, the version in `go.mod`, has
+  `options.App.ErrorFormatter func(error) any`, and `main.go` does not set it.
+  Verified in the module source, since the proxy blocks wails.io. Recorded
+  under the checklist entry, with the global-fallback caveat.
+- #280 was bigger than filed. Beyond the wrong toast, two of `RestoreBackup`'s
+  failure paths narrated "Restoring…" and then returned bare: a `MkdirTemp`
+  failure while staging and a failure to move the current files aside, in both
+  branches. The shape #258 closed for backups, still open for restores.
+- #283's suggested fix, resolving the parent directory only, misses a
+  symlinked *file* on the read path: `ReadConfigFile` follows it. The write
+  path was already safe by accident, because `writeFileAtomic` renames a temp
+  file over the destination rather than writing through it.
+- #281's suggested mapping of warm-list specifiers onto hashed chunk names is
+  unnecessary. `check-prefetch` asserts every lazy chunk is in the warm list,
+  and the built import graph shows the entry importing no helper chunk
+  statically, so "every chunk except the entry" *is* the warm list's closure.
+
+**The fix.** One commit per issue on the branch, so each can be read,
+reverted or cherry-picked alone.
+
+- #281: `check-bundle-size.mjs` asserts a second budget, the gzip total of
+  every chunk except the entry, against 800 KB. Measured 712.3 KB: WorldsScene
+  259.4, EditorPanel 179.9, charts 101.3, MarkdownBody 98.4, GraphEditor 63.7,
+  CommandLibrary 4.6 and 5.0 of shared helpers. Same headroom method as the
+  entry budget, recorded in the header with the argument above. A build with
+  no chunk besides the entry fails loudly rather than comparing zero.
+- #280: `backup:restore-failed`, restore's own event, with the same
+  `{serverID, error}` payload the backup event carries. Every failure after the
+  opening narration goes through one `failRestore` helper, `failBackup`'s
+  twin, so the six sites cannot skip the emit; the staging call sits behind a
+  `mkdirTempRestore` seam so a test can fail it. `App.tsx` toasts "Restore
+  failed". The scheduler's `trigger.backup` keeps its `backup:failed`
+  subscription and now says why restore failures do not route to it: the
+  block says "Fires when a backup completes or fails", and a restore is not a
+  backup.
+- #283: after the lexical test, `sandbox` resolves the working directory and
+  the target with `filepath.EvalSymlinks` and compares again. The target may
+  not exist yet, so its nearest existing ancestor stands in for it. When the
+  working directory itself is not on disk the lexical answer stands, which is
+  what keeps the existing tests against a fake `C:\servers` path meaningful.
+  The lexical path is returned rather than the resolved one, so a link that
+  points inside, a symlinked world folder, still works.
+- #185: each of the six writes branches on `hasWailsBridge()`, the split
+  `agent_docs/CLAUDE.md` prescribes, and the pardon refresh goes through
+  `readOr`. Four cases in `tiles/noBridge.test.tsx` reach a binding by clicking
+  rather than mounting. One mechanism worth knowing: a handler that throws is
+  reported by React through window's `error` event and never escapes
+  `fireEvent`, so `not.toThrow()` around a click passes vacuously. The
+  quick-command case collects those events instead; the three async cases
+  assert on the statement that used to be skipped (the preset selection, the
+  `onMutated`, the `onClose`). All four failed on the previous code.
+- #287: `pnpm test:coverage` runs the suite under `@vitest/coverage-v8` and
+  prints the per-directory table. First measurement on 733 tests: 53.7% of
+  lines, 80.5% of branches, 49.9% of functions, with repeat runs landing
+  between 53.1% and 53.7%. The floor is 50% of lines in `vite.config.ts`, held
+  the way the Go one is, and both `suite.json` and `ci.yml` run it as its own
+  step so a floor failure and a test failure stay separate. The table is what
+  the issue wanted: `tiles/backups` sits at 29.7% and `tiles/mods` at 36.4%,
+  and those two directories hold the three files carrying most of the React
+  Compiler-readiness findings, so that item's gate is now "cover those two to
+  the floor first", which can be met.
+
+**Known and accepted.**
+
+- The config tile's restart button lives in the lazy CodeMirror panel and
+  `CommandLibrary` in the lazy library chunk, so those two carry the #185
+  change without a click test.
+- Neither backup hook listens for `backup:restore-failed`: a restore failure
+  changes neither the backup list nor an archive's contents, and the refresh
+  they used to do on `backup:failed` was a side effect of sharing the event.
+- Coverage moves by about half a point between runs of the same tree, from
+  timing-dependent paths. The floor leaves room for it; a floor set at the
+  measurement would flake.
+- The coverage step runs the suite a second time in CI, about half a minute.
+  Chosen over folding coverage into `pnpm test` so the two gates fail
+  separately, which is the Go side's shape too.
+- `.claude/suite.json` and `.github/workflows/ci.yml` were already outside the
+  Prettier gate's glob and already unformatted at HEAD; the added lines follow
+  each file's existing style and nothing else was touched.
+- The repo root carries its own `package.json` (lefthook) and lockfile, so a
+  pnpm command run from the root rather than `frontend/` lands somewhere real.
+  It happened here, twice, because a parallel command had changed the shell's
+  working directory; the root manifest and lockfile were reverted and its
+  `node_modules` reinstalled before anything was committed. Worth knowing
+  before the next session runs `pnpm add`.
+- `graphify update .` was not run: graphify is not installed in this
+  container, and `graphify-out/` is gitignored, so nothing in the tree is
+  behind.
+
+**Verification.** Every gate in `.claude/suite.json` through
+`.claude/suite-check.py`, against a fresh `pnpm build`: typecheck, lint (0
+errors, 14 warnings, unchanged), Prettier over `frontend/` and `website/`, the
+website link and scene checks, the release-notes extract and its Python tests,
+both bundle budgets, the token-class check, the prefetch warm list, the issue
+templates, `go vet`, `go test`, both coverage floors, the generated-token diff
+and the border invariant. All green.
+
+Frontend suite 733 tests across 65 files, up from 729 across 65: the four
+click cases in `noBridge.test.tsx`. Entry chunk 154.5 KB gzip against
+the 165 KB budget; warmed chunks 712.3 KB against the new 800 KB
+budget; `frontend/src` at 53.7% of lines against the 50% floor. Backend:
+`backup_test.go` replaces the payload case with two, one pinning that a
+truncated archive emits `backup:restore-failed` and not `backup:failed`, one
+failing the staging seam and checking the event, the narration and the
+untouched world; `config_editor_test.go` gains the symlink case on `sandbox`
+and the one through both public entry points, both of which fail with the
+physical check stubbed out and skip where `os.Symlink` fails.
+`backend/services` at 60.1% of statements against the 49% floor.
