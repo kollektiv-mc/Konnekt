@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -264,13 +265,70 @@ func (s *ConfigEditorService) AcceptEula(serverID string) error {
 	return writeFileAtomic(filepath.Join(wd, "eula.txt"), []byte(eulaContent), 0644)
 }
 
+// errOutsideWorkDir is what every escape looks like from the caller's side,
+// whichever of sandbox's two tests caught it.
+var errOutsideWorkDir = errors.New("path outside working directory")
+
+// sandbox resolves relPath against workDir and refuses anything that lands
+// outside it. Two tests, because a path string and a filesystem can disagree.
+// The lexical one, filepath.Clean plus a prefix test, catches "..". It cannot
+// see a symlink: a link inside the working directory pointing outside it
+// passes the string test and then resolves outside (#283). So the second test
+// resolves what is on disk with filepath.EvalSymlinks and compares again. The
+// target itself may not exist yet, since this runs on the write path for new
+// files, so its nearest existing ancestor stands in for it: the components
+// below that do not exist cannot be links. When the working directory itself
+// is not on disk there is nothing to resolve through and the lexical answer
+// stands; the read or write that follows reports the missing directory.
+// Returns the lexical path rather than the resolved one, so the caller's I/O
+// still goes through a link that points inside (a symlinked world folder is
+// a real layout, and refusing it would be the wrong lesson from #283).
 func (s *ConfigEditorService) sandbox(workDir, relPath string) (string, error) {
 	clean := filepath.Clean(filepath.Join(workDir, relPath))
 	wd := filepath.Clean(workDir)
-	if clean != wd && !strings.HasPrefix(clean, wd+string(filepath.Separator)) {
-		return "", fmt.Errorf("path outside working directory")
+	if !withinDir(clean, wd) {
+		return "", errOutsideWorkDir
+	}
+	realWd, err := filepath.EvalSymlinks(wd)
+	if errors.Is(err, fs.ErrNotExist) {
+		return clean, nil
+	}
+	if err != nil {
+		return "", err
+	}
+	real, err := evalNearestExisting(clean)
+	if err != nil {
+		return "", err
+	}
+	if !withinDir(real, realWd) {
+		return "", errOutsideWorkDir
 	}
 	return clean, nil
+}
+
+// withinDir reports whether path is dir itself or beneath it. Both arguments
+// are already cleaned, and for the physical test both already resolved.
+func withinDir(path, dir string) bool {
+	return path == dir || strings.HasPrefix(path, dir+string(filepath.Separator))
+}
+
+// evalNearestExisting resolves symlinks in path, or, when path itself is not
+// on disk, in its nearest ancestor that is.
+func evalNearestExisting(path string) (string, error) {
+	for {
+		real, err := filepath.EvalSymlinks(path)
+		if err == nil {
+			return real, nil
+		}
+		if !errors.Is(err, fs.ErrNotExist) {
+			return "", err
+		}
+		parent := filepath.Dir(path)
+		if parent == path {
+			return "", err
+		}
+		path = parent
+	}
 }
 
 func (s *ConfigEditorService) backup(serverID, abs, relPath string) error {
