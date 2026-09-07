@@ -1,12 +1,18 @@
-import { describe, it, expect, afterEach } from 'vitest'
-import { render, cleanup, fireEvent } from '@testing-library/react'
+import { describe, it, expect, afterEach, vi } from 'vitest'
+import { render, cleanup, fireEvent, screen, waitFor } from '@testing-library/react'
 import { TILE_REGISTRY } from './registry'
 import { ServerRow } from '../components/ServerRow'
 import { ServerDetail } from '../components/ServerManager/ServerDetail'
 import { TitleBar } from '../components/TitleBar'
+import { QuickCommandsPanel } from '../components/QuickCommandsPanel'
+import { LayoutPresets } from '../components/LayoutPresets'
+import { PlayerDetailPopup } from './players/PlayerDetailPopup'
+import { useCommandsStore } from '../stores/useCommandsStore'
+import { useLayoutStore } from '../stores/useLayoutStore'
 import { GetStatsHistory } from '../../wailsjs/go/main/App'
 import { WindowMinimise } from '../../wailsjs/runtime/runtime'
-import type { ServerConfig } from '../types'
+import type { CommandButton } from '../stores/useCommandsStore'
+import type { Player, ServerConfig } from '../types'
 
 // The browser-only `frontend-dev` preset, reproduced.
 //
@@ -89,5 +95,98 @@ describe('no Wails bridge', () => {
     const { getByRole } = render(<TitleBar onOpenSettings={() => {}} />)
     expect(() => fireEvent.click(getByRole('button', { name: 'Minimize window' }))).not.toThrow()
     expect(() => fireEvent.click(getByRole('button', { name: 'Close window' }))).not.toThrow()
+  })
+})
+
+// Everything above reaches a binding by mounting. These reach one by clicking,
+// which is the rest of #185: a write called from an event handler with no
+// bridge throws inside React's event dispatch. React reports that through
+// window's `error` event rather than letting it escape `fireEvent`, so a plain
+// `not.toThrow()` around the click passes vacuously; this collects what React
+// reports instead. The `async` handler is the other shape: the throw rejects
+// the handler's own promise, which nobody awaits, and the only visible sign is
+// that the statements after the call never run. Those cases assert on what
+// should have happened next.
+function clickCollectingErrors(el: HTMLElement): unknown[] {
+  const caught: unknown[] = []
+  const onError = (e: ErrorEvent) => {
+    caught.push(e.error ?? e.message)
+    e.preventDefault()
+  }
+  window.addEventListener('error', onError)
+  try {
+    fireEvent.click(el)
+  } finally {
+    window.removeEventListener('error', onError)
+  }
+  return caught
+}
+
+const PLAYER = {
+  name: 'Korbin',
+  uuid: 'uuid-korbin',
+  online: true,
+  ip: '192.168.1.52',
+  lastOnline: 0,
+  opLevel: 0,
+  whitelisted: true,
+  banned: false,
+  banReason: '',
+  primaryGroup: 'member',
+  groups: [],
+} as unknown as Player
+
+// The `vi.fn()` spies below stand in for a parent component's callbacks, not
+// for a binding: the bindings stay real and bridgeless, as above.
+describe('no Wails bridge, from a click', () => {
+  it('sends a quick command without an error escaping the handler', () => {
+    useCommandsStore.setState({
+      items: [{ id: '1', label: 'Kit', kind: 'cmd', value: 'give @p stone' } as CommandButton],
+      hydrated: true,
+      loading: false,
+      error: null,
+    })
+    render(<QuickCommandsPanel serverId="srv1" />)
+    expect(clickCollectingErrors(screen.getByRole('button', { name: 'Kit' }))).toEqual([])
+  })
+
+  // handleReset writes every default preset, then reloads and selects
+  // 'Default'. With the write throwing, the reload and the selection never
+  // ran and the handler's promise rejected with nobody to catch it.
+  it('resets the layout presets to the defaults', async () => {
+    useLayoutStore.setState({
+      presets: [{ name: 'Mine', layout: '[]' }],
+      activePresetName: 'Mine',
+      currentLayout: [],
+      error: null,
+    })
+    render(<LayoutPresets />)
+    fireEvent.click(screen.getByRole('button', { name: '↺ Reset to defaults' }))
+    fireEvent.click(screen.getByRole('button', { name: '↺ Confirm reset' }))
+    await waitFor(() => expect(useLayoutStore.getState().activePresetName).toBe('Default'))
+  })
+
+  it('pardons a banned player and reports the mutation', async () => {
+    const onMutated = vi.fn()
+    render(
+      <PlayerDetailPopup
+        player={{ ...PLAYER, online: false, banned: true }}
+        serverId="srv1"
+        onClose={() => {}}
+        onMutated={onMutated}
+      />,
+    )
+    fireEvent.click(screen.getByRole('button', { name: 'pardon' }))
+    await waitFor(() => expect(onMutated).toHaveBeenCalled())
+  })
+
+  it('confirms a kick and closes', async () => {
+    const onClose = vi.fn()
+    render(
+      <PlayerDetailPopup player={PLAYER} serverId="srv1" onClose={onClose} onMutated={() => {}} />,
+    )
+    fireEvent.click(screen.getByRole('button', { name: 'kick' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm kick' }))
+    await waitFor(() => expect(onClose).toHaveBeenCalled())
   })
 })

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { SendCommand } from '../../wailsjs/go/main/App'
+import { hasWailsBridge } from '../lib/ipc'
 import { Icon } from './ui/Icon'
 import { GripVertical, Plus, X } from '../lib/icons'
 import { useCommandsStore, type CommandButton } from '../stores/useCommandsStore'
@@ -108,7 +109,10 @@ export function QuickCommandsPanel({ serverId, columns = 2 }: QuickCommandsPanel
 
   const send = useCallback(
     (cmd: string) => {
-      SendCommand(serverId, cmd).catch(console.error)
+      // A write, so `hasWailsBridge()` rather than the `.catch()` alone (see
+      // lib/ipc.ts): with no bridge the binding throws inside the click
+      // handler before a promise exists (#185).
+      if (hasWailsBridge()) SendCommand(serverId, cmd).catch(console.error)
     },
     [serverId],
   )
