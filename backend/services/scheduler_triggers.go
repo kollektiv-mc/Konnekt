@@ -54,6 +54,9 @@ func (s *SchedulerService) startTriggers() {
 		}
 		s.fireRoutedEventTriggers("trigger.backup", seed, "event:backup:completed")
 	})
+	// Deliberately not EventRestoreFailed as well: the block says "Fires when a
+	// backup completes or fails", and a restore is not a backup. Restore
+	// failures used to arrive here disguised as backup:failed (#280).
 	s.bus.Subscribe(EventBackupFailed, func(data any) {
 		seed := map[string]interface{}{
 			"_route": "onFailed",

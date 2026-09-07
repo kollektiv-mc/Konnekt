@@ -202,6 +202,7 @@ function App() {
     let c3: (() => void) | undefined
     let c4: (() => void) | undefined
     let c5: (() => void) | undefined
+    let c6: (() => void) | undefined
     try {
       c1 = EventsOn(EVENTS.BACKUP_STARTED, (data?: { serverID?: string; filename?: string }) => {
         useProcessesStore.getState().start(data?.serverID ?? 'backup', 'Backing up world…', {
@@ -222,6 +223,11 @@ function App() {
       c5 = EventsOn(EVENTS.BACKUP_FAILED, (data?: { serverID?: string; error?: string }) => {
         useProcessesStore.getState().finish(data?.serverID ?? 'backup', 'failed')
         emitNotification('crash', `Backup failed${data?.error ? ': ' + data.error : ''}`)
+      })
+      // No processes row to finish: a restore never opens one. Restore used
+      // to fail through BACKUP_FAILED and toast as a failed backup (#280).
+      c6 = EventsOn(EVENTS.RESTORE_FAILED, (data?: { error?: string }) => {
+        emitNotification('crash', `Restore failed${data?.error ? ': ' + data.error : ''}`)
       })
     } catch {
       /* non-Wails context */
@@ -249,6 +255,11 @@ function App() {
       }
       try {
         c5?.()
+      } catch {
+        /* teardown no-op */
+      }
+      try {
+        c6?.()
       } catch {
         /* teardown no-op */
       }
