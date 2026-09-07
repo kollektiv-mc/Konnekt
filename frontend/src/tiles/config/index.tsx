@@ -1,5 +1,6 @@
 import { useState, useRef, useCallback, lazy, Suspense } from 'react'
 import { RestartServer } from '../../../wailsjs/go/main/App'
+import { hasWailsBridge } from '../../lib/ipc'
 import { useServerStore } from '../../stores/useServerStore'
 import type { TileProps } from '../../types'
 import { FileList } from './FileList'
@@ -78,7 +79,10 @@ export function ConfigTile({ serverId, maximized }: TileProps) {
   }
 
   function handleRestart() {
-    RestartServer(serverId).catch(() => {})
+    // A write, so `hasWailsBridge()` rather than the `.catch()` alone (see
+    // lib/ipc.ts): with no bridge the binding throws inside the click
+    // handler before a promise exists (#185).
+    if (hasWailsBridge()) RestartServer(serverId).catch(() => {})
   }
 
   async function handleSelect(relPath: string) {

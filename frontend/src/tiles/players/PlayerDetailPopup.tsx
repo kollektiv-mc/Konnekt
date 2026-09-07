@@ -5,7 +5,7 @@ import type { Player } from '../../types'
 import { IconButton } from '../../components/ui/IconButton'
 import { X } from '../../lib/icons'
 import { Icon } from '../../components/ui/Icon'
-import { readOr } from '../../lib/ipc'
+import { hasWailsBridge, readOr } from '../../lib/ipc'
 import { fmtDate } from '../../lib/format'
 
 interface Props {
@@ -91,15 +91,20 @@ export function PlayerDetailPopup({ player: initial, serverId, onClose, onMutate
   const submitAction = async () => {
     if (!pending) return
     const fn = pending.action === 'kick' ? KickPlayer : BanPlayer
-    await fn(serverId, player.name, pending.reason).catch(console.error)
+    // Writes, so `hasWailsBridge()` rather than the `.catch()` alone (see
+    // lib/ipc.ts): with no bridge the binding throws before a promise exists,
+    // which rejected this handler's own promise with nobody to catch it and
+    // left the popup open (#185). Same for the pardon below.
+    if (hasWailsBridge()) await fn(serverId, player.name, pending.reason).catch(console.error)
     setPending(null)
     onMutated()
     onClose()
   }
 
   const handlePardon = async () => {
-    await PardonPlayer(serverId, player.name).catch(console.error)
-    const fresh = await GetPlayerDetail(serverId, player.name).catch(() => player)
+    if (hasWailsBridge()) await PardonPlayer(serverId, player.name).catch(console.error)
+    // A read, so readOr: the fallback is the player as already shown.
+    const fresh = await readOr(() => GetPlayerDetail(serverId, player.name), player)
     setPlayer(fresh)
     onMutated()
   }

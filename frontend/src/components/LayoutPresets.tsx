@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useLayoutStore } from '../stores/useLayoutStore'
 import { SaveLayoutPreset } from '../../wailsjs/go/main/App'
 import { DEFAULT_LAYOUT_PRESETS } from '../lib/constants'
+import { hasWailsBridge } from '../lib/ipc'
 import { IconButton } from './ui/IconButton'
 import { NavSection } from './ui/NavSection'
 import { X } from '../lib/icons'
@@ -30,8 +31,16 @@ export function LayoutPresets() {
   const handleReset = async () => {
     setResetting(true)
     try {
-      for (const p of DEFAULT_LAYOUT_PRESETS) {
-        await SaveLayoutPreset(p.name, p.layout).catch(() => {})
+      // A write, so `hasWailsBridge()` rather than the `.catch()` alone (see
+      // lib/ipc.ts): with no bridge the binding throws before a promise
+      // exists, so the catch was attached to nothing and the reset rejected
+      // unhandled before it reached the reload below (#185). With no bridge
+      // there is nothing to rewrite and loadPresets falls back to the same
+      // defaults anyway.
+      if (hasWailsBridge()) {
+        for (const p of DEFAULT_LAYOUT_PRESETS) {
+          await SaveLayoutPreset(p.name, p.layout).catch(() => {})
+        }
       }
       await loadPresets()
       loadPreset('Default')
