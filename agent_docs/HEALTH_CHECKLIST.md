@@ -935,9 +935,7 @@ tool results and the reasoning)
   intact (HEALTH_LOG "The kick reason that was two commands"); #307,
   `serverID` joined into data-dir paths unvalidated (HEALTH_LOG "The server
   id that was a path"); and #309, the quiesce trio discarded around a backup
-  (HEALTH_LOG "The backup that reported a flush it never made"). #321, CodeQL
-  green on a database missing a third of the Go tree, was filed the same day
-  and is the next one open.
+  (HEALTH_LOG "The backup that reported a flush it never made").
 - **p3** #310 NeoForge installer has no checksum; #313 the duplicate panels,
   menus and paths; #314 the oversized functions holding the size ratchet;
   #315 two store writes that swallow; #316 the 27 stdlib error ignores the
