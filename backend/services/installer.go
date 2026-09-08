@@ -200,7 +200,10 @@ func (s *InstallerService) claim(jarPath, targetDir string) (InstallerInfo, erro
 		return InstallerInfo{}, fmt.Errorf("installer jar and target directory are both required")
 	}
 
-	info, _ := InspectInstaller(jarPath)
+	info, err := InspectInstaller(jarPath)
+	if err != nil {
+		return info, fmt.Errorf("inspect %s: %w", filepath.Base(jarPath), err)
+	}
 	if !info.IsInstaller {
 		return info, fmt.Errorf("%s is not a Forge/NeoForge installer", filepath.Base(jarPath))
 	}

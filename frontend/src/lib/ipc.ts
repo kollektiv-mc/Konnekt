@@ -51,6 +51,7 @@ export async function readOr<T, F>(call: () => Promise<T>, fallback: F): Promise
   try {
     return await call()
   } catch {
+    // aislop-ignore-next-line ai-slop/hidden-fallback -- the sanctioned no-bridge read path, see agent_docs/CLAUDE.md IPC conventions
     return fallback
   }
 }

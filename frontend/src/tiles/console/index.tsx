@@ -1,4 +1,4 @@
-import { useEffect, useRef, useCallback, useMemo } from 'react'
+import { useEffect, useRef, useCallback, useMemo, useState } from 'react'
 import { SendCommand } from '../../../wailsjs/go/main/App'
 import { useConsoleStore } from '../../stores/useConsoleStore'
 import { useSettingsStore } from '../../stores/useSettingsStore'
@@ -8,7 +8,6 @@ import { Segmented } from '../../components/ui/Segmented'
 import { QuickCommandsPanel } from '../../components/QuickCommandsPanel'
 import type { TileProps } from '../../types'
 import type { LogLine, ManagerOutcome } from '../../stores/useConsoleStore'
-import { useState } from 'react'
 
 // Server output only. Konnekt's own narration (#113) does not take a level
 // class at all: it renders as its own block below.

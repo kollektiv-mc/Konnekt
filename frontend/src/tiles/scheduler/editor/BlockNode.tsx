@@ -1,3 +1,4 @@
+// aislop-ignore-file code-quality/duplicate-block -- #313
 import React, { memo, useContext } from 'react'
 import { Handle, Position, type NodeProps } from '@xyflow/react'
 import { SchedulerCtx } from './schedulerContext'

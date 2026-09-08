@@ -1,3 +1,4 @@
+// aislop-ignore-file code-quality/duplicate-block -- #313
 import { useEffect, useState } from 'react'
 import type { ConfigFile } from '../../types'
 

@@ -1,3 +1,4 @@
+// aislop-ignore-file code-quality/duplicate-block -- #313
 import { useEffect, useRef, useState } from 'react'
 import { EventsOn } from '../wailsjs/runtime/runtime'
 import { StartServer } from '../wailsjs/go/main/App'

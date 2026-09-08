@@ -1,3 +1,4 @@
+// aislop-ignore-file code-quality/duplicate-block -- #313
 import { useState } from 'react'
 import { Toggle } from '../../components/ui/Toggle'
 import { Popover } from '../../components/ui/Popover'

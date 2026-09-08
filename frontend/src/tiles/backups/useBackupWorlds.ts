@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react'
 import { GetBackupWorlds } from '../../../wailsjs/go/main/App'
-import type { models } from '../../../wailsjs/go/models'
 import { EventsOn } from '../../../wailsjs/runtime/runtime'
 import { EVENTS } from '../../lib/constants'
 import { readOr } from '../../lib/ipc'
 
-export type WorldSystem = models.WorldSystem
+import type { WorldSystem } from '../../types'
+
+export type { WorldSystem }
 
 export function useBackupWorlds(serverId: string, filename: string | undefined): WorldSystem[] {
   const [worlds, setWorlds] = useState<WorldSystem[]>([])

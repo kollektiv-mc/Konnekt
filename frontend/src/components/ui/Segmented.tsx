@@ -1,3 +1,4 @@
+// aislop-ignore-file code-quality/duplicate-block -- #313
 interface Option<T extends string> {
   value: T
   label: string

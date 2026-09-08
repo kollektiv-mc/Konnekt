@@ -1,3 +1,4 @@
+// aislop-ignore-file code-quality/duplicate-block -- skin table, deliberate; #313
 import { STATUS_DEFAULTS } from '../styles/tokens'
 
 // The preset lists are product UI — which alternatives Settings offers — so they
