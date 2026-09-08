@@ -1,0 +1,83 @@
+# OpenSSF Scorecard: an outside audit of this repository's supply chain, run on
+# a schedule and published where anyone can read the per-check breakdown.
+#
+# The reason this is worth having here specifically. The README says plainly
+# that most of this code comes from Claude, which is an honest thing to say and
+# also the first thing a stranger has to decide what to do with. Nothing this
+# repository asserts about itself can settle that, because a project's own
+# claims about its own quality are worth exactly nothing to someone who has not
+# read the code. Scorecard is not this repository's opinion: it runs 18 checks
+# from outside, scores each one, and publishes the result at a URL that is not
+# under this repository's control. A low score is visible too, which is the
+# whole point of using it rather than a self-assessment.
+#
+# What it actually looks at: whether releases are signed, whether CI runs on
+# every change, whether a static analyser runs, whether dependencies are pinned
+# and updated, whether a security policy exists, whether the code is reviewed
+# before it lands. Konnekt's answers to those are in SECURITY.md, ci.yml,
+# codeql.yml, dependabot.yml and the attestations in release.yml, and this
+# reports on them rather than adding anything of its own.
+name: Scorecard
+
+on:
+  # Branch protection is one of the checks, and it is the one thing here that
+  # can change without a commit. This trigger is how the score notices.
+  branch_protection_rule:
+  schedule:
+    - cron: '30 5 * * 0'
+  push:
+    branches: [main]
+
+# Read-only by default, and widened only on the job that needs it. Scorecard's
+# own check for exactly this pattern is why the file is written this way.
+permissions: read-all
+
+jobs:
+  analysis:
+    name: Scorecard analysis
+    runs-on: ubuntu-latest
+    permissions:
+      # Uploading the SARIF to the code-scanning dashboard, so findings sit
+      # beside CodeQL's rather than only in a log.
+      security-events: write
+      # Publishing the result to the OpenSSF API, which is what the badge and
+      # the public viewer read. Without it this runs privately and the badge has
+      # nothing to show.
+      id-token: write
+      # Used by the Webhooks and Maintained checks.
+      actions: read
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Scorecard reads the tree; it never needs to write to the remote, and
+          # leaving a token in .git/config for an analysis step is the kind of
+          # thing it would flag on someone else's repository.
+          persist-credentials: false
+
+      - name: Run analysis
+        uses: ossf/scorecard-action@v2.4.4
+        with:
+          results_file: results.sarif
+          results_format: sarif
+          # This is what makes the result public: the badge endpoint and the
+          # viewer both read the published record, and setting it also replaces
+          # OpenSSF's own weekly scan of this repository with this run.
+          #
+          # Publishing a score nobody has seen yet is the trade here, and it is
+          # the right way round: an unflattering number that is honest is worth
+          # more than a badge that only ever appears once it is flattering.
+          publish_results: true
+
+      # Kept for 5 days so a score that moves can be diffed against the previous
+      # run without re-running the analysis.
+      - uses: actions/upload-artifact@v4
+        with:
+          name: scorecard-results
+          path: results.sarif
+          retention-days: 5
+
+      - uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: results.sarif

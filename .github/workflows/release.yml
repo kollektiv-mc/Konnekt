@@ -239,6 +239,11 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      # Build provenance, below. `id-token` is what lets the job request the
+      # OIDC token Sigstore signs against, and it is the reason the attestation
+      # cannot be forged by anyone who is not this workflow in this repository.
+      id-token: write
+      attestations: write
     steps:
       # Before the artifacts land: actions/checkout cleans the workspace, so
       # running it second would delete them. Only needed for the notes script
@@ -256,6 +261,31 @@ jobs:
       - name: Checksums
         working-directory: dist
         run: sha256sum * > checksums.txt
+
+      # checksums.txt answers "did this download arrive intact". It cannot
+      # answer "did this come from Konnekt", because it is published in the same
+      # release by whoever published the binary: anyone able to write a release
+      # writes both halves, and backend/services/update.go verifies the download
+      # against exactly that file.
+      #
+      # An attestation answers the second question. Each artifact's digest is
+      # bound to this workflow, this repository and this commit, signed with a
+      # short-lived Sigstore certificate issued against the job's OIDC token,
+      # and recorded in a public transparency log. Nothing here holds a signing
+      # key, so there is no key to leak and none to rotate.
+      #
+      # Attested here rather than in the three build jobs on purpose: these are
+      # the exact bytes `gh release create` uploads below, so what is signed is
+      # what a person downloads, with no artifact round-trip in between.
+      #
+      # actions/attest rather than actions/attest-build-provenance: from v4 the
+      # latter is a thin wrapper over this one, and upstream says new setups
+      # should call this directly. With no sbom-path or predicate input it
+      # produces SLSA build provenance, which is what is wanted here.
+      - name: Attest build provenance
+        uses: actions/attest@v4
+        with:
+          subject-path: 'dist/konnekt-*'
 
       # Same notes script as the nightly snapshot, so a release and the
       # snapshot ahead of it are described the same way. It drops pull requests
@@ -323,10 +353,20 @@ jobs:
 
           cat >> notes.md <<EOF
           Windows, Linux and Fedora/RHEL builds are attached below. macOS builds
-          from source. The binaries are unsigned, so Windows SmartScreen warns
-          on first launch: choose More info, then Run anyway.
+          from source. The binaries carry no code-signing certificate, so
+          Windows SmartScreen warns on first launch: choose More info, then Run
+          anyway.
 
-          Check a download against \`checksums.txt\` before running it.
+          Every artifact here is built by GitHub Actions from the tagged commit
+          and carries a signed build provenance attestation. To check that what
+          you downloaded is what this workflow built:
+
+          \`\`\`
+          gh attestation verify <file> --repo $REPO
+          \`\`\`
+
+          Without the \`gh\` CLI, \`checksums.txt\` confirms the download
+          arrived intact.
 
           Konnekt updates itself from these releases. Settings > General chooses
           between the stable and snapshot channels.

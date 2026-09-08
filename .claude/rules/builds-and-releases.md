@@ -93,8 +93,11 @@ the website's changelog shows (`website/release.js`'s `changesOnly`).
 
 Each workflow prepends its own preamble: `snapshot.yml` says what a snapshot is
 and that it can be broken, `release.yml` says which assets are attached, that
-they are unsigned, and how to check one against `checksums.txt`, plus a
-pre-release line when the tag carries a suffix. Anything a reader needs on the
+they carry no code-signing certificate, and how to verify one, plus a
+pre-release line when the tag carries a suffix. Both channels attest their
+artifacts (`actions/attest` in each publish job), so the verification the
+preamble points at is `gh attestation verify`, with `checksums.txt` as the
+fallback for anyone without the `gh` CLI. Anything a reader needs on the
 GitHub page but not on the changelog page belongs there.
 
 ## The snapshot channel

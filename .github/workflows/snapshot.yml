@@ -244,6 +244,12 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      # Build provenance, below. Same reasoning as release.yml's publish job,
+      # and it matters more here rather than less: a snapshot is rebuilt and
+      # republished under the same `snapshot` tag every night, so "which build
+      # is this" has no answer from the tag alone.
+      id-token: write
+      attestations: write
     steps:
       # Before the artifacts land: actions/checkout cleans the workspace, so
       # running it second would delete them. Only needed for the notes script
@@ -259,6 +265,17 @@ jobs:
       - name: Checksums
         working-directory: dist
         run: sha256sum * > checksums.txt
+
+      # Binds each artifact's digest to this workflow, this repository and this
+      # commit, signed against the job's OIDC token. See release.yml's copy of
+      # this step for why checksums.txt alone cannot make that claim.
+      #
+      # Attested here rather than in the three build jobs so that what is signed
+      # is exactly what `gh release create` uploads below.
+      - name: Attest build provenance
+        uses: actions/attest@v4
+        with:
+          subject-path: 'dist/konnekt-*'
 
       # The notes come from .github/scripts/release-notes.py, which release.yml
       # also calls, so a snapshot and the release it is ahead of are described
@@ -318,7 +335,9 @@ jobs:
           release puts you back on whichever channel Settings > General is set
           to.
 
-          Version \`$VERSION\`, commit $SHA.
+          Version \`$VERSION\`, commit $SHA. Built by GitHub Actions from that
+          commit, with a signed build provenance attestation:
+          \`gh attestation verify <file> --repo ${{ github.repository }}\`.
 
           EOF
           cat changes.md >> notes.md

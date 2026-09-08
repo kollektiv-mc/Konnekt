@@ -2,7 +2,7 @@ Name:           konnekt
 Version:        %{_version}
 Release:        1%{?dist}
 Summary:        Minecraft server dashboard
-License:        Proprietary
+License:        MIT
 URL:            https://github.com/kollektiv-mc/Konnekt
 
 Source0:        konnekt-linux-amd64
