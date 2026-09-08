@@ -941,6 +941,35 @@ tool results and the reasoning)
   #315 two store writes that swallow; #316 the 27 stdlib error ignores the
   old grep never saw; #317 a frontend mutation baseline.
 
+**A scanned-file count is not a coverage figure** (filed 2026-09-08 as #321,
+corrected the same day)
+- #321 was filed as "CodeQL misses a third of the Go tree" off one log line,
+  `CodeQL scanned 65 out of 103 Go files`, reasoning that `main.go`'s
+  `//go:embed all:frontend/dist` cannot resolve on a clean checkout, so the
+  root package does not compile, so `app.go` and with it the whole IPC surface
+  is outside the database, so `README.md`'s and `SECURITY.md`'s claims about
+  what CodeQL reads are two thirds true. **None of that holds.** The extractor
+  names every file it takes and the `Analyze (go)` log names `app.go`,
+  `main.go`, `singleinstance.go` and `version.go`. The embed failure costs
+  nothing because `//go:embed` resolves after type-checking and `assets` is
+  declared `embed.FS` either way: `go vet` on a tree with no `dist` reports
+  that one line and no type errors.
+- **The number is fully explained without any of it.** The repo has 68
+  non-test Go files. Exactly three cannot compile on a Linux, non-`dev`
+  runner: `server_windows.go` (`windows`), `server_unix.go` (`!windows &&
+  !linux`) and `singleinstance_dev.go` (`dev`). 68 - 3 = 65. The other 38 are
+  35 `_test.go` files, which no `go build` compiles and which are not the
+  attack surface anyway.
+- **What to take from it.** The denominator is every `.go` file on disk, so no
+  single job can ever reach it and a gap between the two numbers is the
+  expected state, not a finding. Read a scanned-file count against the
+  build-tag matrix and the test/non-test split before calling it coverage.
+  The one real gap it did surface is `server_windows.go`, the `x/sys` Job
+  Object code that `ci.yml` runs an entire `windows-latest` job to compile,
+  being analysed nowhere; closing it needs a second CodeQL job on a Windows
+  runner, which has to earn the minutes on its own. #321 is rewritten to that
+  and dropped to p3.
+
 **Release follow-ups** (deferred)
 - `wails.json`'s `productVersion` is not stamped from the tag, so the Windows
   exe's file properties report the `-dev` base (`0.2.0-dev` on `v0.2.0-alpha.1`)
