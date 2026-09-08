@@ -4957,3 +4957,90 @@ condense the audit report into this entry rather than keep it as a file.
 **Verification.** `go vet`, `go test ./...`, `pnpm typecheck`, `pnpm lint` (0
 errors, the 14 pre-existing warnings), `pnpm test` (733), `pnpm format:check`,
 `pnpm format:website`, the release-notes test, and `aislop ci` at 100.
+
+### 2026-09-08 — The mod description that could reach the bridge
+
+**Closed: [#306](../../issues/306), the p1 from the morning's audit.** A
+Modrinth project body is the one piece of third-party HTML Konnekt renders,
+and it rendered through `rehype-raw` with nothing after it. React neutralises
+`<script>` and string `on*` handlers on its own, which is why the audit's
+first grep found nothing, but `rehype-raw` hands `<iframe srcdoc>`,
+`<object>`, `<meta http-equiv>` and `<style>` through untouched, and the
+WebView is same-origin with `window.go`: a srcdoc frame runs as the app and
+can call `parent.window.go.main.App.StopServer()`, or `DeleteBackup`, or
+`RunInstaller`, from a mod listing. Two layers close it, because either alone
+is a single schema away from being wrong.
+
+**The sanitizer.** `rehype-sanitize` (6.0.0, MIT, the rehype maintainers'
+own, `hast-util-sanitize` its only dependency) now runs after `rehype-raw`
+with the GitHub schema plus `style` on the strip list. Chosen over a
+hand-written allowlist because the GitHub schema is the shape Modrinth
+bodies are already written against: `<div align>`, `<img width>`,
+`<details><summary>`, tables, `language-*` code classes, `mailto:` links all
+survive, and the test pins each. What it does to the hostile shapes, each
+asserted: frames, objects, embeds, scripts, meta, base and forms are gone;
+an `onerror` and a `style` attribute are dropped; a `javascript:` href is
+dropped and its text kept; an `<input>` becomes the one shape that cannot
+take input, a disabled checkbox; a `data:` image source is refused. `style`
+had to be added to `strip` by hand: the default only strips `script` and
+unwraps everything else, so a `<style>` block's CSS would have rendered as
+prose. One consequence to know: an element outside the schema is unwrapped,
+not removed, so `<center>` loses its centring and keeps its text. No other
+HTML sink exists (`dangerouslySetInnerHTML`/`innerHTML`: zero hits under
+`frontend/src`).
+
+**The policy.** `frontend/index.html` carries a Content-Security-Policy
+meta: `default-src 'self'`, `script-src 'self'`, `style-src 'self'
+'unsafe-inline'`, `img-src 'self' https: data:`, `frame-src 'none'`,
+`object-src 'none'`, `base-uri 'self'`, `form-action 'none'`. Each value was
+read off the tree rather than guessed. Wails v2.12.0 inserts
+`/wails/ipc.js` and `/wails/runtime.js` as same-origin `<script src>` tags
+(`pkg/assetserver/common.go`'s `insertScriptInHead`) and the origin is
+`http://wails.localhost/` on Windows and the `wails://` scheme on Linux, so
+`'self'` covers both; the IPC itself is `chrome.webview.postMessage` /
+`webkit.messageHandlers.external.postMessage`, which no directive governs;
+neither runtime file contains `eval` or `new Function`, and nor does any
+built chunk. `'unsafe-inline'` on styles is react-grid-layout's positioning
+plus CodeMirror's and `@xyflow`'s injected style elements. `data:` on images
+is CodeMirror: its stylesheet draws gutter and search icons from SVG data
+URIs (`grep data:image dist/assets/EditorPanel-*.js`), and `img-src` governs
+CSS `url()` too. The worlds chunk mentions `blob:` twice and both are
+three.js classifying a URL, not making one, so there is no `blob:` and no
+`worker-src`. The remote hosts are `cdn.modrinth.com`, Modrinth gallery
+images and `mc-heads.net`, all `https:`.
+
+**Where the policy lives, and the one deviation from the issue.** The issue
+said put the meta in `index.html`; it is there, and the built output ships it
+verbatim, the demo's included (`demo/dist/index.html` carries it, and the
+shim is a same-origin module script, so it loads). What the issue did not
+anticipate: `@vitejs/plugin-react` injects the React refresh preamble as an
+*inline* `<script type="module">` in serve mode (`transformIndexHtml` in its
+`dist/index.js`, gated on `skipFastRefresh`), and Vite's HMR client speaks
+over a websocket. `script-src 'self'` refuses both, so `wails dev` and the
+`frontend-dev` preset would have opened on a blank page. `vite.config.ts`
+now strips the meta in serve mode only, verified by starting the dev server
+and reading its `index.html` back: no policy, preamble present. The cost is
+recorded in the checklist: dev never runs under the policy, so a refused
+resource is a `wails build` finding.
+
+**What could not be verified here, and how it was reasoned.** The issue's
+"check the Wails IPC still works with it" needs a WebView, which the cloud
+container has not got. What the sources establish: the two runtime scripts
+are same-origin script tags; Go-to-JS callbacks run through
+`webkit_web_view_run_javascript` on Linux (`window.c:682`) and WebView2's
+`ExecuteScript` on Windows (`go-webview2`'s `Chromium.Eval`), both host-side
+evaluation APIs rather than script the document loads, which a `script-src`
+does not govern. A web search for a documented statement that WebView2's
+`ExecuteScript` is exempt from a page CSP found none either way, so this
+rests on the mechanism, and the first `wails build` on Windows and Linux
+should confirm a tile still starts and stops a server before this entry is
+trusted. If it does not, the fallback is `script-src 'self'` plus a nonce on
+the two Wails tags, which the assetserver does not currently emit.
+
+**Verification.** `pnpm typecheck`, `pnpm lint` (0 errors, the 14
+pre-existing warnings), `pnpm test` (736, the three new ones in
+`MarkdownBody.test.tsx`), `pnpm format:check`, `pnpm build`, `pnpm
+check-bundle` (entry 154.5 KB unchanged; warmed 714.4 of 800 KB, the
+MarkdownBody chunk 98.4 → 102.8 KB gzip for the schema), `pnpm check-tokens`,
+`pnpm check-prefetch`, `node demo/build.mjs`, `aislop ci` at 100. No Go
+changed.
