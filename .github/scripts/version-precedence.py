@@ -14,13 +14,16 @@ Why this is not two lines of shell
 
 The comparison has to be the updater's, because the updater is what goes quiet.
 `backend/services/update.go`'s `compareVersions` ranks a plain core above any
-prerelease of the same core and otherwise compares prerelease suffixes as
-strings, which is not what `sort -V` does and not something it implements at
-all. The shell guard this replaced worked around that by only ever looking at
-*final* releases, so a prerelease tag - `v0.2.0-alpha.1`, which is every tag
-this repo has cut - skipped the check entirely and stranded the channel in
-silence. Mirroring the Go instead means the answer is the real one, and can be
-tested offline rather than at the moment a release is being cut.
+prerelease of the same core and otherwise orders prerelease suffixes by
+semver's identifier rules, which is not what `sort -V` does and not something
+it implements at all. The shell guard this replaced worked around that by only
+ever looking at *final* releases, so a prerelease tag - `v0.2.0-alpha.1`, which
+is every tag this repo has cut - skipped the check entirely and stranded the
+channel in silence. Mirroring the Go instead means the answer is the real one,
+and can be tested offline rather than at the moment a release is being cut.
+
+`release-tag.py` imports `compare_versions` from here for the same reason: the
+tag it refuses to cut is the one the updater would misorder.
 
 Kept in step with `compareVersions` by `version-precedence_test.py`, which runs
 that function's own Go test cases through this one.
@@ -68,13 +71,51 @@ def parse_core(core: str) -> list[int]:
     return parts
 
 
-def compare_versions(a: str, b: str) -> int:
-    """-1, 0 or 1, matching update.go's compareVersions.
+INT64_MAX = 2**63 - 1
 
-    Prerelease suffixes are compared as strings, byte for byte. Go compares
-    UTF-8 bytes and Python compares code points; every version either side of
-    this is ASCII, where the two agree.
+
+def numeric_identifier(identifier: str) -> int | None:
+    """The value of an all-digit identifier that fits an int64, else None.
+
+    The int64 line is Go's: strconv.ParseInt fails past it and the Go then
+    compares the identifier as text, so a digit string that long has to be
+    text here as well or the two would disagree on a pathological tag.
     """
+    if not identifier or not identifier.isascii() or not identifier.isdigit():
+        return None
+    value = int(identifier)
+    return value if value <= INT64_MAX else None
+
+
+def compare_identifier(a: str, b: str) -> int:
+    num_a, num_b = numeric_identifier(a), numeric_identifier(b)
+    if num_a is not None and num_b is not None:
+        return (num_a > num_b) - (num_a < num_b)
+    if num_a is not None:
+        return -1
+    if num_b is not None:
+        return 1
+    return (a > b) - (a < b)
+
+
+def compare_prerelease(a: str, b: str) -> int:
+    """Semver's rule, as update.go's comparePrerelease applies it.
+
+    Identifier by identifier: numbers as numbers, anything else as text, a
+    number below any text, and the shorter suffix below the longer once every
+    shared identifier agrees. Text is compared as Python code points where Go
+    compares UTF-8 bytes; every version either side of this is ASCII, where
+    the two agree.
+    """
+    ids_a, ids_b = a.split("."), b.split(".")
+    for id_a, id_b in zip(ids_a, ids_b):
+        if (order := compare_identifier(id_a, id_b)) != 0:
+            return order
+    return (len(ids_a) > len(ids_b)) - (len(ids_a) < len(ids_b))
+
+
+def compare_versions(a: str, b: str) -> int:
+    """-1, 0 or 1, matching update.go's compareVersions."""
     core_a, pre_a = split_version(a)
     core_b, pre_b = split_version(b)
 
@@ -88,7 +129,7 @@ def compare_versions(a: str, b: str) -> int:
         return 1
     if not pre_b:
         return -1
-    return (pre_a > pre_b) - (pre_a < pre_b)
+    return compare_prerelease(pre_a, pre_b)
 
 
 def annotation(version: str, latest: str) -> str:

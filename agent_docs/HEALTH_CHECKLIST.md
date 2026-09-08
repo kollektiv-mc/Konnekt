@@ -845,6 +845,15 @@ fix in passing or take the issue)
   guard into the helper the day a caller stops.
 
 **Release follow-ups** (deferred)
+- `wails.json`'s `productVersion` is not stamped from the tag, so the Windows
+  exe's file properties report the `-dev` base (`0.2.0-dev` on `v0.2.0-alpha.1`)
+  while the app itself reports the tag. A `sed` on `wails.json` in the build
+  jobs before `wails build` would close it; deliberately left out of the
+  dispatch-workflow change to keep it to one concern.
+- Delete the three pre-semver tags (`v0.1-alpha`, `v1.1-alpha`, `v2.0-alpha`).
+  They predate `release.yml`, produced no release, and the tag resolver ignores
+  them, but they sort above every real version in any tag listing. Outstanding
+  since the commit that staged v0.2.0-alpha.1.
 - Release-tag-gated full `wails build` packaging job — stronger end-to-end
   confidence than the current `go build`/`pnpm build` CI smoke check.
 - macOS release leg + its self-update support (`platformAssetNameFor` is

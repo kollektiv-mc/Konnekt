@@ -1,105 +1,105 @@
-# Static analysis, and the one gate here that reads the code for what it does
-# rather than for how it is shaped. `pnpm lint` and `go vet` catch style and the
-# obvious mistakes; neither traces a value from where it enters the app to where
-# it is used, which is the whole question for the surfaces SECURITY.md lists —
-# path handling in backups and the config editor, JVM arguments becoming a
-# spawned process, and anything fetched from Modrinth.
+# For most projects, this workflow file will not need changing; you simply need
+# to commit it to your repository.
 #
-# Advanced setup (this file) rather than GitHub's default setup, for two
-# reasons. The Go extractor has to compile the tree, and `main.go`'s
-# `//go:embed all:frontend/dist` means it cannot do that until Vite has run, so
-# the build is not something autobuild can be left to work out. The second
-# reason is smaller and worth stating plainly: default setup publishes no
-# workflow, and so has no badge.svg URL, and the README badge would 404.
-name: CodeQL
+# You may wish to alter this file to override the set of languages analyzed,
+# or to provide custom queries or build logic.
+#
+# ******** NOTE ********
+# We have attempted to detect the languages in your repository. Please check
+# the `language` matrix defined below to confirm you have the correct set of
+# supported CodeQL languages.
+#
+name: "CodeQL Advanced"
 
 on:
   push:
-    branches: [main]
+    branches: [ "main" ]
   pull_request:
-    branches: [main]
-  # Advisories land against dependencies that have not changed, so a repo that
-  # only scans on push stops hearing about anything once it goes quiet. Sunday,
-  # away from the nightly snapshot's window.
+    branches: [ "main" ]
   schedule:
-    - cron: '0 4 * * 0'
-
-concurrency:
-  group: codeql-${{ github.ref }}
-  cancel-in-progress: true
+    - cron: '36 14 * * 0'
 
 jobs:
   analyze:
     name: Analyze (${{ matrix.language }})
-    runs-on: ubuntu-latest
+    # Runner size impacts CodeQL analysis time. To learn more, please see:
+    #   - https://gh.io/recommended-hardware-resources-for-running-codeql
+    #   - https://gh.io/supported-runners-and-hardware-resources
+    #   - https://gh.io/using-larger-runners (GitHub.com only)
+    # Consider using larger runners or machines with greater resources for possible analysis time improvements.
+    runs-on: ${{ (matrix.language == 'swift' && 'macos-latest') || 'ubuntu-latest' }}
     permissions:
+      # required for all workflows
       security-events: write
-      contents: read
+
+      # required to fetch internal or private CodeQL packs
+      packages: read
+
+      # only required for workflows in private repositories
       actions: read
+      contents: read
 
     strategy:
       fail-fast: false
       matrix:
         include:
-          # Compiled, so it needs the whole build toolchain below.
-          - language: go
-            build-mode: manual
-          # Not compiled: the extractor reads the source directly, so there is
-          # nothing to build and no reason to install Go or the GTK headers.
-          - language: javascript-typescript
-            build-mode: none
-
+        - language: actions
+          build-mode: none
+        - language: go
+          build-mode: autobuild
+        - language: javascript-typescript
+          build-mode: none
+        - language: python
+          build-mode: none
+        # CodeQL supports the following values keywords for 'language': 'actions', 'c-cpp', 'csharp', 'go', 'java-kotlin', 'javascript-typescript', 'python', 'ruby', 'rust', 'swift'
+        # Use `c-cpp` to analyze code written in C, C++ or both
+        # Use 'java-kotlin' to analyze code written in Java, Kotlin or both
+        # Use 'javascript-typescript' to analyze code written in JavaScript, TypeScript or both
+        # To learn more about changing the languages that are analyzed or customizing the build mode for your analysis,
+        # see https://docs.github.com/en/code-security/code-scanning/creating-an-advanced-setup-for-code-scanning/customizing-your-advanced-setup-for-code-scanning.
+        # If you are analyzing a compiled language, you can modify the 'build-mode' for that language to customize how
+        # your codebase is analyzed, see https://docs.github.com/en/code-security/code-scanning/creating-an-advanced-setup-for-code-scanning/codeql-code-scanning-for-compiled-languages
     steps:
-      - uses: actions/checkout@v4
+    - name: Checkout repository
+      uses: actions/checkout@v7
 
-      # v4 rather than v3: v3 runs on the Node 20 runtime, which went
-      # end-of-life in April 2026, and the action itself is deprecated in
-      # December 2026 with no further updates after that.
-      - name: Initialize CodeQL
-        uses: github/codeql-action/init@v4
-        with:
-          languages: ${{ matrix.language }}
-          build-mode: ${{ matrix.build-mode }}
-          config-file: ./.github/codeql/codeql-config.yml
+    # Add any setup steps before running the `github/codeql-action/init` action.
+    # This includes steps like installing compilers or runtimes (`actions/setup-node`
+    # or others). This is typically only required for manual builds.
+    # - name: Setup runtime (example)
+    #   uses: actions/setup-example@v1
 
-      - name: Install build dependencies
-        if: matrix.build-mode == 'manual'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends \
-            pkg-config libgtk-3-dev libwebkit2gtk-4.1-dev
+    # Initializes the CodeQL tools for scanning.
+    - name: Initialize CodeQL
+      uses: github/codeql-action/init@v4
+      with:
+        languages: ${{ matrix.language }}
+        build-mode: ${{ matrix.build-mode }}
+        # If you wish to specify custom queries, you can do so here or in a config file.
+        # By default, queries listed here will override any specified in a config file.
+        # Prefix the list here with "+" to use these queries and those in the config file.
 
-      - uses: actions/setup-go@v5
-        if: matrix.build-mode == 'manual'
-        with:
-          go-version-file: go.mod
-          cache: true
+        # For more details on CodeQL's query packs, refer to: https://docs.github.com/en/code-security/code-scanning/automatically-scanning-your-code-for-vulnerabilities-and-errors/configuring-code-scanning#using-queries-in-ql-packs
+        # queries: security-extended,security-and-quality
 
-      - uses: pnpm/action-setup@v4
-        if: matrix.build-mode == 'manual'
-        with:
-          version: 11
+    # If the analyze step fails for one of the languages you are analyzing with
+    # "We were unable to automatically build your code", modify the matrix above
+    # to set the build mode to "manual" for that language. Then modify this step
+    # to build your code.
+    # ℹ️ Command-line programs to run using the OS shell.
+    # 📚 See https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#jobsjob_idstepsrun
+    - name: Run manual build steps
+      if: matrix.build-mode == 'manual'
+      shell: bash
+      run: |
+        echo 'If you are using a "manual" build mode for one or more of the' \
+          'languages you are analyzing, replace this with the commands to build' \
+          'your code, for example:'
+        echo '  make bootstrap'
+        echo '  make release'
+        exit 1
 
-      - uses: actions/setup-node@v4
-        if: matrix.build-mode == 'manual'
-        with:
-          node-version: 22
-          cache: pnpm
-          cache-dependency-path: frontend/pnpm-lock.yaml
-
-      # Same order and the same reason as CI's backend jobs: the embed
-      # directive compiles, so frontend/dist has to exist before Go is built.
-      - name: Build
-        if: matrix.build-mode == 'manual'
-        run: |
-          pnpm install --frozen-lockfile --dir frontend
-          pnpm --dir frontend build
-          # webkit2_41 to match backend-linux and both shipping Linux builds.
-          # Untagged would link against webkit2gtk-4.0, which is not what any
-          # released Linux artifact is built against.
-          go build -tags webkit2_41 ./...
-
-      - name: Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@v4
-        with:
-          category: '/language:${{ matrix.language }}'
+    - name: Perform CodeQL Analysis
+      uses: github/codeql-action/analyze@v4
+      with:
+        category: "/language:${{matrix.language}}"

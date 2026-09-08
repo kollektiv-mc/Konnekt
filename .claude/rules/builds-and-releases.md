@@ -12,9 +12,55 @@ paths:
 
 `version.go`'s `Version` var is the single source of the app version,
 mirrored in `wails.json`'s `info.productVersion`. `.github/workflows/release.yml`
-builds and publishes on `v*` tags; the in-app updater
-(`backend/services/update.go`) checks GitHub Releases. Only relevant when
-cutting a release.
+builds and publishes a release, cut from the Actions tab or from a pushed `v*`
+tag; the in-app updater (`backend/services/update.go`) checks GitHub Releases.
+Only relevant when cutting a release.
+
+## Cutting a release
+
+Actions tab, **Release**, **Run workflow**, on `main`. Two inputs: the channel
+(`alpha`, `beta`, `stable`) and the `X.Y.Z` the build belongs to. The `resolve`
+job turns those into the tag and creates it: the next free counter for a
+prerelease (`v0.2.0-alpha.3` after `v0.2.0-alpha.2`, counted per channel and
+per core) or the bare `v0.2.0` for stable. `.github/scripts/release-tag.py` is
+the decision, `release-tag_test.py` pins it, and CI runs the test.
+
+The ladder each version climbs is `alpha.N`, then `beta.N`, then the bare
+version. Nothing forces a version through every rung, but an alpha cannot
+follow a beta of the same core and no tag can follow one it sorts at or below:
+`compareVersions` would never offer it to anyone on the higher tag, so the
+resolver refuses it. It also refuses any tag off the
+`vX.Y.Z[-alpha.N|-beta.N]` shape. `rc`, `-dev`, a missing counter and the
+pre-semver `v2.0-alpha` shape all fail the same way.
+
+**Before a final, bump the base.** A snapshot of `version.go`'s base has to
+outrank the tag being cut, or the snapshot channel goes quiet (next section).
+For an alpha or beta that holds whenever the base core is at least the tag's,
+so `0.2.0-dev` cuts `v0.2.0-alpha.N` and `v0.2.0-beta.N` with no bump. For
+`v0.2.0` itself the base must already be past it, `0.2.1-dev` or `0.3.0-dev`,
+and the resolver refuses the tag until it is. The bump is a commit on `main`
+that goes through CI, and the workflow will not make one, so it is asked for
+up front, when it costs a merge rather than a stranded channel. The same
+applies when a prerelease jumps the core ahead: `v0.3.0-alpha.1` needs
+`0.3.0-dev` in place first.
+
+**The prerelease flag is decided by the resolver, not the tag.** An alpha or
+beta is flagged only once a final has shipped. A flagged release leaves
+`/releases/latest`, which the stable channel, the website's download card and
+the notes baseline all read, so while every release is an alpha, flagging one
+would freeze all three on the previous alpha. The "Pre-release" line in the
+body is a separate thing, decided by the tag's suffix, and always present on
+one.
+
+A hand-pushed tag (`git tag v0.2.0-alpha.1 && git push origin v0.2.0-alpha.1`)
+still works and goes through the same `resolve` job, minus the tag creation,
+so it is held to the same rules: a tag that would strand the channel fails the
+run rather than shipping. It is the path for releasing something other than
+`main`, which the dispatch refuses. The tag the dispatch creates is pushed with
+`GITHUB_TOKEN`, which GitHub does not fan out into another run, so the build
+continues in the run that made it; that is why every job after `resolve`
+checks out and stamps `needs.resolve.outputs.tag` rather than
+`github.ref_name`, which on a dispatch is the branch.
 
 **`version.go`'s base is the version being worked towards, not the last one
 released, and `wails.json`'s `productVersion` mirrors it.** This is not
@@ -28,8 +74,10 @@ they are up to date forever.
 
 `.github/scripts/version-precedence.py` is what notices, applying
 `update.go`'s own `compareVersions` rules to the snapshot about to be built.
-The snapshot workflow runs it nightly and it emits a `::warning::`, which is
-the only visible symptom. Do not reimplement that comparison in shell: the
+The snapshot workflow runs it nightly and it emits a `::warning::`; the release
+workflow's `resolve` job applies the same comparison to the tag about to be cut
+and refuses it outright, which is what keeps the warning from ever firing for a
+tag cut through it. Do not reimplement that comparison in shell: the
 version of this guard that was, used `sort -V`, which has no notion of
 prerelease precedence, and covered for that by only examining *final*
 releases, so every prerelease tag skipped the check. `version-precedence_test.py`
@@ -45,8 +93,11 @@ the website's changelog shows (`website/release.js`'s `changesOnly`).
 
 Each workflow prepends its own preamble: `snapshot.yml` says what a snapshot is
 and that it can be broken, `release.yml` says which assets are attached, that
-they are unsigned, and how to check one against `checksums.txt`, plus a
-pre-release line when the tag carries a suffix. Anything a reader needs on the
+they carry no code-signing certificate, and how to verify one, plus a
+pre-release line when the tag carries a suffix. Both channels attest their
+artifacts (`actions/attest` in each publish job), so the verification the
+preamble points at is `gh attestation verify`, with `checksums.txt` as the
+fallback for anyone without the `gh` CLI. Anything a reader needs on the
 GitHub page but not on the changelog page belongs there.
 
 ## The snapshot channel
@@ -70,9 +121,10 @@ overtakes their build.
 Two things about the format are load-bearing:
 
 - **The version is `<base>-snapshot.<YYYYMMDDHHMM>.<sha7>`**, stamped from the
-  commit's own UTC date. `compareVersions` falls back to a string compare
-  between two prerelease suffixes, so without that fixed-width timestamp two
-  snapshots sort by sha, which says nothing about which is newer. It is
+  commit's own UTC date. `compareVersions` orders prerelease suffixes identifier
+  by identifier, numbers as numbers and words as text, so without that
+  timestamp two snapshots sort by sha, which says nothing about which is newer.
+  It is
   deliberately **not** `-dev`: that marker now means one thing only, a local
   `wails dev` build, and both `services.IsInstallableBuild` and the frontend's
   `isDevBuild()` must classify a snapshot as installable.

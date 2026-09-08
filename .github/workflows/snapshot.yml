@@ -51,9 +51,9 @@ jobs:
 
           # The commit's own date, UTC, fixed width. That timestamp is the only
           # reason two snapshots can be ordered at all: update.go's
-          # compareVersions falls back to a string compare between two
-          # prerelease suffixes, and a bare sha sorts alphabetically, which says
-          # nothing about which build is newer. Taken from the commit rather
+          # compareVersions orders prerelease identifiers one by one, and a
+          # bare sha is text that sorts alphabetically, which says nothing
+          # about which build is newer. Taken from the commit rather
           # than `date -u` so re-running this workflow on an unchanged main
           # produces the same version instead of nagging every snapshot user
           # about a build they already have.
