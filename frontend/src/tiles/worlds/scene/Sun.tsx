@@ -41,9 +41,8 @@ export function Sun({ radius = 0.55 }: Props) {
             version-typing gap, not a real runtime concern. No clean cast bridges
             it, so the rule is suppressed for this one interop line. */}
         <spriteMaterial
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           // aislop-ignore-next-line ai-slop/unsafe-type-assertion -- the documented three/@react-three/fiber type mismatch (HEALTH_CHECKLIST, Clean)
-          map={glowTexture as any}
+          map={glowTexture as any} // eslint-disable-line @typescript-eslint/no-explicit-any
           transparent
           blending={THREE.AdditiveBlending}
           depthWrite={false}
