@@ -1,5 +1,5 @@
 import type { Node as FlowNode, Edge as FlowEdge, Connection } from '@xyflow/react'
-import type { models } from '../../../../wailsjs/go/models'
+import { models } from '../../../../wailsjs/go/models'
 import { resolveDataPortType, portTypesCompatible } from './portTypes'
 
 export interface NodeData extends Record<string, unknown> {
@@ -21,7 +21,7 @@ export function graphToFlow(
     position: { x: n.position?.x ?? 0, y: n.position?.y ?? 0 },
     data: {
       blockType: n.type,
-      config: { ...(n.config ?? {}) },
+      config: { ...n.config },
       label: defMap.get(n.type)?.label ?? n.type,
     },
   }))
@@ -48,9 +48,10 @@ export function flowToGraph(
   nodes: FlowNode[],
   edges: FlowEdge[],
 ): models.Graph {
-  // Cast via unknown: Wails class types have a convertValues method we don't need
-  // to provide since outgoing IPC calls are serialized as plain JSON.
-  return {
+  // Through the generated constructor rather than a cast: createFrom builds the
+  // Node, Edge and Position instances the binding's type promises, and the
+  // outgoing IPC call serializes them as plain JSON either way.
+  return models.Graph.createFrom({
     id: meta.id,
     name: meta.name,
     enabled: meta.enabled,
@@ -61,7 +62,7 @@ export function flowToGraph(
       type: (n.data as NodeData).blockType,
       config: (n.data as NodeData).config,
       position: { x: n.position.x, y: n.position.y },
-    })) as unknown as models.Node[],
+    })),
     edges: edges.map((e) => {
       const srcH = e.sourceHandle ?? ''
       const tgtH = e.targetHandle ?? ''
@@ -74,8 +75,8 @@ export function flowToGraph(
         target: e.target,
         targetPort: tgtH.replace(/^(ctrl|data):/, ''),
       }
-    }) as unknown as models.Edge[],
-  } as unknown as models.Graph
+    }),
+  })
 }
 
 // Reject cross-kind wiring, self-loops, and (for data edges) incompatible port

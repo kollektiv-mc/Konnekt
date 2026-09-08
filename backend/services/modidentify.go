@@ -208,7 +208,10 @@ func (s *ModService) identifyUnknownLocked(serverID string) (bool, error) {
 
 	for _, c := range candidates {
 		existing := index[c.jar.name]
-		meta, _ := parseJarMetaCached(c.jar.path, loader)
+		meta, err := parseJarMetaCached(c.jar.path, loader)
+		if err != nil {
+			slog.Debug("mods: jar metadata unreadable, identifying by hash only", "jar", c.jar.name, "error", err)
+		}
 
 		item := modManifestItem{
 			FileName:     c.jar.name,

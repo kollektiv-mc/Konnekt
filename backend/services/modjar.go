@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -527,7 +528,10 @@ func detectFromJar(jarPath string) (mcVersion, loader string) {
 
 	// Bukkit/Paper/Spigot: META-INF/services with Bukkit marker
 	if f, ok := entries["META-INF/MANIFEST.MF"]; ok {
-		data, _ := readZipEntry(f)
+		data, err := readZipEntry(f)
+		if err != nil {
+			slog.Debug("mods: manifest unreadable, skipping the Bukkit markers", "error", err)
+		}
 		content := string(data)
 		if strings.Contains(content, "papermc") || strings.Contains(content, "io.papermc") {
 			loader = "paper"

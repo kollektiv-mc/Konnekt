@@ -1,3 +1,4 @@
+// aislop-ignore-file code-quality/duplicate-block -- #313
 import { useState, useEffect, useRef, useCallback } from 'react'
 import type { ModProject } from './useMods'
 import { DURATION_MS } from '../../styles/tokens'

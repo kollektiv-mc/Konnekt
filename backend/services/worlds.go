@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"strings"
@@ -166,7 +167,10 @@ func (s *WorldService) DeleteWorld(serverID, name string) error {
 	if err != nil {
 		return err
 	}
-	props, _ := readProperties(filepath.Join(cfg.WorkingDir, "server.properties"))
+	props, err := readProperties(filepath.Join(cfg.WorkingDir, "server.properties"))
+	if err != nil {
+		slog.Debug("worlds: server.properties unreadable, no world is active", "error", err)
+	}
 	active := props["level-name"]
 	if active == "" {
 		active = "world"
@@ -208,7 +212,10 @@ func (s *WorldService) RenameWorld(serverID, oldName, newName string) error {
 		return fmt.Errorf("a world named %q already exists", newName)
 	}
 
-	props, _ := readProperties(filepath.Join(cfg.WorkingDir, "server.properties"))
+	props, err := readProperties(filepath.Join(cfg.WorkingDir, "server.properties"))
+	if err != nil {
+		slog.Debug("worlds: server.properties unreadable, no world is active", "error", err)
+	}
 	active := props["level-name"]
 	if active == "" {
 		active = "world"

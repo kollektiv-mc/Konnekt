@@ -96,6 +96,7 @@ function LayoutScaleController({
         minZ = Infinity,
         maxZ = -Infinity
       for (const [nx, ny] of NDC_CORNERS) {
+        // aislop-ignore-next-line ai-slop/double-type-assertion -- three vs @react-three/fiber Camera types, the documented mismatch (HEALTH_CHECKLIST, Clean)
         tmpPoint.current.set(nx, ny, 0.5).unproject(state.camera as unknown as THREE.Camera)
         tmpOrigin.current.copy(state.camera.position)
         tmpDir.current.copy(tmpPoint.current).sub(tmpOrigin.current).normalize()

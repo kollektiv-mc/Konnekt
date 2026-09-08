@@ -261,7 +261,10 @@ func (s *ModService) Install(serverID string, versionIDs []string) error {
 		// copy this install replaces when that copy came from somewhere the
 		// provider cannot identify by hash — a CurseForge build of the same mod
 		// is the usual case, and a modpack folder is full of them.
-		meta, _ := parseJarMeta(finalPath, loader)
+		meta, err := parseJarMeta(finalPath, loader)
+		if err != nil {
+			slog.Debug("mods: installed jar metadata unreadable", "path", finalPath, "error", err)
+		}
 
 		// Take out the file this one supersedes before anything is announced.
 		// Two jars of one mod in mods/ is not a cosmetic duplicate: the server
@@ -566,7 +569,10 @@ func (s *ModService) ListInstalled(serverID string) ([]models.InstalledMod, erro
 			info, _ := e.Info()
 			jarPath := filepath.Join(dir, name)
 
-			meta, _ := parseJarMetaCached(jarPath, loader)
+			meta, err := parseJarMetaCached(jarPath, loader)
+			if err != nil {
+				slog.Debug("mods: jar metadata unreadable", "jar", name, "error", err)
+			}
 
 			var manifestItem *modManifestItem
 			if item, ok := manifestIndex[name]; ok {
@@ -962,7 +968,10 @@ func (s *ModService) InstallLocal(serverID string, filePaths []string) error {
 			return fmt.Errorf("copy %s: %w", safeFileName, err)
 		}
 
-		meta, _ := parseJarMeta(finalPath, loader)
+		meta, err := parseJarMeta(finalPath, loader)
+		if err != nil {
+			slog.Debug("mods: imported jar metadata unreadable", "path", finalPath, "error", err)
+		}
 		displayName := meta.Name
 		if displayName == "" {
 			displayName = strings.TrimSuffix(safeFileName, ".jar")

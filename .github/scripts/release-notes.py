@@ -147,7 +147,9 @@ def api(path: str, **params: object) -> object:
             with urllib.request.urlopen(request, timeout=60) as response:
                 return json.load(response)
         except urllib.error.HTTPError as error:
-            if (error.code < 500 and error.code not in (403, 429)) or attempt == RETRIES - 1:
+            if (
+                error.code < 500 and error.code not in (403, 429)
+            ) or attempt == RETRIES - 1:
                 raise ApiError(path, f"HTTP {error.code}", error.code) from error
             detail = f"HTTP {error.code}"
         except (urllib.error.URLError, TimeoutError, json.JSONDecodeError) as error:
@@ -172,7 +174,9 @@ def load_non_app_paths(config_path: pathlib.Path) -> tuple[str, ...]:
     try:
         raw = json.loads(config_path.read_text())
     except FileNotFoundError as error:
-        raise ApiError(str(config_path), "no such file — this repo has not been configured") from error
+        raise ApiError(
+            str(config_path), "no such file — this repo has not been configured"
+        ) from error
     except json.JSONDecodeError as error:
         raise ApiError(str(config_path), f"not valid JSON: {error}") from error
 
@@ -195,7 +199,9 @@ def commits_in_range(repo: str, base: str, head: str) -> list[dict]:
     for page in range(1, 26):
         payload = api(f"/repos/{repo}/compare/{base}...{head}", page=page, per_page=100)
         collected.extend(payload.get("commits") or [])
-        if len(collected) >= payload.get("total_commits", 0) or not payload.get("commits"):
+        if len(collected) >= payload.get("total_commits", 0) or not payload.get(
+            "commits"
+        ):
             break
     return collected
 

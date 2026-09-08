@@ -83,6 +83,25 @@ jobs:
 
       - run: python3 .github/scripts/release-tag_test.py
 
+  # aislop (scanaislop/aislop, MIT) scores the tree for the patterns AI-assisted
+  # code leaves behind: ignored errors, double casts, duplicated blocks,
+  # oversized functions. .aislop/config.yml is the policy and says what is
+  # counted, what is turned off and why; .aislopignore says what is generated
+  # or vendored and never scored. `ci` exits non-zero below ci.failBelow, which
+  # is 100: a drop is one new finding, and the config comments say how to read
+  # one. Pinned, because the ruleset changes between releases and a gate that
+  # moves on its own is not a gate. Telemetry is off in the config.
+  aislop:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - run: npx --yes aislop@0.16.0 ci
+
   frontend:
     runs-on: ubuntu-latest
     defaults:

@@ -3,6 +3,8 @@ import type { LucideIcon } from '../lib/icons'
 import type { models } from '../../wailsjs/go/models'
 export type { LayoutItem } from 'react-grid-layout'
 
+export type WorldSystem = models.WorldSystem
+
 /**
  * Shapes that cross the IPC boundary are aliased from the generated bindings,
  * never redeclared. A hand-written copy stays correct until someone *adds* a

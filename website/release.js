@@ -61,7 +61,7 @@
       if (navigator.userAgentData && navigator.userAgentData.platform) {
         p = navigator.userAgentData.platform
       }
-    } catch (e) {
+    } catch {
       /* older browsers */
     }
     var hay = (
@@ -189,7 +189,7 @@
       var entry = JSON.parse(window.localStorage.getItem(PULLS_KEY))
       if (!entry || Date.now() - entry.at > PULLS_TTL_MS) return null
       return entry.byTitle || null
-    } catch (e) {
+    } catch {
       return null // no storage, a quota error, or an entry from an older shape
     }
   }
@@ -197,7 +197,7 @@
   function writePullCache(byTitle) {
     try {
       window.localStorage.setItem(PULLS_KEY, JSON.stringify({ at: Date.now(), byTitle: byTitle }))
-    } catch (e) {
+    } catch {
       /* The map is still good for this page load. */
     }
   }

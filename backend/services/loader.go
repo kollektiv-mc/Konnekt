@@ -148,6 +148,7 @@ func (s *LoaderService) AvailableVersions(serverID string) ([]models.LoaderVersi
 	// An undetected Minecraft version means no filter rather than no results:
 	// showing everything lets the user pick, showing nothing looks broken. A
 	// malformed one is the same situation, and resolveTarget turns it into one.
+	// aislop-ignore-next-line ai-slop/swallowed-exception -- the second value is the loader name, not an error; the filter only needs the version
 	mcVersion, _ := resolveTarget(*cfg)
 	if mcVersion == "" {
 		return all, nil
@@ -304,11 +305,15 @@ func (s *LoaderService) updateWithRollback(cfg models.ServerConfig, req models.L
 	// build — a partial run, or a version it silently declined. Nothing else in
 	// the app would notice, and the server would start on the old loader while
 	// the UI claimed the new one.
-	installed, _ := detectLoaderVersion(cfg.JarPath, cfg.WorkingDir)
+	installed, source := detectLoaderVersion(cfg.JarPath, cfg.WorkingDir)
 	if installed != req.Version {
+		where := ""
+		if source != "" {
+			where = " (read from " + source + ")"
+		}
 		return s.rollback(cfg, snapshotDir), fmt.Errorf(
-			"the installer finished but this server still launches %s, not %s",
-			orUnknown(installed), req.Version)
+			"the installer finished but this server still launches %s, not %s%s",
+			orUnknown(installed), req.Version, where)
 	}
 
 	cfg.LoaderVersion = req.Version
@@ -436,7 +441,11 @@ func (s *LoaderService) downloadInstaller(provider LoaderProvider, version strin
 	// captive portal's login form all fail here, before java is handed
 	// something that is not an installer — and a build that is not the one
 	// asked for fails here rather than after it has been laid down.
-	info, _ := InspectInstaller(jarPath)
+	info, err := InspectInstaller(jarPath)
+	if err != nil {
+		cleanup()
+		return "", fmt.Errorf("inspect installer: %w", err)
+	}
 	if !info.IsInstaller {
 		cleanup()
 		return "", fmt.Errorf("the download is not a NeoForge installer")

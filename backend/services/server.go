@@ -481,7 +481,10 @@ func (s *serverInstance) start(jarPath string, jvmArgs []string, workingDir stri
 	s.maxRAMMB = parseXmx(effectiveArgs)
 
 	// Read server.properties for max-players and RCON config
-	props, _ := readProperties(filepath.Join(workingDir, "server.properties"))
+	props, err := readProperties(filepath.Join(workingDir, "server.properties"))
+	if err != nil {
+		slog.Debug("server: server.properties unreadable, using defaults", "error", err)
+	}
 	s.maxPlayers = propInt(props, "max-players", 20)
 
 	rconPort := propInt(props, "rcon.port", 25575)

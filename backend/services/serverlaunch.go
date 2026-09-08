@@ -3,6 +3,7 @@ package services
 import (
 	"bufio"
 	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -44,7 +45,11 @@ func resolveLaunch(jarPath, workingDir string, jvmArgs []string) ([]string, erro
 			// An installer jar runs the installer, not a server — refuse rather
 			// than start something confusing. Reachable for a config saved
 			// before Konnekt detected installers, or a hand-typed path.
-			if info, _ := InspectInstaller(jarPath); info.IsInstaller {
+			info, err := InspectInstaller(jarPath)
+			if err != nil {
+				slog.Debug("launch: jar unreadable, leaving the installer check to java", "jar", jarPath, "error", err)
+			}
+			if info.IsInstaller {
 				return nil, fmt.Errorf("%s is a %s installer, not a server — install it first (Konnekt offers this when you select it, or run it yourself with --installServer)", filepath.Base(jarPath), installerLabel(info))
 			}
 			args := make([]string, 0, len(jvmArgs)+3)
