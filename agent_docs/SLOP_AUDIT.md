@@ -417,3 +417,60 @@ the baseline and CI-gate features it lists as reasons to prefer it).
 `golangci-lint` is preinstalled in the cloud image and could replace items 2
 and 3 with one binary and one config, at the cost of a dependency on its
 release cadence; either is fine, but pick one rather than both.
+
+## 9. The `scanaislop/aislop` tool, evaluated
+
+Checked on the same day, at the user's request, by a separate agent that read
+the source before running anything. Nothing under this repo was modified by
+it; it ran `aislop scan` only, with telemetry and the update check disabled.
+
+**What it is [T].** v0.16.0, a TypeScript CLI (npm, PyPI, Homebrew), MIT,
+created 2026-03, about 600 stars, one primary author plus two regulars,
+pushed the day of the run. Mostly an orchestrator: it vendors `oxlint`,
+`biome` and `knip`, shells out to whatever it finds on the path (`gofmt`,
+`golangci-lint`, `govulncheck`, `ruff`, `cppcheck`), adds about twenty regex
+and AST heuristics of its own ("narrative comment", "swallowed exception",
+"hidden fallback") and folds everything into a 0 to 100 score. The `scan`
+path makes no model call; the separate `aislop agent` subcommand drives an
+LLM and was not run.
+
+**Can it be used in this session.** Yes, and it was. Safety, from source
+**[T]**: telemetry to PostHog is **on by default**, opt-out via
+`AISLOP_NO_TELEMETRY=1` or `DO_NOT_TRACK=1`, auto-off in CI; the payload is
+allowlisted to version, OS, durations, counts and score buckets, with no
+paths, code or repo name (`src/telemetry/redaction.ts`). An update check hits
+the npm registry. No API key. No `shell: true` anywhere. `scan` writes only
+to the OS temp dir. The `fix` subcommand is destructive (a regex line deleter
+in its oxlint engine, and its knip engine rewrites `package.json`) and must
+not be run here. `config/extends.ts` will fetch a remote config over HTTP if
+one is configured, which this repo does not.
+
+**Run output [T].** Score 76/100 "Healthy": 15 errors, 207 warnings, 362
+files, 3.5 seconds. Errors: 13 `swallowed-exception`, all Go `x, _ :=` sites
+(`loader.go:151,307,439`, `server.go:484`, `worlds.go:169,211`,
+`modservice.go:264,569,965`, `serverlaunch.go:47`, `installer.go:203`,
+`modjar.go:530`, `modidentify.go:211`), a strict subset of the 40 in §3b;
+and 2 `security/innerhtml` at `website/changelog.js:85,103`. Top warnings:
+99 narrative-comment, 31 duplicate-block, 28 function-too-long, 15
+file-too-large, 12 meta-comment.
+
+**Assessment [J].** The score is noise-dominated. 94 of the 99
+narrative-comment hits are the repo's `// --- Section ---` separators, a house
+style, all marked "fixable", meaning `fix` would strip them. Two of its most
+confident findings re-litigate decisions this repo documented on purpose:
+`lib/ipc.ts:54` "hidden fallback" is the sanctioned `hasWailsBridge()`
+exception spelled out in `CLAUDE.md`, and every one of the 13 `_` ignores
+carries a rationale comment above it. The two `innerHTML` errors are false
+positives on inspection: `website/markdown.js:16,57` HTML-escapes the release
+body before any formatting is applied and restricts link schemes, so the sink
+is guarded. Its heuristics overlap the standard tools almost completely:
+swallowed-exception is `errcheck`, duplicate-block is `jscpd`,
+function-too-long is `gocyclo` plus ESLint `max-lines-per-function`, and
+`knip` is vendored inside it.
+
+**Recommendation [J].** A one-off curiosity, not a gate. Do not add it to
+`.claude/suite.json`: a score that is 40% section-separator count would go
+red on a style the repo chose, and default-on telemetry is the wrong default
+for a shared gate. The one thing it surfaced that the §1 tool set did not is
+that this repo runs no `errcheck`; that is item 5 in §8, and `errcheck` (or
+`golangci-lint` with it enabled) covers it without the rest.
