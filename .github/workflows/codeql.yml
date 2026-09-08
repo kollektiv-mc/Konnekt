@@ -1,0 +1,105 @@
+# Static analysis, and the one gate here that reads the code for what it does
+# rather than for how it is shaped. `pnpm lint` and `go vet` catch style and the
+# obvious mistakes; neither traces a value from where it enters the app to where
+# it is used, which is the whole question for the surfaces SECURITY.md lists —
+# path handling in backups and the config editor, JVM arguments becoming a
+# spawned process, and anything fetched from Modrinth.
+#
+# Advanced setup (this file) rather than GitHub's default setup, for two
+# reasons. The Go extractor has to compile the tree, and `main.go`'s
+# `//go:embed all:frontend/dist` means it cannot do that until Vite has run, so
+# the build is not something autobuild can be left to work out. The second
+# reason is smaller and worth stating plainly: default setup publishes no
+# workflow, and so has no badge.svg URL, and the README badge would 404.
+name: CodeQL
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  # Advisories land against dependencies that have not changed, so a repo that
+  # only scans on push stops hearing about anything once it goes quiet. Sunday,
+  # away from the nightly snapshot's window.
+  schedule:
+    - cron: '0 4 * * 0'
+
+concurrency:
+  group: codeql-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  analyze:
+    name: Analyze (${{ matrix.language }})
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+      contents: read
+      actions: read
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Compiled, so it needs the whole build toolchain below.
+          - language: go
+            build-mode: manual
+          # Not compiled: the extractor reads the source directly, so there is
+          # nothing to build and no reason to install Go or the GTK headers.
+          - language: javascript-typescript
+            build-mode: none
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # v4 rather than v3: v3 runs on the Node 20 runtime, which went
+      # end-of-life in April 2026, and the action itself is deprecated in
+      # December 2026 with no further updates after that.
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v4
+        with:
+          languages: ${{ matrix.language }}
+          build-mode: ${{ matrix.build-mode }}
+          config-file: ./.github/codeql/codeql-config.yml
+
+      - name: Install build dependencies
+        if: matrix.build-mode == 'manual'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            pkg-config libgtk-3-dev libwebkit2gtk-4.1-dev
+
+      - uses: actions/setup-go@v5
+        if: matrix.build-mode == 'manual'
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - uses: pnpm/action-setup@v4
+        if: matrix.build-mode == 'manual'
+        with:
+          version: 11
+
+      - uses: actions/setup-node@v4
+        if: matrix.build-mode == 'manual'
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
+
+      # Same order and the same reason as CI's backend jobs: the embed
+      # directive compiles, so frontend/dist has to exist before Go is built.
+      - name: Build
+        if: matrix.build-mode == 'manual'
+        run: |
+          pnpm install --frozen-lockfile --dir frontend
+          pnpm --dir frontend build
+          # webkit2_41 to match backend-linux and both shipping Linux builds.
+          # Untagged would link against webkit2gtk-4.0, which is not what any
+          # released Linux artifact is built against.
+          go build -tags webkit2_41 ./...
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v4
+        with:
+          category: '/language:${{ matrix.language }}'
