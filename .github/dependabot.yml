@@ -1,0 +1,91 @@
+# Dependency updates.
+#
+# agent_docs/DEPENDENCIES.md is the decision record for what may be added and
+# why; this is the other half, and it answers a question that document does not:
+# whether what is already here is still current. "Periodically confirm
+# dependencies are still current" is listed under the Scalable pillar in
+# HEALTH_CHECKLIST.md, and periodically-by-hand is the kind of task that
+# quietly stops happening.
+#
+# Every pull request opened from here is labelled, because CI's `pr-labelled`
+# job fails a pull request carrying no `type:` and no `area:` and a bot cannot
+# add them after the fact. `type:chore` is correct by the ladder in
+# agent_docs/CLAUDE.md: a dependency bump changes nothing a user can observe,
+# however large the diff.
+#
+# Grouped, and this is the setting that decides whether the config survives
+# contact with a small project. Ungrouped, three ecosystems on a weekly cadence
+# open a pull request per dependency, each one costing a full CI matrix; grouped,
+# the routine minor and patch traffic arrives as one pull request per ecosystem
+# and only a major version, which is the one that can actually break something,
+# gets a pull request of its own.
+version: 2
+
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: sunday
+    labels: ['type:chore', 'area:build']
+    open-pull-requests-limit: 3
+    groups:
+      actions:
+        patterns: ['*']
+        update-types: [minor, patch]
+
+  - package-ecosystem: gomod
+    directory: /
+    schedule:
+      interval: weekly
+      day: sunday
+    labels: ['type:chore', 'area:build']
+    open-pull-requests-limit: 3
+    groups:
+      go:
+        patterns: ['*']
+        update-types: [minor, patch]
+    ignore:
+      # Wails is the app shell, not a library: a minor bump changes the
+      # generated bindings and the webview it links against, and the version is
+      # also pinned by hand in both release workflows' "Install Wails CLI" step.
+      # Upgrading it is a deliberate piece of work, not something to review as a
+      # routine bump that CI happens to pass.
+      - dependency-name: github.com/wailsapp/wails/v2
+
+  # Two npm projects, not one. The root package.json holds lefthook and nothing
+  # else; everything the app is built from is in frontend/.
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: sunday
+    labels: ['type:chore', 'area:build']
+    open-pull-requests-limit: 2
+
+  - package-ecosystem: npm
+    directory: /frontend
+    schedule:
+      interval: weekly
+      day: sunday
+    labels: ['type:chore', 'area:build']
+    open-pull-requests-limit: 5
+    groups:
+      frontend:
+        patterns: ['*']
+        update-types: [minor, patch]
+    ignore:
+      # DEPENDENCIES.md: "Its version has to match vitest's exactly [...] bump
+      # the two together." Dependabot cannot know that, and a lone bump of
+      # either one produces a lockfile that resolves to two versions.
+      - dependency-name: '@vitest/coverage-v8'
+      - dependency-name: vitest
+      # Pinned exactly on purpose: each Playwright version ships its own
+      # Chromium, and demo/record.mjs's clips should come out the same
+      # everywhere. Bumping it means re-recording and re-watching the scenes.
+      - dependency-name: playwright
+# Both pnpm lockfiles are lockfileVersion 9.0, which Dependabot maps to the
+# pnpm v10 runtime this repo uses. That mapping is recent and has broken before
+# on new pnpm releases, so if the npm entries start reporting
+# dependency_file_not_parseable, that is the cause and not this config. The
+# github-actions and gomod entries are unaffected either way.
