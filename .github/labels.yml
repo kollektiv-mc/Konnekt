@@ -122,6 +122,22 @@
   color: 'bfd4f2'
   description: The in-app updater and its snapshot channel.
 
+# Not a tile. Every other repo-owned area names a part of the app a user can
+# open, which left the work that produces the app - CI, the release and snapshot
+# workflows, packaging, licensing, the supply-chain scanners - with no honest
+# label at all. CI's `pr-labelled` job requires an area on every pull request,
+# so the gap was filled by picking whichever tile was least wrong, which is how
+# an area label stops sorting anything.
+#
+# Deliberately not added to the issue forms' "Which part of Konnekt?" dropdown:
+# that list is written for the person filing a bug, and nobody reports "the
+# release workflow" from the outside. It is a maintainer-applied label, which is
+# why website/roadmap.js needs no entry for it - that file maps the form answer,
+# not the label, and anything it does not know lands in requested/.
+- name: 'area:build'
+  color: 'bfd4f2'
+  description: CI, releases, packaging, licensing and supply-chain checks.
+
 # Suite-owned area labels. Verbatim from design/labels.json.
 #
 # `area:ui` is kept declared because the suite defines it and sync-labels.sh
