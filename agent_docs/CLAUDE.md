@@ -233,6 +233,7 @@ node demo/build.mjs   # Build the browser demo into demo/dist, with its drift ch
 node demo/record.mjs  # Film the website's clips from demo/dist; needs ffmpeg (repo root)
 go vet ./...          # Go static analysis (repo root — single module)
 go test ./...         # Go tests (repo root)
+npx --yes aislop@0.16.0 scan   # AI-slop score, policy in .aislop/config.yml (repo root)
 ```
 
 Always run `pnpm typecheck`, `pnpm lint`, and `go vet ./...` after a series of
@@ -392,6 +393,19 @@ commits, never squashed (#263).
   regenerable, AST-only, no API cost. Without graphify installed the hooks
   simply no-op (a harmless per-call notice; nothing blocks). Re-run `graphify
   update .` after code changes to keep the graph current.
+- **aislop** (`scanaislop/aislop`, MIT, run through `npx`, nothing installed)
+  scores the tree for what AI-assisted code leaves behind: ignored errors,
+  double casts, duplicated blocks, oversized functions, `innerHTML` sinks.
+  CI runs `aislop ci` and fails below 100. `.aislop/config.yml` is the policy
+  and says in comments what is counted, which two style rules are off and
+  why, and that the size limits are a **ratchet** held at today's largest
+  function and file (lower them as #314 shrinks the holders, never raise
+  them). `.aislopignore` is what is generated or vendored and never scored.
+  A finding that is a documented exception gets an inline
+  `// aislop-ignore-next-line <rule> -- <reason>` beside it, the way a Go
+  `//nolint:errcheck // reason` does; a bare directive with no reason is the
+  thing to refuse in review. Never run `aislop fix`: it deletes lines by
+  regex and rewrites `package.json`. Telemetry is off in the config.
 - **`.claude/` config is committed** (`settings.json` hooks + `launch.json`
   dev-server presets) so every clone and cloud agent inherits the same setup;
   only `.claude/settings.local.json` (the personal permission allowlist) is

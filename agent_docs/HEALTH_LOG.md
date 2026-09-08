@@ -82,6 +82,8 @@ after them is dated. Newest last, in both groups.
 - [2026-09-01 — The crash you could see but not send](#2026-09-01-the-crash-you-could-see-but-not-send)
 - [2026-09-02 — The overlays that took turns losing](#2026-09-02-the-overlays-that-took-turns-losing)
 - [2026-09-05 — The overlay the tile kept, and six smaller repairs](#2026-09-05-the-overlay-the-tile-kept-and-six-smaller-repairs)
+- [2026-09-07 — The restore that failed as a backup, and four smaller repairs](#2026-09-07-the-restore-that-failed-as-a-backup-and-four-smaller-repairs)
+- [2026-09-08 — The audit brief, and the gate that came out of it](#2026-09-08-the-audit-brief-and-the-gate-that-came-out-of-it)
 
 ---
 
@@ -4822,3 +4824,136 @@ untouched world; `config_editor_test.go` gains the symlink case on `sandbox`
 and the one through both public entry points, both of which fail with the
 physical check stubbed out and skip where `os.Symlink` fails.
 `backend/services` at 60.1% of statements against the 49% floor.
+
+### 2026-09-08 — The audit brief, and the gate that came out of it
+
+**Filed: [#306](../../issues/306) to [#317](../../issues/317). Landed: the
+aislop gate, 13 handled errors, a widened checklist grep, and five checklist
+lines corrected.** An externally written "AI slop audit brief" prescribed a
+tool per failure mode (dead code, duplication, pattern drift, test quality,
+complexity, security, doc drift) and asked whether the tree reads as
+AI-assisted and human-directed or as fully generated. Every tool ran in the
+cloud container except two, and everything below is reproducible from the
+command named; `[T]` is tool output, `[J]` is judgment.
+
+**The brief against the repo first.** About half of it was already here, and
+it was the automated half: the checklist prescribed `deadcode` and
+`staticcheck` on both `GOOS`es, the coverage floors were gated, the path
+traversal and zip-slip guards were tested and named. What had never run:
+`knip`, `jscpd`, `gocyclo`, ESLint complexity, `gosec`, `govulncheck`, any
+mutation tool. Two parts of the brief were wrong for this repo and are
+recorded so nobody re-argues them: its "fresh context, read no docs" rule
+produces an auditor that re-reports what this file already holds, and its
+Modrinth framing does not apply, since Konnekt consumes Modrinth's API and is
+not a project type Modrinth hosts. The disclosure it worried about is
+`README.md:16`, which already says most of the code is Claude's.
+
+**Tool results [T].**
+
+| Check | Result |
+| --- | --- |
+| `staticcheck ./...`, linux and windows | 3: `loader.go:140` ST1005 (the product name, deliberate), `server_state_test.go:331` SA4006, the known `job` false positive |
+| `deadcode`, both OSes and `-test` | 0, 0, 0 |
+| `pnpm dlx knip` (no config) | 1 orphan file, 2 orphan exports, 3 dead icon re-exports, 2 dependencies never imported in any commit. #311 |
+| `jscpd --min-lines 8` | 93 clones, 1.58% of lines; 20 Go and 32 TS clusters outside tests. #313 |
+| `gocyclo -over 15` | 18 functions; `worldsFromServerZip`, `readPayload`, `ListConfigFiles` at 35 |
+| ESLint `complexity: 15`, `max-lines-per-function: 200` | 23 and 18 functions; `App` 453 lines, `GraphEditorInner` 780. #314 |
+| `gosec ./...` | 104, none high: G104 26, G304 25, G115 21, permissions 19, G204 6, G404 5, G110 1 |
+| `govulncheck ./...` | **blocked**, the proxy 403s `vuln.go.dev`. Needs one local run |
+| `go-mutesting` on `rcon.go` + `scheduler_validate.go` | 148 mutants, **66.2%** killed. `rcon.go`: 94% line coverage, about 64% mutation score. #312 |
+| Stryker | **did not start** under `pnpm dlx`; needs the two devDependencies. #317 |
+| `aislop scan` (v0.16.0) | 75/100 before this entry: 15 errors, 221 warnings |
+
+**What the mutation run said [J].** The two best-covered files in the package
+lose a third of their mutants. In `rcon.go` every `if err != nil { return }`
+after auth can be deleted and the suite passes, both edges of the packet
+length check (`length < 10 || length > 4096`) are untested, and no test
+unwraps a `%w`. The tests pin what the functions do and mostly not how they
+fail, which is the gap coverage cannot see and the reason the checklist's
+Stable pillar now names a periodic mutation run.
+
+**Security [J, sites T].** One high: `MarkdownBody.tsx:35` renders Modrinth
+descriptions through `rehype-raw` with no sanitizer and no CSP, the one path
+by which remote content reaches a WebView that holds the bridge (#306). Four
+medium: `serverID` joined into data-dir paths unvalidated (#307), kick/ban
+reasons reaching stdin with newlines intact (#308), RCON `save-off`/`save-on`
+failures discarded around a backup (#309), the NeoForge installer run with no
+checksum (#310). Already guarded and tested: config-editor traversal and
+symlink escape, backup filenames and zip-slip, world names, mod filenames and
+SHA-512, every subprocess is argv, the updater's checksum with rollback. No
+secrets in the tree; `slog` never logs the RCON password or the java command
+line.
+
+**Doc drift [T].** `DEPENDENCIES.md` listed two packages as part of the worlds
+scene that were never imported. The checklist's "no dead code" box was true on
+2026-08-19 and false from 2026-08-30. Its "no blank `_ =` error-ignores" box
+was verified by a grep that returns nothing while 40 `x, _ := f()` sites
+existed, because an error in the second return position is not `_ = `. Its
+`EventsOn` line said three spellings; there are five. Its store line said all
+five stores comply; two do not (#315). Each line is corrected above, and the
+ones that are now false are unchecked with the issue that closes them.
+
+**Verdict [J].** Defensible as AI-assisted and human-directed, and this file
+is what makes it so: it is the record of a person deciding what the code
+should do and checking that it does, including two earlier occasions of
+mutation-checking a test by hand. What reads as generated: symmetry written
+twice (`ServerInfoPanel`/`WorldInfoPanel`, the two backup paths in
+`backup.go`, three hand-rolled dropdowns, four `EventsOn` effects in
+`App.tsx`), eighteen functions over 200 lines, the 138 hover-style writes that
+route around the lint rule (#279), and three orphans from one refactor eleven
+days after a dead-code sweep.
+
+**The aislop tool, evaluated before adoption.** `scanaislop/aislop` v0.16.0,
+MIT, run through `npx`. Read from source before running: telemetry to PostHog
+is on by default with an allowlisted payload (no paths, no code, no repo
+name), opt-out by config; the `scan` path makes no model call and no repo
+content leaves the machine; `fix` is destructive (regex line deletion, a
+`package.json` rewrite) and is never to be run here. It is mostly an
+orchestrator (oxlint, biome, knip vendored; gofmt and golangci-lint if on the
+path) with about twenty heuristics of its own. Its 236 findings on this tree:
+195 style policy, 25 slop indicators, 2 security. 94 of the 99
+`narrative-comment` hits were the `// --- Section ---` separators; all 12
+`meta-comment` hits were ordinary explanatory comments; the 2 `innerhtml`
+errors were guarded by `website/markdown.js`'s escaping. The 13
+`swallowed-exception` errors were real by this repo's own rule ("errors always
+handled"), and the 74 size and duplicate warnings were the same set `gocyclo`
+and `jscpd` found. Decision, with the four options put to the maintainer:
+turn the two style rules off with a written rationale, hold the size limits as
+a ratchet at today's maximum (the coverage-floor pattern, lowered as #314
+shrinks the holders), make it a CI gate at 100 alongside `suite.json`, and
+condense the audit report into this entry rather than keep it as a file.
+
+**What changed in the tree.**
+
+- `.aislop/config.yml` (the policy, with every decision as a comment beside
+  the setting it decides), `.aislopignore` (generated and vendored paths), an
+  `aislop` job in `ci.yml` pinned to 0.16.0, an `aislop` command in
+  `suite.json`. Score after: **100**, 0 findings, `aislop ci` exit 0.
+- The 13 flagged error ignores, handled: `installer.go` and `loader.go` now
+  return an unreadable installer jar as an error rather than "not an
+  installer"; `loader.go`'s post-install check uses `detectLoaderVersion`'s
+  second value (where the version was read from) in its message instead of
+  discarding it; the jar-metadata, manifest and `server.properties` reads in
+  `modidentify.go`, `modjar.go`, `modservice.go`, `server.go`,
+  `serverlaunch.go` and `worlds.go` log at debug through `slog` and keep their
+  degrade-to-default behaviour, so a corrupt jar or a missing properties file
+  now leaves a line in `konnekt.log`. One site (`loader.go:151`) was a false
+  positive, `resolveTarget`'s second value being the loader name, and carries
+  a directive saying so.
+- Small lint: the console tile's duplicate `react` import merged; three unused
+  catch bindings in `website/release.js`; two useless `?? {}` spreads; a
+  caret regex replaced by `startsWith`; `WorldSystem` aliased once in
+  `types/index.ts` instead of twice; `flowToGraph` builds its `models.Graph`
+  through the generated `createFrom` instead of three `as unknown as` casts.
+- Directives with reasons on the documented exceptions: `readOr`'s fallback,
+  the three `three`/`@react-three/fiber` camera casts, the two canonical URLs,
+  `must()`'s panic at construction, the two guarded `innerHTML` sinks; and a
+  file-level `duplicate-block` directive naming #313 on each of the 13 files
+  in its table, three of them marked as deliberate tables.
+- `.github/scripts/release-notes.py` formatted with `ruff format` (12 lines);
+  its test still passes. `.claude/suite-check.py` is vendored and is ignored
+  instead.
+
+**Verification.** `go vet`, `go test ./...`, `pnpm typecheck`, `pnpm lint` (0
+errors, the 14 pre-existing warnings), `pnpm test` (733), `pnpm format:check`,
+`pnpm format:website`, the release-notes test, and `aislop ci` at 100.

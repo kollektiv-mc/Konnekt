@@ -36,6 +36,7 @@ go vet ./...            # Go static analysis (repo root)
 go test ./...           # Go tests (repo root)
 go run ./scripts/coverage-floor   # backend/services coverage floor (repo root)
 pnpm test:coverage      # frontend/src coverage floor, threshold in vite.config.ts (from frontend/)
+npx --yes aislop@0.16.0 ci   # AI-slop score gate, policy in .aislop/config.yml (repo root)
 ```
 Plus the generated-file check `suite.json` declares: `pnpm gen:tokens` then
 `git diff --exit-code src/styles/tokens.css src/styles/tokens.ts
@@ -62,12 +63,22 @@ tree.
 ## 1. Clean
 
 - [x] `go vet ./...` and `gofmt -l .` report nothing.
-- [x] No blank `_ =` error-ignores in Go, except documented `//nolint` cases
+- [ ] No blank `_` error-ignores in Go, except documented `//nolint` cases
       (e.g. `backend/services/eventbus.go`).
-      Verify: `grep -rn "_ = " --include=*.go app.go backend/ | grep -v nolint`
-      — expect no matches (test files aside; `_test.go` sites are excluded by
-      the sweep, as they were in 2026). The repo-root files are in range of
-      that grep now, which is what the 2026 sweep missed.
+      Verify, both greps, from the repo root:
+      ```bash
+      grep -rn "_ = " --include=*.go app.go backend/ | grep -v nolint | grep -v _test.go
+      grep -rnE ", _ (:?=)" --include=*.go app.go backend/ | grep -v nolint | grep -v _test.go
+      ```
+      Expect no matches from either. The first is the one this line carried
+      for two months, and it returned nothing while **40** `x, _ := f()` sites
+      sat in the tree: an error in the second return position is not
+      `_ = `, so the grep that "verified" the line could not see the pattern
+      it was there to catch (2026-09-08, HEALTH_LOG). Type assertions and map
+      lookups also match the second grep; read a hit before counting it.
+      The aislop gate (`ai-slop/swallowed-exception`, an error-severity rule)
+      holds the 13 that call Konnekt's own functions; the 27 stdlib sites are
+      #316, and this line stays open until it closes.
 - [x] `pnpm lint` runs against a real ESLint config and passes.
 - [x] Formatting (Prettier/Biome or equivalent) is consistent and enforced,
       not manual (lefthook pre-commit hook: Prettier + ESLint + `tsc --noEmit`
@@ -192,22 +203,63 @@ tree.
       *Kommands* roadmap had been sitting (see HEALTH_LOG, 2026-08-19): the
       suite shares a design source and a docs shape, so prose copied between
       products is a live failure mode here, not a hypothetical one.
-- [x] No obviously dead code (unused exports, unreachable branches, orphaned
-      files) left behind after refactors.
+- [ ] No obviously dead code (unused exports, unreachable branches, orphaned
+      files) left behind after refactors. Open on #311.
       The per-file grep this line used to prescribe only finds what you already
       suspect, which is how a tombstone file survives: nobody greps for a name
       they have forgotten. Sweep the whole tree instead, from both ends —
       Go: `deadcode ./...` and `staticcheck -checks=U1000 ./...`, each under
       **both** `GOOS=linux` and `GOOS=windows`, since the per-OS files
       (`server_windows.go`) make either one alone produce false positives.
-      Frontend: build the import graph and list files nothing imports (expect
-      only `*.test.*`, `main.tsx`, `vite-env.d.ts`), then reference-count every
-      `export` across every other file. A zero-external-reference export is
-      **not** automatically dead — the props-interface-beside-its-component
-      convention accounts for ~14 of them; dead means zero references *including*
-      its own file. Note ESLint already covers what it structurally can
+      Frontend: `pnpm dlx knip` from `frontend/`, which builds that import
+      graph in one pass and reports unused files, exports and dependencies.
+      Read its output against three known false positives until #311 lands a
+      `knip.json` that ignores them: everything under `wailsjs/` (generated),
+      `playwright` (used from `demo/record.mjs`, outside the package), and an
+      export used only inside its own file (`blockMeta.ts`'s `CATEGORY_ORDER`).
+      A zero-external-reference export is otherwise dead; the
+      props-interface-beside-its-component convention is the one case knip
+      already understands. Note ESLint already covers what it structurally can
       (`no-unreachable`, `no-unused-vars` are on via `js.configs.recommended`),
       so findings here are always whole exports or whole files.
+      **This line is a date, not a state**: the Go half held from the
+      2026-08-19 sweep, the frontend half did not survive the 2026-08-30
+      Overview roll-up, which left one file and two exports behind (#311). The
+      aislop gate vendors knip but did not report them for this repo's
+      layout, so knip is a sweep to run before a milestone, not a gate.
+- [x] Function and file size hold a **ratchet**, not a target. `.aislop/config.yml`'s
+      `quality.maxFunctionLoc` (350) and `maxFileLoc` (970) sit at today's
+      largest function (`useMods`, 384 lines) and file (`server.go`, 1595
+      lines at the tool's 1.5x Go budget), so the gate is green, and the
+      config comments list the next stops down. Lower a number when #314
+      shrinks its holder; never raise one. `gocyclo -over 15 .` and ESLint's
+      `complexity`/`max-lines-per-function` (run ad hoc, both `warn`) draw the
+      same line from the other side: 18 Go functions and 23 frontend functions
+      over 15 as of 2026-09-08, all in #314's table.
+- [ ] Security lint has run recently and its findings are triaged, not
+      counted. `gosec ./...` (2026-09-08: 104 findings, none high; the
+      G301/G302/G304 file-permission and file-from-variable rows are the nature
+      of an app that manages files in a directory the user chose, the six G204
+      rows are all argv `exec.Command`, the five G404 rows are request ids and
+      jitter). Worth a real look and still open: G110 at `backup.go:1008`
+      (uncapped `io.Copy` on restore) and the seven G115 conversions in
+      `rcon.go`'s packet framing. `govulncheck ./...` has **never run**: the
+      cloud container's proxy blocks `vuln.go.dev`, so it needs one local run
+      (#312 carries the reminder). The manual half is `SECURITY.md`'s threat
+      model read against the bridge surface: #306, #307, #308, #309 and #310
+      are the 2026-09-08 findings.
+- [x] The aislop gate's policy is written down where the number is read.
+      `.aislop/config.yml` turns off exactly two rules, both style/policy
+      (`narrative-comment`: 94 of its 99 hits were the `// --- Section ---`
+      separators; `meta-comment`: all 12 were explanatory comments about what
+      a function is for), and every remaining suppression is an inline
+      `aislop-ignore-next-line <rule> -- <reason>` or a file-level
+      `aislop-ignore-file code-quality/duplicate-block -- #313` on a file in
+      that issue's table. Verify: `grep -rn "aislop-ignore" --include=*.go
+      --include=*.ts --include=*.tsx --include=*.js . | grep -v node_modules`
+      — every hit names a rule and carries a reason or an issue number; a bare
+      directive is the failure. Never run `aislop fix`: its oxlint engine
+      deletes lines by regex and its knip engine rewrites `package.json`.
 
 ## 2. Stable
 
@@ -223,6 +275,13 @@ tree.
       floor is a ratchet: raise it as coverage rises, never lower it to green
       a red build. Coverage is a proxy, not the goal — prefer a test that
       would have caught a real bug over one that only moves the number.
+      **Mutation testing is how that proxy gets checked**, and it is a
+      periodic run before a milestone, not a gate: `go-mutesting` (jonbaldie
+      v2) over the security-relevant, high-coverage files first. First
+      baseline 2026-09-08: `rcon.go` at 94% line coverage scored about 64%
+      (every post-auth error return and all five `%w` wraps survived), which
+      is the gap coverage cannot see; #312 has the escaped mutants and the
+      command. The frontend has no baseline yet (#317).
 - [x] CI is green on every push/PR (`.github/workflows/ci.yml`: a `frontend`
       job, an `invariants` job running `.claude/suite-check.py` over the
       manifest's `invariants` and `generated` sections, a `website` job
@@ -246,10 +305,12 @@ tree.
       `grep -rn "EventsOn(" src --include=*.ts --include=*.tsx | grep -v "\.test\."`
       and subtract nothing but comments; the import line spells it `EventsOn }`
       and does not match.
-      Three spellings are in use and a check has to know all three, or it
-      reports a false leak: a single `let cleanup` handle, numbered `c1…c5`
-      handles, and an array drained in the cleanup (`offs.push(...)` in
-      `ServerInstallModal.tsx`, an array literal in `hooks/useServerStatus.ts`).
+      Five spellings are in use and a check has to know all five, or it
+      reports a false leak: a single `cleanup` handle, a single `off`/`cancel`
+      handle, numbered `c1…c6` handles, named `offX` handles, and an array
+      drained in the cleanup (`offs.push(...)` in `ServerInstallModal.tsx`, an
+      array literal in `hooks/useServerStatus.ts`). This line said three for
+      three weeks; recounted 2026-09-08 at 50 sites, all released.
       Registration is always synchronous inside the effect — no `await` before
       the handle is captured — which is what rules out the
       unmount-before-assignment leak.
@@ -291,10 +352,13 @@ tree.
       Verify: `lib/clientErrors.test.ts` plus the reporting case in
       `components/ErrorBoundary.test.tsx`; on the Go side
       `go test . -run LogClientError` pins the line and the per-field clamp.
-- [x] Store write actions record the failure and rethrow rather than applying
+- [ ] Store write actions record the failure and rethrow rather than applying
       the optimistic update anyway, per `agent_docs/CLAUDE.md`'s IPC
-      conventions. All five stores that write comply as of 2026-08-20
-      (HEALTH_LOG); `useSchedulerStore` is the reference shape.
+      conventions. `useSchedulerStore` is the reference shape. This line read
+      "all five comply" from 2026-08-20 until a side-by-side read on
+      2026-09-08 found `useLayoutStore.persistActiveLayout` recording and not
+      rethrowing, and `useCommandsStore`'s seed write swallowing with
+      `.catch(console.error)`. Open on #315.
       Verify: from `frontend/`,
       `grep -rn "best-effort" src/stores` — expect no matches, and read any
       `catch` in a write action against the rule. The rethrow is only half:
@@ -843,6 +907,20 @@ fix in passing or take the issue)
 - `untilMs(0)` reads "now" while `relativeMs(0)` and `fmtDate(0)` now read a
   dash. Every caller guards `next > 0` today, so not worth an issue; move the
   guard into the helper the day a caller stops.
+
+**From the 2026-09-08 audit** (each filed; the log entry of that date has the
+tool results and the reasoning)
+- **p1** #306 mod descriptions render through `rehype-raw` with no sanitizer
+  and no CSP: the one path by which remote content reaches the bridge.
+- **p2** #307 `serverID` joined into data-dir paths unvalidated; #308 kick/ban
+  reasons reach stdin with newlines intact; #309 RCON `save-off`/`save-on`
+  failures discarded around a backup; #311 three orphans and two
+  never-imported dependencies from the Overview roll-up; #312 the RCON tests
+  that a mutation run walks through.
+- **p3** #310 NeoForge installer has no checksum; #313 the duplicate panels,
+  menus and paths; #314 the oversized functions holding the size ratchet;
+  #315 two store writes that swallow; #316 the 27 stdlib error ignores the
+  old grep never saw; #317 a frontend mutation baseline.
 
 **Release follow-ups** (deferred)
 - Release-tag-gated full `wails build` packaging job — stronger end-to-end
