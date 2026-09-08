@@ -4991,3 +4991,41 @@ as #314 shrinks its holders should not be answered by raising it. The file is
 **Verification.** `gofmt`, `go vet ./...`, `go test ./...`, the Go coverage
 floor (60.2% against 49%), `aislop ci` at 100 with no warning. No frontend
 changed.
+
+### 2026-09-08 — The server id that was a path
+
+**Closed: [#307](../../issues/307).** A server id is minted in the frontend
+(`crypto.randomUUID`) and accepted by `SaveServerConfig` as any string, and
+four services joined it straight into data-dir paths: `backups/<id>/...`,
+`mods/<id>.json`, `config_backups/<id>` and `loader-snapshots/<id>`. The
+two that took the id from the caller with no config lookup in front of them
+were the exposed ones: `ListBackups("../../x")` listed, and `DeleteBackup`
+removed, any `*.zip` under a caller-chosen directory. Local-only, so it
+needs a compromised WebView first, which is what #306 closed; the two
+together were the chain.
+
+**One helper, called where the id is persisted and at every join.**
+`validServerID` in `config.go`: non-empty, not `.` or `..`, equal to its own
+`filepath.Base`, no separator either way. The same shape as
+`validateWorldName` and `validateFilename`, so the three read alike. Where it
+runs: `SaveServerConfig`, so a bad id cannot be stored; `backupRoot`, a new
+helper in `backup.go` that is now the only place the id is joined, which
+`serverBackupDir`, `worldBackupDir`, `findBackupFile` and `ListBackups` all
+go through, so every public backup method is covered without a call at the
+top of each; `loadManifest` and `saveManifest` in `modservice.go`, the two
+readers of the manifest path; `ConfigEditorService.backup`; and
+`snapshotLaunchFiles` in `loader.go`, which takes `cfg.ID` from a stored
+config and is guarded twice over. Not `GetServerConfig`: a lookup of a bad id
+already fails on the miss, and the joins are the surface.
+
+**Tests.** `TestValidServerID` is the table the issue asked for, plus a
+space and a dot on the accepted side so nobody tightens it into a UUID
+check by accident. `TestSaveServerConfigRejectsAPathAsID` asserts nothing
+is persisted. `TestBackupsRefuseAPathAsServerID` plants a zip outside
+`backups/` and asserts `ListBackups`, `DeleteBackup` and `CreateBackup` all
+refuse `../outside`, the planted file survives and no directory is created
+there. `TestManifestRefusesAPathAsServerID` does the same for the manifest.
+
+**Verification.** `gofmt`, `go vet ./...`, `go test ./...`, the Go coverage
+floor, `aislop ci` at 100. No frontend changed: the id the UI mints was
+always a single segment, so nothing a user does is refused.

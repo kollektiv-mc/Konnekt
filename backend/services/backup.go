@@ -41,9 +41,24 @@ func (s *BackupService) SetDataDir(dir string) {
 	s.dataDir = dir
 }
 
+// backupRoot returns {dataDir}/backups/{serverID}, the one place the id is
+// joined into a path, so an id that is not a single segment fails here for
+// every backup method (#307). ListBackups and DeleteBackup take the id
+// straight from the caller with no config lookup in front of them.
+func (s *BackupService) backupRoot(serverID string) (string, error) {
+	if err := validServerID(serverID); err != nil {
+		return "", err
+	}
+	return filepath.Join(s.dataDir, "backups", serverID), nil
+}
+
 // serverBackupDir returns {dataDir}/backups/{serverID}/server — where full-server backups are stored.
 func (s *BackupService) serverBackupDir(serverID string) (string, error) {
-	dir := filepath.Join(s.dataDir, "backups", serverID, "server")
+	root, err := s.backupRoot(serverID)
+	if err != nil {
+		return "", err
+	}
+	dir := filepath.Join(root, "server")
 	if err := os.MkdirAll(dir, 0755); err != nil {
 		return "", err
 	}
@@ -52,7 +67,11 @@ func (s *BackupService) serverBackupDir(serverID string) (string, error) {
 
 // worldBackupDir returns {dataDir}/backups/{serverID}/worlds/{worldName}.
 func (s *BackupService) worldBackupDir(serverID, worldName string) (string, error) {
-	dir := filepath.Join(s.dataDir, "backups", serverID, "worlds", worldName)
+	root, err := s.backupRoot(serverID)
+	if err != nil {
+		return "", err
+	}
+	dir := filepath.Join(root, "worlds", worldName)
 	if err := os.MkdirAll(dir, 0755); err != nil {
 		return "", err
 	}
@@ -146,7 +165,10 @@ func (s *BackupService) scanBackupsInDir(dir, kind, world string) []models.Backu
 // containing it (for meta.json lookups), its kind, and its world name.
 // It searches server/, then worlds/*/, then the legacy root dir.
 func (s *BackupService) findBackupFile(serverID, filename string) (filePath, metaDir, kind, world string, err error) {
-	root := filepath.Join(s.dataDir, "backups", serverID)
+	root, err := s.backupRoot(serverID)
+	if err != nil {
+		return "", "", "", "", err
+	}
 
 	// server/
 	serverDir := filepath.Join(root, "server")
@@ -185,7 +207,10 @@ func (s *BackupService) findBackupFile(serverID, filename string) (filePath, met
 // ─── Public methods ────────────────────────────────────────────────────────
 
 func (s *BackupService) ListBackups(serverID string) ([]models.Backup, error) {
-	root := filepath.Join(s.dataDir, "backups", serverID)
+	root, err := s.backupRoot(serverID)
+	if err != nil {
+		return nil, err
+	}
 	var all []models.Backup
 
 	// Full-server backups

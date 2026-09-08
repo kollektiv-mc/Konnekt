@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"konnekt/backend/models"
@@ -50,7 +51,27 @@ func (s *ConfigService) GetServerConfig(id string) (*models.ServerConfig, error)
 	return nil, fmt.Errorf("server config %q not found", id)
 }
 
+// validServerID rejects an id that is not one plain path segment. A server id
+// is minted in the frontend and joined straight into data-dir paths by the
+// backup, mod-manifest, config-backup and loader-snapshot services, so an id
+// of "../../x" would point every one of them at a caller-chosen directory
+// (#307). Same shape as validateWorldName and validateFilename; called where
+// an id is persisted and at every join, since a persisted id is trusted from
+// then on. Nothing decodes the id, so a strict check costs nothing.
+func validServerID(id string) error {
+	if id == "" || id == "." || id == ".." {
+		return fmt.Errorf("invalid server id %q", id)
+	}
+	if id != filepath.Base(id) || strings.ContainsAny(id, `/\`) {
+		return fmt.Errorf("invalid server id %q: must be a single path segment", id)
+	}
+	return nil
+}
+
 func (s *ConfigService) SaveServerConfig(cfg models.ServerConfig) error {
+	if err := validServerID(cfg.ID); err != nil {
+		return err
+	}
 	// The Minecraft version and loader are what every Modrinth query is filtered
 	// by, and a value that is not a Minecraft version filters all of them down to
 	// nothing while Modrinth still answers 200 — a failure with no error to show.

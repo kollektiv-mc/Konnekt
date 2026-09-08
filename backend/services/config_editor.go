@@ -332,6 +332,9 @@ func evalNearestExisting(path string) (string, error) {
 }
 
 func (s *ConfigEditorService) backup(serverID, abs, relPath string) error {
+	if err := validServerID(serverID); err != nil {
+		return err
+	}
 	if _, err := os.Stat(abs); os.IsNotExist(err) {
 		return nil // nothing to back up for new files
 	}

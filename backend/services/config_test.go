@@ -256,3 +256,35 @@ func TestSaveServerConfigKeepsAPlausibleVersionPair(t *testing.T) {
 		t.Errorf("stored (%q, %q), want it kept verbatim", got.MCVersion, got.Loader)
 	}
 }
+
+// A server id is joined straight into data-dir paths by four services, so
+// one that is not a single path segment is refused where it is persisted and
+// at every join (#307). The table is the same shape validateWorldName and
+// validateFilename are tested against.
+func TestValidServerID(t *testing.T) {
+	for _, id := range []string{"srv1", "a1b2c3d4-e5f6-7890-abcd-ef1234567890", "my server", "srv.1"} {
+		if err := validServerID(id); err != nil {
+			t.Errorf("validServerID(%q) = %v, want nil", id, err)
+		}
+	}
+	for _, id := range []string{"", ".", "..", "../x", "a/b", `a\b`, "/abs", "x/", "../../x"} {
+		if err := validServerID(id); err == nil {
+			t.Errorf("validServerID(%q) = nil, want an error", id)
+		}
+	}
+}
+
+func TestSaveServerConfigRejectsAPathAsID(t *testing.T) {
+	s := NewConfigService()
+	s.SetDataDir(t.TempDir())
+	if err := s.SaveServerConfig(models.ServerConfig{ID: "../x", Name: "Bad"}); err == nil {
+		t.Fatal("SaveServerConfig accepted an id with a path separator")
+	}
+	configs, err := s.GetServerConfigs()
+	if err != nil {
+		t.Fatalf("GetServerConfigs: %v", err)
+	}
+	if len(configs) != 0 {
+		t.Fatalf("a refused config was persisted: %+v", configs)
+	}
+}

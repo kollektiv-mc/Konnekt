@@ -333,6 +333,9 @@ func (s *LoaderService) updateWithRollback(cfg models.ServerConfig, req models.L
 // snapshotLaunchFiles copies the files an update rewrites into a timestamped
 // directory under the app data dir, and returns that directory.
 func (s *LoaderService) snapshotLaunchFiles(cfg models.ServerConfig, from string) (string, error) {
+	if err := validServerID(cfg.ID); err != nil {
+		return "", err
+	}
 	dir := filepath.Join(s.dataDir, "loader-snapshots", cfg.ID,
 		strconv.FormatInt(time.Now().UnixMilli(), 10))
 	if err := os.MkdirAll(dir, 0755); err != nil {
