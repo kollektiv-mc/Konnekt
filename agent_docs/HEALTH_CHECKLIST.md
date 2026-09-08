@@ -288,6 +288,21 @@ tree.
       (Prettier plus the link/asset check), a `backend` job on windows-latest,
       and a `backend-linux` job in a webkit2gtk-4.1 container — the only place
       `server_linux.go`/`server_unix.go`/`server_other.go` are compiled).
+- [x] Remote content never reaches the bridge unfiltered. The WebView is
+      same-origin with `window.go`, so any third-party HTML rendered into it
+      is one `<iframe srcdoc>` away from every bound method. The single such
+      path is a Modrinth project body (`tiles/mods/MarkdownBody.tsx`), and it
+      runs through `rehype-sanitize`'s GitHub schema after `rehype-raw`,
+      with `frontend/index.html`'s Content-Security-Policy as the second
+      layer (`frame-src 'none'`, `object-src 'none'`, `script-src 'self'`;
+      closed 2026-09-08 as #306, HEALTH_LOG "The mod description that could
+      reach the bridge"). Verify: `pnpm vitest run src/tiles/mods/MarkdownBody`
+      feeds the hostile shapes and asserts none reach the DOM; `grep -rn
+      "dangerouslySetInnerHTML\|innerHTML" frontend/src` must stay empty; and
+      a new sink for remote HTML goes behind the same two layers, never a
+      third schema. The policy is stripped in dev only (`vite.config.ts`,
+      because the React refresh preamble is inline), so a resource it refuses
+      shows up in `wails build`, not in `wails dev`.
 - [x] All Go methods bound to the Wails `App` struct return `(T, error)`, and
       errors are wrapped with context (`fmt.Errorf("...: %w", err)`).
       92/92 as of 2026-09-02 (this line said 82 for two weeks while the Clean
@@ -910,8 +925,10 @@ fix in passing or take the issue)
 
 **From the 2026-09-08 audit** (each filed; the log entry of that date has the
 tool results and the reasoning)
-- **p1** #306 mod descriptions render through `rehype-raw` with no sanitizer
-  and no CSP: the one path by which remote content reaches the bridge.
+- **p1** #306 mod descriptions rendered through `rehype-raw` with no
+  sanitizer and no CSP: the one path by which remote content reached the
+  bridge. Closed 2026-09-08 (HEALTH_LOG "The mod description that could reach
+  the bridge"); #307 is the rest of that chain and still open.
 - **p2** #307 `serverID` joined into data-dir paths unvalidated; #309 RCON
   `save-off`/`save-on` failures discarded around a backup; #311 three orphans
   and two never-imported dependencies from the Overview roll-up; #312 the

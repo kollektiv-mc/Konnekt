@@ -120,7 +120,7 @@ jobs:
         with:
           version: 11
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: pnpm
@@ -181,7 +181,7 @@ jobs:
         with:
           version: 11
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: pnpm
@@ -219,7 +219,7 @@ jobs:
 
       - uses: actions/checkout@v4
 
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: konnekt-linux-amd64
           path: dist
@@ -256,7 +256,7 @@ jobs:
       # below — nothing else in this job reads the tree.
       - uses: actions/checkout@v4
 
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           pattern: konnekt-*
           path: dist

@@ -2,6 +2,26 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
+    <!--
+      Second layer under the mod-body sanitizer (#306): the WebView is
+      same-origin with the Wails bridge, so this is what stops any remote HTML
+      that slips a sanitizer from loading a frame, an object or a script that
+      could reach it. Everything the app loads is its own bundle ('self'), plus
+      Modrinth icons, gallery images and mc-heads avatars (https:), and the
+      SVG data: URIs CodeMirror's stylesheet draws its gutter and search icons
+      from; a data: image cannot script, and the sanitizer still refuses one
+      as an <img> source. No blob:, no worker: three.js only classifies URLs.
+      'unsafe-inline' on styles only: react-grid-layout positions tiles through
+      style attributes, and CodeMirror and @xyflow inject their own style
+      elements. Wails inserts /wails/ipc.js and /wails/runtime.js as same-origin
+      script tags and runs Go-to-JS callbacks host-side, neither of which a
+      script-src touches. In dev, vite.config.ts strips this tag: the React
+      refresh preamble is an inline script that 'self' would refuse.
+    -->
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' https: data:; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'none'"
+    />
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
     <title>Konnekt</title>
   </head>
