@@ -19,8 +19,8 @@ import (
 // assert the quiesce ordering without a real server process behind it.
 type serverGuard interface {
 	IsRunning(serverID string) bool
-	PrepareForBackup(serverID string) bool
-	ResumeSaves(serverID string)
+	PrepareForBackup(serverID string) (bool, error)
+	ResumeSaves(serverID string) error
 }
 
 type WorldService struct {
@@ -261,8 +261,18 @@ func (s *WorldService) DuplicateWorld(serverID, name, newName string) error {
 		return fmt.Errorf("a world named %q already exists", newName)
 	}
 
-	if s.server != nil && s.server.PrepareForBackup(serverID) {
-		defer s.server.ResumeSaves(serverID)
+	// A duplication that cannot quiesce is the torn copy #115 closed, so it is
+	// refused for the same reason a backup is (#309).
+	if s.server != nil {
+		paused, err := s.server.PrepareForBackup(serverID)
+		if err != nil {
+			return fmt.Errorf("could not pause world saves: %w", err)
+		}
+		if paused {
+			defer func() {
+				_ = s.server.ResumeSaves(serverID) //nolint:errcheck // ResumeSaves logs, narrates and emits its own failure (#309)
+			}()
+		}
 	}
 
 	for _, suffix := range []string{"", "_nether", "_the_end"} {

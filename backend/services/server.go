@@ -1152,21 +1152,67 @@ func (s *serverInstance) ActiveServerID() string {
 	return s.id
 }
 
-// PrepareForBackup flushes pending chunk writes to disk and disables auto-save
-// so a file-level world copy captures a consistent snapshot. Prefers RCON
-// (save-all flush blocks until the save completes); falls back to stdin with a
-// fixed grace period when RCON is unavailable. Returns true if saving was paused
-// — the caller must then call ResumeSaves once the copy is done. No-op (returns
-// false) when the server is not running.
-func (s *serverInstance) PrepareForBackup() bool {
+// saveCommand carries one save command to the server, preferring RCON and
+// falling back to stdin when RCON is unconfigured or the call fails. Returns
+// whether stdin carried it — RCON's save-all flush blocks until the save
+// completes, stdin gives nothing to block on, so only the stdin path leaves the
+// caller with a flush to wait out — and an error only when neither channel
+// worked.
+//
+// The fallback is per command rather than per quiesce: RCON dropping between
+// save-off and save-all flush is exactly the case that used to leave a backup
+// zipping an unflushed world (#309).
+func (s *serverInstance) saveCommand(cmd string) (viaStdin bool, err error) {
 	s.mu.Lock()
-	running := s.running
 	rconOK := s.rconEnabled && s.rconPassword != "" && s.rcon != nil
 	addr, pw := s.rconAddr, s.rconPassword
 	s.mu.Unlock()
 
+	var rconErr error
+	if rconOK {
+		if _, rconErr = s.rcon.Execute(addr, pw, cmd); rconErr == nil {
+			return false, nil
+		}
+		slog.Warn("server: rcon save command failed, falling back to stdin", "command", cmd, "error", rconErr)
+	}
+
+	stdinErr := s.SendCommand(cmd)
+	switch {
+	case stdinErr == nil:
+		return true, nil
+	case rconErr != nil:
+		return true, fmt.Errorf("%q over rcon: %w; over stdin: %w", cmd, rconErr, stdinErr)
+	default:
+		return true, fmt.Errorf("%q over stdin: %w", cmd, stdinErr)
+	}
+}
+
+// PrepareForBackup flushes pending chunk writes to disk and disables auto-save
+// so a file-level world copy captures a consistent snapshot. Prefers RCON
+// (save-all flush blocks until the save completes); falls back to stdin with a
+// fixed grace period. The caller must call ResumeSaves once the copy is done.
+//
+// Three outcomes, because the caller has to tell them apart (#309):
+//
+//	(false, nil)  the server is not running, so there are no live writes to
+//	              pause and the copy is safe as it stands. Proceed.
+//	(true, nil)   saving is paused. Proceed, then ResumeSaves.
+//	(false, err)  neither channel could carry the quiesce, so the copy would be
+//	              taken from a world still being written to. Refuse it — a
+//	              backup that reports success on a torn world is worse than no
+//	              backup, which is the whole of #115 restated from this side.
+//
+// A refusal puts saving back before it returns: save-off can land and
+// save-all flush fail, and leaving autosave off after refusing would be the
+// silent half of the same bug.
+func (s *serverInstance) PrepareForBackup() (bool, error) {
+	s.mu.Lock()
+	running := s.running
+	rconConfigured := s.rconEnabled && s.rconPassword != "" && s.rcon != nil
+	s.mu.Unlock()
+
 	if !running {
-		return false
+		return false, nil
 	}
 
 	// Narrated here rather than at the three call sites (both backup paths and
@@ -1174,39 +1220,56 @@ func (s *serverInstance) PrepareForBackup() bool {
 	// narrow serverGuard interface stays as it is.
 	s.Narrate("Pausing world saves and flushing to disk")
 
-	if rconOK {
-		_, _ = s.rcon.Execute(addr, pw, "save-off")       //nolint:errcheck // best-effort save-flush before backup; backup proceeds either way
-		_, _ = s.rcon.Execute(addr, pw, "save-all flush") //nolint:errcheck // best-effort save-flush before backup; backup proceeds either way
-		return true
+	usedStdin := false
+	for _, cmd := range []string{"save-off", "save-all flush"} {
+		viaStdin, err := s.saveCommand(cmd)
+		usedStdin = usedStdin || viaStdin
+		if err != nil {
+			_, _ = s.saveCommand("save-on") //nolint:errcheck // best-effort undo of a save-off that may have landed; the refusal below is what the caller reports
+			s.NarrateFailed("Could not pause world saves: " + err.Error())
+			return false, err
+		}
 	}
 
-	_ = s.SendCommand("save-off")       //nolint:errcheck // best-effort save-flush before backup; backup proceeds either way
-	_ = s.SendCommand("save-all flush") //nolint:errcheck // best-effort save-flush before backup; backup proceeds either way
-	// Without RCON there is nothing to block on, so this wait is the whole
-	// guarantee — and unexplained it reads as a hang.
-	s.Narrate(fmt.Sprintf("RCON unavailable, giving the save %s to flush", s.quiesceWait))
-	time.Sleep(s.quiesceWait)
-	return true
+	if usedStdin {
+		// Without RCON there is nothing to block on, so this wait is the whole
+		// guarantee — and unexplained it reads as a hang.
+		if rconConfigured {
+			s.Narrate(fmt.Sprintf("RCON did not answer, giving the save %s to flush", s.quiesceWait))
+		} else {
+			s.Narrate(fmt.Sprintf("RCON unavailable, giving the save %s to flush", s.quiesceWait))
+		}
+		time.Sleep(s.quiesceWait)
+	}
+	return true, nil
 }
 
 // ResumeSaves re-enables auto-save after a backup. Safe to call when the server
 // is no longer running (no-op).
-func (s *serverInstance) ResumeSaves() {
+//
+// This is the failure that outlives the operation that caused it: autosave
+// stays off until the server restarts, and nothing the user does afterwards
+// tells them so. Hence a log line, a failed console line and an event, rather
+// than the discarded error this used to be.
+func (s *serverInstance) ResumeSaves() error {
 	s.mu.Lock()
-	running := s.running
-	rconOK := s.rconEnabled && s.rconPassword != "" && s.rcon != nil
-	addr, pw := s.rconAddr, s.rconPassword
+	running, id := s.running, s.id
 	s.mu.Unlock()
 
 	if !running {
-		return
+		return nil
 	}
 	s.Narrate("Resuming world saves")
-	if rconOK {
-		_, _ = s.rcon.Execute(addr, pw, "save-on") //nolint:errcheck // best-effort resume after backup
-		return
+	if _, err := s.saveCommand("save-on"); err != nil {
+		slog.Error("server: save-on failed, autosave is still off", "serverID", id, "error", err)
+		s.NarrateFailed("Could not resume world saves, autosave is still off: " + err.Error())
+		s.bus.Emit(EventAutosaveStuck, map[string]interface{}{
+			"serverID": id,
+			"error":    err.Error(),
+		})
+		return err
 	}
-	_ = s.SendCommand("save-on") //nolint:errcheck // best-effort resume after backup
+	return nil
 }
 
 func (s *serverInstance) Uptime() string {
@@ -1544,10 +1607,12 @@ func (s *ServerService) IsRunning(serverID string) bool {
 }
 func (s *ServerService) State(serverID string) string { return s.instanceFor(serverID).State() }
 func (s *ServerService) ActiveServerID() string       { return s.cur().ActiveServerID() }
-func (s *ServerService) PrepareForBackup(serverID string) bool {
+func (s *ServerService) PrepareForBackup(serverID string) (bool, error) {
 	return s.instanceFor(serverID).PrepareForBackup()
 }
-func (s *ServerService) ResumeSaves(serverID string)   { s.instanceFor(serverID).ResumeSaves() }
+func (s *ServerService) ResumeSaves(serverID string) error {
+	return s.instanceFor(serverID).ResumeSaves()
+}
 func (s *ServerService) Uptime(serverID string) string { return s.instanceFor(serverID).Uptime() }
 func (s *ServerService) GetActivePlayers(serverID string) []models.Player {
 	return s.instanceFor(serverID).GetActivePlayers()

@@ -456,10 +456,16 @@ func TestPrepareForBackupNarratesTheQuiesce(t *testing.T) {
 	release, _ := fakeRunningServer(t, s)
 	s.quiesceWait = time.Millisecond
 
-	if !s.PrepareForBackup(fixtureServerID) {
+	paused, err := s.PrepareForBackup(fixtureServerID)
+	if err != nil {
+		t.Fatalf("PrepareForBackup on a running server = %v, want no error", err)
+	}
+	if !paused {
 		t.Fatal("PrepareForBackup on a running server = false, want true")
 	}
-	s.ResumeSaves(fixtureServerID)
+	if err := s.ResumeSaves(fixtureServerID); err != nil {
+		t.Fatalf("ResumeSaves = %v, want no error", err)
+	}
 
 	want := []string{
 		"Pausing world saves and flushing to disk",
@@ -492,10 +498,16 @@ func TestPrepareForBackupNarratesTheQuiesce(t *testing.T) {
 func TestPrepareForBackupWhileStoppedStaysSilent(t *testing.T) {
 	s, _ := newServerFixture()
 
-	if s.PrepareForBackup(fixtureServerID) {
+	paused, err := s.PrepareForBackup(fixtureServerID)
+	if err != nil {
+		t.Errorf("PrepareForBackup on a stopped server = %v, want no error: a server with no live writes needs no quiesce", err)
+	}
+	if paused {
 		t.Error("PrepareForBackup on a stopped server = true, want false")
 	}
-	s.ResumeSaves(fixtureServerID)
+	if err := s.ResumeSaves(fixtureServerID); err != nil {
+		t.Errorf("ResumeSaves on a stopped server = %v, want no error", err)
+	}
 
 	if lines := consoleLines(s); len(lines) != 0 {
 		t.Errorf("console history = %v, want empty", lines)

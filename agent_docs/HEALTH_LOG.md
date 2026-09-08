@@ -84,6 +84,7 @@ after them is dated. Newest last, in both groups.
 - [2026-09-05 — The overlay the tile kept, and six smaller repairs](#2026-09-05-the-overlay-the-tile-kept-and-six-smaller-repairs)
 - [2026-09-07 — The restore that failed as a backup, and four smaller repairs](#2026-09-07-the-restore-that-failed-as-a-backup-and-four-smaller-repairs)
 - [2026-09-08 — The audit brief, and the gate that came out of it](#2026-09-08-the-audit-brief-and-the-gate-that-came-out-of-it)
+- [2026-09-08 — The backup that reported a flush it never made](#2026-09-08-the-backup-that-reported-a-flush-it-never-made)
 
 ---
 
@@ -5116,3 +5117,93 @@ there. `TestManifestRefusesAPathAsServerID` does the same for the manifest.
 **Verification.** `gofmt`, `go vet ./...`, `go test ./...`, the Go coverage
 floor, `aislop ci` at 100. No frontend changed: the id the UI mints was
 always a single segment, so nothing a user does is refused.
+
+### 2026-09-08 — The backup that reported a flush it never made
+
+**Closed: [#309](../../issues/309).** Three commands quiesce a world before a
+file-level copy: `save-off`, `save-all flush`, then `save-on` afterwards. All
+three discarded their errors behind a `//nolint:errcheck` reading "best-effort
+save-flush before backup; backup proceeds either way", and
+`PrepareForBackup` returned `true` whatever happened. Two silent failures came
+out of that, and the first is the one that matters:
+
+- RCON drops after auth (the 5s deadline in `rcon.go:35` is the usual way), the
+  flush never runs, and the archive is a copy of a world still being written
+  to — reported as a success, listed in the tile, and indistinguishable from a
+  good one until somebody restores it.
+- `save-on` fails after the copy and autosave stays off until the server
+  restarts, with nothing in the console, the log or the UI.
+
+The stdin fallback for the same commands already existed. It was reached only
+when `s.rcon` was nil — when RCON was *unconfigured*, never when it was
+configured and failing, which is the case that actually happens.
+
+**The fix the issue asked for would have made it worse.** It said
+`PrepareForBackup` should return false and the backup be refused. But `false`
+already means "the server is not running, so there is nothing to pause", and
+all three call sites (`backup.go`'s two paths and `worlds.go`'s
+`DuplicateWorld`) *proceed* on it — `if s.server != nil && s.server.PrepareForBackup(serverID)`.
+Returning false on a quiesce failure would have left the copy running
+un-quiesced anyway and additionally skipped the `ResumeSaves` defer, so a
+failed flush would have turned autosave off permanently. The return needed a
+third state, not a different boolean.
+
+**What it is now.** `PrepareForBackup` returns `(bool, error)`:
+
+| Return | Meaning | Caller |
+| --- | --- | --- |
+| `(false, nil)` | not running, no live writes to pause | proceed |
+| `(true, nil)` | saving paused | proceed, then `ResumeSaves` |
+| `(false, err)` | neither channel carried the quiesce | refuse |
+
+`saveCommand` is the new seam: it tries RCON, falls back to stdin **per
+command** rather than per quiesce, and errors only when both fail, wrapping
+both causes. Per command is the point — RCON dropping between `save-off` and
+`save-all flush` is exactly the reported case, and a per-quiesce fallback
+would have missed it.
+
+A refusal puts saving back before it returns. `save-off` can land and the
+flush after it fail, and refusing at that point without a `save-on` would be
+the original bug wearing a different hat: no backup *and* autosave off.
+
+`ResumeSaves` returns an error, and a failure there logs at `slog.Error`,
+narrates a failed console line and emits `server:autosave-stuck`
+(`{serverID, error}`), which `App.tsx` toasts as a warning. Its own event
+rather than `backup:failed`: the archive may be perfectly good, and the thing
+the user has to act on is the server. This is the failure that outlives the
+operation that caused it, which is why it gets a channel of its own.
+
+**`DuplicateWorld` refuses too**, for the reason #115 exists: an un-quiesced
+copy of a live world is the torn copy that issue closed, so the quiesce is
+load-bearing there and not merely nice.
+
+**The narration got one more line.** The stdin path sleeps `quiesceWait` and
+said "RCON unavailable, giving the save 1ms to flush". That is now the message
+for RCON never being configured; a configured RCON that failed says "RCON did
+not answer", because those are different situations and the console is where a
+user finds out which one they are in.
+
+**Tests** (`server_quiesce_test.go`, new). `fakeRconServer` serves exactly one
+connection, and `Execute` opens one per command, so a second dial parked on the
+5s deadline instead of failing — hence `rconServerLoop`, its multi-connection
+twin, with an `rconRecorder` that hangs up after auth on nominated connection
+numbers and records the commands it does serve. `runningInstance` is
+`fakeRunningServer` with a readable stdin rather than `io.Discard`, since the
+whole question here is which channel carried each command. Five cases: the
+stdin fallback on an RCON drop, the refusal when both channels are dead, the
+`save-on` after a failed flush (asserted on the RCON side, connection 3), the
+stuck-autosave event and console line, and `CreateBackup` refusing with the
+reserved archive removed rather than left as a zero-byte entry the tile would
+list. A sixth covers `DuplicateWorld`'s refusal.
+
+**Verification.** All 20 checks in `.claude/suite.json` via
+`.claude/suite-check.py`, green. `backend/services` coverage moved 59.7% →
+60.7%; frontend 736 tests, 53.7% of lines. `aislop ci` at 100. Neither method
+is bound on the `App` struct, so no binding regeneration.
+
+**Left open deliberately.** `rcon.go:35`'s `conn.SetDeadline` still discards
+its error bare, which is not a `_ =` and so is invisible to both the
+checklist's grep and the aislop rule — the same shape as the 27 stdlib ignores
+#316 collects. The mutation survivors in `rcon.go` that this shares a root with
+are #312's, not this change's; the fake that fails after auth is now in the
+tree for it to reuse.

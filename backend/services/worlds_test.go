@@ -1,8 +1,10 @@
 package services
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"konnekt/backend/models"
@@ -17,6 +19,9 @@ type fakeServerGuard struct {
 	onPrepare func()
 	onResume  func()
 	ids       []string
+	// prepareErr stands for a server neither RCON nor stdin could reach, the
+	// case DuplicateWorld now refuses rather than copying through (#309).
+	prepareErr error
 }
 
 // ids records which server each call named, so a test can assert the quiesce
@@ -26,21 +31,25 @@ func (f *fakeServerGuard) IsRunning(serverID string) bool {
 	return f.running
 }
 
-func (f *fakeServerGuard) PrepareForBackup(serverID string) bool {
+func (f *fakeServerGuard) PrepareForBackup(serverID string) (bool, error) {
 	f.calls = append(f.calls, "prepare")
 	f.ids = append(f.ids, serverID)
 	if f.onPrepare != nil {
 		f.onPrepare()
 	}
-	return f.running
+	if f.prepareErr != nil {
+		return false, f.prepareErr
+	}
+	return f.running, nil
 }
 
-func (f *fakeServerGuard) ResumeSaves(serverID string) {
+func (f *fakeServerGuard) ResumeSaves(serverID string) error {
 	f.calls = append(f.calls, "resume")
 	f.ids = append(f.ids, serverID)
 	if f.onResume != nil {
 		f.onResume()
 	}
+	return nil
 }
 
 // newWorldFixture mirrors newBackupFixture: a WorldService wired to temp
@@ -125,6 +134,32 @@ func TestDuplicateWorldWhileStoppedSkipsTheQuiesce(t *testing.T) {
 	got, err := os.ReadFile(filepath.Join(workDir, "copy", "region.mca"))
 	if err != nil || string(got) != "region-data" {
 		t.Errorf("copied overworld = %q, %v; want %q, nil", got, err, "region-data")
+	}
+}
+
+// A duplication that cannot quiesce would copy a world still being written
+// to, which is the torn copy #115 closed. It is refused for that reason (#309)
+// rather than copying through, and nothing is left behind when it refuses.
+func TestDuplicateWorldRefusesWhenTheQuiesceFails(t *testing.T) {
+	guard := &fakeServerGuard{running: true, prepareErr: errors.New("neither channel answered")}
+	svc, workDir := newWorldFixture(t, guard)
+	writeFile(t, filepath.Join(workDir, "world", "region.mca"), "region-data")
+
+	err := svc.DuplicateWorld(testServerID, "world", "copy")
+	if err == nil {
+		t.Fatal("DuplicateWorld with a failed quiesce = nil error, want a refusal")
+	}
+	if !strings.Contains(err.Error(), "pause world saves") {
+		t.Errorf("error = %q, want it to name the quiesce", err)
+	}
+
+	if _, statErr := os.Stat(filepath.Join(workDir, "copy")); statErr == nil {
+		t.Error("a refused duplication left a copy behind")
+	}
+	for _, c := range guard.calls {
+		if c == "resume" {
+			t.Errorf("quiesce calls = %v, want no resume: PrepareForBackup already put saving back", guard.calls)
+		}
 	}
 }
 
