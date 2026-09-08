@@ -43,6 +43,25 @@ func TestCompareVersions(t *testing.T) {
 		{"0.1.0-snapshot.202608290400.abc1234", "v0.1.0-alpha.1", 1},
 		{"0.1.0-snapshot.202608290400.abc1234", "0.1.0-dev", 1},
 		{"0.2.0-snapshot.202608010000.abc1234", "0.1.0", 1},
+
+		// Prerelease counters are numbers, not text. Under the string compare
+		// this replaced, alpha.10 sorted below alpha.9 and the tenth alpha of
+		// a version would never have been offered to anyone on the ninth.
+		{"1.0.0-alpha.9", "1.0.0-alpha.10", -1},
+		{"1.0.0-alpha.10", "1.0.0-alpha.9", 1},
+		{"1.0.0-alpha.2", "1.0.0-alpha.2", 0},
+		{"1.0.0-alpha.1", "1.0.0-beta.1", -1},
+		{"1.0.0-beta.1", "1.0.0-alpha.2", 1},
+		// The ladder this repo cuts: alpha and beta both sort below a snapshot
+		// of the same core, and everything sorts below the final.
+		{"1.0.0-beta.1", "1.0.0-snapshot.202608290400.abc1234", -1},
+		{"1.0.0-snapshot.202608290400.abc1234", "1.0.0", -1},
+		// The rest of semver's identifier rules, so a tag that strays from the
+		// ladder still orders deterministically.
+		{"1.0.0-alpha", "1.0.0-alpha.1", -1},
+		{"1.0.0-1", "1.0.0-alpha", -1},
+		{"1.0.0-alpha.1", "1.0.0-alpha.a", -1},
+		{"1.0.0-99999999999999999999", "1.0.0-9", 1},
 	}
 	for _, c := range cases {
 		if got := compareVersions(c.a, c.b); got != c.want {

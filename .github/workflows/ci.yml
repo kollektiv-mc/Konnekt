@@ -81,6 +81,8 @@ jobs:
 
       - run: python3 .github/scripts/version-precedence_test.py
 
+      - run: python3 .github/scripts/release-tag_test.py
+
   # aislop (scanaislop/aislop, MIT) scores the tree for the patterns AI-assisted
   # code leaves behind: ignored errors, double casts, duplicated blocks,
   # oversized functions. .aislop/config.yml is the policy and says what is

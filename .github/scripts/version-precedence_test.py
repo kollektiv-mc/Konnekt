@@ -52,8 +52,27 @@ for a, b, want in [
     ("0.1.0-snapshot.202608290400.abc1234", "v0.1.0-alpha.1", 1),
     ("0.1.0-snapshot.202608290400.abc1234", "0.1.0-dev", 1),
     ("0.2.0-snapshot.202608010000.abc1234", "0.1.0", 1),
+    ("1.0.0-alpha.9", "1.0.0-alpha.10", -1),
+    ("1.0.0-alpha.10", "1.0.0-alpha.9", 1),
+    ("1.0.0-alpha.2", "1.0.0-alpha.2", 0),
+    ("1.0.0-alpha.1", "1.0.0-beta.1", -1),
+    ("1.0.0-beta.1", "1.0.0-alpha.2", 1),
+    ("1.0.0-beta.1", "1.0.0-snapshot.202608290400.abc1234", -1),
+    ("1.0.0-snapshot.202608290400.abc1234", "1.0.0", -1),
+    ("1.0.0-alpha", "1.0.0-alpha.1", -1),
+    ("1.0.0-1", "1.0.0-alpha", -1),
+    ("1.0.0-alpha.1", "1.0.0-alpha.a", -1),
+    ("1.0.0-99999999999999999999", "1.0.0-9", 1),
 ]:
     check(f"compare_versions({a!r}, {b!r})", guard.compare_versions(a, b), want)
+
+# Where the numeric line is drawn, so the Go and the Python cannot drift on a
+# digit string the Go refuses to parse: int64's maximum is a number, one past
+# it is text.
+check("int64 max is numeric", guard.numeric_identifier("9223372036854775807"), 9223372036854775807)
+check("past int64 is text", guard.numeric_identifier("9223372036854775808"), None)
+check("empty is text", guard.numeric_identifier(""), None)
+check("a non-ASCII digit is text", guard.numeric_identifier("\u00b2"), None)
 
 # A two-component core is padded, not rejected: the tags this repo carried
 # before it moved to semver looked like v2.0-alpha.

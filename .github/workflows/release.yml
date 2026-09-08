@@ -1,14 +1,102 @@
 name: Release
 
+# Two ways in, one pipeline.
+#
+# The Actions tab's "Run workflow" button is the normal path: pick a channel
+# and the X.Y.Z it belongs to, and the resolve job turns that into the tag (the
+# next alpha.N or beta.N of that version, or the bare vX.Y.Z for stable),
+# checks it against the existing tags and version.go's base, and creates it.
+# Pushes made with GITHUB_TOKEN never trigger workflows, so creating the tag
+# from inside this run does not start a second one; the build carries on here,
+# at that tag.
+#
+# A hand-pushed v* tag still works. It goes through the same resolve job, minus
+# the tag creation, so both paths are held to the same rules, and a tag that
+# would strand the snapshot channel fails here rather than shipping.
+#
+# What the rules are, and why each exists, is documented in
+# .github/scripts/release-tag.py; the version ladder itself is in
+# .claude/rules/builds-and-releases.md.
 on:
   push:
     tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      channel:
+        description: 'alpha and beta count up within a version (vX.Y.Z-alpha.N); stable is the bare vX.Y.Z'
+        type: choice
+        required: true
+        default: alpha
+        options: [alpha, beta, stable]
+      version:
+        description: 'The X.Y.Z this build belongs to. No v, no suffix.'
+        type: string
+        required: true
+
+# One release at a time. Two dispatches side by side would both resolve to the
+# same next counter; run in sequence, the second sees the first's tag and
+# refuses it.
+concurrency:
+  group: release
 
 jobs:
+  resolve:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    outputs:
+      tag: ${{ steps.decide.outputs.tag }}
+      rpm_version: ${{ steps.decide.outputs.rpm_version }}
+      prerelease: ${{ steps.decide.outputs.prerelease }}
+    steps:
+      # A release is cut from the default branch. Anything else is a hotfix
+      # somebody should be doing deliberately, which is what the hand-pushed
+      # tag path is for.
+      - name: Refuse a dispatch off the default branch
+        if: github.event_name == 'workflow_dispatch' && github.ref_name != github.event.repository.default_branch
+        run: |
+          echo "::error::Releases are cut from ${{ github.event.repository.default_branch }}, not ${{ github.ref_name }}. Push a v* tag by hand to release another ref."
+          exit 1
+
+      - uses: actions/checkout@v4
+
+      # The inputs reach the script as environment, never as shell text, so a
+      # version field containing anything but a version is data the script
+      # rejects rather than something bash runs.
+      - id: decide
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EVENT: ${{ github.event_name }}
+          REF_NAME: ${{ github.ref_name }}
+          CHANNEL: ${{ inputs.channel }}
+          VERSION: ${{ inputs.version }}
+        run: |
+          BASE="$(sed -n 's/^var Version = "\([^"]*\)".*/\1/p' version.go | head -n1)"
+          git ls-remote --tags --refs origin | sed 's#.*refs/tags/##' > "$RUNNER_TEMP/tags.txt"
+          # Empty when nothing is released yet, which the script treats as
+          # "no final has shipped".
+          LATEST="$(gh api "repos/${{ github.repository }}/releases/latest" --jq .tag_name 2>/dev/null || true)"
+          BASE="$BASE" LATEST="$LATEST" TAGS_FILE="$RUNNER_TEMP/tags.txt" \
+            python3 .github/scripts/release-tag.py
+
+      # A lightweight tag on the dispatched commit, pushed with the job's own
+      # token. That push is the one event GitHub deliberately does not fan out
+      # into another run.
+      - name: Create the tag
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          TAG: ${{ steps.decide.outputs.tag }}
+        run: |
+          git tag "$TAG" "$GITHUB_SHA"
+          git push origin "refs/tags/$TAG"
+
   build-windows:
+    needs: resolve
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.resolve.outputs.tag }}
 
       - uses: actions/setup-go@v5
         with:
@@ -33,9 +121,7 @@ jobs:
 
       - name: Build
         shell: pwsh
-        run: |
-          $tag = "${{ github.ref_name }}"
-          wails build -ldflags "-X main.Version=$tag"
+        run: wails build -ldflags "-X main.Version=${{ needs.resolve.outputs.tag }}"
 
       - name: Stage release asset
         shell: pwsh
@@ -50,6 +136,7 @@ jobs:
           if-no-files-found: error
 
   build-linux:
+    needs: resolve
     runs-on: ubuntu-latest
     container: ubuntu:22.04
     env:
@@ -72,6 +159,8 @@ jobs:
           git config --global --add safe.directory "$GITHUB_WORKSPACE"
 
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.resolve.outputs.tag }}
 
       - uses: actions/setup-go@v5
         with:
@@ -96,8 +185,8 @@ jobs:
 
       - name: Build
         run: |
-          tag="${{ github.ref_name }}"
-          wails build -tags webkit2_41 -ldflags "-X main.Version=$tag"
+          wails build -tags webkit2_41 \
+            -ldflags "-X main.Version=${{ needs.resolve.outputs.tag }}"
 
       - name: Stage release asset
         run: |
@@ -111,7 +200,7 @@ jobs:
           if-no-files-found: error
 
   package-rpm:
-    needs: build-linux
+    needs: [resolve, build-linux]
     runs-on: ubuntu-latest
     container: rockylinux/rockylinux:10
     steps:
@@ -119,24 +208,22 @@ jobs:
         run: dnf install -y git rpm-build rpmdevtools
 
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.resolve.outputs.tag }}
 
       - uses: actions/download-artifact@v4
         with:
           name: konnekt-linux-amd64
           path: dist
 
+      # The RPM version is the tag's with "-" as "~", which sorts before the
+      # base version the way a prerelease should: v0.2.0-alpha.1 packages as
+      # 0.2.0~alpha.1. The resolve job computed it alongside the tag.
       - name: Build RPM
         run: |
-          # RPM Version can't contain "-"; "~" is the correct idiom for
-          # pre-release tags too (it sorts *before* the base version), so
-          # v2.0-alpha becomes 2.0~alpha, not a lossy substitution.
-          tag="${{ github.ref_name }}"
-          version="${tag#v}"
-          version="${version//-/~}"
-
           rpmdev-setuptree
           cp dist/konnekt-linux-amd64 build/appicon-256.png build/linux/konnekt.desktop ~/rpmbuild/SOURCES/
-          rpmbuild -bb build/linux/konnekt.spec --define "_version $version"
+          rpmbuild -bb build/linux/konnekt.spec --define "_version ${{ needs.resolve.outputs.rpm_version }}"
 
           mkdir -p dist-rpm
           cp ~/rpmbuild/RPMS/x86_64/*.rpm dist-rpm/
@@ -148,7 +235,7 @@ jobs:
           if-no-files-found: error
 
   publish:
-    needs: [build-windows, build-linux, package-rpm]
+    needs: [resolve, build-windows, build-linux, package-rpm]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -157,6 +244,8 @@ jobs:
       # running it second would delete them. Only needed for the notes script
       # below — nothing else in this job reads the tree.
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.resolve.outputs.tag }}
 
       - uses: actions/download-artifact@v4
         with:
@@ -187,7 +276,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
           SERVER: ${{ github.server_url }}
-          HEAD_REF: ${{ github.ref_name }}
+          HEAD_REF: ${{ needs.resolve.outputs.tag }}
         run: |
           # Fall back to GitHub's generator rather than to nothing. It is what
           # this step used to be, and on the paths that get here — the very
@@ -213,7 +302,8 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
-          TAG: ${{ github.ref_name }}
+          TAG: ${{ needs.resolve.outputs.tag }}
+          PRERELEASE: ${{ needs.resolve.outputs.prerelease }}
         run: |
           # The preamble, the same way snapshot.yml writes one. The notes
           # script produces what changed and nothing else, which is what the
@@ -244,10 +334,21 @@ jobs:
           EOF
           cat changes.md >> notes.md
 
+          # GitHub's prerelease flag is a separate decision from the line
+          # above, and the resolve job made it: an alpha or beta is flagged
+          # only once a final has shipped. Flagging drops a release out of
+          # /releases/latest, which the stable channel, the download page and
+          # the notes baseline all read, and while every release is an alpha
+          # that would freeze all three on the previous one.
+          flags=()
+          if [ "$PRERELEASE" = 'true' ]; then
+            flags+=(--prerelease)
+          fi
+
           # Assets are named rather than globbed with `*`, which would now pick
           # up the changes.md and notes.md written beside them. Same list
           # snapshot.yml uploads.
           gh release create "$TAG" \
             konnekt-* checksums.txt \
             --title "$TAG" --notes-file notes.md \
-            --repo "$REPO"
+            --repo "$REPO" "${flags[@]}"
