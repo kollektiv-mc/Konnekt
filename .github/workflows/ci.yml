@@ -186,6 +186,59 @@ jobs:
       # changelog and looks like a short release rather than a bug.
       - run: node scripts/check-release-notes-extract.mjs
 
+  # aislop, gating only what the pull request touches.
+  #
+  # The repo-wide score is 76/100 and the whole-repo gate fails, because of 13
+  # discarded Go error returns that predate this job (#318). Gating the whole
+  # tree would therefore mean either fixing those first or setting a threshold
+  # low enough to be meaningless. `--changes` avoids both: existing findings
+  # stay visible in the score without blocking anything, and a pull request is
+  # judged on what it adds. Same shape as the coverage floors, which ratchet
+  # rather than demand a number nobody can reach today.
+  #
+  # Errors fail the job; warnings do not. That split is doing real work here,
+  # because this repository writes long explanatory comments on purpose and
+  # aislop's `narrative-comment` rule reports 99 of them. Those are warnings, so
+  # a deliberate house style is reported and ignored rather than fought.
+  #
+  # Pull requests only. On a push to `main` there is no base branch to diff
+  # against, and the value is in reviewing a change before it lands.
+  slop:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # `--changes` diffs against the base branch, which a shallow clone
+          # does not have.
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      # Not for installing anything: `aislop doctor` reports its five engines as
+      # bundled except Security, which shells out to `pnpm audit`. Without pnpm
+      # on PATH that engine is skipped and the gate quietly gets weaker, with
+      # nothing in the log to say a check stopped running.
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11
+
+      # Pinned, not `@latest`. A new aislop release adding or tightening a rule
+      # would otherwise turn this red overnight on a pull request that changed
+      # nothing, and the first person to see it would have no way to tell that
+      # from a real finding. Bumping the pin is a commit, which is where a
+      # change in what CI enforces belongs.
+      #
+      # The base ref goes through env rather than being interpolated into the
+      # script: on a fork's pull request the branch name is attacker-chosen
+      # text, and `${{ }}` inside a run block is substituted before bash sees it.
+      - name: Gate changed files
+        env:
+          BASE: ${{ github.base_ref }}
+        run: npx --yes aislop@0.16.0 ci --changes --base "origin/$BASE" --human .
+
   # .claude/suite.json declares three sections. CI has always covered
   # `commands` as literal steps above and in the backend jobs, but nothing ever
   # ran `invariants` or `generated` — they only executed when a human invoked
