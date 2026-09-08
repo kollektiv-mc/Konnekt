@@ -1,3 +1,4 @@
+// aislop-ignore-file code-quality/duplicate-block -- #313
 import { useRef, useState } from 'react'
 import { useFrame } from '@react-three/fiber'
 import { Html } from '@react-three/drei'

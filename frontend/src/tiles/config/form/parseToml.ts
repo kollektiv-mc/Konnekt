@@ -91,7 +91,7 @@ export function applyTomlEdit(content: string, path: (string | number)[], value:
   const keyRe = new RegExp(`^(${escapeRegex(key)})(\\s*=\\s*)`)
   for (let i = sectionStart; i < lines.length; i++) {
     const trimmed = lines[i].trim()
-    if (i > sectionStart && /^\[/.test(trimmed)) break // crossed into next section
+    if (i > sectionStart && trimmed.startsWith('[')) break // crossed into next section
     const m = lines[i].match(keyRe)
     if (m) {
       // Preserve inline comments after the value

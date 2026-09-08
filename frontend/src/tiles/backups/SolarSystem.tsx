@@ -1,3 +1,4 @@
+// aislop-ignore-file code-quality/duplicate-block -- #313
 import { useEffect, useState } from 'react'
 import { WireframeSphere } from './WireframeSphere'
 import type { WorldSystem } from './useBackupWorlds'

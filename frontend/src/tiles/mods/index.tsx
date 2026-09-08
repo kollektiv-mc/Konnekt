@@ -1,3 +1,4 @@
+// aislop-ignore-file code-quality/duplicate-block -- #313
 import { useEffect, useRef, useState } from 'react'
 import type { TileProps } from '../../types'
 import { useMods } from './useMods'

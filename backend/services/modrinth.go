@@ -17,6 +17,7 @@ import (
 )
 
 const (
+	// aislop-ignore-next-line ai-slop/hardcoded-url -- the canonical API base; tests point ModrinthClient at an httptest.Server through the constructor
 	modrinthBase      = "https://api.modrinth.com/v2"
 	modrinthUserAgent = "Konnekt/0.1 (github.com/kollektiv-mc/konnekt)"
 	modrinthPageSize  = 20

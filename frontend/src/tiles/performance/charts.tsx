@@ -1,3 +1,4 @@
+// aislop-ignore-file code-quality/duplicate-block -- one recharts <Line> per series, deliberate; #313
 import {
   ResponsiveContainer,
   ComposedChart,

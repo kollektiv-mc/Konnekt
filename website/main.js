@@ -503,6 +503,7 @@
   // sequence. Hovering the box holds the current clip the same way. Reduced
   // motion never plays anything: the tabs still switch the poster and the
   // points, and the demo link is the way to see it move.
+  // aislop-ignore-next-line ai-slop/hardcoded-url -- the demo site's canonical address, see agent_docs/CLAUDE.md
   var DEMO = 'https://konnekt-demo.pages.dev'
   var SCENES = [
     { id: 'dashboard', tile: '' },

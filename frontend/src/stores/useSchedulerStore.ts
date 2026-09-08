@@ -104,7 +104,7 @@ export const useSchedulerStore = create<SchedulerStore>((set, get) => ({
    * "in 1h") is not, and SchedulerSummary only re-renders when `nextRuns`
    * changes identity. An equality check here would freeze the countdown.
    */
-  setNextRuns: (runs) => set({ nextRuns: { ...(runs ?? {}) } }),
+  setNextRuns: (runs) => set({ nextRuns: { ...runs } }),
 
   clearError: () => set({ error: null }),
 

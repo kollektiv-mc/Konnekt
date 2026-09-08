@@ -526,6 +526,7 @@ func execCondition(e *ExecContext) ExecResult {
 
 func must(err error) {
 	if err != nil {
+		// aislop-ignore-next-line ai-slop/go-library-panic -- registerBuiltins runs at construction with static block definitions; a failure is a programming error, not a runtime condition
 		panic(err)
 	}
 }

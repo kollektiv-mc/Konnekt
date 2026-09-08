@@ -9,11 +9,12 @@ import {
   OpenWorldFolder,
   BackupWorld,
 } from '../../../wailsjs/go/main/App'
-import type { models } from '../../../wailsjs/go/models'
 import { useServerConfigStore } from '../../stores/useServerConfigStore'
 import { EVENTS } from '../../lib/constants'
 
-export type WorldSystem = models.WorldSystem
+import type { WorldSystem } from '../../types'
+
+export type { WorldSystem }
 
 export function useWorlds() {
   const activeId = useServerConfigStore((s) => s.activeId)

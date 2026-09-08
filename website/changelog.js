@@ -82,7 +82,8 @@
     var body = el('div', 'md')
     var notes = R.changesOnly(rel.body)
     if (notes) {
-      MD.renderInto(body, notes)
+      // aislop-ignore-next-line security/innerhtml -- MD.render HTML-escapes its input before formatting and restricts link schemes (markdown.js)
+      body.innerHTML = MD.render(notes)
     } else {
       body.appendChild(el('p', null, 'No notes.'))
     }
@@ -100,7 +101,8 @@
   function renderSnapshot(rel) {
     var notes = R.changesOnly(rel.body)
     if (!notes) return
-    MD.renderInto(snapshotBodyEl, notes)
+    // aislop-ignore-next-line security/innerhtml -- MD.render HTML-escapes its input before formatting and restricts link schemes (markdown.js)
+    snapshotBodyEl.innerHTML = MD.render(notes)
 
     var built = R.formatDate(rel.published_at)
     var sha = R.shortSha(rel.target_commitish)

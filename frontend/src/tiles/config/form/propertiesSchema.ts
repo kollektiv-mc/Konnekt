@@ -1,3 +1,4 @@
+// aislop-ignore-file code-quality/duplicate-block -- server.properties schema table, deliberate; #313
 import type { FieldType } from './inferType'
 
 export interface PropSchema {

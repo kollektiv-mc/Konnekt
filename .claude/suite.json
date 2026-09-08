@@ -32,7 +32,8 @@
       { "name": "go vet", "run": "go vet ./..." },
       { "name": "go test", "run": "go test ./..." },
       { "name": "coverage floor", "run": "go run ./scripts/coverage-floor" },
-      { "name": "frontend coverage floor", "run": "pnpm test:coverage", "cwd": "frontend" }
+      { "name": "frontend coverage floor", "run": "pnpm test:coverage", "cwd": "frontend" },
+      { "name": "aislop", "run": "npx --yes aislop@0.16.0 ci" }
     ],
     "invariants": [
       {

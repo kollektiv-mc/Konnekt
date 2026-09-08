@@ -1,0 +1,78 @@
+# aislop (https://github.com/scanaislop/aislop) is the one gate in this repo
+# that scores the tree rather than passing or failing a check, so the score is
+# only meaningful if the config says what it counts. Read this file before
+# reading the number. Run locally with `npx --yes aislop@latest scan`; CI runs
+# `aislop ci` and fails below ci.failBelow.
+version: 1
+
+engines:
+  format: true
+  lint: true
+  code-quality: true
+  ai-slop: true
+  architecture: false
+  security: true
+
+rules:
+  # Two rules turned off, both style/policy, both because the tree's comment
+  # conventions are the ones the tool flags. Decided 2026-09-08, HEALTH_LOG.
+  #
+  # narrative-comment: 94 of its 99 findings are the `// --- Section ---`
+  # separators app.go, modjar.go and SettingsModal.tsx use to break a long
+  # file into pages. That is house style, and `aislop fix` would strip it.
+  ai-slop/narrative-comment: off
+  # meta-comment: all twelve findings are explanatory comments about what a
+  # function is for ("mkdirTempRestore is os.MkdirTemp, swapped by tests").
+  # The rule reads "before/after" phrasing as plan narration; here it is the
+  # comment doing its job.
+  ai-slop/meta-comment: off
+
+quality:
+  # A ratchet, not a target: each number sits at today's largest function or
+  # file so the gate is green, and is lowered as #314 shrinks the entries in
+  # its table. Never raised. The tool multiplies maxFileLoc by 1.5 for .go and
+  # .tsx and maxFunctionLoc by 2 for a React component, then allows 10% over.
+  #
+  # maxFunctionLoc 350: held by useMods (tiles/mods/useMods.ts, 384 lines).
+  # Next stops when it is split: registerBuiltins 267, heroSphere 192,
+  # identifyUnknownLocked 168, useBackups 142, then 80 (the tool's default).
+  maxFunctionLoc: 350
+  # maxFileLoc 970: held by backend/services/server.go (1595 lines, 1.5x).
+  # Next stops: modservice.go 1089, backup.go 1017, GraphEditor.tsx 1010,
+  # SettingsModal.tsx 884, then 400 (the default).
+  maxFileLoc: 970
+  maxNesting: 5
+  maxParams: 6
+
+security:
+  # `npm audit` / `pnpm audit` / `govulncheck` inside the scan. CI already runs
+  # dependency checks on its own cadence and the cloud container's proxy
+  # blocks vuln.go.dev, so this would report network errors as findings.
+  audit: false
+
+scoring:
+  weights:
+    format: 0.3
+    lint: 0.6
+    code-quality: 0.8
+    ai-slop: 1.0
+    architecture: 1.0
+    security: 1.5
+  thresholds:
+    good: 75
+    ok: 50
+  smoothing: 20
+  maxPerRule: 40
+
+ci:
+  # 100 is "no unsuppressed finding", which is where the tree stands after
+  # 2026-09-08. A drop is one new finding; read it before deciding whether it
+  # is real, a directive with a reason, or a rule this file should turn off.
+  failBelow: 100
+  format: json
+
+telemetry:
+  # Off for a shared gate. The CLI's telemetry is an allowlisted payload with
+  # no paths or code in it, but a repo config should not opt its contributors
+  # into anything.
+  enabled: false

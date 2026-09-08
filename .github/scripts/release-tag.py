@@ -56,7 +56,9 @@ import sys
 
 HERE = pathlib.Path(__file__).resolve().parent
 
-_spec = importlib.util.spec_from_file_location("version_precedence", HERE / "version-precedence.py")
+_spec = importlib.util.spec_from_file_location(
+    "version_precedence", HERE / "version-precedence.py"
+)
 _precedence = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(_precedence)
 compare_versions = _precedence.compare_versions
@@ -106,7 +108,9 @@ def problems(tag: str, tags: list[str], base: str) -> list[str]:
     """
     parsed = parse_tag(tag)
     if not parsed:
-        return [f"{tag} is not vX.Y.Z, vX.Y.Z-alpha.N or vX.Y.Z-beta.N; nothing else is released."]
+        return [
+            f"{tag} is not vX.Y.Z, vX.Y.Z-alpha.N or vX.Y.Z-beta.N; nothing else is released."
+        ]
     core, channel, _ = parsed
     found: list[str] = []
 
@@ -116,9 +120,13 @@ def problems(tag: str, tags: list[str], base: str) -> list[str]:
     below = [
         other
         for other in tags
-        if (other_parsed := parse_tag(other)) and other_parsed[0] == core and compare_versions(tag, other) <= 0
+        if (other_parsed := parse_tag(other))
+        and other_parsed[0] == core
+        and compare_versions(tag, other) <= 0
     ]
-    for other in sorted(below, key=lambda other: (parse_tag(other)[1], parse_tag(other)[2])):
+    for other in sorted(
+        below, key=lambda other: (parse_tag(other)[1], parse_tag(other)[2])
+    ):
         if other != tag:
             found.append(
                 f"{other} already exists and {tag} sorts at or below it, "
@@ -154,7 +162,9 @@ def flag_prerelease(tag: str, latest: str) -> bool:
     """
     parsed = parse_tag(tag)
     latest_parsed = parse_tag(latest)
-    return bool(parsed and parsed[1] != STABLE and latest_parsed and latest_parsed[1] == STABLE)
+    return bool(
+        parsed and parsed[1] != STABLE and latest_parsed and latest_parsed[1] == STABLE
+    )
 
 
 def rpm_version(tag: str) -> str:
@@ -171,7 +181,9 @@ def resolve(env: dict[str, str], tags: list[str]) -> tuple[dict[str, str], list[
         channel = env.get("CHANNEL", "").strip()
         core = env.get("VERSION", "").strip()
         if channel not in CHANNELS:
-            return {}, [f"channel must be one of {', '.join(CHANNELS)}, not {channel!r}."]
+            return {}, [
+                f"channel must be one of {', '.join(CHANNELS)}, not {channel!r}."
+            ]
         if not CORE.match(core):
             return {}, [f"version must be X.Y.Z with no v and no suffix, not {core!r}."]
         tag = next_tag(channel, core, tags)
@@ -185,7 +197,9 @@ def resolve(env: dict[str, str], tags: list[str]) -> tuple[dict[str, str], list[
     return {
         "tag": tag,
         "rpm_version": rpm_version(tag),
-        "prerelease": "true" if flag_prerelease(tag, env.get("LATEST", "").strip()) else "false",
+        "prerelease": "true"
+        if flag_prerelease(tag, env.get("LATEST", "").strip())
+        else "false",
     }, []
 
 

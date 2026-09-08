@@ -226,6 +226,7 @@ function SceneController({
 
     // Shift focused body into right 2/3 when HUD panel is open
     // Formula (t = 0→1): fullW = W*(1 + t/3) → planet at (fullW/2)/W = 0.5 + t/6 → 0.667 at t=1
+    // aislop-ignore-next-line ai-slop/double-type-assertion -- three vs @react-three/fiber Camera types, the documented mismatch (HEALTH_CHECKLIST, Clean)
     const perspCam = state.camera as unknown as THREE.PerspectiveCamera
     if (t > 0.001) {
       const W = state.gl.domElement.width
