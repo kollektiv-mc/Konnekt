@@ -144,5 +144,27 @@
     return html.join('\n')
   }
 
-  window.KonnektMarkdown = { render: render }
+  // Renders into `el`, replacing whatever was there.
+  //
+  // `render` returns a string of HTML, and the only thing standing between an
+  // untrusted release body and the page is that every character of the source
+  // was escaped before any of it was formatted (see the header). That is true
+  // and it stays true, but it was being relied on from two call sites in
+  // changelog.js that each assigned the result straight to `innerHTML` with
+  // nothing on the line to say why that was safe.
+  //
+  // This is where the guarantee is documented, so this is where the string
+  // should be turned into nodes. Not a security fix and not claimed as one:
+  // DOMParser does not execute scripts, but neither does innerHTML, and an
+  // event-handler attribute would survive either route. What it buys is one
+  // place to audit instead of two, and no HTML-string assignment left in page
+  // code where the next reader has to go looking for the escaping to know it
+  // is there.
+  function renderInto(el, src) {
+    var doc = new DOMParser().parseFromString(render(src), 'text/html')
+    el.replaceChildren()
+    while (doc.body.firstChild) el.appendChild(doc.body.firstChild)
+  }
+
+  window.KonnektMarkdown = { render: render, renderInto: renderInto }
 })()

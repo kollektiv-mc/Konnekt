@@ -5,6 +5,7 @@
 
 [![CI](https://github.com/kollektiv-mc/Konnekt/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/kollektiv-mc/Konnekt/actions/workflows/ci.yml)
 [![CodeQL](https://github.com/kollektiv-mc/Konnekt/actions/workflows/codeql.yml/badge.svg?branch=main)](https://github.com/kollektiv-mc/Konnekt/actions/workflows/codeql.yml)
+[![aislop](https://badges.scanaislop.com/score/kollektiv-mc/konnekt.svg)](https://scanaislop.com/kollektiv-mc/konnekt)
 [![Signed builds](https://img.shields.io/badge/builds-attested-2ea44f)](#verifying-a-download)
 [![Release](https://img.shields.io/github/v/release/kollektiv-mc/Konnekt?include_prereleases&sort=semver)](https://github.com/kollektiv-mc/Konnekt/releases)
 [![Platforms](https://img.shields.io/badge/platforms-Windows%20%7C%20Linux%20%7C%20macOS%20from%20source-blue)](#platform-support)
@@ -22,6 +23,18 @@
   itself. A number a project awards its own code says nothing to someone who
   has not read the code, which is the whole problem a badge is supposed to
   solve.
+
+  aislop is the one score here, and it is on the page for a specific reason:
+  it is a third-party tool built to detect the patterns AI coding agents leave
+  behind, run against a codebase this README says up front is mostly written by
+  one. That is the most directly relevant outside opinion available, so it goes
+  up whatever it says. Two things a reader should know about it. The score is
+  computed by scanaislop.com, not here, and this project has no account with
+  them: it comes from a public instant scan, so it refreshes when the repository
+  is rescanned rather than on every push, and can lag the code. And the CLI is
+  MIT and runs locally (`npx aislop@latest scan .`), so anyone who doubts the
+  number can recompute it themselves in about five seconds, which is the part
+  that makes it worth showing at all.
 
   To add once its first run has been read (.github/workflows/scorecard.yml):
   [![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/kollektiv-mc/Konnekt/badge)](https://scorecard.dev/viewer/?uri=github.com/kollektiv-mc/Konnekt)

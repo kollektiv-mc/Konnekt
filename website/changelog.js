@@ -82,7 +82,7 @@
     var body = el('div', 'md')
     var notes = R.changesOnly(rel.body)
     if (notes) {
-      body.innerHTML = MD.render(notes)
+      MD.renderInto(body, notes)
     } else {
       body.appendChild(el('p', null, 'No notes.'))
     }
@@ -100,7 +100,7 @@
   function renderSnapshot(rel) {
     var notes = R.changesOnly(rel.body)
     if (!notes) return
-    snapshotBodyEl.innerHTML = MD.render(notes)
+    MD.renderInto(snapshotBodyEl, notes)
 
     var built = R.formatDate(rel.published_at)
     var sha = R.shortSha(rel.target_commitish)
