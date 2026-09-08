@@ -70,9 +70,10 @@ overtakes their build.
 Two things about the format are load-bearing:
 
 - **The version is `<base>-snapshot.<YYYYMMDDHHMM>.<sha7>`**, stamped from the
-  commit's own UTC date. `compareVersions` falls back to a string compare
-  between two prerelease suffixes, so without that fixed-width timestamp two
-  snapshots sort by sha, which says nothing about which is newer. It is
+  commit's own UTC date. `compareVersions` orders prerelease suffixes identifier
+  by identifier, numbers as numbers and words as text, so without that
+  timestamp two snapshots sort by sha, which says nothing about which is newer.
+  It is
   deliberately **not** `-dev`: that marker now means one thing only, a local
   `wails dev` build, and both `services.IsInstallableBuild` and the frontend's
   `isDevBuild()` must classify a snapshot as installable.
