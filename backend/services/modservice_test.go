@@ -834,3 +834,18 @@ func TestInstallKeepsASupersededFileDisabled(t *testing.T) {
 		t.Errorf("plugins/ holds %d files, want 1", len(installed))
 	}
 }
+
+// The manifest is {dataDir}/mods/{serverID}.json, so an id carrying a path
+// read or wrote a caller-chosen file before #307.
+func TestManifestRefusesAPathAsServerID(t *testing.T) {
+	s := &ModService{dataDir: t.TempDir()}
+	if _, err := s.loadManifest("../x"); err == nil {
+		t.Error("loadManifest accepted a path as the server id")
+	}
+	if err := s.saveManifest("../x", &modManifest{Version: modManifestVersion}); err == nil {
+		t.Error("saveManifest accepted a path as the server id")
+	}
+	if _, err := os.Stat(filepath.Join(s.dataDir, "x.json")); err == nil {
+		t.Error("saveManifest wrote outside mods/")
+	}
+}

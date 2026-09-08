@@ -912,12 +912,13 @@ fix in passing or take the issue)
 tool results and the reasoning)
 - **p1** #306 mod descriptions render through `rehype-raw` with no sanitizer
   and no CSP: the one path by which remote content reaches the bridge.
-- **p2** #307 `serverID` joined into data-dir paths unvalidated; #309 RCON
-  `save-off`/`save-on` failures discarded around a backup; #311 three orphans
-  and two never-imported dependencies from the Overview roll-up; #312 the
-  RCON tests that a mutation run walks through. #308, kick/ban reasons
-  reaching stdin with newlines intact, closed 2026-09-08 (HEALTH_LOG "The
-  kick reason that was two commands").
+- **p2** #309 RCON `save-off`/`save-on` failures discarded around a backup;
+  #311 three orphans and two never-imported dependencies from the Overview
+  roll-up; #312 the RCON tests that a mutation run walks through. Closed
+  2026-09-08: #308, kick/ban reasons reaching stdin with newlines intact
+  (HEALTH_LOG "The kick reason that was two commands"), and #307, `serverID`
+  joined into data-dir paths unvalidated (HEALTH_LOG "The server id that was
+  a path").
 - **p3** #310 NeoForge installer has no checksum; #313 the duplicate panels,
   menus and paths; #314 the oversized functions holding the size ratchet;
   #315 two store writes that swallow; #316 the 27 stdlib error ignores the

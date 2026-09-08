@@ -827,6 +827,9 @@ func (s *ModService) manifestPath(serverID string) string {
 }
 
 func (s *ModService) loadManifest(serverID string) (*modManifest, error) {
+	if err := validServerID(serverID); err != nil {
+		return nil, err
+	}
 	data, err := os.ReadFile(s.manifestPath(serverID))
 	if os.IsNotExist(err) {
 		return &modManifest{Version: modManifestVersion}, nil
@@ -842,6 +845,9 @@ func (s *ModService) loadManifest(serverID string) (*modManifest, error) {
 }
 
 func (s *ModService) saveManifest(serverID string, m *modManifest) error {
+	if err := validServerID(serverID); err != nil {
+		return err
+	}
 	dir := s.manifestDir()
 	if err := os.MkdirAll(dir, 0755); err != nil {
 		return err
