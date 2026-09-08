@@ -414,8 +414,10 @@ commits, never squashed (#263).
 
 ## Versioning & releases
 
-`version.go`'s `Version` var is the single source of the app version. Tagged
-releases, the nightly snapshot channel and the Linux build tags are covered in
+`version.go`'s `Version` var is the single source of the app version. A release
+is cut from the Actions tab (Release, Run workflow: a channel and an `X.Y.Z`),
+which computes and creates the `v*` tag. That, the alpha/beta/final ladder,
+the nightly snapshot channel and the Linux build tags are covered in
 `.claude/rules/builds-and-releases.md`, which loads when you open a workflow,
 `version.go`, `wails.json` or anything under `build/`.
 
