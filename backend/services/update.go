@@ -473,9 +473,10 @@ func (s *UpdateService) fetchAsset(ctx context.Context, url string) ([]byte, err
 // compareVersions returns -1 if a < b, 0 if equal, 1 if a > b, treating both
 // as vMAJOR.MINOR.PATCH[-prerelease] (a leading "v" is optional on either
 // side). A release sorts higher than the same MAJOR.MINOR.PATCH with a
-// prerelease suffix; two prerelease suffixes fall back to a string compare
-// (good enough for "-dev" vs. a real prerelease tag, not full semver
-// precedence).
+// prerelease suffix; two prerelease suffixes are ordered by comparePrerelease.
+//
+// Mirrored in .github/scripts/version-precedence.py, which CI keeps in step
+// with this function's own test table. A change here is a change there.
 func compareVersions(a, b string) int {
 	coreA, preA := splitVersion(a)
 	coreB, preB := splitVersion(b)
@@ -500,8 +501,80 @@ func compareVersions(a, b string) int {
 	case preA != "" && preB == "":
 		return -1
 	default:
-		return strings.Compare(preA, preB)
+		return comparePrerelease(preA, preB)
 	}
+}
+
+// comparePrerelease orders two prerelease suffixes the way semver does: split
+// on ".", compare identifier by identifier, a numeric identifier as a number
+// and anything else byte-wise, a numeric identifier below any alphanumeric
+// one, and once every shared identifier is equal, the shorter suffix below
+// the longer.
+//
+// This used to be a plain string compare, which put "alpha.10" below
+// "alpha.9" and would have left every user on the ninth alpha of a version
+// told they were up to date by the tenth. The properties the rest of the
+// pipeline relies on hold under either rule and are pinned in the test
+// table: alpha < beta < snapshot (they differ on the first identifier, which
+// is a word), two snapshots order by their fixed-width timestamp (now as a
+// number, formerly as digits of the same width), and "dev" sorts below all
+// three.
+func comparePrerelease(a, b string) int {
+	idsA := strings.Split(a, ".")
+	idsB := strings.Split(b, ".")
+	for i := 0; i < len(idsA) && i < len(idsB); i++ {
+		if c := comparePrereleaseIdentifier(idsA[i], idsB[i]); c != 0 {
+			return c
+		}
+	}
+	switch {
+	case len(idsA) < len(idsB):
+		return -1
+	case len(idsA) > len(idsB):
+		return 1
+	}
+	return 0
+}
+
+func comparePrereleaseIdentifier(a, b string) int {
+	numA, okA := numericIdentifier(a)
+	numB, okB := numericIdentifier(b)
+	switch {
+	case okA && okB:
+		if numA < numB {
+			return -1
+		}
+		if numA > numB {
+			return 1
+		}
+		return 0
+	case okA:
+		return -1
+	case okB:
+		return 1
+	}
+	return strings.Compare(a, b)
+}
+
+// numericIdentifier reports whether s is a run of ASCII digits that fits an
+// int64, and its value. Anything else, including a digit string too long to
+// parse, is an alphanumeric identifier and compares as text; the Python
+// mirror draws the same line so the two never disagree on a pathological
+// tag.
+func numericIdentifier(s string) (int64, bool) {
+	if s == "" {
+		return 0, false
+	}
+	for i := 0; i < len(s); i++ {
+		if s[i] < '0' || s[i] > '9' {
+			return 0, false
+		}
+	}
+	n, err := strconv.ParseInt(s, 10, 64)
+	if err != nil {
+		return 0, false
+	}
+	return n, true
 }
 
 func splitVersion(v string) (core string, prerelease string) {
