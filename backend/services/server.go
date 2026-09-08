@@ -1040,18 +1040,6 @@ func (s *serverInstance) queryTPSViaRcon() (float64, bool) {
 	return 0, false
 }
 
-func (s *serverInstance) SendCommand(command string) error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	if !s.running || s.stdin == nil {
-		return errServerNotRunning
-	}
-
-	_, err := fmt.Fprintln(s.stdin, command)
-	return err
-}
-
 func (s *serverInstance) IsRunning() bool {
 	s.mu.Lock()
 	defer s.mu.Unlock()

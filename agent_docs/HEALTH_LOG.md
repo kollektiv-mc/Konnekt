@@ -5044,3 +5044,75 @@ check-bundle` (entry 154.5 KB unchanged; warmed 714.4 of 800 KB, the
 MarkdownBody chunk 98.4 → 102.8 KB gzip for the schema), `pnpm check-tokens`,
 `pnpm check-prefetch`, `node demo/build.mjs`, `aislop ci` at 100. No Go
 changed.
+
+### 2026-09-08 — The kick reason that was two commands
+
+**Closed: [#308](../../issues/308).** `KickPlayer`, `BanPlayer` and
+`PardonPlayer` format a console line from a name and a reason and hand it
+to `SendCommand`, which writes it to the server's stdin with `Fprintln`.
+The server reads that stream one line at a time, so a reason of
+`spam\nstop` was a kick and then a stop. Low impact today, since the
+operator already owns the console, but a real primitive the moment anything
+else reaches the bridge, which is the chain #306 opened.
+
+The check went into `serverInstance.SendCommand` rather than the three
+`app.go` wrappers, because every path to stdin comes through it: the
+console tile, kick/ban/pardon, quick commands, Kommands buttons and the
+scheduler's command block. A command containing `\r` or `\n` is refused
+with `errMultilineCommand` before the running check and before the lock,
+and nothing is written; refused rather than truncated to the first line, so
+the caller learns nothing was sent instead of half of it. A trailing newline
+is refused too, deliberately: `Fprintln` adds the line's end, and a caller
+that appends its own is the thing this exists to catch. Verified in
+`TestSendCommandRefusesALineBreak` with a capturing stdin behind the
+running-server fixture: four shapes refused with nothing on stdin, then one
+plain command arriving as exactly one line.
+
+`SendCommand` itself moved out of `server.go` into `server_command.go`,
+with the sentinel beside it. Not for tidiness: the aislop size ratchet sits
+at `server.go`'s own length (1597 lines against a ceiling of 1600), so the
+twelve lines this added tripped it, and a ratchet that is meant to be lowered
+as #314 shrinks its holders should not be answered by raising it. The file is
+1585 lines after the move, the first step down.
+
+**Verification.** `gofmt`, `go vet ./...`, `go test ./...`, the Go coverage
+floor (60.2% against 49%), `aislop ci` at 100 with no warning. No frontend
+changed.
+
+### 2026-09-08 — The server id that was a path
+
+**Closed: [#307](../../issues/307).** A server id is minted in the frontend
+(`crypto.randomUUID`) and accepted by `SaveServerConfig` as any string, and
+four services joined it straight into data-dir paths: `backups/<id>/...`,
+`mods/<id>.json`, `config_backups/<id>` and `loader-snapshots/<id>`. The
+two that took the id from the caller with no config lookup in front of them
+were the exposed ones: `ListBackups("../../x")` listed, and `DeleteBackup`
+removed, any `*.zip` under a caller-chosen directory. Local-only, so it
+needs a compromised WebView first, which is what #306 closed; the two
+together were the chain.
+
+**One helper, called where the id is persisted and at every join.**
+`validServerID` in `config.go`: non-empty, not `.` or `..`, equal to its own
+`filepath.Base`, no separator either way. The same shape as
+`validateWorldName` and `validateFilename`, so the three read alike. Where it
+runs: `SaveServerConfig`, so a bad id cannot be stored; `backupRoot`, a new
+helper in `backup.go` that is now the only place the id is joined, which
+`serverBackupDir`, `worldBackupDir`, `findBackupFile` and `ListBackups` all
+go through, so every public backup method is covered without a call at the
+top of each; `loadManifest` and `saveManifest` in `modservice.go`, the two
+readers of the manifest path; `ConfigEditorService.backup`; and
+`snapshotLaunchFiles` in `loader.go`, which takes `cfg.ID` from a stored
+config and is guarded twice over. Not `GetServerConfig`: a lookup of a bad id
+already fails on the miss, and the joins are the surface.
+
+**Tests.** `TestValidServerID` is the table the issue asked for, plus a
+space and a dot on the accepted side so nobody tightens it into a UUID
+check by accident. `TestSaveServerConfigRejectsAPathAsID` asserts nothing
+is persisted. `TestBackupsRefuseAPathAsServerID` plants a zip outside
+`backups/` and asserts `ListBackups`, `DeleteBackup` and `CreateBackup` all
+refuse `../outside`, the planted file survives and no directory is created
+there. `TestManifestRefusesAPathAsServerID` does the same for the manifest.
+
+**Verification.** `gofmt`, `go vet ./...`, `go test ./...`, the Go coverage
+floor, `aislop ci` at 100. No frontend changed: the id the UI mints was
+always a single segment, so nothing a user does is refused.

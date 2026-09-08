@@ -789,3 +789,32 @@ func TestRestoreStagingFailureEmitsAndNarrates(t *testing.T) {
 		t.Errorf("world touched by a restore that failed before staging: %v", err)
 	}
 }
+
+// ListBackups and DeleteBackup take the id straight from the caller with no
+// config lookup in front of them, so before #307 an id of "../outside"
+// listed, and could delete, any zip under a caller-chosen directory.
+func TestBackupsRefuseAPathAsServerID(t *testing.T) {
+	svc, _ := newBackupFixture(t)
+	outside := filepath.Join(svc.dataDir, "outside")
+	if err := os.MkdirAll(outside, 0755); err != nil {
+		t.Fatal(err)
+	}
+	planted := filepath.Join(outside, "12345_planted.zip")
+	writeFile(t, planted, "not really a zip")
+
+	if _, err := svc.ListBackups("../outside"); err == nil {
+		t.Error("ListBackups listed a directory outside backups/")
+	}
+	if err := svc.DeleteBackup("../outside", "12345_planted.zip"); err == nil {
+		t.Error("DeleteBackup accepted a path as the server id")
+	}
+	if _, err := os.Stat(planted); err != nil {
+		t.Fatalf("the planted file is gone: %v", err)
+	}
+	if _, err := svc.CreateBackup("../outside"); err == nil {
+		t.Error("CreateBackup accepted a path as the server id")
+	}
+	if _, err := os.Stat(filepath.Join(outside, "server")); err == nil {
+		t.Error("CreateBackup created a directory outside backups/")
+	}
+}
