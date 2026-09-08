@@ -101,6 +101,7 @@ only if the log ever grows a real retention requirement.
 | `@xyflow/react` | Node-graph editor for the scheduler tile's block system (`tiles/scheduler/editor/`), lazy-loaded behind the maximized editor (`tiles/scheduler/index.tsx`) |
 | `@codemirror/lang-json`, `@codemirror/lang-yaml`, `@codemirror/state`, `@codemirror/view`, `@uiw/react-codemirror` | server.properties / config file editor, lazy-loaded behind the maximized editor (`tiles/config/EditorPanel.tsx`) |
 | `react-markdown`, `remark-gfm`, `rehype-raw` | Rendering mod descriptions / changelogs in the mods tile, lazy-loaded (`tiles/mods/MarkdownBody.tsx`). `rehype-raw` is what pulls in parse5 and the full HTML parser, which is most of the weight |
+| `rehype-sanitize` | The allowlist `rehype-raw`'s output is run through before it renders (`tiles/mods/MarkdownBody.tsx`, #306). A mod body is the one path by which remote HTML reaches a WebView that is same-origin with the Wails bridge, and `rehype-raw` passes `<iframe srcdoc>`, `<object>` and `<meta http-equiv>` through untouched. Same maintainers and the same hast tree as `rehype-raw`, so it is a schema over nodes already in memory rather than a second parser; `hast-util-sanitize` underneath is its only dependency. In the same lazy chunk, so the entry budget is unaffected |
 | `smol-toml`, `yaml` | Parsing server config formats in the config tile; reached only through the lazy `EditorPanel` chunk |
 
 Dev-only tooling (build, lint, format, test — Vite, TypeScript, ESLint,

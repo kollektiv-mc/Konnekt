@@ -1,11 +1,33 @@
 /// <reference types="vitest/config" />
 import { defineConfig } from 'vite'
+import type { Plugin } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 
+// index.html carries the app's Content-Security-Policy (#306), and the built
+// output ships it verbatim. The dev server cannot: @vitejs/plugin-react injects
+// the React refresh preamble as an inline <script> and Vite's HMR client
+// speaks over a websocket, both of which `script-src 'self'` refuses, so
+// `wails dev` and the frontend-dev preset would open on a blank page. The tag
+// is removed here in serve mode only, which keeps index.html the one place the
+// policy is written and leaves every build, the demo's included, carrying it.
+// The cost is that dev never runs under the policy: a resource the policy
+// refuses shows up in `wails build`, not before.
+function stripCspInDev(): Plugin {
+  return {
+    name: 'konnekt:strip-csp-in-dev',
+    apply: 'serve',
+    transformIndexHtml: {
+      order: 'pre',
+      handler: (html) =>
+        html.replace(/<meta[^>]*http-equiv="Content-Security-Policy"[^>]*>\s*/i, ''),
+    },
+  }
+}
+
 // https://vitejs.dev/config/
 export default defineConfig({
-  plugins: [react(), tailwindcss()],
+  plugins: [react(), tailwindcss(), stripCspInDev()],
   // react-draggable's internal log() reads `process.env.DRAGGABLE_DEBUG`, but Vite
   // doesn't define `process` in the browser/WebView2. Without this, the very first
   // log() call inside DraggableCore.handleDragStart throws "process is not defined",
