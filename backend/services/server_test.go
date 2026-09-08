@@ -1056,3 +1056,59 @@ func TestStreamOutputRegistersJoinWhenLoginAddressIsUnreadable(t *testing.T) {
 		t.Errorf("roster ip = %q, want empty for an address that does not parse", roster[0].IP)
 	}
 }
+
+// captureStdin stands in for the child's stdin so a test can read back
+// exactly what SendCommand wrote.
+type captureStdin struct {
+	mu  sync.Mutex
+	buf strings.Builder
+}
+
+func (c *captureStdin) Write(p []byte) (int, error) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.buf.Write(p)
+}
+
+func (c *captureStdin) Close() error { return nil }
+
+func (c *captureStdin) String() string {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.buf.String()
+}
+
+// The console is read one line at a time, so a command that carries a line
+// break is two commands: "spam\nstop" as a kick reason kicks and then stops
+// the server (#308). SendCommand refuses it outright rather than sending the
+// first line, and the refusal covers every caller, KickPlayer's format string
+// included, because they all reach stdin through it.
+func TestSendCommandRefusesALineBreak(t *testing.T) {
+	s, _ := newServerFixture()
+	fakeLaunch(t, s)
+	release, _ := fakeRunningServer(t, s)
+	t.Cleanup(release)
+
+	stdin := &captureStdin{}
+	in := s.instanceFor(fixtureServerID)
+	in.mu.Lock()
+	in.stdin = stdin
+	in.mu.Unlock()
+
+	for _, cmd := range []string{"say hi\nstop", "say hi\r\nstop", "kick Steve spam\nstop", "stop\n"} {
+		err := s.SendCommand(fixtureServerID, cmd)
+		if !errors.Is(err, errMultilineCommand) {
+			t.Errorf("SendCommand(%q) = %v, want errMultilineCommand", cmd, err)
+		}
+	}
+	if got := stdin.String(); got != "" {
+		t.Fatalf("a refused command still reached stdin: %q", got)
+	}
+
+	if err := s.SendCommand(fixtureServerID, "say hi"); err != nil {
+		t.Fatalf("SendCommand(single line): %v", err)
+	}
+	if got := stdin.String(); got != "say hi\n" {
+		t.Fatalf("stdin = %q, want exactly one line", got)
+	}
+}

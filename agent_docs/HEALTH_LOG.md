@@ -4957,3 +4957,37 @@ condense the audit report into this entry rather than keep it as a file.
 **Verification.** `go vet`, `go test ./...`, `pnpm typecheck`, `pnpm lint` (0
 errors, the 14 pre-existing warnings), `pnpm test` (733), `pnpm format:check`,
 `pnpm format:website`, the release-notes test, and `aislop ci` at 100.
+
+### 2026-09-08 — The kick reason that was two commands
+
+**Closed: [#308](../../issues/308).** `KickPlayer`, `BanPlayer` and
+`PardonPlayer` format a console line from a name and a reason and hand it
+to `SendCommand`, which writes it to the server's stdin with `Fprintln`.
+The server reads that stream one line at a time, so a reason of
+`spam\nstop` was a kick and then a stop. Low impact today, since the
+operator already owns the console, but a real primitive the moment anything
+else reaches the bridge, which is the chain #306 opened.
+
+The check went into `serverInstance.SendCommand` rather than the three
+`app.go` wrappers, because every path to stdin comes through it: the
+console tile, kick/ban/pardon, quick commands, Kommands buttons and the
+scheduler's command block. A command containing `\r` or `\n` is refused
+with `errMultilineCommand` before the running check and before the lock,
+and nothing is written; refused rather than truncated to the first line, so
+the caller learns nothing was sent instead of half of it. A trailing newline
+is refused too, deliberately: `Fprintln` adds the line's end, and a caller
+that appends its own is the thing this exists to catch. Verified in
+`TestSendCommandRefusesALineBreak` with a capturing stdin behind the
+running-server fixture: four shapes refused with nothing on stdin, then one
+plain command arriving as exactly one line.
+
+`SendCommand` itself moved out of `server.go` into `server_command.go`,
+with the sentinel beside it. Not for tidiness: the aislop size ratchet sits
+at `server.go`'s own length (1597 lines against a ceiling of 1600), so the
+twelve lines this added tripped it, and a ratchet that is meant to be lowered
+as #314 shrinks its holders should not be answered by raising it. The file is
+1585 lines after the move, the first step down.
+
+**Verification.** `gofmt`, `go vet ./...`, `go test ./...`, the Go coverage
+floor (60.2% against 49%), `aislop ci` at 100 with no warning. No frontend
+changed.
