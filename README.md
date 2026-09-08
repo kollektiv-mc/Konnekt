@@ -243,9 +243,9 @@ none of which takes my word for anything:
 - Every push and pull request goes through typecheck, lint, formatting, the
   frontend and Go test suites, a production build, a bundle-size budget and a
   coverage floor on both sides, on Windows and Linux. Nothing merges red.
-- [CodeQL](.github/workflows/codeql.yml) reads the Go and TypeScript for the
-  things a linter cannot see: where a path, a JVM argument or something fetched
-  from Modrinth ends up.
+- [CodeQL](.github/workflows/codeql.yml) reads the Go, TypeScript, Python and
+  the workflows themselves for the things a linter cannot see: where a path, a
+  JVM argument or something fetched from Modrinth ends up.
 - Every published binary carries a [signed build provenance
   attestation](#verifying-a-download), so you can check that what you downloaded
   is what the workflow built from this source, without trusting me at all.

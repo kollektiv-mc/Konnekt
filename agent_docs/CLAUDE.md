@@ -229,8 +229,6 @@ pnpm check-prefetch   # Assert every lazy tile chunk is in the warm list (fronte
 pnpm gen:tokens       # Regenerate the token layer from tokens.source.json (frontend/)
 pnpm format:website   # Prettier --check over website/ (run from frontend/)
 node scripts/check-website-links.mjs   # website hrefs/assets/sitemap (repo root)
-npx aislop@0.16.0 scan .              # AI-slop score for the whole tree (repo root)
-npx aislop@0.16.0 ci --changes --base origin/main   # what CI's `slop` job gates
 node demo/build.mjs   # Build the browser demo into demo/dist, with its drift checks (repo root)
 node demo/record.mjs  # Film the website's clips from demo/dist; needs ffmpeg (repo root)
 go vet ./...          # Go static analysis (repo root — single module)

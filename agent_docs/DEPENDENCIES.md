@@ -127,24 +127,6 @@ report; it is also Vitest's own default. Its version has to match `vitest`'s
 exactly, so it carries the same caret range as `vitest` and the lockfile pins
 them to one version; bump the two together.
 
-### Tooling reached through `npx`, not installed
-
-`aislop` (MIT) is the quality gate CI's `slop` job runs, and the score in the
-README's badge row. It is deliberately **not** in either `package.json`: it is
-invoked as `npx aislop@0.16.0`, pinned exactly, so it never ships in the bundle
-and never enters a lockfile. Rationale for keeping it out of the tree: it is a
-developer tool with no import site, its five analysis engines are bundled into
-the CLI (only the Security engine shells out, to `pnpm audit`), and adding it as
-a dependency would make Dependabot bump it, which is the one thing that must not
-happen automatically. A new aislop release can add or tighten a rule, and a rule
-change is a change in what CI enforces; that belongs in a commit somebody wrote,
-not in a batched weekly bump.
-
-The cost of that choice, stated plainly: the pin is a string in
-`.github/workflows/ci.yml` rather than a lockfile entry, so bumping it is manual
-and nothing will remind anyone to do it. Run `npx aislop@latest update` when
-curious.
-
 ## Removed
 
 - `uplot` — was listed as a direct dependency but never imported under
