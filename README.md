@@ -1,7 +1,6 @@
 ![Konnekt](docs/images/konnekt_banner.png)
 
 # Konnekt
-(Alpha)
 
 [![CI](https://github.com/kollektiv-mc/Konnekt/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/kollektiv-mc/Konnekt/actions/workflows/ci.yml)
 [![CodeQL](https://github.com/kollektiv-mc/Konnekt/actions/workflows/codeql.yml/badge.svg?branch=main)](https://github.com/kollektiv-mc/Konnekt/actions/workflows/codeql.yml)
