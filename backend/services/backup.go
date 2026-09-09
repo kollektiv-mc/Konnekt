@@ -289,6 +289,30 @@ func (s *BackupService) narrateFailed(serverID, line string) {
 	}
 }
 
+// quiesce pauses the server's saves for the duration of a copy and returns the
+// resume the caller defers. An error means neither RCON nor stdin could carry
+// the quiesce, and the copy would come off a world still being written to: the
+// caller fails the backup with it rather than zipping anyway and reporting
+// success (#309).
+//
+// A stopped server needs no quiesce and is not an error — it returns a resume
+// that does nothing, so the caller has one shape to handle rather than three.
+func (s *BackupService) quiesce(serverID string) (func(), error) {
+	if s.server == nil {
+		return func() {}, nil
+	}
+	paused, err := s.server.PrepareForBackup(serverID)
+	if err != nil {
+		return nil, fmt.Errorf("could not pause world saves: %w", err)
+	}
+	if !paused {
+		return func() {}, nil
+	}
+	return func() {
+		_ = s.server.ResumeSaves(serverID) //nolint:errcheck // ResumeSaves logs, narrates and emits its own failure (#309); there is no caller left to report it to
+	}, nil
+}
+
 // fmtBytes renders a byte count for a console line, in the tiers
 // frontend/src/lib/format.ts uses, so the console and the tiles agree on a
 // size: a 4 GiB archive is "4.00 GB" in both, where this used to narrate
@@ -392,9 +416,12 @@ func (s *BackupService) CreateBackup(serverID string) (models.Backup, error) {
 	s.bus.Emit(EventBackupStarted, map[string]string{"serverID": serverID, "filename": filename})
 	s.narrate(serverID, "Backing up the server to "+filename)
 
-	if s.server != nil && s.server.PrepareForBackup(serverID) {
-		defer s.server.ResumeSaves(serverID)
+	resume, err := s.quiesce(serverID)
+	if err != nil {
+		_ = dest.Close() //nolint:errcheck // failBackup removes the archive next; the quiesce error is what the caller reports
+		return models.Backup{}, s.failBackup(serverID, destPath, err)
 	}
+	defer resume()
 
 	var lastPct int = -1
 	onProgress := func(pct int) {
@@ -465,9 +492,12 @@ func (s *BackupService) CreateWorldBackup(serverID, worldName string) (models.Ba
 	s.bus.Emit(EventBackupStarted, map[string]string{"serverID": serverID, "filename": filename})
 	s.narrate(serverID, fmt.Sprintf("Backing up world %q to %s", worldName, filename))
 
-	if s.server != nil && s.server.PrepareForBackup(serverID) {
-		defer s.server.ResumeSaves(serverID)
+	resume, err := s.quiesce(serverID)
+	if err != nil {
+		_ = dest.Close() //nolint:errcheck // failBackup removes the archive next; the quiesce error is what the caller reports
+		return models.Backup{}, s.failBackup(serverID, destPath, err)
 	}
+	defer resume()
 
 	var lastPct int = -1
 	onProgress := func(pct int) {

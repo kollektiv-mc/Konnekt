@@ -204,6 +204,7 @@ function App() {
     let c4: (() => void) | undefined
     let c5: (() => void) | undefined
     let c6: (() => void) | undefined
+    let c7: (() => void) | undefined
     try {
       c1 = EventsOn(EVENTS.BACKUP_STARTED, (data?: { serverID?: string; filename?: string }) => {
         useProcessesStore.getState().start(data?.serverID ?? 'backup', 'Backing up world…', {
@@ -229,6 +230,14 @@ function App() {
       // to fail through BACKUP_FAILED and toast as a failed backup (#280).
       c6 = EventsOn(EVENTS.RESTORE_FAILED, (data?: { error?: string }) => {
         emitNotification('crash', `Restore failed${data?.error ? ': ' + data.error : ''}`)
+      })
+      // Not a backup failure: the archive may be fine and the server is what
+      // needs attention, since autosave stays off until it restarts (#309).
+      c7 = EventsOn(EVENTS.AUTOSAVE_STUCK, (data?: { error?: string }) => {
+        emitNotification(
+          'warn',
+          `Auto-save is still off: the server did not accept save-on${data?.error ? ' (' + data.error + ')' : ''}`,
+        )
       })
     } catch {
       /* non-Wails context */
@@ -261,6 +270,11 @@ function App() {
       }
       try {
         c6?.()
+      } catch {
+        /* teardown no-op */
+      }
+      try {
+        c7?.()
       } catch {
         /* teardown no-op */
       }

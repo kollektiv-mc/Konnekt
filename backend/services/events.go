@@ -25,6 +25,13 @@ const (
 	// twin: GetServerStatus().State.
 	EventServerState = "server:state"
 
+	// EventAutosaveStuck says a save-on after a backup or a world duplication
+	// did not reach the server, so autosave is off and stays off until the
+	// server restarts (#309). Payload {serverID, error}. Its own event rather
+	// than backup:failed: the backup itself may well have succeeded, and the
+	// thing the user has to act on is the server, not the archive.
+	EventAutosaveStuck = "server:autosave-stuck"
+
 	EventStatsSnapshot    = "stats:snapshot"
 	EventPlayerJoined     = "player:joined"
 	EventPlayerLeft       = "player:left"

@@ -929,13 +929,13 @@ tool results and the reasoning)
   sanitizer and no CSP: the one path by which remote content reached the
   bridge. Closed 2026-09-08 (HEALTH_LOG "The mod description that could reach
   the bridge"); #307 and #308, the rest of that chain, closed the same day.
-- **p2** #309 RCON `save-off`/`save-on` failures discarded around a backup;
-  #311 three orphans and two never-imported dependencies from the Overview
-  roll-up; #312 the RCON tests that a mutation run walks through. Closed
-  2026-09-08: #308, kick/ban reasons reaching stdin with newlines intact
-  (HEALTH_LOG "The kick reason that was two commands"), and #307, `serverID`
-  joined into data-dir paths unvalidated (HEALTH_LOG "The server id that was
-  a path").
+- **p2** #311 three orphans and two never-imported dependencies from the
+  Overview roll-up; #312 the RCON tests that a mutation run walks through.
+  Closed 2026-09-08: #308, kick/ban reasons reaching stdin with newlines
+  intact (HEALTH_LOG "The kick reason that was two commands"); #307,
+  `serverID` joined into data-dir paths unvalidated (HEALTH_LOG "The server
+  id that was a path"); and #309, the quiesce trio discarded around a backup
+  (HEALTH_LOG "The backup that reported a flush it never made").
 - **p3** #310 NeoForge installer has no checksum; #313 the duplicate panels,
   menus and paths; #314 the oversized functions holding the size ratchet;
   #315 two store writes that swallow; #316 the 27 stdlib error ignores the
