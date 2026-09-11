@@ -5207,3 +5207,42 @@ checklist's grep and the aislop rule — the same shape as the 27 stdlib ignores
 #316 collects. The mutation survivors in `rcon.go` that this shares a root with
 are #312's, not this change's; the fake that fails after auth is now in the
 tree for it to reuse.
+
+### 2026-09-11 — The vendored file the gate reformatted
+
+**What went wrong.** The 2026-09-08 aislop entry above ran `ruff format` over
+`.github/scripts/release-notes.py`, which is vendored from kollektiv and
+byte-compared against its master by that repo's `sync-notes.sh`. kollektiv's
+nightly reported this repo as drifted on every run from Sep 8, and nothing here
+could have fixed it: the master was the unformatted one. `.aislopignore` already
+excluded the vendored runner for exactly this reason; the generator was the same
+case and was not listed.
+
+**What was done.** kollektiv now formats and lint-cleans its masters under the
+same aislop policy this repo runs, so a vendored file arrives clean, and holds
+that policy as `.aislop/base.yml`, vendored here beside `.aislop/config.yml`,
+which now only extends it and carries the size ratchet. Both vendored Python
+files are in `.aislopignore`. The runner and the generator's test were
+re-vendored (the generator itself was already identical, since the ruff pass
+here produced what the master now is). The CI job calls kollektiv's reusable
+aislop workflow, which pins ruff: without a ruff binary aislop's Python engines
+run nothing, which is how this job passed at 100 while a local scan flagged
+`version-precedence.py` twice (a shebang on a non-executable file, and a
+`startswith`/slice that `removeprefix` replaces). Both fixed. `.aislop/history.jsonl`
+was tracked and changed on every scan; untracked and ignored.
+
+The bug and feature forms ask the suite's priority question between
+`suite:priority` markers, rendered by kollektiv's `sync-priority.sh`, and
+`.github/workflows/issue-priority.yml` applies the label on open. The feature
+form's own "How much would this matter to you?" was the same question in other
+words and is replaced rather than doubled; nothing on the website prefilled its
+`impact` id. The question form does not ask: a question is not prioritised work.
+
+**Verification.** `aislop ci` exit 0 at 100 with ruff 0.16.7 on PATH; one
+warning remains, `backend/services/server.go` at 1651 lines against the 1455
+the ratchet's 1.5x allows, left for #314 rather than raising the number.
+`version-precedence_test.py` passes. `pnpm check-issue-templates`: 3 forms, 25
+fields, all valid. Every kollektiv drift check (`sync-tokens`, `sync-runner
+--require-vendored`, `sync-notes`, `sync-aislop`, `sync-priority`,
+`validate-schemas --require-products`, `check-participation
+--require-products`) reports this repo up to date.

@@ -270,7 +270,11 @@ not Later.
 
 `type:` uses the same ladder as a pull request (below). `p0`-`p3` is the suite's
 scale, defined in kollektiv's `docs/conventions.md`, and a repo does not invent
-its own. `area:` is one of the per-area labels in `.github/labels.yml`, matching
+its own. The bug and feature forms ask the reporter for it, as the suite's
+priority question, and `.github/workflows/issue-priority.yml` turns the answer
+into the label on open; both are vendored from kollektiv and rendered from its
+`design/labels.json`, so the block between the `suite:priority` markers in a form
+is not edited here. `issue-labels.yml` is the other half, after triage. `area:` is one of the per-area labels in `.github/labels.yml`, matching
 the issue forms' "Which part of Konnekt?" dropdown. Prefer a specific area over
 `area:ui`: the suite defines that one so it still exists, but "user-facing
 interface work" describes nearly every issue in this repo and so sorts nothing.
@@ -396,11 +400,18 @@ commits, never squashed (#263).
 - **aislop** (`scanaislop/aislop`, MIT, run through `npx`, nothing installed)
   scores the tree for what AI-assisted code leaves behind: ignored errors,
   double casts, duplicated blocks, oversized functions, `innerHTML` sinks.
-  CI runs `aislop ci` and fails below 100. `.aislop/config.yml` is the policy
-  and says in comments what is counted, which two style rules are off and
-  why, and that the size limits are a **ratchet** held at today's largest
+  CI runs `aislop ci` and fails below 100, through kollektiv's reusable
+  workflow (`.github/workflows/aislop.yml` there), which pins aislop and ruff
+  once for the whole suite; ruff has to be present or aislop's Python engines
+  silently run nothing. `.aislop/base.yml` is the suite's policy, vendored
+  from kollektiv by its `scripts/sync-aislop.sh` and never edited here: what
+  is counted, which two style rules are off and why. `.aislop/config.yml`
+  extends it (`extends: ./base.yml`, and the `./` is load-bearing) and holds
+  only this tree's size limits, a **ratchet** held at today's largest
   function and file (lower them as #314 shrinks the holders, never raise
-  them). `.aislopignore` is what is generated or vendored and never scored.
+  them). `.aislopignore` is what is generated or vendored and never scored,
+  the vendored runner and release-notes generator included: a gate that
+  reformatted one of those once handed the suite a week of drift.
   A finding that is a documented exception gets an inline
   `// aislop-ignore-next-line <rule> -- <reason>` beside it, the way a Go
   `//nolint:errcheck // reason` does; a bare directive with no reason is the

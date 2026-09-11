@@ -50,7 +50,7 @@ SNAPSHOT_MARKER = "-snapshot."
 
 def split_version(version: str) -> tuple[str, str]:
     """Core and prerelease, as update.go's splitVersion splits them."""
-    version = version[1:] if version.startswith("v") else version
+    version = version.removeprefix("v")
     core, separator, prerelease = version.partition("-")
     return core, prerelease if separator else ""
 
