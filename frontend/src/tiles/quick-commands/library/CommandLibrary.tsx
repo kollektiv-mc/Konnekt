@@ -1,14 +1,11 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { Fragment, useCallback, useEffect, useMemo, useState } from 'react'
 import { Icon } from '../../../components/ui/Icon'
 import { Check, Plus, Search } from '../../../lib/icons'
 import { KickBanDialog, LifecycleConfirmDialog } from '../../../components/commands/CommandDialogs'
 import { PRESETS, makeItem } from '../../../components/commands/presets'
 import { useLifecycle } from '../../../components/commands/useLifecycle'
-import {
-  useCommandsStore,
-  type CommandButton,
-  type KommandsSavedCommand,
-} from '../../../stores/useCommandsStore'
+import { useSortable } from '../../../hooks/useSortable'
+import { useCommandsStore, type CommandButton } from '../../../stores/useCommandsStore'
 import { useUiStore } from '../../../stores/useUiStore'
 import { SendCommand } from '../../../../wailsjs/go/main/App'
 import { hasWailsBridge } from '../../../lib/ipc'
@@ -18,29 +15,38 @@ import type { LibraryFilter } from '../types'
 
 const UNGROUPED = 'Ungrouped'
 
+const FILTERS: { id: LibraryFilter; label: string }[] = [
+  { id: 'all', label: 'All' },
+  { id: 'linked', label: 'From Kommands' },
+  { id: 'attention', label: 'Needs attention' },
+]
+
 /**
  * The maximized Commands tile: a command library rather than a button grid.
  *
  * The compact panel stays exactly as it was — it is what the console tile
  * embeds, and it is the right shape for firing a command. This is the other
- * half: managing a set of them, which a grid cell has never had room for, and
- * which becomes the blocker once commands can be authored in Kommands and
- * linked in here.
+ * half: managing a set of them, which a grid cell has never had room for.
+ *
+ * The list is one ordered array, and everything here respects that. Rows
+ * linked from Kommands sit in it wherever the user drags them, badged with
+ * where they come from; they are not a section of their own, because a
+ * command's origin is not what decides where it belongs on a server. The
+ * sidebar's Kommands panel only reports on the link, since the linking itself
+ * happens over there.
  */
 export function CommandLibrary({ serverId }: { serverId: string }) {
   const items = useCommandsStore((s) => s.items)
   const kommands = useCommandsStore((s) => s.kommands)
-  const saved = useCommandsStore((s) => s.saved)
   const error = useCommandsStore((s) => s.error)
   const hydrate = useCommandsStore((s) => s.hydrate)
   const add = useCommandsStore((s) => s.add)
   const remove = useCommandsStore((s) => s.remove)
   const reorder = useCommandsStore((s) => s.reorder)
   const update = useCommandsStore((s) => s.update)
+  const duplicate = useCommandsStore((s) => s.duplicate)
   const unlink = useCommandsStore((s) => s.unlink)
   const acknowledge = useCommandsStore((s) => s.acknowledge)
-  const revert = useCommandsStore((s) => s.revert)
-  const linkTo = useCommandsStore((s) => s.linkTo)
 
   const setCloseGuard = useUiStore((s) => s.setCloseGuard)
 
@@ -48,7 +54,6 @@ export function CommandLibrary({ serverId }: { serverId: string }) {
   const [filter, setFilter] = useState<LibraryFilter>('all')
   const [newCmd, setNewCmd] = useState('')
   const [modal, setModal] = useState<'kick' | 'ban' | null>(null)
-  const [forking, setForking] = useState<{ id: string; patch: Partial<CommandButton> } | null>(null)
 
   const lifecycle = useLifecycle(serverId)
 
@@ -62,11 +67,10 @@ export function CommandLibrary({ serverId }: { serverId: string }) {
   //
   // Only the library registers this. The compact panel is mounted at the same
   // time and must not, or its own dialogs would block a close the user meant.
-  const dialogOpen = forking !== null || modal !== null || lifecycle.confirmAction !== null
+  const dialogOpen = modal !== null || lifecycle.confirmAction !== null
   useEffect(() => {
     if (!dialogOpen) return
     setCloseGuard(() => {
-      setForking(null)
       setModal(null)
       lifecycle.setConfirmAction(null)
       return true
@@ -91,30 +95,6 @@ export function CommandLibrary({ serverId }: { serverId: string }) {
     [lifecycle, send],
   )
 
-  /**
-   * Editing a linked row forks it. The confirm is not ceremony: the whole point
-   * of a link is that the value tracks Kommands, so an edit here either loses
-   * on the next poll or stops the link meaning anything. Forking makes the
-   * choice explicit and keeps the edit.
-   */
-  const requestEdit = useCallback(
-    (item: CommandButton, patch: Partial<CommandButton>) => {
-      if (item.link) setForking({ id: item.id, patch })
-      else void update(item.id, patch).catch(console.error)
-    },
-    [update],
-  )
-
-  const confirmFork = useCallback(() => {
-    if (!forking) return
-    const { id, patch } = forking
-    setForking(null)
-    void (async () => {
-      await update(id, patch)
-      await unlink(id)
-    })().catch(console.error)
-  }, [forking, update, unlink])
-
   const addCustom = useCallback(() => {
     const v = newCmd.trim()
     if (!v) return
@@ -122,14 +102,8 @@ export function CommandLibrary({ serverId }: { serverId: string }) {
     setNewCmd('')
   }, [newCmd, add])
 
-  const onLink = useCallback(
-    (item: CommandButton, savedCmd: KommandsSavedCommand) => {
-      void linkTo(item.id, savedCmd).catch(console.error)
-    },
-    [linkTo],
-  )
-
   const changedCount = kommands?.changedCount ?? 0
+  const linkedCount = useMemo(() => items.filter((it) => it.link).length, [items])
 
   const visible = useMemo(() => {
     const q = search.trim().toLowerCase()
@@ -147,16 +121,16 @@ export function CommandLibrary({ serverId }: { serverId: string }) {
   // entirely. Disabled rather than silently wrong.
   const canReorder = search.trim() === '' && filter === 'all'
 
-  const groups = useMemo(() => {
-    const map = new Map<string, CommandButton[]>()
-    for (const it of visible) {
-      const key = it.group || UNGROUPED
-      const list = map.get(key)
-      if (list) list.push(it)
-      else map.set(key, [it])
-    }
-    return [...map.entries()]
-  }, [visible])
+  const onMove = useCallback(
+    (from: number, to: number) => void reorder(from, to).catch(console.error),
+    [reorder],
+  )
+  const sortable = useSortable({ count: items.length, axis: 'y', disabled: !canReorder, onMove })
+
+  // Group headers only once there is more than one group to tell apart. A
+  // single "Ungrouped" heading over the whole list said nothing and cost a
+  // line; nothing in the UI creates a group yet, so this is the usual state.
+  const showGroups = useMemo(() => new Set(visible.map((it) => it.group || '')).size > 1, [visible])
 
   const acknowledgeAll = useCallback(() => {
     void (async () => {
@@ -170,7 +144,10 @@ export function CommandLibrary({ serverId }: { serverId: string }) {
     <div className="lazy-panel-in flex h-full flex-col">
       <div className="border-border-subtle flex shrink-0 items-center gap-2 border-b px-4 py-2.5">
         <span className="text-text-primary text-sm font-semibold">Commands</span>
-        <span className="text-text-faint text-xs">{items.length}</span>
+        <span className="text-text-faint text-xs">
+          {items.length}
+          {linkedCount > 0 && ` · ${linkedCount} from Kommands`}
+        </span>
 
         <div className="relative ml-3 w-56">
           <Icon
@@ -188,17 +165,18 @@ export function CommandLibrary({ serverId }: { serverId: string }) {
         </div>
 
         <div className="flex gap-1">
-          {(['all', 'linked', 'attention'] as LibraryFilter[]).map((f) => (
+          {FILTERS.map((f) => (
             <button
-              key={f}
-              onClick={() => setFilter(f)}
-              className={`rounded border px-2 py-1 text-xs capitalize transition-colors ${
-                filter === f
+              key={f.id}
+              onClick={() => setFilter(f.id)}
+              aria-pressed={filter === f.id}
+              className={`rounded border px-2 py-1 text-xs transition-colors ${
+                filter === f.id
                   ? 'border-border-hover bg-hover text-text-primary'
                   : 'border-border-subtle text-text-secondary hover:border-border-hover hover:text-text-primary'
               }`}
             >
-              {f === 'attention' ? 'Needs attention' : f}
+              {f.label}
             </button>
           ))}
         </div>
@@ -224,34 +202,49 @@ export function CommandLibrary({ serverId }: { serverId: string }) {
         <div className="min-w-0 flex-1 overflow-y-auto px-4 py-3">
           {visible.length === 0 ? (
             <div className="text-text-faint flex h-full items-center justify-center text-xs">
-              {items.length === 0 ? 'No commands yet.' : 'Nothing matches that filter.'}
+              {items.length === 0
+                ? 'No commands yet. Add one on the right, or link one from Kommands.'
+                : 'Nothing matches that filter.'}
             </div>
           ) : (
-            groups.map(([group, rows]) => (
-              <div key={group} className="mb-4">
-                <div className="text-text-faint text-2xs mb-1.5 tracking-wide uppercase">
-                  {group}
-                </div>
-                <div className="flex flex-col gap-1">
-                  {rows.map((item) => (
+            <div className="flex flex-col gap-1">
+              {visible.map((item, i) => {
+                // Positions are indices into the full array. With no search and
+                // no filter the two lists are the same, which is the only time
+                // reordering is on.
+                const index = canReorder ? i : items.indexOf(item)
+                const group = item.group || ''
+                const header = showGroups && (i === 0 || (visible[i - 1].group || '') !== group)
+                return (
+                  <Fragment key={item.id}>
+                    {header && (
+                      <div className="text-text-faint text-2xs mt-3 mb-0.5 tracking-wide uppercase first:mt-0">
+                        {group || UNGROUPED}
+                      </div>
+                    )}
                     <CommandRow
-                      key={item.id}
                       item={item}
-                      index={items.indexOf(item)}
                       canReorder={canReorder}
+                      lift={
+                        sortable.drag?.from === index
+                          ? { dx: sortable.drag.dx, dy: sortable.drag.dy }
+                          : null
+                      }
+                      shift={sortable.shift(index)}
+                      rowRef={sortable.rowRef(index)}
+                      handleProps={sortable.handleProps(index)}
                       lifecycleBusy={lifecycle.busy !== null}
                       onRun={() => run(item)}
-                      onEdit={(patch) => requestEdit(item, patch)}
+                      onEdit={(patch) => void update(item.id, patch).catch(console.error)}
                       onRemove={() => void remove(item.id).catch(console.error)}
-                      onReorder={(from, to) => void reorder(from, to).catch(console.error)}
+                      onDuplicate={() => void duplicate(item.id).catch(console.error)}
                       onAcknowledge={() => void acknowledge(item.id).catch(console.error)}
-                      onRevert={() => void revert(item.id).catch(console.error)}
                       onUnlink={() => void unlink(item.id).catch(console.error)}
                     />
-                  ))}
-                </div>
-              </div>
-            ))
+                  </Fragment>
+                )
+              })}
+            </div>
           )}
         </div>
 
@@ -289,40 +282,9 @@ export function CommandLibrary({ serverId }: { serverId: string }) {
             </div>
           </div>
 
-          <KommandsPanel status={kommands} saved={saved} items={items} onLink={onLink} />
+          <KommandsPanel status={kommands} />
         </div>
       </div>
-
-      {forking && (
-        <div className="modal-overlay-in z-dialog fixed inset-0 flex items-center justify-center bg-black/60">
-          <div className="modal-panel-in border-border-subtle bg-canvas border-hairline flex w-96 flex-col gap-4 rounded-xl p-5">
-            <div className="flex flex-col gap-1">
-              <span className="text-text-primary text-sm font-semibold">
-                Editing unlinks this command
-              </span>
-              <span className="text-text-secondary text-xs">
-                It currently follows its original in Kommands. Keeping your edit means it stops
-                following, so a later change over there will not reach it. The command itself is
-                unaffected in Kommands.
-              </span>
-            </div>
-            <div className="flex justify-end gap-2">
-              <button
-                onClick={() => setForking(null)}
-                className="text-text-muted hover:text-text-primary px-3 py-1.5 text-xs transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={confirmFork}
-                className="border-hairline border-border-hover bg-hover text-text-primary hover:border-border-hover rounded px-3 py-1.5 text-xs transition-colors"
-              >
-                Keep my edit, unlink
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {lifecycle.confirmAction && (
         <LifecycleConfirmDialog

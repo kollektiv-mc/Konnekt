@@ -47,11 +47,10 @@ export {
   X,
   // Commands tile: the button grid, the maximized library, and link state.
   Check,
+  CopyPlus,
   GripVertical,
   Link2,
-  Link2Off,
   Plus,
-  RotateCcw,
   Search,
   Trash2,
   TriangleAlert,

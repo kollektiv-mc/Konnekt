@@ -42,19 +42,17 @@ beforeEach(() => {
   useCommandsStore.setState({
     items: [],
     kommands: null,
-    saved: [],
     hydrated: false,
     loading: false,
     error: null,
   })
   ;(window as unknown as { go?: unknown }).go = {}
   vi.mocked(App.SaveCommandButtons).mockResolvedValue(undefined)
-  vi.mocked(App.GetKommandsCommands).mockResolvedValue([])
 })
 
 describe('CommandLibrary link states', () => {
   it('shows an applied Kommands update until it is acknowledged', async () => {
-    await mount([button({ link: linkOf({ status: 'changed', prevValue: 'give @p dirt' }) })])
+    await mount([button({ link: linkOf({ status: 'changed' }) })])
     expect(screen.getByText('Updated in Kommands')).toBeTruthy()
 
     fireEvent.click(screen.getByRole('button', { name: 'Got it' }))
@@ -63,44 +61,42 @@ describe('CommandLibrary link states', () => {
     expect(useCommandsStore.getState().items[0].value).toBe('give @p stone')
   })
 
-  it('offers unlink and remove for a broken link, and removes nothing on its own', async () => {
+  it("keeps a row whose Kommands file is gone, and lets it become the server's own", async () => {
     await mount([button({ link: linkOf({ status: 'broken' }) })])
-    expect(screen.getByText('Original deleted')).toBeTruthy()
-    // A working button is never removed because another application tidied up.
+    expect(screen.getByText('Kommands not found')).toBeTruthy()
+    // Nothing is removed because another application went away.
     expect(useCommandsStore.getState().items).toHaveLength(1)
+    // Still not editable: it is Kommands' text until the user claims it.
+    expect(screen.queryByLabelText('Command for Kit')).toBeNull()
 
-    fireEvent.click(screen.getByRole('button', { name: 'Unlink' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Keep as custom' }))
     await waitFor(() => expect(useCommandsStore.getState().items[0].link).toBeUndefined())
     expect(useCommandsStore.getState().items).toHaveLength(1)
-  })
-})
-
-describe('CommandLibrary editing a linked command', () => {
-  it('asks before forking, and leaves the link alone on cancel', async () => {
-    await mount([button({ link: linkOf() })])
-
-    const value = screen.getByLabelText('Command for Kit')
-    fireEvent.change(value, { target: { value: 'give @p diamond' } })
-    fireEvent.blur(value)
-
-    expect(await screen.findByText('Editing unlinks this command')).toBeTruthy()
-    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
-
-    await waitFor(() => expect(screen.queryByText('Editing unlinks this command')).toBeNull())
-    expect(useCommandsStore.getState().items[0].link).toBeTruthy()
-    expect(useCommandsStore.getState().items[0].value).toBe('give @p stone')
+    // And now it is an ordinary row, editable in place.
+    expect(screen.getByLabelText('Command for Kit')).toBeTruthy()
   })
 
-  it('keeps the edit and drops the link on confirm', async () => {
+  it('shows a linked command as text and offers a copy instead of an edit', async () => {
     await mount([button({ link: linkOf() })])
 
-    const value = screen.getByLabelText('Command for Kit')
-    fireEvent.change(value, { target: { value: 'give @p diamond' } })
-    fireEvent.blur(value)
+    // The label and command are Kommands'. There is no field to type into and no
+    // delete, because the next sync would put back whatever was changed or
+    // removed here; unlinking happens in Kommands.
+    expect(screen.getByTitle(/follows its original in Kommands/i)).toBeTruthy()
+    expect(screen.queryByLabelText('Command for Kit')).toBeNull()
+    expect(screen.queryByLabelText('Label for Kit')).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Delete Kit' })).toBeNull()
+    expect(screen.getByText('give @p stone')).toBeTruthy()
 
-    fireEvent.click(await screen.findByRole('button', { name: 'Keep my edit, unlink' }))
-    await waitFor(() => expect(useCommandsStore.getState().items[0].link).toBeUndefined())
-    expect(useCommandsStore.getState().items[0].value).toBe('give @p diamond')
+    fireEvent.click(screen.getByRole('button', { name: 'Make a copy of Kit' }))
+    await waitFor(() => expect(useCommandsStore.getState().items).toHaveLength(2))
+    const [original, copy] = useCommandsStore.getState().items
+    // The original still follows its source; the copy is this server's own.
+    expect(original.link?.id).toBe('k1')
+    expect(copy.link).toBeUndefined()
+    expect(copy.value).toBe('give @p stone')
+    expect(copy.id).not.toBe(original.id)
+    expect(screen.getByLabelText('Command for Kit')).toBeTruthy()
   })
 
   it('edits an unlinked command with no confirmation at all', async () => {
@@ -110,21 +106,67 @@ describe('CommandLibrary editing a linked command', () => {
     fireEvent.blur(value)
 
     await waitFor(() => expect(useCommandsStore.getState().items[0].value).toBe('give @p diamond'))
-    expect(screen.queryByText('Editing unlinks this command')).toBeNull()
+  })
+})
+
+describe('CommandLibrary reordering', () => {
+  const two = [
+    button({ id: 'a', label: 'Alpha', value: 'say a' }),
+    button({ id: 'b', label: 'Beta', value: 'say b' }),
+  ]
+
+  it('moves a row with the arrow keys on its handle', async () => {
+    await mount(two)
+    // The handle is a button, so it is reachable without a pointer, and the
+    // arrow keys move the row one step. Reordering used to need a drag and
+    // nothing else, and the drag did not reliably land.
+    fireEvent.keyDown(screen.getByRole('button', { name: 'Reorder Alpha' }), {
+      key: 'ArrowDown',
+    })
+    await waitFor(() =>
+      expect(useCommandsStore.getState().items.map((it) => it.id)).toEqual(['b', 'a']),
+    )
+    const saved = vi.mocked(App.SaveCommandButtons).mock.lastCall?.[0]
+    expect(saved?.map((it) => it.id)).toEqual(['b', 'a'])
+  })
+
+  it('does not move past either end', async () => {
+    await mount(two)
+    fireEvent.keyDown(screen.getByRole('button', { name: 'Reorder Alpha' }), { key: 'ArrowUp' })
+    fireEvent.keyDown(screen.getByRole('button', { name: 'Reorder Beta' }), { key: 'ArrowDown' })
+    expect(App.SaveCommandButtons).not.toHaveBeenCalled()
+  })
+
+  it('is off while the list is filtered, and says why', async () => {
+    await mount(two)
+    fireEvent.change(screen.getByPlaceholderText('Search commands'), { target: { value: 'alp' } })
+    const handle = screen.getByRole('button', { name: 'Reorder Alpha' }) as HTMLButtonElement
+    expect(handle.disabled).toBe(true)
+    expect(handle.title).toMatch(/clear the search/i)
+    fireEvent.keyDown(handle, { key: 'ArrowDown' })
+    expect(App.SaveCommandButtons).not.toHaveBeenCalled()
   })
 })
 
 describe('CommandLibrary Kommands panel', () => {
-  // Kommands has no persistence yet, so this is the state essentially every
-  // user is in. It must not read as something being broken.
-  it('states plainly that nothing is saved yet, with no error styling', async () => {
+  it('says nothing is linked yet, with no error styling', async () => {
+    // Not having Kommands is the state essentially every user is in. It must
+    // not read as something being broken, and it has to say where linking
+    // happens, since nothing here can start one.
     await mount([button()])
-    expect(screen.getByText(/has not saved any commands/i)).toBeTruthy()
+    expect(screen.getByText(/Nothing is linked from Kommands yet/i)).toBeTruthy()
     expect(screen.queryByRole('alert')).toBeNull()
+    expect(screen.queryByRole('combobox')).toBeNull()
   })
 
   it('names the version when the file is newer than this build understands', async () => {
     await mount([button()], { installed: true, unsupported: true, version: 2 })
     expect(screen.getByText(/newer format \(version 2\)/i)).toBeTruthy()
+  })
+
+  it('reports how many commands Kommands has linked', async () => {
+    await mount([button({ link: linkOf() })], { installed: true, savedCount: 1 })
+    expect(screen.getByText('1 linked in Kommands')).toBeTruthy()
+    expect(screen.getByText('1 · 1 from Kommands')).toBeTruthy()
   })
 })

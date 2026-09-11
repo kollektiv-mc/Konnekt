@@ -29,14 +29,22 @@ package models
 //     with a control character.
 //  5. label may be empty; Konnekt falls back to the command text.
 //  6. updatedAt is Unix milliseconds, for display only.
-//  7. Deletion is by absence. Konnekt never deletes a button in response; it
-//     marks the link broken and leaves the button alone.
-//  8. The writer must replace the file atomically (temp file in the same
+//  7. The file holds the commands the user linked in Kommands, not everything
+//     they saved. Linking is a per-command act on that side; a saved command
+//     that was never linked is not in the file and Konnekt never sees it.
+//     Every entry gets a button in the Commands tile, created by Konnekt.
+//  8. Unlinking and deletion are by absence, and Konnekt removes the button
+//     it created for an entry that is gone: the button exists because of the
+//     link, and absence is the user deciding, in Kommands, that it should not.
+//     A file that is missing altogether is a different event (an uninstall,
+//     a moved directory): then every linked button is kept and marked broken,
+//     with keep-as-custom and remove offered.
+//  9. The writer must replace the file atomically (temp file in the same
 //     directory, then rename), or Konnekt can read a half-written one.
 //     services.writeFileAtomic is the reference implementation.
-//  9. Konnekt refuses a file over 2 MiB or beyond 2000 entries, and skips an
+//  10. Konnekt refuses a file over 2 MiB or beyond 2000 entries, and skips an
 //     individual malformed entry rather than rejecting the whole file.
-//  10. Konnekt never creates this file or its directory and never writes
+//  11. Konnekt never creates this file or its directory and never writes
 //     anything under it. A missing file is the normal case and does not
 //     surface as an error.
 
@@ -90,8 +98,10 @@ type KommandsStatus struct {
 	// Error is a parse or read failure, already formatted for display. Empty
 	// when the file is fine or simply absent.
 	Error string `json:"error"`
-	// SavedCount is how many commands the file holds; LinkedCount how many
-	// buttons here are bound to one.
+	// SavedCount is how many commands the file holds, which is how many the
+	// user linked in Kommands; LinkedCount how many buttons here follow one.
+	// The two agree once a poll has run and differ only while a change is on
+	// its way over.
 	SavedCount  int `json:"savedCount"`
 	LinkedCount int `json:"linkedCount"`
 	// Rejected is how many entries were skipped as malformed. Surfaced rather

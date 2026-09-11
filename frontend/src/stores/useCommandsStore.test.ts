@@ -8,7 +8,6 @@ vi.mock('../../wailsjs/go/main/App')
 const INITIAL = {
   items: [],
   kommands: null,
-  saved: [],
   hydrated: false,
   loading: false,
   error: null,
@@ -28,7 +27,6 @@ beforeEach(() => {
   vi.mocked(App.RefreshKommands).mockResolvedValue(
     models.KommandsStatus.createFrom({ installed: false }),
   )
-  vi.mocked(App.GetKommandsCommands).mockResolvedValue([])
   vi.mocked(App.SaveCommandButtons).mockResolvedValue(undefined)
   withBridge(true)
 })
@@ -60,6 +58,26 @@ describe('useCommandsStore hydrate', () => {
     // The one-time custom_commands.json migration folds in.
     expect(items.some((i) => i.value === 'weather thunder')).toBe(true)
     expect(App.SaveCommandButtons).toHaveBeenCalled()
+  })
+
+  it('has the seed on disk before it asks Kommands to sync', async () => {
+    // Go syncs linked commands only into a seeded file. If the seed were still
+    // in flight when the first sync ran, whatever is linked in Kommands would be
+    // missing from a first launch until the next window focus.
+    const order: string[] = []
+    vi.mocked(App.GetCommandButtons).mockResolvedValue(
+      models.CommandButtonSet.createFrom({ seeded: false, items: [] }),
+    )
+    vi.mocked(App.GetCustomCommands).mockResolvedValue([])
+    vi.mocked(App.SaveCommandButtons).mockImplementation(async () => {
+      order.push('seed')
+    })
+    vi.mocked(App.RefreshKommands).mockImplementation(async () => {
+      order.push('sync')
+      return models.KommandsStatus.createFrom({ installed: false })
+    })
+    await useCommandsStore.getState().hydrate()
+    expect(order).toEqual(['seed', 'sync'])
   })
 
   it('does not resurrect defaults when the user deleted every button', async () => {
@@ -97,6 +115,18 @@ describe('useCommandsStore writes', () => {
     expect(useCommandsStore.getState().items).toHaveLength(0)
     expect(useCommandsStore.getState().error).toBeNull()
   })
+
+  it('reorders by moving one row to a new index', async () => {
+    useCommandsStore.setState({
+      items: [
+        models.CommandButton.createFrom({ id: 'a', label: 'A', kind: 'cmd', value: 'a' }),
+        models.CommandButton.createFrom({ id: 'b', label: 'B', kind: 'cmd', value: 'b' }),
+        models.CommandButton.createFrom({ id: 'c', label: 'C', kind: 'cmd', value: 'c' }),
+      ],
+    })
+    await useCommandsStore.getState().reorder(0, 2)
+    expect(useCommandsStore.getState().items.map((it) => it.id)).toEqual(['b', 'c', 'a'])
+  })
 })
 
 describe('useCommandsStore link actions', () => {
@@ -105,14 +135,7 @@ describe('useCommandsStore link actions', () => {
     label: 'New',
     kind: 'cmd',
     value: 'say new',
-    link: {
-      source: 'kommands',
-      id: 'k1',
-      revision: 3,
-      status: 'changed',
-      prevLabel: 'Old',
-      prevValue: 'say old',
-    },
+    link: { source: 'kommands', id: 'k1', revision: 3, status: 'changed' },
   }
 
   beforeEach(async () => {
@@ -125,17 +148,6 @@ describe('useCommandsStore link actions', () => {
     const it = useCommandsStore.getState().items[0]
     expect(it.link?.status).toBe('ok')
     expect(it.value).toBe('say new')
-    // Revert stays available afterwards.
-    expect(it.link?.prevValue).toBe('say old')
-  })
-
-  it('revert restores the previous text and unlinks', async () => {
-    await useCommandsStore.getState().revert('1')
-    const it = useCommandsStore.getState().items[0]
-    expect(it.value).toBe('say old')
-    expect(it.label).toBe('Old')
-    // Still linked, the next poll would re-apply the very update just undone.
-    expect(it.link).toBeUndefined()
   })
 
   it('unlink keeps the button', async () => {
@@ -145,25 +157,15 @@ describe('useCommandsStore link actions', () => {
     expect(items[0].link).toBeUndefined()
   })
 
-  it('linkTo adopts the original text so a new link never starts out stale', async () => {
-    useCommandsStore.setState({
-      items: [
-        models.CommandButton.createFrom({ id: '2', label: 'Mine', kind: 'cmd', value: 'old' }),
-      ],
-    })
-    await useCommandsStore.getState().linkTo(
-      '2',
-      models.KommandsSavedCommand.createFrom({
-        id: 'k9',
-        revision: 5,
-        label: 'Theirs',
-        command: 'say theirs',
-      }),
-    )
-    const it = useCommandsStore.getState().items[0]
-    expect(it.value).toBe('say theirs')
-    expect(it.link?.id).toBe('k9')
-    expect(it.link?.revision).toBe(5)
-    expect(it.link?.status).toBe('ok')
+  it('duplicate puts an unlinked copy right after the original', async () => {
+    await useCommandsStore.getState().duplicate('1')
+    const items = useCommandsStore.getState().items
+    expect(items).toHaveLength(2)
+    // The original still follows Kommands; the copy is this server's own.
+    expect(items[0].link?.id).toBe('k1')
+    expect(items[1].link).toBeUndefined()
+    expect(items[1].value).toBe('say new')
+    expect(items[1].label).toBe('New')
+    expect(items[1].id).not.toBe(items[0].id)
   })
 })

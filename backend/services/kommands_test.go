@@ -97,8 +97,8 @@ func TestKommandsPollFileStates(t *testing.T) {
 			if (got.Error != "") != tt.wantErr {
 				t.Errorf("Error = %q, wantErr %v", got.Error, tt.wantErr)
 			}
-			if len(k.Saved()) != tt.wantSaved {
-				t.Errorf("len(Saved()) = %d, want %d", len(k.Saved()), tt.wantSaved)
+			if got.SavedCount != tt.wantSaved {
+				t.Errorf("SavedCount = %d, want %d", got.SavedCount, tt.wantSaved)
 			}
 		})
 	}
@@ -189,6 +189,65 @@ func TestKommandsPollSkipsUnchangedFile(t *testing.T) {
 	}
 	if got := atomic.LoadInt32(&emits); got != 1 {
 		t.Errorf("emits = %d, want exactly 1 across two polls", got)
+	}
+}
+
+// Kommands uninstalled, or its config directory moved: the buttons that
+// followed it are kept and marked rather than removed, and the mark clears the
+// moment the file is back with the entry in it.
+func TestKommandsPollMissingFileMarksLinksBroken(t *testing.T) {
+	k, cmds, dir := newTestKommands(t)
+	if err := cmds.Save([]models.CommandButton{linked("a", "k1", 1, models.LinkStatusOK)}); err != nil {
+		t.Fatalf("Save: %v", err)
+	}
+	if err := k.Poll(true); err != nil {
+		t.Fatalf("Poll without file: %v", err)
+	}
+	got, _ := cmds.Get()
+	if len(got.Items) != 1 || got.Items[0].Link.Status != models.LinkStatusBroken {
+		t.Fatalf("after a missing file: %+v", got.Items)
+	}
+	if st := k.Status(); st.Installed || st.BrokenCount != 1 {
+		t.Errorf("status = %+v, want not installed with one broken", st)
+	}
+
+	writeSaved(t, dir, `{"version":1,"commands":[{"id":"k1","revision":1,"label":"L","command":"list"}]}`)
+	if err := k.Poll(true); err != nil {
+		t.Fatalf("Poll with file: %v", err)
+	}
+	got, _ = cmds.Get()
+	if got.Items[0].Link.Status != models.LinkStatusOK {
+		t.Errorf("Status = %q after the file returned, want ok", got.Items[0].Link.Status)
+	}
+}
+
+// Linking in Kommands is what creates the button here: a file with an entry no
+// button follows yields one, and the entry's later removal takes it away.
+func TestKommandsPollMaterializesAndRemoves(t *testing.T) {
+	k, cmds, dir := newTestKommands(t)
+	if err := cmds.Save([]models.CommandButton{{ID: "plain", Label: "List", Kind: "cmd", Value: "list"}}); err != nil {
+		t.Fatalf("Save: %v", err)
+	}
+	writeSaved(t, dir, `{"version":1,"commands":[{"id":"k1","revision":1,"label":"Kit","command":"/give @p stone"}]}`)
+	if err := k.Poll(true); err != nil {
+		t.Fatalf("Poll: %v", err)
+	}
+	got, _ := cmds.Get()
+	if len(got.Items) != 2 || got.Items[1].Link == nil || got.Items[1].Link.ID != "k1" {
+		t.Fatalf("after linking: %+v", got.Items)
+	}
+	// The sanitised form reaches the button: console form, no leading slash.
+	if got.Items[1].Value != "give @p stone" || got.Items[1].Label != "Kit" {
+		t.Errorf("materialized button = %+v", got.Items[1])
+	}
+
+	writeSaved(t, dir, `{"version":1,"commands":[]}`)
+	if err := k.Poll(true); err != nil {
+		t.Fatalf("Poll after unlink: %v", err)
+	}
+	got, _ = cmds.Get()
+	if len(got.Items) != 1 || got.Items[0].ID != "plain" {
+		t.Errorf("after unlinking: %+v, want only the plain button", got.Items)
 	}
 }
 

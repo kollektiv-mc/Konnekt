@@ -99,6 +99,20 @@ export function makeItem(t: PresetTemplate): models.CommandButton {
   })
 }
 
+/**
+ * A copy of a button under a new identity: the same label, kind and value, no
+ * link and no group. What "make a copy" on a linked row produces: the original
+ * keeps following Kommands, the copy is this server's own to edit.
+ */
+export function copyOf(item: models.CommandButton): models.CommandButton {
+  return models.CommandButton.createFrom({
+    id: newId(),
+    label: item.label,
+    kind: item.kind,
+    value: item.value,
+  })
+}
+
 export function arrayMove<T>(arr: T[], from: number, to: number): T[] {
   const next = arr.slice()
   const [moved] = next.splice(from, 1)

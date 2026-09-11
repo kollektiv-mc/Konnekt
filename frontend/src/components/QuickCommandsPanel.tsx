@@ -3,7 +3,8 @@ import { createPortal } from 'react-dom'
 import { SendCommand } from '../../wailsjs/go/main/App'
 import { hasWailsBridge } from '../lib/ipc'
 import { Icon } from './ui/Icon'
-import { GripVertical, Plus, X } from '../lib/icons'
+import { GripVertical, Link2, Plus, TriangleAlert, X } from '../lib/icons'
+import { useSortable } from '../hooks/useSortable'
 import { useCommandsStore, type CommandButton } from '../stores/useCommandsStore'
 import { KickBanDialog, LifecycleConfirmDialog } from './commands/CommandDialogs'
 import { PRESETS, makeItem, type PresetTemplate } from './commands/presets'
@@ -48,8 +49,6 @@ export function QuickCommandsPanel({ serverId, columns = 2 }: QuickCommandsPanel
   const [modal, setModal] = useState<'kick' | 'ban' | null>(null)
   const [editing, setEditing] = useState(false)
   const [dropdownPos, setDropdownPos] = useState<DropdownPos | null>(null)
-  const [overIndex, setOverIndex] = useState<number | null>(null)
-  const dragIndex = useRef<number | null>(null)
   const presetsButtonRef = useRef<HTMLButtonElement>(null)
   const dropdownRef = useRef<HTMLDivElement>(null)
 
@@ -144,16 +143,14 @@ export function QuickCommandsPanel({ serverId, columns = 2 }: QuickCommandsPanel
     [add],
   )
 
-  const onDrop = useCallback(
-    (to: number) => {
-      const from = dragIndex.current
-      dragIndex.current = null
-      setOverIndex(null)
-      if (from === null) return
-      void reorder(from, to).catch(console.error)
-    },
+  const onMove = useCallback(
+    (from: number, to: number) => void reorder(from, to).catch(console.error),
     [reorder],
   )
+  // Two columns, so the slot is judged in reading order rather than top to
+  // bottom (lib/sortable.ts). Only live while editing: the grip is the handle,
+  // and the grip is only drawn then.
+  const sortable = useSortable({ count: items.length, axis: 'grid', disabled: !editing, onMove })
 
   const toggleEdit = useCallback(() => {
     setEditing((e) => !e)
@@ -169,59 +166,77 @@ export function QuickCommandsPanel({ serverId, columns = 2 }: QuickCommandsPanel
           </div>
         ) : (
           <div className={`grid gap-1.5 ${columns === 1 ? 'grid-cols-1' : 'grid-cols-2'}`}>
-            {items.map((item, i) =>
-              editing ? (
+            {items.map((item, i) => {
+              if (!editing) {
+                return (
+                  <button
+                    key={item.id}
+                    onClick={() => run(item)}
+                    disabled={
+                      item.kind === 'lifecycle' &&
+                      item.value !== 'force-stop' &&
+                      lifecycle.busy !== null
+                    }
+                    title={item.value}
+                    className="border-border-subtle text-text-secondary hover:border-border-hover hover:bg-hover hover:text-text-primary flex items-center gap-1 rounded border px-2 py-1.5 text-left text-xs transition-all disabled:opacity-40"
+                  >
+                    <span className="min-w-0 flex-1 truncate">{item.label}</span>
+                    {item.link && <LinkGlyph status={item.link.status} />}
+                  </button>
+                )
+              }
+              const lift = sortable.drag?.from === i ? sortable.drag : null
+              const offset = lift ?? sortable.shift(i)
+              // A row Kommands still lists comes back on the next sync if it is
+              // removed here, so the way to remove it is to unlink it there. A
+              // row whose file is gone is removable: nothing would return it.
+              const removable = !item.link || item.link.status === 'broken'
+              return (
                 <div
                   key={item.id}
-                  draggable
-                  onDragStart={(e) => {
-                    dragIndex.current = i
-                    e.dataTransfer.effectAllowed = 'move'
-                  }}
-                  onDragOver={(e) => {
-                    e.preventDefault()
-                    if (overIndex !== i) setOverIndex(i)
-                  }}
-                  onDragLeave={() => setOverIndex((o) => (o === i ? null : o))}
-                  onDrop={() => onDrop(i)}
-                  onDragEnd={() => {
-                    dragIndex.current = null
-                    setOverIndex(null)
-                  }}
-                  className={`text-text-secondary flex cursor-grab items-center gap-1 rounded border px-2 py-1.5 text-xs transition-colors ${
-                    overIndex === i ? 'border-border-hover bg-hover' : 'border-border-subtle'
+                  ref={sortable.rowRef(i)}
+                  className={`text-text-secondary flex items-center gap-1 rounded border px-2 py-1.5 text-xs ${
+                    lift
+                      ? 'border-accent/60 bg-canvas relative z-10 transition-none'
+                      : 'border-border-subtle duration-fast transition-[transform,border-color]'
                   }`}
+                  // eslint-disable-next-line no-restricted-syntax -- a row follows the pointer or slides aside for one; a per-frame offset has no class
+                  style={
+                    offset ? { transform: `translate(${offset.dx}px, ${offset.dy}px)` } : undefined
+                  }
                 >
-                  <Icon icon={GripVertical} size="xs" className="text-text-faint shrink-0" />
-                  <span className="flex-1 truncate" title={item.value}>
+                  <button
+                    type="button"
+                    {...sortable.handleProps(i)}
+                    aria-label={`Reorder ${item.label}`}
+                    title="Drag to reorder, or use the arrow keys"
+                    className="text-text-faint hover:text-text-secondary shrink-0 cursor-grab touch-none active:cursor-grabbing"
+                  >
+                    <Icon icon={GripVertical} size="xs" />
+                  </button>
+                  <span className="min-w-0 flex-1 truncate" title={item.value}>
                     {item.label}
                   </span>
-                  <button
-                    onClick={() => void remove(item.id).catch(console.error)}
-                    onMouseDown={(e) => e.stopPropagation()}
-                    className="text-text-faint hover:text-danger px-1 transition-colors"
-                    title="Remove"
-                    aria-label={`Remove ${item.label}`}
-                  >
-                    <Icon icon={X} size="xs" />
-                  </button>
+                  {removable ? (
+                    <button
+                      onClick={() => void remove(item.id).catch(console.error)}
+                      className="text-text-faint hover:text-danger px-1 transition-colors"
+                      title="Remove"
+                      aria-label={`Remove ${item.label}`}
+                    >
+                      <Icon icon={X} size="xs" />
+                    </button>
+                  ) : (
+                    <span
+                      className="px-1"
+                      title="From Kommands. Unlink it there to remove it here."
+                    >
+                      <LinkGlyph status={item.link?.status ?? 'ok'} />
+                    </span>
+                  )}
                 </div>
-              ) : (
-                <button
-                  key={item.id}
-                  onClick={() => run(item)}
-                  disabled={
-                    item.kind === 'lifecycle' &&
-                    item.value !== 'force-stop' &&
-                    lifecycle.busy !== null
-                  }
-                  title={item.value}
-                  className="border-border-subtle text-text-secondary hover:border-border-hover hover:bg-hover hover:text-text-primary truncate rounded border px-2 py-1.5 text-left text-xs transition-all disabled:opacity-40"
-                >
-                  {item.label}
-                </button>
-              ),
-            )}
+              )
+            })}
           </div>
         )}
       </div>
@@ -347,5 +362,27 @@ export function QuickCommandsPanel({ serverId, columns = 2 }: QuickCommandsPanel
         />
       )}
     </div>
+  )
+}
+
+/**
+ * Where a button came from, at the grid's own scale: a link for a command that
+ * follows Kommands, tinted when it has changed and not yet been acknowledged,
+ * and a warning when the file it followed is gone. The library says the same
+ * things in words; a button in a grid cell has room for one glyph.
+ */
+function LinkGlyph({ status }: { status: string }) {
+  if (status === 'broken') {
+    return (
+      <Icon icon={TriangleAlert} size="xs" className="text-warning" label="Kommands not found" />
+    )
+  }
+  return (
+    <Icon
+      icon={Link2}
+      size="xs"
+      className={status === 'changed' ? 'text-accent' : 'text-text-faint'}
+      label={status === 'changed' ? 'Updated in Kommands' : 'From Kommands'}
+    />
   )
 }
