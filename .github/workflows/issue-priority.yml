@@ -1,0 +1,116 @@
+# Vendored into every repo in suite.repos.json, plus this one, as
+# .github/workflows/issue-priority.yml by scripts/sync-priority.sh. Edit it here.
+# The next sync overwrites the copy in a product, the same way it overwrites a
+# hand-edited tokens.source.json or .claude/suite-check.py.
+#
+# Why this exists at all: a GitHub issue form applies only the static `labels:`
+# list in its front matter. A dropdown answer lands as text in the issue body and
+# never becomes a label on its own, so the priority field the forms ask for would
+# be decorative without something reading it back out. That is this job.
+#
+# It also covers the case the forms cannot reach. An issue opened through the API
+# rather than the chooser has no form answer in its body, which in this suite means
+# an agent filed it. docs/conventions.md requires an agent to apply a p* label in
+# the same call; when one does not, this is what says so. GitHub has no way to
+# refuse an issue, so the strongest available gate is a comment, and a comment is
+# what a person or an agent actually reads.
+#
+# It deliberately applies no triage label on that path. Attaching a label the repo
+# does not declare makes GitHub invent it in default gray with no description --
+# the known gap docs/conventions.md records -- and quietly inventing vocabulary is
+# the thing design/labels.json exists to prevent. The comment needs no vocabulary.
+#
+# `opened` only, not `edited`: a form answer can only ever arrive when the issue is
+# created, so an edit can never introduce one, and re-running on edits would fight
+# a maintainer who removed a label on purpose.
+name: Issue priority
+
+on:
+  issues:
+    types: [opened]
+
+permissions:
+  issues: write
+
+jobs:
+  priority:
+    runs-on: ubuntu-latest
+    steps:
+      # Everything from the issue reaches the script through env rather than a
+      # ${{ }} interpolation inside `run:`. An issue body is text a stranger wrote,
+      # and `${{ }}` is substituted before bash ever sees it.
+      - name: Apply the priority that was chosen, or say that none was
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          NUMBER: ${{ github.event.issue.number }}
+          LABELS: ${{ toJSON(github.event.issue.labels.*.name) }}
+          BODY: ${{ github.event.issue.body }}
+          # The rendered form puts the field's `label:` in as a level-3 heading, so
+          # this string has to stay identical to the one in the vendored form block.
+          # scripts/sync-priority.sh --check is what notices when it does not.
+          HEADING: 'How urgent is this for you?'
+          # The leading token of each form option, and the label it means. Taken
+          # from design/labels.json's priority[] and asserted against it by
+          # scripts/sync-priority.sh --check, so this is a copy that cannot drift
+          # silently rather than a second source.
+          # >>> suite:priority-map
+          PRIORITY_MAP: |
+            Blocking: p1
+            Significant: p2
+            Minor: p3
+          # <<< suite:priority-map
+          RUBRIC_URL: https://github.com/kollektiv-mc/Kollektiv/blob/main/docs/conventions.md#priority
+          MARKER: '<!-- suite:priority -->'
+        run: |
+          set -euo pipefail
+
+          # Already prioritised, by a form label or by whoever opened it. Nothing to do.
+          if printf '%s' "$LABELS" | jq -e 'any(.[]; test("^p[0-3]$"))' > /dev/null; then
+            echo "already carries a priority label"
+            exit 0
+          fi
+
+          # The dropdown answer is the first non-blank line under the heading. CRs
+          # come through in a webhook body and would otherwise defeat the match.
+          answer="$(printf '%s\n' "$BODY" | tr -d '\r' | awk -v h="### $HEADING" '
+            $0 == h { found = 1; next }
+            found && NF { print; exit }
+          ')"
+
+          label=''
+          while read -r key value; do
+            [ -n "$key" ] || continue
+            case "$answer" in
+              "$key"*) label="$value"; break ;;
+            esac
+          done <<< "$PRIORITY_MAP"
+
+          if [ -n "$label" ]; then
+            gh issue edit "$NUMBER" --repo "$REPO" --add-label "$label"
+            echo "applied $label"
+            exit 0
+          fi
+
+          # No answer in the body. Either the issue was opened through the API, or
+          # a form was filled in against a stale copy of the block. Both want a human
+          # or an agent to look, and neither is something this job should guess at.
+          if gh issue view "$NUMBER" --repo "$REPO" --json comments \
+            --jq '.comments[].body' | grep -qF "$MARKER"; then
+            echo "already flagged"
+            exit 0
+          fi
+
+          # The rubric is not restated here on purpose. It is defined once, in
+          # design/labels.json, and read once, in docs/conventions.md; a third copy
+          # in a workflow is the copy that goes stale.
+          gh issue comment "$NUMBER" --repo "$REPO" --body "$(cat <<EOF
+          $MARKER
+          This issue has no priority label.
+
+          Every issue in the suite carries exactly one of \`p0\`, \`p1\`, \`p2\` or \`p3\`. Without one it mirrors into Linear at priority None and drops out of every ordered view, which is not the same as being low priority.
+
+          Pick one against the rubric in [\`docs/conventions.md\`]($RUBRIC_URL). If it is genuinely unclear, the answer is \`p2\`, never nothing.
+          EOF
+          )"
+          echo "flagged for triage"
