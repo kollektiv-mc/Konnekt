@@ -266,14 +266,19 @@ except notes.ApiError:
 # kollektiv there is no product beside it, and the fixture above is the whole
 # test — a master copy has nothing of its own to validate.
 CONFIG = HERE.parent / "changelog.json"
+REPO = HERE.parent.parent
 if CONFIG.exists():
     configured = notes.load_non_app_paths(CONFIG)
     check("config is non-empty", len(configured) > 0, True)
-    # The four path classes that leaked real pull requests into the notes. A
-    # product may add to this list, but dropping one of these reopens a bug
-    # that has already happened once.
+    # The path classes that leaked real pull requests into Konnekt's notes. A
+    # product that has one of these must exclude it, and dropping it reopens a
+    # bug that has already happened once; a product with no website/ or
+    # CONTRIBUTING.md is not asked to name paths it does not have. This test
+    # is vendored into every product, so it can only assert what is true of
+    # each of them.
     for prefix in ("website/", ".github/", ".claude/", "README.md", "CONTRIBUTING.md"):
-        check(f"config still excludes {prefix}", prefix in configured, True)
+        if (REPO / prefix.rstrip("/")).exists():
+            check(f"config still excludes {prefix}", prefix in configured, True)
     # And the one it must not exclude: build/ carries the app icon, the .desktop
     # file and the RPM spec, all of which ship.
     check(

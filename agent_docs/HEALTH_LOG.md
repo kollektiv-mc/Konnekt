@@ -5224,7 +5224,11 @@ that policy as `.aislop/base.yml`, vendored here beside `.aislop/config.yml`,
 which now only extends it and carries the size ratchet. Both vendored Python
 files are in `.aislopignore`. The runner and the generator's test were
 re-vendored (the generator itself was already identical, since the ruff pass
-here produced what the master now is). The CI job calls kollektiv's reusable
+here produced what the master now is). `.github/release.yml` is vendored too
+now, from a generic master, since Kommands carries the same generator; only
+its comments changed. The test no longer asserts `website/` and
+`CONTRIBUTING.md` unconditionally, since Kommands has neither; it asserts them
+where they exist, so this repo's guarantee is unchanged. The CI job calls kollektiv's reusable
 aislop workflow, which pins ruff: without a ruff binary aislop's Python engines
 run nothing, which is how this job passed at 100 while a local scan flagged
 `version-precedence.py` twice (a shebang on a non-executable file, and a
