@@ -298,17 +298,8 @@ func (s *SchedulerService) maybeFireInterval(g models.Graph, node models.Node, n
 }
 
 func (s *SchedulerService) maybeFireTimeOfDay(g models.Graph, node models.Node, now time.Time) {
-	target, _ := node.Config["time"].(string) // "HH:MM"
-	if target == "" {
-		return
-	}
-	parts := strings.SplitN(target, ":", 2)
-	if len(parts) != 2 {
-		return
-	}
-	h, _ := strconv.Atoi(parts[0])
-	m, _ := strconv.Atoi(parts[1])
-	if now.Hour() != h || now.Minute() != m {
+	h, m, ok := parseTimeOfDay(node)
+	if !ok || now.Hour() != h || now.Minute() != m {
 		return
 	}
 	// Debounce: fire only once per calendar day.

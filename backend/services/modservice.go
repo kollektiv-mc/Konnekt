@@ -566,7 +566,12 @@ func (s *ModService) ListInstalled(serverID string) ([]models.InstalledMod, erro
 			}
 			enabled := strings.HasSuffix(name, ".jar")
 
-			info, _ := e.Info()
+			// The entry vanished between ReadDir and here; SizeBytes below would
+			// dereference a nil FileInfo.
+			info, err := e.Info()
+			if err != nil {
+				continue
+			}
 			jarPath := filepath.Join(dir, name)
 
 			meta, err := parseJarMetaCached(jarPath, loader)
