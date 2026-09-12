@@ -203,8 +203,9 @@ tree.
       *Kommands* roadmap had been sitting (see HEALTH_LOG, 2026-08-19): the
       suite shares a design source and a docs shape, so prose copied between
       products is a live failure mode here, not a hypothetical one.
-- [ ] No obviously dead code (unused exports, unreachable branches, orphaned
-      files) left behind after refactors. Open on #311.
+- [x] No obviously dead code (unused exports, unreachable branches, orphaned
+      files) left behind after refactors. Closed on #311 (HEALTH_LOG,
+      2026-09-12).
       The per-file grep this line used to prescribe only finds what you already
       suspect, which is how a tombstone file survives: nobody greps for a name
       they have forgotten. Sweep the whole tree instead, from both ends —
@@ -213,8 +214,8 @@ tree.
       (`server_windows.go`) make either one alone produce false positives.
       Frontend: `pnpm dlx knip` from `frontend/`, which builds that import
       graph in one pass and reports unused files, exports and dependencies.
-      Read its output against three known false positives until #311 lands a
-      `knip.json` that ignores them: everything under `wailsjs/` (generated),
+      `frontend/knip.json` holds the three known false positives so the run
+      prints nothing on a clean tree: everything under `wailsjs/` (generated),
       `playwright` (used from `demo/record.mjs`, outside the package), and an
       export used only inside its own file (`blockMeta.ts`'s `CATEGORY_ORDER`).
       A zero-external-reference export is otherwise dead; the
@@ -224,9 +225,9 @@ tree.
       so findings here are always whole exports or whole files.
       **This line is a date, not a state**: the Go half held from the
       2026-08-19 sweep, the frontend half did not survive the 2026-08-30
-      Overview roll-up, which left one file and two exports behind (#311). The
-      aislop gate vendors knip but did not report them for this repo's
-      layout, so knip is a sweep to run before a milestone, not a gate.
+      Overview roll-up, which left one file and two exports behind for nine
+      days. The aislop gate vendors knip but did not report them for this
+      repo's layout, so knip is a sweep to run before a milestone, not a gate.
 - [x] Function and file size hold a **ratchet**, not a target. `.aislop/config.yml`'s
       `quality.maxFunctionLoc` (350) and `maxFileLoc` (970) sit at today's
       largest function (`useMods`, 384 lines) and file (`server.go`, 1595
