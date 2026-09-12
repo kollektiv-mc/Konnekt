@@ -2,6 +2,10 @@ package services
 
 import (
 	"context"
+	"errors"
+	"io"
+	"net/http"
+	"net/http/httptest"
 	"strings"
 	"testing"
 	"time"
@@ -434,4 +438,41 @@ func TestExecRandomNumber(t *testing.T) {
 			t.Errorf("value = %v, want 10 (max<min corrected to min)", ec.dataOut["value"])
 		}
 	})
+}
+
+// A response body cut off mid-transfer used to be handed to the graph as the
+// body, with onComplete: io.ReadAll's error was discarded. It is a failure of
+// the request and routes to onFailed, with the status still reported.
+func TestExecHTTPSurfacesATruncatedBody(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Declare more than is sent; net/http closes the connection on the
+		// mismatch and the client's ReadAll ends in an unexpected EOF.
+		w.Header().Set("Content-Length", "100")
+		if _, err := io.WriteString(w, "partial"); err != nil {
+			t.Errorf("write: %v", err)
+		}
+	}))
+	defer ts.Close()
+
+	ec := &ExecContext{
+		Ctx:     context.Background(),
+		Config:  map[string]interface{}{"url": ts.URL, "method": "GET"},
+		dataOut: map[string]interface{}{},
+	}
+	res := execHTTP(ec)
+	if res.Port != "onFailed" {
+		t.Fatalf("port = %q, want onFailed", res.Port)
+	}
+	if res.Err == nil || !strings.Contains(res.Err.Error(), "read response") {
+		t.Errorf("err = %v, want it to name the read step", res.Err)
+	}
+	if !errors.Is(res.Err, io.ErrUnexpectedEOF) {
+		t.Errorf("err = %v, want it to wrap io.ErrUnexpectedEOF", res.Err)
+	}
+	if got := ec.dataOut["status"]; got != float64(http.StatusOK) {
+		t.Errorf("status output = %v, want %v", got, float64(http.StatusOK))
+	}
+	if _, set := ec.dataOut["body"]; set {
+		t.Error("a truncated body was still published as the body output")
+	}
 }

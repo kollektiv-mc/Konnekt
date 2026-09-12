@@ -63,22 +63,28 @@ tree.
 ## 1. Clean
 
 - [x] `go vet ./...` and `gofmt -l .` report nothing.
-- [ ] No blank `_` error-ignores in Go, except documented `//nolint` cases
+- [x] No blank `_` error-ignores in Go, except documented `//nolint` cases
       (e.g. `backend/services/eventbus.go`).
-      Verify, both greps, from the repo root:
+      Held by `suite.json`'s `no discarded errors` invariant (2026-09-12), so
+      `/suite-kit:health` and `.claude/suite-check.py` fail on a new one.
+      Verify by hand, both greps, from the repo root:
       ```bash
       grep -rn "_ = " --include=*.go app.go backend/ | grep -v nolint | grep -v _test.go
-      grep -rnE ", _ (:?=)" --include=*.go app.go backend/ | grep -v nolint | grep -v _test.go
+      grep -rnE ", _ (:?=)" --include=*.go app.go backend/ | grep -v nolint | grep -v _test.go | grep -vE '\.\(|resolveTarget\('
       ```
       Expect no matches from either. The first is the one this line carried
       for two months, and it returned nothing while **40** `x, _ := f()` sites
       sat in the tree: an error in the second return position is not
       `_ = `, so the grep that "verified" the line could not see the pattern
-      it was there to catch (2026-09-08, HEALTH_LOG). Type assertions and map
-      lookups also match the second grep; read a hit before counting it.
-      The aislop gate (`ai-slop/swallowed-exception`, an error-severity rule)
-      holds the 13 that call Konnekt's own functions; the 27 stdlib sites are
-      #316, and this line stays open until it closes.
+      it was there to catch (2026-09-08, HEALTH_LOG). The second's tail filter
+      is what the invariant's lookahead does: a comma-ok type assertion
+      (`v, _ := x.(T)`) is idiomatic and not an error, and `resolveTarget`'s
+      second value is the loader name. A map lookup's comma-ok with the `ok`
+      discarded is neither and is written without it. The aislop gate
+      (`ai-slop/swallowed-exception`) still holds the calls into Konnekt's own
+      functions; the 27 stdlib sites closed as #316 (HEALTH_LOG, 2026-09-12),
+      and seven of them were nil dereferences waiting for a file to vanish
+      mid-listing, which is why the line is a gate now and not a grep.
 - [x] `pnpm lint` runs against a real ESLint config and passes.
 - [x] Formatting (Prettier/Biome or equivalent) is consistent and enforced,
       not manual (lefthook pre-commit hook: Prettier + ESLint + `tsc --noEmit`

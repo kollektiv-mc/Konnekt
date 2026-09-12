@@ -122,7 +122,10 @@ func (s *ModService) Categories(serverID string) ([]string, error) {
 	// Modrinth only tags content categories with "mod"; there is no "plugin" taxonomy.
 	// So for plugin loaders we fall back to "mod" categories — they work as search
 	// facets regardless of project type.
-	cfg, _ := s.serverConfig(serverID)
+	cfg, err := s.serverConfig(serverID)
+	if err != nil {
+		return nil, err
+	}
 	_, loader := resolveTarget(cfg)
 	projectType := "mod"
 	if info, ok := loaderProjectType[loader]; ok && info.projectType != "plugin" {
@@ -142,7 +145,10 @@ func (s *ModService) MoreByAuthor(serverID, username, excludeProjectID string) (
 	if err != nil {
 		return nil, err
 	}
-	cfg, _ := s.serverConfig(serverID)
+	cfg, err := s.serverConfig(serverID)
+	if err != nil {
+		return nil, err
+	}
 	_, loader := resolveTarget(cfg)
 	projectType := ""
 	if info, ok := loaderProjectType[loader]; ok {
@@ -188,7 +194,10 @@ func (s *ModService) ResolveDependencies(serverID, versionID string) ([]models.R
 		return nil, err
 	}
 	// Build a set of already-installed project IDs
-	installed, _ := s.ListInstalled(serverID)
+	installed, err := s.ListInstalled(serverID)
+	if err != nil {
+		return nil, err
+	}
 	installedMap := make(map[string]bool, len(installed))
 	for _, m := range installed {
 		if m.ProjectID != "" {
@@ -534,9 +543,17 @@ func (s *ModService) ListInstalled(serverID string) ([]models.InstalledMod, erro
 	if err != nil {
 		return nil, err
 	}
-	loader, _ := s.loaderForServer(serverID)
+	loader, err := s.loaderForServer(serverID)
+	if err != nil {
+		return nil, err
+	}
 
-	manifest, _ := s.loadManifest(serverID)
+	// A manifest that will not parse lists the folder without its install
+	// records rather than hiding the jars that are plainly on disk.
+	manifest, err := s.loadManifest(serverID)
+	if err != nil {
+		slog.Warn("mods: manifest unreadable, listing from disk only", "server", serverID, "error", err)
+	}
 
 	// Index manifest items by fileName for O(1) lookup
 	manifestIndex := make(map[string]*modManifestItem)
@@ -566,7 +583,12 @@ func (s *ModService) ListInstalled(serverID string) ([]models.InstalledMod, erro
 			}
 			enabled := strings.HasSuffix(name, ".jar")
 
-			info, _ := e.Info()
+			// The entry vanished between ReadDir and here; SizeBytes below would
+			// dereference a nil FileInfo.
+			info, err := e.Info()
+			if err != nil {
+				continue
+			}
 			jarPath := filepath.Join(dir, name)
 
 			meta, err := parseJarMetaCached(jarPath, loader)
@@ -657,8 +679,12 @@ func (s *ModService) SetEnabled(serverID, fileName string, enabled bool) error {
 		}
 	}
 
-	// Update manifest
-	manifest, _ := s.loadManifest(serverID)
+	// Update manifest. The rename already happened, so an unreadable manifest
+	// is logged rather than reported; the next successful save rewrites it.
+	manifest, err := s.loadManifest(serverID)
+	if err != nil {
+		slog.Warn("mods: manifest unreadable, not updated", "server", serverID, "error", err)
+	}
 	if manifest != nil {
 		for i := range manifest.Items {
 			it := &manifest.Items[i]
@@ -703,8 +729,11 @@ func (s *ModService) Uninstall(serverID, fileName string) error {
 		}
 	}
 
-	// Remove from manifest
-	manifest, _ := s.loadManifest(serverID)
+	// Remove from manifest. Same as SetEnabled: the file is already gone.
+	manifest, err := s.loadManifest(serverID)
+	if err != nil {
+		slog.Warn("mods: manifest unreadable, not updated", "server", serverID, "error", err)
+	}
 	if manifest != nil {
 		manifest.removeByBase(bareName)
 		_ = s.saveManifest(serverID, manifest) //nolint:errcheck // best-effort manifest sync; the underlying file operation already succeeded

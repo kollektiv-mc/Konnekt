@@ -132,7 +132,10 @@ func (s *ModService) identifyUnknownLocked(serverID string) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	loader, _ := s.loaderForServer(serverID)
+	loader, err := s.loaderForServer(serverID)
+	if err != nil {
+		return false, err
+	}
 
 	manifest, err := s.loadManifest(serverID)
 	if err != nil || manifest == nil {
