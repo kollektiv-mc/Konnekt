@@ -79,7 +79,13 @@ func (s *ConfigEditorService) ListConfigFiles(serverID string) ([]models.ConfigF
 		if format == "" {
 			continue
 		}
-		info, _ := e.Info()
+		// Info fails only when the entry vanished between ReadDir and here, and
+		// makeConfigFile dereferences it, so a file deleted mid-listing used to
+		// be a nil-pointer panic. Skipping it is the truthful listing.
+		info, err := e.Info()
+		if err != nil {
+			continue
+		}
 		files = append(files, makeConfigFile(workDir, filepath.Join(workDir, name), info, "server", "", format))
 	}
 
@@ -98,7 +104,10 @@ func (s *ConfigEditorService) ListConfigFiles(serverID string) ([]models.ConfigF
 			if format == "" {
 				continue
 			}
-			info, _ := e.Info()
+			info, err := e.Info()
+			if err != nil {
+				continue
+			}
 			files = append(files, makeConfigFile(workDir, filepath.Join(configDir, name), info, "server", "", format))
 		}
 	}
@@ -117,7 +126,10 @@ func (s *ConfigEditorService) ListConfigFiles(serverID string) ([]models.ConfigF
 			if format == "" {
 				continue
 			}
-			info, _ := e.Info()
+			info, err := e.Info()
+			if err != nil {
+				continue
+			}
 			files = append(files, makeConfigFile(workDir, filepath.Join(pluginsDir, e.Name()), info, "plugins", "", format))
 		}
 
@@ -136,7 +148,10 @@ func (s *ConfigEditorService) ListConfigFiles(serverID string) ([]models.ConfigF
 				if format == "" {
 					continue
 				}
-				info, _ := sub.Info()
+				info, err := sub.Info()
+				if err != nil {
+					continue
+				}
 				files = append(files, makeConfigFile(workDir, filepath.Join(pluginsDir, pluginName, sub.Name()), info, "plugins", pluginName, format))
 			}
 		}
@@ -157,7 +172,10 @@ func (s *ConfigEditorService) ListConfigFiles(serverID string) ([]models.ConfigF
 			if format == "" {
 				continue
 			}
-			info, _ := e.Info()
+			info, err := e.Info()
+			if err != nil {
+				continue
+			}
 			files = append(files, makeConfigFile(workDir, filepath.Join(configDir, name), info, "mods", "", format))
 		}
 
@@ -176,7 +194,10 @@ func (s *ConfigEditorService) ListConfigFiles(serverID string) ([]models.ConfigF
 				if format == "" {
 					continue
 				}
-				info, _ := sub.Info()
+				info, err := sub.Info()
+				if err != nil {
+					continue
+				}
 				files = append(files, makeConfigFile(workDir, filepath.Join(configDir, modName, sub.Name()), info, "mods", modName, format))
 			}
 		}
