@@ -40,3 +40,6 @@ demo/.frames/
 
 # aislop appends a scan record here on every run; it is local state, not policy.
 .aislop/history.jsonl
+
+# go-mutesting writes its reports into the working directory on every run.
+go-mutesting-*.json
