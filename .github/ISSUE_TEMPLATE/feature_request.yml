@@ -83,14 +83,19 @@ body:
       label: How do you handle this today?
       description: Whatever you do instead, even if it is "give up and use the terminal". It tells us how much the gap costs.
 
+  # >>> suite:priority. Vendored from kollektiv by scripts/sync-priority.sh. Edit it there.
   - type: dropdown
-    id: impact
+    id: priority
     attributes:
-      label: How much would this matter to you?
+      label: How urgent is this for you?
+      description: Your honest read. Triage may change it, and that is normal.
       options:
-        - Nice to have
-        - I would use it often
-        - I cannot really use Konnekt without it
+        - 'Blocking: I cannot use it and have no way around it'
+        - 'Significant: it costs me real time, but I can work around it'
+        - 'Minor: it would be nice, but it is not in my way'
+    validations:
+      required: true
+  # <<< suite:priority
 
   - type: textarea
     id: extra
