@@ -956,6 +956,14 @@ tool results and the reasoning)
   #315 two store writes that swallow; #316 the 27 stdlib error ignores the
   old grep never saw; #317 a frontend mutation baseline.
 
+**From the 2026-09-12 session** (filed; the log entry of that date has the
+numbers)
+- **p2** #348 `backup.go` loses 571 of 809 mutants, 457 of them in the
+  restore, per-world and meta.json paths, against 0 of 818 in `modservice.go`
+  and 0 of 478 in `update.go`. The second half of #312's run, and the file
+  the next mutation pass belongs to. The two perfect scores are to be
+  re-checked for timeout kills before they are believed.
+
 **A scanned-file count is not a coverage figure** (filed 2026-09-08 as #321,
 corrected the same day)
 - #321 was filed as "CodeQL misses a third of the Go tree" off one log line,

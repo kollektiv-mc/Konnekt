@@ -5383,8 +5383,15 @@ the working directory on every run, is gitignored the way
 `.aislop/history.jsonl` is.
 
 **What is left of #312.** The issue's second half, the same run over
-`config_editor.go`, `backup.go`, `update.go` and `modservice.go`, is 2,402
-mutants by the dry run and was started as this entry was committed; its
-numbers follow in the next commit on the same branch.
+`config_editor.go`, `backup.go`, `update.go` and `modservice.go`, ran after
+this entry was first committed: 2,398 mutants, 1,791 killed, 74.7%. Per
+file: `update.go` 478 mutants and `modservice.go` 818, none escaped;
+`config_editor.go` 297, 36 escaped (88% killed); `backup.go` 809, **571
+escaped, 29% killed**, 457 of them past line 400 in the restore, per-world
+and meta.json paths. That file's line coverage says nothing of the kind, and
+it is the file whose failure modes this log has recorded twice. Filed as
+#348, with a note that the two perfect scores want a second look first: a
+mutant whose test run hangs counts as killed, so a file that times out on
+every mutation would score 100% for the wrong reason.
 `govulncheck ./...` still needs one local run; the container's proxy blocks
 `vuln.go.dev`.
