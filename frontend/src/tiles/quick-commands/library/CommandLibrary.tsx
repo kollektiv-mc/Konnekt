@@ -1,6 +1,6 @@
 import { Fragment, useCallback, useEffect, useMemo, useState } from 'react'
 import { Icon } from '../../../components/ui/Icon'
-import { Check, Plus, Search } from '../../../lib/icons'
+import { Plus, Search } from '../../../lib/icons'
 import { KickBanDialog, LifecycleConfirmDialog } from '../../../components/commands/CommandDialogs'
 import { PRESETS, makeItem } from '../../../components/commands/presets'
 import { useLifecycle } from '../../../components/commands/useLifecycle'
@@ -114,7 +114,6 @@ export function CommandLibrary({ serverId }: { serverId: string }) {
     [addLinked],
   )
 
-  const changedCount = kommands?.changedCount ?? 0
   const linkedCount = useMemo(() => items.filter((it) => it.link).length, [items])
 
   const visible = useMemo(() => {
@@ -144,14 +143,6 @@ export function CommandLibrary({ serverId }: { serverId: string }) {
   // line; nothing in the UI creates a group yet, so this is the usual state.
   const showGroups = useMemo(() => new Set(visible.map((it) => it.group || '')).size > 1, [visible])
 
-  const acknowledgeAll = useCallback(() => {
-    void (async () => {
-      for (const it of items) {
-        if (it.link?.status === 'changed') await acknowledge(it.id)
-      }
-    })().catch(console.error)
-  }, [items, acknowledge])
-
   return (
     <div className="lazy-panel-in flex h-full flex-col">
       <div className="border-border-subtle flex shrink-0 items-center gap-3 border-b px-4 py-2">
@@ -178,17 +169,6 @@ export function CommandLibrary({ serverId }: { serverId: string }) {
         </div>
 
         <Segmented options={FILTERS} value={filter} onChange={setFilter} compact />
-
-        {changedCount > 0 && (
-          <button
-            onClick={acknowledgeAll}
-            className="text-accent border-accent/30 bg-accent/10 hover:bg-accent/15 border-hairline ml-auto flex h-6 items-center gap-1 rounded px-2 text-xs transition-colors"
-            title="Keep every applied update and clear the badges"
-          >
-            <Icon icon={Check} size="xs" />
-            Got it{changedCount === 1 ? '' : ` (${changedCount})`}
-          </button>
-        )}
       </div>
 
       {error && (

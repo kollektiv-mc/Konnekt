@@ -46,7 +46,6 @@ export {
   SlidersHorizontal,
   X,
   // Commands tile: the button grid, the maximized library, and link state.
-  Check,
   CopyPlus,
   GripVertical,
   Link2,
