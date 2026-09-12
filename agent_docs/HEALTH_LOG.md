@@ -5253,3 +5253,137 @@ fields, all valid. Every kollektiv drift check (`sync-tokens`, `sync-runner
 --require-vendored`, `sync-notes`, `sync-aislop`, `sync-priority`,
 `validate-schemas --require-products`, `check-participation
 --require-products`) reports this repo up to date.
+
+### 2026-09-12 — The listing that could panic on a vanished file, and three smaller repairs
+
+**Closed: [#311](../../issues/311), [#315](../../issues/315),
+[#316](../../issues/316) and [#312](../../issues/312).** The session's first
+job, as on 2026-09-07, was to check every open backlog issue against the tree
+at 3b2509d before touching anything. Three readings did not hold, and they
+come first because they changed what was built.
+
+**What did not hold.**
+
+- **#315's layout half is not a swallow.** `useLayoutStore.persistActiveLayout`
+  records and does not rethrow, as filed, but the comment above it says why
+  (react-grid-layout drives it from a drag callback that cannot await, and
+  there is nothing to revert into: the layout on screen is what the user just
+  arranged), `LayoutPresets` renders the recorded `error` in the sidebar, and
+  `useLayoutStore.test.ts` pins the shape. That is the IPC convention's own
+  "says why it deliberately does neither" clause, written into #207 nine days
+  before the issue was filed. Left as it is, and the checklist line now names
+  it as the sanctioned exception rather than an open defect. The `startError`
+  alignment suggested for `useLoaderStore` is declined for the same reason:
+  its doc comment separates a refused start (`startError`) from a failed load
+  (`error`) and a failed job (`updateError`), and different UI reads each.
+- **#311's icon count was stale, and knip found two more.** Three dead
+  re-exports were filed; `RotateCcw` had already gone with f9965e0, so two
+  remained. knip, once configured, reported two dead type exports the issue
+  did not have: `RowDraft` in `tiles/quick-commands/types.ts`, and the
+  `LayoutItem` re-export in `types/index.ts`, which every consumer already
+  took from `react-grid-layout` directly.
+- **#316's count was right and its reading was not.** The 27 stdlib sites
+  were filed as "degrade to default by design". Ten of them were not. Seven
+  `info, _ := e.Info()` sites, six in `config_editor.go`'s `ListConfigFiles`
+  and one in `modservice.go`'s `ListInstalled`, fed `info.Name()` or
+  `info.Size()` unguarded, so a file deleted between `ReadDir` and `Info` was
+  a nil-pointer panic inside a bound method. The time-of-day trigger
+  discarded `strconv.Atoi`'s errors, so a node whose time read `ab:cd` fired
+  at midnight while `nextTimeOfDay`, which parsed the same field correctly,
+  showed no next run for it. And the two `io.ReadAll` discards, in the
+  Modrinth client and the HTTP block, handed a body cut off mid-transfer to
+  the caller as the body, with `onComplete` in the block's case.
+
+**The fix.** One commit per issue on the branch, so each can be read,
+reverted or cherry-picked alone.
+
+- **#316.** Per site, in the order the issue listed them. The seven `Info`
+  discards skip the entry, the way `backup.go`'s listing already did. The
+  three `serverConfig` and `ListInstalled` discards in `Categories`,
+  `MoreByAuthor` and `ResolveDependencies` return the error, the same answer
+  `GetVersions` beside them gives an unknown server; `loaderForServer`'s two
+  do the same. The `loadManifest` discards log at warn and go on, since the
+  rename or delete they follow has already happened; the directory and
+  `meta.json` reads log at debug and list what they can, since a server not
+  yet installed has no directory at all. `parseTimeOfDay` is one parser for
+  the trigger and the next-run display, with a range check, because
+  `time.Date` normalises `25:99` into an instant the trigger's hour/minute
+  comparison can never match. Both readers surface the read error, the HTTP
+  block routing to `onFailed` with the status still published. The args-file
+  scan in `serverlaunch.go` no longer pins the search on a first match it
+  could not stat. `scheduler_registry.go`'s comma-ok map lookup with the `ok`
+  discarded is written without it, and `makeConfigFile`'s `filepath.Rel` over
+  a `Join` of the same root carries the `//nolint:errcheck // reason` the
+  repo's other deliberate discards carry.
+  The gate is `suite.json`'s `no discarded errors` invariant: `, _ :?= ` with
+  a lookahead that leaves out the comma-ok type assertion, a `//nolint` line
+  and `resolveTarget`'s loader-name discard, over `app.go`, `main.go` and
+  `backend/` with tests excluded. It passes on this tree and failed on the
+  tree before it. Tests: a `parseTimeOfDay` table, `maybeFireTimeOfDay` for
+  the malformed, matching and off-by-a-minute cases, a truncated body against
+  each reader through an `httptest.Server` that declares more `Content-Length`
+  than it sends, and the unknown-server refusal on all three mod queries
+  through a provider that answers, so the refusal is the server lookup's and
+  not the provider's.
+- **#312.** `rcon_test.go`: both edges of the length check from both sides
+  (9, 10, 4096, 4097), a server that hangs up after auth, `errors.Is` through
+  the recv wraps and `errors.As` through the dial wrap, the packet types the
+  fake actually saw, and a body that arrives in two writes. The send-path
+  guards needed a seam: `RconService` gained an unexported `dial` field
+  defaulting to `net.DialTimeout`, so a test can hand `Execute` a `net.Pipe`
+  whose far end is closed, which is the one way to make a write fail on
+  demand. `scheduler_validate_test.go`: every alias in `dataTypeAliases` in a
+  wiring that is only refused when the alias resolves (a bool input is the
+  target both string and number are refused on), a `dataTypesCompatible`
+  table, and a walk over edges to missing nodes, unregistered blocks and
+  undeclared ports that asserts two bad edges yield two issues.
+  Score, `go-mutesting` v2.10.6 over the two files: 90.4% (169 of 187
+  killed) against the 66.2% (98 of 148) the 2026-09-08 run measured on an
+  older mutator set, so the rate is comparable and the counts are not. What
+  still escapes, and why none of it is worth chasing, is under Verification.
+- **#311.** `SchedulerSummaryCard.tsx` deleted; `PerformanceSummaryCard` and
+  `WorldsSummaryCard` removed with the imports only they used, and the doc
+  comment that pointed at the first; `SquareActivity` and `SlidersHorizontal`
+  dropped from `lib/icons.ts`; `@react-three/postprocessing` and
+  `postprocessing` removed from `package.json` and the lockfile, with a
+  `Removed` entry in `DEPENDENCIES.md` and the worlds row corrected; the two
+  type exports above removed. `frontend/knip.json` ignores `wailsjs/**`,
+  declares `playwright` and treats an in-file export as used, so `pnpm dlx
+  knip` from `frontend/` prints nothing. The entry chunk did not move: none
+  of it was ever in it.
+- **#315.** The seed write records into `error`, which `CommandLibrary`
+  renders beside the buttons, and the comment says why it is the one write in
+  the store that does not rethrow: the seed is shown either way, so a rethrow
+  into `hydrate`'s catch would have emptied the tile to report a write the
+  user could not act on anyway. `save`'s bridge check now reads as the guard
+  the other stores spell. Two tests: a rejected seed keeps the buttons and
+  records the message; no bridge records nothing and never calls the binding.
+
+**Verification.** `go vet ./...`, `go test ./...`, `go run
+./scripts/coverage-floor`; `pnpm typecheck`, `pnpm lint` (0 errors, the 14
+pre-existing warnings), `pnpm test` (759), `pnpm test:coverage`, `pnpm
+format:check`, `pnpm format:website`, `pnpm check-bundle` (entry 154.4 KB
+gzip), `pnpm check-tokens`, `pnpm check-prefetch`, `pnpm check-issue-templates`,
+the release-notes and website checks, `.claude/suite-check.py --section
+invariants` (both pass), `aislop ci` at 100, and `pnpm dlx knip` printing
+nothing.
+**The 18 mutants that still escape**, listed so nobody chases them: the two
+timing constants (`rconDialTimeout`, the five-second deadline) in seven
+mutants, which only a slow test could tell apart; the seam's field cleared
+to nil, which means the default by design; `readPacket`'s `readFull` guard,
+which with named returns falls through to the same `err`; `Uint32` over
+`data[0:5]`, which reads four bytes whatever the slice; `readFull`'s count on
+either return path, which its one caller discards; the four `continue`
+bodies in the validator's walk, whose zero values resolve to unresolved and
+therefore allowed, which is what the skip does; and `tgt == dataTypeNumber`
+in `dataTypesCompatible`, redundant after the `src == tgt` and `tgt ==
+string` returns above it. `go-mutesting-*.json`, which the tool writes into
+the working directory on every run, is gitignored the way
+`.aislop/history.jsonl` is.
+
+**What is left of #312.** The issue's second half, the same run over
+`config_editor.go`, `backup.go`, `update.go` and `modservice.go`, is 2,402
+mutants by the dry run and was started as this entry was committed; its
+numbers follow in the next commit on the same branch.
+`govulncheck ./...` still needs one local run; the container's proxy blocks
+`vuln.go.dev`.
