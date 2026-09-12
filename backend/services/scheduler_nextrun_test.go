@@ -242,3 +242,46 @@ func TestFindTriggerNode(t *testing.T) {
 		}
 	})
 }
+
+func TestParseTimeOfDay(t *testing.T) {
+	cases := []struct {
+		name string
+		time interface{}
+		h, m int
+		ok   bool
+	}{
+		{"plain", "09:30", 9, 30, true},
+		{"midnight", "00:00", 0, 0, true},
+		{"last minute of the day", "23:59", 23, 59, true},
+		{"unpadded with whitespace", " 9:05 ", 9, 5, true},
+		{"letters", "ab:cd", 0, 0, false},
+		{"hour out of range", "24:00", 0, 0, false},
+		{"minute out of range", "12:60", 0, 0, false},
+		{"negative hour", "-1:00", 0, 0, false},
+		{"no separator", "0930", 0, 0, false},
+		{"empty", "", 0, 0, false},
+		{"missing", nil, 0, 0, false},
+		{"not a string", 930.0, 0, 0, false},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			node := models.Node{Config: map[string]interface{}{}}
+			if c.time != nil {
+				node.Config["time"] = c.time
+			}
+			h, m, ok := parseTimeOfDay(node)
+			if ok != c.ok || h != c.h || m != c.m {
+				t.Errorf("parseTimeOfDay(%v) = (%d, %d, %v), want (%d, %d, %v)", c.time, h, m, ok, c.h, c.m, c.ok)
+			}
+		})
+	}
+
+	// The reason the parser is shared: the display and the trigger used to
+	// disagree on "25:99", which time.Date normalises into a real instant.
+	t.Run("out-of-range fields show no next run", func(t *testing.T) {
+		node := models.Node{Config: map[string]interface{}{"time": "25:99"}}
+		if got := nextTimeOfDay(node, time.Date(2024, 1, 1, 10, 0, 0, 0, time.UTC)); !got.IsZero() {
+			t.Errorf("got %v, want zero time", got)
+		}
+	})
+}
