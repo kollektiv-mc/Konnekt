@@ -135,9 +135,14 @@ export function QuickCommandsPanel({ serverId, columns }: QuickCommandsPanelProp
                   {item.link && <LinkGlyph status={item.link.status} />}
                 </span>
                 {/* Only a plain command has text worth a second line: a
-                    lifecycle or dialog button's value is an internal token. */}
+                    lifecycle or dialog button's value is an internal token.
+                    Hidden from the accessible name, which stays the label; the
+                    command is already the button's title. */}
                 {item.kind === 'cmd' && (
-                  <span className="cmd-button__value text-text-faint text-2xs truncate font-mono">
+                  <span
+                    aria-hidden
+                    className="cmd-button__value text-text-faint text-2xs truncate font-mono"
+                  >
                     {item.value}
                   </span>
                 )}
