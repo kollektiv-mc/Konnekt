@@ -63,22 +63,28 @@ tree.
 ## 1. Clean
 
 - [x] `go vet ./...` and `gofmt -l .` report nothing.
-- [ ] No blank `_` error-ignores in Go, except documented `//nolint` cases
+- [x] No blank `_` error-ignores in Go, except documented `//nolint` cases
       (e.g. `backend/services/eventbus.go`).
-      Verify, both greps, from the repo root:
+      Held by `suite.json`'s `no discarded errors` invariant (2026-09-12), so
+      `/suite-kit:health` and `.claude/suite-check.py` fail on a new one.
+      Verify by hand, both greps, from the repo root:
       ```bash
       grep -rn "_ = " --include=*.go app.go backend/ | grep -v nolint | grep -v _test.go
-      grep -rnE ", _ (:?=)" --include=*.go app.go backend/ | grep -v nolint | grep -v _test.go
+      grep -rnE ", _ (:?=)" --include=*.go app.go backend/ | grep -v nolint | grep -v _test.go | grep -vE '\.\(|resolveTarget\('
       ```
       Expect no matches from either. The first is the one this line carried
       for two months, and it returned nothing while **40** `x, _ := f()` sites
       sat in the tree: an error in the second return position is not
       `_ = `, so the grep that "verified" the line could not see the pattern
-      it was there to catch (2026-09-08, HEALTH_LOG). Type assertions and map
-      lookups also match the second grep; read a hit before counting it.
-      The aislop gate (`ai-slop/swallowed-exception`, an error-severity rule)
-      holds the 13 that call Konnekt's own functions; the 27 stdlib sites are
-      #316, and this line stays open until it closes.
+      it was there to catch (2026-09-08, HEALTH_LOG). The second's tail filter
+      is what the invariant's lookahead does: a comma-ok type assertion
+      (`v, _ := x.(T)`) is idiomatic and not an error, and `resolveTarget`'s
+      second value is the loader name. A map lookup's comma-ok with the `ok`
+      discarded is neither and is written without it. The aislop gate
+      (`ai-slop/swallowed-exception`) still holds the calls into Konnekt's own
+      functions; the 27 stdlib sites closed as #316 (HEALTH_LOG, 2026-09-12),
+      and seven of them were nil dereferences waiting for a file to vanish
+      mid-listing, which is why the line is a gate now and not a grep.
 - [x] `pnpm lint` runs against a real ESLint config and passes.
 - [x] Formatting (Prettier/Biome or equivalent) is consistent and enforced,
       not manual (lefthook pre-commit hook: Prettier + ESLint + `tsc --noEmit`
@@ -203,8 +209,9 @@ tree.
       *Kommands* roadmap had been sitting (see HEALTH_LOG, 2026-08-19): the
       suite shares a design source and a docs shape, so prose copied between
       products is a live failure mode here, not a hypothetical one.
-- [ ] No obviously dead code (unused exports, unreachable branches, orphaned
-      files) left behind after refactors. Open on #311.
+- [x] No obviously dead code (unused exports, unreachable branches, orphaned
+      files) left behind after refactors. Closed on #311 (HEALTH_LOG,
+      2026-09-12).
       The per-file grep this line used to prescribe only finds what you already
       suspect, which is how a tombstone file survives: nobody greps for a name
       they have forgotten. Sweep the whole tree instead, from both ends —
@@ -213,8 +220,8 @@ tree.
       (`server_windows.go`) make either one alone produce false positives.
       Frontend: `pnpm dlx knip` from `frontend/`, which builds that import
       graph in one pass and reports unused files, exports and dependencies.
-      Read its output against three known false positives until #311 lands a
-      `knip.json` that ignores them: everything under `wailsjs/` (generated),
+      `frontend/knip.json` holds the three known false positives so the run
+      prints nothing on a clean tree: everything under `wailsjs/` (generated),
       `playwright` (used from `demo/record.mjs`, outside the package), and an
       export used only inside its own file (`blockMeta.ts`'s `CATEGORY_ORDER`).
       A zero-external-reference export is otherwise dead; the
@@ -224,9 +231,9 @@ tree.
       so findings here are always whole exports or whole files.
       **This line is a date, not a state**: the Go half held from the
       2026-08-19 sweep, the frontend half did not survive the 2026-08-30
-      Overview roll-up, which left one file and two exports behind (#311). The
-      aislop gate vendors knip but did not report them for this repo's
-      layout, so knip is a sweep to run before a milestone, not a gate.
+      Overview roll-up, which left one file and two exports behind for nine
+      days. The aislop gate vendors knip but did not report them for this
+      repo's layout, so knip is a sweep to run before a milestone, not a gate.
 - [x] Function and file size hold a **ratchet**, not a target. `.aislop/config.yml`'s
       `quality.maxFunctionLoc` (350) and `maxFileLoc` (970) sit at today's
       largest function (`useMods`, 384 lines) and file (`server.go`, 1595
@@ -367,18 +374,26 @@ tree.
       Verify: `lib/clientErrors.test.ts` plus the reporting case in
       `components/ErrorBoundary.test.tsx`; on the Go side
       `go test . -run LogClientError` pins the line and the per-field clamp.
-- [ ] Store write actions record the failure and rethrow rather than applying
+- [x] Store write actions record the failure and rethrow rather than applying
       the optimistic update anyway, per `agent_docs/CLAUDE.md`'s IPC
       conventions. `useSchedulerStore` is the reference shape. This line read
       "all five comply" from 2026-08-20 until a side-by-side read on
-      2026-09-08 found `useLayoutStore.persistActiveLayout` recording and not
-      rethrowing, and `useCommandsStore`'s seed write swallowing with
-      `.catch(console.error)`. Open on #315.
+      2026-09-08 found two sites that did not rethrow (#315, closed 2026-09-12,
+      HEALTH_LOG). One was a swallow and is fixed: `useCommandsStore`'s
+      first-launch seed write logged to the console, which dies with the
+      window, and now records into `error`, which the library renders. The
+      other is the convention's own "says why it deliberately does neither"
+      clause, and stays: `useLayoutStore.persistActiveLayout` records and
+      does not rethrow because react-grid-layout drives it from a drag
+      callback that cannot await, there is nothing to revert into (the layout
+      on screen is what the user just arranged), and `LayoutPresets` renders
+      the recorded error. The comment above the function says so, and
+      `useLayoutStore.test.ts` pins it.
       Verify: from `frontend/`,
-      `grep -rn "best-effort" src/stores` — expect no matches, and read any
-      `catch` in a write action against the rule. The rethrow is only half:
-      grep the action's callers too, since a store that rethrows into a caller
-      that ignores it is the same bug one level up.
+      `grep -rn "best-effort\|console.error" src/stores` — expect no matches,
+      and read any `catch` in a write action against the rule. The rethrow is
+      only half: grep the action's callers too, since a store that rethrows
+      into a caller that ignores it is the same bug one level up.
       Note the one sanctioned exception, or it will be "fixed" back: a rejection
       with **no Wails bridge at all** (`lib/ipc.ts`'s `hasWailsBridge()`) keeps
       the optimistic value, because that is the `frontend-dev` preset in
@@ -940,6 +955,14 @@ tool results and the reasoning)
   menus and paths; #314 the oversized functions holding the size ratchet;
   #315 two store writes that swallow; #316 the 27 stdlib error ignores the
   old grep never saw; #317 a frontend mutation baseline.
+
+**From the 2026-09-12 session** (filed; the log entry of that date has the
+numbers)
+- **p2** #348 `backup.go` loses 571 of 809 mutants, 457 of them in the
+  restore, per-world and meta.json paths, against 0 of 818 in `modservice.go`
+  and 0 of 478 in `update.go`. The second half of #312's run, and the file
+  the next mutation pass belongs to. The two perfect scores are to be
+  re-checked for timeout kills before they are believed.
 
 **A scanned-file count is not a coverage figure** (filed 2026-09-08 as #321,
 corrected the same day)

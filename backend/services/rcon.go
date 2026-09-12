@@ -18,16 +18,26 @@ const (
 
 var reMinecraftColor = regexp.MustCompile(`§[0-9a-fk-or]`)
 
-type RconService struct{}
+type RconService struct {
+	// dial is net.DialTimeout in production. Tests hand in a net.Pipe so a
+	// write can be made to fail on demand, which a real socket cannot do
+	// deterministically: the first write after the peer hangs up still lands
+	// in the kernel buffer and succeeds. Nil means the default.
+	dial func(network, addr string, timeout time.Duration) (net.Conn, error)
+}
 
 func NewRconService() *RconService {
-	return &RconService{}
+	return &RconService{dial: net.DialTimeout}
 }
 
 // Execute connects, authenticates, runs a single command, and closes.
 // Returns the response body with Minecraft colour codes stripped.
 func (s *RconService) Execute(addr, password, command string) (string, error) {
-	conn, err := net.DialTimeout("tcp", addr, rconDialTimeout)
+	dial := s.dial
+	if dial == nil {
+		dial = net.DialTimeout
+	}
+	conn, err := dial("tcp", addr, rconDialTimeout)
 	if err != nil {
 		return "", fmt.Errorf("rcon dial: %w", err)
 	}
@@ -88,11 +98,9 @@ func readPacket(conn net.Conn) (id, ptype int32, body string, err error) {
 	}
 	id = int32(binary.LittleEndian.Uint32(data[0:4]))
 	ptype = int32(binary.LittleEndian.Uint32(data[4:8]))
-	// body: data[8:] minus the two trailing null bytes
-	end := len(data) - 2
-	if end > 8 {
-		body = string(data[8:end])
-	}
+	// body: data[8:] minus the two trailing null bytes. The length check above
+	// guarantees at least the ten framing bytes, so the slice is never negative.
+	body = string(data[8 : len(data)-2])
 	return
 }
 

@@ -849,3 +849,41 @@ func TestManifestRefusesAPathAsServerID(t *testing.T) {
 		t.Error("saveManifest wrote outside mods/")
 	}
 }
+
+// queryingProvider answers the two provider queries the fake refuses, so the
+// tests below reach the server lookup that follows them.
+type queryingProvider struct{ fakeModProvider }
+
+func (queryingProvider) GetCategories(context.Context) ([]models.ModCategory, error) {
+	return []models.ModCategory{{Header: "categories", Name: "utility", ProjectType: "mod"}}, nil
+}
+
+func (queryingProvider) GetProjectsByAuthor(context.Context, string) ([]models.ModProject, error) {
+	return []models.ModProject{{ID: "p1", ProjectType: "plugin"}}, nil
+}
+
+// Categories and MoreByAuthor used to discard serverConfig's error and run the
+// query against a zero config, so an unknown server id came back as the "mod"
+// taxonomy rather than as the error GetVersions already returns for it.
+func TestCategoriesAndMoreByAuthorRejectAnUnknownServer(t *testing.T) {
+	s, _ := newModFixture(t, &queryingProvider{})
+
+	// The known server answers, which is what makes the refusals below the
+	// server lookup's and not the provider's.
+	if got, err := s.Categories(testServerID); err != nil || len(got) != 1 {
+		t.Fatalf("Categories(known) = %v, %v; want one category and no error", got, err)
+	}
+	if got, err := s.MoreByAuthor(testServerID, "someone", ""); err != nil || len(got) != 1 {
+		t.Fatalf("MoreByAuthor(known) = %v, %v; want one project and no error", got, err)
+	}
+
+	if _, err := s.Categories("no-such-server"); err == nil {
+		t.Error("Categories(unknown server) = nil error, want an error")
+	}
+	if _, err := s.MoreByAuthor("no-such-server", "someone", ""); err == nil {
+		t.Error("MoreByAuthor(unknown server) = nil error, want an error")
+	}
+	if _, err := s.ResolveDependencies("no-such-server", "v1"); err == nil {
+		t.Error("ResolveDependencies(unknown server) = nil error, want an error")
+	}
+}

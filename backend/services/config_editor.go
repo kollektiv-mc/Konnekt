@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"strings"
@@ -66,7 +67,13 @@ func (s *ConfigEditorService) ListConfigFiles(serverID string) ([]models.ConfigF
 	var files []models.ConfigFile
 
 	// --- Server root files ---
-	rootEntries, _ := os.ReadDir(workDir)
+	// An unreadable working directory lists as empty rather than failing the
+	// tile: a server that has not been installed yet has no directory at all,
+	// and the optional subdirectories below already degrade the same way.
+	rootEntries, err := os.ReadDir(workDir)
+	if err != nil {
+		slog.Debug("config: working directory unreadable", "dir", workDir, "error", err)
+	}
 	for _, e := range rootEntries {
 		if e.IsDir() {
 			continue
@@ -115,7 +122,10 @@ func (s *ConfigEditorService) ListConfigFiles(serverID string) ([]models.ConfigF
 	// --- Plugins (depth 2 under plugins/) ---
 	pluginsDir := filepath.Join(workDir, "plugins")
 	if _, err := os.Stat(pluginsDir); err == nil {
-		pEntries, _ := os.ReadDir(pluginsDir)
+		pEntries, err := os.ReadDir(pluginsDir)
+		if err != nil {
+			slog.Debug("config: plugins directory unreadable", "dir", pluginsDir, "error", err)
+		}
 
 		// Files directly in plugins/
 		for _, e := range pEntries {
@@ -139,7 +149,10 @@ func (s *ConfigEditorService) ListConfigFiles(serverID string) ([]models.ConfigF
 				continue
 			}
 			pluginName := e.Name()
-			subEntries, _ := os.ReadDir(filepath.Join(pluginsDir, pluginName))
+			subEntries, err := os.ReadDir(filepath.Join(pluginsDir, pluginName))
+			if err != nil {
+				slog.Debug("config: plugin directory unreadable", "plugin", pluginName, "error", err)
+			}
 			for _, sub := range subEntries {
 				if sub.IsDir() {
 					continue
@@ -185,7 +198,10 @@ func (s *ConfigEditorService) ListConfigFiles(serverID string) ([]models.ConfigF
 				continue
 			}
 			modName := e.Name()
-			subEntries, _ := os.ReadDir(filepath.Join(configDir, modName))
+			subEntries, err := os.ReadDir(filepath.Join(configDir, modName))
+			if err != nil {
+				slog.Debug("config: mod config directory unreadable", "mod", modName, "error", err)
+			}
 			for _, sub := range subEntries {
 				if sub.IsDir() {
 					continue
@@ -439,7 +455,10 @@ func (s *ConfigEditorService) pruneBackups(dir, prefix string) {
 }
 
 func makeConfigFile(workDir, abs string, info os.FileInfo, category, source, format string) models.ConfigFile {
-	rel, _ := filepath.Rel(workDir, abs)
+	// Every caller builds abs by joining workDir, so the relative path exists by
+	// construction; the only way Rel fails is a different volume, which a Join
+	// of the same root cannot produce.
+	rel, _ := filepath.Rel(workDir, abs) //nolint:errcheck // abs is under workDir by construction (see above)
 	return models.ConfigFile{
 		RelPath:   filepath.ToSlash(rel),
 		Name:      info.Name(),

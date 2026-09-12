@@ -1,7 +1,6 @@
 import type { FC } from 'react'
 import type { LucideIcon } from '../lib/icons'
 import type { models } from '../../wailsjs/go/models'
-export type { LayoutItem } from 'react-grid-layout'
 
 export type WorldSystem = models.WorldSystem
 
