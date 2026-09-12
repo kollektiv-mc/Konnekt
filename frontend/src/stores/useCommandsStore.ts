@@ -100,7 +100,7 @@ export const useCommandsStore = create<CommandsStore>((set, get) => ({
         // what makes that distinguishable from a user who deleted every button:
         // the old empty-string check could not tell them apart and would have
         // resurrected the defaults.
-        set({ items: await seedDefaults(), loading: false, hydrated: true })
+        set({ items: await seedDefaults(set), loading: false, hydrated: true })
       }
     } catch (e) {
       // Keep whatever is on screen; the tile renders the error beside it.
@@ -137,9 +137,11 @@ export const useCommandsStore = create<CommandsStore>((set, get) => ({
     try {
       await SaveCommandButtons(next)
     } catch (e) {
-      if (!hasWailsBridge()) return
-      set({ items: prev, error: errMsg(e) })
-      throw e
+      if (hasWailsBridge()) {
+        set({ items: prev, error: errMsg(e) })
+        throw e
+      }
+      // No bridge: the browser-only preview keeps the optimistic value.
     }
   },
 
@@ -210,7 +212,9 @@ function withoutLink(item: CommandButton): CommandButton {
  * That legacy read is the only remaining use of GetCustomCommands. Its write
  * half was bound but never called from anywhere and has been removed.
  */
-async function seedDefaults(): Promise<CommandButton[]> {
+async function seedDefaults(
+  set: (partial: Partial<CommandsStore>) => void,
+): Promise<CommandButton[]> {
   const seed = PRESETS.filter((p) => DEFAULT_LABELS.has(p.label)).map(makeItem)
   const legacy = await readOr(() => GetCustomCommands(), [] as string[])
   for (const cmd of legacy) {
@@ -224,11 +228,19 @@ async function seedDefaults(): Promise<CommandButton[]> {
   // Awaited, because hydrate asks Kommands to sync right after this: Go only
   // syncs into a seeded file, so a seed still in flight would leave whatever
   // is linked in Kommands off the first launch's list until the next focus.
+  //
+  // Recorded, not rethrown, and this is the one write in the store that does
+  // not: the seed is the first-launch default set and the tile shows it either
+  // way, so there is nothing to revert into. What a failed write costs is the
+  // Kommands sync (Go only syncs into a seeded file) until the next launch
+  // re-seeds or the first edit rewrites the whole set. The tile renders
+  // `error` beside the buttons, which is how the user learns the write did
+  // not land; a console line would die with the window.
   if (hasWailsBridge()) {
     try {
       await SaveCommandButtons(seed)
     } catch (e) {
-      console.error(e)
+      set({ error: errMsg(e) })
     }
   }
   return seed
