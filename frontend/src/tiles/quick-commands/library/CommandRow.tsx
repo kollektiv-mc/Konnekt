@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Icon } from '../../../components/ui/Icon'
+import { IconButton } from '../../../components/ui/IconButton'
 import { CopyPlus, GripVertical, Trash2 } from '../../../lib/icons'
 import type { Offset, SortableHandleProps } from '../../../hooks/useSortable'
 import type { CommandButton } from '../../../stores/useCommandsStore'
@@ -29,19 +30,23 @@ function translate(offset: Offset | null) {
 }
 
 const FIELD =
-  'focus:border-border-hover hover:border-border-subtle rounded border border-transparent bg-transparent px-1.5 py-0.5 text-xs transition-colors outline-none'
+  'focus:border-border-hover hover:border-border-subtle h-6 rounded border border-transparent bg-transparent px-1.5 text-xs transition-colors outline-none'
+const TEXT = 'flex h-6 items-center truncate px-1.5 text-xs'
 
 /**
  * One command in the library: label and value editable in place, at a size the
  * compact grid has never had room for.
  *
- * A linked row is the exception, and shows its text as text. Its label and
- * command are Kommands', it exists because it was linked there, and an edit
- * here would either be undone by the next sync or stop the link meaning
- * anything. So the row offers a copy instead — the same text under this
- * server's own identity — and keeps the original following its source. That
- * replaced fork-on-edit, which unlinked the row the user was typing into and
- * then watched the sync bring the original back beside it.
+ * Every row lays out on the same columns, whatever it holds: grip, label,
+ * command, then whatever the link has to say, then Run, copy, delete. The last
+ * three keep their width whether or not they are drawn, so the buttons line up
+ * down the list instead of drifting with each row's tag.
+ *
+ * A linked row is the exception to editing, and shows its text as text. Its
+ * label and command are Kommands', and an edit here would either be undone by
+ * the next sync or stop the link meaning anything. So the row offers a copy
+ * instead — the same text under this server's own identity — and keeps the
+ * original following its source.
  *
  * `kind` is deliberately not editable either. A `lifecycle` value is one of a
  * fixed set the frontend dispatches on and a `special` value names a dialog, so
@@ -82,16 +87,11 @@ export function CommandRow({
 
   const linked = item.link !== undefined
   const editable = item.kind === 'cmd' && !linked
-  // Removing a row that Kommands still lists would only have the next sync put
-  // it back, so the trash is not offered there; the way to remove it is to
-  // unlink it in Kommands. A row whose file is gone is removable, since nothing
-  // would return it.
-  const removable = !linked || item.link?.status === 'broken'
 
   return (
     <div
       ref={rowRef}
-      className={`flex items-center gap-2 rounded border px-2 py-1.5 ${
+      className={`flex items-center gap-2 rounded border px-2 py-1 ${
         lift
           ? 'border-accent/60 bg-canvas relative z-10 transition-none'
           : 'border-border-subtle duration-fast transition-[transform,border-color]'
@@ -109,22 +109,15 @@ export function CommandRow({
             ? 'Drag to reorder, or use the arrow keys'
             : 'Clear the search and filter to reorder'
         }
-        className={`text-text-faint hover:text-text-secondary shrink-0 touch-none ${
+        className={`text-text-faint hover:text-text-secondary flex h-6 w-4 shrink-0 touch-none items-center justify-center ${
           canReorder ? 'cursor-grab active:cursor-grabbing' : 'cursor-not-allowed'
         }`}
       >
         <Icon icon={GripVertical} size="xs" />
       </button>
 
-      <span className="text-text-faint border-border-subtle border-hairline text-2xs shrink-0 rounded px-1.5 py-0.5">
-        {item.kind}
-      </span>
-
       {linked ? (
-        <span
-          className="text-text-primary w-40 shrink-0 truncate px-1.5 py-0.5 text-xs"
-          title={item.label}
-        >
+        <span className={`text-text-primary w-40 shrink-0 ${TEXT}`} title={item.label}>
           {item.label}
         </span>
       ) : (
@@ -159,7 +152,7 @@ export function CommandRow({
         />
       ) : (
         <span
-          className={`min-w-0 flex-1 truncate px-1.5 py-0.5 font-mono text-xs ${
+          className={`min-w-0 flex-1 font-mono ${TEXT} ${
             linked ? 'text-text-secondary' : 'text-text-faint'
           }`}
           title={linked ? item.value : 'A lifecycle or dialog button has a fixed action'}
@@ -169,37 +162,32 @@ export function CommandRow({
       )}
 
       {item.link && (
-        <LinkBadge link={item.link} onAcknowledge={onAcknowledge} onUnlink={onUnlink} />
+        <div className="flex shrink-0 items-center gap-1.5">
+          <LinkBadge link={item.link} onAcknowledge={onAcknowledge} onUnlink={onUnlink} />
+        </div>
       )}
 
-      <button
-        onClick={onRun}
-        disabled={item.kind === 'lifecycle' && item.value !== 'force-stop' && lifecycleBusy}
-        className="border-border-subtle text-text-secondary hover:border-border-hover hover:bg-hover hover:text-text-primary shrink-0 rounded border px-2 py-0.5 text-xs transition-all disabled:opacity-40"
-      >
-        Run
-      </button>
-
-      {linked && (
+      <div className="flex shrink-0 items-center gap-1">
         <button
-          onClick={onDuplicate}
-          aria-label={`Make a copy of ${item.label}`}
-          title="Make a copy that is this server's own to edit"
-          className="text-text-faint hover:text-text-primary shrink-0 transition-colors"
+          onClick={onRun}
+          disabled={item.kind === 'lifecycle' && item.value !== 'force-stop' && lifecycleBusy}
+          className="border-border-subtle text-text-secondary hover:border-border-hover hover:bg-hover hover:text-text-primary h-6 w-12 shrink-0 rounded border text-xs transition-all disabled:opacity-40"
         >
-          <Icon icon={CopyPlus} size="xs" />
+          Run
         </button>
-      )}
-
-      {removable && (
-        <button
-          onClick={onRemove}
-          aria-label={`Delete ${item.label}`}
-          className="text-text-faint hover:text-danger shrink-0 transition-colors"
-        >
+        {linked ? (
+          <IconButton onClick={onDuplicate} title={`Make a copy of ${item.label}`}>
+            <Icon icon={CopyPlus} size="xs" />
+          </IconButton>
+        ) : (
+          // Holds the column so the delete lines up whether or not a copy is
+          // offered.
+          <span aria-hidden className="h-6 w-6 shrink-0" />
+        )}
+        <IconButton onClick={onRemove} tone="danger" title={`Delete ${item.label}`}>
           <Icon icon={Trash2} size="xs" />
-        </button>
-      )}
+        </IconButton>
+      </div>
     </div>
   )
 }

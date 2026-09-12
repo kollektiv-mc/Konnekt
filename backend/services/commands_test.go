@@ -131,7 +131,6 @@ func TestSyncLinks(t *testing.T) {
 		items       []models.CommandButton
 		saved       []models.KommandsSavedCommand
 		wantChanged bool
-		wantItems   int
 		wantStatus  string
 		wantValue   string
 	}{
@@ -140,7 +139,6 @@ func TestSyncLinks(t *testing.T) {
 			items:       []models.CommandButton{linked("a", "k1", 5, models.LinkStatusOK)},
 			saved:       saved,
 			wantChanged: false,
-			wantItems:   1,
 			wantStatus:  models.LinkStatusOK,
 			wantValue:   "old value",
 		},
@@ -149,7 +147,6 @@ func TestSyncLinks(t *testing.T) {
 			items:       []models.CommandButton{linked("a", "k1", 4, models.LinkStatusOK)},
 			saved:       saved,
 			wantChanged: true,
-			wantItems:   1,
 			wantStatus:  models.LinkStatusChanged,
 			wantValue:   "new value",
 		},
@@ -160,28 +157,24 @@ func TestSyncLinks(t *testing.T) {
 			items:       []models.CommandButton{linked("a", "k1", 9, models.LinkStatusOK)},
 			saved:       saved,
 			wantChanged: true,
-			wantItems:   1,
 			wantStatus:  models.LinkStatusChanged,
 			wantValue:   "new value",
 		},
 		{
-			// Absence from a file that is present is the user unlinking or
-			// deleting the command in Kommands. The button exists only because
-			// of the link, so it goes with it.
-			name:        "missing original removes the button",
+			// Unlinked or deleted in Kommands. The button was placed here on
+			// purpose, so it stays, marked, with its last text.
+			name:        "missing original marks broken and keeps the value",
 			items:       []models.CommandButton{linked("a", "gone", 1, models.LinkStatusOK)},
 			saved:       saved,
 			wantChanged: true,
-			wantItems:   1, // k1 is materialized in the same pass
-			wantStatus:  models.LinkStatusOK,
-			wantValue:   "new value",
+			wantStatus:  models.LinkStatusBroken,
+			wantValue:   "old value",
 		},
 		{
-			name:        "a file that came back clears broken",
+			name:        "a relinked original clears broken",
 			items:       []models.CommandButton{linked("a", "k1", 5, models.LinkStatusBroken)},
 			saved:       saved,
 			wantChanged: true,
-			wantItems:   1,
 			wantStatus:  models.LinkStatusOK,
 			wantValue:   "old value",
 		},
@@ -192,21 +185,8 @@ func TestSyncLinks(t *testing.T) {
 			items:       []models.CommandButton{linked("a", "k1", 5, models.LinkStatusChanged)},
 			saved:       saved,
 			wantChanged: false,
-			wantItems:   1,
 			wantStatus:  models.LinkStatusChanged,
 			wantValue:   "old value",
-		},
-		{
-			// The case the whole model rests on: linking in Kommands is what
-			// creates the button here, with the original's text and a link
-			// that already agrees with it.
-			name:        "an entry with no button gets one",
-			items:       []models.CommandButton{{ID: "plain", Label: "List", Kind: "cmd", Value: "list"}},
-			saved:       saved,
-			wantChanged: true,
-			wantItems:   2,
-			wantStatus:  models.LinkStatusOK,
-			wantValue:   "new value",
 		},
 	}
 
@@ -227,93 +207,40 @@ func TestSyncLinks(t *testing.T) {
 			if err != nil {
 				t.Fatalf("Get: %v", err)
 			}
-			if len(got.Items) != tt.wantItems {
-				t.Fatalf("item count = %d, want %d: %+v", len(got.Items), tt.wantItems, got.Items)
+			if len(got.Items) != len(tt.items) {
+				t.Fatalf("item count changed: %d -> %d", len(tt.items), len(got.Items))
 			}
-			var it *models.CommandButton
-			for i := range got.Items {
-				if got.Items[i].Link != nil && got.Items[i].Link.ID == "k1" {
-					it = &got.Items[i]
-				}
-			}
-			if it == nil {
-				t.Fatalf("no button follows k1: %+v", got.Items)
-			}
+			it := got.Items[0]
 			if it.Link.Status != tt.wantStatus {
 				t.Errorf("Status = %q, want %q", it.Link.Status, tt.wantStatus)
 			}
 			if it.Value != tt.wantValue {
 				t.Errorf("Value = %q, want %q", it.Value, tt.wantValue)
 			}
-			if it.Link.Revision != 5 {
-				t.Errorf("Revision = %d, want the file's 5", it.Link.Revision)
-			}
 		})
 	}
 }
 
-// A first sync of several linked commands reads in the order they were made.
-// The file lists newest first; the buttons are appended oldest first, after
-// whatever was already here, and each carries the original's label and text.
-func TestSyncLinksMaterializesOldestFirstAfterExistingButtons(t *testing.T) {
+// Which of Kommands' commands become buttons is the user's decision, taken by
+// adding one from the library's list. An entry no button follows is left
+// there to be added, never turned into a button on its own.
+func TestSyncLinksCreatesNothing(t *testing.T) {
 	s, _ := newTestCommands(t)
 	if err := s.Save([]models.CommandButton{{ID: "plain", Label: "List", Kind: "cmd", Value: "list"}}); err != nil {
 		t.Fatalf("Save: %v", err)
 	}
 	changed, err := s.SyncLinks([]models.KommandsSavedCommand{
-		{ID: "newest", Revision: 1, Label: "Newest", Command: "say newest"},
-		{ID: "oldest", Revision: 2, Label: "Oldest", Command: "say oldest"},
+		{ID: "k1", Revision: 1, Label: "Kit", Command: "give @p stone"},
 	})
-	if err != nil || !changed {
-		t.Fatalf("SyncLinks: changed %v, err %v", changed, err)
+	if err != nil {
+		t.Fatalf("SyncLinks: %v", err)
+	}
+	if changed {
+		t.Error("changed = true, want false: nothing here follows k1")
 	}
 	got, _ := s.Get()
-	if len(got.Items) != 3 {
-		t.Fatalf("len(Items) = %d, want 3", len(got.Items))
-	}
-	if got.Items[0].ID != "plain" {
-		t.Errorf("existing button moved: %+v", got.Items[0])
-	}
-	if got.Items[1].Link.ID != "oldest" || got.Items[2].Link.ID != "newest" {
-		t.Errorf("order = %q, %q; want oldest then newest", got.Items[1].Link.ID, got.Items[2].Link.ID)
-	}
-	made := got.Items[2]
-	if made.Kind != "cmd" || made.Label != "Newest" || made.Value != "say newest" || made.ID == "" {
-		t.Errorf("materialized button wrong: %+v", made)
-	}
-	if made.Link.Revision != 1 || made.Link.Status != models.LinkStatusOK {
-		t.Errorf("materialized link wrong: %+v", made.Link)
-	}
-	// Idempotent: the same file again creates nothing.
-	changed, err = s.SyncLinks([]models.KommandsSavedCommand{
-		{ID: "newest", Revision: 1, Label: "Newest", Command: "say newest"},
-		{ID: "oldest", Revision: 2, Label: "Oldest", Command: "say oldest"},
-	})
-	if err != nil || changed {
-		t.Fatalf("second SyncLinks: changed %v, err %v", changed, err)
-	}
-}
-
-// Only what is gone goes. A button authored here and a button whose original
-// is still linked both survive an unlink of a third.
-func TestSyncLinksRemovesOnlyTheUnlinked(t *testing.T) {
-	s, _ := newTestCommands(t)
-	if err := s.Save([]models.CommandButton{
-		{ID: "plain", Label: "List", Kind: "cmd", Value: "list"},
-		linked("a", "k1", 1, models.LinkStatusOK),
-		linked("b", "k2", 1, models.LinkStatusChanged),
-	}); err != nil {
-		t.Fatalf("Save: %v", err)
-	}
-	changed, err := s.SyncLinks([]models.KommandsSavedCommand{
-		{ID: "k1", Revision: 1, Label: "l", Command: "v"},
-	})
-	if err != nil || !changed {
-		t.Fatalf("SyncLinks: changed %v, err %v", changed, err)
-	}
-	got, _ := s.Get()
-	if len(got.Items) != 2 || got.Items[0].ID != "plain" || got.Items[1].ID != "a" {
-		t.Fatalf("Items = %+v, want plain and a", got.Items)
+	if len(got.Items) != 1 {
+		t.Fatalf("a button was created for an entry nobody added: %+v", got.Items)
 	}
 }
 
@@ -337,8 +264,7 @@ func TestSyncLinksTwoUpdatesStayOneBadge(t *testing.T) {
 }
 
 // A link on a lifecycle or dialog button would let the shared file rewrite what
-// "Stop" does. Nothing creates one any more; one from an older file is left
-// alone, and does not get a twin either.
+// "Stop" does. Go refuses rather than trusting the frontend not to offer it.
 func TestSyncLinksIgnoresNonCommandKinds(t *testing.T) {
 	s, _ := newTestCommands(t)
 	item := linked("a", "k1", 1, models.LinkStatusOK)
@@ -406,8 +332,8 @@ func TestSyncLinksRecoversFromAStaleSave(t *testing.T) {
 	}
 }
 
-// The file being gone is not an entry being gone: every linked button is kept
-// and marked, a plain button is untouched, and doing it twice writes once.
+// A missing file marks every linked button the way a missing entry marks one:
+// kept, a plain button untouched, and doing it twice writes once.
 func TestMarkLinksBroken(t *testing.T) {
 	s, _ := newTestCommands(t)
 	if err := s.Save([]models.CommandButton{

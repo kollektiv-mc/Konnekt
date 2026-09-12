@@ -221,9 +221,10 @@ func TestKommandsPollMissingFileMarksLinksBroken(t *testing.T) {
 	}
 }
 
-// Linking in Kommands is what creates the button here: a file with an entry no
-// button follows yields one, and the entry's later removal takes it away.
-func TestKommandsPollMaterializesAndRemoves(t *testing.T) {
+// Linking in Kommands makes a command visible here, and no more: the poll
+// lists it for the library to offer, and creates no button for it. Unlinking
+// it afterwards marks a button the user did add rather than removing it.
+func TestKommandsPollListsWithoutCreating(t *testing.T) {
 	k, cmds, dir := newTestKommands(t)
 	if err := cmds.Save([]models.CommandButton{{ID: "plain", Label: "List", Kind: "cmd", Value: "list"}}); err != nil {
 		t.Fatalf("Save: %v", err)
@@ -233,21 +234,29 @@ func TestKommandsPollMaterializesAndRemoves(t *testing.T) {
 		t.Fatalf("Poll: %v", err)
 	}
 	got, _ := cmds.Get()
-	if len(got.Items) != 2 || got.Items[1].Link == nil || got.Items[1].Link.ID != "k1" {
-		t.Fatalf("after linking: %+v", got.Items)
+	if len(got.Items) != 1 {
+		t.Fatalf("a button appeared without anyone adding it: %+v", got.Items)
 	}
-	// The sanitised form reaches the button: console form, no leading slash.
-	if got.Items[1].Value != "give @p stone" || got.Items[1].Label != "Kit" {
-		t.Errorf("materialized button = %+v", got.Items[1])
+	// The sanitised form is what the library offers: console form, no slash.
+	listed := k.Saved()
+	if len(listed) != 1 || listed[0].Command != "give @p stone" || listed[0].Label != "Kit" {
+		t.Fatalf("Saved() = %+v", listed)
 	}
 
+	// The user adds it, then unlinks it in Kommands.
+	if err := cmds.Save([]models.CommandButton{got.Items[0], linked("b", "k1", 1, models.LinkStatusOK)}); err != nil {
+		t.Fatalf("Save: %v", err)
+	}
 	writeSaved(t, dir, `{"version":1,"commands":[]}`)
 	if err := k.Poll(true); err != nil {
 		t.Fatalf("Poll after unlink: %v", err)
 	}
 	got, _ = cmds.Get()
-	if len(got.Items) != 1 || got.Items[0].ID != "plain" {
-		t.Errorf("after unlinking: %+v, want only the plain button", got.Items)
+	if len(got.Items) != 2 || got.Items[1].Link.Status != models.LinkStatusBroken {
+		t.Errorf("after unlinking: %+v, want the button kept and marked", got.Items)
+	}
+	if len(k.Saved()) != 0 {
+		t.Errorf("Saved() still lists an unlinked command: %+v", k.Saved())
 	}
 }
 

@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import {
   GetCommandButtons,
   GetCustomCommands,
+  GetKommandsCommands,
   RefreshKommands,
   SaveCommandButtons,
 } from '../../wailsjs/go/main/App'
@@ -17,10 +18,13 @@ import {
 
 export type CommandButton = models.CommandButton
 export type KommandsStatus = models.KommandsStatus
+export type KommandsSavedCommand = models.KommandsSavedCommand
 
 interface CommandsStore {
   items: CommandButton[]
   kommands: KommandsStatus | null
+  /** What Kommands has linked, for the library's list of what can be added. */
+  saved: KommandsSavedCommand[]
   hydrated: boolean
   loading: boolean
   error: string | null
@@ -36,6 +40,8 @@ interface CommandsStore {
   reorder: (from: number, to: number) => Promise<void>
   update: (id: string, patch: Partial<CommandButton>) => Promise<void>
 
+  /** Add a button that follows one of Kommands' linked commands. */
+  addLinked: (saved: KommandsSavedCommand) => Promise<void>
   /** Insert an unlinked copy of a button right after it. */
   duplicate: (id: string) => Promise<void>
   /** Drop the link, keep the button as a plain command of this server's own. */
@@ -53,12 +59,13 @@ interface CommandsStore {
  * time. Two `useState` lists would diverge the moment either one was edited,
  * and the console tile embeds the same panel as a third mount on top of that.
  *
- * Linked buttons are never made here. Kommands decides which of its saved
- * commands are linked, Go turns each one into a button as the shared file
- * changes (CommandsService.SyncLinks) and says so through `commands:changed`,
- * which `useCommandsSync` turns into a `reload`. What this side can do with a
- * linked button is what a view can do: acknowledge an update, keep it as its
- * own once Kommands is gone, or take a copy. Its label and text are Kommands'.
+ * A linked button starts here, from `addLinked`: Kommands decides which of its
+ * saved commands are linked (that is the list in `saved`), and the user decides
+ * which of those become buttons. From then on Go keeps the button in step with
+ * its original (CommandsService.SyncLinks) and says so through
+ * `commands:changed`, which `useCommandsSync` turns into a `reload`. Its label
+ * and text are Kommands', so what this side offers on it is to acknowledge an
+ * update, keep it as its own once the original is gone, or take a copy.
  *
  * Write actions follow the convention in agent_docs/CLAUDE.md: they apply
  * optimistically, and on a real rejection they revert, record the message and
@@ -70,6 +77,7 @@ interface CommandsStore {
 export const useCommandsStore = create<CommandsStore>((set, get) => ({
   items: [],
   kommands: null,
+  saved: [],
   hydrated: false,
   loading: false,
   error: null,
@@ -111,8 +119,11 @@ export const useCommandsStore = create<CommandsStore>((set, get) => ({
     // when a link actually moved, and it says so by emitting commands:changed —
     // which useCommandsSync turns into a reload(). Re-reading on every focus
     // instead would race a save still in flight and put the old value back.
-    const kommands = await readOr(() => RefreshKommands(), null)
-    set({ kommands })
+    const [kommands, saved] = await Promise.all([
+      readOr(() => RefreshKommands(), null),
+      readOr(() => GetKommandsCommands(), [] as KommandsSavedCommand[]),
+    ])
+    set({ kommands, saved: saved ?? [] })
   },
 
   reload: async () => {
@@ -146,6 +157,21 @@ export const useCommandsStore = create<CommandsStore>((set, get) => ({
       get().items.map((it) =>
         it.id === id ? models.CommandButton.createFrom({ ...it, ...patch }) : it,
       ),
+    ),
+
+  addLinked: async (savedCmd) =>
+    get().add(
+      models.CommandButton.createFrom({
+        ...makeItem({ label: savedCmd.label, kind: 'cmd', value: savedCmd.command }),
+        // The link agrees with its original from the first moment, so the
+        // next poll has nothing to apply and nothing to badge.
+        link: {
+          source: 'kommands',
+          id: savedCmd.id,
+          revision: savedCmd.revision,
+          status: 'ok',
+        },
+      }),
     ),
 
   duplicate: async (id) => {

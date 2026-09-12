@@ -34,11 +34,12 @@ type CommandButton struct {
 // ever reads it. That read-only posture is what makes divergence impossible
 // rather than merely unlikely.
 //
-// A linked button is created by the link, not bound to one afterwards: Kommands
-// decides which of its saved commands are linked, the shared file holds exactly
-// those, and CommandsService.SyncLinks materializes a button per entry. So the
-// button's label and value are the original's, it is not editable here (a copy
-// is offered instead), and it leaves when the entry does.
+// Two decisions, one on each side. Kommands decides which of its saved commands
+// are linked, which is what the shared file holds; the user here decides which
+// of those become buttons, by adding one from the library's Kommands list. A
+// linked button's label and value are the original's and follow it
+// (CommandsService.SyncLinks), so it is not editable here: a copy is offered
+// instead.
 type CommandLink struct {
 	// Source is "kommands". A field rather than a bool so a second source needs
 	// no migration of everything already written.
@@ -55,12 +56,11 @@ type CommandLink struct {
 	// it is a UI state, so resolving a link must never clear it on its own or
 	// the badge disappears before the user has seen it.
 	//
-	// "broken" means the shared file itself is gone, an uninstall or a moved
-	// config directory rather than a decision about this one command. The
-	// button still holds the last text it was given and still works, so it is
-	// kept and surfaced with keep-as-custom and remove actions. An entry
-	// missing from a file that is present is not "broken": that is the user
-	// unlinking or deleting it in Kommands, and the button is removed.
+	// "broken" means the original is not in the shared file any more: it was
+	// unlinked or deleted in Kommands, or the file itself is gone. The button
+	// is deliberately kept: it still holds the last text it was given, and
+	// removing a button the user placed because another application tidied
+	// up is hostile. It is surfaced with keep-as-custom and remove instead.
 	Status string `json:"status"`
 }
 

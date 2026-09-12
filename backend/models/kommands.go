@@ -32,13 +32,12 @@ package models
 //  7. The file holds the commands the user linked in Kommands, not everything
 //     they saved. Linking is a per-command act on that side; a saved command
 //     that was never linked is not in the file and Konnekt never sees it.
-//     Every entry gets a button in the Commands tile, created by Konnekt.
-//  8. Unlinking and deletion are by absence, and Konnekt removes the button
-//     it created for an entry that is gone: the button exists because of the
-//     link, and absence is the user deciding, in Kommands, that it should not.
-//     A file that is missing altogether is a different event (an uninstall,
-//     a moved directory): then every linked button is kept and marked broken,
-//     with keep-as-custom and remove offered.
+//     Konnekt lists the entries and the user adds the ones they want as
+//     buttons; nothing is added on its own.
+//  8. Unlinking and deletion are by absence. Konnekt never deletes a button in
+//     response; it marks the link broken and leaves the button alone, with
+//     keep-as-custom and remove offered. A missing file marks every linked
+//     button the same way.
 //  9. The writer must replace the file atomically (temp file in the same
 //     directory, then rename), or Konnekt can read a half-written one.
 //     services.writeFileAtomic is the reference implementation.
@@ -99,9 +98,8 @@ type KommandsStatus struct {
 	// when the file is fine or simply absent.
 	Error string `json:"error"`
 	// SavedCount is how many commands the file holds, which is how many the
-	// user linked in Kommands; LinkedCount how many buttons here follow one.
-	// The two agree once a poll has run and differ only while a change is on
-	// its way over.
+	// user linked in Kommands; LinkedCount how many buttons here follow one,
+	// which is how many of those the user added.
 	SavedCount  int `json:"savedCount"`
 	LinkedCount int `json:"linkedCount"`
 	// Rejected is how many entries were skipped as malformed. Surfaced rather

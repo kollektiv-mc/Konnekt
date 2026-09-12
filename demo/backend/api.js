@@ -225,6 +225,7 @@ export const api = {
     brokenCount: 0,
     changedCount: 0,
   }),
+  GetKommandsCommands: read([]),
 
   // ── Layout and tiles ──────────────────────────────────────────────────
   // All of these succeed. Dragging, resizing and adding tiles is the headline

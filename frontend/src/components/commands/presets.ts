@@ -19,37 +19,26 @@ export type CmdKind = 'cmd' | 'lifecycle' | 'special'
 /** A preset is a button without an identity yet. */
 export type PresetTemplate = Pick<models.CommandButton, 'label' | 'value'> & { kind: CmdKind }
 
+/**
+ * The six presets, and the six defaults: the power actions, a world save, and
+ * the one readout worth a button. Anything more specific is a command the user
+ * types once in the library or links from Kommands, which is where a growing
+ * list belongs; the twelve-entry version of this list (weather, time,
+ * difficulty, the kick and ban dialogs) was retired as noise. Buttons of the
+ * `special` kind from that era still run: the kind is dispatched on, only the
+ * preset is gone.
+ */
 export const PRESETS: PresetTemplate[] = [
   { label: 'Start', kind: 'lifecycle', value: 'start' },
   { label: 'Stop', kind: 'lifecycle', value: 'stop' },
   { label: 'Restart', kind: 'lifecycle', value: 'restart' },
   { label: 'Force Stop', kind: 'lifecycle', value: 'force-stop' },
   { label: 'Save All', kind: 'cmd', value: 'save-all' },
-  { label: 'List', kind: 'cmd', value: 'list' },
-  { label: 'Set Day', kind: 'cmd', value: 'time set day' },
-  { label: 'Set Night', kind: 'cmd', value: 'time set night' },
-  { label: 'Clear Weather', kind: 'cmd', value: 'weather clear' },
-  { label: 'Rain', kind: 'cmd', value: 'weather rain' },
-  { label: 'Freeze Time', kind: 'cmd', value: 'gamerule doDaylightCycle false' },
-  { label: 'Unfreeze Time', kind: 'cmd', value: 'gamerule doDaylightCycle true' },
-  { label: 'Peaceful', kind: 'cmd', value: 'difficulty peaceful' },
-  { label: 'Kick Player', kind: 'special', value: 'kick' },
-  { label: 'Ban Player', kind: 'special', value: 'ban' },
+  { label: 'TPS', kind: 'cmd', value: 'tps' },
 ]
 
-/** The subset seeded on a first launch, by label. */
-export const DEFAULT_LABELS = new Set([
-  'Start',
-  'Stop',
-  'Restart',
-  'Save All',
-  'List',
-  'Set Day',
-  'Clear Weather',
-  'Freeze Time',
-  'Kick Player',
-  'Ban Player',
-])
+/** The subset seeded on a first launch, by label: all of them. */
+export const DEFAULT_LABELS = new Set(PRESETS.map((p) => p.label))
 
 /** Lifecycle actions that can put a confirmation in front of themselves. */
 export type ConfirmableAction = 'stop' | 'restart' | 'force-stop'

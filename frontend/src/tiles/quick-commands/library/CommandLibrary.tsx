@@ -4,8 +4,13 @@ import { Check, Plus, Search } from '../../../lib/icons'
 import { KickBanDialog, LifecycleConfirmDialog } from '../../../components/commands/CommandDialogs'
 import { PRESETS, makeItem } from '../../../components/commands/presets'
 import { useLifecycle } from '../../../components/commands/useLifecycle'
+import { Segmented } from '../../../components/ui/Segmented'
 import { useSortable } from '../../../hooks/useSortable'
-import { useCommandsStore, type CommandButton } from '../../../stores/useCommandsStore'
+import {
+  useCommandsStore,
+  type CommandButton,
+  type KommandsSavedCommand,
+} from '../../../stores/useCommandsStore'
 import { useUiStore } from '../../../stores/useUiStore'
 import { SendCommand } from '../../../../wailsjs/go/main/App'
 import { hasWailsBridge } from '../../../lib/ipc'
@@ -15,10 +20,10 @@ import type { LibraryFilter } from '../types'
 
 const UNGROUPED = 'Ungrouped'
 
-const FILTERS: { id: LibraryFilter; label: string }[] = [
-  { id: 'all', label: 'All' },
-  { id: 'linked', label: 'From Kommands' },
-  { id: 'attention', label: 'Needs attention' },
+const FILTERS: { value: LibraryFilter; label: string }[] = [
+  { value: 'all', label: 'All' },
+  { value: 'linked', label: 'Linked' },
+  { value: 'attention', label: 'Attention' },
 ]
 
 /**
@@ -32,12 +37,13 @@ const FILTERS: { id: LibraryFilter; label: string }[] = [
  * linked from Kommands sit in it wherever the user drags them, badged with
  * where they come from; they are not a section of their own, because a
  * command's origin is not what decides where it belongs on a server. The
- * sidebar's Kommands panel only reports on the link, since the linking itself
- * happens over there.
+ * sidebar is where a command enters the list: typed, from a preset, or added
+ * from what Kommands has linked.
  */
 export function CommandLibrary({ serverId }: { serverId: string }) {
   const items = useCommandsStore((s) => s.items)
   const kommands = useCommandsStore((s) => s.kommands)
+  const saved = useCommandsStore((s) => s.saved)
   const error = useCommandsStore((s) => s.error)
   const hydrate = useCommandsStore((s) => s.hydrate)
   const add = useCommandsStore((s) => s.add)
@@ -45,6 +51,7 @@ export function CommandLibrary({ serverId }: { serverId: string }) {
   const reorder = useCommandsStore((s) => s.reorder)
   const update = useCommandsStore((s) => s.update)
   const duplicate = useCommandsStore((s) => s.duplicate)
+  const addLinked = useCommandsStore((s) => s.addLinked)
   const unlink = useCommandsStore((s) => s.unlink)
   const acknowledge = useCommandsStore((s) => s.acknowledge)
 
@@ -102,6 +109,11 @@ export function CommandLibrary({ serverId }: { serverId: string }) {
     setNewCmd('')
   }, [newCmd, add])
 
+  const onAdd = useCallback(
+    (sc: KommandsSavedCommand) => void addLinked(sc).catch(console.error),
+    [addLinked],
+  )
+
   const changedCount = kommands?.changedCount ?? 0
   const linkedCount = useMemo(() => items.filter((it) => it.link).length, [items])
 
@@ -142,14 +154,14 @@ export function CommandLibrary({ serverId }: { serverId: string }) {
 
   return (
     <div className="lazy-panel-in flex h-full flex-col">
-      <div className="border-border-subtle flex shrink-0 items-center gap-2 border-b px-4 py-2.5">
+      <div className="border-border-subtle flex shrink-0 items-center gap-3 border-b px-4 py-2">
         <span className="text-text-primary text-sm font-semibold">Commands</span>
-        <span className="text-text-faint text-xs">
+        <span className="text-text-faint -ml-1 text-xs">
           {items.length}
-          {linkedCount > 0 && ` · ${linkedCount} from Kommands`}
+          {linkedCount > 0 && ` · ${linkedCount} linked`}
         </span>
 
-        <div className="relative ml-3 w-56">
+        <div className="relative w-40">
           <Icon
             icon={Search}
             size="xs"
@@ -159,35 +171,22 @@ export function CommandLibrary({ serverId }: { serverId: string }) {
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search commands"
-            className="border-border-subtle bg-hover text-text-primary placeholder-text-faint focus:border-border-hover w-full rounded border px-2 py-1 pl-7 text-xs transition-colors outline-none"
+            placeholder="Search"
+            aria-label="Search commands"
+            className="border-border-subtle bg-hover text-text-primary placeholder-text-faint focus:border-border-hover h-6 w-full rounded border px-2 pl-7 text-xs transition-colors outline-none"
           />
         </div>
 
-        <div className="flex gap-1">
-          {FILTERS.map((f) => (
-            <button
-              key={f.id}
-              onClick={() => setFilter(f.id)}
-              aria-pressed={filter === f.id}
-              className={`rounded border px-2 py-1 text-xs transition-colors ${
-                filter === f.id
-                  ? 'border-border-hover bg-hover text-text-primary'
-                  : 'border-border-subtle text-text-secondary hover:border-border-hover hover:text-text-primary'
-              }`}
-            >
-              {f.label}
-            </button>
-          ))}
-        </div>
+        <Segmented options={FILTERS} value={filter} onChange={setFilter} compact />
 
         {changedCount > 0 && (
           <button
             onClick={acknowledgeAll}
-            className="text-accent border-accent/30 bg-accent/10 border-hairline ml-auto flex items-center gap-1 rounded px-2 py-1 text-xs transition-colors"
+            className="text-accent border-accent/30 bg-accent/10 hover:bg-accent/15 border-hairline ml-auto flex h-6 items-center gap-1 rounded px-2 text-xs transition-colors"
+            title="Keep every applied update and clear the badges"
           >
             <Icon icon={Check} size="xs" />
-            Acknowledge {changedCount} update{changedCount === 1 ? '' : 's'}
+            Got it{changedCount === 1 ? '' : ` (${changedCount})`}
           </button>
         )}
       </div>
@@ -202,9 +201,7 @@ export function CommandLibrary({ serverId }: { serverId: string }) {
         <div className="min-w-0 flex-1 overflow-y-auto px-4 py-3">
           {visible.length === 0 ? (
             <div className="text-text-faint flex h-full items-center justify-center text-xs">
-              {items.length === 0
-                ? 'No commands yet. Add one on the right, or link one from Kommands.'
-                : 'Nothing matches that filter.'}
+              {items.length === 0 ? 'No commands yet. Add one on the right.' : 'Nothing matches.'}
             </div>
           ) : (
             <div className="flex flex-col gap-1">
@@ -248,7 +245,7 @@ export function CommandLibrary({ serverId }: { serverId: string }) {
           )}
         </div>
 
-        <div className="border-border-subtle flex w-72 shrink-0 flex-col gap-4 overflow-y-auto border-l px-3 py-3">
+        <div className="border-border-subtle flex w-64 shrink-0 flex-col gap-4 overflow-y-auto border-l px-3 py-3">
           <div className="flex flex-col gap-2">
             <span className="text-text-secondary text-xs font-semibold">Add a command</span>
             <div className="relative">
@@ -282,7 +279,7 @@ export function CommandLibrary({ serverId }: { serverId: string }) {
             </div>
           </div>
 
-          <KommandsPanel status={kommands} />
+          <KommandsPanel status={kommands} saved={saved} items={items} onAdd={onAdd} />
         </div>
       </div>
 

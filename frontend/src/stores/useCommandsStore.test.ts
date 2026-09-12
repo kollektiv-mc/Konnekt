@@ -8,6 +8,7 @@ vi.mock('../../wailsjs/go/main/App')
 const INITIAL = {
   items: [],
   kommands: null,
+  saved: [],
   hydrated: false,
   loading: false,
   error: null,
@@ -27,6 +28,7 @@ beforeEach(() => {
   vi.mocked(App.RefreshKommands).mockResolvedValue(
     models.KommandsStatus.createFrom({ installed: false }),
   )
+  vi.mocked(App.GetKommandsCommands).mockResolvedValue([])
   vi.mocked(App.SaveCommandButtons).mockResolvedValue(undefined)
   withBridge(true)
 })
@@ -155,6 +157,26 @@ describe('useCommandsStore link actions', () => {
     const items = useCommandsStore.getState().items
     expect(items).toHaveLength(1)
     expect(items[0].link).toBeUndefined()
+  })
+
+  it('addLinked appends a button that already agrees with its original', async () => {
+    await useCommandsStore.getState().addLinked(
+      models.KommandsSavedCommand.createFrom({
+        id: 'k9',
+        revision: 5,
+        label: 'Theirs',
+        command: 'say theirs',
+      }),
+    )
+    const items = useCommandsStore.getState().items
+    expect(items).toHaveLength(2)
+    const added = items[1]
+    expect(added.label).toBe('Theirs')
+    expect(added.value).toBe('say theirs')
+    expect(added.kind).toBe('cmd')
+    expect(added.link).toEqual({ source: 'kommands', id: 'k9', revision: 5, status: 'ok' })
+    // Its own identity, not Kommands': the link id is what binds them.
+    expect(added.id).not.toBe('k9')
   })
 
   it('duplicate puts an unlinked copy right after the original', async () => {

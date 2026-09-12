@@ -25,12 +25,15 @@ const linkOf = (over: Record<string, unknown> = {}) => ({
   ...over,
 })
 
-async function mount(items: unknown[], status?: Record<string, unknown>) {
+async function mount(items: unknown[], status?: Record<string, unknown>, saved: unknown[] = []) {
   vi.mocked(App.GetCommandButtons).mockResolvedValue(
     models.CommandButtonSet.createFrom({ seeded: true, items }),
   )
   vi.mocked(App.RefreshKommands).mockResolvedValue(
     models.KommandsStatus.createFrom({ installed: false, ...status }),
+  )
+  vi.mocked(App.GetKommandsCommands).mockResolvedValue(
+    saved.map((sc) => models.KommandsSavedCommand.createFrom(sc)),
   )
   render(<CommandLibrary serverId="srv1" />)
   await screen.findByText('Commands')
@@ -42,6 +45,7 @@ beforeEach(() => {
   useCommandsStore.setState({
     items: [],
     kommands: null,
+    saved: [],
     hydrated: false,
     loading: false,
     error: null,
@@ -61,15 +65,15 @@ describe('CommandLibrary link states', () => {
     expect(useCommandsStore.getState().items[0].value).toBe('give @p stone')
   })
 
-  it("keeps a row whose Kommands file is gone, and lets it become the server's own", async () => {
+  it("keeps a row Kommands unlinked, and lets it become the server's own", async () => {
     await mount([button({ link: linkOf({ status: 'broken' }) })])
-    expect(screen.getByText('Kommands not found')).toBeTruthy()
-    // Nothing is removed because another application went away.
+    expect(screen.getByText('Unlinked in Kommands')).toBeTruthy()
+    // Nothing is removed because another application tidied up.
     expect(useCommandsStore.getState().items).toHaveLength(1)
     // Still not editable: it is Kommands' text until the user claims it.
     expect(screen.queryByLabelText('Command for Kit')).toBeNull()
 
-    fireEvent.click(screen.getByRole('button', { name: 'Keep as custom' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Keep' }))
     await waitFor(() => expect(useCommandsStore.getState().items[0].link).toBeUndefined())
     expect(useCommandsStore.getState().items).toHaveLength(1)
     // And now it is an ordinary row, editable in place.
@@ -79,13 +83,13 @@ describe('CommandLibrary link states', () => {
   it('shows a linked command as text and offers a copy instead of an edit', async () => {
     await mount([button({ link: linkOf() })])
 
-    // The label and command are Kommands'. There is no field to type into and no
-    // delete, because the next sync would put back whatever was changed or
-    // removed here; unlinking happens in Kommands.
+    // The label and command are Kommands'. There is no field to type into,
+    // because an edit here would be undone by the next sync; the row can still
+    // be deleted, since the user added it and nothing brings it back.
     expect(screen.getByTitle(/follows its original in Kommands/i)).toBeTruthy()
     expect(screen.queryByLabelText('Command for Kit')).toBeNull()
     expect(screen.queryByLabelText('Label for Kit')).toBeNull()
-    expect(screen.queryByRole('button', { name: 'Delete Kit' })).toBeNull()
+    expect(screen.getByRole('button', { name: 'Delete Kit' })).toBeTruthy()
     expect(screen.getByText('give @p stone')).toBeTruthy()
 
     fireEvent.click(screen.getByRole('button', { name: 'Make a copy of Kit' }))
@@ -139,7 +143,7 @@ describe('CommandLibrary reordering', () => {
 
   it('is off while the list is filtered, and says why', async () => {
     await mount(two)
-    fireEvent.change(screen.getByPlaceholderText('Search commands'), { target: { value: 'alp' } })
+    fireEvent.change(screen.getByLabelText('Search commands'), { target: { value: 'alp' } })
     const handle = screen.getByRole('button', { name: 'Reorder Alpha' }) as HTMLButtonElement
     expect(handle.disabled).toBe(true)
     expect(handle.title).toMatch(/clear the search/i)
@@ -149,14 +153,15 @@ describe('CommandLibrary reordering', () => {
 })
 
 describe('CommandLibrary Kommands panel', () => {
+  const theirs = { id: 'k9', revision: 5, label: 'Theirs', command: 'say theirs', updatedAt: 0 }
+
   it('says nothing is linked yet, with no error styling', async () => {
     // Not having Kommands is the state essentially every user is in. It must
     // not read as something being broken, and it has to say where linking
     // happens, since nothing here can start one.
     await mount([button()])
-    expect(screen.getByText(/Nothing is linked from Kommands yet/i)).toBeTruthy()
+    expect(screen.getByText(/Nothing linked yet/i)).toBeTruthy()
     expect(screen.queryByRole('alert')).toBeNull()
-    expect(screen.queryByRole('combobox')).toBeNull()
   })
 
   it('names the version when the file is newer than this build understands', async () => {
@@ -164,9 +169,22 @@ describe('CommandLibrary Kommands panel', () => {
     expect(screen.getByText(/newer format \(version 2\)/i)).toBeTruthy()
   })
 
-  it('reports how many commands Kommands has linked', async () => {
-    await mount([button({ link: linkOf() })], { installed: true, savedCount: 1 })
-    expect(screen.getByText('1 linked in Kommands')).toBeTruthy()
-    expect(screen.getByText('1 · 1 from Kommands')).toBeTruthy()
+  it('adds a linked command as a new row, once', async () => {
+    await mount([button()], { installed: true, savedCount: 1 }, [theirs])
+    expect(screen.getByText('1 linked')).toBeTruthy()
+
+    // Linking in Kommands only made it visible. Adding is the act here, and it
+    // creates a new row rather than replacing one.
+    fireEvent.click(screen.getByRole('button', { name: 'Add Theirs' }))
+    await waitFor(() => expect(useCommandsStore.getState().items).toHaveLength(2))
+    const [kit, added] = useCommandsStore.getState().items
+    expect(kit.value).toBe('give @p stone')
+    expect(added.value).toBe('say theirs')
+    expect(added.link).toEqual({ source: 'kommands', id: 'k9', revision: 5, status: 'ok' })
+
+    // Now a button, so the list says so and does not offer it again.
+    const done = screen.getByRole('button', { name: 'Theirs is added' }) as HTMLButtonElement
+    expect(done.disabled).toBe(true)
+    expect(screen.getByText('2 · 1 linked')).toBeTruthy()
   })
 })

@@ -643,16 +643,25 @@ func (a *App) SaveCommandButtons(items []models.CommandButton) error {
 //
 // Called on window focus, which is the case the 30s timer is deliberately too
 // slow for: the user tabs to Kommands, links a command, and tabs back
-// expecting it to be there. The sync itself happens on this side of the
-// bridge (CommandsService.SyncLinks) and announces itself through
-// commands:changed, so there is no binding that hands the file's entries to
-// the frontend: what the user linked in Kommands is already in the button list
-// by the time this returns.
+// expecting it to be there. The reconciliation of buttons already added
+// happens on this side of the bridge (CommandsService.SyncLinks) and announces
+// itself through commands:changed; the list itself is GetKommandsCommands.
 func (a *App) RefreshKommands() (models.KommandsStatus, error) {
 	if err := a.kommandsService.Poll(true); err != nil {
 		return a.kommandsService.Status(), err
 	}
 	return a.kommandsService.Status(), nil
+}
+
+// GetKommandsCommands returns what Kommands currently has linked, from the last
+// successful read.
+//
+// This is what the library lists under Kommands, each with an Add: the user
+// picks which of them become buttons here. It also carries
+// models.KommandsSavedCommand into the generated TypeScript, which no other
+// bound method's type graph reaches.
+func (a *App) GetKommandsCommands() ([]models.KommandsSavedCommand, error) {
+	return a.kommandsService.Saved(), nil
 }
 
 // --- Scheduler ---

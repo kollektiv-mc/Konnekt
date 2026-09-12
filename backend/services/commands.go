@@ -103,27 +103,20 @@ func (s *CommandsService) saveLocked(items []models.CommandButton) error {
 	return WriteDataFile(s.dataDir, commandButtonsFile, data)
 }
 
-// SyncLinks makes the button list agree with what Kommands currently has
-// linked, and persists the result if anything moved.
+// SyncLinks reconciles every linked button against what Kommands currently
+// has linked, and persists the result if anything moved.
 //
-// Kommands decides which of its commands are in Konnekt: the shared file holds
-// exactly the ones the user linked there, so this side is a view of that list
-// rather than a second place to build it. One pass does three things:
-//
-//   - An entry with no button here gets one, created linked and appended. A
-//     batch is appended oldest first, so a first sync reads in the order the
-//     commands were made rather than reversed.
-//   - A button whose entry's revision moved takes the new label and value and
-//     is marked "changed", so the UI can say so. Applied first and surfaced
-//     after, never a prompt per edit: that is the decision on #213, and it is
-//     also why the badge stays until acknowledged.
-//   - A button whose entry is gone is removed. Absence is the user unlinking
-//     or deleting the command in Kommands, and the button exists only because
-//     it was linked. This reverses an earlier decision to keep such a button
-//     and mark it broken, which was taken when a button authored here was
-//     bound to a Kommands command afterwards, so removing it would have
-//     destroyed the user's own work. MarkLinksBroken keeps that protection for
-//     the one case it still fits: the whole file being gone.
+// A linked button is one the user added from the Kommands list in the library,
+// so this never creates or removes a button: which of Kommands' commands are
+// on this server is the user's decision here, as which are visible to Konnekt
+// is their decision there. What it does is keep the buttons that exist in
+// step. An entry whose revision moved is applied, label and value together,
+// and marked "changed" so the UI can say so: applied first and surfaced after,
+// never a prompt per edit, and the badge stays until acknowledged. An entry
+// that is gone (unlinked or deleted in Kommands) marks its button broken and
+// leaves it alone, since removing a button the user placed because another
+// application tidied up is hostile; the UI offers to keep it as a plain
+// command or remove it. An entry that comes back clears the mark.
 //
 // Returns whether anything changed, so the caller only emits an event when
 // there is something to react to. The poll runs on a timer and a no-op emit
@@ -136,10 +129,9 @@ func (s *CommandsService) SyncLinks(saved []models.KommandsSavedCommand) (bool, 
 	if err != nil {
 		return false, err
 	}
-	// Nothing has ever been seeded, so there is nothing to sync into.
+	// Nothing has ever been seeded, so there is nothing to reconcile.
 	// Deliberately not an error, and deliberately not a write: seeding is the
-	// frontend's job and doing it here would race it. The frontend polls again
-	// right after seeding, which is when the first sync lands.
+	// frontend's job and doing it here would race it.
 	if !set.Seeded {
 		return false, nil
 	}
@@ -150,80 +142,52 @@ func (s *CommandsService) SyncLinks(saved []models.KommandsSavedCommand) (bool, 
 	}
 
 	changed := false
-	present := make(map[string]bool, len(saved))
-	kept := make([]models.CommandButton, 0, len(set.Items)+len(saved))
-	for _, it := range set.Items {
-		link := it.Link
+	items := set.Items
+	for i := range items {
+		link := items[i].Link
 		if link == nil || link.Source != models.LinkSourceKommands {
-			kept = append(kept, it)
 			continue
 		}
 		// Only plain commands follow a link. A "lifecycle" button's value is one
 		// of a fixed set of power actions the frontend dispatches on, and a
 		// "special" button's value names a dialog — letting the shared file
-		// rewrite either would turn "Stop" into something else entirely. Nothing
-		// creates such a button any more; one from an older file is left alone,
-		// and still counts as present so it does not get a twin.
-		if it.Kind != "cmd" {
+		// rewrite either would turn "Stop" into something else entirely.
+		if items[i].Kind != "cmd" {
 			slog.Warn("commands: ignoring link on a non-command button",
-				"id", it.ID, "kind", it.Kind)
-			present[link.ID] = true
-			kept = append(kept, it)
+				"id", items[i].ID, "kind", items[i].Kind)
 			continue
 		}
 		orig, ok := byID[link.ID]
-		if !ok {
-			changed = true
-			continue
-		}
-		present[link.ID] = true
 		switch {
+		case !ok:
+			if link.Status != models.LinkStatusBroken {
+				link.Status = models.LinkStatusBroken
+				changed = true
+			}
 		case orig.Revision != link.Revision:
 			// A real update, and the button follows its original wholesale. Not
 			// "newer": a restored Kommands backup carries a lower revision and
 			// the shared file is authoritative either way.
-			it.Label = orig.Label
-			it.Value = orig.Command
+			items[i].Label = orig.Label
+			items[i].Value = orig.Command
 			link.Revision = orig.Revision
 			link.Status = models.LinkStatusChanged
 			changed = true
 		case link.Status == models.LinkStatusBroken:
-			// The file came back with the entry in it. The link works again, so
-			// stop saying it does not.
+			// Relinked, or the file is back. The link works again, so stop
+			// saying it does not.
 			link.Status = models.LinkStatusOK
 			changed = true
 		}
 		// An equal revision does NOT reset an unacknowledged "changed" back to
 		// "ok": that is precisely the state a badge is waiting to be seen in,
 		// and clearing it here would make it vanish on the next poll.
-		kept = append(kept, it)
-	}
-
-	for i := len(saved) - 1; i >= 0; i-- {
-		c := saved[i]
-		if present[c.ID] {
-			continue
-		}
-		kept = append(kept, models.CommandButton{
-			ID:    newID(),
-			Label: c.Label,
-			Kind:  "cmd",
-			Value: c.Command,
-			Link: &models.CommandLink{
-				Source:   models.LinkSourceKommands,
-				ID:       c.ID,
-				Revision: c.Revision,
-				Status:   models.LinkStatusOK,
-			},
-		})
-		present[c.ID] = true
-		changed = true
 	}
 
 	if !changed {
 		return false, nil
 	}
-	if err := s.saveLocked(kept); err != nil {
+	if err := s.saveLocked(items); err != nil {
 		return false, err
 	}
 	return true, nil
@@ -232,12 +196,12 @@ func (s *CommandsService) SyncLinks(saved []models.KommandsSavedCommand) (bool, 
 // MarkLinksBroken flags every linked button when the shared file itself is
 // gone, and reports whether anything moved.
 //
-// Not the same event as an entry missing from the file, which SyncLinks reads
-// as the user unlinking that one command. A file that is gone is an uninstall,
-// a moved config directory, or a Kommands that has been reset: the buttons
-// still hold the last text they were given and still run it, so they stay, and
-// the UI offers to keep each as a plain command or remove it. If the file comes
-// back with the entries in it, SyncLinks clears the mark.
+// The same outcome SyncLinks gives an entry that is gone, reached without a
+// file to read: an uninstall, a moved config directory, or a Kommands that has
+// been reset. The buttons still hold the last text they were given and still
+// run it, so they stay marked, and the UI offers to keep each as a plain
+// command or remove it. If the file comes back with the entries in it,
+// SyncLinks clears the mark.
 func (s *CommandsService) MarkLinksBroken() (bool, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()

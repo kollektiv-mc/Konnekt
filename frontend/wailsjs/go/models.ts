@@ -508,6 +508,26 @@ export namespace models {
 	        this.installedAt = source["installedAt"];
 	    }
 	}
+	export class KommandsSavedCommand {
+	    id: string;
+	    revision: number;
+	    label: string;
+	    command: string;
+	    updatedAt: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new KommandsSavedCommand(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.revision = source["revision"];
+	        this.label = source["label"];
+	        this.command = source["command"];
+	        this.updatedAt = source["updatedAt"];
+	    }
+	}
 	export class KommandsStatus {
 	    installed: boolean;
 	    path: string;

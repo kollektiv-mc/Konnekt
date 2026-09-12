@@ -110,6 +110,10 @@ export function GetDataDir() {
   return window['go']['main']['App']['GetDataDir']();
 }
 
+export function GetKommandsCommands() {
+  return window['go']['main']['App']['GetKommandsCommands']();
+}
+
 export function GetLastStop() {
   return window['go']['main']['App']['GetLastStop']();
 }

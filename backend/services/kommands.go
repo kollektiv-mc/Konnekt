@@ -39,8 +39,9 @@ const (
 // The read-only posture is the invariant the whole linked-command design rests
 // on: with exactly one writer there is no merge, no conflict and no third
 // owner, so the two applications cannot diverge. Which commands are in the
-// file is Kommands' decision too, taken per command over there; this side
-// turns each entry into a button and keeps it in step (CommandsService.SyncLinks).
+// file is Kommands' decision too, taken per command over there; which of them
+// become buttons is the user's decision here, and this side keeps the buttons
+// they added in step (CommandsService.SyncLinks).
 //
 // Change detection is an os.Stat mtime poll rather than a filesystem watch.
 // That was a deliberate choice over fsnotify: agent_docs/DEPENDENCIES.md gates
@@ -58,6 +59,9 @@ type KommandsService struct {
 	// read as "we have seen a file with a zero timestamp".
 	seen   bool
 	status models.KommandsStatus
+	// saved is the sanitised list from the last successful read, so the library
+	// can list what Kommands linked without re-reading the file on every render.
+	saved []models.KommandsSavedCommand
 
 	// stop closes once, from beforeClose. ctx cancellation covers the same
 	// ground, but relying on it alone would let SyncLinks write to disk while
@@ -138,10 +142,10 @@ func (s *KommandsService) Poll(force bool) error {
 			s.setStatus(models.KommandsStatus{Path: path})
 			s.mu.Lock()
 			s.seen = false
+			s.saved = nil
 			s.mu.Unlock()
-			// A file that is gone is not an entry that is gone. Buttons that
-			// followed it are kept and marked, never removed: see
-			// CommandsService.MarkLinksBroken for why the two differ.
+			// Nothing to list, and every button that followed the file is
+			// marked rather than removed, as it would be for a missing entry.
 			changed, err := s.commands.MarkLinksBroken()
 			if err != nil {
 				slog.Error("kommands: mark links broken", "error", err)
@@ -216,6 +220,9 @@ func (s *KommandsService) Poll(force bool) error {
 		SavedCount: len(kept),
 		Rejected:   rejected,
 	})
+	s.mu.Lock()
+	s.saved = kept
+	s.mu.Unlock()
 
 	changed, err := s.commands.SyncLinks(kept)
 	if err != nil {
@@ -247,6 +254,18 @@ func (s *KommandsService) setStatus(st models.KommandsStatus) {
 	s.mu.Lock()
 	s.status = st
 	s.mu.Unlock()
+}
+
+// Saved returns the sanitised commands from the last successful read.
+//
+// Served from cache rather than re-reading, because the library asks for this
+// on every render to list what can be added and what already was.
+func (s *KommandsService) Saved() []models.KommandsSavedCommand {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	out := make([]models.KommandsSavedCommand, len(s.saved))
+	copy(out, s.saved)
+	return out
 }
 
 // sanitizeSaved drops entries this build will not hand to a server, and reports
