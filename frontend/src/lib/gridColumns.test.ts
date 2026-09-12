@@ -14,9 +14,11 @@ describe('columnsFor', () => {
     expect(columnsFor(6, TILE, COMMAND_GRID)).toBe(2)
   })
 
-  it('adds columns as the list grows', () => {
-    expect(columnsFor(12, TILE, COMMAND_GRID)).toBe(3)
-    expect(columnsFor(24, TILE, COMMAND_GRID)).toBeGreaterThanOrEqual(3)
+  it('adds rows, not narrower columns, once the tile is at its column floor', () => {
+    // The default tile fits two label-wide columns; a longer list scrolls.
+    expect(columnsFor(12, TILE, COMMAND_GRID)).toBe(2)
+    expect(columnsFor(24, TILE, COMMAND_GRID)).toBe(2)
+    expect(columnsFor(12, { width: 600, height: 330 }, COMMAND_GRID)).toBe(4)
   })
 
   it('spreads into more columns on a wider tile', () => {
@@ -26,7 +28,7 @@ describe('columnsFor', () => {
 
   it('never offers a column narrower than a label needs', () => {
     expect(columnsFor(20, { width: 150, height: 330 }, COMMAND_GRID)).toBe(1)
-    expect(columnsFor(20, { width: 200, height: 330 }, COMMAND_GRID)).toBe(2)
+    expect(columnsFor(20, { width: 270, height: 330 }, COMMAND_GRID)).toBe(2)
   })
 
   it('stays within the column cap', () => {

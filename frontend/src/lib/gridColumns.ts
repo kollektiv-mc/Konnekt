@@ -30,7 +30,9 @@ export interface GridColumnsOptions {
 }
 
 export const COMMAND_GRID: GridColumnsOptions = {
-  minCellWidth: 96,
+  // Room for a preset's longest label at the sm size with its padding; a
+  // narrower cell truncates "Clear Weather" and "Force Stop" first.
+  minCellWidth: 128,
   minCellHeight: 36,
   gap: 6,
   // A little wider than tall: a label with room beside it, not a square tile.
