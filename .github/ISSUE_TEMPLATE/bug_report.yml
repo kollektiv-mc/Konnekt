@@ -168,6 +168,20 @@ body:
         file, because it contains your RCON password.
       render: shell
 
+  # >>> suite:priority. Vendored from kollektiv by scripts/sync-priority.sh. Edit it there.
+  - type: dropdown
+    id: priority
+    attributes:
+      label: How urgent is this for you?
+      description: Your honest read. Triage may change it, and that is normal.
+      options:
+        - 'Blocking: I cannot use it and have no way around it'
+        - 'Significant: it costs me real time, but I can work around it'
+        - 'Minor: it would be nice, but it is not in my way'
+    validations:
+      required: true
+  # <<< suite:priority
+
   - type: textarea
     id: extra
     attributes:

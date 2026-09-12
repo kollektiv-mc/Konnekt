@@ -1,22 +1,27 @@
-# OpenSSF Scorecard: an outside audit of this repository's supply chain, run on
-# a schedule and published where anyone can read the per-check breakdown.
+# Vendored into every product in suite.repos.json as .github/workflows/scorecard.yml
+# by scripts/sync-workflows.sh. Edit it here. The next sync overwrites the copy
+# in a product, the same way it overwrites a hand-edited tokens.source.json.
 #
-# The reason this is worth having here specifically. The README says plainly
-# that most of this code comes from Claude, which is an honest thing to say and
-# also the first thing a stranger has to decide what to do with. Nothing this
-# repository asserts about itself can settle that, because a project's own
-# claims about its own quality are worth exactly nothing to someone who has not
-# read the code. Scorecard is not this repository's opinion: it runs 18 checks
-# from outside, scores each one, and publishes the result at a URL that is not
-# under this repository's control. A low score is visible too, which is the
-# whole point of using it rather than a self-assessment.
+# OpenSSF Scorecard: an outside audit of a repository's supply chain, run on a
+# schedule and published where anyone can read the per-check breakdown.
+#
+# The reason this is worth having in this suite specifically. Most of the code
+# comes from Claude, with a person reading over its shoulder, which is an honest
+# thing to say and also the first thing a stranger has to decide what to do
+# with. Nothing a repository asserts about itself can settle that, because a
+# project's own claims about its own quality are worth exactly nothing to
+# someone who has not read the code. Scorecard is not the repository's opinion:
+# it runs 18 checks from outside, scores each one, and publishes the result at
+# a URL that is not under the repository's control. A low score is visible too,
+# which is the whole point of using it rather than a self-assessment.
 #
 # What it actually looks at: whether releases are signed, whether CI runs on
 # every change, whether a static analyser runs, whether dependencies are pinned
 # and updated, whether a security policy exists, whether the code is reviewed
-# before it lands. Konnekt's answers to those are in SECURITY.md, ci.yml,
-# codeql.yml, dependabot.yml and the attestations in release.yml, and this
-# reports on them rather than adding anything of its own.
+# before it lands. Each product's answers are in its own SECURITY.md, ci.yml,
+# codeql.yml and dependabot.yml, where it has them, and this reports on them
+# rather than adding anything of its own. A product without one of those files
+# scores lower on that check, which is information, not a failure.
 name: Scorecard
 
 on:
@@ -63,7 +68,7 @@ jobs:
           results_format: sarif
           # This is what makes the result public: the badge endpoint and the
           # viewer both read the published record, and setting it also replaces
-          # OpenSSF's own weekly scan of this repository with this run.
+          # OpenSSF's own weekly scan of the repository with this run.
           #
           # Publishing a score nobody has seen yet is the trade here, and it is
           # the right way round: an unflattering number that is honest is worth
