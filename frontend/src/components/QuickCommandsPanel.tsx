@@ -3,14 +3,33 @@ import { SendCommand } from '../../wailsjs/go/main/App'
 import { hasWailsBridge } from '../lib/ipc'
 import { Icon } from './ui/Icon'
 import { Link2, TriangleAlert } from '../lib/icons'
+import { COMMAND_GRID, columnsFor } from '../lib/gridColumns'
+import { useElementSize } from '../hooks/useElementSize'
 import { useCommandsStore, type CommandButton } from '../stores/useCommandsStore'
 import { KickBanDialog, LifecycleConfirmDialog } from './commands/CommandDialogs'
 import { useLifecycle } from './commands/useLifecycle'
 
 interface QuickCommandsPanelProps {
   serverId: string
-  /** grid columns for the button grid; a narrow sidepane rail should use 1 */
-  columns?: 1 | 2
+  /**
+   * A fixed column count, for a host that knows its shape: the console's rail
+   * is a narrow strip and wants one. Left out, the grid chooses from the count
+   * of buttons and its own measured size (lib/gridColumns.ts).
+   */
+  columns?: number
+}
+
+/**
+ * Tailwind has to see each class it emits, so the count maps to a literal
+ * rather than being spliced into one. Six is `COMMAND_GRID.maxColumns`.
+ */
+const COLUMN_CLASS: Record<number, string> = {
+  1: 'grid-cols-1',
+  2: 'grid-cols-2',
+  3: 'grid-cols-3',
+  4: 'grid-cols-4',
+  5: 'grid-cols-5',
+  6: 'grid-cols-6',
 }
 
 /**
@@ -26,21 +45,24 @@ interface QuickCommandsPanelProps {
  * presets menu and edit mode that used to sit here cost the grid a row of
  * buttons for actions taken once. What is left is the grid.
  *
- * The rows stretch to fill the tile. Six default buttons in a tile sized for
- * more left the bottom half empty; letting each row take its share of the
- * height fills the default size and still scrolls once there are more rows
- * than fit at the minimum height. A button then sizes its text to its row
- * and, given the room, shows the command under the label; that half is CSS
- * in `style.css` (`.cmd-button`), because only the row knows its height.
+ * The grid fills the tile, and shapes itself to it. Columns come from the
+ * count of buttons and the measured box (lib/gridColumns.ts): one command is
+ * one cell the size of the tile, two stack, three go two by two, and a wider
+ * tile spreads into more columns. Rows share the height, so the default size
+ * is filled, and scroll once there are more rows than fit at the minimum. A
+ * button then sizes its text to its row and, given the room, shows the
+ * command under the label; that half is CSS in `style.css` (`.cmd-button`),
+ * because only the row knows its height.
  *
  * The button list itself lives in `useCommandsStore`, not here. Once the tile
  * became maximizable, Dashboard began rendering the maximized copy *in addition
  * to* the grid copy, so component-local state would have diverged between two
  * simultaneous mounts of this same component.
  */
-export function QuickCommandsPanel({ serverId, columns = 2 }: QuickCommandsPanelProps) {
+export function QuickCommandsPanel({ serverId, columns }: QuickCommandsPanelProps) {
   const items = useCommandsStore((s) => s.items)
   const hydrate = useCommandsStore((s) => s.hydrate)
+  const [measure, box] = useElementSize()
 
   const [modal, setModal] = useState<'kick' | 'ban' | null>(null)
 
@@ -75,13 +97,21 @@ export function QuickCommandsPanel({ serverId, columns = 2 }: QuickCommandsPanel
     [lifecycle, send],
   )
 
+  // Before the first measurement (and under jsdom, forever) the count alone
+  // decides, which is the same rule with a square box: a serviceable first
+  // paint that the measured one replaces on the next frame.
+  const cols =
+    columns ??
+    (box
+      ? columnsFor(items.length, box, COMMAND_GRID)
+      : columnsFor(items.length, { width: 360, height: 360 }, COMMAND_GRID))
   const grid = `grid h-full auto-rows-[minmax(2.25rem,1fr)] gap-1.5 ${
-    columns === 1 ? 'grid-cols-1' : 'grid-cols-2'
+    COLUMN_CLASS[Math.min(cols, COMMAND_GRID.maxColumns)] ?? 'grid-cols-1'
   }`
 
   return (
     <div className="flex h-full flex-col gap-2 p-3">
-      <div className="min-h-0 flex-1 overflow-y-auto">
+      <div ref={measure} className="min-h-0 flex-1 overflow-y-auto">
         {items.length === 0 ? (
           <div className="text-text-faint flex h-full items-center justify-center text-xs">
             No commands yet. Maximize the tile to add some.
