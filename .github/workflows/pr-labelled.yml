@@ -1,0 +1,55 @@
+# Vendored into every product in suite.repos.json as
+# .github/workflows/pr-labelled.yml by scripts/sync-workflows.sh. Edit it here.
+# The next sync overwrites the copy in a product, the same way it overwrites a
+# hand-edited tokens.source.json.
+#
+# The pull-request label gate. `labeled` and `unlabeled` are among the triggers
+# so adding the missing label turns the check green without an empty commit.
+#
+# Why a gate at all: a merged pull request's `type:` label is the only input to
+# the release notes, and its `area:` label is the issue-side rule holding on the
+# pull-request side, so what a change touches is recorded in one vocabulary
+# whether it is asked for or delivered. Before Konnekt gated this, 24 of the 41
+# pull requests in its first release window carried no label, and the generator
+# had to guess from titles. kollektiv's docs/conventions.md, § Release notes and
+# pull request labelling, is the rule; this is the check. Two steps rather than
+# one, so a pull request missing both is told about both at once.
+#
+# Via env rather than interpolated into the script: label names are
+# attacker-shaped text as far as a shell is concerned, and `${{ }}` inside a run
+# block is substituted before bash ever sees it.
+name: pr-labelled
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, labeled, unlabeled]
+
+# The labels are in the event payload and nothing is checked out, so the job
+# needs no token at all.
+permissions: {}
+
+jobs:
+  pr-labelled:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 'A type: label decides where this lands in the release notes'
+        env:
+          LABELS: ${{ toJSON(github.event.pull_request.labels.*.name) }}
+        run: |
+          echo "labels: $LABELS"
+          if echo "$LABELS" | jq -e 'any(.[]; startswith("type:"))' > /dev/null; then
+            exit 0
+          fi
+          echo "::error::This pull request has no type: label, so the release notes cannot file it. Add type:feature, type:bug, type:chore or type:docs; the ladder is in kollektiv's docs/conventions.md, 'Which type: label'."
+          exit 1
+
+      - name: 'An area: label says which part of the product this touches'
+        env:
+          LABELS: ${{ toJSON(github.event.pull_request.labels.*.name) }}
+        run: |
+          echo "labels: $LABELS"
+          if echo "$LABELS" | jq -e 'any(.[]; startswith("area:"))' > /dev/null; then
+            exit 0
+          fi
+          echo "::error::This pull request has no area: label. Add the one matching the part of the product it touches; the list is the area: labels this repository declares, from kollektiv's design/labels.json."
+          exit 1

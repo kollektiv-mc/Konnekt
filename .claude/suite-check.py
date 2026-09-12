@@ -37,18 +37,36 @@ PASS, FAIL, SKIP = "pass", "fail", "skip"
 # A command whose first word is one of these is shell syntax, not a binary, so
 # the "is it installed" probe below does not apply to it.
 SHELL_KEYWORDS = {
-    "for", "while", "until", "if", "case", "select", "function",
-    "{", "(", "!", "[[", "time", "do", "then",
+    "for",
+    "while",
+    "until",
+    "if",
+    "case",
+    "select",
+    "function",
+    "{",
+    "(",
+    "!",
+    "[[",
+    "time",
+    "do",
+    "then",
 }
 
 # A tool that drives a project needs that project's manifest to exist before it
 # can do anything. Having the binary installed is not the same as having
 # something for it to run against, and conflating the two turns "this repo is
 # not scaffolded yet" into a wall of red failures.
+#
+# npx is deliberately not here. `npx --yes <package>` fetches and runs a tool
+# against whatever directory it is in, package.json or not, which is how the
+# aislop gate runs in kollektiv, a repo with no JavaScript. Listing it did two
+# wrong things: kollektiv's aislop check was skipped on sight, and in a product
+# an aislop failure with no node_modules installed was reported as
+# "dependencies not installed" rather than as the failure it was.
 PROJECT_MANIFESTS = {
     "pnpm": "package.json",
     "npm": "package.json",
-    "npx": "package.json",
     "yarn": "package.json",
     "go": "go.mod",
     "cargo": "Cargo.toml",
@@ -145,8 +163,8 @@ def posix_shell():
 def shell_argv(command, shell):
     """subprocess arguments for running `command` through `shell` (or the default)."""
     if shell is None:
-        return dict(args=command, shell=True)
-    return dict(args=[shell, "-c", command])
+        return {"args": command, "shell": True}
+    return {"args": [shell, "-c", command]}
 
 
 def runnable(run, cwd, root, shell=None):
@@ -191,16 +209,21 @@ def runnable(run, cwd, root, shell=None):
     if shell is None:
         found = shutil.which(first) is not None
     else:
-        found = subprocess.run([shell, "-c", "command -v " + shlex.quote(first)],
-                               capture_output=True).returncode == 0
+        found = (
+            subprocess.run(
+                [shell, "-c", "command -v " + shlex.quote(first)],
+                capture_output=True,
+                check=False,
+            ).returncode
+            == 0
+        )
     if not found:
         return False, f"command not available: {first}"
 
     tool = os.path.basename(first)
     manifest = PROJECT_MANIFESTS.get(tool)
-    if manifest:
-        if find_upwards(manifest, cwd, root) is None:
-            return False, f"no {manifest} at or above {os.path.relpath(cwd, root)}"
+    if manifest and find_upwards(manifest, cwd, root) is None:
+        return False, f"no {manifest} at or above {os.path.relpath(cwd, root)}"
     return True, ""
 
 
@@ -221,9 +244,11 @@ def environmental_failure(run, cwd, root):
     """
     first = run.strip().split()[0] if run.strip() else ""
     tool = os.path.basename(first)
-    if PROJECT_MANIFESTS.get(tool) == "package.json":
-        if find_upwards("node_modules", cwd, root) is None:
-            return "dependencies not installed (no node_modules)"
+    if (
+        PROJECT_MANIFESTS.get(tool) == "package.json"
+        and find_upwards("node_modules", cwd, root) is None
+    ):
+        return "dependencies not installed (no node_modules)"
     return None
 
 
@@ -272,16 +297,22 @@ def run_commands(root, entries):
         cwd = os.path.join(root, entry["cwd"]) if entry.get("cwd") else root
 
         if not os.path.isdir(cwd):
-            results.append(Result("commands", name, SKIP,
-                                  f"cwd {entry['cwd']!r} does not exist"))
+            results.append(
+                Result("commands", name, SKIP, f"cwd {entry['cwd']!r} does not exist")
+            )
             continue
         ok, reason = runnable(run, cwd, root, shell)
         if not ok:
             results.append(Result("commands", name, SKIP, reason))
             continue
 
-        proc = subprocess.run(cwd=cwd, capture_output=True, text=True,
-                              **shell_argv(run, shell))
+        proc = subprocess.run(
+            cwd=cwd,
+            capture_output=True,
+            text=True,
+            check=False,
+            **shell_argv(run, shell),
+        )
         if proc.returncode == 127:
             results.append(Result("commands", name, SKIP, "command not found"))
         elif proc.returncode != 0:
@@ -290,8 +321,11 @@ def run_commands(root, entries):
                 results.append(Result("commands", name, SKIP, why))
             else:
                 output = (proc.stdout + proc.stderr).strip().splitlines()
-                results.append(Result("commands", name, FAIL,
-                                      f"exit {proc.returncode}", output[-20:]))
+                results.append(
+                    Result(
+                        "commands", name, FAIL, f"exit {proc.returncode}", output[-20:]
+                    )
+                )
         else:
             results.append(Result("commands", name, PASS))
     return results
@@ -318,7 +352,8 @@ def files_under(root, rel_path, exclude):
         return
     for dirpath, dirnames, filenames in os.walk(absolute):
         dirnames[:] = [
-            d for d in sorted(dirnames)
+            d
+            for d in sorted(dirnames)
             if d not in {".git", "node_modules", "dist", "build", ".venv"}
         ]
         for filename in sorted(filenames):
@@ -351,8 +386,14 @@ def run_invariants(root, entries):
         # from 'passed' unless something says so out loud. Kommands has no src/
         # yet, so all three of its invariants land here.
         if not present:
-            results.append(Result("invariants", name, SKIP,
-                                  "paths not present: " + ", ".join(entry["paths"])))
+            results.append(
+                Result(
+                    "invariants",
+                    name,
+                    SKIP,
+                    "paths not present: " + ", ".join(entry["paths"]),
+                )
+            )
             continue
 
         matches, unreadable = [], 0
@@ -368,13 +409,27 @@ def run_invariants(root, entries):
 
         reason = ""
         if missing:
-            reason = "searched " + ", ".join(present) + "; not present: " + ", ".join(missing)
+            reason = (
+                "searched "
+                + ", ".join(present)
+                + "; not present: "
+                + ", ".join(missing)
+            )
         if unreadable:
-            reason = (reason + "; " if reason else "") + f"{unreadable} unreadable file(s)"
+            reason = (
+                reason + "; " if reason else ""
+            ) + f"{unreadable} unreadable file(s)"
 
         if matches:
-            results.append(Result("invariants", name, FAIL,
-                                  reason or f"{len(matches)} match(es)", matches[:50]))
+            results.append(
+                Result(
+                    "invariants",
+                    name,
+                    FAIL,
+                    reason or f"{len(matches)} match(es)",
+                    matches[:50],
+                )
+            )
         else:
             results.append(Result("invariants", name, PASS, reason))
     return results
@@ -383,8 +438,15 @@ def run_invariants(root, entries):
 def run_generated(root, entries, offline):
     shell = posix_shell()
     results = []
-    in_git = subprocess.run(["git", "rev-parse", "--git-dir"], cwd=root,
-                            capture_output=True).returncode == 0
+    in_git = (
+        subprocess.run(
+            ["git", "rev-parse", "--git-dir"],
+            cwd=root,
+            capture_output=True,
+            check=False,
+        ).returncode
+        == 0
+    )
 
     for entry in entries:
         regenerate = entry["regenerate"]
@@ -398,16 +460,22 @@ def run_generated(root, entries, offline):
             results.append(Result("generated", name, SKIP, "offline"))
             continue
         if not os.path.isdir(cwd):
-            results.append(Result("generated", name, SKIP,
-                                  f"cwd {entry['cwd']!r} does not exist"))
+            results.append(
+                Result("generated", name, SKIP, f"cwd {entry['cwd']!r} does not exist")
+            )
             continue
         ok, reason = runnable(regenerate, cwd, root, shell)
         if not ok:
             results.append(Result("generated", name, SKIP, reason))
             continue
 
-        proc = subprocess.run(cwd=cwd, capture_output=True, text=True,
-                              **shell_argv(regenerate, shell))
+        proc = subprocess.run(
+            cwd=cwd,
+            capture_output=True,
+            text=True,
+            check=False,
+            **shell_argv(regenerate, shell),
+        )
         if proc.returncode == 127:
             results.append(Result("generated", name, SKIP, "command not found"))
             continue
@@ -417,8 +485,15 @@ def run_generated(root, entries, offline):
                 results.append(Result("generated", name, SKIP, why))
             else:
                 output = (proc.stdout + proc.stderr).strip().splitlines()
-                results.append(Result("generated", name, FAIL,
-                                      f"generator exited {proc.returncode}", output[-20:]))
+                results.append(
+                    Result(
+                        "generated",
+                        name,
+                        FAIL,
+                        f"generator exited {proc.returncode}",
+                        output[-20:],
+                    )
+                )
             continue
 
         # --porcelain rather than 'git diff', so a generated file that is new and
@@ -426,12 +501,22 @@ def run_generated(root, entries, offline):
         # regeneration are the same bug and both must show up here.
         status = subprocess.run(
             ["git", "status", "--porcelain", "--"] + entry["expectCleanDiff"],
-            cwd=root, capture_output=True, text=True,
+            cwd=root,
+            capture_output=True,
+            text=True,
+            check=False,
         )
         dirty = [line for line in status.stdout.splitlines() if line.strip()]
         if dirty:
-            results.append(Result("generated", name, FAIL,
-                                  "regenerating changed committed output", dirty))
+            results.append(
+                Result(
+                    "generated",
+                    name,
+                    FAIL,
+                    "regenerating changed committed output",
+                    dirty,
+                )
+            )
         else:
             results.append(Result("generated", name, PASS))
     return results
@@ -487,19 +572,28 @@ def main():
     skipped = [r for r in results if r.status == SKIP]
 
     if args.json:
-        print(json.dumps({
-            "product": manifest.get("product"),
-            "sections": list(wanted),
-            "results": [r.as_dict() for r in results],
-            "summary": {
-                "pass": sum(1 for r in results if r.status == PASS),
-                "fail": len(failed),
-                "skip": len(skipped),
-            },
-        }, indent=2))
+        print(
+            json.dumps(
+                {
+                    "product": manifest.get("product"),
+                    "sections": list(wanted),
+                    "results": [r.as_dict() for r in results],
+                    "summary": {
+                        "pass": sum(1 for r in results if r.status == PASS),
+                        "fail": len(failed),
+                        "skip": len(skipped),
+                    },
+                },
+                indent=2,
+            )
+        )
     else:
         print(f"{manifest.get('product', root)} — {len(results)} check(s)\n")
-        print(render_table(results) if results else "no checks declared for these sections")
+        print(
+            render_table(results)
+            if results
+            else "no checks declared for these sections"
+        )
         details = render_details(results)
         if details:
             print(details)
@@ -512,8 +606,10 @@ def main():
     if failed:
         return 1
     if skipped and args.require_runnable:
-        print(f"{len(skipped)} check(s) could not run and --require-runnable is set",
-              file=sys.stderr)
+        print(
+            f"{len(skipped)} check(s) could not run and --require-runnable is set",
+            file=sys.stderr,
+        )
         return 1
     return 0
 

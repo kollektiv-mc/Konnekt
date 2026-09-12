@@ -37,3 +37,6 @@ __pycache__/
 demo/dist/
 # The recorder's frames (demo/record.mjs), kept only with DEMO_KEEP_FRAMES
 demo/.frames/
+
+# aislop appends a scan record here on every run; it is local state, not policy.
+.aislop/history.jsonl

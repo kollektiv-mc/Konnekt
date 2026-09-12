@@ -21,7 +21,9 @@ import sys
 
 HERE = pathlib.Path(__file__).resolve().parent
 
-spec = importlib.util.spec_from_file_location("release_notes", HERE / "release-notes.py")
+spec = importlib.util.spec_from_file_location(
+    "release_notes", HERE / "release-notes.py"
+)
 notes = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(notes)
 
@@ -38,19 +40,39 @@ def pull(title: str, *labels: str) -> dict:
 
 
 # ── Labels decide the section ──────────────────────────────────────────────
-check("type:feature wins", notes.section_for(pull("Whatever", "type:feature")), notes.FEATURES)
+check(
+    "type:feature wins",
+    notes.section_for(pull("Whatever", "type:feature")),
+    notes.FEATURES,
+)
 check("type:bug wins", notes.section_for(pull("Whatever", "type:bug")), notes.FIXES)
-check("type:chore is quiet", notes.section_for(pull("Whatever", "type:chore")), notes.QUIET)
-check("type:docs is quiet", notes.section_for(pull("Whatever", "type:docs")), notes.QUIET)
-check("changelog:skip wins over all", notes.section_for(pull("Add a thing", "changelog:skip", "type:feature")), notes.SKIP)
-check("labels are case-insensitive", notes.section_for(pull("Whatever", "Type:Bug")), notes.FIXES)
+check(
+    "type:chore is quiet",
+    notes.section_for(pull("Whatever", "type:chore")),
+    notes.QUIET,
+)
+check(
+    "type:docs is quiet", notes.section_for(pull("Whatever", "type:docs")), notes.QUIET
+)
+check(
+    "changelog:skip wins over all",
+    notes.section_for(pull("Add a thing", "changelog:skip", "type:feature")),
+    notes.SKIP,
+)
+check(
+    "labels are case-insensitive",
+    notes.section_for(pull("Whatever", "Type:Bug")),
+    notes.FIXES,
+)
 
 # A label beats the title's own verb. #82 "Adopt bg-overlay, and vendor the
 # suite-kit check runner" shipped as a Feature because it carried type:feature;
 # relabelled type:chore it drops out, and no title reading is involved either way.
 check(
     "#82 label beats prose",
-    notes.section_for(pull("Adopt bg-overlay, and vendor the suite-kit check runner", "type:chore")),
+    notes.section_for(
+        pull("Adopt bg-overlay, and vendor the suite-kit check runner", "type:chore")
+    ),
     notes.QUIET,
 )
 
@@ -62,12 +84,16 @@ check(
 # stays visible instead of being dressed up as a category.
 check(
     "#63 unlabelled 'Add ...'",
-    notes.section_for(pull("Add a Full release roadmap section and a nightly snapshot build channel")),
+    notes.section_for(
+        pull("Add a Full release roadmap section and a nightly snapshot build channel")
+    ),
     notes.OTHER,
 )
 check(
     "unlabelled 'Implement ...'",
-    notes.section_for(pull("Implement in-place auto-updater with download, verify, and install")),
+    notes.section_for(
+        pull("Implement in-place auto-updater with download, verify, and install")
+    ),
     notes.OTHER,
 )
 check(
@@ -80,16 +106,36 @@ check(
 # change was, and a `feat:` prefix is a convention this repo's titles do not
 # even use — its title rule is sentence case, so a prefix here is a hand-written
 # scope like "website:", not a claim about the category.
-check("unlabelled 'Fix ...'", notes.section_for(pull("Fix the config dropdown staying dark")), notes.OTHER)
+check(
+    "unlabelled 'Fix ...'",
+    notes.section_for(pull("Fix the config dropdown staying dark")),
+    notes.OTHER,
+)
 check(
     "#86 unlabelled 'Stop ...'",
     notes.section_for(pull("Stop backups from silently overwriting each other")),
     notes.OTHER,
 )
-check("unlabelled 'feat:' prefix", notes.section_for(pull("feat: add the mods tile")), notes.OTHER)
-check("unlabelled 'fix:' prefix", notes.section_for(pull("fix: stop the crash")), notes.OTHER)
-check("unlabelled hand-written scope", notes.section_for(pull("website: fix the hero")), notes.OTHER)
-check("unlabelled neutral verb", notes.section_for(pull("Migrate the worlds tile off inline styles")), notes.OTHER)
+check(
+    "unlabelled 'feat:' prefix",
+    notes.section_for(pull("feat: add the mods tile")),
+    notes.OTHER,
+)
+check(
+    "unlabelled 'fix:' prefix",
+    notes.section_for(pull("fix: stop the crash")),
+    notes.OTHER,
+)
+check(
+    "unlabelled hand-written scope",
+    notes.section_for(pull("website: fix the hero")),
+    notes.OTHER,
+)
+check(
+    "unlabelled neutral verb",
+    notes.section_for(pull("Migrate the worlds tile off inline styles")),
+    notes.OTHER,
+)
 check("empty title", notes.section_for(pull("")), notes.OTHER)
 
 # ── The label carries the changes whose titles read as the other thing ─────
@@ -106,7 +152,11 @@ check(
 )
 check(
     "a feature whose title reads as a fix",
-    notes.section_for(pull("Stop the console dropping lines above the scrollback limit", "type:feature")),
+    notes.section_for(
+        pull(
+            "Stop the console dropping lines above the scrollback limit", "type:feature"
+        )
+    ),
     notes.FEATURES,
 )
 
@@ -144,7 +194,9 @@ check("frontend ships", ships("frontend/src/tiles/registry.ts"), True)
 check("build assets ship", ships("build/linux/konnekt.spec"), True)
 check("root Go files ship", ships("app.go"), True)
 
-check("website alone does not", ships("website/index.html", "website/styles.css"), False)
+check(
+    "website alone does not", ships("website/index.html", "website/styles.css"), False
+)
 check("agent docs alone do not", ships("agent_docs/ROADMAP.md"), False)
 # #87 rode into the notes on one README line beside an all-website diff.
 check("#87 README beside website", ships("README.md", "website/download.html"), False)
@@ -157,14 +209,30 @@ check(
     False,
 )
 # #90 rode in on a .claude rule and a README line, and was labelled type:feature.
-check("#90 .claude rule beside website", ships(".claude/rules/builds-and-releases.md", "README.md", "website/index.html"), False)
+check(
+    "#90 .claude rule beside website",
+    ships(".claude/rules/builds-and-releases.md", "README.md", "website/index.html"),
+    False,
+)
 # #65/#66/#75/#76 were the release tooling describing itself as an app change.
-check("#76 release tooling", ships(".github/scripts/release-notes.py", ".github/workflows/snapshot.yml"), False)
-check("#22 CI and agent config", ships(".claude/settings.json", ".github/workflows/ci.yml", ".gitignore"), False)
+check(
+    "#76 release tooling",
+    ships(".github/scripts/release-notes.py", ".github/workflows/snapshot.yml"),
+    False,
+)
+check(
+    "#22 CI and agent config",
+    ships(".claude/settings.json", ".github/workflows/ci.yml", ".gitignore"),
+    False,
+)
 check("repo tooling alone does not", ships("scripts/check-website-links.mjs"), False)
 # #51 is the case the filter must not over-reach on: repo furniture, plus a
 # real IPC fix in app.go.
-check("#51 app.go among repo meta", ships(".claude/suite.json", "agent_docs/ROADMAP.md", "app.go"), True)
+check(
+    "#51 app.go among repo meta",
+    ships(".claude/suite.json", "agent_docs/ROADMAP.md", "app.go"),
+    True,
+)
 # Prefix matching must not swallow a same-named app path.
 check("docs/ prefix is a directory", ships("docs/images/banner.png"), False)
 check("no changed files at all", ships(), False)
@@ -198,17 +266,26 @@ except notes.ApiError:
 # kollektiv there is no product beside it, and the fixture above is the whole
 # test — a master copy has nothing of its own to validate.
 CONFIG = HERE.parent / "changelog.json"
+REPO = HERE.parent.parent
 if CONFIG.exists():
     configured = notes.load_non_app_paths(CONFIG)
     check("config is non-empty", len(configured) > 0, True)
-    # The four path classes that leaked real pull requests into the notes. A
-    # product may add to this list, but dropping one of these reopens a bug
-    # that has already happened once.
+    # The path classes that leaked real pull requests into Konnekt's notes. A
+    # product that has one of these must exclude it, and dropping it reopens a
+    # bug that has already happened once; a product with no website/ or
+    # CONTRIBUTING.md is not asked to name paths it does not have. This test
+    # is vendored into every product, so it can only assert what is true of
+    # each of them.
     for prefix in ("website/", ".github/", ".claude/", "README.md", "CONTRIBUTING.md"):
-        check(f"config still excludes {prefix}", prefix in configured, True)
+        if (REPO / prefix.rstrip("/")).exists():
+            check(f"config still excludes {prefix}", prefix in configured, True)
     # And the one it must not exclude: build/ carries the app icon, the .desktop
     # file and the RPM spec, all of which ship.
-    check("config does not exclude build/", any(p.startswith("build") for p in configured), False)
+    check(
+        "config does not exclude build/",
+        any(p.startswith("build") for p in configured),
+        False,
+    )
 
 # ── Report ─────────────────────────────────────────────────────────────────
 if failures:

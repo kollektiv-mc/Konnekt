@@ -3,65 +3,21 @@ name: CI
 on:
   push:
     branches: [main]
-  # `labeled`/`unlabeled` are here for the pr-labelled job below: adding the
-  # missing label has to be able to turn that check green without an empty
-  # commit to re-trigger it. Listing types at all overrides the default set,
-  # so the three defaults are repeated.
   pull_request:
-    types: [opened, synchronize, reopened, labeled, unlabeled]
 
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  # Merged PR titles are the release notes, and a `type:` label is what files
-  # each one under a heading. Until now that was a review convention, and the
-  # result was that 24 of the 41 pull requests in the first release window
-  # carried no label at all — so .github/scripts/release-notes.py had to guess
-  # from the title, and guessing put a website polish pass and a CI change into
-  # the "Features" users read first.
-  #
-  # The label is the input that makes the generator's output correct, so it is
-  # checked in the same place as everything else the build depends on rather
-  # than left to whoever opens the pull request to remember.
-  #
-  # The `area:` check is here for a different reason. It does not feed the
-  # release notes at all; it is the issue-side rule (agent_docs/CLAUDE.md's
-  # "Labelling an issue") holding on the pull request side too, so that what a
-  # change touches is recorded in the same vocabulary whether it is asked for or
-  # delivered. `.github/workflows/issue-labels.yml` is the other half.
-  pr-labelled:
-    if: github.event_name == 'pull_request'
-    runs-on: ubuntu-latest
-    steps:
-      # Via env rather than interpolated into the script: label names are
-      # attacker-shaped text as far as a shell is concerned, and `${{ }}` inside
-      # a run block is substituted before bash ever sees it.
-      - name: 'A type: label decides where this lands in the release notes'
-        env:
-          LABELS: ${{ toJSON(github.event.pull_request.labels.*.name) }}
-        run: |
-          echo "labels: $LABELS"
-          if echo "$LABELS" | jq -e 'any(.[]; startswith("type:"))' > /dev/null; then
-            exit 0
-          fi
-          echo "::error::This pull request has no type: label, so the release notes cannot file it. Add type:feature, type:bug, type:chore or type:docs — see agent_docs/CLAUDE.md's 'Commits & pull requests'."
-          exit 1
-
-      # Its own step rather than an `and` in the one above, so a pull request
-      # missing both is told about both at once instead of fixing one and
-      # failing again on the other.
-      - name: 'An area: label says which part of Konnekt this touches'
-        env:
-          LABELS: ${{ toJSON(github.event.pull_request.labels.*.name) }}
-        run: |
-          echo "labels: $LABELS"
-          if echo "$LABELS" | jq -e 'any(.[]; startswith("area:"))' > /dev/null; then
-            exit 0
-          fi
-          echo "::error::This pull request has no area: label. Add the one matching the part of Konnekt it touches — see .github/labels.yml for the list, or agent_docs/CLAUDE.md's 'Labelling an issue'."
-          exit 1
+  # The label gate is not here. Merged PR titles are the release notes and the
+  # `type:` label is what files each one under a heading, so the check that a
+  # pull request carries one `type:` and one `area:` runs on every pull
+  # request: it is pr-labelled.yml beside this file, a shared workflow vendored
+  # from kollektiv (the same copy Kommands runs), which also triggers on
+  # `labeled`/`unlabeled` so adding the missing label turns it green without an
+  # empty commit. The history that made it a gate is in that file and
+  # agent_docs/CLAUDE.md's "Commits & pull requests".
 
   # Release tooling never runs until a release is being cut — which is the worst
   # moment to find out it is wrong. Both scripts are pure and offline, so both
@@ -83,24 +39,13 @@ jobs:
 
       - run: python3 .github/scripts/release-tag_test.py
 
-  # aislop (scanaislop/aislop, MIT) scores the tree for the patterns AI-assisted
-  # code leaves behind: ignored errors, double casts, duplicated blocks,
-  # oversized functions. .aislop/config.yml is the policy and says what is
-  # counted, what is turned off and why; .aislopignore says what is generated
-  # or vendored and never scored. `ci` exits non-zero below ci.failBelow, which
-  # is 100: a drop is one new finding, and the config comments say how to read
-  # one. Pinned, because the ruleset changes between releases and a gate that
-  # moves on its own is not a gate. Telemetry is off in the config.
-  aislop:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v7
-        with:
-          node-version: 22
-
-      - run: npx --yes aislop@0.16.0 ci
+  # The aislop gate is not here either: aislop.yml beside this file, vendored
+  # from kollektiv the same way, pins aislop and ruff once for every repo in
+  # the suite. ruff matters: aislop's Python engines run only when a ruff
+  # binary is on PATH, and this gate used to pass at 100 while a local scan,
+  # with ruff present, flagged .github/scripts/version-precedence.py twice.
+  # .aislop/base.yml is the suite's policy, vendored from kollektiv;
+  # .aislop/config.yml extends it with this tree's size ratchet.
 
   frontend:
     runs-on: ubuntu-latest
