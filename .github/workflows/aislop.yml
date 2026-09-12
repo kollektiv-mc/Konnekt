@@ -1,0 +1,46 @@
+# Vendored into every product in suite.repos.json as .github/workflows/aislop.yml
+# by scripts/sync-workflows.sh. Edit it here. The next sync overwrites the copy
+# in a product, the same way it overwrites a hand-edited tokens.source.json.
+#
+# The aislop gate: aislop (scanaislop/aislop, MIT) scores a tree for what
+# AI-assisted code leaves behind and `ci` exits non-zero below the floor in the
+# repo's .aislop/config.yml. The policy the run applies is not here either: it
+# is .aislop/base.yml, vendored by scripts/sync-aislop.sh, plus the product's
+# own config on top. This file is only the job, so the aislop version and the
+# ruff version are pinned in one place for every repo and change everywhere on
+# the next sync.
+#
+# ruff is installed explicitly because aislop's Python formatting and lint
+# engines run only when a ruff binary is on PATH, and report nothing at all
+# when one is not. Konnekt's job found this the hard way: its gate passed at
+# 100 in CI while a local scan, with ruff present, flagged a vendored file.
+# Pinned, like aislop itself, because a formatter that moves on its own is not
+# a gate.
+name: aislop
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# The job reads the tree and nothing else, so the token gets only that.
+permissions:
+  contents: read
+
+jobs:
+  aislop:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - run: pip install ruff==0.16.7
+
+      - run: npx --yes aislop@0.16.0 ci

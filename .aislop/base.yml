@@ -1,0 +1,81 @@
+# The suite's aislop policy. Vendored into every product as .aislop/base.yml by
+# scripts/sync-aislop.sh; each product's .aislop/config.yml extends it and adds
+# only what is true of that one tree. Edit it here. A product's copy is
+# overwritten on the next sync and reported as drift in between.
+#
+# What is shared and what is not, because the split is the whole point:
+#
+#   shared    Which engines run, which rules are off and why, how findings are
+#             weighted, that the gate is "no unsuppressed finding" (failBelow
+#             100), and that telemetry is off. A finding should mean the same
+#             thing in Konnekt, Kommands and here.
+#   per-repo  The size ratchet (quality.maxFunctionLoc, quality.maxFileLoc): a
+#             number held at that tree's largest function and file, lowered as
+#             they shrink, never raised. And .aislopignore, which is that repo's
+#             own list of generated and vendored paths.
+#
+# aislop (scanaislop/aislop, MIT) scores a tree for what AI-assisted code leaves
+# behind: ignored errors, double casts, duplicated blocks, oversized functions,
+# innerHTML sinks. This file was Konnekt's, generalised: the decisions below were
+# taken there on 2026-09-08 (its HEALTH_LOG) and hold suite-wide.
+version: 1
+
+engines:
+  format: true
+  lint: true
+  code-quality: true
+  ai-slop: true
+  architecture: false
+  security: true
+
+rules:
+  # Two rules off, both style/policy, both because the suite's comment
+  # conventions are the ones the tool flags.
+  #
+  # narrative-comment: its findings are the `# --- Section ---` separators long
+  # files use to break into pages, and `aislop fix` would strip them.
+  ai-slop/narrative-comment: off
+  # meta-comment: explanatory comments about what a function is for. The rule
+  # reads "before/after" phrasing as plan narration; here it is the comment
+  # doing its job.
+  ai-slop/meta-comment: off
+
+quality:
+  # Not a ratchet: these two are policy and hold everywhere. A repo that has to
+  # exceed one says so in its own config, beside the function that holds it,
+  # and lowers it back when that function is split.
+  maxNesting: 5
+  maxParams: 6
+
+security:
+  # `npm audit` / `pnpm audit` / `govulncheck` inside the scan. Each product's
+  # CI runs dependency checks on its own cadence, and a cloud container's proxy
+  # blocks vuln.go.dev, so this would report network errors as findings.
+  audit: false
+
+scoring:
+  weights:
+    format: 0.3
+    lint: 0.6
+    code-quality: 0.8
+    ai-slop: 1.0
+    architecture: 1.0
+    security: 1.5
+  thresholds:
+    good: 75
+    ok: 50
+  smoothing: 20
+  maxPerRule: 40
+
+ci:
+  # 100 is "no unsuppressed finding". A drop is one new finding; read it before
+  # deciding whether it is real, a directive with a reason, or a rule this file
+  # should turn off.
+  failBelow: 100
+  format: json
+
+telemetry:
+  # Off for a shared gate. The CLI's telemetry is an allowlisted payload with no
+  # paths or code in it, but a repo config should not opt its contributors into
+  # anything.
+  enabled: false

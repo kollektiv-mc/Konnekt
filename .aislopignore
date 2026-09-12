@@ -4,8 +4,12 @@
 frontend/wailsjs
 
 # Vendored from kollektiv (suite-kit). Edits are reverted on the next sync,
-# so a finding here is a finding against the upstream file.
+# so a finding here is a finding against the upstream file. kollektiv holds
+# these to the same gate, so they arrive clean; the entries exist because a
+# gate that reformatted one here once handed the suite a week of drift.
 .claude/suite-check.py
+.github/scripts/release-notes.py
+.github/scripts/release-notes_test.py
 
 # Generated token layer (see agent_docs/CLAUDE.md, Code style).
 frontend/src/styles
