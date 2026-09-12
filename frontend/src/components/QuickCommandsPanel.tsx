@@ -29,7 +29,9 @@ interface QuickCommandsPanelProps {
  * The rows stretch to fill the tile. Six default buttons in a tile sized for
  * more left the bottom half empty; letting each row take its share of the
  * height fills the default size and still scrolls once there are more rows
- * than fit at the minimum height.
+ * than fit at the minimum height. A button then sizes its text to its row
+ * and, given the room, shows the command under the label; that half is CSS
+ * in `style.css` (`.cmd-button`), because only the row knows its height.
  *
  * The button list itself lives in `useCommandsStore`, not here. Once the tile
  * became maximizable, Dashboard began rendering the maximized copy *in addition
@@ -96,10 +98,19 @@ export function QuickCommandsPanel({ serverId, columns = 2 }: QuickCommandsPanel
                   lifecycle.busy !== null
                 }
                 title={item.value}
-                className="border-border-subtle text-text-secondary hover:border-border-hover hover:bg-hover hover:text-text-primary flex items-center gap-1.5 rounded border px-2.5 text-left text-xs transition-all disabled:opacity-40"
+                className="cmd-button border-border-subtle text-text-secondary hover:border-border-hover hover:bg-hover hover:text-text-primary flex min-w-0 flex-col justify-center gap-0.5 rounded border text-left transition-all disabled:opacity-40"
               >
-                <span className="min-w-0 flex-1 truncate">{item.label}</span>
-                {item.link && <LinkGlyph status={item.link.status} />}
+                <span className="flex items-center gap-1.5">
+                  <span className="cmd-button__label min-w-0 flex-1 truncate">{item.label}</span>
+                  {item.link && <LinkGlyph status={item.link.status} />}
+                </span>
+                {/* Only a plain command has text worth a second line: a
+                    lifecycle or dialog button's value is an internal token. */}
+                {item.kind === 'cmd' && (
+                  <span className="cmd-button__value text-text-faint text-2xs truncate font-mono">
+                    {item.value}
+                  </span>
+                )}
               </button>
             ))}
           </div>
