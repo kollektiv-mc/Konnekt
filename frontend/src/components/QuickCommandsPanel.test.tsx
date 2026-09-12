@@ -171,9 +171,10 @@ describe('QuickCommandsPanel force stop', () => {
   })
 })
 
-// Adding a command lives in the library. The grid cell used to carry an input
-// and a presets menu, which cost it a row of buttons for an action taken once.
-describe('QuickCommandsPanel edit mode', () => {
+// Everything but firing lives in the library. The grid cell used to carry an
+// input, a presets menu and an edit mode, which cost it a row of buttons for
+// actions taken once.
+describe('QuickCommandsPanel is only the grid', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     useCommandsStore.setState({ items: [], hydrated: false, loading: false, error: null })
@@ -184,15 +185,12 @@ describe('QuickCommandsPanel edit mode', () => {
     vi.mocked(App.GetKommandsCommands).mockResolvedValue([])
   })
 
-  it('offers reordering and removal, and no way to add', async () => {
+  it('offers the commands and nothing else', async () => {
     render(<QuickCommandsPanel serverId="srv1" />)
     await screen.findByRole('button', { name: 'Start' })
 
-    fireEvent.click(screen.getByRole('button', { name: 'Edit' }))
-
-    expect(screen.getByRole('button', { name: 'Reorder Start' })).toBeTruthy()
-    expect(screen.getByRole('button', { name: 'Remove Start' })).toBeTruthy()
+    expect(screen.getAllByRole('button')).toHaveLength(3)
+    expect(screen.queryByRole('button', { name: 'Edit' })).toBeNull()
     expect(screen.queryByRole('textbox')).toBeNull()
-    expect(screen.queryByRole('button', { name: /presets/i })).toBeNull()
   })
 })
