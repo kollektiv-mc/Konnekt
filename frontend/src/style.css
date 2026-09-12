@@ -662,3 +662,27 @@ input[type='number']::-webkit-outer-spin-button {
 .titlebar-no-drag {
   --wails-draggable: no-drag;
 }
+
+/* The compact Commands tile's buttons (components/QuickCommandsPanel.tsx).
+   Their rows share the tile's height, so a tile with six commands draws rows
+   three times taller than a tile with eighteen. Each button is a size
+   container and takes its type size from its own height, clamped to the
+   scale's xs..sm, so a tall row does not read as small text lost in a box.
+   Past 3.75rem there is room for a second line, and the command text is
+   more use there than more padding. Container units are the one place this
+   file sizes text, and the reason is that no class can know the row height. */
+.cmd-button {
+  container-type: size;
+  padding-inline: clamp(0.625rem, 6cqi, 1rem);
+}
+.cmd-button__label {
+  font-size: clamp(var(--text-xs), 28cqh, var(--text-sm));
+}
+.cmd-button__value {
+  display: none;
+}
+@container (min-height: 3.75rem) {
+  .cmd-button__value {
+    display: block;
+  }
+}

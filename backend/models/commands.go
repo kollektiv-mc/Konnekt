@@ -23,8 +23,8 @@ type CommandButton struct {
 	// Group is the section a button sits in within the maximized library.
 	// Empty means ungrouped, which is what every pre-existing button is.
 	Group string `json:"group,omitempty"`
-	// Link binds this button to a command saved in another application. Nil for
-	// the ordinary case of a button authored here.
+	// Link binds this button to a command linked from another application. Nil
+	// for the ordinary case of a button authored here.
 	Link *CommandLink `json:"link,omitempty"`
 }
 
@@ -33,6 +33,13 @@ type CommandButton struct {
 // The one source today is Kommands, which owns the canonical copy: Konnekt only
 // ever reads it. That read-only posture is what makes divergence impossible
 // rather than merely unlikely.
+//
+// Two decisions, one on each side. Kommands decides which of its saved commands
+// are linked, which is what the shared file holds; the user here decides which
+// of those become buttons, by adding one from the library's Kommands list. A
+// linked button's label and value are the original's and follow it
+// (CommandsService.SyncLinks), so it is not editable here: a copy is offered
+// instead.
 type CommandLink struct {
 	// Source is "kommands". A field rather than a bool so a second source needs
 	// no migration of everything already written.
@@ -49,15 +56,12 @@ type CommandLink struct {
 	// it is a UI state, so resolving a link must never clear it on its own or
 	// the badge disappears before the user has seen it.
 	//
-	// "broken" means the original is gone. The button is deliberately kept:
-	// removing a working button because another application tidied up is
-	// hostile, so this is surfaced with unlink/remove actions instead.
+	// "broken" means the original is not in the shared file any more: it was
+	// unlinked or deleted in Kommands, or the file itself is gone. The button
+	// is deliberately kept: it still holds the last text it was given, and
+	// removing a button the user placed because another application tidied
+	// up is hostile. It is surfaced with keep-as-custom and remove instead.
 	Status string `json:"status"`
-	// PrevLabel and PrevValue hold what this button said before the last applied
-	// change, which is what makes an update reversible. One step only, not a
-	// history — enough to undo a surprise, not an audit log.
-	PrevLabel string `json:"prevLabel,omitempty"`
-	PrevValue string `json:"prevValue,omitempty"`
 }
 
 // Link status values.

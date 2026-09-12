@@ -4,7 +4,6 @@ import * as App from '../../wailsjs/go/main/App'
 import { models } from '../../wailsjs/go/models'
 import { QuickCommandsPanel } from './QuickCommandsPanel'
 import { useCommandsStore } from '../stores/useCommandsStore'
-import { declaredLayer } from '../lib/layers'
 
 vi.mock('../../wailsjs/go/main/App')
 
@@ -172,11 +171,10 @@ describe('QuickCommandsPanel force stop', () => {
   })
 })
 
-// The presets dropdown is portaled to document.body so it escapes the tile's
-// stacking context (a grid tile is transformed, a maximized one sits inside
-// the overlay), and z-popover is what carries it over the maximize overlay.
-// Both halves have to hold: a portal on a bare number is back to guessing.
-describe('QuickCommandsPanel presets dropdown', () => {
+// Everything but firing lives in the library. The grid cell used to carry an
+// input, a presets menu and an edit mode, which cost it a row of buttons for
+// actions taken once.
+describe('QuickCommandsPanel is only the grid', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     useCommandsStore.setState({ items: [], hydrated: false, loading: false, error: null })
@@ -184,18 +182,15 @@ describe('QuickCommandsPanel presets dropdown', () => {
     vi.mocked(App.RefreshKommands).mockResolvedValue(
       models.KommandsStatus.createFrom({ installed: false }),
     )
+    vi.mocked(App.GetKommandsCommands).mockResolvedValue([])
   })
 
-  it('opens on the popover layer, outside the tile', async () => {
-    const { container } = render(<QuickCommandsPanel serverId="srv1" />)
+  it('offers the commands and nothing else', async () => {
+    render(<QuickCommandsPanel serverId="srv1" />)
     await screen.findByRole('button', { name: 'Start' })
 
-    fireEvent.click(screen.getByRole('button', { name: 'Edit' }))
-    fireEvent.click(screen.getByRole('button', { name: '+ Presets' }))
-
-    const dropdown = document.body.querySelector('.modal-panel-in.fixed')
-    expect(dropdown).not.toBeNull()
-    expect(container.contains(dropdown)).toBe(false)
-    expect(declaredLayer(dropdown?.className ?? '')).toBe('popover')
+    expect(screen.getAllByRole('button')).toHaveLength(3)
+    expect(screen.queryByRole('button', { name: 'Edit' })).toBeNull()
+    expect(screen.queryByRole('textbox')).toBeNull()
   })
 })

@@ -1,27 +1,35 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
-import { createPortal } from 'react-dom'
+import { useCallback, useEffect, useState } from 'react'
 import { SendCommand } from '../../wailsjs/go/main/App'
 import { hasWailsBridge } from '../lib/ipc'
 import { Icon } from './ui/Icon'
-import { GripVertical, Plus, X } from '../lib/icons'
+import { Link2, TriangleAlert } from '../lib/icons'
+import { COMMAND_GRID, columnsFor } from '../lib/gridColumns'
+import { useElementSize } from '../hooks/useElementSize'
 import { useCommandsStore, type CommandButton } from '../stores/useCommandsStore'
 import { KickBanDialog, LifecycleConfirmDialog } from './commands/CommandDialogs'
-import { PRESETS, makeItem, type PresetTemplate } from './commands/presets'
 import { useLifecycle } from './commands/useLifecycle'
-
-interface DropdownPos {
-  // Only one of top/bottom is set depending on which direction has more room.
-  top?: number
-  bottom?: number
-  left: number
-  width: number
-  maxHeight: number
-}
 
 interface QuickCommandsPanelProps {
   serverId: string
-  /** grid columns for the button grid; a narrow sidepane rail should use 1 */
-  columns?: 1 | 2
+  /**
+   * A fixed column count, for a host that knows its shape: the console's rail
+   * is a narrow strip and wants one. Left out, the grid chooses from the count
+   * of buttons and its own measured size (lib/gridColumns.ts).
+   */
+  columns?: number
+}
+
+/**
+ * Tailwind has to see each class it emits, so the count maps to a literal
+ * rather than being spliced into one. Six is `COMMAND_GRID.maxColumns`.
+ */
+const COLUMN_CLASS: Record<number, string> = {
+  1: 'grid-cols-1',
+  2: 'grid-cols-2',
+  3: 'grid-cols-3',
+  4: 'grid-cols-4',
+  5: 'grid-cols-5',
+  6: 'grid-cols-6',
 }
 
 /**
@@ -32,26 +40,31 @@ interface QuickCommandsPanelProps {
  * separate, lazily-loaded component (`tiles/quick-commands/library/`); this one
  * stays deliberately small, since it renders inside a grid cell.
  *
+ * It fires, and that is all. Adding, removing and reordering commands live in
+ * the library: a grid cell has no room to do any of it well, and the input,
+ * presets menu and edit mode that used to sit here cost the grid a row of
+ * buttons for actions taken once. What is left is the grid.
+ *
+ * The grid fills the tile, and shapes itself to it. Columns come from the
+ * count of buttons and the measured box (lib/gridColumns.ts): one command is
+ * one cell the size of the tile, two stack, three go two by two, and a wider
+ * tile spreads into more columns. Rows share the height, so the default size
+ * is filled, and scroll once there are more rows than fit at the minimum. A
+ * button then sizes its text to its row and, given the room, shows the
+ * command under the label; that half is CSS in `style.css` (`.cmd-button`),
+ * because only the row knows its height.
+ *
  * The button list itself lives in `useCommandsStore`, not here. Once the tile
  * became maximizable, Dashboard began rendering the maximized copy *in addition
  * to* the grid copy, so component-local state would have diverged between two
  * simultaneous mounts of this same component.
  */
-export function QuickCommandsPanel({ serverId, columns = 2 }: QuickCommandsPanelProps) {
+export function QuickCommandsPanel({ serverId, columns }: QuickCommandsPanelProps) {
   const items = useCommandsStore((s) => s.items)
   const hydrate = useCommandsStore((s) => s.hydrate)
-  const add = useCommandsStore((s) => s.add)
-  const remove = useCommandsStore((s) => s.remove)
-  const reorder = useCommandsStore((s) => s.reorder)
+  const [measure, box] = useElementSize()
 
-  const [newCmd, setNewCmd] = useState('')
   const [modal, setModal] = useState<'kick' | 'ban' | null>(null)
-  const [editing, setEditing] = useState(false)
-  const [dropdownPos, setDropdownPos] = useState<DropdownPos | null>(null)
-  const [overIndex, setOverIndex] = useState<number | null>(null)
-  const dragIndex = useRef<number | null>(null)
-  const presetsButtonRef = useRef<HTMLButtonElement>(null)
-  const dropdownRef = useRef<HTMLDivElement>(null)
 
   const lifecycle = useLifecycle(serverId)
 
@@ -60,52 +73,6 @@ export function QuickCommandsPanel({ serverId, columns = 2 }: QuickCommandsPanel
     // both copies of the tile plus the console's rail — without racing.
     void hydrate()
   }, [hydrate])
-
-  // Close the presets dropdown when clicking outside of it.
-  useEffect(() => {
-    if (!dropdownPos) return
-    const handler = (e: MouseEvent) => {
-      if (
-        dropdownRef.current &&
-        !dropdownRef.current.contains(e.target as Node) &&
-        presetsButtonRef.current &&
-        !presetsButtonRef.current.contains(e.target as Node)
-      ) {
-        setDropdownPos(null)
-      }
-    }
-    document.addEventListener('mousedown', handler)
-    return () => document.removeEventListener('mousedown', handler)
-  }, [dropdownPos])
-
-  const openPresets = useCallback(() => {
-    if (dropdownPos) {
-      setDropdownPos(null)
-      return
-    }
-    const btn = presetsButtonRef.current
-    if (!btn) return
-    const rect = btn.getBoundingClientRect()
-    const w = Math.max(rect.width, 240)
-    const margin = 8
-    const spaceAbove = rect.top - margin
-    const spaceBelow = window.innerHeight - rect.bottom - margin
-    if (spaceAbove >= spaceBelow) {
-      setDropdownPos({
-        bottom: window.innerHeight - rect.top + 6,
-        left: rect.left,
-        width: w,
-        maxHeight: spaceAbove,
-      })
-    } else {
-      setDropdownPos({
-        top: rect.bottom + 6,
-        left: rect.left,
-        width: w,
-        maxHeight: spaceBelow,
-      })
-    }
-  }, [dropdownPos])
 
   const send = useCallback(
     (cmd: string) => {
@@ -130,202 +97,79 @@ export function QuickCommandsPanel({ serverId, columns = 2 }: QuickCommandsPanel
     [lifecycle, send],
   )
 
-  const addCustom = useCallback(() => {
-    const v = newCmd.trim()
-    if (!v) return
-    void add(makeItem({ label: v, kind: 'cmd', value: v })).catch(console.error)
-    setNewCmd('')
-  }, [newCmd, add])
-
-  const addPreset = useCallback(
-    (t: PresetTemplate) => {
-      void add(makeItem(t)).catch(console.error)
-    },
-    [add],
-  )
-
-  const onDrop = useCallback(
-    (to: number) => {
-      const from = dragIndex.current
-      dragIndex.current = null
-      setOverIndex(null)
-      if (from === null) return
-      void reorder(from, to).catch(console.error)
-    },
-    [reorder],
-  )
-
-  const toggleEdit = useCallback(() => {
-    setEditing((e) => !e)
-    setDropdownPos(null)
-  }, [])
+  // Before the first measurement (and under jsdom, forever) the count alone
+  // decides, which is the same rule with a square box: a serviceable first
+  // paint that the measured one replaces on the next frame.
+  const cols =
+    columns ??
+    (box
+      ? columnsFor(items.length, box, COMMAND_GRID)
+      : columnsFor(items.length, { width: 360, height: 360 }, COMMAND_GRID))
+  const grid = `grid h-full auto-rows-[minmax(2.25rem,1fr)] gap-1.5 ${
+    COLUMN_CLASS[Math.min(cols, COMMAND_GRID.maxColumns)] ?? 'grid-cols-1'
+  }`
 
   return (
-    <div className="flex h-full flex-col gap-2 px-3 py-2">
-      <div className="min-h-0 flex-1 overflow-y-auto">
+    <div className="flex h-full flex-col gap-2 p-3">
+      <div ref={measure} className="min-h-0 flex-1 overflow-y-auto">
         {items.length === 0 ? (
           <div className="text-text-faint flex h-full items-center justify-center text-xs">
-            Press Edit to add commands.
+            No commands yet. Maximize the tile to add some.
           </div>
         ) : (
-          <div className={`grid gap-1.5 ${columns === 1 ? 'grid-cols-1' : 'grid-cols-2'}`}>
-            {items.map((item, i) =>
-              editing ? (
-                <div
-                  key={item.id}
-                  draggable
-                  onDragStart={(e) => {
-                    dragIndex.current = i
-                    e.dataTransfer.effectAllowed = 'move'
-                  }}
-                  onDragOver={(e) => {
-                    e.preventDefault()
-                    if (overIndex !== i) setOverIndex(i)
-                  }}
-                  onDragLeave={() => setOverIndex((o) => (o === i ? null : o))}
-                  onDrop={() => onDrop(i)}
-                  onDragEnd={() => {
-                    dragIndex.current = null
-                    setOverIndex(null)
-                  }}
-                  className={`text-text-secondary flex cursor-grab items-center gap-1 rounded border px-2 py-1.5 text-xs transition-colors ${
-                    overIndex === i ? 'border-border-hover bg-hover' : 'border-border-subtle'
-                  }`}
-                >
-                  <Icon icon={GripVertical} size="xs" className="text-text-faint shrink-0" />
-                  <span className="flex-1 truncate" title={item.value}>
-                    {item.label}
-                  </span>
-                  <button
-                    onClick={() => void remove(item.id).catch(console.error)}
-                    onMouseDown={(e) => e.stopPropagation()}
-                    className="text-text-faint hover:text-danger px-1 transition-colors"
-                    title="Remove"
-                    aria-label={`Remove ${item.label}`}
-                  >
-                    <Icon icon={X} size="xs" />
-                  </button>
-                </div>
-              ) : (
-                <button
-                  key={item.id}
-                  onClick={() => run(item)}
-                  disabled={
-                    item.kind === 'lifecycle' &&
-                    item.value !== 'force-stop' &&
-                    lifecycle.busy !== null
-                  }
-                  title={item.value}
-                  className="border-border-subtle text-text-secondary hover:border-border-hover hover:bg-hover hover:text-text-primary truncate rounded border px-2 py-1.5 text-left text-xs transition-all disabled:opacity-40"
-                >
-                  {item.label}
-                </button>
-              ),
-            )}
-          </div>
-        )}
-      </div>
-
-      <div className="flex shrink-0 flex-col gap-1.5">
-        {(lifecycle.busy === 'stop' || lifecycle.busy === 'restart') && (
-          <div className="flex items-center justify-between gap-2 text-xs">
-            <span className="text-text-muted">
-              {lifecycle.busy === 'stop' ? 'Stopping…' : 'Restarting…'}
-            </span>
-            <button
-              onClick={() => lifecycle.setConfirmAction('force-stop')}
-              className="border-hairline text-danger border-danger/30 bg-danger/15 hover:bg-danger/25 rounded px-2 py-1 text-xs transition-colors"
-            >
-              Force stop
-            </button>
-          </div>
-        )}
-        {lifecycle.error && (
-          <div role="alert" className="text-danger text-xs">
-            Action failed: {lifecycle.error}
-          </div>
-        )}
-        {editing && (
-          <div className="relative">
-            <input
-              type="text"
-              value={newCmd}
-              onChange={(e) => setNewCmd(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && addCustom()}
-              placeholder="Add command..."
-              className="border-border-subtle bg-hover text-text-primary placeholder-text-faint focus:border-border-hover w-full rounded border px-2 py-1 pr-7 font-mono text-xs transition-colors outline-none"
-            />
-            <button
-              onClick={addCustom}
-              title="Add command"
-              aria-label="Add command"
-              className="text-text-muted hover:text-text-primary absolute top-1/2 right-1.5 -translate-y-1/2 transition-colors"
-            >
-              <Icon icon={Plus} size="xs" />
-            </button>
-          </div>
-        )}
-        <div className="flex justify-between gap-1.5">
-          {editing && (
-            <button
-              ref={presetsButtonRef}
-              onClick={openPresets}
-              className={`rounded border px-2 py-1 text-xs transition-colors ${
-                dropdownPos
-                  ? 'border-border-hover bg-hover text-text-primary'
-                  : 'border-border-subtle text-text-secondary hover:border-border-hover hover:text-text-primary'
-              }`}
-            >
-              + Presets
-            </button>
-          )}
-          <button
-            onClick={toggleEdit}
-            className={`ml-auto rounded border px-2 py-1 text-xs transition-colors ${
-              editing
-                ? 'border-border-hover bg-hover text-text-primary'
-                : 'border-border-subtle text-text-secondary hover:border-border-hover hover:text-text-primary'
-            }`}
-          >
-            {editing ? 'Done' : 'Edit'}
-          </button>
-        </div>
-      </div>
-
-      {/* Portaled to body so the dropdown escapes the tile's stacking context
-          (a grid tile is transformed, a maximized one sits inside the overlay);
-          z-popover is what carries it over the maximize overlay (lib/layers.ts). */}
-      {dropdownPos &&
-        createPortal(
-          <div
-            ref={dropdownRef}
-            className="modal-panel-in border-hairline border-border-subtle bg-canvas z-popover fixed grid grid-cols-2 gap-1.5 overflow-y-auto rounded-[10px] p-2.5 shadow-[0_8px_32px_rgba(0,0,0,0.5)]"
-            // eslint-disable-next-line no-restricted-syntax -- position computed from getBoundingClientRect, not visible to Tailwind's static scanner
-            style={{
-              top: dropdownPos.top,
-              bottom: dropdownPos.bottom,
-              left: dropdownPos.left,
-              minWidth: dropdownPos.width,
-              width: dropdownPos.width,
-              maxHeight: dropdownPos.maxHeight,
-            }}
-          >
-            {PRESETS.map((p) => (
+          <div className={grid}>
+            {items.map((item) => (
               <button
-                key={p.label}
-                onClick={() => {
-                  addPreset(p)
-                  setDropdownPos(null)
-                }}
-                title={p.value}
-                className="border-border-subtle text-text-secondary hover:border-border-hover hover:bg-hover hover:text-text-primary truncate rounded border px-2 py-1.5 text-left text-xs transition-all"
+                key={item.id}
+                onClick={() => run(item)}
+                disabled={
+                  item.kind === 'lifecycle' &&
+                  item.value !== 'force-stop' &&
+                  lifecycle.busy !== null
+                }
+                title={item.value}
+                className="cmd-button border-border-subtle text-text-secondary hover:border-border-hover hover:bg-hover hover:text-text-primary flex min-w-0 flex-col justify-center gap-0.5 rounded border text-left transition-all disabled:opacity-40"
               >
-                {p.label}
+                <span className="flex items-center gap-1.5">
+                  <span className="cmd-button__label min-w-0 flex-1 truncate">{item.label}</span>
+                  {item.link && <LinkGlyph status={item.link.status} />}
+                </span>
+                {/* Only a plain command has text worth a second line: a
+                    lifecycle or dialog button's value is an internal token.
+                    Hidden from the accessible name, which stays the label; the
+                    command is already the button's title. */}
+                {item.kind === 'cmd' && (
+                  <span
+                    aria-hidden
+                    className="cmd-button__value text-text-faint text-2xs truncate font-mono"
+                  >
+                    {item.value}
+                  </span>
+                )}
               </button>
             ))}
-          </div>,
-          document.body,
+          </div>
         )}
+      </div>
+
+      {(lifecycle.busy === 'stop' || lifecycle.busy === 'restart') && (
+        <div className="flex shrink-0 items-center justify-between gap-2 text-xs">
+          <span className="text-text-muted">
+            {lifecycle.busy === 'stop' ? 'Stopping…' : 'Restarting…'}
+          </span>
+          <button
+            onClick={() => lifecycle.setConfirmAction('force-stop')}
+            className="border-hairline text-danger border-danger/30 bg-danger/15 hover:bg-danger/25 rounded px-2 py-1 text-xs transition-colors"
+          >
+            Force stop
+          </button>
+        </div>
+      )}
+      {lifecycle.error && (
+        <div role="alert" className="text-danger shrink-0 text-xs">
+          Action failed: {lifecycle.error}
+        </div>
+      )}
 
       {lifecycle.confirmAction && (
         <LifecycleConfirmDialog
@@ -347,5 +191,27 @@ export function QuickCommandsPanel({ serverId, columns = 2 }: QuickCommandsPanel
         />
       )}
     </div>
+  )
+}
+
+/**
+ * Where a button came from, at the grid's own scale: a link for a command that
+ * follows Kommands, tinted when it has changed and not yet been acknowledged,
+ * and a warning when its original is gone. The library says the same things in
+ * words; a button in a grid cell has room for one glyph.
+ */
+function LinkGlyph({ status }: { status: string }) {
+  if (status === 'broken') {
+    return (
+      <Icon icon={TriangleAlert} size="xs" className="text-warning" label="Unlinked in Kommands" />
+    )
+  }
+  return (
+    <Icon
+      icon={Link2}
+      size="xs"
+      className={status === 'changed' ? 'text-accent' : 'text-text-faint'}
+      label={status === 'changed' ? 'Updated in Kommands' : 'From Kommands'}
+    />
   )
 }

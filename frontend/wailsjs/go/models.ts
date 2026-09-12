@@ -225,8 +225,6 @@ export namespace models {
 	    id: string;
 	    revision: number;
 	    status: string;
-	    prevLabel?: string;
-	    prevValue?: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new CommandLink(source);
@@ -238,8 +236,6 @@ export namespace models {
 	        this.id = source["id"];
 	        this.revision = source["revision"];
 	        this.status = source["status"];
-	        this.prevLabel = source["prevLabel"];
-	        this.prevValue = source["prevValue"];
 	    }
 	}
 	export class CommandButton {

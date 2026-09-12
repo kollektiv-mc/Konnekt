@@ -8,7 +8,13 @@ import {
 } from '../../wailsjs/go/main/App'
 import { models } from '../../wailsjs/go/models'
 import { errMsg, hasWailsBridge, readOr } from '../lib/ipc'
-import { DEFAULT_LABELS, PRESETS, arrayMove, makeItem } from '../components/commands/presets'
+import {
+  DEFAULT_LABELS,
+  PRESETS,
+  arrayMove,
+  copyOf,
+  makeItem,
+} from '../components/commands/presets'
 
 export type CommandButton = models.CommandButton
 export type KommandsStatus = models.KommandsStatus
@@ -17,7 +23,7 @@ export type KommandsSavedCommand = models.KommandsSavedCommand
 interface CommandsStore {
   items: CommandButton[]
   kommands: KommandsStatus | null
-  /** What Kommands has saved, for the library's "link this to that" list. */
+  /** What Kommands has linked, for the library's list of what can be added. */
   saved: KommandsSavedCommand[]
   hydrated: boolean
   loading: boolean
@@ -25,7 +31,7 @@ interface CommandsStore {
 
   hydrate: () => Promise<void>
   refreshKommands: () => Promise<void>
-  /** Re-read after the backend changed the list under us (a Kommands update). */
+  /** Re-read after the backend changed the list under us (a Kommands sync). */
   reload: () => Promise<void>
 
   save: (next: CommandButton[]) => Promise<void>
@@ -34,14 +40,14 @@ interface CommandsStore {
   reorder: (from: number, to: number) => Promise<void>
   update: (id: string, patch: Partial<CommandButton>) => Promise<void>
 
-  /** Bind a button to one of Kommands' saved commands. */
-  linkTo: (id: string, saved: KommandsSavedCommand) => Promise<void>
-  /** Drop the link, keep the button. */
+  /** Add a button that follows one of Kommands' linked commands. */
+  addLinked: (saved: KommandsSavedCommand) => Promise<void>
+  /** Insert an unlinked copy of a button right after it. */
+  duplicate: (id: string) => Promise<void>
+  /** Drop the link, keep the button as a plain command of this server's own. */
   unlink: (id: string) => Promise<void>
   /** Clear the changed badge, keeping the applied value. */
   acknowledge: (id: string) => Promise<void>
-  /** Put back what the last applied update replaced, and unlink. */
-  revert: (id: string) => Promise<void>
 }
 
 /**
@@ -52,6 +58,14 @@ interface CommandsStore {
  * *in addition to* the grid copy, so the component is mounted twice at the same
  * time. Two `useState` lists would diverge the moment either one was edited,
  * and the console tile embeds the same panel as a third mount on top of that.
+ *
+ * A linked button starts here, from `addLinked`: Kommands decides which of its
+ * saved commands are linked (that is the list in `saved`), and the user decides
+ * which of those become buttons. From then on Go keeps the button in step with
+ * its original (CommandsService.SyncLinks) and says so through
+ * `commands:changed`, which `useCommandsSync` turns into a `reload`. Its label
+ * and text are Kommands', so what this side offers on it is to acknowledge an
+ * update, keep it as its own once the original is gone, or take a copy.
  *
  * Write actions follow the convention in agent_docs/CLAUDE.md: they apply
  * optimistically, and on a real rejection they revert, record the message and
@@ -145,28 +159,29 @@ export const useCommandsStore = create<CommandsStore>((set, get) => ({
       ),
     ),
 
-  linkTo: async (id, savedCmd) =>
-    get().save(
-      get().items.map((it) =>
-        it.id === id
-          ? models.CommandButton.createFrom({
-              ...it,
-              // The button takes the original's text immediately, so a fresh
-              // link never starts out already disagreeing with its source.
-              label: savedCmd.label || it.label,
-              value: savedCmd.command,
-              link: {
-                source: 'kommands',
-                id: savedCmd.id,
-                revision: savedCmd.revision,
-                status: 'ok',
-                prevLabel: it.label,
-                prevValue: it.value,
-              },
-            })
-          : it,
-      ),
+  addLinked: async (savedCmd) =>
+    get().add(
+      models.CommandButton.createFrom({
+        ...makeItem({ label: savedCmd.label, kind: 'cmd', value: savedCmd.command }),
+        // The link agrees with its original from the first moment, so the
+        // next poll has nothing to apply and nothing to badge.
+        link: {
+          source: 'kommands',
+          id: savedCmd.id,
+          revision: savedCmd.revision,
+          status: 'ok',
+        },
+      }),
     ),
+
+  duplicate: async (id) => {
+    const items = get().items
+    const at = items.findIndex((it) => it.id === id)
+    if (at === -1) return
+    // Right after its source rather than at the end, so the copy lands where
+    // the eye already is.
+    return get().save([...items.slice(0, at + 1), copyOf(items[at]), ...items.slice(at + 1)])
+  },
 
   unlink: async (id) => get().save(get().items.map((it) => (it.id === id ? withoutLink(it) : it))),
 
@@ -174,26 +189,10 @@ export const useCommandsStore = create<CommandsStore>((set, get) => ({
     get().save(
       get().items.map((it) =>
         it.id === id && it.link
-          ? // Only the badge clears. The applied value stays, and prevLabel /
-            // prevValue stay with it so Revert is still available afterwards.
+          ? // Only the badge clears. The applied value stays.
             models.CommandButton.createFrom({ ...it, link: { ...it.link, status: 'ok' } })
           : it,
       ),
-    ),
-
-  revert: async (id) =>
-    get().save(
-      get().items.map((it) => {
-        if (it.id !== id || !it.link) return it
-        // Reverting keeps the old text, which is by definition no longer what
-        // Kommands says. Leaving the link attached would make the next poll
-        // apply the same update again, so this unlinks too.
-        return models.CommandButton.createFrom({
-          ...withoutLink(it),
-          label: it.link.prevLabel || it.label,
-          value: it.link.prevValue || it.value,
-        })
-      }),
     ),
 }))
 
@@ -221,8 +220,16 @@ async function seedDefaults(): Promise<CommandButton[]> {
   // With no bridge the binding throws synchronously, past any `.catch()`, as an
   // unhandled rejection on every launch of the browser-only `frontend-dev`
   // preset. The seed is already applied and nothing was going to persist.
+  //
+  // Awaited, because hydrate asks Kommands to sync right after this: Go only
+  // syncs into a seeded file, so a seed still in flight would leave whatever
+  // is linked in Kommands off the first launch's list until the next focus.
   if (hasWailsBridge()) {
-    SaveCommandButtons(seed).catch(console.error)
+    try {
+      await SaveCommandButtons(seed)
+    } catch (e) {
+      console.error(e)
+    }
   }
   return seed
 }

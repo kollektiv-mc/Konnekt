@@ -1,50 +1,75 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Icon } from '../../../components/ui/Icon'
-import { GripVertical, Trash2 } from '../../../lib/icons'
+import { IconButton } from '../../../components/ui/IconButton'
+import { CopyPlus, GripVertical, Trash2 } from '../../../lib/icons'
+import type { Offset, SortableHandleProps } from '../../../hooks/useSortable'
 import type { CommandButton } from '../../../stores/useCommandsStore'
 import { LinkBadge } from './LinkBadge'
 
 interface CommandRowProps {
   item: CommandButton
-  /** Index in the full ordered array, not in the filtered view. */
-  index: number
   canReorder: boolean
+  /** How far this row has been dragged, while it is the one being dragged. */
+  lift: Offset | null
+  /** How far this row has moved aside for a row being dragged, or null. */
+  shift: Offset | null
+  rowRef: (el: HTMLElement | null) => void
+  handleProps: SortableHandleProps
   lifecycleBusy: boolean
   onRun: () => void
   onEdit: (patch: Partial<CommandButton>) => void
   onRemove: () => void
-  onReorder: (from: number, to: number) => void
+  onDuplicate: () => void
   onAcknowledge: () => void
-  onRevert: () => void
   onUnlink: () => void
 }
+
+/** The inline transform for a row on the move, or none. */
+function translate(offset: Offset | null) {
+  return offset ? { transform: `translate(${offset.dx}px, ${offset.dy}px)` } : undefined
+}
+
+const FIELD =
+  'focus:border-border-hover hover:border-border-subtle h-6 rounded border border-transparent bg-transparent px-1.5 text-xs transition-colors outline-none'
+const TEXT = 'flex h-6 items-center truncate px-1.5 text-xs'
 
 /**
  * One command in the library: label and value editable in place, at a size the
  * compact grid has never had room for.
  *
- * `kind` is deliberately not editable. A `lifecycle` value is one of a fixed
- * set the frontend dispatches on and a `special` value names a dialog, so
+ * Every row lays out on the same columns, whatever it holds: grip, label,
+ * command, then whatever the link has to say, then Run, copy, delete. The last
+ * three keep their width whether or not they are drawn, so the buttons line up
+ * down the list instead of drifting with each row's tag.
+ *
+ * A linked row is the exception to editing, and shows its text as text. Its
+ * label and command are Kommands', and an edit here would either be undone by
+ * the next sync or stop the link meaning anything. So the row offers a copy
+ * instead — the same text under this server's own identity — and keeps the
+ * original following its source.
+ *
+ * `kind` is deliberately not editable either. A `lifecycle` value is one of a
+ * fixed set the frontend dispatches on and a `special` value names a dialog, so
  * retyping either would produce a button that does nothing. Delete and re-add
  * from the presets instead.
  */
 export function CommandRow({
   item,
-  index,
   canReorder,
+  lift,
+  shift,
+  rowRef,
+  handleProps,
   lifecycleBusy,
   onRun,
   onEdit,
   onRemove,
-  onReorder,
+  onDuplicate,
   onAcknowledge,
-  onRevert,
   onUnlink,
 }: CommandRowProps) {
   const [label, setLabel] = useState(item.label)
   const [value, setValue] = useState(item.value)
-  const [over, setOver] = useState(false)
-  const dragFrom = useRef<number | null>(null)
 
   // The row is a controlled editor over store state that something else can
   // change underneath it — a Kommands update lands as a new label and value on
@@ -60,101 +85,109 @@ export function CommandRow({
     if (value !== item.value) onEdit({ value })
   }
 
-  const editable = item.kind === 'cmd'
+  const linked = item.link !== undefined
+  const editable = item.kind === 'cmd' && !linked
 
   return (
     <div
-      draggable={canReorder}
-      onDragStart={(e) => {
-        dragFrom.current = index
-        e.dataTransfer.effectAllowed = 'move'
-      }}
-      onDragOver={(e) => {
-        if (!canReorder) return
-        e.preventDefault()
-        setOver(true)
-      }}
-      onDragLeave={() => setOver(false)}
-      onDrop={() => {
-        setOver(false)
-        const from = dragFrom.current
-        dragFrom.current = null
-        if (from !== null) onReorder(from, index)
-      }}
-      onDragEnd={() => {
-        dragFrom.current = null
-        setOver(false)
-      }}
-      className={`flex items-center gap-2 rounded border px-2 py-1.5 transition-colors ${
-        over ? 'border-border-hover bg-hover' : 'border-border-subtle'
+      ref={rowRef}
+      className={`flex items-center gap-2 rounded border px-2 py-1 ${
+        lift
+          ? 'border-accent/60 bg-canvas relative z-10 transition-none'
+          : 'border-border-subtle duration-fast transition-[transform,border-color]'
       }`}
+      // eslint-disable-next-line no-restricted-syntax -- a row follows the pointer or slides aside for one; a per-frame offset has no class
+      style={translate(lift ?? shift)}
     >
-      <span
-        className={canReorder ? 'cursor-grab' : 'cursor-not-allowed'}
-        title={canReorder ? 'Drag to reorder' : 'Clear the search and filter to reorder'}
-      >
-        <Icon icon={GripVertical} size="xs" className="text-text-faint" />
-      </span>
-
-      <span className="text-text-faint border-border-subtle border-hairline text-2xs shrink-0 rounded px-1.5 py-0.5">
-        {item.kind}
-      </span>
-
-      <input
-        type="text"
-        value={label}
-        onChange={(e) => setLabel(e.target.value)}
-        onBlur={commitLabel}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter') e.currentTarget.blur()
-          if (e.key === 'Escape') setLabel(item.label)
-        }}
-        aria-label={`Label for ${item.label}`}
-        className="text-text-primary focus:border-border-hover w-40 shrink-0 rounded border border-transparent bg-transparent px-1.5 py-0.5 text-xs transition-colors outline-none"
-      />
-
-      <input
-        type="text"
-        value={value}
-        onChange={(e) => setValue(e.target.value)}
-        onBlur={commitValue}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter') e.currentTarget.blur()
-          if (e.key === 'Escape') setValue(item.value)
-        }}
-        readOnly={!editable}
-        title={editable ? undefined : 'A lifecycle or dialog button has a fixed action'}
-        aria-label={`Command for ${item.label}`}
-        className={`focus:border-border-hover min-w-0 flex-1 rounded border border-transparent bg-transparent px-1.5 py-0.5 font-mono text-xs transition-colors outline-none ${
-          editable ? 'text-text-secondary' : 'text-text-faint'
+      <button
+        type="button"
+        {...handleProps}
+        disabled={!canReorder}
+        aria-label={`Reorder ${item.label}`}
+        title={
+          canReorder
+            ? 'Drag to reorder, or use the arrow keys'
+            : 'Clear the search and filter to reorder'
+        }
+        className={`text-text-faint hover:text-text-secondary flex h-6 w-4 shrink-0 touch-none items-center justify-center ${
+          canReorder ? 'cursor-grab active:cursor-grabbing' : 'cursor-not-allowed'
         }`}
-      />
+      >
+        <Icon icon={GripVertical} size="xs" />
+      </button>
 
-      {item.link && (
-        <LinkBadge
-          link={item.link}
-          onAcknowledge={onAcknowledge}
-          onRevert={onRevert}
-          onUnlink={onUnlink}
-          onRemove={onRemove}
+      {linked ? (
+        <span className={`text-text-primary w-40 shrink-0 ${TEXT}`} title={item.label}>
+          {item.label}
+        </span>
+      ) : (
+        <input
+          type="text"
+          value={label}
+          onChange={(e) => setLabel(e.target.value)}
+          onBlur={commitLabel}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') e.currentTarget.blur()
+            if (e.key === 'Escape') setLabel(item.label)
+          }}
+          aria-label={`Label for ${item.label}`}
+          title="Click to rename"
+          className={`text-text-primary w-40 shrink-0 ${FIELD}`}
         />
       )}
 
-      <button
-        onClick={onRun}
-        disabled={item.kind === 'lifecycle' && item.value !== 'force-stop' && lifecycleBusy}
-        className="border-border-subtle text-text-secondary hover:border-border-hover hover:bg-hover hover:text-text-primary shrink-0 rounded border px-2 py-0.5 text-xs transition-all disabled:opacity-40"
-      >
-        Run
-      </button>
+      {editable ? (
+        <input
+          type="text"
+          value={value}
+          onChange={(e) => setValue(e.target.value)}
+          onBlur={commitValue}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') e.currentTarget.blur()
+            if (e.key === 'Escape') setValue(item.value)
+          }}
+          aria-label={`Command for ${item.label}`}
+          title="Click to edit"
+          className={`text-text-secondary min-w-0 flex-1 font-mono ${FIELD}`}
+        />
+      ) : (
+        <span
+          className={`min-w-0 flex-1 font-mono ${TEXT} ${
+            linked ? 'text-text-secondary' : 'text-text-faint'
+          }`}
+          title={linked ? item.value : 'A lifecycle or dialog button has a fixed action'}
+        >
+          {item.value}
+        </span>
+      )}
 
-      <button
-        onClick={onRemove}
-        aria-label={`Delete ${item.label}`}
-        className="text-text-faint hover:text-danger shrink-0 transition-colors"
-      >
-        <Icon icon={Trash2} size="xs" />
-      </button>
+      {item.link && (
+        <div className="flex shrink-0 items-center gap-1.5">
+          <LinkBadge link={item.link} onAcknowledge={onAcknowledge} onUnlink={onUnlink} />
+        </div>
+      )}
+
+      <div className="flex shrink-0 items-center gap-1">
+        <button
+          onClick={onRun}
+          disabled={item.kind === 'lifecycle' && item.value !== 'force-stop' && lifecycleBusy}
+          className="border-border-subtle text-text-secondary hover:border-border-hover hover:bg-hover hover:text-text-primary h-6 w-12 shrink-0 rounded border text-xs transition-all disabled:opacity-40"
+        >
+          Run
+        </button>
+        {linked ? (
+          <IconButton onClick={onDuplicate} title={`Make a copy of ${item.label}`}>
+            <Icon icon={CopyPlus} size="xs" />
+          </IconButton>
+        ) : (
+          // Holds the column so the delete lines up whether or not a copy is
+          // offered.
+          <span aria-hidden className="h-6 w-6 shrink-0" />
+        )}
+        <IconButton onClick={onRemove} tone="danger" title={`Delete ${item.label}`}>
+          <Icon icon={Trash2} size="xs" />
+        </IconButton>
+      </div>
     </div>
   )
 }

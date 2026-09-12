@@ -29,14 +29,21 @@ package models
 //     with a control character.
 //  5. label may be empty; Konnekt falls back to the command text.
 //  6. updatedAt is Unix milliseconds, for display only.
-//  7. Deletion is by absence. Konnekt never deletes a button in response; it
-//     marks the link broken and leaves the button alone.
-//  8. The writer must replace the file atomically (temp file in the same
+//  7. The file holds the commands the user linked in Kommands, not everything
+//     they saved. Linking is a per-command act on that side; a saved command
+//     that was never linked is not in the file and Konnekt never sees it.
+//     Konnekt lists the entries and the user adds the ones they want as
+//     buttons; nothing is added on its own.
+//  8. Unlinking and deletion are by absence. Konnekt never deletes a button in
+//     response; it marks the link broken and leaves the button alone, with
+//     keep-as-custom and remove offered. A missing file marks every linked
+//     button the same way.
+//  9. The writer must replace the file atomically (temp file in the same
 //     directory, then rename), or Konnekt can read a half-written one.
 //     services.writeFileAtomic is the reference implementation.
-//  9. Konnekt refuses a file over 2 MiB or beyond 2000 entries, and skips an
+//  10. Konnekt refuses a file over 2 MiB or beyond 2000 entries, and skips an
 //     individual malformed entry rather than rejecting the whole file.
-//  10. Konnekt never creates this file or its directory and never writes
+//  11. Konnekt never creates this file or its directory and never writes
 //     anything under it. A missing file is the normal case and does not
 //     surface as an error.
 
@@ -90,8 +97,9 @@ type KommandsStatus struct {
 	// Error is a parse or read failure, already formatted for display. Empty
 	// when the file is fine or simply absent.
 	Error string `json:"error"`
-	// SavedCount is how many commands the file holds; LinkedCount how many
-	// buttons here are bound to one.
+	// SavedCount is how many commands the file holds, which is how many the
+	// user linked in Kommands; LinkedCount how many buttons here follow one,
+	// which is how many of those the user added.
 	SavedCount  int `json:"savedCount"`
 	LinkedCount int `json:"linkedCount"`
 	// Rejected is how many entries were skipped as malformed. Surfaced rather

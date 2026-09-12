@@ -219,6 +219,11 @@ export const api = {
     unsupported: false,
     version: 0,
     error: "",
+    savedCount: 0,
+    linkedCount: 0,
+    rejected: 0,
+    brokenCount: 0,
+    changedCount: 0,
   }),
   GetKommandsCommands: read([]),
 

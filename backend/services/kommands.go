@@ -33,11 +33,15 @@ const (
 	kommandsMaxCmdLen   = 512
 )
 
-// KommandsService reads the commands Kommands has saved, and never writes them.
+// KommandsService reads the commands the user linked in Kommands, and never
+// writes them.
 //
 // The read-only posture is the invariant the whole linked-command design rests
 // on: with exactly one writer there is no merge, no conflict and no third
-// owner, so the two applications cannot diverge.
+// owner, so the two applications cannot diverge. Which commands are in the
+// file is Kommands' decision too, taken per command over there; which of them
+// become buttons is the user's decision here, and this side keeps the buttons
+// they added in step (CommandsService.SyncLinks).
 //
 // Change detection is an os.Stat mtime poll rather than a filesystem watch.
 // That was a deliberate choice over fsnotify: agent_docs/DEPENDENCIES.md gates
@@ -55,13 +59,12 @@ type KommandsService struct {
 	// read as "we have seen a file with a zero timestamp".
 	seen   bool
 	status models.KommandsStatus
-	// saved is the sanitised list from the last successful read, so the UI can
-	// offer "link this button to that command" without re-reading the file on
-	// every render.
+	// saved is the sanitised list from the last successful read, so the library
+	// can list what Kommands linked without re-reading the file on every render.
 	saved []models.KommandsSavedCommand
 
 	// stop closes once, from beforeClose. ctx cancellation covers the same
-	// ground, but relying on it alone would let ApplyLinks write to disk while
+	// ground, but relying on it alone would let SyncLinks write to disk while
 	// the app is shutting down, and it makes the poll untestable without a
 	// real 30-second wait.
 	stop     chan struct{}
@@ -117,13 +120,13 @@ func (s *KommandsService) Status() models.KommandsStatus {
 	st := s.status
 	s.mu.Unlock()
 	// Counted outside the lock: LinkCounts takes CommandsService's lock, and
-	// holding both in one order here while ApplyLinks holds them in the other
+	// holding both in one order here while SyncLinks holds them in the other
 	// is how a deadlock gets written.
 	st.LinkedCount, st.BrokenCount, st.ChangedCount = s.commands.LinkCounts()
 	return st
 }
 
-// Poll checks the shared file and applies any change to the linked buttons.
+// Poll checks the shared file and syncs the linked buttons to it.
 //
 // Safe and cheap to call often: an unchanged mtime and size return after one
 // os.Stat. force re-reads even when the stat is unchanged, which the startup
@@ -134,12 +137,21 @@ func (s *KommandsService) Poll(force bool) error {
 	info, statErr := os.Stat(path)
 	if statErr != nil {
 		if os.IsNotExist(statErr) {
-			// Kommands is not installed, or has never saved anything. The
+			// Kommands is not installed, or has never linked anything. The
 			// overwhelmingly common case, and not a failure.
 			s.setStatus(models.KommandsStatus{Path: path})
 			s.mu.Lock()
 			s.seen = false
+			s.saved = nil
 			s.mu.Unlock()
+			// Nothing to list, and every button that followed the file is
+			// marked rather than removed, as it would be for a missing entry.
+			changed, err := s.commands.MarkLinksBroken()
+			if err != nil {
+				slog.Error("kommands: mark links broken", "error", err)
+				return err
+			}
+			s.emitChanged(changed)
 			return nil
 		}
 		s.setStatus(models.KommandsStatus{Path: path, Error: statErr.Error()})
@@ -212,15 +224,22 @@ func (s *KommandsService) Poll(force bool) error {
 	s.saved = kept
 	s.mu.Unlock()
 
-	changed, err := s.commands.ApplyLinks(kept)
+	changed, err := s.commands.SyncLinks(kept)
 	if err != nil {
-		slog.Error("kommands: apply links", "error", err)
+		slog.Error("kommands: sync links", "error", err)
 		return err
 	}
+	s.emitChanged(changed)
+	return nil
+}
+
+// emitChanged tells the frontend to re-read the button list, only when a sync
+// actually moved something: the poll runs on a timer, and a no-op emit every
+// 30 seconds would be noise.
+func (s *KommandsService) emitChanged(changed bool) {
 	if changed && s.bus != nil {
 		s.bus.Emit(EventCommandsChanged, map[string]any{"source": models.LinkSourceKommands})
 	}
-	return nil
 }
 
 func (s *KommandsService) rememberStat(info os.FileInfo) {
@@ -240,7 +259,7 @@ func (s *KommandsService) setStatus(st models.KommandsStatus) {
 // Saved returns the sanitised commands from the last successful read.
 //
 // Served from cache rather than re-reading, because the library asks for this
-// on every render to decide which of Kommands' commands are not linked yet.
+// on every render to list what can be added and what already was.
 func (s *KommandsService) Saved() []models.KommandsSavedCommand {
 	s.mu.Lock()
 	defer s.mu.Unlock()

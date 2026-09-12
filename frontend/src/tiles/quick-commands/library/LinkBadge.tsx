@@ -1,89 +1,77 @@
 import { Icon } from '../../../components/ui/Icon'
-import { Link2, Link2Off, TriangleAlert } from '../../../lib/icons'
+import { Tag } from '../../../components/ui/Tag'
+import { Link2, TriangleAlert } from '../../../lib/icons'
 import type { CommandButton } from '../../../stores/useCommandsStore'
 
 interface LinkBadgeProps {
   link: NonNullable<CommandButton['link']>
   onAcknowledge: () => void
-  onRevert: () => void
   onUnlink: () => void
-  onRemove: () => void
 }
 
+const ACTION = 'text-text-muted hover:text-text-primary text-2xs shrink-0 whitespace-nowrap'
+
 /**
- * The link state of one row, and the actions that resolve it.
+ * The link state of one row, and the action that resolves it.
  *
  * Three states, and the decisions behind them are not symmetrical:
  *
- * - `ok` is quiet on purpose. A link that is working is not news.
+ * - `ok` names where the command comes from and nothing more. A link that is
+ *   working is not news, but a row that cannot be edited here needs to say
+ *   why, and "Kommands" is the why.
  * - `changed` means an edit in Kommands was already applied here. It is shown
  *   after the fact rather than as a prompt, because a modal per edit is exactly
  *   what the decision rejected — but it stays until acknowledged, so a command
  *   cannot change meaning without the user ever being told.
- * - `broken` means the original is gone. The button is kept and only offered
- *   for removal: deleting somebody's working button because another application
- *   tidied up is hostile.
+ * - `broken` means the original is not in Kommands' file any more: unlinked or
+ *   deleted there, or the file is gone. The button was placed here on purpose,
+ *   so it is kept with its last text, and the one thing offered is to make it
+ *   this server's own; the row's own delete covers the other choice.
  */
-export function LinkBadge({ link, onAcknowledge, onRevert, onUnlink, onRemove }: LinkBadgeProps) {
+export function LinkBadge({ link, onAcknowledge, onUnlink }: LinkBadgeProps) {
   if (link.status === 'broken') {
     return (
-      <div className="flex items-center gap-2">
-        <span className="text-warning border-warning/30 bg-warning/10 border-hairline text-2xs flex items-center gap-1 rounded px-1.5 py-0.5">
+      <>
+        <Tag
+          tone="warning"
+          title="Not in Kommands any more, unlinked or deleted there. This still runs the last text it was given."
+        >
           <Icon icon={TriangleAlert} size="xs" />
-          Original deleted
-        </span>
-        <button onClick={onUnlink} className="text-text-muted hover:text-text-primary text-2xs">
-          Unlink
+          Unlinked in Kommands
+        </Tag>
+        <button
+          onClick={onUnlink}
+          className={ACTION}
+          title="Stop following Kommands and keep this as a command of this server's own"
+        >
+          Keep
         </button>
-        <button onClick={onRemove} className="text-text-muted hover:text-danger text-2xs">
-          Remove
-        </button>
-      </div>
+      </>
     )
   }
 
   if (link.status === 'changed') {
     return (
-      <div className="flex items-center gap-2">
-        <span className="text-accent border-accent/30 bg-accent/10 border-hairline text-2xs flex items-center gap-1 rounded px-1.5 py-0.5">
+      <>
+        <Tag tone="accent" title="An edit in Kommands was applied to this command">
           <Icon icon={Link2} size="xs" />
           Updated in Kommands
-        </span>
+        </Tag>
         <button
           onClick={onAcknowledge}
-          className="text-text-muted hover:text-text-primary text-2xs"
+          className={ACTION}
           title="Keep the update and clear this badge"
         >
           Got it
         </button>
-        <button
-          onClick={onRevert}
-          className="text-text-muted hover:text-text-primary text-2xs"
-          title={
-            link.prevValue
-              ? `Put back "${link.prevValue}" and unlink`
-              : 'Put back the previous version and unlink'
-          }
-        >
-          Revert
-        </button>
-      </div>
+      </>
     )
   }
 
   return (
-    <div className="flex items-center gap-2">
-      <span className="text-text-muted border-border-subtle border-hairline text-2xs flex items-center gap-1 rounded px-1.5 py-0.5">
-        <Icon icon={Link2} size="xs" />
-        Linked
-      </span>
-      <button
-        onClick={onUnlink}
-        className="text-text-faint hover:text-text-primary text-2xs flex items-center gap-1"
-        title="Stop following the Kommands original"
-      >
-        <Icon icon={Link2Off} size="xs" />
-      </button>
-    </div>
+    <Tag title="Follows its original in Kommands. Edit or unlink it there; take a copy to change it here.">
+      <Icon icon={Link2} size="xs" />
+      Kommands
+    </Tag>
   )
 }

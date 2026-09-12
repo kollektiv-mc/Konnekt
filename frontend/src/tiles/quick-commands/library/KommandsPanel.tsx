@@ -9,106 +9,99 @@ interface KommandsPanelProps {
   status: KommandsStatus | null
   saved: KommandsSavedCommand[]
   items: CommandButton[]
-  onLink: (item: CommandButton, saved: KommandsSavedCommand) => void
+  onAdd: (saved: KommandsSavedCommand) => void
 }
 
+const NOTE = 'text-text-faint text-2xs leading-relaxed'
+
 /**
- * The Kommands side of the library: what the other application has saved, and
- * which buttons here follow it.
+ * The Kommands side of the library: what the other application has linked,
+ * and an Add on each one that is not a button here yet.
  *
  * Kommands (kollektiv-mc/Kommands) owns the canonical copy and Konnekt only
  * ever reads it. That asymmetry is the whole design: with one writer there is
- * nothing to merge and no way for the two to disagree.
+ * nothing to merge and no way for the two to disagree. Linking there makes a
+ * command visible here and nothing more; adding it is the decision taken on
+ * this side, and the button it makes then follows its original.
  *
- * Kommands cannot write the file yet — it has no persistence at all — so the
- * common state here is "nothing found", and it is written as a plain fact
- * rather than as an error. Dropping a hand-written saved-commands.json into the
- * directory named below exercises this whole surface today.
+ * Not having Kommands is the common state, and it is written as a plain fact
+ * rather than as an error. The file's path is on the heading's tooltip rather
+ * than in the panel: it is for the one time someone goes looking for it.
  */
-export function KommandsPanel({ status, saved, items, onLink }: KommandsPanelProps) {
+export function KommandsPanel({ status, saved, items, onAdd }: KommandsPanelProps) {
   const refreshKommands = useCommandsStore((s) => s.refreshKommands)
-  const linkedIds = new Set(items.map((it) => it.link?.id).filter(Boolean))
-  // Only plain commands can follow a link: Go refuses one on a lifecycle or
-  // dialog button, so offering it here would be an action that silently no-ops.
-  const linkable = items.filter((it) => it.kind === 'cmd' && !it.link)
+  const added = new Set(items.map((it) => it.link?.id).filter(Boolean))
 
   return (
     <div className="border-border-subtle flex flex-col gap-2 border-t pt-3">
-      <div className="flex items-center justify-between">
-        <span className="text-text-secondary text-xs font-semibold">Kommands</span>
+      <div className="flex items-center gap-2">
+        <span className="text-text-secondary text-xs font-semibold" title={status?.path}>
+          Kommands
+        </span>
+        {status?.installed && !status.unsupported && !status.error && (
+          <span className="text-text-faint text-2xs">{status.savedCount} linked</span>
+        )}
         <button
           onClick={() => void refreshKommands().catch(console.error)}
-          className="text-text-muted hover:text-text-primary text-2xs transition-colors"
+          className="text-text-muted hover:text-text-primary text-2xs ml-auto transition-colors"
         >
-          Check now
+          Refresh
         </button>
       </div>
 
       {!status?.installed ? (
-        <p className="text-text-faint text-2xs leading-relaxed">
-          Kommands has not saved any commands on this machine yet. When it does, its commands appear
-          here and a command in this list can follow one, so an edit there reaches this server
-          without retyping it.
-        </p>
+        <>
+          <p className={NOTE}>
+            Nothing linked yet. Link a saved command in Kommands to see it here.
+          </p>
+          {status && status.brokenCount > 0 && (
+            <p className="text-warning text-2xs leading-relaxed">
+              The file Kommands shares is gone. The commands that followed it are marked in the list
+              and still run their last text.
+            </p>
+          )}
+        </>
       ) : status.unsupported ? (
         <p className="text-warning text-2xs leading-relaxed">
-          Kommands wrote a file in a newer format (version {status.version || 'unknown'}) than this
-          build understands. Update Konnekt to use linked commands.
+          Kommands wrote a newer format (version {status.version || 'unknown'}) than this build
+          understands. Update Konnekt to use linked commands.
         </p>
       ) : status.error ? (
         <p className="text-danger text-2xs leading-relaxed">{status.error}</p>
+      ) : saved.length === 0 ? (
+        <p className={NOTE}>Nothing linked yet. Link a saved command in Kommands to see it here.</p>
       ) : (
-        <>
-          <div className="text-text-faint text-2xs">
-            {status.savedCount} saved · {status.linkedCount} linked
-            {status.rejected > 0 && ` · ${status.rejected} skipped as malformed`}
-          </div>
-          <div className="flex flex-col gap-1">
-            {saved.map((sc) => {
-              const already = linkedIds.has(sc.id)
-              return (
-                <div
-                  key={sc.id}
-                  className="border-border-subtle flex flex-col gap-1 rounded border px-2 py-1.5"
-                >
-                  <span className="text-text-secondary truncate text-xs">{sc.label}</span>
-                  <span className="text-text-faint text-2xs truncate font-mono" title={sc.command}>
+        <div className="flex flex-col gap-1">
+          {saved.map((sc) => {
+            const has = added.has(sc.id)
+            return (
+              <div
+                key={sc.id}
+                className="border-border-subtle flex items-center gap-2 rounded border px-2 py-1"
+              >
+                <div className="min-w-0 flex-1">
+                  <div className="text-text-secondary truncate text-xs">{sc.label}</div>
+                  <div className="text-text-faint text-2xs truncate font-mono" title={sc.command}>
                     {sc.command}
-                  </span>
-                  {already ? (
-                    <span className="text-text-faint text-2xs">Already linked</span>
-                  ) : linkable.length === 0 ? (
-                    <span className="text-text-faint text-2xs">
-                      Add a command above to link it to this
-                    </span>
-                  ) : (
-                    <select
-                      value=""
-                      onChange={(e) => {
-                        const target = linkable.find((it) => it.id === e.target.value)
-                        if (target) onLink(target, sc)
-                      }}
-                      className="border-border-subtle bg-hover text-text-secondary text-2xs rounded border px-1 py-0.5 outline-none"
-                    >
-                      <option value="">Link a command to this…</option>
-                      {linkable.map((it) => (
-                        <option key={it.id} value={it.id}>
-                          {it.label}
-                        </option>
-                      ))}
-                    </select>
-                  )}
+                  </div>
                 </div>
-              )
-            })}
-          </div>
-        </>
+                <button
+                  onClick={() => onAdd(sc)}
+                  disabled={has}
+                  aria-label={has ? `${sc.label} is added` : `Add ${sc.label}`}
+                  title={has ? 'Already a command here' : 'Add as a command that follows this'}
+                  className="border-border-subtle text-text-secondary hover:border-border-hover hover:bg-hover hover:text-text-primary disabled:hover:border-border-subtle h-6 w-14 shrink-0 rounded border text-xs transition-all disabled:cursor-default disabled:opacity-40 disabled:hover:bg-transparent"
+                >
+                  {has ? 'Added' : 'Add'}
+                </button>
+              </div>
+            )
+          })}
+        </div>
       )}
 
-      {status?.path && (
-        <p className="text-text-faint text-2xs break-all" title={status.path}>
-          {status.path}
-        </p>
+      {status?.installed && status.rejected > 0 && (
+        <p className={NOTE}>{status.rejected} skipped as malformed</p>
       )}
     </div>
   )

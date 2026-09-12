@@ -642,23 +642,26 @@ func (a *App) SaveCommandButtons(items []models.CommandButton) error {
 // the background poll, and reports what it found.
 //
 // Called on window focus, which is the case the 30s timer is deliberately too
-// slow for: the user tabs to Kommands, saves, and tabs back expecting the
-// change to be there.
-// GetKommandsCommands returns what Kommands currently has saved, from the last
-// successful read.
-//
-// This is what makes a link creatable: the library lists these and binds a
-// button to one by id. It also carries models.KommandsSavedCommand into the
-// generated TypeScript, which no other bound method's type graph reaches.
-func (a *App) GetKommandsCommands() ([]models.KommandsSavedCommand, error) {
-	return a.kommandsService.Saved(), nil
-}
-
+// slow for: the user tabs to Kommands, links a command, and tabs back
+// expecting it to be there. The reconciliation of buttons already added
+// happens on this side of the bridge (CommandsService.SyncLinks) and announces
+// itself through commands:changed; the list itself is GetKommandsCommands.
 func (a *App) RefreshKommands() (models.KommandsStatus, error) {
 	if err := a.kommandsService.Poll(true); err != nil {
 		return a.kommandsService.Status(), err
 	}
 	return a.kommandsService.Status(), nil
+}
+
+// GetKommandsCommands returns what Kommands currently has linked, from the last
+// successful read.
+//
+// This is what the library lists under Kommands, each with an Add: the user
+// picks which of them become buttons here. It also carries
+// models.KommandsSavedCommand into the generated TypeScript, which no other
+// bound method's type graph reaches.
+func (a *App) GetKommandsCommands() ([]models.KommandsSavedCommand, error) {
+	return a.kommandsService.Saved(), nil
 }
 
 // --- Scheduler ---

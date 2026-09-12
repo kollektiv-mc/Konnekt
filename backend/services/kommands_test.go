@@ -97,8 +97,8 @@ func TestKommandsPollFileStates(t *testing.T) {
 			if (got.Error != "") != tt.wantErr {
 				t.Errorf("Error = %q, wantErr %v", got.Error, tt.wantErr)
 			}
-			if len(k.Saved()) != tt.wantSaved {
-				t.Errorf("len(Saved()) = %d, want %d", len(k.Saved()), tt.wantSaved)
+			if got.SavedCount != tt.wantSaved {
+				t.Errorf("SavedCount = %d, want %d", got.SavedCount, tt.wantSaved)
 			}
 		})
 	}
@@ -189,6 +189,74 @@ func TestKommandsPollSkipsUnchangedFile(t *testing.T) {
 	}
 	if got := atomic.LoadInt32(&emits); got != 1 {
 		t.Errorf("emits = %d, want exactly 1 across two polls", got)
+	}
+}
+
+// Kommands uninstalled, or its config directory moved: the buttons that
+// followed it are kept and marked rather than removed, and the mark clears the
+// moment the file is back with the entry in it.
+func TestKommandsPollMissingFileMarksLinksBroken(t *testing.T) {
+	k, cmds, dir := newTestKommands(t)
+	if err := cmds.Save([]models.CommandButton{linked("a", "k1", 1, models.LinkStatusOK)}); err != nil {
+		t.Fatalf("Save: %v", err)
+	}
+	if err := k.Poll(true); err != nil {
+		t.Fatalf("Poll without file: %v", err)
+	}
+	got, _ := cmds.Get()
+	if len(got.Items) != 1 || got.Items[0].Link.Status != models.LinkStatusBroken {
+		t.Fatalf("after a missing file: %+v", got.Items)
+	}
+	if st := k.Status(); st.Installed || st.BrokenCount != 1 {
+		t.Errorf("status = %+v, want not installed with one broken", st)
+	}
+
+	writeSaved(t, dir, `{"version":1,"commands":[{"id":"k1","revision":1,"label":"L","command":"list"}]}`)
+	if err := k.Poll(true); err != nil {
+		t.Fatalf("Poll with file: %v", err)
+	}
+	got, _ = cmds.Get()
+	if got.Items[0].Link.Status != models.LinkStatusOK {
+		t.Errorf("Status = %q after the file returned, want ok", got.Items[0].Link.Status)
+	}
+}
+
+// Linking in Kommands makes a command visible here, and no more: the poll
+// lists it for the library to offer, and creates no button for it. Unlinking
+// it afterwards marks a button the user did add rather than removing it.
+func TestKommandsPollListsWithoutCreating(t *testing.T) {
+	k, cmds, dir := newTestKommands(t)
+	if err := cmds.Save([]models.CommandButton{{ID: "plain", Label: "List", Kind: "cmd", Value: "list"}}); err != nil {
+		t.Fatalf("Save: %v", err)
+	}
+	writeSaved(t, dir, `{"version":1,"commands":[{"id":"k1","revision":1,"label":"Kit","command":"/give @p stone"}]}`)
+	if err := k.Poll(true); err != nil {
+		t.Fatalf("Poll: %v", err)
+	}
+	got, _ := cmds.Get()
+	if len(got.Items) != 1 {
+		t.Fatalf("a button appeared without anyone adding it: %+v", got.Items)
+	}
+	// The sanitised form is what the library offers: console form, no slash.
+	listed := k.Saved()
+	if len(listed) != 1 || listed[0].Command != "give @p stone" || listed[0].Label != "Kit" {
+		t.Fatalf("Saved() = %+v", listed)
+	}
+
+	// The user adds it, then unlinks it in Kommands.
+	if err := cmds.Save([]models.CommandButton{got.Items[0], linked("b", "k1", 1, models.LinkStatusOK)}); err != nil {
+		t.Fatalf("Save: %v", err)
+	}
+	writeSaved(t, dir, `{"version":1,"commands":[]}`)
+	if err := k.Poll(true); err != nil {
+		t.Fatalf("Poll after unlink: %v", err)
+	}
+	got, _ = cmds.Get()
+	if len(got.Items) != 2 || got.Items[1].Link.Status != models.LinkStatusBroken {
+		t.Errorf("after unlinking: %+v, want the button kept and marked", got.Items)
+	}
+	if len(k.Saved()) != 0 {
+		t.Errorf("Saved() still lists an unlinked command: %+v", k.Saved())
 	}
 }
 
