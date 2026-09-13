@@ -382,8 +382,11 @@ func (c *ModrinthClient) do(ctx context.Context, method, path string, body []byt
 			return fmt.Errorf("modrinth: %w", err)
 		}
 
-		body, _ := io.ReadAll(resp.Body)
+		body, err := io.ReadAll(resp.Body)
 		resp.Body.Close()
+		if err != nil {
+			return fmt.Errorf("modrinth: read response: %w", err)
+		}
 
 		if resp.StatusCode == http.StatusTooManyRequests {
 			wait := 2 * time.Second

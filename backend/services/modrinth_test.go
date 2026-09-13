@@ -2,6 +2,7 @@ package services
 
 import (
 	"context"
+	"errors"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -203,6 +204,31 @@ func TestModrinthDoJSONSurfacesHTTPErrorWithBody(t *testing.T) {
 	}
 	if !strings.Contains(err.Error(), "HTTP 500") || !strings.Contains(err.Error(), "upstream exploded") {
 		t.Errorf("error = %v, want it to carry both the status and the body", err)
+	}
+}
+
+// A body cut off mid-transfer used to be decoded as the body: ReadAll's error
+// was discarded, so a truncated 200 surfaced as a JSON decode error, or as a
+// short body handed to the caller. It is a read failure and says so.
+func TestModrinthDoJSONSurfacesATruncatedBody(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Declare more than is sent; net/http closes the connection on the
+		// mismatch and the client's ReadAll ends in an unexpected EOF.
+		w.Header().Set("Content-Length", "100")
+		writeString(t, w, `{"hits":[`)
+	}))
+	defer ts.Close()
+
+	var out map[string]any
+	err := newTestClient(ts).doJSON(context.Background(), "/search", &out)
+	if err == nil {
+		t.Fatal("doJSON = nil error, want a read error")
+	}
+	if !strings.Contains(err.Error(), "read response") {
+		t.Errorf("error = %v, want it to name the read step", err)
+	}
+	if !errors.Is(err, io.ErrUnexpectedEOF) {
+		t.Errorf("error = %v, want it to wrap io.ErrUnexpectedEOF", err)
 	}
 }
 

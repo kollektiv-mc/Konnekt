@@ -464,8 +464,12 @@ func execHTTP(e *ExecContext) ExecResult {
 	}
 	defer resp.Body.Close()
 
-	respBody, _ := io.ReadAll(resp.Body)
+	respBody, err := io.ReadAll(resp.Body)
 	e.SetOutput("status", float64(resp.StatusCode))
+	if err != nil {
+		// A body cut off mid-transfer used to be reported as the body.
+		return ExecResult{Port: "onFailed", Err: fmt.Errorf("HTTP %d: read response: %w", resp.StatusCode, err)}
+	}
 	e.SetOutput("body", string(respBody))
 
 	if resp.StatusCode >= 400 {
