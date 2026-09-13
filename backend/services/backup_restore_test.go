@@ -293,11 +293,23 @@ func TestRestoreRollsBackWhenTheSwapFails(t *testing.T) {
 // Moving the current files aside fails when their parent is not a directory.
 // A missing target is tolerated (the world was deleted); anything else stops
 // the restore before the archive is put in place, and says which step.
+// nameAtLimit is the longest name a directory can have: NAME_MAX on Linux
+// and the per-component limit on NTFS are both 255. The set-aside appends
+// ".bak-" and a timestamp to the current directory's name, so a world at the
+// limit can be created but never moved aside, and the rename fails with the
+// directory still in place, on every platform the suite runs on. (The fixture
+// this replaced made the target's parent a file, which is ENOTDIR on Linux
+// but ERROR_PATH_NOT_FOUND on Windows, and that one is os.IsNotExist there,
+// so the set-aside read as "nothing to move" and the swap failed instead.)
+const nameAtLimit = 255
+
 func TestRestoreReportsAFailedSetAside(t *testing.T) {
+	longName := strings.Repeat("w", nameAtLimit)
+
 	t.Run("world restore", func(t *testing.T) {
 		svc, workDir := newBackupFixture(t)
-		writeFile(t, filepath.Join(workDir, "blocker"), "a file where the world's parent should be")
-		writeFile(t, filepath.Join(workDir, "server.properties"), "level-name=blocker/world\n")
+		writeFile(t, filepath.Join(workDir, longName, "level.dat"), "current")
+		writeFile(t, filepath.Join(workDir, "server.properties"), "level-name="+longName+"\n")
 		root, err := svc.backupRoot(testServerID)
 		if err != nil {
 			t.Fatal(err)
@@ -313,7 +325,7 @@ func TestRestoreReportsAFailedSetAside(t *testing.T) {
 
 		err = svc.RestoreBackup(testServerID, "oldworld.zip")
 		if err == nil {
-			t.Fatal("RestoreBackup with the world's parent a file = nil error, want the set-aside to fail")
+			t.Fatal("RestoreBackup with a world name at the limit = nil error, want the set-aside to fail")
 		}
 		if p := awaitFailed(t, failed, EventRestoreFailed); p["serverID"] != testServerID || p["error"] != err.Error() {
 			t.Errorf("payload = %v, want the server and the error", p)
@@ -321,23 +333,22 @@ func TestRestoreReportsAFailedSetAside(t *testing.T) {
 		if lines := strings.Join(consoleLines(svc.server), "\n"); !strings.Contains(lines, "Restore failed while moving the current files aside") {
 			t.Errorf("narration = %q, want the set-aside step named", lines)
 		}
-		if got, err := os.ReadFile(filepath.Join(workDir, "blocker")); err != nil || !strings.HasPrefix(string(got), "a file") {
-			t.Errorf("the blocking file was disturbed: %q, %v", got, err)
+		if got, err := os.ReadFile(filepath.Join(workDir, longName, "level.dat")); err != nil || string(got) != "current" {
+			t.Errorf("the current world was disturbed: %q, %v", got, err)
 		}
 	})
 
 	t.Run("server restore", func(t *testing.T) {
 		svc, _ := newBackupFixture(t)
-		parent := filepath.Join(t.TempDir(), "blocker")
-		writeFile(t, parent, "a file where the working directory's parent should be")
 		cfg, err := svc.config.GetServerConfig(testServerID)
 		if err != nil {
 			t.Fatal(err)
 		}
-		cfg.WorkingDir = filepath.Join(parent, "server")
+		cfg.WorkingDir = filepath.Join(t.TempDir(), longName)
 		if err := svc.config.SaveServerConfig(*cfg); err != nil {
 			t.Fatal(err)
 		}
+		writeFile(t, filepath.Join(cfg.WorkingDir, "marker.txt"), "current")
 		root, err := svc.backupRoot(testServerID)
 		if err != nil {
 			t.Fatal(err)
@@ -351,10 +362,13 @@ func TestRestoreReportsAFailedSetAside(t *testing.T) {
 		t.Cleanup(func() { mkdirTempRestore = orig })
 
 		if err := svc.RestoreBackup(testServerID, "12345_full.zip"); err == nil {
-			t.Fatal("RestoreBackup with the working directory's parent a file = nil error, want the set-aside to fail")
+			t.Fatal("RestoreBackup with a working directory name at the limit = nil error, want the set-aside to fail")
 		}
 		if lines := strings.Join(consoleLines(svc.server), "\n"); !strings.Contains(lines, "Restore failed while moving the current files aside") {
 			t.Errorf("narration = %q, want the set-aside step named", lines)
+		}
+		if got, err := os.ReadFile(filepath.Join(cfg.WorkingDir, "marker.txt")); err != nil || string(got) != "current" {
+			t.Errorf("the current server files were disturbed: %q, %v", got, err)
 		}
 	})
 }

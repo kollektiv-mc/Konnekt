@@ -5432,7 +5432,11 @@ after the current files were moved aside, for both kinds, with the current
 files put back (the staging directory is placed on `/dev/shm`, which is a
 separate mount from the temp directory on Linux, so the final rename fails
 with a cross-device error on demand; the test skips where the two share a
-filesystem); the set-aside failing because the target's parent is a file;
+filesystem); the set-aside failing because the world's name is at the
+filesystem's 255-byte limit and leaves no room for the `.bak-` suffix (the
+first version made the target's parent a file, which is `ENOTDIR` on Linux
+but `ERROR_PATH_NOT_FOUND` on Windows, and that one is `os.IsNotExist`
+there, so CI's Windows job saw the set-aside skipped and the swap fail);
 `DeleteBackup` dropping the sidecar entry; `UpdateBackupMeta` over a
 sidecar that will not parse (rewritten) and one that cannot be read at all
 (refused, while the listing degrades to untagged rather than hiding the
