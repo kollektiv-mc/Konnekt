@@ -367,18 +367,26 @@ tree.
       Verify: `lib/clientErrors.test.ts` plus the reporting case in
       `components/ErrorBoundary.test.tsx`; on the Go side
       `go test . -run LogClientError` pins the line and the per-field clamp.
-- [ ] Store write actions record the failure and rethrow rather than applying
+- [x] Store write actions record the failure and rethrow rather than applying
       the optimistic update anyway, per `agent_docs/CLAUDE.md`'s IPC
       conventions. `useSchedulerStore` is the reference shape. This line read
       "all five comply" from 2026-08-20 until a side-by-side read on
-      2026-09-08 found `useLayoutStore.persistActiveLayout` recording and not
-      rethrowing, and `useCommandsStore`'s seed write swallowing with
-      `.catch(console.error)`. Open on #315.
+      2026-09-08 found two sites that did not rethrow (#315, closed 2026-09-12,
+      HEALTH_LOG). One was a swallow and is fixed: `useCommandsStore`'s
+      first-launch seed write logged to the console, which dies with the
+      window, and now records into `error`, which the library renders. The
+      other is the convention's own "says why it deliberately does neither"
+      clause, and stays: `useLayoutStore.persistActiveLayout` records and
+      does not rethrow because react-grid-layout drives it from a drag
+      callback that cannot await, there is nothing to revert into (the layout
+      on screen is what the user just arranged), and `LayoutPresets` renders
+      the recorded error. The comment above the function says so, and
+      `useLayoutStore.test.ts` pins it.
       Verify: from `frontend/`,
-      `grep -rn "best-effort" src/stores` — expect no matches, and read any
-      `catch` in a write action against the rule. The rethrow is only half:
-      grep the action's callers too, since a store that rethrows into a caller
-      that ignores it is the same bug one level up.
+      `grep -rn "best-effort\|console.error" src/stores` — expect no matches,
+      and read any `catch` in a write action against the rule. The rethrow is
+      only half: grep the action's callers too, since a store that rethrows
+      into a caller that ignores it is the same bug one level up.
       Note the one sanctioned exception, or it will be "fixed" back: a rejection
       with **no Wails bridge at all** (`lib/ipc.ts`'s `hasWailsBridge()`) keeps
       the optimistic value, because that is the `frontend-dev` preset in

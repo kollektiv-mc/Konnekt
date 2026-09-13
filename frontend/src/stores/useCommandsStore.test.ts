@@ -92,6 +92,41 @@ describe('useCommandsStore hydrate', () => {
   })
 })
 
+describe('useCommandsStore seed write', () => {
+  beforeEach(() => {
+    vi.mocked(App.GetCommandButtons).mockResolvedValue(
+      models.CommandButtonSet.createFrom({ seeded: false, items: [] }),
+    )
+    vi.mocked(App.GetCustomCommands).mockResolvedValue([])
+  })
+
+  // The seed is shown either way, so a failed write has nothing to revert into;
+  // what it must not do is vanish into the console (#315).
+  it('keeps the seed on screen and records the error when the write rejects', async () => {
+    vi.mocked(App.SaveCommandButtons).mockRejectedValue(new Error('disk full'))
+    await useCommandsStore.getState().hydrate()
+
+    const s = useCommandsStore.getState()
+    expect(s.items.length).toBeGreaterThan(0)
+    expect(s.hydrated).toBe(true)
+    expect(s.loading).toBe(false)
+    expect(s.error).toBe('disk full')
+  })
+
+  it('records nothing with no backend attached', async () => {
+    withBridge(false)
+    vi.mocked(App.SaveCommandButtons).mockImplementation(() => {
+      throw new TypeError("Cannot read properties of undefined (reading 'main')")
+    })
+    await useCommandsStore.getState().hydrate()
+
+    const s = useCommandsStore.getState()
+    expect(s.items.length).toBeGreaterThan(0)
+    expect(s.error).toBeNull()
+    expect(App.SaveCommandButtons).not.toHaveBeenCalled()
+  })
+})
+
 describe('useCommandsStore writes', () => {
   const one = [{ id: '1', label: 'List', kind: 'cmd', value: 'list' }]
 
