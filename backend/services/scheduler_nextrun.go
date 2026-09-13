@@ -97,15 +97,29 @@ func (s *SchedulerService) nextInterval(g models.Graph, node models.Node, now ti
 	return now.Add(interval)
 }
 
-func nextTimeOfDay(node models.Node, now time.Time) time.Time {
+// parseTimeOfDay reads a time-of-day trigger's "HH:MM" config. The trigger
+// and the next-run display both go through it, so a time the one cannot
+// parse the other cannot fire on: the trigger used to discard Atoi's errors
+// and fire "ab:cd" at midnight, while the display showed no next run at all.
+// Out-of-range fields are rejected here too, since time.Date would normalise
+// "25:99" into a real instant that the hour/minute comparison can never hit.
+func parseTimeOfDay(node models.Node) (hour, minute int, ok bool) {
 	target, _ := node.Config["time"].(string) // "HH:MM"
 	parts := strings.SplitN(target, ":", 2)
 	if len(parts) != 2 {
-		return time.Time{}
+		return 0, 0, false
 	}
 	h, err1 := strconv.Atoi(strings.TrimSpace(parts[0]))
 	m, err2 := strconv.Atoi(strings.TrimSpace(parts[1]))
-	if err1 != nil || err2 != nil {
+	if err1 != nil || err2 != nil || h < 0 || h > 23 || m < 0 || m > 59 {
+		return 0, 0, false
+	}
+	return h, m, true
+}
+
+func nextTimeOfDay(node models.Node, now time.Time) time.Time {
+	h, m, ok := parseTimeOfDay(node)
+	if !ok {
 		return time.Time{}
 	}
 	fire := time.Date(now.Year(), now.Month(), now.Day(), h, m, 0, 0, now.Location())
