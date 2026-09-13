@@ -5494,7 +5494,10 @@ fail nothing, which is why its 571 escapes were real. Measured one file per
 invocation with the directory cleaned between: `update.go` 56.9% (271 of
 476 killed) and `modservice.go` 28.2% (229 of 811), filed as #349 and #350;
 `config_editor.go`'s 36 escapes on the 12th were cut short by the same
-file, so its 88% is unmeasured too. The test now runs in a directory of its own
+file, and measured alone it is 28.3% (84 of 297), filed as #352; the two
+containment tests in `sandbox` are among the kills, and its four escapes are
+the propagation of an `EvalSymlinks` failure that cannot be provoked as
+root. The test now runs in a directory of its own
 (`t.Chdir(t.TempDir())`), so a leftover cannot fail it and the guard mutant
 is still caught, checked by hand with the guard removed. And a rule for
 reading the tool, now in the Stable pillar: a mutant's side effects on the

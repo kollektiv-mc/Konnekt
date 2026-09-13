@@ -974,7 +974,9 @@ numbers)
 **From the 2026-09-13 session** (filed; the log entry of that date has the
 numbers and the cause of the earlier 100%)
 - **p2** #349 `update.go` loses 205 of 476 mutants; **p3** #350
-  `modservice.go` loses 582 of 811. Both were reported perfect on the 12th.
+  `modservice.go` loses 582 of 811; **p3** #352 `config_editor.go` loses 213
+  of 297. The first two were reported perfect on the 12th and the third at
+  88%, all three cut short by the same leftover file.
 
 **A scanned-file count is not a coverage figure** (filed 2026-09-08 as #321,
 corrected the same day)
