@@ -288,7 +288,13 @@ tree.
       baseline 2026-09-08: `rcon.go` at 94% line coverage scored about 64%
       (every post-auth error return and all five `%w` wraps survived), which
       is the gap coverage cannot see; #312 has the escaped mutants and the
-      command. The frontend has no baseline yet (#317).
+      command. The frontend has no baseline yet (#317). Read a run before
+      recording it: a mutant's side effects on the working directory persist
+      for the rest of the run (the tool restores the source between mutants
+      and nothing else), so mutate one file per invocation, look at what is
+      left in `backend/services/` before believing the number, and treat a
+      100% file as a question rather than a result. The 2026-09-12 run scored
+      two files perfect that way (HEALTH_LOG 2026-09-13).
 - [x] CI is green on every push/PR (`.github/workflows/ci.yml`: a `frontend`
       job, an `invariants` job running `.claude/suite-check.py` over the
       manifest's `invariants` and `generated` sections, a `website` job
@@ -959,10 +965,18 @@ tool results and the reasoning)
 **From the 2026-09-12 session** (filed; the log entry of that date has the
 numbers)
 - **p2** #348 `backup.go` loses 571 of 809 mutants, 457 of them in the
-  restore, per-world and meta.json paths, against 0 of 818 in `modservice.go`
-  and 0 of 478 in `update.go`. The second half of #312's run, and the file
-  the next mutation pass belongs to. The two perfect scores are to be
-  re-checked for timeout kills before they are believed.
+  restore, per-world and meta.json paths. Closed 2026-09-13 (HEALTH_LOG "The
+  backup tests that pinned nothing"): 220 of 809 now, 72.8% killed. The same
+  run's "0 of 818 in `modservice.go` and 0 of 478 in `update.go`" was not a
+  score but a leftover `eula.txt` failing one test for every mutant after
+  it; measured alone they are 28.2% and 56.9%.
+
+**From the 2026-09-13 session** (filed; the log entry of that date has the
+numbers and the cause of the earlier 100%)
+- **p2** #349 `update.go` loses 205 of 476 mutants; **p3** #350
+  `modservice.go` loses 582 of 811; **p3** #352 `config_editor.go` loses 213
+  of 297. The first two were reported perfect on the 12th and the third at
+  88%, all three cut short by the same leftover file.
 
 **A scanned-file count is not a coverage figure** (filed 2026-09-08 as #321,
 corrected the same day)
