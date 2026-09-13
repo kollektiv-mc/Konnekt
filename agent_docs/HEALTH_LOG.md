@@ -5395,3 +5395,108 @@ mutant whose test run hangs counts as killed, so a file that times out on
 every mutation would score 100% for the wrong reason.
 `govulncheck ./...` still needs one local run; the container's proxy blocks
 `vuln.go.dev`.
+
+### 2026-09-13 — The backup tests that pinned nothing, and the perfect scores that were a leftover file
+
+**Closed: [#348](../../issues/348).** The 2026-09-12 run had `backup.go` at
+29% killed, 571 of 809 mutants, next to 100% for `modservice.go` and
+`update.go` in the same package. The escape map, read function by function
+rather than as a number, said where the tests were missing rather than weak:
+`GetBackupWorlds` and the two archive readers behind it had no test at all,
+nor did the legacy layout (archives from before the server/worlds split,
+directly under the backup root, with the kind read off the filename), the
+world-only restore, either rollback, the sidecar's failure modes, the
+progress events, or the quiesce around a backup. What the round trip
+covered was the happy path through the server directory, and everything
+else could be deleted with the suite green.
+
+**The tests.** Two files beside `backup_test.go`, split by subject rather
+than added to it, each case written from the question "what would a user
+see if this line were wrong". `backup_worlds_test.go`: a server archive
+with an active world carrying vanilla DIM folders, an inactive world laid
+out the Bukkit way whose DIM-1 must not become a second nether, a
+`level.dat` below the top level that is not a world, and server files that
+count towards nothing, asserting dimensions, paths, sizes, the active flag
+and the `level.dat` metadata; a world archive with two nether files and one
+nether dimension; the refusals; a `parsePropertiesReader` and an
+`isServerFilename` table, the latter at every boundary of "five digits and
+an underscore"; the legacy root listed with its sidecar, resolved by
+`findBackupFile` with the right kind, and ordered newest first across
+directories by the file's own mtime; `session.lock` left out of an archive
+and an empty directory kept in one. `backup_restore_test.go`: a named world
+restore that replaces that world and nothing else and leaves no set-aside or
+staging directory behind; a restore into a world that was deleted; a legacy
+world archive restored into `level-name`, or `world` when that is unset;
+a legacy server archive replacing the working directory; the swap failing
+after the current files were moved aside, for both kinds, with the current
+files put back (the staging directory is placed on `/dev/shm`, which is a
+separate mount from the temp directory on Linux, so the final rename fails
+with a cross-device error on demand; the test skips where the two share a
+filesystem); the set-aside failing because the target's parent is a file;
+`DeleteBackup` dropping the sidecar entry; `UpdateBackupMeta` over a
+sidecar that will not parse (rewritten) and one that cannot be read at all
+(refused, while the listing degrades to untagged rather than hiding the
+archive); the three backup events with their server and filename, and the
+progress percentages exactly once each; a backup that pauses and resumes a
+running server's saves; one that fails, with the reason wrapped, when the
+saves cannot be paused; a `BackupService` with no `ServerService`; and the
+refusals before `backup:started` when the backup directory cannot be made.
+
+**Score.** `go-mutesting` v2.10.6 over `backup.go`: 589 of 809 killed,
+72.8%, from 238. Run in three `--match` chunks (165 of 230, 200 of 259, 224
+of 320) with `go clean -cache` between them, because the build cache grows
+about 35 MB per mutant and the whole file filled the container's disk in
+one go: the first attempt ended with 278 mutants errored on "no space left
+on device", a number to distrust rather than record. By mutator,
+`conditional/negated` is 118 of 126 and `composite/field-clear` 60 of 63,
+while `expression/error-guard` is 24 of 61 and `branch/if` 88 of 139, and
+that is what the 220 left are: error guards on calls that cannot be made to
+fail as root (`MkdirAll`, `Stat`, `ReadFile`, `Create` on paths the test
+owns), the `>` against `>=` boundaries no fixture sits exactly on, clears
+that turn an empty slice into a nil one, `statement/return` on paths already
+behind a guard the tests do trigger, and the error paths inside the zip
+walks. A few are equivalents (the sort comparison, the prefix attribution in
+`findBackupFile`). Not chased further: what remains wants a filesystem that
+fails on cue, and the fake for that is worth more than the last points.
+
+**The restore's error does not say which step failed.** `failRestore`
+narrates "Restore failed while swapping files, previous state kept" and
+emits `backup:restore-failed`, but returns the raw rename error, so the
+toast reads "invalid cross-device link" with no step. That is how #280
+shaped it (the console line carries the step, the event carries the error
+and the server) and it is left as it is; the tests assert the step on the
+console and the error on the event, which is where each lives.
+
+**The perfect scores were one leftover file.** The note on the 12th guessed
+at timeouts. It was not that: three timeouts across the two files today, one
+in `update.go` and two in `modservice.go`, each counted as a kill because
+the tool maps `go test`'s exit 1 to killed whatever produced it, which stays
+worth knowing but is nowhere near 1,296 mutants. The run's own output is the
+evidence. It took the four files as `backup.go`, `config_editor.go`,
+`modservice.go`, `update.go`, and every escape it printed is in the first
+two. `AcceptEula` writes `eula.txt` under the server's working directory,
+and `TestConfigEditorRefusesAnEmptyWorkingDir` asserts both that a server
+with no working directory is refused and that no `eula.txt` lands in the
+process's working directory, which under `go test` is `backend/services/`.
+The mutant that drops that guard writes the file there and is killed,
+correctly. The file outlives it: the tool restores the source between
+mutants and nothing else. From then on the test failed on every run, so
+every mutant after it, the rest of `config_editor.go` and all of the other
+two files, was scored as killed by a test that never looked at it.
+Reproduced today in both directions: an `eula.txt` in the package directory
+and nothing else fails the suite on exactly that test, and the directories
+`backup.go`'s own mutants leave behind (`backups/`, `server/`, `worlds/`)
+fail nothing, which is why its 571 escapes were real. Measured one file per
+invocation with the directory cleaned between: `update.go` 56.9% (271 of
+476 killed) and `modservice.go` 28.2% (229 of 811), filed as #349 and #350;
+`config_editor.go`'s 36 escapes on the 12th were cut short by the same
+file, so its 88% is unmeasured too. The test now runs in a directory of its own
+(`t.Chdir(t.TempDir())`), so a leftover cannot fail it and the guard mutant
+is still caught, checked by hand with the guard removed. And a rule for
+reading the tool, now in the Stable pillar: a mutant's side effects on the
+working directory persist for the rest of the run, so mutate one file per
+invocation, look at what is left in the package directory before believing
+the number, and treat a 100% file as a question rather than a result.
+
+**Verification.** `gofmt -l`, `go vet ./...`, `go test ./...`, `go run
+./scripts/coverage-floor`, `aislop ci` at 100, and the mutation runs above.

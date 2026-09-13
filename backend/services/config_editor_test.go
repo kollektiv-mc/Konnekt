@@ -467,6 +467,12 @@ func TestAcceptEulaWritesTheFlagAtomically(t *testing.T) {
 // launched from. Every config-editor path resolves the working directory
 // through the same helper, so the read path is asserted alongside.
 func TestConfigEditorRefusesAnEmptyWorkingDir(t *testing.T) {
+	// The eula.txt check below reads the process's working directory, so run
+	// in a fresh one. A mutant that drops AcceptEula's guard writes the file
+	// into the package directory and is killed, but the file outlives it, and
+	// this test then failed for every mutant after it: that is how a run once
+	// scored update.go and modservice.go as 100% killed (HEALTH_LOG 2026-09-13).
+	t.Chdir(t.TempDir())
 	svc, _ := newConfigEditorFixture(t)
 	if err := svc.appConfig.SaveServerConfig(models.ServerConfig{ID: "bare", Name: "Bare"}); err != nil {
 		t.Fatal(err)
