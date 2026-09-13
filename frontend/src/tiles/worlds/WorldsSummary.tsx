@@ -1,5 +1,3 @@
-import type { TileProps } from '../../types'
-import { useWorlds } from './useWorlds'
 import type { WorldSystem } from './useWorlds'
 import { fmtBytes } from '../../lib/format'
 
@@ -77,10 +75,4 @@ export function WorldsSummary({ worlds, loading, error }: Props) {
       </div>
     </div>
   )
-}
-
-/** The registry's `summary` entry: the same view, listing worlds for itself. */
-export function WorldsSummaryCard(_props: TileProps) {
-  const { worlds, loading, error } = useWorlds()
-  return <WorldsSummary worlds={worlds} loading={loading} error={error} />
 }

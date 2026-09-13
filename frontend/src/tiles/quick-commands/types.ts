@@ -7,11 +7,3 @@
 
 /** Which rows the maximized library is showing. */
 export type LibraryFilter = 'all' | 'linked' | 'attention'
-
-/** A row being edited in place, before it is committed. */
-export interface RowDraft {
-  id: string
-  label: string
-  value: string
-  group: string
-}

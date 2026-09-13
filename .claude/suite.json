@@ -13,27 +13,88 @@
   },
   "health": {
     "commands": [
-      { "name": "typecheck", "run": "pnpm typecheck", "cwd": "frontend" },
-      { "name": "lint", "run": "pnpm lint", "cwd": "frontend" },
-      { "name": "test", "run": "pnpm test", "cwd": "frontend" },
-      { "name": "format", "run": "pnpm format:check", "cwd": "frontend" },
-      { "name": "website format", "run": "pnpm format:website", "cwd": "frontend" },
-      { "name": "website links", "run": "node scripts/check-website-links.mjs" },
-      { "name": "website scenes", "run": "node scripts/check-website-scenes.mjs" },
+      {
+        "name": "typecheck",
+        "run": "pnpm typecheck",
+        "cwd": "frontend"
+      },
+      {
+        "name": "lint",
+        "run": "pnpm lint",
+        "cwd": "frontend"
+      },
+      {
+        "name": "test",
+        "run": "pnpm test",
+        "cwd": "frontend"
+      },
+      {
+        "name": "format",
+        "run": "pnpm format:check",
+        "cwd": "frontend"
+      },
+      {
+        "name": "website format",
+        "run": "pnpm format:website",
+        "cwd": "frontend"
+      },
+      {
+        "name": "website links",
+        "run": "node scripts/check-website-links.mjs"
+      },
+      {
+        "name": "website scenes",
+        "run": "node scripts/check-website-scenes.mjs"
+      },
       {
         "name": "release notes extract",
         "run": "node scripts/check-release-notes-extract.mjs"
       },
-      { "name": "bundle budget", "run": "pnpm check-bundle", "cwd": "frontend" },
-      { "name": "token classes", "run": "pnpm check-tokens", "cwd": "frontend" },
-      { "name": "prefetch warm list", "run": "pnpm check-prefetch", "cwd": "frontend" },
-      { "name": "issue templates", "run": "pnpm check-issue-templates", "cwd": "frontend" },
-      { "name": "release notes", "run": "python3 .github/scripts/release-notes_test.py" },
-      { "name": "go vet", "run": "go vet ./..." },
-      { "name": "go test", "run": "go test ./..." },
-      { "name": "coverage floor", "run": "go run ./scripts/coverage-floor" },
-      { "name": "frontend coverage floor", "run": "pnpm test:coverage", "cwd": "frontend" },
-      { "name": "aislop", "run": "npx --yes aislop@0.16.0 ci" }
+      {
+        "name": "bundle budget",
+        "run": "pnpm check-bundle",
+        "cwd": "frontend"
+      },
+      {
+        "name": "token classes",
+        "run": "pnpm check-tokens",
+        "cwd": "frontend"
+      },
+      {
+        "name": "prefetch warm list",
+        "run": "pnpm check-prefetch",
+        "cwd": "frontend"
+      },
+      {
+        "name": "issue templates",
+        "run": "pnpm check-issue-templates",
+        "cwd": "frontend"
+      },
+      {
+        "name": "release notes",
+        "run": "python3 .github/scripts/release-notes_test.py"
+      },
+      {
+        "name": "go vet",
+        "run": "go vet ./..."
+      },
+      {
+        "name": "go test",
+        "run": "go test ./..."
+      },
+      {
+        "name": "coverage floor",
+        "run": "go run ./scripts/coverage-floor"
+      },
+      {
+        "name": "frontend coverage floor",
+        "run": "pnpm test:coverage",
+        "cwd": "frontend"
+      },
+      {
+        "name": "aislop",
+        "run": "npx --yes aislop@0.16.0 ci"
+      }
     ],
     "invariants": [
       {
@@ -42,6 +103,15 @@
         "paths": ["frontend/src/components", "frontend/src/tiles"],
         "expect": "no matches",
         "diagnosis": "A hairline is the signature weight of this UI, and an inlined [0.5px] opts that edge out of the token layer: it can then only be changed by find-and-replace, and it diverges from Kommands, which reads the same upstream scale. Utilities exist for both weights and all four sides (border-hairline, border-thick, border-{t,r,b,l}-{hairline,thick}), generated into frontend/src/styles/tokens.css from tokens.source.json. A genuinely new weight is a value to add to kollektiv/design/tokens.json, never a literal to inline here. Scoped to borders on purpose: text-[Npx], rounded-[Npx] and the arbitrary sizing literals are separate sweeps still open in the checklist, so a broader pattern would be red on arrival.",
+        "reference": "agent_docs/HEALTH_CHECKLIST.md"
+      },
+      {
+        "name": "no discarded errors",
+        "grep": ", _ :?= (?!.*(?:\\.\\(|//nolint|resolveTarget\\())",
+        "paths": ["app.go", "main.go", "backend"],
+        "exclude": ["*_test.go", "**/*_test.go"],
+        "expect": "no matches",
+        "diagnosis": "An error in the second return position is not `_ = `, so the checklist's `_ = ` grep verified 'no blank error-ignores' for two months while forty `x, _ := f()` sites sat in the tree (HEALTH_LOG, 2026-09-08). Seven of them dereferenced a nil FileInfo when a file vanished mid-listing, one fired a malformed time-of-day trigger at midnight, and two reported a body cut off mid-transfer as the body. Handle the error where it happens, or say why the discard is right in a trailing `//nolint:errcheck // reason` on the same line, the way `players.go`'s degrade-to-empty does. The lookahead leaves out what is not an error: the comma-ok form of a type assertion (`v, _ := x.(T)`) is idiomatic and a discarded `ok` there is a deliberate zero value, and `resolveTarget`'s second value is the loader name. A map lookup's comma-ok with the `ok` discarded is neither and is written without it. Tests are excluded because `_ =` in a test is the test choosing what to assert.",
         "reference": "agent_docs/HEALTH_CHECKLIST.md"
       }
     ],

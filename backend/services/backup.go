@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"math/rand/v2"
 	"os"
 	"path/filepath"
@@ -133,7 +134,12 @@ func (s *BackupService) scanBackupsInDir(dir, kind, world string) []models.Backu
 	if err != nil {
 		return nil
 	}
-	meta, _ := s.loadMeta(dir)
+	// loadMeta already treats a missing or unparseable meta.json as empty; what
+	// reaches here is a read failure, and the listing degrades to untagged.
+	meta, err := s.loadMeta(dir)
+	if err != nil {
+		slog.Debug("backups: meta.json unreadable", "dir", dir, "error", err)
+	}
 	var out []models.Backup
 	for _, e := range entries {
 		if e.IsDir() || !strings.HasSuffix(e.Name(), ".zip") {
@@ -229,7 +235,10 @@ func (s *BackupService) ListBackups(serverID string) ([]models.Backup, error) {
 
 	// Legacy backups in root (created before the server/worlds split)
 	if entries, err := os.ReadDir(root); err == nil {
-		meta, _ := s.loadMeta(root)
+		meta, err := s.loadMeta(root)
+		if err != nil {
+			slog.Debug("backups: meta.json unreadable", "dir", root, "error", err)
+		}
 		for _, e := range entries {
 			if e.IsDir() || !strings.HasSuffix(e.Name(), ".zip") {
 				continue

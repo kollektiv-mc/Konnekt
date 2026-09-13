@@ -293,19 +293,22 @@ func argfileTokens(dir string) []string {
 		}
 		// Several loader versions can sit side by side; the newest file is the one
 		// the most recent installer run wrote. Version strings sort badly here
-		// ("21.1.9" > "21.1.72" lexically), so use mtime.
-		found = matches[0]
-		newest, _ := os.Stat(found)
-		for _, m := range matches[1:] {
+		// ("21.1.9" > "21.1.72" lexically), so use mtime. A match that cannot be
+		// stat'ed (removed mid-scan) is skipped rather than pinned as the
+		// baseline, which is what discarding the first Stat's error used to do.
+		var newest os.FileInfo
+		for _, m := range matches {
 			info, err := os.Stat(m)
-			if err != nil || newest == nil {
+			if err != nil {
 				continue
 			}
-			if info.ModTime().After(newest.ModTime()) {
+			if newest == nil || info.ModTime().After(newest.ModTime()) {
 				found, newest = m, info
 			}
 		}
-		break
+		if found != "" {
+			break
+		}
 	}
 	if found == "" {
 		return nil

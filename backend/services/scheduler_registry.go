@@ -58,7 +58,7 @@ func (e *ExecContext) RawString(key string) string {
 }
 
 func (e *ExecContext) GetString(key string) string {
-	v, _ := e.Config[key]
+	v := e.Config[key]
 	if v == nil {
 		return ""
 	}

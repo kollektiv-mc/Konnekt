@@ -28,10 +28,6 @@ export {
   Gauge,
   LayoutDashboard,
   MessageCircleWarning,
-  // Not a tile icon: the Overview roll-up's own vitals card, which needs a
-  // glyph distinct from the tile header above it. This was the Stats tile's
-  // icon before it became Overview.
-  SquareActivity,
   SquareChevronRight,
   UsersRound,
   Workflow,
@@ -43,7 +39,6 @@ export {
   Minimize2,
   Pencil,
   Settings,
-  SlidersHorizontal,
   X,
   // Commands tile: the button grid, the maximized library, and link state.
   CopyPlus,

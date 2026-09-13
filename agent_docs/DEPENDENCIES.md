@@ -94,10 +94,10 @@ only if the log ever grows a real retention requirement.
 |---|---|
 | `react`, `react-dom` | UI framework |
 | `zustand` | Per-domain state stores (`CLAUDE.md`'s "one Zustand store per domain" rule) |
-| `lucide-react` | The app's icon set (`lib/icons.ts` re-exports it; `components/ui/Icon.tsx` is the only render path). ISC, `sideEffects: false`, so the entry chunk pays only for the icons re-exported: measured 2.6 KB gzip for the 20 in use, against 1600+ available. Chosen over hand-vendoring the SVGs because the shipped path data is the same data lucide.dev serves, verified icon-by-icon when this landed, so there is nothing to transcribe and nothing to drift |
+| `lucide-react` | The app's icon set (`lib/icons.ts` re-exports it; `components/ui/Icon.tsx` is the only render path). ISC, `sideEffects: false`, so the entry chunk pays only for the icons re-exported: measured 2.6 KB gzip for the 20 re-exported when this landed, against 1600+ available; 29 today, and `pnpm dlx knip` from `frontend/` is what says whether every one of them is still rendered (#311 found three that were not). Chosen over hand-vendoring the SVGs because the shipped path data is the same data lucide.dev serves, verified icon-by-icon when this landed, so there is nothing to transcribe and nothing to drift |
 | `react-grid-layout` | Tile drag/resize grid system — used via its v2 modern API (`GridLayout`, `useContainerWidth`, `verticalCompactor` — its default, best-tested mode), not the `/legacy` v1-compat wrapper and not `noCompactor` free placement (tried and abandoned — see `agent_docs/HEALTH_LOG.md`'s "crate-drag placement, rebuilt" for the upstream-confirmed bugs that ruled it out) |
 | `recharts` | Performance-tile charts, lazy-loaded (`tiles/performance/charts.tsx`) |
-| `three`, `@react-three/fiber`, `@react-three/drei`, `@react-three/postprocessing`, `postprocessing` | Worlds tile's 3D planetary scene, lazy-loaded (`tiles/worlds/scene/`) |
+| `three`, `@react-three/fiber`, `@react-three/drei` | Worlds tile's 3D planetary scene, lazy-loaded (`tiles/worlds/scene/`) |
 | `@xyflow/react` | Node-graph editor for the scheduler tile's block system (`tiles/scheduler/editor/`), lazy-loaded behind the maximized editor (`tiles/scheduler/index.tsx`) |
 | `@codemirror/lang-json`, `@codemirror/lang-yaml`, `@codemirror/state`, `@codemirror/view`, `@uiw/react-codemirror` | server.properties / config file editor, lazy-loaded behind the maximized editor (`tiles/config/EditorPanel.tsx`) |
 | `react-markdown`, `remark-gfm`, `rehype-raw` | Rendering mod descriptions / changelogs in the mods tile, lazy-loaded (`tiles/mods/MarkdownBody.tsx`). `rehype-raw` is what pulls in parse5 and the full HTML parser, which is most of the weight |
@@ -130,6 +130,10 @@ them to one version; bump the two together.
 
 ## Removed
 
+- `@react-three/postprocessing` and `postprocessing` — added with the worlds
+  scene and listed above as part of it, but no commit ever imported either
+  under `frontend/src/` (`git log -S` finds none). Removed with #311; the
+  scene renders without a post-processing pass. Re-add when one is written.
 - `uplot` — was listed as a direct dependency but never imported under
   `frontend/src/`; the performance tile's charts use `recharts` exclusively.
   Removed (see `HEALTH_CHECKLIST.md`'s "P2 — Repo hygiene").

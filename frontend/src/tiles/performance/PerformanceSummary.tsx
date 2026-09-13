@@ -1,6 +1,4 @@
 import { lazy, Suspense } from 'react'
-import type { TileProps } from '../../types'
-import { usePerformanceHistory } from './usePerformanceHistory'
 import type { StatsSnapshot } from './usePerformanceHistory'
 import { tpsColor, fmtTps } from './helpers'
 import { ChartFallback } from './ChartFallback'
@@ -35,8 +33,7 @@ function StatCell({
  * count, a memory bar, and a sparkline over the last 60 samples.
  *
  * Presentational — it takes the history rather than fetching it, so the tile
- * root and the Overview roll-up each supply their own. See
- * `PerformanceSummaryCard` below for the connected form.
+ * root and the Overview roll-up each supply their own.
  */
 export function PerformanceSummary({ history }: { history: StatsSnapshot[] }) {
   const latest = history[history.length - 1]
@@ -91,9 +88,4 @@ export function PerformanceSummary({ history }: { history: StatsSnapshot[] }) {
       </div>
     </div>
   )
-}
-
-/** The registry's `summary` entry: the same view, fetching its own history. */
-export function PerformanceSummaryCard({ serverId }: TileProps) {
-  return <PerformanceSummary history={usePerformanceHistory(serverId)} />
 }
