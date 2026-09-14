@@ -1,6 +1,8 @@
 package services
 
 import (
+	"fmt"
+	"log/slog"
 	"strconv"
 	"strings"
 	"time"
@@ -34,7 +36,16 @@ func (s *SchedulerService) startTriggers() {
 		s.fireTypedEventTriggers("trigger.server", "Started", map[string]interface{}{}, "event:server:started")
 	})
 	s.bus.Subscribe(EventServerStopped, func(data any) {
-		payload, _ := data.(models.ServerStopped)
+		// Asserted with ok and reported, never swallowed. This read used to be
+		// `payload, _ :=`, which turns a payload-type change into a zero value:
+		// Expected false, so every clean stop would fire the Crashed trigger with
+		// nothing logged anywhere. The same shape cost the TPS triggers below.
+		payload, ok := data.(models.ServerStoppedEvent)
+		if !ok {
+			slog.Error("scheduler: server:stopped payload has the wrong type",
+				"payloadType", fmt.Sprintf("%T", data))
+			return
+		}
 		t := "Stopped"
 		label := "event:server:stopped"
 		if !payload.Expected {
@@ -65,11 +76,13 @@ func (s *SchedulerService) startTriggers() {
 	})
 
 	s.bus.Subscribe(EventStatsSnapshot, func(data any) {
-		snap, ok := data.(models.StatsSnapshot)
+		snap, ok := data.(models.StatsSnapshotEvent)
 		if !ok {
+			slog.Error("scheduler: stats:snapshot payload has the wrong type",
+				"payloadType", fmt.Sprintf("%T", data))
 			return
 		}
-		s.fireTPSTriggers(snap)
+		s.fireTPSTriggers(snap.StatsSnapshot)
 	})
 
 	// Time-based ticker (per-minute resolution).

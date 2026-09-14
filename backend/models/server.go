@@ -82,3 +82,67 @@ type StatsSnapshot struct {
 	CPUPercent float64 `json:"cpuPercent"`
 	Players    int     `json:"players"`
 }
+
+// ─── Server-scoped event payloads ─────────────────────────────────────────
+//
+// Every server-scoped event carries a serverID, so a subscriber can tell which
+// server it is hearing about (#233). Backup, mod and loader events already did;
+// these are the nine that did not.
+//
+// The id is added by embedding rather than by a field on the model itself, and
+// that is not a style preference. ServerStatus, ServerStopped and StatsSnapshot
+// are reachable from bound method signatures, so Wails generates each as a
+// TypeScript class with every field required; a new field there fails
+// `pnpm typecheck` at every object literal annotated with it, one of them
+// production (stores/useServerStore.ts's defaultStatus). An event-only struct is
+// reachable from no binding and so is never generated at all — ServerStateChange
+// above has been the standing proof of that. encoding/json flattens an embedded
+// struct, so the wire shape is byte-identical to what it always was plus one key.
+//
+// The trap these types set: scheduler_triggers.go type-asserts what it receives,
+// and two of its asserts swallow a miss. Change an emitted type without changing
+// the assert and every clean stop fires the Crashed trigger, or every TPS trigger
+// stops firing, with nothing logged either way. See serverevents_test.go.
+//
+// An empty ServerID is meaningful and not a bug, so a subscriber filtering by id
+// has to decide what to do with it rather than assume it cannot happen. Two
+// sources: NewServerService keeps a bootstrap instance under the empty id, which
+// is what carries narration reached before any server has booted (a backup, a
+// loader update, app.go's EULA write), and StatsService.tick reports on
+// CurrentServerID, which is empty until a start claims one. Dropping those on the
+// floor would lose console lines a user can see today, which is the thing for
+// #234's filter to get right.
+
+// ServerLifecycleEvent is the payload for the server-scoped events that carry no
+// data of their own: server:started and server:eula-required, both of which used
+// to emit nil.
+type ServerLifecycleEvent struct {
+	ServerID string `json:"serverID"`
+}
+
+// ServerStatusEvent is the server:status payload.
+type ServerStatusEvent struct {
+	ServerStatus
+	ServerID string `json:"serverID"`
+}
+
+// ServerStateEvent is the server:state payload.
+type ServerStateEvent struct {
+	ServerStateChange
+	ServerID string `json:"serverID"`
+}
+
+// ServerStoppedEvent is the server:stopped payload. GetLastStop still returns a
+// bare ServerStopped: it is a getter, and its caller already knows which server
+// it asked about.
+type ServerStoppedEvent struct {
+	ServerStopped
+	ServerID string `json:"serverID"`
+}
+
+// StatsSnapshotEvent is the stats:snapshot payload. GetStatsHistory still returns
+// bare StatsSnapshots, for the same reason.
+type StatsSnapshotEvent struct {
+	StatsSnapshot
+	ServerID string `json:"serverID"`
+}
