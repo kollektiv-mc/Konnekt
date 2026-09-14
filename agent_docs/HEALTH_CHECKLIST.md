@@ -1022,8 +1022,10 @@ corrected the same day)
 - macOS release leg + its self-update support (`platformAssetNameFor` is
   structured to add a per-platform case, but no asset-naming/signing story
   exists for macOS yet).
-- Code-signing / notarization for the published binaries (unsigned Windows
-  builds trigger SmartScreen warnings).
+- Code-signing / notarization is no longer deferred: it is a Beta item in
+  `agent_docs/ROADMAP.md`, because the SmartScreen warning an unsigned build
+  trips is the first thing a new user sees and no amount of published
+  provenance answers it for them.
 - Second Linux leg for Rocky/RHEL 9 (webkit2gtk-4.0) — would need the updater to
   probe the host's installed webkit version rather than assume 4.1.
 
