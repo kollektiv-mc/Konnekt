@@ -17,14 +17,13 @@ import { useInstallStore } from './stores/useInstallStore'
 import { useLoaderStore } from './stores/useLoaderStore'
 import { useUiStore } from './stores/useUiStore'
 import { useServerConfigStore } from './stores/useServerConfigStore'
-import { useConsoleStore } from './stores/useConsoleStore'
-import type { IncomingLine } from './stores/useConsoleStore'
 import { useSettingsStore } from './stores/useSettingsStore'
 import { useProcessesStore } from './stores/useProcessesStore'
 import { emitNotification } from './lib/notify'
 import { prefetchHeavyChunks } from './lib/prefetch'
 import { useUpdateCheck } from './hooks/useUpdateCheck'
 import { useServerStatusSync } from './hooks/useServerStatus'
+import { useConsoleSync } from './hooks/useConsoleSync'
 import { useCommandsSync } from './hooks/useCommandsSync'
 import { useNavWidth } from './hooks/useNavWidth'
 import { TitleBar } from './components/TitleBar'
@@ -69,6 +68,7 @@ function App() {
   // status and tiles are removable, so tying it to one tile left the rest
   // reading a stale offline default (see the hook's own comment).
   useServerStatusSync(activeId)
+  useConsoleSync(activeId)
   useCommandsSync()
 
   // Auto-start active server on launch
@@ -102,42 +102,6 @@ function App() {
         /* teardown no-op */
       }
     }
-  }, [])
-
-  // Batch log lines so the console re-renders at most ~7×/sec instead of once
-  // per line — prevents render storms on busy servers.
-  const pendingLines = useRef<IncomingLine[]>([])
-  useEffect(() => {
-    let cleanup: (() => void) | undefined
-    try {
-      cleanup = EventsOn(
-        EVENTS.LOG_LINE,
-        // `source` marks a line Konnekt narrated rather than server output
-        // (#113) and `outcome` says how that went; both are absent on server
-        // lines.
-        (data: IncomingLine) => {
-          pendingLines.current.push(data)
-        },
-      )
-    } catch {
-      /* non-Wails context */
-    }
-    return () => {
-      try {
-        cleanup?.()
-      } catch {
-        /* teardown no-op */
-      }
-    }
-  }, [])
-  useEffect(() => {
-    const id = setInterval(() => {
-      const batch = pendingLines.current
-      if (batch.length === 0) return
-      pendingLines.current = []
-      useConsoleStore.getState().batchAppend(batch)
-    }, 150)
-    return () => clearInterval(id)
   }, [])
 
   // Server stopped — detect crash vs. deliberate stop

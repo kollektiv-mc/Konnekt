@@ -508,6 +508,15 @@ export function Dashboard() {
           {tilesOnCanvas.map((tile) => {
             const TileComponent = tile.component
             return (
+              // key stays tile.id, deliberately. react-grid-layout matches a
+              // child to its layout entry by the child's key
+              // (synchronizeLayoutWithChildren: `initialLayout.find(l => l.i ===
+              // String(child.key))`), and mergedLayout above builds `i: tile.id`.
+              // A server-scoped key here would match nothing, drop every tile to
+              // default placement, and then persistLayout would write the
+              // composite ids into layout.json and the saved presets. The server
+              // scope belongs on TileComponent instead, which is where the state
+              // that must not survive a switch actually lives (#234).
               <div key={tile.id} data-tile-id={tile.id}>
                 <TileWrapper
                   id={tile.id}
@@ -518,7 +527,7 @@ export function Dashboard() {
                   onToggleMaximize={toggleMaximize}
                   flash={flashTileId === tile.id}
                 >
-                  <TileComponent serverId={serverId} />
+                  <TileComponent key={`${tile.id}:${serverId}`} serverId={serverId} />
                 </TileWrapper>
               </div>
             )
@@ -590,7 +599,7 @@ export function Dashboard() {
                     maximized
                     onToggleMaximize={toggleMaximize}
                   >
-                    <TileComponent serverId={serverId} maximized />
+                    <TileComponent key={`${tile.id}:${serverId}`} serverId={serverId} maximized />
                   </TileWrapper>
                 </div>
               </div>

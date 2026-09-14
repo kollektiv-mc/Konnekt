@@ -1,5 +1,5 @@
 // aislop-ignore-file code-quality/duplicate-block -- #313
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import type { ConfigFile } from '../../types'
 
 const FORMAT_COLORS: Record<string, string> = {
@@ -162,11 +162,6 @@ export function FileList({
 
   const pluginGroups = groupBySource(pluginFiles)
   const modGroups = groupBySource(modFiles)
-
-  useEffect(() => {
-    onRefresh()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
 
   return (
     <div className="border-border-subtle flex h-full flex-col border-r">

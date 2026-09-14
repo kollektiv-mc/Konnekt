@@ -26,6 +26,12 @@ interface ServerStore {
   setServerState: (state: string) => void
   setReachable: (reachable: boolean) => void
   setPlayers: (players: Player[]) => void
+  /**
+   * Drops back to the defaults, for a switch to a server nothing is known about
+   * yet (#234). `reachable` stays optimistic for the same reason it starts that
+   * way: the backend has not failed, it has not been asked.
+   */
+  reset: () => void
 }
 
 const defaultStatus: ServerStatus = {
@@ -47,4 +53,5 @@ export const useServerStore = create<ServerStore>((set) => ({
   setServerState: (state) => set((s) => ({ status: { ...s.status, state } })),
   setReachable: (reachable) => set({ reachable }),
   setPlayers: (players) => set({ players }),
+  reset: () => set({ status: defaultStatus, reachable: true, players: [] }),
 }))

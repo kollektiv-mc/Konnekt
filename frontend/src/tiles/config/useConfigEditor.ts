@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from 'react'
+import { useState, useCallback, useRef, useEffect } from 'react'
 import { ListConfigFiles, ReadConfigFile, WriteConfigFile } from '../../../wailsjs/go/main/App'
 import type { ConfigFile } from '../../types'
 
@@ -32,6 +32,26 @@ export function useConfigEditor(serverId: string) {
       setLoadingFiles(false)
     }
   }, [serverId])
+
+  // The listing lives here rather than in FileList's mount effect, which ran on
+  // an empty dependency array and so listed once for the life of the component.
+  // After a server switch that left the previous server's tree on screen while
+  // selectFile and save, which close over the current id, read and wrote the new
+  // server (#234). Dashboard remounts a tile on switch now, but a component
+  // should not depend on being remounted to be correct, and FileList is
+  // presentational: it should not be the thing fetching.
+  //
+  // The selection is dropped with it. A relPath is only meaningful against the
+  // tree it came from, and keeping it would leave the editor showing one
+  // server's file contents under another server's list.
+  useEffect(() => {
+    setSelectedRelPathRaw(null)
+    setContent('')
+    setOriginalContent('')
+    setSaveError(null)
+    loadingFor.current = null
+    refresh()
+  }, [refresh])
 
   const selectFile = useCallback(
     async (relPath: string) => {

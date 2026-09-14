@@ -39,13 +39,23 @@ export function usePlayers(serverId: string) {
   }, [refresh])
 
   useEffect(() => {
+    // Filtered on the event's own server id (#233), the shape useMods has used
+    // since #52. refresh already fetches this server's roster, so an unfiltered
+    // event never showed the wrong players; what it did was refetch on every
+    // join and leave happening on a server nobody is looking at. An absent or
+    // empty id is treated as "applies here", so a payload from before the id
+    // existed still refreshes rather than being silently ignored.
+    const mine = (p?: { serverID?: string }) => !p?.serverID || p.serverID === serverId
+    const onMine = (p?: { serverID?: string }) => {
+      if (mine(p)) refresh()
+    }
     let offs: Array<() => void> = []
     try {
       offs = [
-        EventsOn(EVENTS.PLAYER_JOINED, refresh),
-        EventsOn(EVENTS.PLAYER_LEFT, refresh),
-        EventsOn(EVENTS.SERVER_STARTED, refresh),
-        EventsOn(EVENTS.SERVER_STOPPED, refresh),
+        EventsOn(EVENTS.PLAYER_JOINED, onMine),
+        EventsOn(EVENTS.PLAYER_LEFT, onMine),
+        EventsOn(EVENTS.SERVER_STARTED, onMine),
+        EventsOn(EVENTS.SERVER_STOPPED, onMine),
       ]
     } catch {
       /* non-Wails context */
@@ -57,7 +67,7 @@ export function usePlayers(serverId: string) {
         /* teardown no-op */
       }
     }
-  }, [refresh])
+  }, [serverId, refresh])
 
   return { players, reachable, refresh }
 }
