@@ -174,8 +174,11 @@
              to survive a GitHub outage, which is exactly when a reader is most
              likely to want a second way to confirm what they already have. That
              is why it sits outside #dl-content rather than inside it. -->
-        <section class="dl-verify reveal" id="verify">
-          <h3>Verify your download</h3>
+        <details class="dl-verify doc-collapse reveal" id="verify">
+          <summary>
+            <span class="doc-collapse-mark" aria-hidden="true"></span>
+            <span>Verify your download</span>
+          </summary>
           <div class="md">
             <p>
               Every release is built by a public GitHub Actions workflow, and each file carries a
@@ -199,7 +202,7 @@
               <a href="/roadmap.html#rm-release">that one is on the roadmap</a>.
             </p>
           </div>
-        </section>
+        </details>
       </div>
     </main>
 

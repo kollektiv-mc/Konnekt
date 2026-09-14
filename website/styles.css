@@ -2569,13 +2569,33 @@ button.dl-card:hover {
   border-top: 0.5px solid var(--border-subtle);
 }
 
-.dl-verify h3 {
+/* Closed by default: most people download and run, and two shell commands
+   sitting open under the buttons would read as a step everybody has to take.
+   The summary stays visible at the same weight as "All downloads" above, so
+   the reader who does want to check can still find it without hunting.
+   It reuses .doc-collapse for the cross and for main.js's height animation,
+   which already lists details.doc-collapse.
+
+   Doubled class rather than source order: the .doc-collapse rules are written
+   for a .doc-section card and pull the summary out to its padding with a
+   negative margin, and they sit lower in this file. Matching their specificity
+   here would lose to them; .dl-verify.doc-collapse wins wherever it lands. */
+.dl-verify.doc-collapse > summary {
+  margin: 0;
+  padding: 0;
+  justify-content: center;
   font-family: var(--font-title);
   font-weight: 500;
   font-size: 14px;
   color: var(--text-secondary);
-  text-align: center;
-  margin: 0 0 18px;
+}
+
+.dl-verify.doc-collapse[open] > summary {
+  margin-bottom: 18px;
+}
+
+.dl-verify.doc-collapse > .md {
+  padding-top: 0;
 }
 
 /* The trailing note is the same aside the docs steps use, and it closes the
