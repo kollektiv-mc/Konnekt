@@ -5,6 +5,10 @@ import { useServerStore } from '../stores/useServerStore'
 import { EVENTS } from '../lib/constants'
 import type { ServerStatus } from '../types'
 
+/** Any payload carrying the id of the server it describes (#233). */
+type ServerScoped = { serverID?: string }
+type ServerStatusPush = ServerStatus & ServerScoped
+
 /**
  * Keeps `useServerStore` holding the active server's status.
  *
@@ -43,6 +47,18 @@ export function useServerStatusSync(serverId: string) {
   const setStatus = useServerStore((s) => s.setStatus)
   const setServerState = useServerStore((s) => s.setServerState)
   const setReachable = useServerStore((s) => s.setReachable)
+  const resetStatus = useServerStore((s) => s.reset)
+
+  // An absent or empty id means "not about one server in particular" and is
+  // applied rather than dropped: NewServerService keeps a bootstrap instance
+  // under the empty id, and StatsService.tick reports on CurrentServerID, which
+  // is empty until a start claims one. Dropping those would blank the status of
+  // a freshly launched app. Same shape as useMods, which has filtered this way
+  // since #52.
+  const isForActiveServer = useCallback(
+    (p?: ServerScoped) => !p?.serverID || p.serverID === serverId,
+    [serverId],
+  )
 
   const refresh = useCallback(async () => {
     try {
@@ -57,21 +73,33 @@ export function useServerStatusSync(serverId: string) {
     }
   }, [serverId, setStatus, setReachable])
 
+  // Clear before fetching, not after. The store is global and outlives the tile
+  // tree, so between a switch and the new fetch resolving it still holds the
+  // previous server's uptime, player count and phase, under the new server's
+  // name. Blanking it first means the gap renders as "not known yet" rather than
+  // as a confident lie (#234).
   useEffect(() => {
+    resetStatus()
     refresh()
-  }, [refresh])
+  }, [resetStatus, refresh])
 
   useEffect(() => {
     let offs: Array<() => void> = []
     try {
       offs = [
-        EventsOn(EVENTS.SERVER_STATUS, (s?: ServerStatus) => {
+        EventsOn(EVENTS.SERVER_STATUS, (s?: ServerStatusPush) => {
+          if (!isForActiveServer(s)) return
           if (s) setStatus(s)
           setReachable(true)
         }),
-        EventsOn(EVENTS.SERVER_STARTED, refresh),
-        EventsOn(EVENTS.SERVER_STOPPED, refresh),
-        EventsOn(EVENTS.SERVER_STATE, (p?: { state?: string }) => {
+        EventsOn(EVENTS.SERVER_STARTED, (p?: ServerScoped) => {
+          if (isForActiveServer(p)) refresh()
+        }),
+        EventsOn(EVENTS.SERVER_STOPPED, (p?: ServerScoped) => {
+          if (isForActiveServer(p)) refresh()
+        }),
+        EventsOn(EVENTS.SERVER_STATE, (p?: { state?: string } & ServerScoped) => {
+          if (!isForActiveServer(p)) return
           if (p?.state) setServerState(p.state)
           setReachable(true)
         }),
@@ -86,5 +114,5 @@ export function useServerStatusSync(serverId: string) {
         /* teardown no-op */
       }
     }
-  }, [refresh, setStatus, setServerState, setReachable])
+  }, [isForActiveServer, refresh, setStatus, setServerState, setReachable])
 }
