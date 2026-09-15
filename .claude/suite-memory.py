@@ -159,14 +159,14 @@ def resolve(root):
             with open(abs_path, encoding="utf-8") as handle:
                 text = handle.read()
         except OSError as exc:
-            notes.append("%s: unreadable (%s)" % (rel, exc.strerror))
+            notes.append(f"{rel}: unreadable ({exc.strerror})")
             return
 
         body = strip_html_comments(text)
         files.append((rel, len(body.splitlines())))
 
         if depth >= IMPORT_DEPTH:
-            notes.append("%s: imports past depth %d not followed" % (rel, IMPORT_DEPTH))
+            notes.append(f"{rel}: imports past depth {IMPORT_DEPTH} not followed")
             return
 
         for ref in imports_in(body):
@@ -178,7 +178,7 @@ def resolve(root):
             if os.path.relpath(target, root).startswith(".."):
                 # Outside the repo is not this repo's committed content, and the
                 # user is asked before such an import ever loads.
-                notes.append("%s: external import %s not counted" % (rel, ref))
+                notes.append(f"{rel}: external import {ref} not counted")
                 continue
             visit(target, depth + 1)
 
@@ -215,22 +215,21 @@ def evaluate(root, config):
         return SKIP, "no CLAUDE.md in this repo", []
 
     total = sum(count for _, count in files)
-    details = ["%5d  %s" % (count, rel) for rel, count in files] + notes
+    details = [f"{count:5d}  {rel}" for rel, count in files] + notes
     override = (config or {}).get("maxLines")
 
     if override and total <= DEFAULT_BUDGET:
-        return (
-            FAIL,
-            "%d lines is inside the %d-line budget — delete health.memory from "
-            "the manifest" % (total, DEFAULT_BUDGET),
-            details,
+        expired = (
+            f"{total} lines is inside the {DEFAULT_BUDGET}-line budget, "
+            "delete health.memory from the manifest"
         )
+        return FAIL, expired, details
 
     budget = override or DEFAULT_BUDGET
     if total > budget:
-        return FAIL, "%d lines against a budget of %d" % (total, budget), details
+        return FAIL, f"{total} lines against a budget of {budget}", details
 
-    reason = "%d of %d lines" % (total, budget)
+    reason = f"{total} of {budget} lines"
     if override:
         reason += ", on the over-budget ratchet — lower it as the file shrinks"
     return PASS, reason, details
