@@ -518,7 +518,7 @@ func (s *serverInstance) start(jarPath string, jvmArgs []string, workingDir stri
 	go s.waitForExit()
 	go s.watchStarting(s.exited)
 
-	s.bus.Emit(EventServerStarted, nil)
+	s.bus.Emit(EventServerStarted, models.ServerLifecycleEvent{ServerID: s.id})
 	return nil
 }
 
@@ -536,7 +536,7 @@ func (s *serverInstance) streamOutput(r io.Reader) {
 		s.emitConsoleLine(line)
 
 		if strings.Contains(strings.ToLower(line), "eula.txt") {
-			s.bus.Emit(EventEulaRequired, nil)
+			s.bus.Emit(EventEulaRequired, models.ServerLifecycleEvent{ServerID: s.id})
 		}
 
 		if reServerStop.MatchString(line) {
@@ -575,7 +575,7 @@ func (s *serverInstance) streamOutput(r io.Reader) {
 				s.recordPlayerField(name, func(sess *playerSession) { sess.ip = ip })
 			}
 			if sess, joined := s.promotePlayer(name); joined {
-				s.bus.Emit(EventPlayerJoined, map[string]string{"name": name, "ip": sess.ip})
+				s.bus.Emit(EventPlayerJoined, map[string]string{"serverID": s.id, "name": name, "ip": sess.ip})
 			}
 		} else if m := rePlayerJoin.FindStringSubmatch(line); m != nil {
 			// On Paper this broadcast precedes the login line, so the IP is
@@ -585,11 +585,11 @@ func (s *serverInstance) streamOutput(r io.Reader) {
 			// should read GetActivePlayers rather than this payload.
 			name := m[1]
 			if sess, joined := s.promotePlayer(name); joined {
-				s.bus.Emit(EventPlayerJoined, map[string]string{"name": name, "ip": sess.ip})
+				s.bus.Emit(EventPlayerJoined, map[string]string{"serverID": s.id, "name": name, "ip": sess.ip})
 			}
 		} else if m := rePlayerLeave.FindStringSubmatch(line); m != nil {
 			if name := m[1]; s.removePlayer(name) {
-				s.bus.Emit(EventPlayerLeft, map[string]string{"name": name})
+				s.bus.Emit(EventPlayerLeft, map[string]string{"serverID": s.id, "name": name})
 			}
 		} else if m := rePlayerLost.FindStringSubmatch(line); m != nil {
 			// The core's own disconnect line. Also printed for a connection
@@ -597,7 +597,7 @@ func (s *serverInstance) streamOutput(r io.Reader) {
 			// no-op it is, so no player:left goes out for a player who was
 			// never online.
 			if name := m[1]; s.removePlayer(name) {
-				s.bus.Emit(EventPlayerLeft, map[string]string{"name": name})
+				s.bus.Emit(EventPlayerLeft, map[string]string{"serverID": s.id, "name": name})
 			}
 		}
 		if strings.Contains(line, "Can't keep up") {
@@ -651,13 +651,15 @@ func (s *serverInstance) emitConsoleLine(line string) {
 
 // emitConsoleLineTagged sends one line down the console channel: the log:line
 // event plus the ring buffer GetConsoleHistory replays to late subscribers.
-// The source and outcome keys are omitted entirely when empty, so server
-// output travels exactly the payload it always has.
+// The source and outcome keys are omitted entirely when empty, so a plain line
+// of server output carries only serverID, timestamp and line. serverID rides
+// the event and not the buffered ConsoleLine, because GetConsoleHistory is
+// already asked for one server by id and its rows describe that server.
 // NB: emit precedes buffer append. A remote client that snapshots
 // GetConsoleHistory then subscribes must dedup/order the seam line.
 func (s *serverInstance) emitConsoleLineTagged(line, source, outcome string) {
 	ts := time.Now().Format("15:04:05")
-	payload := map[string]string{"timestamp": ts, "line": line}
+	payload := map[string]string{"serverID": s.id, "timestamp": ts, "line": line}
 	if source != "" {
 		payload["source"] = source
 	}
@@ -728,7 +730,7 @@ func (s *serverInstance) waitForExit() {
 	if !expected {
 		s.NarrateFailed("Server process exited unexpectedly (" + exitLabel(exitCode) + ")")
 	}
-	s.bus.Emit(EventServerStopped, stop)
+	s.bus.Emit(EventServerStopped, models.ServerStoppedEvent{ServerStopped: stop, ServerID: s.id})
 
 	// Closed dead last: anyone unblocked by <-exited (Stop's wait, Restart's
 	// stop leg) observes fully-torn-down state — running already false, the
@@ -1055,7 +1057,10 @@ func (s *serverInstance) setStateLocked(next serverState, timedOut bool) {
 		return
 	}
 	s.state = next
-	s.bus.Emit(EventServerState, models.ServerStateChange{State: next.String(), TimedOut: timedOut})
+	s.bus.Emit(EventServerState, models.ServerStateEvent{
+		ServerStateChange: models.ServerStateChange{State: next.String(), TimedOut: timedOut},
+		ServerID:          s.id,
+	})
 }
 
 // State reports the lifecycle phase as its wire spelling, the readable getter

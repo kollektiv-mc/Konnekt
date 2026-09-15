@@ -1,6 +1,7 @@
 package services
 
 import (
+	"sync"
 	"testing"
 	"time"
 
@@ -118,4 +119,161 @@ func TestMaybeFireTimeOfDay(t *testing.T) {
 			t.Fatal("fired a minute early")
 		}
 	})
+}
+
+// ─── Payload types the triggers assert on (#233) ──────────────────────────
+//
+// These two subscriptions type-assert what the bus hands them, and both used to
+// swallow a miss. Changing an emitted payload type without changing the assert
+// alongside it is invisible at compile time and silent at run time: a
+// server:stopped miss yields the zero ServerStopped, whose Expected is false, so
+// every clean shutdown would fire the Crashed trigger; a stats:snapshot miss
+// returns early, so every TPS trigger would simply stop firing. Nothing is
+// logged in either case and no test outside these two would go red.
+//
+// They are worth the setup cost because the failure is in the reader, not the
+// writer: the events above are provably correct and these still break.
+
+// runTrigger fires one bus event against a scheduler holding the given graphs
+// and reports which graph ids actually ran.
+func runTrigger(t *testing.T, graphs []models.Graph, event string, payload any) map[string]bool {
+	t.Helper()
+	s := newTestScheduler(t)
+	s.graphs = graphs
+	s.startTriggers()
+	t.Cleanup(func() { close(s.stopTime) })
+
+	var mu sync.Mutex
+	ran := make(map[string]bool)
+	s.bus.Subscribe(EventScheduleRunStarted, func(data any) {
+		p, _ := data.(map[string]interface{})
+		id, _ := p["graphId"].(string)
+		mu.Lock()
+		ran[id] = true
+		mu.Unlock()
+	})
+
+	s.bus.Emit(event, payload)
+
+	// The bus fans out in goroutines and runGraph launches another, so settle
+	// rather than read immediately. A false negative here would hide the bug
+	// this test exists for, so the wait is generous.
+	deadline := time.Now().Add(2 * time.Second)
+	for time.Now().Before(deadline) {
+		mu.Lock()
+		n := len(ran)
+		mu.Unlock()
+		if n > 0 {
+			break
+		}
+		time.Sleep(5 * time.Millisecond)
+	}
+	time.Sleep(50 * time.Millisecond) // let a second, wrong graph show up if it is going to
+
+	mu.Lock()
+	defer mu.Unlock()
+	out := make(map[string]bool, len(ran))
+	for k, v := range ran {
+		out[k] = v
+	}
+	return out
+}
+
+func serverTriggerGraph(id, configType string) models.Graph {
+	return models.Graph{
+		ID:      id,
+		Name:    id,
+		Enabled: true,
+		Nodes: []models.Node{{
+			ID:     "n1",
+			Type:   "trigger.server",
+			Config: map[string]interface{}{"type": configType},
+		}},
+	}
+}
+
+func TestGracefulStopFiresStoppedAndNotCrashed(t *testing.T) {
+	ran := runTrigger(t,
+		[]models.Graph{
+			serverTriggerGraph("g-stopped", "Stopped"),
+			serverTriggerGraph("g-crashed", "Crashed"),
+		},
+		EventServerStopped,
+		models.ServerStoppedEvent{
+			ServerStopped: models.ServerStopped{Expected: true, ExitCode: 0},
+			ServerID:      "srv1",
+		})
+
+	if !ran["g-stopped"] {
+		t.Error("a clean stop did not fire the Stopped trigger")
+	}
+	if ran["g-crashed"] {
+		t.Error("a clean stop fired the Crashed trigger, which is what a swallowed type assertion looks like")
+	}
+}
+
+func TestUnexpectedStopStillFiresCrashed(t *testing.T) {
+	ran := runTrigger(t,
+		[]models.Graph{
+			serverTriggerGraph("g-stopped", "Stopped"),
+			serverTriggerGraph("g-crashed", "Crashed"),
+		},
+		EventServerStopped,
+		models.ServerStoppedEvent{
+			ServerStopped: models.ServerStopped{Expected: false, ExitCode: 1},
+			ServerID:      "srv1",
+		})
+
+	if !ran["g-crashed"] {
+		t.Error("an unexpected exit did not fire the Crashed trigger")
+	}
+	if ran["g-stopped"] {
+		t.Error("an unexpected exit fired the Stopped trigger")
+	}
+}
+
+func TestSnapshotStillReachesTheTPSTriggers(t *testing.T) {
+	ran := runTrigger(t,
+		[]models.Graph{{
+			ID:      "g-tps",
+			Name:    "g-tps",
+			Enabled: true,
+			Nodes: []models.Node{{
+				ID:     "n1",
+				Type:   "trigger.tpsThreshold",
+				Config: map[string]interface{}{"threshold": 15.0},
+			}},
+		}},
+		EventStatsSnapshot,
+		models.StatsSnapshotEvent{
+			StatsSnapshot: models.StatsSnapshot{TPS: 5},
+			ServerID:      "srv1",
+		})
+
+	if !ran["g-tps"] {
+		t.Error("a below-threshold snapshot did not fire the TPS trigger; the subscription's type assertion no longer matches what stats.go emits")
+	}
+}
+
+func TestTPSTriggerStillIgnoresAHealthySnapshot(t *testing.T) {
+	ran := runTrigger(t,
+		[]models.Graph{{
+			ID:      "g-tps",
+			Name:    "g-tps",
+			Enabled: true,
+			Nodes: []models.Node{{
+				ID:     "n1",
+				Type:   "trigger.tpsThreshold",
+				Config: map[string]interface{}{"threshold": 15.0},
+			}},
+		}},
+		EventStatsSnapshot,
+		models.StatsSnapshotEvent{
+			StatsSnapshot: models.StatsSnapshot{TPS: 20},
+			ServerID:      "srv1",
+		})
+
+	if ran["g-tps"] {
+		t.Error("a healthy snapshot fired the TPS trigger")
+	}
 }
