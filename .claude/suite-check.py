@@ -21,6 +21,7 @@ Exit codes: 0 no failures, 1 at least one failure, 2 could not run at all.
 
 import argparse
 import fnmatch
+import importlib.util
 import json
 import os
 import re
@@ -30,7 +31,7 @@ import socket
 import subprocess
 import sys
 
-SECTIONS = ("commands", "invariants", "generated")
+SECTIONS = ("commands", "invariants", "generated", "memory")
 
 PASS, FAIL, SKIP = "pass", "fail", "skip"
 
@@ -522,6 +523,27 @@ def run_generated(root, entries, offline):
     return results
 
 
+def run_memory(root, config):
+    """The always-loaded agent memory budget, from the module beside this file.
+
+    Vendored as a pair by sync-runner.sh. A product carrying one half and not
+    the other has a stale vendoring: a skip with a reason, never a crash and
+    never a pass.
+    """
+    name = "always-loaded memory"
+    path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "suite-memory.py")
+    if not os.path.isfile(path):
+        return [
+            Result(
+                "memory", name, SKIP, "suite-memory.py is not vendored beside this file"
+            )
+        ]
+    spec = importlib.util.spec_from_file_location("suite_memory", path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return [Result("memory", name, *module.evaluate(root, config))]
+
+
 # --- reporting ------------------------------------------------------------
 
 
@@ -567,6 +589,8 @@ def main():
         results += run_invariants(root, health.get("invariants", []))
     if "generated" in wanted:
         results += run_generated(root, health.get("generated", []), args.offline)
+    if "memory" in wanted:
+        results += run_memory(root, health.get("memory"))
 
     failed = [r for r in results if r.status == FAIL]
     skipped = [r for r in results if r.status == SKIP]
