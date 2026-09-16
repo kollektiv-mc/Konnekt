@@ -3,8 +3,14 @@ package models
 // ─── Graph persistence ────────────────────────────────────────────────────────
 
 type Graph struct {
-	ID        string `json:"id"`
-	Name      string `json:"name"`
+	ID   string `json:"id"`
+	Name string `json:"name"`
+	// ServerID is the server this graph acts on, decided when it was authored
+	// rather than by whatever the sidebar currently names (#236). Empty means a
+	// graph written before graphs had an owner, which the migration in
+	// scheduler_migrate.go could not resolve; it still runs against the active
+	// server, which is what every graph used to do.
+	ServerID  string `json:"serverId"`
 	Enabled   bool   `json:"enabled"`
 	Nodes     []Node `json:"nodes"`
 	Edges     []Edge `json:"edges"`
