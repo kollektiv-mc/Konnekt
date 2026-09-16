@@ -12,9 +12,13 @@ import { Section, SectionEmpty } from './Section'
  * The cheapest section in the panel: `useScheduler` wraps `useSchedulerStore`,
  * so this reads state the tile already hydrated rather than fetching again, and
  * the next-run times arrive on the backend's per-minute push.
+ *
+ * It takes the server for the same reason the scheduler tile does: the store
+ * holds one server's graphs at a time, and this section has to be asking about
+ * the same one the panel around it is (#236).
  */
-export function SchedulesSection() {
-  const { graphs, nextRuns, loading, hydrated, error } = useScheduler()
+export function SchedulesSection({ serverId }: { serverId: string }) {
+  const { graphs, nextRuns, loading, hydrated, error } = useScheduler(serverId)
   const enabled = graphs.filter((g) => g.enabled)
 
   return (

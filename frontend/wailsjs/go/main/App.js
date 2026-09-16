@@ -42,8 +42,8 @@ export function DeleteLayoutPreset(arg1) {
   return window['go']['main']['App']['DeleteLayoutPreset'](arg1);
 }
 
-export function DeleteScheduleGraph(arg1) {
-  return window['go']['main']['App']['DeleteScheduleGraph'](arg1);
+export function DeleteScheduleGraph(arg1, arg2) {
+  return window['go']['main']['App']['DeleteScheduleGraph'](arg1, arg2);
 }
 
 export function DeleteServerConfig(arg1) {
@@ -142,16 +142,16 @@ export function GetScheduleBlockDefs() {
   return window['go']['main']['App']['GetScheduleBlockDefs']();
 }
 
-export function GetScheduleGraphs() {
-  return window['go']['main']['App']['GetScheduleGraphs']();
+export function GetScheduleGraphs(arg1) {
+  return window['go']['main']['App']['GetScheduleGraphs'](arg1);
 }
 
 export function GetScheduleNextRuns() {
   return window['go']['main']['App']['GetScheduleNextRuns']();
 }
 
-export function GetScheduleRunHistory() {
-  return window['go']['main']['App']['GetScheduleRunHistory']();
+export function GetScheduleRunHistory(arg1) {
+  return window['go']['main']['App']['GetScheduleRunHistory'](arg1);
 }
 
 export function GetServerConfigs() {
@@ -170,8 +170,8 @@ export function GetStatsHistory(arg1) {
   return window['go']['main']['App']['GetStatsHistory'](arg1);
 }
 
-export function ImportScheduleGraphJSON(arg1) {
-  return window['go']['main']['App']['ImportScheduleGraphJSON'](arg1);
+export function ImportScheduleGraphJSON(arg1, arg2) {
+  return window['go']['main']['App']['ImportScheduleGraphJSON'](arg1, arg2);
 }
 
 export function InspectServerFile(arg1) {
@@ -302,8 +302,8 @@ export function RestoreBackup(arg1, arg2) {
   return window['go']['main']['App']['RestoreBackup'](arg1, arg2);
 }
 
-export function RunScheduleGraphNow(arg1) {
-  return window['go']['main']['App']['RunScheduleGraphNow'](arg1);
+export function RunScheduleGraphNow(arg1, arg2) {
+  return window['go']['main']['App']['RunScheduleGraphNow'](arg1, arg2);
 }
 
 export function SaveActiveLayout(arg1) {
@@ -326,8 +326,8 @@ export function SaveLayoutPreset(arg1, arg2) {
   return window['go']['main']['App']['SaveLayoutPreset'](arg1, arg2);
 }
 
-export function SaveScheduleGraph(arg1) {
-  return window['go']['main']['App']['SaveScheduleGraph'](arg1);
+export function SaveScheduleGraph(arg1, arg2) {
+  return window['go']['main']['App']['SaveScheduleGraph'](arg1, arg2);
 }
 
 export function SaveServerConfig(arg1) {
@@ -346,8 +346,8 @@ export function SetActiveWorld(arg1, arg2) {
   return window['go']['main']['App']['SetActiveWorld'](arg1, arg2);
 }
 
-export function SetScheduleGraphEnabled(arg1, arg2) {
-  return window['go']['main']['App']['SetScheduleGraphEnabled'](arg1, arg2);
+export function SetScheduleGraphEnabled(arg1, arg2, arg3) {
+  return window['go']['main']['App']['SetScheduleGraphEnabled'](arg1, arg2, arg3);
 }
 
 export function StartServer(arg1) {

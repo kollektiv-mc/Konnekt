@@ -13,6 +13,12 @@ import (
 // unbounded loop when an expression can never match.
 const cronScanWindow = 14 * 24 * 60
 
+// NextRuns is deliberately not scoped to a server, unlike the rest of the
+// scheduler surface. It is keyed by graph id, which is unique across every
+// server, so a caller showing one server's graphs looks up exactly those and the
+// other entries are inert. Giving the schedule:next-runs push a server dimension
+// would buy nothing and add a server-scoped event with nothing to filter.
+//
 // NextRuns returns graphID → next scheduled fire time (Unix ms) for enabled
 // graphs that have at least one time-based trigger (interval / timeOfDay /
 // cron). Event-driven graphs have no deterministic next run and are omitted.

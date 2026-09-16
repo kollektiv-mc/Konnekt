@@ -11,15 +11,19 @@ import { EVENTS } from '../../lib/constants'
  *
  * The store, not this hook, owns the state — the tile is mounted twice while
  * maximized, and both instances now share one copy.
+ *
+ * `hydrated` is reported for *this* server rather than read as a flag: the store
+ * holds one server at a time, so a stale `true` from the previous server is the
+ * difference between a loading tile and an empty one (#236).
  */
-export function useScheduler() {
+export function useScheduler(serverId: string) {
   // Per-field selectors so the per-minute nextRuns push doesn't re-render
   // consumers of the other fields.
   const graphs = useSchedulerStore((s) => s.graphs)
   const blockDefs = useSchedulerStore((s) => s.blockDefs)
   const nextRuns = useSchedulerStore((s) => s.nextRuns)
   const loading = useSchedulerStore((s) => s.loading)
-  const hydrated = useSchedulerStore((s) => s.hydrated)
+  const hydratedFor = useSchedulerStore((s) => s.hydratedFor)
   const error = useSchedulerStore((s) => s.error)
 
   // Actions are passed through untouched — never wrap them in a local callback.
@@ -34,8 +38,8 @@ export function useScheduler() {
   const clearError = useSchedulerStore((s) => s.clearError)
 
   useEffect(() => {
-    // getState() rather than the selected actions, so [] deps stay honest.
-    useSchedulerStore.getState().hydrate()
+    // getState() rather than the selected actions, so the dep list stays honest.
+    useSchedulerStore.getState().hydrate(serverId)
 
     let off: (() => void) | undefined
     try {
@@ -52,14 +56,14 @@ export function useScheduler() {
         /* teardown no-op */
       }
     }
-  }, [])
+  }, [serverId])
 
   return {
     graphs,
     blockDefs,
     nextRuns,
     loading,
-    hydrated,
+    hydrated: hydratedFor === serverId,
     error,
     saveGraph,
     deleteGraph,

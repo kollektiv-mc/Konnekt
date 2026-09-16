@@ -45,7 +45,7 @@ describe('useScheduler', () => {
       blockDefs: [],
       nextRuns: {},
       loading: false,
-      hydrated: false,
+      hydratedFor: null,
       error: null,
     })
   })
@@ -55,7 +55,7 @@ describe('useScheduler', () => {
   })
 
   it('hydrates the store on mount', async () => {
-    const { result } = renderHook(() => useScheduler())
+    const { result } = renderHook(() => useScheduler('srv-a'))
     await waitFor(() => expect(result.current.graphs).toEqual([graph('g1')]))
     expect(result.current.nextRuns).toEqual({ g1: 1000 })
     expect(App.GetScheduleGraphs).toHaveBeenCalledTimes(1)
@@ -64,15 +64,15 @@ describe('useScheduler', () => {
   // The tile is mounted twice while maximized (Dashboard renders the maximized
   // copy alongside the grid one) — both must share one hydration.
   it('hydrates once across two concurrent mounts', async () => {
-    const a = renderHook(() => useScheduler())
-    const b = renderHook(() => useScheduler())
+    const a = renderHook(() => useScheduler('srv-a'))
+    const b = renderHook(() => useScheduler('srv-a'))
     await waitFor(() => expect(a.result.current.graphs).toEqual([graph('g1')]))
     expect(b.result.current.graphs).toEqual([graph('g1')])
     expect(App.GetScheduleGraphs).toHaveBeenCalledTimes(1)
   })
 
   it('applies schedule:next-runs pushes', async () => {
-    const { result } = renderHook(() => useScheduler())
+    const { result } = renderHook(() => useScheduler('srv-a'))
     await waitFor(() => expect(result.current.graphs).toEqual([graph('g1')]))
 
     act(() => {
@@ -82,7 +82,7 @@ describe('useScheduler', () => {
   })
 
   it('unsubscribes on unmount', async () => {
-    const { result, unmount } = renderHook(() => useScheduler())
+    const { result, unmount } = renderHook(() => useScheduler('srv-a'))
     await waitFor(() => expect(result.current.graphs).toEqual([graph('g1')]))
     unmount()
     expect(off).toHaveBeenCalledTimes(1)
@@ -91,7 +91,7 @@ describe('useScheduler', () => {
   // Regression guard on the removed 30s poll.
   it('never polls next-runs on a timer', async () => {
     vi.useFakeTimers()
-    const { result } = renderHook(() => useScheduler())
+    const { result } = renderHook(() => useScheduler('srv-a'))
 
     // waitFor polls via real setTimeout, which never fires under fake timers —
     // flush the mount effect's already-resolved Promise.all via microtasks.
@@ -110,7 +110,7 @@ describe('useScheduler', () => {
     vi.mocked(EventsOn).mockImplementation(() => {
       throw new Error('no runtime')
     })
-    const { result, unmount } = renderHook(() => useScheduler())
+    const { result, unmount } = renderHook(() => useScheduler('srv-a'))
     await waitFor(() => expect(result.current.graphs).toEqual([graph('g1')]))
     expect(() => unmount()).not.toThrow()
   })
