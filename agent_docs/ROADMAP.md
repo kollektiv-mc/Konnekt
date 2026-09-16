@@ -48,7 +48,7 @@ were shipped early during Alpha. Their status below reflects reality.
 - [x] All IPC bindings generated via wails generate module
 - [x] Typed IPC error handling — per-store / per-tile-hook `loading`/`error`
   state. (A shared `useWailsCall()` hook shipped here first and was removed
-  unused; see `agent_docs/CLAUDE.md`'s IPC conventions.)
+  unused; see `.claude/rules/ipc.md`.)
 
 ### Server management
 

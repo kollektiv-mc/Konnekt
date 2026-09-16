@@ -128,10 +128,6 @@
         "diagnosis": "A non-empty diff means one of the three generated token files was hand-edited, or tokens.source.json was refreshed without regenerating. Both are bugs: the next run reverts the edit, and the underlying value never reaches Kommands. website/tokens.css is the marketing site's copy, the same values as plain :root custom properties because that site has no Tailwind and no build step. It exists because website/styles.css used to hand-mirror the app's dark theme and had already drifted: its --font-mono was missing Liberation Mono.",
         "reference": "frontend/scripts/gen-tokens.mjs"
       }
-    ],
-    "memory": {
-      "maxLines": 639,
-      "reason": "Over budget when the check landed: a 12-line CLAUDE.md that @imports agent_docs/CLAUDE.md (479) and agent_docs/DEPENDENCIES.md (148), all three loaded into context every session. Coming down by moving out what Claude can derive from the codebase and path-scoping what only matters in one part of the tree. Lower this with each pass; it cannot survive reaching 200."
-    }
+    ]
   }
 }

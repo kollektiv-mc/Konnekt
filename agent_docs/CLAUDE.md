@@ -11,39 +11,25 @@ pnpm for the frontend, Go modules for the backend.
 
 ## Project structure
 
-- Repo root: `app.go`, `main.go`, `version.go` (Wails entrypoint, App struct,
-  version).
-- `backend/services/` holds process management, RCON, backups, scheduler,
-  config, stats and updates; `backend/models/` holds structs auto-bound to TS.
-- `frontend/src/` splits into `components/`, `tiles/` (one folder each, plus
-  `registry.ts`), `stores/`, `hooks/`, `lib/`, `types/`, `assets/` and
-  `styles/` — the last holds the **generated** token layer (see Code style),
-  while the hand-authored component CSS stays in `style.css` beside it.
-- `frontend/wailsjs/` is generated. Never edit it by hand.
-- `demo/` is the browser demo: the untouched frontend built by Vite with a
-  shim (`demo/backend/`) loaded ahead of it that answers `window.go` and
-  `window.runtime` from fixtures. Nothing under `frontend/src/` imports it.
-  `demo/build.mjs` regenerates the scheduler palette from Go, cross-checks the
-  shim's method table against the generated bindings and its tile list against
-  `lib/constants.ts`, and fails on drift. `demo/record.mjs` films the scenes
-  under `demo/scenes/` from that build into `demo/dist/scenes/`, which is what
-  the website's feature section plays. `.github/workflows/demo.yml` builds,
-  records and publishes to its own Cloudflare Pages project, `konnekt-demo`.
-- `website/` is the marketing site at konnekt.pages.dev: plain HTML, CSS and
-  browser ES modules, no build step and no `package.json`. Cloudflare Pages
-  watches this branch and deploys it, configured outside this repo, so there is
-  no deploy workflow here and CI's `website` job is the only pre-merge gate.
-  `website/tokens.css` is generated (see Code style). Serve it locally with the
-  `website` preset in `.claude/launch.json`.
+Read the tree rather than a list of it. What it does not tell you:
+
+- `frontend/wailsjs/` and `frontend/src/styles/` are generated. The
+  hand-authored component CSS is `frontend/src/style.css` beside the latter.
+- `demo/` is the browser demo: the untouched frontend with a shim
+  (`demo/backend/`) answering `window.go` from fixtures. Nothing under
+  `frontend/src/` imports it, and `demo/build.mjs` fails on drift against the
+  generated bindings.
+- `website/` is the marketing site: plain HTML, CSS and ES modules, no build
+  step. Cloudflare Pages deploys it from this branch, configured outside this
+  repo, so CI's `website` job is the only pre-merge gate.
 
 ## Architecture rules
 
 - **Tiles are self-contained**: each tile in `frontend/src/tiles/` owns its own
   data fetching, state, and rendering. No cross-tile dependencies, with one
-  sanctioned exception: the Overview tile reads other tiles' hooks and
-  presentational components, because a dashboard of the whole server cannot be
-  built any other way. Read-only, never a tile's lazy half, every section behind
-  its own `ErrorBoundary`.
+  sanctioned exception: the Overview tile, because a dashboard of the whole
+  server cannot be built any other way. Read-only, never a tile's lazy half,
+  every section behind its own `ErrorBoundary`.
 - **Go owns all side effects**: process spawning, file I/O, RCON, scheduling.
   Never call OS-level operations from the frontend.
 - **IPC via generated bindings only**: always import from `wailsjs/go/` — never
@@ -53,403 +39,115 @@ pnpm for the frontend, Go modules for the backend.
 - **Go structs = TypeScript types**: define data shapes in `backend/models/`,
   Wails generates the TS equivalents automatically on `wails dev`.
 
-## Tile system
-
-Every tile is the same size, from `lib/gridSizing.ts`. To add one: create
-`frontend/src/tiles/MyTile/index.tsx` + `types.ts`, then extend (never
-restructure) `frontend/src/tiles/registry.ts`. No layout changes needed.
-
-A new tile does not appear in the Overview tile
-(`frontend/src/tiles/overview/`) — that is a designed dashboard of six chosen
-sections, not a roll-up of the registry, and adding one is a deliberate edit to
-`OverviewPanel.tsx`. Overview is also the one sanctioned exception to the
-no-cross-tile-dependencies rule below: it reads four other tiles' hooks, never
-writes through them, and never imports a tile's lazy half. Its own id is
-`stats`, deliberately: it is persisted verbatim in three JSON files under the
-app data dir. See `.claude/rules/tile-system.md`.
-
-Why the grid is built the way it is, and which parts are load-bearing:
-`.claude/rules/tile-system.md`, which loads on its own when you open a tile,
-`gridSizing.ts` or `Dashboard.tsx`. Read it before changing placement code.
-
-## IPC conventions
-
-- Bind Go methods on the `App` struct in `app.go` (repo root)
-- Method names: `PascalCase` in Go → `PascalCase` in generated TS bindings
-- Always return `(T, error)` from bound Go methods
-- Handle IPC errors where the data lives: a Zustand store or a per-tile hook
-  holds its own `loading`/`error` state and its write actions rethrow after
-  recording the error, so an optimistic UI can revert (see
-  `stores/useSchedulerStore.ts`). A shared `useWailsCall()` hook was tried and
-  removed: a store cannot call a React hook, which is where most fetching ended
-  up. Swallowing a rejection with a bare `catch {}` is the thing to avoid.
-  The rethrow is only half the job — a caller that ignores it is the same bug
-  one level up, so the caller reverts, keeps its editor open, or says why it
-  deliberately does neither.
-- **One sanctioned exception, or it gets "fixed" back.** The generated bindings
-  dereference `window.go`, so with no Wails backend *every* call throws — which
-  is the `frontend-dev` preset in `.claude/launch.json`, a browser-only preview
-  with no Go process. Reverting there would make it read-only. `lib/ipc.ts`'s
-  `hasWailsBridge()` separates the cases: no bridge keeps the optimistic value,
-  a bridge-present rejection reverts, records and rethrows. Reads are unaffected
-  and still degrade to defaults.
-- Two different questions about a server, and UI that renders "nothing here"
-  needs both: `useServerStore`'s `status.running` (the server answered and is
-  stopped) and `reachable` (the backend answered at all). Hydrated once in
-  `App` by `hooks/useServerStatus.ts` — do not re-tie that to a single tile's
-  mount, which is how five tiles once read a permanently stale `false`.
-- Re-run `wails generate module` after adding new bound methods
-
 ## Code style
 
 - Functional components only, no class components
 - `import type` for type-only imports
 - No `any` — use `unknown` and narrow
 - Prefer named exports; default export only for page-level components
-- Styling via Tailwind utilities backed by the CSS-variable token system
-  (`frontend/src/styles/tokens.css` `@theme` blocks + `frontend/src/lib/theme.ts`
-  `applySkin()`). Inline `style={{}}` is reserved for genuinely dynamic/computed
-  values (animation delays, transforms, react-grid-layout position props) — not
-  for static styling. `eslint.config.js`'s `no-restricted-syntax` rule enforces
-  this as `error` across every source file that ever carried an inline style
-  (Milestone 2, closed — see `agent_docs/HEALTH_CHECKLIST.md`).
-- **Icons come from `components/ui/Icon.tsx`**, never a literal glyph (`×`, `⚙`,
-  `✓`) and never a hand-pasted `<svg>`. Do not reach for a Unicode glyph: a font
-  positions each one by its own metrics, so ⚙ ✎ ⤢ × could not be made to line up
-  with each other under any amount of padding, and some of them resolve to an
-  emoji font on one platform and a symbol font on the next.
-  The glyph is passed to `Icon` as a component, sourced from
-  `frontend/src/lib/icons.ts` — the only module in the app allowed to import
-  `lucide-react`, so the icon set is swappable from one file and
-  `pnpm check-bundle` has one place to read. Adding an icon is a name added to
-  that file's import and export, taken from https://lucide.dev/icons. This
-  replaced a hand-drawn 16x16 set (`components/ui/icons.tsx`, deleted): it
-  solved the alignment problem correctly, but every new icon was path data
-  somebody had to draw, and lucide ships the same ink already centred on a
-  24-unit grid.
-  `Icon` sizes through Tailwind's spacing scale (`size-3` … `size-5`, an
-  `xs`/`sm`/`md`/`lg` prop) and never sets a colour: lucide strokes
-  `currentColor`, so a `text-*` token on the icon or an ancestor themes it,
-  `applySkin()` retheming included — which is what lets `IconButton`'s hover
-  rule still drive the icon inside it. Stroke weight is one screen value,
-  `ICON_STROKE_PX`, held constant across sizes by lucide's
-  `absoluteStrokeWidth`; it is not a design token because `tokens.source.json`
-  is vendored from kollektiv and a Konnekt-only value there is reverted on the
-  next sync.
-- **A control's icon goes inside `components/ui/IconButton`**, the one square box
-  the whole navbar column shares — it carries the hit area, the hover
-  background, the tone, and the accessible name. The icon itself stays
-  `aria-hidden`, so nothing is announced twice. `Icon`'s `label` prop is for the
-  rare icon that carries meaning alone, outside a labelled control (see
-  `ActiveProcesses`'s outcome glyph). Not every `×` is an `IconButton`: the
-  small one that clears a search field or drops a chip lives in a dense row at
-  its own scale, where a 24px box would set the row's height.
-- **Token values are not edited here.** `frontend/src/styles/tokens.css`,
-  `frontend/src/styles/tokens.ts` and `website/tokens.css` are generated by
-  `pnpm gen:tokens` from `tokens.source.json`, which is vendored from
-  `kollektiv/design/tokens.json` — the suite's shared source, also consumed by
-  Kommands. To add or change a token, edit it there, run kollektiv's
-  `scripts/sync-tokens.sh`, then regenerate and commit all three files. A hand edit
-  is reverted on the next run and never reaches the other product.
-  `frontend/src/style.css` keeps the hand-authored component CSS and nothing else,
-  bar the one `@theme` block for the overlay layering scale (next bullet).
-  `website/tokens.css` is the same values as plain `:root` custom properties for the
-  marketing site, which has no Tailwind and no build step; every page links it ahead
-  of `/styles.css`, and `website/styles.css` keeps only the page vocabulary that is
-  not a token (`--max-width`, `--nav-h`, `--section-y`).
-- **An overlay's z-index is a layer name, never a number.** `lib/layers.ts` is
-  the scale, five values in one place: `z-overlay` (the maximized tile),
-  `z-modal` (a backdropped surface that replaces the dashboard), `z-dialog` (a
-  confirm on top of a modal), `z-popover` (menus, tooltips, the two portals, the
-  crate drag preview) and `z-splash`. The classes exist because `style.css`
-  declares the same numbers as `--z-index-*` in its one hand-authored `@theme`
-  block, which Tailwind v4's `z-*` utility resolves; `lib/layers.test.ts` pins
-  the two spellings together and `pnpm check-tokens` asserts each class
-  compiles. Rule of thumb: if it opens another surface it is a modal, and what
-  it opens is a dialog. A value only orders things in one stacking context, so
-  rendering from `App`, after `<main>`, is still what puts a surface over the
-  grid; the scale settles the order among surfaces that share a context, which
-  used to be document order and lost twice (the server manager under a
-  maximized tile, a dependency dialog under the preview that opened it). A
-  tile's own sibling order (`z-[1]` to `z-[9]`, `z-10`, `z-20`, the backup
-  carousel) stays on bare numbers, because those never compete with anything
-  outside the tile. Konnekt-only, so it is not in `tokens.source.json`.
-- **`font-variant-numeric` does nothing here, so do not reach for it.** Measured
-  against the shipped `.woff2` files: `Ranade-Regular` (`--font-sans`) and
-  `Excon-Medium` (`--font-title`) expose no `lnum`, `onum`, `tnum` or `pnum`
-  feature at all, so `lining-nums`/`tabular-nums` compile to dead CSS on every
-  surface that matters. Only `Satoshi-Black` (`--font-display`) has `tnum`/`pnum`,
-  and it sets one string, the `Konnekt` wordmark, which has no digits in it.
-  Two consequences worth knowing before someone tries again:
-  Ranade's digits are *already* lining — the reason `2` looks a shade taller than
-  `1` is optical overshoot, 11 units of a 1000-unit em, which is 0.12px at this
-  UI's 12px body size and is deliberate in every typeface. No feature turns it
-  off, and there is nothing to fix.
-  Ranade's digits are, however, **proportional**: nine distinct advance widths,
-  `1` at 446 units against `4` at 713, a ~3.2px spread at 12px. A number that
-  changes in place therefore jitters, and `tabular-nums` cannot fix it because
-  the font has no `tnum`. The answer already in use is `font-mono` for any live
-  readout — the stats tile's `StatRow`, the performance tile's values and table,
-  `ActiveProcesses`' percentages. Keep new numeric readouts on that path rather
-  than adding a font feature the fonts do not carry.
+- Styling is Tailwind utilities over the CSS-variable token layer. Inline
+  `style={{}}` is for genuinely computed values only, and
+  `eslint.config.js`'s `no-restricted-syntax` rule enforces that as `error`.
 - Go: `gofmt` enforced, errors always handled (no blank `_` ignores)
-- Backend diagnostics go through `log/slog`'s package-level functions
-  (`slog.Error("scheduler: write history", "error", err)`), never `fmt.Printf`
-  or `println`. `main()` points the default logger at `konnekt.log` in the app
-  data dir via `services.InitLogger`, because a packaged build has no terminal
-  and anything on stdout is lost. `EventBus` emissions are the UI's channel, not
-  a log: they die with the window. Writes to a *server process's* stdin
-  (`fmt.Fprintln(s.stdin, ...)`) are not diagnostics and stay as they are.
-- Heavy per-tile dependencies are lazy-loaded via `React.lazy` + `Suspense`
-  (see `frontend/src/tiles/worlds/index.tsx`): three.js, recharts, `@xyflow`
-  (scheduler editor), CodeMirror (config editor) and the react-markdown/parse5
-  pipeline (mod descriptions). Keep the entry bundle under the 165 KB gzip
-  budget enforced by `pnpm check-bundle`. A new lazy chunk belongs in
-  `lib/prefetch.ts`'s warm list too, spelled with the same specifier — that
-  file is what makes the first open of a tile cheap, and it warms one chunk per
-  idle slot and never while the user is interacting. `pnpm check-prefetch`
-  enforces that pairing; a specifier that drifts resolves to a second copy of
-  the module and warms nothing, with no other symptom.
+- Keep the entry bundle under the 165 KB gzip budget (`pnpm check-bundle`);
+  heavy per-tile dependencies are lazy-loaded and warmed from
+  `lib/prefetch.ts`.
 
 ## Build & dev commands
 
 ```bash
-wails dev             # Hot-reload dev mode (runs Vite + Go together)
-wails build           # Production binary
-wails generate module # Regenerate TS bindings after Go changes
-pnpm typecheck        # tsc --noEmit (run from frontend/)
-pnpm lint             # ESLint (run from frontend/)
-pnpm test             # vitest (run from frontend/)
-pnpm test:coverage    # vitest with the coverage floor, per-directory table (frontend/)
-pnpm format           # Prettier --write (run from frontend/)
-pnpm format:check     # Prettier --check, the gate CI runs (from frontend/)
-pnpm check-bundle     # Enforce 165 KB gzip entry-chunk budget (run from frontend/)
-pnpm check-tokens     # Assert every token-named class compiles (run from frontend/)
-pnpm check-prefetch   # Assert every lazy tile chunk is in the warm list (frontend/)
-pnpm gen:tokens       # Regenerate the token layer from tokens.source.json (frontend/)
-pnpm format:website   # Prettier --check over website/ (run from frontend/)
-node scripts/check-website-links.mjs   # website hrefs/assets/sitemap (repo root)
-node demo/build.mjs   # Build the browser demo into demo/dist, with its drift checks (repo root)
-node demo/record.mjs  # Film the website's clips from demo/dist; needs ffmpeg (repo root)
-go vet ./...          # Go static analysis (repo root — single module)
-go test ./...         # Go tests (repo root)
-npx --yes aislop@0.16.0 scan   # AI-slop score, policy in .aislop/config.yml (repo root)
+# from frontend/
+pnpm dev | build | typecheck | lint | test | format:check   # the CI gates
+pnpm test:coverage     # with the floor, per-directory table
+pnpm check-bundle      # 165 KB gzip entry chunk
+pnpm check-tokens      # every token-named class compiles
+pnpm check-prefetch    # every lazy chunk is in the warm list
+pnpm gen:tokens        # regenerate the token layer
+pnpm format:website    # Prettier over website/
+
+# from the repo root
+wails dev | wails build | wails generate module
+go vet ./...  |  go test ./...
+node scripts/check-website-links.mjs   # hrefs, assets, sitemap
+node demo/build.mjs                    # browser demo, with its drift checks
+node demo/record.mjs                   # website clips; needs ffmpeg
+npx --yes aislop@0.16.0 scan
 ```
 
-Always run `pnpm typecheck`, `pnpm lint`, and `go vet ./...` after a series of
-changes. A lefthook pre-commit hook already runs Prettier + ESLint +
-`tsc --noEmit` on staged frontend files and `gofmt` + `go vet` on staged Go
-files; CI (`.github/workflows/ci.yml`) re-runs typecheck/lint/build/test on
-every push and PR.
+A lefthook pre-commit hook runs Prettier + ESLint + `tsc --noEmit` on staged
+frontend files and `gofmt` + `go vet` on staged Go files; CI re-runs
+typecheck/lint/build/test on every push and pull request.
 
-**Definition of done:** run `/suite-kit:health` — it runs the gates above plus
-this repo's generated-file check, driven by `.claude/suite.json`, and reports a
-table. Then sanity-check the area you touched against the four pillars in
-`agent_docs/HEALTH_CHECKLIST.md` (Clean / Stable / Scalable / Performant), and
-confirm the change is in scope for the current milestone per
-`agent_docs/ROADMAP.md` (Alpha vs Beta — do not scaffold Beta features during
-Alpha). Track any gap you can't fix now under that checklist's `Open backlog`.
-
-## Task tracking
-
-Task tracking is **GitHub Issues**. Do not add a `TODO.md`.
-
-`agent_docs/ROADMAP.md` holds direction and sequencing; individual work items are
-issues.
-
-Linear is a **downstream mirror**. `/suite-kit:suite-sync` writes it, mirroring
-this repo's GitHub Issues into the Apps team's Konnekt project and matching on a
-`Source: kollektiv-mc/konnekt#<number>` line in the Linear issue description
-rather than on titles. Never write to Linear directly from this repo.
-
-### Labelling an issue
-
-Three labels, always: one `type:`, one `area:`, one `p0`-`p3`. Add a
-`milestone:` once the work is staged. Its absence means nobody has staged it,
-not Later.
-
-`type:` uses the same ladder as a pull request (below). `p0`-`p3` is the suite's
-scale, defined in kollektiv's `docs/conventions.md`, and a repo does not invent
-its own. The bug and feature forms ask the reporter for it, as the suite's
-priority question, and `.github/workflows/issue-priority.yml` turns the answer
-into the label on open; both are vendored from kollektiv and rendered from its
-`design/labels.json`, so the block between the `suite:priority` markers in a form
-is not edited here. `issue-labels.yml` is the other half, after triage. `area:` is one of the per-area labels in `.github/labels.yml`, matching
-the issue forms' "Which part of Konnekt?" dropdown. Prefer a specific area over
-`area:ui`: the suite defines that one so it still exists, but "user-facing
-interface work" describes nearly every issue in this repo and so sorts nothing.
-
-The area label is load-bearing rather than decoration. `website/roadmap.js`
-files each issue into a folder by it.
-
-### Issue titles
-
-**Name the thing, do not describe the change.** An issue title is a leaf in a
-tree under a folder that already says which area it belongs to, so the area does
-not belong in the title as well.
-
-- No `in the X tile` suffix, no `X tile:` prefix, no `X — thing`.
-- A short noun phrase. If it reads as a sentence, it is too long.
-- No em dashes.
-
-| Instead of | Write |
-| --- | --- |
-| Make the scheduler minimap resizable | Resizable minimap |
-| Add a floating node manager panel to the scheduler editor | Floating node manager panel |
-| Show past-session server logs in the console tile | Past-session logs |
-| Render real terrain previews in the Worlds tile | Terrain previews |
-
-This is deliberately **not** the pull request rule below, which is imperative
-mood. A merged pull request title is a release-notes line and has to read as a
-sentence about what shipped; an issue title is an index entry. Different
-surface, different grammar, and the difference is on purpose.
-
-What went wrong without this: the area had nowhere to live except the title, so
-fifteen consecutive scheduler issues each said "scheduler" in theirs, and three
-competing shapes were in use at once (`thing in the X tile`, `X tile: thing`,
-`X — thing`). Across the 32 issues not filed through a form, titles averaged 8.2
-words and 24 of them named their own area.
-
-## Commits & pull requests
-
-Merged PR titles become the release notes, so a title is public copy, not a
-note to a reviewer.
-
-- **Title:** imperative mood, sentence case, no trailing period, one line.
-  Say what changed, not which files moved: "Support NeoForge and modern Forge
-  servers", not "Update serverlaunch.go".
-- **No em dashes** in titles, bodies or commit messages. Use a comma, a colon,
-  or two sentences. Keep the prose plain and short.
-- **Label each PR twice**: one `type:feature`, `type:bug`, `type:docs` or
-  `type:chore`, *and* one `area:` from `.github/labels.yml`. CI's `pr-labelled`
-  job checks the two separately and fails on either, so a PR carrying only a
-  `type:` is still red — which is how this line came to say both, after a PR
-  that had one went red on the other. The `area:` half feeds nothing in the
-  release notes; it is the issue-side rule under "Labelling an issue" holding on
-  the PR side, so a specific area beats `area:ui` here for the same reason.
-  The `type:` label is the *only* input to the release-notes section: the title
-  is never read at all, by a verb, a `feat:` prefix or anything else.
-  `type:chore` and `type:docs` are counted in a footer line rather than listed,
-  because they changed nothing a user can observe. `changelog:skip` leaves a PR
-  out entirely, and does not replace a `type:` label.
-
-**Which `type:` label.** Ask these in order and stop at the first yes:
-
-1. **Can a user of Konnekt tell the difference?** If nothing they can see, run
-   or click changed, it is `type:chore`, or `type:docs` for documentation and
-   nothing else. Refactors, tests, CI, tooling and dependency bumps stop here,
-   however large the diff.
-2. **Was Konnekt already meant to do this, and not doing it?** Then it is
-   `type:bug`. That covers anything the UI offers, the docs describe or the app
-   plainly implies, including things that fail silently.
-3. **Otherwise it is `type:feature`:** the app can now do something it never
-   offered.
-
-The size of the diff is not the test, and this is where it goes wrong: a repair
-that needed a new file, a new bound method and a new row of UI is still
-`type:bug`. #97 "Write a log file a bug reporter can attach" was filed as a
-feature on exactly that reasoning, and it was wrong. The app was already
-writing diagnostics, a packaged build with no terminal was throwing them away,
-and the change is the repair; the Settings > About row exists so the fix is
-usable, which makes it part of the fix. When the ladder feels ambiguous, revert
-the change in your head and ask what the user loses: something goes back to
-being broken is `type:bug`, they lose something they never had is
-`type:feature`, they cannot tell is `type:chore`. A change that is honestly
-half repair and half new capability is two PRs. Full version, with the rest of
-the cases, in `CONTRIBUTING.md`.
-- **Body:** why the change exists and how it was verified. It never reaches the
-  notes, so detail is free.
-- Commit messages follow the same rules. Nothing parses them.
-
-**Keep one PR to one concern.** The notes list a merged PR once, under one
-heading, by its title, so a PR that carries a feature *and* a website pass *and*
-a CI tweak cannot be described honestly by any single line. Every bad entry in
-the first release window came from this: "Close Milestone 2, add a coverage
-floor, and polish the snapshot channel across the website" is three changes, and
-its title is public copy for none of them. Split it, or accept that it will be
-filed as a chore.
-
-**What reaches the notes at all.** `.github/scripts/release-notes.py` builds
-them, and drops any PR whose files are all under the prefixes in
-`.github/changelog.json` — `website/`, `docs/`, `agent_docs/`, `.github/`,
-`.claude/`, `scripts/` and the root repo furniture. None of that ships in the
-binary. Note `README.md` is on that list and `build/` is not: a one-line README
-edit used to be enough to pull an all-website PR into the notes, while `build/`
-holds the app icon and RPM spec, which do ship. The classifier's rules are
-suite-wide and live in the script; the path list is Konnekt's own and lives in
-that config. Both are covered by `.github/scripts/release-notes_test.py`.
-A pull request merged into *another* pull request's branch keeps its own entry,
-because the script maps each commit in the release range to every merged pull
-request containing it. That only survives a **merge commit**: squashing or
-rebasing the parent rewrites the child's commits, GitHub then associates only
-the new commits with the parent, and the child's work is filed under the
-parent's title with no line of its own. Stacked pull requests land as merge
-commits, never squashed (#263).
-
-## Local tooling
-
-- **graphify** — the AST knowledge-graph tool this repo's Claude Code setup is
-  built around. `.claude/settings.json` registers PreToolUse hooks that nudge
-  toward `graphify query`/`explain`/`path` before raw source reads/greps (see
-  the root `CLAUDE.md` graphify rules). Install it so `graphify` is on your
-  `PATH` (e.g. `pipx install graphify` or `pip install --user graphify`), then
-  run `graphify update .` to generate `graphify-out/` — gitignored and
-  regenerable, AST-only, no API cost. Without graphify installed the hooks
-  simply no-op (a harmless per-call notice; nothing blocks). Re-run `graphify
-  update .` after code changes to keep the graph current.
-- **aislop** (`scanaislop/aislop`, MIT, run through `npx`, nothing installed)
-  scores the tree for what AI-assisted code leaves behind: ignored errors,
-  double casts, duplicated blocks, oversized functions, `innerHTML` sinks.
-  CI runs `aislop ci` and fails below 100, through
-  `.github/workflows/aislop.yml`, a shared workflow vendored from kollektiv by
-  its `scripts/sync-workflows.sh` and never edited here, which pins aislop and
-  ruff once for the whole suite; ruff has to be present or aislop's Python engines
-  silently run nothing. `.aislop/base.yml` is the suite's policy, vendored
-  from kollektiv by its `scripts/sync-aislop.sh` and never edited here: what
-  is counted, which two style rules are off and why. `.aislop/config.yml`
-  extends it (`extends: ./base.yml`, and the `./` is load-bearing) and holds
-  only this tree's size limits, a **ratchet** held at today's largest
-  function and file (lower them as #314 shrinks the holders, never raise
-  them). `.aislopignore` is what is generated or vendored and never scored,
-  the vendored runner and release-notes generator included: a gate that
-  reformatted one of those once handed the suite a week of drift.
-  A finding that is a documented exception gets an inline
-  `// aislop-ignore-next-line <rule> -- <reason>` beside it, the way a Go
-  `//nolint:errcheck // reason` does; a bare directive with no reason is the
-  thing to refuse in review. Never run `aislop fix`: it deletes lines by
-  regex and rewrites `package.json`. Telemetry is off in the config.
-- **`.claude/` config is committed** (`settings.json` hooks + `launch.json`
-  dev-server presets) so every clone and cloud agent inherits the same setup;
-  only `.claude/settings.local.json` (the personal permission allowlist) is
-  gitignored.
+**Definition of done:** run `/suite-kit:health`, or `.claude/suite-check.py`
+where the plugin is not installed. Then sanity-check the area you touched
+against the four pillars in `agent_docs/HEALTH_CHECKLIST.md` (Clean / Stable /
+Scalable / Performant), and confirm the change is in scope for the current
+milestone per `agent_docs/ROADMAP.md`. Track any gap you cannot fix now under
+that checklist's `Open backlog`.
 
 ## Testing
 
-- Frontend: `vitest` + `jsdom` + `@testing-library/react`. Mock Wails
-  bindings with `vi.mock('.../wailsjs/go/main/App')` rather than requiring a
-  real Wails bridge — see any `frontend/src/stores/*.test.ts` for the pattern.
+- Frontend: `vitest` + `jsdom` + `@testing-library/react`. Mock Wails bindings
+  with `vi.mock('.../wailsjs/go/main/App')` rather than requiring a real
+  bridge — see any `frontend/src/stores/*.test.ts`.
 - Backend: standard `go test`, table-driven where it fits; use
-  `httptest.Server` for HTTP clients (see `update_test.go`, `modrinth_test.go`).
-- New logic (Go services, Zustand store logic, pure helpers) should ship with
-  tests.
+  `httptest.Server` for HTTP clients.
+- New logic (Go services, Zustand store logic, pure helpers) ships with tests.
 - Both sides hold a coverage floor: `go run ./scripts/coverage-floor` for
-  `backend/services`, `pnpm test:coverage` for `frontend/src` (the threshold
-  lives in `vite.config.ts`). Each is a ratchet: raise it as coverage rises,
-  never lower it to make a build pass. The frontend table is per directory,
-  which is what says which tile is bare.
+  `backend/services`, `pnpm test:coverage` for `frontend/src`. Each is a
+  ratchet: raise it as coverage rises, never lower it to make a build pass.
+
+## Task tracking
+
+**GitHub Issues.** Do not add a `TODO.md`. `agent_docs/ROADMAP.md` holds
+direction; work items are issues. Linear is a downstream mirror written only by
+`/suite-kit:suite-sync`, never from this repo.
+
+Three labels on every issue: one `type:`, one `area:`, one `p0`-`p3`, plus a
+`milestone:` once staged (its absence means nobody staged it, not Later). Titles
+name the thing rather than describe the change: a short noun phrase, no `X tile:`
+prefix or suffix, no em dashes. The area label is load-bearing, because
+`website/roadmap.js` files each issue into a folder by it. Rest in
+`CONTRIBUTING.md`.
+
+## Commits & pull requests
+
+`CONTRIBUTING.md` holds the title rules and the `type:` ladder with its worked
+cases. Four things it does not say:
+
+- **Label each pull request twice**: one `type:`, *and* one `area:` from
+  `.github/labels.yml`. CI's `pr-labelled` job checks the two separately and
+  fails on either, so a pull request carrying only a `type:` is still red.
+  Prefer a specific area over `area:ui`, as on an issue.
+- **No em dashes** in titles, bodies or commit messages. Use a comma, a colon,
+  or two sentences.
+- `.github/scripts/release-notes.py` drops any pull request whose files all sit
+  under the prefixes in `.github/changelog.json`, which is this repo's own list
+  of what never reaches what ships. Note `README.md` is on it and `build/` is
+  not, because `build/` holds the app icon and RPM spec.
+- **Stacked pull requests land as merge commits, never squashed** (#263).
+  Squashing the parent rewrites the child's commits, and the child's work is
+  then filed under the parent's title with no line of its own.
+
+Commit messages follow the same rules. Nothing parses them.
+
+## Local tooling
+
+- **graphify** is the AST knowledge graph the root `CLAUDE.md` holds the rules
+  for. Without it installed, the `PreToolUse` hooks no-op and nothing blocks.
+- **aislop** scores the tree for what AI-assisted code leaves behind, and CI
+  fails below 100. Policy and ratchet: `.claude/rules/aislop.md`.
+- **`.claude/` config is committed** so every clone and cloud agent inherits
+  the same setup; only `.claude/settings.local.json` is gitignored.
 
 ## Versioning & releases
 
 `version.go`'s `Version` var is the single source of the app version. A release
-is cut from the Actions tab (Release, Run workflow: a channel and an `X.Y.Z`),
-which computes and creates the `v*` tag. That, the alpha/beta/final ladder,
-the nightly snapshot channel and the Linux build tags are covered in
-`.claude/rules/builds-and-releases.md`, which loads when you open a workflow,
-`version.go`, `wails.json` or anything under `build/`.
+is cut from the Actions tab. The ladder, the snapshot channel and the Linux
+build tags are in `.claude/rules/builds-and-releases.md`, which loads when you
+open a workflow, `version.go`, `wails.json` or anything under `build/`.
 
 ## Alpha scope — do not implement beyond this
-
-See `agent_docs/ROADMAP.md` for full breakdown.
 
 Alpha: multi-server management, start/stop/restart, live console, real-time
 stats, performance history (1h), player list + kick/ban, quick commands +
@@ -457,9 +155,8 @@ custom commands, scheduled tasks, world management, manual + scheduled backups,
 server.properties editor, tile layout system (drag/resize/snap/crate/presets
 with save/restore), notifications.
 
-Beta features (file explorer, audit log, mod manager, player profiles, skin
-previews, extended history) are in `agent_docs/ROADMAP.md` — do NOT scaffold
-during alpha.
+`agent_docs/ROADMAP.md` has the full breakdown and the Beta list. Do NOT
+scaffold a Beta feature during alpha.
 
 ## Do not
 
@@ -468,12 +165,14 @@ during alpha.
 - Do not use `localStorage` or `sessionStorage` — persist via Go file I/O
   writing JSON to the Wails app data directory
 - Do not add new Go dependencies without checking `agent_docs/DEPENDENCIES.md`
-- Do not restructure `frontend/src/tiles/registry.ts` mid-feature — extend
-  only. (Two sanctioned, one-time exceptions while the tile grid's placement
-  model was under active repair — see HEALTH_LOG.md: loose per-tile
-  `defaultW`/`defaultH`/`minW`/`minH` numbers became an `sm`/`md`/`lg` bucket
-  shape, then that shape was removed outright in favor of every tile sharing
-  one size from `lib/gridSizing.ts`. A `TileDefinition` entry is now just
-  `{ id, label, icon, maximizable?, component }` — the rule applies fully
-  from that shape going forward.)
+- Do not restructure `frontend/src/tiles/registry.ts` mid-feature — extend only
 - Do not use `useEffect` for data that should come from a Wails event listener
+- Do not hand-edit generated output: the token layer, `frontend/wailsjs/`,
+  lockfiles. Change the input and regenerate.
+
+## Deeper rules, loaded on demand
+
+`.claude/rules/` holds what only matters in one part of the tree, each scoped
+by `paths:` so it costs no context until you open a matching file:
+`tile-system.md`, `builds-and-releases.md`, `frontend-style.md`, `ipc.md`,
+`backend.md`, `dependencies.md` and `aislop.md`.
