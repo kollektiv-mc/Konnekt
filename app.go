@@ -666,32 +666,32 @@ func (a *App) GetKommandsCommands() ([]models.KommandsSavedCommand, error) {
 
 // --- Scheduler ---
 
-func (a *App) GetScheduleGraphs() ([]models.Graph, error) {
-	return a.schedulerService.GetGraphs()
+func (a *App) GetScheduleGraphs(serverID string) ([]models.Graph, error) {
+	return a.schedulerService.GetGraphs(serverID)
 }
 
-func (a *App) SaveScheduleGraph(g models.Graph) (models.Graph, error) {
-	return a.schedulerService.SaveGraph(g)
+func (a *App) SaveScheduleGraph(serverID string, g models.Graph) (models.Graph, error) {
+	return a.schedulerService.SaveGraph(serverID, g)
 }
 
-func (a *App) DeleteScheduleGraph(id string) error {
-	return a.schedulerService.DeleteGraph(id)
+func (a *App) DeleteScheduleGraph(serverID string, id string) error {
+	return a.schedulerService.DeleteGraph(serverID, id)
 }
 
-func (a *App) SetScheduleGraphEnabled(id string, enabled bool) error {
-	return a.schedulerService.SetGraphEnabled(id, enabled)
+func (a *App) SetScheduleGraphEnabled(serverID string, id string, enabled bool) error {
+	return a.schedulerService.SetGraphEnabled(serverID, id, enabled)
 }
 
 func (a *App) GetScheduleBlockDefs() ([]models.BlockDef, error) {
 	return a.schedulerService.GetBlockDefs()
 }
 
-func (a *App) RunScheduleGraphNow(id string) (models.RunRecord, error) {
-	return a.schedulerService.RunGraphNow(id)
+func (a *App) RunScheduleGraphNow(serverID string, id string) (models.RunRecord, error) {
+	return a.schedulerService.RunGraphNow(serverID, id)
 }
 
-func (a *App) GetScheduleRunHistory() ([]models.RunRecord, error) {
-	return a.schedulerService.GetRunHistory()
+func (a *App) GetScheduleRunHistory(serverID string) ([]models.RunRecord, error) {
+	return a.schedulerService.GetRunHistory(serverID)
 }
 
 func (a *App) GetScheduleNextRuns() (map[string]int64, error) {
@@ -728,8 +728,8 @@ func (a *App) BackupWorld(serverID, name string) (models.Backup, error) {
 	return a.worldService.BackupWorld(serverID, name)
 }
 
-func (a *App) ImportScheduleGraphJSON(raw string) (models.Graph, error) {
-	return a.schedulerService.ImportGraphJSON(raw)
+func (a *App) ImportScheduleGraphJSON(serverID string, raw string) (models.Graph, error) {
+	return a.schedulerService.ImportGraphJSON(serverID, raw)
 }
 
 func (a *App) PreviewScheduleNode(g models.Graph, nodeID string) (models.NodePreview, error) {

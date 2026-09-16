@@ -64,7 +64,7 @@ describe('OverviewPanel', () => {
     useUiStore.setState({ maximizeRequest: null })
     // useWorlds is a no-op without one, so every worlds case would pass vacuously.
     useServerConfigStore.setState({ activeId: 'srv1' })
-    useSchedulerStore.setState({ graphs: [], nextRuns: {}, hydrated: false, loading: false })
+    useSchedulerStore.setState({ graphs: [], nextRuns: {}, hydratedFor: null, loading: false })
   })
 
   it('renders the chart and all four blocks', async () => {

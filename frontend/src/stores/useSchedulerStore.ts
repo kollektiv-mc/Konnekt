@@ -37,16 +37,26 @@ import { errMsg } from '../lib/ipc'
  * here would need module-level refcounting to unsubscribe.
  */
 interface SchedulerStore {
+  /**
+   * The server this store currently holds graphs for. Every write reads it
+   * rather than taking it as an argument, so the actions keep the stable
+   * identities the note above requires.
+   */
+  serverId: string
   graphs: models.Graph[]
   blockDefs: models.BlockDef[]
   nextRuns: Record<string, number>
   /** Hydration in flight. Mutations are tracked locally by GraphEditor. */
   loading: boolean
-  /** First successful hydration completed — the idempotency latch. */
-  hydrated: boolean
+  /**
+   * The server the last successful hydration was for, replacing a boolean
+   * latch. A boolean short-circuited the second mount after a server switch and
+   * left the previous server's graphs on screen under the new server's name.
+   */
+  hydratedFor: string | null
   error: string | null
 
-  hydrate: () => Promise<void>
+  hydrate: (serverId: string) => Promise<void>
   setNextRuns: (runs: Record<string, number> | null | undefined) => void
   clearError: () => void
 
@@ -58,41 +68,62 @@ interface SchedulerStore {
 }
 
 export const useSchedulerStore = create<SchedulerStore>((set, get) => ({
+  serverId: '',
   graphs: [],
   blockDefs: [],
   nextRuns: {},
   loading: false,
-  hydrated: false,
+  hydratedFor: null,
   error: null,
 
   /**
-   * Idempotent: the tile is mounted twice while maximized (Dashboard renders
-   * the maximized copy *in addition to* the grid one), and StrictMode
+   * Idempotent per server: the tile is mounted twice while maximized (Dashboard
+   * renders the maximized copy *in addition to* the grid one), and StrictMode
    * double-mounts on top of that. The guard is sound because the `set` below
    * runs synchronously, before the first `await`.
    *
+   * It deliberately does **not** bail on `loading` when the server differs.
+   * Bailing there would drop the hydration for a server switched to mid-fetch,
+   * and since the tile only calls this on mount, that server would never load.
+   * Two fetches can therefore be in flight, so the result is applied only if it
+   * is still the server being asked about.
+   *
    * `Promise.all` is fail-fast, so one failing binding discards the other two
    * responses — acceptable, since the realistic failure is "no bridge", where
-   * all three fail together. A failure leaves `hydrated` false so the next
-   * mount retries once; there's no retry loop.
+   * all three fail together. A failure leaves `hydratedFor` unchanged so the
+   * next mount retries once; there's no retry loop.
    */
-  hydrate: async () => {
-    if (get().hydrated || get().loading) return
-    set({ loading: true, error: null })
+  hydrate: async (serverId) => {
+    const prev = get()
+    if (prev.hydratedFor === serverId) return
+    if (prev.loading && prev.serverId === serverId) return
+
+    set({
+      serverId,
+      loading: true,
+      error: null,
+      // A switch must not leave the previous server's graphs on screen for the
+      // length of the fetch: those are another server's schedules under this
+      // server's name, which is the confusion this whole change removes.
+      ...(prev.serverId === serverId ? {} : { graphs: [], nextRuns: {} }),
+    })
+
     try {
       const [graphs, blockDefs, nextRuns] = await Promise.all([
-        GetScheduleGraphs(),
+        GetScheduleGraphs(serverId),
         GetScheduleBlockDefs(),
         GetScheduleNextRuns(),
       ])
+      if (get().serverId !== serverId) return
       set({
         graphs: graphs ?? [],
         blockDefs: blockDefs ?? [],
         nextRuns: nextRuns ?? {},
         loading: false,
-        hydrated: true,
+        hydratedFor: serverId,
       })
     } catch (e) {
+      if (get().serverId !== serverId) return
       // Keep last-good state; the tile renders cached graphs alongside the error.
       set({ loading: false, error: errMsg(e) })
     }
@@ -116,7 +147,7 @@ export const useSchedulerStore = create<SchedulerStore>((set, get) => ({
   saveGraph: async (g) => {
     set({ error: null })
     try {
-      const saved = await SaveScheduleGraph(g)
+      const saved = await SaveScheduleGraph(get().serverId, g)
       set((s) => {
         const idx = s.graphs.findIndex((x) => x.id === saved.id)
         return {
@@ -133,7 +164,7 @@ export const useSchedulerStore = create<SchedulerStore>((set, get) => ({
   deleteGraph: async (id) => {
     set({ error: null })
     try {
-      await DeleteScheduleGraph(id)
+      await DeleteScheduleGraph(get().serverId, id)
       set((s) => ({ graphs: s.graphs.filter((g) => g.id !== id) }))
     } catch (e) {
       set({ error: errMsg(e) })
@@ -144,7 +175,7 @@ export const useSchedulerStore = create<SchedulerStore>((set, get) => ({
   setEnabled: async (id, enabled) => {
     set({ error: null })
     try {
-      await SetScheduleGraphEnabled(id, enabled)
+      await SetScheduleGraphEnabled(get().serverId, id, enabled)
       // SetScheduleGraphEnabled returns no graph, so mirror the two fields Go
       // touches. createFrom keeps the result a real models.Graph instance.
       set((s) => ({
@@ -161,7 +192,7 @@ export const useSchedulerStore = create<SchedulerStore>((set, get) => ({
   runGraph: async (id) => {
     set({ error: null })
     try {
-      return await RunScheduleGraphNow(id)
+      return await RunScheduleGraphNow(get().serverId, id)
     } catch (e) {
       set({ error: errMsg(e) })
       throw e

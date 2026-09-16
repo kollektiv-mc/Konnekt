@@ -18,12 +18,15 @@ function graph(id: string, enabled = true): models.Graph {
   } as unknown as models.Graph
 }
 
+const SERVER = 'srv-a'
+
 const initial = {
+  serverId: SERVER,
   graphs: [],
   blockDefs: [],
   nextRuns: {},
   loading: false,
-  hydrated: false,
+  hydratedFor: null,
   error: null,
 }
 
@@ -38,31 +41,31 @@ describe('useSchedulerStore', () => {
 
   describe('hydrate', () => {
     it('populates graphs, blockDefs and nextRuns', async () => {
-      await useSchedulerStore.getState().hydrate()
+      await useSchedulerStore.getState().hydrate(SERVER)
       const s = useSchedulerStore.getState()
       expect(s.graphs).toEqual([graph('g1')])
       expect(s.nextRuns).toEqual({ g1: 1000 })
-      expect(s.hydrated).toBe(true)
+      expect(s.hydratedFor).toBe(SERVER)
       expect(s.loading).toBe(false)
       expect(s.error).toBeNull()
     })
 
     it('never fetches run history', async () => {
-      await useSchedulerStore.getState().hydrate()
+      await useSchedulerStore.getState().hydrate(SERVER)
       expect(App.GetScheduleRunHistory).not.toHaveBeenCalled()
     })
 
-    it('no-ops once hydrated', async () => {
-      await useSchedulerStore.getState().hydrate()
-      await useSchedulerStore.getState().hydrate()
+    it('no-ops once hydrated for that server', async () => {
+      await useSchedulerStore.getState().hydrate(SERVER)
+      await useSchedulerStore.getState().hydrate(SERVER)
       expect(App.GetScheduleGraphs).toHaveBeenCalledTimes(1)
     })
 
     // Two tile instances (grid + maximized) mount in the same tick.
     it('dedupes concurrent calls', async () => {
       await Promise.all([
-        useSchedulerStore.getState().hydrate(),
-        useSchedulerStore.getState().hydrate(),
+        useSchedulerStore.getState().hydrate(SERVER),
+        useSchedulerStore.getState().hydrate(SERVER),
       ])
       expect(App.GetScheduleGraphs).toHaveBeenCalledTimes(1)
     })
@@ -71,20 +74,78 @@ describe('useSchedulerStore', () => {
       useSchedulerStore.setState({ graphs: [graph('cached')] })
       vi.mocked(App.GetScheduleGraphs).mockRejectedValue(new Error('no bridge'))
 
-      await useSchedulerStore.getState().hydrate()
+      await useSchedulerStore.getState().hydrate(SERVER)
 
       const s = useSchedulerStore.getState()
       expect(s.error).toBe('no bridge')
       expect(s.graphs).toEqual([graph('cached')])
-      expect(s.hydrated).toBe(false)
+      expect(s.hydratedFor).toBeNull()
       expect(s.loading).toBe(false)
     })
 
     it('retries on a later call after a failure', async () => {
       vi.mocked(App.GetScheduleGraphs).mockRejectedValueOnce(new Error('no bridge'))
-      await useSchedulerStore.getState().hydrate()
-      await useSchedulerStore.getState().hydrate()
-      expect(useSchedulerStore.getState().hydrated).toBe(true)
+      await useSchedulerStore.getState().hydrate(SERVER)
+      await useSchedulerStore.getState().hydrate(SERVER)
+      expect(useSchedulerStore.getState().hydratedFor).toBe(SERVER)
+    })
+
+    it('asks the backend for the server it was given', async () => {
+      await useSchedulerStore.getState().hydrate(SERVER)
+      expect(App.GetScheduleGraphs).toHaveBeenCalledWith(SERVER)
+    })
+
+    // The latch used to be a boolean, which made this a no-op and left the
+    // previous server's schedules on screen under the new server's name.
+    it('refetches for a different server', async () => {
+      await useSchedulerStore.getState().hydrate(SERVER)
+      vi.mocked(App.GetScheduleGraphs).mockResolvedValue([graph('g2')])
+
+      await useSchedulerStore.getState().hydrate('srv-b')
+
+      expect(App.GetScheduleGraphs).toHaveBeenLastCalledWith('srv-b')
+      expect(useSchedulerStore.getState().graphs).toEqual([graph('g2')])
+      expect(useSchedulerStore.getState().hydratedFor).toBe('srv-b')
+    })
+
+    it("drops the previous server's graphs before the new ones arrive", async () => {
+      await useSchedulerStore.getState().hydrate(SERVER)
+      let release: (v: models.Graph[]) => void = () => {}
+      vi.mocked(App.GetScheduleGraphs).mockReturnValue(
+        new Promise<models.Graph[]>((r) => {
+          release = r
+        }),
+      )
+
+      const pending = useSchedulerStore.getState().hydrate('srv-b')
+      expect(useSchedulerStore.getState().graphs).toEqual([])
+
+      release([graph('g2')])
+      await pending
+      expect(useSchedulerStore.getState().graphs).toEqual([graph('g2')])
+    })
+
+    // A switch while a fetch is in flight must not be dropped: the tile only
+    // calls hydrate on mount, so that server would never load.
+    it('does not bail on a fetch in flight for a different server', async () => {
+      let release: (v: models.Graph[]) => void = () => {}
+      vi.mocked(App.GetScheduleGraphs).mockReturnValueOnce(
+        new Promise<models.Graph[]>((r) => {
+          release = r
+        }),
+      )
+      const first = useSchedulerStore.getState().hydrate(SERVER)
+
+      vi.mocked(App.GetScheduleGraphs).mockResolvedValue([graph('g2')])
+      await useSchedulerStore.getState().hydrate('srv-b')
+
+      // The slow first response lands last and must not overwrite B.
+      release([graph('g1')])
+      await first
+
+      const s = useSchedulerStore.getState()
+      expect(s.hydratedFor).toBe('srv-b')
+      expect(s.graphs).toEqual([graph('g2')])
     })
   })
 
@@ -115,6 +176,7 @@ describe('useSchedulerStore', () => {
       const saved = await useSchedulerStore.getState().saveGraph(graph(''))
       expect(saved.id).toBe('g2')
       expect(useSchedulerStore.getState().graphs).toEqual([graph('g2')])
+      expect(App.SaveScheduleGraph).toHaveBeenCalledWith(SERVER, graph(''))
       expect(App.GetScheduleGraphs).not.toHaveBeenCalled() // upsert, not refetch
     })
 
@@ -146,7 +208,7 @@ describe('useSchedulerStore', () => {
       useSchedulerStore.setState({ graphs: [graph('g1'), graph('g2')] })
       await useSchedulerStore.getState().deleteGraph('g1')
       expect(useSchedulerStore.getState().graphs).toEqual([graph('g2')])
-      expect(App.DeleteScheduleGraph).toHaveBeenCalledWith('g1')
+      expect(App.DeleteScheduleGraph).toHaveBeenCalledWith(SERVER, 'g1')
     })
 
     it('records the error, rejects, and keeps the graph', async () => {
@@ -165,7 +227,7 @@ describe('useSchedulerStore', () => {
       useSchedulerStore.setState({ graphs: [graph('g1', true)] })
       await useSchedulerStore.getState().setEnabled('g1', false)
       expect(useSchedulerStore.getState().graphs[0].enabled).toBe(false)
-      expect(App.SetScheduleGraphEnabled).toHaveBeenCalledWith('g1', false)
+      expect(App.SetScheduleGraphEnabled).toHaveBeenCalledWith(SERVER, 'g1', false)
     })
 
     it('records the error, rejects, and leaves the flag alone', async () => {

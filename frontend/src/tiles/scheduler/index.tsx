@@ -11,7 +11,7 @@ const GraphEditor = lazy(() =>
   import('./editor/GraphEditor').then((m) => ({ default: m.GraphEditor })),
 )
 
-export function SchedulerTile({ maximized }: TileProps) {
+export function SchedulerTile({ serverId, maximized }: TileProps) {
   const {
     graphs,
     blockDefs,
@@ -24,7 +24,7 @@ export function SchedulerTile({ maximized }: TileProps) {
     setEnabled,
     runGraph,
     previewNode,
-  } = useScheduler()
+  } = useScheduler(serverId)
 
   if (!maximized) {
     return (
