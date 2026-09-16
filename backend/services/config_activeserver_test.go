@@ -204,7 +204,55 @@ func TestSaveServerConfigAdoptsTheFirstServer(t *testing.T) {
 	})
 }
 
-// The knock-on to #236's graph migration is deliberately not tested here.
-// models.Graph has no ServerID on main yet, so the test that proves a repaired
-// active id lets that migration resolve belongs wherever the two changes first
-// sit together, not in a file that cannot compile without one of them.
+// The reason this matters beyond the id itself: #236's graph migration refuses a
+// dangling active id, and with more than one server to choose between it leaves
+// the graph unassigned, which is what forces the two fallbacks that issue left
+// behind. Repairing the id first is what lets the migration resolve.
+//
+// This test could not be written when the fix was, because models.Graph had no
+// ServerID on main until #362 merged. It is the case the two changes only make
+// checkable together.
+func TestGraphMigrationResolvesOnceTheActiveIdIsRepaired(t *testing.T) {
+	dir := t.TempDir()
+
+	cfgSvc := &ConfigService{}
+	cfgSvc.SetDataDir(dir)
+	// Three servers, not two. Deleting one of two leaves a single config, and
+	// resolveMigrationServerID falls back to the only server there is whatever
+	// the active id says, so the test would pass with this fix reverted.
+	for _, id := range []string{"a", "b", "c"} {
+		if err := cfgSvc.SaveServerConfig(models.ServerConfig{ID: id, Name: id}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	// Select a server and then delete it, which is exactly the state the app used
+	// to leave on disk: an active id naming something that is gone.
+	if err := cfgSvc.SetActiveServerID("c"); err != nil {
+		t.Fatal(err)
+	}
+	if err := cfgSvc.DeleteServerConfig("c"); err != nil {
+		t.Fatal(err)
+	}
+
+	graphs, err := json.Marshal([]models.Graph{{ID: "g1", Name: "g1"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "scheduler.json"), graphs, 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	sched := &SchedulerService{
+		running:   make(map[string]bool),
+		lastFired: make(map[string]time.Time),
+		stopTime:  make(chan struct{}),
+	}
+	sched.bus = NewEventBus()
+	sched.deps = serviceDeps{bus: sched.bus, config: cfgSvc}
+	sched.registry = NewBlockRegistry()
+	sched.SetDataDir(dir)
+
+	if len(sched.graphs) != 1 || sched.graphs[0].ServerID != "a" {
+		t.Errorf("graph owner = %+v, want the surviving server a: a dangling active id leaves it unassigned", sched.graphs)
+	}
+}
