@@ -168,7 +168,88 @@ def runnable(run, cwd, root, shell=None):
     manifest = PROJECT_MANIFESTS.get(tool)
     if manifest and find_upwards(manifest, cwd, root) is None:
         return False, f"no {manifest} at or above {os.path.relpath(cwd, root)}"
+
+    gap = aislop_ruff_gap(run, root, shell)
+    if gap:
+        return False, gap
     return True, ""
+
+
+# The pin CI installs, written as pip would take it. Every adopting repo carries
+# it: a product in its vendored .github/workflows/aislop.yml, kollektiv inline in
+# ci.yml, because kollektiv is not a product and carries those steps itself.
+RUFF_PIN = re.compile(r"\bruff==(\d+(?:\.\d+)*)")
+
+# What `ruff --version` answers with.
+RUFF_REPORTED = re.compile(r"\bruff\s+(\d+(?:\.\d+)*)")
+
+
+def pinned_ruff(root):
+    """The ruff version this repo's workflows pin, or None if that is not certain.
+
+    The workflow is the single source of truth on purpose. Writing the version
+    anywhere else, here included, would give the suite a second place to say what
+    it pins, and two places that can disagree is the shape of the bug this whole
+    check exists to catch.
+
+    Disagreeing workflows return None rather than a guess. That is a real problem
+    of its own, but it is not this function's to name, and picking one of two
+    answers would be exactly the confident wrong number the runner must not
+    produce.
+    """
+    directory = os.path.join(root, ".github", "workflows")
+    if not os.path.isdir(directory):
+        return None
+
+    found = set()
+    for name in sorted(os.listdir(directory)):
+        if not name.endswith((".yml", ".yaml")):
+            continue
+        try:
+            with open(os.path.join(directory, name), encoding="utf-8") as handle:
+                found.update(RUFF_PIN.findall(handle.read()))
+        except (OSError, UnicodeDecodeError):
+            continue
+    return found.pop() if len(found) == 1 else None
+
+
+def aislop_ruff_gap(run, root, shell=None):
+    """Why an aislop run here would not mean what CI means by it, or None.
+
+    aislop's Python formatting and lint engines run only when a ruff binary is on
+    PATH. With none they do not report a skip: the run comes back `[ok] 0 issues`,
+    100 of 100, and its JSON says `"skipped": false` with empty diagnostics. A
+    degraded run is identical in every field aislop exposes to a clean one, so
+    there is nothing in the output to read afterwards. A wrong version is the same
+    problem quieter: 0.15.8 and 0.16.7 disagree about real findings in this tree.
+
+    That is why this is a pre-skip, against the rule the sibling docstring in
+    environmental_failure argues for. The rule there is do not pre-judge whether a
+    command will fail, and it still holds: this does not predict a failure. The
+    command will pass. What is provable before running it is that passing would
+    not mean anything, and a pass that means nothing is worse than the skip it
+    should have been, because nobody follows up on either but only one is honest.
+    """
+    if "aislop" not in run:
+        return None
+    want = pinned_ruff(root)
+    if want is None:
+        return None
+
+    argv = ["ruff", "--version"] if shell is None else [shell, "-c", "ruff --version"]
+    try:
+        probe = subprocess.run(argv, capture_output=True, text=True, check=False)
+    except OSError:
+        probe = None
+    if probe is None or probe.returncode != 0:
+        return f"ruff {want} is not on PATH; aislop would score no Python"
+
+    match = RUFF_REPORTED.search(probe.stdout or probe.stderr or "")
+    if match is None:
+        return f"ruff {want} is pinned but its version could not be read"
+    if match.group(1) != want:
+        return f"ruff {want} is pinned for aislop; {match.group(1)} is on PATH"
+    return None
 
 
 # Go compiles //go:embed directives during vet and test, so a package embedding a
