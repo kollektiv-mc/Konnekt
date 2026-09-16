@@ -33,6 +33,8 @@ export {
   Workflow,
   // Sidebar and tile chrome.
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
   CircleCheck,
   CircleX,
   Maximize2,
