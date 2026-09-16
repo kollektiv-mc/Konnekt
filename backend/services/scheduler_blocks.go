@@ -262,7 +262,9 @@ func registerBuiltins(r *BlockRegistry) {
 
 	must(r.RegisterBlock(models.BlockDef{
 		ID: "control.condition", Category: "control", Label: "Condition",
-		Description:   "Branches based on a comparison.",
+		Description: "Branches based on a comparison. Two values that are both " +
+			"numbers compare numerically, so 9 is less than 10; anything else " +
+			"compares as text. \"contains\" always compares as text.",
 		ControlInputs: []string{"trigger"}, ControlOutputs: []string{"onTrue", "onFalse"},
 		DataInputs: []models.DataPort{
 			{ID: "left", Label: "A", Type: "string"},
@@ -502,24 +504,50 @@ func execNotify(e *ExecContext) ExecResult {
 }
 
 func execCondition(e *ExecContext) ExecResult {
-	left := fmt.Sprintf("%v", e.GetString("left"))
-	right := fmt.Sprintf("%v", e.GetString("right"))
+	left := e.GetString("left")
+	right := e.GetString("right")
 	op := e.GetString("op")
+
+	// Two numeric operands compare as numbers. Comparing the rendered strings
+	// instead made "9" > "10" true, so every threshold rule branched wrong the
+	// moment the two sides differed in digit count. A wired operand made it
+	// worse than a typo would: the overlay in runNode puts the float64 itself
+	// into Config, and %v renders a million as "1e+06", which sorts below every
+	// plain digit string.
+	//
+	// Anything that is not a pair of numbers keeps comparing as text, so names,
+	// MOTDs and version strings behave as they did.
+	lf, lok := e.GetNumber("left")
+	rf, rok := e.GetNumber("right")
+
+	// One ordering drives every operator, so the numeric and text paths cannot
+	// drift apart the way four parallel if/else arms would.
+	var cmp int
+	switch {
+	case lok && rok:
+		if lf < rf {
+			cmp = -1
+		} else if lf > rf {
+			cmp = 1
+		}
+	default:
+		cmp = strings.Compare(left, right)
+	}
 
 	var result bool
 	switch op {
-	case "eq":
-		result = left == right
 	case "ne":
-		result = left != right
+		result = cmp != 0
 	case "gt":
-		result = left > right
+		result = cmp > 0
 	case "lt":
-		result = left < right
+		result = cmp < 0
 	case "contains":
+		// Text-only by definition: a substring test over numbers is not one.
 		result = strings.Contains(left, right)
 	default:
-		result = left == right
+		// "eq", and any operator the UI has not taught us about yet.
+		result = cmp == 0
 	}
 
 	if result {
