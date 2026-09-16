@@ -13,15 +13,12 @@ graceful absence: a runner that cannot tell a skip from a failure has nothing
 useful to report, so suite-check.py fails loudly when it is missing.
 """
 
-from __future__ import annotations
-
 import os
 import re
 import shlex
 import shutil
 import socket
 import subprocess
-
 
 # A command whose first word is one of these is shell syntax, not a binary, so
 # the "is it installed" probe below does not apply to it.
@@ -229,8 +226,7 @@ def missing_build_output(output, cwd):
 
     for match in misses:
         pattern = match.group("pattern")
-        if pattern.startswith("all:"):
-            pattern = pattern[len("all:") :]
+        pattern = pattern.removeprefix("all:")
         # A glob matching nothing is not a directory that was never built.
         literal = re.split(r"[*?\[]", pattern, maxsplit=1)[0]
         if not literal:
