@@ -194,10 +194,17 @@ func TestSetDataDirAssignsGraphOwners(t *testing.T) {
 		}
 	})
 
-	t.Run("left ambient when there is no active server", func(t *testing.T) {
+	// This used to pass two server configs and no active id. That state is no
+	// longer reachable: #363 made ConfigService adopt the first server when
+	// nothing is active, so a fixture that saves a config cannot leave the active
+	// id empty. Configured servers with no selection among them is exactly the
+	// hole that issue closed, and the pure function's own branch for it is still
+	// covered by TestResolveMigrationServerID. What survives end to end is the
+	// case below: no servers at all, so there is nothing to assign.
+	t.Run("left ambient when there are no servers at all", func(t *testing.T) {
 		s, dataDir := newMigrationFixture(t,
 			[]models.Graph{{ID: "g1"}},
-			[]models.ServerConfig{{ID: "a"}, {ID: "b"}},
+			nil,
 			"",
 		)
 		s.SetDataDir(dataDir)
