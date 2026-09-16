@@ -1,6 +1,7 @@
 package services
 
 import (
+	"sync"
 	"testing"
 	"time"
 
@@ -163,5 +164,185 @@ func TestPreviewNodeActsOnTheGraphsServer(t *testing.T) {
 	}
 	if seen != "a" {
 		t.Errorf("preview acted on %q, want a", seen)
+	}
+}
+
+// ─── An event fires only the graphs that answer to its server ──────────────
+
+// awaitRuns waits briefly for the goroutines the fire* paths launch and returns
+// the graph ids that ran. The trigger paths are fire-and-forget by design, so a
+// test has to give them a moment rather than a channel.
+func awaitRuns(t *testing.T, seen *[]string, mu *sync.Mutex, want int) []string {
+	t.Helper()
+	deadline := time.Now().Add(2 * time.Second)
+	for time.Now().Before(deadline) {
+		mu.Lock()
+		n := len(*seen)
+		mu.Unlock()
+		if n >= want {
+			break
+		}
+		time.Sleep(5 * time.Millisecond)
+	}
+	// A moment past the target, so an extra run that should not have happened
+	// has a chance to show up and fail the assertion.
+	time.Sleep(50 * time.Millisecond)
+	mu.Lock()
+	defer mu.Unlock()
+	return append([]string{}, *seen...)
+}
+
+// registerRunRecorder records the graph each run belongs to, via the server the
+// run was handed, which is what the filter decides.
+func registerRunRecorder(s *SchedulerService, seen *[]string, mu *sync.Mutex) {
+	must(s.registry.RegisterBlock(models.BlockDef{
+		ID:             "test.runRecorder",
+		Category:       "action",
+		ControlInputs:  []string{"trigger"},
+		ControlOutputs: []string{"onComplete"},
+	}, func(e *ExecContext) ExecResult {
+		mu.Lock()
+		*seen = append(*seen, e.GetString("graphId"))
+		mu.Unlock()
+		return ExecResult{Port: "onComplete"}
+	}))
+}
+
+// playerGraph is a player-joined trigger wired to the run recorder.
+func playerGraph(id, serverID string) models.Graph {
+	g := probeGraph(id, serverID)
+	g.Nodes[1] = models.Node{
+		ID:     "a1",
+		Type:   "test.runRecorder",
+		Config: map[string]interface{}{"graphId": id},
+	}
+	return g
+}
+
+func TestPlayerEventFiresOnlyThatServersGraphs(t *testing.T) {
+	s := newScopedScheduler(t, "a", "a", "b")
+	var seen []string
+	var mu sync.Mutex
+	registerRunRecorder(s, &seen, &mu)
+	s.graphs = []models.Graph{playerGraph("onA", "a"), playerGraph("onB", "b")}
+
+	s.fireTypedEventTriggers("b", "trigger.player", "Joined",
+		map[string]interface{}{}, "event:player:joined")
+
+	if got := awaitRuns(t, &seen, &mu, 1); len(got) != 1 || got[0] != "onB" {
+		t.Errorf("B's player event ran %v, want [onB] only", got)
+	}
+}
+
+func TestBackupEventFiresOnlyThatServersGraphs(t *testing.T) {
+	s := newScopedScheduler(t, "a", "a", "b")
+	var seen []string
+	var mu sync.Mutex
+	registerRunRecorder(s, &seen, &mu)
+
+	onA, onB := playerGraph("onA", "a"), playerGraph("onB", "b")
+	onA.Nodes[0] = models.Node{ID: "t1", Type: "trigger.backup"}
+	onB.Nodes[0] = models.Node{ID: "t1", Type: "trigger.backup"}
+	s.graphs = []models.Graph{onA, onB}
+
+	s.fireRoutedEventTriggers("a", "trigger.backup",
+		map[string]interface{}{"_route": "onComplete"}, "event:backup:completed")
+
+	if got := awaitRuns(t, &seen, &mu, 1); len(got) != 1 || got[0] != "onA" {
+		t.Errorf("A's backup event ran %v, want [onA] only", got)
+	}
+}
+
+func TestTPSEventFiresOnlyThatServersGraphs(t *testing.T) {
+	s := newScopedScheduler(t, "a", "a", "b")
+	var seen []string
+	var mu sync.Mutex
+	registerRunRecorder(s, &seen, &mu)
+
+	onA, onB := playerGraph("onA", "a"), playerGraph("onB", "b")
+	onA.Nodes[0] = models.Node{ID: "t1", Type: "trigger.tpsThreshold"}
+	onB.Nodes[0] = models.Node{ID: "t1", Type: "trigger.tpsThreshold"}
+	s.graphs = []models.Graph{onA, onB}
+
+	s.fireTPSTriggers("b", models.StatsSnapshot{TPS: 2})
+
+	if got := awaitRuns(t, &seen, &mu, 1); len(got) != 1 || got[0] != "onB" {
+		t.Errorf("B's low-TPS snapshot ran %v, want [onB] only", got)
+	}
+}
+
+// A disabled graph is still skipped, so the new condition did not replace the
+// old one by sitting in front of it.
+func TestServerFilterDoesNotResurrectDisabledGraphs(t *testing.T) {
+	s := newScopedScheduler(t, "a", "a")
+	var seen []string
+	var mu sync.Mutex
+	registerRunRecorder(s, &seen, &mu)
+
+	off := playerGraph("off", "a")
+	off.Enabled = false
+	s.graphs = []models.Graph{off}
+
+	s.fireTypedEventTriggers("a", "trigger.player", "Joined",
+		map[string]interface{}{}, "event:player:joined")
+
+	if got := awaitRuns(t, &seen, &mu, 0); len(got) != 0 {
+		t.Errorf("a disabled graph ran: %v", got)
+	}
+}
+
+// The two cases where filtering would silently stop a schedule instead of
+// re-pointing one, which is the worse fault of the two.
+func TestUnknownServerNeverSilencesAGraph(t *testing.T) {
+	t.Run("an event with no server id fires everything", func(t *testing.T) {
+		s := newScopedScheduler(t, "a", "a", "b")
+		var seen []string
+		var mu sync.Mutex
+		registerRunRecorder(s, &seen, &mu)
+		s.graphs = []models.Graph{playerGraph("onA", "a"), playerGraph("onB", "b")}
+
+		s.fireTypedEventTriggers("", "trigger.player", "Joined",
+			map[string]interface{}{}, "event:player:joined")
+
+		if got := awaitRuns(t, &seen, &mu, 2); len(got) != 2 {
+			t.Errorf("an unattributed event ran %v, want both graphs", got)
+		}
+	})
+
+	t.Run("a graph with no resolvable owner answers to any server", func(t *testing.T) {
+		// No configs and no active server: the migration had nothing to assign.
+		s := newScopedScheduler(t, "")
+		var seen []string
+		var mu sync.Mutex
+		registerRunRecorder(s, &seen, &mu)
+		s.graphs = []models.Graph{playerGraph("ambient", "")}
+
+		s.fireTypedEventTriggers("whatever", "trigger.player", "Joined",
+			map[string]interface{}{}, "event:player:joined")
+
+		if got := awaitRuns(t, &seen, &mu, 1); len(got) != 1 {
+			t.Errorf("an unassignable graph ran %v, want it still firing", got)
+		}
+	})
+}
+
+// Time triggers have no event and so no server to filter on: a nightly backup
+// on a server nobody has selected is still due.
+func TestTimeTriggersFireEveryServersGraphs(t *testing.T) {
+	s := newScopedScheduler(t, "a", "a", "b")
+	var seen []string
+	var mu sync.Mutex
+	registerRunRecorder(s, &seen, &mu)
+
+	onA, onB := playerGraph("onA", "a"), playerGraph("onB", "b")
+	cron := map[string]interface{}{"cron": "* * * * *"}
+	onA.Nodes[0] = models.Node{ID: "t1", Type: "trigger.cron", Config: cron}
+	onB.Nodes[0] = models.Node{ID: "t1", Type: "trigger.cron", Config: cron}
+	s.graphs = []models.Graph{onA, onB}
+
+	s.evaluateTimeTriggers(time.Now())
+
+	if got := awaitRuns(t, &seen, &mu, 2); len(got) != 2 {
+		t.Errorf("the minute ticker ran %v, want both servers' graphs", got)
 	}
 }
