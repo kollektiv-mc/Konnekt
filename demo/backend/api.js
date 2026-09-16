@@ -154,13 +154,16 @@ export const api = {
   // Graph edits stick: wiring nodes together is one of the things worth
   // showing, and a refusal would revert every drag. Running one does not —
   // that is acting on a real server.
+  // The serverID each of these now leads with (#236) is ignored: the demo has
+  // one server, so scoping to it is the identity, and dropping the argument
+  // here would only hide a signature change the real app has to honour.
   GetScheduleBlockDefs: read(BLOCK_DEFS),
   GetScheduleGraphs: read(() => state.graphs()),
   GetScheduleNextRuns: read(NEXT_RUNS),
   GetScheduleRunHistory: read([]),
-  SaveScheduleGraph: mutate((g) => state.saveGraph(g)),
-  DeleteScheduleGraph: mutate((id) => state.deleteGraph(id)),
-  SetScheduleGraphEnabled: mutate((id, on) => state.setGraphEnabled(id, on)),
+  SaveScheduleGraph: mutate((_serverId, g) => state.saveGraph(g)),
+  DeleteScheduleGraph: mutate((_serverId, id) => state.deleteGraph(id)),
+  SetScheduleGraphEnabled: mutate((_serverId, id, on) => state.setGraphEnabled(id, on)),
   ImportScheduleGraphJSON: refuse("Importing a graph"),
   RunScheduleGraphNow: refuse("Running a schedule"),
   PreviewScheduleNode: read(async (_g, nodeId) => ({

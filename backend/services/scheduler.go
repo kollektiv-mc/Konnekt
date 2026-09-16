@@ -96,22 +96,33 @@ func (s *SchedulerService) StopScheduler() {
 
 // ─── CRUD ─────────────────────────────────────────────────────────────────────
 
-func (s *SchedulerService) GetGraphs() ([]models.Graph, error) {
+// GetGraphs returns the graphs belonging to one server. Membership is
+// graphAnswersTo, the same rule the triggers fire by, so the tile lists exactly
+// the graphs that server's events will run.
+func (s *SchedulerService) GetGraphs(serverID string) ([]models.Graph, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	out := make([]models.Graph, len(s.graphs))
-	copy(out, s.graphs)
+	out := make([]models.Graph, 0, len(s.graphs))
+	for _, g := range s.graphs {
+		if s.graphAnswersTo(g, serverID) {
+			out = append(out, g)
+		}
+	}
 	return out, nil
 }
 
 // SaveGraph upserts a graph by ID (inserts when ID is empty or not found).
-func (s *SchedulerService) SaveGraph(g models.Graph) (models.Graph, error) {
+// The graph is stamped with serverID rather than trusting the one it arrives
+// with: the caller is the tile the user is looking at, and a graph belongs to
+// the server it was authored on.
+func (s *SchedulerService) SaveGraph(serverID string, g models.Graph) (models.Graph, error) {
 	now := time.Now().UnixMilli()
 	if g.ID == "" {
 		g.ID = newID()
 		g.CreatedAt = now
 	}
 	g.UpdatedAt = now
+	g.ServerID = serverID
 
 	s.mu.Lock()
 	found := false
@@ -140,11 +151,14 @@ func (s *SchedulerService) SaveGraph(g models.Graph) (models.Graph, error) {
 	return g, err
 }
 
-func (s *SchedulerService) DeleteGraph(id string) error {
+// DeleteGraph removes a graph, but only one the given server owns: the id comes
+// from a list that was already scoped, so an id from outside it is a bug rather
+// than a request to honour.
+func (s *SchedulerService) DeleteGraph(serverID, id string) error {
 	s.mu.Lock()
 	filtered := make([]models.Graph, 0, len(s.graphs))
 	for _, g := range s.graphs {
-		if g.ID != id {
+		if g.ID != id || !s.graphAnswersTo(g, serverID) {
 			filtered = append(filtered, g)
 		}
 	}
@@ -158,10 +172,10 @@ func (s *SchedulerService) DeleteGraph(id string) error {
 	return err
 }
 
-func (s *SchedulerService) SetGraphEnabled(id string, enabled bool) error {
+func (s *SchedulerService) SetGraphEnabled(serverID, id string, enabled bool) error {
 	s.mu.Lock()
 	for i, g := range s.graphs {
-		if g.ID == id {
+		if g.ID == id && s.graphAnswersTo(g, serverID) {
 			s.graphs[i].Enabled = enabled
 			s.graphs[i].UpdatedAt = time.Now().UnixMilli()
 			break
@@ -186,11 +200,11 @@ func (s *SchedulerService) GetBlockDefs() ([]models.BlockDef, error) {
 
 // RunGraphNow manually triggers a graph by ID, blocks until the run completes,
 // and returns the final RunRecord. Useful for testing without live triggers.
-func (s *SchedulerService) RunGraphNow(id string) (models.RunRecord, error) {
+func (s *SchedulerService) RunGraphNow(serverID, id string) (models.RunRecord, error) {
 	s.mu.RLock()
 	var target *models.Graph
 	for i := range s.graphs {
-		if s.graphs[i].ID == id {
+		if s.graphs[i].ID == id && s.graphAnswersTo(s.graphs[i], serverID) {
 			g := s.graphs[i]
 			target = &g
 			break
@@ -212,24 +226,43 @@ func (s *SchedulerService) RunGraphNow(id string) (models.RunRecord, error) {
 	}), nil
 }
 
-// GetRunHistory returns in-memory run history in reverse-chronological order.
-func (s *SchedulerService) GetRunHistory() ([]models.RunRecord, error) {
+// GetRunHistory returns one server's run history in reverse-chronological order.
+//
+// Scoped by looking each record's graph up rather than by a ServerID on the
+// record: the join is free, and adding the field would need a second migration
+// for the records already on disk that could only recover their server through
+// this same join. A record whose graph has since been deleted has no server and
+// is left out, which loses a row that could not be opened anyway.
+func (s *SchedulerService) GetRunHistory(serverID string) ([]models.RunRecord, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	out := make([]models.RunRecord, len(s.history))
-	for i, r := range s.history {
-		out[len(s.history)-1-i] = r
+
+	owned := make(map[string]bool, len(s.graphs))
+	for _, g := range s.graphs {
+		if s.graphAnswersTo(g, serverID) {
+			owned[g.ID] = true
+		}
+	}
+
+	out := make([]models.RunRecord, 0, len(s.history))
+	for i := len(s.history) - 1; i >= 0; i-- {
+		if owned[s.history[i].GraphID] {
+			out = append(out, s.history[i])
+		}
 	}
 	return out, nil
 }
 
-// ImportGraphJSON parses a graph from raw JSON and saves it.
-func (s *SchedulerService) ImportGraphJSON(raw string) (models.Graph, error) {
+// ImportGraphJSON parses a graph from raw JSON and saves it to the given server.
+// Any serverId in the JSON is discarded by SaveGraph, which is the point: an
+// exported graph is a shape to reuse, not an assignment to carry between
+// installs.
+func (s *SchedulerService) ImportGraphJSON(serverID, raw string) (models.Graph, error) {
 	var g models.Graph
 	if err := json.Unmarshal([]byte(raw), &g); err != nil {
 		return models.Graph{}, fmt.Errorf("parse graph JSON: %w", err)
 	}
-	return s.SaveGraph(g)
+	return s.SaveGraph(serverID, g)
 }
 
 // ─── Internal helpers ─────────────────────────────────────────────────────────

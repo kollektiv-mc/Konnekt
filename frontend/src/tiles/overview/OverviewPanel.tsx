@@ -52,7 +52,7 @@ export function OverviewPanel({ serverId }: Props) {
         <PlayersSection serverId={serverId} />
         <WorldSection />
         <BackupsSection serverId={serverId} />
-        <SchedulesSection />
+        <SchedulesSection serverId={serverId} />
       </div>
     </div>
   )

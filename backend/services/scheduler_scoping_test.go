@@ -1,6 +1,7 @@
 package services
 
 import (
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -344,5 +345,131 @@ func TestTimeTriggersFireEveryServersGraphs(t *testing.T) {
 
 	if got := awaitRuns(t, &seen, &mu, 2); len(got) != 2 {
 		t.Errorf("the minute ticker ran %v, want both servers' graphs", got)
+	}
+}
+
+// ─── The tile sees, and touches, only its own server's graphs ──────────────
+
+// twoServerScheduler holds one graph per server plus one the migration could
+// not assign, which is the set every scoping rule has to sort correctly.
+func twoServerScheduler(t *testing.T) *SchedulerService {
+	t.Helper()
+	s := newScopedScheduler(t, "a", "a", "b")
+	s.graphs = []models.Graph{
+		playerGraph("onA", "a"),
+		playerGraph("onB", "b"),
+		playerGraph("ambient", ""),
+	}
+	return s
+}
+
+func graphIDs(graphs []models.Graph) []string {
+	ids := make([]string, 0, len(graphs))
+	for _, g := range graphs {
+		ids = append(ids, g.ID)
+	}
+	return ids
+}
+
+func TestGetGraphsListsOneServersGraphs(t *testing.T) {
+	s := twoServerScheduler(t)
+
+	// A is the active server, so the unassigned graph answers to it: that is
+	// the same rule the triggers fire by, and the tile must agree with them.
+	got, err := s.GetGraphs("a")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if ids := graphIDs(got); strings.Join(ids, ",") != "onA,ambient" {
+		t.Errorf("A's graphs = %v, want onA and the unassigned one", ids)
+	}
+
+	got, err = s.GetGraphs("b")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if ids := graphIDs(got); strings.Join(ids, ",") != "onB" {
+		t.Errorf("B's graphs = %v, want onB only", ids)
+	}
+}
+
+func TestSaveGraphStampsTheCallersServer(t *testing.T) {
+	s := twoServerScheduler(t)
+
+	// A graph arriving with somebody else's id does not keep it: the caller is
+	// the tile the user is looking at.
+	saved, err := s.SaveGraph("b", models.Graph{ID: "new", ServerID: "a", Name: "n"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if saved.ServerID != "b" {
+		t.Errorf("saved.ServerID = %q, want b", saved.ServerID)
+	}
+}
+
+func TestImportStampsTheCallersServer(t *testing.T) {
+	s := twoServerScheduler(t)
+
+	// An exported graph is a shape to reuse, not an assignment to carry.
+	g, err := s.ImportGraphJSON("b", `{"id":"imported","name":"n","serverId":"a"}`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if g.ServerID != "b" {
+		t.Errorf("imported graph's server = %q, want b", g.ServerID)
+	}
+}
+
+func TestMutatorsRefuseAnotherServersGraph(t *testing.T) {
+	t.Run("delete", func(t *testing.T) {
+		s := twoServerScheduler(t)
+		if err := s.DeleteGraph("b", "onA"); err != nil {
+			t.Fatal(err)
+		}
+		if ids := graphIDs(s.graphs); len(ids) != 3 {
+			t.Errorf("graphs = %v, want A's graph untouched by B", ids)
+		}
+	})
+
+	t.Run("enable", func(t *testing.T) {
+		s := twoServerScheduler(t)
+		s.graphs[0].Enabled = false
+		if err := s.SetGraphEnabled("b", "onA", true); err != nil {
+			t.Fatal(err)
+		}
+		if s.graphs[0].Enabled {
+			t.Error("B enabled A's graph")
+		}
+	})
+
+	t.Run("run now", func(t *testing.T) {
+		s := twoServerScheduler(t)
+		if _, err := s.RunGraphNow("b", "onA"); err == nil {
+			t.Error("B ran A's graph")
+		}
+	})
+}
+
+func TestGetRunHistoryIsScopedThroughTheGraph(t *testing.T) {
+	s := twoServerScheduler(t)
+	s.history = []models.RunRecord{
+		{ID: "r1", GraphID: "onA"},
+		{ID: "r2", GraphID: "onB"},
+		{ID: "r3", GraphID: "ambient"},
+		{ID: "r4", GraphID: "deleted"},
+	}
+
+	got, err := s.GetRunHistory("a")
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Newest first, A's graphs only, and the record whose graph is gone has no
+	// server to be filed under.
+	ids := make([]string, 0, len(got))
+	for _, r := range got {
+		ids = append(ids, r.ID)
+	}
+	if strings.Join(ids, ",") != "r3,r1" {
+		t.Errorf("A's history = %v, want r3 then r1", ids)
 	}
 }

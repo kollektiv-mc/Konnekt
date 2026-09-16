@@ -431,6 +431,7 @@ export namespace models {
 	export class Graph {
 	    id: string;
 	    name: string;
+	    serverId: string;
 	    enabled: boolean;
 	    nodes: Node[];
 	    edges: Edge[];
@@ -445,6 +446,7 @@ export namespace models {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.id = source["id"];
 	        this.name = source["name"];
+	        this.serverId = source["serverId"];
 	        this.enabled = source["enabled"];
 	        this.nodes = this.convertValues(source["nodes"], Node);
 	        this.edges = this.convertValues(source["edges"], Edge);
