@@ -86,6 +86,7 @@ after them is dated. Newest last, in both groups.
 - [2026-09-08 — The audit brief, and the gate that came out of it](#2026-09-08-the-audit-brief-and-the-gate-that-came-out-of-it)
 - [2026-09-08 — The backup that reported a flush it never made](#2026-09-08-the-backup-that-reported-a-flush-it-never-made)
 - [2026-09-16 — The two thirds of a world the backup never took](#2026-09-16-the-two-thirds-of-a-world-the-backup-never-took)
+- [2026-09-16 — The schedules that followed the sidebar](#2026-09-16-the-schedules-that-followed-the-sidebar)
 
 ---
 
@@ -5581,3 +5582,104 @@ fails five (three of them pre-existing). `gofmt -l`, `go vet ./...`, `go test
 ./...`, `go run ./scripts/coverage-floor` (67.7% against a 49.0% floor) and
 the full `.claude/suite-check.py` table, which was green at 22 of 22 before
 the change and after it.
+
+### 2026-09-16 — The schedules that followed the sidebar
+
+**#236, `type:bug`, `p1`.** A scheduler graph belonged to no server. Every run
+resolved its target from `active_server.json` at fire time, so clicking a
+different server in the sidebar silently re-pointed every schedule the user had
+written, and an event from one server fired every other server's graphs. A
+backup graph authored while A was selected backed up B the moment B was
+clicked.
+
+**Half the issue had already been fixed by other work, and it was the half the
+`p1` rested on.** The filed text argued this was urgent because `execBackup`
+used `e.ServerID` while `execCommand`'s default branch and `execRcon` went
+through the singleton `ServerService`, so one graph could back up B and RCON to
+A. #232 and #239 closed that: `ServerService` holds an `instances` map with
+`instanceFor(serverID)` and every block routes through `e.ServerID`. The issue
+was corrected before the work started rather than left standing, because a
+justification that no longer holds is worse than no justification. What kept it
+at `p1` is the ambient re-pointing and the unfiltered trigger fan-out, both
+reachable in Alpha: Alpha supports multiple saved server configs, and switching
+the sidebar rewrites `active_server.json`.
+
+**The dependency had landed the day before.** #233 put a `serverID` on all nine
+server-scoped events (PR #355, 2026-09-15) and #234 keyed the tile tree by
+server the same day. The filter this needed was mechanically available and
+simply not applied.
+
+**`AttrScope` turned out to be the seam.** The five sites that seeded a run
+(`scheduler_engine.go:111,252,344` and `scheduler_preview.go:32,220`) each read
+`activeServerID()` independently. The scope was already threaded through every
+one of them and already carried a `serverID`, so each `ExecContext` now reads
+its server back off the scope instead of resolving one of its own. A block's
+target and an `@attribute`'s target are the same server by construction; before,
+they were two reads that agreed only because nothing had changed between them,
+and a condition reading one server while its action hits another guards the
+wrong thing. Reverting only the `ExecContext` half makes the test say so
+directly: block server b, attribute server a.
+
+**The plan said `activeServerID` would be deleted, and it was not.** Its absence
+was going to be the proof the ambient read was gone. The migration needs it, and
+so does the fallback for a graph the migration could not assign, so it survives
+with exactly two callers and a comment saying a third would be the ambient read
+coming back. The deletion was a nice proof and not a design constraint; keeping
+the fallback was worth more.
+
+**The migration runs once against real user data, so it went in on its own,
+tests first.** An unassigned graph is given the active server, but only once
+that id resolves against a real config: `active_server.json` is a bare string
+written with no referential check and can name a server that has since been
+deleted. A single configured server wins whatever that file says, because it is
+the only server those graphs can ever have run against. Where neither applies
+the graph is left unassigned and keeps running against the active server the way
+it always has. A graph is never assigned to a server the user does not have,
+which would be a schedule that silently stops and never says so.
+
+**The existing #233 tests caught a regression in the trigger filter that the
+plan had not anticipated.** The first version filtered strictly on the event's
+server id, and the three lifecycle tests #233 shipped went red: they drive
+graphs with no owner through a scheduler with no config service, and every one
+of them was silenced. In production the same shape is a user with several
+servers and no valid `active_server.json`, whose schedules would simply have
+gone quiet. The filter now applies only when both sides are known. An event with
+no id fires everything and logs an error, because an emit site added without one
+is a mistake worth seeing rather than absorbing, and strict filtering there is
+the exact failure `WINGS_ADOPTION.md`'s constraint 2 calls the most maddening.
+Over-firing is the recoverable fault of the two.
+
+**The minute ticker is deliberately not filtered** and now says so: a nightly
+backup on a server nobody has selected is still due at that time, and each graph
+runs against its own server.
+
+**The frontend's hydration latch was a boolean.** #234 keys tiles
+`${tile.id}:${serverId}`, so the scheduler tile remounts on a switch and calls
+`hydrate()` again, which short-circuited: the previous server's graphs stayed on
+screen under the new server's name. It is `hydratedFor` now. It deliberately
+does not bail on a fetch in flight for a *different* server, or a server
+switched to mid-fetch would never load, since the tile only hydrates on mount.
+Two fetches can therefore overlap, so a response is applied only if it is still
+the server being asked about, and a switch clears the graphs rather than showing
+the old ones for the length of the fetch.
+
+**Run history is scoped through the graph rather than by a field.** A `ServerID`
+on `RunRecord` would need a second migration for the 200 records already on
+disk, which could only recover their server through the same join. A record
+whose graph was deleted drops out, losing a row that could not be opened anyway.
+
+**`models.ConfigField`'s `"server"` type went rather than got built.** Nothing
+used it: no `ConfigField`, no block, no editor control. A per-node server
+override would put back the ambiguity this closes.
+
+**Verification.** Five commits, each green on its own. Twenty-four Go tests
+across `scheduler_migrate_test.go` and `scheduler_scoping_test.go`, each
+confirmed to fail against a mutated implementation rather than assumed to:
+reverting the ambient read, reverting only the `ExecContext` half, removing the
+trigger filter, making it strict, extending it to the time ticker, trusting an
+unresolved active id, dropping the single-config fallback, always reporting the
+migration as changed, and removing the migration call. Five new frontend cases
+pin the server dimension of the store, including the overlapping-fetch order.
+`.claude/suite-check.py` green at 22 of 22 before and after. Bindings
+regenerated with the CLI version `go.mod` pins, changing exactly the seven
+signatures and the new field.
