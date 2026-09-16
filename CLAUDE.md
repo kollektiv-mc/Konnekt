@@ -4,12 +4,16 @@ dependency, which `.claude/rules/dependencies.md` prompts you to do.
 
 ## graphify
 
-An AST knowledge graph of this repo lives in `graphify-out/` (gitignored,
-regenerable with `graphify update .`, installed with `pipx install graphify`).
+An optional AST knowledge graph. Reach for it only when a question is about where
+something lives or what touches it across more of the tree than you want to grep;
+reading a file you already know you need is not a graphify question.
 
-- Answer codebase questions with `graphify query "<question>"` first, when
-  `graphify-out/graph.json` exists; `graphify path "<A>" "<B>"` for a
-  relationship, `graphify explain "<concept>"` for one concept. Each returns a
-  scoped subgraph, usually far smaller than raw grep output.
-- Read `graphify-out/GRAPH_REPORT.md` only for broad architecture review.
-- Run `graphify update .` after modifying code.
+The package is `graphifyy` (the command is `graphify`), and `graphify-out/` is
+gitignored, so a fresh clone has the tool only where the cloud environment's setup
+script put it (`kollektiv/scripts/cloud-setup.sh`), and never the graph. Build it
+on demand with `graphify update .`, AST only, no API key, and re-run that after
+changing code. Then `graphify query "<q>"`, `path "<A>" "<B>"`, `explain "<c>"`.
+
+It is precise about structure and shallow about behaviour, so read the source it
+points at rather than quoting it as a conclusion. `agent_docs/CONVENTION_AUDIT.md`
+records how it actually performed against this repo.

@@ -25,9 +25,6 @@ import importlib.util
 import json
 import os
 import re
-import shlex
-import shutil
-import socket
 import subprocess
 import sys
 
@@ -35,43 +32,42 @@ SECTIONS = ("commands", "invariants", "generated", "memory")
 
 PASS, FAIL, SKIP = "pass", "fail", "skip"
 
-# A command whose first word is one of these is shell syntax, not a binary, so
-# the "is it installed" probe below does not apply to it.
-SHELL_KEYWORDS = {
-    "for",
-    "while",
-    "until",
-    "if",
-    "case",
-    "select",
-    "function",
-    "{",
-    "(",
-    "!",
-    "[[",
-    "time",
-    "do",
-    "then",
-}
+HERE = os.path.dirname(os.path.abspath(__file__))
 
-# A tool that drives a project needs that project's manifest to exist before it
-# can do anything. Having the binary installed is not the same as having
-# something for it to run against, and conflating the two turns "this repo is
-# not scaffolded yet" into a wall of red failures.
-#
-# npx is deliberately not here. `npx --yes <package>` fetches and runs a tool
-# against whatever directory it is in, package.json or not, which is how the
-# aislop gate runs in kollektiv, a repo with no JavaScript. Listing it did two
-# wrong things: kollektiv's aislop check was skipped on sight, and in a product
-# an aislop failure with no node_modules installed was reported as
-# "dependencies not installed" rather than as the failure it was.
-PROJECT_MANIFESTS = {
-    "pnpm": "package.json",
-    "npm": "package.json",
-    "yarn": "package.json",
-    "go": "go.mod",
-    "cargo": "Cargo.toml",
-}
+
+def load_sibling(stem):
+    """Import a module vendored beside this file, or None if it is not there.
+
+    Beside rather than on sys.path because that is what vendoring guarantees: the
+    product commits these files into .claude/ and nothing installs them.
+    """
+    path = os.path.join(HERE, f"{stem}.py")
+    if not os.path.isfile(path):
+        return None
+    spec = importlib.util.spec_from_file_location(stem.replace("-", "_"), path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+# The probes are what tell a skip from a failure, which is the one thing this
+# runner exists to get right, so an absent suite-probe.py is fatal. The memory
+# budget degrades to a skip instead, because a report missing one section is
+# still worth reading.
+probe = load_sibling("suite-probe")
+if probe is None:
+    print(
+        "suite-probe.py is not vendored beside this file — re-run"
+        " kollektiv/scripts/sync-runner.sh",
+        file=sys.stderr,
+    )
+    raise SystemExit(2)
+
+posix_shell = probe.posix_shell
+shell_argv = probe.shell_argv
+runnable = probe.runnable
+environmental_failure = probe.environmental_failure
+network_available = probe.network_available
 
 
 class Result:
@@ -113,180 +109,6 @@ def load_manifest(root):
         return None, f"{path} could not be read as JSON: {exc}"
 
 
-# --- availability probes --------------------------------------------------
-
-
-def posix_shell():
-    r"""A POSIX shell to run manifest commands through, or None to use the default.
-
-    Returns None everywhere except Windows, where the default shell is cmd.exe and
-    every manifest in this suite is written in POSIX shell. `for f in scripts/*.sh;
-    do ...; done` is a syntax error there, and `./scripts/foo.sh` is not runnable at
-    all, so a repo whose checks were all fine reported two hard failures and four
-    skips. That is worse than not running: a failure names the code, and this one
-    was naming the operating system.
-
-    subprocess's `executable=` argument is not the fix. On Windows it goes through
-    the same list2cmdline quoting as a plain argument, so a shell under
-    `C:\Program Files` is split at the space and exits 127. The caller uses
-    [shell, "-c", command] instead, which quotes correctly.
-
-    System32\bash.exe is excluded deliberately. That is the WSL launcher, and it
-    runs in a different filesystem namespace where this repo's paths and cwd do not
-    resolve — it would not error, it would check the wrong tree.
-    """
-    if os.name != "nt":
-        return None
-
-    def usable(path):
-        if not path or not os.path.isfile(path):
-            return False
-        system32 = os.path.join(os.environ.get("SystemRoot", r"C:\Windows"), "System32")
-        return not os.path.normcase(path).startswith(os.path.normcase(system32))
-
-    candidates = [os.environ.get("SHELL"), shutil.which("bash"), shutil.which("sh")]
-
-    # Git for Windows ships bash, and git is already a hard requirement of the
-    # generated section, so wherever git is, a usable shell is a sibling.
-    git = shutil.which("git")
-    if git:
-        d = os.path.dirname(git)
-        for up in (1, 2, 3):
-            base = os.path.abspath(os.path.join(d, *([os.pardir] * up)))
-            candidates.append(os.path.join(base, "bin", "bash.exe"))
-
-    for c in candidates:
-        if usable(c):
-            return c
-    return None
-
-
-def shell_argv(command, shell):
-    """subprocess arguments for running `command` through `shell` (or the default)."""
-    if shell is None:
-        return {"args": command, "shell": True}
-    return {"args": [shell, "-c", command]}
-
-
-def runnable(run, cwd, root, shell=None):
-    """Whether a command has any chance of running, and why not if it does not.
-
-    Checked before running rather than after, so an absent toolchain is reported
-    as a skip instead of executing half a pipeline and reporting the wreckage as
-    a failure. Two different absences count:
-
-    The binary is not installed. And — the one that matters most right now — the
-    binary is installed but the project it drives does not exist yet. Kommands is
-    pre-scaffold: it has no package.json, and every one of its health.commands
-    entries is a pnpm invocation. Without this second probe all four report as
-    failures, when what they are is unrunnable. docs/adopting.md says exactly
-    that: an entry that cannot run yet is skipped with a reason, never failed and
-    never passed.
-
-    Returns (True, "") or (False, reason).
-    """
-    first = run.strip().split()[0] if run.strip() else ""
-    if not first or first in SHELL_KEYWORDS:
-        return True, ""  # shell syntax; let the shell decide
-    if not re.fullmatch(r"[A-Za-z0-9_.\-/]+", first):
-        return True, ""  # a variable expansion or similar; not ours to judge
-
-    # A command with a path in it is a file, not something to look up on PATH.
-    # shutil.which resolves a relative path against the *process* cwd rather than
-    # the entry's, and on Windows it consults PATHEXT, so a repo's own
-    # ./scripts/foo.sh came back None there and every such entry reported as
-    # "command not available" — a skip that named the wrong reason, for a script
-    # sitting right there in the tree.
-    if "/" in first or os.sep in first:
-        if os.path.isfile(os.path.join(cwd, first)):
-            return True, ""
-        return False, f"no such file: {first}"
-
-    # Probed through the same shell that will run the command, when there is one.
-    # shutil.which answers for this process: on Windows it consults PATHEXT and so
-    # cannot see a shell script the shell resolves happily. Asking two different
-    # things what "available" means is how a runnable check gets reported as a
-    # skip, and a skip is the one result nobody follows up on.
-    if shell is None:
-        found = shutil.which(first) is not None
-    else:
-        found = (
-            subprocess.run(
-                [shell, "-c", "command -v " + shlex.quote(first)],
-                capture_output=True,
-                check=False,
-            ).returncode
-            == 0
-        )
-    if not found:
-        return False, f"command not available: {first}"
-
-    tool = os.path.basename(first)
-    manifest = PROJECT_MANIFESTS.get(tool)
-    if manifest and find_upwards(manifest, cwd, root) is None:
-        return False, f"no {manifest} at or above {os.path.relpath(cwd, root)}"
-    return True, ""
-
-
-def environmental_failure(run, cwd, root):
-    """Why a failure was the environment's fault rather than the code's, or None.
-
-    Applied only after a command has actually failed, never before it runs.
-    Pre-skipping anything that looked unrunnable was the obvious design and the
-    wrong one: Konnekt's gen:tokens is a plain node script with no imports, so it
-    regenerates correctly with node_modules absent. Skipping it on sight threw
-    away a check that genuinely passes.
-
-    So the rule is: run it, and only reinterpret the failure. eslint, tsc and
-    vitest are all dependencies — with nothing installed they fail for a reason
-    that has nothing to do with the code they were meant to check, and calling
-    that a failing check is the same lie in the other direction as calling an
-    empty grep a pass.
-    """
-    first = run.strip().split()[0] if run.strip() else ""
-    tool = os.path.basename(first)
-    if (
-        PROJECT_MANIFESTS.get(tool) == "package.json"
-        and find_upwards("node_modules", cwd, root) is None
-    ):
-        return "dependencies not installed (no node_modules)"
-    return None
-
-
-def find_upwards(name, cwd, root):
-    """Find `name` in cwd, then upwards as far as the repo root. Path or None.
-
-    Upwards because a workspace puts the manifest — and often the installed
-    dependencies — above the directory a command runs in. Konnekt runs pnpm from
-    frontend/ and go from the root out of one health.commands list.
-    """
-    current = os.path.abspath(cwd)
-    root = os.path.abspath(root)
-    while True:
-        candidate = os.path.join(current, name)
-        if os.path.exists(candidate):
-            return candidate
-        if current == root or current == os.path.dirname(current):
-            return None
-        current = os.path.dirname(current)
-
-
-def network_available(timeout=3.0):
-    """Best-effort reachability probe for requiresNetwork entries.
-
-    Probed before running the generator rather than after it fails, so an offline
-    machine reports a skip instead of a generator crash. Use --offline where the
-    answer is known; this probe is a convenience, not an authority.
-    """
-    for host, port in (("1.1.1.1", 443), ("8.8.8.8", 53)):
-        try:
-            with socket.create_connection((host, port), timeout=timeout):
-                return True
-        except OSError:
-            continue
-    return False
-
-
 # --- sections -------------------------------------------------------------
 
 
@@ -317,7 +139,7 @@ def run_commands(root, entries):
         if proc.returncode == 127:
             results.append(Result("commands", name, SKIP, "command not found"))
         elif proc.returncode != 0:
-            why = environmental_failure(run, cwd, root)
+            why = environmental_failure(run, cwd, root, proc.stdout + proc.stderr)
             if why:
                 results.append(Result("commands", name, SKIP, why))
             else:
@@ -481,7 +303,9 @@ def run_generated(root, entries, offline):
             results.append(Result("generated", name, SKIP, "command not found"))
             continue
         if proc.returncode != 0:
-            why = environmental_failure(regenerate, cwd, root)
+            why = environmental_failure(
+                regenerate, cwd, root, proc.stdout + proc.stderr
+            )
             if why:
                 results.append(Result("generated", name, SKIP, why))
             else:
@@ -526,21 +350,18 @@ def run_generated(root, entries, offline):
 def run_memory(root, config):
     """The always-loaded agent memory budget, from the module beside this file.
 
-    Vendored as a pair by sync-runner.sh. A product carrying one half and not
-    the other has a stale vendoring: a skip with a reason, never a crash and
-    never a pass.
+    Vendored as a trio by sync-runner.sh. A product carrying some of it and not
+    the rest has a stale vendoring: a skip with a reason, never a crash and never
+    a pass.
     """
     name = "always-loaded memory"
-    path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "suite-memory.py")
-    if not os.path.isfile(path):
+    module = load_sibling("suite-memory")
+    if module is None:
         return [
             Result(
                 "memory", name, SKIP, "suite-memory.py is not vendored beside this file"
             )
         ]
-    spec = importlib.util.spec_from_file_location("suite_memory", path)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
     return [Result("memory", name, *module.evaluate(root, config))]
 
 
