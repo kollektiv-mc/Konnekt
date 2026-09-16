@@ -632,6 +632,33 @@ what *is* closed.
   immediately after a scroll can still catch it mid-chunk. Raising the quiet
   window from 500ms to 1000ms was measured and changed nothing, so it stayed.
 
+**P3 — The console pane does not keep your place in history across a reflow**
+(filed 2026-09-16)
+
+#166's anchoring is closed for the case that was losing data: a pane following
+the tail now re-pins when its geometry changes, so collapsing the quick commands
+rail, resizing the tile or resizing the window no longer detaches a live log.
+What is still open is the other half of the same reflow. A reader who has
+scrolled *up* still lands on a different line afterwards, because the rows
+rewrap and the browser keeps `scrollTop` rather than the content under it.
+
+Not fixed here, deliberately. Restoring a position rather than an edge means
+anchoring to a row: recording the topmost visible line and its offset on every
+scroll event, then restoring that row after the reflow. The recording is the
+problem, not the restoring, because it is DOM work on the hottest path this tile
+has, a live server log appending continuously. #166 offered both this and the
+re-pin as acceptable fixes and the re-pin is the one that stops the silent
+failure, so the cheap half shipped and the expensive half is written down.
+
+Worth stating what is *not* on this list: a reflow that shortens the content can
+clamp `scrollTop` to the new bottom, and `handleScroll` then re-arms the tail.
+That looks like a silent re-arm and was nearly filed as one. It is not a defect.
+The clamp only reaches the threshold when the reader was already within 40px of
+the end, and "at the bottom means follow" is the same rule a manual scroll
+obeys. Making it an exception would need a flag distinguishing a clamped scroll
+event from a real one, which swallows a genuine re-arm whenever the reflow fires
+no scroll event at all.
+
 **P3 — Dependency resolution is serial, unbounded in time, and silent while it
 runs** (filed 2026-08-31)
 

@@ -5,6 +5,9 @@ import { useSettingsStore } from '../../stores/useSettingsStore'
 import { useServerStore } from '../../stores/useServerStore'
 import { errMsg } from '../../lib/ipc'
 import { Segmented } from '../../components/ui/Segmented'
+import { Icon } from '../../components/ui/Icon'
+import { IconButton } from '../../components/ui/IconButton'
+import { ChevronLeft, ChevronRight } from '../../lib/icons'
 import { QuickCommandsPanel } from '../../components/QuickCommandsPanel'
 import type { TileProps } from '../../types'
 import type { LogLine, ManagerOutcome } from '../../stores/useConsoleStore'
@@ -111,12 +114,23 @@ export function ConsoleTile({ serverId, maximized }: TileProps) {
   const quickCommandsCollapsed = useSettingsStore((s) => s.settings.consoleQuickCommandsCollapsed)
   const updateSettings = useSettingsStore((s) => s.update)
   const [input, setInput] = useState('')
-  const [autoScroll, setAutoScroll] = useState(true)
+  const [autoScroll, setAutoScrollState] = useState(true)
   const [filterOpen, setFilterOpen] = useState(false)
   const [query, setQuery] = useState('')
   const [levelFilter, setLevelFilter] = useState<LevelFilter>('all')
   const [sendError, setSendError] = useState<string | null>(null)
-  const scrollRef = useRef<HTMLDivElement>(null)
+  const scrollRef = useRef<HTMLDivElement | null>(null)
+
+  // The tail state is mirrored into a ref written at call time, not synced in
+  // an effect: a ResizeObserver callback can fire between React's commit and
+  // the effect that would have updated it, so an effect-synced ref is read
+  // stale exactly when the observer needs it. Same reason, same shape as
+  // `tiles/mods/useGridPageAnimation.ts`.
+  const autoScrollRef = useRef(true)
+  const setAutoScroll = useCallback((v: boolean) => {
+    autoScrollRef.current = v
+    setAutoScrollState(v)
+  }, [])
   const running = useServerStore((s) => s.status.running)
   const reachable = useServerStore((s) => s.reachable)
   // A stopped server and an unreachable backend both mean "this console cannot
@@ -144,6 +158,40 @@ export function ConsoleTile({ serverId, maximized }: TileProps) {
     if (!el) return
     const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 40
     setAutoScroll(atBottom)
+  }, [setAutoScroll])
+
+  // Re-pin the tail whenever the pane's geometry changes, which the effect
+  // above cannot do: its deps are the lines and the tail state, and a reflow
+  // is neither.
+  //
+  // Log rows wrap — each is a plain `flex gap-2` with no `whitespace-nowrap` —
+  // so anything that changes the pane's width changes how many rows the
+  // content occupies, and with it `scrollHeight`. Collapsing the quick
+  // commands rail hands this column the rail's width; resizing the tile on the
+  // canvas or the window does the same thing more slowly. The browser keeps
+  // `scrollTop` across that reflow, so a pane that was following the tail
+  // lands short of it, and `handleScroll` then re-derives the tail state from
+  // wherever it ended up. That is how following a live log got dropped with
+  // nothing on screen to say so, and why the jump-to-bottom button below was
+  // needed several times a session.
+  //
+  // A callback ref rather than an effect with a dependency array: the pane is
+  // a different element in the maximized and canvas branches of this tile, so
+  // an effect keyed on anything but the element itself observes a detached
+  // node after a maximize. Guarded for jsdom, which has no ResizeObserver, the
+  // way `hooks/useElementSize` is. Writing `scrollTop` cannot resize the
+  // observed element, so there is no observer loop to fall into.
+  const observerRef = useRef<ResizeObserver | null>(null)
+  const attachPane = useCallback((el: HTMLDivElement | null) => {
+    observerRef.current?.disconnect()
+    observerRef.current = null
+    scrollRef.current = el
+    if (!el || typeof ResizeObserver === 'undefined') return
+    const observer = new ResizeObserver(() => {
+      if (autoScrollRef.current) el.scrollTop = el.scrollHeight
+    })
+    observer.observe(el)
+    observerRef.current = observer
   }, [])
 
   // A rejected command used to vanish into `.catch(console.error)`, so a typo'd
@@ -215,7 +263,7 @@ export function ConsoleTile({ serverId, maximized }: TileProps) {
       </div>
 
       <div
-        ref={scrollRef}
+        ref={attachPane}
         onScroll={handleScroll}
         className="min-h-0 flex-1 overflow-y-auto px-3 py-2 font-mono text-xs leading-5 select-text"
       >
@@ -325,26 +373,34 @@ export function ConsoleTile({ serverId, maximized }: TileProps) {
     <div className="flex h-full min-h-0">
       {consoleColumn}
       {quickCommandsCollapsed ? (
+        // A full-height strip rather than an IconButton: with the rail closed
+        // this edge is the only thing that reopens it, and a 24px box in the
+        // middle of it would be a smaller target than the strip already is.
         <button
+          type="button"
           onClick={() => updateSettings({ consoleQuickCommandsCollapsed: false }).catch(() => {})}
           className="border-border-subtle text-text-faint hover:text-text-secondary border-l-hairline flex w-6 shrink-0 items-center justify-center transition-colors"
           title="Show quick commands"
+          aria-label="Show quick commands"
         >
-          <span className="font-mono text-[11px] select-none">‹</span>
+          <Icon icon={ChevronLeft} />
         </button>
       ) : (
         <div className="border-border-subtle border-l-hairline flex w-56 shrink-0 flex-col">
           <div className="border-border-subtle border-b-hairline flex shrink-0 items-center justify-between px-3 py-2">
             <span className="text-text-secondary font-title text-xs font-medium">Commands</span>
-            <button
+            {/* Was a bare › at text-xs with no box: the hit target was whatever
+                the glyph happened to occupy, a few pixels across, against the
+                full-height strip that reopens the rail. IconButton is the box
+                the rest of the app's panel controls share. */}
+            <IconButton
               onClick={() =>
                 updateSettings({ consoleQuickCommandsCollapsed: true }).catch(() => {})
               }
-              className="text-text-faint hover:text-text-secondary text-xs transition-colors"
               title="Hide quick commands"
             >
-              ›
-            </button>
+              <Icon icon={ChevronRight} />
+            </IconButton>
           </div>
           <div className="min-h-0 flex-1 overflow-hidden">
             <QuickCommandsPanel serverId={serverId} columns={1} />

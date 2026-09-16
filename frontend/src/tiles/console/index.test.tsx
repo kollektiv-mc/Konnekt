@@ -3,6 +3,7 @@ import { render, screen, fireEvent, waitFor, cleanup } from '@testing-library/re
 import * as App from '../../../wailsjs/go/main/App'
 import { useServerStore } from '../../stores/useServerStore'
 import { useConsoleStore } from '../../stores/useConsoleStore'
+import { useSettingsStore } from '../../stores/useSettingsStore'
 import type { ServerStatus } from '../../types'
 import { ConsoleTile } from './index'
 
@@ -184,5 +185,144 @@ describe('ConsoleTile manager lines', () => {
 
     expect(screen.getByText('[12:00:01] [Server thread/ERROR]: boom')).toBeTruthy()
     expect(screen.queryByText('Backing up the server')).toBeNull()
+  })
+})
+
+// #166. Two separate faults in the quick-commands toggle, and the second one is
+// not really about the toggle at all.
+//
+// jsdom has no ResizeObserver and no layout, so both halves are driven rather
+// than measured: the stub below hands back the callback *and* the element the
+// component asked it to observe, which is what lets the assertions name the
+// real pane without a selector that would drift with the markup. `scrollTop`
+// is a plain settable property here and jsdom never clamps it, so the pin is
+// exactly observable; `scrollHeight` and `clientHeight` read 0 until defined.
+class StubResizeObserver {
+  /** Runs the callback the component registered, as a resize would. */
+  static fire: (() => void) | null = null
+  /** The element the component asked to observe. */
+  static target: HTMLElement | null = null
+
+  constructor(cb: () => void) {
+    StubResizeObserver.fire = () => cb()
+  }
+  observe(el: Element) {
+    StubResizeObserver.target = el as HTMLElement
+  }
+  disconnect() {}
+}
+
+/** Give an element the geometry jsdom will not compute for it. */
+const setGeometry = (el: HTMLElement, scrollHeight: number, clientHeight: number) => {
+  Object.defineProperty(el, 'scrollHeight', { value: scrollHeight, configurable: true })
+  Object.defineProperty(el, 'clientHeight', { value: clientHeight, configurable: true })
+}
+
+describe('ConsoleTile tail anchoring across geometry changes', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    vi.stubGlobal('ResizeObserver', StubResizeObserver)
+    StubResizeObserver.fire = null
+    StubResizeObserver.target = null
+    useServerStore.setState({ status: ONLINE, reachable: true })
+    useConsoleStore.setState({ lines: [] })
+    useConsoleStore
+      .getState()
+      .batchAppend([{ timestamp: '12:00:00', line: '[12:00:00] [Server thread/INFO]: Done' }])
+  })
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
+  const renderAndGetPane = () => {
+    render(<ConsoleTile serverId="srv1" />)
+    const pane = StubResizeObserver.target
+    expect(pane).not.toBeNull()
+    return pane as HTMLElement
+  }
+
+  // The failure this fixes: collapsing the rail, resizing the tile or resizing
+  // the window reflows the wrapped rows, the browser keeps scrollTop, and the
+  // pane silently stops following the log.
+  it('re-pins to the bottom when the pane resizes while following', () => {
+    const pane = renderAndGetPane()
+    setGeometry(pane, 5000, 400)
+    pane.scrollTop = 0
+
+    StubResizeObserver.fire?.()
+
+    expect(pane.scrollTop).toBe(5000)
+  })
+
+  // The other half of not losing the user's place: a reader who has scrolled
+  // up is not yanked back by a resize they did not ask for.
+  it('leaves the pane alone when the user has scrolled away from the tail', () => {
+    const pane = renderAndGetPane()
+    setGeometry(pane, 5000, 400)
+    pane.scrollTop = 1000
+    fireEvent.scroll(pane)
+
+    StubResizeObserver.fire?.()
+
+    expect(pane.scrollTop).toBe(1000)
+  })
+
+  // Scrolling back to the bottom re-arms it, so the anchoring follows again.
+  it('resumes re-pinning once the user returns to the tail', () => {
+    const pane = renderAndGetPane()
+    setGeometry(pane, 5000, 400)
+    pane.scrollTop = 1000
+    fireEvent.scroll(pane)
+    pane.scrollTop = 4600
+    fireEvent.scroll(pane)
+    pane.scrollTop = 0
+
+    StubResizeObserver.fire?.()
+
+    expect(pane.scrollTop).toBe(5000)
+  })
+
+  // The guard that keeps this renderable where ResizeObserver does not exist.
+  it('renders without a ResizeObserver at all', () => {
+    vi.unstubAllGlobals()
+    expect(() => render(<ConsoleTile serverId="srv1" />)).not.toThrow()
+  })
+})
+
+// The control that closes the rail was a bare glyph with no box, against the
+// full-height strip that opens it: easy to open, hard to close.
+describe('ConsoleTile quick-commands toggle', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    vi.stubGlobal('ResizeObserver', StubResizeObserver)
+    useServerStore.setState({ status: ONLINE, reachable: true })
+    useConsoleStore.setState({ lines: [] })
+  })
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
+  const setCollapsed = (collapsed: boolean) =>
+    useSettingsStore.setState((s) => ({
+      settings: { ...s.settings, consoleQuickCommandsCollapsed: collapsed },
+    }))
+
+  it('gives the close control the shared 24px box', () => {
+    setCollapsed(false)
+    render(<ConsoleTile serverId="srv1" maximized />)
+
+    const close = screen.getByRole('button', { name: 'Hide quick commands' })
+    expect(close.className).toContain('h-6')
+    expect(close.className).toContain('w-6')
+  })
+
+  it('names the control that reopens the rail', () => {
+    setCollapsed(true)
+    render(<ConsoleTile serverId="srv1" maximized />)
+
+    expect(screen.getByRole('button', { name: 'Show quick commands' })).toBeTruthy()
+    expect(screen.queryByRole('button', { name: 'Hide quick commands' })).toBeNull()
   })
 })
