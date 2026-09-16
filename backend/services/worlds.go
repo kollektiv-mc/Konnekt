@@ -300,9 +300,9 @@ func (s *WorldService) OpenWorldFolder(serverID, name string) error {
 	return OpenPath(filepath.Join(cfg.WorkingDir, name))
 }
 
-// BackupWorld zips the named world folder via BackupService. Only that folder:
-// the Paper/Spigot dimension siblings that DeleteWorld, RenameWorld and
-// DuplicateWorld walk are not included in the archive yet (#26).
+// BackupWorld zips the named world and its Paper/Spigot dimension siblings via
+// BackupService, the same set DeleteWorld, RenameWorld and DuplicateWorld walk
+// (#26).
 func (s *WorldService) BackupWorld(serverID, name string) (models.Backup, error) {
 	if err := validateWorldName(name); err != nil {
 		return models.Backup{}, err
@@ -332,6 +332,42 @@ func worldSiblings(workingDir, name string) []string {
 		paths = append(paths, filepath.Join(workingDir, name+suffix))
 	}
 	return paths
+}
+
+// existingWorldRoots is worldSiblings filtered to the folders actually on disk.
+// Delete and rename can be handed a path that is not there and skip it; a zip
+// cannot, so the caller that archives a world asks for this set instead.
+func existingWorldRoots(workingDir, name string) []string {
+	all := worldSiblings(workingDir, name)
+	roots := make([]string, 0, len(all))
+	for _, path := range all {
+		if info, err := os.Stat(path); err == nil && info.IsDir() {
+			roots = append(roots, path)
+		}
+	}
+	return roots
+}
+
+// describeWorldRoots names the dimensions a root set covers, for the console
+// narration. The kind is read by trimming the requested world's own name rather
+// than through classifyWorldDir, so a world genuinely called "world_nether" is
+// described as its own overworld instead of as somebody else's nether.
+func describeWorldRoots(name string, roots []string) string {
+	labels := make([]string, 0, len(roots))
+	for _, root := range roots {
+		switch strings.TrimPrefix(filepath.Base(root), name) {
+		case "_nether":
+			labels = append(labels, "nether")
+		case "_the_end":
+			labels = append(labels, "the end")
+		default:
+			labels = append(labels, "overworld")
+		}
+	}
+	if len(labels) == 0 {
+		return "no dimensions"
+	}
+	return strings.Join(labels, ", ")
 }
 
 func buildDimension(path, kind string) models.WorldDimension {

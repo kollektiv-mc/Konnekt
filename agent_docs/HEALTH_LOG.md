@@ -85,6 +85,7 @@ after them is dated. Newest last, in both groups.
 - [2026-09-07 — The restore that failed as a backup, and four smaller repairs](#2026-09-07-the-restore-that-failed-as-a-backup-and-four-smaller-repairs)
 - [2026-09-08 — The audit brief, and the gate that came out of it](#2026-09-08-the-audit-brief-and-the-gate-that-came-out-of-it)
 - [2026-09-08 — The backup that reported a flush it never made](#2026-09-08-the-backup-that-reported-a-flush-it-never-made)
+- [2026-09-16 — The two thirds of a world the backup never took](#2026-09-16-the-two-thirds-of-a-world-the-backup-never-took)
 
 ---
 
@@ -5507,3 +5508,76 @@ the number, and treat a 100% file as a question rather than a result.
 
 **Verification.** `gofmt -l`, `go vet ./...`, `go test ./...`, `go run
 ./scripts/coverage-floor`, `aislop ci` at 100, and the mutation runs above.
+
+### 2026-09-16 — The two thirds of a world the backup never took
+
+**#26, `type:bug`, `p1`.** On Paper, Spigot and Bukkit a world is three
+folders: `world`, `world_nether`, `world_the_end`. `BackupWorld` passed the
+base name straight through to `CreateWorldBackup`, which zipped
+`WorkingDir/<name>` and nothing else, so on those servers a world backup held
+the overworld alone. Restoring one put the overworld back beside whatever
+nether happened to be on disk. Vanilla was never affected: it keeps `DIM-1`
+and `DIM1` inside the overworld folder, so they came along for free, which is
+most likely why this survived as long as it did.
+
+**It was silent in the worst possible place.** `ListWorlds` groups the
+siblings into one `WorldSystem` (`worlds.go:39`) and the Worlds tile draws
+them as moons orbiting the planet (`scene/Planet.tsx:247`). The user saw
+three dimensions and pressed Backup on the planet holding them. Nothing in
+the archive, the tile or the console said that two of the three had been
+skipped.
+
+**`worldSiblings` already existed.** `DeleteWorld`, `RenameWorld` and
+`DuplicateWorld` have walked the sibling set since the Worlds tile shipped
+(`worlds.go:328`). `BackupWorld` was the one sibling-aware operation that
+never adopted it, and its own doc comment said so: "Only that folder ...
+not included in the archive yet (#26)". The 2026-08-21 sweep had flagged
+that comment as overstating today's behavior; it was understating it, in
+the sense that the comment was the only place the gap was written down.
+
+**A world archive is now multi-root.** `CreateWorldBackup` zips every
+existing sibling under its own folder name, so the archive holds `world/`
+and `world_nether/` side by side where it used to hold the overworld
+folder's *contents* at the zip root. `zipDirWithProgress` and the new
+`zipRootsWithProgress` share one tree writer, and progress is a single
+0-100 across every root rather than one sweep per root: the caller emits
+it straight to the UI, and a bar that restarts twice reads as three
+backups rather than one.
+
+**Archives written before this still restore, and that is the part worth
+getting right.** The layout is read off the *extracted* tree, not the zip:
+a `level.dat` at the root can only be the old layout and settles the case
+even for an old-layout world that contains a subfolder named after itself;
+with no root `level.dat`, a folder named after the world is the new layout;
+anything else reads as the old layout, so an archive the check does not
+recognise restores exactly the way it did before. The first version read
+this by opening the zip a second time *before* extracting, which passed its
+own tests and quietly reclassified a corrupt archive from "Restore failed
+while extracting" to "while reading the archive".
+`TestRestoreWorldBackupReportsStagingAndExtractFailures` caught it, which is
+the second time that test has earned its keep.
+
+**Two renames are not one atomic step**, so the guarantee is the weaker one
+that still leaves a bootable server: every dimension is the restored one, or
+every dimension is the one that was there before. `swapWorldDirs` puts back
+what it had already swapped before reporting a failure, so a Paper world
+never ends up with a restored overworld beside a nether it was not restored
+with. `renameIntoPlace` is the seam that test drives, the same shape as
+`mkdirTempRestore` and for the same reason: the rollback matters most in the
+case that is hardest to produce for real.
+
+**A dimension the archive does not hold is left alone, deliberately.** The
+other reading, "make the world exactly what the archive says", deletes the
+nether beside an overworld-only archive written before this change. That is
+data the restore was never asked to touch, and unlike a stale dimension it
+is not recoverable once the aside copy is cleaned up. Leaving it is the
+recoverable failure of the two, and the restore now narrates which
+dimensions it replaced so the choice is visible rather than silent.
+
+**Verification.** Nine tests in `backup_dimensions_test.go`, each confirmed
+to fail against the unfixed tree rather than assumed to: reverting the write
+side alone fails five, and disabling the multi-root restore detection alone
+fails five (three of them pre-existing). `gofmt -l`, `go vet ./...`, `go test
+./...`, `go run ./scripts/coverage-floor` (67.7% against a 49.0% floor) and
+the full `.claude/suite-check.py` table, which was green at 22 of 22 before
+the change and after it.

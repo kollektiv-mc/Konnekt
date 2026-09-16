@@ -349,6 +349,12 @@ var statBackup = os.Stat
 // that used to return with no event and no console line (#280).
 var mkdirTempRestore = os.MkdirTemp
 
+// renameIntoPlace is os.Rename, swapped by tests to fail one dimension of a
+// multi-dimension restore and prove the ones already swapped are put back. Same
+// seam as mkdirTempRestore, for the same reason: the rollback matters most in the
+// case that is hardest to produce for real.
+var renameIntoPlace = os.Rename
+
 // failBackup is every way CreateBackup and CreateWorldBackup can fail once
 // backup:started has gone out. The frontend shows an in-progress row from that
 // event and clears it only on backup:completed or backup:failed, so a path that
@@ -476,13 +482,31 @@ func (s *BackupService) CreateBackup(serverID string) (models.Backup, error) {
 // CreateWorldBackup zips an arbitrary world folder (by name) so the Worlds tile
 // can back up any world, not just the active one. Each world's backups are
 // stored under worlds/{worldName}/ for clean organisation.
+//
+// The archive holds every dimension of the world, not just the overworld (#26).
+// Paper, Spigot and Bukkit keep the nether and the end in sibling folders
+// (world_nether, world_the_end); zipping only the named folder dropped both, and
+// dropped them quietly, because the Worlds tile draws those siblings as moons
+// around the planet whose Backup button had just skipped them. Vanilla's DIM-1
+// and DIM1 live inside the overworld folder and were never affected.
+//
+// This makes a world archive multi-root: "world/" and "world_nether/" side by
+// side, where it used to be the overworld folder's contents at the zip root.
+// Archives written before this still restore: stagedLayoutIsMultiRoot tells the
+// two layouts apart for the restore, worldFilesAreMultiRoot for the read.
 func (s *BackupService) CreateWorldBackup(serverID, worldName string) (models.Backup, error) {
 	cfg, err := s.config.GetServerConfig(serverID)
 	if err != nil {
 		return models.Backup{}, err
 	}
-	worldDir := filepath.Join(cfg.WorkingDir, worldName)
-	if _, err := os.Stat(worldDir); err != nil {
+	// Checked through existingWorldRoots rather than a bare Stat on the world
+	// folder: a path that is there but is not a directory passes a Stat and
+	// contributes no root, and zipping an empty root set would report a backup
+	// that archived nothing. worldSiblings puts the named folder first, so a
+	// roots[0] by any other name means only siblings are there, and siblings
+	// alone are not a world.
+	roots := existingWorldRoots(cfg.WorkingDir, worldName)
+	if len(roots) == 0 || filepath.Base(roots[0]) != worldName {
 		return models.Backup{}, fmt.Errorf("world folder %q not found", worldName)
 	}
 
@@ -499,7 +523,7 @@ func (s *BackupService) CreateWorldBackup(serverID, worldName string) (models.Ba
 	destPath := filepath.Join(backupDir, filename)
 
 	s.bus.Emit(EventBackupStarted, map[string]string{"serverID": serverID, "filename": filename})
-	s.narrate(serverID, fmt.Sprintf("Backing up world %q to %s", worldName, filename))
+	s.narrate(serverID, fmt.Sprintf("Backing up world %q (%s) to %s", worldName, describeWorldRoots(worldName, roots), filename))
 
 	resume, err := s.quiesce(serverID)
 	if err != nil {
@@ -520,7 +544,7 @@ func (s *BackupService) CreateWorldBackup(serverID, worldName string) (models.Ba
 	}
 
 	// Closed before the Stat below, for the same reason as CreateBackup.
-	zipErr := zipDirWithProgress(worldDir, dest, onProgress)
+	zipErr := zipRootsWithProgress(roots, dest, onProgress)
 	if closeErr := dest.Close(); zipErr == nil {
 		zipErr = closeErr
 	}
@@ -591,7 +615,7 @@ func (s *BackupService) RestoreBackup(serverID, filename string) error {
 		_ = os.RemoveAll(aside) //nolint:errcheck // best-effort cleanup of the pre-restore backup dir; restore already succeeded
 		s.narrateDone(serverID, "Restore finished, server files replaced")
 	} else {
-		// World-only restore: replace the target world folder.
+		// World-only restore: replace the world's dimension folders.
 		// For named world backups use the stored world name; legacy server
 		// backups (kind="server" but pre-split) use the active world path.
 		var targetDir string
@@ -605,9 +629,11 @@ func (s *BackupService) RestoreBackup(serverID, filename string) error {
 		}
 
 		worldLabel := filepath.Base(targetDir)
+		parentDir := filepath.Dir(targetDir)
+
 		s.narrate(serverID, fmt.Sprintf("Restoring world %q from %s", worldLabel, filename))
 
-		tmp, err := mkdirTempRestore(filepath.Dir(targetDir), "konnekt-restore-*")
+		tmp, err := mkdirTempRestore(parentDir, "konnekt-restore-*")
 		if err != nil {
 			return s.failRestore(serverID, "preparing a staging directory", err)
 		}
@@ -617,20 +643,153 @@ func (s *BackupService) RestoreBackup(serverID, filename string) error {
 			return s.failRestore(serverID, "extracting", err)
 		}
 
-		aside := targetDir + ".bak-" + time.Now().Format("20060102-150405")
-		if err := os.Rename(targetDir, aside); err != nil && !os.IsNotExist(err) {
-			return s.failRestore(serverID, "moving the current files aside", err)
+		// One swap for the old layout, where the staging dir IS the world folder;
+		// one per dimension for the new one. Only what the archive holds is
+		// replaced: an archive written before #26 carries the overworld alone, and
+		// deleting the nether beside it because it is not in the zip would destroy
+		// data the user never asked this restore to touch. A dimension the archive
+		// does not mention is left exactly where it is.
+		swaps := []worldSwap{{staged: tmp, target: targetDir}}
+		if stagedLayoutIsMultiRoot(tmp, worldLabel) {
+			swaps, err = stagedWorldSwaps(tmp, parentDir)
+			if err != nil {
+				return s.failRestore(serverID, "reading the extracted archive", err)
+			}
 		}
-		if err := os.Rename(tmp, targetDir); err != nil {
-			_ = os.Rename(aside, targetDir) //nolint:errcheck // best-effort rollback; err below is already the reported failure
-			return s.failRestore(serverID, "swapping files, previous state kept", err)
+
+		restored, err := s.swapWorldDirs(serverID, swaps)
+		if err != nil {
+			return err
 		}
-		_ = os.RemoveAll(aside) //nolint:errcheck // best-effort cleanup of the pre-restore backup dir; restore already succeeded
-		s.narrateDone(serverID, fmt.Sprintf("Restore finished, world %q replaced", worldLabel))
+		s.narrateDone(serverID, fmt.Sprintf("Restore finished, world %q replaced (%s)",
+			worldLabel, describeWorldRoots(worldLabel, restored)))
 	}
 
 	s.bus.Emit(EventRestoreCompleted, map[string]string{"serverID": serverID, "filename": filename})
 	return nil
+}
+
+// worldSwap is one directory the restore puts in place: a folder staged under the
+// extraction dir, and where it belongs once the swap succeeds.
+type worldSwap struct{ staged, target string }
+
+// stagedWorldSwaps pairs each top-level folder of an extracted multi-root world
+// archive with its destination beside the other worlds. Files at the staging root
+// are ignored: a multi-root archive puts everything under a dimension folder, so
+// anything loose there did not come from one.
+func stagedWorldSwaps(tmp, parentDir string) ([]worldSwap, error) {
+	entries, err := os.ReadDir(tmp)
+	if err != nil {
+		return nil, err
+	}
+	swaps := make([]worldSwap, 0, len(entries))
+	for _, e := range entries {
+		if !e.IsDir() {
+			continue
+		}
+		swaps = append(swaps, worldSwap{
+			staged: filepath.Join(tmp, e.Name()),
+			target: filepath.Join(parentDir, e.Name()),
+		})
+	}
+	if len(swaps) == 0 {
+		return nil, errors.New("the archive holds no world folders")
+	}
+	return swaps, nil
+}
+
+// swapWorldDirs moves every staged folder into place, moving whatever is already
+// there aside first, and returns the targets it replaced.
+//
+// Two or more renames cannot be one atomic step, so the guarantee here is the
+// weaker one that still leaves a bootable server: either every dimension is the
+// restored one, or every dimension is the one that was there before. A failure
+// part way through puts the folders it had already swapped back before reporting,
+// so a Paper world never ends up with a restored overworld beside the nether it
+// was not restored with.
+func (s *BackupService) swapWorldDirs(serverID string, swaps []worldSwap) ([]string, error) {
+	stamp := time.Now().Format("20060102-150405")
+
+	type completed struct {
+		target, aside string
+		hadAside      bool
+	}
+	var done []completed
+
+	rollback := func() {
+		for i := len(done) - 1; i >= 0; i-- {
+			d := done[i]
+			_ = os.RemoveAll(d.target) //nolint:errcheck // best-effort rollback; the error being reported is the one that started it
+			if d.hadAside {
+				_ = os.Rename(d.aside, d.target) //nolint:errcheck // best-effort rollback, same reason
+			}
+		}
+	}
+
+	for _, sw := range swaps {
+		aside := sw.target + ".bak-" + stamp
+		hadAside := true
+		if err := os.Rename(sw.target, aside); err != nil {
+			if !os.IsNotExist(err) {
+				rollback()
+				return nil, s.failRestore(serverID, "moving the current files aside", err)
+			}
+			// Nothing there to preserve: a dimension the archive has and this
+			// server does not is simply created by the swap below.
+			hadAside = false
+		}
+		if err := renameIntoPlace(sw.staged, sw.target); err != nil {
+			if hadAside {
+				_ = os.Rename(aside, sw.target) //nolint:errcheck // best-effort rollback of this swap; err below is already the reported failure
+			}
+			rollback()
+			return nil, s.failRestore(serverID, "swapping files, previous state kept", err)
+		}
+		done = append(done, completed{target: sw.target, aside: aside, hadAside: hadAside})
+	}
+
+	targets := make([]string, 0, len(done))
+	for _, d := range done {
+		if d.hadAside {
+			_ = os.RemoveAll(d.aside) //nolint:errcheck // best-effort cleanup of the pre-restore copy; the restore already succeeded
+		}
+		targets = append(targets, d.target)
+	}
+	return targets, nil
+}
+
+// stagedLayoutIsMultiRoot reads the archive's layout off the extracted tree rather
+// than off the zip, which keeps the restore to one pass over the archive and, more
+// to the point, keeps a corrupt zip being reported as a failure to extract. Opening
+// it a second time beforehand reclassified exactly that case.
+func stagedLayoutIsMultiRoot(tmp, worldName string) bool {
+	if _, err := os.Stat(filepath.Join(tmp, "level.dat")); err == nil {
+		return false
+	}
+	info, err := os.Stat(filepath.Join(tmp, worldName))
+	return err == nil && info.IsDir()
+}
+
+// worldFilesAreMultiRoot reads the layout off a world archive's entries.
+//
+// Two signals, in this order, because either one alone is wrong in one direction.
+// A level.dat at the zip root can only be the old layout, and settles the case even
+// for an old-layout world that happens to contain a subfolder named after itself.
+// With no level.dat at the root, a folder named after the world is the new layout.
+// Anything else reads as the old layout, which is the answer that leaves an archive
+// this function does not recognise restoring exactly the way it did before.
+func worldFilesAreMultiRoot(files []*zip.File, worldName string) bool {
+	prefix := worldName + "/"
+	named := false
+	for _, f := range files {
+		if f.Name == "level.dat" {
+			return false
+		}
+		if strings.HasPrefix(f.Name, prefix) {
+			named = true
+		}
+	}
+	return named
 }
 
 func (s *BackupService) DeleteBackup(serverID, filename string) error {
@@ -776,14 +935,7 @@ func worldsFromServerZip(files []*zip.File) []models.WorldSystem {
 			{"/DIM-1/", "nether"},
 			{"/DIM1/", "the_end"},
 		} {
-			already := false
-			for _, d := range sys.Dimensions {
-				if d.Kind == sub.kind {
-					already = true
-					break
-				}
-			}
-			if already {
+			if hasDimensionKind(sys.Dimensions, sub.kind) {
 				continue
 			}
 			prefix := base + sub.suffix
@@ -860,8 +1012,95 @@ func worldsFromServerZip(files []*zip.File) []models.WorldSystem {
 	return result
 }
 
-// worldsFromWorldZip handles a single-world backup zip (zip root = world folder).
+// worldsFromWorldZip reads the dimensions out of a world backup zip, in either
+// layout: the multi-root one CreateWorldBackup has written since #26, or the older
+// one whose zip root is the overworld folder itself.
 func worldsFromWorldZip(worldName string, files []*zip.File) []models.WorldSystem {
+	if worldFilesAreMultiRoot(files, worldName) {
+		return worldsFromMultiRootWorldZip(worldName, files)
+	}
+	return worldsFromSingleRootWorldZip(worldName, files)
+}
+
+// worldsFromMultiRootWorldZip reads an archive whose top level is one folder per
+// dimension. The dimension list is built in a fixed order rather than in the order
+// the entries happen to be stored in, so two archives of the same world describe it
+// the same way.
+func worldsFromMultiRootWorldZip(worldName string, files []*zip.File) []models.WorldSystem {
+	sys := models.WorldSystem{
+		Name:       worldName,
+		Dimensions: []models.WorldDimension{{Kind: "overworld", Path: worldName}},
+	}
+
+	// Paper/Spigot siblings.
+	for _, sib := range []struct{ suffix, kind string }{
+		{"_nether", "nether"},
+		{"_the_end", "the_end"},
+	} {
+		dir := worldName + sib.suffix
+		if zipHasPrefix(files, dir+"/") {
+			sys.Dimensions = append(sys.Dimensions, models.WorldDimension{Kind: sib.kind, Path: dir})
+		}
+	}
+
+	// Vanilla sub-dimensions, only for a kind no sibling already supplied: a server
+	// that switched layouts can carry both, and one nether is one dimension.
+	for _, sub := range []struct{ dir, kind string }{
+		{"DIM-1", "nether"},
+		{"DIM1", "the_end"},
+	} {
+		if hasDimensionKind(sys.Dimensions, sub.kind) {
+			continue
+		}
+		path := worldName + "/" + sub.dir
+		if zipHasPrefix(files, path+"/") {
+			sys.Dimensions = append(sys.Dimensions, models.WorldDimension{Kind: sub.kind, Path: path})
+		}
+	}
+
+	levelDat := worldName + "/level.dat"
+	for _, f := range files {
+		if f.Name == levelDat {
+			if rc, err := f.Open(); err == nil {
+				if meta, err := readLevelDatFromReader(rc); err == nil {
+					sys.Meta = meta
+				}
+				rc.Close()
+			}
+		}
+		if !f.FileInfo().IsDir() {
+			sys.TotalSize += int64(f.UncompressedSize64)
+			if t := f.Modified.UnixMilli(); t > sys.Modified {
+				sys.Modified = t
+			}
+		}
+	}
+	return []models.WorldSystem{sys}
+}
+
+// zipHasPrefix reports whether any file entry sits under prefix. Directory entries
+// alone do not count: an empty folder carries no dimension.
+func zipHasPrefix(files []*zip.File, prefix string) bool {
+	for _, f := range files {
+		if strings.HasPrefix(f.Name, prefix) && !f.FileInfo().IsDir() {
+			return true
+		}
+	}
+	return false
+}
+
+// hasDimensionKind reports whether dims already covers kind.
+func hasDimensionKind(dims []models.WorldDimension, kind string) bool {
+	for _, d := range dims {
+		if d.Kind == kind {
+			return true
+		}
+	}
+	return false
+}
+
+// worldsFromSingleRootWorldZip handles the pre-#26 layout (zip root = world folder).
+func worldsFromSingleRootWorldZip(worldName string, files []*zip.File) []models.WorldSystem {
 	sys := models.WorldSystem{
 		Name:       worldName,
 		Dimensions: []models.WorldDimension{{Kind: "overworld", Path: worldName}},
@@ -991,6 +1230,8 @@ func dirSize(srcDir string) int64 {
 // zipDirWithProgress writes a zip of srcDir into dest, which the caller has already
 // created and is responsible for closing. It takes an open file rather than a path
 // so that reserving the name and writing to it cannot race: see reserveBackupFile.
+// The zip root is srcDir's contents, so a full-server archive holds "world/",
+// "server.properties" and the rest at the top level, mirroring the working dir.
 func zipDirWithProgress(srcDir string, dest *os.File, onProgress func(int)) error {
 	total := dirSize(srcDir)
 
@@ -998,6 +1239,39 @@ func zipDirWithProgress(srcDir string, dest *os.File, onProgress func(int)) erro
 	defer w.Close()
 
 	var written int64
+	return writeTreeToZip(w, srcDir, "", total, &written, onProgress)
+}
+
+// zipRootsWithProgress writes a zip holding each root under its own base name as a
+// top-level folder, so a world archive of a Paper server carries "world/",
+// "world_nether/" and "world_the_end/" side by side rather than one folder's
+// contents at the root (#26).
+//
+// Progress is a single 0-100 across every root, not one sweep per root: the caller
+// emits it straight to the UI, and a bar that restarts twice on a Paper world reads
+// as three backups rather than one.
+func zipRootsWithProgress(roots []string, dest *os.File, onProgress func(int)) error {
+	var total int64
+	for _, root := range roots {
+		total += dirSize(root)
+	}
+
+	w := zip.NewWriter(dest)
+	defer w.Close()
+
+	var written int64
+	for _, root := range roots {
+		if err := writeTreeToZip(w, root, filepath.Base(root), total, &written, onProgress); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// writeTreeToZip walks srcDir into w, naming every entry under prefix (empty for a
+// zip whose root is srcDir itself). written and total are shared across calls so a
+// multi-root archive reports one continuous percentage.
+func writeTreeToZip(w *zip.Writer, srcDir, prefix string, total int64, written *int64, onProgress func(int)) error {
 	return filepath.Walk(srcDir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			if filepath.Base(path) == "session.lock" {
@@ -1010,9 +1284,12 @@ func zipDirWithProgress(srcDir string, dest *os.File, onProgress func(int)) erro
 			return err
 		}
 		rel = filepath.ToSlash(rel)
+		name := zipEntryName(prefix, rel)
 		if info.IsDir() {
-			if rel != "." {
-				_, err = w.Create(rel + "/")
+			// An unprefixed root has no entry of its own; a prefixed one does, so
+			// an empty dimension folder still round-trips as that dimension.
+			if name != "" {
+				_, err = w.Create(name + "/")
 			}
 			return err
 		}
@@ -1021,7 +1298,7 @@ func zipDirWithProgress(srcDir string, dest *os.File, onProgress func(int)) erro
 		if info.Name() == "session.lock" {
 			return nil
 		}
-		fw, err := w.Create(rel)
+		fw, err := w.Create(name)
 		if err != nil {
 			return err
 		}
@@ -1031,12 +1308,25 @@ func zipDirWithProgress(srcDir string, dest *os.File, onProgress func(int)) erro
 		}
 		defer src.Close()
 		n, err := io.Copy(fw, src)
-		written += n
+		*written += n
 		if total > 0 && onProgress != nil {
-			onProgress(int(written * 100 / total))
+			onProgress(int(*written * 100 / total))
 		}
 		return err
 	})
+}
+
+// zipEntryName joins a root prefix with a walk-relative path. rel is "." for the
+// root itself, which is the empty name for an unprefixed tree and the bare prefix
+// for a prefixed one.
+func zipEntryName(prefix, rel string) string {
+	if rel == "." {
+		return prefix
+	}
+	if prefix == "" {
+		return rel
+	}
+	return prefix + "/" + rel
 }
 
 func unzipTo(zipPath, destDir string) error {

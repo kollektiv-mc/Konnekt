@@ -106,9 +106,12 @@ Recorded so nobody re-litigates or double-builds:
   What #30 still legitimately covers is surfacing that failure clearly (and, if
   wanted, an explicit "verify backup" affordance). Decision on narrowing or closing
   #30 belongs to the owner; nothing in this set builds separate checksums.
-- **#26 (back up sibling dimensions)** already tracks the multi-dimension backup gap
-  the 2026-08-21 sweep re-found; the sweep also noted `worlds.go`'s "(+ siblings)"
-  comment overstates today's behavior — fix the comment when #26 lands.
+- **#26 (back up sibling dimensions)** tracked the multi-dimension backup gap the
+  2026-08-21 sweep re-found. Closed 2026-09-16 (HEALTH_LOG "The two thirds of a
+  world the backup never took"): a world archive is multi-root now, holding every
+  Paper/Spigot sibling under its own folder, and `worlds.go`'s comment about what
+  `BackupWorld` covers went with it. Archives written before the change restore
+  unchanged, decided by the layout of the extracted tree.
 - **#29 (backup concurrency guard)** is the same missing-serialization family as
   #109; whoever builds #109 should skim #29 for shape alignment, but they stay
   separate PRs.
