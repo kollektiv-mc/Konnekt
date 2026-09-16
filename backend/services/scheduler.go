@@ -279,6 +279,20 @@ func (s *SchedulerService) writeHistory(history []models.RunRecord) error {
 	return WriteDataFile(s.dataDir, "scheduler-history.json", data)
 }
 
+// runServerID is the server a graph acts on: the one it was authored against.
+//
+// A graph with no owner falls back to the active server, which is what every
+// graph did before #236. That is the whole of the old behaviour, kept in one
+// place for graphs the migration could not assign (scheduler_migrate.go), and
+// it is why activeServerID below still exists. Those two are its only callers,
+// and a third would be the ambient read coming back.
+func (s *SchedulerService) runServerID(g models.Graph) string {
+	if g.ServerID != "" {
+		return g.ServerID
+	}
+	return s.activeServerID()
+}
+
 func (s *SchedulerService) activeServerID() string {
 	if s.deps.config == nil {
 		return ""
