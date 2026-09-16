@@ -200,9 +200,10 @@ tree.
       into `agent_docs/` or deleted once the work lands).
 - [x] `agent_docs/CLAUDE.md` and `agent_docs/ROADMAP.md` still reflect the
       actual stack/structure/scope — update them when they drift.
-      Verify: read CLAUDE.md's "Project structure" against the real top-level
-      dirs under `frontend/src/` and `backend/`, and its "Build & dev commands"
-      table against `frontend/package.json`'s `scripts`. Then read ROADMAP.md's
+      Verify: read CLAUDE.md's "Project structure" and "Build & dev commands"
+      against the real tree and `frontend/package.json`'s `scripts`. Both are
+      deliberately partial now (#358), so the test is whether what they *do*
+      say is still true, not whether they list everything. Then read ROADMAP.md's
       **non-feature** sections too — "Later", "Explicitly out of scope" and
       "Implementation notes" are the ones that rot unwatched, because nobody
       re-reads them while shipping a feature. That is where a whole block of

@@ -1,12 +1,15 @@
-See @agent_docs/CLAUDE.md for architecture, conventions, and build/test
-commands, and @agent_docs/DEPENDENCIES.md before adding any dependency.
+See @agent_docs/CLAUDE.md for architecture, conventions and build/test commands.
+`agent_docs/DEPENDENCIES.md` is an inventory, not a rule: read it before adding a
+dependency, which `.claude/rules/dependencies.md` prompts you to do.
 
 ## graphify
 
-This project has a knowledge graph at graphify-out/ with god nodes, community structure, and cross-file relationships.
+An AST knowledge graph of this repo lives in `graphify-out/` (gitignored,
+regenerable with `graphify update .`, installed with `pipx install graphify`).
 
-Rules:
-- For codebase questions, first run `graphify query "<question>"` when graphify-out/graph.json exists. Use `graphify path "<A>" "<B>"` for relationships and `graphify explain "<concept>"` for focused concepts. These return a scoped subgraph, usually much smaller than GRAPH_REPORT.md or raw grep output.
-- Read graphify-out/GRAPH_REPORT.md only for broad architecture review or when query/path/explain do not surface enough context.
-- After modifying code, run `graphify update .` to keep the graph current (AST-only, no API cost).
-- graphify-out/ is gitignored and regenerable. If it's absent (e.g. a fresh clone), run `graphify update .` to build it — see `agent_docs/CLAUDE.md`'s "Local tooling" section for install notes.
+- Answer codebase questions with `graphify query "<question>"` first, when
+  `graphify-out/graph.json` exists; `graphify path "<A>" "<B>"` for a
+  relationship, `graphify explain "<concept>"` for one concept. Each returns a
+  scoped subgraph, usually far smaller than raw grep output.
+- Read `graphify-out/GRAPH_REPORT.md` only for broad architecture review.
+- Run `graphify update .` after modifying code.
