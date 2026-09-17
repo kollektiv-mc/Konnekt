@@ -59,3 +59,19 @@ export const PORT_TYPE_COLOR: Record<string, string> = {
   number: '#a3e635',
   bool: '#fb923c',
 }
+
+// The "wired" badge on a field label, and the read-only row that replaces the
+// control when a data edge supplies the value.
+//
+// Blue because that is what a string data port is drawn in
+// (PORT_TYPE_COLOR.string above): the badge exists to point at that edge, so it
+// tracks the edge's own colour rather than introducing a second one. Like the
+// rest of this palette these are literals rather than design tokens, and for
+// the same reason the file's earlier comment gives — the graph's colours are
+// its own, and the token layer deliberately does not name them. That does mean
+// the badge does not follow applySkin(); making it follow would need an `info`
+// token added upstream in kollektiv/design/tokens.json, which is a suite-wide
+// change rather than a Konnekt one (#163).
+export const WIRED_BG_CLASS = 'bg-[#1e3a5f]'
+export const WIRED_BORDER_CLASS = 'border-[#1e3a5f]'
+export const WIRED_TEXT_CLASS = 'text-[#60a5fa]'

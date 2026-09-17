@@ -65,6 +65,7 @@ func (s *SchedulerService) SetDataDir(dir string) {
 	s.dataDir = dir
 	if graphs, err := s.loadGraphs(); err == nil {
 		graphs = s.migrateGraphServerIDs(graphs)
+		graphs = s.migrateCommandPresets(graphs)
 		s.mu.Lock()
 		s.graphs = graphs
 		s.mu.Unlock()

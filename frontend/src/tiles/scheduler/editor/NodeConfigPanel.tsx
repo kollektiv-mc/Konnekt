@@ -2,6 +2,8 @@ import { useMemo } from 'react'
 import type { Edge } from '@xyflow/react'
 import type { models } from '../../../../wailsjs/go/models'
 import type { NodeData } from './graphMapping'
+import { Combobox } from '../../../components/ui/Combobox'
+import { WIRED_BG_CLASS, WIRED_BORDER_CLASS, WIRED_TEXT_CLASS } from './blockMeta'
 
 interface Props {
   nodeId: string
@@ -10,6 +12,14 @@ interface Props {
   edges: Edge[]
   onChange: (key: string, value: unknown) => void
 }
+
+/**
+ * The one class string every field control wears, so six branches cannot drift
+ * into six near-identical variants of it (#163). Anything a single field type
+ * genuinely needs on top is appended at that branch.
+ */
+const FIELD_CLASS =
+  'bg-surface border-border-subtle text-text-primary border-hairline w-full rounded px-2 py-1 font-mono text-xs transition-colors outline-none'
 
 export function NodeConfigPanel({ nodeId, data, def, edges, onChange }: Props) {
   // Keys that are wired via a data edge — shown as read-only.
@@ -48,21 +58,26 @@ export function NodeConfigPanel({ nodeId, data, def, edges, onChange }: Props) {
       {fields.map((field) => {
         const val = data.config?.[field.key] ?? field.default ?? ''
         const isWired = wiredKeys.has(field.key)
+        const options = (field.options ?? []).map((o) => ({ value: o.value, label: o.label }))
 
         return (
           <div key={field.key} className="flex flex-col gap-0.5">
             <label className="text-text-muted flex items-center gap-1 font-mono text-xs">
               {field.label}
-              {field.required && <span className="text-[#ef4444]">*</span>}
+              {field.required && <span className="text-danger">*</span>}
               {isWired && (
-                <span className="ml-1 rounded bg-[#1e3a5f] px-1 text-[9px] text-[#60a5fa]">
+                <span
+                  className={`text-3xs ml-1 rounded px-1 ${WIRED_BG_CLASS} ${WIRED_TEXT_CLASS}`}
+                >
                   wired
                 </span>
               )}
             </label>
 
             {isWired ? (
-              <div className="bg-canvas border-hairline min-h-[26px] rounded border-[#1e3a5f] px-2 py-1 font-mono text-xs text-[#60a5fa]">
+              <div
+                className={`bg-canvas border-hairline min-h-[26px] rounded px-2 py-1 font-mono text-xs ${WIRED_BORDER_CLASS} ${WIRED_TEXT_CLASS}`}
+              >
                 ← data edge
               </div>
             ) : field.type === 'bool' ? (
@@ -76,35 +91,22 @@ export function NodeConfigPanel({ nodeId, data, def, edges, onChange }: Props) {
                 <span className="text-text-muted font-mono text-xs">{val ? 'true' : 'false'}</span>
               </label>
             ) : field.type === 'select' ? (
-              <select
+              <Combobox
                 value={String(val)}
-                onChange={(e) => onChange(field.key, e.target.value)}
-                className="bg-canvas border-border-subtle text-text-primary border-hairline rounded px-2 py-1 font-mono text-xs outline-none"
-              >
-                {field.options?.map((opt) => (
-                  <option key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </option>
-                ))}
-              </select>
+                onChange={(v) => onChange(field.key, v)}
+                options={options}
+                ariaLabel={field.label}
+              />
             ) : field.type === 'attribute' ? (
               <>
-                <input
-                  type="text"
-                  list={`attrs-${nodeId}-${field.key}`}
+                <Combobox
                   value={String(val)}
-                  placeholder="@server.motd or @myValue"
-                  onChange={(e) => onChange(field.key, e.target.value)}
-                  className="bg-surface border-border-subtle text-text-primary border-hairline rounded px-2 py-1 font-mono text-xs outline-none"
+                  onChange={(v) => onChange(field.key, v)}
+                  options={options}
+                  ariaLabel={field.label}
+                  freeText
                 />
-                <datalist id={`attrs-${nodeId}-${field.key}`}>
-                  {field.options?.map((opt) => (
-                    <option key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </option>
-                  ))}
-                </datalist>
-                <span className="text-text-faint text-[9px]">
+                <span className="text-text-faint text-3xs">
                   Type a built-in or custom attribute name.
                 </span>
               </>
@@ -115,21 +117,23 @@ export function NodeConfigPanel({ nodeId, data, def, edges, onChange }: Props) {
                 onChange={(e) =>
                   onChange(field.key, e.target.value === '' ? '' : Number(e.target.value))
                 }
-                className="bg-surface border-border-subtle text-text-primary border-hairline rounded px-2 py-1 font-mono text-xs outline-none"
+                className={FIELD_CLASS}
               />
             ) : field.type === 'command' ? (
-              <textarea
+              <Combobox
                 value={String(val)}
-                onChange={(e) => onChange(field.key, e.target.value)}
-                rows={2}
-                className="bg-surface border-border-subtle text-text-primary border-hairline resize-none rounded px-2 py-1 font-mono text-xs outline-none"
+                onChange={(v) => onChange(field.key, v)}
+                options={options}
+                ariaLabel={field.label}
+                freeText
+                multiline
               />
             ) : (
               <input
                 type="text"
                 value={String(val)}
                 onChange={(e) => onChange(field.key, e.target.value)}
-                className="bg-surface border-border-subtle text-text-primary border-hairline rounded px-2 py-1 font-mono text-xs outline-none"
+                className={FIELD_CLASS}
               />
             )}
           </div>

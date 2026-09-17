@@ -10,8 +10,19 @@ import {
   parseRamFromArgs,
 } from '../../lib/serverForm'
 import { LOADER_LABELS } from '../../lib/loaders'
+import { Combobox } from '../ui/Combobox'
 import type { InstallResult } from '../ServerInstallModal'
 import type { ServerConfig } from '../../types'
+
+// The loader list, with detection first. A themed Combobox rather than a native
+// <select>: webkit2gtk draws a <select> popup with the GTK theme, so on Linux
+// this one opened a white list over the dark modal, the same defect #160 fixed
+// in the scheduler panel. Eleven entries is past what Segmented can show, and
+// the combobox's typeahead is worth having over that many.
+const LOADER_OPTIONS = [
+  { value: '', label: 'Detect automatically' },
+  ...Object.entries(LOADER_LABELS).map(([value, label]) => ({ value, label })),
+]
 
 interface FormState {
   name: string
@@ -292,18 +303,12 @@ export function ServerEditForm({
         <div className="flex-1">
           {labelled(
             'Loader',
-            <select
+            <Combobox
               value={form.loader}
-              onChange={(e) => setForm((f) => ({ ...f, loader: e.target.value }))}
-              className={inputClass}
-            >
-              <option value="">Detect automatically</option>
-              {Object.entries(LOADER_LABELS).map(([value, label]) => (
-                <option key={value} value={value}>
-                  {label}
-                </option>
-              ))}
-            </select>,
+              onChange={(loader) => setForm((f) => ({ ...f, loader }))}
+              options={LOADER_OPTIONS}
+              ariaLabel="Loader"
+            />,
           )}
         </div>
         <div className="flex-1">

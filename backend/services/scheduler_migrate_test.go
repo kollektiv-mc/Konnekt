@@ -258,3 +258,120 @@ func TestSetDataDirAssignsGraphOwners(t *testing.T) {
 		}
 	})
 }
+
+// ─── Folding command presets onto the command field (#161) ─────────────────
+//
+// Same stakes as the migration above: it runs once against a real user's
+// scheduler.json. The rule it has to reproduce is the old precedence, where a
+// non-empty preset beat whatever was typed in the command field, so a graph
+// that ran "time set day" before the change still runs it after.
+
+func cmdNode(id, blockType string, cfg map[string]interface{}) models.Node {
+	return models.Node{ID: id, Type: blockType, Config: cfg}
+}
+
+func TestFoldCommandPresets(t *testing.T) {
+	cases := []struct {
+		name        string
+		node        models.Node
+		wantCommand string
+		wantChanged bool
+	}{
+		{
+			name:        "a chosen preset becomes the command",
+			node:        cmdNode("n", "action.command", map[string]interface{}{"preset": "time set day", "command": ""}),
+			wantCommand: "time set day",
+			wantChanged: true,
+		},
+		{
+			// The case the bug was about: the typed command was being ignored at
+			// runtime, so the preset is what the graph actually did.
+			name:        "a preset still wins over a typed command, as it did before",
+			node:        cmdNode("n", "action.command", map[string]interface{}{"preset": "time set day", "command": "say hello"}),
+			wantCommand: "time set day",
+			wantChanged: true,
+		},
+		{
+			name:        "an empty preset leaves the typed command alone",
+			node:        cmdNode("n", "action.command", map[string]interface{}{"preset": "", "command": "say hello"}),
+			wantCommand: "say hello",
+			wantChanged: true,
+		},
+		{
+			name:        "a lifecycle sentinel survives as the command",
+			node:        cmdNode("n", "action.command", map[string]interface{}{"preset": "__restart__", "command": ""}),
+			wantCommand: "__restart__",
+			wantChanged: true,
+		},
+		{
+			name:        "rcon nodes fold the same way",
+			node:        cmdNode("n", "action.rcon", map[string]interface{}{"preset": "save-all", "command": "list"}),
+			wantCommand: "save-all",
+			wantChanged: true,
+		},
+		{
+			name:        "an already-migrated node is left untouched",
+			node:        cmdNode("n", "action.command", map[string]interface{}{"command": "say hello"}),
+			wantCommand: "say hello",
+			wantChanged: false,
+		},
+		{
+			name:        "a block that never had the pair is ignored",
+			node:        cmdNode("n", "action.backup", map[string]interface{}{"preset": "whatever"}),
+			wantCommand: "",
+			wantChanged: false,
+		},
+	}
+
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			graphs := []models.Graph{{ID: "g", Nodes: []models.Node{c.node}}}
+
+			got, changed := foldCommandPresets(graphs)
+			if changed != c.wantChanged {
+				t.Fatalf("changed = %v, want %v", changed, c.wantChanged)
+			}
+
+			cfg := got[0].Nodes[0].Config
+			if c.wantCommand != "" {
+				if cfg["command"] != c.wantCommand {
+					t.Errorf("command = %v, want %q", cfg["command"], c.wantCommand)
+				}
+			}
+			// The whole point is that there is one value now. A surviving
+			// preset key would be a second one for execCommand to prefer.
+			if c.wantChanged {
+				if _, still := cfg["preset"]; still {
+					t.Error("preset key survived the fold")
+				}
+			}
+		})
+	}
+}
+
+func TestFoldCommandPresetsIsIdempotent(t *testing.T) {
+	graphs := []models.Graph{{ID: "g", Nodes: []models.Node{
+		cmdNode("n", "action.command", map[string]interface{}{"preset": "time set day", "command": "say hi"}),
+	}}}
+
+	graphs, first := foldCommandPresets(graphs)
+	if !first {
+		t.Fatal("first fold reported no change")
+	}
+	// A second launch must not rewrite scheduler.json again.
+	graphs, second := foldCommandPresets(graphs)
+	if second {
+		t.Error("second fold reported a change on already-folded graphs")
+	}
+	if graphs[0].Nodes[0].Config["command"] != "time set day" {
+		t.Errorf("command drifted on the second fold: %v", graphs[0].Nodes[0].Config["command"])
+	}
+}
+
+func TestFoldCommandPresetsToleratesNilConfig(t *testing.T) {
+	graphs := []models.Graph{{ID: "g", Nodes: []models.Node{{ID: "n", Type: "action.command"}}}}
+
+	if _, changed := foldCommandPresets(graphs); changed {
+		t.Error("a node with no config reported a change")
+	}
+}
