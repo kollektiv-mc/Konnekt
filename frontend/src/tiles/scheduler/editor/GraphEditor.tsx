@@ -17,7 +17,7 @@ import {
   type NodeChange,
   type EdgeChange,
 } from '@xyflow/react'
-import { CATEGORY_COLOR } from './blockMeta'
+import { CATEGORY_COLOR, NO_GRAPH_KEYS } from './blockMeta'
 import { SchedulerCtx, type NodeRunState } from './schedulerContext'
 import { BlockNode } from './BlockNode'
 import { AnimatedEdge } from './AnimatedEdge'
@@ -733,7 +733,9 @@ function GraphEditorInner({
           tile's surface (style.css). */}
       <div className="lazy-panel-in flex h-full flex-col">
         {/* ── Toolbar ──────────────────────────────────────────────────── */}
-        <div className="border-border-subtle bg-surface border-b-hairline flex shrink-0 flex-wrap items-center gap-2 px-3 py-1.5">
+        <div
+          className={`border-border-subtle bg-surface border-b-hairline flex shrink-0 flex-wrap items-center gap-2 px-3 py-1.5 ${NO_GRAPH_KEYS}`}
+        >
           {/* Graph selector */}
           <div className="relative shrink-0">
             <button
@@ -925,7 +927,11 @@ function GraphEditorInner({
               isValidConnection={isValidConnection}
               fitView
               fitViewOptions={{ padding: 0.2 }}
-              deleteKeyCode="Delete"
+              // Backspace as well as Delete, the way every node editor people
+              // arrive from binds it (#159). Editor chrome opts out of key
+              // handling with NO_GRAPH_KEYS, because the library's own guard
+              // covers inputs and not buttons.
+              deleteKeyCode={['Delete', 'Backspace']}
               panOnDrag={[1, 2]}
               selectionOnDrag
             >
@@ -945,7 +951,9 @@ function GraphEditorInner({
 
           {/* Node config / data panel */}
           {selectedNode && (
-            <div className="border-border-subtle bg-canvas border-l-hairline flex w-56 shrink-0 flex-col overflow-y-auto">
+            <div
+              className={`border-border-subtle bg-canvas border-l-hairline flex w-56 shrink-0 flex-col overflow-y-auto ${NO_GRAPH_KEYS}`}
+            >
               {/* Tabs */}
               <div className="border-border-subtle border-b-hairline flex shrink-0">
                 {(['config', 'data'] as const).map((tab) => (
