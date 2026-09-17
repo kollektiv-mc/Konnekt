@@ -199,8 +199,12 @@ export function Combobox({
     else onChange(options[hit].value)
   }
 
+  // The same editable-field pattern the config panel's FIELD_CLASS wears, so a
+  // preset field and a plain one are the same control (#163): bg-hover, and a
+  // border that answers hover and focus rather than a transition with nothing
+  // to transition.
   const controlClass =
-    'bg-surface border-border-subtle text-text-primary border-hairline w-full rounded px-2 py-1 text-left font-mono text-xs transition-colors outline-none'
+    'bg-hover border-border-subtle text-text-primary hover:border-border-hover focus:border-border-hover border-hairline w-full rounded px-2 py-1 text-left font-mono text-xs transition-colors outline-none'
 
   return (
     <div className="relative" onKeyDown={onKeyDown}>

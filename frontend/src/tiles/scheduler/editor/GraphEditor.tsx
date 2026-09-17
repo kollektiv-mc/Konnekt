@@ -17,7 +17,7 @@ import {
   type NodeChange,
   type EdgeChange,
 } from '@xyflow/react'
-import { CATEGORY_COLOR, NO_GRAPH_KEYS } from './blockMeta'
+import { CATEGORY_COLOR, DATA_EDGE_STYLE, NO_GRAPH_KEYS } from './blockMeta'
 import { SchedulerCtx, type NodeRunState } from './schedulerContext'
 import { BlockNode } from './BlockNode'
 import { AnimatedEdge } from './AnimatedEdge'
@@ -424,7 +424,7 @@ function GraphEditorInner({
             ...connection,
             id: randId(),
             type: 'smoothstep',
-            style: isData ? { strokeDasharray: '4 2', stroke: '#60a5fa' } : undefined,
+            style: isData ? DATA_EDGE_STYLE : undefined,
             data: { kind: isData ? 'data' : 'control' } as Record<string, unknown>,
           },
           es,
@@ -731,10 +731,10 @@ function GraphEditorInner({
 
   // ── Toolbar button className helper ───────────────────────────────────────
   function btnClass(active = false, danger = false): string {
-    const base = 'cursor-pointer rounded border-hairline px-2 py-0.5 text-[11px] font-mono'
-    const borderClass = danger ? 'border-[#ef4444]' : 'border-border-subtle'
+    const base = 'cursor-pointer rounded border-hairline px-2 py-0.5 text-1xs font-mono'
+    const borderClass = danger ? 'border-danger' : 'border-border-subtle'
     if (active) return `${base} ${borderClass} bg-accent text-black`
-    if (danger) return `${base} ${borderClass} bg-transparent text-[#ef4444]`
+    if (danger) return `${base} ${borderClass} bg-transparent text-danger`
     return `${base} ${borderClass} bg-surface text-text-muted`
   }
 
@@ -752,11 +752,11 @@ function GraphEditorInner({
           <div className="relative shrink-0">
             <button
               onClick={graphMenu.toggle}
-              className={`border-border-subtle text-text-primary border-hairline flex max-w-[160px] shrink-0 items-center gap-1 rounded px-1.5 py-0.5 font-mono text-[11px] whitespace-nowrap transition-colors ${
+              className={`border-border-subtle text-text-primary border-hairline text-1xs flex max-w-[160px] shrink-0 items-center gap-1 rounded px-1.5 py-0.5 font-mono whitespace-nowrap transition-colors ${
                 graphMenu.open ? 'bg-hover' : 'bg-canvas'
               }`}
             >
-              <span className="text-text-faint text-[10px]">☰</span>
+              <span className="text-text-faint text-2xs">☰</span>
               <span className="truncate">
                 {graphs.length === 0
                   ? '— no graphs —'
@@ -823,12 +823,12 @@ function GraphEditorInner({
               onChange={(e) => setGraphName(e.target.value)}
               onBlur={() => setNameEditing(false)}
               onKeyDown={(e) => e.key === 'Enter' && setNameEditing(false)}
-              className="bg-canvas border-accent text-text-primary border-hairline w-[140px] rounded px-1.5 py-0.5 font-mono text-[11px] outline-none"
+              className="bg-hover border-accent text-text-primary border-hairline text-1xs w-[140px] rounded px-1.5 py-0.5 font-mono outline-none"
             />
           ) : (
             <span
               onClick={() => setNameEditing(true)}
-              className="text-text-muted border-border-subtle border-b-hairline flex min-w-[60px] cursor-text items-center gap-1.5 border-dashed font-mono text-[11px]"
+              className="text-text-muted border-border-subtle border-b-hairline text-1xs flex min-w-[60px] cursor-text items-center gap-1.5 border-dashed font-mono"
               title="Click to rename"
             >
               {graphName || 'Untitled'}
@@ -877,13 +877,13 @@ function GraphEditorInner({
             <button
               type="button"
               onClick={clearSchedulerError}
-              className="text-danger font-mono text-[10px]"
+              className="text-danger text-2xs font-mono"
               title={`${schedulerError} — click to dismiss`}
             >
               scheduler error
             </button>
           ) : (
-            runStatus && <span className="text-text-faint font-mono text-[10px]">{runStatus}</span>
+            runStatus && <span className="text-text-faint text-2xs font-mono">{runStatus}</span>
           )}
 
           {(() => {

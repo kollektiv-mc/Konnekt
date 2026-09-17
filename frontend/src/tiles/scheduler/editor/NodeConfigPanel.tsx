@@ -17,9 +17,16 @@ interface Props {
  * The one class string every field control wears, so six branches cannot drift
  * into six near-identical variants of it (#163). Anything a single field type
  * genuinely needs on top is appended at that branch.
+ *
+ * It is the app's editable-field pattern, matched deliberately: bg-hover rather
+ * than the fainter bg-surface, and a border that answers hover and focus. The
+ * panel had neither, so its fields sat flatter than the same control in any
+ * other tile and carried a transition-colors with no state to transition. Only
+ * font-mono is the editor's own, for the console aesthetic the tile is built
+ * around.
  */
 const FIELD_CLASS =
-  'bg-surface border-border-subtle text-text-primary border-hairline w-full rounded px-2 py-1 font-mono text-xs transition-colors outline-none'
+  'bg-hover border-border-subtle text-text-primary hover:border-border-hover focus:border-border-hover border-hairline w-full rounded px-2 py-1 font-mono text-xs transition-colors outline-none'
 
 export function NodeConfigPanel({ nodeId, data, def, edges, onChange }: Props) {
   // Keys that are wired via a data edge — shown as read-only.

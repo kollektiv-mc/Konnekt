@@ -1,8 +1,8 @@
 import type { models } from '../../../../wailsjs/go/models'
 import {
-  CATEGORY_COLOR,
   CATEGORY_ICON,
-  CATEGORY_TEXT_CLASS,
+  categoryColor,
+  categoryTextClass,
   NO_GRAPH_KEYS,
   orderedCategories,
 } from './blockMeta'
@@ -37,7 +37,7 @@ export function BlockPalette({ blockDefs, onAdd }: Props) {
         onClick={toggleCollapsed}
         title="Expand blocks"
       >
-        <span className="text-text-faint font-mono text-[11px] select-none">›</span>
+        <span className="text-text-faint text-1xs font-mono select-none">›</span>
       </div>
     )
   }
@@ -61,8 +61,8 @@ export function BlockPalette({ blockDefs, onAdd }: Props) {
         {categories.map((cat) => {
           const defs = blockDefs.filter((d) => d.category === cat)
           if (defs.length === 0) return null
-          const color = CATEGORY_COLOR[cat] ?? '#6b7280'
-          const textClass = CATEGORY_TEXT_CLASS[cat] ?? 'text-[#6b7280]'
+          const color = categoryColor(cat)
+          const textClass = categoryTextClass(cat)
           const icon = CATEGORY_ICON[cat] ?? '?'
           const isClosed = !!closed[cat]
 
@@ -72,7 +72,7 @@ export function BlockPalette({ blockDefs, onAdd }: Props) {
                 className={`mb-1 flex cursor-pointer items-center gap-1 font-mono text-xs uppercase select-none ${textClass}`}
                 onClick={() => toggleCategory(cat)}
               >
-                <span className="text-[9px]">{isClosed ? '▸' : '▾'}</span>
+                <span className="text-3xs">{isClosed ? '▸' : '▾'}</span>
                 <span>{icon}</span>
                 <span>{cat}</span>
               </div>
@@ -85,7 +85,7 @@ export function BlockPalette({ blockDefs, onAdd }: Props) {
                     onClick={() => onAdd(def)}
                     onDragStart={(e) => e.dataTransfer.setData('blockType', def.id)}
                     title={def.description}
-                    className="bg-surface border-border-subtle text-text-primary border-hairline mb-0.5 cursor-pointer rounded px-2 py-1 font-mono text-[11px] select-none"
+                    className="bg-surface border-border-subtle text-text-primary border-hairline text-1xs mb-0.5 cursor-pointer rounded px-2 py-1 font-mono select-none"
                     onMouseEnter={(e) =>
                       ((e.currentTarget as HTMLDivElement).style.borderColor = color)
                     }
