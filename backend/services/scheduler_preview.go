@@ -164,20 +164,18 @@ func (s *SchedulerService) simulateNode(
 		return []string{"would notify: " + toStr(resolvedCfg["message"])}, true
 
 	case "action.command":
-		cmd := asString(resolvedCfg["preset"])
-		if cmd == "" {
-			cmd = toStr(resolvedCfg["command"])
-		}
+		// One value, matching execCommand: the preview would lie about which
+		// command runs if it kept resolving a preset the block no longer has
+		// (#161).
+		cmd := toStr(resolvedCfg["command"])
 		if cmd == "" {
 			return []string{"would fail: command is empty"}, false
 		}
 		return []string{"would run: " + cmd}, true
 
 	case "action.rcon":
-		cmd := asString(resolvedCfg["preset"])
-		if cmd == "" {
-			cmd = toStr(resolvedCfg["command"])
-		}
+		// One value, matching execRcon (#161).
+		cmd := toStr(resolvedCfg["command"])
 		if cmd == "" {
 			return []string{"would fail: command is empty"}, false
 		}

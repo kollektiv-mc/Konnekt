@@ -178,6 +178,60 @@ describe('Combobox, accepting free text', () => {
     expect(onChange).toHaveBeenLastCalledWith('server.motd')
   })
 
+  describe('as a textarea', () => {
+    const PRESETS = [
+      { value: '__start__', label: 'Start Server' },
+      { value: 'save-all', label: 'Save All' },
+    ]
+
+    it('renders a textarea so a long command still wraps', () => {
+      render(<Combobox value="say hi" onChange={() => {}} options={PRESETS} freeText multiline />)
+
+      expect(control().tagName).toBe('TEXTAREA')
+    })
+
+    // A closed textarea owns its keys: hijacking Enter would make a newline
+    // impossible, and hijacking the arrows would strand the caret.
+    it('leaves Enter and the arrows to the textarea while the list is closed', () => {
+      const onChange = vi.fn()
+      render(<Combobox value="say hi" onChange={onChange} options={PRESETS} freeText multiline />)
+
+      fireEvent.keyDown(control(), { key: 'Enter' })
+      fireEvent.keyDown(control(), { key: 'ArrowDown' })
+
+      expect(control().getAttribute('aria-expanded')).toBe('false')
+      expect(onChange).not.toHaveBeenCalled()
+    })
+
+    it('opens on Alt+ArrowDown, the one chord it does claim', () => {
+      render(<Combobox value="" onChange={() => {}} options={PRESETS} freeText multiline />)
+
+      fireEvent.keyDown(control(), { key: 'ArrowDown', altKey: true })
+      expect(control().getAttribute('aria-expanded')).toBe('true')
+    })
+
+    it('drives the list with the arrows and Enter once it is open', () => {
+      const onChange = vi.fn()
+      render(<Combobox value="" onChange={onChange} options={PRESETS} freeText multiline />)
+
+      fireEvent.keyDown(control(), { key: 'ArrowDown', altKey: true })
+      fireEvent.keyDown(control(), { key: 'ArrowDown' })
+      fireEvent.keyDown(control(), { key: 'Enter' })
+
+      expect(onChange).toHaveBeenCalledWith('save-all')
+      expect(control().getAttribute('aria-expanded')).toBe('false')
+    })
+
+    // Typing must not pop the list open over the text being written; only the
+    // chevron and the chord do that.
+    it('does not open itself on a keystroke', () => {
+      render(<Combobox value="" onChange={() => {}} options={PRESETS} freeText multiline />)
+
+      fireEvent.change(control(), { target: { value: 'say' } })
+      expect(control().getAttribute('aria-expanded')).toBe('false')
+    })
+  })
+
   // The typed text is the value already; Enter on no highlight must not
   // silently replace it with whatever happened to be first in the list.
   it('keeps the typed text when Enter lands on no highlight', () => {
