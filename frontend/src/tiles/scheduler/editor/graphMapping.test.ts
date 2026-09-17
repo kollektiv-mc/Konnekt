@@ -11,6 +11,7 @@ import {
   defaultConfig,
 } from './graphMapping'
 import type { NodeData, BlockFlowNode } from './graphMapping'
+import { DATA_EDGE_STYLE } from './blockMeta'
 
 // Wails model classes carry a `convertValues` method the pure logic never
 // touches — cast via `unknown`, same pattern as portTypes.test.ts.
@@ -155,7 +156,9 @@ describe('graphToFlow', () => {
     const { edges } = graphToFlow(graph, new Map())
     expect(edges[0].sourceHandle).toBe('data:value')
     expect(edges[0].targetHandle).toBe('data:in')
-    expect(edges[0].style).toEqual({ strokeDasharray: '4 2', stroke: '#60a5fa' })
+    // Against the constant, not a second copy of the literal: asserting the
+    // hex here is the same drift the constant exists to stop (#163).
+    expect(edges[0].style).toEqual(DATA_EDGE_STYLE)
     expect(edges[0].data).toEqual({ kind: 'data' })
   })
 })

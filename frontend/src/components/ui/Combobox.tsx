@@ -202,8 +202,12 @@ export function Combobox({
     else onChange(options[hit].value)
   }
 
+  // A border that answers hover and focus, which the control carried a
+  // transition-colors for without ever having a state to transition (#163).
+  // The config panel's FIELD_CLASS wears the same pair, so a preset field and a
+  // plain one stay the same control.
   const controlClass =
-    'bg-surface border-border-subtle text-text-primary border-hairline w-full rounded px-2 py-1 text-left font-mono text-xs transition-colors outline-none'
+    'bg-surface border-border-subtle text-text-primary hover:border-border-hover focus:border-border-hover border-hairline w-full rounded px-2 py-1 text-left font-mono text-xs transition-colors outline-none'
 
   return (
     <div className="relative" onKeyDown={onKeyDown}>

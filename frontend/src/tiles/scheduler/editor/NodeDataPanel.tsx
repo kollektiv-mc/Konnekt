@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import type { models } from '../../../../wailsjs/go/models'
+import { CUSTOM_ATTR_TEXT_CLASS } from './blockMeta'
 
 interface Props {
   graph: models.Graph
@@ -28,13 +29,13 @@ export function NodeDataPanel({ graph, nodeId, onPreview }: Props) {
     }
   }, [graph, nodeId, onPreview])
 
-  const labelClass = 'text-text-faint font-mono text-[9px] uppercase tracking-wider'
+  const labelClass = 'text-text-faint font-mono text-3xs uppercase tracking-wider'
 
   return (
     <div className="flex flex-col gap-3 p-3">
       <div className="text-text-primary font-mono text-xs font-semibold">Data preview</div>
 
-      {error && <div className="font-mono text-xs text-[#ef4444]">{error}</div>}
+      {error && <div className="text-danger font-mono text-xs">{error}</div>}
 
       {/* Attribute table */}
       <div className="flex flex-col gap-1">
@@ -51,13 +52,13 @@ export function NodeDataPanel({ graph, nodeId, onPreview }: Props) {
                 >
                   @{a.name}
                   {!a.writable && a.type !== 'custom' && (
-                    <span className="text-text-faint ml-1 text-[8px]">(read-only)</span>
+                    <span className="text-text-faint text-3xs ml-1">(read-only)</span>
                   )}
                   {a.type === 'custom' && (
-                    <span className="ml-1 text-[8px] text-[#7c3aed]">(custom)</span>
+                    <span className={`text-3xs ml-1 ${CUSTOM_ATTR_TEXT_CLASS}`}>(custom)</span>
                   )}
                 </span>
-                <span className={`font-mono text-xs ${a.error ? 'text-[#ef4444]' : 'text-accent'}`}>
+                <span className={`font-mono text-xs ${a.error ? 'text-danger' : 'text-accent'}`}>
                   {a.error ? a.error : a.value === '' ? '—' : a.value}
                 </span>
               </div>
@@ -76,7 +77,7 @@ export function NodeDataPanel({ graph, nodeId, onPreview }: Props) {
             preview.console.map((line, i) => {
               const isError = line.startsWith('ERROR') || line.startsWith('would fail')
               return (
-                <span key={i} className={isError ? 'text-[#ef4444]' : 'text-text-secondary'}>
+                <span key={i} className={isError ? 'text-danger' : 'text-text-secondary'}>
                   {line}
                 </span>
               )
