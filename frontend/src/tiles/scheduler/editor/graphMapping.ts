@@ -1,6 +1,7 @@
 import type { Node as FlowNode, Edge as FlowEdge, Connection } from '@xyflow/react'
 import { models } from '../../../../wailsjs/go/models'
 import { resolveDataPortType, portTypesCompatible } from './portTypes'
+import { DATA_EDGE_STYLE } from './blockMeta'
 
 export interface NodeData extends Record<string, unknown> {
   blockType: string
@@ -35,7 +36,7 @@ export function graphToFlow(
       sourceHandle: `${isData ? 'data' : 'ctrl'}:${e.sourcePort}`,
       targetHandle: `${isData ? 'data' : 'ctrl'}:${e.targetPort}`,
       type: 'smoothstep',
-      style: isData ? { strokeDasharray: '4 2', stroke: '#60a5fa' } : undefined,
+      style: isData ? DATA_EDGE_STYLE : undefined,
       data: { kind: e.kind } as Record<string, unknown>,
     }
   })

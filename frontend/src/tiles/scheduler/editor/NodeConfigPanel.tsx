@@ -17,9 +17,19 @@ interface Props {
  * The one class string every field control wears, so six branches cannot drift
  * into six near-identical variants of it (#163). Anything a single field type
  * genuinely needs on top is appended at that branch.
+ *
+ * It carries the hover and focus border the rest of the app's fields have and
+ * this one did not, which is what the transition-colors was always for: the
+ * panel declared the transition without ever having a state to transition.
+ *
+ * The background stays bg-surface rather than moving to the bg-hover most of
+ * the app's dialogs use. That difference is real but it is not the scheduler's
+ * alone: Combobox is shared with the server edit form, whose own fields are
+ * bg-surface, so changing it here would fix one form by splitting another.
+ * Recorded in the checklist's open backlog instead.
  */
 const FIELD_CLASS =
-  'bg-surface border-border-subtle text-text-primary border-hairline w-full rounded px-2 py-1 font-mono text-xs transition-colors outline-none'
+  'bg-surface border-border-subtle text-text-primary hover:border-border-hover focus:border-border-hover border-hairline w-full rounded px-2 py-1 font-mono text-xs transition-colors outline-none'
 
 export function NodeConfigPanel({ nodeId, data, def, edges, onChange }: Props) {
   // Keys that are wired via a data edge — shown as read-only.
