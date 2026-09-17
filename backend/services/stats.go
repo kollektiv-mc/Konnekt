@@ -62,7 +62,7 @@ func (s *StatsService) tick() {
 	// too. One read shared with GetServerStatus, so the pushed payload and the
 	// fetched one cannot drift apart — which this comment used to assert by hand.
 	st := s.server.Status(id)
-	s.bus.Emit(EventServerStatus, st)
+	s.bus.Emit(EventServerStatus, models.ServerStatusEvent{ServerStatus: st, ServerID: id})
 
 	// History recording stays gated — an idle server has no meaningful TPS or
 	// RAM to chart, and stats:snapshot has in-process subscribers
@@ -89,7 +89,7 @@ func (s *StatsService) tick() {
 	s.history[id] = append(ring, snap)
 	s.mu.Unlock()
 
-	s.bus.Emit(EventStatsSnapshot, snap)
+	s.bus.Emit(EventStatsSnapshot, models.StatsSnapshotEvent{StatsSnapshot: snap, ServerID: id})
 }
 
 func (s *StatsService) GetStatsHistory(serverID string) []models.StatsSnapshot {

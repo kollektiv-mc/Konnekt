@@ -48,7 +48,7 @@ were shipped early during Alpha. Their status below reflects reality.
 - [x] All IPC bindings generated via wails generate module
 - [x] Typed IPC error handling — per-store / per-tile-hook `loading`/`error`
   state. (A shared `useWailsCall()` hook shipped here first and was removed
-  unused; see `agent_docs/CLAUDE.md`'s IPC conventions.)
+  unused; see `.claude/rules/ipc.md`.)
 
 ### Server management
 
@@ -206,6 +206,15 @@ historical). Individual Beta tasks are filed in
   planned Wails `runtime.EventsEmit` path, configurable keyboard shortcuts,
   and the Settings page's remaining items (global JVM defaults, backup
   retention policy).
+- **Signed and notarised builds.** The published Windows binaries are unsigned,
+  so a first launch trips SmartScreen, and an unsigned macOS build would trip
+  Gatekeeper the same way. That warning is the loudest trust signal the project
+  sends, and it lands before any verification instructions can reach the reader,
+  which is why it moved out of the deferred list into Beta. Note it is a *different* problem
+  from build provenance: `release.yml` already publishes `checksums.txt` and a
+  Sigstore-signed SLSA attestation for every artifact, and `website/download.html`
+  tells a reader how to check both. Provenance proves where a binary came from
+  once you ask; signing is what stops the OS from warning about it before you do.
 - **Scheduler — beta.** Editor quality-of-life on the shipped node graph:
   straight connections with reroute corner points, per-node renaming,
   copy/cut/paste, backdrops and sticky notes, a menu-based toolbar rework,
@@ -309,9 +318,9 @@ where the decision was actually made — this section records, it does not decid
   build through a shim; there is no native app and no second bundle. See the
   Remote access section above.
 
-Two things are deferred rather than out of scope, and are tracked in
-`agent_docs/HEALTH_CHECKLIST.md`'s "Release follow-ups": a macOS release leg,
-and code-signing/notarization.
+A macOS release leg is deferred rather than out of scope, and is tracked in
+`agent_docs/HEALTH_CHECKLIST.md`'s "Release follow-ups". Code-signing and
+notarisation used to sit beside it there; they are Beta work now, above.
 
 ---
 

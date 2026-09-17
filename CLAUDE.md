@@ -1,12 +1,19 @@
-See @agent_docs/CLAUDE.md for architecture, conventions, and build/test
-commands, and @agent_docs/DEPENDENCIES.md before adding any dependency.
+See @agent_docs/CLAUDE.md for architecture, conventions and build/test commands.
+`agent_docs/DEPENDENCIES.md` is an inventory, not a rule: read it before adding a
+dependency, which `.claude/rules/dependencies.md` prompts you to do.
 
 ## graphify
 
-This project has a knowledge graph at graphify-out/ with god nodes, community structure, and cross-file relationships.
+An optional AST knowledge graph. Reach for it only when a question is about where
+something lives or what touches it across more of the tree than you want to grep;
+reading a file you already know you need is not a graphify question.
 
-Rules:
-- For codebase questions, first run `graphify query "<question>"` when graphify-out/graph.json exists. Use `graphify path "<A>" "<B>"` for relationships and `graphify explain "<concept>"` for focused concepts. These return a scoped subgraph, usually much smaller than GRAPH_REPORT.md or raw grep output.
-- Read graphify-out/GRAPH_REPORT.md only for broad architecture review or when query/path/explain do not surface enough context.
-- After modifying code, run `graphify update .` to keep the graph current (AST-only, no API cost).
-- graphify-out/ is gitignored and regenerable. If it's absent (e.g. a fresh clone), run `graphify update .` to build it — see `agent_docs/CLAUDE.md`'s "Local tooling" section for install notes.
+The package is `graphifyy` (the command is `graphify`), and `graphify-out/` is
+gitignored, so a fresh clone has the tool only where the cloud environment's setup
+script put it (`kollektiv/scripts/cloud-setup.sh`), and never the graph. Build it
+on demand with `graphify update .`, AST only, no API key, and re-run that after
+changing code. Then `graphify query "<q>"`, `path "<A>" "<B>"`, `explain "<c>"`.
+
+It is precise about structure and shallow about behaviour, so read the source it
+points at rather than quoting it as a conclusion. `agent_docs/CONVENTION_AUDIT.md`
+records how it actually performed against this repo.

@@ -10,11 +10,11 @@ import (
 	"konnekt/backend/models"
 )
 
-func statePayload(t *testing.T, ev any) models.ServerStateChange {
+func statePayload(t *testing.T, ev any) models.ServerStateEvent {
 	t.Helper()
-	p, ok := ev.(models.ServerStateChange)
+	p, ok := ev.(models.ServerStateEvent)
 	if !ok {
-		t.Fatalf("server:state payload is %T, want models.ServerStateChange", ev)
+		t.Fatalf("server:state payload is %T, want models.ServerStateEvent", ev)
 	}
 	return p
 }
@@ -193,7 +193,7 @@ func TestStartingTimeoutPromotesToRunning(t *testing.T) {
 	}
 
 	events := waitForCount(t, states, 2)
-	var running *models.ServerStateChange
+	var running *models.ServerStateEvent
 	for _, ev := range events {
 		if p := statePayload(t, ev); p.State == "running" {
 			running = &p

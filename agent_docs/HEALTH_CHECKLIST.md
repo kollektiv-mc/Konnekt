@@ -200,9 +200,10 @@ tree.
       into `agent_docs/` or deleted once the work lands).
 - [x] `agent_docs/CLAUDE.md` and `agent_docs/ROADMAP.md` still reflect the
       actual stack/structure/scope — update them when they drift.
-      Verify: read CLAUDE.md's "Project structure" against the real top-level
-      dirs under `frontend/src/` and `backend/`, and its "Build & dev commands"
-      table against `frontend/package.json`'s `scripts`. Then read ROADMAP.md's
+      Verify: read CLAUDE.md's "Project structure" and "Build & dev commands"
+      against the real tree and `frontend/package.json`'s `scripts`. Both are
+      deliberately partial now (#358), so the test is whether what they *do*
+      say is still true, not whether they list everything. Then read ROADMAP.md's
       **non-feature** sections too — "Later", "Explicitly out of scope" and
       "Implementation notes" are the ones that rot unwatched, because nobody
       re-reads them while shipping a feature. That is where a whole block of
@@ -288,7 +289,13 @@ tree.
       baseline 2026-09-08: `rcon.go` at 94% line coverage scored about 64%
       (every post-auth error return and all five `%w` wraps survived), which
       is the gap coverage cannot see; #312 has the escaped mutants and the
-      command. The frontend has no baseline yet (#317).
+      command. The frontend has no baseline yet (#317). Read a run before
+      recording it: a mutant's side effects on the working directory persist
+      for the rest of the run (the tool restores the source between mutants
+      and nothing else), so mutate one file per invocation, look at what is
+      left in `backend/services/` before believing the number, and treat a
+      100% file as a question rather than a result. The 2026-09-12 run scored
+      two files perfect that way (HEALTH_LOG 2026-09-13).
 - [x] CI is green on every push/PR (`.github/workflows/ci.yml`: a `frontend`
       job, an `invariants` job running `.claude/suite-check.py` over the
       manifest's `invariants` and `generated` sections, a `website` job
@@ -625,6 +632,33 @@ what *is* closed.
   immediately after a scroll can still catch it mid-chunk. Raising the quiet
   window from 500ms to 1000ms was measured and changed nothing, so it stayed.
 
+**P3 — The console pane does not keep your place in history across a reflow**
+(filed 2026-09-16)
+
+#166's anchoring is closed for the case that was losing data: a pane following
+the tail now re-pins when its geometry changes, so collapsing the quick commands
+rail, resizing the tile or resizing the window no longer detaches a live log.
+What is still open is the other half of the same reflow. A reader who has
+scrolled *up* still lands on a different line afterwards, because the rows
+rewrap and the browser keeps `scrollTop` rather than the content under it.
+
+Not fixed here, deliberately. Restoring a position rather than an edge means
+anchoring to a row: recording the topmost visible line and its offset on every
+scroll event, then restoring that row after the reflow. The recording is the
+problem, not the restoring, because it is DOM work on the hottest path this tile
+has, a live server log appending continuously. #166 offered both this and the
+re-pin as acceptable fixes and the re-pin is the one that stops the silent
+failure, so the cheap half shipped and the expensive half is written down.
+
+Worth stating what is *not* on this list: a reflow that shortens the content can
+clamp `scrollTop` to the new bottom, and `handleScroll` then re-arms the tail.
+That looks like a silent re-arm and was nearly filed as one. It is not a defect.
+The clamp only reaches the threshold when the reader was already within 40px of
+the end, and "at the bottom means follow" is the same rule a manual scroll
+obeys. Making it an exception would need a flag distinguishing a clamped scroll
+event from a real one, which swallows a genuine re-arm whenever the reflow fires
+no scroll event at all.
+
 **P3 — Dependency resolution is serial, unbounded in time, and silent while it
 runs** (filed 2026-08-31)
 
@@ -959,10 +993,18 @@ tool results and the reasoning)
 **From the 2026-09-12 session** (filed; the log entry of that date has the
 numbers)
 - **p2** #348 `backup.go` loses 571 of 809 mutants, 457 of them in the
-  restore, per-world and meta.json paths, against 0 of 818 in `modservice.go`
-  and 0 of 478 in `update.go`. The second half of #312's run, and the file
-  the next mutation pass belongs to. The two perfect scores are to be
-  re-checked for timeout kills before they are believed.
+  restore, per-world and meta.json paths. Closed 2026-09-13 (HEALTH_LOG "The
+  backup tests that pinned nothing"): 220 of 809 now, 72.8% killed. The same
+  run's "0 of 818 in `modservice.go` and 0 of 478 in `update.go`" was not a
+  score but a leftover `eula.txt` failing one test for every mutant after
+  it; measured alone they are 28.2% and 56.9%.
+
+**From the 2026-09-13 session** (filed; the log entry of that date has the
+numbers and the cause of the earlier 100%)
+- **p2** #349 `update.go` loses 205 of 476 mutants; **p3** #350
+  `modservice.go` loses 582 of 811; **p3** #352 `config_editor.go` loses 213
+  of 297. The first two were reported perfect on the 12th and the third at
+  88%, all three cut short by the same leftover file.
 
 **A scanned-file count is not a coverage figure** (filed 2026-09-08 as #321,
 corrected the same day)
@@ -1008,8 +1050,10 @@ corrected the same day)
 - macOS release leg + its self-update support (`platformAssetNameFor` is
   structured to add a per-platform case, but no asset-naming/signing story
   exists for macOS yet).
-- Code-signing / notarization for the published binaries (unsigned Windows
-  builds trigger SmartScreen warnings).
+- Code-signing / notarization is no longer deferred: it is a Beta item in
+  `agent_docs/ROADMAP.md`, because the SmartScreen warning an unsigned build
+  trips is the first thing a new user sees and no amount of published
+  provenance answers it for them.
 - Second Linux leg for Rocky/RHEL 9 (webkit2gtk-4.0) — would need the updater to
   probe the host's installed webkit version rather than assume 4.1.
 

@@ -159,7 +159,7 @@ func TestGraphMutatorsEmitNextRuns(t *testing.T) {
 
 	got := subscribeNextRuns(t, s)
 
-	saved, err := s.SaveGraph(models.Graph{Name: "g", Enabled: true, Nodes: []models.Node{
+	saved, err := s.SaveGraph("srv", models.Graph{Name: "g", Enabled: true, Nodes: []models.Node{
 		{ID: "n1", Type: "trigger.interval", Config: map[string]interface{}{"intervalMinutes": float64(10)}},
 	}})
 	if err != nil {
@@ -169,14 +169,14 @@ func TestGraphMutatorsEmitNextRuns(t *testing.T) {
 		t.Errorf("after SaveGraph: payload = %v, want one entry", runs)
 	}
 
-	if err := s.SetGraphEnabled(saved.ID, false); err != nil {
+	if err := s.SetGraphEnabled("srv", saved.ID, false); err != nil {
 		t.Fatalf("SetGraphEnabled: %v", err)
 	}
 	if runs := awaitNextRuns(t, got); len(runs) != 0 {
 		t.Errorf("after disabling: payload = %v, want empty", runs)
 	}
 
-	if err := s.DeleteGraph(saved.ID); err != nil {
+	if err := s.DeleteGraph("srv", saved.ID); err != nil {
 		t.Fatalf("DeleteGraph: %v", err)
 	}
 	if runs := awaitNextRuns(t, got); len(runs) != 0 {

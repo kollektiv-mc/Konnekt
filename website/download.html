@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Download — Konnekt</title>
+    <title>Konnekt: download</title>
     <meta
       name="description"
       content="Download Konnekt, the local-first Minecraft server dashboard. Windows and Linux builds, straight from GitHub Releases."
@@ -11,7 +11,7 @@
     <link rel="canonical" href="https://konnekt.pages.dev/download.html" />
 
     <meta property="og:site_name" content="Konnekt" />
-    <meta property="og:title" content="Download — Konnekt" />
+    <meta property="og:title" content="Konnekt: download" />
     <meta
       property="og:description"
       content="Download Konnekt, the local-first Minecraft server dashboard. Windows and Linux builds, straight from GitHub Releases."
@@ -22,7 +22,7 @@
     <meta property="og:image:width" content="1715" />
     <meta property="og:image:height" content="1123" />
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="Download — Konnekt" />
+    <meta name="twitter:title" content="Konnekt: download" />
     <meta
       name="twitter:description"
       content="Download Konnekt, the local-first Minecraft server dashboard. Windows and Linux builds, straight from GitHub Releases."
@@ -168,6 +168,41 @@
             >
           </p>
         </div>
+
+        <!-- Verification. Static rather than rendered by download.js, for two
+             reasons: it is the same two commands for every release, and it has
+             to survive a GitHub outage, which is exactly when a reader is most
+             likely to want a second way to confirm what they already have. That
+             is why it sits outside #dl-content rather than inside it. -->
+        <details class="dl-verify doc-collapse reveal" id="verify">
+          <summary>
+            <span class="doc-collapse-mark" aria-hidden="true"></span>
+            <span>Verify your download</span>
+          </summary>
+          <div class="md">
+            <p>
+              Every release is built by a public GitHub Actions workflow, and each file carries a
+              signed build provenance attestation: its digest is bound to that workflow, to this
+              repository and to the commit it was built from, and recorded in a public transparency
+              log. No signing key is held anywhere, so there is none to leak. With the
+              <a href="https://cli.github.com/" target="_blank" rel="noopener">GitHub CLI</a>
+              installed, check any file you downloaded:
+            </p>
+            <pre><code>gh attestation verify &lt;file&gt; --repo kollektiv-mc/Konnekt</code></pre>
+            <p>
+              Without <code>gh</code>, the <code>checksums.txt</code> published beside the binaries
+              confirms the download arrived intact:
+            </p>
+            <pre><code>sha256sum -c checksums.txt</code></pre>
+            <p class="step-note">
+              The two answer different questions. A checksum says the bytes are the ones that were
+              published; the attestation says who published them, and it cannot be written by anyone
+              who is not that workflow in this repository. Windows builds are not code signed yet,
+              so a first launch still shows a SmartScreen warning:
+              <a href="/roadmap.html#rm-release">that one is on the roadmap</a>.
+            </p>
+          </div>
+        </details>
       </div>
     </main>
 

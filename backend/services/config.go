@@ -3,6 +3,7 @@ package services
 import (
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"strings"
@@ -19,8 +20,57 @@ func NewConfigService() *ConfigService {
 	return &ConfigService{}
 }
 
+// SetDataDir points the service at the app data directory and repairs the active
+// server id if it is already dangling on disk (#363). Doing it here rather than
+// lazily is what makes the invariant true for everything that reads the id
+// afterwards, including the scheduler's own migration: app.go calls this before
+// schedulerService.SetDataDir, so the id that migration resolves against has
+// already been checked against a real config.
 func (s *ConfigService) SetDataDir(dir string) {
 	s.dataDir = dir
+	if err := s.reconcileActiveServer(); err != nil {
+		slog.Error("config: repairing the active server id", "error", err)
+	}
+}
+
+// reconcileActiveServer enforces the one rule the rest of the app reads this
+// file by: active_server.json names a server that exists, or is empty only when
+// there are none.
+//
+// Nothing held that rule before. SetActiveServerID was the only writer and the
+// sidebar its only caller, so deleting the server you were on left the file
+// naming it, and the frontend store worked the correction out three times over
+// without ever writing it back (#363). Go and the UI then disagreed about which
+// server was active, silently, until the user happened to click one.
+//
+// It writes only when the file is actually wrong. A healthy install rewrites
+// nothing on launch, the same discipline the scheduler's graph migration holds.
+func (s *ConfigService) reconcileActiveServer() error {
+	configs, err := s.GetServerConfigs()
+	if err != nil {
+		return err
+	}
+	active, err := s.GetActiveServerID()
+	if err != nil {
+		return err
+	}
+	for _, c := range configs {
+		if c.ID == active {
+			return nil
+		}
+	}
+	// The first config, which is what the sidebar's own fallback picks, so the
+	// file and the UI land on the same server rather than on two defensible ones.
+	next := ""
+	if len(configs) > 0 {
+		next = configs[0].ID
+	}
+	if next == active {
+		// Both empty: there is nothing to name and nothing to correct. Writing
+		// here would create the file just to say so.
+		return nil
+	}
+	return s.SetActiveServerID(next)
 }
 
 func (s *ConfigService) GetServerConfigs() ([]models.ServerConfig, error) {
@@ -90,7 +140,12 @@ func (s *ConfigService) SaveServerConfig(cfg models.ServerConfig) error {
 		}
 	}
 	configs = append(configs, cfg)
-	return s.writeServerConfigs(configs)
+	if err := s.writeServerConfigs(configs); err != nil {
+		return err
+	}
+	// A first server adopts the empty active id, so the backend agrees with the
+	// sidebar, which has always selected it (#363).
+	return s.reconcileActiveServer()
 }
 
 func (s *ConfigService) DeleteServerConfig(id string) error {
@@ -104,7 +159,12 @@ func (s *ConfigService) DeleteServerConfig(id string) error {
 			filtered = append(filtered, c)
 		}
 	}
-	return s.writeServerConfigs(filtered)
+	if err := s.writeServerConfigs(filtered); err != nil {
+		return err
+	}
+	// Deleting the server you are on used to leave the active id naming it
+	// (#363), which is the state everything downstream reads as a real server.
+	return s.reconcileActiveServer()
 }
 
 func (s *ConfigService) writeServerConfigs(configs []models.ServerConfig) error {

@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 	"fmt"
+	"math"
 	"sort"
 	"sync"
 
@@ -79,6 +80,35 @@ func (e *ExecContext) GetFloat(key string, def float64) float64 {
 		return float64(n)
 	}
 	return def
+}
+
+// GetNumber reports a config value as a number, and whether it is one at all.
+//
+// Unlike GetFloat this parses numeric strings, which is what makes it usable on
+// operands: a literal typed into a config field arrives as "10", while the same
+// port fed by an edge arrives as float64(10). Callers that must not conflate a
+// missing value with zero want this rather than GetFloat's default.
+//
+// Two kinds of value are deliberately reported as non-numeric:
+//
+//   - Bools, so a wired true never equals 1. GetFloat excludes them the same
+//     way; they read as "true"/"false" text instead.
+//   - NaN and the infinities, which strconv.ParseFloat happily accepts from the
+//     strings "NaN" and "Inf". Comparing those numerically would make even
+//     "NaN" == "NaN" false, so they stay on the text path where they behave.
+func (e *ExecContext) GetNumber(key string) (float64, bool) {
+	v, ok := e.Config[key]
+	if !ok || v == nil {
+		return 0, false
+	}
+	if _, isBool := v.(bool); isBool {
+		return 0, false
+	}
+	f, err := toFloat(v)
+	if err != nil || math.IsNaN(f) || math.IsInf(f, 0) {
+		return 0, false
+	}
+	return f, true
 }
 
 func (e *ExecContext) Server() *ServerService  { return e.svc.server }

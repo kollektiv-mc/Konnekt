@@ -24,6 +24,10 @@ canvas: it said what each tile says, in each tile's words, and answered "how is
 this server doing" no faster than the canvas already did. Adding a section is a
 deliberate edit to `OverviewPanel.tsx`, not a field on a registry entry.
 
+Overview's own tile id is `stats`, deliberately: it is persisted verbatim in
+three JSON files under the app data dir, so renaming it would orphan every
+saved layout. Do not "tidy" it to `overview`.
+
 Overview is also the **one sanctioned exception** to "tiles are self-contained,
 no cross-tile dependencies" (`agent_docs/CLAUDE.md`). It imports four other
 tiles' hooks and presentational components. Three rules keep that from rotting:

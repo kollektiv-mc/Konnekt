@@ -32,7 +32,10 @@ export {
   UsersRound,
   Workflow,
   // Sidebar and tile chrome.
+  Check,
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
   CircleCheck,
   CircleX,
   Maximize2,

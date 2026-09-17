@@ -368,22 +368,53 @@ func TestExecMathOp(t *testing.T) {
 
 func TestExecCondition(t *testing.T) {
 	cases := []struct {
-		name            string
-		left, right, op string
-		wantPort        string
+		name        string
+		left, right interface{}
+		op          string
+		wantPort    string
 	}{
-		{"eq true", "5", "5", "eq", "onTrue"},
-		{"eq false", "5", "6", "eq", "onFalse"},
-		{"ne true", "5", "6", "ne", "onTrue"},
-		{"contains true", "hello world", "world", "contains", "onTrue"},
-		{"contains false", "hello world", "xyz", "contains", "onFalse"},
-		{
-			// Documented current quirk: gt/lt compare left/right as plain
-			// strings (lexicographic), not numerically. "10" < "9" here
-			// because '1' < '9' in ASCII, even though 10 > 9 numerically.
-			name: "gt is lexicographic not numeric", left: "10", right: "9", op: "gt", wantPort: "onFalse",
-		},
-		{"gt lexicographic true case", "9", "10", "gt", "onTrue"},
+		{name: "eq true", left: "5", right: "5", op: "eq", wantPort: "onTrue"},
+		{name: "eq false", left: "5", right: "6", op: "eq", wantPort: "onFalse"},
+		{name: "ne true", left: "5", right: "6", op: "ne", wantPort: "onTrue"},
+		{name: "contains true", left: "hello world", right: "world", op: "contains", wantPort: "onTrue"},
+		{name: "contains false", left: "hello world", right: "xyz", op: "contains", wantPort: "onFalse"},
+
+		// Numeric comparison. These two were pinned the other way round while
+		// gt/lt compared the rendered strings: "10" > "9" was false and
+		// "9" > "10" was true, because '1' sorts below '9' in ASCII.
+		{name: "gt compares numerically", left: "10", right: "9", op: "gt", wantPort: "onTrue"},
+		{name: "gt numeric, differing digit counts", left: "9", right: "10", op: "gt", wantPort: "onFalse"},
+		{name: "lt compares numerically", left: "9", right: "10", op: "lt", wantPort: "onTrue"},
+
+		// A wired operand arrives as the float64 itself, via the overlay in
+		// runNode. %v renders it, so a million used to stringify to "1e+06"
+		// and sort below every plain digit string.
+		{name: "wired float beats digit string", left: float64(1000000), right: "500000", op: "gt", wantPort: "onTrue"},
+		{name: "wired float against wired float", left: float64(19.5), right: float64(20), op: "lt", wantPort: "onTrue"},
+		{name: "tps threshold below", left: float64(8.5), right: "10", op: "lt", wantPort: "onTrue"},
+		{name: "tps threshold above", left: float64(19.9), right: "10", op: "lt", wantPort: "onFalse"},
+
+		// eq/ne take the numeric path too, so the spellings of one number agree.
+		{name: "eq across float and int spelling", left: "1.0", right: "1", op: "eq", wantPort: "onTrue"},
+		{name: "ne across float and int spelling", left: "1.0", right: "1", op: "ne", wantPort: "onFalse"},
+		{name: "eq across wired float and string", left: float64(3), right: "3.00", op: "eq", wantPort: "onTrue"},
+		{name: "surrounding space still parses", left: " 10 ", right: "9", op: "gt", wantPort: "onTrue"},
+
+		// Fallback: not a pair of numbers, so the text comparison stands.
+		{name: "text gt stays lexicographic", left: "banana", right: "apple", op: "gt", wantPort: "onTrue"},
+		{name: "one side non-numeric falls back to text", left: "10", right: "apple", op: "gt", wantPort: "onFalse"},
+		{name: "text eq unchanged", left: "green", right: "green", op: "eq", wantPort: "onTrue"},
+		{name: "empty operand is not a number", left: "", right: "0", op: "eq", wantPort: "onFalse"},
+		{name: "contains never goes numeric", left: "1234", right: "23", op: "contains", wantPort: "onTrue"},
+
+		// Values ParseFloat accepts but that must not compare as numbers.
+		{name: "NaN compares as text", left: "NaN", right: "NaN", op: "eq", wantPort: "onTrue"},
+		{name: "Inf compares as text", left: "Inf", right: "Inf", op: "eq", wantPort: "onTrue"},
+		{name: "bool never equals its numeric spelling", left: true, right: "1", op: "eq", wantPort: "onFalse"},
+		{name: "bool equals its own text", left: true, right: "true", op: "eq", wantPort: "onTrue"},
+
+		// An unknown operator keeps falling through to equality.
+		{name: "unknown op falls back to eq, numerically", left: "1.0", right: "1", op: "whatever", wantPort: "onTrue"},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
@@ -396,6 +427,50 @@ func TestExecCondition(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestExecContextGetNumber(t *testing.T) {
+	cases := []struct {
+		name   string
+		value  interface{}
+		want   float64
+		wantOK bool
+	}{
+		{name: "float64", value: float64(4.5), want: 4.5, wantOK: true},
+		{name: "int", value: 7, want: 7, wantOK: true},
+		{name: "int64", value: int64(7), want: 7, wantOK: true},
+		{name: "numeric string", value: "12", want: 12, wantOK: true},
+		{name: "numeric string with space", value: " 12.5 ", want: 12.5, wantOK: true},
+		{name: "exponent string", value: "1e3", want: 1000, wantOK: true},
+		{name: "text", value: "tps", wantOK: false},
+		{name: "empty string", value: "", wantOK: false},
+		{name: "nil", value: nil, wantOK: false},
+		// Excluded on purpose: see the accessor's doc comment.
+		{name: "bool true", value: true, wantOK: false},
+		{name: "bool false", value: false, wantOK: false},
+		{name: "NaN string", value: "NaN", wantOK: false},
+		{name: "Inf string", value: "Inf", wantOK: false},
+		{name: "negative Inf string", value: "-inf", wantOK: false},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			ec := &ExecContext{Config: map[string]interface{}{"k": c.value}}
+			got, ok := ec.GetNumber("k")
+			if ok != c.wantOK {
+				t.Fatalf("ok = %v, want %v", ok, c.wantOK)
+			}
+			if ok && got != c.want {
+				t.Errorf("value = %v, want %v", got, c.want)
+			}
+		})
+	}
+
+	t.Run("absent key is not a number", func(t *testing.T) {
+		ec := &ExecContext{Config: map[string]interface{}{}}
+		if _, ok := ec.GetNumber("missing"); ok {
+			t.Error("expected absent key to report false")
+		}
+	})
 }
 
 func TestExecDelay(t *testing.T) {

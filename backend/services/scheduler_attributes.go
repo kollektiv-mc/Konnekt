@@ -87,6 +87,13 @@ func newAttrScope(deps serviceDeps, serverID string, custom map[string]string) *
 	return &AttrScope{serverID: serverID, deps: deps, custom: custom, visiting: map[string]bool{}}
 }
 
+// ServerID is the server this run acts on. Every ExecContext in the run reads
+// its own ServerID from here rather than resolving one of its own, so a block's
+// target and an @attribute's target are the same server by construction. They
+// used to be two independent reads of the active server, which agreed only
+// because nothing had changed between them (#236).
+func (a *AttrScope) ServerID() string { return a.serverID }
+
 // Define registers (or overwrites) a custom attribute's raw value expression.
 func (a *AttrScope) Define(name, expr string) {
 	a.custom[name] = expr

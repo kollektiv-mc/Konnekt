@@ -136,14 +136,18 @@ export function useBackups(serverId: string): BackupsState {
       // to avoid duplicates from React 18 Strict Mode double-effect runs.
       // creatingFilename itself is derived from useProcessesStore, which the
       // same events already update (see App.tsx) — no local bookkeeping needed here.
-      c1 = EventsOn(EVENTS.BACKUP_COMPLETED, () => {
-        refresh(true)
+      // These already carry a serverID; they just were not read (#234). A
+      // backup finishing on another server refetched this one's list for
+      // nothing. An absent or empty id still refreshes, matching useMods.
+      const mine = (p?: { serverID?: string }) => !p?.serverID || p.serverID === serverId
+      c1 = EventsOn(EVENTS.BACKUP_COMPLETED, (p?: { serverID?: string }) => {
+        if (mine(p)) refresh(true)
       })
-      c2 = EventsOn(EVENTS.RESTORE_COMPLETED, () => {
-        refresh(true)
+      c2 = EventsOn(EVENTS.RESTORE_COMPLETED, (p?: { serverID?: string }) => {
+        if (mine(p)) refresh(true)
       })
-      c3 = EventsOn(EVENTS.BACKUP_FAILED, () => {
-        refresh(true)
+      c3 = EventsOn(EVENTS.BACKUP_FAILED, (p?: { serverID?: string }) => {
+        if (mine(p)) refresh(true)
       })
     } catch {
       /* Wails runtime unavailable in dev without backend */

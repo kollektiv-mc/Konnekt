@@ -291,7 +291,7 @@
     "id": "control.condition",
     "category": "control",
     "label": "Condition",
-    "description": "Branches based on a comparison.",
+    "description": "Branches based on a comparison. Two values that are both numbers compare numerically, so 9 is less than 10; anything else compares as text. \"contains\" always compares as text.",
     "isTrigger": false,
     "controlInputs": [
       "trigger"

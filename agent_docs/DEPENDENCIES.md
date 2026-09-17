@@ -28,7 +28,7 @@ see `agent_docs/CLAUDE.md`'s "Linux builds" section for why.
 
 **Before adding an npm dependency:**
 - Prefer what's already in the tree (e.g. reuse Zustand for state, Tailwind
-  utilities for styling — see `CLAUDE.md`'s Code style section) over a new
+  utilities for styling — see `.claude/rules/frontend-style.md`) over a new
   library that does the same job differently.
 - Heavy/rarely-used dependencies must be lazy-loaded (`React.lazy` +
   `Suspense`), per the existing `worlds` (three.js), `performance` (recharts),

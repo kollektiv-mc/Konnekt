@@ -29,7 +29,7 @@ func (s *SchedulerService) PreviewNode(g models.Graph, nodeID string) (models.No
 	defer cancel()
 
 	outputs := make(map[string]map[string]interface{})
-	scope := newAttrScope(s.deps, s.activeServerID(), map[string]string{})
+	scope := newAttrScope(s.deps, s.runServerID(g), map[string]string{})
 
 	// Gather custom-attribute definitions from all Write Attribute nodes in the graph.
 	// Pull their data dependencies first so wired values (e.g. Math result) are available.
@@ -217,7 +217,7 @@ func (s *SchedulerService) simulateNode(
 		defer cancel()
 		ec := &ExecContext{
 			Ctx:       nodeCtx,
-			ServerID:  s.activeServerID(),
+			ServerID:  scope.ServerID(),
 			Config:    resolvedCfg,
 			RawConfig: node.Config,
 			DataIn:    dataIn,

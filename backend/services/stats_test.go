@@ -64,9 +64,9 @@ func TestTickEmitsServerStatusWhileStopped(t *testing.T) {
 	if len(got) != 1 {
 		t.Fatalf("want 1 server:status while stopped, got %d", len(got))
 	}
-	st, ok := got[0].(models.ServerStatus)
+	st, ok := got[0].(models.ServerStatusEvent)
 	if !ok {
-		t.Fatalf("payload should be models.ServerStatus, got %T", got[0])
+		t.Fatalf("payload should be models.ServerStatusEvent, got %T", got[0])
 	}
 	if st.Running {
 		t.Error("Running should be false while the server is stopped")
@@ -109,7 +109,7 @@ func TestTickEmitsBothWhileRunning(t *testing.T) {
 	if len(got) != 1 {
 		t.Fatalf("want 1 server:status while running, got %d", len(got))
 	}
-	if st := got[0].(models.ServerStatus); !st.Running {
+	if st := got[0].(models.ServerStatusEvent); !st.Running {
 		t.Error("Running should be true while the server is up")
 	}
 	if n := len(snapshots()); n != 1 {
@@ -132,7 +132,7 @@ func TestPushedStatusMatchesGetServerStatusShape(t *testing.T) {
 	if len(got) != 1 {
 		t.Fatalf("want 1 server:status, got %d", len(got))
 	}
-	pushed := got[0].(models.ServerStatus)
+	pushed := got[0].(models.ServerStatusEvent)
 
 	// Both sides are now one read (ServerService.Status), where they used to be
 	// two hand-kept lists of eight accessors. The drift this test was written to
@@ -140,7 +140,7 @@ func TestPushedStatusMatchesGetServerStatusShape(t *testing.T) {
 	// the fetch still resolve the *same server* — which is the thing #239 could
 	// get wrong.
 	fetched := server.Status(server.CurrentServerID())
-	if pushed != fetched {
+	if pushed.ServerStatus != fetched {
 		t.Errorf("pushed %+v != fetched %+v", pushed, fetched)
 	}
 }

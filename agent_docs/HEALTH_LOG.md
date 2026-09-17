@@ -85,6 +85,8 @@ after them is dated. Newest last, in both groups.
 - [2026-09-07 — The restore that failed as a backup, and four smaller repairs](#2026-09-07-the-restore-that-failed-as-a-backup-and-four-smaller-repairs)
 - [2026-09-08 — The audit brief, and the gate that came out of it](#2026-09-08-the-audit-brief-and-the-gate-that-came-out-of-it)
 - [2026-09-08 — The backup that reported a flush it never made](#2026-09-08-the-backup-that-reported-a-flush-it-never-made)
+- [2026-09-16 — The two thirds of a world the backup never took](#2026-09-16-the-two-thirds-of-a-world-the-backup-never-took)
+- [2026-09-16 — The schedules that followed the sidebar](#2026-09-16-the-schedules-that-followed-the-sidebar)
 
 ---
 
@@ -5395,3 +5397,289 @@ mutant whose test run hangs counts as killed, so a file that times out on
 every mutation would score 100% for the wrong reason.
 `govulncheck ./...` still needs one local run; the container's proxy blocks
 `vuln.go.dev`.
+
+### 2026-09-13 — The backup tests that pinned nothing, and the perfect scores that were a leftover file
+
+**Closed: [#348](../../issues/348).** The 2026-09-12 run had `backup.go` at
+29% killed, 571 of 809 mutants, next to 100% for `modservice.go` and
+`update.go` in the same package. The escape map, read function by function
+rather than as a number, said where the tests were missing rather than weak:
+`GetBackupWorlds` and the two archive readers behind it had no test at all,
+nor did the legacy layout (archives from before the server/worlds split,
+directly under the backup root, with the kind read off the filename), the
+world-only restore, either rollback, the sidecar's failure modes, the
+progress events, or the quiesce around a backup. What the round trip
+covered was the happy path through the server directory, and everything
+else could be deleted with the suite green.
+
+**The tests.** Two files beside `backup_test.go`, split by subject rather
+than added to it, each case written from the question "what would a user
+see if this line were wrong". `backup_worlds_test.go`: a server archive
+with an active world carrying vanilla DIM folders, an inactive world laid
+out the Bukkit way whose DIM-1 must not become a second nether, a
+`level.dat` below the top level that is not a world, and server files that
+count towards nothing, asserting dimensions, paths, sizes, the active flag
+and the `level.dat` metadata; a world archive with two nether files and one
+nether dimension; the refusals; a `parsePropertiesReader` and an
+`isServerFilename` table, the latter at every boundary of "five digits and
+an underscore"; the legacy root listed with its sidecar, resolved by
+`findBackupFile` with the right kind, and ordered newest first across
+directories by the file's own mtime; `session.lock` left out of an archive
+and an empty directory kept in one. `backup_restore_test.go`: a named world
+restore that replaces that world and nothing else and leaves no set-aside or
+staging directory behind; a restore into a world that was deleted; a legacy
+world archive restored into `level-name`, or `world` when that is unset;
+a legacy server archive replacing the working directory; the swap failing
+after the current files were moved aside, for both kinds, with the current
+files put back (the staging directory is placed on `/dev/shm`, which is a
+separate mount from the temp directory on Linux, so the final rename fails
+with a cross-device error on demand; the test skips where the two share a
+filesystem); the set-aside failing because the world's name is at the
+filesystem's 255-byte limit and leaves no room for the `.bak-` suffix (the
+first version made the target's parent a file, which is `ENOTDIR` on Linux
+but `ERROR_PATH_NOT_FOUND` on Windows, and that one is `os.IsNotExist`
+there, so CI's Windows job saw the set-aside skipped and the swap fail);
+`DeleteBackup` dropping the sidecar entry; `UpdateBackupMeta` over a
+sidecar that will not parse (rewritten) and one that cannot be read at all
+(refused, while the listing degrades to untagged rather than hiding the
+archive); the three backup events with their server and filename, and the
+progress percentages exactly once each; a backup that pauses and resumes a
+running server's saves; one that fails, with the reason wrapped, when the
+saves cannot be paused; a `BackupService` with no `ServerService`; and the
+refusals before `backup:started` when the backup directory cannot be made.
+
+**Score.** `go-mutesting` v2.10.6 over `backup.go`: 589 of 809 killed,
+72.8%, from 238. Run in three `--match` chunks (165 of 230, 200 of 259, 224
+of 320) with `go clean -cache` between them, because the build cache grows
+about 35 MB per mutant and the whole file filled the container's disk in
+one go: the first attempt ended with 278 mutants errored on "no space left
+on device", a number to distrust rather than record. By mutator,
+`conditional/negated` is 118 of 126 and `composite/field-clear` 60 of 63,
+while `expression/error-guard` is 24 of 61 and `branch/if` 88 of 139, and
+that is what the 220 left are: error guards on calls that cannot be made to
+fail as root (`MkdirAll`, `Stat`, `ReadFile`, `Create` on paths the test
+owns), the `>` against `>=` boundaries no fixture sits exactly on, clears
+that turn an empty slice into a nil one, `statement/return` on paths already
+behind a guard the tests do trigger, and the error paths inside the zip
+walks. A few are equivalents (the sort comparison, the prefix attribution in
+`findBackupFile`). Not chased further: what remains wants a filesystem that
+fails on cue, and the fake for that is worth more than the last points.
+
+**The restore's error does not say which step failed.** `failRestore`
+narrates "Restore failed while swapping files, previous state kept" and
+emits `backup:restore-failed`, but returns the raw rename error, so the
+toast reads "invalid cross-device link" with no step. That is how #280
+shaped it (the console line carries the step, the event carries the error
+and the server) and it is left as it is; the tests assert the step on the
+console and the error on the event, which is where each lives.
+
+**The perfect scores were one leftover file.** The note on the 12th guessed
+at timeouts. It was not that: three timeouts across the two files today, one
+in `update.go` and two in `modservice.go`, each counted as a kill because
+the tool maps `go test`'s exit 1 to killed whatever produced it, which stays
+worth knowing but is nowhere near 1,296 mutants. The run's own output is the
+evidence. It took the four files as `backup.go`, `config_editor.go`,
+`modservice.go`, `update.go`, and every escape it printed is in the first
+two. `AcceptEula` writes `eula.txt` under the server's working directory,
+and `TestConfigEditorRefusesAnEmptyWorkingDir` asserts both that a server
+with no working directory is refused and that no `eula.txt` lands in the
+process's working directory, which under `go test` is `backend/services/`.
+The mutant that drops that guard writes the file there and is killed,
+correctly. The file outlives it: the tool restores the source between
+mutants and nothing else. From then on the test failed on every run, so
+every mutant after it, the rest of `config_editor.go` and all of the other
+two files, was scored as killed by a test that never looked at it.
+Reproduced today in both directions: an `eula.txt` in the package directory
+and nothing else fails the suite on exactly that test, and the directories
+`backup.go`'s own mutants leave behind (`backups/`, `server/`, `worlds/`)
+fail nothing, which is why its 571 escapes were real. Measured one file per
+invocation with the directory cleaned between: `update.go` 56.9% (271 of
+476 killed) and `modservice.go` 28.2% (229 of 811), filed as #349 and #350;
+`config_editor.go`'s 36 escapes on the 12th were cut short by the same
+file, and measured alone it is 28.3% (84 of 297), filed as #352; the two
+containment tests in `sandbox` are among the kills, and its four escapes are
+the propagation of an `EvalSymlinks` failure that cannot be provoked as
+root. The test now runs in a directory of its own
+(`t.Chdir(t.TempDir())`), so a leftover cannot fail it and the guard mutant
+is still caught, checked by hand with the guard removed. And a rule for
+reading the tool, now in the Stable pillar: a mutant's side effects on the
+working directory persist for the rest of the run, so mutate one file per
+invocation, look at what is left in the package directory before believing
+the number, and treat a 100% file as a question rather than a result.
+
+**Verification.** `gofmt -l`, `go vet ./...`, `go test ./...`, `go run
+./scripts/coverage-floor`, `aislop ci` at 100, and the mutation runs above.
+
+### 2026-09-16 — The two thirds of a world the backup never took
+
+**#26, `type:bug`, `p1`.** On Paper, Spigot and Bukkit a world is three
+folders: `world`, `world_nether`, `world_the_end`. `BackupWorld` passed the
+base name straight through to `CreateWorldBackup`, which zipped
+`WorkingDir/<name>` and nothing else, so on those servers a world backup held
+the overworld alone. Restoring one put the overworld back beside whatever
+nether happened to be on disk. Vanilla was never affected: it keeps `DIM-1`
+and `DIM1` inside the overworld folder, so they came along for free, which is
+most likely why this survived as long as it did.
+
+**It was silent in the worst possible place.** `ListWorlds` groups the
+siblings into one `WorldSystem` (`worlds.go:39`) and the Worlds tile draws
+them as moons orbiting the planet (`scene/Planet.tsx:247`). The user saw
+three dimensions and pressed Backup on the planet holding them. Nothing in
+the archive, the tile or the console said that two of the three had been
+skipped.
+
+**`worldSiblings` already existed.** `DeleteWorld`, `RenameWorld` and
+`DuplicateWorld` have walked the sibling set since the Worlds tile shipped
+(`worlds.go:328`). `BackupWorld` was the one sibling-aware operation that
+never adopted it, and its own doc comment said so: "Only that folder ...
+not included in the archive yet (#26)". The 2026-08-21 sweep had flagged
+that comment as overstating today's behavior; it was understating it, in
+the sense that the comment was the only place the gap was written down.
+
+**A world archive is now multi-root.** `CreateWorldBackup` zips every
+existing sibling under its own folder name, so the archive holds `world/`
+and `world_nether/` side by side where it used to hold the overworld
+folder's *contents* at the zip root. `zipDirWithProgress` and the new
+`zipRootsWithProgress` share one tree writer, and progress is a single
+0-100 across every root rather than one sweep per root: the caller emits
+it straight to the UI, and a bar that restarts twice reads as three
+backups rather than one.
+
+**Archives written before this still restore, and that is the part worth
+getting right.** The layout is read off the *extracted* tree, not the zip:
+a `level.dat` at the root can only be the old layout and settles the case
+even for an old-layout world that contains a subfolder named after itself;
+with no root `level.dat`, a folder named after the world is the new layout;
+anything else reads as the old layout, so an archive the check does not
+recognise restores exactly the way it did before. The first version read
+this by opening the zip a second time *before* extracting, which passed its
+own tests and quietly reclassified a corrupt archive from "Restore failed
+while extracting" to "while reading the archive".
+`TestRestoreWorldBackupReportsStagingAndExtractFailures` caught it, which is
+the second time that test has earned its keep.
+
+**Two renames are not one atomic step**, so the guarantee is the weaker one
+that still leaves a bootable server: every dimension is the restored one, or
+every dimension is the one that was there before. `swapWorldDirs` puts back
+what it had already swapped before reporting a failure, so a Paper world
+never ends up with a restored overworld beside a nether it was not restored
+with. `renameIntoPlace` is the seam that test drives, the same shape as
+`mkdirTempRestore` and for the same reason: the rollback matters most in the
+case that is hardest to produce for real.
+
+**A dimension the archive does not hold is left alone, deliberately.** The
+other reading, "make the world exactly what the archive says", deletes the
+nether beside an overworld-only archive written before this change. That is
+data the restore was never asked to touch, and unlike a stale dimension it
+is not recoverable once the aside copy is cleaned up. Leaving it is the
+recoverable failure of the two, and the restore now narrates which
+dimensions it replaced so the choice is visible rather than silent.
+
+**Verification.** Nine tests in `backup_dimensions_test.go`, each confirmed
+to fail against the unfixed tree rather than assumed to: reverting the write
+side alone fails five, and disabling the multi-root restore detection alone
+fails five (three of them pre-existing). `gofmt -l`, `go vet ./...`, `go test
+./...`, `go run ./scripts/coverage-floor` (67.7% against a 49.0% floor) and
+the full `.claude/suite-check.py` table, which was green at 22 of 22 before
+the change and after it.
+
+### 2026-09-16 — The schedules that followed the sidebar
+
+**#236, `type:bug`, `p1`.** A scheduler graph belonged to no server. Every run
+resolved its target from `active_server.json` at fire time, so clicking a
+different server in the sidebar silently re-pointed every schedule the user had
+written, and an event from one server fired every other server's graphs. A
+backup graph authored while A was selected backed up B the moment B was
+clicked.
+
+**Half the issue had already been fixed by other work, and it was the half the
+`p1` rested on.** The filed text argued this was urgent because `execBackup`
+used `e.ServerID` while `execCommand`'s default branch and `execRcon` went
+through the singleton `ServerService`, so one graph could back up B and RCON to
+A. #232 and #239 closed that: `ServerService` holds an `instances` map with
+`instanceFor(serverID)` and every block routes through `e.ServerID`. The issue
+was corrected before the work started rather than left standing, because a
+justification that no longer holds is worse than no justification. What kept it
+at `p1` is the ambient re-pointing and the unfiltered trigger fan-out, both
+reachable in Alpha: Alpha supports multiple saved server configs, and switching
+the sidebar rewrites `active_server.json`.
+
+**The dependency had landed the day before.** #233 put a `serverID` on all nine
+server-scoped events (PR #355, 2026-09-15) and #234 keyed the tile tree by
+server the same day. The filter this needed was mechanically available and
+simply not applied.
+
+**`AttrScope` turned out to be the seam.** The five sites that seeded a run
+(`scheduler_engine.go:111,252,344` and `scheduler_preview.go:32,220`) each read
+`activeServerID()` independently. The scope was already threaded through every
+one of them and already carried a `serverID`, so each `ExecContext` now reads
+its server back off the scope instead of resolving one of its own. A block's
+target and an `@attribute`'s target are the same server by construction; before,
+they were two reads that agreed only because nothing had changed between them,
+and a condition reading one server while its action hits another guards the
+wrong thing. Reverting only the `ExecContext` half makes the test say so
+directly: block server b, attribute server a.
+
+**The plan said `activeServerID` would be deleted, and it was not.** Its absence
+was going to be the proof the ambient read was gone. The migration needs it, and
+so does the fallback for a graph the migration could not assign, so it survives
+with exactly two callers and a comment saying a third would be the ambient read
+coming back. The deletion was a nice proof and not a design constraint; keeping
+the fallback was worth more.
+
+**The migration runs once against real user data, so it went in on its own,
+tests first.** An unassigned graph is given the active server, but only once
+that id resolves against a real config: `active_server.json` is a bare string
+written with no referential check and can name a server that has since been
+deleted. A single configured server wins whatever that file says, because it is
+the only server those graphs can ever have run against. Where neither applies
+the graph is left unassigned and keeps running against the active server the way
+it always has. A graph is never assigned to a server the user does not have,
+which would be a schedule that silently stops and never says so.
+
+**The existing #233 tests caught a regression in the trigger filter that the
+plan had not anticipated.** The first version filtered strictly on the event's
+server id, and the three lifecycle tests #233 shipped went red: they drive
+graphs with no owner through a scheduler with no config service, and every one
+of them was silenced. In production the same shape is a user with several
+servers and no valid `active_server.json`, whose schedules would simply have
+gone quiet. The filter now applies only when both sides are known. An event with
+no id fires everything and logs an error, because an emit site added without one
+is a mistake worth seeing rather than absorbing, and strict filtering there is
+the exact failure `WINGS_ADOPTION.md`'s constraint 2 calls the most maddening.
+Over-firing is the recoverable fault of the two.
+
+**The minute ticker is deliberately not filtered** and now says so: a nightly
+backup on a server nobody has selected is still due at that time, and each graph
+runs against its own server.
+
+**The frontend's hydration latch was a boolean.** #234 keys tiles
+`${tile.id}:${serverId}`, so the scheduler tile remounts on a switch and calls
+`hydrate()` again, which short-circuited: the previous server's graphs stayed on
+screen under the new server's name. It is `hydratedFor` now. It deliberately
+does not bail on a fetch in flight for a *different* server, or a server
+switched to mid-fetch would never load, since the tile only hydrates on mount.
+Two fetches can therefore overlap, so a response is applied only if it is still
+the server being asked about, and a switch clears the graphs rather than showing
+the old ones for the length of the fetch.
+
+**Run history is scoped through the graph rather than by a field.** A `ServerID`
+on `RunRecord` would need a second migration for the 200 records already on
+disk, which could only recover their server through the same join. A record
+whose graph was deleted drops out, losing a row that could not be opened anyway.
+
+**`models.ConfigField`'s `"server"` type went rather than got built.** Nothing
+used it: no `ConfigField`, no block, no editor control. A per-node server
+override would put back the ambiguity this closes.
+
+**Verification.** Five commits, each green on its own. Twenty-four Go tests
+across `scheduler_migrate_test.go` and `scheduler_scoping_test.go`, each
+confirmed to fail against a mutated implementation rather than assumed to:
+reverting the ambient read, reverting only the `ExecContext` half, removing the
+trigger filter, making it strict, extending it to the time ticker, trusting an
+unresolved active id, dropping the single-config fallback, always reporting the
+migration as changed, and removing the migration call. Five new frontend cases
+pin the server dimension of the store, including the overlapping-fetch order.
+`.claude/suite-check.py` green at 22 of 22 before and after. Bindings
+regenerated with the CLI version `go.mod` pins, changing exactly the seven
+signatures and the new field.

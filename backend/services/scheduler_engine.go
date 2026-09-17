@@ -108,7 +108,7 @@ func (s *SchedulerService) runGraph(
 
 	// Run-scoped custom attributes: defined by Write Attribute nodes as raw
 	// expressions, evaluated lazily on each reference. Fresh per run.
-	scope := newAttrScope(s.deps, s.activeServerID(), map[string]string{})
+	scope := newAttrScope(s.deps, s.runServerID(g), map[string]string{})
 
 	// BFS/queue of (nodeID, firedPort-that-led-here).
 	type work struct {
@@ -249,7 +249,7 @@ func (s *SchedulerService) executeNode(
 	dataOut := make(map[string]interface{})
 	ec := &ExecContext{
 		Ctx:       nodeCtx,
-		ServerID:  s.activeServerID(),
+		ServerID:  scope.ServerID(),
 		Config:    resolvedConfig,
 		RawConfig: node.Config,
 		DataIn:    dataIn,
@@ -341,7 +341,7 @@ func (s *SchedulerService) ensureDataOutputs(
 	defer cancel()
 	ec := &ExecContext{
 		Ctx:       nodeCtx,
-		ServerID:  s.activeServerID(),
+		ServerID:  scope.ServerID(),
 		Config:    resolvedConfig,
 		RawConfig: node.Config,
 		DataIn:    dataIn,

@@ -31,6 +31,17 @@ interface ServerConfigStore {
  * roll back: failing before it is the whole fix. `hasWailsBridge()` keeps the
  * browser-only `frontend-dev` preview working, where no write was ever going to
  * land anyway — see `lib/ipc.ts`.
+ *
+ * Three places below pick an `activeId` without calling `SetActiveServerID`:
+ * `loadConfigs` when the stored one names nothing, `saveConfig` for the first
+ * server added, and `deleteConfig` when it removes the selected one. They are
+ * mirrors of a rule `ConfigService` now holds on disk, not repairs it is missing
+ * (#363): the backend re-points the same way, to the first config, so the two
+ * agree rather than both being separately defensible. They stay because the
+ * no-bridge preview has no backend to hold anything, and because a store that
+ * renders a server it was told does not exist would be its own bug. Do not read
+ * them as the source of truth, and do not delete one on the grounds that Go
+ * covers it.
  */
 export const useServerConfigStore = create<ServerConfigStore>((set) => ({
   configs: [],

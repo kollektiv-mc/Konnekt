@@ -23,7 +23,7 @@ export function DeleteBackup(arg1:string,arg2:string):Promise<void>;
 
 export function DeleteLayoutPreset(arg1:string):Promise<void>;
 
-export function DeleteScheduleGraph(arg1:string):Promise<void>;
+export function DeleteScheduleGraph(arg1:string,arg2:string):Promise<void>;
 
 export function DeleteServerConfig(arg1:string):Promise<void>;
 
@@ -73,11 +73,11 @@ export function GetPlayerRoster(arg1:string):Promise<Array<models.Player>>;
 
 export function GetScheduleBlockDefs():Promise<Array<models.BlockDef>>;
 
-export function GetScheduleGraphs():Promise<Array<models.Graph>>;
+export function GetScheduleGraphs(arg1:string):Promise<Array<models.Graph>>;
 
 export function GetScheduleNextRuns():Promise<Record<string, number>>;
 
-export function GetScheduleRunHistory():Promise<Array<models.RunRecord>>;
+export function GetScheduleRunHistory(arg1:string):Promise<Array<models.RunRecord>>;
 
 export function GetServerConfigs():Promise<Array<models.ServerConfig>>;
 
@@ -87,7 +87,7 @@ export function GetServerSummary(arg1:string):Promise<models.ServerSummary>;
 
 export function GetStatsHistory(arg1:string):Promise<Array<models.StatsSnapshot>>;
 
-export function ImportScheduleGraphJSON(arg1:string):Promise<models.Graph>;
+export function ImportScheduleGraphJSON(arg1:string,arg2:string):Promise<models.Graph>;
 
 export function InspectServerFile(arg1:string):Promise<services.InstallerInfo>;
 
@@ -153,7 +153,7 @@ export function RestartServer(arg1:string):Promise<void>;
 
 export function RestoreBackup(arg1:string,arg2:string):Promise<void>;
 
-export function RunScheduleGraphNow(arg1:string):Promise<models.RunRecord>;
+export function RunScheduleGraphNow(arg1:string,arg2:string):Promise<models.RunRecord>;
 
 export function SaveActiveLayout(arg1:string):Promise<void>;
 
@@ -165,7 +165,7 @@ export function SaveCommandButtons(arg1:Array<models.CommandButton>):Promise<voi
 
 export function SaveLayoutPreset(arg1:string,arg2:string):Promise<void>;
 
-export function SaveScheduleGraph(arg1:models.Graph):Promise<models.Graph>;
+export function SaveScheduleGraph(arg1:string,arg2:models.Graph):Promise<models.Graph>;
 
 export function SaveServerConfig(arg1:models.ServerConfig):Promise<void>;
 
@@ -175,7 +175,7 @@ export function SetActiveServerID(arg1:string):Promise<void>;
 
 export function SetActiveWorld(arg1:string,arg2:string):Promise<void>;
 
-export function SetScheduleGraphEnabled(arg1:string,arg2:boolean):Promise<void>;
+export function SetScheduleGraphEnabled(arg1:string,arg2:string,arg3:boolean):Promise<void>;
 
 export function StartServer(arg1:string):Promise<void>;
 

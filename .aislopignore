@@ -8,6 +8,8 @@ frontend/wailsjs
 # these to the same gate, so they arrive clean; the entries exist because a
 # gate that reformatted one here once handed the suite a week of drift.
 .claude/suite-check.py
+.claude/suite-probe.py
+.claude/suite-memory.py
 .github/scripts/release-notes.py
 .github/scripts/release-notes_test.py
 

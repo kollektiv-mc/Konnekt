@@ -566,9 +566,9 @@ func TestWaitForExitReportsTheExitCodeOnUnexpectedStop(t *testing.T) {
 		defer mu.Unlock()
 		return append([]any{}, stops...)
 	}, 1)
-	payload, ok := events[0].(models.ServerStopped)
+	payload, ok := events[0].(models.ServerStoppedEvent)
 	if !ok {
-		t.Fatalf("server:stopped payload is %T, want models.ServerStopped", events[0])
+		t.Fatalf("server:stopped payload is %T, want models.ServerStoppedEvent", events[0])
 	}
 	if payload.Expected || payload.ExitCode != 3 {
 		t.Errorf("payload = %+v, want {Expected:false ExitCode:3}", payload)
@@ -745,9 +745,9 @@ func TestRestartBackToBackSecondFailsFast(t *testing.T) {
 	}
 
 	events := waitForCount(t, stops, 1)
-	payload, ok := events[0].(models.ServerStopped)
+	payload, ok := events[0].(models.ServerStoppedEvent)
 	if !ok {
-		t.Fatalf("server:stopped payload is %T, want models.ServerStopped", events[0])
+		t.Fatalf("server:stopped payload is %T, want models.ServerStoppedEvent", events[0])
 	}
 	if !payload.Expected {
 		t.Error("restart's stop leg emitted Expected=false — a crash notification for a deliberate restart")

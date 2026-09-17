@@ -3,8 +3,14 @@ package models
 // ─── Graph persistence ────────────────────────────────────────────────────────
 
 type Graph struct {
-	ID        string `json:"id"`
-	Name      string `json:"name"`
+	ID   string `json:"id"`
+	Name string `json:"name"`
+	// ServerID is the server this graph acts on, decided when it was authored
+	// rather than by whatever the sidebar currently names (#236). Empty means a
+	// graph written before graphs had an owner, which the migration in
+	// scheduler_migrate.go could not resolve; it still runs against the active
+	// server, which is what every graph used to do.
+	ServerID  string `json:"serverId"`
 	Enabled   bool   `json:"enabled"`
 	Nodes     []Node `json:"nodes"`
 	Edges     []Edge `json:"edges"`
@@ -59,9 +65,13 @@ type DataPort struct {
 }
 
 type ConfigField struct {
-	Key      string        `json:"key"`
-	Label    string        `json:"label"`
-	Type     string        `json:"type"` // "string"|"number"|"bool"|"select"|"server"|"command"
+	Key   string `json:"key"`
+	Label string `json:"label"`
+	// "server" was listed here and never implemented: no ConfigField used it, no
+	// block read it and the editor had no control for it. It is gone rather than
+	// built, because a graph belongs to the server it was authored on (#236) and
+	// a per-node override would put back the ambiguity that closed.
+	Type     string        `json:"type"` // "string"|"number"|"bool"|"select"|"command"
 	Default  interface{}   `json:"default,omitempty"`
 	Required bool          `json:"required,omitempty"`
 	Options  []FieldOption `json:"options,omitempty"` // for "select"
