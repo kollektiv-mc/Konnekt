@@ -51,7 +51,7 @@ export const GRAPHS = [
       node(
         "n3",
         "action.command",
-        { preset: "", command: "say Restarting in 60s" },
+        { command: "say Restarting in 60s" },
         320,
         200,
       ),
@@ -60,7 +60,7 @@ export const GRAPHS = [
       node(
         "n6",
         "action.command",
-        { preset: "__restart__", command: "" },
+        { command: "__restart__" },
         880,
         200,
       ),
@@ -84,7 +84,7 @@ export const GRAPHS = [
       node(
         "m2",
         "action.rcon",
-        { preset: "", command: "say Live map: https://map.example.gg" },
+        { command: "say Live map: https://map.example.gg" },
         360,
         120,
       ),
@@ -112,7 +112,7 @@ export const GRAPHS = [
         360,
         60,
       ),
-      node("l3", "action.rcon", { preset: "save-all", command: "" }, 360, 200),
+      node("l3", "action.rcon", { command: "save-all" }, 360, 200),
     ],
     edges: [
       control("le1", "l1", "onComplete", "l2"),
