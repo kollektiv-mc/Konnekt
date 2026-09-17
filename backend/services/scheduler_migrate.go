@@ -91,3 +91,70 @@ func (s *SchedulerService) migrateGraphServerIDs(graphs []models.Graph) []models
 	}
 	return migrated
 }
+
+// ─── Folding command presets onto the command field (#161) ─────────────────
+//
+// action.command and action.rcon used to carry two fields: a `preset` select
+// and a `command` textarea, with the preset winning whenever it was set. A user
+// who picked a preset and then typed their own command got the preset, silently
+// and on every run. The blocks now declare one `command` field with the presets
+// as its options, so the node shows the value it runs.
+//
+// Graphs already on disk carry the old pair and have to keep running exactly as
+// they did. That means reproducing the old precedence once, at rest: a non-empty
+// preset was the command, so it becomes the command.
+
+// commandPresetBlocks are the block types that had the preset/command pair.
+var commandPresetBlocks = map[string]bool{
+	"action.command": true,
+	"action.rcon":    true,
+}
+
+// foldCommandPresets rewrites the old pair into the single command field and
+// reports whether it changed anything, so an already-migrated file is not
+// rewritten on every launch.
+//
+// It mutates the nodes' config maps in place. Copying the slice would not help:
+// Node.Config is a map, so the copy would share it, and every caller here wants
+// the in-memory graphs migrated anyway.
+func foldCommandPresets(graphs []models.Graph) ([]models.Graph, bool) {
+	changed := false
+	for gi := range graphs {
+		for ni := range graphs[gi].Nodes {
+			n := &graphs[gi].Nodes[ni]
+			if !commandPresetBlocks[n.Type] || n.Config == nil {
+				continue
+			}
+			raw, ok := n.Config["preset"]
+			if !ok {
+				continue
+			}
+			// Only a non-empty preset was ever the command. An empty one meant
+			// "— none —", which left the command field in charge, so dropping
+			// the key is the whole migration for that node.
+			if preset, isString := raw.(string); isString && preset != "" {
+				n.Config["command"] = preset
+			}
+			delete(n.Config, "preset")
+			changed = true
+		}
+	}
+	return graphs, changed
+}
+
+// migrateCommandPresets folds the presets on the graphs loaded from disk and
+// persists the result.
+//
+// A failed write is logged and not fatal, for the same reason
+// migrateGraphServerIDs gives: the in-memory graphs are correct for this
+// session and the migration runs again next launch.
+func (s *SchedulerService) migrateCommandPresets(graphs []models.Graph) []models.Graph {
+	migrated, changed := foldCommandPresets(graphs)
+	if !changed {
+		return graphs
+	}
+	if err := s.writeGraphs(migrated); err != nil {
+		slog.Error("scheduler: persisting folded command presets", "error", err)
+	}
+	return migrated
+}

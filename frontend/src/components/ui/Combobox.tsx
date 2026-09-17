@@ -19,6 +19,16 @@ interface ComboboxProps {
    * `<select>` is.
    */
   freeText?: boolean
+  /**
+   * Render the free-text half as a textarea. Only meaningful with `freeText`.
+   *
+   * It changes the keyboard contract, because a textarea already owns the keys
+   * a combobox wants: while the list is closed every key goes to the textarea
+   * untouched, so Enter inserts a newline and the arrows move the caret. The
+   * list opens from the chevron or Alt+ArrowDown, and only once it is open do
+   * the arrows and Enter drive it.
+   */
+  multiline?: boolean
   placeholder?: string
   /**
    * Labels the control for assistive tech. The panel's field labels are plain
@@ -50,6 +60,7 @@ export function Combobox({
   onChange,
   options,
   freeText,
+  multiline,
   placeholder,
   ariaLabel,
 }: ComboboxProps) {
@@ -110,6 +121,17 @@ export function Combobox({
   )
 
   const onKeyDown = (e: React.KeyboardEvent) => {
+    // A closed textarea owns its keys outright: Enter is a newline and the
+    // arrows move the caret, so nothing below may intercept them. Alt+ArrowDown
+    // is the one exception, the standard "open the list" chord.
+    if (multiline && !open) {
+      if (e.key === 'ArrowDown' && e.altKey) {
+        e.preventDefault()
+        openAt()
+      }
+      return
+    }
+
     switch (e.key) {
       case 'ArrowDown':
         e.preventDefault()
@@ -187,23 +209,42 @@ export function Combobox({
     <div className="relative" onKeyDown={onKeyDown}>
       {freeText ? (
         <div className="relative">
-          <input
-            type="text"
-            role="combobox"
-            aria-expanded={open}
-            aria-controls={listId}
-            aria-autocomplete="list"
-            aria-label={ariaLabel}
-            value={value}
-            placeholder={placeholder}
-            onChange={(e) => {
-              onChange(e.target.value)
-              setQuery(e.target.value)
-              setActiveIndex(-1)
-              if (!open) toggle()
-            }}
-            className={`${controlClass} pr-6`}
-          />
+          {multiline ? (
+            <textarea
+              role="combobox"
+              aria-expanded={open}
+              aria-controls={listId}
+              aria-autocomplete="list"
+              aria-label={ariaLabel}
+              value={value}
+              placeholder={placeholder}
+              rows={2}
+              onChange={(e) => {
+                onChange(e.target.value)
+                setQuery(e.target.value)
+                setActiveIndex(-1)
+              }}
+              className={`${controlClass} resize-none pr-6`}
+            />
+          ) : (
+            <input
+              type="text"
+              role="combobox"
+              aria-expanded={open}
+              aria-controls={listId}
+              aria-autocomplete="list"
+              aria-label={ariaLabel}
+              value={value}
+              placeholder={placeholder}
+              onChange={(e) => {
+                onChange(e.target.value)
+                setQuery(e.target.value)
+                setActiveIndex(-1)
+                if (!open) toggle()
+              }}
+              className={`${controlClass} pr-6`}
+            />
+          )}
           <button
             type="button"
             tabIndex={-1}
@@ -213,7 +254,9 @@ export function Combobox({
               if (open) closeList()
               else openAt()
             }}
-            className="text-text-faint hover:text-text-secondary absolute top-0 right-0 flex h-full cursor-pointer items-center bg-transparent px-1.5 transition-colors"
+            className={`text-text-faint hover:text-text-secondary absolute top-0 right-0 flex cursor-pointer items-center bg-transparent px-1.5 transition-colors ${
+              multiline ? 'pt-1.5' : 'h-full'
+            }`}
           >
             <Icon icon={ChevronDown} size="xs" />
           </button>

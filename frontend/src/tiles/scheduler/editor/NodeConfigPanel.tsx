@@ -120,11 +120,13 @@ export function NodeConfigPanel({ nodeId, data, def, edges, onChange }: Props) {
                 className={FIELD_CLASS}
               />
             ) : field.type === 'command' ? (
-              <textarea
+              <Combobox
                 value={String(val)}
-                onChange={(e) => onChange(field.key, e.target.value)}
-                rows={2}
-                className={`${FIELD_CLASS} resize-none`}
+                onChange={(v) => onChange(field.key, v)}
+                options={options}
+                ariaLabel={field.label}
+                freeText
+                multiline
               />
             ) : (
               <input

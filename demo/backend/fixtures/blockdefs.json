@@ -52,15 +52,10 @@
     ],
     "configSchema": [
       {
-        "key": "preset",
-        "label": "Preset",
-        "type": "select",
-        "default": "",
+        "key": "command",
+        "label": "Command",
+        "type": "command",
         "options": [
-          {
-            "label": "— none —",
-            "value": ""
-          },
           {
             "label": "Start Server",
             "value": "__start__"
@@ -90,11 +85,6 @@
             "value": "time set night"
           }
         ]
-      },
-      {
-        "key": "command",
-        "label": "Command",
-        "type": "command"
       }
     ],
     "source": "native"
@@ -251,15 +241,11 @@
     ],
     "configSchema": [
       {
-        "key": "preset",
-        "label": "Preset",
-        "type": "select",
-        "default": "",
+        "key": "command",
+        "label": "Command",
+        "type": "command",
+        "required": true,
         "options": [
-          {
-            "label": "— none —",
-            "value": ""
-          },
           {
             "label": "Save All",
             "value": "save-all"
@@ -277,12 +263,6 @@
             "value": "time set night"
           }
         ]
-      },
-      {
-        "key": "command",
-        "label": "Command",
-        "type": "command",
-        "required": true
       }
     ],
     "source": "native"

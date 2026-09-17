@@ -138,9 +138,17 @@ func registerBuiltins(r *BlockRegistry) {
 		DataInputs:  []models.DataPort{{ID: "command", Label: "Command", Type: "string"}},
 		DataOutputs: []models.DataPort{{ID: "command", Label: "Command sent", Type: "string"}},
 		ConfigSchema: []models.ConfigField{
-			{Key: "preset", Label: "Preset", Type: "select", Default: "",
+			// One field, not a command plus an overriding preset (#161). The
+			// presets are options on the command itself, so what the node shows
+			// is what runs.
+			//
+			// The three lifecycle entries are sentinels rather than commands:
+			// execCommand switches on them instead of writing them to stdin.
+			// They stay safe to keep in the same field because no Minecraft
+			// command begins with "__", so the prefix is a reserved namespace
+			// free text cannot wander into.
+			{Key: "command", Label: "Command", Type: "command",
 				Options: []models.FieldOption{
-					{Label: "— none —", Value: ""},
 					{Label: "Start Server", Value: "__start__"},
 					{Label: "Stop Server", Value: "__stop__"},
 					{Label: "Restart Server", Value: "__restart__"},
@@ -149,7 +157,6 @@ func registerBuiltins(r *BlockRegistry) {
 					{Label: "Set Day", Value: "time set day"},
 					{Label: "Set Night", Value: "time set night"},
 				}},
-			{Key: "command", Label: "Command", Type: "command"},
 		},
 		Source: "native",
 	}, execCommand))
@@ -161,15 +168,15 @@ func registerBuiltins(r *BlockRegistry) {
 		DataInputs:  []models.DataPort{{ID: "command", Label: "Command", Type: "string"}},
 		DataOutputs: []models.DataPort{{ID: "response", Label: "Response", Type: "string"}},
 		ConfigSchema: []models.ConfigField{
-			{Key: "preset", Label: "Preset", Type: "select", Default: "",
+			// As on action.command: presets attach to the command field rather
+			// than overriding it from a second one (#161).
+			{Key: "command", Label: "Command", Type: "command", Required: true,
 				Options: []models.FieldOption{
-					{Label: "— none —", Value: ""},
 					{Label: "Save All", Value: "save-all"},
 					{Label: "Freeze Time", Value: "time set 18000"},
 					{Label: "Set Day", Value: "time set day"},
 					{Label: "Set Night", Value: "time set night"},
 				}},
-			{Key: "command", Label: "Command", Type: "command", Required: true},
 		},
 		Source: "native",
 	}, execRcon))
@@ -300,11 +307,12 @@ func triggerRouted(e *ExecContext) ExecResult {
 }
 
 func execCommand(e *ExecContext) ExecResult {
-	// Preset takes precedence, then wired/config command.
-	cmd := e.GetString("preset")
-	if cmd == "" {
-		cmd = e.GetString("command")
-	}
+	// One value, wired or configured. There is deliberately no second field to
+	// fall back to: a preset that outranked the command field meant a typed
+	// command could be ignored without the node saying so, which on an
+	// unattended schedule ran the wrong thing for as long as nobody looked
+	// (#161).
+	cmd := e.GetString("command")
 	if cmd == "" {
 		return ExecResult{Port: "onFailed", Err: fmt.Errorf("command is empty")}
 	}
@@ -341,10 +349,8 @@ func execRcon(e *ExecContext) ExecResult {
 	if !ok {
 		return ExecResult{Port: "onFailed", Err: fmt.Errorf("RCON not enabled or not running")}
 	}
-	cmd := e.GetString("preset")
-	if cmd == "" {
-		cmd = e.GetString("command")
-	}
+	// One value, as in execCommand above (#161).
+	cmd := e.GetString("command")
 	if cmd == "" {
 		return ExecResult{Port: "onFailed", Err: fmt.Errorf("command is empty")}
 	}
