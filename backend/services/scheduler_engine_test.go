@@ -151,7 +151,7 @@ func TestRunGraph_OnFailedBranching(t *testing.T) {
 		ID: "g3",
 		Nodes: []models.Node{
 			{ID: "t1", Type: "trigger.player", Config: map[string]interface{}{"type": "Joined"}},
-			{ID: "cmd1", Type: "action.command"}, // no command/preset configured -> always fails
+			{ID: "cmd1", Type: "action.command"}, // no command configured -> always fails
 			{ID: "ok", Type: "test.marker", Config: map[string]interface{}{"markerId": "ok-branch"}},
 			{ID: "fail", Type: "test.marker", Config: map[string]interface{}{"markerId": "fail-branch"}},
 		},
