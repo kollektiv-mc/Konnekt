@@ -26,6 +26,20 @@ interface ComboboxProps {
    * the name has to come from here.
    */
   ariaLabel?: string
+  /**
+   * With `freeText`, show a matched option's label instead of the raw value
+   * while the field is not being edited, and the raw value the moment it is.
+   *
+   * For fields whose list holds values a user is not meant to read: the command
+   * field's lifecycle presets are the sentinels `__start__`, `__stop__` and
+   * `__restart__`, which are switch cases rather than commands, so the node
+   * would otherwise display an internal token where a command belongs (#161).
+   *
+   * Opt-in, because for a field whose labels are merely a decorated spelling of
+   * its values — the attribute list showing `@tps` for `tps` — swapping one for
+   * the other on blur teaches the same mismatch #162 is about.
+   */
+  showOptionLabel?: boolean
 }
 
 /**
@@ -52,6 +66,7 @@ export function Combobox({
   freeText,
   placeholder,
   ariaLabel,
+  showOptionLabel,
 }: ComboboxProps) {
   const { open, toggle, close } = usePopover()
   const [activeIndex, setActiveIndex] = useState(-1)
@@ -59,6 +74,10 @@ export function Combobox({
   // user has typed since opening, so picking a preset and reopening does not
   // leave the list narrowed to the one thing already chosen.
   const [query, setQuery] = useState<string | null>(null)
+  // Only ever read under showOptionLabel: an unfocused field shows the label,
+  // and focusing it reveals the value it stands for, so what runs stays one
+  // click away rather than hidden behind a friendly name.
+  const [focused, setFocused] = useState(false)
   const listRef = useRef<HTMLDivElement>(null)
   const typeahead = useRef({ buffer: '', at: 0 })
   const listId = useId()
@@ -194,8 +213,10 @@ export function Combobox({
             aria-controls={listId}
             aria-autocomplete="list"
             aria-label={ariaLabel}
-            value={value}
+            value={showOptionLabel && !focused ? selectedLabel : value}
             placeholder={placeholder}
+            onFocus={() => setFocused(true)}
+            onBlur={() => setFocused(false)}
             onChange={(e) => {
               onChange(e.target.value)
               setQuery(e.target.value)

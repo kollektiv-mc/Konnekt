@@ -13,6 +13,18 @@ import (
 	"konnekt/backend/models"
 )
 
+// The lifecycle sentinels action.command accepts in place of a command.
+//
+// They are switch cases in execCommand rather than text sent to the server, so
+// they stay distinguishable from free text now that the preset list and the
+// command field are one control (#161). The editor renders them by their option
+// label, so a user sees "Start Server" rather than the sentinel itself.
+const (
+	lifecycleStart   = "__start__"
+	lifecycleStop    = "__stop__"
+	lifecycleRestart = "__restart__"
+)
+
 // registerBuiltins registers all native block descriptors and executors.
 func registerBuiltins(r *BlockRegistry) {
 	// ── Triggers ──────────────────────────────────────────────────────────────
@@ -133,23 +145,24 @@ func registerBuiltins(r *BlockRegistry) {
 
 	must(r.RegisterBlock(models.BlockDef{
 		ID: "action.command", Category: "action", Label: "Command",
-		Description:   "Sends a command to the server, or manages the server lifecycle via presets.",
+		Description:   "Sends a command to the server, or manages the server lifecycle via a preset.",
 		ControlInputs: []string{"trigger"}, ControlOutputs: []string{"onComplete", "onFailed"},
 		DataInputs:  []models.DataPort{{ID: "command", Label: "Command", Type: "string"}},
 		DataOutputs: []models.DataPort{{ID: "command", Label: "Command sent", Type: "string"}},
 		ConfigSchema: []models.ConfigField{
-			{Key: "preset", Label: "Preset", Type: "select", Default: "",
+			// One field, not a command field plus a preset field that silently won
+			// over it (#161). The presets are options on the command itself, so the
+			// value the node holds is the value that runs.
+			{Key: "command", Label: "Command", Type: "command", Required: true,
 				Options: []models.FieldOption{
-					{Label: "— none —", Value: ""},
-					{Label: "Start Server", Value: "__start__"},
-					{Label: "Stop Server", Value: "__stop__"},
-					{Label: "Restart Server", Value: "__restart__"},
+					{Label: "Start Server", Value: lifecycleStart},
+					{Label: "Stop Server", Value: lifecycleStop},
+					{Label: "Restart Server", Value: lifecycleRestart},
 					{Label: "Save All", Value: "save-all"},
 					{Label: "Freeze Time", Value: "time set 18000"},
 					{Label: "Set Day", Value: "time set day"},
 					{Label: "Set Night", Value: "time set night"},
 				}},
-			{Key: "command", Label: "Command", Type: "command"},
 		},
 		Source: "native",
 	}, execCommand))
@@ -161,15 +174,16 @@ func registerBuiltins(r *BlockRegistry) {
 		DataInputs:  []models.DataPort{{ID: "command", Label: "Command", Type: "string"}},
 		DataOutputs: []models.DataPort{{ID: "response", Label: "Response", Type: "string"}},
 		ConfigSchema: []models.ConfigField{
-			{Key: "preset", Label: "Preset", Type: "select", Default: "",
+			// Merged the same way as action.command (#161). No lifecycle sentinels
+			// here: RCON talks to a running server, so starting or stopping one is
+			// not something it can express.
+			{Key: "command", Label: "Command", Type: "command", Required: true,
 				Options: []models.FieldOption{
-					{Label: "— none —", Value: ""},
 					{Label: "Save All", Value: "save-all"},
 					{Label: "Freeze Time", Value: "time set 18000"},
 					{Label: "Set Day", Value: "time set day"},
 					{Label: "Set Night", Value: "time set night"},
 				}},
-			{Key: "command", Label: "Command", Type: "command", Required: true},
 		},
 		Source: "native",
 	}, execRcon))
@@ -300,26 +314,26 @@ func triggerRouted(e *ExecContext) ExecResult {
 }
 
 func execCommand(e *ExecContext) ExecResult {
-	// Preset takes precedence, then wired/config command.
-	cmd := e.GetString("preset")
-	if cmd == "" {
-		cmd = e.GetString("command")
-	}
+	// One value, and it is the one that runs. There used to be a separate preset
+	// field that won over this one, so a command typed below a chosen preset was
+	// discarded without saying so, and so was a command arriving over the data
+	// edge (#161). Config carries the wired value here when an edge supplies it.
+	cmd := e.GetString("command")
 	if cmd == "" {
 		return ExecResult{Port: "onFailed", Err: fmt.Errorf("command is empty")}
 	}
 
 	var err error
 	switch cmd {
-	case "__start__":
+	case lifecycleStart:
 		cfg, cfgErr := e.Config_().GetServerConfig(e.ServerID)
 		if cfgErr != nil {
 			return ExecResult{Port: "onFailed", Err: cfgErr}
 		}
 		err = e.Server().Start(cfg.ID, cfg.JarPath, cfg.JvmArgs, cfg.WorkingDir)
-	case "__stop__":
+	case lifecycleStop:
 		err = e.Server().Stop(e.ServerID, e.Config_().StopGrace())
-	case "__restart__":
+	case lifecycleRestart:
 		cfg, cfgErr := e.Config_().GetServerConfig(e.ServerID)
 		if cfgErr != nil {
 			return ExecResult{Port: "onFailed", Err: cfgErr}
@@ -341,10 +355,7 @@ func execRcon(e *ExecContext) ExecResult {
 	if !ok {
 		return ExecResult{Port: "onFailed", Err: fmt.Errorf("RCON not enabled or not running")}
 	}
-	cmd := e.GetString("preset")
-	if cmd == "" {
-		cmd = e.GetString("command")
-	}
+	cmd := e.GetString("command")
 	if cmd == "" {
 		return ExecResult{Port: "onFailed", Err: fmt.Errorf("command is empty")}
 	}

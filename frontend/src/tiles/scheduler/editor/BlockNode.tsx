@@ -2,7 +2,13 @@
 import React, { memo, useContext } from 'react'
 import { Handle, Position, type NodeProps } from '@xyflow/react'
 import { SchedulerCtx } from './schedulerContext'
-import { CATEGORY_COLOR, CATEGORY_ICON, CTRL_PORT_COLOR, PORT_TYPE_COLOR } from './blockMeta'
+import {
+  CATEGORY_COLOR,
+  CATEGORY_ICON,
+  configHint,
+  CTRL_PORT_COLOR,
+  PORT_TYPE_COLOR,
+} from './blockMeta'
 import type { BlockFlowNode, NodeData } from './graphMapping'
 import { resolveDataPortType } from './portTypes'
 import type { models } from '../../../../wailsjs/go/models'
@@ -79,11 +85,7 @@ export const BlockNode = memo(function BlockNode({ data, selected }: NodeProps<B
     }),
   ]
 
-  // Show first non-empty required config value as a hint
-  const hint = def?.configSchema
-    ?.filter((f) => f.required && f.key !== '_collapsed')
-    .map((f) => nd.config?.[f.key])
-    .find((v) => v !== undefined && v !== '')
+  const hint = configHint(def, nd.config)
 
   // All data-input ports (used for rendering hidden handles so edges don't break)
   const allDataInPorts: PortEntry[] = dataIns.map((p) => ({

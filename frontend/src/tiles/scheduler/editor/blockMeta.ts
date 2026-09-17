@@ -1,3 +1,5 @@
+import type { models } from '../../../../wailsjs/go/models'
+
 export const CATEGORY_ORDER = ['trigger', 'data', 'action', 'control', 'notify']
 
 export function orderedCategories(defs: { category: string }[]): string[] {
@@ -75,3 +77,32 @@ export const PORT_TYPE_COLOR: Record<string, string> = {
 export const WIRED_BG_CLASS = 'bg-[#1e3a5f]'
 export const WIRED_BORDER_CLASS = 'border-[#1e3a5f]'
 export const WIRED_TEXT_CLASS = 'text-[#60a5fa]'
+
+/**
+ * The one config value a node shows under its title: the first non-empty
+ * required field.
+ *
+ * A command field is read through its own options first, because its lifecycle
+ * presets are sentinels execCommand switches on rather than commands it sends:
+ * a node reading "__restart__" says less about what it does than "Restart
+ * Server" (#161). Anything with no matching option, which is every command a
+ * user typed, is its own label already.
+ *
+ * Only command fields. Other lists label a value with a decorated spelling of
+ * itself, the attribute list showing `@tps` for `tps`, and resolving those here
+ * would put the @ form on the node while the field holds the bare one, which is
+ * the mismatch #162 is open about.
+ */
+export function configHint(
+  def: models.BlockDef | undefined,
+  config: Record<string, unknown> | undefined,
+): unknown {
+  return def?.configSchema
+    ?.filter((f) => f.required && f.key !== '_collapsed')
+    .map((f) => {
+      const v = config?.[f.key]
+      if (f.type !== 'command' || v === undefined || v === '') return v
+      return f.options?.find((o) => o.value === v)?.label ?? v
+    })
+    .find((v) => v !== undefined && v !== '')
+}

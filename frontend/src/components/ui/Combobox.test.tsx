@@ -192,3 +192,124 @@ describe('Combobox, accepting free text', () => {
     expect(control().getAttribute('aria-expanded')).toBe('false')
   })
 })
+
+// ─── showOptionLabel: free text alongside values nobody should have to read ──
+//
+// The command field's lifecycle presets are sentinels (`__start__`) that
+// execCommand switches on rather than sends, so the field has to name them
+// while still storing them (#161). Free text is unaffected, and the raw value
+// has to come back the instant the field is editable, or typing would append to
+// a label and write that.
+
+const CMD_OPTIONS = [
+  { value: '__start__', label: 'Start Server' },
+  { value: '__restart__', label: 'Restart Server' },
+  { value: 'save-all', label: 'Save All' },
+]
+
+describe('Combobox, free text with labelled values', () => {
+  it('shows a matched value by its label while the field is not being edited', () => {
+    render(
+      <Combobox
+        value="__start__"
+        onChange={() => {}}
+        options={CMD_OPTIONS}
+        ariaLabel="Command"
+        freeText
+        showOptionLabel
+      />,
+    )
+
+    expect((control() as HTMLInputElement).value).toBe('Start Server')
+  })
+
+  it('reveals the value the label stands for as soon as the field is focused', () => {
+    render(
+      <Combobox
+        value="__start__"
+        onChange={() => {}}
+        options={CMD_OPTIONS}
+        ariaLabel="Command"
+        freeText
+        showOptionLabel
+      />,
+    )
+
+    fireEvent.focus(control())
+    expect((control() as HTMLInputElement).value).toBe('__start__')
+
+    fireEvent.blur(control())
+    expect((control() as HTMLInputElement).value).toBe('Start Server')
+  })
+
+  it('leaves text that matches no option exactly as typed', () => {
+    render(
+      <Combobox
+        value="say hello"
+        onChange={() => {}}
+        options={CMD_OPTIONS}
+        ariaLabel="Command"
+        freeText
+        showOptionLabel
+      />,
+    )
+
+    expect((control() as HTMLInputElement).value).toBe('say hello')
+  })
+
+  it('types through to the raw value rather than appending to a label', () => {
+    const onChange = vi.fn()
+    render(
+      <Combobox
+        value="__start__"
+        onChange={onChange}
+        options={CMD_OPTIONS}
+        ariaLabel="Command"
+        freeText
+        showOptionLabel
+      />,
+    )
+
+    // Focus first, the way a user reaching for the field does: the input is
+    // showing the raw value by then, so what they edit is what is stored.
+    fireEvent.focus(control())
+    fireEvent.change(control(), { target: { value: 'say hi' } })
+
+    expect(onChange).toHaveBeenCalledWith('say hi')
+  })
+
+  it('stores the sentinel, not its label, when a preset is picked', () => {
+    const onChange = vi.fn()
+    render(
+      <Combobox
+        value=""
+        onChange={onChange}
+        options={CMD_OPTIONS}
+        ariaLabel="Command"
+        freeText
+        showOptionLabel
+      />,
+    )
+
+    fireEvent.keyDown(control(), { key: 'ArrowDown' })
+    fireEvent.click(screen.getByText('Restart Server'))
+
+    expect(onChange).toHaveBeenCalledWith('__restart__')
+  })
+
+  it('does not swap label for value without the opt-in, so @tps stays as stored', () => {
+    // The attribute field's labels are a decorated spelling of its values, and
+    // showing one for the other is the mismatch #162 is about.
+    render(
+      <Combobox
+        value="tps"
+        onChange={() => {}}
+        options={[{ value: 'tps', label: '@tps' }]}
+        ariaLabel="Attribute"
+        freeText
+      />,
+    )
+
+    expect((control() as HTMLInputElement).value).toBe('tps')
+  })
+})

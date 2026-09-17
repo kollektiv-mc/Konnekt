@@ -120,12 +120,19 @@ export function NodeConfigPanel({ nodeId, data, def, edges, onChange }: Props) {
                 className={FIELD_CLASS}
               />
             ) : field.type === 'command' ? (
-              <textarea
-                value={String(val)}
-                onChange={(e) => onChange(field.key, e.target.value)}
-                rows={2}
-                className={`${FIELD_CLASS} resize-none`}
-              />
+              <>
+                <Combobox
+                  value={String(val)}
+                  onChange={(v) => onChange(field.key, v)}
+                  options={options}
+                  ariaLabel={field.label}
+                  freeText
+                  showOptionLabel
+                />
+                <span className="text-text-faint text-3xs">
+                  Pick a preset or type a command. The preset is the command.
+                </span>
+              </>
             ) : (
               <input
                 type="text"

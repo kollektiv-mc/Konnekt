@@ -164,20 +164,18 @@ func (s *SchedulerService) simulateNode(
 		return []string{"would notify: " + toStr(resolvedCfg["message"])}, true
 
 	case "action.command":
-		cmd := asString(resolvedCfg["preset"])
-		if cmd == "" {
-			cmd = toStr(resolvedCfg["command"])
-		}
+		// Reads the same single field execCommand does (#161). The preview and
+		// the run disagreeing about which of two fields wins is the one thing a
+		// preview must never do, and with one field there is nothing to disagree
+		// about.
+		cmd := toStr(resolvedCfg["command"])
 		if cmd == "" {
 			return []string{"would fail: command is empty"}, false
 		}
 		return []string{"would run: " + cmd}, true
 
 	case "action.rcon":
-		cmd := asString(resolvedCfg["preset"])
-		if cmd == "" {
-			cmd = toStr(resolvedCfg["command"])
-		}
+		cmd := toStr(resolvedCfg["command"])
 		if cmd == "" {
 			return []string{"would fail: command is empty"}, false
 		}

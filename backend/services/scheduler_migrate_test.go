@@ -258,3 +258,157 @@ func TestSetDataDirAssignsGraphOwners(t *testing.T) {
 		}
 	})
 }
+
+// ─── Folding the command preset into the command field (#161) ───────────────
+//
+// Like the migration above this one runs once against a real user's
+// scheduler.json, and what it decides is which command a schedule fires
+// unattended from then on. The preset is what has been running, so the preset
+// is what has to survive; every case that could quietly change a fired command
+// is pinned here.
+
+func cmdNode(id, typ string, cfg map[string]interface{}) models.Node {
+	return models.Node{ID: id, Type: typ, Config: cfg}
+}
+
+func TestFoldCommandPresets(t *testing.T) {
+	cases := []struct {
+		name        string
+		in          map[string]interface{}
+		typ         string
+		wantCommand interface{} // nil means the key must be absent
+		wantChanged bool
+	}{
+		{
+			name:        "a set preset becomes the command",
+			typ:         "action.command",
+			in:          map[string]interface{}{"preset": "time set day", "command": ""},
+			wantCommand: "time set day",
+			wantChanged: true,
+		},
+		{
+			name: "a set preset wins over the command it was already winning over",
+			typ:  "action.command",
+			in: map[string]interface{}{
+				"preset": "__restart__", "command": "say this never ran",
+			},
+			wantCommand: "__restart__",
+			wantChanged: true,
+		},
+		{
+			name:        "an empty preset leaves the command alone",
+			typ:         "action.command",
+			in:          map[string]interface{}{"preset": "", "command": "say hello"},
+			wantCommand: "say hello",
+			wantChanged: true,
+		},
+		{
+			name:        "an empty preset with no command stays empty",
+			typ:         "action.rcon",
+			in:          map[string]interface{}{"preset": ""},
+			wantCommand: nil,
+			wantChanged: true,
+		},
+		{
+			name:        "rcon folds the same way",
+			typ:         "action.rcon",
+			in:          map[string]interface{}{"preset": "save-all", "command": ""},
+			wantCommand: "save-all",
+			wantChanged: true,
+		},
+		{
+			name:        "a node already migrated is not touched",
+			typ:         "action.command",
+			in:          map[string]interface{}{"command": "say hello"},
+			wantCommand: "say hello",
+			wantChanged: false,
+		},
+		{
+			name:        "a non-string preset is dropped rather than stringified",
+			typ:         "action.command",
+			in:          map[string]interface{}{"preset": 7, "command": "say hello"},
+			wantCommand: "say hello",
+			wantChanged: true,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			graphs := []models.Graph{{ID: "g", Nodes: []models.Node{cmdNode("n", tc.typ, tc.in)}}}
+			out, changed := foldCommandPresets(graphs)
+
+			if changed != tc.wantChanged {
+				t.Fatalf("changed = %v, want %v", changed, tc.wantChanged)
+			}
+			cfg := out[0].Nodes[0].Config
+			if _, still := cfg["preset"]; still {
+				t.Errorf("preset key survived the fold: %v", cfg)
+			}
+			got, present := cfg["command"]
+			if tc.wantCommand == nil {
+				if present && got != "" {
+					t.Errorf("command = %v, want absent", got)
+				}
+				return
+			}
+			if got != tc.wantCommand {
+				t.Errorf("command = %v, want %v", got, tc.wantCommand)
+			}
+		})
+	}
+}
+
+// A block that never had a preset field keeps a "preset" key of its own. The
+// fold is scoped by block type precisely so a manifest block a user wrote is
+// not edited by a migration that was never about it.
+func TestFoldCommandPresetsLeavesOtherBlocksAlone(t *testing.T) {
+	graphs := []models.Graph{{ID: "g", Nodes: []models.Node{
+		cmdNode("n", "custom.thing", map[string]interface{}{"preset": "mine", "command": "x"}),
+	}}}
+	out, changed := foldCommandPresets(graphs)
+	if changed {
+		t.Fatal("changed = true, want false for a block that never declared a preset")
+	}
+	if got := out[0].Nodes[0].Config["preset"]; got != "mine" {
+		t.Errorf("preset = %v, want it left alone", got)
+	}
+}
+
+// Running twice must be the same as running once, because SetDataDir calls this
+// on every launch and a second pass that changed anything would rewrite the
+// file forever.
+func TestFoldCommandPresetsIsIdempotent(t *testing.T) {
+	graphs := []models.Graph{{ID: "g", Nodes: []models.Node{
+		cmdNode("n", "action.command", map[string]interface{}{"preset": "save-all", "command": "ignored"}),
+	}}}
+
+	once, changed := foldCommandPresets(graphs)
+	if !changed {
+		t.Fatal("first pass reported no change")
+	}
+	twice, changedAgain := foldCommandPresets(once)
+	if changedAgain {
+		t.Error("second pass reported a change; the migration is not idempotent")
+	}
+	if got := twice[0].Nodes[0].Config["command"]; got != "save-all" {
+		t.Errorf("command = %v, want save-all", got)
+	}
+}
+
+// The fold must not write through to the caller's graphs. SetDataDir keeps the
+// loaded slice until the migration returns, and a persist that fails would
+// otherwise leave memory holding a shape that never reached disk.
+func TestFoldCommandPresetsDoesNotMutateInput(t *testing.T) {
+	original := map[string]interface{}{"preset": "save-all", "command": ""}
+	graphs := []models.Graph{{ID: "g", Nodes: []models.Node{cmdNode("n", "action.command", original)}}}
+
+	if _, changed := foldCommandPresets(graphs); !changed {
+		t.Fatal("expected a change")
+	}
+	if got := graphs[0].Nodes[0].Config["preset"]; got != "save-all" {
+		t.Errorf("input preset = %v, want it untouched at save-all", got)
+	}
+	if got := graphs[0].Nodes[0].Config["command"]; got != "" {
+		t.Errorf("input command = %v, want it untouched at empty", got)
+	}
+}

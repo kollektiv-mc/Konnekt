@@ -27,7 +27,7 @@
     "id": "action.command",
     "category": "action",
     "label": "Command",
-    "description": "Sends a command to the server, or manages the server lifecycle via presets.",
+    "description": "Sends a command to the server, or manages the server lifecycle via a preset.",
     "isTrigger": false,
     "controlInputs": [
       "trigger"
@@ -52,15 +52,11 @@
     ],
     "configSchema": [
       {
-        "key": "preset",
-        "label": "Preset",
-        "type": "select",
-        "default": "",
+        "key": "command",
+        "label": "Command",
+        "type": "command",
+        "required": true,
         "options": [
-          {
-            "label": "— none —",
-            "value": ""
-          },
           {
             "label": "Start Server",
             "value": "__start__"
@@ -90,11 +86,6 @@
             "value": "time set night"
           }
         ]
-      },
-      {
-        "key": "command",
-        "label": "Command",
-        "type": "command"
       }
     ],
     "source": "native"
@@ -251,15 +242,11 @@
     ],
     "configSchema": [
       {
-        "key": "preset",
-        "label": "Preset",
-        "type": "select",
-        "default": "",
+        "key": "command",
+        "label": "Command",
+        "type": "command",
+        "required": true,
         "options": [
-          {
-            "label": "— none —",
-            "value": ""
-          },
           {
             "label": "Save All",
             "value": "save-all"
@@ -277,12 +264,6 @@
             "value": "time set night"
           }
         ]
-      },
-      {
-        "key": "command",
-        "label": "Command",
-        "type": "command",
-        "required": true
       }
     ],
     "source": "native"
