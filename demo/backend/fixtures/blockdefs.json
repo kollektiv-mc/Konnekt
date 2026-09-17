@@ -550,51 +550,51 @@
         "required": true,
         "options": [
           {
-            "label": "@tps",
+            "label": "tps",
             "value": "tps"
           },
           {
-            "label": "@players.count",
+            "label": "players.count",
             "value": "players.count"
           },
           {
-            "label": "@ram.used (MB)",
+            "label": "ram.used (MB)",
             "value": "ram.used"
           },
           {
-            "label": "@ram.left (MB)",
+            "label": "ram.left (MB)",
             "value": "ram.left"
           },
           {
-            "label": "@server.status",
+            "label": "server.status",
             "value": "server.status"
           },
           {
-            "label": "@players.max",
+            "label": "players.max",
             "value": "players.max"
           },
           {
-            "label": "@ram.total (MB)",
+            "label": "ram.total (MB)",
             "value": "ram.total"
           },
           {
-            "label": "@server.whitelist",
+            "label": "server.whitelist",
             "value": "server.whitelist"
           },
           {
-            "label": "@server.port",
+            "label": "server.port",
             "value": "server.port"
           },
           {
-            "label": "@server.gamemode",
+            "label": "server.gamemode",
             "value": "server.gamemode"
           },
           {
-            "label": "@server.motd",
+            "label": "server.motd",
             "value": "server.motd"
           },
           {
-            "label": "@server.world",
+            "label": "server.world",
             "value": "server.world"
           }
         ]
@@ -656,27 +656,27 @@
         "required": true,
         "options": [
           {
-            "label": "@players.max",
+            "label": "players.max",
             "value": "players.max"
           },
           {
-            "label": "@server.motd",
+            "label": "server.motd",
             "value": "server.motd"
           },
           {
-            "label": "@server.whitelist",
+            "label": "server.whitelist",
             "value": "server.whitelist"
           },
           {
-            "label": "@server.port",
+            "label": "server.port",
             "value": "server.port"
           },
           {
-            "label": "@server.gamemode",
+            "label": "server.gamemode",
             "value": "server.gamemode"
           },
           {
-            "label": "@server.world",
+            "label": "server.world",
             "value": "server.world"
           }
         ]
