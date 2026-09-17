@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import type { Player } from '../../types'
+import { Segmented } from '../../components/ui/Segmented'
 
 interface Props {
   players: Player[]
@@ -9,6 +10,15 @@ interface Props {
 }
 
 type SortKey = 'name' | 'opLevel'
+
+// Two fixed options with no free text, which is exactly what Segmented is for.
+// It replaced a native <select> whose popup webkit2gtk drew with the GTK theme,
+// opening a white list over a dark roster on Linux (#165). Unlike the scheduler
+// panel's fields (#160) this one never needed a combobox.
+const SORT_OPTIONS: { value: SortKey; label: string }[] = [
+  { value: 'name', label: 'Name' },
+  { value: 'opLevel', label: 'OP level' },
+]
 
 function AvatarHead({ player }: { player: Player }) {
   const [failed, setFailed] = useState(false)
@@ -54,14 +64,7 @@ export function PlayerRoster({ players, reachable, onSelectPlayer }: Props) {
           placeholder="Search…"
           className="bg-elevated border-border-subtle text-text-primary border-hairline flex-1 rounded px-2 py-1 font-mono text-xs transition-colors outline-none"
         />
-        <select
-          value={sortBy}
-          onChange={(e) => setSortBy(e.target.value as SortKey)}
-          className="bg-elevated border-border-subtle text-text-secondary border-hairline rounded px-2 py-1 font-mono text-xs outline-none"
-        >
-          <option value="name">Name</option>
-          <option value="opLevel">OP level</option>
-        </select>
+        <Segmented options={SORT_OPTIONS} value={sortBy} onChange={setSortBy} compact />
       </div>
 
       {/* list */}
