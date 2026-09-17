@@ -2,10 +2,11 @@ import { useState, useEffect, useRef, useMemo } from 'react'
 import { createPortal } from 'react-dom'
 import type { models } from '../../../../wailsjs/go/models'
 import {
-  CATEGORY_BORDER_CLASS,
-  CATEGORY_COLOR,
   CATEGORY_ICON,
-  CATEGORY_TEXT_CLASS,
+  categoryBorderClass,
+  categoryColor,
+  categoryTextClass,
+  NO_GRAPH_KEYS,
   orderedCategories,
 } from './blockMeta'
 
@@ -81,10 +82,12 @@ export function QuickAddMenu({ blockDefs, screenPos, onPick, onClose }: Props) {
     primaryLeft + PANEL_W + PANEL_W > vw ? primaryLeft - PANEL_W : primaryLeft + PANEL_W
 
   const activeDefs = activeCategory ? blockDefs.filter((d) => d.category === activeCategory) : []
-  const activeColor = activeCategory ? (CATEGORY_COLOR[activeCategory] ?? '#6b7280') : '#6b7280'
+  const activeColor = categoryColor(activeCategory ?? '')
 
-  const panelClass =
-    'fixed z-popover w-40 bg-elevated border-hairline border-border-subtle rounded-lg overflow-hidden shadow-[0_8px_24px_rgba(0,0,0,0.3)] backdrop-blur-md'
+  // Both panels share it, so NO_GRAPH_KEYS lands on both. The menu is portaled
+  // to body, well outside the canvas, but React Flow binds its keys to the
+  // document, so being elsewhere in the tree guards nothing (#159).
+  const panelClass = `fixed z-popover w-40 bg-elevated border-hairline border-border-subtle rounded-lg overflow-hidden shadow-[0_8px_24px_rgba(0,0,0,0.3)] backdrop-blur-md ${NO_GRAPH_KEYS}`
 
   // Portaled to body so the menu escapes the maximized tile's stacking
   // context; z-popover carries it over the maximize overlay (lib/layers.ts).
@@ -102,14 +105,14 @@ export function QuickAddMenu({ blockDefs, screenPos, onPick, onClose }: Props) {
       >
         {/* Search input */}
         <div className="border-border-subtle border-b-hairline flex items-center gap-1 px-3 py-[5px]">
-          <span className="text-text-faint text-[9px]">⌕</span>
+          <span className="text-text-faint text-3xs">⌕</span>
           <input
             ref={inputRef}
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="search blocks…"
-            className="text-text-primary flex-1 border-none bg-transparent font-mono text-[11px] outline-none"
+            className="text-text-primary text-1xs flex-1 border-none bg-transparent font-mono outline-none"
           />
         </div>
 
@@ -117,23 +120,23 @@ export function QuickAddMenu({ blockDefs, screenPos, onPick, onClose }: Props) {
         <div className="max-h-[260px] overflow-y-auto">
           {isSearching ? (
             filtered.length === 0 ? (
-              <div className="text-text-faint px-3 py-1.5 font-mono text-[11px]">no results</div>
+              <div className="text-text-faint text-1xs px-3 py-1.5 font-mono">no results</div>
             ) : (
               filtered.map((def, i) => {
                 const isHilit = i === highlightIdx
-                const borderClass = CATEGORY_BORDER_CLASS[def.category] ?? 'border-l-[#6b7280]'
+                const borderClass = categoryBorderClass(def.category)
                 return (
                   <div
                     key={def.id}
                     title={def.description}
                     onClick={() => onPick(def)}
                     onMouseEnter={() => setHighlightIdx(i)}
-                    className={`text-text-primary flex cursor-pointer items-center gap-1.5 border-l-2 px-3 py-1 font-mono text-[11px] select-none ${
+                    className={`text-text-primary text-1xs flex cursor-pointer items-center gap-1.5 border-l-2 px-3 py-1 font-mono select-none ${
                       isHilit ? `bg-hover ${borderClass}` : 'border-l-transparent bg-transparent'
                     }`}
                   >
                     <span className="flex-1">{def.label}</span>
-                    <span className="text-text-faint text-[9px] uppercase">{def.category}</span>
+                    <span className="text-text-faint text-3xs uppercase">{def.category}</span>
                   </div>
                 )
               })
@@ -142,19 +145,19 @@ export function QuickAddMenu({ blockDefs, screenPos, onPick, onClose }: Props) {
             categories.map((cat) => {
               const icon = CATEGORY_ICON[cat] ?? '?'
               const isActive = activeCategory === cat
-              const textClass = CATEGORY_TEXT_CLASS[cat] ?? 'text-[#6b7280]'
-              const borderClass = CATEGORY_BORDER_CLASS[cat] ?? 'border-l-[#6b7280]'
+              const textClass = categoryTextClass(cat)
+              const borderClass = categoryBorderClass(cat)
               return (
                 <div
                   key={cat}
                   onMouseEnter={() => setActiveCategory(cat)}
-                  className={`flex cursor-default items-center gap-1.5 border-l-2 px-3 py-[5px] font-mono text-[11px] select-none ${textClass} ${
+                  className={`text-1xs flex cursor-default items-center gap-1.5 border-l-2 px-3 py-[5px] font-mono select-none ${textClass} ${
                     isActive ? `bg-hover ${borderClass}` : 'border-l-transparent bg-transparent'
                   }`}
                 >
                   <span>{icon}</span>
                   <span className="flex-1 uppercase">{cat}</span>
-                  <span className="text-text-faint text-[9px]">›</span>
+                  <span className="text-text-faint text-3xs">›</span>
                 </div>
               )
             })
@@ -174,7 +177,7 @@ export function QuickAddMenu({ blockDefs, screenPos, onPick, onClose }: Props) {
               key={def.id}
               title={def.description}
               onClick={() => onPick(def)}
-              className="text-text-primary cursor-pointer border-l-2 border-l-transparent px-3 py-[5px] font-mono text-[11px] select-none"
+              className="text-text-primary text-1xs cursor-pointer border-l-2 border-l-transparent px-3 py-[5px] font-mono select-none"
               onMouseEnter={(e) => {
                 const el = e.currentTarget as HTMLDivElement
                 el.style.borderLeftColor = activeColor

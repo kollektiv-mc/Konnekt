@@ -113,6 +113,24 @@
         "expect": "no matches",
         "diagnosis": "An error in the second return position is not `_ = `, so the checklist's `_ = ` grep verified 'no blank error-ignores' for two months while forty `x, _ := f()` sites sat in the tree (HEALTH_LOG, 2026-09-08). Seven of them dereferenced a nil FileInfo when a file vanished mid-listing, one fired a malformed time-of-day trigger at midnight, and two reported a body cut off mid-transfer as the body. Handle the error where it happens, or say why the discard is right in a trailing `//nolint:errcheck // reason` on the same line, the way `players.go`'s degrade-to-empty does. The lookahead leaves out what is not an error: the comma-ok form of a type assertion (`v, _ := x.(T)`) is idiomatic and a discarded `ok` there is a deliberate zero value, and `resolveTarget`'s second value is the loader name. A map lookup's comma-ok with the `ok` discarded is neither and is written without it. Tests are excluded because `_ =` in a test is the test choosing what to assert.",
         "reference": "agent_docs/HEALTH_CHECKLIST.md"
+      },
+      {
+        "name": "scheduler uses the type scale",
+        "grep": "text-\\[[0-9.]+px\\]",
+        "paths": ["frontend/src/tiles/scheduler"],
+        "exclude": ["**/*.test.ts", "**/*.test.tsx"],
+        "expect": "no matches",
+        "diagnosis": "The type scale names three steps below Tailwind's smallest (text-3xs 9px, text-2xs 10px, text-1xs 11px, text-xs 12px), generated into frontend/src/styles/tokens.css from tokens.source.json, and the rest of the app uses them. The scheduler editor had twenty-seven inlined px sizes instead, which is the same set of values with no single place to change them and no way for a token sync to reach them (#163). A size the scale does not name is a value to add to kollektiv/design/tokens.json, not a literal to inline; 8px sat below the floor and was rounded to text-3xs rather than earning a token of its own. Scoped to the scheduler because the sweep is finished only there: SettingsModal and others still carry theirs, tracked in the checklist, so widening this path list turns it red on arrival.",
+        "reference": "agent_docs/HEALTH_CHECKLIST.md"
+      },
+      {
+        "name": "scheduler colours live in blockMeta",
+        "grep": "#[0-9a-fA-F]{6}(?![0-9a-fA-F])",
+        "paths": ["frontend/src/tiles/scheduler"],
+        "exclude": ["**/blockMeta.ts", "**/*.test.ts", "**/*.test.tsx"],
+        "expect": "no matches",
+        "diagnosis": "The graph's palette is deliberately literal rather than tokenised, because the token layer does not name a category or port-type hue and giving it one is a suite-wide change; blockMeta.ts says so at length. That reasoning only holds while the palette lives in one file, and it did not: the same fallback grey sat at twelve call sites, the data edge's stroke was the string port's colour copy-pasted into two files, and the custom-attribute badge was the trigger hue with nothing to do with triggers, so retuning one would have moved the other (#163). Read a colour through blockMeta's accessors instead. Where a semantic token already exists, use it: danger, success and warning are why this grep finds nothing left to tokenise. The pattern matches exactly six hex digits, so the eight-digit hex-plus-alpha inside an arbitrary box-shadow is left alone; those cannot take a themed colour without color-mix and are documented where they sit.",
+        "reference": "agent_docs/HEALTH_CHECKLIST.md"
       }
     ],
     "generated": [

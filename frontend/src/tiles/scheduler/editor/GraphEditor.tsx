@@ -17,7 +17,7 @@ import {
   type NodeChange,
   type EdgeChange,
 } from '@xyflow/react'
-import { CATEGORY_COLOR } from './blockMeta'
+import { CATEGORY_COLOR, DATA_EDGE_STYLE, NO_GRAPH_KEYS } from './blockMeta'
 import { SchedulerCtx, type NodeRunState } from './schedulerContext'
 import { BlockNode } from './BlockNode'
 import { AnimatedEdge } from './AnimatedEdge'
@@ -88,6 +88,18 @@ interface GraphEditorProps {
 }
 
 // Outer wrapper provides ReactFlowProvider so useReactFlow() works inside.
+/**
+ * Backspace as well as Delete, the way every node editor people arrive from
+ * binds it (#159). Editor chrome opts out of key handling with NO_GRAPH_KEYS,
+ * because the library's own guard covers inputs and not buttons.
+ *
+ * Module-level so the identity is stable. React Flow's useKeyPress holds the
+ * key prop in its effect dependencies, so a fresh array literal on each render
+ * would rebind four document listeners every time the graph re-renders, which
+ * is every node drag.
+ */
+const DELETE_KEYS = ['Delete', 'Backspace']
+
 export function GraphEditor(props: GraphEditorProps) {
   return (
     <ReactFlowProvider>
@@ -412,7 +424,7 @@ function GraphEditorInner({
             ...connection,
             id: randId(),
             type: 'smoothstep',
-            style: isData ? { strokeDasharray: '4 2', stroke: '#60a5fa' } : undefined,
+            style: isData ? DATA_EDGE_STYLE : undefined,
             data: { kind: isData ? 'data' : 'control' } as Record<string, unknown>,
           },
           es,
@@ -719,10 +731,10 @@ function GraphEditorInner({
 
   // ── Toolbar button className helper ───────────────────────────────────────
   function btnClass(active = false, danger = false): string {
-    const base = 'cursor-pointer rounded border-hairline px-2 py-0.5 text-[11px] font-mono'
-    const borderClass = danger ? 'border-[#ef4444]' : 'border-border-subtle'
+    const base = 'cursor-pointer rounded border-hairline px-2 py-0.5 text-1xs font-mono'
+    const borderClass = danger ? 'border-danger' : 'border-border-subtle'
     if (active) return `${base} ${borderClass} bg-accent text-black`
-    if (danger) return `${base} ${borderClass} bg-transparent text-[#ef4444]`
+    if (danger) return `${base} ${borderClass} bg-transparent text-danger`
     return `${base} ${borderClass} bg-surface text-text-muted`
   }
 
@@ -733,16 +745,18 @@ function GraphEditorInner({
           tile's surface (style.css). */}
       <div className="lazy-panel-in flex h-full flex-col">
         {/* ── Toolbar ──────────────────────────────────────────────────── */}
-        <div className="border-border-subtle bg-surface border-b-hairline flex shrink-0 flex-wrap items-center gap-2 px-3 py-1.5">
+        <div
+          className={`border-border-subtle bg-surface border-b-hairline flex shrink-0 flex-wrap items-center gap-2 px-3 py-1.5 ${NO_GRAPH_KEYS}`}
+        >
           {/* Graph selector */}
           <div className="relative shrink-0">
             <button
               onClick={graphMenu.toggle}
-              className={`border-border-subtle text-text-primary border-hairline flex max-w-[160px] shrink-0 items-center gap-1 rounded px-1.5 py-0.5 font-mono text-[11px] whitespace-nowrap transition-colors ${
+              className={`border-border-subtle text-text-primary border-hairline text-1xs flex max-w-[160px] shrink-0 items-center gap-1 rounded px-1.5 py-0.5 font-mono whitespace-nowrap transition-colors ${
                 graphMenu.open ? 'bg-hover' : 'bg-canvas'
               }`}
             >
-              <span className="text-text-faint text-[10px]">☰</span>
+              <span className="text-text-faint text-2xs">☰</span>
               <span className="truncate">
                 {graphs.length === 0
                   ? '— no graphs —'
@@ -809,12 +823,12 @@ function GraphEditorInner({
               onChange={(e) => setGraphName(e.target.value)}
               onBlur={() => setNameEditing(false)}
               onKeyDown={(e) => e.key === 'Enter' && setNameEditing(false)}
-              className="bg-canvas border-accent text-text-primary border-hairline w-[140px] rounded px-1.5 py-0.5 font-mono text-[11px] outline-none"
+              className="bg-canvas border-accent text-text-primary border-hairline text-1xs w-[140px] rounded px-1.5 py-0.5 font-mono outline-none"
             />
           ) : (
             <span
               onClick={() => setNameEditing(true)}
-              className="text-text-muted border-border-subtle border-b-hairline flex min-w-[60px] cursor-text items-center gap-1.5 border-dashed font-mono text-[11px]"
+              className="text-text-muted border-border-subtle border-b-hairline text-1xs flex min-w-[60px] cursor-text items-center gap-1.5 border-dashed font-mono"
               title="Click to rename"
             >
               {graphName || 'Untitled'}
@@ -863,13 +877,13 @@ function GraphEditorInner({
             <button
               type="button"
               onClick={clearSchedulerError}
-              className="text-danger font-mono text-[10px]"
+              className="text-danger text-2xs font-mono"
               title={`${schedulerError} — click to dismiss`}
             >
               scheduler error
             </button>
           ) : (
-            runStatus && <span className="text-text-faint font-mono text-[10px]">{runStatus}</span>
+            runStatus && <span className="text-text-faint text-2xs font-mono">{runStatus}</span>
           )}
 
           {(() => {
@@ -925,7 +939,7 @@ function GraphEditorInner({
               isValidConnection={isValidConnection}
               fitView
               fitViewOptions={{ padding: 0.2 }}
-              deleteKeyCode="Delete"
+              deleteKeyCode={DELETE_KEYS}
               panOnDrag={[1, 2]}
               selectionOnDrag
             >
@@ -945,7 +959,9 @@ function GraphEditorInner({
 
           {/* Node config / data panel */}
           {selectedNode && (
-            <div className="border-border-subtle bg-canvas border-l-hairline flex w-56 shrink-0 flex-col overflow-y-auto">
+            <div
+              className={`border-border-subtle bg-canvas border-l-hairline flex w-56 shrink-0 flex-col overflow-y-auto ${NO_GRAPH_KEYS}`}
+            >
               {/* Tabs */}
               <div className="border-border-subtle border-b-hairline flex shrink-0">
                 {(['config', 'data'] as const).map((tab) => (

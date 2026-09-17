@@ -2,7 +2,15 @@
 import React, { memo, useContext } from 'react'
 import { Handle, Position, type NodeProps } from '@xyflow/react'
 import { SchedulerCtx } from './schedulerContext'
-import { CATEGORY_COLOR, CATEGORY_ICON, CTRL_PORT_COLOR, PORT_TYPE_COLOR } from './blockMeta'
+import {
+  CATEGORY_ICON,
+  categoryColor,
+  CTRL_PORT_COLOR,
+  CTRL_PORT_FALLBACK_IN,
+  CTRL_PORT_FALLBACK_OUT,
+  portTypeColor,
+  UNRESOLVED_PORT_COLOR,
+} from './blockMeta'
 import type { BlockFlowNode, NodeData } from './graphMapping'
 import { resolveDataPortType } from './portTypes'
 import type { models } from '../../../../wailsjs/go/models'
@@ -16,10 +24,14 @@ const PAD = 6
 // per-node computed height/category-color that must stay inline (see below).
 // `.node-running`'s own CSS animation (scheduler.css) drives its box-shadow, so
 // no shadow class is needed for that state.
+// The borders are tokens and the glows are literals, because an arbitrary
+// box-shadow cannot take a themed colour at an alpha without color-mix. `failed`
+// was the one that spelled its border out as well (#163); the other two already
+// read the token, so it was inconsistent rather than deliberate.
 const RUN_STATE_CLASS: Record<string, string> = {
   running: 'border-accent border-2',
   success: 'border-success border-2 shadow-[0_0_0_1px_#22c55e55,0_0_12px_#22c55e44]',
-  failed: 'border-[#ef4444] border-2 shadow-[0_0_0_1px_#ef444466,0_0_12px_#ef444455]',
+  failed: 'border-danger border-2 shadow-[0_0_0_1px_#ef444466,0_0_12px_#ef444455]',
   cycle: 'border-warning border-thick shadow-[0_0_0_1px_#f59e0b55]',
 }
 
@@ -32,7 +44,7 @@ export const BlockNode = memo(function BlockNode({ data, selected }: NodeProps<B
   const runState = nodeRunState.get(nd.id as string)
   const inCycle = cycleNodes.has(nd.id as string)
 
-  const color = CATEGORY_COLOR[def?.category ?? ''] ?? '#6b7280'
+  const color = categoryColor(def?.category ?? '')
   const icon = CATEGORY_ICON[def?.category ?? ''] ?? '?'
 
   const ctrlIns: string[] = def?.controlInputs ?? []
@@ -54,13 +66,13 @@ export const BlockNode = memo(function BlockNode({ data, selected }: NodeProps<B
     ...ctrlIns.map((p) => ({
       id: `ctrl:${p}`,
       label: p,
-      color: CTRL_PORT_COLOR[p] ?? '#94a3b8',
+      color: CTRL_PORT_COLOR[p] ?? CTRL_PORT_FALLBACK_IN,
       isData: false,
     })),
     ...visibleDataIns.map((p) => ({
       id: `data:${p.id}`,
       label: p.label,
-      color: PORT_TYPE_COLOR[p.type] ?? '#60a5fa',
+      color: portTypeColor(p.type),
       isData: true,
     })),
   ]
@@ -68,13 +80,12 @@ export const BlockNode = memo(function BlockNode({ data, selected }: NodeProps<B
     ...ctrlOuts.map((p) => ({
       id: `ctrl:${p}`,
       label: p,
-      color: CTRL_PORT_COLOR[p] ?? '#22c55e',
+      color: CTRL_PORT_COLOR[p] ?? CTRL_PORT_FALLBACK_OUT,
       isData: false,
     })),
     ...dataOuts.map((p) => {
       const resolved = resolveDataPortType(def, p.id, 'output', nd.config)
-      const portColor =
-        resolved === 'unresolved' ? '#6b7280' : (PORT_TYPE_COLOR[resolved] ?? '#60a5fa')
+      const portColor = resolved === 'unresolved' ? UNRESOLVED_PORT_COLOR : portTypeColor(resolved)
       return { id: `data:${p.id}`, label: p.label, color: portColor, isData: true }
     }),
   ]
@@ -89,7 +100,7 @@ export const BlockNode = memo(function BlockNode({ data, selected }: NodeProps<B
   const allDataInPorts: PortEntry[] = dataIns.map((p) => ({
     id: `data:${p.id}`,
     label: p.label,
-    color: PORT_TYPE_COLOR[p.type] ?? '#60a5fa',
+    color: portTypeColor(p.type),
     isData: true,
   }))
   const hiddenDataIns = isCollapsed
@@ -143,19 +154,19 @@ export const BlockNode = memo(function BlockNode({ data, selected }: NodeProps<B
         style={{ borderBottom: `0.5px solid ${color}20` }}
       >
         <span
-          className="shrink-0 font-mono text-[10px] font-bold tracking-wider"
+          className="text-2xs shrink-0 font-mono font-bold tracking-wider"
           // eslint-disable-next-line no-restricted-syntax -- color varies per block category (CATEGORY_COLOR)
           style={{ color }}
         >
           {icon}
         </span>
-        <span className="text-text-primary flex-1 truncate font-mono text-[11px] font-semibold">
+        <span className="text-text-primary text-1xs flex-1 truncate font-mono font-semibold">
           {nd.label}
         </span>
         {hasExpandablePorts && (
           <span
             onClick={() => onToggleCollapse(nd.id as string)}
-            className="nodrag text-text-faint shrink-0 cursor-pointer pl-1 font-mono text-[9px] select-none"
+            className="nodrag text-text-faint text-3xs shrink-0 cursor-pointer pl-1 font-mono select-none"
             title={isCollapsed ? 'Expand ports' : 'Collapse ports'}
           >
             {isCollapsed ? '▸' : '▾'}
@@ -165,7 +176,7 @@ export const BlockNode = memo(function BlockNode({ data, selected }: NodeProps<B
 
       {/* Config hint */}
       {hint !== undefined && (
-        <div className="text-text-faint border-border-subtle border-b-hairline flex h-5 items-center truncate px-2.5 font-mono text-[9px]">
+        <div className="text-text-faint border-border-subtle border-b-hairline text-3xs flex h-5 items-center truncate px-2.5 font-mono">
           {String(hint)}
         </div>
       )}
@@ -174,7 +185,7 @@ export const BlockNode = memo(function BlockNode({ data, selected }: NodeProps<B
       {leftPorts.map((p, i) => (
         <div
           key={p.id}
-          className="absolute left-3.5 flex h-[22px] items-center font-mono text-[9px]"
+          className="text-3xs absolute left-3.5 flex h-[22px] items-center font-mono"
           // eslint-disable-next-line no-restricted-syntax -- top is computed from port index/count; color is the port's data-type/control color
           style={{ top: portTop + i * ROW_H, color: p.color }}
         >
@@ -186,7 +197,7 @@ export const BlockNode = memo(function BlockNode({ data, selected }: NodeProps<B
       {rightPorts.map((p, i) => (
         <div
           key={p.id}
-          className="absolute right-3.5 flex h-[22px] items-center text-right font-mono text-[9px]"
+          className="text-3xs absolute right-3.5 flex h-[22px] items-center text-right font-mono"
           // eslint-disable-next-line no-restricted-syntax -- top is computed from port index/count; color is the port's data-type/control color
           style={{ top: portTop + i * ROW_H, color: p.color }}
         >
