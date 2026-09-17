@@ -17,7 +17,7 @@ import {
   type NodeChange,
   type EdgeChange,
 } from '@xyflow/react'
-import { CATEGORY_COLOR } from './blockMeta'
+import { CATEGORY_COLOR, NO_GRAPH_KEYS } from './blockMeta'
 import { SchedulerCtx, type NodeRunState } from './schedulerContext'
 import { BlockNode } from './BlockNode'
 import { AnimatedEdge } from './AnimatedEdge'
@@ -88,6 +88,18 @@ interface GraphEditorProps {
 }
 
 // Outer wrapper provides ReactFlowProvider so useReactFlow() works inside.
+/**
+ * Backspace as well as Delete, the way every node editor people arrive from
+ * binds it (#159). Editor chrome opts out of key handling with NO_GRAPH_KEYS,
+ * because the library's own guard covers inputs and not buttons.
+ *
+ * Module-level so the identity is stable. React Flow's useKeyPress holds the
+ * key prop in its effect dependencies, so a fresh array literal on each render
+ * would rebind four document listeners every time the graph re-renders, which
+ * is every node drag.
+ */
+const DELETE_KEYS = ['Delete', 'Backspace']
+
 export function GraphEditor(props: GraphEditorProps) {
   return (
     <ReactFlowProvider>
@@ -733,7 +745,9 @@ function GraphEditorInner({
           tile's surface (style.css). */}
       <div className="lazy-panel-in flex h-full flex-col">
         {/* ── Toolbar ──────────────────────────────────────────────────── */}
-        <div className="border-border-subtle bg-surface border-b-hairline flex shrink-0 flex-wrap items-center gap-2 px-3 py-1.5">
+        <div
+          className={`border-border-subtle bg-surface border-b-hairline flex shrink-0 flex-wrap items-center gap-2 px-3 py-1.5 ${NO_GRAPH_KEYS}`}
+        >
           {/* Graph selector */}
           <div className="relative shrink-0">
             <button
@@ -925,7 +939,7 @@ function GraphEditorInner({
               isValidConnection={isValidConnection}
               fitView
               fitViewOptions={{ padding: 0.2 }}
-              deleteKeyCode="Delete"
+              deleteKeyCode={DELETE_KEYS}
               panOnDrag={[1, 2]}
               selectionOnDrag
             >
@@ -945,7 +959,9 @@ function GraphEditorInner({
 
           {/* Node config / data panel */}
           {selectedNode && (
-            <div className="border-border-subtle bg-canvas border-l-hairline flex w-56 shrink-0 flex-col overflow-y-auto">
+            <div
+              className={`border-border-subtle bg-canvas border-l-hairline flex w-56 shrink-0 flex-col overflow-y-auto ${NO_GRAPH_KEYS}`}
+            >
               {/* Tabs */}
               <div className="border-border-subtle border-b-hairline flex shrink-0">
                 {(['config', 'data'] as const).map((tab) => (

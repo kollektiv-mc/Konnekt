@@ -6,6 +6,7 @@ import {
   CATEGORY_COLOR,
   CATEGORY_ICON,
   CATEGORY_TEXT_CLASS,
+  NO_GRAPH_KEYS,
   orderedCategories,
 } from './blockMeta'
 
@@ -83,8 +84,10 @@ export function QuickAddMenu({ blockDefs, screenPos, onPick, onClose }: Props) {
   const activeDefs = activeCategory ? blockDefs.filter((d) => d.category === activeCategory) : []
   const activeColor = activeCategory ? (CATEGORY_COLOR[activeCategory] ?? '#6b7280') : '#6b7280'
 
-  const panelClass =
-    'fixed z-popover w-40 bg-elevated border-hairline border-border-subtle rounded-lg overflow-hidden shadow-[0_8px_24px_rgba(0,0,0,0.3)] backdrop-blur-md'
+  // Both panels share it, so NO_GRAPH_KEYS lands on both. The menu is portaled
+  // to body, well outside the canvas, but React Flow binds its keys to the
+  // document, so being elsewhere in the tree guards nothing (#159).
+  const panelClass = `fixed z-popover w-40 bg-elevated border-hairline border-border-subtle rounded-lg overflow-hidden shadow-[0_8px_24px_rgba(0,0,0,0.3)] backdrop-blur-md ${NO_GRAPH_KEYS}`
 
   // Portaled to body so the menu escapes the maximized tile's stacking
   // context; z-popover carries it over the maximize overlay (lib/layers.ts).

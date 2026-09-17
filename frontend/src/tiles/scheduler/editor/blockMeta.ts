@@ -75,3 +75,20 @@ export const PORT_TYPE_COLOR: Record<string, string> = {
 export const WIRED_BG_CLASS = 'bg-[#1e3a5f]'
 export const WIRED_BORDER_CLASS = 'border-[#1e3a5f]'
 export const WIRED_TEXT_CLASS = 'text-[#60a5fa]'
+
+/**
+ * React Flow's opt-out class, on every piece of editor chrome.
+ *
+ * Its key handling is bound to `document`, not to the canvas, and the only
+ * thing that stops it is `isInputDOMNode`: INPUT, SELECT, TEXTAREA,
+ * contenteditable, or anything inside an element carrying this class. A BUTTON
+ * is none of those, and the library only checks for one to decide whether to
+ * call preventDefault, not whether to act.
+ *
+ * That matters since Backspace joined Delete as a delete key (#159). The config
+ * panel's preset fields are buttons now rather than native selects (#160), and
+ * the panel is showing the selected node, so a Backspace meant for a field
+ * would have deleted the very node being edited. The toolbar, palette and
+ * quick-add menu are all buttons too.
+ */
+export const NO_GRAPH_KEYS = 'nokey'

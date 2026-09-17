@@ -1,5 +1,11 @@
 import type { models } from '../../../../wailsjs/go/models'
-import { CATEGORY_COLOR, CATEGORY_ICON, CATEGORY_TEXT_CLASS, orderedCategories } from './blockMeta'
+import {
+  CATEGORY_COLOR,
+  CATEGORY_ICON,
+  CATEGORY_TEXT_CLASS,
+  NO_GRAPH_KEYS,
+  orderedCategories,
+} from './blockMeta'
 import { useSettingsStore } from '../../../stores/useSettingsStore'
 
 interface Props {
@@ -27,7 +33,7 @@ export function BlockPalette({ blockDefs, onAdd }: Props) {
   if (collapsed) {
     return (
       <div
-        className="bg-canvas border-border-subtle border-r-hairline flex w-5 shrink-0 cursor-pointer items-center justify-center"
+        className={`bg-canvas border-border-subtle border-r-hairline flex w-5 shrink-0 cursor-pointer items-center justify-center ${NO_GRAPH_KEYS}`}
         onClick={toggleCollapsed}
         title="Expand blocks"
       >
@@ -37,7 +43,9 @@ export function BlockPalette({ blockDefs, onAdd }: Props) {
   }
 
   return (
-    <div className="bg-canvas border-border-subtle border-r-hairline w-48 shrink-0 overflow-y-auto">
+    <div
+      className={`bg-canvas border-border-subtle border-r-hairline w-48 shrink-0 overflow-y-auto ${NO_GRAPH_KEYS}`}
+    >
       <div className="px-2 py-2">
         <div className="text-text-faint mb-2 flex items-center font-mono text-xs">
           <span className="flex-1">blocks</span>
