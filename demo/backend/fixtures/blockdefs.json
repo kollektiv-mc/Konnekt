@@ -531,51 +531,51 @@
         "required": true,
         "options": [
           {
-            "label": "@tps",
+            "label": "tps",
             "value": "tps"
           },
           {
-            "label": "@players.count",
+            "label": "players.count",
             "value": "players.count"
           },
           {
-            "label": "@ram.used (MB)",
+            "label": "ram.used (MB)",
             "value": "ram.used"
           },
           {
-            "label": "@ram.left (MB)",
+            "label": "ram.left (MB)",
             "value": "ram.left"
           },
           {
-            "label": "@server.status",
+            "label": "server.status",
             "value": "server.status"
           },
           {
-            "label": "@players.max",
+            "label": "players.max",
             "value": "players.max"
           },
           {
-            "label": "@ram.total (MB)",
+            "label": "ram.total (MB)",
             "value": "ram.total"
           },
           {
-            "label": "@server.whitelist",
+            "label": "server.whitelist",
             "value": "server.whitelist"
           },
           {
-            "label": "@server.port",
+            "label": "server.port",
             "value": "server.port"
           },
           {
-            "label": "@server.gamemode",
+            "label": "server.gamemode",
             "value": "server.gamemode"
           },
           {
-            "label": "@server.motd",
+            "label": "server.motd",
             "value": "server.motd"
           },
           {
-            "label": "@server.world",
+            "label": "server.world",
             "value": "server.world"
           }
         ]
@@ -611,7 +611,7 @@
     "id": "data.writeAttribute",
     "category": "data",
     "label": "Write Attribute",
-    "description": "Writes a server attribute (e.g. @server.motd) or defines a custom in-flow attribute (@myvalue). Value may be an expression like @{ @players.count * 2 }.",
+    "description": "Writes a server attribute such as server.motd, or defines a custom in-flow attribute of your own. Reference either one elsewhere with an @, as in the expression @{ @players.count * 2 }.",
     "isTrigger": false,
     "controlInputs": [
       "trigger"
@@ -637,27 +637,27 @@
         "required": true,
         "options": [
           {
-            "label": "@players.max",
+            "label": "players.max",
             "value": "players.max"
           },
           {
-            "label": "@server.motd",
+            "label": "server.motd",
             "value": "server.motd"
           },
           {
-            "label": "@server.whitelist",
+            "label": "server.whitelist",
             "value": "server.whitelist"
           },
           {
-            "label": "@server.port",
+            "label": "server.port",
             "value": "server.port"
           },
           {
-            "label": "@server.gamemode",
+            "label": "server.gamemode",
             "value": "server.gamemode"
           },
           {
-            "label": "@server.world",
+            "label": "server.world",
             "value": "server.world"
           }
         ]

@@ -198,18 +198,21 @@ func registerBuiltins(r *BlockRegistry) {
 
 	must(r.RegisterBlock(models.BlockDef{
 		ID: "data.writeAttribute", Category: "data", Label: "Write Attribute",
-		Description:   "Writes a server attribute (e.g. @server.motd) or defines a custom in-flow attribute (@myvalue). Value may be an expression like @{ @players.count * 2 }.",
+		// The @ appears here only where it is genuinely the reference sigil, in
+		// the expression. Naming the field's own example as "@server.motd" read
+		// as instructions for a field that holds the bare name (#162).
+		Description:   "Writes a server attribute such as server.motd, or defines a custom in-flow attribute of your own. Reference either one elsewhere with an @, as in the expression @{ @players.count * 2 }.",
 		ControlInputs: []string{"trigger"}, ControlOutputs: []string{"onComplete", "onFailed"},
 		DataInputs: []models.DataPort{{ID: "value", Label: "Value", Type: "string"}},
 		ConfigSchema: []models.ConfigField{
 			{Key: "attribute", Label: "Attribute", Type: "attribute", Default: "server.motd", Required: true,
 				Options: []models.FieldOption{
-					{Label: "@players.max", Value: "players.max"},
-					{Label: "@server.motd", Value: "server.motd"},
-					{Label: "@server.whitelist", Value: "server.whitelist"},
-					{Label: "@server.port", Value: "server.port"},
-					{Label: "@server.gamemode", Value: "server.gamemode"},
-					{Label: "@server.world", Value: "server.world"},
+					{Label: "players.max", Value: "players.max"},
+					{Label: "server.motd", Value: "server.motd"},
+					{Label: "server.whitelist", Value: "server.whitelist"},
+					{Label: "server.port", Value: "server.port"},
+					{Label: "server.gamemode", Value: "server.gamemode"},
+					{Label: "server.world", Value: "server.world"},
 				}},
 			{Key: "value", Label: "Value", Type: "string", Required: true},
 		},
@@ -585,19 +588,19 @@ func registerDataBuiltins(r *BlockRegistry) {
 			{Key: "attribute", Label: "Attribute", Type: "attribute", Default: "tps", Required: true,
 				Options: []models.FieldOption{
 					// Read-only
-					{Label: "@tps", Value: "tps"},
-					{Label: "@players.count", Value: "players.count"},
-					{Label: "@ram.used (MB)", Value: "ram.used"},
-					{Label: "@ram.left (MB)", Value: "ram.left"},
-					{Label: "@server.status", Value: "server.status"},
+					{Label: "tps", Value: "tps"},
+					{Label: "players.count", Value: "players.count"},
+					{Label: "ram.used (MB)", Value: "ram.used"},
+					{Label: "ram.left (MB)", Value: "ram.left"},
+					{Label: "server.status", Value: "server.status"},
 					// Read & Write
-					{Label: "@players.max", Value: "players.max"},
-					{Label: "@ram.total (MB)", Value: "ram.total"},
-					{Label: "@server.whitelist", Value: "server.whitelist"},
-					{Label: "@server.port", Value: "server.port"},
-					{Label: "@server.gamemode", Value: "server.gamemode"},
-					{Label: "@server.motd", Value: "server.motd"},
-					{Label: "@server.world", Value: "server.world"},
+					{Label: "players.max", Value: "players.max"},
+					{Label: "ram.total (MB)", Value: "ram.total"},
+					{Label: "server.whitelist", Value: "server.whitelist"},
+					{Label: "server.port", Value: "server.port"},
+					{Label: "server.gamemode", Value: "server.gamemode"},
+					{Label: "server.motd", Value: "server.motd"},
+					{Label: "server.world", Value: "server.world"},
 				}},
 			{Key: "type", Label: "Data type", Type: "select", Default: "auto",
 				Options: []models.FieldOption{
