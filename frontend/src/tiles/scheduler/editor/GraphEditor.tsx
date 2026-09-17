@@ -39,6 +39,7 @@ import {
   type BlockFlowNode,
 } from './graphMapping'
 import { CloseConfirmDialog } from './CloseConfirmDialog'
+import { useDirtyGuard } from './useDirtyGuard'
 import {
   emptyHistory,
   record as recordHistory,
@@ -140,7 +141,6 @@ function GraphEditorInner({
   const clearSchedulerError = useSchedulerStore((s) => s.clearError)
 
   // ── Unsaved-changes guard ─────────────────────────────────────────────────
-  const [showCloseConfirm, setShowCloseConfirm] = useState(false)
   // State (not a ref) so changing it — on load/save/discard — reliably
   // invalidates the `dirty` memo below.
   const [savedSig, setSavedSig] = useState('')
@@ -153,6 +153,17 @@ function GraphEditorInner({
     dirtyRef.current = dirty
   }, [dirty])
 
+  // One dialog for every action that replaces what the editor holds: closing
+  // the maximized tile, switching graphs, and starting a new one (#124). The
+  // continuation travels with the request, so the dialog itself knows nothing
+  // about which of the three asked.
+  const confirm = useDirtyGuard(() => dirtyRef.current)
+  // Pulled out for the close-guard effect's dependency list. Every callback the
+  // hook returns is stable by construction, but exhaustive-deps only sees the
+  // member expression and asks for the whole object, which is a new one each
+  // render and would re-register the guard on every node drag.
+  const { hold: holdConfirm } = confirm
+
   // Veto a Dashboard-initiated close (Escape / backdrop / restore button /
   // navbar) while there are unsaved changes, in favor of our own confirm
   // dialog. Registered only while this editor is mounted (i.e. maximized).
@@ -160,11 +171,11 @@ function GraphEditorInner({
   useEffect(() => {
     setCloseGuard(() => {
       if (!dirtyRef.current) return false
-      setShowCloseConfirm(true)
+      holdConfirm(() => useUiStore.getState().requestCloseMaximize())
       return true
     })
     return () => setCloseGuard(null)
-  }, [setCloseGuard])
+  }, [setCloseGuard, holdConfirm])
 
   // ── Live run highlighting (driven by schedule:* events) ───────────────────
   const [nodeRunState, setNodeRunState] = useState<Map<string, NodeRunState>>(new Map())
@@ -757,7 +768,7 @@ function GraphEditorInner({
                   <button
                     key={g.id}
                     onClick={() => {
-                      loadGraph(g)
+                      confirm.guard(() => loadGraph(g))
                       graphMenu.close()
                     }}
                     className={`flex w-full items-center gap-2 px-3 py-1.5 text-left font-mono text-xs transition-colors ${
@@ -818,7 +829,7 @@ function GraphEditorInner({
 
           <div className="bg-border-subtle h-4 w-[0.5px]" />
 
-          <button className={btnClass()} onClick={handleNew}>
+          <button className={btnClass()} onClick={() => confirm.guard(handleNew)}>
             new
           </button>
 
@@ -988,19 +999,25 @@ function GraphEditorInner({
         />
       )}
 
-      {showCloseConfirm && (
+      {confirm.pending && (
         <CloseConfirmDialog
           saving={saving}
-          onCancel={() => setShowCloseConfirm(false)}
+          onCancel={confirm.cancel}
           onDiscard={() => {
+            // Mark clean first: the close path re-enters the close guard, which
+            // reads dirtyRef and would otherwise put the dialog straight back.
             setSavedSig(graphSignature({ name: graphName, enabled: graphEnabled }, nodes, edges))
-            setShowCloseConfirm(false)
-            useUiStore.getState().requestCloseMaximize()
+            confirm.proceed()
           }}
-          onSaveAndClose={async () => {
-            await handleSave()
-            setShowCloseConfirm(false)
-            useUiStore.getState().requestCloseMaximize()
+          onSaveAndContinue={async () => {
+            // null means the save failed. The store has recorded the message and
+            // the toolbar renders it, so drop the pending action and leave the
+            // graph loaded rather than continuing past a failure (#124).
+            if ((await handleSave()) === null) {
+              confirm.cancel()
+              return
+            }
+            confirm.proceed()
           }}
         />
       )}
