@@ -88,6 +88,18 @@ interface GraphEditorProps {
 }
 
 // Outer wrapper provides ReactFlowProvider so useReactFlow() works inside.
+/**
+ * Backspace as well as Delete, the way every node editor people arrive from
+ * binds it (#159). Editor chrome opts out of key handling with NO_GRAPH_KEYS,
+ * because the library's own guard covers inputs and not buttons.
+ *
+ * Module-level so the identity is stable. React Flow's useKeyPress holds the
+ * key prop in its effect dependencies, so a fresh array literal on each render
+ * would rebind four document listeners every time the graph re-renders, which
+ * is every node drag.
+ */
+const DELETE_KEYS = ['Delete', 'Backspace']
+
 export function GraphEditor(props: GraphEditorProps) {
   return (
     <ReactFlowProvider>
@@ -927,11 +939,7 @@ function GraphEditorInner({
               isValidConnection={isValidConnection}
               fitView
               fitViewOptions={{ padding: 0.2 }}
-              // Backspace as well as Delete, the way every node editor people
-              // arrive from binds it (#159). Editor chrome opts out of key
-              // handling with NO_GRAPH_KEYS, because the library's own guard
-              // covers inputs and not buttons.
-              deleteKeyCode={['Delete', 'Backspace']}
+              deleteKeyCode={DELETE_KEYS}
               panOnDrag={[1, 2]}
               selectionOnDrag
             >
