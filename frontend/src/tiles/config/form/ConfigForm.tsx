@@ -30,7 +30,7 @@ function Field({
           className="flex w-full items-center gap-2 py-2 text-left"
         >
           <span
-            className={`text-text-muted duration-fast ease-standard text-[10px] transition-transform ${open ? 'rotate-90' : 'rotate-0'}`}
+            className={`text-text-muted duration-fast ease-standard text-2xs transition-transform ${open ? 'rotate-90' : 'rotate-0'}`}
           >
             ▶
           </span>

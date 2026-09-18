@@ -23,7 +23,7 @@ const FORMAT_LABELS: Record<string, string> = {
 function FormatChip({ format }: { format: ConfigFile['format'] }) {
   return (
     <span
-      className={`flex-shrink-0 font-mono text-[9px] tracking-wide uppercase ${FORMAT_COLORS[format] ?? 'text-zinc-500'}`}
+      className={`text-3xs flex-shrink-0 font-mono tracking-wide uppercase ${FORMAT_COLORS[format] ?? 'text-zinc-500'}`}
     >
       {FORMAT_LABELS[format] ?? format}
     </span>
@@ -62,10 +62,8 @@ function FileRow({
 function GroupHeader({ label, count }: { label: string; count: number }) {
   return (
     <div className="flex items-center gap-2 px-3 pt-4 pb-1.5">
-      <span className="text-text-muted text-[10px] font-bold tracking-widest uppercase">
-        {label}
-      </span>
-      <span className="text-text-faint font-mono text-[10px]">{count}</span>
+      <span className="text-text-muted text-2xs font-bold tracking-widest uppercase">{label}</span>
+      <span className="text-text-faint text-2xs font-mono">{count}</span>
     </div>
   )
 }
@@ -93,12 +91,12 @@ function PluginGroup({
         className="flex w-full items-center gap-1.5 rounded px-3 py-1.5 text-left transition-colors hover:bg-white/3"
       >
         <span
-          className={`text-text-faint text-[9px] transition-transform ${open ? 'rotate-90' : 'rotate-0'}`}
+          className={`text-text-faint text-3xs transition-transform ${open ? 'rotate-90' : 'rotate-0'}`}
         >
           ▶
         </span>
         <span className="text-text-muted flex-1 truncate text-xs font-medium">{source}</span>
-        <span className="text-text-faint font-mono text-[9px]">{files.length}</span>
+        <span className="text-text-faint text-3xs font-mono">{files.length}</span>
       </button>
 
       {open && (
@@ -264,7 +262,7 @@ export function FileList({
       <div className="border-border-subtle shrink-0 border-t px-3 py-2">
         <button
           onClick={onRefresh}
-          className="text-text-faint hover:text-accent font-mono text-[10px] transition-colors"
+          className="text-text-faint hover:text-accent text-2xs font-mono transition-colors"
         >
           ↻ Refresh
         </button>

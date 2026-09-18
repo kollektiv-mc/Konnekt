@@ -87,6 +87,7 @@ after them is dated. Newest last, in both groups.
 - [2026-09-08 — The backup that reported a flush it never made](#2026-09-08-the-backup-that-reported-a-flush-it-never-made)
 - [2026-09-16 — The two thirds of a world the backup never took](#2026-09-16-the-two-thirds-of-a-world-the-backup-never-took)
 - [2026-09-16 — The schedules that followed the sidebar](#2026-09-16-the-schedules-that-followed-the-sidebar)
+- [2026-09-18 — The type scale sweep reaches the whole tree](#2026-09-18-the-type-scale-sweep-reaches-the-whole-tree)
 
 ---
 
@@ -5683,3 +5684,46 @@ pin the server dimension of the store, including the overlapping-fetch order.
 `.claude/suite-check.py` green at 22 of 22 before and after. Bindings
 regenerated with the CLI version `go.mod` pins, changing exactly the seven
 signatures and the new field.
+
+### 2026-09-18 — The type scale sweep reaches the whole tree
+
+**Closed:** the checklist's `P3 — The type scale sweep stops at the scheduler`
+(filed 2026-09-17), as #368.
+
+#163 moved the scheduler editor's twenty-seven inlined `text-[Npx]` sizes onto
+the generated scale and left an invariant holding that one directory. This
+sweep did the rest of `frontend/src`: 62 `text-[10px]` to `text-2xs`, 19
+`text-[11px]` to `text-1xs`, 4 `text-[9px]` to `text-3xs`, and the one
+`text-[13px]` (the mods tile's quick-install `+`, in a 22px box) to `text-sm`,
+across seventeen files. The counts differ from #368's, which had 66 and 13 and
+no 11px at all; #163 had landed between the filing and the sweep, and the 11px
+ones had simply been missed. Every value except the 13px maps exactly onto a
+token, so nothing renders at a different size.
+
+**Twenty-seven sites carry two font sizes, and did before.** `text-xs
+text-[10px]` was the pattern, mostly in the mods tile's dialogs, and it is
+`text-xs text-2xs` now. Both render 10px: in the built CSS `.text-2xs` sits
+after `.text-xs` exactly as `.text-\[10px\]` did, so the later rule wins in
+both spellings. The `text-xs` is not dead, though. Tailwind's `text-xs` also
+sets `line-height` from its own theme and the token-derived `text-2xs` sets
+font-size only, so dropping the `text-xs` would change those rows' line-height.
+Left as they were: a line-height decision is a design change, and this sweep
+was a rename.
+
+**One literal stays, by name.** `worlds/scene/Planet.tsx`'s focused-planet
+label is `text-[7px]`. It is not a type size: drei's `Html` scales it by camera
+distance (`distanceFactor`), and the focused planet sits close enough that the
+scale's 9px floor would land larger on screen than the unfocused labels beside
+it. The literal is the input to that transform, and a token for it would name a
+screen size the label never has. The file says so beside the class, and the
+invariant excludes that one file rather than the whole scene directory.
+
+**The invariant is now `text uses the type scale` over all of `frontend/src`**,
+renamed from `scheduler uses the type scale` and widened from
+`frontend/src/tiles/scheduler`, which the checklist had said could not happen
+without turning red on arrival. It is green on arrival. `no literal border
+widths`' diagnosis used to name text as a sweep still open and now points here.
+
+**Verified:** `.claude/suite-check.py --section invariants` green with the
+widened path; `pnpm check-tokens` after a fresh build, so all four classes
+compile; `pnpm typecheck`, `lint`, `test` and `format:check` green.

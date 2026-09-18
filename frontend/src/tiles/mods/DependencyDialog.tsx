@@ -138,7 +138,7 @@ function DepRow({
         )}
       </div>
       {dep.alreadyInstalled && (
-        <span className="text-text-muted shrink-0 rounded bg-white/[0.06] px-1 text-xs text-[10px]">
+        <span className="text-text-muted text-2xs shrink-0 rounded bg-white/[0.06] px-1 text-xs">
           installed
         </span>
       )}

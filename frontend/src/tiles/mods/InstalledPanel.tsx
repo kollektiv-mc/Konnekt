@@ -66,7 +66,7 @@ function SortMenu({ sort, onSort }: { sort: SortKey; onSort: (v: SortKey) => voi
           open ? 'bg-hover' : 'bg-transparent'
         }`}
       >
-        <span className="text-text-faint text-[10px]">↕</span>
+        <span className="text-text-faint text-2xs">↕</span>
         {label}
       </button>
       <Popover open={open} onClose={close}>
@@ -128,11 +128,11 @@ function FilterMenu({
           open ? 'bg-hover' : 'bg-transparent'
         } ${active ? 'text-accent' : 'text-text-muted'}`}
       >
-        <span className="text-text-faint text-[10px]">☰</span>
+        <span className="text-text-faint text-2xs">☰</span>
         Filter{active ? ' ·' : ''}
       </button>
       <Popover open={open} onClose={close}>
-        <div className="text-text-faint border-border-subtle border-b-hairline px-3 py-1.5 font-mono text-xs text-[10px]">
+        <div className="text-text-faint border-border-subtle border-b-hairline text-2xs px-3 py-1.5 font-mono text-xs">
           Status
         </div>
         {(['all', 'enabled', 'disabled'] as StatusFilter[]).map((v) => {
@@ -160,7 +160,7 @@ function FilterMenu({
             </button>
           )
         })}
-        <div className="text-text-faint border-border-subtle border-t-hairline border-b-hairline px-3 py-1.5 font-mono text-xs text-[10px]">
+        <div className="text-text-faint border-border-subtle border-t-hairline border-b-hairline text-2xs px-3 py-1.5 font-mono text-xs">
           Source
         </div>
         {(['all', 'modrinth', 'local'] as SourceFilter[]).map((v) => {
@@ -285,7 +285,7 @@ export function InstalledPanel({
     <div className="flex h-full min-h-0 flex-col">
       {/* Toolbar */}
       <div className="border-border-subtle border-b-hairline flex shrink-0 flex-wrap items-center gap-2 px-3 py-2">
-        <span className="text-text-muted text-[11px]">⌕</span>
+        <span className="text-text-muted text-1xs">⌕</span>
         <input
           value={search}
           onChange={(e) => setSearch(e.target.value)}
@@ -293,7 +293,7 @@ export function InstalledPanel({
           className="text-text-primary min-w-[60px] flex-1 bg-transparent font-mono text-xs outline-none"
         />
         {search && (
-          <button onClick={() => setSearch('')} className="text-text-muted text-[11px]">
+          <button onClick={() => setSearch('')} className="text-text-muted text-1xs">
             ✕
           </button>
         )}
@@ -393,13 +393,13 @@ export function InstalledPanel({
                     {mod.displayName}
                   </button>
                   {numCols === 1 && mod.versionNumber && (
-                    <span className="text-text-muted shrink-0 font-mono text-xs text-[10px]">
+                    <span className="text-text-muted text-2xs shrink-0 font-mono text-xs">
                       v{mod.versionNumber}
                     </span>
                   )}
                   {numCols === 1 && (
                     <span
-                      className={`shrink-0 rounded px-1 text-xs text-[10px] ${
+                      className={`text-2xs shrink-0 rounded px-1 text-xs ${
                         mod.source === 'modrinth'
                           ? 'bg-accent/[0.12] text-accent'
                           : 'text-text-muted bg-white/[0.06]'
@@ -411,10 +411,10 @@ export function InstalledPanel({
                 </div>
                 {numCols === 1 && (
                   <div className="mt-0.5 flex items-center gap-2">
-                    <span className="text-text-faint truncate font-mono text-xs text-[10px]">
+                    <span className="text-text-faint text-2xs truncate font-mono text-xs">
                       {mod.fileName}
                     </span>
-                    <span className="text-text-faint shrink-0 text-xs text-[10px]">
+                    <span className="text-text-faint text-2xs shrink-0 text-xs">
                       {fmtBytes(mod.sizeBytes)}
                     </span>
                   </div>

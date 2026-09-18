@@ -105,7 +105,7 @@ export function ContentCard({
               {project.title}
             </div>
             {project.author && (
-              <div className="text-text-faint mt-0.5 truncate text-xs text-[10px]">
+              <div className="text-text-faint text-2xs mt-0.5 truncate text-xs">
                 by {project.author}
               </div>
             )}
@@ -120,17 +120,17 @@ export function ContentCard({
         {/* Stats row */}
         <div className="mb-1.5 flex items-center gap-2">
           {project.downloads > 0 && (
-            <span className="text-text-faint font-mono text-xs text-[10px]">
+            <span className="text-text-faint text-2xs font-mono text-xs">
               ↓ {fmtCount(project.downloads)}
             </span>
           )}
           {project.follows > 0 && (
-            <span className="text-text-faint font-mono text-xs text-[10px]">
+            <span className="text-text-faint text-2xs font-mono text-xs">
               ♥ {fmtCount(project.follows)}
             </span>
           )}
           {project.dateModified && (
-            <span className="text-text-faint ml-auto font-mono text-xs text-[10px]">
+            <span className="text-text-faint text-2xs ml-auto font-mono text-xs">
               {relativeTime(project.dateModified)}
             </span>
           )}
@@ -142,7 +142,7 @@ export function ContentCard({
             {visibleCategories.map((cat) => (
               <span
                 key={cat}
-                className="text-accent border-hairline rounded border-[color-mix(in_srgb,var(--accent)_25%,transparent)] bg-[color-mix(in_srgb,var(--accent)_10%,transparent)] px-1.5 py-px font-mono text-xs text-[10px]"
+                className="text-accent border-hairline text-2xs rounded border-[color-mix(in_srgb,var(--accent)_25%,transparent)] bg-[color-mix(in_srgb,var(--accent)_10%,transparent)] px-1.5 py-px font-mono text-xs"
               >
                 {cat}
               </span>
@@ -155,7 +155,7 @@ export function ContentCard({
           onClick={handleQuickInstall}
           disabled={busy || alreadyInstalled}
           title={showGrey ? 'Already installed' : done ? 'Installed!' : 'Install latest version'}
-          className={`absolute right-2 bottom-2 z-[1] flex h-[22px] w-[22px] items-center justify-center rounded-md bg-transparent pb-px text-[13px] leading-none [transition:opacity_200ms_ease] ${
+          className={`absolute right-2 bottom-2 z-[1] flex h-[22px] w-[22px] items-center justify-center rounded-md bg-transparent pb-px text-sm leading-none [transition:opacity_200ms_ease] ${
             showGrey
               ? 'border-border-subtle text-text-faint border-hairline'
               : 'border-accent text-accent border'

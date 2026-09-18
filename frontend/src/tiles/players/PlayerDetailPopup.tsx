@@ -47,7 +47,7 @@ function AvatarLarge({ player }: { player: Player }) {
 function InfoRow({ label, value, dim }: { label: string; value: string; dim?: boolean }) {
   return (
     <div className="flex items-baseline gap-2 py-0.5">
-      <span className="text-text-faint w-20 shrink-0 font-mono text-[10px] tracking-wider uppercase">
+      <span className="text-text-faint text-2xs w-20 shrink-0 font-mono tracking-wider uppercase">
         {label}
       </span>
       <span
@@ -133,7 +133,7 @@ export function PlayerDetailPopup({ player: initial, serverId, onClose, onMutate
               />
             </div>
             {player.uuid && (
-              <span className="text-text-faint mt-0.5 block truncate font-mono text-[9px]">
+              <span className="text-text-faint text-3xs mt-0.5 block truncate font-mono">
                 {player.uuid}
               </span>
             )}
