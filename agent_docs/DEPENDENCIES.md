@@ -109,6 +109,15 @@ Prettier, Vitest, Tailwind, etc.) isn't itemized here; it's inspectable
 directly from `devDependencies` in `frontend/package.json` and doesn't ship in
 the production bundle.
 
+One dev-only package is worth a line anyway, because of where it is *not*
+allowed to reach. `@types/node` exists so `tsconfig.node.json` can typecheck
+`vite.config.ts` (#371), and it is scoped to that project by its `types`
+list. `tsconfig.app.json` sets `"types": []` for the same reason from the other
+side: without it TypeScript auto-includes every `@types/*` package, and
+`process`, `Buffer` and the `node:` builtins would typecheck inside browser code
+that has none of them at runtime, which is exactly the class of bug
+`vite.config.ts`'s `DRAGGABLE_DEBUG` comment records.
+
 One devDependency earns a line anyway, because it pulls a browser: `playwright`
 drives `demo/record.mjs`, which films the website's feature clips from the
 built demo in CI. It lives in `frontend/package.json` because that is the only

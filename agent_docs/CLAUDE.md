@@ -74,7 +74,7 @@ node demo/record.mjs                   # website clips; needs ffmpeg
 npx --yes aislop@0.16.0 scan
 ```
 
-A lefthook pre-commit hook runs Prettier + ESLint + `tsc --noEmit` on staged
+A lefthook pre-commit hook runs Prettier + ESLint + `tsc -b` on staged
 frontend files and `gofmt` + `go vet` on staged Go files; CI re-runs
 typecheck/lint/build/test on every push and pull request.
 
