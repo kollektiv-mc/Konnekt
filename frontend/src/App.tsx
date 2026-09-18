@@ -36,7 +36,10 @@ function App() {
   const checkUpdatesOnStartup = useSettingsStore((s) => s.settings.checkUpdatesOnStartup)
   const installOpen = useInstallStore((s) => s.open)
   const loaderDialogOpen = useLoaderStore((s) => s.dialogOpen)
-  const [eulaRequired, setEulaRequired] = useState(false)
+  // The server whose eula.txt needs accepting, or null. A string rather than
+  // a flag because the prompt is for the server that tripped it, which is not
+  // always the selected one: a schedule can start another server (#236).
+  const [eulaFor, setEulaFor] = useState<string | null>(null)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const { width: navWidth, resizing, onHandleMouseDown, onHandleDoubleClick } = useNavWidth()
   // Any drag that moves the navbar or something inside it. While one is in
@@ -91,7 +94,12 @@ function App() {
   useEffect(() => {
     let cleanup: (() => void) | undefined
     try {
-      cleanup = EventsOn(EVENTS.EULA_REQUIRED, () => setEulaRequired(true))
+      // An empty serverID is the bootstrap instance (models/server.go), and
+      // the selected server is the only one that can have been started
+      // without an id, so it stands in rather than the prompt going missing.
+      cleanup = EventsOn(EVENTS.EULA_REQUIRED, (p?: { serverID?: string }) =>
+        setEulaFor(p?.serverID || useServerConfigStore.getState().activeId || ''),
+      )
     } catch {
       /* non-Wails context */
     }
@@ -597,7 +605,7 @@ function App() {
         </main>
       </div>
 
-      {eulaRequired && <EulaModal serverId={activeId} onClose={() => setEulaRequired(false)} />}
+      {eulaFor !== null && <EulaModal serverId={eulaFor} onClose={() => setEulaFor(null)} />}
 
       <SettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} />
 

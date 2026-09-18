@@ -45,11 +45,18 @@ export function useWorlds() {
 
   // Re-scan after server lifecycle and backup events that may affect world state.
   useEffect(() => {
+    // Filtered on the event's own server id (#237), the shape usePlayers uses.
+    // refresh already fetches this server's worlds, so an unfiltered event
+    // never showed the wrong ones; it rescanned on every other server's stop
+    // and backup. An absent or empty id still refreshes.
+    const onMine = (p?: { serverID?: string }) => {
+      if (!p?.serverID || p.serverID === activeId) refresh()
+    }
     let off1: (() => void) | undefined
     let off2: (() => void) | undefined
     try {
-      off1 = EventsOn(EVENTS.SERVER_STOPPED, refresh)
-      off2 = EventsOn(EVENTS.BACKUP_COMPLETED, refresh)
+      off1 = EventsOn(EVENTS.SERVER_STOPPED, onMine)
+      off2 = EventsOn(EVENTS.BACKUP_COMPLETED, onMine)
     } catch {
       /* Wails runtime unavailable in dev without backend */
     }
@@ -57,7 +64,7 @@ export function useWorlds() {
       off1?.()
       off2?.()
     }
-  }, [refresh])
+  }, [refresh, activeId])
 
   const setActive = useCallback(
     async (name: string) => {

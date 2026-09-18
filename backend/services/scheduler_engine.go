@@ -76,8 +76,11 @@ func (s *SchedulerService) runGraph(
 		Status:    "running",
 	}
 
+	// serverID rides every run and node event (#237): a graph belongs to one
+	// server (#236), and the id is what lets a listener filter on the server
+	// rather than having to know which graphs are that server's.
 	s.bus.Emit(EventScheduleRunStarted, map[string]interface{}{
-		"runId": runID, "graphId": g.ID, "graphName": g.Name,
+		"runId": runID, "graphId": g.ID, "graphName": g.Name, "serverID": g.ServerID,
 	})
 
 	// Build lookup structures from the graph snapshot.
@@ -132,7 +135,7 @@ func (s *SchedulerService) runGraph(
 		execCount++
 		nodeStart := time.Now()
 		s.bus.Emit(EventScheduleNodeStarted, map[string]interface{}{
-			"runId": runID, "graphId": g.ID, "nodeId": node.ID, "type": node.Type,
+			"runId": runID, "graphId": g.ID, "nodeId": node.ID, "type": node.Type, "serverID": g.ServerID,
 		})
 
 		result := s.executeNode(runCtx, node, g.Edges, nodeByID, outputs, scope)
@@ -167,7 +170,7 @@ func (s *SchedulerService) runGraph(
 
 		s.bus.Emit(EventScheduleNodeFinished, map[string]interface{}{
 			"runId": runID, "graphId": g.ID, "nodeId": node.ID,
-			"status": status, "firedPort": firedPort,
+			"status": status, "firedPort": firedPort, "serverID": g.ServerID,
 		})
 
 		// Follow control edges from this node on the fired port.
@@ -202,7 +205,7 @@ done:
 	}
 
 	s.bus.Emit(EventScheduleRunFinished, map[string]interface{}{
-		"runId": runID, "graphId": g.ID, "status": rec.Status,
+		"runId": runID, "graphId": g.ID, "status": rec.Status, "serverID": g.ServerID,
 	})
 
 	s.addHistory(rec)

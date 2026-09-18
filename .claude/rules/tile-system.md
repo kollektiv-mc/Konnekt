@@ -15,6 +15,16 @@ Adding a new tile:
    same size (see below).
 3. No changes to core layout system required
 
+A new tile is per-server by construction: `Dashboard.tsx` keys the tile tree
+`${tile.id}:${serverId}` (#234), so a switch remounts every tile and its
+hooks refetch for the new id. What that does not cover is state held outside
+the tile: a Zustand store keeps its data across the remount, so a store that
+holds server data resets on switch (`useServerStore.reset`,
+`useSchedulerStore.hydratedFor`), and an `EventsOn` listener for a
+server-scoped event filters on the payload's `serverID`, the way
+`tiles/players/usePlayers.ts` does. `lib/serverScoping.test.ts` fails on a
+listener that does not, and `.claude/rules/ipc.md` has the rest.
+
 A new tile does **not** appear in the Overview tile, and that is deliberate.
 Overview (`tiles/overview/`) is a designed dashboard of six chosen sections —
 status, CPU/RAM/players, roster, active world, recent backups, armed schedules
