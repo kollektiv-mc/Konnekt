@@ -22,7 +22,7 @@ function KindTag({ backup }: { backup: Backup }) {
   const label = backup.kind === 'world' ? (backup.world ?? 'world') : 'server'
   return (
     <span
-      className="border-border-subtle text-text-faint border-hairline shrink-0 truncate rounded px-1 font-mono text-[10px]"
+      className="border-border-subtle text-text-faint border-hairline text-2xs shrink-0 truncate rounded px-1 font-mono"
       title={backup.kind === 'world' ? `World backup: ${label}` : 'Full server backup'}
     >
       {label}

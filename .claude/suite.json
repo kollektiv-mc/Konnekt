@@ -102,7 +102,7 @@
         "grep": "\\bborder(-[a-z]+)?-\\[[0-9.]+px\\]",
         "paths": ["frontend/src/components", "frontend/src/tiles"],
         "expect": "no matches",
-        "diagnosis": "A hairline is the signature weight of this UI, and an inlined [0.5px] opts that edge out of the token layer: it can then only be changed by find-and-replace, and it diverges from Kommands, which reads the same upstream scale. Utilities exist for both weights and all four sides (border-hairline, border-thick, border-{t,r,b,l}-{hairline,thick}), generated into frontend/src/styles/tokens.css from tokens.source.json. A genuinely new weight is a value to add to kollektiv/design/tokens.json, never a literal to inline here. Scoped to borders on purpose: text-[Npx], rounded-[Npx] and the arbitrary sizing literals are separate sweeps still open in the checklist, so a broader pattern would be red on arrival.",
+        "diagnosis": "A hairline is the signature weight of this UI, and an inlined [0.5px] opts that edge out of the token layer: it can then only be changed by find-and-replace, and it diverges from Kommands, which reads the same upstream scale. Utilities exist for both weights and all four sides (border-hairline, border-thick, border-{t,r,b,l}-{hairline,thick}), generated into frontend/src/styles/tokens.css from tokens.source.json. A genuinely new weight is a value to add to kollektiv/design/tokens.json, never a literal to inline here. Scoped to borders on purpose: text-[Npx] has its own invariant below with its own exclusions, and rounded-[Npx] and the arbitrary sizing literals are separate sweeps still open in the checklist, so a broader pattern would be red on arrival.",
         "reference": "agent_docs/HEALTH_CHECKLIST.md"
       },
       {
@@ -115,12 +115,12 @@
         "reference": "agent_docs/HEALTH_CHECKLIST.md"
       },
       {
-        "name": "scheduler uses the type scale",
+        "name": "text uses the type scale",
         "grep": "text-\\[[0-9.]+px\\]",
-        "paths": ["frontend/src/tiles/scheduler"],
-        "exclude": ["**/*.test.ts", "**/*.test.tsx"],
+        "paths": ["frontend/src"],
+        "exclude": ["**/*.test.ts", "**/*.test.tsx", "**/assets/**", "**/worlds/scene/Planet.tsx"],
         "expect": "no matches",
-        "diagnosis": "The type scale names three steps below Tailwind's smallest (text-3xs 9px, text-2xs 10px, text-1xs 11px, text-xs 12px), generated into frontend/src/styles/tokens.css from tokens.source.json, and the rest of the app uses them. The scheduler editor had twenty-seven inlined px sizes instead, which is the same set of values with no single place to change them and no way for a token sync to reach them (#163). A size the scale does not name is a value to add to kollektiv/design/tokens.json, not a literal to inline; 8px sat below the floor and was rounded to text-3xs rather than earning a token of its own. Scoped to the scheduler because the sweep is finished only there: SettingsModal and others still carry theirs, tracked in the checklist, so widening this path list turns it red on arrival.",
+        "diagnosis": "The type scale names three steps below Tailwind's smallest (text-3xs 9px, text-2xs 10px, text-1xs 11px, text-xs 12px), generated into frontend/src/styles/tokens.css from tokens.source.json. An inlined text-[10px] is the same value with no single place to change it and no way for a token sync to reach it: tokens.source.json is vendored from kollektiv/design/tokens.json and shared with Kommands, so when the scale moves upstream the literal keeps its old value and the tree ends up with two scales a pixel apart, and nothing fails (#368). A size the scale does not name is a value to add to kollektiv/design/tokens.json, not a literal to inline; 8px sat below the floor and was rounded to text-3xs rather than earning a token of its own (#163), and the one 13px went to text-sm. The scheduler editor was swept first under #163 and the rest of frontend/src under #368, which is when this widened from tiles/scheduler to the whole tree. One exclusion by name: worlds/scene/Planet.tsx's 7px label is scaled by camera distance through drei's Html distanceFactor, so the literal is an input to a transform rather than a screen size, and the file says so where it sits. The assets directory is excluded only because its fonts and logo are binary and the runner would otherwise report them as unreadable.",
         "reference": "agent_docs/HEALTH_CHECKLIST.md"
       },
       {

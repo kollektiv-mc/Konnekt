@@ -75,7 +75,7 @@ function ViewToggle({ mode, supported, onChange }: ViewToggleProps) {
   if (!supported) {
     return (
       <span
-        className="text-text-faint shrink-0 font-mono text-[10px]"
+        className="text-text-faint text-2xs shrink-0 font-mono"
         title="Form view unavailable — file format not supported or contains constructs that can't be safely round-tripped"
       >
         Raw only
@@ -88,7 +88,7 @@ function ViewToggle({ mode, supported, onChange }: ViewToggleProps) {
         <button
           key={m}
           onClick={() => onChange(m)}
-          className={`px-2 py-0.5 font-mono text-[10px] capitalize transition-colors ${
+          className={`text-2xs px-2 py-0.5 font-mono capitalize transition-colors ${
             mode === m ? 'bg-accent text-black' : 'text-text-faint bg-transparent'
           }`}
         >
@@ -159,23 +159,23 @@ export function EditorPanel({
         </span>
 
         <span
-          className={`shrink-0 font-mono text-[10px] ${FORMAT_COLORS[file.format] ?? 'text-zinc-400'}`}
+          className={`text-2xs shrink-0 font-mono ${FORMAT_COLORS[file.format] ?? 'text-zinc-400'}`}
         >
           {FORMAT_LABELS[file.format] ?? file.format}
         </span>
 
         <ViewToggle mode={viewMode} supported={canForm} onChange={setViewMode} />
 
-        {isDirty && <span className="text-text-faint shrink-0 text-[10px]">●</span>}
+        {isDirty && <span className="text-text-faint text-2xs shrink-0">●</span>}
 
         {isRunning && isDirty && (
-          <span className="flex-shrink-0 text-[10px] text-yellow-500">applies after restart</span>
+          <span className="text-2xs flex-shrink-0 text-yellow-500">applies after restart</span>
         )}
 
         {isDirty && (
           <button
             onClick={onRevert}
-            className="text-text-faint shrink-0 font-mono text-[10px] transition-colors hover:text-red-400"
+            className="text-text-faint text-2xs shrink-0 font-mono transition-colors hover:text-red-400"
           >
             Revert
           </button>
@@ -184,7 +184,7 @@ export function EditorPanel({
         <button
           onClick={onSave}
           disabled={!isDirty || saving}
-          className={`shrink-0 rounded px-2 py-0.5 font-mono text-[10px] transition-colors disabled:opacity-30 ${
+          className={`text-2xs shrink-0 rounded px-2 py-0.5 font-mono transition-colors disabled:opacity-30 ${
             isDirty && !saving ? 'bg-accent text-black' : 'text-text-faint'
           }`}
         >
@@ -194,7 +194,7 @@ export function EditorPanel({
         {isRunning && isDirty && (
           <button
             onClick={onRestart}
-            className="border-border-subtle text-text-muted shrink-0 rounded border px-2 py-0.5 font-mono text-[10px] transition-colors"
+            className="border-border-subtle text-text-muted text-2xs shrink-0 rounded border px-2 py-0.5 font-mono transition-colors"
           >
             Restart
           </button>

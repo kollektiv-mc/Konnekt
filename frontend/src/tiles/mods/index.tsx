@@ -106,7 +106,7 @@ function ModsSummary({
             : `${installed.length} ${installed.length !== 1 ? nounPlural : noun}`}
         </span>
         {running && (
-          <span className="text-text-muted text-xs text-[10px]">restart needed for changes</span>
+          <span className="text-text-muted text-2xs text-xs">restart needed for changes</span>
         )}
       </div>
       {modProcess?.status === 'running' && (
@@ -234,7 +234,7 @@ function ModsExpanded({
                   : 'mods'}
             </span>
             {running && (
-              <span className="text-text-muted shrink-0 text-xs text-[10px]">
+              <span className="text-text-muted text-2xs shrink-0 text-xs">
                 restart needed for changes
               </span>
             )}

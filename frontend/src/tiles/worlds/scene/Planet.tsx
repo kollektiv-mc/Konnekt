@@ -175,7 +175,14 @@ function MoonBody({
         <group ref={labelGroupRef}>
           <Html center className="pointer-events-none select-none" distanceFactor={10}>
             {/* opacity-0 is only the first-frame value: useFrame above writes
-                labelSpanRef.style.opacity every frame, and inline beats the class. */}
+                labelSpanRef.style.opacity every frame, and inline beats the class.
+                text-[7px] is not a type size and is excluded from the `text uses
+                the type scale` invariant by name: drei's Html scales this label by
+                camera distance (distanceFactor), and the focused planet sits close
+                enough that 9px would land larger on screen than the unfocused
+                labels. The literal is the input to that scaling, sized so the
+                rendered label matches its neighbours, so a token for it would
+                name a screen size it never has. */}
             <span
               ref={labelSpanRef}
               className={`font-mono whitespace-nowrap opacity-0 ${selected ? 'text-[7px]' : 'text-3xs'}`}
@@ -369,7 +376,14 @@ export function Planet({
         <group ref={labelGroupRef}>
           <Html center className="pointer-events-none select-none" distanceFactor={10}>
             {/* opacity-0 is only the first-frame value: useFrame above writes
-                labelSpanRef.style.opacity every frame, and inline beats the class. */}
+                labelSpanRef.style.opacity every frame, and inline beats the class.
+                text-[7px] is not a type size and is excluded from the `text uses
+                the type scale` invariant by name: drei's Html scales this label by
+                camera distance (distanceFactor), and the focused planet sits close
+                enough that 9px would land larger on screen than the unfocused
+                labels. The literal is the input to that scaling, sized so the
+                rendered label matches its neighbours, so a token for it would
+                name a screen size it never has. */}
             <span
               ref={labelSpanRef}
               className="text-3xs font-mono whitespace-nowrap opacity-0"

@@ -240,7 +240,7 @@ function ColorField({
         title="Custom color"
       >
         {isPreset && (
-          <span className="text-text-muted absolute inset-0 flex items-center justify-center text-[10px]">
+          <span className="text-text-muted text-2xs absolute inset-0 flex items-center justify-center">
             +
           </span>
         )}
@@ -280,7 +280,7 @@ function SkinCard({
         ))}
       </div>
       <span
-        className={`text-left text-[11px] leading-tight ${selected ? 'text-accent' : 'text-text-secondary'}`}
+        className={`text-1xs text-left leading-tight ${selected ? 'text-accent' : 'text-text-secondary'}`}
       >
         {skin.name}
       </span>
@@ -395,7 +395,7 @@ function AppearancePane({ settings, update }: { settings: AppSettings; update: U
       <div className="py-3">
         <div className="flex items-center gap-2">
           <span className="text-text-faint text-sm">Import custom skin…</span>
-          <span className="bg-hover text-text-faint border-border-subtle border-hairline rounded px-1.5 py-0.5 text-[10px]">
+          <span className="bg-hover text-text-faint border-border-subtle border-hairline text-2xs rounded px-1.5 py-0.5">
             Coming soon
           </span>
         </div>
@@ -558,7 +558,7 @@ function ChangelogItem({ entry }: { entry: ChangelogEntry }) {
         <div className="mt-1.5">
           <button
             onClick={() => setShowMinor((v) => !v)}
-            className="text-text-faint hover:text-text-muted text-[11px] transition-colors"
+            className="text-text-faint hover:text-text-muted text-1xs transition-colors"
           >
             {showMinor ? '−' : '+'} {entry.minor.length} smaller change
             {entry.minor.length === 1 ? '' : 's'}
@@ -737,7 +737,7 @@ function AboutPane({ version }: { version: string | null }) {
       <div className="flex flex-col gap-2">
         <div className="text-text-secondary flex items-center justify-between text-xs">
           <span>Version</span>
-          <span className="text-text-muted font-mono text-[11px]">{version ?? '—'}</span>
+          <span className="text-text-muted text-1xs font-mono">{version ?? '—'}</span>
         </div>
         <div className="text-text-secondary flex items-center justify-between text-xs">
           <span>License</span>
@@ -747,7 +747,7 @@ function AboutPane({ version }: { version: string | null }) {
           <span>Data directory</span>
           <button
             onClick={openFolder}
-            className="text-text-muted font-mono text-[11px] transition-colors"
+            className="text-text-muted text-1xs font-mono transition-colors"
             onMouseEnter={(e) => {
               ;(e.currentTarget as HTMLButtonElement).style.color = 'var(--accent)'
             }}
@@ -763,7 +763,7 @@ function AboutPane({ version }: { version: string | null }) {
           <div className="text-text-secondary flex items-center justify-between gap-3 text-xs">
             <span className="shrink-0">Log file</span>
             <span
-              className="text-text-muted truncate font-mono text-[11px]"
+              className="text-text-muted text-1xs truncate font-mono"
               title={`${logPath} — attach this to a bug report`}
             >
               {logPath}
@@ -782,10 +782,10 @@ function AboutPane({ version }: { version: string | null }) {
         </button>
 
         {checkState.status === 'upToDate' && (
-          <span className="text-text-muted text-center text-[11px]">You&apos;re up to date.</span>
+          <span className="text-text-muted text-1xs text-center">You&apos;re up to date.</span>
         )}
         {checkState.status === 'error' && (
-          <span className="text-danger text-center text-[11px]">
+          <span className="text-danger text-1xs text-center">
             Couldn&apos;t check for updates. Try again later.
           </span>
         )}
@@ -796,13 +796,13 @@ function AboutPane({ version }: { version: string | null }) {
               {checkState.info.latestVersion}
             </span>
             {checkState.info.channel === 'snapshot' && (
-              <span className="bg-warning/[0.08] text-warning border-border-subtle border-hairline rounded px-2 py-1 text-[11px]">
+              <span className="bg-warning/[0.08] text-warning border-border-subtle border-hairline text-1xs rounded px-2 py-1">
                 Rebuilt from the newest code and untested. It can be broken. Back up your server
                 directory first.
               </span>
             )}
             {isDevBuild(version ?? '') ? (
-              <span className="text-text-muted text-[11px]">
+              <span className="text-text-muted text-1xs">
                 Not available in dev builds — restart via a packaged build to install updates.
               </span>
             ) : checkState.info.channel === 'snapshot' ? (
@@ -812,7 +812,7 @@ function AboutPane({ version }: { version: string | null }) {
               !confirmSnapshot ? (
                 <button
                   onClick={() => setConfirmSnapshot(true)}
-                  className="text-warning border-warning/30 bg-warning/10 hover:bg-warning/15 border-hairline rounded py-1 text-[11px] transition-colors"
+                  className="text-warning border-warning/30 bg-warning/10 hover:bg-warning/15 border-hairline text-1xs rounded py-1 transition-colors"
                 >
                   Install snapshot…
                 </button>
@@ -820,13 +820,13 @@ function AboutPane({ version }: { version: string | null }) {
                 <div className="flex gap-1.5">
                   <button
                     onClick={() => runInstall(checkState.info)}
-                    className="text-warning border-warning/30 bg-warning/10 hover:bg-warning/15 border-hairline flex-1 rounded py-1 text-[11px] transition-colors"
+                    className="text-warning border-warning/30 bg-warning/10 hover:bg-warning/15 border-hairline text-1xs flex-1 rounded py-1 transition-colors"
                   >
                     Install it anyway
                   </button>
                   <button
                     onClick={() => setConfirmSnapshot(false)}
-                    className="text-text-muted hover:text-text-secondary border-border-subtle border-hairline rounded px-2 py-1 text-[11px] transition-colors"
+                    className="text-text-muted hover:text-text-secondary border-border-subtle border-hairline text-1xs rounded px-2 py-1 transition-colors"
                   >
                     Cancel
                   </button>
@@ -835,14 +835,14 @@ function AboutPane({ version }: { version: string | null }) {
             ) : (
               <button
                 onClick={() => runInstall(checkState.info)}
-                className="text-accent border-accent/30 bg-accent/10 hover:bg-accent/15 border-hairline rounded py-1 text-[11px] transition-colors"
+                className="text-accent border-accent/30 bg-accent/10 hover:bg-accent/15 border-hairline text-1xs rounded py-1 transition-colors"
               >
                 Download &amp; Install
               </button>
             )}
             <button
               onClick={() => openRelease(checkState.info.releaseUrl)}
-              className="text-text-muted hover:text-text-secondary text-[11px] transition-colors"
+              className="text-text-muted hover:text-text-secondary text-1xs transition-colors"
             >
               or open the release page ↗
             </button>
@@ -860,7 +860,7 @@ function AboutPane({ version }: { version: string | null }) {
                 style={{ width: `${checkState.percent}%` }}
               />
             </div>
-            <span className="text-text-muted text-center text-[11px]">
+            <span className="text-text-muted text-1xs text-center">
               Konnekt will restart automatically once the download finishes.
             </span>
           </div>
@@ -868,10 +868,10 @@ function AboutPane({ version }: { version: string | null }) {
         {checkState.status === 'installFailed' && (
           <div className="border-border-subtle border-hairline flex flex-col gap-1.5 rounded p-2.5">
             <span className="text-danger text-xs">Couldn&apos;t install automatically.</span>
-            <span className="text-text-muted text-[11px]">{checkState.message}</span>
+            <span className="text-text-muted text-1xs">{checkState.message}</span>
             <button
               onClick={() => openRelease(checkState.info.releaseUrl)}
-              className="text-accent border-accent/30 bg-accent/10 hover:bg-accent/15 border-hairline rounded py-1 text-[11px] transition-colors"
+              className="text-accent border-accent/30 bg-accent/10 hover:bg-accent/15 border-hairline text-1xs rounded py-1 transition-colors"
             >
               Open release page ↗
             </button>

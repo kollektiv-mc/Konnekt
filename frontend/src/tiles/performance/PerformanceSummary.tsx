@@ -22,7 +22,7 @@ function StatCell({
 }) {
   return (
     <div className="flex flex-col">
-      <span className="text-[10px] text-white/40">{label}</span>
+      <span className="text-2xs text-white/40">{label}</span>
       <span className={`font-mono text-xs font-medium ${valueClass}`}>{value}</span>
     </div>
   )

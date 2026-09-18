@@ -227,7 +227,7 @@ export function ConfigSummary({ serverId }: Props) {
         </span>
         <button
           onClick={load}
-          className="border-border-subtle text-text-muted rounded border px-2 py-0.5 font-mono text-[10px]"
+          className="border-border-subtle text-text-muted text-2xs rounded border px-2 py-0.5 font-mono"
         >
           Retry
         </button>
@@ -293,7 +293,7 @@ export function ConfigSummary({ serverId }: Props) {
       <div className="border-border-subtle border-t-hairline flex shrink-0 items-center justify-start px-3 py-1">
         <button
           onClick={load}
-          className="text-text-faint font-mono text-[10px] transition-colors"
+          className="text-text-faint text-2xs font-mono transition-colors"
           onMouseEnter={(e) => {
             ;(e.currentTarget as HTMLButtonElement).style.color = 'var(--text-secondary)'
           }}

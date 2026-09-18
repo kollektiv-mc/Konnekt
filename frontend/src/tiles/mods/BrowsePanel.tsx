@@ -65,7 +65,7 @@ function SortMenu({ sort, onSort }: SortMenuProps) {
           open ? 'bg-hover' : 'bg-transparent'
         } ${sort ? 'text-accent' : 'text-text-muted'}`}
       >
-        <span className="text-text-faint text-[10px]">↕</span>
+        <span className="text-text-faint text-2xs">↕</span>
         {activeLabel}
       </button>
 
@@ -124,7 +124,7 @@ function CategoriesMenu({ categories, selectedCats, onToggle, onClear }: Categor
           open ? 'bg-hover' : 'bg-transparent'
         } ${disabled ? 'text-text-faint cursor-default opacity-50' : count > 0 ? 'text-accent cursor-pointer opacity-100' : 'text-text-muted cursor-pointer opacity-100'}`}
       >
-        <span className="text-text-faint text-[10px]">☰</span>
+        <span className="text-text-faint text-2xs">☰</span>
         Categories{count > 0 ? ` · ${count}` : ''}
       </button>
 
@@ -352,7 +352,7 @@ export function BrowsePanel({
               className="text-accent border-hairline flex shrink-0 items-center gap-1 rounded border-[color-mix(in_srgb,var(--accent)_35%,transparent)] bg-[color-mix(in_srgb,var(--accent)_15%,transparent)] px-2 py-0.5 font-mono text-xs font-semibold transition-colors"
             >
               {cat}
-              <span className="text-[10px] opacity-70">×</span>
+              <span className="text-2xs opacity-70">×</span>
             </button>
           ))}
           <button

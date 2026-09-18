@@ -25,7 +25,7 @@ function AvatarHead({ player }: { player: Player }) {
   const key = player.uuid || player.name
   if (failed) {
     return (
-      <div className="bg-elevated text-text-muted flex h-6 w-6 shrink-0 items-center justify-center rounded-sm font-mono text-[10px]">
+      <div className="bg-elevated text-text-muted text-2xs flex h-6 w-6 shrink-0 items-center justify-center rounded-sm font-mono">
         {player.name[0]?.toUpperCase()}
       </div>
     )
@@ -86,17 +86,17 @@ export function PlayerRoster({ players, reachable, onSelectPlayer }: Props) {
               </span>
               <div className="flex shrink-0 items-center gap-1">
                 {p.opLevel > 0 && (
-                  <span className="rounded border border-yellow-400/30 px-1.5 py-0.5 font-mono text-[10px] text-yellow-400/70">
+                  <span className="text-2xs rounded border border-yellow-400/30 px-1.5 py-0.5 font-mono text-yellow-400/70">
                     OP{p.opLevel}
                   </span>
                 )}
                 {p.banned && (
-                  <span className="rounded border border-red-400/30 px-1.5 py-0.5 font-mono text-[10px] text-red-400/70">
+                  <span className="text-2xs rounded border border-red-400/30 px-1.5 py-0.5 font-mono text-red-400/70">
                     BAN
                   </span>
                 )}
                 {p.whitelisted && (
-                  <span className="rounded border border-blue-400/30 px-1.5 py-0.5 font-mono text-[10px] text-blue-400/70">
+                  <span className="text-2xs rounded border border-blue-400/30 px-1.5 py-0.5 font-mono text-blue-400/70">
                     WL
                   </span>
                 )}
@@ -110,7 +110,7 @@ export function PlayerRoster({ players, reachable, onSelectPlayer }: Props) {
       </div>
 
       {/* footer */}
-      <div className="border-border-subtle text-text-faint border-t-hairline shrink-0 px-3 py-1.5 font-mono text-[10px]">
+      <div className="border-border-subtle text-text-faint border-t-hairline text-2xs shrink-0 px-3 py-1.5 font-mono">
         {players.length} online
       </div>
     </div>

@@ -171,17 +171,17 @@ export function ModPreviewDialog({
             {project && (
               <div className="mt-1 flex flex-wrap items-center gap-3">
                 {project.downloads > 0 && (
-                  <span className="text-text-faint font-mono text-xs text-[10px]">
+                  <span className="text-text-faint text-2xs font-mono text-xs">
                     ↓ {fmtCount(project.downloads)}
                   </span>
                 )}
                 {project.follows > 0 && (
-                  <span className="text-text-faint font-mono text-xs text-[10px]">
+                  <span className="text-text-faint text-2xs font-mono text-xs">
                     ♥ {fmtCount(project.follows)}
                   </span>
                 )}
                 {mod.versionNumber && (
-                  <span className="text-text-faint font-mono text-xs text-[10px]">
+                  <span className="text-text-faint text-2xs font-mono text-xs">
                     v{mod.versionNumber}
                   </span>
                 )}
@@ -329,22 +329,22 @@ export function ModPreviewDialog({
                               {v.versionNumber}
                             </span>
                             <span
-                              className={`shrink-0 font-mono text-xs text-[10px] ${typeColorClass}`}
+                              className={`text-2xs shrink-0 font-mono text-xs ${typeColorClass}`}
                             >
                               {v.versionType}
                             </span>
                             {isCurrent && (
-                              <span className="text-accent shrink-0 rounded bg-[color-mix(in_srgb,var(--accent)_15%,transparent)] px-1 text-xs text-[10px]">
+                              <span className="text-accent text-2xs shrink-0 rounded bg-[color-mix(in_srgb,var(--accent)_15%,transparent)] px-1 text-xs">
                                 installed
                               </span>
                             )}
                             {isLatestUpdate && !isCurrent && (
-                              <span className="text-accent shrink-0 rounded bg-[color-mix(in_srgb,var(--accent)_15%,transparent)] px-1 text-xs text-[10px]">
+                              <span className="text-accent text-2xs shrink-0 rounded bg-[color-mix(in_srgb,var(--accent)_15%,transparent)] px-1 text-xs">
                                 latest
                               </span>
                             )}
                           </div>
-                          <div className="text-text-faint mt-0.5 font-mono text-xs text-[10px]">
+                          <div className="text-text-faint text-2xs mt-0.5 font-mono text-xs">
                             {v.gameVersions.slice(0, 3).join(', ')}
                             {v.gameVersions.length > 3 ? ` +${v.gameVersions.length - 3}` : ''}
                             {v.fileSize ? ` · ${fmtBytes(v.fileSize)}` : ''}

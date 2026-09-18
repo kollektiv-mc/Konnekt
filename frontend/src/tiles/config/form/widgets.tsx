@@ -100,14 +100,14 @@ export function NumberInput({
         <div className="border-border-subtle ml-1 flex flex-shrink-0 flex-col border-l">
           <button
             onClick={() => step(1)}
-            className={`hover:text-accent px-1.5 py-0.5 text-[10px] transition-colors ${spinnerBtnClass}`}
+            className={`hover:text-accent text-2xs px-1.5 py-0.5 transition-colors ${spinnerBtnClass}`}
             tabIndex={-1}
           >
             ▲
           </button>
           <button
             onClick={() => step(-1)}
-            className={`border-border-subtle hover:text-accent border-t px-1.5 py-0.5 text-[10px] transition-colors ${spinnerBtnClass}`}
+            className={`border-border-subtle hover:text-accent text-2xs border-t px-1.5 py-0.5 transition-colors ${spinnerBtnClass}`}
             tabIndex={-1}
           >
             ▼
@@ -184,7 +184,7 @@ export function Select({ field, onChange }: { field: ConfigField; onChange: (v: 
           className={`flex w-full items-center justify-between gap-2 rounded px-2 py-1 font-mono text-sm ${FIELD_INPUT_CLASS}`}
         >
           <span>{current}</span>
-          <span className="text-[10px] opacity-50">{open ? '▲' : '▼'}</span>
+          <span className="text-2xs opacity-50">{open ? '▲' : '▼'}</span>
         </button>
 
         {/* Dropdown panel. Opaque on purpose: it covers the form behind it, so
@@ -475,7 +475,7 @@ export function MotdWidget({
         </div>
         <button
           onClick={() => setExpanded((o) => !o)}
-          className="border-border-subtle text-text-muted flex-shrink-0 rounded border px-2 py-1 font-mono text-[10px] transition-colors"
+          className="border-border-subtle text-text-muted text-2xs flex-shrink-0 rounded border px-2 py-1 font-mono transition-colors"
         >
           {expanded ? '▲ Done' : '▼ Edit'}
         </button>
@@ -500,7 +500,7 @@ export function MotdWidget({
 
           {/* Color palette */}
           <div className="flex flex-col gap-1.5">
-            <span className="text-text-faint text-[10px] font-semibold tracking-widest uppercase">
+            <span className="text-text-faint text-2xs font-semibold tracking-widest uppercase">
               Color
             </span>
             <div className="flex flex-wrap gap-1.5">
@@ -523,7 +523,7 @@ export function MotdWidget({
 
           {/* Style buttons */}
           <div className="flex flex-col gap-1.5">
-            <span className="text-text-faint text-[10px] font-semibold tracking-widest uppercase">
+            <span className="text-text-faint text-2xs font-semibold tracking-widest uppercase">
               Style
             </span>
             <div className="flex items-center gap-1.5">

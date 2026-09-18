@@ -134,17 +134,17 @@ export function ContentDetailPanel({
             )}
             <div className="mt-1 flex flex-wrap items-center gap-3">
               {project.downloads > 0 && (
-                <span className="text-text-faint font-mono text-xs text-[10px]">
+                <span className="text-text-faint text-2xs font-mono text-xs">
                   ↓ {fmtCount(project.downloads)}
                 </span>
               )}
               {project.follows > 0 && (
-                <span className="text-text-faint font-mono text-xs text-[10px]">
+                <span className="text-text-faint text-2xs font-mono text-xs">
                   ♥ {fmtCount(project.follows)}
                 </span>
               )}
               {project.dateModified && (
-                <span className="text-text-faint font-mono text-xs text-[10px]">
+                <span className="text-text-faint text-2xs font-mono text-xs">
                   {relativeTime(project.dateModified)}
                 </span>
               )}
@@ -333,18 +333,18 @@ function VersionRow({
         <div className="flex flex-wrap items-center gap-2">
           <span className="text-text-primary text-xs font-medium">{version.versionNumber}</span>
           <span
-            className={`rounded bg-white/[0.06] px-1.5 py-px font-mono text-xs text-[10px] ${typeColorClass}`}
+            className={`text-2xs rounded bg-white/[0.06] px-1.5 py-px font-mono text-xs ${typeColorClass}`}
           >
             {version.versionType}
           </span>
         </div>
-        <div className="text-text-faint mt-0.5 font-mono text-xs text-[10px]">
+        <div className="text-text-faint text-2xs mt-0.5 font-mono text-xs">
           {version.gameVersions?.slice(0, 3).join(', ')}
           {(version.gameVersions?.length ?? 0) > 3 ? '…' : ''}
           {version.fileSize ? ' · ' + fmtBytes(version.fileSize) : ''}
         </div>
         {version.datePublished && (
-          <div className="text-text-faint mt-0.5 font-mono text-xs text-[10px]">
+          <div className="text-text-faint text-2xs mt-0.5 font-mono text-xs">
             {relativeTime(version.datePublished)}
           </div>
         )}

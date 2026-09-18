@@ -47,10 +47,13 @@ values as plain `:root` custom properties, since that site has no Tailwind.
 
 And the invariants `suite.json` declares. `no literal border widths` is a grep
 for `border-[Npx]` under `frontend/src/components` and `frontend/src/tiles` that
-must find nothing. `scheduler uses the type scale` and `scheduler colours live in
-blockMeta` are the same shape, scoped to `frontend/src/tiles/scheduler` because
-that is as far as those two sweeps have got (#163). Read an entry's `diagnosis`
-before judging a match; the rule is about the token layer, not the regex.
+must find nothing. `text uses the type scale` is the same shape for `text-[Npx]`
+over the whole of `frontend/src`, widened from the scheduler once #368 swept
+the rest (HEALTH_LOG, 2026-09-18), with one file excluded by name and the
+reason beside the literal. `scheduler colours live in blockMeta` is scoped to
+`frontend/src/tiles/scheduler` because that is as far as that sweep has got
+(#163). Read an entry's `diagnosis` before judging a match; the rule is about
+the token layer, not the regex.
 
 Where the plugin is not installed — CI, a cloud container, an unattended agent —
 `.claude/suite-check.py` reads the same manifest and runs the same three sections
@@ -653,27 +656,7 @@ Settling this means deciding which background an editable field has, saying so
 where the token is defined, and moving whichever side loses. It spans
 `area:scheduler` and `area:server-setup`, so it is its own change rather than a
 rider on either.
-
-**P3 — The type scale sweep stops at the scheduler** (filed 2026-09-17)
-
-#163 closed the scheduler editor's twenty-seven inlined `text-[Npx]` sizes onto
-the generated scale, and `suite.json`'s `scheduler uses the type scale`
-invariant holds that one directory. Eighty-seven remain everywhere else, and
-until they go the invariant cannot widen its `paths` without turning red on
-arrival, which is the same reason `no literal border widths` says it is scoped
-to borders on purpose.
-
-They are concentrated rather than scattered, so this is a handful of files
-rather than a tree-wide trawl: `SettingsModal.tsx` (19), the mods tile (35
-across seven files), the config tile (23 across five), the players tile (7), and
-six single occurrences elsewhere. Every value maps exactly onto an existing
-token, `text-3xs` through `text-xs`, except any 8px, which sits below the
-scale's floor and rounds up rather than earning a token of its own.
-
-The work is mechanical; what it needs is a reviewer's eye on the handful of
-places where a size was doing something the scale does not, and a widened
-`paths` list on the invariant once each directory is clear. Nothing is
-user-visible today, which is why this is P3 rather than higher.
+Filed as #385 (2026-09-18).
 
 **P3 — The console pane does not keep your place in history across a reflow**
 (filed 2026-09-16)
@@ -701,6 +684,7 @@ the end, and "at the bottom means follow" is the same rule a manual scroll
 obeys. Making it an exception would need a flag distinguishing a clamped scroll
 event from a real one, which swallows a genuine re-arm whenever the reflow fires
 no scroll event at all.
+Filed as #386 (2026-09-18).
 
 **P3 — Dependency resolution is serial, unbounded in time, and silent while it
 runs** (filed 2026-08-31)
