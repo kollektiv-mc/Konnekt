@@ -20,7 +20,7 @@ it's the quality gate that sits alongside them.
 Canonical gate set — declared in `.claude/suite.json` and run together by
 `/suite-kit:health`, which reports them as a table:
 ```bash
-pnpm typecheck          # tsc --noEmit (from frontend/)
+pnpm typecheck          # tsc -b, the app and vite.config.ts projects (from frontend/)
 pnpm lint               # ESLint (from frontend/)
 pnpm test               # vitest (from frontend/)
 pnpm format:check       # Prettier (from frontend/)
@@ -89,7 +89,7 @@ tree.
       mid-listing, which is why the line is a gate now and not a grep.
 - [x] `pnpm lint` runs against a real ESLint config and passes.
 - [x] Formatting (Prettier/Biome or equivalent) is consistent and enforced,
-      not manual (lefthook pre-commit hook: Prettier + ESLint + `tsc --noEmit`
+      not manual (lefthook pre-commit hook: Prettier + ESLint + `tsc -b`
       on staged frontend files, `gofmt` + `go vet` on staged Go files). The
       whole `frontend/` tree is Prettier-clean and CI runs `pnpm format:check`,
       so this no longer depends on the hook alone — note the frontend hook's

@@ -43,3 +43,6 @@ demo/.frames/
 
 # go-mutesting writes its reports into the working directory on every run.
 go-mutesting-*.json
+
+# TypeScript build info (tsc -b); the configs point it at node_modules/.tmp
+*.tsbuildinfo
