@@ -11,6 +11,8 @@ import {
 } from '../../lib/serverForm'
 import { LOADER_LABELS } from '../../lib/loaders'
 import { Combobox } from '../ui/Combobox'
+import { Icon } from '../ui/Icon'
+import { ArrowLeft, Settings } from '../../lib/icons'
 import type { InstallResult } from '../ServerInstallModal'
 import type { ServerConfig } from '../../types'
 
@@ -370,9 +372,10 @@ export function ServerEditForm({
 
       <button
         onClick={toggleAdvanced}
-        className="text-text-faint hover:text-text-secondary self-start text-xs transition-colors"
+        className="text-text-faint hover:text-text-secondary flex items-center gap-1 self-start text-xs transition-colors"
       >
-        {advancedMode ? '← Simple' : '⚙ Advanced'}
+        <Icon icon={advancedMode ? ArrowLeft : Settings} size="xs" />
+        {advancedMode ? 'Simple' : 'Advanced'}
       </button>
 
       <div className="flex gap-2 pt-1">

@@ -59,4 +59,8 @@ export {
   Copy,
   Minus,
   Square,
+  // Menu and form chrome that used to be literal glyphs (#367): the sort
+  // buttons' up-down arrow, and the JVM mode toggle's back arrow.
+  ArrowLeft,
+  ArrowUpDown,
 } from 'lucide-react'

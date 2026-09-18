@@ -2,6 +2,8 @@
 import { useState } from 'react'
 import { Toggle } from '../../components/ui/Toggle'
 import { Popover } from '../../components/ui/Popover'
+import { Icon } from '../../components/ui/Icon'
+import { ArrowUpDown, Check } from '../../lib/icons'
 import { usePopover } from '../../hooks/usePopover'
 import { ModPreviewDialog } from './ModPreviewDialog'
 import { fmtBytes } from '../../lib/format'
@@ -66,7 +68,7 @@ function SortMenu({ sort, onSort }: { sort: SortKey; onSort: (v: SortKey) => voi
           open ? 'bg-hover' : 'bg-transparent'
         }`}
       >
-        <span className="text-text-faint text-2xs">↕</span>
+        <Icon icon={ArrowUpDown} size="xs" className="text-text-faint" />
         {label}
       </button>
       <Popover open={open} onClose={close}>
@@ -92,7 +94,11 @@ function SortMenu({ sort, onSort }: { sort: SortKey; onSort: (v: SortKey) => voi
                 if (!active) (e.currentTarget as HTMLElement).style.background = 'transparent'
               }}
             >
-              <span className={`text-accent w-3 ${active ? 'opacity-100' : 'opacity-0'}`}>✓</span>
+              <Icon
+                icon={Check}
+                size="xs"
+                className={`text-accent ${active ? 'opacity-100' : 'opacity-0'}`}
+              />
               {opt.label}
             </button>
           )
@@ -155,7 +161,11 @@ function FilterMenu({
                 if (!isActive) (e.currentTarget as HTMLElement).style.background = 'transparent'
               }}
             >
-              <span className={`text-accent w-3 ${isActive ? 'opacity-100' : 'opacity-0'}`}>✓</span>
+              <Icon
+                icon={Check}
+                size="xs"
+                className={`text-accent ${isActive ? 'opacity-100' : 'opacity-0'}`}
+              />
               {label}
             </button>
           )
@@ -183,7 +193,11 @@ function FilterMenu({
                 if (!isActive) (e.currentTarget as HTMLElement).style.background = 'transparent'
               }}
             >
-              <span className={`text-accent w-3 ${isActive ? 'opacity-100' : 'opacity-0'}`}>✓</span>
+              <Icon
+                icon={Check}
+                size="xs"
+                className={`text-accent ${isActive ? 'opacity-100' : 'opacity-0'}`}
+              />
               {label}
             </button>
           )

@@ -5,6 +5,8 @@ import { ContentCard } from './ContentCard'
 import { ContentDetailPanel } from './ContentDetailPanel'
 import { Pagination } from './Pagination'
 import { Popover } from '../../components/ui/Popover'
+import { Icon } from '../../components/ui/Icon'
+import { ArrowUpDown, Check } from '../../lib/icons'
 import { usePopover } from '../../hooks/usePopover'
 import { useGridPageAnimation, getTileStyle } from './useGridPageAnimation'
 
@@ -65,7 +67,7 @@ function SortMenu({ sort, onSort }: SortMenuProps) {
           open ? 'bg-hover' : 'bg-transparent'
         } ${sort ? 'text-accent' : 'text-text-muted'}`}
       >
-        <span className="text-text-faint text-2xs">↕</span>
+        <Icon icon={ArrowUpDown} size="xs" className="text-text-faint" />
         {activeLabel}
       </button>
 
@@ -92,7 +94,11 @@ function SortMenu({ sort, onSort }: SortMenuProps) {
                 if (!active) (e.currentTarget as HTMLElement).style.background = 'transparent'
               }}
             >
-              <span className={`text-accent w-3 ${active ? 'opacity-100' : 'opacity-0'}`}>✓</span>
+              <Icon
+                icon={Check}
+                size="xs"
+                className={`text-accent ${active ? 'opacity-100' : 'opacity-0'}`}
+              />
               {opt.label}
             </button>
           )
@@ -141,7 +147,11 @@ function CategoriesMenu({ categories, selectedCats, onToggle, onClear }: Categor
             ;(e.currentTarget as HTMLElement).style.background = 'transparent'
           }}
         >
-          <span className={`text-accent w-3 ${count === 0 ? 'opacity-100' : 'opacity-0'}`}>✓</span>
+          <Icon
+            icon={Check}
+            size="xs"
+            className={`text-accent ${count === 0 ? 'opacity-100' : 'opacity-0'}`}
+          />
           All
         </button>
         {categories.map((cat) => {
@@ -163,7 +173,11 @@ function CategoriesMenu({ categories, selectedCats, onToggle, onClear }: Categor
                 if (!active) (e.currentTarget as HTMLElement).style.background = 'transparent'
               }}
             >
-              <span className={`text-accent w-3 ${active ? 'opacity-100' : 'opacity-0'}`}>✓</span>
+              <Icon
+                icon={Check}
+                size="xs"
+                className={`text-accent ${active ? 'opacity-100' : 'opacity-0'}`}
+              />
               {cat}
             </button>
           )
