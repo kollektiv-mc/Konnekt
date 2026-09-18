@@ -26,6 +26,8 @@ import { NodeConfigPanel } from './NodeConfigPanel'
 import { NodeDataPanel } from './NodeDataPanel'
 import { QuickAddMenu } from './QuickAddMenu'
 import { Popover } from '../../../components/ui/Popover'
+import { Icon } from '../../../components/ui/Icon'
+import { Check } from '../../../lib/icons'
 import { usePopover } from '../../../hooks/usePopover'
 import {
   graphToFlow,
@@ -798,18 +800,18 @@ function GraphEditorInner({
                       if (!active) (e.currentTarget as HTMLElement).style.background = 'transparent'
                     }}
                   >
-                    <span
-                      className={`text-accent w-3 shrink-0 ${active ? 'opacity-100' : 'opacity-0'}`}
-                    >
-                      ✓
-                    </span>
+                    <Icon
+                      icon={Check}
+                      size="xs"
+                      className={`text-accent ${active ? 'opacity-100' : 'opacity-0'}`}
+                    />
                     <span className="min-w-0 truncate">{g.name || g.id}</span>
                   </button>
                 )
               })}
               {graphId === '' && (
                 <div className="text-accent flex w-full items-center gap-2 px-3 py-1.5 text-left font-mono text-xs">
-                  <span className="w-3">✓</span>— new graph —
+                  <Icon icon={Check} size="xs" />— new graph —
                 </div>
               )}
             </Popover>
