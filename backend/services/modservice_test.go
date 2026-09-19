@@ -11,6 +11,9 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"reflect"
+	"sort"
+	"strings"
 	"testing"
 	"time"
 
@@ -716,6 +719,11 @@ func TestInstallReplacesTheCopyAlreadyOnDisk(t *testing.T) {
 	if len(installed) != 1 {
 		t.Errorf("plugins/ holds %d files, want 1", len(installed))
 	}
+	// ListInstalled reads only .jar and .jar.disabled, so the folder itself is
+	// what says the copy moved aside during the install (#167) was discarded.
+	if got := fileNames(t, filepath.Join(workDir, "plugins")); !reflect.DeepEqual(got, []string{"EssentialsX-2.22.0.jar"}) {
+		t.Errorf("plugins/ holds %v, want the new jar alone", got)
+	}
 }
 
 // The copy being replaced may be one no provider can name: a CurseForge build
@@ -833,6 +841,147 @@ func TestInstallKeepsASupersededFileDisabled(t *testing.T) {
 	if len(installed) != 1 {
 		t.Errorf("plugins/ holds %d files, want 1", len(installed))
 	}
+}
+
+// The copy being replaced was the only copy, and two steps still run after
+// it goes: the .disabled rename and the manifest write. Deleting it up front
+// left a failure at either with the new jar in place and the old row gone
+// (#167). It is moved aside now and put back, so a failed install leaves the
+// folder and the manifest as they were.
+func TestInstallRestoresTheSupersededJarWhenKeepingItDisabledFails(t *testing.T) {
+	newJar := pluginJarBytes(t, "Essentials", "2.22.0")
+	files := jarServer(t, map[string][]byte{"/ess-2.22.0": newJar})
+	defer files.Close()
+
+	provider := &fakeModProvider{
+		versions: map[string]models.ModVersion{
+			"ver2": {ID: "ver2", ProjectID: "ess", VersionNumber: "2.22.0",
+				FileName: "EssentialsX-2.22.0.jar", FileURL: files.URL + "/ess-2.22.0", SHA512: hashOf(newJar)},
+		},
+		projects: map[string]models.ModProject{"ess": {ID: "ess", Title: "EssentialsX"}},
+	}
+	s, workDir := newModFixture(t, provider)
+	plugins := filepath.Join(workDir, "plugins")
+
+	oldHash := writePluginJar(t, plugins, "essentialsx.jar.disabled", "Essentials", "2.21.0")
+	provider.byHash = map[string]models.ModVersion{
+		oldHash: {ID: "ver1", ProjectID: "ess", VersionNumber: "2.21.0",
+			FileName: "EssentialsX-2.21.0.jar", SHA512: oldHash},
+	}
+	if err := s.Rescan(testServerID); err != nil {
+		t.Fatalf("Rescan: %v", err)
+	}
+
+	// The rename's target becomes a directory just before the rename, so the
+	// real os.Rename fails with a real error.
+	s.installHooks.beforeKeepDisabled = func() {
+		if err := os.Mkdir(filepath.Join(plugins, "EssentialsX-2.22.0.jar.disabled"), 0755); err != nil {
+			t.Fatalf("occupy the rename target: %v", err)
+		}
+	}
+
+	err := s.Install(testServerID, []string{"ver2"})
+	if err == nil || !strings.Contains(err.Error(), "keep EssentialsX-2.22.0.jar disabled") {
+		t.Fatalf("Install error = %v, want the .disabled rename to fail", err)
+	}
+
+	if got := fileNames(t, plugins); !reflect.DeepEqual(got, []string{"essentialsx.jar.disabled"}) {
+		t.Errorf("plugins/ holds %v, want only the copy that was there before", got)
+	}
+	installed := installedByFile(t, s)
+	if mod, ok := installed["essentialsx.jar.disabled"]; !ok || mod.VersionID != "ver1" || mod.Enabled {
+		t.Errorf("manifest row for the old copy = %+v (present %v), want ver1, disabled", mod, ok)
+	}
+	if len(installed) != 1 {
+		t.Errorf("manifest lists %d files, want 1", len(installed))
+	}
+}
+
+func TestInstallRestoresTheSupersededJarWhenTheManifestWriteFails(t *testing.T) {
+	newJar := pluginJarBytes(t, "Essentials", "2.22.0")
+	files := jarServer(t, map[string][]byte{"/ess-2.22.0": newJar})
+	defer files.Close()
+
+	provider := &fakeModProvider{
+		versions: map[string]models.ModVersion{
+			"ver2": {ID: "ver2", ProjectID: "ess", VersionNumber: "2.22.0",
+				FileName: "EssentialsX-2.22.0.jar", FileURL: files.URL + "/ess-2.22.0", SHA512: hashOf(newJar)},
+		},
+		projects: map[string]models.ModProject{"ess": {ID: "ess", Title: "EssentialsX"}},
+	}
+	s, workDir := newModFixture(t, provider)
+	plugins := filepath.Join(workDir, "plugins")
+
+	oldHash := writePluginJar(t, plugins, "essentialsx.jar", "Essentials", "2.21.0")
+	provider.byHash = map[string]models.ModVersion{
+		oldHash: {ID: "ver1", ProjectID: "ess", VersionNumber: "2.21.0",
+			FileName: "EssentialsX-2.21.0.jar", SHA512: oldHash},
+	}
+	if err := s.Rescan(testServerID); err != nil {
+		t.Fatalf("Rescan: %v", err)
+	}
+
+	// The manifest's path becomes a directory just before the write, so the
+	// real rename into place fails with a real error. The file is held beside
+	// it and read back below: it is the manifest that was on disk before the
+	// failure, and the one a restored folder has to agree with.
+	manifestPath := s.manifestPath(testServerID)
+	held := manifestPath + ".held"
+	s.installHooks.beforeSaveManifest = func() {
+		if err := os.Rename(manifestPath, held); err != nil {
+			t.Fatalf("hold the manifest: %v", err)
+		}
+		if err := os.Mkdir(manifestPath, 0755); err != nil {
+			t.Fatalf("occupy the manifest path: %v", err)
+		}
+	}
+
+	if err := s.Install(testServerID, []string{"ver2"}); err == nil {
+		t.Fatal("Install succeeded with the manifest unwritable")
+	}
+
+	if got := fileNames(t, plugins); !reflect.DeepEqual(got, []string{"essentialsx.jar"}) {
+		t.Errorf("plugins/ holds %v, want only the copy that was there before", got)
+	}
+	if err := os.RemoveAll(manifestPath); err != nil {
+		t.Fatalf("clear the occupied manifest path: %v", err)
+	}
+	if err := os.Rename(held, manifestPath); err != nil {
+		t.Fatalf("put the manifest back: %v", err)
+	}
+	installed := installedByFile(t, s)
+	if mod, ok := installed["essentialsx.jar"]; !ok || mod.VersionID != "ver1" {
+		t.Errorf("manifest row for the old copy = %+v (present %v), want ver1", mod, ok)
+	}
+	if _, ok := installed["EssentialsX-2.22.0.jar"]; ok {
+		t.Error("the manifest names the new file, which is not on disk")
+	}
+	if len(installed) != 1 {
+		t.Errorf("manifest lists %d files, want 1", len(installed))
+	}
+	// The temp file a failed manifest write used to leave beside the manifest
+	// is gone too.
+	if got := fileNames(t, s.manifestDir()); !reflect.DeepEqual(got, []string{filepath.Base(manifestPath)}) {
+		t.Errorf("manifest dir holds %v, want the manifest alone", got)
+	}
+}
+
+// fileNames lists a directory's files, sorted, directories left out: what a
+// loader would see, plus anything an install left behind.
+func fileNames(t *testing.T, dir string) []string {
+	t.Helper()
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		t.Fatalf("read %s: %v", dir, err)
+	}
+	var names []string
+	for _, e := range entries {
+		if !e.IsDir() {
+			names = append(names, e.Name())
+		}
+	}
+	sort.Strings(names)
+	return names
 }
 
 // The manifest is {dataDir}/mods/{serverID}.json, so an id carrying a path
