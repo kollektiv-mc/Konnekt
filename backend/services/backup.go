@@ -984,7 +984,7 @@ func worldsFromServerZip(files []*zip.File) []models.WorldSystem {
 			}
 		}
 		if bestSys != nil {
-			bestSys.TotalSize += int64(f.UncompressedSize64)
+			bestSys.TotalSize += zipEntrySize(f)
 			if t := f.Modified.UnixMilli(); t > bestSys.Modified {
 				bestSys.Modified = t
 			}
@@ -1069,7 +1069,7 @@ func worldsFromMultiRootWorldZip(worldName string, files []*zip.File) []models.W
 			}
 		}
 		if !f.FileInfo().IsDir() {
-			sys.TotalSize += int64(f.UncompressedSize64)
+			sys.TotalSize += zipEntrySize(f)
 			if t := f.Modified.UnixMilli(); t > sys.Modified {
 				sys.Modified = t
 			}
@@ -1124,7 +1124,7 @@ func worldsFromSingleRootWorldZip(worldName string, files []*zip.File) []models.
 			endFound = true
 		}
 		if !f.FileInfo().IsDir() {
-			sys.TotalSize += int64(f.UncompressedSize64)
+			sys.TotalSize += zipEntrySize(f)
 			if t := f.Modified.UnixMilli(); t > sys.Modified {
 				sys.Modified = t
 			}
@@ -1329,12 +1329,67 @@ func zipEntryName(prefix, rel string) string {
 	return prefix + "/" + rel
 }
 
+// Restore reads a zip's central directory, which is a claim made by whoever
+// wrote the archive rather than a fact about it. A backup can arrive from
+// outside Konnekt, because sharing a world archive is an ordinary thing to do,
+// so the limits below bound what a restore can be talked into doing before any
+// of it reaches the disk. They are sized to be absurd for a Minecraft server
+// and still finite for an archive built to exhaust one: the largest single file
+// in a server tree is a mod jar or a region file, and a backup that genuinely
+// held a terabyte would not be a zip.
+const (
+	maxZipEntries   = 1 << 20  // 1,048,576 files in one archive
+	maxZipEntrySize = 64 << 30 // 64 GiB for any one entry
+	maxZipTotalSize = 1 << 40  // 1 TiB extracted in total
+)
+
+// zipEntrySize returns f's declared uncompressed size as a non-negative int64.
+// UncompressedSize64 is a uint64 read straight out of the archive, so the bare
+// int64 conversion this replaces turned a crafted or corrupt header above
+// 2^63 into a negative size. Callers that only display a total want the
+// clamp; unzipTo wants the rejection zipDeclaredTotal gives it.
+func zipEntrySize(f *zip.File) int64 {
+	if f.UncompressedSize64 > maxZipEntrySize {
+		return maxZipEntrySize
+	}
+	return int64(f.UncompressedSize64)
+}
+
+// zipDeclaredTotal sums what an archive says it will extract to, refusing a
+// directory too large to walk, a single entry too large to be a backup, and a
+// total too large to land. The sum is taken in uint64 so it cannot wrap the way
+// an int64 accumulator would, and it is compared against the ceiling before it
+// is narrowed.
+func zipDeclaredTotal(files []*zip.File) (int64, error) {
+	if len(files) > maxZipEntries {
+		return 0, fmt.Errorf("archive declares %d entries, more than the %d a restore will extract", len(files), maxZipEntries)
+	}
+	var total uint64
+	for _, f := range files {
+		if f.FileInfo().IsDir() {
+			continue
+		}
+		if f.UncompressedSize64 > maxZipEntrySize {
+			return 0, fmt.Errorf("archive entry %q declares %d bytes, more than the %d a restore will extract", f.Name, f.UncompressedSize64, int64(maxZipEntrySize))
+		}
+		total += f.UncompressedSize64
+		if total > maxZipTotalSize {
+			return 0, fmt.Errorf("archive declares more than the %d bytes a restore will extract in total", int64(maxZipTotalSize))
+		}
+	}
+	return int64(total), nil
+}
+
 func unzipTo(zipPath, destDir string) error {
 	r, err := zip.OpenReader(zipPath)
 	if err != nil {
 		return err
 	}
 	defer r.Close()
+
+	if _, err := zipDeclaredTotal(r.File); err != nil {
+		return err
+	}
 
 	for _, f := range r.File {
 		target := filepath.Join(destDir, filepath.FromSlash(f.Name))
@@ -1359,7 +1414,15 @@ func unzipTo(zipPath, destDir string) error {
 			out.Close()
 			return err
 		}
-		_, err = io.Copy(out, rc)
+		// Unbounded by inspection only. archive/zip's own reader stops at the
+		// size the central directory declares and returns zip.ErrFormat rather
+		// than yield the next byte, so an entry cannot outrun its header here
+		// however well it compresses; zipDeclaredTotal above is what bounds the
+		// declaration itself. TestUnzipToStopsAtTheDeclaredSize pins both
+		// halves, because this line is only safe for as long as the first one
+		// holds. gosec sees an io.Copy out of a compressed stream and can see
+		// neither guard.
+		_, err = io.Copy(out, rc) // #nosec G110 -- bounded by the declared size (stdlib) and by zipDeclaredTotal
 		rc.Close()
 		out.Close()
 		if err != nil {

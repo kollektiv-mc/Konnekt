@@ -54,6 +54,72 @@ func TestWriteReadPacketEmptyBody(t *testing.T) {
 	}
 }
 
+func TestWritePacketRejectsABodyThatWouldWrapTheLength(t *testing.T) {
+	// readPacket has bounded its input since it was written; writePacket had
+	// no matching bound, so the int32 length was computed from an int of any
+	// width. The failure needed a body near 2 GiB, which no caller produces,
+	// but it made the arithmetic partial and the make() below it panickable.
+	server, client := net.Pipe()
+	defer server.Close()
+	defer client.Close()
+	// Nothing reads the pipe: a rejected body must never reach a write.
+	err := writePacket(client, 1, rconPacketCommand, strings.Repeat("a", maxRconBody+1))
+	if err == nil {
+		t.Fatal("expected writePacket to reject a body over maxRconBody, got nil error")
+	}
+	if !strings.Contains(err.Error(), "exceeds") {
+		t.Errorf("error = %q, want it to name the limit", err)
+	}
+}
+
+func TestWritePacketAcceptsABodyAtTheLimit(t *testing.T) {
+	// The boundary from the other side, so the guard cannot be tightened into
+	// rejecting what it is meant to allow.
+	server, client := net.Pipe()
+	defer server.Close()
+	defer client.Close()
+
+	done := make(chan error, 1)
+	go func() {
+		done <- writePacket(client, 1, rconPacketCommand, strings.Repeat("a", maxRconBody))
+	}()
+	id, ptype, body, err := readPacketAllowingAnyLength(server)
+	if err != nil {
+		t.Fatalf("read error: %v", err)
+	}
+	if werr := <-done; werr != nil {
+		t.Fatalf("writePacket at the limit: %v", werr)
+	}
+	if id != 1 || ptype != rconPacketCommand {
+		t.Errorf("id/type = %d/%d, want 1/%d", id, ptype, rconPacketCommand)
+	}
+	if len(body) != maxRconBody {
+		t.Errorf("body length = %d, want %d", len(body), maxRconBody)
+	}
+}
+
+// readPacketAllowingAnyLength is readPacket without its 4096-byte inbound cap,
+// which exists for what a server sends back and would otherwise refuse to read
+// the large outbound packet the test above writes.
+func readPacketAllowingAnyLength(conn net.Conn) (id, ptype int32, body string, err error) {
+	var length int32
+	if err = binary.Read(conn, binary.LittleEndian, &length); err != nil {
+		return
+	}
+	if length < 10 {
+		err = errors.New("short packet")
+		return
+	}
+	data := make([]byte, length)
+	if _, err = readFull(conn, data); err != nil {
+		return
+	}
+	id = int32(binary.LittleEndian.Uint32(data[0:4]))
+	ptype = int32(binary.LittleEndian.Uint32(data[4:8]))
+	body = string(data[8 : len(data)-2])
+	return
+}
+
 func TestReadPacketRejectsTooShort(t *testing.T) {
 	server, client := net.Pipe()
 	defer server.Close()
