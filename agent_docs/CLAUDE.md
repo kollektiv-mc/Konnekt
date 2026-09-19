@@ -34,6 +34,9 @@ Read the tree rather than a list of it. What it does not tell you:
   Never call OS-level operations from the frontend.
 - **IPC via generated bindings only**: always import from `wailsjs/go/` — never
   use raw `window.go` or string-based calls.
+- **Per-server scoping**: a bound method that acts on a server takes its
+  `serverID`, an event about a server carries it, a listener filters on it.
+  The gates and their allowlists are in `.claude/rules/ipc.md`.
 - **One Zustand store per domain**: `useServerStore`, `useLayoutStore`,
   `useTileStore`, `useSchedulerStore`. Do not mix domains.
 - **Go structs = TypeScript types**: define data shapes in `backend/models/`,

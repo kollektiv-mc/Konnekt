@@ -329,6 +329,15 @@ tree.
       Verify: `grep -nE "^func \(a \*App\) [A-Z]" app.go` — every hit must end
       in `error)` or `error {`. (`beforeClose`/`startup` are Wails lifecycle
       hooks, not bound methods, and are exempt.)
+- [x] Per-server scoping is held on both sides of the bridge (#237,
+      2026-09-18): `scoping_test.go` reads every `Emit` and every bound method
+      and fails on a server-scoped event without a `serverID` or a method that
+      acts on a server without one, each exception listed with its reason;
+      `lib/serverScoping.test.ts` does the same for every `EventsOn` listener,
+      and `tiles/serverSwitch.test.tsx` proves the filters per hook. The
+      convention is in `.claude/rules/ipc.md`. On the day the gates landed
+      they found `useWorlds` refetching on every server's events and the EULA
+      prompt accepting for the selected server whichever one had tripped it.
 - [x] Every `EventsOn` listener registered in a component is cleaned up on
       unmount — no leaked subscriptions.
       Verify: from `frontend/`, `grep -rn "EventsOn" src` — each call site must

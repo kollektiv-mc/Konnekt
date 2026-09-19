@@ -88,6 +88,7 @@ after them is dated. Newest last, in both groups.
 - [2026-09-16 — The two thirds of a world the backup never took](#2026-09-16-the-two-thirds-of-a-world-the-backup-never-took)
 - [2026-09-16 — The schedules that followed the sidebar](#2026-09-16-the-schedules-that-followed-the-sidebar)
 - [2026-09-18 — The type scale sweep reaches the whole tree](#2026-09-18-the-type-scale-sweep-reaches-the-whole-tree)
+- [2026-09-18 — Per-server scoping gets its gates](#2026-09-18-per-server-scoping-gets-its-gates)
 
 ---
 
@@ -5727,3 +5728,66 @@ widths`' diagnosis used to name text as a sweep still open and now points here.
 **Verified:** `.claude/suite-check.py --section invariants` green with the
 widened path; `pnpm check-tokens` after a fresh build, so all four classes
 compile; `pnpm typecheck`, `lint`, `test` and `format:check` green.
+
+### 2026-09-18 — Per-server scoping gets its gates
+
+**#237, `type:chore`, `p2`.** #232, #233, #234 and #236 made the dashboard
+answer for one server at a time, and nothing kept it that way: each of those
+defects arrived through a change that looked locally reasonable. Four checks
+were asked for. The switch test (`tiles/serverSwitch.test.tsx`) had already
+landed with #234; this closes the other three and writes the convention where
+the next session reads it.
+
+**Both Go checks read the source rather than the type graph.** The event
+check has to see the second argument of every `Emit`, wherever that literal
+was built, and the method check has to see parameter *names*, which
+reflection does not carry. So `scoping_test.go` parses `app.go`,
+`backend/services` and `backend/models` with `go/parser`, the same reasoning
+`bindings_test.go` gives for living in Go rather than as a diff over generated
+output: a new emit or a new bound method with the wrong shape fails on the
+commit that adds it. Every `Event*` constant is classified, a payload
+variable is followed to the composite literal assigned to it in the same
+function, and a call whose event or payload is a parameter (`ExecContext.Emit`)
+is listed by name with the reason. The bound-method rule accepts a parameter
+named `serverID` or a `models` struct with a `ServerID` field, which is how
+`UpdateLoader` and `PreviewScheduleNode` pass; thirty-seven methods are listed
+as genuinely serverless, each with why, and an entry whose method later gains
+an id fails the test so the list cannot rot. `GetLastStop` is on it with its
+own comment's reason: unused by the frontend, and bindings cannot be
+regenerated here, so it stays the getter it is until a caller needs the id.
+
+**The Go gate found the four scheduler run events.** `schedule:run-started`,
+`node-started`, `node-finished` and `run-finished` carried a `graphId` and no
+`serverID`. A graph belongs to one server since #236, so the id was one field
+away; it is on all four now. The editor still filters on `graphId`, which is
+tighter, and is listed as such.
+
+**The frontend gate is a source scan, not a `suite.json` invariant.** The
+issue asked for the invariant shape, and it does not fit: "this handler reads
+the payload's server id" spans lines, and the predicate may sit beside the
+registration rather than in it (`usePlayers`'s `mine`), while an invariant is
+one regex that must find nothing. `lib/serverScoping.test.ts` blanks strings
+and comments, walks every `EventsOn` under `src/`, and requires a
+server-scoped handler to read `serverID` or go through `isForActiveServer`,
+looking one level out to the enclosing function body only when the handler is
+passed by name. It mirrors the Go classification by hand; the two lists are
+short and the rule for a new event is written in both files.
+
+**It found two real gaps on the day it ran.** `useWorlds` rescanned on every
+server's stop and every server's backup; it filters now, the way `usePlayers`
+has since #233, with a switch test that fails with the filter reverted. And
+the EULA prompt was a boolean: `server:eula-required` from any server showed
+the modal, which then accepted and started the *selected* server. Since #236
+a schedule can start a server that is not selected, so `App` now keeps the
+id off the payload and the modal accepts for that one. An empty id falls back
+to the selection, because `models/server.go` says the empty id is real and
+the selected server is the only one that can have been started without one.
+Eighteen registrations are listed as global on purpose, all in `App.tsx` and
+the graph editor: app-wide notifications, two loader handlers keyed through
+the started handler, and the four graph-scoped ones.
+
+**Verified.** `go test ./...` and the frontend suite green. Each gate confirmed
+to fail before its fix: the Go test on the four scheduler emits (and, as a
+second check, on a `serverID` key deleted from `backup.go`), the frontend test
+on `useWorlds` and the EULA handler, and the new switch case on the `useWorlds`
+filter reverted. `.claude/suite-check.py` green, memory budget included.

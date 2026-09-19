@@ -8,6 +8,8 @@ import { useServerStatusSync } from '../hooks/useServerStatus'
 import { useConsoleSync } from '../hooks/useConsoleSync'
 import { usePerformanceHistory } from './performance/usePerformanceHistory'
 import { usePlayers } from './players/usePlayers'
+import { useWorlds } from './worlds/useWorlds'
+import { useServerConfigStore } from '../stores/useServerConfigStore'
 import { useConfigEditor } from './config/useConfigEditor'
 import { EVENTS } from '../lib/constants'
 import type { ConfigFile, ServerStatus } from '../types'
@@ -301,6 +303,36 @@ describe('player roster on switch', () => {
     emit(EVENTS.PLAYER_JOINED, { name: 'Alex', ip: '127.0.0.1', serverID: 'srv1' })
 
     await waitFor(() => expect(App.GetPlayerRoster).toHaveBeenCalledTimes(2))
+  })
+})
+
+describe('worlds on switch', () => {
+  // useWorlds reads the selection from the config store rather than taking
+  // an id, so the store is the fixture. Found by lib/serverScoping.test.ts
+  // (#237): the two listeners refreshed unfiltered, so a stop or a backup on
+  // any server rescanned this one's worlds.
+  beforeEach(() => {
+    useServerConfigStore.setState({ activeId: 'srv1' })
+    vi.mocked(App.ListWorlds).mockResolvedValue([])
+  })
+
+  it('does not rescan for a lifecycle event on another server', async () => {
+    renderHook(() => useWorlds())
+    await waitFor(() => expect(App.ListWorlds).toHaveBeenCalledTimes(1))
+
+    emit(EVENTS.SERVER_STOPPED, { serverID: 'srv2', expected: true })
+    emit(EVENTS.BACKUP_COMPLETED, { serverID: 'srv2' })
+
+    expect(App.ListWorlds).toHaveBeenCalledTimes(1)
+  })
+
+  it('rescans for a lifecycle event on its own server', async () => {
+    renderHook(() => useWorlds())
+    await waitFor(() => expect(App.ListWorlds).toHaveBeenCalledTimes(1))
+
+    emit(EVENTS.BACKUP_COMPLETED, { serverID: 'srv1' })
+
+    await waitFor(() => expect(App.ListWorlds).toHaveBeenCalledTimes(2))
   })
 })
 
