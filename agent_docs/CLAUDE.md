@@ -116,7 +116,7 @@ prefix or suffix, no em dashes. The area label is load-bearing, because
 ## Commits & pull requests
 
 `CONTRIBUTING.md` holds the title rules and the `type:` ladder with its worked
-cases. Four things it does not say:
+cases. Five things it does not say:
 
 - **Label each pull request twice**: one `type:`, *and* one `area:` from
   `.github/labels.yml`. CI's `pr-labelled` job checks the two separately and
@@ -128,6 +128,10 @@ cases. Four things it does not say:
   under the prefixes in `.github/changelog.json`, which is this repo's own list
   of what never reaches what ships. Note `README.md` is on it and `build/` is
   not, because `build/` holds the app icon and RPM spec.
+- **Branch from `origin/main` and set the base to `main` explicitly.** GitHub
+  retargets a stacked pull request only when the parent branch is *deleted*,
+  not when it merges, and onto the parent's base rather than `main`: #388
+  merged into an already-merged branch and needed #389 to reach `main`.
 - **Stacked pull requests land as merge commits, never squashed** (#263).
   Squashing the parent rewrites the child's commits, and the child's work is
   then filed under the parent's title with no line of its own.
@@ -163,12 +167,8 @@ scaffold a Beta feature during alpha.
 
 ## Do not
 
-- Do not edit files under `frontend/wailsjs/` — they are auto-generated
-- Do not call OS or filesystem operations from frontend TypeScript
 - Do not use `localStorage` or `sessionStorage` — persist via Go file I/O
   writing JSON to the Wails app data directory
-- Do not add new Go dependencies without checking `agent_docs/DEPENDENCIES.md`
-- Do not restructure `frontend/src/tiles/registry.ts` mid-feature — extend only
 - Do not use `useEffect` for data that should come from a Wails event listener
 - Do not hand-edit generated output: the token layer, `frontend/wailsjs/`,
   lockfiles. Change the input and regenerate.
