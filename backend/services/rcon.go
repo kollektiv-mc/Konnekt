@@ -14,6 +14,13 @@ const (
 	rconPacketAuth    = 3
 	rconPacketCommand = 2
 	rconDialTimeout   = 2 * time.Second
+	// maxRconBody bounds an outgoing body so writePacket's int32 length cannot
+	// wrap. It is deliberately far larger than any command a server would
+	// accept, because its job is to make the arithmetic total rather than to
+	// enforce the protocol: readPacket already refuses an inbound packet over
+	// 4096 bytes, and picking that number here too would newly reject outbound
+	// commands that work today. Raise it only with the wrap in mind.
+	maxRconBody = 1 << 20
 )
 
 var reMinecraftColor = regexp.MustCompile(`§[0-9a-fk-or]`)
@@ -71,11 +78,19 @@ func (s *RconService) Execute(addr, password, command string) (string, error) {
 // writePacket writes a Source RCON packet: length(4) + id(4) + type(4) + body + 2 null bytes.
 func writePacket(conn net.Conn, id, ptype int32, body string) error {
 	payload := []byte(body)
-	length := int32(4 + 4 + len(payload) + 2)
+	if len(payload) > maxRconBody {
+		return fmt.Errorf("rcon: body of %d bytes exceeds the %d byte limit", len(payload), maxRconBody)
+	}
+	// Total because of the check above: the widest payload leaves length far
+	// inside int32, so it can neither wrap negative nor panic the make below.
+	length := int32(4 + 4 + len(payload) + 2) // #nosec G115 -- bounded by the maxRconBody check above
 	buf := make([]byte, 4+length)
-	binary.LittleEndian.PutUint32(buf[0:], uint32(length))
-	binary.LittleEndian.PutUint32(buf[4:], uint32(id))
-	binary.LittleEndian.PutUint32(buf[8:], uint32(ptype))
+	// The three conversions below are the protocol's own encoding, not a range
+	// narrowing: Source RCON carries id and type as four little-endian bytes
+	// each, and a negative id is a value it uses rather than an overflow.
+	binary.LittleEndian.PutUint32(buf[0:], uint32(length)) // #nosec G115 -- length is bounded positive by maxRconBody
+	binary.LittleEndian.PutUint32(buf[4:], uint32(id))     // #nosec G115 -- two's complement is the wire format
+	binary.LittleEndian.PutUint32(buf[8:], uint32(ptype))  // #nosec G115 -- two's complement is the wire format
 	copy(buf[12:], payload)
 	// two null terminators already zero-valued in the slice
 	_, err := conn.Write(buf)
@@ -96,8 +111,10 @@ func readPacket(conn net.Conn) (id, ptype int32, body string, err error) {
 	if _, err = readFull(conn, data); err != nil {
 		return
 	}
-	id = int32(binary.LittleEndian.Uint32(data[0:4]))
-	ptype = int32(binary.LittleEndian.Uint32(data[4:8]))
+	// Reading the same wire format back. The wrap is load-bearing: a failed
+	// auth is signalled by id -1, which arrives as 0xFFFFFFFF.
+	id = int32(binary.LittleEndian.Uint32(data[0:4]))    // #nosec G115 -- two's complement is the wire format
+	ptype = int32(binary.LittleEndian.Uint32(data[4:8])) // #nosec G115 -- two's complement is the wire format
 	// body: data[8:] minus the two trailing null bytes. The length check above
 	// guarantees at least the ten framing bytes, so the slice is never negative.
 	body = string(data[8 : len(data)-2])

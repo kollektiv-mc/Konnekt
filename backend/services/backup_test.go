@@ -2,7 +2,9 @@ package services
 
 import (
 	"archive/zip"
+	"encoding/binary"
 	"errors"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -130,6 +132,180 @@ func TestUnzipToRejectsZipSlip(t *testing.T) {
 	if _, err := os.Stat(filepath.Join(filepath.Dir(dest), "evil.txt")); err == nil {
 		t.Fatal("zip-slip entry was written outside the destination directory")
 	}
+}
+
+// A zip's central directory is written by whoever built the archive, and a
+// restore can be handed one from outside Konnekt. These three cover the guards
+// that treat it as a claim rather than a fact: the declared total, the clamp
+// that keeps a forged size from wrapping negative, and the extraction that
+// holds an entry to what it promised.
+
+func TestZipEntrySizeClampsAHeaderThatWouldWrapNegative(t *testing.T) {
+	cases := []struct {
+		name string
+		size uint64
+		want int64
+	}{
+		{"ordinary", 4096, 4096},
+		{"at the ceiling", maxZipEntrySize, maxZipEntrySize},
+		{"one past the ceiling", maxZipEntrySize + 1, maxZipEntrySize},
+		// The bare int64 conversion this guards turns both of these negative.
+		{"above int64", 1 << 63, maxZipEntrySize},
+		{"uint64 max", ^uint64(0), maxZipEntrySize},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			f := &zip.File{FileHeader: zip.FileHeader{Name: "x", UncompressedSize64: tc.size}}
+			got := zipEntrySize(f)
+			if got != tc.want {
+				t.Errorf("zipEntrySize(%d) = %d, want %d", tc.size, got, tc.want)
+			}
+			if got < 0 {
+				t.Errorf("zipEntrySize(%d) = %d, which is negative", tc.size, got)
+			}
+		})
+	}
+}
+
+func TestZipDeclaredTotalRefusesWhatARestoreWillNotExtract(t *testing.T) {
+	entry := func(name string, size uint64) *zip.File {
+		return &zip.File{FileHeader: zip.FileHeader{Name: name, UncompressedSize64: size}}
+	}
+
+	t.Run("sums the ordinary case", func(t *testing.T) {
+		total, err := zipDeclaredTotal([]*zip.File{entry("a", 100), entry("b", 250)})
+		if err != nil {
+			t.Fatalf("zipDeclaredTotal error: %v", err)
+		}
+		if total != 350 {
+			t.Errorf("total = %d, want 350", total)
+		}
+	})
+
+	t.Run("refuses one oversized entry", func(t *testing.T) {
+		if _, err := zipDeclaredTotal([]*zip.File{entry("bomb", maxZipEntrySize+1)}); err == nil {
+			t.Fatal("expected an entry over the per-entry ceiling to be refused")
+		}
+	})
+
+	t.Run("refuses a total over the ceiling", func(t *testing.T) {
+		// Each entry is inside the per-entry ceiling; together they are not.
+		needed := (maxZipTotalSize / maxZipEntrySize) + 1
+		// Asserted rather than assumed: the two ceilings are meant to sit a
+		// couple of orders of magnitude apart, and building the entries blind
+		// would turn a widened maxZipTotalSize into an out-of-memory kill
+		// instead of a failing test.
+		if needed > 1000 {
+			t.Fatalf("maxZipTotalSize is %d entries of maxZipEntrySize, too far apart to exercise", needed)
+		}
+		var files []*zip.File
+		for i := 0; i < needed; i++ {
+			files = append(files, entry("part", maxZipEntrySize))
+		}
+		if _, err := zipDeclaredTotal(files); err == nil {
+			t.Fatal("expected a declared total over the ceiling to be refused")
+		}
+	})
+
+	t.Run("does not wrap on sizes that would overflow an int64 accumulator", func(t *testing.T) {
+		// Two entries at the per-entry ceiling are fine; the point is that the
+		// refusal above comes from the ceiling and never from a negative sum.
+		total, err := zipDeclaredTotal([]*zip.File{entry("a", maxZipEntrySize), entry("b", maxZipEntrySize)})
+		if err != nil {
+			t.Fatalf("zipDeclaredTotal error: %v", err)
+		}
+		if total < 0 {
+			t.Fatalf("total = %d, which is negative", total)
+		}
+	})
+}
+
+func TestUnzipToStopsAtTheDeclaredSize(t *testing.T) {
+	// unzipTo's io.Copy is unbounded by inspection and safe only because
+	// archive/zip refuses to yield more bytes than the central directory
+	// declares. That is a property of the standard library, not of this
+	// package, so it is pinned here: if a Go release relaxes it, or someone
+	// swaps in another zip reader, this test is what says so.
+	const realSize = 64 * 1024
+	zipPath := filepath.Join(t.TempDir(), "bomb.zip")
+	f, err := os.Create(zipPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	w := zip.NewWriter(f)
+	fw, err := w.Create("big.dat")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := fw.Write(make([]byte, realSize)); err != nil {
+		t.Fatal(err)
+	}
+	if err := w.Close(); err != nil {
+		t.Fatal(err)
+	}
+	f.Close()
+
+	// Forge the central directory so the entry claims one byte in front of a
+	// 64 KiB stream: the shape of a decompression bomb.
+	raw, err := os.ReadFile(zipPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !forgeCentralDirectorySize(raw, 1) {
+		t.Fatal("could not find the central directory header to forge")
+	}
+	if err := os.WriteFile(zipPath, raw, 0600); err != nil {
+		t.Fatal(err)
+	}
+
+	// Half one: the reader believes the forged number, so the guard below is
+	// actually being exercised rather than passing on a malformed archive.
+	r, err := zip.OpenReader(zipPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := r.File[0].UncompressedSize64; got != 1 {
+		r.Close()
+		t.Fatalf("forged size did not take: reader sees %d, want 1", got)
+	}
+	rc, err := r.File[0].Open()
+	if err != nil {
+		r.Close()
+		t.Fatalf("File.Open: %v", err)
+	}
+	n, copyErr := io.Copy(io.Discard, rc)
+	rc.Close()
+	r.Close()
+	if copyErr == nil {
+		t.Fatalf("archive/zip yielded %d bytes for an entry declaring 1 and returned no error; unzipTo's io.Copy is no longer bounded", n)
+	}
+	if n > 1 {
+		t.Fatalf("archive/zip yielded %d bytes for an entry declaring 1", n)
+	}
+
+	// Half two: unzipTo surfaces that as a failed restore rather than a
+	// truncated one written into the staging directory.
+	dest := t.TempDir()
+	if err := unzipTo(zipPath, dest); err == nil {
+		t.Fatal("expected unzipTo to fail on an entry larger than it declares, got nil error")
+	}
+	if info, err := os.Stat(filepath.Join(dest, "big.dat")); err == nil && info.Size() > 1 {
+		t.Fatalf("wrote %d bytes for an entry declaring 1", info.Size())
+	}
+}
+
+// forgeCentralDirectorySize rewrites the uncompressed-size field of the first
+// central directory file header in place. archive/zip reads sizes from the
+// central directory, so this is the field that decides what an entry claims.
+func forgeCentralDirectorySize(raw []byte, size uint32) bool {
+	const sig = "\x50\x4b\x01\x02" // 0x02014b50, central directory file header
+	const uncompressedSizeOffset = 24
+	i := strings.Index(string(raw), sig)
+	if i < 0 || i+uncompressedSizeOffset+4 > len(raw) {
+		return false
+	}
+	binary.LittleEndian.PutUint32(raw[i+uncompressedSizeOffset:], size)
+	return true
 }
 
 // ─── Create / restore orchestration ────────────────────────────────────────

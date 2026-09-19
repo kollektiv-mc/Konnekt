@@ -90,6 +90,7 @@ after them is dated. Newest last, in both groups.
 - [2026-09-18 — The type scale sweep reaches the whole tree](#2026-09-18-the-type-scale-sweep-reaches-the-whole-tree)
 - [2026-09-18 — Per-server scoping gets its gates](#2026-09-18-per-server-scoping-gets-its-gates)
 - [2026-09-18 — The superseded jar survives a failed install](#2026-09-18-the-superseded-jar-survives-a-failed-install)
+- [2026-09-19 — The zip bomb the standard library had already stopped](#2026-09-19-the-zip-bomb-the-standard-library-had-already-stopped)
 
 ---
 
@@ -5832,3 +5833,81 @@ restore tests fail), the aside copies never discarded (the replace test's new
 folder assertion fails), and the old delete-in-place behaviour restored (both
 restore tests fail). `go vet`, `go test ./...` and the services coverage
 floor green.
+
+
+### 2026-09-19 — The zip bomb the standard library had already stopped
+
+**Checklist, Stable pillar, the security-lint line.** It had carried three
+named findings since 2026-09-08: G110, an uncapped `io.Copy` on restore; seven
+G115 conversions in `rcon.go`; and `govulncheck`, never run. The line is still
+unchecked, because the last of those is still true. The other two are closed,
+and neither was what the line said it was.
+
+**G110 was a false positive, and the fix for it was a test that proved
+nothing.** The first attempt bounded `unzipTo`'s copy with
+`io.CopyN(out, rc, declared+1)` and rejected an entry that produced more bytes
+than its header promised, with a test that forged a zip's central directory to
+claim one byte in front of a 64 KiB stream. The test passed. It also passed
+with the guard deleted, which is the only reason any of this was noticed:
+`archive/zip`'s `checksumReader` already refuses to yield a byte past
+`UncompressedSize64` and returns `zip.ErrFormat`. Measured on Go 1.26 against
+that same forged archive, a plain `io.Copy` copied **0** bytes and failed. The
+classic decompression bomb cannot be built through `zip.Reader` at all, and
+gosec flags the line because it sees a copy out of a compressed stream and
+cannot see the reader's contract.
+
+So the `CopyN` came back out. Duplicating a guarantee the standard library
+already makes reads, to the next person, like a guarantee the standard library
+does *not* make. What is there instead is the annotation, the reason, and
+`TestUnzipToStopsAtTheDeclaredSize`, which pins **both** halves: that
+`archive/zip` still refuses, and that `unzipTo` surfaces the refusal as a
+failed restore. The code is safe only for as long as the first half holds, and
+a Go release that relaxed it would otherwise land here silently.
+
+**What gosec could not see was the real gap.** Nothing bounded the
+*declaration*. An archive honestly claiming a petabyte, or four million
+entries, was extracted until the disk said no. `zipDeclaredTotal` now runs
+before anything is written and refuses on entry count, per-entry size and
+declared total. Restore only opens files `findBackupFile` locates under the
+backups directory, so this is defense-in-depth for an archive that arrived
+from somewhere else, which sharing a world backup makes an ordinary thing.
+
+**Three G115 rows in `backup.go` were the same neighbourhood.**
+`int64(f.UncompressedSize64)` summed a header field into the size the worlds
+tile displays, so a forged size above 2^63 wrapped it negative. `zipEntrySize`
+clamps it, and the table test covers `uint64` max, the ceiling, and one past
+it.
+
+**The seven G115 rows in `rcon.go` were five, and four were the wire
+format.** Source RCON carries id and type as four little-endian bytes and
+signals a failed auth as id -1, arriving as `0xFFFFFFFF`, so the round trip
+through `uint32` is the protocol rather than a narrowing; those are annotated.
+The fifth was real and unreachable: `writePacket` computed an `int32` length
+from a body of any width, so a body near 2 GiB would have wrapped it negative
+and panicked the `make` below it. `maxRconBody` bounds it, tested from both
+sides of the boundary, which is the shape #312's mutation work asked for.
+
+**The count in the line was not reproducible, and that is the part worth
+keeping.** It read "104 findings, none high" with no version beside it. gosec
+v2.29.0 reports 98 on today's tree with 20 HIGH, and carries rules (G122) the
+earlier run may not have had, so there is no way to tell a regression from a
+tool upgrade. The command in the checklist now pins the module version. It has
+to be the module version: `gosec --version` prints `dev` for anything built by
+`go install`, because the tag arrives through ldflags when a release is cut,
+so the binary cannot be asked what it is.
+
+**Triage now lives at the finding.** `#nosec <rule> -- <reason>` on the line,
+the way the aislop gate already works, so a row triaged once is not triaged
+again from scratch. Two rows were deliberately left un-annotated: `nbt.go`'s
+`intGet` and `byteGet` narrow an NBT `int64` when reading a `level.dat` the
+user may have downloaded, and an annotation should follow a test rather than
+substitute for one (#395).
+
+**Verified.** 107 findings before, 98 after, with G110 gone and G115 down from
+22 to 14, the remainder being `scripts/gen-icons` build tooling and the four
+rows above. Each new guard was mutation-checked by hand: deleting the zip-slip
+check fails its test, widening `maxZipTotalSize` fails the ceiling test (the
+subtest asserts the two ceilings stay within a testable distance of each other,
+so the mutant fails on an assertion rather than an out-of-memory kill), and the
+declared-size test fails if `archive/zip` ever stops enforcing it. `gofmt`,
+`go vet ./...`, `go test ./...` and both coverage floors green.

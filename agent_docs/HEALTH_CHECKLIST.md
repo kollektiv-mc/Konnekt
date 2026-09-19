@@ -250,17 +250,35 @@ tree.
       same line from the other side: 18 Go functions and 23 frontend functions
       over 15 as of 2026-09-08, all in #314's table.
 - [ ] Security lint has run recently and its findings are triaged, not
-      counted. `gosec ./...` (2026-09-08: 104 findings, none high; the
+      counted. **Pin the tool in the command, or the count means nothing:**
+      ```bash
+      go install github.com/securego/gosec/v2/cmd/gosec@v2.29.0 && gosec ./...
+      ```
+      2026-09-19, gosec v2.29.0: **98 findings, 20 of them HIGH.** The
       G301/G302/G304 file-permission and file-from-variable rows are the nature
       of an app that manages files in a directory the user chose, the six G204
-      rows are all argv `exec.Command`, the five G404 rows are request ids and
-      jitter). Worth a real look and still open: G110 at `backup.go:1008`
-      (uncapped `io.Copy` on restore) and the seven G115 conversions in
-      `rcon.go`'s packet framing. `govulncheck ./...` has **never run**: the
-      cloud container's proxy blocks `vuln.go.dev`, so it needs one local run
-      (#312 carries the reminder). The manual half is `SECURITY.md`'s threat
-      model read against the bridge surface: #306, #307, #308, #309 and #310
-      are the 2026-09-08 findings.
+      rows are all argv `exec.Command`, and the five G404 rows are request ids
+      and jitter. The previous entry read "104 findings, none high" and named no
+      version, which made it a number nobody could reproduce, this run included
+      (2026-09-19, HEALTH_LOG). Note `gosec --version` prints `dev` for any
+      `go install` build, because the tag is injected by ldflags when a release
+      is built, so the module version in the command above is the only pin
+      there is.
+      **A triaged row carries `#nosec <rule> -- <reason>` at the finding**,
+      not a sentence in this file, so the next run does not re-triage it. Read
+      it the way the aislop line reads its directives: a bare `#nosec` with no
+      rule or no reason is the failure, and so is one with no test behind the
+      reason. Verify with `grep -rn "#nosec" --include=*.go .` — every hit must
+      name both.
+      Still open: the two NBT narrowings in #395; the nine rows in
+      `scripts/gen-icons` are build-time tooling outside the app.
+      `govulncheck ./...` has **never run**, and needs one run from a machine
+      with ordinary network access: this environment's policy denies
+      `vuln.go.dev` at the gateway with a 403 to CONNECT, re-verified
+      2026-09-19. Tracked as #396, which replaces the reminder that died with
+      #312.
+      The manual half is `SECURITY.md`'s threat model read against the bridge
+      surface: #306, #307, #308, #309 and #310 are the 2026-09-08 findings.
 - [x] The aislop gate's policy is written down where the number is read.
       `.aislop/config.yml` turns off exactly two rules, both style/policy
       (`narrative-comment`: 94 of its 99 hits were the `// --- Section ---`
