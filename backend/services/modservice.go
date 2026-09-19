@@ -85,6 +85,14 @@ type ModService struct {
 	// ends.
 	stop     chan struct{}
 	stopOnce sync.Once
+
+	// installHooks are nil outside tests. Install calls each at the step it
+	// names, so a test can make the real call that follows fail there (#167);
+	// nothing else reads them.
+	installHooks struct {
+		beforeKeepDisabled func()
+		beforeSaveManifest func()
+	}
 }
 
 func NewModService(cfg *ConfigService, srv *ServerService) *ModService {
@@ -280,9 +288,22 @@ func (s *ModService) Install(serverID string, versionIDs []string) error {
 		// refuses to start on the duplicate mod id. This is what installing over
 		// a modpack's own copy produced every time, because the name Modrinth
 		// serves a file under is rarely the name the pack shipped it as.
-		wasDisabled, err := s.removeSuperseded(workDir, manifest, targetFolder, safeFileName, version.ProjectID, meta.ID)
+		wasDisabled, aside, err := s.removeSuperseded(workDir, manifest, targetFolder, safeFileName, version.ProjectID, meta.ID)
 		if err != nil {
+			s.restoreSuperseded(aside)
 			return err
+		}
+
+		// From here until the manifest is on disk the copy this install
+		// replaces is only moved aside, so a failure puts it back and takes
+		// the new file out (#167). The manifest on disk still describes the
+		// old copy until saveManifest succeeds, so a rollback needs no
+		// manifest write of its own: one jar, and a manifest that agrees.
+		undo := func(newPath string) {
+			if rerr := os.Remove(newPath); rerr != nil && !os.IsNotExist(rerr) {
+				slog.Error("mods: remove the new file after a failed install", "path", newPath, "error", rerr)
+			}
+			s.restoreSuperseded(aside)
 		}
 
 		// A superseded file that was switched off stays switched off. A pack
@@ -290,9 +311,15 @@ func (s *ModService) Install(serverID string, versionIDs []string) error {
 		// because its version changed is a server that stops booting for a
 		// reason nobody asked for.
 		installedName := safeFileName
+		installedPath := finalPath
 		if wasDisabled {
 			installedName = safeFileName + ".disabled"
-			if err := os.Rename(finalPath, filepath.Join(targetDir, installedName)); err != nil {
+			installedPath = filepath.Join(targetDir, installedName)
+			if h := s.installHooks.beforeKeepDisabled; h != nil {
+				h()
+			}
+			if err := os.Rename(finalPath, installedPath); err != nil {
+				undo(finalPath)
 				return fmt.Errorf("keep %s disabled: %w", safeFileName, err)
 			}
 		}
@@ -339,9 +366,14 @@ func (s *ModService) Install(serverID string, versionIDs []string) error {
 			Enabled:       !wasDisabled,
 			InstalledAt:   time.Now().UnixMilli(),
 		})
+		if h := s.installHooks.beforeSaveManifest; h != nil {
+			h()
+		}
 		if err := s.saveManifest(serverID, manifest); err != nil {
+			undo(installedPath)
 			return err
 		}
+		s.discardSuperseded(aside)
 
 		s.bus.Emit(EventModInstalled, map[string]any{
 			"serverID": serverID,
@@ -354,9 +386,21 @@ func (s *ModService) Install(serverID string, versionIDs []string) error {
 	return nil
 }
 
-// removeSuperseded deletes the files the jar being installed replaces and drops
-// their manifest rows. It reports whether what it removed was switched off,
-// which is the state the caller carries over to the new file.
+// removeSuperseded moves the files the jar being installed replaces aside and
+// drops their manifest rows. It reports whether what it removed was switched
+// off, which is the state the caller carries over to the new file, and where
+// the copies now sit, so the caller can put them back if the install fails
+// past this point or delete them once it has not (#167). Moved aside rather
+// than deleted because two steps still run after this one, the .disabled
+// rename and the manifest write, and the old jar was the only copy.
+//
+// The aside name is the original plus supersededSuffix, in the same folder:
+// nothing that scans mods/ or plugins/, Konnekt's ListInstalled and Rescan or
+// the server's loader, reads a name that does not end in .jar or
+// .jar.disabled, so a copy waiting there is loaded by nobody. A crash between
+// the move and the discard leaves one behind, invisible for the same reason;
+// the next install of that mod does not see it either, which is the one cost
+// of not deleting up front.
 //
 // Identity is asked two ways, because the copy being replaced may be one Konnekt
 // installed or one that arrived with a modpack:
@@ -374,12 +418,21 @@ func (s *ModService) Install(serverID string, versionIDs []string) error {
 //
 // Nothing outside the target folder is touched. mods/ and plugins/ hold
 // different kinds of content and a name can legitimately appear in both.
-func (s *ModService) removeSuperseded(workDir string, manifest *modManifest, targetFolder, newFileName, projectID, modID string) (bool, error) {
+func (s *ModService) removeSuperseded(workDir string, manifest *modManifest, targetFolder, newFileName, projectID, modID string) (wasDisabled bool, aside []string, err error) {
 	// Whether the new file inherits a .disabled suffix is decided by what was
 	// actually removed, and one enabled copy is enough to keep it enabled: the
 	// folder that holds both an old jar and its disabled predecessor is a folder
 	// where the enabled one is the one in use.
 	sawEnabled, sawDisabled := false, false
+
+	moveAside := func(path string) error {
+		asidePath := path + supersededSuffix
+		if err := os.Rename(path, asidePath); err != nil {
+			return fmt.Errorf("move superseded %s aside: %w", filepath.Base(path), err)
+		}
+		aside = append(aside, asidePath)
+		return nil
+	}
 
 	remove := func(base string) error {
 		for _, name := range []string{base, base + ".disabled"} {
@@ -395,8 +448,8 @@ func (s *ModService) removeSuperseded(workDir string, manifest *modManifest, tar
 			} else {
 				sawEnabled = true
 			}
-			if err := os.Remove(path); err != nil {
-				return fmt.Errorf("remove superseded %s: %w", name, err)
+			if err := moveAside(path); err != nil {
+				return err
 			}
 		}
 		manifest.removeByBase(base)
@@ -408,10 +461,10 @@ func (s *ModService) removeSuperseded(workDir string, manifest *modManifest, tar
 	disabledTwin := filepath.Join(workDir, targetFolder, newFileName+".disabled")
 	if _, err := os.Stat(disabledTwin); err == nil {
 		if err := sandboxCheck(workDir, disabledTwin); err != nil {
-			return false, err
+			return false, aside, err
 		}
-		if err := os.Remove(disabledTwin); err != nil {
-			return false, fmt.Errorf("remove superseded %s: %w", newFileName+".disabled", err)
+		if err := moveAside(disabledTwin); err != nil {
+			return false, aside, err
 		}
 		manifest.removeByBase(newFileName)
 		sawDisabled = true
@@ -441,11 +494,38 @@ func (s *ModService) removeSuperseded(workDir string, manifest *modManifest, tar
 		}
 		slog.Info("mods: replacing an existing copy", "old", base, "new", newFileName, "folder", targetFolder)
 		if err := remove(base); err != nil {
-			return false, err
+			return false, aside, err
 		}
 	}
 
-	return sawDisabled && !sawEnabled, nil
+	return sawDisabled && !sawEnabled, aside, nil
+}
+
+// supersededSuffix is what removeSuperseded appends to a jar it moves aside.
+// Ends in neither .jar nor .jar.disabled on purpose; see removeSuperseded.
+const supersededSuffix = ".superseded"
+
+// restoreSuperseded puts the copies removeSuperseded moved aside back under
+// their original names. A copy that cannot be put back is logged and left
+// where it is, invisible to every scan, rather than lost.
+func (s *ModService) restoreSuperseded(aside []string) {
+	for _, asidePath := range aside {
+		original := strings.TrimSuffix(asidePath, supersededSuffix)
+		if err := os.Rename(asidePath, original); err != nil {
+			slog.Error("mods: restore the superseded copy after a failed install", "path", asidePath, "error", err)
+		}
+	}
+}
+
+// discardSuperseded deletes the copies once the install that replaced them is
+// on disk and in the manifest. A copy that will not delete is logged; the
+// install succeeded and the leftover is loaded by nobody.
+func (s *ModService) discardSuperseded(aside []string) {
+	for _, asidePath := range aside {
+		if err := os.Remove(asidePath); err != nil {
+			slog.Warn("mods: discard the superseded copy", "path", asidePath, "error", err)
+		}
+	}
 }
 
 // downloadVerified streams a file from url to finalPath, verifying the sha512
@@ -897,7 +977,11 @@ func (s *ModService) saveManifest(serverID string, m *modManifest) error {
 		return err
 	}
 	tmp.Close()
-	return os.Rename(tmpPath, s.manifestPath(serverID))
+	if err := os.Rename(tmpPath, s.manifestPath(serverID)); err != nil {
+		os.Remove(tmpPath)
+		return err
+	}
+	return nil
 }
 
 // CheckUpdates fetches the latest compatible version for each Modrinth-sourced

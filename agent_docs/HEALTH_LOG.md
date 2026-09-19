@@ -89,6 +89,7 @@ after them is dated. Newest last, in both groups.
 - [2026-09-16 — The schedules that followed the sidebar](#2026-09-16-the-schedules-that-followed-the-sidebar)
 - [2026-09-18 — The type scale sweep reaches the whole tree](#2026-09-18-the-type-scale-sweep-reaches-the-whole-tree)
 - [2026-09-18 — Per-server scoping gets its gates](#2026-09-18-per-server-scoping-gets-its-gates)
+- [2026-09-18 — The superseded jar survives a failed install](#2026-09-18-the-superseded-jar-survives-a-failed-install)
 
 ---
 
@@ -5791,3 +5792,43 @@ to fail before its fix: the Go test on the four scheduler emits (and, as a
 second check, on a `serverID` key deleted from `backup.go`), the frontend test
 on `useWorlds` and the EULA handler, and the new switch case on the `useWorlds`
 filter reverted. `.claude/suite-check.py` green, memory budget included.
+
+### 2026-09-18 — The superseded jar survives a failed install
+
+**#167, `type:chore`, `p3`.** `removeSuperseded` deleted the copy an install
+replaces before two steps that could still fail, the `.disabled` rename and
+the manifest write, so a failure at either left the new jar in place with a
+manifest that still described the old one, and the old one gone. A working
+server with a wrong manifest row, not an unbootable one, which is why it sat
+at `p3`; the issue's own 2026-09-16 rewrite records that the two-jars case it
+was filed for had already closed under #52.
+
+**Moved aside rather than deleted.** The superseded file is renamed in place
+to `<name>.superseded`, a suffix chosen because nothing reads it: Konnekt's
+`ListInstalled` and `Rescan` take only `.jar` and `.jar.disabled`, and so does
+every loader. `Install` puts the copies back and removes the new file if the
+rename or the manifest write fails, and deletes them once the version is
+recorded. No manifest write is needed to roll back, because the manifest on
+disk still describes the old copy until `saveManifest` succeeds, which is the
+property that makes "one jar, and a manifest that agrees" hold at both
+failure points. A crash between the move and the discard leaves an aside copy
+behind, invisible for the same reason it is safe; that is the one cost, and
+it is written where the suffix is.
+
+**The failure tests needed a seam.** Both failure points sit after the
+manifest loads and inside one call, and the container runs as root, so a
+permissions trick fails nothing. `ModService.installHooks` carries two
+`func()` fields, nil outside tests, called just before each step; each test
+uses its hook to make the *real* call after it fail, by occupying the
+rename's target and the manifest's path with a directory. The production
+code gains two nil checks and no fake.
+
+**A smaller leak closed on the way.** `saveManifest` left its temp file
+beside the manifest when the rename into place failed; it is removed now,
+and the manifest-write test asserts the directory holds the manifest alone.
+
+**Verified.** Three mutations, each caught: `undo` no longer restoring (both
+restore tests fail), the aside copies never discarded (the replace test's new
+folder assertion fails), and the old delete-in-place behaviour restored (both
+restore tests fail). `go vet`, `go test ./...` and the services coverage
+floor green.
