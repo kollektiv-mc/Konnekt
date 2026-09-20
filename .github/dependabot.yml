@@ -19,6 +19,16 @@
 # the routine minor and patch traffic arrives as one pull request per ecosystem
 # and only a major version, which is the one that can actually break something,
 # gets a pull request of its own.
+#
+# github-actions is the exception, and groups its majors too. A major there is
+# not the same kind of risk: bumping checkout or setup-node asks one question,
+# does CI still pass on the new runner, and every such pull request asks it
+# again. Splitting them multiplies the review while making each one answer
+# less, because the combined effect is what actually runs. On 2026-09-20 that
+# produced three open pull requests, for checkout, setup-node and
+# upload-artifact, all 4 to 7, all the same question. A dependency major in npm
+# or gomod is the opposite and keeps its own pull request: vite 5 to 8 can
+# change what the app does, and deserves to be read alone.
 version: 2
 
 updates:
@@ -32,7 +42,7 @@ updates:
     groups:
       actions:
         patterns: ['*']
-        update-types: [minor, patch]
+        update-types: [major, minor, patch]
 
   - package-ecosystem: gomod
     directory: /
