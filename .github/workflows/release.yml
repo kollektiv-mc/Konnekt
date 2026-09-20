@@ -129,7 +129,7 @@ jobs:
           New-Item -ItemType Directory -Force -Path dist | Out-Null
           Copy-Item build/bin/konnekt.exe dist/konnekt-windows-amd64.exe
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: konnekt-windows-amd64
           path: dist/konnekt-windows-amd64.exe
@@ -193,7 +193,7 @@ jobs:
           mkdir -p dist
           cp build/bin/konnekt dist/konnekt-linux-amd64
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: konnekt-linux-amd64
           path: dist/konnekt-linux-amd64
@@ -228,7 +228,7 @@ jobs:
           mkdir -p dist-rpm
           cp ~/rpmbuild/RPMS/x86_64/*.rpm dist-rpm/
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: konnekt-rpm
           path: dist-rpm/*.rpm
