@@ -60,12 +60,12 @@ jobs:
 
       # The scheduler palette is generated from backend/services, so this job
       # needs Go as well as node. Nothing else in the demo touches the backend.
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v7
         with:
           go-version-file: go.mod
           cache: true
 
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v6
         with:
           version: 11
 
