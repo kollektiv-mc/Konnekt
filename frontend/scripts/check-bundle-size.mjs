@@ -32,7 +32,14 @@ import { ensureFreshDist } from './lib/dist-freshness.mjs'
 // 145.0 KB; budget = that + ~12% headroom, rounded. It was 550 KB when the
 // entry still carried CodeMirror, @xyflow and the markdown pipeline eagerly —
 // leaving it there now would let the chunk grow 3.7x before anything noticed.
-const ENTRY_BUDGET_KB = 165
+//
+// Raised 165 to 170 for vite 7 (#406). The sources did not change: vite 5 built
+// this entry at 164.6 KB and vite 7 builds it at 166.7 KB, so the 2.1 KB is the
+// bundler's own output rather than an import that should have been lazy. The
+// original ~12% headroom was spent under vite 5, 145.0 KB to 164.6 KB, and this
+// raise does not restore it. 170 leaves about 2%, which keeps the number
+// reading as a tripwire on the next eager import, not as room to grow into.
+const ENTRY_BUDGET_KB = 170
 
 // Measured warmed total on 2026-09-07, six lazy chunks plus three shared
 // helpers: 712.3 KB gzip (WorldsScene 259.4, EditorPanel 179.9, charts 101.3,
