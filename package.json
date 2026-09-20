@@ -2,6 +2,6 @@
   "name": "konnekt-repo",
   "private": true,
   "devDependencies": {
-    "lefthook": "^2.1.12"
+    "lefthook": "^2.1.14"
   }
 }
