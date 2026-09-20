@@ -54,7 +54,7 @@ jobs:
       contents: read
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           # Scorecard reads the tree; it never needs to write to the remote, and
           # leaving a token in .git/config for an analysis step is the kind of

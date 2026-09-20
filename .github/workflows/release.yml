@@ -58,7 +58,7 @@ jobs:
           echo "::error::Releases are cut from ${{ github.event.repository.default_branch }}, not ${{ github.ref_name }}. Push a v* tag by hand to release another ref."
           exit 1
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       # The inputs reach the script as environment, never as shell text, so a
       # version field containing anything but a version is data the script
@@ -94,7 +94,7 @@ jobs:
     needs: resolve
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: ${{ needs.resolve.outputs.tag }}
 
@@ -158,7 +158,7 @@ jobs:
           # in a temporary global config that doesn't survive its own step.
           git config --global --add safe.directory "$GITHUB_WORKSPACE"
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: ${{ needs.resolve.outputs.tag }}
 
@@ -207,7 +207,7 @@ jobs:
       - name: Install packaging dependencies
         run: dnf install -y git rpm-build rpmdevtools
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: ${{ needs.resolve.outputs.tag }}
 
@@ -248,7 +248,7 @@ jobs:
       # Before the artifacts land: actions/checkout cleans the workspace, so
       # running it second would delete them. Only needed for the notes script
       # below — nothing else in this job reads the tree.
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: ${{ needs.resolve.outputs.tag }}
 

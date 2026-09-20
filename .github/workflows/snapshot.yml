@@ -34,7 +34,7 @@ jobs:
       version: ${{ steps.decide.outputs.version }}
       rpm_version: ${{ steps.decide.outputs.rpm_version }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - id: decide
         env:
@@ -109,7 +109,7 @@ jobs:
     if: needs.check.outputs.build == 'true'
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - uses: actions/setup-go@v5
         with:
@@ -170,7 +170,7 @@ jobs:
           # shells out to (exit 128).
           git config --global --add safe.directory "$GITHUB_WORKSPACE"
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - uses: actions/setup-go@v5
         with:
@@ -217,7 +217,7 @@ jobs:
       - name: Install packaging dependencies
         run: dnf install -y git rpm-build rpmdevtools
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - uses: actions/download-artifact@v8
         with:
@@ -254,7 +254,7 @@ jobs:
       # Before the artifacts land: actions/checkout cleans the workspace, so
       # running it second would delete them. Only needed for the notes script
       # below — nothing else in this job reads the tree.
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - uses: actions/download-artifact@v8
         with:
