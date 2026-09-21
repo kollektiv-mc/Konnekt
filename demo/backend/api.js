@@ -239,6 +239,8 @@ export const api = {
   // is a `?tile=` link (frame.js), which answers both reads with that tile.
   GetActiveTiles: read(() => frame.activeTiles()),
   SaveActiveTiles: mutate(() => undefined),
+  GetTileLayouts: read({}),
+  SaveTileLayouts: mutate(() => undefined),
   GetActiveLayout: read(() => frame.activeLayout()),
   SaveActiveLayout: mutate(() => undefined),
   GetLayoutPresets: read([]),

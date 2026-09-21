@@ -1,5 +1,6 @@
 import { useServerStore } from '../../stores/useServerStore'
 import { Figure } from '../../components/ui/Figure'
+import type { TileLayout } from '../../types'
 
 function tpsColor(tps: number): string {
   if (tps >= 18) return 'text-accent'
@@ -30,6 +31,15 @@ export const PILL = {
   online: { label: 'Online', dot: 'bg-accent shadow-[0_0_6px_var(--accent)]', text: 'text-accent' },
 } as const
 
+function DetailRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="border-border-subtle border-b-hairline flex items-center justify-between py-1 last:border-0">
+      <span className="text-text-muted text-xs">{label}</span>
+      <span className="text-text-secondary font-mono text-xs">{value}</span>
+    </div>
+  )
+}
+
 /**
  * The server's vitals: a status pill, four figures, and the memory bar.
  *
@@ -40,11 +50,17 @@ export const PILL = {
  * canvas that says whether the server is up at all, and a figure reading "—"
  * does not say why.
  *
+ * The figures go four across and drop to two by two once the tile is tall
+ * enough (`tile-tall`, style.css): at the four-row minimum a 2×2 plus the bar
+ * is more than the body holds, and the bar was what got cut. The compact
+ * layout keeps the pill and the figures and drops the bar; the large one sets
+ * the figures small and adds the rows the figures round off.
+ *
  * It reads `useServerStore` and nothing else, which is why an Overview sitting
  * on the canvas costs no IPC at all — every section of the maximized dashboard
  * fetches on mount, and none of them mount until the user asks for it.
  */
-export function Vitals() {
+export function Vitals({ layout = 'default' }: { layout?: TileLayout }) {
   const status = useServerStore((s) => s.status)
   const reachable = useServerStore((s) => s.reachable)
 
@@ -67,6 +83,9 @@ export function Vitals() {
               : 'offline'
     ]
 
+  const size = layout === 'large' ? 'sm' : 'lg'
+  const grid = layout === 'default' ? 'grid-cols-4 tile-tall:grid-cols-2' : 'grid-cols-4'
+
   return (
     <div className="flex h-full flex-col gap-3 px-3 py-3">
       <div className="flex shrink-0 items-center gap-2">
@@ -74,18 +93,34 @@ export function Vitals() {
         <span className={`text-xs font-semibold ${pill.text}`}>{pill.label}</span>
       </div>
 
-      <div className="grid shrink-0 grid-cols-2 gap-x-3 gap-y-2">
-        <Figure label="Players" value={`${status.players} / ${status.maxPlayers}`} />
+      <div className={`grid shrink-0 gap-x-3 gap-y-2 ${grid}`}>
+        <Figure size={size} label="Players" value={`${status.players} / ${status.maxPlayers}`} />
         <Figure
+          size={size}
           label="TPS"
           value={online && status.tps >= 0 ? status.tps.toFixed(1) : '—'}
           valueClass={online && status.tps >= 0 ? tpsColor(status.tps) : undefined}
         />
-        <Figure label="Uptime" value={online ? status.uptime : '—'} />
-        <Figure label="Memory" value={online ? `${ramPct.toFixed(0)}%` : '—'} />
+        <Figure size={size} label="Uptime" value={online ? status.uptime : '—'} />
+        <Figure size={size} label="Memory" value={online ? `${ramPct.toFixed(0)}%` : '—'} />
       </div>
 
-      {online && (
+      {layout === 'large' && (
+        <div className="min-h-0 shrink-0">
+          <DetailRow label="State" value={pill.label} />
+          <DetailRow label="Max players" value={String(status.maxPlayers)} />
+          <DetailRow
+            label="Memory used"
+            value={online ? `${Math.round(status.ramUsed)} MB` : '—'}
+          />
+          <DetailRow
+            label="Memory total"
+            value={status.ramTotal > 0 ? `${Math.round(status.ramTotal)} MB` : '—'}
+          />
+        </div>
+      )}
+
+      {online && layout !== 'compact' && (
         <div className="mt-auto shrink-0">
           <div className="text-text-muted mb-1 flex justify-between text-xs">
             <span>Memory</span>

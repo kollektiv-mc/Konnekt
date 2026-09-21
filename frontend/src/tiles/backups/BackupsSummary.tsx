@@ -5,9 +5,11 @@ import { BackupRunningDialog } from './BackupRunningDialog'
 import { useBackups } from './useBackups'
 import { fmtBytes, relativeMs } from '../../lib/format'
 import { Figure } from '../../components/ui/Figure'
+import type { TileLayout } from '../../types'
 
 interface Props {
   serverId: string
+  layout?: TileLayout
 }
 
 /**
@@ -17,9 +19,10 @@ interface Props {
  * The age of the last backup is the figure, its size and the archive count
  * the detail under it, and the button holds the bottom edge: the default
  * layout's shape. World backups are counted in the maximized face; here the
- * question is only whether the whole server is safe.
+ * question is only whether the whole server is safe. Compact keeps the figure
+ * and the button; large sets the figure small and lists the archives kept.
  */
-export function BackupsSummary({ serverId }: Props) {
+export function BackupsSummary({ serverId, layout = 'default' }: Props) {
   const { status } = useServerStore()
   const { backups, loading, listError, creating, create } = useBackups(serverId)
   const [showRunningDialog, setShowRunningDialog] = useState(false)
@@ -69,14 +72,48 @@ export function BackupsSummary({ serverId }: Props) {
       <div className="flex min-h-0 flex-1 flex-col gap-1">
         {latest ? (
           <>
-            <Figure label="Last full backup" value={relativeMs(latest.createdAt)} />
-            <span className="text-text-muted text-xs">
-              {fmtBytes(latest.sizeBytes)} · {serverBackups.length}{' '}
-              {serverBackups.length === 1 ? 'archive' : 'archives'} kept
-            </span>
+            <Figure
+              size={layout === 'large' ? 'sm' : 'lg'}
+              label="Last full backup"
+              value={relativeMs(latest.createdAt)}
+            />
+            {layout !== 'compact' && (
+              <span className="text-text-muted text-xs">
+                {fmtBytes(latest.sizeBytes)} · {serverBackups.length}{' '}
+                {serverBackups.length === 1 ? 'archive' : 'archives'} kept
+              </span>
+            )}
           </>
         ) : (
-          <Figure label="Last full backup" value="never" valueClass="text-text-faint" />
+          <Figure
+            size={layout === 'large' ? 'sm' : 'lg'}
+            label="Last full backup"
+            value="never"
+            valueClass="text-text-faint"
+          />
+        )}
+        {layout === 'large' && serverBackups.length > 0 && (
+          <div className="mt-1 min-h-0 flex-1 overflow-y-auto">
+            {serverBackups.map((b) => (
+              <div
+                key={b.filename}
+                className="border-border-subtle border-b-hairline flex items-center gap-2 py-1 last:border-0"
+              >
+                <span
+                  className="text-text-secondary min-w-0 flex-1 truncate font-mono text-xs"
+                  title={b.filename}
+                >
+                  {b.displayName || b.filename}
+                </span>
+                <span className="text-text-faint text-2xs shrink-0 font-mono">
+                  {relativeMs(b.createdAt)}
+                </span>
+                <span className="text-text-faint shrink-0 font-mono text-xs">
+                  {fmtBytes(b.sizeBytes)}
+                </span>
+              </div>
+            ))}
+          </div>
         )}
       </div>
       <button

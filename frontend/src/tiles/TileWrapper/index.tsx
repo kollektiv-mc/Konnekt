@@ -1,9 +1,14 @@
-import { useState, type ReactNode } from 'react'
+import { lazy, Suspense, useState, type ReactNode } from 'react'
 import type { LucideIcon } from '../../lib/icons'
 import { IconButton } from '../../components/ui/IconButton'
 import { ErrorBoundary } from '../../components/ErrorBoundary'
 import { Maximize2, Minimize2, X } from '../../lib/icons'
 import { Icon } from '../../components/ui/Icon'
+
+// Opened by a right-click and by nothing else, so it loads on the first one
+// rather than with every tile. The specifier matches `lib/prefetch.ts`.
+const LayoutMenu = lazy(() => import('./LayoutMenu').then((m) => ({ default: m.LayoutMenu })))
+import type { TileLayout } from '../../types'
 
 interface TileWrapperProps {
   id: string
@@ -15,6 +20,13 @@ interface TileWrapperProps {
   maximized?: boolean
   flash?: boolean
   onToggleMaximize?: (id: string) => void
+  /**
+   * The in-tile layout the compact face is on, for a tile that honours one
+   * (`TileDefinition.layouts`). With both this and `onSetLayout` set, a
+   * right-click on the header opens the menu that changes it.
+   */
+  layout?: TileLayout
+  onSetLayout?: (id: string, layout: TileLayout) => void
 }
 
 export function TileWrapper({
@@ -27,12 +39,22 @@ export function TileWrapper({
   maximized,
   flash,
   onToggleMaximize,
+  layout,
+  onSetLayout,
 }: TileWrapperProps) {
   // Bumped by the fallback's Retry. The boundary is keyed on it, so a bump
   // unmounts the failed subtree and mounts the tile again from scratch —
   // fresh state, fresh effects — rather than asking the same instance to try
   // once more with whatever it had when it threw.
   const [attempt, setAttempt] = useState(0)
+  // The layout menu opens from the header's context menu and only on the
+  // canvas copy: the maximized face ignores the layout, so offering it there
+  // would change nothing the user can see.
+  const [menuOpen, setMenuOpen] = useState(false)
+  // Mounted on the first open and kept afterwards, so the popover's close
+  // animation has something to run on and the chunk is fetched once.
+  const [menuOpened, setMenuOpened] = useState(false)
+  const hasLayoutMenu = !maximized && layout !== undefined && onSetLayout !== undefined
 
   return (
     <div className={`relative h-full ${maximized ? '' : 'tile-outer'}`}>
@@ -55,11 +77,26 @@ export function TileWrapper({
         }
       >
         <div
-          className={`drag-handle border-border-subtle border-b-hairline flex shrink-0 items-center justify-between px-3 py-2 select-none ${
+          className={`drag-handle border-border-subtle border-b-hairline relative flex shrink-0 items-center justify-between px-3 py-2 select-none ${
             maximized ? 'cursor-default' : 'cursor-grab'
           }`}
           onDoubleClick={maximizable ? () => onToggleMaximize?.(id) : undefined}
-          title={maximizable && !maximized ? 'Double-click to maximize' : undefined}
+          onContextMenu={
+            hasLayoutMenu
+              ? (e) => {
+                  e.preventDefault()
+                  setMenuOpened(true)
+                  setMenuOpen(true)
+                }
+              : undefined
+          }
+          title={
+            maximizable && !maximized
+              ? hasLayoutMenu
+                ? 'Double-click to maximize · right-click for layout'
+                : 'Double-click to maximize'
+              : undefined
+          }
         >
           <div className="flex items-center gap-2">
             <Icon icon={icon} size="sm" className="text-text-muted" />
@@ -87,6 +124,16 @@ export function TileWrapper({
               </IconButton>
             )}
           </div>
+          {hasLayoutMenu && menuOpened && (
+            <Suspense fallback={null}>
+              <LayoutMenu
+                open={menuOpen}
+                layout={layout}
+                onChoose={(next) => onSetLayout(id, next)}
+                onClose={() => setMenuOpen(false)}
+              />
+            </Suspense>
+          )}
         </div>
         {/* The boundary sits inside the frame and around the content only.
             Every tile renders through this slot — the canvas copy and the
@@ -96,7 +143,7 @@ export function TileWrapper({
             dashboard with "render error". The header stays live above it, so
             Remove and Maximize/Restore still work on a failed tile; the
             fallback adds Retry. */}
-        <div className="min-h-0 flex-1 overflow-hidden">
+        <div className="tile-body min-h-0 flex-1 overflow-hidden">
           <ErrorBoundary
             key={attempt}
             fallback={(error) => (

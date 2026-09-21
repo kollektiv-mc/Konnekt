@@ -170,6 +170,10 @@ export function GetStatsHistory(arg1) {
   return window['go']['main']['App']['GetStatsHistory'](arg1);
 }
 
+export function GetTileLayouts() {
+  return window['go']['main']['App']['GetTileLayouts']();
+}
+
 export function ImportScheduleGraphJSON(arg1, arg2) {
   return window['go']['main']['App']['ImportScheduleGraphJSON'](arg1, arg2);
 }
@@ -332,6 +336,10 @@ export function SaveScheduleGraph(arg1, arg2) {
 
 export function SaveServerConfig(arg1) {
   return window['go']['main']['App']['SaveServerConfig'](arg1);
+}
+
+export function SaveTileLayouts(arg1) {
+  return window['go']['main']['App']['SaveTileLayouts'](arg1);
 }
 
 export function SendCommand(arg1, arg2) {

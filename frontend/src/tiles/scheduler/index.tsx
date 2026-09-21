@@ -2,6 +2,7 @@ import { lazy, Suspense } from 'react'
 import './scheduler.css'
 import { useScheduler } from './useScheduler'
 import { SchedulerSummary } from './SchedulerSummary'
+import { useSettingsStore } from '../../stores/useSettingsStore'
 import type { TileProps } from '../../types'
 
 // @xyflow/react is ~370 KB of source and only the maximized editor renders it,
@@ -11,7 +12,14 @@ const GraphEditor = lazy(() =>
   import('./editor/GraphEditor').then((m) => ({ default: m.GraphEditor })),
 )
 
-export function SchedulerTile({ serverId, maximized }: TileProps) {
+// Behind the "Classic tile faces" setting, so it loads only when asked for.
+// The specifier matches `lib/prefetch.ts`'s warm list and every other tile's.
+const ClassicSchedulerSummary = lazy(() =>
+  import('../classicFaces').then((m) => ({ default: m.ClassicSchedulerSummary })),
+)
+
+export function SchedulerTile({ serverId, maximized, layout }: TileProps) {
+  const classic = useSettingsStore((s) => s.settings.classicTileFaces)
   const {
     graphs,
     blockDefs,
@@ -27,12 +35,25 @@ export function SchedulerTile({ serverId, maximized }: TileProps) {
   } = useScheduler(serverId)
 
   if (!maximized) {
+    if (classic) {
+      return (
+        <Suspense fallback={<div className="h-full w-full" />}>
+          <ClassicSchedulerSummary
+            graphs={graphs}
+            nextRuns={nextRuns}
+            loading={loading && !hydrated}
+            error={error}
+          />
+        </Suspense>
+      )
+    }
     return (
       <SchedulerSummary
         graphs={graphs}
         nextRuns={nextRuns}
         loading={loading && !hydrated}
         error={error}
+        layout={layout}
       />
     )
   }

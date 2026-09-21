@@ -635,6 +635,18 @@ The remaining, not-yet-closed follow-ups. Each item's full remediation write-up
 moves to `agent_docs/HEALTH_LOG.md` once it's done — keep this section short and
 current. Priorities mirror the pillars above.
 
+**P2 — The entry chunk is at its budget** (filed 2026-09-21)
+
+`pnpm check-bundle` measured the entry at 164.7 KB gzip against the 165 KB
+budget before the per-tile layouts landed, and 166.1 KB after; the budget was
+raised to 175 KB with ~5% headroom rather than the 12% the original had, so
+the next feature on the eager path trips it again. Twenty kilobytes of growth
+since the 145 KB measurement, none of it one thing. Worth finding the next
+split before raising again: candidates are the mods tile's `BrowsePanel` and
+`ContentDetailPanel`, which only the maximized face renders yet load eagerly
+through `tiles/mods/index.tsx`, and the backups tile's carousel and solar
+system, same shape.
+
 **P2 — What is still open from the first-scroll work** (filed 2026-08-29)
 
 The warm-up's own contribution to the first scroll is closed (HEALTH_LOG,

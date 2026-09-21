@@ -89,6 +89,8 @@ var serverlessMethods = map[string]string{
 	"DeleteLayoutPreset":   "the canvas layout is the app's, not a server's",
 	"GetActiveTiles":       "the canvas layout is the app's, not a server's",
 	"SaveActiveTiles":      "the canvas layout is the app's, not a server's",
+	"GetTileLayouts":       "the canvas layout is the app's, not a server's",
+	"SaveTileLayouts":      "the canvas layout is the app's, not a server's",
 	"GetActiveLayout":      "the canvas layout is the app's, not a server's",
 	"SaveActiveLayout":     "the canvas layout is the app's, not a server's",
 	"GetCustomCommands":    "one custom_commands.json for the app",

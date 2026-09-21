@@ -553,6 +553,39 @@ func (a *App) SaveActiveTiles(ids []string) error {
 	return services.WriteDataFile(a.dataDir, "active_tiles.json", data)
 }
 
+// --- Tile layouts ---
+// Which in-tile layout each tile shows on the canvas (frontend/src/types
+// TileLayout: "compact", "default" or "large"), keyed by tile id. A tile that
+// is not in the map is on its default. Kept apart from active_tiles.json and
+// the layout presets so a preset switch, which rearranges the board, never
+// changes how a tile reads.
+
+func (a *App) GetTileLayouts() (map[string]string, error) {
+	data, err := os.ReadFile(filepath.Join(a.dataDir, "tile_layouts.json"))
+	if os.IsNotExist(err) {
+		return map[string]string{}, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	var layouts map[string]string
+	if err := json.Unmarshal(data, &layouts); err != nil {
+		return nil, err
+	}
+	if layouts == nil {
+		layouts = map[string]string{}
+	}
+	return layouts, nil
+}
+
+func (a *App) SaveTileLayouts(layouts map[string]string) error {
+	data, err := json.Marshal(layouts)
+	if err != nil {
+		return err
+	}
+	return services.WriteDataFile(a.dataDir, "tile_layouts.json", data)
+}
+
 // --- Active (working) layout ---
 // The current on-screen tile arrangement, persisted independently of the named
 // layout presets so drags/resizes survive a restart without overwriting templates.

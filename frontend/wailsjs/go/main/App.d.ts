@@ -87,6 +87,8 @@ export function GetServerSummary(arg1:string):Promise<models.ServerSummary>;
 
 export function GetStatsHistory(arg1:string):Promise<Array<models.StatsSnapshot>>;
 
+export function GetTileLayouts():Promise<Record<string, string>>;
+
 export function ImportScheduleGraphJSON(arg1:string,arg2:string):Promise<models.Graph>;
 
 export function InspectServerFile(arg1:string):Promise<services.InstallerInfo>;
@@ -168,6 +170,8 @@ export function SaveLayoutPreset(arg1:string,arg2:string):Promise<void>;
 export function SaveScheduleGraph(arg1:string,arg2:models.Graph):Promise<models.Graph>;
 
 export function SaveServerConfig(arg1:models.ServerConfig):Promise<void>;
+
+export function SaveTileLayouts(arg1:Record<string, string>):Promise<void>;
 
 export function SendCommand(arg1:string,arg2:string):Promise<void>;
 
