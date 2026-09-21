@@ -44,8 +44,14 @@ function clamp(x: number, y: number, count: number): MenuPosition {
   }
 }
 
+// The suite's floating-layer surface, per kollektiv/design/README.md: opaque
+// `bg-overlay` (bg-elevated composited over the base, so it reads as the same
+// panel wherever it lands and stays legible over a busy tile), a hairline
+// border, and no shadow or blur. The suite has no shadow tokens, deliberately:
+// elevation is the surface and the border. `Popover` and the other floating
+// panels still carry a drop shadow from before that rule; #415 tracks them.
 const PANEL =
-  'fixed z-popover bg-elevated border-hairline border-border-subtle overflow-hidden rounded-lg py-1 shadow-[0_8px_24px_rgba(0,0,0,0.3)] backdrop-blur-md'
+  'fixed z-popover bg-overlay border-hairline border-border-subtle overflow-hidden rounded-lg py-1'
 
 function Row({
   item,
