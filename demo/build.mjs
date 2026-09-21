@@ -123,9 +123,22 @@ rmSync(OUT, { recursive: true, force: true });
 mkdirSync(OUT, { recursive: true });
 
 console.log("demo: building the frontend");
+// Vite's own entry script under the running Node rather than `pnpm exec`: on
+// Windows, pnpm is a .cmd shim, which execFileSync cannot launch without a
+// shell (Node's child_process docs, "Spawning .bat and .cmd files on
+// Windows"). Reached this way, the script had already emptied demo/dist above
+// and then died here, leaving an empty directory to serve.
 run(
-  "pnpm",
-  ["exec", "vite", "build", "--outDir", OUT, "--emptyOutDir", "--base", "./"],
+  process.execPath,
+  [
+    path.join(FRONTEND, "node_modules/vite/bin/vite.js"),
+    "build",
+    "--outDir",
+    OUT,
+    "--emptyOutDir",
+    "--base",
+    "./",
+  ],
   FRONTEND,
 );
 
