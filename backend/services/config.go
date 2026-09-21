@@ -221,6 +221,7 @@ func (s *ConfigService) GetAppSettings() (models.AppSettings, error) {
 		CheckUpdatesOnStartup:            true,
 		UpdateChannel:                    UpdateChannelStable,
 		NavWidth:                         DefaultNavWidth,
+		SmoothScrolling:                  true,
 	}
 	data, err := os.ReadFile(filepath.Join(s.dataDir, "app_settings.json"))
 	if os.IsNotExist(err) {

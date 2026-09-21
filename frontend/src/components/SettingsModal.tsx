@@ -391,6 +391,18 @@ function AppearancePane({ settings, update }: { settings: AppSettings; update: U
         />
       </SettingRow>
 
+      {/* Wheel physics. Read per notch by lib/springScroll.ts, so it takes
+          effect on the next notch with no restart. */}
+      <SettingRow
+        label="Smooth scrolling"
+        description="Glide under each mouse wheel notch on spring physics instead of stepping. Touchpads and the OS reduced-motion setting are left alone."
+      >
+        <Toggle
+          checked={settings.smoothScrolling}
+          onChange={(v) => update({ smoothScrolling: v })}
+        />
+      </SettingRow>
+
       {/* Import stub */}
       <div className="py-3">
         <div className="flex items-center gap-2">

@@ -91,6 +91,7 @@ after them is dated. Newest last, in both groups.
 - [2026-09-18 — Per-server scoping gets its gates](#2026-09-18-per-server-scoping-gets-its-gates)
 - [2026-09-18 — The superseded jar survives a failed install](#2026-09-18-the-superseded-jar-survives-a-failed-install)
 - [2026-09-19 — The zip bomb the standard library had already stopped](#2026-09-19-the-zip-bomb-the-standard-library-had-already-stopped)
+- [2026-09-21 — The scroll that felt like dragging was the physics, not the pixels](#2026-09-21-the-scroll-that-felt-like-dragging-was-the-physics-not-the-pixels)
 
 ---
 
@@ -5911,3 +5912,77 @@ subtest asserts the two ceilings stay within a testable distance of each other,
 so the mutant fails on an assertion rather than an out-of-memory kill), and the
 declared-size test fails if `archive/zip` ever stops enforcing it. `gofmt`,
 `go vet ./...`, `go test ./...` and both coverage floors green.
+
+### 2026-09-21 — The scroll that felt like dragging was the physics, not the pixels
+
+**The report.** "Konnekt scrolling feels somewhat sluggish. Compared to a web
+browser it is almost like it is dragging. Not visibly stuttering, but even on
+a lower refresh rate screen a browser feels smoother." The browser was Zen, a
+Firefox build; the machine was Windows 11, so the app was in WebView2.
+
+**Ruling things out before ruling something in.** The frontend was cleared
+first: no `scroll-behavior`, no non-passive wheel listener on the canvas (the
+two that exist are scoped to the backups carousel and the worlds scene, which
+claim the wheel on purpose), the prefetch listener is passive, and
+react-grid-layout positions tiles with transforms. The Linux GPU policy in
+`main.go` is a real software-rendering cliff, but it is inside the `Linux:`
+block and this was Windows. What settled it was the browser demo: rebuilt
+(`node demo/build.mjs`, which needed #418 to run on Windows at all) and
+served to Edge and to Zen side by side, the same dashboard felt exactly
+like the app in Edge and "absolutely wonderful" in Zen. Edge is the same
+Chromium as WebView2, so the app's code was not the variable; the engine's
+wheel animation was.
+
+**What the difference actually is.** Chromium animates each mouse-wheel notch
+with a fixed ease over a fixed duration: a run of notches is a run of
+identical little glides that each start from rest. Gecko's
+`ScrollAnimationMSDPhysics` models the scroll position as a unit mass on a
+critically damped spring whose resting point is the destination. A notch
+moves the resting point; the mass keeps its velocity; and the stiffness
+follows the rhythm of the notches (1250 for the first notch of a gesture,
+1000 through a steady run, 2000 once the gaps between notches grow past 1.3x
+the previous one so the settle happens before the hand leaves the wheel).
+Stock Firefox ships it off (`general.smoothScroll.msdPhysics.enabled` is
+`@IS_NIGHTLY_BUILD@` in `StaticPrefList.yaml`); Zen turns it on. That one
+preference is the whole gap the report described.
+
+**The fix: port it rather than approximate it.** `lib/springPhysics.ts` is
+the model with Gecko's constants and its `ComputeSpringConstant` schedule
+verbatim, and `ClampVelocityToMaximum` from bug 1866904 so a carried velocity
+can never overshoot. Where Gecko integrates numerically, the critically
+damped case has a closed form, `dest + (A + Bt)e^(-wt)`, so the port is exact
+at any frame rate and needs no timestep. `lib/springScroll.ts` is one
+non-passive `wheel` listener on the document: for a stepped-wheel notch it
+finds the scroller the notch would have moved (nearest vertical scroller with
+room that way, an in-flight destination standing in for the position so a run
+that reaches the bottom of the console chains into the canvas), takes the
+event over, and drives `scrollTop` from `requestAnimationFrame`. Everything
+else stays native: precision touchpads (`classifyWheel` reads Chromium's
+legacy 120-per-notch `wheelDeltaY`, which the OS lines-per-notch setting does
+not scale), events another handler already claimed, Ctrl or Shift held, a
+horizontal delta, the OS reduced-motion preference, and a frame that finds
+the element moved by something else (a scrollbar drag, the console following
+its tail) stops rather than fights. `AppSettings.SmoothScrolling` is the
+toggle, on by default, under Settings > Appearance, read per notch so it
+applies without a restart; the Go default test pins that an older settings
+file comes up with it on, since a `bool` defaulting to `true` is exactly the
+case unmarshalling onto a zero struct would get wrong silently.
+
+**Found on the way, filed on their own.** The demo build could not run on
+Windows at all (#418), and the Linux `WebviewGpuPolicyNever` line is a real
+software-rendering cliff that this physics can only draw slowly on; that one
+is the next entry.
+
+**Verification.** 28 new tests: the spring starts and settles where it is
+told, never overshoots or reverses from rest, its velocity is the derivative
+of its position, and the stiffness schedule's four branches and the velocity
+clamp each have a case; a run of notches keeps its velocity across the
+retarget and never passes the latest destination. The DOM half: a notch is
+taken over and glides to its destination, a run accumulates and clamps at the
+end, a precision delta, Ctrl, Shift, a horizontal delta, the toggle and an
+already-claimed event are all left alone, an inner scroller bound for its end
+chains outward, an outside move stops the animation, and uninstall leaves the
+element where it was. 867 frontend tests pass; `tsc -b`, ESLint and Prettier
+clean; the entry chunk stays under the 165 KB budget; `gofmt`, `go vet` and
+the settings tests green. Measured by hand against Zen on the machine that
+filed the report is the one check this session cannot run.
