@@ -30,6 +30,7 @@ were shipped early during Alpha. Their status below reflects reality.
 - [x] Tailwind CSS v4 design system (dark, #05060a base, #4ade80 accent),
       backed by the generated token layer in `frontend/src/styles/`
 - [x] Custom scrollbar (4px, dark minimal, matches design scheme)
+- [x] Mouse-wheel scrolling on Firefox's spring physics (Settings > Appearance, on by default)
 - [x] Satoshi (display), Excon (titles) and Ranade (body) webfonts; mono is the
       native OS stack. JetBrains Mono and Inter were the original plan and were
       never shipped
