@@ -1,15 +1,10 @@
-import { lazy, Suspense, useState, type ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
 import type { LucideIcon } from '../../lib/icons'
 import { IconButton } from '../../components/ui/IconButton'
 import { ErrorBoundary } from '../../components/ErrorBoundary'
 import { Maximize2, Minimize2, X } from '../../lib/icons'
 import { Icon } from '../../components/ui/Icon'
-
-// Opened by a right-click and by nothing else, so it loads on the first one
-// rather than with every tile. The specifier matches `lib/prefetch.ts`.
-const TileContextMenu = lazy(() =>
-  import('./LayoutMenu').then((m) => ({ default: m.TileContextMenu })),
-)
+import { TileContextMenu } from './LayoutMenu'
 import type { TileLayout } from '../../types'
 
 interface TileWrapperProps {
@@ -123,17 +118,21 @@ export function TileWrapper({
               </IconButton>
             )}
           </div>
-          {hasLayoutMenu && menuAt && (
-            <Suspense fallback={null}>
-              <TileContextMenu
-                at={menuAt}
-                layout={layout}
-                onChoose={(next) => onSetLayout(id, next)}
-                onClose={() => setMenuAt(null)}
-              />
-            </Suspense>
-          )}
         </div>
+        {/* A sibling of the header, not a child: the menu is a portal, and
+            React bubbles a portal's events to its React parent, so inside
+            the header its backdrop's right-click reopened it (its own
+            handler stops that too; this keeps the tree honest). Eager rather
+            than lazy: a chunk fetched on the first right-click was a visible
+            pause before anything appeared, for about a kilobyte. */}
+        {hasLayoutMenu && menuAt && (
+          <TileContextMenu
+            at={menuAt}
+            layout={layout}
+            onChoose={(next) => onSetLayout(id, next)}
+            onClose={() => setMenuAt(null)}
+          />
+        )}
         {/* The boundary sits inside the frame and around the content only.
             Every tile renders through this slot — the canvas copy and the
             maximized copy alike (Dashboard.tsx) — so this one boundary is what

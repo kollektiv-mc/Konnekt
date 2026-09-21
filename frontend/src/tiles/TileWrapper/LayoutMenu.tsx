@@ -19,8 +19,10 @@ interface Props {
  *
  * One entry today, "Layout", with the three in-tile layouts as its fly-out,
  * so the next entries the header grows slot in beside it rather than pushing
- * the layouts down a list. The rows follow `Combobox`'s option shape, a
- * check that is invisible until chosen, so the two menus read as one control.
+ * the layouts down a list. The fly-out is open from the first paint, since
+ * asking for a hover before the only choice appears made the menu feel slow.
+ * The rows follow `Combobox`'s option shape, a check that is invisible until
+ * chosen, so the two menus read as one control.
  */
 export function TileContextMenu({ at, layout, onChoose, onClose }: Props) {
   return (
@@ -28,6 +30,7 @@ export function TileContextMenu({ at, layout, onChoose, onClose }: Props) {
       at={at}
       label="Tile"
       onClose={onClose}
+      openChild="layout"
       items={[
         {
           id: 'layout',

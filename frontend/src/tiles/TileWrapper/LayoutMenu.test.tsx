@@ -29,24 +29,35 @@ function mount(props: Partial<Parameters<typeof TileWrapper>[0]> = {}) {
 const header = () => screen.getByText('Overview').closest('.drag-handle') as Element
 
 describe('the tile header context menu', () => {
-  it('opens at the pointer with a Layout entry', async () => {
+  it('opens at the pointer with the Layout fly-out already showing', () => {
     mount()
     expect(screen.queryByRole('menu')).toBeNull()
     fireEvent.contextMenu(header(), { clientX: 120, clientY: 60 })
-    const menu = await screen.findByRole('menu', { name: 'Tile' })
+    const menu = screen.getByRole('menu', { name: 'Tile' })
     expect(menu.style.left).toBe('120px')
     expect(menu.style.top).toBe('60px')
     expect(screen.getByRole('menuitem', { name: /Layout/ })).toBeTruthy()
+    expect(screen.getByRole('menu', { name: 'Layout' })).toBeTruthy()
   })
 
-  it('reports the layout chosen from the fly-out and marks the current one', async () => {
+  it('reports the layout chosen from the fly-out and marks the current one', () => {
     const onSetLayout = mount({ layout: 'detailed' })
     fireEvent.contextMenu(header(), { clientX: 10, clientY: 10 })
-    fireEvent.click(await screen.findByRole('menuitem', { name: /Layout/ }))
-    const current = await screen.findByRole('menuitemradio', { name: /Detailed/ })
+    const current = screen.getByRole('menuitemradio', { name: /Detailed/ })
     expect(current.getAttribute('aria-checked')).toBe('true')
     fireEvent.click(screen.getByRole('menuitemradio', { name: /Expanded/ }))
     expect(onSetLayout).toHaveBeenCalledWith('stats', 'expanded')
+    expect(screen.queryByRole('menu')).toBeNull()
+  })
+
+  // The menu is a portal and React bubbles its events to the header that
+  // opened it, which used to reopen the menu at the new pointer position.
+  it('closes on a right-click on its backdrop instead of moving', async () => {
+    mount()
+    fireEvent.contextMenu(header(), { clientX: 100, clientY: 50 })
+    const menu = screen.getByRole('menu', { name: 'Tile' })
+    fireEvent.contextMenu(menu.previousElementSibling as Element, { clientX: 400, clientY: 300 })
+    await new Promise((r) => setTimeout(r, 30))
     expect(screen.queryByRole('menu')).toBeNull()
   })
 
