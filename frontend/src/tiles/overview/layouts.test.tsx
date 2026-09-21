@@ -28,32 +28,34 @@ describe('Overview compact face layouts', () => {
     useSettingsStore.setState((s) => ({ settings: { ...s.settings, classicTileFaces: false } }))
   })
 
-  it('default: four figures and the memory bar', () => {
+  it('default: four figures and the memory bar, nothing the figures already say', () => {
     render(<OverviewTile serverId="srv1" layout="default" />)
     expect(screen.getByText('Uptime')).toBeTruthy()
     expect(screen.getByText('4218 / 8192 MB')).toBeTruthy()
-    expect(screen.queryByText('Max players')).toBeNull()
+    expect(screen.queryByText('Memory free')).toBeNull()
   })
 
-  it('compact: the figures only', () => {
-    render(<OverviewTile serverId="srv1" layout="compact" />)
+  it('expanded: the figures only', () => {
+    render(<OverviewTile serverId="srv1" layout="expanded" />)
     expect(screen.getByText('2h 14m')).toBeTruthy()
     expect(screen.queryByText('4218 / 8192 MB')).toBeNull()
   })
 
-  it('large: small figures plus the detail rows', () => {
-    render(<OverviewTile serverId="srv1" layout="large" />)
-    expect(screen.getByText('Max players')).toBeTruthy()
+  it('detailed: small figures, the bar, and rows the figures do not cover', () => {
+    render(<OverviewTile serverId="srv1" layout="detailed" />)
     expect(screen.getByText('2h 14m').className).toContain('text-sm')
+    expect(screen.getByText('4218 / 8192 MB')).toBeTruthy()
+    expect(screen.getByText('3974 MB')).toBeTruthy()
+    expect(screen.getByText('steady')).toBeTruthy()
   })
 
   it('classic faces win over the layout while the setting is on', async () => {
     useSettingsStore.setState((s) => ({ settings: { ...s.settings, classicTileFaces: true } }))
-    render(<OverviewTile serverId="srv1" layout="large" />)
+    render(<OverviewTile serverId="srv1" layout="detailed" />)
     // The classic face labels its row RAM and never had an Uptime figure. It
     // arrives through a lazy chunk, hence the wait.
     expect(await screen.findByText('RAM')).toBeTruthy()
     expect(screen.queryByText('Uptime')).toBeNull()
-    expect(screen.queryByText('Max players')).toBeNull()
+    expect(screen.queryByText('Memory free')).toBeNull()
   })
 })

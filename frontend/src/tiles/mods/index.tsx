@@ -108,7 +108,9 @@ function ModsSummary({
   // the default layout's shape; "N on" beside it is the number a running
   // server actually reflects, since a toggle here waits for a restart.
   return (
-    <div className="flex h-full min-h-0 flex-col">
+    <div
+      className={`flex h-full min-h-0 flex-col ${!classic && layout === 'expanded' ? 'justify-center' : ''}`}
+    >
       {classic ? (
         // The classic face's header, behind Settings › Appearance › "Classic
         // tile faces". The rows below it are shared with the figure-first face.
@@ -123,7 +125,7 @@ function ModsSummary({
       ) : (
         <div className="shrink-0 px-3 pt-2 pb-1">
           <Headline
-            size={layout === 'large' ? 'sm' : 'lg'}
+            size={layout === 'detailed' ? 'sm' : 'lg'}
             value={detecting ? '…' : String(installed.length)}
             unit={
               detecting
@@ -143,7 +145,7 @@ function ModsSummary({
           />
         </div>
       )}
-      {(classic || layout !== 'compact') && (
+      {(classic || layout !== 'expanded') && (
         <div className="min-h-0 flex-1 overflow-y-auto">
           <InstalledPanel
             mods={installed}

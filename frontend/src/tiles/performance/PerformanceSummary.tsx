@@ -24,8 +24,8 @@ const SparkChart = lazy(() => import('./charts').then((m) => ({ default: m.Spark
  * performance figure and the bar because the RAM line on the chart is the same
  * number over time.
  *
- * The compact layout keeps the figures and drops the chart; the large one
- * sets them small and adds the megabytes and the player count beside them.
+ * The expanded layout keeps the figures, spread, and drops the chart; the
+ * detailed one sets them small and adds the megabytes and the player count.
  *
  * Presentational — it takes the history rather than fetching it, so the tile
  * root and the Overview roll-up each supply their own.
@@ -44,7 +44,7 @@ export function PerformanceSummary({
   const ramPct = ramTotal > 0 ? (ramUsed / ramTotal) * 100 : 0
   const cpu = latest?.cpuPercent ?? 0
   const players = latest?.players ?? 0
-  const size = layout === 'large' ? 'sm' : 'lg'
+  const size = layout === 'detailed' ? 'sm' : 'lg'
 
   const sparkData = history.slice(-60).map((s) => ({
     ts: s.timestamp,
@@ -55,11 +55,13 @@ export function PerformanceSummary({
 
   return (
     <div className="flex h-full flex-col gap-2 px-3 py-2">
-      <div className="flex shrink-0 flex-wrap gap-x-5 gap-y-1">
+      <div
+        className={`flex flex-wrap gap-x-5 gap-y-1 ${layout === 'expanded' ? 'min-h-0 flex-1 content-around' : 'shrink-0'}`}
+      >
         <Figure size={size} label="TPS" value={fmtTps(tps)} valueClass={tpsColor(tps)} />
         <Figure size={size} label="CPU" value={`${cpu.toFixed(1)}%`} />
         <Figure size={size} label="RAM" value={ramTotal > 0 ? `${ramPct.toFixed(0)}%` : '—'} />
-        {layout === 'large' && (
+        {layout === 'detailed' && (
           <>
             <Figure
               size={size}
@@ -71,7 +73,7 @@ export function PerformanceSummary({
         )}
       </div>
 
-      {layout === 'compact' ? null : (
+      {layout === 'expanded' ? null : (
         <div className="border-border-subtle border-hairline min-h-0 flex-1 overflow-hidden rounded">
           {sparkData.length > 1 ? (
             <Suspense fallback={<ChartFallback />}>

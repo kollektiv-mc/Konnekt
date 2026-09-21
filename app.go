@@ -555,7 +555,7 @@ func (a *App) SaveActiveTiles(ids []string) error {
 
 // --- Tile layouts ---
 // Which in-tile layout each tile shows on the canvas (frontend/src/types
-// TileLayout: "compact", "default" or "large"), keyed by tile id. A tile that
+// TileLayout: "detailed", "default" or "expanded"), keyed by tile id. A tile that
 // is not in the map is on its default. Kept apart from active_tiles.json and
 // the layout presets so a preset switch, which rearranges the board, never
 // changes how a tile reads.

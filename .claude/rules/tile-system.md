@@ -18,12 +18,16 @@ Adding a new tile:
 A tile's compact face leads with its key figure and keeps its detail below,
 built from `components/ui/Figure.tsx`'s `Figure` and `Headline`. A tile that
 sets `layouts: true` honours `TileProps.layout` (`types/index.ts`'s
-`TileLayout`: `compact` keeps the figure alone, `default` sets it large over
-the detail, `large` sets it small and adds more), chosen per tile from the
-header's right-click menu (`TileWrapper/LayoutMenu.tsx`) and kept in
-`tile_layouts.json` by `useTileStore`. The maximized face ignores it. A face
-that has one shape (the console, a key/value list) does not set `layouts`, so
-it never offers a choice that would change nothing. Settings › Appearance ›
+`TileLayout`: `default` sets the figure large over the detail, `detailed`
+sets it small and packs in more, `expanded` keeps the figure alone and spreads
+it over the tile), chosen per tile from the header's right-click menu at the
+pointer (`components/ui/ContextMenu.tsx`, with the layouts as the "Layout"
+fly-out in `TileWrapper/LayoutMenu.tsx`) and kept in `tile_layouts.json` by
+`useTileStore`. The maximized face ignores it and stays what it is. The
+console's three are the log as it comes, every line at a tighter leading, and
+only the notable lines with each run of chatter folded into one row
+(`lib/logImportance.ts`). A face that has one shape (a key/value list) does
+not set `layouts`, so it never offers a choice that would change nothing. Settings › Appearance ›
 "Classic tile faces" swaps every figure-first face for the `Classic*` component
 beside it, the face the tile had before, and the layout does not apply while
 that is on.
@@ -32,9 +36,12 @@ The face's slot is a size container (`.tile-body` in `style.css`), and the
 `tile-tall:` variant declared there applies a utility once the face has a
 default-size tile's worth of height. `Vitals` is the worked case: its four
 figures go one row at the four-row minimum and two by two above it, which is
-what keeps the memory bar under them from being cut off. Reach for the variant
-before a measured size in the component; the Commands grid measures because it
-picks a column count from a range, not between two arrangements.
+what keeps the memory bar under them from being cut off, and the figure block
+is the flexible region with its rows spread over it, so a tall tile fills
+rather than leaving a gap under a short face. Anything that must never be
+pushed out (a bar, a button) sits outside the flexible region. Reach for the
+variant before a measured size in the component; the Commands grid measures
+because it picks a column count from a range, not between two arrangements.
 
 A new tile is per-server by construction: `Dashboard.tsx` keys the tile tree
 `${tile.id}:${serverId}` (#234), so a switch remounts every tile and its

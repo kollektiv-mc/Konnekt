@@ -16,8 +16,8 @@ interface Props {
  * server admits, then who they are.
  *
  * The count is the figure and the roster is the detail, in that order, which
- * is the default layout's shape. Compact keeps the count alone; large sets it
- * small and gives the rows every tag and a last-seen time. `maxPlayers` comes
+ * is the default layout's shape. Expanded keeps the count alone, centred;
+ * detailed sets it small and gives the rows every tag and a last-seen time. `maxPlayers` comes
  * from the server status the app hydrates once (`hooks/useServerStatus.ts`),
  * the same store `Vitals` reads it from; the roster itself is the tile's own
  * hook.
@@ -27,18 +27,20 @@ export function PlayerSummary({ players, reachable, onSelectPlayer, layout = 'de
   const online = players.filter((p) => p.online).length
 
   return (
-    <div className="flex h-full flex-col gap-2 px-3 py-2">
+    <div
+      className={`flex h-full flex-col gap-2 px-3 py-2 ${layout === 'expanded' ? 'justify-center' : ''}`}
+    >
       <Headline
-        size={layout === 'large' ? 'sm' : 'lg'}
+        size={layout === 'detailed' ? 'sm' : 'lg'}
         value={String(online)}
         unit={`of ${maxPlayers} online`}
       />
-      {layout !== 'compact' && (
+      {layout !== 'expanded' && (
         <PlayerList
           players={players}
           reachable={reachable}
           onSelectPlayer={onSelectPlayer}
-          detailed={layout === 'large'}
+          detailed={layout === 'detailed'}
         />
       )}
     </div>

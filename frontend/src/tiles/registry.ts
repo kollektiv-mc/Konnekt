@@ -30,6 +30,7 @@ export const TILE_REGISTRY: TileDefinition[] = [
     label: 'Console',
     icon: SquareChevronRight,
     maximizable: true,
+    layouts: true,
     component: ConsoleTile,
   },
   {

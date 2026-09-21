@@ -26,39 +26,38 @@ function mount(props: Partial<Parameters<typeof TileWrapper>[0]> = {}) {
   return onSetLayout
 }
 
-describe('the tile header layout menu', () => {
-  it('opens on right-click and reports the chosen layout', async () => {
-    const onSetLayout = mount()
-    const header = screen.getByText('Overview').closest('.drag-handle')
-    expect(header).not.toBeNull()
-    // Nothing is mounted until the first right-click: the menu is a lazy chunk.
+const header = () => screen.getByText('Overview').closest('.drag-handle') as Element
+
+describe('the tile header context menu', () => {
+  it('opens at the pointer with a Layout entry', async () => {
+    mount()
     expect(screen.queryByRole('menu')).toBeNull()
-
-    fireEvent.contextMenu(header as Element)
-    fireEvent.click(await screen.findByRole('menuitemradio', { name: /Large/ }))
-
-    expect(onSetLayout).toHaveBeenCalledWith('stats', 'large')
+    fireEvent.contextMenu(header(), { clientX: 120, clientY: 60 })
+    const menu = await screen.findByRole('menu', { name: 'Tile' })
+    expect(menu.style.left).toBe('120px')
+    expect(menu.style.top).toBe('60px')
+    expect(screen.getByRole('menuitem', { name: /Layout/ })).toBeTruthy()
   })
 
-  it('marks the current layout as checked', async () => {
-    mount({ layout: 'compact' })
-    fireEvent.contextMenu(screen.getByText('Overview').closest('.drag-handle') as Element)
-    expect(
-      (await screen.findByRole('menuitemradio', { name: /Compact/ })).getAttribute('aria-checked'),
-    ).toBe('true')
-    expect(
-      screen.getByRole('menuitemradio', { name: /Default/ }).getAttribute('aria-checked'),
-    ).toBe('false')
+  it('reports the layout chosen from the fly-out and marks the current one', async () => {
+    const onSetLayout = mount({ layout: 'detailed' })
+    fireEvent.contextMenu(header(), { clientX: 10, clientY: 10 })
+    fireEvent.click(await screen.findByRole('menuitem', { name: /Layout/ }))
+    const current = await screen.findByRole('menuitemradio', { name: /Detailed/ })
+    expect(current.getAttribute('aria-checked')).toBe('true')
+    fireEvent.click(screen.getByRole('menuitemradio', { name: /Expanded/ }))
+    expect(onSetLayout).toHaveBeenCalledWith('stats', 'expanded')
+    expect(screen.queryByRole('menu')).toBeNull()
   })
 
   it('offers no menu to a tile without layouts, nor to the maximized copy', async () => {
     mount({ layout: undefined, onSetLayout: undefined })
-    fireEvent.contextMenu(screen.getByText('Overview').closest('.drag-handle') as Element)
+    fireEvent.contextMenu(header(), { clientX: 10, clientY: 10 })
     await new Promise((r) => setTimeout(r, 50))
     expect(screen.queryByRole('menu')).toBeNull()
     cleanup()
     mount({ maximized: true })
-    fireEvent.contextMenu(screen.getByText('Overview').closest('.drag-handle') as Element)
+    fireEvent.contextMenu(header(), { clientX: 10, clientY: 10 })
     await new Promise((r) => setTimeout(r, 50))
     expect(screen.queryByRole('menu')).toBeNull()
   })

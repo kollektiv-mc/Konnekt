@@ -4,13 +4,13 @@ import type { ReactNode } from 'react'
  * The two shapes a tile's key figure comes in, and the one axis a tile layout
  * moves them along.
  *
- * A tile's compact face leads with the number that is the point of the tile:
+ * A tile's canvas face leads with the number that is the point of the tile:
  * how many players, what the TPS is, when the last backup ran. The default
- * layout sets that figure large with its detail below it; the minimal layout
- * (later, per tile, from the header's context menu) keeps only the figure; the
- * maximal one sets it small to make room for more detail. `size` is that axis,
- * so a tile never picks its own figure scale and the three layouts stay one
- * decision made in one place.
+ * layout sets that figure large with its detail below it; the detailed layout
+ * (per tile, from the header's context menu) sets it small to pack in more;
+ * the expanded one keeps the figure alone and spreads it over the tile. `size`
+ * is that axis, so a tile never picks its own figure scale and the three
+ * layouts stay one decision made in one place.
  *
  * Values are `font-mono` for the reason `.claude/rules/frontend-style.md`
  * § Numerals gives: a readout that changes in place has to keep its width,

@@ -19,21 +19,21 @@ describe('useTileStore layouts', () => {
 
   it('reads only the layouts it knows, and never stores default', () => {
     expect(
-      readTileLayouts({ stats: 'large', players: 'compact', worlds: 'default', mods: 'huge' }),
-    ).toEqual({ stats: 'large', players: 'compact' })
+      readTileLayouts({ stats: 'detailed', players: 'expanded', worlds: 'default', mods: 'huge' }),
+    ).toEqual({ stats: 'detailed', players: 'expanded' })
     expect(readTileLayouts(undefined)).toEqual({})
   })
 
   it('loads the saved layouts with the active list', async () => {
-    vi.mocked(App.GetTileLayouts).mockResolvedValue({ stats: 'compact' })
+    vi.mocked(App.GetTileLayouts).mockResolvedValue({ stats: 'expanded' })
     await useTileStore.getState().loadTiles()
-    expect(useTileStore.getState().layouts).toEqual({ stats: 'compact' })
+    expect(useTileStore.getState().layouts).toEqual({ stats: 'expanded' })
   })
 
   it('persists a choice and drops the key for default', async () => {
-    await useTileStore.getState().setLayout('stats', 'large')
-    expect(useTileStore.getState().layouts).toEqual({ stats: 'large' })
-    expect(App.SaveTileLayouts).toHaveBeenLastCalledWith({ stats: 'large' })
+    await useTileStore.getState().setLayout('stats', 'detailed')
+    expect(useTileStore.getState().layouts).toEqual({ stats: 'detailed' })
+    expect(App.SaveTileLayouts).toHaveBeenLastCalledWith({ stats: 'detailed' })
 
     await useTileStore.getState().setLayout('stats', 'default')
     expect(useTileStore.getState().layouts).toEqual({})
@@ -42,16 +42,18 @@ describe('useTileStore layouts', () => {
 
   it('reverts and records the reason when the bridge refuses the write', async () => {
     attachBridge()
-    useTileStore.setState({ layouts: { stats: 'compact' } })
+    useTileStore.setState({ layouts: { stats: 'expanded' } })
     vi.mocked(App.SaveTileLayouts).mockRejectedValue(new Error('disk full'))
-    await expect(useTileStore.getState().setLayout('stats', 'large')).rejects.toThrow('disk full')
-    expect(useTileStore.getState().layouts).toEqual({ stats: 'compact' })
+    await expect(useTileStore.getState().setLayout('stats', 'detailed')).rejects.toThrow(
+      'disk full',
+    )
+    expect(useTileStore.getState().layouts).toEqual({ stats: 'expanded' })
     expect(useTileStore.getState().error).toBe('disk full')
   })
 
   it('keeps the optimistic value with no bridge to persist to', async () => {
     vi.mocked(App.SaveTileLayouts).mockRejectedValue(new Error('no wails bridge'))
-    await useTileStore.getState().setLayout('stats', 'large')
-    expect(useTileStore.getState().layouts).toEqual({ stats: 'large' })
+    await useTileStore.getState().setLayout('stats', 'detailed')
+    expect(useTileStore.getState().layouts).toEqual({ stats: 'detailed' })
   })
 })

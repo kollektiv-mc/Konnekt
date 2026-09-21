@@ -1,65 +1,47 @@
-import { Popover } from '../../components/ui/Popover'
-import { Icon } from '../../components/ui/Icon'
-import { Check } from '../../lib/icons'
+import { ContextMenu, type MenuPosition } from '../../components/ui/ContextMenu'
 import { TILE_LAYOUTS, type TileLayout } from '../../types'
 
 const LABELS: Record<TileLayout, { label: string; hint: string }> = {
-  compact: { label: 'Compact', hint: 'The key figure only' },
+  detailed: { label: 'Detailed', hint: 'Small figures, more rows' },
   default: { label: 'Default', hint: 'Key figure large, detail below' },
-  large: { label: 'Large', hint: 'Key figure small, more detail' },
+  expanded: { label: 'Expanded', hint: 'The key figure, spread out' },
 }
 
 interface Props {
-  open: boolean
+  at: MenuPosition
   layout: TileLayout
   onChoose: (layout: TileLayout) => void
   onClose: () => void
 }
 
 /**
- * The menu a right-click on a tile's header opens: which of the three in-tile
- * layouts the compact face shows.
+ * The menu a right-click on a tile's header opens, at the pointer.
  *
- * A `Popover` under the header rather than a menu at the pointer: the header
- * is the thing that was clicked and is 33px tall, so the two positions are a
- * few pixels apart, and the popover already carries the open animation, the
- * backdrop that closes it and the layer it sits on. The rows follow
- * `Combobox`'s option shape, a check that is invisible until chosen, so the
- * two menus read as one control.
+ * One entry today, "Layout", with the three in-tile layouts as its fly-out,
+ * so the next entries the header grows slot in beside it rather than pushing
+ * the layouts down a list. The rows follow `Combobox`'s option shape, a
+ * check that is invisible until chosen, so the two menus read as one control.
  */
-export function LayoutMenu({ open, layout, onChoose, onClose }: Props) {
+export function TileContextMenu({ at, layout, onChoose, onClose }: Props) {
   return (
-    <Popover open={open} onClose={onClose} align="left" width={200}>
-      <div role="menu" aria-label="Tile layout" className="py-1">
-        {TILE_LAYOUTS.map((option) => {
-          const selected = option === layout
-          return (
-            <button
-              key={option}
-              type="button"
-              role="menuitemradio"
-              aria-checked={selected}
-              onClick={() => {
-                onChoose(option)
-                onClose()
-              }}
-              className={`hover:bg-hover flex w-full cursor-pointer items-center gap-2 px-2 py-1.5 text-left transition-colors ${
-                selected ? 'text-accent' : 'text-text-primary'
-              }`}
-            >
-              <Icon
-                icon={Check}
-                size="xs"
-                className={`text-accent ${selected ? 'opacity-100' : 'opacity-0'}`}
-              />
-              <span className="flex min-w-0 flex-col">
-                <span className="text-xs">{LABELS[option].label}</span>
-                <span className="text-text-faint text-2xs">{LABELS[option].hint}</span>
-              </span>
-            </button>
-          )
-        })}
-      </div>
-    </Popover>
+    <ContextMenu
+      at={at}
+      label="Tile"
+      onClose={onClose}
+      items={[
+        {
+          id: 'layout',
+          label: 'Layout',
+          hint: LABELS[layout].label,
+          children: TILE_LAYOUTS.map((option) => ({
+            id: option,
+            label: LABELS[option].label,
+            hint: LABELS[option].hint,
+            checked: option === layout,
+            onSelect: () => onChoose(option),
+          })),
+        },
+      ]}
+    />
   )
 }

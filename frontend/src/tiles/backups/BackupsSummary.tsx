@@ -19,8 +19,8 @@ interface Props {
  * The age of the last backup is the figure, its size and the archive count
  * the detail under it, and the button holds the bottom edge: the default
  * layout's shape. World backups are counted in the maximized face; here the
- * question is only whether the whole server is safe. Compact keeps the figure
- * and the button; large sets the figure small and lists the archives kept.
+ * question is only whether the whole server is safe. Expanded keeps the figure
+ * and the button; detailed sets the figure small and lists the archives kept.
  */
 export function BackupsSummary({ serverId, layout = 'default' }: Props) {
   const { status } = useServerStore()
@@ -69,15 +69,17 @@ export function BackupsSummary({ serverId, layout = 'default' }: Props) {
 
   return (
     <div className="relative flex h-full flex-col gap-2 px-3 py-2">
-      <div className="flex min-h-0 flex-1 flex-col gap-1">
+      <div
+        className={`flex min-h-0 flex-1 flex-col gap-1 ${layout === 'expanded' ? 'justify-center' : ''}`}
+      >
         {latest ? (
           <>
             <Figure
-              size={layout === 'large' ? 'sm' : 'lg'}
+              size={layout === 'detailed' ? 'sm' : 'lg'}
               label="Last full backup"
               value={relativeMs(latest.createdAt)}
             />
-            {layout !== 'compact' && (
+            {layout !== 'expanded' && (
               <span className="text-text-muted text-xs">
                 {fmtBytes(latest.sizeBytes)} · {serverBackups.length}{' '}
                 {serverBackups.length === 1 ? 'archive' : 'archives'} kept
@@ -86,13 +88,13 @@ export function BackupsSummary({ serverId, layout = 'default' }: Props) {
           </>
         ) : (
           <Figure
-            size={layout === 'large' ? 'sm' : 'lg'}
+            size={layout === 'detailed' ? 'sm' : 'lg'}
             label="Last full backup"
             value="never"
             valueClass="text-text-faint"
           />
         )}
-        {layout === 'large' && serverBackups.length > 0 && (
+        {layout === 'detailed' && serverBackups.length > 0 && (
           <div className="mt-1 min-h-0 flex-1 overflow-y-auto">
             {serverBackups.map((b) => (
               <div

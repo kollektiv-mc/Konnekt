@@ -86,15 +86,16 @@ export interface ConfigFile {
 // Frontend-only shapes below: no Go counterpart, nothing to alias.
 
 /**
- * How much a tile's compact face shows, chosen per tile from its header's
+ * How much a tile's canvas face shows, chosen per tile from its header's
  * context menu and kept in tile_layouts.json (app.go). `default` leads with the
- * tile's key figure large and its detail below; `compact` keeps only the
- * figure; `large` sets the figure small to make room for more detail. The
- * maximized face ignores it: that one already has all the room there is.
+ * tile's key figure large and its detail below; `detailed` sets the figure
+ * small and packs in more; `expanded` is the figure alone, spread over the
+ * tile. The maximized face ignores it: that one already has all the room there
+ * is, and it stays the one it has.
  */
-export type TileLayout = 'compact' | 'default' | 'large'
+export type TileLayout = 'detailed' | 'default' | 'expanded'
 
-export const TILE_LAYOUTS: readonly TileLayout[] = ['compact', 'default', 'large']
+export const TILE_LAYOUTS: readonly TileLayout[] = ['detailed', 'default', 'expanded']
 
 export function isTileLayout(v: unknown): v is TileLayout {
   return typeof v === 'string' && (TILE_LAYOUTS as readonly string[]).includes(v)

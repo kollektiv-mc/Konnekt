@@ -7,7 +7,9 @@ import { Icon } from '../../components/ui/Icon'
 
 // Opened by a right-click and by nothing else, so it loads on the first one
 // rather than with every tile. The specifier matches `lib/prefetch.ts`.
-const LayoutMenu = lazy(() => import('./LayoutMenu').then((m) => ({ default: m.LayoutMenu })))
+const TileContextMenu = lazy(() =>
+  import('./LayoutMenu').then((m) => ({ default: m.TileContextMenu })),
+)
 import type { TileLayout } from '../../types'
 
 interface TileWrapperProps {
@@ -50,10 +52,8 @@ export function TileWrapper({
   // The layout menu opens from the header's context menu and only on the
   // canvas copy: the maximized face ignores the layout, so offering it there
   // would change nothing the user can see.
-  const [menuOpen, setMenuOpen] = useState(false)
-  // Mounted on the first open and kept afterwards, so the popover's close
-  // animation has something to run on and the chunk is fetched once.
-  const [menuOpened, setMenuOpened] = useState(false)
+  // Where the right-click landed, in viewport coordinates; null while closed.
+  const [menuAt, setMenuAt] = useState<{ x: number; y: number } | null>(null)
   const hasLayoutMenu = !maximized && layout !== undefined && onSetLayout !== undefined
 
   return (
@@ -77,7 +77,7 @@ export function TileWrapper({
         }
       >
         <div
-          className={`drag-handle border-border-subtle border-b-hairline relative flex shrink-0 items-center justify-between px-3 py-2 select-none ${
+          className={`drag-handle border-border-subtle border-b-hairline flex shrink-0 items-center justify-between px-3 py-2 select-none ${
             maximized ? 'cursor-default' : 'cursor-grab'
           }`}
           onDoubleClick={maximizable ? () => onToggleMaximize?.(id) : undefined}
@@ -85,8 +85,7 @@ export function TileWrapper({
             hasLayoutMenu
               ? (e) => {
                   e.preventDefault()
-                  setMenuOpened(true)
-                  setMenuOpen(true)
+                  setMenuAt({ x: e.clientX, y: e.clientY })
                 }
               : undefined
           }
@@ -124,13 +123,13 @@ export function TileWrapper({
               </IconButton>
             )}
           </div>
-          {hasLayoutMenu && menuOpened && (
+          {hasLayoutMenu && menuAt && (
             <Suspense fallback={null}>
-              <LayoutMenu
-                open={menuOpen}
+              <TileContextMenu
+                at={menuAt}
                 layout={layout}
                 onChoose={(next) => onSetLayout(id, next)}
-                onClose={() => setMenuOpen(false)}
+                onClose={() => setMenuAt(null)}
               />
             </Suspense>
           )}

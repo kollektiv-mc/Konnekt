@@ -20,8 +20,8 @@ interface Props {
  * "3 / 4 armed" is the figure, the soonest run sits at the end of the same
  * line, and the graphs are the detail under it: the default layout's shape.
  * The two centred counters this replaced said the same thing in twice the
- * height and left the next-run time for a footer. Compact keeps the line
- * alone; large sets it small and gives each row its block count.
+ * height and left the next-run time for a footer. Expanded keeps the line
+ * alone, centred; detailed sets it small and gives each row its block count.
  */
 export function SchedulerSummary({ graphs, nextRuns, loading, error, layout = 'default' }: Props) {
   const enabled = graphs.filter((g) => g.enabled).length
@@ -32,9 +32,11 @@ export function SchedulerSummary({ graphs, nextRuns, loading, error, layout = 'd
     .sort((a, b) => a - b)[0]
 
   return (
-    <div className="flex h-full flex-col gap-2 overflow-hidden px-3 py-2">
+    <div
+      className={`flex h-full flex-col gap-2 overflow-hidden px-3 py-2 ${layout === 'expanded' ? 'justify-center' : ''}`}
+    >
       <Headline
-        size={layout === 'large' ? 'sm' : 'lg'}
+        size={layout === 'detailed' ? 'sm' : 'lg'}
         value={`${enabled} / ${graphs.length}`}
         unit="armed"
         aside={
@@ -48,7 +50,7 @@ export function SchedulerSummary({ graphs, nextRuns, loading, error, layout = 'd
         }
       />
 
-      {layout !== 'compact' && (
+      {layout !== 'expanded' && (
         <div className="min-h-0 flex-1 overflow-y-auto">
           {graphs.length === 0 ? (
             <div className="flex h-full items-center justify-center">
@@ -72,7 +74,7 @@ export function SchedulerSummary({ graphs, nextRuns, loading, error, layout = 'd
                   >
                     {g.name || g.id}
                   </span>
-                  {layout === 'large' && (
+                  {layout === 'detailed' && (
                     <span className="text-text-faint text-2xs shrink-0 font-mono">
                       {g.nodes?.length ?? 0} blocks
                     </span>

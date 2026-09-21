@@ -15,8 +15,9 @@ interface Props {
  * they weigh, which one is active, and the list of them with their sizes.
  *
  * The count is the figure, the active world sits at the end of the same line,
- * and the list is the detail below: the default layout's shape. Compact keeps
- * the line alone; large sets it small and adds when each world was last played.
+ * and the list is the detail below: the default layout's shape. Expanded keeps
+ * the line alone, centred; detailed sets it small and adds when each world was
+ * last played.
  *
  * Presentational on purpose. The tile's maximized face is a WebGL scene behind
  * `lazy()`, and keeping this half free of it is what lets the Overview roll-up
@@ -27,9 +28,11 @@ export function WorldsSummary({ worlds, loading, error, layout = 'default' }: Pr
   const total = worlds.reduce((sum, w) => sum + w.totalSize, 0)
 
   return (
-    <div className="flex h-full flex-col gap-2 overflow-hidden px-3 py-2">
+    <div
+      className={`flex h-full flex-col gap-2 overflow-hidden px-3 py-2 ${layout === 'expanded' ? 'justify-center' : ''}`}
+    >
       <Headline
-        size={layout === 'large' ? 'sm' : 'lg'}
+        size={layout === 'detailed' ? 'sm' : 'lg'}
         value={String(worlds.length)}
         unit={worlds.length === 1 ? 'world' : `worlds · ${fmtBytes(total)}`}
         aside={
@@ -41,7 +44,7 @@ export function WorldsSummary({ worlds, loading, error, layout = 'default' }: Pr
         }
       />
 
-      {layout !== 'compact' && (
+      {layout !== 'expanded' && (
         <div className="min-h-0 flex-1 overflow-y-auto">
           {loading && (
             <div className="flex h-full items-center justify-center">
@@ -71,7 +74,7 @@ export function WorldsSummary({ worlds, loading, error, layout = 'default' }: Pr
               >
                 {w.name}
               </span>
-              {layout === 'large' && (
+              {layout === 'detailed' && (
                 <span className="text-text-faint text-2xs shrink-0 font-mono">
                   {relativeMs(w.modified)}
                 </span>
