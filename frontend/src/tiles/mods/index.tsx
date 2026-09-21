@@ -12,6 +12,7 @@ import { DetectServerLoader } from '../../../wailsjs/go/main/App'
 import { models } from '../../../wailsjs/go/models'
 import { PLUGIN_LOADERS } from '../../lib/constants'
 import { readOr } from '../../lib/ipc'
+import { Headline } from '../../components/ui/Figure'
 
 function useServerKind(serverId: string): { kind: 'mods' | 'plugins'; detecting: boolean } {
   const config = useServerConfigStore((s) => s.configs.find((c) => c.id === serverId))
@@ -96,18 +97,23 @@ function ModsSummary({
   const noun = kind === 'plugins' ? 'plugin' : 'mod'
   const nounPlural = kind === 'plugins' ? 'plugins' : 'mods'
   const modProcess = useProcessesStore((s) => s.processes['mod:' + serverId])
+  const enabledCount = installed.filter((m) => m.enabled).length
 
+  // The installed count is the figure and the rows under it are the detail,
+  // the default layout's shape; "N on" beside it is the number a running
+  // server actually reflects, since a toggle here waits for a restart.
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <div className="flex shrink-0 items-center justify-between px-3 py-2">
-        <span className="text-text-secondary text-xs font-semibold">
-          {detecting
-            ? 'Detecting server type…'
-            : `${installed.length} ${installed.length !== 1 ? nounPlural : noun}`}
-        </span>
-        {running && (
-          <span className="text-text-muted text-2xs text-xs">restart needed for changes</span>
-        )}
+      <div className="shrink-0 px-3 pt-2 pb-1">
+        <Headline
+          value={detecting ? '…' : String(installed.length)}
+          unit={
+            detecting
+              ? 'detecting server type…'
+              : `${installed.length === 1 ? noun : nounPlural} installed · ${enabledCount} on`
+          }
+          aside={running ? 'restart needed for changes' : undefined}
+        />
       </div>
       {modProcess?.status === 'running' && (
         <div className="bg-border-subtle h-0.5 w-full shrink-0">

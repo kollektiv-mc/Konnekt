@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import type { TileProps, Player } from '../../types'
-import { PlayerGrid } from './PlayerGrid'
+import { PlayerSummary } from './PlayerSummary'
 import { PlayerRoster } from './PlayerRoster'
 import { PlayerDetailPopup } from './PlayerDetailPopup'
 import { usePlayers } from './usePlayers'
@@ -14,7 +14,7 @@ export function PlayersTile({ serverId, maximized }: TileProps) {
       {maximized ? (
         <PlayerRoster players={players} reachable={reachable} onSelectPlayer={setSelected} />
       ) : (
-        <PlayerGrid players={players} reachable={reachable} onSelectPlayer={setSelected} />
+        <PlayerSummary players={players} reachable={reachable} onSelectPlayer={setSelected} />
       )}
 
       {selected && (

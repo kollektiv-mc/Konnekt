@@ -1,26 +1,10 @@
 import { useServerStore } from '../../stores/useServerStore'
+import { Figure } from '../../components/ui/Figure'
 
 function tpsColor(tps: number): string {
   if (tps >= 18) return 'text-accent'
   if (tps >= 14) return 'text-yellow-400'
   return 'text-red-400'
-}
-
-function StatRow({
-  label,
-  value,
-  className = '',
-}: {
-  label: string
-  value: string
-  className?: string
-}) {
-  return (
-    <div className="border-border-subtle border-b-hairline flex items-center justify-between py-1 last:border-0">
-      <span className="text-text-muted text-xs">{label}</span>
-      <span className={`font-mono text-sm font-medium ${className}`}>{value}</span>
-    </div>
-  )
 }
 
 // The status pill's five faces. Starting and stopping share the warning amber
@@ -47,13 +31,18 @@ export const PILL = {
 } as const
 
 /**
- * The server's vitals: status pill, players, TPS, RAM, memory bar.
+ * The server's vitals: a status pill, four figures, and the memory bar.
  *
- * This is the Overview tile's compact face, unchanged from when the tile was
- * called Stats. It reads `useServerStore` and nothing else, which is why an
- * Overview sitting on the canvas costs no IPC at all — every section of the
- * maximized dashboard fetches on mount, and none of them mount until the user
- * asks for it.
+ * This is the Overview tile's compact face. The four figures (players, TPS,
+ * uptime, memory) lead at the large figure size and the bar sits under them as
+ * the detail, which is the default layout's shape: the key numbers first, the
+ * rest below. The pill stays above them because it is the only place on the
+ * canvas that says whether the server is up at all, and a figure reading "—"
+ * does not say why.
+ *
+ * It reads `useServerStore` and nothing else, which is why an Overview sitting
+ * on the canvas costs no IPC at all — every section of the maximized dashboard
+ * fetches on mount, and none of them mount until the user asks for it.
  */
 export function Vitals() {
   const status = useServerStore((s) => s.status)
@@ -79,31 +68,30 @@ export function Vitals() {
     ]
 
   return (
-    <div className="flex h-full flex-col justify-between px-3 py-3">
-      <div className="mb-3 flex items-center gap-2">
+    <div className="flex h-full flex-col gap-3 px-3 py-3">
+      <div className="flex shrink-0 items-center gap-2">
         <span className={`h-2 w-2 rounded-full ${pill.dot}`} />
-        <span className={`text-sm font-semibold ${pill.text}`}>{pill.label}</span>
-        {online && <span className="text-text-faint ml-auto text-xs">{status.uptime}</span>}
+        <span className={`text-xs font-semibold ${pill.text}`}>{pill.label}</span>
       </div>
 
-      <div className="flex-1">
-        <StatRow label="Players" value={`${status.players} / ${status.maxPlayers}`} />
-        <StatRow
+      <div className="grid shrink-0 grid-cols-2 gap-x-3 gap-y-2">
+        <Figure label="Players" value={`${status.players} / ${status.maxPlayers}`} />
+        <Figure
           label="TPS"
           value={online && status.tps >= 0 ? status.tps.toFixed(1) : '—'}
-          className={online && status.tps >= 0 ? tpsColor(status.tps) : ''}
+          valueClass={online && status.tps >= 0 ? tpsColor(status.tps) : undefined}
         />
-        <StatRow
-          label="RAM"
-          value={online ? `${Math.round(status.ramUsed)} / ${Math.round(status.ramTotal)} MB` : '—'}
-        />
+        <Figure label="Uptime" value={online ? status.uptime : '—'} />
+        <Figure label="Memory" value={online ? `${ramPct.toFixed(0)}%` : '—'} />
       </div>
 
       {online && (
-        <div className="mt-2">
-          <div className="text-text-faint mb-1 flex justify-between text-xs">
+        <div className="mt-auto shrink-0">
+          <div className="text-text-muted mb-1 flex justify-between text-xs">
             <span>Memory</span>
-            <span>{ramPct.toFixed(0)}%</span>
+            <span className="text-text-secondary font-mono">
+              {Math.round(status.ramUsed)} / {Math.round(status.ramTotal)} MB
+            </span>
           </div>
           <div className="bg-hover h-1 overflow-hidden rounded-full">
             <div

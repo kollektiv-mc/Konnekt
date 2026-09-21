@@ -2,6 +2,7 @@ import { lazy, Suspense } from 'react'
 import type { StatsSnapshot } from './usePerformanceHistory'
 import { tpsColor, fmtTps } from './helpers'
 import { ChartFallback } from './ChartFallback'
+import { Figure } from '../../components/ui/Figure'
 
 // recharts is heavy (~250KB gzip) and only needed once a chart actually
 // renders — lazy-load it behind one shared chunk for both chart variants. The
@@ -11,26 +12,16 @@ import { ChartFallback } from './ChartFallback'
 // and warm nothing (`pnpm check-prefetch`).
 const SparkChart = lazy(() => import('./charts').then((m) => ({ default: m.SparkChart })))
 
-function StatCell({
-  label,
-  value,
-  valueClass = 'text-white',
-}: {
-  label: string
-  value: string
-  valueClass?: string
-}) {
-  return (
-    <div className="flex flex-col">
-      <span className="text-2xs text-white/40">{label}</span>
-      <span className={`font-mono text-xs font-medium ${valueClass}`}>{value}</span>
-    </div>
-  )
-}
-
 /**
- * The compact face of the Performance tile: latest TPS, CPU, RAM and player
- * count, a memory bar, and a sparkline over the last 60 samples.
+ * The compact face of the Performance tile: the latest TPS, CPU and RAM as
+ * three figures, and a sparkline of the last 60 samples under them.
+ *
+ * Figures first, chart below: the default layout's shape. RAM is a percentage
+ * here because the three read as one row that way; the megabytes are in the
+ * Overview tile's bar and the maximized table. The player count and the memory
+ * bar this face used to carry are gone from it, the count because it is not a
+ * performance figure and the bar because the RAM line on the chart is the same
+ * number over time.
  *
  * Presentational — it takes the history rather than fetching it, so the tile
  * root and the Overview roll-up each supply their own.
@@ -42,7 +33,6 @@ export function PerformanceSummary({ history }: { history: StatsSnapshot[] }) {
   const ramTotal = latest?.ramTotalMB ?? 0
   const ramPct = ramTotal > 0 ? (ramUsed / ramTotal) * 100 : 0
   const cpu = latest?.cpuPercent ?? 0
-  const players = latest?.players ?? 0
 
   const sparkData = history.slice(-60).map((s) => ({
     ts: s.timestamp,
@@ -53,27 +43,11 @@ export function PerformanceSummary({ history }: { history: StatsSnapshot[] }) {
 
   return (
     <div className="flex h-full flex-col gap-2 px-3 py-2">
-      <div className="grid grid-cols-2 gap-x-3 gap-y-1">
-        <StatCell label="TPS" value={fmtTps(tps)} valueClass={tpsColor(tps)} />
-        <StatCell label="CPU" value={`${cpu.toFixed(1)}%`} />
-        <StatCell
-          label="RAM"
-          value={ramTotal > 0 ? `${Math.round(ramUsed)} / ${Math.round(ramTotal)} MB` : '—'}
-        />
-        <StatCell label="Players" value={String(players)} />
+      <div className="flex shrink-0 gap-5">
+        <Figure label="TPS" value={fmtTps(tps)} valueClass={tpsColor(tps)} />
+        <Figure label="CPU" value={`${cpu.toFixed(1)}%`} />
+        <Figure label="RAM" value={ramTotal > 0 ? `${ramPct.toFixed(0)}%` : '—'} />
       </div>
-
-      {ramTotal > 0 && (
-        <div className="bg-hover h-1 shrink-0 overflow-hidden rounded-full">
-          <div
-            className={`h-full rounded-full transition-all duration-500 ${
-              ramPct > 80 ? 'bg-[var(--danger)]' : ramPct > 60 ? 'bg-[var(--warning)]' : 'bg-accent'
-            }`}
-            // eslint-disable-next-line no-restricted-syntax -- width is a computed percentage, not visible to Tailwind's static scanner
-            style={{ width: `${Math.min(ramPct, 100)}%` }}
-          />
-        </div>
-      )}
 
       <div className="border-border-subtle border-hairline min-h-0 flex-1 overflow-hidden rounded">
         {sparkData.length > 1 ? (

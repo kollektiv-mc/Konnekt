@@ -1,5 +1,6 @@
 import type { models } from '../../../wailsjs/go/models'
 import { untilMs } from '../../lib/format'
+import { Headline } from '../../components/ui/Figure'
 
 interface Props {
   graphs: models.Graph[]
@@ -10,6 +11,15 @@ interface Props {
   error?: string | null
 }
 
+/**
+ * The compact face of the Scheduler tile: how many graphs are armed, when the
+ * next one fires, and the list of them.
+ *
+ * "3 / 4 armed" is the figure, the soonest run sits at the end of the same
+ * line, and the graphs are the detail under it: the default layout's shape.
+ * The two centred counters this replaced said the same thing in twice the
+ * height and left the next-run time for a footer.
+ */
 export function SchedulerSummary({ graphs, nextRuns, loading, error }: Props) {
   const enabled = graphs.filter((g) => g.enabled).length
 
@@ -19,22 +29,22 @@ export function SchedulerSummary({ graphs, nextRuns, loading, error }: Props) {
     .sort((a, b) => a - b)[0]
 
   return (
-    <div className="flex h-full flex-col overflow-hidden">
-      {/* Stats row */}
-      <div className="flex items-center justify-center gap-4 py-2">
-        <div className="flex flex-col items-center">
-          <span className="text-accent font-mono text-xl">{graphs.length}</span>
-          <span className="text-text-faint font-mono text-xs">total</span>
-        </div>
-        <div className="bg-border-subtle h-7 w-[0.5px]" />
-        <div className="flex flex-col items-center">
-          <span className="text-success font-mono text-xl">{enabled}</span>
-          <span className="text-text-faint font-mono text-xs">active</span>
-        </div>
-      </div>
+    <div className="flex h-full flex-col gap-2 overflow-hidden px-3 py-2">
+      <Headline
+        value={`${enabled} / ${graphs.length}`}
+        unit="armed"
+        aside={
+          error ? (
+            <span className="text-danger" title={error}>
+              unavailable
+            </span>
+          ) : soonest ? (
+            `next ${untilMs(soonest)}`
+          ) : undefined
+        }
+      />
 
-      {/* Graph list */}
-      <div className="flex-1 overflow-y-auto px-2 pb-1">
+      <div className="min-h-0 flex-1 overflow-y-auto">
         {graphs.length === 0 ? (
           <div className="flex h-full items-center justify-center">
             <span className="text-text-faint font-mono text-xs">
@@ -42,44 +52,32 @@ export function SchedulerSummary({ graphs, nextRuns, loading, error }: Props) {
             </span>
           </div>
         ) : (
-          graphs.slice(0, 8).map((g) => {
+          graphs.map((g) => {
             const next = nextRuns[g.id]
             return (
-              <div key={g.id} className="flex items-center gap-1.5 py-0.5">
+              <div
+                key={g.id}
+                className="border-border-subtle border-b-hairline flex items-center gap-2 py-1 last:border-0"
+              >
                 <span
                   className={`h-1.5 w-1.5 shrink-0 rounded-full ${g.enabled ? 'bg-success' : 'bg-border-subtle'}`}
                 />
                 <span
-                  className={`flex-1 truncate font-mono text-xs ${g.enabled ? 'text-text-primary' : 'text-text-muted'}`}
+                  className={`flex-1 truncate text-xs ${g.enabled ? 'text-text-primary' : 'text-text-muted'}`}
                 >
                   {g.name || g.id}
                 </span>
-                {g.enabled && next > 0 && (
+                {g.enabled && (
                   <span
                     className="text-text-faint shrink-0 font-mono text-xs"
-                    title="Next scheduled run"
+                    title={next > 0 ? 'Next scheduled run' : 'Runs on an event, not a clock'}
                   >
-                    {untilMs(next)}
+                    {next > 0 ? untilMs(next) : 'on trigger'}
                   </span>
                 )}
               </div>
             )
           })
-        )}
-        {graphs.length > 8 && (
-          <span className="text-text-faint font-mono text-xs">+{graphs.length - 8} more</span>
-        )}
-      </div>
-
-      <div className="px-2 pb-1">
-        {error ? (
-          <span className="text-danger font-mono text-xs" title={error}>
-            scheduler unavailable
-          </span>
-        ) : (
-          <span className="text-text-faint font-mono text-xs">
-            {soonest ? `next run ${untilMs(soonest)}` : 'maximize to edit'}
-          </span>
         )}
       </div>
     </div>
