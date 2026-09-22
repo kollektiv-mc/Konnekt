@@ -7,6 +7,9 @@ import { LayoutDashboard } from '../../lib/icons'
 // afterEach and a previous test's DOM would still be mounted.
 afterEach(cleanup)
 
+const onRemove = vi.fn()
+const onToggleMaximize = vi.fn()
+
 function mount(props: Partial<Parameters<typeof TileWrapper>[0]> = {}) {
   const onSetLayout = vi.fn()
   render(
@@ -14,8 +17,9 @@ function mount(props: Partial<Parameters<typeof TileWrapper>[0]> = {}) {
       id="stats"
       label="Overview"
       icon={LayoutDashboard}
-      onRemove={() => {}}
+      onRemove={onRemove}
       maximizable
+      onToggleMaximize={onToggleMaximize}
       layout="default"
       onSetLayout={onSetLayout}
       {...props}
@@ -51,6 +55,24 @@ describe('the tile header context menu', () => {
     fireEvent.click(screen.getByRole('menuitemradio', { name: /Expanded/ }))
     expect(onSetLayout).toHaveBeenCalledWith('stats', 'expanded')
     expect(screen.queryByRole('menu')).toBeNull()
+  })
+
+  it('offers Maximize and Remove, and leaves Maximize out where the tile cannot', () => {
+    mount()
+    fireEvent.contextMenu(header(), { clientX: 10, clientY: 10 })
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Maximize' }))
+    expect(onToggleMaximize).toHaveBeenCalledWith('stats')
+    expect(screen.queryByRole('menu')).toBeNull()
+
+    fireEvent.contextMenu(header(), { clientX: 10, clientY: 10 })
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Remove' }))
+    expect(onRemove).toHaveBeenCalledWith('stats')
+    cleanup()
+
+    mount({ maximizable: false })
+    fireEvent.contextMenu(header(), { clientX: 10, clientY: 10 })
+    expect(screen.queryByRole('menuitem', { name: 'Maximize' })).toBeNull()
+    expect(screen.getByRole('menuitem', { name: 'Remove' })).toBeTruthy()
   })
 
   // The menu is a portal and React bubbles its events to the header that

@@ -29,7 +29,8 @@ interface Props {
   label: string
 }
 
-const PANEL_W = 184
+// w-44 on the spacing scale, so the clamp and the class agree.
+const PANEL_W = 176
 const ITEM_H = 34
 const EDGE = 8
 // The panel's inner padding, which is also what keeps the corners concentric:
@@ -187,7 +188,7 @@ export function ContextMenu({ at, items, onClose, label }: Props) {
         ref={panelRef}
         role="menu"
         aria-label={label}
-        className={`${PANEL} w-[184px]`}
+        className={`${PANEL} w-44`}
         // eslint-disable-next-line no-restricted-syntax -- left/top are viewport-computed positions (clamped against window dimensions)
         style={{ left: pos.x, top: pos.y }}
       >
@@ -212,7 +213,7 @@ export function ContextMenu({ at, items, onClose, label }: Props) {
         <div
           role="menu"
           aria-label={child.label}
-          className={`${PANEL} w-[184px]`}
+          className={`${PANEL} w-44`}
           // eslint-disable-next-line no-restricted-syntax -- left/top are viewport-computed positions (clamped against window dimensions)
           style={{ left: childPos.x, top: childPos.y }}
         >

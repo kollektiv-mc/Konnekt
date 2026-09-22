@@ -4,8 +4,8 @@ import type { TileLayout } from '../../types'
 
 function tpsColor(tps: number): string {
   if (tps >= 18) return 'text-accent'
-  if (tps >= 14) return 'text-yellow-400'
-  return 'text-red-400'
+  if (tps >= 14) return 'text-warning'
+  return 'text-danger'
 }
 
 function tpsBand(tps: number): string {
@@ -22,8 +22,8 @@ function tpsBand(tps: number): string {
 // copies of this map is how Starting ends up amber in one place and green in
 // the other.
 export const PILL = {
-  unreachable: { label: 'Unreachable', dot: 'bg-red-500', text: 'text-red-400' },
-  offline: { label: 'Offline', dot: 'bg-red-500', text: 'text-red-400' },
+  unreachable: { label: 'Unreachable', dot: 'bg-danger', text: 'text-danger' },
+  offline: { label: 'Offline', dot: 'bg-danger', text: 'text-danger' },
   starting: {
     label: 'Starting',
     dot: 'bg-warning shadow-[0_0_6px_var(--warning)]',
@@ -113,7 +113,7 @@ export function Vitals({ layout = 'default' }: { layout?: TileLayout }) {
       <div className="bg-hover h-1 overflow-hidden rounded-full">
         <div
           className={`h-full rounded-full transition-all duration-500 ${
-            ramPct > 80 ? 'bg-red-500' : ramPct > 60 ? 'bg-yellow-500' : 'bg-accent'
+            ramPct > 80 ? 'bg-danger' : ramPct > 60 ? 'bg-warning' : 'bg-accent'
           }`}
           // eslint-disable-next-line no-restricted-syntax -- width is a computed percentage, not visible to Tailwind's static scanner
           style={{ width: `${ramPct}%` }}

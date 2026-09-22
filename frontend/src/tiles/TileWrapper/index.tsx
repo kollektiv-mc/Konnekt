@@ -130,6 +130,8 @@ export function TileWrapper({
             at={menuAt}
             layout={layout}
             onChoose={(next) => onSetLayout(id, next)}
+            onMaximize={maximizable ? () => onToggleMaximize?.(id) : undefined}
+            onRemove={() => onRemove(id)}
             onClose={() => setMenuAt(null)}
           />
         )}
