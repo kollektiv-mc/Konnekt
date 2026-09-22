@@ -25,7 +25,7 @@ interface Props {
  * menu is a full set of what can be done to the tile from one gesture. The
  * fly-out opens on hover, like any other. The rows follow `Combobox`'s option
  * shape, a check that is invisible until chosen, so the two menus read as one
- * control; the Layout row's hint is the current choice.
+ * control.
  */
 export function TileContextMenu({ at, layout, onChoose, onMaximize, onRemove, onClose }: Props) {
   return (
@@ -37,7 +37,6 @@ export function TileContextMenu({ at, layout, onChoose, onMaximize, onRemove, on
         {
           id: 'layout',
           label: 'Layout',
-          hint: LABELS[layout],
           children: TILE_LAYOUTS.map((option) => ({
             id: option,
             label: LABELS[option],
