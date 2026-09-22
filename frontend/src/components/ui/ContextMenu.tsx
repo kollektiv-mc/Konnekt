@@ -44,12 +44,18 @@ function clamp(x: number, y: number, count: number): MenuPosition {
 
 // The suite's floating-layer surface, per kollektiv/design/README.md: opaque
 // `bg-overlay` (bg-elevated composited over the base, so it reads as the same
-// panel wherever it lands and stays legible over a busy tile), a hairline
-// border, and no shadow or blur. The suite has no shadow tokens, deliberately:
-// elevation is the surface and the border. `Popover` and the other floating
-// panels still carry a drop shadow from before that rule; #415 tracks them.
-const PANEL =
-  'fixed z-popover bg-overlay border-hairline border-border-subtle overflow-hidden rounded-lg py-1'
+// panel wherever it lands and stays legible over a busy tile), and no shadow
+// or blur. The suite has no shadow tokens, deliberately: elevation is the
+// surface. The README pairs that surface with a hairline border; this menu
+// goes without one, on purpose, since the opaque surface already separates it
+// from anything behind it and the line read as a bevel on a panel this small.
+// The near-square corner is radius-sm. Whether the other floating panels
+// follow is #415's question; they still carry a drop shadow from before.
+//
+// Rows are inset from the panel edge and rounded on their own, so a hovered
+// row is a highlight inside the panel rather than a stripe that reaches its
+// edge on the sides and stops short of it at the top and bottom.
+const PANEL = 'fixed z-popover bg-overlay overflow-hidden rounded-sm p-1'
 
 function Row({
   item,
@@ -77,7 +83,7 @@ function Row({
         item.onSelect?.()
         onDone()
       }}
-      className={`hover:bg-hover flex w-full cursor-pointer items-center gap-2 px-2 py-1.5 text-left transition-colors ${
+      className={`hover:bg-hover flex w-full cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-left transition-colors ${
         item.checked ? 'text-accent' : 'text-text-primary'
       }`}
     >
