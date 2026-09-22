@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef, useEffect } from 'react'
+import { lazy, Suspense, useState, useMemo, useRef, useEffect } from 'react'
 import type { TileProps } from '../../types'
 import { useServerStore } from '../../stores/useServerStore'
 import { useUiStore } from '../../stores/useUiStore'
@@ -6,6 +6,7 @@ import { useTileStore } from '../../stores/useTileStore'
 import { useProcessesStore } from '../../stores/useProcessesStore'
 import { StopServer } from '../../../wailsjs/go/main/App'
 import { BackupsSummary } from './BackupsSummary'
+import { useSettingsStore } from '../../stores/useSettingsStore'
 import { BackupRunningDialog } from './BackupRunningDialog'
 import { useBackups } from './useBackups'
 import type { Backup } from './useBackups'
@@ -297,8 +298,24 @@ function BackupRow({
 
 // ─── Tile ──────────────────────────────────────────────────────────────────
 
-export function BackupsTile({ serverId, maximized }: TileProps) {
-  if (!maximized) return <BackupsSummary serverId={serverId} />
+// Behind the "Classic tile faces" setting, so it loads only when asked for.
+// The specifier matches `lib/prefetch.ts`'s warm list and every other tile's.
+const ClassicBackupsSummary = lazy(() =>
+  import('../classicFaces').then((m) => ({ default: m.ClassicBackupsSummary })),
+)
+
+export function BackupsTile({ serverId, maximized, layout }: TileProps) {
+  const classic = useSettingsStore((s) => s.settings.classicTileFaces)
+  if (!maximized) {
+    if (classic) {
+      return (
+        <Suspense fallback={<div className="h-full w-full" />}>
+          <ClassicBackupsSummary serverId={serverId} />
+        </Suspense>
+      )
+    }
+    return <BackupsSummary serverId={serverId} layout={layout} />
+  }
   return <BackupsTileExpanded serverId={serverId} />
 }
 

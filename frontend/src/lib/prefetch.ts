@@ -22,6 +22,8 @@ const CHUNKS: ReadonlyArray<() => Promise<unknown>> = [
   () => import('../tiles/config/EditorPanel'),
   () => import('../tiles/mods/MarkdownBody'),
   () => import('../tiles/worlds/scene/WorldsScene'),
+  // Last: only a setting most installs never touch asks for it.
+  () => import('../tiles/classicFaces'),
 ]
 
 // How quiet the app has to be before another chunk is evaluated.

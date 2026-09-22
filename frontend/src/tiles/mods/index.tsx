@@ -1,6 +1,6 @@
 // aislop-ignore-file code-quality/duplicate-block -- #313
 import { useEffect, useRef, useState } from 'react'
-import type { TileProps } from '../../types'
+import type { TileLayout, TileProps } from '../../types'
 import { useMods } from './useMods'
 import type { InstalledMod } from './useMods'
 import { InstalledPanel } from './InstalledPanel'
@@ -12,6 +12,8 @@ import { DetectServerLoader } from '../../../wailsjs/go/main/App'
 import { models } from '../../../wailsjs/go/models'
 import { PLUGIN_LOADERS } from '../../lib/constants'
 import { readOr } from '../../lib/ipc'
+import { Headline } from '../../components/ui/Figure'
+import { useSettingsStore } from '../../stores/useSettingsStore'
 
 function useServerKind(serverId: string): { kind: 'mods' | 'plugins'; detecting: boolean } {
   const config = useServerConfigStore((s) => s.configs.find((c) => c.id === serverId))
@@ -57,7 +59,7 @@ function useServerKind(serverId: string): { kind: 'mods' | 'plugins'; detecting:
   return { kind, detecting }
 }
 
-export function ModsTile({ serverId, maximized }: TileProps) {
+export function ModsTile({ serverId, maximized, layout = 'default' }: TileProps) {
   const mods = useMods(serverId)
   const running = useServerStore((s) => s.status.running)
   const { kind, detecting } = useServerKind(serverId)
@@ -70,6 +72,7 @@ export function ModsTile({ serverId, maximized }: TileProps) {
         running={running}
         kind={kind}
         detecting={detecting}
+        layout={layout}
       />
     )
   }
@@ -85,30 +88,54 @@ function ModsSummary({
   running,
   kind,
   detecting,
+  layout,
 }: {
   serverId: string
   mods: ReturnType<typeof useMods>
   running: boolean
   kind: 'mods' | 'plugins'
   detecting: boolean
+  layout: TileLayout
 }) {
+  const classic = useSettingsStore((s) => s.settings.classicTileFaces)
   const { installed, installedLoading, installProgress, setEnabled, uninstall, updates } = mods
   const noun = kind === 'plugins' ? 'plugin' : 'mod'
   const nounPlural = kind === 'plugins' ? 'plugins' : 'mods'
   const modProcess = useProcessesStore((s) => s.processes['mod:' + serverId])
+  const enabledCount = installed.filter((m) => m.enabled).length
 
+  // The installed count is the figure and the rows under it are the detail,
+  // the default layout's shape; "N on" beside it is the number a running
+  // server actually reflects, since a toggle here waits for a restart.
   return (
-    <div className="flex h-full min-h-0 flex-col">
-      <div className="flex shrink-0 items-center justify-between px-3 py-2">
-        <span className="text-text-secondary text-xs font-semibold">
-          {detecting
-            ? 'Detecting server type…'
-            : `${installed.length} ${installed.length !== 1 ? nounPlural : noun}`}
-        </span>
-        {running && (
-          <span className="text-text-muted text-2xs text-xs">restart needed for changes</span>
-        )}
-      </div>
+    <div
+      className={`flex h-full min-h-0 flex-col ${!classic && layout === 'expanded' ? 'justify-center' : ''}`}
+    >
+      {classic ? (
+        // The classic face's header, behind Settings › Appearance › "Classic
+        // tile faces". The rows below it are shared with the figure-first face.
+        <div className="flex shrink-0 items-center justify-between px-3 py-2">
+          <span className="text-text-secondary text-xs font-semibold">
+            {detecting
+              ? 'Detecting server type…'
+              : `${installed.length} ${installed.length !== 1 ? nounPlural : noun}`}
+          </span>
+          {running && <span className="text-text-muted text-2xs">restart needed for changes</span>}
+        </div>
+      ) : (
+        <div className="shrink-0 px-3 pt-2 pb-1">
+          <Headline
+            size={layout === 'detailed' ? 'sm' : 'lg'}
+            value={detecting ? '…' : String(installed.length)}
+            unit={
+              detecting
+                ? 'detecting server type…'
+                : `${installed.length === 1 ? noun : nounPlural} installed · ${enabledCount} on`
+            }
+            aside={running ? 'restart needed for changes' : undefined}
+          />
+        </div>
+      )}
       {modProcess?.status === 'running' && (
         <div className="bg-border-subtle h-0.5 w-full shrink-0">
           <div
@@ -118,36 +145,38 @@ function ModsSummary({
           />
         </div>
       )}
-      <div className="min-h-0 flex-1 overflow-y-auto">
-        <InstalledPanel
-          mods={installed}
-          loading={installedLoading}
-          error={mods.installedError}
-          installProgress={installProgress}
-          installing={mods.installing}
-          serverRunning={running}
-          kind={kind}
-          updates={updates}
-          onSetEnabled={setEnabled}
-          onUninstall={uninstall}
-          onChangeVersion={mods.changeVersion}
-          selectedProject={mods.selectedProject}
-          projectLoading={mods.projectLoading}
-          versions={mods.versions}
-          versionsLoading={mods.versionsLoading}
-          versionsError={mods.versionsError}
-          installError={mods.installError}
-          onSelectProject={(mod) => mods.selectProject(modToProject(mod))}
-          onClearProject={mods.clearProject}
-          onGetVersions={mods.getVersions}
-          onGetAllVersions={mods.getAllVersions}
-          onResolveDeps={mods.resolveDeps}
-          onInstall={mods.install}
-          onOpenInBrowser={() => {
-            /* no-op in compact view */
-          }}
-        />
-      </div>
+      {(classic || layout !== 'expanded') && (
+        <div className="min-h-0 flex-1 overflow-y-auto">
+          <InstalledPanel
+            mods={installed}
+            loading={installedLoading}
+            error={mods.installedError}
+            installProgress={installProgress}
+            installing={mods.installing}
+            serverRunning={running}
+            kind={kind}
+            updates={updates}
+            onSetEnabled={setEnabled}
+            onUninstall={uninstall}
+            onChangeVersion={mods.changeVersion}
+            selectedProject={mods.selectedProject}
+            projectLoading={mods.projectLoading}
+            versions={mods.versions}
+            versionsLoading={mods.versionsLoading}
+            versionsError={mods.versionsError}
+            installError={mods.installError}
+            onSelectProject={(mod) => mods.selectProject(modToProject(mod))}
+            onClearProject={mods.clearProject}
+            onGetVersions={mods.getVersions}
+            onGetAllVersions={mods.getAllVersions}
+            onResolveDeps={mods.resolveDeps}
+            onInstall={mods.install}
+            onOpenInBrowser={() => {
+              /* no-op in compact view */
+            }}
+          />
+        </div>
+      )}
     </div>
   )
 }

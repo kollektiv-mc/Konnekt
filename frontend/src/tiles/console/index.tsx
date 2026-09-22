@@ -10,6 +10,7 @@ import { IconButton } from '../../components/ui/IconButton'
 import { ChevronLeft, ChevronRight } from '../../lib/icons'
 import { QuickCommandsPanel } from '../../components/QuickCommandsPanel'
 import type { TileProps } from '../../types'
+import { foldQuiet, isFold } from '../../lib/logImportance'
 import type { LogLine, ManagerOutcome } from '../../stores/useConsoleStore'
 
 // Server output only. Konnekt's own narration (#113) does not take a level
@@ -107,7 +108,70 @@ function highlightQuery(text: string, query: string) {
   )
 }
 
-export function ConsoleTile({ serverId, maximized }: TileProps) {
+function LogRow({
+  line,
+  query,
+  showTimestamps,
+}: {
+  line: LogLine
+  query: string
+  showTimestamps: boolean
+}) {
+  if (line.level === 'manager') {
+    return <ManagerLine line={line} query={query} showTimestamp={showTimestamps} />
+  }
+  return (
+    <div className="flex gap-2">
+      {showTimestamps && <span className="text-text-faint shrink-0">{line.timestamp}</span>}
+      <span className={LEVEL_CLASS[line.level]}>{highlightQuery(line.text, query)}</span>
+    </div>
+  )
+}
+
+/**
+ * A run of quiet lines in the expanded layout: one row with the count, which
+ * opens in place to show them. The count is the whole point of the row, so
+ * it stays visible while the run is open, as the row's header.
+ */
+function QuietFoldRow({
+  lines,
+  open,
+  onToggle,
+  query,
+  showTimestamps,
+}: {
+  lines: LogLine[]
+  open: boolean
+  onToggle: () => void
+  query: string
+  showTimestamps: boolean
+}) {
+  return (
+    <div>
+      <button
+        type="button"
+        onClick={onToggle}
+        aria-expanded={open}
+        className="text-text-faint hover:text-text-muted flex items-center gap-2 text-left transition-colors"
+        title={open ? 'Hide these lines' : 'Show these lines'}
+      >
+        <span>{open ? '▾' : '▸'}</span>
+        <span>
+          {lines.length} {lines.length === 1 ? 'line' : 'lines'}
+        </span>
+      </button>
+      {open && (
+        <div className="border-border-subtle border-l-hairline ml-1 pl-2">
+          {lines.map((line) => (
+            <LogRow key={line.id} line={line} query={query} showTimestamps={showTimestamps} />
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+export function ConsoleTile({ serverId, maximized, layout = 'default' }: TileProps) {
   const lines = useConsoleStore((s) => s.lines)
   const clear = useConsoleStore((s) => s.clear)
   const showTimestamps = useSettingsStore((s) => s.settings.consoleTimestamps)
@@ -119,6 +183,9 @@ export function ConsoleTile({ serverId, maximized }: TileProps) {
   const [query, setQuery] = useState('')
   const [levelFilter, setLevelFilter] = useState<LevelFilter>('all')
   const [sendError, setSendError] = useState<string | null>(null)
+  // The folds the user has opened in the expanded layout, by the fold's id
+  // (its first line), so an open fold stays open as lines arrive after it.
+  const [openFolds, setOpenFolds] = useState<ReadonlySet<number>>(() => new Set())
   const scrollRef = useRef<HTMLDivElement | null>(null)
 
   // The tail state is mirrored into a ref written at call time, not synced in
@@ -146,6 +213,15 @@ export function ConsoleTile({ serverId, maximized }: TileProps) {
     }
     return result
   }, [lines, levelFilter, query])
+
+  // The expanded layout shows what matters and folds each run of chatter
+  // into one row (lib/logImportance.ts); detailed shows every line at a
+  // tighter leading; default is the log as it comes.
+  const entries = useMemo(
+    () => (layout === 'expanded' ? foldQuiet(filtered) : filtered),
+    [filtered, layout],
+  )
+  const leading = layout === 'detailed' ? 'leading-4' : 'leading-5'
 
   useEffect(() => {
     if (autoScroll && scrollRef.current) {
@@ -265,7 +341,7 @@ export function ConsoleTile({ serverId, maximized }: TileProps) {
       <div
         ref={attachPane}
         onScroll={handleScroll}
-        className="min-h-0 flex-1 overflow-y-auto px-3 py-2 font-mono text-xs leading-5 select-text"
+        className={`min-h-0 flex-1 overflow-y-auto px-3 py-2 font-mono text-xs select-text ${leading}`}
       >
         {lines.length === 0 ? (
           // Was a bare empty <div>: an unreachable server, a stopped one and a
@@ -281,16 +357,25 @@ export function ConsoleTile({ serverId, maximized }: TileProps) {
         ) : filtered.length === 0 ? (
           <div className="text-text-faint py-2 font-mono text-xs">No matching lines</div>
         ) : (
-          filtered.map((line) =>
-            line.level === 'manager' ? (
-              <ManagerLine key={line.id} line={line} query={query} showTimestamp={showTimestamps} />
+          entries.map((entry) =>
+            isFold(entry) ? (
+              <QuietFoldRow
+                key={`fold:${entry.id}`}
+                lines={entry.lines}
+                open={openFolds.has(entry.id)}
+                onToggle={() =>
+                  setOpenFolds((prev) => {
+                    const next = new Set(prev)
+                    if (next.has(entry.id)) next.delete(entry.id)
+                    else next.add(entry.id)
+                    return next
+                  })
+                }
+                query={query}
+                showTimestamps={showTimestamps}
+              />
             ) : (
-              <div key={line.id} className="flex gap-2">
-                {showTimestamps && (
-                  <span className="text-text-faint shrink-0">{line.timestamp}</span>
-                )}
-                <span className={LEVEL_CLASS[line.level]}>{highlightQuery(line.text, query)}</span>
-              </div>
+              <LogRow key={entry.id} line={entry} query={query} showTimestamps={showTimestamps} />
             ),
           )
         )}

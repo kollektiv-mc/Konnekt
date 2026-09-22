@@ -59,6 +59,7 @@ export interface AppSettings {
   schedulerPaletteCollapsed: boolean
   schedulerPaletteClosedCategories: Record<string, boolean>
   consoleQuickCommandsCollapsed: boolean
+  classicTileFaces: boolean
   navClosedSections: Record<string, boolean>
   checkUpdatesOnStartup: boolean
   updateChannel: 'stable' | 'snapshot'
@@ -84,9 +85,27 @@ export interface ConfigFile {
 
 // Frontend-only shapes below: no Go counterpart, nothing to alias.
 
+/**
+ * How much a tile's canvas face shows, chosen per tile from its header's
+ * context menu and kept in tile_layouts.json (app.go). `default` leads with the
+ * tile's key figure large and its detail below; `detailed` sets the figure
+ * small and packs in more; `expanded` is the figure alone, spread over the
+ * tile. The maximized face ignores it: that one already has all the room there
+ * is, and it stays the one it has.
+ */
+export type TileLayout = 'detailed' | 'default' | 'expanded'
+
+export const TILE_LAYOUTS: readonly TileLayout[] = ['detailed', 'default', 'expanded']
+
+export function isTileLayout(v: unknown): v is TileLayout {
+  return typeof v === 'string' && (TILE_LAYOUTS as readonly string[]).includes(v)
+}
+
 export interface TileProps {
   serverId: string
   maximized?: boolean
+  /** Absent for a tile whose registry entry has no `layouts`, and treated as `default`. */
+  layout?: TileLayout
 }
 
 export interface TileDefinition {
@@ -99,5 +118,12 @@ export interface TileDefinition {
    */
   icon: LucideIcon
   maximizable?: boolean
+  /**
+   * Whether the tile's compact face honours a `TileLayout`. Only a tile that
+   * declares it gets the layout menu on its header, so a tile whose face has
+   * one shape (the console, a key/value list) never offers a choice that
+   * would change nothing.
+   */
+  layouts?: boolean
   component: FC<TileProps>
 }

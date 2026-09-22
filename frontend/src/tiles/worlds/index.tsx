@@ -2,6 +2,7 @@ import { lazy, Suspense, useEffect, useState } from 'react'
 import type { TileProps } from '../../types'
 import { useWorlds } from './useWorlds'
 import { WorldsSummary } from './WorldsSummary'
+import { useSettingsStore } from '../../stores/useSettingsStore'
 
 // Lazy-load the heavy 3D scene so three.js only ships when the tile is maximized.
 const WorldsScene = lazy(() =>
@@ -14,7 +15,14 @@ const WorldsScene = lazy(() =>
 // maximize animation. Tracked as a token to add in HEALTH_CHECKLIST.md's backlog.
 const SCENE_BG = 'bg-[#050608]'
 
-export function WorldsTile({ maximized }: TileProps) {
+// Behind the "Classic tile faces" setting, so it loads only when asked for.
+// The specifier matches `lib/prefetch.ts`'s warm list and every other tile's.
+const ClassicWorldsSummary = lazy(() =>
+  import('../classicFaces').then((m) => ({ default: m.ClassicWorldsSummary })),
+)
+
+export function WorldsTile({ maximized, layout }: TileProps) {
+  const classic = useSettingsStore((s) => s.settings.classicTileFaces)
   const {
     worlds,
     loading,
@@ -46,7 +54,13 @@ export function WorldsTile({ maximized }: TileProps) {
   }, [maximized])
 
   if (!maximized) {
-    return <WorldsSummary worlds={worlds} loading={loading} error={error} />
+    return classic ? (
+      <Suspense fallback={<div className="h-full w-full" />}>
+        <ClassicWorldsSummary worlds={worlds} loading={loading} error={error} />
+      </Suspense>
+    ) : (
+      <WorldsSummary worlds={worlds} loading={loading} error={error} layout={layout} />
+    )
   }
 
   // Dark panel matching the Canvas background — shown while waiting and as

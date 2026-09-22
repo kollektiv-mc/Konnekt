@@ -9,6 +9,7 @@ import {
 } from 'react-grid-layout/core'
 import 'react-grid-layout/css/styles.css'
 import { useTileStore } from '../stores/useTileStore'
+import type { TileLayout } from '../types'
 import { useLayoutStore } from '../stores/useLayoutStore'
 import { useServerConfigStore } from '../stores/useServerConfigStore'
 import { useUiStore } from '../stores/useUiStore'
@@ -61,6 +62,16 @@ function cellAt(
 
 export function Dashboard() {
   const { activeTileIds, loadTiles, removeTile } = useTileStore()
+  const tileLayouts = useTileStore((s) => s.layouts)
+  const setLayout = useTileStore((s) => s.setLayout)
+  // The store has already put the face back and recorded why when the write
+  // is refused, so there is nothing for the menu to add.
+  const setTileLayout = useCallback(
+    (id: string, layout: TileLayout) => {
+      setLayout(id, layout).catch(() => {})
+    },
+    [setLayout],
+  )
   const { currentLayout, updateLayout, loadPresets } = useLayoutStore()
   const { activeId: serverId } = useServerConfigStore()
   const {
@@ -526,8 +537,14 @@ export function Dashboard() {
                   maximizable={tile.maximizable}
                   onToggleMaximize={toggleMaximize}
                   flash={flashTileId === tile.id}
+                  layout={tile.layouts ? (tileLayouts[tile.id] ?? 'default') : undefined}
+                  onSetLayout={tile.layouts ? setTileLayout : undefined}
                 >
-                  <TileComponent key={`${tile.id}:${serverId}`} serverId={serverId} />
+                  <TileComponent
+                    key={`${tile.id}:${serverId}`}
+                    serverId={serverId}
+                    layout={tile.layouts ? (tileLayouts[tile.id] ?? 'default') : undefined}
+                  />
                 </TileWrapper>
               </div>
             )
