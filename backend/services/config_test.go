@@ -189,6 +189,12 @@ func TestAppSettingsFillGapsInAnOlderFileWithDefaults(t *testing.T) {
 	if got.NavWidth != DefaultNavWidth {
 		t.Errorf("NavWidth = %d, want the default %d for a key the file lacks", got.NavWidth, DefaultNavWidth)
 	}
+	// A bool whose default is true is the case unmarshalling onto the zero
+	// struct would get wrong silently: every pre-existing install would come
+	// up with the wheel physics off and nothing to say so.
+	if !got.SmoothScrolling {
+		t.Error("SmoothScrolling = false, want the default true for a key the file lacks")
+	}
 	// The navbar opens on Servers and Tiles and folds Widgets and Layouts away.
 	// Only the closed ones are named: a key that is not there is open, so this
 	// map is the whole first-run shape and asserting it whole is what catches a

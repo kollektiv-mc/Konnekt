@@ -65,6 +65,7 @@ export interface AppSettings {
   updateChannel: 'stable' | 'snapshot'
   crateOrder: string[]
   navWidth: number
+  smoothScrolling: boolean
 }
 
 /**

@@ -38,6 +38,7 @@ const DEFAULTS: AppSettings = {
   updateChannel: 'stable',
   crateOrder: [],
   navWidth: NAV_WIDTH_DEFAULT,
+  smoothScrolling: true,
 }
 
 interface SettingsStore {

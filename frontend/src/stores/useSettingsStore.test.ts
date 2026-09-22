@@ -31,6 +31,7 @@ const DEFAULTS = {
   updateChannel: 'stable' as const,
   crateOrder: [] as string[],
   navWidth: 192,
+  smoothScrolling: true,
 }
 
 // `hasWailsBridge()` reads window.go's presence, and jsdom has none — so the

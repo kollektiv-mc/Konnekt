@@ -57,4 +57,10 @@ type AppSettings struct {
 	// (frontend/src/lib/navWidth.ts). Zero means "never set" and resolves to
 	// the default the same way.
 	NavWidth int `json:"navWidth"`
+
+	// SmoothScrolling animates each mouse-wheel notch on the spring physics
+	// Firefox's msdPhysics mode uses (frontend/src/lib/springPhysics.ts),
+	// rather than the WebView's own per-notch ease. On by default; a settings
+	// file written before the field existed unmarshals onto that default.
+	SmoothScrolling bool `json:"smoothScrolling"`
 }

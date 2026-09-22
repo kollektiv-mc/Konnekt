@@ -24,6 +24,7 @@ export namespace models {
 	    updateChannel: string;
 	    crateOrder: string[];
 	    navWidth: number;
+	    smoothScrolling: boolean;
 	
 	    static createFrom(source: any = {}) {
 	        return new AppSettings(source);
@@ -54,6 +55,7 @@ export namespace models {
 	        this.updateChannel = source["updateChannel"];
 	        this.crateOrder = source["crateOrder"];
 	        this.navWidth = source["navWidth"];
+	        this.smoothScrolling = source["smoothScrolling"];
 	    }
 	}
 	export class AttrValue {
