@@ -32,7 +32,14 @@ import { ensureFreshDist } from './lib/dist-freshness.mjs'
 // 145.0 KB; budget = that + ~12% headroom, rounded. It was 550 KB when the
 // entry still carried CodeMirror, @xyflow and the markdown pipeline eagerly —
 // leaving it there now would let the chunk grow 3.7x before anything noticed.
-const ENTRY_BUDGET_KB = 165
+//
+// Raised 165 → 175 on 2026-09-21, measured at 166.1 KB: the per-tile layouts
+// (three arrangements per compact face, the header menu's plumbing, the
+// layouts slice of useTileStore) are feature code on the eager path, and the
+// entry had crept to 164.7 KB underneath them. The classic faces and the menu
+// itself are lazy. ~5% headroom rather than 12%, deliberately: the next split
+// is the thing to find, not more room (HEALTH_CHECKLIST.md's Open backlog).
+const ENTRY_BUDGET_KB = 175
 
 // Measured warmed total on 2026-09-07, six lazy chunks plus three shared
 // helpers: 712.3 KB gzip (WorldsScene 259.4, EditorPanel 179.9, charts 101.3,

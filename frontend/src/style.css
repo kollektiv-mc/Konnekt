@@ -251,6 +251,29 @@ input[type='number']::-webkit-outer-spin-button {
   inset: 0;
 }
 
+/* The slot a tile's face renders into is a size container, so a face can
+   rearrange itself by the room it actually has rather than by a prop nobody
+   passes it, the way .cmd-button below sizes its label by its row. `size`
+   rather than `inline-size` because the axis that runs out first on this grid
+   is height: a tile at the 4-row minimum keeps most of its width and loses
+   two thirds of its body. The named container is what the tile-tall variant
+   queries, so a nested container inside a face never answers for the tile. */
+.tile-body {
+  container: tile / size;
+}
+
+/* tile-tall:<utility> applies once the face has a default-size tile's worth of
+   height. 200px is the body of a tile between the 4-row minimum (~140px
+   inside the header) and the 8-row default (~300px), so the short arrangement
+   holds for a tile at or near the minimum and the tall one everywhere else.
+   Tailwind's own container variants query width only, which is why this is
+   declared here rather than spelled @min-[…] at the call site. */
+@custom-variant tile-tall {
+  @container tile (min-height: 200px) {
+    @slot;
+  }
+}
+
 .tile-flash-ring {
   position: absolute;
   /* inset must be an integer and concentric with the panel below it:

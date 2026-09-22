@@ -28,6 +28,7 @@ const DEFAULTS: AppSettings = {
   schedulerPaletteCollapsed: true,
   schedulerPaletteClosedCategories: {},
   consoleQuickCommandsCollapsed: false,
+  classicTileFaces: false,
   // Servers and Tiles open, Widgets and Layouts closed: the two a first run
   // wants to see are the server it is about to start and the tiles it can
   // place, and the other two are there when they are looked for. Kept in step

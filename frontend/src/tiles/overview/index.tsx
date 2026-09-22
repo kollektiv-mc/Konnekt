@@ -1,5 +1,7 @@
+import { lazy, Suspense } from 'react'
 import type { TileProps } from '../../types'
 import { Vitals } from './Vitals'
+import { useSettingsStore } from '../../stores/useSettingsStore'
 import { OverviewPanel } from './OverviewPanel'
 
 /**
@@ -23,7 +25,21 @@ import { OverviewPanel } from './OverviewPanel'
  * are a pure reader of the shared store, hydrated once in App by
  * `hooks/useServerStatus.ts`.
  */
-export function OverviewTile({ serverId, maximized }: TileProps) {
-  if (!maximized) return <Vitals />
+// Behind the "Classic tile faces" setting, so it loads only when asked for.
+// The specifier matches `lib/prefetch.ts`'s warm list and every other tile's.
+const ClassicVitals = lazy(() =>
+  import('../classicFaces').then((m) => ({ default: m.ClassicVitals })),
+)
+
+export function OverviewTile({ serverId, maximized, layout }: TileProps) {
+  const classic = useSettingsStore((s) => s.settings.classicTileFaces)
+  if (!maximized) {
+    if (!classic) return <Vitals layout={layout} />
+    return (
+      <Suspense fallback={<div className="h-full w-full" />}>
+        <ClassicVitals />
+      </Suspense>
+    )
+  }
   return <OverviewPanel serverId={serverId} />
 }

@@ -1,6 +1,6 @@
 import { describe, it, expect, afterEach } from 'vitest'
 import { render, screen, cleanup } from '@testing-library/react'
-import { PlayerGrid } from './PlayerGrid'
+import { PlayerList } from './PlayerList'
 import { PlayerRoster } from './PlayerRoster'
 import type { Player } from '../../types'
 
@@ -29,13 +29,13 @@ function player(name: string): Player {
 afterEach(cleanup)
 
 describe('empty-state wording', () => {
-  it('PlayerGrid says nobody is on when the server answered', () => {
-    render(<PlayerGrid players={[]} reachable onSelectPlayer={() => {}} />)
+  it('PlayerList says nobody is on when the server answered', () => {
+    render(<PlayerList players={[]} reachable onSelectPlayer={() => {}} />)
     expect(screen.getByText('No players online')).toBeTruthy()
   })
 
-  it('PlayerGrid says unreachable when the roster fetch failed', () => {
-    render(<PlayerGrid players={[]} reachable={false} onSelectPlayer={() => {}} />)
+  it('PlayerList says unreachable when the roster fetch failed', () => {
+    render(<PlayerList players={[]} reachable={false} onSelectPlayer={() => {}} />)
     expect(screen.getByText('Server unreachable')).toBeTruthy()
     expect(screen.queryByText('No players online')).toBeNull()
   })
@@ -51,7 +51,7 @@ describe('empty-state wording', () => {
   })
 
   it('shows the roster rather than either message when players are online', () => {
-    render(<PlayerGrid players={[player('Steve')]} reachable onSelectPlayer={() => {}} />)
+    render(<PlayerList players={[player('Steve')]} reachable onSelectPlayer={() => {}} />)
     expect(screen.queryByText('No players online')).toBeNull()
     expect(screen.queryByText('Server unreachable')).toBeNull()
   })

@@ -30,6 +30,7 @@ export const TILE_REGISTRY: TileDefinition[] = [
     label: 'Console',
     icon: SquareChevronRight,
     maximizable: true,
+    layouts: true,
     component: ConsoleTile,
   },
   {
@@ -43,6 +44,7 @@ export const TILE_REGISTRY: TileDefinition[] = [
     label: 'Overview',
     icon: LayoutDashboard,
     maximizable: true,
+    layouts: true,
     component: OverviewTile,
   },
   {
@@ -50,6 +52,7 @@ export const TILE_REGISTRY: TileDefinition[] = [
     label: 'Players',
     icon: UsersRound,
     maximizable: true,
+    layouts: true,
     component: PlayersTile,
   },
   {
@@ -64,6 +67,7 @@ export const TILE_REGISTRY: TileDefinition[] = [
     label: 'Performance',
     icon: Gauge,
     maximizable: true,
+    layouts: true,
     component: PerformanceTile,
   },
   {
@@ -71,6 +75,7 @@ export const TILE_REGISTRY: TileDefinition[] = [
     label: 'Scheduler',
     icon: Workflow,
     maximizable: true,
+    layouts: true,
     component: SchedulerTile,
   },
   {
@@ -78,6 +83,7 @@ export const TILE_REGISTRY: TileDefinition[] = [
     label: 'Worlds',
     icon: Earth,
     maximizable: true,
+    layouts: true,
     component: WorldsTile,
   },
   {
@@ -85,6 +91,7 @@ export const TILE_REGISTRY: TileDefinition[] = [
     label: 'Backups',
     icon: Database,
     maximizable: true,
+    layouts: true,
     component: BackupsTile,
   },
   {
@@ -106,6 +113,7 @@ export const TILE_REGISTRY: TileDefinition[] = [
     label: 'Plugins',
     icon: Blocks,
     maximizable: true,
+    layouts: true,
     component: ModsTile,
   },
 ]

@@ -92,6 +92,7 @@ after them is dated. Newest last, in both groups.
 - [2026-09-18 — The superseded jar survives a failed install](#2026-09-18-the-superseded-jar-survives-a-failed-install)
 - [2026-09-19 — The zip bomb the standard library had already stopped](#2026-09-19-the-zip-bomb-the-standard-library-had-already-stopped)
 - [2026-09-21 — The scroll that felt like dragging was the physics, not the pixels](#2026-09-21-the-scroll-that-felt-like-dragging-was-the-physics-not-the-pixels)
+- [2026-09-21 — Linux gets the GPU back](#2026-09-21-linux-gets-the-gpu-back)
 
 ---
 
@@ -5986,3 +5987,57 @@ element where it was. 867 frontend tests pass; `tsc -b`, ESLint and Prettier
 clean; the entry chunk stays under the 165 KB budget; `gofmt`, `go vet` and
 the settings tests green. Measured by hand against Zen on the machine that
 filed the report is the one check this session cannot run.
+
+### 2026-09-21 — Linux gets the GPU back
+
+**The ask.** With the wheel physics in, make Linux scroll smoothly out of the
+box too, RHEL-based systems especially.
+
+**What was in the way.** `main.go` set `WebviewGpuPolicy: linux.WebviewGpuPolicyNever`,
+restating the default Wails applies when Linux options are nil, its workaround
+for wailsapp/wails#2977. Never means no accelerated compositing at all: no
+compositor thread, no asynchronous scrolling, and every scrolled frame a CPU
+repaint. The mouse-wheel spring physics (its own pull request, "Scroll the mouse
+wheel on Firefox's spring physics") run on Linux unchanged, but they animate
+`scrollTop` on whatever the webview draws, and a software-rendered page is a
+smooth curve drawn slowly.
+
+**What the bug behind the workaround actually is.** Read at the source rather
+than inherited: WebKitGTK's own default for `hardware-acceleration-policy` is
+`ALWAYS` (`WebKitSettings.cpp`), which is what Epiphany and every Tauri app run
+with, and `AcceleratedBackingStore.cpp` already drops to software on its own
+when GTK cannot create a GL context. #2977 and its many siblings across Tauri,
+Wails and Electron-adjacent trackers are one thing: the DMA-BUF renderer that
+WebKitGTK 2.42 introduced failing GBM buffer allocation on the proprietary
+NVIDIA driver, and the window staying blank. The fix the ecosystem settled on,
+Tauri's Linux graphics page included, is `WEBKIT_DISABLE_DMABUF_RENDERER=1`,
+which WebKit still honours (`rendererBufferTransportMode` reads it first) and
+which only gives up the DMA-BUF transport: the web process keeps compositing
+on the GPU and hands frames over through shared memory. Turning acceleration
+off for everyone to spare NVIDIA users a blank window was the wrong lever.
+
+**The change.** `webviewgpu.go` decides the policy: Always by default;
+`WEBKIT_DISABLE_DMABUF_RENDERER=1` set before `wails.Run` (GTK initialises
+inside it) when any DRM card under `/sys/class/drm` is an NVIDIA device bound
+to the `nvidia` driver, the same sysfs reads the `webkit2gtk-nvidia-quirk`
+crate does for Rust apps, and never when the variable is already in the
+environment, `0` included; `KONNEKT_WEBVIEW_GPU=never|ondemand|always` as the
+override for a machine this still gets wrong. Nouveau is not a match, since it
+does not have the problem. Every decision is one `linux webview gpu` line in
+`konnekt.log` with its reason, so the next blank-window report starts from a
+fact. The README's Linux bullet and `.claude/rules/builds-and-releases.md`
+carry the user-facing and contributor-facing halves.
+
+**What this does not settle.** No Linux machine was available to this session,
+so the claim that Always is safe rests on WebKitGTK's own default and its
+fallbacks, not on a run here. The quirk also costs a hybrid laptop the DMA-BUF
+fast path whenever the discrete NVIDIA GPU is bound to the proprietary driver,
+even when the integrated one would have drawn the window; that is the cheaper
+side of the trade and the override is the way back. Wayland-specific NVIDIA
+trouble (`__NV_DISABLE_EXPLICIT_SYNC`, WebKit bug 280210) is not handled.
+
+**Verification.** Ten table-driven cases against a fake sysfs tree: no cards,
+Intel only, NVIDIA on nouveau, NVIDIA proprietary, hybrid with NVIDIA second,
+a preset `0` kept, each override value, a garbage override; plus a failing
+`setenv` reported in the reason rather than swallowed, and a missing tree
+reading as not NVIDIA. `gofmt`, `go vet ./...`, `go test ./...` green.

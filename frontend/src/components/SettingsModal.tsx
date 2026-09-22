@@ -390,6 +390,15 @@ function AppearancePane({ settings, update }: { settings: AppSettings; update: U
           onChange={(backgroundStyle) => update({ backgroundStyle })}
         />
       </SettingRow>
+      <SettingRow
+        label="Classic tile faces"
+        description="The compact tile faces from before the figure-first ones. Per-tile layouts do not apply while this is on."
+      >
+        <Toggle
+          checked={settings.classicTileFaces}
+          onChange={(v) => update({ classicTileFaces: v })}
+        />
+      </SettingRow>
 
       {/* Wheel physics. Read per notch by lib/springScroll.ts, so it takes
           effect on the next notch with no restart. */}

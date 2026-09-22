@@ -27,6 +27,12 @@ type AppSettings struct {
 
 	ConsoleQuickCommandsCollapsed bool `json:"consoleQuickCommandsCollapsed"`
 
+	// ClassicTileFaces shows the compact tile faces from before the
+	// figure-first ones: the Overview's stat rows, the players' avatar grid
+	// and the centred counters. Off by default; the per-tile layouts in
+	// tile_layouts.json do not apply while it is on.
+	ClassicTileFaces bool `json:"classicTileFaces"`
+
 	// NavClosedSections marks which navbar sections the user has collapsed,
 	// keyed by section id ("servers", "widgets", "tiles", "layouts"). A key
 	// that is not there is open, so the defaults in services.GetAppSettings

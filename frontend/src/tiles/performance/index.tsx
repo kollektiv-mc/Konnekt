@@ -5,6 +5,7 @@ import type { StatsSnapshot } from './usePerformanceHistory'
 import { tpsColor, tpsStrokeColor, fmtTime, fmtTps } from './helpers'
 import { ChartFallback } from './ChartFallback'
 import { PerformanceSummary } from './PerformanceSummary'
+import { useSettingsStore } from '../../stores/useSettingsStore'
 
 // recharts is heavy (~250KB gzip) and only needed once a chart actually
 // renders — lazy-load it behind one shared chunk for both chart variants. The
@@ -307,7 +308,22 @@ function ExpandedView({ history }: { history: StatsSnapshot[] }) {
 
 // ─── tile root ────────────────────────────────────────────────────────────────
 
-export function PerformanceTile({ serverId, maximized }: TileProps) {
+// Behind the "Classic tile faces" setting, so it loads only when asked for.
+// The specifier matches `lib/prefetch.ts`'s warm list and every other tile's.
+const ClassicPerformanceSummary = lazy(() =>
+  import('../classicFaces').then((m) => ({ default: m.ClassicPerformanceSummary })),
+)
+
+export function PerformanceTile({ serverId, maximized, layout }: TileProps) {
   const history = usePerformanceHistory(serverId)
-  return maximized ? <ExpandedView history={history} /> : <PerformanceSummary history={history} />
+  const classic = useSettingsStore((s) => s.settings.classicTileFaces)
+  if (maximized) return <ExpandedView history={history} />
+  if (classic) {
+    return (
+      <Suspense fallback={<div className="h-full w-full" />}>
+        <ClassicPerformanceSummary history={history} />
+      </Suspense>
+    )
+  }
+  return <PerformanceSummary history={history} layout={layout} />
 }
