@@ -203,10 +203,26 @@ async function film(scene) {
     crop = { x: region.x, y: region.y };
   }
 
+  // Pausing the clock. pauseAt fast-forwards to the time it is given and
+  // throws if that time is already behind, and behind is easy to be: the
+  // clock has run at real speed since install(), Playwright syncs it to the
+  // wall clock on every Date.now() the page reads and again whenever one of
+  // the page's own timers comes due, and pauseAt subtracts from the last
+  // sync without making a fresh one. So "what the page just read, plus a
+  // millisecond" was behind whenever a timer fired between the read and the
+  // pause, a window of one frame on a page that animates, and the demo job
+  // failed on it with "Cannot fast-forward to the past". A second of headroom
+  // is far more than that round trip. The scene starts a second of page time
+  // later, which nothing sees: the boot has settled, and scene time is
+  // counted from here.
+  const PAUSE_HEADROOM_MS = 1000;
+  await page.clock.pauseAt(
+    (await page.evaluate(() => Date.now())) + PAUSE_HEADROOM_MS,
+  );
+
   // The loop: capture a frame, advance the scene clock one tick, wake any
   // wait() that has come due, repeat. A scene that moves its frame —
   // maximizing a tile — calls setCrop, and the next capture follows it.
-  await page.clock.pauseAt((await page.evaluate(() => Date.now())) + 1);
   const cdp = await context.newCDPSession(page);
   let frameCount = 0;
   let elapsed = 0; // scene time, ms
