@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Check, ChevronRight } from '../../lib/icons'
 import { Icon } from './Icon'
@@ -27,8 +27,6 @@ interface Props {
   onClose: () => void
   /** The accessible name of the menu. */
   label: string
-  /** The id of an item whose fly-out is open from the first paint. */
-  openChild?: string
 }
 
 const PANEL_W = 184
@@ -108,9 +106,7 @@ function Row({
  * sibling, so one value orders the two (lib/layers.ts). A right-click on the
  * backdrop closes it rather than opening a second one; Escape closes it too.
  *
- * An item with `children` opens a fly-out beside it on hover or click, or
- * from the first paint when it is `openChild`, so a menu whose only entry is
- * a group does not ask for a second motion before it shows anything. The
+ * An item with `children` opens a fly-out beside it on hover or click. The
  * fly-out is positioned from the row it belongs to, measured when it opens,
  * and clamped like the panel. One level: nothing here needs a third.
  *
@@ -122,18 +118,9 @@ function Row({
  * replayed, as a native event, at whatever is under the pointer, so
  * right-clicking another tile's header opens that tile's menu in one gesture.
  */
-export function ContextMenu({ at, items, onClose, label, openChild }: Props) {
+export function ContextMenu({ at, items, onClose, label }: Props) {
   const [open, setOpen] = useState<{ id: string; at: MenuPosition } | null>(null)
-  const rows = useRef(new Map<string, HTMLDivElement>())
   const pos = clamp(at.x, at.y, items.length)
-
-  useLayoutEffect(() => {
-    if (!openChild) return
-    const row = rows.current.get(openChild)
-    if (!row) return
-    const r = row.getBoundingClientRect()
-    setOpen({ id: openChild, at: { x: r.right + 2, y: r.top - 4 } })
-  }, [openChild])
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -178,10 +165,6 @@ export function ContextMenu({ at, items, onClose, label, openChild }: Props) {
         {items.map((item) => (
           <div
             key={item.id}
-            ref={(el) => {
-              if (el) rows.current.set(item.id, el)
-              else rows.current.delete(item.id)
-            }}
             onMouseEnter={
               item.children
                 ? (e) => {

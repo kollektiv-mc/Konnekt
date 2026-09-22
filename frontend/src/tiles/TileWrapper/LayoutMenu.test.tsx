@@ -29,7 +29,7 @@ function mount(props: Partial<Parameters<typeof TileWrapper>[0]> = {}) {
 const header = () => screen.getByText('Overview').closest('.drag-handle') as Element
 
 describe('the tile header context menu', () => {
-  it('opens at the pointer with the Layout fly-out already showing', () => {
+  it('opens at the pointer with a Layout entry whose fly-out waits for a hover', () => {
     mount()
     expect(screen.queryByRole('menu')).toBeNull()
     fireEvent.contextMenu(header(), { clientX: 120, clientY: 60 })
@@ -37,12 +37,15 @@ describe('the tile header context menu', () => {
     expect(menu.style.left).toBe('120px')
     expect(menu.style.top).toBe('60px')
     expect(screen.getByRole('menuitem', { name: /Layout/ })).toBeTruthy()
+    expect(screen.queryByRole('menu', { name: 'Layout' })).toBeNull()
+    fireEvent.mouseEnter(screen.getByRole('menuitem', { name: /Layout/ }))
     expect(screen.getByRole('menu', { name: 'Layout' })).toBeTruthy()
   })
 
   it('reports the layout chosen from the fly-out and marks the current one', () => {
     const onSetLayout = mount({ layout: 'detailed' })
     fireEvent.contextMenu(header(), { clientX: 10, clientY: 10 })
+    fireEvent.mouseEnter(screen.getByRole('menuitem', { name: /Layout/ }))
     const current = screen.getByRole('menuitemradio', { name: /Detailed/ })
     expect(current.getAttribute('aria-checked')).toBe('true')
     fireEvent.click(screen.getByRole('menuitemradio', { name: /Expanded/ }))
