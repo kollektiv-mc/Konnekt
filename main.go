@@ -3,6 +3,8 @@ package main
 import (
 	"embed"
 	"log/slog"
+	"os"
+	"runtime"
 
 	"github.com/wailsapp/wails/v2"
 	"github.com/wailsapp/wails/v2/pkg/logger"
@@ -42,6 +44,15 @@ func main() {
 	}
 	log.Info("starting", "version", Version, "dataDir", dataDir)
 
+	// Before wails.Run, because the NVIDIA quirk is an environment variable
+	// WebKit reads when GTK initialises, and that happens inside Run. On the
+	// other platforms Wails ignores the Linux options, so the sysfs probe
+	// simply finds nothing and the log line is the only trace.
+	gpu := resolveWebviewGpu(os.Getenv, os.Setenv, sysClassDRM)
+	if runtime.GOOS == "linux" {
+		log.Info("linux webview gpu", "policy", gpu.Policy, "reason", gpu.Reason)
+	}
+
 	app := NewApp()
 
 	err := wails.Run(&options.App{
@@ -79,12 +90,14 @@ func main() {
 		// the Alt-Tab entry fall back to a generic placeholder without this.
 		Linux: &linux.Options{
 			Icon: appIcon,
-			// Restates the default Wails applies when Linux options are nil.
-			// Supplying any Linux options replaces that default with this field's
-			// zero value, WebviewGpuPolicyAlways, so without this line setting an
-			// icon would also silently re-enable the hardware acceleration that
-			// wailsapp/wails#2977 turns off.
-			WebviewGpuPolicy: linux.WebviewGpuPolicyNever,
+			// Hardware acceleration on, which is WebKitGTK's own default and the
+			// difference between scrolling on a compositor thread and repainting
+			// every frame on the CPU. Wails defaults this to Never over
+			// wailsapp/wails#2977, and webviewgpu.go is what makes on safe: the
+			// NVIDIA quirk that bug needs, applied before GTK starts, and
+			// KONNEKT_WEBVIEW_GPU to override the policy on a machine that
+			// still needs it.
+			WebviewGpuPolicy: gpu.Policy,
 		},
 		// Wails' own runtime logging (asset server, bindings, IPC) joins the same
 		// file instead of a stdout nobody can read in a packaged build.

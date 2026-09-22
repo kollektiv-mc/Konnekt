@@ -181,6 +181,13 @@ nightly code.
   Rocky/RHEL 10, Fedora 36+, Ubuntu 22.04+, and Debian 12+. **Rocky/RHEL 9 is
   not supported**: EL9 never received webkit2gtk-4.1, and EL10 dropped
   webkit2gtk-4.0, so the two are not binary-compatible.
+  The webview runs hardware accelerated, WebKitGTK's own default. On the
+  proprietary NVIDIA driver Konnekt sets `WEBKIT_DISABLE_DMABUF_RENDERER=1`
+  for itself before the window opens, which is the standard fix for the blank
+  window that driver otherwise shows, and never overrides a value you set. If
+  a machine still misbehaves, `KONNEKT_WEBVIEW_GPU=never` (or `ondemand`)
+  turns acceleration down; `konnekt.log` records which policy was chosen and
+  why.
 - **macOS** is not published on either channel, but builds from source via
   `wails build` like any other platform.
 
