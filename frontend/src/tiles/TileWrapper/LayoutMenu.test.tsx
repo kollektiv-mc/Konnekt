@@ -86,11 +86,13 @@ describe('the tile header context menu', () => {
     expect(screen.queryByRole('menu')).toBeNull()
   })
 
-  it('offers no menu to a tile without layouts, nor to the maximized copy', async () => {
+  it('gives a tile without layouts the menu minus its Layout entry, and the maximized copy none', async () => {
     mount({ layout: undefined, onSetLayout: undefined })
     fireEvent.contextMenu(header(), { clientX: 10, clientY: 10 })
-    await new Promise((r) => setTimeout(r, 50))
-    expect(screen.queryByRole('menu')).toBeNull()
+    expect(screen.getByRole('menu', { name: 'Tile' })).toBeTruthy()
+    expect(screen.queryByRole('menuitem', { name: /Layout/ })).toBeNull()
+    expect(screen.getByRole('menuitem', { name: 'Maximize' })).toBeTruthy()
+    expect(screen.getByRole('menuitem', { name: 'Remove' })).toBeTruthy()
     cleanup()
     mount({ maximized: true })
     fireEvent.contextMenu(header(), { clientX: 10, clientY: 10 })

@@ -19,8 +19,8 @@ interface TileWrapperProps {
   onToggleMaximize?: (id: string) => void
   /**
    * The in-tile layout the compact face is on, for a tile that honours one
-   * (`TileDefinition.layouts`). With both this and `onSetLayout` set, a
-   * right-click on the header opens the menu that changes it.
+   * (`TileDefinition.layouts`). With both this and `onSetLayout` set, the
+   * header's right-click menu carries a Layout entry.
    */
   layout?: TileLayout
   onSetLayout?: (id: string, layout: TileLayout) => void
@@ -44,12 +44,12 @@ export function TileWrapper({
   // fresh state, fresh effects — rather than asking the same instance to try
   // once more with whatever it had when it threw.
   const [attempt, setAttempt] = useState(0)
-  // The layout menu opens from the header's context menu and only on the
-  // canvas copy: the maximized face ignores the layout, so offering it there
-  // would change nothing the user can see.
-  // Where the right-click landed, in viewport coordinates; null while closed.
+  // The header's context menu, on the canvas copy only: the maximized copy
+  // has no Remove and ignores the layout, so it would offer nothing. Where
+  // the right-click landed, in viewport coordinates; null while closed.
   const [menuAt, setMenuAt] = useState<{ x: number; y: number } | null>(null)
-  const hasLayoutMenu = !maximized && layout !== undefined && onSetLayout !== undefined
+  const hasMenu = !maximized
+  const hasLayouts = layout !== undefined && onSetLayout !== undefined
 
   return (
     <div className={`relative h-full ${maximized ? '' : 'tile-outer'}`}>
@@ -77,7 +77,7 @@ export function TileWrapper({
           }`}
           onDoubleClick={maximizable ? () => onToggleMaximize?.(id) : undefined}
           onContextMenu={
-            hasLayoutMenu
+            hasMenu
               ? (e) => {
                   e.preventDefault()
                   setMenuAt({ x: e.clientX, y: e.clientY })
@@ -86,7 +86,7 @@ export function TileWrapper({
           }
           title={
             maximizable && !maximized
-              ? hasLayoutMenu
+              ? hasLayouts
                 ? 'Double-click to maximize · right-click for layout'
                 : 'Double-click to maximize'
               : undefined
@@ -125,11 +125,11 @@ export function TileWrapper({
             handler stops that too; this keeps the tree honest). Eager rather
             than lazy: a chunk fetched on the first right-click was a visible
             pause before anything appeared, for about a kilobyte. */}
-        {hasLayoutMenu && menuAt && (
+        {hasMenu && menuAt && (
           <TileContextMenu
             at={menuAt}
-            layout={layout}
-            onChoose={(next) => onSetLayout(id, next)}
+            layout={hasLayouts ? layout : undefined}
+            onChoose={hasLayouts ? (next) => onSetLayout(id, next) : undefined}
             onMaximize={maximizable ? () => onToggleMaximize?.(id) : undefined}
             onRemove={() => onRemove(id)}
             onClose={() => setMenuAt(null)}

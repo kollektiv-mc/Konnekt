@@ -28,7 +28,9 @@ the layouts in a "Layout" fly-out beside Maximize and Remove) and kept in
 console's three are the log as it comes, every line at a tighter leading, and
 only the notable lines with each run of chatter folded into one row
 (`lib/logImportance.ts`). A face that has one shape (a key/value list) does
-not set `layouts`, so it never offers a choice that would change nothing. Settings › Appearance ›
+not set `layouts`; every canvas tile still gets the menu, with Maximize and
+Remove, and an entry that would do nothing for that tile is left out rather
+than shown disabled. Settings › Appearance ›
 "Classic tile faces" swaps every figure-first face for the `Classic*` component
 beside it, the face the tile had before, and the layout does not apply while
 that is on.
