@@ -82,6 +82,25 @@ body {
   color: var(--text-primary);
   font-family: var(--font-sans);
   height: 100%;
+  /* A desktop app, not a document: nothing on the dashboard is prose, so
+     a drag that starts on a label should never start a selection, and the
+     pointer should never turn into an I-beam over a figure. A tile resize
+     used to select half the board when the pointer strayed off the handle
+     (#107). The console's output opts back in below, and so does anything
+     editable, which is where selecting text is the point. */
+  user-select: none;
+  cursor: default;
+}
+
+/* Where text is meant to be selected. The console pane carries
+   `select-text` itself; editable fields, including CodeMirror's contenteditable
+   content, get it here so no field has to remember to ask. */
+input,
+textarea,
+[contenteditable],
+.select-text {
+  user-select: text;
+  cursor: text;
 }
 
 #root {
