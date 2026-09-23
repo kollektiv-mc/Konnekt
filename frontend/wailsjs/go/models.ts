@@ -1143,6 +1143,7 @@ export namespace models {
 	    releaseNotes: string;
 	    publishedAt: string;
 	    assets: UpdateAsset[];
+	    packageManaged: boolean;
 	
 	    static createFrom(source: any = {}) {
 	        return new UpdateInfo(source);
@@ -1158,6 +1159,7 @@ export namespace models {
 	        this.releaseNotes = source["releaseNotes"];
 	        this.publishedAt = source["publishedAt"];
 	        this.assets = this.convertValues(source["assets"], UpdateAsset);
+	        this.packageManaged = source["packageManaged"];
 	    }
 	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {

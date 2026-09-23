@@ -729,3 +729,62 @@ func TestDownloadAndApplyChecksumMismatch(t *testing.T) {
 		t.Errorf("target file was modified despite the checksum mismatch: got %q, want unchanged %q", got, original)
 	}
 }
+
+func TestIsPackageManagedPath(t *testing.T) {
+	cases := []struct {
+		goos, exe string
+		want      bool
+	}{
+		{"linux", "/usr/bin/konnekt", true},
+		{"linux", "/usr/lib/konnekt/konnekt", true},
+		{"linux", "/usr/local/bin/konnekt", false},
+		{"linux", "/home/alex/bin/konnekt-linux-amd64", false},
+		{"linux", "/opt/konnekt/konnekt", false},
+		{"linux", "/usrdata/konnekt", false},
+		{"windows", `C:\Program Files\Konnekt\konnekt.exe`, false},
+		{"darwin", "/usr/bin/konnekt", false},
+	}
+	for _, c := range cases {
+		if got := isPackageManagedPath(c.goos, c.exe); got != c.want {
+			t.Errorf("isPackageManagedPath(%q, %q) = %v, want %v", c.goos, c.exe, got, c.want)
+		}
+	}
+}
+
+// A package install learns it is one from the check, which is where the
+// frontend decides whether to offer the install at all.
+func TestCheckForUpdatesReportsPackageManaged(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"tag_name":"v0.2.0"}`))
+	}))
+	defer ts.Close()
+
+	svc := &UpdateService{http: ts.Client(), baseURL: ts.URL, packageManaged: true}
+	info, err := svc.CheckForUpdates(context.Background(), "0.1.0", UpdateChannelStable)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !info.PackageManaged {
+		t.Error("PackageManaged = false, want true")
+	}
+}
+
+// The install refuses a package install before it contacts anything, so no
+// binary is ever downloaded to be applied over /usr/bin.
+func TestDownloadAndInstallUpdateRefusesAPackageInstall(t *testing.T) {
+	var hits int
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		hits++
+	}))
+	defer ts.Close()
+
+	svc := &UpdateService{http: ts.Client(), baseURL: ts.URL, packageManaged: true}
+	err := svc.DownloadAndInstallUpdate(context.Background(), "0.1.0", UpdateChannelStable)
+	if err == nil || !strings.Contains(err.Error(), "package manager") {
+		t.Errorf("err = %v, want the package-manager refusal", err)
+	}
+	if hits != 0 {
+		t.Errorf("made %d requests before refusing, want 0", hits)
+	}
+}

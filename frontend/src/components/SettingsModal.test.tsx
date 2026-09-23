@@ -1,7 +1,7 @@
 import { describe, it, expect, afterEach, beforeEach, vi } from 'vitest'
 import { render, screen, fireEvent, waitFor, cleanup, within } from '@testing-library/react'
 import * as App from '../../wailsjs/go/main/App'
-import { EventsOn } from '../../wailsjs/runtime/runtime'
+import { BrowserOpenURL, EventsOn } from '../../wailsjs/runtime/runtime'
 import type { models } from '../../wailsjs/go/models'
 import { SettingsModal } from './SettingsModal'
 import { useSettingsStore } from '../stores/useSettingsStore'
@@ -88,6 +88,29 @@ describe('SettingsModal update install', () => {
 
     expect(await screen.findByRole('button', { name: 'Install snapshot…' })).toBeTruthy()
     expect(screen.queryByRole('button', { name: 'Install it anyway' })).toBeNull()
+    expect(App.DownloadAndInstallUpdate).not.toHaveBeenCalled()
+  })
+
+  // #424: an RPM install cannot replace /usr/bin/konnekt, so offering the
+  // button only led to a permission error.
+  it('points a package install at dnf instead of offering the install', async () => {
+    const rpm = {
+      name: 'konnekt-0.2.0-1.x86_64.rpm',
+      downloadUrl: 'https://example.com/konnekt-0.2.0-1.x86_64.rpm',
+      size: 1,
+    }
+    vi.mocked(App.CheckForUpdates).mockResolvedValue({
+      ...updateInfo('stable', 'v0.2.0'),
+      packageManaged: true,
+      assets: [rpm],
+    } as unknown as models.UpdateInfo)
+    await openAbout()
+
+    expect(await screen.findByText(`sudo dnf install ./${rpm.name}`)).toBeTruthy()
+    expect(screen.queryByRole('button', { name: 'Download & Install' })).toBeNull()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Download the .rpm ↗' }))
+    expect(BrowserOpenURL).toHaveBeenCalledWith(rpm.downloadUrl)
     expect(App.DownloadAndInstallUpdate).not.toHaveBeenCalled()
   })
 })
