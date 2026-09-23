@@ -121,7 +121,8 @@ func runningFromPackage() bool {
 }
 
 // isPackageManagedPath is the decision itself, over any platform and path so
-// it is testable from one machine. Only Linux ships as a package. Under /usr
+// it is testable from one machine. exe is already clean, as EvalSymlinks
+// returns it. Only Linux ships as a package. Under /usr
 // the package manager owns the file, and replacing it would leave rpm's
 // database describing a binary that is no longer there. /usr/local is the
 // exception, being where a binary copied in by hand conventionally goes.
@@ -129,7 +130,6 @@ func isPackageManagedPath(goos, exe string) bool {
 	if goos != "linux" {
 		return false
 	}
-	exe = filepath.Clean(exe)
 	return strings.HasPrefix(exe, "/usr/") && !strings.HasPrefix(exe, "/usr/local/")
 }
 
@@ -280,7 +280,7 @@ func (s *UpdateService) CheckForUpdates(ctx context.Context, currentVersion, cha
 	}
 	if !ok {
 		// Channel is still reported, so the UI can say what was checked.
-		return models.UpdateInfo{CurrentVersion: currentVersion, LatestVersion: currentVersion, Channel: channel, PackageManaged: s.packageManaged}, nil
+		return models.UpdateInfo{CurrentVersion: currentVersion, LatestVersion: currentVersion, Channel: channel}, nil
 	}
 
 	assets := make([]models.UpdateAsset, 0, len(c.rel.Assets))

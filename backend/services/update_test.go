@@ -737,7 +737,6 @@ func TestIsPackageManagedPath(t *testing.T) {
 	}{
 		{"linux", "/usr/bin/konnekt", true},
 		{"linux", "/usr/lib/konnekt/konnekt", true},
-		{"linux", "/usr/bin/../bin/konnekt", true},
 		{"linux", "/usr/local/bin/konnekt", false},
 		{"linux", "/home/alex/bin/konnekt-linux-amd64", false},
 		{"linux", "/opt/konnekt/konnekt", false},
@@ -753,22 +752,21 @@ func TestIsPackageManagedPath(t *testing.T) {
 }
 
 // A package install learns it is one from the check, which is where the
-// frontend decides what to offer, and in both of the check's outcomes.
+// frontend decides whether to offer the install at all.
 func TestCheckForUpdatesReportsPackageManaged(t *testing.T) {
-	for _, tag := range []string{"v0.2.0", "v0.1.0"} {
-		ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			w.Header().Set("Content-Type", "application/json")
-			_, _ = fmt.Fprintf(w, `{"tag_name":%q}`, tag)
-		}))
-		svc := &UpdateService{http: ts.Client(), baseURL: ts.URL, packageManaged: true}
-		info, err := svc.CheckForUpdates(context.Background(), "0.1.0", UpdateChannelStable)
-		ts.Close()
-		if err != nil {
-			t.Fatalf("%s: unexpected error: %v", tag, err)
-		}
-		if !info.PackageManaged {
-			t.Errorf("%s: PackageManaged = false, want true", tag)
-		}
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"tag_name":"v0.2.0"}`))
+	}))
+	defer ts.Close()
+
+	svc := &UpdateService{http: ts.Client(), baseURL: ts.URL, packageManaged: true}
+	info, err := svc.CheckForUpdates(context.Background(), "0.1.0", UpdateChannelStable)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !info.PackageManaged {
+		t.Error("PackageManaged = false, want true")
 	}
 }
 

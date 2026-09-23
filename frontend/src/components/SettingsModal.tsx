@@ -931,7 +931,7 @@ function PackageUpdateSteps({
           onClick={() => onOpen(rpm.downloadUrl)}
           className="text-accent border-accent/30 bg-accent/10 hover:bg-accent/15 border-hairline text-1xs rounded py-1 transition-colors"
         >
-          Download {rpm.name} ↗
+          Download the .rpm ↗
         </button>
       )}
     </div>

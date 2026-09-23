@@ -109,7 +109,7 @@ describe('SettingsModal update install', () => {
     expect(await screen.findByText(`sudo dnf install ./${rpm.name}`)).toBeTruthy()
     expect(screen.queryByRole('button', { name: 'Download & Install' })).toBeNull()
 
-    fireEvent.click(screen.getByRole('button', { name: `Download ${rpm.name} ↗` }))
+    fireEvent.click(screen.getByRole('button', { name: 'Download the .rpm ↗' }))
     expect(BrowserOpenURL).toHaveBeenCalledWith(rpm.downloadUrl)
     expect(App.DownloadAndInstallUpdate).not.toHaveBeenCalled()
   })
