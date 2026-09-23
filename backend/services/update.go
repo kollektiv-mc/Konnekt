@@ -9,6 +9,8 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
+	"path/filepath"
 	"runtime"
 	"strconv"
 	"strings"
@@ -87,16 +89,48 @@ var ErrUpdatePermission = errors.New("update install: insufficient permissions t
 // tests can point it at an httptest.Server — the same shape ModrinthClient
 // now uses.
 type UpdateService struct {
-	http    *http.Client
-	baseURL string
-	bus     *EventBus
+	http           *http.Client
+	baseURL        string
+	bus            *EventBus
+	packageManaged bool
 }
 
 func NewUpdateService() *UpdateService {
 	return &UpdateService{
-		http:    &http.Client{Timeout: 30 * time.Second},
-		baseURL: updateAPIBase,
+		http:           &http.Client{Timeout: 30 * time.Second},
+		baseURL:        updateAPIBase,
+		packageManaged: runningFromPackage(),
 	}
+}
+
+// runningFromPackage reports whether the running binary belongs to a system
+// package (the RPM puts it at /usr/bin/konnekt). Symlinks are resolved first,
+// so a link from somewhere the user owns still counts. If the executable
+// cannot be located the answer is false, which leaves the in-place path and
+// its own permission check to report the problem.
+func runningFromPackage() bool {
+	exe, err := os.Executable()
+	if err != nil {
+		return false
+	}
+	resolved, err := filepath.EvalSymlinks(exe)
+	if err != nil {
+		return false
+	}
+	return isPackageManagedPath(runtime.GOOS, resolved)
+}
+
+// isPackageManagedPath is the decision itself, over any platform and path so
+// it is testable from one machine. Only Linux ships as a package. Under /usr
+// the package manager owns the file, and replacing it would leave rpm's
+// database describing a binary that is no longer there. /usr/local is the
+// exception, being where a binary copied in by hand conventionally goes.
+func isPackageManagedPath(goos, exe string) bool {
+	if goos != "linux" {
+		return false
+	}
+	exe = filepath.Clean(exe)
+	return strings.HasPrefix(exe, "/usr/") && !strings.HasPrefix(exe, "/usr/local/")
 }
 
 func (s *UpdateService) SetBus(b *EventBus) { s.bus = b }
@@ -246,7 +280,7 @@ func (s *UpdateService) CheckForUpdates(ctx context.Context, currentVersion, cha
 	}
 	if !ok {
 		// Channel is still reported, so the UI can say what was checked.
-		return models.UpdateInfo{CurrentVersion: currentVersion, LatestVersion: currentVersion, Channel: channel}, nil
+		return models.UpdateInfo{CurrentVersion: currentVersion, LatestVersion: currentVersion, Channel: channel, PackageManaged: s.packageManaged}, nil
 	}
 
 	assets := make([]models.UpdateAsset, 0, len(c.rel.Assets))
@@ -263,6 +297,7 @@ func (s *UpdateService) CheckForUpdates(ctx context.Context, currentVersion, cha
 		ReleaseNotes:    c.rel.Body,
 		PublishedAt:     c.rel.PublishedAt,
 		Assets:          assets,
+		PackageManaged:  s.packageManaged,
 	}, nil
 }
 
@@ -373,6 +408,13 @@ func (p *progressReader) Read(buf []byte) (int, error) {
 // come from one release, so the install is consistent, just newer than the
 // version the UI named.
 func (s *UpdateService) DownloadAndInstallUpdate(ctx context.Context, currentVersion, channelSetting string) error {
+	// The frontend never offers the install for a package, so reaching this is
+	// a caller bug. Refuse before any download rather than let
+	// CheckPermissions report it as a missing permission.
+	if s.packageManaged {
+		return errors.New("update install: this copy of Konnekt is managed by the system package manager; update it through the package instead")
+	}
+
 	info, err := s.CheckForUpdates(ctx, currentVersion, channelSetting)
 	if err != nil {
 		return fmt.Errorf("update install: check failed: %w", err)

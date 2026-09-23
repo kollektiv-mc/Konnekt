@@ -729,3 +729,64 @@ func TestDownloadAndApplyChecksumMismatch(t *testing.T) {
 		t.Errorf("target file was modified despite the checksum mismatch: got %q, want unchanged %q", got, original)
 	}
 }
+
+func TestIsPackageManagedPath(t *testing.T) {
+	cases := []struct {
+		goos, exe string
+		want      bool
+	}{
+		{"linux", "/usr/bin/konnekt", true},
+		{"linux", "/usr/lib/konnekt/konnekt", true},
+		{"linux", "/usr/bin/../bin/konnekt", true},
+		{"linux", "/usr/local/bin/konnekt", false},
+		{"linux", "/home/alex/bin/konnekt-linux-amd64", false},
+		{"linux", "/opt/konnekt/konnekt", false},
+		{"linux", "/usrdata/konnekt", false},
+		{"windows", `C:\Program Files\Konnekt\konnekt.exe`, false},
+		{"darwin", "/usr/bin/konnekt", false},
+	}
+	for _, c := range cases {
+		if got := isPackageManagedPath(c.goos, c.exe); got != c.want {
+			t.Errorf("isPackageManagedPath(%q, %q) = %v, want %v", c.goos, c.exe, got, c.want)
+		}
+	}
+}
+
+// A package install learns it is one from the check, which is where the
+// frontend decides what to offer, and in both of the check's outcomes.
+func TestCheckForUpdatesReportsPackageManaged(t *testing.T) {
+	for _, tag := range []string{"v0.2.0", "v0.1.0"} {
+		ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = fmt.Fprintf(w, `{"tag_name":%q}`, tag)
+		}))
+		svc := &UpdateService{http: ts.Client(), baseURL: ts.URL, packageManaged: true}
+		info, err := svc.CheckForUpdates(context.Background(), "0.1.0", UpdateChannelStable)
+		ts.Close()
+		if err != nil {
+			t.Fatalf("%s: unexpected error: %v", tag, err)
+		}
+		if !info.PackageManaged {
+			t.Errorf("%s: PackageManaged = false, want true", tag)
+		}
+	}
+}
+
+// The install refuses a package install before it contacts anything, so no
+// binary is ever downloaded to be applied over /usr/bin.
+func TestDownloadAndInstallUpdateRefusesAPackageInstall(t *testing.T) {
+	var hits int
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		hits++
+	}))
+	defer ts.Close()
+
+	svc := &UpdateService{http: ts.Client(), baseURL: ts.URL, packageManaged: true}
+	err := svc.DownloadAndInstallUpdate(context.Background(), "0.1.0", UpdateChannelStable)
+	if err == nil || !strings.Contains(err.Error(), "package manager") {
+		t.Errorf("err = %v, want the package-manager refusal", err)
+	}
+	if hits != 0 {
+		t.Errorf("made %d requests before refusing, want 0", hits)
+	}
+}

@@ -826,6 +826,8 @@ function AboutPane({ version }: { version: string | null }) {
               <span className="text-text-muted text-1xs">
                 Not available in dev builds — restart via a packaged build to install updates.
               </span>
+            ) : checkState.info.packageManaged ? (
+              <PackageUpdateSteps info={checkState.info} onOpen={openRelease} />
             ) : checkState.info.channel === 'snapshot' ? (
               // Two steps on purpose. A misclick here swaps a working install
               // for untested nightly code, and the warning above is only worth
@@ -899,6 +901,39 @@ function AboutPane({ version }: { version: string | null }) {
           </div>
         )}
       </div>
+    </div>
+  )
+}
+
+// An install from the .rpm cannot replace itself: the binary sits in /usr/bin,
+// owned by root and by the package, so the backend reports it as package-managed
+// and this takes the place of the install button. The asset's own name goes in
+// the command when the release carries one, so it can be pasted as it stands.
+function PackageUpdateSteps({
+  info,
+  onOpen,
+}: {
+  info: models.UpdateInfo
+  onOpen: (url: string) => void
+}) {
+  const rpm = info.assets.find((a) => a.name.endsWith('.rpm'))
+  return (
+    <div className="flex flex-col gap-1.5">
+      <span className="text-text-muted text-1xs">
+        Installed from the .rpm package, so it updates through it. Download the new package, then
+        run this from the folder it saved to:
+      </span>
+      <code className="bg-hover text-text-secondary text-1xs rounded px-2 py-1 font-mono break-all select-all">
+        sudo dnf install ./{rpm?.name ?? 'konnekt-*.x86_64.rpm'}
+      </code>
+      {rpm && (
+        <button
+          onClick={() => onOpen(rpm.downloadUrl)}
+          className="text-accent border-accent/30 bg-accent/10 hover:bg-accent/15 border-hairline text-1xs rounded py-1 transition-colors"
+        >
+          Download {rpm.name} ↗
+        </button>
+      )}
     </div>
   )
 }

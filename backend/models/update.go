@@ -14,6 +14,10 @@ type UpdateInfo struct {
 	ReleaseNotes string        `json:"releaseNotes"`
 	PublishedAt  string        `json:"publishedAt"`
 	Assets       []UpdateAsset `json:"assets"`
+	// PackageManaged is true when the running binary was installed by a system
+	// package (the RPM), which the in-place update must not replace. The
+	// frontend then shows how to update through the package instead.
+	PackageManaged bool `json:"packageManaged"`
 }
 
 // UpdateAsset is a single file attached to a GitHub release (a per-platform
