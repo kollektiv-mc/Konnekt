@@ -41,6 +41,7 @@ func NewApp() *App {
 	srv := services.NewServerService()
 	srv.SetRcon(rcon)
 	cfg := services.NewConfigService()
+	srv.SetConfig(cfg)
 	bus := services.NewEventBus()
 	srv.SetBus(bus)
 	stats := services.NewStatsService(srv)
@@ -319,7 +320,15 @@ func (a *App) ReadConfigFile(serverID string, relPath string) (string, error) {
 }
 
 func (a *App) WriteConfigFile(serverID string, relPath string, content string) error {
-	return a.configEditorService.WriteConfigFile(serverID, relPath, content)
+	if err := a.configEditorService.WriteConfigFile(serverID, relPath, content); err != nil {
+		return err
+	}
+	// max-players lives in this file, and a stopped server's status reads it
+	// from disk, so push the new figure now rather than on the next stats tick.
+	if filepath.Clean(relPath) == "server.properties" {
+		a.serverService.PushStatus(serverID)
+	}
+	return nil
 }
 
 // --- Server install ---

@@ -235,6 +235,7 @@ func NewServerService() *ServerService {
 			startingTimeout: startingDeadline,
 			killTree:        killTree,
 			quiesceWait:     quiesceFlushWait,
+			workingDir:      func(string) (string, error) { return "", errNoWorkingDir },
 		},
 		instances: make(map[string]*serverInstance),
 	}
@@ -485,7 +486,7 @@ func (s *serverInstance) start(jarPath string, jvmArgs []string, workingDir stri
 	if err != nil {
 		slog.Debug("server: server.properties unreadable, using defaults", "error", err)
 	}
-	s.maxPlayers = propInt(props, "max-players", 20)
+	s.maxPlayers = propInt(props, "max-players", defaultMaxPlayers)
 
 	rconPort := propInt(props, "rcon.port", 25575)
 	s.rconEnabled = props["enable-rcon"] == "true"
@@ -713,9 +714,10 @@ func (s *serverInstance) waitForExit() {
 	s.setStateLocked(stateOffline, false)
 	// Two per-run fields deliberately survive this reset: maxPlayers and
 	// maxRAMMB keep what the last boot read from server.properties and the JVM
-	// args, so a stopped server's status still reads "0 / 20" and its RAM
-	// ceiling rather than blanking (stats_test.go pins MaxPlayers at 20 while
-	// stopped). Start re-reads both before the next process is spawned.
+	// args, so a stopped server's RAM ceiling does not blank, and maxPlayers is
+	// the fallback when resolveMaxPlayers cannot read the file (stats_test.go
+	// pins the 20 default for a server with none). Start re-reads both before
+	// the next process is spawned.
 	stop := models.ServerStopped{Expected: expected, ExitCode: exitCode}
 	s.lastStop = stop
 	// Captured under the lock, closed below without it. Reading s.exited at the
@@ -751,12 +753,10 @@ func (s *serverInstance) waitForExit() {
 func (s *serverInstance) status() models.ServerStatus {
 	s.mu.Lock()
 	running, state, started := s.running, s.state, s.startTime
-	maxPlayers, maxRAM, proc := s.maxPlayers, s.maxRAMMB, s.cachedProc
+	booted, maxRAM, proc := s.maxPlayers, s.maxRAMMB, s.cachedProc
 	s.mu.Unlock()
 
-	if maxPlayers == 0 {
-		maxPlayers = 20
-	}
+	maxPlayers := s.resolveMaxPlayers(running, booted)
 	return models.ServerStatus{
 		Running:    running,
 		State:      state.String(),
@@ -1421,11 +1421,9 @@ func (s *serverInstance) PlayerCount() int {
 
 func (s *serverInstance) MaxPlayers() int {
 	s.mu.Lock()
-	defer s.mu.Unlock()
-	if s.maxPlayers == 0 {
-		return 20
-	}
-	return s.maxPlayers
+	running, booted := s.running, s.maxPlayers
+	s.mu.Unlock()
+	return s.resolveMaxPlayers(running, booted)
 }
 
 func (s *serverInstance) CurrentTPS() float64 {

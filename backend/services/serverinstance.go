@@ -11,7 +11,7 @@ import (
 	"github.com/shirou/gopsutil/v4/process"
 )
 
-// instanceDeps is the wiring a serverInstance shares with its manager: the two
+// instanceDeps is the wiring a serverInstance shares with its manager: its
 // collaborators and the four test seams. Held by pointer and embedded in both
 // ServerService and serverInstance.
 //
@@ -54,6 +54,10 @@ type instanceDeps struct {
 	// quiesceWait is how long PrepareForBackup gives a stdin save-all to flush
 	// when RCON is unavailable and there is nothing to block on.
 	quiesceWait time.Duration
+
+	// workingDir finds a server's directory, which the instance otherwise only
+	// learns when Start is handed it. Wired by SetConfig.
+	workingDir func(serverID string) (string, error)
 }
 
 // serverInstance is one configured server's runtime: its process, the console
@@ -96,6 +100,9 @@ type serverInstance struct {
 	// stats fields — set on Start, read by accessors
 	maxRAMMB   int
 	maxPlayers int
+
+	// max-players as a stopped server's file says it now; see resolveMaxPlayers.
+	diskMax diskMaxPlayers
 
 	// RCON config — read from server.properties on Start
 	rconEnabled  bool
