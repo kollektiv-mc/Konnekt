@@ -201,8 +201,7 @@ read the command and RCON blocks in `scheduler_blocks.go`.
 
 **S4.3 A properties write cannot add a property.**
 Holds when: `writeProperty` (`properties.go`) refuses a value containing `\r` or
-`\n`, and a test covers it. Otherwise a value becomes a second line, such as
-`enable-rcon=true`.
+`\n`, and a test covers it.
 Verify: `grep -n 'writeProperty' backend/services/*_test.go`.
 
 **S4.4 Player-written log lines cannot impersonate server events.**
