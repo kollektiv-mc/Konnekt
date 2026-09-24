@@ -285,8 +285,10 @@ Verify: read `execHTTP` in `backend/services/scheduler_blocks.go`.
 Verify: `grep -L '^permissions:' .github/workflows/*.yml` must find nothing.
 
 **S7.2 Actions are pinned by commit SHA.**
-Verify: `grep -hn 'uses: ' .github/workflows/*.yml | grep -v '@[0-9a-f]\{40\}'`
-must find nothing, apart from local actions (`./`).
+Verify: `grep -hnE '^\s*(- )?uses: ' .github/workflows/*.yml | grep -v '@[0-9a-f]\{40\} # v'`
+must find nothing, apart from local actions (`./`). Anchored because a comment
+can contain the substring. The trailing `# vX.Y.Z` is what Dependabot reads to
+keep the pin current; kollektiv's `docs/conventions.md` has the rule.
 The workflows vendored from kollektiv (`aislop.yml`, `codeql.yml`,
 `pr-labelled.yml`, `scorecard.yml`, `issue-priority.yml`) are pinned in
 kollektiv's masters and re-synced, never edited here.
@@ -296,8 +298,10 @@ Verify: `.github/dependabot.yml` lists `gomod`, `npm` for `/frontend`, and
 `github-actions`.
 
 **S7.4 A vulnerability scanner runs in CI.**
-Holds when: govulncheck (at least) runs on every push, pinned as in `Scanners`.
-Verify: `grep -rln 'govulncheck' .github/workflows`.
+Holds when: govulncheck runs in CI once per shipped GOOS, pinned at the same
+version as `Scanners`.
+Verify: `grep -rn 'govulncheck@' .github/workflows` shows the `backend` and
+`backend-linux` jobs at the version above.
 
 ---
 
