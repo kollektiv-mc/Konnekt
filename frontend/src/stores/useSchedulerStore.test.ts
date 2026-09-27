@@ -147,6 +147,46 @@ describe('useSchedulerStore', () => {
       expect(s.hydratedFor).toBe('srv-b')
       expect(s.graphs).toEqual([graph('g2')])
     })
+    // hydratedFor used to survive a switch. After A → B with B's fetch failing,
+    // switching back to A found hydratedFor === A and bailed, leaving the store on
+    // B: A showed B's (empty) state and every write went to B (#446).
+    it('refetches a server it hydrated before, after a failed switch away', async () => {
+      await useSchedulerStore.getState().hydrate(SERVER)
+      vi.mocked(App.GetScheduleGraphs).mockRejectedValueOnce('corrupt file')
+      await useSchedulerStore.getState().hydrate('srv-b')
+
+      await useSchedulerStore.getState().hydrate(SERVER)
+
+      const s = useSchedulerStore.getState()
+      expect(App.GetScheduleGraphs).toHaveBeenLastCalledWith(SERVER)
+      expect(s.serverId).toBe(SERVER)
+      expect(s.hydratedFor).toBe(SERVER)
+      expect(s.graphs).toEqual([graph('g1')])
+
+      vi.mocked(App.SaveScheduleGraph).mockResolvedValue(graph('g3'))
+      await s.saveGraph(graph(''))
+      expect(App.SaveScheduleGraph).toHaveBeenLastCalledWith(SERVER, graph(''))
+    })
+
+    it('refetches when switching back before the switch away resolved', async () => {
+      await useSchedulerStore.getState().hydrate(SERVER)
+      let release: (v: models.Graph[]) => void = () => {}
+      vi.mocked(App.GetScheduleGraphs).mockReturnValueOnce(
+        new Promise<models.Graph[]>((r) => {
+          release = r
+        }),
+      )
+      const toB = useSchedulerStore.getState().hydrate('srv-b')
+
+      await useSchedulerStore.getState().hydrate(SERVER)
+      release([graph('g2')])
+      await toB
+
+      const s = useSchedulerStore.getState()
+      expect(s.serverId).toBe(SERVER)
+      expect(s.hydratedFor).toBe(SERVER)
+      expect(s.graphs).toEqual([graph('g1')])
+    })
   })
 
   describe('setNextRuns', () => {
@@ -190,6 +230,26 @@ describe('useSchedulerStore', () => {
       const graphs = useSchedulerStore.getState().graphs
       expect(graphs).toHaveLength(2)
       expect(graphs[0].name).toBe('renamed')
+    })
+
+    // The save was for the server the store held when it started. A switch while
+    // it was in flight must not put that graph into the next server's list.
+    it("keeps a save that lands after a switch out of the next server's graphs", async () => {
+      let release: (v: models.Graph) => void = () => {}
+      vi.mocked(App.SaveScheduleGraph).mockReturnValue(
+        new Promise<models.Graph>((r) => {
+          release = r
+        }),
+      )
+      const saving = useSchedulerStore.getState().saveGraph(graph(''))
+      vi.mocked(App.GetScheduleGraphs).mockResolvedValue([graph('g2')])
+      await useSchedulerStore.getState().hydrate('srv-b')
+
+      release(graph('g-a'))
+      await saving
+
+      expect(App.SaveScheduleGraph).toHaveBeenCalledWith(SERVER, graph(''))
+      expect(useSchedulerStore.getState().graphs).toEqual([graph('g2')])
     })
 
     it('records the error and rejects', async () => {

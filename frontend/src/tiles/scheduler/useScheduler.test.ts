@@ -41,6 +41,7 @@ describe('useScheduler', () => {
     vi.mocked(App.GetScheduleNextRuns).mockResolvedValue({ g1: 1000 })
 
     useSchedulerStore.setState({
+      serverId: '',
       graphs: [],
       blockDefs: [],
       nextRuns: {},
@@ -104,6 +105,26 @@ describe('useScheduler', () => {
       await vi.advanceTimersByTimeAsync(60_000)
     })
     expect(App.GetScheduleNextRuns).toHaveBeenCalledTimes(1) // the mount fetch only
+  })
+
+  // The store outlives the remount a server switch causes, so the first render
+  // for the new server finds the previous server's graphs still in it (#446).
+  it("never returns another server's graphs, even before hydrating", async () => {
+    const a = renderHook(() => useScheduler('srv-a'))
+    await waitFor(() => expect(a.result.current.graphs).toEqual([graph('g1')]))
+    a.unmount()
+
+    const seen: Array<{ graphs: models.Graph[]; loading: boolean }> = []
+    vi.mocked(App.GetScheduleGraphs).mockResolvedValue([graph('g2')])
+    const b = renderHook(() => {
+      const r = useScheduler('srv-b')
+      seen.push({ graphs: r.graphs, loading: r.loading })
+      return r
+    })
+    await waitFor(() => expect(b.result.current.graphs).toEqual([graph('g2')]))
+
+    expect(seen[0]).toEqual({ graphs: [], loading: true })
+    expect(seen.some((r) => r.graphs.some((g) => g.id === 'g1'))).toBe(false)
   })
 
   it('renders without a Wails bridge', async () => {

@@ -2,6 +2,12 @@ import { useEffect } from 'react'
 import { EventsOn } from '../../../wailsjs/runtime/runtime'
 import { useSchedulerStore } from '../../stores/useSchedulerStore'
 import { EVENTS } from '../../lib/constants'
+import type { models } from '../../../wailsjs/go/models'
+
+// Module-level so the gated values keep one identity across renders: GraphEditor's
+// auto-load effect depends on `graphs`, and a fresh array would re-run it each time.
+const NO_GRAPHS: models.Graph[] = []
+const NO_NEXT_RUNS: Record<string, number> = {}
 
 /**
  * Lifecycle wrapper around `useSchedulerStore`: hydrates on mount and keeps
@@ -15,10 +21,18 @@ import { EVENTS } from '../../lib/constants'
  * `hydrated` is reported for *this* server rather than read as a flag: the store
  * holds one server at a time, so a stale `true` from the previous server is the
  * difference between a loading tile and an empty one (#236).
+ *
+ * The data is gated the same way. A server switch remounts the tile, but the
+ * store outlives it, and until the effect below calls `hydrate` it still holds
+ * the previous server's graphs. Effects run child first, so GraphEditor's
+ * auto-load ran before that call and latched the previous server's first graph
+ * under this server's id (#446). Until the store holds this server, the hook
+ * reports it as loading with nothing in it.
  */
 export function useScheduler(serverId: string) {
   // Per-field selectors so the per-minute nextRuns push doesn't re-render
   // consumers of the other fields.
+  const storeServerId = useSchedulerStore((s) => s.serverId)
   const graphs = useSchedulerStore((s) => s.graphs)
   const blockDefs = useSchedulerStore((s) => s.blockDefs)
   const nextRuns = useSchedulerStore((s) => s.nextRuns)
@@ -58,13 +72,14 @@ export function useScheduler(serverId: string) {
     }
   }, [serverId])
 
+  const current = storeServerId === serverId
   return {
-    graphs,
+    graphs: current ? graphs : NO_GRAPHS,
     blockDefs,
-    nextRuns,
-    loading,
+    nextRuns: current ? nextRuns : NO_NEXT_RUNS,
+    loading: current ? loading : true,
     hydrated: hydratedFor === serverId,
-    error,
+    error: current ? error : null,
     saveGraph,
     deleteGraph,
     setEnabled,
