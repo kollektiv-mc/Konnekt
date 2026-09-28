@@ -272,11 +272,12 @@ tree.
       name both.
       Still open: the two NBT narrowings in #395; the nine rows in
       `scripts/gen-icons` are build-time tooling outside the app.
-      `govulncheck ./...` has **never run**, and needs one run from a machine
-      with ordinary network access: this environment's policy denies
-      `vuln.go.dev` at the gateway with a 403 to CONNECT, re-verified
-      2026-09-19. Tracked as #396, which replaces the reminder that died with
-      #312.
+      `govulncheck` (v1.8.0) runs in CI's `backend` and `backend-linux` jobs
+      (#440), one per shipped GOOS, because the cloud environment's policy
+      still denies `vuln.go.dev` with a 403 to CONNECT (re-verified
+      2026-09-24, #396). Read a red run there; nothing else reports it.
+      The full security yardstick, with a verify step per item, is
+      `agent_docs/SECURITY_CHECKLIST.md`, run by `/security-check`.
       The manual half is `SECURITY.md`'s threat model read against the bridge
       surface: #306, #307, #308, #309 and #310 are the 2026-09-08 findings.
 - [x] The aislop gate's policy is written down where the number is read.

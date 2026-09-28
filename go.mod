@@ -2,6 +2,8 @@ module konnekt
 
 go 1.26.0
 
+toolchain go1.26.8
+
 require (
 	github.com/minio/selfupdate v0.6.0
 	github.com/shirou/gopsutil/v4 v4.26.8

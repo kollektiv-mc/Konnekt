@@ -260,7 +260,8 @@ only ongoing cost is the remote-readiness checklist under "Adding a tile" below.
 
 Phases 1–5 (RemoteService, frontend remote runtime, auth, cloudflared tunnel,
 remote-mode adaptations) are filed in [GitHub Issues](../../issues), labelled
-`milestone:remote-access`.
+`milestone:remote-access`. Their security acceptance criteria are § S8 of
+`agent_docs/SECURITY_CHECKLIST.md`, checked by `/security-check`.
 
 Open questions to resolve before build: single app-wide password vs per-user
 accounts (default: single); whether remote needs per-server sessions or just

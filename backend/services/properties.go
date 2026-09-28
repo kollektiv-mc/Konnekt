@@ -2,13 +2,24 @@ package services
 
 import (
 	"bufio"
+	"errors"
 	"os"
 	"strings"
 )
 
+// errMultilineProperty is writeProperty's answer to a value carrying a line
+// break. The file is one key=value per line, so a break would write the rest
+// of the value as a line of its own. Refused rather than stripped so the
+// caller learns nothing was written.
+var errMultilineProperty = errors.New("property value must be a single line")
+
 // writeProperty updates a single key in a Java-style key=value properties file,
 // preserving all other lines and comments. Appends the key if not found.
 func writeProperty(path, key, value string) error {
+	if strings.ContainsAny(key, "\r\n") || strings.ContainsAny(value, "\r\n") {
+		return errMultilineProperty
+	}
+
 	f, err := os.Open(path)
 	if err != nil && !os.IsNotExist(err) {
 		return err
