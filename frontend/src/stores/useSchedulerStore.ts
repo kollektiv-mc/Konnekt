@@ -90,8 +90,13 @@ export const useSchedulerStore = create<SchedulerStore>((set, get) => ({
    *
    * `Promise.all` is fail-fast, so one failing binding discards the other two
    * responses — acceptable, since the realistic failure is "no bridge", where
-   * all three fail together. A failure leaves `hydratedFor` unchanged so the
-   * next mount retries once; there's no retry loop.
+   * all three fail together. A failure leaves `hydratedFor` unset for this
+   * server so the next mount retries once; there's no retry loop.
+   *
+   * A switch clears `hydratedFor`, so it only ever names the server in
+   * `serverId`. Keeping it across a switch let A → B (fetch fails) → A find
+   * `hydratedFor === 'A'` and bail, leaving the store on B: A showed B's state
+   * and every write went to B (#446).
    */
   hydrate: async (serverId) => {
     const prev = get()
@@ -105,7 +110,7 @@ export const useSchedulerStore = create<SchedulerStore>((set, get) => ({
       // A switch must not leave the previous server's graphs on screen for the
       // length of the fetch: those are another server's schedules under this
       // server's name, which is the confusion this whole change removes.
-      ...(prev.serverId === serverId ? {} : { graphs: [], nextRuns: {} }),
+      ...(prev.serverId === serverId ? {} : { graphs: [], nextRuns: {}, hydratedFor: null }),
     })
 
     try {
@@ -144,10 +149,17 @@ export const useSchedulerStore = create<SchedulerStore>((set, get) => ({
   // refetch would add a round trip plus an ambiguous "write succeeded, refetch
   // failed" state. The backend emits schedule:next-runs after each mutator, so
   // the countdown corrects itself.
+  //
+  // Each write captures the server before its await and applies the result only
+  // if the store still holds that server: a switch mid-write would otherwise put
+  // one server's graph into the next server's list, where the editor would then
+  // save it under the wrong server.
   saveGraph: async (g) => {
     set({ error: null })
+    const serverId = get().serverId
     try {
-      const saved = await SaveScheduleGraph(get().serverId, g)
+      const saved = await SaveScheduleGraph(serverId, g)
+      if (get().serverId !== serverId) return saved
       set((s) => {
         const idx = s.graphs.findIndex((x) => x.id === saved.id)
         return {
@@ -164,7 +176,9 @@ export const useSchedulerStore = create<SchedulerStore>((set, get) => ({
   deleteGraph: async (id) => {
     set({ error: null })
     try {
-      await DeleteScheduleGraph(get().serverId, id)
+      const serverId = get().serverId
+      await DeleteScheduleGraph(serverId, id)
+      if (get().serverId !== serverId) return
       set((s) => ({ graphs: s.graphs.filter((g) => g.id !== id) }))
     } catch (e) {
       set({ error: errMsg(e) })
@@ -175,7 +189,9 @@ export const useSchedulerStore = create<SchedulerStore>((set, get) => ({
   setEnabled: async (id, enabled) => {
     set({ error: null })
     try {
-      await SetScheduleGraphEnabled(get().serverId, id, enabled)
+      const serverId = get().serverId
+      await SetScheduleGraphEnabled(serverId, id, enabled)
+      if (get().serverId !== serverId) return
       // SetScheduleGraphEnabled returns no graph, so mirror the two fields Go
       // touches. createFrom keeps the result a real models.Graph instance.
       set((s) => ({
