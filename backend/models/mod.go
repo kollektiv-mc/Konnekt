@@ -30,6 +30,9 @@ type ModProject struct {
 	DateModified string          `json:"dateModified"` // ISO timestamp
 	Categories   []string        `json:"categories"`
 	Gallery      []ModGalleryImg `json:"gallery"`
+	// ClientOnly is true when every version of the project declares an
+	// environment that does not load on a dedicated server.
+	ClientOnly bool `json:"clientOnly"`
 }
 
 // ModCategory is a Modrinth content category tag.
@@ -62,6 +65,10 @@ type ModVersion struct {
 	FileSize      int64           `json:"fileSize"`
 	Dependencies  []ModDependency `json:"dependencies"`
 	DatePublished string          `json:"datePublished"`
+	// ClientOnly is true when this version declares an environment that does
+	// not load on a dedicated server (Modrinth's client_only or
+	// singleplayer_only).
+	ClientOnly bool `json:"clientOnly"`
 }
 
 // ModDependency describes a mod that another mod depends on.
@@ -97,6 +104,10 @@ type InstalledMod struct {
 	Enabled       bool   `json:"enabled"`
 	SizeBytes     int64  `json:"sizeBytes"`
 	InstalledAt   int64  `json:"installedAt"` // unix ms; 0 for local/unknown
+	// ClientOnly is true when the jar itself (Fabric, Quilt) or the provider
+	// version it was installed or identified as says it does not load on a
+	// dedicated server.
+	ClientOnly bool `json:"clientOnly"`
 }
 
 // ModUpdateInfo holds the result of an update check for one installed mod.
@@ -126,4 +137,7 @@ type JarMeta struct {
 	Name    string `json:"name"`
 	Version string `json:"version"`
 	Loader  string `json:"loader"` // detected loader, may be empty
+	// ClientOnly is fabric.mod.json's environment, or quilt.mod.json's
+	// minecraft.environment, saying "client".
+	ClientOnly bool `json:"clientOnly"`
 }

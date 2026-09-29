@@ -4,11 +4,21 @@ import type { ResolvedDependency } from './useMods'
 interface Props {
   primaryVersionId: string
   dependencies: ResolvedDependency[]
+  // The primary version does not load on a dedicated server. Warned about
+  // rather than refused: the metadata is the author's claim and is sometimes
+  // wrong, so the user keeps the last word.
+  clientOnly?: boolean
   onConfirm: (versionIds: string[]) => void
   onCancel: () => void
 }
 
-export function DependencyDialog({ primaryVersionId, dependencies, onConfirm, onCancel }: Props) {
+export function DependencyDialog({
+  primaryVersionId,
+  dependencies,
+  clientOnly = false,
+  onConfirm,
+  onCancel,
+}: Props) {
   // required deps are auto-selected and locked; optional are toggleable
   const [optionalSelected, setOptionalSelected] = useState<Set<string>>(new Set())
 
@@ -53,10 +63,21 @@ export function DependencyDialog({ primaryVersionId, dependencies, onConfirm, on
   return (
     <div className="modal-overlay-in z-dialog fixed inset-0 flex items-center justify-center bg-black/65">
       <div className="modal-panel-in bg-canvas border-border-subtle w-full max-w-md rounded-xl border p-5">
-        <h2 className="text-text-primary mb-1 text-sm font-semibold">Dependencies</h2>
-        <p className="text-text-muted mb-4 text-xs">
-          This mod requires the following. Required dependencies will be installed automatically.
-        </p>
+        <h2 className="text-text-primary mb-1 text-sm font-semibold">
+          {dependencies.length > 0 ? 'Dependencies' : 'Client-only mod'}
+        </h2>
+        {clientOnly && (
+          <p className="text-warning mb-3 text-xs">
+            This version is marked client only: it does not load on a dedicated server, and some
+            client-only mods stop a server from starting. Install it only if you know the server
+            needs it.
+          </p>
+        )}
+        {dependencies.length > 0 && (
+          <p className="text-text-muted mb-4 text-xs">
+            This mod requires the following. Required dependencies will be installed automatically.
+          </p>
+        )}
 
         {required.length > 0 && (
           <div className="mb-3">
@@ -97,7 +118,7 @@ export function DependencyDialog({ primaryVersionId, dependencies, onConfirm, on
             onClick={handleConfirm}
             className="bg-accent text-canvas rounded px-3 py-1.5 text-xs font-medium"
           >
-            Install
+            {clientOnly ? 'Install anyway' : 'Install'}
           </button>
         </div>
       </div>

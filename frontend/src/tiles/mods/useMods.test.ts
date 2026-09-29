@@ -1,7 +1,8 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { renderHook, waitFor, act, cleanup } from '@testing-library/react'
 import * as App from '../../../wailsjs/go/main/App'
-import { useMods } from './useMods'
+import { models } from '../../../wailsjs/go/models'
+import { isConfirmInstallError, useMods } from './useMods'
 
 vi.mock('../../../wailsjs/go/main/App')
 vi.mock('../../../wailsjs/runtime/runtime')
@@ -201,5 +202,52 @@ describe('useMods version switching', () => {
 
     expect(result.current.installError).toContain('sha512 mismatch')
     expect(result.current.installing).toBe(false)
+  })
+})
+
+// A client-only version installs nothing a dedicated server will load, so the
+// one-click install stops and asks, even with no dependency to show.
+describe('useMods installing a client-only version', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    vi.mocked(App.ModListInstalled).mockResolvedValue([])
+    vi.mocked(App.ModCheckUpdates).mockResolvedValue([])
+    vi.mocked(App.ModCategories).mockResolvedValue([])
+    vi.mocked(App.ModRescan).mockResolvedValue(undefined)
+    vi.mocked(App.ModInstall).mockResolvedValue(undefined)
+    vi.mocked(App.ModResolveDependencies).mockResolvedValue([])
+  })
+
+  it('asks before installing and installs nothing yet', async () => {
+    vi.mocked(App.ModGetVersions).mockResolvedValue([
+      models.ModVersion.createFrom({ id: 'sodium-1', clientOnly: true }),
+    ])
+    const { result } = renderHook(() => useMods('srv1'))
+
+    let caught: unknown
+    await act(async () => {
+      caught = await result.current.installLatest('sodium').catch((e: unknown) => e)
+    })
+
+    expect(isConfirmInstallError(caught)).toBe(true)
+    if (!isConfirmInstallError(caught)) return
+    expect(caught.clientOnly).toBe(true)
+    expect(caught.versionId).toBe('sodium-1')
+    expect(caught.deps).toEqual([])
+    expect(App.ModInstall).not.toHaveBeenCalled()
+    expect(result.current.installError).toBeNull()
+  })
+
+  it('installs a version that loads on a server without asking', async () => {
+    vi.mocked(App.ModGetVersions).mockResolvedValue([
+      models.ModVersion.createFrom({ id: 'lithium-1', clientOnly: false }),
+    ])
+    const { result } = renderHook(() => useMods('srv1'))
+
+    await act(async () => {
+      await result.current.installLatest('lithium')
+    })
+
+    expect(App.ModInstall).toHaveBeenCalledWith('srv1', ['lithium-1'])
   })
 })

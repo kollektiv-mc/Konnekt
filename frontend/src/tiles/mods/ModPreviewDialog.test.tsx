@@ -104,6 +104,24 @@ describe('ModPreviewDialog', () => {
     expect(declaredZ(depDialog)).toBeGreaterThan(declaredZ(previewPanel))
   })
 
+  // Switching to a client-only version needs a yes even with no dependency to
+  // pick, and the switch must not start until it is given.
+  it('asks before switching to a client-only version', async () => {
+    const onChangeVersion = vi.fn().mockResolvedValue(undefined)
+    const { getByText, findByText } = renderDialog({
+      versions: [models.ModVersion.createFrom({ ...versions[0], clientOnly: true })],
+      onChangeVersion,
+    })
+
+    fireEvent.click(getByText('versions'))
+    expect(getByText('client only')).toBeTruthy()
+    fireEvent.click(getByText('Switch'))
+
+    expect(await findByText('Client-only mod')).toBeTruthy()
+    expect(getByText('Install anyway')).toBeTruthy()
+    expect(onChangeVersion).not.toHaveBeenCalled()
+  })
+
   // The other half of the same silence: a dependency check that cannot reach
   // Modrinth leaves the version list empty, and the error used to render only
   // inside the branch that draws that list.

@@ -828,3 +828,63 @@ func TestModrinthGetVersionsByHashesSurfacesHTTPErrors(t *testing.T) {
 		t.Fatal("GetVersionsByHashes = nil error, want the HTTP failure surfaced")
 	}
 }
+
+// Modrinth's environment replaced the deprecated client_side/server_side pair.
+// A version carries one value and a project the set of its versions', and only
+// a set that is entirely client-side keeps a mod off a dedicated server.
+func TestModrinthClientOnly(t *testing.T) {
+	tests := []struct {
+		envs []string
+		want bool
+	}{
+		{[]string{"client_only"}, true},
+		{[]string{"singleplayer_only"}, true},
+		{[]string{"client_only", "singleplayer_only"}, true},
+		{[]string{"client_only_server_optional"}, false},
+		{[]string{"client_or_server_prefers_both"}, false},
+		{[]string{"client_only", "client_and_server"}, false},
+		{[]string{"server_only"}, false},
+		{[]string{"unknown"}, false},
+		{nil, false},
+	}
+	for _, tt := range tests {
+		if got := modrinthClientOnly(tt.envs...); got != tt.want {
+			t.Errorf("modrinthClientOnly(%v) = %v, want %v", tt.envs, got, tt.want)
+		}
+	}
+}
+
+// The flag has to survive decoding on every path the tile reads it from: a
+// search hit, a project and a version.
+func TestModrinthDecodesTheEnvironment(t *testing.T) {
+	ts := mrAPI(t, map[string]string{
+		"/version/client": `{"id":"client","environment":"client_only","files":[]}`,
+		"/version/both":   `{"id":"both","environment":"client_and_server","files":[]}`,
+		"/version/old":    `{"id":"old","files":[]}`,
+		"/search":         `{"hits":[{"project_id":"sodium","environment":["client_only"]},{"project_id":"lithium","environment":["client_or_server_prefers_both"]}],"total_hits":2}`,
+	})
+	defer ts.Close()
+	c := newTestClient(ts)
+
+	for id, want := range map[string]bool{"client": true, "both": false, "old": false} {
+		v, err := c.GetVersion(context.Background(), id)
+		if err != nil {
+			t.Fatalf("GetVersion(%s): %v", id, err)
+		}
+		if v.ClientOnly != want {
+			t.Errorf("GetVersion(%s).ClientOnly = %v, want %v", id, v.ClientOnly, want)
+		}
+	}
+
+	res, err := c.Search(context.Background(), models.ModSearchQuery{}, "", "")
+	if err != nil {
+		t.Fatalf("Search: %v", err)
+	}
+	got := map[string]bool{}
+	for _, h := range res.Hits {
+		got[h.ID] = h.ClientOnly
+	}
+	if !got["sodium"] || got["lithium"] {
+		t.Errorf("search ClientOnly = %v, want sodium only", got)
+	}
+}

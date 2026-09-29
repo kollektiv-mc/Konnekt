@@ -491,6 +491,7 @@ export namespace models {
 	    enabled: boolean;
 	    sizeBytes: number;
 	    installedAt: number;
+	    clientOnly: boolean;
 	
 	    static createFrom(source: any = {}) {
 	        return new InstalledMod(source);
@@ -512,6 +513,7 @@ export namespace models {
 	        this.enabled = source["enabled"];
 	        this.sizeBytes = source["sizeBytes"];
 	        this.installedAt = source["installedAt"];
+	        this.clientOnly = source["clientOnly"];
 	    }
 	}
 	export class KommandsSavedCommand {
@@ -682,6 +684,7 @@ export namespace models {
 	    dateModified: string;
 	    categories: string[];
 	    gallery: ModGalleryImg[];
+	    clientOnly: boolean;
 	
 	    static createFrom(source: any = {}) {
 	        return new ModProject(source);
@@ -702,6 +705,7 @@ export namespace models {
 	        this.dateModified = source["dateModified"];
 	        this.categories = source["categories"];
 	        this.gallery = this.convertValues(source["gallery"], ModGalleryImg);
+	        this.clientOnly = source["clientOnly"];
 	    }
 	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {
@@ -788,6 +792,7 @@ export namespace models {
 	    fileSize: number;
 	    dependencies: ModDependency[];
 	    datePublished: string;
+	    clientOnly: boolean;
 	
 	    static createFrom(source: any = {}) {
 	        return new ModVersion(source);
@@ -808,6 +813,7 @@ export namespace models {
 	        this.fileSize = source["fileSize"];
 	        this.dependencies = this.convertValues(source["dependencies"], ModDependency);
 	        this.datePublished = source["datePublished"];
+	        this.clientOnly = source["clientOnly"];
 	    }
 	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {

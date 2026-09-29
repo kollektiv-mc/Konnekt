@@ -132,9 +132,34 @@ func tryLoader(loader string, entries map[string]*zip.File) (models.JarMeta, boo
 // --- Fabric ---
 
 type fabricModJSON struct {
-	ID      string `json:"id"`
-	Name    string `json:"name"`
-	Version string `json:"version"`
+	ID          string          `json:"id"`
+	Name        string          `json:"name"`
+	Version     string          `json:"version"`
+	Environment json.RawMessage `json:"environment"`
+}
+
+// jarClientOnly reads fabric.mod.json's environment or quilt.mod.json's
+// minecraft.environment: a string, or for Fabric an array of strings. Only
+// "client" keeps a mod off a dedicated server. "*", "server" and Quilt's
+// "dedicated_server" all load there, and an absent field means "*".
+func jarClientOnly(raw json.RawMessage) bool {
+	if len(raw) == 0 {
+		return false
+	}
+	var one string
+	if err := json.Unmarshal(raw, &one); err == nil {
+		return one == "client"
+	}
+	var many []string
+	if err := json.Unmarshal(raw, &many); err != nil || len(many) == 0 {
+		return false
+	}
+	for _, e := range many {
+		if e != "client" {
+			return false
+		}
+	}
+	return true
 }
 
 func parseFabricMod(f *zip.File) (models.JarMeta, bool) {
@@ -150,7 +175,7 @@ func parseFabricMod(f *zip.File) (models.JarMeta, bool) {
 	if name == "" {
 		name = m.ID
 	}
-	return models.JarMeta{ID: m.ID, Name: name, Version: m.Version, Loader: "fabric"}, true
+	return models.JarMeta{ID: m.ID, Name: name, Version: m.Version, Loader: "fabric", ClientOnly: jarClientOnly(m.Environment)}, true
 }
 
 // --- Quilt ---
@@ -163,6 +188,9 @@ type quiltModJSON struct {
 	Metadata struct {
 		Name string `json:"name"`
 	} `json:"metadata"`
+	Minecraft struct {
+		Environment json.RawMessage `json:"environment"`
+	} `json:"minecraft"`
 }
 
 func parseQuiltMod(f *zip.File) (models.JarMeta, bool) {
@@ -178,7 +206,7 @@ func parseQuiltMod(f *zip.File) (models.JarMeta, bool) {
 	if name == "" {
 		name = m.QuiltLoader.ID
 	}
-	return models.JarMeta{ID: m.QuiltLoader.ID, Name: name, Version: m.QuiltLoader.Version, Loader: "quilt"}, true
+	return models.JarMeta{ID: m.QuiltLoader.ID, Name: name, Version: m.QuiltLoader.Version, Loader: "quilt", ClientOnly: jarClientOnly(m.Minecraft.Environment)}, true
 }
 
 // --- Forge / NeoForge (mods.toml) ---

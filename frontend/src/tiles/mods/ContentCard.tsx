@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import type { ModProject, ResolvedDependency } from './useMods'
-import { isDepsRequiredError } from './useMods'
+import { isConfirmInstallError } from './useMods'
 import { DependencyDialog } from './DependencyDialog'
+import { ClientOnlyBadge } from './ClientOnlyBadge'
 import { fmtCount, relativeTime } from '../../lib/format'
 
 interface ContentCardProps {
@@ -29,6 +30,7 @@ export function ContentCard({
   const [hovered, setHovered] = useState(false)
   const [deps, setDeps] = useState<ResolvedDependency[] | null>(null)
   const [pendingVersionId, setPendingVersionId] = useState('')
+  const [pendingClientOnly, setPendingClientOnly] = useState(false)
 
   const busy = quickInstalling || installing
   // done = just installed → treat same as installed (grey dim +, no checkmark)
@@ -43,9 +45,10 @@ export function ContentCard({
       setDone(true)
       setTimeout(() => setDone(false), 2500)
     } catch (err: unknown) {
-      if (isDepsRequiredError(err)) {
+      if (isConfirmInstallError(err)) {
         setDeps(err.deps)
         setPendingVersionId(err.versionId)
+        setPendingClientOnly(err.clientOnly)
       }
     } finally {
       setQuickInstalling(false)
@@ -70,6 +73,7 @@ export function ContentCard({
         <DependencyDialog
           primaryVersionId={pendingVersionId}
           dependencies={deps}
+          clientOnly={pendingClientOnly}
           onConfirm={handleDepConfirm}
           onCancel={() => setDeps(null)}
         />
@@ -119,6 +123,7 @@ export function ContentCard({
 
         {/* Stats row */}
         <div className="mb-1.5 flex items-center gap-2">
+          {project.clientOnly && <ClientOnlyBadge />}
           {project.downloads > 0 && (
             <span className="text-text-faint text-2xs font-mono text-xs">
               ↓ {fmtCount(project.downloads)}

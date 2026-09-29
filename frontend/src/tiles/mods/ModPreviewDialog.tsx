@@ -8,6 +8,7 @@ import type {
   ResolvedDependency,
 } from './useMods'
 import { DependencyDialog } from './DependencyDialog'
+import { ClientOnlyBadge } from './ClientOnlyBadge'
 import { ModAboutBody } from './ModAboutBody'
 import { fmtCount, fmtBytes, relativeTime } from '../../lib/format'
 import { IconButton } from '../../components/ui/IconButton'
@@ -58,6 +59,7 @@ export function ModPreviewDialog({
   const [showAllVersions, setShowAllVersions] = useState(false)
   const [deps, setDeps] = useState<ResolvedDependency[] | null>(null)
   const [pendingVersionId, setPendingVersionId] = useState('')
+  const [pendingClientOnly, setPendingClientOnly] = useState(false)
   const [changingVersion, setChangingVersion] = useState(false)
 
   const isModrinth = mod.source === 'modrinth' && !!mod.projectId
@@ -91,9 +93,11 @@ export function ModPreviewDialog({
       try {
         const resolved = await onResolveDeps(versionId)
         const nonTrivial = (resolved ?? []).filter((d) => !d.alreadyInstalled)
-        if (nonTrivial.length > 0) {
-          setDeps(resolved)
+        const clientOnly = versions.find((v) => v.id === versionId)?.clientOnly ?? false
+        if (nonTrivial.length > 0 || clientOnly) {
+          setDeps(resolved ?? [])
           setPendingVersionId(versionId)
+          setPendingClientOnly(clientOnly)
           return
         }
         setChangingVersion(true)
@@ -109,7 +113,7 @@ export function ModPreviewDialog({
         setChangingVersion(false)
       }
     },
-    [mod.fileName, onResolveDeps, onChangeVersion, onClose],
+    [mod.fileName, versions, onResolveDeps, onChangeVersion, onClose],
   )
 
   const handleDepConfirm = useCallback(
@@ -143,6 +147,7 @@ export function ModPreviewDialog({
         <DependencyDialog
           primaryVersionId={pendingVersionId}
           dependencies={deps}
+          clientOnly={pendingClientOnly}
           onConfirm={handleDepConfirm}
           onCancel={() => setDeps(null)}
         />
@@ -333,6 +338,7 @@ export function ModPreviewDialog({
                             >
                               {v.versionType}
                             </span>
+                            {v.clientOnly && <ClientOnlyBadge />}
                             {isCurrent && (
                               <span className="text-accent text-2xs shrink-0 rounded bg-[color-mix(in_srgb,var(--accent)_15%,transparent)] px-1 text-xs">
                                 installed

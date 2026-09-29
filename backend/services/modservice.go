@@ -49,6 +49,10 @@ type modManifestItem struct {
 	Enabled      bool     `json:"enabled"`
 	InstalledAt  int64    `json:"installedAt"` // unix ms
 	DependencyOf []string `json:"dependencyOf,omitempty"`
+	// ClientOnly is what the provider said about the version this file was
+	// installed or identified as. Kept because a Forge or NeoForge jar has no
+	// field of its own that says so.
+	ClientOnly bool `json:"clientOnly,omitempty"`
 }
 
 // modManifestVersion is the manifest's schema version, and the trigger for the
@@ -418,6 +422,7 @@ func (s *ModService) Install(serverID string, versionIDs []string) error {
 			TargetFolder:  targetFolder,
 			Enabled:       !wasDisabled,
 			InstalledAt:   time.Now().UnixMilli(),
+			ClientOnly:    version.ClientOnly,
 		})
 		if h := s.installHooks.beforeSaveManifest; h != nil {
 			h()
@@ -757,6 +762,7 @@ func (s *ModService) ListInstalled(serverID string) ([]models.InstalledMod, erro
 				Loader:       meta.Loader,
 				Enabled:      enabled,
 				SizeBytes:    info.Size(),
+				ClientOnly:   meta.ClientOnly,
 			}
 
 			// Merge manifest data if available
@@ -768,6 +774,7 @@ func (s *ModService) ListInstalled(serverID string) ([]models.InstalledMod, erro
 				mod.VersionNumber = manifestItem.VersionNumber
 				mod.InstalledAt = manifestItem.InstalledAt
 				mod.IconURL = manifestItem.IconURL
+				mod.ClientOnly = mod.ClientOnly || manifestItem.ClientOnly
 				if manifestItem.Loader != "" {
 					mod.Loader = manifestItem.Loader
 				}
