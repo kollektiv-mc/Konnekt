@@ -999,6 +999,103 @@ func TestManifestRefusesAPathAsServerID(t *testing.T) {
 	}
 }
 
+// --- File names from the frontend (#428) ---
+
+// SetEnabled and Uninstall take a file name over IPC. They used to confine it
+// to the working directory rather than the mods folder, so ../server.properties
+// was renamed to server.properties.disabled or deleted outright.
+func TestSetEnabledAndUninstallRefuseANameOutsideTheFolder(t *testing.T) {
+	s, workDir := newModFixture(t, &fakeModProvider{})
+	props := filepath.Join(workDir, "server.properties")
+	if err := os.WriteFile(props, []byte("motd=hi\n"), 0644); err != nil {
+		t.Fatalf("write server.properties: %v", err)
+	}
+
+	names := []string{
+		"../server.properties",
+		`..\server.properties`,
+		props,
+		"",
+		"server.properties",
+		"../plugins/real.jar",
+		"..",
+	}
+	for _, name := range names {
+		t.Run("SetEnabled/"+name, func(t *testing.T) {
+			if err := s.SetEnabled(testServerID, name, false); err == nil {
+				t.Errorf("SetEnabled(%q) = nil error, want a refusal", name)
+			}
+		})
+		t.Run("Uninstall/"+name, func(t *testing.T) {
+			if err := s.Uninstall(testServerID, name); err == nil {
+				t.Errorf("Uninstall(%q) = nil error, want a refusal", name)
+			}
+		})
+	}
+
+	got, err := os.ReadFile(props)
+	if err != nil {
+		t.Fatalf("server.properties is gone: %v", err)
+	}
+	if string(got) != "motd=hi\n" {
+		t.Errorf("server.properties changed: %q", got)
+	}
+	if _, err := os.Stat(props + ".disabled"); err == nil {
+		t.Error("server.properties was renamed to .disabled")
+	}
+}
+
+// The refusal must not cost the names the tile really sends: a jar read off
+// disk, in either state.
+func TestSetEnabledAndUninstallStillAcceptAJar(t *testing.T) {
+	s, workDir := newModFixture(t, &fakeModProvider{})
+	plugins := filepath.Join(workDir, "plugins")
+	writePluginJar(t, plugins, "real.jar", "Real", "1.0")
+
+	if err := s.SetEnabled(testServerID, "real.jar", false); err != nil {
+		t.Fatalf("SetEnabled(real.jar, false): %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(plugins, "real.jar.disabled")); err != nil {
+		t.Fatalf("real.jar was not disabled: %v", err)
+	}
+	if err := s.SetEnabled(testServerID, "real.jar.disabled", true); err != nil {
+		t.Fatalf("SetEnabled(real.jar.disabled, true): %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(plugins, "real.jar")); err != nil {
+		t.Fatalf("real.jar was not re-enabled: %v", err)
+	}
+	if err := s.Uninstall(testServerID, "real.jar"); err != nil {
+		t.Fatalf("Uninstall(real.jar): %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(plugins, "real.jar")); err == nil {
+		t.Error("real.jar is still on disk after Uninstall")
+	}
+}
+
+func TestModFileName(t *testing.T) {
+	tests := []struct {
+		in, want string
+		ok       bool
+	}{
+		{"a.jar", "a.jar", true},
+		{"a.jar.disabled", "a.jar", true},
+		{"", "", false},
+		{"a.txt", "", false},
+		{"a.disabled", "", false},
+		{"../a.jar", "", false},
+		{`..\a.jar`, "", false},
+		{"/abs/a.jar", "", false},
+		{"sub/a.jar", "", false},
+		{"..", "", false},
+	}
+	for _, tt := range tests {
+		got, err := modFileName(tt.in)
+		if (err == nil) != tt.ok || got != tt.want {
+			t.Errorf("modFileName(%q) = %q, %v; want %q, ok=%v", tt.in, got, err, tt.want, tt.ok)
+		}
+	}
+}
+
 // queryingProvider answers the two provider queries the fake refuses, so the
 // tests below reach the server lookup that follows them.
 type queryingProvider struct{ fakeModProvider }

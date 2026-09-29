@@ -437,7 +437,7 @@ func (s *ModService) removeSuperseded(workDir string, manifest *modManifest, tar
 	remove := func(base string) error {
 		for _, name := range []string{base, base + ".disabled"} {
 			path := filepath.Join(workDir, targetFolder, name)
-			if err := sandboxCheck(workDir, path); err != nil {
+			if err := sandboxCheck(filepath.Join(workDir, targetFolder), path); err != nil {
 				return err
 			}
 			if _, err := os.Stat(path); err != nil {
@@ -460,7 +460,7 @@ func (s *ModService) removeSuperseded(workDir string, manifest *modManifest, tar
 	// name beside it, so without this the folder ends up holding both.
 	disabledTwin := filepath.Join(workDir, targetFolder, newFileName+".disabled")
 	if _, err := os.Stat(disabledTwin); err == nil {
-		if err := sandboxCheck(workDir, disabledTwin); err != nil {
+		if err := sandboxCheck(filepath.Join(workDir, targetFolder), disabledTwin); err != nil {
 			return false, aside, err
 		}
 		if err := moveAside(disabledTwin); err != nil {
@@ -724,32 +724,36 @@ func (s *ModService) SetEnabled(serverID, fileName string, enabled bool) error {
 
 	// Accept the bare filename; determine current name and target name
 	// to support toggling from either state.
-	bareName := strings.TrimSuffix(fileName, ".disabled")
+	bareName, err := modFileName(fileName)
+	if err != nil {
+		return err
+	}
 	disabledName := bareName + ".disabled"
 
 	folder := s.findJarFolder(workDir, bareName)
 	if folder == "" {
 		return fmt.Errorf("mod file not found: %s", fileName)
 	}
+	folderDir := filepath.Join(workDir, folder)
 
-	currentPath := filepath.Join(workDir, folder, disabledName)
-	newPath := filepath.Join(workDir, folder, bareName)
+	currentPath := filepath.Join(folderDir, disabledName)
+	newPath := filepath.Join(folderDir, bareName)
 	if enabled {
 		// disabled → enabled: expect .disabled exists
 		if _, err := os.Stat(currentPath); os.IsNotExist(err) {
-			currentPath = filepath.Join(workDir, folder, bareName)
+			currentPath = filepath.Join(folderDir, bareName)
 			newPath = currentPath // already enabled
 		}
 	} else {
 		// enabled → disabled
-		currentPath = filepath.Join(workDir, folder, bareName)
-		newPath = filepath.Join(workDir, folder, disabledName)
+		currentPath = filepath.Join(folderDir, bareName)
+		newPath = filepath.Join(folderDir, disabledName)
 	}
 
-	if err := sandboxCheck(workDir, currentPath); err != nil {
+	if err := sandboxCheck(folderDir, currentPath); err != nil {
 		return err
 	}
-	if err := sandboxCheck(workDir, newPath); err != nil {
+	if err := sandboxCheck(folderDir, newPath); err != nil {
 		return err
 	}
 
@@ -790,16 +794,20 @@ func (s *ModService) Uninstall(serverID, fileName string) error {
 		return err
 	}
 
-	bareName := strings.TrimSuffix(fileName, ".disabled")
+	bareName, err := modFileName(fileName)
+	if err != nil {
+		return err
+	}
 	folder := s.findJarFolder(workDir, bareName)
 	if folder == "" {
 		return fmt.Errorf("mod file not found: %s", fileName)
 	}
+	folderDir := filepath.Join(workDir, folder)
 
 	// Try both enabled and disabled variants
 	for _, name := range []string{bareName, bareName + ".disabled"} {
-		path := filepath.Join(workDir, folder, name)
-		if err := sandboxCheck(workDir, path); err != nil {
+		path := filepath.Join(folderDir, name)
+		if err := sandboxCheck(folderDir, path); err != nil {
 			return err
 		}
 		if _, err := os.Stat(path); err == nil {
@@ -915,14 +923,35 @@ func loaderTargetFolder(loader string) string {
 	}
 }
 
-// sandboxCheck ensures path is within workDir.
-func sandboxCheck(workDir, path string) error {
+// sandboxCheck ensures path is within dir. Callers pass the mods or plugins
+// folder itself rather than the server's working directory: every path this
+// service touches is a jar in one of those two, and a check against the
+// working directory let server.properties through (#428).
+func sandboxCheck(dir, path string) error {
 	clean := filepath.Clean(path)
-	wd := filepath.Clean(workDir)
-	if clean != wd && !strings.HasPrefix(clean, wd+string(filepath.Separator)) {
-		return fmt.Errorf("path outside working directory")
+	d := filepath.Clean(dir)
+	if clean != d && !strings.HasPrefix(clean, d+string(filepath.Separator)) {
+		return fmt.Errorf("path outside %s", filepath.Base(d))
 	}
 	return nil
+}
+
+// modFileName checks a jar name that arrived over IPC and returns it with any
+// .disabled suffix trimmed. The tile only ever sends a name ListInstalled read
+// off disk, but a bound method is reachable from any script in the WebView and,
+// with Remote Access, from the network, so the name is refused unless it is a
+// bare file name ending in .jar or .jar.disabled (#428). Backslashes are
+// refused on every platform because filepath.Base only treats them as a
+// separator on Windows.
+func modFileName(fileName string) (string, error) {
+	if fileName == "" || fileName != filepath.Base(fileName) || strings.ContainsAny(fileName, `/\`) {
+		return "", fmt.Errorf("invalid mod file name %q", fileName)
+	}
+	bare := strings.TrimSuffix(fileName, ".disabled")
+	if !strings.HasSuffix(bare, ".jar") {
+		return "", fmt.Errorf("invalid mod file name %q: not a jar", fileName)
+	}
+	return bare, nil
 }
 
 // --- Manifest persistence ---
@@ -1080,7 +1109,7 @@ func (s *ModService) InstallLocal(serverID string, filePaths []string) error {
 			continue
 		}
 		finalPath := filepath.Join(targetDir, safeFileName)
-		if err := sandboxCheck(workDir, finalPath); err != nil {
+		if err := sandboxCheck(targetDir, finalPath); err != nil {
 			return err
 		}
 		if err := atomicCopyFile(srcPath, finalPath); err != nil {
