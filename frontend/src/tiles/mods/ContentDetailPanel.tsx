@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import type { ModProject, ModVersion, ResolvedDependency } from './useMods'
-import { isDepsRequiredError } from './useMods'
+import { isConfirmInstallError } from './useMods'
+import { ClientOnlyBadge } from './ClientOnlyBadge'
 import { DependencyDialog } from './DependencyDialog'
 import { ContentCard } from './ContentCard'
 import { ModAboutBody } from './ModAboutBody'
@@ -40,7 +41,7 @@ export function ContentDetailPanel({
   installError,
   moreByAuthorProjects,
   // onResolveDeps is unused here: dependency resolution now surfaces via the
-  // isDepsRequiredError thrown from onInstall/onInstallLatest below. Left in
+  // isConfirmInstallError thrown from onInstall/onInstallLatest below. Left in
   // Props for caller compatibility.
   onGetVersions,
   onGetAllVersions,
@@ -56,6 +57,7 @@ export function ContentDetailPanel({
   const [showAllVersions, setShowAllVersions] = useState(false)
   const [deps, setDeps] = useState<ResolvedDependency[] | null>(null)
   const [pendingVersionId, setPendingVersionId] = useState('')
+  const [pendingClientOnly, setPendingClientOnly] = useState(false)
   const [installing2, setInstalling2] = useState(false)
 
   useEffect(() => {
@@ -85,9 +87,10 @@ export function ContentDetailPanel({
     try {
       await onInstallLatest(project.id)
     } catch (e: unknown) {
-      if (isDepsRequiredError(e)) {
+      if (isConfirmInstallError(e)) {
         setDeps(e.deps)
         setPendingVersionId(e.versionId)
+        setPendingClientOnly(e.clientOnly)
       }
     } finally {
       setInstalling2(false)
@@ -99,6 +102,18 @@ export function ContentDetailPanel({
     await onInstall(versionIds)
   }
 
+  // A version row installs that exact version, without the dependency pass
+  // installLatest makes, so a client-only one asks here instead.
+  const handleVersionInstall = (v: ModVersion) => {
+    if (v.clientOnly) {
+      setDeps([])
+      setPendingVersionId(v.id)
+      setPendingClientOnly(true)
+      return
+    }
+    void onInstall([v.id])
+  }
+
   const isInstalling = installing || installing2
 
   return (
@@ -107,6 +122,7 @@ export function ContentDetailPanel({
         <DependencyDialog
           primaryVersionId={pendingVersionId}
           dependencies={deps}
+          clientOnly={pendingClientOnly}
           onConfirm={handleDepConfirm}
           onCancel={() => setDeps(null)}
         />
@@ -128,7 +144,12 @@ export function ContentDetailPanel({
           )}
 
           <div className="min-w-0 flex-1">
-            <div className="text-text-primary truncate text-sm font-semibold">{project.title}</div>
+            <div className="flex min-w-0 items-center gap-1.5">
+              <div className="text-text-primary truncate text-sm font-semibold">
+                {project.title}
+              </div>
+              {project.clientOnly && <ClientOnlyBadge />}
+            </div>
             {project.author && (
               <div className="text-text-muted mt-0.5 truncate text-xs">by {project.author}</div>
             )}
@@ -254,7 +275,7 @@ export function ContentDetailPanel({
                 <VersionRow
                   key={v.id}
                   version={v}
-                  onInstall={() => onInstall([v.id])}
+                  onInstall={() => handleVersionInstall(v)}
                   installing={isInstalling}
                 />
               ))}
@@ -337,6 +358,7 @@ function VersionRow({
           >
             {version.versionType}
           </span>
+          {version.clientOnly && <ClientOnlyBadge />}
         </div>
         <div className="text-text-faint text-2xs mt-0.5 font-mono text-xs">
           {version.gameVersions?.slice(0, 3).join(', ')}

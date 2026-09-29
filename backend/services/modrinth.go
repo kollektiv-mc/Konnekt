@@ -465,6 +465,7 @@ type mrSearchHit struct {
 	Follows      int      `json:"follows"`
 	DateModified string   `json:"date_modified"`
 	Categories   []string `json:"categories"`
+	Environment  []string `json:"environment"`
 }
 
 type mrProject struct {
@@ -481,6 +482,7 @@ type mrProject struct {
 	Categories  []string    `json:"categories"`
 	Gallery     []mrGallery `json:"gallery"`
 	Team        string      `json:"team"`
+	Environment []string    `json:"environment"`
 }
 
 type mrMember struct {
@@ -514,6 +516,7 @@ type mrVersion struct {
 	Files         []mrFile       `json:"files"`
 	Dependencies  []mrDependency `json:"dependencies"`
 	DatePublished string         `json:"date_published"`
+	Environment   string         `json:"environment"`
 }
 
 type mrFile struct {
@@ -532,6 +535,26 @@ type mrDependency struct {
 
 // --- Mapping helpers ---
 
+// modrinthClientOnly reports whether a set of Modrinth environments rules out a
+// dedicated server. A version carries one; a project carries every environment
+// its versions declare, and is client-only only when all of them are.
+// singleplayer_only counts: it runs on the integrated server, never a dedicated
+// one. An empty set is unknown, which plugins always are, and is not flagged.
+//
+// These replace the deprecated project-level client_side and server_side
+// fields, which Modrinth's docs direct callers away from.
+func modrinthClientOnly(envs ...string) bool {
+	if len(envs) == 0 {
+		return false
+	}
+	for _, e := range envs {
+		if e != "client_only" && e != "singleplayer_only" {
+			return false
+		}
+	}
+	return true
+}
+
 func mrHitToProject(h mrSearchHit) models.ModProject {
 	return models.ModProject{
 		ID:           h.ProjectID,
@@ -545,6 +568,7 @@ func mrHitToProject(h mrSearchHit) models.ModProject {
 		Follows:      h.Follows,
 		DateModified: h.DateModified,
 		Categories:   h.Categories,
+		ClientOnly:   modrinthClientOnly(h.Environment...),
 	}
 }
 
@@ -572,6 +596,7 @@ func mrProjectToModel(p mrProject) models.ModProject {
 		DateModified: p.Updated,
 		Categories:   p.Categories,
 		Gallery:      gallery,
+		ClientOnly:   modrinthClientOnly(p.Environment...),
 	}
 }
 
@@ -593,6 +618,9 @@ func mrVersionToModel(v mrVersion) models.ModVersion {
 		GameVersions:  v.GameVersions,
 		Loaders:       v.Loaders,
 		DatePublished: v.DatePublished,
+	}
+	if v.Environment != "" {
+		mv.ClientOnly = modrinthClientOnly(v.Environment)
 	}
 	for _, f := range v.Files {
 		if f.Primary {

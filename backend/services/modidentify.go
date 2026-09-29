@@ -243,6 +243,7 @@ func (s *ModService) identifyUnknownLocked(serverID string) (bool, error) {
 			item.Provider = s.provider.ID()
 			item.ProjectID = version.ProjectID
 			item.VersionNumber = version.VersionNumber
+			item.ClientOnly = version.ClientOnly
 
 			// Only a version's *primary* file gets its VersionID. A secondary
 			// file — EssentialsX ships EssentialsXChat and the rest of its

@@ -26,18 +26,23 @@ export type ModSearchResult = models.ModSearchResult
 export type ResolvedDependency = models.ResolvedDependency
 export type InstalledMod = models.InstalledMod
 
-export class DepsRequiredError extends Error {
+// Thrown by installLatest when the install needs a yes from the user first:
+// dependencies to choose, or a version that will not load on a dedicated
+// server. The caller catches it and opens DependencyDialog with both.
+export class ConfirmInstallError extends Error {
   readonly deps: ResolvedDependency[]
   readonly versionId: string
-  constructor(deps: ResolvedDependency[], versionId: string) {
-    super('Dependencies required')
+  readonly clientOnly: boolean
+  constructor(deps: ResolvedDependency[], versionId: string, clientOnly: boolean) {
+    super('Install needs confirmation')
     this.deps = deps
     this.versionId = versionId
+    this.clientOnly = clientOnly
   }
 }
 
-export function isDepsRequiredError(e: unknown): e is DepsRequiredError {
-  return e instanceof DepsRequiredError
+export function isConfirmInstallError(e: unknown): e is ConfirmInstallError {
+  return e instanceof ConfirmInstallError
 }
 
 // Aliased, not redeclared: this was a hand-written copy of a Go struct, and
@@ -375,13 +380,13 @@ export function useMods(serverId: string): ModsState {
         const latest = v[0]
         const deps = (await ModResolveDependencies(serverId, latest.id)) as ResolvedDependency[]
         const nonTrivial = (deps ?? []).filter((d) => !d.alreadyInstalled)
-        if (nonTrivial.length > 0) {
+        if (nonTrivial.length > 0 || latest.clientOnly) {
           setInstalling(false)
-          throw new DepsRequiredError(deps, latest.id)
+          throw new ConfirmInstallError(deps ?? [], latest.id, latest.clientOnly)
         }
         await ModInstall(serverId, [latest.id])
       } catch (e: unknown) {
-        if (isDepsRequiredError(e)) throw e // re-throw for dep dialog
+        if (isConfirmInstallError(e)) throw e // re-throw for the confirm dialog
         setInstallError(String(e))
         throw e
       } finally {

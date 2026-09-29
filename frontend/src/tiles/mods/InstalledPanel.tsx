@@ -6,6 +6,7 @@ import { Icon } from '../../components/ui/Icon'
 import { ArrowUpDown, Check } from '../../lib/icons'
 import { usePopover } from '../../hooks/usePopover'
 import { ModPreviewDialog } from './ModPreviewDialog'
+import { ClientOnlyBadge } from './ClientOnlyBadge'
 import { fmtBytes } from '../../lib/format'
 import type {
   InstalledMod,
@@ -422,6 +423,7 @@ export function InstalledPanel({
                       {mod.source}
                     </span>
                   )}
+                  {mod.clientOnly && <ClientOnlyBadge />}
                 </div>
                 {numCols === 1 && (
                   <div className="mt-0.5 flex items-center gap-2">

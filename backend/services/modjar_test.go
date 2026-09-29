@@ -349,3 +349,38 @@ func TestBuildFacetsFromResolvedTarget(t *testing.T) {
 		t.Errorf("buildFacets = %s, want %s", got, want)
 	}
 }
+
+// Fabric's environment is a string or an array, Quilt's sits under minecraft,
+// and only "client" keeps a mod off a dedicated server.
+func TestParseJarMetaReadsTheEnvironment(t *testing.T) {
+	tests := []struct {
+		name, entry, body string
+		want              bool
+	}{
+		{"fabric client", "fabric.mod.json", `{"id":"m","environment":"client"}`, true},
+		{"fabric client array", "fabric.mod.json", `{"id":"m","environment":["client"]}`, true},
+		{"fabric any", "fabric.mod.json", `{"id":"m","environment":"*"}`, false},
+		{"fabric server", "fabric.mod.json", `{"id":"m","environment":"server"}`, false},
+		{"fabric both in an array", "fabric.mod.json", `{"id":"m","environment":["client","server"]}`, false},
+		{"fabric absent", "fabric.mod.json", `{"id":"m"}`, false},
+		{"fabric malformed", "fabric.mod.json", `{"id":"m","environment":7}`, false},
+		{"quilt client", "quilt.mod.json", `{"quilt_loader":{"id":"m"},"minecraft":{"environment":"client"}}`, true},
+		{"quilt dedicated server", "quilt.mod.json", `{"quilt_loader":{"id":"m"},"minecraft":{"environment":"dedicated_server"}}`, false},
+		{"quilt absent", "quilt.mod.json", `{"quilt_loader":{"id":"m"}}`, false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			path := writeJar(t, filepath.Join(t.TempDir(), "m.jar"), map[string]string{tt.entry: tt.body})
+			meta, err := parseJarMeta(path, "")
+			if err != nil {
+				t.Fatalf("parseJarMeta: %v", err)
+			}
+			if meta.ID != "m" {
+				t.Fatalf("parsed id = %q, want m: the entry was not read at all", meta.ID)
+			}
+			if meta.ClientOnly != tt.want {
+				t.Errorf("ClientOnly = %v, want %v", meta.ClientOnly, tt.want)
+			}
+		})
+	}
+}

@@ -595,6 +595,34 @@ func TestFileSHA512CachedMatchesContentAndFollowsChanges(t *testing.T) {
 	}
 }
 
+// --- Client-only mods ---
+
+// A Forge or NeoForge jar cannot say it is client-only, so the list has to
+// carry what the provider said about the version the jar was identified as.
+func TestRescanRecordsThatAVersionIsClientOnly(t *testing.T) {
+	provider := &fakeModProvider{
+		projects: map[string]models.ModProject{"p1": {ID: "p1", Title: "Minimap"}},
+	}
+	s, workDir := newModFixture(t, provider)
+	plugins := filepath.Join(workDir, "plugins")
+	hash := writePluginJar(t, plugins, "Minimap.jar", "Minimap", "1.0")
+	writePluginJar(t, plugins, "Other.jar", "Other", "1.0")
+	provider.byHash = map[string]models.ModVersion{
+		hash: {ID: "v1", ProjectID: "p1", FileName: "Minimap.jar", SHA512: hash, ClientOnly: true},
+	}
+
+	if err := s.Rescan(testServerID); err != nil {
+		t.Fatalf("Rescan: %v", err)
+	}
+	installed := installedByFile(t, s)
+	if !installed["Minimap.jar"].ClientOnly {
+		t.Error("Minimap.jar ClientOnly = false, want the provider's answer recorded")
+	}
+	if installed["Other.jar"].ClientOnly {
+		t.Error("Other.jar ClientOnly = true for a jar nothing said was client-only")
+	}
+}
+
 // --- Identity of a jar somebody else named ---
 
 // A modpack rarely ships a mod under the file name Modrinth serves it as, and
