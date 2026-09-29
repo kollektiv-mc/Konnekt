@@ -9,8 +9,10 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -58,6 +60,55 @@ const modManifestVersion = 2
 
 const updateCacheTTL = 10 * time.Minute
 
+// downloadTimeout bounds one jar download end to end. Without it a stalled
+// connection held s.mu, and with it every install and toggle, until the app
+// closed.
+const downloadTimeout = 10 * time.Minute
+
+// downloadPolicy is where a jar may be fetched from. A jar in mods/ or plugins/
+// runs with the server's privileges, so the URL a provider hands back is not
+// trusted on its own: it must be https, on one of hosts, and so must every
+// redirect it takes (#434).
+type downloadPolicy struct {
+	hosts []string
+	// client is nil outside tests, which swap in an httptest TLS client.
+	client *http.Client
+}
+
+// modrinthDownloads is the policy for files the Modrinth API points at.
+var modrinthDownloads = downloadPolicy{hosts: []string{"cdn.modrinth.com"}}
+
+func (p downloadPolicy) check(u *url.URL) error {
+	if u.Scheme != "https" || !slices.Contains(p.hosts, u.Hostname()) {
+		return fmt.Errorf("download from %s refused: not an allowed https host", u.Redacted())
+	}
+	return nil
+}
+
+// httpClient returns a client that applies check to every redirect.
+func (p downloadPolicy) httpClient() *http.Client {
+	c := &http.Client{}
+	if p.client != nil {
+		*c = *p.client
+	}
+	c.CheckRedirect = func(req *http.Request, via []*http.Request) error {
+		if len(via) >= 10 {
+			return fmt.Errorf("download stopped after %d redirects", len(via))
+		}
+		return p.check(req.URL)
+	}
+	return c
+}
+
+// validSHA512 reports whether h is a hex SHA-512 digest.
+func validSHA512(h string) bool {
+	if len(h) != sha512.Size*2 {
+		return false
+	}
+	_, err := hex.DecodeString(h)
+	return err == nil
+}
+
 type updateCacheEntry struct {
 	result    []models.ModUpdateInfo
 	fetchedAt time.Time
@@ -68,6 +119,7 @@ type ModService struct {
 	cfg         *ConfigService
 	srv         *ServerService
 	provider    ModProvider
+	downloads   downloadPolicy
 	ctx         context.Context
 	dataDir     string
 	bus         *EventBus
@@ -97,11 +149,12 @@ type ModService struct {
 
 func NewModService(cfg *ConfigService, srv *ServerService) *ModService {
 	return &ModService{
-		cfg:      cfg,
-		srv:      srv,
-		provider: NewModrinthClient(),
-		lastSig:  make(map[string]uint64),
-		stop:     make(chan struct{}),
+		cfg:       cfg,
+		srv:       srv,
+		provider:  NewModrinthClient(),
+		downloads: modrinthDownloads,
+		lastSig:   make(map[string]uint64),
+		stop:      make(chan struct{}),
 	}
 }
 
@@ -530,7 +583,24 @@ func (s *ModService) discardSuperseded(aside []string) {
 
 // downloadVerified streams a file from url to finalPath, verifying the sha512
 // hash while downloading. Uses a temp file in the same directory for atomicity.
+//
+// Everything that can be refused without the network is refused before the temp
+// file exists: a missing or malformed hash used to switch verification off and
+// install the jar unchecked, and a hash under 16 characters panicked in the
+// mismatch message (#434).
 func (s *ModService) downloadVerified(serverID, fileName, fileURL, expectedSHA512, finalPath string) error {
+	expectedSHA512 = strings.ToLower(expectedSHA512)
+	if !validSHA512(expectedSHA512) {
+		return fmt.Errorf("download %s refused: the provider gave no valid SHA-512 to verify it against", fileName)
+	}
+	u, err := url.Parse(fileURL)
+	if err != nil {
+		return fmt.Errorf("download %s: bad URL: %w", fileName, err)
+	}
+	if err := s.downloads.check(u); err != nil {
+		return err
+	}
+
 	destDir := filepath.Dir(finalPath)
 	tmp, err := os.CreateTemp(destDir, ".konnekt-dl-*")
 	if err != nil {
@@ -545,14 +615,15 @@ func (s *ModService) downloadVerified(serverID, fileName, fileURL, expectedSHA51
 		}
 	}()
 
-	req, err := http.NewRequestWithContext(s.ctx, http.MethodGet, fileURL, nil)
+	ctx, cancel := context.WithTimeout(s.ctx, downloadTimeout)
+	defer cancel()
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u.String(), nil)
 	if err != nil {
 		return fmt.Errorf("build download request: %w", err)
 	}
 	req.Header.Set("User-Agent", modrinthUserAgent)
 
-	dlClient := &http.Client{} // no hard timeout; bounded by context
-	resp, err := dlClient.Do(req)
+	resp, err := s.downloads.httpClient().Do(req)
 	if err != nil {
 		return fmt.Errorf("download %s: %w", fileName, err)
 	}
@@ -597,12 +668,8 @@ func (s *ModService) downloadVerified(serverID, fileName, fileURL, expectedSHA51
 		}
 	}
 
-	// Verify hash
-	if expectedSHA512 != "" {
-		got := hex.EncodeToString(hasher.Sum(nil))
-		if got != expectedSHA512 {
-			return fmt.Errorf("sha512 mismatch for %s: got %s want %s", fileName, got[:16]+"…", expectedSHA512[:16]+"…")
-		}
+	if got := hex.EncodeToString(hasher.Sum(nil)); got != expectedSHA512 {
+		return fmt.Errorf("sha512 mismatch for %s: got %s want %s", fileName, got[:16]+"…", expectedSHA512[:16]+"…")
 	}
 
 	tmp.Close()

@@ -7,8 +7,10 @@ import (
 	"crypto/sha512"
 	"encoding/hex"
 	"errors"
+	"net"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -165,7 +167,7 @@ func writePluginJar(t *testing.T, dir, fileName, pluginName, version string) str
 // mismatch.
 func jarServer(t *testing.T, files map[string][]byte) *httptest.Server {
 	t.Helper()
-	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	return httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		jar, ok := files[r.URL.Path]
 		if !ok {
 			t.Errorf("unexpected download path %q", r.URL.Path)
@@ -176,6 +178,14 @@ func jarServer(t *testing.T, files map[string][]byte) *httptest.Server {
 			t.Errorf("serve jar: %v", err)
 		}
 	}))
+}
+
+// allowDownloads points s's download policy at a test file server. The server
+// has to be TLS, since the policy refuses plain http, and is trusted through
+// its own client rather than by relaxing the policy.
+func allowDownloads(s *ModService, files *httptest.Server) {
+	host := files.Listener.Addr().(*net.TCPAddr).IP.String()
+	s.downloads = downloadPolicy{hosts: []string{host}, client: files.Client()}
 }
 
 func hashOf(b []byte) string {
@@ -203,7 +213,7 @@ func installedByFile(t *testing.T, s *ModService) map[string]models.InstalledMod
 // file. A mod announced before its row existed came back from ListInstalled as
 // an unmanaged local jar, with no icon, no project and no update check.
 func TestInstallWritesManifestBeforeMovingOn(t *testing.T) {
-	files := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	files := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if _, err := w.Write([]byte("jar-bytes-for" + r.URL.Path)); err != nil {
 			t.Errorf("serve jar: %v", err)
 		}
@@ -224,6 +234,7 @@ func TestInstallWritesManifestBeforeMovingOn(t *testing.T) {
 	}
 
 	s, _ := newModFixture(t, provider)
+	allowDownloads(s, files)
 
 	// Observed from inside the install rather than from the event: the handler
 	// runs in its own goroutine, so an event-side assertion would race the very
@@ -273,7 +284,7 @@ func TestInstallWritesManifestBeforeMovingOn(t *testing.T) {
 }
 
 func TestInstallKeepsEarlierFilesWhenALaterOneFails(t *testing.T) {
-	files := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	files := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path == "/second" {
 			w.WriteHeader(http.StatusInternalServerError)
 			return
@@ -289,11 +300,12 @@ func TestInstallKeepsEarlierFilesWhenALaterOneFails(t *testing.T) {
 			"v1": {ID: "v1", ProjectID: "p1", VersionNumber: "1.0.0", FileName: "First.jar",
 				FileURL: files.URL + "/first", SHA512: hashOf([]byte("jar-bytes-for/first"))},
 			"v2": {ID: "v2", ProjectID: "p2", VersionNumber: "2.0.0", FileName: "Second.jar",
-				FileURL: files.URL + "/second"},
+				FileURL: files.URL + "/second", SHA512: hashOf([]byte("jar-bytes-for/second"))},
 		},
 		projects: map[string]models.ModProject{"p1": {ID: "p1", Title: "First Plugin"}},
 	}
 	s, _ := newModFixture(t, provider)
+	allowDownloads(s, files)
 
 	if err := s.Install(testServerID, []string{"v1", "v2"}); err == nil {
 		t.Fatal("Install: want an error when the second download fails")
@@ -303,6 +315,87 @@ func TestInstallKeepsEarlierFilesWhenALaterOneFails(t *testing.T) {
 	// stranded as a local jar by a failure that had nothing to do with it.
 	if got := installedByFile(t, s)["First.jar"].Source; got != "modrinth" {
 		t.Errorf("First.jar source after a later failure = %q, want modrinth", got)
+	}
+}
+
+// --- Download verification (#434) ---
+
+// Every refusal leaves the target folder exactly as it was: no jar, and no
+// half-written temp file either.
+func TestInstallRefusesAnUnverifiableDownload(t *testing.T) {
+	jar := []byte("jar-bytes")
+	serve := func(w http.ResponseWriter, _ *http.Request) {
+		if _, err := w.Write(jar); err != nil {
+			t.Errorf("serve jar: %v", err)
+		}
+	}
+	// A plain-http server on the allowed host that really serves the jar, so
+	// the only thing that can refuse a download from it, or a redirect to it,
+	// is the scheme check.
+	plain := httptest.NewServer(http.HandlerFunc(serve))
+	defer plain.Close()
+	files := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/redirect" {
+			http.Redirect(w, r, plain.URL+"/Mod.jar", http.StatusFound)
+			return
+		}
+		serve(w, r)
+	}))
+	defer files.Close()
+
+	tests := []struct {
+		name, url, sha512 string
+	}{
+		{"hash mismatch", files.URL + "/Mod.jar", hashOf([]byte("other bytes"))},
+		{"missing hash", files.URL + "/Mod.jar", ""},
+		{"short hash", files.URL + "/Mod.jar", "abc"},
+		{"hash that is not hex", files.URL + "/Mod.jar", strings.Repeat("z", 128)},
+		{"foreign host", "https://example.invalid/Mod.jar", hashOf(jar)},
+		{"plain http", plain.URL + "/Mod.jar", hashOf(jar)},
+		{"redirect to plain http", files.URL + "/redirect", hashOf(jar)},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			provider := &fakeModProvider{versions: map[string]models.ModVersion{
+				"v1": {ID: "v1", ProjectID: "p1", FileName: "Mod.jar", FileURL: tt.url, SHA512: tt.sha512},
+			}}
+			s, workDir := newModFixture(t, provider)
+			allowDownloads(s, files)
+
+			if err := s.Install(testServerID, []string{"v1"}); err == nil {
+				t.Fatal("Install = nil error, want a refusal")
+			}
+			entries, err := os.ReadDir(filepath.Join(workDir, "plugins"))
+			if err != nil {
+				t.Fatalf("read plugins: %v", err)
+			}
+			for _, e := range entries {
+				t.Errorf("plugins/ holds %s after a refused download", e.Name())
+			}
+		})
+	}
+}
+
+// The policy's own default: Modrinth's CDN over https, and nothing else.
+func TestModrinthDownloadPolicy(t *testing.T) {
+	tests := []struct {
+		url string
+		ok  bool
+	}{
+		{"https://cdn.modrinth.com/data/P7dR8mSH/versions/x/mod.jar", true},
+		{"http://cdn.modrinth.com/data/x/mod.jar", false},
+		{"https://cdn.modrinth.com.example.com/mod.jar", false},
+		{"https://example.com/mod.jar", false},
+		{"file:///etc/passwd", false},
+	}
+	for _, tt := range tests {
+		u, err := url.Parse(tt.url)
+		if err != nil {
+			t.Fatalf("parse %q: %v", tt.url, err)
+		}
+		if err := modrinthDownloads.check(u); (err == nil) != tt.ok {
+			t.Errorf("check(%q) = %v, want ok=%v", tt.url, err, tt.ok)
+		}
 	}
 }
 
@@ -504,7 +597,7 @@ func TestRescanAnnouncesAJarRemovedFromTheFolder(t *testing.T) {
 }
 
 func TestRescanLeavesInstalledModsAlone(t *testing.T) {
-	files := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	files := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if _, err := w.Write([]byte("jar-bytes-for" + r.URL.Path)); err != nil {
 			t.Errorf("serve jar: %v", err)
 		}
@@ -520,6 +613,7 @@ func TestRescanLeavesInstalledModsAlone(t *testing.T) {
 		byHash:   map[string]models.ModVersion{},
 	}
 	s, _ := newModFixture(t, provider)
+	allowDownloads(s, files)
 
 	if err := s.Install(testServerID, []string{"v1"}); err != nil {
 		t.Fatalf("Install: %v", err)
@@ -695,6 +789,7 @@ func TestInstallReplacesTheCopyAlreadyOnDisk(t *testing.T) {
 		projects: map[string]models.ModProject{"ess": {ID: "ess", Title: "EssentialsX"}},
 	}
 	s, workDir := newModFixture(t, provider)
+	allowDownloads(s, files)
 
 	oldHash := writePluginJar(t, filepath.Join(workDir, "plugins"), "essentialsx.jar", "Essentials", "2.21.0")
 	provider.byHash = map[string]models.ModVersion{
@@ -742,6 +837,7 @@ func TestInstallReplacesACopyItCanOnlyRecogniseByModID(t *testing.T) {
 		projects: map[string]models.ModProject{"ess": {ID: "ess", Title: "EssentialsX"}},
 	}
 	s, workDir := newModFixture(t, provider)
+	allowDownloads(s, files)
 
 	// Not in byHash: the provider does not recognise these bytes.
 	writePluginJar(t, filepath.Join(workDir, "plugins"), "Essentials-curseforge.jar", "Essentials", "2.20.0")
@@ -779,6 +875,7 @@ func TestInstallLeavesASecondaryFileOfTheSameProjectAlone(t *testing.T) {
 		projects: map[string]models.ModProject{"ess": {ID: "ess", Title: "EssentialsX"}},
 	}
 	s, workDir := newModFixture(t, provider)
+	allowDownloads(s, files)
 
 	chatHash := writePluginJar(t, filepath.Join(workDir, "plugins"), "EssentialsXChat-2.21.0.jar", "EssentialsChat", "2.21.0")
 	provider.byHash = map[string]models.ModVersion{
@@ -816,6 +913,7 @@ func TestInstallKeepsASupersededFileDisabled(t *testing.T) {
 		projects: map[string]models.ModProject{"ess": {ID: "ess", Title: "EssentialsX"}},
 	}
 	s, workDir := newModFixture(t, provider)
+	allowDownloads(s, files)
 
 	oldHash := writePluginJar(t, filepath.Join(workDir, "plugins"), "essentialsx.jar.disabled", "Essentials", "2.21.0")
 	provider.byHash = map[string]models.ModVersion{
@@ -861,6 +959,7 @@ func TestInstallRestoresTheSupersededJarWhenKeepingItDisabledFails(t *testing.T)
 		projects: map[string]models.ModProject{"ess": {ID: "ess", Title: "EssentialsX"}},
 	}
 	s, workDir := newModFixture(t, provider)
+	allowDownloads(s, files)
 	plugins := filepath.Join(workDir, "plugins")
 
 	oldHash := writePluginJar(t, plugins, "essentialsx.jar.disabled", "Essentials", "2.21.0")
@@ -910,6 +1009,7 @@ func TestInstallRestoresTheSupersededJarWhenTheManifestWriteFails(t *testing.T) 
 		projects: map[string]models.ModProject{"ess": {ID: "ess", Title: "EssentialsX"}},
 	}
 	s, workDir := newModFixture(t, provider)
+	allowDownloads(s, files)
 	plugins := filepath.Join(workDir, "plugins")
 
 	oldHash := writePluginJar(t, plugins, "essentialsx.jar", "Essentials", "2.21.0")
