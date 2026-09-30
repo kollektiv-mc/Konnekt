@@ -2,7 +2,9 @@ package services
 
 import (
 	"context"
+	"log"
 	"log/slog"
+	"os"
 	"strings"
 	"sync"
 	"testing"
@@ -35,7 +37,13 @@ func (h *recordingHandler) Handle(_ context.Context, r slog.Record) error {
 	h.mu.Lock()
 	h.lines = append(h.lines, b.String())
 	h.mu.Unlock()
-	h.seen <- struct{}{}
+	// A wake-up, not a queue: a test that waits reads one signal per line it
+	// expects, and a test that logs more than the channel holds must not
+	// block the code under test on its own log line.
+	select {
+	case h.seen <- struct{}{}:
+	default:
+	}
 	return nil
 }
 
@@ -56,7 +64,16 @@ func captureLog(t *testing.T) *recordingHandler {
 	h := newRecordingHandler()
 	prev := slog.Default()
 	slog.SetDefault(slog.New(h))
-	t.Cleanup(func() { slog.SetDefault(prev) })
+	t.Cleanup(func() {
+		slog.SetDefault(prev)
+		// SetDefault also points the log package at the new handler, and
+		// restoring a default-handler logger deliberately leaves that alone
+		// (slog's own comment: they would deadlock otherwise), so the log
+		// package would keep writing into this test's handler for the rest of
+		// the run. Put it back where a fresh process has it.
+		log.SetOutput(os.Stderr)
+		log.SetFlags(log.LstdFlags)
+	})
 	return h
 }
 
@@ -127,4 +144,36 @@ func TestEmitIsSilentForAHealthyHandler(t *testing.T) {
 func TestEmitOnANilBusIsANoOp(t *testing.T) {
 	var bus *EventBus
 	bus.Emit("test:nil", nil)
+}
+
+// A tap runs on the emitter's goroutine, so it sees events in emit order:
+// the property the remote replay buffer is built on and Subscribe does not
+// give.
+func TestTapSeesEventsInEmitOrderAndSurvivesAPanic(t *testing.T) {
+	logs := captureLog(t)
+	bus := NewEventBus()
+	var order []int
+	bus.Tap(func(string, any) { panic("tap exploded") })
+	bus.Tap(func(_ string, data any) {
+		if n, ok := data.(int); ok {
+			order = append(order, n)
+		}
+	})
+	// Ten, not more: the recording handler's channel holds 16 and every
+	// panic line is one, so a larger count would block the emitter here.
+	for i := range 10 {
+		bus.Emit("test:tap", i)
+	}
+	for i, n := range order {
+		if n != i {
+			t.Fatalf("tap saw %d at position %d; order is not emit order", n, i)
+		}
+	}
+	if len(order) != 10 {
+		t.Fatalf("tap saw %d events, want 10", len(order))
+	}
+	lines := logs.all()
+	if len(lines) != 10 || !strings.Contains(lines[0], "tap panicked") {
+		t.Errorf("expected one 'tap panicked' line per emit, got %d: %v", len(lines), lines[:min(3, len(lines))])
+	}
 }

@@ -51,8 +51,10 @@ does. Concretely:
   scope.
 - **Content fetched from Modrinth**, including mod jars and the metadata and
   markdown rendered alongside them.
-- **Remote access**, once it exists. It is not built yet, so there is nothing to
-  report there today.
+- **Remote access**, once it ships. The listener exists in the source
+  (`backend/services/remote.go`) but no release starts it and nothing can
+  reach it yet, so there is nothing to report there today; the acceptance
+  criteria it is built to are § S8 of `agent_docs/SECURITY_CHECKLIST.md`.
 
 ## What is out of scope
 

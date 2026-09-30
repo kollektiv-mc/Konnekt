@@ -32,6 +32,7 @@ type App struct {
 	loaderService       *services.LoaderService
 	commandsService     *services.CommandsService
 	kommandsService     *services.KommandsService
+	remoteService       *services.RemoteService
 	bus                 *services.EventBus
 	dataDir             string
 }
@@ -62,7 +63,7 @@ func NewApp() *App {
 	commands.SetBus(bus)
 	kommands := services.NewKommandsService(commands)
 	kommands.SetBus(bus)
-	return &App{
+	app := &App{
 		serverService:       srv,
 		configService:       cfg,
 		configEditorService: services.NewConfigEditorService(cfg),
@@ -80,6 +81,18 @@ func NewApp() *App {
 		kommandsService:     kommands,
 		bus:                 bus,
 	}
+	// Remote Access (#43). Built here so the allowlist is resolved against the
+	// real App and remote_methods_test.go constructs exactly what ships; not
+	// started here, or anywhere yet: the settings UI (#47) is what will, and
+	// until the authorizer (#45) exists the listener refuses every API call.
+	dispatcher, err := services.NewRemoteDispatcher(app, remoteMethods)
+	if err != nil {
+		// Unreachable past the test, which fails on the same error. Logged
+		// rather than fatal because the desktop app is whole without remote.
+		slog.Error("remote: allowlist", "error", err)
+	}
+	app.remoteService = services.NewRemoteService(bus, dispatcher)
+	return app
 }
 
 // quitStopGrace bounds the close-time stop. Deliberately NOT the user's

@@ -9,13 +9,14 @@ import (
 )
 
 // EventBus is the single emit path for all Wails events.
-// Emit forwards to both the local WebView and any in-process subscribers
-// registered via Subscribe (used by the scheduler trigger subsystem and
-// reserved for the remote-access WebSocket fan-out in Phase 1).
+// Emit forwards to the local WebView, to every Tap (the remote-access
+// WebSocket mirror, remote_ws.go) and to any in-process subscribers registered
+// via Subscribe (the scheduler trigger subsystem).
 type EventBus struct {
 	ctx  context.Context
 	mu   sync.RWMutex
 	subs map[string][]func(data any)
+	taps []func(event string, data any)
 }
 
 func NewEventBus() *EventBus {
@@ -38,6 +39,20 @@ func (b *EventBus) Subscribe(event string, handler func(data any)) {
 	b.subs[event] = append(b.subs[event], handler)
 }
 
+// Tap registers a handler for every event, called synchronously on the
+// emitter's goroutine in emit order. It exists for the remote-access fan-out
+// (remote_ws.go), whose replay buffer is only useful if it holds events in the
+// order they happened: Subscribe's per-call goroutines give no such guarantee,
+// and two console lines emitted a microsecond apart would reach a reconnecting
+// phone swapped. A tap must therefore be quick and never block, since it runs
+// inside every Emit; a panic in one is contained and logged the same way a
+// subscriber's is, so a broken tap cannot take the server process down.
+func (b *EventBus) Tap(handler func(event string, data any)) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	b.taps = append(b.taps, handler)
+}
+
 func (b *EventBus) Emit(event string, data any) {
 	if b == nil {
 		return
@@ -45,10 +60,14 @@ func (b *EventBus) Emit(event string, data any) {
 	if b.ctx != nil {
 		runtime.EventsEmit(b.ctx, event, data)
 	}
-	// Fan out to in-process subscribers (scheduler triggers, future remote WS).
 	b.mu.RLock()
+	taps := b.taps
 	handlers := b.subs[event]
 	b.mu.RUnlock()
+	for _, tap := range taps {
+		b.runTap(tap, event, data)
+	}
+	// Fan out to in-process subscribers (scheduler triggers).
 	for _, h := range handlers {
 		h := h
 		go func() {
@@ -60,4 +79,13 @@ func (b *EventBus) Emit(event string, data any) {
 			h(data)
 		}()
 	}
+}
+
+func (b *EventBus) runTap(tap func(event string, data any), event string, data any) {
+	defer func() {
+		if r := recover(); r != nil {
+			slog.Error("eventbus: tap panicked", "event", event, "panic", r)
+		}
+	}()
+	tap(event, data)
 }
