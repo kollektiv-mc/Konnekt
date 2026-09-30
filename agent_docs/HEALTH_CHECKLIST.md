@@ -298,8 +298,9 @@ tree.
 - [x] Automated tests exist and pass for critical paths: RCON client, Modrinth
       API client, backup create/restore, config path-traversal guards,
       scheduler engine (Go); Zustand store logic and critical hooks (frontend).
-      `backend/services` sits at **59.7%** of statements (2026-09-01), with a
-      **49%** floor owned by `scripts/coverage-floor` and run by both
+      `backend/services` sits at **74.0%** of statements (2026-09-30, Linux;
+      CI's windows-latest run measures within a tenth of it), with a
+      **72%** floor owned by `scripts/coverage-floor` and run by both
       `/suite-kit:health` and CI. `frontend/src` sits at **53.7%** of lines
       (2026-09-07, the first measurement; repeat runs land between 53.1% and
       53.7%, so the number moves by about half a point), with a **50%** floor owned by
