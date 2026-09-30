@@ -48,10 +48,13 @@ const targetPackage = "./backend/services/"
 //	47.3% -> floor 45.0  loader version detection and Summary tests
 //	49.4% -> floor 47.0  NeoForge provider and loader update orchestration
 //	51.2% -> floor 49.0  command buttons and the Kommands shared-file reader
+//	74.0% -> floor 72.0  the Remote Access listener, dispatcher and event mirror (#43);
+//	                     the floor had not moved since 51.2 while the tree climbed
+//	                     (CI's windows-latest run measured 73.0% on 2026-09-29)
 //
 // Coverage is a proxy, not the goal. A test that would have caught a real bug is
 // worth more than one that only moves this number.
-const floorPercent = 49.0
+const floorPercent = 72.0
 
 // Matches the tail of `go test -cover` output: "coverage: 36.7% of statements".
 var reCoverage = regexp.MustCompile(`coverage:\s+([0-9.]+)%\s+of\s+statements`)

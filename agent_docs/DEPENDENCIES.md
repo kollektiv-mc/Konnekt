@@ -55,9 +55,10 @@ with another library doing the same job.
 | `github.com/shirou/gopsutil/v4` | Cross-platform CPU/RAM stats polling (`backend/services/stats.go`) |
 | `github.com/wailsapp/wails/v2` | App shell — Go↔WebView bridge, IPC binding generation |
 | `golang.org/x/sys` | Windows syscalls for Job Object child-process cleanup (`backend/services/server_windows.go`) |
+| `github.com/gorilla/websocket` | The Remote Access event mirror (`backend/services/remote_ws.go`, #43): the EventBus over `GET /ws`. Already in the tree as Wails' own transitive dependency at the same version, so promoting it to a direct require adds no code to vet, and it is the one WebSocket library the Go ecosystem has kept maintained at that footprint. `golang.org/x/net/websocket` is also already present and was not used: its own package doc points elsewhere, and it lacks ping/pong control and per-message deadlines. Its `Upgrader.CheckOrigin` is handed the same Host allowlist the request guard uses, never its default |
 
 All other Go modules in `go.mod` are transitive (`// indirect`), pulled in by
-the three direct dependencies above (mostly Wails' own runtime/webview/toast
+the direct dependencies above (mostly Wails' own runtime/webview/toast
 stack and gopsutil's per-OS backends).
 
 **Considered and not added:** a filesystem-watch library (`fsnotify`). The

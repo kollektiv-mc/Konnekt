@@ -258,8 +258,22 @@ only ongoing cost is the remote-readiness checklist under "Adding a tile" below.
     progress/completed/failed/restore). The remote WS fan-out seam is marked in
     `Emit()` for Phase 1 — no service bypasses it.
 
-Phases 1–5 (RemoteService, frontend remote runtime, auth, cloudflared tunnel,
-remote-mode adaptations) are filed in [GitHub Issues](../../issues), labelled
+- [x] **Phase 1 — RemoteService** ([#43](../../issues/43)). What is on disk:
+  `backend/services/remote.go` (the loopback-only listener, the Host and
+  Origin guard, the security headers, the static bundle, `POST /api/rpc`, the
+  idle stop), `remote_dispatch.go` (the tiered allowlist dispatcher; no
+  reflection over the whole `App`) and `remote_ws.go` (the EventBus over
+  `GET /ws`, sequence-numbered with a replay buffer the size of the console's).
+  `remote_methods.go` at the root classifies all 94 bound methods, held by
+  `remote_methods_test.go`. `EventBus.Tap` is the ordered, synchronous seam
+  the mirror needed, which `Subscribe`'s per-call goroutines could not give.
+  Built ahead of the sequencing note above because it is tile-agnostic and
+  unreachable: nothing starts it, and it refuses every API call until Phase 3
+  supplies an authorizer. Phases 3 and 4 are what expose the dashboard, and
+  they still wait.
+
+Phases 2–5 (frontend remote runtime, auth, cloudflared tunnel, remote-mode
+adaptations) are filed in [GitHub Issues](../../issues), labelled
 `milestone:remote-access`. Their security acceptance criteria are § S8 of
 `agent_docs/SECURITY_CHECKLIST.md`, checked by `/security-check`.
 

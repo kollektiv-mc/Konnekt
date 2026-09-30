@@ -2,6 +2,7 @@ package main
 
 import (
 	"embed"
+	"io/fs"
 	"log/slog"
 	"os"
 	"runtime"
@@ -54,6 +55,13 @@ func main() {
 	}
 
 	app := NewApp()
+	// The same bundle the WebView shows, for Remote Access to serve (#43).
+	// The embed's root is the repo, so the dashboard lives one directory down.
+	if dist, err := fs.Sub(assets, "frontend/dist"); err != nil {
+		log.Error("remote: frontend dist", "error", err)
+	} else {
+		app.remoteService.SetAssets(dist)
+	}
 
 	err := wails.Run(&options.App{
 		Title:     "Konnekt",

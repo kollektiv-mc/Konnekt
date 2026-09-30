@@ -310,6 +310,13 @@ Applies when: `backend/services/remote*.go` exists (issues #43 to #47). Until
 then every item is `n/a`, but read them before any Remote Access work starts:
 they are the acceptance criteria.
 
+The files exist since #43 (the listener, the allowlist dispatcher and the
+event mirror), so the items apply. Read a `fail` on S8.4, S8.5, S8.6 or S8.10
+against what is on disk: the service has no authorizer until #45 and no tunnel
+until #46, refuses every API request meanwhile, and nothing starts it before
+the settings UI in #47. Those are unbuilt phases, not reachable gaps, and the
+run should say which.
+
 **S8.1 The remote surface is an allowlist, held by a test.**
 Holds when: remote dispatch reaches only methods listed with a tier (`read`,
 `operate`, `admin`) and a reason, and a test in the shape of
