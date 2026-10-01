@@ -512,7 +512,8 @@
 
   // Both issue forms share a required "Which part of Konnekt?" dropdown, and
   // GitHub renders the answer into the body under that heading. It files an
-  // issue that has no per-area label below into the right folder. The options are fixed by .github/ISSUE_TEMPLATE/*.yml, and
+  // issue that carries none of the labels below. The options are fixed by
+  // .github/ISSUE_TEMPLATE/*.yml, and
   // frontend/scripts/check-issue-templates.mjs already keeps the two forms
   // holding the same list. An answer this does not know lands in requested/,
   // which is also where "Something else, or not sure" goes.
@@ -534,11 +535,14 @@
     updater: 'rm-release',
   }
 
-  // The per-area `area:` labels in .github/labels.yml, one per answer above.
-  // They are read first, because a form is only one way to file an issue: one
-  // filed any other way has no dropdown heading, and the label is the area a
-  // maintainer set at triage rather than the reporter's closest guess. `area:ui`
-  // names no folder, so it falls through to the form answer.
+  // The labels this files by: the per-area `area:` labels in
+  // .github/labels.yml, one per answer above, plus `area:remote`. A form is only
+  // one way to file an issue, and one filed any other way has no dropdown
+  // heading to parse, so until the label was read every maintainer-filed issue
+  // landed in requested/ beside the folder it belongs in. Remote Access is not a
+  // tile, so the form has no option for it at all and the label is the only
+  // place that fact lives. `area:ui`, `area:build` and `area:agents` name no
+  // folder, so an issue carrying only those falls through to its form answer.
   var LABEL_FOLDERS = {
     'area:console': 'rm-console',
     'area:commands': 'rm-console',
@@ -555,6 +559,7 @@
     'area:settings': 'rm-settings',
     'area:server-setup': 'rm-server',
     'area:updater': 'rm-release',
+    'area:remote': 'rm-remote-access',
   }
 
   var AREA_HEADING = /^###\s+Which part of Konnekt\?\s*$/im
@@ -614,10 +619,14 @@
     return requestedRec
   }
 
-  function folderFor(labels, body) {
-    var id = null
-    for (var i = 0; i < labels.length && !id; i++) id = LABEL_FOLDERS[labels[i]]
-    if (!id) id = AREA_FOLDERS[areaOf(body)]
+  // The label wins over the form answer: it is a maintainer's decision, where
+  // the answer is whatever a reporter picked as the closest option. Both
+  // resolve through the same lookup and fall back to the same folder.
+  function folderFor(area, labels) {
+    var id = AREA_FOLDERS[area]
+    labels.forEach(function (label) {
+      if (LABEL_FOLDERS[label]) id = LABEL_FOLDERS[label]
+    })
     var el = id ? document.getElementById(id) : null
     return el ? info.get(el.closest('.rm-node')) : requested()
   }
@@ -694,7 +703,7 @@
         // milestone:remote-access and no milestone at all are both Later, which
         // is what that card says: not scheduled, and not forgotten.
         var stage = labels.indexOf('milestone:beta') !== -1 ? 'beta' : 'later'
-        var folder = folderFor(labels, issue.body)
+        var folder = folderFor(areaOf(issue.body), labels)
         var li = buildLeaf(issue, stage)
 
         folder.el.querySelector('.rm-children').appendChild(li)

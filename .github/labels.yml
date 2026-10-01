@@ -139,6 +139,22 @@
   color: 'bfd4f2'
   description: CI, releases, packaging, licensing and supply-chain checks.
 
+# Not a tile either, and for the same reason. Remote Access is the listener, its
+# dispatcher, sign-in and the tunnel: a programme of its own rather than a part
+# of any one tile. The phase issues (#43 to #47) and every pull request that
+# lands a phase had to pick a dishonest area, `area:ui` being the one that no
+# longer sorts anything, and CI's `pr-labelled` job requires one on each.
+#
+# Maintainer-applied and deliberately not in the issue forms' "Which part of
+# Konnekt?" dropdown, as with `area:build`: nobody reports "the remote
+# listener" from the outside. Unlike `area:build`, website/roadmap.js files by
+# it, as it does by every per-area label above. The roadmap page already has a
+# `remote access/` folder, and a maintainer-filed issue has no form answer to
+# file it by, so without the label it would land in requested/ beside it.
+- name: 'area:remote'
+  color: 'bfd4f2'
+  description: 'Remote Access: the listener, its dispatcher, sign-in and tunnel.'
+
 # Suite-owned area labels. Verbatim from design/labels.json.
 #
 # `area:ui` is kept declared because the suite defines it and sync-labels.sh

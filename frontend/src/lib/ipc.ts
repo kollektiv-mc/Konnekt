@@ -31,6 +31,31 @@ export function hasWailsBridge(): boolean {
 }
 
 /**
+ * Whether this page is the dashboard served to a browser by the Remote Access
+ * listener (#44), as opposed to the desktop WebView, the browser demo or the
+ * `frontend-dev` preset. `main.tsx` asks it before React mounts, to decide
+ * whether `lib/remoteRuntime.ts` has to install `window.go` first.
+ *
+ * It is a production build with no bridge, and each other case reads
+ * correctly for its own reason:
+ *
+ * - Desktop: Wails injects `/wails/runtime.js` as a classic script at the top
+ *   of `<head>`, and that sets `window.go = {}` synchronously, so the bridge
+ *   is present before `main.tsx` runs even though no binding has been called.
+ * - Demo: `demo/build.mjs` inserts its shim as a module script ahead of the
+ *   app's, and module scripts run in document order, so it has set
+ *   `window.go` by then.
+ * - `frontend-dev`: Vite's dev server, so `import.meta.env.PROD` is false.
+ *
+ * `vite preview` of a production build has no bridge either and reads as
+ * remote. That is acceptable: it is the same bundle with no Go behind it, and
+ * the gate it lands on says so.
+ */
+export function isRemoteBrowser(): boolean {
+  return import.meta.env.PROD && !hasWailsBridge()
+}
+
+/**
  * Run a bound read, falling back to `fallback` however it fails.
  *
  * Same root cause as `hasWailsBridge()`, from the other side. Because the

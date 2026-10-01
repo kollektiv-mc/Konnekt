@@ -4,6 +4,7 @@ import './style.css'
 import App from './App'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import { SplashScreen } from './components/SplashScreen'
+import { isRemoteBrowser } from './lib/ipc'
 import { applyScrollbarWidth } from './lib/scrollbar'
 import { installGlobalErrorReporting } from './lib/clientErrors'
 import { useSettingsStore } from './stores/useSettingsStore'
@@ -30,15 +31,36 @@ const container = document.getElementById('root')
 
 const root = createRoot(container!)
 
-// Remote-mode seam: before React mounts, a remote runtime shim can polyfill
-// window.go.main.App and window.runtime here so every tile works over HTTP/WS
-// without per-tile changes. See agent_docs/ROADMAP.md "Remote access — Phase 2".
+function renderDashboard() {
+  root.render(
+    <React.StrictMode>
+      <ErrorBoundary>
+        <SplashScreen />
+        <App />
+      </ErrorBoundary>
+    </React.StrictMode>,
+  )
+}
 
-root.render(
-  <React.StrictMode>
-    <ErrorBoundary>
-      <SplashScreen />
-      <App />
-    </ErrorBoundary>
-  </React.StrictMode>,
-)
+// A browser served by the Remote Access listener has no window.go and no
+// window.runtime, so they are installed before the dashboard mounts and no tile
+// changes (#44, lib/remoteRuntime.ts). Both halves are dynamic imports: the
+// desktop path below stays synchronous and never fetches either.
+async function bootRemote() {
+  const runtime = await import('./lib/remoteRuntime')
+  runtime.installRemoteRuntime()
+  const session = await runtime.probeSession()
+  if (session !== 'ok') {
+    const { RemoteLoginGate } = await import('./components/RemoteLoginGate')
+    root.render(<RemoteLoginGate state={session} onUnlocked={() => window.location.reload()} />)
+    return
+  }
+  runtime.connectEvents()
+  renderDashboard()
+}
+
+if (isRemoteBrowser()) {
+  void bootRemote()
+} else {
+  renderDashboard()
+}
