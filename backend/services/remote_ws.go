@@ -317,6 +317,7 @@ func (s *RemoteService) readPump(c *remoteClient, session RemoteSession) {
 		s.hub.remove(c)
 		c.close()
 		slog.Info("remote: socket closed", "device", session.Device)
+		s.changed()
 	}()
 	c.conn.SetReadLimit(1024)
 	if err := c.conn.SetReadDeadline(time.Now().Add(remotePongWait)); err != nil {

@@ -628,3 +628,82 @@ func TestRemoteDoesNotLogAnUnknownMethodName(t *testing.T) {
 		t.Errorf("no remote: call line with the placeholder in %v", logs.all())
 	}
 }
+
+// Stopping the listener withdraws a call that is waiting on the desktop,
+// rather than holding the shutdown open for the rest of its minute.
+func TestRemoteStopWithdrawsACallAwaitingApproval(t *testing.T) {
+	target := &remoteTarget{}
+	d, err := NewRemoteDispatcher(target, remoteTargetAllow)
+	if err != nil {
+		t.Fatal(err)
+	}
+	approvals := NewRemoteApprovals()
+	d.SetApprover(approvals.Ask)
+	s := NewRemoteService(NewEventBus(), d)
+	s.SetAuthorizer(stubAuthorizer{device: "phone"})
+	changes := make(chan struct{}, 8)
+	s.OnChange(func() {
+		select {
+		case changes <- struct{}{}:
+		default:
+		}
+	})
+	addr, err := s.Start(0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	select {
+	case <-changes:
+	case <-time.After(2 * time.Second):
+		t.Fatal("starting was not announced")
+	}
+
+	status := make(chan int, 1)
+	go func() {
+		req, err := http.NewRequest(http.MethodPost, "http://"+addr+"/api/rpc", strings.NewReader(`{"method":"Danger","args":[]}`))
+		if err != nil {
+			status <- 0
+			return
+		}
+		req.Header.Set("Origin", "http://"+addr)
+		req.Header.Set("Content-Type", "application/json")
+		res, err := http.DefaultClient.Do(req)
+		if err != nil {
+			status <- 0
+			return
+		}
+		status <- res.StatusCode
+		if err := res.Body.Close(); err != nil {
+			t.Error(err)
+		}
+	}()
+	deadline := time.Now().Add(2 * time.Second)
+	for len(approvals.Pending()) == 0 && time.Now().Before(deadline) {
+		time.Sleep(time.Millisecond)
+	}
+	if len(approvals.Pending()) != 1 {
+		t.Fatal("the call never reached the desktop")
+	}
+
+	started := time.Now()
+	if err := s.Stop(); err != nil {
+		t.Errorf("stop: %v", err)
+	}
+	if took := time.Since(started); took > 2*time.Second {
+		t.Errorf("stop took %s with a call waiting", took)
+	}
+	select {
+	case code := <-status:
+		if code != http.StatusForbidden {
+			t.Errorf("the waiting call was answered %d, want 403", code)
+		}
+	case <-time.After(2 * time.Second):
+		t.Error("the waiting call was never answered")
+	}
+	if len(approvals.Pending()) != 0 {
+		t.Error("the prompt outlived the listener")
+	}
+	if len(target.calls) != 0 {
+		t.Errorf("the method ran: %v", target.calls)
+	}
+}

@@ -54,6 +54,11 @@ type RemoteAuth struct {
 	pending  map[string]*remotePendingEntry // by request id
 	buckets  map[string]*remoteLoginBucket  // by device id; "" is every unapproved caller
 	onRevoke func(sessionIDs []string)
+	// onChange is told when anything the desktop shows has changed: a device
+	// waiting, approved or removed, a session begun or ended. dirty is set
+	// under mu where the change happens and spent by flush once mu is free.
+	onChange func()
+	dirty    bool
 
 	// verifyMu serialises argon2: one derivation holds 64 MiB, and without this
 	// a burst of sign-ins would hold that many at once.
@@ -218,6 +223,27 @@ func (a *RemoteAuth) OnRevoke(fn func(sessionIDs []string)) {
 	a.onRevoke = fn
 }
 
+// OnChange registers what to tell when the devices, the waiting requests or
+// the sessions have changed. It is told that something did, not what: the
+// desktop reads the state back. Called with a.mu released.
+func (a *RemoteAuth) OnChange(fn func()) {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	a.onChange = fn
+}
+
+// flush reports a change made under a.mu. Every exported method that can make
+// one defers it first, so it runs last, after the lock is released.
+func (a *RemoteAuth) flush() {
+	a.mu.Lock()
+	fn, dirty := a.onChange, a.dirty
+	a.dirty = false
+	a.mu.Unlock()
+	if dirty && fn != nil {
+		fn()
+	}
+}
+
 func (a *RemoteAuth) saveLocked() error {
 	data, err := json.MarshalIndent(a.state, "", "  ") // #nosec G117 -- the field is an argon2id hash, never the password
 	if err != nil {
@@ -239,6 +265,7 @@ func (a *RemoteAuth) PasswordSet() bool {
 // approved: the device is the second factor, and changing the first does not
 // make a phone a stranger.
 func (a *RemoteAuth) SetPassword(password string) error {
+	defer a.flush()
 	if n := utf8.RuneCountInString(password); n < remotePasswordMin || n > remotePasswordMax || !utf8.ValidString(password) {
 		return ErrRemotePasswordLength
 	}
@@ -260,6 +287,7 @@ func (a *RemoteAuth) SetPassword(password string) error {
 		a.mu.Unlock()
 		return err
 	}
+	a.dirty = true
 	a.buckets = map[string]*remoteLoginBucket{}
 	// A pending request remembers that the old password was right.
 	a.pending = map[string]*remotePendingEntry{}
@@ -472,6 +500,7 @@ func (a *RemoteAuth) issueSessionLocked(device *remoteDeviceRecord) (string, err
 		}
 	}
 	a.sessions[sha256.Sum256([]byte(token))] = &remoteSessionEntry{id: id, deviceID: device.ID, created: now, lastSeen: now}
+	a.dirty = true
 	device.LastSeen = now.UnixMilli()
 	if err := a.saveLocked(); err != nil {
 		// The last-seen stamp is a courtesy; the sign-in stands without it.
@@ -488,6 +517,7 @@ func (a *RemoteAuth) dropSessionsLocked(match func(*remoteSessionEntry) bool) ([
 		if match(s) {
 			ids = append(ids, s.id)
 			delete(a.sessions, key)
+			a.dirty = true
 		}
 	}
 	return ids, a.onRevoke
@@ -502,6 +532,7 @@ func notifyRevoked(notify func([]string), ids []string) {
 // RevokeSessions ends every session (§ S8.5). Devices stay approved, so each
 // signs in again with the password.
 func (a *RemoteAuth) RevokeSessions() {
+	defer a.flush()
 	a.mu.Lock()
 	ids, notify := a.dropSessionsLocked(func(*remoteSessionEntry) bool { return true })
 	a.mu.Unlock()
@@ -551,6 +582,7 @@ func (a *RemoteAuth) prunePendingLocked() {
 	for id, p := range a.pending {
 		if now.After(p.expires) {
 			delete(a.pending, id)
+			a.dirty = true
 		}
 	}
 }
@@ -574,6 +606,7 @@ func cleanRemoteName(name string) (string, error) {
 // (§ S8.6). The name is the desktop's, typed by the person approving; nothing
 // the browser sent becomes it.
 func (a *RemoteAuth) ApproveDevice(requestID, name string) error {
+	defer a.flush()
 	name, err := cleanRemoteName(name)
 	if err != nil {
 		return err
@@ -604,12 +637,14 @@ func (a *RemoteAuth) ApproveDevice(requestID, name string) error {
 		return err
 	}
 	p.granted, p.deviceID, p.expires = true, id, now.Add(remoteGrantTTL)
+	a.dirty = true
 	slog.Info("remote: device approved", "device", name)
 	return nil
 }
 
 // DenyDevice discards a pending request. The browser's next poll is refused.
 func (a *RemoteAuth) DenyDevice(requestID string) error {
+	defer a.flush()
 	a.mu.Lock()
 	defer a.mu.Unlock()
 	a.prunePendingLocked()
@@ -618,6 +653,7 @@ func (a *RemoteAuth) DenyDevice(requestID string) error {
 		return ErrRemoteRequestGone
 	}
 	delete(a.pending, requestID)
+	a.dirty = true
 	slog.Info("remote: device denied", "request", requestID)
 	return nil
 }
@@ -625,6 +661,7 @@ func (a *RemoteAuth) DenyDevice(requestID string) error {
 // RemoveDevice forgets an approved device and ends its sessions. Its cookie is
 // then a stranger's, and the password alone gets it a pending request again.
 func (a *RemoteAuth) RemoveDevice(deviceID string) error {
+	defer a.flush()
 	a.mu.Lock()
 	idx := -1
 	for i, d := range a.state.Devices {
@@ -645,6 +682,7 @@ func (a *RemoteAuth) RemoveDevice(deviceID string) error {
 		return err
 	}
 	delete(a.buckets, deviceID)
+	a.dirty = true
 	ids, notify := a.dropSessionsLocked(func(s *remoteSessionEntry) bool { return s.deviceID == deviceID })
 	a.mu.Unlock()
 	slog.Info("remote: device removed", "device", removed.Name, "sessionsEnded", len(ids))
@@ -750,6 +788,7 @@ func cleanRemoteAgent(ua string) string {
 //	403  no password has been set on the desktop
 //	429  backoff, with Retry-After in whole seconds
 func (a *RemoteAuth) ServeLogin(w http.ResponseWriter, r *http.Request) bool {
+	defer a.flush()
 	w.Header().Set("Cache-Control", "no-store")
 	if ct := r.Header.Get("Content-Type"); !strings.HasPrefix(ct, "application/json") {
 		http.Error(w, "expected application/json", http.StatusUnsupportedMediaType)
@@ -875,6 +914,7 @@ func (a *RemoteAuth) newPendingLocked(userAgent string) (token, code string, err
 		id: id, tokenHash: remoteTokenHash(token), code: code,
 		userAgent: cleanRemoteAgent(userAgent), requested: now, expires: now.Add(remotePendingTTL),
 	}
+	a.dirty = true
 	slog.Info("remote: device waiting for approval", "request", id)
 	return token, code, nil
 }
@@ -888,6 +928,7 @@ func (a *RemoteAuth) newPendingLocked(userAgent string) (token, code string, err
 //	202  still waiting: {"pending":true,"code":"…"}
 //	403  denied, expired, or never asked
 func (a *RemoteAuth) ServeLoginWait(w http.ResponseWriter, r *http.Request) bool {
+	defer a.flush()
 	w.Header().Set("Cache-Control", "no-store")
 	deviceToken := remoteCookieValue(r, remoteDeviceCookie)
 	a.mu.Lock()
@@ -911,6 +952,7 @@ func (a *RemoteAuth) ServeLoginWait(w http.ResponseWriter, r *http.Request) bool
 		return false
 	}
 	delete(a.pending, request.id)
+	a.dirty = true
 	device := a.deviceLocked(request.deviceID)
 	if device == nil {
 		// Approved and then removed before the browser came back for it.

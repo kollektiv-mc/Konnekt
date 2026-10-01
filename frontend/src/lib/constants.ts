@@ -37,6 +37,7 @@ export const EVENTS = {
   LOADER_UPDATE_FAILED: 'loader:update-failed',
   UPDATE_PROGRESS: 'update:progress',
   COMMANDS_CHANGED: 'commands:changed',
+  REMOTE_CHANGED: 'remote:changed',
 } as const
 
 export const COLS = 6

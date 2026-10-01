@@ -10,6 +10,14 @@ export function AcceptEula(arg1) {
   return window['go']['main']['App']['AcceptEula'](arg1);
 }
 
+export function AnswerRemoteApproval(arg1, arg2) {
+  return window['go']['main']['App']['AnswerRemoteApproval'](arg1, arg2);
+}
+
+export function ApproveRemoteDevice(arg1, arg2) {
+  return window['go']['main']['App']['ApproveRemoteDevice'](arg1, arg2);
+}
+
 export function BackupWorld(arg1, arg2) {
   return window['go']['main']['App']['BackupWorld'](arg1, arg2);
 }
@@ -52,6 +60,10 @@ export function DeleteServerConfig(arg1) {
 
 export function DeleteWorld(arg1, arg2) {
   return window['go']['main']['App']['DeleteWorld'](arg1, arg2);
+}
+
+export function DenyRemoteDevice(arg1) {
+  return window['go']['main']['App']['DenyRemoteDevice'](arg1);
 }
 
 export function DetectServerLoader(arg1) {
@@ -136,6 +148,10 @@ export function GetPlayerDetail(arg1, arg2) {
 
 export function GetPlayerRoster(arg1) {
   return window['go']['main']['App']['GetPlayerRoster'](arg1);
+}
+
+export function GetRemoteAccessState() {
+  return window['go']['main']['App']['GetRemoteAccessState']();
 }
 
 export function GetScheduleBlockDefs() {
@@ -294,6 +310,10 @@ export function RefreshKommands() {
   return window['go']['main']['App']['RefreshKommands']();
 }
 
+export function RemoveRemoteDevice(arg1) {
+  return window['go']['main']['App']['RemoveRemoteDevice'](arg1);
+}
+
 export function RenameWorld(arg1, arg2, arg3) {
   return window['go']['main']['App']['RenameWorld'](arg1, arg2, arg3);
 }
@@ -304,6 +324,10 @@ export function RestartServer(arg1) {
 
 export function RestoreBackup(arg1, arg2) {
   return window['go']['main']['App']['RestoreBackup'](arg1, arg2);
+}
+
+export function RevokeRemoteSessions() {
+  return window['go']['main']['App']['RevokeRemoteSessions']();
 }
 
 export function RunScheduleGraphNow(arg1, arg2) {
@@ -354,12 +378,24 @@ export function SetActiveWorld(arg1, arg2) {
   return window['go']['main']['App']['SetActiveWorld'](arg1, arg2);
 }
 
+export function SetRemotePassword(arg1) {
+  return window['go']['main']['App']['SetRemotePassword'](arg1);
+}
+
 export function SetScheduleGraphEnabled(arg1, arg2, arg3) {
   return window['go']['main']['App']['SetScheduleGraphEnabled'](arg1, arg2, arg3);
 }
 
+export function StartRemoteAccess() {
+  return window['go']['main']['App']['StartRemoteAccess']();
+}
+
 export function StartServer(arg1) {
   return window['go']['main']['App']['StartServer'](arg1);
+}
+
+export function StopRemoteAccess() {
+  return window['go']['main']['App']['StopRemoteAccess']();
 }
 
 export function StopServer(arg1) {

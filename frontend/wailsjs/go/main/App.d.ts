@@ -7,6 +7,10 @@ export function AbortInstall():Promise<void>;
 
 export function AcceptEula(arg1:string):Promise<void>;
 
+export function AnswerRemoteApproval(arg1:string,arg2:boolean):Promise<void>;
+
+export function ApproveRemoteDevice(arg1:string,arg2:string):Promise<void>;
+
 export function BackupWorld(arg1:string,arg2:string):Promise<models.Backup>;
 
 export function BanPlayer(arg1:string,arg2:string,arg3:string):Promise<void>;
@@ -28,6 +32,8 @@ export function DeleteScheduleGraph(arg1:string,arg2:string):Promise<void>;
 export function DeleteServerConfig(arg1:string):Promise<void>;
 
 export function DeleteWorld(arg1:string,arg2:string):Promise<void>;
+
+export function DenyRemoteDevice(arg1:string):Promise<void>;
 
 export function DetectServerLoader(arg1:string):Promise<models.ServerConfig>;
 
@@ -70,6 +76,8 @@ export function GetLogPath():Promise<string>;
 export function GetPlayerDetail(arg1:string,arg2:string):Promise<models.Player>;
 
 export function GetPlayerRoster(arg1:string):Promise<Array<models.Player>>;
+
+export function GetRemoteAccessState():Promise<models.RemoteAccessState>;
 
 export function GetScheduleBlockDefs():Promise<Array<models.BlockDef>>;
 
@@ -149,11 +157,15 @@ export function ReadConfigFile(arg1:string,arg2:string):Promise<string>;
 
 export function RefreshKommands():Promise<models.KommandsStatus>;
 
+export function RemoveRemoteDevice(arg1:string):Promise<void>;
+
 export function RenameWorld(arg1:string,arg2:string,arg3:string):Promise<void>;
 
 export function RestartServer(arg1:string):Promise<void>;
 
 export function RestoreBackup(arg1:string,arg2:string):Promise<void>;
+
+export function RevokeRemoteSessions():Promise<void>;
 
 export function RunScheduleGraphNow(arg1:string,arg2:string):Promise<models.RunRecord>;
 
@@ -179,9 +191,15 @@ export function SetActiveServerID(arg1:string):Promise<void>;
 
 export function SetActiveWorld(arg1:string,arg2:string):Promise<void>;
 
+export function SetRemotePassword(arg1:string):Promise<void>;
+
 export function SetScheduleGraphEnabled(arg1:string,arg2:string,arg3:boolean):Promise<void>;
 
+export function StartRemoteAccess():Promise<void>;
+
 export function StartServer(arg1:string):Promise<void>;
+
+export function StopRemoteAccess():Promise<void>;
 
 export function StopServer(arg1:string):Promise<void>;
 

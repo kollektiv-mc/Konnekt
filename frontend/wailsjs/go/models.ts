@@ -928,6 +928,113 @@ export namespace models {
 	    }
 	}
 	
+	export class RemoteApproval {
+	    id: string;
+	    device: string;
+	    method: string;
+	    reason: string;
+	    args: string[];
+	    requestedAt: number;
+	    expiresAt: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new RemoteApproval(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.device = source["device"];
+	        this.method = source["method"];
+	        this.reason = source["reason"];
+	        this.args = source["args"];
+	        this.requestedAt = source["requestedAt"];
+	        this.expiresAt = source["expiresAt"];
+	    }
+	}
+	export class RemotePendingDevice {
+	    id: string;
+	    code: string;
+	    userAgent: string;
+	    requestedAt: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new RemotePendingDevice(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.code = source["code"];
+	        this.userAgent = source["userAgent"];
+	        this.requestedAt = source["requestedAt"];
+	    }
+	}
+	export class RemoteDevice {
+	    id: string;
+	    name: string;
+	    approvedAt: number;
+	    lastSeen: number;
+	    sessions: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new RemoteDevice(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.name = source["name"];
+	        this.approvedAt = source["approvedAt"];
+	        this.lastSeen = source["lastSeen"];
+	        this.sessions = source["sessions"];
+	    }
+	}
+	export class RemoteAccessState {
+	    passwordSet: boolean;
+	    running: boolean;
+	    addr: string;
+	    clients: number;
+	    devices: RemoteDevice[];
+	    pendingDevices: RemotePendingDevice[];
+	    approvals: RemoteApproval[];
+	
+	    static createFrom(source: any = {}) {
+	        return new RemoteAccessState(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.passwordSet = source["passwordSet"];
+	        this.running = source["running"];
+	        this.addr = source["addr"];
+	        this.clients = source["clients"];
+	        this.devices = this.convertValues(source["devices"], RemoteDevice);
+	        this.pendingDevices = this.convertValues(source["pendingDevices"], RemotePendingDevice);
+	        this.approvals = this.convertValues(source["approvals"], RemoteApproval);
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	
+	
+	
 	export class ResolvedDependency {
 	    projectId: string;
 	    projectTitle: string;

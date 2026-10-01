@@ -50,6 +50,13 @@ type RemoteService struct {
 	running    atomic.Bool
 	lastActive atomic.Int64 // unix nanoseconds of the last request or socket message
 	stopIdle   chan struct{}
+	// cancel ends every request's context when the listener stops, so a call
+	// waiting on the desktop's approval is withdrawn rather than holding the
+	// shutdown open for its whole wait.
+	cancel context.CancelFunc
+	// onChange is told when the listener starts or stops, by hand or by the
+	// idle stop, and when a socket opens or closes.
+	onChange func()
 }
 
 // RemoteAuthorizer identifies the session behind a request. An error refuses
@@ -150,6 +157,30 @@ func (s *RemoteService) SetAuthorizer(auth RemoteAuthorizer) {
 	s.auth = auth
 }
 
+// OnChange registers what to tell when what the desktop shows about the
+// listener has changed: running or not, and how many sockets are open. It is
+// told that something did, not what. Called with s.mu released.
+func (s *RemoteService) OnChange(fn func()) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.onChange = fn
+}
+
+// RemoteChangeNotifier is the one emitter of remote:changed: what the
+// listener, the authorizer and the approvals are each given as their OnChange.
+func RemoteChangeNotifier(bus *EventBus) func() {
+	return func() { bus.Emit(EventRemoteChanged, nil) }
+}
+
+func (s *RemoteService) changed() {
+	s.mu.Lock()
+	fn := s.onChange
+	s.mu.Unlock()
+	if fn != nil {
+		fn()
+	}
+}
+
 // SetIdleTimeout replaces the idle stop's period. Zero or less disables it,
 // which nothing in the app does; it exists for the tests.
 func (s *RemoteService) SetIdleTimeout(d time.Duration) {
@@ -173,6 +204,8 @@ func (s *RemoteService) AllowHost(host string) {
 // wants it authenticated and over TLS, which the tunnel gives and a bare
 // listener does not.
 func (s *RemoteService) Start(port int) (string, error) {
+	// Deferred first, so it runs after s.mu is released.
+	defer s.changed()
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if s.srv != nil {
@@ -198,11 +231,14 @@ func (s *RemoteService) Start(port int) (string, error) {
 	s.hosts[addr] = struct{}{}
 	s.hosts["localhost:"+boundPort] = struct{}{}
 
+	base, cancel := context.WithCancel(context.Background())
 	s.srv = &http.Server{
 		Handler:           s.handler(),
 		ReadHeaderTimeout: 10 * time.Second,
 		ErrorLog:          slog.NewLogLogger(slog.Default().Handler(), slog.LevelWarn),
+		BaseContext:       func(net.Listener) context.Context { return base },
 	}
+	s.cancel = cancel
 	s.ln = ln
 	s.touch()
 	s.running.Store(true)
@@ -225,13 +261,16 @@ func (s *RemoteService) Stop() error {
 	s.mu.Lock()
 	srv := s.srv
 	stopIdle := s.stopIdle
-	s.srv, s.ln, s.stopIdle = nil, nil, nil
+	cancel := s.cancel
+	s.srv, s.ln, s.stopIdle, s.cancel = nil, nil, nil, nil
 	s.running.Store(false)
 	s.mu.Unlock()
 	if srv == nil {
 		return nil
 	}
+	defer s.changed()
 	close(stopIdle)
+	cancel()
 	ctx, cancel := context.WithTimeout(context.Background(), remoteShutdownGrace)
 	defer cancel()
 	err := srv.Shutdown(ctx)

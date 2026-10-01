@@ -142,4 +142,16 @@ var neverRemote = map[string]string{
 	"OpenWorldFolder":   "opens a folder on the desktop",
 	"ModInstallLocal":   "a native file dialog on the desktop",
 	"SetActiveServerID": "would change what the desktop is looking at (§ S8.11); the remote mirrors the selection instead",
+
+	// The desktop's own control over remote access. A session that could call
+	// any of these could approve itself, or lock the desktop's user out.
+	"GetRemoteAccessState": "lists the devices, the waiting requests and the arguments of calls awaiting approval",
+	"SetRemotePassword":    "the first factor; set at the desktop only",
+	"StartRemoteAccess":    "switched on at the desktop only (§ S8.8)",
+	"StopRemoteAccess":     "a browser that could stop the listener could lock every other device out; closing the tab is its way to leave",
+	"ApproveRemoteDevice":  "the second factor (§ S8.6); a browser that could call it could approve itself",
+	"DenyRemoteDevice":     "the desktop's answer to a waiting device",
+	"RemoveRemoteDevice":   "the desktop's list of who may sign in",
+	"RevokeRemoteSessions": "revocation is the desktop's (§ S8.5)",
+	"AnswerRemoteApproval": "the approval itself (§ S8.2); a browser that could call it could approve its own admin calls",
 }
