@@ -170,8 +170,10 @@ function dispatch(name: string, args: unknown[]): void {
     try {
       sub.cb(...args)
     } catch (e) {
-      // One bad subscriber must not stop the rest, as on the real bus.
-      console.error(`remote: listener for "${name}" threw`, e)
+      // One bad subscriber must not stop the rest, as on the real bus. The
+      // name arrives in a server frame, so it is an argument, never part of
+      // the format string, where a % in it would be read as a directive.
+      console.error('remote: a listener threw for event', name, e)
     }
   }
 }
