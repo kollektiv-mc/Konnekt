@@ -240,15 +240,15 @@ injects a **shim** that implements those same globals against an embedded HTTP
 server. Tiles render remotely with zero per-tile changes (every generated
 binding funnels through `window['go']['main']['App'][Method]`).
 
-**Sequencing decision:** Phases 1–5 are deferred until after all Beta tiles ship.
-The shim is tile-agnostic, so Phases 1–2 cost the same now or later, while the
-expensive-to-retrofit groundwork (Phase 0 — EventBus, console replay buffer,
-uniform `(T, error)` bindings) is already done. Beta also adds the most
-remote-hostile surface (file explorer, mod manager → native file I/O, downloads),
-all of which Phase 5 must adapt; building remote first would mean redoing that
-work per tile. Auth + tunnel (Phases 3–4) also expose the dashboard to the web,
-so they should land once against a stable, hardened feature set. Until then, the
-only ongoing cost is the remote-readiness checklist under "Adding a tile" below.
+**Sequencing:** this was planned to wait until every Beta tile had shipped,
+on the reasoning that Beta adds the most remote-hostile surface (file explorer,
+mod manager, native file I/O) and that auth and the tunnel should land once
+against a settled feature set. It was built ahead of that instead, phase by
+phase. What the early build costs is what the plan said it would: a Beta tile
+that adds a bound method or a native dialog has to be classified in
+`remote_methods.go` (a test fails until it is) and, where it opens something
+on the desktop, left out of a remote browser. The remote-readiness checklist
+under "Adding a tile" below is that cost, per tile.
 
 - [x] **Phase 0 — Event hub refactor**
   - `EventBus` (backend/services/eventbus.go) is now the single emit path; every
@@ -339,14 +339,33 @@ only ongoing cost is the remote-readiness checklist under "Adding a tile" below.
   host behaves; `/favicon.ico` is the app icon. A layout for a phone's width
   is not built: the grid is the desktop's six columns at any width.
 
-Phase 4 (cloudflared tunnel) is filed in
-[GitHub Issues](../../issues), labelled
-`milestone:remote-access`. Their security acceptance criteria are § S8 of
+- [x] **Phase 4 — Tunnel transport** ([#46](../../issues/46)). What is on
+  disk: `backend/services/tunnel.go` runs Cloudflare's `cloudflared` as a
+  child process in quick-tunnel mode and reads the public
+  `https://<name>.trycloudflare.com` address off its output. The binary is
+  pinned in the source by version, byte size and SHA-256 per platform
+  (Windows and Linux; macOS is not built), fetched on first use from the
+  release's own URL with redirects held to GitHub's hosts, and hashed again
+  before every execution, with `--no-autoupdate` so it stays the file that was
+  checked. `BindTunnel` makes the tunnel's hostname one the listener answers to
+  only while the tunnel is up, forgets the devices approved on it when it goes
+  (a quick tunnel's address is new every time, and a cookie is bound to the
+  one it was set on), and stops the tunnel whenever the listener stops, the
+  idle stop included. `StartRemoteTunnel` and `StopRemoteTunnel` are the
+  desktop's, in `neverRemote`. Settings > Remote Access has the switch, with
+  what it means said beside it: the address is public, the sign-in is what
+  stands in front of the dashboard, and Cloudflare terminates the TLS. The
+  title bar's chip says "public" while it is up. Not run against a real
+  `cloudflared` from this repository's tests, which use a stand-in process.
+
+Phases 1 to 5 are on disk. What is left under `milestone:remote-access` is in
+[GitHub Issues](../../issues). The security acceptance criteria are § S8 of
 `agent_docs/SECURITY_CHECKLIST.md`, checked by `/security-check`.
 
-Open questions to resolve before build: single app-wide password vs per-user
-accounts (default: single); whether remote needs per-server sessions or just
-mirrors the one active server like the desktop does (default: mirror).
+Settled while building: one app-wide password rather than per-user accounts,
+with the approved device as the second factor; and each browser keeps its own
+server selection rather than mirroring the desktop's, since every bound method
+takes a `serverID` and a browser must not move what the desktop is looking at.
 
 ## Later
 
@@ -423,12 +442,15 @@ notarisation used to sit beside it there; they are Beta work now, above.
    d. Run `wails generate module` to regenerate TS bindings
    e. Import from `frontend/wailsjs/go/main/` in the tile
 5. Run `pnpm typecheck` and `go vet ./...` before marking done
-6. Remote-readiness (keeps the future Remote Access feature cheap — see below):
+6. Remote Access (the same tile is served to a browser):
    a. Fetch data only through generated bindings — never raw `window.go`
    b. Emit/consume events through `EventBus`, never `runtime.EventsEmit` directly
-   c. Any native-only method (file dialog, OS file/folder open, host path access)
-      must be flagged "needs a remote fallback in Remote Access Phase 5" at the
-      call site, so it surfaces when the remote shim is built
+   c. Classify every new bound method in `remote_methods.go`: a tier and a
+      reason, or `neverRemote`. `remote_methods_test.go` fails until it is.
+   d. A control that calls a `neverRemote` method (a file dialog, "open
+      folder") is not drawn when `isRemoteBrowser()` (`lib/ipc.ts`), and an
+      admin-tier call is never made unprompted: it raises a prompt on the
+      desktop
 
 ### Event naming convention
 

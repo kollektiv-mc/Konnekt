@@ -53,10 +53,15 @@ does. Concretely:
   markdown rendered alongside them.
 - **Remote access.** Off until it is switched on in Settings, and then a
   listener on the loopback address only (`backend/services/remote.go`, with
-  its sign-in in `remote_auth.go`). Anything that lets someone other than the
-  person at the desktop sign in, keep a session, or run a method the desktop
-  did not approve is in scope; the criteria it is built to are § S8 of
-  `agent_docs/SECURITY_CHECKLIST.md`.
+  its sign-in in `remote_auth.go`). A second switch publishes it through a
+  Cloudflare quick tunnel (`tunnel.go`), which runs a `cloudflared` binary
+  pinned by hash. Anything that lets someone other than the person at the
+  desktop sign in, keep a session, or run a method the desktop did not
+  approve is in scope, and so is anything that gets a different binary run in
+  `cloudflared`'s place; the criteria it is built to are § S8 of
+  `agent_docs/SECURITY_CHECKLIST.md`. Cloudflare terminates the tunnel's TLS
+  and can read what passes through it. That is how a quick tunnel works and
+  is stated where the switch is, not a vulnerability in Konnekt.
 
 ## What is out of scope
 
