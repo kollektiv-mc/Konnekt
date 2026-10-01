@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { describe, it, expect, beforeAll, beforeEach, vi } from 'vitest'
 import { render, fireEvent } from '@testing-library/react'
 import * as runtime from '../../../wailsjs/runtime/runtime'
 import { ModAboutBody } from './ModAboutBody'
@@ -9,6 +9,17 @@ vi.mock('../../../wailsjs/runtime/runtime')
 // assertion here waits for the Suspense boundary to resolve rather than
 // reading the first synchronous render.
 describe('ModAboutBody', () => {
+  // Transforming and evaluating react-markdown with its HTML parser for the
+  // first time is the one variable cost in the findBy below, and on a slow
+  // disk it alone exceeds findBy's 1 s default. It is module loading, not the
+  // behaviour under test, so the chunk is loaded first through the same
+  // specifier the component's lazy() uses and vitest's module cache then
+  // serves it instantly. What remains in the findBy is React's own 300 ms
+  // Suspense fallback throttle, a constant.
+  beforeAll(async () => {
+    await import('./MarkdownBody')
+  })
+
   beforeEach(() => {
     vi.clearAllMocks()
   })

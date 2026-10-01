@@ -28,7 +28,14 @@ func fakeDRM(t *testing.T, cards ...struct{ vendor, driver string }) string {
 		if err := os.MkdirAll(drivers, 0o755); err != nil {
 			t.Fatal(err)
 		}
+		// The driver entry has to be a real symlink, because the code under test
+		// reads it with os.Readlink. Windows only grants that to Developer Mode
+		// or an elevated shell (CI's windows-latest runner is elevated, a dev
+		// machine often is not), so a privilege refusal skips rather than fails.
 		if err := os.Symlink(drivers, filepath.Join(device, "driver")); err != nil {
+			if symlinkNeedsPrivilege(err) {
+				t.Skipf("symlinks need Developer Mode or elevation here: %v", err)
+			}
 			t.Fatal(err)
 		}
 		// Not a card, however NVIDIA-looking its contents are.

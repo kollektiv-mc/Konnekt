@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
+import { describe, it, expect, beforeAll, beforeEach, afterEach, vi } from 'vitest'
 import { render, screen, cleanup, waitFor } from '@testing-library/react'
 import * as App from '../../../wailsjs/go/main/App'
 import type { models } from '../../../wailsjs/go/models'
@@ -12,6 +12,17 @@ vi.mock('../../../wailsjs/runtime/runtime', () => ({ EventsOn: vi.fn(() => () =>
 afterEach(() => {
   cleanup()
   vi.unstubAllGlobals()
+})
+
+// The maximized tile renders GraphEditor through lazy() (see index.tsx), and
+// transforming and evaluating React Flow for the first time is the one
+// variable cost in the first waitFor: on a slow disk it alone exceeds the 1 s
+// default. It is module loading, not the server switch under test, so the
+// chunk is loaded first through the same specifier the lazy() uses and
+// vitest's module cache then serves it instantly. What remains in the waitFor
+// is React's own 300 ms Suspense fallback throttle, a constant.
+beforeAll(async () => {
+  await import('./editor/GraphEditor')
 })
 
 // React Flow measures its viewport; jsdom has no ResizeObserver.
