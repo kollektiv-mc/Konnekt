@@ -3,6 +3,7 @@ package services
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 )
@@ -106,5 +107,41 @@ func TestDataDirEndsInTheAppFolder(t *testing.T) {
 	}
 	if dir == "konnekt" {
 		t.Error("expected a parent directory, got a bare relative name")
+	}
+}
+
+// A file holding a credential, even a hashed one, is owner-only (§ S2.2). Mode
+// bits mean nothing on Windows, so the mode check is for the platforms that
+// have them.
+func TestWritePrivateDataFileIsOwnerOnly(t *testing.T) {
+	dir := filepath.Join(t.TempDir(), "konnekt")
+	if err := WritePrivateDataFile(dir, "remote.json", []byte(`{"a":1}`)); err != nil {
+		t.Fatal(err)
+	}
+	path := filepath.Join(dir, "remote.json")
+	got, err := os.ReadFile(path)
+	if err != nil || string(got) != `{"a":1}` {
+		t.Fatalf("read back %q, %v", got, err)
+	}
+	if runtime.GOOS == "windows" {
+		return
+	}
+	info, err := os.Stat(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if info.Mode().Perm() != 0600 {
+		t.Errorf("mode %o, want 0600", info.Mode().Perm())
+	}
+	// The ordinary writer is unchanged.
+	if err := WriteDataFile(dir, "plain.json", []byte(`{}`)); err != nil {
+		t.Fatal(err)
+	}
+	info, err = os.Stat(filepath.Join(dir, "plain.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if info.Mode().Perm() != 0644 {
+		t.Errorf("WriteDataFile mode %o, want 0644", info.Mode().Perm())
 	}
 }

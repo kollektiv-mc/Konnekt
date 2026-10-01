@@ -114,7 +114,16 @@ func TestRemoteGuardRefusesForeignHostAndOrigin(t *testing.T) {
 // § S8.3: no decision reads the source address. Held by grep rather than by
 // behaviour, since behaviour cannot show an absence.
 func TestRemoteNeverConsultsTheSourceAddress(t *testing.T) {
-	for _, name := range []string{"remote.go", "remote_ws.go", "remote_dispatch.go"} {
+	names, err := filepath.Glob("remote*.go")
+	if err != nil {
+		t.Fatal(err)
+	}
+	checked := 0
+	for _, name := range names {
+		if strings.HasSuffix(name, "_test.go") {
+			continue
+		}
+		checked++
 		src, err := os.ReadFile(name)
 		if err != nil {
 			t.Fatal(err)
@@ -125,6 +134,9 @@ func TestRemoteNeverConsultsTheSourceAddress(t *testing.T) {
 		if strings.Contains(string(src), "math/rand") {
 			t.Errorf("%s imports math/rand (§ S8.5)", name)
 		}
+	}
+	if checked < 4 {
+		t.Fatalf("only %d remote source files found; the glob is not seeing the package", checked)
 	}
 }
 
@@ -444,5 +456,175 @@ func TestRemoteStartRefusesWithoutADispatcher(t *testing.T) {
 	s := NewRemoteService(NewEventBus(), nil)
 	if _, err := s.Start(0); err == nil {
 		t.Fatal("started with no dispatcher")
+	}
+}
+
+// loginThroughListener is a sign-in request as the browser sends it: past the
+// guard's Host and Origin checks.
+func loginThroughListener(path, body string, cookies ...*http.Cookie) *http.Request {
+	r := httptest.NewRequest(http.MethodPost, path, strings.NewReader(body))
+	r.Host = testHost
+	r.Header.Set("Origin", "http://"+testHost)
+	r.Header.Set("Content-Type", "application/json")
+	for _, c := range cookies {
+		r.AddCookie(c)
+	}
+	return r
+}
+
+// § S8.5 and § S8.6 end to end: a session is what an approved sign-in earns,
+// and a foreign Origin never reaches the password check, so it is not counted.
+func TestRemoteSignInThroughTheListener(t *testing.T) {
+	s, _ := newTestRemote(t)
+	auth := newPasswordAuth(t)
+	s.SetAuthorizer(auth)
+	h := s.Handler()
+	good := loginJSON(t, testPassword)
+
+	w := do(h, loginThroughListener("/api/login", good))
+	expectStatus(t, "POST /api/login", w, http.StatusAccepted)
+	device := findCookie(w, remoteDeviceCookie)
+	if device == nil {
+		t.Fatal("no device cookie")
+	}
+	pending := auth.Pending()
+	if len(pending) != 1 {
+		t.Fatalf("Pending() = %+v", pending)
+	}
+	expectStatus(t, "wait before approval", do(h, loginThroughListener("/api/login/wait", "{}", device)), http.StatusAccepted)
+	if err := auth.ApproveDevice(pending[0].ID, "Phone"); err != nil {
+		t.Fatal(err)
+	}
+	w = do(h, loginThroughListener("/api/login/wait", "{}", device))
+	expectStatus(t, "POST /api/login/wait", w, http.StatusNoContent)
+	session := findCookie(w, remoteSessionCookie)
+	if session == nil {
+		t.Fatal("no session cookie")
+	}
+
+	call := func(cookies ...*http.Cookie) *httptest.ResponseRecorder {
+		r := rpcRequest("Echo", `{"method":"Echo","args":["x"]}`)
+		for _, c := range cookies {
+			r.AddCookie(c)
+		}
+		return do(h, r)
+	}
+	if w := call(session); w.Code != http.StatusOK || !strings.Contains(w.Body.String(), "echo:x") {
+		t.Errorf("rpc with the session: %d %s", w.Code, w.Body.String())
+	}
+	if w := call(); w.Code != http.StatusUnauthorized {
+		t.Errorf("rpc without the session: %d, want 401", w.Code)
+	}
+	if w := call(device); w.Code != http.StatusUnauthorized {
+		t.Errorf("rpc with only the device cookie: %d, want 401", w.Code)
+	}
+
+	// Wrong passwords from a foreign page are refused by the guard before the
+	// password is looked at, so no number of them locks anything out.
+	bad := loginJSON(t, wrongPass)
+	for i := 0; i < 10; i++ {
+		r := loginThroughListener("/api/login", bad)
+		r.Header.Set("Origin", "http://evil.example")
+		expectStatus(t, "foreign origin sign-in", do(h, r), http.StatusForbidden)
+	}
+	expectStatus(t, "right password after the foreign attempts", do(h, loginThroughListener("/api/login", good, device)), http.StatusNoContent)
+}
+
+// An authorizer with no sign-in half has no sign-in routes: the login gate
+// reads the 404 as "not set up yet".
+func TestRemoteLoginRoutesAreAbsentWithoutASignInAuthorizer(t *testing.T) {
+	s, _ := newTestRemote(t)
+	s.SetAuthorizer(stubAuthorizer{device: "phone"})
+	h := s.Handler()
+	for _, path := range []string{"/api/login", "/api/login/wait"} {
+		expectStatus(t, path, do(h, loginThroughListener(path, loginJSON(t, testPassword))), http.StatusNotFound)
+	}
+}
+
+// § S8.8: only a session's own work, or an accepted sign-in, counts as
+// activity. Anything an outsider can send does not.
+func TestRemoteOnlyAuthenticatedWorkCountsAsActivity(t *testing.T) {
+	s, _ := newTestRemote(t)
+	s.SetAssets(fstest.MapFS{"index.html": {Data: []byte("<!doctype html><title>x</title>")}})
+	auth := newPasswordAuth(t)
+	s.SetAuthorizer(auth)
+	h := s.Handler()
+	activity := func() int64 { return s.lastActive.Load() }
+	reset := func() { s.lastActive.Store(1) }
+	reset()
+
+	get := httptest.NewRequest(http.MethodGet, "/", nil)
+	get.Host = testHost
+	expectStatus(t, "GET /", do(h, get), http.StatusOK)
+	if activity() != 1 {
+		t.Error("an unauthenticated page load counted as activity")
+	}
+	expectStatus(t, "rpc without a session", do(h, rpcRequest("Echo", `{"method":"Echo","args":["x"]}`)), http.StatusUnauthorized)
+	if activity() != 1 {
+		t.Error("a 401 rpc counted as activity")
+	}
+	expectStatus(t, "wrong password", do(h, loginThroughListener("/api/login", loginJSON(t, wrongPass))), http.StatusUnauthorized)
+	if activity() != 1 {
+		t.Error("a wrong-password sign-in counted as activity")
+	}
+
+	// A right password from an unapproved device earns a pending request, not
+	// a session, so it does not count either.
+	w := do(h, loginThroughListener("/api/login", loginJSON(t, testPassword)))
+	expectStatus(t, "right password", w, http.StatusAccepted)
+	if activity() != 1 {
+		t.Error("a pending sign-in counted as activity")
+	}
+	device := findCookie(w, remoteDeviceCookie)
+	expectStatus(t, "pending poll", do(h, loginThroughListener("/api/login/wait", "{}", device)), http.StatusAccepted)
+	if activity() != 1 {
+		t.Error("a pending poll counted as activity")
+	}
+
+	if err := auth.ApproveDevice(auth.Pending()[0].ID, "Phone"); err != nil {
+		t.Fatal(err)
+	}
+	w = do(h, loginThroughListener("/api/login/wait", "{}", device))
+	expectStatus(t, "approved poll", w, http.StatusNoContent)
+	if activity() == 1 {
+		t.Error("a poll that collected a session did not count as activity")
+	}
+	session := findCookie(w, remoteSessionCookie)
+	reset()
+	r := rpcRequest("Echo", `{"method":"Echo","args":["x"]}`)
+	r.AddCookie(session)
+	expectStatus(t, "authorized rpc", do(h, r), http.StatusOK)
+	if activity() == 1 {
+		t.Error("an authorized rpc did not count as activity")
+	}
+
+	reset()
+	expectStatus(t, "accepted sign-in", do(h, loginThroughListener("/api/login", loginJSON(t, testPassword), device)), http.StatusNoContent)
+	if activity() == 1 {
+		t.Error("an accepted sign-in did not count as activity")
+	}
+}
+
+// § S8.9: a method name the allowlist does not know is the caller's own text,
+// so it is not written to the log.
+func TestRemoteDoesNotLogAnUnknownMethodName(t *testing.T) {
+	logs := captureLog(t)
+	s, _ := newTestRemote(t)
+	s.SetAuthorizer(stubAuthorizer{device: "phone"})
+	name := strings.Repeat("X", 1000)
+	w := do(s.Handler(), rpcRequest("", `{"method":"`+name+`","args":[]}`))
+	expectStatus(t, "unknown method", w, http.StatusNotFound)
+
+	found := false
+	for _, l := range logs.all() {
+		if strings.Contains(l, "XXXXXXXXXX") {
+			t.Errorf("the caller's method name reached the log: %.200q", l)
+		}
+		if strings.HasPrefix(l, "remote: call") && strings.Contains(l, "(not remote-callable)") {
+			found = true
+		}
+	}
+	if !found {
+		t.Errorf("no remote: call line with the placeholder in %v", logs.all())
 	}
 }

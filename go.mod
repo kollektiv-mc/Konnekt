@@ -9,6 +9,7 @@ require (
 	github.com/minio/selfupdate v0.6.0
 	github.com/shirou/gopsutil/v4 v4.26.8
 	github.com/wailsapp/wails/v2 v2.12.0
+	golang.org/x/crypto v0.52.0
 	golang.org/x/sys v0.48.0
 )
 
@@ -43,7 +44,6 @@ require (
 	github.com/wailsapp/go-webview2 v1.0.22 // indirect
 	github.com/wailsapp/mimetype v1.4.1 // indirect
 	github.com/yusufpapurcu/wmi v1.2.4 // indirect
-	golang.org/x/crypto v0.52.0 // indirect
 	golang.org/x/net v0.55.0 // indirect
 	golang.org/x/text v0.37.0 // indirect
 )

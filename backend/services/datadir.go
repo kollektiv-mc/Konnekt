@@ -47,6 +47,18 @@ func DataDir() string {
 // The write itself is atomic (writeFileAtomic): a crash mid-save leaves the
 // previous content intact rather than a truncated file.
 func WriteDataFile(dir, name string, data []byte) error {
+	return writeDataFile(dir, name, data, 0644)
+}
+
+// WritePrivateDataFile is WriteDataFile for a file that holds a credential,
+// even a hashed one: owner-only, which is what agent_docs/SECURITY_CHECKLIST.md
+// § S2.2 asks of every such file. remote.json (the Remote Access password hash
+// and the approved devices) is the one caller.
+func WritePrivateDataFile(dir, name string, data []byte) error {
+	return writeDataFile(dir, name, data, 0600)
+}
+
+func writeDataFile(dir, name string, data []byte, perm os.FileMode) error {
 	if dir == "" {
 		return fmt.Errorf("write %s: data directory is not set", name)
 	}
@@ -54,7 +66,7 @@ func WriteDataFile(dir, name string, data []byte) error {
 		return fmt.Errorf("create data directory %s: %w", dir, err)
 	}
 	path := filepath.Join(dir, name)
-	if err := writeFileAtomic(path, data, 0644); err != nil {
+	if err := writeFileAtomic(path, data, perm); err != nil {
 		return fmt.Errorf("write %s: %w", path, err)
 	}
 	return nil

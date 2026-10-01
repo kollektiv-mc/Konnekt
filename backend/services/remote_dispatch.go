@@ -57,7 +57,7 @@ var (
 type RemoteDispatcher struct {
 	methods map[string]remoteBoundMethod
 	// approve gates admin calls. nil refuses every one of them, which is the
-	// state until the desktop-side approval prompt exists (Phase 3).
+	// state until the desktop-side approval prompt exists (#462).
 	approve func(method string) error
 }
 
