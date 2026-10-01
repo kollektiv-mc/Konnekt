@@ -24,8 +24,12 @@ class FakeSocket {
   receive(frame: unknown) {
     this.onmessage?.(new MessageEvent('message', { data: JSON.stringify(frame) }))
   }
-  hello(seq: number, data: { replayed?: number; gap?: boolean } = {}) {
-    this.receive({ seq, event: 'remote:hello', data: { replayed: 0, gap: false, ...data } })
+  hello(seq: number, data: { replayed?: number; gap?: boolean; run?: string } = {}) {
+    this.receive({
+      seq,
+      event: 'remote:hello',
+      data: { replayed: 0, gap: false, run: 'run-a', ...data },
+    })
   }
   drop() {
     this.onclose?.()
@@ -350,7 +354,7 @@ describe('connectEvents', () => {
     lastSocket().drop()
     vi.advanceTimersByTime(1000)
     expect(sockets()).toHaveLength(2)
-    expect(lastSocket().url).toMatch(/\/ws\?since=11$/)
+    expect(lastSocket().url).toMatch(/\/ws\?since=11&run=run-a$/)
     // Replayed frames follow the hello and must not read as already seen.
     const cb = vi.fn()
     runtime().EventsOn('e', cb)
@@ -368,7 +372,23 @@ describe('connectEvents', () => {
     lastSocket().hello(40)
     lastSocket().drop()
     vi.advanceTimersByTime(1000)
-    expect(lastSocket().url).toMatch(/\/ws\?since=40$/)
+    expect(lastSocket().url).toMatch(/\/ws\?since=40&run=run-a$/)
+    stop()
+  })
+
+  it('sends the run of the latest hello, which a gap hello replaces', () => {
+    vi.useFakeTimers()
+    const stop = connectEvents()
+    lastSocket().hello(5, { gap: true, run: 'run-b' })
+    lastSocket().drop()
+    vi.advanceTimersByTime(1000)
+    expect(lastSocket().url).toMatch(/\/ws\?since=5&run=run-b$/)
+    stop()
+  })
+
+  it('sends neither since nor run on a page that has seen nothing', () => {
+    const stop = connectEvents()
+    expect(lastSocket().url).not.toMatch(/since|run/)
     stop()
   })
 

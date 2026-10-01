@@ -161,6 +161,10 @@ func (s *RemoteService) Start(port int) (string, error) {
 		_ = ln.Close() //nolint:errcheck // the listen already failed to yield a usable address; nothing to report about closing it
 		return "", fmt.Errorf("remote: bound address %q: %w", addr, err)
 	}
+	if err := s.hub.newRun(); err != nil {
+		_ = ln.Close() //nolint:errcheck // already failing; nothing to report about closing it
+		return "", err
+	}
 	s.hosts[addr] = struct{}{}
 	s.hosts["localhost:"+boundPort] = struct{}{}
 

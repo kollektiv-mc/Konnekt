@@ -283,9 +283,12 @@ only ongoing cost is the remote-readiness checklist under "Adding a tile" below.
   the entry chunk does not carry either. Unreachable for the same reason as
   Phase 1: nothing starts the listener (Phase 4 and #47) and the gate has no
   `/api/login` to post to until Phase 3, where it reads a 404 or 405 as "does
-  not accept sign-ins yet". It also fixed two replay bugs in `remote_ws.go`:
-  a stale or emptied `since` now reports a gap, and a replay too big for the
-  send buffer is answered with one rather than a closed socket.
+  not accept sign-ins yet". It also fixed the replay in `remote_ws.go`:
+  each `Start` is a new run with a random id, carried in the hello and sent
+  back as `?run=` beside `?since=`, so the server decides whether a number is
+  its own; a `since` from another run, ahead of the latest or behind an emptied
+  buffer reports a gap, and a replay too big for the send buffer is answered
+  with one rather than a closed socket.
 
 Phases 3–5 (auth, cloudflared tunnel, remote-mode
 adaptations) are filed in [GitHub Issues](../../issues), labelled

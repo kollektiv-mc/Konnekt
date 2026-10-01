@@ -16,10 +16,11 @@ import * as Bindings from '../../wailsjs/go/main/App'
  * does not pay for it (`pnpm check-bundle`).
  *
  * The wire contract is `backend/services/remote.go` (`POST /api/rpc`) and
- * `remote_ws.go` (`GET /ws`). Nothing here persists: the session is a cookie
- * the server sets, and the event position is a variable, because a token or a
- * cursor in `localStorage` or a URL is banned by § S8.5 and by
- * `agent_docs/CLAUDE.md`.
+ * `remote_ws.go` (`GET /ws`; the `remote:hello` first frame carries the latest
+ * seq, whether the replay had a gap, and the run id). Nothing here persists:
+ * the session is a cookie the server sets, and the event position is a
+ * variable, because a token or a cursor in `localStorage` or a URL is banned by
+ * § S8.5 and by `agent_docs/CLAUDE.md`.
  */
 
 export interface RemoteRuntimeOptions {
@@ -50,6 +51,9 @@ const state = {
   // loop from the gate page: reload, fail, report, 401, reload.
   lockedFired: false,
   lastSeq: 0,
+  // The server run the position belongs to, from the last hello. A number is
+  // only comparable inside one run, so it travels with `since`.
+  run: '',
 }
 
 const listeners = new Map<string, Set<Subscription>>()
@@ -197,11 +201,13 @@ const BACKOFF_CAP_MS = 30_000
 /**
  * Opens the event mirror and keeps it open. Returns the function that stops it.
  *
- * Every frame is numbered. A reconnect asks for what it missed with
- * `?since=<last seq>`, and the server answers with a `remote:hello` that says
- * whether the replay could cover it. When it could not, or when the server
- * restarted (its numbering began again below ours), the tiles hold a hole and
- * `onResync` re-primes them the way a fresh page does.
+ * Every frame is numbered, and every hello names the server run that numbers
+ * them. A reconnect asks for what it missed with `?since=<last seq>&run=<run>`,
+ * and the server, not this page, decides whether that number belongs to its
+ * current run, answering with a `remote:hello` that says whether the replay
+ * could cover it. When it could not, the tiles hold a hole and `onResync`
+ * re-primes them the way a fresh page does. `hello.seq < lastSeq` stays as a
+ * defence for a server that predates the run id.
  */
 export function connectEvents(): () => void {
   let socket: WebSocket | null = null
@@ -218,6 +224,8 @@ export function connectEvents(): () => void {
   const onHello = (hello: Frame) => {
     backoff = BACKOFF_START_MS
     const replayed = isRecord(hello.data) ? hello.data.replayed : undefined
+    // Taken from every hello, a gap one included: that is the new run.
+    if (isRecord(hello.data) && typeof hello.data.run === 'string') state.run = hello.data.run
     if ((isRecord(hello.data) && hello.data.gap === true) || hello.seq < state.lastSeq) {
       // Take the server's position, so a handler that does not reload does not
       // see the same gap again on the next reconnect.
@@ -233,7 +241,10 @@ export function connectEvents(): () => void {
   function open() {
     if (stopped || socket) return
     const scheme = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
-    const since = state.lastSeq > 0 ? `?since=${state.lastSeq}` : ''
+    const since =
+      state.lastSeq > 0
+        ? `?since=${state.lastSeq}${state.run ? `&run=${encodeURIComponent(state.run)}` : ''}`
+        : ''
     const ws = new WebSocket(`${scheme}//${window.location.host}/ws${since}`)
     socket = ws
     let sawHello = false
@@ -419,6 +430,7 @@ export function installRemoteRuntime(options: RemoteRuntimeOptions = {}): void {
   state.confirmed = false
   state.lockedFired = false
   state.lastSeq = 0
+  state.run = ''
   listeners.clear()
 
   const App = Object.fromEntries(
