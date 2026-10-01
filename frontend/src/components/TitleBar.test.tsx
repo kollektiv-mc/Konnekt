@@ -1,6 +1,7 @@
 import { describe, it, expect, afterEach, beforeEach, vi } from 'vitest'
 import { render, screen, fireEvent, cleanup, act } from '@testing-library/react'
 import * as runtime from '../../wailsjs/runtime/runtime'
+import { useRemoteStore } from '../stores/useRemoteStore'
 import { TitleBar } from './TitleBar'
 
 vi.mock('../../wailsjs/runtime/runtime')
@@ -41,6 +42,26 @@ describe('TitleBar', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Settings' }))
     expect(onOpenSettings).toHaveBeenCalledTimes(1)
+  })
+
+  it('shows the remote chip only while remote access runs, and opens remote from it', async () => {
+    const onOpenRemote = vi.fn()
+    const { unmount } = render(<TitleBar onOpenSettings={() => {}} onOpenRemote={onOpenRemote} />)
+    await settle()
+    expect(screen.queryByRole('button', { name: /Remote access is on/ })).toBeNull()
+    unmount()
+
+    useRemoteStore.setState({
+      access: { running: true, clients: 0, pendingDevices: [], approvals: [] } as never,
+    })
+    try {
+      render(<TitleBar onOpenSettings={() => {}} onOpenRemote={onOpenRemote} />)
+      await settle()
+      fireEvent.click(screen.getByRole('button', { name: /Remote access is on/ }))
+      expect(onOpenRemote).toHaveBeenCalledTimes(1)
+    } finally {
+      useRemoteStore.setState({ access: { running: false } as never })
+    }
   })
 
   it('names the maximise control from the window it finds on mount', async () => {

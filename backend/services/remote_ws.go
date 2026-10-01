@@ -278,6 +278,9 @@ func (s *RemoteService) handleWS(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	s.hub.add(c)
+	// The desktop shows how many browsers are connected, so it hears of this
+	// one arriving as it will of it leaving (readPump).
+	s.changed()
 	go s.writePump(c)
 	s.readPump(c, session)
 }

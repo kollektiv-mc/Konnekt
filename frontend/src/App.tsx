@@ -13,6 +13,8 @@ import { LoaderUpdateDialog } from './components/ServerManager/LoaderUpdateDialo
 import { DisconnectConfirm } from './components/DisconnectConfirm'
 import { EulaModal } from './components/EulaModal'
 import { SettingsModal } from './components/SettingsModal'
+import type { SettingsSection } from './components/SettingsModal'
+import { RemotePrompts } from './components/RemotePrompts'
 import { useInstallStore } from './stores/useInstallStore'
 import { useLoaderStore } from './stores/useLoaderStore'
 import { useUiStore } from './stores/useUiStore'
@@ -25,10 +27,11 @@ import { useUpdateCheck } from './hooks/useUpdateCheck'
 import { useServerStatusSync } from './hooks/useServerStatus'
 import { useConsoleSync } from './hooks/useConsoleSync'
 import { useCommandsSync } from './hooks/useCommandsSync'
+import { useRemoteSync } from './hooks/useRemoteSync'
 import { useNavWidth } from './hooks/useNavWidth'
 import { TitleBar } from './components/TitleBar'
 import { EVENTS } from './lib/constants'
-import { hasWailsBridge } from './lib/ipc'
+import { hasWailsBridge, isRemoteBrowser } from './lib/ipc'
 
 function App() {
   const { activeId } = useServerConfigStore()
@@ -41,6 +44,9 @@ function App() {
   // always the selected one: a schedule can start another server (#236).
   const [eulaFor, setEulaFor] = useState<string | null>(null)
   const [settingsOpen, setSettingsOpen] = useState(false)
+  // The section Settings opens on, set by the title bar's Remote chip and
+  // cleared by the gear, so the gear opens Settings on its own default.
+  const [settingsSection, setSettingsSection] = useState<SettingsSection | undefined>(undefined)
   const { width: navWidth, resizing, onHandleMouseDown, onHandleDoubleClick } = useNavWidth()
   // Any drag that moves the navbar or something inside it. While one is in
   // flight nothing in there should light up under the pointer: the row being
@@ -73,6 +79,8 @@ function App() {
   useServerStatusSync(activeId)
   useConsoleSync(activeId)
   useCommandsSync()
+  // Here for the same reason: the prompts and the title bar chip both read it.
+  useRemoteSync()
 
   // Auto-start active server on launch
   useEffect(() => {
@@ -535,7 +543,20 @@ function App() {
     // navbar's own scroller scrolling instead of growing the flex item past the
     // viewport.
     <div className="flex h-screen flex-col overflow-hidden">
-      <TitleBar onOpenSettings={() => setSettingsOpen(true)} />
+      <TitleBar
+        onOpenSettings={() => {
+          setSettingsSection(undefined)
+          setSettingsOpen(true)
+        }}
+        onOpenRemote={
+          isRemoteBrowser()
+            ? undefined
+            : () => {
+                setSettingsSection('remote')
+                setSettingsOpen(true)
+              }
+        }
+      />
       <div className="flex min-h-0 flex-1 overflow-hidden">
         <aside
           className={`border-r-hairline border-border-subtle flex shrink-0 flex-col overflow-y-auto ${
@@ -607,7 +628,11 @@ function App() {
 
       {eulaFor !== null && <EulaModal serverId={eulaFor} onClose={() => setEulaFor(null)} />}
 
-      <SettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} />
+      <SettingsModal
+        open={settingsOpen}
+        onClose={() => setSettingsOpen(false)}
+        initialSection={settingsSection}
+      />
 
       {/* Every overlay below is rendered here, after <main>, on purpose, and
           for two reasons that are not the z-index: <aside> goes
@@ -620,6 +645,8 @@ function App() {
           latter, which is how the manager opened underneath an open tile. */}
       <ServerManager />
       <DisconnectConfirm />
+      {/* A remote browser has no store to read: it never loads (useRemoteSync). */}
+      {!isRemoteBrowser() && <RemotePrompts />}
       {installOpen && <ServerInstallModal />}
       {loaderDialogOpen && <LoaderUpdateDialog />}
     </div>

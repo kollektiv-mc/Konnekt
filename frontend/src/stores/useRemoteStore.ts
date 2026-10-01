@@ -13,13 +13,14 @@ import {
 } from '../../wailsjs/go/main/App'
 import type { models } from '../../wailsjs/go/models'
 
-export type RemoteAccessState = models.RemoteAccessState
+/** The generated class without its converter method, so a plain object is one too. */
+export type RemoteAccessState = Omit<models.RemoteAccessState, 'convertValues'>
 export type RemoteDevice = models.RemoteDevice
 export type RemotePendingDevice = models.RemotePendingDevice
 export type RemoteApproval = models.RemoteApproval
 
 /** Remote Access as a fresh install has it: off, no password, nobody known. */
-const OFF = {
+const OFF: RemoteAccessState = {
   passwordSet: false,
   running: false,
   addr: '',
@@ -27,7 +28,7 @@ const OFF = {
   devices: [],
   pendingDevices: [],
   approvals: [],
-} as unknown as RemoteAccessState
+}
 
 interface RemoteStore {
   /** What the desktop shows about Remote Access. The getter twin of `remote:changed`. */
