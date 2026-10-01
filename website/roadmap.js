@@ -535,6 +535,17 @@
     updater: 'rm-release',
   }
 
+  // The one label this files by. Remote Access is not a tile, so the form has no
+  // option for it and nobody outside reports "the remote listener"; a
+  // maintainer files that work, with no dropdown answer to parse, and until now
+  // it landed in requested/ beside the folder it belongs in. The label is the
+  // only place that fact lives, and the folder it names is authored in
+  // roadmap.html, so it is looked up the way an area answer is: an unknown or
+  // missing folder still falls through to requested/.
+  var LABEL_FOLDERS = {
+    'area:remote': 'rm-remote-access',
+  }
+
   var AREA_HEADING = /^###\s+Which part of Konnekt\?\s*$/im
 
   function mk(tag, cls, text) {
@@ -592,8 +603,14 @@
     return requestedRec
   }
 
-  function folderFor(area) {
+  // The label wins over the form answer: it is a maintainer's decision, where
+  // the answer is whatever a reporter picked from a list that has no entry for
+  // it. Both resolve through the same lookup and fall back to the same folder.
+  function folderFor(area, labels) {
     var id = AREA_FOLDERS[area]
+    labels.forEach(function (label) {
+      if (LABEL_FOLDERS[label]) id = LABEL_FOLDERS[label]
+    })
     var el = id ? document.getElementById(id) : null
     return el ? info.get(el.closest('.rm-node')) : requested()
   }
@@ -670,7 +687,7 @@
         // milestone:remote-access and no milestone at all are both Later, which
         // is what that card says: not scheduled, and not forgotten.
         var stage = labels.indexOf('milestone:beta') !== -1 ? 'beta' : 'later'
-        var folder = folderFor(areaOf(issue.body))
+        var folder = folderFor(areaOf(issue.body), labels)
         var li = buildLeaf(issue, stage)
 
         folder.el.querySelector('.rm-children').appendChild(li)
