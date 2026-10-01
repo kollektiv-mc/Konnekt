@@ -9,7 +9,9 @@ import {
   RevokeRemoteSessions,
   SetRemotePassword,
   StartRemoteAccess,
+  StartRemoteTunnel,
   StopRemoteAccess,
+  StopRemoteTunnel,
 } from '../../wailsjs/go/main/App'
 import type { models } from '../../wailsjs/go/models'
 
@@ -28,6 +30,7 @@ const OFF: RemoteAccessState = {
   devices: [],
   pendingDevices: [],
   approvals: [],
+  tunnel: { status: 'off', url: '', error: '', percent: 0, version: '' },
 }
 
 interface RemoteStore {
@@ -42,6 +45,9 @@ interface RemoteStore {
   setPassword: (password: string) => Promise<void>
   start: () => Promise<void>
   stop: () => Promise<void>
+  /** Returns once the tunnel has started coming up; `access.tunnel` reports the rest. */
+  startTunnel: () => Promise<void>
+  stopTunnel: () => Promise<void>
   approveDevice: (requestId: string, name: string) => Promise<void>
   denyDevice: (requestId: string) => Promise<void>
   removeDevice: (deviceId: string) => Promise<void>
@@ -93,6 +99,8 @@ export const useRemoteStore = create<RemoteStore>((set, get) => {
     setPassword: (password) => act(() => SetRemotePassword(password)),
     start: () => act(() => StartRemoteAccess()),
     stop: () => act(() => StopRemoteAccess()),
+    startTunnel: () => act(() => StartRemoteTunnel()),
+    stopTunnel: () => act(() => StopRemoteTunnel()),
     approveDevice: (requestId, name) => act(() => ApproveRemoteDevice(requestId, name)),
     denyDevice: (requestId) => act(() => DenyRemoteDevice(requestId)),
     removeDevice: (deviceId) => act(() => RemoveRemoteDevice(deviceId)),

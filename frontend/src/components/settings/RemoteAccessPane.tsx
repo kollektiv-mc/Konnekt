@@ -1,11 +1,13 @@
-import { useEffect, useRef, useState } from 'react'
+import { useState } from 'react'
 import { useRemoteStore } from '../../stores/useRemoteStore'
 import type { RemoteDevice } from '../../stores/useRemoteStore'
 import { relativeMs } from '../../lib/format'
 import { BrowserOpenURL } from '../../../wailsjs/runtime/runtime'
 import { SettingRow } from '../ui/SettingRow'
 import { Toggle } from '../ui/Toggle'
+import { CopyButton } from './CopyButton'
 import { PendingDeviceCard } from './PendingDeviceCard'
+import { TunnelSection } from './TunnelSection'
 import { ACCENT_BUTTON, DANGER_BUTTON, QUIET_BUTTON, TEXT_INPUT } from './controls'
 
 // The listener binds loopback and serves plain HTTP; there is no TLS to name.
@@ -24,22 +26,7 @@ function lastSignedIn(device: RemoteDevice): string {
 }
 
 function AddressRow({ addr, clients }: { addr: string; clients: number }) {
-  const [copied, setCopied] = useState(false)
-  const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const url = `${LISTENER_SCHEME}//${addr}`
-
-  useEffect(() => () => clearTimeout(timer.current), [])
-
-  const copy = async () => {
-    try {
-      await navigator.clipboard.writeText(url)
-    } catch {
-      return // Clipboard refused: the address stays on screen to copy by hand.
-    }
-    setCopied(true)
-    clearTimeout(timer.current)
-    timer.current = setTimeout(() => setCopied(false), 1500)
-  }
 
   const open = () => {
     try {
@@ -52,12 +39,10 @@ function AddressRow({ addr, clients }: { addr: string; clients: number }) {
   return (
     <div className={SECTION}>
       <div className="flex items-center justify-between gap-4">
-        <span className="text-text-secondary text-xs">Address</span>
+        <span className="text-text-secondary text-xs">On this computer</span>
         <div className="flex min-w-0 items-center gap-2">
           <span className="text-text-muted text-1xs truncate font-mono">{url}</span>
-          <button onClick={() => void copy()} className={QUIET_BUTTON}>
-            {copied ? 'Copied' : 'Copy'}
-          </button>
+          <CopyButton text={url} />
           <button onClick={open} className={QUIET_BUTTON}>
             Open ↗
           </button>
@@ -75,6 +60,8 @@ export function RemoteAccessPane() {
     error,
     start,
     stop,
+    startTunnel,
+    stopTunnel,
     setPassword,
     removeDevice,
     revokeSessions,
@@ -139,6 +126,14 @@ export function RemoteAccessPane() {
       </SettingRow>
 
       {access.running && <AddressRow addr={access.addr} clients={access.clients} />}
+
+      <TunnelSection
+        tunnel={access.tunnel}
+        listening={access.running}
+        disabled={disabled}
+        onStart={() => void run(startTunnel)}
+        onStop={() => void run(stopTunnel)}
+      />
 
       <div className={SECTION}>
         <span className="text-text-primary text-sm">Password</span>

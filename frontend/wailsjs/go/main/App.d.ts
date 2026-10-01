@@ -197,9 +197,13 @@ export function SetScheduleGraphEnabled(arg1:string,arg2:string,arg3:boolean):Pr
 
 export function StartRemoteAccess():Promise<void>;
 
+export function StartRemoteTunnel():Promise<void>;
+
 export function StartServer(arg1:string):Promise<void>;
 
 export function StopRemoteAccess():Promise<void>;
+
+export function StopRemoteTunnel():Promise<void>;
 
 export function StopServer(arg1:string):Promise<void>;
 

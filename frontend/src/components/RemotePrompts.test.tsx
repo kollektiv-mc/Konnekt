@@ -73,6 +73,7 @@ function seed(approvals: Approval[] = [], pendingDevices: Pending[] = []) {
       devices: [],
       pendingDevices,
       approvals,
+      tunnel: { status: 'off', url: '', error: '', percent: 0, version: '2026.9.3' },
     } as unknown as RemoteAccessState,
     loaded: true,
     error: null,

@@ -928,6 +928,26 @@ export namespace models {
 	    }
 	}
 	
+	export class TunnelState {
+	    status: string;
+	    url: string;
+	    error: string;
+	    percent: number;
+	    version: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new TunnelState(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.status = source["status"];
+	        this.url = source["url"];
+	        this.error = source["error"];
+	        this.percent = source["percent"];
+	        this.version = source["version"];
+	    }
+	}
 	export class RemoteApproval {
 	    id: string;
 	    device: string;
@@ -998,6 +1018,7 @@ export namespace models {
 	    devices: RemoteDevice[];
 	    pendingDevices: RemotePendingDevice[];
 	    approvals: RemoteApproval[];
+	    tunnel: TunnelState;
 	
 	    static createFrom(source: any = {}) {
 	        return new RemoteAccessState(source);
@@ -1012,6 +1033,7 @@ export namespace models {
 	        this.devices = this.convertValues(source["devices"], RemoteDevice);
 	        this.pendingDevices = this.convertValues(source["pendingDevices"], RemotePendingDevice);
 	        this.approvals = this.convertValues(source["approvals"], RemoteApproval);
+	        this.tunnel = this.convertValues(source["tunnel"], TunnelState);
 	    }
 	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {
@@ -1231,6 +1253,7 @@ export namespace models {
 	        this.players = source["players"];
 	    }
 	}
+	
 	export class UpdateAsset {
 	    name: string;
 	    downloadUrl: string;
