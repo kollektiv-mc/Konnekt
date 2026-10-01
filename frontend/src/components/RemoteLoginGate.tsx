@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
 
 interface Props {
@@ -18,6 +18,22 @@ const BUTTON =
 function retryAfterSeconds(res: Response): number | undefined {
   const raw = res.headers.get('Retry-After')
   return raw !== null && /^\d+$/.test(raw.trim()) ? Number(raw) : undefined
+}
+
+const POLL_MS = 2000
+const DECLINED = 'The request was declined or has expired. Sign in again.'
+
+/** The approval code in a 202 body, if it has one. A body that is not JSON just has none. */
+async function pendingCode(res: Response): Promise<string> {
+  try {
+    const body: unknown = await res.json()
+    if (typeof body === 'object' && body !== null && 'code' in body) {
+      return typeof body.code === 'string' ? body.code : ''
+    }
+  } catch {
+    // Not JSON: the desktop still shows the code, so the wait goes on without it.
+  }
+  return ''
 }
 
 /** What a refused sign-in says. Never includes the password, which is not in the reply. */
@@ -53,11 +69,65 @@ async function refusal(res: Response): Promise<string> {
  * The sign-in is a `fetch`, never a native form submission: the CSP's
  * `form-action 'none'` refuses one. The cookie it earns is HttpOnly and set by
  * the server (§ S8.5), so success reloads rather than reading anything back.
+ *
+ * A right password from a device the desktop has not approved is answered 202
+ * with a code. The gate then shows that code and waits for the desktop to
+ * approve or decline it (§ S8.6, #45), dropping the password meanwhile.
  */
 export function RemoteLoginGate({ state, onUnlocked }: Props) {
   const [password, setPassword] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
+  const [pending, setPending] = useState(false)
+  const [code, setCode] = useState('')
+
+  // No Wails event channel exists before sign-in, so the wait is polled.
+  useEffect(() => {
+    if (!pending) return
+    let cancelled = false
+    let timer: ReturnType<typeof setTimeout> | undefined
+    const back = (message: string) => {
+      setPending(false)
+      setCode('')
+      setSubmitting(false)
+      setError(message)
+    }
+    const tick = async () => {
+      try {
+        const res = await fetch('/api/login/wait', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'same-origin',
+          body: '{}',
+        })
+        if (cancelled) return
+        if (res.status === 202) {
+          const next = await pendingCode(res)
+          if (cancelled) return
+          if (next) setCode(next)
+        } else if (res.status === 200 || res.status === 204) {
+          onUnlocked()
+          return
+        } else if (res.status === 403) {
+          const text = (await res.text()).trim().slice(0, 200)
+          if (!cancelled) back(text || DECLINED)
+          return
+        } else {
+          back(`Sign-in failed (${res.status}).`)
+          return
+        }
+      } catch {
+        // Network: the next tick retries.
+        if (cancelled) return
+      }
+      timer = setTimeout(() => void tick(), POLL_MS)
+    }
+    timer = setTimeout(() => void tick(), POLL_MS)
+    return () => {
+      cancelled = true
+      clearTimeout(timer)
+    }
+  }, [pending, onUnlocked])
 
   const submit = async (e: FormEvent) => {
     e.preventDefault()
@@ -70,6 +140,12 @@ export function RemoteLoginGate({ state, onUnlocked }: Props) {
         credentials: 'same-origin',
         body: JSON.stringify({ password }),
       })
+      if (res.status === 202) {
+        setPassword('')
+        setCode(await pendingCode(res))
+        setPending(true)
+        return
+      }
       if (res.ok) {
         onUnlocked()
         return
@@ -94,6 +170,33 @@ export function RemoteLoginGate({ state, onUnlocked }: Props) {
           </p>
           <button type="button" onClick={() => window.location.reload()} className={BUTTON}>
             Retry
+          </button>
+        </div>
+      </main>
+    )
+  }
+
+  if (pending) {
+    return (
+      <main className="flex min-h-screen items-center justify-center p-4">
+        <div className={CARD}>
+          <h1 className="font-title text-text-primary text-sm font-medium">Approve this device</h1>
+          <div aria-live="polite" className="flex flex-col gap-3">
+            <p className="text-text-secondary text-xs leading-relaxed">
+              Open Konnekt on the desktop and approve the device showing this code.
+            </p>
+            {code && <p className="text-accent text-xl tracking-widest">{code}</p>}
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              setPending(false)
+              setCode('')
+              setSubmitting(false)
+            }}
+            className={BUTTON}
+          >
+            Cancel
           </button>
         </div>
       </main>
