@@ -151,6 +151,8 @@ var neverRemote = map[string]string{
 	"SetRemotePassword":    "the first factor; set at the desktop only",
 	"StartRemoteAccess":    "switched on at the desktop only (§ S8.8)",
 	"StopRemoteAccess":     "a browser that could stop the listener could lock every other device out; closing the tab is its way to leave",
+	"StartRemoteTunnel":    "publishing the dashboard to the internet is decided at the desktop only (§ S8.8)",
+	"StopRemoteTunnel":     "closing the tunnel cuts off every browser on it; the desktop's call",
 	"ApproveRemoteDevice":  "the second factor (§ S8.6); a browser that could call it could approve itself",
 	"DenyRemoteDevice":     "the desktop's answer to a waiting device",
 	"RemoveRemoteDevice":   "the desktop's list of who may sign in",

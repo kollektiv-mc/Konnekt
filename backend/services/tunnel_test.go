@@ -16,6 +16,7 @@ import (
 	"runtime"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -746,5 +747,121 @@ func TestTunnelFindURL(t *testing.T) {
 		if got := findTunnelURL(line); got != want {
 			t.Errorf("%q: got %q, want %q", line, got, want)
 		}
+	}
+}
+
+// BindTunnel, against § S8.3 and § S8.8: the tunnel's hostname is one the
+// listener answers to only while the tunnel is up, the devices approved on it
+// go with it, and the tunnel never outlives the listener.
+func TestBindTunnelTiesTheTunnelToTheListener(t *testing.T) {
+	const tunnelHost = "quiet-river-1234.trycloudflare.com"
+	f := newTunnelFixture(t)
+	f.installGood()
+	d, err := NewRemoteDispatcher(&remoteTarget{}, remoteTargetAllow)
+	if err != nil {
+		t.Fatal(err)
+	}
+	remote := NewRemoteService(NewEventBus(), d)
+	auth := newPasswordAuth(t)
+	remote.SetAuthorizer(auth)
+	var changes atomic.Int32
+	BindTunnel(remote, auth, f.svc, func() { changes.Add(1) })
+
+	addr, err := remote.Start(0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		if err := remote.Stop(); err != nil {
+			t.Error(err)
+		}
+	})
+	throughTunnel := func() int {
+		r := httptest.NewRequest(http.MethodGet, "/", nil)
+		r.Host = tunnelHost
+		return do(remote.Handler(), r).Code
+	}
+	if code := throughTunnel(); code != http.StatusForbidden {
+		t.Fatalf("the tunnel's hostname answered %d before the tunnel was up", code)
+	}
+
+	if err := f.svc.Start(addr); err != nil {
+		t.Fatal(err)
+	}
+	f.waitStatus("running")
+	if code := throughTunnel(); code == http.StatusForbidden {
+		t.Fatal("the tunnel's hostname is refused while the tunnel is up")
+	}
+
+	// A device approved through the tunnel, and one approved on loopback.
+	signInOn := func(host, name string) *http.Cookie {
+		t.Helper()
+		r := jsonRequest("/api/login", loginJSON(t, testPassword))
+		r.Host = host
+		w := httptest.NewRecorder()
+		auth.ServeLogin(w, r)
+		expectStatus(t, "sign-in on "+host, w, http.StatusAccepted)
+		if err := auth.ApproveDevice(requestForCode(t, auth, w).ID, name); err != nil {
+			t.Fatal(err)
+		}
+		w2 := postWait(auth, findCookie(w, remoteDeviceCookie))
+		expectStatus(t, "collect on "+host, w2, http.StatusNoContent)
+		return findCookie(w2, remoteSessionCookie)
+	}
+	viaTunnel := signInOn(strings.ToUpper(tunnelHost), "Phone")
+	viaLoopback := signInOn(addr, "Laptop")
+
+	before := changes.Load()
+	if err := remote.Stop(); err != nil {
+		t.Fatal(err)
+	}
+	if s := f.svc.State(); s.Status != "off" {
+		t.Errorf("the tunnel is %q after the listener stopped", s.Status)
+	}
+	if changes.Load() == before {
+		t.Error("the desktop was not told")
+	}
+	names := []string{}
+	for _, dev := range auth.Devices() {
+		names = append(names, dev.Name)
+	}
+	if strings.Join(names, ",") != "Laptop" {
+		t.Errorf("devices after the tunnel closed: %v, want only the loopback one", names)
+	}
+	if _, err := authorizeWith(auth, viaTunnel); err == nil {
+		t.Error("a session opened through the closed tunnel still stands")
+	}
+	if _, err := authorizeWith(auth, viaLoopback); err != nil {
+		t.Errorf("the loopback device's session was ended: %v", err)
+	}
+
+	if _, err := remote.Start(0); err != nil {
+		t.Fatal(err)
+	}
+	if code := throughTunnel(); code != http.StatusForbidden {
+		t.Errorf("the old tunnel's hostname answers %d on the next run", code)
+	}
+}
+
+// A pending request made through a tunnel goes with it too, and a host nobody
+// was approved on changes nothing.
+func TestRemoteAuthForgetHost(t *testing.T) {
+	auth := newPasswordAuth(t)
+	r := jsonRequest("/api/login", loginJSON(t, testPassword))
+	r.Host = "gone.trycloudflare.com"
+	w := httptest.NewRecorder()
+	auth.ServeLogin(w, r)
+	expectStatus(t, "sign-in", w, http.StatusAccepted)
+	if n := auth.ForgetHost("other.trycloudflare.com"); n != 0 || len(auth.Pending()) != 1 {
+		t.Errorf("forgetting another host removed %d devices and left %d pending", n, len(auth.Pending()))
+	}
+	if n := auth.ForgetHost("GONE.trycloudflare.com"); n != 0 {
+		t.Errorf("removed %d devices; there were none", n)
+	}
+	if len(auth.Pending()) != 0 {
+		t.Error("the request waiting on the forgotten host is still pending")
+	}
+	if n := auth.ForgetHost(""); n != 0 {
+		t.Errorf("an empty host removed %d devices", n)
 	}
 }

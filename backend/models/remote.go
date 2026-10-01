@@ -51,6 +51,9 @@ type RemoteAccessState struct {
 	Devices        []RemoteDevice        `json:"devices"`
 	PendingDevices []RemotePendingDevice `json:"pendingDevices"`
 	Approvals      []RemoteApproval      `json:"approvals"`
+	// Tunnel is the public way in: off unless switched on, and only while the
+	// listener runs.
+	Tunnel TunnelState `json:"tunnel"`
 }
 
 // TunnelState is what the desktop shows about the tunnel.

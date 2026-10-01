@@ -106,6 +106,8 @@ var serverlessMethods = map[string]string{
 	"SetRemotePassword":    "remote access belongs to the app",
 	"StartRemoteAccess":    "remote access belongs to the app",
 	"StopRemoteAccess":     "remote access belongs to the app",
+	"StartRemoteTunnel":    "remote access belongs to the app",
+	"StopRemoteTunnel":     "remote access belongs to the app",
 	"ApproveRemoteDevice":  "remote access belongs to the app; the id is a waiting request's",
 	"DenyRemoteDevice":     "remote access belongs to the app; the id is a waiting request's",
 	"RemoveRemoteDevice":   "remote access belongs to the app; the id is a device's",

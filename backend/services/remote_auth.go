@@ -147,6 +147,10 @@ type remoteDeviceRecord struct {
 	TokenHash  string `json:"tokenHash"`
 	ApprovedAt int64  `json:"approvedAt"`
 	LastSeen   int64  `json:"lastSeen"`
+	// Host is the hostname the browser signed in on, lowercased. Its cookie is
+	// bound to that name, so a device approved on a tunnel's hostname cannot
+	// come back once the tunnel is gone (ForgetHost).
+	Host string `json:"host,omitempty"`
 }
 
 type remoteSessionEntry struct {
@@ -163,6 +167,7 @@ type remotePendingEntry struct {
 	tokenHash string
 	code      string
 	userAgent string
+	host      string
 	requested time.Time
 	expires   time.Time
 	// granted is set by ApproveDevice. The browser's next poll trades it for a
@@ -631,7 +636,7 @@ func (a *RemoteAuth) ApproveDevice(requestID, name string) error {
 		return err
 	}
 	now := a.now()
-	a.state.Devices = append(a.state.Devices, remoteDeviceRecord{ID: id, Name: name, TokenHash: p.tokenHash, ApprovedAt: now.UnixMilli()})
+	a.state.Devices = append(a.state.Devices, remoteDeviceRecord{ID: id, Name: name, TokenHash: p.tokenHash, ApprovedAt: now.UnixMilli(), Host: p.host})
 	if err := a.saveLocked(); err != nil {
 		a.state.Devices = a.state.Devices[:len(a.state.Devices)-1]
 		return err
@@ -688,6 +693,57 @@ func (a *RemoteAuth) RemoveDevice(deviceID string) error {
 	slog.Info("remote: device removed", "device", removed.Name, "sessionsEnded", len(ids))
 	notifyRevoked(notify, ids)
 	return nil
+}
+
+// ForgetHost removes every device approved on host, ends their sessions and
+// drops the requests waiting on it. A quick tunnel's hostname is random and
+// never comes back, and a device's cookie is bound to the hostname it was set
+// on, so once that tunnel is gone those devices can never sign in again: left
+// alone they would only fill the list until nothing more could be approved.
+// It returns how many devices it removed.
+func (a *RemoteAuth) ForgetHost(host string) int {
+	defer a.flush()
+	host = strings.ToLower(host)
+	if host == "" {
+		return 0
+	}
+	a.mu.Lock()
+	gone := map[string]bool{}
+	kept := make([]remoteDeviceRecord, 0, len(a.state.Devices))
+	for _, d := range a.state.Devices {
+		if d.Host == host {
+			gone[d.ID] = true
+			continue
+		}
+		kept = append(kept, d)
+	}
+	for id, p := range a.pending {
+		if p.host == host {
+			delete(a.pending, id)
+			a.dirty = true
+		}
+	}
+	if len(gone) == 0 {
+		a.mu.Unlock()
+		return 0
+	}
+	previous := a.state.Devices
+	a.state.Devices = kept
+	if err := a.saveLocked(); err != nil {
+		a.state.Devices = previous
+		a.mu.Unlock()
+		slog.Error("remote: forget a tunnel's devices", "error", err)
+		return 0
+	}
+	a.dirty = true
+	for id := range gone {
+		delete(a.buckets, id)
+	}
+	ids, notify := a.dropSessionsLocked(func(s *remoteSessionEntry) bool { return gone[s.deviceID] })
+	a.mu.Unlock()
+	slog.Info("remote: devices of a closed tunnel forgotten", "count", len(gone))
+	notifyRevoked(notify, ids)
+	return len(gone)
 }
 
 // ── Backoff ─────────────────────────────────────────────────────────────
@@ -886,7 +942,7 @@ func (a *RemoteAuth) servePendingLocked(w http.ResponseWriter, r *http.Request, 
 		writeRemoteRetry(w, soonest)
 		return
 	}
-	token, code, err := a.newPendingLocked(r.UserAgent())
+	token, code, err := a.newPendingLocked(r.UserAgent(), r.Host)
 	if err != nil {
 		slog.Error("remote: create pending request", "error", err)
 		http.Error(w, "sign-in failed", http.StatusInternalServerError)
@@ -898,7 +954,7 @@ func (a *RemoteAuth) servePendingLocked(w http.ResponseWriter, r *http.Request, 
 
 // newPendingLocked records a request for approval and returns the device token
 // for the browser's cookie and the code for both screens.
-func (a *RemoteAuth) newPendingLocked(userAgent string) (token, code string, err error) {
+func (a *RemoteAuth) newPendingLocked(userAgent, host string) (token, code string, err error) {
 	if token, err = newRemoteToken(); err != nil {
 		return "", "", err
 	}
@@ -912,7 +968,8 @@ func (a *RemoteAuth) newPendingLocked(userAgent string) (token, code string, err
 	now := a.now()
 	a.pending[id] = &remotePendingEntry{
 		id: id, tokenHash: remoteTokenHash(token), code: code,
-		userAgent: cleanRemoteAgent(userAgent), requested: now, expires: now.Add(remotePendingTTL),
+		userAgent: cleanRemoteAgent(userAgent), host: strings.ToLower(host),
+		requested: now, expires: now.Add(remotePendingTTL),
 	}
 	a.dirty = true
 	slog.Info("remote: device waiting for approval", "request", id)

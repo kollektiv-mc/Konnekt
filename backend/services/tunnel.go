@@ -171,6 +171,37 @@ func (t *TunnelService) OnHost(fn func(host string, up bool)) {
 	t.onHost = fn
 }
 
+// BindTunnel ties a tunnel to the listener it carries and to who may sign in
+// through it. changed is told of anything the desktop shows.
+//
+//   - The tunnel's hostname is one the listener answers to while the tunnel is
+//     up, and at no other time (§ S8.3).
+//   - Devices approved on that hostname are forgotten when it goes: their
+//     cookies are bound to a name that will not come back.
+//   - The tunnel does not outlive the listener. When the listener stops, by
+//     hand or by its idle stop (§ S8.8), the tunnel is stopped with it; left
+//     up, it would publish a URL that answers nothing.
+func BindTunnel(remote *RemoteService, auth *RemoteAuth, tunnel *TunnelService, changed func()) {
+	tunnel.OnChange(changed)
+	tunnel.OnHost(func(host string, up bool) {
+		if up {
+			remote.AllowHost(host)
+			return
+		}
+		remote.DisallowHost(host)
+		auth.ForgetHost(host)
+	})
+	remote.OnChange(func() {
+		changed()
+		if remote.Running() {
+			return
+		}
+		if err := tunnel.Stop(); err != nil {
+			slog.Warn("tunnel: stop with the listener", "error", err)
+		}
+	})
+}
+
 func (t *TunnelService) State() models.TunnelState {
 	t.mu.Lock()
 	defer t.mu.Unlock()
