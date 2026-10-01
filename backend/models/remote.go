@@ -22,3 +22,18 @@ type RemotePendingDevice struct {
 	UserAgent   string `json:"userAgent"`
 	RequestedAt int64  `json:"requestedAt"` // Unix ms
 }
+
+// RemoteApproval is an admin-tier call a remote device made that is waiting
+// for the desktop's answer (#462). Reason is why the method is gated, from the
+// allowlist. Args are the call's arguments as JSON, one string each, exactly
+// as the device sent them: the prompt shows them so the answer is a decision
+// about this call and not about the method's name.
+type RemoteApproval struct {
+	ID          string   `json:"id"`
+	Device      string   `json:"device"`
+	Method      string   `json:"method"`
+	Reason      string   `json:"reason"`
+	Args        []string `json:"args"`
+	RequestedAt int64    `json:"requestedAt"` // Unix ms
+	ExpiresAt   int64    `json:"expiresAt"`   // Unix ms; unanswered, the call is refused then
+}

@@ -309,8 +309,18 @@ only ongoing cost is the remote-readiness checklist under "Adding a tile" below.
   prompt and the Settings pane are #47, and until a password exists every
   sign-in is refused.
 
-Phases 4 and 5 (cloudflared tunnel, remote-mode adaptations) and the desktop
-approval of admin-tier calls ([#462](../../issues/462)) are filed in
+- [x] **Desktop approval of admin-tier calls** ([#462](../../issues/462)).
+  What is on disk: `backend/services/remote_approve.go`. The dispatcher decodes
+  an admin call's arguments first, so a call that could not run never asks,
+  and then hands `RemoteApprovals.Ask` the device, the method, the allowlist's
+  reason and the arguments as sent. The call waits up to a minute on the RPC
+  handler's own goroutine; no answer, a no, or the phone hanging up is a 403.
+  One call waits per device and four in all, each answered once, with no
+  "remember this device". The log names the method and the device and never
+  an argument. Nothing can answer yet: the prompt is #47, so until then every
+  admin call is refused when its wait runs out.
+
+Phases 4 and 5 (cloudflared tunnel, remote-mode adaptations) are filed in
 [GitHub Issues](../../issues), labelled
 `milestone:remote-access`. Their security acceptance criteria are § S8 of
 `agent_docs/SECURITY_CHECKLIST.md`, checked by `/security-check`.

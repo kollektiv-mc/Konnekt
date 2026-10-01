@@ -34,6 +34,7 @@ type App struct {
 	kommandsService     *services.KommandsService
 	remoteService       *services.RemoteService
 	remoteAuth          *services.RemoteAuth
+	remoteApprovals     *services.RemoteApprovals
 	bus                 *services.EventBus
 	dataDir             string
 }
@@ -90,6 +91,12 @@ func NewApp() *App {
 		// Unreachable past the test, which fails on the same error. Logged
 		// rather than fatal because the desktop app is whole without remote.
 		slog.Error("remote: allowlist", "error", err)
+	}
+	// Admin-tier calls wait on the desktop (#462). Until the prompt exists
+	// (#47) nobody can answer, so each is refused when its wait runs out.
+	app.remoteApprovals = services.NewRemoteApprovals()
+	if dispatcher != nil {
+		dispatcher.SetApprover(app.remoteApprovals.Ask)
 	}
 	app.remoteService = services.NewRemoteService(bus, dispatcher)
 	// Who may use it (#45). No password exists until the settings UI (#47) can
