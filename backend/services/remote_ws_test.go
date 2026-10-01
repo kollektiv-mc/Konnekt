@@ -165,6 +165,66 @@ func TestRemoteReplayReportsAGapPastTheBuffer(t *testing.T) {
 	}
 }
 
+// A since the hub cannot answer for is a gap, never a silent nothing: the
+// numbering restarts at 0 per process, so a client from the previous run holds
+// a number from another sequence, and Stop empties the buffer without
+// resetting it.
+func TestRemoteReplayReportsAGapItCannotAnswerFor(t *testing.T) {
+	hub := newRemoteHub(5)
+	for i := range 3 {
+		hub.publish("e", i)
+	}
+	// A client from a previous run saw 40; this run is at 3.
+	if frames, latest, gap := hub.replay(40); !gap || len(frames) != 0 || latest != 3 {
+		t.Errorf("replay(40) = %d frames, latest %d, gap %v; want none, 3 and a gap", len(frames), latest, gap)
+	}
+	// A client that is current has missed nothing.
+	if frames, _, gap := hub.replay(3); gap || len(frames) != 0 {
+		t.Errorf("replay(3) = %d frames, gap %v; want nothing and no gap", len(frames), gap)
+	}
+	// closeAll empties the ring but not the numbering: what a client at 1 missed
+	// is gone.
+	hub.closeAll()
+	if frames, latest, gap := hub.replay(1); !gap || len(frames) != 0 || latest != 3 {
+		t.Errorf("replay(1) after closeAll = %d frames, latest %d, gap %v; want none, 3 and a gap", len(frames), latest, gap)
+	}
+}
+
+// A replay that cannot be queued ahead of writePump must be answered with a
+// gap, not a closed socket: the client would reconnect with the same since and
+// fail the same way forever.
+func TestRemoteSocketAnswersAnOversizedReplayWithAGap(t *testing.T) {
+	_, bus, addr := startRemote(t)
+	total := remoteSendBuffer + 44
+	for i := range total {
+		bus.Emit(EventLogLine, map[string]any{"serverID": "s1", "line": "l" + strconv.Itoa(i)})
+	}
+	conn := dialWS(t, addr, 1, "http://"+addr)
+	hello := readFrame(t, conn)
+	var h remoteHello
+	if err := json.Unmarshal(hello.Data, &h); err != nil {
+		t.Fatal(err)
+	}
+	if hello.Event != remoteHelloEvent || hello.Seq != uint64(total) || h.Replayed != 0 || !h.Gap {
+		t.Fatalf("hello %+v %+v; want seq %d, nothing replayed and a gap", hello, h, total)
+	}
+	// The socket stayed open and went live.
+	bus.Emit(EventLogLine, map[string]any{"serverID": "s1", "line": "live"})
+	if f := readFrame(t, conn); f.Seq != uint64(total+1) {
+		t.Fatalf("live seq %d after the gap hello, want %d", f.Seq, total+1)
+	}
+
+	// The largest replay that fits is still replayed.
+	fits := dialWS(t, addr, uint64(total+1-(remoteSendBuffer-1)), "http://"+addr)
+	var fh remoteHello
+	if err := json.Unmarshal(readFrame(t, fits).Data, &fh); err != nil {
+		t.Fatal(err)
+	}
+	if fh.Replayed != remoteSendBuffer-1 || fh.Gap {
+		t.Fatalf("a replay of %d frames: hello %+v; want it replayed whole", remoteSendBuffer-1, fh)
+	}
+}
+
 // § S8.3 over the wire: gorilla's upgrader sees the same allowlist the guard
 // does, so a foreign Origin never reaches the socket.
 func TestRemoteSocketRefusesAForeignOriginOverTheWire(t *testing.T) {

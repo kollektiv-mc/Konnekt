@@ -105,13 +105,22 @@ func (h *remoteHub) publish(event string, data any) {
 // replay returns the frames after since, the latest sequence number, and
 // whether the buffer no longer reaches back to since. since 0 asks for
 // nothing but the live stream, which is what a fresh page wants.
+//
+// Two cases cannot be made whole and report a gap with no frames. A since
+// ahead of the latest number belongs to a previous run of the app, because the
+// numbering restarts at 0 per process, so what that client saw is unrelated to
+// this run's frames. And a since behind the latest with nothing buffered means
+// closeAll forgot the buffer, so the frames it missed are gone.
 func (h *remoteHub) replay(since uint64) ([]remoteFrame, uint64, bool) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
-	if since == 0 || since >= h.seq {
+	if since == 0 || since == h.seq {
 		return nil, h.seq, false
 	}
-	gap := len(h.ring) > 0 && h.ring[0].Seq > since+1
+	if since > h.seq || len(h.ring) == 0 {
+		return nil, h.seq, true
+	}
+	gap := h.ring[0].Seq > since+1
 	var out []remoteFrame
 	for _, f := range h.ring {
 		if f.Seq > since {
@@ -187,8 +196,15 @@ func (s *RemoteService) handleWS(w http.ResponseWriter, r *http.Request) {
 	slog.Info("remote: socket opened", "device", session.Device, "since", since)
 
 	// Hello and replay are queued before the client joins the hub, so nothing
-	// live can slip in ahead of them and arrive out of order.
+	// live can slip in ahead of them and arrive out of order. They are queued
+	// before writePump starts, so they must fit the send buffer: a replay that
+	// would not is not attempted, and the hello says gap so the client
+	// re-primes like a fresh page. Disconnecting instead would loop, since the
+	// client's reconnect carries the same "since" and meets the same wall.
 	frames, latest, gap := s.hub.replay(since)
+	if len(frames)+1 > remoteSendBuffer {
+		frames, gap = nil, true
+	}
 	if !c.queue(remoteFrame{Seq: latest, Event: remoteHelloEvent}, remoteHello{Replayed: len(frames), Gap: gap}) {
 		c.close()
 		return
@@ -224,9 +240,9 @@ func (c *remoteClient) queueEncoded(f remoteFrame) bool {
 	case c.send <- encoded:
 		return true
 	default:
-		// The replay alone overflowed the client's buffer; a reconnect with the
-		// same "since" will hit the same wall, so tell it to start fresh.
-		slog.Warn("remote: replay exceeds client buffer, disconnecting")
+		// handleWS checks that the replay fits before queueing it, so this is
+		// not reached by a replay; it guards the invariant, not a path.
+		slog.Warn("remote: client send buffer full, disconnecting")
 		return false
 	}
 }
