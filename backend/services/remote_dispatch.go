@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
+	"sort"
 	"sync"
 )
 
@@ -138,6 +139,20 @@ var errorType = reflect.TypeOf((*error)(nil)).Elem()
 func (d *RemoteDispatcher) Tier(method string) (RemoteTier, bool) {
 	m, ok := d.methods[method]
 	return m.tier, ok
+}
+
+// MethodsInTier lists the allowlisted methods of one tier, sorted. The
+// listener tells a signed-in browser which of its calls will wait on the
+// desktop, so it can say so instead of looking hung.
+func (d *RemoteDispatcher) MethodsInTier(tier RemoteTier) []string {
+	var names []string
+	for name, m := range d.methods {
+		if m.tier == tier {
+			names = append(names, name)
+		}
+	}
+	sort.Strings(names)
+	return names
 }
 
 // SetApprover installs what admin calls wait on. Without one they are refused.

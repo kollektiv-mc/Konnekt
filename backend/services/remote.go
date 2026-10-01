@@ -36,8 +36,11 @@ type RemoteService struct {
 
 	mu     sync.Mutex
 	assets fs.FS
-	auth   RemoteAuthorizer
-	idle   time.Duration
+	// icon answers /favicon.ico when the bundle has none, which a browser asks
+	// for unprompted on every first visit.
+	icon []byte
+	auth RemoteAuthorizer
+	idle time.Duration
 	// hosts is the Host allowlist (§ S8.3): the bound address in both of its
 	// spellings, plus whatever AllowHost added (the tunnel's hostname). Origin
 	// is checked against the same set, since a page served from one of these
@@ -78,12 +81,13 @@ type RemoteSession struct {
 
 // remoteLoginServer is the sign-in half of an authorizer. RemoteAuth is the
 // one implementation; an authorizer without it (the tests' stub) leaves the
-// two routes answering 404, which the login gate reads as "no sign-ins yet".
-// Each method reports whether it issued a session, which is the only
+// routes answering 404, which the login gate reads as "no sign-ins yet". The
+// two sign-in methods each report whether they issued a session, which is the only
 // unauthenticated request that counts as activity.
 type remoteLoginServer interface {
 	ServeLogin(w http.ResponseWriter, r *http.Request) bool
 	ServeLoginWait(w http.ResponseWriter, r *http.Request) bool
+	ServeLogout(w http.ResponseWriter, r *http.Request)
 }
 
 // remoteSessionKeeper is the other optional half: whether a session is still
@@ -149,6 +153,14 @@ func (s *RemoteService) SetAssets(assets fs.FS) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.assets = assets
+}
+
+// SetIcon gives the service a PNG to answer /favicon.ico with: main.go's
+// embedded app icon, the same mark the window carries.
+func (s *RemoteService) SetIcon(png []byte) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.icon = png
 }
 
 func (s *RemoteService) SetAuthorizer(auth RemoteAuthorizer) {
@@ -307,6 +319,8 @@ func (s *RemoteService) handler() http.Handler {
 	mux.HandleFunc("POST /api/rpc", s.handleRPC)
 	mux.HandleFunc("POST /api/login", s.handleLogin)
 	mux.HandleFunc("POST /api/login/wait", s.handleLoginWait)
+	mux.HandleFunc("POST /api/logout", s.handleLogout)
+	mux.HandleFunc("GET /api/session", s.handleSession)
 	mux.HandleFunc("GET /ws", s.handleWS)
 	mux.HandleFunc("GET /", s.handleStatic)
 	return s.guard(mux)
@@ -365,19 +379,19 @@ func (s *RemoteService) originAllowed(origin string) bool {
 // for.
 func (s *RemoteService) handleStatic(w http.ResponseWriter, r *http.Request) {
 	s.mu.Lock()
-	assets := s.assets
+	assets, icon := s.assets, s.icon
 	s.mu.Unlock()
-	if assets == nil {
-		http.NotFound(w, r)
-		return
-	}
 	name := strings.TrimPrefix(path.Clean("/"+r.URL.Path), "/")
 	if name == "" {
 		name = "index.html"
 	}
+	if assets == nil {
+		s.serveIcon(w, r, name, icon)
+		return
+	}
 	info, err := fs.Stat(assets, name)
 	if err != nil || info.IsDir() {
-		http.NotFound(w, r)
+		s.serveIcon(w, r, name, icon)
 		return
 	}
 	if name == "index.html" {
@@ -388,6 +402,20 @@ func (s *RemoteService) handleStatic(w http.ResponseWriter, r *http.Request) {
 	// escapes it, and fs.Stat above has already refused a directory or an
 	// invalid name.
 	http.ServeFileFS(w, r, assets, name) // #nosec G703 -- see above
+}
+
+// serveIcon answers /favicon.ico with the app icon, and anything else the
+// bundle does not hold with a 404.
+func (s *RemoteService) serveIcon(w http.ResponseWriter, r *http.Request, name string, icon []byte) {
+	if name != "favicon.ico" || len(icon) == 0 {
+		http.NotFound(w, r)
+		return
+	}
+	w.Header().Set("Content-Type", "image/png")
+	w.Header().Set("Cache-Control", "max-age=86400")
+	if _, err := w.Write(icon); err != nil {
+		slog.Debug("remote: write icon", "error", err)
+	}
 }
 
 // remoteRPCRequest is the wire shape of one call: the bound method's name
@@ -501,6 +529,36 @@ func (s *RemoteService) handleLogin(w http.ResponseWriter, r *http.Request) {
 	if login.ServeLogin(w, r) {
 		s.touch()
 	}
+}
+
+func (s *RemoteService) handleLogout(w http.ResponseWriter, r *http.Request) {
+	login := s.loginServer()
+	if login == nil {
+		http.NotFound(w, r)
+		return
+	}
+	login.ServeLogout(w, r)
+}
+
+// remoteSessionInfo is GET /api/session: who the desktop says this browser
+// is, and which of its calls will wait for the desktop's approval. The page
+// uses the first to say who is signed in and the second to say "waiting on
+// the desktop" rather than look hung for the minute an approval may take.
+type remoteSessionInfo struct {
+	Device string   `json:"device"`
+	Admin  []string `json:"admin"`
+}
+
+func (s *RemoteService) handleSession(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Cache-Control", "no-store")
+	session, ok := s.authorize(w, r)
+	if !ok {
+		return
+	}
+	writeRemoteJSON(w, http.StatusOK, remoteSessionInfo{
+		Device: session.Device,
+		Admin:  s.dispatcher.MethodsInTier(RemoteTierAdmin),
+	})
 }
 
 func (s *RemoteService) handleLoginWait(w http.ResponseWriter, r *http.Request) {

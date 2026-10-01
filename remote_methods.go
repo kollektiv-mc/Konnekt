@@ -66,9 +66,11 @@ var remoteMethods = map[string]services.RemoteMethod{
 	"BanPlayer":       {Tier: services.RemoteTierOperate, Reason: "moderation; a game action"},
 	"PardonPlayer":    {Tier: services.RemoteTierOperate, Reason: "moderation; a game action"},
 
-	// Layout. Shared with the desktop until #47 decides whether a phone keeps
-	// its own; a remote write rearranges the desktop's canvas, which is
-	// annoying and nothing worse.
+	// Layout. One arrangement, shared with the desktop: a remote write
+	// rearranges the desktop's canvas, which is annoying and nothing worse.
+	// Konnekt's own browser runtime does not send the live canvas writes at all
+	// (lib/remoteRuntime.ts keeps them in the tab); they stay callable for a
+	// preset saved on purpose and because nothing here is the enforcement.
 	"GetLayoutPresets":   {Tier: services.RemoteTierRead, Reason: "the canvas layout"},
 	"SaveLayoutPreset":   {Tier: services.RemoteTierOperate, Reason: "the canvas layout"},
 	"DeleteLayoutPreset": {Tier: services.RemoteTierOperate, Reason: "the canvas layout"},
@@ -141,7 +143,7 @@ var neverRemote = map[string]string{
 	"OpenBackupDir":     "opens a folder on the desktop",
 	"OpenWorldFolder":   "opens a folder on the desktop",
 	"ModInstallLocal":   "a native file dialog on the desktop",
-	"SetActiveServerID": "would change what the desktop is looking at (§ S8.11); the remote mirrors the selection instead",
+	"SetActiveServerID": "would change what the desktop is looking at (§ S8.11); a browser keeps its own selection (lib/remoteRuntime.ts)",
 
 	// The desktop's own control over remote access. A session that could call
 	// any of these could approve itself, or lock the desktop's user out.
