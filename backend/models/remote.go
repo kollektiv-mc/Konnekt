@@ -52,3 +52,12 @@ type RemoteAccessState struct {
 	PendingDevices []RemotePendingDevice `json:"pendingDevices"`
 	Approvals      []RemoteApproval      `json:"approvals"`
 }
+
+// TunnelState is what the desktop shows about the tunnel.
+type TunnelState struct {
+	Status  string `json:"status"`  // "off" | "downloading" | "starting" | "running" | "failed"
+	URL     string `json:"url"`     // https://<name>.trycloudflare.com while running
+	Error   string `json:"error"`   // why it failed, when Status is "failed"
+	Percent int    `json:"percent"` // download progress, 0-100, while "downloading"
+	Version string `json:"version"` // the pinned cloudflared version
+}
