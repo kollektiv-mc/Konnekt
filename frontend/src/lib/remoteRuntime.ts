@@ -1,4 +1,5 @@
 import * as Bindings from '../../wailsjs/go/main/App'
+import { REMOTE_MARK } from './ipc'
 
 /**
  * The remote half of #44: the two globals Wails would have injected, backed by
@@ -54,6 +55,41 @@ const state = {
   // The server run the position belongs to, from the last hello. A number is
   // only comparable inside one run, so it travels with `since`.
   run: '',
+  // Which server this tab is looking at, once it has asked or chosen. Held
+  // here and nowhere else: see `local` below.
+  activeServer: undefined as string | undefined,
+  // The methods the desktop has to approve one call at a time, from
+  // `GET /api/session`. Only used to say "waiting on the desktop" while one is
+  // in flight; the server is what enforces it.
+  admin: new Set<string>(),
+}
+
+// ── What the page knows about itself ────────────────────────────────────
+
+export interface RemoteClient {
+  /** The desktop's name for this browser, from the session. Empty before sign-in. */
+  device: string
+  /** Admin-tier calls in flight, each waiting for someone at the desktop to answer. */
+  waiting: readonly string[]
+}
+
+const NO_CLIENT: RemoteClient = { device: '', waiting: [] }
+let client = NO_CLIENT
+const watchers = new Set<() => void>()
+
+function setClient(next: RemoteClient): void {
+  client = next
+  for (const watcher of watchers) watcher()
+}
+
+/** The snapshot half of `useSyncExternalStore`: the same object until something changes. */
+export function getRemoteClient(): RemoteClient {
+  return client
+}
+
+export function subscribeRemoteClient(watcher: () => void): () => void {
+  watchers.add(watcher)
+  return () => watchers.delete(watcher)
 }
 
 const listeners = new Map<string, Set<Subscription>>()
@@ -98,13 +134,26 @@ async function failureMessage(res: Response): Promise<string> {
   return text.slice(0, 200) || `Request failed (${res.status})`
 }
 
+const APPROVAL = 'method needs desktop approval'
+
 /**
- * One bound call. Resolves with `result` (absent for a void method), rejects
- * with the message string for a method that ran and said no, which is what
- * Wails v2's own runtime rejects with, so `errMsg` and every caller's catch
- * read it the same either way.
+ * A refused admin-tier call, in words for whoever clicked. The dispatcher says
+ * `method needs desktop approval: <Method>: <why>`; the why is the part a
+ * person can act on (declined, nobody answered, another request is waiting).
  */
-async function call(method: string, args: unknown[]): Promise<unknown> {
+function refusalMessage(text: string): string {
+  if (!text.startsWith(APPROVAL)) return text
+  const why = text.split(': ').slice(2).join(': ')
+  return why ? `Not approved on the desktop: ${why}.` : 'This change needs approval on the desktop.'
+}
+
+/**
+ * One bound call over the wire. Resolves with `result` (absent for a void
+ * method), rejects with the message string for a method that ran and said no,
+ * which is what Wails v2's own runtime rejects with, so `errMsg` and every
+ * caller's catch read it the same either way.
+ */
+async function send(method: string, args: unknown[]): Promise<unknown> {
   let res: Response
   try {
     res = await post(method, args)
@@ -115,6 +164,7 @@ async function call(method: string, args: unknown[]): Promise<unknown> {
     if (state.confirmed) fireLocked()
     throw new Error('Signed out. Sign in again to continue.')
   }
+  if (res.status === 403) throw new Error(refusalMessage(await failureMessage(res)))
   if (!res.ok) throw new Error(await failureMessage(res))
   state.confirmed = true
   const body = parseJSON(await res.text())
@@ -125,22 +175,98 @@ async function call(method: string, args: unknown[]): Promise<unknown> {
 }
 
 /**
- * Whether the session is usable, by the cheapest read-tier call there is. The
- * gate page and the socket's first failure both ask it, so "locked" and
- * "the app is not there" are told apart before anything is rendered.
+ * What this tab answers for itself instead of asking the desktop. These bound
+ * methods are about one person's view rather than about the host, and a
+ * browser must not move the desktop's (§ S8.11):
+ *
+ * - The selected server. `SetActiveServerID` is not remote-callable, so
+ *   without this a phone could only watch whichever server the desktop has
+ *   selected. Every other method takes a `serverID`, so the selection can live
+ *   here: it starts as the desktop's and then belongs to the tab.
+ * - App settings. `SaveAppSettings` is admin tier, and the stores call it for
+ *   a collapsed nav section or a resized sidebar as readily as for a theme.
+ *   Sent over the wire, each would raise a prompt on the desktop. A browser's
+ *   changes therefore stay in its own stores and last until it reloads.
+ * - The canvas. Which tiles are out, where they sit and how each is laid out
+ *   is one arrangement shared with the desktop, and a phone dragging a tile
+ *   would rearrange the screen of whoever is sitting at it. Named presets are
+ *   still saved for real: that is a deliberate act, not a drag.
+ *
+ * In memory only: `localStorage` is banned (`agent_docs/CLAUDE.md`), and a
+ * reload re-reading the desktop's values is the honest behaviour for a view
+ * that was never saved.
+ */
+const local: Record<string, (...args: unknown[]) => Promise<unknown>> = {
+  GetActiveServerID: async () => {
+    if (state.activeServer === undefined) {
+      const fromDesktop = await send('GetActiveServerID', [])
+      // A choice made while that was in flight wins.
+      state.activeServer ??= typeof fromDesktop === 'string' ? fromDesktop : ''
+    }
+    return state.activeServer
+  },
+  SetActiveServerID: async (id) => {
+    state.activeServer = typeof id === 'string' ? id : ''
+  },
+  SaveAppSettings: async () => undefined,
+  SaveActiveTiles: async () => undefined,
+  SaveActiveLayout: async () => undefined,
+  SaveTileLayouts: async () => undefined,
+}
+
+/**
+ * One bound call as the bindings make it: answered here when it is this tab's
+ * own business, sent otherwise, and announced while it waits on the desktop.
+ */
+async function call(method: string, args: unknown[]): Promise<unknown> {
+  const mine = local[method]
+  if (mine) return mine(...args)
+  if (!state.admin.has(method)) return send(method, args)
+  setClient({ ...client, waiting: [...client.waiting, method] })
+  try {
+    return await send(method, args)
+  } finally {
+    const at = client.waiting.indexOf(method)
+    setClient({ ...client, waiting: client.waiting.filter((_, i) => i !== at) })
+  }
+}
+
+/**
+ * Whether the session is usable, and who the desktop says this browser is. The
+ * gate page and the socket's first failure both ask, so "locked" and "the app
+ * is not there" are told apart before anything is rendered.
  */
 export async function probeSession(): Promise<SessionState> {
   let res: Response
   try {
-    res = await post('GetAppVersion', [])
+    res = await fetch('/api/session', { credentials: 'same-origin' })
   } catch {
     return 'unreachable'
   }
-  if (res.ok) {
-    state.confirmed = true
-    return 'ok'
+  if (!res.ok) return res.status === 401 ? 'locked' : 'unreachable'
+  state.confirmed = true
+  const info = parseJSON(await res.text())
+  if (isRecord(info)) {
+    state.admin = new Set(
+      Array.isArray(info.admin) ? info.admin.filter((m) => typeof m === 'string') : [],
+    )
+    setClient({ ...client, device: typeof info.device === 'string' ? info.device : '' })
   }
-  return res.status === 401 ? 'locked' : 'unreachable'
+  return 'ok'
+}
+
+/**
+ * Ends this browser's session and returns to the gate. The device stays
+ * approved, so signing back in takes the password alone. A failed request
+ * still reloads: the page that comes back says which of the two it was.
+ */
+export async function signOut(): Promise<void> {
+  try {
+    await fetch('/api/logout', { method: 'POST', credentials: 'same-origin' })
+  } catch {
+    // Unreachable: the reload lands on the page that says so.
+  }
+  reload()
 }
 
 // ── Events ──────────────────────────────────────────────────────────────
@@ -433,10 +559,14 @@ export function installRemoteRuntime(options: RemoteRuntimeOptions = {}): void {
   state.lockedFired = false
   state.lastSeq = 0
   state.run = ''
+  state.activeServer = undefined
+  state.admin = new Set()
+  client = NO_CLIENT
   listeners.clear()
 
   const App = Object.fromEntries(
     Object.keys(Bindings).map((method) => [method, (...args: unknown[]) => call(method, args)]),
   )
-  Object.assign(window, { go: { main: { App } }, runtime: buildRuntime() })
+  // The mark is what keeps `isRemoteBrowser()` true once this bridge exists.
+  Object.assign(window, { go: { main: { App }, [REMOTE_MARK]: true }, runtime: buildRuntime() })
 }

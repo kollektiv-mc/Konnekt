@@ -6,8 +6,18 @@ import { TitleBar } from './TitleBar'
 
 vi.mock('../../wailsjs/runtime/runtime')
 
+// Only isRemoteBrowser is steered; readOr and the rest stay real.
+const remote = vi.hoisted(() => ({ on: false }))
+vi.mock('../lib/ipc', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../lib/ipc')>()),
+  isRemoteBrowser: () => remote.on,
+}))
+
 // Vitest runs with `globals: false`, so RTL cannot register its own auto-cleanup.
-afterEach(cleanup)
+afterEach(() => {
+  cleanup()
+  remote.on = false
+})
 
 // The component reads the maximised state through a promise, so every render
 // has a microtask to settle before its glyph is the right one.
@@ -102,5 +112,25 @@ describe('TitleBar', () => {
     } finally {
       vi.useRealTimers()
     }
+  })
+
+  it('has no window buttons in a browser tab, only the settings gear', async () => {
+    remote.on = true
+    render(<TitleBar onOpenSettings={() => {}} />)
+    await settle()
+
+    expect(screen.queryByRole('button', { name: 'Minimize window' })).toBeNull()
+    expect(screen.queryByRole('button', { name: /(Maximize|Restore) window/ })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Close window' })).toBeNull()
+    expect(screen.getByRole('button', { name: 'Settings' })).toBeTruthy()
+  })
+
+  it('has all three window buttons on the desktop', async () => {
+    render(<TitleBar onOpenSettings={() => {}} />)
+    await settle()
+
+    expect(screen.getByRole('button', { name: 'Minimize window' })).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Maximize window' })).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Close window' })).toBeTruthy()
   })
 })

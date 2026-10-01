@@ -1,5 +1,6 @@
 import { AbortInstall, BrowseDirectory, InstallServer } from '../../wailsjs/go/main/App'
 import { LOADER_LABELS } from '../lib/loaders'
+import { isRemoteBrowser } from '../lib/ipc'
 import { useInstallStore } from '../stores/useInstallStore'
 import { InstallLog } from './InstallLog'
 
@@ -87,15 +88,18 @@ export function ServerInstallModal() {
             disabled={running || done}
             className="bg-surface border-border-subtle text-text-primary placeholder-text-faint focus:border-border-hover border-hairline min-w-0 flex-1 rounded px-2 py-1 font-mono text-xs transition-colors outline-none disabled:opacity-40"
           />
-          <button
-            type="button"
-            onClick={browse}
-            disabled={running || done}
-            className="border-border-subtle text-text-muted hover:border-border-hover hover:text-text-primary border-hairline shrink-0 rounded px-2 py-1 font-mono text-xs transition-colors disabled:opacity-40"
-            title="Browse"
-          >
-            …
-          </button>
+          {/* A native dialog on the desktop: not callable from a remote browser. */}
+          {!isRemoteBrowser() && (
+            <button
+              type="button"
+              onClick={browse}
+              disabled={running || done}
+              className="border-border-subtle text-text-muted hover:border-border-hover hover:text-text-primary border-hairline shrink-0 rounded px-2 py-1 font-mono text-xs transition-colors disabled:opacity-40"
+              title="Browse"
+            >
+              …
+            </button>
+          )}
         </div>
 
         <InstallLog lines={log} />

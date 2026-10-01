@@ -4,6 +4,7 @@ import { useServerConfigStore } from '../../stores/useServerConfigStore'
 import { useServerStore } from '../../stores/useServerStore'
 import type { WorldSystem } from './useWorlds'
 import { fmtBytes, relativeMs } from '../../lib/format'
+import { isRemoteBrowser } from '../../lib/ipc'
 
 interface Props {
   world: WorldSystem
@@ -209,13 +210,16 @@ export function WorldHud({
           >
             {busy ? '…' : 'backup'}
           </button>
-          <button
-            className={BTN()}
-            onClick={() => doAction(() => onOpenFolder(world.name))}
-            disabled={busy}
-          >
-            open folder
-          </button>
+          {/* OpenWorldFolder opens a folder on the desktop: not callable from a remote browser. */}
+          {!isRemoteBrowser() && (
+            <button
+              className={BTN()}
+              onClick={() => doAction(() => onOpenFolder(world.name))}
+              disabled={busy}
+            >
+              open folder
+            </button>
+          )}
           <button
             className={BTN()}
             onClick={() => {

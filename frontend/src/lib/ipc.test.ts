@@ -1,5 +1,5 @@
 import { describe, it, expect, afterEach, vi } from 'vitest'
-import { errMsg, hasWailsBridge, isRemoteBrowser, readOr } from './ipc'
+import { errMsg, hasWailsBridge, isRemoteBrowser, readOr, REMOTE_MARK } from './ipc'
 
 afterEach(() => {
   Reflect.deleteProperty(window, 'go')
@@ -67,6 +67,21 @@ describe('isRemoteBrowser', () => {
 
   it('is false in the Vite dev server, which has no bridge and is not remote', () => {
     vi.stubEnv('PROD', false)
+    expect(isRemoteBrowser()).toBe(false)
+  })
+
+  // Components ask at render time, after the remote runtime has installed its
+  // own window.go. Without the mark that reads as the desktop, and the title
+  // bar, Settings and every hidden control came back.
+  it('stays true once the remote runtime has installed its marked bridge', () => {
+    vi.stubEnv('PROD', true)
+    Object.assign(window, { go: { main: { App: {} }, [REMOTE_MARK]: true } })
+    expect(isRemoteBrowser()).toBe(true)
+  })
+
+  it('does not take the mark for remote in a dev build', () => {
+    vi.stubEnv('PROD', false)
+    Object.assign(window, { go: { [REMOTE_MARK]: true } })
     expect(isRemoteBrowser()).toBe(false)
   })
 })

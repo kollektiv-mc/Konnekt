@@ -8,8 +8,13 @@ import { useUiStore } from '../../stores/useUiStore'
 import { ServerManager } from './index'
 import { NEW_SERVER } from './ServerList'
 import type { ServerConfig } from '../../types'
+import { isRemoteBrowser } from '../../lib/ipc'
 
 vi.mock('../../../wailsjs/go/main/App')
+vi.mock('../../lib/ipc', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../lib/ipc')>()),
+  isRemoteBrowser: vi.fn(() => false),
+}))
 
 // Vitest runs with `globals: false`, so RTL cannot register its own auto-cleanup
 // afterEach and a previous test's DOM would still be mounted.
@@ -182,5 +187,30 @@ describe('ServerManager', () => {
 
     await waitFor(() => expect(screen.getByDisplayValue('/srv/alpha')).toBeTruthy())
     expect(screen.queryByText('Add a server')).toBeNull()
+  })
+})
+
+describe('ServerManager Browse buttons', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    vi.mocked(App.GetServerSummary).mockResolvedValue(summary())
+    useServerConfigStore.setState({ configs: [cfg('alpha')], activeId: 'alpha', error: null })
+    useInstallStore.setState({ open: false, result: null })
+    useLoaderStore.setState({ dialogOpen: false, status: null, versions: [] })
+  })
+  afterEach(() => vi.mocked(isRemoteBrowser).mockReturnValue(false))
+
+  it('offers both on the desktop', async () => {
+    renderManager()
+    await screen.findByDisplayValue('/srv/alpha')
+    expect(screen.getAllByTitle('Browse')).toHaveLength(2)
+  })
+
+  it('leaves the path inputs and drops both in a remote browser', async () => {
+    vi.mocked(isRemoteBrowser).mockReturnValue(true)
+    renderManager()
+    await screen.findByDisplayValue('/srv/alpha')
+    expect(screen.queryAllByTitle('Browse')).toHaveLength(0)
+    expect(screen.getByPlaceholderText('Install folder')).toBeTruthy()
   })
 })

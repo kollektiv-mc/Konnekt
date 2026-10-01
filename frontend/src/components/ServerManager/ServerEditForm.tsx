@@ -10,6 +10,7 @@ import {
   parseRamFromArgs,
 } from '../../lib/serverForm'
 import { LOADER_LABELS } from '../../lib/loaders'
+import { isRemoteBrowser } from '../../lib/ipc'
 import { Combobox } from '../ui/Combobox'
 import { Icon } from '../ui/Icon'
 import { ArrowLeft, Settings } from '../../lib/icons'
@@ -274,14 +275,17 @@ export function ServerEditForm({
           placeholder={placeholder}
           className={inputClass}
         />
-        <button
-          type="button"
-          onClick={onBrowse}
-          className="border-border-subtle text-text-muted hover:border-border-hover hover:text-text-primary border-hairline shrink-0 rounded px-2.5 py-1 font-mono text-xs transition-colors"
-          title="Browse"
-        >
-          …
-        </button>
+        {/* A native dialog on the desktop: not callable from a remote browser. */}
+        {!isRemoteBrowser() && (
+          <button
+            type="button"
+            onClick={onBrowse}
+            className="border-border-subtle text-text-muted hover:border-border-hover hover:text-text-primary border-hairline shrink-0 rounded px-2.5 py-1 font-mono text-xs transition-colors"
+            title="Browse"
+          >
+            …
+          </button>
+        )}
       </div>,
     )
 

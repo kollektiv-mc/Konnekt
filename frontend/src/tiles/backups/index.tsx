@@ -12,6 +12,7 @@ import { useBackups } from './useBackups'
 import type { Backup } from './useBackups'
 import { extractID } from './format'
 import { fmtBytes, fmtDate } from '../../lib/format'
+import { isRemoteBrowser } from '../../lib/ipc'
 import { BackupCarousel } from './BackupCarousel'
 import { SolarSystem } from './SolarSystem'
 import { useBackupWorlds } from './useBackupWorlds'
@@ -469,19 +470,22 @@ function BackupsTileExpanded({ serverId }: { serverId: string }) {
               {serverBackups.length !== 1 ? 's' : ''}
             </span>
 
-            <button
-              onClick={openDir}
-              className="text-text-faint shrink-0 font-mono text-xs transition-colors"
-              title="Open backup folder"
-              onMouseEnter={(e) => {
-                ;(e.currentTarget as HTMLButtonElement).style.color = 'var(--text-secondary)'
-              }}
-              onMouseLeave={(e) => {
-                ;(e.currentTarget as HTMLButtonElement).style.color = 'var(--text-faint)'
-              }}
-            >
-              ↗
-            </button>
+            {/* OpenBackupDir opens a folder on the desktop: not callable from a remote browser. */}
+            {!isRemoteBrowser() && (
+              <button
+                onClick={openDir}
+                className="text-text-faint shrink-0 font-mono text-xs transition-colors"
+                title="Open backup folder"
+                onMouseEnter={(e) => {
+                  ;(e.currentTarget as HTMLButtonElement).style.color = 'var(--text-secondary)'
+                }}
+                onMouseLeave={(e) => {
+                  ;(e.currentTarget as HTMLButtonElement).style.color = 'var(--text-faint)'
+                }}
+              >
+                ↗
+              </button>
+            )}
 
             <button
               onClick={openScheduler}

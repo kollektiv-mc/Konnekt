@@ -11,7 +11,7 @@ import { useProcessesStore } from '../../stores/useProcessesStore'
 import { DetectServerLoader } from '../../../wailsjs/go/main/App'
 import { models } from '../../../wailsjs/go/models'
 import { PLUGIN_LOADERS } from '../../lib/constants'
-import { readOr } from '../../lib/ipc'
+import { isRemoteBrowser, readOr } from '../../lib/ipc'
 import { Headline } from '../../components/ui/Figure'
 import { useSettingsStore } from '../../stores/useSettingsStore'
 
@@ -48,7 +48,8 @@ function useServerKind(serverId: string): { kind: 'mods' | 'plugins'; detecting:
           cfg.loader === config.loader &&
           cfg.mcVersion === config.mcVersion &&
           cfg.jarPath === config.jarPath
-        if (!unchanged) saveConfig(cfg)
+        // SaveServerConfig is admin tier: remotely it would raise an approval prompt nobody asked for.
+        if (!unchanged && !isRemoteBrowser()) saveConfig(cfg)
       })
       .finally(() => setDetecting(false))
   }, [serverId, config, saveConfig])
@@ -284,19 +285,21 @@ function ModsExpanded({
             >
               {refreshing ? '…' : '↺'}
             </button>
-            {/* Add Files button */}
-            <button
-              onClick={handleAddFiles}
-              className="text-text-secondary border-border-subtle border-hairline shrink-0 rounded bg-transparent px-3 py-1 text-xs font-semibold transition-colors"
-              onMouseEnter={(e) => {
-                ;(e.currentTarget as HTMLButtonElement).style.background = 'var(--hover-surface)'
-              }}
-              onMouseLeave={(e) => {
-                ;(e.currentTarget as HTMLButtonElement).style.background = 'transparent'
-              }}
-            >
-              Add Files
-            </button>
+            {/* Add Files: ModInstallLocal is a native file dialog, not callable from a remote browser. */}
+            {!isRemoteBrowser() && (
+              <button
+                onClick={handleAddFiles}
+                className="text-text-secondary border-border-subtle border-hairline shrink-0 rounded bg-transparent px-3 py-1 text-xs font-semibold transition-colors"
+                onMouseEnter={(e) => {
+                  ;(e.currentTarget as HTMLButtonElement).style.background = 'var(--hover-surface)'
+                }}
+                onMouseLeave={(e) => {
+                  ;(e.currentTarget as HTMLButtonElement).style.background = 'transparent'
+                }}
+              >
+                Add Files
+              </button>
+            )}
             {/* Add Content button */}
             <button
               onClick={openBrowse}
