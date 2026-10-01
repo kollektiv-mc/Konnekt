@@ -51,10 +51,12 @@ does. Concretely:
   scope.
 - **Content fetched from Modrinth**, including mod jars and the metadata and
   markdown rendered alongside them.
-- **Remote access**, once it ships. The listener exists in the source
-  (`backend/services/remote.go`, with its sign-in in `remote_auth.go`) but no
-  release starts it and nothing can reach it yet, so there is nothing to report there today; the acceptance
-  criteria it is built to are § S8 of `agent_docs/SECURITY_CHECKLIST.md`.
+- **Remote access.** Off until it is switched on in Settings, and then a
+  listener on the loopback address only (`backend/services/remote.go`, with
+  its sign-in in `remote_auth.go`). Anything that lets someone other than the
+  person at the desktop sign in, keep a session, or run a method the desktop
+  did not approve is in scope; the criteria it is built to are § S8 of
+  `agent_docs/SECURITY_CHECKLIST.md`.
 
 ## What is out of scope
 
