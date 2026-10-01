@@ -511,9 +511,8 @@
   var STAGE_LABEL = { alpha: 'ALPHA', beta: 'BETA', release: 'RELEASE', later: 'LATER' }
 
   // Both issue forms share a required "Which part of Konnekt?" dropdown, and
-  // GitHub renders the answer into the body under that heading. It is the only
-  // per-tile fact an issue carries, so it is what files a new one into the
-  // right folder. The options are fixed by .github/ISSUE_TEMPLATE/*.yml, and
+  // GitHub renders the answer into the body under that heading. It files an
+  // issue that has no per-area label below into the right folder. The options are fixed by .github/ISSUE_TEMPLATE/*.yml, and
   // frontend/scripts/check-issue-templates.mjs already keeps the two forms
   // holding the same list. An answer this does not know lands in requested/,
   // which is also where "Something else, or not sure" goes.
@@ -533,6 +532,29 @@
     settings: 'rm-settings',
     'server setup and install': 'rm-server',
     updater: 'rm-release',
+  }
+
+  // The per-area `area:` labels in .github/labels.yml, one per answer above.
+  // They are read first, because a form is only one way to file an issue: one
+  // filed any other way has no dropdown heading, and the label is the area a
+  // maintainer set at triage rather than the reporter's closest guess. `area:ui`
+  // names no folder, so it falls through to the form answer.
+  var LABEL_FOLDERS = {
+    'area:console': 'rm-console',
+    'area:commands': 'rm-console',
+    'area:stats': 'rm-stats',
+    'area:players': 'rm-players',
+    'area:performance': 'rm-performance',
+    'area:scheduler': 'rm-scheduler',
+    'area:worlds': 'rm-worlds',
+    'area:backups': 'rm-backups',
+    'area:config': 'rm-config',
+    'area:notifications': 'rm-notifications',
+    'area:mods': 'rm-mods',
+    'area:layout': 'rm-layout',
+    'area:settings': 'rm-settings',
+    'area:server-setup': 'rm-server',
+    'area:updater': 'rm-release',
   }
 
   var AREA_HEADING = /^###\s+Which part of Konnekt\?\s*$/im
@@ -592,8 +614,10 @@
     return requestedRec
   }
 
-  function folderFor(area) {
-    var id = AREA_FOLDERS[area]
+  function folderFor(labels, body) {
+    var id = null
+    for (var i = 0; i < labels.length && !id; i++) id = LABEL_FOLDERS[labels[i]]
+    if (!id) id = AREA_FOLDERS[areaOf(body)]
     var el = id ? document.getElementById(id) : null
     return el ? info.get(el.closest('.rm-node')) : requested()
   }
@@ -670,7 +694,7 @@
         // milestone:remote-access and no milestone at all are both Later, which
         // is what that card says: not scheduled, and not forgotten.
         var stage = labels.indexOf('milestone:beta') !== -1 ? 'beta' : 'later'
-        var folder = folderFor(areaOf(issue.body))
+        var folder = folderFor(labels, issue.body)
         var li = buildLeaf(issue, stage)
 
         folder.el.querySelector('.rm-children').appendChild(li)
