@@ -25,8 +25,8 @@ import (
 // endpoints back into window.go and window.runtime, so no tile changes.
 //
 // What it is not: reachable. Nothing starts it until the settings UI exists
-// (#47), it refuses every API call until an authorizer is set (#45), and it
-// only ever binds the loopback address: the tunnel (#46) is what carries it
+// (#47), its authorizer (remote_auth.go, #45) refuses every sign-in until that
+// UI has set a password, and it only ever binds the loopback address: the tunnel (#46) is what carries it
 // further, and TLS terminates at that tunnel's edge. The acceptance criteria
 // are agent_docs/SECURITY_CHECKLIST.md § S8; each rule below names its item.
 type RemoteService struct {
@@ -54,17 +54,36 @@ type RemoteService struct {
 
 // RemoteAuthorizer identifies the session behind a request. An error refuses
 // the request with 401 and is never shown to the client beyond that status,
-// so it may say why. Phase 3 (#45) provides the implementation; until then a
-// RemoteService has none and refuses every API request.
+// so it may say why. RemoteAuth (remote_auth.go, #45) is the implementation; a
+// RemoteService with none refuses every API request.
 type RemoteAuthorizer interface {
 	Authorize(r *http.Request) (RemoteSession, error)
 }
 
 // RemoteSession is what the authorizer knows about a caller. Device is the
 // name the desktop gave the device when it approved it (§ S8.6), and is the
-// one thing about a caller the log names (§ S8.9).
+// one thing about a caller the log names (§ S8.9). ID names the session, so
+// CloseSessions can find its sockets; it is not the token and unlocks nothing.
 type RemoteSession struct {
+	ID     string
 	Device string
+}
+
+// remoteLoginServer is the sign-in half of an authorizer. RemoteAuth is the
+// one implementation; an authorizer without it (the tests' stub) leaves the
+// two routes answering 404, which the login gate reads as "no sign-ins yet".
+// Each method reports whether it issued a session, which is the only
+// unauthenticated request that counts as activity.
+type remoteLoginServer interface {
+	ServeLogin(w http.ResponseWriter, r *http.Request) bool
+	ServeLoginWait(w http.ResponseWriter, r *http.Request) bool
+}
+
+// remoteSessionKeeper is the other optional half: whether a session is still
+// good. writePump asks at every ping, so a socket does not outlive the session
+// it was opened with.
+type remoteSessionKeeper interface {
+	SessionAlive(id string) bool
 }
 
 const (
@@ -77,6 +96,12 @@ const (
 	remoteMaxBody = 1 << 20
 	// remoteShutdownGrace is how long Stop waits for in-flight requests.
 	remoteShutdownGrace = 5 * time.Second
+	// remoteLoginReadTimeout bounds reading a sign-in body: the one body read
+	// before anyone is authenticated, which a caller could otherwise hold open
+	// a byte at a time. It is set per request rather than as the server's
+	// ReadTimeout, which would also run out under a bound method that takes
+	// longer than this to answer.
+	remoteLoginReadTimeout = 10 * time.Second
 )
 
 // remoteCSP is frontend/index.html's policy with frame-ancestors added: a
@@ -97,7 +122,12 @@ func NewRemoteService(bus *EventBus, dispatcher *RemoteDispatcher) *RemoteServic
 	}
 	if bus != nil {
 		bus.Tap(func(event string, data any) {
-			if s.running.Load() {
+			// "remote:" is the listener's own namespace on the wire (the hello),
+			// and on the bus it is what the desktop is told about remote access:
+			// a device waiting, a call wanting approval. Neither is a phone's
+			// business, and a bus event named remote:hello would otherwise pass
+			// for the real one.
+			if s.running.Load() && !strings.HasPrefix(event, remoteEventPrefix) {
 				s.hub.publish(event, data)
 			}
 		})
@@ -236,6 +266,8 @@ func (s *RemoteService) Handler() http.Handler { return s.handler() }
 func (s *RemoteService) handler() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("POST /api/rpc", s.handleRPC)
+	mux.HandleFunc("POST /api/login", s.handleLogin)
+	mux.HandleFunc("POST /api/login/wait", s.handleLoginWait)
 	mux.HandleFunc("GET /ws", s.handleWS)
 	mux.HandleFunc("GET /", s.handleStatic)
 	return s.guard(mux)
@@ -269,7 +301,6 @@ func (s *RemoteService) guard(next http.Handler) http.Handler {
 			http.Error(w, "unexpected origin", http.StatusForbidden)
 			return
 		}
-		s.touch()
 		next.ServeHTTP(w, r)
 	})
 }
@@ -355,8 +386,14 @@ func (s *RemoteService) handleRPC(w http.ResponseWriter, r *http.Request) {
 	result, err := s.dispatcher.Invoke(req.Method, req.Args)
 	// One line per call, naming the method and the device and never an
 	// argument or a result: a config file's content or a console command are
-	// both arguments, and neither belongs in konnekt.log (§ S8.9).
-	slog.Info("remote: call", "method", req.Method, "tier", string(tier), "device", session.Device, "ok", err == nil)
+	// both arguments, and neither belongs in konnekt.log (§ S8.9). A name the
+	// allowlist does not know is the caller's own text, up to a megabyte of
+	// it, so it is not written either.
+	logged := req.Method
+	if !known {
+		logged = "(not remote-callable)"
+	}
+	slog.Info("remote: call", "method", logged, "tier", string(tier), "device", session.Device, "ok", err == nil)
 	if !known {
 		// Same answer for "not bound" and "bound but not remote-callable": the
 		// difference is not the client's business.
@@ -392,7 +429,67 @@ func (s *RemoteService) authorize(w http.ResponseWriter, r *http.Request) (Remot
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return RemoteSession{}, false
 	}
+	// Only here, and on a sign-in that earned a session: activity is what a
+	// session does.
+	// Counting every guarded request would let anyone who can reach the
+	// tunnel's URL hold the listener open by reloading the gate (§ S8.8).
+	s.touch()
 	return session, true
+}
+
+func (s *RemoteService) loginServer() remoteLoginServer {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	login, ok := s.auth.(remoteLoginServer)
+	if !ok {
+		return nil
+	}
+	return login
+}
+
+func (s *RemoteService) handleLogin(w http.ResponseWriter, r *http.Request) {
+	login := s.loginServer()
+	if login == nil {
+		http.NotFound(w, r)
+		return
+	}
+	// httptest's recorder has no connection to set a deadline on, which is the
+	// one error expected here.
+	deadline := time.Now().Add(remoteLoginReadTimeout)
+	if err := http.NewResponseController(w).SetReadDeadline(deadline); err != nil && !errors.Is(err, http.ErrNotSupported) {
+		slog.Warn("remote: sign-in read deadline", "error", err)
+	}
+	if login.ServeLogin(w, r) {
+		s.touch()
+	}
+}
+
+func (s *RemoteService) handleLoginWait(w http.ResponseWriter, r *http.Request) {
+	login := s.loginServer()
+	if login == nil {
+		http.NotFound(w, r)
+		return
+	}
+	if login.ServeLoginWait(w, r) {
+		s.touch()
+	}
+}
+
+// sessionAlive is whether a socket's session still stands. An authorizer that
+// cannot say (the tests' stub) is taken to mean yes.
+func (s *RemoteService) sessionAlive(id string) bool {
+	s.mu.Lock()
+	keeper, ok := s.auth.(remoteSessionKeeper)
+	s.mu.Unlock()
+	return !ok || keeper.SessionAlive(id)
+}
+
+// CloseSessions disconnects every socket opened under one of the named
+// sessions. RemoteAuth calls it when sessions are revoked (§ S8.5): without it
+// a revoked session's next request is refused, but its open socket would keep
+// receiving events until the next ping.
+func (s *RemoteService) CloseSessions(ids []string) {
+	s.hub.closeSessions(ids)
 }
 
 func writeRemoteJSON(w http.ResponseWriter, status int, v any) {
@@ -406,8 +503,9 @@ func writeRemoteJSON(w http.ResponseWriter, status int, v any) {
 func (s *RemoteService) touch() { s.lastActive.Store(time.Now().UnixNano()) }
 
 // idleWatch stops the listener once nothing has touched it for idle (§ S8.8).
-// A request, a WebSocket message and a pong all count, so a phone with the
-// dashboard open keeps it alive and a closed tab lets it lapse.
+// An authorized request, a sign-in that earned a session, a WebSocket message
+// and a pong all count, so a phone with the dashboard open keeps it alive and a closed
+// tab lets it lapse. A request nobody authorized does not.
 func (s *RemoteService) idleWatch(idle time.Duration, stop <-chan struct{}) {
 	tick := time.NewTicker(idle / 4)
 	defer tick.Stop()

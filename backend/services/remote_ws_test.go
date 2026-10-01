@@ -369,3 +369,117 @@ func TestRemoteRunIDsAreFreshPerStartAndHex(t *testing.T) {
 		t.Errorf("run after a restart %q, first was %q; want a different 16 character id", second, first)
 	}
 }
+
+// startRemoteWithAuth is startRemote with a real RemoteAuth behind the
+// listener, wired to close sockets on a revocation as the app wires it.
+func startRemoteWithAuth(t *testing.T) (*RemoteService, *EventBus, string, *RemoteAuth) {
+	t.Helper()
+	bus := NewEventBus()
+	d, err := NewRemoteDispatcher(&remoteTarget{}, remoteTargetAllow)
+	if err != nil {
+		t.Fatal(err)
+	}
+	s := NewRemoteService(bus, d)
+	auth := newPasswordAuth(t)
+	s.SetAuthorizer(auth)
+	auth.OnRevoke(s.CloseSessions)
+	addr, err := s.Start(0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		if err := s.Stop(); err != nil {
+			t.Error(err)
+		}
+	})
+	return s, bus, addr, auth
+}
+
+// dialWSWithSession opens a socket under a session cookie and reads its hello.
+func dialWSWithSession(t *testing.T, addr string, session *http.Cookie) *websocket.Conn {
+	t.Helper()
+	header := http.Header{"Origin": {"http://" + addr}, "Cookie": {session.Name + "=" + session.Value}}
+	conn, resp, err := websocket.DefaultDialer.Dial("ws://"+addr+"/ws", header)
+	if err != nil {
+		code := 0
+		if resp != nil {
+			code = resp.StatusCode
+		}
+		t.Fatalf("dial with a session: %v (status %d)", err, code)
+	}
+	t.Cleanup(func() {
+		if err := conn.Close(); err != nil && !errors.Is(err, net.ErrClosed) {
+			t.Log(err)
+		}
+	})
+	readFrame(t, conn)
+	return conn
+}
+
+// expectClosed fails unless the socket's read ends with a real close inside two
+// seconds, which is what separates "closed promptly" from "timed out waiting".
+func expectClosed(t *testing.T, name string, conn *websocket.Conn) {
+	t.Helper()
+	start := time.Now()
+	if err := conn.SetReadDeadline(start.Add(2 * time.Second)); err != nil {
+		t.Fatal(err)
+	}
+	_, _, err := conn.ReadMessage()
+	if err == nil {
+		t.Fatalf("%s: a message arrived on a socket that should be closed", name)
+	}
+	var ne net.Error
+	if errors.As(err, &ne) && ne.Timeout() {
+		t.Fatalf("%s: still open after %v", name, time.Since(start))
+	}
+}
+
+// § S8.5: revoking sessions closes their sockets at once, not at the next ping.
+func TestRemoteRevokeSessionsClosesOpenSockets(t *testing.T) {
+	s, _, addr, auth := startRemoteWithAuth(t)
+	_, session := signIn(t, auth, "Phone")
+	conn := dialWSWithSession(t, addr, session)
+	waitForClients(t, s, 1)
+
+	auth.RevokeSessions()
+	expectClosed(t, "revoked socket", conn)
+	waitForClients(t, s, 0)
+}
+
+func TestRemoteRemoveDeviceClosesOnlyItsSockets(t *testing.T) {
+	s, bus, addr, auth := startRemoteWithAuth(t)
+	_, phoneSession := signIn(t, auth, "Phone")
+	_, tabletSession := signIn(t, auth, "Tablet")
+	phone := dialWSWithSession(t, addr, phoneSession)
+	tablet := dialWSWithSession(t, addr, tabletSession)
+	waitForClients(t, s, 2)
+
+	if err := auth.RemoveDevice(deviceIDByName(t, auth, "Phone")); err != nil {
+		t.Fatal(err)
+	}
+	expectClosed(t, "removed device's socket", phone)
+	waitForClients(t, s, 1)
+
+	bus.Emit(EventLogLine, map[string]any{"serverID": "s1", "line": "still here"})
+	if f := readFrame(t, tablet); f.Event != EventLogLine {
+		t.Errorf("the surviving socket got %+v, want the published event", f)
+	}
+}
+
+// The "remote:" namespace is the listener's own: a bus event named into it is
+// the desktop's business and never crosses to a browser or takes a number.
+func TestRemoteBusEventsInTheRemoteNamespaceAreNotMirrored(t *testing.T) {
+	s, bus, addr := startRemote(t)
+	conn := dialWS(t, addr, 0, "", "http://"+addr)
+	readFrame(t, conn)
+	waitForClients(t, s, 1)
+
+	bus.Emit("remote:pending", map[string]any{"code": "ABC-234"})
+	bus.Emit(remoteHelloEvent, map[string]any{"replayed": 99, "gap": true})
+	bus.Emit(EventLogLine, map[string]any{"serverID": "s1", "line": "ordinary"})
+
+	f := readFrame(t, conn)
+	if f.Event != EventLogLine || f.Seq != 1 {
+		t.Fatalf("first frame after the remote: events is %+v, want the ordinary event at seq 1", f)
+	}
+}

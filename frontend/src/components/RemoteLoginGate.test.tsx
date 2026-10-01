@@ -4,6 +4,7 @@ import { RemoteLoginGate } from './RemoteLoginGate'
 
 afterEach(() => {
   cleanup()
+  vi.useRealTimers()
   vi.unstubAllGlobals()
 })
 
@@ -130,5 +131,119 @@ describe('RemoteLoginGate', () => {
     expect(screen.queryByLabelText('Password')).toBeNull()
     fireEvent.click(screen.getByRole('button', { name: 'Retry' }))
     expect(reload).toHaveBeenCalledTimes(1)
+  })
+
+  describe('waiting for desktop approval', () => {
+    const pendingReply = (code = 'ABC-DEF') =>
+      new Response(JSON.stringify({ pending: true, code }), { status: 202 })
+    const waitCalls = () => fetchMock.mock.calls.filter(([url]) => url === '/api/login/wait')
+
+    const signInPending = async () => {
+      vi.useFakeTimers({ shouldAdvanceTime: true })
+      fetchMock.mockResolvedValueOnce(pendingReply())
+      signIn()
+      await screen.findByText('Approve this device')
+    }
+
+    it('shows the code, not the password field, on a 202 and does not unlock', async () => {
+      await signInPending()
+      expect(screen.getByText('ABC-DEF')).toBeTruthy()
+      expect(screen.queryByLabelText('Password')).toBeNull()
+      expect(onUnlocked).not.toHaveBeenCalled()
+    })
+
+    it('polls /api/login/wait with a JSON POST and the session cookie', async () => {
+      await signInPending()
+      fetchMock.mockResolvedValue(pendingReply())
+      await vi.advanceTimersByTimeAsync(2000)
+      const [url, init] = waitCalls()[0]
+      expect(url).toBe('/api/login/wait')
+      expect(init?.method).toBe('POST')
+      expect(init?.credentials).toBe('same-origin')
+      expect(init?.headers).toEqual({ 'Content-Type': 'application/json' })
+      expect(init?.body).toBe('{}')
+    })
+
+    it('unlocks once on approval and stops polling', async () => {
+      await signInPending()
+      fetchMock.mockResolvedValueOnce(pendingReply('XYZ-123'))
+      await vi.advanceTimersByTimeAsync(2000)
+      expect(await screen.findByText('XYZ-123')).toBeTruthy()
+      fetchMock.mockResolvedValueOnce(new Response(null, { status: 204 }))
+      await vi.advanceTimersByTimeAsync(2000)
+      expect(onUnlocked).toHaveBeenCalledTimes(1)
+      const calls = fetchMock.mock.calls.length
+      await vi.advanceTimersByTimeAsync(10000)
+      expect(fetchMock.mock.calls).toHaveLength(calls)
+      expect(onUnlocked).toHaveBeenCalledTimes(1)
+    })
+
+    it('returns to the form with the server text when the wait is declined', async () => {
+      await signInPending()
+      fetchMock.mockResolvedValueOnce(new Response(' device declined \n', { status: 403 }))
+      await vi.advanceTimersByTimeAsync(2000)
+      expect((await screen.findByText('device declined')).getAttribute('aria-live')).toBe('polite')
+      expect(screen.getByLabelText('Password')).toBeTruthy()
+      const calls = fetchMock.mock.calls.length
+      await vi.advanceTimersByTimeAsync(10000)
+      expect(fetchMock.mock.calls).toHaveLength(calls)
+    })
+
+    it('says so in a sentence when the declined wait has no text', async () => {
+      await signInPending()
+      fetchMock.mockResolvedValueOnce(new Response('', { status: 403 }))
+      await vi.advanceTimersByTimeAsync(2000)
+      expect(
+        await screen.findByText('The request was declined or has expired. Sign in again.'),
+      ).toBeTruthy()
+    })
+
+    it('returns to the form on any other wait status', async () => {
+      await signInPending()
+      fetchMock.mockResolvedValueOnce(new Response('', { status: 500 }))
+      await vi.advanceTimersByTimeAsync(2000)
+      expect(await screen.findByText('Sign-in failed (500).')).toBeTruthy()
+      expect(screen.getByLabelText('Password')).toBeTruthy()
+    })
+
+    it('returns to the form on Cancel and polls no more', async () => {
+      await signInPending()
+      fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
+      expect(screen.getByLabelText('Password')).toBeTruthy()
+      await vi.advanceTimersByTimeAsync(10000)
+      expect(waitCalls()).toHaveLength(0)
+    })
+
+    it('keeps polling after a network failure', async () => {
+      await signInPending()
+      fetchMock.mockRejectedValueOnce(new TypeError('Failed to fetch'))
+      await vi.advanceTimersByTimeAsync(2000)
+      expect(screen.getByText('Approve this device')).toBeTruthy()
+      fetchMock.mockResolvedValueOnce(new Response(null, { status: 204 }))
+      await vi.advanceTimersByTimeAsync(2000)
+      expect(waitCalls()).toHaveLength(2)
+      expect(onUnlocked).toHaveBeenCalledTimes(1)
+    })
+
+    it('stops polling on unmount', async () => {
+      vi.useFakeTimers({ shouldAdvanceTime: true })
+      fetchMock.mockResolvedValueOnce(pendingReply())
+      const { unmount } = render(<RemoteLoginGate state="locked" onUnlocked={onUnlocked} />)
+      fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'hunter2' } })
+      fireEvent.click(screen.getByRole('button', { name: 'Sign in' }))
+      await screen.findByText('Approve this device')
+      unmount()
+      await vi.advanceTimersByTimeAsync(10000)
+      expect(waitCalls()).toHaveLength(0)
+    })
+
+    it('still waits when the 202 body is not JSON, just without a code', async () => {
+      vi.useFakeTimers({ shouldAdvanceTime: true })
+      fetchMock.mockResolvedValueOnce(new Response('pending', { status: 202 }))
+      signIn()
+      expect(await screen.findByText('Approve this device')).toBeTruthy()
+      expect(screen.queryByText('ABC-DEF')).toBeNull()
+      expect(screen.queryByLabelText('Password')).toBeNull()
+    })
   })
 })

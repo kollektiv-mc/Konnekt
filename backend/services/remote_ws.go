@@ -38,6 +38,9 @@ const (
 	// remoteHelloEvent is the first frame on every socket: the latest
 	// sequence number, and whether the replay could cover the client's gap.
 	remoteHelloEvent = "remote:hello"
+	// remoteEventPrefix is the namespace no bus event crosses the wire under
+	// (see NewRemoteService's tap).
+	remoteEventPrefix = "remote:"
 )
 
 // remoteFrame is one event on the wire. Data is the payload already encoded,
@@ -71,9 +74,11 @@ type remoteHub struct {
 
 type remoteClient struct {
 	conn *websocket.Conn
-	send chan []byte
-	once sync.Once
-	done chan struct{}
+	// session is the RemoteSession.ID the socket was opened under.
+	session string
+	send    chan []byte
+	once    sync.Once
+	done    chan struct{}
 }
 
 func newRemoteHub(capacity int) *remoteHub {
@@ -194,6 +199,30 @@ func (h *remoteHub) closeAll() {
 	}
 }
 
+// closeSessions disconnects the clients of the named sessions and leaves the
+// rest, and the buffer, alone.
+func (h *remoteHub) closeSessions(ids []string) {
+	if len(ids) == 0 {
+		return
+	}
+	gone := make(map[string]struct{}, len(ids))
+	for _, id := range ids {
+		gone[id] = struct{}{}
+	}
+	var closing []*remoteClient
+	h.mu.Lock()
+	for c := range h.clients {
+		if _, ok := gone[c.session]; ok {
+			delete(h.clients, c)
+			closing = append(closing, c)
+		}
+	}
+	h.mu.Unlock()
+	for _, c := range closing {
+		c.close()
+	}
+}
+
 func (c *remoteClient) close() {
 	c.once.Do(func() {
 		close(c.done)
@@ -225,7 +254,7 @@ func (s *RemoteService) handleWS(w http.ResponseWriter, r *http.Request) {
 		slog.Warn("remote: websocket upgrade", "device", session.Device, "error", err)
 		return
 	}
-	c := &remoteClient{conn: conn, send: make(chan []byte, remoteSendBuffer), done: make(chan struct{})}
+	c := &remoteClient{conn: conn, session: session.ID, send: make(chan []byte, remoteSendBuffer), done: make(chan struct{})}
 	slog.Info("remote: socket opened", "device", session.Device, "since", since)
 
 	// Hello and replay are queued before the client joins the hub, so nothing
@@ -323,6 +352,11 @@ func (s *RemoteService) writePump(c *remoteClient) {
 				return
 			}
 		case <-ping.C:
+			// The session is checked on the socket's own clock, since nothing
+			// else would: a socket makes no requests for Authorize to refuse.
+			if !s.sessionAlive(c.session) {
+				return
+			}
 			if err := c.conn.SetWriteDeadline(time.Now().Add(remoteWriteWait)); err != nil {
 				return
 			}

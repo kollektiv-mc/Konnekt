@@ -33,6 +33,7 @@ type App struct {
 	commandsService     *services.CommandsService
 	kommandsService     *services.KommandsService
 	remoteService       *services.RemoteService
+	remoteAuth          *services.RemoteAuth
 	bus                 *services.EventBus
 	dataDir             string
 }
@@ -83,8 +84,7 @@ func NewApp() *App {
 	}
 	// Remote Access (#43). Built here so the allowlist is resolved against the
 	// real App and remote_methods_test.go constructs exactly what ships; not
-	// started here, or anywhere yet: the settings UI (#47) is what will, and
-	// until the authorizer (#45) exists the listener refuses every API call.
+	// started here, or anywhere yet: the settings UI (#47) is what will.
 	dispatcher, err := services.NewRemoteDispatcher(app, remoteMethods)
 	if err != nil {
 		// Unreachable past the test, which fails on the same error. Logged
@@ -92,6 +92,12 @@ func NewApp() *App {
 		slog.Error("remote: allowlist", "error", err)
 	}
 	app.remoteService = services.NewRemoteService(bus, dispatcher)
+	// Who may use it (#45). No password exists until the settings UI (#47) can
+	// set one, and without one every sign-in is refused, so the listener still
+	// answers nobody.
+	app.remoteAuth = services.NewRemoteAuth()
+	app.remoteAuth.OnRevoke(app.remoteService.CloseSessions)
+	app.remoteService.SetAuthorizer(app.remoteAuth)
 	return app
 }
 
@@ -155,6 +161,7 @@ func (a *App) startup(ctx context.Context) {
 	a.loaderService.SetContext(ctx)
 	a.loaderService.SetDataDir(a.dataDir)
 	a.commandsService.SetDataDir(a.dataDir)
+	a.remoteAuth.SetDataDir(a.dataDir)
 	// Reads Kommands' shared file on a slack timer for as long as the app
 	// lives. The responsive path is RefreshKommands, which the frontend calls
 	// on window focus; this only catches an edit made while Konnekt already
