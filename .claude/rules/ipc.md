@@ -50,6 +50,13 @@ is `Object.keys` of the bindings, so it cannot drift from them, and
 `remoteRuntime.test.ts` reads `wailsjs/runtime/runtime.js` to hold the
 `window.runtime` half complete. Do not add a third.
 
+The remote runtime also answers a few bound methods itself, in its `local`
+table, instead of sending them: the selected server, `SaveAppSettings` and the
+live canvas writes. Those are one person's view, and a browser must not move
+the desktop's. A store that calls one of them needs no remote branch; a new
+bound method that is view state rather than host state belongs in that table,
+with the reason.
+
 ## Per-server scoping
 
 Three rules, one per layer, each held by a test that fails on the next
