@@ -1,10 +1,12 @@
 package services
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"reflect"
+	"sync"
 )
 
 // RemoteTier says what a stolen or misused remote session could do with a
@@ -18,7 +20,7 @@ import (
 //   - admin: amounts to running code on the host, or writes what does (a JVM
 //     argument, a jar path, a mod jar the server will load, an app setting, a
 //     scheduler graph with HTTP and command blocks). Never dispatched without
-//     the desktop's approval of that call; until an approver exists, refused
+//     the desktop's approval of that call; with no approver set, refused
 //     (agent_docs/SECURITY_CHECKLIST.md § S8.2).
 //
 // A method with no tier is not remote-callable at all. The native-host methods
@@ -56,15 +58,32 @@ var (
 // method is classified there, one way or the other, or the test fails.
 type RemoteDispatcher struct {
 	methods map[string]remoteBoundMethod
-	// approve gates admin calls. nil refuses every one of them, which is the
-	// state until the desktop-side approval prompt exists (#462).
-	approve func(method string) error
+
+	mu sync.RWMutex
+	// approve gates admin calls. nil refuses every one of them.
+	approve RemoteApprover
 }
+
+// RemoteApprovalRequest is one admin call as the desktop is asked about it:
+// who is asking, for what, why that method is gated, and the arguments as
+// sent. They have already been decoded once, so what the prompt shows is a
+// call that would run.
+type RemoteApprovalRequest struct {
+	Device string
+	Method string
+	Reason string
+	Args   []json.RawMessage
+}
+
+// RemoteApprover decides one admin call. nil allows it; an error refuses it
+// and is what the caller is told. RemoteApprovals.Ask is the implementation.
+type RemoteApprover func(ctx context.Context, req RemoteApprovalRequest) error
 
 type remoteBoundMethod struct {
 	fn      reflect.Value
 	in      []reflect.Type
 	tier    RemoteTier
+	reason  string
 	hasBody bool // returns (T, error) rather than just error
 }
 
@@ -110,7 +129,7 @@ func resolveRemoteMethod(tv reflect.Value, name string, entry RemoteMethod) (rem
 			return remoteBoundMethod{}, fmt.Errorf("parameter %d cannot be decoded from JSON", i)
 		}
 	}
-	return remoteBoundMethod{fn: fn, in: in, tier: entry.Tier, hasBody: ft.NumOut() == 2}, nil
+	return remoteBoundMethod{fn: fn, in: in, tier: entry.Tier, reason: entry.Reason, hasBody: ft.NumOut() == 2}, nil
 }
 
 var errorType = reflect.TypeOf((*error)(nil)).Elem()
@@ -121,22 +140,25 @@ func (d *RemoteDispatcher) Tier(method string) (RemoteTier, bool) {
 	return m.tier, ok
 }
 
+// SetApprover installs what admin calls wait on. Without one they are refused.
+func (d *RemoteDispatcher) SetApprover(approve RemoteApprover) {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	d.approve = approve
+}
+
 // Invoke calls one allowlisted method with JSON-encoded positional arguments,
 // the shape the generated bindings send, and returns what it returned. An
 // error from the method itself is returned as is; the sentinel errors above
 // mark refusals that never reached it.
-func (d *RemoteDispatcher) Invoke(method string, args []json.RawMessage) (any, error) {
+//
+// device names the caller for an approval prompt, and ctx ends the wait for
+// one. The arguments are decoded before the desktop is asked, so a call that
+// could not run never puts a prompt on screen.
+func (d *RemoteDispatcher) Invoke(ctx context.Context, device, method string, args []json.RawMessage) (any, error) {
 	m, ok := d.methods[method]
 	if !ok {
 		return nil, fmt.Errorf("%w: %s", ErrRemoteMethodUnknown, method)
-	}
-	if m.tier == RemoteTierAdmin {
-		if d.approve == nil {
-			return nil, fmt.Errorf("%w: %s", ErrRemoteApprovalRequired, method)
-		}
-		if err := d.approve(method); err != nil {
-			return nil, fmt.Errorf("%w: %s: %w", ErrRemoteApprovalRequired, method, err)
-		}
 	}
 	if len(args) != len(m.in) {
 		return nil, fmt.Errorf("%w: %s takes %d arguments, got %d", ErrRemoteBadArgs, method, len(m.in), len(args))
@@ -148,6 +170,17 @@ func (d *RemoteDispatcher) Invoke(method string, args []json.RawMessage) (any, e
 			return nil, fmt.Errorf("%w: %s argument %d: %w", ErrRemoteBadArgs, method, i, err)
 		}
 		in[i] = v.Elem()
+	}
+	if m.tier == RemoteTierAdmin {
+		d.mu.RLock()
+		approve := d.approve
+		d.mu.RUnlock()
+		if approve == nil {
+			return nil, fmt.Errorf("%w: %s", ErrRemoteApprovalRequired, method)
+		}
+		if err := approve(ctx, RemoteApprovalRequest{Device: device, Method: method, Reason: m.reason, Args: args}); err != nil {
+			return nil, fmt.Errorf("%w: %s: %w", ErrRemoteApprovalRequired, method, err)
+		}
 	}
 	out := m.fn.Call(in)
 	var result any

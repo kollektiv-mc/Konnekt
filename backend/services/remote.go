@@ -383,7 +383,7 @@ func (s *RemoteService) handleRPC(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	tier, known := s.dispatcher.Tier(req.Method)
-	result, err := s.dispatcher.Invoke(req.Method, req.Args)
+	result, err := s.dispatcher.Invoke(r.Context(), session.Device, req.Method, req.Args)
 	// One line per call, naming the method and the device and never an
 	// argument or a result: a config file's content or a console command are
 	// both arguments, and neither belongs in konnekt.log (§ S8.9). A name the
