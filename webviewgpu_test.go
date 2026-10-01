@@ -4,11 +4,26 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
 	"github.com/wailsapp/wails/v2/pkg/options/linux"
 )
+
+// symlinkOrSkip links newname to oldname. Windows refuses a symlink without
+// Developer Mode or elevation, which says nothing about the code under test,
+// so there the test skips; everywhere else a failure is a failure. CI's Linux
+// leg still runs these unskipped.
+func symlinkOrSkip(t *testing.T, oldname, newname string) {
+	t.Helper()
+	if err := os.Symlink(oldname, newname); err != nil {
+		if runtime.GOOS == "windows" {
+			t.Skipf("cannot create a symlink on Windows without Developer Mode or elevation: %v", err)
+		}
+		t.Fatal(err)
+	}
+}
 
 // A fake /sys/class/drm: one directory per card, with the PCI vendor id and
 // the driver the card is bound to, plus the connector entries a real tree
@@ -28,9 +43,7 @@ func fakeDRM(t *testing.T, cards ...struct{ vendor, driver string }) string {
 		if err := os.MkdirAll(drivers, 0o755); err != nil {
 			t.Fatal(err)
 		}
-		if err := os.Symlink(drivers, filepath.Join(device, "driver")); err != nil {
-			t.Fatal(err)
-		}
+		symlinkOrSkip(t, drivers, filepath.Join(device, "driver"))
 		// Not a card, however NVIDIA-looking its contents are.
 		connector := filepath.Join(dir, "card"+string(rune('0'+i))+"-HDMI-A-1", "device")
 		if err := os.MkdirAll(connector, 0o755); err != nil {
