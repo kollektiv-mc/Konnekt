@@ -1,7 +1,10 @@
 package services
 
 import (
+	"crypto/rand"
+	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"strconv"
@@ -45,14 +48,22 @@ type remoteFrame struct {
 	Data  json.RawMessage `json:"data,omitempty"`
 }
 
+// remoteHello also names the run, so a client can send it back with "since"
+// and the server, not the client, decides whether that number belongs to this
+// run. Sequence numbers are only comparable inside one run.
 type remoteHello struct {
-	Replayed int  `json:"replayed"`
-	Gap      bool `json:"gap"`
+	Replayed int    `json:"replayed"`
+	Gap      bool   `json:"gap"`
+	Run      string `json:"run"`
 }
 
 type remoteHub struct {
-	mu      sync.Mutex
-	cap     int
+	mu  sync.Mutex
+	cap int
+	// run identifies one listening session. A "since" is only meaningful
+	// against the run that numbered it, which is what lets replay refuse a
+	// client from before a restart even when its number happens to be in range.
+	run     string
 	ring    []remoteFrame
 	seq     uint64
 	clients map[*remoteClient]struct{}
@@ -67,6 +78,23 @@ type remoteClient struct {
 
 func newRemoteHub(capacity int) *remoteHub {
 	return &remoteHub{cap: capacity, clients: map[*remoteClient]struct{}{}}
+}
+
+// newRun starts a new run: a fresh identity and an empty buffer. Start calls it,
+// so a Stop and Start inside one process is a new run too, and a client that was
+// fully caught up at Stop is told it missed whatever was emitted while the
+// listener was down, which was never numbered. seq is not reset: it stays
+// monotonic for the process.
+func (h *remoteHub) newRun() error {
+	var b [8]byte
+	if _, err := rand.Read(b[:]); err != nil {
+		return fmt.Errorf("remote: run id: %w", err)
+	}
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	h.run = hex.EncodeToString(b[:])
+	h.ring = nil
+	return nil
 }
 
 // publish numbers and buffers an event and hands it to every client. It runs
@@ -102,23 +130,37 @@ func (h *remoteHub) publish(event string, data any) {
 	}
 }
 
-// replay returns the frames after since, the latest sequence number, and
-// whether the buffer no longer reaches back to since. since 0 asks for
-// nothing but the live stream, which is what a fresh page wants.
-func (h *remoteHub) replay(since uint64) ([]remoteFrame, uint64, bool) {
+// replay returns the frames after since, the latest sequence number, whether
+// the buffer no longer reaches back to since, and the current run. since 0 asks
+// for nothing but the live stream, which is what a fresh page wants.
+//
+// A since with a missing or different run belongs to another run, or to none
+// the client can name, and is a gap with no frames: the numbering is unrelated
+// to this run's, so even an in-range number would replay the wrong events.
+//
+// Within a run, two more cases cannot be made whole and report a gap with no
+// frames. A since ahead of the latest number is not one this run issued, and a
+// since behind it with nothing buffered means closeAll forgot the buffer.
+func (h *remoteHub) replay(since uint64, run string) ([]remoteFrame, uint64, bool, string) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
-	if since == 0 || since >= h.seq {
-		return nil, h.seq, false
+	if since == 0 {
+		return nil, h.seq, false, h.run
 	}
-	gap := len(h.ring) > 0 && h.ring[0].Seq > since+1
+	if run == "" || run != h.run || since > h.seq || (since < h.seq && len(h.ring) == 0) {
+		return nil, h.seq, true, h.run
+	}
+	if since == h.seq {
+		return nil, h.seq, false, h.run
+	}
+	gap := h.ring[0].Seq > since+1
 	var out []remoteFrame
 	for _, f := range h.ring {
 		if f.Seq > since {
 			out = append(out, f)
 		}
 	}
-	return out, h.seq, gap
+	return out, h.seq, gap, h.run
 }
 
 func (h *remoteHub) add(c *remoteClient) {
@@ -187,9 +229,16 @@ func (s *RemoteService) handleWS(w http.ResponseWriter, r *http.Request) {
 	slog.Info("remote: socket opened", "device", session.Device, "since", since)
 
 	// Hello and replay are queued before the client joins the hub, so nothing
-	// live can slip in ahead of them and arrive out of order.
-	frames, latest, gap := s.hub.replay(since)
-	if !c.queue(remoteFrame{Seq: latest, Event: remoteHelloEvent}, remoteHello{Replayed: len(frames), Gap: gap}) {
+	// live can slip in ahead of them and arrive out of order. They are queued
+	// before writePump starts, so they must fit the send buffer: a replay that
+	// would not is not attempted, and the hello says gap so the client
+	// re-primes like a fresh page. Disconnecting instead would loop, since the
+	// client's reconnect carries the same "since" and meets the same wall.
+	frames, latest, gap, run := s.hub.replay(since, r.URL.Query().Get("run"))
+	if len(frames)+1 > remoteSendBuffer {
+		frames, gap = nil, true
+	}
+	if !c.queue(remoteFrame{Seq: latest, Event: remoteHelloEvent}, remoteHello{Replayed: len(frames), Gap: gap, Run: run}) {
 		c.close()
 		return
 	}
@@ -224,9 +273,9 @@ func (c *remoteClient) queueEncoded(f remoteFrame) bool {
 	case c.send <- encoded:
 		return true
 	default:
-		// The replay alone overflowed the client's buffer; a reconnect with the
-		// same "since" will hit the same wall, so tell it to start fresh.
-		slog.Warn("remote: replay exceeds client buffer, disconnecting")
+		// handleWS checks that the replay fits before queueing it, so this is
+		// not reached by a replay; it guards the invariant, not a path.
+		slog.Warn("remote: client send buffer full, disconnecting")
 		return false
 	}
 }

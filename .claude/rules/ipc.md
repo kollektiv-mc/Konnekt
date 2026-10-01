@@ -41,6 +41,15 @@ no Go process. Reverting there would make it read-only. `lib/ipc.ts`'s
 bridge-present rejection reverts, records and rethrows. Reads are unaffected
 and still degrade to defaults.
 
+**Two writers of `window.go` and `window.runtime`, and only two.** The "generated
+bindings only" rule is about callers: a tile or a store never touches
+`window.go` itself. Something has to supply it where Wails does not, and that is
+`lib/remoteRuntime.ts` (a browser served by the Remote Access listener, picked
+by `isRemoteBrowser()`) and `demo/backend/` (the browser demo). Its method list
+is `Object.keys` of the bindings, so it cannot drift from them, and
+`remoteRuntime.test.ts` reads `wailsjs/runtime/runtime.js` to hold the
+`window.runtime` half complete. Do not add a third.
+
 ## Per-server scoping
 
 Three rules, one per layer, each held by a test that fails on the next

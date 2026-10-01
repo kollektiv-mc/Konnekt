@@ -1,8 +1,9 @@
-import { describe, it, expect, afterEach } from 'vitest'
-import { errMsg, hasWailsBridge, readOr } from './ipc'
+import { describe, it, expect, afterEach, vi } from 'vitest'
+import { errMsg, hasWailsBridge, isRemoteBrowser, readOr } from './ipc'
 
 afterEach(() => {
   Reflect.deleteProperty(window, 'go')
+  vi.unstubAllEnvs()
 })
 
 describe('errMsg', () => {
@@ -49,5 +50,23 @@ describe('readOr', () => {
         throw new TypeError("Cannot read properties of undefined (reading 'main')")
       }, null),
     ).resolves.toBeNull()
+  })
+})
+
+describe('isRemoteBrowser', () => {
+  it('is true for a production build with no bridge, which is what the listener serves', () => {
+    vi.stubEnv('PROD', true)
+    expect(isRemoteBrowser()).toBe(true)
+  })
+
+  it('is false on the desktop, where Wails sets window.go before the bundle runs', () => {
+    vi.stubEnv('PROD', true)
+    Object.assign(window, { go: {} })
+    expect(isRemoteBrowser()).toBe(false)
+  })
+
+  it('is false in the Vite dev server, which has no bridge and is not remote', () => {
+    vi.stubEnv('PROD', false)
+    expect(isRemoteBrowser()).toBe(false)
   })
 })
