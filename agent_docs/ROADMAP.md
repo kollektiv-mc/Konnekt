@@ -272,7 +272,22 @@ only ongoing cost is the remote-readiness checklist under "Adding a tile" below.
   supplies an authorizer. Phases 3 and 4 are what expose the dashboard, and
   they still wait.
 
-Phases 2–5 (frontend remote runtime, auth, cloudflared tunnel, remote-mode
+- [x] **Phase 2 — Frontend remote runtime** ([#44](../../issues/44)). What is on
+  disk: `lib/remoteRuntime.ts` installs `window.go.main.App` (one function per
+  export of the generated bindings, each a `POST /api/rpc`) and
+  `window.runtime` (the event registry, fed by `GET /ws`, with `?since=`
+  reconnects and a resync when a replay cannot cover the gap), and
+  `components/RemoteLoginGate.tsx` is the page a 401 lands on. `main.tsx`
+  takes that path only when `isRemoteBrowser()` (a production build with no
+  `window.go`), through dynamic imports, so the desktop path is unchanged and
+  the entry chunk does not carry either. Unreachable for the same reason as
+  Phase 1: nothing starts the listener (Phase 4 and #47) and the gate has no
+  `/api/login` to post to until Phase 3, where it reads a 404 or 405 as "does
+  not accept sign-ins yet". It also fixed two replay bugs in `remote_ws.go`:
+  a stale or emptied `since` now reports a gap, and a replay too big for the
+  send buffer is answered with one rather than a closed socket.
+
+Phases 3–5 (auth, cloudflared tunnel, remote-mode
 adaptations) are filed in [GitHub Issues](../../issues), labelled
 `milestone:remote-access`. Their security acceptance criteria are § S8 of
 `agent_docs/SECURITY_CHECKLIST.md`, checked by `/security-check`.
