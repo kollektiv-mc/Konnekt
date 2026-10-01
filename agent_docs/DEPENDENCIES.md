@@ -56,6 +56,7 @@ with another library doing the same job.
 | `github.com/wailsapp/wails/v2` | App shell — Go↔WebView bridge, IPC binding generation |
 | `golang.org/x/sys` | Windows syscalls for Job Object child-process cleanup (`backend/services/server_windows.go`) |
 | `github.com/gorilla/websocket` | The Remote Access event mirror (`backend/services/remote_ws.go`, #43): the EventBus over `GET /ws`. Already in the tree as Wails' own transitive dependency at the same version, so promoting it to a direct require adds no code to vet, and it is the one WebSocket library the Go ecosystem has kept maintained at that footprint. `golang.org/x/net/websocket` is also already present and was not used: its own package doc points elsewhere, and it lacks ping/pong control and per-message deadlines. Its `Upgrader.CheckOrigin` is handed the same Host allowlist the request guard uses, never its default |
+| `golang.org/x/crypto` | `argon2` only: the Remote Access password hash (`backend/services/remote_auth.go`, #45). `agent_docs/SECURITY_CHECKLIST.md` § S8.4 pins argon2id, which the standard library does not have. Already in the tree as Wails' own transitive dependency at the same version, so promoting it to a direct require adds no code to vet. The comparison is `crypto/subtle` and every token is `crypto/rand`, both standard library |
 
 All other Go modules in `go.mod` are transitive (`// indirect`), pulled in by
 the direct dependencies above (mostly Wails' own runtime/webview/toast

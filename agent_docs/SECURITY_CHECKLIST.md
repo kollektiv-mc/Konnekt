@@ -126,8 +126,10 @@ scheduler RCON block.
 
 **S2.2 Files that hold a credential are owner-only.**
 Holds when: `server.properties` keeps its existing mode when Konnekt rewrites it,
-and every copy Konnekt makes of it (the config editor's `.bak` files under
-`<dataDir>/config_backups/`) is created `0600`.
+every copy Konnekt makes of it (the config editor's `.bak` files under
+`<dataDir>/config_backups/`) is created `0600`, and `remote.json` (the Remote
+Access password hash and device token hashes, added with #45) is written
+through `WritePrivateDataFile`, which is `0600`.
 Verify: `grep -rn 'writeFileAtomic(\|OpenFile(\|WriteFile(' --include=*.go backend | grep -v _test`
 and check the mode at each call that can touch `server.properties`.
 
@@ -311,11 +313,12 @@ then every item is `n/a`, but read them before any Remote Access work starts:
 they are the acceptance criteria.
 
 The files exist since #43 (the listener, the allowlist dispatcher and the
-event mirror), so the items apply. Read a `fail` on S8.4, S8.5, S8.6 or S8.10
-against what is on disk: the service has no authorizer until #45 and no tunnel
-until #46, refuses every API request meanwhile, and nothing starts it before
-the settings UI in #47. Those are unbuilt phases, not reachable gaps, and the
-run should say which.
+event mirror) and #45 (`remote_auth.go`: the password, the devices and the
+sessions), so the items apply. Read a `fail` on S8.10, or on the desktop half
+of S8.6 and S8.8, against what is on disk: there is no tunnel until #46, and
+no bound method sets the password, approves a device or starts the listener
+before the settings UI in #47, so every sign-in is refused meanwhile. Those are
+unbuilt phases, not reachable gaps, and the run should say which.
 
 **S8.1 The remote surface is an allowlist, held by a test.**
 Holds when: remote dispatch reaches only methods listed with a tier (`read`,

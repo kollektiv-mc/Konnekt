@@ -290,8 +290,28 @@ only ongoing cost is the remote-readiness checklist under "Adding a tile" below.
   buffer reports a gap, and a replay too big for the send buffer is answered
   with one rather than a closed socket.
 
-Phases 3–5 (auth, cloudflared tunnel, remote-mode
-adaptations) are filed in [GitHub Issues](../../issues), labelled
+- [x] **Phase 3 — Auth** ([#45](../../issues/45)). What is on disk:
+  `backend/services/remote_auth.go` is the listener's authorizer. One password,
+  kept in `remote.json` as an argon2id hash; a backoff keyed on the approved
+  device, with one shared bucket for every caller that is not one, since the
+  source address is always loopback; device and session tokens of 256 bits
+  from `crypto/rand`, kept only as SHA-256 and carried in
+  `HttpOnly; Secure; SameSite=Strict` cookies; sessions held in memory, ended
+  by an hour's disuse, twelve hours' age, a password change or a revocation,
+  which also closes their sockets. A right password from a browser the desktop
+  has not approved earns a pending request and a code, not a session:
+  `POST /api/login` answers 202, the gate shows the code and polls
+  `POST /api/login/wait`, and `ApproveDevice` is what turns it into a session.
+  The listener now counts only an authorized request or an accepted sign-in as
+  activity, so an unauthenticated visitor cannot hold it open, and bus events
+  named `remote:` stay on the desktop. Still unreachable: no bound method sets
+  the password, approves a device or starts the listener. Those, the desktop
+  prompt and the Settings pane are #47, and until a password exists every
+  sign-in is refused.
+
+Phases 4 and 5 (cloudflared tunnel, remote-mode adaptations) and the desktop
+approval of admin-tier calls ([#462](../../issues/462)) are filed in
+[GitHub Issues](../../issues), labelled
 `milestone:remote-access`. Their security acceptance criteria are § S8 of
 `agent_docs/SECURITY_CHECKLIST.md`, checked by `/security-check`.
 
