@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { describe, it, expect, beforeAll, beforeEach, vi } from 'vitest'
 import { render, fireEvent } from '@testing-library/react'
 import * as runtime from '../../../wailsjs/runtime/runtime'
 import { ModAboutBody } from './ModAboutBody'
@@ -9,6 +9,11 @@ vi.mock('../../../wailsjs/runtime/runtime')
 // assertion here waits for the Suspense boundary to resolve rather than
 // reading the first synchronous render.
 describe('ModAboutBody', () => {
+  // The first import of the markdown chunk is what was eating findBy's 1 s budget on a cold run.
+  beforeAll(async () => {
+    await import('./MarkdownBody')
+  }, 30_000)
+
   beforeEach(() => {
     vi.clearAllMocks()
   })

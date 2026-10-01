@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
+import { describe, it, expect, beforeAll, beforeEach, afterEach, vi } from 'vitest'
 import { render, screen, cleanup, waitFor } from '@testing-library/react'
 import * as App from '../../../wailsjs/go/main/App'
 import type { models } from '../../../wailsjs/go/models'
@@ -7,6 +7,11 @@ import { SchedulerTile } from './index'
 
 vi.mock('../../../wailsjs/go/main/App')
 vi.mock('../../../wailsjs/runtime/runtime', () => ({ EventsOn: vi.fn(() => () => {}) }))
+
+// The first import of the editor chunk (React Flow) is what was eating waitFor's 1 s budget on a cold run.
+beforeAll(async () => {
+  await import('./editor/GraphEditor')
+}, 30_000)
 
 // Vitest runs with `globals: false`, so RTL cannot register its own auto-cleanup.
 afterEach(() => {
