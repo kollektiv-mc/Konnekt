@@ -254,6 +254,25 @@ export const api = {
   GetDataDir: read("/home/mc/.config/konnekt"),
   GetLogPath: read("/home/mc/.config/konnekt/konnekt.log"),
   OpenDataDir: refuse("Opening the data folder"),
+  // Remote Access is the desktop's own, and the demo has no listener to start:
+  // the pane renders in its off state and every action says why not.
+  GetRemoteAccessState: read({
+    passwordSet: false,
+    running: false,
+    addr: "",
+    clients: 0,
+    devices: [],
+    pendingDevices: [],
+    approvals: [],
+  }),
+  SetRemotePassword: refuse("Remote access"),
+  StartRemoteAccess: refuse("Remote access"),
+  StopRemoteAccess: refuse("Remote access"),
+  ApproveRemoteDevice: refuse("Remote access"),
+  DenyRemoteDevice: refuse("Remote access"),
+  RemoveRemoteDevice: refuse("Remote access"),
+  RevokeRemoteSessions: refuse("Remote access"),
+  AnswerRemoteApproval: refuse("Remote access"),
   LogClientError: async () => undefined,
   CheckForUpdates: read({
     currentVersion: "demo",

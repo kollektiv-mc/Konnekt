@@ -317,10 +317,20 @@ only ongoing cost is the remote-readiness checklist under "Adding a tile" below.
   handler's own goroutine; no answer, a no, or the phone hanging up is a 403.
   One call waits per device and four in all, each answered once, with no
   "remember this device". The log names the method and the device and never
-  an argument. Nothing can answer yet: the prompt is #47, so until then every
-  admin call is refused when its wait runs out.
+  an argument. The desktop answers through `AnswerRemoteApproval`.
 
-Phases 4 and 5 (cloudflared tunnel, remote-mode adaptations) are filed in
+- [ ] **Phase 5 — Remote-mode adaptations** ([#47](../../issues/47)). The
+  desktop's half is on disk: nine bound methods, all in `neverRemote`, over
+  the password, the listener, the devices, the sessions and the answer to an
+  admin-tier call; `remote:changed`, which tells the desktop to read
+  `GetRemoteAccessState` back and never crosses the wire; Settings > Remote
+  Access (`components/settings/RemoteAccessPane.tsx`); `RemotePrompts`, the
+  dialog a waiting device or a waiting admin call raises over whatever is
+  open; and `RemoteIndicator` in the title bar while the listener runs. The
+  listener can now be switched on, on loopback only. The browser's half is
+  still open.
+
+Phase 4 (cloudflared tunnel) and the rest of Phase 5 are filed in
 [GitHub Issues](../../issues), labelled
 `milestone:remote-access`. Their security acceptance criteria are § S8 of
 `agent_docs/SECURITY_CHECKLIST.md`, checked by `/security-check`.

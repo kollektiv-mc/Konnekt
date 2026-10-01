@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
 	"os"
@@ -85,26 +86,31 @@ func NewApp() *App {
 	}
 	// Remote Access (#43). Built here so the allowlist is resolved against the
 	// real App and remote_methods_test.go constructs exactly what ships; not
-	// started here, or anywhere yet: the settings UI (#47) is what will.
+	// started here: StartRemoteAccess is what does, from Settings.
 	dispatcher, err := services.NewRemoteDispatcher(app, remoteMethods)
 	if err != nil {
 		// Unreachable past the test, which fails on the same error. Logged
 		// rather than fatal because the desktop app is whole without remote.
 		slog.Error("remote: allowlist", "error", err)
 	}
-	// Admin-tier calls wait on the desktop (#462). Until the prompt exists
-	// (#47) nobody can answer, so each is refused when its wait runs out.
+	// Admin-tier calls wait on the desktop (#462), which answers through
+	// AnswerRemoteApproval.
 	app.remoteApprovals = services.NewRemoteApprovals()
 	if dispatcher != nil {
 		dispatcher.SetApprover(app.remoteApprovals.Ask)
 	}
 	app.remoteService = services.NewRemoteService(bus, dispatcher)
-	// Who may use it (#45). No password exists until the settings UI (#47) can
-	// set one, and without one every sign-in is refused, so the listener still
-	// answers nobody.
+	// Who may use it (#45). Until SetRemotePassword has been called every
+	// sign-in is refused, and StartRemoteAccess will not start without one.
 	app.remoteAuth = services.NewRemoteAuth()
 	app.remoteAuth.OnRevoke(app.remoteService.CloseSessions)
 	app.remoteService.SetAuthorizer(app.remoteAuth)
+	// One event for all three, with no payload: the desktop reads the state
+	// back through GetRemoteAccessState.
+	remoteChanged := services.RemoteChangeNotifier(bus)
+	app.remoteService.OnChange(remoteChanged)
+	app.remoteAuth.OnChange(remoteChanged)
+	app.remoteApprovals.OnChange(remoteChanged)
 	return app
 }
 
@@ -118,6 +124,11 @@ const quitStopGrace = 8 * time.Second
 
 func (a *App) beforeClose(ctx context.Context) bool {
 	a.schedulerService.StopScheduler()
+	// A browser's next call should find nothing listening, not a half-closed
+	// app. Stop is a no-op when remote access is off.
+	if err := a.remoteService.Stop(); err != nil {
+		slog.Warn("remote: stop on close", "error", err)
+	}
 	// Before the server stop below, so a poll cannot land mid-shutdown and
 	// rewrite command_buttons.json while the app is on its way out.
 	a.kommandsService.Stop()
@@ -893,4 +904,69 @@ func (a *App) ModInstallLocal(serverID string) error {
 
 func (a *App) DetectServerLoader(serverID string) (models.ServerConfig, error) {
 	return a.modService.DetectServerLoader(serverID)
+}
+
+// ── Remote Access, the desktop's side ───────────────────────────────────
+//
+// Every method below is in neverRemote (remote_methods.go): a browser that
+// could call one could approve itself. The state they change is announced by
+// remote:changed, and GetRemoteAccessState is what the desktop reads back.
+
+func (a *App) GetRemoteAccessState() (models.RemoteAccessState, error) {
+	return models.RemoteAccessState{
+		PasswordSet:    a.remoteAuth.PasswordSet(),
+		Running:        a.remoteService.Running(),
+		Addr:           a.remoteService.Addr(),
+		Clients:        a.remoteService.ClientCount(),
+		Devices:        a.remoteAuth.Devices(),
+		PendingDevices: a.remoteAuth.Pending(),
+		Approvals:      a.remoteApprovals.Pending(),
+	}, nil
+}
+
+// SetRemotePassword sets or replaces the one password. Replacing it signs
+// every device out.
+func (a *App) SetRemotePassword(password string) error {
+	return a.remoteAuth.SetPassword(password)
+}
+
+// StartRemoteAccess starts the listener on a free loopback port. It refuses
+// without a password: a listener nobody can sign in to is only attack surface.
+func (a *App) StartRemoteAccess() error {
+	if !a.remoteAuth.PasswordSet() {
+		return errors.New("set a password before switching remote access on")
+	}
+	_, err := a.remoteService.Start(0)
+	return err
+}
+
+func (a *App) StopRemoteAccess() error {
+	return a.remoteService.Stop()
+}
+
+// ApproveRemoteDevice approves a waiting browser under the name the person at
+// the desktop typed (§ S8.6).
+func (a *App) ApproveRemoteDevice(requestID, name string) error {
+	return a.remoteAuth.ApproveDevice(requestID, name)
+}
+
+func (a *App) DenyRemoteDevice(requestID string) error {
+	return a.remoteAuth.DenyDevice(requestID)
+}
+
+// RemoveRemoteDevice forgets an approved device and ends its sessions.
+func (a *App) RemoveRemoteDevice(deviceID string) error {
+	return a.remoteAuth.RemoveDevice(deviceID)
+}
+
+// RevokeRemoteSessions signs every device out (§ S8.5). They stay approved.
+func (a *App) RevokeRemoteSessions() error {
+	a.remoteAuth.RevokeSessions()
+	return nil
+}
+
+// AnswerRemoteApproval is the desktop's yes or no to one admin-tier call
+// (§ S8.2, #462).
+func (a *App) AnswerRemoteApproval(id string, allow bool) error {
+	return a.remoteApprovals.Answer(id, allow)
 }

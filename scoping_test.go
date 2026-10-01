@@ -43,6 +43,7 @@ var globalEvents = map[string]string{
 	"EventInstallFinished": "same installer",
 	"EventInstallFailed":   "same installer",
 	"EventUpdateProgress":  "Konnekt updating itself",
+	"EventRemoteChanged":   "remote access belongs to the app, not to a server",
 	"EventCommandsChanged": "the Kommands link belongs to the app, not to a server",
 	"EventScheduleNotify":  "a block's message to the user, shown app-wide; the block already ran against its graph's own server (#236)",
 	"EventScheduleNextRuns": "one map keyed by graph id across every server; graph ids are unique and a graph belongs to one server, " +
@@ -101,6 +102,15 @@ var serverlessMethods = map[string]string{
 	"GetScheduleBlockDefs": "static block definitions",
 	"GetScheduleNextRuns":  "keyed by graph id across every server; see EventScheduleNextRuns above",
 	"ModGetProject":        "a provider lookup, not a server operation",
+	"GetRemoteAccessState": "remote access belongs to the app",
+	"SetRemotePassword":    "remote access belongs to the app",
+	"StartRemoteAccess":    "remote access belongs to the app",
+	"StopRemoteAccess":     "remote access belongs to the app",
+	"ApproveRemoteDevice":  "remote access belongs to the app; the id is a waiting request's",
+	"DenyRemoteDevice":     "remote access belongs to the app; the id is a waiting request's",
+	"RemoveRemoteDevice":   "remote access belongs to the app; the id is a device's",
+	"RevokeRemoteSessions": "remote access belongs to the app",
+	"AnswerRemoteApproval": "remote access belongs to the app; the call it answers carried its own server id",
 	"ModGetAllVersions":    "a provider lookup, not a server operation",
 }
 

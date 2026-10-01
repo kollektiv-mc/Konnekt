@@ -961,3 +961,49 @@ func TestRemoteUserAgentIsClampedToPrintableAndShort(t *testing.T) {
 		}
 	}
 }
+
+// The desktop is told when what it shows has changed, and only then: a wrong
+// password changes nothing it shows.
+func TestRemoteAuthTellsTheDesktopOfChanges(t *testing.T) {
+	auth := newPasswordAuth(t)
+	changes := 0
+	auth.OnChange(func() { changes++ })
+	expect := func(what string, want int) {
+		t.Helper()
+		if changes != want {
+			t.Errorf("after %s: %d changes announced, want %d", what, changes, want)
+		}
+	}
+
+	expectStatus(t, "wrong password", postLogin(t, auth, wrongPass), http.StatusUnauthorized)
+	expect("a wrong password", 0)
+
+	w := postLogin(t, auth, testPassword)
+	expectStatus(t, "right password", w, http.StatusAccepted)
+	device := findCookie(w, remoteDeviceCookie)
+	expect("a device started waiting", 1)
+
+	expectStatus(t, "poll", postWait(auth, device), http.StatusAccepted)
+	expect("a poll that changed nothing", 1)
+
+	if err := auth.ApproveDevice(auth.Pending()[0].ID, "Phone"); err != nil {
+		t.Fatal(err)
+	}
+	expect("the approval", 2)
+	expectStatus(t, "collecting the session", postWait(auth, device), http.StatusNoContent)
+	expect("the session", 3)
+
+	auth.RevokeSessions()
+	expect("the revocation", 4)
+	auth.RevokeSessions()
+	expect("a revocation with nothing to revoke", 4)
+
+	if err := auth.RemoveDevice(deviceIDByName(t, auth, "Phone")); err != nil {
+		t.Fatal(err)
+	}
+	expect("removing the device", 5)
+	if err := auth.DenyDevice("nope"); !errors.Is(err, ErrRemoteRequestGone) {
+		t.Fatalf("got %v", err)
+	}
+	expect("a refused deny", 5)
+}

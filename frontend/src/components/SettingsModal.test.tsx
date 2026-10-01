@@ -5,6 +5,7 @@ import { BrowserOpenURL, EventsOn } from '../../wailsjs/runtime/runtime'
 import type { models } from '../../wailsjs/go/models'
 import { SettingsModal } from './SettingsModal'
 import { useSettingsStore } from '../stores/useSettingsStore'
+import { isRemoteBrowser } from '../lib/ipc'
 import { BUILTIN_SKINS, resolveSkin } from '../lib/theme'
 import { declaredLayer } from '../lib/layers'
 import type { AppSettings } from '../types'
@@ -13,6 +14,11 @@ vi.mock('../../wailsjs/go/main/App')
 vi.mock('../../wailsjs/runtime/runtime', () => ({
   BrowserOpenURL: vi.fn(),
   EventsOn: vi.fn(() => () => {}),
+}))
+
+vi.mock('../lib/ipc', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../lib/ipc')>()),
+  isRemoteBrowser: vi.fn(() => false),
 }))
 
 const noop = () => () => {}
@@ -141,6 +147,7 @@ describe('SettingsModal with no Wails bridge', () => {
       ['General', 'Auto-start active server'],
       ['Console', 'Show timestamps'],
       ['Notifications', 'Crash alerts'],
+      ['Remote Access', 'Approved devices'],
       ["What's New", 'View full changelog on GitHub ↗'],
       ['About', 'Version'],
     ]
@@ -371,6 +378,44 @@ describe('SettingsModal skin accent pairing', () => {
 
     await waitFor(() => expect(App.SaveAppSettings).toHaveBeenCalledTimes(1))
     expect(useSettingsStore.getState().settings.accentColor).toBe('#ff0000')
+  })
+})
+
+describe('SettingsModal Remote Access section', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    vi.mocked(App.GetAppVersion).mockResolvedValue('0.1.0')
+    vi.mocked(isRemoteBrowser).mockReturnValue(false)
+  })
+  afterEach(() => vi.mocked(isRemoteBrowser).mockReturnValue(false))
+
+  it('opens on the pane named by initialSection', () => {
+    render(<SettingsModal open onClose={() => {}} initialSection="remote" />)
+    expect(screen.getByText('Approved devices')).toBeTruthy()
+    expect(screen.queryByText('Skin')).toBeNull()
+  })
+
+  it('returns to initialSection each time it reopens', () => {
+    const { rerender } = render(<SettingsModal open onClose={() => {}} initialSection="remote" />)
+    fireEvent.click(screen.getByRole('button', { name: 'General' }))
+    rerender(<SettingsModal open={false} onClose={() => {}} initialSection="remote" />)
+    rerender(<SettingsModal open onClose={() => {}} initialSection="remote" />)
+    expect(screen.getByText('Approved devices')).toBeTruthy()
+  })
+
+  it('keeps the last pane across opens when initialSection is unset', () => {
+    const { rerender } = render(<SettingsModal open onClose={() => {}} />)
+    fireEvent.click(screen.getByRole('button', { name: 'General' }))
+    rerender(<SettingsModal open={false} onClose={() => {}} />)
+    rerender(<SettingsModal open onClose={() => {}} />)
+    expect(screen.getByText('Auto-start active server')).toBeTruthy()
+  })
+
+  it('has no Remote Access entry or pane in a browser served by the listener', () => {
+    vi.mocked(isRemoteBrowser).mockReturnValue(true)
+    render(<SettingsModal open onClose={() => {}} initialSection="remote" />)
+    expect(screen.queryByRole('button', { name: 'Remote Access' })).toBeNull()
+    expect(screen.queryByText('Approved devices')).toBeNull()
   })
 })
 

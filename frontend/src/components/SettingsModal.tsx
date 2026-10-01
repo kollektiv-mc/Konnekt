@@ -27,7 +27,8 @@ import {
 } from '../../wailsjs/go/main/App'
 import { BrowserOpenURL, EventsOn } from '../../wailsjs/runtime/runtime'
 import type { models } from '../../wailsjs/go/models'
-import { readOr } from '../lib/ipc'
+import { isRemoteBrowser, readOr } from '../lib/ipc'
+import { RemoteAccessPane } from './settings/RemoteAccessPane'
 import { CHANGELOG, CHANGELOG_URL, groupByDate } from '../lib/changelog'
 import type { ChangelogEntry } from '../lib/changelog'
 import { EVENTS } from '../lib/constants'
@@ -35,13 +36,15 @@ import { isDevBuild, isSnapshotVersion } from '../hooks/useUpdateCheck'
 
 type UpdateFn = (patch: Partial<AppSettings>) => Promise<void>
 
-type Section = 'appearance' | 'general' | 'console' | 'notifications' | 'changelog' | 'about'
+export type SettingsSection =
+  'appearance' | 'general' | 'console' | 'notifications' | 'remote' | 'changelog' | 'about'
 
-const NAV: { id: Section; label: string }[] = [
+const NAV: { id: SettingsSection; label: string }[] = [
   { id: 'appearance', label: 'Appearance' },
   { id: 'general', label: 'General' },
   { id: 'console', label: 'Console' },
   { id: 'notifications', label: 'Notifications' },
+  { id: 'remote', label: 'Remote Access' },
   { id: 'changelog', label: "What's New" },
   { id: 'about', label: 'About' },
 ]
@@ -89,11 +92,20 @@ const BG_STYLE_OPTIONS = [
 interface Props {
   open: boolean
   onClose: () => void
+  /** The pane to show each time the modal opens. Unset keeps the last one shown. */
+  initialSection?: SettingsSection
 }
 
-export function SettingsModal({ open, onClose }: Props) {
+export function SettingsModal({ open, onClose, initialSection }: Props) {
   const { settings, error, update, clearError } = useSettingsStore()
-  const [section, setSection] = useState<Section>('appearance')
+  const [section, setSection] = useState<SettingsSection>(initialSection ?? 'appearance')
+  const [wasOpen, setWasOpen] = useState(open)
+  if (open !== wasOpen) {
+    setWasOpen(open)
+    if (open && initialSection) setSection(initialSection)
+  }
+  // A browser served by the listener cannot call any Remote Access method.
+  const nav = NAV.filter((n) => n.id !== 'remote' || !isRemoteBrowser())
   const overlayRef = useRef<HTMLDivElement>(null)
   // Fetched once here rather than in each pane: General needs it to say whether
   // this build already follows the snapshot channel, and About both displays it
@@ -152,7 +164,7 @@ export function SettingsModal({ open, onClose }: Props) {
             </span>
           </div>
           <div className="mt-2 flex flex-col gap-0.5">
-            {NAV.map((item) => (
+            {nav.map((item) => (
               <button
                 key={item.id}
                 onClick={() => setSection(item.id)}
@@ -173,7 +185,7 @@ export function SettingsModal({ open, onClose }: Props) {
           {/* Header */}
           <div className="border-border-subtle border-b-hairline flex shrink-0 items-center justify-between px-5 py-3">
             <span className="text-text-primary text-sm font-semibold">
-              {NAV.find((n) => n.id === section)?.label}
+              {nav.find((n) => n.id === section)?.label}
             </span>
             <IconButton onClick={onClose} title="Close">
               <Icon icon={X} />
@@ -197,6 +209,7 @@ export function SettingsModal({ open, onClose }: Props) {
             )}
             {section === 'console' && <ConsolePane settings={settings} update={save} />}
             {section === 'notifications' && <NotificationsPane settings={settings} update={save} />}
+            {section === 'remote' && nav.some((n) => n.id === 'remote') && <RemoteAccessPane />}
             {section === 'changelog' && <ChangelogPane />}
             {section === 'about' && <AboutPane version={version} />}
           </div>

@@ -278,6 +278,9 @@ func (s *RemoteService) handleWS(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	s.hub.add(c)
+	// The desktop shows how many browsers are connected, so it hears of this
+	// one arriving as it will of it leaving (readPump).
+	s.changed()
 	go s.writePump(c)
 	s.readPump(c, session)
 }
@@ -317,6 +320,7 @@ func (s *RemoteService) readPump(c *remoteClient, session RemoteSession) {
 		s.hub.remove(c)
 		c.close()
 		slog.Info("remote: socket closed", "device", session.Device)
+		s.changed()
 	}()
 	c.conn.SetReadLimit(1024)
 	if err := c.conn.SetReadDeadline(time.Now().Add(remotePongWait)); err != nil {

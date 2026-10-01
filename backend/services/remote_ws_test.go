@@ -483,3 +483,28 @@ func TestRemoteBusEventsInTheRemoteNamespaceAreNotMirrored(t *testing.T) {
 		t.Fatalf("first frame after the remote: events is %+v, want the ordinary event at seq 1", f)
 	}
 }
+
+// § S8.8: the desktop shows the connected browsers, so it is told when one
+// arrives and when one leaves, and the count it then reads is the new one.
+func TestRemoteSocketsAnnounceArrivingAndLeaving(t *testing.T) {
+	s, _, addr := startRemote(t)
+	counts := make(chan int, 8)
+	s.OnChange(func() { counts <- s.ClientCount() })
+	next := func(what string, want int) {
+		t.Helper()
+		select {
+		case got := <-counts:
+			if got != want {
+				t.Errorf("%s: the desktop read %d connected, want %d", what, got, want)
+			}
+		case <-time.After(2 * time.Second):
+			t.Fatalf("%s was not announced", what)
+		}
+	}
+	conn := dialWS(t, addr, 0, "", "http://"+addr)
+	next("a socket arriving", 1)
+	if err := conn.Close(); err != nil {
+		t.Fatal(err)
+	}
+	next("a socket leaving", 0)
+}

@@ -37,3 +37,18 @@ type RemoteApproval struct {
 	RequestedAt int64    `json:"requestedAt"` // Unix ms
 	ExpiresAt   int64    `json:"expiresAt"`   // Unix ms; unanswered, the call is refused then
 }
+
+// RemoteAccessState is everything the desktop shows about Remote Access: the
+// Settings pane, the prompts and the title bar's indicator all read it. It is
+// the getter twin of the remote:changed event.
+type RemoteAccessState struct {
+	PasswordSet bool `json:"passwordSet"`
+	Running     bool `json:"running"`
+	// Addr is the listener's loopback address while running, else "".
+	Addr string `json:"addr"`
+	// Clients is how many browser tabs hold a live connection.
+	Clients        int                   `json:"clients"`
+	Devices        []RemoteDevice        `json:"devices"`
+	PendingDevices []RemotePendingDevice `json:"pendingDevices"`
+	Approvals      []RemoteApproval      `json:"approvals"`
+}

@@ -7,11 +7,13 @@ import {
 } from '../../wailsjs/runtime/runtime'
 import { IconButton } from './ui/IconButton'
 import { Icon } from './ui/Icon'
+import { RemoteIndicator } from './RemoteIndicator'
 import { Copy, Minus, Settings, Square, X } from '../lib/icons'
 import { readOr } from '../lib/ipc'
 
 interface Props {
   onOpenSettings: () => void
+  onOpenRemote?: () => void
 }
 
 /**
@@ -29,7 +31,7 @@ interface Props {
  * Everything in here is drawn by the app, so `applySkin()` themes it like any
  * other surface, which the system bar never did.
  */
-export function TitleBar({ onOpenSettings }: Props) {
+export function TitleBar({ onOpenSettings, onOpenRemote }: Props) {
   const [maximized, setMaximized] = useState(false)
 
   // No Wails event reports a change of window state, so the DOM's own resize
@@ -102,6 +104,7 @@ export function TitleBar({ onOpenSettings }: Props) {
         <span className="text-accent font-display text-sm font-black tracking-tight">Konnekt</span>
       </div>
       <div className="flex h-full items-center gap-0.5 pr-2">
+        <RemoteIndicator onOpen={onOpenRemote ?? (() => {})} />
         <IconButton className="titlebar-no-drag" onClick={onOpenSettings} title="Settings">
           <Icon icon={Settings} />
         </IconButton>

@@ -89,4 +89,13 @@ const (
 
 	// Self-update lifecycle.
 	EventUpdateProgress = "update:progress" // {percent}
+
+	// EventRemoteChanged tells the desktop that something about Remote Access
+	// changed: the listener started or stopped, a device is waiting or was
+	// answered, a session began or ended, an admin call wants approval. No
+	// payload: GetRemoteAccessState is the getter twin, and holds what a
+	// prompt needs. It is in the "remote:" namespace, which the mirror never
+	// sends to a browser (remote.go), so a phone cannot watch the desktop's
+	// prompts.
+	EventRemoteChanged = "remote:changed"
 )
