@@ -511,9 +511,9 @@
   var STAGE_LABEL = { alpha: 'ALPHA', beta: 'BETA', release: 'RELEASE', later: 'LATER' }
 
   // Both issue forms share a required "Which part of Konnekt?" dropdown, and
-  // GitHub renders the answer into the body under that heading. It is the only
-  // per-tile fact an issue carries, so it is what files a new one into the
-  // right folder. The options are fixed by .github/ISSUE_TEMPLATE/*.yml, and
+  // GitHub renders the answer into the body under that heading. It files an
+  // issue that carries none of the labels below. The options are fixed by
+  // .github/ISSUE_TEMPLATE/*.yml, and
   // frontend/scripts/check-issue-templates.mjs already keeps the two forms
   // holding the same list. An answer this does not know lands in requested/,
   // which is also where "Something else, or not sure" goes.
@@ -535,14 +535,30 @@
     updater: 'rm-release',
   }
 
-  // The one label this files by. Remote Access is not a tile, so the form has no
-  // option for it and nobody outside reports "the remote listener"; a
-  // maintainer files that work, with no dropdown answer to parse, and until now
-  // it landed in requested/ beside the folder it belongs in. The label is the
-  // only place that fact lives, and the folder it names is authored in
-  // roadmap.html, so it is looked up the way an area answer is: an unknown or
-  // missing folder still falls through to requested/.
+  // The labels this files by: the per-area `area:` labels in
+  // .github/labels.yml, one per answer above, plus `area:remote`. A form is only
+  // one way to file an issue, and one filed any other way has no dropdown
+  // heading to parse, so until the label was read every maintainer-filed issue
+  // landed in requested/ beside the folder it belongs in. Remote Access is not a
+  // tile, so the form has no option for it at all and the label is the only
+  // place that fact lives. `area:ui`, `area:build` and `area:agents` name no
+  // folder, so an issue carrying only those falls through to its form answer.
   var LABEL_FOLDERS = {
+    'area:console': 'rm-console',
+    'area:commands': 'rm-console',
+    'area:stats': 'rm-stats',
+    'area:players': 'rm-players',
+    'area:performance': 'rm-performance',
+    'area:scheduler': 'rm-scheduler',
+    'area:worlds': 'rm-worlds',
+    'area:backups': 'rm-backups',
+    'area:config': 'rm-config',
+    'area:notifications': 'rm-notifications',
+    'area:mods': 'rm-mods',
+    'area:layout': 'rm-layout',
+    'area:settings': 'rm-settings',
+    'area:server-setup': 'rm-server',
+    'area:updater': 'rm-release',
     'area:remote': 'rm-remote-access',
   }
 
@@ -604,8 +620,8 @@
   }
 
   // The label wins over the form answer: it is a maintainer's decision, where
-  // the answer is whatever a reporter picked from a list that has no entry for
-  // it. Both resolve through the same lookup and fall back to the same folder.
+  // the answer is whatever a reporter picked as the closest option. Both
+  // resolve through the same lookup and fall back to the same folder.
   function folderFor(area, labels) {
     var id = AREA_FOLDERS[area]
     labels.forEach(function (label) {

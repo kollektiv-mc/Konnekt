@@ -131,10 +131,10 @@
 #
 # Deliberately not added to the issue forms' "Which part of Konnekt?" dropdown:
 # that list is written for the person filing a bug, and nobody reports "the
-# release workflow" from the outside. It is a maintainer-applied label, which is
-# why website/roadmap.js needs no entry for it - that file maps the form answer,
-# not the label (`area:remote` below is its one exception), and anything it does
-# not know lands in requested/.
+# release workflow" from the outside. It is a maintainer-applied label, and
+# website/roadmap.js gives it no folder: the roadmap's tree has no build branch,
+# so an issue carrying it falls back to its form answer, and anything that
+# answer does not place lands in requested/.
 - name: 'area:build'
   color: 'bfd4f2'
   description: CI, releases, packaging, licensing and supply-chain checks.
@@ -147,10 +147,10 @@
 #
 # Maintainer-applied and deliberately not in the issue forms' "Which part of
 # Konnekt?" dropdown, as with `area:build`: nobody reports "the remote
-# listener" from the outside. Unlike `area:build`, this is the one label
-# website/roadmap.js files by. The roadmap page already has a `remote access/`
-# folder, and a maintainer-filed issue has no form answer to file it by, so
-# without the label it would land in requested/ beside the folder it belongs in.
+# listener" from the outside. Unlike `area:build`, website/roadmap.js files by
+# it, as it does by every per-area label above. The roadmap page already has a
+# `remote access/` folder, and a maintainer-filed issue has no form answer to
+# file it by, so without the label it would land in requested/ beside it.
 - name: 'area:remote'
   color: 'bfd4f2'
   description: 'Remote Access: the listener, its dispatcher, sign-in and tunnel.'
