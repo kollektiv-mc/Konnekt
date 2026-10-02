@@ -971,6 +971,31 @@ func (a *RemoteAuth) ServeLoginWait(w http.ResponseWriter, r *http.Request) bool
 	return true
 }
 
+// ServeLogout is POST /api/logout: it ends the session the request carries
+// and clears its cookie. The device stays approved, so signing in again takes
+// the password and nothing else. It answers 204 whether or not there was a
+// session to end: a sign-out that fails is not something a page can act on.
+func (a *RemoteAuth) ServeLogout(w http.ResponseWriter, r *http.Request) {
+	defer a.flush()
+	w.Header().Set("Cache-Control", "no-store")
+	var ended []string
+	var notify func([]string)
+	if token := remoteCookieValue(r, remoteSessionCookie); token != "" {
+		key := sha256.Sum256([]byte(token))
+		a.mu.Lock()
+		if s, ok := a.sessions[key]; ok {
+			ended, notify = a.dropSessionsLocked(func(e *remoteSessionEntry) bool { return e == s })
+			if d := a.deviceLocked(s.deviceID); d != nil {
+				slog.Info("remote: signed out", "device", d.Name)
+			}
+		}
+		a.mu.Unlock()
+	}
+	setRemoteCookie(w, remoteSessionCookie, "", 0)
+	w.WriteHeader(http.StatusNoContent)
+	notifyRevoked(notify, ended)
+}
+
 // writeRemoteRetry is a 429 with Retry-After in whole seconds, rounded up so
 // a client that waits exactly that long is not refused again.
 func writeRemoteRetry(w http.ResponseWriter, wait time.Duration) {

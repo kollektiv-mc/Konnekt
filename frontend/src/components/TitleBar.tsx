@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useState } from 'react'
 import {
   Quit,
   WindowIsMaximised,
@@ -9,7 +9,13 @@ import { IconButton } from './ui/IconButton'
 import { Icon } from './ui/Icon'
 import { RemoteIndicator } from './RemoteIndicator'
 import { Copy, Minus, Settings, Square, X } from '../lib/icons'
-import { readOr } from '../lib/ipc'
+import { isRemoteBrowser, readOr } from '../lib/ipc'
+
+// Remote mode only. A dynamic import, so the desktop's entry chunk does not
+// carry lib/remoteRuntime (`pnpm check-bundle`).
+const RemoteSession = lazy(() =>
+  import('./RemoteChrome').then((m) => ({ default: m.RemoteSession })),
+)
 
 interface Props {
   onOpenSettings: () => void
@@ -78,6 +84,9 @@ export function TitleBar({ onOpenSettings, onOpenRemote }: Props) {
   // bar's × did (see app.go's beforeClose).
   const close = useCallback(() => windowCommand(Quit), [])
 
+  // The window buttons do nothing in a browser tab, so a tab has none.
+  const remote = isRemoteBrowser()
+
   return (
     // h-9 rather than the 52px the navbar header used: nothing has to line up
     // with this bar any more, and a system title bar is ~32px, so the chrome
@@ -105,26 +114,40 @@ export function TitleBar({ onOpenSettings, onOpenRemote }: Props) {
       </div>
       <div className="flex h-full items-center gap-0.5 pr-2">
         <RemoteIndicator onOpen={onOpenRemote ?? (() => {})} />
+        {remote && (
+          <Suspense fallback={null}>
+            <RemoteSession />
+          </Suspense>
+        )}
         <IconButton className="titlebar-no-drag" onClick={onOpenSettings} title="Settings">
           <Icon icon={Settings} />
         </IconButton>
-        {/* One hairline between the app's control and the window's. The close
+        {!remote && (
+          <>
+            {/* One hairline between the app's control and the window's. The close
             button is the only irreversible thing in this bar, and grouping by
             gap alone left it four pixels from a gear that opens a dialog. */}
-        <div className="border-l-hairline border-border-subtle mx-1 h-4" />
-        <IconButton className="titlebar-no-drag" onClick={minimize} title="Minimize window">
-          <Icon icon={Minus} size="sm" />
-        </IconButton>
-        <IconButton
-          className="titlebar-no-drag"
-          onClick={toggleMaximize}
-          title={maximized ? 'Restore window' : 'Maximize window'}
-        >
-          <Icon icon={maximized ? Copy : Square} size="sm" />
-        </IconButton>
-        <IconButton className="titlebar-no-drag" tone="danger" onClick={close} title="Close window">
-          <Icon icon={X} size="sm" />
-        </IconButton>
+            <div className="border-l-hairline border-border-subtle mx-1 h-4" />
+            <IconButton className="titlebar-no-drag" onClick={minimize} title="Minimize window">
+              <Icon icon={Minus} size="sm" />
+            </IconButton>
+            <IconButton
+              className="titlebar-no-drag"
+              onClick={toggleMaximize}
+              title={maximized ? 'Restore window' : 'Maximize window'}
+            >
+              <Icon icon={maximized ? Copy : Square} size="sm" />
+            </IconButton>
+            <IconButton
+              className="titlebar-no-drag"
+              tone="danger"
+              onClick={close}
+              title="Close window"
+            >
+              <Icon icon={X} size="sm" />
+            </IconButton>
+          </>
+        )}
       </div>
     </header>
   )

@@ -1,8 +1,26 @@
 import { describe, it, expect, afterEach, beforeEach, vi } from 'vitest'
-import { GetServerStatus } from '../../wailsjs/go/main/App'
+import {
+  GetActiveServerID,
+  GetServerStatus,
+  SaveActiveLayout,
+  SaveActiveTiles,
+  SaveAppSettings,
+  SaveLayoutPreset,
+  SaveServerConfig,
+  SaveTileLayouts,
+  SetActiveServerID,
+} from '../../wailsjs/go/main/App'
+import { hasWailsBridge, isRemoteBrowser } from './ipc'
 import appSource from '../../wailsjs/go/main/App.js?raw'
 import runtimeSource from '../../wailsjs/runtime/runtime.js?raw'
-import { connectEvents, installRemoteRuntime, probeSession } from './remoteRuntime'
+import {
+  connectEvents,
+  getRemoteClient,
+  installRemoteRuntime,
+  probeSession,
+  signOut,
+  subscribeRemoteClient,
+} from './remoteRuntime'
 
 // A reply the way the listener writes it: JSON for the dispatcher's answers,
 // plain text for the guard's and the authorizer's.
@@ -67,6 +85,13 @@ afterEach(() => {
 })
 
 describe('the installed globals', () => {
+  it('still reads as a remote browser once its bridge is installed', () => {
+    vi.stubEnv('PROD', true)
+    expect(hasWailsBridge()).toBe(true)
+    expect(isRemoteBrowser()).toBe(true)
+    vi.unstubAllEnvs()
+  })
+
   it('has a function for every export of the generated App bindings', () => {
     const exported = [...appSource.matchAll(/^export function (\w+)/gm)].map((m) => m[1])
     expect(exported.length).toBeGreaterThan(50)
@@ -189,13 +214,13 @@ describe('a bound call', () => {
 })
 
 describe('probeSession', () => {
-  it('reads a read-tier method and maps the status', async () => {
-    fetchMock.mockResolvedValueOnce(json({ result: '0.1.0' }))
+  it('reads GET /api/session with the cookie and maps the status', async () => {
+    fetchMock.mockResolvedValueOnce(json({ device: 'Pixel', admin: [] }))
     await expect(probeSession()).resolves.toBe('ok')
-    expect(JSON.parse(String(fetchMock.mock.calls[0][1]?.body))).toEqual({
-      method: 'GetAppVersion',
-      args: [],
-    })
+    const [url, init] = fetchMock.mock.calls[0]
+    expect(url).toBe('/api/session')
+    expect(init?.credentials).toBe('same-origin')
+    expect(getRemoteClient().device).toBe('Pixel')
     fetchMock.mockResolvedValueOnce(text('unauthorized', 401))
     await expect(probeSession()).resolves.toBe('locked')
     fetchMock.mockResolvedValueOnce(text('bad gateway', 502))
@@ -204,8 +229,14 @@ describe('probeSession', () => {
     await expect(probeSession()).resolves.toBe('unreachable')
   })
 
+  it('is still ok, with an empty device, for a 200 that is not JSON', async () => {
+    fetchMock.mockResolvedValueOnce(text('<html>captive portal</html>', 200))
+    await expect(probeSession()).resolves.toBe('ok')
+    expect(getRemoteClient().device).toBe('')
+  })
+
   it('counts as the confirmation a later 401 is read against', async () => {
-    fetchMock.mockResolvedValueOnce(json({ result: '0.1.0' }))
+    fetchMock.mockResolvedValueOnce(json({ device: 'Pixel', admin: [] }))
     await probeSession()
     fetchMock.mockResolvedValueOnce(text('unauthorized', 401))
     await expect(GetServerStatus('s1')).rejects.toThrow()
@@ -216,6 +247,193 @@ describe('probeSession', () => {
     fetchMock.mockResolvedValue(text('unauthorized', 401))
     await probeSession()
     expect(onLocked).not.toHaveBeenCalled()
+  })
+})
+
+describe('the selected server', () => {
+  const rpcMethods = () =>
+    fetchMock.mock.calls.map(([, init]) => JSON.parse(String(init?.body)).method)
+
+  it('asks the desktop once, then answers from memory', async () => {
+    fetchMock.mockResolvedValue(json({ result: 's1' }))
+    await expect(GetActiveServerID()).resolves.toBe('s1')
+    await expect(GetActiveServerID()).resolves.toBe('s1')
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    expect(rpcMethods()).toEqual(['GetActiveServerID'])
+  })
+
+  it('keeps a choice to itself and returns it', async () => {
+    await SetActiveServerID('s2')
+    expect(fetchMock).not.toHaveBeenCalled()
+    await expect(GetActiveServerID()).resolves.toBe('s2')
+    expect(fetchMock).not.toHaveBeenCalled()
+  })
+
+  it('lets a choice made before the first read win over a slow desktop answer', async () => {
+    let answer: (r: Response) => void = () => {}
+    fetchMock.mockReturnValueOnce(new Promise<Response>((resolve) => (answer = resolve)))
+    const read = GetActiveServerID()
+    await SetActiveServerID('s2')
+    answer(json({ result: 's1' }))
+    await expect(read).resolves.toBe('s2')
+    await expect(GetActiveServerID()).resolves.toBe('s2')
+  })
+})
+
+describe('what a tab keeps to itself', () => {
+  it('resolves the settings and canvas saves without a request', async () => {
+    await expect(SaveAppSettings({} as never)).resolves.toBeUndefined()
+    await expect(SaveActiveTiles([])).resolves.toBeUndefined()
+    await expect(SaveActiveLayout('[]')).resolves.toBeUndefined()
+    await expect(SaveTileLayouts({})).resolves.toBeUndefined()
+    expect(fetchMock).not.toHaveBeenCalled()
+  })
+
+  it('still sends a named preset, which is a deliberate save', async () => {
+    fetchMock.mockResolvedValue(json({}))
+    await SaveLayoutPreset('Mine', '[]')
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('an admin-tier call', () => {
+  const adminSession = () => {
+    fetchMock.mockResolvedValueOnce(json({ device: 'Pixel', admin: ['SaveServerConfig'] }))
+    return probeSession()
+  }
+  interface Gate {
+    resolve: (r: Response) => void
+    reject: (e: unknown) => void
+  }
+  const pending = (): Gate => {
+    const gate = {} as Gate
+    fetchMock.mockReturnValueOnce(
+      new Promise<Response>((resolve, reject) => {
+        gate.resolve = resolve
+        gate.reject = reject
+      }),
+    )
+    return gate
+  }
+  const save = () => SaveServerConfig({} as never)
+
+  it('is listed as waiting while in flight and removed on success', async () => {
+    await adminSession()
+    const gate = pending()
+    const watcher = vi.fn()
+    subscribeRemoteClient(watcher)
+    const call = save()
+    expect(getRemoteClient().waiting).toEqual(['SaveServerConfig'])
+    expect(watcher).toHaveBeenCalledTimes(1)
+    gate.resolve(json({}))
+    await call
+    expect(getRemoteClient().waiting).toEqual([])
+    expect(watcher).toHaveBeenCalledTimes(2)
+  })
+
+  it('is removed when the call rejects', async () => {
+    await adminSession()
+    const gate = pending()
+    const call = save()
+    expect(getRemoteClient().waiting).toEqual(['SaveServerConfig'])
+    gate.reject(new TypeError('offline'))
+    await expect(call).rejects.toThrow()
+    expect(getRemoteClient().waiting).toEqual([])
+  })
+
+  it('tells subscribers until they unsubscribe', async () => {
+    await adminSession()
+    const watcher = vi.fn()
+    const off = subscribeRemoteClient(watcher)
+    off()
+    const gate = pending()
+    const call = save()
+    gate.resolve(json({}))
+    await call
+    expect(watcher).not.toHaveBeenCalled()
+  })
+
+  it('is never announced for a method that is not admin tier', async () => {
+    await adminSession()
+    const gate = pending()
+    const call = GetServerStatus('s1')
+    expect(getRemoteClient().waiting).toEqual([])
+    gate.resolve(json({ result: 1 }))
+    await call
+    expect(getRemoteClient().waiting).toEqual([])
+  })
+
+  it('counts two concurrent calls of one method and removes them one at a time', async () => {
+    await adminSession()
+    const first = pending()
+    const second = pending()
+    const a = save()
+    const b = save()
+    expect(getRemoteClient().waiting).toEqual(['SaveServerConfig', 'SaveServerConfig'])
+    first.resolve(json({}))
+    await a
+    expect(getRemoteClient().waiting).toEqual(['SaveServerConfig'])
+    second.resolve(json({}))
+    await b
+    expect(getRemoteClient().waiting).toEqual([])
+  })
+
+  it('rewrites a 403 refusal into words for whoever clicked', async () => {
+    fetchMock.mockResolvedValueOnce(
+      json(
+        { error: 'method needs desktop approval: SaveServerConfig: declined on the desktop' },
+        403,
+      ),
+    )
+    const refused = await GetServerStatus('s1').catch((e: unknown) => e)
+    expect(refused).toBeInstanceOf(Error)
+    expect((refused as Error).message).toBe('Not approved on the desktop: declined on the desktop.')
+
+    fetchMock.mockResolvedValueOnce(json({ error: 'method needs desktop approval' }, 403))
+    await expect(GetServerStatus('s1')).rejects.toThrow(
+      'This change needs approval on the desktop.',
+    )
+
+    fetchMock.mockResolvedValueOnce(text('unexpected origin', 403))
+    await expect(GetServerStatus('s1')).rejects.toThrow(/^unexpected origin$/)
+  })
+})
+
+describe('signOut', () => {
+  const stubLocation = () => {
+    const reload = vi.fn()
+    vi.stubGlobal('location', { ...window.location, reload })
+    return reload
+  }
+
+  it('posts the logout with the cookie, then reloads', async () => {
+    const reload = stubLocation()
+    fetchMock.mockResolvedValueOnce(json({}))
+    await signOut()
+    const [url, init] = fetchMock.mock.calls[0]
+    expect(url).toBe('/api/logout')
+    expect(init?.method).toBe('POST')
+    expect(init?.credentials).toBe('same-origin')
+    expect(reload).toHaveBeenCalledTimes(1)
+  })
+
+  it('reloads even when the request fails', async () => {
+    const reload = stubLocation()
+    fetchMock.mockRejectedValueOnce(new TypeError('offline'))
+    await signOut()
+    expect(reload).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('installRemoteRuntime', () => {
+  it('resets the client to no device and nothing waiting', async () => {
+    fetchMock.mockResolvedValueOnce(json({ device: 'Pixel', admin: ['SaveServerConfig'] }))
+    await probeSession()
+    fetchMock.mockReturnValueOnce(new Promise<Response>(() => {}))
+    void SaveServerConfig({} as never)
+    expect(getRemoteClient()).toEqual({ device: 'Pixel', waiting: ['SaveServerConfig'] })
+    installRemoteRuntime({ onLocked, onResync })
+    expect(getRemoteClient()).toEqual({ device: '', waiting: [] })
   })
 })
 

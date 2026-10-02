@@ -707,3 +707,117 @@ func TestRemoteStopWithdrawsACallAwaitingApproval(t *testing.T) {
 		t.Errorf("the method ran: %v", target.calls)
 	}
 }
+
+// § S8.5: signing out ends that session and no other. The device stays
+// approved, so it signs in again with the password alone.
+func TestRemoteSignOutEndsOnlyThatSession(t *testing.T) {
+	s, _ := newTestRemote(t)
+	auth := newPasswordAuth(t)
+	s.SetAuthorizer(auth)
+	var revoked []string
+	auth.OnRevoke(func(ids []string) { revoked = append(revoked, ids...) })
+	h := s.Handler()
+
+	phoneDevice, phone := signIn(t, auth, "Phone")
+	_, tablet := signIn(t, auth, "Tablet")
+	rpc := func(session *http.Cookie) int {
+		r := rpcRequest("Echo", `{"method":"Echo","args":["x"]}`)
+		r.AddCookie(session)
+		return do(h, r).Code
+	}
+	if rpc(phone) != http.StatusOK || rpc(tablet) != http.StatusOK {
+		t.Fatal("both devices should be signed in")
+	}
+	phoneSession, err := authorizeWith(auth, phone)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	w := do(h, loginThroughListener("/api/logout", "", phone))
+	expectStatus(t, "sign-out", w, http.StatusNoContent)
+	cleared := findCookie(w, remoteSessionCookie)
+	if cleared == nil || cleared.MaxAge >= 0 || cleared.Value != "" {
+		t.Errorf("sign-out should expire the session cookie, got %+v", cleared)
+	}
+	if code := rpc(phone); code != http.StatusUnauthorized {
+		t.Errorf("the signed-out session still answers %d", code)
+	}
+	if code := rpc(tablet); code != http.StatusOK {
+		t.Errorf("another device's session answers %d after someone else signed out", code)
+	}
+	if len(revoked) != 1 || revoked[0] != phoneSession.ID {
+		t.Errorf("revocation was told %v, want only %s so its sockets close", revoked, phoneSession.ID)
+	}
+	if again := signInAgain(t, auth, phoneDevice); again == nil {
+		t.Error("the device should still be approved")
+	}
+
+	// Nothing to end is still a 204, and a cross-site page cannot sign anyone out.
+	expectStatus(t, "sign-out with no session", do(h, loginThroughListener("/api/logout", "")), http.StatusNoContent)
+	foreign := loginThroughListener("/api/logout", "", tablet)
+	foreign.Header.Set("Origin", "http://evil.example")
+	expectStatus(t, "sign-out from a foreign origin", do(h, foreign), http.StatusForbidden)
+	if code := rpc(tablet); code != http.StatusOK {
+		t.Errorf("a foreign-origin sign-out ended the session (%d)", code)
+	}
+}
+
+// The page is told who the desktop says it is and which calls wait for the
+// desktop, and only once it has a session.
+func TestRemoteSessionNamesTheDeviceAndWhatWaits(t *testing.T) {
+	s, _ := newTestRemote(t)
+	get := func() *httptest.ResponseRecorder {
+		r := httptest.NewRequest(http.MethodGet, "/api/session", nil)
+		r.Host = testHost
+		return do(s.Handler(), r)
+	}
+	expectStatus(t, "no authorizer", get(), http.StatusUnauthorized)
+	s.SetAuthorizer(stubAuthorizer{err: errors.New("no")})
+	expectStatus(t, "no session", get(), http.StatusUnauthorized)
+
+	s.SetAuthorizer(stubAuthorizer{device: "Phone"})
+	w := get()
+	expectStatus(t, "signed in", w, http.StatusOK)
+	var info remoteSessionInfo
+	if err := json.Unmarshal(w.Body.Bytes(), &info); err != nil {
+		t.Fatal(err)
+	}
+	if info.Device != "Phone" {
+		t.Errorf("device %q, want the desktop's name for it", info.Device)
+	}
+	if strings.Join(info.Admin, ",") != "Danger,DangerWith" {
+		t.Errorf("admin methods %v, want the admin tier of the allowlist, sorted", info.Admin)
+	}
+	if w.Header().Get("Cache-Control") != "no-store" {
+		t.Errorf("Cache-Control %q", w.Header().Get("Cache-Control"))
+	}
+}
+
+// A browser asks for /favicon.ico unprompted. It gets the app icon when the
+// bundle has none, the bundle's own when it has, and nothing else new.
+func TestRemoteServesTheAppIconAsFavicon(t *testing.T) {
+	s, _ := newTestRemote(t)
+	get := func(path string) *httptest.ResponseRecorder {
+		r := httptest.NewRequest(http.MethodGet, path, nil)
+		r.Host = testHost
+		return do(s.Handler(), r)
+	}
+	expectStatus(t, "no icon, no bundle", get("/favicon.ico"), http.StatusNotFound)
+
+	icon := []byte("\x89PNG not really")
+	s.SetIcon(icon)
+	w := get("/favicon.ico")
+	expectStatus(t, "icon, no bundle", w, http.StatusOK)
+	if w.Header().Get("Content-Type") != "image/png" || w.Body.String() != string(icon) {
+		t.Errorf("got %q as %s", w.Body.String(), w.Header().Get("Content-Type"))
+	}
+
+	s.SetAssets(fstest.MapFS{"index.html": {Data: []byte("<!doctype html>")}})
+	expectStatus(t, "icon beside a bundle without one", get("/favicon.ico"), http.StatusOK)
+	expectStatus(t, "another missing file", get("/missing.png"), http.StatusNotFound)
+
+	s.SetAssets(fstest.MapFS{"favicon.ico": {Data: []byte("the bundle's own")}})
+	if w := get("/favicon.ico"); w.Body.String() != "the bundle's own" {
+		t.Errorf("the bundle's own icon should win, got %q", w.Body.String())
+	}
+}

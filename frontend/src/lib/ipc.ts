@@ -50,10 +50,22 @@ export function hasWailsBridge(): boolean {
  * `vite preview` of a production build has no bridge either and reads as
  * remote. That is acceptable: it is the same bundle with no Go behind it, and
  * the gate it lands on says so.
+ *
+ * The answer has to stay true after `lib/remoteRuntime.ts` has installed its
+ * own `window.go`, because components ask at render time, long after boot:
+ * the title bar to drop the window buttons, Settings to drop what only the
+ * desktop can do. "No bridge" stops being true the moment the runtime exists,
+ * so the runtime marks the `window.go` it installs and that mark is read here.
  */
 export function isRemoteBrowser(): boolean {
-  return import.meta.env.PROD && !hasWailsBridge()
+  if (!import.meta.env.PROD) return false
+  if (!hasWailsBridge()) return true
+  const go: unknown = Reflect.get(window, 'go')
+  return typeof go === 'object' && go !== null && Reflect.get(go, REMOTE_MARK) === true
 }
+
+/** The property `lib/remoteRuntime.ts` sets on the `window.go` it installs. */
+export const REMOTE_MARK = 'konnektRemote'
 
 /**
  * Run a bound read, falling back to `fallback` however it fails.

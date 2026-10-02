@@ -419,6 +419,158 @@ describe('SettingsModal Remote Access section', () => {
   })
 })
 
+// Remote mode: the page keeps settings in memory and cannot call the methods
+// that act on the host's machine, so those controls are not offered.
+describe('SettingsModal in a browser served by the listener', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    vi.mocked(App.GetAppVersion).mockResolvedValue('0.1.0')
+    vi.mocked(App.GetDataDir).mockResolvedValue('/home/user/.config/konnekt')
+    vi.mocked(App.GetLogPath).mockResolvedValue('')
+    vi.mocked(EventsOn).mockImplementation(noop)
+    vi.mocked(isRemoteBrowser).mockReturnValue(false)
+  })
+  afterEach(() => vi.mocked(isRemoteBrowser).mockReturnValue(false))
+
+  const NOTE = 'Changes here apply to this browser until it reloads.'
+
+  it('hides the General entry remotely and shows it on the desktop', () => {
+    const { unmount } = render(<SettingsModal open onClose={() => {}} />)
+    expect(screen.getByRole('button', { name: 'General' })).toBeTruthy()
+    unmount()
+
+    vi.mocked(isRemoteBrowser).mockReturnValue(true)
+    render(<SettingsModal open onClose={() => {}} initialSection="general" />)
+    expect(screen.queryByRole('button', { name: 'General' })).toBeNull()
+    expect(screen.queryByText('Auto-start active server')).toBeNull()
+  })
+
+  it('says settings last until reload on Appearance, Console and Notifications remotely', () => {
+    vi.mocked(isRemoteBrowser).mockReturnValue(true)
+    render(<SettingsModal open onClose={() => {}} />)
+    expect(screen.getByText(NOTE)).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: 'Console' }))
+    expect(screen.getByText(NOTE)).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: 'Notifications' }))
+    expect(screen.getByText(NOTE)).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: 'About' }))
+    expect(screen.queryByText(NOTE)).toBeNull()
+  })
+
+  it('does not show the reload note on the desktop', () => {
+    render(<SettingsModal open onClose={() => {}} />)
+    expect(screen.queryByText(NOTE)).toBeNull()
+  })
+
+  it('shows the data directory as text without a button remotely', async () => {
+    vi.mocked(isRemoteBrowser).mockReturnValue(true)
+    render(<SettingsModal open onClose={() => {}} />)
+    fireEvent.click(screen.getByRole('button', { name: 'About' }))
+    expect(await screen.findByText('/home/user/.config/konnekt')).toBeTruthy()
+    expect(screen.queryByRole('button', { name: /Open / })).toBeNull()
+    expect(screen.queryByText(/↗/)).toBeNull()
+  })
+
+  it('shows the data directory as a button on the desktop', async () => {
+    render(<SettingsModal open onClose={() => {}} />)
+    fireEvent.click(screen.getByRole('button', { name: 'About' }))
+    expect(
+      await screen.findByRole('button', { name: /\/home\/user\/.config\/konnekt/ }),
+    ).toBeTruthy()
+  })
+
+  it('replaces the install controls with a pointer to the desktop remotely', async () => {
+    vi.mocked(isRemoteBrowser).mockReturnValue(true)
+    for (const channel of ['stable', 'snapshot'] as const) {
+      vi.mocked(App.CheckForUpdates).mockResolvedValue(updateInfo(channel, '0.2.0'))
+      const { unmount } = render(<SettingsModal open onClose={() => {}} />)
+      fireEvent.click(screen.getByRole('button', { name: 'About' }))
+      fireEvent.click(await screen.findByRole('button', { name: 'Check for updates' }))
+
+      expect(await screen.findByText('Update Konnekt from the desktop.')).toBeTruthy()
+      expect(screen.queryByRole('button', { name: 'Download & Install' })).toBeNull()
+      expect(screen.queryByRole('button', { name: 'Install snapshot…' })).toBeNull()
+      unmount()
+    }
+    expect(App.DownloadAndInstallUpdate).not.toHaveBeenCalled()
+  })
+})
+
+// Remote mode: the page keeps settings in memory and cannot call the methods
+// that act on the host's machine, so those controls are not offered.
+describe('SettingsModal in a browser served by the listener', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    vi.mocked(App.GetAppVersion).mockResolvedValue('0.1.0')
+    vi.mocked(App.GetDataDir).mockResolvedValue('/home/user/.config/konnekt')
+    vi.mocked(App.GetLogPath).mockResolvedValue('')
+    vi.mocked(EventsOn).mockImplementation(noop)
+    vi.mocked(isRemoteBrowser).mockReturnValue(false)
+  })
+  afterEach(() => vi.mocked(isRemoteBrowser).mockReturnValue(false))
+
+  const NOTE = 'Changes here apply to this browser until it reloads.'
+
+  it('hides the General entry remotely and shows it on the desktop', () => {
+    const { unmount } = render(<SettingsModal open onClose={() => {}} />)
+    expect(screen.getByRole('button', { name: 'General' })).toBeTruthy()
+    unmount()
+
+    vi.mocked(isRemoteBrowser).mockReturnValue(true)
+    render(<SettingsModal open onClose={() => {}} initialSection="general" />)
+    expect(screen.queryByRole('button', { name: 'General' })).toBeNull()
+    expect(screen.queryByText('Auto-start active server')).toBeNull()
+  })
+
+  it('says settings last until reload on Appearance, Console and Notifications remotely', () => {
+    vi.mocked(isRemoteBrowser).mockReturnValue(true)
+    render(<SettingsModal open onClose={() => {}} />)
+    expect(screen.getByText(NOTE)).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: 'Console' }))
+    expect(screen.getByText(NOTE)).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: 'Notifications' }))
+    expect(screen.getByText(NOTE)).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: 'About' }))
+    expect(screen.queryByText(NOTE)).toBeNull()
+  })
+
+  it('does not show the reload note on the desktop', () => {
+    render(<SettingsModal open onClose={() => {}} />)
+    expect(screen.queryByText(NOTE)).toBeNull()
+  })
+
+  it('shows the data directory as text without a button remotely', async () => {
+    vi.mocked(isRemoteBrowser).mockReturnValue(true)
+    render(<SettingsModal open onClose={() => {}} />)
+    fireEvent.click(screen.getByRole('button', { name: 'About' }))
+    expect(await screen.findByText('/home/user/.config/konnekt')).toBeTruthy()
+    expect(screen.queryByRole('button', { name: /konnekt/ })).toBeNull()
+    expect(screen.queryByText(/↗/)).toBeNull()
+  })
+
+  it('shows the data directory as a button on the desktop', async () => {
+    render(<SettingsModal open onClose={() => {}} />)
+    fireEvent.click(screen.getByRole('button', { name: 'About' }))
+    expect(await screen.findByRole('button', { name: /\.config\/konnekt/ })).toBeTruthy()
+  })
+
+  it('replaces the install controls with a pointer to the desktop remotely', async () => {
+    vi.mocked(isRemoteBrowser).mockReturnValue(true)
+    for (const channel of ['stable', 'snapshot'] as const) {
+      vi.mocked(App.CheckForUpdates).mockResolvedValue(updateInfo(channel, '0.2.0'))
+      const { unmount } = render(<SettingsModal open onClose={() => {}} />)
+      fireEvent.click(screen.getByRole('button', { name: 'About' }))
+      fireEvent.click(await screen.findByRole('button', { name: 'Check for updates' }))
+
+      expect(await screen.findByText('Update Konnekt from the desktop.')).toBeTruthy()
+      expect(screen.queryByRole('button', { name: 'Download & Install' })).toBeNull()
+      expect(screen.queryByRole('button', { name: 'Install snapshot…' })).toBeNull()
+      unmount()
+    }
+    expect(App.DownloadAndInstallUpdate).not.toHaveBeenCalled()
+  })
+})
+
 // A backdropped surface that replaces the dashboard, so it sits on the modal
 // layer: above the maximized-tile overlay by value, whatever App renders first.
 describe('SettingsModal layering', () => {

@@ -1,5 +1,5 @@
 // aislop-ignore-file code-quality/duplicate-block -- #313
-import { useEffect, useRef, useState } from 'react'
+import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import { EventsOn } from '../wailsjs/runtime/runtime'
 import { StartServer } from '../wailsjs/go/main/App'
 import { Dashboard } from './components/Dashboard'
@@ -14,7 +14,6 @@ import { DisconnectConfirm } from './components/DisconnectConfirm'
 import { EulaModal } from './components/EulaModal'
 import { SettingsModal } from './components/SettingsModal'
 import type { SettingsSection } from './components/SettingsModal'
-import { RemotePrompts } from './components/RemotePrompts'
 import { useInstallStore } from './stores/useInstallStore'
 import { useLoaderStore } from './stores/useLoaderStore'
 import { useUiStore } from './stores/useUiStore'
@@ -28,10 +27,21 @@ import { useServerStatusSync } from './hooks/useServerStatus'
 import { useConsoleSync } from './hooks/useConsoleSync'
 import { useCommandsSync } from './hooks/useCommandsSync'
 import { useRemoteSync } from './hooks/useRemoteSync'
+import { useRemoteStore } from './stores/useRemoteStore'
 import { useNavWidth } from './hooks/useNavWidth'
 import { TitleBar } from './components/TitleBar'
 import { EVENTS } from './lib/constants'
 import { hasWailsBridge, isRemoteBrowser } from './lib/ipc'
+
+// Remote mode only; a dynamic import keeps lib/remoteRuntime out of the entry chunk.
+// The desktop's approval dialog, fetched the first time something waits on it:
+// most sessions never raise one, and the entry chunk has a budget.
+const RemotePrompts = lazy(() =>
+  import('./components/RemotePrompts').then((m) => ({ default: m.RemotePrompts })),
+)
+const RemoteBanner = lazy(() =>
+  import('./components/RemoteChrome').then((m) => ({ default: m.RemoteBanner })),
+)
 
 function App() {
   const { activeId } = useServerConfigStore()
@@ -81,6 +91,9 @@ function App() {
   useCommandsSync()
   // Here for the same reason: the prompts and the title bar chip both read it.
   useRemoteSync()
+  const remoteWaiting = useRemoteStore(
+    (s) => s.access.pendingDevices.length + s.access.approvals.length > 0,
+  )
 
   // Auto-start active server on launch
   useEffect(() => {
@@ -645,8 +658,18 @@ function App() {
           latter, which is how the manager opened underneath an open tile. */}
       <ServerManager />
       <DisconnectConfirm />
-      {/* A remote browser has no store to read: it never loads (useRemoteSync). */}
-      {!isRemoteBrowser() && <RemotePrompts />}
+      {/* Never in a remote browser: its store is never loaded (useRemoteSync),
+          so nothing is ever waiting there. */}
+      {remoteWaiting && (
+        <Suspense fallback={null}>
+          <RemotePrompts />
+        </Suspense>
+      )}
+      {isRemoteBrowser() && (
+        <Suspense fallback={null}>
+          <RemoteBanner />
+        </Suspense>
+      )}
       {installOpen && <ServerInstallModal />}
       {loaderDialogOpen && <LoaderUpdateDialog />}
     </div>

@@ -319,18 +319,27 @@ only ongoing cost is the remote-readiness checklist under "Adding a tile" below.
   "remember this device". The log names the method and the device and never
   an argument. The desktop answers through `AnswerRemoteApproval`.
 
-- [ ] **Phase 5 — Remote-mode adaptations** ([#47](../../issues/47)). The
-  desktop's half is on disk: nine bound methods, all in `neverRemote`, over
+- [x] **Phase 5 — Remote-mode adaptations** ([#47](../../issues/47)). The
+  desktop's half: nine bound methods, all in `neverRemote`, over
   the password, the listener, the devices, the sessions and the answer to an
   admin-tier call; `remote:changed`, which tells the desktop to read
   `GetRemoteAccessState` back and never crosses the wire; Settings > Remote
   Access (`components/settings/RemoteAccessPane.tsx`); `RemotePrompts`, the
   dialog a waiting device or a waiting admin call raises over whatever is
   open; and `RemoteIndicator` in the title bar while the listener runs. The
-  listener can now be switched on, on loopback only. The browser's half is
-  still open.
+  listener can be switched on, on loopback only. The browser's half: the
+  remote runtime answers for itself what is one person's view rather than
+  the host's (the selected server, app settings, the live canvas), so a
+  browser neither moves the desktop's nor raises a prompt on it for a
+  collapsed nav section; `GET /api/session` tells the page who the desktop
+  says it is and which calls wait for approval, and `RemoteBanner` says so
+  while one does; `POST /api/logout` and a Sign out in the title bar, where
+  the window buttons are not drawn; the controls behind native dialogs and
+  "open folder" are not drawn either, nor the settings that change how the
+  host behaves; `/favicon.ico` is the app icon. A layout for a phone's width
+  is not built: the grid is the desktop's six columns at any width.
 
-Phase 4 (cloudflared tunnel) and the rest of Phase 5 are filed in
+Phase 4 (cloudflared tunnel) is filed in
 [GitHub Issues](../../issues), labelled
 `milestone:remote-access`. Their security acceptance criteria are § S8 of
 `agent_docs/SECURITY_CHECKLIST.md`, checked by `/security-check`.

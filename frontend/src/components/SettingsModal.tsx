@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react'
 import { useSettingsStore } from '../stores/useSettingsStore'
 import type { AppSettings } from '../types'
 import {
@@ -28,11 +28,17 @@ import {
 import { BrowserOpenURL, EventsOn } from '../../wailsjs/runtime/runtime'
 import type { models } from '../../wailsjs/go/models'
 import { isRemoteBrowser, readOr } from '../lib/ipc'
-import { RemoteAccessPane } from './settings/RemoteAccessPane'
+import { PlainDataDir, ReloadNote, UpdateFromDesktop } from './settings/RemoteNotes'
 import { CHANGELOG, CHANGELOG_URL, groupByDate } from '../lib/changelog'
 import type { ChangelogEntry } from '../lib/changelog'
 import { EVENTS } from '../lib/constants'
 import { isDevBuild, isSnapshotVersion } from '../hooks/useUpdateCheck'
+
+// Fetched when the pane is first opened: most sessions never open it, and the
+// entry chunk has a budget (`pnpm check-bundle`).
+const RemoteAccessPane = lazy(() =>
+  import('./settings/RemoteAccessPane').then((m) => ({ default: m.RemoteAccessPane })),
+)
 
 type UpdateFn = (patch: Partial<AppSettings>) => Promise<void>
 
@@ -104,8 +110,10 @@ export function SettingsModal({ open, onClose, initialSection }: Props) {
     setWasOpen(open)
     if (open && initialSection) setSection(initialSection)
   }
-  // A browser served by the listener cannot call any Remote Access method.
-  const nav = NAV.filter((n) => n.id !== 'remote' || !isRemoteBrowser())
+  // A browser served by the listener cannot call any Remote Access method, and
+  // General holds host behaviour that its in-memory settings could not keep.
+  const hostOnly = (id: SettingsSection) => id === 'remote' || id === 'general'
+  const nav = NAV.filter((n) => !hostOnly(n.id) || !isRemoteBrowser())
   const overlayRef = useRef<HTMLDivElement>(null)
   // Fetched once here rather than in each pane: General needs it to say whether
   // this build already follows the snapshot channel, and About both displays it
@@ -203,13 +211,18 @@ export function SettingsModal({ open, onClose, initialSection }: Props) {
 
           {/* Body */}
           <div className="flex-1 overflow-y-auto px-5 py-2">
+            <ReloadNote section={section} />
             {section === 'appearance' && <AppearancePane settings={settings} update={save} />}
-            {section === 'general' && (
+            {section === 'general' && nav.some((n) => n.id === 'general') && (
               <GeneralPane settings={settings} update={save} version={version} />
             )}
             {section === 'console' && <ConsolePane settings={settings} update={save} />}
             {section === 'notifications' && <NotificationsPane settings={settings} update={save} />}
-            {section === 'remote' && nav.some((n) => n.id === 'remote') && <RemoteAccessPane />}
+            {section === 'remote' && nav.some((n) => n.id === 'remote') && (
+              <Suspense fallback={null}>
+                <RemoteAccessPane />
+              </Suspense>
+            )}
             {section === 'changelog' && <ChangelogPane />}
             {section === 'about' && <AboutPane version={version} />}
           </div>
@@ -779,19 +792,24 @@ function AboutPane({ version }: { version: string | null }) {
         </div>
         <div className="text-text-secondary flex items-center justify-between text-xs">
           <span>Data directory</span>
-          <button
-            onClick={openFolder}
-            className="text-text-muted text-1xs font-mono transition-colors"
-            onMouseEnter={(e) => {
-              ;(e.currentTarget as HTMLButtonElement).style.color = 'var(--accent)'
-            }}
-            onMouseLeave={(e) => {
-              ;(e.currentTarget as HTMLButtonElement).style.color = 'var(--text-muted)'
-            }}
-            title={dataDir ? `Open ${dataDir}` : 'Open config folder'}
-          >
-            <span className="max-w-56 truncate">{dataDir ?? 'Open folder'}</span> ↗
-          </button>
+          {isRemoteBrowser() ? (
+            // OpenDataDir opens a folder on the desktop: not callable from a remote browser.
+            <PlainDataDir path={dataDir} />
+          ) : (
+            <button
+              onClick={openFolder}
+              className="text-text-muted text-1xs font-mono transition-colors"
+              onMouseEnter={(e) => {
+                ;(e.currentTarget as HTMLButtonElement).style.color = 'var(--accent)'
+              }}
+              onMouseLeave={(e) => {
+                ;(e.currentTarget as HTMLButtonElement).style.color = 'var(--text-muted)'
+              }}
+              title={dataDir ? `Open ${dataDir}` : 'Open config folder'}
+            >
+              <span className="max-w-56 truncate">{dataDir ?? 'Open folder'}</span> ↗
+            </button>
+          )}
         </div>
         {logPath && (
           <div className="text-text-secondary flex items-center justify-between gap-3 text-xs">
@@ -835,7 +853,10 @@ function AboutPane({ version }: { version: string | null }) {
                 directory first.
               </span>
             )}
-            {isDevBuild(version ?? '') ? (
+            {isRemoteBrowser() ? (
+              // DownloadAndInstallUpdate replaces the host's executable: not callable from a remote browser.
+              <UpdateFromDesktop />
+            ) : isDevBuild(version ?? '') ? (
               <span className="text-text-muted text-1xs">
                 Not available in dev builds — restart via a packaged build to install updates.
               </span>

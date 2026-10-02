@@ -62,6 +62,7 @@ func main() {
 	} else {
 		app.remoteService.SetAssets(dist)
 	}
+	app.remoteService.SetIcon(appIcon)
 
 	err := wails.Run(&options.App{
 		Title:     "Konnekt",
