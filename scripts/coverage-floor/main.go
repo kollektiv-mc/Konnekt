@@ -51,10 +51,11 @@ const targetPackage = "./backend/services/"
 //	74.0% -> floor 72.0  the Remote Access listener, dispatcher and event mirror (#43);
 //	                     the floor had not moved since 51.2 while the tree climbed
 //	                     (CI's windows-latest run measured 73.0% on 2026-09-29)
+//	76.0% -> floor 74.0  the Remote Access sign-in, approvals and tunnel (#45, #462, #46)
 //
 // Coverage is a proxy, not the goal. A test that would have caught a real bug is
 // worth more than one that only moves this number.
-const floorPercent = 72.0
+const floorPercent = 74.0
 
 // Matches the tail of `go test -cover` output: "coverage: 36.7% of statements".
 var reCoverage = regexp.MustCompile(`coverage:\s+([0-9.]+)%\s+of\s+statements`)

@@ -139,6 +139,15 @@ report; it is also Vitest's own default. Its version has to match `vitest`'s
 exactly, so it carries the same caret range as `vitest` and the lockfile pins
 them to one version; bump the two together.
 
+## Binaries fetched at run time
+
+Not a module and not in any lockfile, so nothing here is seen by Dependabot or
+`govulncheck`. Each is pinned in the source and a bump is a pull request.
+
+| Binary | Pinned in | What it is for |
+|---|---|---|
+| `cloudflared` | `backend/services/tunnel.go` (`tunnelVersion`, `tunnelPins`) | The Remote Access tunnel (#46). Fetched from the release's own GitHub URL the first time the tunnel is switched on, cached under `<data dir>/bin/`, and checked against the pinned byte size and SHA-256 before every execution (`agent_docs/SECURITY_CHECKLIST.md` § S8.10). To move to a new release: take the version and each platform asset's size and SHA-256 from the release, where GitHub's own asset digest and the checksum in the release notes agree, change the three constants per platform, and run `go test ./backend/services -run Tunnel`. Run with `--no-autoupdate`, so it never replaces itself with something unpinned. macOS is not pinned: Cloudflare ships it as a `.tgz` and Konnekt is not built for it. |
+
 ## Removed
 
 - `@react-three/postprocessing` and `postprocessing` — added with the worlds

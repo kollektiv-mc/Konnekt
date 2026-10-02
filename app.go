@@ -36,6 +36,7 @@ type App struct {
 	remoteService       *services.RemoteService
 	remoteAuth          *services.RemoteAuth
 	remoteApprovals     *services.RemoteApprovals
+	tunnelService       *services.TunnelService
 	bus                 *services.EventBus
 	dataDir             string
 }
@@ -108,9 +109,13 @@ func NewApp() *App {
 	// One event for all three, with no payload: the desktop reads the state
 	// back through GetRemoteAccessState.
 	remoteChanged := services.RemoteChangeNotifier(bus)
-	app.remoteService.OnChange(remoteChanged)
 	app.remoteAuth.OnChange(remoteChanged)
 	app.remoteApprovals.OnChange(remoteChanged)
+	// The tunnel (#46) carries the loopback listener to a public URL. Binding
+	// it also registers the listener's OnChange, which is why that is not set
+	// here: the listener stopping takes the tunnel down with it.
+	app.tunnelService = services.NewTunnelService()
+	services.BindTunnel(app.remoteService, app.remoteAuth, app.tunnelService, remoteChanged)
 	return app
 }
 
@@ -180,6 +185,7 @@ func (a *App) startup(ctx context.Context) {
 	a.loaderService.SetDataDir(a.dataDir)
 	a.commandsService.SetDataDir(a.dataDir)
 	a.remoteAuth.SetDataDir(a.dataDir)
+	a.tunnelService.SetDataDir(a.dataDir)
 	// Reads Kommands' shared file on a slack timer for as long as the app
 	// lives. The responsive path is RefreshKommands, which the frontend calls
 	// on window focus; this only catches an edit made while Konnekt already
@@ -921,6 +927,7 @@ func (a *App) GetRemoteAccessState() (models.RemoteAccessState, error) {
 		Devices:        a.remoteAuth.Devices(),
 		PendingDevices: a.remoteAuth.Pending(),
 		Approvals:      a.remoteApprovals.Pending(),
+		Tunnel:         a.tunnelService.State(),
 	}, nil
 }
 
@@ -940,8 +947,26 @@ func (a *App) StartRemoteAccess() error {
 	return err
 }
 
+// StopRemoteAccess stops the listener, and with it the tunnel if one is up.
 func (a *App) StopRemoteAccess() error {
 	return a.remoteService.Stop()
+}
+
+// StartRemoteTunnel makes the running listener reachable from the internet
+// through a Cloudflare quick tunnel (#46). It returns once the work has
+// started; GetRemoteAccessState's Tunnel reports the download, the URL or the
+// failure. The listener has to be running: there is nothing to point it at
+// otherwise, and the sign-in in front of the dashboard is the listener's.
+func (a *App) StartRemoteTunnel() error {
+	addr := a.remoteService.Addr()
+	if addr == "" {
+		return errors.New("switch remote access on before opening the tunnel")
+	}
+	return a.tunnelService.Start(addr)
+}
+
+func (a *App) StopRemoteTunnel() error {
+	return a.tunnelService.Stop()
 }
 
 // ApproveRemoteDevice approves a waiting browser under the name the person at

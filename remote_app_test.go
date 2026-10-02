@@ -129,3 +129,25 @@ func TestRemoteAccessAnnouncesItsChanges(t *testing.T) {
 		t.Error("a refused action was announced as a change")
 	}
 }
+
+// § S8.8: the tunnel is off unless switched on, and it has nothing to carry
+// until the listener runs.
+func TestRemoteTunnelNeedsTheListener(t *testing.T) {
+	app := newRemoteTestApp(t)
+	state, err := app.GetRemoteAccessState()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if state.Tunnel.Status != "off" || state.Tunnel.URL != "" || state.Tunnel.Version == "" {
+		t.Errorf("a fresh app's tunnel is %+v, want off and naming its pinned version", state.Tunnel)
+	}
+	if err := app.StartRemoteTunnel(); err == nil {
+		t.Fatal("the tunnel started with the listener off")
+	}
+	if got := app.tunnelService.State().Status; got != "off" {
+		t.Errorf("the tunnel is %q after a refused start", got)
+	}
+	if err := app.StopRemoteTunnel(); err != nil {
+		t.Errorf("stopping a tunnel that is off: %v", err)
+	}
+}

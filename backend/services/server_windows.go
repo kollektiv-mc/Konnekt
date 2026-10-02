@@ -5,6 +5,7 @@ package services
 import (
 	"os/exec"
 	"strconv"
+	"syscall"
 	"unsafe"
 
 	"golang.org/x/sys/windows"
@@ -30,13 +31,27 @@ type jobobjectBasicLimitInformation struct {
 	SchedulingClass         uint32
 }
 
-// createJob creates a Windows Job Object, sets JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE
-// so the OS kills the entire Java process tree when this process exits for any reason,
-// then assigns the freshly started Java process to the job.
+// createJob ties the freshly started Java process to this process's lifetime.
 func (s *serverInstance) createJob() {
+	s.job = newKillOnCloseJob(s.cmd.Process.Pid)
+}
+
+// closeJob releases the Job Object handle after the Java process has exited normally.
+func (s *serverInstance) closeJob() {
+	closeKillOnCloseJob(s.job)
+	s.job = 0
+}
+
+// newKillOnCloseJob creates a Windows Job Object with
+// JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE and assigns the process to it, so the OS
+// kills that process and its children when this process exits for any reason.
+// It returns the job handle, or 0 when any step failed: the job is a safety
+// net, and a process without one still runs and still dies on an explicit stop.
+// Shared by the server and the tunnel, which both must not outlive Konnekt.
+func newKillOnCloseJob(pid int) uintptr {
 	job, err := windows.CreateJobObject(nil, nil)
 	if err != nil {
-		return
+		return 0
 	}
 
 	info := jobobjectBasicLimitInformation{
@@ -50,30 +65,36 @@ func (s *serverInstance) createJob() {
 	)
 	if err != nil {
 		_ = windows.CloseHandle(job) //nolint:errcheck // error-path cleanup; job is being discarded either way
-		return
+		return 0
 	}
 
-	proc, err := windows.OpenProcess(windows.PROCESS_ALL_ACCESS, false, uint32(s.cmd.Process.Pid))
+	proc, err := windows.OpenProcess(windows.PROCESS_ALL_ACCESS, false, uint32(pid))
 	if err != nil {
 		_ = windows.CloseHandle(job) //nolint:errcheck // error-path cleanup; job is being discarded either way
-		return
+		return 0
 	}
 	defer windows.CloseHandle(proc)
 
 	if err := windows.AssignProcessToJobObject(job, proc); err != nil {
 		_ = windows.CloseHandle(job) //nolint:errcheck // error-path cleanup; job is being discarded either way
-		return
+		return 0
 	}
 
-	s.job = uintptr(job)
+	return uintptr(job)
 }
 
-// closeJob releases the Job Object handle after the Java process has exited normally.
-func (s *serverInstance) closeJob() {
-	if s.job != 0 {
-		_ = windows.CloseHandle(windows.Handle(s.job)) //nolint:errcheck // normal teardown; the process is exiting regardless
-		s.job = 0
+// closeKillOnCloseJob releases a handle from newKillOnCloseJob. 0 is a no-op.
+func closeKillOnCloseJob(job uintptr) {
+	if job != 0 {
+		_ = windows.CloseHandle(windows.Handle(job)) //nolint:errcheck // normal teardown; the process is exiting regardless
 	}
+}
+
+// hideConsoleWindow stops a console program started from this GUI app from
+// opening a console window of its own. cloudflared is a console binary and
+// would flash one for as long as the tunnel runs.
+func hideConsoleWindow(cmd *exec.Cmd) {
+	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true, CreationFlags: windows.CREATE_NO_WINDOW}
 }
 
 func killTree(pid int) {

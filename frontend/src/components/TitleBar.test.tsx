@@ -62,7 +62,13 @@ describe('TitleBar', () => {
     unmount()
 
     useRemoteStore.setState({
-      access: { running: true, clients: 0, pendingDevices: [], approvals: [] } as never,
+      access: {
+        running: true,
+        clients: 0,
+        pendingDevices: [],
+        approvals: [],
+        tunnel: { status: 'off', url: '', error: '', percent: 0, version: '2026.9.3' },
+      } as never,
     })
     try {
       render(<TitleBar onOpenSettings={() => {}} onOpenRemote={onOpenRemote} />)

@@ -21,8 +21,9 @@ running Konnekt. Two reaches matter:
   hands the bridge to whoever holds a session (see S8). Every bridge item is
   written so it already holds when that happens.
 
-Bound methods on 2026-10-01: **103** (94 on 2026-09-24, plus the nine that are
-the desktop's own control over Remote Access, all in `neverRemote`)
+Bound methods on 2026-10-01: **105** (94 on 2026-09-24, plus the eleven that
+are the desktop's own control over Remote Access and its tunnel, all in
+`neverRemote`)
 (`grep -c '^func (a \*App) [A-Z]' app.go`). A different count is new surface;
 step 3 of the skill classifies it.
 
@@ -315,11 +316,9 @@ they are the acceptance criteria.
 
 The files exist since #43 (the listener, the allowlist dispatcher and the
 event mirror) and #45 (`remote_auth.go`: the password, the devices and the
-sessions), so the items apply. Since #47's desktop half the listener can be
-switched on from Settings > Remote Access, on loopback only, so S8.1 to S8.9 and
-S8.11 are live and a `fail` on any of them is a finding. Read a `fail` on S8.10
-against what is on disk: there is no tunnel until #46, which is an unbuilt
-phase and not a reachable gap, and the run should say so.
+sessions), so the items apply. The listener can be switched on from Settings >
+Remote Access (#47) and published through a tunnel (#46, `tunnel.go`), so
+every item is live and a `fail` on any of them is a finding.
 
 **S8.1 The remote surface is an allowlist, held by a test.**
 Holds when: remote dispatch reaches only methods listed with a tier (`read`,

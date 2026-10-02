@@ -16,6 +16,7 @@ const state = (over: Partial<RemoteAccessState> = {}): models.RemoteAccessState 
     devices: [],
     pendingDevices: [],
     approvals: [],
+    tunnel: { status: 'off', url: '', error: '', percent: 0, version: '2026.9.3' },
     ...over,
   })
 
@@ -30,6 +31,8 @@ describe('useRemoteStore', () => {
       App.SetRemotePassword,
       App.StartRemoteAccess,
       App.StopRemoteAccess,
+      App.StartRemoteTunnel,
+      App.StopRemoteTunnel,
       App.ApproveRemoteDevice,
       App.DenyRemoteDevice,
       App.RemoveRemoteDevice,
@@ -38,6 +41,10 @@ describe('useRemoteStore', () => {
     ]) {
       vi.mocked(fn).mockResolvedValue(undefined)
     }
+  })
+
+  it('starts with the tunnel off', () => {
+    expect(initial.access.tunnel.status).toBe('off')
   })
 
   it('refresh stores the state and marks the store loaded', async () => {
@@ -66,6 +73,8 @@ describe('useRemoteStore', () => {
     ],
     ['start', () => useRemoteStore.getState().start(), () => App.StartRemoteAccess, []],
     ['stop', () => useRemoteStore.getState().stop(), () => App.StopRemoteAccess, []],
+    ['startTunnel', () => useRemoteStore.getState().startTunnel(), () => App.StartRemoteTunnel, []],
+    ['stopTunnel', () => useRemoteStore.getState().stopTunnel(), () => App.StopRemoteTunnel, []],
     [
       'approveDevice',
       () => useRemoteStore.getState().approveDevice('r1', 'Phone'),

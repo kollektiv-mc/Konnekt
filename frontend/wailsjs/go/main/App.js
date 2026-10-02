@@ -390,12 +390,20 @@ export function StartRemoteAccess() {
   return window['go']['main']['App']['StartRemoteAccess']();
 }
 
+export function StartRemoteTunnel() {
+  return window['go']['main']['App']['StartRemoteTunnel']();
+}
+
 export function StartServer(arg1) {
   return window['go']['main']['App']['StartServer'](arg1);
 }
 
 export function StopRemoteAccess() {
   return window['go']['main']['App']['StopRemoteAccess']();
+}
+
+export function StopRemoteTunnel() {
+  return window['go']['main']['App']['StopRemoteTunnel']();
 }
 
 export function StopServer(arg1) {

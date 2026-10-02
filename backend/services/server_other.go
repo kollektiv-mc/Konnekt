@@ -2,10 +2,22 @@
 
 package services
 
-import "syscall"
+import (
+	"os/exec"
+	"syscall"
+)
 
 func (s *serverInstance) createJob() {}
 func (s *serverInstance) closeJob()  {}
+
+// newKillOnCloseJob and closeKillOnCloseJob are the Windows Job Object helpers
+// (server_windows.go). Here the process group and Pdeathsig set by
+// configureProcAttr do that job, so there is nothing to create.
+func newKillOnCloseJob(pid int) uintptr { return 0 }
+func closeKillOnCloseJob(job uintptr)   {}
+
+// hideConsoleWindow is a Windows concern; other platforms start no console.
+func hideConsoleWindow(cmd *exec.Cmd) {}
 
 // killTree signals the whole process group rooted at pid (see server_linux.go /
 // server_unix.go, which put the Java process in its own group via Setpgid before

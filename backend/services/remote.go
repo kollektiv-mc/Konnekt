@@ -210,6 +210,16 @@ func (s *RemoteService) AllowHost(host string) {
 	s.hosts[strings.ToLower(host)] = struct{}{}
 }
 
+// DisallowHost takes a hostname AllowHost added off the list again. The tunnel
+// calls it when it goes down: its hostname was only ever the listener's while
+// the tunnel pointed at it, and Cloudflare may hand the same name to someone
+// else afterwards. The loopback spellings Start adds are left alone.
+func (s *RemoteService) DisallowHost(host string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	delete(s.hosts, strings.ToLower(host))
+}
+
 // Start listens on 127.0.0.1 at port (0 picks a free one) and returns the
 // bound address. It binds loopback and nothing else (§ S8.3): a LAN or public
 // reach is the tunnel's job, and a user who wants the dashboard on the LAN

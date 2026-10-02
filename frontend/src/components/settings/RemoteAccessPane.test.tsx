@@ -19,6 +19,7 @@ const access = (over: Partial<RemoteAccessState> = {}): RemoteAccessState =>
     devices: [],
     pendingDevices: [],
     approvals: [],
+    tunnel: { status: 'off', url: '', error: '', percent: 0, version: '2026.9.3' },
     ...over,
   }) as RemoteAccessState
 
@@ -26,6 +27,8 @@ const ok = () => vi.fn(() => Promise.resolve())
 const actions = {
   start: ok(),
   stop: ok(),
+  startTunnel: ok(),
+  stopTunnel: ok(),
   setPassword: ok(),
   removeDevice: ok(),
   revokeSessions: ok(),
@@ -36,7 +39,9 @@ const actions = {
 const seed = (over: Partial<RemoteAccessState> = {}, extra: object = {}) =>
   useRemoteStore.setState({ access: access(over), loaded: true, error: null, ...actions, ...extra })
 
-const toggle = () => screen.getByRole('switch') as HTMLButtonElement
+// Two switches: remote access first, the tunnel after it.
+const toggle = () => screen.getAllByRole('switch')[0] as HTMLButtonElement
+const tunnelToggle = () => screen.getAllByRole('switch')[1] as HTMLButtonElement
 const passwordInput = () => screen.getByLabelText('New password') as HTMLInputElement
 
 const device = (over = {}) => ({
@@ -105,7 +110,7 @@ describe('RemoteAccessPane', () => {
     it('is absent while off', () => {
       seed()
       render(<RemoteAccessPane />)
-      expect(screen.queryByText('Address')).toBeNull()
+      expect(screen.queryByText('On this computer')).toBeNull()
       expect(screen.queryByRole('button', { name: 'Copy' })).toBeNull()
       expect(screen.queryByRole('button', { name: 'Open ↗' })).toBeNull()
     })
@@ -115,6 +120,7 @@ describe('RemoteAccessPane', () => {
       Object.assign(navigator, { clipboard: { writeText } })
       seed({ running: true, addr: '127.0.0.1:54321' })
       render(<RemoteAccessPane />)
+      expect(screen.getByText('On this computer')).toBeTruthy()
       expect(screen.getByText('http://127.0.0.1:54321')).toBeTruthy()
 
       fireEvent.click(screen.getByRole('button', { name: 'Copy' }))
@@ -143,6 +149,57 @@ describe('RemoteAccessPane', () => {
       seed({ running: true, addr: '127.0.0.1:1', clients })
       render(<RemoteAccessPane />)
       expect(screen.getByText(text)).toBeTruthy()
+    })
+  })
+
+  describe('the tunnel', () => {
+    const running = {
+      status: 'running',
+      url: 'https://quiet-fox.trycloudflare.com',
+      error: '',
+      percent: 0,
+      version: '2026.9.3',
+    } as RemoteAccessState['tunnel']
+
+    it('has its own section and switch', () => {
+      seed({ running: true, addr: '127.0.0.1:1' })
+      render(<RemoteAccessPane />)
+      expect(screen.getByText('Reach it from anywhere')).toBeTruthy()
+      expect(screen.getAllByRole('switch')).toHaveLength(2)
+      expect(tunnelToggle().getAttribute('aria-checked')).toBe('false')
+      expect(tunnelToggle().disabled).toBe(false)
+    })
+
+    it('starts the tunnel when switched on, and nothing else', () => {
+      seed({ running: true, addr: '127.0.0.1:1' })
+      render(<RemoteAccessPane />)
+      fireEvent.click(tunnelToggle())
+      expect(actions.startTunnel).toHaveBeenCalledTimes(1)
+      expect(actions.stopTunnel).not.toHaveBeenCalled()
+      expect(actions.start).not.toHaveBeenCalled()
+      expect(actions.stop).not.toHaveBeenCalled()
+    })
+
+    it('stops the tunnel when switched off while running', () => {
+      seed({ running: true, addr: '127.0.0.1:1', tunnel: running })
+      render(<RemoteAccessPane />)
+      expect(screen.getByText('https://quiet-fox.trycloudflare.com')).toBeTruthy()
+      fireEvent.click(tunnelToggle())
+      expect(actions.stopTunnel).toHaveBeenCalledTimes(1)
+      expect(actions.startTunnel).not.toHaveBeenCalled()
+    })
+
+    it('is disabled while remote access is off', () => {
+      seed()
+      render(<RemoteAccessPane />)
+      expect(tunnelToggle().disabled).toBe(true)
+      expect(screen.getByText(/Switch remote access on first\./)).toBeTruthy()
+    })
+
+    it('is disabled before the first read', () => {
+      seed({ running: true, addr: '127.0.0.1:1' }, { loaded: false })
+      render(<RemoteAccessPane />)
+      expect(tunnelToggle().disabled).toBe(true)
     })
   })
 
