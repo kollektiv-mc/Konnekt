@@ -4,11 +4,15 @@ import { TILE_REGISTRY } from '../tiles/registry'
  * Every registry id, in `order`'s relative sequence, with stale ids (removed
  * from the registry since this was persisted) dropped and newly-registered
  * tiles appended at the end in registry order.
+ *
+ * A missing order (null or undefined) reads as empty: Go's nil slice crosses
+ * the Wails bridge as null, which is what a first run with no settings file
+ * used to hand this (#466).
  */
-export function normalizeCrateOrder(order: readonly string[]): string[] {
+export function normalizeCrateOrder(order: readonly string[] | null | undefined): string[] {
   const known = TILE_REGISTRY.map((t) => t.id)
   const knownSet = new Set(known)
-  const kept = order.filter((id) => knownSet.has(id))
+  const kept = (order ?? []).filter((id) => knownSet.has(id))
   const keptSet = new Set(kept)
   const missing = known.filter((id) => !keptSet.has(id))
   return [...kept, ...missing]

@@ -220,6 +220,7 @@ func (s *ConfigService) GetAppSettings() (models.AppSettings, error) {
 		NavClosedSections:                map[string]bool{"widgets": true, "layouts": true},
 		CheckUpdatesOnStartup:            true,
 		UpdateChannel:                    UpdateChannelStable,
+		CrateOrder:                       []string{},
 		NavWidth:                         DefaultNavWidth,
 		SmoothScrolling:                  true,
 	}
@@ -233,6 +234,18 @@ func (s *ConfigService) GetAppSettings() (models.AppSettings, error) {
 	settings := defaults
 	if err := json.Unmarshal(data, &settings); err != nil {
 		return defaults, err
+	}
+	// An explicit null in the file sets a slice or map to nil, overwriting the
+	// default the struct started from, and a nil one crosses the Wails bridge
+	// as null where the frontend expects an array or an object (#466).
+	if settings.CrateOrder == nil {
+		settings.CrateOrder = defaults.CrateOrder
+	}
+	if settings.SchedulerPaletteClosedCategories == nil {
+		settings.SchedulerPaletteClosedCategories = defaults.SchedulerPaletteClosedCategories
+	}
+	if settings.NavClosedSections == nil {
+		settings.NavClosedSections = defaults.NavClosedSections
 	}
 	return settings, nil
 }

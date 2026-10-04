@@ -1,6 +1,7 @@
 package services
 
 import (
+	"encoding/json"
 	"path/filepath"
 	"reflect"
 	"testing"
@@ -202,6 +203,60 @@ func TestAppSettingsFillGapsInAnOlderFileWithDefaults(t *testing.T) {
 	want := map[string]bool{"widgets": true, "layouts": true}
 	if !reflect.DeepEqual(got.NavClosedSections, want) {
 		t.Errorf("NavClosedSections = %v, want %v for a key the file lacks", got.NavClosedSections, want)
+	}
+}
+
+// The collection fields must cross the Wails bridge as [] and {}, never null:
+// the frontend filters crateOrder on load, and a null there threw before
+// `loaded` was set, so the update check and the auto-start never ran (#466).
+// A nil slice or map marshals to null, so each shape of file that could leave
+// one nil is covered: no file, a file lacking the key, and a file with the key
+// explicitly null.
+func TestAppSettingsCollectionsNeverMarshalAsNull(t *testing.T) {
+	tests := []struct {
+		name string
+		file string // empty means no app_settings.json at all
+	}{
+		{name: "no file"},
+		{name: "file lacking the keys", file: `{"theme":"light"}`},
+		{
+			name: "keys set to null",
+			file: `{"crateOrder":null,"schedulerPaletteClosedCategories":null,"navClosedSections":null}`,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s := newTestConfigService(t)
+			if tt.file != "" {
+				if err := WriteDataFile(s.dataDir, "app_settings.json", []byte(tt.file)); err != nil {
+					t.Fatalf("setup: %v", err)
+				}
+			}
+
+			got, err := s.GetAppSettings()
+			if err != nil {
+				t.Fatalf("GetAppSettings: %v", err)
+			}
+			data, err := json.Marshal(got)
+			if err != nil {
+				t.Fatalf("marshal: %v", err)
+			}
+			var wire map[string]json.RawMessage
+			if err := json.Unmarshal(data, &wire); err != nil {
+				t.Fatalf("unmarshal: %v", err)
+			}
+			if raw := string(wire["crateOrder"]); raw != "[]" {
+				t.Errorf("crateOrder = %s, want []", raw)
+			}
+			if raw := string(wire["schedulerPaletteClosedCategories"]); raw != "{}" {
+				t.Errorf("schedulerPaletteClosedCategories = %s, want {}", raw)
+			}
+			// A null here must fall back to the first-run shape, not to an
+			// empty map that would open the two sections that start closed.
+			if raw := string(wire["navClosedSections"]); raw != `{"layouts":true,"widgets":true}` {
+				t.Errorf("navClosedSections = %s, want the two default-closed sections", raw)
+			}
+		})
 	}
 }
 
