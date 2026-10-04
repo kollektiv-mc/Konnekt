@@ -122,7 +122,7 @@ export function ServerManager() {
           <div className="flex-1 overflow-y-auto px-5 py-4">
             {!isNew && (
               <div className="mb-5 flex flex-col gap-5">
-                <ServerDetail config={current} refreshKey={refreshKey} />
+                <ServerDetail key={current.id} config={current} refreshKey={refreshKey} />
                 <LoaderPanel config={current} refreshKey={refreshKey} />
                 <div className="flex items-center gap-2">
                   {current.id !== activeId && (
