@@ -1,4 +1,5 @@
 import type { RemoteAccessState } from '../../stores/useRemoteStore'
+import { QrCode } from '../ui/QrCode'
 import { Toggle } from '../ui/Toggle'
 import { CopyButton } from './CopyButton'
 
@@ -36,10 +37,16 @@ function Progress({ tunnel }: { tunnel: Tunnel }) {
             <span className="text-accent text-1xs truncate font-mono">{tunnel.url}</span>
             <CopyButton text={tunnel.url} />
           </div>
-          <p className="text-text-muted mt-1.5 text-xs">
-            The address is new every time. A device approved through it is forgotten when the tunnel
-            closes, and is approved again on the next one.
-          </p>
+          <div className="mt-3 flex items-start gap-4">
+            {tunnel.url && <QrCode text={tunnel.url} />}
+            <div className="text-text-muted text-xs">
+              {tunnel.url && <p className="mb-1.5">Point a phone camera at the code to open it.</p>}
+              <p>
+                The address is new every time. A device approved through it is forgotten when the
+                tunnel closes, and is approved again on the next one.
+              </p>
+            </div>
+          </div>
         </>
       )
     case 'failed':
