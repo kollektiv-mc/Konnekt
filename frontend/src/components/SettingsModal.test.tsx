@@ -462,6 +462,20 @@ describe('SettingsModal in a browser served by the listener', () => {
     expect(screen.queryByText(NOTE)).toBeNull()
   })
 
+  // The list is the desktop's fonts, and a remote write is not persisted, so the
+  // picker is a desktop control (#444).
+  it('offers the font pickers on the desktop and not in a remote browser', () => {
+    const { unmount } = render(<SettingsModal open onClose={() => {}} />)
+    expect(screen.getByText('Fonts')).toBeTruthy()
+    expect(screen.getByRole('combobox', { name: 'Code' })).toBeTruthy()
+    unmount()
+
+    vi.mocked(isRemoteBrowser).mockReturnValue(true)
+    render(<SettingsModal open onClose={() => {}} />)
+    expect(screen.queryByText('Fonts')).toBeNull()
+    expect(screen.queryByRole('combobox', { name: 'Code' })).toBeNull()
+  })
+
   it('shows the data directory as text without a button remotely', async () => {
     vi.mocked(isRemoteBrowser).mockReturnValue(true)
     render(<SettingsModal open onClose={() => {}} />)

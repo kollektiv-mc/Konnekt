@@ -2,8 +2,17 @@ import { describe, it, expect, beforeEach, vi } from 'vitest'
 import * as App from '../../wailsjs/go/main/App'
 import { useSettingsStore } from './useSettingsStore'
 import { TILE_REGISTRY } from '../tiles/registry'
+import * as ipc from '../lib/ipc'
 
 vi.mock('../../wailsjs/go/main/App')
+// Only isRemoteBrowser is replaced: the vitest build is never PROD, so the real
+// one cannot be made to say "remote". Everything else is the module as shipped.
+vi.mock('../lib/ipc', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../lib/ipc')>()),
+  isRemoteBrowser: vi.fn(() => false),
+}))
+
+const rootFont = (role: string) => document.documentElement.style.getPropertyValue(`--font-${role}`)
 
 const ALL_TILE_IDS = TILE_REGISTRY.map((t) => t.id)
 
@@ -32,6 +41,7 @@ const DEFAULTS = {
   crateOrder: [] as string[],
   navWidth: 192,
   smoothScrolling: true,
+  fonts: {} as Record<string, string>,
 }
 
 // `hasWailsBridge()` reads window.go's presence, and jsdom has none — so the
@@ -46,6 +56,8 @@ describe('useSettingsStore', () => {
     // one test would still be armed in the next.
     vi.mocked(App.SaveAppSettings).mockResolvedValue(undefined)
     Reflect.deleteProperty(window, 'go')
+    vi.mocked(ipc.isRemoteBrowser).mockReturnValue(false)
+    document.documentElement.removeAttribute('style')
     useSettingsStore.setState({ settings: DEFAULTS, loaded: false, error: null })
   })
 
@@ -130,6 +142,59 @@ describe('useSettingsStore', () => {
       })
       await useSettingsStore.getState().load()
       expect(useSettingsStore.getState().settings.crateOrder).toEqual(ALL_TILE_IDS)
+    })
+  })
+
+  describe('fonts', () => {
+    it('applies the stored choice to the document on load', async () => {
+      vi.mocked(App.GetAppSettings).mockResolvedValue({
+        ...DEFAULTS,
+        fonts: { mono: 'Fira Code', sans: '  Inter ' },
+      })
+      await useSettingsStore.getState().load()
+      expect(rootFont('mono')).toBe('"Fira Code"')
+      expect(rootFont('sans')).toBe('"Inter"')
+      expect(rootFont('title')).toBe('')
+    })
+
+    // A bound map crosses the bridge as null when Go never set it, which is what
+    // a settings file written before the field existed unmarshals to.
+    it('reads a null fonts map as no choice', async () => {
+      vi.mocked(App.GetAppSettings).mockResolvedValue({
+        ...DEFAULTS,
+        fonts: null as unknown as Record<string, string>,
+      })
+      await useSettingsStore.getState().load()
+      expect(useSettingsStore.getState().settings.fonts).toEqual({})
+      expect(rootFont('sans')).toBe('')
+    })
+
+    it('applies a changed choice at once and persists it', async () => {
+      const promise = useSettingsStore.getState().update({ fonts: { display: 'Cooper Black' } })
+      expect(rootFont('display')).toBe('"Cooper Black"')
+      await promise
+      expect(App.SaveAppSettings).toHaveBeenCalledWith(
+        expect.objectContaining({ fonts: { display: 'Cooper Black' } }),
+      )
+    })
+
+    it('puts the previous fonts back when the backend refuses the write', async () => {
+      attachBridge()
+      useSettingsStore.setState({ settings: { ...DEFAULTS, fonts: { sans: 'Inter' } } })
+      vi.mocked(App.SaveAppSettings).mockRejectedValue(new Error('disk full'))
+      await useSettingsStore
+        .getState()
+        .update({ fonts: { sans: 'Papyrus' } })
+        .catch(() => {})
+      expect(useSettingsStore.getState().settings.fonts).toEqual({ sans: 'Inter' })
+      expect(rootFont('sans')).toBe('"Inter"')
+    })
+
+    it('leaves the token stacks alone in a browser served by Remote Access', async () => {
+      vi.mocked(ipc.isRemoteBrowser).mockReturnValue(true)
+      vi.mocked(App.GetAppSettings).mockResolvedValue({ ...DEFAULTS, fonts: { sans: 'Inter' } })
+      await useSettingsStore.getState().load()
+      expect(rootFont('sans')).toBe('')
     })
   })
 

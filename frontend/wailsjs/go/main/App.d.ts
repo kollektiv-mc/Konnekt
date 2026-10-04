@@ -109,6 +109,8 @@ export function ListBackups(arg1:string):Promise<Array<models.Backup>>;
 
 export function ListConfigFiles(arg1:string):Promise<Array<models.ConfigFile>>;
 
+export function ListFontFamilies():Promise<Array<string>>;
+
 export function ListLoaderVersions(arg1:string):Promise<Array<models.LoaderVersion>>;
 
 export function ListWorlds(arg1:string):Promise<Array<models.WorldSystem>>;

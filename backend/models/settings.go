@@ -63,4 +63,14 @@ type AppSettings struct {
 	// rather than the WebView's own per-notch ease. On by default; a settings
 	// file written before the field existed unmarshals onto that default.
 	SmoothScrolling bool `json:"smoothScrolling"`
+
+	// Fonts is the family a person chose for each --font-* token, keyed by the
+	// token's role: "sans", "title", "display" or "mono" (#444). A role with no
+	// entry, or an empty one, keeps the token's own stack. It is a map rather
+	// than four fields so a fifth token is a key and not a schema change, and
+	// the family is a free-text name because the picker suggests the installed
+	// faces without being limited to them. frontend/src/lib/fonts.ts writes the
+	// name in front of the token's stack, so one that is not installed falls
+	// through to the default.
+	Fonts map[string]string `json:"fonts"`
 }

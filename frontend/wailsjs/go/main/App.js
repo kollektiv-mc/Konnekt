@@ -214,6 +214,10 @@ export function ListConfigFiles(arg1) {
   return window['go']['main']['App']['ListConfigFiles'](arg1);
 }
 
+export function ListFontFamilies() {
+  return window['go']['main']['App']['ListFontFamilies']();
+}
+
 export function ListLoaderVersions(arg1) {
   return window['go']['main']['App']['ListLoaderVersions'](arg1);
 }
