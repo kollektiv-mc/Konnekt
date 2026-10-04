@@ -1,6 +1,24 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { useUiStore } from './useUiStore'
 
+describe('useUiStore maximizedTileId', () => {
+  beforeEach(() => {
+    useUiStore.setState({ maximizedTileId: null })
+  })
+
+  it('defaults to null', () => {
+    expect(useUiStore.getState().maximizedTileId).toBeNull()
+  })
+
+  it('sets and clears the maximized tile id', () => {
+    useUiStore.getState().setMaximizedTileId('console')
+    expect(useUiStore.getState().maximizedTileId).toBe('console')
+
+    useUiStore.getState().setMaximizedTileId(null)
+    expect(useUiStore.getState().maximizedTileId).toBeNull()
+  })
+})
+
 describe('useUiStore closeGuard', () => {
   beforeEach(() => {
     useUiStore.setState({ closeGuard: null })

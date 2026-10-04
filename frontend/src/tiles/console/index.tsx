@@ -454,6 +454,9 @@ export function ConsoleTile({ serverId, maximized, layout = 'default' }: TilePro
 
   if (!maximized) return consoleColumn
 
+  // At a phone's width the rail is not drawn, open or closed: it would take
+  // more than half of the log's width, and Commands is its own tile on the
+  // home screen there.
   return (
     <div className="flex h-full min-h-0">
       {consoleColumn}
@@ -464,14 +467,14 @@ export function ConsoleTile({ serverId, maximized, layout = 'default' }: TilePro
         <button
           type="button"
           onClick={() => updateSettings({ consoleQuickCommandsCollapsed: false }).catch(() => {})}
-          className="border-border-subtle text-text-faint hover:text-text-secondary border-l-hairline flex w-6 shrink-0 items-center justify-center transition-colors"
+          className="border-border-subtle text-text-faint hover:text-text-secondary border-l-hairline flex w-6 shrink-0 items-center justify-center transition-colors max-sm:hidden"
           title="Show quick commands"
           aria-label="Show quick commands"
         >
           <Icon icon={ChevronLeft} />
         </button>
       ) : (
-        <div className="border-border-subtle border-l-hairline flex w-56 shrink-0 flex-col">
+        <div className="border-border-subtle border-l-hairline flex w-56 shrink-0 flex-col max-sm:hidden">
           <div className="border-border-subtle border-b-hairline flex shrink-0 items-center justify-between px-3 py-2">
             <span className="text-text-secondary font-title text-xs font-medium">Commands</span>
             {/* Was a bare › at text-xs with no box: the hit target was whatever

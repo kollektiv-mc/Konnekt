@@ -68,6 +68,9 @@ function App() {
   // here depends on the navbar being hit-testable mid-drag.
   const crateDragging = useUiStore((s) => s.crateDragId !== null || s.draggingTileId !== null)
   const navFrozen = resizing || crateDragging
+  // Below 640px the nav is the home screen and a maximized tile is a page, so
+  // the two swap on this and the grid is never drawn.
+  const tileOpen = useUiStore((s) => s.maximizedTileId !== null)
   const autoStarted = useRef(false)
   const lowTpsWarned = useRef(false)
 
@@ -572,9 +575,9 @@ function App() {
       />
       <div className="flex min-h-0 flex-1 overflow-hidden">
         <aside
-          className={`border-r-hairline border-border-subtle flex shrink-0 flex-col overflow-y-auto ${
+          className={`border-r-hairline border-border-subtle flex shrink-0 flex-col overflow-y-auto max-sm:!w-full max-sm:border-r-0 ${
             navFrozen ? 'pointer-events-none' : ''
-          }`}
+          } ${tileOpen ? 'max-sm:hidden' : ''}`}
           // eslint-disable-next-line no-restricted-syntax -- navWidth is a live drag-computed value
           style={{ width: navWidth }}
         >
@@ -630,11 +633,12 @@ function App() {
           aria-label="Resize navbar"
           onMouseDown={onHandleMouseDown}
           onDoubleClick={onHandleDoubleClick}
-          className="group relative z-10 -mx-0.5 flex w-1 shrink-0 cursor-col-resize justify-center bg-transparent"
+          className="group relative z-10 -mx-0.5 flex w-1 shrink-0 cursor-col-resize justify-center bg-transparent max-sm:hidden"
         >
           <div className="group-hover:bg-accent group-active:bg-accent h-full w-px transition-colors" />
         </div>
-        <main className="flex-1 overflow-hidden">
+        {/* A phone never draws the grid: with no tile open the nav is the page. */}
+        <main className={`flex-1 overflow-hidden ${tileOpen ? '' : 'max-sm:hidden'}`}>
           <Dashboard />
         </main>
       </div>

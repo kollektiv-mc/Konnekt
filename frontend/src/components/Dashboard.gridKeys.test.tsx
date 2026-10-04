@@ -6,6 +6,7 @@ import * as App from '../../wailsjs/go/main/App'
 import { useTileStore } from '../stores/useTileStore'
 import { useLayoutStore } from '../stores/useLayoutStore'
 import { useServerConfigStore } from '../stores/useServerConfigStore'
+import { useUiStore } from '../stores/useUiStore'
 
 // react-grid-layout matches a child to its layout entry **by the child's React
 // key**, not by any prop. From the installed v2.2.4 source,
@@ -168,5 +169,51 @@ describe('Dashboard grid keys', () => {
     // firstSeen is srv2, so this is a fresh component, not the old one with a
     // new prop. Were the key missing it would read 'console:srv2:srv1'.
     expect(getByText('console:srv2:srv2')).toBeTruthy()
+  })
+})
+
+// App reads this to swap the nav and the page on a phone, so Dashboard keeps it
+// in step with the tile it has open.
+describe('Dashboard maximized tile', () => {
+  beforeEach(() => {
+    vi.useFakeTimers()
+    vi.mocked(App.GetActiveTiles).mockResolvedValue(['console', 'players'])
+    vi.mocked(App.GetActiveLayout).mockResolvedValue('')
+    vi.mocked(App.GetLayoutPresets).mockResolvedValue([])
+    useTileStore.setState({ activeTileIds: ['console', 'players'] })
+    useUiStore.setState({ maximizedTileId: null, maximizeRequest: null, closeGuard: null })
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  it('publishes the opened tile and clears it once the close lands', () => {
+    render(<Dashboard />)
+    expect(useUiStore.getState().maximizedTileId).toBeNull()
+
+    act(() => {
+      useUiStore.getState().requestMaximize('console', null)
+    })
+    expect(useUiStore.getState().maximizedTileId).toBe('console')
+
+    act(() => {
+      useUiStore.getState().requestCloseMaximize()
+    })
+    act(() => {
+      vi.advanceTimersByTime(500)
+    })
+    expect(useUiStore.getState().maximizedTileId).toBeNull()
+  })
+
+  it('clears it on unmount', () => {
+    const { unmount } = render(<Dashboard />)
+    act(() => {
+      useUiStore.getState().requestMaximize('players', null)
+    })
+    expect(useUiStore.getState().maximizedTileId).toBe('players')
+
+    unmount()
+    expect(useUiStore.getState().maximizedTileId).toBeNull()
   })
 })

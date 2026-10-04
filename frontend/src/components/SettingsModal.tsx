@@ -163,20 +163,21 @@ export function SettingsModal({ open, onClose, initialSection }: Props) {
         if (e.target === overlayRef.current) onClose()
       }}
     >
-      <div className="modal-panel-in bg-canvas border-border-subtle border-hairline flex h-[480px] w-[640px] overflow-hidden rounded-xl shadow-[0_24px_64px_rgba(0,0,0,0.5)]">
-        {/* Left nav */}
-        <div className="bg-surface border-border-subtle border-r-hairline flex w-40 shrink-0 flex-col gap-0.5 p-3">
-          <div className="border-border-subtle border-b-hairline px-2 pt-1 pb-3">
+      <div className="modal-panel-in bg-canvas border-border-subtle border-hairline flex h-[480px] w-[640px] overflow-hidden rounded-xl shadow-[0_24px_64px_rgba(0,0,0,0.5)] max-sm:h-[calc(100dvh-1rem)] max-sm:w-[calc(100vw-1rem)] max-sm:flex-col">
+        {/* Left nav. On a phone's width it is a scrolling row above the content,
+            so the content keeps the full width; its heading is the title bar's job. */}
+        <div className="bg-surface border-border-subtle border-r-hairline max-sm:border-b-hairline flex w-40 shrink-0 flex-col gap-0.5 p-3 max-sm:w-full max-sm:flex-row max-sm:overflow-x-auto max-sm:border-r-0 max-sm:p-2">
+          <div className="border-border-subtle border-b-hairline px-2 pt-1 pb-3 max-sm:hidden">
             <span className="font-title text-text-muted text-xs font-medium tracking-wider uppercase">
               Settings
             </span>
           </div>
-          <div className="mt-2 flex flex-col gap-0.5">
+          <div className="mt-2 flex flex-col gap-0.5 max-sm:mt-0 max-sm:flex-row">
             {nav.map((item) => (
               <button
                 key={item.id}
                 onClick={() => setSection(item.id)}
-                className={`cursor-pointer rounded-lg px-2 py-1.5 text-left text-sm transition-colors ${
+                className={`cursor-pointer rounded-lg px-2 py-1.5 text-left text-sm transition-colors max-sm:shrink-0 max-sm:whitespace-nowrap ${
                   section === item.id
                     ? 'text-accent bg-accent/10'
                     : 'text-text-secondary hover:bg-hover hover:text-text-primary bg-transparent'
