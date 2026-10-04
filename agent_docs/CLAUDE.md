@@ -52,7 +52,7 @@ Read the tree rather than a list of it. What it does not tell you:
   `style={{}}` is for genuinely computed values only, and
   `eslint.config.js`'s `no-restricted-syntax` rule enforces that as `error`.
 - Go: `gofmt` enforced, errors always handled (no blank `_` ignores)
-- Keep the entry bundle under the 165 KB gzip budget (`pnpm check-bundle`);
+- Keep the entry bundle under the 175 KB gzip budget (`pnpm check-bundle`);
   heavy per-tile dependencies are lazy-loaded and warmed from
   `lib/prefetch.ts`.
 
@@ -62,7 +62,7 @@ Read the tree rather than a list of it. What it does not tell you:
 # from frontend/
 pnpm dev | build | typecheck | lint | test | format:check   # the CI gates
 pnpm test:coverage     # with the floor, per-directory table
-pnpm check-bundle      # 165 KB gzip entry chunk
+pnpm check-bundle      # 175 KB gzip entry chunk
 pnpm check-tokens      # every token-named class compiles
 pnpm check-prefetch    # every lazy chunk is in the warm list
 pnpm gen:tokens        # regenerate the token layer
