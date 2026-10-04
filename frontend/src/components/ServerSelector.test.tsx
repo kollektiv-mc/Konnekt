@@ -36,6 +36,7 @@ describe('ServerSelector', () => {
       error: null,
     })
     useUiStore.setState({
+      closeGuard: null,
       serverManagerOpen: false,
       serverManagerSelection: '',
       pendingDisconnect: null,
@@ -52,6 +53,22 @@ describe('ServerSelector', () => {
     render(<ServerSelector />)
     fireEvent.click(screen.getByRole('button', { name: /beta/ }))
     expect(App.SetActiveServerID).toHaveBeenCalledWith('beta')
+  })
+
+  it('selecting the active server does nothing', () => {
+    render(<ServerSelector />)
+    fireEvent.click(screen.getByRole('button', { name: /alpha/ }))
+    expect(App.SetActiveServerID).not.toHaveBeenCalled()
+  })
+
+  // The maximized tile's guard owns the question; the real editors are covered
+  // against this in tiles/scheduler/index.test.tsx.
+  it('leaves the switch to the maximized tile when its guard takes over', () => {
+    useUiStore.setState({ closeGuard: () => true })
+    render(<ServerSelector />)
+    fireEvent.click(screen.getByRole('button', { name: /beta/ }))
+    expect(App.SetActiveServerID).not.toHaveBeenCalled()
+    useUiStore.setState({ closeGuard: null })
   })
 
   it('the edit control opens the manager on that server', () => {

@@ -182,13 +182,14 @@ function GraphEditorInner({
   const { hold: holdConfirm } = confirm
 
   // Veto a Dashboard-initiated close (Escape / backdrop / restore button /
-  // navbar) while there are unsaved changes, in favor of our own confirm
-  // dialog. Registered only while this editor is mounted (i.e. maximized).
+  // navbar) or a server switch while there are unsaved changes, in favor of our
+  // own confirm dialog, which runs whichever of the two asked once the user
+  // agrees. Registered only while this editor is mounted (i.e. maximized).
   const setCloseGuard = useUiStore((s) => s.setCloseGuard)
   useEffect(() => {
-    setCloseGuard(() => {
+    setCloseGuard((proceed) => {
       if (!dirtyRef.current) return false
-      holdConfirm(() => useUiStore.getState().requestCloseMaximize())
+      holdConfirm(proceed)
       return true
     })
     return () => setCloseGuard(null)

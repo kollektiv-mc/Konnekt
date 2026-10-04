@@ -1,8 +1,12 @@
 import { describe, it, expect, beforeAll, beforeEach, afterEach, vi } from 'vitest'
-import { render, screen, cleanup, waitFor } from '@testing-library/react'
+import { render, screen, cleanup, waitFor, fireEvent } from '@testing-library/react'
 import * as App from '../../../wailsjs/go/main/App'
 import type { models } from '../../../wailsjs/go/models'
 import { useSchedulerStore } from '../../stores/useSchedulerStore'
+import { useServerConfigStore } from '../../stores/useServerConfigStore'
+import { useUiStore } from '../../stores/useUiStore'
+import { ServerSelector } from '../../components/ServerSelector'
+import type { ServerConfig } from '../../types'
 import { SchedulerTile } from './index'
 
 vi.mock('../../../wailsjs/go/main/App')
@@ -122,5 +126,114 @@ describe('the scheduler editor on unmount', () => {
     vi.stubGlobal('requestAnimationFrame', raf)
     await new Promise((resolve) => setTimeout(resolve, 300))
     expect(raf).not.toHaveBeenCalled()
+  })
+})
+
+function serverCfg(id: string): ServerConfig {
+  return {
+    id,
+    name: id,
+    jarPath: '',
+    jvmArgs: [],
+    workingDir: `/srv/${id}`,
+    mcVersion: '1.21.1',
+    loader: 'neoforge',
+    loaderVersion: '',
+  }
+}
+
+// Switching server remounts the maximized tile, which threw away an editor's
+// unsaved graph without asking. The sidebar now asks the editor's own close
+// guard first and only switches once the user has answered (#450). Both halves
+// are real here, the sidebar and the editor, because the contract between them
+// is what broke.
+describe('switching server from the sidebar with the scheduler editor maximized', () => {
+  async function renderDirty() {
+    render(
+      <>
+        <ServerSelector />
+        <SchedulerTile serverId="alpha" maximized />
+      </>,
+    )
+    await waitFor(() => expect(selected()).toBe('Only'))
+    fireEvent.click(screen.getByTitle('Click to rename'))
+    const input = screen.getByDisplayValue('Only')
+    fireEvent.change(input, { target: { value: 'Only, edited' } })
+    // The dirty dot is on the label, which the input replaces while editing.
+    fireEvent.keyDown(input, { key: 'Enter' })
+    await waitFor(() => expect(screen.getByTitle('Unsaved changes')).toBeTruthy())
+  }
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    // These run long enough for a load's handle re-measure to fire while mounted,
+    // and React Flow reads the viewport transform through a matrix jsdom lacks.
+    vi.stubGlobal(
+      'DOMMatrixReadOnly',
+      class {
+        m22 = 1
+      },
+    )
+    vi.mocked(App.GetScheduleGraphs).mockResolvedValue([graph('g1', 'Only')])
+    vi.mocked(App.GetScheduleBlockDefs).mockResolvedValue([])
+    vi.mocked(App.GetScheduleNextRuns).mockResolvedValue({})
+    vi.mocked(App.GetServerConfigs).mockResolvedValue([serverCfg('alpha'), serverCfg('beta')])
+    vi.mocked(App.GetActiveServerID).mockResolvedValue('alpha')
+    vi.mocked(App.SetActiveServerID).mockResolvedValue(undefined)
+    useServerConfigStore.setState({
+      configs: [serverCfg('alpha'), serverCfg('beta')],
+      activeId: 'alpha',
+      error: null,
+    })
+    useUiStore.setState({ closeGuard: null })
+    useSchedulerStore.setState({
+      serverId: '',
+      graphs: [],
+      blockDefs: [],
+      nextRuns: {},
+      loading: false,
+      hydratedFor: null,
+      error: null,
+    })
+  })
+
+  it('asks first, and switches only once the changes are discarded', async () => {
+    await renderDirty()
+
+    fireEvent.click(screen.getByRole('button', { name: /beta/ }))
+
+    expect(screen.getByText('Unsaved changes')).toBeTruthy()
+    expect(App.SetActiveServerID).not.toHaveBeenCalled()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Discard' }))
+
+    expect(App.SetActiveServerID).toHaveBeenCalledWith('beta')
+  })
+
+  it('leaves the active server and the edits alone on cancel', async () => {
+    await renderDirty()
+
+    fireEvent.click(screen.getByRole('button', { name: /beta/ }))
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
+
+    expect(App.SetActiveServerID).not.toHaveBeenCalled()
+    expect(useServerConfigStore.getState().activeId).toBe('alpha')
+    expect(screen.queryByText('Unsaved changes')).toBeNull()
+    expect(screen.getByTitle('Unsaved changes')).toBeTruthy()
+  })
+
+  it('switches at once when the editor is clean', async () => {
+    render(
+      <>
+        <ServerSelector />
+        <SchedulerTile serverId="alpha" maximized />
+      </>,
+    )
+    await waitFor(() => expect(selected()).toBe('Only'))
+
+    fireEvent.click(screen.getByRole('button', { name: /beta/ }))
+
+    expect(screen.queryByText('Unsaved changes')).toBeNull()
+    expect(App.SetActiveServerID).toHaveBeenCalledWith('beta')
   })
 })

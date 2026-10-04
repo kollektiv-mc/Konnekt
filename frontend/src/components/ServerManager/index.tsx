@@ -3,6 +3,7 @@ import { useInstallStore } from '../../stores/useInstallStore'
 import { useLoaderStore } from '../../stores/useLoaderStore'
 import { useServerConfigStore } from '../../stores/useServerConfigStore'
 import { useUiStore } from '../../stores/useUiStore'
+import { switchServer } from '../../lib/switchServer'
 import { IconButton } from '../ui/IconButton'
 import { X } from '../../lib/icons'
 import { Icon } from '../ui/Icon'
@@ -32,7 +33,7 @@ import { ServerList, NEW_SERVER } from './ServerList'
  * to be the latter, and the manager opened underneath an open tile.
  */
 export function ServerManager() {
-  const { configs, activeId, error, clearError, setActiveId } = useServerConfigStore()
+  const { configs, activeId, error, clearError } = useServerConfigStore()
   const {
     serverManagerOpen: open,
     serverManagerSelection,
@@ -127,7 +128,12 @@ export function ServerManager() {
                 <div className="flex items-center gap-2">
                   {current.id !== activeId && (
                     <button
-                      onClick={() => void setActiveId(current.id).catch(() => {})}
+                      onClick={() => {
+                        // A held switch asks in the maximized tile's own dialog,
+                        // which sits below this modal (lib/layers.ts), so step
+                        // aside or the question would be asked out of sight.
+                        if (switchServer(current.id)) closeServerManager()
+                      }}
                       className="text-text-muted border-border-subtle hover:border-border-hover hover:text-text-primary border-hairline rounded px-2.5 py-1 text-xs transition-colors"
                     >
                       Make active

@@ -139,9 +139,11 @@ export function Dashboard() {
 
   const closeMaximize = useCallback(() => {
     const guard = useUiStore.getState().closeGuard
-    if (guard && guard()) {
+    if (guard && guard(() => useUiStore.getState().requestCloseMaximize())) {
       // Guard is handling the close itself (e.g. showing a confirm dialog) —
       // drop any queued tile-switch so a later cancel doesn't jump to it.
+      // Confirming comes back through requestCloseMaximize, by which time the
+      // guard reads clean.
       pendingOpenRef.current = null
       return
     }

@@ -26,10 +26,14 @@ interface UiStore {
   // Tile to briefly glow green on the canvas (utility-tile click).
   flashTileId: string | null
   flashTile: (id: string) => void
-  // Set by the maximized tile to veto a close (e.g. unsaved changes). Returning
-  // true blocks the close and takes over showing its own confirm UI.
-  closeGuard: (() => boolean) | null
-  setCloseGuard: (fn: (() => boolean) | null) => void
+  // Set by the maximized tile to veto whatever would discard it: a close, or a
+  // server switch (lib/switchServer.ts). `proceed` is the vetoed action itself.
+  // Returning false lets it run; returning true means the guard has taken over,
+  // shows its own confirm UI, and calls `proceed` if and when the user agrees
+  // (or never, on cancel). A guard that only wants to swallow the request, like
+  // the command library closing its own dialog, may ignore `proceed`.
+  closeGuard: ((proceed: () => void) => boolean) | null
+  setCloseGuard: (fn: ((proceed: () => void) => boolean) | null) => void
 
   // The server manager, and the sidebar's disconnect confirm.
   //
