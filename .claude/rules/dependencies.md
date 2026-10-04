@@ -23,7 +23,7 @@ The short version:
   same job. Anything heavy or rarely used must be lazy-loaded via `React.lazy`
   + `Suspense`, and added to `lib/prefetch.ts`'s warm list with the same
   specifier, or the cost simply moves to the first open of the tile.
-- Check `pnpm check-bundle` (165 KB gzip entry chunk) is not blown by the
+- Check `pnpm check-bundle` (175 KB gzip entry chunk) is not blown by the
   addition.
 
 `DEPENDENCIES.md` also tracks the system build dependencies Linux needs, which

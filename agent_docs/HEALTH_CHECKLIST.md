@@ -27,7 +27,7 @@ pnpm format:check       # Prettier (from frontend/)
 pnpm format:website     # Prettier over website/ (from frontend/)
 node scripts/check-website-links.mjs   # website links/assets/sitemap (repo root)
 node scripts/check-release-notes-extract.mjs   # changelog page's body extract (repo root)
-pnpm check-bundle       # 165 KB gzip entry-chunk budget (from frontend/)
+pnpm check-bundle       # 175 KB gzip entry-chunk budget (from frontend/)
 pnpm check-tokens       # every token-named class compiles (from frontend/, after a build)
 pnpm check-prefetch     # lazy tile chunks all appear in the warm list (from frontend/)
 pnpm check-issue-templates   # .github/ISSUE_TEMPLATE forms + their labels (from frontend/)
@@ -508,8 +508,9 @@ tree.
       The backups tile has **no** three.js dependency — its "planets" are pure
       SVG/CSS (`WireframeSphere.tsx`, `SolarSystem.tsx`); a repo-wide grep
       confirms `three`/`@react-three` appear only under `worlds/scene/`.
-- [x] Production bundle size stays within an agreed budget (165 KB gzip on the
-      entry chunk, ~12% headroom over the measured post-split size), checked
+- [x] Production bundle size stays within an agreed budget (175 KB gzip on the
+      entry chunk, raised from 165 KB on 2026-09-21 with ~5% headroom where the
+      original left ~12%; bringing it back down is #426), checked
       in CI (`frontend/scripts/check-bundle-size.mjs`, `pnpm check-bundle`).
       Ratchet it down after a split, the way the coverage floor ratchets up: it
       sat at 550 KB against a 145 KB chunk for the length of one commit, which
@@ -611,7 +612,7 @@ tree.
       descriptions (see Scalable pillar).
       Verify: `pnpm build` from `frontend/`, then confirm each of those five
       lands in its own chunk rather than the entry chunk. `pnpm check-bundle`
-      holds the entry at 165 KB gzip, which is the number that actually fails.
+      holds the entry at 175 KB gzip, which is the number that actually fails.
 - [x] The lazy chunks are warmed at a moment the user cannot feel.
       `lib/prefetch.ts` warms one chunk per idle slot and defers whenever the
       user has interacted in the last 500ms. The failure this guards against is

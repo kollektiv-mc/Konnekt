@@ -117,7 +117,7 @@ Heavy per-tile dependencies are lazy-loaded via `React.lazy` + `Suspense` (see
 `frontend/src/tiles/worlds/index.tsx`): three.js, recharts, `@xyflow` (the
 scheduler editor), CodeMirror (the config editor) and the
 react-markdown/parse5 pipeline (mod descriptions). Keep the entry bundle under
-the 165 KB gzip budget enforced by `pnpm check-bundle`.
+the 175 KB gzip budget enforced by `pnpm check-bundle`.
 
 A new lazy chunk belongs in `lib/prefetch.ts`'s warm list too, spelled with the
 same specifier. That file is what makes the first open of a tile cheap, and it
