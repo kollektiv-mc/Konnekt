@@ -92,12 +92,16 @@ Konnekt-only, so it is not in `tokens.source.json`.
 
 ## Numerals
 
-**`font-variant-numeric` does nothing here, so do not reach for it.** Measured
-against the shipped `.woff2` files: `Ranade-Regular` (`--font-sans`) and
-`Excon-Medium` (`--font-title`) expose no `lnum`, `onum`, `tnum` or `pnum`
-feature at all, so `lining-nums`/`tabular-nums` compile to dead CSS on every
-surface that matters. Only `Satoshi-Black` (`--font-display`) has `tnum`/`pnum`,
-and it sets one string, the `Konnekt` wordmark, which has no digits in it.
+**`font-variant-numeric` does nothing here, so do not reach for it.** The
+brand faces are not shipped (their licence forbids committing the files, #442),
+so the app renders in the system stack unless someone has them installed. When
+they are installed, measured against the files: `Ranade-Regular`
+(`--font-sans`) and `Excon-Medium` (`--font-title`) expose no `lnum`, `onum`,
+`tnum` or `pnum` feature at all, so `lining-nums`/`tabular-nums` compile to dead
+CSS on every surface that matters. Only `Satoshi-Black` (`--font-display`) has
+`tnum`/`pnum`, and it sets one string, the `Konnekt` wordmark, which has no
+digits in it. A system sans may be proportional too, and which one it is varies
+by machine.
 
 Two consequences worth knowing before someone tries again. Ranade's digits are
 *already* lining: the reason `2` looks a shade taller than `1` is optical

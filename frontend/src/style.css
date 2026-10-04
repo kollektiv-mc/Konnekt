@@ -24,29 +24,11 @@
   --z-index-splash: 500;
 }
 
-@font-face {
-  font-family: 'Satoshi';
-  font-style: normal;
-  font-weight: 900;
-  font-display: swap;
-  src: url('./assets/fonts/Satoshi-Black.woff2') format('woff2');
-}
-
-@font-face {
-  font-family: 'Excon';
-  font-style: normal;
-  font-weight: 500;
-  font-display: swap;
-  src: url('./assets/fonts/Excon-Medium.woff2') format('woff2');
-}
-
-@font-face {
-  font-family: 'Ranade';
-  font-style: normal;
-  font-weight: 400;
-  font-display: swap;
-  src: url('./assets/fonts/Ranade-Regular.woff2') format('woff2');
-}
+/* No @font-face rules live here. Satoshi, Excon and Ranade are under the ITF Free
+   Font License, which forbids redistributing the files through a public
+   repository, so they are not bundled (#442). The families stay first in the
+   --font-* stacks on purpose: someone with them installed locally still gets
+   them, and everyone else falls through to the system faces the stacks end in. */
 
 /* Runtime state, not a design token: applySkin() overwrites this on every call,
    and its gradient form is composed from --accent-rgb rather than being a value

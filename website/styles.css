@@ -1,27 +1,10 @@
-/* ── Fonts (bundled from the app, see frontend/src/style.css) ───────────── */
-@font-face {
-  font-family: 'Satoshi';
-  font-style: normal;
-  font-weight: 900;
-  font-display: swap;
-  src: url('./assets/fonts/Satoshi-Black.woff2') format('woff2');
-}
-
-@font-face {
-  font-family: 'Excon';
-  font-style: normal;
-  font-weight: 500;
-  font-display: swap;
-  src: url('./assets/fonts/Excon-Medium.woff2') format('woff2');
-}
-
-@font-face {
-  font-family: 'Ranade';
-  font-style: normal;
-  font-weight: 400;
-  font-display: swap;
-  src: url('./assets/fonts/Ranade-Regular.woff2') format('woff2');
-}
+/* ── Fonts ─────────────────────────────────────────────────────────────────
+   No @font-face rules live here. Satoshi, Excon and Ranade are under the ITF
+   Free Font License, which forbids redistributing the files through a public
+   repository, so the site does not bundle them (#442). The families stay first
+   in the --font-* stacks in /tokens.css on purpose: a visitor with them
+   installed locally still gets them, and everyone else falls through to the
+   system faces the stacks end in. ─────────────────────────────────────── */
 
 /* ── Page vocabulary — everything here that is *not* a design token. The
    token layer (colours, font stacks, durations, easings) is generated into
