@@ -14,7 +14,17 @@ interface Props {
  * available, and the control that moves between them.
  */
 export function LoaderPanel({ config, refreshKey = 0 }: Props) {
-  const { status, versions, loading, error, load, openUpdate, phase, showDialog } = useLoaderStore()
+  const store = useLoaderStore()
+  const { load, openUpdate, phase, showDialog } = store
+  // The store holds one server's reading at a time. Until it is this server's,
+  // nothing from it is shown: the first render after a switch lands before the
+  // effect below has asked for anything, and would otherwise list the previous
+  // server's builds with an Update button wired to this one.
+  const mine = store.statusFor === config.id
+  const status = mine ? store.status : null
+  const versions = mine ? store.versions : []
+  const loading = store.loading || !mine
+  const error = mine ? store.error : null
   const [showBeta, setShowBeta] = useState(false)
   // The backend allows one loader update at a time, globally, and refuses a
   // second. Offering the button anyway is a promise it cannot keep.

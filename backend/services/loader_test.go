@@ -2,6 +2,7 @@ package services
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -133,7 +134,14 @@ func newLoaderFixture(t *testing.T, over ...func(*models.ServerConfig)) *loaderF
 	backup.SetDataDir(dataDir)
 
 	installer := &fakeInstaller{}
-	provider := &fakeLoaderProvider{}
+	// Update only accepts a build the provider lists for the server's Minecraft
+	// version, so the fixture lists the one the update tests move to, and a
+	// build for another version for the refusal test.
+	provider := &fakeLoaderProvider{versions: []models.LoaderVersion{
+		{Version: "21.2.1-beta", MCVersion: "1.21.2"},
+		{Version: "21.1.209", MCVersion: "1.21.1", Stable: true, Latest: true},
+		{Version: "21.1.72", MCVersion: "1.21.1", Stable: true},
+	}}
 
 	svc := NewLoaderService(cfgSvc, srv, backup, nil)
 	svc.installer = installer
@@ -406,6 +414,33 @@ func TestLoaderUpdateRefusals(t *testing.T) {
 		f := newLoaderFixture(t)
 		if err := f.svc.Update(models.LoaderUpdateRequest{ServerID: "nope", Version: "21.1.209"}); err == nil {
 			t.Error("Update for an unknown server = nil error, want a refusal")
+		}
+	})
+
+	// The panel can hold another server's list for a moment (#448), and the
+	// request is what the backend answers for, not the screen that sent it.
+	t.Run("for a build this server is not offered", func(t *testing.T) {
+		f := newLoaderFixture(t)
+		for _, v := range []string{"21.2.1-beta", "99.0.0"} {
+			err := f.svc.Update(models.LoaderUpdateRequest{ServerID: f.serverID, Version: v})
+			if err == nil {
+				t.Fatalf("Update to unlisted %s = nil error, want a refusal", v)
+			}
+			if !strings.Contains(err.Error(), v) || !strings.Contains(err.Error(), "1.21.1") {
+				t.Errorf("refusal %q should name the build and the Minecraft version", err)
+			}
+		}
+		if f.installer.ran() != 0 {
+			t.Error("the installer ran despite the refusal")
+		}
+	})
+
+	t.Run("when the builds cannot be listed", func(t *testing.T) {
+		f := newLoaderFixture(t)
+		f.provider.err = errors.New("maven is unreachable")
+		err := f.svc.Update(models.LoaderUpdateRequest{ServerID: f.serverID, Version: "21.1.209"})
+		if err == nil || !strings.Contains(err.Error(), "maven is unreachable") {
+			t.Errorf("Update = %v, want the listing failure wrapped", err)
 		}
 	})
 
