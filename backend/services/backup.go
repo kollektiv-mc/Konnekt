@@ -1239,10 +1239,15 @@ func reserveBackupFile(dir string) (*os.File, string, error) {
 	return nil, "", errors.New("no free backup filename after 10 attempts")
 }
 
+// dirSize sums the regular files under srcDir. It counts exactly what
+// writeTreeToZip archives: Walk reports a symlink by its own Lstat, so without
+// the IsRegular test a link would add its few bytes of link text to a total the
+// archive never writes, and a skipped device or pipe would add whatever size the
+// OS reports for it. Nothing here follows a link.
 func dirSize(srcDir string) int64 {
 	var total int64
 	_ = filepath.Walk(srcDir, func(_ string, info os.FileInfo, err error) error { //nolint:errcheck // best-effort size estimate for a progress percentage; a walk error just undercounts
-		if err == nil && !info.IsDir() {
+		if err == nil && info.Mode().IsRegular() {
 			total += info.Size()
 		}
 		return nil
@@ -1339,6 +1344,25 @@ func writeTreeToZip(w *zip.Writer, srcDir, prefix string, total int64, written *
 		// session.lock is held exclusively by the running server; it contains no
 		// world data and is recreated automatically on next start.
 		if info.Name() == "session.lock" {
+			return nil
+		}
+		// Walk reports each entry by Lstat, so a symlink arrives here as a
+		// symlink, but os.Open below follows it: a link to a file would archive
+		// the target's bytes (a ~/.ssh key linked into a world is the probe in
+		// SECURITY_CHECKLIST S3.4), and a link to a directory would make io.Copy
+		// fail and take the whole backup with it. Only regular files are data
+		// the world owns, so links, devices, sockets and pipes are skipped, and
+		// never read through. restore never creates a symlink either, so nothing
+		// is lost that a round trip could have kept.
+		// The root itself is the one exception: skipping a world folder that is
+		// a link would turn the whole backup into an empty archive reported as a
+		// success. Refuse it instead, which is no worse than before, when the
+		// open below followed it and io.Copy failed on the directory.
+		if path == srcDir {
+			return fmt.Errorf("%s is not a directory: a linked world folder is not backed up", srcDir)
+		}
+		if !info.Mode().IsRegular() {
+			slog.Warn("backups: skipped entry that is not a regular file", "path", path, "mode", info.Mode().String())
 			return nil
 		}
 		fw, err := w.Create(name)
