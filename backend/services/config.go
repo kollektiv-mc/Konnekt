@@ -223,6 +223,7 @@ func (s *ConfigService) GetAppSettings() (models.AppSettings, error) {
 		CrateOrder:                       []string{},
 		NavWidth:                         DefaultNavWidth,
 		SmoothScrolling:                  true,
+		Fonts:                            map[string]string{},
 	}
 	data, err := os.ReadFile(filepath.Join(s.dataDir, "app_settings.json"))
 	if os.IsNotExist(err) {

@@ -37,6 +37,7 @@ type App struct {
 	remoteAuth          *services.RemoteAuth
 	remoteApprovals     *services.RemoteApprovals
 	tunnelService       *services.TunnelService
+	fontService         *services.FontService
 	bus                 *services.EventBus
 	dataDir             string
 }
@@ -83,6 +84,7 @@ func NewApp() *App {
 		loaderService:       loader,
 		commandsService:     commands,
 		kommandsService:     kommands,
+		fontService:         services.NewFontService(),
 		bus:                 bus,
 	}
 	// Remote Access (#43). Built here so the allowlist is resolved against the
@@ -242,6 +244,15 @@ func (a *App) GetAppSettings() (models.AppSettings, error) {
 
 func (a *App) SaveAppSettings(s models.AppSettings) error {
 	return a.configService.SaveAppSettings(s)
+}
+
+// ListFontFamilies returns the font families installed on this machine, for the
+// font pickers in Settings > Appearance (#444). The webview cannot list them
+// itself: the Local Font Access API is Chromium-only and Linux and macOS render
+// through WebKit, so the Go side reads the platform's font directories. The
+// slice is never nil, so the frontend does not receive null.
+func (a *App) ListFontFamilies() ([]string, error) {
+	return a.fontService.ListFamilies(), nil
 }
 
 func (a *App) OpenDataDir() error {

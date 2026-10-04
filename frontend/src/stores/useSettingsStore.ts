@@ -1,10 +1,11 @@
 import { create } from 'zustand'
 import type { AppSettings } from '../types'
 import { applySkin, BUILTIN_SKINS } from '../lib/theme'
+import { applyFonts } from '../lib/fonts'
 import { STATUS_DEFAULTS } from '../styles/tokens'
 import { normalizeCrateOrder, reorderWithinGroup } from '../lib/crateOrder'
 import { clampNavWidth, NAV_WIDTH_DEFAULT } from '../lib/navWidth'
-import { errMsg, hasWailsBridge } from '../lib/ipc'
+import { errMsg, hasWailsBridge, isRemoteBrowser } from '../lib/ipc'
 import { GetAppSettings, SaveAppSettings } from '../../wailsjs/go/main/App'
 
 // One colour is stored per role for both themes, seeded from the dark defaults.
@@ -39,6 +40,7 @@ const DEFAULTS: AppSettings = {
   crateOrder: [],
   navWidth: NAV_WIDTH_DEFAULT,
   smoothScrolling: true,
+  fonts: {},
 }
 
 interface SettingsStore {
@@ -49,6 +51,22 @@ interface SettingsStore {
   update: (patch: Partial<AppSettings>) => Promise<void>
   reorderCrate: (id: string, toIndex: number, groupIds: ReadonlySet<string>) => void
   clearError: () => void
+}
+
+/**
+ * Everything a settings change repaints: the skin, and the font overrides beside
+ * it. One function so the three places that apply settings cannot disagree about
+ * which of the two they run.
+ *
+ * Fonts are not applied in a browser served by the Remote Access listener. They
+ * name faces installed on the desktop, which the browser's own machine need not
+ * have, and Settings does not offer the picker there (it cannot list that
+ * machine's fonts and a remote write is not persisted), so the page keeps the
+ * token stacks as generated.
+ */
+function paint(settings: AppSettings): void {
+  applySkin(settings)
+  if (!isRemoteBrowser()) applyFonts(settings.fonts)
 }
 
 const validThemes = ['light', 'dark', 'system'] as const
@@ -86,6 +104,9 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
         updateChannel,
         schedulerPaletteClosedCategories: s.schedulerPaletteClosedCategories ?? {},
         navClosedSections: s.navClosedSections ?? DEFAULTS.navClosedSections,
+        // null for a settings file that predates the field, and for one whose
+        // `fonts` was written as null; the picker reads this as a map.
+        fonts: s.fonts ?? DEFAULTS.fonts,
       }
     } catch {
       /* non-Wails context */
@@ -101,7 +122,7 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
       crateOrder: normalizeCrateOrder(settings.crateOrder),
       navWidth: clampNavWidth(settings.navWidth, window.innerWidth),
     }
-    applySkin(settings)
+    paint(settings)
     set({ settings, loaded: true })
   },
 
@@ -123,13 +144,13 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
     const prev = get().settings
     const next = { ...prev, ...patch }
     set({ settings: next, error: null })
-    applySkin(next)
+    paint(next)
     try {
       await SaveAppSettings(next)
     } catch (e) {
       if (hasWailsBridge()) {
         set({ settings: prev, error: errMsg(e) })
-        applySkin(prev)
+        paint(prev)
         throw e
       }
       /* No bridge: nothing to persist to, so keep the optimistic value. */

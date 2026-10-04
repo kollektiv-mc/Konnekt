@@ -254,6 +254,11 @@ export const api = {
   GetDataDir: read("/home/mc/.config/konnekt"),
   GetLogPath: read("/home/mc/.config/konnekt/konnekt.log"),
   OpenDataDir: refuse("Opening the data folder"),
+  // The real answer is the visitor's own installed fonts, which no page can read
+  // in every browser (the reason the app asks Go). A few families most machines
+  // ship stand in, so the picker has something to suggest; a name that is not
+  // installed falls through to the default, same as in the app.
+  ListFontFamilies: read(["Arial", "Courier New", "Georgia", "Tahoma", "Verdana"]),
   // Remote Access is the desktop's own, and the demo has no listener to start:
   // the pane renders in its off state and every action says why not.
   GetRemoteAccessState: read({

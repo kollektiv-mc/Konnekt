@@ -25,6 +25,7 @@ export namespace models {
 	    crateOrder: string[];
 	    navWidth: number;
 	    smoothScrolling: boolean;
+	    fonts: Record<string, string>;
 	
 	    static createFrom(source: any = {}) {
 	        return new AppSettings(source);
@@ -56,6 +57,7 @@ export namespace models {
 	        this.crateOrder = source["crateOrder"];
 	        this.navWidth = source["navWidth"];
 	        this.smoothScrolling = source["smoothScrolling"];
+	        this.fonts = source["fonts"];
 	    }
 	}
 	export class AttrValue {

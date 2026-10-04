@@ -37,6 +37,9 @@ were shipped early during Alpha. Their status below reflects reality.
       the families stay first in the stacks, which fall back to system faces
 - [x] Startup splash screen (Satoshi Black "Konnekt" in accent green, 1s fade+glow animation; Satoshi is no longer bundled, see above)
 - [x] Tile layout system (react-grid-layout, drag, resize, snap)
+- [x] Font choice per `--font-*` token (Settings > Appearance, desktop only):
+      installed families suggested from a Go listing of the platform font
+      directories, any typed name accepted, empty is the default (#444)
 - [x] Tile crate (inactive tiles panel, add/remove from canvas)
 - [x] Tile scale and maximise
   - [x] Maximise button in tile header: expands tile to fill the canvas area as an overlay

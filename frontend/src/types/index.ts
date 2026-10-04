@@ -66,6 +66,8 @@ export interface AppSettings {
   crateOrder: string[]
   navWidth: number
   smoothScrolling: boolean
+  /** Family per --font-* role (lib/fonts.ts). Never null: Go defaults it to an empty map. */
+  fonts: Record<string, string>
 }
 
 /**

@@ -204,6 +204,32 @@ func TestAppSettingsFillGapsInAnOlderFileWithDefaults(t *testing.T) {
 	if !reflect.DeepEqual(got.NavClosedSections, want) {
 		t.Errorf("NavClosedSections = %v, want %v for a key the file lacks", got.NavClosedSections, want)
 	}
+	// An empty map, never nil: nil crosses the bridge as null, and the font
+	// pickers read this as a map (#444).
+	if got.Fonts == nil || len(got.Fonts) != 0 {
+		t.Errorf("Fonts = %#v, want an empty non-nil map for a key the file lacks", got.Fonts)
+	}
+}
+
+// The per-token font choice is a free-text name the person typed, so what is
+// stored is what comes back, quotes and backslashes included.
+func TestAppSettingsFontsRoundTrip(t *testing.T) {
+	s := newTestConfigService(t)
+	settings, err := s.GetAppSettings()
+	if err != nil {
+		t.Fatalf("GetAppSettings: %v", err)
+	}
+	settings.Fonts = map[string]string{"sans": "Inter", "mono": `Say "hi" \ bye`}
+	if err := s.SaveAppSettings(settings); err != nil {
+		t.Fatalf("SaveAppSettings: %v", err)
+	}
+	got, err := s.GetAppSettings()
+	if err != nil {
+		t.Fatalf("GetAppSettings after save: %v", err)
+	}
+	if !reflect.DeepEqual(got.Fonts, settings.Fonts) {
+		t.Errorf("Fonts = %v, want %v", got.Fonts, settings.Fonts)
+	}
 }
 
 // The collection fields must cross the Wails bridge as [] and {}, never null:
