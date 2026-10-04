@@ -162,7 +162,11 @@ func TestMaxPlayersOnDiskParsesTheHandleItStamped(t *testing.T) {
 		}
 		if err := os.Remove(name); err != nil {
 			// Windows will not delete an open file, so the window cannot be
-			// opened there.
+			// opened there. Close before skipping: Skipf ends the goroutine,
+			// and a handle left open makes TempDir's cleanup fail the test.
+			if cerr := f.Close(); cerr != nil {
+				t.Errorf("close: %v", cerr)
+			}
 			t.Skipf("cannot delete an open file: %v", err)
 		}
 		removed = true
