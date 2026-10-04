@@ -9,6 +9,11 @@ describe('normalizeCrateOrder', () => {
     expect(normalizeCrateOrder([])).toEqual(ALL_IDS)
   })
 
+  // Go's nil slice crosses the Wails bridge as null (#466).
+  it.each([null, undefined])('treats %s as an empty order', (missing) => {
+    expect(normalizeCrateOrder(missing)).toEqual(ALL_IDS)
+  })
+
   it('preserves an already-valid full order unchanged', () => {
     const reversed = [...ALL_IDS].reverse()
     expect(normalizeCrateOrder(reversed)).toEqual(reversed)
