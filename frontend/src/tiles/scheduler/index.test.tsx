@@ -93,3 +93,34 @@ describe('the maximized scheduler across a server switch', () => {
     expect(screen.queryByText('A first')).toBeNull()
   })
 })
+
+// A load schedules a handle re-measure 220ms out, which reaches React Flow's
+// requestAnimationFrame. Left running past unmount it fired once jsdom was torn
+// down, as an unhandled ReferenceError that failed an unrelated CI run (#492).
+describe('the scheduler editor on unmount', () => {
+  beforeEach(() => {
+    vi.mocked(App.GetScheduleGraphs).mockResolvedValue([graph('g1', 'Only')])
+    vi.mocked(App.GetScheduleBlockDefs).mockResolvedValue([])
+    vi.mocked(App.GetScheduleNextRuns).mockResolvedValue({})
+    useSchedulerStore.setState({
+      serverId: '',
+      graphs: [],
+      blockDefs: [],
+      nextRuns: {},
+      loading: false,
+      hydratedFor: null,
+      error: null,
+    })
+  })
+
+  it('cancels the pending re-measure', async () => {
+    const { unmount } = render(<SchedulerTile serverId="a" maximized />)
+    await waitFor(() => expect(selected()).toBe('Only'))
+    unmount()
+
+    const raf = vi.fn()
+    vi.stubGlobal('requestAnimationFrame', raf)
+    await new Promise((resolve) => setTimeout(resolve, 300))
+    expect(raf).not.toHaveBeenCalled()
+  })
+})

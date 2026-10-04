@@ -163,6 +163,9 @@ function GraphEditorInner({
     [graphName, graphEnabled, nodes, edges, savedSig],
   )
   const dirtyRef = useRef(false)
+  // The pending handle re-measure loadGraph schedules, so a second load or an
+  // unmount can cancel it.
+  const remeasureTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   useEffect(() => {
     dirtyRef.current = dirty
   }, [dirty])
@@ -402,9 +405,23 @@ function GraphEditorInner({
       // may still have scale < 1, producing stale edge endpoints. Waiting 220ms
       // ensures getBoundingClientRect returns settled coordinates.
       const ids = ns.map((n) => n.id)
-      setTimeout(() => updateNodeInternals(ids), 220)
+      if (remeasureTimer.current !== null) clearTimeout(remeasureTimer.current)
+      remeasureTimer.current = setTimeout(() => {
+        remeasureTimer.current = null
+        updateNodeInternals(ids)
+      }, 220)
     },
     [defMap, setNodes, setEdges, updateNodeInternals],
+  )
+
+  // The re-measure must not outlive the editor: closing the tile within 220ms of
+  // a load fired it against an unmounted React Flow, and in a test it fired after
+  // jsdom was torn down, where its requestAnimationFrame no longer exists.
+  useEffect(
+    () => () => {
+      if (remeasureTimer.current !== null) clearTimeout(remeasureTimer.current)
+    },
+    [],
   )
 
   // Auto-load first graph when graphs list arrives
