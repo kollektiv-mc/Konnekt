@@ -116,6 +116,13 @@ func (s *SchedulerService) GetGraphs(serverID string) ([]models.Graph, error) {
 // The graph is stamped with serverID rather than trusting the one it arrives
 // with: the caller is the tile the user is looking at, and a graph belongs to
 // the server it was authored on.
+//
+// An ID that is already taken by a graph serverID does not own is refused as
+// "not found", the answer RunGraphNow gives. Without that, the upsert below
+// matches on ID across every server's graphs and the stamp then moves the match
+// to serverID: saving B's graph under A's ID replaced A's graph and handed it
+// to B (#429). The check is made under the lock and before anything is
+// changed, so a refusal writes and emits nothing.
 func (s *SchedulerService) SaveGraph(serverID string, g models.Graph) (models.Graph, error) {
 	now := time.Now().UnixMilli()
 	if g.ID == "" {
@@ -129,6 +136,10 @@ func (s *SchedulerService) SaveGraph(serverID string, g models.Graph) (models.Gr
 	found := false
 	for i, existing := range s.graphs {
 		if existing.ID == g.ID {
+			if !s.graphAnswersTo(existing, serverID) {
+				s.mu.Unlock()
+				return models.Graph{}, fmt.Errorf("graph %q not found", g.ID)
+			}
 			s.graphs[i] = g
 			found = true
 			break
@@ -257,12 +268,17 @@ func (s *SchedulerService) GetRunHistory(serverID string) ([]models.RunRecord, e
 // ImportGraphJSON parses a graph from raw JSON and saves it to the given server.
 // Any serverId in the JSON is discarded by SaveGraph, which is the point: an
 // exported graph is a shape to reuse, not an assignment to carry between
-// installs.
+// installs. The id and creation time are discarded for the same reason: an
+// import is always a new graph, so a file carrying the id of one that already
+// exists (re-importing an export, or another server's) adds a copy rather than
+// overwriting it (#429).
 func (s *SchedulerService) ImportGraphJSON(serverID, raw string) (models.Graph, error) {
 	var g models.Graph
 	if err := json.Unmarshal([]byte(raw), &g); err != nil {
 		return models.Graph{}, fmt.Errorf("parse graph JSON: %w", err)
 	}
+	g.ID = newID()
+	g.CreatedAt = 0
 	return s.SaveGraph(serverID, g)
 }
 
