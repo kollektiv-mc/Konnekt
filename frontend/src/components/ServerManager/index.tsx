@@ -101,7 +101,7 @@ export function ServerManager() {
         if (e.target === overlayRef.current) closeServerManager()
       }}
     >
-      <div className="modal-panel-in bg-canvas border-border-subtle border-hairline flex h-[480px] w-[680px] overflow-hidden rounded-xl shadow-[0_24px_64px_rgba(0,0,0,0.5)]">
+      <div className="modal-panel-in bg-canvas border-border-subtle border-hairline flex h-[480px] w-[680px] overflow-hidden rounded-xl shadow-[0_24px_64px_rgba(0,0,0,0.5)] max-sm:h-[calc(100dvh-1rem)] max-sm:w-[calc(100vw-1rem)] max-sm:flex-col">
         <ServerList
           configs={configs}
           selected={isNew ? NEW_SERVER : selected}

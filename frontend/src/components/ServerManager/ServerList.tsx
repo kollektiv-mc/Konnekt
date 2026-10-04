@@ -14,19 +14,21 @@ interface Props {
 
 export function ServerList({ configs, selected, activeId, onSelect }: Props) {
   return (
-    <div className="bg-surface border-border-subtle border-r-hairline flex w-48 shrink-0 flex-col p-3">
-      <span className="font-title text-text-muted border-border-subtle border-b-hairline px-2 pt-1 pb-3 text-xs font-medium tracking-wider uppercase">
+    // On a phone's width the list is a scrolling row above the form, so the
+    // form keeps the full width; the heading is dropped to save the height.
+    <div className="bg-surface border-border-subtle border-r-hairline max-sm:border-b-hairline flex w-48 shrink-0 flex-col p-3 max-sm:w-full max-sm:flex-row max-sm:items-stretch max-sm:overflow-x-auto max-sm:border-r-0 max-sm:p-2">
+      <span className="font-title text-text-muted border-border-subtle border-b-hairline px-2 pt-1 pb-3 text-xs font-medium tracking-wider uppercase max-sm:hidden">
         Servers
       </span>
 
-      <div className="flex flex-1 flex-col gap-0.5 overflow-y-auto pt-2">
+      <div className="flex flex-1 flex-col gap-0.5 overflow-y-auto pt-2 max-sm:flex-none max-sm:flex-row max-sm:overflow-visible max-sm:pt-0">
         {configs.map((cfg) => {
           const isSelected = cfg.id === selected
           return (
             <button
               key={cfg.id}
               onClick={() => onSelect(cfg.id)}
-              className={`flex flex-col items-start gap-0.5 rounded px-2 py-1.5 text-left transition-colors ${
+              className={`flex flex-col items-start gap-0.5 rounded px-2 py-1.5 text-left transition-colors max-sm:shrink-0 ${
                 isSelected
                   ? 'bg-hover text-text-primary'
                   : 'text-text-secondary hover:bg-hover hover:text-text-primary'
@@ -51,7 +53,7 @@ export function ServerList({ configs, selected, activeId, onSelect }: Props) {
 
       <button
         onClick={() => onSelect(NEW_SERVER)}
-        className={`border-border-subtle border-t-hairline mt-2 flex items-center gap-1.5 rounded px-2 py-1.5 text-xs transition-colors ${
+        className={`border-border-subtle border-t-hairline mt-2 flex items-center gap-1.5 rounded px-2 py-1.5 text-xs transition-colors max-sm:mt-0 max-sm:shrink-0 max-sm:border-t-0 max-sm:whitespace-nowrap ${
           selected === NEW_SERVER
             ? 'text-accent'
             : 'text-text-faint hover:bg-hover hover:text-text-secondary'

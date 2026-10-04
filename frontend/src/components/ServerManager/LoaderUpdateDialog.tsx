@@ -73,7 +73,7 @@ export function LoaderUpdateDialog() {
 
   return (
     <div className="z-dialog fixed inset-0 flex items-center justify-center bg-black/60">
-      <div className="bg-canvas border-border-subtle border-hairline flex w-[30rem] flex-col gap-3 rounded-xl p-5 font-mono">
+      <div className="bg-canvas border-border-subtle border-hairline flex w-[30rem] flex-col gap-3 rounded-xl p-5 font-mono max-sm:max-w-[calc(100vw-1rem)]">
         <div className="flex items-center gap-2.5">
           <span className="text-warning text-sm font-bold">[!]</span>
           <span className="font-title text-text-primary text-sm font-medium">

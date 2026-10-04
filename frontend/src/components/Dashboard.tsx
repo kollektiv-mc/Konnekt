@@ -39,6 +39,13 @@ function flipTransform(rect: DOMRect, containerRect: DOMRect, padding: number) {
   return `translate(${tx}px, ${ty}px) scale(${sx}, ${sy})`
 }
 
+// The maximized overlay's padding: p-6 on the desktop, none below 640px, where
+// the tile is a full-bleed page. Must match the overlay's `max-sm:p-0` class.
+// jsdom has no matchMedia, hence the optional call.
+function overlayPadding() {
+  return window.matchMedia?.('(max-width: 639.98px)').matches ? 0 : 24
+}
+
 // Pixel box a w x h item would occupy centered on (clientX, clientY),
 // translated into the grid cell it lands on. Measures against the RGL grid
 // container's own rect (not the scrollable viewport around it) — the grid
@@ -95,6 +102,7 @@ export function Dashboard() {
   const gridRef = useRef<HTMLDivElement>(null)
   const [maximizedId, setMaximizedId] = useState<string | null>(null)
   const [closing, setClosing] = useState(false)
+  const setMaximizedTileId = useUiStore((s) => s.setMaximizedTileId)
   const panelRef = useRef<HTMLDivElement>(null)
   const backdropRef = useRef<HTMLDivElement>(null)
   const originRectRef = useRef<DOMRect | null>(null)
@@ -148,6 +156,13 @@ export function Dashboard() {
     [maximizedId, openMaximize, closeMaximize],
   )
 
+  // Tell App which tile is open (a phone hides the nav while one is). UI state,
+  // not backend data, so an effect is the right tool; cleared on unmount.
+  useEffect(() => {
+    setMaximizedTileId(maximizedId)
+    return () => setMaximizedTileId(null)
+  }, [maximizedId, setMaximizedTileId])
+
   // Consume maximize requests raised by the navbar
   useEffect(() => {
     if (!maximizeRequest) return
@@ -194,7 +209,7 @@ export function Dashboard() {
     const rect = originRectRef.current
     const containerRect = containerRef.current?.getBoundingClientRect()
     if (!containerRect) return
-    const padding = 24 // p-6
+    const padding = overlayPadding()
 
     if (backdropRef.current) {
       const el = backdropRef.current
@@ -249,7 +264,7 @@ export function Dashboard() {
     const rect = originRectRef.current
     const containerRect = containerRef.current?.getBoundingClientRect()
     if (!containerRect) return
-    const padding = 24
+    const padding = overlayPadding()
 
     if (backdropRef.current) {
       backdropRef.current.style.transition = `background-color ${ANIM_MS}ms ease`
@@ -601,7 +616,7 @@ export function Dashboard() {
                 onClick={!closing ? closeMaximize : undefined}
               />
               {/* Panel — pointer-events-none on container so backdrop receives clicks */}
-              <div className="z-overlay pointer-events-none absolute inset-0 flex items-center justify-center p-6">
+              <div className="z-overlay pointer-events-none absolute inset-0 flex items-center justify-center p-6 max-sm:p-0">
                 <div
                   ref={panelRef}
                   className="pointer-events-auto h-full w-full"

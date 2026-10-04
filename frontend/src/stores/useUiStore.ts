@@ -5,6 +5,10 @@ interface UiStore {
   maximizeRequest: { id: string; rect: DOMRect | null } | null
   requestMaximize: (id: string, rect: DOMRect | null) => void
   clearMaximizeRequest: () => void
+  // The tile Dashboard has maximized, mirrored here so App can read it: below
+  // 640px the nav is the home screen and hides while a tile is open.
+  maximizedTileId: string | null
+  setMaximizedTileId: (id: string | null) => void
   // Bumped to ask Dashboard to close any open fullscreen (e.g. utility-tile click).
   closeRequest: number
   requestCloseMaximize: () => void
@@ -48,6 +52,9 @@ export const useUiStore = create<UiStore>((set) => ({
   maximizeRequest: null,
   requestMaximize: (id, rect) => set({ maximizeRequest: { id, rect } }),
   clearMaximizeRequest: () => set({ maximizeRequest: null }),
+
+  maximizedTileId: null,
+  setMaximizedTileId: (id) => set({ maximizedTileId: id }),
 
   closeRequest: 0,
   requestCloseMaximize: () => set((s) => ({ closeRequest: s.closeRequest + 1 })),
