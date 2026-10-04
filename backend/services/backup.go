@@ -1230,16 +1230,34 @@ func dirSize(srcDir string) int64 {
 // zipDirWithProgress writes a zip of srcDir into dest, which the caller has already
 // created and is responsible for closing. It takes an open file rather than a path
 // so that reserving the name and writing to it cannot race: see reserveBackupFile.
-// The zip root is srcDir's contents, so a full-server archive holds "world/",
-// "server.properties" and the rest at the top level, mirroring the working dir.
-func zipDirWithProgress(srcDir string, dest *os.File, onProgress func(int)) error {
+// The parameter is an io.Writer only so a test can fail the writes; production
+// always passes that file. The zip root is srcDir's contents, so a full-server
+// archive holds "world/", "server.properties" and the rest at the top level,
+// mirroring the working dir.
+//
+// The returned error includes the zip writer's own Close, which is the step that
+// writes the central directory. A failure there (a full disk at the final flush)
+// leaves an archive that will not open, so it is this function's error rather
+// than a deferred discard. See closeZip.
+func zipDirWithProgress(srcDir string, dest io.Writer, onProgress func(int)) (err error) {
 	total := dirSize(srcDir)
 
 	w := zip.NewWriter(dest)
-	defer w.Close()
+	defer closeZip(w, &err)
 
 	var written int64
 	return writeTreeToZip(w, srcDir, "", total, &written, onProgress)
+}
+
+// closeZip closes w into *err, for a deferred call. Closing flushes the zip's
+// central directory, so its error means a truncated archive. It only fills *err
+// when nothing failed earlier: the walk's error is the cause the caller should
+// see, and a Close after it fails for the same reason or one not worth reporting.
+// w is still closed on that path, so its buffered state is released either way.
+func closeZip(w *zip.Writer, err *error) {
+	if closeErr := w.Close(); *err == nil {
+		*err = closeErr
+	}
 }
 
 // zipRootsWithProgress writes a zip holding each root under its own base name as a
@@ -1250,14 +1268,16 @@ func zipDirWithProgress(srcDir string, dest *os.File, onProgress func(int)) erro
 // Progress is a single 0-100 across every root, not one sweep per root: the caller
 // emits it straight to the UI, and a bar that restarts twice on a Paper world reads
 // as three backups rather than one.
-func zipRootsWithProgress(roots []string, dest *os.File, onProgress func(int)) error {
+//
+// Like zipDirWithProgress, the returned error includes the writer's Close.
+func zipRootsWithProgress(roots []string, dest io.Writer, onProgress func(int)) (err error) {
 	var total int64
 	for _, root := range roots {
 		total += dirSize(root)
 	}
 
 	w := zip.NewWriter(dest)
-	defer w.Close()
+	defer closeZip(w, &err)
 
 	var written int64
 	for _, root := range roots {

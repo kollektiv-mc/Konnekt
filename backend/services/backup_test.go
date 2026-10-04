@@ -102,6 +102,85 @@ func TestZipDirRoundTrip(t *testing.T) {
 	}
 }
 
+// failAfterWriter accepts limit bytes and then fails every write, standing in for
+// a disk that fills part-way through an archive.
+type failAfterWriter struct {
+	limit int
+	n     int
+}
+
+var errDiskFull = errors.New("simulated disk full")
+
+func (f *failAfterWriter) Write(p []byte) (int, error) {
+	if f.n+len(p) > f.limit {
+		accepted := f.limit - f.n
+		f.n = f.limit
+		return accepted, errDiskFull
+	}
+	f.n += len(p)
+	return len(p), nil
+}
+
+// The zip writer buffers, so for a tree this small nothing reaches dest until the
+// writer's Close flushes the entries and the central directory. A writer that fails
+// from the first byte therefore fails Close and nothing earlier: the walk has
+// already returned nil. Close's error used to be dropped by a bare deferred
+// w.Close(), so the zip functions reported success for an archive that never got
+// its central directory (#451).
+func TestZipFunctionsReturnTheCloseError(t *testing.T) {
+	src := t.TempDir()
+	writeFile(t, filepath.Join(src, "level.dat"), "level")
+	writeFile(t, filepath.Join(src, "nested", "inner.txt"), "inner")
+
+	cases := []struct {
+		name string
+		run  func(dest io.Writer) error
+	}{
+		{"zipDirWithProgress", func(dest io.Writer) error { return zipDirWithProgress(src, dest, nil) }},
+		{"zipRootsWithProgress", func(dest io.Writer) error { return zipRootsWithProgress([]string{src}, dest, nil) }},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			if err := tc.run(&failAfterWriter{limit: 0}); !errors.Is(err, errDiskFull) {
+				t.Errorf("error = %v, want the write failure from closing the zip", err)
+			}
+			// A writer with room to spare is the control: the same tree succeeds.
+			if err := tc.run(io.Discard); err != nil {
+				t.Errorf("error with a healthy writer = %v, want nil", err)
+			}
+		})
+	}
+}
+
+// The walk's error is the cause, so a Close failure after it must not replace it.
+// The writer fails too, so a function that let Close overwrite the error would
+// report errDiskFull here instead of the missing root.
+func TestZipFunctionsKeepTheWalkErrorOverTheCloseError(t *testing.T) {
+	missing := filepath.Join(t.TempDir(), "no-such-dir")
+
+	cases := []struct {
+		name string
+		run  func(dest io.Writer) error
+	}{
+		{"zipDirWithProgress", func(dest io.Writer) error { return zipDirWithProgress(missing, dest, nil) }},
+		{"zipRootsWithProgress", func(dest io.Writer) error { return zipRootsWithProgress([]string{missing}, dest, nil) }},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			err := tc.run(&failAfterWriter{limit: 0})
+			if err == nil {
+				t.Fatal("expected an error for a missing root, got nil")
+			}
+			if errors.Is(err, errDiskFull) {
+				t.Errorf("error = %v, the close error overwrote the walk error", err)
+			}
+			if !errors.Is(err, os.ErrNotExist) {
+				t.Errorf("error = %v, want the walk's not-exist error", err)
+			}
+		})
+	}
+}
+
 func TestUnzipToRejectsZipSlip(t *testing.T) {
 	zipPath := filepath.Join(t.TempDir(), "evil.zip")
 	f, err := os.Create(zipPath)
