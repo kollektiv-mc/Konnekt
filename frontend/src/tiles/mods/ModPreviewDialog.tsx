@@ -11,6 +11,7 @@ import { DependencyDialog } from './DependencyDialog'
 import { ClientOnlyBadge } from './ClientOnlyBadge'
 import { ModAboutBody } from './ModAboutBody'
 import { fmtCount, fmtBytes, relativeTime } from '../../lib/format'
+import { errMsg } from '../../lib/ipc'
 import { IconButton } from '../../components/ui/IconButton'
 import { X } from '../../lib/icons'
 import { Icon } from '../../components/ui/Icon'
@@ -61,6 +62,7 @@ export function ModPreviewDialog({
   const [pendingVersionId, setPendingVersionId] = useState('')
   const [pendingClientOnly, setPendingClientOnly] = useState(false)
   const [changingVersion, setChangingVersion] = useState(false)
+  const [depError, setDepError] = useState<string | null>(null)
 
   const isModrinth = mod.source === 'modrinth' && !!mod.projectId
   // Versions stay browsable for anything with a project, but switching needs a
@@ -96,6 +98,7 @@ export function ModPreviewDialog({
         const clientOnly = versions.find((v) => v.id === versionId)?.clientOnly ?? false
         if (nonTrivial.length > 0 || clientOnly) {
           setDeps(resolved ?? [])
+          setDepError(null)
           setPendingVersionId(versionId)
           setPendingClientOnly(clientOnly)
           return
@@ -116,13 +119,20 @@ export function ModPreviewDialog({
     [mod.fileName, versions, onResolveDeps, onChangeVersion, onClose],
   )
 
+  // The dependency dialog stays open until the install lands. It sits above
+  // this dialog (z-dialog), so the installError line below is behind its
+  // backdrop: a failure is shown in the dependency dialog itself, where the
+  // click was, and can be retried or cancelled from there.
   const handleDepConfirm = useCallback(
     async (versionIds: string[]) => {
-      setDeps(null)
+      setDepError(null)
       setChangingVersion(true)
       try {
         await onInstall(versionIds)
+        setDeps(null)
         onClose()
+      } catch (e: unknown) {
+        setDepError(errMsg(e))
       } finally {
         setChangingVersion(false)
       }
@@ -150,6 +160,8 @@ export function ModPreviewDialog({
           clientOnly={pendingClientOnly}
           onConfirm={handleDepConfirm}
           onCancel={() => setDeps(null)}
+          busy={changingVersion}
+          error={depError}
         />
       )}
 

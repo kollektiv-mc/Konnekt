@@ -11,7 +11,7 @@ import { useProcessesStore } from '../../stores/useProcessesStore'
 import { DetectServerLoader } from '../../../wailsjs/go/main/App'
 import { models } from '../../../wailsjs/go/models'
 import { PLUGIN_LOADERS } from '../../lib/constants'
-import { isRemoteBrowser, readOr } from '../../lib/ipc'
+import { errMsg, isRemoteBrowser, readOr } from '../../lib/ipc'
 import { Headline } from '../../components/ui/Figure'
 import { useSettingsStore } from '../../stores/useSettingsStore'
 
@@ -42,14 +42,25 @@ function useServerKind(serverId: string): { kind: 'mods' | 'plugins'; detecting:
     detected.current = true
     setDetecting(true)
     readOr(() => DetectServerLoader(serverId), null)
-      .then((cfg) => {
+      .then(async (cfg) => {
         if (!cfg) return
         const unchanged =
           cfg.loader === config.loader &&
           cfg.mcVersion === config.mcVersion &&
           cfg.jarPath === config.jarPath
         // SaveServerConfig is admin tier: remotely it would raise an approval prompt nobody asked for.
-        if (!unchanged && !isRemoteBrowser()) saveConfig(cfg)
+        if (unchanged || isRemoteBrowser()) return
+        try {
+          await saveConfig(cfg)
+        } catch {
+          // Deliberately not surfaced here: nobody clicked anything, so a banner
+          // would blame the user for a sync they did not start. The store has
+          // already recorded the message in its `error` before rethrowing (the
+          // server manager shows it), and dropping the rethrow loses nothing:
+          // the write only refreshes a value derived from the files on disk, so
+          // a refused one leaves the stored config as it was and the next mount
+          // asks again. detected stays true, so this mount does not retry.
+        }
       })
       .finally(() => setDetecting(false))
   }, [serverId, config, saveConfig])
@@ -199,10 +210,12 @@ function ModsExpanded({
 }) {
   const [view, setView] = useState<ModsView>('library')
   const [refreshing, setRefreshing] = useState(false)
+  const [addError, setAddError] = useState<string | null>(null)
   const noun = kind === 'plugins' ? 'Plugin' : 'Mod'
   const modProcess = useProcessesStore((s) => s.processes['mod:' + serverId])
 
   function openBrowse() {
+    setAddError(null)
     setView('browse')
     mods.clearProject()
   }
@@ -212,8 +225,16 @@ function ModsExpanded({
     mods.clearProject()
   }
 
+  // Not mods.installError: that is the browse flow's, and it renders only in the
+  // panels, so a failed Add Files would be on screen nowhere. This sits under
+  // the header the button is in.
   async function handleAddFiles() {
-    await mods.installLocal()
+    setAddError(null)
+    try {
+      await mods.installLocal()
+    } catch (e: unknown) {
+      setAddError(errMsg(e))
+    }
   }
 
   async function handleRefresh() {
@@ -325,6 +346,15 @@ function ModsExpanded({
             // eslint-disable-next-line no-restricted-syntax -- width is a live download-progress percent
             style={{ width: `${modProcess.percent}%` }}
           />
+        </div>
+      )}
+
+      {view === 'library' && addError && (
+        <div
+          role="alert"
+          className="text-danger border-border-subtle border-b-hairline shrink-0 px-3 py-1.5 text-xs"
+        >
+          {addError}
         </div>
       )}
 

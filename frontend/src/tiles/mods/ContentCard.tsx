@@ -4,6 +4,7 @@ import { isConfirmInstallError } from './useMods'
 import { DependencyDialog } from './DependencyDialog'
 import { ClientOnlyBadge } from './ClientOnlyBadge'
 import { fmtCount, relativeTime } from '../../lib/format'
+import { errMsg } from '../../lib/ipc'
 
 interface ContentCardProps {
   project: ModProject
@@ -31,6 +32,10 @@ export function ContentCard({
   const [deps, setDeps] = useState<ResolvedDependency[] | null>(null)
   const [pendingVersionId, setPendingVersionId] = useState('')
   const [pendingClientOnly, setPendingClientOnly] = useState(false)
+  // Why the last install from this card failed, shown on the card itself: the
+  // hook's installError reaches only the detail panel, and only when it is open.
+  const [installError, setInstallError] = useState<string | null>(null)
+  const [depError, setDepError] = useState<string | null>(null)
 
   const busy = quickInstalling || installing
   // done = just installed → treat same as installed (grey dim +, no checkmark)
@@ -39,6 +44,7 @@ export function ContentCard({
   const handleQuickInstall = async (e: React.MouseEvent) => {
     e.stopPropagation()
     if (busy || alreadyInstalled) return
+    setInstallError(null)
     setQuickInstalling(true)
     try {
       await onInstallLatest(project.id)
@@ -49,19 +55,27 @@ export function ContentCard({
         setDeps(err.deps)
         setPendingVersionId(err.versionId)
         setPendingClientOnly(err.clientOnly)
+        setDepError(null)
+      } else {
+        setInstallError(errMsg(err))
       }
     } finally {
       setQuickInstalling(false)
     }
   }
 
+  // The dialog stays open until the install lands: a failure is shown in it
+  // and can be retried, rather than closing the dialog on a failure nobody saw.
   const handleDepConfirm = async (versionIds: string[]) => {
-    setDeps(null)
+    setDepError(null)
     setQuickInstalling(true)
     try {
       await onInstall(versionIds)
+      setDeps(null)
       setDone(true)
       setTimeout(() => setDone(false), 2500)
+    } catch (err: unknown) {
+      setDepError(errMsg(err))
     } finally {
       setQuickInstalling(false)
     }
@@ -76,6 +90,8 @@ export function ContentCard({
           clientOnly={pendingClientOnly}
           onConfirm={handleDepConfirm}
           onCancel={() => setDeps(null)}
+          busy={quickInstalling}
+          error={depError}
         />
       )}
       <div
@@ -120,6 +136,12 @@ export function ContentCard({
         <p className="text-text-muted mb-2 line-clamp-2 flex-1 text-xs leading-relaxed">
           {project.description}
         </p>
+
+        {installError && (
+          <p role="alert" title={installError} className="text-danger mb-1.5 line-clamp-2 text-xs">
+            {installError}
+          </p>
+        )}
 
         {/* Stats row */}
         <div className="mb-1.5 flex items-center gap-2">

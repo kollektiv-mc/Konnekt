@@ -147,4 +147,33 @@ describe('ModPreviewDialog', () => {
     await waitFor(() => expect(getByText(/no version to switch it to/)).toBeTruthy())
     expect(queryByText('Switch')).toBeNull()
   })
+
+  // #473: the confirm used to close the dependency dialog first and await the
+  // install with no catch, so a refused install (admin tier through Remote
+  // Access) was an unhandled rejection with nothing on screen. The dependency
+  // dialog is above this one, so the message has to be in it.
+  it('keeps the dependency dialog open and says why a confirmed install failed', async () => {
+    const onInstall = vi.fn().mockRejectedValue('install refused: nobody answered on the desktop')
+    const onClose = vi.fn()
+    const { getByText, findByText, findByRole } = renderDialog({
+      versions: [models.ModVersion.createFrom({ ...versions[0], clientOnly: true })],
+      onInstall,
+      onClose,
+    })
+
+    fireEvent.click(getByText('versions'))
+    fireEvent.click(getByText('Switch'))
+    fireEvent.click(await findByText('Install anyway'))
+
+    const alert = await findByRole('alert')
+    expect(alert.textContent).toBe('install refused: nobody answered on the desktop')
+    expect(onInstall).toHaveBeenCalledWith(['ver2'])
+    expect(getByText('Client-only mod')).toBeTruthy()
+    expect(onClose).not.toHaveBeenCalled()
+
+    // Retryable from the same dialog, and a success closes both.
+    onInstall.mockResolvedValueOnce(undefined)
+    fireEvent.click(getByText('Install anyway'))
+    await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1))
+  })
 })

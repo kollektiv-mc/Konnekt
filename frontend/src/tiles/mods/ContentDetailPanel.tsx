@@ -6,6 +6,7 @@ import { DependencyDialog } from './DependencyDialog'
 import { ContentCard } from './ContentCard'
 import { ModAboutBody } from './ModAboutBody'
 import { fmtCount, fmtBytes, relativeTime } from '../../lib/format'
+import { errMsg } from '../../lib/ipc'
 import { IconButton } from '../../components/ui/IconButton'
 import { X } from '../../lib/icons'
 import { Icon } from '../../components/ui/Icon'
@@ -59,12 +60,16 @@ export function ContentDetailPanel({
   const [pendingVersionId, setPendingVersionId] = useState('')
   const [pendingClientOnly, setPendingClientOnly] = useState(false)
   const [installing2, setInstalling2] = useState(false)
+  const [actionError, setActionError] = useState<string | null>(null)
+  const [depError, setDepError] = useState<string | null>(null)
 
   useEffect(() => {
     setTab('about')
     setGalleryIdx(0)
     setShowAllVersions(false)
     setDeps(null)
+    setActionError(null)
+    setDepError(null)
   }, [project.id])
 
   useEffect(() => {
@@ -83,6 +88,7 @@ export function ContentDetailPanel({
   }, [tab]) // intentionally omit stable refs
 
   const handleInstallClick = async () => {
+    setActionError(null)
     setInstalling2(true)
     try {
       await onInstallLatest(project.id)
@@ -91,30 +97,57 @@ export function ContentDetailPanel({
         setDeps(e.deps)
         setPendingVersionId(e.versionId)
         setPendingClientOnly(e.clientOnly)
+        setDepError(null)
+      } else {
+        setActionError(errMsg(e))
       }
     } finally {
       setInstalling2(false)
     }
   }
 
+  // The dialog stays open until the install lands: a failure is shown in it
+  // and can be retried, rather than closing the dialog on a failure nobody saw.
   const handleDepConfirm = async (versionIds: string[]) => {
-    setDeps(null)
-    await onInstall(versionIds)
+    setDepError(null)
+    setInstalling2(true)
+    try {
+      await onInstall(versionIds)
+      setDeps(null)
+    } catch (e: unknown) {
+      setDepError(errMsg(e))
+    } finally {
+      setInstalling2(false)
+    }
   }
 
   // A version row installs that exact version, without the dependency pass
   // installLatest makes, so a client-only one asks here instead.
-  const handleVersionInstall = (v: ModVersion) => {
+  const handleVersionInstall = async (v: ModVersion) => {
     if (v.clientOnly) {
       setDeps([])
+      setDepError(null)
       setPendingVersionId(v.id)
       setPendingClientOnly(true)
       return
     }
-    void onInstall([v.id])
+    setActionError(null)
+    setInstalling2(true)
+    try {
+      await onInstall([v.id])
+    } catch (e: unknown) {
+      // Shown with the Install button, which is above the tabs and so on
+      // screen whichever one the row was clicked from.
+      setActionError(errMsg(e))
+    } finally {
+      setInstalling2(false)
+    }
   }
 
   const isInstalling = installing || installing2
+  // This panel's own failure first: it is the one the click that just happened
+  // produced. The hook's installError covers an install the card grid started.
+  const shownError = actionError ?? installError
 
   return (
     <>
@@ -125,6 +158,8 @@ export function ContentDetailPanel({
           clientOnly={pendingClientOnly}
           onConfirm={handleDepConfirm}
           onCancel={() => setDeps(null)}
+          busy={isInstalling}
+          error={depError}
         />
       )}
 
@@ -188,7 +223,11 @@ export function ContentDetailPanel({
           >
             {isInstalling ? 'Installing…' : 'Install'}
           </button>
-          {installError && <div className="text-danger mt-1.5 text-xs">{installError}</div>}
+          {shownError && (
+            <div role="alert" className="text-danger mt-1.5 text-xs">
+              {shownError}
+            </div>
+          )}
         </div>
 
         {/* Sub-tabs */}
