@@ -378,7 +378,14 @@ func (s *ConfigEditorService) backup(serverID, abs, relPath string) error {
 
 	escaped := strings.ReplaceAll(filepath.ToSlash(relPath), "/", "__")
 	backupDir := filepath.Join(s.dataDir, "config_backups", serverID)
-	if err := os.MkdirAll(backupDir, 0755); err != nil {
+	// A backup of server.properties carries the RCON password, so the
+	// directory is owner-only. MkdirAll leaves an existing directory as it
+	// found it, and older versions made this one 0755, so narrow it
+	// explicitly; that also hides any 0644 .bak files already inside.
+	if err := os.MkdirAll(backupDir, 0700); err != nil {
+		return err
+	}
+	if err := os.Chmod(backupDir, 0700); err != nil {
 		return err
 	}
 
@@ -424,7 +431,7 @@ func createConfigBackupFile(backupDir, escaped string) (*os.File, error) {
 		now := time.Now()
 		ts := now.Format("20060102_150405") + fmt.Sprintf("_%03d", now.Nanosecond()/int(time.Millisecond))
 		path := filepath.Join(backupDir, escaped+"."+ts+".bak")
-		f, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0644)
+		f, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0600)
 		if err == nil {
 			return f, nil
 		}

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -491,5 +492,78 @@ func TestConfigEditorRefusesAnEmptyWorkingDir(t *testing.T) {
 
 	if _, err := svc.ReadConfigFile("bare", "server.properties"); err == nil || !strings.Contains(err.Error(), "no working directory") {
 		t.Errorf("ReadConfigFile on an empty working dir = %v, want the same refusal", err)
+	}
+}
+
+// Config backups copy server.properties, RCON password included, so the .bak
+// files are 0600 and their directory 0700 (#430).
+func TestConfigBackupsAreOwnerOnly(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("POSIX mode bits are not meaningful on Windows")
+	}
+	svc, _ := newConfigEditorFixture(t)
+	backupDir := filepath.Join(svc.dataDir, "config_backups", "srv1")
+
+	if err := svc.WriteConfigFile("srv1", "server.properties", "rcon.password=a\n"); err != nil {
+		t.Fatal(err)
+	}
+	if err := svc.WriteConfigFile("srv1", "server.properties", "rcon.password=b\n"); err != nil {
+		t.Fatal(err)
+	}
+
+	if got := modeOf(t, backupDir); got != 0700 {
+		t.Errorf("backup dir mode = %o, want 0700", got)
+	}
+	entries, err := os.ReadDir(backupDir)
+	if err != nil || len(entries) != 1 {
+		t.Fatalf("backup dir = %v, %v; want one .bak", entries, err)
+	}
+	if got := modeOf(t, filepath.Join(backupDir, entries[0].Name())); got != 0600 {
+		t.Errorf("backup file mode = %o, want 0600", got)
+	}
+}
+
+// A directory an older version made at 0755 is narrowed on the next backup,
+// since MkdirAll leaves an existing directory alone.
+func TestConfigBackupNarrowsAnExistingWideDirectory(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("POSIX mode bits are not meaningful on Windows")
+	}
+	svc, _ := newConfigEditorFixture(t)
+	backupDir := filepath.Join(svc.dataDir, "config_backups", "srv1")
+	if err := os.MkdirAll(backupDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	// MkdirAll is subject to the umask, so pin the starting mode.
+	if err := os.Chmod(backupDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := svc.WriteConfigFile("srv1", "server.properties", "a=1\n"); err != nil {
+		t.Fatal(err)
+	}
+	if err := svc.WriteConfigFile("srv1", "server.properties", "a=2\n"); err != nil {
+		t.Fatal(err)
+	}
+	if got := modeOf(t, backupDir); got != 0700 {
+		t.Errorf("pre-existing backup dir mode = %o, want 0700", got)
+	}
+}
+
+// WriteConfigFile on a 0600 server.properties keeps it 0600 end to end.
+func TestWriteConfigFileKeepsAnOwnerOnlyServerProperties(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("POSIX mode bits are not meaningful on Windows")
+	}
+	svc, workDir := newConfigEditorFixture(t)
+	path := filepath.Join(workDir, "server.properties")
+	if err := os.WriteFile(path, []byte("rcon.password=a\n"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	if err := svc.WriteConfigFile("srv1", "server.properties", "rcon.password=b\n"); err != nil {
+		t.Fatal(err)
+	}
+	if got := modeOf(t, path); got != 0600 {
+		t.Errorf("server.properties mode = %o, want 0600", got)
 	}
 }
