@@ -33,8 +33,9 @@ were shipped early during Alpha. Their status below reflects reality.
 - [x] Mouse-wheel scrolling on Firefox's spring physics (Settings > Appearance, on by default)
 - [x] Satoshi (display), Excon (titles) and Ranade (body) webfonts; mono is the
       native OS stack. JetBrains Mono and Inter were the original plan and were
-      never shipped
-- [x] Startup splash screen (Satoshi Black "Konnekt" in accent green, 1s fade+glow animation)
+      never shipped. The webfont files were later removed for licensing (#442):
+      the families stay first in the stacks, which fall back to system faces
+- [x] Startup splash screen (Satoshi Black "Konnekt" in accent green, 1s fade+glow animation; Satoshi is no longer bundled, see above)
 - [x] Tile layout system (react-grid-layout, drag, resize, snap)
 - [x] Tile crate (inactive tiles panel, add/remove from canvas)
 - [x] Tile scale and maximise
