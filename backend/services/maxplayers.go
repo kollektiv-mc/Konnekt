@@ -71,9 +71,18 @@ func (s *serverInstance) resolveMaxPlayers(running bool, booted int) int {
 	return booted
 }
 
-// maxPlayersOnDisk costs one stat per call, and a parse only when the file's
-// size or modification time has moved since the last one. false means the
-// file could not be found or read.
+// openProperties is os.Open, swapped by tests to act on the file between the
+// open and the parse. It exists only as that seam, like renameFile.
+var openProperties = os.Open
+
+// maxPlayersOnDisk costs one stat per call, and an open and parse only when the
+// file's size or modification time has moved since the last one. false means
+// the file could not be found or read, and leaves the cache as it was.
+//
+// The common path is a stat by path and holds no handle on purpose: this runs on
+// every stats tick for a stopped server, and on Windows os.Open does not share
+// delete access, so a handle held on every tick could make a concurrent
+// writeFileAtomic rename over server.properties fail.
 func (s *serverInstance) maxPlayersOnDisk() (int, bool) {
 	dir, err := s.workingDir(s.id)
 	if err != nil {
@@ -91,11 +100,31 @@ func (s *serverInstance) maxPlayersOnDisk() (int, bool) {
 	if stamp == s.diskMax.stamp {
 		return s.diskMax.value, true
 	}
-	props, err := readProperties(path)
+	return s.reparseMaxPlayers(path)
+}
+
+// reparseMaxPlayers reads max-players and caches it against the stamp of the
+// handle it parsed, not the stat that sent it here. A stat by path followed by
+// readProperties (which reads a missing file as an empty map) let a delete
+// between them cache the default against the old stamp, and the real figure
+// then never came back until the file's stamp moved (#453). Taking the stamp
+// and the bytes from one handle means they always describe the same file.
+// Called with s.diskMax.mu held.
+func (s *serverInstance) reparseMaxPlayers(path string) (int, bool) {
+	f, err := openProperties(path)
 	if err != nil {
 		return 0, false
 	}
-	s.diskMax.stamp = stamp
+	defer f.Close()
+	info, err := f.Stat()
+	if err != nil {
+		return 0, false
+	}
+	props, err := parseProperties(f)
+	if err != nil {
+		return 0, false
+	}
+	s.diskMax.stamp = propsStamp{modTime: info.ModTime(), size: info.Size()}
 	s.diskMax.value = propInt(props, "max-players", defaultMaxPlayers)
 	return s.diskMax.value, true
 }

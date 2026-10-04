@@ -3,6 +3,7 @@ package services
 import (
 	"bufio"
 	"errors"
+	"io"
 	"os"
 	"strings"
 )
@@ -67,9 +68,15 @@ func readProperties(path string) (map[string]string, error) {
 		return nil, err
 	}
 	defer f.Close()
+	return parseProperties(f)
+}
 
+// parseProperties is readProperties' parser, split out so a caller that already
+// holds an open file (maxPlayersOnDisk, which must parse the very handle it
+// took its stamp from) reads it with the same rules rather than a second copy.
+func parseProperties(r io.Reader) (map[string]string, error) {
 	props := make(map[string]string)
-	scanner := bufio.NewScanner(f)
+	scanner := bufio.NewScanner(r)
 	for scanner.Scan() {
 		line := strings.TrimSpace(scanner.Text())
 		if line == "" || strings.HasPrefix(line, "#") {
