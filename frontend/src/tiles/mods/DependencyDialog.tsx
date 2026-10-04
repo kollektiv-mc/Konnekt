@@ -10,6 +10,12 @@ interface Props {
   clientOnly?: boolean
   onConfirm: (versionIds: string[]) => void
   onCancel: () => void
+  // The install the confirm started, while it runs, and why it failed. The
+  // dialog stays open across both: a refused install (admin tier through
+  // Remote Access, where nobody may answer) is told to the person who clicked
+  // Install, in the surface they are looking at, and can be retried from it.
+  busy?: boolean
+  error?: string | null
 }
 
 export function DependencyDialog({
@@ -18,6 +24,8 @@ export function DependencyDialog({
   clientOnly = false,
   onConfirm,
   onCancel,
+  busy = false,
+  error = null,
 }: Props) {
   // required deps are auto-selected and locked; optional are toggleable
   const [optionalSelected, setOptionalSelected] = useState<Set<string>>(new Set())
@@ -107,6 +115,12 @@ export function DependencyDialog({
           </div>
         )}
 
+        {error && (
+          <p role="alert" className="text-danger mb-3 text-xs break-words">
+            {error}
+          </p>
+        )}
+
         <div className="flex justify-end gap-2">
           <button
             onClick={onCancel}
@@ -116,9 +130,12 @@ export function DependencyDialog({
           </button>
           <button
             onClick={handleConfirm}
-            className="bg-accent text-canvas rounded px-3 py-1.5 text-xs font-medium"
+            disabled={busy}
+            className={`bg-accent text-canvas rounded px-3 py-1.5 text-xs font-medium ${
+              busy ? 'opacity-60' : 'opacity-100'
+            }`}
           >
-            {clientOnly ? 'Install anyway' : 'Install'}
+            {busy ? 'Installing…' : clientOnly ? 'Install anyway' : 'Install'}
           </button>
         </div>
       </div>

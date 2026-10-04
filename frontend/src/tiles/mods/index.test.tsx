@@ -1,5 +1,5 @@
 import { describe, it, expect, afterEach, beforeEach, vi } from 'vitest'
-import { render, screen, waitFor, cleanup } from '@testing-library/react'
+import { render, screen, waitFor, cleanup, fireEvent } from '@testing-library/react'
 import * as App from '../../../wailsjs/go/main/App'
 import { ModsTile } from './index'
 import { useServerConfigStore } from '../../stores/useServerConfigStore'
@@ -12,9 +12,11 @@ vi.mock('../../lib/ipc', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../../lib/ipc')>()),
   isRemoteBrowser: vi.fn(() => false),
 }))
+const installLocal = vi.hoisted(() => vi.fn<() => Promise<void>>(() => Promise.resolve()))
 // Data fields are explicit; every function the tile calls falls through to a no-op.
 vi.mock('./useMods', () => {
   const data: Record<string, unknown> = {
+    installLocal,
     installed: [],
     updates: {},
     searchResults: [],
@@ -74,6 +76,49 @@ describe('ModsTile', () => {
     await waitFor(() => expect(App.DetectServerLoader).toHaveBeenCalledTimes(1))
     await new Promise((r) => setTimeout(r, 20))
     expect(saveConfig).not.toHaveBeenCalled()
+  })
+
+  // #473: the detection write is a background sync with nobody waiting on it.
+  // A refusal is caught (the store has already recorded it), not rethrown into
+  // an unhandled rejection that vitest would fail this test on.
+  it('survives a refused detection save without an unhandled rejection', async () => {
+    // A plain function, not vi.fn(): a mock records the settled result of the
+    // promise it returns, which attaches a handler and hides the rejection.
+    let calls = 0
+    useServerConfigStore.setState({
+      saveConfig: () => {
+        calls++
+        return Promise.reject(new Error('SaveServerConfig refused'))
+      },
+    })
+    const unhandled = vi.fn()
+    process.on('unhandledRejection', unhandled)
+    try {
+      render(<ModsTile serverId="alpha" />)
+      await waitFor(() => expect(calls).toBe(1))
+      await new Promise((r) => setTimeout(r, 20))
+      expect(unhandled).not.toHaveBeenCalled()
+      // Nothing the user did failed, so nothing is shown.
+      expect(screen.queryByRole('alert')).toBeNull()
+    } finally {
+      process.off('unhandledRejection', unhandled)
+    }
+  })
+
+  // #473: handleAddFiles awaited installLocal with no catch, and the hook's
+  // installError renders only in the panels, so a failed add was on screen nowhere.
+  it('shows why Add Files failed', async () => {
+    installLocal.mockRejectedValueOnce('ModInstallLocal refused: nobody answered')
+    render(<ModsTile serverId="alpha" maximized />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Add Files' }))
+
+    const alert = await screen.findByRole('alert')
+    expect(alert.textContent).toBe('ModInstallLocal refused: nobody answered')
+
+    // A second try clears it.
+    fireEvent.click(screen.getByRole('button', { name: 'Add Files' }))
+    await waitFor(() => expect(screen.queryByRole('alert')).toBeNull())
   })
 
   it('offers Add Files on the desktop and not in a remote browser', () => {
