@@ -22,7 +22,27 @@ var renameFile = os.Rename
 // exactly the torn-write window this helper exists to close. A Windows
 // sharing violation (the target open in another process) surfaces as an error
 // instead.
+//
+// The final mode is perm narrowed by whatever mode path already has: perm AND
+// the existing permission bits. Never wider than the caller asks for, and
+// never wider than the user chose. A user's 0600 server.properties (it holds
+// the RCON password) therefore stays 0600 when a caller asks for 0644, where
+// a plain chmod to perm widened it on every save. Plain "keep the existing
+// mode" would be wrong the other way: WritePrivateDataFile asks for 0600 and
+// must narrow a pre-existing 0644 file. The intersection is also never wider
+// than the old always-perm behaviour, so no caller can end up with a file
+// more open than it was before.
 func writeFileAtomic(path string, data []byte, perm os.FileMode) error {
+	// Resolve the mode before creating anything, so a stat failure leaves no
+	// temp file behind.
+	mode := perm
+	switch existing, err := os.Stat(path); {
+	case err == nil:
+		mode = existing.Mode().Perm() & perm
+	case !os.IsNotExist(err):
+		return fmt.Errorf("stat %s: %w", path, err)
+	}
+
 	dir := filepath.Dir(path)
 	f, err := os.CreateTemp(dir, "."+filepath.Base(path)+".tmp-*")
 	if err != nil {
@@ -46,8 +66,9 @@ func writeFileAtomic(path string, data []byte, perm os.FileMode) error {
 		removeTemp(tmp)
 		return fmt.Errorf("close %s: %w", tmp, err)
 	}
-	// CreateTemp opens at 0600; match the mode a direct os.WriteFile gave.
-	if err := os.Chmod(tmp, perm); err != nil {
+	// CreateTemp opens at 0600, so the mode is set explicitly. Chmod is not
+	// subject to the umask, which is also why a new file gets exactly perm.
+	if err := os.Chmod(tmp, mode); err != nil {
 		removeTemp(tmp)
 		return fmt.Errorf("chmod %s: %w", tmp, err)
 	}
