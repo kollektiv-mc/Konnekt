@@ -1,7 +1,8 @@
-import { useState, useRef, useCallback, lazy, Suspense } from 'react'
+import { useState, useRef, useCallback, useEffect, lazy, Suspense } from 'react'
 import { RestartServer } from '../../../wailsjs/go/main/App'
 import { hasWailsBridge } from '../../lib/ipc'
 import { useServerStore } from '../../stores/useServerStore'
+import { useUiStore } from '../../stores/useUiStore'
 import type { TileProps } from '../../types'
 import { FileList } from './FileList'
 import { useConfigEditor } from './useConfigEditor'
@@ -68,6 +69,35 @@ export function ConfigTile({ serverId, maximized }: TileProps) {
     save,
     revert,
   } = useConfigEditor(serverId)
+
+  // Veto a close or a server switch while the open file has unsaved edits (#450).
+  // Both read through refs so the guard keeps one identity across keystrokes
+  // instead of re-registering on each, and it is only registered while this
+  // editor is maximized, since the compact face holds nothing to lose.
+  const setCloseGuard = useUiStore((s) => s.setCloseGuard)
+  const isDirtyRef = useRef(false)
+  const revertRef = useRef(revert)
+  useEffect(() => {
+    isDirtyRef.current = isDirty
+    revertRef.current = revert
+  }, [isDirty, revert])
+  useEffect(() => {
+    if (!maximized) return
+    setCloseGuard((proceed) => {
+      if (!isDirtyRef.current) return false
+      // Cancelling still returns true: the guard has answered, and the close or
+      // switch is dropped rather than run.
+      if (window.confirm('You have unsaved changes. Discard them?')) {
+        revertRef.current()
+        // Close re-enters this guard through the store before the render that
+        // refreshes the ref above, so mark it clean here or it would ask again.
+        isDirtyRef.current = false
+        proceed()
+      }
+      return true
+    })
+    return () => setCloseGuard(null)
+  }, [maximized, setCloseGuard])
 
   // Summary view when tile is not maximized
   if (!maximized) {

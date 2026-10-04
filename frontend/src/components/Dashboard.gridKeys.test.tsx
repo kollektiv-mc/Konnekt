@@ -227,6 +227,40 @@ describe('Dashboard maximized tile', () => {
     expect(panel.style.transition).toBe('')
   })
 
+  // A guard that takes over a close gets the close itself to run once the user
+  // agrees, which is how the same guard also serves a server switch (#450).
+  it('hands a close guard the close to run, and closes when it does', () => {
+    render(<Dashboard />)
+    act(() => {
+      useUiStore.getState().requestMaximize('console', null)
+    })
+    let held: (() => void) | undefined
+    useUiStore.setState({
+      closeGuard: (proceed) => {
+        held = proceed
+        return true
+      },
+    })
+
+    act(() => {
+      useUiStore.getState().requestCloseMaximize()
+    })
+    act(() => {
+      vi.advanceTimersByTime(500)
+    })
+    expect(useUiStore.getState().maximizedTileId).toBe('console')
+
+    // The user agreed, and the guard reads clean by the time the close returns.
+    useUiStore.setState({ closeGuard: null })
+    act(() => {
+      held?.()
+    })
+    act(() => {
+      vi.advanceTimersByTime(500)
+    })
+    expect(useUiStore.getState().maximizedTileId).toBeNull()
+  })
+
   it('clears it on unmount', () => {
     const { unmount } = render(<Dashboard />)
     act(() => {
