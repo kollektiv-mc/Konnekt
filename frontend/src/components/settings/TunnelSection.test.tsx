@@ -102,6 +102,16 @@ describe('TunnelSection', () => {
       expect(sw().getAttribute('aria-checked')).toBe('true')
     })
 
+    it('shows a QR code named for the address', () => {
+      setup({ status: 'running', url: ADDRESS })
+      expect(screen.getByRole('img', { name: `QR code for ${ADDRESS}` })).toBeTruthy()
+    })
+
+    it('shows no QR code while the address is empty', () => {
+      setup({ status: 'running', url: '' })
+      expect(screen.queryByRole('img')).toBeNull()
+    })
+
     it('copies the tunnel address', async () => {
       const writeText = vi.fn(() => Promise.resolve())
       Object.assign(navigator, { clipboard: { writeText } })
@@ -143,6 +153,14 @@ describe('TunnelSection', () => {
       expect(sw().disabled).toBe(true)
     })
   })
+
+  it.each<Status>(['off', 'downloading', 'starting', 'failed'])(
+    'shows no QR code while %s, even with a stale address',
+    (status) => {
+      setup({ status, url: ADDRESS, error: 'boom' })
+      expect(screen.queryByRole('img')).toBeNull()
+    },
+  )
 
   describe('the disabled prop', () => {
     it.each(ALL)('disables the switch while %s', (status) => {

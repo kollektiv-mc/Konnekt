@@ -139,6 +139,26 @@ report; it is also Vitest's own default. Its version has to match `vitest`'s
 exactly, so it carries the same caret range as `vitest` and the lockfile pins
 them to one version; bump the two together.
 
+**Considered and not added:** a QR library (`qrcode`, `qrcode-generator`,
+`uqr` and the like). Settings > Remote Access draws the tunnel's address as a
+code (#479) so a phone can read it off the screen, which is the case for one.
+`frontend/src/lib/qr.ts` is a small in-repo encoder instead: byte mode, level
+M, versions 1 to 10 (213 bytes), pure and DOM-free, rendered by
+`components/ui/QrCode.tsx` as one inline SVG path. The whole input space is
+`https://<words>.trycloudflare.com`, so one mode and one level cover it, and
+the libraries are mostly the rest of the standard (numeric, alphanumeric and
+kanji modes, ECI, the other levels, versions to 40) and their own canvas, PNG
+or DOM renderers, none of which this draws. The address is the one thing the
+pane must not send anywhere, and an encoder that fits on a screen is easier to
+vouch for than a dependency tree. The risk in writing one is a code that looks
+right and does not scan, so it is held to a decoder rather than to review:
+`qr.test.ts` pins the tables against the published ones and carries three
+symbols (versions 1, 4 and 7) that jsQR and zxing-cpp both read back, and
+those two were also run over every version's capacity boundary and all eight
+masks, outside the repo, so neither is a dependency. Revisit if something
+other than a short URL needs a code, or if the encoder ever has to grow a
+second mode.
+
 ## Binaries fetched at run time
 
 Not a module and not in any lockfile, so nothing here is seen by Dependabot or
