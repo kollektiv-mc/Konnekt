@@ -651,9 +651,16 @@ func (s *BackupService) RestoreBackup(serverID, filename string) error {
 		// does not mention is left exactly where it is.
 		swaps := []worldSwap{{staged: tmp, target: targetDir}}
 		if stagedLayoutIsMultiRoot(tmp, worldLabel) {
-			swaps, err = stagedWorldSwaps(tmp, parentDir)
+			var skipped []string
+			swaps, skipped, err = stagedWorldSwaps(tmp, parentDir, worldLabel)
 			if err != nil {
 				return s.failRestore(serverID, "reading the extracted archive", err)
+			}
+			if len(skipped) > 0 {
+				slog.Warn("backups: restore skipped folders that are not dimensions of the world",
+					"server", serverID, "world", worldLabel, "skipped", skipped)
+				s.narrate(serverID, fmt.Sprintf("Ignored %d folder(s) in the archive that are not part of world %q: %s",
+					len(skipped), worldLabel, strings.Join(skipped, ", ")))
 			}
 		}
 
@@ -673,18 +680,34 @@ func (s *BackupService) RestoreBackup(serverID, filename string) error {
 // extraction dir, and where it belongs once the swap succeeds.
 type worldSwap struct{ staged, target string }
 
-// stagedWorldSwaps pairs each top-level folder of an extracted multi-root world
+// stagedWorldSwaps pairs each dimension folder of an extracted multi-root world
 // archive with its destination beside the other worlds. Files at the staging root
 // are ignored: a multi-root archive puts everything under a dimension folder, so
 // anything loose there did not come from one.
-func stagedWorldSwaps(tmp, parentDir string) ([]worldSwap, error) {
+//
+// Only the folders CreateWorldBackup writes are promoted: the world itself and the
+// "_nether" and "_the_end" siblings that worldSiblings names for it. An archive can
+// arrive from outside Konnekt, and a stray top-level folder in one (a "__MACOSX"
+// from an archiving tool, say) would otherwise be moved into the server's working
+// directory beside the real worlds. A folder outside that set is not fatal, since a
+// legitimately shared archive may carry one, so it is left behind in the staging
+// directory and returned by name for the caller to report.
+func stagedWorldSwaps(tmp, parentDir, worldName string) (swaps []worldSwap, skipped []string, err error) {
 	entries, err := os.ReadDir(tmp)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	swaps := make([]worldSwap, 0, len(entries))
+	allowed := make(map[string]bool)
+	for _, root := range worldSiblings(parentDir, worldName) {
+		allowed[filepath.Base(root)] = true
+	}
+	swaps = make([]worldSwap, 0, len(allowed))
 	for _, e := range entries {
 		if !e.IsDir() {
+			continue
+		}
+		if !allowed[e.Name()] {
+			skipped = append(skipped, e.Name())
 			continue
 		}
 		swaps = append(swaps, worldSwap{
@@ -693,9 +716,9 @@ func stagedWorldSwaps(tmp, parentDir string) ([]worldSwap, error) {
 		})
 	}
 	if len(swaps) == 0 {
-		return nil, errors.New("the archive holds no world folders")
+		return nil, skipped, errors.New("the archive holds no world folders")
 	}
-	return swaps, nil
+	return swaps, skipped, nil
 }
 
 // swapWorldDirs moves every staged folder into place, moving whatever is already
