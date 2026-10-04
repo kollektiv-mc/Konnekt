@@ -5,6 +5,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"testing"
 )
@@ -374,4 +375,159 @@ func sameMarkers(got, want map[string]string) bool {
 		}
 	}
 	return true
+}
+
+// ─── Which folders a multi-root restore promotes (#452) ────────────────────
+//
+// An archive shared from outside Konnekt can carry a top-level folder that is
+// no dimension of the world: an archiving tool's "__MACOSX", or any stray
+// directory. The restore promotes into the server's working directory, so what
+// it is willing to promote is the set CreateWorldBackup writes and nothing else.
+
+func TestStagedWorldSwapsPromotesOnlyTheWorldsOwnFolders(t *testing.T) {
+	tests := []struct {
+		name        string
+		world       string
+		dirs        []string
+		files       []string
+		wantSwaps   []string
+		wantSkipped []string
+		wantErr     bool
+	}{
+		{
+			name:      "the three Paper folders",
+			world:     "world",
+			dirs:      []string{"world", "world_nether", "world_the_end"},
+			wantSwaps: []string{"world", "world_nether", "world_the_end"},
+		},
+		{
+			name:      "the overworld alone",
+			world:     "world",
+			dirs:      []string{"world"},
+			wantSwaps: []string{"world"},
+		},
+		{
+			name:        "strays beside the dimensions are skipped, not promoted",
+			world:       "world",
+			dirs:        []string{"world", "world_nether", "__MACOSX", "random"},
+			wantSwaps:   []string{"world", "world_nether"},
+			wantSkipped: []string{"__MACOSX", "random"},
+		},
+		{
+			name:      "a custom level name",
+			world:     "survival",
+			dirs:      []string{"survival", "survival_nether", "survival_the_end"},
+			wantSwaps: []string{"survival", "survival_nether", "survival_the_end"},
+		},
+		{
+			name:        "another world's folders are not this world's dimensions",
+			world:       "survival",
+			dirs:        []string{"survival", "world", "world_nether"},
+			wantSwaps:   []string{"survival"},
+			wantSkipped: []string{"world", "world_nether"},
+		},
+		{
+			name:        "nothing allowed is an error that still names what was skipped",
+			world:       "world",
+			dirs:        []string{"__MACOSX", "random"},
+			wantSkipped: []string{"__MACOSX", "random"},
+			wantErr:     true,
+		},
+		{
+			name:    "an empty staging dir is an error",
+			world:   "world",
+			wantErr: true,
+		},
+		{
+			name:        "loose files at the root are ignored, not reported",
+			world:       "world",
+			dirs:        []string{"world", "__MACOSX"},
+			files:       []string{"level.dat", "world_nether"},
+			wantSwaps:   []string{"world"},
+			wantSkipped: []string{"__MACOSX"},
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			tmp := t.TempDir()
+			parent := t.TempDir()
+			for _, d := range tc.dirs {
+				if err := os.MkdirAll(filepath.Join(tmp, d), 0755); err != nil {
+					t.Fatal(err)
+				}
+			}
+			for _, f := range tc.files {
+				writeFile(t, filepath.Join(tmp, f), "loose")
+			}
+
+			swaps, skipped, err := stagedWorldSwaps(tmp, parent, tc.world)
+			if (err != nil) != tc.wantErr {
+				t.Fatalf("err = %v, wantErr %v", err, tc.wantErr)
+			}
+			var got []string
+			for _, sw := range swaps {
+				name := filepath.Base(sw.target)
+				got = append(got, name)
+				if sw.staged != filepath.Join(tmp, name) || sw.target != filepath.Join(parent, name) {
+					t.Errorf("swap %+v, want %s staged under tmp and targeted under the parent dir", sw, name)
+				}
+			}
+			if strings.Join(sortedStrings(got), ",") != strings.Join(sortedStrings(tc.wantSwaps), ",") {
+				t.Errorf("swaps = %v, want %v", got, tc.wantSwaps)
+			}
+			if strings.Join(sortedStrings(skipped), ",") != strings.Join(sortedStrings(tc.wantSkipped), ",") {
+				t.Errorf("skipped = %v, want %v", skipped, tc.wantSkipped)
+			}
+		})
+	}
+}
+
+func sortedStrings(in []string) []string {
+	out := append([]string(nil), in...)
+	sort.Strings(out)
+	return out
+}
+
+// The end to end case: a shared archive with a stray folder restores the world and
+// leaves the stray out of the server's working directory.
+func TestRestoreWorldBackupDoesNotPlantStrayArchiveFolders(t *testing.T) {
+	svc, workDir := newBackupFixture(t)
+	writeFile(t, filepath.Join(workDir, "world", "region", "r.0.0.mca"), "current")
+
+	dir, err := svc.worldBackupDir(testServerID, "world")
+	if err != nil {
+		t.Fatal(err)
+	}
+	makeZip(t, filepath.Join(dir, "00003_01_01_26_000000.zip"), map[string]string{
+		"world/level.dat":           "level",
+		"world/region/r.0.0.mca":    "restored-overworld",
+		"world_nether/region/n.mca": "restored-nether",
+		"__MACOSX/world/._level":    "metadata",
+		"stray/notes.txt":           "not a dimension",
+	})
+
+	if err := svc.RestoreBackup(testServerID, "00003_01_01_26_000000.zip"); err != nil {
+		t.Fatalf("RestoreBackup: %v", err)
+	}
+	data, err := os.ReadFile(filepath.Join(workDir, "world", "region", "r.0.0.mca"))
+	if err != nil || string(data) != "restored-overworld" {
+		t.Errorf("overworld = %q (%v), want the archived one", data, err)
+	}
+	if _, err := os.Stat(filepath.Join(workDir, "world_nether", "region", "n.mca")); err != nil {
+		t.Errorf("nether not restored: %v", err)
+	}
+	for _, stray := range []string{"__MACOSX", "stray"} {
+		if _, err := os.Stat(filepath.Join(workDir, stray)); !errors.Is(err, os.ErrNotExist) {
+			t.Errorf("%s was promoted into the working directory (stat err: %v)", stray, err)
+		}
+	}
+	entries, err := os.ReadDir(workDir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, e := range entries {
+		if strings.HasPrefix(e.Name(), "konnekt-restore-") {
+			t.Errorf("restore left the staging dir %q behind", e.Name())
+		}
+	}
 }
