@@ -206,6 +206,27 @@ describe('Dashboard maximized tile', () => {
     expect(useUiStore.getState().maximizedTileId).toBeNull()
   })
 
+  // The expand animation ends on an identity transform, and WebView2 allocates
+  // the Worlds WebGL layer at the wrong size while one is set (#478). A tile
+  // opened from the navbar has no origin rect and takes its own branch.
+  it.each([
+    ['no origin rect', null],
+    ['an origin rect', new DOMRect(10, 10, 100, 100)],
+  ])('strips the inline transform once the expand lands, from %s', (_name, rect) => {
+    const { container } = render(<Dashboard />)
+    act(() => {
+      useUiStore.getState().requestMaximize('console', rect)
+    })
+    const panel = container.querySelector<HTMLElement>('.pointer-events-auto')!
+    expect(panel.style.transform).not.toBe('')
+
+    act(() => {
+      vi.advanceTimersByTime(250)
+    })
+    expect(panel.style.transform).toBe('')
+    expect(panel.style.transition).toBe('')
+  })
+
   it('clears it on unmount', () => {
     const { unmount } = render(<Dashboard />)
     act(() => {
