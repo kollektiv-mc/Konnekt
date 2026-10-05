@@ -437,6 +437,23 @@ func execWriteAttribute(e *ExecContext) ExecResult {
 	return ExecResult{Port: "onComplete"}
 }
 
+// maxHTTPResponseBytes caps the response body the HTTP Request block will keep
+// as its body output. A graph runs unattended, so an oversized response would
+// otherwise land whole in memory. A body over the cap fails the block rather
+// than being handed on truncated.
+const maxHTTPResponseBytes = 1 << 20 // 1 MiB
+
+// execHTTP sends the request, with a 30 s timeout and a bounded response body.
+// net/http speaks only http and https, and follows at most 10 redirects.
+//
+// Loopback, link-local and private addresses are deliberately allowed: a
+// webhook to a service on the LAN is a real use, and the block does no address
+// filtering. That is safe only because writing a graph (SaveScheduleGraph,
+// ImportScheduleGraphJSON) stays admin tier on the remote surface and needs
+// desktop approval (SECURITY_CHECKLIST S8.2, remote_methods.go). A phone can
+// run a graph at the operate tier but cannot make the host request a new URL.
+// Moving either write method down a tier would turn this block into a way to
+// reach the host's own network, and this decision would have to be revisited.
 func execHTTP(e *ExecContext) ExecResult {
 	method := strings.ToUpper(e.GetString("method"))
 	if method == "" {
@@ -472,11 +489,16 @@ func execHTTP(e *ExecContext) ExecResult {
 	}
 	defer resp.Body.Close()
 
-	respBody, err := io.ReadAll(resp.Body)
+	// Read one byte past the cap so an overflow is told apart from a body that
+	// is exactly the cap.
+	respBody, err := io.ReadAll(io.LimitReader(resp.Body, maxHTTPResponseBytes+1))
 	e.SetOutput("status", float64(resp.StatusCode))
 	if err != nil {
 		// A body cut off mid-transfer used to be reported as the body.
 		return ExecResult{Port: "onFailed", Err: fmt.Errorf("HTTP %d: read response: %w", resp.StatusCode, err)}
+	}
+	if len(respBody) > maxHTTPResponseBytes {
+		return ExecResult{Port: "onFailed", Err: fmt.Errorf("HTTP %d: response body exceeds %d bytes", resp.StatusCode, maxHTTPResponseBytes)}
 	}
 	e.SetOutput("body", string(respBody))
 
