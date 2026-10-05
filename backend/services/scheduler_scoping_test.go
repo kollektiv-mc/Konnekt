@@ -1,6 +1,8 @@
 package services
 
 import (
+	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 	"testing"
@@ -446,6 +448,52 @@ func TestMutatorsRefuseAnotherServersGraph(t *testing.T) {
 		s := twoServerScheduler(t)
 		if _, err := s.RunGraphNow("b", "onA"); err == nil {
 			t.Error("B ran A's graph")
+		}
+	})
+
+	// #429: the upsert matched on id across every server's graphs, then the
+	// stamp moved the match to the caller.
+	t.Run("save", func(t *testing.T) {
+		s := twoServerScheduler(t)
+		emitted := collect(s.bus, EventScheduleNextRuns)
+
+		theirs := playerGraph("onA", "b")
+		theirs.Name = "from B"
+		if _, err := s.SaveGraph("b", theirs); err == nil {
+			t.Fatal("B saved over A's graph")
+		}
+		if ids := graphIDs(s.graphs); strings.Join(ids, ",") != "onA,onB,ambient" {
+			t.Errorf("graphs = %v, want the same three", ids)
+		}
+		if s.graphs[0].ServerID != "a" || s.graphs[0].Name == "from B" {
+			t.Errorf("A's graph is now owned by %q and named %q, want it untouched", s.graphs[0].ServerID, s.graphs[0].Name)
+		}
+		if _, err := os.Stat(filepath.Join(s.dataDir, "scheduler.json")); err == nil {
+			t.Error("a refused save wrote scheduler.json")
+		}
+		if n := len(emitted()); n != 0 {
+			t.Errorf("a refused save emitted %d next-run updates, want none", n)
+		}
+	})
+
+	t.Run("import", func(t *testing.T) {
+		s := twoServerScheduler(t)
+
+		g, err := s.ImportGraphJSON("b", `{"id":"onA","name":"imported","serverId":"a"}`)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if g.ID == "" || g.ID == "onA" {
+			t.Errorf("imported id = %q, want a fresh one", g.ID)
+		}
+		if g.ServerID != "b" {
+			t.Errorf("imported graph's server = %q, want b", g.ServerID)
+		}
+		if len(s.graphs) != 4 {
+			t.Fatalf("graphs = %v, want the import added as a fourth", graphIDs(s.graphs))
+		}
+		if s.graphs[0].ID != "onA" || s.graphs[0].ServerID != "a" || s.graphs[0].Name == "imported" {
+			t.Errorf("A's graph changed: %+v", s.graphs[0])
 		}
 	})
 }
