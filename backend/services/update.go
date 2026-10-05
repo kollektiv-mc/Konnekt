@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -45,7 +46,101 @@ const (
 	// questions with separate answers.
 	snapshotVersionMarker = "-snapshot."
 	devVersionMarker      = "-dev"
+
+	// Bounds on what the updater will read (§ S1.4). Each sits far above the
+	// real payload, so only a hostile or broken server meets it: the release
+	// JSON is some tens of KB, checksums.txt a few hundred bytes, and the
+	// binary tens of MB.
+	maxReleaseJSONBytes = 4 << 20
+	maxChecksumsBytes   = 1 << 20
+	maxUpdateBinary     = 256 << 20
+
+	// updateMaxRedirects caps the hops of an asset download. GitHub needs one
+	// (github.com to release-assets.githubusercontent.com).
+	updateMaxRedirects = 5
+
+	// The binary download is bounded two ways. It is not cancelled from outside:
+	// the ctx DownloadAndInstallUpdate receives is the Wails app context, which
+	// only ends at shutdown. updateStallTimeout aborts a connection that has
+	// stopped delivering bytes, without penalising a slow but moving link, and
+	// updateDownloadTimeout is the ceiling on the whole transfer (a 40 MB binary
+	// at 1 Mbit/s is about 5 minutes, so 30 is generous).
+	updateStallTimeout    = 30 * time.Second
+	updateDownloadTimeout = 30 * time.Minute
 )
+
+// updateAssetHosts are the hosts an asset or checksums.txt URL may name, on the
+// first request and on every redirect (§ S1.3). Established on 2026-10-05 with
+// `curl -sIL` against kollektiv-mc/Konnekt's v0.2.0-alpha.2 assets:
+// github.com/<repo>/releases/download/... answers 302 to
+// release-assets.githubusercontent.com. objects.githubusercontent.com was the
+// redirect target before GitHub moved release assets, and is kept so a
+// transition back, or an older cached link, still works.
+var updateAssetHosts = []string{
+	"github.com",
+	"release-assets.githubusercontent.com",
+	"objects.githubusercontent.com",
+}
+
+// checkUpdateURL is the production rule: https, on updateAssetHosts.
+func checkUpdateURL(u *url.URL) error {
+	if u.Scheme != "https" {
+		return fmt.Errorf("download refused: %q is not an https URL", u.Scheme)
+	}
+	for _, h := range updateAssetHosts {
+		if strings.EqualFold(u.Hostname(), h) {
+			return nil
+		}
+	}
+	return fmt.Errorf("download refused: %q is not an expected host", u.Hostname())
+}
+
+// errTooLarge marks a body that outgrew its cap, which is an error rather than
+// a truncated success.
+var errTooLarge = errors.New("response exceeds the size limit")
+
+// readCapped reads all of r, failing if it holds more than max bytes.
+func readCapped(r io.Reader, max int64) ([]byte, error) {
+	body, err := io.ReadAll(io.LimitReader(r, max+1))
+	if err != nil {
+		return nil, err
+	}
+	if int64(len(body)) > max {
+		return nil, fmt.Errorf("%w (%d bytes)", errTooLarge, max)
+	}
+	return body, nil
+}
+
+// capReader fails a stream once it delivers more than max bytes.
+type capReader struct {
+	r    io.Reader
+	left int64
+}
+
+func (c *capReader) Read(p []byte) (int, error) {
+	n, err := c.r.Read(p)
+	c.left -= int64(n)
+	if c.left < 0 {
+		return n, errTooLarge
+	}
+	return n, err
+}
+
+// stallReader re-arms a timer on every read that delivers bytes. If the timer
+// fires it cancels the request's context, which fails the read in flight.
+type stallReader struct {
+	r     io.Reader
+	timer *time.Timer
+	d     time.Duration
+}
+
+func (s *stallReader) Read(p []byte) (int, error) {
+	n, err := s.r.Read(p)
+	if n > 0 {
+		s.timer.Reset(s.d)
+	}
+	return n, err
+}
 
 // IsSnapshotVersion reports whether v is a build from the snapshot channel.
 func IsSnapshotVersion(v string) bool { return strings.Contains(v, snapshotVersionMarker) }
@@ -93,6 +188,50 @@ type UpdateService struct {
 	baseURL        string
 	bus            *EventBus
 	packageManaged bool
+
+	// Test seams, all zero in production. checkURL replaces checkUpdateURL so
+	// tests can reach an httptest.Server on plain http; nil means the strict
+	// rule, so a service built any other way is strict too. The two durations
+	// replace updateStallTimeout and updateDownloadTimeout. Unexported, set
+	// only from this package's tests, and no setting, env var or remote call
+	// reaches them.
+	checkURL        func(*url.URL) error
+	stallTimeout    time.Duration
+	downloadTimeout time.Duration
+}
+
+// allowURL applies the URL rule: the test override if there is one, else the
+// production one.
+func (s *UpdateService) allowURL(u *url.URL) error {
+	if s.checkURL != nil {
+		return s.checkURL(u)
+	}
+	return checkUpdateURL(u)
+}
+
+// assetClient is a copy of the service's client whose redirects are capped and
+// held to allowURL, so the policy covers every hop and not just the first URL.
+func (s *UpdateService) assetClient() *http.Client {
+	c := *s.http
+	c.CheckRedirect = func(req *http.Request, via []*http.Request) error {
+		if len(via) >= updateMaxRedirects {
+			return errors.New("download refused: too many redirects")
+		}
+		return s.allowURL(req.URL)
+	}
+	return &c
+}
+
+// parseAssetURL parses a URL taken from the release API and applies the rule.
+func (s *UpdateService) parseAssetURL(raw string) (*url.URL, error) {
+	u, err := url.Parse(raw)
+	if err != nil {
+		return nil, fmt.Errorf("bad URL: %w", err)
+	}
+	if err := s.allowURL(u); err != nil {
+		return nil, err
+	}
+	return u, nil
 }
 
 func NewUpdateService() *UpdateService {
@@ -204,7 +343,7 @@ func (s *UpdateService) fetchCandidate(ctx context.Context, path, channel string
 		return candidate{}, false, nil
 	}
 
-	body, err := io.ReadAll(resp.Body)
+	body, err := readCapped(resp.Body, maxReleaseJSONBytes)
 	if err != nil {
 		return candidate{}, false, fmt.Errorf("update check: read response: %w", err)
 	}
@@ -459,14 +598,36 @@ func (s *UpdateService) downloadAndApply(ctx context.Context, asset models.Updat
 		return fmt.Errorf("%w: %v", ErrUpdatePermission, err)
 	}
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, asset.DownloadURL, nil)
+	u, err := s.parseAssetURL(asset.DownloadURL)
+	if err != nil {
+		return fmt.Errorf("update install: download %s: %w", asset.Name, err)
+	}
+
+	// The ceiling is fixed, tightened to the size the release declares for the
+	// asset when it declares one.
+	limit := int64(maxUpdateBinary)
+	if asset.Size > 0 && asset.Size < limit {
+		limit = asset.Size
+	}
+	stall, total := s.stallTimeout, s.downloadTimeout
+	if stall <= 0 {
+		stall = updateStallTimeout
+	}
+	if total <= 0 {
+		total = updateDownloadTimeout
+	}
+	ctx, cancel := context.WithTimeout(ctx, total)
+	defer cancel()
+	watchdog := time.AfterFunc(stall, cancel)
+	defer watchdog.Stop()
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u.String(), nil)
 	if err != nil {
 		return fmt.Errorf("update install: build download request: %w", err)
 	}
 	req.Header.Set("User-Agent", updateUserAgent)
 
-	dlClient := &http.Client{} // no hard timeout; bounded by ctx
-	resp, err := dlClient.Do(req)
+	resp, err := s.assetClient().Do(req)
 	if err != nil {
 		return fmt.Errorf("update install: download %s: %w", asset.Name, err)
 	}
@@ -474,9 +635,12 @@ func (s *UpdateService) downloadAndApply(ctx context.Context, asset models.Updat
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		return fmt.Errorf("update install: download %s: HTTP %d", asset.Name, resp.StatusCode)
 	}
+	if resp.ContentLength > limit {
+		return fmt.Errorf("update install: download %s refused: %d bytes announced, limit %d", asset.Name, resp.ContentLength, limit)
+	}
 
 	reader := &progressReader{
-		r:       resp.Body,
+		r:       &capReader{r: &stallReader{r: resp.Body, timer: watchdog, d: stall}, left: limit},
 		total:   resp.ContentLength,
 		lastPct: -1,
 		onUpdate: func(pct int) {
@@ -494,14 +658,18 @@ func (s *UpdateService) downloadAndApply(ctx context.Context, asset models.Updat
 }
 
 // fetchAsset downloads a small release asset (checksums.txt) fully into memory.
-func (s *UpdateService) fetchAsset(ctx context.Context, url string) ([]byte, error) {
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+func (s *UpdateService) fetchAsset(ctx context.Context, rawURL string) ([]byte, error) {
+	u, err := s.parseAssetURL(rawURL)
+	if err != nil {
+		return nil, err
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u.String(), nil)
 	if err != nil {
 		return nil, err
 	}
 	req.Header.Set("User-Agent", updateUserAgent)
 
-	resp, err := s.http.Do(req)
+	resp, err := s.assetClient().Do(req)
 	if err != nil {
 		return nil, err
 	}
@@ -509,7 +677,7 @@ func (s *UpdateService) fetchAsset(ctx context.Context, url string) ([]byte, err
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		return nil, fmt.Errorf("HTTP %d", resp.StatusCode)
 	}
-	return io.ReadAll(resp.Body)
+	return readCapped(resp.Body, maxChecksumsBytes)
 }
 
 // compareVersions returns -1 if a < b, 0 if equal, 1 if a > b, treating both

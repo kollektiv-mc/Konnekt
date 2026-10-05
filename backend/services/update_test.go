@@ -7,11 +7,13 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
 	"sync"
 	"testing"
+	"time"
 
 	"konnekt/backend/models"
 )
@@ -681,7 +683,7 @@ func TestDownloadAndApplySuccess(t *testing.T) {
 		t.Fatalf("seed target file: %v", err)
 	}
 
-	svc := &UpdateService{http: ts.Client()}
+	svc := &UpdateService{http: ts.Client(), checkURL: allowHost(ts.URL)}
 	asset := models.UpdateAsset{Name: "konnekt-windows-amd64.exe", DownloadURL: ts.URL}
 	if err := svc.downloadAndApply(context.Background(), asset, hexSum, target); err != nil {
 		t.Fatalf("downloadAndApply: %v", err)
@@ -715,7 +717,7 @@ func TestDownloadAndApplyChecksumMismatch(t *testing.T) {
 		t.Fatalf("seed target file: %v", err)
 	}
 
-	svc := &UpdateService{http: ts.Client()}
+	svc := &UpdateService{http: ts.Client(), checkURL: allowHost(ts.URL)}
 	asset := models.UpdateAsset{Name: "konnekt-windows-amd64.exe", DownloadURL: ts.URL}
 	if err := svc.downloadAndApply(context.Background(), asset, hexSum, target); err == nil {
 		t.Fatal("expected an error on checksum mismatch")
@@ -786,5 +788,273 @@ func TestDownloadAndInstallUpdateRefusesAPackageInstall(t *testing.T) {
 	}
 	if hits != 0 {
 		t.Errorf("made %d requests before refusing, want 0", hits)
+	}
+}
+
+// allowHost is the test stand-in for checkUpdateURL: it admits http or https
+// to exactly one host:port (an httptest.Server), so a second server is a
+// "foreign host" and the redirect policy can be exercised without TLS.
+func allowHost(serverURL string) func(*url.URL) error {
+	want, err := url.Parse(serverURL)
+	if err != nil {
+		panic(err)
+	}
+	return func(u *url.URL) error {
+		if u.Host != want.Host {
+			return fmt.Errorf("download refused: %q is not an expected host", u.Hostname())
+		}
+		return nil
+	}
+}
+
+// § S1.3: the production rule is https on the GitHub asset hosts, and nothing
+// that merely looks like them.
+func TestCheckUpdateURL(t *testing.T) {
+	for _, bad := range []string{
+		"http://github.com/x", "https://evil.example/x", "https://github.com.evil.example/x",
+		"https://evilgithub.com/x", "ftp://github.com/x", "https://api.github.com/x",
+		"https://githubusercontent.com/x",
+	} {
+		u, err := url.Parse(bad)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := checkUpdateURL(u); err == nil {
+			t.Errorf("%s accepted", bad)
+		}
+	}
+	for _, h := range updateAssetHosts {
+		if err := checkUpdateURL(&url.URL{Scheme: "https", Host: h}); err != nil {
+			t.Errorf("%s refused: %v", h, err)
+		}
+	}
+}
+
+// A service built without the test override is strict: an http httptest URL is
+// refused before a single request is sent, on both download paths.
+func TestUpdateDownloadsRefuseNonHTTPSUnderTheProductionRule(t *testing.T) {
+	var hits int
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { hits++ }))
+	defer ts.Close()
+
+	svc := &UpdateService{http: ts.Client()}
+	if _, err := svc.fetchAsset(context.Background(), ts.URL+"/checksums.txt"); err == nil || !strings.Contains(err.Error(), "not an https URL") {
+		t.Errorf("fetchAsset: %v", err)
+	}
+	asset := models.UpdateAsset{Name: "konnekt-linux-amd64", DownloadURL: ts.URL + "/bin"}
+	if err := svc.downloadAndApply(context.Background(), asset, hex.EncodeToString(make([]byte, 32)), filepath.Join(t.TempDir(), "t")); err == nil || !strings.Contains(err.Error(), "not an https URL") {
+		t.Errorf("downloadAndApply: %v", err)
+	}
+	if hits != 0 {
+		t.Errorf("made %d requests, want 0", hits)
+	}
+}
+
+// § S1.3: an asset URL on another host is refused before any request.
+func TestUpdateDownloadsRefuseAForeignHost(t *testing.T) {
+	var hits int
+	foreign := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { hits++ }))
+	defer foreign.Close()
+	home := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { hits++ }))
+	defer home.Close()
+
+	svc := &UpdateService{http: home.Client(), checkURL: allowHost(home.URL)}
+	if _, err := svc.fetchAsset(context.Background(), foreign.URL); err == nil || !strings.Contains(err.Error(), "not an expected host") {
+		t.Errorf("fetchAsset: %v", err)
+	}
+	asset := models.UpdateAsset{Name: "konnekt-linux-amd64", DownloadURL: foreign.URL}
+	if err := svc.downloadAndApply(context.Background(), asset, hex.EncodeToString(make([]byte, 32)), filepath.Join(t.TempDir(), "t")); err == nil || !strings.Contains(err.Error(), "not an expected host") {
+		t.Errorf("downloadAndApply: %v", err)
+	}
+	if hits != 0 {
+		t.Errorf("made %d requests, want 0", hits)
+	}
+}
+
+// § S1.3: a redirect is held to the same rule as the first URL, and a redirect
+// chain is capped. The target server must never be reached.
+func TestUpdateDownloadsRefuseARedirectOffTheAllowlist(t *testing.T) {
+	var targetHits int
+	target := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		targetHits++
+		_, _ = w.Write([]byte("payload"))
+	}))
+	defer target.Close()
+
+	home := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/loop":
+			http.Redirect(w, r, "/loop", http.StatusFound)
+		default:
+			http.Redirect(w, r, target.URL, http.StatusFound)
+		}
+	}))
+	defer home.Close()
+
+	svc := &UpdateService{http: home.Client(), checkURL: allowHost(home.URL)}
+	if _, err := svc.fetchAsset(context.Background(), home.URL+"/checksums.txt"); err == nil || !strings.Contains(err.Error(), "not an expected host") {
+		t.Errorf("fetchAsset redirect: %v", err)
+	}
+	asset := models.UpdateAsset{Name: "konnekt-linux-amd64", DownloadURL: home.URL + "/bin"}
+	targetFile := filepath.Join(t.TempDir(), "t")
+	if err := svc.downloadAndApply(context.Background(), asset, hex.EncodeToString(make([]byte, 32)), targetFile); err == nil || !strings.Contains(err.Error(), "not an expected host") {
+		t.Errorf("downloadAndApply redirect: %v", err)
+	}
+	if _, err := svc.fetchAsset(context.Background(), home.URL+"/loop"); err == nil || !strings.Contains(err.Error(), "too many redirects") {
+		t.Errorf("redirect loop: %v", err)
+	}
+	if targetHits != 0 {
+		t.Errorf("foreign server reached %d times, want 0", targetHits)
+	}
+}
+
+// A redirect that stays on the allowed host still works, so the policy is a
+// filter and not a ban on redirects (GitHub always sends one).
+func TestUpdateFetchAssetFollowsAnAllowedRedirect(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/final" {
+			_, _ = w.Write([]byte("abc  konnekt-linux-amd64\n"))
+			return
+		}
+		http.Redirect(w, r, "/final", http.StatusFound)
+	}))
+	defer ts.Close()
+
+	svc := &UpdateService{http: ts.Client(), checkURL: allowHost(ts.URL)}
+	body, err := svc.fetchAsset(context.Background(), ts.URL+"/checksums.txt")
+	if err != nil || !strings.HasPrefix(string(body), "abc") {
+		t.Fatalf("body %q, err %v", body, err)
+	}
+}
+
+// § S1.4: checksums.txt over its cap is an error, never a truncated success,
+// and a body of exactly the cap is accepted.
+func TestUpdateFetchAssetRefusesAnOversizedBody(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		size := maxChecksumsBytes + 1
+		if r.URL.Path == "/exact" {
+			size = maxChecksumsBytes
+		}
+		_, _ = w.Write([]byte(strings.Repeat("a", size)))
+	}))
+	defer ts.Close()
+
+	svc := &UpdateService{http: ts.Client(), checkURL: allowHost(ts.URL)}
+	if _, err := svc.fetchAsset(context.Background(), ts.URL+"/big"); err == nil || !strings.Contains(err.Error(), "size limit") {
+		t.Errorf("oversized: %v", err)
+	}
+	if body, err := svc.fetchAsset(context.Background(), ts.URL+"/exact"); err != nil || len(body) != maxChecksumsBytes {
+		t.Errorf("exactly the cap: %d bytes, %v", len(body), err)
+	}
+}
+
+// § S1.4: the release-list read has its own cap.
+func TestCheckForUpdatesRefusesAnOversizedReleaseList(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write([]byte(`{"tag_name":"v0.2.0","body":"` + strings.Repeat("a", maxReleaseJSONBytes) + `"}`))
+	}))
+	defer ts.Close()
+
+	svc := &UpdateService{http: ts.Client(), baseURL: ts.URL}
+	if _, err := svc.CheckForUpdates(context.Background(), "0.1.0", UpdateChannelStable); err == nil || !strings.Contains(err.Error(), "size limit") {
+		t.Errorf("err = %v, want the size-limit refusal", err)
+	}
+}
+
+// § S1.4: the binary may not outgrow what the release declares for it, whether
+// announced up front or streamed past it, and the target is left alone.
+func TestDownloadAndApplyRefusesMoreThanTheDeclaredSize(t *testing.T) {
+	payload := []byte(strings.Repeat("x", 1024))
+	sum := sha256.Sum256(payload)
+	hexSum := hex.EncodeToString(sum[:])
+
+	for name, announce := range map[string]bool{"announced": true, "streamed": false} {
+		t.Run(name, func(t *testing.T) {
+			ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if announce {
+					w.Header().Set("Content-Length", fmt.Sprintf("%d", len(payload)))
+				}
+				_, _ = w.Write(payload)
+			}))
+			defer ts.Close()
+
+			target := filepath.Join(t.TempDir(), "konnekt-target.exe")
+			if err := os.WriteFile(target, []byte("old"), 0755); err != nil {
+				t.Fatal(err)
+			}
+			svc := &UpdateService{http: ts.Client(), checkURL: allowHost(ts.URL)}
+			asset := models.UpdateAsset{Name: "konnekt-windows-amd64.exe", DownloadURL: ts.URL, Size: 100}
+			if err := svc.downloadAndApply(context.Background(), asset, hexSum, target); err == nil {
+				t.Fatal("expected a refusal")
+			}
+			got, err := os.ReadFile(target)
+			if err != nil || string(got) != "old" {
+				t.Errorf("target = %q, %v; want it untouched", got, err)
+			}
+		})
+	}
+}
+
+// § S1.4: a server that sends some bytes and then goes silent is cut off by the
+// stall guard. The ctx handed in never ends, as the Wails one does not, so only
+// the guard can stop it.
+func TestDownloadAndApplyTimesOutAStalledBody(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write([]byte("partial"))
+		w.(http.Flusher).Flush()
+		<-r.Context().Done()
+	}))
+	defer ts.Close()
+
+	target := filepath.Join(t.TempDir(), "konnekt-target.exe")
+	if err := os.WriteFile(target, []byte("old"), 0755); err != nil {
+		t.Fatal(err)
+	}
+	svc := &UpdateService{http: ts.Client(), checkURL: allowHost(ts.URL), stallTimeout: 150 * time.Millisecond}
+	asset := models.UpdateAsset{Name: "konnekt-windows-amd64.exe", DownloadURL: ts.URL}
+
+	start := time.Now()
+	err := svc.downloadAndApply(context.Background(), asset, hex.EncodeToString(make([]byte, 32)), target)
+	if err == nil {
+		t.Fatal("expected the stalled download to fail")
+	}
+	if elapsed := time.Since(start); elapsed > 5*time.Second {
+		t.Errorf("took %v, the stall guard did not fire", elapsed)
+	}
+	got, rerr := os.ReadFile(target)
+	if rerr != nil || string(got) != "old" {
+		t.Errorf("target = %q, %v; want it untouched", got, rerr)
+	}
+}
+
+// The overall deadline stops a server that keeps the stall guard fed with a
+// slow trickle.
+func TestDownloadAndApplyTimesOutATrickle(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		for {
+			select {
+			case <-r.Context().Done():
+				return
+			case <-time.After(20 * time.Millisecond):
+				_, _ = w.Write([]byte("x"))
+				w.(http.Flusher).Flush()
+			}
+		}
+	}))
+	defer ts.Close()
+
+	svc := &UpdateService{
+		http: ts.Client(), checkURL: allowHost(ts.URL),
+		stallTimeout: 10 * time.Second, downloadTimeout: 300 * time.Millisecond,
+	}
+	asset := models.UpdateAsset{Name: "konnekt-windows-amd64.exe", DownloadURL: ts.URL}
+
+	start := time.Now()
+	err := svc.downloadAndApply(context.Background(), asset, hex.EncodeToString(make([]byte, 32)), filepath.Join(t.TempDir(), "t"))
+	if err == nil {
+		t.Fatal("expected the trickle to hit the overall deadline")
+	}
+	if elapsed := time.Since(start); elapsed > 5*time.Second {
+		t.Errorf("took %v, the deadline did not fire", elapsed)
 	}
 }
