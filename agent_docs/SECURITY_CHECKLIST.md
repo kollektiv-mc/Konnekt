@@ -127,9 +127,10 @@ Probe: every error path in `rcon.go` after authentication; a panic inside a
 scheduler RCON block.
 
 **S2.2 Files that hold a credential are owner-only.**
-Holds when: `server.properties` keeps its existing mode when Konnekt rewrites it,
+Holds when: a rewrite of `server.properties` is never wider than the mode it
+already had (`writeFileAtomic` applies the requested mode AND the existing one),
 every copy Konnekt makes of it (the config editor's `.bak` files under
-`<dataDir>/config_backups/`) is created `0600`, and `remote.json` (the Remote
+`<dataDir>/config_backups/<id>/`, a `0700` directory) is created `0600`, and `remote.json` (the Remote
 Access password hash and device token hashes, added with #45) is written
 through `WritePrivateDataFile`, which is `0600`.
 Verify: `grep -rn 'writeFileAtomic(\|OpenFile(\|WriteFile(' --include=*.go backend | grep -v _test`

@@ -134,3 +134,92 @@ func TestWriteFileAtomicMissingParentDirFailsCleanly(t *testing.T) {
 		t.Errorf("directory holds %v, want nothing created", names)
 	}
 }
+
+// modeOf returns path's permission bits, failing the test if it cannot be
+// stat'd.
+func modeOf(t *testing.T, path string) os.FileMode {
+	t.Helper()
+	info, err := os.Stat(path)
+	if err != nil {
+		t.Fatalf("stat %s: %v", path, err)
+	}
+	return info.Mode().Perm()
+}
+
+// writeFileAtomic must never widen a file past what the user set (#430): a
+// 0600 server.properties holds the RCON password and used to come back 0644.
+func TestWriteFileAtomicKeepsANarrowerExistingMode(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("POSIX mode bits are not meaningful on Windows")
+	}
+	path := filepath.Join(t.TempDir(), "server.properties")
+	if err := os.WriteFile(path, []byte("rcon.password=hunter2\n"), 0600); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := writeFileAtomic(path, []byte("rcon.password=changed\n"), 0644); err != nil {
+		t.Fatalf("writeFileAtomic: %v", err)
+	}
+	if got := modeOf(t, path); got != 0600 {
+		t.Errorf("mode = %o, want 0600 kept", got)
+	}
+}
+
+// The other direction: WritePrivateDataFile asks for 0600 and must narrow a
+// file an older build left at 0644, so "keep the existing mode" is not enough.
+func TestWriteFileAtomicNarrowsAWiderExistingFileToPerm(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("POSIX mode bits are not meaningful on Windows")
+	}
+	path := filepath.Join(t.TempDir(), "remote.json")
+	if err := os.WriteFile(path, []byte("old"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	// WriteFile is subject to the umask, so pin the starting mode.
+	if err := os.Chmod(path, 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := writeFileAtomic(path, []byte("new"), 0600); err != nil {
+		t.Fatalf("writeFileAtomic: %v", err)
+	}
+	if got := modeOf(t, path); got != 0600 {
+		t.Errorf("mode = %o, want 0600", got)
+	}
+}
+
+// A file that does not exist yet gets exactly perm. CreateTemp opens at 0600
+// and the helper chmods afterwards, which the umask does not touch, so 0644
+// survives even under a restrictive umask.
+func TestWriteFileAtomicGivesANewFileExactlyPerm(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("POSIX mode bits are not meaningful on Windows")
+	}
+	for _, perm := range []os.FileMode{0644, 0600, 0755} {
+		path := filepath.Join(t.TempDir(), "fresh")
+		if err := writeFileAtomic(path, []byte("x"), perm); err != nil {
+			t.Fatalf("writeFileAtomic(%o): %v", perm, err)
+		}
+		if got := modeOf(t, path); got != perm {
+			t.Errorf("new file mode = %o, want %o", got, perm)
+		}
+	}
+}
+
+// The mode is intersected, never unioned: an existing 0600 file asked for 0755
+// stays 0600 rather than gaining bits it never had.
+func TestWriteFileAtomicNeverWidensBeyondTheExistingMode(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("POSIX mode bits are not meaningful on Windows")
+	}
+	path := filepath.Join(t.TempDir(), "run.sh")
+	if err := os.WriteFile(path, []byte("old"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	if err := writeFileAtomic(path, []byte("new"), 0755); err != nil {
+		t.Fatalf("writeFileAtomic: %v", err)
+	}
+	if got := modeOf(t, path); got != 0600 {
+		t.Errorf("mode = %o, want 0600", got)
+	}
+}
