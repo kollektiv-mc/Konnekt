@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { GetServerSummary } from '../../../wailsjs/go/main/App'
 import { LOADER_LABELS } from '../../lib/loaders'
 import type { ServerConfig, ServerSummary } from '../../types'
@@ -41,17 +41,28 @@ export function ServerDetail({ config, refreshKey = 0 }: Props) {
   const [summary, setSummary] = useState<ServerSummary | null>(null)
   const [loading, setLoading] = useState(true)
 
-  const load = useCallback(() => {
+  useEffect(() => {
+    // No clear here: the manager keys this pane by server, so a switch mounts a
+    // fresh one with no summary, and a refresh of the same server keeps showing
+    // its last reading rather than blinking back to the stored config.
     setLoading(true)
+    // A reply that lands after the server changed (or the panel closed) belongs
+    // to someone else, so it is dropped rather than written over this one's.
+    let cancelled = false
     // Reads degrade to defaults rather than surfacing an error: the panel below
     // still renders everything the stored config knows. `readOr` also covers the
     // no-bridge case, where the binding throws before a `.catch()` can attach.
     readOr(() => GetServerSummary(config.id), null)
-      .then((s) => setSummary(s))
-      .finally(() => setLoading(false))
-  }, [config.id])
-
-  useEffect(load, [load, refreshKey])
+      .then((s) => {
+        if (!cancelled) setSummary(s)
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [config.id, refreshKey])
 
   const loader = summary?.loader || config.loader
   const mcVersion = summary?.mcVersion || config.mcVersion

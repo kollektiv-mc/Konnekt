@@ -1,5 +1,5 @@
 import { describe, it, expect, afterEach, beforeEach, vi } from 'vitest'
-import { render, screen, fireEvent, waitFor, cleanup } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor, cleanup, act } from '@testing-library/react'
 import * as App from '../../../wailsjs/go/main/App'
 import { useInstallStore } from '../../stores/useInstallStore'
 import { useLoaderStore } from '../../stores/useLoaderStore'
@@ -214,6 +214,61 @@ describe('ServerManager', () => {
 
     await waitFor(() => expect(screen.getByDisplayValue('/srv/alpha')).toBeTruthy())
     expect(screen.queryByText('Add a server')).toBeNull()
+  })
+})
+
+describe('ServerManager install summary', () => {
+  type Summary = Awaited<ReturnType<typeof App.GetServerSummary>>
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    useServerConfigStore.setState({
+      configs: [cfg('alpha'), cfg('beta', { loader: 'paper' })],
+      activeId: 'alpha',
+      error: null,
+    })
+    useInstallStore.setState({ open: false, result: null })
+    useLoaderStore.setState({ dialogOpen: false, status: null, versions: [] })
+  })
+
+  // The summary reads are per server and either can be the slower one. Alpha's
+  // answering last must not put alpha's build and launcher under beta's name,
+  // neither while beta's own read is out nor once alpha's lands.
+  it("never shows another server's summary, even when its reply lands last", async () => {
+    const pending = new Map<string, (s: Summary) => void>()
+    vi.mocked(App.GetServerSummary).mockImplementation(
+      (id: string) => new Promise<Summary>((resolve) => pending.set(id, resolve)),
+    )
+    renderManager({ selection: 'alpha' })
+    await waitFor(() => expect(pending.has('alpha')).toBe(true))
+
+    fireEvent.click(screen.getByRole('button', { name: /beta/ }))
+    await waitFor(() => expect(pending.has('beta')).toBe(true))
+
+    await act(async () => {
+      pending.get('beta')?.(summary({ loaderVersion: '9.9.9', launchFile: 'beta.sh' }))
+    })
+    await waitFor(() => expect(screen.getByText(/9\.9\.9/)).toBeTruthy())
+
+    await act(async () => {
+      pending.get('alpha')?.(summary({ loaderVersion: '21.1.72', launchFile: 'alpha.sh' }))
+    })
+    expect(screen.getByText(/9\.9\.9/)).toBeTruthy()
+    expect(screen.getByText('beta.sh')).toBeTruthy()
+    expect(screen.queryByText(/21\.1\.72/)).toBeNull()
+    expect(screen.queryByText('alpha.sh')).toBeNull()
+  })
+
+  it("does not carry the previous server's values into the next one's read", async () => {
+    vi.mocked(App.GetServerSummary).mockResolvedValueOnce(summary({ loaderVersion: '21.1.72' }))
+    renderManager({ selection: 'alpha' })
+    await waitFor(() => expect(screen.getByText(/21\.1\.72/)).toBeTruthy())
+
+    vi.mocked(App.GetServerSummary).mockImplementation(() => new Promise<Summary>(() => {}))
+    fireEvent.click(screen.getByRole('button', { name: /beta/ }))
+
+    await waitFor(() => expect(screen.getByText('Reading install…')).toBeTruthy())
+    expect(screen.queryByText(/21\.1\.72/)).toBeNull()
   })
 })
 
