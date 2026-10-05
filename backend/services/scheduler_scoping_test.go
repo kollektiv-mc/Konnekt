@@ -3,6 +3,7 @@ package services
 import (
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"sync"
 	"testing"
@@ -420,6 +421,58 @@ func TestImportStampsTheCallersServer(t *testing.T) {
 	if g.ServerID != "b" {
 		t.Errorf("imported graph's server = %q, want b", g.ServerID)
 	}
+}
+
+// ─── An import is validated before it is saved (#435) ──────────────────────
+
+func TestImportGraphJSONValidates(t *testing.T) {
+	noop := func(e *ExecContext) ExecResult { return ExecResult{} }
+	register := func(s *SchedulerService) {
+		must(s.registry.RegisterBlock(models.BlockDef{
+			ID: "test.strOut", DataOutputs: []models.DataPort{{ID: "value", Type: "string"}},
+		}, noop))
+		must(s.registry.RegisterBlock(models.BlockDef{
+			ID: "test.numIn", DataInputs: []models.DataPort{{ID: "value", Type: "number"}},
+		}, noop))
+	}
+	const wired = `{"name":"n","nodes":[` +
+		`{"id":"a","type":"test.strOut"},{"id":"b","type":"test.numIn"}],` +
+		`"edges":[{"id":"e","kind":"data","source":"a","sourcePort":"value","target":"b","targetPort":"value"}]}`
+	const fine = `{"name":"n","nodes":[{"id":"a","type":"test.strOut"}]}`
+
+	refused := map[string]string{
+		"oversized":     `{"name":"` + strings.Repeat("x", maxImportBytes) + `"}`,
+		"unknown block": `{"name":"n","nodes":[{"id":"a","type":"no.such.block"}]}`,
+		"port mismatch": wired,
+	}
+	for name, raw := range refused {
+		t.Run(name, func(t *testing.T) {
+			s := twoServerScheduler(t)
+			register(s)
+			before := graphIDs(s.graphs)
+			if _, err := s.ImportGraphJSON("b", raw); err == nil {
+				t.Fatal("import accepted, want it refused")
+			}
+			if got := graphIDs(s.graphs); !reflect.DeepEqual(got, before) {
+				t.Errorf("graphs = %v, want %v: a refused import saved something", got, before)
+			}
+		})
+	}
+
+	t.Run("valid", func(t *testing.T) {
+		s := twoServerScheduler(t)
+		register(s)
+		g, err := s.ImportGraphJSON("b", fine)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if g.ID == "" || g.ServerID != "b" {
+			t.Errorf("imported graph = id %q server %q, want a fresh id on b", g.ID, g.ServerID)
+		}
+		if got := len(s.graphs); got != 4 {
+			t.Errorf("%d graphs, want 4", got)
+		}
+	})
 }
 
 func TestMutatorsRefuseAnotherServersGraph(t *testing.T) {
