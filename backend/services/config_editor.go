@@ -8,9 +8,12 @@ import (
 	"io/fs"
 	"log/slog"
 	"os"
+	"path"
 	"path/filepath"
+	"slices"
 	"strings"
 	"time"
+	"unicode"
 
 	"konnekt/backend/models"
 )
@@ -56,6 +59,100 @@ func (s *ConfigEditorService) SetDataDir(dir string) {
 	s.dataDir = dir
 }
 
+// configLocation is where the editor files one config file: the category and
+// plugin or mod folder it shows under, and the format its editor uses.
+type configLocation struct {
+	category, source, format string
+}
+
+// classifyConfigPath is the single answer to "is this a config file the editor
+// offers, and as what". ListConfigFiles asks it of every directory entry and
+// the read and write gates ask it of the caller's path, so what is listed and
+// what is reachable cannot drift apart (#431). It is a predicate over the path
+// alone, not over the disk, because the write path is legitimately reached for
+// a file that is not there yet (server.properties on a fresh server). rel is
+// slash-separated and already canonical, see listedConfigPath.
+//
+// Names are matched case-sensitively, as the listing always has: a name the
+// listing would not have produced is not one it offers, whatever the host
+// filesystem thinks of case.
+func classifyConfigPath(rel string) (configLocation, bool) {
+	parts := strings.Split(rel, "/")
+	name := parts[len(parts)-1]
+	format := extFormat(name)
+	if format == "" {
+		return configLocation{}, false
+	}
+	switch len(parts) {
+	case 1:
+		// Server root: a fixed set of names, never "any config-looking file".
+		if serverRootNames[name] {
+			return configLocation{"server", "", format}, true
+		}
+	case 2:
+		switch parts[0] {
+		case "plugins":
+			return configLocation{"plugins", "", format}, true
+		case "config":
+			// Paper and Purpur keep their configs here, everything else is a mod's.
+			if strings.HasPrefix(name, "paper-") || strings.HasPrefix(name, "purpur-") {
+				return configLocation{"server", "", format}, true
+			}
+			return configLocation{"mods", "", format}, true
+		}
+	case 3:
+		folder := parts[1]
+		if folder == "" || strings.HasPrefix(folder, ".") {
+			return configLocation{}, false
+		}
+		switch parts[0] {
+		case "plugins":
+			if !strings.EqualFold(folder, "update") {
+				return configLocation{"plugins", folder, format}, true
+			}
+		case "config":
+			return configLocation{"mods", folder, format}, true
+		}
+	}
+	return configLocation{}, false
+}
+
+// errNotListedConfig is the refusal for a path the config editor does not
+// offer. It is distinct from errOutsideWorkDir: the path may be perfectly
+// inside the working directory, it is just not a config file (run.sh, a jar,
+// user_jvm_args.txt), and a remote session must not read or replace those.
+var errNotListedConfig = errors.New("not a config file the editor lists")
+
+// listedConfigPath refuses any relPath classifyConfigPath would not list. It
+// runs before sandbox, which stays as the second layer. Separators are
+// normalised so a Windows path with backslashes names the same file the
+// listing's slash form does, and anything not already canonical after that
+// ("./a", "a//b", "plugins/../run.sh", a leading slash) is refused instead of
+// cleaned, because the listing only ever produces canonical paths and so does
+// every legitimate caller.
+func listedConfigPath(relPath string) error {
+	rel := filepath.ToSlash(relPath)
+	if rel == "" || path.Clean(rel) != rel {
+		return errNotListedConfig
+	}
+	// Segments Windows resolves to a different name than the one classified,
+	// refused on every platform so the accepted names stay portable: ":" is an
+	// NTFS alternate data stream ("evil.jar:x.yml" classifies as yaml but
+	// addresses a stream on evil.jar), a trailing dot or space is stripped
+	// ("update./x.yml" reaches the excluded update folder), and control
+	// characters have no business in a config path.
+	for _, seg := range strings.Split(rel, "/") {
+		if strings.ContainsRune(seg, ':') || strings.HasSuffix(seg, ".") || strings.HasSuffix(seg, " ") ||
+			strings.IndexFunc(seg, unicode.IsControl) >= 0 {
+			return errNotListedConfig
+		}
+	}
+	if _, ok := classifyConfigPath(rel); !ok {
+		return errNotListedConfig
+	}
+	return nil
+}
+
 // ListConfigFiles scans the server's working directory and returns discoverable
 // config files grouped into Server / Plugins / Mods categories.
 func (s *ConfigEditorService) ListConfigFiles(serverID string) ([]models.ConfigFile, error) {
@@ -66,6 +163,45 @@ func (s *ConfigEditorService) ListConfigFiles(serverID string) ([]models.ConfigF
 
 	var files []models.ConfigFile
 
+	// scan lists the plain files directly in dir (relDir is its slash-form path
+	// under workDir) that classifyConfigPath accepts and files under one of
+	// cats. The category filter is what keeps the passes below in their
+	// original order: server, then plugins, then mods.
+	scan := func(entries []os.DirEntry, dir, relDir string, cats ...string) {
+		for _, e := range entries {
+			if e.IsDir() {
+				continue
+			}
+			loc, ok := classifyConfigPath(path.Join(relDir, e.Name()))
+			if !ok || !slices.Contains(cats, loc.category) {
+				continue
+			}
+			// Info fails only when the entry vanished between ReadDir and here, and
+			// makeConfigFile dereferences it, so a file deleted mid-listing used to
+			// be a nil-pointer panic. Skipping it is the truthful listing.
+			info, err := e.Info()
+			if err != nil {
+				continue
+			}
+			files = append(files, makeConfigFile(workDir, filepath.Join(dir, e.Name()), info, loc.category, loc.source, loc.format))
+		}
+	}
+	// scanSub does the same one folder down, for the directory entries. The
+	// classifier decides which folders count (not "update", nothing dotted).
+	scanSub := func(entries []os.DirEntry, dir, relDir string) {
+		for _, e := range entries {
+			if !e.IsDir() {
+				continue
+			}
+			subDir := filepath.Join(dir, e.Name())
+			subEntries, err := os.ReadDir(subDir)
+			if err != nil {
+				slog.Debug("config: subdirectory unreadable", "dir", subDir, "error", err)
+			}
+			scan(subEntries, subDir, path.Join(relDir, e.Name()), "plugins", "mods")
+		}
+	}
+
 	// --- Server root files ---
 	// An unreadable working directory lists as empty rather than failing the
 	// tile: a server that has not been installed yet has no directory at all,
@@ -74,49 +210,13 @@ func (s *ConfigEditorService) ListConfigFiles(serverID string) ([]models.ConfigF
 	if err != nil {
 		slog.Debug("config: working directory unreadable", "dir", workDir, "error", err)
 	}
-	for _, e := range rootEntries {
-		if e.IsDir() {
-			continue
-		}
-		name := e.Name()
-		if !serverRootNames[name] {
-			continue
-		}
-		format := extFormat(name)
-		if format == "" {
-			continue
-		}
-		// Info fails only when the entry vanished between ReadDir and here, and
-		// makeConfigFile dereferences it, so a file deleted mid-listing used to
-		// be a nil-pointer panic. Skipping it is the truthful listing.
-		info, err := e.Info()
-		if err != nil {
-			continue
-		}
-		files = append(files, makeConfigFile(workDir, filepath.Join(workDir, name), info, "server", "", format))
-	}
+	scan(rootEntries, workDir, "", "server")
 
 	// Paper-specific configs in config/ subdir (paper-*.yml, purpur-*.yml)
 	configDir := filepath.Join(workDir, "config")
-	if cfgEntries, err := os.ReadDir(configDir); err == nil {
-		for _, e := range cfgEntries {
-			if e.IsDir() {
-				continue
-			}
-			name := e.Name()
-			if !strings.HasPrefix(name, "paper-") && !strings.HasPrefix(name, "purpur-") {
-				continue
-			}
-			format := extFormat(name)
-			if format == "" {
-				continue
-			}
-			info, err := e.Info()
-			if err != nil {
-				continue
-			}
-			files = append(files, makeConfigFile(workDir, filepath.Join(configDir, name), info, "server", "", format))
-		}
+	cfgEntries, cfgErr := os.ReadDir(configDir)
+	if cfgErr == nil {
+		scan(cfgEntries, configDir, "config", "server")
 	}
 
 	// --- Plugins (depth 2 under plugins/) ---
@@ -126,106 +226,28 @@ func (s *ConfigEditorService) ListConfigFiles(serverID string) ([]models.ConfigF
 		if err != nil {
 			slog.Debug("config: plugins directory unreadable", "dir", pluginsDir, "error", err)
 		}
-
-		// Files directly in plugins/
-		for _, e := range pEntries {
-			if e.IsDir() {
-				continue
-			}
-			format := extFormat(e.Name())
-			if format == "" {
-				continue
-			}
-			info, err := e.Info()
-			if err != nil {
-				continue
-			}
-			files = append(files, makeConfigFile(workDir, filepath.Join(pluginsDir, e.Name()), info, "plugins", "", format))
-		}
-
-		// One level of plugin subdirectories
-		for _, e := range pEntries {
-			if !e.IsDir() || e.Name() == "update" || strings.HasPrefix(e.Name(), ".") {
-				continue
-			}
-			pluginName := e.Name()
-			subEntries, err := os.ReadDir(filepath.Join(pluginsDir, pluginName))
-			if err != nil {
-				slog.Debug("config: plugin directory unreadable", "plugin", pluginName, "error", err)
-			}
-			for _, sub := range subEntries {
-				if sub.IsDir() {
-					continue
-				}
-				format := extFormat(sub.Name())
-				if format == "" {
-					continue
-				}
-				info, err := sub.Info()
-				if err != nil {
-					continue
-				}
-				files = append(files, makeConfigFile(workDir, filepath.Join(pluginsDir, pluginName, sub.Name()), info, "plugins", pluginName, format))
-			}
-		}
+		// Files directly in plugins/, then one level of plugin subdirectories.
+		scan(pEntries, pluginsDir, "plugins", "plugins")
+		scanSub(pEntries, pluginsDir, "plugins")
 	}
 
 	// --- Mods: config/ (excluding paper/purpur prefixed files) ---
-	if cfgEntries, err := os.ReadDir(configDir); err == nil {
-		// Files directly in config/ (non-paper, non-purpur)
-		for _, e := range cfgEntries {
-			if e.IsDir() {
-				continue
-			}
-			name := e.Name()
-			if strings.HasPrefix(name, "paper-") || strings.HasPrefix(name, "purpur-") {
-				continue
-			}
-			format := extFormat(name)
-			if format == "" {
-				continue
-			}
-			info, err := e.Info()
-			if err != nil {
-				continue
-			}
-			files = append(files, makeConfigFile(workDir, filepath.Join(configDir, name), info, "mods", "", format))
-		}
-
-		// One level of mod subdirectories in config/
-		for _, e := range cfgEntries {
-			if !e.IsDir() || strings.HasPrefix(e.Name(), ".") {
-				continue
-			}
-			modName := e.Name()
-			subEntries, err := os.ReadDir(filepath.Join(configDir, modName))
-			if err != nil {
-				slog.Debug("config: mod config directory unreadable", "mod", modName, "error", err)
-			}
-			for _, sub := range subEntries {
-				if sub.IsDir() {
-					continue
-				}
-				format := extFormat(sub.Name())
-				if format == "" {
-					continue
-				}
-				info, err := sub.Info()
-				if err != nil {
-					continue
-				}
-				files = append(files, makeConfigFile(workDir, filepath.Join(configDir, modName, sub.Name()), info, "mods", modName, format))
-			}
-		}
+	if cfgErr == nil {
+		scan(cfgEntries, configDir, "config", "mods")
+		scanSub(cfgEntries, configDir, "config")
 	}
 
 	return files, nil
 }
 
-// ReadConfigFile reads a config file, sandbox-checked against the server working dir.
+// ReadConfigFile reads a config file the editor lists for the server, then
+// sandbox-checks it against the working dir.
 func (s *ConfigEditorService) ReadConfigFile(serverID, relPath string) (string, error) {
 	workDir, err := s.workingDir(serverID)
 	if err != nil {
+		return "", err
+	}
+	if err := listedConfigPath(relPath); err != nil {
 		return "", err
 	}
 	abs, err := s.sandbox(workDir, relPath)
@@ -239,10 +261,14 @@ func (s *ConfigEditorService) ReadConfigFile(serverID, relPath string) (string, 
 	return string(data), nil
 }
 
-// WriteConfigFile validates (JSON only for now), backs up, then writes a config file.
+// WriteConfigFile refuses a path the editor does not list, validates (JSON only
+// for now), backs up, then writes a config file.
 func (s *ConfigEditorService) WriteConfigFile(serverID, relPath, content string) error {
 	workDir, err := s.workingDir(serverID)
 	if err != nil {
+		return err
+	}
+	if err := listedConfigPath(relPath); err != nil {
 		return err
 	}
 	abs, err := s.sandbox(workDir, relPath)
