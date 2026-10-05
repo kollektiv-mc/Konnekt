@@ -551,3 +551,56 @@ func TestExecHTTPSurfacesATruncatedBody(t *testing.T) {
 		t.Error("a truncated body was still published as the body output")
 	}
 }
+
+// The block keeps the response as its body output, so the read is capped. A
+// body over the cap fails the block rather than arriving truncated; one
+// exactly at the cap, and an ordinary one, come through whole.
+func TestExecHTTPBoundsTheResponseBody(t *testing.T) {
+	cases := []struct {
+		name     string
+		size     int
+		wantPort string
+	}{
+		{"small", 11, "onComplete"},
+		{"exactly at the cap", maxHTTPResponseBytes, "onComplete"},
+		{"one byte over the cap", maxHTTPResponseBytes + 1, "onFailed"},
+		{"far over the cap", maxHTTPResponseBytes * 4, "onFailed"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			payload := strings.Repeat("x", tc.size)
+			ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				// The client hangs up once it is past the cap, so a write error is expected.
+				if _, err := io.WriteString(w, payload); err != nil {
+					t.Logf("write: %v", err)
+				}
+			}))
+			defer ts.Close()
+
+			ec := &ExecContext{
+				Ctx:     context.Background(),
+				Config:  map[string]interface{}{"url": ts.URL, "method": "GET"},
+				dataOut: map[string]interface{}{},
+			}
+			res := execHTTP(ec)
+			if res.Port != tc.wantPort {
+				t.Fatalf("port = %q (err %v), want %q", res.Port, res.Err, tc.wantPort)
+			}
+			if got := ec.dataOut["status"]; got != float64(http.StatusOK) {
+				t.Errorf("status output = %v, want %v", got, float64(http.StatusOK))
+			}
+			if tc.wantPort == "onComplete" {
+				if got, _ := ec.dataOut["body"].(string); got != payload {
+					t.Errorf("body length = %d, want the full %d bytes", len(got), tc.size)
+				}
+				return
+			}
+			if res.Err == nil || !strings.Contains(res.Err.Error(), "exceeds") {
+				t.Errorf("err = %v, want it to say the body exceeds the cap", res.Err)
+			}
+			if _, set := ec.dataOut["body"]; set {
+				t.Error("an oversize body was still published as the body output")
+			}
+		})
+	}
+}
