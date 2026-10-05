@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
+import { waitFor } from '@testing-library/react'
 import * as App from '../../wailsjs/go/main/App'
 import { useLoaderStore } from './useLoaderStore'
 import type { LoaderStatus, LoaderVersion } from './useLoaderStore'
@@ -40,6 +41,7 @@ describe('useLoaderStore', () => {
     useLoaderStore.setState({
       status: null,
       versions: [],
+      statusFor: '',
       loading: false,
       error: null,
       phase: 'idle',
@@ -85,6 +87,90 @@ describe('useLoaderStore', () => {
     expect(s.error).toContain('maven is unreachable')
     expect(s.status?.installedVersion).toBe('21.1.72')
     expect(s.loading).toBe(false)
+  })
+
+  describe('reads for two servers', () => {
+    /** A promise the test settles by hand, to pick which reply lands last. */
+    function deferred<T>() {
+      let resolve!: (v: T) => void
+      let reject!: (e: unknown) => void
+      const promise = new Promise<T>((res, rej) => {
+        resolve = res
+        reject = rej
+      })
+      return { promise, resolve, reject }
+    }
+
+    // The store has one slot for whichever server the panel is on. A's slow
+    // build list landing after B's must not put A's builds under B, where
+    // Update would send one of them to B.
+    it("keeps the newer server's data when the older read lands last", async () => {
+      const a = deferred<LoaderVersion[]>()
+      vi.mocked(App.ListLoaderVersions).mockImplementation((id: string) =>
+        id === 'srvA' ? a.promise : Promise.resolve([version('B-build')]),
+      )
+
+      const loadA = useLoaderStore.getState().load('srvA')
+      await waitFor(() => expect(App.ListLoaderVersions).toHaveBeenCalledWith('srvA'))
+      await useLoaderStore.getState().load('srvB')
+      a.resolve([version('A-build')])
+      await loadA
+
+      const s = useLoaderStore.getState()
+      expect(s.statusFor).toBe('srvB')
+      expect(s.versions.map((v) => v.version)).toEqual(['B-build'])
+      expect(s.loading).toBe(false)
+    })
+
+    it("drops a stale read's failure instead of showing it on the new server", async () => {
+      const a = deferred<LoaderVersion[]>()
+      vi.mocked(App.ListLoaderVersions).mockImplementation((id: string) =>
+        id === 'srvA' ? a.promise : Promise.resolve([version('B-build')]),
+      )
+
+      const loadA = useLoaderStore.getState().load('srvA')
+      await waitFor(() => expect(App.ListLoaderVersions).toHaveBeenCalledWith('srvA'))
+      await useLoaderStore.getState().load('srvB')
+      a.reject('maven is unreachable')
+      await loadA
+
+      expect(useLoaderStore.getState().error).toBeNull()
+    })
+
+    // Dropping the reply one await earlier also saves the list fetch nobody
+    // will read.
+    it("does not fetch the older server's builds once a newer read has started", async () => {
+      const a = deferred<LoaderStatus>()
+      vi.mocked(App.GetLoaderStatus).mockImplementation((id: string) =>
+        id === 'srvA' ? a.promise : Promise.resolve(status()),
+      )
+
+      const loadA = useLoaderStore.getState().load('srvA')
+      await useLoaderStore.getState().load('srvB')
+      a.resolve(status())
+      await loadA
+
+      expect(App.ListLoaderVersions).not.toHaveBeenCalledWith('srvA')
+      expect(useLoaderStore.getState().statusFor).toBe('srvB')
+    })
+
+    it("clears the previous server's reading as soon as the next read starts", async () => {
+      await useLoaderStore.getState().load('srvA')
+      expect(useLoaderStore.getState().versions).toHaveLength(2)
+
+      const b = deferred<LoaderVersion[]>()
+      vi.mocked(App.ListLoaderVersions).mockReturnValue(b.promise)
+      const loadB = useLoaderStore.getState().load('srvB')
+
+      const s = useLoaderStore.getState()
+      expect(s.statusFor).toBe('srvB')
+      expect(s.status).toBeNull()
+      expect(s.versions).toEqual([])
+      expect(s.loading).toBe(true)
+
+      b.resolve([])
+      await loadB
+    })
   })
 
   describe('the job belongs to the backend', () => {

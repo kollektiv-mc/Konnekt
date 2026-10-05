@@ -21,6 +21,8 @@ export interface PendingUpdate {
 interface LoaderStore {
   status: LoaderStatus | null
   versions: LoaderVersion[]
+  /** The server `status` and `versions` were read for; empty before any read. */
+  statusFor: string
   loading: boolean
   /** A failed read: the panel shows this instead of a version list. */
   error: string | null
@@ -62,6 +64,9 @@ interface LoaderStore {
 
 const MAX_LOG_LINES = 500
 
+/** Which `load` call is the newest; an older one finds this moved on and drops its reply. */
+let latestLoad = 0
+
 /**
  * Loader status, available builds, and the state of an in-flight update.
  *
@@ -82,6 +87,7 @@ const MAX_LOG_LINES = 500
 export const useLoaderStore = create<LoaderStore>((set, get) => ({
   status: null,
   versions: [],
+  statusFor: '',
   loading: false,
   error: null,
 
@@ -142,16 +148,31 @@ export const useLoaderStore = create<LoaderStore>((set, get) => ({
   showDialog: () => set({ dialogOpen: true }),
 
   load: async (serverId: string) => {
-    set({ loading: true, error: null })
+    // One slot serves whichever server the panel is on, so a read for the
+    // previous one can still be in flight. Its builds are that server's, and
+    // offering one as an update for this server would install the wrong thing.
+    // The reading is dropped only when the server changes; a refresh of the
+    // same one keeps it on screen until the new one lands.
+    const mine = ++latestLoad
+    const stale = () => mine !== latestLoad
+    const switching = get().statusFor !== serverId
+    set({
+      loading: true,
+      error: null,
+      statusFor: serverId,
+      ...(switching ? { status: null, versions: [] } : {}),
+    })
 
     let status: LoaderStatus | null = null
+    let error: string | null = null
     try {
       status = await GetLoaderStatus(serverId)
     } catch (e) {
       // A failed status read is not fatal on its own; the panel still has the
       // config's own values to fall back on.
-      set({ error: errMsg(e) })
+      error = errMsg(e)
     }
+    if (stale()) return
 
     // Only managed loaders have a version list to fetch, and asking for one
     // otherwise produces an error the user can do nothing about.
@@ -160,11 +181,12 @@ export const useLoaderStore = create<LoaderStore>((set, get) => ({
       try {
         versions = await ListLoaderVersions(serverId)
       } catch (e) {
-        set({ error: errMsg(e) })
+        error = errMsg(e)
       }
+      if (stale()) return
     }
 
-    set({ status, versions, loading: false })
+    set({ status, versions, error, loading: false })
   },
 
   startUpdate: async (serverId: string, version: string, fullBackup: boolean) => {

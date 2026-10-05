@@ -1,5 +1,5 @@
 import { describe, it, expect, afterEach, beforeEach, vi } from 'vitest'
-import { render, screen, fireEvent, waitFor, cleanup } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor, cleanup, act } from '@testing-library/react'
 import * as App from '../../../wailsjs/go/main/App'
 import { useLoaderStore } from '../../stores/useLoaderStore'
 import type { LoaderStatus, LoaderVersion } from '../../stores/useLoaderStore'
@@ -49,6 +49,7 @@ describe('LoaderPanel', () => {
     useLoaderStore.setState({
       status: null,
       versions: [],
+      statusFor: '',
       loading: false,
       error: null,
       phase: 'idle',
@@ -154,6 +155,51 @@ describe('LoaderPanel', () => {
 
       expect(useLoaderStore.getState().dialogOpen).toBe(true)
     })
+  })
+
+  // The manager mounts one panel and switches its config. A's builds arriving
+  // after B's must neither be listed under B nor be what B's Update sends.
+  it("never lists or offers another server's builds when its reply lands last", async () => {
+    const other: ServerConfig = { ...cfg, id: 'srv2', name: 'creative' }
+    let resolveA: (v: LoaderVersion[]) => void = () => {}
+    vi.mocked(App.ListLoaderVersions).mockImplementation((id: string) =>
+      id === 'srv1'
+        ? new Promise<LoaderVersion[]>((resolve) => {
+            resolveA = resolve
+          })
+        : Promise.resolve([version('B-build')]),
+    )
+
+    const { rerender } = render(<LoaderPanel key={cfg.id} config={cfg} />)
+    await waitFor(() => expect(App.ListLoaderVersions).toHaveBeenCalledWith('srv1'))
+
+    rerender(<LoaderPanel key={other.id} config={other} />)
+    await waitFor(() => expect(screen.getByText('B-build')).toBeTruthy())
+
+    await act(async () => {
+      resolveA([version('A-build')])
+    })
+
+    expect(screen.queryByText('A-build')).toBeNull()
+    expect(screen.getByText('B-build')).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: 'Update' }))
+    expect(useLoaderStore.getState().pending).toMatchObject({
+      serverId: 'srv2',
+      target: { version: 'B-build' },
+    })
+  })
+
+  it("shows nothing of the previous server's reading before its own arrives", async () => {
+    const other: ServerConfig = { ...cfg, id: 'srv2', name: 'creative' }
+    const { rerender } = render(<LoaderPanel config={cfg} />)
+    await waitFor(() => expect(screen.getByText('21.1.209')).toBeTruthy())
+
+    vi.mocked(App.GetLoaderStatus).mockImplementation(() => new Promise(() => {}))
+    rerender(<LoaderPanel config={other} />)
+
+    expect(screen.queryByText('21.1.209')).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Update' })).toBeNull()
+    expect(screen.getByText('Checking for versions…')).toBeTruthy()
   })
 
   // A finished update changes which build is installed.

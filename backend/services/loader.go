@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"sync"
 	"time"
@@ -208,12 +209,28 @@ func (s *LoaderService) Update(req models.LoaderUpdateRequest) error {
 	}
 
 	version, source := detectLoaderVersion(cfg.JarPath, cfg.WorkingDir)
-	_, loaderName := resolveTarget(*cfg)
+	mcVersion, loaderName := resolveTarget(*cfg)
 	if managed, reason := s.manageable(loaderName, source); !managed {
 		return fmt.Errorf("%s", reason)
 	}
 	if version == req.Version {
 		return fmt.Errorf("%s is already on %s", cfg.Name, req.Version)
+	}
+
+	// The panel only offers builds for this server's Minecraft version, but the
+	// request is the backend's to judge: a build picked from another server's
+	// list would otherwise be installed here exactly as asked. Listing needs the
+	// network and so does the update, so a failed listing fails the update too.
+	available, err := s.AvailableVersions(req.ServerID)
+	if err != nil {
+		return fmt.Errorf("could not check the available %s builds: %w", loaderName, err)
+	}
+	if !slices.ContainsFunc(available, func(v models.LoaderVersion) bool { return v.Version == req.Version }) {
+		scope := ""
+		if mcVersion != "" {
+			scope = " for Minecraft " + mcVersion
+		}
+		return fmt.Errorf("%s is not an available %s build%s", req.Version, loaderName, scope)
 	}
 
 	provider := s.providers[loaderName]
