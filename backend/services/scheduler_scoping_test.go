@@ -76,7 +76,32 @@ func newScopedScheduler(t *testing.T, activeID string, configIDs ...string) *Sch
 	s.registry = NewBlockRegistry()
 	registerBuiltins(s.registry)
 	registerDataBuiltins(s.registry)
+	// Registered after t.TempDir, so it runs before the directory is removed.
+	t.Cleanup(func() { awaitIdle(t, s) })
 	return s
+}
+
+// awaitIdle waits for every graph run to return. A run writes
+// scheduler-history.json after its last block, which is after the test saw the
+// block run, and on a slow runner that write landed inside t.TempDir's removal
+// and failed it with "directory not empty". runGraph clears its running entry
+// in a defer, so an empty map means the history write is done.
+func awaitIdle(t *testing.T, s *SchedulerService) {
+	t.Helper()
+	deadline := time.Now().Add(5 * time.Second)
+	for {
+		s.runningMu.Lock()
+		n := len(s.running)
+		s.runningMu.Unlock()
+		if n == 0 {
+			return
+		}
+		if time.Now().After(deadline) {
+			t.Errorf("%d graph runs still in flight at cleanup", n)
+			return
+		}
+		time.Sleep(5 * time.Millisecond)
+	}
 }
 
 func TestRunGraphActsOnTheGraphsServer(t *testing.T) {
