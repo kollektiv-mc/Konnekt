@@ -180,3 +180,132 @@ func TestDuplicateWorldRefusesExistingNameBeforeQuiescing(t *testing.T) {
 		t.Errorf("quiesce calls = %v, want none when the duplicate is refused", guard.calls)
 	}
 }
+
+// badWorldNames are names that must never reach a path join: traversal,
+// absolute and drive-relative paths, UNC shares, and the forms Windows
+// normalises back onto a real folder (trailing dots and spaces strip to the
+// working directory or to a sibling, so "world " would slip past the
+// active-world check while deleting the active world).
+var badWorldNames = []string{
+	"", ".", "..", "...", ".. ", ". ", "..  .", " ", "\t",
+	"../keep", "..\\keep", "../../etc", "..\\..\\Windows",
+	"/etc", "/etc/passwd", `C:\keep`, "C:keep", "C:", `\\server\share`,
+	"a/b", `a\b`, "world/", `world\`,
+	"world.", "world ", "world:stream", "world::$DATA", "a\x00b",
+	"CON", "nul", "com1", "LPT9", "NUL.txt", "wor?ld", "wor*ld", "wor|ld",
+}
+
+// TestValidateWorldName is the guard S3.2 asks a traversal test for: it sits
+// in front of a recursive delete that Remote Access can reach without a
+// desktop approval.
+func TestValidateWorldName(t *testing.T) {
+	for _, name := range badWorldNames {
+		if err := validateWorldName(name); err == nil {
+			t.Errorf("validateWorldName(%q) = nil, want a refusal", name)
+		}
+	}
+	for _, name := range []string{"world", "My World", "world_nether", "survival-2", "world.bak", ".hidden", "a.b", "console"} {
+		if err := validateWorldName(name); err != nil {
+			t.Errorf("validateWorldName(%q) = %v, want nil", name, err)
+		}
+	}
+}
+
+// traversalFixture is newWorldFixture plus something that must survive: a
+// sentinel folder beside the server directory (what "../keep" reaches) and a
+// level-name line to hold still. abs names the sentinel by absolute path.
+func traversalFixture(t *testing.T) (svc *WorldService, workDir, abs string) {
+	t.Helper()
+	svc, workDir = newWorldFixture(t, &fakeServerGuard{})
+	writeFile(t, filepath.Join(workDir, "world", "level.dat"), "level")
+	writeFile(t, filepath.Join(workDir, "server.properties"), "level-name=world\n")
+	abs = filepath.Join(filepath.Dir(workDir), "keep")
+	writeFile(t, filepath.Join(abs, "data.txt"), "precious")
+	return svc, workDir, abs
+}
+
+// assertUntouched fails if the sentinel, the server directory's world or its
+// properties changed.
+func assertUntouched(t *testing.T, workDir, abs string) {
+	t.Helper()
+	for path, want := range map[string]string{
+		filepath.Join(abs, "data.txt"):               "precious",
+		filepath.Join(workDir, "world", "level.dat"): "level",
+		filepath.Join(workDir, "server.properties"):  "level-name=world\n",
+	} {
+		got, err := os.ReadFile(path)
+		if err != nil || string(got) != want {
+			t.Errorf("%s = %q, %v; want %q, nil", path, got, err, want)
+		}
+	}
+}
+
+// worldNameAttacks is the hostile set plus the sentinel named by absolute path.
+func worldNameAttacks(abs string) []string {
+	return append([]string{abs, filepath.Join(abs, "data.txt")}, badWorldNames...)
+}
+
+// The two-name methods try each hostile name as the target and then as the
+// new name, so a guard on only one argument fails here.
+func TestDeleteWorldRefusesTraversalNames(t *testing.T) {
+	svc, workDir, abs := traversalFixture(t)
+	for _, name := range worldNameAttacks(abs) {
+		if err := svc.DeleteWorld(testServerID, name); err == nil {
+			t.Errorf("DeleteWorld(%q) = nil, want a refusal", name)
+		}
+	}
+	assertUntouched(t, workDir, abs)
+}
+
+func TestRenameWorldRefusesTraversalNames(t *testing.T) {
+	svc, workDir, abs := traversalFixture(t)
+	for _, name := range worldNameAttacks(abs) {
+		if err := svc.RenameWorld(testServerID, name, "moved"); err == nil {
+			t.Errorf("RenameWorld(%q, moved) = nil, want a refusal", name)
+		}
+		if err := svc.RenameWorld(testServerID, "world", name); err == nil {
+			t.Errorf("RenameWorld(world, %q) = nil, want a refusal", name)
+		}
+	}
+	assertUntouched(t, workDir, abs)
+	if _, err := os.Stat(filepath.Join(workDir, "moved")); err == nil {
+		t.Error("a refused rename still created the destination")
+	}
+}
+
+func TestDuplicateWorldRefusesTraversalNames(t *testing.T) {
+	svc, workDir, abs := traversalFixture(t)
+	for _, name := range worldNameAttacks(abs) {
+		if err := svc.DuplicateWorld(testServerID, name, "copy"); err == nil {
+			t.Errorf("DuplicateWorld(%q, copy) = nil, want a refusal", name)
+		}
+		if err := svc.DuplicateWorld(testServerID, "world", name); err == nil {
+			t.Errorf("DuplicateWorld(world, %q) = nil, want a refusal", name)
+		}
+	}
+	assertUntouched(t, workDir, abs)
+	if _, err := os.Stat(filepath.Join(workDir, "copy")); err == nil {
+		t.Error("a refused duplication still created the destination")
+	}
+}
+
+func TestSetActiveWorldRefusesTraversalNames(t *testing.T) {
+	svc, workDir, abs := traversalFixture(t)
+	for _, name := range worldNameAttacks(abs) {
+		if err := svc.SetActiveWorld(testServerID, name); err == nil {
+			t.Errorf("SetActiveWorld(%q) = nil, want a refusal", name)
+		}
+	}
+	assertUntouched(t, workDir, abs)
+}
+
+// BackupWorld has no BackupService behind the fixture: a name that got past
+// the guard would panic on the nil service, which is also a failure.
+func TestBackupWorldRefusesTraversalNames(t *testing.T) {
+	svc, _, abs := traversalFixture(t)
+	for _, name := range worldNameAttacks(abs) {
+		if _, err := svc.BackupWorld(testServerID, name); err == nil {
+			t.Errorf("BackupWorld(%q) = nil, want a refusal", name)
+		}
+	}
+}

@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+	"unicode"
 
 	"konnekt/backend/models"
 )
@@ -379,13 +380,37 @@ func buildDimension(path, kind string) models.WorldDimension {
 	return models.WorldDimension{Kind: kind, Path: path, Size: size, Modified: modified}
 }
 
+// windowsDeviceNames are reserved on Windows whatever the extension.
+var windowsDeviceNames = map[string]bool{
+	"CON": true, "PRN": true, "AUX": true, "NUL": true,
+	"COM1": true, "COM2": true, "COM3": true, "COM4": true, "COM5": true,
+	"COM6": true, "COM7": true, "COM8": true, "COM9": true,
+	"LPT1": true, "LPT2": true, "LPT3": true, "LPT4": true, "LPT5": true,
+	"LPT6": true, "LPT7": true, "LPT8": true, "LPT9": true,
+}
+
 // validateWorldName rejects paths that could escape the working directory.
+// It also refuses the names Windows resolves to some other folder: trailing
+// dots and spaces are stripped ("..." is the working directory, "world " is
+// "world", which sidesteps the active-world check), a colon addresses a
+// stream or drive, and device names open a device. These are refused on every
+// platform so a server directory stays portable.
 func validateWorldName(name string) error {
 	if name == "" || name == "." || name == ".." {
 		return errors.New("invalid world name")
 	}
 	if name != filepath.Base(name) || strings.ContainsAny(name, `/\`) {
 		return errors.New("invalid world name: must be a plain folder name")
+	}
+	if strings.ContainsAny(name, `:*?"<>|`) || strings.ContainsFunc(name, unicode.IsControl) {
+		return errors.New("invalid world name: contains a character Windows does not allow in a folder name")
+	}
+	if strings.HasSuffix(name, ".") || strings.HasSuffix(name, " ") {
+		return errors.New("invalid world name: must not end in a dot or a space")
+	}
+	stem, _, _ := strings.Cut(name, ".")
+	if windowsDeviceNames[strings.ToUpper(strings.TrimRight(stem, " "))] {
+		return errors.New("invalid world name: reserved device name")
 	}
 	return nil
 }
