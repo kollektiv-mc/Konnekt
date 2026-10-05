@@ -459,7 +459,10 @@ func validateWorldName(name string) error {
 	if strings.HasSuffix(name, ".") || strings.HasSuffix(name, " ") {
 		return errors.New("invalid world name: must not end in a dot or a space")
 	}
-	stem, _, _ := strings.Cut(name, ".")
+	stem := name
+	if i := strings.IndexByte(name, '.'); i >= 0 {
+		stem = name[:i]
+	}
 	if windowsDeviceNames[strings.ToUpper(strings.TrimRight(stem, " "))] {
 		return errors.New("invalid world name: reserved device name")
 	}
