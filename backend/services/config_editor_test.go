@@ -134,12 +134,14 @@ func TestConfigEditorSandboxRefusesSymlinkEscape(t *testing.T) {
 func TestConfigFileGuardRefusesSymlinkOnBothPaths(t *testing.T) {
 	svc, workDir := newConfigEditorFixture(t)
 	outside := t.TempDir()
-	secret := filepath.Join(outside, "secret.txt")
+	secret := filepath.Join(outside, "secret.yml")
 	writeFile(t, secret, "top secret")
-	symlinkOrSkip(t, outside, filepath.Join(workDir, "link"))
+	// The escaping directory link has to sit at a path the listing offers, or the
+	// config gate refuses first and sandbox is never reached: config/ is one.
+	symlinkOrSkip(t, outside, filepath.Join(workDir, "config"))
 	symlinkOrSkip(t, secret, filepath.Join(workDir, "server.properties"))
 
-	for _, rel := range []string{filepath.Join("link", "secret.txt"), "server.properties"} {
+	for _, rel := range []string{filepath.Join("config", "secret.yml"), "server.properties"} {
 		if _, err := svc.ReadConfigFile("srv1", rel); !errors.Is(err, errOutsideWorkDir) {
 			t.Errorf("ReadConfigFile(%q) error = %v, want errOutsideWorkDir", rel, err)
 		}
@@ -220,9 +222,9 @@ func TestConfigFileGuardAppliesOnBothPaths(t *testing.T) {
 func TestWriteConfigFileRejectsInvalidJSONWithoutWriting(t *testing.T) {
 	svc, workDir := newConfigEditorFixture(t)
 	original := `{"valid": true}`
-	writeFile(t, filepath.Join(workDir, "config.json"), original)
+	writeFile(t, filepath.Join(workDir, "plugins", "config.json"), original)
 
-	err := svc.WriteConfigFile("srv1", "config.json", "{not valid json")
+	err := svc.WriteConfigFile("srv1", "plugins/config.json", "{not valid json")
 	if err == nil {
 		t.Fatal("WriteConfigFile with invalid JSON = nil error, want an error")
 	}
@@ -230,7 +232,7 @@ func TestWriteConfigFileRejectsInvalidJSONWithoutWriting(t *testing.T) {
 		t.Errorf("error = %q, want it to mention invalid JSON", err)
 	}
 
-	after, readErr := os.ReadFile(filepath.Join(workDir, "config.json"))
+	after, readErr := os.ReadFile(filepath.Join(workDir, "plugins", "config.json"))
 	if readErr != nil {
 		t.Fatal(readErr)
 	}
@@ -253,7 +255,7 @@ func TestWriteConfigFileBacksUpOnlyExistingFiles(t *testing.T) {
 	backupDir := filepath.Join(svc.dataDir, "config_backups", "srv1")
 
 	// A brand-new file has nothing to preserve, so backup() returns early.
-	if err := svc.WriteConfigFile("srv1", "fresh.yml", "a: 1"); err != nil {
+	if err := svc.WriteConfigFile("srv1", "bukkit.yml", "a: 1"); err != nil {
 		t.Fatal(err)
 	}
 	if entries, err := os.ReadDir(backupDir); err == nil && len(entries) != 0 {
@@ -261,7 +263,7 @@ func TestWriteConfigFileBacksUpOnlyExistingFiles(t *testing.T) {
 	}
 
 	// Overwriting it preserves the previous contents.
-	if err := svc.WriteConfigFile("srv1", "fresh.yml", "a: 2"); err != nil {
+	if err := svc.WriteConfigFile("srv1", "bukkit.yml", "a: 2"); err != nil {
 		t.Fatal(err)
 	}
 	entries, err := os.ReadDir(backupDir)
@@ -280,7 +282,7 @@ func TestWriteConfigFileBacksUpOnlyExistingFiles(t *testing.T) {
 	}
 
 	// The current file is the new content, not the backup.
-	current, err := os.ReadFile(filepath.Join(workDir, "fresh.yml"))
+	current, err := os.ReadFile(filepath.Join(workDir, "bukkit.yml"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -565,5 +567,134 @@ func TestWriteConfigFileKeepsAnOwnerOnlyServerProperties(t *testing.T) {
 	}
 	if got := modeOf(t, path); got != 0600 {
 		t.Errorf("server.properties mode = %o, want 0600", got)
+	}
+}
+
+// ─── The listing gate (#431) ───────────────────────────────────────────────
+
+// Launch scripts and JVM args are code the next server start runs, so a remote
+// session that could read or replace them would own the host. Every file is on
+// disk, so a refusal cannot be mistaken for a miss, and the checks after the
+// loop show that nothing landed and nothing was backed up.
+func TestConfigFilesRefusePathsTheListingDoesNotOffer(t *testing.T) {
+	svc, workDir := newConfigEditorFixture(t)
+	unlisted := map[string]string{
+		"run.sh":                     "#!/bin/sh\njava -jar server.jar\n",
+		"run.bat":                    "java -jar server.jar\r\n",
+		"user_jvm_args.txt":          "-Xmx4G\n",
+		"server.jar":                 "PK",
+		"eula.txt":                   "eula=true\n",
+		"ops.json":                   "[]",
+		"logs/latest.log":            "log",
+		"plugins/plugin.jar":         "PK",
+		"plugins/update/a.yml":       "update: true",
+		"plugins/a/b/deep.yml":       "deep: true",
+		"plugins/.hidden/a.yml":      "h: 1",
+		"config/.hidden/a.yml":       "h: 1",
+		"world/level.dat":            "nbt",
+		"Server.Properties.bak":      "x",
+		"other/config.yml":           "x: 1",
+		"bukkit.yml.sh":              "x",
+		"plugins/a/start.sh":         "x",
+		"config/mod/start.sh":        "x",
+		"config/a/b/c/too-deep.json": "{}",
+	}
+	for rel, body := range unlisted {
+		writeFile(t, filepath.Join(workDir, filepath.FromSlash(rel)), body)
+	}
+
+	// Spellings that must not slip through: other separators and case, a
+	// traversal that lands on a script, non-canonical forms, an absolute path,
+	// and the empty one.
+	variants := []string{
+		"RUN.SH", "./run.sh", "plugins/../run.sh", "plugins\\..\\run.sh",
+		"USER_JVM_ARGS.TXT", "config/../user_jvm_args.txt",
+		"./server.properties", "plugins//a.yml", "plugins/./a.yml", "plugins/a.yml/",
+		"Server.properties", "SERVER.PROPERTIES", "PLUGINS/a.yml", "Config/a.yml",
+		"/server.properties", filepath.Join(workDir, "server.properties"), "", ".", "..",
+		"server.properties:stream", "server.properties.",
+		"plugins\\update\\a.yml",
+		// What Windows resolves to a different name than the one classified.
+		"plugins/evil.jar:x.yml", "plugins/a/evil.jar:x.yml", "plugins/update./x.yml", "plugins/update /x.yml",
+		"plugins/UPDATE/x.yml", "plugins/Update/x.yml", "plugins/a./x.yml", "plugins/a/x.yml ", "plugins/a/x.yml.",
+		"plugins/a/x\x00.yml", "plugins/a/x\n.yml", "plugins/a/x\t.yml",
+	}
+	for rel := range unlisted {
+		variants = append(variants, rel)
+	}
+
+	for _, rel := range variants {
+		if _, err := svc.ReadConfigFile("srv1", rel); !errors.Is(err, errNotListedConfig) {
+			t.Errorf("ReadConfigFile(%q) error = %v, want errNotListedConfig", rel, err)
+		}
+		if err := svc.WriteConfigFile("srv1", rel, "overwritten"); !errors.Is(err, errNotListedConfig) {
+			t.Errorf("WriteConfigFile(%q) error = %v, want errNotListedConfig", rel, err)
+		}
+	}
+
+	for rel, body := range unlisted {
+		got, err := os.ReadFile(filepath.Join(workDir, filepath.FromSlash(rel)))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if string(got) != body {
+			t.Errorf("%s was modified: %q, want %q", rel, got, body)
+		}
+	}
+	if _, err := os.Stat(filepath.Join(workDir, "server.properties")); err == nil {
+		t.Error("a refused write created server.properties")
+	}
+	// "plugins/evil.jar:x.yml" must not have created evil.jar, or a stream on it.
+	if _, err := os.Stat(filepath.Join(workDir, "plugins", "evil.jar")); err == nil {
+		t.Error("a refused write created plugins/evil.jar")
+	}
+	if entries, err := os.ReadDir(filepath.Join(svc.dataDir, "config_backups")); err == nil && len(entries) != 0 {
+		t.Errorf("refused writes produced %d backup entr(ies), want none", len(entries))
+	}
+}
+
+// The gate and the listing share one predicate, so every file the listing
+// returns must read and write back, with the platform's own separators too.
+// A listing that offered a file the gate refuses would break the editor.
+func TestEveryListedConfigFileRoundTripsThroughTheGate(t *testing.T) {
+	svc, workDir := newConfigEditorFixture(t)
+	listed := []string{
+		"server.properties", "bukkit.yml", "config/paper-global.yml", "config/purpur-x.yml",
+		"plugins/top.yml", "plugins/Essentials/config.yml", "config/sodium.toml", "config/mod/a.toml",
+	}
+	for _, rel := range listed {
+		writeFile(t, filepath.Join(workDir, filepath.FromSlash(rel)), "a=1\n")
+	}
+	files, err := svc.ListConfigFiles("srv1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(files) != len(listed) {
+		t.Fatalf("listed %d files, want %d: %+v", len(files), len(listed), files)
+	}
+	for _, f := range files {
+		got, err := svc.ReadConfigFile("srv1", f.RelPath)
+		if err != nil || got != "a=1\n" {
+			t.Errorf("ReadConfigFile(%q) = %q, %v", f.RelPath, got, err)
+		}
+		if err := svc.WriteConfigFile("srv1", f.RelPath, "a=2\n"); err != nil {
+			t.Errorf("WriteConfigFile(%q) of a listed file: %v", f.RelPath, err)
+		}
+		native := filepath.FromSlash(f.RelPath)
+		if got, err := svc.ReadConfigFile("srv1", native); err != nil || got != "a=2\n" {
+			t.Errorf("ReadConfigFile(%q) with native separators = %q, %v", native, got, err)
+		}
+	}
+}
+
+// server.properties does not exist on a fresh server and the summary tile
+// writes it anyway, so the gate is over the path's shape and not the disk.
+func TestWriteConfigFileAllowsListedNameThatIsNotOnDiskYet(t *testing.T) {
+	svc, workDir := newConfigEditorFixture(t)
+	if err := svc.WriteConfigFile("srv1", "server.properties", "motd=hi\n"); err != nil {
+		t.Fatalf("WriteConfigFile of a fresh server.properties: %v", err)
+	}
+	if got, err := os.ReadFile(filepath.Join(workDir, "server.properties")); err != nil || string(got) != "motd=hi\n" {
+		t.Errorf("server.properties = %q, %v", got, err)
 	}
 }

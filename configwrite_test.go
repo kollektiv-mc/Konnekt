@@ -28,8 +28,8 @@ func TestWritingServerPropertiesPushesTheNewStatus(t *testing.T) {
 
 	// A file with no max-players in it pushes nothing, so the first status to
 	// arrive has to be the server.properties write's.
-	if err := a.WriteConfigFile("srv", "ops.json", "[]"); err != nil {
-		t.Fatalf("WriteConfigFile(ops.json): %v", err)
+	if err := a.WriteConfigFile("srv", "commands.yml", "{}"); err != nil {
+		t.Fatalf("WriteConfigFile(commands.yml): %v", err)
 	}
 	if err := a.WriteConfigFile("srv", "server.properties", "max-players=7\n"); err != nil {
 		t.Fatalf("WriteConfigFile(server.properties): %v", err)
