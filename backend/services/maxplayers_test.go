@@ -130,3 +130,68 @@ func TestPushStatusEmitsTheServersStatus(t *testing.T) {
 		t.Errorf("pushed %q with MaxPlayers %d, want srv with 50", st.ServerID, st.MaxPlayers)
 	}
 }
+
+// #453: with no file there is nothing to cache. The old stat-then-read let an
+// absent file parse as an empty map, and the default was cached against the
+// stamp of a file that was no longer there.
+func TestMaxPlayersOnDiskCachesNothingForAMissingFile(t *testing.T) {
+	srv, _ := newPropsFixture(t)
+	in := srv.instanceFor("srv")
+
+	if n, ok := in.maxPlayersOnDisk(); ok {
+		t.Errorf("maxPlayersOnDisk() = %d, true, want false for a missing file", n)
+	}
+	if in.diskMax.stamp != (propsStamp{}) || in.diskMax.value != 0 {
+		t.Errorf("cache = %+v / %d, want it untouched", in.diskMax.stamp, in.diskMax.value)
+	}
+}
+
+// #453: the stamp and the parse come from one handle. The file is deleted after
+// it is opened and before it is parsed, which is the window the race lived in;
+// the figure is the opened file's, not the default an absent path would read as.
+func TestMaxPlayersOnDiskParsesTheHandleItStamped(t *testing.T) {
+	srv, dir := newPropsFixture(t)
+	writeProps(t, dir, "max-players=50\n", time.Unix(1_000, 0))
+	in := srv.instanceFor("srv")
+
+	removed := false
+	openProperties = func(name string) (*os.File, error) {
+		f, err := os.Open(name)
+		if err != nil {
+			return nil, err
+		}
+		if err := os.Remove(name); err != nil {
+			// Windows will not delete an open file, so the window cannot be
+			// opened there. Close before skipping: Skipf ends the goroutine,
+			// and a handle left open makes TempDir's cleanup fail the test.
+			if cerr := f.Close(); cerr != nil {
+				t.Errorf("close: %v", cerr)
+			}
+			t.Skipf("cannot delete an open file: %v", err)
+		}
+		removed = true
+		return f, nil
+	}
+	t.Cleanup(func() { openProperties = os.Open })
+
+	n, ok := in.maxPlayersOnDisk()
+	if !removed {
+		t.Fatal("the seam never ran")
+	}
+	if !ok || n != 50 {
+		t.Errorf("maxPlayersOnDisk() = %d, %v, want 50, true from the opened file", n, ok)
+	}
+	if in.diskMax.value != 50 || in.diskMax.stamp.size != int64(len("max-players=50\n")) {
+		t.Errorf("cache = %+v / %d, want 50 against the opened file's stamp", in.diskMax.stamp, in.diskMax.value)
+	}
+
+	// The next call finds no file: false, and the cache is left alone rather
+	// than overwritten with a default.
+	openProperties = os.Open
+	if n, ok := in.maxPlayersOnDisk(); ok {
+		t.Errorf("maxPlayersOnDisk() = %d, true after the delete, want false", n)
+	}
+	if in.diskMax.value != 50 {
+		t.Errorf("cache value = %d after a failed read, want it untouched", in.diskMax.value)
+	}
+}
