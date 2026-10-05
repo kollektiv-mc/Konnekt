@@ -66,12 +66,8 @@ func (s *WorldService) ListWorlds(serverID string) ([]models.WorldSystem, error)
 	baseDimension := make(map[string]string) // dir name → base name
 
 	for _, e := range entries {
-		if !e.IsDir() {
-			continue
-		}
 		name := e.Name()
-		levelDat := filepath.Join(cfg.WorkingDir, name, "level.dat")
-		if _, err := os.Stat(levelDat); err != nil {
+		if !isWorldDir(filepath.Join(cfg.WorkingDir, name)) {
 			continue // not a world folder
 		}
 
@@ -126,7 +122,7 @@ func (s *WorldService) ListWorlds(serverID string) ([]models.WorldSystem, error)
 		if err == nil {
 			sys.Meta = meta
 		}
-		sys.Active = base == activeName
+		sys.Active = isActiveWorld(cfg.WorkingDir, base, activeName)
 	}
 
 	result := make([]models.WorldSystem, 0, len(baseSystems))
@@ -148,9 +144,8 @@ func (s *WorldService) SetActiveWorld(serverID, name string) error {
 	if err != nil {
 		return err
 	}
-	worldPath := filepath.Join(cfg.WorkingDir, name)
-	if _, err := os.Stat(worldPath); err != nil {
-		return fmt.Errorf("world %q not found", name)
+	if err := requireWorld(cfg.WorkingDir, name); err != nil {
+		return err
 	}
 	return writeProperty(filepath.Join(cfg.WorkingDir, "server.properties"), "level-name", name)
 }
@@ -168,6 +163,9 @@ func (s *WorldService) DeleteWorld(serverID, name string) error {
 	if err != nil {
 		return err
 	}
+	if err := requireWorld(cfg.WorkingDir, name); err != nil {
+		return err
+	}
 	props, err := readProperties(filepath.Join(cfg.WorkingDir, "server.properties"))
 	if err != nil {
 		slog.Debug("worlds: server.properties unreadable, no world is active", "error", err)
@@ -176,7 +174,7 @@ func (s *WorldService) DeleteWorld(serverID, name string) error {
 	if active == "" {
 		active = "world"
 	}
-	if name == active {
+	if isActiveWorld(cfg.WorkingDir, name, active) {
 		return errors.New("cannot delete the active world; switch to another world first")
 	}
 
@@ -209,6 +207,9 @@ func (s *WorldService) RenameWorld(serverID, oldName, newName string) error {
 	if err != nil {
 		return err
 	}
+	if err := requireWorld(cfg.WorkingDir, oldName); err != nil {
+		return err
+	}
 	if _, err := os.Stat(filepath.Join(cfg.WorkingDir, newName)); err == nil {
 		return fmt.Errorf("a world named %q already exists", newName)
 	}
@@ -234,7 +235,7 @@ func (s *WorldService) RenameWorld(serverID, oldName, newName string) error {
 		}
 	}
 
-	if oldName == active {
+	if isActiveWorld(cfg.WorkingDir, oldName, active) {
 		if err := writeProperty(filepath.Join(cfg.WorkingDir, "server.properties"), "level-name", newName); err != nil {
 			return fmt.Errorf("world folder renamed but level-name update failed: %w", err)
 		}
@@ -256,6 +257,9 @@ func (s *WorldService) DuplicateWorld(serverID, name, newName string) error {
 	}
 	cfg, err := s.config.GetServerConfig(serverID)
 	if err != nil {
+		return err
+	}
+	if err := requireWorld(cfg.WorkingDir, name); err != nil {
 		return err
 	}
 	if _, err := os.Stat(filepath.Join(cfg.WorkingDir, newName)); err == nil {
@@ -308,6 +312,13 @@ func (s *WorldService) BackupWorld(serverID, name string) (models.Backup, error)
 	if err := validateWorldName(name); err != nil {
 		return models.Backup{}, err
 	}
+	cfg, err := s.config.GetServerConfig(serverID)
+	if err != nil {
+		return models.Backup{}, err
+	}
+	if err := requireWorld(cfg.WorkingDir, name); err != nil {
+		return models.Backup{}, err
+	}
 	return s.backup.CreateWorldBackup(serverID, name)
 }
 
@@ -326,7 +337,47 @@ func classifyWorldDir(name string) (base, kind string) {
 	return name, "overworld"
 }
 
+// isWorldDir is the one definition of a world folder: a real directory (not a
+// symlink out of the working directory) that directly contains level.dat. The
+// listing and the gate on the mutating methods both use it, so they cannot
+// drift apart.
+func isWorldDir(path string) bool {
+	info, err := os.Lstat(path)
+	if err != nil || !info.IsDir() {
+		return false
+	}
+	_, err = os.Stat(filepath.Join(path, "level.dat"))
+	return err == nil
+}
+
+// requireWorld refuses a name that is not a world folder, so a name like
+// "mods" or "libraries" never reaches a delete, rename, copy or zip.
+func requireWorld(workingDir, name string) error {
+	if !isWorldDir(filepath.Join(workingDir, name)) {
+		return fmt.Errorf("world %q not found", name)
+	}
+	return nil
+}
+
+// isActiveWorld reports whether name is the world level-name points at. A bare
+// string compare misses "WORLD" on a case-insensitive filesystem, so when both
+// folders exist they are compared with os.SameFile, and the strings are the
+// fallback when either does not.
+func isActiveWorld(workingDir, name, active string) bool {
+	if name == active {
+		return true
+	}
+	a, errA := os.Stat(filepath.Join(workingDir, name))
+	b, errB := os.Stat(filepath.Join(workingDir, active))
+	if errA != nil || errB != nil {
+		return false
+	}
+	return os.SameFile(a, b)
+}
+
 // worldSiblings returns all paths that belong to a world (overworld + dimension siblings).
+// Callers gate the base name on requireWorld first; the siblings are taken as
+// found, since a Paper dimension folder need not hold a level.dat of its own.
 func worldSiblings(workingDir, name string) []string {
 	paths := []string{filepath.Join(workingDir, name)}
 	for _, suffix := range []string{"_nether", "_the_end"} {

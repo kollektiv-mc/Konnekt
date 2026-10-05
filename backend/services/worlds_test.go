@@ -62,6 +62,8 @@ func newWorldFixture(t *testing.T, guard *fakeServerGuard) (*WorldService, strin
 	if err := os.MkdirAll(filepath.Join(workDir, "world"), 0755); err != nil {
 		t.Fatal(err)
 	}
+	// A world is a folder holding level.dat, which the mutating methods require.
+	writeFile(t, filepath.Join(workDir, "world", "level.dat"), "level")
 
 	cfgSvc := &ConfigService{}
 	cfgSvc.SetDataDir(dataDir)
@@ -307,5 +309,105 @@ func TestBackupWorldRefusesTraversalNames(t *testing.T) {
 		if _, err := svc.BackupWorld(testServerID, name); err == nil {
 			t.Errorf("BackupWorld(%q) = nil, want a refusal", name)
 		}
+	}
+}
+
+// nonWorldFolders are real server folders that hold files but no level.dat.
+var nonWorldFolders = []string{"mods", "config", "libraries"}
+
+func nonWorldFixture(t *testing.T) (*WorldService, string) {
+	t.Helper()
+	svc, workDir, _ := traversalFixture(t)
+	for _, dir := range nonWorldFolders {
+		writeFile(t, filepath.Join(workDir, dir, "inner", "keep.txt"), dir)
+	}
+	return svc, workDir
+}
+
+func assertNonWorldsIntact(t *testing.T, workDir string) {
+	t.Helper()
+	for _, dir := range nonWorldFolders {
+		got, err := os.ReadFile(filepath.Join(workDir, dir, "inner", "keep.txt"))
+		if err != nil || string(got) != dir {
+			t.Errorf("%s/inner/keep.txt = %q, %v; want %q, nil", dir, got, err, dir)
+		}
+	}
+}
+
+// A plain folder name is no proof of a world: mods, config and libraries pass
+// validateWorldName, so the level.dat gate is what keeps a phone from
+// recursively deleting them.
+func TestWorldActionsRefuseFoldersThatAreNotWorlds(t *testing.T) {
+	actions := map[string]func(svc *WorldService, dir string) error{
+		"DeleteWorld":    func(svc *WorldService, dir string) error { return svc.DeleteWorld(testServerID, dir) },
+		"RenameWorld":    func(svc *WorldService, dir string) error { return svc.RenameWorld(testServerID, dir, "moved") },
+		"DuplicateWorld": func(svc *WorldService, dir string) error { return svc.DuplicateWorld(testServerID, dir, "copy") },
+		"SetActiveWorld": func(svc *WorldService, dir string) error { return svc.SetActiveWorld(testServerID, dir) },
+		"BackupWorld": func(svc *WorldService, dir string) error {
+			_, err := svc.BackupWorld(testServerID, dir)
+			return err
+		},
+	}
+	for action, call := range actions {
+		// A fresh fixture per action, or an unguarded delete would remove the
+		// folders before the later actions got to be tested.
+		svc, workDir := nonWorldFixture(t)
+		for _, dir := range nonWorldFolders {
+			if err := call(svc, dir); err == nil {
+				t.Errorf("%s(%q) = nil, want a refusal", action, dir)
+			}
+		}
+		assertNonWorldsIntact(t, workDir)
+		for _, gone := range []string{"moved", "copy"} {
+			if _, err := os.Stat(filepath.Join(workDir, gone)); err == nil {
+				t.Errorf("%s created %q", action, gone)
+			}
+		}
+	}
+}
+
+// Sibling dimension folders ride along with a real world even without a
+// level.dat of their own, as Paper lays them out.
+func TestDeleteWorldRemovesAWorldWithItsSiblings(t *testing.T) {
+	svc, workDir, _ := traversalFixture(t)
+	writeFile(t, filepath.Join(workDir, "other", "level.dat"), "level")
+	writeFile(t, filepath.Join(workDir, "other_nether", "DIM-1", "r.mca"), "n")
+	writeFile(t, filepath.Join(workDir, "other_the_end", "level.dat"), "e")
+
+	if err := svc.DeleteWorld(testServerID, "other"); err != nil {
+		t.Fatalf("DeleteWorld: %v", err)
+	}
+	for _, name := range []string{"other", "other_nether", "other_the_end"} {
+		if _, err := os.Stat(filepath.Join(workDir, name)); err == nil {
+			t.Errorf("%s survived DeleteWorld", name)
+		}
+	}
+	if _, err := os.Stat(filepath.Join(workDir, "world", "level.dat")); err != nil {
+		t.Errorf("the active world was touched: %v", err)
+	}
+}
+
+// caseInsensitiveFS probes the filesystem under dir rather than trusting GOOS:
+// macOS and Windows are usually, not always, case-insensitive.
+func caseInsensitiveFS(t *testing.T, dir string) bool {
+	t.Helper()
+	writeFile(t, filepath.Join(dir, "CaseProbe"), "x")
+	_, err := os.Stat(filepath.Join(dir, "caseprobe"))
+	return err == nil
+}
+
+// "WORLD" is a different string from the active "world" but the same folder on
+// a case-insensitive filesystem, so a string compare would let the active
+// world be deleted.
+func TestDeleteWorldRefusesTheActiveWorldUnderAnotherCase(t *testing.T) {
+	svc, workDir, _ := traversalFixture(t)
+	if !caseInsensitiveFS(t, workDir) {
+		t.Skip("filesystem is case-sensitive: WORLD is a different folder")
+	}
+	if err := svc.DeleteWorld(testServerID, "WORLD"); err == nil {
+		t.Error("DeleteWorld(WORLD) with active world = nil, want a refusal")
+	}
+	if _, err := os.Stat(filepath.Join(workDir, "world", "level.dat")); err != nil {
+		t.Errorf("the active world was deleted: %v", err)
 	}
 }
