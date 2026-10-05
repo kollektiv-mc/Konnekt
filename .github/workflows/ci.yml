@@ -152,7 +152,9 @@ jobs:
 
       # The changelog page shows only the "What's changed" section of a release
       # body. A regex that cuts in the wrong place truncates the public
-      # changelog and looks like a short release rather than a bug.
+      # changelog and looks like a short release rather than a bug. The same
+      # script pages the roadmap's issue search, whose done marks vanish
+      # without an error when an issue falls off the last page read.
       - run: node scripts/check-release-notes-extract.mjs
 
   # .claude/suite.json declares three sections. CI has always covered
