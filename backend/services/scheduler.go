@@ -8,6 +8,7 @@ import (
 	"math/rand"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 
@@ -15,6 +16,12 @@ import (
 )
 
 const historyCapacity = 200
+
+// maxImportBytes bounds the raw JSON ImportGraphJSON will parse. A real graph
+// is a few kilobytes (maxNodesPerRun caps a run at 500 nodes, a few hundred
+// bytes each), so 1 MiB is generous while keeping a hostile or mistaken file
+// from being parsed and held in memory (#435).
+const maxImportBytes = 1 << 20
 
 type SchedulerService struct {
 	mu       sync.RWMutex
@@ -272,10 +279,27 @@ func (s *SchedulerService) GetRunHistory(serverID string) ([]models.RunRecord, e
 // import is always a new graph, so a file carrying the id of one that already
 // exists (re-importing an export, or another server's) adds a copy rather than
 // overwriting it (#429).
+//
+// Import is the door a graph written elsewhere comes through, so it refuses what
+// the engine would only reject when the graph fires unattended: input over
+// maxImportBytes, a node whose block is not registered, and a data wire the
+// engine's type check fails. SaveGraph stays permissive, because the editor
+// saves a half-wired graph while it is being built (#435).
 func (s *SchedulerService) ImportGraphJSON(serverID, raw string) (models.Graph, error) {
+	if len(raw) > maxImportBytes {
+		return models.Graph{}, fmt.Errorf("graph JSON is %d bytes, over the %d byte import limit", len(raw), maxImportBytes)
+	}
 	var g models.Graph
 	if err := json.Unmarshal([]byte(raw), &g); err != nil {
 		return models.Graph{}, fmt.Errorf("parse graph JSON: %w", err)
+	}
+	for _, n := range g.Nodes {
+		if _, ok := s.registry.Get(n.Type); !ok {
+			return models.Graph{}, fmt.Errorf("node %q uses unknown block %q", n.ID, n.Type)
+		}
+	}
+	if issues := validateGraphDataTypes(g, s.registry); len(issues) > 0 {
+		return models.Graph{}, fmt.Errorf("data type validation failed: %s", strings.Join(issues, "; "))
 	}
 	g.ID = newID()
 	g.CreatedAt = 0
