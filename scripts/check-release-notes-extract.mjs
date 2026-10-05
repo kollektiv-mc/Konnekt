@@ -1,12 +1,14 @@
 #!/usr/bin/env node
 /**
  * Tests website/release.js's changesOnly(), which decides how much of a GitHub
- * release body the changelog page shows.
+ * release body the changelog page shows, and searchIssues(), which pages
+ * through the issues the roadmap page marks done.
  *
  * Zero dependencies and no browser, same as check-website-links.mjs: website/
- * has no build step, no package.json and no test runner, and this is a pure
- * string function, so a node script that loads the file and calls it is the
- * whole harness. The frontend's vitest only reaches frontend/src.
+ * has no build step, no package.json and no test runner, and both functions
+ * run with nothing but a stubbed fetch, so a node script that loads the file
+ * and calls them is the whole harness. The frontend's vitest only reaches
+ * frontend/src.
  *
  * Worth guarding rather than eyeballing: a regex that cuts in the wrong place
  * silently truncates the public changelog, and the failure looks like a short
@@ -148,9 +150,91 @@ check(
   "## What's changed\n\n* A thing",
 )
 
+// ── searchIssues ──────────────────────────────────────────────────────────
+// The roadmap's done marks come from this list. It read one page of 100 while
+// the repo held 246 issues, so a row whose issue fell off that page lost its
+// mark with no error anywhere. Fetch is stubbed: each case says which pages
+// exist and which fail.
+const { fetchIssues } = sandbox.window.KonnektRelease
+
+function issues(from, n) {
+  return Array.from({ length: n }, (_, i) => ({ number: from + i }))
+}
+
+function stubSearch(pages, total) {
+  const seen = []
+  sandbox.fetch = (url) => {
+    const n = Number(new URL(url).searchParams.get('page'))
+    seen.push(n)
+    const page = pages[n - 1]
+    if (page === 'fail') return Promise.resolve({ ok: false, status: 403 })
+    if (page === 'throw') return Promise.reject(new Error('offline'))
+    return Promise.resolve({
+      ok: true,
+      status: 200,
+      json: () => Promise.resolve({ total_count: total, items: page || [] }),
+    })
+  }
+  return seen
+}
+
+async function checkSearch(name, pages, total, want) {
+  const seen = stubSearch(pages, total)
+  let got
+  try {
+    const res = await fetchIssues()
+    got = { ok: res.ok, count: res.data ? res.data.length : null, pages: seen.length }
+  } catch {
+    got = { threw: true, pages: seen.length }
+  }
+  check(name, JSON.stringify(got), JSON.stringify(want))
+}
+
+await checkSearch('one short page', [issues(1, 40)], 40, { ok: true, count: 40, pages: 1 })
+await checkSearch(
+  'every page read',
+  [issues(1, 100), issues(101, 100), issues(201, 46)],
+  246,
+  { ok: true, count: 246, pages: 3 },
+)
+await checkSearch('exact multiple stops on the count', [issues(1, 100), issues(101, 100)], 200, {
+  ok: true,
+  count: 200,
+  pages: 2,
+})
+await checkSearch(
+  'capped at five pages',
+  Array.from({ length: 7 }, (_, i) => issues(i * 100 + 1, 100)),
+  700,
+  { ok: true, count: 500, pages: 5 },
+)
+await checkSearch('a later failure keeps what was read', [issues(1, 100), 'fail'], 246, {
+  ok: true,
+  count: 100,
+  pages: 2,
+})
+await checkSearch('a later rejection keeps what was read', [issues(1, 100), 'throw'], 246, {
+  ok: true,
+  count: 100,
+  pages: 2,
+})
+await checkSearch('a failed first page is a failure', ['fail'], 0, { ok: false, count: null, pages: 1 })
+await checkSearch('a rejected first page rejects', ['throw'], 0, { threw: true, pages: 1 })
+
+const sorted = stubSearch([issues(1, 1)], 1)
+await fetchIssues()
+check('one request for one short page', sorted.length, 1)
+let lastUrl = ''
+sandbox.fetch = (url) => {
+  lastUrl = url
+  return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({ total_count: 0, items: [] }) })
+}
+await fetchIssues()
+check('sorted oldest first', new URL(lastUrl).searchParams.get('sort') + ' ' + new URL(lastUrl).searchParams.get('order'), 'created asc')
+
 if (failures.length) {
   console.error(`${failures.length} failing:\n`)
   for (const failure of failures) console.error(`  ${failure}\n`)
   process.exit(1)
 }
-console.log('release notes extract: all checks passed')
+console.log('release.js: all checks passed')

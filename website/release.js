@@ -270,18 +270,49 @@
   // search instead, which is the only endpoint that can say is:issue.
   //
   // Search carries its own rate limit, 10 a minute per address unauthenticated
-  // rather than the 60 an hour the rest of this file draws on. One call per
-  // page load sits well inside it. Add a second page when the repo passes 100
-  // issues; it is at 49.
+  // rather than the 60 an hour the rest of this file draws on, so the pages are
+  // capped well inside it. One page was the whole repo until it passed 100
+  // issues; past that, a row whose issue fell off the page silently lost its
+  // done mark. Sorted by creation, oldest first, so the pages are stable while
+  // they are read and a cap that is ever reached drops the newest issues
+  // rather than the ones the page links by hand.
+  var ISSUES_PER_PAGE = 100
+  var ISSUES_MAX_PAGES = 5
+
+  // Resolves to { ok, status, data }. Only a failed first page is a failure: a
+  // later one leaves what was read, which the roadmap treats the way it treats
+  // any issue it was not told about.
   function searchIssues() {
-    var url =
-      SEARCH + '?q=' + encodeURIComponent('repo:' + OWNER_REPO + ' is:issue') + '&per_page=100'
-    return fetch(url, { headers: { Accept: 'application/vnd.github+json' } }).then(function (res) {
-      if (!res.ok) return { ok: false, status: res.status, data: null }
-      return res.json().then(function (data) {
-        return { ok: true, status: res.status, data: (data && data.items) || [] }
-      })
-    })
+    var q = encodeURIComponent('repo:' + OWNER_REPO + ' is:issue')
+    var items = []
+
+    function page(n) {
+      var url =
+        SEARCH + '?q=' + q + '&sort=created&order=asc&per_page=' + ISSUES_PER_PAGE + '&page=' + n
+      return fetch(url, { headers: { Accept: 'application/vnd.github+json' } })
+        .then(function (res) {
+          if (!res.ok) return n === 1 ? { ok: false, status: res.status, data: null } : null
+          return res.json().then(function (data) {
+            var list = (data && data.items) || []
+            items = items.concat(list)
+            var total = (data && data.total_count) || 0
+            // A short page, or everything counted, is the end of the list.
+            if (list.length < ISSUES_PER_PAGE || items.length >= total || n >= ISSUES_MAX_PAGES) {
+              return null
+            }
+            return page(n + 1)
+          })
+        })
+        .catch(function (err) {
+          if (n === 1) throw err
+          return null
+        })
+        .then(function (result) {
+          return result || { ok: true, status: 200, data: items }
+        })
+    }
+
+    return page(1)
   }
 
   window.KonnektRelease = {
