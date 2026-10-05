@@ -27,13 +27,15 @@ const noop = () => () => {}
 // afterEach and a previous test's DOM would still be mounted.
 afterEach(cleanup)
 
+const RELEASE_URL = 'https://github.com/kollektiv-mc/Konnekt/releases/tag/v0.2.0'
+
 const updateInfo = (channel: 'stable' | 'snapshot', latestVersion: string) =>
   ({
     currentVersion: '0.1.0',
     latestVersion,
     updateAvailable: true,
     channel,
-    releaseUrl: 'https://example.com/release',
+    releaseUrl: RELEASE_URL,
     releaseNotes: '',
     publishedAt: '',
     assets: [],
@@ -102,7 +104,8 @@ describe('SettingsModal update install', () => {
   it('points a package install at dnf instead of offering the install', async () => {
     const rpm = {
       name: 'konnekt-0.2.0-1.x86_64.rpm',
-      downloadUrl: 'https://example.com/konnekt-0.2.0-1.x86_64.rpm',
+      downloadUrl:
+        'https://github.com/kollektiv-mc/Konnekt/releases/download/v0.2.0/konnekt-0.2.0-1.x86_64.rpm',
       size: 1,
     }
     vi.mocked(App.CheckForUpdates).mockResolvedValue({
@@ -118,6 +121,60 @@ describe('SettingsModal update install', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Download the .rpm ↗' }))
     expect(BrowserOpenURL).toHaveBeenCalledWith(rpm.downloadUrl)
     expect(App.DownloadAndInstallUpdate).not.toHaveBeenCalled()
+  })
+})
+
+// #437: the release link and the .rpm link are the one place a URL from the
+// network reaches the OS URL handler, and Wails only denylists a few schemes.
+describe('SettingsModal release link', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    vi.mocked(App.GetAppVersion).mockResolvedValue('0.1.0')
+    vi.mocked(App.GetDataDir).mockResolvedValue('/home/user/.config/konnekt')
+    vi.mocked(App.GetLogPath).mockResolvedValue('/home/user/.config/konnekt/konnekt.log')
+    vi.mocked(EventsOn).mockImplementation(noop)
+  })
+
+  const clickReleaseLink = async (releaseUrl: string) => {
+    vi.mocked(App.CheckForUpdates).mockResolvedValue({
+      ...updateInfo('stable', 'v0.2.0'),
+      releaseUrl,
+    } as unknown as models.UpdateInfo)
+    await openAbout()
+    fireEvent.click(await screen.findByRole('button', { name: 'or open the release page ↗' }))
+  }
+
+  it('opens a release page of this repository', async () => {
+    await clickReleaseLink(RELEASE_URL)
+    expect(BrowserOpenURL).toHaveBeenCalledWith(RELEASE_URL)
+  })
+
+  it.each([
+    'http://github.com/kollektiv-mc/Konnekt/releases/tag/v0.2.0',
+    'smb://github.com/kollektiv-mc/Konnekt/releases/tag/v0.2.0',
+    'https://example.com/release',
+    'https://github.com.evil.example/kollektiv-mc/Konnekt/',
+    'https://github.com@evil.example/kollektiv-mc/Konnekt/',
+    'https://github.com/kollektiv-mc/Konnekt-evil/releases',
+    'https://github.com/other/Konnekt/releases',
+    '',
+  ])('never opens %s', async (releaseUrl) => {
+    await clickReleaseLink(releaseUrl)
+    expect(BrowserOpenURL).not.toHaveBeenCalled()
+  })
+
+  it('never opens a package download from another host', async () => {
+    vi.mocked(App.CheckForUpdates).mockResolvedValue({
+      ...updateInfo('stable', 'v0.2.0'),
+      packageManaged: true,
+      assets: [
+        { name: 'konnekt.x86_64.rpm', downloadUrl: 'smb://evil.example/konnekt.rpm', size: 1 },
+      ],
+    } as unknown as models.UpdateInfo)
+    await openAbout()
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Download the .rpm ↗' }))
+    expect(BrowserOpenURL).not.toHaveBeenCalled()
   })
 })
 

@@ -33,6 +33,7 @@ import { FontSettings } from './settings/FontSettings'
 import { CHANGELOG, CHANGELOG_URL, groupByDate } from '../lib/changelog'
 import type { ChangelogEntry } from '../lib/changelog'
 import { EVENTS } from '../lib/constants'
+import { releaseUrlToOpen } from '../lib/releaseUrl'
 import { isDevBuild, isSnapshotVersion } from '../hooks/useUpdateCheck'
 
 // Fetched when the pane is first opened: most sessions never open it, and the
@@ -748,9 +749,13 @@ function AboutPane({ version }: { version: string | null }) {
     }
   }
 
+  // Both the release page and the .rpm link come from the GitHub API, so only
+  // this repository's own https pages reach the OS URL handler (#437).
   const openRelease = (url: string) => {
+    const target = releaseUrlToOpen(url)
+    if (!target) return
     try {
-      BrowserOpenURL(url)
+      BrowserOpenURL(target)
     } catch {
       /* non-Wails context */
     }
