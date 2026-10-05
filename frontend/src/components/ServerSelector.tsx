@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { useServerConfigStore } from '../stores/useServerConfigStore'
 import { useUiStore } from '../stores/useUiStore'
+import { switchServer } from '../lib/switchServer'
 import { IconButton } from './ui/IconButton'
 import { NavSection } from './ui/NavSection'
 import { Maximize2 } from '../lib/icons'
@@ -22,18 +23,12 @@ import { NEW_SERVER } from './ServerManager/ServerList'
  * of unmounting and App is the natural place for the listener.
  */
 export function ServerSelector() {
-  const { configs, activeId, error, loadConfigs, setActiveId } = useServerConfigStore()
+  const { configs, activeId, error, loadConfigs } = useServerConfigStore()
   const openServerManager = useUiStore((s) => s.openServerManager)
 
   useEffect(() => {
     loadConfigs().catch(console.error)
   }, [loadConfigs])
-
-  const selectServer = (id: string) => {
-    // Selecting is idempotent and re-selectable, so there is nothing to revert;
-    // `error` renders below the list.
-    setActiveId(id).catch(() => {})
-  }
 
   return (
     // The manage-servers control rides on the section header rather than inside
@@ -62,7 +57,7 @@ export function ServerSelector() {
             key={cfg.id}
             cfg={cfg}
             active={cfg.id === activeId}
-            onSelect={() => selectServer(cfg.id)}
+            onSelect={() => switchServer(cfg.id)}
             onEdit={() => openServerManager(cfg.id)}
           />
         ))}

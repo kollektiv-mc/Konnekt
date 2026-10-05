@@ -74,6 +74,8 @@ export function CommandLibrary({ serverId }: { serverId: string }) {
   //
   // Only the library registers this. The compact panel is mounted at the same
   // time and must not, or its own dialogs would block a close the user meant.
+  // It never calls the `proceed` it is handed, so a server switch is swallowed
+  // the same way: the first click closes the dialog, the next one switches.
   const dialogOpen = modal !== null || lifecycle.confirmAction !== null
   useEffect(() => {
     if (!dialogOpen) return

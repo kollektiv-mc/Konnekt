@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { useUiStore } from './useUiStore'
 
 describe('useUiStore maximizedTileId', () => {
@@ -43,6 +43,18 @@ describe('useUiStore closeGuard', () => {
     useUiStore.getState().setCloseGuard(first)
     useUiStore.getState().setCloseGuard(second)
     expect(useUiStore.getState().closeGuard).toBe(second)
-    expect(useUiStore.getState().closeGuard?.()).toBe(false)
+    expect(useUiStore.getState().closeGuard?.(() => {})).toBe(false)
+  })
+
+  it('hands the guard the action it is vetoing, to run or to drop', () => {
+    const proceed = vi.fn()
+    // A guard that takes over, and runs the continuation once the user agrees.
+    useUiStore.getState().setCloseGuard((next) => {
+      next()
+      return true
+    })
+
+    expect(useUiStore.getState().closeGuard?.(proceed)).toBe(true)
+    expect(proceed).toHaveBeenCalledOnce()
   })
 })

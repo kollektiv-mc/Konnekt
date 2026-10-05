@@ -102,6 +102,33 @@ describe('ServerManager', () => {
     await waitFor(() => expect(screen.getByDisplayValue('/srv/beta')).toBeTruthy())
   })
 
+  describe('Make active', () => {
+    beforeEach(() => {
+      vi.mocked(App.SetActiveServerID).mockResolvedValue(undefined)
+      useUiStore.setState({ closeGuard: null })
+    })
+
+    it('switches and stays open when nothing is guarding', async () => {
+      renderManager({ selection: 'beta' })
+      fireEvent.click(await screen.findByRole('button', { name: 'Make active' }))
+
+      expect(App.SetActiveServerID).toHaveBeenCalledWith('beta')
+      expect(useUiStore.getState().serverManagerOpen).toBe(true)
+    })
+
+    // The maximized tile asks its question in a dialog that sits below this
+    // modal (lib/layers.ts), so a held switch has to close the manager or the
+    // question would be asked where nobody can see it (#450).
+    it('closes the manager when the maximized tile holds the switch', async () => {
+      useUiStore.setState({ closeGuard: () => true })
+      renderManager({ selection: 'beta' })
+      fireEvent.click(await screen.findByRole('button', { name: 'Make active' }))
+
+      expect(App.SetActiveServerID).not.toHaveBeenCalled()
+      expect(useUiStore.getState().serverManagerOpen).toBe(false)
+    })
+  })
+
   it('saves an edit through the store', async () => {
     renderManager()
     const name = await screen.findByDisplayValue('alpha')
