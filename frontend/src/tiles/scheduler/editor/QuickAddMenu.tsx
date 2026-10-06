@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo } from 'react'
+import { useState, useEffect, useLayoutEffect, useRef, useMemo } from 'react'
 import { createPortal } from 'react-dom'
 import type { models } from '../../../../wailsjs/go/models'
 import {
@@ -9,8 +9,10 @@ import {
   NO_GRAPH_KEYS,
   orderedCategories,
 } from './blockMeta'
+import { placeQuickAdd, type Size } from './quickAddPlacement'
 
-const PANEL_W = 160
+// First-paint guess only; the primary panel is measured before the browser paints.
+const INITIAL_PANEL: Size = { w: 160, h: 0 }
 
 interface Props {
   blockDefs: models.BlockDef[]
@@ -24,6 +26,8 @@ export function QuickAddMenu({ blockDefs, screenPos, onPick, onClose }: Props) {
   const [activeCategory, setActiveCategory] = useState<string | null>(null)
   const [highlightIdx, setHighlightIdx] = useState(0)
   const inputRef = useRef<HTMLInputElement>(null)
+  const panelRef = useRef<HTMLDivElement>(null)
+  const [panelSize, setPanelSize] = useState<Size>(INITIAL_PANEL)
   const categories = orderedCategories(blockDefs)
 
   useEffect(() => {
@@ -69,17 +73,19 @@ export function QuickAddMenu({ blockDefs, screenPos, onPick, onClose }: Props) {
     return () => window.removeEventListener('keydown', onKey)
   }, [onClose, isSearching, filtered, highlightIdx, onPick])
 
-  const vw = window.innerWidth
-  const vh = window.innerHeight
+  // Measure the rendered panel so flipping and clamping use its real size, not
+  // a constant that drifts from the CSS. Runs before paint, after every render.
+  useLayoutEffect(() => {
+    const el = panelRef.current
+    if (!el) return
+    const { width, height } = el.getBoundingClientRect()
+    setPanelSize((prev) => (prev.w === width && prev.h === height ? prev : { w: width, h: height }))
+  })
 
-  const primaryLeft = screenPos.x + PANEL_W > vw ? screenPos.x - PANEL_W : screenPos.x
-  const menuHeight =
-    30 + (isSearching ? Math.min(filtered.length, 10) * 26 + 4 : categories.length * 28 + 4)
-  const primaryTop =
-    screenPos.y + menuHeight > vh ? Math.max(0, screenPos.y - menuHeight) : screenPos.y
-
-  const flyoutLeft =
-    primaryLeft + PANEL_W + PANEL_W > vw ? primaryLeft - PANEL_W : primaryLeft + PANEL_W
+  const { primaryLeft, primaryTop, flyoutLeft } = placeQuickAdd(screenPos, panelSize, {
+    w: window.innerWidth,
+    h: window.innerHeight,
+  })
 
   const activeDefs = activeCategory ? blockDefs.filter((d) => d.category === activeCategory) : []
   const activeColor = categoryColor(activeCategory ?? '')
@@ -99,6 +105,7 @@ export function QuickAddMenu({ blockDefs, screenPos, onPick, onClose }: Props) {
 
       {/* Primary panel */}
       <div
+        ref={panelRef}
         className={panelClass}
         // eslint-disable-next-line no-restricted-syntax -- left/top are viewport-computed positions (clamped against window dimensions)
         style={{ left: primaryLeft, top: primaryTop }}
@@ -112,7 +119,7 @@ export function QuickAddMenu({ blockDefs, screenPos, onPick, onClose }: Props) {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="search blocks…"
-            className="text-text-primary text-1xs flex-1 border-none bg-transparent font-mono outline-none"
+            className="text-text-primary text-1xs min-w-0 flex-1 border-none bg-transparent font-mono outline-none"
           />
         </div>
 
