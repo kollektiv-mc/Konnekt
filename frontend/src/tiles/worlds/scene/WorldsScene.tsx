@@ -159,8 +159,7 @@ interface ControllerProps {
   camRef: React.RefObject<CameraControls | null>
   hudOpenRef: React.MutableRefObject<boolean>
   selectedDimensionRef: React.MutableRefObject<string | null>
-  // The layout scale Galaxy is settling toward (not its damped current value)
-  layoutScaleTargetRef: React.MutableRefObject<number>
+  layoutScaleRef: React.MutableRefObject<number>
 }
 
 function SceneController({
@@ -170,7 +169,7 @@ function SceneController({
   camRef,
   hudOpenRef,
   selectedDimensionRef,
-  layoutScaleTargetRef,
+  layoutScaleRef,
 }: ControllerProps) {
   const hudOffsetRef = useRef(0)
   // Live camera state — damped toward desiredEye/desiredTarget each frame
@@ -211,15 +210,14 @@ function SceneController({
       const isMoon = dim !== null && dim !== 'overworld'
       const moonPos = isMoon ? positionsRef.current.get(`${name}/${dim}`) : undefined
       const bodyPos = isMoon && moonPos ? moonPos : planetPos
-      // Base distance scaled by the zoom-to-fit layout scale's TARGET, not its
-      // damped current value. Galaxy damps that scale (SCALE_LAMBDA) and this
-      // block damps the camera (CAM_LAMBDA); reading the current value would put
-      // two exponentials in series, so focus motion would depend on how settled
-      // the layout was. The target is steady (Galaxy freezes it at the held scale
-      // while focused), so the camera has one damp and the same feel every time.
+      // Base distance scaled by the current zoom-to-fit layout scale so a focused
+      // body frames correctly regardless of the overview zoom level it was
+      // selected at (the body's own world position is already scaled, only the
+      // camera offset needs compensating). Galaxy freezes that scale while a body
+      // is focused, so this is a constant here, not a second damp in series.
       const dist =
         (isMoon ? CLOSE_DIST_MOON : dim === 'overworld' ? CLOSE_DIST_PLANET : FOCUS_DIST) *
-        layoutScaleTargetRef.current
+        layoutScaleRef.current
 
       desiredTarget.current.copy(bodyPos)
       desiredEye.current.copy(bodyPos).addScaledVector(FOCUS_DIR, dist)
@@ -285,11 +283,10 @@ export function WorldsScene({
   const hudOpenRef = useRef(false)
   const selectedDimensionRef = useRef<string | null>(null)
   // Wheel-driven zoom multiplier (galaxy overview only) and the resulting
-  // damped scale (and its target) published by Galaxy's LayoutScaleController each frame —
+  // damped scale published by Galaxy's LayoutScaleController each frame —
   // see Galaxy.tsx for the zoom-to-fit implementation.
   const userZoomRef = useRef(1)
   const layoutScaleRef = useRef(1)
-  const layoutScaleTargetRef = useRef(1)
   const wrapperRef = useRef<HTMLDivElement>(null)
 
   // Keep refs in sync each render so SceneController reads the latest value each frame
@@ -381,7 +378,6 @@ export function WorldsScene({
                 focusNameRef={focusNameRef}
                 userZoomRef={userZoomRef}
                 layoutScaleRef={layoutScaleRef}
-                layoutScaleTargetRef={layoutScaleTargetRef}
               />
 
               {/* SceneController last so all planet positions are written before it reads them */}
@@ -392,7 +388,7 @@ export function WorldsScene({
                 camRef={camRef}
                 hudOpenRef={hudOpenRef}
                 selectedDimensionRef={selectedDimensionRef}
-                layoutScaleTargetRef={layoutScaleTargetRef}
+                layoutScaleRef={layoutScaleRef}
               />
             </SceneScaleGroup>
           </Suspense>

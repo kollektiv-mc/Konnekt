@@ -18,8 +18,6 @@ interface Props {
   focusNameRef: React.MutableRefObject<string | null>
   userZoomRef: React.MutableRefObject<number>
   layoutScaleRef: React.MutableRefObject<number>
-  // The scale the layout is settling toward; the camera sizes focus distance from it
-  layoutScaleTargetRef: React.MutableRefObject<number>
 }
 
 function planetRadius(totalSize: number): number {
@@ -53,7 +51,6 @@ interface LayoutScaleControllerProps {
   focusNameRef: React.MutableRefObject<string | null>
   userZoomRef: React.MutableRefObject<number>
   layoutScaleRef: React.MutableRefObject<number>
-  layoutScaleTargetRef: React.MutableRefObject<number>
 }
 
 // Scales the planet/orbit group (not the Sun) so the full orbit spread stays
@@ -62,9 +59,7 @@ interface LayoutScaleControllerProps {
 //
 // Frozen while a planet is focused (focusNameRef set) so the follow camera
 // in WorldsScene's SceneController never fights a rescale mid-flight — the
-// last overview scale is held steady and published unchanged. The target is
-// published too (held scale while focused, fit target otherwise) so the camera
-// can size itself from a steady value instead of the damped one.
+// last overview scale is held steady and published unchanged.
 //
 // Ground-plane projection reuses the same ray/plane technique as Planet.tsx's
 // cursor tracking (t = -origin.y / direction.y, then origin + direction * t),
@@ -77,7 +72,6 @@ function LayoutScaleController({
   focusNameRef,
   userZoomRef,
   layoutScaleRef,
-  layoutScaleTargetRef,
 }: LayoutScaleControllerProps) {
   const currentScale = useRef(1)
   const tmpPoint = useRef(new THREE.Vector3())
@@ -93,7 +87,6 @@ function LayoutScaleController({
       // Freeze at the last overview scale — no recompute while focused/flying.
       g.scale.setScalar(currentScale.current)
       layoutScaleRef.current = currentScale.current
-      layoutScaleTargetRef.current = currentScale.current
       return
     }
 
@@ -131,7 +124,6 @@ function LayoutScaleController({
       }
     }
 
-    layoutScaleTargetRef.current = target
     currentScale.current = THREE.MathUtils.damp(
       currentScale.current,
       target,
@@ -155,7 +147,6 @@ export function Galaxy({
   focusNameRef,
   userZoomRef,
   layoutScaleRef,
-  layoutScaleTargetRef,
 }: Props) {
   const spread = GALAXY_SPREAD
   const step = worlds.length > 1 ? spread / worlds.length : spread
@@ -222,7 +213,6 @@ export function Galaxy({
         focusNameRef={focusNameRef}
         userZoomRef={userZoomRef}
         layoutScaleRef={layoutScaleRef}
-        layoutScaleTargetRef={layoutScaleTargetRef}
       />
     </group>
   )
