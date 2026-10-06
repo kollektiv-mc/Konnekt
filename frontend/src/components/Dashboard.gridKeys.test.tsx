@@ -51,7 +51,7 @@ vi.mock('react-grid-layout', async (importOriginal) => ({
   },
   // jsdom reports every element as zero-width, and the real hook would hand
   // Dashboard a 0 it then divides by.
-  useContainerWidth: () => [{ current: null }, 1200],
+  useContainerWidth: () => ({ width: 1200, containerRef: { current: null } }),
 }))
 
 vi.mock('react-grid-layout/css/styles.css', () => ({}))

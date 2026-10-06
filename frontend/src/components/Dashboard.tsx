@@ -16,6 +16,7 @@ import { useUiStore } from '../stores/useUiStore'
 import { TILE_REGISTRY } from '../tiles/registry'
 import { TileWrapper } from '../tiles/TileWrapper'
 import { COLS, ROW_HEIGHT } from '../lib/constants'
+import { useCanvasFirstWheel } from '../hooks/useCanvasFirstWheel'
 import { GRID_COMPACTOR, TILE_SIZE, TILE_MIN, TILE_MAX, withGhost } from '../lib/gridSizing'
 
 const ANIM_MS = 120
@@ -100,6 +101,8 @@ export function Dashboard() {
   // handleDragOver measures it, with no manual scrollTop needed.
   const { width: canvasWidth, containerRef: canvasRef } = useContainerWidth({ initialWidth: 800 })
   const gridRef = useRef<HTMLDivElement>(null)
+  // The wheel goes to the canvas first, then to a pane (#164).
+  useCanvasFirstWheel(canvasRef)
   const [maximizedId, setMaximizedId] = useState<string | null>(null)
   const [closing, setClosing] = useState(false)
   const setMaximizedTileId = useUiStore((s) => s.setMaximizedTileId)
