@@ -74,13 +74,15 @@ export function QuickAddMenu({ blockDefs, screenPos, onPick, onClose }: Props) {
   }, [onClose, isSearching, filtered, highlightIdx, onPick])
 
   // Measure the rendered panel so flipping and clamping use its real size, not
-  // a constant that drifts from the CSS. Runs before paint, after every render.
+  // a constant that drifts from the CSS. Runs before paint, again whenever the
+  // row count (and so the height) changes.
+  const rowCount = isSearching ? filtered.length : categories.length
   useLayoutEffect(() => {
     const el = panelRef.current
     if (!el) return
     const { width, height } = el.getBoundingClientRect()
     setPanelSize((prev) => (prev.w === width && prev.h === height ? prev : { w: width, h: height }))
-  })
+  }, [rowCount])
 
   const { primaryLeft, primaryTop, flyoutLeft } = placeQuickAdd(screenPos, panelSize, {
     w: window.innerWidth,
