@@ -119,8 +119,9 @@ prefix or suffix, no em dashes. The area label is load-bearing, because
 cases. Five things it does not say:
 
 - **Label each pull request twice**: one `type:`, *and* one `area:` from
-  `.github/labels.yml`. CI's `pr-labelled` job checks the two separately and
-  fails on either, so a pull request carrying only a `type:` is still red.
+  `.github/labels.yml`. The `pr-labelled` status checks the two separately and
+  stays pending until both are on, so a pull request carrying only a `type:`
+  cannot merge.
   Prefer a specific area over `area:ui`, as on an issue.
 - **No em dashes** in titles, bodies or commit messages. Use a comma, a colon,
   or two sentences.

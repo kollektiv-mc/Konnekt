@@ -48,6 +48,6 @@ Full version, with the cases this gets wrong: CONTRIBUTING.md.
 -->
 
 - [ ] Labelled by the test above rather than by the title's verb: `type:feature`, `type:bug`, `type:docs` or `type:chore`. The label alone decides which release-notes section this lands in.
-- [ ] Labelled with an `area:` too, from `.github/labels.yml`. CI's `pr-labelled` job checks the two separately and fails on either, so a `type:` on its own is still red. Prefer a specific area over `area:ui`, as on an issue.
+- [ ] Labelled with an `area:` too, from `.github/labels.yml`. The `pr-labelled` status checks the two separately and stays pending until both are on, so a `type:` on its own still cannot merge. Prefer a specific area over `area:ui`, as on an issue.
 - [ ] One concern. A change that is honestly half repair and half new capability is two pull requests, not a judgement call.
 - [ ] Generated files were regenerated rather than hand-edited (`frontend/wailsjs/`, the token layer, lockfiles).
