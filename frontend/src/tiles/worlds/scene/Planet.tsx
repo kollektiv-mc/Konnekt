@@ -1,6 +1,7 @@
 // aislop-ignore-file code-quality/duplicate-block -- #313
 import { useRef, useState } from 'react'
 import { useFrame } from '@react-three/fiber'
+import { MOTION, clampDelta, dampFactor } from './motion'
 import { Html } from '@react-three/drei'
 import * as THREE from 'three'
 import { OrbitRing } from './OrbitRing'
@@ -72,7 +73,8 @@ function MoonBody({
   const color = KIND_COLOR[kind] ?? '#60a5fa'
   const label = KIND_LABEL[kind] ?? kind
 
-  useFrame((state, delta) => {
+  useFrame((state, rawDelta) => {
+    const delta = clampDelta(rawDelta)
     angleRef.current += speed * delta
     const x = Math.cos(angleRef.current) * orbitRX
     const z = Math.sin(angleRef.current) * orbitRZ
@@ -88,7 +90,7 @@ function MoonBody({
       hoverScaleRef.current = THREE.MathUtils.damp(
         hoverScaleRef.current,
         hovered ? 1.06 : 1,
-        10,
+        MOTION.MOON_HOVER_LAMBDA,
         delta,
       )
       meshRef.current.scale.setScalar(hoverScaleRef.current)
@@ -113,13 +115,13 @@ function MoonBody({
         if (labelDirRef.current.lengthSq() < 0.001) {
           labelDirRef.current.copy(targetDirRef.current)
         }
-        labelDirRef.current.lerp(targetDirRef.current, 1 - Math.exp(-5 * delta))
+        labelDirRef.current.lerp(targetDirRef.current, dampFactor(MOTION.LABEL_DIR_LAMBDA, delta))
         labelDirRef.current.normalize()
         const targetOffset = selected ? radius + 0.2 : radius + 0.32
         labelOffsetRef.current = THREE.MathUtils.damp(
           labelOffsetRef.current,
           targetOffset,
-          5,
+          MOTION.LABEL_OFFSET_LAMBDA,
           delta,
         )
         const r = labelOffsetRef.current
@@ -253,7 +255,8 @@ export function Planet({
   const color = KIND_COLOR[kind] ?? '#60a5fa'
   const moons = world ? world.dimensions.filter((d) => d.kind !== 'overworld') : []
 
-  useFrame((state, delta) => {
+  useFrame((state, rawDelta) => {
+    const delta = clampDelta(rawDelta)
     angleRef.current += orbitSpeed * delta
 
     const ox = Math.cos(angleRef.current) * orbitRX
@@ -295,7 +298,7 @@ export function Planet({
       hoverScaleRef.current = THREE.MathUtils.damp(
         hoverScaleRef.current,
         hovered ? 1.05 : 1,
-        10,
+        MOTION.PLANET_HOVER_LAMBDA,
         delta,
       )
       meshRef.current.scale.setScalar(hoverScaleRef.current)
@@ -304,7 +307,12 @@ export function Planet({
     // Damp the local zoom progress toward 1 when focused, 0 when not.
     // Using a per-planet ref (not the shared camera zoomRef) ensures moons
     // scale back smoothly on deselect instead of hard-cutting to zero.
-    localZoomRef.current = THREE.MathUtils.damp(localZoomRef.current, focused ? 1 : 0, 3.5, delta)
+    localZoomRef.current = THREE.MathUtils.damp(
+      localZoomRef.current,
+      focused ? 1 : 0,
+      MOTION.PLANET_ZOOM_LAMBDA,
+      delta,
+    )
     if (moonSystemRef.current) {
       moonSystemRef.current.scale.setScalar(localZoomRef.current)
     }
