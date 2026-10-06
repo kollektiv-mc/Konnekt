@@ -508,6 +508,9 @@
   var R = window.KonnektRelease
   if (!R || !R.fetchIssues) return
 
+  // How many closed, completed issues no row links get added as done rows.
+  var SHIPPED_MAX = 20
+
   var STAGE_LABEL = { alpha: 'ALPHA', beta: 'BETA', release: 'RELEASE', later: 'LATER' }
 
   // Both issue forms share a required "Which part of Konnekt?" dropdown, and
@@ -678,17 +681,18 @@
       if (!res.ok || !res.data || !res.data.length) return
 
       var added = 0
+      var shipped = []
+      var open = []
       res.data.forEach(function (issue) {
         var known = referenced[issue.number]
         if (known) {
           if (issue.state === 'closed') markDone(known)
           return
         }
-        if (issue.state !== 'open') return
 
         // Only planned work, and only once a person has looked at it. The form
         // stamps status:needs-triage on everything it files, so nothing reaches
-        // the public roadmap unread — and clearing that one label is what puts
+        // the public roadmap unread, and clearing that one label is what puts
         // an item here, with no edit to this site at all. Bugs stay off by the
         // rule the note under the tree already states: they are fixed as they
         // surface rather than listed.
@@ -700,15 +704,45 @@
         // not a roadmap entry in either direction.
         if (labels.indexOf('type:bug') !== -1 || labels.indexOf('bug') !== -1) return
 
+        if (issue.state === 'open') open.push(issue)
+        // Closed as completed is work that landed. not_planned and duplicate
+        // are decisions not to build it, which a roadmap does not list.
+        else if (issue.state_reason === 'completed') shipped.push(issue)
+      })
+
+      // Only the newest few: a closed issue no row links is history, and the
+      // whole of it would bury the open work in every folder. Appended after
+      // the open rows, so within a folder the done ones sit last.
+      shipped.sort(function (a, b) {
+        return String(b.closed_at || '').localeCompare(String(a.closed_at || ''))
+      })
+      shipped = shipped.slice(0, SHIPPED_MAX)
+
+      function addRow(issue, done) {
+        var labels = labelsOf(issue)
         // milestone:remote-access and no milestone at all are both Later, which
-        // is what that card says: not scheduled, and not forgotten.
-        var stage = labels.indexOf('milestone:beta') !== -1 ? 'beta' : 'later'
+        // is what that card says: not scheduled, and not forgotten. A closed
+        // row has been built, so with no milestone it is read as alpha, the
+        // stage a merged tile belongs to, and the done mark says the rest.
+        var stage = labels.indexOf('milestone:beta') !== -1 ? 'beta' : done ? 'alpha' : 'later'
+        if (done && labels.indexOf('milestone:later') !== -1) stage = 'later'
+        if (done && labels.indexOf('milestone:remote-access') !== -1) stage = 'later'
         var folder = folderFor(areaOf(issue.body), labels)
         var li = buildLeaf(issue, stage)
 
         folder.el.querySelector('.rm-children').appendChild(li)
-        linkNode(indexNode(li, nodes.length + added))
+        var rec = indexNode(li, nodes.length + added)
+        linkNode(rec)
+        if (done) markDone(rec)
         added++
+      }
+
+      open.forEach(function (issue) {
+        addRow(issue, false)
+      })
+      var filed = added
+      shipped.forEach(function (issue) {
+        addRow(issue, true)
       })
 
       if (added) {
@@ -724,7 +758,7 @@
       var note = mk(
         'span',
         'rm-sync',
-        added ? 'synced with GitHub · ' + added + ' filed since' : 'synced with GitHub',
+        filed ? 'synced with GitHub · ' + filed + ' filed since' : 'synced with GitHub',
       )
       document.getElementById('rm-status').appendChild(note)
     })
