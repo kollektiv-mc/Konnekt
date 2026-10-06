@@ -3,6 +3,7 @@ import * as THREE from 'three'
 import { useFrame } from '@react-three/fiber'
 import { Sun } from './Sun'
 import { Planet } from './Planet'
+import { MOTION, clampDelta } from './motion'
 import { OrbitPath } from './OrbitPath'
 import type { WorldSystem } from '../useWorlds'
 
@@ -17,6 +18,8 @@ interface Props {
   focusNameRef: React.MutableRefObject<string | null>
   userZoomRef: React.MutableRefObject<number>
   layoutScaleRef: React.MutableRefObject<number>
+  // The scale the layout is settling toward; the camera sizes focus distance from it
+  layoutScaleTargetRef: React.MutableRefObject<number>
 }
 
 function planetRadius(totalSize: number): number {
@@ -33,7 +36,6 @@ const GALAXY_SPREAD = 11
 const FIT_MARGIN = 0.15 // fraction of the viewport kept as breathing room
 const SCALE_MIN = 0.25
 const SCALE_MAX = 1.6
-const SCALE_LAMBDA = 6
 
 // The four NDC viewport corners, unprojected onto the y=0 ground plane each
 // frame to measure the actual visible world-space extent.
@@ -51,6 +53,7 @@ interface LayoutScaleControllerProps {
   focusNameRef: React.MutableRefObject<string | null>
   userZoomRef: React.MutableRefObject<number>
   layoutScaleRef: React.MutableRefObject<number>
+  layoutScaleTargetRef: React.MutableRefObject<number>
 }
 
 // Scales the planet/orbit group (not the Sun) so the full orbit spread stays
@@ -59,7 +62,9 @@ interface LayoutScaleControllerProps {
 //
 // Frozen while a planet is focused (focusNameRef set) so the follow camera
 // in WorldsScene's SceneController never fights a rescale mid-flight — the
-// last overview scale is held steady and published unchanged.
+// last overview scale is held steady and published unchanged. The target is
+// published too (held scale while focused, fit target otherwise) so the camera
+// can size itself from a steady value instead of the damped one.
 //
 // Ground-plane projection reuses the same ray/plane technique as Planet.tsx's
 // cursor tracking (t = -origin.y / direction.y, then origin + direction * t),
@@ -72,13 +77,15 @@ function LayoutScaleController({
   focusNameRef,
   userZoomRef,
   layoutScaleRef,
+  layoutScaleTargetRef,
 }: LayoutScaleControllerProps) {
   const currentScale = useRef(1)
   const tmpPoint = useRef(new THREE.Vector3())
   const tmpOrigin = useRef(new THREE.Vector3())
   const tmpDir = useRef(new THREE.Vector3())
 
-  useFrame((state, delta) => {
+  useFrame((state, rawDelta) => {
+    const delta = clampDelta(rawDelta)
     const g = groupRef.current
     if (!g) return
 
@@ -86,6 +93,7 @@ function LayoutScaleController({
       // Freeze at the last overview scale — no recompute while focused/flying.
       g.scale.setScalar(currentScale.current)
       layoutScaleRef.current = currentScale.current
+      layoutScaleTargetRef.current = currentScale.current
       return
     }
 
@@ -123,7 +131,13 @@ function LayoutScaleController({
       }
     }
 
-    currentScale.current = THREE.MathUtils.damp(currentScale.current, target, SCALE_LAMBDA, delta)
+    layoutScaleTargetRef.current = target
+    currentScale.current = THREE.MathUtils.damp(
+      currentScale.current,
+      target,
+      MOTION.SCALE_LAMBDA,
+      delta,
+    )
     g.scale.setScalar(currentScale.current)
     layoutScaleRef.current = currentScale.current
   })
@@ -141,6 +155,7 @@ export function Galaxy({
   focusNameRef,
   userZoomRef,
   layoutScaleRef,
+  layoutScaleTargetRef,
 }: Props) {
   const spread = GALAXY_SPREAD
   const step = worlds.length > 1 ? spread / worlds.length : spread
@@ -207,6 +222,7 @@ export function Galaxy({
         focusNameRef={focusNameRef}
         userZoomRef={userZoomRef}
         layoutScaleRef={layoutScaleRef}
+        layoutScaleTargetRef={layoutScaleTargetRef}
       />
     </group>
   )

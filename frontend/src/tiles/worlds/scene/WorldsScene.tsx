@@ -3,6 +3,7 @@ import { Canvas, useFrame } from '@react-three/fiber'
 import { CameraControls, Stars } from '@react-three/drei'
 import * as THREE from 'three'
 import { Galaxy } from './Galaxy'
+import { MOTION, clampDelta, dampFactor } from './motion'
 import { WorldHud } from '../WorldHud'
 import type { WorldSystem as WorldSystemData } from '../useWorlds'
 
@@ -23,8 +24,6 @@ const FOCUS_BACK = 2.5 // units in +Z (gives slight frontal tilt; sun visible wh
 const FOCUS_DIST = Math.sqrt(FOCUS_ELEV * FOCUS_ELEV + FOCUS_BACK * FOCUS_BACK) // ≈ 4.92
 const CLOSE_DIST_MOON = 1.2 // camera distance when a moon is the HUD focus
 const CLOSE_DIST_PLANET = 2.5 // camera distance when the main planet is the HUD focus
-const ZOOM_LAMBDA = 3.2
-const CAM_LAMBDA = 4.5 // single time-constant for all camera transitions (tunable)
 
 // Wheel-driven user zoom multiplier layered on top of the auto zoom-to-fit
 // scale computed by Galaxy's LayoutScaleController.
@@ -86,10 +85,16 @@ function SlowStars({ zoomRef }: { zoomRef: React.MutableRefObject<number> }) {
     })
   }, [])
 
-  useFrame((_, delta) => {
+  useFrame((_, rawDelta) => {
     if (!groupRef.current) return
+    const delta = clampDelta(rawDelta)
     groupRef.current.rotation.y += delta * 0.001
-    entranceRef.current = THREE.MathUtils.damp(entranceRef.current, 1, 8, delta)
+    entranceRef.current = THREE.MathUtils.damp(
+      entranceRef.current,
+      1,
+      MOTION.STAR_ENTRANCE_LAMBDA,
+      delta,
+    )
     if (fadeUniform.current) {
       const zoomFade = Math.max(0, 1 - zoomRef.current / 0.4)
       fadeUniform.current.value = entranceRef.current * zoomFade
@@ -114,9 +119,14 @@ function SceneScaleGroup({
 }) {
   const groupRef = useRef<THREE.Group>(null)
   const scaleRef = useRef(0.82)
-  useFrame((_, delta) => {
+  useFrame((_, rawDelta) => {
     if (!groupRef.current || !revealedRef.current) return
-    scaleRef.current = THREE.MathUtils.damp(scaleRef.current, 1, 10, delta)
+    scaleRef.current = THREE.MathUtils.damp(
+      scaleRef.current,
+      1,
+      MOTION.SCENE_REVEAL_LAMBDA,
+      clampDelta(rawDelta),
+    )
     groupRef.current.scale.setScalar(scaleRef.current)
   })
   return (
@@ -149,7 +159,8 @@ interface ControllerProps {
   camRef: React.RefObject<CameraControls | null>
   hudOpenRef: React.MutableRefObject<boolean>
   selectedDimensionRef: React.MutableRefObject<string | null>
-  layoutScaleRef: React.MutableRefObject<number>
+  // The layout scale Galaxy is settling toward (not its damped current value)
+  layoutScaleTargetRef: React.MutableRefObject<number>
 }
 
 function SceneController({
@@ -159,7 +170,7 @@ function SceneController({
   camRef,
   hudOpenRef,
   selectedDimensionRef,
-  layoutScaleRef,
+  layoutScaleTargetRef,
 }: ControllerProps) {
   const hudOffsetRef = useRef(0)
   // Live camera state — damped toward desiredEye/desiredTarget each frame
@@ -168,18 +179,24 @@ function SceneController({
   const desiredEye = useRef(new THREE.Vector3(0, 14, 5))
   const desiredTarget = useRef(new THREE.Vector3(0, 0, 0))
 
-  useFrame((state, delta) => {
+  useFrame((state, rawDelta) => {
+    const delta = clampDelta(rawDelta)
     // Keep zoomRef updated for SlowStars fade (0 = overview, 1 = focused)
     zoomRef.current = THREE.MathUtils.damp(
       zoomRef.current,
       focusNameRef.current ? 1 : 0,
-      ZOOM_LAMBDA,
+      MOTION.ZOOM_LAMBDA,
       delta,
     )
 
     // HUD offset drives the view-offset shift; kept independent of eye/target math
     const hudTarget = hudOpenRef.current ? 1 : 0
-    hudOffsetRef.current = THREE.MathUtils.damp(hudOffsetRef.current, hudTarget, 4.5, delta)
+    hudOffsetRef.current = THREE.MathUtils.damp(
+      hudOffsetRef.current,
+      hudTarget,
+      MOTION.CAM_LAMBDA,
+      delta,
+    )
     const t = hudOffsetRef.current
 
     // Compute desired eye + target from discrete logical state — no feedback loops
@@ -194,20 +211,22 @@ function SceneController({
       const isMoon = dim !== null && dim !== 'overworld'
       const moonPos = isMoon ? positionsRef.current.get(`${name}/${dim}`) : undefined
       const bodyPos = isMoon && moonPos ? moonPos : planetPos
-      // Base distance scaled by the current zoom-to-fit layout scale so a focused
-      // body frames correctly regardless of the overview zoom level it was
-      // selected at (the body's own world position is already scaled — only the
-      // camera offset needs compensating).
+      // Base distance scaled by the zoom-to-fit layout scale's TARGET, not its
+      // damped current value. Galaxy damps that scale (SCALE_LAMBDA) and this
+      // block damps the camera (CAM_LAMBDA); reading the current value would put
+      // two exponentials in series, so focus motion would depend on how settled
+      // the layout was. The target is steady (Galaxy freezes it at the held scale
+      // while focused), so the camera has one damp and the same feel every time.
       const dist =
         (isMoon ? CLOSE_DIST_MOON : dim === 'overworld' ? CLOSE_DIST_PLANET : FOCUS_DIST) *
-        layoutScaleRef.current
+        layoutScaleTargetRef.current
 
       desiredTarget.current.copy(bodyPos)
       desiredEye.current.copy(bodyPos).addScaledVector(FOCUS_DIR, dist)
     }
 
     // Single lambda damps actual camera toward desired — covers all transitions uniformly
-    const k = 1 - Math.exp(-CAM_LAMBDA * delta)
+    const k = dampFactor(MOTION.CAM_LAMBDA, delta)
     currentEye.current.lerp(desiredEye.current, k)
     currentTarget.current.lerp(desiredTarget.current, k)
 
@@ -266,10 +285,11 @@ export function WorldsScene({
   const hudOpenRef = useRef(false)
   const selectedDimensionRef = useRef<string | null>(null)
   // Wheel-driven zoom multiplier (galaxy overview only) and the resulting
-  // damped scale published by Galaxy's LayoutScaleController each frame —
+  // damped scale (and its target) published by Galaxy's LayoutScaleController each frame —
   // see Galaxy.tsx for the zoom-to-fit implementation.
   const userZoomRef = useRef(1)
   const layoutScaleRef = useRef(1)
+  const layoutScaleTargetRef = useRef(1)
   const wrapperRef = useRef<HTMLDivElement>(null)
 
   // Keep refs in sync each render so SceneController reads the latest value each frame
@@ -361,6 +381,7 @@ export function WorldsScene({
                 focusNameRef={focusNameRef}
                 userZoomRef={userZoomRef}
                 layoutScaleRef={layoutScaleRef}
+                layoutScaleTargetRef={layoutScaleTargetRef}
               />
 
               {/* SceneController last so all planet positions are written before it reads them */}
@@ -371,7 +392,7 @@ export function WorldsScene({
                 camRef={camRef}
                 hudOpenRef={hudOpenRef}
                 selectedDimensionRef={selectedDimensionRef}
-                layoutScaleRef={layoutScaleRef}
+                layoutScaleTargetRef={layoutScaleTargetRef}
               />
             </SceneScaleGroup>
           </Suspense>
@@ -383,7 +404,7 @@ export function WorldsScene({
           Slides in from the LEFT; camera simultaneously shifts the planet into the right 2/3
           via setViewOffset (planet at ≈66.7% from left = centre of the right two-thirds).
           250ms is deliberate, not a near-miss of --duration-panel: it is hand-matched to the
-          camera's exponential damp above (MathUtils.damp at lambda 4.5), which has no fixed
+          camera's exponential damp above (MOTION.CAM_LAMBDA, 4.5, in motion.ts; the HUD offset damp shares it), which has no fixed
           duration to share a token with. Moving it to 280ms desyncs the panel from the shot. */}
         <div
           className={`border-r-border-subtle bg-surface border-r-hairline absolute top-0 bottom-0 left-0 z-10 flex w-1/3 flex-col overflow-y-auto px-5 pt-4 pb-6 transition-transform duration-[250ms] ease-[cubic-bezier(0.25,0,0.25,1)] ${
