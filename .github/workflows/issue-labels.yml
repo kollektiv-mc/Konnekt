@@ -1,8 +1,8 @@
 # Every issue carries three labels: one `type:`, one `area:` and one `p0`-`p3`.
 # This is the half of that rule GitHub cannot enforce.
 #
-# A pull request has a merge to block, so CI's `pr-labelled` job simply fails and
-# nothing lands unlabelled. An issue has no such gate: there is no check to go
+# A pull request has a merge to block, so CI's `pr-labelled` status simply stays
+# pending and nothing lands unlabelled. An issue has no such gate: there is no check to go
 # red on and nothing to withhold, so the only honest thing a workflow can do is
 # say so where a person will read it.
 #
@@ -40,7 +40,7 @@ jobs:
       # Via env rather than interpolated into the script: label names are
       # attacker-shaped text as far as a shell is concerned, and `${{ }}` inside
       # a run block is substituted before bash ever sees it. Same reasoning as
-      # ci.yml's pr-labelled job.
+      # pr-labelled.yml.
       - name: Find which of the three are missing
         id: check
         env:

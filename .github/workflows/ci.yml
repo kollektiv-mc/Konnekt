@@ -17,7 +17,8 @@ jobs:
   # `type:` label is what files each one under a heading, so the check that a
   # pull request carries one `type:` and one `area:` runs on every pull
   # request: it is pr-labelled.yml beside this file, a shared workflow vendored
-  # from kollektiv (the same copy Kommands runs), which also triggers on
+  # from kollektiv (the same copy Kommands runs), which posts a `pr-labelled`
+  # commit status that stays pending until both labels are on, and triggers on
   # `labeled`/`unlabeled` so adding the missing label turns it green without an
   # empty commit. The history that made it a gate is in that file and
   # agent_docs/CLAUDE.md's "Commits & pull requests".
