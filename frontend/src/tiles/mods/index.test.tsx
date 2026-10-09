@@ -1,3 +1,4 @@
+/// <reference types="node" />
 import { describe, it, expect, afterEach, beforeEach, vi } from 'vitest'
 import { render, screen, waitFor, cleanup, fireEvent } from '@testing-library/react'
 import * as App from '../../../wailsjs/go/main/App'
