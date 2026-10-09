@@ -159,8 +159,9 @@ The webview's hardware acceleration policy is decided in `webviewgpu.go`, not
 in `main.go`'s options block: Always by default (WebKitGTK's own default; Wails'
 Never is its workaround for wailsapp/wails#2977 and costs the compositor thread
 and asynchronous scrolling), with `WEBKIT_DISABLE_DMABUF_RENDERER=1` set for the
-proprietary NVIDIA driver before GTK starts, and `KONNEKT_WEBVIEW_GPU` as the
-user's override. A blank-window report on Linux starts from the
+proprietary NVIDIA driver before GTK starts, then the user's choice:
+`KONNEKT_WEBVIEW_GPU` in the environment, else `AppSettings.WebviewGpu`, which
+`main` reads with `services.ReadAppSettings` before `wails.Run` (#421). A blank-window report on Linux starts from the
 `linux webview gpu` line in `konnekt.log`, which names the policy and why.
 
 On a Rocky Linux 10 dev machine (or any distro on the 4.1 side), if WebKit

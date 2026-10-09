@@ -91,7 +91,7 @@ func TestResolveWebviewGpu(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			dir := fakeDRM(t, tt.cards...)
-			got := resolveWebviewGpu(tt.env.get, tt.env.set, dir)
+			got := resolveWebviewGpu(tt.env.get, tt.env.set, dir, "")
 			if got.Policy != tt.wantPolicy {
 				t.Errorf("policy = %v, want %v (reason: %s)", got.Policy, tt.wantPolicy, got.Reason)
 			}
@@ -108,10 +108,49 @@ func TestResolveWebviewGpu(t *testing.T) {
 	}
 }
 
+// The saved setting (#421) sits between the environment override and the
+// default, and the reason names whichever of the three decided, because that
+// is what the log line is for.
+func TestResolveWebviewGpuPrecedence(t *testing.T) {
+	nvidia := struct{ vendor, driver string }{nvidiaVendorID, "nvidia"}
+	tests := []struct {
+		name       string
+		env        fakeEnv
+		setting    string
+		wantPolicy linux.WebviewGpuPolicy
+		wantReason string // a prefix of the reason
+		wantDMABuf string
+	}{
+		{"no override, no setting", fakeEnv{}, "", linux.WebviewGpuPolicyAlways, "default", "1"},
+		{"the setting decides", fakeEnv{}, "never", linux.WebviewGpuPolicyNever, "setting webviewGpu=never", ""},
+		{"the setting, normalised", fakeEnv{}, " OnDemand ", linux.WebviewGpuPolicyOnDemand, "setting webviewGpu=ondemand", "1"},
+		{"the setting at its default", fakeEnv{}, "always", linux.WebviewGpuPolicyAlways, "setting webviewGpu=always", "1"},
+		{"the environment beats the setting", fakeEnv{webviewGpuEnv: "always"}, "never", linux.WebviewGpuPolicyAlways, webviewGpuEnv + "=always", "1"},
+		{"the environment beats it the other way", fakeEnv{webviewGpuEnv: "never"}, "always", linux.WebviewGpuPolicyNever, webviewGpuEnv + "=never", ""},
+		{"a bad override falls through to the setting", fakeEnv{webviewGpuEnv: "off"}, "ondemand", linux.WebviewGpuPolicyOnDemand, "setting webviewGpu=ondemand (" + webviewGpuEnv + "=off is not", "1"},
+		{"a bad setting falls through to the default", fakeEnv{}, "off", linux.WebviewGpuPolicyAlways, "default (setting webviewGpu=off is not", "1"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			dir := fakeDRM(t, nvidia)
+			got := resolveWebviewGpu(tt.env.get, tt.env.set, dir, tt.setting)
+			if got.Policy != tt.wantPolicy {
+				t.Errorf("policy = %v, want %v (reason: %s)", got.Policy, tt.wantPolicy, got.Reason)
+			}
+			if !strings.HasPrefix(got.Reason, tt.wantReason) {
+				t.Errorf("reason = %q, want it to start with %q", got.Reason, tt.wantReason)
+			}
+			if v := tt.env[disableDMABufEnv]; v != tt.wantDMABuf {
+				t.Errorf("%s = %q, want %q (reason: %s)", disableDMABufEnv, v, tt.wantDMABuf, got.Reason)
+			}
+		})
+	}
+}
+
 func TestResolveWebviewGpuReportsASetenvFailure(t *testing.T) {
 	dir := fakeDRM(t, struct{ vendor, driver string }{nvidiaVendorID, "nvidia"})
 	failing := func(string, string) error { return errors.New("read-only environment") }
-	got := resolveWebviewGpu(fakeEnv{}.get, failing, dir)
+	got := resolveWebviewGpu(fakeEnv{}.get, failing, dir, "")
 	if got.Policy != linux.WebviewGpuPolicyAlways || got.DisabledDMABuf {
 		t.Errorf("got %+v, want Always with the quirk reported as not applied", got)
 	}

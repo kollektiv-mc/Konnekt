@@ -68,7 +68,12 @@ export interface AppSettings {
   smoothScrolling: boolean
   /** Family per --font-* role (lib/fonts.ts). Never null: Go defaults it to an empty map. */
   fonts: Record<string, string>
+  /** The Linux webview's GPU policy (#421). Empty is "never chosen", which Go resolves to always. */
+  webviewGpu: WebviewGpu
 }
+
+/** `AppSettings.webviewGpu`, hand-written for the same reason as the rest: Go's is a `string`. */
+export type WebviewGpu = '' | 'always' | 'ondemand' | 'never'
 
 /**
  * Also hand-written on purpose, for the same reason: `category` and `format`

@@ -30,6 +30,7 @@ import type { models } from '../../wailsjs/go/models'
 import { isRemoteBrowser, readOr } from '../lib/ipc'
 import { PlainDataDir, ReloadNote, UpdateFromDesktop } from './settings/RemoteNotes'
 import { FontSettings } from './settings/FontSettings'
+import { WebviewGpuSetting } from './settings/WebviewGpuSetting'
 import { CHANGELOG, CHANGELOG_URL, groupByDate } from '../lib/changelog'
 import type { ChangelogEntry } from '../lib/changelog'
 import { EVENTS } from '../lib/constants'
@@ -440,6 +441,11 @@ function AppearancePane({ settings, update }: { settings: AppSettings; update: U
           onChange={(v) => update({ smoothScrolling: v })}
         />
       </SettingRow>
+
+      <WebviewGpuSetting
+        value={settings.webviewGpu}
+        onChange={(webviewGpu) => update({ webviewGpu })}
+      />
 
       {/* Per-token font choice. Desktop only: the list is this machine's fonts,
           and a browser served by Remote Access can neither see nor persist them. */}

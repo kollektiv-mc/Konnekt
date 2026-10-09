@@ -2,6 +2,7 @@ package services
 
 import (
 	"encoding/json"
+	"os"
 	"path/filepath"
 	"reflect"
 	"testing"
@@ -208,6 +209,43 @@ func TestAppSettingsFillGapsInAnOlderFileWithDefaults(t *testing.T) {
 	// pickers read this as a map (#444).
 	if got.Fonts == nil || len(got.Fonts) != 0 {
 		t.Errorf("Fonts = %#v, want an empty non-nil map for a key the file lacks", got.Fonts)
+	}
+	// An install from before #421 has made no choice, which the resolver in
+	// webviewgpu.go reads as the accelerated default it already had.
+	if got.WebviewGpu != "" {
+		t.Errorf("WebviewGpu = %q, want empty (no choice) for a key the file lacks", got.WebviewGpu)
+	}
+}
+
+// main reads the webview policy before the App exists, so ReadAppSettings has
+// to see what SaveAppSettings wrote and must not repair anything on the way:
+// SetDataDir rewrites a dangling active server id, and that belongs to the
+// App's own startup, not to a read for one setting.
+func TestReadAppSettingsReadsTheSavedFileAndWritesNothing(t *testing.T) {
+	dir := t.TempDir()
+	if got, err := ReadAppSettings(dir); err != nil || got.WebviewGpu != "" || got.Theme != "dark" {
+		t.Fatalf("ReadAppSettings with no file = %+v, %v; want the defaults", got, err)
+	}
+	if err := WriteDataFile(dir, "active_server.json", []byte(`"gone"`)); err != nil {
+		t.Fatalf("setup: %v", err)
+	}
+	if err := WriteDataFile(dir, "app_settings.json", []byte(`{"webviewGpu":"never"}`)); err != nil {
+		t.Fatalf("setup: %v", err)
+	}
+
+	got, err := ReadAppSettings(dir)
+	if err != nil {
+		t.Fatalf("ReadAppSettings: %v", err)
+	}
+	if got.WebviewGpu != "never" {
+		t.Errorf("WebviewGpu = %q, want the saved %q", got.WebviewGpu, "never")
+	}
+	active, err := os.ReadFile(filepath.Join(dir, "active_server.json"))
+	if err != nil {
+		t.Fatalf("read active_server.json: %v", err)
+	}
+	if string(active) != `"gone"` {
+		t.Errorf("active_server.json = %s, want it untouched", active)
 	}
 }
 
