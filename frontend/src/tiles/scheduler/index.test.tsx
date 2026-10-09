@@ -236,4 +236,23 @@ describe('switching server from the sidebar with the scheduler editor maximized'
     expect(screen.queryByText('Unsaved changes')).toBeNull()
     expect(App.SetActiveServerID).toHaveBeenCalledWith('beta')
   })
+
+  // An editor with nothing loaded used to compare its empty state against a
+  // saved signature of '', which never matches, so a server with no graphs
+  // asked to discard changes nobody made (#526).
+  it('switches at once when the server has no graphs', async () => {
+    vi.mocked(App.GetScheduleGraphs).mockResolvedValue([])
+    render(
+      <>
+        <ServerSelector />
+        <SchedulerTile serverId="alpha" maximized />
+      </>,
+    )
+    await waitFor(() => expect(useSchedulerStore.getState().hydratedFor).toBe('alpha'))
+
+    fireEvent.click(screen.getByRole('button', { name: /beta/ }))
+
+    expect(screen.queryByText('Unsaved changes')).toBeNull()
+    expect(App.SetActiveServerID).toHaveBeenCalledWith('beta')
+  })
 })
