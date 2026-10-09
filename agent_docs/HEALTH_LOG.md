@@ -93,6 +93,7 @@ after them is dated. Newest last, in both groups.
 - [2026-09-19 — The zip bomb the standard library had already stopped](#2026-09-19-the-zip-bomb-the-standard-library-had-already-stopped)
 - [2026-09-21 — The scroll that felt like dragging was the physics, not the pixels](#2026-09-21-the-scroll-that-felt-like-dragging-was-the-physics-not-the-pixels)
 - [2026-09-21 — Linux gets the GPU back](#2026-09-21-linux-gets-the-gpu-back)
+- [2026-10-09 — The updater tests that survive mutation](#2026-10-09-the-updater-tests-that-survive-mutation)
 
 ---
 
@@ -6041,3 +6042,49 @@ Intel only, NVIDIA on nouveau, NVIDIA proprietary, hybrid with NVIDIA second,
 a preset `0` kept, each override value, a garbage override; plus a failing
 `setenv` reported in the reason rather than swallowed, and a missing tree
 reading as not NVIDIA. `gofmt`, `go vet ./...`, `go test ./...` green.
+
+### 2026-10-09 — The updater tests that survive mutation
+
+#349 asked for `update.go` to be put through the recipe #348 used on
+`backup.go`: for each escaped mutant, what would a caller observe if the code
+were wrong that way. `update_check_test.go` and `update_install_test.go` are
+the answer, about 980 lines, all through the public paths (`CheckForUpdates`,
+`DownloadAndInstallUpdate`, `downloadAndApply` against an `httptest.Server`)
+rather than against the mutants.
+
+What they pin: the client `NewUpdateService` builds (the strict URL rule, a
+30-second timeout); the update host compared case-insensitively; every field of a
+check's result, an empty asset list sent as `[]` rather than `null`, and a
+release-less repository echoing the running version; the snapshot channel's
+tie going to stable; which endpoint a failed check names; the download
+accepting exactly its declared size and stopping one byte over it, refusing
+an announced length over the ceiling or over the declared size, a non-2xx, a
+malformed URL and a truncated body; a checksum mismatch reported as an apply
+failure; the user agent on every request; the redirect cap; progress
+emitted once per percent and not at all without a length; the stall reader
+re-arming on progress; and where a prerelease identifier stops being a number
+(`'/'` and `':'` either side of the digits, a leading `+`, a digit run past
+int64).
+
+**Score.** `go-mutesting` v2.10.25 over `update.go` alone: 528 of 622 scored
+mutants killed, about 85%, from 57% (271 of 476) on 2026-09-13. The two
+numbers are not the same denominator: the file has grown since and v2.10.25
+generates more mutants than v2.10.6 did, so read the change as the share,
+not the count. Four mutants were skipped by the tool. Checked before
+believing it: nothing left behind in `backend/services/` after the run, and
+the baseline passed on its own.
+
+**What the 94 left are.** Mostly equivalents and constants. 42 are
+`numbers/incrementer` and `numbers/decrementer`, and the bulk of those are
+the size and time bounds at the top of the file (`4 << 20` to `5 << 20`, a
+30-second stall to 31) and zero values returned beside a `false` or an error
+nobody reads; a test that pins a ceiling to the byte is a test of the
+constant, not of the behaviour. In `numericIdentifier` the empty-string guard
+and the digit scan are each equivalent to the `ParseInt` error check below
+them for every input but the two now tested. The rest are error-wrap and
+error-guard mutants on calls that do not fail under test, and the branches in
+the asset download's redirect and stall handling that need a transport that
+misbehaves on cue.
+
+Coverage of `backend/services` went to 79.1%, and the floor in
+`scripts/coverage-floor` from 74 to 77.

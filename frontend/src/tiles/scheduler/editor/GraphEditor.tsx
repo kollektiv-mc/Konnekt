@@ -156,8 +156,12 @@ function GraphEditorInner({
 
   // ── Unsaved-changes guard ─────────────────────────────────────────────────
   // State (not a ref) so changing it — on load/save/discard — reliably
-  // invalidates the `dirty` memo below.
-  const [savedSig, setSavedSig] = useState('')
+  // invalidates the `dirty` memo below. It starts as the signature of the empty
+  // editor rather than '', which no signature equals: that read as dirty until a
+  // graph loaded, and for good on a server with none (#526).
+  const [savedSig, setSavedSig] = useState(() =>
+    graphSignature({ name: '', enabled: false }, [], []),
+  )
   const dirty = useMemo(
     () => graphSignature({ name: graphName, enabled: graphEnabled }, nodes, edges) !== savedSig,
     [graphName, graphEnabled, nodes, edges, savedSig],

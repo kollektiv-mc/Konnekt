@@ -298,9 +298,9 @@ tree.
 - [x] Automated tests exist and pass for critical paths: RCON client, Modrinth
       API client, backup create/restore, config path-traversal guards,
       scheduler engine (Go); Zustand store logic and critical hooks (frontend).
-      `backend/services` sits at **74.0%** of statements (2026-09-30, Linux;
-      CI's windows-latest run measures within a tenth of it), with a
-      **72%** floor owned by `scripts/coverage-floor` and run by both
+      `backend/services` sits at **79.0%** of statements (2026-10-09, Linux;
+      CI's windows-latest run has measured about a point lower), with a
+      **77%** floor owned by `scripts/coverage-floor` and run by both
       `/suite-kit:health` and CI. `frontend/src` sits at **53.7%** of lines
       (2026-09-07, the first measurement; repeat runs land between 53.1% and
       53.7%, so the number moves by about half a point), with a **50%** floor owned by
@@ -1070,7 +1070,8 @@ numbers)
 
 **From the 2026-09-13 session** (filed; the log entry of that date has the
 numbers and the cause of the earlier 100%)
-- **p2** #349 `update.go` loses 205 of 476 mutants; **p3** #350
+- ~~**p2** #349 `update.go` loses 205 of 476 mutants~~ 94 of 622 on
+  2026-10-09 (the log entry of that date); **p3** #350
   `modservice.go` loses 582 of 811; **p3** #352 `config_editor.go` loses 213
   of 297. The first two were reported perfect on the 12th and the third at
   88%, all three cut short by the same leftover file.
