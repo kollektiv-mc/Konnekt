@@ -33,9 +33,12 @@ import (
 // that variable set for the NVIDIA driver before GTK initialises, the way
 // the webkit2gtk-nvidia-quirk crate does it for Rust apps.
 //
-// KONNEKT_WEBVIEW_GPU=never|ondemand|always overrides the policy for a
-// machine this still gets wrong, and an explicit WEBKIT_DISABLE_DMABUF_RENDERER
-// in the environment, set to anything including 0, is never overwritten.
+// Settings > Appearance offers the same three policies to someone who can see
+// the window (#421), stored as AppSettings.WebviewGpu and read by main before
+// Run. KONNEKT_WEBVIEW_GPU=never|ondemand|always in the environment wins over
+// it, because a blank first launch never reaches Settings and the variable is
+// the way out of that. An explicit WEBKIT_DISABLE_DMABUF_RENDERER in the
+// environment, set to anything including 0, is never overwritten.
 
 // The override's name and values. Lower-cased and trimmed before matching.
 const webviewGpuEnv = "KONNEKT_WEBVIEW_GPU"
@@ -51,6 +54,13 @@ const sysClassDRM = "/sys/class/drm"
 
 var drmCardName = regexp.MustCompile(`^card[0-9]+$`)
 
+// The three policies, by the name the override and the setting both use.
+var webviewGpuPolicies = map[string]linux.WebviewGpuPolicy{
+	"always":   linux.WebviewGpuPolicyAlways,
+	"ondemand": linux.WebviewGpuPolicyOnDemand,
+	"never":    linux.WebviewGpuPolicyNever,
+}
+
 // PCI vendor id of NVIDIA, as sysfs prints it.
 const nvidiaVendorID = "0x10de"
 
@@ -64,23 +74,40 @@ type webviewGpuDecision struct {
 	DisabledDMABuf bool
 }
 
-// resolveWebviewGpu decides the Linux policy from the override, the GPUs in
-// `drmDir` and the current environment, applying the NVIDIA quirk through
-// `setenv`. Both lookups are parameters so the decision is testable against
-// a fake sysfs tree and a fake environment; main passes the real ones.
-func resolveWebviewGpu(getenv func(string) string, setenv func(string, string) error, drmDir string) webviewGpuDecision {
+// resolveWebviewGpu decides the Linux policy from the override, the saved
+// setting, the GPUs in `drmDir` and the current environment, applying the
+// NVIDIA quirk through `setenv`. Precedence is the environment override, then
+// `setting` (AppSettings.WebviewGpu), then the default; an unrecognised value
+// at either level is named in the reason and passed over. The lookups are
+// parameters so the decision is testable against a fake sysfs tree and a fake
+// environment; main passes the real ones.
+func resolveWebviewGpu(getenv func(string) string, setenv func(string, string) error, drmDir, setting string) webviewGpuDecision {
 	policy := linux.WebviewGpuPolicyAlways
 	reason := "default"
-	switch override := strings.ToLower(strings.TrimSpace(getenv(webviewGpuEnv))); override {
-	case "":
-	case "never":
-		return webviewGpuDecision{Policy: linux.WebviewGpuPolicyNever, Reason: webviewGpuEnv + "=never"}
-	case "ondemand":
-		policy, reason = linux.WebviewGpuPolicyOnDemand, webviewGpuEnv+"=ondemand"
-	case "always":
-		reason = webviewGpuEnv + "=always"
-	default:
-		reason = "default (" + webviewGpuEnv + "=" + override + " is not never, ondemand or always)"
+	var ignored []string
+	choice, source := "", ""
+	if override := strings.ToLower(strings.TrimSpace(getenv(webviewGpuEnv))); override != "" {
+		if _, ok := webviewGpuPolicies[override]; ok {
+			choice, source = override, webviewGpuEnv+"="+override
+		} else {
+			ignored = append(ignored, webviewGpuEnv+"="+override)
+		}
+	}
+	if saved := strings.ToLower(strings.TrimSpace(setting)); choice == "" && saved != "" {
+		if _, ok := webviewGpuPolicies[saved]; ok {
+			choice, source = saved, "setting webviewGpu="+saved
+		} else {
+			ignored = append(ignored, "setting webviewGpu="+saved)
+		}
+	}
+	if choice != "" {
+		policy, reason = webviewGpuPolicies[choice], source
+	}
+	if len(ignored) > 0 {
+		reason += " (" + strings.Join(ignored, ", ") + " is not never, ondemand or always)"
+	}
+	if policy == linux.WebviewGpuPolicyNever {
+		return webviewGpuDecision{Policy: policy, Reason: reason}
 	}
 
 	decision := webviewGpuDecision{Policy: policy, Reason: reason}

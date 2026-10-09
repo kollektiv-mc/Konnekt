@@ -73,4 +73,14 @@ type AppSettings struct {
 	// name in front of the token's stack, so one that is not installed falls
 	// through to the default.
 	Fonts map[string]string `json:"fonts"`
+
+	// WebviewGpu is the Linux webview's hardware acceleration policy:
+	// "always", "ondemand" or "never" (#421). Empty means nobody chose, which
+	// resolves to always; it stays empty rather than defaulting to "always" so
+	// the startup log can tell a choice from the default. It is read once, in main,
+	// before the window exists, because the policy is fixed when Wails creates
+	// the webview; a change applies on the next launch. KONNEKT_WEBVIEW_GPU in
+	// the environment wins over it (webviewgpu.go), and the other platforms
+	// ignore it.
+	WebviewGpu string `json:"webviewGpu"`
 }
