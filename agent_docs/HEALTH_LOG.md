@@ -93,6 +93,7 @@ after them is dated. Newest last, in both groups.
 - [2026-09-19 — The zip bomb the standard library had already stopped](#2026-09-19-the-zip-bomb-the-standard-library-had-already-stopped)
 - [2026-09-21 — The scroll that felt like dragging was the physics, not the pixels](#2026-09-21-the-scroll-that-felt-like-dragging-was-the-physics-not-the-pixels)
 - [2026-09-21 — Linux gets the GPU back](#2026-09-21-linux-gets-the-gpu-back)
+- [2026-10-09 — Vite 8, and the test runner it could not leave behind](#2026-10-09-vite-8-and-the-test-runner-it-could-not-leave-behind)
 
 ---
 
@@ -6041,3 +6042,94 @@ Intel only, NVIDIA on nouveau, NVIDIA proprietary, hybrid with NVIDIA second,
 a preset `0` kept, each override value, a garbage override; plus a failing
 `setenv` reported in the reason rather than swallowed, and a missing tree
 reading as not NVIDIA. `gofmt`, `go vet ./...`, `go test ./...` green.
+
+### 2026-10-09 — Vite 8, and the test runner it could not leave behind
+
+**The ask.** #423: Dependabot's vite 5.4.21 to 8.x bump (#486) was red on
+`vite.config.ts(40,3): error TS2769 ... 'test' does not exist in type
+'UserConfigExport'`. Assess whether to move, and to what.
+
+**Why #486 could never go green.** Reproduced on its branch. vitest 3.2.7
+takes vite as a direct dependency (`^5 || ^6 || ^7`), so the lockfile held
+vite 8.3.2 for the app and vite 5.4.21 for vitest, and `/// <reference
+types="vitest/config" />` augments the copy vitest resolves. The app's
+`defineConfig` came from the other one. Nothing in that pull request could fix
+it, because the lockfile is generated and `dependabot.yml` ignored vitest
+outright: the ignore kept vitest and coverage-v8 in step with each other by
+never moving either, which is how vitest ended up two majors behind vite.
+
+**The decision: move now, to vite 8.3.4, vitest 5.0.3 and
+@vitest/coverage-v8 5.0.3.** `@vitejs/plugin-react` 5.2.0 and
+`@tailwindcss/vite` 4.3.3 already peer `^8` and stay where they are. Vitest 4
+(4.1.11) and Vitest 5 were each tried against the whole suite and both were a
+drop-in: no test, mock or config line changed for either. 5 wins on runway
+alone: 4.1.11 is from 2026-08-18 and the 4.x line has had no release since 5.0
+shipped on 2026-09-03, so taking 4 would schedule another lockstep major
+within months. Its one cost is Node: vitest 5 needs `^22.12 || ^24 || >=26`,
+and vite 8 alone already needs `^20.19 || >=22.12`. Every workflow pins Node
+22, and Node 20 is past end of life. Staying on 5.4.21 was the other option
+and is the expensive one: vite 5 is no longer a maintained line. 5.4.21 is
+from 2025-10-20, and the patch train of 2026-10-06 shipped 8.3.3, 8.2.4,
+8.1.6, 7.3.7 and 6.4.4 and nothing for 5.4, so the next advisory against it
+has no release to take. The plugin ecosystem
+(`@vitejs/plugin-react` 6 already requires `^8`) moves on without it.
+
+**Vite 8 against this app, item by item.**
+
+- `stripCspInDev` keeps working unchanged: `transformIndexHtml` with
+  `order: 'pre'` and a `handler` is still the hook's shape. Checked on a running
+  dev server: the CSP meta is gone from the served page and the React refresh
+  preamble is there, while `dist/index.html` still carries the policy.
+- `define` of `process.env.DRAGGABLE_DEBUG` still replaces it in the build (no
+  `DRAGGABLE_DEBUG` or `process.env` left in `dist/`). The dev optimizer, now
+  Rolldown, leaves the expression in the pre-bundled `react-grid-layout`, and
+  that is harmless: react-draggable 4.7.1 guards it with
+  `typeof process !== "undefined"` itself.
+- The bundle gate needed a fix. Rolldown hoists modules the entry shares with a
+  lazy chunk (React, the JSX runtime, the server store, `App`) into helper
+  chunks the entry imports statically, so `index-*.js` alone fell from 173.4 KB
+  to 157.4 KB gzip while what a page load fetches before paint stayed put.
+  `check-bundle-size.mjs` assumed the entry imported no helper chunk statically
+  and said so; it now counts the entry plus everything `index.html`
+  modulepreloads, which reads 172.5 KB (entry plus nine helpers) against main's
+  173.4 KB (entry alone). The warmed set dropped from 750.2 KB to 721.2 KB.
+  Without the fix the entry budget would have carried 15 KB of headroom nobody
+  had agreed to.
+- `pnpm check-prefetch` reads source and is unaffected: all 7 lazy chunks
+  warmed.
+- `demo/build.mjs` needs nothing: `node_modules/vite/bin/vite.js` is still the
+  entry script, and the shim still lands ahead of the hashed module script.
+- Vite 8 no longer installs esbuild, so the `esbuild` build allowlists in
+  `frontend/package.json`, `pnpm.json` and `pnpm-workspace.yaml` now name a
+  package that is not in the tree. Harmless, left alone here.
+
+**Coverage.** The floor (`lines: 50`) holds untouched. The reading moved for a
+reason that is not the tests: Vitest 3 read 64.0% of 20836 lines, Vitest 5
+reads 58.7% of 7133 (Vitest 4 read 59.6% of 7139), on the same 1368 tests.
+Since Vitest 4 the v8 provider remaps by AST and counts executable lines only.
+Branches moved more (83.9% to 50.1%) for the same reason.
+
+**`vite.config.ts` keeps the triple-slash reference and vite's
+`defineConfig`.** `defineConfig` from `vitest/config` would also typecheck, but
+it would have turned #486's clear TS2769 into plugin type mismatches between
+two vite copies. The reference is kept as the canary, with a comment saying so.
+
+**`dependabot.yml`** drops the vitest and coverage-v8 ignore for a
+`vite-vitest` group (`vite`, `vitest`, `@vitest/*`, majors only, listed ahead
+of `frontend`). Majors arrive as one pull request; minors and patches already
+travel together in `frontend`. Whether Dependabot's pnpm updater resolves a
+grouped major cleanly is something only its next run shows.
+
+**What this does not settle.** No browser was reachable from this session, so
+the built app and the demo were checked by their output, not rendered. The
+default build target moved from Vite 5's `modules` to Vite 7's
+`baseline-widely-available` (Safari 16.4 and Chrome 111 class), which WebView2
+clears and which an old enough WebKitGTK might not; not measured on a Linux
+machine. Tests ran 92s on Vitest 3 and 110s on Vitest 5 on the same machine,
+almost all of it jsdom setup, which Vitest 5 itself flags (one environment per
+file); worth a look on its own, not as part of the upgrade.
+
+**Verification.** From `frontend/`: `typecheck`, `lint` (0 errors, the same 14
+warnings), `build`, `test` (111 files, 1368 tests), `test:coverage`,
+`format:check`, `check-bundle`, `check-tokens`, `check-prefetch` all green.
+From the root: `node demo/build.mjs`, `go vet ./...`, `go test ./...` green.

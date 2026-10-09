@@ -28,7 +28,8 @@
 # produced three open pull requests, for checkout, setup-node and
 # upload-artifact, all 4 to 7, all the same question. A dependency major in npm
 # or gomod is the opposite and keeps its own pull request: vite 5 to 8 can
-# change what the app does, and deserves to be read alone.
+# change what the app does, and deserves to be read alone. The one exception is
+# a set that cannot move apart: vite's test runner rides with it (`vite-vitest`).
 version: 2
 
 updates:
@@ -81,15 +82,22 @@ updates:
     labels: ['type:chore', 'area:build']
     open-pull-requests-limit: 5
     groups:
+      # vite, vitest and @vitest/coverage-v8 are one upgrade (#423). Each vitest
+      # major peers a window of vite majors, and coverage-v8 has to match vitest
+      # exactly. A lone vite major (#486, 5 to 8) left vitest 3 resolving its
+      # own vite 5 beside it, and vite.config.ts stopped typechecking. Majors
+      # come here as one pull request; minors and patches already travel
+      # together in `frontend` below. Listed first, because a dependency goes
+      # to the first group it matches. This replaces an ignore of vitest and
+      # coverage-v8, which kept them in step with each other by never moving
+      # them at all, and so left vitest two majors behind vite.
+      vite-vitest:
+        patterns: ['vite', 'vitest', '@vitest/*']
+        update-types: [major]
       frontend:
         patterns: ['*']
         update-types: [minor, patch]
     ignore:
-      # DEPENDENCIES.md: "Its version has to match vitest's exactly [...] bump
-      # the two together." Dependabot cannot know that, and a lone bump of
-      # either one produces a lockfile that resolves to two versions.
-      - dependency-name: '@vitest/coverage-v8'
-      - dependency-name: vitest
       # Pinned exactly on purpose: each Playwright version ships its own
       # Chromium, and demo/record.mjs's clips should come out the same
       # everywhere. Bumping it means re-recording and re-watching the scenes.
