@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
+import type { Mock } from 'vitest'
 import { renderHook, waitFor, act } from '@testing-library/react'
 import * as App from '../../../wailsjs/go/main/App'
 import { EventsOn } from '../../../wailsjs/runtime/runtime'
@@ -29,7 +30,7 @@ function player(name: string, online = true): models.Player {
 // Wails events rather than an interval (agent_docs/HEALTH_CHECKLIST.md, Stable).
 describe('usePlayers', () => {
   let handlers: Record<string, (...data: unknown[]) => void>
-  let off: ReturnType<typeof vi.fn>
+  let off: Mock<() => void>
 
   beforeEach(() => {
     vi.clearAllMocks()

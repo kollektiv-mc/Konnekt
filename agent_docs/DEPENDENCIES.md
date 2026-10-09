@@ -37,8 +37,9 @@ see `agent_docs/CLAUDE.md`'s "Linux builds" section for why.
   is half the job: add the same import specifier to `frontend/src/lib/prefetch.ts`
   so it is warmed during idle time, or the cost simply moves to the first time
   the tile is opened.
-- Check the production bundle budget (`pnpm check-bundle`, 165 KB gzip entry
-  chunk) isn't blown by the addition.
+- Check the production bundle budget (`pnpm check-bundle`, 175 KB gzip for
+  the entry chunk and the chunks it imports statically) isn't blown by the
+  addition.
 - Record the addition here with a one-line rationale in the same PR.
 
 **Periodically** (see `HEALTH_CHECKLIST.md`'s Scalable pillar): confirm
@@ -138,6 +139,16 @@ is compared against its numbers (#287). The v8 provider rather than
 report; it is also Vitest's own default. Its version has to match `vitest`'s
 exactly, so it carries the same caret range as `vitest` and the lockfile pins
 them to one version; bump the two together.
+
+`vite` belongs to the same set, because `vitest` takes vite as a dependency of
+its own and each vitest major accepts only a window of vite majors. A vite
+major that outruns vitest leaves the lockfile holding two vites, one for the
+app and one for vitest, and `vite.config.ts` stops typechecking because vitest's
+`test:` types attach to the copy the config does not use (#486, vite 8 beside
+vitest 3). So all three move as one: vite 8.3, vitest 5.0 and
+@vitest/coverage-v8 5.0 since #423, and `.github/dependabot.yml`'s `vite-vitest`
+group is what files their majors as one pull request. Vitest 5 over 4 because
+the 4.x line stopped releasing when 5.0 shipped; it needs Node 22.12 or later.
 
 **Considered and not added:** a QR library (`qrcode`, `qrcode-generator`,
 `uqr` and the like). Settings > Remote Access draws the tunnel's address as a
