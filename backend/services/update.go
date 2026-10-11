@@ -198,6 +198,9 @@ type UpdateService struct {
 	checkURL        func(*url.URL) error
 	stallTimeout    time.Duration
 	downloadTimeout time.Duration
+	// provenance replaces the Sigstore check (update_provenance.go); nil is
+	// the real one.
+	provenance provenanceVerifier
 }
 
 // allowURL applies the URL rule: the test override if there is one, else the
@@ -526,8 +529,9 @@ func (p *progressReader) Read(buf []byte) (int, error) {
 	return n, err
 }
 
-// DownloadAndInstallUpdate fetches the latest release, downloads the asset
-// matching the running platform, verifies it against checksums.txt, and
+// DownloadAndInstallUpdate fetches the latest release, checks that the digest
+// checksums.txt names for this platform's asset carries the release workflow's
+// build provenance, downloads the asset, verifies it against that digest, and
 // replaces the running executable in place via selfupdate.Apply — which
 // handles the Windows "can't overwrite a running exe" rename dance and rolls
 // back automatically on a failed write. The caller is responsible for
@@ -574,6 +578,16 @@ func (s *UpdateService) DownloadAndInstallUpdate(ctx context.Context, currentVer
 	hexSum, ok := parseChecksums(checksumBody)[asset.Name]
 	if !ok {
 		return fmt.Errorf("update install: %s has no entry for %q", updateChecksumsAssetName, asset.Name)
+	}
+	digest, err := hex.DecodeString(hexSum)
+	if err != nil {
+		return fmt.Errorf("update install: decode checksum: %w", err)
+	}
+	// Before the download: checksums.txt is only as trustworthy as whoever
+	// uploaded it, and the attestation is what says this digest came out of
+	// the release workflow (#432). downloadAndApply then holds the bytes to it.
+	if err := s.verifyProvenance(ctx, digest); err != nil {
+		return fmt.Errorf("update install: %s: %w", asset.Name, err)
 	}
 
 	// "" targetPath means selfupdate replaces the running executable itself.
