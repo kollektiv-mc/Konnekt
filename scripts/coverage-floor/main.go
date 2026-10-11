@@ -54,10 +54,11 @@ const targetPackage = "./backend/services/"
 //	76.0% -> floor 74.0  the Remote Access sign-in, approvals and tunnel (#45, #462, #46)
 //	79.0% -> floor 77.0  the updater's mutation-driven tests (#349); the tree had
 //	                     reached 78.6% before them
+//	79.6% -> floor 77.5  the S3 client's signer and httptest tests (#480)
 //
 // Coverage is a proxy, not the goal. A test that would have caught a real bug is
 // worth more than one that only moves this number.
-const floorPercent = 77.0
+const floorPercent = 77.5
 
 // Matches the tail of `go test -cover` output: "coverage: 36.7% of statements".
 var reCoverage = regexp.MustCompile(`coverage:\s+([0-9.]+)%\s+of\s+statements`)
