@@ -3,7 +3,8 @@ import { Canvas, useFrame } from '@react-three/fiber'
 import { CameraControls, Stars } from '@react-three/drei'
 import * as THREE from 'three'
 import { Galaxy } from './Galaxy'
-import { MOTION, clampDelta, dampFactor } from './motion'
+import { MOTION, clampDelta, springDamp } from './motion'
+import { OVERVIEW_EYE, OVERVIEW_TARGET } from './overview'
 import { WorldHud } from '../WorldHud'
 import type { WorldSystem as WorldSystemData } from '../useWorlds'
 
@@ -172,11 +173,19 @@ function SceneController({
   layoutScaleRef,
 }: ControllerProps) {
   const hudOffsetRef = useRef(0)
-  // Live camera state — damped toward desiredEye/desiredTarget each frame
-  const currentEye = useRef(new THREE.Vector3(0, 14, 5))
-  const currentTarget = useRef(new THREE.Vector3(0, 0, 0))
-  const desiredEye = useRef(new THREE.Vector3(0, 14, 5))
-  const desiredTarget = useRef(new THREE.Vector3(0, 0, 0))
+  // Live camera state, sprung toward desiredEye/desiredTarget each frame
+  const currentEye = useRef(OVERVIEW_EYE.clone())
+  const currentTarget = useRef(OVERVIEW_TARGET.clone())
+  const desiredEye = useRef(OVERVIEW_EYE.clone())
+  const desiredTarget = useRef(OVERVIEW_TARGET.clone())
+  const eyeVelocity = useRef(new THREE.Vector3())
+  const targetVelocity = useRef(new THREE.Vector3())
+  // Which shot the desired pose describes, and that pose last frame, so a body
+  // that moves along its orbit carries the camera with it (see below).
+  const shotKey = useRef('')
+  const lastDesiredEye = useRef(OVERVIEW_EYE.clone())
+  const lastDesiredTarget = useRef(OVERVIEW_TARGET.clone())
+  const carry = useRef(new THREE.Vector3())
 
   useFrame((state, rawDelta) => {
     const delta = clampDelta(rawDelta)
@@ -193,7 +202,7 @@ function SceneController({
     hudOffsetRef.current = THREE.MathUtils.damp(
       hudOffsetRef.current,
       hudTarget,
-      MOTION.CAM_LAMBDA,
+      MOTION.HUD_LAMBDA,
       delta,
     )
     const t = hudOffsetRef.current
@@ -203,9 +212,10 @@ function SceneController({
     const dim = selectedDimensionRef.current
     const planetPos = name ? positionsRef.current.get(name) : undefined
 
+    let key = ''
     if (!name || !planetPos) {
-      desiredEye.current.set(0, 14, 5)
-      desiredTarget.current.set(0, 0, 0)
+      desiredEye.current.copy(OVERVIEW_EYE)
+      desiredTarget.current.copy(OVERVIEW_TARGET)
     } else {
       const isMoon = dim !== null && dim !== 'overworld'
       const moonPos = isMoon ? positionsRef.current.get(`${name}/${dim}`) : undefined
@@ -221,12 +231,38 @@ function SceneController({
 
       desiredTarget.current.copy(bodyPos)
       desiredEye.current.copy(bodyPos).addScaledVector(FOCUS_DIR, dist)
+      key = `${name}|${dim}|${bodyPos === moonPos ? 'moon' : 'planet'}`
     }
 
-    // Single lambda damps actual camera toward desired — covers all transitions uniformly
-    const k = dampFactor(MOTION.CAM_LAMBDA, delta)
-    currentEye.current.lerp(desiredEye.current, k)
-    currentTarget.current.lerp(desiredTarget.current, k)
+    // Within one shot the desired pose only moves because the body orbits, so the
+    // camera takes that motion directly and the spring works on the remaining gap
+    // alone. Without this a spring trails a moving body by velocity * smoothTime and
+    // the focused planet sits off-centre. A new shot is a transition: no carry.
+    if (key === shotKey.current) {
+      currentEye.current.add(carry.current.subVectors(desiredEye.current, lastDesiredEye.current))
+      currentTarget.current.add(
+        carry.current.subVectors(desiredTarget.current, lastDesiredTarget.current),
+      )
+    }
+    shotKey.current = key
+    lastDesiredEye.current.copy(desiredEye.current)
+    lastDesiredTarget.current.copy(desiredTarget.current)
+
+    // One spring moves the camera toward desired, covering every transition uniformly
+    springDamp(
+      currentEye.current,
+      desiredEye.current,
+      eyeVelocity.current,
+      MOTION.CAM_SMOOTH_TIME,
+      delta,
+    )
+    springDamp(
+      currentTarget.current,
+      desiredTarget.current,
+      targetVelocity.current,
+      MOTION.CAM_SMOOTH_TIME,
+      delta,
+    )
 
     const cam = camRef.current
     if (cam) {
@@ -357,7 +393,7 @@ export function WorldsScene({
         )}
 
         <Canvas
-          camera={{ position: [0, 14, 5], fov: 50 }}
+          camera={{ position: OVERVIEW_EYE.toArray(), fov: 50 }}
           // eslint-disable-next-line no-restricted-syntax -- r3f's Canvas writes position/width/height/overflow inline on its own container div and spreads `style` after them, so a className cannot win the cascade for `position`
           style={{ position: 'absolute', inset: 0, background: '#050608' }}
         >
@@ -400,8 +436,9 @@ export function WorldsScene({
           Slides in from the LEFT; camera simultaneously shifts the planet into the right 2/3
           via setViewOffset (planet at ≈66.7% from left = centre of the right two-thirds).
           250ms is deliberate, not a near-miss of --duration-panel: it is hand-matched to the
-          camera's exponential damp above (MOTION.CAM_LAMBDA, 4.5, in motion.ts; the HUD offset damp shares it), which has no fixed
-          duration to share a token with. Moving it to 280ms desyncs the panel from the shot. */}
+          view-offset shift's exponential damp above (MOTION.HUD_LAMBDA, 4.5, in motion.ts), which
+          has no fixed duration to share a token with. Moving it to 280ms desyncs the panel from
+          the shift. */}
         <div
           className={`border-r-border-subtle bg-surface border-r-hairline absolute top-0 bottom-0 left-0 z-10 flex w-1/3 flex-col overflow-y-auto px-5 pt-4 pb-6 transition-transform duration-[250ms] ease-[cubic-bezier(0.25,0,0.25,1)] ${
             hudOpen ? 'pointer-events-auto translate-x-0' : 'pointer-events-none -translate-x-full'

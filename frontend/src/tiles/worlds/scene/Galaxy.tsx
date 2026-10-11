@@ -4,6 +4,7 @@ import { useFrame } from '@react-three/fiber'
 import { Sun } from './Sun'
 import { Planet } from './Planet'
 import { MOTION, clampDelta } from './motion'
+import { OVERVIEW_EYE, OVERVIEW_TARGET } from './overview'
 import { OrbitPath } from './OrbitPath'
 import type { WorldSystem } from '../useWorlds'
 
@@ -61,6 +62,12 @@ interface LayoutScaleControllerProps {
 // in WorldsScene's SceneController never fights a rescale mid-flight — the
 // last overview scale is held steady and published unchanged.
 //
+// The fit is measured from the overview pose (overview.ts), not the live
+// camera. On the way back from a focused planet the live camera is still close
+// in, so measuring from it read a tiny visible extent, shrank the galaxy hard
+// and grew it back as the camera pulled out: the camera and the scale both
+// zoomed out at once, so the return read as faster than the way in.
+//
 // Ground-plane projection reuses the same ray/plane technique as Planet.tsx's
 // cursor tracking (t = -origin.y / direction.y, then origin + direction * t),
 // applied to the four NDC viewport corners instead of the pointer, to derive
@@ -77,6 +84,7 @@ function LayoutScaleController({
   const tmpPoint = useRef(new THREE.Vector3())
   const tmpOrigin = useRef(new THREE.Vector3())
   const tmpDir = useRef(new THREE.Vector3())
+  const fitCamera = useRef(new THREE.PerspectiveCamera())
 
   useFrame((state, rawDelta) => {
     const delta = clampDelta(rawDelta)
@@ -92,14 +100,27 @@ function LayoutScaleController({
 
     let target = currentScale.current
     if (outerRX > 0.0001 && outerRZ > 0.0001) {
+      // The live camera's lens and aspect at the overview pose. Never given the
+      // HUD's view offset, which the overview does not have.
+      // aislop-ignore-next-line ai-slop/double-type-assertion -- three vs @react-three/fiber Camera types, the documented mismatch (HEALTH_CHECKLIST, Clean)
+      const live = state.camera as unknown as THREE.PerspectiveCamera
+      const cam = fitCamera.current
+      cam.fov = live.fov
+      cam.aspect = live.aspect
+      cam.near = live.near
+      cam.far = live.far
+      cam.zoom = live.zoom
+      cam.updateProjectionMatrix()
+      cam.position.copy(OVERVIEW_EYE)
+      cam.lookAt(OVERVIEW_TARGET)
+      cam.updateMatrixWorld()
       let minX = Infinity,
         maxX = -Infinity,
         minZ = Infinity,
         maxZ = -Infinity
       for (const [nx, ny] of NDC_CORNERS) {
-        // aislop-ignore-next-line ai-slop/double-type-assertion -- three vs @react-three/fiber Camera types, the documented mismatch (HEALTH_CHECKLIST, Clean)
-        tmpPoint.current.set(nx, ny, 0.5).unproject(state.camera as unknown as THREE.Camera)
-        tmpOrigin.current.copy(state.camera.position)
+        tmpPoint.current.set(nx, ny, 0.5).unproject(cam)
+        tmpOrigin.current.copy(cam.position)
         tmpDir.current.copy(tmpPoint.current).sub(tmpOrigin.current).normalize()
         if (Math.abs(tmpDir.current.y) < 0.0001) continue
         const t = -tmpOrigin.current.y / tmpDir.current.y
