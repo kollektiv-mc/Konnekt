@@ -1,4 +1,9 @@
 /// <reference types="vitest/config" />
+// The reference augments the `vite` that vitest itself resolves, so `test:`
+// below typechecks only while the lockfile holds one copy of vite. That is
+// kept deliberately as the canary: Dependabot's lone vite 8 bump (#486) left
+// vitest 3 on its own vite 5, and this file failing TS2769 is how it showed.
+// vite, vitest and @vitest/coverage-v8 move together (agent_docs/DEPENDENCIES.md).
 import { defineConfig } from 'vite'
 import type { Plugin } from 'vite'
 import react from '@vitejs/plugin-react'
@@ -60,7 +65,11 @@ export default defineConfig({
       // 53.7% of lines, 80.5% of branches, 49.9% of functions, with repeat
       // runs landing between 53.1% and 53.7%, so the floor leaves room for that
       // spread. Lines only, the one number the Go floor also uses, so the two
-      // read the same way.
+      // read the same way. Re-measured 2026-10-09 on Vitest 5 (#423): 58.7%
+      // of 7133 lines, where Vitest 3 read 64.0% of 20836 on the same 1368
+      // tests. The denominator moved, not the tests: since Vitest 4 the v8
+      // provider remaps by AST and counts executable lines only. Still above
+      // the floor, so the floor stands.
       thresholds: { lines: 50 },
     },
   },
