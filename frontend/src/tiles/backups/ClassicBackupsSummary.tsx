@@ -59,6 +59,8 @@ export function ClassicBackupsSummary({ serverId }: Props) {
   }
 
   const serverBackups = backups.filter((b) => b.kind === 'server')
+  const worldCount = backups.filter((b) => b.kind === 'world').length
+  const worldNote = `${worldCount} world ${worldCount === 1 ? 'backup' : 'backups'}`
   const latest = serverBackups[0]
 
   return (
@@ -72,10 +74,14 @@ export function ClassicBackupsSummary({ serverId }: Props) {
             </div>
             <div className="text-text-faint font-mono text-xs">
               {fmtBytes(latest.sizeBytes)} · {serverBackups.length} total
+              {worldCount > 0 && ` · ${worldNote}`}
             </div>
           </>
         ) : (
-          <div className="text-text-faint font-mono text-xs">No full-server backups yet</div>
+          <>
+            <div className="text-text-faint font-mono text-xs">No full-server backups yet</div>
+            {worldCount > 0 && <div className="text-text-faint font-mono text-xs">{worldNote}</div>}
+          </>
         )}
       </div>
       <button

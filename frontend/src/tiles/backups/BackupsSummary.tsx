@@ -18,9 +18,10 @@ interface Props {
  *
  * The age of the last backup is the figure, its size and the archive count
  * the detail under it, and the button holds the bottom edge: the default
- * layout's shape. World backups are counted in the maximized face; here the
- * question is only whether the whole server is safe. Expanded keeps the figure
- * and the button; detailed sets the figure small and lists the archives kept.
+ * layout's shape. World backups are only counted, beside the archives, and
+ * never take the figure: the question here is whether the whole server is safe.
+ * Expanded keeps the figure and the button; detailed sets the figure small and
+ * lists the archives kept.
  */
 export function BackupsSummary({ serverId, layout = 'default' }: Props) {
   const { status } = useServerStore()
@@ -65,6 +66,8 @@ export function BackupsSummary({ serverId, layout = 'default' }: Props) {
   }
 
   const serverBackups = backups.filter((b) => b.kind === 'server')
+  const worldCount = backups.filter((b) => b.kind === 'world').length
+  const worldNote = `${worldCount} world ${worldCount === 1 ? 'backup' : 'backups'}`
   const latest = serverBackups[0]
 
   return (
@@ -83,16 +86,22 @@ export function BackupsSummary({ serverId, layout = 'default' }: Props) {
               <span className="text-text-muted text-xs">
                 {fmtBytes(latest.sizeBytes)} · {serverBackups.length}{' '}
                 {serverBackups.length === 1 ? 'archive' : 'archives'} kept
+                {worldCount > 0 && ` · ${worldNote}`}
               </span>
             )}
           </>
         ) : (
-          <Figure
-            size={layout === 'detailed' ? 'sm' : 'lg'}
-            label="Last full backup"
-            value="never"
-            valueClass="text-text-faint"
-          />
+          <>
+            <Figure
+              size={layout === 'detailed' ? 'sm' : 'lg'}
+              label="Last full backup"
+              value="never"
+              valueClass="text-text-faint"
+            />
+            {layout !== 'expanded' && worldCount > 0 && (
+              <span className="text-text-muted text-xs">{worldNote}</span>
+            )}
+          </>
         )}
         {layout === 'detailed' && serverBackups.length > 0 && (
           <div className="mt-1 min-h-0 flex-1 overflow-y-auto">

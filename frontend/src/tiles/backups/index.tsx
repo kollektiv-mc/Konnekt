@@ -9,6 +9,8 @@ import { BackupsSummary } from './BackupsSummary'
 import { useSettingsStore } from '../../stores/useSettingsStore'
 import { BackupRunningDialog } from './BackupRunningDialog'
 import { useBackups } from './useBackups'
+import { useServerWorldNames } from './useServerWorldNames'
+import { WorldBackupDialog } from './WorldBackupDialog'
 import type { Backup } from './useBackups'
 import { extractID } from './format'
 import { fmtBytes, fmtDate } from '../../lib/format'
@@ -19,6 +21,8 @@ import { useBackupWorlds } from './useBackupWorlds'
 import { WorldInfoPanel } from './WorldInfoPanel'
 import { ServerInfoPanel } from './ServerInfoPanel'
 import { Segmented } from '../../components/ui/Segmented'
+import { Combobox } from '../../components/ui/Combobox'
+import { Tag } from '../../components/ui/Tag'
 import type { FocusTarget } from './focusLayout'
 
 // ─── Confirm dialog ────────────────────────────────────────────────────────
@@ -203,6 +207,11 @@ function BackupRow({
             {displayLabel}
           </button>
         )}
+        {backup.world && (
+          <Tag tone="accent" title="World backed up">
+            {backup.world}
+          </Tag>
+        )}
         {backup.tags.map((tag) => (
           <TagPill key={tag} tag={tag} onRemove={() => removeTag(tag)} />
         ))}
@@ -330,6 +339,7 @@ function BackupsTileExpanded({ serverId }: { serverId: string }) {
     creatingFilename,
     actionError,
     create,
+    createWorld,
     restore,
     remove,
     updateMeta,
@@ -339,6 +349,10 @@ function BackupsTileExpanded({ serverId }: { serverId: string }) {
   const [view, setView] = useState<'server' | 'world'>('server')
   const [confirm, setConfirm] = useState<ConfirmState | null>(null)
   const [search, setSearch] = useState('')
+  // '' is "All worlds". Only the world view reads it.
+  const [worldFilter, setWorldFilter] = useState('')
+  const [showWorldDialog, setShowWorldDialog] = useState(false)
+  const serverWorlds = useServerWorldNames(serverId)
   const [showRunningDialog, setShowRunningDialog] = useState(false)
   const [stopping, setStopping] = useState(false)
   const [focusedIndex, setFocusedIndex] = useState(0)
@@ -351,10 +365,12 @@ function BackupsTileExpanded({ serverId }: { serverId: string }) {
 
   useEffect(() => {
     setFocusedIndex(0)
-  }, [search])
+  }, [search, view, worldFilter])
 
   function handleCreateClick() {
-    if (status.running) {
+    if (view === 'world') {
+      setShowWorldDialog(true)
+    } else if (status.running) {
       setShowRunningDialog(true)
     } else {
       create()
@@ -373,22 +389,47 @@ function BackupsTileExpanded({ serverId }: { serverId: string }) {
     await create()
   }
 
-  const serverBackups = useMemo(() => backups.filter((b) => b.kind === 'server'), [backups])
+  // The two views run one carousel and one list over different slices of the
+  // same listing, so everything below works on `scoped`, not on a kind.
+  const kindBackups = useMemo(() => backups.filter((b) => b.kind === view), [backups, view])
+
+  const backupWorldNames = useMemo(
+    () => [...new Set(kindBackups.map((b) => b.world).filter((w): w is string => !!w))].sort(),
+    [kindBackups],
+  )
+  // A filter whose world has lost its last backup (deleted, say) falls back to
+  // all worlds instead of leaving an empty list under a stale choice.
+  const activeWorldFilter =
+    view === 'world' && backupWorldNames.includes(worldFilter) ? worldFilter : ''
+
+  const scoped = useMemo(
+    () =>
+      activeWorldFilter ? kindBackups.filter((b) => b.world === activeWorldFilter) : kindBackups,
+    [kindBackups, activeWorldFilter],
+  )
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase()
-    if (!q) return serverBackups
+    if (!q) return scoped
     if (q.startsWith('#')) {
       const tag = q.slice(1)
-      return serverBackups.filter((b) => b.tags.some((t) => t.toLowerCase().includes(tag)))
+      return scoped.filter((b) => b.tags.some((t) => t.toLowerCase().includes(tag)))
     }
-    return serverBackups.filter(
+    return scoped.filter(
       (b) =>
         b.filename.toLowerCase().includes(q) ||
         (b.displayName && b.displayName.toLowerCase().includes(q)) ||
+        (b.world && b.world.toLowerCase().includes(q)) ||
         fmtDate(b.createdAt).toLowerCase().includes(q),
     )
-  }, [serverBackups, search])
+  }, [scoped, search])
+
+  // The world the backup dialog opens on: the filter's world if one is chosen,
+  // else the active world, else the first on disk.
+  const dialogWorld =
+    [activeWorldFilter, serverWorlds.find((w) => w.active)?.name, serverWorlds[0]?.name].find(
+      (n) => n && serverWorlds.some((w) => w.name === n),
+    ) ?? ''
 
   const clampedFocused = Math.min(focusedIndex, Math.max(0, filtered.length - 1))
 
@@ -423,7 +464,12 @@ function BackupsTileExpanded({ serverId }: { serverId: string }) {
 
   function requestRestore(backup: Backup) {
     if (status.running) return
-    const target = backup.kind === 'server' ? 'server files' : 'world folder'
+    const target =
+      backup.kind === 'server'
+        ? 'server files'
+        : backup.world
+          ? `"${backup.world}" world folder`
+          : 'world folder'
     setConfirm({
       message: `Restore "${backup.displayName || extractID(backup.filename)}"? This will replace your current ${target}.`,
       confirmLabel: 'Restore',
@@ -440,6 +486,10 @@ function BackupsTileExpanded({ serverId }: { serverId: string }) {
       onConfirm: () => remove(backup.filename),
     })
   }
+
+  const noun = view === 'world' ? 'world backup' : 'backup'
+  // A world backup needs a world to name; with none on disk there is nothing to ask.
+  const noWorlds = view === 'world' && serverWorlds.length === 0
 
   function openScheduler() {
     const { addTile, activeTileIds } = useTileStore.getState()
@@ -462,131 +512,137 @@ function BackupsTileExpanded({ serverId }: { serverId: string }) {
           slide
         />
 
-        {view === 'server' && (
-          <>
-            <span className="text-text-faint flex-1 font-mono text-xs">
-              {filtered.length}
-              {filtered.length !== serverBackups.length ? `/${serverBackups.length}` : ''} backup
-              {serverBackups.length !== 1 ? 's' : ''}
-            </span>
+        <span className="text-text-faint flex-1 font-mono text-xs">
+          {filtered.length}
+          {filtered.length !== scoped.length ? `/${scoped.length}` : ''} {noun}
+          {scoped.length !== 1 ? 's' : ''}
+        </span>
 
-            {/* OpenBackupDir opens a folder on the desktop: not callable from a remote browser. */}
-            {!isRemoteBrowser() && (
-              <button
-                onClick={openDir}
-                className="text-text-faint shrink-0 font-mono text-xs transition-colors"
-                title="Open backup folder"
-                onMouseEnter={(e) => {
-                  ;(e.currentTarget as HTMLButtonElement).style.color = 'var(--text-secondary)'
-                }}
-                onMouseLeave={(e) => {
-                  ;(e.currentTarget as HTMLButtonElement).style.color = 'var(--text-faint)'
-                }}
-              >
-                ↗
-              </button>
-            )}
-
-            <button
-              onClick={openScheduler}
-              className="border-border-subtle text-text-muted shrink-0 rounded border bg-transparent px-2 py-0.5 font-mono text-xs transition-colors"
-              title="Set up scheduled backups in the Scheduler tile"
-              onMouseEnter={(e) => {
-                const b = e.currentTarget as HTMLButtonElement
-                b.style.borderColor = 'var(--border-hover)'
-                b.style.color = 'var(--text-secondary)'
-              }}
-              onMouseLeave={(e) => {
-                const b = e.currentTarget as HTMLButtonElement
-                b.style.borderColor = 'var(--border-subtle)'
-                b.style.color = 'var(--text-muted)'
-              }}
-            >
-              schedule
-            </button>
-
-            <button
-              onClick={handleCreateClick}
-              disabled={creating || stopping}
-              className="border-accent text-accent shrink-0 rounded border bg-transparent px-2 py-0.5 font-mono text-xs transition-colors disabled:opacity-40"
-              onMouseEnter={(e) => {
-                if (!creating && !stopping)
-                  (e.currentTarget as HTMLButtonElement).style.background =
-                    'color-mix(in srgb, var(--accent) 10%, transparent)'
-              }}
-              onMouseLeave={(e) => {
-                ;(e.currentTarget as HTMLButtonElement).style.background = 'transparent'
-              }}
-            >
-              {stopping ? 'Stopping server…' : creating ? 'Backing up…' : 'Back up now'}
-            </button>
-          </>
+        {view === 'world' && backupWorldNames.length > 0 && (
+          <div className="w-36 shrink-0">
+            <Combobox
+              ariaLabel="Filter by world"
+              value={activeWorldFilter}
+              onChange={setWorldFilter}
+              options={[
+                { value: '', label: 'All worlds' },
+                ...backupWorldNames.map((w) => ({ value: w, label: w })),
+              ]}
+            />
+          </div>
         )}
 
-        {view === 'world' && <span className="flex-1" />}
+        {/* OpenBackupDir opens a folder on the desktop: not callable from a remote browser. */}
+        {!isRemoteBrowser() && (
+          <button
+            onClick={openDir}
+            className="text-text-faint shrink-0 font-mono text-xs transition-colors"
+            title="Open backup folder"
+            onMouseEnter={(e) => {
+              ;(e.currentTarget as HTMLButtonElement).style.color = 'var(--text-secondary)'
+            }}
+            onMouseLeave={(e) => {
+              ;(e.currentTarget as HTMLButtonElement).style.color = 'var(--text-faint)'
+            }}
+          >
+            ↗
+          </button>
+        )}
+
+        <button
+          onClick={openScheduler}
+          className="border-border-subtle text-text-muted shrink-0 rounded border bg-transparent px-2 py-0.5 font-mono text-xs transition-colors"
+          title="Set up scheduled backups in the Scheduler tile"
+          onMouseEnter={(e) => {
+            const b = e.currentTarget as HTMLButtonElement
+            b.style.borderColor = 'var(--border-hover)'
+            b.style.color = 'var(--text-secondary)'
+          }}
+          onMouseLeave={(e) => {
+            const b = e.currentTarget as HTMLButtonElement
+            b.style.borderColor = 'var(--border-subtle)'
+            b.style.color = 'var(--text-muted)'
+          }}
+        >
+          schedule
+        </button>
+
+        <button
+          onClick={handleCreateClick}
+          disabled={creating || stopping || noWorlds}
+          title={noWorlds ? 'This server has no worlds to back up' : undefined}
+          className="border-accent text-accent shrink-0 rounded border bg-transparent px-2 py-0.5 font-mono text-xs transition-colors disabled:opacity-40"
+          onMouseEnter={(e) => {
+            if (!creating && !stopping && !noWorlds)
+              (e.currentTarget as HTMLButtonElement).style.background =
+                'color-mix(in srgb, var(--accent) 10%, transparent)'
+          }}
+          onMouseLeave={(e) => {
+            ;(e.currentTarget as HTMLButtonElement).style.background = 'transparent'
+          }}
+        >
+          {stopping ? 'Stopping server…' : creating ? 'Backing up…' : 'Back up now'}
+        </button>
       </div>
 
-      {view === 'world' ? (
-        <div className="text-text-faint flex flex-1 items-center justify-center px-6 text-center font-mono text-xs">
-          World-specific backups are managed in the Worlds tile. Dedicated management here is coming
-          soon.
+      {/* Progress bar */}
+      {activeProcess?.status === 'running' && (
+        <div className="bg-border-subtle h-0.5 w-full shrink-0">
+          <div
+            className="bg-accent h-full transition-all duration-300"
+            // eslint-disable-next-line no-restricted-syntax -- width is a computed percentage, not visible to Tailwind's static scanner
+            style={{ width: `${activeProcess.percent}%` }}
+          />
         </div>
-      ) : (
-        <>
-          {/* Progress bar */}
-          {activeProcess?.status === 'running' && (
-            <div className="bg-border-subtle h-0.5 w-full shrink-0">
-              <div
-                className="bg-accent h-full transition-all duration-300"
-                // eslint-disable-next-line no-restricted-syntax -- width is a computed percentage, not visible to Tailwind's static scanner
-                style={{ width: `${activeProcess.percent}%` }}
-              />
-            </div>
-          )}
+      )}
 
-          {/* Search row */}
-          <div className="border-b-border-subtle border-b-hairline shrink-0 px-3 py-2">
-            <div
-              className="border-border-subtle bg-canvas border-hairline flex items-center gap-2 rounded px-2 py-1"
-              onFocusCapture={(e) => {
-                ;(e.currentTarget as HTMLDivElement).style.borderColor = 'var(--accent)'
+      {/* Search row */}
+      <div className="border-b-border-subtle border-b-hairline shrink-0 px-3 py-2">
+        <div
+          className="border-border-subtle bg-canvas border-hairline flex items-center gap-2 rounded px-2 py-1"
+          onFocusCapture={(e) => {
+            ;(e.currentTarget as HTMLDivElement).style.borderColor = 'var(--accent)'
+          }}
+          onBlurCapture={(e) => {
+            ;(e.currentTarget as HTMLDivElement).style.borderColor = 'var(--border-subtle)'
+          }}
+        >
+          <span className="text-text-faint shrink-0 text-xs select-none">⌕</span>
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder={
+              view === 'world'
+                ? 'Search by #tag, date, world, or ID'
+                : 'Search by #tag, date, or ID'
+            }
+            className="text-text-secondary caret-accent min-w-0 flex-1 bg-transparent font-mono text-xs outline-none"
+          />
+          {search && (
+            <button
+              onClick={() => setSearch('')}
+              className="text-text-faint shrink-0 text-xs leading-none transition-colors"
+              onMouseEnter={(e) => {
+                ;(e.currentTarget as HTMLButtonElement).style.color = 'var(--text-muted)'
               }}
-              onBlurCapture={(e) => {
-                ;(e.currentTarget as HTMLDivElement).style.borderColor = 'var(--border-subtle)'
+              onMouseLeave={(e) => {
+                ;(e.currentTarget as HTMLButtonElement).style.color = 'var(--text-faint)'
               }}
             >
-              <span className="text-text-faint shrink-0 text-xs select-none">⌕</span>
-              <input
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search by #tag, date, or ID"
-                className="text-text-secondary caret-accent min-w-0 flex-1 bg-transparent font-mono text-xs outline-none"
-              />
-              {search && (
-                <button
-                  onClick={() => setSearch('')}
-                  className="text-text-faint shrink-0 text-xs leading-none transition-colors"
-                  onMouseEnter={(e) => {
-                    ;(e.currentTarget as HTMLButtonElement).style.color = 'var(--text-muted)'
-                  }}
-                  onMouseLeave={(e) => {
-                    ;(e.currentTarget as HTMLButtonElement).style.color = 'var(--text-faint)'
-                  }}
-                >
-                  ×
-                </button>
-              )}
-            </div>
-          </div>
-
-          {/* Error banner */}
-          {actionError && (
-            <div className="text-danger border-b-border-subtle border-b-hairline shrink-0 px-3 py-1 font-mono text-xs">
-              {actionError}
-            </div>
+              ×
+            </button>
           )}
+        </div>
+      </div>
 
-          {/* Stage: carousel + slide-up list panel.
+      {/* Error banner */}
+      {actionError && (
+        <div className="text-danger border-b-border-subtle border-b-hairline shrink-0 px-3 py-1 font-mono text-xs">
+          {actionError}
+        </div>
+      )}
+
+      {/* Stage: carousel + slide-up list panel.
 
               The three duration-panel members below — the sky scaling down, the carousel
               riding up, the list panel sliding in — are one choreographed motion off the
@@ -597,151 +653,161 @@ function BackupsTileExpanded({ serverId }: { serverId: string }) {
               keyword, cubic-bezier(0.25, 0.1, 0.25, 1), a genuinely different curve from
               --ease-standard. Tailwind ships no bare `ease` utility, so the arbitrary-value
               escape hatch is the only spelling available for it — not a token near-miss. */}
-          <div ref={stageRef} className="relative min-h-0 flex-1 overflow-hidden">
-            {/* Dim overlay — fades in behind planets and panel when a panel is focused.
+      <div ref={stageRef} className="relative min-h-0 flex-1 overflow-hidden">
+        {/* Dim overlay — fades in behind planets and panel when a panel is focused.
                 Made clickable when active so clicking outside the HUD closes it. */}
-            <div
-              className={`absolute inset-0 z-[2] bg-black/55 transition-opacity duration-300 ease-[ease] ${anyFocus ? 'pointer-events-auto cursor-pointer opacity-100' : 'pointer-events-none cursor-default opacity-0'}`}
-              onClick={() => setFocus(null)}
-            />
+        <div
+          className={`absolute inset-0 z-[2] bg-black/55 transition-opacity duration-300 ease-[ease] ${anyFocus ? 'pointer-events-auto cursor-pointer opacity-100' : 'pointer-events-none cursor-default opacity-0'}`}
+          onClick={() => setFocus(null)}
+        />
 
-            {/* Solar system — sun + orbiting worlds.
+        {/* Solar system — sun + orbiting worlds.
                 Scales down from top-center when the list panel opens so the sky
                 tucks above the rising carousel. */}
-            <div
-              className={`duration-panel pointer-events-none absolute inset-0 z-[3] origin-top transition-transform ease-[ease] ${panelOpen ? 'scale-[0.36]' : 'scale-100'}`}
-            >
-              <SolarSystem
-                key={focusedFilename}
-                worlds={previewWorlds}
-                focus={focus}
-                onWorldClick={(w) => {
-                  if (focus?.kind === 'world' && focus.world.name === w.name) {
-                    setFocus(null)
-                  } else {
-                    setPanelOpen(false)
-                    setFocus({ kind: 'world', world: w })
-                  }
-                }}
-                onServerClick={() => {
-                  if (focus?.kind === 'server') {
-                    setFocus(null)
-                  } else {
-                    setPanelOpen(false)
-                    setFocus({ kind: 'server' })
-                  }
-                }}
-              />
-            </div>
+        <div
+          className={`duration-panel pointer-events-none absolute inset-0 z-[3] origin-top transition-transform ease-[ease] ${panelOpen ? 'scale-[0.36]' : 'scale-100'}`}
+        >
+          <SolarSystem
+            key={focusedFilename}
+            worlds={previewWorlds}
+            focus={focus}
+            onWorldClick={(w) => {
+              if (focus?.kind === 'world' && focus.world.name === w.name) {
+                setFocus(null)
+              } else {
+                setPanelOpen(false)
+                setFocus({ kind: 'world', world: w })
+              }
+            }}
+            onServerClick={() => {
+              if (focus?.kind === 'server') {
+                setFocus(null)
+              } else {
+                setPanelOpen(false)
+                setFocus({ kind: 'server' })
+              }
+            }}
+          />
+        </div>
 
-            {/* Close zone — transparent, covers the upper stage; closes the panel when
+        {/* Close zone — transparent, covers the upper stage; closes the panel when
                 the cursor re-enters this area while the panel is open. Without this,
                 onMouseLeave on the stage only fires when leaving the window entirely
                 because the stage fills almost the whole maximized tile. */}
-            <div
-              className={`absolute top-0 right-0 bottom-[42%] left-0 z-[9] ${panelOpen ? 'pointer-events-auto' : 'pointer-events-none'}`}
-              onMouseMove={() => setPanelOpen(false)}
-            />
+        <div
+          className={`absolute top-0 right-0 bottom-[42%] left-0 z-[9] ${panelOpen ? 'pointer-events-auto' : 'pointer-events-none'}`}
+          onMouseMove={() => setPanelOpen(false)}
+        />
 
-            {/* Hover-zone hint — opens explorer only when cursor enters this strip */}
-            <div
-              className={`border-t-border-subtle border-t-hairline absolute right-0 bottom-0 left-0 z-[5] flex h-14 cursor-pointer items-center justify-center bg-white/[2.5%] transition-opacity duration-[180ms] ease-[ease] ${panelOpen || anyFocus ? 'pointer-events-none opacity-0' : 'pointer-events-auto opacity-100'}`}
-              onMouseEnter={() => setPanelOpen(true)}
-            >
-              <div className="bg-text-faint h-[3px] w-8 rounded-[2px] opacity-40" />
-            </div>
+        {/* Hover-zone hint — opens explorer only when cursor enters this strip */}
+        <div
+          className={`border-t-border-subtle border-t-hairline absolute right-0 bottom-0 left-0 z-[5] flex h-14 cursor-pointer items-center justify-center bg-white/[2.5%] transition-opacity duration-[180ms] ease-[ease] ${panelOpen || anyFocus ? 'pointer-events-none opacity-0' : 'pointer-events-auto opacity-100'}`}
+          onMouseEnter={() => setPanelOpen(true)}
+        >
+          <div className="bg-text-faint h-[3px] w-8 rounded-[2px] opacity-40" />
+        </div>
 
-            {/* Carousel zone — rides up when the list panel opens.
+        {/* Carousel zone — rides up when the list panel opens.
                 z-4 when browsing so cards render above planet previews.
                 z-1 when a planet is focused so the dim overlay covers it. */}
-            <div
-              className={`duration-panel absolute right-0 left-0 h-[36%] transition-[bottom] ease-[ease] ${panelOpen ? 'bottom-[42%]' : 'bottom-[7%]'} ${anyFocus ? 'z-[1]' : 'z-[4]'}`}
-            >
-              {loading && (
-                <div className="text-text-faint flex h-full items-center justify-center font-mono text-xs">
-                  Loading…
-                </div>
-              )}
-              {!loading && listError && (
-                <div className="text-danger flex h-full items-center justify-center px-4 text-center font-mono text-xs">
-                  {listError}
-                </div>
-              )}
-              {!loading && !listError && serverBackups.length === 0 && (
-                <div className="text-text-faint flex h-full items-center justify-center font-mono text-xs">
-                  No full-server backups yet — click "Back up now" to create one
-                </div>
-              )}
-              {!loading && !listError && serverBackups.length > 0 && filtered.length === 0 && (
-                <div className="text-text-faint flex h-full items-center justify-center font-mono text-xs">
-                  No backups match "{search}"
-                </div>
-              )}
-              {!loading && !listError && filtered.length > 0 && (
-                <BackupCarousel
-                  backups={filtered}
-                  focusedIndex={clampedFocused}
-                  onFocusChange={setFocusedIndex}
-                  panelOpen={panelOpen}
-                  onOpenPanel={() => setPanelOpen(true)}
-                  onClosePanel={() => setPanelOpen(false)}
-                  serverRunning={status.running}
-                  creatingFilename={creatingFilename}
-                  onRequestRestore={requestRestore}
-                  onRequestDelete={requestDelete}
-                  wheelTargetRef={stageRef}
-                />
-              )}
+        <div
+          className={`duration-panel absolute right-0 left-0 h-[36%] transition-[bottom] ease-[ease] ${panelOpen ? 'bottom-[42%]' : 'bottom-[7%]'} ${anyFocus ? 'z-[1]' : 'z-[4]'}`}
+        >
+          {loading && (
+            <div className="text-text-faint flex h-full items-center justify-center font-mono text-xs">
+              Loading…
             </div>
-
-            {/* List panel — overlays bottom of carousel, GPU-accelerated slide only */}
-            <div
-              ref={listPanelRef}
-              className={`border-t-border-subtle bg-canvas border-t-hairline duration-panel absolute right-0 bottom-0 left-0 z-10 h-[42%] overflow-y-auto transition-transform ease-[ease] ${panelOpen ? 'translate-y-0' : 'translate-y-full'}`}
-            >
-              {filtered.map((b, idx) => (
-                <div
-                  key={b.filename}
-                  data-row-idx={idx}
-                  className="relative cursor-default"
-                  onClick={(e) => {
-                    const t = e.target as Element
-                    if (!t.closest('button') && !t.closest('input')) setFocusedIndex(idx)
-                  }}
-                >
-                  {idx === clampedFocused && (
-                    <div className="bg-accent absolute top-0 bottom-0 left-0 z-[1] w-0.5" />
-                  )}
-                  <BackupRow
-                    backup={b}
-                    serverRunning={status.running}
-                    inProgress={b.filename === creatingFilename}
-                    onRequestRestore={requestRestore}
-                    onRequestDelete={requestDelete}
-                    onUpdateMeta={updateMeta}
-                  />
-                </div>
-              ))}
+          )}
+          {!loading && listError && (
+            <div className="text-danger flex h-full items-center justify-center px-4 text-center font-mono text-xs">
+              {listError}
             </div>
+          )}
+          {!loading && !listError && scoped.length === 0 && (
+            <div className="text-text-faint flex h-full items-center justify-center font-mono text-xs">
+              {view === 'world'
+                ? 'No world backups yet, click "Back up now" to create one'
+                : 'No full-server backups yet — click "Back up now" to create one'}
+            </div>
+          )}
+          {!loading && !listError && scoped.length > 0 && filtered.length === 0 && (
+            <div className="text-text-faint flex h-full items-center justify-center font-mono text-xs">
+              No backups match "{search}"
+            </div>
+          )}
+          {!loading && !listError && filtered.length > 0 && (
+            <BackupCarousel
+              backups={filtered}
+              focusedIndex={clampedFocused}
+              onFocusChange={setFocusedIndex}
+              panelOpen={panelOpen}
+              onOpenPanel={() => setPanelOpen(true)}
+              onClosePanel={() => setPanelOpen(false)}
+              serverRunning={status.running}
+              creatingFilename={creatingFilename}
+              onRequestRestore={requestRestore}
+              onRequestDelete={requestDelete}
+              wheelTargetRef={stageRef}
+            />
+          )}
+        </div>
 
-            {/* World info panel — slides in from the right when a planet is focused */}
-            {focus?.kind === 'world' && (
-              <WorldInfoPanel world={focus.world} onClose={() => setFocus(null)} />
-            )}
-
-            {/* Server info panel — slides in when the server sphere is focused */}
-            {focus?.kind === 'server' && filtered[clampedFocused] && (
-              <ServerInfoPanel
-                backup={filtered[clampedFocused]}
-                worlds={previewWorlds}
-                onClose={() => setFocus(null)}
+        {/* List panel — overlays bottom of carousel, GPU-accelerated slide only */}
+        <div
+          ref={listPanelRef}
+          className={`border-t-border-subtle bg-canvas border-t-hairline duration-panel absolute right-0 bottom-0 left-0 z-10 h-[42%] overflow-y-auto transition-transform ease-[ease] ${panelOpen ? 'translate-y-0' : 'translate-y-full'}`}
+        >
+          {filtered.map((b, idx) => (
+            <div
+              key={b.filename}
+              data-row-idx={idx}
+              className="relative cursor-default"
+              onClick={(e) => {
+                const t = e.target as Element
+                if (!t.closest('button') && !t.closest('input')) setFocusedIndex(idx)
+              }}
+            >
+              {idx === clampedFocused && (
+                <div className="bg-accent absolute top-0 bottom-0 left-0 z-[1] w-0.5" />
+              )}
+              <BackupRow
+                backup={b}
+                serverRunning={status.running}
+                inProgress={b.filename === creatingFilename}
+                onRequestRestore={requestRestore}
+                onRequestDelete={requestDelete}
+                onUpdateMeta={updateMeta}
               />
-            )}
-          </div>
-        </>
-      )}
+            </div>
+          ))}
+        </div>
 
+        {/* World info panel — slides in from the right when a planet is focused */}
+        {focus?.kind === 'world' && (
+          <WorldInfoPanel world={focus.world} onClose={() => setFocus(null)} />
+        )}
+
+        {/* Server info panel — slides in when the server sphere is focused */}
+        {focus?.kind === 'server' && filtered[clampedFocused] && (
+          <ServerInfoPanel
+            backup={filtered[clampedFocused]}
+            worlds={previewWorlds}
+            onClose={() => setFocus(null)}
+          />
+        )}
+      </div>
       {confirm && <ConfirmDialog {...confirm} onCancel={() => setConfirm(null)} />}
+      {showWorldDialog && (
+        <WorldBackupDialog
+          worlds={serverWorlds}
+          initial={dialogWorld}
+          onConfirm={(world) => {
+            setShowWorldDialog(false)
+            createWorld(world)
+          }}
+          onCancel={() => setShowWorldDialog(false)}
+        />
+      )}
       {showRunningDialog && (
         <BackupRunningDialog
           onBackUpNow={() => {

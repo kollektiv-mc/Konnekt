@@ -3,6 +3,7 @@ import { EventsOn } from '../../../wailsjs/runtime/runtime'
 import {
   ListBackups,
   CreateBackup,
+  BackupWorld,
   RestoreBackup,
   DeleteBackup,
   UpdateBackupMeta,
@@ -23,6 +24,7 @@ interface BackupsState {
   actionError: string | null
   refresh: () => Promise<void>
   create: () => Promise<void>
+  createWorld: (name: string) => Promise<void>
   restore: (filename: string) => Promise<void>
   remove: (filename: string) => Promise<void>
   updateMeta: (filename: string, displayName: string, tags: string[]) => Promise<void>
@@ -60,18 +62,30 @@ export function useBackups(serverId: string): BackupsState {
     [serverId],
   )
 
-  const create = useCallback(async () => {
-    setCreating(true)
-    setActionError(null)
-    try {
-      await CreateBackup(serverId)
-      await refresh()
-    } catch (e) {
-      setActionError(String(e))
-    } finally {
-      setCreating(false)
-    }
-  }, [serverId, refresh])
+  // A full-server and a single-world backup share the creating flag, the error
+  // banner and the refetch; only the binding differs.
+  const runCreate = useCallback(
+    async (call: () => Promise<unknown>) => {
+      setCreating(true)
+      setActionError(null)
+      try {
+        await call()
+        await refresh()
+      } catch (e) {
+        setActionError(String(e))
+      } finally {
+        setCreating(false)
+      }
+    },
+    [refresh],
+  )
+
+  const create = useCallback(() => runCreate(() => CreateBackup(serverId)), [serverId, runCreate])
+
+  const createWorld = useCallback(
+    (name: string) => runCreate(() => BackupWorld(serverId, name)),
+    [serverId, runCreate],
+  )
 
   const restore = useCallback(
     async (filename: string) => {
@@ -169,6 +183,7 @@ export function useBackups(serverId: string): BackupsState {
     actionError,
     refresh,
     create,
+    createWorld,
     restore,
     remove,
     updateMeta,
