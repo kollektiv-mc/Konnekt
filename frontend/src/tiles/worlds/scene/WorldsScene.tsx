@@ -35,7 +35,7 @@ const WHEEL_ZOOM_SENSITIVITY = 0.0012
 // Precomputed unit direction: offset applied from the focused body to place the camera eye
 const FOCUS_DIR = new THREE.Vector3(0, FOCUS_ELEV, FOCUS_BACK).normalize()
 
-// The scene's overlay buttons (← galaxy / ← system). Same hairline-outline shape as
+// The scene's overlay buttons (← solar / ← system). Same hairline-outline shape as
 // WorldHud's buttons, one step roomier since these sit over the 3D view rather than
 // inside a panel.
 const NAV_BTN =
@@ -350,7 +350,7 @@ export function WorldsScene({
 
   // Non-passive wheel listener so we can preventDefault (mirrors BackupCarousel.tsx's
   // precedent). Ignored while a planet is focused — scrolling then either does nothing
-  // (galaxy button visible) or hits the HUD panel's own overflowY:auto scroll, which
+  // (solar button visible) or hits the HUD panel's own overflowY:auto scroll, which
   // this must not fight.
   useEffect(() => {
     const el = wrapperRef.current
@@ -385,10 +385,10 @@ export function WorldsScene({
             : 'opacity-0 transition-none'
         }`}
       >
-        {/* ← galaxy button — only visible in planetary view when the HUD panel is closed */}
+        {/* ← solar button — only visible in planetary view when the HUD panel is closed */}
         {focusName && !hudOpen && (
           <button onClick={goBack} className={`${NAV_BTN} absolute top-2.5 left-2.5 z-20`}>
-            ← galaxy
+            ← solar
           </button>
         )}
 
@@ -447,7 +447,7 @@ export function WorldsScene({
           {/* Navigation */}
           <div className="mb-5 flex shrink-0 gap-1.5">
             <button className={NAV_BTN} onClick={goBack}>
-              ← galaxy
+              ← solar
             </button>
             <button className={NAV_BTN} onClick={() => setSelectedDimension(null)}>
               ← system

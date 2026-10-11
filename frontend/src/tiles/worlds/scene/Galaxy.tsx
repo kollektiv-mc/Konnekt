@@ -5,6 +5,7 @@ import { Sun } from './Sun'
 import { Planet } from './Planet'
 import { MOTION, clampDelta } from './motion'
 import { OVERVIEW_EYE, OVERVIEW_TARGET } from './overview'
+import { fitOrbitScale } from './fit'
 import { OrbitPath } from './OrbitPath'
 import type { WorldSystem } from '../useWorlds'
 
@@ -32,31 +33,29 @@ function planetRadius(totalSize: number): number {
 const GALAXY_SPREAD = 11
 
 // Zoom-to-fit tuning — see LayoutScaleController.
-const FIT_MARGIN = 0.15 // fraction of the viewport kept as breathing room
+const FIT_MARGIN = 0.08 // fraction of each half-viewport kept clear past a planet's edge
 const SCALE_MIN = 0.25
 const SCALE_MAX = 1.6
-
-// The four NDC viewport corners, unprojected onto the y=0 ground plane each
-// frame to measure the actual visible world-space extent.
-const NDC_CORNERS: ReadonlyArray<readonly [number, number]> = [
-  [-1, -1],
-  [1, -1],
-  [1, 1],
-  [-1, 1],
-]
+// How far a planet reaches past its orbit point, as a multiple of its radius:
+// the active OrbitRing's outer edge (1.45 + 0.06 tube) at Planet's 1.05 hover
+// scale. Plus Planet's largest cursor push, in orbit units.
+const BODY_REACH = (1.45 + 0.06) * 1.05
+const PUSH_MAX = 0.1
 
 interface LayoutScaleControllerProps {
   groupRef: React.RefObject<THREE.Group | null>
   outerRX: number
   outerRZ: number
+  bodyPad: number
   focusNameRef: React.MutableRefObject<string | null>
   userZoomRef: React.MutableRefObject<number>
   layoutScaleRef: React.MutableRefObject<number>
 }
 
-// Scales the planet/orbit group (not the Sun) so the full orbit spread stays
-// framed inside the viewport regardless of world count, layered with a
-// wheel-driven user zoom multiplier (userZoomRef, owned by WorldsScene).
+// Scales the planet/orbit group (not the Sun) so the outermost orbit, planet
+// and ring included, stays inside the viewport regardless of world count,
+// layered with a wheel-driven user zoom multiplier (userZoomRef, owned by
+// WorldsScene).
 //
 // Frozen while a planet is focused (focusNameRef set) so the follow camera
 // in WorldsScene's SceneController never fights a rescale mid-flight — the
@@ -67,24 +66,21 @@ interface LayoutScaleControllerProps {
 // in, so measuring from it read a tiny visible extent, shrank the galaxy hard
 // and grew it back as the camera pulled out: the camera and the scale both
 // zoomed out at once, so the return read as faster than the way in.
-//
-// Ground-plane projection reuses the same ray/plane technique as Planet.tsx's
-// cursor tracking (t = -origin.y / direction.y, then origin + direction * t),
-// applied to the four NDC viewport corners instead of the pointer, to derive
-// the actual visible half-extents in world space.
 function LayoutScaleController({
   groupRef,
   outerRX,
   outerRZ,
+  bodyPad,
   focusNameRef,
   userZoomRef,
   layoutScaleRef,
 }: LayoutScaleControllerProps) {
   const currentScale = useRef(1)
-  const tmpPoint = useRef(new THREE.Vector3())
-  const tmpOrigin = useRef(new THREE.Vector3())
-  const tmpDir = useRef(new THREE.Vector3())
   const fitCamera = useRef(new THREE.PerspectiveCamera())
+  // The fit only changes with the lens, the aspect or the orbit, so it is
+  // searched again only when one of those does.
+  const fitKey = useRef('')
+  const fit = useRef(1)
 
   useFrame((state, rawDelta) => {
     const delta = clampDelta(rawDelta)
@@ -100,49 +96,34 @@ function LayoutScaleController({
 
     let target = currentScale.current
     if (outerRX > 0.0001 && outerRZ > 0.0001) {
-      // The live camera's lens and aspect at the overview pose. Never given the
-      // HUD's view offset, which the overview does not have.
       // aislop-ignore-next-line ai-slop/double-type-assertion -- three vs @react-three/fiber Camera types, the documented mismatch (HEALTH_CHECKLIST, Clean)
       const live = state.camera as unknown as THREE.PerspectiveCamera
-      const cam = fitCamera.current
-      cam.fov = live.fov
-      cam.aspect = live.aspect
-      cam.near = live.near
-      cam.far = live.far
-      cam.zoom = live.zoom
-      cam.updateProjectionMatrix()
-      cam.position.copy(OVERVIEW_EYE)
-      cam.lookAt(OVERVIEW_TARGET)
-      cam.updateMatrixWorld()
-      let minX = Infinity,
-        maxX = -Infinity,
-        minZ = Infinity,
-        maxZ = -Infinity
-      for (const [nx, ny] of NDC_CORNERS) {
-        tmpPoint.current.set(nx, ny, 0.5).unproject(cam)
-        tmpOrigin.current.copy(cam.position)
-        tmpDir.current.copy(tmpPoint.current).sub(tmpOrigin.current).normalize()
-        if (Math.abs(tmpDir.current.y) < 0.0001) continue
-        const t = -tmpOrigin.current.y / tmpDir.current.y
-        if (t < 0) continue
-        const px = tmpOrigin.current.x + tmpDir.current.x * t
-        const pz = tmpOrigin.current.z + tmpDir.current.z * t
-        minX = Math.min(minX, px)
-        maxX = Math.max(maxX, px)
-        minZ = Math.min(minZ, pz)
-        maxZ = Math.max(maxZ, pz)
+      const key = `${live.fov}|${live.aspect}|${live.zoom}|${outerRX}|${outerRZ}|${bodyPad}`
+      if (key !== fitKey.current) {
+        fitKey.current = key
+        // The live camera's lens and aspect at the overview pose. Never given the
+        // HUD's view offset, which the overview does not have.
+        const cam = fitCamera.current
+        cam.fov = live.fov
+        cam.aspect = live.aspect
+        cam.near = live.near
+        cam.far = live.far
+        cam.zoom = live.zoom
+        cam.updateProjectionMatrix()
+        cam.position.copy(OVERVIEW_EYE)
+        cam.lookAt(OVERVIEW_TARGET)
+        cam.updateMatrixWorld()
+        fit.current = fitOrbitScale(
+          cam,
+          outerRX,
+          outerRZ,
+          bodyPad,
+          FIT_MARGIN,
+          SCALE_MIN,
+          SCALE_MAX,
+        )
       }
-      if (
-        Number.isFinite(minX) &&
-        Number.isFinite(maxX) &&
-        Number.isFinite(minZ) &&
-        Number.isFinite(maxZ)
-      ) {
-        const halfX = (maxX - minX) / 2
-        const halfZ = (maxZ - minZ) / 2
-        const fit = Math.min(halfX / outerRX, halfZ / outerRZ) * (1 - FIT_MARGIN)
-        target = THREE.MathUtils.clamp(fit * userZoomRef.current, SCALE_MIN, SCALE_MAX)
-      }
+      target = THREE.MathUtils.clamp(fit.current * userZoomRef.current, SCALE_MIN, SCALE_MAX)
     }
 
     currentScale.current = THREE.MathUtils.damp(
@@ -181,6 +162,9 @@ export function Galaxy({
   const lastIndex = worlds.length - 1
   const outerRX = lastIndex >= 0 ? 1.8 + (lastIndex + 0.5) * step : 0
   const outerRZ = outerRX * 0.55
+  // The largest planet's reach, so whichever planet is on the outer orbit fits.
+  const bodyPad =
+    worlds.reduce((m, w) => Math.max(m, planetRadius(w.totalSize)), 0) * BODY_REACH + PUSH_MAX
 
   return (
     <group>
@@ -231,6 +215,7 @@ export function Galaxy({
         groupRef={orbitGroupRef}
         outerRX={outerRX}
         outerRZ={outerRZ}
+        bodyPad={bodyPad}
         focusNameRef={focusNameRef}
         userZoomRef={userZoomRef}
         layoutScaleRef={layoutScaleRef}
