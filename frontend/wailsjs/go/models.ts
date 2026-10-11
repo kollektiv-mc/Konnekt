@@ -189,6 +189,7 @@ export namespace models {
 	    configSchema: ConfigField[];
 	    source: string;
 	    primitive?: string;
+	    timeoutSeconds?: number;
 	    effects?: string[];
 	
 	    static createFrom(source: any = {}) {
@@ -209,6 +210,7 @@ export namespace models {
 	        this.configSchema = this.convertValues(source["configSchema"], ConfigField);
 	        this.source = source["source"];
 	        this.primitive = source["primitive"];
+	        this.timeoutSeconds = source["timeoutSeconds"];
 	        this.effects = source["effects"];
 	    }
 	
