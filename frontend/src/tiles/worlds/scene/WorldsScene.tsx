@@ -7,6 +7,7 @@ import { MOTION, clampDelta, springDamp } from './motion'
 import { OVERVIEW_EYE, OVERVIEW_TARGET } from './overview'
 import { WorldHud } from '../WorldHud'
 import type { WorldSystem as WorldSystemData } from '../useWorlds'
+import type { WorldBackup } from '../useWorldBackups'
 
 interface Props {
   worlds: WorldSystemData[]
@@ -16,6 +17,9 @@ interface Props {
   onDuplicate: (name: string, next: string) => Promise<void>
   onOpenFolder: (name: string) => Promise<void>
   onBackup: (name: string) => Promise<void>
+  backups: WorldBackup[]
+  onRestoreBackup: (filename: string) => Promise<void>
+  onDeleteBackup: (filename: string) => Promise<void>
   onRefresh: () => void
 }
 
@@ -301,6 +305,9 @@ export function WorldsScene({
   onDuplicate,
   onOpenFolder,
   onBackup,
+  backups,
+  onRestoreBackup,
+  onDeleteBackup,
   onRefresh,
 }: Props) {
   const [focusName, setFocusName] = useState<string | null>(null)
@@ -465,6 +472,9 @@ export function WorldsScene({
               onDuplicate={onDuplicate}
               onOpenFolder={onOpenFolder}
               onBackup={onBackup}
+              backups={backups}
+              onRestoreBackup={onRestoreBackup}
+              onDeleteBackup={onDeleteBackup}
               onRefresh={onRefresh}
             />
           )}
