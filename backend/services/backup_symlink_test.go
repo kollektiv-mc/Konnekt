@@ -98,9 +98,9 @@ func TestBackupSkipsSymlinksInsteadOfFollowingThem(t *testing.T) {
 		zip  func(dest io.Writer) error
 		want string
 	}{
-		{"zipDirWithProgress", func(dest io.Writer) error { return zipDirWithProgress(world, dest, nil) }, "level.dat"},
+		{"zipDirWithProgress", func(dest io.Writer) error { return zipDirWithProgress(world, dest, nil, nil) }, "level.dat"},
 		{"zipRootsWithProgress", func(dest io.Writer) error {
-			return zipRootsWithProgress([]string{world}, dest, nil)
+			return zipRootsWithProgress([]string{world}, dest, nil, nil)
 		}, filepath.Base(world) + "/level.dat"},
 	}
 	for _, tc := range cases {
@@ -126,7 +126,7 @@ func TestBackupSkipsSymlinksInsteadOfFollowingThem(t *testing.T) {
 // The progress total counts what the archive writes, not what a link points at.
 func TestDirSizeCountsOnlyRegularFiles(t *testing.T) {
 	world, _ := symlinkWorld(t)
-	if got, want := dirSize(world), int64(len("real world data")); got != want {
+	if got, want := dirSize(world, false), int64(len("real world data")); got != want {
 		t.Errorf("dirSize = %d, want %d (links must not count)", got, want)
 	}
 }
@@ -144,10 +144,10 @@ func TestBackupRefusesALinkedWorldRoot(t *testing.T) {
 		t.Skipf("symlinks unavailable here: %v", err)
 	}
 
-	if err := zipDirWithProgress(link, io.Discard, nil); err == nil {
+	if err := zipDirWithProgress(link, io.Discard, nil, nil); err == nil {
 		t.Error("zipDirWithProgress succeeded on a linked world root, want an error")
 	}
-	if err := zipRootsWithProgress([]string{link}, io.Discard, nil); err == nil {
+	if err := zipRootsWithProgress([]string{link}, io.Discard, nil, nil); err == nil {
 		t.Error("zipRootsWithProgress succeeded on a linked world root, want an error")
 	}
 }

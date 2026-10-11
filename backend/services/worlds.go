@@ -265,6 +265,9 @@ func (s *WorldService) DuplicateWorld(serverID, name, newName string) error {
 	if _, err := os.Stat(filepath.Join(cfg.WorkingDir, newName)); err == nil {
 		return fmt.Errorf("a world named %q already exists", newName)
 	}
+	// Distant Horizons' databases are not copied while the server runs, for the
+	// reason a backup leaves them out (#563).
+	running := false
 
 	// A duplication that cannot quiesce is the torn copy #115 closed, so it is
 	// refused for the same reason a backup is (#309).
@@ -273,6 +276,7 @@ func (s *WorldService) DuplicateWorld(serverID, name, newName string) error {
 		if err != nil {
 			return fmt.Errorf("could not pause world saves: %w", err)
 		}
+		running = paused
 		if paused {
 			defer func() {
 				_ = s.server.ResumeSaves(serverID) //nolint:errcheck // ResumeSaves logs, narrates and emits its own failure (#309)
@@ -286,7 +290,7 @@ func (s *WorldService) DuplicateWorld(serverID, name, newName string) error {
 		if _, err := os.Stat(src); err != nil {
 			continue
 		}
-		if err := copyDir(src, dst, cfg.WorkingDir); err != nil {
+		if err := copyDir(src, dst, cfg.WorkingDir, running); err != nil {
 			return fmt.Errorf("duplicate %q: %w", suffix, err)
 		}
 	}
@@ -423,7 +427,7 @@ func describeWorldRoots(name string, roots []string) string {
 }
 
 func buildDimension(path, kind string) models.WorldDimension {
-	size := dirSize(path)
+	size := dirSize(path, false)
 	modified := int64(0)
 	if info, err := os.Stat(path); err == nil {
 		modified = info.ModTime().UnixMilli()
@@ -470,7 +474,9 @@ func validateWorldName(name string) error {
 }
 
 // copyDir recursively copies src to dst, confining all writes to within workingDir.
-func copyDir(src, dst, workingDir string) error {
+// skipLods leaves out Distant Horizons' databases, for a copy of a running
+// server's world (#563).
+func copyDir(src, dst, workingDir string, skipLods bool) error {
 	cleanWork := filepath.Clean(workingDir)
 	cleanDst := filepath.Clean(dst)
 	if !strings.HasPrefix(cleanDst+string(os.PathSeparator), cleanWork+string(os.PathSeparator)) {
@@ -489,6 +495,10 @@ func copyDir(src, dst, workingDir string) error {
 
 		if info.IsDir() {
 			return os.MkdirAll(target, info.Mode())
+		}
+
+		if skipLods && info.Mode().IsRegular() && isLodDatabase(path) {
+			return nil
 		}
 
 		return copyFile(path, target, info.ModTime())

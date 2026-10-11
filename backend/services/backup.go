@@ -151,6 +151,10 @@ func (s *BackupService) activeWorldName(serverID string) (string, error) {
 type backupFileMeta struct {
 	DisplayName string   `json:"displayName,omitempty"`
 	Tags        []string `json:"tags,omitempty"`
+	// LodsSkipped is written when the archive is made and never edited after:
+	// the archive is what lacks the Distant Horizons databases, so a rename or a
+	// retag has to carry it over (#563).
+	LodsSkipped bool `json:"lodsSkipped,omitempty"`
 }
 
 func (s *BackupService) loadMeta(dir string) (map[string]backupFileMeta, error) {
@@ -213,6 +217,7 @@ func (s *BackupService) scanBackupsInDir(dir, kind, world string) []models.Backu
 			Tags:        tags,
 			Kind:        kind,
 			World:       world,
+			LodsSkipped: m.LodsSkipped,
 		})
 	}
 	return out
@@ -314,6 +319,7 @@ func (s *BackupService) ListBackups(serverID string) ([]models.Backup, error) {
 				DisplayName: m.DisplayName,
 				Tags:        tags,
 				Kind:        k,
+				LodsSkipped: m.LodsSkipped,
 			})
 		}
 	}
@@ -357,20 +363,58 @@ func (s *BackupService) narrateFailed(serverID, line string) {
 //
 // A stopped server needs no quiesce and is not an error — it returns a resume
 // that does nothing, so the caller has one shape to handle rather than three.
-func (s *BackupService) quiesce(serverID string) (func(), error) {
+//
+// The second result is whether the server was running, which PrepareForBackup
+// already answered. It is the caller's reason to leave Distant Horizons'
+// databases out of the copy (#563): save-off pauses Minecraft's chunk saves and
+// does nothing to them.
+func (s *BackupService) quiesce(serverID string) (resume func(), running bool, err error) {
 	if s.server == nil {
-		return func() {}, nil
+		return func() {}, false, nil
 	}
 	paused, err := s.server.PrepareForBackup(serverID)
 	if err != nil {
-		return nil, fmt.Errorf("could not pause world saves: %w", err)
+		return nil, false, fmt.Errorf("could not pause world saves: %w", err)
 	}
 	if !paused {
-		return func() {}, nil
+		return func() {}, false, nil
 	}
 	return func() {
 		_ = s.server.ResumeSaves(serverID) //nolint:errcheck // ResumeSaves logs, narrates and emits its own failure (#309); there is no caller left to report it to
-	}, nil
+	}, true, nil
+}
+
+// lodsWhileRunning is the tally a copy fills in when the server was running,
+// and nil when it was not, which is how the copy functions are told whether to
+// leave the databases out.
+func lodsWhileRunning(running bool) *lodTally {
+	if running {
+		return &lodTally{}
+	}
+	return nil
+}
+
+// finishLods records what a copy left out: the console line, and the flag in
+// the backup directory's meta.json so ListBackups, a restore and the tile can
+// say so later. It is a no-op when nothing was skipped. The archive is already
+// complete, so a meta that cannot be written is logged rather than failing a
+// backup that worked.
+func (s *BackupService) finishLods(serverID, backupDir, filename string, skip *lodTally) {
+	if !skip.skipped() {
+		return
+	}
+	s.narrate(serverID, skip.narration())
+	meta, err := s.loadMeta(backupDir)
+	if err != nil {
+		slog.Warn("backups: could not record that LODs were skipped", "file", filename, "error", err)
+		return
+	}
+	m := meta[filename]
+	m.LodsSkipped = true
+	meta[filename] = m
+	if err := s.saveMeta(backupDir, meta); err != nil {
+		slog.Warn("backups: could not record that LODs were skipped", "file", filename, "error", err)
+	}
 }
 
 // fmtBytes renders a byte count for a console line, in the tiers
@@ -501,7 +545,7 @@ func (s *BackupService) CreateBackup(serverID string) (models.Backup, error) {
 	s.bus.Emit(EventBackupStarted, map[string]string{"serverID": serverID, "filename": filename})
 	s.narrate(serverID, "Backing up the server to "+filename)
 
-	resume, err := s.quiesce(serverID)
+	resume, running, err := s.quiesce(serverID)
 	if err != nil {
 		_ = dest.Close() //nolint:errcheck // failBackup removes the archive next; the quiesce error is what the caller reports
 		return models.Backup{}, s.failBackup(serverID, destPath, err)
@@ -522,7 +566,8 @@ func (s *BackupService) CreateBackup(serverID string) (models.Backup, error) {
 	// Closed before the Stat below so the zip's central directory is on disk and
 	// the recorded size is the finished file's. A close error means a truncated
 	// archive, so it fails the backup rather than being dropped.
-	zipErr := zipDirWithProgress(serverDir, dest, onProgress)
+	skip := lodsWhileRunning(running)
+	zipErr := zipDirWithProgress(serverDir, dest, onProgress, skip)
 	if closeErr := dest.Close(); zipErr == nil {
 		zipErr = closeErr
 	}
@@ -541,6 +586,8 @@ func (s *BackupService) CreateBackup(serverID string) (models.Backup, error) {
 		Tags:      []string{},
 		Kind:      "server",
 	}
+	b.LodsSkipped = skip.skipped()
+	s.finishLods(serverID, backupDir, filename, skip)
 	s.bus.Emit(EventBackupCompleted, map[string]interface{}{
 		"serverID": serverID,
 		"filename": b.Filename,
@@ -604,7 +651,7 @@ func (s *BackupService) CreateWorldBackup(serverID, worldName string) (models.Ba
 	s.bus.Emit(EventBackupStarted, map[string]string{"serverID": serverID, "filename": filename})
 	s.narrate(serverID, fmt.Sprintf("Backing up world %q (%s) to %s", worldName, describeWorldRoots(worldName, roots), filename))
 
-	resume, err := s.quiesce(serverID)
+	resume, running, err := s.quiesce(serverID)
 	if err != nil {
 		_ = dest.Close() //nolint:errcheck // failBackup removes the archive next; the quiesce error is what the caller reports
 		return models.Backup{}, s.failBackup(serverID, destPath, err)
@@ -623,7 +670,8 @@ func (s *BackupService) CreateWorldBackup(serverID, worldName string) (models.Ba
 	}
 
 	// Closed before the Stat below, for the same reason as CreateBackup.
-	zipErr := zipRootsWithProgress(roots, dest, onProgress)
+	skip := lodsWhileRunning(running)
+	zipErr := zipRootsWithProgress(roots, dest, onProgress, skip)
 	if closeErr := dest.Close(); zipErr == nil {
 		zipErr = closeErr
 	}
@@ -643,6 +691,8 @@ func (s *BackupService) CreateWorldBackup(serverID, worldName string) (models.Ba
 		Kind:      "world",
 		World:     worldName,
 	}
+	b.LodsSkipped = skip.skipped()
+	s.finishLods(serverID, backupDir, filename, skip)
 	s.bus.Emit(EventBackupCompleted, map[string]interface{}{
 		"serverID": serverID,
 		"filename": b.Filename,
@@ -659,10 +709,14 @@ func (s *BackupService) RestoreBackup(serverID, filename string) error {
 		return errors.New("stop the server before restoring a backup")
 	}
 
-	zipPath, _, kind, world, err := s.findBackupFile(serverID, filename)
+	zipPath, metaDir, kind, world, err := s.findBackupFile(serverID, filename)
 	if err != nil {
 		return err
 	}
+	// An unreadable meta.json reads as an unflagged archive: the restore itself
+	// does not depend on it.
+	meta, _ := s.loadMeta(metaDir) //nolint:errcheck // the flag only adds a console line; a restore must not hang on it
+	lodsSkipped := meta[filename].LodsSkipped
 
 	cfg, err := s.config.GetServerConfig(serverID)
 	if err != nil {
@@ -699,6 +753,9 @@ func (s *BackupService) RestoreBackup(serverID, filename string) error {
 			return s.failRestore(serverID, "swapping files, previous state kept", err)
 		}
 		_ = os.RemoveAll(aside) //nolint:errcheck // best-effort cleanup of the pre-restore backup dir; restore already succeeded
+		if lodsSkipped {
+			s.narrate(serverID, lodsRestoreNarration)
+		}
 		s.narrateDone(serverID, "Restore finished, server files replaced")
 	} else {
 		// World-only restore: replace the world's dimension folders.
@@ -753,6 +810,9 @@ func (s *BackupService) RestoreBackup(serverID, filename string) error {
 		restored, err := s.swapWorldDirs(serverID, swaps)
 		if err != nil {
 			return err
+		}
+		if lodsSkipped {
+			s.narrate(serverID, lodsRestoreNarration)
 		}
 		s.narrateDone(serverID, fmt.Sprintf("Restore finished, world %q replaced (%s)",
 			worldLabel, describeWorldRoots(worldLabel, restored)))
@@ -945,9 +1005,12 @@ func (s *BackupService) UpdateBackupMeta(serverID, filename, displayName string,
 	if err != nil {
 		return models.Backup{}, err
 	}
+	// The entry is replaced whole, so the flag is carried across by hand (#563).
+	lodsSkipped := meta[filename].LodsSkipped
 	meta[filename] = backupFileMeta{
 		DisplayName: strings.TrimSpace(displayName),
 		Tags:        clean,
+		LodsSkipped: lodsSkipped,
 	}
 	if err := s.saveMeta(metaDir, meta); err != nil {
 		return models.Backup{}, err
@@ -961,6 +1024,7 @@ func (s *BackupService) UpdateBackupMeta(serverID, filename, displayName string,
 		Tags:        clean,
 		Kind:        kind,
 		World:       world,
+		LodsSkipped: lodsSkipped,
 	}, nil
 }
 
@@ -1365,10 +1429,13 @@ func backupNameTaken(root, name string) bool {
 // the IsRegular test a link would add its few bytes of link text to a total the
 // archive never writes, and a skipped device or pipe would add whatever size the
 // OS reports for it. Nothing here follows a link.
-func dirSize(srcDir string) int64 {
+//
+// skipLods leaves out the files writeTreeToZip leaves out of a running server's
+// backup (#563), or the progress bar would stop short of 100.
+func dirSize(srcDir string, skipLods bool) int64 {
 	var total int64
-	_ = filepath.Walk(srcDir, func(_ string, info os.FileInfo, err error) error { //nolint:errcheck // best-effort size estimate for a progress percentage; a walk error just undercounts
-		if err == nil && info.Mode().IsRegular() {
+	_ = filepath.Walk(srcDir, func(path string, info os.FileInfo, err error) error { //nolint:errcheck // best-effort size estimate for a progress percentage; a walk error just undercounts
+		if err == nil && info.Mode().IsRegular() && !(skipLods && isLodDatabase(path)) {
 			total += info.Size()
 		}
 		return nil
@@ -1388,14 +1455,14 @@ func dirSize(srcDir string) int64 {
 // writes the central directory. A failure there (a full disk at the final flush)
 // leaves an archive that will not open, so it is this function's error rather
 // than a deferred discard. See closeZip.
-func zipDirWithProgress(srcDir string, dest io.Writer, onProgress func(int)) (err error) {
-	total := dirSize(srcDir)
+func zipDirWithProgress(srcDir string, dest io.Writer, onProgress func(int), skip *lodTally) (err error) {
+	total := dirSize(srcDir, skip != nil)
 
 	w := zip.NewWriter(dest)
 	defer closeZip(w, &err)
 
 	var written int64
-	return writeTreeToZip(w, srcDir, "", total, &written, onProgress)
+	return writeTreeToZip(w, srcDir, "", total, &written, onProgress, skip)
 }
 
 // closeZip closes w into *err, for a deferred call. Closing flushes the zip's
@@ -1419,10 +1486,10 @@ func closeZip(w *zip.Writer, err *error) {
 // as three backups rather than one.
 //
 // Like zipDirWithProgress, the returned error includes the writer's Close.
-func zipRootsWithProgress(roots []string, dest io.Writer, onProgress func(int)) (err error) {
+func zipRootsWithProgress(roots []string, dest io.Writer, onProgress func(int), skip *lodTally) (err error) {
 	var total int64
 	for _, root := range roots {
-		total += dirSize(root)
+		total += dirSize(root, skip != nil)
 	}
 
 	w := zip.NewWriter(dest)
@@ -1430,7 +1497,7 @@ func zipRootsWithProgress(roots []string, dest io.Writer, onProgress func(int)) 
 
 	var written int64
 	for _, root := range roots {
-		if err := writeTreeToZip(w, root, filepath.Base(root), total, &written, onProgress); err != nil {
+		if err := writeTreeToZip(w, root, filepath.Base(root), total, &written, onProgress, skip); err != nil {
 			return err
 		}
 	}
@@ -1440,7 +1507,10 @@ func zipRootsWithProgress(roots []string, dest io.Writer, onProgress func(int)) 
 // writeTreeToZip walks srcDir into w, naming every entry under prefix (empty for a
 // zip whose root is srcDir itself). written and total are shared across calls so a
 // multi-root archive reports one continuous percentage.
-func writeTreeToZip(w *zip.Writer, srcDir, prefix string, total int64, written *int64, onProgress func(int)) error {
+//
+// A non-nil skip is a running server's backup: Distant Horizons' databases are
+// left out and counted into it (#563). Nil keeps every regular file.
+func writeTreeToZip(w *zip.Writer, srcDir, prefix string, total int64, written *int64, onProgress func(int), skip *lodTally) error {
 	return filepath.Walk(srcDir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			if filepath.Base(path) == "session.lock" {
@@ -1484,6 +1554,10 @@ func writeTreeToZip(w *zip.Writer, srcDir, prefix string, total int64, written *
 		}
 		if !info.Mode().IsRegular() {
 			slog.Warn("backups: skipped entry that is not a regular file", "path", path, "mode", info.Mode().String())
+			return nil
+		}
+		if skip != nil && isLodDatabase(path) {
+			skip.add(info.Size())
 			return nil
 		}
 		fw, err := w.Create(name)

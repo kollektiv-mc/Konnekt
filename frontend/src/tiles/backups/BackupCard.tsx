@@ -71,6 +71,7 @@ export function BackupCard({
         <div className="text-text-faint flex flex-col gap-0.5 font-mono text-xs">
           <div>{fmtDate(backup.createdAt)}</div>
           <div>{fmtBytes(backup.sizeBytes)}</div>
+          {backup.lodsSkipped && <div>LODs not included (server was running)</div>}
         </div>
       )}
 
