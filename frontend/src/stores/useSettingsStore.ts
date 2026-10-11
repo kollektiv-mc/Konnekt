@@ -41,6 +41,7 @@ const DEFAULTS: AppSettings = {
   navWidth: NAV_WIDTH_DEFAULT,
   smoothScrolling: true,
   fonts: {},
+  webviewGpu: '',
 }
 
 interface SettingsStore {
@@ -73,6 +74,7 @@ const validThemes = ['light', 'dark', 'system'] as const
 const validSkinIds = BUILTIN_SKINS.map((s) => s.id)
 const validBgStyles = ['solid', 'gradient'] as const
 const validChannels = ['stable', 'snapshot'] as const
+const validWebviewGpu = ['', 'always', 'ondemand', 'never'] as const
 
 export const useSettingsStore = create<SettingsStore>((set, get) => ({
   settings: DEFAULTS,
@@ -95,6 +97,11 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
       const updateChannel = (validChannels as readonly string[]).includes(s.updateChannel)
         ? (s.updateChannel as AppSettings['updateChannel'])
         : DEFAULTS.updateChannel
+      // A hand-edited value the Go resolver would ignore reads as no choice here
+      // too, so the row shows the policy the window actually got.
+      const webviewGpu = (validWebviewGpu as readonly string[]).includes(s.webviewGpu)
+        ? (s.webviewGpu as AppSettings['webviewGpu'])
+        : DEFAULTS.webviewGpu
       settings = {
         ...DEFAULTS,
         ...s,
@@ -102,6 +109,7 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
         skinId,
         backgroundStyle,
         updateChannel,
+        webviewGpu,
         schedulerPaletteClosedCategories: s.schedulerPaletteClosedCategories ?? {},
         navClosedSections: s.navClosedSections ?? DEFAULTS.navClosedSections,
         // null for a settings file that predates the field, and for one whose

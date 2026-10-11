@@ -42,6 +42,7 @@ const DEFAULTS = {
   navWidth: 192,
   smoothScrolling: true,
   fonts: {} as Record<string, string>,
+  webviewGpu: '' as const,
 }
 
 // `hasWailsBridge()` reads window.go's presence, and jsdom has none — so the
@@ -111,6 +112,16 @@ describe('useSettingsStore', () => {
       vi.mocked(App.GetAppSettings).mockResolvedValue({ ...DEFAULTS, updateChannel: '' as never })
       await useSettingsStore.getState().load()
       expect(useSettingsStore.getState().settings.updateChannel).toBe('stable')
+    })
+
+    it('keeps a stored webviewGpu and reads a value Go would ignore as no choice', async () => {
+      vi.mocked(App.GetAppSettings).mockResolvedValue({ ...DEFAULTS, webviewGpu: 'never' })
+      await useSettingsStore.getState().load()
+      expect(useSettingsStore.getState().settings.webviewGpu).toBe('never')
+
+      vi.mocked(App.GetAppSettings).mockResolvedValue({ ...DEFAULTS, webviewGpu: 'off' as never })
+      await useSettingsStore.getState().load()
+      expect(useSettingsStore.getState().settings.webviewGpu).toBe('')
     })
 
     // The navbar's first-run shape: Servers and Tiles open, Widgets and Layouts

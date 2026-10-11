@@ -49,7 +49,14 @@ func main() {
 	// WebKit reads when GTK initialises, and that happens inside Run. On the
 	// other platforms Wails ignores the Linux options, so the sysfs probe
 	// simply finds nothing and the log line is the only trace.
-	gpu := resolveWebviewGpu(os.Getenv, os.Setenv, sysClassDRM)
+	// The saved setting is read here rather than through the App, which does
+	// not exist yet. Unreadable settings fall back to the default policy, the
+	// same thing a first launch with no settings file gets.
+	settings, settingsErr := services.ReadAppSettings(dataDir)
+	if settingsErr != nil {
+		log.Warn("read app settings for the webview gpu policy", "error", settingsErr)
+	}
+	gpu := resolveWebviewGpu(os.Getenv, os.Setenv, sysClassDRM, settings.WebviewGpu)
 	if runtime.GOOS == "linux" {
 		log.Info("linux webview gpu", "policy", gpu.Policy, "reason", gpu.Reason)
 	}
