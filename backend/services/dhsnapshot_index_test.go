@@ -324,8 +324,8 @@ func TestSnapshotKeys(t *testing.T) {
 		want := SnapshotKeys{
 			CreatedAt:   "2026-10-11T04:00:00Z",
 			Latest:      "frangfurd/dh/latest.json",
-			Index:       "frangfurd/dh/snapshots/2026-10-11T04:00:00Z/index.json",
-			Page:        "frangfurd/dh/snapshots/2026-10-11T04:00:00Z/index.html",
+			Index:       "frangfurd/dh/snapshots/20261011T040000Z/index.json",
+			Page:        "frangfurd/dh/snapshots/20261011T040000Z/index.html",
 			PartsPrefix: "frangfurd/dh/parts/",
 			PartsBase:   "../../parts/",
 		}
@@ -341,8 +341,8 @@ func TestSnapshotKeys(t *testing.T) {
 			t.Fatal(err)
 		}
 		if k.Latest != "frangfurd/dh/abcdefghijklmnopqrstuvwxyz/latest.json" ||
-			k.Index != "frangfurd/dh/abcdefghijklmnopqrstuvwxyz/snapshots/2026-10-11T04:00:00Z/index.json" ||
-			k.Page != "frangfurd/dh/abcdefghijklmnopqrstuvwxyz/snapshots/2026-10-11T04:00:00Z/index.html" {
+			k.Index != "frangfurd/dh/abcdefghijklmnopqrstuvwxyz/snapshots/20261011T040000Z/index.json" ||
+			k.Page != "frangfurd/dh/abcdefghijklmnopqrstuvwxyz/snapshots/20261011T040000Z/index.html" {
 			t.Errorf("small files are not under the token: %+v", k)
 		}
 		if k.PartsPrefix != "frangfurd/dh/parts/" || k.PartsBase != "../../../parts/" {
@@ -382,7 +382,7 @@ func TestSnapshotKeys(t *testing.T) {
 		if got := k.PartKey("abc"); got != "p/parts/abc" {
 			t.Errorf("PartKey = %s", got)
 		}
-		if got := k.AssembledKey("pfx@minecraft@@overworld"); got != "p/tok/snapshots/2026-10-11T04:00:00Z/pfx@minecraft@@overworld/DistantHorizons.sqlite" {
+		if got := k.AssembledKey("pfx@minecraft@@overworld"); got != "p/tok/snapshots/20261011T040000Z/pfx@minecraft@@overworld/DistantHorizons.sqlite" {
 			t.Errorf("AssembledKey = %s", got)
 		}
 	})

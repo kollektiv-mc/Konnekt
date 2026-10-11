@@ -54,7 +54,8 @@ type DHIndexLevel struct {
 // (Kapital-Launcher#136).
 type DHIndex struct {
 	Format int `json:"format"`
-	// CreatedAt is RFC 3339 in UTC and names the snapshot's folder.
+	// CreatedAt is RFC 3339 in UTC. The snapshot's folder carries the same
+	// instant as a compact stamp (see dhFolderStamp).
 	CreatedAt string `json:"createdAt"`
 	// PartsBase is the parts folder's path relative to this index, so the index
 	// can sit at any depth (the private-link layout is one deeper). A client
@@ -91,10 +92,17 @@ func parseDHIndex(data []byte) (DHIndex, error) {
 	return ix, nil
 }
 
-// formatDHCreatedAt is the one rendering of a snapshot's time, in the index and
-// in the object keys, so the two cannot disagree.
+// formatDHCreatedAt is the snapshot's time as index.json writes it.
 func formatDHCreatedAt(t time.Time) string {
 	return t.UTC().Format(time.RFC3339)
+}
+
+// dhFolderStamp is the same instant as the snapshot folder's name. It drops
+// the colons of RFC 3339 because a client that mirrors the layout on disk
+// cannot create a folder with one on Windows, and because a colon in an
+// object key needs percent-encoding in every signed request and link.
+func dhFolderStamp(t time.Time) string {
+	return t.UTC().Format("20060102T150405Z")
 }
 
 // partSet is every part hash an index names, across all levels.
@@ -228,7 +236,8 @@ func stageDHSnapshot(src DHSnapshotSource, prev *DHIndex, stageDir string, keys 
 // guess without the index. Nothing that writes these keys needs to know which
 // layout it is in.
 type SnapshotKeys struct {
-	// CreatedAt is the snapshot's time as the index writes it.
+	// CreatedAt is the snapshot's time as the index writes it; the folder under
+	// snapshots/ carries the compact form of the same instant.
 	CreatedAt string
 	// Latest, Index and Page are full object keys.
 	Latest string
@@ -268,14 +277,13 @@ func snapshotKeys(prefix, token string, createdAt time.Time) (SnapshotKeys, erro
 		base = path.Join(root, token)
 		depth = 3
 	}
-	stamp := formatDHCreatedAt(createdAt)
-	dir := path.Join(base, "snapshots", stamp)
+	dir := path.Join(base, "snapshots", dhFolderStamp(createdAt))
 	partsPrefix := path.Join(root, "parts") + "/"
 	if root == "" {
 		partsPrefix = "parts/"
 	}
 	return SnapshotKeys{
-		CreatedAt:   stamp,
+		CreatedAt:   formatDHCreatedAt(createdAt),
 		Latest:      path.Join(base, "latest.json"),
 		Index:       path.Join(dir, "index.json"),
 		Page:        path.Join(dir, "index.html"),
