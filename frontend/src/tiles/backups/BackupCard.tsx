@@ -1,6 +1,7 @@
 import type { Backup } from './useBackups'
 import { extractID } from './format'
 import { fmtBytes, fmtDate } from '../../lib/format'
+import { Tag } from '../../components/ui/Tag'
 
 function TagPillReadOnly({ tag }: { tag: string }) {
   return (
@@ -48,8 +49,13 @@ export function BackupCard({
         >
           {displayLabel}
         </div>
-        {backup.tags.length > 0 && (
+        {(backup.world || backup.tags.length > 0) && (
           <div className="flex flex-wrap gap-1">
+            {backup.world && (
+              <Tag tone="accent" title="World backed up">
+                {backup.world}
+              </Tag>
+            )}
             {backup.tags.map((tag) => (
               <TagPillReadOnly key={tag} tag={tag} />
             ))}

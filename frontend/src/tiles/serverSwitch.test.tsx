@@ -9,6 +9,7 @@ import { useConsoleSync } from '../hooks/useConsoleSync'
 import { usePerformanceHistory } from './performance/usePerformanceHistory'
 import { usePlayers } from './players/usePlayers'
 import { useWorlds } from './worlds/useWorlds'
+import { useServerWorldNames } from './backups/useServerWorldNames'
 import { useServerConfigStore } from '../stores/useServerConfigStore'
 import { useConfigEditor } from './config/useConfigEditor'
 import { EVENTS } from '../lib/constants'
@@ -333,6 +334,54 @@ describe('worlds on switch', () => {
     emit(EVENTS.BACKUP_COMPLETED, { serverID: 'srv1' })
 
     await waitFor(() => expect(App.ListWorlds).toHaveBeenCalledTimes(2))
+  })
+})
+
+describe('backup world picker on switch', () => {
+  // The Backups tile lists the worlds it can back up from its own read of
+  // ListWorlds. It holds that list in state, so a switch to a server whose list
+  // is still loading must not offer the previous server's worlds.
+  type Worlds = Awaited<ReturnType<typeof App.ListWorlds>>
+  const named = (name: string) => [{ name, active: true }] as Worlds
+
+  it('offers nothing of the previous server while the new list loads', async () => {
+    let resolveSrv2: (w: Worlds) => void = () => {}
+    vi.mocked(App.ListWorlds).mockImplementation((id: string) =>
+      id === 'srv1'
+        ? Promise.resolve(named('one'))
+        : new Promise((resolve) => {
+            resolveSrv2 = resolve
+          }),
+    )
+    const { result, rerender } = renderHook(({ id }) => useServerWorldNames(id), {
+      initialProps: { id: 'srv1' },
+    })
+    await waitFor(() => expect(result.current.map((w) => w.name)).toEqual(['one']))
+
+    rerender({ id: 'srv2' })
+    expect(result.current).toEqual([])
+
+    await act(async () => resolveSrv2(named('two')))
+    expect(result.current.map((w) => w.name)).toEqual(['two'])
+  })
+
+  it('drops a slow answer for a server that is no longer selected', async () => {
+    let resolveSrv1: (w: Worlds) => void = () => {}
+    vi.mocked(App.ListWorlds).mockImplementation((id: string) =>
+      id === 'srv1'
+        ? new Promise((resolve) => {
+            resolveSrv1 = resolve
+          })
+        : Promise.resolve(named('two')),
+    )
+    const { result, rerender } = renderHook(({ id }) => useServerWorldNames(id), {
+      initialProps: { id: 'srv1' },
+    })
+    rerender({ id: 'srv2' })
+    await waitFor(() => expect(result.current.map((w) => w.name)).toEqual(['two']))
+
+    await act(async () => resolveSrv1(named('one')))
+    expect(result.current.map((w) => w.name)).toEqual(['two'])
   })
 })
 

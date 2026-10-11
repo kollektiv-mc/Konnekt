@@ -12,9 +12,11 @@
  *    format.ts's extractID regexes ^(\d{5})_ for the card's fallback label; a
  *    filename that misses it shows the whole string across the card face.
  *
- * The maximized tile filters to kind === 'server', so the two world-kind
- * entries only surface in the Overview section — which is the point of having
- * them: that path renders a KindTag and would otherwise never be exercised.
+ * The maximized tile's Server view shows kind === 'server' and its Worlds view
+ * shows kind === 'world', so the world-kind entries fill that segment and the
+ * Overview section's KindTag. They span three of the survival server's worlds
+ * (fixtures/worlds.js), two of them twice, so the world filter has something
+ * to narrow.
  */
 
 import { daysAgo, hoursAgo } from "./server.js";
@@ -55,8 +57,8 @@ export const BACKUPS = [
     displayName: "Pre-plugin-sweep",
     tags: ["manual"],
   }),
-  // World-kind entries: invisible in the maximized tile by design, visible in
-  // the Overview section, which is the only place KindTag renders `world`.
+  // World-kind entries: the Worlds segment of the maximized tile, and the
+  // Overview section's KindTag.
   {
     ...entry(46540, daysAgo(8), 4.19),
     kind: "world",
@@ -68,6 +70,19 @@ export const BACKUPS = [
     ...entry(46201, daysAgo(11), 1.82),
     kind: "world",
     world: "Middleworld",
+    tags: ["world"],
+  },
+  {
+    ...entry(45977, daysAgo(14), 4.02),
+    kind: "world",
+    world: "Overworld",
+    displayName: "Before the village rebuild",
+    tags: ["manual"],
+  },
+  {
+    ...entry(45310, daysAgo(19), 0.64),
+    kind: "world",
+    world: "Underworld",
     tags: ["world"],
   },
 ];
