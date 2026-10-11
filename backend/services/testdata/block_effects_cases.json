@@ -1,0 +1,73 @@
+[
+  {
+    "name": "the Stop preset of a command node",
+    "type": "action.command",
+    "config": { "command": "__stop__" },
+    "want": ["stopsServer"]
+  },
+  {
+    "name": "the Restart preset of a command node",
+    "type": "action.command",
+    "config": { "command": "__restart__" },
+    "want": ["stopsServer"]
+  },
+  {
+    "name": "a command node with the Start preset",
+    "type": "action.command",
+    "config": { "command": "__start__" },
+    "want": []
+  },
+  {
+    "name": "a command node with an ordinary command",
+    "type": "action.command",
+    "config": { "command": "save-all" },
+    "want": []
+  },
+  {
+    "name": "a command node with no command yet",
+    "type": "action.command",
+    "config": {},
+    "want": []
+  },
+  {
+    "name": "a command node whose command is a template",
+    "type": "action.command",
+    "config": { "command": "{{trigger.command}}" },
+    "want": []
+  },
+  {
+    "name": "a command node with a wired command, whatever its config says",
+    "type": "action.command",
+    "config": { "command": "__stop__" },
+    "commandWired": true,
+    "want": []
+  },
+  {
+    "name": "an RCON node never reads the sentinels",
+    "type": "action.rcon",
+    "config": { "command": "__stop__" },
+    "want": []
+  },
+  {
+    "name": "a block that declares the effect",
+    "type": "action.example",
+    "defEffects": ["stopsServer"],
+    "config": {},
+    "want": ["stopsServer"]
+  },
+  {
+    "name": "a declaring block is not duplicated",
+    "type": "action.command",
+    "defEffects": ["stopsServer"],
+    "config": { "command": "__restart__" },
+    "want": ["stopsServer"]
+  },
+  {
+    "name": "a declaring block keeps its effect when its port is wired",
+    "type": "action.command",
+    "defEffects": ["stopsServer"],
+    "config": { "command": "save-all" },
+    "commandWired": true,
+    "want": ["stopsServer"]
+  }
+]

@@ -122,3 +122,23 @@ func validateGraphDataTypes(g models.Graph, reg *BlockRegistry) []string {
 	}
 	return issues
 }
+
+// rconUnconfirmedWarning is the one warning graphWarnings produces. Worded as
+// "not confirmed" because ServerService.RconConfig reports ok only once the
+// server has started with RCON enabled, so a server that has never been started
+// reads the same as one with RCON off.
+const rconUnconfirmedWarning = "This graph stops the server, but RCON is not confirmed for it, " +
+	"so a warning to players cannot be sent first. RCON is confirmed once the server has " +
+	"started with enable-rcon on."
+
+// graphWarnings returns advice about g that is not an error: a graph that
+// stops the server while RCON is not confirmed cannot warn players before it
+// does. Pure and side-effect free. Unlike validateGraphDataTypes it never
+// refuses anything: SaveGraph stays permissive and the editor only shows the
+// text beside Save, so a save or a run is never blocked by it.
+func graphWarnings(g models.Graph, reg *BlockRegistry, rconAvailable bool) []string {
+	if rconAvailable || !graphStopsServer(g, reg) {
+		return nil
+	}
+	return []string{rconUnconfirmedWarning}
+}

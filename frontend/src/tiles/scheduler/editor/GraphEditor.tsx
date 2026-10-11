@@ -17,7 +17,14 @@ import {
   type NodeChange,
   type EdgeChange,
 } from '@xyflow/react'
-import { CATEGORY_COLOR, DATA_EDGE_STYLE, NO_GRAPH_KEYS } from './blockMeta'
+import {
+  CATEGORY_COLOR,
+  DATA_EDGE_STYLE,
+  isCommandHandleWired,
+  NO_GRAPH_KEYS,
+  nodeEffects,
+  NODE_EFFECT_STOPS_SERVER,
+} from './blockMeta'
 import { SchedulerCtx, type NodeRunState } from './schedulerContext'
 import { BlockNode } from './BlockNode'
 import { AnimatedEdge } from './AnimatedEdge'
@@ -56,6 +63,7 @@ import { EventsOn } from '../../../../wailsjs/runtime/runtime'
 import { EVENTS } from '../../../lib/constants'
 import { useUiStore } from '../../../stores/useUiStore'
 import { useSchedulerStore } from '../../../stores/useSchedulerStore'
+import { useServerStore } from '../../../stores/useServerStore'
 import type { models } from '../../../../wailsjs/go/models'
 
 // schedule:* event payload shapes (emitted by the Go engine via EventBus).
@@ -153,6 +161,8 @@ function GraphEditorInner({
   // the graph data itself still arrives via props from the tile's hook.
   const schedulerError = useSchedulerStore((s) => s.error)
   const clearSchedulerError = useSchedulerStore((s) => s.clearError)
+  const askGraphWarnings = useSchedulerStore((s) => s.graphWarnings)
+  const serverState = useServerStore((s) => s.status.state)
 
   // ── Unsaved-changes guard ─────────────────────────────────────────────────
   // State (not a ref) so changing it — on load/save/discard — reliably
@@ -722,6 +732,57 @@ function GraphEditorInner({
     [nodes, edges],
   )
 
+  // ── Warnings ──────────────────────────────────────────────────────────────
+  // Advice about the canvas, never a gate: it sits beside Save and neither a
+  // save nor a run waits on it. Today's one warning is a stop with RCON not
+  // confirmed, which the backend answers from the server's own state, so the
+  // ask is made when the set of stopping nodes changes or the server changes
+  // state (RCON is confirmed once the server has started), not on every drag.
+  const stopSig = useMemo(
+    () =>
+      nodes
+        .filter((n) => {
+          const nd = n.data as NodeData
+          return nodeEffects(
+            defMap.get(nd.blockType),
+            nd.blockType,
+            nd.config,
+            isCommandHandleWired(n.id, edges),
+          ).includes(NODE_EFFECT_STOPS_SERVER)
+        })
+        .map((n) => n.id)
+        .join(','),
+    [nodes, edges, defMap],
+  )
+  const [warnings, setWarnings] = useState<string[]>([])
+  useEffect(() => {
+    if (stopSig === '') {
+      setWarnings([])
+      return
+    }
+    let current = true
+    // The metadata is irrelevant to a warning, so none of the graph's own state
+    // is a dependency; the nodes and edges come from the refs, which are current
+    // by now because their sync effects are declared above this one.
+    const graph = flowToGraph(
+      { id: '', name: '', enabled: false, createdAt: 0 },
+      nodesRef.current,
+      edgesRef.current,
+    )
+    askGraphWarnings(graph)
+      .then((w) => {
+        if (current) setWarnings(w)
+      })
+      .catch(() => {
+        // Advice only: a failed ask leaves no warning rather than a banner, and
+        // the next change to the stopping nodes or the server asks again.
+        if (current) setWarnings([])
+      })
+    return () => {
+      current = false
+    }
+  }, [stopSig, serverState, askGraphWarnings])
+
   // Wrap ReactFlow's own change handlers so a Delete-key removal (which never
   // goes through handleDeleteSelected) still records an undo entry.
   const handleNodesChange = useCallback(
@@ -919,6 +980,12 @@ function GraphEditorInner({
               </button>
             ) : null
           })()}
+
+          {warnings.length > 0 && (
+            <span className="text-warning text-2xs max-w-sm font-mono" role="status">
+              {warnings.join(' ')}
+            </span>
+          )}
 
           {graphId && (
             <button className={btnClass()} onClick={handleRun}>

@@ -189,6 +189,7 @@ export namespace models {
 	    configSchema: ConfigField[];
 	    source: string;
 	    primitive?: string;
+	    effects?: string[];
 	
 	    static createFrom(source: any = {}) {
 	        return new BlockDef(source);
@@ -208,6 +209,7 @@ export namespace models {
 	        this.configSchema = this.convertValues(source["configSchema"], ConfigField);
 	        this.source = source["source"];
 	        this.primitive = source["primitive"];
+	        this.effects = source["effects"];
 	    }
 	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {

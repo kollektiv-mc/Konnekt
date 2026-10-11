@@ -1,8 +1,12 @@
+import { useMemo } from 'react'
 import type { models } from '../../../wailsjs/go/models'
 import { untilMs } from '../../lib/format'
+import { DOWNTIME_TOOLTIP, stoppingGraphIds } from './editor/blockMeta'
 
 interface Props {
   graphs: models.Graph[]
+  /** Block definitions, to tell which graphs stop the server. */
+  blockDefs: models.BlockDef[]
   nextRuns: Record<string, number>
   /** First hydration still in flight — distinct from "no graphs configured". */
   loading?: boolean
@@ -17,13 +21,16 @@ interface Props {
  * figure-first face for new work; this one only follows if a hook it shares
  * changes shape.
  */
-export function ClassicSchedulerSummary({ graphs, nextRuns, loading, error }: Props) {
+export function ClassicSchedulerSummary({ graphs, blockDefs, nextRuns, loading, error }: Props) {
   const enabled = graphs.filter((g) => g.enabled).length
+  const stopping = useMemo(() => stoppingGraphIds(graphs, blockDefs), [graphs, blockDefs])
 
-  // Soonest upcoming scheduled run across all graphs.
-  const soonest = Object.values(nextRuns)
-    .filter((v) => v > 0)
-    .sort((a, b) => a - b)[0]
+  // Soonest upcoming scheduled run across all graphs, and whether it is the
+  // run of a graph that stops the server.
+  const [soonestId, soonest] = Object.entries(nextRuns)
+    .filter(([, v]) => v > 0)
+    .sort((a, b) => a[1] - b[1])[0] ?? [undefined, undefined]
+  const soonestStops = soonestId !== undefined && stopping.has(soonestId)
 
   return (
     <div className="flex h-full flex-col overflow-hidden">
@@ -51,6 +58,7 @@ export function ClassicSchedulerSummary({ graphs, nextRuns, loading, error }: Pr
         ) : (
           graphs.slice(0, 8).map((g) => {
             const next = nextRuns[g.id]
+            const stops = stopping.has(g.id)
             return (
               <div key={g.id} className="flex items-center gap-1.5 py-0.5">
                 <span
@@ -64,8 +72,9 @@ export function ClassicSchedulerSummary({ graphs, nextRuns, loading, error }: Pr
                 {g.enabled && next > 0 && (
                   <span
                     className="text-text-faint shrink-0 font-mono text-xs"
-                    title="Next scheduled run"
+                    title={stops ? DOWNTIME_TOOLTIP : 'Next scheduled run'}
                   >
+                    {stops ? 'downtime ' : ''}
                     {untilMs(next)}
                   </span>
                 )}
@@ -84,8 +93,13 @@ export function ClassicSchedulerSummary({ graphs, nextRuns, loading, error }: Pr
             scheduler unavailable
           </span>
         ) : (
-          <span className="text-text-faint font-mono text-xs">
-            {soonest ? `next run ${untilMs(soonest)}` : 'maximize to edit'}
+          <span
+            className="text-text-faint font-mono text-xs"
+            title={soonestStops ? DOWNTIME_TOOLTIP : undefined}
+          >
+            {soonest
+              ? `${soonestStops ? 'next downtime' : 'next run'} ${untilMs(soonest)}`
+              : 'maximize to edit'}
           </span>
         )}
       </div>

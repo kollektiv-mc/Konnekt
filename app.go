@@ -829,6 +829,10 @@ func (a *App) ImportScheduleGraphJSON(serverID string, raw string) (models.Graph
 	return a.schedulerService.ImportGraphJSON(serverID, raw)
 }
 
+func (a *App) GetScheduleGraphWarnings(serverID string, g models.Graph) ([]string, error) {
+	return a.schedulerService.GraphWarnings(serverID, g)
+}
+
 func (a *App) PreviewScheduleNode(g models.Graph, nodeID string) (models.NodePreview, error) {
 	return a.schedulerService.PreviewNode(g, nodeID)
 }

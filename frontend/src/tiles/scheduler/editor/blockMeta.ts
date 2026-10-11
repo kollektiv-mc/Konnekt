@@ -1,3 +1,5 @@
+import type { models } from '../../../../wailsjs/go/models'
+
 export const CATEGORY_ORDER = ['trigger', 'data', 'action', 'control', 'notify']
 
 export function orderedCategories(defs: { category: string }[]): string[] {
@@ -153,3 +155,99 @@ export const WIRED_TEXT_CLASS = 'text-[#60a5fa]'
  * quick-add menu are all buttons too.
  */
 export const NO_GRAPH_KEYS = 'nokey'
+
+// ── Block effects ───────────────────────────────────────────────────────────
+
+/**
+ * The one effect value: running the block takes the server down. Mirrors
+ * EffectStopsServer in backend/services/scheduler_effects.go.
+ */
+export const NODE_EFFECT_STOPS_SERVER = 'stopsServer'
+
+// action.command's two options that stop the server. They are sentinels the
+// executor switches on rather than commands (scheduler_blocks.go), which is
+// why the effect can be read from config at all.
+const COMMAND_BLOCK_ID = 'action.command'
+const COMMAND_PORT_ID = 'command'
+const STOPPING_COMMANDS = ['__stop__', '__restart__']
+
+/**
+ * The effects of one node: what its block declares, plus what its config adds.
+ *
+ * action.command cannot declare stopsServer, because only its Stop and Restart
+ * options stop anything, so the effect is read from the node's configured
+ * command. A command wired in on the data port is not known until run time (the
+ * wired value outranks the config field), so a node with that port connected
+ * gets none. That is inferred rather than guaranteed: the wired value could be a
+ * stop sentinel from a Constant block, and nothing here evaluates it.
+ *
+ * Mirrors nodeEffects in backend/services/scheduler_effects.go;
+ * testdata/block_effects_cases.json holds the cases both sides must agree on.
+ */
+export function nodeEffects(
+  def: Pick<models.BlockDef, 'effects'> | undefined,
+  type: string,
+  config: Record<string, unknown> | undefined,
+  commandWired: boolean,
+): string[] {
+  const out = new Set<string>(def?.effects ?? [])
+  if (type === COMMAND_BLOCK_ID && !commandWired) {
+    const cmd = config?.[COMMAND_PORT_ID]
+    if (typeof cmd === 'string' && STOPPING_COMMANDS.includes(cmd)) {
+      out.add(NODE_EFFECT_STOPS_SERVER)
+    }
+  }
+  return [...out]
+}
+
+/** Whether a saved graph has a data edge into the node's command port. */
+export function isCommandWired(nodeId: string, edges: readonly models.Edge[]): boolean {
+  return edges.some(
+    (e) => e.kind === 'data' && e.target === nodeId && e.targetPort === COMMAND_PORT_ID,
+  )
+}
+
+/**
+ * The same question asked of the editor's canvas edges, whose ports are handle
+ * ids (`data:<port>`, see BlockNode) rather than a kind and a port.
+ */
+export function isCommandHandleWired(
+  nodeId: string,
+  edges: readonly { target: string; targetHandle?: string | null }[],
+): boolean {
+  return edges.some((e) => e.target === nodeId && e.targetHandle === `data:${COMMAND_PORT_ID}`)
+}
+
+/** Whether any node of a saved graph stops the server. */
+export function graphStopsServer(
+  g: Pick<models.Graph, 'nodes' | 'edges'>,
+  defs: ReadonlyMap<string, models.BlockDef>,
+): boolean {
+  const edges = g.edges ?? []
+  return (g.nodes ?? []).some((n) =>
+    nodeEffects(defs.get(n.type), n.type, n.config, isCommandWired(n.id, edges)).includes(
+      NODE_EFFECT_STOPS_SERVER,
+    ),
+  )
+}
+
+/**
+ * The ids of the enabled graphs that stop the server, for the tile's summaries.
+ * Disabled graphs are left out because "next downtime" is a promise about a
+ * schedule that is armed.
+ */
+export function stoppingGraphIds(
+  graphs: readonly models.Graph[],
+  blockDefs: readonly models.BlockDef[],
+): Set<string> {
+  const defs = new Map(blockDefs.map((d) => [d.id, d]))
+  return new Set(graphs.filter((g) => g.enabled && graphStopsServer(g, defs)).map((g) => g.id))
+}
+
+/**
+ * Why a summary's "next downtime" is a lower bound: the clock gives when the
+ * graph's trigger fires, and the stop lands after it by any delay and warning
+ * lead upstream of the stopping block.
+ */
+export const DOWNTIME_TOOLTIP =
+  'Next scheduled run of a graph that stops the server. The stop lands a little after this, by any delay or warning before it.'

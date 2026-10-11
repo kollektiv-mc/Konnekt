@@ -161,6 +161,9 @@ export const api = {
   GetScheduleGraphs: read(() => state.graphs()),
   GetScheduleNextRuns: read(NEXT_RUNS),
   GetScheduleRunHistory: read([]),
+  // The demo's server is running with RCON up, which is the case with nothing to
+  // warn about.
+  GetScheduleGraphWarnings: read([]),
   SaveScheduleGraph: mutate((_serverId, g) => state.saveGraph(g)),
   DeleteScheduleGraph: mutate((_serverId, id) => state.deleteGraph(id)),
   SetScheduleGraphEnabled: mutate((_serverId, id, on) => state.setGraphEnabled(id, on)),

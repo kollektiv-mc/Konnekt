@@ -327,6 +327,30 @@ describe('useSchedulerStore', () => {
     expect(useSchedulerStore.getState().error).toBeNull()
   })
 
+  // The warnings are advice about the canvas: they go out for the server the
+  // store holds, and a failed ask is the editor's to interpret, not a banner.
+  it('graphWarnings asks for the held server and returns the advice', async () => {
+    vi.mocked(App.GetScheduleGraphWarnings).mockResolvedValue(['RCON is not confirmed'])
+    const g = graph('g1')
+    await expect(useSchedulerStore.getState().graphWarnings(g)).resolves.toEqual([
+      'RCON is not confirmed',
+    ])
+    expect(App.GetScheduleGraphWarnings).toHaveBeenCalledWith(SERVER, g)
+  })
+
+  it('graphWarnings treats a null answer as no warnings', async () => {
+    vi.mocked(App.GetScheduleGraphWarnings).mockResolvedValue(null as unknown as string[])
+    await expect(useSchedulerStore.getState().graphWarnings(graph('g1'))).resolves.toEqual([])
+  })
+
+  it('graphWarnings failures do not set the store error', async () => {
+    vi.mocked(App.GetScheduleGraphWarnings).mockRejectedValue(new Error('no bridge'))
+    await expect(useSchedulerStore.getState().graphWarnings(graph('g1'))).rejects.toThrow(
+      'no bridge',
+    )
+    expect(useSchedulerStore.getState().error).toBeNull()
+  })
+
   it('clearError resets the banner', () => {
     useSchedulerStore.setState({ error: 'boom' })
     useSchedulerStore.getState().clearError()

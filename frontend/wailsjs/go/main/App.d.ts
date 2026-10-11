@@ -81,6 +81,8 @@ export function GetRemoteAccessState():Promise<models.RemoteAccessState>;
 
 export function GetScheduleBlockDefs():Promise<Array<models.BlockDef>>;
 
+export function GetScheduleGraphWarnings(arg1:string,arg2:models.Graph):Promise<Array<string>>;
+
 export function GetScheduleGraphs(arg1:string):Promise<Array<models.Graph>>;
 
 export function GetScheduleNextRuns():Promise<Record<string, number>>;

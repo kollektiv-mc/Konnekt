@@ -56,6 +56,12 @@ type BlockDef struct {
 	ConfigSchema   []ConfigField `json:"configSchema"`
 	Source         string        `json:"source"`              // "native" | "manifest"
 	Primitive      string        `json:"primitive,omitempty"` // manifest blocks only
+	// Effects names side effects worth showing a person who is reading a graph,
+	// declared statically by blocks whose every use has them. "stopsServer" is
+	// the only value. A block whose effect depends on its config (the Stop and
+	// Restart options of action.command) declares none here; the services
+	// package derives it per node instead.
+	Effects []string `json:"effects,omitempty"`
 }
 
 type DataPort struct {
