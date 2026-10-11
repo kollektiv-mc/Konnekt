@@ -30,15 +30,11 @@ var remoteMethods = map[string]services.RemoteMethod{
 	"DownloadAndInstallUpdate": {Tier: services.RemoteTierAdmin,
 		Reason: "replaces the running executable (§ S8.2)"},
 
-	// Bucket destinations. Saving and testing carry a credential typed at the
-	// desktop; the secret is never listed back.
+	// Bucket destinations. The secret is never listed back; saving and testing
+	// carry it as an argument and are desktop-only (neverRemote).
 	"ListDestinations": {Tier: services.RemoteTierRead, Reason: "names, endpoints and buckets; the secret is never sent, only whether one is set"},
-	"SaveDestination": {Tier: services.RemoteTierAdmin,
-		Reason: "stores a credential that can write to the user's storage, typed at the desktop"},
 	"DeleteDestination": {Tier: services.RemoteTierAdmin,
 		Reason: "removes a bucket and its stored secret; a graph that names it stops uploading"},
-	"TestDestination": {Tier: services.RemoteTierAdmin,
-		Reason: "makes the host call out to an address and sign it with a stored credential"},
 
 	// Config files.
 	"ListConfigFiles": {Tier: services.RemoteTierRead, Reason: "file names under the server directory"},
@@ -169,4 +165,10 @@ var neverRemote = map[string]string{
 	"RemoveRemoteDevice":   "the desktop's list of who may sign in",
 	"RevokeRemoteSessions": "revocation is the desktop's (§ S8.5)",
 	"AnswerRemoteApproval": "the approval itself (§ S8.2); a browser that could call it could approve its own admin calls",
+
+	// A bucket credential is typed at the desktop. An admin call's approval card
+	// prints the call's arguments (§ S8.2), so a secret sent from a browser would
+	// be shown there and kept in the pending list until answered.
+	"SaveDestination": "carries the secret access key as an argument; a credential is typed at the desktop only",
+	"TestDestination": "carries the secret access key as an argument; a credential is typed at the desktop only",
 }
