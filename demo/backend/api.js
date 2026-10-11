@@ -281,6 +281,12 @@ export const api = {
   RemoveRemoteDevice: refuse("Remote access"),
   RevokeRemoteSessions: refuse("Remote access"),
   AnswerRemoteApproval: refuse("Remote access"),
+  // Bucket destinations hold a credential and test it against a live endpoint,
+  // so the demo lists none and refuses every write.
+  ListDestinations: read([]),
+  SaveDestination: refuse("Saving a bucket destination"),
+  DeleteDestination: refuse("Deleting a bucket destination"),
+  TestDestination: refuse("Testing a bucket destination"),
   LogClientError: async () => undefined,
   CheckForUpdates: read({
     currentVersion: "demo",

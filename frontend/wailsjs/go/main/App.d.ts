@@ -25,6 +25,8 @@ export function CreateBackup(arg1:string):Promise<models.Backup>;
 
 export function DeleteBackup(arg1:string,arg2:string):Promise<void>;
 
+export function DeleteDestination(arg1:string):Promise<void>;
+
 export function DeleteLayoutPreset(arg1:string):Promise<void>;
 
 export function DeleteScheduleGraph(arg1:string,arg2:string):Promise<void>;
@@ -109,6 +111,8 @@ export function ListBackups(arg1:string):Promise<Array<models.Backup>>;
 
 export function ListConfigFiles(arg1:string):Promise<Array<models.ConfigFile>>;
 
+export function ListDestinations():Promise<Array<models.Destination>>;
+
 export function ListFontFamilies():Promise<Array<string>>;
 
 export function ListLoaderVersions(arg1:string):Promise<Array<models.LoaderVersion>>;
@@ -179,6 +183,8 @@ export function SaveAppSettings(arg1:models.AppSettings):Promise<void>;
 
 export function SaveCommandButtons(arg1:Array<models.CommandButton>):Promise<void>;
 
+export function SaveDestination(arg1:models.Destination,arg2:string):Promise<models.Destination>;
+
 export function SaveLayoutPreset(arg1:string,arg2:string):Promise<void>;
 
 export function SaveScheduleGraph(arg1:string,arg2:models.Graph):Promise<models.Graph>;
@@ -208,6 +214,8 @@ export function StopRemoteAccess():Promise<void>;
 export function StopRemoteTunnel():Promise<void>;
 
 export function StopServer(arg1:string):Promise<void>;
+
+export function TestDestination(arg1:models.Destination,arg2:string):Promise<models.DestinationTestResult>;
 
 export function UpdateBackupMeta(arg1:string,arg2:string,arg3:string,arg4:Array<string>):Promise<models.Backup>;
 

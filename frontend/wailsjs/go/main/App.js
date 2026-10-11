@@ -46,6 +46,10 @@ export function DeleteBackup(arg1, arg2) {
   return window['go']['main']['App']['DeleteBackup'](arg1, arg2);
 }
 
+export function DeleteDestination(arg1) {
+  return window['go']['main']['App']['DeleteDestination'](arg1);
+}
+
 export function DeleteLayoutPreset(arg1) {
   return window['go']['main']['App']['DeleteLayoutPreset'](arg1);
 }
@@ -214,6 +218,10 @@ export function ListConfigFiles(arg1) {
   return window['go']['main']['App']['ListConfigFiles'](arg1);
 }
 
+export function ListDestinations() {
+  return window['go']['main']['App']['ListDestinations']();
+}
+
 export function ListFontFamilies() {
   return window['go']['main']['App']['ListFontFamilies']();
 }
@@ -354,6 +362,10 @@ export function SaveCommandButtons(arg1) {
   return window['go']['main']['App']['SaveCommandButtons'](arg1);
 }
 
+export function SaveDestination(arg1, arg2) {
+  return window['go']['main']['App']['SaveDestination'](arg1, arg2);
+}
+
 export function SaveLayoutPreset(arg1, arg2) {
   return window['go']['main']['App']['SaveLayoutPreset'](arg1, arg2);
 }
@@ -412,6 +424,10 @@ export function StopRemoteTunnel() {
 
 export function StopServer(arg1) {
   return window['go']['main']['App']['StopServer'](arg1);
+}
+
+export function TestDestination(arg1, arg2) {
+  return window['go']['main']['App']['TestDestination'](arg1, arg2);
 }
 
 export function UpdateBackupMeta(arg1, arg2, arg3, arg4) {

@@ -30,6 +30,16 @@ var remoteMethods = map[string]services.RemoteMethod{
 	"DownloadAndInstallUpdate": {Tier: services.RemoteTierAdmin,
 		Reason: "replaces the running executable (§ S8.2)"},
 
+	// Bucket destinations. Saving and testing carry a credential typed at the
+	// desktop; the secret is never listed back.
+	"ListDestinations": {Tier: services.RemoteTierRead, Reason: "names, endpoints and buckets; the secret is never sent, only whether one is set"},
+	"SaveDestination": {Tier: services.RemoteTierAdmin,
+		Reason: "stores a credential that can write to the user's storage, typed at the desktop"},
+	"DeleteDestination": {Tier: services.RemoteTierAdmin,
+		Reason: "removes a bucket and its stored secret; a graph that names it stops uploading"},
+	"TestDestination": {Tier: services.RemoteTierAdmin,
+		Reason: "makes the host call out to an address and sign it with a stored credential"},
+
 	// Config files.
 	"ListConfigFiles": {Tier: services.RemoteTierRead, Reason: "file names under the server directory"},
 	"ReadConfigFile": {Tier: services.RemoteTierRead,

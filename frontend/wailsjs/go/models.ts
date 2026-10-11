@@ -365,6 +365,50 @@ export namespace models {
 	    }
 	}
 	
+	export class Destination {
+	    id: string;
+	    name: string;
+	    endpoint: string;
+	    region: string;
+	    bucket: string;
+	    prefix: string;
+	    publicBaseUrl: string;
+	    accessKeyId: string;
+	    secretSet: boolean;
+	
+	    static createFrom(source: any = {}) {
+	        return new Destination(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.name = source["name"];
+	        this.endpoint = source["endpoint"];
+	        this.region = source["region"];
+	        this.bucket = source["bucket"];
+	        this.prefix = source["prefix"];
+	        this.publicBaseUrl = source["publicBaseUrl"];
+	        this.accessKeyId = source["accessKeyId"];
+	        this.secretSet = source["secretSet"];
+	    }
+	}
+	export class DestinationTestResult {
+	    ok: boolean;
+	    status: string;
+	    message: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new DestinationTestResult(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.ok = source["ok"];
+	        this.status = source["status"];
+	        this.message = source["message"];
+	    }
+	}
 	export class Edge {
 	    id: string;
 	    kind: string;
