@@ -26,6 +26,7 @@ export namespace models {
 	    navWidth: number;
 	    smoothScrolling: boolean;
 	    fonts: Record<string, string>;
+	    webviewGpu: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new AppSettings(source);
@@ -58,6 +59,7 @@ export namespace models {
 	        this.navWidth = source["navWidth"];
 	        this.smoothScrolling = source["smoothScrolling"];
 	        this.fonts = source["fonts"];
+	        this.webviewGpu = source["webviewGpu"];
 	    }
 	}
 	export class AttrValue {

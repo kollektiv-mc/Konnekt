@@ -204,6 +204,14 @@ func (s *ConfigService) SetActiveServerID(id string) error {
 // are separate constants because neither side can import the other's.
 const DefaultNavWidth = 192
 
+// ReadAppSettings reads app_settings.json from dataDir, with the same defaults
+// GetAppSettings fills in. It is for main, which needs one setting before the
+// App and its ConfigService exist, and it touches nothing else on disk: unlike
+// SetDataDir it does not repair the active server id.
+func ReadAppSettings(dataDir string) (models.AppSettings, error) {
+	return (&ConfigService{dataDir: dataDir}).GetAppSettings()
+}
+
 func (s *ConfigService) GetAppSettings() (models.AppSettings, error) {
 	defaults := models.AppSettings{
 		Theme:                            "dark",

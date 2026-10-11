@@ -185,8 +185,10 @@ nightly code.
   proprietary NVIDIA driver Konnekt sets `WEBKIT_DISABLE_DMABUF_RENDERER=1`
   for itself before the window opens, which is the standard fix for the blank
   window that driver otherwise shows, and never overrides a value you set. If
-  a machine still misbehaves, `KONNEKT_WEBVIEW_GPU=never` (or `ondemand`)
-  turns acceleration down; `konnekt.log` records which policy was chosen and
+  a machine still misbehaves, Settings > Appearance > Hardware acceleration
+  turns it down from the next launch. If the window never appears at all,
+  `KONNEKT_WEBVIEW_GPU=never` (or `ondemand`) in the environment does the same
+  and wins over the setting; `konnekt.log` records which policy was chosen and
   why.
 - **macOS** is not published on either channel, but builds from source via
   `wails build` like any other platform.
