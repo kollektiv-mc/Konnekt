@@ -3,7 +3,7 @@
     "id": "action.backup",
     "category": "action",
     "label": "Create Backup",
-    "description": "Creates a backup of the active server's world.",
+    "description": "Backs up the whole server, or only its active world.",
     "isTrigger": false,
     "controlInputs": [
       "trigger"
@@ -20,7 +20,24 @@
         "type": "string"
       }
     ],
-    "configSchema": null,
+    "configSchema": [
+      {
+        "key": "target",
+        "label": "Target",
+        "type": "select",
+        "default": "server",
+        "options": [
+          {
+            "label": "Full server",
+            "value": "server"
+          },
+          {
+            "label": "Active world",
+            "value": "active-world"
+          }
+        ]
+      }
+    ],
     "source": "native"
   },
   {
