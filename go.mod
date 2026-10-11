@@ -11,7 +11,7 @@ require (
 	github.com/sigstore/sigstore-go v1.3.0
 	github.com/wailsapp/wails/v2 v2.12.0
 	golang.org/x/crypto v0.57.0
-	golang.org/x/sys v0.48.0
+	golang.org/x/sys v0.49.0
 )
 
 require (
