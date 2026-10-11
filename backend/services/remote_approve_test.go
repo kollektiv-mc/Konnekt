@@ -177,6 +177,22 @@ func TestRemoteApprovalPromptsAreBounded(t *testing.T) {
 	}
 }
 
+// waitForChanges polls until the desktop has been told want times. Ask and
+// Answer update the pending set under the lock and tell the desktop after
+// releasing it, so a poller that saw the set change can run before the
+// callback has; the count is reached a moment later, never missed.
+func waitForChanges(t *testing.T, changes *atomic.Int32, want int32) {
+	t.Helper()
+	deadline := time.Now().Add(2 * time.Second)
+	for time.Now().Before(deadline) {
+		if changes.Load() == want {
+			return
+		}
+		time.Sleep(time.Millisecond)
+	}
+	t.Fatalf("%d changes, want %d", changes.Load(), want)
+}
+
 // The desktop is told when a prompt appears and when it goes.
 func TestRemoteApprovalTellsTheDesktopOfChanges(t *testing.T) {
 	a := NewRemoteApprovals()
@@ -184,18 +200,14 @@ func TestRemoteApprovalTellsTheDesktopOfChanges(t *testing.T) {
 	a.OnChange(func() { changes.Add(1) })
 	done := ask(a, context.Background(), "Phone")
 	id := waitForPending(t, a)
-	if changes.Load() != 1 {
-		t.Errorf("%d changes after a call arrived, want 1", changes.Load())
-	}
+	waitForChanges(t, &changes, 1)
 	if err := a.Answer(id, true); err != nil {
 		t.Fatal(err)
 	}
 	if err := result(t, done); err != nil {
 		t.Fatal(err)
 	}
-	if changes.Load() != 2 {
-		t.Errorf("%d changes after the answer, want 2", changes.Load())
-	}
+	waitForChanges(t, &changes, 2)
 }
 
 // § S8.9: the log names the method and the device, and never an argument.
