@@ -183,10 +183,17 @@ func registerBuiltins(r *BlockRegistry) {
 
 	must(r.RegisterBlock(models.BlockDef{
 		ID: "action.backup", Category: "action", Label: "Create Backup",
-		Description:   "Creates a backup of the active server's world.",
+		Description:   "Backs up the whole server, or only its active world.",
 		ControlInputs: []string{"trigger"}, ControlOutputs: []string{"onComplete", "onFailed"},
 		DataOutputs: []models.DataPort{{ID: "filename", Label: "Backup filename", Type: "string"}},
-		Source:      "native",
+		ConfigSchema: []models.ConfigField{
+			{Key: "target", Label: "Target", Type: "select", Default: backupTargetServer,
+				Options: []models.FieldOption{
+					{Label: "Full server", Value: backupTargetServer},
+					{Label: "Active world", Value: backupTargetActiveWorld},
+				}},
+		},
+		Source: "native",
 	}, execBackup))
 
 	must(r.RegisterBlock(models.BlockDef{
@@ -362,8 +369,32 @@ func execRcon(e *ExecContext) ExecResult {
 	return ExecResult{Port: "onComplete"}
 }
 
+// The action.backup targets. A graph saved before the field existed has no
+// target in its config, and that must keep meaning a full-server backup.
+const (
+	backupTargetServer      = "server"
+	backupTargetActiveWorld = "active-world"
+)
+
 func execBackup(e *ExecContext) ExecResult {
-	b, err := e.Backup().CreateBackup(e.ServerID)
+	var (
+		b   models.Backup
+		err error
+	)
+	switch target := e.GetString("target"); target {
+	case "", backupTargetServer:
+		b, err = e.Backup().CreateBackup(e.ServerID)
+	case backupTargetActiveWorld:
+		var world string
+		world, err = e.Backup().activeWorldName(e.ServerID)
+		if err == nil {
+			b, err = e.Backup().CreateWorldBackup(e.ServerID, world)
+		}
+	default:
+		// Fail rather than guess: backing up something other than what the
+		// graph asked for is worse than a visible onFailed.
+		err = fmt.Errorf("unknown backup target %q", target)
+	}
 	if err != nil {
 		return ExecResult{Port: "onFailed", Err: err}
 	}

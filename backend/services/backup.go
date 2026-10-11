@@ -95,6 +95,18 @@ func (s *BackupService) worldPath(serverID string) (string, error) {
 	return filepath.Join(cfg.WorkingDir, levelName), nil
 }
 
+// activeWorldName is the folder name of the world the server is set to load,
+// which is what CreateWorldBackup keys on. Base, not the full path, so a
+// level-name that points outside the working directory cannot name a backup
+// directory outside the backup root.
+func (s *BackupService) activeWorldName(serverID string) (string, error) {
+	p, err := s.worldPath(serverID)
+	if err != nil {
+		return "", err
+	}
+	return filepath.Base(p), nil
+}
+
 // ─── Metadata sidecar ─────────────────────────────────────────────────────
 
 type backupFileMeta struct {
