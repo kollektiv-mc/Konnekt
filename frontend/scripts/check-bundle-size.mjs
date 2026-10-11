@@ -13,11 +13,17 @@
 //    on-demand one (#281). The set is measured as "every chunk except the
 //    entry" rather than by mapping the warm list's specifiers onto hashed
 //    file names, and that is exact rather than approximate: check-prefetch
-//    asserts every React.lazy chunk is in the warm list, and the entry imports
-//    no helper chunk statically (verified in the build this budget was set
-//    from), so the closure of the warm list is precisely the non-entry set.
-//    Should the entry ever gain a static helper chunk, it is counted here as
-//    warmed rather than as entry, which errs on the side of the tighter budget.
+//    asserts every React.lazy chunk is in the warm list, so the closure of the
+//    warm list is precisely the non-eager set.
+//
+// "The entry" is the entry chunk plus every chunk it imports statically, read
+// from the <link rel="modulepreload"> tags Vite writes into index.html for
+// exactly that set. Under Vite 5's Rollup the set was the entry alone. Vite 8's
+// Rolldown hoists modules the entry shares with a lazy chunk (React, the JSX
+// runtime, the server store) into helper chunks the entry imports, which took
+// 15 KB out of index-*.js without changing what a page load pays for (#423).
+// Counting only index-*.js would have handed the entry budget that 15 KB as
+// silent headroom.
 //
 // Measures the built output, so it needs a build matching the current sources.
 // lib/dist-freshness.mjs makes that true rather than assuming it: an unnoticed
@@ -74,7 +80,16 @@ if (!entry) {
   process.exit(1)
 }
 
-const warmed = rows.filter((r) => r !== entry)
+const html = await readFile(path.join(path.dirname(distAssets), 'index.html'), 'utf8')
+const preloaded = new Set(
+  [...html.matchAll(/<link rel="modulepreload"[^>]*href="[^"]*\/assets\/([^"]+\.js)"/g)].map(
+    (m) => m[1],
+  ),
+)
+const eager = rows.filter((r) => r === entry || preloaded.has(r.file))
+const eagerKB = eager.reduce((sum, r) => sum + r.gzipKB, 0)
+
+const warmed = rows.filter((r) => !eager.includes(r))
 // A build with no lazy chunk at all means the code-split has collapsed back
 // into the entry, which the entry budget catches loudly. It also means this
 // half of the check would be comparing zero against the budget and passing,
@@ -86,7 +101,7 @@ if (warmed.length === 0) {
 const warmedKB = warmed.reduce((sum, r) => sum + r.gzipKB, 0)
 
 console.log(
-  `\nEntry chunk (${entry.file}): ${entry.gzipKB.toFixed(1)} KB gzip (budget: ${ENTRY_BUDGET_KB} KB)`,
+  `\nEntry (${entry.file} + ${eager.length - 1} static imports): ${eagerKB.toFixed(1)} KB gzip (budget: ${ENTRY_BUDGET_KB} KB)`,
 )
 console.log(
   `Warmed chunks (${warmed.length} files): ${warmedKB.toFixed(1)} KB gzip (budget: ${WARMED_BUDGET_KB} KB)`,
@@ -94,10 +109,10 @@ console.log(
 
 let failed = false
 
-if (entry.gzipKB > ENTRY_BUDGET_KB) {
+if (eagerKB > ENTRY_BUDGET_KB) {
   failed = true
   console.error(
-    `\n✖ Entry chunk exceeds the ${ENTRY_BUDGET_KB} KB gzip budget by ${(entry.gzipKB - ENTRY_BUDGET_KB).toFixed(1)} KB.`,
+    `\n✖ Entry exceeds the ${ENTRY_BUDGET_KB} KB gzip budget by ${(eagerKB - ENTRY_BUDGET_KB).toFixed(1)} KB.`,
   )
   console.error(
     '  If this growth is expected, raise ENTRY_BUDGET_KB in scripts/check-bundle-size.mjs.',

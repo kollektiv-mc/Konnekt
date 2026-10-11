@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
+import type { Mock } from 'vitest'
 import { renderHook, waitFor, act } from '@testing-library/react'
 import * as App from '../../../wailsjs/go/main/App'
 import { EventsOn } from '../../../wailsjs/runtime/runtime'
@@ -25,7 +26,7 @@ function graph(id: string): models.Graph {
 // subscription. Data behaviour is covered by useSchedulerStore.test.ts.
 describe('useScheduler', () => {
   let handlers: Record<string, (...data: unknown[]) => void>
-  let off: ReturnType<typeof vi.fn>
+  let off: Mock<() => void>
 
   beforeEach(() => {
     vi.clearAllMocks()

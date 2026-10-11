@@ -515,8 +515,10 @@ tree.
       Ratchet it down after a split, the way the coverage floor ratchets up: it
       sat at 550 KB against a 145 KB chunk for the length of one commit, which
       is a budget that would have waved through 3.7x growth. The check covers
-      the **entry chunk only** — see the backlog for what that leaves uncovered
-      now that there are six chunks.
+      the **entry chunk plus the helper chunks it imports statically** (read
+      from `index.html`'s `modulepreload` links), which since Vite 8's Rolldown
+      is ten files rather than one (HEALTH_LOG 2026-10-09) — see the backlog
+      for what that leaves uncovered now that there are six chunks.
 - [x] `frontend/src/tiles/registry.ts` was extended, not restructured, when
       new tiles were added. (Two sanctioned exceptions while the tile grid's
       placement model was under active repair — see HEALTH_LOG.md: loose
@@ -643,7 +645,9 @@ current. Priorities mirror the pillars above.
 `pnpm check-bundle` measured the entry at 164.7 KB gzip against the 165 KB
 budget before the per-tile layouts landed, and 166.1 KB after; the budget was
 raised to 175 KB with ~5% headroom rather than the 12% the original had, so
-the next feature on the eager path trips it again. Twenty kilobytes of growth
+the next feature on the eager path trips it again. Vite 8 (2026-10-09) read
+it at 172.5 KB against Vite 5's 173.4 KB on the same sources: the move to
+Rolldown is not the split this item is waiting for. Twenty kilobytes of growth
 since the 145 KB measurement, none of it one thing. Worth finding the next
 split before raising again: candidates are the mods tile's `BrowsePanel` and
 `ContentDetailPanel`, which only the maximized face renders yet load eagerly

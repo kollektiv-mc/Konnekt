@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
+import type { Mock } from 'vitest'
 import { renderHook, waitFor, act } from '@testing-library/react'
 import * as App from '../../wailsjs/go/main/App'
 import { EventsOn } from '../../wailsjs/runtime/runtime'
@@ -41,7 +42,7 @@ const stored = () => useServerStore.getState().status
 // every consumer selects from the store, so the assertions here read the store.
 describe('useServerStatusSync', () => {
   let handlers: Record<string, (...data: unknown[]) => void>
-  let off: ReturnType<typeof vi.fn>
+  let off: Mock<() => void>
 
   beforeEach(() => {
     vi.clearAllMocks()
