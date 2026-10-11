@@ -8,4 +8,7 @@ type Backup struct {
 	Tags        []string `json:"tags"`
 	Kind        string   `json:"kind"`            // "server" | "world"
 	World       string   `json:"world,omitempty"` // set for kind="world"
+	// LodsSkipped marks an archive taken while the server ran, so it holds no
+	// Distant Horizons database (#563).
+	LodsSkipped bool `json:"lodsSkipped,omitempty"`
 }

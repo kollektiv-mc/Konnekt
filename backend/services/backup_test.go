@@ -79,7 +79,7 @@ func TestZipDirRoundTrip(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := zipDirWithProgress(src, out, nil); err != nil {
+	if err := zipDirWithProgress(src, out, nil, nil); err != nil {
 		out.Close()
 		t.Fatalf("zipDirWithProgress error: %v", err)
 	}
@@ -136,8 +136,8 @@ func TestZipFunctionsReturnTheCloseError(t *testing.T) {
 		name string
 		run  func(dest io.Writer) error
 	}{
-		{"zipDirWithProgress", func(dest io.Writer) error { return zipDirWithProgress(src, dest, nil) }},
-		{"zipRootsWithProgress", func(dest io.Writer) error { return zipRootsWithProgress([]string{src}, dest, nil) }},
+		{"zipDirWithProgress", func(dest io.Writer) error { return zipDirWithProgress(src, dest, nil, nil) }},
+		{"zipRootsWithProgress", func(dest io.Writer) error { return zipRootsWithProgress([]string{src}, dest, nil, nil) }},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -162,8 +162,8 @@ func TestZipFunctionsKeepTheWalkErrorOverTheCloseError(t *testing.T) {
 		name string
 		run  func(dest io.Writer) error
 	}{
-		{"zipDirWithProgress", func(dest io.Writer) error { return zipDirWithProgress(missing, dest, nil) }},
-		{"zipRootsWithProgress", func(dest io.Writer) error { return zipRootsWithProgress([]string{missing}, dest, nil) }},
+		{"zipDirWithProgress", func(dest io.Writer) error { return zipDirWithProgress(missing, dest, nil, nil) }},
+		{"zipRootsWithProgress", func(dest io.Writer) error { return zipRootsWithProgress([]string{missing}, dest, nil, nil) }},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {

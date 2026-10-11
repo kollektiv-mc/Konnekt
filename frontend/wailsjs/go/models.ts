@@ -90,6 +90,7 @@ export namespace models {
 	    tags: string[];
 	    kind: string;
 	    world?: string;
+	    lodsSkipped?: boolean;
 	
 	    static createFrom(source: any = {}) {
 	        return new Backup(source);
@@ -104,6 +105,7 @@ export namespace models {
 	        this.tags = source["tags"];
 	        this.kind = source["kind"];
 	        this.world = source["world"];
+	        this.lodsSkipped = source["lodsSkipped"];
 	    }
 	}
 	export class FieldOption {

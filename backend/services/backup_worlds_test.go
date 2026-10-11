@@ -336,7 +336,7 @@ func TestZipDirSkipsSessionLockAndKeepsEmptyDirs(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := zipDirWithProgress(src, out, nil); err != nil {
+	if err := zipDirWithProgress(src, out, nil, nil); err != nil {
 		t.Fatal(err)
 	}
 	if err := out.Close(); err != nil {
