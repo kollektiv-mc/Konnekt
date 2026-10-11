@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { classifyWheel, findScrollTarget, installSpringScroll } from './springScroll'
+import { getWheelAnimator } from './wheelAnimator'
 
 // jsdom lays nothing out, so a scroller is given its geometry by hand:
 // `scrollTop` clamps to the range a real element would, and the two heights
@@ -207,5 +208,48 @@ describe('installSpringScroll', () => {
     uninstall()
     advance(16)
     expect(el.scrollTop).toBe(partway)
+  })
+})
+
+describe('the registered WheelAnimator', () => {
+  let now = 0
+  let frames: FrameRequestCallback[] = []
+  let enabled = true
+
+  beforeEach(() => {
+    now = 0
+    frames = []
+    enabled = true
+    vi.spyOn(performance, 'now').mockImplementation(() => now)
+    vi.stubGlobal('requestAnimationFrame', (cb: FrameRequestCallback) => frames.push(cb))
+    vi.stubGlobal('cancelAnimationFrame', () => {})
+  })
+
+  afterEach(() => {
+    vi.restoreAllMocks()
+    vi.unstubAllGlobals()
+    document.body.innerHTML = ''
+  })
+
+  it('is registered for as long as the listener is installed', () => {
+    const uninstall = installSpringScroll({ enabled: () => enabled })
+    expect(getWheelAnimator()).not.toBeNull()
+    uninstall()
+    expect(getWheelAnimator()).toBeNull()
+  })
+
+  it('animates a notch, reports the destination, and declines what it does not animate', () => {
+    const uninstall = installSpringScroll({ enabled: () => enabled })
+    const animator = getWheelAnimator()
+    const el = makeScroller(document.body, 2000, 500)
+    const e = new WheelEvent('wheel', { deltaY: 100 })
+    expect(animator?.scrollBy(el, e)).toBe(true)
+    expect(animator?.destinationOf(el)).toBe(100)
+    expect(el.scrollTop).toBe(0)
+    expect(animator?.scrollBy(el, new WheelEvent('wheel', { deltaY: 3.5 }))).toBe(false)
+    enabled = false
+    expect(animator?.scrollBy(el, e)).toBe(false)
+    expect(animator?.destinationOf(el)).toBe(100)
+    uninstall()
   })
 })

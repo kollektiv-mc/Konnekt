@@ -7,9 +7,17 @@ import {
   type ScrollMetrics,
   type WheelGesture,
 } from '../lib/canvasWheel'
+import { getWheelAnimator } from '../lib/wheelAnimator'
 
+/**
+ * An element mid-animation is judged by where it is bound for, not where it
+ * is: otherwise a fast run of notches keeps going to the canvas after the
+ * spring has already been sent to its end, and the surplus is clamped away
+ * instead of handing over to the pane.
+ */
 function metrics(el: HTMLElement): ScrollMetrics {
-  return { scrollTop: el.scrollTop, scrollHeight: el.scrollHeight, clientHeight: el.clientHeight }
+  const scrollTop = getWheelAnimator()?.destinationOf(el) ?? el.scrollTop
+  return { scrollTop, scrollHeight: el.scrollHeight, clientHeight: el.clientHeight }
 }
 
 function scrollsVertically(el: HTMLElement): boolean {
@@ -49,6 +57,12 @@ function panesUnder(target: EventTarget | null, canvas: HTMLElement): HTMLElemen
  *
  * Moving the canvas never touches a pane's `scrollTop`, so the console's
  * follow-tail logic neither detaches nor re-arms from it.
+ *
+ * The canvas moves on the same spring as every other scroller
+ * (`lib/springScroll.ts`) when a mouse-wheel notch would be animated there,
+ * and jumps otherwise: a precision touchpad, reduced motion, the Settings
+ * toggle off, or the spring's chunk not loaded yet. The spring's own
+ * listener never sees these events, since this one claims them first.
  */
 export function useCanvasFirstWheel(canvasRef: RefObject<HTMLElement | null>): void {
   useEffect(() => {
@@ -85,7 +99,7 @@ export function useCanvasFirstWheel(canvasRef: RefObject<HTMLElement | null>): v
 
       if (decision.owner === 'canvas') {
         e.preventDefault()
-        canvas.scrollTop += deltaY
+        if (!getWheelAnimator()?.scrollBy(canvas, e)) canvas.scrollTop += deltaY
       } else if (decision.owner === 'hold') {
         e.preventDefault()
       }

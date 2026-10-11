@@ -13,7 +13,9 @@
  * - A wheel event something else has already claimed. The backups carousel,
  *   the worlds scene and the scheduler's graph editor each `preventDefault`
  *   the wheel for their own zoom or paging; the listener is on the bubble
- *   phase so theirs run first, and `defaultPrevented` is honoured.
+ *   phase so theirs run first, and `defaultPrevented` is honoured. The
+ *   dashboard canvas claims the wheel too (`hooks/useCanvasFirstWheel.ts`),
+ *   and animates the canvas through the `WheelAnimator` this registers.
  * - Ctrl or Shift held (zoom, horizontal), a horizontal delta, the OS
  *   reduced-motion preference, and the Settings toggle being off.
  *
@@ -30,6 +32,7 @@
  */
 
 import { SpringScrollAnimation } from './springPhysics'
+import { setWheelAnimator, type WheelAnimator } from './wheelAnimator'
 
 export type WheelKind = 'notch' | 'precision'
 
@@ -205,13 +208,10 @@ export function installSpringScroll({
   const destinationOf = (el: Element): number | null =>
     el instanceof HTMLElement ? (scrollers.get(el)?.destination ?? null) : null
 
-  const onWheel = (e: WheelEvent) => {
-    if (e.defaultPrevented || !enabled() || prefersReducedMotion()) return
-    if (e.ctrlKey || e.shiftKey || e.deltaY === 0 || e.deltaX !== 0) return
-    if (classifyWheel(e) !== 'notch') return
-    const el = findScrollTarget(e.target, e.deltaY > 0 ? 1 : -1, destinationOf)
-    if (!el) return
-    e.preventDefault()
+  const animates = (e: WheelEvent): boolean =>
+    enabled() && !prefersReducedMotion() && classifyWheel(e) === 'notch'
+
+  const animate = (el: HTMLElement, e: WheelEvent): void => {
     let scroller = scrollers.get(el)
     if (!scroller) {
       scroller = new ElementScroller(el, settled)
@@ -220,9 +220,29 @@ export function installSpringScroll({
     scroller.notch(pixelDelta(e, el), performance.now())
   }
 
+  const onWheel = (e: WheelEvent) => {
+    if (e.defaultPrevented || !animates(e)) return
+    if (e.ctrlKey || e.shiftKey || e.deltaY === 0 || e.deltaX !== 0) return
+    const el = findScrollTarget(e.target, e.deltaY > 0 ? 1 : -1, destinationOf)
+    if (!el) return
+    e.preventDefault()
+    animate(el, e)
+  }
+
+  const animator: WheelAnimator = {
+    scrollBy(el, e) {
+      if (!animates(e)) return false
+      animate(el, e)
+      return true
+    },
+    destinationOf,
+  }
+
   target.addEventListener('wheel', onWheel, { passive: false })
+  setWheelAnimator(animator)
   return () => {
     target.removeEventListener('wheel', onWheel)
+    setWheelAnimator(null)
     // stop() removes the entry it is on; a Map iterator is defined to cope.
     for (const scroller of scrollers.values()) scroller.stop()
   }
