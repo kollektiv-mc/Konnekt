@@ -189,6 +189,7 @@ export namespace models {
 	    configSchema: ConfigField[];
 	    source: string;
 	    primitive?: string;
+	    timeoutSeconds?: number;
 	
 	    static createFrom(source: any = {}) {
 	        return new BlockDef(source);
@@ -208,6 +209,7 @@ export namespace models {
 	        this.configSchema = this.convertValues(source["configSchema"], ConfigField);
 	        this.source = source["source"];
 	        this.primitive = source["primitive"];
+	        this.timeoutSeconds = source["timeoutSeconds"];
 	    }
 	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {

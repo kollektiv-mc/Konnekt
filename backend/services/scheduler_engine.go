@@ -10,11 +10,55 @@ import (
 	"konnekt/backend/models"
 )
 
-const (
-	maxNodesPerRun = 500
+const maxNodesPerRun = 500
+
+// maxBlockTimeout bounds a declared limit. It is far above any real block and
+// exists so a malformed manifest cannot overflow a time.Duration.
+const maxBlockTimeout = 7 * 24 * time.Hour
+
+// maxRunDuration is the run cap a graph of ordinary blocks gets, and nodeTimeout
+// the limit of a block that declares none. Both are variables so a test can
+// shrink them, the way statBackup in backup.go is swapped.
+var (
 	maxRunDuration = 30 * time.Minute
 	nodeTimeout    = 60 * time.Second
 )
+
+// blockTimeout is how long one execution of def may run: the limit it declares,
+// or nodeTimeout when it declares none. A negative value counts as none.
+func blockTimeout(def models.BlockDef) time.Duration {
+	if def.TimeoutSeconds <= 0 {
+		return nodeTimeout
+	}
+	// Clamp in seconds first: converting before the clamp is what overflows.
+	return time.Duration(min(def.TimeoutSeconds, int(maxBlockTimeout/time.Second))) * time.Second
+}
+
+// runDuration is the wall-clock cap for one run of g: the larger of
+// maxRunDuration and the sum of the limits its nodes declare. Only declared
+// limits add up, so a graph of blocks that declare nothing keeps maxRunDuration
+// exactly, and a graph with a long block gets the room it asked for and no more.
+func (s *SchedulerService) runDuration(g models.Graph) time.Duration {
+	var declared time.Duration
+	for _, n := range g.Nodes {
+		entry, ok := s.registry.Get(n.Type)
+		if !ok || entry.def.TimeoutSeconds <= 0 {
+			continue
+		}
+		declared += blockTimeout(entry.def)
+	}
+	return max(maxRunDuration, declared)
+}
+
+// timeoutError names the limit a node hit. It reports only a node's own limit:
+// when the run's cap expired first, the parent context is done and the plain
+// error stands.
+func timeoutError(runCtx, nodeCtx context.Context, limit time.Duration, err error) error {
+	if err == nil || runCtx.Err() != nil || nodeCtx.Err() != context.DeadlineExceeded {
+		return err
+	}
+	return fmt.Errorf("timed out after %gs: %w", limit.Seconds(), err)
+}
 
 var reTemplate = regexp.MustCompile(`\{\{\s*([\w-]+)\.([\w-]+)\s*\}\}`)
 
@@ -106,7 +150,7 @@ func (s *SchedulerService) runGraph(
 	}
 
 	// Run context with a wall-clock limit.
-	runCtx, cancel := context.WithTimeout(context.Background(), maxRunDuration)
+	runCtx, cancel := context.WithTimeout(context.Background(), s.runDuration(g))
 	defer cancel()
 
 	// Run-scoped custom attributes: defined by Write Attribute nodes as raw
@@ -236,7 +280,8 @@ func (s *SchedulerService) executeNode(
 	// before we resolve inputs — ensures their outputs are available.
 	s.pullDataDependencies(runCtx, node.ID, edges, nodeByID, outputs, scope, make(map[string]bool))
 
-	nodeCtx, cancel := context.WithTimeout(runCtx, nodeTimeout)
+	limit := blockTimeout(entry.def)
+	nodeCtx, cancel := context.WithTimeout(runCtx, limit)
 	defer cancel()
 
 	resolvedConfig := resolveConfigTemplates(node.Config, outputs, scope)
@@ -262,6 +307,7 @@ func (s *SchedulerService) executeNode(
 	}
 
 	result := entry.exec(ec)
+	result.Err = timeoutError(runCtx, nodeCtx, limit, result.Err)
 
 	// Store data outputs so downstream nodes can reference them.
 	if len(dataOut) > 0 {
@@ -340,7 +386,7 @@ func (s *SchedulerService) ensureDataOutputs(
 	}
 
 	dataOut := make(map[string]interface{})
-	nodeCtx, cancel := context.WithTimeout(runCtx, nodeTimeout)
+	nodeCtx, cancel := context.WithTimeout(runCtx, blockTimeout(entry.def))
 	defer cancel()
 	ec := &ExecContext{
 		Ctx:       nodeCtx,

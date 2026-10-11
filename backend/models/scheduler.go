@@ -56,6 +56,12 @@ type BlockDef struct {
 	ConfigSchema   []ConfigField `json:"configSchema"`
 	Source         string        `json:"source"`              // "native" | "manifest"
 	Primitive      string        `json:"primitive,omitempty"` // manifest blocks only
+	// TimeoutSeconds is the longest this block may run before the engine cancels
+	// it. Zero (the field absent) means the engine's default per-node limit; a
+	// block that legitimately runs for minutes or hours declares its own. The
+	// run's overall cap grows by the limits graphs declare, so a long block is
+	// not cut short by the run it sits in.
+	TimeoutSeconds int `json:"timeoutSeconds,omitempty"`
 }
 
 type DataPort struct {
