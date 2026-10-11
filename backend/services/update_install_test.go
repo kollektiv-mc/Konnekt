@@ -560,7 +560,9 @@ func TestDownloadAndInstallUpdateRefusals(t *testing.T) {
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
 			ts := c.rel.server(t)
-			svc := &UpdateService{http: ts.Client(), baseURL: ts.URL, checkURL: allowHost(ts.URL)}
+			// An accepting verifier, so "binary unreachable" gets past the
+			// provenance check to the download it is about.
+			svc := &UpdateService{http: ts.Client(), baseURL: ts.URL, checkURL: allowHost(ts.URL), provenance: &fakeProvenance{}}
 			err := svc.DownloadAndInstallUpdate(context.Background(), c.current, UpdateChannelStable)
 			if err == nil || !strings.Contains(err.Error(), c.want) {
 				t.Errorf("err = %v, want %q", err, c.want)
