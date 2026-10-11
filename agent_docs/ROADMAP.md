@@ -194,9 +194,8 @@ historical). Individual Beta tasks are filed in
 - **Backups — beta hardening.** Full-server vs world-only snapshots shipped;
   remaining: per-world backup surfacing in the Worlds tile, the "World-specific"
   segment in the Backups tile, a world-specific Scheduler backup action,
-  multi-dimension (`world_nether`/`world_the_end`) backup, retention/pruning,
-  cancel-in-progress, a concurrency guard, restore integrity checks, and
-  import from an external file.
+  retention/pruning, cancel-in-progress, restore integrity checks, and import
+  from an external file.
 - **Tiles — beta.** Server Config tile enhancements (grouped fields, gamerule
   editor, MOTD preview), a File explorer tile, an Audit log tile, a Mod/plugin
   manager tile (Modrinth + Hangar + CurseForge), a Player profiles tile, a

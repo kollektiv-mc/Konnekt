@@ -809,7 +809,7 @@ func TestBackToBackBackupsDoNotOverwriteEachOther(t *testing.T) {
 func TestReserveBackupFileNeverTruncatesAnExistingFile(t *testing.T) {
 	dir := t.TempDir()
 
-	f, name, err := reserveBackupFile(dir)
+	f, name, err := reserveBackupFile(dir, dir)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -822,7 +822,7 @@ func TestReserveBackupFileNeverTruncatesAnExistingFile(t *testing.T) {
 
 	// Whatever the next reservation picks, it must not be this file.
 	for i := 0; i < 50; i++ {
-		next, nextName, err := reserveBackupFile(dir)
+		next, nextName, err := reserveBackupFile(dir, dir)
 		if err != nil {
 			t.Fatal(err)
 		}

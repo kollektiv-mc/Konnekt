@@ -778,14 +778,10 @@ func TestRestoreWorldBackupReportsStagingAndExtractFailures(t *testing.T) {
 // Backups tile opens as for a backup.
 func TestOpenBackupDirRefusesABlockedDirectory(t *testing.T) {
 	svc, _ := newBackupFixture(t)
-	root, err := svc.backupRoot(testServerID)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := os.MkdirAll(root, 0755); err != nil {
-		t.Fatal(err)
-	}
-	writeFile(t, filepath.Join(root, "server"), "a file where the directory should be")
+	openBackupPath = func(string) error { return nil }
+	t.Cleanup(func() { openBackupPath = OpenPath })
+	// It opens the backup root now (#553), so the root is what is blocked.
+	writeFile(t, filepath.Join(svc.dataDir, "backups"), "a file where the directory should be")
 	if err := svc.OpenBackupDir(testServerID); err == nil {
 		t.Error("OpenBackupDir with its directory blocked = nil error")
 	}
@@ -795,7 +791,7 @@ func TestOpenBackupDirRefusesABlockedDirectory(t *testing.T) {
 }
 
 func TestReserveBackupFileReportsAMissingDirectory(t *testing.T) {
-	_, _, err := reserveBackupFile(filepath.Join(t.TempDir(), "missing"))
+	_, _, err := reserveBackupFile(t.TempDir(), filepath.Join(t.TempDir(), "missing"))
 	if err == nil {
 		t.Fatal("reserveBackupFile in a missing directory = nil error")
 	}

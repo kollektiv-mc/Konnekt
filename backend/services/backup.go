@@ -13,6 +13,7 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"sync"
 	"time"
 
 	"konnekt/backend/models"
@@ -24,10 +25,48 @@ type BackupService struct {
 	ctx     context.Context
 	dataDir string
 	bus     *EventBus
+
+	// busy holds the servers with a backup or restore in flight, guarded by mu.
+	// See claim.
+	mu   sync.Mutex
+	busy map[string]bool
 }
 
 func NewBackupService(cfg *ConfigService, srv *ServerService) *BackupService {
-	return &BackupService{config: cfg, server: srv}
+	return &BackupService{config: cfg, server: srv, busy: map[string]bool{}}
+}
+
+// errBackupRunning is what a backup is refused with while another operation
+// holds the server (#29). Nothing is emitted or narrated for it: the UI already
+// shows the one that is running.
+var errBackupRunning = errors.New("a backup is already running for this server")
+
+// errRestoreBlocked is the restore's wording of the same refusal.
+var errRestoreBlocked = errors.New("a backup or restore is already running for this server")
+
+// claim marks serverID as having an operation in flight and reports whether it
+// got it. quiesce and its resume are not reference-counted (PrepareForBackup
+// sends save-off, ResumeSaves sends save-on), so two backups of one server
+// overlapping meant the first to finish turned saves back on under the second's
+// zip (#29). One operation per server, then; other servers are unaffected. The
+// map is made lazily because fixtures build BackupService literals.
+func (s *BackupService) claim(serverID string) bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.busy[serverID] {
+		return false
+	}
+	if s.busy == nil {
+		s.busy = map[string]bool{}
+	}
+	s.busy[serverID] = true
+	return true
+}
+
+func (s *BackupService) release(serverID string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	delete(s.busy, serverID)
 }
 
 func (s *BackupService) SetContext(ctx context.Context) {
@@ -361,6 +400,16 @@ var statBackup = os.Stat
 // that used to return with no event and no console line (#280).
 var mkdirTempRestore = os.MkdirTemp
 
+// openBackupPath is OpenPath, swapped by tests so OpenBackupDir can be observed
+// without launching a file manager. It exists only as that seam.
+var openBackupPath = OpenPath
+
+// newBackupName builds a candidate backup filename, swapped by tests to force a
+// collision a random id would almost never produce. It exists only as that seam.
+var newBackupName = func() string {
+	return fmt.Sprintf("%s_%s.zip", shortID(), time.Now().Format("02_01_06_150405"))
+}
+
 // renameIntoPlace is os.Rename, swapped by tests to fail one dimension of a
 // multi-dimension restore and prove the ones already swapped are put back. Same
 // seam as mkdirTempRestore, for the same reason: the rollback matters most in the
@@ -428,13 +477,22 @@ func (s *BackupService) CreateBackup(serverID string) (models.Backup, error) {
 		return models.Backup{}, fmt.Errorf("server folder not found: %s", serverDir)
 	}
 
+	if !s.claim(serverID) {
+		return models.Backup{}, errBackupRunning
+	}
+	defer s.release(serverID)
+
 	backupDir, err := s.serverBackupDir(serverID)
+	if err != nil {
+		return models.Backup{}, err
+	}
+	root, err := s.backupRoot(serverID)
 	if err != nil {
 		return models.Backup{}, err
 	}
 
 	// Format: {5-digit-id}_{DD}_{MM}_{YY}_{HHMMSS}.zip
-	dest, filename, err := reserveBackupFile(backupDir)
+	dest, filename, err := reserveBackupFile(root, backupDir)
 	if err != nil {
 		return models.Backup{}, err
 	}
@@ -522,13 +580,22 @@ func (s *BackupService) CreateWorldBackup(serverID, worldName string) (models.Ba
 		return models.Backup{}, fmt.Errorf("world folder %q not found", worldName)
 	}
 
+	if !s.claim(serverID) {
+		return models.Backup{}, errBackupRunning
+	}
+	defer s.release(serverID)
+
 	backupDir, err := s.worldBackupDir(serverID, worldName)
+	if err != nil {
+		return models.Backup{}, err
+	}
+	root, err := s.backupRoot(serverID)
 	if err != nil {
 		return models.Backup{}, err
 	}
 
 	// Filename no longer carries the world name — the directory provides context.
-	dest, filename, err := reserveBackupFile(backupDir)
+	dest, filename, err := reserveBackupFile(root, backupDir)
 	if err != nil {
 		return models.Backup{}, err
 	}
@@ -601,6 +668,13 @@ func (s *BackupService) RestoreBackup(serverID, filename string) error {
 	if err != nil {
 		return err
 	}
+
+	// A stopped server is not exempt: a restore swapping the working directory
+	// under a running backup's zip would archive half of each (#29).
+	if !s.claim(serverID) {
+		return errRestoreBlocked
+	}
+	defer s.release(serverID)
 
 	if kind == "server" {
 		// Full-server restore: replace the entire working directory.
@@ -890,12 +964,18 @@ func (s *BackupService) UpdateBackupMeta(serverID, filename, displayName string,
 	}, nil
 }
 
+// OpenBackupDir opens the server's whole backup root, not server/ alone: world
+// backups live under worlds/ beside it, and opening server/ hid them (#553). The
+// root is made first, since a fresh server has no backups folder yet.
 func (s *BackupService) OpenBackupDir(serverID string) error {
-	dir, err := s.serverBackupDir(serverID)
+	root, err := s.backupRoot(serverID)
 	if err != nil {
 		return err
 	}
-	return OpenPath(dir)
+	if err := os.MkdirAll(root, 0755); err != nil {
+		return err
+	}
+	return openBackupPath(root)
 }
 
 // GetBackupWorlds reads the worlds and dimensions stored in a backup zip
@@ -1230,16 +1310,25 @@ func shortID() string {
 }
 
 // reserveBackupFile creates an empty backup file under dir whose name nothing else
-// holds, and returns it open for writing alongside that name.
+// under root holds, and returns it open for writing alongside that name.
 //
 // O_EXCL is the point. shortID being genuinely random makes a same-second collision
 // unlikely (1 in 100,000), not impossible, and the old os.Create turned one into
 // silent data loss: the second zip truncated the first, and the user was left with
 // one backup where they had asked for two. Here a taken name is an error we retry
 // with a fresh id, so a collision costs a loop iteration rather than a backup.
-func reserveBackupFile(dir string) (*os.File, string, error) {
+//
+// O_EXCL only sees dir, though, and findBackupFile resolves a bare filename across
+// server/, every worlds/*/ and the legacy root, first match wins. A name free in
+// dir but held in a sibling folder made the new backup unreachable by name, so
+// restoring or deleting it hit the other one (#552). The name has to be free
+// across root before dir is even tried.
+func reserveBackupFile(root, dir string) (*os.File, string, error) {
 	for attempt := 0; attempt < 10; attempt++ {
-		name := fmt.Sprintf("%s_%s.zip", shortID(), time.Now().Format("02_01_06_150405"))
+		name := newBackupName()
+		if backupNameTaken(root, name) {
+			continue
+		}
 		f, err := os.OpenFile(filepath.Join(dir, name), os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o644)
 		if err == nil {
 			return f, name, nil
@@ -1249,6 +1338,26 @@ func reserveBackupFile(dir string) (*os.File, string, error) {
 		}
 	}
 	return nil, "", errors.New("no free backup filename after 10 attempts")
+}
+
+// backupNameTaken reports whether name exists in any folder findBackupFile
+// searches under root. An unreadable folder counts as empty, as it does there:
+// a name it cannot resolve to cannot be shadowed either.
+func backupNameTaken(root, name string) bool {
+	dirs := []string{root, filepath.Join(root, "server")}
+	if entries, err := os.ReadDir(filepath.Join(root, "worlds")); err == nil {
+		for _, e := range entries {
+			if e.IsDir() {
+				dirs = append(dirs, filepath.Join(root, "worlds", e.Name()))
+			}
+		}
+	}
+	for _, d := range dirs {
+		if _, err := os.Stat(filepath.Join(d, name)); err == nil {
+			return true
+		}
+	}
+	return false
 }
 
 // dirSize sums the regular files under srcDir. It counts exactly what
