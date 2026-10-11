@@ -9,6 +9,7 @@ import { useConsoleSync } from '../hooks/useConsoleSync'
 import { usePerformanceHistory } from './performance/usePerformanceHistory'
 import { usePlayers } from './players/usePlayers'
 import { useWorlds } from './worlds/useWorlds'
+import { useWorldBackups } from './worlds/useWorldBackups'
 import { useServerWorldNames } from './backups/useServerWorldNames'
 import { useServerConfigStore } from '../stores/useServerConfigStore'
 import { useConfigEditor } from './config/useConfigEditor'
@@ -334,6 +335,63 @@ describe('worlds on switch', () => {
     emit(EVENTS.BACKUP_COMPLETED, { serverID: 'srv1' })
 
     await waitFor(() => expect(App.ListWorlds).toHaveBeenCalledTimes(2))
+  })
+})
+
+describe('world backups on switch', () => {
+  const worldBackup = (filename: string, world: string) => ({
+    filename,
+    createdAt: 1,
+    sizeBytes: 10,
+    displayName: '',
+    tags: [],
+    kind: 'world',
+    world,
+  })
+
+  it('does not refetch for a backup event on another server', async () => {
+    vi.mocked(App.ListBackups).mockResolvedValue([])
+    renderHook(() => useWorldBackups('srv1'))
+    await waitFor(() => expect(App.ListBackups).toHaveBeenCalledTimes(1))
+
+    emit(EVENTS.BACKUP_COMPLETED, { serverID: 'srv2' })
+    emit(EVENTS.RESTORE_COMPLETED, { serverID: 'srv2' })
+
+    expect(App.ListBackups).toHaveBeenCalledTimes(1)
+  })
+
+  // The stamp: the previous server's backups must not render under the new
+  // server's name while its own list is still on the wire.
+  it('shows no backups while the new server list is loading', async () => {
+    vi.mocked(App.ListBackups).mockResolvedValue([worldBackup('a.zip', 'Overworld')])
+    const { result, rerender } = renderHook(({ id }) => useWorldBackups(id), {
+      initialProps: { id: 'srv1' },
+    })
+    await waitFor(() => expect(result.current.backups).toHaveLength(1))
+
+    // Never resolves, so the state under assertion is the gap itself.
+    vi.mocked(App.ListBackups).mockReturnValue(new Promise(() => {}))
+    rerender({ id: 'srv2' })
+
+    expect(result.current.backups).toHaveLength(0)
+  })
+
+  it('replaces the backups with the new server list on switch', async () => {
+    vi.mocked(App.ListBackups).mockResolvedValue([worldBackup('a.zip', 'Overworld')])
+    const { result, rerender } = renderHook(({ id }) => useWorldBackups(id), {
+      initialProps: { id: 'srv1' },
+    })
+    await waitFor(() => expect(result.current.backups).toHaveLength(1))
+
+    vi.mocked(App.ListBackups).mockResolvedValue([
+      worldBackup('x.zip', 'Other'),
+      worldBackup('y.zip', 'Other'),
+    ])
+    rerender({ id: 'srv2' })
+
+    await waitFor(() =>
+      expect(result.current.backups.map((b) => b.filename)).toEqual(['x.zip', 'y.zip']),
+    )
   })
 })
 

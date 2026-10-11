@@ -1,6 +1,7 @@
 import { lazy, Suspense, useEffect, useState } from 'react'
 import type { TileProps } from '../../types'
 import { useWorlds } from './useWorlds'
+import { useWorldBackups } from './useWorldBackups'
 import { WorldsSummary } from './WorldsSummary'
 import { useSettingsStore } from '../../stores/useSettingsStore'
 
@@ -21,7 +22,7 @@ const ClassicWorldsSummary = lazy(() =>
   import('../classicFaces').then((m) => ({ default: m.ClassicWorldsSummary })),
 )
 
-export function WorldsTile({ maximized, layout }: TileProps) {
+export function WorldsTile({ serverId, maximized, layout }: TileProps) {
   const classic = useSettingsStore((s) => s.settings.classicTileFaces)
   const {
     worlds,
@@ -35,6 +36,7 @@ export function WorldsTile({ maximized, layout }: TileProps) {
     backup,
     refresh,
   } = useWorlds()
+  const worldBackups = useWorldBackups(serverId)
 
   // Maximized — 3D scene.
   // Defer mounting the WebGL Canvas until the panel's maximize animation has
@@ -79,6 +81,9 @@ export function WorldsTile({ maximized, layout }: TileProps) {
             onDuplicate={duplicate}
             onOpenFolder={openFolder}
             onBackup={backup}
+            backups={worldBackups.backups}
+            onRestoreBackup={worldBackups.restore}
+            onDeleteBackup={worldBackups.remove}
             onRefresh={refresh}
           />
         </Suspense>

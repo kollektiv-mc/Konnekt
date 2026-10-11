@@ -3,7 +3,9 @@ import { StopServer, StartServer } from '../../../wailsjs/go/main/App'
 import { useServerConfigStore } from '../../stores/useServerConfigStore'
 import { useServerStore } from '../../stores/useServerStore'
 import type { WorldSystem } from './useWorlds'
-import { fmtBytes, relativeMs } from '../../lib/format'
+import { backupsOfWorld } from './useWorldBackups'
+import type { WorldBackup } from './useWorldBackups'
+import { fmtBytes, fmtDate, relativeMs } from '../../lib/format'
 import { isRemoteBrowser } from '../../lib/ipc'
 
 interface Props {
@@ -16,7 +18,19 @@ interface Props {
   onDuplicate: (name: string, next: string) => Promise<void>
   onOpenFolder: (name: string) => Promise<void>
   onBackup: (name: string) => Promise<void>
+  /** Every world-kind backup of the server; the HUD shows this world's. */
+  backups: WorldBackup[]
+  onRestoreBackup: (filename: string) => Promise<void>
+  onDeleteBackup: (filename: string) => Promise<void>
   onRefresh: () => void
+}
+
+// How many of a world's backups the HUD lists; the Backups tile has the rest.
+const BACKUP_ROWS = 3
+
+interface PendingBackup {
+  action: 'restore' | 'delete'
+  filename: string
 }
 
 type SwitchStep = 'idle' | 'confirm' | 'working' | 'delete-confirm' | 'rename' | 'duplicate'
@@ -51,6 +65,9 @@ export function WorldHud({
   onDuplicate,
   onOpenFolder,
   onBackup,
+  backups,
+  onRestoreBackup,
+  onDeleteBackup,
   onRefresh,
 }: Props) {
   const activeId = useServerConfigStore((s) => s.activeId)
@@ -60,6 +77,11 @@ export function WorldHud({
   const [inputVal, setInputVal] = useState('')
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState('')
+  const [pending, setPending] = useState<PendingBackup | null>(null)
+
+  const worldBackups = backupsOfWorld(backups, world.name)
+  const shownBackups = worldBackups.slice(0, BACKUP_ROWS)
+  const hiddenBackups = worldBackups.length - shownBackups.length
 
   const dim = world.dimensions.find((d) => d.kind === dimension)
   const meta = world.meta
@@ -78,6 +100,15 @@ export function WorldHud({
     } finally {
       setBusy(false)
     }
+  }
+
+  async function confirmBackupAction() {
+    if (!pending) return
+    const { action, filename } = pending
+    await doAction(() =>
+      action === 'restore' ? onRestoreBackup(filename) : onDeleteBackup(filename),
+    )
+    setPending(null)
   }
 
   // Switch active: if server running, show confirm with 3-way choice.
@@ -324,6 +355,74 @@ export function WorldHud({
           <button className={BTN(true)} onClick={() => setStep('idle')}>
             cancel
           </button>
+        </div>
+      )}
+
+      {/* This world's backups */}
+      {step === 'idle' && (
+        <div className="border-t-border-subtle border-t-hairline mt-2 pt-1.5">
+          <div className={`${LABEL} mb-1`}>Backups</div>
+          {shownBackups.length === 0 && (
+            <div className="text-text-faint text-2xs">No backups of this world yet</div>
+          )}
+          {shownBackups.map((b) => {
+            const asking = pending?.filename === b.filename ? pending.action : null
+            return (
+              <div key={b.filename} className="border-b-border-subtle border-b-hairline py-1">
+                <div className="flex justify-between gap-2">
+                  <span>{fmtDate(b.createdAt)}</span>
+                  <span className="text-text-muted">{fmtBytes(b.sizeBytes)}</span>
+                </div>
+                {b.displayName && (
+                  <div className="text-text-muted text-2xs truncate">{b.displayName}</div>
+                )}
+                {asking ? (
+                  <div className={`${STACK} mt-1`}>
+                    <div
+                      className={`text-2xs ${asking === 'delete' ? 'text-danger' : 'text-text-muted'}`}
+                    >
+                      {asking === 'restore'
+                        ? 'Replace the current world with this backup?'
+                        : 'Delete this backup permanently?'}
+                    </div>
+                    <button
+                      className={BTN(asking === 'delete')}
+                      onClick={confirmBackupAction}
+                      disabled={busy}
+                    >
+                      {busy ? '…' : asking === 'restore' ? 'yes, restore' : 'yes, delete'}
+                    </button>
+                    <button className={BTN()} onClick={() => setPending(null)} disabled={busy}>
+                      cancel
+                    </button>
+                  </div>
+                ) : (
+                  <div className="mt-1 flex gap-1">
+                    <button
+                      className={BTN()}
+                      onClick={() => setPending({ action: 'restore', filename: b.filename })}
+                      disabled={busy || running}
+                      title={running ? 'Stop the server before restoring a backup' : undefined}
+                    >
+                      restore
+                    </button>
+                    <button
+                      className={BTN(true)}
+                      onClick={() => setPending({ action: 'delete', filename: b.filename })}
+                      disabled={busy}
+                    >
+                      delete
+                    </button>
+                  </div>
+                )}
+              </div>
+            )
+          })}
+          {hiddenBackups > 0 && (
+            <div className="text-text-faint text-2xs pt-1">
+              +{hiddenBackups} more in the Backups tile
+            </div>
+          )}
         </div>
       )}
     </div>
