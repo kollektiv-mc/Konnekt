@@ -77,9 +77,15 @@ func hasEffect(effects []string, want string) bool {
 // graphStopsServer reports whether any node of g stops the server. A node whose
 // block is not registered contributes nothing; the engine fails it at run time.
 func graphStopsServer(g models.Graph, reg *BlockRegistry) bool {
+	return graphStopsServerExcept(g, reg, "")
+}
+
+// graphStopsServerExcept is graphStopsServer ignoring nodes of one block type,
+// for advice that treats that block's stop separately.
+func graphStopsServerExcept(g models.Graph, reg *BlockRegistry, except string) bool {
 	for _, n := range g.Nodes {
 		entry, ok := reg.Get(n.Type)
-		if !ok {
+		if !ok || (except != "" && n.Type == except) {
 			continue
 		}
 		if hasEffect(nodeEffects(entry.def, n, g.Edges), EffectStopsServer) {

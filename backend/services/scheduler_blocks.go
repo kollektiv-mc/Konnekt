@@ -298,6 +298,7 @@ func registerBuiltins(r *BlockRegistry) {
 	}, execCondition))
 
 	registerUploadBlock(r)
+	registerDHSnapshotBlock(r)
 }
 
 // ── Executors ─────────────────────────────────────────────────────────────────
