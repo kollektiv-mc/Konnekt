@@ -13,6 +13,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	"runtime"
 	"strconv"
 	"strings"
 	"sync"
@@ -1496,7 +1497,7 @@ func (s *serverInstance) CPUPercent() float64 {
 	if err != nil {
 		return 0
 	}
-	return pct
+	return machineCPUPercent(pct, runtime.NumCPU())
 }
 
 // RconConfig returns the RCON address and password parsed from server.properties
