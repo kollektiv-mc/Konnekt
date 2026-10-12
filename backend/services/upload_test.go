@@ -3,12 +3,15 @@ package services
 import (
 	"context"
 	"encoding/json"
+	"encoding/xml"
 	"errors"
 	"fmt"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"runtime"
+	"strconv"
 	"strings"
 	"sync"
 	"testing"
@@ -33,11 +36,28 @@ type fakeBucket struct {
 	// failGet, when set, is asked before each GET; a non-zero status is sent
 	// instead of the object.
 	failGet func(key string) (status int, code string)
+	// failMultipart, when set, is asked before each multipart call with its name
+	// ("create", "copy", "complete" or "abort") and how many of that name have
+	// arrived, the current one included; a non-zero status is sent instead of
+	// doing it.
+	failMultipart func(op string, n int) (status int, code string)
+	uploads       map[string]*fakeUpload
+	multipartOps  map[string]int
+}
+
+// fakeUpload is one open multipart upload: the key it will become and the bytes
+// of each part copied into it so far.
+type fakeUpload struct {
+	key   string
+	parts map[int][]byte
 }
 
 func newFakeBucket(t *testing.T) *fakeBucket {
 	t.Helper()
-	b := &fakeBucket{objects: map[string][]byte{}, types: map[string]string{}}
+	b := &fakeBucket{
+		objects: map[string][]byte{}, types: map[string]string{},
+		uploads: map[string]*fakeUpload{}, multipartOps: map[string]int{},
+	}
 	b.s3TestServer = newS3TestServer(t, func(_ int, w http.ResponseWriter, r *http.Request) {
 		key := strings.TrimPrefix(r.URL.Path, "/snapshots/")
 		b.mu.Lock()
@@ -63,7 +83,19 @@ func newFakeBucket(t *testing.T) *fakeBucket {
 				return
 			}
 			_, _ = w.Write(data)
+		case http.MethodPost, http.MethodDelete:
+			b.multipart(w, r, key)
 		case http.MethodPut:
+			if r.URL.Query().Get("uploadId") != "" {
+				b.multipart(w, r, key)
+				return
+			}
+			if r.Header.Get("If-None-Match") == "*" {
+				if _, exists := b.objects[key]; exists {
+					s3XMLError(w, http.StatusPreconditionFailed, "PreconditionFailed", "At least one of the pre-conditions you specified did not hold")
+					return
+				}
+			}
 			b.puts++
 			if b.fail != nil {
 				if status, code := b.fail(key, b.puts); status != 0 {
@@ -79,6 +111,103 @@ func newFakeBucket(t *testing.T) *fakeBucket {
 		}
 	})
 	return b
+}
+
+// multipart answers the four calls of a multipart upload, with the lock held. A
+// completed upload is really assembled from the bytes its parts copied, so a test
+// can compare the finished object with what it should be.
+func (b *fakeBucket) multipart(w http.ResponseWriter, r *http.Request, key string) {
+	q := r.URL.Query()
+	op := ""
+	switch {
+	case r.Method == http.MethodPost && q.Has("uploads"):
+		op = "create"
+	case r.Method == http.MethodPut:
+		op = "copy"
+	case r.Method == http.MethodPost:
+		op = "complete"
+	case r.Method == http.MethodDelete:
+		op = "abort"
+	}
+	b.multipartOps[op]++
+	if b.failMultipart != nil {
+		if status, code := b.failMultipart(op, b.multipartOps[op]); status != 0 {
+			s3XMLError(w, status, code, "refused "+testSecret)
+			return
+		}
+	}
+	up := b.uploads[q.Get("uploadId")]
+	if op != "create" && up == nil {
+		s3XMLError(w, http.StatusNotFound, "NoSuchUpload", "The specified upload does not exist.")
+		return
+	}
+	switch op {
+	case "create":
+		id := fmt.Sprintf("upload-%d", b.multipartOps["create"])
+		b.uploads[id] = &fakeUpload{key: key, parts: map[int][]byte{}}
+		fmt.Fprintf(w, `<InitiateMultipartUploadResult><Bucket>snapshots</Bucket><Key>%s</Key><UploadId>%s</UploadId></InitiateMultipartUploadResult>`, key, id)
+	case "copy":
+		n, err := strconv.Atoi(q.Get("partNumber"))
+		src, srcErr := url.PathUnescape(strings.TrimPrefix(r.Header.Get("X-Amz-Copy-Source"), "/snapshots/"))
+		data, ok := b.objects[src]
+		if err != nil || srcErr != nil || !ok {
+			s3XMLError(w, http.StatusNotFound, "NoSuchKey", "The specified copy source does not exist.")
+			return
+		}
+		if rng := r.Header.Get("X-Amz-Copy-Source-Range"); rng != "" {
+			var first, last int
+			if _, err := fmt.Sscanf(rng, "bytes=%d-%d", &first, &last); err != nil || first > last || last >= len(data) {
+				s3XMLError(w, http.StatusBadRequest, "InvalidArgument", "bad range "+rng)
+				return
+			}
+			data = data[first : last+1]
+		}
+		up.parts[n] = append([]byte(nil), data...)
+		fmt.Fprintf(w, `<CopyPartResult><ETag>&quot;etag-%d&quot;</ETag></CopyPartResult>`, n)
+	case "complete":
+		var doc struct {
+			Parts []struct {
+				PartNumber int    `xml:"PartNumber"`
+				ETag       string `xml:"ETag"`
+			} `xml:"Part"`
+		}
+		body := recordedBody(b.s3TestServer, r)
+		if err := xml.Unmarshal(body, &doc); err != nil || len(doc.Parts) == 0 {
+			s3XMLError(w, http.StatusBadRequest, "MalformedXML", "bad complete body")
+			return
+		}
+		var whole []byte
+		for i, p := range doc.Parts {
+			part, ok := up.parts[p.PartNumber]
+			if p.PartNumber != i+1 || !ok || strings.Trim(p.ETag, `"`) != fmt.Sprintf("etag-%d", p.PartNumber) {
+				s3XMLError(w, http.StatusBadRequest, "InvalidPart", "part list does not match")
+				return
+			}
+			whole = append(whole, part...)
+		}
+		b.objects[up.key] = whole
+		b.types[up.key] = r.Header.Get("Content-Type")
+		delete(b.uploads, q.Get("uploadId"))
+		fmt.Fprintf(w, `<CompleteMultipartUploadResult><Key>%s</Key></CompleteMultipartUploadResult>`, up.key)
+	case "abort":
+		delete(b.uploads, q.Get("uploadId"))
+		w.WriteHeader(http.StatusNoContent)
+	}
+}
+
+// openUploads is how many multipart uploads were started and neither completed
+// nor aborted.
+func (b *fakeBucket) openUploads() int {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	return len(b.uploads)
+}
+
+// setFailMultipart installs (or, with nil, removes) the multipart failure hook.
+func (b *fakeBucket) setFailMultipart(f func(op string, n int) (int, string)) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	b.failMultipart = f
 }
 
 // recordedBody is the body the wrapper in newS3TestServer already read and kept.
