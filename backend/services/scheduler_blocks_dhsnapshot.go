@@ -179,6 +179,16 @@ func dhPlanFor(e *ExecContext) (dhRunPlan, func(string) string, error) {
 }
 
 func execDHSnapshot(e *ExecContext) ExecResult {
+	// The claim is held for the whole run, so a publish cannot be reading the
+	// staging folder while this one stages into it.
+	if !dhClaim(e.ServerID) {
+		err := errors.New(dhBusyMessage)
+		if e.Server() != nil {
+			e.Server().NarrateFailed(e.ServerID, "Distant Horizons snapshot failed: "+err.Error())
+		}
+		return ExecResult{Port: "onFailed", Err: err}
+	}
+	defer dhRelease(e.ServerID)
 	plan, scrub, err := dhPlanFor(e)
 	if err != nil {
 		return ExecResult{Port: "onFailed", Err: err}

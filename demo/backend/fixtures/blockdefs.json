@@ -139,6 +139,74 @@
     "source": "native"
   },
   {
+    "id": "action.dhPublish",
+    "category": "action",
+    "label": "Publish DH Snapshot",
+    "description": "Uploads a staged Distant Horizons snapshot to a saved bucket destination, builds each level's whole database in the bucket from the uploaded parts, and writes the download page. latest.json is written last, so a reader never sees a snapshot whose files are missing. The server is not touched.",
+    "isTrigger": false,
+    "controlInputs": [
+      "trigger"
+    ],
+    "controlOutputs": [
+      "onComplete",
+      "onFailed"
+    ],
+    "dataInputs": [
+      {
+        "id": "folder",
+        "label": "Staged folder",
+        "type": "string"
+      }
+    ],
+    "dataOutputs": [
+      {
+        "id": "url",
+        "label": "Snapshot URL",
+        "type": "string"
+      },
+      {
+        "id": "partsUploaded",
+        "label": "Parts uploaded",
+        "type": "number"
+      },
+      {
+        "id": "partsSkipped",
+        "label": "Parts skipped",
+        "type": "number"
+      },
+      {
+        "id": "bytesSent",
+        "label": "Bytes sent",
+        "type": "number"
+      },
+      {
+        "id": "levelsAssembled",
+        "label": "Levels assembled",
+        "type": "number"
+      }
+    ],
+    "configSchema": [
+      {
+        "key": "destination",
+        "label": "Destination",
+        "type": "destination",
+        "required": true
+      },
+      {
+        "key": "prefix",
+        "label": "Key prefix",
+        "type": "string"
+      },
+      {
+        "key": "folder",
+        "label": "Staged folder (default: this server's staging folder)",
+        "type": "string"
+      }
+    ],
+    "source": "native",
+    "timeoutSeconds": 43200
+  },
+  {
     "id": "action.dhSnapshot",
     "category": "action",
     "label": "Distant Horizons Snapshot",

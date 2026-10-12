@@ -2,9 +2,11 @@ package services
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -70,17 +72,37 @@ func (h *fakeDHHost) Start() error {
 }
 func (h *fakeDHHost) Narrate(line string) { h.f.narration = append(h.f.narration, line) }
 
-// fakeIndexReader stands in for the bucket's latest.json.
+// fakeIndexReader stands in for the bucket's latest.json and the index it points
+// at: a few objects by key, a read error for all of them, and a record of every
+// key asked for.
 type fakeIndexReader struct {
-	data  []byte
-	found bool
-	err   error
-	keys  []string
+	objects map[string][]byte
+	err     error
+	keys    []string
 }
 
 func (r *fakeIndexReader) GetObject(_ context.Context, key string) ([]byte, bool, error) {
 	r.keys = append(r.keys, key)
-	return r.data, r.found, r.err
+	if r.err != nil {
+		return nil, false, r.err
+	}
+	data, ok := r.objects[key]
+	return data, ok, nil
+}
+
+// latestPointing is a bucket under prefix whose latest.json points at index,
+// stored where a publish would have put it.
+func latestPointing(t *testing.T, prefix string, index []byte) *fakeIndexReader {
+	t.Helper()
+	const rel = "snapshots/20261011T040000Z/index.json"
+	pointer, err := DHLatest{Format: dhLatestFormat, CreatedAt: "2026-10-11T04:00:00Z", Index: rel}.Marshal()
+	if err != nil {
+		t.Fatal(err)
+	}
+	return &fakeIndexReader{objects: map[string][]byte{
+		joinKey(prefix, "latest.json"): pointer,
+		joinKey(prefix, rel):           index,
+	}}
 }
 
 func newDHRunFixture(t *testing.T) *dhRunFixture {
@@ -334,9 +356,10 @@ func TestDHRunRefusesBeforeWarningOrStopping(t *testing.T) {
 			f.plan.KeyPrefix = "dh"
 		}, []string{"cannot read the previous snapshot from", `"R2"`, "403"}},
 		{"a latest.json that is not an index", func(f *dhRunFixture) {
-			f.plan.Bucket = &fakeIndexReader{data: []byte("<html>"), found: true}
+			f.plan.Bucket = &fakeIndexReader{objects: map[string][]byte{"dh/latest.json": []byte("<html>")}}
 			f.plan.BucketLabel = `"R2"`
-		}, []string{"latest.json", "not a Distant Horizons index"}},
+			f.plan.KeyPrefix = "dh"
+		}, []string{"latest.json", "not a Distant Horizons latest.json"}},
 		{"neither RCON nor stdin", func(f *dhRunFixture) { f.host.canWarn = false }, []string{"neither RCON nor the server's console"}},
 		{"the server is not running", func(f *dhRunFixture) { f.host.running = false }, []string{"not running", "nothing to warn or stop"}},
 		{"a lead time over the limit", func(f *dhRunFixture) { f.plan.Lead = time.Hour }, []string{"lead time"}},
@@ -587,14 +610,14 @@ func TestDHRunWithABucketStagesOnlyWhatTheBucketLacks(t *testing.T) {
 	// bucket whose latest.json is that first index: everything in it is up.
 	f.flipPart(4)
 	f.log = nil
-	reader := &fakeIndexReader{data: latest, found: true}
+	reader := latestPointing(t, "dh/snap", latest)
 	f.plan.Bucket, f.plan.BucketLabel, f.plan.KeyPrefix = reader, `"R2"`, "dh/snap"
 	res, err := f.run()
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(reader.keys) != 1 || reader.keys[0] != "dh/snap/latest.json" {
-		t.Errorf("read %v, want the public layout's dh/snap/latest.json", reader.keys)
+	if want := []string{"dh/snap/latest.json", "dh/snap/snapshots/20261011T040000Z/index.json"}; !slices.Equal(reader.keys, want) {
+		t.Errorf("read %v, want the pointer and then the index it names: %v", reader.keys, want)
 	}
 	if res.PartsChanged != 1 || res.PartsTotal != 6 {
 		t.Errorf("result = %+v, want 1 changed of 6", res)
@@ -617,7 +640,7 @@ func TestDHRunABucketWithNoLatestJSONIsAFirstSnapshot(t *testing.T) {
 	}
 	dhWrite(t, f.stageDir, dhIndexFile, data)
 
-	f.plan.Bucket, f.plan.BucketLabel, f.plan.KeyPrefix = &fakeIndexReader{found: false}, `"R2"`, "dh"
+	f.plan.Bucket, f.plan.BucketLabel, f.plan.KeyPrefix = &fakeIndexReader{}, `"R2"`, "dh"
 	res, err := f.run()
 	if err != nil {
 		t.Fatal(err)
@@ -627,6 +650,45 @@ func TestDHRunABucketWithNoLatestJSONIsAFirstSnapshot(t *testing.T) {
 	}
 	if !strings.Contains(strings.Join(f.narration, "\n"), "first snapshot") {
 		t.Errorf("narration = %v", f.narration)
+	}
+}
+
+func TestDHRunADanglingLatestPointerRefusesInsteadOfRestagingEverything(t *testing.T) {
+	f := newDHRunFixture(t)
+	reader := latestPointing(t, "dh", nil)
+	delete(reader.objects, "dh/snapshots/20261011T040000Z/index.json")
+	f.plan.Bucket, f.plan.BucketLabel, f.plan.KeyPrefix = reader, `"R2"`, "dh"
+
+	_, err := f.run()
+	if err == nil {
+		t.Fatal("a pointer at nothing was read as a first snapshot")
+	}
+	for _, want := range []string{"cannot read the previous snapshot from", `"R2"`, "dh/latest.json points at dh/snapshots/20261011T040000Z/index.json", "not in the bucket", "delete dh/latest.json"} {
+		if !strings.Contains(err.Error(), want) {
+			t.Errorf("err = %q, want it to contain %q", err, want)
+		}
+	}
+	f.assertUntouched("a dangling pointer")
+}
+
+func TestDHRunRefusesALatestPointerThatAimsOutsideItsFolder(t *testing.T) {
+	for _, index := range []string{"/etc/index.json", "https://example.com/index.json", "../other/index.json", "a/../../index.json", `snap\index.json`, ""} {
+		t.Run(index, func(t *testing.T) {
+			f := newDHRunFixture(t)
+			pointer, err := json.Marshal(DHLatest{Format: dhLatestFormat, CreatedAt: "2026-10-11T04:00:00Z", Index: index})
+			if err != nil {
+				t.Fatal(err)
+			}
+			reader := &fakeIndexReader{objects: map[string][]byte{"dh/latest.json": pointer}}
+			f.plan.Bucket, f.plan.BucketLabel, f.plan.KeyPrefix = reader, `"R2"`, "dh"
+			if _, err := f.run(); err == nil || !strings.Contains(err.Error(), "latest.json") {
+				t.Errorf("err = %v, want the pointer refused", err)
+			}
+			if len(reader.keys) != 1 {
+				t.Errorf("read %v: the index a bad pointer names must not be fetched", reader.keys)
+			}
+			f.assertUntouched(index)
+		})
 	}
 }
 
