@@ -215,6 +215,25 @@ func (s *SchedulerService) GetBlockDefs() ([]models.BlockDef, error) {
 	return s.registry.Defs(), nil
 }
 
+// GraphWarnings reports advice about a graph the editor holds, saved or not, for
+// the server it is being edited against. It is a read: nothing is stored and
+// nothing blocks. The graph is passed in rather than looked up by id because
+// the editor asks about what is on the canvas, which is usually ahead of what
+// was saved.
+func (s *SchedulerService) GraphWarnings(serverID string, g models.Graph) ([]string, error) {
+	rconOK := false
+	// Asked only when it can change the answer, so a graph with no stopping
+	// node never touches the server service.
+	if graphStopsServer(g, s.registry) {
+		_, _, rconOK = s.deps.server.RconConfig(serverID)
+	}
+	warnings := graphWarnings(g, s.registry, rconOK)
+	if warnings == nil {
+		warnings = []string{}
+	}
+	return warnings, nil
+}
+
 // ─── Execution ────────────────────────────────────────────────────────────────
 
 // RunGraphNow manually triggers a graph by ID, blocks until the run completes,

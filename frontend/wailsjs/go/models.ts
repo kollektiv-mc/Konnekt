@@ -192,6 +192,7 @@ export namespace models {
 	    source: string;
 	    primitive?: string;
 	    timeoutSeconds?: number;
+	    effects?: string[];
 	
 	    static createFrom(source: any = {}) {
 	        return new BlockDef(source);
@@ -212,6 +213,7 @@ export namespace models {
 	        this.source = source["source"];
 	        this.primitive = source["primitive"];
 	        this.timeoutSeconds = source["timeoutSeconds"];
+	        this.effects = source["effects"];
 	    }
 	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {

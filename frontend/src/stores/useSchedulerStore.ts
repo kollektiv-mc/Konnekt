@@ -3,6 +3,7 @@ import {
   GetScheduleGraphs,
   GetScheduleBlockDefs,
   GetScheduleNextRuns,
+  GetScheduleGraphWarnings,
   SaveScheduleGraph,
   DeleteScheduleGraph,
   SetScheduleGraphEnabled,
@@ -65,6 +66,7 @@ interface SchedulerStore {
   setEnabled: (id: string, enabled: boolean) => Promise<void>
   runGraph: (id: string) => Promise<models.RunRecord>
   previewNode: (g: models.Graph, nodeId: string) => Promise<models.NodePreview>
+  graphWarnings: (g: models.Graph) => Promise<string[]>
 }
 
 export const useSchedulerStore = create<SchedulerStore>((set, get) => ({
@@ -218,4 +220,9 @@ export const useSchedulerStore = create<SchedulerStore>((set, get) => ({
   // Pass-through by design: NodeDataPanel owns preview errors locally, and they
   // are per-node-selection noise that shouldn't raise a tile-wide banner.
   previewNode: (g, nodeId) => PreviewScheduleNode(g, nodeId),
+
+  // Pass-through too, and for the same reason: the warnings are advice about
+  // the canvas, asked for again whenever it changes, and a failed ask is not a
+  // tile-wide error. GraphEditor owns what a failure means.
+  graphWarnings: async (g) => (await GetScheduleGraphWarnings(get().serverId, g)) ?? [],
 }))

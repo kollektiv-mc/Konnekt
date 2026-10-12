@@ -62,6 +62,12 @@ type BlockDef struct {
 	// run's overall cap grows by the limits graphs declare, so a long block is
 	// not cut short by the run it sits in.
 	TimeoutSeconds int `json:"timeoutSeconds,omitempty"`
+	// Effects names side effects worth showing a person who is reading a graph,
+	// declared statically by blocks whose every use has them. "stopsServer" is
+	// the only value. A block whose effect depends on its config (the Stop and
+	// Restart options of action.command) declares none here; the services
+	// package derives it per node instead.
+	Effects []string `json:"effects,omitempty"`
 }
 
 type DataPort struct {

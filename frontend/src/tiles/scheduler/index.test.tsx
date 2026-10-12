@@ -256,3 +256,91 @@ describe('switching server from the sidebar with the scheduler editor maximized'
     expect(App.SetActiveServerID).toHaveBeenCalledWith('beta')
   })
 })
+
+// A graph that stops the server is warned about when RCON is not confirmed, and
+// the warning sits beside Save without gating it. The backend decides what to
+// say (scheduler_validate.go); the editor only asks when the set of stopping
+// nodes changes, and shows the answer.
+describe('the scheduler editor warns about a stop', () => {
+  const RCON_WARNING = 'This graph stops the server, but RCON is not confirmed for it.'
+
+  const commandDef = {
+    id: 'action.command',
+    category: 'action',
+    label: 'Command',
+    description: '',
+    isTrigger: false,
+    controlInputs: ['trigger'],
+    controlOutputs: ['onComplete', 'onFailed'],
+    dataInputs: [{ id: 'command', label: 'Command', type: 'string' }],
+    dataOutputs: [{ id: 'command', label: 'Command sent', type: 'string' }],
+    configSchema: [{ key: 'command', label: 'Command', type: 'command' }],
+    source: 'native',
+  } as unknown as models.BlockDef
+
+  const withCommand = (command: string): models.Graph =>
+    ({
+      ...graph('g1', 'Only'),
+      nodes: [{ id: 'n1', type: 'action.command', config: { command }, position: { x: 0, y: 0 } }],
+    }) as unknown as models.Graph
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    vi.stubGlobal(
+      'DOMMatrixReadOnly',
+      class {
+        m22 = 1
+      },
+    )
+    vi.mocked(App.GetScheduleBlockDefs).mockResolvedValue([commandDef])
+    vi.mocked(App.GetScheduleNextRuns).mockResolvedValue({})
+    useSchedulerStore.setState({
+      serverId: '',
+      graphs: [],
+      blockDefs: [],
+      nextRuns: {},
+      loading: false,
+      hydratedFor: null,
+      error: null,
+    })
+  })
+
+  it('shows the answer beside Save and asks for the server it edits', async () => {
+    vi.mocked(App.GetScheduleGraphs).mockResolvedValue([withCommand('__stop__')])
+    vi.mocked(App.GetScheduleGraphWarnings).mockResolvedValue([RCON_WARNING])
+    render(<SchedulerTile serverId="alpha" maximized />)
+
+    await waitFor(() => expect(screen.getByRole('status').textContent).toBe(RCON_WARNING))
+    expect(App.GetScheduleGraphWarnings).toHaveBeenCalledWith('alpha', expect.anything())
+    // Never a gate: Save is still there and enabled.
+    expect((screen.getByRole('button', { name: 'save' }) as HTMLButtonElement).disabled).toBe(false)
+  })
+
+  it('never asks about a graph with nothing that stops the server', async () => {
+    vi.mocked(App.GetScheduleGraphs).mockResolvedValue([withCommand('save-all')])
+    render(<SchedulerTile serverId="alpha" maximized />)
+    await waitFor(() => expect(selected()).toBe('Only'))
+
+    expect(App.GetScheduleGraphWarnings).not.toHaveBeenCalled()
+    expect(screen.queryByRole('status')).toBeNull()
+  })
+
+  it('shows nothing when the backend has no warning', async () => {
+    vi.mocked(App.GetScheduleGraphs).mockResolvedValue([withCommand('__restart__')])
+    vi.mocked(App.GetScheduleGraphWarnings).mockResolvedValue([])
+    render(<SchedulerTile serverId="alpha" maximized />)
+
+    await waitFor(() => expect(App.GetScheduleGraphWarnings).toHaveBeenCalled())
+    expect(screen.queryByRole('status')).toBeNull()
+  })
+
+  it('leaves no warning, and no banner, when the ask fails', async () => {
+    vi.mocked(App.GetScheduleGraphs).mockResolvedValue([withCommand('__stop__')])
+    vi.mocked(App.GetScheduleGraphWarnings).mockRejectedValue(new Error('no bridge'))
+    render(<SchedulerTile serverId="alpha" maximized />)
+
+    await waitFor(() => expect(App.GetScheduleGraphWarnings).toHaveBeenCalled())
+    expect(screen.queryByRole('status')).toBeNull()
+    expect(screen.queryByText('scheduler error')).toBeNull()
+  })
+})

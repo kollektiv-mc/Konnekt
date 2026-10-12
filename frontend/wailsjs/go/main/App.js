@@ -158,6 +158,10 @@ export function GetScheduleBlockDefs() {
   return window['go']['main']['App']['GetScheduleBlockDefs']();
 }
 
+export function GetScheduleGraphWarnings(arg1, arg2) {
+  return window['go']['main']['App']['GetScheduleGraphWarnings'](arg1, arg2);
+}
+
 export function GetScheduleGraphs(arg1) {
   return window['go']['main']['App']['GetScheduleGraphs'](arg1);
 }

@@ -8,6 +8,9 @@ import {
   CTRL_PORT_COLOR,
   CTRL_PORT_FALLBACK_IN,
   CTRL_PORT_FALLBACK_OUT,
+  isCommandHandleWired,
+  nodeEffects,
+  NODE_EFFECT_STOPS_SERVER,
   portTypeColor,
   UNRESOLVED_PORT_COLOR,
 } from './blockMeta'
@@ -17,6 +20,8 @@ import type { models } from '../../../../wailsjs/go/models'
 
 const HEADER_H = 30
 const INFO_H = 20
+// The effect badge is a line in the hint line's style, so it takes the same height.
+const BADGE_H = INFO_H
 const ROW_H = 22
 const PAD = 6
 
@@ -37,7 +42,7 @@ const RUN_STATE_CLASS: Record<string, string> = {
 
 export const BlockNode = memo(function BlockNode({ data, selected }: NodeProps<BlockFlowNode>) {
   const nd = data as NodeData
-  const { blockDefs, collapsed, onToggleCollapse, nodeRunState, cycleNodes } =
+  const { blockDefs, edges, collapsed, onToggleCollapse, nodeRunState, cycleNodes } =
     useContext(SchedulerCtx)
   const def = blockDefs.get(nd.blockType)
 
@@ -107,9 +112,17 @@ export const BlockNode = memo(function BlockNode({ data, selected }: NodeProps<B
     ? allDataInPorts.filter((p) => !visibleDataIns.some((v) => `data:${v.id}` === p.id))
     : []
 
+  const stopsServer = nodeEffects(
+    def,
+    nd.blockType,
+    nd.config,
+    isCommandHandleWired(nd.id as string, edges),
+  ).includes(NODE_EFFECT_STOPS_SERVER)
+
   const bodyH = Math.max(1, leftPorts.length, rightPorts.length) * ROW_H + PAD * 2
-  const totalH = HEADER_H + (hint !== undefined ? INFO_H : 0) + bodyH
-  const portTop = HEADER_H + (hint !== undefined ? INFO_H : 0) + PAD
+  const aboveBodyH = HEADER_H + (hint !== undefined ? INFO_H : 0) + (stopsServer ? BADGE_H : 0)
+  const totalH = aboveBodyH + bodyH
+  const portTop = aboveBodyH + PAD
 
   // Border/shadow: the 4 run-states are a closed set (RUN_STATE_CLASS); the
   // remaining default/selected case's color is a genuinely per-node dynamic
@@ -178,6 +191,13 @@ export const BlockNode = memo(function BlockNode({ data, selected }: NodeProps<B
       {hint !== undefined && (
         <div className="text-text-faint border-border-subtle border-b-hairline text-3xs flex h-5 items-center truncate px-2.5 font-mono">
           {String(hint)}
+        </div>
+      )}
+
+      {/* Effect badge */}
+      {stopsServer && (
+        <div className="text-warning border-border-subtle border-b-hairline text-3xs flex h-5 items-center truncate px-2.5 font-mono">
+          Stops the server
         </div>
       )}
 

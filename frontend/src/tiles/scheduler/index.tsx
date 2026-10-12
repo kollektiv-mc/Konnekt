@@ -40,6 +40,7 @@ export function SchedulerTile({ serverId, maximized, layout }: TileProps) {
         <Suspense fallback={<div className="h-full w-full" />}>
           <ClassicSchedulerSummary
             graphs={graphs}
+            blockDefs={blockDefs}
             nextRuns={nextRuns}
             loading={loading && !hydrated}
             error={error}
@@ -50,6 +51,7 @@ export function SchedulerTile({ serverId, maximized, layout }: TileProps) {
     return (
       <SchedulerSummary
         graphs={graphs}
+        blockDefs={blockDefs}
         nextRuns={nextRuns}
         loading={loading && !hydrated}
         error={error}

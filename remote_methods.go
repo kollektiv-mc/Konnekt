@@ -104,16 +104,17 @@ var remoteMethods = map[string]services.RemoteMethod{
 
 	// Scheduler. A graph carries HTTP-request and command blocks, so writing
 	// one is writing something that runs.
-	"GetScheduleGraphs":       {Tier: services.RemoteTierRead, Reason: "the scheduler tile"},
-	"SaveScheduleGraph":       {Tier: services.RemoteTierAdmin, Reason: "a graph's blocks run on a timer (§ S8.2)"},
-	"ImportScheduleGraphJSON": {Tier: services.RemoteTierAdmin, Reason: "a graph's blocks run on a timer (§ S8.2)"},
-	"DeleteScheduleGraph":     {Tier: services.RemoteTierOperate, Reason: "removes a graph; the safe direction"},
-	"SetScheduleGraphEnabled": {Tier: services.RemoteTierOperate, Reason: "pauses or resumes a graph the desktop wrote"},
-	"GetScheduleBlockDefs":    {Tier: services.RemoteTierRead, Reason: "static block definitions"},
-	"RunScheduleGraphNow":     {Tier: services.RemoteTierOperate, Reason: "runs a graph the desktop wrote, which its trigger would run anyway"},
-	"GetScheduleRunHistory":   {Tier: services.RemoteTierRead, Reason: "the run log"},
-	"GetScheduleNextRuns":     {Tier: services.RemoteTierRead, Reason: "the countdowns"},
-	"PreviewScheduleNode":     {Tier: services.RemoteTierRead, Reason: "evaluates data nodes only; action nodes are described, never run"},
+	"GetScheduleGraphs":        {Tier: services.RemoteTierRead, Reason: "the scheduler tile"},
+	"SaveScheduleGraph":        {Tier: services.RemoteTierAdmin, Reason: "a graph's blocks run on a timer (§ S8.2)"},
+	"ImportScheduleGraphJSON":  {Tier: services.RemoteTierAdmin, Reason: "a graph's blocks run on a timer (§ S8.2)"},
+	"DeleteScheduleGraph":      {Tier: services.RemoteTierOperate, Reason: "removes a graph; the safe direction"},
+	"SetScheduleGraphEnabled":  {Tier: services.RemoteTierOperate, Reason: "pauses or resumes a graph the desktop wrote"},
+	"GetScheduleBlockDefs":     {Tier: services.RemoteTierRead, Reason: "static block definitions"},
+	"RunScheduleGraphNow":      {Tier: services.RemoteTierOperate, Reason: "runs a graph the desktop wrote, which its trigger would run anyway"},
+	"GetScheduleRunHistory":    {Tier: services.RemoteTierRead, Reason: "the run log"},
+	"GetScheduleNextRuns":      {Tier: services.RemoteTierRead, Reason: "the countdowns"},
+	"GetScheduleGraphWarnings": {Tier: services.RemoteTierRead, Reason: "advice about the graph on the canvas; nothing is stored or run"},
+	"PreviewScheduleNode":      {Tier: services.RemoteTierRead, Reason: "evaluates data nodes only; action nodes are described, never run"},
 
 	// Mods. Installing a jar the server JVM loads is code execution on the
 	// host, however it was downloaded, so it waits for the desktop; enabling
