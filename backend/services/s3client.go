@@ -1,6 +1,7 @@
 package services
 
 import (
+	"bytes"
 	"context"
 	"crypto/hmac"
 	"crypto/sha256"
@@ -16,6 +17,7 @@ import (
 	"os"
 	"path"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -352,6 +354,181 @@ func s3ContentType(key string) string {
 	default:
 		return "application/octet-stream"
 	}
+}
+
+// PutObjectBytes uploads data as key in one PUT, for the small documents a
+// caller builds in memory (an index, a page, a pointer file). It is PutObject
+// without the file: the same checksum, content type and size limit.
+func (c *S3Client) PutObjectBytes(ctx context.Context, key string, data []byte, opts S3PutOptions) error {
+	return c.putSource(ctx, key, int64(len(data)), bytesBody(data), opts)
+}
+
+// bytesBody opens data afresh for each attempt.
+func bytesBody(data []byte) func() (io.ReadCloser, error) {
+	return func() (io.ReadCloser, error) { return io.NopCloser(bytes.NewReader(data)), nil }
+}
+
+// ObjectURL is the address of key on the endpoint, path-style like every request
+// this client makes. It carries no credential: it names the object and nothing
+// more, and so only opens for a bucket that serves objects publicly.
+func (c *S3Client) ObjectURL(key string) string {
+	u := *c.base
+	u.Path = "/" + c.cfg.Bucket + "/" + key
+	u.RawPath = s3URIEncode(u.Path, false)
+	return u.String()
+}
+
+// --- multipart assembly ---
+//
+// These four calls exist to build one big object out of objects already in the
+// bucket (UploadPartCopy), so no data leaves the machine for it. They are not a
+// multipart upload of local bytes, which this client still does not do.
+
+// s3MaxMultipartParts is S3's limit on the parts of one multipart upload.
+const s3MaxMultipartParts = 10000
+
+// CreateMultipartUpload starts a multipart upload of key and returns its id. The
+// object's Content-Type is set here, from the key, as PutObject sets it.
+func (c *S3Client) CreateMultipartUpload(ctx context.Context, key string) (string, error) {
+	const op = "CreateMultipartUpload"
+	resp, err := c.roundTrip(ctx, s3Call{
+		op: op, method: http.MethodPost, key: key, query: url.Values{"uploads": {""}},
+		headers: map[string]string{"content-type": s3ContentType(key)}, payloadHash: s3EmptyHash,
+	})
+	if err != nil {
+		return "", err
+	}
+	var out struct {
+		UploadID string `xml:"UploadId"`
+	}
+	if err := c.decodeXMLResult(op, key, resp, &out); err != nil {
+		return "", err
+	}
+	if out.UploadID == "" {
+		return "", &S3Error{Op: op, Key: key, Status: resp.StatusCode, Message: "response names no upload id"}
+	}
+	return out.UploadID, nil
+}
+
+// UploadPartCopy adds part number partNumber (from 1) to an upload, copying it
+// from sourceKey in the same bucket: the whole object, or byteRange (first and
+// last byte, inclusive) of it. It returns the part's ETag for the final
+// CompleteMultipartUpload. No data bytes are in the request.
+func (c *S3Client) UploadPartCopy(ctx context.Context, key, uploadID string, partNumber int, sourceKey string, byteRange *[2]int64) (string, error) {
+	const op = "UploadPartCopy"
+	if partNumber < 1 || partNumber > s3MaxMultipartParts {
+		return "", fmt.Errorf("s3 %s %s: part number %d is outside 1 to %d", op, key, partNumber, s3MaxMultipartParts)
+	}
+	headers := map[string]string{"x-amz-copy-source": "/" + c.cfg.Bucket + "/" + s3URIEncode(sourceKey, false)}
+	if byteRange != nil {
+		if byteRange[0] < 0 || byteRange[1] < byteRange[0] {
+			return "", fmt.Errorf("s3 %s %s: byte range %d-%d is not valid", op, key, byteRange[0], byteRange[1])
+		}
+		headers["x-amz-copy-source-range"] = fmt.Sprintf("bytes=%d-%d", byteRange[0], byteRange[1])
+	}
+	resp, err := c.roundTrip(ctx, s3Call{
+		op: op, method: http.MethodPut, key: key, headers: headers, payloadHash: s3EmptyHash,
+		query: url.Values{"partNumber": {strconv.Itoa(partNumber)}, "uploadId": {uploadID}},
+	})
+	if err != nil {
+		return "", err
+	}
+	var out struct {
+		ETag string `xml:"ETag"`
+	}
+	if err := c.decodeXMLResult(op, key, resp, &out); err != nil {
+		return "", err
+	}
+	etag := strings.Trim(strings.TrimSpace(out.ETag), `"`)
+	if etag == "" {
+		return "", &S3Error{Op: op, Key: key, Status: resp.StatusCode, Message: "response names no ETag"}
+	}
+	return etag, nil
+}
+
+type s3CompletePart struct {
+	PartNumber int    `xml:"PartNumber"`
+	ETag       string `xml:"ETag"`
+}
+
+type s3CompleteBody struct {
+	XMLName xml.Name         `xml:"CompleteMultipartUpload"`
+	Parts   []s3CompletePart `xml:"Part"`
+}
+
+// CompleteMultipartUpload finishes an upload from the ETags UploadPartCopy
+// returned, in part order: etags[0] is part 1. The request body is the list of
+// parts and their ETags, never object data.
+func (c *S3Client) CompleteMultipartUpload(ctx context.Context, key, uploadID string, etags []string) error {
+	const op = "CompleteMultipartUpload"
+	if len(etags) == 0 || len(etags) > s3MaxMultipartParts {
+		return fmt.Errorf("s3 %s %s: %d parts is outside 1 to %d", op, key, len(etags), s3MaxMultipartParts)
+	}
+	doc := s3CompleteBody{Parts: make([]s3CompletePart, len(etags))}
+	for i, etag := range etags {
+		doc.Parts[i] = s3CompletePart{PartNumber: i + 1, ETag: `"` + strings.Trim(etag, `"`) + `"`}
+	}
+	body, err := xml.Marshal(doc)
+	if err != nil {
+		return fmt.Errorf("s3 %s %s: %w", op, key, err)
+	}
+	sum := sha256.Sum256(body)
+	resp, err := c.roundTrip(ctx, s3Call{
+		op: op, method: http.MethodPost, key: key, query: url.Values{"uploadId": {uploadID}},
+		headers:     map[string]string{"content-type": "application/xml"},
+		payloadHash: hex.EncodeToString(sum[:]), size: int64(len(body)), body: bytesBody(body),
+	})
+	if err != nil {
+		return err
+	}
+	return c.decodeXMLResult(op, key, resp, nil)
+}
+
+// AbortMultipartUpload discards an upload and the parts it holds, so nothing
+// half built is kept or billed. An upload that is already gone is not an error.
+func (c *S3Client) AbortMultipartUpload(ctx context.Context, key, uploadID string) error {
+	const op = "AbortMultipartUpload"
+	resp, err := c.roundTrip(ctx, s3Call{
+		op: op, method: http.MethodDelete, key: key, query: url.Values{"uploadId": {uploadID}}, payloadHash: s3EmptyHash,
+	})
+	if err != nil {
+		return err
+	}
+	if resp.StatusCode/100 != 2 && resp.StatusCode != http.StatusNotFound {
+		return c.responseError(op, key, resp)
+	}
+	_, _ = io.Copy(io.Discard, io.LimitReader(resp.Body, s3ErrorBodyLimit)) //nolint:errcheck // draining a finished response so the connection is reused
+	return resp.Body.Close()
+}
+
+// decodeXMLResult reads a response whose body is an XML document into out (nil to
+// ignore it), closing resp. A non-2xx status is an error, and so is a 2xx whose
+// body is an Error document: S3 starts answering a copy or a complete before the
+// work is done, and reports a late failure inside the body of a 200.
+func (c *S3Client) decodeXMLResult(op, key string, resp *http.Response, out any) error {
+	if resp.StatusCode/100 != 2 {
+		return c.responseError(op, key, resp)
+	}
+	defer func() { _ = resp.Body.Close() }()
+	body, err := io.ReadAll(io.LimitReader(resp.Body, s3ErrorBodyLimit))
+	if err != nil {
+		return c.transportError(op, key, err)
+	}
+	var probe struct {
+		XMLName xml.Name
+		Code    string `xml:"Code"`
+		Message string `xml:"Message"`
+	}
+	if xml.Unmarshal(body, &probe) == nil && probe.XMLName.Local == "Error" {
+		return &S3Error{Op: op, Key: key, Status: resp.StatusCode, Code: c.scrub(probe.Code), Message: c.scrub(probe.Message)}
+	}
+	if out == nil {
+		return nil
+	}
+	if err := xml.Unmarshal(body, out); err != nil {
+		return &S3Error{Op: op, Key: key, Status: resp.StatusCode, Message: "response is not the XML document expected"}
+	}
+	return nil
 }
 
 // --- transport ---
