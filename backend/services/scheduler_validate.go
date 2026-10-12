@@ -212,3 +212,24 @@ func validateGraphDestinations(g models.Graph, reg *BlockRegistry, dests *Destin
 	}
 	return issues
 }
+
+// validateGraphRetention checks the keep value of every Publish DH Snapshot node:
+// empty or absent is the default, anything else must be a whole number of at
+// least 1. A value that is not a number yet (a {{wire}} or an @attribute) cannot
+// be judged before the run resolves it, and the block checks it again then.
+// Returns one sentence per bad node; nil means the graph is clean.
+func validateGraphRetention(g models.Graph) []string {
+	var issues []string
+	for _, n := range g.Nodes {
+		if n.Type != dhPublishBlockID {
+			continue
+		}
+		if s, ok := n.Config["keep"].(string); ok && (strings.Contains(s, "{{") || strings.Contains(s, "@")) {
+			continue
+		}
+		if _, err := parseDHKeep(n.Config["keep"]); err != nil {
+			issues = append(issues, fmt.Sprintf("Publish DH Snapshot (%s): %s.", n.ID, err))
+		}
+	}
+	return issues
+}

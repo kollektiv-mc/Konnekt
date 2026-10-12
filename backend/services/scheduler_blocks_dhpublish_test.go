@@ -90,7 +90,7 @@ func TestDHPublishBlockDefinition(t *testing.T) {
 	if got := strings.Join(ins, ","); got != "folder:string" {
 		t.Errorf("data inputs = %s", got)
 	}
-	if got := strings.Join(outs, ","); got != "url:string,partsUploaded:number,partsSkipped:number,bytesSent:number,levelsAssembled:number" {
+	if got := strings.Join(outs, ","); got != "url:string,partsUploaded:number,partsSkipped:number,bytesSent:number,levelsAssembled:number,snapshotsDeleted:number,partsDeleted:number,bytesFreed:number" {
 		t.Errorf("data outputs = %s", got)
 	}
 	fields := map[string]models.ConfigField{}
@@ -99,7 +99,7 @@ func TestDHPublishBlockDefinition(t *testing.T) {
 		fields[f.Key] = f
 		keys = append(keys, f.Key)
 	}
-	if got := strings.Join(keys, ","); got != "destination,prefix,folder" {
+	if got := strings.Join(keys, ","); got != "destination,prefix,folder,keep" {
 		t.Errorf("config keys = %s", got)
 	}
 	if f := fields["destination"]; f.Type != destinationFieldType || !f.Required {
@@ -110,11 +110,12 @@ func TestDHPublishBlockDefinition(t *testing.T) {
 			t.Errorf("%s = %+v, want an optional string", k, f)
 		}
 	}
-	// Retention and the private link belong to later changes.
-	for _, k := range []string{"keep", "token"} {
-		if _, ok := fields[k]; ok {
-			t.Errorf("the block has a %q field already", k)
-		}
+	// Retention is a number that starts at 3. The private link belongs to a later change.
+	if f := fields["keep"]; f.Type != "number" || f.Required || f.Default != dhDefaultKeep || dhDefaultKeep != 3 {
+		t.Errorf("keep = %+v, want an optional number defaulting to 3", f)
+	}
+	if _, ok := fields["token"]; ok {
+		t.Error("the block has a \"token\" field already")
 	}
 	// Every data input is a config key too: the overlay model needs it.
 	for _, p := range def.DataInputs {

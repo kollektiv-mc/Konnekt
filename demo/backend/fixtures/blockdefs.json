@@ -142,7 +142,7 @@
     "id": "action.dhPublish",
     "category": "action",
     "label": "Publish DH Snapshot",
-    "description": "Uploads a staged Distant Horizons snapshot to a saved bucket destination, builds each level's whole database in the bucket from the uploaded parts, and writes the download page. latest.json is written last, so a reader never sees a snapshot whose files are missing. The server is not touched.",
+    "description": "Uploads a staged Distant Horizons snapshot to a saved bucket destination, builds each level's whole database in the bucket from the uploaded parts, and writes the download page. latest.json is written last, so a reader never sees a snapshot whose files are missing. Afterwards it keeps the newest snapshots and deletes the older ones and the parts only they used; a failure to do that is a warning, not a failed run. The server is not touched.",
     "isTrigger": false,
     "controlInputs": [
       "trigger"
@@ -183,6 +183,21 @@
         "id": "levelsAssembled",
         "label": "Levels assembled",
         "type": "number"
+      },
+      {
+        "id": "snapshotsDeleted",
+        "label": "Snapshots deleted",
+        "type": "number"
+      },
+      {
+        "id": "partsDeleted",
+        "label": "Parts deleted",
+        "type": "number"
+      },
+      {
+        "id": "bytesFreed",
+        "label": "Bytes freed",
+        "type": "number"
       }
     ],
     "configSchema": [
@@ -201,6 +216,12 @@
         "key": "folder",
         "label": "Staged folder (default: this server's staging folder)",
         "type": "string"
+      },
+      {
+        "key": "keep",
+        "label": "Snapshots to keep (at least 1)",
+        "type": "number",
+        "default": 3
       }
     ],
     "source": "native",
