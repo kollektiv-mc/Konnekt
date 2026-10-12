@@ -2,14 +2,18 @@ import { create } from 'zustand'
 import { errMsg } from '../lib/ipc'
 import {
   DeleteDestination,
+  GetSnapshotLink,
   ListDestinations,
+  RotateSnapshotLink,
   SaveDestination,
+  SetSnapshotLinkPrivate,
   TestDestination,
 } from '../../wailsjs/go/main/App'
 import type { models } from '../../wailsjs/go/models'
 
 export type Destination = models.Destination
 export type DestinationTestResult = models.DestinationTestResult
+export type SnapshotLinkResult = models.SnapshotLinkResult
 
 interface DestinationsStore {
   /** The saved buckets. Each says whether a secret is stored (`secretSet`); the secret itself never arrives here. */
@@ -29,6 +33,16 @@ interface DestinationsStore {
   remove: (id: string) => Promise<void>
   /** A verdict in words; a blank `secret` tests with the stored one. Writes nothing to the bucket. */
   test: (destination: Destination, secret: string) => Promise<DestinationTestResult>
+  /**
+   * The destination's snapshot link (#561), for a click on Copy link. The link
+   * carries the private token, so it is returned to the caller and never kept
+   * here: this store holds the mode (`privateLink`) and nothing more.
+   */
+  getSnapshotLink: (id: string) => Promise<SnapshotLinkResult>
+  /** Moves the published snapshot to the other layout, then reads the list back. Takes minutes. */
+  setSnapshotLinkPrivate: (id: string, isPrivate: boolean) => Promise<SnapshotLinkResult>
+  /** Gives a private link a new token, then reads the list back. Takes minutes. */
+  rotateSnapshotLink: (id: string) => Promise<SnapshotLinkResult>
 }
 
 /**
@@ -76,5 +90,19 @@ export const useDestinationsStore = create<DestinationsStore>((set, get) => {
     },
 
     test: (destination, secret) => act(() => TestDestination(destination, secret)),
+
+    getSnapshotLink: (id) => act(() => GetSnapshotLink(id)),
+
+    setSnapshotLinkPrivate: async (id, isPrivate) => {
+      const result = await act(() => SetSnapshotLinkPrivate(id, isPrivate))
+      await get().refresh()
+      return result
+    },
+
+    rotateSnapshotLink: async (id) => {
+      const result = await act(() => RotateSnapshotLink(id))
+      await get().refresh()
+      return result
+    },
   }
 })

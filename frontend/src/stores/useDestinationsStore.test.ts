@@ -15,6 +15,7 @@ const dest = (over: Partial<Destination> = {}): Destination => ({
   publicBaseUrl: '',
   accessKeyId: 'AKID',
   secretSet: true,
+  privateLink: false,
   ...over,
 })
 
@@ -89,5 +90,53 @@ describe('useDestinationsStore', () => {
     vi.mocked(App.TestDestination).mockRejectedValue(new Error('no bridge'))
     await expect(useDestinationsStore.getState().test(dest(), 's')).rejects.toThrow('no bridge')
     expect(useDestinationsStore.getState().error).toBe('no bridge')
+  })
+
+  describe('the snapshot link (#561)', () => {
+    const answer = (over: Partial<Awaited<ReturnType<typeof App.GetSnapshotLink>>> = {}) => ({
+      private: true,
+      link: '',
+      message: 'done',
+      oldLinkStillWorks: false,
+      ...over,
+    })
+
+    it('hands the link to the caller and keeps it nowhere', async () => {
+      vi.mocked(App.GetSnapshotLink).mockResolvedValue(
+        answer({ link: 'https://x.test/dh/mfrggzdfmztwq2lknnwg23tpob/latest.json' }),
+      )
+      const got = await useDestinationsStore.getState().getSnapshotLink('d1')
+      expect(App.GetSnapshotLink).toHaveBeenCalledWith('d1')
+      expect(got.link).toContain('mfrggzdfmztwq2lknnwg23tpob')
+      expect(JSON.stringify(useDestinationsStore.getState())).not.toContain(
+        'mfrggzdfmztwq2lknnwg23tpob',
+      )
+    })
+
+    it('switches the mode and rotates, reading the list back after each', async () => {
+      vi.mocked(App.SetSnapshotLinkPrivate).mockResolvedValue(answer())
+      vi.mocked(App.RotateSnapshotLink).mockResolvedValue(answer())
+      await useDestinationsStore.getState().setSnapshotLinkPrivate('d1', true)
+      expect(App.SetSnapshotLinkPrivate).toHaveBeenCalledWith('d1', true)
+      expect(App.ListDestinations).toHaveBeenCalledTimes(1)
+      await useDestinationsStore.getState().rotateSnapshotLink('d1')
+      expect(App.RotateSnapshotLink).toHaveBeenCalledWith('d1')
+      expect(App.ListDestinations).toHaveBeenCalledTimes(2)
+    })
+
+    it('records a refusal and rethrows it, without reading the list back', async () => {
+      vi.mocked(App.RotateSnapshotLink).mockRejectedValue(new Error('the snapshot link is public'))
+      await expect(useDestinationsStore.getState().rotateSnapshotLink('d1')).rejects.toThrow(
+        'the snapshot link is public',
+      )
+      expect(useDestinationsStore.getState().error).toBe('the snapshot link is public')
+      expect(App.ListDestinations).not.toHaveBeenCalled()
+
+      vi.mocked(App.GetSnapshotLink).mockRejectedValue('nothing has been published')
+      await expect(useDestinationsStore.getState().getSnapshotLink('d1')).rejects.toBe(
+        'nothing has been published',
+      )
+      expect(useDestinationsStore.getState().error).toBe('nothing has been published')
+    })
   })
 })

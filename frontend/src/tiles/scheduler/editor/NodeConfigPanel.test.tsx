@@ -22,6 +22,7 @@ const dest = (over: Partial<Destination> = {}): Destination => ({
   publicBaseUrl: '',
   accessKeyId: 'AKID',
   secretSet: true,
+  privateLink: false,
   ...over,
 })
 

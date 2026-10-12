@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
 import { useDestinationsStore } from '../../stores/useDestinationsStore'
 import type { Destination, DestinationTestResult } from '../../stores/useDestinationsStore'
+import { SnapshotLinkRow } from './SnapshotLinkRow'
 import { ACCENT_BUTTON, DANGER_BUTTON, QUIET_BUTTON, TEXT_INPUT } from './controls'
 
 const SECTION = 'border-border-subtle border-b-hairline py-3'
@@ -17,6 +18,7 @@ const BLANK: Destination = {
   publicBaseUrl: '',
   accessKeyId: '',
   secretSet: false,
+  privateLink: false,
 }
 
 function Field({ label, help, children }: { label: string; help?: string; children: ReactNode }) {
@@ -289,31 +291,31 @@ export function DestinationsPane() {
         editing === d.id && current ? (
           <DestinationEditor key={d.id} initial={current} onClose={() => setEditing(null)} />
         ) : (
-          <div
-            key={d.id}
-            className="border-border-subtle border-b-hairline flex items-center justify-between gap-3 py-3"
-          >
-            <div className="flex min-w-0 flex-col gap-0.5">
-              <span className="text-text-primary flex items-center gap-2 text-sm">
-                <span className="truncate">{d.name}</span>
-                {d.secretSet && (
-                  <span className="bg-hover text-text-faint border-border-subtle border-hairline text-2xs shrink-0 rounded px-1.5 py-0.5">
-                    secret saved
-                  </span>
-                )}
-              </span>
-              <span className="text-text-muted text-1xs truncate font-mono">
-                {d.bucket} at {d.endpoint}
-              </span>
+          <div key={d.id} className="border-border-subtle border-b-hairline">
+            <div className="flex items-center justify-between gap-3 py-3">
+              <div className="flex min-w-0 flex-col gap-0.5">
+                <span className="text-text-primary flex items-center gap-2 text-sm">
+                  <span className="truncate">{d.name}</span>
+                  {d.secretSet && (
+                    <span className="bg-hover text-text-faint border-border-subtle border-hairline text-2xs shrink-0 rounded px-1.5 py-0.5">
+                      secret saved
+                    </span>
+                  )}
+                </span>
+                <span className="text-text-muted text-1xs truncate font-mono">
+                  {d.bucket} at {d.endpoint}
+                </span>
+              </div>
+              <button
+                disabled={loading}
+                onClick={() => setEditing(d.id)}
+                className={QUIET_BUTTON}
+                aria-label={`Edit ${d.name}`}
+              >
+                Edit
+              </button>
             </div>
-            <button
-              disabled={loading}
-              onClick={() => setEditing(d.id)}
-              className={QUIET_BUTTON}
-              aria-label={`Edit ${d.name}`}
-            >
-              Edit
-            </button>
+            <SnapshotLinkRow destination={d} />
           </div>
         ),
       )}
