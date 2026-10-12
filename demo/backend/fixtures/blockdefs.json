@@ -139,6 +139,82 @@
     "source": "native"
   },
   {
+    "id": "action.dhSnapshot",
+    "category": "action",
+    "label": "Distant Horizons Snapshot",
+    "description": "Stops the server to copy its Distant Horizons data into a staged snapshot, then starts it again. Players are warned first, over RCON or the console. Only the parts that changed since the last snapshot are staged, and the staged folder wires into Upload to Bucket.",
+    "isTrigger": false,
+    "controlInputs": [
+      "trigger"
+    ],
+    "controlOutputs": [
+      "onComplete",
+      "onFailed"
+    ],
+    "dataInputs": null,
+    "dataOutputs": [
+      {
+        "id": "folder",
+        "label": "Staged folder",
+        "type": "string"
+      },
+      {
+        "id": "bytesChanged",
+        "label": "Bytes changed",
+        "type": "number"
+      },
+      {
+        "id": "partsChanged",
+        "label": "Parts changed",
+        "type": "number"
+      },
+      {
+        "id": "partsTotal",
+        "label": "Parts in all",
+        "type": "number"
+      },
+      {
+        "id": "downtime",
+        "label": "Downtime (s)",
+        "type": "number"
+      }
+    ],
+    "configSchema": [
+      {
+        "key": "destination",
+        "label": "Destination of the last snapshot",
+        "type": "destination"
+      },
+      {
+        "key": "prefix",
+        "label": "Key prefix",
+        "type": "string"
+      },
+      {
+        "key": "output",
+        "label": "Staging folder (default: in the app data folder)",
+        "type": "string"
+      },
+      {
+        "key": "leadSeconds",
+        "label": "Warn players this many seconds before",
+        "type": "number",
+        "default": 300
+      },
+      {
+        "key": "message",
+        "label": "Warning ({time} is the time left)",
+        "type": "string",
+        "default": "The server will stop in {time} for a world snapshot and be back shortly."
+      }
+    ],
+    "source": "native",
+    "timeoutSeconds": 10800,
+    "effects": [
+      "stopsServer"
+    ]
+  },
+  {
     "id": "action.httpRequest",
     "category": "action",
     "label": "HTTP Request",
