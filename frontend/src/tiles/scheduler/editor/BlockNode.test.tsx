@@ -37,6 +37,7 @@ function renderNode(
   blockType: string,
   config: Record<string, unknown>,
   edges: Edge[] = [],
+  downtimeMs?: number,
 ): HTMLElement {
   const ctx: SchedulerCtxValue = {
     blockDefs: new Map([commandDef, declaringDef].map((d) => [d.id, d])),
@@ -44,6 +45,7 @@ function renderNode(
     collapsed: new Set(),
     onToggleCollapse: () => {},
     nodeRunState: new Map(),
+    nodeDowntimeMs: downtimeMs === undefined ? new Map() : new Map([['n1', downtimeMs]]),
     firedEdges: new Set(),
     cycleNodes: new Set(),
     cycleEdges: new Set(),
@@ -115,5 +117,32 @@ describe('the Stops the server badge', () => {
     // is the 20px badge line.
     expect(plainH).not.toBe('')
     expect(parseFloat(stopping.style.height) - parseFloat(plainH)).toBe(20)
+  })
+})
+
+describe('the downtime figure on a server-stopping node', () => {
+  it('shows the measured downtime beside the badge', () => {
+    renderNode('action.declares', {}, [], 130_000)
+    expect(screen.getByText(BADGE)).toBeTruthy()
+    expect(screen.getByText('downtime 2m 10s')).toBeTruthy()
+  })
+
+  it('is absent when the last run reported none', () => {
+    renderNode('action.declares', {})
+    expect(screen.queryByText(/downtime/)).toBeNull()
+  })
+
+  it('does not change the node height', () => {
+    const without = renderNode('action.declares', {})
+    const withoutH = without.style.height
+    cleanup()
+    const withFigure = renderNode('action.declares', {}, [], 45_000)
+    expect(withFigure.style.height).toBe(withoutH)
+    expect(screen.getByText('downtime 45s')).toBeTruthy()
+  })
+
+  it('needs the badge: a node that stops nothing shows no figure', () => {
+    renderNode('action.command', { command: 'save-all' }, [], 130_000)
+    expect(screen.queryByText(/downtime/)).toBeNull()
   })
 })

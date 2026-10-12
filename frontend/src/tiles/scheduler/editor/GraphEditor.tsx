@@ -75,6 +75,7 @@ interface NodeEvt {
   nodeId: string
   status?: string
   firedPort?: string
+  downtimeMs?: number
 }
 
 const RUN_CLEAR_MS = 2400
@@ -211,6 +212,7 @@ function GraphEditorInner({
 
   // ── Live run highlighting (driven by schedule:* events) ───────────────────
   const [nodeRunState, setNodeRunState] = useState<Map<string, NodeRunState>>(new Map())
+  const [nodeDowntimeMs, setNodeDowntimeMs] = useState<Map<string, number>>(new Map())
   const [firedEdges, setFiredEdges] = useState<Set<string>>(new Set())
   const clearTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   // Refs so the event handlers (registered once) read current graph + edges.
@@ -323,6 +325,7 @@ function GraphEditorInner({
         if (p.graphId !== graphIdRef.current) return
         if (clearTimer.current) clearTimeout(clearTimer.current)
         reset()
+        setNodeDowntimeMs(new Map())
       })
       offNodeStart = EventsOn(EVENTS.SCHEDULE_NODE_STARTED, (p: NodeEvt) => {
         if (p.graphId !== graphIdRef.current) return
@@ -333,6 +336,8 @@ function GraphEditorInner({
         setNodeRunState((m) =>
           new Map(m).set(p.nodeId, p.status === 'failed' ? 'failed' : 'success'),
         )
+        const downtimeMs = p.downtimeMs
+        if (downtimeMs) setNodeDowntimeMs((m) => new Map(m).set(p.nodeId, downtimeMs))
         const fired = `ctrl:${p.firedPort ?? ''}`
         setFiredEdges((s) => {
           const next = new Set(s)
@@ -807,11 +812,22 @@ function GraphEditorInner({
       collapsed,
       onToggleCollapse,
       nodeRunState,
+      nodeDowntimeMs,
       firedEdges,
       cycleNodes,
       cycleEdges,
     }),
-    [defMap, edges, collapsed, onToggleCollapse, nodeRunState, firedEdges, cycleNodes, cycleEdges],
+    [
+      defMap,
+      edges,
+      collapsed,
+      onToggleCollapse,
+      nodeRunState,
+      nodeDowntimeMs,
+      firedEdges,
+      cycleNodes,
+      cycleEdges,
+    ],
   )
 
   // ── Toolbar button className helper ───────────────────────────────────────

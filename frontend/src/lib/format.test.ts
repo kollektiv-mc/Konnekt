@@ -3,6 +3,7 @@ import {
   fmtCount,
   fmtBytes,
   fmtDate,
+  fmtDowntime,
   relativeMs,
   relativeTime,
   truncateStart,
@@ -203,5 +204,22 @@ describe('fmtDate', () => {
       }),
     )
     expect(fmtDate(ms)).toMatch(/2026/)
+  })
+})
+
+describe('fmtDowntime', () => {
+  it('spells seconds, minutes and hours', () => {
+    expect(fmtDowntime(0)).toBe('0s')
+    expect(fmtDowntime(45_000)).toBe('45s')
+    expect(fmtDowntime(59_400)).toBe('59s')
+    expect(fmtDowntime(60_000)).toBe('1m 0s')
+    expect(fmtDowntime(130_000)).toBe('2m 10s')
+    expect(fmtDowntime(3_725_000)).toBe('1h 2m')
+  })
+
+  it('rounds to the second and never goes negative', () => {
+    expect(fmtDowntime(1_499)).toBe('1s')
+    expect(fmtDowntime(1_500)).toBe('2s')
+    expect(fmtDowntime(-5_000)).toBe('0s')
   })
 })

@@ -14,6 +14,18 @@ export function fmtBytes(b: number): string {
   return (b / 1024 / 1024 / 1024).toFixed(2) + ' GB'
 }
 
+/**
+ * "2m 10s" for a measured span in ms: how long a server was down. Seconds are the
+ * finest unit, rounded, and the hour tier drops the seconds because a figure that
+ * long is about the minutes.
+ */
+export function fmtDowntime(ms: number): string {
+  const secs = Math.max(0, Math.round(ms / 1000))
+  if (secs >= 3600) return `${Math.floor(secs / 3600)}h ${Math.floor((secs % 3600) / 60)}m`
+  if (secs >= 60) return `${Math.floor(secs / 60)}m ${secs % 60}s`
+  return `${secs}s`
+}
+
 // Truncate from the front, keeping the tail. For a filesystem path the tail is
 // the identifying part, so "…/servers/neoforge-1.21" beats "/home/alex/Doc…".
 // Done in JS rather than with CSS `direction: rtl`, which reorders punctuation.

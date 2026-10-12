@@ -110,6 +110,7 @@ export function NodeConfigPanel({ nodeId, data, def, edges, onChange }: Props) {
               />
             ) : field.type === 'destination' ? (
               <DestinationField
+                optional={!field.required}
                 value={String(val)}
                 onChange={(v) => onChange(field.key, v)}
                 ariaLabel={field.label}
