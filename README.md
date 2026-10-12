@@ -72,6 +72,8 @@ See who's online and kick, ban, or pardon players without leaving the dashboard.
 
 A node-based automation editor: wire up triggers (a player joining or leaving, the server stopping, TPS dropping below a threshold, a cron/interval/time-of-day schedule) to actions (run a console command, send an RCON command, trigger a backup, make an HTTP request, wait, start/stop/restart the server) and control/data blocks (conditions, math, randomness, server attributes). Runs are tracked with history and next-run predictions.
 
+Two of those actions publish a server's [Distant Horizons](https://modrinth.com/mod/distanthorizons) LOD data to a bucket on a schedule, so players can download the rendered world instead of waiting for it to stream in. [`docs/distant-horizons.md`](docs/distant-horizons.md) is the setup guide.
+
 ![Visual scheduler](docs/images/visual-scheduler.png)
 
 ### World management
@@ -283,6 +285,7 @@ file it and how to send code. To report a vulnerability privately, see
 
 - [`CONTRIBUTING.md`](CONTRIBUTING.md) — how to report a bug, request a feature, or send code
 - [`SECURITY.md`](SECURITY.md) — supported versions and how to report a vulnerability
+- [`docs/distant-horizons.md`](docs/distant-horizons.md) — publishing Distant Horizons data: the bucket, the scheduler graph and its values, the player's download
 - [`agent_docs/CLAUDE.md`](agent_docs/CLAUDE.md) — architecture and stack overview
 - [`agent_docs/ROADMAP.md`](agent_docs/ROADMAP.md) — full feature roadmap
 - [`agent_docs/DEPENDENCIES.md`](agent_docs/DEPENDENCIES.md) — dependency notes
