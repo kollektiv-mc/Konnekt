@@ -285,6 +285,70 @@
     "source": "native"
   },
   {
+    "id": "action.upload",
+    "category": "action",
+    "label": "Upload to Bucket",
+    "description": "Uploads a file, or the contents of a folder, to a saved bucket destination, under the key prefix. Objects already in the bucket at the same size are skipped, so a run that stopped carries on where it left off. The source is a path inside the server's folder, or its backups.",
+    "isTrigger": false,
+    "controlInputs": [
+      "trigger"
+    ],
+    "controlOutputs": [
+      "onComplete",
+      "onFailed"
+    ],
+    "dataInputs": [
+      {
+        "id": "source",
+        "label": "Source",
+        "type": "string"
+      },
+      {
+        "id": "prefix",
+        "label": "Key prefix",
+        "type": "string"
+      }
+    ],
+    "dataOutputs": [
+      {
+        "id": "uploaded",
+        "label": "Objects uploaded",
+        "type": "number"
+      },
+      {
+        "id": "skipped",
+        "label": "Objects skipped",
+        "type": "number"
+      },
+      {
+        "id": "bytes",
+        "label": "Bytes sent",
+        "type": "number"
+      }
+    ],
+    "configSchema": [
+      {
+        "key": "destination",
+        "label": "Destination",
+        "type": "destination",
+        "required": true
+      },
+      {
+        "key": "source",
+        "label": "Source (file or folder)",
+        "type": "string",
+        "required": true
+      },
+      {
+        "key": "prefix",
+        "label": "Key prefix",
+        "type": "string"
+      }
+    ],
+    "source": "native",
+    "timeoutSeconds": 43200
+  },
+  {
     "id": "control.condition",
     "category": "control",
     "label": "Condition",
