@@ -27,7 +27,7 @@ import (
 
 // dhPublishStore is the bucket as a publish uses it. *S3Client is the real one.
 type dhPublishStore interface {
-	dhIndexReader
+	dhPruneStore
 	dhAssembleStore
 	HeadObject(ctx context.Context, key string) (S3ObjectInfo, bool, error)
 	PutObject(ctx context.Context, key, localPath string, opts S3PutOptions) error
@@ -45,6 +45,9 @@ type dhPublishPlan struct {
 	// StageDir is the staged folder, already resolved and checked. It is read and
 	// never written.
 	StageDir string
+	// Keep is how many snapshots the bucket keeps once this one is published. Zero
+	// prunes nothing; the block always passes at least 1.
+	Keep int
 	// PublicBaseURL, when the destination has one, is where the published
 	// latest.json is linked from; otherwise the bucket's own object address is.
 	PublicBaseURL string
@@ -58,6 +61,14 @@ type dhPublishResult struct {
 	PartsSkipped    int
 	BytesSent       int64
 	LevelsAssembled int
+
+	// What the prune after the publish deleted, and Warning when it could not run
+	// to the end. A failed prune is not a failed publish: the snapshot is up and
+	// valid, and the next run prunes again.
+	SnapshotsDeleted int
+	PartsDeleted     int
+	BytesFreed       int64
+	Warning          string
 }
 
 var (
@@ -138,7 +149,27 @@ func runDHPublish(ctx context.Context, plan dhPublishPlan) (dhPublishResult, err
 	}
 	res.URL = p.publishedURL(st.Keys.Latest)
 	p.narrate("Published: " + res.URL)
+	p.prune(ctx, st, &res)
 	return res, nil
+}
+
+// prune is the last step: it keeps plan.Keep snapshots and deletes the rest. It
+// runs only after latest.json is written and res.URL is set, and its failure is
+// a warning on the result, never an error.
+func (p *dhPublisher) prune(ctx context.Context, st dhStaged, res *dhPublishResult) {
+	if p.Keep < 1 {
+		return
+	}
+	pr, err := pruneDHSnapshots(ctx, p.Store, st.Keys, p.Keep, p.narrate)
+	res.SnapshotsDeleted, res.PartsDeleted, res.BytesFreed = pr.SnapshotsDeleted, pr.PartsDeleted, pr.BytesFreed
+	if err != nil {
+		lead := "Prune skipped: "
+		if pr.SnapshotsDeleted > 0 {
+			lead = "Prune incomplete: "
+		}
+		res.Warning = lead + err.Error()
+		p.narrate(res.Warning)
+	}
 }
 
 // --- reading what was staged ---
