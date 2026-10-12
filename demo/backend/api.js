@@ -290,6 +290,9 @@ export const api = {
   SaveDestination: refuse("Saving a bucket destination"),
   DeleteDestination: refuse("Deleting a bucket destination"),
   TestDestination: refuse("Testing a bucket destination"),
+  GetSnapshotLink: refuse("Copying a snapshot link"),
+  RotateSnapshotLink: refuse("Rotating a snapshot link"),
+  SetSnapshotLinkPrivate: refuse("Changing a snapshot link"),
   LogClientError: async () => undefined,
   CheckForUpdates: read({
     currentVersion: "demo",

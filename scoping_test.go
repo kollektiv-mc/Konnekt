@@ -119,6 +119,10 @@ var serverlessMethods = map[string]string{
 	"RevokeRemoteSessions": "remote access belongs to the app",
 	"AnswerRemoteApproval": "remote access belongs to the app; the call it answers carried its own server id",
 	"ModGetAllVersions":    "a provider lookup, not a server operation",
+
+	"GetSnapshotLink":        "the link belongs to a destination, not a server",
+	"RotateSnapshotLink":     "the link belongs to a destination, not a server",
+	"SetSnapshotLinkPrivate": "the link belongs to a destination, not a server",
 }
 
 const serverIDKey = "serverID"

@@ -97,6 +97,8 @@ export function GetServerStatus(arg1:string):Promise<models.ServerStatus>;
 
 export function GetServerSummary(arg1:string):Promise<models.ServerSummary>;
 
+export function GetSnapshotLink(arg1:string):Promise<models.SnapshotLinkResult>;
+
 export function GetStatsHistory(arg1:string):Promise<Array<models.StatsSnapshot>>;
 
 export function GetTileLayouts():Promise<Record<string, string>>;
@@ -175,6 +177,8 @@ export function RestoreBackup(arg1:string,arg2:string):Promise<void>;
 
 export function RevokeRemoteSessions():Promise<void>;
 
+export function RotateSnapshotLink(arg1:string):Promise<models.SnapshotLinkResult>;
+
 export function RunScheduleGraphNow(arg1:string,arg2:string):Promise<models.RunRecord>;
 
 export function SaveActiveLayout(arg1:string):Promise<void>;
@@ -204,6 +208,8 @@ export function SetActiveWorld(arg1:string,arg2:string):Promise<void>;
 export function SetRemotePassword(arg1:string):Promise<void>;
 
 export function SetScheduleGraphEnabled(arg1:string,arg2:string,arg3:boolean):Promise<void>;
+
+export function SetSnapshotLinkPrivate(arg1:string,arg2:boolean):Promise<models.SnapshotLinkResult>;
 
 export function StartRemoteAccess():Promise<void>;
 

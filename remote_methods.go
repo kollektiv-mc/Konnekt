@@ -35,6 +35,14 @@ var remoteMethods = map[string]services.RemoteMethod{
 	"ListDestinations": {Tier: services.RemoteTierRead, Reason: "names, endpoints and buckets; the secret is never sent, only whether one is set"},
 	"DeleteDestination": {Tier: services.RemoteTierAdmin,
 		Reason: "removes a bucket and its stored secret; a graph that names it stops uploading"},
+	// The private snapshot link (#561). The token is returned only by Get, so all
+	// three carry the same reason: the link is the capability.
+	"GetSnapshotLink": {Tier: services.RemoteTierAdmin,
+		Reason: "the link is a bearer capability; rotating or switching revokes it for everyone, and reading it hands it over"},
+	"RotateSnapshotLink": {Tier: services.RemoteTierAdmin,
+		Reason: "the link is a bearer capability; rotating or switching revokes it for everyone"},
+	"SetSnapshotLinkPrivate": {Tier: services.RemoteTierAdmin,
+		Reason: "the link is a bearer capability; rotating or switching revokes it for everyone"},
 
 	// Config files.
 	"ListConfigFiles": {Tier: services.RemoteTierRead, Reason: "file names under the server directory"},
