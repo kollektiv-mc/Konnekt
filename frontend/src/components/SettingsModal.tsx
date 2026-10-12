@@ -39,6 +39,9 @@ import { isDevBuild, isSnapshotVersion } from '../hooks/useUpdateCheck'
 
 // Fetched when the pane is first opened: most sessions never open it, and the
 // entry chunk has a budget (`pnpm check-bundle`).
+const DestinationsPane = lazy(() =>
+  import('./settings/DestinationsPane').then((m) => ({ default: m.DestinationsPane })),
+)
 const RemoteAccessPane = lazy(() =>
   import('./settings/RemoteAccessPane').then((m) => ({ default: m.RemoteAccessPane })),
 )
@@ -46,13 +49,21 @@ const RemoteAccessPane = lazy(() =>
 type UpdateFn = (patch: Partial<AppSettings>) => Promise<void>
 
 export type SettingsSection =
-  'appearance' | 'general' | 'console' | 'notifications' | 'remote' | 'changelog' | 'about'
+  | 'appearance'
+  | 'general'
+  | 'console'
+  | 'notifications'
+  | 'destinations'
+  | 'remote'
+  | 'changelog'
+  | 'about'
 
 const NAV: { id: SettingsSection; label: string }[] = [
   { id: 'appearance', label: 'Appearance' },
   { id: 'general', label: 'General' },
   { id: 'console', label: 'Console' },
   { id: 'notifications', label: 'Notifications' },
+  { id: 'destinations', label: 'Destinations' },
   { id: 'remote', label: 'Remote Access' },
   { id: 'changelog', label: "What's New" },
   { id: 'about', label: 'About' },
@@ -113,9 +124,11 @@ export function SettingsModal({ open, onClose, initialSection }: Props) {
     setWasOpen(open)
     if (open && initialSection) setSection(initialSection)
   }
-  // A browser served by the listener cannot call any Remote Access method, and
-  // General holds host behaviour that its in-memory settings could not keep.
-  const hostOnly = (id: SettingsSection) => id === 'remote' || id === 'general'
+  // A browser served by the listener cannot call any Remote Access method,
+  // General holds host behaviour that its in-memory settings could not keep, and
+  // a bucket's credential is typed at the desktop, not into a browser.
+  const hostOnly = (id: SettingsSection) =>
+    id === 'remote' || id === 'general' || id === 'destinations'
   const nav = NAV.filter((n) => !hostOnly(n.id) || !isRemoteBrowser())
   const overlayRef = useRef<HTMLDivElement>(null)
   // Fetched once here rather than in each pane: General needs it to say whether
@@ -222,6 +235,11 @@ export function SettingsModal({ open, onClose, initialSection }: Props) {
             )}
             {section === 'console' && <ConsolePane settings={settings} update={save} />}
             {section === 'notifications' && <NotificationsPane settings={settings} update={save} />}
+            {section === 'destinations' && nav.some((n) => n.id === 'destinations') && (
+              <Suspense fallback={null}>
+                <DestinationsPane />
+              </Suspense>
+            )}
             {section === 'remote' && nav.some((n) => n.id === 'remote') && (
               <Suspense fallback={null}>
                 <RemoteAccessPane />

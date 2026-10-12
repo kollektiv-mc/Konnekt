@@ -132,13 +132,20 @@ already had (`writeFileAtomic` applies the requested mode AND the existing one),
 every copy Konnekt makes of it (the config editor's `.bak` files under
 `<dataDir>/config_backups/<id>/`, a `0700` directory) is created `0600`, and `remote.json` (the Remote
 Access password hash and device token hashes, added with #45) is written
-through `WritePrivateDataFile`, which is `0600`.
+through `WritePrivateDataFile`, which is `0600`. So is each bucket destination's
+secret access key (#480): one file per destination under
+`<dataDir>/destination_secrets/` (a `0700` directory), named by the destination's
+id, which `DestinationService` validates before it names a path. `destinations.json`
+beside it holds no secret.
 Verify: `grep -rn 'writeFileAtomic(\|OpenFile(\|WriteFile(' --include=*.go backend | grep -v _test`
 and check the mode at each call that can touch `server.properties`.
 
 **S2.3 App data holds no secrets.**
 Holds when: `models.AppSettings` and `models.ServerConfig` carry no password,
-token or key. A future credential (S8) is stored hashed, never in these.
+token or key. A future credential (S8) is stored hashed, never in these. A
+bucket destination follows the same rule: `models.Destination` has no secret
+field, only `SecretSet`, and `SaveDestination` takes the secret as a separate
+argument.
 Verify: read `backend/models/`.
 
 ---

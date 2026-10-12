@@ -38,6 +38,7 @@ type App struct {
 	remoteApprovals     *services.RemoteApprovals
 	tunnelService       *services.TunnelService
 	fontService         *services.FontService
+	destinationService  *services.DestinationService
 	bus                 *services.EventBus
 	dataDir             string
 }
@@ -85,6 +86,7 @@ func NewApp() *App {
 		commandsService:     commands,
 		kommandsService:     kommands,
 		fontService:         services.NewFontService(),
+		destinationService:  services.NewDestinationService(),
 		bus:                 bus,
 	}
 	// Remote Access (#43). Built here so the allowlist is resolved against the
@@ -188,6 +190,7 @@ func (a *App) startup(ctx context.Context) {
 	a.commandsService.SetDataDir(a.dataDir)
 	a.remoteAuth.SetDataDir(a.dataDir)
 	a.tunnelService.SetDataDir(a.dataDir)
+	a.destinationService.SetDataDir(a.dataDir)
 	// Reads Kommands' shared file on a slack timer for as long as the app
 	// lives. The responsive path is RefreshKommands, which the frontend calls
 	// on window focus; this only catches an edit made while Konnekt already
@@ -253,6 +256,37 @@ func (a *App) SaveAppSettings(s models.AppSettings) error {
 // slice is never nil, so the frontend does not receive null.
 func (a *App) ListFontFamilies() ([]string, error) {
 	return a.fontService.ListFamilies(), nil
+}
+
+// --- Bucket destinations (#480) ---
+
+// ListDestinations returns the saved buckets. Each says whether a secret is
+// stored for it (SecretSet); the secret itself never crosses the bridge.
+func (a *App) ListDestinations() ([]models.Destination, error) {
+	return a.destinationService.List()
+}
+
+// SaveDestination adds a bucket (empty ID) or replaces one. The secret access
+// key is a separate argument so it never sits in a struct that is stored,
+// listed or logged; a blank secret keeps the one already stored.
+func (a *App) SaveDestination(d models.Destination, secret string) (models.Destination, error) {
+	return a.destinationService.Save(d, secret)
+}
+
+// DeleteDestination removes a bucket and its stored secret.
+func (a *App) DeleteDestination(id string) error {
+	return a.destinationService.Delete(id)
+}
+
+// TestDestination checks a bucket's settings with a signed HEAD of a key nobody
+// wrote, so nothing is written to it. A blank secret tests with the stored one.
+// The answer is always a verdict in words, never an error.
+func (a *App) TestDestination(d models.Destination, secret string) (models.DestinationTestResult, error) {
+	ctx := a.ctx
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	return a.destinationService.Test(ctx, d, secret), nil
 }
 
 func (a *App) OpenDataDir() error {
