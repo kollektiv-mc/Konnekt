@@ -169,9 +169,14 @@ func TestDHPublishFolder(t *testing.T) {
 	for _, tc := range good {
 		t.Run(tc.name, func(t *testing.T) {
 			got, err := dhPublishFolder(e(tc.folder), work)
-			want, werr := filepath.EvalSymlinks(tc.want)
-			if werr != nil {
-				want = tc.want
+			// The default is handed back as built, since it may not exist yet; a
+			// named folder comes back resolved, which on Windows also expands a
+			// short name such as RUNNER~1.
+			want := tc.want
+			if strings.TrimSpace(tc.folder) != "" {
+				if resolved, rerr := filepath.EvalSymlinks(tc.want); rerr == nil {
+					want = resolved
+				}
 			}
 			if err != nil || got != want {
 				t.Errorf("got (%q, %v), want %q", got, err, want)
