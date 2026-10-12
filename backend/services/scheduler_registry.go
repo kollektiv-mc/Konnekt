@@ -17,6 +17,10 @@ import (
 type ExecResult struct {
 	Port string // e.g. "onComplete", "onFailed", "onTrue", "onFalse"
 	Err  error
+	// DowntimeMs is how long the block kept the server down, measured by the block
+	// that owns the stop. The engine copies it into the node's run record; zero
+	// (nearly every block) is left out of it.
+	DowntimeMs int64
 }
 
 // serviceDeps bundles service references injected into every ExecContext.
@@ -30,6 +34,9 @@ type serviceDeps struct {
 	// Set by SetDestinations, so it is nil in the many tests that build a
 	// scheduler without one.
 	destinations *DestinationService
+	// dataDir is the app data directory, for the one block that stages files in
+	// it (action.dhSnapshot). Set by SetDataDir.
+	dataDir string
 }
 
 // ExecContext is the per-node execution surface handed to a block executor.

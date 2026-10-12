@@ -132,23 +132,43 @@ const rconUnconfirmedWarning = "This graph stops the server, but RCON is not con
 	"so a warning to players cannot be sent first. RCON is confirmed once the server has " +
 	"started with enable-rcon on."
 
+// dhSnapshotConsoleWarning is the other half of that advice. The snapshot block
+// stops the server too, but it warns the players first, so for it "cannot warn"
+// would be untrue: without RCON the warning goes through the server's console.
+const dhSnapshotConsoleWarning = "This graph has a Distant Horizons Snapshot, which warns players before it stops " +
+	"the server, but RCON is not confirmed for this server, so the warning will go through the " +
+	"console instead. RCON is confirmed once the server has started with enable-rcon on."
+
 // graphWarnings returns advice about g that is not an error: a graph that
 // stops the server while RCON is not confirmed cannot warn players before it
-// does. Pure and side-effect free. Unlike validateGraphDataTypes it never
-// refuses anything: SaveGraph stays permissive and the editor only shows the
-// text beside Save, so a save or a run is never blocked by it.
+// does, except through the console for the snapshot block, which says so in a
+// line of its own. Pure and side-effect free. Unlike validateGraphDataTypes it
+// never refuses anything: SaveGraph stays permissive and the editor only shows
+// the text beside Save, so a save or a run is never blocked by it.
 func graphWarnings(g models.Graph, reg *BlockRegistry, rconAvailable bool) []string {
-	if rconAvailable || !graphStopsServer(g, reg) {
+	if rconAvailable {
 		return nil
 	}
-	return []string{rconUnconfirmedWarning}
+	var warnings []string
+	if graphStopsServerExcept(g, reg, dhSnapshotBlockID) {
+		warnings = append(warnings, rconUnconfirmedWarning)
+	}
+	for _, n := range g.Nodes {
+		if n.Type == dhSnapshotBlockID {
+			warnings = append(warnings, dhSnapshotConsoleWarning)
+			break
+		}
+	}
+	return warnings
 }
 
 // validateGraphDestinations checks every node whose block has a destination
-// field: it must name a saved destination that still exists. A graph names its
-// bucket and nothing more (the credential stays in Settings), so a destination
-// deleted or renamed afterwards leaves the node pointing at nothing, and a graph
-// imported from another install may name one this install never had.
+// field: a required one must name a saved destination that still exists, and an
+// optional one (the snapshot block's) may be empty but may not name a missing
+// one. A graph names its bucket and nothing more (the credential stays in
+// Settings), so a destination deleted or renamed afterwards leaves the node
+// pointing at nothing, and a graph imported from another install may name one
+// this install never had.
 //
 // It reads the field by its type rather than by block id, so the next block that
 // uploads gets the same check. Returns one sentence per bad node; nil means the
@@ -170,7 +190,11 @@ func validateGraphDestinations(g models.Graph, reg *BlockRegistry, dests *Destin
 				name = strings.TrimSpace(v)
 			}
 			if name == "" {
-				issues = append(issues, who+": no destination chosen.")
+				// An optional destination (the snapshot block's, where none means
+				// the staging folder's own index) may be left empty.
+				if f.Required {
+					issues = append(issues, who+": no destination chosen.")
+				}
 				continue
 			}
 			if dests == nil {

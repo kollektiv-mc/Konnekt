@@ -30,6 +30,9 @@ type fakeBucket struct {
 	// so far; a non-zero status is sent instead of storing.
 	fail func(key string, puts int) (status int, code string)
 	puts int
+	// failGet, when set, is asked before each GET; a non-zero status is sent
+	// instead of the object.
+	failGet func(key string) (status int, code string)
 }
 
 func newFakeBucket(t *testing.T) *fakeBucket {
@@ -47,6 +50,19 @@ func newFakeBucket(t *testing.T) *fakeBucket {
 				return
 			}
 			w.Header().Set("Content-Length", fmt.Sprint(len(data)))
+		case http.MethodGet:
+			if b.failGet != nil {
+				if status, code := b.failGet(key); status != 0 {
+					s3XMLError(w, status, code, "refused "+testSecret)
+					return
+				}
+			}
+			data, ok := b.objects[key]
+			if !ok {
+				s3XMLError(w, http.StatusNotFound, "NoSuchKey", "The specified key does not exist.")
+				return
+			}
+			_, _ = w.Write(data)
 		case http.MethodPut:
 			b.puts++
 			if b.fail != nil {
@@ -82,6 +98,20 @@ func (b *fakeBucket) setFail(f func(key string, puts int) (int, string)) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 	b.fail = f
+}
+
+// setFailGet installs (or, with nil, removes) the GET failure hook.
+func (b *fakeBucket) setFailGet(f func(key string) (int, string)) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	b.failGet = f
+}
+
+// put stores an object directly, as an earlier run would have left it.
+func (b *fakeBucket) put(key string, data []byte) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	b.objects[key] = data
 }
 
 // object is what is stored at key.

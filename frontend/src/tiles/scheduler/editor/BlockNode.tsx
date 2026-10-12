@@ -2,6 +2,7 @@
 import React, { memo, useContext } from 'react'
 import { Handle, Position, type NodeProps } from '@xyflow/react'
 import { SchedulerCtx } from './schedulerContext'
+import { fmtDowntime } from '../../../lib/format'
 import {
   CATEGORY_ICON,
   categoryColor,
@@ -42,11 +43,19 @@ const RUN_STATE_CLASS: Record<string, string> = {
 
 export const BlockNode = memo(function BlockNode({ data, selected }: NodeProps<BlockFlowNode>) {
   const nd = data as NodeData
-  const { blockDefs, edges, collapsed, onToggleCollapse, nodeRunState, cycleNodes } =
-    useContext(SchedulerCtx)
+  const {
+    blockDefs,
+    edges,
+    collapsed,
+    onToggleCollapse,
+    nodeRunState,
+    nodeDowntimeMs,
+    cycleNodes,
+  } = useContext(SchedulerCtx)
   const def = blockDefs.get(nd.blockType)
 
   const runState = nodeRunState.get(nd.id as string)
+  const downtimeMs = nodeDowntimeMs.get(nd.id as string)
   const inCycle = cycleNodes.has(nd.id as string)
 
   const color = categoryColor(def?.category ?? '')
@@ -194,10 +203,13 @@ export const BlockNode = memo(function BlockNode({ data, selected }: NodeProps<B
         </div>
       )}
 
-      {/* Effect badge */}
+      {/* Effect badge, with the measured downtime of the last run beside it */}
       {stopsServer && (
-        <div className="text-warning border-border-subtle border-b-hairline text-3xs flex h-5 items-center truncate px-2.5 font-mono">
-          Stops the server
+        <div className="text-warning border-border-subtle border-b-hairline text-3xs flex h-5 items-center justify-between gap-2 truncate px-2.5 font-mono">
+          <span>Stops the server</span>
+          {downtimeMs !== undefined && (
+            <span className="text-text-muted">downtime {fmtDowntime(downtimeMs)}</span>
+          )}
         </div>
       )}
 

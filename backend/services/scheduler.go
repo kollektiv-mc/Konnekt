@@ -77,6 +77,7 @@ func (s *SchedulerService) SetDestinations(d *DestinationService) {
 // Must be called before SetContext so triggers see graphs on first evaluation.
 func (s *SchedulerService) SetDataDir(dir string) {
 	s.dataDir = dir
+	s.deps.dataDir = dir
 	if graphs, err := s.loadGraphs(); err == nil {
 		graphs = s.migrateGraphServerIDs(graphs)
 		graphs = s.migrateCommandPresets(graphs)

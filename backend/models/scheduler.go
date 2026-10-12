@@ -139,4 +139,7 @@ type NodeRunRecord struct {
 	StartedAt  int64  `json:"startedAt"`
 	FinishedAt int64  `json:"finishedAt"`
 	Error      string `json:"error,omitempty"`
+	// DowntimeMs is how long the node kept the server down, set by the node that
+	// owns the stop and the start (action.dhSnapshot) and absent for every other.
+	DowntimeMs int64 `json:"downtimeMs,omitempty"`
 }

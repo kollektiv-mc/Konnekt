@@ -133,6 +133,7 @@ describe('AnimatedEdge', () => {
           collapsed: new Set(),
           onToggleCollapse: () => {},
           nodeRunState: new Map(),
+          nodeDowntimeMs: new Map(),
           firedEdges: new Set(['e1']),
           cycleNodes: new Set(),
           cycleEdges: new Set(),

@@ -56,16 +56,20 @@ func registerUploadBlock(r *BlockRegistry) {
 }
 
 // uploadRoots are the folders a source may be inside for this server: its working
-// directory, and its own backups. The app data directory holds more than that: the
-// secret access keys, the Remote Access password hash and every other server's
-// files, none of which a graph should be able to publish, so only the backups of
-// this one server are in.
+// directory, its own backups, and the folder its Distant Horizons snapshot is
+// staged in, which is what lets a graph wire that block's output into this one.
+// The app data directory holds more than that: the secret access keys, the Remote
+// Access password hash and every other server's files, none of which a graph
+// should be able to publish, so only these three folders of this one server are in.
 func uploadRoots(e *ExecContext, workingDir string) []string {
 	roots := []string{workingDir}
 	if e.Backup() != nil {
 		if dir, err := e.Backup().backupRoot(e.ServerID); err == nil {
 			roots = append(roots, dir)
 		}
+	}
+	if dir, err := dhStagingRoot(e.svc.dataDir, e.ServerID); err == nil {
+		roots = append(roots, dir)
 	}
 	return roots
 }

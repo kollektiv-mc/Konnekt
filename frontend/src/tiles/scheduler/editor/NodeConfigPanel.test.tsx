@@ -38,9 +38,26 @@ const uploadDef = models.BlockDef.createFrom({
   ],
 })
 
-function renderPanel(config: Record<string, unknown>, onChange = vi.fn()) {
-  const data = { blockType: 'action.upload', config } as unknown as NodeData
-  render(<NodeConfigPanel nodeId="n1" data={data} def={uploadDef} edges={[]} onChange={onChange} />)
+// The snapshot block's destination is optional: none means the staging folder's own index.
+const snapshotDef = models.BlockDef.createFrom({
+  id: 'action.dhSnapshot',
+  category: 'action',
+  label: 'Distant Horizons Snapshot',
+  description: 'Stops the server to copy its Distant Horizons data.',
+  controlInputs: ['trigger'],
+  controlOutputs: ['onComplete', 'onFailed'],
+  configSchema: [
+    { key: 'destination', label: 'Destination of the last snapshot', type: 'destination' },
+  ],
+})
+
+function renderPanel(
+  config: Record<string, unknown>,
+  onChange = vi.fn(),
+  def: models.BlockDef = uploadDef,
+) {
+  const data = { blockType: def.id, config } as unknown as NodeData
+  render(<NodeConfigPanel nodeId="n1" data={data} def={def} edges={[]} onChange={onChange} />)
   return onChange
 }
 
@@ -112,5 +129,46 @@ describe('NodeConfigPanel destination field', () => {
     fireEvent.change(source, { target: { value: 'world_nether' } })
     expect(onChange).toHaveBeenCalledWith('source', 'world_nether')
     await waitFor(() => expect(App.ListDestinations).toHaveBeenCalled())
+  })
+})
+
+describe('NodeConfigPanel optional destination field', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    useDestinationsStore.setState({ destinations: [], loaded: false, loading: false, error: null })
+    vi.mocked(App.ListDestinations).mockResolvedValue([dest()])
+  })
+
+  it('offers None first and shows it while nothing is chosen', async () => {
+    renderPanel({}, vi.fn(), snapshotDef)
+    const box = screen.getByRole('combobox', { name: 'Destination of the last snapshot' })
+    expect(box.textContent).toContain('None')
+    await waitFor(() => expect(useDestinationsStore.getState().loaded).toBe(true))
+    expect(screen.queryByRole('alert')).toBeNull()
+
+    fireEvent.click(box)
+    const names = (await screen.findAllByRole('option')).map((o) => o.textContent)
+    expect(names).toEqual(['None', 'R2 snapshots'])
+  })
+
+  it('clears a chosen destination by picking None', async () => {
+    const onChange = renderPanel({ destination: 'R2 snapshots' }, vi.fn(), snapshotDef)
+    fireEvent.click(
+      await screen.findByRole('combobox', { name: 'Destination of the last snapshot' }),
+    )
+    fireEvent.click(screen.getByRole('option', { name: 'None' }))
+    expect(onChange).toHaveBeenCalledWith('destination', '')
+  })
+
+  it('still warns about a chosen destination that no longer exists', async () => {
+    renderPanel({ destination: 'Old bucket' }, vi.fn(), snapshotDef)
+    expect(await screen.findByRole('alert')).toBeTruthy()
+  })
+
+  it('does not offer None on a block that requires a destination', async () => {
+    renderPanel({ destination: '' })
+    fireEvent.click(screen.getByRole('combobox', { name: 'Destination' }))
+    const names = (await screen.findAllByRole('option')).map((o) => o.textContent)
+    expect(names).not.toContain('None')
   })
 })

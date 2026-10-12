@@ -228,13 +228,18 @@ func (s *SchedulerService) runGraph(
 			StartedAt:  nodeStart.UnixMilli(),
 			FinishedAt: time.Now().UnixMilli(),
 			Error:      errStr,
+			DowntimeMs: result.DowntimeMs,
 		}
 		rec.Nodes = append(rec.Nodes, nrec)
 
-		s.bus.Emit(EventScheduleNodeFinished, map[string]interface{}{
+		finished := map[string]interface{}{
 			"runId": runID, "graphId": g.ID, "nodeId": node.ID,
 			"status": status, "firedPort": firedPort, "serverID": g.ServerID,
-		})
+		}
+		if result.DowntimeMs > 0 {
+			finished["downtimeMs"] = result.DowntimeMs
+		}
+		s.bus.Emit(EventScheduleNodeFinished, finished)
 
 		// Follow control edges from this node on the fired port.
 		for _, edge := range g.Edges {

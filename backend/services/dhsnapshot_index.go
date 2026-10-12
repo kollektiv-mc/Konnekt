@@ -1,6 +1,7 @@
 package services
 
 import (
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
@@ -121,6 +122,11 @@ func (ix DHIndex) partSet() map[string]struct{} {
 type dhStage struct {
 	Dir      string
 	PartSize int64
+	// Ctx, when set, is checked before each part is read, so a long copy stops
+	// between parts rather than running to the end of a database.
+	Ctx context.Context
+	// Progress, when set, is told the length of each part as it has been read.
+	Progress func(n int64)
 }
 
 // indexDHDatabase reads one database once, front to back, in parts. It hashes
@@ -144,6 +150,11 @@ func (st dhStage) indexDHDatabase(dbPath, folder string, known map[string]struct
 	whole := sha256.New()
 	buf := make([]byte, st.PartSize)
 	for {
+		if st.Ctx != nil {
+			if err := st.Ctx.Err(); err != nil {
+				return DHIndexLevel{}, nil, fmt.Errorf("read %s: %w", dbPath, err)
+			}
+		}
 		n, readErr := io.ReadFull(f, buf)
 		if n > 0 {
 			chunk := buf[:n]
@@ -160,6 +171,9 @@ func (st dhStage) indexDHDatabase(dbPath, folder string, known map[string]struct
 				if err := st.writePart(part.SHA256, chunk); err != nil {
 					return DHIndexLevel{}, nil, err
 				}
+			}
+			if st.Progress != nil {
+				st.Progress(int64(n))
 			}
 		}
 		if readErr == io.EOF || readErr == io.ErrUnexpectedEOF {
@@ -194,11 +208,18 @@ func (st dhStage) writePart(hash string, data []byte) error {
 // the previous index by hash are not copied again, wherever in the previous
 // index they were.
 func stageDHSnapshot(src DHSnapshotSource, prev *DHIndex, stageDir string, keys SnapshotKeys, partSize int64) (DHIndex, []DHPart, error) {
+	return stageDHSnapshotRun(src, prev, keys, dhStage{Dir: stageDir, PartSize: partSize, Ctx: context.Background()})
+}
+
+// stageDHSnapshotRun is stageDHSnapshot for a caller that can be cancelled and
+// wants to narrate a long read: st carries the stage directory and part size, a
+// Ctx that is checked between parts and a Progress that hears each part's length. A cancelled run leaves the parts it had staged, which are
+// named by their hash and so are right whenever they are reused.
+func stageDHSnapshotRun(src DHSnapshotSource, prev *DHIndex, keys SnapshotKeys, st dhStage) (DHIndex, []DHPart, error) {
 	known := map[string]struct{}{}
 	if prev != nil {
 		known = prev.partSet()
 	}
-	st := dhStage{Dir: stageDir, PartSize: partSize}
 	staged := map[string]struct{}{}
 
 	ix := DHIndex{

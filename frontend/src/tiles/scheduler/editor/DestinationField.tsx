@@ -7,6 +7,8 @@ interface Props {
   value: string
   ariaLabel: string
   onChange: (name: string) => void
+  /** The field may be left empty (the snapshot block's), so the list offers "None". */
+  optional?: boolean
 }
 
 /**
@@ -19,7 +21,7 @@ interface Props {
  * a graph imported from another install) is kept and shown as missing rather than
  * quietly replaced: the run would refuse it, and the author should see why.
  */
-export function DestinationField({ value, ariaLabel, onChange }: Props) {
+export function DestinationField({ value, ariaLabel, onChange, optional = false }: Props) {
   const destinations = useDestinationsStore((s) => s.destinations)
   const loaded = useDestinationsStore((s) => s.loaded)
   const refresh = useDestinationsStore((s) => s.refresh)
@@ -34,8 +36,9 @@ export function DestinationField({ value, ariaLabel, onChange }: Props) {
 
   const options = useMemo(() => {
     const opts = destinations.map((d) => ({ value: d.name, label: d.name }))
-    return missing ? [{ value, label: `${value} (not found)` }, ...opts] : opts
-  }, [destinations, missing, value])
+    const named = missing ? [{ value, label: `${value} (not found)` }, ...opts] : opts
+    return optional ? [{ value: '', label: 'None' }, ...named] : named
+  }, [destinations, missing, optional, value])
 
   return (
     <>

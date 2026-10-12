@@ -933,6 +933,7 @@ export namespace models {
 	    startedAt: number;
 	    finishedAt: number;
 	    error?: string;
+	    downtimeMs?: number;
 	
 	    static createFrom(source: any = {}) {
 	        return new NodeRunRecord(source);
@@ -947,6 +948,7 @@ export namespace models {
 	        this.startedAt = source["startedAt"];
 	        this.finishedAt = source["finishedAt"];
 	        this.error = source["error"];
+	        this.downtimeMs = source["downtimeMs"];
 	    }
 	}
 	export class Player {

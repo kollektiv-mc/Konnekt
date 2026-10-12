@@ -46,6 +46,12 @@ const (
 	// and Message.
 	s3ErrorBodyLimit = 64 << 10
 
+	// s3GetBodyLimit caps how much of an object GetObject reads into memory. The
+	// objects it exists for are small JSON documents (a snapshot's index.json is
+	// tens of KB even for a 20 GB database, one line per 8 MiB part), so a few
+	// MiB is generous, and a larger object is refused rather than truncated.
+	s3GetBodyLimit = 4 << 20
+
 	s3Redacted = "[redacted]"
 )
 
@@ -239,6 +245,39 @@ func (c *S3Client) HeadObject(ctx context.Context, key string) (S3ObjectInfo, bo
 		return S3ObjectInfo{}, false, &S3Error{Op: op, Key: key, Status: resp.StatusCode, Message: "response has no Content-Length"}
 	}
 	return S3ObjectInfo{Size: resp.ContentLength, ETag: strings.Trim(resp.Header.Get("ETag"), `"`)}, true, nil
+}
+
+// GetObject reads the whole of key into memory. found is false, with no error, for
+// a key that does not exist; a bucket that does not exist is an error, since
+// reading "no previous snapshot" out of a mistyped bucket name would be wrong in
+// a way nothing downstream could notice. An object over s3GetBodyLimit is an
+// error and is not returned in part: the callers parse what they get, and half a
+// document is worse than none.
+func (c *S3Client) GetObject(ctx context.Context, key string) ([]byte, bool, error) {
+	const op = "GetObject"
+	resp, err := c.roundTrip(ctx, s3Call{op: op, method: http.MethodGet, key: key, payloadHash: s3EmptyHash})
+	if err != nil {
+		return nil, false, err
+	}
+	defer func() { _ = resp.Body.Close() }()
+	switch {
+	case resp.StatusCode == http.StatusNotFound:
+		if se := c.responseError(op, key, resp); se.Code == "NoSuchBucket" {
+			return nil, false, se
+		}
+		return nil, false, nil
+	case resp.StatusCode/100 != 2:
+		return nil, false, c.responseError(op, key, resp)
+	}
+	body, err := io.ReadAll(io.LimitReader(resp.Body, s3GetBodyLimit+1))
+	if err != nil {
+		return nil, false, c.transportError(op, key, err)
+	}
+	if len(body) > s3GetBodyLimit {
+		return nil, false, &S3Error{Op: op, Key: key, Status: resp.StatusCode,
+			Message: fmt.Sprintf("object is over the %s this client reads into memory", fmtBytes(s3GetBodyLimit))}
+	}
+	return body, true, nil
 }
 
 // PutObject uploads the file at localPath as key in one PUT. The body is streamed

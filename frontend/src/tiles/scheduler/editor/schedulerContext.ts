@@ -12,6 +12,10 @@ export interface SchedulerCtxValue {
   onToggleCollapse: (nodeId: string) => void
   // Live run highlighting (empty when no run is active).
   nodeRunState: Map<string, NodeRunState>
+  // How long each node kept the server down in the last run, in ms, for the
+  // nodes that report one (the Distant Horizons snapshot). Unlike the run state
+  // it stays until the next run starts, so the figure outlives the highlight.
+  nodeDowntimeMs: Map<string, number>
   firedEdges: Set<string>
   // Static analysis: node/edge ids that participate in a control-flow cycle.
   cycleNodes: Set<string>
@@ -24,6 +28,7 @@ export const SchedulerCtx = createContext<SchedulerCtxValue>({
   collapsed: new Set(),
   onToggleCollapse: () => {},
   nodeRunState: new Map(),
+  nodeDowntimeMs: new Map(),
   firedEdges: new Set(),
   cycleNodes: new Set(),
   cycleEdges: new Set(),
