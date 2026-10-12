@@ -26,6 +26,11 @@ type Destination struct {
 	// destination. It is filled in by the list call and ignored on save; the
 	// secret itself is never sent to the frontend.
 	SecretSet bool `json:"secretSet"`
+	// PrivateLink reports whether the snapshot published here sits under a private
+	// link (#561). It is a mode flag filled in by the list call and ignored on
+	// save. The link's token is a credential and is never a field of this struct:
+	// it lives in its own owner-only file (services.DestinationService).
+	PrivateLink bool `json:"privateLink"`
 }
 
 // DestinationTestResult is what TestDestination found, in words a person can act
@@ -35,4 +40,17 @@ type DestinationTestResult struct {
 	OK      bool   `json:"ok"`
 	Status  string `json:"status"`
 	Message string `json:"message"`
+}
+
+// SnapshotLinkResult is what the three snapshot-link calls answer (#561). Link is
+// filled only by GetSnapshotLink, on an explicit click: it carries the private
+// token, so nothing that lists, saves or emits ever holds it. Message is in words
+// a person can act on; OldLinkStillWorks is true when a move finished but the
+// previous link could not be removed, which a person who rotated to revoke it
+// needs to hear.
+type SnapshotLinkResult struct {
+	Private           bool   `json:"private"`
+	Link              string `json:"link"`
+	Message           string `json:"message"`
+	OldLinkStillWorks bool   `json:"oldLinkStillWorks"`
 }

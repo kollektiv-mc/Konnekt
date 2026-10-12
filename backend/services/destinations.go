@@ -65,9 +65,15 @@ type DestinationService struct {
 
 	// httpClient and retryBase are for tests, which point the client at an
 	// httptest.Server and do not want to wait out its backoff. Production leaves
-	// both zero.
+	// both zero. randSource is the same for the link token's random bytes: a
+	// test makes the read fail. Production leaves it nil, which is crypto/rand.
 	httpClient *http.Client
 	retryBase  time.Duration
+	randSource io.Reader
+
+	// linkUse is who holds each destination's private link, guarded by mu
+	// (dhsnapshot_link.go).
+	linkUse map[string]*dhLinkUse
 }
 
 func NewDestinationService() *DestinationService {
@@ -90,7 +96,7 @@ func (s *DestinationService) secretPath(id string) string {
 	return filepath.Join(s.dataDir, destinationSecretsDir, id+destinationSecretExt)
 }
 
-// List returns every destination with SecretSet filled in. The slice is never
+// List returns every destination with SecretSet and PrivateLink filled in. The slice is never
 // nil, so the frontend does not receive null.
 func (s *DestinationService) List() ([]models.Destination, error) {
 	s.mu.Lock()
@@ -105,6 +111,7 @@ func (s *DestinationService) listLocked() ([]models.Destination, error) {
 	}
 	for i := range list {
 		list[i].SecretSet = s.hasSecretLocked(list[i].ID)
+		list[i].PrivateLink = s.hasPrivateLinkLocked(list[i].ID)
 	}
 	return list, nil
 }
@@ -131,6 +138,7 @@ func (s *DestinationService) loadLocked() ([]models.Destination, error) {
 	}
 	for i := range list {
 		list[i].SecretSet = false
+		list[i].PrivateLink = false
 	}
 	if list == nil {
 		list = []models.Destination{}
@@ -143,6 +151,7 @@ func (s *DestinationService) storeLocked(list []models.Destination) error {
 	copy(out, list)
 	for i := range out {
 		out[i].SecretSet = false
+		out[i].PrivateLink = false
 	}
 	data, err := json.MarshalIndent(out, "", "  ")
 	if err != nil {
@@ -223,6 +232,25 @@ func (s *DestinationService) Open(name string) (*S3Client, models.Destination, e
 	if !found {
 		return nil, models.Destination{}, fmt.Errorf("destination %q no longer exists; choose another in the Upload to Bucket block or add it in Settings", strings.TrimSpace(name))
 	}
+	return s.openDestination(d)
+}
+
+// OpenByID is Open for a caller that holds the destination's id rather than the
+// name a graph uses, such as the Settings pane (#561).
+func (s *DestinationService) OpenByID(id string) (*S3Client, models.Destination, error) {
+	list, err := s.List()
+	if err != nil {
+		return nil, models.Destination{}, err
+	}
+	for _, d := range list {
+		if d.ID == id {
+			return s.openDestination(d)
+		}
+	}
+	return nil, models.Destination{}, errors.New("destination not found")
+}
+
+func (s *DestinationService) openDestination(d models.Destination) (*S3Client, models.Destination, error) {
 	secret, err := s.Secret(d.ID)
 	if err != nil {
 		return nil, models.Destination{}, err
@@ -254,6 +282,7 @@ func normalizeDestination(d models.Destination) (models.Destination, error) {
 	d.PublicBaseURL = strings.TrimRight(strings.TrimSpace(d.PublicBaseURL), "/")
 	d.AccessKeyID = strings.TrimSpace(d.AccessKeyID)
 	d.SecretSet = false
+	d.PrivateLink = false
 	if d.Region == "" {
 		d.Region = destinationDefaultRegion
 	}
@@ -336,6 +365,7 @@ func (s *DestinationService) Save(d models.Destination, secret string) (models.D
 		return models.Destination{}, err
 	}
 	d.SecretSet = true
+	d.PrivateLink = s.hasPrivateLinkLocked(d.ID)
 	return d, nil
 }
 
@@ -356,6 +386,9 @@ func (s *DestinationService) Delete(id string) error {
 	// can be tried again, rather than an unlisted secret nobody can remove.
 	if err := os.Remove(s.secretPath(id)); err != nil && !os.IsNotExist(err) {
 		return fmt.Errorf("remove the stored secret for destination %s: %w", id, err)
+	}
+	if err := os.Remove(s.linkPath(id)); err != nil && !os.IsNotExist(err) {
+		return fmt.Errorf("remove the stored snapshot link for destination %s: %w", id, err)
 	}
 	kept := list[:0]
 	for _, d := range list {

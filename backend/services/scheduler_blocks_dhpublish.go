@@ -145,12 +145,14 @@ func parseDHKeep(v interface{}) (int, error) {
 }
 
 func execDHPublish(e *ExecContext) ExecResult {
+	// scrub is the destination client's once it is open: it replaces the secret
+	// and the private link's token, which a key in a narrated line carries.
+	scrub := func(s string) string { return s }
 	narrate, narrateFailed := func(string) {}, func(string) {}
 	if e.Server() != nil {
-		narrate = func(line string) { e.Server().Narrate(e.ServerID, line) }
-		narrateFailed = func(line string) { e.Server().NarrateFailed(e.ServerID, line) }
+		narrate = func(line string) { e.Server().Narrate(e.ServerID, scrub(line)) }
+		narrateFailed = func(line string) { e.Server().NarrateFailed(e.ServerID, scrub(line)) }
 	}
-	scrub := func(s string) string { return s }
 	fail := func(err error) ExecResult {
 		err = errors.New(scrub(err.Error()))
 		narrateFailed("Publish failed: " + err.Error())
@@ -192,11 +194,26 @@ func execDHPublish(e *ExecContext) ExecResult {
 		return fail(err)
 	}
 	scrub = client.scrub
+	// A change of the link waits for this run and this run for it: a move that
+	// deleted the old base under a publish would leave a latest.json at the
+	// address it meant to revoke.
+	release, err := e.Destinations().HoldLink(dest.ID)
+	if err != nil {
+		return fail(err)
+	}
+	defer release()
+	token, err := e.Destinations().LinkToken(dest.ID)
+	if err != nil {
+		return fail(err)
+	}
+	client.AlsoRedact(token)
 
+	keyPrefix := joinKey(dest.Prefix, prefix)
 	res, err := runDHPublish(e.Ctx, dhPublishPlan{
 		Store:         client,
 		Label:         fmt.Sprintf("%q", dest.Name),
-		KeyPrefix:     joinKey(dest.Prefix, prefix),
+		KeyPrefix:     keyPrefix,
+		Token:         token,
 		StageDir:      stageDir,
 		Keep:          keep,
 		PublicBaseURL: dest.PublicBaseURL,
@@ -218,5 +235,12 @@ func execDHPublish(e *ExecContext) ExecResult {
 	// The snapshot is published whatever the prune did, so the node completes; the
 	// prune's trouble rides on the record as a warning. The text came from the
 	// client, which scrubs its own errors, and is scrubbed here too like a failure.
-	return ExecResult{Port: "onComplete", Warning: scrub(res.Warning)}
+	warning := res.Warning
+	// Copy link finds the snapshot by this prefix. Failing to note it does not
+	// undo a publish, so it is a warning too.
+	if err := e.Destinations().RecordLinkPrefix(dest.ID, keyPrefix); err != nil {
+		note := "The snapshot is published, but the destination could not note where, so Copy link may not find it: " + err.Error()
+		warning = strings.TrimSpace(warning + " " + note)
+	}
+	return ExecResult{Port: "onComplete", Warning: scrub(warning)}
 }

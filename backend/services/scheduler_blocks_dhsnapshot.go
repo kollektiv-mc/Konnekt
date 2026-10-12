@@ -174,7 +174,15 @@ func dhPlanFor(e *ExecContext) (dhRunPlan, func(string) string, error) {
 	if err != nil {
 		return dhRunPlan{}, none, err
 	}
-	plan.Bucket, plan.BucketLabel, plan.KeyPrefix = client, fmt.Sprintf("%q", dest.Name), joinKey(dest.Prefix, prefix)
+	// The previous snapshot is read under the destination's private link, if it
+	// has one, and the token is marked out of everything the client scrubs.
+	token, err := e.Destinations().LinkToken(dest.ID)
+	if err != nil {
+		return dhRunPlan{}, none, err
+	}
+	client.AlsoRedact(token)
+	plan.Bucket, plan.BucketLabel, plan.KeyPrefix, plan.Token = client, fmt.Sprintf("%q", dest.Name), joinKey(dest.Prefix, prefix), token
+	plan.Host = serverDHHost{e: e, cfg: *cfg, scrub: client.scrub}
 	return plan, client.scrub, nil
 }
 
@@ -226,6 +234,9 @@ func finishDHSnapshot(e *ExecContext, res dhRunResult, err error, scrub func(str
 type serverDHHost struct {
 	e   *ExecContext
 	cfg models.ServerConfig
+	// scrub, when set, is applied to every line narrated to the console: a line
+	// that names an object key carries the private link's token (#561).
+	scrub func(string) string
 }
 
 func (h serverDHHost) IsRunning() bool { return h.e.Server().IsRunning(h.e.ServerID) }
@@ -267,4 +278,9 @@ func (h serverDHHost) Start() error {
 	return h.e.Server().Start(h.cfg.ID, h.cfg.JarPath, h.cfg.JvmArgs, h.cfg.WorkingDir)
 }
 
-func (h serverDHHost) Narrate(line string) { h.e.Server().Narrate(h.e.ServerID, line) }
+func (h serverDHHost) Narrate(line string) {
+	if h.scrub != nil {
+		line = h.scrub(line)
+	}
+	h.e.Server().Narrate(h.e.ServerID, line)
+}
