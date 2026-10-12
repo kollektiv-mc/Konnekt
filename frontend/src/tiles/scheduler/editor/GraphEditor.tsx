@@ -76,6 +76,7 @@ interface NodeEvt {
   status?: string
   firedPort?: string
   downtimeMs?: number
+  warning?: string
 }
 
 const RUN_CLEAR_MS = 2400
@@ -213,6 +214,7 @@ function GraphEditorInner({
   // ── Live run highlighting (driven by schedule:* events) ───────────────────
   const [nodeRunState, setNodeRunState] = useState<Map<string, NodeRunState>>(new Map())
   const [nodeDowntimeMs, setNodeDowntimeMs] = useState<Map<string, number>>(new Map())
+  const [nodeWarning, setNodeWarning] = useState<Map<string, string>>(new Map())
   const [firedEdges, setFiredEdges] = useState<Set<string>>(new Set())
   const clearTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   // Refs so the event handlers (registered once) read current graph + edges.
@@ -326,6 +328,7 @@ function GraphEditorInner({
         if (clearTimer.current) clearTimeout(clearTimer.current)
         reset()
         setNodeDowntimeMs(new Map())
+        setNodeWarning(new Map())
       })
       offNodeStart = EventsOn(EVENTS.SCHEDULE_NODE_STARTED, (p: NodeEvt) => {
         if (p.graphId !== graphIdRef.current) return
@@ -338,6 +341,8 @@ function GraphEditorInner({
         )
         const downtimeMs = p.downtimeMs
         if (downtimeMs) setNodeDowntimeMs((m) => new Map(m).set(p.nodeId, downtimeMs))
+        const warning = p.warning
+        if (warning) setNodeWarning((m) => new Map(m).set(p.nodeId, warning))
         const fired = `ctrl:${p.firedPort ?? ''}`
         setFiredEdges((s) => {
           const next = new Set(s)
@@ -813,6 +818,7 @@ function GraphEditorInner({
       onToggleCollapse,
       nodeRunState,
       nodeDowntimeMs,
+      nodeWarning,
       firedEdges,
       cycleNodes,
       cycleEdges,
@@ -824,6 +830,7 @@ function GraphEditorInner({
       onToggleCollapse,
       nodeRunState,
       nodeDowntimeMs,
+      nodeWarning,
       firedEdges,
       cycleNodes,
       cycleEdges,

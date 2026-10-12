@@ -239,6 +239,7 @@ func (s *SchedulerService) GraphWarnings(serverID string, g models.Graph) ([]str
 	// A node that would fail the run at its start is advice the editor can give
 	// while the graph is being built, in the same place.
 	warnings = append(warnings, validateGraphDestinations(g, s.registry, s.deps.destinations)...)
+	warnings = append(warnings, validateGraphRetention(g)...)
 	if warnings == nil {
 		warnings = []string{}
 	}

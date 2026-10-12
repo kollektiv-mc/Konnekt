@@ -3,7 +3,9 @@ package services
 import (
 	"errors"
 	"fmt"
+	"math"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"konnekt/backend/models"
@@ -21,6 +23,11 @@ const (
 	// snapshot, and the next run resumes: a part already in the bucket is not sent
 	// again.
 	dhPublishTimeoutSeconds = 12 * 60 * 60
+
+	// dhDefaultKeep is how many snapshots the bucket keeps when the node does not
+	// say: enough that one bad run, or a restore from the one before it, is not a
+	// loss.
+	dhDefaultKeep = 3
 )
 
 // registerDHPublishBlock registers action.dhPublish. It lives beside
@@ -30,7 +37,8 @@ func registerDHPublishBlock(r *BlockRegistry) {
 		ID: dhPublishBlockID, Category: "action", Label: "Publish DH Snapshot",
 		Description: "Uploads a staged Distant Horizons snapshot to a saved bucket destination, builds each level's whole " +
 			"database in the bucket from the uploaded parts, and writes the download page. latest.json is written last, " +
-			"so a reader never sees a snapshot whose files are missing. The server is not touched.",
+			"so a reader never sees a snapshot whose files are missing. Afterwards it keeps the newest snapshots and deletes the " +
+			"older ones and the parts only they used; a failure to do that is a warning, not a failed run. The server is not touched.",
 		ControlInputs: []string{"trigger"}, ControlOutputs: []string{"onComplete", "onFailed"},
 		// Port id == config key (resolveDataInputs), so the snapshot block's
 		// folder output wires straight in and outranks the field.
@@ -43,11 +51,15 @@ func registerDHPublishBlock(r *BlockRegistry) {
 			{ID: "partsSkipped", Label: "Parts skipped", Type: "number"},
 			{ID: "bytesSent", Label: "Bytes sent", Type: "number"},
 			{ID: "levelsAssembled", Label: "Levels assembled", Type: "number"},
+			{ID: "snapshotsDeleted", Label: "Snapshots deleted", Type: "number"},
+			{ID: "partsDeleted", Label: "Parts deleted", Type: "number"},
+			{ID: "bytesFreed", Label: "Bytes freed", Type: "number"},
 		},
 		ConfigSchema: []models.ConfigField{
 			{Key: "destination", Label: "Destination", Type: destinationFieldType, Required: true},
 			{Key: "prefix", Label: "Key prefix", Type: "string"},
 			{Key: "folder", Label: "Staged folder (default: this server's staging folder)", Type: "string"},
+			{Key: "keep", Label: "Snapshots to keep (at least 1)", Type: "number", Default: dhDefaultKeep},
 		},
 		Source:         "native",
 		TimeoutSeconds: dhPublishTimeoutSeconds,
@@ -90,6 +102,48 @@ func dhPublishFolder(e *ExecContext, workingDir string) (string, error) {
 	return resolved, nil
 }
 
+// parseDHKeep reads the node's keep value: how many snapshots to leave in the
+// bucket. Nothing, or an empty field, is the default. Anything else must be a
+// whole number of at least 1; a text number from a hand-edited graph counts, and
+// a bool, NaN or a number too big to count does not.
+func parseDHKeep(v interface{}) (int, error) {
+	if v == nil {
+		return dhDefaultKeep, nil
+	}
+	if s, ok := v.(string); ok {
+		s = strings.TrimSpace(s)
+		if s == "" {
+			return dhDefaultKeep, nil
+		}
+		v = s
+	}
+	bad := fmt.Errorf("keep must be a whole number of at least 1, not %v", v)
+	if _, isBool := v.(bool); isBool {
+		return 0, bad
+	}
+	var f float64
+	switch n := v.(type) {
+	case float64:
+		f = n
+	case int:
+		f = float64(n)
+	case int64:
+		f = float64(n)
+	case string:
+		parsed, err := strconv.ParseFloat(n, 64)
+		if err != nil {
+			return 0, bad
+		}
+		f = parsed
+	default:
+		return 0, bad
+	}
+	if math.IsNaN(f) || math.IsInf(f, 0) || f != math.Trunc(f) || f < 1 || f > math.MaxInt32 {
+		return 0, bad
+	}
+	return int(f), nil
+}
+
 func execDHPublish(e *ExecContext) ExecResult {
 	narrate, narrateFailed := func(string) {}, func(string) {}
 	if e.Server() != nil {
@@ -113,6 +167,10 @@ func execDHPublish(e *ExecContext) ExecResult {
 	name := strings.TrimSpace(e.GetString("destination"))
 	if name == "" {
 		return fail(errors.New("no destination chosen: pick a saved bucket in the Publish DH Snapshot block"))
+	}
+	keep, err := parseDHKeep(e.Config["keep"])
+	if err != nil {
+		return fail(err)
 	}
 	if e.Destinations() == nil || e.Config_() == nil {
 		return fail(errors.New("publishing is not available"))
@@ -140,6 +198,7 @@ func execDHPublish(e *ExecContext) ExecResult {
 		Label:         fmt.Sprintf("%q", dest.Name),
 		KeyPrefix:     joinKey(dest.Prefix, prefix),
 		StageDir:      stageDir,
+		Keep:          keep,
 		PublicBaseURL: dest.PublicBaseURL,
 		Narrate:       narrate,
 	})
@@ -153,5 +212,11 @@ func execDHPublish(e *ExecContext) ExecResult {
 	e.SetOutput("partsSkipped", float64(res.PartsSkipped))
 	e.SetOutput("bytesSent", float64(res.BytesSent))
 	e.SetOutput("levelsAssembled", float64(res.LevelsAssembled))
-	return ExecResult{Port: "onComplete"}
+	e.SetOutput("snapshotsDeleted", float64(res.SnapshotsDeleted))
+	e.SetOutput("partsDeleted", float64(res.PartsDeleted))
+	e.SetOutput("bytesFreed", float64(res.BytesFreed))
+	// The snapshot is published whatever the prune did, so the node completes; the
+	// prune's trouble rides on the record as a warning. The text came from the
+	// client, which scrubs its own errors, and is scrubbed here too like a failure.
+	return ExecResult{Port: "onComplete", Warning: scrub(res.Warning)}
 }

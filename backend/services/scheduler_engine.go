@@ -128,6 +128,20 @@ func (s *SchedulerService) runGraph(
 		return rec
 	}
 
+	// A snapshot count that cannot be kept fails the run before anything is
+	// uploaded, rather than after, when it could only be told as a prune warning.
+	if issues := validateGraphRetention(g); len(issues) > 0 {
+		now := time.Now().UnixMilli()
+		rec := models.RunRecord{
+			ID: newID(), GraphID: g.ID, GraphName: g.Name,
+			Trigger: triggerLabel, StartedAt: now, FinishedAt: now,
+			Status: "failed",
+			Error:  "validation failed: " + strings.Join(issues, " "),
+		}
+		s.addHistory(rec)
+		return rec
+	}
+
 	runID := newID()
 	now := time.Now()
 	rec := models.RunRecord{
@@ -229,6 +243,7 @@ func (s *SchedulerService) runGraph(
 			FinishedAt: time.Now().UnixMilli(),
 			Error:      errStr,
 			DowntimeMs: result.DowntimeMs,
+			Warning:    result.Warning,
 		}
 		rec.Nodes = append(rec.Nodes, nrec)
 
@@ -238,6 +253,9 @@ func (s *SchedulerService) runGraph(
 		}
 		if result.DowntimeMs > 0 {
 			finished["downtimeMs"] = result.DowntimeMs
+		}
+		if result.Warning != "" {
+			finished["warning"] = result.Warning
 		}
 		s.bus.Emit(EventScheduleNodeFinished, finished)
 

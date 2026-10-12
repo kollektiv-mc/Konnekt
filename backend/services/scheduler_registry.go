@@ -21,6 +21,10 @@ type ExecResult struct {
 	// that owns the stop. The engine copies it into the node's run record; zero
 	// (nearly every block) is left out of it.
 	DowntimeMs int64
+	// Warning is something the block could not do after its work was done: the run
+	// is not failed by it. The engine copies it into the node's run record and
+	// its finished event, beside DowntimeMs. It must already be free of secrets.
+	Warning string
 }
 
 // serviceDeps bundles service references injected into every ExecContext.

@@ -934,6 +934,7 @@ export namespace models {
 	    finishedAt: number;
 	    error?: string;
 	    downtimeMs?: number;
+	    warning?: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new NodeRunRecord(source);
@@ -949,6 +950,7 @@ export namespace models {
 	        this.finishedAt = source["finishedAt"];
 	        this.error = source["error"];
 	        this.downtimeMs = source["downtimeMs"];
+	        this.warning = source["warning"];
 	    }
 	}
 	export class Player {

@@ -50,12 +50,14 @@ export const BlockNode = memo(function BlockNode({ data, selected }: NodeProps<B
     onToggleCollapse,
     nodeRunState,
     nodeDowntimeMs,
+    nodeWarning,
     cycleNodes,
   } = useContext(SchedulerCtx)
   const def = blockDefs.get(nd.blockType)
 
   const runState = nodeRunState.get(nd.id as string)
   const downtimeMs = nodeDowntimeMs.get(nd.id as string)
+  const warning = nodeWarning.get(nd.id as string)
   const inCycle = cycleNodes.has(nd.id as string)
 
   const color = categoryColor(def?.category ?? '')
@@ -129,7 +131,10 @@ export const BlockNode = memo(function BlockNode({ data, selected }: NodeProps<B
   ).includes(NODE_EFFECT_STOPS_SERVER)
 
   const bodyH = Math.max(1, leftPorts.length, rightPorts.length) * ROW_H + PAD * 2
-  const aboveBodyH = HEADER_H + (hint !== undefined ? INFO_H : 0) + (stopsServer ? BADGE_H : 0)
+  // One line carries the effect badge, the measured downtime and the last run's
+  // warning, so a node with none of them is as tall as ever.
+  const hasStatusLine = stopsServer || warning !== undefined
+  const aboveBodyH = HEADER_H + (hint !== undefined ? INFO_H : 0) + (hasStatusLine ? BADGE_H : 0)
   const totalH = aboveBodyH + bodyH
   const portTop = aboveBodyH + PAD
 
@@ -203,12 +208,18 @@ export const BlockNode = memo(function BlockNode({ data, selected }: NodeProps<B
         </div>
       )}
 
-      {/* Effect badge, with the measured downtime of the last run beside it */}
-      {stopsServer && (
+      {/* Effect badge, with the measured downtime of the last run beside it, and
+          what the last run could not finish (the node still completed) */}
+      {hasStatusLine && (
         <div className="text-warning border-border-subtle border-b-hairline text-3xs flex h-5 items-center justify-between gap-2 truncate px-2.5 font-mono">
-          <span>Stops the server</span>
-          {downtimeMs !== undefined && (
+          {stopsServer && <span>Stops the server</span>}
+          {stopsServer && downtimeMs !== undefined && (
             <span className="text-text-muted">downtime {fmtDowntime(downtimeMs)}</span>
+          )}
+          {warning !== undefined && (
+            <span className="text-text-muted min-w-0 truncate" title={warning}>
+              warning: {warning}
+            </span>
           )}
         </div>
       )}

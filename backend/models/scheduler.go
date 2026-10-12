@@ -142,4 +142,8 @@ type NodeRunRecord struct {
 	// DowntimeMs is how long the node kept the server down, set by the node that
 	// owns the stop and the start (action.dhSnapshot) and absent for every other.
 	DowntimeMs int64 `json:"downtimeMs,omitempty"`
+	// Warning is something the node could not finish after its work was done, set
+	// by action.dhPublish when the prune that follows a publish fails. The node's
+	// status is still success and it still fires onComplete.
+	Warning string `json:"warning,omitempty"`
 }

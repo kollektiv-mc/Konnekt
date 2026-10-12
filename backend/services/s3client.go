@@ -4,7 +4,9 @@ import (
 	"bytes"
 	"context"
 	"crypto/hmac"
+	"crypto/md5" //nolint:gosec // Content-MD5 is S3's required integrity header on DeleteObjects, not a security use
 	"crypto/sha256"
+	"encoding/base64"
 	"encoding/hex"
 	"encoding/xml"
 	"errors"
@@ -20,6 +22,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"unicode"
+	"unicode/utf8"
 )
 
 // A small S3 client for S3-compatible storage (Cloudflare R2 first, any S3 API
@@ -53,6 +57,15 @@ const (
 	// tens of KB even for a 20 GB database, one line per 8 MiB part), so a few
 	// MiB is generous, and a larger object is refused rather than truncated.
 	s3GetBodyLimit = 4 << 20
+
+	// s3ListBodyLimit caps one page of a listing. A page holds at most 1000
+	// entries of at most 1024 bytes of key each, with the metadata S3 adds to
+	// every one, which stays far under this; a larger body is refused rather than
+	// read in part.
+	s3ListBodyLimit = 8 << 20
+
+	// s3MaxDeleteKeys is S3's limit on the keys of one DeleteObjects request.
+	s3MaxDeleteKeys = 1000
 
 	s3Redacted = "[redacted]"
 )
@@ -92,6 +105,12 @@ func (c S3Config) LogValue() slog.Value {
 type S3ObjectInfo struct {
 	Size int64
 	ETag string // without the surrounding quotes
+}
+
+// S3ListedObject is one entry of a listing: an object's key and its size.
+type S3ListedObject struct {
+	Key  string
+	Size int64
 }
 
 // S3PutOptions are the optional parts of a PutObject.
@@ -501,18 +520,159 @@ func (c *S3Client) AbortMultipartUpload(ctx context.Context, key, uploadID strin
 	return resp.Body.Close()
 }
 
+// --- listing and deleting ---
+
+// ListObjects returns every object whose key starts with prefix, in the order S3
+// lists them (by key). It follows the continuation token until S3 says the
+// listing is complete, so a bucket of any size is read in full; a listing that
+// claims more to come without saying where is an error, never a short answer
+// taken for a whole one.
+func (c *S3Client) ListObjects(ctx context.Context, prefix string) ([]S3ListedObject, error) {
+	const op = "ListObjects"
+	var out []S3ListedObject
+	token := ""
+	for {
+		q := url.Values{"list-type": {"2"}, "prefix": {prefix}}
+		if token != "" {
+			q.Set("continuation-token", token)
+		}
+		resp, err := c.roundTrip(ctx, s3Call{op: op, method: http.MethodGet, query: q, payloadHash: s3EmptyHash})
+		if err != nil {
+			return nil, err
+		}
+		var page struct {
+			IsTruncated           bool   `xml:"IsTruncated"`
+			NextContinuationToken string `xml:"NextContinuationToken"`
+			Contents              []struct {
+				Key  string `xml:"Key"`
+				Size int64  `xml:"Size"`
+			} `xml:"Contents"`
+		}
+		if err := c.decodeXMLResultLimit(op, prefix, resp, &page, s3ListBodyLimit); err != nil {
+			return nil, err
+		}
+		for _, o := range page.Contents {
+			out = append(out, S3ListedObject{Key: o.Key, Size: o.Size})
+		}
+		if !page.IsTruncated {
+			return out, nil
+		}
+		if page.NextContinuationToken == "" || page.NextContinuationToken == token {
+			return nil, &S3Error{Op: op, Key: prefix, Status: resp.StatusCode, Message: "listing is truncated but names no next page"}
+		}
+		token = page.NextContinuationToken
+	}
+}
+
+type s3DeleteObject struct {
+	Key string `xml:"Key"`
+}
+
+type s3DeleteBody struct {
+	XMLName xml.Name         `xml:"Delete"`
+	Quiet   bool             `xml:"Quiet"`
+	Objects []s3DeleteObject `xml:"Object"`
+}
+
+// DeleteObjects deletes keys with multi-object delete, at most 1000 to a request
+// (a longer list is sent as several). A key that does not exist is not an error.
+// The requests carry Content-MD5, which S3 and R2 require on this call, and ask
+// for Quiet mode, so the response lists only what failed. A request that is
+// refused outright ends the call at once; keys S3 reports as failed within a
+// request that succeeded are counted across all the requests and reported as one
+// error at the end, so one stuck key does not stop the others being deleted.
+func (c *S3Client) DeleteObjects(ctx context.Context, keys []string) error {
+	const op = "DeleteObjects"
+	for _, k := range keys {
+		// encoding/xml would turn a control character into U+FFFD, so the key
+		// that went out would not be the key meant. Refuse it instead.
+		if k == "" || !utf8.ValidString(k) || strings.ContainsFunc(k, unicode.IsControl) {
+			return fmt.Errorf("s3 %s: %q is not a key that can be sent in a delete request", op, k)
+		}
+	}
+	var failed int
+	var first string
+	for start := 0; start < len(keys); start += s3MaxDeleteKeys {
+		chunk := keys[start:min(start+s3MaxDeleteKeys, len(keys))]
+		n, firstErr, err := c.deleteChunk(ctx, chunk)
+		if err != nil {
+			return err
+		}
+		if failed == 0 {
+			first = firstErr
+		}
+		failed += n
+	}
+	if failed > 0 {
+		return &S3Error{Op: op, Message: fmt.Sprintf("%d of %d key(s) could not be deleted (first: %s)", failed, len(keys), first)}
+	}
+	return nil
+}
+
+// deleteChunk sends one DeleteObjects request and returns how many keys the
+// response reports as failed, with the first of them described.
+func (c *S3Client) deleteChunk(ctx context.Context, keys []string) (failed int, first string, err error) {
+	const op = "DeleteObjects"
+	doc := s3DeleteBody{Quiet: true, Objects: make([]s3DeleteObject, len(keys))}
+	for i, k := range keys {
+		doc.Objects[i] = s3DeleteObject{Key: k}
+	}
+	body, err := xml.Marshal(doc)
+	if err != nil {
+		return 0, "", fmt.Errorf("s3 %s: %w", op, err)
+	}
+	sha := sha256.Sum256(body)
+	sum := md5.Sum(body) //nolint:gosec // see the import
+	resp, err := c.roundTrip(ctx, s3Call{
+		op: op, method: http.MethodPost, query: url.Values{"delete": {""}},
+		headers: map[string]string{
+			"content-type": "application/xml",
+			"content-md5":  base64.StdEncoding.EncodeToString(sum[:]),
+		},
+		payloadHash: hex.EncodeToString(sha[:]), size: int64(len(body)), body: bytesBody(body),
+	})
+	if err != nil {
+		return 0, "", err
+	}
+	var out struct {
+		Errors []struct {
+			Key     string `xml:"Key"`
+			Code    string `xml:"Code"`
+			Message string `xml:"Message"`
+		} `xml:"Error"`
+	}
+	if err := c.decodeXMLResultLimit(op, "", resp, &out, s3ListBodyLimit); err != nil {
+		return 0, "", err
+	}
+	if len(out.Errors) > 0 {
+		e := out.Errors[0]
+		first = fmt.Sprintf("%s: %s", c.scrub(e.Key), c.scrub(e.Code))
+	}
+	return len(out.Errors), first, nil
+}
+
 // decodeXMLResult reads a response whose body is an XML document into out (nil to
 // ignore it), closing resp. A non-2xx status is an error, and so is a 2xx whose
 // body is an Error document: S3 starts answering a copy or a complete before the
 // work is done, and reports a late failure inside the body of a 200.
 func (c *S3Client) decodeXMLResult(op, key string, resp *http.Response, out any) error {
+	return c.decodeXMLResultLimit(op, key, resp, out, s3ErrorBodyLimit)
+}
+
+// decodeXMLResultLimit is decodeXMLResult for a body that may be larger than a
+// small answer, a page of a listing. A body over limit is an error: a document
+// cut short would not parse, and one that did parse would be missing entries.
+func (c *S3Client) decodeXMLResultLimit(op, key string, resp *http.Response, out any, limit int64) error {
 	if resp.StatusCode/100 != 2 {
 		return c.responseError(op, key, resp)
 	}
 	defer func() { _ = resp.Body.Close() }()
-	body, err := io.ReadAll(io.LimitReader(resp.Body, s3ErrorBodyLimit))
+	body, err := io.ReadAll(io.LimitReader(resp.Body, limit+1))
 	if err != nil {
 		return c.transportError(op, key, err)
+	}
+	if int64(len(body)) > limit {
+		return &S3Error{Op: op, Key: key, Status: resp.StatusCode, Message: fmt.Sprintf("response is over the %s this client reads", fmtBytes(limit))}
 	}
 	var probe struct {
 		XMLName xml.Name

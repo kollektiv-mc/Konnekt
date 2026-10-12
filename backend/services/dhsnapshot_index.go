@@ -369,6 +369,18 @@ func (k SnapshotKeys) AssembledKey(levelFolder string) string {
 	return path.Join(k.snapshotDir, levelFolder, dhDatabaseName)
 }
 
+// SnapshotsPrefix is the folder that holds every snapshot's own folder, with a
+// trailing slash: <prefix>/snapshots/ in the public layout, and one level
+// deeper in the private one. A snapshot's folder is SnapshotsPrefix + its stamp.
+func (k SnapshotKeys) SnapshotsPrefix() string { return path.Dir(k.snapshotDir) + "/" }
+
+// Root is the configured key prefix with no trailing slash, empty when the
+// bucket's root is the prefix. Every key a snapshot writes, parts included, is
+// below it.
+func (k SnapshotKeys) Root() string {
+	return strings.Trim(strings.TrimSuffix(k.PartsPrefix, "parts/"), "/")
+}
+
 var reDHToken = regexp.MustCompile(`^[A-Za-z0-9_-]+$`)
 
 // snapshotKeys lays out one snapshot under prefix. An empty token is the public

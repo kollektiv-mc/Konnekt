@@ -2,6 +2,8 @@ package services
 
 import (
 	"context"
+	"crypto/md5"
+	"encoding/base64"
 	"encoding/json"
 	"encoding/xml"
 	"errors"
@@ -11,6 +13,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -43,6 +46,19 @@ type fakeBucket struct {
 	failMultipart func(op string, n int) (status int, code string)
 	uploads       map[string]*fakeUpload
 	multipartOps  map[string]int
+	// listPageSize is how many keys one ListObjectsV2 page holds (zero is 1000,
+	// S3's own). listExtra are keys added to every listing whatever its prefix,
+	// which a faithful bucket never does: a planted answer the client cannot
+	// trust. failList and failDelete, when set, are asked before a listing and a
+	// multi-object delete; a non-zero status is sent instead. stuck are keys a
+	// delete reports as failed, and leaves in place. deletes are the keys of
+	// every delete request that arrived, one slice each, in order.
+	listPageSize int
+	listExtra    []string
+	failList     func() (status int, code string)
+	failDelete   func(keys []string) (status int, code string)
+	stuck        map[string]bool
+	deletes      [][]string
 }
 
 // fakeUpload is one open multipart upload: the key it will become and the bytes
@@ -62,6 +78,14 @@ func newFakeBucket(t *testing.T) *fakeBucket {
 		key := strings.TrimPrefix(r.URL.Path, "/snapshots/")
 		b.mu.Lock()
 		defer b.mu.Unlock()
+		if r.Method == http.MethodGet && r.URL.Query().Get("list-type") == "2" {
+			b.list(w, r)
+			return
+		}
+		if r.Method == http.MethodPost && r.URL.Query().Has("delete") {
+			b.deleteMany(w, r)
+			return
+		}
 		switch r.Method {
 		case http.MethodHead:
 			data, ok := b.objects[key]
@@ -111,6 +135,114 @@ func newFakeBucket(t *testing.T) *fakeBucket {
 		}
 	})
 	return b
+}
+
+// list answers ListObjectsV2 with the lock held: the stored keys under the
+// prefix in key order, listPageSize at a time, with a continuation token that
+// names where the next page starts.
+func (b *fakeBucket) list(w http.ResponseWriter, r *http.Request) {
+	q := r.URL.Query()
+	if b.failList != nil {
+		if status, code := b.failList(); status != 0 {
+			s3XMLError(w, status, code, "refused "+testSecret)
+			return
+		}
+	}
+	var keys []string
+	for k := range b.objects {
+		if strings.HasPrefix(k, q.Get("prefix")) {
+			keys = append(keys, k)
+		}
+	}
+	keys = append(keys, b.listExtra...)
+	sort.Strings(keys)
+	if after := q.Get("continuation-token"); after != "" {
+		keys = keys[sort.SearchStrings(keys, strings.TrimPrefix(after, "after:")):]
+		for len(keys) > 0 && "after:"+keys[0] <= after {
+			keys = keys[1:]
+		}
+	}
+	size := b.listPageSize
+	if size == 0 {
+		size = 1000
+	}
+	truncated := len(keys) > size
+	if truncated {
+		keys = keys[:size]
+	}
+	var sb strings.Builder
+	sb.WriteString(`<?xml version="1.0" encoding="UTF-8"?><ListBucketResult><Name>snapshots</Name>`)
+	fmt.Fprintf(&sb, "<IsTruncated>%t</IsTruncated>", truncated)
+	if truncated {
+		fmt.Fprintf(&sb, "<NextContinuationToken>after:%s</NextContinuationToken>", keys[len(keys)-1])
+	}
+	for _, k := range keys {
+		fmt.Fprintf(&sb, "<Contents><Key>%s</Key><LastModified>2026-10-18T04:00:00.000Z</LastModified><ETag>&quot;e&quot;</ETag><Size>%d</Size><StorageClass>STANDARD</StorageClass></Contents>", k, len(b.objects[k]))
+	}
+	sb.WriteString("</ListBucketResult>")
+	_, _ = w.Write([]byte(sb.String()))
+}
+
+// deleteMany answers a multi-object delete with the lock held. Like S3 it
+// refuses a body whose Content-MD5 is not the body's, or that names more than
+// 1000 keys; it answers in Quiet mode, so only the failures are listed.
+func (b *fakeBucket) deleteMany(w http.ResponseWriter, r *http.Request) {
+	body := recordedBody(b.s3TestServer, r)
+	sum := md5.Sum(body)
+	if r.Header.Get("Content-MD5") != base64.StdEncoding.EncodeToString(sum[:]) {
+		s3XMLError(w, http.StatusBadRequest, "InvalidDigest", "The Content-MD5 you specified was invalid.")
+		return
+	}
+	var doc struct {
+		Quiet   bool `xml:"Quiet"`
+		Objects []struct {
+			Key string `xml:"Key"`
+		} `xml:"Object"`
+	}
+	if err := xml.Unmarshal(body, &doc); err != nil || len(doc.Objects) == 0 || len(doc.Objects) > 1000 {
+		s3XMLError(w, http.StatusBadRequest, "MalformedXML", "bad delete body")
+		return
+	}
+	keys := make([]string, len(doc.Objects))
+	for i, o := range doc.Objects {
+		keys[i] = o.Key
+	}
+	b.deletes = append(b.deletes, keys)
+	if b.failDelete != nil {
+		if status, code := b.failDelete(keys); status != 0 {
+			s3XMLError(w, status, code, "refused "+testSecret)
+			return
+		}
+	}
+	var sb strings.Builder
+	sb.WriteString(`<?xml version="1.0" encoding="UTF-8"?><DeleteResult>`)
+	for _, k := range keys {
+		if b.stuck[k] {
+			fmt.Fprintf(&sb, "<Error><Key>%s</Key><Code>AccessDenied</Code><Message>Access Denied %s</Message></Error>", k, testSecret)
+			continue
+		}
+		delete(b.objects, k)
+	}
+	sb.WriteString("</DeleteResult>")
+	_, _ = w.Write([]byte(sb.String()))
+}
+
+// deletedKeys is every key a delete request named, in the order they arrived.
+func (b *fakeBucket) deletedKeys() []string {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	var out []string
+	for _, batch := range b.deletes {
+		out = append(out, batch...)
+	}
+	return out
+}
+
+// deleteRequests is how many multi-object delete requests arrived.
+func (b *fakeBucket) deleteRequests() int {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	return len(b.deletes)
 }
 
 // multipart answers the four calls of a multipart upload, with the lock held. A
