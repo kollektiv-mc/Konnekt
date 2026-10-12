@@ -3,6 +3,7 @@ import type { Edge } from '@xyflow/react'
 import type { models } from '../../../../wailsjs/go/models'
 import type { NodeData } from './graphMapping'
 import { Combobox } from '../../../components/ui/Combobox'
+import { DestinationField } from './DestinationField'
 import { WIRED_BG_CLASS, WIRED_BORDER_CLASS, WIRED_TEXT_CLASS } from './blockMeta'
 
 interface Props {
@@ -105,6 +106,12 @@ export function NodeConfigPanel({ nodeId, data, def, edges, onChange }: Props) {
                 value={String(val)}
                 onChange={(v) => onChange(field.key, v)}
                 options={options}
+                ariaLabel={field.label}
+              />
+            ) : field.type === 'destination' ? (
+              <DestinationField
+                value={String(val)}
+                onChange={(v) => onChange(field.key, v)}
                 ariaLabel={field.label}
               />
             ) : field.type === 'attribute' ? (
