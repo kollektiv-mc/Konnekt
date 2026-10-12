@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 	"fmt"
+	"maps"
 	"regexp"
 	"slices"
 	"strings"
@@ -223,7 +224,7 @@ func keptDHParts(ctx context.Context, store dhIndexReader, snapPrefix string, fo
 		}
 	}
 	referenced := map[string]struct{}{}
-	for _, key := range slices.Sorted(mapKeys(indexKeys)) {
+	for _, key := range slices.Sorted(maps.Keys(indexKeys)) {
 		if err := ctx.Err(); err != nil {
 			return nil, err
 		}
@@ -245,16 +246,6 @@ func keptDHParts(ctx context.Context, store dhIndexReader, snapPrefix string, fo
 	return referenced, nil
 }
 
-func mapKeys[V any](m map[string]V) func(yield func(string) bool) {
-	return func(yield func(string) bool) {
-		for k := range m {
-			if !yield(k) {
-				return
-			}
-		}
-	}
-}
-
 // oldDHFolders returns the keys of the objects in every folder to delete, how
 // many folders that is, and their bytes. A complete folder that is not kept goes;
 // an incomplete one goes only when older than every kept one.
@@ -265,7 +256,7 @@ func oldDHFolders(snapPrefix string, folders map[string]*dhPruneFolder, kept map
 			oldest = stamp
 		}
 	}
-	for _, stamp := range slices.Sorted(mapKeys(folders)) {
+	for _, stamp := range slices.Sorted(maps.Keys(folders)) {
 		f := folders[stamp]
 		if _, keep := kept[stamp]; keep || (!f.Complete && stamp >= oldest) {
 			continue
