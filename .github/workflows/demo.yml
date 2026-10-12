@@ -5,13 +5,15 @@
 # built bundle into it would take that property away. The demo is its own
 # Cloudflare Pages project instead, and the site links out to it.
 #
-# Three triggers, deliberately. A release is what the demo is *of*, so a tag
-# rebuilds it and the demo can never be older than the newest build; main keeps
-# it honest between releases; and a pull request that touches the demo runs the
-# build, its checks and the recording without publishing, so a binding the demo
-# does not answer or a scene that cannot find its controls is red before it
-# merges rather than after. None of them ever writes frontend/dist, which
-# main.go embeds and check-bundle measures.
+# Published from three triggers. A release is what the demo is *of*, so a tag
+# rebuilds it and the demo can never be older than the newest build; a nightly
+# run keeps it honest between releases; and workflow_dispatch publishes on
+# demand. A pull request that touches the demo runs the build and its checks
+# but neither films nor publishes, so a binding the demo does not answer is red
+# before it merges. A scene that can no longer find its controls is red at the
+# next nightly run instead, which is the trade for not installing ffmpeg and a
+# browser and filming every scene on every pull request. None of them ever
+# writes frontend/dist, which main.go embeds and check-bundle measures.
 #
 # The website's feature clips are filmed here too (demo/record.mjs), from the
 # very build that is published, and shipped beside it under /scenes/. That is
@@ -20,18 +22,14 @@
 name: demo
 
 on:
-  push:
-    branches: [main]
-    # Nothing else can change what the demo renders. A website-only or docs-only
-    # push would otherwise rebuild and redeploy it for no reason.
-    paths:
-      - "frontend/**"
-      - "demo/**"
-      - "backend/services/scheduler_blocks.go"
-      - ".github/workflows/demo.yml"
-  # The same four paths, listed twice because a workflow cannot share a list
-  # between two events. The publish step below is gated on the event, so this
-  # never deploys.
+  # GitHub runs a schedule on the latest commit of the default branch, and
+  # delays runs at the start of every hour, so this sits off the hour. In a
+  # public repository it is disabled after 60 days without activity.
+  schedule:
+    - cron: "17 3 * * *"
+  # Nothing else can change what the demo renders. A website-only or docs-only
+  # pull request would otherwise build it for no reason. The publish step and
+  # the filming are gated on the event, so this never films or deploys.
   pull_request:
     paths:
       - "frontend/**"
@@ -91,24 +89,31 @@ jobs:
         run: git diff --exit-code demo/backend/fixtures/blockdefs.json
 
       # ── The clips ────────────────────────────────────────────────────────
+      # Skipped on a pull request, which only builds; see the header. The
+      # publish step needs the clips, so whatever publishes also films.
+      #
       # The runner image ships Chromium but no ffmpeg, and demo/record.mjs
       # wants libvpx-vp9, libx264 and libwebp, which Ubuntu's package has.
       # Playwright's own Chromium is the one its devDependency pins, so the
       # recording runs on the same build everywhere; --with-deps installs the
       # shared libraries it needs on the runner.
       - name: Install ffmpeg
+        if: github.event_name != 'pull_request'
         run: |
           sudo apt-get update -q
           sudo apt-get install -y -q --no-install-recommends ffmpeg
 
       - name: Install the recorder's browser
+        if: github.event_name != 'pull_request'
         run: pnpm exec playwright install --with-deps chromium
         working-directory: frontend
 
       # Films every scene under demo/scenes/ against demo/dist and writes the
       # clips into it. A scene whose tile has moved its controls fails here,
-      # which is the point of running it on every pull request.
+      # and fails the publish with it, so a broken scene never ships a demo
+      # with a clip missing.
       - name: Film the scenes
+        if: github.event_name != 'pull_request'
         run: node demo/record.mjs
 
       # frontend/dist is what main.go embeds and what check-bundle-size.mjs
@@ -122,8 +127,8 @@ jobs:
           fi
 
       - name: Publish
-        # Skipped on forks, where the secrets do not exist: the build and the
-        # coverage check above are the parts worth running on a pull request.
+        # Skipped on a pull request, and wherever the variable is unset, such
+        # as a fork, where the secrets do not exist either.
         #
         # Wrangler comes from npx rather than cloudflare/wrangler-action. The
         # action sees pnpm on the runner and runs `pnpm add wrangler` in the
