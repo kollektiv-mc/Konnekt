@@ -58,10 +58,11 @@ const targetPackage = "./backend/services/"
 //	80.4% -> floor 78.0  the bucket destinations' storage and connection tests (#480)
 //	81.1% -> floor 78.5  the upload block's walk, skip and source-folder tests (#480)
 //	81.5% -> floor 79.0  the Distant Horizons snapshot block's sequence and refusal tests (#481)
+//	82.3% -> floor 80.0  the publish block's assembly, page and claim tests (#565, #562)
 //
 // Coverage is a proxy, not the goal. A test that would have caught a real bug is
 // worth more than one that only moves this number.
-const floorPercent = 79.0
+const floorPercent = 80.0
 
 // Matches the tail of `go test -cover` output: "coverage: 36.7% of statements".
 var reCoverage = regexp.MustCompile(`coverage:\s+([0-9.]+)%\s+of\s+statements`)

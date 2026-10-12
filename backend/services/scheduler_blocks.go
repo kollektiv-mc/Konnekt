@@ -299,6 +299,7 @@ func registerBuiltins(r *BlockRegistry) {
 
 	registerUploadBlock(r)
 	registerDHSnapshotBlock(r)
+	registerDHPublishBlock(r)
 }
 
 // ── Executors ─────────────────────────────────────────────────────────────────
