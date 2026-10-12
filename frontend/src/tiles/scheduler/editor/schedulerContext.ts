@@ -16,6 +16,10 @@ export interface SchedulerCtxValue {
   // nodes that report one (the Distant Horizons snapshot). Unlike the run state
   // it stays until the next run starts, so the figure outlives the highlight.
   nodeDowntimeMs: Map<string, number>
+  // What each node could not finish after its work was done in the last run, for
+  // the nodes that report one (the Publish DH Snapshot's prune). Kept until the
+  // next run starts, like the downtime. The node still completed.
+  nodeWarning: Map<string, string>
   firedEdges: Set<string>
   // Static analysis: node/edge ids that participate in a control-flow cycle.
   cycleNodes: Set<string>
@@ -29,6 +33,7 @@ export const SchedulerCtx = createContext<SchedulerCtxValue>({
   onToggleCollapse: () => {},
   nodeRunState: new Map(),
   nodeDowntimeMs: new Map(),
+  nodeWarning: new Map(),
   firedEdges: new Set(),
   cycleNodes: new Set(),
   cycleEdges: new Set(),

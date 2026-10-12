@@ -38,6 +38,7 @@ function renderNode(
   config: Record<string, unknown>,
   edges: Edge[] = [],
   downtimeMs?: number,
+  warning?: string,
 ): HTMLElement {
   const ctx: SchedulerCtxValue = {
     blockDefs: new Map([commandDef, declaringDef].map((d) => [d.id, d])),
@@ -46,6 +47,7 @@ function renderNode(
     onToggleCollapse: () => {},
     nodeRunState: new Map(),
     nodeDowntimeMs: downtimeMs === undefined ? new Map() : new Map([['n1', downtimeMs]]),
+    nodeWarning: warning === undefined ? new Map() : new Map([['n1', warning]]),
     firedEdges: new Set(),
     cycleNodes: new Set(),
     cycleEdges: new Set(),
@@ -144,5 +146,43 @@ describe('the downtime figure on a server-stopping node', () => {
   it('needs the badge: a node that stops nothing shows no figure', () => {
     renderNode('action.command', { command: 'save-all' }, [], 130_000)
     expect(screen.queryByText(/downtime/)).toBeNull()
+  })
+})
+
+describe('the warning a node reports after its work is done', () => {
+  const WARNING = 'Prune skipped: s3 ListObjects dh/snapshots/: status 403 AccessDenied'
+
+  it('shows muted, prefixed, on a node that stops nothing', () => {
+    renderNode('action.command', { command: 'save-all' }, [], undefined, WARNING)
+    const line = screen.getByText(`warning: ${WARNING}`)
+    expect(line.className).toContain('text-text-muted')
+    expect(screen.queryByText(BADGE)).toBeNull()
+  })
+
+  it('carries the whole text as a tooltip, since the line is truncated', () => {
+    renderNode('action.command', { command: 'save-all' }, [], undefined, WARNING)
+    expect(screen.getByText(`warning: ${WARNING}`).getAttribute('title')).toBe(WARNING)
+  })
+
+  it('is absent when the last run reported none', () => {
+    renderNode('action.command', { command: 'save-all' })
+    expect(screen.queryByText(/warning:/)).toBeNull()
+  })
+
+  it('makes the node taller by exactly the status line, once', () => {
+    const plain = renderNode('action.command', { command: 'save-all' })
+    const plainH = parseFloat(plain.style.height)
+    cleanup()
+    const warned = renderNode('action.command', { command: 'save-all' }, [], undefined, WARNING)
+    expect(parseFloat(warned.style.height) - plainH).toBe(20)
+    cleanup()
+    // A node that already has the badge line shares it rather than adding a second.
+    const stopping = renderNode('action.declares', {})
+    const stoppingH = parseFloat(stopping.style.height)
+    cleanup()
+    const both = renderNode('action.declares', {}, [], 45_000, WARNING)
+    expect(parseFloat(both.style.height)).toBe(stoppingH)
+    expect(screen.getByText('downtime 45s')).toBeTruthy()
+    expect(screen.getByText(`warning: ${WARNING}`)).toBeTruthy()
   })
 })
