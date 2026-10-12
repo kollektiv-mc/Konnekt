@@ -57,6 +57,8 @@ func NewApp() *App {
 	backup.SetBus(bus)
 	sched := services.NewSchedulerService(srv, backup, rcon, cfg)
 	sched.SetBus(bus)
+	destinations := services.NewDestinationService()
+	sched.SetDestinations(destinations)
 	mods := services.NewModService(cfg, srv)
 	mods.SetBus(bus)
 	update := services.NewUpdateService()
@@ -86,7 +88,7 @@ func NewApp() *App {
 		commandsService:     commands,
 		kommandsService:     kommands,
 		fontService:         services.NewFontService(),
-		destinationService:  services.NewDestinationService(),
+		destinationService:  destinations,
 		bus:                 bus,
 	}
 	// Remote Access (#43). Built here so the allowlist is resolved against the

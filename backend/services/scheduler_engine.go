@@ -109,6 +109,25 @@ func (s *SchedulerService) runGraph(
 		}
 	}
 
+	// A destination is chosen in the editor and can be deleted in Settings
+	// afterwards. Checked here, before any node runs, so a graph that stops the
+	// server for a snapshot never gets as far as stopping it only to find the
+	// upload has nowhere to go.
+	if issues := validateGraphDestinations(g, s.registry, s.deps.destinations); len(issues) > 0 {
+		now := time.Now().UnixMilli()
+		rec := models.RunRecord{
+			ID: newID(), GraphID: g.ID, GraphName: g.Name,
+			Trigger: triggerLabel, StartedAt: now, FinishedAt: now,
+			Status: "failed",
+			Error:  "destination validation failed: " + strings.Join(issues, " "),
+		}
+		// Unlike the type check above, this one can start failing a graph that
+		// ran yesterday (a destination deleted in Settings), on a schedule nobody
+		// is watching, so the history is where the reason has to be.
+		s.addHistory(rec)
+		return rec
+	}
+
 	runID := newID()
 	now := time.Now()
 	rec := models.RunRecord{
