@@ -69,7 +69,8 @@ type dhHost interface {
 	Narrate(line string)
 }
 
-// dhIndexReader is the part of S3Client the run uses: it reads latest.json.
+// dhIndexReader is the part of S3Client the run uses: it reads latest.json and
+// the index it points at.
 type dhIndexReader interface {
 	GetObject(ctx context.Context, key string) ([]byte, bool, error)
 }
@@ -269,12 +270,13 @@ func nearestExistingDir(dir string) string {
 }
 
 // previousIndex reads the index the new snapshot is measured against. With a
-// bucket it is the bucket's latest.json, which says what is already up: the file
-// must be there or be a clean 404 (a first snapshot), and anything else refuses
-// the run, because carrying on would restage and re-upload everything on the
-// strength of a network blip. Without a bucket it is the index.json left in the
-// staging folder, a convenience that is only as true as the last publish; one
-// that cannot be read is ignored, which costs a full restage and nothing else.
+// bucket it is the index the bucket's latest.json points at, which says what
+// is already up: the pointer must be there or be a clean 404 (a first snapshot),
+// and anything else refuses the run, because carrying on would restage and
+// re-upload everything on the strength of a network blip. Without a bucket it
+// is the index.json left in the staging folder, a convenience that is only as
+// true as the last publish; one that cannot be read is ignored, which costs a
+// full restage and nothing else.
 func (p *dhRunPlan) previousIndex(ctx context.Context) (*DHIndex, bool, error) {
 	if p.Bucket == nil {
 		return p.localIndex(), false, nil
@@ -283,19 +285,58 @@ func (p *dhRunPlan) previousIndex(ctx context.Context) (*DHIndex, bool, error) {
 	if err != nil {
 		return nil, false, err
 	}
-	data, found, err := p.Bucket.GetObject(ctx, keys.Latest)
+	prev, err := readLatestIndex(ctx, p.Bucket, keys.Latest)
 	if err != nil {
 		return nil, false, fmt.Errorf("cannot read the previous snapshot from %s: %w", p.BucketLabel, err)
 	}
-	if !found {
+	if prev == nil {
 		p.narrate(fmt.Sprintf("No %s in %s: this is a first snapshot, every part will be staged", keys.Latest, p.BucketLabel))
 		return nil, false, nil
 	}
+	return &prev.Index, true, nil
+}
+
+// dhLatestIndex is the snapshot a bucket's latest.json points at.
+type dhLatestIndex struct {
+	Index DHIndex
+	// IndexKey is where the index was read from, which is also where the
+	// snapshot's own folder is: its assembled files sit beside it.
+	IndexKey string
+}
+
+// readLatestIndex reads latest.json, resolves the index it points at and reads
+// that. It returns nil, with no error, only when there is no latest.json at all:
+// a first snapshot. A pointer whose index is missing is an error, never a first
+// snapshot, since treating it as one would restage and re-upload everything over
+// what is probably a pruned or half-deleted bucket.
+func readLatestIndex(ctx context.Context, r dhIndexReader, latestKey string) (*dhLatestIndex, error) {
+	data, found, err := r.GetObject(ctx, latestKey)
+	if err != nil {
+		return nil, err
+	}
+	if !found {
+		return nil, nil
+	}
+	latest, err := parseDHLatest(data)
+	if err != nil {
+		return nil, fmt.Errorf("%s is not a Distant Horizons latest.json: %w", latestKey, err)
+	}
+	indexKey, err := latestIndexKey(latestKey, latest)
+	if err != nil {
+		return nil, err
+	}
+	data, found, err = r.GetObject(ctx, indexKey)
+	if err != nil {
+		return nil, err
+	}
+	if !found {
+		return nil, fmt.Errorf("%s points at %s, which is not in the bucket: delete %s to start over with a first snapshot", latestKey, indexKey, latestKey)
+	}
 	ix, err := parseDHIndex(data)
 	if err != nil {
-		return nil, false, fmt.Errorf("%s in %s is not a Distant Horizons index: %w", keys.Latest, p.BucketLabel, err)
+		return nil, fmt.Errorf("%s is not a Distant Horizons index: %w", indexKey, err)
 	}
-	return &ix, true, nil
+	return &dhLatestIndex{Index: ix, IndexKey: indexKey}, nil
 }
 
 func (p *dhRunPlan) localIndex() *DHIndex {

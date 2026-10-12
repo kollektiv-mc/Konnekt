@@ -14,6 +14,7 @@ import (
 	"regexp"
 	"strings"
 	"time"
+	"unicode"
 )
 
 // DHPartSize is the size of one snapshot part. 8 MiB is a PROVISIONAL value,
@@ -91,6 +92,92 @@ func parseDHIndex(data []byte) (DHIndex, error) {
 		return DHIndex{}, fmt.Errorf("index format %d is not supported (want %d)", ix.Format, dhIndexFormat)
 	}
 	return ix, nil
+}
+
+// dhLatestFormat is latest.json's `format`.
+const dhLatestFormat = 1
+
+// DHLatest is latest.json: a pointer at the newest snapshot's index.json, not a
+// copy of it, so one canonical index exists and the relative paths inside it
+// (partsBase) stay right wherever a reader found it. It is the last object a
+// publish writes, so every part the index it names lists is already up.
+// Kapital Launcher reads it (Kapital-Launcher#136).
+type DHLatest struct {
+	Format int `json:"format"`
+	// CreatedAt is the snapshot's time, copied from its index.
+	CreatedAt string `json:"createdAt"`
+	// Index is the index.json's path relative to latest.json's own location:
+	// forward slashes, no scheme, no leading slash, no ".." segment.
+	Index string `json:"index"`
+}
+
+// Marshal renders the pointer as the JSON that is uploaded.
+func (l DHLatest) Marshal() ([]byte, error) {
+	data, err := json.MarshalIndent(l, "", "  ")
+	if err != nil {
+		return nil, fmt.Errorf("encode latest: %w", err)
+	}
+	return append(data, '\n'), nil
+}
+
+// parseDHLatest decodes a latest.json, refusing a format it does not know and a
+// pointer that names nothing. Where the pointer may point is latestIndexKey's.
+func parseDHLatest(data []byte) (DHLatest, error) {
+	var l DHLatest
+	if err := json.Unmarshal(data, &l); err != nil {
+		return DHLatest{}, fmt.Errorf("parse latest: %w", err)
+	}
+	if l.Format != dhLatestFormat {
+		return DHLatest{}, fmt.Errorf("latest format %d is not supported (want %d)", l.Format, dhLatestFormat)
+	}
+	if strings.TrimSpace(l.Index) == "" {
+		return DHLatest{}, errors.New("latest names no index")
+	}
+	return l, nil
+}
+
+// latestIndexKey resolves the pointer against latestKey, the object key
+// latest.json was read from, into the index's object key. The pointer is read
+// from a bucket anyone with write access can change, so it is held to what it
+// is for: a relative path below latest.json's own folder. An absolute path, a
+// scheme, a ".." segment, a backslash or anything a URL reader would treat as a
+// query or a fragment is refused, since each would aim a reader somewhere other
+// than where the snapshot lives.
+func latestIndexKey(latestKey string, l DHLatest) (string, error) {
+	ref := l.Index
+	switch {
+	case ref == "":
+		return "", errors.New("latest.json names no index")
+	case strings.HasPrefix(ref, "/") || strings.Contains(ref, `\`):
+		return "", fmt.Errorf("latest.json index %q must be a relative path with forward slashes", ref)
+	case strings.ContainsAny(ref, "?#%") || strings.ContainsFunc(ref, unicode.IsControl):
+		return "", fmt.Errorf("latest.json index %q must be a plain path", ref)
+	}
+	segs := strings.Split(ref, "/")
+	if strings.Contains(segs[0], ":") {
+		return "", fmt.Errorf("latest.json index %q must not start with a scheme", ref)
+	}
+	for _, seg := range segs {
+		switch seg {
+		case "", ".", "..":
+			return "", fmt.Errorf("latest.json index %q must not contain an empty, '.' or '..' segment", ref)
+		}
+	}
+	return path.Join(path.Dir(latestKey), ref), nil
+}
+
+// dhRelativeKey is key relative to the folder of fromKey, the form latest.json
+// states its index in. It is the inverse of what latestIndexKey resolves.
+func dhRelativeKey(fromKey, key string) (string, error) {
+	dir := path.Dir(fromKey)
+	if dir == "." {
+		return key, nil
+	}
+	rel, ok := strings.CutPrefix(key, dir+"/")
+	if !ok {
+		return "", fmt.Errorf("%s is not below the folder of %s", key, fromKey)
+	}
+	return rel, nil
 }
 
 // formatDHCreatedAt is the snapshot's time as index.json writes it.
