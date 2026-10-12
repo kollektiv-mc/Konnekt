@@ -78,4 +78,55 @@ describe('CopyButton', () => {
     })
     expect(error).not.toHaveBeenCalled()
   })
+
+  describe('with text fetched at the click', () => {
+    it('fetches only when clicked, copies what it got and reports success', async () => {
+      const fetchText = vi.fn(() => Promise.resolve('fetched link'))
+      const onResult = vi.fn()
+      render(<CopyButton text={fetchText} label="Copy link" onResult={onResult} />)
+      expect(fetchText).not.toHaveBeenCalled()
+
+      await click('Copy link')
+      expect(fetchText).toHaveBeenCalledTimes(1)
+      expect(writeText).toHaveBeenCalledWith('fetched link')
+      expect(onResult).toHaveBeenCalledWith(null)
+      expect(label('Copied')).toBeTruthy()
+      act(() => {
+        vi.advanceTimersByTime(1500)
+      })
+      expect(label('Copy link')).toBeTruthy()
+    })
+
+    it('reports why a fetch failed and copies nothing', async () => {
+      const onResult = vi.fn()
+      render(
+        <CopyButton
+          text={() => Promise.reject(new Error('nothing published'))}
+          label="Copy link"
+          onResult={onResult}
+        />,
+      )
+      await click('Copy link')
+      expect(onResult).toHaveBeenCalledWith('nothing published')
+      expect(writeText).not.toHaveBeenCalled()
+      expect(label('Copy link')).toBeTruthy()
+    })
+
+    it('reports a refused clipboard, which static text leaves silent unless asked', async () => {
+      writeText.mockImplementation(() => Promise.reject(new Error('denied')))
+      const onResult = vi.fn()
+      render(<CopyButton text={() => Promise.resolve('x')} onResult={onResult} />)
+      await click()
+      expect(onResult).toHaveBeenCalledWith('The clipboard refused the copy.')
+    })
+
+    it('is disabled while the text is being fetched', async () => {
+      let resolve: (s: string) => void = () => {}
+      render(<CopyButton text={() => new Promise((r) => (resolve = r))} />)
+      await click()
+      expect((label('Copy') as HTMLButtonElement).disabled).toBe(true)
+      await act(async () => resolve('x'))
+      expect(writeText).toHaveBeenCalledWith('x')
+    })
+  })
 })

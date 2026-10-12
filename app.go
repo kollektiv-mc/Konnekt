@@ -291,6 +291,39 @@ func (a *App) TestDestination(d models.Destination, secret string) (models.Desti
 	return a.destinationService.Test(ctx, d, secret), nil
 }
 
+// --- Private snapshot link (#561) ---
+
+// GetSnapshotLink returns the address of a destination's latest published
+// snapshot, for the Copy link button. It is the only call that returns the link:
+// in private mode the address carries the token, so nothing that lists, saves or
+// emits a destination does. It refuses until something has been published.
+func (a *App) GetSnapshotLink(id string) (models.SnapshotLinkResult, error) {
+	return a.destinationService.GetSnapshotLink(id)
+}
+
+// RotateSnapshotLink gives a destination's private link a new token and moves the
+// latest snapshot under it, so everyone holding the old link loses access. It
+// takes as long as the bucket needs to build each level's database again.
+func (a *App) RotateSnapshotLink(id string) (models.SnapshotLinkResult, error) {
+	return a.destinationService.RotateSnapshotLink(a.linkContext(), id)
+}
+
+// SetSnapshotLinkPrivate switches a destination's published snapshot between
+// public and a private link, moving it to the other layout. The link everyone
+// uses changes with it.
+func (a *App) SetSnapshotLinkPrivate(id string, private bool) (models.SnapshotLinkResult, error) {
+	return a.destinationService.SetSnapshotLinkPrivate(a.linkContext(), id, private)
+}
+
+// linkContext is the app's lifetime, which ends a long move when the app closes,
+// or a background one before the window has started.
+func (a *App) linkContext() context.Context {
+	if a.ctx == nil {
+		return context.Background()
+	}
+	return a.ctx
+}
+
 func (a *App) OpenDataDir() error {
 	return services.OpenPath(a.dataDir)
 }

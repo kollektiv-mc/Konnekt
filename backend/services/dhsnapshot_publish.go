@@ -42,6 +42,11 @@ type dhPublishPlan struct {
 	Label string
 	// KeyPrefix is the destination's prefix, then the node's.
 	KeyPrefix string
+	// Token is the destination's private link token, empty for the public
+	// layout (#561). It is a credential: the run replaces it in everything it
+	// narrates, reports or returns, and the URL in the result is the one with the
+	// token marked out, since the link is copied from Settings and from nowhere else.
+	Token string
 	// StageDir is the staged folder, already resolved and checked. It is read and
 	// never written.
 	StageDir string
@@ -101,8 +106,18 @@ type dhPublisher struct {
 
 func (p *dhPublisher) narrate(line string) {
 	if p.Narrate != nil {
-		p.Narrate(line)
+		p.Narrate(p.redact(line))
 	}
+}
+
+// redact marks the private link's token out of text the run hands to anyone:
+// object keys and URLs carry it. A public run has none, and replacing the empty
+// string would mark between every character, so it returns the text as it is.
+func (p *dhPublisher) redact(s string) string {
+	if p.Token == "" {
+		return s
+	}
+	return strings.ReplaceAll(s, p.Token, s3Redacted)
 }
 
 // runDHPublish runs the sequence. It returns an error for any failure, with the
@@ -111,7 +126,7 @@ func runDHPublish(ctx context.Context, plan dhPublishPlan) (dhPublishResult, err
 	p := &dhPublisher{dhPublishPlan: plan}
 	var res dhPublishResult
 
-	st, err := readStagedSnapshot(plan.StageDir, plan.KeyPrefix)
+	st, err := readStagedSnapshot(plan.StageDir, plan.KeyPrefix, plan.Token)
 	if err != nil {
 		return res, err
 	}
@@ -147,8 +162,11 @@ func runDHPublish(ctx context.Context, plan dhPublishPlan) (dhPublishResult, err
 	if err := p.writeLatest(ctx, st); err != nil {
 		return res, err
 	}
-	res.URL = p.publishedURL(st.Keys.Latest)
+	res.URL = p.redact(p.publishedURL(st.Keys.Latest))
 	p.narrate("Published: " + res.URL)
+	if p.Token != "" {
+		p.narrate("The snapshot is under a private link: copy it from Settings, in the destination's Snapshot link row")
+	}
 	p.prune(ctx, st, &res)
 	return res, nil
 }
@@ -167,7 +185,7 @@ func (p *dhPublisher) prune(ctx context.Context, st dhStaged, res *dhPublishResu
 		if pr.SnapshotsDeleted > 0 {
 			lead = "Prune incomplete: "
 		}
-		res.Warning = lead + err.Error()
+		res.Warning = p.redact(lead + err.Error())
 		p.narrate(res.Warning)
 	}
 }
@@ -178,7 +196,7 @@ func (p *dhPublisher) prune(ctx context.Context, st dhStaged, res *dhPublishResu
 // snapshot's keys from the time it states. Everything in the index that becomes
 // part of a path or a key is checked here, before anything is sent: the index is
 // a file in a folder the graph names.
-func readStagedSnapshot(stageDir, keyPrefix string) (dhStaged, error) {
+func readStagedSnapshot(stageDir, keyPrefix, token string) (dhStaged, error) {
 	indexPath := filepath.Join(stageDir, dhIndexFile)
 	data, err := readBounded(indexPath, s3GetBodyLimit)
 	if errors.Is(err, os.ErrNotExist) {
@@ -195,7 +213,7 @@ func readStagedSnapshot(stageDir, keyPrefix string) (dhStaged, error) {
 	if err != nil {
 		return dhStaged{}, fmt.Errorf("%s in %s: %w", dhIndexFile, stageDir, err)
 	}
-	keys, err := snapshotKeys(keyPrefix, "", created)
+	keys, err := snapshotKeys(keyPrefix, token, created)
 	if err != nil {
 		return dhStaged{}, err
 	}
@@ -503,10 +521,16 @@ func (p *dhPublisher) writeLatest(ctx context.Context, st dhStaged) error {
 // publishedURL is where key can be reached: the destination's public base URL
 // when it has one, else the bucket's own object address.
 func (p *dhPublisher) publishedURL(key string) string {
-	if base := strings.TrimRight(p.PublicBaseURL, "/"); base != "" {
+	return dhObjectURL(p.PublicBaseURL, p.Store, key)
+}
+
+// dhObjectURL is where key can be reached: under the destination's public base
+// URL when it has one, else at the bucket's own object address.
+func dhObjectURL(publicBase string, store interface{ ObjectURL(key string) string }, key string) string {
+	if base := strings.TrimRight(publicBase, "/"); base != "" {
 		return base + "/" + s3URIEncode(key, false)
 	}
-	return p.Store.ObjectURL(key)
+	return store.ObjectURL(key)
 }
 
 var _ dhPublishStore = (*S3Client)(nil)

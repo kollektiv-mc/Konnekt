@@ -110,7 +110,7 @@ func TestDHPublishBlockDefinition(t *testing.T) {
 			t.Errorf("%s = %+v, want an optional string", k, f)
 		}
 	}
-	// Retention is a number that starts at 3. The private link belongs to a later change.
+	// Retention is a number that starts at 3. The private link belongs to the destination (#561), never to the block.
 	if f := fields["keep"]; f.Type != "number" || f.Required || f.Default != dhDefaultKeep || dhDefaultKeep != 3 {
 		t.Errorf("keep = %+v, want an optional number defaulting to 3", f)
 	}

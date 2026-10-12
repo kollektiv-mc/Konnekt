@@ -2,13 +2,16 @@ interface ToggleProps {
   checked: boolean
   onChange: (v: boolean) => void
   disabled?: boolean
+  /** The switch's accessible name, for one that stands apart from a labelled row. */
+  label?: string
 }
 
-export function Toggle({ checked, onChange, disabled }: ToggleProps) {
+export function Toggle({ checked, onChange, disabled, label }: ToggleProps) {
   return (
     <button
       role="switch"
       aria-checked={checked}
+      aria-label={label}
       disabled={disabled}
       onClick={() => onChange(!checked)}
       // The off-state hover steps --border-hover (0.12) up to --text-faint

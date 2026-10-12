@@ -59,6 +59,10 @@ type fakeBucket struct {
 	failDelete   func(keys []string) (status int, code string)
 	stuck        map[string]bool
 	deletes      [][]string
+	// copies are the destination keys of every CopyObject that arrived, in order,
+	// and failCopy, when set, is asked before each one.
+	copies   []string
+	failCopy func(key string) (status int, code string)
 }
 
 // fakeUpload is one open multipart upload: the key it will become and the bytes
@@ -112,6 +116,10 @@ func newFakeBucket(t *testing.T) *fakeBucket {
 		case http.MethodPut:
 			if r.URL.Query().Get("uploadId") != "" {
 				b.multipart(w, r, key)
+				return
+			}
+			if r.Header.Get("X-Amz-Copy-Source") != "" {
+				b.copyObject(w, r, key)
 				return
 			}
 			if r.Header.Get("If-None-Match") == "*" {
@@ -325,6 +333,28 @@ func (b *fakeBucket) multipart(w http.ResponseWriter, r *http.Request, key strin
 		delete(b.uploads, q.Get("uploadId"))
 		w.WriteHeader(http.StatusNoContent)
 	}
+}
+
+// copyObject answers a CopyObject with the lock held: the source's bytes and
+// content type under the new key. failCopy, when set, is asked first with the
+// destination key; a non-zero status is sent instead of copying.
+func (b *fakeBucket) copyObject(w http.ResponseWriter, r *http.Request, key string) {
+	b.copies = append(b.copies, key)
+	if b.failCopy != nil {
+		if status, code := b.failCopy(key); status != 0 {
+			s3XMLError(w, status, code, "refused "+testSecret)
+			return
+		}
+	}
+	src, err := url.PathUnescape(strings.TrimPrefix(r.Header.Get("X-Amz-Copy-Source"), "/snapshots/"))
+	data, ok := b.objects[src]
+	if err != nil || !ok {
+		s3XMLError(w, http.StatusNotFound, "NoSuchKey", "The specified copy source does not exist.")
+		return
+	}
+	b.objects[key] = append([]byte(nil), data...)
+	b.types[key] = b.types[src]
+	fmt.Fprint(w, `<CopyObjectResult><ETag>&quot;e&quot;</ETag><LastModified>2026-10-18T04:00:00.000Z</LastModified></CopyObjectResult>`)
 }
 
 // openUploads is how many multipart uploads were started and neither completed

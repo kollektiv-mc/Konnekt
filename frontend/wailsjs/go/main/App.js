@@ -190,6 +190,10 @@ export function GetServerSummary(arg1) {
   return window['go']['main']['App']['GetServerSummary'](arg1);
 }
 
+export function GetSnapshotLink(arg1) {
+  return window['go']['main']['App']['GetSnapshotLink'](arg1);
+}
+
 export function GetStatsHistory(arg1) {
   return window['go']['main']['App']['GetStatsHistory'](arg1);
 }
@@ -346,6 +350,10 @@ export function RevokeRemoteSessions() {
   return window['go']['main']['App']['RevokeRemoteSessions']();
 }
 
+export function RotateSnapshotLink(arg1) {
+  return window['go']['main']['App']['RotateSnapshotLink'](arg1);
+}
+
 export function RunScheduleGraphNow(arg1, arg2) {
   return window['go']['main']['App']['RunScheduleGraphNow'](arg1, arg2);
 }
@@ -404,6 +412,10 @@ export function SetRemotePassword(arg1) {
 
 export function SetScheduleGraphEnabled(arg1, arg2, arg3) {
   return window['go']['main']['App']['SetScheduleGraphEnabled'](arg1, arg2, arg3);
+}
+
+export function SetSnapshotLinkPrivate(arg1, arg2) {
+  return window['go']['main']['App']['SetSnapshotLinkPrivate'](arg1, arg2);
 }
 
 export function StartRemoteAccess() {

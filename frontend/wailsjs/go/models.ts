@@ -379,6 +379,7 @@ export namespace models {
 	    publicBaseUrl: string;
 	    accessKeyId: string;
 	    secretSet: boolean;
+	    privateLink: boolean;
 	
 	    static createFrom(source: any = {}) {
 	        return new Destination(source);
@@ -395,6 +396,7 @@ export namespace models {
 	        this.publicBaseUrl = source["publicBaseUrl"];
 	        this.accessKeyId = source["accessKeyId"];
 	        this.secretSet = source["secretSet"];
+	        this.privateLink = source["privateLink"];
 	    }
 	}
 	export class DestinationTestResult {
@@ -1287,6 +1289,24 @@ export namespace models {
 	        this.running = source["running"];
 	        this.loaderVersion = source["loaderVersion"];
 	        this.loaderSource = source["loaderSource"];
+	    }
+	}
+	export class SnapshotLinkResult {
+	    private: boolean;
+	    link: string;
+	    message: string;
+	    oldLinkStillWorks: boolean;
+	
+	    static createFrom(source: any = {}) {
+	        return new SnapshotLinkResult(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.private = source["private"];
+	        this.link = source["link"];
+	        this.message = source["message"];
+	        this.oldLinkStillWorks = source["oldLinkStillWorks"];
 	    }
 	}
 	export class StatsSnapshot {

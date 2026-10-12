@@ -84,6 +84,10 @@ type dhRunPlan struct {
 	Bucket      dhIndexReader
 	BucketLabel string // what the narration calls the destination
 	KeyPrefix   string // the destination's prefix, then the node's
+	// Token is the destination's private link token, empty for the public layout
+	// (#561). It places the previous index and the new one's partsBase, and is
+	// marked out of everything the run narrates.
+	Token string
 
 	WorkingDir string
 	WorldDir   string
@@ -133,7 +137,12 @@ func (p *dhRunPlan) fillDefaults() {
 	}
 }
 
-func (p *dhRunPlan) narrate(line string) { p.Host.Narrate(line) }
+func (p *dhRunPlan) narrate(line string) {
+	if p.Token != "" {
+		line = strings.ReplaceAll(line, p.Token, s3Redacted)
+	}
+	p.Host.Narrate(line)
+}
 
 // dhPreflight is what the checks before the warning learned.
 type dhPreflight struct {
@@ -281,7 +290,7 @@ func (p *dhRunPlan) previousIndex(ctx context.Context) (*DHIndex, bool, error) {
 	if p.Bucket == nil {
 		return p.localIndex(), false, nil
 	}
-	keys, err := snapshotKeys(p.KeyPrefix, "", p.Now())
+	keys, err := snapshotKeys(p.KeyPrefix, p.Token, p.Now())
 	if err != nil {
 		return nil, false, err
 	}
@@ -462,7 +471,7 @@ func (p *dhRunPlan) copy(ctx context.Context, pre dhPreflight) (dhRunResult, err
 	if err := os.MkdirAll(p.StageDir, 0755); err != nil {
 		return res, fmt.Errorf("create %s: %w", p.StageDir, err)
 	}
-	keys, err := snapshotKeys(p.KeyPrefix, "", p.Now())
+	keys, err := snapshotKeys(p.KeyPrefix, p.Token, p.Now())
 	if err != nil {
 		return res, err
 	}
