@@ -18,6 +18,7 @@ import (
 	"net/url"
 	"os"
 	"path"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -127,6 +128,9 @@ type S3Client struct {
 	http    *http.Client
 	now     func() time.Time
 	backoff time.Duration // first retry delay; doubles each attempt
+	// redact are further strings scrub replaces beside the secret: the private
+	// snapshot link's token (#561), which sits in object keys and so in errors.
+	redact []string
 }
 
 // NewS3Client validates cfg. httpClient may be nil, which gives a client with
@@ -217,20 +221,37 @@ func (e *S3Error) Unwrap() error { return e.Err }
 // object that already exists gets back.
 func (e *S3Error) PreconditionFailed() bool { return e.Status == http.StatusPreconditionFailed }
 
-// scrub removes the secret from text before it can reach an error string or a log.
+// scrub removes the secret, and anything AlsoRedact named, from text before it
+// can reach an error string or a log.
 func (c *S3Client) scrub(s string) string {
-	return strings.ReplaceAll(s, c.cfg.SecretAccessKey, s3Redacted)
+	s = strings.ReplaceAll(s, c.cfg.SecretAccessKey, s3Redacted)
+	for _, r := range c.redact {
+		s = strings.ReplaceAll(s, r, s3Redacted)
+	}
+	return s
+}
+
+// AlsoRedact adds a string scrub replaces from now on, so an object key that
+// carries the private link's token reads "[redacted]" in every error, log line
+// and narration the client or its callers scrub. Call it right after the client
+// is opened and before it is shared; an empty string is ignored, since replacing
+// "" would put the marker between every character.
+func (c *S3Client) AlsoRedact(s string) {
+	if s == "" || slices.Contains(c.redact, s) {
+		return
+	}
+	c.redact = append(c.redact, s)
 }
 
 func (c *S3Client) transportError(op, key string, err error) *S3Error {
-	return &S3Error{Op: op, Key: key, Err: err, detail: c.scrub(err.Error())}
+	return &S3Error{Op: op, Key: c.scrub(key), Err: err, detail: c.scrub(err.Error())}
 }
 
 // responseError reads the S3 XML error out of resp (closing it) without echoing
 // the raw body.
 func (c *S3Client) responseError(op, key string, resp *http.Response) *S3Error {
 	defer func() { _ = resp.Body.Close() }()
-	e := &S3Error{Op: op, Key: key, Status: resp.StatusCode}
+	e := &S3Error{Op: op, Key: c.scrub(key), Status: resp.StatusCode}
 	body, err := io.ReadAll(io.LimitReader(resp.Body, s3ErrorBodyLimit))
 	if err == nil && len(body) > 0 {
 		var doc struct {
@@ -263,7 +284,7 @@ func (c *S3Client) HeadObject(ctx context.Context, key string) (S3ObjectInfo, bo
 	case resp.StatusCode/100 != 2:
 		return S3ObjectInfo{}, false, c.responseError(op, key, resp)
 	case resp.ContentLength < 0:
-		return S3ObjectInfo{}, false, &S3Error{Op: op, Key: key, Status: resp.StatusCode, Message: "response has no Content-Length"}
+		return S3ObjectInfo{}, false, &S3Error{Op: op, Key: c.scrub(key), Status: resp.StatusCode, Message: "response has no Content-Length"}
 	}
 	return S3ObjectInfo{Size: resp.ContentLength, ETag: strings.Trim(resp.Header.Get("ETag"), `"`)}, true, nil
 }
@@ -295,7 +316,7 @@ func (c *S3Client) GetObject(ctx context.Context, key string) ([]byte, bool, err
 		return nil, false, c.transportError(op, key, err)
 	}
 	if len(body) > s3GetBodyLimit {
-		return nil, false, &S3Error{Op: op, Key: key, Status: resp.StatusCode,
+		return nil, false, &S3Error{Op: op, Key: c.scrub(key), Status: resp.StatusCode,
 			Message: fmt.Sprintf("object is over the %s this client reads into memory", fmtBytes(s3GetBodyLimit))}
 	}
 	return body, true, nil
@@ -308,10 +329,10 @@ func (c *S3Client) GetObject(ctx context.Context, key string) ([]byte, bool, err
 func (c *S3Client) PutObject(ctx context.Context, key, localPath string, opts S3PutOptions) error {
 	info, err := os.Stat(localPath)
 	if err != nil {
-		return fmt.Errorf("s3 PutObject %s: %w", key, err)
+		return fmt.Errorf("s3 PutObject %s: %w", c.scrub(key), err)
 	}
 	if !info.Mode().IsRegular() {
-		return fmt.Errorf("s3 PutObject %s: %s is not a regular file", key, info.Name())
+		return fmt.Errorf("s3 PutObject %s: %s is not a regular file", c.scrub(key), info.Name())
 	}
 	return c.putSource(ctx, key, info.Size(), func() (io.ReadCloser, error) { return os.Open(localPath) }, opts)
 }
@@ -321,11 +342,11 @@ func (c *S3Client) PutObject(ctx context.Context, key, localPath string, opts S3
 func (c *S3Client) putSource(ctx context.Context, key string, size int64, open func() (io.ReadCloser, error), opts S3PutOptions) error {
 	const op = "PutObject"
 	if size > s3MaxSinglePutBytes {
-		return fmt.Errorf("s3 %s %s: %d bytes: %w; split it or wait for multipart upload", op, key, size, ErrS3TooLarge)
+		return fmt.Errorf("s3 %s %s: %d bytes: %w; split it or wait for multipart upload", op, c.scrub(key), size, ErrS3TooLarge)
 	}
 	hash, err := hashReader(open, size)
 	if err != nil {
-		return fmt.Errorf("s3 %s %s: %w", op, key, err)
+		return fmt.Errorf("s3 %s %s: %w", op, c.scrub(key), err)
 	}
 	headers := map[string]string{"content-type": s3ContentType(key)}
 	if opts.IfNoneMatch {
@@ -397,6 +418,23 @@ func (c *S3Client) ObjectURL(key string) string {
 	return u.String()
 }
 
+// CopyObject copies srcKey to dstKey inside the bucket with one request, so no
+// data leaves the machine. S3 proper caps one copy at 5 GiB, so it is for small
+// objects; a large one is built with UploadPartCopy. The new object keeps the
+// source's Content-Type (S3's default metadata directive).
+func (c *S3Client) CopyObject(ctx context.Context, dstKey, srcKey string) error {
+	const op = "CopyObject"
+	resp, err := c.roundTrip(ctx, s3Call{
+		op: op, method: http.MethodPut, key: dstKey, payloadHash: s3EmptyHash,
+		headers: map[string]string{"x-amz-copy-source": "/" + c.cfg.Bucket + "/" + s3URIEncode(srcKey, false)},
+	})
+	if err != nil {
+		return err
+	}
+	// S3 may answer 200 and report a late failure in the body, which this reads.
+	return c.decodeXMLResult(op, dstKey, resp, nil)
+}
+
 // --- multipart assembly ---
 //
 // These four calls exist to build one big object out of objects already in the
@@ -424,7 +462,7 @@ func (c *S3Client) CreateMultipartUpload(ctx context.Context, key string) (strin
 		return "", err
 	}
 	if out.UploadID == "" {
-		return "", &S3Error{Op: op, Key: key, Status: resp.StatusCode, Message: "response names no upload id"}
+		return "", &S3Error{Op: op, Key: c.scrub(key), Status: resp.StatusCode, Message: "response names no upload id"}
 	}
 	return out.UploadID, nil
 }
@@ -436,12 +474,12 @@ func (c *S3Client) CreateMultipartUpload(ctx context.Context, key string) (strin
 func (c *S3Client) UploadPartCopy(ctx context.Context, key, uploadID string, partNumber int, sourceKey string, byteRange *[2]int64) (string, error) {
 	const op = "UploadPartCopy"
 	if partNumber < 1 || partNumber > s3MaxMultipartParts {
-		return "", fmt.Errorf("s3 %s %s: part number %d is outside 1 to %d", op, key, partNumber, s3MaxMultipartParts)
+		return "", fmt.Errorf("s3 %s %s: part number %d is outside 1 to %d", op, c.scrub(key), partNumber, s3MaxMultipartParts)
 	}
 	headers := map[string]string{"x-amz-copy-source": "/" + c.cfg.Bucket + "/" + s3URIEncode(sourceKey, false)}
 	if byteRange != nil {
 		if byteRange[0] < 0 || byteRange[1] < byteRange[0] {
-			return "", fmt.Errorf("s3 %s %s: byte range %d-%d is not valid", op, key, byteRange[0], byteRange[1])
+			return "", fmt.Errorf("s3 %s %s: byte range %d-%d is not valid", op, c.scrub(key), byteRange[0], byteRange[1])
 		}
 		headers["x-amz-copy-source-range"] = fmt.Sprintf("bytes=%d-%d", byteRange[0], byteRange[1])
 	}
@@ -460,7 +498,7 @@ func (c *S3Client) UploadPartCopy(ctx context.Context, key, uploadID string, par
 	}
 	etag := strings.Trim(strings.TrimSpace(out.ETag), `"`)
 	if etag == "" {
-		return "", &S3Error{Op: op, Key: key, Status: resp.StatusCode, Message: "response names no ETag"}
+		return "", &S3Error{Op: op, Key: c.scrub(key), Status: resp.StatusCode, Message: "response names no ETag"}
 	}
 	return etag, nil
 }
@@ -481,7 +519,7 @@ type s3CompleteBody struct {
 func (c *S3Client) CompleteMultipartUpload(ctx context.Context, key, uploadID string, etags []string) error {
 	const op = "CompleteMultipartUpload"
 	if len(etags) == 0 || len(etags) > s3MaxMultipartParts {
-		return fmt.Errorf("s3 %s %s: %d parts is outside 1 to %d", op, key, len(etags), s3MaxMultipartParts)
+		return fmt.Errorf("s3 %s %s: %d parts is outside 1 to %d", op, c.scrub(key), len(etags), s3MaxMultipartParts)
 	}
 	doc := s3CompleteBody{Parts: make([]s3CompletePart, len(etags))}
 	for i, etag := range etags {
@@ -489,7 +527,7 @@ func (c *S3Client) CompleteMultipartUpload(ctx context.Context, key, uploadID st
 	}
 	body, err := xml.Marshal(doc)
 	if err != nil {
-		return fmt.Errorf("s3 %s %s: %w", op, key, err)
+		return fmt.Errorf("s3 %s %s: %w", op, c.scrub(key), err)
 	}
 	sum := sha256.Sum256(body)
 	resp, err := c.roundTrip(ctx, s3Call{
@@ -558,7 +596,7 @@ func (c *S3Client) ListObjects(ctx context.Context, prefix string) ([]S3ListedOb
 			return out, nil
 		}
 		if page.NextContinuationToken == "" || page.NextContinuationToken == token {
-			return nil, &S3Error{Op: op, Key: prefix, Status: resp.StatusCode, Message: "listing is truncated but names no next page"}
+			return nil, &S3Error{Op: op, Key: c.scrub(prefix), Status: resp.StatusCode, Message: "listing is truncated but names no next page"}
 		}
 		token = page.NextContinuationToken
 	}
@@ -672,7 +710,7 @@ func (c *S3Client) decodeXMLResultLimit(op, key string, resp *http.Response, out
 		return c.transportError(op, key, err)
 	}
 	if int64(len(body)) > limit {
-		return &S3Error{Op: op, Key: key, Status: resp.StatusCode, Message: fmt.Sprintf("response is over the %s this client reads", fmtBytes(limit))}
+		return &S3Error{Op: op, Key: c.scrub(key), Status: resp.StatusCode, Message: fmt.Sprintf("response is over the %s this client reads", fmtBytes(limit))}
 	}
 	var probe struct {
 		XMLName xml.Name
@@ -680,13 +718,13 @@ func (c *S3Client) decodeXMLResultLimit(op, key string, resp *http.Response, out
 		Message string `xml:"Message"`
 	}
 	if xml.Unmarshal(body, &probe) == nil && probe.XMLName.Local == "Error" {
-		return &S3Error{Op: op, Key: key, Status: resp.StatusCode, Code: c.scrub(probe.Code), Message: c.scrub(probe.Message)}
+		return &S3Error{Op: op, Key: c.scrub(key), Status: resp.StatusCode, Code: c.scrub(probe.Code), Message: c.scrub(probe.Message)}
 	}
 	if out == nil {
 		return nil
 	}
 	if err := xml.Unmarshal(body, out); err != nil {
-		return &S3Error{Op: op, Key: key, Status: resp.StatusCode, Message: "response is not the XML document expected"}
+		return &S3Error{Op: op, Key: c.scrub(key), Status: resp.StatusCode, Message: "response is not the XML document expected"}
 	}
 	return nil
 }
@@ -734,7 +772,7 @@ func (c *S3Client) roundTrip(ctx context.Context, call s3Call) (*http.Response, 
 		default:
 			return resp, nil
 		}
-		slog.Warn("s3: retrying", "op", call.op, "key", call.key, "attempt", attempt, "reason", retry)
+		slog.Warn("s3: retrying", "op", call.op, "key", c.scrub(call.key), "attempt", attempt, "reason", retry)
 		if err := sleepCtx(ctx, delay); err != nil {
 			return nil, c.transportError(call.op, call.key, err)
 		}
