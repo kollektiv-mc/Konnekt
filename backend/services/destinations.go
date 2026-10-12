@@ -191,6 +191,58 @@ func (s *DestinationService) Secret(id string) (string, error) {
 	return s.readSecretLocked(id)
 }
 
+// Lookup finds a destination by the name a graph refers to it by. Names are
+// unique ignoring case (Save enforces it), so the match ignores case too. The
+// result carries no secret.
+func (s *DestinationService) Lookup(name string) (models.Destination, bool, error) {
+	name = strings.TrimSpace(name)
+	if name == "" {
+		return models.Destination{}, false, nil
+	}
+	list, err := s.List()
+	if err != nil {
+		return models.Destination{}, false, err
+	}
+	for _, d := range list {
+		if strings.EqualFold(d.Name, name) {
+			return d, true, nil
+		}
+	}
+	return models.Destination{}, false, nil
+}
+
+// Open returns a client for the destination a graph names, signing with its
+// stored secret, together with the destination's own settings. The client's
+// string forms, errors and logs redact the secret (S3Config), and a caller that
+// builds error text of its own passes it through the client's scrub.
+func (s *DestinationService) Open(name string) (*S3Client, models.Destination, error) {
+	d, found, err := s.Lookup(name)
+	if err != nil {
+		return nil, models.Destination{}, err
+	}
+	if !found {
+		return nil, models.Destination{}, fmt.Errorf("destination %q no longer exists; choose another in the Upload to Bucket block or add it in Settings", strings.TrimSpace(name))
+	}
+	secret, err := s.Secret(d.ID)
+	if err != nil {
+		return nil, models.Destination{}, err
+	}
+	if secret == "" {
+		return nil, models.Destination{}, fmt.Errorf("destination %q has no secret access key stored; enter it in Settings", d.Name)
+	}
+	client, err := NewS3Client(S3Config{
+		Endpoint: d.Endpoint, Region: d.Region, Bucket: d.Bucket,
+		AccessKeyID: d.AccessKeyID, SecretAccessKey: secret,
+	}, s.httpClient)
+	if err != nil {
+		return nil, models.Destination{}, fmt.Errorf("destination %q: %s", d.Name, strings.TrimPrefix(err.Error(), "s3: "))
+	}
+	if s.retryBase > 0 {
+		client.backoff = s.retryBase
+	}
+	return client, d, nil
+}
+
 // normalizeDestination trims the fields, defaults the region and checks what can
 // be checked without the network. The returned value is what gets saved.
 func normalizeDestination(d models.Destination) (models.Destination, error) {

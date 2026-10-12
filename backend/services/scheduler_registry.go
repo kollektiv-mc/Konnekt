@@ -26,6 +26,10 @@ type serviceDeps struct {
 	rcon   *RconService
 	config *ConfigService
 	bus    *EventBus
+	// destinations is the saved bucket destinations, reached by the upload block.
+	// Set by SetDestinations, so it is nil in the many tests that build a
+	// scheduler without one.
+	destinations *DestinationService
 }
 
 // ExecContext is the per-node execution surface handed to a block executor.
@@ -115,6 +119,10 @@ func (e *ExecContext) Server() *ServerService  { return e.svc.server }
 func (e *ExecContext) Backup() *BackupService  { return e.svc.backup }
 func (e *ExecContext) Rcon() *RconService      { return e.svc.rcon }
 func (e *ExecContext) Config_() *ConfigService { return e.svc.config }
+
+// Destinations reaches the saved bucket destinations, and through them the one
+// place a secret access key can be read from. May be nil.
+func (e *ExecContext) Destinations() *DestinationService { return e.svc.destinations }
 func (e *ExecContext) Emit(event string, data any) {
 	e.svc.bus.Emit(event, data)
 }

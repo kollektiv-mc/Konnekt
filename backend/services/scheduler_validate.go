@@ -2,6 +2,7 @@ package services
 
 import (
 	"fmt"
+	"strings"
 
 	"konnekt/backend/models"
 )
@@ -141,4 +142,49 @@ func graphWarnings(g models.Graph, reg *BlockRegistry, rconAvailable bool) []str
 		return nil
 	}
 	return []string{rconUnconfirmedWarning}
+}
+
+// validateGraphDestinations checks every node whose block has a destination
+// field: it must name a saved destination that still exists. A graph names its
+// bucket and nothing more (the credential stays in Settings), so a destination
+// deleted or renamed afterwards leaves the node pointing at nothing, and a graph
+// imported from another install may name one this install never had.
+//
+// It reads the field by its type rather than by block id, so the next block that
+// uploads gets the same check. Returns one sentence per bad node; nil means the
+// graph is clean. Pure apart from reading the destination list.
+func validateGraphDestinations(g models.Graph, reg *BlockRegistry, dests *DestinationService) []string {
+	var issues []string
+	for _, n := range g.Nodes {
+		entry, ok := reg.Get(n.Type)
+		if !ok {
+			continue
+		}
+		for _, f := range entry.def.ConfigSchema {
+			if f.Type != destinationFieldType {
+				continue
+			}
+			who := fmt.Sprintf("%s (%s)", entry.def.Label, n.ID)
+			name := ""
+			if v, ok := n.Config[f.Key].(string); ok {
+				name = strings.TrimSpace(v)
+			}
+			if name == "" {
+				issues = append(issues, who+": no destination chosen.")
+				continue
+			}
+			if dests == nil {
+				issues = append(issues, who+": destinations are not available.")
+				continue
+			}
+			_, found, err := dests.Lookup(name)
+			switch {
+			case err != nil:
+				issues = append(issues, fmt.Sprintf("%s: the saved destinations could not be read.", who))
+			case !found:
+				issues = append(issues, fmt.Sprintf("%s: the destination %q does not exist. It was deleted or renamed in Settings, or this graph came from another install.", who, name))
+			}
+		}
+	}
+	return issues
 }

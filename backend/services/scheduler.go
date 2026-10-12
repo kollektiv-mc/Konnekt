@@ -66,6 +66,13 @@ func (s *SchedulerService) SetBus(b *EventBus) {
 	s.deps.bus = b
 }
 
+// SetDestinations gives the upload block the saved bucket destinations. A setter
+// rather than a constructor argument, like SetBus: the destinations belong to
+// Settings, and a scheduler without them still runs every other block.
+func (s *SchedulerService) SetDestinations(d *DestinationService) {
+	s.deps.destinations = d
+}
+
 // SetDataDir loads graphs from disk and manifest blocks from the blocks/ subfolder.
 // Must be called before SetContext so triggers see graphs on first evaluation.
 func (s *SchedulerService) SetDataDir(dir string) {
@@ -228,6 +235,9 @@ func (s *SchedulerService) GraphWarnings(serverID string, g models.Graph) ([]str
 		_, _, rconOK = s.deps.server.RconConfig(serverID)
 	}
 	warnings := graphWarnings(g, s.registry, rconOK)
+	// A node that would fail the run at its start is advice the editor can give
+	// while the graph is being built, in the same place.
+	warnings = append(warnings, validateGraphDestinations(g, s.registry, s.deps.destinations)...)
 	if warnings == nil {
 		warnings = []string{}
 	}

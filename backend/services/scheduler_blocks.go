@@ -296,6 +296,8 @@ func registerBuiltins(r *BlockRegistry) {
 		},
 		Source: "native",
 	}, execCondition))
+
+	registerUploadBlock(r)
 }
 
 // ── Executors ─────────────────────────────────────────────────────────────────

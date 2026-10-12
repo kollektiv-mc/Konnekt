@@ -83,7 +83,13 @@ type ConfigField struct {
 	// block read it and the editor had no control for it. It is gone rather than
 	// built, because a graph belongs to the server it was authored on (#236) and
 	// a per-node override would put back the ambiguity that closed.
-	Type     string        `json:"type"` // "string"|"number"|"bool"|"select"|"command"
+	//
+	// "destination" is a select of the saved bucket destinations (Settings), filled
+	// in by the editor at edit time rather than listed in Options, because the set
+	// changes without the block definition changing. The stored value is the
+	// destination's name, which is what lets a graph move between installs without
+	// carrying a credential.
+	Type     string        `json:"type"` // "string"|"number"|"bool"|"select"|"command"|"attribute"|"destination"
 	Default  interface{}   `json:"default,omitempty"`
 	Required bool          `json:"required,omitempty"`
 	Options  []FieldOption `json:"options,omitempty"` // for "select"

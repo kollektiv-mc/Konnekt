@@ -165,6 +165,7 @@ filesystem.**
 | world name | `validateWorldName` | `worlds.go` |
 | config editor `relPath` | `ConfigEditorService.sandbox` | `config_editor.go` |
 | mod file name | `filepath.Base` then `sandboxCheck` | `modservice.go` |
+| upload block source | `resolveUploadSource`, then `collectUploadItems` for links | `upload.go` |
 
 Holds when: each method in the table's files that takes a name applies its guard
 before the first filesystem call, and a mod file name is reduced to its base
