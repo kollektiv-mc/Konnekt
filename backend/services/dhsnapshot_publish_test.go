@@ -490,13 +490,15 @@ func (h headFails) HeadObject(ctx context.Context, key string) (S3ObjectInfo, bo
 	return h.dhPublishStore.HeadObject(ctx, key)
 }
 
-func TestDHPublishAPartTheBucketHasButTheIndexDoesNotNameIsSkippedBy412(t *testing.T) {
+// An earlier run that was cut off had already sent two parts. The listing
+// finds them, so they are never PUT again: R2 can answer such a PUT's 412
+// before reading the body, and Go's transport may report the cut-off write
+// instead (golang/go#11745), which failed real resumed runs.
+func TestDHPublishAPartTheBucketHasButTheIndexDoesNotNameIsNotSentAgain(t *testing.T) {
 	f := newDHPublishFixture(t)
 	dbs := dhPubDBs()
 	dir, ix := f.stage(dbs, nil, dhPubTime1)
-	// An earlier run that was cut off had already sent two parts.
-	sent := ix.Levels[0].Parts[:2]
-	for _, part := range sent {
+	for _, part := range ix.Levels[0].Parts[:2] {
 		f.bucket.put(partKey(part.SHA256), dbs[dhPubOverworld][partOffset(ix.Levels[0], part):][:part.Size])
 	}
 
@@ -508,10 +510,36 @@ func TestDHPublishAPartTheBucketHasButTheIndexDoesNotNameIsSkippedBy412(t *testi
 		t.Fatalf("result = %+v, want 4 sent and 2 skipped", res)
 	}
 	if want := int64(dhTestPart + 100 + 2*dhTestPart); res.BytesSent != want {
-		t.Errorf("bytes sent = %d, want %d: a part answered with a 412 is not counted as sent", res.BytesSent, want)
+		t.Errorf("bytes sent = %d, want %d", res.BytesSent, want)
+	}
+	if n := len(partPuts(f.wire())); n != 4 {
+		t.Errorf("%d part PUTs, want only the 4 the bucket does not list", n)
+	}
+}
+
+// Without the listing the run still finishes: every part is offered with
+// If-None-Match, and the bucket's 412 marks the ones it has.
+func TestDHPublishARefusedListingFallsBackToIfNoneMatch(t *testing.T) {
+	f := newDHPublishFixture(t)
+	dbs := dhPubDBs()
+	dir, ix := f.stage(dbs, nil, dhPubTime1)
+	for _, part := range ix.Levels[0].Parts[:2] {
+		f.bucket.put(partKey(part.SHA256), dbs[dhPubOverworld][partOffset(ix.Levels[0], part):][:part.Size])
+	}
+	f.bucket.failList = func() (int, string) { return 403, "AccessDenied" }
+
+	res, err := f.publish(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.PartsUploaded != 4 || res.PartsSkipped != 2 {
+		t.Fatalf("result = %+v, want 4 sent and 2 skipped", res)
 	}
 	if n := len(partPuts(f.wire())); n != 6 {
-		t.Errorf("%d part PUTs, want all 6 attempted with If-None-Match", n)
+		t.Errorf("%d part PUTs, want all 6 offered with If-None-Match", n)
+	}
+	if !slices.ContainsFunc(f.narration, func(l string) bool { return strings.HasPrefix(l, "Could not list the parts") }) {
+		t.Errorf("the refused listing was not narrated: %q", f.narration)
 	}
 }
 
