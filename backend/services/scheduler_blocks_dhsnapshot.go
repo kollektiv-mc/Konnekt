@@ -209,7 +209,10 @@ func execDHSnapshot(e *ExecContext) ExecResult {
 // goes to the engine for the run record whether the run worked or not, and the
 // outputs are set only when it did.
 func finishDHSnapshot(e *ExecContext, res dhRunResult, err error, scrub func(string) string) ExecResult {
-	out := ExecResult{DowntimeMs: res.Downtime.Milliseconds()}
+	// Rounded up: Milliseconds() truncates, and a measured downtime under a
+	// millisecond would otherwise reach the engine as 0, which it reads as
+	// "this node stopped nothing" and leaves off the run record.
+	out := ExecResult{DowntimeMs: (res.Downtime + time.Millisecond - 1).Milliseconds()}
 	if res.Downtime > 0 {
 		e.SetOutput("downtime", res.Downtime.Seconds())
 	}

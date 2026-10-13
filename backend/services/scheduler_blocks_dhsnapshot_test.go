@@ -956,3 +956,27 @@ func TestFinishDHSnapshot(t *testing.T) {
 		}
 	})
 }
+
+// A downtime the run measured is never recorded as none. Milliseconds()
+// truncates, so a stop and start that took under a millisecond (a fake server
+// in CI) came out as 0, which the engine reads as "this node stopped nothing"
+// and leaves off the run record.
+func TestFinishDHSnapshotRoundsADowntimeUpToAMillisecond(t *testing.T) {
+	cases := []struct {
+		downtime time.Duration
+		wantMs   int64
+	}{
+		{0, 0},
+		{300 * time.Microsecond, 1},
+		{time.Millisecond, 1},
+		{1500 * time.Microsecond, 2},
+		{42 * time.Second, 42000},
+	}
+	for _, tc := range cases {
+		e := &ExecContext{dataOut: map[string]interface{}{}}
+		res := finishDHSnapshot(e, dhRunResult{Downtime: tc.downtime}, nil, func(s string) string { return s })
+		if res.DowntimeMs != tc.wantMs {
+			t.Errorf("downtime %s recorded as %d ms, want %d", tc.downtime, res.DowntimeMs, tc.wantMs)
+		}
+	}
+}
