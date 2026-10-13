@@ -108,6 +108,13 @@ var (
 	reTPSForge    = regexp.MustCompile(`(?i)Mean TPS:\s*(\d+(?:\.\d+)?)`)
 	reTickQuery   = regexp.MustCompile(`(\d+(?:\.\d+)?)\s*ms\s*per tick`)
 	reServerStop  = regexp.MustCompile(`(?i)Stopping the server`)
+	// reServerCrash is the dedicated server's own crash path: runServer logs
+	// "Encountered an unexpected exception" and then where the report went,
+	// in vanilla, Fabric, Paper and Forge/NeoForge alike. The JVM can outlive
+	// that line for minutes when the shutdown it then attempts wedges, so a
+	// stop after it waits crashedStopGrace rather than the configured grace.
+	// Anchored on "]: " like the ready line so chat cannot spoof it.
+	reServerCrash = regexp.MustCompile(`]: (?:Encountered an unexpected exception|This crash report has been saved to:|We were unable to save this crash report to disk)`)
 	// reServerReady is the Minecraft "Done (3.541s)!" ready line, shared by
 	// vanilla, Fabric, Quilt, Paper/Purpur and Forge/NeoForge (their log
 	// prefixes differ, the Done line does not). Anchored on "]: " like the
@@ -133,6 +140,13 @@ const (
 	stopGraceDefault = 60 * time.Second
 	maxStopGrace     = 10 * time.Minute
 )
+
+// crashedStopGrace is the grace a stop gets once the console has shown a
+// crash report. A server that has written one is not saving a world any more:
+// what remains of the process is a shutdown that may never finish, so the
+// configured grace protects nothing and only delays the kill. Only ever
+// shortens a grace; a quit's 8 s stays 8 s.
+const crashedStopGrace = 10 * time.Second
 
 // quiesceFlushWait is the grace a stdin-driven save-all gets to reach disk
 // when RCON is unavailable, since that path has nothing to block on.
@@ -231,11 +245,12 @@ type ServerService struct {
 func NewServerService() *ServerService {
 	s := &ServerService{
 		instanceDeps: &instanceDeps{
-			launchCmd:       defaultLaunchCmd,
-			startingTimeout: startingDeadline,
-			killTree:        killTree,
-			quiesceWait:     quiesceFlushWait,
-			workingDir:      func(string) (string, error) { return "", errNoWorkingDir },
+			launchCmd:        defaultLaunchCmd,
+			startingTimeout:  startingDeadline,
+			crashedStopGrace: crashedStopGrace,
+			killTree:         killTree,
+			quiesceWait:      quiesceFlushWait,
+			workingDir:       func(string) (string, error) { return "", errNoWorkingDir },
 		},
 		instances: make(map[string]*serverInstance),
 	}
@@ -466,6 +481,7 @@ func (s *serverInstance) start(jarPath string, jvmArgs []string, workingDir stri
 	s.running = true
 	s.startTime = time.Now()
 	s.expectedStop = false
+	s.crashed = false
 	s.setStateLocked(stateStarting, false)
 
 	s.logBufMu.Lock()
@@ -551,6 +567,19 @@ func (s *serverInstance) streamOutput(r io.Reader) {
 				s.setStateLocked(stateStopping, false)
 			}
 			s.mu.Unlock()
+		}
+
+		if reServerCrash.MatchString(line) {
+			s.mu.Lock()
+			// Narrated once per boot, on the first of the crash path's lines.
+			// The flag outlives this boot until start() clears it, which is
+			// harmless: nothing reads it on an offline instance.
+			first := !s.crashed
+			s.crashed = true
+			s.mu.Unlock()
+			if first {
+				s.NarrateFailed(fmt.Sprintf("Server crashed; a stop now force kills the process after %s if it has not exited by itself", s.crashedStopGrace))
+			}
 		}
 
 		if reServerReady.MatchString(line) {
@@ -830,6 +859,15 @@ func (s *serverInstance) stop(grace time.Duration) error {
 	s.expectedStop = true
 	s.setStateLocked(stateStopping, false)
 
+	// A crashed server gets the short grace: its world save, if any, happened
+	// before the crash report, and the process that is left is a shutdown
+	// that may be wedged for good. The configured grace still applies while
+	// it is shorter, so a quit never waits longer for this.
+	crashed := s.crashed && grace > s.crashedStopGrace
+	if crashed {
+		grace = s.crashedStopGrace
+	}
+
 	if s.stdin != nil {
 		_, _ = fmt.Fprintln(s.stdin, "stop") //nolint:errcheck // best-effort; the timeout + killTree fallback below is the real safety net
 		s.stdin.Close()
@@ -843,6 +881,10 @@ func (s *serverInstance) stop(grace time.Duration) error {
 	pid := s.cmd.Process.Pid
 	exited := s.exited
 	s.mu.Unlock()
+
+	if crashed {
+		s.Narrate(fmt.Sprintf("Server already crashed, force killing the process tree in %s unless it exits first", grace))
+	}
 
 	// Two-stage wait so a slow world save is narrated instead of looking like
 	// a hang: a warning at half the grace, the kill at its end (#110). The
