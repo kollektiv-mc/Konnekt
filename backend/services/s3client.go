@@ -6,6 +6,7 @@ import (
 	"crypto/hmac"
 	"crypto/md5" //nolint:gosec // Content-MD5 is S3's required integrity header on DeleteObjects, not a security use
 	"crypto/sha256"
+	"crypto/tls"
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/xml"
@@ -744,8 +745,8 @@ type s3Call struct {
 	body        func() (io.ReadCloser, error)
 }
 
-// roundTrip sends call with the retry policy: a 5xx or a timeout is retried with
-// exponential backoff, a 4xx never is. It returns the response for any status
+// roundTrip sends call with the retry policy: a 5xx or a network failure (see
+// retryableTransport) is retried with exponential backoff, a 4xx never is. It returns the response for any status
 // below 500, which the caller closes and judges; a 5xx that outlasts the attempts
 // comes back as an *S3Error.
 func (c *S3Client) roundTrip(ctx context.Context, call s3Call) (*http.Response, error) {
@@ -755,10 +756,13 @@ func (c *S3Client) roundTrip(ctx context.Context, call s3Call) (*http.Response, 
 		var retry string
 		switch {
 		case err != nil:
-			if ctx.Err() != nil || !isTimeout(err) {
+			if ctx.Err() != nil || !retryableTransport(err) {
 				return nil, c.transportError(call.op, call.key, err)
 			}
-			retry = "timeout"
+			retry = "connection error"
+			if isTimeout(err) {
+				retry = "timeout"
+			}
 			if attempt == s3MaxAttempts {
 				return nil, c.transportError(call.op, call.key, err)
 			}
@@ -778,6 +782,17 @@ func (c *S3Client) roundTrip(ctx context.Context, call s3Call) (*http.Response, 
 		}
 		delay *= 2
 	}
+}
+
+// retryableTransport reports whether err is the network failing under a
+// request, which a fresh connection need not repeat: a timeout, a reset, a TLS
+// record corrupted in transit ("bad record MAC"). A local body that will not
+// open is not, and neither is a certificate the server could not prove: sending
+// again meets the same answer.
+func retryableTransport(err error) bool {
+	var ue *url.Error
+	var cv *tls.CertificateVerificationError
+	return errors.As(err, &ue) && !errors.As(err, &cv)
 }
 
 func isTimeout(err error) bool {

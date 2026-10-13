@@ -9,7 +9,9 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"log/slog"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -17,6 +19,7 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 )
@@ -458,6 +461,58 @@ func TestS3RetriesATimeout(t *testing.T) {
 	}
 	if n := len(s.recorded()); n != 2 {
 		t.Errorf("requests = %d, want 2", n)
+	}
+}
+
+func TestS3RetriesAConnectionDroppedMidRequest(t *testing.T) {
+	path := writeTemp(t, "f", []byte("x"))
+	s := newS3TestServer(t, func(n int, w http.ResponseWriter, _ *http.Request) {
+		if n == 1 {
+			// What a reset or a corrupted TLS record looks like to the client:
+			// the connection ends with no response.
+			conn, _, err := http.NewResponseController(w).Hijack()
+			if err != nil {
+				t.Error(err)
+				return
+			}
+			_ = conn.Close()
+		}
+	})
+	if err := newTestS3Client(t, s).PutObject(context.Background(), "k", path, S3PutOptions{}); err != nil {
+		t.Fatal(err)
+	}
+	if n := len(s.recorded()); n != 2 {
+		t.Errorf("requests = %d, want 2", n)
+	}
+}
+
+func TestS3DoesNotRetryAnUntrustedCertificate(t *testing.T) {
+	path := writeTemp(t, "f", []byte("x"))
+	var conns atomic.Int32
+	ts := httptest.NewUnstartedServer(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {}))
+	ts.Config.ConnState = func(_ net.Conn, st http.ConnState) {
+		if st == http.StateNew {
+			conns.Add(1)
+		}
+	}
+	ts.Config.ErrorLog = log.New(io.Discard, "", 0) // the refused handshake
+	ts.StartTLS()
+	t.Cleanup(ts.Close)
+
+	// The default client trusts the system roots, not the test certificate.
+	c, err := NewS3Client(S3Config{
+		Endpoint: ts.URL, Region: "auto", Bucket: "snapshots",
+		AccessKeyID: "AKIATESTKEY", SecretAccessKey: testSecret,
+	}, &http.Client{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	c.backoff = time.Millisecond
+	if err := c.PutObject(context.Background(), "k", path, S3PutOptions{}); err == nil {
+		t.Fatal("PutObject trusted an unknown certificate")
+	}
+	if n := conns.Load(); n != 1 {
+		t.Errorf("connections = %d, want 1", n)
 	}
 }
 
