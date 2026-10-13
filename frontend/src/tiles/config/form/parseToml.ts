@@ -87,8 +87,12 @@ export function applyTomlEdit(content: string, path: (string | number)[], value:
     sectionStart = idx + 1
   }
 
-  // Find key within section, stopping at next section header
-  const keyRe = new RegExp(`^(${escapeRegex(key)})(\\s*=\\s*)`)
+  // Find key within section, stopping at next section header. The leading
+  // whitespace is part of the match and kept: night-config, which writes most
+  // NeoForge and Forge mod configs (Distant Horizons among them), indents every
+  // key under a table with a tab, and a key anchored at column 0 matched none of
+  // them, so every form edit to such a file was silently dropped.
+  const keyRe = new RegExp(`^(\\s*${escapeRegex(key)})(\\s*=\\s*)`)
   for (let i = sectionStart; i < lines.length; i++) {
     const trimmed = lines[i].trim()
     if (i > sectionStart && trimmed.startsWith('[')) break // crossed into next section

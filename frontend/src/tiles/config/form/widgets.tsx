@@ -61,8 +61,10 @@ export function NumberInput({
   const [draft, setDraft] = useState(String(field.value ?? ''))
 
   function commit(raw: string) {
-    const n = Number(raw)
-    if (!Number.isNaN(n)) {
+    // Number('') is 0, and a type="number" input reports '' for anything it
+    // cannot read as a number, so an emptied or mistyped field used to commit 0.
+    const n = raw.trim() === '' ? Number.NaN : Number(raw)
+    if (Number.isFinite(n)) {
       const clamped =
         field.min !== undefined && n < field.min
           ? field.min
