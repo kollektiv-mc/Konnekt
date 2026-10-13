@@ -305,11 +305,26 @@ func checkDHLevelForPublish(l DHIndexLevel) error {
 // byte is sent. A part is up when the previous snapshot's index names it
 // (latest.json is written last, so everything its index names is there), or when
 // a HEAD finds it at the size the index states. A staged part the previous index
-// also names is not sent again.
+// names, or the parts folder lists at that size, is not sent again.
+//
+// The listing is what lets a cut-off run resume. Without it every part a failed
+// first publish did send is PUT again, and R2 can answer such a PUT's
+// If-None-Match with a 412 before reading the body; Go's transport may then
+// report the write it was cut off in rather than the 412 (golang/go#11745), and
+// the run fails on a part that is already there. A listing that fails costs only
+// that, so it is narrated and the run goes on without it.
 func (p *dhPublisher) planParts(ctx context.Context, st dhStaged) ([]dhPartPlan, error) {
 	var prevParts map[string]struct{}
 	if p.prev != nil {
 		prevParts = p.prev.Index.partSet()
+	}
+	inBucket := map[string]int64{}
+	if listed, err := p.Store.ListObjects(ctx, st.Keys.PartsPrefix); err != nil {
+		p.narrate(fmt.Sprintf("Could not list the parts already in %s, so each is offered again: %v", p.Label, readableUploadError(err)))
+	} else {
+		for _, o := range listed {
+			inBucket[strings.TrimPrefix(o.Key, st.Keys.PartsPrefix)] = o.Size
+		}
 	}
 	seen := map[string]struct{}{}
 	var plan []dhPartPlan
@@ -324,12 +339,13 @@ func (p *dhPublisher) planParts(ctx context.Context, st dhStaged) ([]dhPartPlan,
 				return nil, err
 			}
 			_, upOnPrev := prevParts[part.SHA256]
+			size, listed := inBucket[part.SHA256]
 			entry := dhPartPlan{SHA256: part.SHA256, Size: part.Size}
 			staged, err := stagedPartPath(p.StageDir, part)
 			switch {
 			case err != nil:
 				return nil, err
-			case staged != "" && !upOnPrev:
+			case staged != "" && !upOnPrev && !(listed && size == part.Size):
 				entry.Path = staged
 			case staged == "" && !upOnPrev:
 				info, found, err := p.Store.HeadObject(ctx, st.Keys.PartKey(part.SHA256))
