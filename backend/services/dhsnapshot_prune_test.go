@@ -177,7 +177,8 @@ func (s *pruneScene) assertAbsent(keys ...string) {
 	}
 }
 
-func TestDHPruneThreeSnapshotsKeepTwoDeletesTheOldestAndExactlyItsUnsharedParts(t *testing.T) {
+// Three snapshots with keep two: the oldest is deleted along with exactly its unshared parts.
+func TestDHPruneDeletesOldestAndItsUnsharedParts(t *testing.T) {
 	s := newPruneScene(t, 0)
 	bystanders := s.plantBystanders()
 	// A part nothing names, as a run that was cut off leaves behind.
@@ -333,7 +334,8 @@ func TestDHPruneKeepsTheSnapshotLatestPointsAtWhateverKeepIs(t *testing.T) {
 	}
 }
 
-func TestDHPruneKeepsLatestsFolderEvenWhenItsIndexIsOutsideTheSnapshotsFolder(t *testing.T) {
+// latest's folder is kept even when its index is outside the snapshots folder.
+func TestDHPruneKeepsLatestWithIndexOutsideSnapshots(t *testing.T) {
 	s := newPruneScene(t, 0)
 	// A pointer at an index that is not in any snapshot folder: its parts are
 	// still protected, and the folders are pruned by keep alone.
@@ -455,7 +457,8 @@ func TestDHPruneAListFailureEndsAsAWarningWithTheRunComplete(t *testing.T) {
 	}
 }
 
-func TestDHPruneADeleteFailureEndsAsAWarningAndLeavesTheBucketAsItWas(t *testing.T) {
+// A delete failure ends as a warning and leaves the bucket as it was.
+func TestDHPruneDeleteFailureIsAWarning(t *testing.T) {
 	s := newPruneScene(t, 0)
 	s.bucket.mu.Lock()
 	s.bucket.failDelete = func([]string) (int, string) { return 403, "AccessDenied" }
@@ -473,7 +476,8 @@ func TestDHPruneADeleteFailureEndsAsAWarningAndLeavesTheBucketAsItWas(t *testing
 	s.assertPresent(folderKeys(dhPubCreated1)...)
 }
 
-func TestDHPruneAKeyTheBucketCannotDeleteIsAWarningNamingHowManyAndCountsTheRest(t *testing.T) {
+// A key the bucket cannot delete is a warning naming how many, and the rest are still counted.
+func TestDHPruneUndeletableKeyIsACountedWarning(t *testing.T) {
 	s := newPruneScene(t, 0)
 	a1 := s.part(0, 0, 1)
 	s.bucket.mu.Lock()
@@ -626,7 +630,8 @@ func TestDHPruneFollowsThePrivateLayout(t *testing.T) {
 	}
 }
 
-func TestDHPruneAnIncompleteFolderIsDeletedOnlyWhenOlderThanEveryKeptSnapshot(t *testing.T) {
+// An incomplete folder is deleted only when it is older than every kept snapshot.
+func TestDHPruneIncompleteFolderOnlyWhenOldest(t *testing.T) {
 	s := newPruneScene(t, 0)
 	older := "dh/snapshots/20260901T040000Z/"
 	newer := "dh/snapshots/20261201T040000Z/"

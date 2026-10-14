@@ -366,7 +366,8 @@ func TestUploadRunFailsBeforeAnythingRunsWhenTheDestinationIsGone(t *testing.T) 
 	}
 }
 
-func TestUploadRunFailsWhenTheDestinationWasDeletedAfterTheGraphWasSaved(t *testing.T) {
+// A run fails when the destination was deleted after the graph was saved.
+func TestUploadRunFailsOnADeletedDestination(t *testing.T) {
 	f := newUploadFixture(t)
 	g := uploadGraph("srv1", okConfig(), false)
 	if _, err := f.s.SaveGraph("srv1", g); err != nil {

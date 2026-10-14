@@ -231,7 +231,7 @@ func (f *fakeProvenance) verify(_ context.Context, _ *UpdateService, digest []by
 
 // The install path asks about the digest checksums.txt names for this
 // platform's asset, and a refusal stops it before the binary is requested.
-func TestDownloadAndInstallUpdateRefusesBeforeDownloadingWithoutProvenance(t *testing.T) {
+func TestDownloadAndInstallUpdateRefusesWithoutProvenance(t *testing.T) {
 	name, err := platformAssetNameFor(runtime.GOOS, runtime.GOARCH)
 	if err != nil {
 		t.Skipf("no release asset for %s/%s: %v", runtime.GOOS, runtime.GOARCH, err)

@@ -142,7 +142,8 @@ func TestS3CopyAndCompleteTreatAnErrorBodyInA200AsAFailure(t *testing.T) {
 	}
 }
 
-func TestS3CompleteMultipartUploadSendsTheOrderedPartListAndNoData(t *testing.T) {
+// CompleteMultipartUpload sends the ordered part list and no data.
+func TestS3CompleteMultipartUploadSendsOrderedPartsOnly(t *testing.T) {
 	s := newS3TestServer(t, func(_ int, w http.ResponseWriter, _ *http.Request) {
 		_, _ = w.Write([]byte(`<CompleteMultipartUploadResult><Key>k</Key></CompleteMultipartUploadResult>`))
 	})

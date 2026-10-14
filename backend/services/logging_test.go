@@ -78,7 +78,7 @@ func TestInitLoggerAppendsAcrossRuns(t *testing.T) {
 // A read-only data dir must degrade to stderr rather than stop the app: this is
 // a local-first desktop tool and refusing to start over a log is worse than the
 // missing log.
-func TestInitLoggerStillReturnsAUsableLoggerWhenTheFileCannotBeOpened(t *testing.T) {
+func TestInitLoggerFallsBackWhenTheFileCannotOpen(t *testing.T) {
 	dir := t.TempDir()
 	t.Cleanup(func() { _ = CloseLogger() })
 

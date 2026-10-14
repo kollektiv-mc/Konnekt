@@ -534,7 +534,8 @@ func TestDHRunARestartFailureAfterAGoodCopyIsStillAFailure(t *testing.T) {
 	}
 }
 
-func TestDHRunAStopThatFailsMeansNothingWasStoppedAndNothingIsStarted(t *testing.T) {
+// A stop that fails means nothing was stopped, so nothing is started.
+func TestDHRunFailedStopStartsNothing(t *testing.T) {
 	f := newDHRunFixture(t)
 	f.host.stopErr = ErrPowerActionInProgress
 	res, err := f.run()
@@ -653,7 +654,8 @@ func TestDHRunABucketWithNoLatestJSONIsAFirstSnapshot(t *testing.T) {
 	}
 }
 
-func TestDHRunADanglingLatestPointerRefusesInsteadOfRestagingEverything(t *testing.T) {
+// A dangling latest pointer refuses the run instead of restaging everything.
+func TestDHRunRefusesADanglingLatestPointer(t *testing.T) {
 	f := newDHRunFixture(t)
 	reader := latestPointing(t, "dh", nil)
 	delete(reader.objects, "dh/snapshots/20261011T040000Z/index.json")

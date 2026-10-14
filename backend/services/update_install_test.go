@@ -133,7 +133,7 @@ func TestDownloadAndApplyRefusesAnAnnouncedLengthOverTheCeiling(t *testing.T) {
 }
 
 // An announced length equal to the declared size is not over it.
-func TestDownloadAndApplyRefusesAnAnnouncedLengthOverTheDeclaredSize(t *testing.T) {
+func TestDownloadAndApplyRefusesOversizedAnnouncedLength(t *testing.T) {
 	payload := []byte(strings.Repeat("x", 100))
 	ts := httptest.NewServer(servePayload(payload, true))
 	defer ts.Close()
