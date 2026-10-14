@@ -32,7 +32,7 @@ const (
 // registerBuiltins rather than in it, like registerUploadBlock.
 func registerDHSnapshotBlock(r *BlockRegistry) {
 	must(r.RegisterBlock(models.BlockDef{
-		ID: dhSnapshotBlockID, Category: "action", Label: "Distant Horizons Snapshot",
+		ID: dhSnapshotBlockID, Category: "action", Label: "DH Snapshot",
 		Description: "Stops the server to copy its Distant Horizons data into a staged snapshot, then starts it again. " +
 			"Players are warned first, over RCON or the console. Only the parts that changed since the last snapshot " +
 			"are staged, and the staged folder wires into Upload to Bucket.",

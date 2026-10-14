@@ -57,7 +57,7 @@ func (f *uploadFixture) execDH(serverID string, cfg map[string]interface{}) (Exe
 
 func TestDHSnapshotBlockDefinition(t *testing.T) {
 	def := commandBlock(t, dhSnapshotBlockID)
-	if def.ID != "action.dhSnapshot" || def.Category != "action" || def.Label != "Distant Horizons Snapshot" {
+	if def.ID != "action.dhSnapshot" || def.Category != "action" || def.Label != "DH Snapshot" {
 		t.Errorf("id %q, category %q, label %q", def.ID, def.Category, def.Label)
 	}
 	if got := strings.Join(def.Effects, ","); got != "stopsServer" {

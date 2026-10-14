@@ -43,7 +43,7 @@ const uploadDef = models.BlockDef.createFrom({
 const snapshotDef = models.BlockDef.createFrom({
   id: 'action.dhSnapshot',
   category: 'action',
-  label: 'Distant Horizons Snapshot',
+  label: 'DH Snapshot',
   description: 'Stops the server to copy its Distant Horizons data.',
   controlInputs: ['trigger'],
   controlOutputs: ['onComplete', 'onFailed'],

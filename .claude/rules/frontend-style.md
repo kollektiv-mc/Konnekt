@@ -115,6 +115,17 @@ any live readout: the stats tile's `StatRow`, the performance tile's values and
 table, `ActiveProcesses`' percentages. Keep new numeric readouts on that path
 rather than adding a font feature the fonts do not carry.
 
+## Text that shares a line with controls
+
+**A status or warning in a toolbar, header or node is one line and never
+grows it.** The span takes `min-w-0 truncate` and carries the full text in
+`title`, so a long message is cut at the edge rather than wrapping and moving
+every control beside it, which is what the scheduler editor's RCON advice did
+until `GraphEditor.tsx` cut it. What the backend sends there is held short by
+`TestGraphWarningsStayShort`, and a block label fits the palette's twenty
+characters by `TestBlockLabelsFitThePalette`: a name that needs more belongs in
+the description.
+
 ## Lazy loading
 
 Heavy per-tile dependencies are lazy-loaded via `React.lazy` + `Suspense` (see
