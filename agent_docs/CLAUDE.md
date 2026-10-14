@@ -118,11 +118,9 @@ prefix or suffix, no em dashes. The area label is load-bearing, because
 `CONTRIBUTING.md` holds the title rules and the `type:` ladder with its worked
 cases. Five things it does not say:
 
-- **Label each pull request twice**: one `type:`, *and* one `area:` from
-  `.github/labels.yml`. The `pr-labelled` status checks the two separately and
-  stays pending until both are on, so a pull request carrying only a `type:`
-  cannot merge.
-  Prefer a specific area over `area:ui`, as on an issue.
+- **Label each pull request twice**: one `type:` and one `area:` from
+  `.github/labels.yml`, a specific area over `area:ui`. The `pr-labelled`
+  status stays pending until both are on, so a pull request cannot merge.
 - **No em dashes** in titles, bodies or commit messages. Use a comma, a colon,
   or two sentences.
 - `.github/scripts/release-notes.py` drops any pull request whose files all sit

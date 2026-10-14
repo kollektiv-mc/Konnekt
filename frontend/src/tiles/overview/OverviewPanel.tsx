@@ -21,8 +21,8 @@ interface Props {
  * which world, whether backups are current, what is armed.
  *
  * The cost of that is the one architecture rule this tile bends: it imports
- * from four other tile folders, where `agent_docs/CLAUDE.md` says tiles are
- * self-contained. Overview is the documented exception. It reads other tiles'
+ * from five other tile folders (backups, performance, players, scheduler and
+ * worlds), where `agent_docs/CLAUDE.md` says tiles are self-contained. Overview is the documented exception. It reads other tiles'
  * hooks and presentational pieces, never writes through them, and never touches
  * a tile's lazy half — which is why `WorldSection` uses `useWorlds` rather than
  * anything under `worlds/scene/`.
