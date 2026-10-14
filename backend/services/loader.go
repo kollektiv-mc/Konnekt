@@ -60,8 +60,12 @@ type LoaderService struct {
 	// client for metadata.
 	http *http.Client
 
+	// updating is the id of the server whose loader is being updated, empty
+	// when idle. One update at a time across all servers, because the install
+	// shells out to java and InstallerService guards the same way; the id is
+	// there so a refusal can say which server is busy.
 	mu       sync.Mutex
-	updating bool
+	updating string
 
 	cacheMu sync.Mutex
 	cache   map[string]loaderVersionCache // provider ID → entry
@@ -240,21 +244,32 @@ func (s *LoaderService) Update(req models.LoaderUpdateRequest) error {
 	cfg.Loader = loaderName
 
 	s.mu.Lock()
-	if s.updating {
-		s.mu.Unlock()
-		return fmt.Errorf("a loader update is already running")
+	busy := s.updating
+	if busy == "" {
+		s.updating = req.ServerID
 	}
-	s.updating = true
 	s.mu.Unlock()
+	if busy != "" {
+		return fmt.Errorf("a loader update is already running for %s", s.serverLabel(busy))
+	}
 
 	go s.runUpdate(*cfg, req, provider, version)
 	return nil
 }
 
+// serverLabel is the configured name of a server, or its id when the config is
+// gone or unnamed. Called without s.mu held, since it reads the config.
+func (s *LoaderService) serverLabel(serverID string) string {
+	if cfg, err := s.cfg.GetServerConfig(serverID); err == nil && cfg.Name != "" {
+		return cfg.Name
+	}
+	return serverID
+}
+
 func (s *LoaderService) runUpdate(cfg models.ServerConfig, req models.LoaderUpdateRequest, provider LoaderProvider, from string) {
 	defer func() {
 		s.mu.Lock()
-		s.updating = false
+		s.updating = ""
 		s.mu.Unlock()
 	}()
 

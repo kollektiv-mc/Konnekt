@@ -444,6 +444,50 @@ func TestLoaderUpdateRefusals(t *testing.T) {
 		}
 	})
 
+	// The guard is global on purpose (one java installer at a time), but the
+	// message has to say which server holds it: a bare "already running" reads
+	// as though this server were the busy one.
+	t.Run("while another server is updating", func(t *testing.T) {
+		f := newLoaderFixture(t)
+		otherDir := t.TempDir()
+		neoForgeInstall(t, otherDir, "21.1.72")
+		if err := f.cfgSvc.SaveServerConfig(models.ServerConfig{
+			ID: "srv2", Name: "creative", WorkingDir: otherDir, Loader: "neoforge", MCVersion: "1.21.1",
+		}); err != nil {
+			t.Fatalf("save second config: %v", err)
+		}
+
+		f.svc.mu.Lock()
+		f.svc.updating = f.serverID
+		f.svc.mu.Unlock()
+
+		err := f.svc.Update(models.LoaderUpdateRequest{ServerID: "srv2", Version: "21.1.209"})
+		if err == nil {
+			t.Fatal("Update for a second server = nil error, want a refusal")
+		}
+		if !strings.Contains(err.Error(), "already running") || !strings.Contains(err.Error(), "smp") {
+			t.Errorf("refusal %q should say an update is running and name the server holding it", err)
+		}
+		if strings.Contains(err.Error(), "creative") {
+			t.Errorf("refusal %q names the refused server, not the busy one", err)
+		}
+		if f.installer.ran() != 0 {
+			t.Error("the installer ran despite the refusal")
+		}
+	})
+
+	t.Run("while a server with no config is updating", func(t *testing.T) {
+		f := newLoaderFixture(t)
+		f.svc.mu.Lock()
+		f.svc.updating = "gone"
+		f.svc.mu.Unlock()
+
+		err := f.svc.Update(models.LoaderUpdateRequest{ServerID: f.serverID, Version: "21.1.209"})
+		if err == nil || !strings.Contains(err.Error(), "gone") {
+			t.Errorf("Update = %v, want a refusal falling back to the server id", err)
+		}
+	})
+
 	t.Run("for an unmanaged loader", func(t *testing.T) {
 		f := newLoaderFixture(t, func(c *models.ServerConfig) { c.Loader = "paper" })
 		if err := f.svc.Update(models.LoaderUpdateRequest{ServerID: f.serverID, Version: "21.1.209"}); err == nil {
