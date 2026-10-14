@@ -8,6 +8,7 @@ import type { ConfigFile } from '../../types'
 import { ConfigForm } from './form/ConfigForm'
 import { yamlIsFormSafe } from './form/parseYaml'
 import { tomlIsFormSafe } from './form/parseToml'
+import { parseProblem } from './form/parseProblem'
 
 function langExtension(format: ConfigFile['format']): Extension[] {
   switch (format) {
@@ -127,6 +128,7 @@ export function EditorPanel({
   onRestart,
 }: Props) {
   const canForm = file ? formSupported(file.format, content) : false
+  const problem = file && !loading ? parseProblem(file.format, content) : null
   const [viewMode, setViewMode] = useState<'form' | 'raw'>('form')
 
   // When switching to a file that doesn't support form, force raw
@@ -205,6 +207,16 @@ export function EditorPanel({
       {saveError && (
         <div className="border-border-subtle shrink-0 border-b bg-[rgba(239,68,68,0.08)] px-3 py-1.5 font-mono text-xs text-red-400">
           {saveError}
+        </div>
+      )}
+
+      {problem && (
+        <div
+          role="alert"
+          className="border-border-subtle bg-warning/[0.08] text-warning shrink-0 border-b px-3 py-1.5 font-mono text-xs"
+        >
+          Not valid {FORMAT_LABELS[file.format] ?? file.format} ({problem}). A mod that cannot read
+          its config may replace it with defaults on the next start.
         </div>
       )}
 

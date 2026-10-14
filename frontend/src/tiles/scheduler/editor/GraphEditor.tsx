@@ -32,6 +32,7 @@ import { BlockPalette } from './BlockPalette'
 import { NodeConfigPanel } from './NodeConfigPanel'
 import { NodeDataPanel } from './NodeDataPanel'
 import { QuickAddMenu } from './QuickAddMenu'
+import { RUN_RUNNING, runOutcome, type RunStatus } from './runStatus'
 import { Popover } from '../../../components/ui/Popover'
 import { Icon } from '../../../components/ui/Icon'
 import { Check } from '../../../lib/icons'
@@ -155,7 +156,7 @@ function GraphEditorInner({
   const dragSnapshotRef = useRef<GraphSnapshot | null>(null)
 
   // ── UI state ──────────────────────────────────────────────────────────────
-  const [runStatus, setRunStatus] = useState<string | null>(null)
+  const [runStatus, setRunStatus] = useState<RunStatus | null>(null)
   const [saving, setSaving] = useState(false)
   const runStatusTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -237,10 +238,13 @@ function GraphEditorInner({
     return () => window.removeEventListener('mousemove', handler)
   }, [])
 
-  const showRunStatus = useCallback((msg: string) => {
-    setRunStatus(msg)
+  // A failure stays until clicked away; anything else clears after 4 s.
+  const showRunStatus = useCallback((status: RunStatus | null) => {
+    setRunStatus(status)
     if (runStatusTimer.current) clearTimeout(runStatusTimer.current)
-    runStatusTimer.current = setTimeout(() => setRunStatus(null), 4000)
+    if (status && !status.failed && status !== RUN_RUNNING) {
+      runStatusTimer.current = setTimeout(() => setRunStatus(null), 4000)
+    }
   }, [])
 
   // Keep refs in sync so the once-registered event handlers see current state.
@@ -652,17 +656,14 @@ function GraphEditorInner({
   const handleRun = useCallback(async () => {
     const id = await handleSave()
     if (!id) return
+    // The call returns when the whole graph has finished, minutes for a block
+    // that stops the server, so say that it is under way.
+    showRunStatus(RUN_RUNNING)
     try {
-      const rec = await onRun(id)
-      if (rec.status === 'skipped') {
-        showRunStatus('already running')
-      } else if (rec.status === 'failed') {
-        showRunStatus(`failed: ${rec.error || 'unknown error'}`)
-      } else {
-        showRunStatus(`done (${rec.nodes?.length ?? 0} nodes)`)
-      }
+      showRunStatus(runOutcome(await onRun(id)))
     } catch {
       /* store surfaces the error in the toolbar */
+      showRunStatus(null)
     }
   }, [handleSave, onRun, showRunStatus])
 
@@ -991,7 +992,19 @@ function GraphEditorInner({
               scheduler error
             </button>
           ) : (
-            runStatus && <span className="text-text-faint text-2xs font-mono">{runStatus}</span>
+            runStatus &&
+            (runStatus.failed ? (
+              <button
+                type="button"
+                onClick={() => showRunStatus(null)}
+                className="text-danger text-2xs max-w-sm font-mono"
+                title="click to dismiss"
+              >
+                {runStatus.text}
+              </button>
+            ) : (
+              <span className="text-text-faint text-2xs font-mono">{runStatus.text}</span>
+            ))
           )}
 
           {(() => {

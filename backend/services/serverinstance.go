@@ -45,6 +45,10 @@ type instanceDeps struct {
 	// watchStarting promotes it (startingDeadline in production).
 	startingTimeout time.Duration
 
+	// crashedStopGrace caps a stop's grace once the console has shown a crash
+	// report (the crashedStopGrace constant in production).
+	crashedStopGrace time.Duration
+
 	// killTree is the platform process-tree kill (server_windows.go /
 	// server_other.go), behind a seam like launchCmd: the test fixtures'
 	// children lack the Setpgid/Job setup a real boot gets, so the genuine
@@ -95,7 +99,10 @@ type serverInstance struct {
 	exited       chan struct{} // closed by waitForExit when the child process exits
 	state        serverState
 	expectedStop bool
-	lastStop     models.ServerStopped
+	// crashed is set by the console's crash-report line and cleared by the
+	// next start(); it shortens the grace of any stop that follows.
+	crashed  bool
+	lastStop models.ServerStopped
 
 	// stats fields — set on Start, read by accessors
 	maxRAMMB   int

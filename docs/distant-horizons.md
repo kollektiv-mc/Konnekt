@@ -141,7 +141,10 @@ matters most to new players.
 
 Press **save**, then switch the graph **[on]**. **run** starts it once right
 away, which is the way to take the first snapshot at a time of your choosing
-rather than waiting for Sunday.
+rather than waiting for Sunday. While it runs, the toolbar says `running…`, the
+snapshot's lines appear in the **Console** tile and the first warning reaches chat
+at once. A run that fails before the snapshot starts, such as a destination that
+no longer exists, says why in red beside **run** until you click it away.
 
 ## What a run does
 
