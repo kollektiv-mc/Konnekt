@@ -128,16 +128,14 @@ func validateGraphDataTypes(g models.Graph, reg *BlockRegistry) []string {
 // "not confirmed" because ServerService.RconConfig reports ok only once the
 // server has started with RCON enabled, so a server that has never been started
 // reads the same as one with RCON off.
-const rconUnconfirmedWarning = "This graph stops the server, but RCON is not confirmed for it, " +
-	"so a warning to players cannot be sent first. RCON is confirmed once the server has " +
-	"started with enable-rcon on."
+const rconUnconfirmedWarning = "Stops the server with no warning to players: RCON is not confirmed. " +
+	"It is confirmed once the server has started with enable-rcon on."
 
 // dhSnapshotConsoleWarning is the other half of that advice. The snapshot block
 // stops the server too, but it warns the players first, so for it "cannot warn"
 // would be untrue: without RCON the warning goes through the server's console.
-const dhSnapshotConsoleWarning = "This graph has a Distant Horizons Snapshot, which warns players before it stops " +
-	"the server, but RCON is not confirmed for this server, so the warning will go through the " +
-	"console instead. RCON is confirmed once the server has started with enable-rcon on."
+const dhSnapshotConsoleWarning = "DH Snapshot warns players through the console, as RCON is not confirmed. " +
+	"It is confirmed once the server has started with enable-rcon on."
 
 // graphWarnings returns advice about g that is not an error: a graph that
 // stops the server while RCON is not confirmed cannot warn players before it
