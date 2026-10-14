@@ -173,7 +173,7 @@ func containsAll(s string, parts ...string) bool {
 
 // A graph with no stopping node must answer without asking the server service
 // at all, which is also what lets the scheduler tests run with none.
-func TestGraphWarningsMethodSkipsTheServerForAGraphThatDoesNotStop(t *testing.T) {
+func TestGraphWarningsMethodSkipsServerForNonStoppingGraph(t *testing.T) {
 	s := newTestScheduler(t)
 	got, err := s.GraphWarnings("srv", stopGraph(t, "save-all", false))
 	if err != nil {

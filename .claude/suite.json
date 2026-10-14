@@ -124,6 +124,14 @@
         "reference": "agent_docs/HEALTH_CHECKLIST.md"
       },
       {
+        "name": "test names stay readable",
+        "grep": "^func Test[A-Za-z0-9_]{57,}\\(",
+        "paths": ["backend", "scripts", "bindings_test.go", "client_error_test.go", "configwrite_test.go", "remote_app_test.go", "remote_methods_test.go", "scoping_test.go", "webviewgpu_test.go"],
+        "expect": "no matches",
+        "diagnosis": "A Go test name is an identifier of at most 60 characters: the function or block under test and the one condition, as in TestDHSnapshotFailedCopyStillRecordsDowntime. The sentence it was tempting to write goes in the comment above the function, or in a t.Run subtest name, which may carry spaces and comes back out of `go test -v` as the sentence it is. The limit was set after the Distant Horizons series landed 49 names between 61 and 79 characters in four days (#575 to #581) against none in the thousand tests before it, and one of them, TestDHSnapshotRunRecordCarriesTheDowntimeEvenWhenTheCopyFailsAndTheServerIsBack, read as a paragraph in a CI failure. Length is a reading cost only: _test.go files are excluded from `wails build`, so a name costs the shipped binary nothing.",
+        "reference": ".claude/rules/backend.md"
+      },
+      {
         "name": "scheduler colours live in blockMeta",
         "grep": "#[0-9a-fA-F]{6}(?![0-9a-fA-F])",
         "paths": ["frontend/src/tiles/scheduler"],

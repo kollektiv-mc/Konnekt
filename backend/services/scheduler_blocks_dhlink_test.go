@@ -61,7 +61,8 @@ func (f *uploadFixture) stageForToken(t *testing.T, serverID, token string, dbs 
 	return root
 }
 
-func TestDHPublishBlockInPrivateModeLandsUnderTheTokenAndRedactsItsURL(t *testing.T) {
+// In private mode the block lands under the token and redacts its URL.
+func TestDHPublishBlockPrivateModeRedactsTheURL(t *testing.T) {
 	f, dest, tok := privateBlockFixture(t)
 	f.stageForToken(t, "srv1", tok, dhPubDBs())
 
@@ -164,7 +165,8 @@ func TestDHPublishBlockRefusesASnapshotStagedForTheOtherLayout(t *testing.T) {
 	}
 }
 
-func TestDHPublishBlockFailureInPrivateModeHidesTheTokenEverywhere(t *testing.T) {
+// A failure in private mode hides the token everywhere.
+func TestDHPublishBlockPrivateFailureHidesTheToken(t *testing.T) {
 	logs := &captureHandler{}
 	prev := slog.Default()
 	slog.SetDefault(slog.New(logs))
@@ -270,7 +272,8 @@ func TestDHSnapshotPlanTakesTheTokenAndScrubsIt(t *testing.T) {
 	}
 }
 
-func TestDHSnapshotRunInPrivateModeFindsThePreviousIndexUnderTheToken(t *testing.T) {
+// A run in private mode finds the previous index under the token.
+func TestDHSnapshotPrivateRunFindsPreviousIndexUnderToken(t *testing.T) {
 	f := newDHRunFixture(t)
 	if _, err := f.run(); err != nil {
 		t.Fatal(err)
@@ -320,7 +323,8 @@ func TestDHSnapshotRunInPrivateModeFindsThePreviousIndexUnderTheToken(t *testing
 	}
 }
 
-func TestDHPublishRunInPrivateModeWritesUnderTheTokenAndMarksItOutOfWhatItSays(t *testing.T) {
+// A run in private mode writes under the token and marks it out of what it says.
+func TestDHPublishPrivateRunWritesUnderTokenAndRedactsIt(t *testing.T) {
 	f := newDHPublishFixture(t)
 	f.plan.Token = testLinkToken
 	keys, err := snapshotKeys("dh", testLinkToken, dhPubTime1)
