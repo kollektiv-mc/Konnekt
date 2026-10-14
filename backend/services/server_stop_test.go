@@ -244,3 +244,103 @@ func TestForceStopWithFreeGateExcludesOtherActions(t *testing.T) {
 		t.Errorf("Stop during a force stop = %v, want ErrPowerActionInProgress", raced)
 	}
 }
+
+const crashLine = "[12:22:45] [Server thread/ERROR]: Encountered an unexpected exception\n"
+
+// A server that has written a crash report is not saving a world any more, and
+// the JVM left behind can hang in its shutdown for good. A stop after the crash
+// line waits crashedStopGrace rather than the configured grace, says why, and
+// kills as usual.
+func TestStopAfterCrashLineUsesShortGrace(t *testing.T) {
+	s, _ := newServerFixture()
+	release, _ := fakeRunningServer(t, s)
+	kills := recordKillTree(t, s, release)
+	s.crashedStopGrace = 60 * time.Millisecond
+
+	curInst(s).streamOutput(strings.NewReader(crashLine + crashLine))
+
+	start := time.Now()
+	if err := s.Stop(fixtureServerID, 10*time.Minute); err != nil {
+		t.Fatalf("Stop = %v, want nil", err)
+	}
+	if waited := time.Since(start); waited > 2*time.Second {
+		t.Fatalf("stop after a crash waited %s, want about the short grace", waited)
+	}
+
+	crashBanners, graceBanner := 0, false
+	for _, line := range consoleLines(s) {
+		if strings.Contains(line, "Server crashed; a stop now force kills") {
+			crashBanners++
+		}
+		if strings.Contains(line, "Server already crashed, force killing the process tree in 60ms") {
+			graceBanner = true
+		}
+	}
+	if crashBanners != 1 {
+		t.Errorf("crash banner narrated %d times, want once for two crash lines", crashBanners)
+	}
+	if !graceBanner {
+		t.Errorf("short-grace banner missing from %v", consoleLines(s))
+	}
+	if got := kills(); len(got) != 1 {
+		t.Errorf("killTree calls = %v, want exactly one", got)
+	}
+	if got := s.State(fixtureServerID); got != "offline" {
+		t.Errorf("State() = %q, want offline", got)
+	}
+}
+
+// The short grace only ever shortens: a quit's own 8 s stays what it was, so a
+// crashed server never makes the app wait longer to close.
+func TestStopAfterCrashLineKeepsAShorterGrace(t *testing.T) {
+	s, _ := newServerFixture()
+	release, _ := fakeRunningServer(t, s)
+	recordKillTree(t, s, release)
+	s.crashedStopGrace = 10 * time.Second
+
+	curInst(s).streamOutput(strings.NewReader(crashLine))
+
+	start := time.Now()
+	if err := s.Stop(fixtureServerID, 80*time.Millisecond); err != nil {
+		t.Fatalf("Stop = %v, want nil", err)
+	}
+	if waited := time.Since(start); waited > 2*time.Second {
+		t.Fatalf("stop waited %s, want the caller's 80ms grace", waited)
+	}
+	for _, line := range consoleLines(s) {
+		if strings.Contains(line, "Server already crashed") {
+			t.Errorf("short-grace banner on a grace that was already shorter: %q", line)
+		}
+	}
+}
+
+// start() clears the flag, so a crash on one boot does not shorten the next
+// boot's stop: the fixture crashes and stops, then a real Start through the
+// launch seam boots again.
+func TestCrashFlagClearsOnNextBoot(t *testing.T) {
+	s, _ := newServerFixture()
+	fakeLaunch(t, s)
+	release, _ := fakeRunningServer(t, s)
+	recordKillTree(t, s, release)
+
+	curInst(s).streamOutput(strings.NewReader(crashLine))
+	if err := s.Stop(fixtureServerID, 50*time.Millisecond); err != nil {
+		t.Fatalf("Stop = %v", err)
+	}
+	if !curInst(s).crashed {
+		t.Fatal("flag cleared by the stop; it should survive until the next start")
+	}
+
+	if err := s.Start("srv1", "", nil, t.TempDir()); err != nil {
+		t.Fatalf("Start = %v", err)
+	}
+	curInst(s).mu.Lock()
+	crashed := curInst(s).crashed
+	curInst(s).mu.Unlock()
+	if crashed {
+		t.Error("crash flag survived into the next boot")
+	}
+	if err := s.Stop(fixtureServerID, 0); err != nil {
+		t.Errorf("cleanup Stop = %v, want nil", err)
+	}
+}
