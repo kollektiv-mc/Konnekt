@@ -51,6 +51,10 @@
         "run": "node scripts/check-release-notes-extract.mjs"
       },
       {
+        "name": "health log cap",
+        "run": "node scripts/check-health-log.mjs"
+      },
+      {
         "name": "bundle budget",
         "run": "pnpm check-bundle",
         "cwd": "frontend"

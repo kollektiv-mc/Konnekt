@@ -1,0 +1,1705 @@
+# Konnekt — Health log, before dated entries
+
+Entries moved out of `agent_docs/HEALTH_LOG.md` on 2026-10-14, when that file
+took a cap; its header states the rule. These were written before the log
+adopted dated entries, grouped by finding and newest last, and carry no
+reliable date. The text is as it was: an archived file is not edited. "The
+checklist above" in it means `agent_docs/HEALTH_CHECKLIST.md` as it read at
+the time, and `✅` marks a closed item.
+
+## Index
+
+- [P0 — CI foundation](#p0-ci-foundation)
+- [P1 — CI blind spot: `@react-three/fiber`/`@types/three` resolution-dependent typecheck failure](#p1-ci-blind-spot-react-threefibertypesthree-resolution-dependent-typecheck-failure)
+- [P1 — Auto-updater: check, release pipeline, and in-place install all shipped](#p1-auto-updater-check-release-pipeline-and-in-place-install-all-shipped)
+- [Done — Lint/format enforcement (frontend)](#done-lintformat-enforcement-frontend)
+- [P1 — Inline styles → Tailwind utilities (Milestone 2)](#p1-inline-styles-tailwind-utilities-milestone-2)
+- [P1 — Modrinth client: HTTP paths are testable, and now tested](#p1-modrinth-client-http-paths-are-testable-and-now-tested)
+- [P2 — React Compiler-readiness lint rules](#p2-react-compiler-readiness-lint-rules)
+- [P1 — Test coverage + gate](#p1-test-coverage-gate)
+- [P1 — Code-split heavy tiles](#p1-code-split-heavy-tiles)
+- [P2 — Undocumented blank error-ignores](#p2-undocumented-blank-error-ignores)
+- [P2 — Structured logging](#p2-structured-logging)
+- [P2 — Repo hygiene](#p2-repo-hygiene)
+- [P1 — Scheduler node-system deep analysis](#p1-scheduler-node-system-deep-analysis)
+- [P1 — Scheduler tile convention gaps ✅ closed](#p1-scheduler-tile-convention-gaps-closed)
+- [P2 — Memoization pass](#p2-memoization-pass)
+- [P3 — Bound method missing `(T, error)` return](#p3-bound-method-missing-t-error-return)
+- [P1 — Tile grid: two parallel systems collapsed into one](#p1-tile-grid-two-parallel-systems-collapsed-into-one)
+- [P1 — Tile grid: crate-drag placement fixed (the above shipped broken)](#p1-tile-grid-crate-drag-placement-fixed-the-above-shipped-broken)
+- [P1 — Tile grid: crate-drag placement, rebuilt (the above shipped broken too)](#p1-tile-grid-crate-drag-placement-rebuilt-the-above-shipped-broken-too)
+- [P1 — Tile grid: right-hand cells unreachable from the crate](#p1-tile-grid-right-hand-cells-unreachable-from-the-crate)
+
+---
+
+## Remediation backlog
+
+Concrete, prioritized follow-ups based on the most recent review. This section
+*is* allowed to go stale/get checked off — unlike the checklist above, it's a
+todo list, not a target.
+
+### P0 — CI foundation
+- ✅ Added `.github/workflows/ci.yml`: `frontend` job (ubuntu-latest —
+  `pnpm typecheck` + `pnpm lint` + `pnpm build`) and `backend` job
+  (windows-latest, matching the shipping target — `gofmt -l` + `go vet ./...` +
+  `go test ./...` + `go build ./...`), both with dependency caching
+  (`setup-node`'s `cache: pnpm`, `setup-go`'s `cache: true`). Runs on push to
+  `main` and on every PR. `wails build` packaging deferred (see below) — the
+  light `go build`/`pnpm build` smoke check was judged sufficient for now.
+  Fixed the 14 Go files that weren't `gofmt`-clean as a prerequisite. Confirmed
+  green on `main`: https://github.com/sandrogekeler/Konnekt/actions/runs/28618749554
+- Follow-up (not yet done): a release-tag-gated full `wails build` packaging
+  job, for stronger end-to-end confidence than the `go build`/`pnpm build`
+  smoke check gives.
+
+### P1 — CI blind spot: `@react-three/fiber`/`@types/three` resolution-dependent typecheck failure
+- Found 2026-07-16: `frontend/src/tiles/worlds/scene/Galaxy.tsx`'s new
+  `LayoutScaleController` (from the worlds zoom-to-fit merge) called
+  `.unproject(state.camera)` — R3F's `state.camera` type and the app's
+  `@types/three` `Camera` type had diverged (newer three fields like
+  `reversedDepth`/`static`/`pivot` weren't on R3F's copy), so `tsc` should
+  reject the assignment. It passed in this repo's own CI (`pnpm typecheck` +
+  `pnpm build`, both on a `--frozen-lockfile` install) but failed a
+  contributor's local `wails dev`, which ran a fresh non-frozen `pnpm install`
+  that resolved a node_modules tree where the two `Camera` types diverge.
+  First patched at the call site with the same cast the sibling file in the
+  same merge already uses (`WorldsScene.tsx`'s `state.camera as unknown as
+  THREE.PerspectiveCamera` precedent) — kept as belt-and-suspenders, but that
+  alone left the underlying tree still capable of producing more of these.
+- ✅ **Root cause found and removed.** The tree carried **two** `@types/three`/
+  `three` copies: the app's own `@types/three@0.184.1`/`three@0.184.0`, and
+  `@types/three@0.156.0`/`three@0.156.1` pinned by `skinview3d` (a dependency
+  that was never imported anywhere under `frontend/src/` — see "P2 — Repo
+  hygiene" below). Depending on how a given `pnpm install` laid out
+  `node_modules`, R3F's camera type could bind to either copy; the
+  0.156.0-era `Camera` predates the fields 0.184.1 added, producing the
+  mismatch. CI and prior sandbox installs happened to dedupe to 0.184.1, so
+  this was invisible there — only a fresh install on the reporting
+  contributor's machine resolved the conflicting layout. Removed `skinview3d`
+  (`pnpm remove skinview3d` in `frontend/`); confirmed via `pnpm-lock.yaml`
+  that exactly one `@types/three@0.184.1` and one `three@0.184.0` remain in
+  the tree. `pnpm typecheck`/`pnpm build`/`pnpm lint` (0 errors)/`pnpm test`
+  (165/165) all re-verified green after the removal.
+
+### P1 — Auto-updater: check, release pipeline, and in-place install all shipped
+- ✅ **In-app update check shipped.** `version.go` (package `main`) is the
+  single source of the app's version (`var Version = "0.1.0-dev"`), also
+  mirrored in `wails.json`'s `info.productVersion` for the built binary's
+  file metadata — the app previously had **no version anywhere** (confirmed
+  via grep before this work; `wails.json` had no `info` block, frontend
+  `package.json` sits at the placeholder `0.0.0`, the About pane showed
+  nothing). `backend/services/update.go`'s `UpdateService` queries
+  `GET /repos/sandrogekeler/Konnekt/releases/latest` on the GitHub REST API —
+  **GitHub Releases *is* the version database**, no separate backend needed;
+  each release is a git tag with per-platform binaries attached as assets.
+  `baseURL` is constructor-injected (unlike `modrinth.go`'s hardcoded
+  `modrinthBase`, a gap `update_test.go` deliberately avoids repeating) so
+  `CheckForUpdates` is fully covered by `httptest.Server`-backed tests:
+  update-available, up-to-date, 404-no-releases-yet (treated as "up to
+  date", not an error — the correct state until the first release is cut),
+  malformed JSON, and HTTP 500. `compareVersions` (semver-ish, `v`-prefix
+  tolerant, prerelease-sorts-lower) has its own table-driven test.
+  `GetAppVersion`/`CheckForUpdates` bound on `App` (`app.go`); Settings →
+  About shows the version + a "Check for updates" button (idle → checking →
+  up to date / update-available-with-Download-button / error); Settings →
+  General adds a "Check for updates on startup" toggle
+  (`AppSettings.CheckUpdatesOnStartup`, defaults `true` in
+  `config.go`'s `GetAppSettings()`). The startup path is a **one-shot check**
+  (`frontend/src/hooks/useUpdateCheck.ts`, tested with the established
+  `vi.mock('.../wailsjs/go/main/App')` + `renderHook` pattern), not a poll,
+  wired into `App.tsx` alongside the other one-shot startup effects — it
+  **no-ops when `Version` contains `-dev`** (a dev/`wails dev` build has no
+  installable artifact to update to), and failures (offline, no releases)
+  are silent by design since it's a background check, not a user action.
+- ✅ **Release pipeline shipped, now with a Linux leg.**
+  `.github/workflows/release.yml` triggers on a `v*` tag push and runs four
+  jobs: `build-windows` (unchanged, `windows-latest`, `-ldflags "-X
+  main.Version=$TAG"`), `build-linux` (in an `ubuntu:22.04` **container** —
+  pins glibc 2.35 + webkit2gtk-4.1 independently of the `ubuntu-22.04` runner
+  image's own deprecation schedule — with `wails build -tags webkit2_41`),
+  `package-rpm` (in a `rockylinux/rockylinux:10` container, packages the
+  Linux binary built above into an `.rpm` with a `.desktop` entry and
+  hand-declared `Requires: webkit2gtk4.1, gtk3` since `AutoReqProv: no` is set
+  — see `build/linux/konnekt.spec`), and `publish` (aggregates
+  `konnekt-windows-amd64.exe`, `konnekt-linux-amd64`, and the `.rpm` into one
+  `checksums.txt` and a single `gh release create`). Rocky/RHEL **9** is
+  deliberately not covered: EL9 never shipped webkit2gtk-4.1 and EL10 dropped
+  4.0, so one binary can't span both — see the README's Platform support
+  section. macOS is still not built in CI — a documented follow-up, not
+  built.
+- ✅ **In-place install shipped, Windows + Linux.** Settings → About's
+  "Download & Install" button (previously just opened the release page) now
+  calls `App.DownloadAndInstallUpdate()`, which re-checks the latest release,
+  picks the asset matching the running platform (`platformAssetNameFor`
+  covers `windows` and `linux`; other platforms — and an RPM install's
+  root-owned `/usr/bin`, caught generically by `selfupdate`'s
+  `CheckPermissions` — get a clear error instead of a silent failure or a
+  guessed name nothing publishes), downloads `checksums.txt`, streams
+  the binary while verifying its SHA256 against it, and replaces the running
+  executable in place via `github.com/minio/selfupdate` — which owns the
+  Windows "can't overwrite a running exe" rename dance and auto-rolls-back on
+  a failed write (recorded in `DEPENDENCIES.md`). On success the app spawns
+  the replaced binary and quits via `runtime.Quit`; on failure (offline
+  mid-download, a Program-Files install without write permission, a bad
+  checksum) the frontend falls back to the original "open release page"
+  button rather than silently failing. Progress streams over the existing
+  `EventBus` (`EventUpdateProgress` in `events.go`) to a Wails
+  `EventsOn` listener in `SettingsModal.tsx`'s `AboutPane`, cleaned up on
+  unmount — not `useEffect` polling, per `CLAUDE.md`'s rule. Dev builds
+  (`Version` containing `-dev`) are rejected up front (in both `App.go` and
+  the About pane's UI, which disables the button with a hint) since a `wails
+  dev` process has no packaged binary to replace — this is also why the
+  feature can only be exercised end-to-end against a real packaged build, not
+  `wails dev`. Testable seams split out for this: `platformAssetNameFor` and
+  `selectPlatformAssets` take `goos`/`goarch` as parameters rather than
+  reading `runtime.GOOS`/`GOARCH` directly, and `downloadAndApply` takes a
+  `TargetPath` override, so `update_test.go` exercises the real
+  download+checksum-verify+`selfupdate.Apply` path (success, and a rejected
+  checksum mismatch leaving the original file untouched) against a temp file
+  instead of the actual running executable, all from a single (non-Windows)
+  dev machine.
+- Also done: `frontend/src/lib/changelog.ts`'s `CHANGELOG_URL` flipped from
+  `/commits/main` to `/releases` now that the release pipeline exists.
+- **Deferred, not built this pass:** code-signing/notarization for the
+  published binaries (unsigned builds trigger Windows SmartScreen warnings —
+  functional, just not polished); a macOS release leg and its self-update
+  support (`platformAssetNameFor` is structured to add a case per platform,
+  but no asset-naming convention or code-signing story exists for macOS yet);
+  a second Linux leg for Rocky/RHEL 9 (webkit2gtk-4.0), which would need the
+  updater to probe the host's installed webkit version rather than assume 4.1.
+- Also fixed alongside the Linux release leg: on non-Windows, `killTree`
+  previously killed only the direct Java PID, and the process was never put
+  in its own process group at spawn — so a Konnekt crash orphaned the running
+  Minecraft server instead of the OS reaping it (the Windows Job Object
+  already handled this). `server.go` now calls a new `configureProcAttr(cmd)`
+  hook immediately before `Start()`; `server_linux.go` sets
+  `Setpgid: true, Pdeathsig: SIGKILL` (the closest Linux analogue to the Job
+  Object, best-effort since `Pdeathsig` is scoped to the parent OS thread and
+  Go can migrate goroutines across threads), `server_unix.go` (`!windows &&
+  !linux`) sets `Setpgid` only, and `killTree` in `server_other.go` now
+  signals the whole group via `syscall.Kill(-pid, ...)`.
+
+### Done — Lint/format enforcement (frontend)
+- ✅ Migrated `frontend/` from Tailwind v3 (barely used) to v4, mapped the
+  existing CSS-variable token system into `@theme inline`
+  (`frontend/src/style.css`) so `applySkin()` keeps working unchanged.
+- ✅ Added a real ESLint flat config (`frontend/eslint.config.js`):
+  `typescript-eslint` + classic `react-hooks` rules (`rules-of-hooks`,
+  `exhaustive-deps`) + `react-refresh` + a `warn`-level `no-restricted-syntax`
+  rule flagging inline `style={{}}` (see Clean pillar, item 6, and Milestone 2
+  below). `pnpm lint` now runs and passes.
+  - Deliberately **not** enabled: `eslint-plugin-react-hooks`'s
+    `recommended`/`recommended-latest` configs, which bundle React Compiler
+    readiness rules (`purity`, `refs`, `set-state-in-effect`, etc.). These flag
+    ~60 findings, mostly in the react-three-fiber scene code
+    (`frontend/src/tiles/worlds/scene/`) where imperative per-frame ref sync is
+    the standard r3f pattern, not a bug. Revisit if the project adopts the
+    React Compiler.
+- ✅ Added Prettier + `prettier-plugin-tailwindcss`
+  (`frontend/.prettierrc.json`). **Not** run as a one-time mass reformat —
+  Prettier's opinionated formatter expands the codebase's condensed
+  single-line block style (e.g. `catch { /* comment */ }`) across ~105 files,
+  which would be a large, low-value diff. Applied incrementally instead, via
+  the pre-commit hook below (format-on-touch).
+- ✅ Added a pre-commit hook (`lefthook.yml`, root `package.json`) running
+  Prettier + ESLint + `tsc --noEmit` on staged frontend files, and `gofmt` +
+  `go vet` on staged Go files.
+- ✅ Cleared the real debt the new tooling surfaced: empty catch blocks, unused
+  vars/imports, ternary-as-statement, redundant boolean casts, a genuine
+  conditional-hooks bug in `frontend/src/tiles/worlds/index.tsx` (hooks were
+  declared after an early `return`), and 9 `any` usages down to 1 documented,
+  justified exception (`frontend/src/tiles/worlds/scene/Sun.tsx` — a
+  known `three`/`@react-three/fiber` cross-package type mismatch).
+
+### P1 — Inline styles → Tailwind utilities (Milestone 2)
+- ✅ First slice done: `frontend/src/components/ui/*` (5 files —
+  `SettingRow`, `Toggle`, `Segmented` fully migrated; `ColorSwatch` and the
+  animation-driven parts of `Popover` correctly stay inline as documented
+  `eslint-disable-next-line no-restricted-syntax` exceptions — arbitrary hex
+  colors and open/close-animation transforms aren't visible to Tailwind's
+  static class scanner). Global warning count: 725 → 711. Ratcheted
+  `no-restricted-syntax` from `warn` → `error` for `src/components/ui/**/*.tsx`
+  in `frontend/eslint.config.js` (as a config object placed *after* the global
+  rules block — flat-config applies later array entries' matching rules on
+  top of earlier ones, opposite of what might be assumed). This is the
+  reusable template for future per-directory passes. Confirmed green on
+  `main`: https://github.com/sandrogekeler/Konnekt/actions/runs/28628543709
+  - Two conversion rules established during this pass: (1) Tailwind v4's JIT
+    scanner only sees literal class-name strings in source — a
+    template-interpolated arbitrary class (e.g. `` `min-w-[${width}px]` ``) is
+    invisible to it and produces no CSS, so prop/state-driven numeric values
+    must stay inline; (2) a boolean ternary between two *static* values (e.g.
+    `checked ? 'var(--accent)' : 'var(--border-hover)'`) is not "genuinely
+    dynamic" — convert to a conditional `className`, reserving `style={{}}`
+    for values that are actually computed/interpolated.
+  - Verified in-browser via the Settings modal (gear icon — pure client
+    state, no Wails backend needed): `Toggle`'s checked/unchecked colors and
+    slide animation, `Segmented`'s Light/Dark/System pill, and `ColorSwatch`
+    all confirmed pixel-correct via computed-style inspection (e.g. the
+    selected pill's `background-color` resolved to `rgb(74, 222, 128)` =
+    `#4ade80`, the accent color, exactly as expected from the `@theme inline`
+    token mapping). `Popover` could not be live-verified the same way — its
+    only real consumers are in the Mods tile (`BrowsePanel.tsx`,
+    `InstalledPanel.tsx`), which calls `EventsOn` on mount and crashes without
+    the Wails bridge (same pre-existing environment limitation as the
+    performance-tile check in the prior session, unrelated to this change).
+    Indirect confirmation instead: `Popover`'s `shadow-[...]` arbitrary-value
+    syntax is identical in form to `Toggle`'s, which *was* verified live
+    (`box-shadow` computed to `rgba(0,0,0,0.3) 0px 1px 3px 0px`, matching the
+    class exactly).
+- ✅ Second slice done: `frontend/src/tiles/TileWrapper/index.tsx` — the
+  shared wrapper every tile renders inside (`CLAUDE.md`'s "Tile system"),
+  same "shared primitive" philosophy as the `ui/*` slice. All 5 occurrences
+  converted to Tailwind utilities; this is the **first directory in the
+  migration to reach zero remaining inline styles** — no `eslint-disable`
+  exceptions needed, unlike `ui/*`. Global warning count: 711 → 706. Added
+  `src/tiles/TileWrapper/**/*.tsx` to the same ratcheted-`error` `files` glob
+  in `frontend/eslint.config.js` as `ui/*` (merged into one config object
+  rather than duplicating the rule block). Confirmed green on `main`:
+  https://github.com/sandrogekeler/Konnekt/actions/runs/28630261474
+  - ⚠️ **Regression this slice shipped, fixed later:** the commit dropped the
+    leading space in the outer div's conditional class string
+    (`` `relative h-full${maximized ? '' : ' tile-outer'}` `` →
+    `...: 'tile-outer'`), fusing `h-full` and `tile-outer` into the invalid
+    token `h-fulltile-outer` for every *non-maximized* tile. Since
+    `.tile-wrapper` is `position:absolute; inset:0`, losing `h-full` on its
+    parent collapsed all tiles to 0px height — the whole dashboard canvas
+    rendered empty (only maximized tiles, which take the `''` branch, were
+    fine). Fixed by moving the separator space *outside* the interpolation
+    (`` `relative h-full ${maximized ? '' : 'tile-outer'}` ``). **Lesson for
+    future className migrations:** conditional class strings with a
+    leading/trailing space inside the conditional are fragile; keep the
+    separating space outside the `${}`. And verify migrated tiles by their
+    rendered *geometry* (non-zero `getBoundingClientRect().height`), not just
+    computed `background-color` — a 0-height element still reports its color.
+  - The three `onMouseEnter`/`onMouseLeave` pairs that imperatively set
+    `e.currentTarget.style.borderColor`/`.style.color` were left untouched —
+    not the JSX `style=` attribute the lint rule targets, and out of scope to
+    redesign. Verified live that this doesn't change runtime behavior: the
+    default border/text-color values now come from `className`, but the
+    hover handlers still directly set an inline `style` override, which wins
+    over `className` at the same specificity today exactly as it did before.
+  - Verified live in-browser (default dashboard, no Wails backend needed —
+    every visible tile uses this wrapper): computed styles matched exactly,
+    including the unusual `backgroundImage:
+    linear-gradient(var(--bg-surface),var(--bg-surface))` (a same-color-twice
+    trick) which resolved to identical gradient stops before and after.
+    Toggling a tile's maximize/restore confirmed the `cursor: maximized ?
+    'default' : 'grab'` ternary → conditional `className` conversion is
+    correct: querying all `.drag-handle` elements while one tile was
+    maximized showed `cursor: grab` on the four background grid tiles and
+    `cursor: default` on the maximized overlay's own handle. Confirmed the
+    hover border-color swap still fires (inspected the element's `style`
+    attribute directly: `border-color: var(--border-hover)` on hover,
+    reverting to `var(--border-subtle)` on mouseleave).
+- ✅ Third slice done: batched all five remaining small single-file tiles in
+  one pass — `stats`, `notifications`, `quick-commands`, `performance`,
+  `console` (40 occurrences total, exact count corrected from the earlier
+  census, which missed the `style={cond ? {...} : {}}` ternary form).
+  `notifications` fully converts to zero remaining inline styles (including a
+  `KIND_COLOR` → `KIND_CLASS` static Tailwind-class lookup, replacing the
+  removed CSS-var lookup — `NotifKind` is a closed string-literal union, so
+  this is exactly as static as a boolean ternary). `stats`/`quick-commands`/
+  `performance` each keep exactly one genuinely-computed exception (a
+  percentage-width bar fill, and a floating dropdown's
+  `getBoundingClientRect`-derived position). `console` keeps 4 documented
+  exceptions, all `fontFamily: "'JetBrains Mono', monospace"` — see the new
+  `--font-mono` token-gap entry below. The eslint ratchet's `files` glob also
+  caught one leftover from the earlier code-split session:
+  `performance/charts.tsx`'s recharts `<Legend>` label color (a ternary
+  between two static `rgba()` values, converted the same way). Global warning
+  count: 706 → 665.
+  - `#f87171` in `quick-commands.tsx` turned out to be exactly Tailwind's
+    default `red-400` — converted to named classes with opacity modifiers
+    (`bg-red-400/15`, `border-red-400/30`, `text-red-400`) instead of
+    arbitrary hex brackets.
+  - Verified live: `stats`' status dot correctly shows `bg-red-500` with
+    `box-shadow: none` in the offline state (computed style, confirming the
+    ternary's false branch); `console`'s command input still resolves
+    `font-family: "JetBrains Mono", monospace` exactly; the quick-commands
+    kick/ban modal panel opened and its `background-color`/`border-color`
+    matched the source arbitrary values exactly (`rgb(13,14,20)` = `#0d0e14`,
+    `white/10` border). No new console errors beyond the same pre-existing
+    `quick-commands` `window.go`-unavailable mount errors seen in prior
+    sessions. Confirmed green on `main`:
+    https://github.com/sandrogekeler/Konnekt/actions/runs/28631150720
+- Missing `--font-mono` theme token found during this pass, tracked
+  separately: see "P2 — Missing `--font-mono` theme token" below.
+- ✅ Fourth slice done: the **mods tile** — the single largest remaining
+  cluster, all 9 files (`frontend/src/tiles/mods/**`: `InstalledPanel.tsx`,
+  `ModPreviewDialog.tsx`, `ContentDetailPanel.tsx`, `BrowsePanel.tsx`,
+  `index.tsx`, `DependencyDialog.tsx`, `ContentCard.tsx`, `Pagination.tsx`,
+  `ModAboutBody.tsx`). 176 → 7 remaining, all genuinely dynamic and documented
+  with `eslint-disable-next-line no-restricted-syntax`: three live-percent
+  progress-bar widths (`index.tsx` x2, `InstalledPanel.tsx`), two live
+  user-controlled grid-column counts (`InstalledPanel.tsx`, `BrowsePanel.tsx`),
+  and the resizable detail panel's live `panelWidth`-derived width/transform
+  (`BrowsePanel.tsx` x2). Global warning count: 668 → 492. Added
+  `src/tiles/mods/**/*.tsx` to the ratcheted-`error` `files` glob in
+  `frontend/eslint.config.js`; `pnpm lint` passes with 0 errors, confirming
+  every remaining inline style in the tile is a documented exception.
+  - Static ternaries between two fixed values (color, background, opacity,
+    border, font-weight) converted to conditional `className`s throughout,
+    per the established rule — including several 3-way ternaries (e.g. a
+    version-type color lookup keyed by a plain `string` field, mirrored the
+    same way an already-existing ternary chain in `ModPreviewDialog.tsx`
+    handled it, for consistency between the two files).
+  - New conversion patterns established this pass, verified live via computed
+    `getComputedStyle()` checks against a running `pnpm dev` server (not just
+    typecheck/lint): `color-mix(in srgb, ...)` values as Tailwind arbitrary
+    `bg-[...]`/`border-[...]` (verified the mixed color resolves correctly);
+    `mask-image`/`-webkit-mask-image` gradients as arbitrary properties
+    (`[mask-image:...]`); `line-clamp-2` replacing the manual
+    `-webkit-box`/`-webkit-line-clamp` trick; `caret-accent` for `caretColor`;
+    opacity ternaries mapped onto Tailwind's opacity scale exactly (`0.55` →
+    `opacity-55`, `0.2` → `opacity-20`); a fixed-duration `transform`
+    transition (`280ms cubic-bezier(0.4,0,0.2,1)`) converted to
+    `duration-[280ms] ease-in-out` since Tailwind's `ease-in-out` *is* that
+    exact bezier curve — the `PANEL_SLIDE_MS` constant that previously held
+    this value was removed as dead code once inlined into the class, with a
+    comment linking the two so a future duration change updates both;
+    `calc(100vw-48px)`-style arbitrary values confirmed Tailwind auto-inserts
+    the required operator spacing even without explicit underscores.
+  - Not independently verified: the mods tile itself rendering end-to-end
+    inside the app. `index.tsx`'s `useMods` hook calls `EventsOn` and
+    `DetectServerLoader` on mount and crashes without the Wails bridge, so
+    only the 8 pure-presentational child components could be exercised
+    (verified via direct computed-style checks against a running Vite dev
+    server, not a full component mount) — a full visual pass needs `wails dev`
+    with a configured server, same limitation noted for backups/performance in
+    prior sessions.
+- ✅ **Fifth slice done: the backups tile** — the largest remaining cluster at
+  the time (116 → 19, all 7 files: `index.tsx`, `SolarSystem.tsx`,
+  `BackupCard.tsx`, `BackupCarousel.tsx`, `ServerInfoPanel.tsx`,
+  `WorldInfoPanel.tsx`, `WireframeSphere.tsx`; `BackupsSummary.tsx` and
+  `BackupRunningDialog.tsx` reach **zero** remaining inline styles). Every
+  survivor carries a documented `eslint-disable-next-line` exception. Global
+  frontend-wide count: 451 → 354. Added `src/tiles/backups/**/*.tsx` to the
+  ratcheted-`error` `files` glob in `frontend/eslint.config.js`; `pnpm lint`
+  passes with 0 errors.
+  - Same "static ternary between two fixed values → conditional `className`"
+    rule applied throughout (e.g. `BackupCard`'s `focused`-driven width/height/
+    border/background, the dim-overlay's opacity/pointer-events/cursor triad).
+    One refinement discovered this pass: a **CSS `rotate()`/grid-template-rows
+    two-value ternary is also "two fixed values"**, not just color/border
+    ternaries — `ServerInfoPanel.tsx`'s collapse-chevron `rotate(180deg)`/
+    `rotate(0deg)` converted cleanly to Tailwind's native `rotate-180`/
+    `rotate-0` utilities (the original plan for this file assumed these had to
+    stay inline; they didn't).
+  - **Multi-property/multi-easing `transition` strings don't fit one Tailwind
+    utility** and were kept inline as a distinct, deliberate exception
+    category (not "computed", just not expressible in one class): `BackupCard`
+    mixes a 260ms custom-bezier (width/min-height) with a 200ms ease
+    (padding/border-color/background) in one declaration; `SolarSystem.tsx`'s
+    shared `FOCUS_TRANSITION` constant (imported from `focusLayout.ts`) mixes
+    left/top at 380ms bezier with opacity at 250ms ease. Where a transition
+    targets only *one* property at *one* duration/easing (e.g. the scaled-
+    sphere's `transform 350ms cubic-bezier(...)`), it converts cleanly to
+    `transition-transform duration-[350ms] ease-[cubic-bezier(...)]` — Tailwind
+    arbitrary values pass the raw CSS timing-function through unchanged,
+    including the literal `ease` keyword (`ease-[ease]`), which is **not**
+    the same curve as Tailwind's own `ease-in-out` alias.
+  - `SolarSystem.tsx` had more static wins than the original per-file plan
+    assumed: `focusLayout.ts` was checked directly, confirming `FOCUS.left`/
+    `FOCUS.top` are compile-time constants — so `SunNode`'s position ternary
+    (`isFocused ? FOCUS.left : '50%'`) is between two *fixed* values (unlike
+    `WorldNode`'s analogous ternary, which mixes that same constant with a
+    genuinely per-world computed `${cfg.x}%`, and correctly stays inline).
+    `SunNode`'s wrapper reduced to a single inline `style` holding only the
+    shared `FOCUS_TRANSITION` constant.
+  - `#f87171` confirmed to equal the `--danger` token exactly
+    (`rgb(248 113 113)` in `style.css`'s `@theme inline` block) — converted
+    every occurrence to `text-danger`/`border-danger`/`bg-[color-mix(in_srgb,var(--danger)_·%,transparent)]`
+    instead of the literal hex, so these follow the theme (unlike the
+    already-`red-400`-converted quick-commands case, `--danger` isn't
+    Tailwind's stock `red-400` value, so the token, not a stock color name,
+    is the correct target here). `#22c55e` (Tailwind's exact `green-500`)
+    converted to the named class per the established quick-commands
+    precedent.
+  - Verified: `pnpm typecheck` (0 errors), `pnpm lint` (0 errors — one
+    genuine bug caught and fixed by the lint gate itself: converting
+    `SolarSystem.tsx`'s opacity ternaries to `opacity-35`/`opacity-100`
+    classes left the `FOCUS_FADED_OPACITY` import unused, which
+    `@typescript-eslint/no-unused-vars` flagged as an error and was removed),
+    `pnpm test` (131/131, unchanged), `pnpm build` (entry chunk 490.77 KB →
+    479.3 KB gzip — a net *decrease*, consistent with removing inline style
+    objects rather than adding code), `pnpm check-bundle` (479.3 KB, well
+    under the 550 KB budget).
+  - Not independently verified: live rendering of the tile itself. Same
+    environment limitation noted for every prior tile pass — `useBackups`/
+    `useBackupWorlds` call the Wails bridge on mount, and this sandbox has no
+    configured Minecraft server, so the sidebar's tile-activation guard
+    no-ops for server-scoped tiles before the component even mounts (couldn't
+    get as far as the mods/worlds passes, which at least reached
+    Wails-bridge-crash on mount). The app shell and every already-mounted
+    tile (Console, Stats, Commands, Players) rendered correctly throughout
+    with no new console errors beyond the pre-existing `quick-commands`
+    `window.go`-unavailable one. A full visual pass needs `wails dev` with a
+    configured server, same as backups/worlds/performance previously.
+- ✅ **Sixth slice done: the scheduler tile** (`frontend/src/tiles/scheduler/**`,
+  a React Flow/xyflow visual node editor) — the next-largest remaining
+  cluster. A recount against `pnpm lint`'s own output (not just `grep`) found
+  99 real occurrences across 8 `.tsx` files, not the ~90 first estimated —
+  `GraphEditor.tsx` (19, not 14), `NodeDataPanel.tsx` (13, not 11), and
+  `QuickAddMenu.tsx` (15, not 14) were undercounted. All 8 files converge to
+  **zero or a small, fully-documented set of exceptions**: `SchedulerSummary.tsx`,
+  `BlockPalette.tsx`, `NodeConfigPanel.tsx`, and `NodeDataPanel.tsx` reach
+  **zero** remaining inline styles; `GraphEditor.tsx` keeps 1 (the `MiniMap`
+  position override — see below); `QuickAddMenu.tsx` keeps 2 (viewport-computed
+  popup positions); `AnimatedEdge.tsx` keeps its original 3 (xyflow-provided
+  style spreads + per-instance animation delay, unchanged in shape, now with
+  disable comments); `BlockNode.tsx` keeps 10 (the most complex file — see
+  below). Added `src/tiles/scheduler/**/*.tsx` to the ratcheted-`error` `files`
+  glob in `frontend/eslint.config.js`; `pnpm lint` passes with 0 errors,
+  global warning count 376 → 277 (all 99 scheduler occurrences resolved).
+  - **Tailwind v4's default palette does not render pixel-identical to the
+    classic hex values baked into this codebase** — verified by checking
+    `frontend/src/style.css`'s tokens directly rather than assuming a v3-era
+    hex-to-stock-color match: only `#22c55e`/`#f59e0b` matched existing tokens
+    exactly (`--success`/`--warning`, converted to `text-success`/`border-warning`
+    etc.); every other hardcoded hex in the tile (`#ef4444`, `#7c3aed`,
+    `#60a5fa`, `#1e3a5f`, category colors) had no exact stock-Tailwind match
+    and became arbitrary-value brackets (`text-[#ef4444]`) instead — this
+    still converts the occurrence fully (it's a static literal either way),
+    it just isn't a *named* class. A hardcoded hex needing an arbitrary
+    bracket is not the same as a value needing to *stay inline* — several
+    sites in `NodeConfigPanel.tsx`/`NodeDataPanel.tsx` initially assumed to
+    need "stay inline" exceptions for their odd colors converted fully once
+    this distinction was made.
+  - **`GraphEditor.tsx`'s `btn()` inline-style factory → `btnClass()`
+    className factory** was the single biggest win in the slice, clearing 7
+    of 19 occurrences in one refactor (every toolbar button call site). Also
+    fixed a miscategorization risk before it shipped: `opacity: saving ? 0.5
+    : 1` is a plain two-fixed-value ternary (rule already established in
+    prior slices), not a value that needs to stay inline — converted to a
+    conditional `opacity-50` class. The `ReactFlow` component's `style={{
+    background: 'var(--bg-base)' }}` prop turned out to be fully redundant
+    dead code (`scheduler.css`'s `.react-flow` rule already sets that
+    background) and was deleted outright rather than converted.
+  - **New pattern: category-keyed lookup tables shared across files.** Block
+    categories (`trigger/action/control/notify/data`) are a closed 5-value
+    set already backing `CATEGORY_COLOR`/`CATEGORY_ICON` in `blockMeta.ts`.
+    Added sibling `CATEGORY_TEXT_CLASS`/`CATEGORY_BORDER_CLASS` maps in the
+    same file, consumed by `BlockPalette.tsx` and `QuickAddMenu.tsx` (both
+    the search-result and category-browse list items) — the same "N-way
+    ternary keyed by a closed string union → className lookup" rule used for
+    `KIND_CLASS` in the notifications slice, just with the lookup shared
+    across files instead of local to one.
+  - **`BlockNode.tsx` needed the most careful splitting of any file this
+    session**: its wrapper mixed a genuinely per-node computed `height`
+    (from port count) with a run-state border/shadow that's actually a
+    *closed set of 4 states* (running/success/failed/cycle) — treating the
+    whole multi-property style object as one atomic "stays inline" unit
+    would have missed that the run-state part is static. Split into a local
+    `RUN_STATE_CLASS` lookup (converts) plus a much smaller inline object
+    holding only `height` and, in the default/selected case, the per-category
+    `borderColor` (stays, since `CATEGORY_COLOR` values vary per block).
+    `@xyflow/react`'s `Handle` component was confirmed (via its exported
+    types and compiled source) to forward and merge both `className` and
+    `style` independently, so the Handle's static size/shape/background
+    converted to `className`, leaving only its per-port computed `top`
+    inline — narrower than assumed possible going in.
+  - Verified: `pnpm typecheck` (0 errors), `pnpm lint` (0 errors, 376 → 277
+    warnings), `pnpm test` (131/131 unchanged, including
+    `AnimatedEdge.test.tsx`'s 10 tests which assert on literal `style`
+    attribute strings — confirmed they still pass verbatim since that file's
+    styles stayed inline), `pnpm build` (entry chunk ~479 KB gzip per
+    `check-bundle`'s own measurement, flat/consistent with the trend from
+    every prior slice), `pnpm check-bundle` (well under the 550 KB budget).
+  - Not independently verified: live rendering of the tile's canvas/editor
+    itself. Confirmed via a running dev server that the Scheduler sidebar
+    button no-ops without a configured server (same server-scoped-tile guard
+    documented in every prior slice) and produces no *new* console errors
+    beyond the pre-existing `quick-commands` `window.go`-unavailable ones —
+    but the node editor, drag/connect interactions, and run-state glow
+    colors need `wails dev` with a real server to see rendered, same
+    limitation as backups/mods/worlds/performance previously.
+- ✅ **Seventh slice done: the config tile** (`frontend/src/tiles/config/**`,
+  the server.properties/config-file editor built on CodeMirror + a
+  generated form UI) — the next-largest remaining cluster. Confirmed count:
+  80 occurrences across 6 files. This tile converted more cleanly than
+  scheduler — **4 of 6 files reach zero remaining inline styles**
+  (`ConfigSummary.tsx`, `FileList.tsx`, `form/ConfigForm.tsx`, plus
+  `index.tsx`'s resize handle, leaving only its drag-computed sidebar
+  width). `EditorPanel.tsx` keeps 1 (CodeMirror's own `style` prop —
+  library-API requirement, same treatment as xyflow's `Handle`/`MiniMap` in
+  the scheduler slice). `form/widgets.tsx` (39 → 3) keeps the fewest
+  exceptions of any large file yet: vendor-prefix spinner suppression
+  (`MozAppearance`/`WebkitAppearance`, no Tailwind utility target), the
+  `MC_COLORS` swatch buttons' per-swatch `background`/conditional
+  `boxShadow` (16 literal colors from a data table), and
+  `MotdPreviewLine`'s per-segment rich-text styling (parsed from Minecraft
+  MOTD formatting codes, continuously variable). Added
+  `src/tiles/config/**/*.tsx` to the ratcheted-`error` `files` glob in
+  `frontend/eslint.config.js`; `pnpm lint` passes with 0 errors, global
+  warning count 277 → 194.
+  - **`#000`/`#000000` confirmed to match Tailwind's `black` keyword class
+    exactly** — unlike the mid-tone swatches that broke hex assumptions in
+    the scheduler slice (OKLCH-interpolated), `black` is a fixed CSS
+    keyword, not part of that interpolated scale. Used throughout
+    (`EditorPanel.tsx`'s view-toggle/save-button active text, `widgets.tsx`'s
+    `Toggle` on-state knob, `Select`'s active-option text).
+  - **Found and flagged a dead CSS variable**: `widgets.tsx`'s `Select`
+    dropdown used `background: 'var(--panel-bg, #0e1117)'` — `--panel-bg` is
+    never defined anywhere else in the repo (confirmed via a repo-wide
+    grep), so it always fell through to the literal `#0e1117` fallback,
+    which doesn't match `--bg-base` or `--bg-elevated` or any other token.
+    Converted to `bg-[#0e1117]` (preserving the actual rendered color
+    exactly, not "fixing" the dead variable — that's a separate cleanup,
+    tracked below) rather than inventing a replacement token.
+  - **De-duplication beyond the mechanical conversion**: `form/widgets.tsx`
+    had the `background: 'var(--hover-surface)', color: 'var(--text-primary)',
+    border: '1px solid var(--border-subtle)'` triple repeated near-verbatim
+    across `TextInput`, `TextArea`, `Select`'s trigger, and `ChipList`'s
+    chips/input — introduced a file-local `FIELD_INPUT_CLASS` constant
+    (mirroring how `FORMAT_COLORS` is already file-local rather than
+    centralized) reused across all four. `NumberInput`'s `btnStyle` object
+    became a similar local `spinnerBtnClass` string. `FORMAT_BUTTONS`' small
+    closed lookup table had its optional `style?` field converted to
+    `className?` (`'font-bold'`/`'italic'`/`'underline'`/`'line-through'`),
+    the same "N-way lookup → className field" pattern used for
+    `CATEGORY_TEXT_CLASS` in the scheduler slice.
+  - `calc(100% + 4px)` (the `Select` dropdown's position) is a **static**
+    literal expression, not runtime-computed — converted to
+    `top-[calc(100%+4px)]` rather than staying inline, same precedent as
+    the mods slice's `calc(100vw-48px)`.
+  - A `style={{}}` ternary of the odd form
+    `style={selected ? undefined : { color: ... }}` (`FileList.tsx`'s
+    `FileRow`) folded into the existing conditional-className template
+    literal rather than needing special-case handling.
+  - Verified: `pnpm typecheck` (0 errors), `pnpm lint` (0 errors, 277 → 194
+    warnings), `pnpm test` (131/131 unchanged — no existing tests target
+    `tiles/config/**`), `pnpm build` (entry chunk ~479 KB gzip, flat vs. the
+    prior slice), `pnpm check-bundle` (479.0 KB, well under the 550 KB
+    budget).
+  - Not independently verified: live rendering of the file browser/editor
+    with real data. Both `ConfigSummary.tsx` (non-maximized view) and
+    `FileList.tsx`/`EditorPanel.tsx` (maximized, via `useConfigEditor`) call
+    real Wails bindings unconditionally on mount, so neither renders past
+    that point without a configured server — confirmed live via a running
+    dev server: clicking the sidebar's Config tile produced no *new*
+    console errors beyond the pre-existing `quick-commands` one. A full
+    visual pass (editing a real `server.properties`, the MOTD builder, the
+    toggle/select/chip widgets with live data) needs `wails dev` with a
+    configured server, same limitation as every prior slice.
+- ✅ **Eighth slice done: `frontend/src/components/` (non-`ui/`)** — the
+  largest remaining cluster (confirmed count: 64 occurrences across 8 files).
+  Uniquely, this is the first slice fully live-verifiable in the headless
+  preview: the app-shell modals render on pure client state, no Wails bridge
+  needed (unlike every prior server-scoped tile slice). **5 of 8 files reach
+  zero remaining inline styles**: `LayoutPresets.tsx`, `EulaModal.tsx`,
+  `ServerSelector.tsx`, `TileCrate.tsx`, `ErrorBoundary.tsx`.
+  `SettingsModal.tsx` (35 → 3) keeps `ColorField`'s live-hex swatch background/
+  outline and `SkinCard`'s per-`previewColors`-entry background — genuine
+  runtime colors, not tokens. `Dashboard.tsx` (3 → 3, same count but now all
+  documented) keeps the drag-placeholder/wireframe `...dragVisual` position
+  spreads (react-grid-layout computed geometry, CLAUDE.md's sanctioned
+  exception) and the canvas dot-grid's `backgroundSize`/`backgroundPosition`
+  (tracks live `colStep`/`rowStep`, canvas-width-dependent).
+  `ActiveProcesses.tsx` (5 → 1) keeps only the live percent-width progress
+  bar fill. Added `src/components/*.tsx` (single star — top-level only, since
+  `ui/**` was already in the glob) to the ratcheted-`error` `files` glob in
+  `frontend/eslint.config.js`; `pnpm lint` passes with 0 errors, global
+  warning count 194 → 130.
+  - Same "static two-value ternary → conditional `className`" rule applied
+    throughout (nav active/inactive color+background in `SettingsModal`,
+    preset active/inactive in `LayoutPresets`, `onCanvas` color+background in
+    `TileCrate`). One extension confirmed this pass: **a static
+    `maxHeight`/`rotate()` ternary is "two fixed values" too** (matching the
+    scheduler slice's `rotate(180deg)`/`rotate(0deg)` precedent) —
+    `LayoutPresets`' collapse-chevron `rotate(-90deg)`/`rotate(0deg)` and its
+    accordion wrapper's `maxHeight: '0px'`/`'2000px'` both converted cleanly
+    to `-rotate-90`/`rotate-0` and `max-h-0`/`max-h-[2000px]`.
+  - **Tailwind v4 renders `rotate`/`scale`/`translate` via native standalone
+    CSS properties, not the legacy `transform` shorthand** — confirmed live:
+    `getComputedStyle(el).transform` reads `"none"` even when `-rotate-90` is
+    applied and visibly rotates the element; the utility's effect only shows
+    up under `getComputedStyle(el).rotate` (`"-90deg"`). Worth remembering for
+    any future computed-style verification of rotate/scale/translate
+    utilities — checking `.transform` alone gives a false negative.
+  - **A stacked `outline` + `outline-[1.5px]` + `outline-offset-2` utility
+    combo silently rendered `outline-width: 1px` instead of `1.5px`**
+    (verified live via computed style) — the bare `outline` utility's own
+    width declaration won the cascade over the arbitrary-width utility.
+    Fixed by switching to a single arbitrary-property class,
+    `[outline:1.5px_solid_var(--border-hover)] [outline-offset:2px]`, which
+    verified correctly afterwards. Lesson for future conversions: don't split
+    an `outline` shorthand across `outline`/`outline-[width]`/`outline-{color}`
+    utility classes — collapse it into one arbitrary-property declaration.
+  - `rgb(var(--accent-rgb) / 0.1)`-style tokens confirmed to convert to
+    Tailwind's opacity-modifier syntax exactly (`bg-accent/10`, `/8`, `/6`,
+    per the exact percentage) since `--color-accent` is a real registered
+    color in `@theme inline` — same technique already used elsewhere in the
+    codebase (`ServerSelector.tsx`'s pre-existing `bg-accent/10`), now
+    extended to every remaining `--accent-rgb` site in this cluster.
+  - Verified: `pnpm typecheck` (0 errors), `pnpm lint` (0 errors, 194 → 130
+    warnings), `pnpm test` (131/131 unchanged — no existing tests target
+    `components/*`), `pnpm build` (entry chunk 478.7 KB gzip, flat vs. the
+    prior slice), `pnpm check-bundle` (478.7 KB, well under the 550 KB
+    budget).
+  - **Live-verified in-browser** (first slice able to do this beyond
+    typecheck/lint/test): started `pnpm dev` directly via `pnpm --dir frontend
+    exec vite --port <port> --strictPort` (`.claude/launch.json`'s prior
+    `pnpm run dev` + auto-port form silently forwarded a literal `"--"` token
+    to Vite instead of stripping it as pnpm's arg separator, and separately
+    the auto-assigned proxy port didn't match the port Vite actually bound —
+    fixed by calling `vite` directly via `pnpm exec` with an explicit
+    `--strictPort`). Opened Settings (gear icon): confirmed the modal's
+    `640×480` size, `bg-canvas` background (`rgb(5, 6, 10)` = `--bg-base`),
+    and `shadow-[0_24px_64px_rgba(0,0,0,0.5)]` via computed style; confirmed
+    the active nav item's `text-accent`/`bg-accent/10` (`rgb(74, 222, 128)`,
+    exact accent green) versus inactive items' `text-text-secondary`
+    (`rgba(255, 255, 255, 0.6)`); confirmed the accent-color swatch's
+    `background-color` reflects the live `settings.accentColor` value with a
+    correctly-colored static outline. Confirmed a mounted tile's geometry is
+    non-zero (`Console` tile: 664px height) per the `TileWrapper` slice's
+    0-height-regression lesson. No new console errors beyond the pre-existing
+    `quick-commands` `window.go`-unavailable ones (React 19 dev-mode
+    double-invokes effects, which doubles each log line — a tooling
+    artifact, not a regression). `EulaModal`/`LayoutPresets` are also
+    client-renderable but not independently screenshotted this pass (the
+    screenshot tool itself timed out repeatedly in this environment;
+    `preview_inspect`/computed-style checks were used instead, per the
+    verification skill's own guidance to prefer them for style checks).
+- ✅ **Ninth slice done: the players tile** — all 32 occurrences across its
+  four components, reaching **zero** remaining inline styles with no
+  `eslint-disable` exceptions (nothing in the tile was genuinely computed).
+  `src/tiles/players/**/*.tsx` added to the ratcheted-`error` `files` glob in
+  `frontend/eslint.config.js`; `pnpm lint` passes with 0 errors. Global count
+  144 → 112, warnings 129 → 97 (exactly the 32 removed).
+  - The literal colours turned out to be tokens: `#4ade80` is exactly `--accent`
+    (`rgb(74 222 128)`) and `rgba(248,113,113,·)` is `--danger`, so the online
+    dots and the ban button now follow the theme instead of pinning dark-theme
+    values. `rgba(250,204,21,·)` is Tailwind's own `yellow-400`.
+  - **Refinement of the TileWrapper precedent on imperative hover handlers.**
+    That slice deliberately left `onMouseEnter`/`onMouseLeave` pairs alone —
+    they aren't the JSX `style` attribute the lint rule targets. Here the four
+    pairs in `PlayerDetailPopup.tsx` wrote *the very colours being converted*,
+    so leaving them would have left an inline style overriding the new
+    `className` from the first hover onward — the class would be dead code
+    that still looked right. Converted 1:1 to `hover:` utilities (same
+    properties, same values, same trigger). The distinction worth carrying
+    forward: leave imperative handlers when they touch properties nothing else
+    sets; convert them when they collide with the className you're introducing.
+  - The popup panel carried both `w-88` and an inline `width: '22rem'` — the
+    same value stated twice. Dropped the inline one; measured 352px after.
+  - **First server-scoped slice fully verifiable without `wails dev`**, because
+    the preceding commit lifted data fetching into the tile root: `PlayerCard`/
+    `PlayerGrid`/`PlayerRoster` became props-driven and render from a plain Vite
+    dev server. Verified every utility against the value it replaced via
+    computed styles in Chromium — `bg-accent` → `rgb(74, 222, 128)`,
+    `bg-text-faint` → `rgba(255,255,255,0.25)`, `bg-elevated` →
+    `rgba(18,20,30,0.82)`, `border-border-subtle` → `rgba(255,255,255,0.06)`,
+    `bg-canvas` → `rgb(5,6,10)`, the shadow byte-identical — plus non-zero
+    card (73.4×70) and row (1280×45) geometry per the TileWrapper 0-height
+    lesson.
+  - **Sub-pixel borders: verified equivalent, not assumed.** `border-[0.5px]`
+    and `border-[1.5px]` both report `1px` from `getComputedStyle`, which looks
+    like a regression against the old `0.5px`/`1.5px` inline values. An A/B in
+    the same page (inline vs utility, same declared width) returns `1px` for
+    both — it's Chrome's used-value rounding, identical before and after.
+    Worth remembering before "fixing" a hairline that was never broken.
+- ✅ **Tenth slice done: the worlds tile** (`frontend/src/tiles/worlds/**`) —
+  `WorldHud.tsx` 51 → 0, `index.tsx` 15 → 0, `scene/WorldsScene.tsx` 8 → 1,
+  `scene/Planet.tsx` 4 → 2, with `src/tiles/worlds/**/*.tsx` added to the
+  ratcheted-`error` glob. **Every tile directory is now migrated.**
+  - **This tile was booked at 44 and was really 78.** The 44 came from a
+    `grep 'style={{'`, which cannot see the `style={SOME_CONST}` form — and
+    `WorldHud.tsx` was built almost entirely from it (`CARD`, `ROW`, `LABEL`,
+    and a `BTN(danger)` factory returning `React.CSSProperties`, applied 32
+    times). ESLint's own `no-restricted-syntax` count is the honest number.
+    **Count with `pnpm exec eslint src`, not grep.**
+  - The `React.CSSProperties`-constant idiom converts cleanly to class strings
+    (`const ROW = 'flex justify-between gap-2 py-0.5'`) with one trap: a factory
+    that varied padding per call cannot be expressed by appending a second
+    padding utility. `{...BTN(), padding: '1px 5px'}` relied on object-spread
+    order; `${BTN()} px-[5px]` does not, because class-attribute order has no
+    bearing on which of `px-[7px]`/`px-[5px]` wins the cascade. Split into a
+    padding-less `BTN_BASE` plus explicit `BTN`/`BTN_CLOSE` variants.
+  - **Colour rule applied both ways.** `#22c55e` *is* `--success`'s dark value,
+    so it became `text-success`/`bg-success` — no change in the default theme,
+    and it now follows the light theme's darker green instead of staying too
+    pale. `#ef4444` is **not** `--danger`'s dark value (`#f87171`), so it stayed
+    a literal `text-[#ef4444]`, matching every prior slice. Take the token when
+    it is an exact match in the default theme; keep the literal when it is not,
+    rather than quietly restyling inside a mechanical pass.
+  - **Two third-party components write their own inline styles, and one of them
+    wins.** r3f's `<Canvas>` renders its container with
+    `style={{position:'relative', width, height, overflow, ...yourStyle}}`, so a
+    `className` can never beat that inline `position` — the Canvas keeps its
+    inline `style` behind a documented disable. drei's `<Html>` (non-`transform`
+    mode) merges only `position`/`transform` and passes `className` straight
+    through, so its `pointerEvents`/`userSelect` *did* convert. Check the
+    library's render call before assuming either way.
+  - `Planet.tsx`'s two label spans keep `style={{ color }}` (a per-world /
+    per-dimension runtime colour) and nothing else. Their `opacity: 0` became
+    `opacity-0`: it is only the first-frame value, since `useFrame` writes
+    `labelSpanRef.style.opacity` every frame and inline still beats a class.
+  - **Tailwind v4's `transition-transform` covers `translate`, not just
+    `transform`** — verified live, `transitionProperty` computes to
+    `"transform, translate, scale, rotate"`. This matters because
+    `-translate-x-full` sets the standalone `translate` property (the same v4
+    behaviour the eighth slice found for `-rotate-90`). Had the utility covered
+    only `transform`, the HUD panel's slide-in would have become an instant jump
+    with every test still green.
+  - `font-mono` replaced `fontFamily: 'monospace'`, which **is** a visible
+    change: this tile now renders in the app's registered stack like the other
+    246 `font-mono` usages instead of the host's generic default. Deliberate —
+    the inline value was the outlier.
+  - First use of the `border-hairline` utility, which had existed since the token
+    layer landed with **zero** callers (all 146 hairline borders are spelled as
+    arbitrary values). Both compute identically — Chrome reports `1px` either
+    way, since it rounds border widths to whole device pixels — so this is a
+    readability change, not a rendering one.
+  - **Not live-verifiable in the browser**, unlike the players slice: the tile
+    only mounts when `GetActiveTiles` returns it, and that is a Wails IPC call.
+    What *was* verified against the dev server instead: all 46 utility classes
+    the converted markup relies on exist in the compiled stylesheet (a class
+    Tailwind never generated would silently drop the style), and each computes to
+    its inline predecessor's value — `text-1xs/2xs/3xs` → 11/10/9px,
+    `text-text-faint` → `rgba(255,255,255,0.25)`, `w-1/3` → 33.33%,
+    `duration-[250ms]` + `ease-[cubic-bezier(0.25,0,0.25,1)]` → exactly the old
+    shorthand's timing.
+  - Verified: `pnpm typecheck` (0 errors), `pnpm lint` (0 errors), `pnpm test`,
+    `pnpm build` + `pnpm check-bundle` (well under budget), `prettier --check`
+    clean on every file touched.
+- 71 `style={{}}` remain across the tree, but only **6 are backlog** — all in
+  `App.tsx`. The other 65 live in directories ratcheted to `error`, so each is a
+  lint-enforced documented exception rather than unmigrated code.
+
+### P1 — Modrinth client: HTTP paths are testable, and now tested
+- ✅ **`ModrinthClient.baseURL` is injectable**, the same shape `UpdateService`
+  has had all along. The production change is three lines — a field, a
+  constructor assignment, `c.baseURL + path` in `doJSON` — and it is what the
+  checklist's "needs an injectable base URL" item was waiting on. `update.go`'s
+  doc comment used to cite `modrinth.go`'s hardcoded base as the counter-example;
+  that sentence was true when written and is not now, so it was rewritten rather
+  than left as a trap for the next reader.
+- ✅ **`modrinth_test.go` goes from 7 tests to 28**, and `modrinth.go` from 2 of
+  17 functions covered to **15 of 17** — the two left return a struct literal and
+  a constant. `backend/services` coverage is now 29.7% of statements.
+- What the tests pin down, beyond the two paths the backlog named:
+  - **429 handling.** `Retry-After: 0` keeps them instant. Three separate facts:
+    a 429 followed by a 200 succeeds; three consecutive 429s produce "exceeded
+    retry limit"; and **`maxRetries` is a total attempt count, not
+    retries-after-the-first** — the counter says 3, not 4. That is the kind of
+    off-by-one a rewrite silently flips.
+  - **The backoff respects context cancellation.** With no `Retry-After` the
+    client waits its 2s default; the test cancels after 50ms and asserts a
+    cancelled-context error in well under 2s. It deliberately does *not* time the
+    2s default — asserting a wall-clock sleep buys a flaky test and nothing else.
+  - **Search dedup** collapses a repeated `project_id`, keeps the *first*
+    occurrence, and passes `total_hits`/`offset` through untouched.
+  - **`GetProject`'s author resolution**: Owner role wins over an earlier
+    Contributor; with no Owner the first member is the fallback; and a failing
+    `/members` lookup leaves the project intact with an empty author rather than
+    failing the call.
+  - **`ResolveDependencies`**, the largest untested block in the file and only
+    reachable over HTTP: `incompatible`/`embedded` skipped, `optional` returned
+    with `Required: false`, the `installed` map setting `AlreadyInstalled`,
+    transitive required deps followed breadth-first without re-resolving through
+    a cycle, and an empty filtered version query falling back to the unfiltered
+    one before giving up.
+  - **Which file a version resolves to** — `primary: true` beats file order, and
+    the first file is the fallback when nothing is marked primary. This decides
+    the download URL and the sha512 that gets verified.
+- **The tests were checked against broken code, not just passing code.**
+  Disabling the 429 branch failed 3 tests; disabling the dedup check failed 1;
+  dropping the `incompatible`/`embedded` skip failed 1. Each was restored and
+  re-run green. A suite written after the fact proves nothing until it has been
+  shown to fail.
+- A small helper, `writeString(t, w, body)`, wraps the `w.Write` in every fake
+  handler. CLAUDE.md's "no blank `_` error-ignores" rule does not stop at
+  non-test code, and 30-odd unchecked `w.Write` calls would have been the largest
+  cluster of them in the repo.
+
+### P2 — React Compiler-readiness lint rules
+- Revisit enabling `eslint-plugin-react-hooks`'s full `recommended`/
+  `recommended-latest` rule set (`purity`, `refs`, `set-state-in-effect`,
+  `immutability`, etc.) — currently scoped down to classic `rules-of-hooks` +
+  `exhaustive-deps` only (see Lint/format enforcement above). The ~60 findings
+  it currently surfaces are concentrated in the r3f scene code and would need
+  a dedicated pass with test coverage in place first.
+
+**P2 — Missing `--font-mono` theme token** ✅ **closed — overtaken by the
+token rework**
+- Closed on review 2026-08-15, resolved differently than the entry below
+  planned. The token layer was rebuilt in the meantime (`frontend/src/styles/
+  tokens.css`, generated from the vendored `tokens.source.json`), and it
+  registers `--font-mono` as a deliberate **system** monospace stack
+  (`ui-monospace, 'Cascadia Code', 'SF Mono', …`). `JetBrains` no longer
+  appears anywhere under `frontend/src/`, and the console tile's four inline
+  `fontFamily` exceptions are gone with it — that directory is at zero inline
+  styles.
+- So the gap this entry described no longer exists: bare `font-mono` now
+  resolves through a registered token rather than falling through to Tailwind's
+  default. Bundling JetBrains Mono as a webfont is now a **design** decision
+  owned upstream in `kollektiv/design/tokens.json`, not a Konnekt health gap —
+  if it's ever wanted, it changes there and arrives via `pnpm gen:tokens`.
+- Original entry, kept for context:
+- Found during the Milestone 2 third slice: `frontend/src/style.css`'s
+  `@theme inline` block registers color tokens but has no `--font-mono`
+  override, so the bare `font-mono` Tailwind utility (already used in several
+  places across the codebase) resolves to Tailwind's *default* monospace
+  stack, not the app's actual font (JetBrains Mono, per `CLAUDE.md`).
+  Registering `--font-mono: 'JetBrains Mono', 'Fira Code', monospace;` (the
+  exact stack already used in `style.css`'s `.mod-body code` rule) would let
+  `console.tsx`'s 4 documented inline-style exceptions, and any similar sites
+  found in future migration passes, convert to a plain `font-mono` class.
+  Deliberately not fixed as part of the Milestone 2 pass — every *existing*
+  bare `font-mono` usage project-wide needs auditing first, since some may
+  currently be relying on Tailwind's default stack rather than an inline
+  override masking the gap; flipping the token blind would be a wide,
+  unverified visual change across the whole codebase.
+- Follow-up finding (repo-hygiene pass): the audit turned up 246 `font-mono`
+  usages across 39 files, all currently resolving to Tailwind's *default*
+  monospace stack. More importantly, `frontend/src/style.css` has no
+  `@font-face` for JetBrains Mono at all — the only bundled font is Satoshi
+  (used for `sans`, not `mono`). So today's bare `font-mono` and a would-be
+  `--font-mono: 'JetBrains Mono', ...` token both fall through to whatever
+  monospace the OS provides; registering the token wouldn't visibly change
+  anything until JetBrains Mono is actually bundled as a webfont. Still
+  deferred — now blocked on "bundle the font" as a prerequisite, not just
+  "audit existing usages."
+
+### P1 — Test coverage + gate
+- ✅ Stood up the frontend test harness: `vitest` (pinned to `^3` — `vitest@4`
+  requires Vite 6+, this repo is still on `vite@^5.4.21`) + `jsdom` +
+  `@testing-library/react`/`dom`, wired via a `test` block in
+  `frontend/vite.config.ts` and a `pnpm test` script. Added to the CI
+  `frontend` job (`.github/workflows/ci.yml`), after `pnpm lint`.
+  Confirmed green on `main`:
+  https://github.com/sandrogekeler/Konnekt/actions/runs/28620873038
+- ✅ Frontend: 39 tests covering the pure/no-Wails-mocking logic —
+  `lib/format.ts`, `lib/layout.ts` (`collapseEmptyRows`), and three stores'
+  pure logic: `useConsoleStore` (`classifyLine` + buffer-cap eviction on
+  `appendLine`/`batchAppend`), `useNotificationsStore` (200-item cap),
+  `useProcessesStore` (state machine + the 3s auto-remove timer via
+  `vi.useFakeTimers`).
+- ✅ Backend: 21 new tests (up from 2 pre-existing) —
+  `rcon_test.go` (packet marshal/unmarshal round-trip over `net.Pipe`, the
+  10–4096 byte length-bounds guard, colour-code stripping),
+  `backup_test.go` (`validateFilename`, zip create/restore round-trip, and
+  the zip-slip extraction guard — confirmed this test actually fails when the
+  guard is removed, then restored it),
+  `config_editor_test.go` (the path-traversal `sandbox()` guard),
+  `modrinth_test.go` (`buildFacets` facet-string assembly).
+- ✅ **Scheduler backend engine — closed the critical gap.** A dedicated
+  4-pillar audit of the scheduler (see the new backlog entry below) found the
+  ~3,100-line execution engine essentially untested — only `scheduler_expr.go`
+  and `scheduler_validate.go` had test files; `runGraph`/`executeNode`,
+  triggers, cron/interval matching, next-run calc, and all block executors had
+  zero coverage. Added:
+  `scheduler_engine_test.go` (`runGraph` integration: control-flow ordering,
+  data-flow through pure-data pull-eval + the data-over-config overlay,
+  `onFailed` branching, the data-type-validation short-circuit, the
+  control-cycle/`maxNodesPerRun` guard, the concurrency guard; plus direct
+  `ExecContext` getter tests and `execConstant`/`execMathOp`/`execCondition`/
+  `execDelay`/`execRandomNumber` executor tests — including pinning down two
+  existing behaviors as tests, not fixes: `GetFloat` silently falls back to
+  its default on an unparseable string, and `execCondition`'s `gt`/`lt` are
+  lexicographic string comparisons, not numeric),
+  `scheduler_triggers_test.go` (`cronMatches` field types incl. `*/n` steps/
+  ranges/lists, `cooldownAllows`), `scheduler_nextrun_test.go` (`nextTimeOfDay`,
+  `nextCron`, `nextInterval`, `findTriggerNode`). One production change: a
+  nil-guard in `activeServerID()` so the engine is constructable without a
+  full `ConfigService`, enabling headless tests (`EventBus.Emit` was already
+  nil-context-safe). Verified the data-type-validation guard test actually
+  fails when that guard is disabled, then restored it — same technique as the
+  zip-slip test above.
+- ✅ **Wails-mocked store tests — harness established, 4 stores + `useScheduler`
+  covered.** Added the first `vi.mock('../../wailsjs/go/main/App')` pattern in
+  the repo (a plain hoisted auto-mock — no `vite.config.ts` or setup-file
+  changes needed): `useSettingsStore.test.ts` (7 tests — payload merge,
+  invalid-value fallback per validated field, load-rejects-to-defaults),
+  `useTileStore.test.ts` (6 — saved/empty/rejecting `loadTiles`, dedup on
+  `addTile`, active↔crate moves), `useLayoutStore.test.ts` (13 — preset
+  seeding, active-layout override, insert-vs-update `savePreset`, delete
+  reassignment), `useServerConfigStore.test.ts` (13 — stale/missing-activeId
+  fallback, insert-vs-update, delete reassignment), and
+  `frontend/src/tiles/scheduler/useScheduler.test.ts` (4, via `renderHook` +
+  `vi.useFakeTimers` — mount fetch, save/run refresh, the 30s next-run poll and
+  its unmount cleanup), closing the second (frontend hook) half of the
+  scheduler test-coverage backlog alongside the earlier `graphMapping.ts` pass.
+  Frontend test count: 88 → 131.
+  - **One real bug found and fixed, not just documented**: `useLayoutStore.ts`'s
+    `deletePreset` computed the reassigned `activePresetName` from
+    `s.presets[0]` — the *pre-filter* array — so deleting the active preset
+    reassigned back to that same now-deleted name whenever it happened to be
+    first in the list (the common case, since "Default" is always seeded
+    first). `LayoutPresets.tsx` highlights the active preset by exact name
+    match, so this silently left **no** preset shown as active after such a
+    delete, and its save-fallback (`newName.trim() || activePresetName`) would
+    have resurrected the deleted preset's name on the next save. Fixed by
+    reading the *filtered* list's first entry instead — same
+    write-test-first/find-real-bug technique as the earlier `RenameWorld` and
+    zip-slip fixes. Verified the fix by first watching the un-fixed test fail,
+    then confirming green after the source fix (plus a second, unrelated
+    fault-injection check: temporarily dropped `useTileStore.addTile`'s dedup
+    guard and confirmed its test fails, then restored it).
+  - Still untested: the two custom hooks (`useWailsCall`, `usePopover`), and
+    the binding-backed tile hooks (`useMods`, `useBackups`, `useWorlds`,
+    `usePerformanceHistory`) — the harness above is now a documented,
+    copy-pasteable pattern for covering them.
+- Deferred follow-up — **Modrinth HTTP-path coverage**: `ModrinthClient`
+  hardcodes `modrinthBase = "https://api.modrinth.com/v2"` with no injectable
+  base URL, so the 429/`Retry-After` retry logic and search-hit dedup can't be
+  driven by an `httptest.Server` yet. Needs a small constructor refactor
+  (injectable base URL) before those paths are testable.
+- Deferred follow-up — **coverage floor**: still no numeric threshold in CI;
+  add one once a stable baseline is established across both suites.
+
+### P1 — Code-split heavy tiles
+- ✅ **Correction to this item's original premise**: exploration found the
+  backups tile has no three.js dependency at all — its "planets" are pure
+  SVG/CSS (`frontend/src/tiles/backups/WireframeSphere.tsx`,
+  `SolarSystem.tsx`). three.js/@react-three only appear under
+  `frontend/src/tiles/worlds/scene/`, already lazy-loaded. So recharts (only
+  in the performance tile) was the sole remaining eager heavy dependency.
+- ✅ Split recharts out of `frontend/src/tiles/performance/index.tsx` into a
+  new `charts.tsx` (the tile's only `recharts` import), lazy-loaded via
+  `React.lazy` + `Suspense` for both the compact `SparkChart` and the
+  expanded `HistoryChart` — same pattern as Worlds. Shared pure helpers
+  (`fmtTime`, `fmtTps`, `tpsColor`, `tpsStrokeColor`) moved to `helpers.ts` to
+  avoid duplication between `index.tsx` and `charts.tsx`.
+  Effect: entry chunk gzip dropped from 595.00 KB → 490.53 KB (Vite's own
+  report); recharts now ships as its own ~103 KB gzip chunk, fetched only
+  once real chart data exists (confirmed in a dev-mode network trace — the
+  `charts.tsx` module is never requested while the history buffer is empty).
+- ✅ Added `frontend/scripts/check-bundle-size.mjs` (no new dependency — uses
+  `node:zlib`): gzips each `dist/assets/*.js`, asserts the entry
+  (`index-*.js`) chunk stays under a 550 KB budget, prints a per-chunk table.
+  Wired in as `pnpm check-bundle`, run in the CI `frontend` job right after
+  `pnpm build`. Verified the gate actually fails when the budget is
+  temporarily set below the real size, then restored it. Confirmed green on
+  `main`: https://github.com/sandrogekeler/Konnekt/actions/runs/28622676087
+- Not independently verified: live chart rendering with real streaming data
+  in a browser. The Wails IPC bridge (`window.go`/`window.runtime`) only
+  exists inside the native `wails dev` process — unreachable from the
+  headless-Chrome preview tooling used for this pass, which can only run the
+  bare Vite dev server (no backend). Confirmed the code-split mechanism
+  itself is sound (chunk separation, on-demand fetch, all typecheck/lint/test
+  gates green); a full data-driven visual check needs `wails dev` with a
+  configured Minecraft server.
+- Unused dependency found during this pass, tracked separately: see
+  "P2 — Repo hygiene" below (`uplot` / `skinview3d`).
+
+### P2 — Undocumented blank error-ignores
+- ✅ Resolved. All 28 blank `_ = ` / `_, _ = ` sites across
+  `backend/services/{backup,config_editor,players,modservice,scheduler_blocks,
+  scheduler_engine,server,server_windows,server_other}.go` now carry a
+  `//nolint:errcheck // <reason>` comment (no `golangci-lint` config exists in
+  this repo — `//nolint` is a human-readable documentation convention here,
+  not machine-enforced). 27 were genuinely safe best-effort/fire-and-forget
+  code (rollback cleanup, progress-estimate walks, best-effort manifest/meta
+  persistence, RCON save-flush during backup, OS-handle-close/process-kill
+  teardown) — verified individually by reading each call site in context, not
+  assumed.
+  - One real bug found and fixed, not just documented: `worlds.go`'s
+    `RenameWorld` renamed a world's folder on disk, then discarded the error
+    from writing the new name into `server.properties`'s `level-name`. A
+    failed write there would have left `RenameWorld` returning success while
+    the server's config pointed at a folder that no longer existed — the
+    server would fail to find its world on next start. Now propagates the
+    error (`fmt.Errorf("world folder renamed but level-name update failed: %w", err)`),
+    a safe, backward-compatible fix since the function already returns
+    `error` and no caller needed to change.
+  - Verification: `gofmt -l .` clean, `go vet ./...` + `go test ./... -count=1`
+    + `go build ./...` green, and the audit grep
+    (`grep -rn "_ = \|_, _ = " backend --include="*.go" | grep -v "_test.go" | grep -v "nolint"`)
+    returns nothing. Confirmed green on `main`:
+    https://github.com/sandrogekeler/Konnekt/actions/runs/28629364439
+
+### P2 — Structured logging
+- Replace ad-hoc `fmt.Errorf`-only error reporting on the backend with
+  `log/slog` for diagnosable runtime logs, keeping the existing `EventBus`
+  emissions for UI-facing notifications.
+
+### P2 — Repo hygiene
+- ✅ `*.syso` added to `.gitignore` (`konnekt-res.syso` was untracked and
+  uncovered).
+- ✅ Created `agent_docs/DEPENDENCIES.md` — policy + rationale table for every
+  direct Go and npm dependency, referenced from `CLAUDE.md`.
+- ✅ Triaged the root-level `scheduler-blocks-rework.md` design doc: promoted
+  to `agent_docs/scheduler-blocks-rework.md` rather than deleted — it's the
+  spec base for the scheduler's block/node system (triggers, attributes,
+  math, data-type→color legend, which stays fixed) and remains useful input
+  for the node-system rework tracked below.
+- ✅ Removed the unused `uplot` npm dependency (confirmed unimported anywhere
+  under `frontend/src/` — the performance tile's charts use `recharts`
+  exclusively).
+- ✅ **Reversal:** `skinview3d` — previously kept intentionally as reserved
+  for the not-yet-built Beta "player skin preview" tile — has since been
+  **removed**. It pinned its own `@types/three@0.156.0`/`three@0.156.1`, a
+  second copy alongside the app's `0.184.x` line that caused an
+  install-layout-dependent type mismatch in the Worlds tile's R3F camera
+  code (see "P1 — CI blind spot" above for the full incident). Re-add,
+  pinned to `0.184.x`, when the skin-preview tile is actually built —
+  tracked in `agent_docs/DEPENDENCIES.md`'s "Removed" section.
+- ✅ Deleted the stale root-level `Roadmap.md` — a status log fully superseded
+  by `agent_docs/ROADMAP.md` (which it already deferred to for feature scope)
+  and out of date (e.g. still listed "Split the JS bundle" as planned
+  Infrastructure work, done in the code-split pass above). Root now has no
+  `.md` files besides `README.md`.
+- Found during the config-tile Milestone 2 pass, not yet fixed:
+  `frontend/src/tiles/config/form/widgets.tsx`'s `Select` component
+  references `var(--panel-bg, #0e1117)` — `--panel-bg` is never defined
+  anywhere else in the codebase, so it always falls through to the literal
+  `#0e1117` fallback (which matches neither `--bg-base` nor `--bg-elevated`
+  nor any other token). Either register a real `--panel-bg` token in
+  `style.css` or replace the reference with an existing token
+  (`--bg-elevated` looks like the closest semantic match) — deferred as out
+  of scope for a pure style-migration pass.
+
+### P1 — Scheduler node-system deep analysis
+- ✅ **Architecture confirmed sound.** Three parallel Explore agents mapped the
+  xyflow editor, the Go engine, and the contract between them: it's a hybrid
+  control-flow + data-flow graph interpreter — xyflow is a pure visual editor
+  serializing losslessly to a shared `models.Graph`; the real node engine
+  (BFS control-flow execution, lazy pull-eval of pure-data nodes, an
+  attribute scope with expression parsing) lives in Go, as it must (blocks
+  spawn Java, send RCON, write backups — CLAUDE.md: "Go owns all side
+  effects"). Keeping xyflow over switching to `rete` was the right call —
+  rete's value-add is its own JS-side execution engine, which this app can't
+  use. The control-pin/data-pin split mirrors Unreal Blueprints and Blender's
+  node graph — the right base structure.
+- ✅ **Data-type flow enforcement shipped** (the one real gap found: ports
+  declared a type but nothing checked it). New `frontend/.../portTypes.ts` +
+  `backend/services/scheduler_validate.go` share a type-resolution model,
+  enforced at authoring time (`isValidConnection` rejects incompatible drags)
+  and run time (`runGraph` fails loudly instead of silently coercing). Also
+  fixed `data.constant`'s output port (was hardcoded `"string"`, is now
+  `"auto"`).
+- ✅ **Connection-handle UX fixed**: the visible port dot was also the entire
+  grab/drop hit area (too small); the `Handle`'s own box (xyflow's real hit
+  area) is now an 18px zone with a small decorative dot inside it, plus a
+  node-background/border-contrast fix.
+- ✅ **Full 4-pillar Health Checklist audit performed** (3 parallel Explore
+  agents + hand-verification of every load-bearing claim):
+  - **Performant: PASS.** `BlockNode` is `React.memo`; context value +
+    `defMap`/cycle-detection sets all `useMemo`'d; static `nodeTypes`/
+    `edgeTypes`; 200-cap history ring; deliberate cadences (30s frontend
+    countdown, 1-min backend ticker); 500-node/30-min/60s-per-node guards.
+  - **Clean: was a GAP, now ✅ closed.** At the time of this audit, 89 inline
+    `style={{}}` sat across 8 scheduler files, not yet in the ESLint
+    error-ratchet glob. Resolved in the Milestone 2 sixth slice (see that
+    section above) — recounted at 99 real occurrences, converted to 0-10
+    documented exceptions per file, glob added, `pnpm lint` 0 errors.
+  - **Scalable: 1 GAP remaining.** No `useSchedulerStore` — state lives in
+    local `useState` inside `useScheduler.ts`, contradicting CLAUDE.md's
+    one-Zustand-store-per-domain rule (confirmed drift, not just suspected).
+    The other Scalable gap this audit found — `localStorage` used directly in
+    `frontend/src/tiles/scheduler/editor/BlockPalette.tsx` for palette
+    collapsed/closed state, a direct violation of CLAUDE.md's explicit "no
+    `localStorage`/`sessionStorage`; persist via Go file I/O" rule — is now
+    ✅ **fixed**: migrated onto `AppSettings.schedulerPaletteCollapsed` /
+    `.schedulerPaletteClosedCategories`, persisted through the existing
+    `GetAppSettings`/`SaveAppSettings` binding (no new Go methods, bindings
+    regenerated via `wails generate module`). Verified live with a
+    mocked-Wails-bridge preview: toggling the palette collapse and a category
+    group calls `SaveAppSettings` with the new fields, and `localStorage`
+    stays at 0 keys throughout.
+  - **Stable: critical gap, now closed for the backend engine** (this
+    session's main remediation — see the P1 test-coverage entry above for
+    what shipped). Two smaller Stable gaps remain, not yet fixed: the 30s
+    next-run poll in `useScheduler.ts` should be a Wails event instead
+    (CLAUDE.md's no-`useEffect`-polling rule), and `useScheduler` swallows
+    IPC failures silently (no offline/error state surfaced to the UI).
+- ✅ **`graphMapping.ts` frontend test coverage added**: 26 tests in the new
+  `frontend/src/tiles/scheduler/editor/graphMapping.test.ts` covering
+  `graphToFlow`/`flowToGraph` (including a dedicated round-trip test),
+  `isValidConnection`, `detectControlCycles`, `randId`, and `defaultConfig` —
+  all pure logic, no Wails binding mocks needed, following the same
+  `as unknown as models.X` stub convention as the sibling `portTypes.test.ts`.
+  Verified the round-trip and cycle-detection tests actually fail when their
+  underlying guards are disabled (the `data:`-prefix kind inference in
+  `flowToGraph`, and the `reachableFrom` reachability check in
+  `detectControlCycles`), then restored both — same technique as the backend
+  zip-slip/data-type-validation tests. `pnpm test` (88 tests), `pnpm typecheck`,
+  and `pnpm lint` all green.
+- **Remaining scheduler backlog** (deferred, not fixed this session):
+  the `useSchedulerStore` Zustand migration; the next-run poll → event
+  switch; offline-error surfacing in `useScheduler`. (The `localStorage` →
+  Go-file-I/O migration, `useScheduler`-hook test coverage, and the
+  scheduler's inline-style Milestone-2 slice, all listed here previously,
+  have since been completed.) **All three of those remaining items are now
+  closed too — see "P1 — Scheduler tile convention gaps" below.**
+
+### P1 — Scheduler tile convention gaps ✅ closed
+
+All three sub-items lived in the same 95-line file
+(`frontend/src/tiles/scheduler/useScheduler.ts`), so they were closed in one
+pass rather than rewriting it three times.
+
+- ✅ **`useSchedulerStore` shipped** (`frontend/src/stores/useSchedulerStore.ts`).
+  The five local `useState`s moved into a plain `create<T>((set, get) => …)`
+  store with no middleware, matching the other nine stores. `useScheduler.ts`
+  survives as a ~65-line lifecycle wrapper (mount hydration + the event
+  subscription) rather than being deleted: no store in this repo imports React
+  or the Wails runtime, and putting `EventsOn` in the store would have needed
+  module-level refcounting to unsubscribe. `index.tsx` and the
+  tile-self-contained rule are undisturbed.
+  - **Incidental bug fixed:** `Dashboard.tsx` renders the maximized tile *in
+    addition to* the grid copy, so `useScheduler()` was running twice with two
+    private copies of state — the minimized summary went stale while you edited
+    in the maximized editor, and there were two 30s intervals. Sharing one store
+    fixes that for free. `hydrate()` is idempotent via a
+    `if (get().hydrated || get().loading) return` guard that's sound because the
+    following `set` runs synchronously, before the first `await` — so two
+    same-tick mounts and StrictMode's double-mount both collapse to one fetch.
+    Covered by a "hydrates once across two concurrent mounts" test.
+- ✅ **30s poll → `schedule:next-runs` event.** New Go constant in
+  `backend/services/events.go` and a `emitNextRuns()` helper next to
+  `NextRuns()` in `scheduler_nextrun.go`, emitted through `EventBus` (never
+  `runtime.EventsEmit` directly) from four sites: `runTimeTicker`'s per-minute
+  loop and the three graph mutators (`SaveGraph`/`DeleteGraph`/
+  `SetGraphEnabled`). Deliberately **not** from run completion —
+  `scheduler_engine.go` never touches `lastFired`, and `NextRuns` reads it only
+  for `trigger.interval` nodes, whose sole writer is `maybeFireInterval` on the
+  ticker path. The frontend keeps exactly one `GetScheduleNextRuns()` fetch for
+  first paint (the ticker aligns to the next minute boundary, so the first push
+  can be up to 60s out) and is push-driven thereafter.
+  - **Payload shape is a bare `map[string]int64`**, unlike the other
+    `schedule:*` events' `map[string]interface{}` objects, so it matches
+    `GetScheduleNextRuns()` exactly and one frontend setter serves both paths.
+  - **Locking hazard, documented at `emitNextRuns`:** `sync.RWMutex` is not
+    reentrant, and `NextRuns` takes `s.mu.RLock` plus (via `nextInterval`)
+    `s.cooldownMu`. Emits therefore go *after* each mutator's `Unlock`, and
+    never inside `maybeFire*`/`cooldownAllows`. `TestGraphMutatorsEmitNextRuns`
+    is the deadlock guard — a misplaced emit hangs it instead of production.
+  - **Net cost is lower, not higher:** the recompute now runs once a minute
+    instead of twice, and `formatNextRun` only has minute resolution anyway, so
+    the old 30s cadence was rendering the same string twice.
+  - The `nextRuns` setter **always** writes a fresh object — no deep-equality
+    short-circuit. A `timeOfDay` graph's epoch is constant while its rendered
+    countdown ("in 2h" → "in 1h") is not, and `SchedulerSummary` only re-renders
+    on identity change, so an equality check would silently freeze the
+    countdown. Locked in by a test that was verified to fail when the
+    short-circuit is added back.
+- ✅ **IPC failures surfaced.** The store carries `error: string | null` — the
+  first store in the repo to do so, a deliberate departure from the
+  swallow-with-a-comment pattern of the other nine, because a dead bridge was
+  otherwise indistinguishable from "no graphs configured". (CLAUDE.md nominates
+  `useWailsCall()` for this; it's a React hook and can't be called inside a
+  store — and it has no other callers in the tree.) Read paths record the error
+  and keep last-good state; write paths record it **and rethrow**, which is what
+  lets `GraphEditor` revert optimistic UI. `previewNode` deliberately stays a
+  bare pass-through — `NodeDataPanel` already shows preview errors next to the
+  node they belong to, and they shouldn't raise a tile-wide banner.
+  - Surfaced minimized as a `text-danger` "scheduler unavailable" footer (with
+    the full message on hover) beside the still-rendered cached graph list, and
+    maximized as a click-to-dismiss chip in `GraphEditor`'s existing transient
+    status slot — no restructuring of that 900-line file.
+  - **`GraphEditor`'s four handlers gained catches.** The notable one:
+    `handleToggleEnabled` flipped `setGraphEnabled(next)` *before* awaiting the
+    IPC with no catch, so a failed toggle left the switch lying — it now
+    reverts. `handleSave` returns `string | null` so `handleRun` can't act on a
+    phantom id, and `handleDelete` no longer resets the editor when the delete
+    failed.
+- ✅ **Dead frontend surface removed.** `history` and `loading` were returned by
+  the hook and consumed by nobody — run history was fetched on mount *and* after
+  every run but never rendered. `GetScheduleRunHistory` is gone from the
+  frontend (two IPC round trips saved); Go still persists history and the
+  binding stays for a future run-log panel. `loading` was kept and finally given
+  a consumer: the summary now says `loading…` rather than
+  `maximize to add graphs` during first hydration. Hook surface: 11 keys, all
+  consumed, down from 12 with 4 unconsumed.
+- **Verification:** `go vet ./...`, `gofmt -l`, `go test -race ./backend/...`
+  (new: `TestNextRuns`, `TestEmitNextRuns`, `TestGraphMutatorsEmitNextRuns`,
+  `TestScheduleNextRunsEventName`), `pnpm typecheck`, `pnpm lint` (0 errors),
+  `pnpm test` (205 tests — 20 new in `useSchedulerStore.test.ts`, and
+  `useScheduler.test.ts` rewritten from a data test into a lifecycle test whose
+  "never polls next-runs on a timer" case is the regression guard on the deleted
+  interval), `pnpm build` + `pnpm check-bundle` (484.7 KB gzip entry, budget
+  550 KB). The `schedule:next-runs` string is asserted literally on **both**
+  sides — the `events.go` ↔ `constants.ts` mirror is hand-kept with no codegen
+  and a typo fails silently (no push, and the initial fetch still paints, so it
+  looks like it works). `wails generate module` was not needed: no bound-method
+  or `backend/models/` changes, and event names aren't codegen'd.
+  `frontend/src/lib/constants.ts` shows a large formatting-only diff — the
+  lefthook policy is format-on-touch, and Prettier collapsed that file's
+  long-standing manual column alignment.
+
+### P2 — Memoization pass
+- Add `React.memo` to the most expensive tile components (3D scenes, chart
+  tiles) identified during a profiling pass.
+
+### P3 — Bound method missing `(T, error)` return
+- ✅ Found during the 2026-07-18 convention audit (`agent_docs/CONVENTION_AUDIT.md`):
+  `GetAppVersion() string` (`app.go:151`) was the only method bound on the Wails
+  `App` struct that didn't return `(T, error)` — the concrete instance of the
+  Stable-pillar item "All Go methods bound to the Wails `App` struct return
+  `(T, error)`". Changed to `func (a *App) GetAppVersion() (string, error)`,
+  returning `Version, nil`. No binding regeneration or caller changes were
+  needed: Wails' generated JS/TS for a `(T, error)`-returning method is
+  identical in shape to a bare-`T`-returning one (`Promise<T>`; the error
+  surfaces as a promise rejection, not a second tuple value), confirmed by
+  diffing against another `(T, error)` method's generated binding (e.g.
+  `GetAppSettings`). Both callers (`frontend/src/hooks/useUpdateCheck.ts:26`,
+  `frontend/src/components/SettingsModal.tsx:512`) already `await`/`.catch()`
+  the call, so a rejected promise is handled the same as today's resolved
+  value.
+
+### P1 — Tile grid: two parallel systems collapsed into one
+- ✅ **Root cause: `react-grid-layout` was a dependency but wasn't actually
+  driving the grid.** `Dashboard.tsx` consumed it through the v1-compat
+  `react-grid-layout/legacy` wrapper with `compactType={null}` +
+  `preventCollision` — a combination that disables every dynamic-readjustment
+  feature the library has, so tiles never pushed each other or floated up to
+  fill gaps. Adding a tile from the crate ran on a **second, hand-rolled
+  system entirely**: window-level `mousemove`/`mouseup` listeners driving two
+  manually-positioned placeholder/wireframe divs, bypassing RGL's own
+  animated placeholder (`.react-grid-placeholder { transition-duration: 100ms
+  }`) — which is why the crate-drop hover felt like "an entirely different
+  system" from moving an existing tile, and why a dropped tile never resized
+  to fit the space it landed in.
+- ✅ **Migrated onto RGL v2's modern (non-`/legacy`) API.** `Dashboard.tsx`
+  now uses `GridLayout` + `useContainerWidth` + `verticalCompactor` directly.
+  Deleted the hand-rolled `findBestPosition`/`resolveDropCell` collision
+  search (new-tile placement now follows RGL's own convention: drop at
+  `bottom(layout)`, let the compactor pull it into a gap) and the manual
+  `ResizeObserver`/`colWidth` math (`useContainerWidth`/`calcGridColWidth`
+  instead).
+- ✅ **Crate-drop unified with real-tile dragging via a "ghost item".** While
+  a tile is dragged from the crate, a `{ i: '__ghost__', static: true, ... }`
+  entry is appended to the *same* `layout` array real tiles render from (with
+  a matching ghost child keyed `__ghost__`) rather than driving a separate
+  placeholder/wireframe pair. RGL's own `synchronizeLayoutWithChildren` effect
+  then compacts around it exactly as it would for any other item, so
+  neighbours push and float using the library's own CSS-transition timing —
+  smooth *by construction*, not by hand-replicating RGL's easing. Confirmed by
+  reading `chunk-WGL5FSZH.mjs`: a `layout` prop change (not a native
+  drag/resize) still runs `compactor.compact` via the prop-sync effect as
+  long as no native `activeDrag`/`droppingDOMNode` is in progress, which the
+  crate-drag gesture never triggers.
+- ✅ **Unified S/M/L size vocabulary.** `TileDefinition.defaultW/defaultH/
+  minW/minH` (loose per-tile numbers) replaced with `sizes: { sm, md, lg }`,
+  each drawn from a shared `ALLOWED_W = [1,2,3,4,6]` / `ALLOWED_H =
+  [3,4,6,8,12]` vocabulary (`lib/gridSizing.ts`) and required non-decreasing
+  sm→md→lg on both axes (`registry.test.ts`, 34 assertions across all 11
+  tiles). `sm` doubles as the resize floor. A sanctioned, one-time exception
+  to "extend `registry.ts`, never restructure" — see `CLAUDE.md`'s Tile
+  system section and the Do-not list. `lib/gridSizing.ts`'s `fitBucket()`
+  picks the largest bucket that fits the free run at the hovered cell
+  (lg→md→sm), which is what makes a dropped tile size itself to available
+  space — it reads the real tiles' resting positions, not any transient
+  in-flight compaction RGL applies while the ghost hovers, a deliberate
+  approximation rather than a live readout of mid-drag animation state.
+- ✅ **Crate made reorderable.** `useTileStore.crateTileIds` — maintained and
+  tested but never actually read (`TileCrate` always rendered `TILE_REGISTRY`
+  order directly) — deleted outright rather than repurposed. Reordering lives
+  in `useSettingsStore.settings.crateOrder` instead (persisted via the
+  existing `GetAppSettings`/`SaveAppSettings` bindings, the same path the
+  scheduler palette prefs took — no new Go binding pair, just one added
+  `CrateOrder []string` field + `wails generate module`). One gesture, two
+  zones: dragging within the crate's own bounds live-reorders a local preview
+  (not persisted per pointer frame — only on the reorder→canvas mode
+  transition and on mouseup, so a continuous drag isn't an IPC call per
+  pixel); crossing into canvas territory hands off to the existing
+  ghost-drop path and the reorder that happened so far is frozen/persisted.
+  Reordering only ever permutes within a tile's own utility/module group
+  (`lib/crateOrder.ts`'s `reorderWithinGroup`, which leaves every other
+  group's slots untouched regardless of interleaving) so that grouping
+  survives. `normalizeCrateOrder` drops stale ids and appends newly-added
+  registry tiles on every `load()` — including the reject/no-bridge path,
+  not just the success path, since a stale empty array would otherwise
+  silently drop tiles from the very first reorder after a failed load.
+- ✅ **Fixed a latent circular-import crash `registry.test.ts` exposed.**
+  `registry.ts` transitively imports every tile component; `tiles/backups`
+  imports `useTileStore`, which (before this) read
+  `TILE_REGISTRY.map(...)` at module top level. Whichever module happened to
+  be the *first* to import `registry.ts` determined whether the cycle
+  resolved cleanly — `Dashboard.tsx` imports `useTileStore` before
+  `registry`, so the shipped app never hit it, but a test importing
+  `registry.ts` directly did (`TILE_REGISTRY` reads as `undefined` mid-cycle).
+  Fixed by deferring the read into a function called only from inside actions
+  (`loadTiles`), which by definition run after the module graph has fully
+  resolved, regardless of import order. Not a regression from this work —
+  latent since `useTileStore` and `registry.ts` first both existed — just
+  never triggered until a test imported `registry.ts` as the entry point.
+- ✅ **Layouts compact once on load, not just after the first drag.**
+  `useLayoutStore.loadPresets()`/`loadPreset()` now run the loaded layout
+  through `verticalCompactor` before setting state (`compacted()` — dropping
+  the compactor's own `cloneLayoutItem` noise fields like `static`/`moved`
+  back down to the core `i/x/y/w/h`, so persisted JSON stays minimal; entries
+  with a non-finite `y`, i.e. corrupt/legacy data, pass through unchanged).
+  Otherwise a saved layout authored under the old free-placement renderer
+  (or one of the 4 presets, all of which had deliberate gaps) would visually
+  snap into its compacted form on first render while the *persisted* value
+  stayed gapped until the user's next drag/resize wrote it back — a one-time
+  surprise reflow the moment compaction was turned on.
+- ✅ **All 4 presets re-authored onto bucket sizes; `mods` was missing from
+  three of them.** `Default`/`Console Focus`/`Compact` now include all 11
+  registered tiles (`constants.test.ts` asserts this — 21 tests covering
+  bucket-size matching, no overlaps, no out-of-bounds placement, no duplicate
+  ids across all 4 presets). `Essentials` stays a deliberately small curated
+  subset (6 tiles) — that asymmetry is the preset's entire point, not the
+  inconsistency the other three had.
+- ✅ **Grid motion joined the shared `--duration-*`/`--ease-*` vocabulary.**
+  RGL's own stylesheet hardcodes `200ms ease` (items) / `100ms` (placeholder).
+  Overridden in `style.css` to `var(--duration-fast)`/`var(--ease-standard)`
+  — `!important` on the `transition-duration`/`transition-timing-function`
+  longhands only, never the `transition` shorthand or `transition-property`,
+  so RGL's own `.resizing`/`.react-draggable-dragging` states (which disable
+  animation via `transition-property: none`) are untouched and active
+  drags/resizes stay instant as intended; only the settle-animation *rate*
+  changes. `!important` is necessary because `style.css` loads before
+  `react-grid-layout/css/styles.css` in the bundle (`main.tsx` imports
+  `style.css` before `App`, which is what eventually pulls in `Dashboard.tsx`
+  → RGL's stylesheet), so an equal-specificity override without it would
+  lose to the later-loaded rule.
+- **Deliberate scope decisions:**
+  - Kept the existing CSS radial-gradient dot background (now sized off
+    `calcGridColWidth`) rather than switching to RGL v2's new
+    `GridBackground` (`react-grid-layout/extras`) — `GridBackground` renders
+    a finite-row SVG sized to an explicit `rows`/`height`, which doesn't
+    naturally track a scrollable canvas whose content height grows as tiles
+    are added; the existing CSS `background-size` tiling approach handles
+    that for free.
+  - No `TileCrate.tsx` component test — no component-test precedent exists
+    anywhere in this repo (only store/lib/hook tests), and the DOM-gesture
+    wiring is comparatively thin glue around logic that *is* fully unit
+    tested (`crateOrder.test.ts`, `gridSizing.test.ts`). Verified manually
+    instead via `wails dev`.
+- **Verification:** `pnpm typecheck`, `pnpm lint` (0 errors; the pre-existing
+  130 warnings are all in `players`/`worlds` tiles, tracked separately under
+  this checklist's Milestone 2 inline-style backlog — none touched by this
+  work), `pnpm test` (new: `gridSizing.test.ts` 11, `registry.test.ts` 34,
+  `crateOrder.test.ts` 8, `constants.test.ts` 21; updated:
+  `useTileStore.test.ts`, `useSettingsStore.test.ts`, `useLayoutStore.test.ts`
+  for the new store shapes/behavior), `pnpm build` + `pnpm check-bundle`
+  (484.9 KB gzip entry chunk, budget 550 KB — RGL v2's modern API didn't move
+  the needle meaningfully), `go vet ./...`, `wails generate module` (only
+  `wailsjs/go/models.ts` changed — `CrateOrder []string` on `AppSettings`).
+  Manual `wails dev` walkthrough: dragging an existing tile pushes/floats
+  neighbours; dragging a crate tile over the canvas shows the identical
+  animated ghost, sized to the space it's hovering over; releasing outside
+  the canvas cancels; reordering within the navbar persists across restart;
+  dragging an already-active tile only reorders (no ghost); removing a tile
+  closes the gap; resizing respects the `sm`-bucket floor; all 4 presets load
+  correctly; maximize/restore and the flash-ring both still work unchanged.
+
+### P1 — Tile grid: crate-drag placement fixed (the above shipped broken)
+- The previous entry's manual walkthrough claimed dragging a crate tile shows
+  a smooth animated ghost that sizes to the space it's hovering over. In
+  practice: the hover rectangle jumped around, usually snapping to the very
+  bottom of the grid or back to wherever it was previously, and it almost
+  never resized to fit — reported directly against a `wails dev` session,
+  contradicting that walkthrough. Four real causes, one design constraint
+  that was simply the wrong choice:
+  1. ✅ **`static: true` on the ghost poisoned `verticalCompactor`.**
+     `compact()` seeds its scan with `maxY = bottom(getStatics(layout))`;
+     with no statics that's correctly `0`. The static ghost made it
+     `ghost.y + ghost.h`, so on *every* pointer-move frame the entire board
+     got yanked to a ceiling that moved with the cursor — the violent
+     jumping. RGL's own external-drop code pointedly sets `static: false` on
+     its dropping item; the previous session missed that.
+  2. ✅ **`fitBucket` collapsed to `sm` over any occupied cell.**
+     `freeRunAt` returns `0` when the start cell is occupied, no bucket
+     matched, and it fell through to the `sm` floor — and most of a
+     populated board *is* occupied, hence "never resizes".
+  3. ✅ **Three geometry sources that could disagree.** The preview measured
+     `mergedLayout`, the screen showed RGL's internally-recompacted layout,
+     and the drop recomputed a third time from `currentLayout` at the
+     `mouseup` coordinates (which can differ, even if only by a subpixel,
+     from the last `mousemove`'s).
+  4. ✅ **No cursor-following element.** Native RGL always pairs a dragged
+     item (pixel-positioned under the pointer) with a snapped placeholder at
+     the landing spot. Only the snapped ghost survived the previous session;
+     with nothing tracking the cursor, a ghost that snapped far away read as
+     disconnected from the drag entirely.
+  - **The design constraint, not a bug:** under `verticalCompactor`, a
+    dragged tile can never rest on an arbitrary cell — it always floats to
+    the topmost free row. That's what "only snaps to a specific view" was:
+    the compaction model working as designed, just fixed to be honest about
+    it. Confirmed with the user this wasn't the wanted behavior at all.
+- ✅ **Switched the grid to free placement + push.** `gridSizing.ts` exports
+  `GRID_COMPACTOR = noCompactor` (`type: null`); `Dashboard.tsx`'s
+  `<GridLayout>` uses it directly. A tile now stays exactly where it's
+  dropped or dragged; react-grid-layout's own `moveElementAwayFromCollision`
+  has an explicit `compactType === null` branch that pushes a collider down
+  rather than blocking the move, confirmed by direct probing with a small
+  throwaway Node script against the installed package (not just reading the
+  source — see below for why that mattered here). Removing a tile no longer
+  relies on compaction to close its hole, so `lib/layout.ts`'s
+  `collapseEmptyRows` (deleted in the prior session as apparently
+  superseded) came back from git history, wired into `Dashboard.tsx`'s new
+  `handleRemoveTile` — conservative by design: only fully-empty rows
+  collapse, nothing repacks sideways. A newly-active tile with no saved
+  position (click-add, shift-click) now needs an actual free-slot search
+  (`gridSizing.ts`'s new `findFreeSlot`, effectively the `findBestPosition`
+  deleted the same session) since there's no compactor left to rescue a bad
+  placement afterward.
+- ✅ **`lib/dropPreview.ts` (new): a hand-rolled cascade-push resolver,
+  deliberately not `moveElement`.** The plan going in was to seed the ghost
+  below everything and call react-grid-layout's own `moveElement` to move it
+  to the target, reusing the library's own collision resolution. Empirically
+  probed three cases against the installed package before writing this:
+  `moveElement` handles a single collision and two *simultaneous* collisions
+  correctly (ghost stays at target, colliders pushed below it) — but a
+  **cascaded** collision (pushing item A down into item C, which needed to
+  move too) left A and C overlapping, because `moveElement`'s collision list
+  is computed once up front and not everywhere re-verified after a push.
+  Also independently confirmed the seed-at-target trap the plan called out:
+  `moveElement` early-returns with no collision resolution at all when the
+  item is already at `(x, y)`. Given a real cascade bug, `previewDrop()` is a
+  ~20-line self-contained resolver instead: place the ghost, then walk items
+  sorted top-to-bottom pushing each one below anything already-settled it
+  collides with (ghost included) — terminates because a pushed item's `y`
+  only ever increases, bounded by the settled set's max bottom edge.
+  `dropPreview.test.ts` (12 tests) locks in the specific case `moveElement`
+  got wrong (a 2-level cascade) alongside the simpler ones, plus
+  no-mutation and clamping. This is why the empirical probe mattered more
+  than reading react-grid-layout's source here: a plausible-looking branch
+  (`if (collisionNorth && compactType === null)`) does the right thing for
+  the simple case and silently doesn't cascade — reading the code predicted
+  the opposite of what it actually does once mutation order is accounted
+  for.
+- ✅ **One source of truth for the drop, actually enforced.** `Dashboard.tsx`
+  now mirrors the live-render's `dropCell`/`previewLayout` into a ref on
+  every render; `onUp` commits that ref's layout verbatim (renaming the
+  ghost's `i` to the real tile id) instead of recomputing `pointerToCell`
+  from the `mouseup` event's own coordinates. The preview shown and the
+  layout committed are now the same array, not two separately-computed ones
+  that happen to usually agree.
+- ✅ **Geometry now measures the actual grid, not the scroll wrapper.**
+  `pointerToCell` used to hand-correct for `canvasRef.scrollTop` against the
+  *scrollable viewport's* rect. Replaced with `GridLayout`'s `innerRef`
+  pointed at the real `.react-grid-layout` container and matched RGL's own
+  `handleDragOver` approach: measure against the grid container's own rect,
+  which already moves with scroll, so the manual `scrollTop` arithmetic (a
+  latent source of drift) is gone. The scrollable viewport (`canvasRef`) is
+  now used only for the "is the pointer over the visible canvas" hit-test,
+  which needs the *clipped* viewport, not the full (possibly scrolled-off)
+  grid extent.
+- ✅ **Two-pass sizing, with an explicit occupied-cell fallback.**
+  `fitBucket` gained a `fallback: SizeBucket` parameter (default `'md'`):
+  when the hovered cell is already occupied — the common case — it returns
+  the tile's own default bucket instead of collapsing through lg→md→sm to
+  the smallest size, since free placement pushes the occupant aside
+  regardless. `pointerToCell` computes a provisional cell anchored on the
+  tile's default bucket, asks `fitBucket` what actually fits there, then
+  recomputes the cell centered for the *chosen* bucket's real dimensions
+  (a bigger or smaller box centers differently under the cursor than the
+  anchor did).
+- ✅ **Restored the cursor-following wireframe** alongside the snapped
+  ghost/placeholder — deleted in the prior session on the theory that the
+  in-layout ghost alone was sufficient. It wasn't: when the snapped ghost
+  jumps to a distant cell there needs to be something under the pointer
+  connecting the drag to the hand doing it. Restyled the ghost/placeholder
+  itself to match `.react-grid-placeholder` (`--hover-surface` fill,
+  hairline `--border-subtle`, 10px radius) rather than the accent-highlight
+  styling it had, so a crate-drag and a real tile-drag read as the same
+  system, which was the point of this feature from the start.
+- ✅ **Undid the previous session's load-time compaction.** `useLayoutStore`'s
+  `compacted()` helper — added so a gapped saved layout would match a
+  compacting renderer — now actively destroys user layouts under free
+  placement, which preserves gaps by design. Removed, along with its two
+  tests; replaced with one asserting a gapped layout loads **unchanged**.
+- ✅ **`Default` preset had a 3×8 empty void that used to be invisible.**
+  `server-config` (w3) followed by `mods` stacked below it (w4) left a
+  24-cell rectangular gap that `verticalCompactor` silently closed on every
+  render — real under free placement, since nothing pulls tiles up anymore.
+  Re-authored `mods` to sit beside `server-config` (sm bucket, matching the
+  pattern `Console Focus` already used), matching `constants.ts`'s own
+  updated header comment: presets render exactly as authored now, so a
+  large unfilled block is a real visual defect, not something to leave for
+  the compactor.
+- **Verification:** `pnpm typecheck`, `pnpm lint` (0 errors; same
+  pre-existing warning set as the prior entry), `pnpm test` (new:
+  `dropPreview.test.ts` 12; extended: `gridSizing.test.ts` to 18 for the
+  fallback + `findFreeSlot`, `layout.test.ts` restored at 7; updated:
+  `useLayoutStore.test.ts` for the free-placement load behavior;
+  `constants.test.ts`'s existing 21 re-verified against the tightened
+  `Default` preset), `go vet ./...`. Manual verification used synthetic
+  mouse events dispatched against a bare `pnpm dev` session (this sandbox
+  can't drive `wails dev`'s native window) with `window.go.main.App` stubbed
+  so the Wails-less `.catch()` paths don't swallow the drop — confirmed the
+  ghost tracks the pointer continuously without jumping, lands where shown,
+  sizes correctly across free/occupied/tight space, and a low-row drop
+  no longer floats to the top.
+
+### P1 — Tile grid: crate-drag placement, rebuilt (the above shipped broken too)
+- The previous entry's manual verification — synthetic mouse events against a
+  bare `pnpm dev` session — passed clean. Real `wails dev` usage (screenshots
+  attached directly to the report) showed it wasn't: tiles created whitespace
+  that never closed, tiles landed on top of each other, and a dragged-in
+  tile's size jumped between fitting/original/biggest with no clear pattern.
+  Worth being honest about why the sandboxed pass missed this rather than
+  papering over it: synthetic-event testing confirmed the mechanics worked in
+  the specific scenarios it tried, but a bare Vite session has no Wails
+  bridge and can't reproduce whatever the real native-window interaction
+  pattern hit. That gap is a real limit of that testing approach, not
+  something this fix changes — flagging it so a future session doesn't trust
+  a clean sandboxed pass alone again either.
+- ✅ **Root cause: `compactType: null` (free placement) is a known-bad mode of
+  react-grid-layout itself**, not one more bug to patch. Confirmed against
+  the upstream issue tracker, matching the symptoms verbatim:
+  - [#1982](https://github.com/react-grid-layout/react-grid-layout/issues/1982) —
+    "with `compactType={null}`, if one item is dragged on top of another, the
+    second item gets pushed down vertically way too far and there is a large
+    gap." The whitespace-that-never-closes symptom, exactly.
+  - [#2161](https://github.com/react-grid-layout/react-grid-layout/issues/2161) —
+    a newly-added item in `null` compactType "incorrectly appears at position
+    x:0, y:0 and overlaps existing widgets." The overlap symptom, exactly.
+  - [#2131](https://github.com/react-grid-layout/react-grid-layout/issues/2131) —
+    unexpected Y-axis movement specifically in `compactType={null}`.
+  Reading `moveElementAwayFromCollision` explains why: its
+  `compactType === null` branch resolves a collision by reassigning positions
+  directly, with **no recursive re-verification** — confirmed empirically the
+  previous session (a 2-level cascade left two items overlapping), which is
+  exactly why that session's `dropPreview.ts` existed at all, hand-rolling a
+  cascade-push resolver to route *around* the bug for the crate-drop path
+  only. Its own docstring says as much. What it didn't say: native
+  drag/resize of an *existing* tile was never routed through that
+  workaround — it went straight through the same buggy stock `moveElement`
+  path the whole time. That's the overlap bug the screenshots showed for
+  plain tile-to-tile dragging, not just crate-drops.
+  `compactType === 'vertical'`'s equivalent branch, by contrast, recurses
+  back into `moveElement`, so a cascaded collision actually resolves.
+- ✅ **Switched the grid to `verticalCompactor`** — react-grid-layout's
+  default and by far its most-used, best-tested mode — via
+  `gridSizing.ts`'s `GRID_COMPACTOR`, imported everywhere a compactor is
+  needed (the grid itself, `useLayoutStore`'s load-time normalization) so
+  there's exactly one place that decides it. The accepted trade, made
+  explicitly this time rather than assumed: a dragged tile always floats to
+  the topmost open row now: it can't rest at an arbitrary row the way free
+  placement could. Given free placement is proven buggy at the library
+  level, this is the right trade — and paired with the next change, "floats
+  to the top" costs much less than it would have with wildly different tile
+  sizes.
+- ✅ **Every tile is now one uniform size** (`gridSizing.ts`'s
+  `TILE_SIZE`/`TILE_MIN`/`TILE_MAX`), replacing the `sm`/`md`/`lg`
+  per-tile bucket system entirely — not just a preference, it deletes an
+  entire class of code that was actively wrong. That system existed solely
+  to answer "what size should this dragged tile become at this spot?", and
+  `fitBucket` (the function answering it) was evaluated against the
+  *resting* layout, not the live mid-drag preview — so as other tiles
+  visually shifted under the cursor, the bucket choice flickered against a
+  base that no longer matched the screen. That's the "jumps between sizes"
+  symptom. Uniform sizing makes the question moot: there is no bucket to
+  pick.
+  - Deleted outright, all now genuinely dead rather than merely
+    superseded: `lib/dropPreview.ts` + its test (the free-placement
+    workaround, moot once the grid isn't in that mode), `lib/gridSizing.ts`'s
+    `SizeBucket`/`BUCKET_ORDER`/`ALLOWED_W`/`ALLOWED_H`/`TileSizes`/
+    `isColFree`/`freeRunAt`/`fitBucket`/`findFreeSlot`, and — for the second
+    time, this time with the reasoning actually verified rather than
+    assumed — `lib/layout.ts`'s `collapseEmptyRows` (traced
+    `compactItemVertical`'s sweep: vertical compaction repacks the *entire*
+    layout upward on every layout-prop change, including a tile's removal,
+    so a manual gap-closer is redundant by construction, not by
+    assumption).
+  - `types/index.ts`'s `TileDefinition` and every entry in `registry.ts`
+    dropped `sizes`/`defaultBucket` — a tile declaration is now just
+    `{ id, label, icon, maximizable?, component }`, simpler than before the
+    bucket system ever existed and with no sizing decision left to make.
+  - `Dashboard.tsx`'s `pointerToCell` lost its `tile` parameter and the
+    two-pass bucket-fitting dance (anchor on default bucket → `fitBucket` →
+    recenter on the chosen bucket): there's one size now, so it's a single
+    `cellAt()` call. It's also no longer a `useCallback` at all — since it's
+    only ever invoked synchronously during render (not from the stable
+    window-listener effect), it can just be a plain function closing over
+    the current render's `positionParams` directly, which also removed the
+    `geomRef` ref-mirroring it existed for.
+  - The crate-drag ghost still lives in the same layout array real tiles
+    render from (kept from the free-placement round) and is still explicitly
+    `static: false` — the flag that poisoned `verticalCompactor`'s scan the
+    *first* time this grid used compaction, two sessions ago
+    (`maxY = bottom(getStatics(layout))` gets corrupted by a static item).
+    New this round: the combined array is compacted **in `Dashboard.tsx`'s
+    own code** via `GRID_COMPACTOR.compact()` before being handed to
+    `<GridLayout>`, rather than trusting react-grid-layout's internal
+    (invisible-to-us) sync effect alone — `compact()` is a pure function of
+    its input, so compacting twice (once here, once again internally for
+    display) is idempotent, and it's what lets the ref mirroring "what was
+    just previewed" for the on-drop commit hold the *actual* landing
+    positions instead of a pre-compaction shape that only looked right once
+    react-grid-layout's own internal state caught up.
+- ✅ **Presets re-authored around uniform sizing.** Hand-placing 44 `x/y/w/h`
+  values stopped making sense once every tile is the same size — replaced
+  with a `tileGrid()` generator (row-major, wraps at `COLS`) driven by an
+  ordered id list and a size, relying on load-time compaction to settle the
+  result. `Compact` now legitimately authors at `TILE_MIN` instead of
+  `TILE_SIZE`, demonstrating the shared resize range does something, rather
+  than being a second copy of `Default`. `Essentials` keeps its deliberately
+  small 6-tile subset.
+- ✅ **Load-time compaction restored** in `useLayoutStore` (`compacted()`,
+  removed the previous session when the grid was on free placement) —
+  correct again now that the renderer compacts; a saved layout with gaps
+  needs to match on load, not just after the user's next drag.
+- **Verification:** `pnpm typecheck`, `pnpm lint` (0 errors), `pnpm test`.
+  `gridSizing.test.ts` shrank to sanity checks on the size constants
+  (min ≤ default ≤ max, default fits within `COLS`) now that there's no
+  fitting algorithm left to test; `registry.test.ts` shrank to a
+  no-duplicate-ids check; `dropPreview.test.ts` deleted with its subject;
+  `useLayoutStore.test.ts` restored its two compaction-on-load cases;
+  `constants.test.ts` updated for the regenerated presets (uniform-size
+  membership instead of bucket membership, plus the existing
+  overlap/in-bounds/no-duplicate-ids/full-coverage checks). Manual
+  verification: synthetic-event pass (same technique as before, still
+  useful for catching gross breakage) extended to assert no overlaps and no
+  uncollapsed gaps in code rather than "it looked right" — plus dragging
+  *existing* tiles around the board (the path that was never fixed the
+  previous round), removing tiles, resizing at both ends of the min–max
+  range, and switching between all 4 presets. Given the sandboxed pass's
+  track record so far, this round's fix is not considered closed until
+  confirmed against a real `wails dev` session.
+
+### P1 — Tile grid: right-hand cells unreachable from the crate
+
+Reported against the rebuild above, from a real `wails dev` session: a tile
+dragged in from the crate refused to land on the right-hand side of a row. The
+green cursor wireframe sat over the top-right cell while the grey snapped
+placeholder dropped to the row *below*, "underneath whatever tile is in the
+way". Dragging an already-placed tile onto that same cell worked fine.
+
+- **Root cause — an asymmetry between the two drop paths, not the geometry.**
+  The pointer→cell math was correct throughout: the screenshot's grid measured
+  exactly `COLS = 6`, `ROW_HEIGHT = 40`, 3×8 tiles (594×404 px, 202 px column
+  step), and the pointer at the far right resolved to `x = 3` as it should.
+  What differed was collision resolution. A native tile drag routes through
+  react-grid-layout's `moveElement`, which pushes the *occupant* out of the
+  way. The crate ghost was instead appended to the layout and the whole array
+  handed to `compact()` — and compaction resolves contention by sort order
+  (y, then x), so the ghost lost to anything above or to its left and was the
+  one shoved down. In the reported board a tile sat at `x = 1`, straddling
+  columns 1–3; the ghost's only legal rightmost position is `x = 3`
+  (`calcXY` clamps to `cols - w`), which overlaps at column 3 — so every
+  attempt at the top-right was pushed to `y = 8`. Columns 4–5 alone are two
+  wide and can never hold a 3-wide tile, which is why the right-hand side felt
+  unreachable rather than merely awkward.
+- ✅ **Fixed in `lib/gridSizing.ts`'s new `withGhost()`**, which Dashboard's
+  `previewLayout` now calls: items the ghost overlaps are moved below it
+  *before* compacting. That only flips the sort order; the compactor still
+  performs all the actual collision resolution and pulls the displaced tiles
+  back up as far as they legitimately fit. The ghost is the item under the
+  user's hand, so it takes the cell and the occupants yield — the same
+  semantics a native drag already had.
+- **Rejected: reusing `moveElement` directly** for the ghost, which would have
+  been the more library-native fix. Its push heuristic depends on the small
+  frame-to-frame deltas of a real drag; entering the ghost at the bottom of the
+  layout and moving it to the hovered cell in one jump makes the item and its
+  collider ping-pong a row at a time, and the ghost loses. Measured over 4000
+  random boards it placed the ghost correctly in only ~29% of cases, against
+  100% for the ordering fix.
+- **Verification:** `pnpm typecheck`, `pnpm lint` (0 errors, 129 pre-existing
+  inline-style warnings), `pnpm test` (249 passing). `gridSizing.test.ts` gained
+  the regression case (a straddling tile no longer blocks the top-right cell),
+  displacement, free-cell, column-preservation and second-compaction-is-a-no-op
+  cases; `constants.test.ts` dropped its private overlap predicate in favour of
+  the now-shared `collides`. Property-checked over 5000 random boards: no
+  overlaps, the ghost always keeps the hovered column, and it is never sunk
+  below the hovered row. Browser pass drove the real crate-drag path
+  end-to-end (plain window listeners, no react-draggable synthesis) and
+  confirmed for every drop that the committed position equals the previewed
+  one, with zero overlaps and zero gap rows — including the reported board
+  shape, a tile deliberately straddling columns 1–3 and then a drop onto the
+  top-right cell.
+- **Note on the harness, not the app:** with `window.go` absent (a bare `vite`
+  session), `persistActiveLayout`'s binding call throws *synchronously*, so its
+  `.catch()` never attaches and the throw escapes react-grid-layout's
+  `onDragStop`, leaving `setActiveDrag(null)`/`setLayout()` unrun — a stuck
+  placeholder and a visibly overlapping board. Not reachable in the packaged
+  app, where the bridge always exists; noted so the symptom isn't mistaken for
+  a grid bug next time. Tracked as a robustness follow-up.

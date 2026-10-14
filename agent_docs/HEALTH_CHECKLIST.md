@@ -11,7 +11,8 @@ target, not a snapshot. When a gap is found, track it as an item under
 checklist. This file should look almost the same every time you open it; only
 the `Open backlog` section should churn. Completed remediation history — the
 detailed, per-session narrative of gaps already closed — lives in
-`agent_docs/HEALTH_LOG.md`, not here.
+`agent_docs/HEALTH_LOG.md`, not here. That log keeps its last months under a
+cap; earlier ones are the files under `agent_docs/health-log/`.
 
 See `agent_docs/CLAUDE.md` for architecture conventions and build commands, and
 `agent_docs/ROADMAP.md` for feature scope. This doc doesn't duplicate either —

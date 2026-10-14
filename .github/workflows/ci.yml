@@ -220,6 +220,13 @@ jobs:
         run: pnpm check-issue-templates
         working-directory: frontend
 
+      # agent_docs/HEALTH_LOG.md stays under a cap, and the months moved out of
+      # it sit beside it one file each; the header there says why. A line count
+      # is not a regex the runner's invariants can express, so the gate is its
+      # own script, here because it is a repo-level check that needs only node.
+      - name: Health log stays under its cap
+        run: node scripts/check-health-log.mjs
+
   backend:
     runs-on: windows-latest
     steps:
