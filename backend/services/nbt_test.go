@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"compress/gzip"
 	"encoding/binary"
+	"math"
 	"os"
 	"testing"
 )
@@ -130,5 +131,107 @@ func TestNBT_missingFile(t *testing.T) {
 	_, err := readLevelDat("/nonexistent/level.dat")
 	if err == nil {
 		t.Fatal("expected error for missing file")
+	}
+}
+
+func TestNBT_intGetByteGetRange(t *testing.T) {
+	root := func(tag byte, n int64) *nbtValue {
+		return &nbtValue{compound: map[string]*nbtValue{"k": {tagType: tag, i64: n}}}
+	}
+
+	intCases := []struct {
+		name string
+		tag  byte
+		in   int64
+		want int32
+	}{
+		{"int in range", tagInt, 64, 64},
+		{"int negative", tagInt, -64, -64},
+		{"int max", tagInt, math.MaxInt32, math.MaxInt32},
+		{"int min", tagInt, math.MinInt32, math.MinInt32},
+		{"long in range", tagLong, 30_000_000, 30_000_000},
+		{"long above int32", tagLong, math.MaxInt32 + 1, 0},
+		{"long below int32", tagLong, math.MinInt32 - 1, 0},
+		{"long that would truncate to 5", tagLong, 1<<32 + 5, 0},
+	}
+	for _, tc := range intCases {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := intGet(root(tc.tag, tc.in), "k"); got != tc.want {
+				t.Errorf("intGet(%d) = %d, want %d", tc.in, got, tc.want)
+			}
+		})
+	}
+	if got := intGet(root(tagInt, 7), "missing"); got != 0 {
+		t.Errorf("intGet on an absent key = %d, want 0", got)
+	}
+
+	byteCases := []struct {
+		name string
+		tag  byte
+		in   int64
+		want int8
+	}{
+		{"byte one", tagByte, 1, 1},
+		{"byte negative", tagByte, -1, -1},
+		{"byte max", tagByte, math.MaxInt8, math.MaxInt8},
+		{"byte min", tagByte, math.MinInt8, math.MinInt8},
+		{"int above int8", tagInt, math.MaxInt8 + 1, 0},
+		{"int below int8", tagInt, math.MinInt8 - 1, 0},
+		{"int that would truncate to 1", tagInt, 257, 0},
+	}
+	for _, tc := range byteCases {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := byteGet(root(tc.tag, tc.in), "k"); got != tc.want {
+				t.Errorf("byteGet(%d) = %d, want %d", tc.in, got, tc.want)
+			}
+		})
+	}
+	if got := byteGet(root(tagByte, 1), "missing"); got != 0 {
+		t.Errorf("byteGet on an absent key = %d, want 0", got)
+	}
+}
+
+// A Long SpawnX outside int32 and a hardcore flag of 257 stored as an Int must
+// read as absent, not truncate into 5 and true.
+func TestNBT_readLevelDatOutOfRange(t *testing.T) {
+	var buf bytes.Buffer
+	gz := gzip.NewWriter(&buf)
+	put := func(b ...byte) {
+		if _, err := gz.Write(b); err != nil {
+			t.Fatalf("gzip write: %v", err)
+		}
+	}
+	name := func(s string) {
+		put(byte(len(s)>>8), byte(len(s)))
+		put([]byte(s)...)
+	}
+	put(tagCompound)
+	name("")
+	put(tagCompound)
+	name("Data")
+	put(tagLong)
+	name("SpawnX")
+	if err := binary.Write(gz, binary.BigEndian, int64(1<<32+5)); err != nil {
+		t.Fatalf("binary.Write: %v", err)
+	}
+	put(tagInt)
+	name("hardcore")
+	if err := binary.Write(gz, binary.BigEndian, int32(257)); err != nil {
+		t.Fatalf("binary.Write: %v", err)
+	}
+	put(tagEnd, tagEnd)
+	if err := gz.Close(); err != nil {
+		t.Fatalf("gzip close: %v", err)
+	}
+
+	meta, err := readLevelDatFromReader(&buf)
+	if err != nil {
+		t.Fatalf("readLevelDatFromReader: %v", err)
+	}
+	if meta.SpawnX != 0 {
+		t.Errorf("SpawnX: got %d, want 0", meta.SpawnX)
+	}
+	if meta.Hardcore {
+		t.Error("Hardcore: got true, want false")
 	}
 }
