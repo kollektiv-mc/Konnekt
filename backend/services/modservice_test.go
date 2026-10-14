@@ -974,7 +974,7 @@ func TestInstallKeepsASupersededFileDisabled(t *testing.T) {
 // left a failure at either with the new jar in place and the old row gone
 // (#167). It is moved aside now and put back, so a failed install leaves the
 // folder and the manifest as they were.
-func TestInstallRestoresTheSupersededJarWhenKeepingItDisabledFails(t *testing.T) {
+func TestInstallRestoresSupersededJarOnDisableFailure(t *testing.T) {
 	newJar := pluginJarBytes(t, "Essentials", "2.22.0")
 	files := jarServer(t, map[string][]byte{"/ess-2.22.0": newJar})
 	defer files.Close()

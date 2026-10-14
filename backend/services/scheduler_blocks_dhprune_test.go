@@ -77,7 +77,8 @@ func TestValidateGraphRetentionRejects0And1Point5AndAccepts3(t *testing.T) {
 	}
 }
 
-func TestDHPublishAnInvalidKeepFailsTheRunBeforeAnythingIsSentAndIsAdvice(t *testing.T) {
+// An invalid keep fails the run before anything is sent, and the error is advice.
+func TestDHPublishInvalidKeepFailsBeforeSending(t *testing.T) {
 	f := dhBlockFixture(t)
 	f.stageFor(t, "srv1", "7_alpha", dhPubDBs())
 	cfg := publishConfig()
@@ -223,7 +224,8 @@ func TestDHPublishBlockPrunesAndReportsWhatItDeleted(t *testing.T) {
 	}
 }
 
-func TestDHPublishBlockPruneFailureIsAWarningOnTheRecordTheEventAndTheConsole(t *testing.T) {
+// A prune failure is a warning on the record, the event and the console.
+func TestDHPublishBlockPruneFailureIsAWarningEverywhere(t *testing.T) {
 	for name, fail := range map[string]func(b *fakeBucket){
 		"the listing is refused": func(b *fakeBucket) {
 			b.failList = func() (int, string) { return 403, "AccessDenied" }

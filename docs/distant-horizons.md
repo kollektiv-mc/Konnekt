@@ -7,7 +7,7 @@ distance instead of waiting for the server to stream it. This page is the setup:
 what the server needs, the bucket, the scheduler graph and its values, and what
 players do with the link.
 
-Two scheduler blocks do the work. **Distant Horizons Snapshot** warns the
+Two scheduler blocks do the work. **DH Snapshot** warns the
 players, stops the server, copies the LOD databases out, and starts it again.
 **Publish DH Snapshot** uploads the copy to the bucket and writes the download
 page. The server is only down for the copy, and only the parts of each database
@@ -94,7 +94,7 @@ Open the **Scheduler** tile, start a new graph, and add four blocks from the
 palette (click or drag):
 
 ```
-Cron Schedule  ->  Distant Horizons Snapshot  ->  Publish DH Snapshot  ->  Notify
+Cron Schedule  ->  DH Snapshot  ->  Publish DH Snapshot  ->  Notify
 ```
 
 Wire them:
@@ -120,7 +120,7 @@ Once a week is a reasonable default: each run stops the server for the copy,
 and DH keeps returning players up to date in game on its own, so the snapshot
 matters most to new players.
 
-**Distant Horizons Snapshot**
+**DH Snapshot**
 
 | Field | Value | Default |
 | --- | --- | --- |

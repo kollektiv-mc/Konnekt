@@ -690,7 +690,7 @@ func TestModrinthResolveDependenciesFailsWhenNoVersionExists(t *testing.T) {
 // end the whole resolution, and the switch with it. It is only fatal for a
 // dependency that is required and missing: an optional one that cannot be
 // resolved is not something to install, and not a reason to refuse.
-func TestModrinthResolveDependenciesSurvivesAnUnresolvableOptionalDep(t *testing.T) {
+func TestModrinthResolveSurvivesUnresolvableOptionalDep(t *testing.T) {
 	ts := mrAPI(t, map[string]string{
 		"/version/root": `{"id":"root","dependencies":[
 			{"project_id":"REQ","version_id":"reqv","dependency_type":"required"},
@@ -718,7 +718,7 @@ func TestModrinthResolveDependenciesSurvivesAnUnresolvableOptionalDep(t *testing
 // dialog labels the row and how its own dependencies get walked, but the answer
 // changes nothing about what has to be installed — so a project that has since
 // been emptied on Modrinth must not block a mod that is already working.
-func TestModrinthResolveDependenciesSurvivesAnUnresolvableInstalledDep(t *testing.T) {
+func TestModrinthResolveSurvivesUnresolvableInstalledDep(t *testing.T) {
 	ts := mrAPI(t, map[string]string{
 		"/version/root":      `{"id":"root","dependencies":[{"project_id":"A","dependency_type":"required"}]}`,
 		"/project/A/version": `[]`,

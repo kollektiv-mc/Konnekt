@@ -68,7 +68,8 @@ func raw(vals ...string) []json.RawMessage {
 	return out
 }
 
-func TestRemoteDispatcherInvokesAllowlistedMethodsWithDecodedArguments(t *testing.T) {
+// Allowlisted methods are invoked with their arguments decoded.
+func TestRemoteDispatcherInvokesWithDecodedArguments(t *testing.T) {
 	target := &remoteTarget{}
 	d, err := NewRemoteDispatcher(target, remoteTargetAllow)
 	if err != nil {

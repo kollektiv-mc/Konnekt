@@ -74,7 +74,8 @@ func TestS3ListObjectsFollowsEveryPageOfAThreePageListing(t *testing.T) {
 	}
 }
 
-func TestS3ListObjectsEmptyAndTruncatedWithoutATokenAreDistinguished(t *testing.T) {
+// An empty listing and a truncated one without a token are distinguished.
+func TestS3ListObjectsTellsEmptyFromTruncatedWithoutToken(t *testing.T) {
 	body := listPage(false, "")
 	s := newS3TestServer(t, func(_ int, w http.ResponseWriter, _ *http.Request) { _, _ = w.Write([]byte(body)) })
 	c := newTestS3Client(t, s)
@@ -139,7 +140,8 @@ func TestS3ListObjectsReadsAPageLargerThanASmallAnswer(t *testing.T) {
 	}
 }
 
-func TestS3ListObjectsRefusesAPageOverTheLimitRatherThanReadingPartOfIt(t *testing.T) {
+// A page over the limit is refused rather than read in part.
+func TestS3ListObjectsRefusesAPageOverTheLimit(t *testing.T) {
 	s := newS3TestServer(t, func(_ int, w http.ResponseWriter, _ *http.Request) {
 		_, _ = w.Write([]byte(strings.Repeat(" ", s3ListBodyLimit+1)))
 	})
@@ -240,7 +242,8 @@ func TestS3DeleteObjectsOfNothingSendsNothing(t *testing.T) {
 	}
 }
 
-func TestS3DeleteObjectsRefusesAKeyXMLCouldNotCarryBeforeAnyRequest(t *testing.T) {
+// A key XML could not carry is refused before any request is sent.
+func TestS3DeleteObjectsRefusesAKeyXMLCannotCarry(t *testing.T) {
 	s := newS3TestServer(t, func(_ int, w http.ResponseWriter, _ *http.Request) {})
 	c := newTestS3Client(t, s)
 	for _, bad := range []string{"", "dh/a\x01b", "dh/\xff"} {
@@ -253,7 +256,8 @@ func TestS3DeleteObjectsRefusesAKeyXMLCouldNotCarryBeforeAnyRequest(t *testing.T
 	}
 }
 
-func TestS3DeleteObjectsCountsPerKeyErrorsAcrossRequestsIntoOneError(t *testing.T) {
+// Per-key errors across requests are counted into one error.
+func TestS3DeleteObjectsFoldsPerKeyErrorsIntoOne(t *testing.T) {
 	s := newS3TestServer(t, func(n int, w http.ResponseWriter, _ *http.Request) {
 		if n == 1 {
 			_, _ = fmt.Fprintf(w, `<DeleteResult><Error><Key>dh/parts/0003</Key><Code>AccessDenied</Code><Message>Access Denied %s</Message></Error><Error><Key>dh/parts/0004</Key><Code>InternalError</Code><Message>x</Message></Error></DeleteResult>`, testSecret)
@@ -301,7 +305,8 @@ func TestS3DeleteObjectsRetriesA5xxWithTheSameBody(t *testing.T) {
 	}
 }
 
-func TestS3DeleteObjectsRefusedOutrightEndsAtOnceAndNeverLeaksTheSecret(t *testing.T) {
+// A request refused outright ends at once and never leaks the secret.
+func TestS3DeleteObjectsRefusalEndsAtOnceWithoutTheSecret(t *testing.T) {
 	s := newS3TestServer(t, func(_ int, w http.ResponseWriter, _ *http.Request) {
 		s3XMLError(w, http.StatusForbidden, "AccessDenied", "no "+testSecret)
 	})

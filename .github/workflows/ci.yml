@@ -193,11 +193,17 @@ jobs:
       - run: pnpm install --frozen-lockfile
         working-directory: frontend
 
-      # --require-runnable turns a skip into a failure. Every check in these two
-      # sections can run here, so a skip means something broke in the setup
-      # above rather than a check that legitimately does not apply.
-      - name: Invariants and generated files
-        run: ./.claude/suite-check.py --section invariants --section generated --require-runnable
+      # --require-runnable turns a skip into a failure. Every check in these
+      # three sections can run here, so a skip means something broke in the
+      # setup above rather than a check that legitimately does not apply.
+      #
+      # `memory` is the always-loaded agent memory budget (200 lines, counted
+      # by .claude/suite-memory.py). It sat at 201 from #537 (2026-10-06) until
+      # #595, because only the local health run reported it and every pull
+      # request in between noted the failure as main's. A line added to
+      # agent_docs/CLAUDE.md is paid for in the same pull request from now on.
+      - name: Invariants, generated files and the memory budget
+        run: ./.claude/suite-check.py --section invariants --section generated --section memory --require-runnable
 
       # Issue forms are the one user-facing surface in the repo that nothing
       # else here opens: `pnpm format:check` runs from frontend/ and
@@ -213,6 +219,13 @@ jobs:
       - name: Issue templates are valid
         run: pnpm check-issue-templates
         working-directory: frontend
+
+      # agent_docs/HEALTH_LOG.md stays under a cap, and the months moved out of
+      # it sit beside it one file each; the header there says why. A line count
+      # is not a regex the runner's invariants can express, so the gate is its
+      # own script, here because it is a repo-level check that needs only node.
+      - name: Health log stays under its cap
+        run: node scripts/check-health-log.mjs
 
   backend:
     runs-on: windows-latest

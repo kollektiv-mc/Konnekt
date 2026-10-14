@@ -1017,8 +1017,14 @@ function GraphEditorInner({
             ) : null
           })()}
 
+          {/* One line, whatever the text: a bar that grows moves every control
+              beside it. The full advice is the tooltip. */}
           {warnings.length > 0 && (
-            <span className="text-warning text-2xs max-w-sm font-mono" role="status">
+            <span
+              className="text-warning text-2xs max-w-sm min-w-0 truncate font-mono"
+              role="status"
+              title={warnings.join('\n')}
+            >
               {warnings.join(' ')}
             </span>
           )}

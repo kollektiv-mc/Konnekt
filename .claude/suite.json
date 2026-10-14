@@ -51,6 +51,10 @@
         "run": "node scripts/check-release-notes-extract.mjs"
       },
       {
+        "name": "health log cap",
+        "run": "node scripts/check-health-log.mjs"
+      },
+      {
         "name": "bundle budget",
         "run": "pnpm check-bundle",
         "cwd": "frontend"
@@ -122,6 +126,14 @@
         "expect": "no matches",
         "diagnosis": "The type scale names three steps below Tailwind's smallest (text-3xs 9px, text-2xs 10px, text-1xs 11px, text-xs 12px), generated into frontend/src/styles/tokens.css from tokens.source.json. An inlined text-[10px] is the same value with no single place to change it and no way for a token sync to reach it: tokens.source.json is vendored from kollektiv/design/tokens.json and shared with Kommands, so when the scale moves upstream the literal keeps its old value and the tree ends up with two scales a pixel apart, and nothing fails (#368). A size the scale does not name is a value to add to kollektiv/design/tokens.json, not a literal to inline; 8px sat below the floor and was rounded to text-3xs rather than earning a token of its own (#163), and the one 13px went to text-sm. The scheduler editor was swept first under #163 and the rest of frontend/src under #368, which is when this widened from tiles/scheduler to the whole tree. One exclusion by name: worlds/scene/Planet.tsx's 7px label is scaled by camera distance through drei's Html distanceFactor, so the literal is an input to a transform rather than a screen size, and the file says so where it sits. The assets directory is excluded only because its fonts and logo are binary and the runner would otherwise report them as unreadable.",
         "reference": "agent_docs/HEALTH_CHECKLIST.md"
+      },
+      {
+        "name": "test names stay readable",
+        "grep": "^func Test[A-Za-z0-9_]{57,}\\(",
+        "paths": ["backend", "scripts", "bindings_test.go", "client_error_test.go", "configwrite_test.go", "remote_app_test.go", "remote_methods_test.go", "scoping_test.go", "webviewgpu_test.go"],
+        "expect": "no matches",
+        "diagnosis": "A Go test name is an identifier of at most 60 characters: the function or block under test and the one condition, as in TestDHSnapshotFailedCopyStillRecordsDowntime. The sentence it was tempting to write goes in the comment above the function, or in a t.Run subtest name, which may carry spaces and comes back out of `go test -v` as the sentence it is. The limit was set after the Distant Horizons series landed 49 names between 61 and 79 characters in four days (#575 to #581) against none in the thousand tests before it, and one of them, TestDHSnapshotRunRecordCarriesTheDowntimeEvenWhenTheCopyFailsAndTheServerIsBack, read as a paragraph in a CI failure. Length is a reading cost only: _test.go files are excluded from `wails build`, so a name costs the shipped binary nothing.",
+        "reference": ".claude/rules/backend.md"
       },
       {
         "name": "scheduler colours live in blockMeta",

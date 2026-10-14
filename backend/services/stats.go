@@ -2,6 +2,7 @@ package services
 
 import (
 	"context"
+	"math"
 	"sync"
 	"time"
 
@@ -101,4 +102,17 @@ func (s *StatsService) GetStatsHistory(serverID string) []models.StatsSnapshot {
 	out := make([]models.StatsSnapshot, len(ring))
 	copy(out, ring)
 	return out
+}
+
+// machineCPUPercent turns gopsutil's per-core figure into a share of the whole
+// machine. Process.Percent counts 100 for every logical core the process keeps
+// busy, the way top does, so a JVM spread over eight cores reads 500% or more.
+// The dashboard means "how much of this computer", as Task Manager does, so the
+// figure is divided by the same runtime.NumCPU() gopsutil multiplied by, and
+// clamped because the two time samples are not taken atomically.
+func machineCPUPercent(perCore float64, cores int) float64 {
+	if cores < 1 {
+		cores = 1
+	}
+	return math.Min(perCore/float64(cores), 100)
 }

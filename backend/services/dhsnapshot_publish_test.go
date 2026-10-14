@@ -158,7 +158,7 @@ func partKey(sum string) string { return "dh/parts/" + sum }
 
 // --- a first publish ---
 
-func TestDHPublishFirstPublishSendsEveryPartAssemblesAndWritesLatestLast(t *testing.T) {
+func TestDHPublishFirstRunSendsAllAndWritesLatestLast(t *testing.T) {
 	f := newDHPublishFixture(t)
 	dbs := dhPubDBs()
 	dir, ix := f.stage(dbs, nil, dhPubTime1)
@@ -340,7 +340,7 @@ func TestDHPublishURLUsesThePublicBaseWhenTheDestinationHasOne(t *testing.T) {
 
 // --- a second publish ---
 
-func TestDHPublishSecondPublishSendsTheChangedPartAndCopiesWhatDidNotChange(t *testing.T) {
+func TestDHPublishSecondRunSendsOnlyChangedParts(t *testing.T) {
 	shrinkCopyRange(t, 1500)
 	f := newDHPublishFixture(t)
 	dbs := dhPubDBs()
@@ -424,7 +424,8 @@ func shrinkCopyRange(t *testing.T, n int64) {
 	t.Cleanup(func() { dhCopyRangeBytes = old })
 }
 
-func TestDHPublishPreviousFileThatCannotBeConfirmedIsBuiltFromParts(t *testing.T) {
+// A previous file that cannot be confirmed is built from parts.
+func TestDHPublishUnconfirmedPreviousFileIsBuiltFromParts(t *testing.T) {
 	for name, damage := range map[string]func(f *dhPublishFixture){
 		"missing from the bucket": func(f *dhPublishFixture) {
 			f.bucket.mu.Lock()
@@ -494,7 +495,7 @@ func (h headFails) HeadObject(ctx context.Context, key string) (S3ObjectInfo, bo
 // finds them, so they are never PUT again: R2 can answer such a PUT's 412
 // before reading the body, and Go's transport may report the cut-off write
 // instead (golang/go#11745), which failed real resumed runs.
-func TestDHPublishAPartTheBucketHasButTheIndexDoesNotNameIsNotSentAgain(t *testing.T) {
+func TestDHPublishSkipsPartsTheBucketAlreadyHas(t *testing.T) {
 	f := newDHPublishFixture(t)
 	dbs := dhPubDBs()
 	dir, ix := f.stage(dbs, nil, dhPubTime1)
@@ -565,7 +566,8 @@ func TestDHPublishRepeatedPartsAreSentOnceAndCopiedEachTime(t *testing.T) {
 	}
 }
 
-func TestDHPublishPartNotStagedIsFineWhenTheBucketHasItAtTheRightSize(t *testing.T) {
+// A part that is not staged is fine when the bucket has it at the right size.
+func TestDHPublishUnstagedPartIsFineIfInBucket(t *testing.T) {
 	f := newDHPublishFixture(t)
 	dbs := dhPubDBs()
 	dir1, ix1 := f.stage(dbs, nil, dhPubTime1)
@@ -641,7 +643,7 @@ func TestDHPublishPartNeitherStagedNorUpFailsBeforeAnythingIsSent(t *testing.T) 
 
 // --- failure during the assembly ---
 
-func TestDHPublishAbortsAMidwayAssemblyFailureAndLeavesLatestAlone(t *testing.T) {
+func TestDHPublishAssemblyFailureLeavesLatestAlone(t *testing.T) {
 	for name, failAt := range map[string]struct {
 		op string
 		n  int

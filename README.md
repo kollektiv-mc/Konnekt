@@ -291,3 +291,4 @@ file it and how to send code. To report a vulnerability privately, see
 - [`agent_docs/DEPENDENCIES.md`](agent_docs/DEPENDENCIES.md) — dependency notes
 - [`agent_docs/HEALTH_CHECKLIST.md`](agent_docs/HEALTH_CHECKLIST.md) — codebase health checklist (evergreen yardstick + open backlog)
 - [`agent_docs/HEALTH_LOG.md`](agent_docs/HEALTH_LOG.md) — completed remediation history
+- [`agent_docs/health-log/`](agent_docs/health-log/) — earlier months of that history, one file per month

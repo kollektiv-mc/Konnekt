@@ -454,7 +454,7 @@ func last(labels []string, prefix string) int {
 
 // --- the move: public to private ---
 
-func TestDHLinkPublicToPrivateMovesTheLatestSnapshotInTheRightOrder(t *testing.T) {
+func TestDHLinkPublicToPrivateMoveOrder(t *testing.T) {
 	f := newLinkFixture(t)
 	f.publishPublic()
 	f.assertSnapshotAt("")
@@ -589,7 +589,8 @@ func TestDHLinkMovedIndexIsTheSameIndexWithOnlyPartsBaseRewritten(t *testing.T) 
 	}
 }
 
-func TestDHLinkMoveRebuildsLevelsFromTheOldFileInRangesAndFromPartsWhenItIsGone(t *testing.T) {
+// A move rebuilds levels from the old file in ranges, and from parts when it is gone.
+func TestDHLinkMoveRebuildsLevelsFromRangesOrParts(t *testing.T) {
 	shrinkCopyRange(t, 2*dhTestPart)
 	f := newLinkFixture(t)
 	f.publishPublic()
@@ -797,7 +798,8 @@ func TestDHLinkNeverPublishedChangesOnlyTheRecord(t *testing.T) {
 	}
 }
 
-func TestDHLinkARecordedPrefixWithNothingUnderItIsOnlyARecordChange(t *testing.T) {
+// A recorded prefix with nothing under it is only a record change.
+func TestDHLinkEmptyPrefixIsOnlyARecordChange(t *testing.T) {
 	f := newLinkFixture(t)
 	if err := f.dests.RecordLinkPrefix(f.dest.ID, "dh"); err != nil {
 		t.Fatal(err)
@@ -816,7 +818,7 @@ func TestDHLinkARecordedPrefixWithNothingUnderItIsOnlyARecordChange(t *testing.T
 
 // --- failures ---
 
-func TestDHLinkAMoveCutOffLeavesTheOldLinkAndAPendingTokenThatTheRetryReuses(t *testing.T) {
+func TestDHLinkMoveCutOffKeepsOldLinkAndPendingToken(t *testing.T) {
 	f := newLinkFixture(t)
 	f.publishPublic()
 	copies := f.bucket.copiesSoFar()
@@ -870,7 +872,8 @@ func TestDHLinkAMoveCutOffLeavesTheOldLinkAndAPendingTokenThatTheRetryReuses(t *
 	}
 }
 
-func TestDHLinkARotationCutOffReusesItsPendingTokenAndTheOldLinkKeepsWorking(t *testing.T) {
+// A rotation cut off midway reuses its pending token, and the old link keeps working.
+func TestDHLinkRotationCutOffReusesPendingToken(t *testing.T) {
 	f := newLinkFixture(t)
 	f.publishPublic()
 	if _, err := f.set(true); err != nil {
@@ -904,7 +907,8 @@ func TestDHLinkARotationCutOffReusesItsPendingTokenAndTheOldLinkKeepsWorking(t *
 	f.assertNothingAt(old)
 }
 
-func TestDHLinkAFailedDeleteLeavesTheNewLinkLiveAndSaysTheOldOneStillWorks(t *testing.T) {
+// A failed delete leaves the new link live and says the old one still works.
+func TestDHLinkFailedDeleteKeepsNewLinkAndWarns(t *testing.T) {
 	f := newLinkFixture(t)
 	f.publishPublic()
 	f.bucket.failDelete = func([]string) (int, string) { return http.StatusForbidden, "AccessDenied" }
@@ -947,7 +951,8 @@ func TestDHLinkAFailedDeleteLeavesTheNewLinkLiveAndSaysTheOldOneStillWorks(t *te
 	}
 }
 
-func TestDHLinkWhenOnlyTheSnapshotsStayThePointerIsGoneAndTheLinkIsDead(t *testing.T) {
+// When only the snapshots stay, the pointer is gone and the link is dead.
+func TestDHLinkIsDeadWhenOnlySnapshotsRemain(t *testing.T) {
 	f := newLinkFixture(t)
 	f.publishPublic()
 	f.bucket.failDelete = func(keys []string) (int, string) {
@@ -997,7 +1002,8 @@ func TestDHLinkAStaleBaseThatBecomesLiveAgainIsNotDeleted(t *testing.T) {
 	}
 }
 
-func TestDHLinkARecordThatCannotBeSavedAfterTheMoveLeavesTheOldLinkInUse(t *testing.T) {
+// A record that cannot be saved after the move leaves the old link in use.
+func TestDHLinkUnsavedRecordAfterMoveKeepsOldLink(t *testing.T) {
 	f := newLinkFixture(t)
 	f.publishPublic()
 	// The destination is deleted as the new latest.json is written, the last step
@@ -1151,7 +1157,8 @@ func TestDHLinkGetSnapshotLinkIsTheLatestJSONOfTheCurrentMode(t *testing.T) {
 	}
 }
 
-func TestDHLinkAMoveOfASnapshotWhoseIndexIsNotWhereAPublishPutsItIsRefused(t *testing.T) {
+// A move of a snapshot whose index is not where a publish puts it is refused.
+func TestDHLinkMoveRefusesAMisplacedIndex(t *testing.T) {
 	f := newLinkFixture(t)
 	f.publishPublic()
 	// latest.json pointing at another folder of the bucket's: not where a publish

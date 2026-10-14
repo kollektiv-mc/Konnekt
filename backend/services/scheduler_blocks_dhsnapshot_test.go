@@ -57,7 +57,7 @@ func (f *uploadFixture) execDH(serverID string, cfg map[string]interface{}) (Exe
 
 func TestDHSnapshotBlockDefinition(t *testing.T) {
 	def := commandBlock(t, dhSnapshotBlockID)
-	if def.ID != "action.dhSnapshot" || def.Category != "action" || def.Label != "Distant Horizons Snapshot" {
+	if def.ID != "action.dhSnapshot" || def.Category != "action" || def.Label != "DH Snapshot" {
 		t.Errorf("id %q, category %q, label %q", def.ID, def.Category, def.Label)
 	}
 	if got := strings.Join(def.Effects, ","); got != "stopsServer" {
@@ -474,7 +474,7 @@ func TestSchedulerSetDataDirGivesTheBlocksTheDataDirectory(t *testing.T) {
 
 // --- running the block against real services ---
 
-func TestDHSnapshotRefusesAServerThatIsNotRunningAndTouchesNothing(t *testing.T) {
+func TestDHSnapshotRefusesAStoppedServer(t *testing.T) {
 	f := dhBlockFixture(t)
 	res, out := f.execDH("srv1", dhBlockConfig())
 	if res.Port != "onFailed" || res.Err == nil || !strings.Contains(res.Err.Error(), "not running") {
@@ -508,7 +508,8 @@ func TestDHSnapshotRefusesAnEmptyServerKeyBeforeWarningAnyone(t *testing.T) {
 	}
 }
 
-func TestDHSnapshotUnreachableDestinationRefusesAndTheSecretIsNowhere(t *testing.T) {
+// An unreachable destination refuses the run, and the secret appears nowhere.
+func TestDHSnapshotUnreachableDestinationHidesTheSecret(t *testing.T) {
 	logs := &captureHandler{}
 	prev := slog.Default()
 	slog.SetDefault(slog.New(logs))
@@ -680,7 +681,8 @@ func dhGraph(serverID string, cfg map[string]interface{}) models.Graph {
 	return g
 }
 
-func TestGraphWarningsForTheSnapshotBlockSayTheWarningGoesThroughTheConsole(t *testing.T) {
+// For the snapshot block the advice says the warning goes through the console.
+func TestGraphWarningsSnapshotBlockWarnsViaConsole(t *testing.T) {
 	reg := NewBlockRegistry()
 	registerBuiltins(reg)
 	snap := dhGraph("srv1", dhBlockConfig())
@@ -723,7 +725,8 @@ func TestGraphWarningsMethodAsksRconForASnapshotGraph(t *testing.T) {
 	}
 }
 
-func TestSnapshotNodeMayLeaveItsDestinationEmptyButNotNameAMissingOne(t *testing.T) {
+// A snapshot node may leave its destination empty, but not name a missing one.
+func TestSnapshotNodeDestinationOptionalButMustExist(t *testing.T) {
 	f := newUploadFixture(t)
 	reg := f.s.registry
 	node := func(dest interface{}) models.Graph {
@@ -752,7 +755,8 @@ func TestSnapshotNodeMayLeaveItsDestinationEmptyButNotNameAMissingOne(t *testing
 	}
 }
 
-func TestRunWithAMissingOptionalDestinationRunsAsAFirstLocalSnapshot(t *testing.T) {
+// A run with a missing optional destination runs as a first local snapshot.
+func TestRunWithoutDestinationIsAFirstLocalSnapshot(t *testing.T) {
 	// The engine's own destination check must let an empty optional one through:
 	// the block then fails on its own terms (the server is not running), not
 	// with "destination validation failed".
@@ -846,7 +850,8 @@ func TestDHSnapshotRunsEndToEndAndRestartsTheServer(t *testing.T) {
 	}
 }
 
-func TestDHSnapshotRunRecordCarriesTheDowntimeEvenWhenTheCopyFailsAndTheServerIsBack(t *testing.T) {
+// The run record carries the downtime even when the copy fails, and the server is back.
+func TestDHSnapshotFailedCopyStillRecordsDowntime(t *testing.T) {
 	f := dhBlockFixture(t)
 	logPath := consoleLogFixture(t, f)
 	if err := os.WriteFile(filepath.Join(f.workA, "world", "data", "DistantHorizons.sqlite-wal"), []byte("log"), 0644); err != nil {

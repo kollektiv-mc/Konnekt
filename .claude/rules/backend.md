@@ -27,3 +27,9 @@ Data shapes live in `backend/models/`, and Wails generates the TypeScript
 equivalents on `wails dev`. New logic ships with tests, and
 `backend/services` holds a coverage floor (`go run ./scripts/coverage-floor`)
 that is raised as coverage rises and never lowered to make a build pass.
+
+A test name is an identifier, not a sentence: the thing under test and the one
+condition, at most 60 characters (`TestDHSnapshotFailedCopyStillRecordsDowntime`).
+The sentence goes in the comment above the function or in a `t.Run` subtest
+name, which may carry spaces. The `test names stay readable` invariant in
+`.claude/suite.json` holds the limit.
