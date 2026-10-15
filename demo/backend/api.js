@@ -256,6 +256,8 @@ export const api = {
   GetAppVersion: read("demo"),
   GetDataDir: read("/home/mc/.config/konnekt"),
   GetLogPath: read("/home/mc/.config/konnekt/konnekt.log"),
+  // The visitor's machine is not the demo's host; a typical desktop stands in.
+  GetPhysicalMemoryMB: read(16384),
   OpenDataDir: refuse("Opening the data folder"),
   // The real answer is the visitor's own installed fonts, which no page can read
   // in every browser (the reason the app asks Go). A few families most machines

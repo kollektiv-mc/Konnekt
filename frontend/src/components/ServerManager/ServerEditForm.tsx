@@ -2,9 +2,11 @@ import { useEffect, useState } from 'react'
 import { BrowseJarFile, BrowseDirectory, InspectServerFile } from '../../../wailsjs/go/main/App'
 import { useInstallStore } from '../../stores/useInstallStore'
 import { useServerConfigStore } from '../../stores/useServerConfigStore'
+import { useHostStore } from '../../stores/useHostStore'
 import {
   baseOf,
   dirOf,
+  heapAdvice,
   isLaunchScript,
   mergeRamIntoArgs,
   parseRamFromArgs,
@@ -99,10 +101,17 @@ export function ServerEditForm({
 }: Props) {
   const saveConfig = useServerConfigStore((s) => s.saveConfig)
   const openInstaller = useInstallStore((s) => s.openFor)
+  const physicalMemoryMB = useHostStore((s) => s.physicalMemoryMB)
+  const loadPhysicalMemory = useHostStore((s) => s.loadPhysicalMemory)
   const [form, setForm] = useState<FormState>(config ? configToForm(config) : emptyForm)
   const [advancedMode, setAdvancedMode] = useState(
     config ? config.jvmArgs.some((a) => !a.startsWith('-Xms') && !a.startsWith('-Xmx')) : false,
   )
+
+  // Installed RAM, for the heap advice under the fields. Read once per run.
+  useEffect(() => {
+    void loadPhysicalMemory()
+  }, [loadPhysicalMemory])
 
   // Re-seed when the selection changes, so switching servers in the list does
   // not leave the previous server's values in the fields.
@@ -241,6 +250,13 @@ export function ServerEditForm({
     )
   }
 
+  // Advisory only: it never touches what submit saves. In advanced mode the
+  // heap is whatever -Xmx the expression carries.
+  const advice = heapAdvice(
+    advancedMode ? parseRamFromArgs(form.jvmArgs).maxRam : form.maxRam,
+    physicalMemoryMB,
+  )
+
   const inputClass =
     'bg-surface border-border-subtle text-text-primary placeholder-text-faint focus:border-border-hover border-hairline w-full min-w-0 rounded px-2 py-1.5 font-mono text-xs transition-colors outline-none'
 
@@ -372,6 +388,15 @@ export function ServerEditForm({
             )}
           </div>
         </div>
+      )}
+
+      {advice && (
+        <p
+          role="status"
+          className={`${advice.level === 'strong' ? 'text-danger' : 'text-warning'} text-2xs px-0.5`}
+        >
+          {advice.message}
+        </p>
       )}
 
       <button
