@@ -53,6 +53,8 @@ export function PerformanceSummary({
     cpu: s.cpuPercent,
   }))
 
+  const empty = sparkData.length <= 1
+
   return (
     <div className="flex h-full flex-col gap-2 px-3 py-2">
       <div
@@ -74,13 +76,15 @@ export function PerformanceSummary({
       </div>
 
       {layout === 'expanded' ? null : (
-        <div className="border-border-subtle border-hairline min-h-0 flex-1 overflow-hidden rounded">
-          {sparkData.length > 1 ? (
-            <Suspense fallback={<ChartFallback />}>
-              <SparkChart data={sparkData} />
-            </Suspense>
-          ) : (
-            <div className="text-text-faint flex h-full items-center justify-center text-xs">
+        <div className="border-border-subtle border-hairline relative min-h-0 flex-1 overflow-hidden rounded">
+          {/* Mounted before there is data, with the copy laid over it: the
+              chunk loads and recharts' first render happens on tile mount
+              rather than whenever `GetStatsHistory` resolves (#285). */}
+          <Suspense fallback={empty ? null : <ChartFallback />}>
+            <SparkChart data={sparkData} />
+          </Suspense>
+          {empty && (
+            <div className="text-text-faint pointer-events-none absolute inset-0 flex items-center justify-center text-xs">
               waiting for data…
             </div>
           )}

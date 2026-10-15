@@ -173,6 +173,7 @@ function ExpandedView({ history }: { history: StatsSnapshot[] }) {
     }
   }
 
+  const chartEmpty = chartData.length <= 1
   const latest = history[history.length - 1]
   const latestTps = latest?.tps ?? -1
 
@@ -201,20 +202,21 @@ function ExpandedView({ history }: { history: StatsSnapshot[] }) {
       </div>
 
       {/* chart */}
-      <div className="min-h-0 flex-[3]">
-        {chartData.length > 1 ? (
-          <Suspense fallback={<ChartFallback />}>
-            <HistoryChart
-              data={chartData}
-              animCutoff={animCutoff}
-              anchor={anchor}
-              hidden={hidden}
-              tpsStroke={tpsStroke}
-              onToggleHide={toggleHide}
-            />
-          </Suspense>
-        ) : (
-          <div className="flex h-full items-center justify-center text-sm text-white/20">
+      <div className="relative min-h-0 flex-[3]">
+        {/* Mounted on an empty series so the axes draw and the first render
+            does not wait on the history IPC (#285); the copy sits over it. */}
+        <Suspense fallback={chartEmpty ? null : <ChartFallback />}>
+          <HistoryChart
+            data={chartData}
+            animCutoff={animCutoff}
+            anchor={anchor}
+            hidden={hidden}
+            tpsStroke={tpsStroke}
+            onToggleHide={toggleHide}
+          />
+        </Suspense>
+        {chartEmpty && (
+          <div className="pointer-events-none absolute inset-0 flex items-center justify-center text-sm text-white/20">
             <span className="text-text-faint">
               {history.length === 0
                 ? 'No data yet — start the server to begin recording'
