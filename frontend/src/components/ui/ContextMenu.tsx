@@ -57,8 +57,9 @@ function clamp(x: number, y: number, count: number): MenuPosition {
 // surface. The README pairs that surface with a hairline border; this menu
 // goes without one, on purpose, since the opaque surface already separates it
 // from anything behind it and the line read as a bevel on a panel this small.
-// The near-square corner is radius-sm. Whether the other floating panels
-// follow is #415's question; they still carry a drop shadow from before.
+// The near-square corner is radius-sm. The other floating panels (popover,
+// server tooltip, quick-add menu, select dropdown) share the surface and
+// keep their hairline border.
 //
 // Rows are inset from the panel edge on every side, so a hovered row is a
 // highlight inside the panel rather than a stripe that reaches its edge on
