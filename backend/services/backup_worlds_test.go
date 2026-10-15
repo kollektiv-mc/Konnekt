@@ -184,7 +184,7 @@ func TestGetBackupWorldsRefusals(t *testing.T) {
 
 // A server.properties entry that cannot be read to the end marks no world
 // active, rather than trusting the partial parse's level-name.
-func TestWorldsFromServerZipUnreadablePropertiesMarksNoActiveWorld(t *testing.T) {
+func TestWorldsFromServerZipUnreadableProperties(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "server.zip")
 	f, err := os.Create(path)
 	if err != nil {
