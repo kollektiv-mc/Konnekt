@@ -5,6 +5,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"io"
+	"math"
 	"os"
 	"strconv"
 
@@ -291,9 +292,12 @@ func stringGet(v *nbtValue, key string) string {
 	return c.str
 }
 
+// intGet reads an integral tag as an int32. Every integral tag is stored as an
+// int64, and a level.dat is not ours, so a value outside int32 reads as absent
+// rather than truncating into a wrong number.
 func intGet(v *nbtValue, key string) int32 {
 	c := compoundGet(v, key)
-	if c == nil {
+	if c == nil || c.i64 < math.MinInt32 || c.i64 > math.MaxInt32 {
 		return 0
 	}
 	return int32(c.i64)
@@ -307,9 +311,10 @@ func longGet(v *nbtValue, key string) int64 {
 	return c.i64
 }
 
+// byteGet reads an integral tag as an int8, with intGet's out-of-range rule.
 func byteGet(v *nbtValue, key string) int8 {
 	c := compoundGet(v, key)
-	if c == nil {
+	if c == nil || c.i64 < math.MinInt8 || c.i64 > math.MaxInt8 {
 		return 0
 	}
 	return int8(c.i64)
