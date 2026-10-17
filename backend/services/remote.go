@@ -63,6 +63,8 @@ type RemoteService struct {
 	// mcp is the MCP endpoint's handler (remote_mcp.go, #513), nil until
 	// SetMCPServer; mcpFlags holds its switch and the idle hold.
 	mcp http.Handler
+	// operate names the tools that need konnekt:operate (SetMCPOperateTools).
+	operate map[string]bool
 	mcpFlags
 }
 
@@ -338,6 +340,13 @@ func (s *RemoteService) handler() http.Handler {
 	mux.HandleFunc("GET /ws", s.handleWS)
 	mux.HandleFunc("POST "+RemoteMCPPath, s.handleMCP)
 	mux.HandleFunc("GET "+RemoteMCPPath, s.handleMCP)
+	// The authorization server for the endpoint (#514), 404 with it.
+	for _, p := range RemoteOAuthGETPaths {
+		mux.HandleFunc("GET "+p, s.handleOAuth)
+	}
+	for _, p := range RemoteOAuthPOSTPaths {
+		mux.HandleFunc("POST "+p, s.handleOAuth)
+	}
 	mux.HandleFunc("GET /", s.handleStatic)
 	return s.guard(mux)
 }
@@ -361,13 +370,16 @@ func (s *RemoteService) guard(next http.Handler) http.Handler {
 			return
 		}
 		origin := r.Header.Get("Origin")
-		// The MCP endpoint is the exception to "a write carries an Origin":
-		// its clients are not browsers and send none, and its credential is
-		// a bearer token, which no browser attaches on its own, so there is
-		// nothing for a cross-site page to ride (§ S9.5). An Origin that is
-		// present and foreign is still refused there, as the transport
+		// The MCP endpoint, and the OAuth registration and token endpoints
+		// behind it, are the exception to "a write carries an Origin": their
+		// clients are not browsers and send none, and what they carry is a
+		// bearer token, a code with its PKCE verifier or a registration,
+		// none of which a browser attaches on its own, so there is nothing
+		// for a cross-site page to ride (§ S9.5). The consent form is a
+		// browser's POST and keeps the rule. An Origin that is present and
+		// foreign is still refused everywhere, as the transport
 		// specification requires.
-		mustHaveOrigin := r.URL.Path == "/ws" || (r.Method != http.MethodGet && r.Method != http.MethodHead && r.URL.Path != RemoteMCPPath)
+		mustHaveOrigin := r.URL.Path == "/ws" || (r.Method != http.MethodGet && r.Method != http.MethodHead && !remoteOriginOptional[r.URL.Path])
 		if origin == "" && mustHaveOrigin {
 			http.Error(w, "missing origin", http.StatusForbidden)
 			return
@@ -379,6 +391,9 @@ func (s *RemoteService) guard(next http.Handler) http.Handler {
 		next.ServeHTTP(w, r)
 	})
 }
+
+// remoteOriginOptional lists the write paths a non-browser client posts to.
+var remoteOriginOptional = map[string]bool{RemoteMCPPath: true, RemoteRegisterPath: true, RemoteTokenPath: true}
 
 func (s *RemoteService) hostAllowed(host string) bool {
 	s.mu.Lock()

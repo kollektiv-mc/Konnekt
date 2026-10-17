@@ -489,3 +489,19 @@ func mcpClientLabel(info *mcp.Implementation) string {
 	}
 	return b.String()
 }
+
+// MCPOperateTools names the catalog's tools whose method is operate-tier:
+// the ones a grant needs konnekt:operate for. The listener refuses a call to
+// one on a lesser grant with the step-up challenge (SetMCPOperateTools).
+func MCPOperateTools(d *RemoteDispatcher, tools []MCPTool) []string {
+	if d == nil {
+		return nil
+	}
+	var names []string
+	for _, t := range tools {
+		if tier, ok := d.Tier(t.Method); ok && tier == RemoteTierOperate {
+			names = append(names, t.Name)
+		}
+	}
+	return names
+}

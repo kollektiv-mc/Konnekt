@@ -39,8 +39,13 @@ const (
 	RemoteScopeOperate = "konnekt:operate"
 
 	remoteAccessTokenTTL = time.Hour
-	remoteMaxGrants      = 16
-	remoteClientNameMax  = 60
+	// A refresh token keeps a grant alive for thirty days from its last use
+	// and ninety from its consent, whichever ends first (§ S9.6). A grant
+	// with no refresh token ends with its access token.
+	remoteGrantUnused   = 30 * 24 * time.Hour
+	remoteGrantLifetime = 90 * 24 * time.Hour
+	remoteMaxGrants     = 16
+	remoteClientNameMax = 60
 )
 
 var (
@@ -56,16 +61,32 @@ var (
 
 // remoteGrantRecord is a grant as remote.json holds it.
 type remoteGrantRecord struct {
-	ID         string   `json:"id"`
-	Client     string   `json:"client"`
+	ID     string `json:"id"`
+	Client string `json:"client"`
+	// ClientID is the OAuth client the grant was consented to (#514): a
+	// Client ID Metadata Document URL or a registered id. A refresh is
+	// accepted from that client and no other.
+	ClientID   string   `json:"clientId,omitempty"`
 	Scopes     []string `json:"scopes"`
 	Resource   string   `json:"resource"`
 	AccessHash string   `json:"accessHash"`
-	// AccessExpires is Unix seconds. A grant whose access token has expired
-	// and that has no way to refresh it (#514) is dead and is pruned.
+	// AccessExpires is Unix seconds.
 	AccessExpires int64 `json:"accessExpires"`
-	Created       int64 `json:"created"`
-	LastUsed      int64 `json:"lastUsed,omitempty"`
+	// RefreshHash is the current refresh token; PrevRefreshHash the one it
+	// replaced, kept so a replay of it is recognised and ends the grant
+	// (§ S9.6). Empty for a grant that was issued with no refresh token.
+	RefreshHash     string `json:"refreshHash,omitempty"`
+	PrevRefreshHash string `json:"prevRefreshHash,omitempty"`
+	Created         int64  `json:"created"`
+	LastUsed        int64  `json:"lastUsed,omitempty"`
+}
+
+// remoteTokens is what /token hands a client: the one copy of each.
+type remoteTokens struct {
+	Access    string
+	Refresh   string
+	ExpiresIn int
+	Scopes    []string
 }
 
 // RemoteGrant is what the endpoint learns about an accepted token: the name
@@ -126,12 +147,25 @@ func (a *RemoteAuth) SetConnectorsEnabled(on bool) error {
 	return nil
 }
 
-// IssueGrant creates a grant for client with scopes, good for resource, and
-// returns its id and the one copy of its access token. The caller is the
-// desktop's consent flow (#514): nothing a connector sends reaches here
-// unchecked. client is clamped to something a prompt can show.
+// IssueGrant creates a grant for client with scopes, good for resource, with
+// an access token only, and returns its id and the one copy of that token.
+// Without a refresh token the grant ends with the hour. The consent flow
+// (remote_oauth.go) issues through issueGrantLocked with both tokens; this is
+// the plain form, for tests and for a token minted at the desktop.
 func (a *RemoteAuth) IssueGrant(client string, scopes []string, resource string) (id, token string, err error) {
 	defer a.flush()
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	id, tokens, err := a.issueGrantLocked(client, "", scopes, resource, false)
+	if err != nil {
+		return "", "", err
+	}
+	return id, tokens.Access, nil
+}
+
+// cleanRemoteClient clamps a client's name, which is third-party text, to
+// what a prompt can show.
+func cleanRemoteClient(client string) string {
 	client = cleanRemoteAgent(client)
 	if client == "" {
 		client = "unnamed client"
@@ -139,42 +173,117 @@ func (a *RemoteAuth) IssueGrant(client string, scopes []string, resource string)
 	if len(client) > remoteClientNameMax {
 		client = client[:remoteClientNameMax]
 	}
+	return client
+}
+
+// issueGrantLocked records a grant and mints its tokens. clientID binds a
+// later refresh to the client the user consented to; refresh says whether
+// to mint one. Caller holds a.mu and defers flush.
+func (a *RemoteAuth) issueGrantLocked(client, clientID string, scopes []string, resource string, refresh bool) (string, remoteTokens, error) {
+	client = cleanRemoteClient(client)
 	scopes = normalizeRemoteScopes(scopes)
 	if len(scopes) == 0 {
-		return "", "", ErrRemoteScope
+		return "", remoteTokens{}, ErrRemoteScope
 	}
 	if !strings.HasPrefix(resource, "https://") && !strings.HasPrefix(resource, "http://") || !strings.HasSuffix(resource, RemoteMCPPath) {
-		return "", "", ErrRemoteResource
+		return "", remoteTokens{}, ErrRemoteResource
 	}
-	id, err = newRemoteID()
+	id, err := newRemoteID()
 	if err != nil {
-		return "", "", err
+		return "", remoteTokens{}, err
 	}
-	token, err = newRemoteToken()
+	now := a.now()
+	a.pruneGrantsLocked(now)
+	if len(a.state.Grants) >= remoteMaxGrants {
+		return "", remoteTokens{}, ErrRemoteGrantsFull
+	}
+	rec := remoteGrantRecord{ID: id, Client: client, ClientID: clientID, Scopes: scopes,
+		Resource: strings.ToLower(resource), Created: now.Unix()}
+	tokens, err := a.mintLocked(&rec, refresh)
 	if err != nil {
-		return "", "", err
+		return "", remoteTokens{}, err
 	}
+	a.state.Grants = append(a.state.Grants, rec)
+	if err := a.saveLocked(); err != nil {
+		a.state.Grants = a.state.Grants[:len(a.state.Grants)-1]
+		return "", remoteTokens{}, err
+	}
+	a.dirty = true
+	slog.Info("remote: grant issued", "client", client, "scopes", strings.Join(scopes, " "))
+	return id, tokens, nil
+}
+
+// mintLocked gives rec a fresh access token and, if asked, a fresh refresh
+// token, keeping the one it replaces so a replay is recognised.
+func (a *RemoteAuth) mintLocked(rec *remoteGrantRecord, refresh bool) (remoteTokens, error) {
+	access, err := newRemoteToken()
+	if err != nil {
+		return remoteTokens{}, err
+	}
+	now := a.now()
+	rec.AccessHash = remoteTokenHash(access)
+	rec.AccessExpires = now.Add(remoteAccessTokenTTL).Unix()
+	tokens := remoteTokens{Access: access, ExpiresIn: int(remoteAccessTokenTTL / time.Second), Scopes: slices.Clone(rec.Scopes)}
+	if refresh {
+		token, err := newRemoteToken()
+		if err != nil {
+			return remoteTokens{}, err
+		}
+		rec.PrevRefreshHash = rec.RefreshHash
+		rec.RefreshHash = remoteTokenHash(token)
+		tokens.Refresh = token
+	}
+	return tokens, nil
+}
+
+// RefreshGrant trades a refresh token for new tokens (§ S9.6): the old one
+// stops working at once, and a replay of it ends the grant, since someone
+// other than the client holds it. clientID has to be the grant's. Every
+// failure is ErrRemoteBearer, which /token reports as invalid_grant.
+func (a *RemoteAuth) RefreshGrant(refresh, clientID string) (remoteTokens, error) {
+	defer a.flush()
+	if refresh == "" {
+		return remoteTokens{}, ErrRemoteBearer
+	}
+	hash := remoteTokenHash(refresh)
 	a.mu.Lock()
 	defer a.mu.Unlock()
 	now := a.now()
 	a.pruneGrantsLocked(now)
-	if len(a.state.Grants) >= remoteMaxGrants {
-		return "", "", ErrRemoteGrantsFull
+	for i := range a.state.Grants {
+		g := &a.state.Grants[i]
+		switch hash {
+		case g.RefreshHash:
+			if g.ClientID != clientID {
+				return remoteTokens{}, ErrRemoteBearer
+			}
+			tokens, err := a.mintLocked(g, true)
+			if err != nil {
+				return remoteTokens{}, err
+			}
+			g.LastUsed = now.Unix()
+			if err := a.saveLocked(); err != nil {
+				return remoteTokens{}, err
+			}
+			a.dirty = true
+			return tokens, nil
+		case g.PrevRefreshHash:
+			client := g.Client
+			a.state.Grants = slices.Delete(a.state.Grants, i, i+1)
+			if err := a.saveLocked(); err != nil {
+				slog.Error("remote: save after refresh replay", "error", err)
+			}
+			a.dirty = true
+			slog.Warn("remote: refresh token replayed, grant ended", "client", client)
+			return remoteTokens{}, ErrRemoteBearer
+		}
 	}
-	a.state.Grants = append(a.state.Grants, remoteGrantRecord{
-		ID: id, Client: client, Scopes: scopes, Resource: strings.ToLower(resource),
-		AccessHash: remoteTokenHash(token), AccessExpires: now.Add(remoteAccessTokenTTL).Unix(),
-		Created: now.Unix(),
-	})
-	if err := a.saveLocked(); err != nil {
-		a.state.Grants = a.state.Grants[:len(a.state.Grants)-1]
-		return "", "", err
-	}
-	a.dirty = true
-	slog.Info("remote: grant issued", "client", client, "scopes", strings.Join(scopes, " "))
-	return id, token, nil
+	return remoteTokens{}, ErrRemoteBearer
 }
 
+// normalizeRemoteScopes sorts and deduplicates scopes, adds read to operate
+// (operating a server includes seeing it, and the endpoint's challenge asks
+// for read of every grant), and answers nil for a scope it does not know.
 func normalizeRemoteScopes(scopes []string) []string {
 	var out []string
 	for _, s := range scopes {
@@ -183,6 +292,9 @@ func normalizeRemoteScopes(scopes []string) []string {
 		} else if s != RemoteScopeRead && s != RemoteScopeOperate {
 			return nil
 		}
+	}
+	if slices.Contains(out, RemoteScopeOperate) && !slices.Contains(out, RemoteScopeRead) {
+		out = append(out, RemoteScopeRead)
 	}
 	slices.Sort(out)
 	return out
@@ -267,12 +379,17 @@ func (a *RemoteAuth) RevokeGrant(id string) error {
 	return nil
 }
 
-// pruneGrantsLocked drops grants whose access token has expired. Until #514
-// adds refresh tokens an expired grant has no way back, so it is not kept.
+// pruneGrantsLocked drops the grants that have ended: ninety days after the
+// consent, thirty days after the last use, or, with no refresh token to come
+// back on, when the access token expired.
 func (a *RemoteAuth) pruneGrantsLocked(now time.Time) {
 	kept := a.state.Grants[:0]
 	for _, g := range a.state.Grants {
-		if now.Unix() < g.AccessExpires {
+		last := max(g.LastUsed, g.Created)
+		alive := now.Unix() < g.Created+int64(remoteGrantLifetime/time.Second) &&
+			now.Unix() < last+int64(remoteGrantUnused/time.Second) &&
+			(g.RefreshHash != "" || now.Unix() < g.AccessExpires)
+		if alive {
 			kept = append(kept, g)
 		}
 	}

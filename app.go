@@ -113,6 +113,9 @@ func NewApp() *App {
 	app.remoteAuth = services.NewRemoteAuth()
 	app.remoteAuth.OnRevoke(app.remoteService.CloseSessions)
 	app.remoteService.SetAuthorizer(app.remoteAuth)
+	// A connector's sign-in (#514) ends on the same desktop prompt as an
+	// admin call, after the password.
+	app.remoteAuth.SetConsentApprover(app.remoteApprovals.Ask)
 	// One event for all three, with no payload: the desktop reads the state
 	// back through GetRemoteAccessState.
 	remoteChanged := services.RemoteChangeNotifier(bus)
@@ -145,6 +148,7 @@ func NewApp() *App {
 		slog.Error("mcp: connector catalog", "error", err)
 	}
 	app.remoteService.SetMCPServer(connectorServer)
+	app.remoteService.SetMCPOperateTools(services.MCPOperateTools(dispatcher, mcpTools))
 	return app
 }
 
