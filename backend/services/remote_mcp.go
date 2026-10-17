@@ -1,8 +1,13 @@
 package services
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
+	"fmt"
+	"io"
 	"net/http"
+	"slices"
 	"sync/atomic"
 
 	"github.com/modelcontextprotocol/go-sdk/auth"
@@ -39,6 +44,49 @@ func (s *RemoteService) SetMCPServer(server *mcp.Server) {
 	}
 }
 
+// SetMCPOperateTools names the tools that need konnekt:operate, so a call to
+// one on a read-only grant is refused at the HTTP level with the challenge
+// Claude's clients step up on (§ S9.6), rather than inside the protocol
+// where only the model sees it. MCPOperateTools derives the list from the
+// catalog.
+func (s *RemoteService) SetMCPOperateTools(names []string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.operate = map[string]bool{}
+	for _, n := range names {
+		s.operate[n] = true
+	}
+}
+
+// remoteOAuthServer is the authorization server half of an authorizer
+// (remote_oauth.go). RemoteAuth is the implementation; without it the OAuth
+// routes are 404s and no client can sign in.
+type remoteOAuthServer interface {
+	ServeOAuth(w http.ResponseWriter, r *http.Request) bool
+}
+
+// handleOAuth routes the OAuth endpoints to the authorizer, behind the same
+// switch as /mcp: with no endpoint to sign in to there is nothing to
+// discover.
+func (s *RemoteService) handleOAuth(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Cache-Control", "no-store")
+	s.mu.Lock()
+	handler, authz := s.mcp, s.auth
+	s.mu.Unlock()
+	if handler == nil || !s.mcpOn.Load() {
+		http.NotFound(w, r)
+		return
+	}
+	server, ok := authz.(remoteOAuthServer)
+	if !ok {
+		http.NotFound(w, r)
+		return
+	}
+	if server.ServeOAuth(w, r) {
+		s.touch()
+	}
+}
+
 // SetMCPEnabled is the switch. Off, the endpoint does not exist.
 func (s *RemoteService) SetMCPEnabled(on bool) { s.mcpOn.Store(on) }
 
@@ -63,7 +111,7 @@ func (s *RemoteService) HoldOpen() bool { return s.holdOpen.Load() }
 func (s *RemoteService) handleMCP(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Cache-Control", "no-store")
 	s.mu.Lock()
-	handler, authz := s.mcp, s.auth
+	handler, authz, operate := s.mcp, s.auth, s.operate
 	s.mu.Unlock()
 	if handler == nil || !s.mcpOn.Load() {
 		http.NotFound(w, r)
@@ -86,15 +134,51 @@ func (s *RemoteService) handleMCP(w http.ResponseWriter, r *http.Request) {
 	// what the verifier said into the request context, and answers 401 with
 	// the challenge otherwise. The tool handler reads the context back
 	// through req.Extra.TokenInfo for the caller's name and scopes.
+	// The scope on the challenge is what a client asks for at sign-in;
+	// every grant carries it, since operating a server includes seeing it.
 	require := auth.RequireBearerToken(verifier.VerifyBearer, &auth.RequireBearerTokenOptions{
 		ResourceMetadataURL: remoteResourceMetadataURL(r.Host),
+		Scopes:              []string{RemoteScopeRead},
 	})
 	require(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if tool, ok := peekMCPToolCall(r); ok && operate[tool] {
+			if info := auth.TokenInfoFromContext(r.Context()); info != nil && !slices.Contains(info.Scopes, RemoteScopeOperate) {
+				// The step-up challenge (RFC 6750 § 3.1): the client takes
+				// the user back through consent for the missing scope.
+				w.Header().Set("WWW-Authenticate", fmt.Sprintf(`Bearer error="insufficient_scope", scope=%q, resource_metadata=%q`,
+					RemoteScopeOperate, remoteResourceMetadataURL(r.Host)))
+				http.Error(w, "insufficient scope: "+tool+" needs "+RemoteScopeOperate, http.StatusForbidden)
+				return
+			}
+		}
 		// An authorized call is activity (§ S8.8); a refused one is not, or
 		// anyone with the URL could hold the listener open.
 		s.touch()
 		handler.ServeHTTP(w, r)
 	})).ServeHTTP(w, r)
+}
+
+// peekMCPToolCall reads the tool a JSON-RPC body calls, if it is a
+// tools/call, and leaves the body for the transport to read again.
+func peekMCPToolCall(r *http.Request) (string, bool) {
+	body, err := io.ReadAll(io.LimitReader(r.Body, remoteMaxBody+1))
+	if closeErr := r.Body.Close(); closeErr != nil && err == nil {
+		err = closeErr
+	}
+	r.Body = io.NopCloser(bytes.NewReader(body))
+	if err != nil {
+		return "", false
+	}
+	var msg struct {
+		Method string `json:"method"`
+		Params struct {
+			Name string `json:"name"`
+		} `json:"params"`
+	}
+	if json.Unmarshal(body, &msg) != nil || msg.Method != "tools/call" || msg.Params.Name == "" {
+		return "", false
+	}
+	return msg.Params.Name, true
 }
 
 // mcpChallenge is the 401 a client starts sign-in on (§ S9.5): the
