@@ -141,6 +141,15 @@ func (d *RemoteDispatcher) Tier(method string) (RemoteTier, bool) {
 	return m.tier, ok
 }
 
+// Arity reports how many arguments an allowlisted method takes, or false if
+// it has none. The MCP catalog names a tool's inputs in the method's order, so
+// a tool with the wrong number fails when the server is built, not when
+// Claude calls it.
+func (d *RemoteDispatcher) Arity(method string) (int, bool) {
+	m, ok := d.methods[method]
+	return len(m.in), ok
+}
+
 // MethodsInTier lists the allowlisted methods of one tier, sorted. The
 // listener tells a signed-in browser which of its calls will wait on the
 // desktop, so it can say so instead of looking hung.
