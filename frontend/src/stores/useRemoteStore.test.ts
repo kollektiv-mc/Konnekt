@@ -19,6 +19,7 @@ const state = (over: Partial<RemoteAccessState> = {}): models.RemoteAccessState 
     pendingDevices: [],
     approvals: [],
     tunnel: { status: 'off', url: '', error: '', percent: 0, version: '2026.9.3', named: NONE },
+    connectors: { enabled: false, url: '', grants: [] },
     ...over,
   })
 

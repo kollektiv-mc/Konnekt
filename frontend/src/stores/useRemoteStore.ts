@@ -20,8 +20,14 @@ import type { models } from '../../wailsjs/go/models'
 /** The generated classes without their converter methods, so a plain object is one too. */
 export type TunnelState = Omit<models.TunnelState, 'convertValues'>
 export type NamedTunnel = models.NamedTunnel
-export type RemoteAccessState = Omit<models.RemoteAccessState, 'convertValues' | 'tunnel'> & {
+export type ConnectorsState = Omit<models.ConnectorsState, 'convertValues'>
+export type RemoteGrant = models.RemoteGrant
+export type RemoteAccessState = Omit<
+  models.RemoteAccessState,
+  'convertValues' | 'tunnel' | 'connectors'
+> & {
   tunnel: TunnelState
+  connectors: ConnectorsState
 }
 export type RemoteDevice = models.RemoteDevice
 export type RemotePendingDevice = models.RemotePendingDevice
@@ -44,6 +50,7 @@ const OFF: RemoteAccessState = {
     version: '',
     named: { hostname: '', port: 0, tokenSet: false },
   },
+  connectors: { enabled: false, url: '', grants: [] },
 }
 
 interface RemoteStore {

@@ -181,6 +181,8 @@ export function RestartServer(arg1:string):Promise<void>;
 
 export function RestoreBackup(arg1:string,arg2:string):Promise<void>;
 
+export function RevokeRemoteGrant(arg1:string):Promise<void>;
+
 export function RevokeRemoteSessions():Promise<void>;
 
 export function RotateSnapshotLink(arg1:string):Promise<models.SnapshotLinkResult>;
@@ -214,6 +216,8 @@ export function SetActiveServerID(arg1:string):Promise<void>;
 export function SetActiveWorld(arg1:string,arg2:string):Promise<void>;
 
 export function SetLocalMCPEnabled(arg1:boolean):Promise<void>;
+
+export function SetRemoteConnectorsEnabled(arg1:boolean):Promise<void>;
 
 export function SetRemotePassword(arg1:string):Promise<void>;
 

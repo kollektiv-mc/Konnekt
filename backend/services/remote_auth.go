@@ -59,6 +59,8 @@ type RemoteAuth struct {
 	// under mu where the change happens and spent by flush once mu is free.
 	onChange func()
 	dirty    bool
+	// oauth is the authorization server's working state (remote_oauth.go).
+	oauth remoteOAuthState
 
 	// verifyMu serialises argon2: one derivation holds 64 MiB, and without this
 	// a burst of sign-ins would hold that many at once.
@@ -139,6 +141,13 @@ const (
 type remoteAuthState struct {
 	Password string               `json:"password,omitempty"`
 	Devices  []remoteDeviceRecord `json:"devices,omitempty"`
+	// Connectors is the "Allow Claude connectors" switch (#513), and Grants
+	// are the MCP clients it has let in (remote_grants.go).
+	Connectors bool                `json:"connectors,omitempty"`
+	Grants     []remoteGrantRecord `json:"grants,omitempty"`
+	// Clients are the OAuth clients that registered (#514), identities with
+	// no credential, which is why a password change leaves them.
+	Clients []remoteClientRecord `json:"clients,omitempty"`
 }
 
 type remoteDeviceRecord struct {
@@ -192,6 +201,7 @@ func NewRemoteAuth() *RemoteAuth {
 		sessions: map[[sha256.Size]byte]*remoteSessionEntry{},
 		pending:  map[string]*remotePendingEntry{},
 		buckets:  map[string]*remoteLoginBucket{},
+		oauth:    newRemoteOAuthState(),
 	}
 }
 
@@ -296,9 +306,22 @@ func (a *RemoteAuth) SetPassword(password string) error {
 	a.buckets = map[string]*remoteLoginBucket{}
 	// A pending request remembers that the old password was right.
 	a.pending = map[string]*remotePendingEntry{}
+	// So does a consent page or a code: both were earned with it.
+	a.oauth.consents = map[string]*remoteConsent{}
+	a.oauth.codes = map[string]*remoteCode{}
 	revoked, notify := a.dropSessionsLocked(func(*remoteSessionEntry) bool { return true })
+	// A grant was consented to with the old password (#514), so it goes the
+	// way the sessions do. Already saved above with the hash; the grants are
+	// dropped from the saved state too.
+	grants := len(a.state.Grants)
+	a.state.Grants = nil
+	if grants > 0 {
+		if err := a.saveLocked(); err != nil {
+			slog.Error("remote: drop grants with the password", "error", err)
+		}
+	}
 	a.mu.Unlock()
-	slog.Info("remote: password set", "sessionsEnded", len(revoked))
+	slog.Info("remote: password set", "sessionsEnded", len(revoked), "grantsEnded", grants)
 	notifyRevoked(notify, revoked)
 	return nil
 }
