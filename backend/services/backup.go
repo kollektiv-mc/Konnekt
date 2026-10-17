@@ -1175,9 +1175,13 @@ func worldsFromServerZip(files []*zip.File) []models.WorldSystem {
 	for _, f := range files {
 		if f.Name == "server.properties" {
 			if rc, err := f.Open(); err == nil {
-				props := parsePropertiesReader(rc)
+				props, perr := parseProperties(rc)
 				rc.Close()
-				activeName = props["level-name"]
+				if perr != nil {
+					slog.Warn("backups: server.properties unreadable, no active world marked", "error", perr)
+				} else {
+					activeName = props["level-name"]
+				}
 			}
 			break
 		}
@@ -1310,25 +1314,6 @@ func worldsFromSingleRootWorldZip(worldName string, files []*zip.File) []models.
 		}
 	}
 	return []models.WorldSystem{sys}
-}
-
-// parsePropertiesReader reads key=value lines from a Java-style properties reader.
-func parsePropertiesReader(r io.Reader) map[string]string {
-	props := make(map[string]string)
-	data, err := io.ReadAll(r)
-	if err != nil {
-		return props
-	}
-	for _, line := range strings.Split(string(data), "\n") {
-		line = strings.TrimSpace(line)
-		if line == "" || strings.HasPrefix(line, "#") {
-			continue
-		}
-		if i := strings.IndexByte(line, '='); i >= 0 {
-			props[strings.TrimSpace(line[:i])] = strings.TrimSpace(line[i+1:])
-		}
-	}
-	return props
 }
 
 // ─── Helpers ───────────────────────────────────────────────────────────────

@@ -5,8 +5,20 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"testing"
 )
+
+func TestParsePropertiesRules(t *testing.T) {
+	in := "# a comment\n\n  level-name = alpha  \nno-equals-here\nmotd=a=b\n"
+	got, err := parseProperties(strings.NewReader(in))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(got) != 2 || got["level-name"] != "alpha" || got["motd"] != "a=b" {
+		t.Errorf("parseProperties = %v, want level-name=alpha and motd=a=b only", got)
+	}
+}
 
 func TestWritePropertyRefusesALineBreak(t *testing.T) {
 	const original = "gamemode=survival\nmotd=hello\n"

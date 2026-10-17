@@ -182,11 +182,58 @@ func TestGetBackupWorldsRefusals(t *testing.T) {
 	}
 }
 
-func TestParsePropertiesReader(t *testing.T) {
-	in := "# a comment\n\n  level-name = alpha  \nno-equals-here\nmotd=a=b\n"
-	got := parsePropertiesReader(strings.NewReader(in))
-	if len(got) != 2 || got["level-name"] != "alpha" || got["motd"] != "a=b" {
-		t.Errorf("parsePropertiesReader = %v, want level-name=alpha and motd=a=b only", got)
+// A server.properties entry that cannot be read to the end marks no world
+// active, rather than trusting the partial parse's level-name.
+func TestWorldsFromServerZipUnreadableProperties(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "server.zip")
+	f, err := os.Create(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	w := zip.NewWriter(f)
+	// Stored, not deflated, so the damaged byte below fails the checksum at
+	// the end of the read rather than surfacing as a decompression error.
+	for _, e := range []struct{ name, body string }{
+		{"server.properties", "level-name=alpha\nmotd=hello\n"},
+		{"alpha/level.dat", "x"},
+	} {
+		fw, err := w.CreateHeader(&zip.FileHeader{Name: e.name, Method: zip.Store})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := fw.Write([]byte(e.body)); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := w.Close(); err != nil {
+		t.Fatal(err)
+	}
+	if err := f.Close(); err != nil {
+		t.Fatal(err)
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// The stored body sits verbatim in the archive; damage a byte after level-name.
+	at := strings.Index(string(data), "motd=hello")
+	if at < 0 {
+		t.Fatal("stored server.properties body not found in the archive")
+	}
+	data[at+len("motd=")] = 'j'
+	writeBytes(t, path, data)
+
+	r, err := zip.OpenReader(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer r.Close()
+	systems := worldsFromServerZip(r.File)
+	if len(systems) != 1 || systems[0].Name != "alpha" {
+		t.Fatalf("systems = %+v, want the one world alpha", systems)
+	}
+	if systems[0].Active {
+		t.Error("alpha marked active from an unreadable server.properties")
 	}
 }
 
