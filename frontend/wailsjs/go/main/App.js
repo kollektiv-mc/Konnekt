@@ -358,6 +358,10 @@ export function RestoreBackup(arg1, arg2) {
   return window['go']['main']['App']['RestoreBackup'](arg1, arg2);
 }
 
+export function RevokeAllRemoteGrants() {
+  return window['go']['main']['App']['RevokeAllRemoteGrants']();
+}
+
 export function RevokeRemoteGrant(arg1) {
   return window['go']['main']['App']['RevokeRemoteGrant'](arg1);
 }

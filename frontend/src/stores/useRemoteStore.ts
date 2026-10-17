@@ -7,8 +7,12 @@ import {
   ForgetRemoteTunnel,
   GetRemoteAccessState,
   RemoveRemoteDevice,
+  RevokeAllRemoteGrants,
+  RevokeRemoteGrant,
   RevokeRemoteSessions,
   SaveRemoteTunnel,
+  SetLocalMCPEnabled,
+  SetRemoteConnectorsEnabled,
   SetRemotePassword,
   StartRemoteAccess,
   StartRemoteTunnel,
@@ -22,12 +26,14 @@ export type TunnelState = Omit<models.TunnelState, 'convertValues'>
 export type NamedTunnel = models.NamedTunnel
 export type ConnectorsState = Omit<models.ConnectorsState, 'convertValues'>
 export type RemoteGrant = models.RemoteGrant
+export type LocalMCPState = models.LocalMCPState
 export type RemoteAccessState = Omit<
   models.RemoteAccessState,
-  'convertValues' | 'tunnel' | 'connectors'
+  'convertValues' | 'tunnel' | 'connectors' | 'localMcp'
 > & {
   tunnel: TunnelState
   connectors: ConnectorsState
+  localMcp: LocalMCPState
 }
 export type RemoteDevice = models.RemoteDevice
 export type RemotePendingDevice = models.RemotePendingDevice
@@ -51,6 +57,7 @@ const OFF: RemoteAccessState = {
     named: { hostname: '', port: 0, tokenSet: false },
   },
   connectors: { enabled: false, url: '', grants: [] },
+  localMcp: { enabled: false, running: false, addr: '', command: '', executable: '' },
 }
 
 interface RemoteStore {
@@ -77,6 +84,13 @@ interface RemoteStore {
   removeDevice: (deviceId: string) => Promise<void>
   revokeSessions: () => Promise<void>
   answerApproval: (id: string, allow: boolean) => Promise<void>
+  /** "Allow Claude on this computer" (#511): the loopback bridge endpoint. */
+  setLocalMCPEnabled: (on: boolean) => Promise<void>
+  /** "Allow Claude connectors" (#513): the MCP endpoint on the listener. */
+  setConnectorsEnabled: (on: boolean) => Promise<void>
+  /** Ends one connector's grant (#514); it signs in again from scratch. */
+  revokeGrant: (id: string) => Promise<void>
+  revokeAllGrants: () => Promise<void>
 }
 
 /**
@@ -132,5 +146,9 @@ export const useRemoteStore = create<RemoteStore>((set, get) => {
     removeDevice: (deviceId) => act(() => RemoveRemoteDevice(deviceId)),
     revokeSessions: () => act(() => RevokeRemoteSessions()),
     answerApproval: (id, allow) => act(() => AnswerRemoteApproval(id, allow)),
+    setLocalMCPEnabled: (on) => act(() => SetLocalMCPEnabled(on)),
+    setConnectorsEnabled: (on) => act(() => SetRemoteConnectorsEnabled(on)),
+    revokeGrant: (id) => act(() => RevokeRemoteGrant(id)),
+    revokeAllGrants: () => act(() => RevokeAllRemoteGrants()),
   }
 })

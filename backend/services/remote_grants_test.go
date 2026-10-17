@@ -92,6 +92,32 @@ func TestGrantsPersistAndRevoke(t *testing.T) {
 	}
 }
 
+// "Revoke all" in Settings (#515) ends every grant at once; with none to end
+// it is a no-op, and a grant the user issued by hand carries no redirect host.
+func TestRevokeGrantsEndsEveryGrant(t *testing.T) {
+	dir := t.TempDir()
+	a := newTestAuthIn(t, dir)
+	if err := a.RevokeGrants(); err != nil {
+		t.Fatalf("with nothing to revoke: %v", err)
+	}
+	_, first := issueTestGrant(t, a, "claude.ai", RemoteScopeRead)
+	_, second := issueTestGrant(t, a, "Claude Code", RemoteScopeOperate)
+	if got := a.Grants(); len(got) != 2 || got[0].Redirect != "" {
+		t.Fatalf("before: %+v", got)
+	}
+	if err := a.RevokeGrants(); err != nil {
+		t.Fatal(err)
+	}
+	for _, token := range []string{first, second} {
+		if _, err := a.AuthorizeBearer(token, testResource); !errors.Is(err, ErrRemoteBearer) {
+			t.Errorf("token after revoke all: %v", err)
+		}
+	}
+	if got := newTestAuthIn(t, dir).Grants(); len(got) != 0 {
+		t.Errorf("after restart: %+v", got)
+	}
+}
+
 // A grant was consented to with the password; a new password ends it, as it
 // ends every session (#514).
 func TestPasswordChangeEndsEveryGrant(t *testing.T) {

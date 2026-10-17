@@ -747,7 +747,7 @@ func TestOAuthCIMDClientSignsInByItsDocument(t *testing.T) {
 		t.Errorf("scope %v", tokens["scope"])
 	}
 	grants := f.auth.Grants()
-	if len(grants) != 1 || grants[0].Client != "Claude Code" {
+	if len(grants) != 1 || grants[0].Client != "Claude Code" || grants[0].Redirect != "127.0.0.1" {
 		t.Errorf("grants %+v", grants)
 	}
 	// A refresh from a registered client with the same name is not the same

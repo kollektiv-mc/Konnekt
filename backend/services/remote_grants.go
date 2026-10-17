@@ -66,7 +66,9 @@ type remoteGrantRecord struct {
 	// ClientID is the OAuth client the grant was consented to (#514): a
 	// Client ID Metadata Document URL or a registered id. A refresh is
 	// accepted from that client and no other.
-	ClientID   string   `json:"clientId,omitempty"`
+	ClientID string `json:"clientId,omitempty"`
+	// Redirect is the host the sign-in went back to, for Settings.
+	Redirect   string   `json:"redirect,omitempty"`
 	Scopes     []string `json:"scopes"`
 	Resource   string   `json:"resource"`
 	AccessHash string   `json:"accessHash"`
@@ -156,7 +158,7 @@ func (a *RemoteAuth) IssueGrant(client string, scopes []string, resource string)
 	defer a.flush()
 	a.mu.Lock()
 	defer a.mu.Unlock()
-	id, tokens, err := a.issueGrantLocked(client, "", scopes, resource, false)
+	id, tokens, err := a.issueGrantLocked(client, "", "", scopes, resource, false)
 	if err != nil {
 		return "", "", err
 	}
@@ -177,9 +179,10 @@ func cleanRemoteClient(client string) string {
 }
 
 // issueGrantLocked records a grant and mints its tokens. clientID binds a
-// later refresh to the client the user consented to; refresh says whether
-// to mint one. Caller holds a.mu and defers flush.
-func (a *RemoteAuth) issueGrantLocked(client, clientID string, scopes []string, resource string, refresh bool) (string, remoteTokens, error) {
+// later refresh to the client the user consented to, redirect is the host
+// the sign-in went back to, and refresh says whether to mint one. Caller
+// holds a.mu and defers flush.
+func (a *RemoteAuth) issueGrantLocked(client, clientID, redirect string, scopes []string, resource string, refresh bool) (string, remoteTokens, error) {
 	client = cleanRemoteClient(client)
 	scopes = normalizeRemoteScopes(scopes)
 	if len(scopes) == 0 {
@@ -197,7 +200,7 @@ func (a *RemoteAuth) issueGrantLocked(client, clientID string, scopes []string, 
 	if len(a.state.Grants) >= remoteMaxGrants {
 		return "", remoteTokens{}, ErrRemoteGrantsFull
 	}
-	rec := remoteGrantRecord{ID: id, Client: client, ClientID: clientID, Scopes: scopes,
+	rec := remoteGrantRecord{ID: id, Client: client, ClientID: clientID, Redirect: redirect, Scopes: scopes,
 		Resource: strings.ToLower(resource), Created: now.Unix()}
 	tokens, err := a.mintLocked(&rec, refresh)
 	if err != nil {
@@ -350,7 +353,7 @@ func (a *RemoteAuth) Grants() []models.RemoteGrant {
 	out := make([]models.RemoteGrant, 0, len(a.state.Grants))
 	for _, g := range a.state.Grants {
 		out = append(out, models.RemoteGrant{
-			ID: g.ID, Client: g.Client, Scopes: slices.Clone(g.Scopes),
+			ID: g.ID, Client: g.Client, Redirect: g.Redirect, Scopes: slices.Clone(g.Scopes),
 			CreatedAt: g.Created * 1000, LastUsed: g.LastUsed * 1000, ExpiresAt: g.AccessExpires * 1000,
 		})
 	}
@@ -376,6 +379,25 @@ func (a *RemoteAuth) RevokeGrant(id string) error {
 	}
 	a.dirty = true
 	slog.Info("remote: grant revoked", "client", client)
+	return nil
+}
+
+// RevokeGrants ends every grant (#515).
+func (a *RemoteAuth) RevokeGrants() error {
+	defer a.flush()
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	if len(a.state.Grants) == 0 {
+		return nil
+	}
+	previous := a.state.Grants
+	a.state.Grants = nil
+	if err := a.saveLocked(); err != nil {
+		a.state.Grants = previous
+		return err
+	}
+	a.dirty = true
+	slog.Info("remote: every grant revoked", "count", len(previous))
 	return nil
 }
 

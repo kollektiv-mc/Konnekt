@@ -157,8 +157,9 @@ func (s *LocalMCPService) Addr() string {
 }
 
 // State is what the desktop shows. command is the setup command's executable.
-func (s *LocalMCPService) State(command string) models.LocalMCPState {
-	return models.LocalMCPState{Enabled: s.Enabled(), Running: s.Running(), Addr: s.Addr(), Command: command}
+func (s *LocalMCPService) State(executable string) models.LocalMCPState {
+	return models.LocalMCPState{Enabled: s.Enabled(), Running: s.Running(), Addr: s.Addr(),
+		Command: fmt.Sprintf("%q mcp", executable), Executable: executable}
 }
 
 // SetEnabled moves the switch, persists it, and starts or stops the endpoint

@@ -58,6 +58,9 @@ type RemoteAccessState struct {
 	// connectors" switch, the URL a connector is given, and the grants that
 	// hold a token right now.
 	Connectors ConnectorsState `json:"connectors"`
+	// LocalMCP is the local bridge's switch and endpoint (#511), read with
+	// the rest so Settings has one state to draw.
+	LocalMCP LocalMCPState `json:"localMcp"`
 }
 
 // ConnectorsState is what the desktop shows about the MCP endpoint on the
@@ -74,8 +77,12 @@ type ConnectorsState struct {
 // (#513, #514): who it is, what it may do, and when its token was last seen.
 // The token itself is never here.
 type RemoteGrant struct {
-	ID        string   `json:"id"`
-	Client    string   `json:"client"`
+	ID     string `json:"id"`
+	Client string `json:"client"`
+	// Redirect is the host the sign-in was sent back to (#514): claude.ai for
+	// a hosted client, localhost for Claude Code. "" for a grant minted
+	// without a sign-in.
+	Redirect  string   `json:"redirect"`
 	Scopes    []string `json:"scopes"`
 	CreatedAt int64    `json:"createdAt"` // Unix ms
 	LastUsed  int64    `json:"lastUsed"`  // Unix ms, 0 before its first call
@@ -112,4 +119,7 @@ type LocalMCPState struct {
 	Running bool   `json:"running"`
 	Addr    string `json:"addr"`    // 127.0.0.1:<port> while running, else ""
 	Command string `json:"command"` // what to register with a client: "<exe>" mcp
+	// Executable is the path on its own, for a client configured as a JSON
+	// entry rather than a command line.
+	Executable string `json:"executable"`
 }

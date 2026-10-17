@@ -135,9 +135,15 @@ func (b bearerTransport) RoundTrip(r *http.Request) (*http.Response, error) {
 // mcpBridgeCommand is what a client registers: this executable, then "mcp".
 // Settings shows it (#515) beside the `claude mcp add` line.
 func mcpBridgeCommand() string {
+	return fmt.Sprintf("%q mcp", mcpBridgeExecutable())
+}
+
+// mcpBridgeExecutable is this executable's path, or "konnekt" when the OS
+// will not say.
+func mcpBridgeExecutable() string {
 	exe, err := os.Executable()
 	if err != nil {
-		exe = "konnekt"
+		return "konnekt"
 	}
-	return fmt.Sprintf("%q mcp", exe)
+	return exe
 }
