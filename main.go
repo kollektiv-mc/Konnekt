@@ -1,12 +1,15 @@
 package main
 
 import (
+	"context"
 	"embed"
+	"fmt"
 	"io/fs"
 	"log/slog"
 	"os"
 	"runtime"
 
+	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/wailsapp/wails/v2"
 	"github.com/wailsapp/wails/v2/pkg/logger"
 	"github.com/wailsapp/wails/v2/pkg/options"
@@ -27,6 +30,21 @@ var assets embed.FS
 var appIcon []byte
 
 func main() {
+	// `konnekt mcp` is the local MCP bridge (#511): a stdio process for Claude
+	// Code or Claude Desktop, from the same binary. Decided before anything
+	// else, so it opens no window, takes no SingleInstanceLock and writes
+	// nothing to stdout but MCP. It logs to stderr, which the client keeps,
+	// rather than to konnekt.log, which is the app's.
+	if len(os.Args) > 1 && os.Args[1] == "mcp" {
+		// stderr is the client's to keep; stdout is the protocol.
+		slog.SetDefault(slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelWarn})))
+		if err := runMCPBridge(context.Background(), services.DataDir(), &mcp.StdioTransport{}); err != nil {
+			fmt.Fprintln(os.Stderr, "konnekt mcp:", err)
+			os.Exit(1)
+		}
+		return
+	}
+
 	// Before wails.Run, so a failure to start the window is itself logged
 	// somewhere retrievable. A packaged GUI build has no terminal attached, and
 	// this used to be a bare println into nothing.

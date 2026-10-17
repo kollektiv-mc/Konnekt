@@ -692,6 +692,24 @@ export namespace models {
 	        this.latest = source["latest"];
 	    }
 	}
+	export class LocalMCPState {
+	    enabled: boolean;
+	    running: boolean;
+	    addr: string;
+	    command: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new LocalMCPState(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.enabled = source["enabled"];
+	        this.running = source["running"];
+	        this.addr = source["addr"];
+	        this.command = source["command"];
+	    }
+	}
 	export class ModDependency {
 	    projectId: string;
 	    versionId: string;
