@@ -20,6 +20,8 @@ function seed(over: Record<string, unknown> = {}) {
       pendingDevices: [],
       approvals: [],
       tunnel: { status: 'off', url: '', error: '', percent: 0, version: '2026.9.3' },
+      connectors: { enabled: false, url: '', grants: [] },
+      localMcp: { enabled: false, running: false, addr: '', command: '', executable: '' },
       ...over,
     } as unknown as RemoteAccessState,
     loaded: true,
@@ -32,6 +34,36 @@ const chip = () => screen.getByRole('button', { name: 'Remote access is on. Clic
 describe('RemoteIndicator', () => {
   it('is not rendered while remote access is off', () => {
     seed({ running: false, clients: 2 })
+    const { container } = render(<RemoteIndicator onOpen={() => {}} />)
+    expect(container.firstChild).toBeNull()
+  })
+
+  it('reads "Claude on" with the bridge up and the listener off', () => {
+    seed({ running: false, localMcp: { enabled: true, running: true, addr: '127.0.0.1:1' } })
+    render(<RemoteIndicator onOpen={() => {}} />)
+    const button = screen.getByRole('button', {
+      name: "Claude's access to this computer is on. Click to manage.",
+    })
+    expect(button.textContent).toBe('Claude on')
+  })
+
+  it('names Claude beside the listener for the bridge or the connectors', () => {
+    seed({ localMcp: { enabled: true, running: true, addr: '127.0.0.1:1' } })
+    render(<RemoteIndicator onOpen={() => {}} />)
+    expect(chip().textContent).toBe('Remote on · Claude')
+    cleanup()
+    seed({
+      clients: 1,
+      connectors: { enabled: true, url: 'https://mc.example.com/mcp', grants: [] },
+    })
+    render(<RemoteIndicator onOpen={() => {}} />)
+    expect(chip().textContent).toBe('Remote on · 1 browser · Claude')
+    cleanup()
+    // Connectors switched on do not count while the listener is down.
+    seed({
+      running: false,
+      connectors: { enabled: true, url: 'https://mc.example.com/mcp', grants: [] },
+    })
     const { container } = render(<RemoteIndicator onOpen={() => {}} />)
     expect(container.firstChild).toBeNull()
   })

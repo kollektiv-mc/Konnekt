@@ -54,6 +54,39 @@ type RemoteAccessState struct {
 	// Tunnel is the public way in: off unless switched on, and only while the
 	// listener runs.
 	Tunnel TunnelState `json:"tunnel"`
+	// Connectors is Claude's way in over the tunnel (#513): the "Allow Claude
+	// connectors" switch, the URL a connector is given, and the grants that
+	// hold a token right now.
+	Connectors ConnectorsState `json:"connectors"`
+	// LocalMCP is the local bridge's switch and endpoint (#511), read with
+	// the rest so Settings has one state to draw.
+	LocalMCP LocalMCPState `json:"localMcp"`
+}
+
+// ConnectorsState is what the desktop shows about the MCP endpoint on the
+// remote listener (#513). URL is "https://<named hostname>/mcp" once a named
+// tunnel is configured, else "": the endpoint has no address a connector can
+// be given before then.
+type ConnectorsState struct {
+	Enabled bool          `json:"enabled"`
+	URL     string        `json:"url"`
+	Grants  []RemoteGrant `json:"grants"`
+}
+
+// RemoteGrant is one MCP client's standing permission to call the endpoint
+// (#513, #514): who it is, what it may do, and when its token was last seen.
+// The token itself is never here.
+type RemoteGrant struct {
+	ID     string `json:"id"`
+	Client string `json:"client"`
+	// Redirect is the host the sign-in was sent back to (#514): claude.ai for
+	// a hosted client, localhost for Claude Code. "" for a grant minted
+	// without a sign-in.
+	Redirect  string   `json:"redirect"`
+	Scopes    []string `json:"scopes"`
+	CreatedAt int64    `json:"createdAt"` // Unix ms
+	LastUsed  int64    `json:"lastUsed"`  // Unix ms, 0 before its first call
+	ExpiresAt int64    `json:"expiresAt"` // Unix ms; the access token's end
 }
 
 // TunnelState is what the desktop shows about the tunnel.
@@ -86,4 +119,7 @@ type LocalMCPState struct {
 	Running bool   `json:"running"`
 	Addr    string `json:"addr"`    // 127.0.0.1:<port> while running, else ""
 	Command string `json:"command"` // what to register with a client: "<exe>" mcp
+	// Executable is the path on its own, for a client configured as a JSON
+	// entry rather than a command line.
+	Executable string `json:"executable"`
 }

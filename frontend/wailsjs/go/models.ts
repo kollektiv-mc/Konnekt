@@ -350,6 +350,64 @@ export namespace models {
 	        this.modified = source["modified"];
 	    }
 	}
+	export class RemoteGrant {
+	    id: string;
+	    client: string;
+	    redirect: string;
+	    scopes: string[];
+	    createdAt: number;
+	    lastUsed: number;
+	    expiresAt: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new RemoteGrant(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.client = source["client"];
+	        this.redirect = source["redirect"];
+	        this.scopes = source["scopes"];
+	        this.createdAt = source["createdAt"];
+	        this.lastUsed = source["lastUsed"];
+	        this.expiresAt = source["expiresAt"];
+	    }
+	}
+	export class ConnectorsState {
+	    enabled: boolean;
+	    url: string;
+	    grants: RemoteGrant[];
+	
+	    static createFrom(source: any = {}) {
+	        return new ConnectorsState(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.enabled = source["enabled"];
+	        this.url = source["url"];
+	        this.grants = this.convertValues(source["grants"], RemoteGrant);
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
 	export class ConsoleLine {
 	    timestamp: string;
 	    line: string;
@@ -697,6 +755,7 @@ export namespace models {
 	    running: boolean;
 	    addr: string;
 	    command: string;
+	    executable: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new LocalMCPState(source);
@@ -708,6 +767,7 @@ export namespace models {
 	        this.running = source["running"];
 	        this.addr = source["addr"];
 	        this.command = source["command"];
+	        this.executable = source["executable"];
 	    }
 	}
 	export class ModDependency {
@@ -1133,6 +1193,8 @@ export namespace models {
 	    pendingDevices: RemotePendingDevice[];
 	    approvals: RemoteApproval[];
 	    tunnel: TunnelState;
+	    connectors: ConnectorsState;
+	    localMcp: LocalMCPState;
 	
 	    static createFrom(source: any = {}) {
 	        return new RemoteAccessState(source);
@@ -1148,6 +1210,8 @@ export namespace models {
 	        this.pendingDevices = this.convertValues(source["pendingDevices"], RemotePendingDevice);
 	        this.approvals = this.convertValues(source["approvals"], RemoteApproval);
 	        this.tunnel = this.convertValues(source["tunnel"], TunnelState);
+	        this.connectors = this.convertValues(source["connectors"], ConnectorsState);
+	        this.localMcp = this.convertValues(source["localMcp"], LocalMCPState);
 	    }
 	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {
@@ -1168,6 +1232,7 @@ export namespace models {
 		    return a;
 		}
 	}
+	
 	
 	
 	

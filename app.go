@@ -113,6 +113,9 @@ func NewApp() *App {
 	app.remoteAuth = services.NewRemoteAuth()
 	app.remoteAuth.OnRevoke(app.remoteService.CloseSessions)
 	app.remoteService.SetAuthorizer(app.remoteAuth)
+	// A connector's sign-in (#514) ends on the same desktop prompt as an
+	// admin call, after the password.
+	app.remoteAuth.SetConsentApprover(app.remoteApprovals.Ask)
 	// One event for all three, with no payload: the desktop reads the state
 	// back through GetRemoteAccessState.
 	remoteChanged := services.RemoteChangeNotifier(bus)
@@ -135,6 +138,17 @@ func NewApp() *App {
 	}
 	app.localMCP = services.NewLocalMCPService(mcpServer)
 	app.localMCP.OnChange(remoteChanged)
+	// The same catalog on the remote listener (#513), for Claude's connectors
+	// through the named tunnel. A call there is named for its grant and bound
+	// by the grant's scopes; the fixed name is only the fallback the engine
+	// insists on. 404 until SetRemoteConnectorsEnabled turns it on.
+	connectorServer, err := services.NewMCPServer(dispatcher, mcpTools, Version, services.MCPServerOptions{
+		Caller: "connector", Approve: app.remoteApprovals.Ask, Instructions: mcpInstructions})
+	if err != nil {
+		slog.Error("mcp: connector catalog", "error", err)
+	}
+	app.remoteService.SetMCPServer(connectorServer)
+	app.remoteService.SetMCPOperateTools(services.MCPOperateTools(dispatcher, mcpTools))
 	return app
 }
 
@@ -210,6 +224,7 @@ func (a *App) startup(ctx context.Context) {
 	a.loaderService.SetDataDir(a.dataDir)
 	a.commandsService.SetDataDir(a.dataDir)
 	a.remoteAuth.SetDataDir(a.dataDir)
+	a.syncConnectors()
 	a.tunnelService.SetDataDir(a.dataDir)
 	// The local MCP endpoint comes back up if it was on when the app last
 	// quit: a Claude Code session that registered the bridge should find it
@@ -1062,7 +1077,51 @@ func (a *App) GetRemoteAccessState() (models.RemoteAccessState, error) {
 		PendingDevices: a.remoteAuth.Pending(),
 		Approvals:      a.remoteApprovals.Pending(),
 		Tunnel:         a.tunnelService.State(),
+		Connectors:     a.connectorsState(),
+		LocalMCP:       a.localMCP.State(mcpBridgeExecutable()),
 	}, nil
+}
+
+func (a *App) connectorsState() models.ConnectorsState {
+	state := models.ConnectorsState{Enabled: a.remoteAuth.ConnectorsEnabled(), Grants: a.remoteAuth.Grants()}
+	if named := a.tunnelService.Named(); named.Hostname != "" {
+		state.URL = services.RemoteResource(named.Hostname)
+	}
+	return state
+}
+
+// SetRemoteConnectorsEnabled is "Allow Claude connectors" (#513): on, the
+// listener answers MCP at /mcp to a client holding a grant; off, that path
+// does not exist. Off by default, and decided at the desktop only.
+func (a *App) SetRemoteConnectorsEnabled(on bool) error {
+	if err := a.remoteAuth.SetConnectorsEnabled(on); err != nil {
+		return err
+	}
+	a.syncConnectors()
+	return nil
+}
+
+// RevokeRemoteGrant ends one connector's grant (#513); its next call is
+// refused.
+func (a *App) RevokeRemoteGrant(id string) error {
+	return a.remoteAuth.RevokeGrant(id)
+}
+
+// RevokeAllRemoteGrants ends every connector's grant (#515). Each signs in
+// again from scratch, through the password and the desktop.
+func (a *App) RevokeAllRemoteGrants() error {
+	return a.remoteAuth.RevokeGrants()
+}
+
+// syncConnectors gives the listener the switch and the idle hold it follows
+// (§ S9.10): held open only while a named tunnel is configured and the switch
+// is on, because a connector used once a day would otherwise find the
+// listener stopped, and a quick tunnel's random hostname is not worth
+// keeping a listener up for.
+func (a *App) syncConnectors() {
+	on := a.remoteAuth.ConnectorsEnabled()
+	a.remoteService.SetMCPEnabled(on)
+	a.remoteService.SetHoldOpen(on && a.tunnelService.Named().Hostname != "")
 }
 
 // SetRemotePassword sets or replaces the one password. Replacing it signs
@@ -1115,20 +1174,28 @@ func (a *App) StopRemoteTunnel() error {
 // goes to an owner-only file and nowhere else (§ S9.8); it is not in the
 // state this method's twin returns, only whether one is set.
 func (a *App) SaveRemoteTunnel(hostname string, port int, token string) error {
-	return a.tunnelService.SaveNamed(hostname, port, token)
+	if err := a.tunnelService.SaveNamed(hostname, port, token); err != nil {
+		return err
+	}
+	a.syncConnectors()
+	return nil
 }
 
 // ForgetRemoteTunnel deletes the named tunnel's token and configuration, and
 // the devices approved on its hostname. The switch runs a quick tunnel again.
 func (a *App) ForgetRemoteTunnel() error {
-	return a.tunnelService.ForgetNamed()
+	if err := a.tunnelService.ForgetNamed(); err != nil {
+		return err
+	}
+	a.syncConnectors()
+	return nil
 }
 
 // GetLocalMCPState is what Settings shows about the local bridge (#511): the
 // switch, the endpoint and the command to register with a client. The secret
 // is not in it.
 func (a *App) GetLocalMCPState() (models.LocalMCPState, error) {
-	return a.localMCP.State(mcpBridgeCommand()), nil
+	return a.localMCP.State(mcpBridgeExecutable()), nil
 }
 
 // SetLocalMCPEnabled is "Allow Claude on this computer": on starts the

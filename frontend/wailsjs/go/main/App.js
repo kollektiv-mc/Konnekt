@@ -358,6 +358,14 @@ export function RestoreBackup(arg1, arg2) {
   return window['go']['main']['App']['RestoreBackup'](arg1, arg2);
 }
 
+export function RevokeAllRemoteGrants() {
+  return window['go']['main']['App']['RevokeAllRemoteGrants']();
+}
+
+export function RevokeRemoteGrant(arg1) {
+  return window['go']['main']['App']['RevokeRemoteGrant'](arg1);
+}
+
 export function RevokeRemoteSessions() {
   return window['go']['main']['App']['RevokeRemoteSessions']();
 }
@@ -424,6 +432,10 @@ export function SetActiveWorld(arg1, arg2) {
 
 export function SetLocalMCPEnabled(arg1) {
   return window['go']['main']['App']['SetLocalMCPEnabled'](arg1);
+}
+
+export function SetRemoteConnectorsEnabled(arg1) {
+  return window['go']['main']['App']['SetRemoteConnectorsEnabled'](arg1);
 }
 
 export function SetRemotePassword(arg1) {
