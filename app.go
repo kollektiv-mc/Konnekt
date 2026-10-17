@@ -37,6 +37,7 @@ type App struct {
 	remoteAuth          *services.RemoteAuth
 	remoteApprovals     *services.RemoteApprovals
 	tunnelService       *services.TunnelService
+	localMCP            *services.LocalMCPService
 	fontService         *services.FontService
 	destinationService  *services.DestinationService
 	bus                 *services.EventBus
@@ -122,6 +123,18 @@ func NewApp() *App {
 	// here: the listener stopping takes the tunnel down with it.
 	app.tunnelService = services.NewTunnelService()
 	services.BindTunnel(app.remoteService, app.remoteAuth, app.tunnelService, remoteChanged)
+	// The MCP catalog over the same dispatcher (#509), served to the local
+	// bridge (#511) through a loopback endpoint that is off until Settings
+	// switches it on. Calls arrive as device local-mcp; the one tool that
+	// asks the desktop asks through the same prompt as an admin call.
+	mcpServer, err := services.NewMCPServer(dispatcher, mcpTools, Version, services.MCPServerOptions{
+		Caller: services.LocalMCPCaller, Approve: app.remoteApprovals.Ask, Instructions: mcpInstructions})
+	if err != nil {
+		// Unreachable past mcp_tools_test.go, which builds the same catalog.
+		slog.Error("mcp: catalog", "error", err)
+	}
+	app.localMCP = services.NewLocalMCPService(mcpServer)
+	app.localMCP.OnChange(remoteChanged)
 	return app
 }
 
@@ -139,6 +152,12 @@ func (a *App) beforeClose(ctx context.Context) bool {
 	// app. Stop is a no-op when remote access is off.
 	if err := a.remoteService.Stop(); err != nil {
 		slog.Warn("remote: stop on close", "error", err)
+	}
+	// Same for the bridge's endpoint: Stop also clears the port and secret
+	// from mcp-local.json, so a bridge started after this finds "not running"
+	// rather than a stale port.
+	if err := a.localMCP.Stop(); err != nil {
+		slog.Warn("mcp: stop on close", "error", err)
 	}
 	// Before the server stop below, so a poll cannot land mid-shutdown and
 	// rewrite command_buttons.json while the app is on its way out.
@@ -192,6 +211,17 @@ func (a *App) startup(ctx context.Context) {
 	a.commandsService.SetDataDir(a.dataDir)
 	a.remoteAuth.SetDataDir(a.dataDir)
 	a.tunnelService.SetDataDir(a.dataDir)
+	// The local MCP endpoint comes back up if it was on when the app last
+	// quit: a Claude Code session that registered the bridge should find it
+	// after a restart without a trip to Settings. Logged, not fatal: the
+	// desktop is whole without it, and GetLocalMCPState shows the switch on
+	// and the endpoint off.
+	a.localMCP.SetDataDir(a.dataDir)
+	if a.localMCP.Enabled() {
+		if err := a.localMCP.Start(); err != nil {
+			slog.Error("mcp: local endpoint", "error", err)
+		}
+	}
 	a.destinationService.SetDataDir(a.dataDir)
 	// Reads Kommands' shared file on a slack timer for as long as the app
 	// lives. The responsive path is RefreshKommands, which the frontend calls
@@ -1092,6 +1122,20 @@ func (a *App) SaveRemoteTunnel(hostname string, port int, token string) error {
 // the devices approved on its hostname. The switch runs a quick tunnel again.
 func (a *App) ForgetRemoteTunnel() error {
 	return a.tunnelService.ForgetNamed()
+}
+
+// GetLocalMCPState is what Settings shows about the local bridge (#511): the
+// switch, the endpoint and the command to register with a client. The secret
+// is not in it.
+func (a *App) GetLocalMCPState() (models.LocalMCPState, error) {
+	return a.localMCP.State(mcpBridgeCommand()), nil
+}
+
+// SetLocalMCPEnabled is "Allow Claude on this computer": on starts the
+// loopback endpoint with a fresh secret, off stops it. Off by default, and
+// decided at the desktop only (neverRemote).
+func (a *App) SetLocalMCPEnabled(on bool) error {
+	return a.localMCP.SetEnabled(on)
 }
 
 // ApproveRemoteDevice approves a waiting browser under the name the person at

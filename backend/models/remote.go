@@ -76,3 +76,14 @@ type NamedTunnel struct {
 	Port     int    `json:"port"`     // the loopback port the dashboard's ingress rule names
 	TokenSet bool   `json:"tokenSet"`
 }
+
+// LocalMCPState is what the desktop shows about the local MCP bridge (#511):
+// whether "Allow Claude on this computer" is on, whether its loopback
+// endpoint is listening, and the executable the setup command names. The
+// secret the endpoint checks is never here.
+type LocalMCPState struct {
+	Enabled bool   `json:"enabled"`
+	Running bool   `json:"running"`
+	Addr    string `json:"addr"`    // 127.0.0.1:<port> while running, else ""
+	Command string `json:"command"` // what to register with a client: "<exe>" mcp
+}

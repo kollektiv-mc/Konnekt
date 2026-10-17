@@ -146,6 +146,10 @@ export function GetLoaderStatus(arg1) {
   return window['go']['main']['App']['GetLoaderStatus'](arg1);
 }
 
+export function GetLocalMCPState() {
+  return window['go']['main']['App']['GetLocalMCPState']();
+}
+
 export function GetLogPath() {
   return window['go']['main']['App']['GetLogPath']();
 }
@@ -416,6 +420,10 @@ export function SetActiveServerID(arg1) {
 
 export function SetActiveWorld(arg1, arg2) {
   return window['go']['main']['App']['SetActiveWorld'](arg1, arg2);
+}
+
+export function SetLocalMCPEnabled(arg1) {
+  return window['go']['main']['App']['SetLocalMCPEnabled'](arg1);
 }
 
 export function SetRemotePassword(arg1) {

@@ -298,6 +298,8 @@ export const api = {
   StopRemoteTunnel: refuse("Remote access"),
   SaveRemoteTunnel: refuse("Remote access"),
   ForgetRemoteTunnel: refuse("Remote access"),
+  GetLocalMCPState: read({ enabled: false, running: false, addr: "", command: "" }),
+  SetLocalMCPEnabled: refuse("Remote access"),
   ApproveRemoteDevice: refuse("Remote access"),
   DenyRemoteDevice: refuse("Remote access"),
   RemoveRemoteDevice: refuse("Remote access"),

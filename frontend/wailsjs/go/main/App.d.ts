@@ -75,6 +75,8 @@ export function GetLayoutPresets():Promise<Array<models.LayoutPreset>>;
 
 export function GetLoaderStatus(arg1:string):Promise<models.LoaderStatus>;
 
+export function GetLocalMCPState():Promise<models.LocalMCPState>;
+
 export function GetLogPath():Promise<string>;
 
 export function GetPhysicalMemoryMB():Promise<number>;
@@ -210,6 +212,8 @@ export function SendCommand(arg1:string,arg2:string):Promise<void>;
 export function SetActiveServerID(arg1:string):Promise<void>;
 
 export function SetActiveWorld(arg1:string,arg2:string):Promise<void>;
+
+export function SetLocalMCPEnabled(arg1:boolean):Promise<void>;
 
 export function SetRemotePassword(arg1:string):Promise<void>;
 

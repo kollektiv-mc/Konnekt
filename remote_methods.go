@@ -173,6 +173,8 @@ var neverRemote = map[string]string{
 	"StopRemoteTunnel":     "closing the tunnel cuts off every browser on it; the desktop's call",
 	"SaveRemoteTunnel":     "takes the tunnel token, a credential (§ S9.8); pasted at the desktop only",
 	"ForgetRemoteTunnel":   "deletes the token and the devices on its hostname; the desktop's call",
+	"GetLocalMCPState":     "the local bridge's switch and endpoint; the desktop's own (§ S9.4)",
+	"SetLocalMCPEnabled":   "opens a second loopback listener; decided at the desktop only, like StartRemoteAccess (§ S8.8)",
 	"ApproveRemoteDevice":  "the second factor (§ S8.6); a browser that could call it could approve itself",
 	"DenyRemoteDevice":     "the desktop's answer to a waiting device",
 	"RemoveRemoteDevice":   "the desktop's list of who may sign in",
