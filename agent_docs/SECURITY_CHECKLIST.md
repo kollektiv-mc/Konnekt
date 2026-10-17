@@ -21,9 +21,8 @@ running Konnekt. Two reaches matter:
   hands the bridge to whoever holds a session (see S8). Every bridge item is
   written so it already holds when that happens.
 
-Bound methods on 2026-10-01: **105** (94 on 2026-09-24, plus the eleven that
-are the desktop's own control over Remote Access and its tunnel, all in
-`neverRemote`)
+Bound methods on 2026-10-17: **115** (105 on 2026-10-01; each one since is
+classified in `remote_methods.go`, which `remote_methods_test.go` holds)
 (`grep -c '^func (a \*App) [A-Z]' app.go`). A different count is new surface;
 step 3 of the skill classifies it.
 
@@ -380,8 +379,9 @@ added (a `<meta>` policy cannot set `frame-ancestors`), plus
 Verify: an `httptest` test asserting each header on `/`.
 
 **S8.8 Remote access is off unless switched on, and visibly on.**
-Holds when: it defaults to off, stops after an idle period, and the desktop
-shows its state and the connected devices.
+Holds when: it defaults to off, stops after an idle period (the one exception
+is § S9.10's, and it is visible), and the desktop shows its state and the
+connected devices.
 
 **S8.9 Every remote action is logged, and no log line holds a credential.**
 Verify: a test that a remote call writes one log line naming the method and the
@@ -394,6 +394,116 @@ pinned hash before it is executed.
 **S8.11 A remote client cannot change what the desktop is looking at.**
 Holds when: the active server is per client, not the global
 `SetActiveServerID`, or `SetActiveServerID` is not remote-callable.
+
+---
+
+## S9. Claude through MCP
+
+Applies when: an `mcp*.go` file exists (#507, issues #509 to #515). Until
+then every item is `n/a`, but they are the acceptance criteria and are read
+before any MCP work starts. MCP is a second client of the Remote Access
+machinery, so every § S8 item applies to it unchanged; these items are what MCP
+adds. The threat model beyond § S8 is in #507: prompt injection through tool
+results, theft of a token held outside Konnekt, local processes reaching a
+loopback port, and OAuth misuse.
+
+**S9.1 Every tool maps to one allowlisted method of tier `read` or `operate`.**
+Holds when: each catalog entry names exactly one `remote_methods.go` entry, that
+entry's tier is `read` or `operate`, and no tool reaches an `admin` or
+`neverRemote` method. A test that parses the catalog holds this, in the shape of
+`remote_methods_test.go`. There is no reflection over `App`.
+Verify: find the test; add a catalog entry over an `admin` method in a scratch
+branch and watch it fail.
+Probe: can a tool reach a method the browser remote cannot?
+
+**S9.2 No third-party text reaches the static surface.**
+Holds when: tool names, tool descriptions and the server `instructions` are
+compile-time constants, with no server, world or player name in them. Untrusted
+text in a result (console lines, player names, ban reasons, MOTDs, mod
+descriptions) travels in `structuredContent` fields the text part names as
+third-party text, stripped of control characters and ANSI escapes and capped
+in length.
+Verify: a test where a console line carrying a fake instruction arrives only
+inside a marked field.
+Probe: can a player's chat line change what Claude is told a tool does?
+
+**S9.3 The raw console command waits for desktop approval on every call.**
+Holds when: the console tool goes through `RemoteApprovals.Ask` with the exact
+command and the calling client shown, with no "remember"; no answer is a
+refusal. Kick, ban and pardon validate the name as a player name and refuse a
+target selector, for every caller and not only MCP.
+Verify: tests for an unanswered console call refused, and for `@a`, `@e[...]`,
+a space and an empty name refused.
+Probe: with nobody at the desktop, what can an injected instruction run?
+
+**S9.4 The local bridge is loopback-only and keyed by an owner-only secret.**
+Holds when: the bridge's endpoint binds `127.0.0.1`, checks a `crypto/rand`
+secret kept in a `0600` file written by `WritePrivateDataFile` and regenerated
+at every start, passes the Host and Origin guard, and is not reachable on the
+tunnel's hostname. On Windows the protection is the per-user profile directory
+rather than an ACL, and the Settings text says exactly that.
+Verify: tests driving the bridge with the right secret, the wrong one and none,
+and a request carrying an `Origin` refused.
+Probe: a page in the user's browser posting to the bridge's port.
+
+**S9.5 The HTTP endpoint accepts only tokens it issued for itself.**
+Holds when: an unauthenticated request gets `401` with
+`WWW-Authenticate: Bearer resource_metadata="..."`; a request whose `Origin` is
+present and not allowed gets `403`; a token issued for another resource, a
+token in the query string and the dashboard's cookie are each refused; and
+`/api/rpc` ignores bearer tokens. Nothing is authorized by an MCP session.
+Verify: `httptest` tests for each refusal.
+Probe: replay a `konnekt_session` cookie against `/mcp`; replay an MCP token
+against `/api/rpc`.
+
+**S9.6 OAuth follows OAuth 2.1 as the MCP authorization spec profiles it.**
+Holds when: PKCE S256 is required and advertised; redirect URIs match exactly
+(`https://claude.ai/api/mcp/auth_callback`, and `http://localhost/callback` and
+`http://127.0.0.1/callback` with the port ignored, for Claude Code); codes are
+single-use and short-lived; the consent page carries a CSRF token,
+`frame-ancestors 'none'` and the redirect URI's hostname; tokens come from
+`crypto/rand` with at least 128 bits and are stored as SHA-256; an access token
+lasts one hour; a refresh token rotates on every use and a replayed one revokes
+the grant; a grant ends after thirty days unused or ninety days in all; every
+grant can be revoked from the desktop; and a password change revokes them all.
+Verify: tests for each clause; `grep -rn 'math/rand' backend/services/mcp*.go`
+finds nothing.
+Probe: replay a rotated refresh token; present a code twice; a redirect URI
+that differs by a trailing slash.
+
+**S9.7 Fetching a Client ID Metadata Document is pinned.**
+Holds when: the URL is `https` only; the resolved address is public (no
+loopback, private or link-local), checked after resolution and on every
+redirect, or redirects are not followed; the fetch has a timeout and a size
+bound (§ S1.3, § S1.4); and Dynamic Client Registration entries are capped in
+number and expire unused.
+Verify: tests with a `client_id` resolving to `127.0.0.1`, `10.0.0.1` and
+`169.254.169.254`, each refused.
+Probe: an authorization request whose `client_id` points at the listener's own
+loopback port.
+
+**S9.8 The named-tunnel token is a credential and treated as one.**
+Holds when: it lives in an owner-only file written by `WritePrivateDataFile`,
+reaches `cloudflared` only through `--token-file`, and appears in no argv, no
+`AppSettings` field and no log line.
+Verify: the stand-in-process tests in `tunnel_test.go` show the token passed by
+file only; S2.1's grep extended to `tunnel*.go`.
+Probe: the process list while the tunnel runs.
+
+**S9.9 Every MCP call writes one log line and no argument.**
+Holds when: the line names the tool, the client and the server id, and never an
+argument (§ S8.9).
+Verify: a test asserting the line's fields on a call with a distinctive
+argument.
+
+**S9.10 Staying up is a choice the desktop made and can see.**
+Holds when: the listener outlives § S8.8's idle period only while a named
+tunnel is configured and "Allow Claude connectors" is on, both off by default;
+the title bar shows the listener the whole time; and turning either off
+restores the idle stop.
+Verify: a test that the idle stop fires with the quick tunnel, and does not
+with a named tunnel and the switch on.
+Probe: what keeps the sign-in page reachable overnight, and who can tell?
 
 ---
 

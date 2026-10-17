@@ -370,6 +370,81 @@ with the approved device as the second factor; and each browser keeps its own
 server selection rather than mirroring the desktop's, since every bound method
 takes a `serverID` and a browser must not move what the desktop is looking at.
 
+### Claude through MCP
+
+Let Claude (Claude Code, Claude Desktop, claude.ai and the mobile app) observe
+and operate the user's servers through the Model Context Protocol, held to the
+bar Remote Access already meets. The epic is [#507](../../issues/507); the
+acceptance criteria are § S9 of `agent_docs/SECURITY_CHECKLIST.md`.
+
+**Core idea:** MCP is a second client of the Remote Access machinery, not a
+second backend. Every tool resolves to one entry of `remote_methods.go` and
+runs through `RemoteDispatcher.Invoke`, so the tier check, the per-call log
+line, per-server scoping and `neverRemote` hold for Claude as they do for a
+phone. Claude reaches nothing the browser remote cannot, and the admin tier is
+never exposed to it, approval or not.
+
+**Decided** (planning 2026-10-05, revisited 2026-10-17):
+
+- **Two transports, phased.** Phase A is a local stdio bridge (`konnekt mcp`)
+  for Claude Code and Claude Desktop on the machine that runs Konnekt: no
+  network, no OAuth. Phase B is Streamable HTTP at `/mcp` on the listener,
+  reached through a tunnel, for the hosted Claude apps, which call from
+  Anthropic's cloud.
+- **A stable address** is a named Cloudflare tunnel on the user's own account
+  and a hostname on a domain they own ([#512](../../issues/512)). A quick
+  tunnel's hostname is new on every start, and `BindTunnel` forgets the
+  devices approved on it when it goes, which is why the phone is asked for a
+  new code after every restart today. A subdomain of `konnekt.pages.dev`
+  cannot carry this: it is static hosting, Cloudflare routes a tunnel only
+  through DNS records in the account that owns the tunnel, and one hostname
+  shared by every install would make this project a relay for every user's
+  traffic, which is the hosted service "Explicitly out of scope" rules out.
+  On a named hostname the approved devices survive a restart, since the reason
+  to forget them (a name that never returns) no longer holds.
+- **The listener stays up** while a named tunnel is configured and "Allow
+  Claude connectors" is on. The thirty-minute idle stop (§ S8.8) would
+  otherwise take the tunnel down between Claude's calls, and a connector used
+  once a day would find nothing at the address. The title bar's chip shows the
+  listener the whole time; the quick tunnel keeps the idle stop as it is.
+- **Sign-in is OAuth 2.1** with Konnekt as its own authorization server
+  ([#514](../../issues/514)): Client ID Metadata Documents first, Dynamic
+  Client Registration as the fallback Claude still takes, PKCE S256, and
+  consent on Konnekt's own page with the Remote Access password and the
+  desktop's approval, as § S8.6 does for a new device. Access tokens last an
+  hour; refresh tokens rotate on every use; a grant ends after thirty days
+  unused or ninety days in all, so the desktop is asked again about four times
+  a year rather than after every restart. Changing the password revokes every
+  grant.
+- **Tool power** is read plus a curated operate set
+  ([#509](../../issues/509)). A raw console command waits for desktop approval
+  on every call, and kick, ban and pardon refuse target selectors, because
+  player chat, names and MOTDs are third-party text that lands in Claude's
+  context ([#510](../../issues/510)).
+- **Out of scope:** Sampling, Roots and Logging (deprecated in MCP
+  2026-07-28), MCP prompts, any hosted relay, and per-user accounts.
+
+**Sequencing:** [#508](../../issues/508) (this entry and § S9) first, then the
+catalog and the injection guard, the named tunnel, the local bridge, the
+endpoint, OAuth, and Settings last, piecewise. The Go MCP SDK
+(`github.com/modelcontextprotocol/go-sdk`) is the candidate over a hand-rolled
+JSON-RPC layer, decided in the catalog's pull request against
+`agent_docs/DEPENDENCIES.md`: v1.8.0 speaks 2026-07-28 with a `Stateless`
+option and negotiates down to earlier revisions, and its `go.mod` requires
+`golang.org/x/tools`, `golang.org/x/oauth2`, `github.com/golang-jwt/jwt/v5`,
+`github.com/segmentio/encoding` and `github.com/google/jsonschema-go`. Which
+of those the linked packages pull in is for that pull request to measure.
+
+- [ ] **Phase A: local bridge** ([#511](../../issues/511))
+- [ ] **Phase B: named tunnel, endpoint and OAuth** ([#512](../../issues/512),
+  [#513](../../issues/513), [#514](../../issues/514))
+- [ ] **Settings** ([#515](../../issues/515))
+
+Done when a claude.ai custom connector at `https://<named-host>/mcp` survives
+an app restart and a day of idleness with no new approval, § S9 passes under
+`/security-check`, and Claude Code lists a server's players over both
+transports.
+
 ## Later
 
 Breadth, once the foundations are proven. Ordering here is not fixed, and
