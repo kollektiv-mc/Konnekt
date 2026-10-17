@@ -245,6 +245,13 @@ func (s *LocalMCPService) Stop() error {
 	ctx, cancel := context.WithTimeout(context.Background(), localMCPGrace)
 	defer cancel()
 	err := srv.Shutdown(ctx)
+	if errors.Is(err, context.DeadlineExceeded) {
+		// Shutdown has closed the listener but waits for every request in
+		// flight; a client holding one past the grace does not get to keep
+		// the endpoint alive, so Close ends the connections it waited for.
+		slog.Warn("mcp: local endpoint closed with a request still open")
+		err = srv.Close()
+	}
 	slog.Info("mcp: local endpoint stopped")
 	if werr := s.writeRecord(rec); werr != nil && err == nil {
 		err = werr
