@@ -600,17 +600,30 @@ func (a *App) GetPlayerDetail(serverID string, name string) (models.Player, erro
 	return a.playerService.GetDetail(serverID, name)
 }
 
+// The moderation methods take one player's name and refuse anything else
+// (services.ValidPlayerName, #510): `kick` and `ban` accept target selectors,
+// so an unchecked `@a` from a phone or an MCP tool would hit everyone online.
+
 func (a *App) KickPlayer(serverID string, name string, reason string) error {
+	if err := services.ValidPlayerName(name); err != nil {
+		return err
+	}
 	cmd := fmt.Sprintf("kick %s %s", name, reason)
 	return a.serverService.SendCommand(serverID, cmd)
 }
 
 func (a *App) BanPlayer(serverID string, name string, reason string) error {
+	if err := services.ValidPlayerName(name); err != nil {
+		return err
+	}
 	cmd := fmt.Sprintf("ban %s %s", name, reason)
 	return a.serverService.SendCommand(serverID, cmd)
 }
 
 func (a *App) PardonPlayer(serverID string, name string) error {
+	if err := services.ValidPlayerName(name); err != nil {
+		return err
+	}
 	return a.serverService.SendCommand(serverID, fmt.Sprintf("pardon %s", name))
 }
 
