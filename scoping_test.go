@@ -79,6 +79,7 @@ var serverlessMethods = map[string]string{
 	"GetLogPath":               "app-level; one log file for the app",
 	"LogClientError":           "app-level",
 	"GetAppVersion":            "app-level",
+	"GetPhysicalMemoryMB":      "the machine's RAM, not a server's",
 	"CheckForUpdates":          "Konnekt updating itself",
 	"DownloadAndInstallUpdate": "Konnekt updating itself",
 	"InspectServerFile":        "inspects a jar before any server exists",

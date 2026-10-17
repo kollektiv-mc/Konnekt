@@ -260,6 +260,13 @@ func (a *App) ListFontFamilies() ([]string, error) {
 	return a.fontService.ListFamilies(), nil
 }
 
+// GetPhysicalMemoryMB returns the machine's installed RAM in megabytes, so the
+// server form can warn when a heap setting approaches it (#120). Host-wide and
+// constant for a run, so the frontend reads it once.
+func (a *App) GetPhysicalMemoryMB() (int, error) {
+	return services.TotalPhysicalMemoryMB(context.Background())
+}
+
 // --- Bucket destinations (#480) ---
 
 // ListDestinations returns the saved buckets. Each says whether a secret is

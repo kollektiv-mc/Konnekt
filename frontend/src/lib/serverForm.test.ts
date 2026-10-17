@@ -1,5 +1,14 @@
 import { describe, it, expect } from 'vitest'
-import { parseRamFromArgs, mergeRamIntoArgs, dirOf, baseOf, isLaunchScript } from './serverForm'
+import {
+  parseRamFromArgs,
+  mergeRamIntoArgs,
+  dirOf,
+  baseOf,
+  isLaunchScript,
+  heapToMB,
+  heapAdvice,
+  formatMB,
+} from './serverForm'
 
 describe('parseRamFromArgs', () => {
   it('reads both flags', () => {
@@ -66,5 +75,70 @@ describe('isLaunchScript', () => {
 
   it.each(['/srv/mc/server.jar', 'runner.sh', '/srv/mc/prerun.bat', ''])('rejects %s', (path) => {
     expect(isLaunchScript(path)).toBe(false)
+  })
+})
+
+describe('heapToMB', () => {
+  it.each([
+    ['2G', 2048],
+    ['2g', 2048],
+    ['512M', 512],
+    ['1536m', 1536],
+    ['1048576K', 1024],
+    ['1T', 1024 * 1024],
+    ['1073741824', 1024],
+    [' 4G ', 4096],
+  ])('reads %s', (value, mb) => {
+    expect(heapToMB(value)).toBe(mb)
+  })
+
+  it.each(['', 'G', '2GB', '-2G', '1.5G', 'lots'])('gives null for %j', (value) => {
+    expect(heapToMB(value)).toBeNull()
+  })
+})
+
+describe('formatMB', () => {
+  it.each([
+    [512, '512 MB'],
+    [1024, '1 GB'],
+    [15872, '15.5 GB'],
+    [16384, '16 GB'],
+  ])('writes %d as %s', (mb, text) => {
+    expect(formatMB(mb)).toBe(text)
+  })
+})
+
+describe('heapAdvice', () => {
+  const total = 16384
+
+  it('says nothing below 85 percent', () => {
+    expect(heapAdvice('13G', total)).toBeNull() // 81%
+    expect(heapAdvice('2G', total)).toBeNull()
+  })
+
+  it('warns from 85 percent, naming both numbers', () => {
+    const advice = heapAdvice('14G', total) // 87.5%
+    expect(advice?.level).toBe('warning')
+    expect(advice?.message).toContain('14 GB')
+    expect(advice?.message).toContain('16 GB')
+    expect(advice?.message).toContain('88%')
+  })
+
+  it('treats exactly 85 percent as a warning', () => {
+    expect(heapAdvice('17000M', 20000)?.level).toBe('warning')
+    expect(heapAdvice('16999M', 20000)).toBeNull()
+  })
+
+  it('warns strongly from 95 percent, and above all of it', () => {
+    expect(heapAdvice('15616M', total)?.level).toBe('strong') // 95.3%
+    expect(heapAdvice('15G', total)?.level).toBe('warning') // 93.75%
+    expect(heapAdvice('32G', total)?.level).toBe('strong')
+  })
+
+  it('stays quiet when it cannot compare', () => {
+    expect(heapAdvice('', total)).toBeNull()
+    expect(heapAdvice('nonsense', total)).toBeNull()
+    expect(heapAdvice('15G', null)).toBeNull()
+    expect(heapAdvice('15G', 0)).toBeNull()
   })
 })

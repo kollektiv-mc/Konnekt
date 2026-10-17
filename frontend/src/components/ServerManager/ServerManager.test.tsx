@@ -1,6 +1,7 @@
 import { describe, it, expect, afterEach, beforeEach, vi } from 'vitest'
 import { render, screen, fireEvent, waitFor, cleanup, act } from '@testing-library/react'
 import * as App from '../../../wailsjs/go/main/App'
+import { useHostStore } from '../../stores/useHostStore'
 import { useInstallStore } from '../../stores/useInstallStore'
 import { useLoaderStore } from '../../stores/useLoaderStore'
 import { useServerConfigStore } from '../../stores/useServerConfigStore'
@@ -63,6 +64,7 @@ describe('ServerManager', () => {
     })
     useInstallStore.setState({ open: false, result: null })
     useLoaderStore.setState({ dialogOpen: false, status: null, versions: [] })
+    useHostStore.setState({ physicalMemoryMB: null })
   })
 
   it('renders nothing when closed', () => {
@@ -140,6 +142,61 @@ describe('ServerManager', () => {
       id: 'alpha',
       name: 'renamed',
       workingDir: '/srv/alpha',
+    })
+  })
+
+  describe('heap advice (#120)', () => {
+    const setMax = (value: string) =>
+      fireEvent.change(screen.getByPlaceholderText('2G'), { target: { value } })
+
+    it('says nothing while the heap is well under physical RAM', async () => {
+      vi.mocked(App.GetPhysicalMemoryMB).mockResolvedValue(16384)
+      renderManager()
+      await screen.findByDisplayValue('alpha')
+      await waitFor(() => expect(useHostStore.getState().physicalMemoryMB).toBe(16384))
+      expect(screen.queryByRole('status')).toBeNull()
+    })
+
+    it('warns with both numbers, and still saves what was typed', async () => {
+      vi.mocked(App.GetPhysicalMemoryMB).mockResolvedValue(16384)
+      renderManager()
+      await screen.findByDisplayValue('alpha')
+      await waitFor(() => expect(useHostStore.getState().physicalMemoryMB).toBe(16384))
+
+      setMax('14G')
+      const note = screen.getByRole('status')
+      expect(note.textContent).toContain('14 GB')
+      expect(note.textContent).toContain('16 GB')
+      expect(note.className).toContain('text-warning')
+
+      setMax('15616M')
+      expect(screen.getByRole('status').className).toContain('text-danger')
+
+      fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+      await waitFor(() => expect(App.SaveServerConfig).toHaveBeenCalledTimes(1))
+      expect(vi.mocked(App.SaveServerConfig).mock.calls[0][0].jvmArgs).toContain('-Xmx15616M')
+    })
+
+    it('reads the heap out of the expression in advanced mode', async () => {
+      vi.mocked(App.GetPhysicalMemoryMB).mockResolvedValue(8192)
+      renderManager({ selection: 'beta' })
+      await screen.findByDisplayValue('beta')
+      await waitFor(() => expect(useHostStore.getState().physicalMemoryMB).toBe(8192))
+      fireEvent.click(screen.getByRole('button', { name: 'Advanced' }))
+      expect(screen.queryByRole('status')).toBeNull()
+
+      fireEvent.change(screen.getByPlaceholderText(/-Xms512M/), {
+        target: { value: '-Xms1G -Xmx7G' },
+      })
+      expect(screen.getByRole('status').textContent).toContain('7 GB')
+    })
+
+    it('stays silent when the machine RAM cannot be read', async () => {
+      vi.mocked(App.GetPhysicalMemoryMB).mockRejectedValue(new Error('no bridge'))
+      renderManager()
+      await screen.findByDisplayValue('alpha')
+      setMax('512G')
+      expect(screen.queryByRole('status')).toBeNull()
     })
   })
 

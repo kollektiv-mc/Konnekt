@@ -75,6 +75,8 @@ export function GetLoaderStatus(arg1:string):Promise<models.LoaderStatus>;
 
 export function GetLogPath():Promise<string>;
 
+export function GetPhysicalMemoryMB():Promise<number>;
+
 export function GetPlayerDetail(arg1:string,arg2:string):Promise<models.Player>;
 
 export function GetPlayerRoster(arg1:string):Promise<Array<models.Player>>;

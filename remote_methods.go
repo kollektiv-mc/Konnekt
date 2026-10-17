@@ -29,6 +29,8 @@ var remoteMethods = map[string]services.RemoteMethod{
 	"CheckForUpdates":   {Tier: services.RemoteTierRead, Reason: "asks GitHub, changes nothing"},
 	"DownloadAndInstallUpdate": {Tier: services.RemoteTierAdmin,
 		Reason: "replaces the running executable (§ S8.2)"},
+	"GetPhysicalMemoryMB": {Tier: services.RemoteTierRead,
+		Reason: "the host's installed RAM, which the server form compares a heap setting against (#120); a number, not a file"},
 
 	// Bucket destinations. The secret is never listed back; saving and testing
 	// carry it as an argument and are desktop-only (neverRemote).
