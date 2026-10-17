@@ -669,13 +669,16 @@ func TestCIMDRefusesPrivateAddresses(t *testing.T) {
 	if dialed {
 		t.Error("a private address was fetched")
 	}
-	// A URL of the wrong shape is refused before anything is resolved.
+	// A URL of the wrong shape, or on any host but claude.ai, is refused
+	// before anything is resolved.
 	f := newCIMDFetcher()
 	f.lookup = func(context.Context, string) ([]netip.Addr, error) {
 		return nil, errors.New("resolved, which it must not be")
 	}
 	shapes := []string{"http://claude.ai/x", "https://claude.ai", "https://claude.ai/", "https://claude.ai/x?y=1", "https://claude.ai/x#f",
-		"https://user@claude.ai/x", "https://93.184.216.34/x", "https://[2001:db8::1]/x", "claude.ai/x", ""}
+		"https://user@claude.ai/x", "https://93.184.216.34/x", "https://[2001:db8::1]/x", "claude.ai/x", "",
+		// Any host but claude.ai, including ones that only look like it.
+		"https://example.com/x", "https://claude.ai.example.com/x", "https://www.claude.ai/x", "https://claude.ai:8443/x"}
 	for _, raw := range shapes {
 		if _, err := f.Fetch(context.Background(), raw); !errors.Is(err, ErrCIMDURL) {
 			t.Errorf("%q: %v, want ErrCIMDURL", raw, err)

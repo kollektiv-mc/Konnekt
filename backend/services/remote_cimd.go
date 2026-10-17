@@ -12,7 +12,6 @@ import (
 	"net/http"
 	"net/netip"
 	"net/url"
-	"strings"
 	"sync"
 	"syscall"
 	"time"
@@ -20,14 +19,15 @@ import (
 
 // Client ID Metadata Documents (#514, § S9.7). A connector may identify
 // itself with an https URL as its client_id; the document at that URL names
-// it and lists its redirect URIs. Fetching it is an outbound request to an
-// address a stranger chose, so the fetch is pinned: https only, a hostname
-// rather than an address, every resolved address public, the dial checked
-// again against the address it actually connects to, no redirects followed,
-// a timeout and a size cap, and no proxy, because through one the address
-// checks would be judging the proxy. What the document says about itself is
-// third-party text: the name is clamped and the host of the URL is what the
-// consent page names as the party asking.
+// it and lists its redirect URIs. The URL is fetched from remoteCIMDHost
+// only, since Claude's clients are the only ones the redirect allowlist lets
+// in, and even that fetch is pinned, because a resolver answers for the host
+// and the host is not Konnekt's: https only, every resolved address public,
+// the dial checked again against the address it actually connects to, no
+// redirects followed, a timeout and a size cap, and no proxy, because through
+// one the address checks would be judging the proxy. What the document says
+// about itself is third-party text: the name is clamped and the host of the
+// URL is what the consent page names as the party asking.
 
 const (
 	cimdTimeout = 10 * time.Second
@@ -36,7 +36,7 @@ const (
 )
 
 var (
-	ErrCIMDURL     = errors.New("a client_id URL is https, names a host and a path, and nothing else")
+	ErrCIMDURL     = errors.New("a client_id URL is https://" + remoteCIMDHost + " with a path, and nothing else")
 	ErrCIMDAddress = errors.New("the client_id host resolves to a private, loopback or link-local address")
 	ErrCIMDDoc     = errors.New("the client metadata document is not what the URL promised")
 )
@@ -112,15 +112,15 @@ func publicAddress(ip netip.Addr) bool {
 }
 
 // validCIMDURL is the shape a client_id URL must have before anything is
-// resolved: https, a hostname that is not an address, a path, no user info,
-// no query and no fragment.
+// resolved: https, the host remoteCIMDHost and no other, a path, no user
+// info, no query and no fragment.
 func validCIMDURL(raw string) (*url.URL, error) {
 	u, err := url.Parse(raw)
-	if err != nil || u.Scheme != "https" || u.Host == "" || u.User != nil || u.RawQuery != "" || u.Fragment != "" ||
-		u.Path == "" || u.Path == "/" || u.Hostname() == "" {
+	if err != nil || u.Scheme != "https" || u.User != nil || u.RawQuery != "" || u.Fragment != "" ||
+		u.Path == "" || u.Path == "/" || u.Port() != "" {
 		return nil, ErrCIMDURL
 	}
-	if _, err := netip.ParseAddr(strings.Trim(u.Hostname(), "[]")); err == nil {
+	if u.Hostname() != remoteCIMDHost {
 		return nil, ErrCIMDURL
 	}
 	if u.String() != raw {
