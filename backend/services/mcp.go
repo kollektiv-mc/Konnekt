@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"slices"
 	"sort"
 	"strings"
 	"unicode"
@@ -80,9 +81,11 @@ type MCPTool struct {
 
 // MCPServerOptions is what the engine needs besides the catalog.
 type MCPServerOptions struct {
-	// Caller is the device name the dispatcher sees and the log names: the
-	// local bridge's fixed name, or an OAuth client's. Never text from the
-	// MCP client itself, which is third-party.
+	// Caller is the device name the dispatcher sees and the log names when
+	// the call carries no token: the local bridge's fixed name. A call that
+	// arrived with a bearer token (#513) is named for its grant instead,
+	// and bound by the grant's scopes. Never text from the MCP client
+	// itself, which is third-party.
 	Caller string
 	// Approve answers a tool marked Approval. nil refuses them all.
 	Approve RemoteApprover
@@ -104,6 +107,7 @@ var (
 	ErrMCPToolUnknown  = errors.New("no such tool")
 	ErrMCPBadInput     = errors.New("bad input")
 	ErrMCPNeedApproval = errors.New("the desktop did not approve")
+	ErrMCPScope        = errors.New("insufficient scope")
 )
 
 // NewMCPServer builds an MCP server over d from tools. It refuses a catalog
@@ -131,7 +135,11 @@ func NewMCPServer(d *RemoteDispatcher, tools []MCPTool, version string, opts MCP
 	s := mcp.NewServer(&mcp.Implementation{Name: mcpServerName, Title: "Konnekt", Version: version},
 		&mcp.ServerOptions{Instructions: opts.Instructions, HasTools: true})
 	for _, t := range tools {
-		s.AddTool(mcpToolDef(t), mcpHandler(d, t, opts))
+		tier, known := d.Tier(t.Method)
+		if !known {
+			return nil, fmt.Errorf("mcp: tool %q: %s is not remote-callable", t.Name, t.Method)
+		}
+		s.AddTool(mcpToolDef(t), mcpHandler(d, t, tier, opts))
 	}
 	return s, nil
 }
@@ -211,19 +219,24 @@ func mcpToolDef(t MCPTool) *mcp.Tool {
 // mcpHandler turns one call into one dispatcher invocation. A refusal or a
 // method error comes back as an MCP error result, which the model reads, not
 // as a protocol error, which it does not.
-func mcpHandler(d *RemoteDispatcher, t MCPTool, opts MCPServerOptions) mcp.ToolHandler {
+func mcpHandler(d *RemoteDispatcher, t MCPTool, tier RemoteTier, opts MCPServerOptions) mcp.ToolHandler {
 	return func(ctx context.Context, req *mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		args, serverID, err := mcpArgs(t, req.Params.Arguments)
 		if err != nil {
 			return mcpErrorResult(err), nil
 		}
 		client := mcpClientLabel(req.ClientInfo())
+		caller, err := mcpCaller(req, tier, opts)
+		if err != nil {
+			slog.Info("mcp: call", "tool", t.Name, "client", client, "server", serverID, "ok", false)
+			return mcpErrorResult(err), nil
+		}
 		var result any
 		if t.Approval {
-			err = mcpApprove(ctx, opts, t, args)
+			err = mcpApprove(ctx, caller, opts, t, args)
 		}
 		if err == nil {
-			result, err = d.Invoke(ctx, opts.Caller, t.Method, args)
+			result, err = d.Invoke(ctx, caller, t.Method, args)
 		}
 		// One line per call naming the tool, the client and the server id,
 		// never an argument (§ S9.9): a console command is an argument.
@@ -235,11 +248,35 @@ func mcpHandler(d *RemoteDispatcher, t MCPTool, opts MCPServerOptions) mcp.ToolH
 	}
 }
 
-func mcpApprove(ctx context.Context, opts MCPServerOptions, t MCPTool, args []json.RawMessage) error {
+// mcpCaller names the caller for the dispatcher, the prompt and the log, and
+// holds a token's call to the token's scopes. With no token (the local
+// bridge) it is the fixed Caller and every tool is open. With one (the
+// remote endpoint, #513) it is the grant's client name, a read tool needs
+// konnekt:read or konnekt:operate, and an operate tool needs konnekt:operate.
+func mcpCaller(req *mcp.CallToolRequest, tier RemoteTier, opts MCPServerOptions) (string, error) {
+	if req.Extra == nil || req.Extra.TokenInfo == nil {
+		return opts.Caller, nil
+	}
+	info := req.Extra.TokenInfo
+	operate := slices.Contains(info.Scopes, RemoteScopeOperate)
+	read := operate || slices.Contains(info.Scopes, RemoteScopeRead)
+	switch {
+	case tier == RemoteTierOperate && !operate:
+		return "", fmt.Errorf("%w: this tool needs %s", ErrMCPScope, RemoteScopeOperate)
+	case !read:
+		return "", fmt.Errorf("%w: this tool needs %s", ErrMCPScope, RemoteScopeRead)
+	}
+	if info.UserID == "" {
+		return "connector", nil
+	}
+	return info.UserID, nil
+}
+
+func mcpApprove(ctx context.Context, caller string, opts MCPServerOptions, t MCPTool, args []json.RawMessage) error {
 	if opts.Approve == nil {
 		return fmt.Errorf("%w: %s needs the desktop and nothing is there to ask", ErrMCPNeedApproval, t.Name)
 	}
-	req := RemoteApprovalRequest{Device: opts.Caller, Method: t.Method, Reason: t.Description, Args: args}
+	req := RemoteApprovalRequest{Device: caller, Method: t.Method, Reason: t.Description, Args: args}
 	if err := opts.Approve(ctx, req); err != nil {
 		return fmt.Errorf("%w: %w", ErrMCPNeedApproval, err)
 	}
