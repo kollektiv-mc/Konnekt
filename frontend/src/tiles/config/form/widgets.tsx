@@ -193,7 +193,7 @@ export function Select({ field, onChange }: { field: ConfigField; onChange: (v: 
             bg-elevated is wrong here at alpha 0.82 in both skins. z-popover so
             it paints over the rows that follow it (lib/layers.ts). */}
         {open && (
-          <div className="border-border-subtle bg-overlay z-popover absolute top-[calc(100%+4px)] right-0 min-w-full overflow-hidden rounded border shadow-[0_8px_24px_rgba(0,0,0,0.5)]">
+          <div className="border-border-subtle bg-overlay z-popover absolute top-[calc(100%+4px)] right-0 min-w-full overflow-hidden rounded border">
             {field.options?.map((opt) => (
               <button
                 key={opt}

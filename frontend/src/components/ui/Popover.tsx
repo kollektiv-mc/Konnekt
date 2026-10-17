@@ -24,7 +24,7 @@ export function Popover({
     <>
       {open && <div className="z-popover fixed inset-0" onClick={onClose} />}
       <div
-        className={`border-border-subtle bg-elevated border-hairline z-popover absolute top-[calc(100%_+_4px)] overflow-hidden rounded-lg shadow-[0_8px_24px_rgba(0,0,0,0.3)] backdrop-blur-md ${alignClass}`}
+        className={`border-border-subtle bg-overlay border-hairline z-popover absolute top-[calc(100%_+_4px)] overflow-hidden rounded-lg ${alignClass}`}
         // eslint-disable-next-line no-restricted-syntax -- width prop + open-driven animation are runtime-computed, not visible to Tailwind's static scanner
         style={{
           minWidth: width,
