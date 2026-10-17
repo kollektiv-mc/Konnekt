@@ -1,5 +1,5 @@
 import { describe, it, expect, afterEach, vi } from 'vitest'
-import { render, screen, fireEvent, cleanup } from '@testing-library/react'
+import { render, screen, fireEvent, cleanup, waitFor } from '@testing-library/react'
 import type { RemoteAccessState } from '../../stores/useRemoteStore'
 import { TunnelSection } from './TunnelSection'
 
@@ -10,6 +10,8 @@ type Status = Tunnel['status']
 
 const ADDRESS = 'https://quiet-fox.trycloudflare.com'
 const ALL: Status[] = ['off', 'downloading', 'starting', 'running', 'failed']
+const NONE = { hostname: '', port: 0, tokenSet: false }
+const NAMED = { hostname: 'dash.example.net', port: 48321, tokenSet: true }
 
 const tunnel = (over: Partial<Tunnel> = {}): Tunnel => ({
   status: 'off',
@@ -17,12 +19,18 @@ const tunnel = (over: Partial<Tunnel> = {}): Tunnel => ({
   error: '',
   percent: 0,
   version: '2026.9.3',
+  named: NONE,
   ...over,
 })
 
-function setup(t: Partial<Tunnel> = {}, props: { listening?: boolean; disabled?: boolean } = {}) {
+function setup(
+  t: Partial<Tunnel> = {},
+  props: { listening?: boolean; disabled?: boolean; saveOk?: boolean } = {},
+) {
   const onStart = vi.fn()
   const onStop = vi.fn()
+  const onSaveNamed = vi.fn(() => Promise.resolve(props.saveOk ?? true))
+  const onForgetNamed = vi.fn()
   const view = render(
     <TunnelSection
       tunnel={tunnel(t)}
@@ -30,10 +38,17 @@ function setup(t: Partial<Tunnel> = {}, props: { listening?: boolean; disabled?:
       disabled={props.disabled ?? false}
       onStart={onStart}
       onStop={onStop}
+      onSaveNamed={onSaveNamed}
+      onForgetNamed={onForgetNamed}
     />,
   )
-  return { onStart, onStop, ...view }
+  return { onStart, onStop, onSaveNamed, onForgetNamed, ...view }
 }
+
+const hostInput = () => screen.getByLabelText('Hostname') as HTMLInputElement
+const portInput = () => screen.getByLabelText('Port') as HTMLInputElement
+const tokenInput = () => screen.getByLabelText('Tunnel token') as HTMLInputElement
+const saveButton = () => screen.getByRole('button', { name: 'Save' }) as HTMLButtonElement
 
 const sw = () => screen.getByRole('switch') as HTMLButtonElement
 
@@ -182,5 +197,85 @@ describe('TunnelSection', () => {
   it.each(ALL)('uses no em dash in what it shows while %s', (status) => {
     setup({ status, url: ADDRESS, error: 'boom', percent: 7 })
     expect(document.body.textContent).not.toContain('—')
+  })
+
+  describe('the named tunnel form (#512)', () => {
+    it('offers the three fields and Save only once they are filled', () => {
+      const { onSaveNamed } = setup()
+      expect(screen.getByText(/Keep one address across runs/)).toBeTruthy()
+      expect(tokenInput().type).toBe('password')
+      expect(saveButton().disabled).toBe(true)
+      fireEvent.change(hostInput(), { target: { value: 'Dash.Example.net' } })
+      fireEvent.change(portInput(), { target: { value: '48321' } })
+      expect(saveButton().disabled).toBe(true)
+      fireEvent.change(tokenInput(), { target: { value: 'tok' } })
+      expect(saveButton().disabled).toBe(false)
+      fireEvent.click(saveButton())
+      expect(onSaveNamed).toHaveBeenCalledWith('Dash.Example.net', 48321, 'tok')
+    })
+
+    it.each(['80', '70000', 'abc', ''])('keeps Save off for port %j', (port) => {
+      setup()
+      fireEvent.change(hostInput(), { target: { value: 'dash.example.net' } })
+      fireEvent.change(portInput(), { target: { value: port } })
+      fireEvent.change(tokenInput(), { target: { value: 'tok' } })
+      expect(saveButton().disabled).toBe(true)
+    })
+
+    it('clears the token field after a save the backend accepted', async () => {
+      setup()
+      fireEvent.change(hostInput(), { target: { value: 'dash.example.net' } })
+      fireEvent.change(portInput(), { target: { value: '48321' } })
+      fireEvent.change(tokenInput(), { target: { value: 'tok' } })
+      fireEvent.click(saveButton())
+      await waitFor(() => expect(tokenInput().value).toBe(''))
+    })
+
+    it('keeps the token typed when the backend refused', async () => {
+      const { onSaveNamed } = setup({}, { saveOk: false })
+      fireEvent.change(hostInput(), { target: { value: '*.example.net' } })
+      fireEvent.change(portInput(), { target: { value: '48321' } })
+      fireEvent.change(tokenInput(), { target: { value: 'tok' } })
+      fireEvent.click(saveButton())
+      await waitFor(() => expect(onSaveNamed).toHaveBeenCalled())
+      expect(tokenInput().value).toBe('tok')
+    })
+
+    it('shows the saved hostname and port on one line, with Change and Forget token', () => {
+      const { onForgetNamed } = setup({ named: NAMED })
+      expect(screen.getByText('dash.example.net on port 48321')).toBeTruthy()
+      expect(screen.queryByLabelText('Tunnel token')).toBeNull()
+      fireEvent.click(screen.getByRole('button', { name: 'Forget token' }))
+      expect(onForgetNamed).toHaveBeenCalledTimes(1)
+    })
+
+    it('lets a saved tunnel change port with the stored token kept', () => {
+      const { onSaveNamed } = setup({ named: NAMED })
+      fireEvent.click(screen.getByRole('button', { name: 'Change' }))
+      expect(hostInput().value).toBe('dash.example.net')
+      expect(portInput().value).toBe('48321')
+      expect(tokenInput().placeholder).toBe('Keep the stored token')
+      fireEvent.change(portInput(), { target: { value: '48400' } })
+      expect(saveButton().disabled).toBe(false)
+      fireEvent.click(saveButton())
+      expect(onSaveNamed).toHaveBeenCalledWith('dash.example.net', 48400, '')
+    })
+
+    it('says the address stays while a named tunnel runs', () => {
+      setup({ status: 'running', url: 'https://dash.example.net', named: NAMED })
+      expect(screen.getByText(/The address stays the same across runs/)).toBeTruthy()
+      expect(screen.queryByText(/The address is new every time\./)).toBeNull()
+      expect(screen.getByText(/Opens your own address through Cloudflare\./)).toBeTruthy()
+    })
+
+    it.each<Status>(['downloading', 'starting', 'running'])('locks the form while %s', (status) => {
+      setup({ status, url: ADDRESS, named: NAMED })
+      expect((screen.getByRole('button', { name: 'Change' }) as HTMLButtonElement).disabled).toBe(
+        true,
+      )
+      expect(
+        (screen.getByRole('button', { name: 'Forget token' }) as HTMLButtonElement).disabled,
+      ).toBe(true)
+    })
   })
 })

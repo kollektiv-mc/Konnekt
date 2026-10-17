@@ -86,6 +86,10 @@ export function ForceStopServer(arg1) {
   return window['go']['main']['App']['ForceStopServer'](arg1);
 }
 
+export function ForgetRemoteTunnel() {
+  return window['go']['main']['App']['ForgetRemoteTunnel']();
+}
+
 export function GetActiveLayout() {
   return window['go']['main']['App']['GetActiveLayout']();
 }
@@ -384,6 +388,10 @@ export function SaveDestination(arg1, arg2) {
 
 export function SaveLayoutPreset(arg1, arg2) {
   return window['go']['main']['App']['SaveLayoutPreset'](arg1, arg2);
+}
+
+export function SaveRemoteTunnel(arg1, arg2, arg3) {
+  return window['go']['main']['App']['SaveRemoteTunnel'](arg1, arg2, arg3);
 }
 
 export function SaveScheduleGraph(arg1, arg2) {

@@ -4,9 +4,11 @@ import {
   AnswerRemoteApproval,
   ApproveRemoteDevice,
   DenyRemoteDevice,
+  ForgetRemoteTunnel,
   GetRemoteAccessState,
   RemoveRemoteDevice,
   RevokeRemoteSessions,
+  SaveRemoteTunnel,
   SetRemotePassword,
   StartRemoteAccess,
   StartRemoteTunnel,
@@ -15,8 +17,12 @@ import {
 } from '../../wailsjs/go/main/App'
 import type { models } from '../../wailsjs/go/models'
 
-/** The generated class without its converter method, so a plain object is one too. */
-export type RemoteAccessState = Omit<models.RemoteAccessState, 'convertValues'>
+/** The generated classes without their converter methods, so a plain object is one too. */
+export type TunnelState = Omit<models.TunnelState, 'convertValues'>
+export type NamedTunnel = models.NamedTunnel
+export type RemoteAccessState = Omit<models.RemoteAccessState, 'convertValues' | 'tunnel'> & {
+  tunnel: TunnelState
+}
 export type RemoteDevice = models.RemoteDevice
 export type RemotePendingDevice = models.RemotePendingDevice
 export type RemoteApproval = models.RemoteApproval
@@ -30,7 +36,14 @@ const OFF: RemoteAccessState = {
   devices: [],
   pendingDevices: [],
   approvals: [],
-  tunnel: { status: 'off', url: '', error: '', percent: 0, version: '' },
+  tunnel: {
+    status: 'off',
+    url: '',
+    error: '',
+    percent: 0,
+    version: '',
+    named: { hostname: '', port: 0, tokenSet: false },
+  },
 }
 
 interface RemoteStore {
@@ -48,6 +61,10 @@ interface RemoteStore {
   /** Returns once the tunnel has started coming up; `access.tunnel` reports the rest. */
   startTunnel: () => Promise<void>
   stopTunnel: () => Promise<void>
+  /** Configures the named tunnel (#512). An empty token keeps the stored one. */
+  saveNamedTunnel: (hostname: string, port: number, token: string) => Promise<void>
+  /** Deletes the token and the configuration; the switch runs a quick tunnel again. */
+  forgetNamedTunnel: () => Promise<void>
   approveDevice: (requestId: string, name: string) => Promise<void>
   denyDevice: (requestId: string) => Promise<void>
   removeDevice: (deviceId: string) => Promise<void>
@@ -101,6 +118,8 @@ export const useRemoteStore = create<RemoteStore>((set, get) => {
     stop: () => act(() => StopRemoteAccess()),
     startTunnel: () => act(() => StartRemoteTunnel()),
     stopTunnel: () => act(() => StopRemoteTunnel()),
+    saveNamedTunnel: (hostname, port, token) => act(() => SaveRemoteTunnel(hostname, port, token)),
+    forgetNamedTunnel: () => act(() => ForgetRemoteTunnel()),
     approveDevice: (requestId, name) => act(() => ApproveRemoteDevice(requestId, name)),
     denyDevice: (requestId) => act(() => DenyRemoteDevice(requestId)),
     removeDevice: (deviceId) => act(() => RemoveRemoteDevice(deviceId)),

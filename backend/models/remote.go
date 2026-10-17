@@ -59,8 +59,20 @@ type RemoteAccessState struct {
 // TunnelState is what the desktop shows about the tunnel.
 type TunnelState struct {
 	Status  string `json:"status"`  // "off" | "downloading" | "starting" | "running" | "failed"
-	URL     string `json:"url"`     // https://<name>.trycloudflare.com while running
+	URL     string `json:"url"`     // https://<name>.trycloudflare.com, or https://<named hostname>, while running
 	Error   string `json:"error"`   // why it failed, when Status is "failed"
 	Percent int    `json:"percent"` // download progress, 0-100, while "downloading"
 	Version string `json:"version"` // the pinned cloudflared version
+	// Named is the named tunnel's configuration (#512). With a hostname and a
+	// token set, the switch runs that tunnel instead of a quick one.
+	Named NamedTunnel `json:"named"`
+}
+
+// NamedTunnel is a remotely-managed Cloudflare tunnel on the user's own
+// account (#512): one hostname that stays the same across runs. The token
+// itself is never here (§ S2.3, S9.8); TokenSet says whether one is stored.
+type NamedTunnel struct {
+	Hostname string `json:"hostname"` // lowercase DNS name, "" when none is configured
+	Port     int    `json:"port"`     // the loopback port the dashboard's ingress rule names
+	TokenSet bool   `json:"tokenSet"`
 }

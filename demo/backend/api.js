@@ -166,7 +166,9 @@ export const api = {
   GetScheduleGraphWarnings: read([]),
   SaveScheduleGraph: mutate((_serverId, g) => state.saveGraph(g)),
   DeleteScheduleGraph: mutate((_serverId, id) => state.deleteGraph(id)),
-  SetScheduleGraphEnabled: mutate((_serverId, id, on) => state.setGraphEnabled(id, on)),
+  SetScheduleGraphEnabled: mutate((_serverId, id, on) =>
+    state.setGraphEnabled(id, on),
+  ),
   ImportScheduleGraphJSON: refuse("Importing a graph"),
   RunScheduleGraphNow: refuse("Running a schedule"),
   PreviewScheduleNode: read(async (_g, nodeId) => ({
@@ -263,7 +265,13 @@ export const api = {
   // in every browser (the reason the app asks Go). A few families most machines
   // ship stand in, so the picker has something to suggest; a name that is not
   // installed falls through to the default, same as in the app.
-  ListFontFamilies: read(["Arial", "Courier New", "Georgia", "Tahoma", "Verdana"]),
+  ListFontFamilies: read([
+    "Arial",
+    "Courier New",
+    "Georgia",
+    "Tahoma",
+    "Verdana",
+  ]),
   // Remote Access is the desktop's own, and the demo has no listener to start:
   // the pane renders in its off state and every action says why not.
   GetRemoteAccessState: read({
@@ -274,13 +282,22 @@ export const api = {
     devices: [],
     pendingDevices: [],
     approvals: [],
-    tunnel: { status: "off", url: "", error: "", percent: 0, version: "" },
+    tunnel: {
+      status: "off",
+      url: "",
+      error: "",
+      percent: 0,
+      version: "",
+      named: { hostname: "", port: 0, tokenSet: false },
+    },
   }),
   SetRemotePassword: refuse("Remote access"),
   StartRemoteAccess: refuse("Remote access"),
   StopRemoteAccess: refuse("Remote access"),
   StartRemoteTunnel: refuse("Remote access"),
   StopRemoteTunnel: refuse("Remote access"),
+  SaveRemoteTunnel: refuse("Remote access"),
+  ForgetRemoteTunnel: refuse("Remote access"),
   ApproveRemoteDevice: refuse("Remote access"),
   DenyRemoteDevice: refuse("Remote access"),
   RemoveRemoteDevice: refuse("Remote access"),

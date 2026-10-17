@@ -117,7 +117,9 @@ type TunnelService struct {
 	dataDir  string
 	state    models.TunnelState
 	onChange func()
-	onHost   func(host string, up bool)
+	onHost   func(host string, up, final bool)
+	// named is the named tunnel's saved configuration (tunnel_named.go).
+	named models.NamedTunnel
 
 	// gen counts runs. A run's goroutine reports only while its gen is still
 	// current, so a run Stop has cut off cannot write over its successor.
@@ -126,6 +128,7 @@ type TunnelService struct {
 	done   chan struct{} // closed when the current run's goroutine returns
 	pid    int           // the live cloudflared, 0 when none
 	host   string        // the public hostname while it is up
+	final  bool          // whether host is gone for good once it goes (a quick tunnel's is)
 
 	// Seams for tests.
 	pins         map[string]tunnelPin
@@ -148,11 +151,14 @@ func NewTunnelService() *TunnelService {
 	}
 }
 
-// SetDataDir sets where the binary is cached: <dir>/bin/cloudflared-<version>.
+// SetDataDir sets where the binary is cached (<dir>/bin/cloudflared-<version>)
+// and where the named tunnel's configuration and token live, and reads them.
 func (t *TunnelService) SetDataDir(dir string) {
+	named := t.loadNamed(dir)
 	t.mu.Lock()
 	defer t.mu.Unlock()
 	t.dataDir = dir
+	t.named = named
 }
 
 // OnChange registers what to tell when State changes. Called with t.mu released.
@@ -164,8 +170,11 @@ func (t *TunnelService) OnChange(fn func()) {
 
 // OnHost registers who is told the public hostname: up=true when the tunnel
 // comes up, up=false when it goes. The remote listener uses it to accept that
-// Host header and no other. Called with t.mu released.
-func (t *TunnelService) OnHost(fn func(host string, up bool)) {
+// Host header and no other. final=true says the hostname will not come back:
+// a quick tunnel's hostname, which is random, or a named one the user
+// forgot or replaced. A named hostname that only went down is not final.
+// Called with t.mu released.
+func (t *TunnelService) OnHost(fn func(host string, up, final bool)) {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 	t.onHost = fn
@@ -176,20 +185,27 @@ func (t *TunnelService) OnHost(fn func(host string, up bool)) {
 //
 //   - The tunnel's hostname is one the listener answers to while the tunnel is
 //     up, and at no other time (§ S8.3).
-//   - Devices approved on that hostname are forgotten when it goes: their
-//     cookies are bound to a name that will not come back.
+//   - Devices approved on a quick tunnel's hostname are forgotten when it
+//     goes: their cookies are bound to a name that will not come back. On a
+//     named hostname (#512) they are kept, because the name does come back
+//     and the cookie is bound to the name, not to the run; forgetting them
+//     would make every restart a re-approval, which is the quick tunnel's
+//     cost and the reason a named tunnel exists. They go when the user
+//     forgets the named tunnel or replaces its hostname.
 //   - The tunnel does not outlive the listener. When the listener stops, by
 //     hand or by its idle stop (§ S8.8), the tunnel is stopped with it; left
 //     up, it would publish a URL that answers nothing.
 func BindTunnel(remote *RemoteService, auth *RemoteAuth, tunnel *TunnelService, changed func()) {
 	tunnel.OnChange(changed)
-	tunnel.OnHost(func(host string, up bool) {
+	tunnel.OnHost(func(host string, up, final bool) {
 		if up {
 			remote.AllowHost(host)
 			return
 		}
 		remote.DisallowHost(host)
-		auth.ForgetHost(host)
+		if final {
+			auth.ForgetHost(host)
+		}
 	})
 	remote.OnChange(func() {
 		changed()
@@ -205,7 +221,9 @@ func BindTunnel(remote *RemoteService, auth *RemoteAuth, tunnel *TunnelService, 
 func (t *TunnelService) State() models.TunnelState {
 	t.mu.Lock()
 	defer t.mu.Unlock()
-	return t.state
+	s := t.state
+	s.Named = t.named
+	return s
 }
 
 func (t *TunnelService) pin() (tunnelPin, bool) {
@@ -251,11 +269,16 @@ func (t *TunnelService) Start(localAddr string) error {
 		t.mu.Unlock()
 		return ErrTunnelNoDataDir
 	}
+	plan, err := t.planRun(localAddr)
+	if err != nil {
+		t.mu.Unlock()
+		return err
+	}
 	t.gen++
 	gen := t.gen
 	ctx, cancel := context.WithCancel(context.Background())
 	done := make(chan struct{})
-	t.cancel, t.done, t.pid, t.host = cancel, done, 0, ""
+	t.cancel, t.done, t.pid, t.host, t.final = cancel, done, 0, "", plan.mode == tunnelQuickMode
 	t.state = models.TunnelState{Status: "starting", Version: tunnelVersion}
 	binPath := filepath.Join(t.dataDir, "bin", tunnelBinaryName(pin))
 	cb := t.onChange
@@ -267,7 +290,7 @@ func (t *TunnelService) Start(localAddr string) error {
 	go func() {
 		defer close(done)
 		defer cancel()
-		t.run(ctx, cancel, gen, pin, binPath, localAddr)
+		t.run(ctx, cancel, gen, pin, binPath, plan)
 	}()
 	return nil
 }
@@ -304,14 +327,14 @@ func (t *TunnelService) Stop() error {
 	}
 
 	t.mu.Lock()
-	host := t.host
+	host, final := t.host, t.final
 	t.cancel, t.done, t.pid, t.host = nil, nil, 0, ""
 	t.state = models.TunnelState{Status: "off", Version: tunnelVersion}
 	cb, hostCb := t.onChange, t.onHost
 	t.mu.Unlock()
 
 	if host != "" && hostCb != nil {
-		hostCb(host, false)
+		hostCb(host, false, final)
 	}
 	if cb != nil {
 		cb()
@@ -351,7 +374,7 @@ func (t *TunnelService) up(gen uint64, rawURL, host string) {
 	cb, hostCb := t.onChange, t.onHost
 	t.mu.Unlock()
 	if hostCb != nil {
-		hostCb(host, true)
+		hostCb(host, true, false)
 	}
 	if cb != nil {
 		cb()
@@ -365,14 +388,14 @@ func (t *TunnelService) fail(gen uint64, msg string) {
 		t.mu.Unlock()
 		return
 	}
-	host := t.host
+	host, final := t.host, t.final
 	t.host, t.pid = "", 0
 	t.state = models.TunnelState{Status: "failed", Error: msg, Version: tunnelVersion}
 	cb, hostCb := t.onChange, t.onHost
 	t.mu.Unlock()
 	slog.Warn("tunnel: failed", "reason", firstLine(msg))
 	if host != "" && hostCb != nil {
-		hostCb(host, false)
+		hostCb(host, false, final)
 	}
 	if cb != nil {
 		cb()
@@ -386,7 +409,7 @@ func firstLine(s string) string {
 	return s
 }
 
-func (t *TunnelService) run(ctx context.Context, cancel context.CancelFunc, gen uint64, pin tunnelPin, binPath, localAddr string) {
+func (t *TunnelService) run(ctx context.Context, cancel context.CancelFunc, gen uint64, pin tunnelPin, binPath string, plan tunnelRun) {
 	if err := t.prepareBinary(ctx, gen, pin, binPath); err != nil {
 		if ctx.Err() != nil {
 			return // Stop cancelled it; Stop reports "off"
@@ -397,7 +420,7 @@ func (t *TunnelService) run(ctx context.Context, cancel context.CancelFunc, gen 
 	if !t.set(gen, func(s *models.TunnelState) { s.Status, s.Percent = "starting", 0 }) {
 		return
 	}
-	t.runProcess(ctx, cancel, gen, binPath, localAddr)
+	t.runProcess(ctx, cancel, gen, binPath, plan)
 }
 
 func tunnelBinaryName(pin tunnelPin) string {
@@ -583,10 +606,11 @@ func (t *TunnelService) download(ctx context.Context, gen uint64, pin tunnelPin,
 }
 
 // runProcess starts cloudflared and supervises it until it exits. It blocks.
-func (t *TunnelService) runProcess(ctx context.Context, cancel context.CancelFunc, gen uint64, bin, localAddr string) {
+func (t *TunnelService) runProcess(ctx context.Context, cancel context.CancelFunc, gen uint64, bin string, plan tunnelRun) {
 	// --no-autoupdate matters: a binary that replaces itself is no longer the
-	// one whose hash was pinned.
-	cmd := t.newCmd(ctx, bin, "tunnel", "--no-autoupdate", "--url", "http://"+localAddr)
+	// one whose hash was pinned. The named tunnel's token is in no argument
+	// (§ S9.8): planRun passes the file's path.
+	cmd := t.newCmd(ctx, bin, plan.args...)
 	configureProcAttr(cmd) // own process group on Unix, must precede Start
 	hideConsoleWindow(cmd)
 
@@ -666,8 +690,8 @@ loop:
 				tail = tail[1:]
 			}
 			if host == "" {
-				if u := findTunnelURL(line); u != "" {
-					host = strings.TrimPrefix(u, "https://")
+				if u, h := plan.tunnelUp(line); u != "" {
+					host = h
 					timeout = nil
 					t.up(gen, u, host)
 				}
@@ -694,11 +718,11 @@ loop:
 	}
 	switch {
 	case timedOut:
-		t.fail(gen, fmt.Sprintf("cloudflared printed no tunnel URL within %s", t.urlTimeout)+detail)
+		t.fail(gen, fmt.Sprintf("cloudflared did not connect within %s", t.urlTimeout)+detail)
 	case host != "":
 		t.fail(gen, "the tunnel stopped unexpectedly"+detail)
 	default:
-		t.fail(gen, "cloudflared exited before it printed a tunnel URL ("+exitReason(waitErr)+")"+detail)
+		t.fail(gen, "cloudflared exited before it connected ("+exitReason(waitErr)+")"+detail)
 	}
 }
 

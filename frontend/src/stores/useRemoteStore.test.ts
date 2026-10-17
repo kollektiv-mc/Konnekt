@@ -6,6 +6,8 @@ import { models } from '../../wailsjs/go/models'
 
 vi.mock('../../wailsjs/go/main/App')
 
+const NONE = { hostname: '', port: 0, tokenSet: false }
+
 // The generated class, as the binding returns it.
 const state = (over: Partial<RemoteAccessState> = {}): models.RemoteAccessState =>
   models.RemoteAccessState.createFrom({
@@ -16,7 +18,7 @@ const state = (over: Partial<RemoteAccessState> = {}): models.RemoteAccessState 
     devices: [],
     pendingDevices: [],
     approvals: [],
-    tunnel: { status: 'off', url: '', error: '', percent: 0, version: '2026.9.3' },
+    tunnel: { status: 'off', url: '', error: '', percent: 0, version: '2026.9.3', named: NONE },
     ...over,
   })
 
@@ -33,6 +35,8 @@ describe('useRemoteStore', () => {
       App.StopRemoteAccess,
       App.StartRemoteTunnel,
       App.StopRemoteTunnel,
+      App.SaveRemoteTunnel,
+      App.ForgetRemoteTunnel,
       App.ApproveRemoteDevice,
       App.DenyRemoteDevice,
       App.RemoveRemoteDevice,
@@ -131,5 +135,28 @@ describe('useRemoteStore', () => {
     useRemoteStore.setState({ error: 'old refusal' })
     await useRemoteStore.getState().start()
     expect(useRemoteStore.getState().error).toBeNull()
+  })
+})
+
+describe('useRemoteStore, the named tunnel', () => {
+  it('saves the hostname, port and token as given, then reads the state back', async () => {
+    await useRemoteStore.getState().saveNamedTunnel('dash.example.net', 48321, 'tok')
+    expect(App.SaveRemoteTunnel).toHaveBeenCalledWith('dash.example.net', 48321, 'tok')
+    expect(App.GetRemoteAccessState).toHaveBeenCalledTimes(1)
+  })
+
+  it('forgets it and reads the state back', async () => {
+    await useRemoteStore.getState().forgetNamedTunnel()
+    expect(App.ForgetRemoteTunnel).toHaveBeenCalledTimes(1)
+    expect(App.GetRemoteAccessState).toHaveBeenCalledTimes(1)
+  })
+
+  it('records a refused save and rethrows it', async () => {
+    vi.mocked(App.SaveRemoteTunnel).mockRejectedValue(new Error('the hostname is not a DNS name'))
+    await expect(
+      useRemoteStore.getState().saveNamedTunnel('*.example.net', 48321, 'tok'),
+    ).rejects.toThrow()
+    expect(useRemoteStore.getState().error).toContain('not a DNS name')
+    expect(App.GetRemoteAccessState).not.toHaveBeenCalled()
   })
 })
