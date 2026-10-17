@@ -22,6 +22,10 @@ import (
 // Names, titles and descriptions are constants: no server name, world name or
 // player name goes into them, because clients place them in the model's
 // system context (§ S9.2).
+//
+// What a player wrote reaches Claude only inside a field the tool marks
+// Untrusted (#510, § S9.2): the engine cleans those and says what they are.
+// A result member not listed there is the owner's or the program's.
 
 // mcpInstructions is the server's static text for the client.
 const mcpInstructions = "Konnekt manages Minecraft servers on this computer. Call list_servers first; " +
@@ -45,13 +49,14 @@ var mcpTools = []services.MCPTool{
 	{Name: "players", Title: "Players", Method: "GetPlayerRoster", ReadOnly: true, Idempotent: true,
 		Description: "The players known to one server: online now or seen before, op level, whitelist and ban state. " +
 			"Names and ban reasons are player-written text.",
-		Params: []services.MCPParam{mcpServerIDParam}, Shape: mcpShapePlayers},
+		Params: []services.MCPParam{mcpServerIDParam}, Shape: mcpShapePlayers, Untrusted: []string{"name", "banReason"}},
 	{Name: "stats_history", Title: "Performance history", Method: "GetStatsHistory", ReadOnly: true, Idempotent: true,
 		Description: "The last hour of one server's TPS, memory, CPU and player count, one snapshot per sample.",
 		Params:      []services.MCPParam{mcpServerIDParam}, Key: "snapshots"},
 	{Name: "console_tail", Title: "Console", Method: "GetConsoleHistory", ReadOnly: true, Idempotent: true,
-		Description: "The recent console output of one server. Lines include player chat, which is third-party text.",
-		Params:      []services.MCPParam{mcpServerIDParam}, Key: "lines"},
+		Description: "The most recent console output of one server, newest last, at most " + mcpConsoleLinesText +
+			" lines. Lines include player chat, which is third-party text.",
+		Params: []services.MCPParam{mcpServerIDParam}, Shape: mcpShapeConsole, Untrusted: []string{"line"}},
 	{Name: "last_stop", Title: "Last stop", Method: "GetLastStop", ReadOnly: true, Idempotent: true,
 		Description: "Why the current server last stopped: on request, or by itself, and with which exit code.",
 		Key:         "stop"},
@@ -61,7 +66,7 @@ var mcpTools = []services.MCPTool{
 	{Name: "worlds", Title: "Worlds", Method: "ListWorlds", ReadOnly: true, Idempotent: true,
 		Description: "The world saves of one server: name, whether it is the active one, size, dimensions, " +
 			"and what level.dat says about it.",
-		Params: []services.MCPParam{mcpServerIDParam}, Shape: mcpShapeWorlds},
+		Params: []services.MCPParam{mcpServerIDParam}, Shape: mcpShapeWorlds, Untrusted: []string{"name", "levelName"}},
 	{Name: "schedules", Title: "Schedules", Method: "GetScheduleGraphs", ReadOnly: true, Idempotent: true,
 		Description: "The scheduled task graphs of one server: id, name and whether each is enabled.",
 		Params:      []services.MCPParam{mcpServerIDParam}, Shape: mcpShapeSchedules},
@@ -104,7 +109,28 @@ var mcpTools = []services.MCPTool{
 		Params: []services.MCPParam{mcpServerIDParam,
 			{Name: "scheduleID", Description: "the schedule's id, from schedules"}},
 		Key: "run"},
+
+	// The raw console, behind the desktop on every call (§ S9.3). The prompt
+	// shows the command as sent and who is asking, and there is no remember:
+	// with nobody at the desktop the call times out to a refusal, which is the
+	// intended cost. The dispatcher gates admin only and SendCommand is
+	// operate, so this flag is what holds it, and mcp_tools_test.go holds the
+	// flag.
+	{Name: "send_command", Title: "Send console command", Method: "SendCommand", Destructive: true, Approval: true,
+		Description: "Sends one line to one server's console, as typed and without the leading slash. " +
+			"Every call waits for the person at the desktop to approve it and is refused when nobody does.",
+		Params: []services.MCPParam{mcpServerIDParam,
+			{Name: "command", Description: "the console command, one line"}},
+		Shape: mcpShapeDone},
 }
+
+// mcpConsoleLines and mcpConsoleBytes cap console_tail: the ring holds more
+// than a model needs, and a chat flood is not a reason to send it all.
+const (
+	mcpConsoleLines     = 200
+	mcpConsoleLinesText = "200"
+	mcpConsoleBytes     = 32 * 1024
+)
 
 // The shapes below are what Claude sees of a result. Each one leaves out what
 // Claude has no business with and the browser remote shows only because the
@@ -112,6 +138,21 @@ var mcpTools = []services.MCPTool{
 // path on disk and its seed.
 
 func mcpShapeDone(any) any { return map[string]any{"done": true} }
+
+// mcpShapeConsole keeps the newest lines that fit both caps, in order.
+func mcpShapeConsole(result any) any {
+	all := mcpAs[[]models.ConsoleLine](result)
+	start, size := len(all), 0
+	for start > 0 && len(all)-start < mcpConsoleLines {
+		if size += len(all[start-1].Line); size > mcpConsoleBytes {
+			break
+		}
+		start--
+	}
+	out := make([]models.ConsoleLine, len(all)-start)
+	copy(out, all[start:])
+	return map[string]any{"lines": out}
+}
 
 func mcpShapeServers(result any) any {
 	type server struct {
