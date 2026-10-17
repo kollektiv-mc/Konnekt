@@ -202,3 +202,51 @@ func TestRemoteAccessListensOnTheNamedTunnelPort(t *testing.T) {
 		t.Errorf("after forget: %+v", state.Tunnel.Named)
 	}
 }
+
+// § S9.10: the connector URL exists once a named tunnel does, and the
+// listener is held open only with the tunnel configured and the switch on.
+func TestConnectorsHoldTheListenerWithANamedTunnel(t *testing.T) {
+	app := newRemoteTestApp(t)
+	app.tunnelService.SetDataDir(t.TempDir())
+	state, err := app.GetRemoteAccessState()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if c := state.Connectors; c.Enabled || c.URL != "" || len(c.Grants) != 0 {
+		t.Fatalf("fresh connectors state %+v", c)
+	}
+	if err := app.SetRemoteConnectorsEnabled(true); err != nil {
+		t.Fatal(err)
+	}
+	if !app.remoteService.MCPEnabled() || app.remoteService.HoldOpen() {
+		t.Fatalf("switch on, no tunnel: enabled=%v hold=%v", app.remoteService.MCPEnabled(), app.remoteService.HoldOpen())
+	}
+	if err := app.SaveRemoteTunnel("dash.example.net", 18080, "eyJ0b2tlbiI6Int9In0"); err != nil {
+		t.Fatal(err)
+	}
+	state, err = app.GetRemoteAccessState()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if state.Connectors.URL != "https://dash.example.net/mcp" || !app.remoteService.HoldOpen() {
+		t.Errorf("named tunnel: url=%q hold=%v", state.Connectors.URL, app.remoteService.HoldOpen())
+	}
+	if err := app.SetRemoteConnectorsEnabled(false); err != nil {
+		t.Fatal(err)
+	}
+	if app.remoteService.HoldOpen() || app.remoteService.MCPEnabled() {
+		t.Error("switch off still holds the listener or the endpoint")
+	}
+	if err := app.SetRemoteConnectorsEnabled(true); err != nil {
+		t.Fatal(err)
+	}
+	if err := app.ForgetRemoteTunnel(); err != nil {
+		t.Fatal(err)
+	}
+	if app.remoteService.HoldOpen() {
+		t.Error("the tunnel is gone and the listener is still held")
+	}
+	if err := app.RevokeRemoteGrant("nope"); !errors.Is(err, services.ErrRemoteGrantUnknown) {
+		t.Errorf("revoking an unknown grant: %v", err)
+	}
+}

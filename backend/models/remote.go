@@ -54,6 +54,32 @@ type RemoteAccessState struct {
 	// Tunnel is the public way in: off unless switched on, and only while the
 	// listener runs.
 	Tunnel TunnelState `json:"tunnel"`
+	// Connectors is Claude's way in over the tunnel (#513): the "Allow Claude
+	// connectors" switch, the URL a connector is given, and the grants that
+	// hold a token right now.
+	Connectors ConnectorsState `json:"connectors"`
+}
+
+// ConnectorsState is what the desktop shows about the MCP endpoint on the
+// remote listener (#513). URL is "https://<named hostname>/mcp" once a named
+// tunnel is configured, else "": the endpoint has no address a connector can
+// be given before then.
+type ConnectorsState struct {
+	Enabled bool          `json:"enabled"`
+	URL     string        `json:"url"`
+	Grants  []RemoteGrant `json:"grants"`
+}
+
+// RemoteGrant is one MCP client's standing permission to call the endpoint
+// (#513, #514): who it is, what it may do, and when its token was last seen.
+// The token itself is never here.
+type RemoteGrant struct {
+	ID        string   `json:"id"`
+	Client    string   `json:"client"`
+	Scopes    []string `json:"scopes"`
+	CreatedAt int64    `json:"createdAt"` // Unix ms
+	LastUsed  int64    `json:"lastUsed"`  // Unix ms, 0 before its first call
+	ExpiresAt int64    `json:"expiresAt"` // Unix ms; the access token's end
 }
 
 // TunnelState is what the desktop shows about the tunnel.

@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"io"
+	"net"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -11,6 +13,7 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
@@ -329,5 +332,40 @@ func TestLocalMCPServesAnAuthorizedClient(t *testing.T) {
 		HTTPClient: &http.Client{Transport: bearerRoundTripper{secret: "not-it"}}, MaxRetries: -1}
 	if _, err := mcp.NewClient(&mcp.Implementation{Name: "x", Version: "0"}, nil).Connect(ctx, wrong, nil); err == nil {
 		t.Error("a client with the wrong secret connected")
+	}
+}
+
+// A request the client never finishes sending holds its connection active,
+// which is what Shutdown waits for. Stop still ends within the grace plus a
+// forced close, reports nothing, and leaves no listener behind.
+func TestLocalMCPStopEndsAHeldRequest(t *testing.T) {
+	f := newLocalMCPFixture(t)
+	f.start(t)
+	_, secret, err := LocalMCPEndpoint(f.dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	conn, err := net.Dial("tcp", f.svc.Addr())
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer conn.Close() //nolint:errcheck // the server closes it first; this is the test's own tidy-up
+	head := "POST / HTTP/1.1\r\nHost: " + f.svc.Addr() + "\r\nAuthorization: Bearer " + secret +
+		"\r\nContent-Type: application/json\r\nContent-Length: 400\r\n\r\n{"
+	if _, err := io.WriteString(conn, head); err != nil {
+		t.Fatal(err)
+	}
+	// Let the server read the headers and block on the body.
+	time.Sleep(100 * time.Millisecond)
+	addr := f.svc.Addr()
+	started := time.Now()
+	if err := f.svc.Stop(); err != nil {
+		t.Fatalf("stop with a held request: %v", err)
+	}
+	if took := time.Since(started); took < localMCPGrace {
+		t.Errorf("stop returned after %v, before the %v grace", took, localMCPGrace)
+	}
+	if _, err := net.DialTimeout("tcp", addr, time.Second); err == nil {
+		t.Error("the endpoint still accepts connections after Stop")
 	}
 }

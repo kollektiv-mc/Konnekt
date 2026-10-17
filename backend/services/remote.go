@@ -60,6 +60,10 @@ type RemoteService struct {
 	// onChange is told when the listener starts or stops, by hand or by the
 	// idle stop, and when a socket opens or closes.
 	onChange func()
+	// mcp is the MCP endpoint's handler (remote_mcp.go, #513), nil until
+	// SetMCPServer; mcpFlags holds its switch and the idle hold.
+	mcp http.Handler
+	mcpFlags
 }
 
 // RemoteAuthorizer identifies the session behind a request. An error refuses
@@ -332,6 +336,8 @@ func (s *RemoteService) handler() http.Handler {
 	mux.HandleFunc("POST /api/logout", s.handleLogout)
 	mux.HandleFunc("GET /api/session", s.handleSession)
 	mux.HandleFunc("GET /ws", s.handleWS)
+	mux.HandleFunc("POST "+RemoteMCPPath, s.handleMCP)
+	mux.HandleFunc("GET "+RemoteMCPPath, s.handleMCP)
 	mux.HandleFunc("GET /", s.handleStatic)
 	return s.guard(mux)
 }
@@ -355,7 +361,13 @@ func (s *RemoteService) guard(next http.Handler) http.Handler {
 			return
 		}
 		origin := r.Header.Get("Origin")
-		mustHaveOrigin := r.URL.Path == "/ws" || (r.Method != http.MethodGet && r.Method != http.MethodHead)
+		// The MCP endpoint is the exception to "a write carries an Origin":
+		// its clients are not browsers and send none, and its credential is
+		// a bearer token, which no browser attaches on its own, so there is
+		// nothing for a cross-site page to ride (§ S9.5). An Origin that is
+		// present and foreign is still refused there, as the transport
+		// specification requires.
+		mustHaveOrigin := r.URL.Path == "/ws" || (r.Method != http.MethodGet && r.Method != http.MethodHead && r.URL.Path != RemoteMCPPath)
 		if origin == "" && mustHaveOrigin {
 			http.Error(w, "missing origin", http.StatusForbidden)
 			return
@@ -622,6 +634,11 @@ func (s *RemoteService) idleWatch(idle time.Duration, stop <-chan struct{}) {
 			return
 		case <-tick.C:
 			if time.Since(time.Unix(0, s.lastActive.Load())) < idle {
+				continue
+			}
+			// Held open for connectors (§ S9.10): the desktop chose it, the
+			// title bar shows it, and clearing the hold brings the stop back.
+			if s.holdOpen.Load() {
 				continue
 			}
 			slog.Info("remote: idle, stopping", "idle", idle.String())
