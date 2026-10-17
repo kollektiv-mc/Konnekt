@@ -10,6 +10,8 @@ vi.mock('../../../wailsjs/runtime/runtime', () => ({ BrowserOpenURL: vi.fn() }))
 
 afterEach(cleanup)
 
+const NONE = { hostname: '', port: 0, tokenSet: false }
+
 const access = (over: Partial<RemoteAccessState> = {}): RemoteAccessState =>
   ({
     passwordSet: true,
@@ -19,7 +21,7 @@ const access = (over: Partial<RemoteAccessState> = {}): RemoteAccessState =>
     devices: [],
     pendingDevices: [],
     approvals: [],
-    tunnel: { status: 'off', url: '', error: '', percent: 0, version: '2026.9.3' },
+    tunnel: { status: 'off', url: '', error: '', percent: 0, version: '2026.9.3', named: NONE },
     ...over,
   }) as RemoteAccessState
 
@@ -29,6 +31,8 @@ const actions = {
   stop: ok(),
   startTunnel: ok(),
   stopTunnel: ok(),
+  saveNamedTunnel: ok(),
+  forgetNamedTunnel: ok(),
   setPassword: ok(),
   removeDevice: ok(),
   revokeSessions: ok(),
@@ -159,6 +163,7 @@ describe('RemoteAccessPane', () => {
       error: '',
       percent: 0,
       version: '2026.9.3',
+      named: NONE,
     } as RemoteAccessState['tunnel']
 
     it('has its own section and switch', () => {

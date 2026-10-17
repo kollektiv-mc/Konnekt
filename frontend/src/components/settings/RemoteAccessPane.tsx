@@ -62,6 +62,8 @@ export function RemoteAccessPane() {
     stop,
     startTunnel,
     stopTunnel,
+    saveNamedTunnel,
+    forgetNamedTunnel,
     setPassword,
     removeDevice,
     revokeSessions,
@@ -133,6 +135,8 @@ export function RemoteAccessPane() {
         disabled={disabled}
         onStart={() => void run(startTunnel)}
         onStop={() => void run(stopTunnel)}
+        onSaveNamed={(hostname, port, token) => run(() => saveNamedTunnel(hostname, port, token))}
+        onForgetNamed={() => void run(forgetNamedTunnel)}
       />
 
       <div className={SECTION}>

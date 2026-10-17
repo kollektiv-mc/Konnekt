@@ -3,6 +3,8 @@ package main
 import (
 	"encoding/json"
 	"errors"
+	"net"
+	"strconv"
 	"strings"
 	"sync/atomic"
 	"testing"
@@ -149,5 +151,54 @@ func TestRemoteTunnelNeedsTheListener(t *testing.T) {
 	}
 	if err := app.StopRemoteTunnel(); err != nil {
 		t.Errorf("stopping a tunnel that is off: %v", err)
+	}
+}
+
+// With a named tunnel configured the listener takes that tunnel's port (#512),
+// because the dashboard's ingress rule names it; without one it takes any
+// free port, as before.
+func TestRemoteAccessListensOnTheNamedTunnelPort(t *testing.T) {
+	app := newRemoteTestApp(t)
+	app.tunnelService.SetDataDir(t.TempDir())
+	if err := app.SetRemotePassword("correct horse battery"); err != nil {
+		t.Fatal(err)
+	}
+	// A port that is free right now.
+	probe, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	port := probe.Addr().(*net.TCPAddr).Port
+	if err := probe.Close(); err != nil {
+		t.Fatal(err)
+	}
+	if err := app.SaveRemoteTunnel("dash.example.net", port, "eyJ0b2tlbiI6Int9In0"); err != nil {
+		t.Fatal(err)
+	}
+	state, err := app.GetRemoteAccessState()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if n := state.Tunnel.Named; n.Hostname != "dash.example.net" || n.Port != port || !n.TokenSet {
+		t.Fatalf("named %+v", n)
+	}
+	if err := app.StartRemoteAccess(); err != nil {
+		t.Fatal(err)
+	}
+	if addr := app.remoteService.Addr(); !strings.HasSuffix(addr, ":"+strconv.Itoa(port)) {
+		t.Errorf("listening on %s, want port %d", addr, port)
+	}
+	if err := app.StopRemoteAccess(); err != nil {
+		t.Fatal(err)
+	}
+	if err := app.ForgetRemoteTunnel(); err != nil {
+		t.Fatal(err)
+	}
+	state, err = app.GetRemoteAccessState()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if state.Tunnel.Named.TokenSet || state.Tunnel.Named.Hostname != "" {
+		t.Errorf("after forget: %+v", state.Tunnel.Named)
 	}
 }

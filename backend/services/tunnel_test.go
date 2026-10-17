@@ -23,7 +23,14 @@ import (
 	"konnekt/backend/models"
 )
 
-const tunnelHelperEnv = "KONNEKT_TUNNEL_HELPER"
+const (
+	tunnelHelperEnv      = "KONNEKT_TUNNEL_HELPER"
+	tunnelHelperTokenEnv = "KONNEKT_TUNNEL_HELPER_TOKEN"
+	// tunnelHelperArgsEnv carries the arguments the service gave cloudflared,
+	// newline-separated, since the helper is started by the test binary's own
+	// flags rather than by them.
+	tunnelHelperArgsEnv = "KONNEKT_TUNNEL_HELPER_ARGS"
+)
 
 // TestTunnelHelperProcess is not a test: it is the stand-in for cloudflared.
 // The test binary re-executes itself with KONNEKT_TUNNEL_HELPER set to a mode,
@@ -57,6 +64,30 @@ func TestTunnelHelperProcess(t *testing.T) {
 	case "longlines":
 		fmt.Fprintln(os.Stderr, strings.Repeat("x", 1000))
 		os.Exit(1)
+	case "named":
+		// The stand-in for `tunnel run --token-file`: the token must arrive by
+		// file and never in an argument (§ S9.8). The expected token comes in
+		// through the environment the fixture sets.
+		want := os.Getenv(tunnelHelperTokenEnv)
+		args := strings.Split(os.Getenv(tunnelHelperArgsEnv), "\n")
+		path := ""
+		for i, a := range args {
+			if strings.Contains(a, want) {
+				fmt.Fprintln(os.Stderr, "ERR the token is in argv")
+				os.Exit(8)
+			}
+			if a == "--token-file" && i+1 < len(args) {
+				path = args[i+1]
+			}
+		}
+		got, err := os.ReadFile(path)
+		if err != nil || string(got) != want {
+			fmt.Fprintf(os.Stderr, "ERR token file %q: %v\n", path, err)
+			os.Exit(7)
+		}
+		noise()
+		fmt.Fprintln(os.Stderr, "2026-10-01T10:00:02Z INF Registered tunnel connection connIndex=0 connection=1a2b location=fra01 protocol=quic")
+		time.Sleep(time.Minute)
 	}
 	os.Exit(0)
 }
@@ -75,8 +106,9 @@ type tunnelFixture struct {
 	calls   [][]string
 	cmds    []*exec.Cmd
 	changes int
-	hosts   []string // "host up" / "host down"
+	hosts   []string // "host up" / "host down" / "host down, kept"
 	mode    string
+	token   string // what the "named" helper expects in the token file
 }
 
 func newTunnelFixture(t *testing.T) *tunnelFixture {
@@ -101,7 +133,8 @@ func newTunnelFixture(t *testing.T) *tunnelFixture {
 		defer f.mu.Unlock()
 		f.calls = append(f.calls, append([]string{bin}, args...))
 		cmd := exec.CommandContext(ctx, os.Args[0], "-test.run=^TestTunnelHelperProcess$")
-		cmd.Env = append(os.Environ(), tunnelHelperEnv+"="+f.mode)
+		cmd.Env = append(os.Environ(), tunnelHelperEnv+"="+f.mode, tunnelHelperTokenEnv+"="+f.token,
+			tunnelHelperArgsEnv+"="+strings.Join(args, "\n"))
 		f.cmds = append(f.cmds, cmd)
 		return cmd
 	}
@@ -110,13 +143,16 @@ func newTunnelFixture(t *testing.T) *tunnelFixture {
 		f.changes++
 		f.mu.Unlock()
 	})
-	f.svc.OnHost(func(host string, up bool) {
+	f.svc.OnHost(func(host string, up, final bool) {
 		f.mu.Lock()
 		defer f.mu.Unlock()
-		if up {
+		switch {
+		case up:
 			f.hosts = append(f.hosts, host+" up")
-		} else {
+		case final:
 			f.hosts = append(f.hosts, host+" down")
+		default:
+			f.hosts = append(f.hosts, host+" down, kept")
 		}
 	})
 	t.Cleanup(func() {
@@ -520,7 +556,7 @@ func TestTunnelFailsWhenProcessExitsWithoutURL(t *testing.T) {
 		t.Fatal(err)
 	}
 	s := f.waitStatus("failed")
-	for _, want := range []string{"exited before it printed a tunnel URL", "failed to request quick Tunnel", "stdout noise line"} {
+	for _, want := range []string{"exited before it connected", "failed to request quick Tunnel", "stdout noise line"} {
 		if !strings.Contains(s.Error, want) {
 			t.Errorf("error lacks %q: %q", want, s.Error)
 		}
@@ -565,7 +601,7 @@ func TestTunnelFailsWhenNoURLAppears(t *testing.T) {
 		t.Fatal(err)
 	}
 	s := f.waitStatus("failed")
-	if !strings.Contains(s.Error, "no tunnel URL") {
+	if !strings.Contains(s.Error, "did not connect within") {
 		t.Fatalf("error %q", s.Error)
 	}
 	f.mu.Lock()

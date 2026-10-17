@@ -1028,13 +1028,19 @@ func (a *App) SetRemotePassword(password string) error {
 	return a.remoteAuth.SetPassword(password)
 }
 
-// StartRemoteAccess starts the listener on a free loopback port. It refuses
-// without a password: a listener nobody can sign in to is only attack surface.
+// StartRemoteAccess starts the listener on a loopback port: a free one, or
+// the named tunnel's fixed one while that is configured (#512), because the
+// dashboard's ingress rule names it. It refuses without a password: a
+// listener nobody can sign in to is only attack surface.
 func (a *App) StartRemoteAccess() error {
 	if !a.remoteAuth.PasswordSet() {
 		return errors.New("set a password before switching remote access on")
 	}
-	_, err := a.remoteService.Start(0)
+	port := 0
+	if named := a.tunnelService.Named(); named.Hostname != "" {
+		port = named.Port
+	}
+	_, err := a.remoteService.Start(port)
 	return err
 }
 
@@ -1058,6 +1064,21 @@ func (a *App) StartRemoteTunnel() error {
 
 func (a *App) StopRemoteTunnel() error {
 	return a.tunnelService.Stop()
+}
+
+// SaveRemoteTunnel configures the named tunnel (#512): the hostname the user
+// routed in their Cloudflare dashboard, the loopback port its ingress rule
+// names, and the tunnel token. An empty token keeps the stored one. The token
+// goes to an owner-only file and nowhere else (§ S9.8); it is not in the
+// state this method's twin returns, only whether one is set.
+func (a *App) SaveRemoteTunnel(hostname string, port int, token string) error {
+	return a.tunnelService.SaveNamed(hostname, port, token)
+}
+
+// ForgetRemoteTunnel deletes the named tunnel's token and configuration, and
+// the devices approved on its hostname. The switch runs a quick tunnel again.
+func (a *App) ForgetRemoteTunnel() error {
+	return a.tunnelService.ForgetNamed()
 }
 
 // ApproveRemoteDevice approves a waiting browser under the name the person at

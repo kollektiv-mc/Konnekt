@@ -45,6 +45,8 @@ export function DuplicateWorld(arg1:string,arg2:string,arg3:string):Promise<void
 
 export function ForceStopServer(arg1:string):Promise<void>;
 
+export function ForgetRemoteTunnel():Promise<void>;
+
 export function GetActiveLayout():Promise<string>;
 
 export function GetActiveServerID():Promise<string>;
@@ -194,6 +196,8 @@ export function SaveCommandButtons(arg1:Array<models.CommandButton>):Promise<voi
 export function SaveDestination(arg1:models.Destination,arg2:string):Promise<models.Destination>;
 
 export function SaveLayoutPreset(arg1:string,arg2:string):Promise<void>;
+
+export function SaveRemoteTunnel(arg1:string,arg2:number,arg3:string):Promise<void>;
 
 export function SaveScheduleGraph(arg1:string,arg2:models.Graph):Promise<models.Graph>;
 
