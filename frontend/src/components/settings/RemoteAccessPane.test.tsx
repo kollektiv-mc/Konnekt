@@ -23,6 +23,7 @@ const access = (over: Partial<RemoteAccessState> = {}): RemoteAccessState =>
     approvals: [],
     tunnel: { status: 'off', url: '', error: '', percent: 0, version: '2026.9.3', named: NONE },
     connectors: { enabled: false, url: '', grants: [] },
+    localMcp: { enabled: false, running: false, addr: '', command: '', executable: '' },
     ...over,
   }) as RemoteAccessState
 
@@ -39,6 +40,10 @@ const actions = {
   revokeSessions: ok(),
   approveDevice: ok(),
   denyDevice: ok(),
+  setLocalMCPEnabled: ok(),
+  setConnectorsEnabled: ok(),
+  revokeGrant: ok(),
+  revokeAllGrants: ok(),
 }
 
 const seed = (over: Partial<RemoteAccessState> = {}, extra: object = {}) =>
@@ -171,7 +176,7 @@ describe('RemoteAccessPane', () => {
       seed({ running: true, addr: '127.0.0.1:1' })
       render(<RemoteAccessPane />)
       expect(screen.getByText('Reach it from anywhere')).toBeTruthy()
-      expect(screen.getAllByRole('switch')).toHaveLength(2)
+      expect(screen.getAllByRole('switch')).toHaveLength(4)
       expect(tunnelToggle().getAttribute('aria-checked')).toBe('false')
       expect(tunnelToggle().disabled).toBe(false)
     })
@@ -343,6 +348,46 @@ describe('RemoteAccessPane', () => {
         'A browser is waiting to be approved',
       )
     })
+  })
+
+  it("drives Claude's switches and revocations through the store", async () => {
+    seed({
+      connectors: {
+        enabled: true,
+        url: 'https://mc.example.com/mcp',
+        grants: [
+          {
+            id: 'g1',
+            client: 'Claude',
+            redirect: 'claude.ai',
+            scopes: ['konnekt:read'],
+            createdAt: 1,
+            lastUsed: 0,
+            expiresAt: 2,
+          },
+          {
+            id: 'g2',
+            client: 'Claude Code',
+            redirect: 'localhost',
+            scopes: ['konnekt:read'],
+            createdAt: 1,
+            lastUsed: 0,
+            expiresAt: 2,
+          },
+        ],
+      },
+    })
+    render(<RemoteAccessPane />)
+    const switches = screen.getAllByRole('switch')
+    expect(switches).toHaveLength(4)
+    fireEvent.click(switches[2])
+    await waitFor(() => expect(actions.setLocalMCPEnabled).toHaveBeenCalledWith(true))
+    fireEvent.click(switches[3])
+    await waitFor(() => expect(actions.setConnectorsEnabled).toHaveBeenCalledWith(false))
+    fireEvent.click(screen.getAllByRole('button', { name: 'Revoke' })[0])
+    await waitFor(() => expect(actions.revokeGrant).toHaveBeenCalledWith('g1'))
+    fireEvent.click(screen.getByRole('button', { name: 'Revoke all' }))
+    await waitFor(() => expect(actions.revokeAllGrants).toHaveBeenCalledTimes(1))
   })
 
   it('shows the store error in a banner', () => {

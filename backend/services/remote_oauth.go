@@ -942,7 +942,11 @@ func (a *RemoteAuth) exchangeCode(code, verifier, clientID, redirect, resource s
 	if resource != "" && !strings.EqualFold(resource, entry.resource) {
 		return remoteTokens{}, errRemoteTarget
 	}
-	_, tokens, err := a.issueGrantLocked(entry.client.Name, entry.client.ID, entry.scopes, entry.resource, true)
+	redirectHost := entry.redirectURI
+	if u, err := url.Parse(redirectHost); err == nil && u.Hostname() != "" {
+		redirectHost = u.Hostname()
+	}
+	_, tokens, err := a.issueGrantLocked(entry.client.Name, entry.client.ID, redirectHost, entry.scopes, entry.resource, true)
 	return tokens, err
 }
 

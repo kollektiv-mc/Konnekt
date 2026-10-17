@@ -1078,6 +1078,7 @@ func (a *App) GetRemoteAccessState() (models.RemoteAccessState, error) {
 		Approvals:      a.remoteApprovals.Pending(),
 		Tunnel:         a.tunnelService.State(),
 		Connectors:     a.connectorsState(),
+		LocalMCP:       a.localMCP.State(mcpBridgeExecutable()),
 	}, nil
 }
 
@@ -1104,6 +1105,12 @@ func (a *App) SetRemoteConnectorsEnabled(on bool) error {
 // refused.
 func (a *App) RevokeRemoteGrant(id string) error {
 	return a.remoteAuth.RevokeGrant(id)
+}
+
+// RevokeAllRemoteGrants ends every connector's grant (#515). Each signs in
+// again from scratch, through the password and the desktop.
+func (a *App) RevokeAllRemoteGrants() error {
+	return a.remoteAuth.RevokeGrants()
 }
 
 // syncConnectors gives the listener the switch and the idle hold it follows
@@ -1188,7 +1195,7 @@ func (a *App) ForgetRemoteTunnel() error {
 // switch, the endpoint and the command to register with a client. The secret
 // is not in it.
 func (a *App) GetLocalMCPState() (models.LocalMCPState, error) {
-	return a.localMCP.State(mcpBridgeCommand()), nil
+	return a.localMCP.State(mcpBridgeExecutable()), nil
 }
 
 // SetLocalMCPEnabled is "Allow Claude on this computer": on starts the

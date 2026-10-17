@@ -110,6 +110,36 @@ describe('RemotePrompts', () => {
     expect(pre?.textContent).toBe(JSON.stringify({ jvmArgs: ['-Xmx2G'] }, null, 2))
   })
 
+  it('names a connector sign-in and a console command for what they are', () => {
+    seed([
+      approval({
+        method: 'ConnectorSignIn',
+        reason: 'Claude Code wants to connect to Konnekt and see your servers',
+        args: [],
+      }),
+    ])
+    render(<RemotePrompts />)
+    expect(screen.getByText('Pixel wants to connect to Konnekt')).toBeTruthy()
+    expect(screen.queryByText('ConnectorSignIn')).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: 'Allow' }))
+    expect(actions.answerApproval).toHaveBeenCalledWith('a1', true)
+    expect(vi.mocked(emitNotification)).toHaveBeenCalledWith(
+      'warn',
+      'Pixel is asking to connect to Konnekt',
+    )
+
+    cleanup()
+    seed([approval({ id: 'a2', method: 'SendCommand', args: ['"say hi"'] })])
+    render(<RemotePrompts />)
+    expect(screen.getByText('Pixel wants to run a console command')).toBeTruthy()
+    expect(screen.getByText('SendCommand')).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Allow once' })).toBeTruthy()
+    expect(vi.mocked(emitNotification)).toHaveBeenLastCalledWith(
+      'warn',
+      'Pixel is asking to run a console command',
+    )
+  })
+
   it('falls back to the raw string for an argument that is not JSON', () => {
     seed([approval({ args: ['not json {'] })])
     render(<RemotePrompts />)

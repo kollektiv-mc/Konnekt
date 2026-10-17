@@ -353,6 +353,7 @@ export namespace models {
 	export class RemoteGrant {
 	    id: string;
 	    client: string;
+	    redirect: string;
 	    scopes: string[];
 	    createdAt: number;
 	    lastUsed: number;
@@ -366,6 +367,7 @@ export namespace models {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.id = source["id"];
 	        this.client = source["client"];
+	        this.redirect = source["redirect"];
 	        this.scopes = source["scopes"];
 	        this.createdAt = source["createdAt"];
 	        this.lastUsed = source["lastUsed"];
@@ -753,6 +755,7 @@ export namespace models {
 	    running: boolean;
 	    addr: string;
 	    command: string;
+	    executable: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new LocalMCPState(source);
@@ -764,6 +767,7 @@ export namespace models {
 	        this.running = source["running"];
 	        this.addr = source["addr"];
 	        this.command = source["command"];
+	        this.executable = source["executable"];
 	    }
 	}
 	export class ModDependency {
@@ -1190,6 +1194,7 @@ export namespace models {
 	    approvals: RemoteApproval[];
 	    tunnel: TunnelState;
 	    connectors: ConnectorsState;
+	    localMcp: LocalMCPState;
 	
 	    static createFrom(source: any = {}) {
 	        return new RemoteAccessState(source);
@@ -1206,6 +1211,7 @@ export namespace models {
 	        this.approvals = this.convertValues(source["approvals"], RemoteApproval);
 	        this.tunnel = this.convertValues(source["tunnel"], TunnelState);
 	        this.connectors = this.convertValues(source["connectors"], ConnectorsState);
+	        this.localMcp = this.convertValues(source["localMcp"], LocalMCPState);
 	    }
 	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {

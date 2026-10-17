@@ -29,6 +29,34 @@ function waitingItems(
   return [...a.sort(byAge), ...d.sort(byAge)]
 }
 
+/** The desktop prompt's method for a connector's sign-in (remote_oauth.go). */
+const CONSENT_METHOD = 'ConnectorSignIn'
+/** The one catalog tool that asks on every call (mcp_tools.go). */
+const CONSOLE_METHOD = 'SendCommand'
+
+/** What is being asked, in the title: an MCP request names its kind, the rest is a change. */
+function approvalTitle(approval: RemoteApproval): string {
+  switch (approval.method) {
+    case CONSENT_METHOD:
+      return `${approval.device} wants to connect to Konnekt`
+    case CONSOLE_METHOD:
+      return `${approval.device} wants to run a console command`
+    default:
+      return `${approval.device} wants to make a change`
+  }
+}
+
+function approvalNotice(approval: RemoteApproval): string {
+  switch (approval.method) {
+    case CONSENT_METHOD:
+      return `${approval.device} is asking to connect to Konnekt`
+    case CONSOLE_METHOD:
+      return `${approval.device} is asking to run a console command`
+    default:
+      return `${approval.device} is asking to make a change through remote access`
+  }
+}
+
 /** One argument as the call sent it, indented when it is JSON and verbatim when it is not. */
 function pretty(arg: string): string {
   try {
@@ -73,7 +101,7 @@ export function RemotePrompts() {
         'warn',
         item.kind === 'device'
           ? 'A device is waiting to be approved for remote access'
-          : `${item.approval.device} is asking to make a change through remote access`,
+          : approvalNotice(item.approval),
       )
     }
   }, [approvals, pending])
@@ -178,9 +206,11 @@ function ApprovalPrompt({ approval, total }: { approval: RemoteApproval; total: 
       <div className="flex flex-col gap-1">
         <Count total={total} />
         <span id="remote-prompt-title" className="text-text-primary text-sm font-medium">
-          {approval.device} wants to make a change
+          {approvalTitle(approval)}
         </span>
-        <span className="text-text-primary font-mono text-xs">{approval.method}</span>
+        {approval.method !== CONSENT_METHOD && (
+          <span className="text-text-primary font-mono text-xs">{approval.method}</span>
+        )}
         <span className="text-text-muted text-xs">{approval.reason}</span>
       </div>
 
@@ -218,7 +248,7 @@ function ApprovalPrompt({ approval, total }: { approval: RemoteApproval; total: 
           onClick={() => answer(true)}
           className="text-accent border-accent/30 hover:bg-accent/10 border-hairline rounded px-3 py-1.5 text-xs transition-colors disabled:opacity-40"
         >
-          Allow once
+          {approval.method === CONSENT_METHOD ? 'Allow' : 'Allow once'}
         </button>
       </div>
 

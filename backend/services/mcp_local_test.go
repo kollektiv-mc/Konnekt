@@ -265,7 +265,7 @@ func TestLocalMCPStartRefusesWithNothingToServe(t *testing.T) {
 	if err := bare.Stop(); err != nil {
 		t.Errorf("stop while never started: %v", err)
 	}
-	if state := bare.State("x mcp"); state.Enabled || state.Running || state.Command != "x mcp" {
+	if state := bare.State("x"); state.Enabled || state.Running || state.Command != `"x" mcp` || state.Executable != "x" {
 		t.Errorf("state %+v", state)
 	}
 }

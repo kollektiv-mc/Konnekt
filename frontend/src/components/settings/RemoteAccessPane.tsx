@@ -5,6 +5,7 @@ import { relativeMs } from '../../lib/format'
 import { BrowserOpenURL } from '../../../wailsjs/runtime/runtime'
 import { SettingRow } from '../ui/SettingRow'
 import { Toggle } from '../ui/Toggle'
+import { ClaudeSection } from './ClaudeSection'
 import { CopyButton } from './CopyButton'
 import { PendingDeviceCard } from './PendingDeviceCard'
 import { TunnelSection } from './TunnelSection'
@@ -69,6 +70,10 @@ export function RemoteAccessPane() {
     revokeSessions,
     approveDevice,
     denyDevice,
+    setLocalMCPEnabled,
+    setConnectorsEnabled,
+    revokeGrant,
+    revokeAllGrants,
   } = useRemoteStore()
   const [busy, setBusy] = useState(false)
   const [password, setPasswordText] = useState('')
@@ -137,6 +142,17 @@ export function RemoteAccessPane() {
         onStop={() => void run(stopTunnel)}
         onSaveNamed={(hostname, port, token) => run(() => saveNamedTunnel(hostname, port, token))}
         onForgetNamed={() => void run(forgetNamedTunnel)}
+      />
+
+      <ClaudeSection
+        local={access.localMcp}
+        connectors={access.connectors}
+        passwordSet={passwordSet}
+        disabled={disabled}
+        onLocal={(on) => void run(() => setLocalMCPEnabled(on))}
+        onConnectors={(on) => void run(() => setConnectorsEnabled(on))}
+        onRevoke={(id) => void run(() => revokeGrant(id))}
+        onRevokeAll={() => void run(revokeAllGrants)}
       />
 
       <div className={SECTION}>
