@@ -165,21 +165,23 @@ var neverRemote = map[string]string{
 
 	// The desktop's own control over remote access. A session that could call
 	// any of these could approve itself, or lock the desktop's user out.
-	"GetRemoteAccessState": "lists the devices, the waiting requests and the arguments of calls awaiting approval",
-	"SetRemotePassword":    "the first factor; set at the desktop only",
-	"StartRemoteAccess":    "switched on at the desktop only (§ S8.8)",
-	"StopRemoteAccess":     "a browser that could stop the listener could lock every other device out; closing the tab is its way to leave",
-	"StartRemoteTunnel":    "publishing the dashboard to the internet is decided at the desktop only (§ S8.8)",
-	"StopRemoteTunnel":     "closing the tunnel cuts off every browser on it; the desktop's call",
-	"SaveRemoteTunnel":     "takes the tunnel token, a credential (§ S9.8); pasted at the desktop only",
-	"ForgetRemoteTunnel":   "deletes the token and the devices on its hostname; the desktop's call",
-	"GetLocalMCPState":     "the local bridge's switch and endpoint; the desktop's own (§ S9.4)",
-	"SetLocalMCPEnabled":   "opens a second loopback listener; decided at the desktop only, like StartRemoteAccess (§ S8.8)",
-	"ApproveRemoteDevice":  "the second factor (§ S8.6); a browser that could call it could approve itself",
-	"DenyRemoteDevice":     "the desktop's answer to a waiting device",
-	"RemoveRemoteDevice":   "the desktop's list of who may sign in",
-	"RevokeRemoteSessions": "revocation is the desktop's (§ S8.5)",
-	"AnswerRemoteApproval": "the approval itself (§ S8.2); a browser that could call it could approve its own admin calls",
+	"GetRemoteAccessState":       "lists the devices, the waiting requests and the arguments of calls awaiting approval",
+	"SetRemotePassword":          "the first factor; set at the desktop only",
+	"StartRemoteAccess":          "switched on at the desktop only (§ S8.8)",
+	"StopRemoteAccess":           "a browser that could stop the listener could lock every other device out; closing the tab is its way to leave",
+	"StartRemoteTunnel":          "publishing the dashboard to the internet is decided at the desktop only (§ S8.8)",
+	"StopRemoteTunnel":           "closing the tunnel cuts off every browser on it; the desktop's call",
+	"GetLocalMCPState":           "the local bridge's switch and endpoint; the desktop's own (§ S9.4)",
+	"SetLocalMCPEnabled":         "opens a second loopback listener; decided at the desktop only, like StartRemoteAccess (§ S8.8)",
+	"SetRemoteConnectorsEnabled": "opens the MCP endpoint to the internet; decided at the desktop only (§ S9.10)",
+	"RevokeRemoteGrant":          "ends a connector's access; a connector that could call it could unseat another",
+	"SaveRemoteTunnel":           "takes the tunnel token, a credential (§ S9.8); pasted at the desktop only",
+	"ForgetRemoteTunnel":         "deletes the token and the devices on its hostname; the desktop's call",
+	"ApproveRemoteDevice":        "the second factor (§ S8.6); a browser that could call it could approve itself",
+	"DenyRemoteDevice":           "the desktop's answer to a waiting device",
+	"RemoveRemoteDevice":         "the desktop's list of who may sign in",
+	"RevokeRemoteSessions":       "revocation is the desktop's (§ S8.5)",
+	"AnswerRemoteApproval":       "the approval itself (§ S8.2); a browser that could call it could approve its own admin calls",
 
 	// A bucket credential is typed at the desktop. An admin call's approval card
 	// prints the call's arguments (§ S8.2), so a secret sent from a browser would

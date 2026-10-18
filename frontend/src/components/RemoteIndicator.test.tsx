@@ -20,6 +20,7 @@ function seed(over: Record<string, unknown> = {}) {
       pendingDevices: [],
       approvals: [],
       tunnel: { status: 'off', url: '', error: '', percent: 0, version: '2026.9.3' },
+      connectors: { enabled: false, url: '', grants: [] },
       ...over,
     } as unknown as RemoteAccessState,
     loaded: true,

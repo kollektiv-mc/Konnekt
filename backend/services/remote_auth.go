@@ -139,6 +139,10 @@ const (
 type remoteAuthState struct {
 	Password string               `json:"password,omitempty"`
 	Devices  []remoteDeviceRecord `json:"devices,omitempty"`
+	// Connectors is the "Allow Claude connectors" switch (#513), and Grants
+	// are the MCP clients it has let in (remote_grants.go).
+	Connectors bool                `json:"connectors,omitempty"`
+	Grants     []remoteGrantRecord `json:"grants,omitempty"`
 }
 
 type remoteDeviceRecord struct {
@@ -297,8 +301,18 @@ func (a *RemoteAuth) SetPassword(password string) error {
 	// A pending request remembers that the old password was right.
 	a.pending = map[string]*remotePendingEntry{}
 	revoked, notify := a.dropSessionsLocked(func(*remoteSessionEntry) bool { return true })
+	// A grant was consented to with the old password (#514), so it goes the
+	// way the sessions do. Already saved above with the hash; the grants are
+	// dropped from the saved state too.
+	grants := len(a.state.Grants)
+	a.state.Grants = nil
+	if grants > 0 {
+		if err := a.saveLocked(); err != nil {
+			slog.Error("remote: drop grants with the password", "error", err)
+		}
+	}
 	a.mu.Unlock()
-	slog.Info("remote: password set", "sessionsEnded", len(revoked))
+	slog.Info("remote: password set", "sessionsEnded", len(revoked), "grantsEnded", grants)
 	notifyRevoked(notify, revoked)
 	return nil
 }
