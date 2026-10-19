@@ -85,7 +85,7 @@ func TestRemoteMCPRefusesEverythingButABearer(t *testing.T) {
 	bearer := func(tok string) func(*http.Request) {
 		return func(r *http.Request) { r.Header.Set("Authorization", "Bearer "+tok) }
 	}
-	const challenge = `Bearer resource_metadata="https://` + testHost + `/.well-known/oauth-protected-resource"`
+	const challenge = `Bearer resource_metadata="https://` + testHost + `/.well-known/oauth-protected-resource", scope="konnekt:read"`
 
 	cases := []struct {
 		name   string
