@@ -20,6 +20,7 @@ const state = (over: Partial<RemoteAccessState> = {}): models.RemoteAccessState 
     approvals: [],
     tunnel: { status: 'off', url: '', error: '', percent: 0, version: '2026.9.3', named: NONE },
     connectors: { enabled: false, url: '', grants: [] },
+    localMcp: { enabled: false, running: false, addr: '', command: '', executable: '' },
     ...over,
   })
 
@@ -43,6 +44,10 @@ describe('useRemoteStore', () => {
       App.RemoveRemoteDevice,
       App.RevokeRemoteSessions,
       App.AnswerRemoteApproval,
+      App.SetLocalMCPEnabled,
+      App.SetRemoteConnectorsEnabled,
+      App.RevokeRemoteGrant,
+      App.RevokeAllRemoteGrants,
     ]) {
       vi.mocked(fn).mockResolvedValue(undefined)
     }
@@ -109,6 +114,30 @@ describe('useRemoteStore', () => {
       () => useRemoteStore.getState().answerApproval('a1', true),
       () => App.AnswerRemoteApproval,
       ['a1', true],
+    ],
+    [
+      'setLocalMCPEnabled',
+      () => useRemoteStore.getState().setLocalMCPEnabled(true),
+      () => App.SetLocalMCPEnabled,
+      [true],
+    ],
+    [
+      'setConnectorsEnabled',
+      () => useRemoteStore.getState().setConnectorsEnabled(false),
+      () => App.SetRemoteConnectorsEnabled,
+      [false],
+    ],
+    [
+      'revokeGrant',
+      () => useRemoteStore.getState().revokeGrant('g1'),
+      () => App.RevokeRemoteGrant,
+      ['g1'],
+    ],
+    [
+      'revokeAllGrants',
+      () => useRemoteStore.getState().revokeAllGrants(),
+      () => App.RevokeAllRemoteGrants,
+      [],
     ],
   ]
 

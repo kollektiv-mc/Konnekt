@@ -118,6 +118,7 @@ var serverlessMethods = map[string]string{
 	"SetLocalMCPEnabled":         "remote access belongs to the app",
 	"SetRemoteConnectorsEnabled": "remote access belongs to the app",
 	"RevokeRemoteGrant":          "remote access belongs to the app",
+	"RevokeAllRemoteGrants":      "remote access belongs to the app",
 	"SaveRemoteTunnel":           "remote access belongs to the app",
 	"ForgetRemoteTunnel":         "remote access belongs to the app",
 	"ApproveRemoteDevice":        "remote access belongs to the app; the id is a waiting request's",

@@ -181,6 +181,8 @@ export function RestartServer(arg1:string):Promise<void>;
 
 export function RestoreBackup(arg1:string,arg2:string):Promise<void>;
 
+export function RevokeAllRemoteGrants():Promise<void>;
+
 export function RevokeRemoteGrant(arg1:string):Promise<void>;
 
 export function RevokeRemoteSessions():Promise<void>;

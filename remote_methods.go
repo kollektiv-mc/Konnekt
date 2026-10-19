@@ -175,6 +175,7 @@ var neverRemote = map[string]string{
 	"SetLocalMCPEnabled":         "opens a second loopback listener; decided at the desktop only, like StartRemoteAccess (§ S8.8)",
 	"SetRemoteConnectorsEnabled": "opens the MCP endpoint to the internet; decided at the desktop only (§ S9.10)",
 	"RevokeRemoteGrant":          "ends a connector's access; a connector that could call it could unseat another",
+	"RevokeAllRemoteGrants":      "ends every connector's access; the desktop's own, as RevokeRemoteGrant is",
 	"SaveRemoteTunnel":           "takes the tunnel token, a credential (§ S9.8); pasted at the desktop only",
 	"ForgetRemoteTunnel":         "deletes the token and the devices on its hostname; the desktop's call",
 	"ApproveRemoteDevice":        "the second factor (§ S8.6); a browser that could call it could approve itself",
