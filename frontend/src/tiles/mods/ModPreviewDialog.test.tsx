@@ -104,6 +104,25 @@ describe('ModPreviewDialog', () => {
     expect(declaredZ(depDialog)).toBeGreaterThan(declaredZ(previewPanel))
   })
 
+  // The dependency walk runs before anything else and takes seconds on a deep
+  // tree (#282). The clicked row says so from the click, and no other Switch
+  // can start a second walk meanwhile.
+  it('shows the switch as busy while dependencies resolve', () => {
+    const { getByText, getAllByText } = renderDialog({
+      versions: [
+        ...versions,
+        models.ModVersion.createFrom({ ...versions[0], id: 'ver3', versionNumber: '2.23.0' }),
+      ],
+      onResolveDeps: vi.fn(() => new Promise<never>(() => {})),
+    })
+
+    fireEvent.click(getByText('versions'))
+    fireEvent.click(getAllByText('Switch')[0])
+
+    expect(getByText('…').closest('button')?.disabled).toBe(true)
+    expect(getByText('Switch').closest('button')?.disabled).toBe(true)
+  })
+
   // Switching to a client-only version needs a yes even with no dependency to
   // pick, and the switch must not start until it is given.
   it('asks before switching to a client-only version', async () => {

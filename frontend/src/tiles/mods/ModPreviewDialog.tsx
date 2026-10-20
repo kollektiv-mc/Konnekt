@@ -62,6 +62,10 @@ export function ModPreviewDialog({
   const [pendingVersionId, setPendingVersionId] = useState('')
   const [pendingClientOnly, setPendingClientOnly] = useState(false)
   const [changingVersion, setChangingVersion] = useState(false)
+  // The version whose Switch was clicked, from the click on. The dependency
+  // walk runs first and can take seconds on a deep tree (#282), and the button
+  // used to look idle all that time.
+  const [switchingVersionId, setSwitchingVersionId] = useState<string | null>(null)
   const [depError, setDepError] = useState<string | null>(null)
 
   const isModrinth = mod.source === 'modrinth' && !!mod.projectId
@@ -70,6 +74,7 @@ export function ModPreviewDialog({
   // module, say) has a project and no version of its own, and "switching" it
   // would download the primary jar over a plugin that is not the same plugin.
   const canSwitchVersion = isModrinth && !!mod.versionId
+  const switchBusy = installing || changingVersion || switchingVersionId !== null
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -92,6 +97,7 @@ export function ModPreviewDialog({
 
   const handleVersionInstall = useCallback(
     async (versionId: string) => {
+      setSwitchingVersionId(versionId)
       try {
         const resolved = await onResolveDeps(versionId)
         const nonTrivial = (resolved ?? []).filter((d) => !d.alreadyInstalled)
@@ -114,6 +120,7 @@ export function ModPreviewDialog({
         // catch with nothing to show, and the button went back to looking idle.
       } finally {
         setChangingVersion(false)
+        setSwitchingVersionId(null)
       }
     },
     [mod.fileName, versions, onResolveDeps, onChangeVersion, onClose],
@@ -372,9 +379,9 @@ export function ModPreviewDialog({
                         {!isCurrent && canSwitchVersion && (
                           <button
                             onClick={() => handleVersionInstall(v.id)}
-                            disabled={installing || changingVersion}
+                            disabled={switchBusy}
                             className={`border-border-subtle text-text-secondary border-hairline shrink-0 rounded px-2 py-0.5 text-xs transition-colors ${
-                              installing || changingVersion ? 'opacity-50' : 'opacity-100'
+                              switchBusy ? 'opacity-50' : 'opacity-100'
                             }`}
                             onMouseEnter={(e) => {
                               ;(e.currentTarget as HTMLElement).style.background =
@@ -384,7 +391,9 @@ export function ModPreviewDialog({
                               ;(e.currentTarget as HTMLElement).style.background = 'transparent'
                             }}
                           >
-                            {installing || changingVersion ? '…' : 'Switch'}
+                            {installing || changingVersion || switchingVersionId === v.id
+                              ? '…'
+                              : 'Switch'}
                           </button>
                         )}
                       </div>
