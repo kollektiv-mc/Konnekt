@@ -964,8 +964,9 @@ func TestStreamOutputTracksBedrockPlayer(t *testing.T) {
 	}
 }
 
-// The name sits directly against the "]: " anchor precisely so chat and plugin
-// broadcasts cannot pass for a server line. Widening the name class for
+// The name opens the log message precisely so chat and plugin broadcasts
+// cannot pass for a server line, and typing the prefix's "]: " into chat does
+// not move that start (#619). Widening the name class for
 // Bedrock prefixes must not have opened that up, so each of these has to
 // register nobody at all.
 func TestPlayerMatchersRejectSpoofedLines(t *testing.T) {
@@ -980,6 +981,9 @@ func TestPlayerMatchersRejectSpoofedLines(t *testing.T) {
 		{"chat quoting a disconnect", "[12:00:00 INFO]: <Alex> Bob lost connection: Disconnected"},
 		{"chat quoting a login line", "[12:00:00 INFO]: <Alex> Bob[/127.0.0.1:1] logged in with entity id 1"},
 		{"chat quoting a uuid line", "[12:00:00 INFO]: <Alex> UUID of player Bob is 069a79f4-44e9-4726-a5be-fca90e38aaf5"},
+		{"chat typing the anchor before a join", "[12:00:00 INFO]: <Alex> ]: Bob joined the game"},
+		{"chat typing the anchor before a login", "[12:00:00] [Server thread/INFO]: <Alex> ]: Bob[/127.0.0.1:1] logged in with entity id 1"},
+		{"chat typing the anchor before a uuid", "[12:00:00 INFO]: <Alex> ]: UUID of player Bob is 069a79f4-44e9-4726-a5be-fca90e38aaf5"},
 	}
 
 	for _, tc := range cases {
