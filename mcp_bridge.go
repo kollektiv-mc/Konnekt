@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"net"
 	"net/http"
 	"os"
 	"sync"
@@ -60,9 +61,15 @@ func (u *mcpUpstream) call(ctx context.Context, client *mcp.Implementation, name
 		if err == nil {
 			return res, nil
 		}
-		// A session the app no longer knows: it restarted, or was switched
-		// off. Drop it and connect once more before giving up.
 		u.dropLocked()
+		if !callNeverSent(err) {
+			// A timeout or a connection lost mid-call can follow the app
+			// running the tool, and these tools restart servers and ban
+			// players: sending it again could do that twice (#621).
+			return nil, fmt.Errorf("Konnekt did not answer, so the call was not sent again; it may have run: %w", err)
+		}
+		// The app restarted or was switched off, and never saw the call.
+		// Connect once more before giving up.
 	}
 	if err := u.connectLocked(ctx, client); err != nil {
 		return nil, err
@@ -73,6 +80,20 @@ func (u *mcpUpstream) call(ctx context.Context, client *mcp.Implementation, name
 		return nil, fmt.Errorf("Konnekt did not answer: %w", err)
 	}
 	return res, nil
+}
+
+// callNeverSent reports whether err proves the app never received the call,
+// the one case in which sending it again cannot run a tool twice. The app's
+// endpoint answers 404 for a session it does not know before it dispatches
+// anything, which the SDK reports as ErrSessionMissing, and a dial that
+// found nothing listening never sent a byte: the app quit, or came back on
+// another port.
+func callNeverSent(err error) bool {
+	if errors.Is(err, mcp.ErrSessionMissing) {
+		return true
+	}
+	var op *net.OpError
+	return errors.As(err, &op) && op.Op == "dial"
 }
 
 // connectLocked reads the endpoint and opens a session, introducing the

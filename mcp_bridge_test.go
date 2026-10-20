@@ -4,8 +4,12 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"io"
 	"log/slog"
+	"net/http"
+	"net/http/httptest"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -203,5 +207,156 @@ func TestMCPBridgeCommandQuotesTheExecutable(t *testing.T) {
 	cmd := mcpBridgeCommand()
 	if !strings.HasPrefix(cmd, `"`) || !strings.HasSuffix(cmd, `" mcp`) {
 		t.Errorf("command %q", cmd)
+	}
+}
+
+// mcpFaultProxy sits between the bridge and the app's endpoint and fails
+// tools/call requests the way a network or a restarted app does, so a test
+// can count how often the app actually ran the tool.
+type mcpFaultProxy struct {
+	target string
+
+	mu sync.Mutex
+	// cutAfter forwards each tools/call, lets the app answer, then drops the
+	// connection with no reply: the call ran and the bridge cannot know it.
+	cutAfter bool
+	// forgetOnce answers the next tools/call 404 without forwarding it, as
+	// the app's endpoint does for a session it no longer has.
+	forgetOnce bool
+}
+
+func (p *mcpFaultProxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	isCall := bytes.Contains(body, []byte(`"tools/call"`))
+	p.mu.Lock()
+	cut, forget := isCall && p.cutAfter, isCall && p.forgetOnce
+	if forget {
+		p.forgetOnce = false
+	}
+	p.mu.Unlock()
+	if forget {
+		http.Error(w, "session not found", http.StatusNotFound)
+		return
+	}
+
+	req, err := http.NewRequestWithContext(r.Context(), r.Method, p.target+r.URL.RequestURI(), bytes.NewReader(body))
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadGateway)
+		return
+	}
+	req.Header = r.Header.Clone()
+	resp, err := http.DefaultTransport.RoundTrip(req)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadGateway)
+		return
+	}
+	defer resp.Body.Close() //nolint:errcheck // a read-only body
+	if cut {
+		if _, err := io.Copy(io.Discard, resp.Body); err != nil {
+			http.Error(w, err.Error(), http.StatusBadGateway)
+			return
+		}
+		conn, _, err := http.NewResponseController(w).Hijack()
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		conn.Close() //nolint:errcheck // dropping it is the point
+		return
+	}
+	for k, v := range resp.Header {
+		w.Header()[k] = v
+	}
+	w.WriteHeader(resp.StatusCode)
+	if _, err := io.Copy(w, resp.Body); err != nil {
+		slog.Debug("fault proxy: copy", "error", err)
+	}
+}
+
+// startFaultProxy runs the app's endpoint in dir behind a mcpFaultProxy and
+// points mcp-local.json at the proxy, so the bridge reaches the app through
+// it.
+func startFaultProxy(t *testing.T, dir string, stub *mcpStubApp) *mcpFaultProxy {
+	t.Helper()
+	app := newLocalEndpoint(t, dir, stub)
+	if err := app.Start(); err != nil {
+		t.Fatal(err)
+	}
+	endpoint, secret, err := services.LocalMCPEndpoint(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	proxy := &mcpFaultProxy{target: strings.TrimSuffix(endpoint, "/")}
+	srv := httptest.NewServer(proxy)
+	t.Cleanup(srv.Close)
+	port := srv.URL[strings.LastIndex(srv.URL, ":")+1:]
+	record, err := json.Marshal(map[string]any{"enabled": true, "port": json.Number(port), "secret": secret})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := services.WritePrivateDataFile(dir, "mcp-local.json", record); err != nil {
+		t.Fatal(err)
+	}
+	return proxy
+}
+
+func (s *mcpStubApp) count(name string) int {
+	n := 0
+	for _, c := range s.calls {
+		if c == name {
+			n++
+		}
+	}
+	return n
+}
+
+// A call whose answer was lost after the app ran it is not sent again
+// (#621): restart_server or ban_player would run twice. The bridge says the
+// call may have run instead.
+func TestMCPBridgeDoesNotReplayALostAnswer(t *testing.T) {
+	dir := t.TempDir()
+	stub := &mcpStubApp{}
+	proxy := startFaultProxy(t, dir, stub)
+	cs := startBridge(t, dir)
+	if res := bridgeCall(t, cs, "list_servers", nil); res.IsError {
+		t.Fatalf("list_servers: %s", bridgeText(t, res))
+	}
+
+	proxy.mu.Lock()
+	proxy.cutAfter = true
+	proxy.mu.Unlock()
+	res := bridgeCall(t, cs, "server_status", map[string]any{"serverID": "srv-1"})
+	if !res.IsError || !strings.Contains(bridgeText(t, res), "may have run") {
+		t.Errorf("lost answer: %s", bridgeText(t, res))
+	}
+	if n := stub.count("GetServerStatus"); n != 1 {
+		t.Errorf("the app ran server_status %d times, want once", n)
+	}
+}
+
+// A session the app no longer has is answered 404 before anything runs, so
+// that one is safe to reconnect and send again, and the call goes through.
+func TestMCPBridgeResendsAfterAMissingSession(t *testing.T) {
+	dir := t.TempDir()
+	stub := &mcpStubApp{}
+	proxy := startFaultProxy(t, dir, stub)
+	cs := startBridge(t, dir)
+	if res := bridgeCall(t, cs, "list_servers", nil); res.IsError {
+		t.Fatalf("list_servers: %s", bridgeText(t, res))
+	}
+
+	proxy.mu.Lock()
+	proxy.forgetOnce = true
+	proxy.mu.Unlock()
+	res := bridgeCall(t, cs, "server_status", map[string]any{"serverID": "srv-1"})
+	if res.IsError {
+		t.Errorf("after a missing session: %s", bridgeText(t, res))
+	}
+	if n := stub.count("GetServerStatus"); n != 1 {
+		t.Errorf("the app ran server_status %d times, want once", n)
 	}
 }
