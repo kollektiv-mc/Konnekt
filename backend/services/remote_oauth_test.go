@@ -521,6 +521,46 @@ func TestOAuthConsentNeedsPasswordAndDesktop(t *testing.T) {
 	}
 }
 
+// A double click on Allow (#622): the second submit lands while the first is
+// still checking the password. The desktop is asked once, the second submit
+// is told a check is running rather than that the password was wrong, and a
+// submit after the first lands goes to the waiting page.
+func TestOAuthDoubleSubmitAsksTheDesktopOnce(t *testing.T) {
+	f := newOAuthFixture(t)
+	client := f.register(t, RemoteClaudeRedirect)
+	_, challenge := pkce()
+	id, csrf, _ := f.startConsent(t, authorizeURL(client, RemoteClaudeRedirect, challenge, "", "s"))
+
+	f.auth.verifyMu.Lock()
+	first := make(chan *httptest.ResponseRecorder, 1)
+	go func() { first <- f.consent(id, csrf, testPassword, "allow", RemoteScopeRead) }()
+	for checking := false; !checking; {
+		f.auth.mu.Lock()
+		checking = f.auth.loginBusyLocked(remoteConsentKey)
+		f.auth.mu.Unlock()
+		time.Sleep(time.Millisecond)
+	}
+	second := f.consent(id, csrf, testPassword, "allow", RemoteScopeRead)
+	f.auth.verifyMu.Unlock()
+	if second.Code != http.StatusTooManyRequests || !strings.Contains(second.Body.String(), "Already checking") {
+		t.Errorf("second submit: %d %s", second.Code, second.Body.String())
+	}
+
+	landed := <-first
+	if w := f.consent(id, csrf, testPassword, "allow", RemoteScopeRead); w.Code != http.StatusSeeOther ||
+		!strings.Contains(w.Header().Get("Location"), RemoteAuthorizeWaitPath) {
+		t.Errorf("submit after the first landed: %d %s", w.Code, w.Header().Get("Location"))
+	}
+	if back := f.waitForRedirect(t, landed); back.Query().Get("code") == "" {
+		t.Errorf("first submit ended in %s, want a code", back)
+	}
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if len(f.asked) != 1 {
+		t.Errorf("the desktop was asked %d times, want once", len(f.asked))
+	}
+}
+
 func TestOAuthPasswordChangeDropsConsentsAndCodes(t *testing.T) {
 	f := newOAuthFixture(t)
 	client := f.register(t, RemoteClaudeRedirect)
