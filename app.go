@@ -223,9 +223,7 @@ func (a *App) startup(ctx context.Context) {
 	a.loaderService.SetContext(ctx)
 	a.loaderService.SetDataDir(a.dataDir)
 	a.commandsService.SetDataDir(a.dataDir)
-	a.remoteAuth.SetDataDir(a.dataDir)
-	a.syncConnectors()
-	a.tunnelService.SetDataDir(a.dataDir)
+	a.initRemote(a.dataDir)
 	// The local MCP endpoint comes back up if it was on when the app last
 	// quit: a Claude Code session that registered the bridge should find it
 	// after a restart without a trip to Settings. Logged, not fatal: the
@@ -1111,6 +1109,16 @@ func (a *App) RevokeRemoteGrant(id string) error {
 // again from scratch, through the password and the desktop.
 func (a *App) RevokeAllRemoteGrants() error {
 	return a.remoteAuth.RevokeGrants()
+}
+
+// initRemote reads Remote Access's saved state from dir at startup. The named
+// tunnel loads before syncConnectors runs, because the idle hold depends on
+// its hostname: the other way round, every restart computed the hold from an
+// empty tunnel and the listener idle-stopped under a saved connector (#620).
+func (a *App) initRemote(dir string) {
+	a.remoteAuth.SetDataDir(dir)
+	a.tunnelService.SetDataDir(dir)
+	a.syncConnectors()
 }
 
 // syncConnectors gives the listener the switch and the idle hold it follows
