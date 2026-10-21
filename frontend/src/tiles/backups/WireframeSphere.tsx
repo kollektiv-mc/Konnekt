@@ -6,12 +6,16 @@ interface WireframeSphereProps {
   size?: number
   color?: string
   spinDuration?: number
+  /** Stroke width in the sphere's own units. A caller that scales the sphere down passes
+   *  `strokeForScale(scale)` so the line keeps its on-screen weight. */
+  strokeWidth?: number
 }
 
 export function WireframeSphere({
   size = 80,
   color = 'var(--sun)',
   spinDuration = 8,
+  strokeWidth = 1.5,
 }: WireframeSphereProps) {
   const uid = useId().replace(/[^a-z0-9]/gi, '') || 'sphere'
   const clipId = `sc-${uid}`
@@ -19,6 +23,9 @@ export function WireframeSphere({
   const r = size / 2
   const cx = r
   const cy = r
+  // Half a stroke in from the edge so the silhouette stays whole inside the clip instead of
+  // losing its outer half, which is what made thin scaled lines look broken.
+  const edge = r - strokeWidth / 2
 
   return (
     <svg
@@ -30,7 +37,7 @@ export function WireframeSphere({
     >
       <defs>
         <clipPath id={clipId}>
-          <circle cx={cx} cy={cy} r={r - 0.5} />
+          <circle cx={cx} cy={cy} r={r} />
         </clipPath>
         <radialGradient id={glowId} cx="50%" cy="50%" r="50%">
           <stop offset="0%" stopColor={color} stopOpacity="0.18" />
@@ -41,9 +48,15 @@ export function WireframeSphere({
       {/* Glow halo */}
       <circle cx={cx} cy={cy} r={r * 1.35} fill={`url(#${glowId})`} />
 
-      <g clipPath={`url(#${clipId})`} stroke={color} fill="none" strokeWidth="1.5" opacity="0.85">
+      <g
+        clipPath={`url(#${clipId})`}
+        stroke={color}
+        fill="none"
+        strokeWidth={strokeWidth}
+        opacity="0.85"
+      >
         {/* Silhouette */}
-        <circle cx={cx} cy={cy} r={r - 0.5} />
+        <circle cx={cx} cy={cy} r={edge} />
 
         {/* Latitude lines */}
         {[-0.55, 0, 0.55].map((frac, i) => {
@@ -70,8 +83,8 @@ export function WireframeSphere({
               className="backup-sphere-meridian"
               cx={cx}
               cy={cy}
-              rx={r - 0.5}
-              ry={r - 0.5}
+              rx={edge}
+              ry={edge}
               // Decorative idle spin, deliberately off-token: spinDuration is a prop, seconds not
               // milliseconds, and no shared duration would mean anything here.
               // eslint-disable-next-line no-restricted-syntax -- per-meridian spin animation computed from size/spinDuration props

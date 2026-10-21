@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react'
 import { WireframeSphere } from './WireframeSphere'
 import type { WorldSystem } from './useBackupWorlds'
-import { FOCUS, FOCUS_TRANSITION } from './focusLayout'
+import { FOCUS, FOCUS_TRANSITION, strokeForScale } from './focusLayout'
 import type { FocusTarget } from './focusLayout'
 
 /* Motion here is deliberately off-token. The 1.56 overshoot spring, the entrance
@@ -13,7 +13,9 @@ import type { FocusTarget } from './focusLayout'
 
 const RENDER_SCALE = 2.5
 
-const SUN_SIZE = 96
+// Up from 96 (about 17%) so the server reads as the largest body. buildConfigs widens the worlds'
+// minimum orbit by the same margin so the larger sun crowds them no more than the old one did.
+const SUN_SIZE = 112
 const WORLD_MIN = 40
 const WORLD_MAX = 56
 
@@ -81,7 +83,7 @@ function buildConfigs(worlds: WorldSystem[]): WorldConfig[] {
     // Scatter around the sun (50%, 36%) using polar coords.
     // rx/ry are % of container so layout stays responsive.
     const angle = (h % 628) / 100 // 0..2π
-    const rx = 16 + (h2 % 10) // 16-25% of width
+    const rx = 19 + (h2 % 10) // 19-28% of width, clear of the sun's radius
     const ry = rx * 0.52 // flattened vertically
     const x = Math.max(12, Math.min(88, 50 + Math.cos(angle) * rx))
     const y = Math.max(8, Math.min(56, 36 + Math.sin(angle) * ry))
@@ -172,6 +174,7 @@ function WorldNode({
               size={cfg.renderSize}
               color={KIND_COLOR.overworld}
               spinDuration={cfg.spinDuration}
+              strokeWidth={strokeForScale(currentScale)}
             />
             {cfg.dimDots.map((dot) => (
               <div
@@ -250,7 +253,7 @@ function SunNode({
           onMouseLeave={() => setHovered(false)}
           title="Server"
         >
-          <WireframeSphere size={renderSize} />
+          <WireframeSphere size={renderSize} strokeWidth={strokeForScale(currentScale)} />
         </div>
       </div>
     </div>
