@@ -45,8 +45,8 @@ export function SplashScreen({ onDone }: { onDone?: () => void }) {
       setDone(true)
       onDone?.()
     }
-    if (still || typeof requestAnimationFrame !== 'function') {
-      const end = setTimeout(finish, still ? SPLASH_MS.still : SPLASH_MS.fadeStart + SPLASH_MS.fade)
+    if (still) {
+      const end = setTimeout(finish, SPLASH_MS.still)
       return () => clearTimeout(end)
     }
     let raf = 0

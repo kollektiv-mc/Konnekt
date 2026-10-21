@@ -108,8 +108,8 @@ export function orbitPoint(t: number): Point {
 
 /**
  * The orbit drawn from parameter `from` to `to`, as a path. An arc's centre is
- * re-derived from its end points, so they carry four decimals: two put visible
- * steps where a nearly half arc meets the rest of the ring.
+ * re-derived from its end points, so they carry full precision: two decimals
+ * put visible steps where a nearly half arc meets the rest of the ring.
  */
 export function orbitPath(from: number, to: number): string {
   const span = to - from
@@ -117,12 +117,12 @@ export function orbitPath(from: number, to: number): string {
   if (span >= 2 * Math.PI - 1e-6) {
     const [ax, ay] = orbitPoint(from)
     const [bx, by] = orbitPoint(from + Math.PI)
-    const arc = (x: number, y: number) => `A${ORBIT.rx} ${ORBIT.ry} 0 1 1 ${f4(x)} ${f4(y)}`
-    return `M${f4(ax)} ${f4(ay)}${arc(bx, by)}${arc(ax, ay)}Z`
+    const arc = (x: number, y: number) => `A${ORBIT.rx} ${ORBIT.ry} 0 1 1 ${x} ${y}`
+    return `M${ax} ${ay}${arc(bx, by)}${arc(ax, ay)}Z`
   }
   const [ax, ay] = orbitPoint(from)
   const [bx, by] = orbitPoint(to)
-  return `M${f4(ax)} ${f4(ay)}A${ORBIT.rx} ${ORBIT.ry} 0 ${span > Math.PI ? 1 : 0} 1 ${f4(bx)} ${f4(by)}`
+  return `M${ax} ${ay}A${ORBIT.rx} ${ORBIT.ry} 0 ${span > Math.PI ? 1 : 0} 1 ${bx} ${by}`
 }
 
 /** Milliseconds: when each part starts and how long it runs. */
@@ -183,10 +183,11 @@ export const RESTING_FRAME = splashFrame(SPLASH_MS.cube + SPLASH_MS.orbitStart +
  * have run on time for a while, and once running never advances by more than
  * a slow frame: a late frame then pauses the motion instead of jumping it.
  */
-const CALM_FRAME_MS = 34
+// Two 60Hz frames: a frame within it is on time, and once running the
+// timeline advances by no more than it.
+const SLOW_FRAME_MS = 34
 const CALM_FRAMES = 6
 const MAX_HOLD_MS = 700
-const MAX_STEP_MS = 34
 
 /**
  * A clock for the splash timeline, fed each frame's rAF timestamp. Returns the
@@ -198,15 +199,15 @@ export function splashClock(): (now: number) => number {
   let calm = 0
   let ms = -1
   return (now) => {
-    const step = last === undefined ? 0 : Math.max(0, now - last)
+    const step = last === undefined ? 0 : now - last
     last = now
     if (ms < 0) {
       held += step
-      calm = step > 0 && step <= CALM_FRAME_MS ? calm + 1 : 0
+      calm = step > 0 && step <= SLOW_FRAME_MS ? calm + 1 : 0
       if (calm >= CALM_FRAMES || held >= MAX_HOLD_MS) ms = 0
       return ms
     }
-    ms += Math.min(step, MAX_STEP_MS)
+    ms += Math.min(step, SLOW_FRAME_MS)
     return ms
   }
 }
@@ -262,8 +263,4 @@ function accelCruiseBrake(x: number): number {
   if (x <= BRAKE) return cruised
   const d = x - BRAKE
   return cruised - (v * d * d) / (2 * (1 - BRAKE))
-}
-
-function f4(n: number): string {
-  return n.toFixed(4)
 }
