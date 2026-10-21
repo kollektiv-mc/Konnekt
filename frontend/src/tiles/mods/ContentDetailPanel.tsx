@@ -151,17 +151,15 @@ export function ContentDetailPanel({
 
   return (
     <>
-      {deps && (
-        <DependencyDialog
-          primaryVersionId={pendingVersionId}
-          dependencies={deps}
-          clientOnly={pendingClientOnly}
-          onConfirm={handleDepConfirm}
-          onCancel={() => setDeps(null)}
-          busy={isInstalling}
-          error={depError}
-        />
-      )}
+      <DependencyDialog
+        primaryVersionId={pendingVersionId}
+        dependencies={deps}
+        clientOnly={pendingClientOnly}
+        onConfirm={handleDepConfirm}
+        onCancel={() => setDeps(null)}
+        busy={isInstalling}
+        error={depError}
+      />
 
       <div className="flex h-full w-full flex-col overflow-hidden bg-[color-mix(in_srgb,var(--bg-base)_97%,white)]">
         {/* Header */}

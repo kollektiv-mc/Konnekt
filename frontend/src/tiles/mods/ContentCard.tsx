@@ -83,17 +83,15 @@ export function ContentCard({
 
   return (
     <>
-      {deps && (
-        <DependencyDialog
-          primaryVersionId={pendingVersionId}
-          dependencies={deps}
-          clientOnly={pendingClientOnly}
-          onConfirm={handleDepConfirm}
-          onCancel={() => setDeps(null)}
-          busy={quickInstalling}
-          error={depError}
-        />
-      )}
+      <DependencyDialog
+        primaryVersionId={pendingVersionId}
+        dependencies={deps}
+        clientOnly={pendingClientOnly}
+        onConfirm={handleDepConfirm}
+        onCancel={() => setDeps(null)}
+        busy={quickInstalling}
+        error={depError}
+      />
       <div
         role="button"
         tabIndex={0}
