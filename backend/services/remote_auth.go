@@ -797,6 +797,13 @@ func (a *RemoteAuth) beginLoginLocked(key string) (time.Duration, bool) {
 	return 0, true
 }
 
+// loginBusyLocked reports whether a verification for key is in flight, the
+// refusal beginLoginLocked gives that is not a wrong password.
+func (a *RemoteAuth) loginBusyLocked(key string) bool {
+	b := a.buckets[key]
+	return b != nil && b.busy
+}
+
 func (a *RemoteAuth) endLoginLocked(key string, ok bool) {
 	b := a.buckets[key]
 	if b == nil {

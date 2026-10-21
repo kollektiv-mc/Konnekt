@@ -758,7 +758,15 @@ func (a *RemoteAuth) serveConsent(w http.ResponseWriter, r *http.Request) {
 	encoded := a.state.Password
 	wait, admitted := a.beginLoginLocked(remoteConsentKey)
 	if !admitted {
-		view := consentView(c, "Too many wrong passwords. Try again in "+wait.Round(time.Second).String()+".")
+		message := "Too many wrong passwords. Try again in " + wait.Round(time.Second).String() + "."
+		if a.loginBusyLocked(remoteConsentKey) {
+			// Another submit's check is still running, most often the first
+			// click of a double click on Allow. Nothing was wrong, and that
+			// submit asks the desktop once; trying again after it lands
+			// goes to the waiting page (#622).
+			message = "Already checking the password. Try again in a moment."
+		}
+		view := consentView(c, message)
 		a.mu.Unlock()
 		w.Header().Set("Retry-After", strconv.Itoa(int(wait/time.Second)+1))
 		writeRemoteConsentPage(w, http.StatusTooManyRequests, view)
