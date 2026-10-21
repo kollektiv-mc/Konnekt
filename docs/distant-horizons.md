@@ -11,7 +11,8 @@ Two scheduler blocks do the work. **DH Snapshot** warns the
 players, stops the server, copies the LOD databases out, and starts it again.
 **Publish DH Snapshot** uploads the copy to the bucket and writes the download
 page. The server is only down for the copy, and only the parts of each database
-that changed since the last run are copied and uploaded.
+that changed since the last run are copied and uploaded. A server that is
+already stopped is copied as it is, with no warning, and left stopped.
 
 ## Before you start
 
@@ -320,7 +321,7 @@ The block's error names what to fix. The common ones:
 | `serverKey is empty` or `levelKeyPrefix is empty` | Set them as above, with the server stopped. |
 | `serverId is not set` | DH writes it on the first save of its config. Start the server once with DH. |
 | `no Distant Horizons jar found in mods/` | DH runs as a mod; the snapshot reads the version from the jar. |
-| `the server is not running` | The block warns, stops and restarts a running server. Start it first. |
+| `could not keep the server stopped for the copy` | The server was started between the checks and the copy. Run the snapshot again. |
 | `neither RCON nor the server's console can carry the warning` | Enable RCON, or start the server from Konnekt, or set the lead time to 0 to stop without a warning. |
 | `not enough free space to stage the snapshot` | Free space, or point the staging folder at another volume. |
 | `cannot read the previous snapshot from "R2"` | The bucket answered with something other than the pointer or a clean 404. Check the destination with Test. Carrying on would re-upload everything, so the run stops instead. |

@@ -46,6 +46,7 @@ type fakeDHHost struct {
 	sayErr    error
 	stopErr   error
 	startErr  error
+	holdErr   error
 	onStop    func()
 	stopTook  time.Duration
 	startTook time.Duration
@@ -70,6 +71,14 @@ func (h *fakeDHHost) WhileStopped(grace time.Duration, fn func()) (stopErr, star
 	h.f.log = append(h.f.log, "start")
 	h.f.now = h.f.now.Add(h.startTook)
 	return nil, h.startErr
+}
+func (h *fakeDHHost) WhileDown(fn func()) error {
+	h.f.log = append(h.f.log, "hold")
+	if h.holdErr != nil {
+		return h.holdErr
+	}
+	fn()
+	return nil
 }
 func (h *fakeDHHost) Narrate(line string) { h.f.narration = append(h.f.narration, line) }
 
@@ -186,7 +195,7 @@ func (f *dhRunFixture) stagedIndex() DHIndex {
 
 func (f *dhRunFixture) assertUntouched(what string) {
 	f.t.Helper()
-	for _, bad := range []string{"say:", "stop:", "start", "copy"} {
+	for _, bad := range []string{"say:", "stop:", "start", "hold", "copy"} {
 		if f.logged(bad) {
 			f.t.Errorf("%s: %q happened (log %v)", what, bad, f.log)
 		}
@@ -299,6 +308,57 @@ func TestDHRunWithNoLeadTimeWarnsNobodyAndNeedsNoWarningChannel(t *testing.T) {
 	}
 }
 
+// A stopped server has nobody to warn and nothing to stop: the run copies it as
+// it is, under the power gate, and leaves it stopped. A warning channel is not
+// needed either, whatever the lead time.
+func TestDHRunCopiesAStoppedServerWithoutWarningStoppingOrStarting(t *testing.T) {
+	f := newDHRunFixture(t)
+	f.host.running = false
+	f.host.canWarn = false
+	res, err := f.run()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Join(f.log, "|") != "hold|copy" {
+		t.Errorf("log = %v, want the copy under the gate and nothing else", f.log)
+	}
+	if res.PartsChanged != 6 || res.PartsTotal != 6 || res.Folder != f.stageDir {
+		t.Errorf("result = %+v", res)
+	}
+	if res.Downtime != 0 {
+		t.Errorf("downtime = %v for a server that was already stopped", res.Downtime)
+	}
+}
+
+// The server was started between the checks and the copy. It is not stopped
+// unannounced: the run refuses and copies nothing.
+func TestDHRunAStoppedServerStartedBeforeTheCopyIsRefused(t *testing.T) {
+	f := newDHRunFixture(t)
+	f.host.running = false
+	f.host.holdErr = errServerRunning
+	res, err := f.run()
+	if err == nil || !strings.Contains(err.Error(), "could not keep the server stopped") || !errors.Is(err, errServerRunning) {
+		t.Fatalf("err = %v", err)
+	}
+	if f.logged("copy") || f.logged("say:") || f.logged("stop:") {
+		t.Errorf("log = %v", f.log)
+	}
+	if res.Downtime != 0 {
+		t.Errorf("downtime = %v", res.Downtime)
+	}
+}
+
+// A stopped server is still checked first: a refusal there touches nothing.
+func TestDHRunAStoppedServerIsStillCheckedFirst(t *testing.T) {
+	f := newDHRunFixture(t)
+	f.host.running = false
+	dhWrite(t, f.workingDir, "config/DistantHorizons.toml", []byte("serverId = 7\nserverKey = \"\"\nlevelKeyPrefix = \"pfx\"\n"))
+	if _, err := f.run(); err == nil || !strings.Contains(err.Error(), "serverKey is empty") {
+		t.Fatalf("err = %v", err)
+	}
+	f.assertUntouched("a stopped server with an empty serverKey")
+}
+
 func TestDHRunPassesTheGraceToTheStop(t *testing.T) {
 	f := newDHRunFixture(t)
 	f.plan.Grace = 3 * time.Minute
@@ -362,7 +422,6 @@ func TestDHRunRefusesBeforeWarningOrStopping(t *testing.T) {
 			f.plan.KeyPrefix = "dh"
 		}, []string{"latest.json", "not a Distant Horizons latest.json"}},
 		{"neither RCON nor stdin", func(f *dhRunFixture) { f.host.canWarn = false }, []string{"neither RCON nor the server's console"}},
-		{"the server is not running", func(f *dhRunFixture) { f.host.running = false }, []string{"not running", "nothing to warn or stop"}},
 		{"a lead time over the limit", func(f *dhRunFixture) { f.plan.Lead = time.Hour }, []string{"lead time"}},
 		{"a negative lead time", func(f *dhRunFixture) { f.plan.Lead = -time.Second }, []string{"lead time"}},
 	}

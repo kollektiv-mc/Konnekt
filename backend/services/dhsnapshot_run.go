@@ -69,6 +69,10 @@ type dhHost interface {
 	// stopErr means it was not stopped and fn was not called; startErr means it
 	// could not be started again.
 	WhileStopped(grace time.Duration, fn func()) (stopErr, startErr error)
+	// WhileDown calls fn with the server already stopped, with nothing able to
+	// start it until fn returns. An error means the server is running (or
+	// another power action is under way) and fn was not called.
+	WhileDown(fn func()) error
 	Narrate(line string)
 }
 
@@ -154,6 +158,9 @@ type dhPreflight struct {
 	// prevFromBucket says the previous index is the bucket's latest.json, whose
 	// parts are therefore all up, so staging need not keep them.
 	prevFromBucket bool
+	// running says the server was up at the checks. A stopped server is copied
+	// as it is: there is nobody to warn and nothing to stop or start.
+	running bool
 }
 
 // runDHSnapshot runs the sequence. It returns an error for any failure, with the
@@ -165,6 +172,9 @@ func runDHSnapshot(ctx context.Context, plan dhRunPlan) (dhRunResult, error) {
 	if err != nil {
 		return dhRunResult{}, err
 	}
+	if !pre.running {
+		return p.copyWhileDown(ctx, pre)
+	}
 	if err := p.warn(ctx); err != nil {
 		return dhRunResult{}, err
 	}
@@ -173,12 +183,10 @@ func runDHSnapshot(ctx context.Context, plan dhRunPlan) (dhRunResult, error) {
 
 // --- before anything is said or stopped ---
 
-// preflight refuses every failure that can be known while the server is up. It
+// preflight refuses every failure that can be known before anything happens. It
 // stops nothing, warns nobody and writes nothing.
 func (p *dhRunPlan) preflight(ctx context.Context) (dhPreflight, error) {
-	if !p.Host.IsRunning() {
-		return dhPreflight{}, errors.New("the server is not running, so there is nothing to warn or stop: start it, then run the snapshot")
-	}
+	running := p.Host.IsRunning()
 	if p.Lead < 0 || p.Lead > dhMaxLeadSeconds*time.Second {
 		return dhPreflight{}, fmt.Errorf("the warning lead time must be between 0 and %d seconds", dhMaxLeadSeconds)
 	}
@@ -189,14 +197,14 @@ func (p *dhRunPlan) preflight(ctx context.Context) (dhPreflight, error) {
 	if err := p.checkFreeSpace(src); err != nil {
 		return dhPreflight{}, err
 	}
-	if p.Lead > 0 && !p.Host.CanWarn() {
+	if running && p.Lead > 0 && !p.Host.CanWarn() {
 		return dhPreflight{}, errors.New("neither RCON nor the server's console can carry the warning, so the players could not be told before the stop: enable RCON (enable-rcon in server.properties) or start the server from Konnekt")
 	}
 	prev, fromBucket, err := p.previousIndex(ctx)
 	if err != nil {
 		return dhPreflight{}, err
 	}
-	return dhPreflight{src: src, prev: prev, prevFromBucket: fromBucket}, nil
+	return dhPreflight{src: src, prev: prev, prevFromBucket: fromBucket, running: running}, nil
 }
 
 // resolveDHRunSource is resolveDHSnapshotSource with the server id read from DH's
@@ -464,6 +472,24 @@ func (p *dhRunPlan) stopCopyStart(ctx context.Context, pre dhPreflight) (dhRunRe
 		return res, fmt.Errorf("the snapshot was staged, but the server could not be started again: %w", startErr)
 	}
 	p.narrate(fmt.Sprintf("Server started again after %s offline", dhDuration(res.Downtime)))
+	p.pruneStaging(pre)
+	return res, nil
+}
+
+// copyWhileDown is the run for a server that was already stopped: nobody to
+// warn, nothing to stop, and it is left stopped. The host holds the power gate
+// for the copy, so the server cannot be started under it; a server started
+// between the checks and here is refused rather than stopped unannounced.
+func (p *dhRunPlan) copyWhileDown(ctx context.Context, pre dhPreflight) (dhRunResult, error) {
+	p.narrate("Distant Horizons snapshot: the server is stopped, so nobody is warned and it stays stopped")
+	var res dhRunResult
+	var copyErr error
+	if err := p.Host.WhileDown(func() { res, copyErr = p.copy(ctx, pre) }); err != nil {
+		return dhRunResult{}, fmt.Errorf("could not keep the server stopped for the copy: %w", err)
+	}
+	if copyErr != nil {
+		return res, copyErr
+	}
 	p.pruneStaging(pre)
 	return res, nil
 }

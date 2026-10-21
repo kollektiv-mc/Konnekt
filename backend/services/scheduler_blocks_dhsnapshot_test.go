@@ -474,20 +474,28 @@ func TestSchedulerSetDataDirGivesTheBlocksTheDataDirectory(t *testing.T) {
 
 // --- running the block against real services ---
 
-func TestDHSnapshotRefusesAStoppedServer(t *testing.T) {
+// A stopped server is copied as it is and left stopped, warning time or not.
+func TestDHSnapshotCopiesAStoppedServerAndLeavesItStopped(t *testing.T) {
 	f := dhBlockFixture(t)
-	res, out := f.execDH("srv1", dhBlockConfig())
-	if res.Port != "onFailed" || res.Err == nil || !strings.Contains(res.Err.Error(), "not running") {
+	res, out := f.execDH("srv1", map[string]interface{}{"leadSeconds": float64(300)})
+	if res.Port != "onComplete" || res.Err != nil {
 		t.Fatalf("result = %+v", res)
 	}
-	if res.DowntimeMs != 0 || len(out) != 0 {
-		t.Errorf("downtime %d, outputs %v: nothing happened", res.DowntimeMs, out)
+	stage := filepath.Join(f.dataDir, "dh-snapshots", "srv1")
+	if out["folder"] != stage || out["partsTotal"] != float64(1) {
+		t.Errorf("outputs = %v", out)
 	}
-	if _, err := os.Stat(filepath.Join(f.dataDir, "dh-snapshots")); err == nil {
-		t.Error("a staging folder was created")
+	if res.DowntimeMs != 0 || out["downtime"] != nil {
+		t.Errorf("downtime %d ms, output %v: the server was already stopped", res.DowntimeMs, out["downtime"])
 	}
-	if !strings.Contains(f.console("srv1"), "Distant Horizons snapshot failed:") {
-		t.Errorf("console does not say it failed:\n%s", f.console("srv1"))
+	if _, err := os.Stat(filepath.Join(stage, dhIndexFile)); err != nil {
+		t.Errorf("no index.json staged: %v", err)
+	}
+	if f.server.IsRunning("srv1") {
+		t.Error("a server that was stopped was started")
+	}
+	if !strings.Contains(f.console("srv1"), "the server is stopped") {
+		t.Errorf("console:\n%s", f.console("srv1"))
 	}
 }
 
@@ -757,16 +765,13 @@ func TestSnapshotNodeDestinationOptionalButMustExist(t *testing.T) {
 
 // A run with a missing optional destination runs as a first local snapshot.
 func TestRunWithoutDestinationIsAFirstLocalSnapshot(t *testing.T) {
-	// The engine's own destination check must let an empty optional one through:
-	// the block then fails on its own terms (the server is not running), not
-	// with "destination validation failed".
+	// The engine's own destination check must let an empty optional one through,
+	// and the block then snapshots the (stopped) server against its own staging
+	// folder rather than failing with "destination validation failed".
 	f := dhBlockFixture(t)
 	rec := f.run(dhGraph("srv1", dhBlockConfig()))
-	if strings.Contains(rec.Error, "destination validation failed") {
-		t.Errorf("run error = %q", rec.Error)
-	}
-	if !strings.Contains(rec.Error, "not running") {
-		t.Errorf("run error = %q, want the block's own refusal", rec.Error)
+	if rec.Status != "success" || rec.Error != "" {
+		t.Errorf("run = %s %q", rec.Status, rec.Error)
 	}
 }
 

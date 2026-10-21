@@ -73,6 +73,42 @@ func TestWhileStoppedOnAStoppedServerDoesNothing(t *testing.T) {
 	}
 }
 
+// WhileDown is the same hold for a server that was never running: a Start
+// inside it is refused, and the server is left stopped after.
+func TestWhileDownRefusesAStartAndLeavesTheServerStopped(t *testing.T) {
+	s, _ := newServerFixture()
+	fakeLaunch(t, s)
+
+	var inner error
+	if err := s.WhileDown(fixtureServerID, func() { inner = s.Start(fixtureServerID, "", nil, t.TempDir()) }); err != nil {
+		t.Fatalf("WhileDown = %v", err)
+	}
+	if !errors.Is(inner, ErrPowerActionInProgress) {
+		t.Errorf("a Start inside WhileDown = %v, want ErrPowerActionInProgress", inner)
+	}
+	if s.IsRunning(fixtureServerID) {
+		t.Error("WhileDown left the server running")
+	}
+}
+
+func TestWhileDownRefusesARunningServer(t *testing.T) {
+	s, _ := newServerFixture()
+	fakeLaunch(t, s)
+	release, _ := fakeRunningServer(t, s)
+	t.Cleanup(release)
+
+	called := false
+	if err := s.WhileDown(fixtureServerID, func() { called = true }); !errors.Is(err, errServerRunning) {
+		t.Fatalf("WhileDown = %v, want errServerRunning", err)
+	}
+	if called {
+		t.Error("fn ran with the server up")
+	}
+	if !s.IsRunning(fixtureServerID) {
+		t.Error("WhileDown touched a running server")
+	}
+}
+
 func TestWhileStoppedRefusesWhileAnotherPowerActionHoldsTheGate(t *testing.T) {
 	s, _ := newServerFixture()
 	s.powerMu.Lock()
@@ -85,5 +121,8 @@ func TestWhileStoppedRefusesWhileAnotherPowerActionHoldsTheGate(t *testing.T) {
 	}
 	if called {
 		t.Error("fn ran without the gate")
+	}
+	if err := s.WhileDown(fixtureServerID, func() { called = true }); !errors.Is(err, ErrPowerActionInProgress) || called {
+		t.Errorf("WhileDown = %v (fn called %v), want ErrPowerActionInProgress and no call", err, called)
 	}
 }

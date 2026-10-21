@@ -54,6 +54,9 @@ var ErrPowerActionInProgress = errors.New("another power action is in progress")
 // it (the backups tile's stop-and-back-up, beforeClose's benign race).
 var errServerNotRunning = errors.New("server not running")
 
+// errServerRunning is WhileDown's refusal: the caller needed the server stopped.
+var errServerRunning = errors.New("the server is running")
+
 // rePlayerName is the name capture every player matcher shares, so the
 // reasoning below lives in one place instead of being re-derived at each
 // regex.
@@ -461,6 +464,23 @@ func (s *ServerService) WhileStopped(serverID string, jarPath string, jvmArgs []
 	}
 	fn()
 	return nil, s.startInstance(serverID, jarPath, jvmArgs, workingDir)
+}
+
+// WhileDown calls fn with the server already stopped, holding the power gate so
+// nothing can start it until fn returns. It is WhileStopped for a server that
+// was not running to begin with: there is no stop to make and no start owed
+// after. A server that is running is refused with errServerRunning, and fn is
+// not called.
+func (s *ServerService) WhileDown(serverID string, fn func()) error {
+	if !s.powerMu.TryLock() {
+		return ErrPowerActionInProgress
+	}
+	defer s.powerMu.Unlock()
+	if s.IsRunning(serverID) {
+		return errServerRunning
+	}
+	fn()
+	return nil
 }
 
 // start is Start without the power gate. Callers hold powerMu.

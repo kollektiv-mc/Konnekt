@@ -231,7 +231,7 @@
     "id": "action.dhSnapshot",
     "category": "action",
     "label": "DH Snapshot",
-    "description": "Stops the server to copy its Distant Horizons data into a staged snapshot, then starts it again. Players are warned first, over RCON or the console. Only the parts that changed since the last snapshot are staged, and the staged folder wires into Upload to Bucket.",
+    "description": "Stops the server to copy its Distant Horizons data into a staged snapshot, then starts it again. Players are warned first, over RCON or the console. A server that is already stopped is copied as it is and left stopped. Only the parts that changed since the last snapshot are staged, and the staged folder wires into Upload to Bucket.",
     "isTrigger": false,
     "controlInputs": [
       "trigger"
