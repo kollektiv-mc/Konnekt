@@ -223,6 +223,7 @@ func (s *ConfigService) GetAppSettings() (models.AppSettings, error) {
 		BackgroundStyle:                  "solid",
 		StopGraceSeconds:                 60,
 		ConsoleBufferLines:               1000,
+		ToastsOff:                        map[string]bool{},
 		SchedulerPaletteCollapsed:        true,
 		SchedulerPaletteClosedCategories: map[string]bool{},
 		NavClosedSections:                map[string]bool{"widgets": true, "layouts": true},
@@ -255,6 +256,9 @@ func (s *ConfigService) GetAppSettings() (models.AppSettings, error) {
 	}
 	if settings.NavClosedSections == nil {
 		settings.NavClosedSections = defaults.NavClosedSections
+	}
+	if settings.ToastsOff == nil {
+		settings.ToastsOff = defaults.ToastsOff
 	}
 	return settings, nil
 }

@@ -26,6 +26,7 @@ const DEFAULTS: AppSettings = {
   consoleTimestamps: false,
   notifyOnCrash: false,
   notifyOnJoin: false,
+  toastsOff: {},
   schedulerPaletteCollapsed: true,
   schedulerPaletteClosedCategories: {},
   consoleQuickCommandsCollapsed: false,
@@ -112,6 +113,7 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
         webviewGpu,
         schedulerPaletteClosedCategories: s.schedulerPaletteClosedCategories ?? {},
         navClosedSections: s.navClosedSections ?? DEFAULTS.navClosedSections,
+        toastsOff: s.toastsOff ?? DEFAULTS.toastsOff,
         // null for a settings file that predates the field, and for one whose
         // `fonts` was written as null; the picker reads this as a map.
         fonts: s.fonts ?? DEFAULTS.fonts,

@@ -22,6 +22,14 @@ type AppSettings struct {
 	NotifyOnCrash bool `json:"notifyOnCrash"`
 	NotifyOnJoin  bool `json:"notifyOnJoin"`
 
+	// ToastsOff marks which in-app notification bubble categories the user has
+	// turned off, keyed by category ("warnings", "errors", "crash", "update";
+	// frontend/src/lib/toast.ts). A key that is not there is on, so a settings
+	// file written before this field existed shows every bubble, and a category
+	// added later starts on without a migration. Separate from NotifyOnCrash,
+	// which is the desktop notification.
+	ToastsOff map[string]bool `json:"toastsOff"`
+
 	SchedulerPaletteCollapsed        bool            `json:"schedulerPaletteCollapsed"`
 	SchedulerPaletteClosedCategories map[string]bool `json:"schedulerPaletteClosedCategories"`
 

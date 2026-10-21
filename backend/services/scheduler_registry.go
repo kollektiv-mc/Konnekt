@@ -25,6 +25,9 @@ type ExecResult struct {
 	// is not failed by it. The engine copies it into the node's run record and
 	// its finished event, beside DowntimeMs. It must already be free of secrets.
 	Warning string
+	// Narrated is set by a block that has already put its failure in the
+	// server's console, so the engine does not write the same reason twice.
+	Narrated bool
 }
 
 // serviceDeps bundles service references injected into every ExecContext.

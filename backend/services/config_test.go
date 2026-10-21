@@ -285,7 +285,7 @@ func TestAppSettingsCollectionsNeverMarshalAsNull(t *testing.T) {
 		{name: "file lacking the keys", file: `{"theme":"light"}`},
 		{
 			name: "keys set to null",
-			file: `{"crateOrder":null,"schedulerPaletteClosedCategories":null,"navClosedSections":null}`,
+			file: `{"crateOrder":null,"schedulerPaletteClosedCategories":null,"navClosedSections":null,"toastsOff":null}`,
 		},
 	}
 	for _, tt := range tests {
@@ -319,6 +319,10 @@ func TestAppSettingsCollectionsNeverMarshalAsNull(t *testing.T) {
 			// empty map that would open the two sections that start closed.
 			if raw := string(wire["navClosedSections"]); raw != `{"layouts":true,"widgets":true}` {
 				t.Errorf("navClosedSections = %s, want the two default-closed sections", raw)
+			}
+			// Empty means every bubble category is on; the toggles read it as a map.
+			if raw := string(wire["toastsOff"]); raw != "{}" {
+				t.Errorf("toastsOff = %s, want {}", raw)
 			}
 		})
 	}

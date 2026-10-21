@@ -156,7 +156,7 @@ func execDHPublish(e *ExecContext) ExecResult {
 	fail := func(err error) ExecResult {
 		err = errors.New(scrub(err.Error()))
 		narrateFailed("Publish failed: " + err.Error())
-		return ExecResult{Port: "onFailed", Err: err}
+		return ExecResult{Port: "onFailed", Err: err, Narrated: e.Server() != nil}
 	}
 
 	// Held for the whole run: a snapshot staging into this folder, or a second

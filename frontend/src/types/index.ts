@@ -56,6 +56,8 @@ export interface AppSettings {
   consoleTimestamps: boolean
   notifyOnCrash: boolean
   notifyOnJoin: boolean
+  /** Bubble categories turned off (lib/toast.ts). A missing key is on. Never null. */
+  toastsOff: Record<string, boolean>
   schedulerPaletteCollapsed: boolean
   schedulerPaletteClosedCategories: Record<string, boolean>
   consoleQuickCommandsCollapsed: boolean

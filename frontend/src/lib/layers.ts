@@ -22,6 +22,10 @@
 // |         | DependencyDialog, CloseConfirmDialog, the command confirms,     |
 // |         | and EulaModal, which is raised by an event rather than a click  |
 // |         | and so has to beat whichever modal was already open (#256)      |
+// | toast   | the in-app notification bubbles (Toasts): above a modal or  |
+// |         | dialog, because an error that arrives while Settings is open |
+// |         | must still be read, and under a popover, which is the user's |
+// |         | own pointer-attached menu and closes on its own              |
 // | popover | an anchored transient with no modal backdrop: Popover,          |
 // |         | ServerTooltip, QuickAddMenu, the presets dropdown, the config   |
 // |         | select panel, the crate drag preview                            |
@@ -69,6 +73,7 @@ export const LAYER = {
   overlay: 100,
   modal: 200,
   dialog: 300,
+  toast: 350,
   popover: 400,
   splash: 500,
 } as const

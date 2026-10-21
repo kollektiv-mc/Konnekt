@@ -48,9 +48,8 @@ const GLOBAL_EVENTS = new Set<keyof typeof EVENTS>([
  * the test so the list cannot rot.
  */
 const GLOBAL_ON_PURPOSE: Record<string, string> = {
-  'App.tsx#SERVER_STOPPED':
-    'a crash notification is app-wide: the user should hear about any server',
-  'App.tsx#SERVER_STARTED': 'app-wide notification, as above',
+  'App.tsx#SERVER_STARTED':
+    'a lifecycle notification is app-wide: the user should hear about any server',
   'App.tsx#PLAYER_JOINED': 'app-wide notification, as above',
   'App.tsx#PLAYER_LEFT': 'app-wide notification, as above',
   'App.tsx#RESTORE_COMPLETED': 'app-wide notification, as above',

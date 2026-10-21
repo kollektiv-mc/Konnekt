@@ -71,12 +71,51 @@ var reAttrRef = regexp.MustCompile(`@([A-Za-z_][\w]*(?:\.[A-Za-z_][\w]*)*)`)
 // and returns the final RunRecord when complete.
 //
 // seed maps nodeID → portID → value; "trigger" is an alias for entryNodeID.
+//
+// Every run that was not skipped ends in one run-finished event, a failed one
+// carrying its reason, so the desktop can raise it whether or not an editor is
+// open: most runs are on a schedule nobody is watching. A failed run also puts
+// its reason in the server's console, unless the block that failed already did.
 func (s *SchedulerService) runGraph(
 	g models.Graph,
 	entryNodeID string,
 	triggerLabel string,
 	seed map[string]map[string]interface{},
 ) models.RunRecord {
+	rec, narrated := s.executeGraph(g, entryNodeID, triggerLabel, seed)
+	if rec.Status == "skipped" {
+		return rec
+	}
+	finished := map[string]interface{}{
+		"runId": rec.ID, "graphId": g.ID, "graphName": g.Name, "status": rec.Status, "serverID": g.ServerID,
+	}
+	if rec.Status == "failed" {
+		finished["error"] = rec.Error
+		if !narrated && s.deps.server != nil {
+			s.deps.server.NarrateFailed(g.ServerID, fmt.Sprintf("Scheduled run %q failed: %s", graphLabel(g), rec.Error))
+		}
+	}
+	s.bus.Emit(EventScheduleRunFinished, finished)
+	return rec
+}
+
+// graphLabel is the name a graph goes by in a console line, which an unnamed
+// one still needs.
+func graphLabel(g models.Graph) string {
+	if name := strings.TrimSpace(g.Name); name != "" {
+		return name
+	}
+	return "Untitled"
+}
+
+// executeGraph is runGraph's run itself. narrated reports that the failing
+// block wrote its own reason to the console.
+func (s *SchedulerService) executeGraph(
+	g models.Graph,
+	entryNodeID string,
+	triggerLabel string,
+	seed map[string]map[string]interface{},
+) (models.RunRecord, bool) {
 	// Concurrency guard: one active run per graph.
 	s.runningMu.Lock()
 	if s.running[g.ID] {
@@ -85,7 +124,7 @@ func (s *SchedulerService) runGraph(
 			ID: newID(), GraphID: g.ID, GraphName: g.Name,
 			Trigger: triggerLabel, StartedAt: time.Now().UnixMilli(),
 			FinishedAt: time.Now().UnixMilli(), Status: "skipped",
-		}
+		}, false
 	}
 	s.running[g.ID] = true
 	s.runningMu.Unlock()
@@ -106,7 +145,7 @@ func (s *SchedulerService) runGraph(
 			Trigger: triggerLabel, StartedAt: now, FinishedAt: now,
 			Status: "failed",
 			Error:  "data type validation failed: " + strings.Join(issues, "; "),
-		}
+		}, false
 	}
 
 	// A destination is chosen in the editor and can be deleted in Settings
@@ -125,7 +164,7 @@ func (s *SchedulerService) runGraph(
 		// ran yesterday (a destination deleted in Settings), on a schedule nobody
 		// is watching, so the history is where the reason has to be.
 		s.addHistory(rec)
-		return rec
+		return rec, false
 	}
 
 	// A snapshot count that cannot be kept fails the run before anything is
@@ -139,7 +178,7 @@ func (s *SchedulerService) runGraph(
 			Error:  "validation failed: " + strings.Join(issues, " "),
 		}
 		s.addHistory(rec)
-		return rec
+		return rec, false
 	}
 
 	runID := newID()
@@ -199,6 +238,7 @@ func (s *SchedulerService) runGraph(
 	execCount := 0
 	failed := false
 	var firstErr string
+	firstNarrated := false
 
 	for len(queue) > 0 && execCount < maxNodesPerRun {
 		item := queue[0]
@@ -229,6 +269,7 @@ func (s *SchedulerService) runGraph(
 			if !failed {
 				failed = true
 				firstErr = errStr
+				firstNarrated = result.Narrated
 			}
 		} else if firedPort == "" {
 			firedPort = "onComplete"
@@ -271,6 +312,7 @@ func (s *SchedulerService) runGraph(
 		case <-runCtx.Done():
 			failed = true
 			firstErr = "run exceeded maximum duration"
+			firstNarrated = false
 			goto done
 		default:
 		}
@@ -279,6 +321,7 @@ func (s *SchedulerService) runGraph(
 	if execCount >= maxNodesPerRun {
 		failed = true
 		firstErr = fmt.Sprintf("aborted: exceeded %d node executions (possible cycle)", maxNodesPerRun)
+		firstNarrated = false
 	}
 
 done:
@@ -290,12 +333,8 @@ done:
 		rec.Status = "success"
 	}
 
-	s.bus.Emit(EventScheduleRunFinished, map[string]interface{}{
-		"runId": runID, "graphId": g.ID, "status": rec.Status, "serverID": g.ServerID,
-	})
-
 	s.addHistory(rec)
-	return rec
+	return rec, firstNarrated
 }
 
 // executeNode resolves the node's config + data inputs, runs its executor

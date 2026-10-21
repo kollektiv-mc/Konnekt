@@ -755,3 +755,38 @@ describe('SettingsModal layering', () => {
     expect(declaredLayer(overlay?.className ?? '')).toBe('modal')
   })
 })
+
+// The bubbles are stored as the categories turned off, so a toggle writes only
+// its own key and leaves the others as they were.
+describe('SettingsModal in-app bubbles', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    vi.mocked(App.GetAppVersion).mockResolvedValue('0.1.0')
+    vi.mocked(App.GetDataDir).mockResolvedValue('/home/user/.config/konnekt')
+    vi.mocked(App.GetLogPath).mockResolvedValue('/home/user/.config/konnekt/konnekt.log')
+    vi.mocked(App.SaveAppSettings).mockResolvedValue(undefined)
+    vi.mocked(EventsOn).mockImplementation(noop)
+    useSettingsStore.setState({
+      settings: { ...useSettingsStore.getState().settings, toastsOff: { update: true } },
+      error: null,
+    })
+  })
+
+  it('shows every category on except the one stored off, and writes one key', async () => {
+    render(<SettingsModal open onClose={() => {}} />)
+    fireEvent.click(screen.getByRole('button', { name: 'Notifications' }))
+
+    const sw = (name: string) => screen.getByRole('switch', { name })
+    expect(sw('Warnings and info').getAttribute('aria-checked')).toBe('true')
+    expect(sw('Errors').getAttribute('aria-checked')).toBe('true')
+    expect(sw('Server crash').getAttribute('aria-checked')).toBe('true')
+    expect(sw('Update available').getAttribute('aria-checked')).toBe('false')
+
+    fireEvent.click(sw('Errors'))
+    await waitFor(() => expect(App.SaveAppSettings).toHaveBeenCalledTimes(1))
+    expect(vi.mocked(App.SaveAppSettings).mock.calls[0][0].toastsOff).toEqual({
+      update: true,
+      errors: true,
+    })
+  })
+})
