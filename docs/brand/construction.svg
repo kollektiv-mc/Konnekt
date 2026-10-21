@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 272" role="img" aria-label="Konnekt mark construction">
+<title>Konnekt mark construction</title>
+<rect width="240" height="240" fill="#05060a"/>
+<rect x="15" y="15" width="210" height="210" stroke="#ffffff" stroke-opacity="0.35" stroke-width="1" fill="none" stroke-dasharray="4 4"/>
+<path d="M120 0V240" stroke="#ffffff" stroke-opacity="0.35" stroke-width="1" fill="none"/>
+<path d="M0 111.63H240" stroke="#ffffff" stroke-opacity="0.35" stroke-width="1" fill="none" stroke-dasharray="4 4"/>
+<path d="M0 132.06H240" stroke="#ffffff" stroke-opacity="0.35" stroke-width="1" fill="none" stroke-dasharray="4 4"/>
+<g transform="scale(10)"><defs><mask id="k-con-behind" maskUnits="userSpaceOnUse" x="0" y="0" width="24" height="24"><rect width="24" height="24" fill="#fff"/><polygon points="12,4.36 17.9,7.76 17.9,14.57 12,17.97 6.1,14.57 6.1,7.76" fill="#000" stroke="#000" stroke-width="2.2" stroke-linejoin="round"/><circle cx="3.69" cy="15.98" r="3" fill="#000"/></mask><mask id="k-con-cube" maskUnits="userSpaceOnUse" x="0" y="0" width="24" height="24"><rect width="24" height="24" fill="#fff"/><path d="M2.4683 13.8688A9.6008 5.5396 0 0 0 21.5317 13.8688" stroke="#000" stroke-width="4" fill="none"/><circle cx="3.69" cy="15.98" r="3" fill="#000"/></mask><mask id="k-con-front" maskUnits="userSpaceOnUse" x="0" y="0" width="24" height="24"><rect width="24" height="24" fill="#fff"/><circle cx="3.69" cy="15.98" r="3" fill="#000"/></mask></defs><ellipse cx="12.0000" cy="13.2056" rx="9.6008" ry="5.5396" fill="none" stroke="#4ade80" stroke-width="1.8" mask="url(#k-con-behind)"/><g mask="url(#k-con-cube)"><polygon points="12,4.36 17.9,7.76 17.9,14.57 12,17.97 6.1,14.57 6.1,7.76" fill="#22c55e"/><polygon points="12,4.36 17.9,7.76 12,11.16 6.1,7.76" fill="#4ade80"/><polygon points="6.1,7.76 12,11.16 12,17.97 6.1,14.57" fill="#22c55e"/><polygon points="12,11.16 17.9,7.76 17.9,14.57 12,17.97" fill="#16a34a"/></g><path d="M2.4299 12.7629A9.6008 5.5396 0 1 0 21.5701 12.7629" fill="none" stroke="#4ade80" stroke-width="1.8" mask="url(#k-con-front)"/><circle cx="3.69" cy="15.98" r="1.9" fill="#4ade80"/></g>
+<circle cx="120" cy="132.06" r="3" stroke="#ffffff" stroke-opacity="0.35" stroke-width="1" fill="none"/>
+<path d="M116 111.63h8M120 107.63v8" stroke="#ffffff" stroke-opacity="0.35" stroke-width="1" fill="none"/>
+<rect y="240" width="240" height="32" fill="#05060a"/>
+<path d="M12 256h12M18 250v12" stroke="#ffffff" stroke-opacity="0.35" stroke-width="1" fill="none"/><text x="30" y="259" fill="#ffffff" fill-opacity="0.6" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="9">cube centre</text>
+<circle cx="104" cy="256" r="3" stroke="#ffffff" stroke-opacity="0.35" stroke-width="1" fill="none"/><text x="112" y="259" fill="#ffffff" fill-opacity="0.6" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="9">orbit centre</text>
+<text x="12" y="234" fill="#ffffff" fill-opacity="0.6" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="9">live area 21 of 24</text>
+</svg>
