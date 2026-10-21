@@ -127,12 +127,14 @@ export function orbitPath(from: number, to: number): string {
 
 /** Milliseconds: when each part starts and how long it runs. */
 export const SPLASH_MS = {
-  cube: 850,
-  orbitStart: 350,
-  orbit: 1000,
+  /** The block's turn, which settles as the node lands. */
+  cube: 1350,
+  cubeFadeIn: 250,
+  orbitStart: 250,
+  orbit: 1100,
   /** The finished mark holds, then the overlay fades. */
-  fadeStart: 1550,
-  total: 1850,
+  fadeStart: 1600,
+  total: 1900,
   /** Under reduced motion: the finished mark, held and faded. */
   still: 600,
 }
@@ -140,6 +142,8 @@ export const SPLASH_MS = {
 // The block turns half a revolution on its way in, and rises this far.
 const SPIN = Math.PI
 const RISE = 3
+// How much of its lap the node cruises before it starts to brake.
+const CRUISE = 0.4
 
 export interface SplashFrame {
   azimuth: number
@@ -159,9 +163,9 @@ export function splashFrame(ms: number): SplashFrame {
   return {
     azimuth: REST_AZIMUTH - SPIN * (1 - easeOutCubic(c)),
     drop: RISE * (1 - easeOutCubic(c)),
-    cubeOpacity: clamp01(c / 0.3),
+    cubeOpacity: clamp01(ms / SPLASH_MS.cubeFadeIn),
     orbitFrom: start,
-    nodeT: start + 2 * Math.PI * easeInOutCubic(o),
+    nodeT: start + 2 * Math.PI * cruiseThenLand(o),
     nodeScale: easeOutCubic(clamp01((ms - SPLASH_MS.orbitStart) / 200)),
   }
 }
@@ -206,8 +210,14 @@ function easeOutCubic(x: number): number {
   return 1 - (1 - x) ** 3
 }
 
-function easeInOutCubic(x: number): number {
-  return x < 0.5 ? 4 * x ** 3 : 1 - (-2 * x + 2) ** 3 / 2
+// The node's lap: it appears already moving, holds that speed to CRUISE of
+// the way, then brakes evenly to rest. The speed is chosen so the lap ends
+// at 1, and the braking starts at the cruising speed, so there is no kink.
+function cruiseThenLand(x: number): number {
+  const v = 2 / (1 + CRUISE)
+  if (x <= CRUISE) return v * x
+  const d = x - CRUISE
+  return v * x - (v * d * d) / (2 * (1 - CRUISE))
 }
 
 function f4(n: number): string {

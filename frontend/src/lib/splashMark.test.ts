@@ -57,6 +57,17 @@ describe('splash mark', () => {
     }
   })
 
+  it('launches the node moving and lands it at rest', () => {
+    const at = (ms: number) => splashFrame(SPLASH_MS.orbitStart + ms).nodeT
+    const land = SPLASH_MS.orbit
+    expect(at(1) - at(0)).toBeGreaterThan(0.004)
+    expect(at(land) - at(land - 1)).toBeLessThan(0.0005)
+  })
+
+  it('settles the block as the node lands', () => {
+    expect(SPLASH_MS.cube).toBe(SPLASH_MS.orbitStart + SPLASH_MS.orbit)
+  })
+
   it('fades the overlay after the node lands', () => {
     expect(SPLASH_MS.fadeStart).toBeGreaterThan(SPLASH_MS.orbitStart + SPLASH_MS.orbit)
     expect(SPLASH_MS.fadeStart).toBeGreaterThanOrEqual(SPLASH_MS.cube)
