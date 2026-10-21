@@ -6,6 +6,7 @@ import { Icon } from '../../components/ui/Icon'
 import { ArrowUpDown, Check } from '../../lib/icons'
 import { usePopover } from '../../hooks/usePopover'
 import { ModPreviewDialog } from './ModPreviewDialog'
+import { useRetained } from '../../hooks/usePresence'
 import { ClientOnlyBadge } from './ClientOnlyBadge'
 import { fmtBytes } from '../../lib/format'
 import type {
@@ -244,6 +245,8 @@ export function InstalledPanel({
   const [uninstallingFile, setUninstallingFile] = useState<string | null>(null)
   const [confirmUninstall, setConfirmUninstall] = useState<string | null>(null)
   const [previewMod, setPreviewMod] = useState<InstalledMod | null>(null)
+  // Outlives previewMod by the dialog's exit, which still draws it.
+  const shownMod = useRetained(previewMod)
   const [numCols, setNumCols] = useState(1)
 
   // Filter + sort
@@ -527,10 +530,11 @@ export function InstalledPanel({
       </div>
 
       {/* Preview dialog */}
-      {previewMod && (
+      {shownMod && (
         <ModPreviewDialog
-          mod={previewMod}
-          updateInfo={updates[previewMod.fileName]}
+          open={previewMod !== null}
+          mod={shownMod}
+          updateInfo={updates[shownMod.fileName]}
           project={selectedProject}
           projectLoading={projectLoading}
           versions={versions}
@@ -545,7 +549,7 @@ export function InstalledPanel({
           onInstall={onInstall}
           onChangeVersion={onChangeVersion}
           onOpenInBrowser={() => {
-            onOpenInBrowser(previewMod)
+            onOpenInBrowser(shownMod)
             closePreview()
           }}
         />

@@ -4,6 +4,11 @@
 //	build/windows/icon.ico  the exe's icon resource and the NSIS installer icon
 //	build/appicon-256.png   embedded in main.go as the GTK window icon on Linux
 //
+// Every frame is a downscale of build/appicon.png except where
+// build/appicon-cuts/<size>.png exists: the mark is redrawn below 24px rather
+// than shrunk, because its orbit and gaps fall under a pixel and blur
+// (docs/brand/README.md, Sizes), and a drawn cut replaces the frame it names.
+//
 // Both are committed. This exists so they are reproducible from the one source
 // image rather than being opaque bytes nobody can regenerate: the scaffolded
 // icon.ico was Wails' own "W" logo and survived a year of builds precisely
@@ -21,16 +26,19 @@ package main
 import (
 	"bytes"
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"image"
 	"image/draw"
 	"image/png"
+	"io/fs"
 	"os"
 	"path/filepath"
 )
 
 const (
 	sourcePath  = "build/appicon.png"
+	cutsDir     = "build/appicon-cuts"
 	icoPath     = "build/windows/icon.ico"
 	linuxPath   = "build/appicon-256.png"
 	linuxIconPx = 256
@@ -69,7 +77,12 @@ func run() error {
 	// eight times over.
 	src := toNRGBA(decoded)
 
-	ico, err := encodeICO(src, icoSizes)
+	cuts, err := loadCuts(filepath.Join(root, cutsDir), icoSizes)
+	if err != nil {
+		return err
+	}
+
+	ico, err := encodeICO(src, icoSizes, cuts)
 	if err != nil {
 		return fmt.Errorf("encode %s: %w", icoPath, err)
 	}
@@ -85,9 +98,31 @@ func run() error {
 		return fmt.Errorf("write %s: %w", linuxPath, err)
 	}
 
-	fmt.Printf("gen-icons: wrote %s (%d frames) and %s (%dpx)\n",
-		icoPath, len(icoSizes), linuxPath, linuxIconPx)
+	fmt.Printf("gen-icons: wrote %s (%d frames, %d drawn) and %s (%dpx)\n",
+		icoPath, len(icoSizes), len(cuts), linuxPath, linuxIconPx)
 	return nil
+}
+
+// loadCuts reads the drawn frame for each size that has one in dir. A size with
+// no file is left out and gets a downscale; a file of the wrong size is an
+// error rather than a silent resize, since the point of a cut is its pixels.
+func loadCuts(dir string, sizes []int) (map[int]image.Image, error) {
+	cuts := map[int]image.Image{}
+	for _, size := range sizes {
+		path := filepath.Join(dir, fmt.Sprintf("%d.png", size))
+		img, err := loadPNG(path)
+		if errors.Is(err, fs.ErrNotExist) {
+			continue
+		}
+		if err != nil {
+			return nil, fmt.Errorf("read %s: %w", path, err)
+		}
+		if b := img.Bounds(); b.Dx() != size || b.Dy() != size {
+			return nil, fmt.Errorf("%s is %dx%d, want %dx%d", path, b.Dx(), b.Dy(), size, size)
+		}
+		cuts[size] = img
+	}
+	return cuts, nil
 }
 
 // repoRoot walks up from the working directory to the directory holding go.mod,
@@ -120,12 +155,16 @@ func loadPNG(path string) (image.Image, error) {
 // encodeICO writes an .ico holding one PNG-compressed frame per size. PNG frames
 // at every size (rather than BMP below 256) are what Wails' own generator emits
 // and what the winres loader in its build pipeline reads back, and they have
-// been valid since Vista.
-func encodeICO(src image.Image, sizes []int) ([]byte, error) {
+// been valid since Vista. A size in cuts is encoded as drawn instead of resized.
+func encodeICO(src image.Image, sizes []int, cuts map[int]image.Image) ([]byte, error) {
 	frames := make([][]byte, len(sizes))
 	for i, size := range sizes {
+		frame, ok := cuts[size]
+		if !ok {
+			frame = resize(src, size)
+		}
 		var buf bytes.Buffer
-		if err := png.Encode(&buf, resize(src, size)); err != nil {
+		if err := png.Encode(&buf, frame); err != nil {
 			return nil, fmt.Errorf("%dpx frame: %w", size, err)
 		}
 		frames[i] = buf.Bytes()

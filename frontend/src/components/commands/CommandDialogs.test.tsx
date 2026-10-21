@@ -1,5 +1,5 @@
 import { describe, it, expect, afterEach } from 'vitest'
-import { render, screen, cleanup } from '@testing-library/react'
+import { render, screen, cleanup, fireEvent } from '@testing-library/react'
 import { KickBanDialog, LifecycleConfirmDialog } from './CommandDialogs'
 import { declaredLayer } from '../../lib/layers'
 
@@ -36,5 +36,62 @@ describe('command dialogs', () => {
     expect(overlay).not.toBeNull()
     expect(container.contains(overlay)).toBe(false)
     expect(declaredLayer(overlay?.className ?? '')).toBe('dialog')
+  })
+})
+
+// jsdom has no AnimationEvent, so React listens for the prefixed
+// `webkitAnimationEnd` there, and fireEvent.animationEnd (the unprefixed name)
+// reaches nothing. The event also needs its `animationName`, which is what
+// tells the dialog's own exit from any other animation ending inside it.
+function panelExitEnds(panel: Element | null) {
+  const ev = new Event('webkitAnimationEnd', { bubbles: true })
+  Object.defineProperty(ev, 'animationName', { value: 'modal-panel-out' })
+  fireEvent(panel as Element, ev)
+}
+
+// Closing is the entrance reversed (hooks/usePresence.ts): the dialog stays up,
+// inert, while its exit plays, and goes when the panel's animation ends.
+describe('command dialogs closing', () => {
+  const kick = (type: 'kick' | 'ban' | null, onCancel = () => {}) => (
+    <KickBanDialog type={type} onCancel={onCancel} onSubmit={() => {}} />
+  )
+
+  it('plays the exit before the kick dialog unmounts', () => {
+    const { rerender } = render(kick('kick'))
+    rerender(kick(null))
+
+    const overlay = screen.getByPlaceholderText('Player name').closest('.fixed')
+    expect(overlay?.className).toContain('modal-overlay-out')
+    expect(overlay?.className).toContain('pointer-events-none')
+    expect(overlay?.hasAttribute('inert')).toBe(true)
+
+    panelExitEnds(overlay?.firstElementChild ?? null)
+    expect(screen.queryByPlaceholderText('Player name')).toBeNull()
+  })
+
+  it('still draws the confirm it was closed from during the exit', () => {
+    const confirm = (action: 'force-stop' | null) => (
+      <LifecycleConfirmDialog
+        action={action}
+        busy={false}
+        onCancel={() => {}}
+        onConfirm={() => {}}
+      />
+    )
+    const { rerender } = render(confirm('force-stop'))
+    rerender(confirm(null))
+    expect(screen.getByRole('button', { name: 'Cancel' })).toBeTruthy()
+  })
+
+  it('opens with empty fields again after a full exit', () => {
+    const { rerender } = render(kick('ban'))
+    fireEvent.change(screen.getByPlaceholderText('Player name'), { target: { value: 'Steve' } })
+    rerender(kick(null))
+    panelExitEnds(
+      screen.getByPlaceholderText('Player name').closest('.fixed')?.firstElementChild ?? null,
+    )
+
+    rerender(kick('ban'))
+    expect((screen.getByPlaceholderText('Player name') as HTMLInputElement).value).toBe('')
   })
 })

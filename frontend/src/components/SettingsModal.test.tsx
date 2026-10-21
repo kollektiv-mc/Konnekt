@@ -486,6 +486,16 @@ describe('SettingsModal skin and light mode', () => {
     })
   })
 
+  it('lays every skin out in a wrapping grid with no sideways scroll', () => {
+    openAppearance()
+
+    const gallery = screen.getByTestId('skin-gallery')
+    expect(gallery.className).toContain('grid-cols-3')
+    expect(gallery.className).toContain('max-sm:grid-cols-2')
+    expect(gallery.className).not.toContain('overflow-x')
+    expect(within(gallery).getAllByRole('button')).toHaveLength(BUILTIN_SKINS.length)
+  })
+
   it('does not touch the theme when the skin picked supports light', async () => {
     settings({ theme: 'light', skinId: 'default' })
     openAppearance()
@@ -824,5 +834,52 @@ describe('SettingsModal in-app bubbles', () => {
       update: true,
       errors: true,
     })
+  })
+})
+
+// jsdom has no AnimationEvent, so React listens for the prefixed
+// `webkitAnimationEnd` there, and fireEvent.animationEnd (the unprefixed name)
+// reaches nothing. The event also needs its `animationName`, which is what
+// tells the dialog's own exit from any other animation ending inside it.
+function panelExitEnds(panel: Element | null) {
+  const ev = new Event('webkitAnimationEnd', { bubbles: true })
+  Object.defineProperty(ev, 'animationName', { value: 'modal-panel-out' })
+  fireEvent(panel as Element, ev)
+}
+
+describe('SettingsModal closing', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    vi.mocked(App.GetAppVersion).mockResolvedValue('0.1.0')
+    vi.mocked(EventsOn).mockImplementation(noop)
+  })
+
+  it('answers Escape once and stays up, inert, until the exit ends', () => {
+    const onClose = vi.fn()
+    const { rerender } = render(<SettingsModal open onClose={onClose} />)
+    fireEvent.keyDown(window, { key: 'Escape' })
+    expect(onClose).toHaveBeenCalledTimes(1)
+
+    rerender(<SettingsModal open={false} onClose={onClose} />)
+    const nav = screen.getByRole('button', { name: 'About' })
+    const overlay = nav.closest('.fixed')
+    expect(overlay?.className).toContain('modal-overlay-out')
+    expect(overlay?.hasAttribute('inert')).toBe(true)
+
+    fireEvent.keyDown(window, { key: 'Escape' })
+    expect(onClose).toHaveBeenCalledTimes(1)
+
+    panelExitEnds(overlay?.firstElementChild ?? null)
+    expect(screen.queryByRole('button', { name: 'About' })).toBeNull()
+  })
+
+  it('shows the dialog again when reopened mid-exit', () => {
+    const { rerender } = render(<SettingsModal open onClose={() => {}} />)
+    rerender(<SettingsModal open={false} onClose={() => {}} />)
+    rerender(<SettingsModal open onClose={() => {}} />)
+
+    const overlay = screen.getByRole('button', { name: 'About' }).closest('.fixed')
+    expect(overlay?.className).toContain('modal-overlay-in')
+    expect(overlay?.hasAttribute('inert')).toBe(false)
   })
 })

@@ -2,9 +2,8 @@
 
 The Konnekt mark is an isometric block, shaded in the three brand greens, with
 one orbit around it and a node riding on the orbit: a server, and something
-connected to it. It replaces the plain "K" that `build/appicon.png` carries
-today. The app icon, favicon and website still use the "K"; switching them is
-a separate change, described under [Rolling it out](#rolling-it-out).
+connected to it. It replaced the plain "K" as the app icon and favicon; the
+headers still set the wordmark alone, see [Rolling it out](#rolling-it-out).
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="lockup-on-dark.svg">
@@ -24,7 +23,8 @@ so each file works on any ground of its tone.
 | [`mark-16-on-dark.svg`](mark-16-on-dark.svg), [`mark-16-on-light.svg`](mark-16-on-light.svg) | 16 px and below, drawn on a 16 grid |
 | [`mark-mono-white.svg`](mark-mono-white.svg), [`mark-mono-black.svg`](mark-mono-black.svg) | One colour: the faces are separated by gaps instead of shade |
 | [`lockup-on-dark.svg`](lockup-on-dark.svg), [`lockup-on-light.svg`](lockup-on-light.svg) | Mark and wordmark, the wordmark outlined |
-| [`app-icon.svg`](app-icon.svg) | The mark at 80 % on a full-bleed `#05060a` square, the shape of `build/appicon.png` |
+| [`app-icon.svg`](app-icon.svg) | The mark at 80 % on a full-bleed `#05060a` square: `build/appicon.png` and the website's icons |
+| [`app-icon-16.svg`](app-icon-16.svg), [`app-icon-24.svg`](app-icon-24.svg) | The 16 and 24 cuts on the same square, for the icon's small frames and the 16 px favicon |
 | [`construction.svg`](construction.svg) | The construction below |
 
 ## Construction
@@ -101,14 +101,13 @@ uses it, since `accent` has no light value today.
 
 ## Rolling it out
 
-Not done yet. Each step is its own change.
-
-1. **App icon.** Render `app-icon.svg` to a 2560 × 2560 PNG, replace
-   `build/appicon.png` and its copy `website/assets/img/app-icon.png`, then run
-   `go run ./scripts/gen-icons` and commit all four files, per
-   [`build/README.md`](../../build/README.md). `docs/images/konnekt_icon.png`
-   is the same image again.
-2. **Favicon.** Replace `website/assets/img/favicon.png` from
-   `mark-16-on-dark.svg` and `mark-on-dark.svg` (32 and 48 px).
-3. **Website and app header.** Use the lockup in place of the text-only wordmark.
-4. **Token.** Add the light-ground `#15803d` to kollektiv before step 3 needs it.
+1. **App icon.** Done. `app-icon.svg` rendered at 2560 × 2560 is
+   `build/appicon.png`, its website copy and `docs/images/konnekt_icon.png`;
+   `app-icon-16.svg` and `app-icon-24.svg` rendered at their size are
+   `build/appicon-cuts/`, which `go run ./scripts/gen-icons` puts in the
+   `.ico` in place of a downscale. See [`build/README.md`](../../build/README.md).
+2. **Favicon.** Done. `website/assets/img/favicon-16.png` is `app-icon-16.svg`,
+   `favicon-32.png` and `favicon.png` (256) are `app-icon.svg`, and every page
+   links all three by size.
+3. **Website and app header.** Not done. Use the lockup in place of the text-only wordmark.
+4. **Token.** Not done. Add the light-ground `#15803d` to kollektiv before step 3 needs it.
