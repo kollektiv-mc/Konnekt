@@ -64,11 +64,12 @@ var errServerNotRunning = errors.New("server not running")
 // gamertag with underscores, so "Steve" arrives as ".Steve" and matched
 // nothing.
 //
-// The dot is added and nothing else, deliberately. What keeps a chat message
-// from spoofing a server line is that the name sits directly against the
-// "]: " anchor, so every character this class gains is one some plugin's
-// broadcast format can exploit. Four in particular stay out: "<" and ">",
-// or "]: <Alex> Bob joined the game" registers Alex; "[" and "]", or a
+// The dot is added and nothing else, deliberately. The matchers run on the
+// log message (see logMessage) anchored at its start, so what keeps a chat
+// message from spoofing a server line is that the name sits directly against
+// that anchor, and every character this class gains is one some plugin's
+// broadcast format can exploit. Four in particular stay out: "<" and ">", or
+// "<Alex> Bob joined the game" registers Alex; "[" and "]", or a
 // "[Lobby] Bob joined" broadcast registers the rank tag. So does ":", which
 // is subtler — chat plugins that format messages as "Name: message" would
 // otherwise let a player type "joined the game" and register themselves.
@@ -80,11 +81,13 @@ var errServerNotRunning = errors.New("server not running")
 const rePlayerName = `([\w.]+)`
 
 var (
-	// Player matchers. All anchored on "]: " followed directly by the name, so
-	// a chat message ("]: <Alex> Bob joined the game") cannot spoof one — the
-	// same guard reServerReady documents below. Lines reach these already run
-	// through stripANSI, without which a chat plugin's colour sequence sits in
-	// that gap and none of them match at all.
+	// Player matchers. Each runs on the log message and is anchored at its
+	// start, so the server's own words have to open the message: a chat
+	// message ("<Alex> Bob joined the game") cannot spoof one, and neither can
+	// a player who types the old anchor ("<Alex> ]: Bob joined the game"),
+	// which matched while these looked for "]: " anywhere in the line (#619).
+	// Lines reach these already run through stripANSI, without which a chat
+	// plugin's colour sequence opens the message and none of them match.
 	//
 	// Joins and leaves are each matched on two lines rather than one. The
 	// broadcasts ("joined the game", "left the game") are the obvious signal
@@ -94,36 +97,53 @@ var (
 	// they back the broadcasts up. Both paths are idempotent, and which one
 	// lands first is not fixed — vanilla logs the login line before the join
 	// broadcast, Paper logs it after.
-	rePlayerJoin  = regexp.MustCompile(`]: ` + rePlayerName + ` joined the game`)
-	rePlayerLeave = regexp.MustCompile(`]: ` + rePlayerName + ` left the game`)
-	rePlayerUUID  = regexp.MustCompile(`]: UUID of player ` + rePlayerName + ` is ([0-9a-f-]{36})`)
+	rePlayerJoin  = regexp.MustCompile(`^` + rePlayerName + ` joined the game`)
+	rePlayerLeave = regexp.MustCompile(`^` + rePlayerName + ` left the game`)
+	rePlayerUUID  = regexp.MustCompile(`^UUID of player ` + rePlayerName + ` is ([0-9a-f-]{36})`)
 	// The address is captured whole and parsed by parseLoginAddress rather
 	// than being spelled out here. A dotted quad used to be, which meant an
 	// IPv6 player matched nothing at all and so was not merely missing an IP
 	// but untracked on a server whose join broadcast a plugin had silenced
 	// (#229). The line's worth as a join signal must not hang on the address
 	// format.
-	rePlayerLogin = regexp.MustCompile(`]: ` + rePlayerName + `\[/(\S+)\] logged in`)
-	rePlayerLost  = regexp.MustCompile(`]: ` + rePlayerName + ` lost connection:`)
+	rePlayerLogin = regexp.MustCompile(`^` + rePlayerName + `\[/(\S+)\] logged in`)
+	rePlayerLost  = regexp.MustCompile(`^` + rePlayerName + ` lost connection:`)
 	reTPSPaper    = regexp.MustCompile(`TPS from.*?:\s*[*‡]*\s*(\d+(?:\.\d+)?)`)
 	reTPSForge    = regexp.MustCompile(`(?i)Mean TPS:\s*(\d+(?:\.\d+)?)`)
 	reTickQuery   = regexp.MustCompile(`(\d+(?:\.\d+)?)\s*ms\s*per tick`)
-	reServerStop  = regexp.MustCompile(`(?i)Stopping the server`)
+	// reServerStop marks a deliberate shutdown. Anchored like the rest, or a
+	// player typing "Stopping the server" moves a running server to stopping.
+	reServerStop = regexp.MustCompile(`(?i)^Stopping the server`)
 	// reServerCrash is the dedicated server's own crash path: runServer logs
 	// "Encountered an unexpected exception" and then where the report went,
 	// in vanilla, Fabric, Paper and Forge/NeoForge alike. The JVM can outlive
 	// that line for minutes when the shutdown it then attempts wedges, so a
 	// stop after it waits crashedStopGrace rather than the configured grace.
-	// Anchored on "]: " like the ready line so chat cannot spoof it.
-	reServerCrash = regexp.MustCompile(`]: (?:Encountered an unexpected exception|This crash report has been saved to:|We were unable to save this crash report to disk)`)
+	// Anchored at the start of the log message like every server-line matcher
+	// here, so chat cannot spoof it (#619).
+	reServerCrash = regexp.MustCompile(`^(?:Encountered an unexpected exception|This crash report has been saved to:|We were unable to save this crash report to disk)`)
 	// reServerReady is the Minecraft "Done (3.541s)!" ready line, shared by
 	// vanilla, Fabric, Quilt, Paper/Purpur and Forge/NeoForge (their log
-	// prefixes differ, the Done line does not). Anchored on "]: " like the
-	// player matchers so a chat message ("]: <Alex> Done (1s)!") cannot spoof
-	// readiness; [0-9.,] tolerates locale comma decimals. Case-sensitive on
-	// purpose — every flavor capitalizes Done.
-	reServerReady = regexp.MustCompile(`]: Done \([0-9.,]+s\)!`)
+	// prefixes differ, the Done line does not). Anchored at the start of the
+	// log message like the player matchers, so a chat message
+	// ("<Alex> Done (1s)!") cannot spoof readiness; [0-9.,] tolerates locale
+	// comma decimals. Case-sensitive on purpose — every flavor capitalizes
+	// Done.
+	reServerReady = regexp.MustCompile(`^Done \([0-9.,]+s\)!`)
 )
+
+// logMessage is what a server log line says after its log4j prefix: the text
+// following the line's first "]: ". Every flavor's prefix ends there, vanilla
+// "[12:00:00] [Server thread/INFO]: ", Forge's "[...] [Server thread/INFO]
+// [minecraft/DedicatedServer]: " and Paper's "[12:00:00 INFO]: ", and a chat
+// message only ever comes after it, so a "]: " a player types is never the
+// first one. A line without the prefix has no message and matches nothing.
+func logMessage(line string) string {
+	if i := strings.Index(line, "]: "); i >= 0 {
+		return line[i+len("]: "):]
+	}
+	return ""
+}
 
 // startingDeadline bounds the starting state — the timeout Wings lacks: a
 // ready line that never matches (an exotic flavor, an old log format) must
@@ -552,12 +572,13 @@ func (s *serverInstance) streamOutput(r io.Reader) {
 		line := stripANSI(scanner.Text())
 
 		s.emitConsoleLine(line)
+		msg := logMessage(line)
 
 		if strings.Contains(strings.ToLower(line), "eula.txt") {
 			s.bus.Emit(EventEulaRequired, models.ServerLifecycleEvent{ServerID: s.id})
 		}
 
-		if reServerStop.MatchString(line) {
+		if reServerStop.MatchString(msg) {
 			s.mu.Lock()
 			// The flag write is unconditional (any spelling of a deliberate
 			// shutdown marks intent); the state transition is gated so a late
@@ -570,7 +591,7 @@ func (s *serverInstance) streamOutput(r io.Reader) {
 			s.mu.Unlock()
 		}
 
-		if reServerCrash.MatchString(line) {
+		if reServerCrash.MatchString(msg) {
 			s.mu.Lock()
 			// Narrated once per boot, on the first of the crash path's lines.
 			// The flag outlives this boot until start() clears it, which is
@@ -583,7 +604,7 @@ func (s *serverInstance) streamOutput(r io.Reader) {
 			}
 		}
 
-		if reServerReady.MatchString(line) {
+		if reServerReady.MatchString(msg) {
 			s.mu.Lock()
 			// Gated on starting: output from a stopping or offline process is
 			// never a ready signal, so a late buffered Done line cannot
@@ -594,9 +615,9 @@ func (s *serverInstance) streamOutput(r io.Reader) {
 			s.mu.Unlock()
 		}
 
-		if m := rePlayerUUID.FindStringSubmatch(line); m != nil {
+		if m := rePlayerUUID.FindStringSubmatch(msg); m != nil {
 			s.recordPlayerField(m[1], func(sess *playerSession) { sess.uuid = m[2] })
-		} else if m := rePlayerLogin.FindStringSubmatch(line); m != nil {
+		} else if m := rePlayerLogin.FindStringSubmatch(msg); m != nil {
 			// Carries the IP and, on a server whose join broadcast a plugin
 			// silenced, doubles as the join itself. An address that will not
 			// parse is left unset rather than dropping the line, so the join
@@ -608,7 +629,7 @@ func (s *serverInstance) streamOutput(r io.Reader) {
 			if sess, joined := s.promotePlayer(name); joined {
 				s.bus.Emit(EventPlayerJoined, map[string]string{"serverID": s.id, "name": name, "ip": sess.ip})
 			}
-		} else if m := rePlayerJoin.FindStringSubmatch(line); m != nil {
+		} else if m := rePlayerJoin.FindStringSubmatch(msg); m != nil {
 			// On Paper this broadcast precedes the login line, so the IP is
 			// genuinely not known yet and rides out empty — the same
 			// best-effort the player:left payload has always had. The roster
@@ -618,11 +639,11 @@ func (s *serverInstance) streamOutput(r io.Reader) {
 			if sess, joined := s.promotePlayer(name); joined {
 				s.bus.Emit(EventPlayerJoined, map[string]string{"serverID": s.id, "name": name, "ip": sess.ip})
 			}
-		} else if m := rePlayerLeave.FindStringSubmatch(line); m != nil {
+		} else if m := rePlayerLeave.FindStringSubmatch(msg); m != nil {
 			if name := m[1]; s.removePlayer(name) {
 				s.bus.Emit(EventPlayerLeft, map[string]string{"serverID": s.id, "name": name})
 			}
-		} else if m := rePlayerLost.FindStringSubmatch(line); m != nil {
+		} else if m := rePlayerLost.FindStringSubmatch(msg); m != nil {
 			// The core's own disconnect line. Also printed for a connection
 			// that failed before joining, which removePlayer reports as the
 			// no-op it is, so no player:left goes out for a player who was

@@ -3,6 +3,7 @@ package services
 import (
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
 	"time"
@@ -168,14 +169,67 @@ func TestReadyRegexFlavors(t *testing.T) {
 		{"comma decimal", `[12:00:00] [Server thread/INFO]: Done (4,2s)!`, true},
 		{"bare done", `[12:00:00] [Server thread/INFO]: Done (0.9s)!`, true},
 		{"chat spoof", `[12:00:00] [Server thread/INFO]: <Alex> Done (1.2s)!`, false},
+		{"chat typing the anchor", `[12:00:00] [Server thread/INFO]: <Alex> ]: Done (1.2s)!`, false},
+		{"paper chat typing the anchor", `[12:00:00 INFO]: <Alex> ]: Done (1.2s)!`, false},
 		{"no log prefix", `Done (0.9s)!`, false},
 		{"lowercase", `[12:00:00] [Server thread/INFO]: done (1.2s)!`, false},
 		{"no duration", `[12:00:00] [Server thread/INFO]: Done!`, false},
 	}
 	for _, tc := range cases {
-		if got := reServerReady.MatchString(tc.line); got != tc.match {
+		if got := reServerReady.MatchString(logMessage(tc.line)); got != tc.match {
 			t.Errorf("%s: match = %v, want %v for %q", tc.name, got, tc.match, tc.line)
 		}
+	}
+}
+
+// The crash and stop lines are read the same way as the ready line: on the log
+// message, from its start. A player who types the prefix's closing "]: " into
+// chat used to match both (#619), which marked a healthy server crashed (and so
+// cut its next stop's grace to crashedStopGrace) or moved it to stopping.
+func TestCrashAndStopRegexesIgnoreChat(t *testing.T) {
+	cases := []struct {
+		name  string
+		re    *regexp.Regexp
+		line  string
+		match bool
+	}{
+		{"crash vanilla", reServerCrash, `[12:22:45] [Server thread/ERROR]: Encountered an unexpected exception`, true},
+		{"crash forge", reServerCrash, `[20Oct2026 12:22:45.000] [Server thread/ERROR] [minecraft/MinecraftServer]: Encountered an unexpected exception`, true},
+		{"crash report saved", reServerCrash, `[12:22:45 ERROR]: This crash report has been saved to: /srv/crash-reports/crash.txt`, true},
+		{"crash in chat", reServerCrash, `[12:00:00] [Server thread/INFO]: <Steve> Encountered an unexpected exception`, false},
+		{"crash typing the anchor", reServerCrash, `[12:00:00] [Server thread/INFO]: <Steve> ]: Encountered an unexpected exception`, false},
+		{"stop vanilla", reServerStop, `[12:00:00] [Server thread/INFO]: Stopping the server`, true},
+		{"stop paper", reServerStop, `[12:00:00 INFO]: Stopping the server`, true},
+		{"stop in chat", reServerStop, `[12:00:00 INFO]: <Steve> Stopping the server`, false},
+		{"stop typing the anchor", reServerStop, `[12:00:00 INFO]: <Steve> ]: Stopping the server`, false},
+		{"no log prefix", reServerStop, `Stopping the server`, false},
+	}
+	for _, tc := range cases {
+		if got := tc.re.MatchString(logMessage(tc.line)); got != tc.match {
+			t.Errorf("%s: match = %v, want %v for %q", tc.name, got, tc.match, tc.line)
+		}
+	}
+}
+
+// End to end through the read loop: a chat line carrying the crash text leaves
+// a running server uncrashed and running.
+func TestChatCannotMarkTheServerCrashed(t *testing.T) {
+	s, _ := newServerFixture()
+	release, _ := fakeRunningServer(t, s)
+	t.Cleanup(release)
+
+	curInst(s).streamOutput(strings.NewReader(
+		"[12:00:00] [Server thread/INFO]: <Steve> ]: Encountered an unexpected exception\n" +
+			"[12:00:00] [Server thread/INFO]: <Steve> ]: Stopping the server\n"))
+
+	curInst(s).mu.Lock()
+	crashed, expected := curInst(s).crashed, curInst(s).expectedStop
+	curInst(s).mu.Unlock()
+	if crashed || expected {
+		t.Errorf("chat set crashed=%v expectedStop=%v, want both false", crashed, expected)
+	}
+	if got := s.State(fixtureServerID); got != "running" {
+		t.Errorf("State() = %q after chat, want running", got)
 	}
 }
 
