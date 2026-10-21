@@ -502,7 +502,21 @@ input[type='number']::-webkit-outer-spin-button {
   animation: toast-out var(--duration-panel) var(--ease-standard) forwards;
 }
 
+/* Settings (components/SettingsModal.tsx): the pane that replaces another
+   fades in, and the nav highlight slides to the selected item. The highlight's
+   transition comes from utilities, so the reduced-motion rule below is what
+   turns it into a jump. */
+.settings-pane-in {
+  animation: lazy-panel-fade-in var(--duration-fast) ease-out both;
+}
+
 @media (prefers-reduced-motion: reduce) {
+  .settings-pane-in {
+    animation: none !important;
+  }
+  .settings-nav-pill {
+    transition: none !important;
+  }
   .backup-sphere-meridian {
     animation: none !important;
   }
