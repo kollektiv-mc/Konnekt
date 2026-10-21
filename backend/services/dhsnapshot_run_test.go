@@ -311,7 +311,7 @@ func TestDHRunWithNoLeadTimeWarnsNobodyAndNeedsNoWarningChannel(t *testing.T) {
 // A stopped server has nobody to warn and nothing to stop: the run copies it as
 // it is, under the power gate, and leaves it stopped. A warning channel is not
 // needed either, whatever the lead time.
-func TestDHRunCopiesAStoppedServerWithoutWarningStoppingOrStarting(t *testing.T) {
+func TestDHRunCopiesAStoppedServerAsItIs(t *testing.T) {
 	f := newDHRunFixture(t)
 	f.host.running = false
 	f.host.canWarn = false
