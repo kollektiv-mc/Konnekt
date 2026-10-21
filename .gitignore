@@ -1,6 +1,11 @@
 # Build output
 frontend/dist/
 build/bin/
+# `wails build -nsis` renders wails_tools.nsh and downloads the WebView2
+# bootstrapper on every run; CI writes version.nsh (project.nsi says why)
+build/windows/installer/wails_tools.nsh
+build/windows/installer/tmp/
+build/windows/installer/version.nsh
 
 # Wails frontend-hash cache
 frontend/package.json.md5

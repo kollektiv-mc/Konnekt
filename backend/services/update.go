@@ -446,7 +446,10 @@ func (s *UpdateService) CheckForUpdates(ctx context.Context, currentVersion, cha
 // platformAssetNameFor returns the release asset name expected for goos/goarch,
 // matching the naming convention release.yml publishes under
 // (konnekt-<goos>-<goarch>[.exe]). Windows and Linux (amd64, raw binary — the
-// RPM is a separate, non-self-updating asset) are shipped; other platforms
+// RPM is a separate, non-self-updating asset) are shipped. On Windows that is
+// the portable exe for an installed copy too: the -setup.exe beside it is for a
+// first install, and the installer puts the same konnekt.exe in a per-user
+// folder this can replace in place. Other platforms
 // report an error rather than guessing a name nothing publishes. Takes
 // goos/goarch as parameters (rather than reading runtime.GOOS/GOARCH directly)
 // so it's testable for every platform from any single dev machine.

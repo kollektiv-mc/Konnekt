@@ -122,20 +122,48 @@ jobs:
       - name: Install Wails CLI
         run: go install github.com/wailsapp/wails/v2/cmd/wails@v2.12.0
 
+      # `wails build -nsis` shells out to makensis. Pinned, and put on PATH
+      # explicitly, because the package does not shim it.
+      - name: Install NSIS
+        shell: pwsh
+        run: |
+          choco install nsis --version=3.11 -y --no-progress
+          Add-Content -Path $env:GITHUB_PATH -Value "${env:ProgramFiles(x86)}\NSIS"
+
+      # The installer names the build it carries, in its file properties and
+      # in Installed apps. project.nsi reads it from here and falls back to
+      # wails.json's base when the file is missing.
+      - name: Stamp installer version
+        shell: pwsh
+        env:
+          TAG: ${{ needs.resolve.outputs.tag }}
+        run: |
+          $version = $env:TAG.TrimStart('v')
+          Set-Content -Path build/windows/installer/version.nsh -Encoding ascii `
+            -Value "!define KONNEKT_VERSION `"$version`""
+
+      # One build, two assets: -nsis wraps the same konnekt.exe it just built
+      # into build/bin/konnekt-amd64-installer.exe.
       - name: Build
         shell: pwsh
-        run: wails build -ldflags "-X main.Version=${{ needs.resolve.outputs.tag }}"
+        run: wails build -nsis -ldflags "-X main.Version=${{ needs.resolve.outputs.tag }}"
 
-      - name: Stage release asset
+      # The portable exe keeps its name: it is the asset the in-app updater
+      # downloads, matched exactly (update.go's platformAssetNameFor), for an
+      # installed copy and a portable one alike.
+      - name: Stage release assets
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force -Path dist | Out-Null
           Copy-Item build/bin/konnekt.exe dist/konnekt-windows-amd64.exe
+          Copy-Item build/bin/konnekt-amd64-installer.exe dist/konnekt-windows-amd64-setup.exe
 
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: konnekt-windows-amd64
-          path: dist/konnekt-windows-amd64.exe
+          path: |
+            dist/konnekt-windows-amd64.exe
+            dist/konnekt-windows-amd64-setup.exe
           if-no-files-found: error
 
   build-linux:
@@ -356,9 +384,16 @@ jobs:
 
           cat >> notes.md <<EOF
           Windows, Linux and Fedora/RHEL builds are attached below. macOS builds
-          from source. The binaries carry no code-signing certificate, so
-          Windows SmartScreen warns on first launch: choose More info, then Run
-          anyway.
+          from source.
+
+          On Windows, \`konnekt-windows-amd64-setup.exe\` installs Konnekt for
+          your account, with a Start Menu entry and an uninstaller under
+          Installed apps. \`konnekt-windows-amd64.exe\` is the same app as a
+          single file that runs from wherever you put it. Either one updates
+          itself.
+
+          The binaries carry no code-signing certificate, so Windows
+          SmartScreen warns on first launch: choose More info, then Run anyway.
 
           Every artifact here is built by GitHub Actions from the tagged commit
           and carries a signed build provenance attestation. To check that what
