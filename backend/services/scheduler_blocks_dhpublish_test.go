@@ -565,7 +565,11 @@ func TestDHClaimIsReleasedOnEveryExit(t *testing.T) {
 			r, _ := f.execPublish("srv1", publishConfig())
 			return r
 		}},
-		{"a snapshot refused because the server is not running", func() ExecResult { r, _ := f.execDH("srv1", dhBlockConfig()); return r }},
+		{"a snapshot of a stopped server", func() ExecResult { r, _ := f.execDH("srv1", dhBlockConfig()); return r }},
+		{"a snapshot refused for its config", func() ExecResult {
+			r, _ := f.execDH("srv1", map[string]interface{}{"leadSeconds": float64(-1)})
+			return r
+		}},
 	}
 	for _, a := range attempts {
 		a.run()

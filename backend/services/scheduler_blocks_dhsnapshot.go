@@ -34,7 +34,8 @@ func registerDHSnapshotBlock(r *BlockRegistry) {
 	must(r.RegisterBlock(models.BlockDef{
 		ID: dhSnapshotBlockID, Category: "action", Label: "DH Snapshot",
 		Description: "Stops the server to copy its Distant Horizons data into a staged snapshot, then starts it again. " +
-			"Players are warned first, over RCON or the console. Only the parts that changed since the last snapshot " +
+			"Players are warned first, over RCON or the console. A server that is already stopped is copied as it is " +
+			"and left stopped. Only the parts that changed since the last snapshot " +
 			"are staged, and the staged folder wires into Upload to Bucket.",
 		ControlInputs: []string{"trigger"}, ControlOutputs: []string{"onComplete", "onFailed"},
 		DataOutputs: []models.DataPort{
@@ -273,12 +274,12 @@ func (h serverDHHost) Say(message string) error {
 	return err
 }
 
-func (h serverDHHost) Stop(grace time.Duration) error {
-	return h.e.Server().Stop(h.e.ServerID, grace)
+func (h serverDHHost) WhileStopped(grace time.Duration, fn func()) (stopErr, startErr error) {
+	return h.e.Server().WhileStopped(h.cfg.ID, h.cfg.JarPath, h.cfg.JvmArgs, h.cfg.WorkingDir, grace, fn)
 }
 
-func (h serverDHHost) Start() error {
-	return h.e.Server().Start(h.cfg.ID, h.cfg.JarPath, h.cfg.JvmArgs, h.cfg.WorkingDir)
+func (h serverDHHost) WhileDown(fn func()) error {
+	return h.e.Server().WhileDown(h.cfg.ID, fn)
 }
 
 func (h serverDHHost) Narrate(line string) {
