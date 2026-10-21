@@ -87,7 +87,7 @@ const VIEWPORT = { width: 1440, height: 900 };
 const CROP = { width: 1224, height: 456 };
 const FPS = 30;
 const TICK_MS = 1000 / FPS;
-const SETTLE_MS = 2400; // the splash, the reveal after it, and the boot replay
+const SETTLE_MS = 3250; // the splash, the reveal after it, and the boot replay
 const HOLD_MS = 1200;
 const SCENE_TIMEOUT_MS = 240_000; // wall time; a 15s scene is ~450 captures
 // Scenes filmed at once. Capture is one page rendering and encoding a frame

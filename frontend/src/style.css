@@ -353,12 +353,13 @@ input[type='number']::-webkit-outer-spin-button {
   border-color: var(--text-secondary);
 }
 
-/* Startup splash animation */
+/* Startup splash. The mark is drawn frame by frame in SplashScreen.tsx; this
+   only holds the overlay over the dashboard and fades it once the mark has
+   come to rest. The percentages are SPLASH_MS.fadeStart over .total, and over
+   .still for reduced motion, in lib/splashMark.ts. */
 @keyframes splash-overlay-fade {
-  0% {
-    opacity: 1;
-  }
-  75% {
+  0%,
+  84% {
     opacity: 1;
   }
   100% {
@@ -366,24 +367,13 @@ input[type='number']::-webkit-outer-spin-button {
   }
 }
 
-@keyframes splash-word-in {
-  0% {
-    opacity: 0;
-    transform: scale(0.97);
-    text-shadow: none;
-  }
-  25% {
+@keyframes splash-overlay-fade-still {
+  0%,
+  50% {
     opacity: 1;
-    transform: scale(1);
-    text-shadow: 0 0 32px rgb(var(--accent-rgb) / 0.5);
-  }
-  75% {
-    opacity: 1;
-    text-shadow: 0 0 24px rgb(var(--accent-rgb) / 0.35);
   }
   100% {
-    opacity: 1;
-    text-shadow: 0 0 16px rgb(var(--accent-rgb) / 0.2);
+    opacity: 0;
   }
 }
 
@@ -395,8 +385,19 @@ input[type='number']::-webkit-outer-spin-button {
   align-items: center;
   justify-content: center;
   background: var(--bg-base);
-  animation: splash-overlay-fade 1s ease forwards;
+  animation: splash-overlay-fade 1.85s ease forwards;
   pointer-events: none;
+}
+
+.splash-overlay.splash-still {
+  animation-name: splash-overlay-fade-still;
+  animation-duration: 0.6s;
+}
+
+.splash-mark {
+  width: clamp(120px, 22vmin, 220px);
+  height: clamp(120px, 22vmin, 220px);
+  overflow: visible;
 }
 
 /* Backup carousel — wireframe sphere idle spin */
@@ -518,15 +519,6 @@ input[type='number']::-webkit-outer-spin-button {
   .ui-collapsible {
     transition: none !important;
   }
-}
-
-.splash-word {
-  font-family: var(--font-display);
-  font-weight: 900;
-  font-size: clamp(48px, 9vw, 112px);
-  letter-spacing: -0.02em;
-  color: var(--accent);
-  animation: splash-word-in 1s ease forwards;
 }
 
 /* ── Mod description body (About tab) ────────────────────────────────────────

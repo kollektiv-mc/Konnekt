@@ -667,7 +667,7 @@ what *is* closed.
   resolves, so nothing warms it first: the `lazy()` factory is not called until
   there is data to draw. On a 4x-throttled build that is about 580ms in, inside
   the splash, and a real user does not feel it — but the trigger is an IPC
-  round trip, so on a slower machine it moves, and the splash is a fixed 1000ms
+  round trip, so on a slower machine it moves, and the splash is a fixed 1850ms
   that does not move with it. Fixing it properly means the chart's first render
   not being gated on its data, which is a tile change, not a prefetch change.
   Filed as #285 (2026-09-05).
