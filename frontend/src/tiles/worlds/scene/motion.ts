@@ -22,7 +22,32 @@ export const MOTION = {
   PLANET_ZOOM_LAMBDA: 3.5, // per-planet moon-system scale in/out
   LABEL_DIR_LAMBDA: 5, // moon label direction
   LABEL_OFFSET_LAMBDA: 5, // moon label distance from surface
+  // Cube bodies (the Sun now). Constant angular speeds in rad/s, not damps: a slow tumble on two
+  // axes, deliberately off the 2:1 so the face the camera sees never settles into a pattern.
+  CUBE_SPIN_X: 0.11,
+  CUBE_SPIN_Y: 0.17,
 } as const
+
+// The OS reduced-motion preference. The scene's one reader, so a body that tumbles asks here
+// rather than spelling the query again. jsdom has no matchMedia, hence the optional call.
+export const REDUCED_MOTION_QUERY = '(prefers-reduced-motion: reduce)'
+
+export function prefersReducedMotion(): boolean {
+  return window.matchMedia?.(REDUCED_MOTION_QUERY).matches ?? false
+}
+
+// One frame of a cube's tumble, in place. Under reduced motion the cube holds the pose it has,
+// so it stops where it is rather than snapping back to a start angle.
+export function advanceTumble(
+  rotation: { x: number; y: number },
+  delta: number,
+  reduced: boolean,
+): void {
+  if (reduced) return
+  const dt = clampDelta(delta)
+  rotation.x += MOTION.CUBE_SPIN_X * dt
+  rotation.y += MOTION.CUBE_SPIN_Y * dt
+}
 
 // Longest frame step the scene will integrate. A stalled tab or long GC pause
 // would otherwise hand every damp an enormous delta and teleport the camera.

@@ -1,14 +1,17 @@
-import { useRef, useMemo } from 'react'
-import { useFrame } from '@react-three/fiber'
+import { useMemo } from 'react'
 import * as THREE from 'three'
+import { SpinningCube } from './SpinningCube'
 
 interface Props {
   radius?: number
 }
 
-export function Sun({ radius = 0.55 }: Props) {
-  const meshRef = useRef<THREE.Mesh>(null)
+// Edge length per unit of `radius`. A cube reads from 0.75 radius face-on to 1.3 radius corner-on,
+// so 1.5 x radius is the edge whose silhouette averages out near the old sphere's, and the camera
+// fit in fit.ts (which frames the orbits, not the body) is unaffected.
+const CUBE_EDGE = 1.5
 
+export function Sun({ radius = 0.55 }: Props) {
   const glowTexture = useMemo(() => {
     const size = 256
     const canvas = document.createElement('canvas')
@@ -24,12 +27,6 @@ export function Sun({ radius = 0.55 }: Props) {
     ctx.fillRect(0, 0, size, size)
     return new THREE.CanvasTexture(canvas)
   }, [])
-
-  useFrame(({ clock }) => {
-    if (meshRef.current) {
-      meshRef.current.rotation.y = clock.getElapsedTime() * 0.05
-    }
-  })
 
   return (
     <group>
@@ -48,16 +45,13 @@ export function Sun({ radius = 0.55 }: Props) {
           depthWrite={false}
         />
       </sprite>
-      {/* Sun sphere */}
-      <mesh ref={meshRef}>
-        <sphereGeometry args={[radius, 32, 32]} />
-        <meshStandardMaterial
-          color="#ffd84d"
-          emissive="#ffc200"
-          emissiveIntensity={1.2}
-          roughness={0.8}
-        />
-      </mesh>
+      {/* Sun body */}
+      <SpinningCube
+        size={radius * CUBE_EDGE}
+        color="#ffd84d"
+        emissive="#ffc200"
+        emissiveIntensity={1.2}
+      />
     </group>
   )
 }
