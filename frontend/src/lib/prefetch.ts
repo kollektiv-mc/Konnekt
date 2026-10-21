@@ -56,7 +56,7 @@ function whenIdle(fn: () => void): void {
 export function warmSequentially(loaders: ReadonlyArray<() => Promise<unknown>>): () => void {
   let cancelled = false
   // Starts at "now" rather than 0 so the first chunk always waits out one quiet
-  // window: the app has just mounted and is still finishing its first paint.
+  // window: the splash has just unmounted, and the dashboard is painting.
   let lastInput = performance.now()
 
   const noteInput = () => {
