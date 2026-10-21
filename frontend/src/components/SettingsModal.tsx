@@ -180,7 +180,7 @@ export function SettingsModal({ open, onClose, initialSection }: Props) {
         if (e.target === overlayRef.current) onClose()
       }}
     >
-      <div className="modal-panel-in bg-canvas border-border-subtle border-hairline flex h-[480px] w-[640px] overflow-hidden rounded-xl shadow-[0_24px_64px_rgba(0,0,0,0.5)] max-sm:h-[calc(100dvh-1rem)] max-sm:w-[calc(100vw-1rem)] max-sm:flex-col">
+      <div className="modal-panel-in bg-canvas border-border-subtle border-hairline flex h-[560px] max-h-[calc(100dvh-2rem)] w-[720px] max-w-[calc(100vw-2rem)] overflow-hidden rounded-xl shadow-[0_24px_64px_rgba(0,0,0,0.5)] max-sm:h-[calc(100dvh-1rem)] max-sm:max-h-none max-sm:w-[calc(100vw-1rem)] max-sm:max-w-none max-sm:flex-col">
         {/* Left nav. On a phone's width it is a scrolling row above the content,
             so the content keeps the full width; its heading is the title bar's job. */}
         <div className="bg-surface border-border-subtle border-r-hairline max-sm:border-b-hairline flex w-40 shrink-0 flex-col gap-0.5 p-3 max-sm:w-full max-sm:flex-row max-sm:overflow-x-auto max-sm:border-r-0 max-sm:p-2">
