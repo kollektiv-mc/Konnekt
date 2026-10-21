@@ -134,7 +134,7 @@ export const SPLASH_MS = {
   orbit: 880,
   /** The finished mark holds, then the overlay fades. */
   fadeStart: 1200,
-  total: 1450,
+  fade: 250,
   /** Under reduced motion: the finished mark, held and faded. */
   still: 600,
 }
@@ -174,6 +174,42 @@ export function splashFrame(ms: number): SplashFrame {
 
 /** The static mark, for reduced motion and the last frame. */
 export const RESTING_FRAME = splashFrame(SPLASH_MS.cube + SPLASH_MS.orbitStart + SPLASH_MS.orbit)
+
+/*
+ * The splash mounts in the same frame as the dashboard, whose first render and
+ * first data arrive as a burst of long tasks in the next few hundred
+ * milliseconds. Played from mount, the animation spends that burst skipping
+ * ahead in jumps. So its clock holds at zero, on a blank overlay, until frames
+ * have run on time for a while, and once running never advances by more than
+ * a slow frame: a late frame then pauses the motion instead of jumping it.
+ */
+const CALM_FRAME_MS = 34
+const CALM_FRAMES = 6
+const MAX_HOLD_MS = 700
+const MAX_STEP_MS = 34
+
+/**
+ * A clock for the splash timeline, fed each frame's rAF timestamp. Returns the
+ * timeline's milliseconds, or -1 while it is still holding for the start.
+ */
+export function splashClock(): (now: number) => number {
+  let last: number | undefined
+  let held = 0
+  let calm = 0
+  let ms = -1
+  return (now) => {
+    const step = last === undefined ? 0 : Math.max(0, now - last)
+    last = now
+    if (ms < 0) {
+      held += step
+      calm = step > 0 && step <= CALM_FRAME_MS ? calm + 1 : 0
+      if (calm >= CALM_FRAMES || held >= MAX_HOLD_MS) ms = 0
+      return ms
+    }
+    ms += Math.min(step, MAX_STEP_MS)
+    return ms
+  }
+}
 
 function convexHull(points: readonly Point[]): Point[] {
   const sorted = [...points].sort((a, b) => a[0] - b[0] || a[1] - b[1])

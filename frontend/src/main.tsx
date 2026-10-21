@@ -5,6 +5,7 @@ import App from './App'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import { SplashScreen } from './components/SplashScreen'
 import { isRemoteBrowser } from './lib/ipc'
+import { prefetchHeavyChunks } from './lib/prefetch'
 import { applyScrollbarWidth } from './lib/scrollbar'
 import { installGlobalErrorReporting } from './lib/clientErrors'
 import { useSettingsStore } from './stores/useSettingsStore'
@@ -35,7 +36,9 @@ function renderDashboard() {
   root.render(
     <React.StrictMode>
       <ErrorBoundary>
-        <SplashScreen />
+        {/* Warming evaluates a chunk at a time, three.js among them, and one
+            evaluated mid-animation drops the splash's frames. */}
+        <SplashScreen onDone={prefetchHeavyChunks} />
         <App />
       </ErrorBoundary>
     </React.StrictMode>,

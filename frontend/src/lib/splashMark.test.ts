@@ -6,6 +6,7 @@ import {
   orbitPoint,
   RESTING_FRAME,
   SPLASH_MS,
+  splashClock,
   splashFrame,
 } from './splashMark'
 
@@ -72,6 +73,33 @@ describe('splash mark', () => {
   it('fades the overlay after the node lands', () => {
     expect(SPLASH_MS.fadeStart).toBeGreaterThan(SPLASH_MS.orbitStart + SPLASH_MS.orbit)
     expect(SPLASH_MS.fadeStart).toBeGreaterThanOrEqual(SPLASH_MS.cube)
-    expect(SPLASH_MS.total).toBeGreaterThan(SPLASH_MS.fadeStart)
+    expect(SPLASH_MS.fade).toBeGreaterThan(0)
+  })
+})
+
+describe('splash clock', () => {
+  const feed = (clock: (now: number) => number, frames: number[]) => frames.map(clock)
+
+  it('holds until frames have run on time for a while', () => {
+    const out = feed(splashClock(), [0, 16, 32, 48, 64, 80, 96, 112])
+    expect(out.slice(0, 6)).toEqual([-1, -1, -1, -1, -1, -1])
+    expect(out.slice(6)).toEqual([0, 16])
+  })
+
+  it('starts after a long frame resets the count', () => {
+    const out = feed(splashClock(), [0, 16, 32, 232, 248, 264, 280, 296, 312, 328])
+    expect(out.at(-2)).toBe(-1)
+    expect(out.at(-1)).toBe(0)
+  })
+
+  it('stops holding once a busy start has run long', () => {
+    const out = feed(splashClock(), [0, 100, 200, 300, 400, 500, 600, 700])
+    expect(out.at(-2)).toBe(-1)
+    expect(out.at(-1)).toBe(0)
+  })
+
+  it('pauses on a late frame rather than jumping', () => {
+    const out = feed(splashClock(), [0, 16, 32, 48, 64, 80, 96, 296, 312])
+    expect(out.slice(-2)).toEqual([34, 50])
   })
 })

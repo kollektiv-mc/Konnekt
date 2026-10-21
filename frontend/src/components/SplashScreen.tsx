@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { flushSync } from 'react-dom'
 import {
   cubeView,
   FACE,
@@ -9,6 +10,7 @@ import {
   orbitPoint,
   RESTING_FRAME,
   SPLASH_MS,
+  splashClock,
   splashFrame,
   STROKE,
 } from '../lib/splashMark'
@@ -19,34 +21,53 @@ const prefersStill = () => window.matchMedia?.('(prefers-reduced-motion: reduce)
 /*
  * The mark builds itself: the block spins in and the node flies one lap,
  * drawing the orbit, and comes to rest where the static mark has it. Then the
- * overlay fades (style.css) and this unmounts.
+ * overlay fades (style.css), this unmounts and calls `onDone`. The timeline
+ * runs on splashClock, which waits out the dashboard's mount before starting.
+ *
+ * Each frame is committed inside its own animation frame callback, with
+ * flushSync. Left to React's scheduler it would be rendered in a task queued
+ * behind whatever the dashboard has queued, and paint a frame late whenever
+ * that work ran long.
  *
  * The gaps are the canvas colour rather than a mask, which is equivalent on a
  * solid overlay and lets them follow the block as it turns. The block's gap
  * outline sits under its own base fill, never directly under the faces, or
  * the faces' edges would antialias against it into a dark seam.
  */
-export function SplashScreen() {
+export function SplashScreen({ onDone }: { onDone?: () => void }) {
   const [still] = useState(prefersStill)
   const [ms, setMs] = useState(0)
+  const [fading, setFading] = useState(false)
   const [done, setDone] = useState(false)
 
   useEffect(() => {
-    const end = setTimeout(() => setDone(true), still ? SPLASH_MS.still : SPLASH_MS.total)
-    if (still || typeof requestAnimationFrame !== 'function') return () => clearTimeout(end)
+    const finish = () => {
+      setDone(true)
+      onDone?.()
+    }
+    if (still || typeof requestAnimationFrame !== 'function') {
+      const end = setTimeout(finish, still ? SPLASH_MS.still : SPLASH_MS.fadeStart + SPLASH_MS.fade)
+      return () => clearTimeout(end)
+    }
     let raf = 0
-    const t0 = performance.now()
+    let end: ReturnType<typeof setTimeout> | undefined
+    const clock = splashClock()
     const tick = (now: number) => {
-      const elapsed = now - t0
-      setMs(elapsed)
-      if (elapsed < SPLASH_MS.fadeStart) raf = requestAnimationFrame(tick)
+      const elapsed = clock(now)
+      if (elapsed >= SPLASH_MS.fadeStart) {
+        setFading(true)
+        end = setTimeout(finish, SPLASH_MS.fade)
+        return
+      }
+      if (elapsed >= 0) flushSync(() => setMs(elapsed))
+      raf = requestAnimationFrame(tick)
     }
     raf = requestAnimationFrame(tick)
     return () => {
       clearTimeout(end)
       cancelAnimationFrame(raf)
     }
-  }, [still])
+  }, [still, onDone])
 
   if (done) return null
 
@@ -65,7 +86,16 @@ export function SplashScreen() {
   const pts = (p: readonly (readonly [number, number])[]) => p.map((q) => q.join(',')).join(' ')
 
   return (
-    <div className={still ? 'splash-overlay splash-still' : 'splash-overlay'} aria-hidden="true">
+    <div
+      className={
+        still
+          ? 'splash-overlay splash-still'
+          : fading
+            ? 'splash-overlay splash-fading'
+            : 'splash-overlay'
+      }
+      aria-hidden="true"
+    >
       <svg className="splash-mark" viewBox="0 0 24 24" fill="none">
         <defs>
           {/* The front of the orbit. The ink reaches higher than the gap so

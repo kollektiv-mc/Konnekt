@@ -24,7 +24,6 @@ import { emitNotification } from './lib/notify'
 import { failedRunToast, showToast } from './lib/toast'
 import type { RunFinished } from './lib/toast'
 import { useNotificationsStore } from './stores/useNotificationsStore'
-import { prefetchHeavyChunks } from './lib/prefetch'
 import { useUpdateCheck } from './hooks/useUpdateCheck'
 import { useServerStatusSync } from './hooks/useServerStatus'
 import { useConsoleSync } from './hooks/useConsoleSync'
@@ -102,12 +101,6 @@ function App() {
 
   useEffect(() => {
     useSettingsStore.getState().load()
-  }, [])
-
-  // Warm the heavy lazy-loaded tile chunks (worlds scene, charts) during
-  // idle time so the first tile open doesn't stutter on a cold fetch+eval.
-  useEffect(() => {
-    prefetchHeavyChunks()
   }, [])
 
   useUpdateCheck(settingsLoaded && checkUpdatesOnStartup)

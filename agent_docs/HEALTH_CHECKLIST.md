@@ -618,7 +618,9 @@ tree.
       holds the entry at 175 KB gzip, which is the number that actually fails.
 - [x] The lazy chunks are warmed at a moment the user cannot feel.
       `lib/prefetch.ts` warms one chunk per idle slot and defers whenever the
-      user has interacted in the last 500ms. The failure this guards against is
+      user has interacted in the last 500ms. It starts only once the startup
+      splash has unmounted (`main.tsx`), because evaluating three.js mid-splash
+      dropped 150 to 200ms of its frames on a 4x-throttled build. The failure this guards against is
       specific and was live: a warm-up that fired everything at once, one to
       three seconds after launch, landed on the user's first scroll.
       Verify: `pnpm check-prefetch`
@@ -667,8 +669,8 @@ what *is* closed.
   resolves, so nothing warms it first: the `lazy()` factory is not called until
   there is data to draw. On a 4x-throttled build that is about 580ms in, inside
   the splash, and a real user does not feel it — but the trigger is an IPC
-  round trip, so on a slower machine it moves, and the splash is a fixed 1450ms
-  that does not move with it. Fixing it properly means the chart's first render
+  round trip, so on a slower machine it moves, and the splash waits out only
+  the dashboard's first burst (at most 700ms, `splashClock`), not this. Fixing it properly means the chart's first render
   not being gated on its data, which is a tile change, not a prefetch change.
   Filed as #285 (2026-09-05).
 - **A tile's cold/warm gap is mostly first-mount work, not the chunk.** Warming
