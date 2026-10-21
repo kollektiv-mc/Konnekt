@@ -15,6 +15,7 @@ export namespace models {
 	    consoleTimestamps: boolean;
 	    notifyOnCrash: boolean;
 	    notifyOnJoin: boolean;
+	    toastsOff: Record<string, boolean>;
 	    schedulerPaletteCollapsed: boolean;
 	    schedulerPaletteClosedCategories: Record<string, boolean>;
 	    consoleQuickCommandsCollapsed: boolean;
@@ -48,6 +49,7 @@ export namespace models {
 	        this.consoleTimestamps = source["consoleTimestamps"];
 	        this.notifyOnCrash = source["notifyOnCrash"];
 	        this.notifyOnJoin = source["notifyOnJoin"];
+	        this.toastsOff = source["toastsOff"];
 	        this.schedulerPaletteCollapsed = source["schedulerPaletteCollapsed"];
 	        this.schedulerPaletteClosedCategories = source["schedulerPaletteClosedCategories"];
 	        this.consoleQuickCommandsCollapsed = source["consoleQuickCommandsCollapsed"];

@@ -152,8 +152,8 @@ tree.
       justified exception carries a documented `eslint-disable-next-line`.
       Verify with `pnpm exec eslint src` — expect 0 errors.
 - [x] Every app-wide overlay carries a named layer from `lib/layers.ts`
-      (`z-overlay`, `z-modal`, `z-dialog`, `z-popover`, `z-splash`), never a
-      literal. Closed 2026-09-02 (HEALTH_LOG "The overlays that took turns
+      (`z-overlay`, `z-modal`, `z-dialog`, `z-toast`, `z-popover`,
+      `z-splash`), never a literal. Closed 2026-09-02 (HEALTH_LOG "The overlays that took turns
       losing"). The scale is Konnekt-only, so it lives as the one hand-authored
       `@theme` block in `style.css`, mirrored from the module and pinned to it
       by `lib/layers.test.ts`; `pnpm check-tokens` asserts each class compiles.

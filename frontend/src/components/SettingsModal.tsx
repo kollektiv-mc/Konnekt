@@ -17,6 +17,7 @@ import { IconButton } from './ui/IconButton'
 import { X } from '../lib/icons'
 import { Icon } from './ui/Icon'
 import { SettingRow } from './ui/SettingRow'
+import { TOAST_CATEGORIES } from '../lib/toast'
 import {
   OpenDataDir,
   GetAppVersion,
@@ -594,9 +595,13 @@ function ConsolePane({ settings, update }: { settings: AppSettings; update: Upda
 
 // ─── Notifications ────────────────────────────────────────────────────────────
 
+const PANE_HEADING =
+  'font-title text-text-muted block pt-1 pb-1 text-xs font-medium tracking-wider uppercase'
+
 function NotificationsPane({ settings, update }: { settings: AppSettings; update: UpdateFn }) {
   return (
     <div>
+      <span className={PANE_HEADING}>Desktop</span>
       <SettingRow label="Crash alerts" description="Notify when the server stops unexpectedly.">
         <Toggle checked={settings.notifyOnCrash} onChange={(v) => update({ notifyOnCrash: v })} />
       </SettingRow>
@@ -606,6 +611,19 @@ function NotificationsPane({ settings, update }: { settings: AppSettings; update
       >
         <Toggle checked={settings.notifyOnJoin} onChange={(v) => update({ notifyOnJoin: v })} />
       </SettingRow>
+      {/* Bubbles that hold a message's full text in the corner of the window
+          until dismissed (components/Toasts.tsx). Stored as the categories
+          turned off, so a category added later starts on. */}
+      <span className={`${PANE_HEADING} mt-5`}>In-app bubbles</span>
+      {TOAST_CATEGORIES.map((c) => (
+        <SettingRow key={c.id} label={c.label} description={c.description}>
+          <Toggle
+            label={c.label}
+            checked={!settings.toastsOff[c.id]}
+            onChange={(v) => update({ toastsOff: { ...settings.toastsOff, [c.id]: !v } })}
+          />
+        </SettingRow>
+      ))}
     </div>
   )
 }

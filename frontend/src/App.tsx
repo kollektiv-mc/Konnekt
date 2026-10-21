@@ -21,6 +21,8 @@ import { useServerConfigStore } from './stores/useServerConfigStore'
 import { useSettingsStore } from './stores/useSettingsStore'
 import { useProcessesStore } from './stores/useProcessesStore'
 import { emitNotification } from './lib/notify'
+import { showToast } from './lib/toast'
+import { useNotificationsStore } from './stores/useNotificationsStore'
 import { prefetchHeavyChunks } from './lib/prefetch'
 import { useUpdateCheck } from './hooks/useUpdateCheck'
 import { useServerStatusSync } from './hooks/useServerStatus'
@@ -39,6 +41,23 @@ import { hasWailsBridge, isRemoteBrowser } from './lib/ipc'
 const RemotePrompts = lazy(() =>
   import('./components/RemotePrompts').then((m) => ({ default: m.RemotePrompts })),
 )
+// The server a bubble is about, by name: with several configured, "Server
+// crashed" alone does not say which. Falls back to the id, then to nothing.
+function serverLabel(serverID?: string): string {
+  if (!serverID) return ''
+  const cfg = useServerConfigStore.getState().configs.find((c) => c.id === serverID)
+  return cfg?.name || serverID
+}
+
+function titled(title: string, serverID?: string): string {
+  const name = serverLabel(serverID)
+  return name ? `${title}: ${name}` : title
+}
+
+// The bubble layer, fetched with the first bubble: most sessions raise none,
+// and the entry chunk has a budget. The store that holds them is eager, so a
+// bubble raised before the chunk arrives is drawn when it does.
+const Toasts = lazy(() => import('./components/Toasts').then((m) => ({ default: m.Toasts })))
 const RemoteBanner = lazy(() =>
   import('./components/RemoteChrome').then((m) => ({ default: m.RemoteBanner })),
 )
@@ -49,6 +68,7 @@ function App() {
   const checkUpdatesOnStartup = useSettingsStore((s) => s.settings.checkUpdatesOnStartup)
   const installOpen = useInstallStore((s) => s.open)
   const loaderDialogOpen = useLoaderStore((s) => s.dialogOpen)
+  const hasToasts = useNotificationsStore((s) => s.toasts.length > 0)
   // The server whose eula.txt needs accepting, or null. A string rather than
   // a flag because the prompt is for the server that tripped it, which is not
   // always the selected one: a schedule can start another server (#236).
@@ -142,17 +162,27 @@ function App() {
     try {
       cleanup = EventsOn(
         EVENTS.SERVER_STOPPED,
-        (payload?: { expected?: boolean; exitCode?: number }) => {
-          const { settings } = useSettingsStore.getState()
-          if (!payload?.expected && settings.notifyOnCrash) {
-            const code = payload?.exitCode
-            const detail =
-              typeof code !== 'number'
-                ? ''
-                : code === -1
-                  ? ' (killed by a signal)'
-                  : ` (exit code ${code})`
-            emitNotification('crash', `Server stopped unexpectedly${detail}`)
+        (payload?: { expected?: boolean; exitCode?: number; serverID?: string }) => {
+          if (payload?.expected) return
+          const code = payload?.exitCode
+          const detail =
+            typeof code !== 'number'
+              ? ''
+              : code === -1
+                ? ' (killed by a signal)'
+                : ` (exit code ${code})`
+          const text = `Server stopped unexpectedly${detail}`
+          // App-wide on purpose: a crash on any server should be heard about.
+          // The id names the server rather than filtering the event out.
+          showToast({
+            key: `crash:${payload?.serverID ?? ''}`,
+            category: 'crash',
+            tone: 'error',
+            title: titled('Server crashed', payload?.serverID),
+            text,
+          })
+          if (useSettingsStore.getState().settings.notifyOnCrash) {
+            emitNotification('crash', text)
           }
         },
       )
@@ -221,19 +251,30 @@ function App() {
       c5 = EventsOn(EVENTS.BACKUP_FAILED, (data?: { serverID?: string; error?: string }) => {
         useProcessesStore.getState().finish(data?.serverID ?? 'backup', 'failed')
         emitNotification('crash', `Backup failed${data?.error ? ': ' + data.error : ''}`)
+        showToast({
+          category: 'errors',
+          tone: 'error',
+          title: titled('Backup failed', data?.serverID),
+          text: data?.error || 'The backup failed.',
+        })
       })
       // No processes row to finish: a restore never opens one. Restore used
       // to fail through BACKUP_FAILED and toast as a failed backup (#280).
       c6 = EventsOn(EVENTS.RESTORE_FAILED, (data?: { error?: string }) => {
         emitNotification('crash', `Restore failed${data?.error ? ': ' + data.error : ''}`)
+        showToast({
+          category: 'errors',
+          tone: 'error',
+          title: 'Restore failed',
+          text: data?.error || 'The restore failed.',
+        })
       })
       // Not a backup failure: the archive may be fine and the server is what
       // needs attention, since autosave stays off until it restarts (#309).
       c7 = EventsOn(EVENTS.AUTOSAVE_STUCK, (data?: { error?: string }) => {
-        emitNotification(
-          'warn',
-          `Auto-save is still off: the server did not accept save-on${data?.error ? ' (' + data.error + ')' : ''}`,
-        )
+        const text = `Auto-save is still off: the server did not accept save-on${data?.error ? ' (' + data.error + ')' : ''}`
+        emitNotification('warn', text)
+        showToast({ category: 'warnings', tone: 'warn', title: 'Auto-save is off', text })
       })
     } catch {
       /* non-Wails context */
@@ -372,6 +413,12 @@ function App() {
           useProcessesStore.getState().finish(current, 'failed')
           useInstallStore.getState().fail(d?.error ?? 'The installer failed.')
           emitNotification('crash', `Server install failed${d?.error ? ': ' + d.error : ''}`)
+          showToast({
+            category: 'errors',
+            tone: 'error',
+            title: 'Server install failed',
+            text: d?.error || 'The installer failed.',
+          })
         }),
       )
     } catch {
@@ -432,6 +479,12 @@ function App() {
             .getState()
             .failUpdate(d?.error ?? 'The loader update failed.', d?.rolledBack ?? false)
           emitNotification('crash', `Loader update failed${d?.error ? ': ' + d.error : ''}`)
+          showToast({
+            category: 'errors',
+            tone: 'error',
+            title: 'Loader update failed',
+            text: d?.error || 'The loader update failed.',
+          })
         }),
       )
       // install:log carries the installer's output for both a first install
@@ -471,6 +524,14 @@ function App() {
         const kind = (['info', 'warn', 'error'].includes(data.kind) ? data.kind : 'info') as
           'info' | 'warn' | 'error'
         emitNotification(kind, data.message)
+        // A Notify block is a message the user wrote to be read, so it gets a
+        // bubble too: an error one counts as an error, the rest as advice.
+        showToast({
+          category: kind === 'error' ? 'errors' : 'warnings',
+          tone: kind,
+          title: 'Scheduler',
+          text: data.message,
+        })
       })
     } catch {
       /* non-Wails context */
@@ -535,7 +596,9 @@ function App() {
       cleanup = EventsOn(EVENTS.STATS_SNAPSHOT, (snap: { tps: number }) => {
         if (snap.tps > 0 && snap.tps < 14 && !lowTpsWarned.current) {
           lowTpsWarned.current = true
-          emitNotification('warn', `TPS dropped to ${snap.tps.toFixed(1)} (below 14)`)
+          const text = `TPS dropped to ${snap.tps.toFixed(1)} (below 14)`
+          emitNotification('warn', text)
+          showToast({ key: 'low-tps', category: 'warnings', tone: 'warn', title: 'Low TPS', text })
         } else if (snap.tps >= 15) {
           lowTpsWarned.current = false
         }
@@ -676,6 +739,11 @@ function App() {
       )}
       {installOpen && <ServerInstallModal />}
       {loaderDialogOpen && <LoaderUpdateDialog />}
+      {hasToasts && (
+        <Suspense fallback={null}>
+          <Toasts />
+        </Suspense>
+      )}
     </div>
   )
 }

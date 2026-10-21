@@ -63,4 +63,7 @@ export {
   // buttons' up-down arrow, and the JVM mode toggle's back arrow.
   ArrowLeft,
   ArrowUpDown,
+  // The in-app notification bubbles: one glyph per tone, and the update one.
+  CircleArrowUp,
+  Info,
 } from 'lucide-react'

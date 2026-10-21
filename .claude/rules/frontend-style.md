@@ -72,10 +72,11 @@ search field or drops a chip lives in a dense row at its own scale, where a
 ## Overlay layering
 
 **An overlay's z-index is a layer name, never a number.** `lib/layers.ts` is
-the scale, five values in one place: `z-overlay` (the maximized tile),
+the scale, six values in one place: `z-overlay` (the maximized tile),
 `z-modal` (a backdropped surface that replaces the dashboard), `z-dialog` (a
-confirm on top of a modal), `z-popover` (menus, tooltips, the two portals, the
-crate drag preview) and `z-splash`. The classes exist because `style.css`
+confirm on top of a modal), `z-toast` (the notification bubbles),
+`z-popover` (menus, tooltips, the two portals, the crate drag preview) and
+`z-splash`. The classes exist because `style.css`
 declares the same numbers as `--z-index-*` in its one hand-authored `@theme`
 block, which Tailwind v4's `z-*` utility resolves; `lib/layers.test.ts` pins
 the two spellings together and `pnpm check-tokens` asserts each class compiles.
@@ -118,13 +119,24 @@ rather than adding a font feature the fonts do not carry.
 ## Text that shares a line with controls
 
 **A status or warning in a toolbar, header or node is one line and never
-grows it.** The span takes `min-w-0 truncate` and carries the full text in
-`title`, so a long message is cut at the edge rather than wrapping and moving
-every control beside it, which is what the scheduler editor's RCON advice did
-until `GraphEditor.tsx` cut it. What the backend sends there is held short by
-`TestGraphWarningsStayShort`, and a block label fits the palette's twenty
-characters by `TestBlockLabelsFitThePalette`: a name that needs more belongs in
-the description.
+grows it.** A short fixed label goes there; a message that can run to a
+sentence goes in a bubble. The scheduler editor's toolbar shows `run failed`,
+`scheduler error` or `1 warning`, `whitespace-nowrap` with the full text in
+`title`, and the text itself in an in-app bubble (`components/Toasts.tsx`,
+raised through `lib/toast.ts`) that clicking the label reopens. Cutting the
+text with `truncate` was tried first (#598): the bar stopped moving, but the
+DH Snapshot advice ended in an ellipsis, and an S3 error wrapped the bar to
+four lines before that (#629). A span that must hold variable text still takes
+`min-w-0 truncate` and the full text in `title`. What the backend sends there
+is held short by `TestGraphWarningsStayShort`, and a block label fits the
+palette's twenty characters by `TestBlockLabelsFitThePalette`: a name that
+needs more belongs in the description.
+
+A bubble stays until dismissed, so it is for text that needs reading now: a
+failure, a crash, advice, an update. Routine lifecycle news ("Server started")
+stays in the Notifications tile. Each bubble has a category the user can turn
+off in Settings (`AppSettings.toastsOff`), and a `key` that makes a repeat
+replace the open bubble rather than stack under it.
 
 ## Lazy loading
 

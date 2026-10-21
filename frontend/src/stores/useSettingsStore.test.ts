@@ -31,6 +31,7 @@ const DEFAULTS = {
   consoleTimestamps: false,
   notifyOnCrash: false,
   notifyOnJoin: false,
+  toastsOff: {} as Record<string, boolean>,
   schedulerPaletteCollapsed: true,
   schedulerPaletteClosedCategories: {},
   consoleQuickCommandsCollapsed: false,
@@ -154,6 +155,17 @@ describe('useSettingsStore', () => {
       await useSettingsStore.getState().load()
       expect(useSettingsStore.getState().settings.crateOrder).toEqual(ALL_TILE_IDS)
     })
+  })
+
+  // A settings file from before the bubbles has no toastsOff, and one with it
+  // written as null crosses the bridge as null; the toggles index it as a map.
+  it('reads a null toastsOff map as every bubble category on', async () => {
+    vi.mocked(App.GetAppSettings).mockResolvedValue({
+      ...DEFAULTS,
+      toastsOff: null as unknown as Record<string, boolean>,
+    })
+    await useSettingsStore.getState().load()
+    expect(useSettingsStore.getState().settings.toastsOff).toEqual({})
   })
 
   describe('fonts', () => {

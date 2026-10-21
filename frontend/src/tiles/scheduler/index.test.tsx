@@ -1,10 +1,12 @@
 import { describe, it, expect, beforeAll, beforeEach, afterEach, vi } from 'vitest'
-import { render, screen, cleanup, waitFor, fireEvent } from '@testing-library/react'
+import { act, render, screen, cleanup, waitFor, fireEvent } from '@testing-library/react'
 import * as App from '../../../wailsjs/go/main/App'
 import type { models } from '../../../wailsjs/go/models'
 import { useSchedulerStore } from '../../stores/useSchedulerStore'
 import { useServerConfigStore } from '../../stores/useServerConfigStore'
 import { useUiStore } from '../../stores/useUiStore'
+import { useNotificationsStore } from '../../stores/useNotificationsStore'
+import { useSettingsStore } from '../../stores/useSettingsStore'
 import { ServerSelector } from '../../components/ServerSelector'
 import type { ServerConfig } from '../../types'
 import { SchedulerTile } from './index'
@@ -260,8 +262,11 @@ describe('switching server from the sidebar with the scheduler editor maximized'
 // A graph that stops the server is warned about when RCON is not confirmed, and
 // the warning sits beside Save without gating it. The backend decides what to
 // say (scheduler_validate.go); the editor only asks when the set of stopping
-// nodes changes, and shows the answer.
+// nodes changes, counts the answer in the toolbar and puts the text in a
+// bubble, so the toolbar never grows or cuts a sentence (#629).
 describe('the scheduler editor warns about a stop', () => {
+  const toasts = () => useNotificationsStore.getState().toasts
+  const warningButton = () => screen.queryByRole('button', { name: /^\d+ warnings?$/ })
   const RCON_WARNING = 'This graph stops the server, but RCON is not confirmed for it.'
 
   const commandDef = {
@@ -303,6 +308,7 @@ describe('the scheduler editor warns about a stop', () => {
       hydratedFor: null,
       error: null,
     })
+    useNotificationsStore.setState({ toasts: [], dismissedToasts: {} })
   })
 
   it('shows the answer beside Save and asks for the server it edits', async () => {
@@ -310,10 +316,89 @@ describe('the scheduler editor warns about a stop', () => {
     vi.mocked(App.GetScheduleGraphWarnings).mockResolvedValue([RCON_WARNING])
     render(<SchedulerTile serverId="alpha" maximized />)
 
-    await waitFor(() => expect(screen.getByRole('status').textContent).toBe(RCON_WARNING))
+    await waitFor(() => expect(warningButton()).not.toBeNull())
+    expect(warningButton()?.textContent).toBe('1 warning')
+    expect(toasts()).toEqual([
+      expect.objectContaining({ category: 'warnings', tone: 'warn', text: RCON_WARNING }),
+    ])
     expect(App.GetScheduleGraphWarnings).toHaveBeenCalledWith('alpha', expect.anything())
     // Never a gate: Save is still there and enabled.
     expect((screen.getByRole('button', { name: 'save' }) as HTMLButtonElement).disabled).toBe(false)
+  })
+
+  it('reopens a dismissed bubble from the toolbar, and withdraws it on close', async () => {
+    vi.mocked(App.GetScheduleGraphs).mockResolvedValue([withCommand('__stop__')])
+    vi.mocked(App.GetScheduleGraphWarnings).mockResolvedValue([RCON_WARNING])
+    const { unmount } = render(<SchedulerTile serverId="alpha" maximized />)
+    await waitFor(() => expect(toasts()).toHaveLength(1))
+
+    act(() => useNotificationsStore.getState().dismissToast(toasts()[0].id))
+    expect(toasts()).toEqual([])
+    fireEvent.click(warningButton() as HTMLElement)
+    expect(toasts()).toHaveLength(1)
+
+    // The advice is about the canvas this editor holds, so it leaves with it.
+    unmount()
+    expect(toasts()).toEqual([])
+  })
+
+  // The message that wrapped the toolbar to four lines. The toolbar keeps two
+  // words; the reason is in the bubble, whole.
+  it('shows a failed run as two words, with the reason in a bubble', async () => {
+    const reason =
+      'cannot read the previous snapshot from "Frangfurd DH": s3 GetObject dh/latest.json: ' +
+      'status 403 RequestTimeTooSkewed: The difference between the request time and the ' +
+      "server's time is too large."
+    vi.mocked(App.GetScheduleGraphs).mockResolvedValue([withCommand('save-all')])
+    vi.mocked(App.SaveScheduleGraph).mockImplementation(async (_id, g) => g)
+    vi.mocked(App.RunScheduleGraphNow).mockResolvedValue({
+      status: 'failed',
+      error: reason,
+      nodes: [],
+    } as unknown as models.RunRecord)
+    render(<SchedulerTile serverId="alpha" maximized />)
+    await waitFor(() => expect(selected()).toBe('Only'))
+
+    fireEvent.click(screen.getByRole('button', { name: 'run' }))
+    const indicator = await screen.findByRole('button', { name: 'run failed' })
+    expect(indicator.className).toContain('whitespace-nowrap')
+    expect(toasts()).toEqual([
+      expect.objectContaining({ category: 'errors', title: 'Run failed: Only', text: reason }),
+    ])
+
+    // Clicking it moves the reason to the bubble and clears the toolbar.
+    act(() => useNotificationsStore.getState().dismissAllToasts())
+    fireEvent.click(indicator)
+    expect(toasts()).toHaveLength(1)
+    expect(screen.queryByRole('button', { name: 'run failed' })).toBeNull()
+  })
+
+  // The editor gates on the toggle itself rather than through lib/toast (see
+  // GraphEditor.tsx), so it is held to the same rule here.
+  it('raises no error bubble with errors turned off, until the indicator is clicked', async () => {
+    const prev = useSettingsStore.getState().settings
+    useSettingsStore.setState({ settings: { ...prev, toastsOff: { errors: true } } })
+    try {
+      vi.mocked(App.GetScheduleGraphs).mockResolvedValue([withCommand('save-all')])
+      vi.mocked(App.SaveScheduleGraph).mockImplementation(async (_id, g) => g)
+      vi.mocked(App.RunScheduleGraphNow).mockResolvedValue({
+        status: 'failed',
+        error: 'the reason',
+        nodes: [],
+      } as unknown as models.RunRecord)
+      render(<SchedulerTile serverId="alpha" maximized />)
+      await waitFor(() => expect(selected()).toBe('Only'))
+
+      fireEvent.click(screen.getByRole('button', { name: 'run' }))
+      const indicator = await screen.findByRole('button', { name: 'run failed' })
+      expect(indicator.getAttribute('title')).toBe('the reason')
+      expect(toasts()).toEqual([])
+
+      fireEvent.click(indicator)
+      expect(toasts()).toEqual([expect.objectContaining({ text: 'the reason' })])
+    } finally {
+      useSettingsStore.setState({ settings: prev })
+    }
   })
 
   it('never asks about a graph with nothing that stops the server', async () => {
@@ -322,7 +407,8 @@ describe('the scheduler editor warns about a stop', () => {
     await waitFor(() => expect(selected()).toBe('Only'))
 
     expect(App.GetScheduleGraphWarnings).not.toHaveBeenCalled()
-    expect(screen.queryByRole('status')).toBeNull()
+    expect(warningButton()).toBeNull()
+    expect(toasts()).toEqual([])
   })
 
   it('shows nothing when the backend has no warning', async () => {
@@ -331,7 +417,8 @@ describe('the scheduler editor warns about a stop', () => {
     render(<SchedulerTile serverId="alpha" maximized />)
 
     await waitFor(() => expect(App.GetScheduleGraphWarnings).toHaveBeenCalled())
-    expect(screen.queryByRole('status')).toBeNull()
+    expect(warningButton()).toBeNull()
+    expect(toasts()).toEqual([])
   })
 
   it('leaves no warning, and no banner, when the ask fails', async () => {
@@ -340,7 +427,8 @@ describe('the scheduler editor warns about a stop', () => {
     render(<SchedulerTile serverId="alpha" maximized />)
 
     await waitFor(() => expect(App.GetScheduleGraphWarnings).toHaveBeenCalled())
-    expect(screen.queryByRole('status')).toBeNull()
+    expect(warningButton()).toBeNull()
+    expect(toasts()).toEqual([])
     expect(screen.queryByText('scheduler error')).toBeNull()
   })
 })

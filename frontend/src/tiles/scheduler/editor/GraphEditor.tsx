@@ -35,7 +35,10 @@ import { QuickAddMenu } from './QuickAddMenu'
 import { RUN_RUNNING, runOutcome, type RunStatus } from './runStatus'
 import { Popover } from '../../../components/ui/Popover'
 import { Icon } from '../../../components/ui/Icon'
-import { Check } from '../../../lib/icons'
+import { Check, TriangleAlert } from '../../../lib/icons'
+import { useNotificationsStore } from '../../../stores/useNotificationsStore'
+import type { ToastInput } from '../../../stores/useNotificationsStore'
+import { useSettingsStore } from '../../../stores/useSettingsStore'
 import { usePopover } from '../../../hooks/usePopover'
 import {
   graphToFlow,
@@ -81,6 +84,25 @@ interface NodeEvt {
 }
 
 const RUN_CLEAR_MS = 2400
+
+// The bubbles this editor raises. One editor is open at a time, so a fixed key
+// per kind is enough, and it is what lets a dismissal hold across a reopen.
+const TOAST_RUN = 'scheduler:run'
+const TOAST_ERROR = 'scheduler:error'
+const TOAST_WARNING = 'scheduler:warning'
+
+// lib/toast.ts's showToast and withdrawToast, written against the two stores
+// here. Importing lib/toast from this lazy chunk made Rolldown hoist six of the
+// entry's modules into helper chunks, 2.3 KB over the entry budget for no code
+// of its own; the stores are shared with the entry already and move nothing.
+function showToast(input: ToastInput, force = false): void {
+  if (!force && useSettingsStore.getState().settings.toastsOff[input.category]) return
+  useNotificationsStore.getState().showToast(input, force)
+}
+
+function withdrawToast(key: string): void {
+  useNotificationsStore.getState().withdrawToast(key)
+}
 
 const nodeTypes = { block: BlockNode }
 const edgeTypes = { smoothstep: AnimatedEdge }
@@ -246,6 +268,46 @@ function GraphEditorInner({
       runStatusTimer.current = setTimeout(() => setRunStatus(null), 4000)
     }
   }, [])
+
+  // The full reason for a failed run, in a bubble: the toolbar only has room to
+  // say that it failed. `force` is the toolbar's indicator being clicked.
+  const showRunToast = useCallback(
+    (status: RunStatus, force = false) => {
+      showToast(
+        {
+          key: TOAST_RUN,
+          category: 'errors',
+          tone: 'error',
+          title: `Run failed: ${graphName || 'Untitled'}`,
+          text: status.detail ?? status.text,
+        },
+        force,
+      )
+    },
+    [graphName],
+  )
+
+  // A store error (a save, a delete, a toggle the backend refused) goes to a
+  // bubble the same way, and the toolbar keeps the two-word indicator for it.
+  const showErrorToast = useCallback(
+    (force = false) => {
+      if (!schedulerError) return
+      showToast(
+        {
+          key: TOAST_ERROR,
+          category: 'errors',
+          tone: 'error',
+          title: 'Scheduler error',
+          text: schedulerError,
+        },
+        force,
+      )
+    },
+    [schedulerError],
+  )
+  useEffect(() => {
+    if (schedulerError) showErrorToast()
+  }, [schedulerError, showErrorToast])
 
   // Keep refs in sync so the once-registered event handlers see current state.
   useEffect(() => {
@@ -659,13 +721,16 @@ function GraphEditorInner({
     // The call returns when the whole graph has finished, minutes for a block
     // that stops the server, so say that it is under way.
     showRunStatus(RUN_RUNNING)
+    withdrawToast(TOAST_RUN)
     try {
-      showRunStatus(runOutcome(await onRun(id)))
+      const outcome = runOutcome(await onRun(id))
+      showRunStatus(outcome)
+      if (outcome.failed) showRunToast(outcome)
     } catch {
       /* store surfaces the error in the toolbar */
       showRunStatus(null)
     }
-  }, [handleSave, onRun, showRunStatus])
+  }, [handleSave, onRun, showRunStatus, showRunToast])
 
   // ── Delete selected nodes + their edges ───────────────────────────────────
   const handleDeleteSelected = useCallback(() => {
@@ -793,6 +858,32 @@ function GraphEditorInner({
       current = false
     }
   }, [stopSig, serverState, askGraphWarnings])
+
+  // The advice in full goes to a bubble; the toolbar says how many there are.
+  // It is about the canvas open here, so it goes when the editor does, or when
+  // the canvas no longer earns it.
+  const warningText = warnings.join('\n')
+  const showWarningToast = useCallback(
+    (force = false) => {
+      if (!warningText) return
+      showToast(
+        {
+          key: TOAST_WARNING,
+          category: 'warnings',
+          tone: 'warn',
+          title: 'Scheduler advice',
+          text: warningText,
+        },
+        force,
+      )
+    },
+    [warningText],
+  )
+  useEffect(() => {
+    if (warningText) showWarningToast()
+    else withdrawToast(TOAST_WARNING)
+  }, [warningText, showWarningToast])
+  useEffect(() => () => withdrawToast(TOAST_WARNING), [])
 
   // Wrap ReactFlow's own change handlers so a Delete-key removal (which never
   // goes through handleDeleteSelected) still records an undo entry.
@@ -981,13 +1072,19 @@ function GraphEditorInner({
 
           <div className="flex-1" />
 
-          {/* IPC errors take the transient status slot and stay until dismissed. */}
+          {/* IPC errors and a failed run take the transient status slot and
+              stay until clicked. Two words here, whatever the message: the
+              message is in a bubble, and the click moves it there if that was
+              dismissed or its category is turned off. */}
           {schedulerError ? (
             <button
               type="button"
-              onClick={clearSchedulerError}
-              className="text-danger text-2xs font-mono"
-              title={`${schedulerError} — click to dismiss`}
+              onClick={() => {
+                showErrorToast(true)
+                clearSchedulerError()
+              }}
+              className="text-danger text-2xs shrink-0 font-mono whitespace-nowrap"
+              title={schedulerError}
             >
               scheduler error
             </button>
@@ -996,14 +1093,19 @@ function GraphEditorInner({
             (runStatus.failed ? (
               <button
                 type="button"
-                onClick={() => showRunStatus(null)}
-                className="text-danger text-2xs max-w-sm font-mono"
-                title="click to dismiss"
+                onClick={() => {
+                  showRunToast(runStatus, true)
+                  showRunStatus(null)
+                }}
+                className="text-danger text-2xs shrink-0 font-mono whitespace-nowrap"
+                title={runStatus.detail}
               >
                 {runStatus.text}
               </button>
             ) : (
-              <span className="text-text-faint text-2xs font-mono">{runStatus.text}</span>
+              <span className="text-text-faint text-2xs shrink-0 font-mono whitespace-nowrap">
+                {runStatus.text}
+              </span>
             ))
           )}
 
@@ -1017,16 +1119,19 @@ function GraphEditorInner({
             ) : null
           })()}
 
-          {/* One line, whatever the text: a bar that grows moves every control
-              beside it. The full advice is the tooltip. */}
+          {/* A count, never the text: a bar that grows moves every control
+              beside it, and a cut sentence cannot be read. The advice is in a
+              bubble, which this reopens. */}
           {warnings.length > 0 && (
-            <span
-              className="text-warning text-2xs max-w-sm min-w-0 truncate font-mono"
-              role="status"
-              title={warnings.join('\n')}
+            <button
+              type="button"
+              onClick={() => showWarningToast(true)}
+              className="text-warning text-2xs flex shrink-0 items-center gap-1 font-mono whitespace-nowrap"
+              title={warningText}
             >
-              {warnings.join(' ')}
-            </span>
+              <Icon icon={TriangleAlert} size="xs" />
+              {warnings.length === 1 ? '1 warning' : `${warnings.length} warnings`}
+            </button>
           )}
 
           {graphId && (

@@ -11,7 +11,7 @@
 @import './styles/tokens.css';
 
 /* The overlay layering scale. Tailwind v4's z-* utility resolves --z-index-*, so
-   these five declarations are what make `z-overlay` through `z-splash` real
+   these six declarations are what make `z-overlay` through `z-splash` real
    classes; `pnpm check-tokens` asserts each compiles to a rule. Plain @theme, not
    inline, so the custom properties exist for hand-written CSS too (.splash-overlay
    below reads one). Which layer is for what, and what the scale does not decide:
@@ -20,6 +20,7 @@
   --z-index-overlay: 100;
   --z-index-modal: 200;
   --z-index-dialog: 300;
+  --z-index-toast: 350;
   --z-index-popover: 400;
   --z-index-splash: 500;
 }

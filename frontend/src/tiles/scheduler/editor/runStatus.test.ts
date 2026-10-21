@@ -2,16 +2,22 @@ import { describe, it, expect } from 'vitest'
 import { runOutcome } from './runStatus'
 
 describe('runOutcome', () => {
-  it('keeps a failure, with its reason', () => {
+  // The toolbar keeps the two words; the reason is the bubble's.
+  it('keeps a failure short, with its reason as the detail', () => {
     expect(
       runOutcome({ status: 'failed', error: 'destination validation failed: R2 is gone.' }),
-    ).toEqual({ text: 'failed: destination validation failed: R2 is gone.', failed: true })
+    ).toEqual({
+      text: 'run failed',
+      failed: true,
+      detail: 'destination validation failed: R2 is gone.',
+    })
   })
 
   it('names a failure that carries no reason', () => {
     expect(runOutcome({ status: 'failed', error: '' })).toEqual({
-      text: 'failed: unknown error',
+      text: 'run failed',
       failed: true,
+      detail: 'unknown error',
     })
   })
 

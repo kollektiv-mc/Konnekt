@@ -19,8 +19,8 @@ describe('layering scale', () => {
     expect(declared).toEqual(LAYER)
   })
 
-  it('orders overlay < modal < dialog < popover < splash', () => {
-    const order: Layer[] = ['overlay', 'modal', 'dialog', 'popover', 'splash']
+  it('orders overlay < modal < dialog < toast < popover < splash', () => {
+    const order: Layer[] = ['overlay', 'modal', 'dialog', 'toast', 'popover', 'splash']
     expect(Object.keys(LAYER)).toEqual(order)
     for (let i = 1; i < order.length; i++) {
       expect(LAYER[order[i]]).toBeGreaterThan(LAYER[order[i - 1]])

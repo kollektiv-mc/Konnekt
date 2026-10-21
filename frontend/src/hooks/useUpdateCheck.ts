@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { CheckForUpdates, GetAppVersion } from '../../wailsjs/go/main/App'
 import { emitNotification } from '../lib/notify'
+import { showToast } from '../lib/toast'
 
 // A build from the snapshot channel, stamped `<base>-snapshot.<date>.<sha7>`
 // by .github/workflows/snapshot.yml. Mirrors backend/services/update.go's
@@ -22,8 +23,8 @@ export function isDevBuild(version: string): boolean {
 
 // One-shot startup check, gated by the "check for updates on startup"
 // setting. Fires an info notification through the existing notifications
-// pipeline (lib/notify.ts's emitNotification) if a newer GitHub release
-// exists. Not a poll — runs once per mount, same shape as App.tsx's other
+// pipeline (lib/notify.ts's emitNotification), and an update bubble
+// (lib/toast.ts), if a newer GitHub release exists. Not a poll — runs once per mount, same shape as App.tsx's other
 // one-shot startup effects (e.g. auto-start-active-server).
 export function useUpdateCheck(enabled: boolean): void {
   const checked = useRef(false)
@@ -44,6 +45,13 @@ export function useUpdateCheck(enabled: boolean): void {
           const label =
             info.channel === 'snapshot' ? 'Snapshot update available' : 'Update available'
           emitNotification('info', `${label}: ${info.latestVersion}`)
+          showToast({
+            key: 'update',
+            category: 'update',
+            tone: 'info',
+            title: label,
+            text: `Konnekt ${info.latestVersion} is available. Settings > About installs it.`,
+          })
         }
       } catch {
         /* non-Wails context, offline, or no releases yet — silent background check */
