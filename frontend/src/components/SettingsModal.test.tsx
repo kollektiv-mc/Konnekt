@@ -802,6 +802,57 @@ describe('SettingsModal layering', () => {
   })
 })
 
+// The selected item is drawn by one highlight that slides between buttons and
+// the pane fades in, so the button's own state has to say which is selected.
+// jsdom does no layout, so where the highlight sits is not asserted here.
+describe('SettingsModal section switching', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    vi.mocked(App.GetAppVersion).mockResolvedValue('0.1.0')
+    vi.mocked(App.GetDataDir).mockResolvedValue('/home/user/.config/konnekt')
+    vi.mocked(App.GetLogPath).mockResolvedValue('/home/user/.config/konnekt/konnekt.log')
+    vi.mocked(EventsOn).mockImplementation(noop)
+  })
+
+  it('marks only the selected item as current and moves it on click', () => {
+    render(<SettingsModal open onClose={() => {}} />)
+    expect(screen.getByRole('button', { name: 'Appearance' }).getAttribute('aria-current')).toBe(
+      'true',
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Console' }))
+
+    expect(screen.getByRole('button', { name: 'Console' }).getAttribute('aria-current')).toBe(
+      'true',
+    )
+    expect(screen.getByRole('button', { name: 'Appearance' }).hasAttribute('aria-current')).toBe(
+      false,
+    )
+    expect(document.querySelectorAll('[aria-current]')).toHaveLength(1)
+  })
+
+  it('swaps the pane content for the selected section', () => {
+    render(<SettingsModal open onClose={() => {}} />)
+    expect(screen.getByText('Skin')).toBeTruthy()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Console' }))
+
+    expect(screen.getByText('Show timestamps')).toBeTruthy()
+    expect(screen.queryByText('Skin')).toBeNull()
+  })
+
+  it('keeps a single highlight, hidden from assistive tech, across switches', () => {
+    render(<SettingsModal open onClose={() => {}} />)
+    const pills = () => document.querySelectorAll('.settings-nav-pill')
+    expect(pills()).toHaveLength(1)
+    expect(pills()[0].getAttribute('aria-hidden')).toBe('true')
+
+    fireEvent.click(screen.getByRole('button', { name: 'Console' }))
+
+    expect(pills()).toHaveLength(1)
+  })
+})
+
 // The bubbles are stored as the categories turned off, so a toggle writes only
 // its own key and leaves the others as they were.
 describe('SettingsModal in-app bubbles', () => {

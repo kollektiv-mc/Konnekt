@@ -1,4 +1,4 @@
-import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { useSettingsStore } from '../stores/useSettingsStore'
 import type { AppSettings } from '../types'
 import {
@@ -112,6 +112,16 @@ const BG_STYLE_OPTIONS = [
   { value: 'gradient' as const, label: 'Gradient' },
 ]
 
+interface PillBox {
+  x: number
+  y: number
+  width: number
+  height: number
+}
+
+const samePillBox = (a: PillBox, b: PillBox) =>
+  a.x === b.x && a.y === b.y && a.width === b.width && a.height === b.height
+
 interface Props {
   open: boolean
   onClose: () => void
@@ -123,8 +133,13 @@ export function SettingsModal({ open, onClose, initialSection }: Props) {
   const { settings, error, update, clearError } = useSettingsStore()
   const [section, setSection] = useState<SettingsSection>(initialSection ?? 'appearance')
   const [wasOpen, setWasOpen] = useState(open)
+  // The nav highlight's measured box, see `measurePill`. Cleared on open, so a
+  // reopened modal places it afresh instead of sliding from where it last was,
+  // and kept through the closing fade so the highlight leaves with the panel.
+  const [pill, setPill] = useState<PillBox | null>(null)
   if (open !== wasOpen) {
     setWasOpen(open)
+    if (open) setPill(null)
     if (open && initialSection) setSection(initialSection)
   }
   // A browser served by the listener cannot call any Remote Access method,
@@ -135,6 +150,39 @@ export function SettingsModal({ open, onClose, initialSection }: Props) {
   const nav = NAV.filter((n) => !hostOnly(n.id) || !isRemoteBrowser())
   const overlayRef = useRef<HTMLDivElement>(null)
   const presence = usePresence(open)
+  // The one highlight behind the nav buttons slides to whichever is selected.
+  // It is measured off the real button rather than computed from the layout,
+  // since the nav is a column on a desktop and a scrolling row on a phone.
+  // Null until measured, so it mounts already in place and a freshly opened
+  // modal never animates it in from the corner.
+  const navRef = useRef<HTMLDivElement>(null)
+  const navButtons = useRef(new Map<SettingsSection, HTMLButtonElement>())
+  const measurePill = useCallback(() => {
+    const el = navButtons.current.get(section)
+    if (!el) return
+    setPill((prev) => {
+      const next = {
+        x: el.offsetLeft,
+        y: el.offsetTop,
+        width: el.offsetWidth,
+        height: el.offsetHeight,
+      }
+      return prev && samePillBox(prev, next) ? prev : next
+    })
+  }, [section])
+  // Layout effect, so the highlight is placed before the first paint. `nav` is
+  // a dependency because a host-only entry dropping out moves the others.
+  useLayoutEffect(() => {
+    if (!open) return
+    measurePill()
+    const container = navRef.current
+    if (!container || typeof ResizeObserver === 'undefined') return
+    // The container changes size when the breakpoint flips the nav between a
+    // column and a row, or a font loads and changes the labels' widths.
+    const observer = new ResizeObserver(measurePill)
+    observer.observe(container)
+    return () => observer.disconnect()
+  }, [open, measurePill, nav.length])
   // Fetched once here rather than in each pane: General needs it to say whether
   // this build already follows the snapshot channel, and About both displays it
   // and gates the install button on it. Null outside a Wails context.
@@ -196,14 +244,34 @@ export function SettingsModal({ open, onClose, initialSection }: Props) {
               Settings
             </span>
           </div>
-          <div className="mt-2 flex flex-col gap-0.5 max-sm:mt-0 max-sm:flex-row">
+          <div
+            ref={navRef}
+            className="relative mt-2 flex flex-col gap-0.5 max-sm:mt-0 max-sm:flex-row"
+          >
+            {pill && (
+              <div
+                aria-hidden="true"
+                className="settings-nav-pill bg-accent/10 ease-standard duration-panel pointer-events-none absolute top-0 left-0 rounded-lg transition-[transform,width,height]"
+                // eslint-disable-next-line no-restricted-syntax -- position and size are measured off the selected button at runtime, not visible to Tailwind's static scanner
+                style={{
+                  width: pill.width,
+                  height: pill.height,
+                  transform: `translate(${pill.x}px, ${pill.y}px)`,
+                }}
+              />
+            )}
             {nav.map((item) => (
               <button
                 key={item.id}
+                ref={(el) => {
+                  if (el) navButtons.current.set(item.id, el)
+                  else navButtons.current.delete(item.id)
+                }}
                 onClick={() => setSection(item.id)}
-                className={`cursor-pointer rounded-lg px-2 py-1.5 text-left text-sm transition-colors max-sm:shrink-0 max-sm:whitespace-nowrap ${
+                aria-current={section === item.id ? 'true' : undefined}
+                className={`relative cursor-pointer rounded-lg px-2 py-1.5 text-left text-sm transition-colors max-sm:shrink-0 max-sm:whitespace-nowrap ${
                   section === item.id
-                    ? 'text-accent bg-accent/10'
+                    ? 'text-accent bg-transparent'
                     : 'text-text-secondary hover:bg-hover hover:text-text-primary bg-transparent'
                 }`}
               >
@@ -236,25 +304,30 @@ export function SettingsModal({ open, onClose, initialSection }: Props) {
 
           {/* Body */}
           <div className="flex-1 overflow-y-auto px-5 py-2">
-            <ReloadNote section={section} />
-            {section === 'appearance' && <AppearancePane settings={settings} update={save} />}
-            {section === 'general' && nav.some((n) => n.id === 'general') && (
-              <GeneralPane settings={settings} update={save} version={version} />
-            )}
-            {section === 'console' && <ConsolePane settings={settings} update={save} />}
-            {section === 'notifications' && <NotificationsPane settings={settings} update={save} />}
-            {section === 'destinations' && nav.some((n) => n.id === 'destinations') && (
-              <Suspense fallback={null}>
-                <DestinationsPane />
-              </Suspense>
-            )}
-            {section === 'remote' && nav.some((n) => n.id === 'remote') && (
-              <Suspense fallback={null}>
-                <RemoteAccessPane />
-              </Suspense>
-            )}
-            {section === 'changelog' && <ChangelogPane />}
-            {section === 'about' && <AboutPane version={version} />}
+            {/* Keyed on the section so each switch remounts it and replays the fade. */}
+            <div key={section} className="settings-pane-in">
+              <ReloadNote section={section} />
+              {section === 'appearance' && <AppearancePane settings={settings} update={save} />}
+              {section === 'general' && nav.some((n) => n.id === 'general') && (
+                <GeneralPane settings={settings} update={save} version={version} />
+              )}
+              {section === 'console' && <ConsolePane settings={settings} update={save} />}
+              {section === 'notifications' && (
+                <NotificationsPane settings={settings} update={save} />
+              )}
+              {section === 'destinations' && nav.some((n) => n.id === 'destinations') && (
+                <Suspense fallback={null}>
+                  <DestinationsPane />
+                </Suspense>
+              )}
+              {section === 'remote' && nav.some((n) => n.id === 'remote') && (
+                <Suspense fallback={null}>
+                  <RemoteAccessPane />
+                </Suspense>
+              )}
+              {section === 'changelog' && <ChangelogPane />}
+              {section === 'about' && <AboutPane version={version} />}
+            </div>
           </div>
         </div>
       </div>
