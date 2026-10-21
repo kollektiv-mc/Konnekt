@@ -83,7 +83,8 @@ export function SplashScreen({ onDone }: { onDone?: () => void }) {
         <circle r={NODE_R} fill={FACE.top} />
       </g>
     ) : null
-  const pts = (p: readonly (readonly [number, number])[]) => p.map((q) => q.join(',')).join(' ')
+  // A point pair stringifies as `x,y`, which is SVG's own points syntax.
+  const pts = (p: readonly (readonly [number, number])[]) => p.join(' ')
 
   return (
     <div
@@ -96,7 +97,7 @@ export function SplashScreen({ onDone }: { onDone?: () => void }) {
       }
       aria-hidden="true"
     >
-      <svg className="splash-mark" viewBox="0 0 24 24" fill="none">
+      <svg className="splash-mark" viewBox="0 0 24 24" fill="none" strokeLinecap="round">
         <defs>
           {/* The front of the orbit. The ink reaches higher than the gap so
               where the gap's clip edge antialiases there is ink over it. */}

@@ -127,11 +127,11 @@ export function orbitPath(from: number, to: number): string {
 
 /** Milliseconds: when each part starts and how long it runs. */
 export const SPLASH_MS = {
-  /** The block's turn, which settles as the node lands. */
+  /** The block's turn; its quint ease has it still by the time the node lands. */
   cube: 1000,
   cubeFadeIn: 200,
   orbitStart: 120,
-  orbit: 880,
+  orbit: 733,
   /** The finished mark holds, then the overlay fades. */
   fadeStart: 1200,
   fade: 250,

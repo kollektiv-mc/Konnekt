@@ -66,8 +66,11 @@ describe('splash mark', () => {
     expect(at(land) - at(land - 1)).toBeLessThan(mid / 10)
   })
 
-  it('settles the block as the node lands', () => {
-    expect(SPLASH_MS.cube).toBe(SPLASH_MS.orbitStart + SPLASH_MS.orbit)
+  it('has the block still by the time the node lands', () => {
+    const landing = splashFrame(SPLASH_MS.orbitStart + SPLASH_MS.orbit)
+    // Within a tenth of a degree of rest, which no frame can show.
+    expect(Math.abs(landing.azimuth - RESTING_FRAME.azimuth)).toBeLessThan(Math.PI / 1800)
+    expect(landing.drop).toBeLessThan(0.01)
   })
 
   it('fades the overlay after the node lands', () => {
