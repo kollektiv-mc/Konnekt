@@ -4,6 +4,7 @@ import { useLoaderStore } from '../../stores/useLoaderStore'
 import { useServerConfigStore } from '../../stores/useServerConfigStore'
 import { useUiStore } from '../../stores/useUiStore'
 import { switchServer } from '../../lib/switchServer'
+import { usePresence } from '../../hooks/usePresence'
 import { IconButton } from '../ui/IconButton'
 import { X } from '../../lib/icons'
 import { Icon } from '../ui/Icon'
@@ -51,6 +52,7 @@ export function ServerManager() {
   // re-read the install from disk.
   const [refreshKey, setRefreshKey] = useState(0)
   const overlayRef = useRef<HTMLDivElement>(null)
+  const presence = usePresence(open)
 
   // Follow the caller's choice each time the modal is opened, not on every
   // render — the user's own clicks in the list own the selection while it is up.
@@ -89,7 +91,7 @@ export function ServerManager() {
     return () => window.removeEventListener('keydown', onKey)
   }, [open, closeServerManager, installOpen, loaderDialogOpen])
 
-  if (!open) return null
+  if (!presence.mounted) return null
 
   const current = configs.find((c) => c.id === selected) ?? null
   const isNew = selected === NEW_SERVER || !current
@@ -97,12 +99,16 @@ export function ServerManager() {
   return (
     <div
       ref={overlayRef}
-      className="modal-overlay-in z-modal fixed inset-0 flex items-center justify-center bg-[rgba(0,0,0,0.65)]"
+      inert={presence.inert}
+      className={`${presence.overlayClass} z-modal fixed inset-0 flex items-center justify-center bg-[rgba(0,0,0,0.65)]`}
       onClick={(e) => {
         if (e.target === overlayRef.current) closeServerManager()
       }}
     >
-      <div className="modal-panel-in bg-canvas border-border-subtle border-hairline flex h-[480px] w-[680px] overflow-hidden rounded-xl shadow-[0_24px_64px_rgba(0,0,0,0.5)] max-sm:h-[calc(100dvh-1rem)] max-sm:w-[calc(100vw-1rem)] max-sm:flex-col">
+      <div
+        onAnimationEnd={presence.onAnimationEnd}
+        className={`${presence.panelClass} bg-canvas border-border-subtle border-hairline flex h-[480px] w-[680px] overflow-hidden rounded-xl shadow-[0_24px_64px_rgba(0,0,0,0.5)] max-sm:h-[calc(100dvh-1rem)] max-sm:w-[calc(100vw-1rem)] max-sm:flex-col`}
+      >
         <ServerList
           configs={configs}
           selected={isNew ? NEW_SERVER : selected}

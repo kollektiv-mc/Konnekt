@@ -16,11 +16,17 @@ by hand:
 | File | Consumer | How it is produced |
 |---|---|---|
 | `appicon.png` | the source, and macOS | Wails encodes it into `iconfile.icns` inside the `.app` bundle on every `wails build` |
+| `appicon-cuts/16.png`, `appicon-cuts/24.png` | the 16 and 24 px frames of `windows/icon.ico` | rendered from `docs/brand/app-icon-16.svg` and `app-icon-24.svg`, committed |
 | `windows/icon.ico` | the exe's icon resource, and the NSIS installer (`MUI_ICON`) | `go run ./scripts/gen-icons`, committed |
 | `appicon-256.png` | the GTK window icon (embedded by `main.go`) and the RPM's `/usr/share/pixmaps` entry | `go run ./scripts/gen-icons`, committed |
 
 To change the app icon: replace `appicon.png` (and the website's copy of it),
 run `go run ./scripts/gen-icons`, and commit all four files.
+
+The `.ico` frames are downscales of `appicon.png`, except where
+`appicon-cuts/<size>.png` exists: below 24 px the mark is redrawn rather than
+shrunk (`docs/brand/README.md`, Sizes), and `gen-icons` takes a cut in place of
+the downscale it names. Re-render the cuts when the mark changes.
 
 **`wails build` will not do this for you.** It generates `windows/icon.ico`
 from `appicon.png` only when that file is *missing*, so a stale one is used

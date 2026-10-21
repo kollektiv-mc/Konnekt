@@ -265,25 +265,21 @@ export function CommandLibrary({ serverId }: { serverId: string }) {
         </div>
       </div>
 
-      {lifecycle.confirmAction && (
-        <LifecycleConfirmDialog
-          action={lifecycle.confirmAction}
-          busy={lifecycle.busy !== null}
-          onCancel={() => lifecycle.setConfirmAction(null)}
-          onConfirm={lifecycle.runConfirmed}
-        />
-      )}
+      <LifecycleConfirmDialog
+        action={lifecycle.confirmAction}
+        busy={lifecycle.busy !== null}
+        onCancel={() => lifecycle.setConfirmAction(null)}
+        onConfirm={lifecycle.runConfirmed}
+      />
 
-      {modal && (
-        <KickBanDialog
-          type={modal}
-          onCancel={() => setModal(null)}
-          onSubmit={(cmd) => {
-            send(cmd)
-            setModal(null)
-          }}
-        />
-      )}
+      <KickBanDialog
+        type={modal}
+        onCancel={() => setModal(null)}
+        onSubmit={(cmd) => {
+          send(cmd)
+          setModal(null)
+        }}
+      />
     </div>
   )
 }

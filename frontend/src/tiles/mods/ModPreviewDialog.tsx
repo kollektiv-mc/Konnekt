@@ -8,6 +8,7 @@ import type {
   ResolvedDependency,
 } from './useMods'
 import { DependencyDialog } from './DependencyDialog'
+import { usePresence } from '../../hooks/usePresence'
 import { ClientOnlyBadge } from './ClientOnlyBadge'
 import { ModAboutBody } from './ModAboutBody'
 import { fmtCount, fmtBytes, relativeTime } from '../../lib/format'
@@ -17,6 +18,9 @@ import { X } from '../../lib/icons'
 import { Icon } from '../../components/ui/Icon'
 
 interface Props {
+  // Shown while true. The dialog stays mounted through its exit after this goes
+  // false (hooks/usePresence.ts), so the caller keeps `mod` set until then.
+  open: boolean
   mod: InstalledMod
   updateInfo?: ModUpdateInfo
   // Modrinth data (null while loading / local mods)
@@ -38,7 +42,14 @@ interface Props {
 
 type Tab = 'about' | 'versions'
 
-export function ModPreviewDialog({
+export function ModPreviewDialog({ open, ...rest }: Props) {
+  const presence = usePresence(open)
+  if (!presence.mounted) return null
+  return <ModPreview presence={presence} {...rest} />
+}
+
+function ModPreview({
+  presence,
   mod,
   updateInfo,
   project,
@@ -55,7 +66,8 @@ export function ModPreviewDialog({
   onInstall,
   onChangeVersion,
   onOpenInBrowser,
-}: Props) {
+}: Omit<Props, 'open'> & { presence: ReturnType<typeof usePresence> }) {
+  const { leaving } = presence
   const [tab, setTab] = useState<Tab>('about')
   const [showAllVersions, setShowAllVersions] = useState(false)
   const [deps, setDeps] = useState<ResolvedDependency[] | null>(null)
@@ -78,11 +90,11 @@ export function ModPreviewDialog({
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
-      if (e.key === 'Escape') onClose()
+      if (e.key === 'Escape' && !leaving) onClose()
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [onClose])
+  }, [onClose, leaving])
 
   useEffect(() => {
     if (tab === 'versions' && isModrinth && versions.length === 0 && !versionsLoading) {
@@ -160,25 +172,31 @@ export function ModPreviewDialog({
   // what order it against the maximize overlay and its own dependency dialog.
   return createPortal(
     <>
-      {deps && (
-        <DependencyDialog
-          primaryVersionId={pendingVersionId}
-          dependencies={deps}
-          clientOnly={pendingClientOnly}
-          onConfirm={handleDepConfirm}
-          onCancel={() => setDeps(null)}
-          busy={changingVersion}
-          error={depError}
-        />
-      )}
+      <DependencyDialog
+        primaryVersionId={pendingVersionId}
+        dependencies={deps}
+        clientOnly={pendingClientOnly}
+        onConfirm={handleDepConfirm}
+        onCancel={() => setDeps(null)}
+        busy={changingVersion}
+        error={depError}
+      />
 
       {/* Backdrop */}
-      <div className="modal-overlay-in z-modal fixed inset-0 bg-black/65" onClick={onClose} />
+      <div
+        inert={presence.inert}
+        className={`${presence.overlayClass} z-modal fixed inset-0 bg-black/65`}
+        onClick={onClose}
+      />
 
       {/* Dialog — fixed height (not just a max-height cap) so the frame
           doesn't resize when Modrinth content/versions finish loading; the
           body's own overflow-y-auto absorbs the difference instead. */}
-      <div className="modal-panel-in bg-canvas border-border-subtle border-hairline z-modal fixed top-1/2 left-1/2 flex h-[560px] max-h-[calc(100vh-80px)] w-[600px] max-w-[calc(100vw-48px)] -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-xl shadow-[0_24px_64px_rgba(0,0,0,0.5)]">
+      <div
+        inert={presence.inert}
+        onAnimationEnd={presence.onAnimationEnd}
+        className={`${presence.panelClass} bg-canvas border-border-subtle border-hairline z-modal fixed top-1/2 left-1/2 flex h-[560px] max-h-[calc(100vh-80px)] w-[600px] max-w-[calc(100vw-48px)] -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-xl shadow-[0_24px_64px_rgba(0,0,0,0.5)]`}
+      >
         {/* Header */}
         <div className="border-border-subtle border-b-hairline flex shrink-0 items-start gap-3 px-4 pt-4 pb-3">
           {icon ? (
