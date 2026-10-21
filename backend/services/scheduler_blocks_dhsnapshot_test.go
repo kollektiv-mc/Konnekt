@@ -902,20 +902,22 @@ func TestDHSnapshotHostStopsAndStartsTheRunsServer(t *testing.T) {
 	if !host.IsRunning() {
 		t.Fatal("the fixture server is not running")
 	}
-	if err := host.Stop(time.Minute); err != nil {
-		t.Fatal(err)
+	var downWhileCalled bool
+	stopErr, startErr := host.WhileStopped(time.Minute, func() {
+		downWhileCalled = !host.IsRunning()
+		// A second stop inside the window is refused by the gate, not run.
+		if inner, _ := host.WhileStopped(time.Minute, func() {}); !errors.Is(inner, ErrPowerActionInProgress) {
+			t.Errorf("nested WhileStopped = %v, want ErrPowerActionInProgress", inner)
+		}
+	})
+	if stopErr != nil || startErr != nil {
+		t.Fatalf("WhileStopped = (%v, %v)", stopErr, startErr)
 	}
-	if host.IsRunning() {
-		t.Error("still running after Stop")
-	}
-	if err := host.Stop(time.Minute); err == nil {
-		t.Error("stopping a stopped server was not an error")
-	}
-	if err := host.Start(); err != nil {
-		t.Fatal(err)
+	if !downWhileCalled {
+		t.Error("fn ran with the server still up")
 	}
 	if !host.IsRunning() {
-		t.Error("not running after Start")
+		t.Error("not running after WhileStopped")
 	}
 }
 

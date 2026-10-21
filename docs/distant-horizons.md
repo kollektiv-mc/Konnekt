@@ -162,6 +162,9 @@ no longer exists, says why in red beside **run** until you click it away.
    or not, and even when the block runs out of time, so a bad run costs the
    snapshot and never the uptime. The block's console lines report the measured
    downtime, and the node shows it under its **Stops the server** badge.
+   From the stop to this start nothing else can start the server: a schedule
+   triggered by the server stopping, or **Start** in the app, is refused until
+   the block has started it itself.
 6. **Publish**, with the server running. Parts the bucket does not have are
    uploaded. The bucket then assembles each dimension's whole database from the
    parts by copying inside the bucket, so no database is uploaded twice. The

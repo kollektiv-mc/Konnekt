@@ -64,8 +64,11 @@ type dhHost interface {
 	// Say sends one chat line to the players, over RCON when that is confirmed
 	// and otherwise (or when it fails) through the server's console.
 	Say(message string) error
-	Stop(grace time.Duration) error
-	Start() error
+	// WhileStopped stops the server, calls fn while it is down, and starts it
+	// again, with no other power action able to start it in between.
+	// stopErr means it was not stopped and fn was not called; startErr means it
+	// could not be started again.
+	WhileStopped(grace time.Duration, fn func()) (stopErr, startErr error)
 	Narrate(line string)
 }
 
@@ -432,20 +435,23 @@ func dhDuration(d time.Duration) string {
 // --- stop, copy, start ---
 
 // stopCopyStart is the part that has the server down. The start call is made
-// whatever the copy did, and the downtime ends when it returns.
+// whatever the copy did, and the downtime ends when it returns. The host holds
+// the server's power gate across all three, so nothing else (a graph triggered
+// by the stop, a Start from the UI) can boot the server under the copy.
 func (p *dhRunPlan) stopCopyStart(ctx context.Context, pre dhPreflight) (dhRunResult, error) {
 	p.narrate("Stopping the server")
 	stopAt := p.Now()
-	if err := p.Host.Stop(p.Grace); err != nil {
+	var res dhRunResult
+	var copyErr error
+	stopErr, startErr := p.Host.WhileStopped(p.Grace, func() {
+		res, copyErr = p.copy(ctx, pre)
+		p.narrate("Starting the server again")
+	})
+	if stopErr != nil {
 		// Stop fails without having stopped anything (another power action is in
 		// progress, or the server is already gone), so there is nothing to start.
-		return dhRunResult{}, fmt.Errorf("could not stop the server: %w", err)
+		return dhRunResult{}, fmt.Errorf("could not stop the server: %w", stopErr)
 	}
-
-	res, copyErr := p.copy(ctx, pre)
-
-	p.narrate("Starting the server again")
-	startErr := p.Host.Start()
 	res.Downtime = p.Now().Sub(stopAt)
 
 	switch {

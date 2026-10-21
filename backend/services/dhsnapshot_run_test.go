@@ -57,18 +57,19 @@ func (h *fakeDHHost) Say(message string) error {
 	h.f.log = append(h.f.log, "say:"+message)
 	return h.sayErr
 }
-func (h *fakeDHHost) Stop(grace time.Duration) error {
+func (h *fakeDHHost) WhileStopped(grace time.Duration, fn func()) (stopErr, startErr error) {
 	h.f.log = append(h.f.log, "stop:"+grace.String())
 	h.f.now = h.f.now.Add(h.stopTook)
 	if h.onStop != nil {
 		h.onStop()
 	}
-	return h.stopErr
-}
-func (h *fakeDHHost) Start() error {
+	if h.stopErr != nil {
+		return h.stopErr, nil
+	}
+	fn()
 	h.f.log = append(h.f.log, "start")
 	h.f.now = h.f.now.Add(h.startTook)
-	return h.startErr
+	return nil, h.startErr
 }
 func (h *fakeDHHost) Narrate(line string) { h.f.narration = append(h.f.narration, line) }
 

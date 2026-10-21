@@ -438,6 +438,31 @@ func (s *ServerService) Restart(serverID string, jarPath string, jvmArgs []strin
 	return s.startInstance(serverID, jarPath, jvmArgs, workingDir)
 }
 
+// WhileStopped stops the server, calls fn while it is down, and starts it again,
+// holding the power gate from the stop until the start returns, as Restart does
+// across its two legs. Any other power action in between gets
+// ErrPowerActionInProgress. Before this, a DH snapshot stopped and started the
+// server as two separate calls, and a scheduler graph triggered on the stop
+// (an "Auto Start" on server Stopped) booted the server while the snapshot was
+// still reading its databases; the snapshot's own start then failed with
+// "server already running" and its publish never ran.
+//
+// stopErr means the server was not stopped and fn was not called. startErr means
+// fn ran but the server could not be started again. Unlike Restart, a server
+// that is not running is a stopErr: the caller has nothing to do while it is
+// down that it did not already check for.
+func (s *ServerService) WhileStopped(serverID string, jarPath string, jvmArgs []string, workingDir string, grace time.Duration, fn func()) (stopErr, startErr error) {
+	if !s.powerMu.TryLock() {
+		return ErrPowerActionInProgress, nil
+	}
+	defer s.powerMu.Unlock()
+	if err := s.instanceFor(serverID).stop(grace); err != nil {
+		return err, nil
+	}
+	fn()
+	return nil, s.startInstance(serverID, jarPath, jvmArgs, workingDir)
+}
+
 // start is Start without the power gate. Callers hold powerMu.
 func (s *serverInstance) start(jarPath string, jvmArgs []string, workingDir string) error {
 	s.mu.Lock()

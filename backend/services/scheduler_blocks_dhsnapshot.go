@@ -273,12 +273,8 @@ func (h serverDHHost) Say(message string) error {
 	return err
 }
 
-func (h serverDHHost) Stop(grace time.Duration) error {
-	return h.e.Server().Stop(h.e.ServerID, grace)
-}
-
-func (h serverDHHost) Start() error {
-	return h.e.Server().Start(h.cfg.ID, h.cfg.JarPath, h.cfg.JvmArgs, h.cfg.WorkingDir)
+func (h serverDHHost) WhileStopped(grace time.Duration, fn func()) (stopErr, startErr error) {
+	return h.e.Server().WhileStopped(h.cfg.ID, h.cfg.JarPath, h.cfg.JvmArgs, h.cfg.WorkingDir, grace, fn)
 }
 
 func (h serverDHHost) Narrate(line string) {
