@@ -14,8 +14,9 @@ import { Toggle } from './ui/Toggle'
 import { Segmented } from './ui/Segmented'
 import { ColorSwatch } from './ui/ColorSwatch'
 import { IconButton } from './ui/IconButton'
-import { X } from '../lib/icons'
+import { ChevronDown, X } from '../lib/icons'
 import { Icon } from './ui/Icon'
+import { Collapsible } from './ui/Collapsible'
 import { SettingRow } from './ui/SettingRow'
 import { TOAST_CATEGORIES } from '../lib/toast'
 import {
@@ -360,6 +361,8 @@ function AppearancePane({ settings, update }: { settings: AppSettings; update: U
   const shownTheme =
     settings.theme === 'light' && !activeSkin.supportsLight ? 'dark' : settings.theme
 
+  const [advancedOpen, setAdvancedOpen] = useState(false)
+
   return (
     <div>
       {/* Skin gallery */}
@@ -416,32 +419,6 @@ function AppearancePane({ settings, update }: { settings: AppSettings; update: U
         />
       </div>
 
-      {/* Status colors */}
-      <div className="border-border-subtle border-b-hairline py-3">
-        <span className="text-text-primary text-sm">Status colors</span>
-        <p className="text-text-muted mt-0.5 mb-3 text-xs">
-          Used for success, warnings, and errors across the app.
-        </p>
-        <div className="flex flex-col gap-3">
-          {(
-            [
-              { label: 'Success', key: 'successColor' as const, presets: SUCCESS_PRESETS },
-              { label: 'Warning', key: 'warningColor' as const, presets: WARNING_PRESETS },
-              { label: 'Error', key: 'dangerColor' as const, presets: DANGER_PRESETS },
-            ] as const
-          ).map(({ label, key, presets }) => (
-            <div key={key} className="flex items-center justify-between gap-4">
-              <span className="text-text-secondary w-14 shrink-0 text-xs">{label}</span>
-              <ColorField
-                value={settings[key]}
-                onChange={(hex) => update({ [key]: hex } as Partial<AppSettings>)}
-                presets={presets}
-              />
-            </div>
-          ))}
-        </div>
-      </div>
-
       {/* Background style */}
       <SettingRow label="Background" description="Subtle accent glow behind the interface.">
         <Segmented
@@ -460,28 +437,10 @@ function AppearancePane({ settings, update }: { settings: AppSettings; update: U
         />
       </SettingRow>
 
-      {/* Wheel physics. Read per notch by lib/springScroll.ts, so it takes
-          effect on the next notch with no restart. */}
-      <SettingRow
-        label="Smooth scrolling"
-        description="Glide under each mouse wheel notch on spring physics instead of stepping. Touchpads and the OS reduced-motion setting are left alone."
-      >
-        <Toggle
-          checked={settings.smoothScrolling}
-          onChange={(v) => update({ smoothScrolling: v })}
-        />
-      </SettingRow>
-
       <WebviewGpuSetting
         value={settings.webviewGpu}
         onChange={(webviewGpu) => update({ webviewGpu })}
       />
-
-      {/* Per-token font choice. Desktop only: the list is this machine's fonts,
-          and a browser served by Remote Access can neither see nor persist them. */}
-      {!isRemoteBrowser() && (
-        <FontSettings fonts={settings.fonts} onChange={(fonts) => update({ fonts })} />
-      )}
 
       {/* Import stub */}
       <div className="py-3">
@@ -491,6 +450,76 @@ function AppearancePane({ settings, update }: { settings: AppSettings; update: U
             Coming soon
           </span>
         </div>
+      </div>
+
+      {/* Advanced. Closed on every open of Settings, so it is plain state rather
+          than a persisted setting. Collapsible keeps its children mounted while
+          it is shut, so `inert` is what takes them out of the tab order and the
+          accessibility tree until the header opens them. */}
+      <div>
+        <button
+          type="button"
+          onClick={() => setAdvancedOpen((open) => !open)}
+          aria-expanded={advancedOpen}
+          className="border-border-subtle border-b-hairline flex w-full cursor-pointer items-center gap-2 py-3 text-left select-none"
+        >
+          <Icon
+            icon={ChevronDown}
+            size="sm"
+            className={`text-text-muted duration-fast shrink-0 transition-transform motion-reduce:transition-none ${
+              advancedOpen ? '' : '-rotate-90'
+            }`}
+          />
+          <span className="text-text-primary text-sm">Advanced</span>
+        </button>
+        <Collapsible open={advancedOpen}>
+          <div inert={!advancedOpen}>
+            {/* Per-token font choice. Desktop only: the list is this machine's
+                fonts, and a browser served by Remote Access can neither see nor
+                persist them. */}
+            {!isRemoteBrowser() && (
+              <FontSettings fonts={settings.fonts} onChange={(fonts) => update({ fonts })} />
+            )}
+
+            {/* Status colors */}
+            <div className="border-border-subtle border-b-hairline py-3">
+              <span className="text-text-primary text-sm">Status colors</span>
+              <p className="text-text-muted mt-0.5 mb-3 text-xs">
+                Used for success, warnings, and errors across the app.
+              </p>
+              <div className="flex flex-col gap-3">
+                {(
+                  [
+                    { label: 'Success', key: 'successColor' as const, presets: SUCCESS_PRESETS },
+                    { label: 'Warning', key: 'warningColor' as const, presets: WARNING_PRESETS },
+                    { label: 'Error', key: 'dangerColor' as const, presets: DANGER_PRESETS },
+                  ] as const
+                ).map(({ label, key, presets }) => (
+                  <div key={key} className="flex items-center justify-between gap-4">
+                    <span className="text-text-secondary w-14 shrink-0 text-xs">{label}</span>
+                    <ColorField
+                      value={settings[key]}
+                      onChange={(hex) => update({ [key]: hex } as Partial<AppSettings>)}
+                      presets={presets}
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Wheel physics. Read per notch by lib/springScroll.ts, so it takes
+                effect on the next notch with no restart. */}
+            <SettingRow
+              label="Smooth scrolling"
+              description="Glide under each mouse wheel notch on spring physics instead of stepping. Touchpads and the OS reduced-motion setting are left alone."
+            >
+              <Toggle
+                checked={settings.smoothScrolling}
+                onChange={(v) => update({ smoothScrolling: v })}
+              />
+            </SettingRow>
+          </div>
+        </Collapsible>
       </div>
     </div>
   )

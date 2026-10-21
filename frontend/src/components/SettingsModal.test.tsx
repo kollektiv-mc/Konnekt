@@ -450,6 +450,42 @@ describe('SettingsModal skin and light mode', () => {
     expect(useSettingsStore.getState().settings.theme).toBe('light')
   })
 
+  describe('Advanced disclosure', () => {
+    const advancedToggle = () => screen.getByRole('button', { name: 'Advanced' })
+    const isInert = (text: string) => screen.getByText(text).closest('[inert]') !== null
+
+    it('is closed by default, with its groups out of reach', () => {
+      openAppearance()
+
+      expect(advancedToggle().getAttribute('aria-expanded')).toBe('false')
+      for (const group of ['Fonts', 'Status colors', 'Smooth scrolling']) {
+        expect(isInert(group)).toBe(true)
+      }
+    })
+
+    it('reveals fonts, status colors and smooth scrolling when opened', () => {
+      openAppearance()
+
+      fireEvent.click(advancedToggle())
+
+      expect(advancedToggle().getAttribute('aria-expanded')).toBe('true')
+      for (const group of ['Fonts', 'Status colors', 'Smooth scrolling']) {
+        expect(isInert(group)).toBe(false)
+      }
+      expect(screen.getByRole('combobox', { name: 'Code' })).toBeTruthy()
+    })
+
+    it('closes again on a second click', () => {
+      openAppearance()
+
+      fireEvent.click(advancedToggle())
+      fireEvent.click(advancedToggle())
+
+      expect(advancedToggle().getAttribute('aria-expanded')).toBe('false')
+      expect(isInert('Status colors')).toBe(true)
+    })
+  })
+
   it('lays every skin out in a wrapping grid with no sideways scroll', () => {
     openAppearance()
 
