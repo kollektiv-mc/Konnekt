@@ -21,7 +21,8 @@ import { useServerConfigStore } from './stores/useServerConfigStore'
 import { useSettingsStore } from './stores/useSettingsStore'
 import { useProcessesStore } from './stores/useProcessesStore'
 import { emitNotification } from './lib/notify'
-import { showToast } from './lib/toast'
+import { failedRunToast, showToast } from './lib/toast'
+import type { RunFinished } from './lib/toast'
 import { useNotificationsStore } from './stores/useNotificationsStore'
 import { prefetchHeavyChunks } from './lib/prefetch'
 import { useUpdateCheck } from './hooks/useUpdateCheck'
@@ -512,6 +513,33 @@ function App() {
         } catch {
           /* teardown no-op */
         }
+      }
+    }
+  }, [])
+
+  // A failed run, from any server and whatever started it: most runs are on a
+  // schedule, with no editor open to say so. The console has the line already,
+  // from the backend; this is the bubble and the Notifications tile.
+  useEffect(() => {
+    let cleanup: (() => void) | undefined
+    try {
+      cleanup = EventsOn(
+        EVENTS.SCHEDULE_RUN_FINISHED,
+        (p?: RunFinished & { serverID?: string }) => {
+          const toast = failedRunToast(p)
+          if (!toast) return
+          emitNotification('error', `${toast.title}. ${toast.text}`)
+          showToast({ ...toast, title: titled(toast.title, p?.serverID) })
+        },
+      )
+    } catch {
+      /* non-Wails context */
+    }
+    return () => {
+      try {
+        cleanup?.()
+      } catch {
+        /* teardown no-op */
       }
     }
   }, [])

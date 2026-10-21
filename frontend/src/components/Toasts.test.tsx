@@ -10,6 +10,12 @@ afterEach(() => {
 })
 
 // The message that wrapped the scheduler's header to four lines (#629).
+// jsdom has no AnimationEvent, so React listens for the prefixed name there;
+// a browser sends the plain one.
+function endAnimation(el: Element) {
+  el.dispatchEvent(new Event('webkitAnimationEnd', { bubbles: true }))
+}
+
 const SKEWED =
   'cannot read the previous snapshot from "Frangfurd DH": s3 GetObject dh/latest.json: ' +
   "status 403 RequestTimeTooSkewed: The difference between the request time and the server's time is too large."
@@ -60,6 +66,10 @@ describe('Toasts', () => {
 
     fireEvent.click(screen.getAllByRole('button', { name: 'Dismiss' })[0])
     expect(screen.getAllByRole('status')).toHaveLength(1)
+    // It fades out where it was, and goes when that ends.
+    const leaving = screen.getByText('TPS 12').closest('[aria-hidden]') as HTMLElement
+    expect(leaving.className).toContain('toast-out')
+    act(() => endAnimation(leaving))
     expect(screen.queryByText('TPS 12')).toBeNull()
     // One left: nothing to dismiss "all" of.
     expect(screen.queryByRole('button', { name: 'Dismiss all' })).toBeNull()
@@ -68,7 +78,28 @@ describe('Toasts', () => {
       showToast({ category: 'crash', tone: 'error', title: 'Server crashed', text: 'exit code 1' }),
     )
     fireEvent.click(screen.getByRole('button', { name: 'Dismiss all' }))
+    act(() => document.querySelectorAll('.toast-out').forEach(endAnimation))
     expect(screen.queryByRole('region', { name: 'Notifications' })).toBeNull()
+  })
+
+  it('slides a new bubble in from the right', () => {
+    render(<Toasts />)
+    act(() =>
+      useNotificationsStore
+        .getState()
+        .showToast({ category: 'warnings', tone: 'warn', title: 'Low TPS', text: 'TPS 12' }),
+    )
+    expect(screen.getByRole('status').className).toContain('toast-in')
+  })
+
+  it('removes a bubble at once with reduced motion', () => {
+    vi.stubGlobal('matchMedia', (q: string) => ({ matches: q.includes('reduce') }))
+    useNotificationsStore
+      .getState()
+      .showToast({ category: 'warnings', tone: 'warn', title: 'Low TPS', text: 'TPS 12' })
+    render(<Toasts />)
+    fireEvent.click(screen.getByRole('button', { name: 'Dismiss' }))
+    expect(screen.queryByText('TPS 12')).toBeNull()
   })
 
   it('says how often the same message repeated', () => {

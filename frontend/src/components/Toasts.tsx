@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { useNotificationsStore } from '../stores/useNotificationsStore'
 import type { Toast, ToastTone } from '../stores/useNotificationsStore'
 import { Icon } from './ui/Icon'
@@ -12,14 +13,31 @@ const TONE: Record<ToastTone, { icon: LucideIcon; text: string; edge: string }> 
   error: { icon: CircleX, text: 'text-danger', edge: 'border-l-danger' },
 }
 
-function ToastCard({ toast, onDismiss }: { toast: Toast; onDismiss: () => void }) {
+function ToastCard({
+  toast,
+  leaving,
+  onDismiss,
+  onLeft,
+}: {
+  toast: Toast
+  leaving: boolean
+  onDismiss: () => void
+  onLeft: () => void
+}) {
   const tone = TONE[toast.tone]
   const icon = toast.category === 'update' ? CircleArrowUp : tone.icon
   return (
     <div
-      // An error interrupts; everything else waits its turn.
+      // An error interrupts; everything else waits its turn. A card on its way
+      // out is already gone from the store, so it is hidden from assistive tech
+      // and the pointer while it fades.
       role={toast.tone === 'error' ? 'alert' : 'status'}
-      className={`bg-overlay border-border-subtle border-hairline border-l-thick pointer-events-auto rounded-lg px-3 py-2 ${tone.edge}`}
+      aria-hidden={leaving || undefined}
+      onAnimationEnd={(e) => {
+        // Only the card's own exit: an animation inside it bubbles here too.
+        if (leaving && e.target === e.currentTarget) onLeft()
+      }}
+      className={`bg-overlay border-border-subtle border-hairline border-l-thick rounded-lg px-3 py-2 ${tone.edge} ${leaving ? 'toast-out pointer-events-none' : 'toast-in pointer-events-auto'}`}
     >
       <div className="flex items-center gap-2">
         <Icon icon={icon} size="sm" className={tone.text} />
@@ -46,6 +64,30 @@ function ToastCard({ toast, onDismiss }: { toast: Toast; onDismiss: () => void }
   )
 }
 
+type Shown = { toast: Toast; leaving: boolean }
+
+function reducedMotion(): boolean {
+  return window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false
+}
+
+/**
+ * The cards on screen: the store's bubbles, in the order they arrived, plus the
+ * ones it has just let go of, kept until their exit animation ends. With
+ * reduced motion there is no animation to wait for, so they go at once.
+ */
+function reconcileToasts(shown: Shown[], toasts: Toast[], instant: boolean): Shown[] {
+  const live = new Map(toasts.map((t) => [t.id, t]))
+  const next: Shown[] = []
+  for (const s of shown) {
+    const current = live.get(s.toast.id)
+    if (current) next.push({ toast: current, leaving: false })
+    else if (!instant) next.push({ toast: s.toast, leaving: true })
+  }
+  const known = new Set(shown.map((s) => s.toast.id))
+  for (const t of toasts) if (!known.has(t.id)) next.push({ toast: t, leaving: false })
+  return next
+}
+
 /**
  * The in-app notification bubbles, stacked in the bottom-right corner of the
  * window. Each holds the full text of a message that had no room where it was
@@ -58,7 +100,16 @@ export function Toasts() {
   const toasts = useNotificationsStore((s) => s.toasts)
   const dismiss = useNotificationsStore((s) => s.dismissToast)
   const dismissAll = useNotificationsStore((s) => s.dismissAllToasts)
-  if (toasts.length === 0) return null
+  // Derived during render rather than in an effect, so a new bubble is drawn
+  // in the same frame the store raises it.
+  const [seen, setSeen] = useState(toasts)
+  const [shown, setShown] = useState(() => reconcileToasts([], toasts, true))
+  if (seen !== toasts) {
+    setSeen(toasts)
+    setShown(reconcileToasts(shown, toasts, reducedMotion()))
+  }
+  const left = (id: number) => setShown((all) => all.filter((s) => s.toast.id !== id))
+  if (shown.length === 0) return null
   return (
     <section
       aria-label="Notifications"
@@ -71,8 +122,14 @@ export function Toasts() {
           </button>
         </div>
       )}
-      {toasts.map((t) => (
-        <ToastCard key={t.id} toast={t} onDismiss={() => dismiss(t.id)} />
+      {shown.map(({ toast, leaving }) => (
+        <ToastCard
+          key={toast.id}
+          toast={toast}
+          leaving={leaving}
+          onDismiss={() => dismiss(toast.id)}
+          onLeft={() => left(toast.id)}
+        />
       ))}
     </section>
   )

@@ -194,7 +194,7 @@ func execDHSnapshot(e *ExecContext) ExecResult {
 		if e.Server() != nil {
 			e.Server().NarrateFailed(e.ServerID, "Distant Horizons snapshot failed: "+err.Error())
 		}
-		return ExecResult{Port: "onFailed", Err: err}
+		return ExecResult{Port: "onFailed", Err: err, Narrated: e.Server() != nil}
 	}
 	defer dhRelease(e.ServerID)
 	plan, scrub, err := dhPlanFor(e)
@@ -221,7 +221,7 @@ func finishDHSnapshot(e *ExecContext, res dhRunResult, err error, scrub func(str
 		// the secret is in no run record, event or console line whatever built it.
 		err = errors.New(scrub(err.Error()))
 		e.Server().NarrateFailed(e.ServerID, "Distant Horizons snapshot failed: "+err.Error())
-		out.Port, out.Err = "onFailed", err
+		out.Port, out.Err, out.Narrated = "onFailed", err, true
 		return out
 	}
 	e.SetOutput("folder", res.Folder)

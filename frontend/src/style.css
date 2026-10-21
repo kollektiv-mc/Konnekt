@@ -471,6 +471,37 @@ input[type='number']::-webkit-outer-spin-button {
   animation: modal-panel-in var(--duration-panel) var(--ease-standard);
 }
 
+/* In-app bubbles (components/Toasts.tsx): in from the right edge they sit
+   against, out by fading where they are, a little smaller, so a dismissal
+   reads as gone rather than as sent somewhere. Forwards on the way out, or the
+   card would flash back at full size between the last frame and its removal. */
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateX(calc(100% + 0.75rem));
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+@keyframes toast-out {
+  from {
+    opacity: 1;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+}
+.toast-in {
+  animation: toast-in var(--duration-panel) var(--ease-standard);
+}
+.toast-out {
+  animation: toast-out var(--duration-panel) var(--ease-standard) forwards;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .backup-sphere-meridian {
     animation: none !important;
@@ -479,7 +510,9 @@ input[type='number']::-webkit-outer-spin-button {
     animation: none !important;
   }
   .modal-overlay-in,
-  .modal-panel-in {
+  .modal-panel-in,
+  .toast-in,
+  .toast-out {
     animation: none !important;
   }
   .ui-collapsible {

@@ -1,5 +1,9 @@
 import { TILE_SIZE, TILE_MIN } from './gridSizing'
 
+// The bubble for a graph's failed run. Raised from App for every run, scheduled
+// or not, and reopened from the editor's toolbar, so both name it the same way.
+export const scheduleRunToastKey = (graphId: string) => `scheduler:run:${graphId}`
+
 export const EVENTS = {
   LOG_LINE: 'log:line',
   SERVER_STARTED: 'server:started',

@@ -117,7 +117,9 @@ func execUpload(e *ExecContext) ExecResult {
 		// the secret is in no run record, event or console line whatever built it.
 		err = errors.New(client.scrub(readableUploadError(err).Error()))
 		narrateFailed("Upload failed: " + err.Error())
-		return fail(err)
+		out := fail(err)
+		out.Narrated = e.Server() != nil
+		return out
 	}
 	e.SetOutput("uploaded", float64(res.Uploaded))
 	e.SetOutput("skipped", float64(res.Skipped))

@@ -317,16 +317,22 @@ describe('the scheduler editor warns about a stop', () => {
     render(<SchedulerTile serverId="alpha" maximized />)
 
     await waitFor(() => expect(warningButton()).not.toBeNull())
-    expect(warningButton()?.textContent).toBe('1 warning')
+    // The icon and the count, the words only for a screen reader.
+    expect(warningButton()?.textContent).toBe('1')
     expect(toasts()).toEqual([
-      expect.objectContaining({ category: 'warnings', tone: 'warn', text: RCON_WARNING }),
+      expect.objectContaining({
+        category: 'warnings',
+        tone: 'warn',
+        title: 'Scheduler warning',
+        text: RCON_WARNING,
+      }),
     ])
     expect(App.GetScheduleGraphWarnings).toHaveBeenCalledWith('alpha', expect.anything())
     // Never a gate: Save is still there and enabled.
     expect((screen.getByRole('button', { name: 'save' }) as HTMLButtonElement).disabled).toBe(false)
   })
 
-  it('reopens a dismissed bubble from the toolbar, and withdraws it on close', async () => {
+  it('reopens a dismissed bubble, and keeps it after close', async () => {
     vi.mocked(App.GetScheduleGraphs).mockResolvedValue([withCommand('__stop__')])
     vi.mocked(App.GetScheduleGraphWarnings).mockResolvedValue([RCON_WARNING])
     const { unmount } = render(<SchedulerTile serverId="alpha" maximized />)
@@ -337,9 +343,12 @@ describe('the scheduler editor warns about a stop', () => {
     fireEvent.click(warningButton() as HTMLElement)
     expect(toasts()).toHaveLength(1)
 
-    // The advice is about the canvas this editor holds, so it leaves with it.
+    // Closing the scheduler leaves it up, and reopening counts no repeat.
     unmount()
-    expect(toasts()).toEqual([])
+    expect(toasts()).toHaveLength(1)
+    render(<SchedulerTile serverId="alpha" maximized />)
+    await waitFor(() => expect(warningButton()).not.toBeNull())
+    expect(toasts()).toEqual([expect.objectContaining({ count: 1 })])
   })
 
   // The message that wrapped the toolbar to four lines. The toolbar keeps two
@@ -362,14 +371,19 @@ describe('the scheduler editor warns about a stop', () => {
     fireEvent.click(screen.getByRole('button', { name: 'run' }))
     const indicator = await screen.findByRole('button', { name: 'run failed' })
     expect(indicator.className).toContain('whitespace-nowrap')
-    expect(toasts()).toEqual([
-      expect.objectContaining({ category: 'errors', title: 'Run failed: Only', text: reason }),
-    ])
+    // The bubble itself is App's, raised from the run's event for every run.
+    expect(toasts()).toEqual([])
 
-    // Clicking it moves the reason to the bubble and clears the toolbar.
-    act(() => useNotificationsStore.getState().dismissAllToasts())
+    // Clicking it brings the reason back in that bubble and clears the toolbar.
     fireEvent.click(indicator)
-    expect(toasts()).toHaveLength(1)
+    expect(toasts()).toEqual([
+      expect.objectContaining({
+        key: 'scheduler:run:g1',
+        category: 'errors',
+        title: 'Run failed: Only',
+        text: reason,
+      }),
+    ])
     expect(screen.queryByRole('button', { name: 'run failed' })).toBeNull()
   })
 

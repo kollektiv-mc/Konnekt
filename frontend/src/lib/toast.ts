@@ -1,6 +1,7 @@
 import { useNotificationsStore } from '../stores/useNotificationsStore'
 import type { ToastCategory, ToastInput } from '../stores/useNotificationsStore'
 import { useSettingsStore } from '../stores/useSettingsStore'
+import { scheduleRunToastKey } from './constants'
 
 /**
  * The categories in the order Settings lists them, with the words it uses.
@@ -14,7 +15,7 @@ export const TOAST_CATEGORIES: readonly {
   {
     id: 'warnings',
     label: 'Warnings and info',
-    description: "The scheduler's graph advice, Notify block messages and low TPS.",
+    description: "The scheduler's graph warnings, Notify block messages and low TPS.",
   },
   {
     id: 'errors',
@@ -47,4 +48,28 @@ export function showToast(input: ToastInput, force = false): void {
 /** Closes a bubble whose condition has cleared, so it does not outlive what it reported. */
 export function withdrawToast(key: string): void {
   useNotificationsStore.getState().withdrawToast(key)
+}
+
+/** The fields of a schedule:run-finished payload a failed run's bubble reads. */
+export interface RunFinished {
+  graphId?: string
+  graphName?: string
+  status?: string
+  error?: string
+}
+
+/**
+ * The bubble for a scheduler run that failed, or null for one that did not.
+ * Keyed by graph, so a graph that fails on every tick keeps one bubble and
+ * counts the repeats, and the editor's toolbar can reopen it.
+ */
+export function failedRunToast(p: RunFinished | undefined): ToastInput | null {
+  if (p?.status !== 'failed' || !p.graphId) return null
+  return {
+    key: scheduleRunToastKey(p.graphId),
+    category: 'errors',
+    tone: 'error',
+    title: `Run failed: ${p.graphName || 'Untitled'}`,
+    text: p.error || 'unknown error',
+  }
 }

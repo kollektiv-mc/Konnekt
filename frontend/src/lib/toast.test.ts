@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import { showToast, TOAST_CATEGORIES, toastsEnabled } from './toast'
+import { failedRunToast, showToast, TOAST_CATEGORIES, toastsEnabled } from './toast'
 import { useNotificationsStore } from '../stores/useNotificationsStore'
 import type { ToastInput } from '../stores/useNotificationsStore'
 import { useSettingsStore } from '../stores/useSettingsStore'
@@ -41,5 +41,29 @@ describe('showToast', () => {
     turnOff({ crash: true })
     showToast(CRASH, true)
     expect(useNotificationsStore.getState().toasts).toHaveLength(1)
+  })
+})
+
+describe('failedRunToast', () => {
+  it('raises a failed run, keyed by its graph', () => {
+    expect(
+      failedRunToast({ graphId: 'g1', graphName: 'Nightly', status: 'failed', error: 'no RCON' }),
+    ).toEqual({
+      key: 'scheduler:run:g1',
+      category: 'errors',
+      tone: 'error',
+      title: 'Run failed: Nightly',
+      text: 'no RCON',
+    })
+  })
+
+  it('stays quiet for a run that worked', () => {
+    expect(failedRunToast({ graphId: 'g1', status: 'success' })).toBeNull()
+    expect(failedRunToast(undefined)).toBeNull()
+  })
+
+  it('names an unnamed graph and an empty reason', () => {
+    const t = failedRunToast({ graphId: 'g1', status: 'failed' })
+    expect([t?.title, t?.text]).toEqual(['Run failed: Untitled', 'unknown error'])
   })
 })
