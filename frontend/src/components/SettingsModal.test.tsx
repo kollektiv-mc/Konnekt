@@ -450,6 +450,16 @@ describe('SettingsModal skin and light mode', () => {
     expect(useSettingsStore.getState().settings.theme).toBe('light')
   })
 
+  it('lays every skin out in a wrapping grid with no sideways scroll', () => {
+    openAppearance()
+
+    const gallery = screen.getByTestId('skin-gallery')
+    expect(gallery.className).toContain('grid-cols-3')
+    expect(gallery.className).toContain('max-sm:grid-cols-2')
+    expect(gallery.className).not.toContain('overflow-x')
+    expect(within(gallery).getAllByRole('button')).toHaveLength(BUILTIN_SKINS.length)
+  })
+
   it('does not touch the theme when the skin picked supports light', async () => {
     settings({ theme: 'light', skinId: 'default' })
     openAppearance()
