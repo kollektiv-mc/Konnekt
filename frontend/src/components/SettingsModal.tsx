@@ -194,9 +194,9 @@ export function SettingsModal({ open, onClose, initialSection }: Props) {
   // raising an unhandled rejection, and `error` says what happened.
   const save: UpdateFn = useCallback((patch) => update(patch).catch(() => {}), [update])
 
-  // Gated on `open` because this component is mounted for the whole session
-  // (it renders null when closed), and an unconditional effect here would turn
-  // a Settings-only lookup into an extra IPC call at app startup.
+  // Gated on `open` because this component stays mounted from its first open
+  // (it renders null when closed), and an unconditional effect here would make
+  // Settings-only lookups while the dialog is shut.
   //
   // Through `readOr` rather than a bare `.catch()`: with no Wails bridge the
   // binding throws synchronously instead of rejecting, and the throw took the
