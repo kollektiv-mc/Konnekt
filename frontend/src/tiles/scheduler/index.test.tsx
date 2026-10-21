@@ -319,14 +319,18 @@ describe('the scheduler editor warns about a stop', () => {
     await waitFor(() => expect(warningButton()).not.toBeNull())
     // The icon and the count, the words only for a screen reader.
     expect(warningButton()?.textContent).toBe('1')
-    expect(toasts()).toEqual([
-      expect.objectContaining({
-        category: 'warnings',
-        tone: 'warn',
-        title: 'Scheduler warning',
-        text: RCON_WARNING,
-      }),
-    ])
+    // The bubble is raised from an effect, which can run after the button is
+    // already in the DOM, so it is waited for rather than read at once.
+    await waitFor(() =>
+      expect(toasts()).toEqual([
+        expect.objectContaining({
+          category: 'warnings',
+          tone: 'warn',
+          title: 'Scheduler warning',
+          text: RCON_WARNING,
+        }),
+      ]),
+    )
     expect(App.GetScheduleGraphWarnings).toHaveBeenCalledWith('alpha', expect.anything())
     // Never a gate: Save is still there and enabled.
     expect((screen.getByRole('button', { name: 'save' }) as HTMLButtonElement).disabled).toBe(false)

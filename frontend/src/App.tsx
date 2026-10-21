@@ -70,6 +70,11 @@ function App() {
   const installOpen = useInstallStore((s) => s.open)
   const loaderDialogOpen = useLoaderStore((s) => s.dialogOpen)
   const hasToasts = useNotificationsStore((s) => s.toasts.length > 0)
+  // Fetched with the first bubble and kept mounted from then on: the last
+  // bubble's exit animation runs after the store has let it go, so unmounting
+  // the layer with an empty store would cut it off.
+  const [toastLayer, setToastLayer] = useState(false)
+  if (hasToasts && !toastLayer) setToastLayer(true)
   // The server whose eula.txt needs accepting, or null. A string rather than
   // a flag because the prompt is for the server that tripped it, which is not
   // always the selected one: a schedule can start another server (#236).
@@ -767,7 +772,7 @@ function App() {
       )}
       {installOpen && <ServerInstallModal />}
       {loaderDialogOpen && <LoaderUpdateDialog />}
-      {hasToasts && (
+      {toastLayer && (
         <Suspense fallback={null}>
           <Toasts />
         </Suspense>

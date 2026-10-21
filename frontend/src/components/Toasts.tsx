@@ -113,7 +113,12 @@ export function Toasts() {
   return (
     <section
       aria-label="Notifications"
-      className="z-toast pointer-events-none fixed right-3 bottom-3 flex max-h-[calc(100vh_-_4rem)] w-96 max-w-[calc(100vw_-_1.5rem)] flex-col gap-2 overflow-y-auto"
+      // Flush with the window's right edge, padded off it, and clipped across:
+      // a card sliding in from past that edge would otherwise overflow the
+      // column sideways, and the horizontal scrollbar that brings lifted the
+      // card for the length of the slide, so it dropped a pixel or two on
+      // landing.
+      className="z-toast pointer-events-none fixed right-0 bottom-3 box-content flex max-h-[calc(100vh_-_4rem)] w-96 max-w-[calc(100vw_-_1.5rem)] flex-col gap-2 overflow-x-hidden overflow-y-auto pr-3"
     >
       {toasts.length > 1 && (
         <div className="pointer-events-auto flex justify-end">

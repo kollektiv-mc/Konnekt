@@ -90,6 +90,11 @@ describe('Toasts', () => {
         .showToast({ category: 'warnings', tone: 'warn', title: 'Low TPS', text: 'TPS 12' }),
     )
     expect(screen.getByRole('status').className).toContain('toast-in')
+    // Clipped sideways, so the slide brings no horizontal scrollbar that lifts
+    // the card until it lands.
+    expect(screen.getByRole('region', { name: 'Notifications' }).className).toContain(
+      'overflow-x-hidden',
+    )
   })
 
   it('removes a bubble at once with reduced motion', () => {
