@@ -102,49 +102,103 @@
          and supplies its label. Only this page carries them. -->
     <header class="hero section-full" id="top" data-nav="Top">
       <div class="hero-inner">
-        <!-- The same pill the download page wears over its own title, filled
-             from the same release by the same helper, so the front page cannot
-             claim a version the download page disagrees with. It says
-             "checking latest…" until GitHub answers and stays on that if it
-             never does. -->
-        <span
-          class="version-pill hero-version hero-fade"
-          id="hero-version"
-          style="--fade-delay: 120ms"
-          ><span class="dot"></span> checking latest…</span
-        >
-        <h1>
-          <span class="hero-lead">
-            <span class="hw" style="--i: 0">Run</span>
-            <span class="hw" style="--i: 1">your</span>
-            <span class="hw" style="--i: 2">server</span>
-            <span class="hw" style="--i: 3">like</span>
-          </span>
-          <span class="accent hero-mission">mission control.</span>
-        </h1>
-        <p class="hero-fade" style="--fade-delay: 900ms">
-          Console, scheduling, worlds and backups in one local-first desktop app.
-        </p>
-        <div class="hero-actions hero-fade" style="--fade-delay: 1020ms">
-          <a class="btn btn-primary" href="/download.html">Download Konnekt</a>
-          <!-- The real dashboard, built for a browser and backed by fixtures:
-               demo/ in the repository, published by .github/workflows/demo.yml
-               to its own Pages project. A new tab, because it is an app of its
-               own with its own scroll and keyboard, not a page of this site. -->
-          <a
-            class="btn btn-secondary"
-            href="https://konnekt-demo.pages.dev/"
-            target="_blank"
-            rel="noopener"
-            >Try the demo</a
+        <div class="hero-copy">
+          <!-- The same pill the download page wears over its own title, filled
+               from the same release by the same helper, so the front page cannot
+               claim a version the download page disagrees with. It says
+               "checking latest…" until GitHub answers and stays on that if it
+               never does. -->
+          <span
+            class="version-pill hero-version hero-fade"
+            id="hero-version"
+            style="--fade-delay: 120ms"
+            ><span class="dot"></span> checking latest…</span
           >
-          <a
-            class="btn btn-secondary"
-            href="https://github.com/kollektiv-mc/Konnekt"
-            target="_blank"
-            rel="noopener"
-            >View on GitHub</a
-          >
+          <h1>
+            <span class="hero-lead">
+              <span class="hw" style="--i: 0">Your</span>
+              <span class="hw" style="--i: 1">Minecraft</span>
+              <span class="hw" style="--i: 2">server,</span>
+            </span>
+            <span class="accent hero-mission">in one window.</span>
+          </h1>
+          <p class="hero-fade" style="--fade-delay: 900ms">
+            Console, scheduling, worlds and backups in a local-first desktop app.
+          </p>
+          <div class="hero-actions hero-fade" style="--fade-delay: 1020ms">
+            <a class="btn btn-primary" href="/download.html">Download Konnekt</a>
+            <!-- The real dashboard, built for a browser and backed by fixtures:
+                 demo/ in the repository, published by .github/workflows/demo.yml
+                 to its own Pages project. A new tab, because it is an app of its
+                 own with its own scroll and keyboard, not a page of this site. -->
+            <a
+              class="btn btn-secondary"
+              href="https://konnekt-demo.pages.dev/"
+              target="_blank"
+              rel="noopener"
+              >Try the demo</a
+            >
+            <a
+              class="btn btn-secondary"
+              href="https://github.com/kollektiv-mc/Konnekt"
+              target="_blank"
+              rel="noopener"
+              >View on GitHub</a
+            >
+          </div>
+        </div>
+        <!-- Three servers in orbit around one block, and the console of the
+             first. Decoration, so hidden from assistive tech: the copy beside
+             it already says what the app is. The rings turn in CSS (.orbit-*)
+             and stop under reduced motion. -->
+        <div class="hero-visual hero-fade" style="--fade-delay: 600ms" aria-hidden="true">
+          <svg class="orbit" viewBox="0 0 400 360">
+            <g class="orbit-ring orbit-ring-a">
+              <circle cx="200" cy="180" r="168" />
+            </g>
+            <g class="orbit-ring orbit-ring-b">
+              <circle cx="200" cy="180" r="122" />
+            </g>
+            <circle class="orbit-ring-c" cx="200" cy="180" r="78" />
+            <g class="orbit-cube">
+              <path d="M200 138 L240 161 L200 184 L160 161 Z" />
+              <path d="M160 161 L160 207 L200 230 L200 184" />
+              <path d="M240 161 L240 207 L200 230" />
+            </g>
+            <g class="orbit-mark">
+              <path d="M82 52 v14 M75 59 h14" />
+              <path d="M318 240 v14 M311 247 h14" />
+              <path d="M120 302 v14 M113 309 h14" />
+            </g>
+            <g class="orbit-label">
+              <text x="96" y="50">survival :25565</text>
+              <text class="orbit-sub" x="96" y="64">19.9 tps</text>
+              <text x="334" y="240">creative</text>
+              <text class="orbit-sub" x="334" y="254">:25566</text>
+              <text x="134" y="322">modded :25567</text>
+              <text class="orbit-sub" x="134" y="336">offline</text>
+            </g>
+          </svg>
+          <div class="hero-console">
+            <div class="hero-console-dim">[14:02:11] Starting minecraft server version 1.21.1</div>
+            <div>[14:02:17] Done (6.129s)! For help, type "help"</div>
+            <div>[14:03:40] Frangfurd joined the game</div>
+            <div class="hero-console-prompt"><span class="hero-caret"></span>&gt; save-all</div>
+          </div>
+        </div>
+        <!-- What it runs, as a row under both columns. It used to be a row of
+             pills in About, under the screenshot; up here it answers the first
+             question a server owner has before they scroll. -->
+        <div class="hero-works hero-fade" style="--fade-delay: 1140ms">
+          <span class="hero-works-label">Works with</span>
+          <ul class="hero-works-list">
+            <li>Vanilla</li>
+            <li>Paper</li>
+            <li>Spigot</li>
+            <li>Bukkit</li>
+            <li>Fabric</li>
+            <li>NeoForge</li>
+          </ul>
         </div>
       </div>
     </header>
@@ -156,7 +210,7 @@
              page a tile stops being legible as one. -->
         <div class="about-stack">
           <div class="section-head reveal">
-            <span class="eyebrow">[i] about</span>
+            <span class="eyebrow"><span class="eyebrow-n">01</span> About</span>
             <h2>Everything in one window</h2>
           </div>
           <figure class="about-shot reveal" style="--reveal-delay: 60ms">
@@ -190,28 +244,12 @@
               rather than a cron line.
             </p>
           </div>
-          <!-- Two facts, each a label over a row of tags and nothing else. They were
-               cards, which put a bordered box around six words and had them
-               competing with the feature grid one scroll below for the same kind of
-               attention. The alpha status they used to sit beside is already stated
-               by the footer badge and the disclaimer above it. -->
+          <!-- A label over a row of tags and nothing else. The servers it runs
+               used to sit here too; they are the hero's "Works with" row now. -->
           <dl class="about-facts">
             <div class="about-fact reveal" style="--reveal-delay: 180ms">
-              <dt>Servers</dt>
-              <dd class="fact-pills">
-                <span class="pill">Vanilla</span>
-                <span class="pill">Paper</span>
-                <span class="pill">Spigot</span>
-                <span class="pill">Bukkit</span>
-                <span class="pill">Fabric</span>
-                <span class="pill">NeoForge</span>
-              </dd>
-            </div>
-            <div class="about-fact reveal" style="--reveal-delay: 240ms">
               <dt>Platforms</dt>
-              <!-- Narrower than the servers' box so these break 2/1; see
-                   --pills-w in styles.css. -->
-              <dd class="fact-pills" style="--pills-w: 150px">
+              <dd class="fact-pills">
                 <span class="pill">Windows</span>
                 <span class="pill">Linux</span>
                 <span class="pill">macOS</span>
@@ -225,7 +263,7 @@
     <section class="section-full" id="features" data-nav="Features">
       <div class="container">
         <div class="section-head reveal">
-          <span class="eyebrow">&gt;_ features</span>
+          <span class="eyebrow"><span class="eyebrow-n">02</span> Features</span>
           <h2>What's inside</h2>
           <p>The tools Konnekt gives you to run your servers.</p>
         </div>
@@ -254,7 +292,8 @@
               aria-controls="showcase-panel-dashboard"
               data-scene="dashboard"
             >
-              Tile dashboard</button
+              <span class="showcase-n" aria-hidden="true">01</span
+              ><span class="showcase-name">Tile dashboard</span></button
             ><button
               class="showcase-tab"
               role="tab"
@@ -265,7 +304,8 @@
               tabindex="-1"
               data-scene="console"
             >
-              Live console</button
+              <span class="showcase-n" aria-hidden="true">02</span
+              ><span class="showcase-name">Live console</span></button
             ><button
               class="showcase-tab"
               role="tab"
@@ -276,7 +316,8 @@
               tabindex="-1"
               data-scene="players"
             >
-              Players</button
+              <span class="showcase-n" aria-hidden="true">03</span
+              ><span class="showcase-name">Players</span></button
             ><button
               class="showcase-tab"
               role="tab"
@@ -287,7 +328,8 @@
               tabindex="-1"
               data-scene="performance"
             >
-              Performance</button
+              <span class="showcase-n" aria-hidden="true">04</span
+              ><span class="showcase-name">Performance</span></button
             ><button
               class="showcase-tab"
               role="tab"
@@ -298,7 +340,8 @@
               tabindex="-1"
               data-scene="worlds"
             >
-              Worlds</button
+              <span class="showcase-n" aria-hidden="true">05</span
+              ><span class="showcase-name">Worlds</span></button
             ><button
               class="showcase-tab"
               role="tab"
@@ -309,7 +352,8 @@
               tabindex="-1"
               data-scene="backups"
             >
-              Backups</button
+              <span class="showcase-n" aria-hidden="true">06</span
+              ><span class="showcase-name">Backups</span></button
             ><button
               class="showcase-tab"
               role="tab"
@@ -320,7 +364,8 @@
               tabindex="-1"
               data-scene="config"
             >
-              Config editor</button
+              <span class="showcase-n" aria-hidden="true">07</span
+              ><span class="showcase-name">Config editor</span></button
             ><button
               class="showcase-tab"
               role="tab"
@@ -331,7 +376,8 @@
               tabindex="-1"
               data-scene="mods"
             >
-              Mods &amp; plugins</button
+              <span class="showcase-n" aria-hidden="true">08</span
+              ><span class="showcase-name">Mods &amp; plugins</span></button
             ><button
               class="showcase-tab"
               role="tab"
@@ -342,219 +388,228 @@
               tabindex="-1"
               data-scene="servers"
             >
-              Multi-server
+              <span class="showcase-n" aria-hidden="true">09</span
+              ><span class="showcase-name">Multi-server</span>
             </button>
           </div>
-          <figure class="showcase-media reveal" style="--reveal-delay: 80ms">
-            <!-- Muted and inline is what every browser allows to autoplay
+          <!-- The picked feature: its clip and its three points. On a wide
+               screen the tabs above are a row of strips and this sits over the
+               picked one, which main.js marks with --sel; see .showcase-stage. -->
+          <div class="showcase-stage">
+            <figure class="showcase-media reveal" style="--reveal-delay: 80ms">
+              <!-- Muted and inline is what every browser allows to autoplay
                  (main.js only plays it while it is on screen); no controls,
                  because the tabs are the controls and the demo is the thing
                  to interact with. The first feature's sources are here so the
                  poster shows without JS; the rest are built from data-demo. -->
-            <video
-              class="showcase-video"
-              muted
-              playsinline
-              preload="none"
-              poster="https://konnekt-demo.pages.dev/scenes/dashboard.webp"
-              aria-label="Tile dashboard, in action"
+              <video
+                class="showcase-video"
+                muted
+                playsinline
+                preload="none"
+                poster="https://konnekt-demo.pages.dev/scenes/dashboard.webp"
+                aria-label="Tile dashboard, in action"
+              >
+                <source
+                  src="https://konnekt-demo.pages.dev/scenes/dashboard.webm"
+                  type="video/webm"
+                />
+                <source
+                  src="https://konnekt-demo.pages.dev/scenes/dashboard.mp4"
+                  type="video/mp4"
+                />
+              </video>
+              <a
+                class="btn btn-secondary btn-sm showcase-open"
+                href="https://konnekt-demo.pages.dev/"
+                target="_blank"
+                rel="noopener"
+                >Open in the demo</a
+              >
+            </figure>
+            <ul
+              class="showcase-points reveal"
+              style="--reveal-delay: 140ms"
+              role="tabpanel"
+              id="showcase-panel-dashboard"
+              aria-labelledby="showcase-tab-dashboard"
             >
-              <source
-                src="https://konnekt-demo.pages.dev/scenes/dashboard.webm"
-                type="video/webm"
-              />
-              <source src="https://konnekt-demo.pages.dev/scenes/dashboard.mp4" type="video/mp4" />
-            </video>
-            <a
-              class="btn btn-secondary btn-sm showcase-open"
-              href="https://konnekt-demo.pages.dev/"
-              target="_blank"
-              rel="noopener"
-              >Open in the demo</a
+              <li>
+                <h3>Drag, resize and snap every tile</h3>
+                <p>Pick a tile up by its title bar and the rest of the grid makes room.</p>
+              </li>
+              <li>
+                <h3>Crate the ones you are not using</h3>
+                <p>Close a tile and it waits in the sidebar until you want it back.</p>
+              </li>
+              <li>
+                <h3>Save and switch layout presets</h3>
+                <p>Console focus, compact, essentials, or your own, one click apart.</p>
+              </li>
+            </ul>
+            <ul
+              class="showcase-points"
+              role="tabpanel"
+              id="showcase-panel-console"
+              aria-labelledby="showcase-tab-console"
+              hidden
             >
-          </figure>
-          <ul
-            class="showcase-points reveal"
-            style="--reveal-delay: 140ms"
-            role="tabpanel"
-            id="showcase-panel-dashboard"
-            aria-labelledby="showcase-tab-dashboard"
-          >
-            <li>
-              <h3>Drag, resize and snap every tile</h3>
-              <p>Pick a tile up by its title bar and the rest of the grid makes room.</p>
-            </li>
-            <li>
-              <h3>Crate the ones you are not using</h3>
-              <p>Close a tile and it waits in the sidebar until you want it back.</p>
-            </li>
-            <li>
-              <h3>Save and switch layout presets</h3>
-              <p>Console focus, compact, essentials, or your own, one click apart.</p>
-            </li>
-          </ul>
-          <ul
-            class="showcase-points"
-            role="tabpanel"
-            id="showcase-panel-console"
-            aria-labelledby="showcase-tab-console"
-            hidden
-          >
-            <li>
-              <h3>Live log streaming</h3>
-              <p>
-                Every line the server prints, as it prints it, with Konnekt's own narration boxed.
-              </p>
-            </li>
-            <li>
-              <h3>Send commands inline</h3>
-              <p>Type at the prompt and the reply lands in the same stream.</p>
-            </li>
-            <li>
-              <h3>Filter and search output</h3>
-              <p>Narrow the scrollback to one kind of line, or to a word.</p>
-            </li>
-          </ul>
-          <ul
-            class="showcase-points"
-            role="tabpanel"
-            id="showcase-panel-players"
-            aria-labelledby="showcase-tab-players"
-            hidden
-          >
-            <li>
-              <h3>See who is online</h3>
-              <p>A card per player, lit while they are on.</p>
-            </li>
-            <li>
-              <h3>Kick or ban with a reason</h3>
-              <p>The reason goes with the command, and the roster follows when they go.</p>
-            </li>
-            <li>
-              <h3>Op, whitelist and ban state</h3>
-              <p>Each player's standing, in one panel.</p>
-            </li>
-          </ul>
-          <ul
-            class="showcase-points"
-            role="tabpanel"
-            id="showcase-panel-performance"
-            aria-labelledby="showcase-tab-performance"
-            hidden
-          >
-            <li>
-              <h3>Live TPS, CPU and memory</h3>
-              <p>Read straight off the process and the tick, nothing installed on the server.</p>
-            </li>
-            <li>
-              <h3>An hour of charted history</h3>
-              <p>A sample every ten seconds, kept for an hour, so a dip has a shape.</p>
-            </li>
-            <li>
-              <h3>No plugins to install</h3>
-              <p>Konnekt watches the process it started; the server never knows.</p>
-            </li>
-          </ul>
-          <ul
-            class="showcase-points"
-            role="tabpanel"
-            id="showcase-panel-worlds"
-            aria-labelledby="showcase-tab-worlds"
-            hidden
-          >
-            <li>
-              <h3>Each world as its own planet</h3>
-              <p>Its nether and end as moons, sized by what they take on disk.</p>
-            </li>
-            <li>
-              <h3>Seed, size and version</h3>
-              <p>Read from the level data, not typed in.</p>
-            </li>
-            <li>
-              <h3>Switch, rename or duplicate</h3>
-              <p>Change the active world without opening server.properties.</p>
-            </li>
-          </ul>
-          <ul
-            class="showcase-points"
-            role="tabpanel"
-            id="showcase-panel-backups"
-            aria-labelledby="showcase-tab-backups"
-            hidden
-          >
-            <li>
-              <h3>Manual or scheduled</h3>
-              <p>Back up now, or let a schedule do it with world saves paused.</p>
-            </li>
-            <li>
-              <h3>Browse restore points</h3>
-              <p>A carousel of every backup, tagged and searchable.</p>
-            </li>
-            <li>
-              <h3>Roll back in two clicks</h3>
-              <p>Restore with the server stopped, and that backup is the world.</p>
-            </li>
-          </ul>
-          <ul
-            class="showcase-points"
-            role="tabpanel"
-            id="showcase-panel-config"
-            aria-labelledby="showcase-tab-config"
-            hidden
-          >
-            <li>
-              <h3>server.properties as a form</h3>
-              <p>Every setting under a name you can read, not a key you have to know.</p>
-            </li>
-            <li>
-              <h3>Syntax-highlighted raw mode</h3>
-              <p>The file itself, in an editor, when the form is not enough.</p>
-            </li>
-            <li>
-              <h3>YAML, JSON and TOML aware</h3>
-              <p>Plugin and mod configs open in the same place.</p>
-            </li>
-          </ul>
-          <ul
-            class="showcase-points"
-            role="tabpanel"
-            id="showcase-panel-mods"
-            aria-labelledby="showcase-tab-mods"
-            hidden
-          >
-            <li>
-              <h3>Install from Modrinth</h3>
-              <p>Search, pick a version, and it lands in the right folder.</p>
-            </li>
-            <li>
-              <h3>Dependencies resolve automatically</h3>
-              <p>What a plugin needs comes along with it.</p>
-            </li>
-            <li>
-              <h3>Changelogs read inline</h3>
-              <p>See what a version changed before you take it.</p>
-            </li>
-          </ul>
-          <ul
-            class="showcase-points"
-            role="tabpanel"
-            id="showcase-panel-servers"
-            aria-labelledby="showcase-tab-servers"
-            hidden
-          >
-            <li>
-              <h3>All your servers in one app</h3>
-              <p>Survival, creative, a test server: one list in the sidebar.</p>
-            </li>
-            <li>
-              <h3>Own jar, folder and JVM args</h3>
-              <p>Each server keeps its own launch settings.</p>
-            </li>
-            <li>
-              <h3>Switch with one click</h3>
-              <p>The whole dashboard follows the server you pick.</p>
-            </li>
-          </ul>
+              <li>
+                <h3>Live log streaming</h3>
+                <p>
+                  Every line the server prints, as it prints it, with Konnekt's own narration boxed.
+                </p>
+              </li>
+              <li>
+                <h3>Send commands inline</h3>
+                <p>Type at the prompt and the reply lands in the same stream.</p>
+              </li>
+              <li>
+                <h3>Filter and search output</h3>
+                <p>Narrow the scrollback to one kind of line, or to a word.</p>
+              </li>
+            </ul>
+            <ul
+              class="showcase-points"
+              role="tabpanel"
+              id="showcase-panel-players"
+              aria-labelledby="showcase-tab-players"
+              hidden
+            >
+              <li>
+                <h3>See who is online</h3>
+                <p>A card per player, lit while they are on.</p>
+              </li>
+              <li>
+                <h3>Kick or ban with a reason</h3>
+                <p>The reason goes with the command, and the roster follows when they go.</p>
+              </li>
+              <li>
+                <h3>Op, whitelist and ban state</h3>
+                <p>Each player's standing, in one panel.</p>
+              </li>
+            </ul>
+            <ul
+              class="showcase-points"
+              role="tabpanel"
+              id="showcase-panel-performance"
+              aria-labelledby="showcase-tab-performance"
+              hidden
+            >
+              <li>
+                <h3>Live TPS, CPU and memory</h3>
+                <p>Read straight off the process and the tick, nothing installed on the server.</p>
+              </li>
+              <li>
+                <h3>An hour of charted history</h3>
+                <p>A sample every ten seconds, kept for an hour, so a dip has a shape.</p>
+              </li>
+              <li>
+                <h3>No plugins to install</h3>
+                <p>Konnekt watches the process it started; the server never knows.</p>
+              </li>
+            </ul>
+            <ul
+              class="showcase-points"
+              role="tabpanel"
+              id="showcase-panel-worlds"
+              aria-labelledby="showcase-tab-worlds"
+              hidden
+            >
+              <li>
+                <h3>Each world as its own planet</h3>
+                <p>Its nether and end as moons, sized by what they take on disk.</p>
+              </li>
+              <li>
+                <h3>Seed, size and version</h3>
+                <p>Read from the level data, not typed in.</p>
+              </li>
+              <li>
+                <h3>Switch, rename or duplicate</h3>
+                <p>Change the active world without opening server.properties.</p>
+              </li>
+            </ul>
+            <ul
+              class="showcase-points"
+              role="tabpanel"
+              id="showcase-panel-backups"
+              aria-labelledby="showcase-tab-backups"
+              hidden
+            >
+              <li>
+                <h3>Manual or scheduled</h3>
+                <p>Back up now, or let a schedule do it with world saves paused.</p>
+              </li>
+              <li>
+                <h3>Browse restore points</h3>
+                <p>A carousel of every backup, tagged and searchable.</p>
+              </li>
+              <li>
+                <h3>Roll back in two clicks</h3>
+                <p>Restore with the server stopped, and that backup is the world.</p>
+              </li>
+            </ul>
+            <ul
+              class="showcase-points"
+              role="tabpanel"
+              id="showcase-panel-config"
+              aria-labelledby="showcase-tab-config"
+              hidden
+            >
+              <li>
+                <h3>server.properties as a form</h3>
+                <p>Every setting under a name you can read, not a key you have to know.</p>
+              </li>
+              <li>
+                <h3>Syntax-highlighted raw mode</h3>
+                <p>The file itself, in an editor, when the form is not enough.</p>
+              </li>
+              <li>
+                <h3>YAML, JSON and TOML aware</h3>
+                <p>Plugin and mod configs open in the same place.</p>
+              </li>
+            </ul>
+            <ul
+              class="showcase-points"
+              role="tabpanel"
+              id="showcase-panel-mods"
+              aria-labelledby="showcase-tab-mods"
+              hidden
+            >
+              <li>
+                <h3>Install from Modrinth</h3>
+                <p>Search, pick a version, and it lands in the right folder.</p>
+              </li>
+              <li>
+                <h3>Dependencies resolve automatically</h3>
+                <p>What a plugin needs comes along with it.</p>
+              </li>
+              <li>
+                <h3>Changelogs read inline</h3>
+                <p>See what a version changed before you take it.</p>
+              </li>
+            </ul>
+            <ul
+              class="showcase-points"
+              role="tabpanel"
+              id="showcase-panel-servers"
+              aria-labelledby="showcase-tab-servers"
+              hidden
+            >
+              <li>
+                <h3>All your servers in one app</h3>
+                <p>Survival, creative, a test server: one list in the sidebar.</p>
+              </li>
+              <li>
+                <h3>Own jar, folder and JVM args</h3>
+                <p>Each server keeps its own launch settings.</p>
+              </li>
+              <li>
+                <h3>Switch with one click</h3>
+                <p>The whole dashboard follows the server you pick.</p>
+              </li>
+            </ul>
+          </div>
         </div>
       </div>
     </section>
@@ -563,7 +618,7 @@
       <div class="container">
         <div class="spotlight">
           <div class="section-head reveal">
-            <span class="eyebrow">() scheduler</span>
+            <span class="eyebrow"><span class="eyebrow-n">03</span> Scheduler</span>
             <h2>Automate with a graph</h2>
             <p>Wire triggers, conditions and commands on a canvas.</p>
           </div>
@@ -875,7 +930,7 @@
     <section class="section-full" id="privacy" data-nav="Local-first">
       <div class="container">
         <div class="section-head reveal">
-          <span class="eyebrow">[#] local-first</span>
+          <span class="eyebrow"><span class="eyebrow-n">04</span> Local-first</span>
           <h2>Your server, your machine</h2>
           <p>A desktop app, not a hosted panel. No account, nothing to sign up for.</p>
         </div>
@@ -932,9 +987,9 @@
                Absolutely positioned, so it is out of flow and never becomes a
                flex item of the panel. -->
           <span class="cta-glow" aria-hidden="true"></span>
-          <span class="eyebrow">[&gt;] download</span>
+          <span class="eyebrow"><span class="eyebrow-n">05</span> Download</span>
           <h2>Get <span class="accent">Konnekt</span></h2>
-          <p>Free and open source.</p>
+          <p>Free and open source, for Windows and Linux.</p>
           <div class="cta-actions">
             <a class="btn btn-primary" href="/download.html">Download Konnekt</a>
             <a class="btn btn-secondary" href="/changelog.html">Changelog</a>
@@ -953,22 +1008,48 @@
             <a href="/docs.html#disclaimer">Full statement</a>.
           </p>
         </div>
-        <div class="footer-inner">
-          <div class="footer-left">
-            <span class="wordmark" style="font-size: 15px">Konnekt</span>
-            <span class="brand-tag">ALPHA</span>
+        <!-- A brand column and three of links, each column a heading over its
+             links, then the copyright under a rule. -->
+        <div class="footer-grid">
+          <div class="footer-brand">
+            <span class="footer-left">
+              <a href="/index.html" class="wordmark">Konnekt</a>
+              <span class="brand-tag">ALPHA</span>
+            </span>
+            <p>A desktop dashboard for the Minecraft servers you host.</p>
           </div>
-          <div class="footer-links">
-            <a href="https://github.com/kollektiv-mc/Konnekt" target="_blank" rel="noopener"
-              >GitHub</a
+          <nav class="footer-col" aria-label="Product">
+            <span class="footer-head">Product</span>
+            <a href="/download.html">Download</a>
+            <a href="https://konnekt-demo.pages.dev/" target="_blank" rel="noopener"
+              >Try the demo</a
             >
+            <a href="/changelog.html">Changelog</a>
+          </nav>
+          <nav class="footer-col" aria-label="Learn">
+            <span class="footer-head">Learn</span>
             <a href="/index.html#about">About</a>
             <a href="/index.html#features">Features</a>
             <a href="/docs.html">Docs</a>
             <a href="/roadmap.html">Roadmap</a>
-            <a href="/download.html">Download</a>
-            <a href="/changelog.html">Changelog</a>
-          </div>
+          </nav>
+          <nav class="footer-col" aria-label="Source">
+            <span class="footer-head">Source</span>
+            <a href="https://github.com/kollektiv-mc/Konnekt" target="_blank" rel="noopener"
+              >GitHub</a
+            >
+            <a href="https://github.com/kollektiv-mc/Konnekt/issues" target="_blank" rel="noopener"
+              >Issues</a
+            >
+            <a
+              href="https://github.com/kollektiv-mc/Konnekt/blob/main/LICENSE"
+              target="_blank"
+              rel="noopener"
+              >Licence, CC0</a
+            >
+          </nav>
+        </div>
+        <div class="footer-base">
           <span class="footer-copy">&copy; 2026 Konnekt</span>
         </div>
       </div>

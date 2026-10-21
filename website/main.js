@@ -145,7 +145,14 @@
   // keyframes end on `none` for this reason too; this is the guarantee.
   var hero = document.querySelector('.hero')
   if (hero) {
-    var heroAnims = hero.getAnimations ? hero.getAnimations({ subtree: true }) : []
+    // Only the ones that end: the orbit's rings and the console caret loop
+    // forever, and waiting on them would hold the teardown off for good.
+    var heroAnims = (hero.getAnimations ? hero.getAnimations({ subtree: true }) : []).filter(
+      function (a) {
+        var timing = a.effect && a.effect.getComputedTiming ? a.effect.getComputedTiming() : null
+        return !timing || timing.endTime !== Infinity
+      },
+    )
     if (heroAnims.length) {
       Promise.allSettled(
         heroAnims.map(function (a) {
@@ -526,6 +533,7 @@
     var media = showcase.querySelector('.showcase-media')
     var video = showcase.querySelector('video')
     var openLink = showcase.querySelector('.showcase-open')
+    var stage = showcase.querySelector('.showcase-stage')
     var current = Math.max(
       0,
       tabs.findIndex(function (t) {
@@ -564,13 +572,22 @@
         panel.hidden = panel.id !== tab.getAttribute('aria-controls')
       })
       if (openLink) openLink.href = DEMO + '/' + (scene.tile ? '?tile=' + scene.tile : '')
+      // Where the stage sits over the strips (styles.css, .showcase-stage),
+      // and its slide in from the side, restarted on every change.
+      showcase.style.setProperty('--sel', String(current))
+      if (stage && !reduceMotion) {
+        stage.classList.remove('is-entering')
+        void stage.offsetWidth
+        stage.classList.add('is-entering')
+      }
 
       if (video) {
         // Sources are rebuilt rather than swapped in place: a <video> only
         // re-evaluates its <source> children on load().
         video.pause()
         video.poster = DEMO + '/scenes/' + scene.id + '.webp'
-        video.setAttribute('aria-label', tab.textContent + ', in action')
+        var name = tab.querySelector('.showcase-name') || tab
+        video.setAttribute('aria-label', name.textContent + ', in action')
         while (video.firstChild) video.removeChild(video.firstChild)
         ;[
           ['webm', 'video/webm'],

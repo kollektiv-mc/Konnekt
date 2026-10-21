@@ -116,15 +116,23 @@ a {
   padding: 0 24px;
 }
 
+/* Grey and plain: a section's number and its name. The coloured code glyphs
+   these used to carry ([i], >_, ()) read as decoration rather than as labels. */
 .eyebrow {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 10px;
   font-family: var(--font-title);
   font-size: 12px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--accent);
+  color: var(--text-secondary);
+}
+
+.eyebrow-n {
+  font-family: var(--font-mono);
+  letter-spacing: 0;
+  color: var(--text-muted);
 }
 
 .sr-only {
@@ -1075,35 +1083,222 @@ a {
   overflow: hidden;
 }
 
+/* Copy on the left, the orbit and its console on the right, and the servers
+   it runs as one row under both. Below 961px the columns stack, copy first. */
 .hero-inner {
+  width: 100%;
   max-width: var(--max-width);
   margin: 0 auto;
   position: relative;
   z-index: 1;
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+  align-items: center;
+  gap: 40px 56px;
+}
+
+.hero-copy {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  text-align: center;
+  align-items: flex-start;
   gap: 22px;
 }
 
 .hero h1 {
   font-family: var(--font-display);
   font-weight: 900;
-  font-size: clamp(40px, 7vw, 76px);
+  font-size: clamp(40px, 6vw, 72px);
   line-height: 1.03;
   letter-spacing: -0.02em;
   margin: 0;
   color: var(--text-primary);
 }
 
+/* The accent colour without the glow it used to carry: the green says this is
+   Konnekt, and the halo only said "slogan". */
 .hero h1 .accent {
   color: var(--accent);
-  text-shadow: 0 0 32px rgb(var(--accent-rgb) / 0.4);
+}
+
+.hero-visual {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 28px;
+}
+
+.orbit {
+  align-self: center;
+  width: 100%;
+  max-width: 340px;
+  height: auto;
+  overflow: visible;
+}
+
+.orbit-ring circle,
+.orbit-ring-c {
+  fill: none;
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+
+.orbit-ring-a circle {
+  stroke: var(--text-faint);
+  stroke-dasharray: 0 9;
+}
+
+.orbit-ring-b circle {
+  stroke: rgba(255, 255, 255, 0.18);
+  stroke-dasharray: 0 8;
+}
+
+.orbit-ring-c {
+  stroke: var(--border-hover);
+  stroke-dasharray: 0 7;
+}
+
+.orbit-ring {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: orbit-turn 90s linear infinite;
+}
+
+.orbit-ring-b {
+  animation-duration: 140s;
+  animation-direction: reverse;
+}
+
+@keyframes orbit-turn {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.orbit-cube {
+  fill: none;
+  stroke: var(--text-secondary);
+  stroke-width: 1.5;
+  stroke-dasharray: 2 4;
+}
+
+.orbit-mark {
+  stroke: var(--accent);
+  stroke-width: 1.5;
+}
+
+.orbit-label {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  fill: var(--text-secondary);
+}
+
+.orbit-label .orbit-sub {
+  fill: var(--text-muted);
+}
+
+/* The site's tile, holding four lines of a server starting. Mono at the
+   showcase tabs' size, so it reads as the app rather than as copy. */
+.hero-console {
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  line-height: 1.9;
+  color: var(--text-secondary);
+  background-color: var(--bg-elevated);
+  border: 0.5px solid var(--border-subtle);
+  border-radius: 12px;
+  padding: 16px 20px;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.5);
+  overflow-x: auto;
+  white-space: nowrap;
+}
+
+.hero-console-dim {
+  color: var(--text-muted);
+}
+
+.hero-console-prompt {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-top: 6px;
+  color: var(--text-primary);
+}
+
+.hero-caret {
+  width: 7px;
+  height: 14px;
+  background: var(--accent);
+  animation: hero-caret-blink 1.1s steps(1) infinite;
+}
+
+@keyframes hero-caret-blink {
+  50% {
+    opacity: 0;
+  }
+}
+
+/* A label cell and the six names, in one bordered strip across both columns. */
+.hero-works {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  border: 0.5px solid var(--border-subtle);
+  border-radius: 12px;
+  background: var(--bg-surface);
+}
+
+.hero-works-label {
+  display: flex;
+  align-items: center;
+  padding: 18px 24px;
+  border-right: 0.5px solid var(--border-subtle);
+  font-family: var(--font-title);
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.hero-works-list {
+  flex: 1 1 480px;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px 28px;
+  list-style: none;
+  margin: 0;
+  padding: 18px 24px;
+  font-family: var(--font-title);
+  font-size: 18px;
+  color: var(--text-secondary);
+}
+
+/* Stacked, the orbit would be a screen of its own between the buttons and
+   the console, so it goes and the console stays. */
+@media (max-width: 960px) {
+  .hero-inner {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .orbit {
+    display: none;
+  }
+
+  .hero-works-label {
+    border-right: 0;
+    border-bottom: 0.5px solid var(--border-subtle);
+    flex: 1 1 100%;
+  }
+
+  .hero-works-list {
+    justify-content: flex-start;
+  }
 }
 
 /* Intro: each lead word blurs/fades in with a little per-word variation,
-   then the mission-control line lands with more flare (blur, scale, glow). */
+   then the accent line lands with more flare (blur and scale). */
 .hero-lead {
   display: block;
 }
@@ -1160,7 +1355,6 @@ a {
     opacity: 0;
     filter: blur(22px);
     transform: translateY(22px) scale(0.9);
-    text-shadow: none;
   }
   65% {
     opacity: 1;
@@ -1171,14 +1365,11 @@ a {
     opacity: 1;
     filter: none;
     transform: none;
-    text-shadow: 0 0 32px rgb(var(--accent-rgb) / 0.4);
   }
 }
 
 /* Belt and braces for the above: once the intro has finished, drop the
-   animations entirely so nothing is left holding a layer. The accent glow
-   survives because `.hero h1 .accent` carries the same text-shadow as a
-   resting style, not just as the animation's last frame. */
+   animations entirely so nothing is left holding a layer. */
 .hero.intro-done .hw,
 .hero.intro-done .hero-mission,
 .hero.intro-done .hero-fade {
@@ -1188,18 +1379,17 @@ a {
   transform: none;
 }
 
-/* Measured, not guessed. At 17px Ranade the line is 637px whole, 390px up to
-   "backups in" and 428px once "one" joins it, so any measure in [390, 428)
-   breaks it after "in" and leaves "one local-first desktop app." whole on the
-   second line. 560px put "desktop app." alone down there. 408px is the middle
-   of that window; a wider render than measured costs an extra line rather than
-   a sideways scroll, which is why this is a measure and not a <br>. Retune it
-   if the sentence changes. */
+/* A measure, not a <br>: a wider render than expected costs an extra line
+   rather than a sideways scroll. */
 .hero p {
   font-size: 17px;
   color: var(--text-secondary);
   max-width: 408px;
   margin: 0;
+}
+
+.hero-version {
+  align-self: flex-start;
 }
 
 /* The pill sits above the title as the hero's first element, so it wants the
@@ -1257,7 +1447,6 @@ a {
   gap: 12px;
   margin-top: 10px;
   flex-wrap: wrap;
-  justify-content: center;
 }
 
 .hero-fade {
@@ -1292,11 +1481,14 @@ a {
   gap: 12px;
 }
 
+/* The hero's face at a section's size: bold enough that the head, not the
+   label over it, is what the eye lands on. */
 .section-head h2 {
-  font-family: var(--font-title);
-  font-weight: 500;
-  font-size: clamp(28px, 4vw, 38px);
-  letter-spacing: -0.01em;
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: clamp(32px, 4.4vw, 48px);
+  line-height: 1.05;
+  letter-spacing: -0.02em;
   margin: 0;
 }
 
@@ -1532,7 +1724,7 @@ a {
   font-size: 12px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--accent);
+  color: var(--text-muted);
 }
 
 .about-fact dd {
@@ -1832,6 +2024,153 @@ a {
   display: none;
 }
 
+/* Each tab's number, shown only as a strip (below). */
+.showcase-n {
+  display: none;
+}
+
+/* ── Feature showcase as an archive of strips ─────────────────────────── */
+/* Wide screens only, where the picked strip still has room for a clip. The nine tabs become nine bordered strips in one row,
+   each a number and a name set on its side, and the picked one widens to take
+   the rest of the row. The stage (the clip and its points) is not inside the
+   tab, because a tablist holds tabs and nothing else; it shares the tabs' grid
+   cell instead and sits over the picked strip's body, below its header.
+   Every strip but one is --strip wide, so the picked one starts at
+   --sel × --strip and the stage's offset is that and nothing measured. The
+   strips widen with a transition the stage cannot follow in step, so the stage
+   leaves rather than travels: it fades out, jumps, and slides back in from the
+   side once the strips have settled (.is-entering, from main.js). Narrower
+   than this the tabs stay the row of labels above, over the stage. */
+@media (min-width: 1240px) {
+  .showcase {
+    --strip: 56px;
+    --sel: 0;
+    display: grid;
+    width: min(1280px, calc(100vw - 96px));
+    margin-left: 50%;
+    translate: -50% 0;
+    border: 0.5px solid var(--border-subtle);
+    border-radius: 16px;
+    overflow: hidden;
+    background-color: var(--bg-elevated);
+    box-shadow: 0 24px 64px rgba(0, 0, 0, 0.5);
+  }
+
+  .showcase-tabs,
+  .showcase-stage {
+    grid-area: 1 / 1;
+  }
+
+  .showcase-tabs {
+    flex-wrap: nowrap;
+    justify-content: flex-start;
+    gap: 0;
+    margin: 0;
+  }
+
+  .showcase-tab {
+    flex: 0 0 var(--strip);
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 24px 0;
+    border: 0;
+    border-right: 0.5px solid var(--border-subtle);
+    border-radius: 0;
+    font-size: 12px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    white-space: nowrap;
+    overflow: hidden;
+    color: var(--text-secondary);
+    transition:
+      flex-grow 520ms var(--ease-standard),
+      color var(--duration-fast) var(--ease-standard),
+      background-color var(--duration-fast) var(--ease-standard);
+  }
+
+  .showcase-tab:last-child {
+    border-right: 0;
+  }
+
+  .showcase-n {
+    display: block;
+    color: var(--text-muted);
+    letter-spacing: 0;
+  }
+
+  .showcase-name {
+    writing-mode: vertical-rl;
+    rotate: 180deg;
+  }
+
+  .showcase-tab::after {
+    content: '+';
+    font-size: 18px;
+    line-height: 1;
+    color: var(--accent);
+  }
+
+  .showcase-tab[aria-selected='true'] {
+    flex-grow: 1;
+    flex-direction: row;
+    align-items: flex-start;
+    justify-content: flex-start;
+    gap: 14px;
+    padding: 22px 28px;
+    color: var(--text-primary);
+    background: transparent;
+    box-shadow: inset 0 2px 0 var(--accent);
+    cursor: default;
+  }
+
+  .showcase-tab[aria-selected='true'] .showcase-name {
+    writing-mode: horizontal-tb;
+    rotate: none;
+    font-family: var(--font-title);
+    font-size: 15px;
+    letter-spacing: 0.02em;
+  }
+
+  .showcase-tab[aria-selected='true']::after {
+    content: none;
+  }
+
+  .showcase-stage {
+    position: relative;
+    z-index: 1;
+    margin-left: calc(var(--sel) * var(--strip));
+    width: calc(100% - 8 * var(--strip));
+    padding: 64px 28px 28px;
+    /* Clicks on the stage's empty margins fall through to nothing: the strips
+       either side are outside it, and the one under it is already picked. */
+  }
+
+  .showcase-stage.is-entering {
+    animation: showcase-in 420ms var(--ease-standard) 360ms backwards;
+  }
+
+  .showcase-stage .showcase-media {
+    box-shadow: none;
+    border-radius: 12px;
+  }
+
+  .showcase-stage .showcase-points {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    margin-top: 18px;
+  }
+}
+
+@keyframes showcase-in {
+  from {
+    opacity: 0;
+    transform: translateX(28px);
+  }
+}
+
 /* ── Scheduler node-graph animation — static SVG, CSS-driven ──────────── */
 /* One 24s master cycle drives everything: the reel pans one frame every 6s
    (5s held, 1s gliding), and each frame's nodes and pulses are offset by that
@@ -2054,7 +2393,7 @@ a {
 .cta-panel h2 {
   font-family: var(--font-display);
   font-weight: 900;
-  font-size: clamp(30px, 4.5vw, 44px);
+  font-size: clamp(44px, 7vw, 84px);
   line-height: 1.05;
   letter-spacing: -0.02em;
   margin: 0;
@@ -2062,7 +2401,6 @@ a {
 
 .cta-panel h2 .accent {
   color: var(--accent);
-  text-shadow: 0 0 32px rgb(var(--accent-rgb) / 0.4);
 }
 
 .cta-panel p {
@@ -2170,9 +2508,9 @@ footer {
 
 /* Alpha / AI-built disclaimer, condensed from the README's "Fair warning".
    Sits above the footer row on every page. */
+/* The footer's full width, so its edges line up with the columns under it. */
 .disclaimer {
-  max-width: 720px;
-  margin: 0 auto calc(var(--section-y) * 0.5);
+  margin: 0 0 calc(var(--section-y) * 0.5);
   border: 0.5px solid rgb(var(--sun-rgb) / 0.28);
   background: rgb(var(--sun-rgb) / 0.05);
   border-radius: 12px;
@@ -2206,18 +2544,79 @@ footer {
   color: var(--text-secondary);
 }
 
-.footer-inner {
+/* Four columns on a wide screen: the brand takes the extra width, and each
+   link column is a heading over a stack of links. Two columns, then one, as
+   it narrows, without a media query. */
+.footer-grid {
+  display: grid;
+  grid-template-columns: minmax(220px, 1.6fr) repeat(3, minmax(140px, 1fr));
+  gap: 32px 40px;
+  padding-bottom: 32px;
+}
+
+.footer-brand {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 16px;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.footer-brand p {
+  margin: 0;
+  max-width: 32ch;
+  font-size: 13.5px;
+  line-height: 1.55;
+  color: var(--text-muted);
 }
 
 .footer-left {
   display: flex;
   align-items: center;
   gap: 12px;
+}
+
+.footer-col {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 13.5px;
+}
+
+.footer-head {
+  font-family: var(--font-title);
+  font-size: 11.5px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+}
+
+.footer-col a {
+  color: var(--text-secondary);
+  text-decoration: none;
+  transition: color var(--duration-fast) ease;
+}
+
+.footer-col a:hover {
+  color: var(--text-primary);
+}
+
+.footer-base {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding-top: 20px;
+  border-top: 0.5px solid var(--border-subtle);
+}
+
+@media (max-width: 860px) {
+  .footer-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .footer-brand {
+    grid-column: 1 / -1;
+  }
 }
 
 /* The alpha badge, worn by the wordmark in both the nav and the footer. */
@@ -2230,24 +2629,6 @@ footer {
   padding: 2px 8px;
   border-radius: 5px;
   letter-spacing: 0.05em;
-}
-
-.footer-links {
-  display: flex;
-  gap: 20px;
-  font-size: 13px;
-  color: var(--text-muted);
-  flex-wrap: wrap;
-}
-
-.footer-links a {
-  text-decoration: none;
-  color: inherit;
-  transition: color var(--duration-fast) ease;
-}
-
-.footer-links a:hover {
-  color: var(--text-primary);
 }
 
 .footer-copy {
@@ -2283,7 +2664,6 @@ footer {
 
 .subpage-head h1 .accent {
   color: var(--accent);
-  text-shadow: 0 0 32px rgb(var(--accent-rgb) / 0.4);
 }
 
 .subpage-head p {
@@ -5338,11 +5718,6 @@ button.dl-card:hover {
 }
 
 @media (max-width: 560px) {
-  .footer-inner {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-
   .download-primary {
     padding: 26px 20px;
   }
@@ -5468,7 +5843,9 @@ button.dl-card:hover {
 .reduce-motion .sf-reel,
 .reduce-motion .sf-node .sf-box,
 .reduce-motion .sf-pulse,
-.reduce-motion .cta-glow::before {
+.reduce-motion .cta-glow::before,
+.reduce-motion .orbit-ring,
+.reduce-motion .hero-caret {
   animation: none !important;
 }
 
