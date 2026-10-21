@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useLayoutEffect, useRef, useState } from 'react'
+import type { Ref } from 'react'
 import { useNotificationsStore } from '../stores/useNotificationsStore'
 import type { Toast, ToastTone } from '../stores/useNotificationsStore'
 import { Icon } from './ui/Icon'
@@ -18,16 +19,19 @@ function ToastCard({
   leaving,
   onDismiss,
   onLeft,
+  cardRef,
 }: {
   toast: Toast
   leaving: boolean
   onDismiss: () => void
   onLeft: () => void
+  cardRef: Ref<HTMLDivElement>
 }) {
   const tone = TONE[toast.tone]
   const icon = toast.category === 'update' ? CircleArrowUp : tone.icon
   return (
     <div
+      ref={cardRef}
       // An error interrupts; everything else waits its turn. A card on its way
       // out is already gone from the store, so it is hidden from assistive tech
       // and the pointer while it fades.
@@ -70,6 +74,25 @@ function reducedMotion(): boolean {
   return window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false
 }
 
+// The standard motion token, read where the browser resolves it so the glide
+// keeps time with the slide and the fade in style.css.
+function panelMotion(): KeyframeAnimationOptions {
+  const style = getComputedStyle(document.documentElement)
+  return {
+    duration: parseFloat(style.getPropertyValue('--duration-panel')) || 0,
+    easing: style.getPropertyValue('--ease-standard').trim() || 'ease-in-out',
+    // Added to the card's own slide or fade rather than replacing it, so a
+    // card still sliding in when the stack moves keeps sliding.
+    composite: 'add',
+  }
+}
+
+// How far a glide still running has the card from where layout puts it.
+function glideOffset(el: HTMLElement, glide: Animation | undefined): number {
+  if (glide?.playState !== 'running' || typeof DOMMatrixReadOnly === 'undefined') return 0
+  return new DOMMatrixReadOnly(getComputedStyle(el).transform).m42
+}
+
 /**
  * The cards on screen: the store's bubbles, in the order they arrived, plus the
  * ones it has just let go of, kept until their exit animation ends. With
@@ -109,9 +132,49 @@ export function Toasts() {
     setShown(reconcileToasts(shown, toasts, reducedMotion()))
   }
   const left = (id: number) => setShown((all) => all.filter((s) => s.toast.id !== id))
+
+  // The stack glides rather than jumps when a card arrives below the others or
+  // one leaves from among them: each card that layout moved is drawn where it
+  // was and eased to where it now is. Measured from the column's bottom, which
+  // is where it is anchored, so the "Dismiss all" row appearing above moves
+  // nothing; offsetTop ignores transforms, so a card mid-glide measures where
+  // layout has it and the glide still running is added on top.
+  const column = useRef<HTMLElement>(null)
+  const cards = useRef(new Map<number, HTMLDivElement>())
+  const fromBottom = useRef(new Map<number, number>())
+  const glides = useRef(new Map<number, Animation>())
+  useLayoutEffect(() => {
+    const height = column.current?.scrollHeight ?? 0
+    const animate = !reducedMotion()
+    const next = new Map<number, number>()
+    for (const [id, el] of cards.current) {
+      const now = height - el.offsetTop
+      next.set(id, now)
+      const before = fromBottom.current.get(id)
+      if (before === undefined || !animate || typeof el.animate !== 'function') continue
+      const dy = now - before + glideOffset(el, glides.current.get(id))
+      if (Math.abs(dy) < 0.5) continue
+      glides.current.get(id)?.cancel()
+      glides.current.set(
+        id,
+        el.animate(
+          [{ transform: `translateY(${dy}px)` }, { transform: 'translateY(0)' }],
+          panelMotion(),
+        ),
+      )
+    }
+    fromBottom.current = next
+    for (const id of glides.current.keys()) if (!next.has(id)) glides.current.delete(id)
+  })
+  const cardRef = (id: number) => (el: HTMLDivElement | null) => {
+    if (el) cards.current.set(id, el)
+    else cards.current.delete(id)
+  }
+
   if (shown.length === 0) return null
   return (
     <section
+      ref={column}
       aria-label="Notifications"
       // Flush with the window's right edge, padded off it, and clipped across:
       // a card sliding in from past that edge would otherwise overflow the
@@ -134,6 +197,7 @@ export function Toasts() {
           leaving={leaving}
           onDismiss={() => dismiss(toast.id)}
           onLeft={() => left(toast.id)}
+          cardRef={cardRef(toast.id)}
         />
       ))}
     </section>
