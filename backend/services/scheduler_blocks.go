@@ -278,7 +278,9 @@ func registerBuiltins(r *BlockRegistry) {
 		ID: "control.condition", Category: "control", Label: "Condition",
 		Description: "Branches based on a comparison. Two values that are both " +
 			"numbers compare numerically, so 9 is less than 10; anything else " +
-			"compares as text. \"contains\" always compares as text.",
+			"compares as text. \"contains\" always compares as text. \"is true\" and " +
+			"\"is false\" test whether the left value is true and ignore the right one, " +
+			"so a gate's output can drive a branch directly.",
 		ControlInputs: []string{"trigger"}, ControlOutputs: []string{"onTrue", "onFalse"},
 		DataInputs: []models.DataPort{
 			{ID: "left", Label: "A", Type: "string"},
@@ -291,12 +293,16 @@ func registerBuiltins(r *BlockRegistry) {
 					{Label: "==", Value: "eq"}, {Label: "!=", Value: "ne"},
 					{Label: ">", Value: "gt"}, {Label: "<", Value: "lt"},
 					{Label: "contains", Value: "contains"},
+					// Unary: they read only the left operand, so a gate's output
+					// needs no constant on the other side to be branched on.
+					{Label: "is true", Value: "true"}, {Label: "is false", Value: "false"},
 				}},
 			{Key: "right", Label: "Right value", Type: "string", Required: true},
 		},
 		Source: "native",
 	}, execCondition))
 
+	registerLogicBlocks(r)
 	registerUploadBlock(r)
 	registerDHSnapshotBlock(r)
 	registerDHPublishBlock(r)
@@ -570,6 +576,17 @@ func execCondition(e *ExecContext) ExecResult {
 	left := e.GetString("left")
 	right := e.GetString("right")
 	op := e.GetString("op")
+
+	// The unary operators test the left operand's truthiness and never look at
+	// the right, so they answer before the comparison below is set up. The raw
+	// value is read, not the string, because a wired true arrives as float64 1
+	// and the text "1" would have to be parsed back.
+	if op == "true" || op == "false" {
+		if truthy(e.Config["left"]) == (op == "true") {
+			return ExecResult{Port: "onTrue"}
+		}
+		return ExecResult{Port: "onFalse"}
+	}
 
 	// Two numeric operands compare as numbers. Comparing the rendered strings
 	// instead made "9" > "10" true, so every threshold rule branched wrong the
