@@ -89,7 +89,10 @@ keeps the two answering the same.
 `.github/scripts/release-notes.py` writes the body for both channels, and
 `agent_docs/CLAUDE.md` covers what reaches it. Its output starts at
 `## What's changed` and is nothing but the changes, because that section is all
-the website's changelog shows (`website/release.js`'s `changesOnly`).
+the website's changelog shows (`website/release.js`'s `changesOnly`), and
+all the app's Settings > What's New reads (`backend/services/release_notes.go`,
+which splits it at its `### ` headings and caches it in the app data dir). A
+release whose body lacks that heading shows in the app as a bare link.
 
 Each workflow prepends its own preamble: `snapshot.yml` says what a snapshot is
 and that it can be broken, `release.yml` says which assets are attached, that

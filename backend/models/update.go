@@ -27,3 +27,33 @@ type UpdateAsset struct {
 	DownloadURL string `json:"downloadUrl"`
 	Size        int64  `json:"size"`
 }
+
+// ReleaseNotes is what Settings > What's New shows: every published release at
+// or below the running version, newest first, read from GitHub Releases.
+type ReleaseNotes struct {
+	Releases []ReleaseNote `json:"releases"`
+	// FetchedAt is when GitHub last answered (RFC 3339), "" if it never has.
+	FetchedAt string `json:"fetchedAt"`
+	// Stale is true when GitHub could not be reached this time and Releases
+	// came from the copy cached at FetchedAt.
+	Stale bool `json:"stale"`
+}
+
+// ReleaseNote is one release's "## What's changed" section, split into the
+// sections .github/scripts/release-notes.py writes (Features, Fixes, Other
+// changes). A release whose body has no such section, a hand-written one,
+// carries no sections and is shown as a link to its page.
+type ReleaseNote struct {
+	Version     string               `json:"version"`
+	Snapshot    bool                 `json:"snapshot"`
+	URL         string               `json:"url"`
+	PublishedAt string               `json:"publishedAt"`
+	Sections    []ReleaseNoteSection `json:"sections"`
+}
+
+// ReleaseNoteSection is one "### Title" heading and its bullets, each the
+// title of a merged pull request.
+type ReleaseNoteSection struct {
+	Title string   `json:"title"`
+	Items []string `json:"items"`
+}

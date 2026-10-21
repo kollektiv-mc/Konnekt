@@ -31,8 +31,8 @@ import { isRemoteBrowser, readOr } from '../lib/ipc'
 import { PlainDataDir, ReloadNote, UpdateFromDesktop } from './settings/RemoteNotes'
 import { FontSettings } from './settings/FontSettings'
 import { WebviewGpuSetting } from './settings/WebviewGpuSetting'
-import { CHANGELOG, CHANGELOG_URL, groupByDate } from '../lib/changelog'
-import type { ChangelogEntry } from '../lib/changelog'
+import { CHANGELOG_URL, countItems, releaseLabel, splitSections } from '../lib/changelog'
+import { useReleaseNotes } from '../hooks/useReleaseNotes'
 import { EVENTS } from '../lib/constants'
 import { releaseUrlToOpen } from '../lib/releaseUrl'
 import { isDevBuild, isSnapshotVersion } from '../hooks/useUpdateCheck'
@@ -612,47 +612,80 @@ function NotificationsPane({ settings, update }: { settings: AppSettings; update
 
 // ─── Changelog ────────────────────────────────────────────────────────────────
 
-function ChangelogItem({ entry }: { entry: ChangelogEntry }) {
-  const [showMinor, setShowMinor] = useState(false)
-  const formattedDate = new Date(entry.date).toLocaleDateString(undefined, {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-  })
+function ChangeList({ items, muted }: { items: readonly string[]; muted?: boolean }) {
+  return (
+    <ul className="mt-1.5 flex flex-col gap-1">
+      {items.map((item, i) => (
+        <li
+          key={i}
+          className={`${muted ? 'text-text-muted' : 'text-text-secondary'} flex gap-1.5 text-xs`}
+        >
+          <span className="text-text-faint">–</span>
+          <span>{item}</span>
+        </li>
+      ))}
+    </ul>
+  )
+}
+
+// Release links come from the GitHub API, so they pass the same allowlist as
+// the updater's before reaching the OS.
+function openRelease(raw: string) {
+  const target = releaseUrlToOpen(raw)
+  if (!target) return
+  try {
+    BrowserOpenURL(target)
+  } catch {
+    /* non-Wails context */
+  }
+}
+
+function ChangelogItem({ note }: { note: models.ReleaseNote }) {
+  const [showRest, setShowRest] = useState(false)
+  const { lead, rest } = splitSections(note.sections ?? [])
+  const restCount = countItems(rest)
+  const published = note.publishedAt ? new Date(note.publishedAt) : null
+  const formattedDate =
+    published && !Number.isNaN(published.getTime())
+      ? published.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
+      : ''
 
   return (
     <div className="border-border-subtle border-b-hairline py-3 last:border-b-0">
       <div className="flex items-center justify-between gap-4">
-        <span className="text-text-primary text-sm">{entry.label}</span>
+        <button
+          onClick={() => openRelease(note.url)}
+          className="text-text-primary hover:text-accent text-sm transition-colors"
+        >
+          {releaseLabel(note)}
+        </button>
         <span className="text-text-muted shrink-0 text-xs">{formattedDate}</span>
       </div>
-      <ul className="mt-1.5 flex flex-col gap-1">
-        {entry.highlights.map((item, i) => (
-          <li key={i} className="text-text-secondary flex gap-1.5 text-xs">
-            <span className="text-text-faint">–</span>
-            <span>{item}</span>
-          </li>
-        ))}
-      </ul>
-      {entry.minor && entry.minor.length > 0 && (
+      {lead ? (
+        <ChangeList items={lead.items} />
+      ) : (
+        <button
+          onClick={() => openRelease(note.url)}
+          className="text-text-muted hover:text-text-secondary mt-1.5 text-xs transition-colors"
+        >
+          This release's notes are on GitHub ↗
+        </button>
+      )}
+      {restCount > 0 && (
         <div className="mt-1.5">
           <button
-            onClick={() => setShowMinor((v) => !v)}
+            onClick={() => setShowRest((v) => !v)}
             className="text-text-faint hover:text-text-muted text-1xs transition-colors"
           >
-            {showMinor ? '−' : '+'} {entry.minor.length} smaller change
-            {entry.minor.length === 1 ? '' : 's'}
+            {showRest ? '−' : '+'} {restCount} more change{restCount === 1 ? '' : 's'}
           </button>
-          {showMinor && (
-            <ul className="mt-1 flex flex-col gap-1">
-              {entry.minor.map((item, i) => (
-                <li key={i} className="text-text-muted flex gap-1.5 text-xs">
-                  <span className="text-text-faint">–</span>
-                  <span>{item}</span>
-                </li>
-              ))}
-            </ul>
-          )}
+          {showRest &&
+            rest.map((section, i) => (
+              <div key={i} className="mt-1.5">
+                {section.title && <span className="text-text-muted text-1xs">{section.title}</span>}
+                <ChangeList items={section.items} muted />
+              </div>
+            ))}
         </div>
       )}
     </div>
@@ -661,9 +694,10 @@ function ChangelogItem({ entry }: { entry: ChangelogEntry }) {
 
 function ChangelogPane() {
   const [showEarlier, setShowEarlier] = useState(false)
-  const grouped = groupByDate(CHANGELOG)
-  const recent = grouped.slice(0, 3)
-  const earlier = grouped.slice(3)
+  const state = useReleaseNotes()
+  const releases = state.status === 'ready' ? state.notes.releases : []
+  const recent = releases.slice(0, 3)
+  const earlier = releases.slice(3)
 
   const openChangelog = () => {
     try {
@@ -675,9 +709,28 @@ function ChangelogPane() {
 
   return (
     <div className="flex flex-col py-2">
+      {state.status === 'loading' && (
+        <span className="text-text-muted py-3 text-xs">Loading release notes…</span>
+      )}
+      {state.status === 'unavailable' && (
+        <span className="text-text-muted py-3 text-xs">
+          Couldn't reach GitHub for the release notes. They appear here once Konnekt has fetched
+          them.
+        </span>
+      )}
+      {state.status === 'ready' && state.notes.stale && (
+        <span className="text-text-faint text-1xs py-1">
+          Couldn't reach GitHub. Showing the notes saved{' '}
+          {new Date(state.notes.fetchedAt).toLocaleDateString()}.
+        </span>
+      )}
+      {state.status === 'ready' && releases.length === 0 && (
+        <span className="text-text-muted py-3 text-xs">No releases up to this build yet.</span>
+      )}
+
       <div className="flex flex-col">
-        {recent.map((entry) => (
-          <ChangelogItem key={entry.date} entry={entry} />
+        {recent.map((note) => (
+          <ChangelogItem key={note.version} note={note} />
         ))}
       </div>
 
@@ -691,8 +744,8 @@ function ChangelogPane() {
           </button>
           {showEarlier && (
             <div className="mt-1 flex flex-col">
-              {earlier.map((entry) => (
-                <ChangelogItem key={entry.date} entry={entry} />
+              {earlier.map((note) => (
+                <ChangelogItem key={note.version} note={note} />
               ))}
             </div>
           )}

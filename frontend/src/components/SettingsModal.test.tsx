@@ -193,6 +193,7 @@ describe('SettingsModal with no Wails bridge', () => {
     vi.mocked(App.GetAppVersion).mockImplementation(noBridge)
     vi.mocked(App.GetDataDir).mockImplementation(noBridge)
     vi.mocked(App.GetLogPath).mockImplementation(noBridge)
+    vi.mocked(App.GetReleaseNotes).mockImplementation(noBridge)
     vi.mocked(EventsOn).mockImplementation(noBridge)
   })
 
@@ -233,6 +234,109 @@ describe('SettingsModal with no Wails bridge', () => {
 // light-theme tokens they happened not to override — near-black text on a
 // near-black canvas, for Midnight. `applySkin` refuses the combination; these
 // cover the half of the answer the user can actually see.
+const releaseNotes = (over: Partial<models.ReleaseNotes> = {}) =>
+  ({
+    fetchedAt: '2026-10-21T18:00:00Z',
+    stale: false,
+    releases: [
+      {
+        version: 'v0.2.0-alpha.2',
+        snapshot: false,
+        url: 'https://github.com/kollektiv-mc/Konnekt/releases/tag/v0.2.0-alpha.2',
+        publishedAt: '2026-10-01T08:56:39Z',
+        sections: [
+          { title: 'Fixes', items: ['Refuse console commands that carry a line break'] },
+          { title: 'Features', items: ['Rework the Commands tile'] },
+        ],
+      },
+      {
+        version: 'v0.1.0-alpha.1',
+        snapshot: false,
+        url: 'https://github.com/kollektiv-mc/Konnekt/releases/tag/v0.1.0-alpha.1',
+        publishedAt: '2026-07-16T18:51:55Z',
+        sections: [],
+      },
+    ],
+    ...over,
+  }) as unknown as models.ReleaseNotes
+
+const openWhatsNew = () => {
+  render(<SettingsModal open onClose={() => {}} />)
+  fireEvent.click(screen.getByRole('button', { name: "What's New" }))
+}
+
+// The pane used to be a list typed by hand that stopped at 2026-08-29 (#638);
+// it now shows whatever GetReleaseNotes parsed from GitHub Releases.
+describe("SettingsModal What's New", () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    vi.mocked(App.GetAppVersion).mockResolvedValue('0.2.0')
+    vi.mocked(App.GetDataDir).mockResolvedValue('/home/user/.config/konnekt')
+    vi.mocked(App.GetLogPath).mockResolvedValue('/home/user/.config/konnekt/konnekt.log')
+    vi.mocked(EventsOn).mockImplementation(noop)
+  })
+
+  it('leads with features and folds the rest behind a toggle', async () => {
+    vi.mocked(App.GetReleaseNotes).mockResolvedValue(releaseNotes())
+    openWhatsNew()
+    expect(await screen.findByText('Rework the Commands tile')).toBeTruthy()
+    expect(screen.queryByText('Refuse console commands that carry a line break')).toBeNull()
+
+    fireEvent.click(screen.getByRole('button', { name: '+ 1 more change' }))
+    expect(screen.getByText('Fixes')).toBeTruthy()
+    expect(screen.getByText('Refuse console commands that carry a line break')).toBeTruthy()
+  })
+
+  it('opens a release page from its heading', async () => {
+    vi.mocked(App.GetReleaseNotes).mockResolvedValue(releaseNotes())
+    openWhatsNew()
+    fireEvent.click(await screen.findByRole('button', { name: 'v0.2.0-alpha.2' }))
+    expect(BrowserOpenURL).toHaveBeenCalledWith(
+      'https://github.com/kollektiv-mc/Konnekt/releases/tag/v0.2.0-alpha.2',
+    )
+  })
+
+  it('never opens a release link from another host', async () => {
+    const notes = releaseNotes()
+    notes.releases[0].url = 'https://github.com.evil.example/kollektiv-mc/Konnekt/'
+    vi.mocked(App.GetReleaseNotes).mockResolvedValue(notes)
+    openWhatsNew()
+    fireEvent.click(await screen.findByRole('button', { name: 'v0.2.0-alpha.2' }))
+    expect(BrowserOpenURL).not.toHaveBeenCalled()
+  })
+
+  it('links a release with hand-written notes to GitHub', async () => {
+    vi.mocked(App.GetReleaseNotes).mockResolvedValue(releaseNotes())
+    openWhatsNew()
+    fireEvent.click(
+      await screen.findByRole('button', { name: "This release's notes are on GitHub ↗" }),
+    )
+    expect(BrowserOpenURL).toHaveBeenCalledWith(
+      'https://github.com/kollektiv-mc/Konnekt/releases/tag/v0.1.0-alpha.1',
+    )
+  })
+
+  it('says when the notes come from the offline copy', async () => {
+    vi.mocked(App.GetReleaseNotes).mockResolvedValue(releaseNotes({ stale: true }))
+    openWhatsNew()
+    expect(await screen.findByText(/Showing the notes saved/)).toBeTruthy()
+    expect(screen.getByText('Rework the Commands tile')).toBeTruthy()
+  })
+
+  it('says GitHub was unreachable and still links the releases', async () => {
+    vi.mocked(App.GetReleaseNotes).mockRejectedValue(new Error('offline'))
+    openWhatsNew()
+    expect(await screen.findByText(/Couldn't reach GitHub for the release notes/)).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'View full changelog on GitHub ↗' })).toBeTruthy()
+  })
+
+  it('says so when no release is at or below this build', async () => {
+    vi.mocked(App.GetReleaseNotes).mockResolvedValue(releaseNotes({ releases: [] }))
+    openWhatsNew()
+    expect(await screen.findByText('No releases up to this build yet.')).toBeTruthy()
+  })
+})
+
 describe('SettingsModal skin and light mode', () => {
   const settings = (patch: Partial<AppSettings>) => {
     useSettingsStore.setState({

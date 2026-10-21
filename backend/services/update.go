@@ -15,6 +15,7 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/minio/selfupdate"
@@ -189,6 +190,11 @@ type UpdateService struct {
 	bus            *EventBus
 	packageManaged bool
 
+	// dataDir holds the release notes cache (release_notes.go), and notesMu
+	// keeps two opens of What's New from writing it at once.
+	dataDir string
+	notesMu sync.Mutex
+
 	// Test seams, all zero in production. checkURL replaces checkUpdateURL so
 	// tests can reach an httptest.Server on plain http; nil means the strict
 	// rule, so a service built any other way is strict too. The two durations
@@ -288,6 +294,7 @@ type ghRelease struct {
 	// Name is the release title. On the snapshot channel it is the only place
 	// the version can come from — see releaseVersion.
 	Name        string    `json:"name"`
+	Draft       bool      `json:"draft"`
 	HTMLURL     string    `json:"html_url"`
 	Body        string    `json:"body"`
 	PublishedAt string    `json:"published_at"`

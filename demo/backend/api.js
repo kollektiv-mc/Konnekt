@@ -31,6 +31,7 @@ import {
 } from "./fixtures/server.js";
 import { WORLDS, BACKUP_WORLDS, CREATIVE_WORLDS } from "./fixtures/worlds.js";
 import { BACKUPS } from "./fixtures/backups.js";
+import { RELEASE_NOTES } from "./fixtures/releases.js";
 import { INSTALLED_MODS, MOD_UPDATES } from "./fixtures/mods.js";
 import { CONFIG_FILES, readConfigFile } from "./fixtures/config.js";
 import { GRAPHS, NEXT_RUNS } from "./fixtures/scheduler.js";
@@ -329,6 +330,7 @@ export const api = {
     releaseNotes: "",
   }),
   DownloadAndInstallUpdate: refuse("Updating Konnekt"),
+  GetReleaseNotes: read(RELEASE_NOTES),
 
   // ── Native dialogs ────────────────────────────────────────────────────
   // No browser analogue at all: these open an OS file picker.
