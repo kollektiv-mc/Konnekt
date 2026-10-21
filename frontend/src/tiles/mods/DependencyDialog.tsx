@@ -1,9 +1,12 @@
 import { useEffect, useState } from 'react'
 import type { ResolvedDependency } from './useMods'
+import { usePresence, useRetained } from '../../hooks/usePresence'
 
 interface Props {
   primaryVersionId: string
-  dependencies: ResolvedDependency[]
+  // Null while closed. The callers render this all the time, so a close can
+  // play its exit (hooks/usePresence.ts) before the dialog unmounts.
+  dependencies: ResolvedDependency[] | null
   // The primary version does not load on a dedicated server. Warned about
   // rather than refused: the metadata is the author's claim and is sometimes
   // wrong, so the user keeps the last word.
@@ -18,7 +21,14 @@ interface Props {
   error?: string | null
 }
 
-export function DependencyDialog({
+export function DependencyDialog({ dependencies: requested, ...rest }: Props) {
+  const presence = usePresence(requested !== null)
+  const dependencies = useRetained(requested)
+  if (!presence.mounted || dependencies === null) return null
+  return <DependencyPrompt dependencies={dependencies} presence={presence} {...rest} />
+}
+
+function DependencyPrompt({
   primaryVersionId,
   dependencies,
   clientOnly = false,
@@ -26,17 +36,22 @@ export function DependencyDialog({
   onCancel,
   busy = false,
   error = null,
-}: Props) {
+  presence,
+}: Omit<Props, 'dependencies'> & {
+  dependencies: ResolvedDependency[]
+  presence: ReturnType<typeof usePresence>
+}) {
   // required deps are auto-selected and locked; optional are toggleable
   const [optionalSelected, setOptionalSelected] = useState<Set<string>>(new Set())
+  const { leaving } = presence
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onCancel()
+      if (e.key === 'Escape' && !leaving) onCancel()
     }
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
-  }, [onCancel])
+  }, [onCancel, leaving])
 
   const toggleOptional = (versionId: string) => {
     setOptionalSelected((prev) => {
@@ -69,8 +84,14 @@ export function DependencyDialog({
   // landed on the backdrop and closed everything. The browse-side callers
   // (ContentCard, ContentDetailPanel) have nothing above tile content to clear.
   return (
-    <div className="modal-overlay-in z-dialog fixed inset-0 flex items-center justify-center bg-black/65">
-      <div className="modal-panel-in bg-canvas border-border-subtle w-full max-w-md rounded-xl border p-5">
+    <div
+      inert={presence.inert}
+      className={`${presence.overlayClass} z-dialog fixed inset-0 flex items-center justify-center bg-black/65`}
+    >
+      <div
+        onAnimationEnd={presence.onAnimationEnd}
+        className={`${presence.panelClass} bg-canvas border-border-subtle w-full max-w-md rounded-xl border p-5`}
+      >
         <h2 className="text-text-primary mb-1 text-sm font-semibold">
           {dependencies.length > 0 ? 'Dependencies' : 'Client-only mod'}
         </h2>

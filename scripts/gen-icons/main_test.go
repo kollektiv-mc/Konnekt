@@ -6,6 +6,8 @@ import (
 	"image"
 	"image/color"
 	"image/png"
+	"os"
+	"path/filepath"
 	"testing"
 )
 
@@ -72,7 +74,7 @@ func TestResizeSquaresANonZeroOriginImage(t *testing.T) {
 
 func TestEncodeICODirectory(t *testing.T) {
 	sizes := []int{256, 32, 16}
-	data, err := encodeICO(quadrant(), sizes)
+	data, err := encodeICO(quadrant(), sizes, nil)
 	if err != nil {
 		t.Fatalf("encodeICO: %v", err)
 	}
@@ -146,5 +148,52 @@ func TestBitsPerPixelFollowsTheEncodedFrame(t *testing.T) {
 				t.Errorf("bitsPerPixel = %d, want %d", got, tc.want)
 			}
 		})
+	}
+}
+
+func TestEncodeICOUsesADrawnCut(t *testing.T) {
+	// A 2px cut that is solid blue, against a source that would downscale to a
+	// red-and-transparent frame: the 2px frame has to be the cut, untouched.
+	cut := image.NewNRGBA(image.Rect(0, 0, 2, 2))
+	for y := 0; y < 2; y++ {
+		for x := 0; x < 2; x++ {
+			cut.Set(x, y, color.NRGBA{B: 255, A: 255})
+		}
+	}
+	data, err := encodeICO(quadrant(), []int{4, 2}, map[int]image.Image{2: cut})
+	if err != nil {
+		t.Fatalf("encodeICO: %v", err)
+	}
+	entry := data[6+16 : 6+32]
+	length := binary.LittleEndian.Uint32(entry[8:12])
+	offset := binary.LittleEndian.Uint32(entry[12:16])
+	frame, err := png.Decode(bytes.NewReader(data[offset : offset+length]))
+	if err != nil {
+		t.Fatalf("2px frame: %v", err)
+	}
+	r, g, b, _ := frame.At(0, 0).RGBA()
+	if r != 0 || g != 0 || b != 0xffff {
+		t.Errorf("2px frame pixel = %v, want the cut's blue", frame.At(0, 0))
+	}
+}
+
+func TestLoadCutsRejectsAWrongSize(t *testing.T) {
+	dir := t.TempDir()
+	var buf bytes.Buffer
+	if err := png.Encode(&buf, image.NewNRGBA(image.Rect(0, 0, 3, 3))); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "16.png"), buf.Bytes(), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := loadCuts(dir, []int{24, 16}); err == nil {
+		t.Error("a 3x3 file named 16.png loaded without an error")
+	}
+}
+
+func TestLoadCutsSkipsAbsentSizes(t *testing.T) {
+	cuts, err := loadCuts(t.TempDir(), []int{24, 16})
+	if err != nil || len(cuts) != 0 {
+		t.Errorf("empty dir: cuts = %v, err = %v; want none and no error", cuts, err)
 	}
 }

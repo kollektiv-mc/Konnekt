@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { createPortal } from 'react-dom'
+import { usePresence, useRetained } from '../../hooks/usePresence'
 import { CONFIRM_COPY, type ConfirmableAction } from './presets'
 
 /**
@@ -18,21 +19,40 @@ import { CONFIRM_COPY, type ConfirmableAction } from './presets'
  * the containing block for `fixed`, so rendered inline a Stop confirm covered
  * the tile's own box rather than the window (#257). z-dialog is what orders
  * them above the maximize overlay and the surfaces that raise them.
+ *
+ * Each is rendered by its parent all the time and shown while `action` / `type`
+ * is set, which is what lets a close play its exit (hooks/usePresence.ts)
+ * before the dialog unmounts.
  */
 
 interface ConfirmDialogProps {
-  action: ConfirmableAction
+  /** Null while closed; the exit still draws the last one. */
+  action: ConfirmableAction | null
   /** Disables the confirm button while a power action is already in flight. */
   busy: boolean
   onCancel: () => void
   onConfirm: () => void
 }
 
-export function LifecycleConfirmDialog({ action, busy, onCancel, onConfirm }: ConfirmDialogProps) {
+export function LifecycleConfirmDialog({
+  action: requested,
+  busy,
+  onCancel,
+  onConfirm,
+}: ConfirmDialogProps) {
+  const presence = usePresence(requested !== null)
+  const action = useRetained(requested)
+  if (!presence.mounted || action === null) return null
   const copy = CONFIRM_COPY[action]
   return createPortal(
-    <div className="modal-overlay-in z-dialog fixed inset-0 flex items-center justify-center bg-black/60">
-      <div className="modal-panel-in border-border-subtle bg-canvas border-hairline flex w-80 flex-col gap-4 rounded-xl p-5">
+    <div
+      inert={presence.inert}
+      className={`${presence.overlayClass} z-dialog fixed inset-0 flex items-center justify-center bg-black/60`}
+    >
+      <div
+        onAnimationEnd={presence.onAnimationEnd}
+        className={`${presence.panelClass} border-border-subtle bg-canvas border-hairline flex w-80 flex-col gap-4 rounded-xl p-5`}
+      >
         <div className="flex flex-col gap-1">
           <span className="text-text-primary text-sm font-semibold">{copy.title}</span>
           <span className="text-text-secondary text-xs">{copy.body}</span>
@@ -61,20 +81,60 @@ export function LifecycleConfirmDialog({ action, busy, onCancel, onConfirm }: Co
 }
 
 interface KickBanDialogProps {
-  type: 'kick' | 'ban'
+  /** Null while closed; the exit still draws the last one. */
+  type: 'kick' | 'ban' | null
   onCancel: () => void
   /** Receives the assembled command, e.g. `kick Steve griefing`. */
   onSubmit: (command: string) => void
 }
 
-export function KickBanDialog({ type, onCancel, onSubmit }: KickBanDialogProps) {
+export function KickBanDialog({ type: requested, onCancel, onSubmit }: KickBanDialogProps) {
+  const presence = usePresence(requested !== null)
+  const type = useRetained(requested)
+  if (!presence.mounted || type === null) return null
+  return (
+    <KickBanForm
+      type={type}
+      inert={presence.inert}
+      overlayClass={presence.overlayClass}
+      panelClass={presence.panelClass}
+      onAnimationEnd={presence.onAnimationEnd}
+      onCancel={onCancel}
+      onSubmit={onSubmit}
+    />
+  )
+}
+
+// Split from the dialog so the two fields start empty each time it opens: they
+// live only while the form is mounted, as they did when the parent mounted it.
+function KickBanForm({
+  type,
+  inert,
+  overlayClass,
+  panelClass,
+  onAnimationEnd,
+  onCancel,
+  onSubmit,
+}: Omit<KickBanDialogProps, 'type'> & {
+  type: 'kick' | 'ban'
+  inert: boolean
+  overlayClass: string
+  panelClass: string
+  onAnimationEnd: ReturnType<typeof usePresence>['onAnimationEnd']
+}) {
   const [playerName, setPlayerName] = useState('')
   const [reason, setReason] = useState('')
   const submit = () => onSubmit(`${type} ${playerName}${reason ? ' ' + reason : ''}`)
 
   return createPortal(
-    <div className="modal-overlay-in z-dialog fixed inset-0 flex items-center justify-center bg-black/60">
-      <div className="modal-panel-in border-border-subtle bg-canvas border-hairline flex w-80 flex-col gap-3 rounded-xl p-5">
+    <div
+      inert={inert}
+      className={`${overlayClass} z-dialog fixed inset-0 flex items-center justify-center bg-black/60`}
+    >
+      <div
+        onAnimationEnd={onAnimationEnd}
+        className={`${panelClass} border-border-subtle bg-canvas border-hairline flex w-80 flex-col gap-3 rounded-xl p-5`}
+      >
         <h3 className="text-text-primary text-sm font-semibold capitalize">{type} Player</h3>
         <input
           type="text"

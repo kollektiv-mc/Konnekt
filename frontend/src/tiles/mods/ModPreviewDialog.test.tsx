@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from 'vitest'
-import { render, fireEvent, waitFor, cleanup } from '@testing-library/react'
+import { act, render, fireEvent, waitFor, cleanup } from '@testing-library/react'
 import { models } from '../../../wailsjs/go/models'
 import { LAYER, declaredLayer } from '../../lib/layers'
 import { ModPreviewDialog } from './ModPreviewDialog'
@@ -30,9 +30,10 @@ const versions = [
   }),
 ]
 
-function renderDialog(props: Partial<Parameters<typeof ModPreviewDialog>[0]> = {}) {
-  return render(
+function dialog(props: Partial<Parameters<typeof ModPreviewDialog>[0]> = {}) {
+  return (
     <ModPreviewDialog
+      open
       mod={mod}
       project={null}
       projectLoading={false}
@@ -48,8 +49,12 @@ function renderDialog(props: Partial<Parameters<typeof ModPreviewDialog>[0]> = {
       onChangeVersion={vi.fn().mockResolvedValue(undefined)}
       onOpenInBrowser={vi.fn()}
       {...props}
-    />,
+    />
   )
+}
+
+function renderDialog(props: Partial<Parameters<typeof ModPreviewDialog>[0]> = {}) {
+  return render(dialog(props))
 }
 
 // The layer a node declares, read off its class list and resolved through
@@ -194,5 +199,24 @@ describe('ModPreviewDialog', () => {
     onInstall.mockResolvedValueOnce(undefined)
     fireEvent.click(getByText('Install anyway'))
     await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1))
+  })
+
+  // Closing plays the exit, so the dialog is still there, inert, until the
+  // animation ends; jsdom never fires it, so the timeout fallback ends it here.
+  it('stays up, inert, through its exit and then unmounts', () => {
+    vi.useFakeTimers()
+    try {
+      const { getByText, queryByText, rerender } = renderDialog()
+      rerender(dialog({ open: false }))
+
+      const panel = getByText('EssentialsX').closest('.fixed')
+      expect(panel?.className).toContain('modal-panel-out')
+      expect(panel?.hasAttribute('inert')).toBe(true)
+
+      act(() => void vi.advanceTimersByTime(1000))
+      expect(queryByText('EssentialsX')).toBeNull()
+    } finally {
+      vi.useRealTimers()
+    }
   })
 })
