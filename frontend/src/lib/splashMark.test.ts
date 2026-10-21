@@ -57,11 +57,12 @@ describe('splash mark', () => {
     }
   })
 
-  it('launches the node moving and lands it at rest', () => {
+  it('eases the node in and out of its lap', () => {
     const at = (ms: number) => splashFrame(SPLASH_MS.orbitStart + ms).nodeT
     const land = SPLASH_MS.orbit
-    expect(at(1) - at(0)).toBeGreaterThan(0.004)
-    expect(at(land) - at(land - 1)).toBeLessThan(0.0005)
+    const mid = at(land / 2 + 1) - at(land / 2)
+    expect(at(1) - at(0)).toBeLessThan(mid / 10)
+    expect(at(land) - at(land - 1)).toBeLessThan(mid / 10)
   })
 
   it('settles the block as the node lands', () => {

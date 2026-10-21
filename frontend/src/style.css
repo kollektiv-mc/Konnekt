@@ -359,7 +359,7 @@ input[type='number']::-webkit-outer-spin-button {
    .still for reduced motion, in lib/splashMark.ts. */
 @keyframes splash-overlay-fade {
   0%,
-  84% {
+  83% {
     opacity: 1;
   }
   100% {
@@ -385,7 +385,7 @@ input[type='number']::-webkit-outer-spin-button {
   align-items: center;
   justify-content: center;
   background: var(--bg-base);
-  animation: splash-overlay-fade 1.9s ease forwards;
+  animation: splash-overlay-fade 1.45s ease forwards;
   pointer-events: none;
 }
 

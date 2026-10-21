@@ -128,13 +128,13 @@ export function orbitPath(from: number, to: number): string {
 /** Milliseconds: when each part starts and how long it runs. */
 export const SPLASH_MS = {
   /** The block's turn, which settles as the node lands. */
-  cube: 1350,
-  cubeFadeIn: 250,
-  orbitStart: 250,
-  orbit: 1100,
+  cube: 1000,
+  cubeFadeIn: 200,
+  orbitStart: 120,
+  orbit: 880,
   /** The finished mark holds, then the overlay fades. */
-  fadeStart: 1600,
-  total: 1900,
+  fadeStart: 1200,
+  total: 1450,
   /** Under reduced motion: the finished mark, held and faded. */
   still: 600,
 }
@@ -142,8 +142,10 @@ export const SPLASH_MS = {
 // The block turns half a revolution on its way in, and rises this far.
 const SPIN = Math.PI
 const RISE = 3
-// How much of its lap the node cruises before it starts to brake.
-const CRUISE = 0.4
+// The node's lap as a share of its time: speeding up until ACCEL, at full
+// speed until BRAKE, then slowing to rest.
+const ACCEL = 0.25
+const BRAKE = 0.45
 
 export interface SplashFrame {
   azimuth: number
@@ -161,11 +163,11 @@ export function splashFrame(ms: number): SplashFrame {
   const o = clamp01((ms - SPLASH_MS.orbitStart) / SPLASH_MS.orbit)
   const start = NODE_T - 2 * Math.PI
   return {
-    azimuth: REST_AZIMUTH - SPIN * (1 - easeOutCubic(c)),
-    drop: RISE * (1 - easeOutCubic(c)),
+    azimuth: REST_AZIMUTH - SPIN * (1 - easeOutQuint(c)),
+    drop: RISE * (1 - easeOutQuint(c)),
     cubeOpacity: clamp01(ms / SPLASH_MS.cubeFadeIn),
     orbitFrom: start,
-    nodeT: start + 2 * Math.PI * cruiseThenLand(o),
+    nodeT: start + 2 * Math.PI * accelCruiseBrake(o),
     nodeScale: easeOutCubic(clamp01((ms - SPLASH_MS.orbitStart) / 200)),
   }
 }
@@ -210,14 +212,20 @@ function easeOutCubic(x: number): number {
   return 1 - (1 - x) ** 3
 }
 
-// The node's lap: it appears already moving, holds that speed to CRUISE of
-// the way, then brakes evenly to rest. The speed is chosen so the lap ends
-// at 1, and the braking starts at the cruising speed, so there is no kink.
-function cruiseThenLand(x: number): number {
-  const v = 2 / (1 + CRUISE)
-  if (x <= CRUISE) return v * x
-  const d = x - CRUISE
-  return v * x - (v * d * d) / (2 * (1 - CRUISE))
+function easeOutQuint(x: number): number {
+  return 1 - (1 - x) ** 5
+}
+
+// The node's lap: even acceleration from rest, a stretch at full speed, then
+// even braking to rest. The full speed is the one that makes the lap end at 1,
+// and each phase starts at the speed the last one ended on, so no kink shows.
+function accelCruiseBrake(x: number): number {
+  const v = 2 / (1 + BRAKE - ACCEL)
+  if (x <= ACCEL) return (v * x * x) / (2 * ACCEL)
+  const cruised = (v * ACCEL) / 2 + v * (x - ACCEL)
+  if (x <= BRAKE) return cruised
+  const d = x - BRAKE
+  return cruised - (v * d * d) / (2 * (1 - BRAKE))
 }
 
 function f4(n: number): string {
