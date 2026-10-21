@@ -250,3 +250,24 @@ func TestConnectorsHoldTheListenerWithANamedTunnel(t *testing.T) {
 		t.Errorf("revoking an unknown grant: %v", err)
 	}
 }
+
+// The same hold after a restart (#620): a fresh app reading a data dir with
+// the switch on and a named tunnel saved holds the listener from startup,
+// which it did not while the tunnel loaded after syncConnectors.
+func TestConnectorsHoldTheListenerAfterARestart(t *testing.T) {
+	dir := t.TempDir()
+	before := newRemoteTestApp(t)
+	before.initRemote(dir)
+	if err := before.SetRemoteConnectorsEnabled(true); err != nil {
+		t.Fatal(err)
+	}
+	if err := before.SaveRemoteTunnel("dash.example.net", 18080, "eyJ0b2tlbiI6Int9In0"); err != nil {
+		t.Fatal(err)
+	}
+
+	after := newRemoteTestApp(t)
+	after.initRemote(dir)
+	if !after.remoteService.MCPEnabled() || !after.remoteService.HoldOpen() {
+		t.Errorf("after restart: enabled=%v hold=%v, want both", after.remoteService.MCPEnabled(), after.remoteService.HoldOpen())
+	}
+}
