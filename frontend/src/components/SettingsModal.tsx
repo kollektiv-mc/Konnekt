@@ -316,7 +316,7 @@ function SkinCard({
   return (
     <button
       onClick={onClick}
-      className={`border-thick flex w-21 shrink-0 cursor-pointer flex-col gap-1.5 rounded-lg p-2 transition-colors ${
+      className={`border-thick flex min-w-0 cursor-pointer flex-col gap-1.5 rounded-lg p-2 transition-colors ${
         selected
           ? 'border-accent bg-accent/8'
           : 'border-border-subtle hover:border-border-hover bg-hover'
@@ -360,7 +360,12 @@ function AppearancePane({ settings, update }: { settings: AppSettings; update: U
       <div className="border-border-subtle border-b-hairline py-3">
         <span className="text-text-primary text-sm">Skin</span>
         <p className="text-text-muted mt-0.5 mb-3 text-xs">Built-in surface and border palette.</p>
-        <div className="flex gap-2 overflow-x-auto pb-1">
+        <div
+          role="group"
+          aria-label="Skin"
+          data-testid="skin-gallery"
+          className="grid grid-cols-3 gap-2 max-sm:grid-cols-2"
+        >
           {BUILTIN_SKINS.map((skin) => (
             <SkinCard
               key={skin.id}
