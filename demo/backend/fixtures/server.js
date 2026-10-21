@@ -52,8 +52,7 @@ export const configFor = (id) =>
   SERVER_CONFIGS.find((c) => c.id === id) ?? SERVER_CONFIG;
 
 /* Running, deliberately. An offline dashboard is a dashboard of empty states —
-   the console reads "Server offline — start it to see output" with a dead
-   input, players shows nothing, performance says "start the server to begin
+   the console is an empty pane with a dead input, players shows nothing, performance says "start the server to begin
    recording". This is the state the demo is in when you arrive; state.js owns
    it from there, and the Stop and Start buttons move it. */
 export const SERVER_STATUS = {
