@@ -143,9 +143,31 @@ export function Toasts() {
   const cards = useRef(new Map<number, HTMLDivElement>())
   const fromBottom = useRef(new Map<number, number>())
   const glides = useRef(new Map<number, Animation>())
+  const contentHeight = useRef<number | undefined>(undefined)
+  const settle = useRef<Animation | undefined>(undefined)
   useLayoutEffect(() => {
-    const height = column.current?.scrollHeight ?? 0
+    const col = column.current
     const animate = !reducedMotion()
+    // The column clips (it scrolls past its max height), and shrinks the moment
+    // a card goes, while the card above is still drawn where it was: its top
+    // half was cut off on the way down. So the column lets go of the height at
+    // the pace of the glide, as padding above the cards: being anchored at the
+    // bottom, the padding moves nothing, and the gliding card stays inside it.
+    if (col) {
+      const padding = parseFloat(getComputedStyle(col).paddingTop) || 0
+      const content = col.scrollHeight - padding
+      const shrank = (contentHeight.current ?? content) - content
+      contentHeight.current = content
+      if (animate && shrank > 0.5 && typeof col.animate === 'function') {
+        settle.current?.cancel()
+        settle.current = col.animate(
+          [{ paddingTop: `${padding + shrank}px` }, { paddingTop: '0px' }],
+          { ...panelMotion(), composite: 'replace' },
+        )
+      }
+    }
+    // Read after the padding starts, which every offsetTop below includes.
+    const height = col?.scrollHeight ?? 0
     const next = new Map<number, number>()
     for (const [id, el] of cards.current) {
       const now = height - el.offsetTop

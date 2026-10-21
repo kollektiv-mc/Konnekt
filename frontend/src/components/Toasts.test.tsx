@@ -124,16 +124,21 @@ describe('Toasts', () => {
       render(<Toasts />)
       expect(animate).not.toHaveBeenCalled()
 
-      // The lower card fades where it is, so nothing moves until it is gone.
+      // The lower card fades where it is, so no card moves until it is gone.
+      // (The "Dismiss all" row going is only the column giving up its height.)
       fireEvent.click(screen.getAllByRole('button', { name: 'Dismiss' })[1])
-      expect(animate).not.toHaveBeenCalled()
+      expect(animate.mock.calls.map((c) => c[0])).toEqual([
+        [{ paddingTop: '100px' }, { paddingTop: '0px' }],
+      ])
+      animate.mockClear()
       act(() => document.querySelectorAll('.toast-out').forEach(endAnimation))
 
-      // The card above drops one card's height, from where it was.
-      expect(animate).toHaveBeenCalledTimes(1)
-      expect(animate.mock.calls[0][0]).toEqual([
-        { transform: 'translateY(-100px)' },
-        { transform: 'translateY(0)' },
+      // The card above drops one card's height, from where it was, and the
+      // column gives that height up at the same pace, so the card is not
+      // clipped at its top on the way down.
+      expect(animate.mock.calls.map((c) => c[0])).toEqual([
+        [{ paddingTop: '100px' }, { paddingTop: '0px' }],
+        [{ transform: 'translateY(-100px)' }, { transform: 'translateY(0)' }],
       ])
       expect(screen.getByText('TPS 12')).toBeTruthy()
     } finally {
