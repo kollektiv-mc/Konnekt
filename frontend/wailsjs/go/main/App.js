@@ -166,6 +166,10 @@ export function GetPlayerRoster(arg1) {
   return window['go']['main']['App']['GetPlayerRoster'](arg1);
 }
 
+export function GetReleaseNotes() {
+  return window['go']['main']['App']['GetReleaseNotes']();
+}
+
 export function GetRemoteAccessState() {
   return window['go']['main']['App']['GetRemoteAccessState']();
 }

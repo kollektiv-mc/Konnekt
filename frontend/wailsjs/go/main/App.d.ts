@@ -85,6 +85,8 @@ export function GetPlayerDetail(arg1:string,arg2:string):Promise<models.Player>;
 
 export function GetPlayerRoster(arg1:string):Promise<Array<models.Player>>;
 
+export function GetReleaseNotes():Promise<models.ReleaseNotes>;
+
 export function GetRemoteAccessState():Promise<models.RemoteAccessState>;
 
 export function GetScheduleBlockDefs():Promise<Array<models.BlockDef>>;

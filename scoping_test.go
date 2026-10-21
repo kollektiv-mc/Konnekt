@@ -81,6 +81,7 @@ var serverlessMethods = map[string]string{
 	"GetAppVersion":            "app-level",
 	"GetPhysicalMemoryMB":      "the machine's RAM, not a server's",
 	"CheckForUpdates":          "Konnekt updating itself",
+	"GetReleaseNotes":          "Konnekt's own release notes",
 	"DownloadAndInstallUpdate": "Konnekt updating itself",
 	"InspectServerFile":        "inspects a jar before any server exists",
 	"InstallServer":            "creates the server; there is no id until it is saved",

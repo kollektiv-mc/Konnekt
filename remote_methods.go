@@ -27,6 +27,7 @@ var remoteMethods = map[string]services.RemoteMethod{
 	"LogClientError":    {Tier: services.RemoteTierOperate, Reason: "writes a clamped line to konnekt.log; a remote tile crash is worth a line too"},
 	"GetAppVersion":     {Tier: services.RemoteTierRead, Reason: "the About pane"},
 	"CheckForUpdates":   {Tier: services.RemoteTierRead, Reason: "asks GitHub, changes nothing"},
+	"GetReleaseNotes":   {Tier: services.RemoteTierRead, Reason: "What's New; asks GitHub or reads its cache, changes nothing"},
 	"DownloadAndInstallUpdate": {Tier: services.RemoteTierAdmin,
 		Reason: "replaces the running executable (§ S8.2)"},
 	"GetPhysicalMemoryMB": {Tier: services.RemoteTierRead,

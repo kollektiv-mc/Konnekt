@@ -223,6 +223,7 @@ func (a *App) startup(ctx context.Context) {
 	a.loaderService.SetContext(ctx)
 	a.loaderService.SetDataDir(a.dataDir)
 	a.commandsService.SetDataDir(a.dataDir)
+	a.updateService.SetDataDir(a.dataDir)
 	a.initRemote(a.dataDir)
 	// The local MCP endpoint comes back up if it was on when the app last
 	// quit: a Claude Code session that registered the bridge should find it
@@ -433,6 +434,12 @@ func (a *App) GetAppVersion() (string, error) {
 
 func (a *App) CheckForUpdates() (models.UpdateInfo, error) {
 	return a.updateService.CheckForUpdates(a.ctx, Version, a.updateChannel())
+}
+
+// GetReleaseNotes is Settings > What's New: the notes of every release up to
+// this build, from GitHub Releases or, offline, the copy cached last time.
+func (a *App) GetReleaseNotes() (models.ReleaseNotes, error) {
+	return a.updateService.GetReleaseNotes(a.ctx, Version)
 }
 
 // updateChannel reads the configured update channel. Unreadable settings fall
