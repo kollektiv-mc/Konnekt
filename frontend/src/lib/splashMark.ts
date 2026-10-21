@@ -143,9 +143,11 @@ export const SPLASH_MS = {
 const SPIN = Math.PI
 const RISE = 3
 // The node's lap as a share of its time: speeding up until ACCEL, at full
-// speed until BRAKE, then slowing to rest.
-const ACCEL = 0.25
-const BRAKE = 0.45
+// speed until BRAKE, then slowing to rest on an ease-out of power LANDING.
+// A power of 2, even braking, reads as stopping short; 3 lets it drift in.
+const ACCEL = 0.2
+const BRAKE = 0.4
+const LANDING = 3
 
 export interface SplashFrame {
   azimuth: number
@@ -254,13 +256,14 @@ function easeOutQuint(x: number): number {
 }
 
 // The node's lap: even acceleration from rest, a stretch at full speed, then
-// even braking to rest. The full speed is the one that makes the lap end at 1,
+// an ease-out to rest. The full speed is the one that makes the lap end at 1,
 // and each phase starts at the speed the last one ended on, so no kink shows.
 function accelCruiseBrake(x: number): number {
-  const v = 2 / (1 + BRAKE - ACCEL)
+  const v = 1 / (BRAKE - ACCEL / 2 + (1 - BRAKE) / LANDING)
   if (x <= ACCEL) return (v * x * x) / (2 * ACCEL)
-  const cruised = (v * ACCEL) / 2 + v * (x - ACCEL)
-  if (x <= BRAKE) return cruised
-  const d = x - BRAKE
-  return cruised - (v * d * d) / (2 * (1 - BRAKE))
+  if (x <= BRAKE) return v * (x - ACCEL / 2)
+  const tail = 1 - BRAKE
+  return (
+    v * (BRAKE - ACCEL / 2) + ((v * tail) / LANDING) * (1 - (1 - (x - BRAKE) / tail) ** LANDING)
+  )
 }

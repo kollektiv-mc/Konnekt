@@ -66,6 +66,13 @@ describe('splash mark', () => {
     expect(at(land) - at(land - 1)).toBeLessThan(mid / 10)
   })
 
+  it('lands the node on a soft ease-out', () => {
+    const at = (share: number) => splashFrame(SPLASH_MS.orbitStart + share * SPLASH_MS.orbit).nodeT
+    // The last tenth of the lap's time covers under half a percent of it.
+    expect(at(1) - at(0.9)).toBeLessThan(0.005 * 2 * Math.PI)
+    expect(at(1) - at(0)).toBeCloseTo(2 * Math.PI)
+  })
+
   it('has the block still by the time the node lands', () => {
     const landing = splashFrame(SPLASH_MS.orbitStart + SPLASH_MS.orbit)
     // Within a tenth of a degree of rest, which no frame can show.
