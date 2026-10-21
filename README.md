@@ -175,7 +175,10 @@ Settings > General switches to snapshots, and a snapshot build follows that
 channel on its own. Installing a snapshot warns first, because it is untested
 nightly code.
 
-- **Windows** (`konnekt-windows-amd64.exe`) — tagged releases and snapshots.
+- **Windows** — tagged releases and snapshots. `konnekt-windows-amd64-setup.exe`
+  installs it for your account, with a Start Menu entry and an uninstaller
+  under Installed apps; `konnekt-windows-amd64.exe` is the same app as a single
+  portable file. Either way it updates itself.
 - **Linux** (`konnekt-linux-amd64`, plus an `.rpm` for Rocky/RHEL 10 and
   Fedora) — **snapshots only so far.** The release workflow builds both, but
   those jobs landed after the one tagged release was cut, so the next tag is

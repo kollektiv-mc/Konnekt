@@ -55,7 +55,10 @@ build with `wails build`.
 - `icon.ico` - The icon compiled into the exe as its icon resource. See **Icons**
   above before replacing it: it is generated from `appicon.png`, and `wails build`
   only creates it when it is missing.
-- `installer/*` - The files used to create the Windows installer. These are used when building using `wails build`.
+- `installer/project.nsi` - The NSIS script for the Windows installer, built by `wails build -nsis` and published
+  as `konnekt-windows-amd64-setup.exe`. It installs per user, under `%LOCALAPPDATA%\Programs\Konnekt`, so the
+  in-app updater can replace the exe without elevation. `wails_tools.nsh`, `tmp/` and `version.nsh` beside it are
+  generated on each build and not tracked.
 - `info.json` - Application details used for Windows builds. The data here will be used by the Windows installer,
   as well as the application itself (right click the exe -> properties -> details)
 - `wails.exe.manifest` - The main application manifest file.

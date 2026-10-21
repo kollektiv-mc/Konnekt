@@ -1,47 +1,54 @@
 Unicode true
 
 ####
-## Please note: Template replacements don't work in this file. They are provided with default defines like
-## mentioned underneath.
-## If the keyword is not defined, "wails_tools.nsh" will populate them with the values from ProjectInfo.
-## If they are defined here, "wails_tools.nsh" will not touch them. This allows to use this project.nsi manually
-## from outside of Wails for debugging and development of the installer.
+## Konnekt's Windows installer, built by `wails build -nsis` (release.yml and
+## snapshot.yml's build-windows jobs) into build\bin\konnekt-amd64-installer.exe
+## and published as konnekt-windows-amd64-setup.exe beside the portable exe.
 ##
-## For development first make a wails nsis build to populate the "wails_tools.nsh":
-## > wails build --target windows/amd64 --nsis
-## Then you can call makensis on this file with specifying the path to your binary:
-## For a AMD64 only installer:
-## > makensis -DARG_WAILS_AMD64_BINARY=..\..\bin\app.exe
-## For a ARM64 only installer:
-## > makensis -DARG_WAILS_ARM64_BINARY=..\..\bin\app.exe
-## For a installer with both architectures:
-## > makensis -DARG_WAILS_AMD64_BINARY=..\..\bin\app-amd64.exe -DARG_WAILS_ARM64_BINARY=..\..\bin\app-arm64.exe
+## wails writes this file only when it is missing, so the edits below are
+## ours to keep. wails_tools.nsh beside it is regenerated on every -nsis build
+## and is not tracked; its macros are used where they fit and replaced here
+## where they do not.
+##
+## To iterate on the installer without a full build, run one `wails build -nsis`
+## to render wails_tools.nsh and fetch the WebView2 bootstrapper, then:
+## > makensis -DARG_WAILS_AMD64_BINARY=..\..\bin\konnekt.exe project.nsi
 ####
-## The following information is taken from the ProjectInfo file, but they can be overwritten here.
-####
-## !define INFO_PROJECTNAME    "MyProject" # Default "{{.Name}}"
-## !define INFO_COMPANYNAME    "MyCompany" # Default "{{.Info.CompanyName}}"
-## !define INFO_PRODUCTNAME    "MyProduct" # Default "{{.Info.ProductName}}"
-## !define INFO_PRODUCTVERSION "1.0.0"     # Default "{{.Info.ProductVersion}}"
-## !define INFO_COPYRIGHT      "Copyright" # Default "{{.Info.Copyright}}"
-###
-## !define PRODUCT_EXECUTABLE  "Application.exe"      # Default "${INFO_PROJECTNAME}.exe"
-## !define UNINST_KEY_NAME     "UninstKeyInRegistry"  # Default "${INFO_COMPANYNAME}${INFO_PRODUCTNAME}"
-####
-## !define REQUEST_EXECUTION_LEVEL "admin"            # Default "admin"  see also https://nsis.sourceforge.io/Docs/Chapter4.html
-####
-## Include the wails tools
-####
+
+## A per-user install, deliberately. The in-app updater replaces konnekt.exe
+## in place (backend/services/update.go, selfupdate.Apply), which an
+## unelevated process can only do in a folder the user owns. Under Program
+## Files every update would fail with ErrUpdatePermission.
+!define REQUEST_EXECUTION_LEVEL "user"
+
+!define INFO_COMPANYNAME "Kollektiv"
+!define INFO_PRODUCTNAME "Konnekt"
+!define UNINST_KEY_NAME  "Konnekt"
+
+## CI writes version.nsh with the version it stamps into the binary (the tag
+## without its v, or the snapshot version), so the installer and Installed
+## apps name the build rather than wails.json's -dev base. A local build has
+## no version.nsh and falls back to that base.
+!include /NONFATAL "version.nsh"
+
 !include "wails_tools.nsh"
 
-# The version information for this two must consist of 4 parts
-VIProductVersion "${INFO_PRODUCTVERSION}.0"
-VIFileVersion    "${INFO_PRODUCTVERSION}.0"
+!ifndef KONNEKT_VERSION
+    !define KONNEKT_VERSION "${INFO_PRODUCTVERSION}"
+!endif
+
+# VIProductVersion takes four numbers and nothing else, so it gets the
+# version's X.Y.Z core. The trailing "-" makes the parse match a bare
+# version too.
+!searchparse "${KONNEKT_VERSION}-" "" KONNEKT_VERSION_CORE "-"
+
+VIProductVersion "${KONNEKT_VERSION_CORE}.0"
+VIFileVersion    "${KONNEKT_VERSION_CORE}.0"
 
 VIAddVersionKey "CompanyName"     "${INFO_COMPANYNAME}"
 VIAddVersionKey "FileDescription" "${INFO_PRODUCTNAME} Installer"
-VIAddVersionKey "ProductVersion"  "${INFO_PRODUCTVERSION}"
-VIAddVersionKey "FileVersion"     "${INFO_PRODUCTVERSION}"
+VIAddVersionKey "ProductVersion"  "${KONNEKT_VERSION}"
+VIAddVersionKey "FileVersion"     "${KONNEKT_VERSION}"
 VIAddVersionKey "LegalCopyright"  "${INFO_COPYRIGHT}"
 VIAddVersionKey "ProductName"     "${INFO_PRODUCTNAME}"
 
@@ -52,28 +59,48 @@ ManifestDPIAware true
 
 !define MUI_ICON "..\icon.ico"
 !define MUI_UNICON "..\icon.ico"
-# !define MUI_WELCOMEFINISHPAGE_BITMAP "resources\leftimage.bmp" #Include this to add a bitmap on the left side of the Welcome Page. Must be a size of 164x314
-!define MUI_FINISHPAGE_NOAUTOCLOSE # Wait on the INSTFILES page so the user can take a look into the details of the installation steps
 !define MUI_ABORTWARNING # This will warn the user if they exit from the installer.
+!define MUI_FINISHPAGE_RUN "$INSTDIR\${PRODUCT_EXECUTABLE}"
+!define MUI_FINISHPAGE_RUN_TEXT "Start ${INFO_PRODUCTNAME}"
 
-!insertmacro MUI_PAGE_WELCOME # Welcome to the installer page.
-# !insertmacro MUI_PAGE_LICENSE "resources\eula.txt" # Adds a EULA page to the installer
-!insertmacro MUI_PAGE_DIRECTORY # In which folder install page.
-!insertmacro MUI_PAGE_INSTFILES # Installing page.
-!insertmacro MUI_PAGE_FINISH # Finished installation page.
+!insertmacro MUI_PAGE_WELCOME
+!insertmacro MUI_PAGE_DIRECTORY
+!insertmacro MUI_PAGE_INSTFILES
+!insertmacro MUI_PAGE_FINISH
 
-!insertmacro MUI_UNPAGE_INSTFILES # Uinstalling page
+!insertmacro MUI_UNPAGE_CONFIRM
+!insertmacro MUI_UNPAGE_INSTFILES
 
-!insertmacro MUI_LANGUAGE "English" # Set the Language of the installer
-
-## The following two statements can be used to sign the installer and the uninstaller. The path to the binaries are provided in %1
-#!uninstfinalize 'signtool --file "%1"'
-#!finalize 'signtool --file "%1"'
+!insertmacro MUI_LANGUAGE "English"
 
 Name "${INFO_PRODUCTNAME}"
-OutFile "..\..\bin\${INFO_PROJECTNAME}-${ARCH}-installer.exe" # Name of the installer's file.
-InstallDir "$PROGRAMFILES64\${INFO_COMPANYNAME}\${INFO_PRODUCTNAME}" # Default installing folder ($PROGRAMFILES is Program Files folder).
-ShowInstDetails show # This will always show the installation details.
+OutFile "..\..\bin\${INFO_PROJECTNAME}-${ARCH}-installer.exe"
+InstallDir "$LOCALAPPDATA\Programs\${INFO_PRODUCTNAME}"
+# A reinstall or upgrade goes where the last install did, even if the user
+# picked another folder then.
+InstallDirRegKey HKCU "${UNINST_KEY}" "InstallLocation"
+ShowInstDetails show
+
+# wails.writeUninstaller and wails.deleteUninstaller write HKLM, which a
+# per-user installer cannot. These are the same entries under HKCU, which is
+# where Installed apps looks for a per-user install.
+!macro konnekt.writeUninstaller
+    WriteUninstaller "$INSTDIR\uninstall.exe"
+
+    WriteRegStr HKCU "${UNINST_KEY}" "Publisher" "${INFO_COMPANYNAME}"
+    WriteRegStr HKCU "${UNINST_KEY}" "DisplayName" "${INFO_PRODUCTNAME}"
+    WriteRegStr HKCU "${UNINST_KEY}" "DisplayVersion" "${KONNEKT_VERSION}"
+    WriteRegStr HKCU "${UNINST_KEY}" "DisplayIcon" "$INSTDIR\${PRODUCT_EXECUTABLE}"
+    WriteRegStr HKCU "${UNINST_KEY}" "InstallLocation" "$INSTDIR"
+    WriteRegStr HKCU "${UNINST_KEY}" "UninstallString" "$\"$INSTDIR\uninstall.exe$\""
+    WriteRegStr HKCU "${UNINST_KEY}" "QuietUninstallString" "$\"$INSTDIR\uninstall.exe$\" /S"
+    WriteRegDWORD HKCU "${UNINST_KEY}" "NoModify" 1
+    WriteRegDWORD HKCU "${UNINST_KEY}" "NoRepair" 1
+
+    ${GetSize} "$INSTDIR" "/S=0K" $0 $1 $2
+    IntFmt $0 "0x%08X" $0
+    WriteRegDWORD HKCU "${UNINST_KEY}" "EstimatedSize" "$0"
+!macroend
 
 Function .onInit
    !insertmacro wails.checkArchitecture
@@ -89,26 +116,29 @@ Section
     !insertmacro wails.files
 
     CreateShortcut "$SMPROGRAMS\${INFO_PRODUCTNAME}.lnk" "$INSTDIR\${PRODUCT_EXECUTABLE}"
-    CreateShortCut "$DESKTOP\${INFO_PRODUCTNAME}.lnk" "$INSTDIR\${PRODUCT_EXECUTABLE}"
 
-    !insertmacro wails.associateFiles
-    !insertmacro wails.associateCustomProtocols
-
-    !insertmacro wails.writeUninstaller
+    !insertmacro konnekt.writeUninstaller
 SectionEnd
 
 Section "uninstall"
     !insertmacro wails.setShellContext
 
-    RMDir /r "$AppData\${PRODUCT_EXECUTABLE}" # Remove the WebView2 DataPath
-
-    RMDir /r $INSTDIR
+    # Named files rather than RMDir /r $INSTDIR: the directory page lets the
+    # user install into a folder that holds other things. .konnekt.exe.old is
+    # what selfupdate leaves behind when Windows will not let it delete the
+    # binary it replaced.
+    Delete "$INSTDIR\${PRODUCT_EXECUTABLE}"
+    Delete "$INSTDIR\.${PRODUCT_EXECUTABLE}.old"
+    Delete "$INSTDIR\uninstall.exe"
+    RMDir "$INSTDIR"
 
     Delete "$SMPROGRAMS\${INFO_PRODUCTNAME}.lnk"
-    Delete "$DESKTOP\${INFO_PRODUCTNAME}.lnk"
 
-    !insertmacro wails.unassociateFiles
-    !insertmacro wails.unassociateCustomProtocols
+    # The WebView2 cache Wails keeps beside the roaming profile, named after
+    # the binary. The settings, server list and layouts in %APPDATA%\konnekt
+    # stay: they are the user's, and a reinstall picks them back up. Servers
+    # live wherever the user put them and are never touched.
+    RMDir /r "$AppData\${PRODUCT_EXECUTABLE}"
 
-    !insertmacro wails.deleteUninstaller
+    DeleteRegKey HKCU "${UNINST_KEY}"
 SectionEnd

@@ -135,20 +135,39 @@ jobs:
       - name: Install Wails CLI
         run: go install github.com/wailsapp/wails/v2/cmd/wails@v2.12.0
 
+      # The same three steps as release.yml's build-windows; the comments
+      # there say why each one exists.
+      - name: Install NSIS
+        shell: pwsh
+        run: |
+          choco install nsis --version=3.11 -y --no-progress
+          Add-Content -Path $env:GITHUB_PATH -Value "${env:ProgramFiles(x86)}\NSIS"
+
+      - name: Stamp installer version
+        shell: pwsh
+        env:
+          VERSION: ${{ needs.check.outputs.version }}
+        run: |
+          Set-Content -Path build/windows/installer/version.nsh -Encoding ascii `
+            -Value "!define KONNEKT_VERSION `"$env:VERSION`""
+
       - name: Build
         shell: pwsh
-        run: wails build -ldflags "-X main.Version=${{ needs.check.outputs.version }}"
+        run: wails build -nsis -ldflags "-X main.Version=${{ needs.check.outputs.version }}"
 
-      - name: Stage release asset
+      - name: Stage release assets
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force -Path dist | Out-Null
           Copy-Item build/bin/konnekt.exe dist/konnekt-windows-amd64.exe
+          Copy-Item build/bin/konnekt-amd64-installer.exe dist/konnekt-windows-amd64-setup.exe
 
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: konnekt-windows-amd64
-          path: dist/konnekt-windows-amd64.exe
+          path: |
+            dist/konnekt-windows-amd64.exe
+            dist/konnekt-windows-amd64-setup.exe
           if-no-files-found: error
 
   build-linux:
@@ -337,6 +356,10 @@ jobs:
           snapshot, and a stable release once one overtakes it. Installing a
           release puts you back on whichever channel Settings > General is set
           to.
+
+          On Windows, \`konnekt-windows-amd64-setup.exe\` installs it with a
+          Start Menu entry and an uninstaller; \`konnekt-windows-amd64.exe\`
+          runs from wherever you put it.
 
           Version \`$VERSION\`, commit $SHA. Built by GitHub Actions from that
           commit, with a signed build provenance attestation:
