@@ -186,7 +186,7 @@ export function SettingsModal({ open, onClose, initialSection }: Props) {
     >
       <div
         onAnimationEnd={presence.onAnimationEnd}
-        className={`${presence.panelClass} bg-canvas border-border-subtle border-hairline flex h-[480px] w-[640px] overflow-hidden rounded-xl shadow-[0_24px_64px_rgba(0,0,0,0.5)] max-sm:h-[calc(100dvh-1rem)] max-sm:w-[calc(100vw-1rem)] max-sm:flex-col`}
+        className={`${presence.panelClass} bg-canvas border-border-subtle border-hairline flex h-[560px] max-h-[calc(100dvh-2rem)] w-[720px] max-w-[calc(100vw-2rem)] overflow-hidden rounded-xl shadow-[0_24px_64px_rgba(0,0,0,0.5)] max-sm:h-[calc(100dvh-1rem)] max-sm:max-h-none max-sm:w-[calc(100vw-1rem)] max-sm:max-w-none max-sm:flex-col`}
       >
         {/* Left nav. On a phone's width it is a scrolling row above the content,
             so the content keeps the full width; its heading is the title bar's job. */}
