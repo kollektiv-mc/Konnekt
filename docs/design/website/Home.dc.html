@@ -1,0 +1,300 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Konnekt, combined: Blocks</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&amp;family=Geist+Mono:wght@400;500&amp;display=swap">
+<style>
+body{margin:0;background:#05060a}
+a{color:#ffffff;text-decoration:none}a:hover{color:#4ade80}
+@keyframes kspin{to{transform:rotate(360deg)}}
+.kspin{transform-box:fill-box;transform-origin:center;animation:kspin 90s linear infinite}
+.kspin-rev{transform-box:fill-box;transform-origin:center;animation:kspin 140s linear infinite reverse}
+.kstrip{transition:flex-grow 520ms cubic-bezier(0.4,0,0.2,1)}
+.kstrip button:hover{background:rgba(255,255,255,0.05)}
+@media (max-width:760px){
+.karch{flex-direction:column!important;height:auto!important}
+.kstrip{flex-basis:auto!important}
+.kpanel{min-width:0!important}
+.kvl{writing-mode:horizontal-tb!important;transform:none!important}
+.kstripbtn{flex-direction:row!important;min-height:56px!important;padding:0 20px!important}
+}
+@media (min-width:861px) and (pointer:fine){
+html{scroll-snap-type:y proximity}
+.ksnap-start{scroll-snap-align:start}
+.ksnap{scroll-snap-align:center}
+.ksnap-end{scroll-snap-align:end}
+}
+.kglow{position:absolute;inset:-1px;overflow:hidden;pointer-events:none;padding:1px;-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);mask-composite:exclude}
+.kglow::before{content:"";position:absolute;top:50%;left:50%;width:180%;aspect-ratio:1;background:conic-gradient(from 0deg,transparent 0deg,rgba(74,222,128,0.55) 16deg,transparent 42deg,transparent 180deg,rgba(74,222,128,0.55) 196deg,transparent 222deg,transparent 360deg);transform:translate(-50%,-50%) rotate(0deg);animation:kglow 14s linear infinite}
+@keyframes kglow{to{transform:translate(-50%,-50%) rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.kspin,.kspin-rev,.kglow::before{animation:none}.kstrip{transition:none}html{scroll-behavior:auto}}
+</style>
+</helmet>
+<div style="background: #05060a; color: #ffffff; font-family: 'Geist', system-ui, sans-serif; min-height: 100vh; padding: 16px clamp(12px, 2vw, 24px) 24px">
+<div style="max-width: 1280px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px">
+
+<div id="ksec0" class="ksnap-start" style="display: flex; flex-direction: column; gap: 16px; filter: {{s0f}}; opacity: {{s0o}}; transform: {{s0t}}; transition: filter 500ms ease, opacity 500ms ease, transform 500ms cubic-bezier(0.2,0.7,0.2,1), border-color 500ms ease, box-shadow 500ms ease">
+<nav id="knav" style="display: flex; flex-wrap: wrap; align-items: stretch; border: 1px solid rgba(255,255,255,0.06); background: rgba(255,255,255,0.025)">
+<a href="#top" style="display: flex; align-items: center; gap: 10px; padding: 0 32px; min-height: 72px; border-right: 1px solid rgba(255,255,255,0.06); font-weight: 600; font-size: 20px; letter-spacing: -0.02em; color: #ffffff">
+<svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><rect x="1" y="1" width="7" height="7" fill="none" stroke="currentColor" stroke-width="1.5"></rect><rect x="10" y="1" width="7" height="7" fill="none" stroke="currentColor" stroke-width="1.5"></rect><rect x="1" y="10" width="16" height="7" fill="none" stroke="currentColor" stroke-width="1.5"></rect></svg>
+Konnekt</a>
+<div style="display: flex; flex-wrap: wrap; align-items: center; gap: 28px; padding: 0 32px; flex: 1 1 360px; min-height: 72px; font-size: 15px">
+<a href="#ksec1" style="color: rgba(255,255,255,0.6)">Features</a>
+<a href="#ksec2" style="color: rgba(255,255,255,0.6)">Scheduler</a>
+<a href="#docs" style="color: rgba(255,255,255,0.6)">Docs</a>
+<a href="#roadmap" style="color: rgba(255,255,255,0.6)">Roadmap</a>
+<a href="#changelog" style="color: rgba(255,255,255,0.6)">Changelog</a>
+</div>
+<a href="#github" style="display: flex; align-items: center; padding: 0 28px; min-height: 72px; border-left: 1px solid rgba(255,255,255,0.06); font-size: 15px; color: rgba(255,255,255,0.6)">GitHub</a>
+<a href="#download" style="display: flex; align-items: center; justify-content: center; gap: 10px; padding: 0 40px; min-height: 72px; background: #4ade80; color: #05060a; font-family: 'Geist Mono', monospace; font-size: 14px; font-weight: 500; letter-spacing: 0.06em; text-transform: uppercase">
+<svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><path d="M7 1v9M3 6.5 7 10.5 11 6.5M1.5 13h11" fill="none" stroke="currentColor" stroke-width="1.6"></path></svg>
+Download</a>
+</nav>
+
+<header id="top" style="display: flex; flex-wrap: wrap; box-sizing: border-box; border: 1px solid {{s0b}}; box-shadow: {{s0sh}}; transition: filter 500ms ease, opacity 500ms ease, transform 500ms cubic-bezier(0.2,0.7,0.2,1), border-color 500ms ease, box-shadow 500ms ease">
+<div style="flex: 1 1 560px; padding: clamp(48px, 6vw, 96px) 32px; display: flex; flex-direction: column; justify-content: center; gap: 28px; border-right: 1px solid rgba(255,255,255,0.06)">
+<h1 style="margin: 0; font-size: clamp(44px, 6vw, 84px); line-height: 0.98; font-weight: 600; letter-spacing: -0.045em; max-width: 12ch">Your Minecraft server, in one window.</h1>
+<p style="margin: 0; font-size: 20px; line-height: 1.5; color: rgba(255,255,255,0.6); max-width: 34ch">Console, scheduling, worlds and backups in a local-first desktop app.</p>
+<div style="display: flex; flex-wrap: wrap; gap: 12px; padding-top: 8px">
+<a href="#download" style="display: inline-flex; align-items: center; justify-content: center; min-height: 56px; padding: 0 36px; background: #4ade80; color: #05060a; font-family: 'Geist Mono', monospace; font-size: 14px; font-weight: 500; letter-spacing: 0.06em; text-transform: uppercase">Download Konnekt</a>
+<a href="#demo" style="display: inline-flex; align-items: center; justify-content: center; min-height: 56px; padding: 0 28px; border: 1px solid rgba(255,255,255,0.12); color: #ffffff; font-family: 'Geist Mono', monospace; font-size: 14px; letter-spacing: 0.06em; text-transform: uppercase">Try the demo</a>
+</div>
+<div style="font-family: 'Geist Mono', monospace; font-size: 13px; color: rgba(255,255,255,0.6)">└ v0.2.0-alpha.2 · Windows and Linux · free, CC0</div>
+</div>
+<div style="flex: 1 1 400px; display: flex; flex-direction: column; justify-content: center; align-items: stretch; padding: 48px 32px; gap: 40px">
+<svg viewBox="0 0 400 360" width="360" height="324" aria-hidden="true" style="align-self: center; max-width: 100%; height: auto; overflow: visible">
+<g class="kspin"><circle cx="200" cy="180" r="168" fill="none" stroke="rgba(255,255,255,0.25)" stroke-width="2" stroke-dasharray="0 9" stroke-linecap="round"></circle></g>
+<g class="kspin-rev"><circle cx="200" cy="180" r="122" fill="none" stroke="rgba(255,255,255,0.18)" stroke-width="2" stroke-dasharray="0 8" stroke-linecap="round"></circle></g>
+<circle cx="200" cy="180" r="78" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="2" stroke-dasharray="0 7" stroke-linecap="round"></circle>
+<g fill="none" stroke="rgba(255,255,255,0.6)" stroke-width="1.5" stroke-dasharray="2 4">
+<path d="M200 138 L240 161 L200 184 L160 161 Z"></path>
+<path d="M160 161 L160 207 L200 230 L200 184"></path>
+<path d="M240 161 L240 207 L200 230"></path>
+</g>
+<g stroke="#4ade80" stroke-width="1.5">
+<path d="M82 52 v14 M75 59 h14"></path>
+<path d="M318 240 v14 M311 247 h14"></path>
+<path d="M120 302 v14 M113 309 h14"></path>
+</g>
+<g font-family="Geist Mono, monospace" font-size="11" fill="rgba(255,255,255,0.6)">
+<text x="96" y="50">survival :25565</text>
+<text x="96" y="64" fill="rgba(255,255,255,0.4)">19.9 tps</text>
+<text x="334" y="240">creative</text>
+<text x="334" y="254" fill="rgba(255,255,255,0.4)">:25566</text>
+<text x="134" y="322">modded :25567</text>
+<text x="134" y="336" fill="rgba(255,255,255,0.4)">offline</text>
+</g>
+</svg>
+<div style="font-family: 'Geist Mono', monospace; font-size: 13px; line-height: 1.9; color: rgba(255,255,255,0.6); border: 1px solid rgba(255,255,255,0.06); padding: 18px 22px; background: #10111a">
+<div style="color: rgba(255,255,255,0.4)">[14:02:11] Starting minecraft server version 1.21.1</div>
+<div>[14:02:17] Done (6.129s)! For help, type "help"</div>
+<div>[14:03:40] Frangfurd joined the game</div>
+<div style="display: flex; align-items: center; gap: 10px; padding-top: 6px; color: #ffffff"><span style="width: 8px; height: 8px; background: #4ade80; display: inline-block"></span>&gt; save-all</div>
+</div>
+</div>
+</header>
+
+<section id="kworks" aria-label="Works with" style="display: flex; flex-wrap: wrap; border: 1px solid rgba(255,255,255,0.06)">
+<div style="flex: 0 1 200px; padding: 28px 32px; border-right: 1px solid rgba(255,255,255,0.06); font-family: 'Geist Mono', monospace; font-size: 12px; letter-spacing: 0.14em; color: rgba(255,255,255,0.6); display: flex; align-items: center">WORKS WITH</div>
+<div style="flex: 1 1 600px; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 16px 32px; padding: 28px 32px; font-size: 24px; font-weight: 500; letter-spacing: -0.01em; color: rgba(255,255,255,0.6)">
+<span>Vanilla</span><span>Paper</span><span>Spigot</span><span>Bukkit</span><span>Fabric</span><span>NeoForge</span>
+</div>
+</section>
+</div>
+
+<div aria-hidden="true" style="height: 56px"></div>
+
+<section id="ksec1" data-anchor="features" class="ksnap" style="border: 1px solid {{s1b}}; box-shadow: {{s1sh}}; filter: {{s1f}}; opacity: {{s1o}}; transform: {{s1t}}; transition: filter 500ms ease, opacity 500ms ease, transform 500ms cubic-bezier(0.2,0.7,0.2,1), border-color 500ms ease, box-shadow 500ms ease">
+<div style="display: flex; flex-wrap: wrap; border-bottom: 1px solid rgba(255,255,255,0.06); background: rgba(255,255,255,0.025)">
+<div style="flex: 1 1 320px; padding: 40px 32px; border-right: 1px solid rgba(255,255,255,0.06); display: flex; align-items: baseline; gap: 20px"><span style="font-family: 'Geist Mono', monospace; font-size: 13px; color: rgba(255,255,255,0.6)">01</span><h2 style="margin: 0; font-size: clamp(36px, 4vw, 56px); line-height: 1; font-weight: 600; letter-spacing: -0.04em">Features</h2></div>
+<div style="flex: 2 1 480px; padding: 40px 32px; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 16px"><p style="margin: 0; font-size: 17px; line-height: 1.5; color: rgba(255,255,255,0.6); max-width: 42ch">Every tool is a tile. Pick one to see it running in the demo.</p><a href="#demo" style="font-family: 'Geist Mono', monospace; font-size: 13px; letter-spacing: 0.06em; text-transform: uppercase">Open the demo →</a></div>
+</div>
+<div class="karch" style="display: flex; height: 600px">
+<sc-for list="{{features}}" as="f" hint-placeholder-count="9">
+<div class="kstrip" style="flex-grow: {{f.grow}}; flex-shrink: 1; flex-basis: 0px; min-width: 64px; overflow: hidden; border-right: 1px solid rgba(255,255,255,0.06); background: {{f.bg}}">
+<sc-if value="{{f.active}}" hint-placeholder-val="{{false}}">
+<div class="kpanel" style="min-width: 680px; height: 100%; box-sizing: border-box; padding: 28px 32px; display: flex; flex-direction: column; gap: 22px; border-top: 2px solid #4ade80">
+<div style="display: flex; justify-content: space-between; align-items: baseline; gap: 16px"><h3 style="margin: 0; font-size: 26px; font-weight: 600; letter-spacing: -0.02em">{{f.name}}</h3><span style="font-family: 'Geist Mono', monospace; font-size: 13px; color: rgba(255,255,255,0.6)">{{f.n}} / 09</span></div>
+<video src="{{f.video}}" poster="{{f.poster}}" autoplay="" muted="" loop="" playsinline="" aria-label="{{f.name}}, in action" style="display: block; width: 100%; aspect-ratio: 1836 / 684; object-fit: cover; background: #05060a; border: 1px solid rgba(255,255,255,0.06)"></video>
+<div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px">
+<sc-for list="{{f.points}}" as="p" hint-placeholder-count="3">
+<div style="display: flex; flex-direction: column; gap: 6px; border-top: 1px solid rgba(255,255,255,0.12); padding-top: 14px"><h4 style="margin: 0; font-size: 15px; font-weight: 500">{{p.t}}</h4><p style="margin: 0; font-size: 14px; line-height: 1.5; color: rgba(255,255,255,0.6)">{{p.d}}</p></div>
+</sc-for>
+</div>
+</div>
+</sc-if>
+<sc-if value="{{f.inactive}}" hint-placeholder-val="{{true}}">
+<button type="button" class="kstripbtn" onClick="{{f.pick}}" aria-label="Show {{f.name}}" style="width: 100%; height: 100%; border: 0; background: transparent; color: #ffffff; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: space-between; padding: 28px 0; font-family: 'Geist Mono', monospace; font-size: 13px; gap: 16px">
+<span style="color: rgba(255,255,255,0.6)">{{f.n}}</span>
+<span class="kvl" style="writing-mode: vertical-rl; transform: rotate(180deg); letter-spacing: 0.08em; text-transform: uppercase; white-space: nowrap">{{f.name}}</span>
+<span aria-hidden="true" style="font-size: 20px; color: #4ade80">+</span>
+</button>
+</sc-if>
+</div>
+</sc-for>
+</div>
+</section>
+
+<div aria-hidden="true" style="height: 56px"></div>
+
+<section id="ksec2" data-anchor="scheduler" class="ksnap" style="border: 1px solid {{s2b}}; box-shadow: {{s2sh}}; filter: {{s2f}}; opacity: {{s2o}}; transform: {{s2t}}; transition: filter 500ms ease, opacity 500ms ease, transform 500ms cubic-bezier(0.2,0.7,0.2,1), border-color 500ms ease, box-shadow 500ms ease">
+<div style="display: flex; flex-wrap: wrap; border-bottom: 1px solid rgba(255,255,255,0.06); background: rgba(255,255,255,0.025)">
+<div style="flex: 1 1 320px; padding: 40px 32px; border-right: 1px solid rgba(255,255,255,0.06); display: flex; align-items: baseline; gap: 20px"><span style="font-family: 'Geist Mono', monospace; font-size: 13px; color: rgba(255,255,255,0.6)">02</span><h2 style="margin: 0; font-size: clamp(36px, 4vw, 56px); line-height: 1; font-weight: 600; letter-spacing: -0.04em">Scheduler</h2></div>
+<div style="flex: 2 1 480px; padding: 40px 32px; display: flex; align-items: flex-end"><p style="margin: 0; font-size: 17px; line-height: 1.5; color: rgba(255,255,255,0.6); max-width: 48ch">Automation is a node graph, not a cron line. Wire a trigger to the actions it should run, and watch it fire.</p></div>
+</div>
+<div style="padding: 64px 32px; display: flex; flex-wrap: wrap; align-items: center; justify-content: center; row-gap: 16px; font-family: 'Geist Mono', monospace; font-size: 14px">
+<div style="border: 1px solid {{n0}}; background: #10111a; padding: 18px 22px; min-width: 170px; transition: border-color 300ms"><div style="font-size: 11px; color: rgba(255,255,255,0.6); text-transform: uppercase; letter-spacing: 0.08em; padding-bottom: 8px">Trigger</div>Daily at 04:00</div>
+<div aria-hidden="true" style="width: 56px; height: 2px; background: rgba(255,255,255,0.12)"><div style="height: 2px; width: {{w0}}; background: #4ade80; transition: width 600ms linear"></div></div>
+<div style="border: 1px solid {{n1}}; background: #10111a; padding: 18px 22px; min-width: 170px; transition: border-color 300ms"><div style="font-size: 11px; color: rgba(255,255,255,0.6); text-transform: uppercase; letter-spacing: 0.08em; padding-bottom: 8px">Condition</div>Players online = 0</div>
+<div aria-hidden="true" style="width: 56px; height: 2px; background: rgba(255,255,255,0.12)"><div style="height: 2px; width: {{w1}}; background: #4ade80; transition: width 600ms linear"></div></div>
+<div style="border: 1px solid {{n2}}; background: #10111a; padding: 18px 22px; min-width: 170px; transition: border-color 300ms"><div style="font-size: 11px; color: rgba(255,255,255,0.6); text-transform: uppercase; letter-spacing: 0.08em; padding-bottom: 8px">Action</div>Back up world</div>
+<div aria-hidden="true" style="width: 56px; height: 2px; background: rgba(255,255,255,0.12)"><div style="height: 2px; width: {{w2}}; background: #4ade80; transition: width 600ms linear"></div></div>
+<div style="border: 1px solid {{n3}}; background: #10111a; padding: 18px 22px; min-width: 170px; transition: border-color 300ms"><div style="font-size: 11px; color: rgba(255,255,255,0.6); text-transform: uppercase; letter-spacing: 0.08em; padding-bottom: 8px">Action</div>Notify</div>
+</div>
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); border-top: 1px solid rgba(255,255,255,0.06)">
+<div style="padding: 32px; border-right: 1px solid rgba(255,255,255,0.06); display: flex; flex-direction: column; gap: 8px"><h3 style="margin: 0; font-size: 17px; font-weight: 500">Triggers</h3><p style="margin: 0; font-size: 15px; line-height: 1.5; color: rgba(255,255,255,0.6)">A time, an interval, or something the server did.</p></div>
+<div style="padding: 32px; border-right: 1px solid rgba(255,255,255,0.06); display: flex; flex-direction: column; gap: 8px"><h3 style="margin: 0; font-size: 17px; font-weight: 500">Attributes</h3><p style="margin: 0; font-size: 15px; line-height: 1.5; color: rgba(255,255,255,0.6)">Read live server values, and write settings back.</p></div>
+<div style="padding: 32px; border-right: 1px solid rgba(255,255,255,0.06); display: flex; flex-direction: column; gap: 8px"><h3 style="margin: 0; font-size: 17px; font-weight: 500">Conditions</h3><p style="margin: 0; font-size: 15px; line-height: 1.5; color: rgba(255,255,255,0.6)">Compare values and branch. Failures get their own path.</p></div>
+<div style="padding: 32px; display: flex; flex-direction: column; gap: 8px"><h3 style="margin: 0; font-size: 17px; font-weight: 500">Actions</h3><p style="margin: 0; font-size: 15px; line-height: 1.5; color: rgba(255,255,255,0.6)">Commands, backups, delays, notifications, webhooks.</p></div>
+</div>
+</section>
+
+<div aria-hidden="true" style="height: 56px"></div>
+
+
+
+
+<div id="ksec3" class="ksnap" style="display: flex; flex-direction: column; gap: 16px; filter: {{s3f}}; opacity: {{s3o}}; transform: {{s3t}}; transition: filter 500ms ease, opacity 500ms ease, transform 500ms cubic-bezier(0.2,0.7,0.2,1), border-color 500ms ease, box-shadow 500ms ease">
+<section id="local" style="display: flex; flex-wrap: wrap; border: 1px solid {{s3b}}; box-shadow: {{s3sh}}; transition: filter 500ms ease, opacity 500ms ease, transform 500ms cubic-bezier(0.2,0.7,0.2,1), border-color 500ms ease, box-shadow 500ms ease">
+<div style="flex: 1.3 1 300px; padding: 32px; display: flex; flex-direction: column; gap: 12px; background: rgba(255,255,255,0.025)"><div style="display: flex; align-items: baseline; gap: 20px"><span style="font-family: 'Geist Mono', monospace; font-size: 13px; color: rgba(255,255,255,0.6)">03</span><h2 style="margin: 0; font-size: clamp(32px, 3.4vw, 44px); line-height: 1; font-weight: 600; letter-spacing: -0.04em">Local-first</h2></div><p style="margin: 0; font-size: 15px; line-height: 1.5; color: rgba(255,255,255,0.6)">A desktop app, not a hosted panel. No account to sign up for.</p></div>
+<div style="flex: 1 1 220px; padding: 32px; border-left: 1px solid rgba(255,255,255,0.06); display: flex; flex-direction: column; gap: 8px"><h3 style="margin: 0; font-size: 18px; font-weight: 500">No telemetry</h3><p style="margin: 0; font-size: 15px; line-height: 1.5; color: rgba(255,255,255,0.6)">No analytics, no crash reports. Nothing phones home.</p></div>
+<div style="flex: 1 1 220px; padding: 32px; border-left: 1px solid rgba(255,255,255,0.06); display: flex; flex-direction: column; gap: 8px"><h3 style="margin: 0; font-size: 18px; font-weight: 500">Stays on disk</h3><p style="margin: 0; font-size: 15px; line-height: 1.5; color: rgba(255,255,255,0.6)">Settings as JSON on your disk. Backups where you point them.</p></div>
+<div style="flex: 1 1 220px; padding: 32px; border-left: 1px solid rgba(255,255,255,0.06); display: flex; flex-direction: column; gap: 8px"><h3 style="margin: 0; font-size: 18px; font-weight: 500">Network on request</h3><p style="margin: 0; font-size: 15px; line-height: 1.5; color: rgba(255,255,255,0.6)">GitHub, Modrinth, and your own server over RCON.</p></div>
+</section>
+
+<section id="download" style="position: relative; overflow: hidden; border: 1px solid rgba(74,222,128,0.18); box-shadow: {{s3sh}}; transition: filter 500ms ease, opacity 500ms ease, transform 500ms cubic-bezier(0.2,0.7,0.2,1), border-color 500ms ease, box-shadow 500ms ease; background-color: rgba(18,20,30,0.82); background-image: radial-gradient(120% 90% at 50% 0%, rgba(74,222,128,0.07), transparent 62%); padding: clamp(72px, 9vw, 128px) 32px; display: flex; flex-direction: column; align-items: center; text-align: center; gap: 20px">
+<span class="kglow" aria-hidden="true"></span>
+<span style="font-family: 'Geist Mono', monospace; font-size: 13px; color: rgba(255,255,255,0.6)">v0.2.0-alpha.2 · Oct 1, 2026</span>
+<h2 style="margin: 0; font-size: clamp(56px, 8vw, 112px); line-height: 0.95; font-weight: 600; letter-spacing: -0.05em">Get Konnekt<span style="color: #4ade80">.</span></h2>
+<p style="margin: 0; font-size: 19px; line-height: 1.5; color: rgba(255,255,255,0.6)">Free and open source, for Windows and Linux.</p>
+<div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; padding-top: 16px">
+<a href="#download" style="display: inline-flex; align-items: center; justify-content: center; gap: 12px; min-height: 64px; padding: 0 44px; background: #4ade80; color: #05060a; font-family: 'Geist Mono', monospace; font-size: 15px; font-weight: 500; letter-spacing: 0.06em; text-transform: uppercase"><svg width="15" height="15" viewBox="0 0 14 14" aria-hidden="true"><path d="M7 1v9M3 6.5 7 10.5 11 6.5M1.5 13h11" fill="none" stroke="currentColor" stroke-width="1.6"></path></svg>Download Konnekt</a>
+<a href="#changelog" style="display: inline-flex; align-items: center; justify-content: center; min-height: 64px; padding: 0 32px; border: 1px solid rgba(255,255,255,0.12); background: #05060a; color: #ffffff; font-family: 'Geist Mono', monospace; font-size: 15px; letter-spacing: 0.06em; text-transform: uppercase">Changelog</a>
+</div>
+</section>
+</div>
+
+<div aria-hidden="true" style="height: 56px"></div>
+
+<footer class="ksnap-end" style="border: 1px solid rgba(255,255,255,0.06); background: rgba(255,255,255,0.025)">
+<div style="display: flex; flex-wrap: wrap">
+<div style="flex: 1.6 1 320px; padding: 40px 32px; display: flex; flex-direction: column; gap: 14px">
+<a href="#top" style="display: inline-flex; align-items: center; gap: 10px; font-weight: 600; font-size: 20px; letter-spacing: -0.02em; color: #ffffff"><svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><rect x="1" y="1" width="7" height="7" fill="none" stroke="currentColor" stroke-width="1.5"></rect><rect x="10" y="1" width="7" height="7" fill="none" stroke="currentColor" stroke-width="1.5"></rect><rect x="1" y="10" width="16" height="7" fill="none" stroke="currentColor" stroke-width="1.5"></rect></svg>Konnekt</a>
+<p style="margin: 0; font-size: 15px; line-height: 1.5; color: rgba(255,255,255,0.6); max-width: 32ch">A desktop dashboard for the Minecraft servers you host.</p>
+<span style="font-family: 'Geist Mono', monospace; font-size: 13px; color: rgba(255,255,255,0.6)">v0.2.0-alpha.2 · Windows and Linux</span>
+</div>
+<nav aria-label="Product" style="flex: 1 1 160px; padding: 40px 32px; border-left: 1px solid rgba(255,255,255,0.06); display: flex; flex-direction: column; gap: 14px"><span style="font-family: 'Geist Mono', monospace; font-size: 12px; letter-spacing: 0.1em; color: rgba(255,255,255,0.6)">PRODUCT</span><a href="#download" style="color: rgba(255,255,255,0.85); font-size: 15px">Download</a><a href="#demo" style="color: rgba(255,255,255,0.85); font-size: 15px">Try the demo</a><a href="#changelog" style="color: rgba(255,255,255,0.85); font-size: 15px">Changelog</a></nav>
+<nav aria-label="Learn" style="flex: 1 1 160px; padding: 40px 32px; border-left: 1px solid rgba(255,255,255,0.06); display: flex; flex-direction: column; gap: 14px"><span style="font-family: 'Geist Mono', monospace; font-size: 12px; letter-spacing: 0.1em; color: rgba(255,255,255,0.6)">LEARN</span><a href="#ksec1" style="color: rgba(255,255,255,0.85); font-size: 15px">Features</a><a href="#docs" style="color: rgba(255,255,255,0.85); font-size: 15px">Docs</a><a href="#roadmap" style="color: rgba(255,255,255,0.85); font-size: 15px">Roadmap</a></nav>
+<nav aria-label="Source" style="flex: 1 1 160px; padding: 40px 32px; border-left: 1px solid rgba(255,255,255,0.06); display: flex; flex-direction: column; gap: 14px"><span style="font-family: 'Geist Mono', monospace; font-size: 12px; letter-spacing: 0.1em; color: rgba(255,255,255,0.6)">SOURCE</span><a href="#github" style="color: rgba(255,255,255,0.85); font-size: 15px">GitHub</a><a href="#issues" style="color: rgba(255,255,255,0.85); font-size: 15px">Issues</a><a href="#licence" style="color: rgba(255,255,255,0.85); font-size: 15px">Licence, CC0</a></nav>
+</div>
+<div style="display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px 24px; padding: 20px 32px; border-top: 1px solid rgba(255,255,255,0.06); font-family: 'Geist Mono', monospace; font-size: 13px; color: rgba(255,255,255,0.6)">
+<span>Alpha software. A side project mostly written by Claude. <a href="#disclaimer" style="color: rgba(255,255,255,0.85); text-decoration: underline">Full statement</a></span>
+<span>© 2026 Konnekt</span>
+</div>
+</footer>
+
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":3900}}'>
+const FEATURES = [
+  { n: '01', name: 'Tile dashboard', video: '/_blob/2883ae0f2acb4f7fcc7cf6dae5280267', poster: '/_blob/5ce445329b11437a78c7cf99d5762966', points: [{ t: 'Drag, resize and snap', d: 'Pick a tile up by its title bar and the grid makes room.' }, { t: 'Crate what you do not use', d: 'A closed tile waits in the sidebar until you want it back.' }, { t: 'Layout presets', d: 'Console focus, compact, essentials, or your own.' }] },
+  { n: '02', name: 'Live console', video: '/_blob/51a09c6903ae4c1fb35166c5abbc5596', poster: '/_blob/b99e7a176f388234ffee9a46aa8d9868', points: [{ t: 'Live log streaming', d: 'The log as the server writes it.' }, { t: 'Send commands inline', d: 'Type at the prompt and the reply lands in the same stream.' }, { t: 'Filter and search', d: 'Narrow the scrollback to one kind of line, or to a word.' }] },
+  { n: '03', name: 'Players', video: '/_blob/2554da4905b9adb76784f30c6c3f7456', poster: '/_blob/910476dcaf7832ccb55b372f1d8dd519', points: [{ t: 'See who is online', d: 'A card per player, lit while they are on.' }, { t: 'Kick or ban with a reason', d: 'The reason goes with the command.' }, { t: 'Op, whitelist and bans', d: "Each player's standing, in one panel." }] },
+  { n: '04', name: 'Performance', video: '/_blob/c9ab4e0073aa7bd4f809b5e99aaa18c5', poster: '/_blob/bad5e8ec0de4c06f1f1cf92a22ef0459', points: [{ t: 'Live TPS, CPU and memory', d: 'Read off the process and the tick.' }, { t: 'An hour of history', d: 'A sample every ten seconds, kept for an hour.' }, { t: 'No plugins to install', d: 'The server never knows it is watched.' }] },
+  { n: '05', name: 'Worlds', video: '/_blob/98c18510cbb0cd23bef2223697f582ee', poster: '/_blob/79342060c3561d4be44c1b6861c6680b', points: [{ t: 'Each world as a planet', d: 'Its nether and end as moons, sized by disk use.' }, { t: 'Seed, size and version', d: 'Read from the level data, not typed in.' }, { t: 'Switch, rename, duplicate', d: 'Change worlds without opening server.properties.' }] },
+  { n: '06', name: 'Backups', video: '/_blob/81d8098f59c5c03205dc1d9c2d3d5e70', poster: '/_blob/2ced4fdc22f3d2d915fcffe17387a0cb', points: [{ t: 'Manual or scheduled', d: 'World saves paused while it runs.' }, { t: 'Browse restore points', d: 'Every backup, tagged and searchable.' }, { t: 'Roll back in two clicks', d: 'Restore with the server stopped.' }] },
+  { n: '07', name: 'Config editor', video: '/_blob/84870a01c340b8b4098121aa913b4730', poster: '/_blob/56f37fe40e61b8ca4021d757836a7f73', points: [{ t: 'server.properties as a form', d: 'Every setting under a readable name.' }, { t: 'Raw mode', d: 'The file itself, syntax highlighted.' }, { t: 'YAML, JSON and TOML', d: 'Plugin and mod configs open in the same place.' }] },
+  { n: '08', name: 'Mods and plugins', video: '/_blob/bc2db157b7f768eadf56c249ffcd0d48', poster: '/_blob/2d7663aae76becd611ba72134fe80de0', points: [{ t: 'Install from Modrinth', d: 'Search, pick a version, it lands in the right folder.' }, { t: 'Dependencies resolve', d: 'What a plugin needs comes along with it.' }, { t: 'Changelogs inline', d: 'See what a version changed before you take it.' }] },
+  { n: '09', name: 'Multi-server', video: '/_blob/c8a59dc0f4ca05b561e3a9cb6a1c23fa', poster: '/_blob/e6028aeed59ec52ac28994fd4e2f99d0', points: [{ t: 'Every server in one app', d: 'Survival, creative, a test server: one list.' }, { t: 'Own jar, folder and JVM args', d: 'Each server keeps its launch settings.' }, { t: 'Switch with one click', d: 'The whole dashboard follows the server you pick.' }] },
+];
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { active: 0, step: 0, sec: -1 };
+  }
+  componentDidMount() {
+    this.timer = setInterval(() => this.setState((s) => ({ step: (s.step + 1) % 10 })), 900);
+    this.onScroll = () => {
+      if (this.frame) return;
+      this.frame = requestAnimationFrame(() => {
+        this.frame = 0;
+        const sec = this.focusedSection();
+        if (sec !== this.state.sec) this.setState({ sec });
+      });
+    };
+    window.addEventListener('scroll', this.onScroll, { capture: true, passive: true });
+    window.addEventListener('resize', this.onScroll);
+    this.onScroll();
+  }
+  componentWillUnmount() {
+    clearInterval(this.timer);
+    cancelAnimationFrame(this.frame);
+    window.removeEventListener('scroll', this.onScroll, { capture: true });
+    window.removeEventListener('resize', this.onScroll);
+  }
+  focusedSection() {
+    // Nothing to focus when the whole page fits, as it does on the canvas.
+    const vh = window.innerHeight;
+    if (document.documentElement.scrollHeight <= vh + 4) return -1;
+    const mid = vh / 2;
+    let best = -1;
+    let bestDist = Infinity;
+    for (let i = 0; i < 4; i++) {
+      const el = document.getElementById('ksec' + i);
+      if (!el) continue;
+      const r = el.getBoundingClientRect();
+      const dist = r.top <= mid && r.bottom >= mid ? 0 : Math.min(Math.abs(r.top - mid), Math.abs(r.bottom - mid));
+      if (dist < bestDist) { best = i; bestDist = dist; }
+    }
+    return best;
+  }
+  renderVals() {
+    const { active, step, sec } = this.state;
+    const focus = {};
+    for (let i = 0; i < 4; i++) {
+      const dim = sec !== -1 && sec !== i;
+      const up = sec === i;
+      focus['s' + i + 'f'] = dim ? 'blur(1.5px)' : 'none';
+      focus['s' + i + 'o'] = dim ? 0.72 : 1;
+      focus['s' + i + 't'] = up ? 'translateY(-6px)' : 'none';
+      focus['s' + i + 'b'] = up ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.06)';
+      focus['s' + i + 'sh'] = up ? '0 28px 56px -24px rgba(0,0,0,0.9), 0 0 0 1px rgba(74,222,128,0.04)' : '0 0 0 0 rgba(0,0,0,0)';
+    }
+    const lit = (k) => (step >= k * 2 + 1 ?'#4ade80' : 'rgba(255,255,255,0.12)');
+    const wire = (k) => (step >= k * 2 + 2 ? '100%' : '0%');
+    return {
+      features: FEATURES.map((f, i) => ({
+        ...f,
+        active: i === active,
+        inactive: i !== active,
+        grow: i === active ? 12 : 1,
+        bg: i === active ? '#10111a' : '#05060a',
+        pick: () => this.setState({ active: i }),
+      })),
+      ...focus,
+      n0: lit(0), n1: lit(1), n2: lit(2), n3: lit(3),
+      w0: wire(0), w1: wire(1), w2: wire(2),
+    };
+  }
+}
+</script>
+</body>
+</html>

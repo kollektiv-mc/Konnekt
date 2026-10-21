@@ -1,0 +1,187 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Konnekt changelog</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&amp;family=Geist+Mono:wght@400;500&amp;display=swap">
+<style>
+body{margin:0;background:#05060a}
+a{color:#ffffff;text-decoration:none}a:hover{color:#4ade80}
+.kbtn{transition:background 150ms ease,color 150ms ease}
+.kbtn:hover{background:rgba(255,255,255,0.05)}
+</style>
+</helmet>
+<div style="background: #05060a; color: #ffffff; font-family: 'Geist', system-ui, sans-serif; min-height: 100vh; padding: 16px clamp(12px, 2vw, 24px) 24px">
+<div style="max-width: 1280px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px">
+
+<nav style="display: flex; flex-wrap: wrap; align-items: stretch; border: 1px solid rgba(255,255,255,0.06); background: rgba(255,255,255,0.025)">
+<a href="Home.dc.html" style="display: flex; align-items: center; gap: 10px; padding: 0 32px; min-height: 72px; border-right: 1px solid rgba(255,255,255,0.06); font-weight: 600; font-size: 20px; letter-spacing: -0.02em; color: #ffffff">
+<svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><rect x="1" y="1" width="7" height="7" fill="none" stroke="currentColor" stroke-width="1.5"></rect><rect x="10" y="1" width="7" height="7" fill="none" stroke="currentColor" stroke-width="1.5"></rect><rect x="1" y="10" width="16" height="7" fill="none" stroke="currentColor" stroke-width="1.5"></rect></svg>
+Konnekt</a>
+<div style="display: flex; flex-wrap: wrap; align-items: center; gap: 28px; padding: 0 32px; flex: 1 1 360px; min-height: 72px; font-size: 15px">
+<a href="Home.dc.html" style="color: rgba(255,255,255,0.6)">Features</a>
+<a href="#docs" style="color: rgba(255,255,255,0.6)">Docs</a>
+<a href="Roadmap.dc.html" style="color: rgba(255,255,255,0.6)">Roadmap</a>
+<a href="Changelog.dc.html" aria-current="page" style="color: #ffffff">Changelog</a>
+</div>
+<a href="#github" style="display: flex; align-items: center; padding: 0 28px; min-height: 72px; border-left: 1px solid rgba(255,255,255,0.06); font-size: 15px; color: rgba(255,255,255,0.6)">GitHub</a>
+<a href="#download" style="display: flex; align-items: center; justify-content: center; gap: 10px; padding: 0 40px; min-height: 72px; background: #4ade80; color: #05060a; font-family: 'Geist Mono', monospace; font-size: 14px; font-weight: 500; letter-spacing: 0.06em; text-transform: uppercase">
+<svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><path d="M7 1v9M3 6.5 7 10.5 11 6.5M1.5 13h11" fill="none" stroke="currentColor" stroke-width="1.6"></path></svg>
+Download</a>
+</nav>
+
+<header style="display: flex; flex-wrap: wrap; border: 1px solid rgba(255,255,255,0.06)">
+<div style="flex: 1 1 420px; padding: clamp(40px, 6vw, 72px) 32px; display: flex; flex-direction: column; gap: 16px; border-right: 1px solid rgba(255,255,255,0.06)">
+<span style="font-family: 'Geist Mono', monospace; font-size: 13px; color: rgba(255,255,255,0.6)">{{releaseCount}} releases since Jul 16, 2026</span>
+<h1 style="margin: 0; font-size: clamp(56px, 7vw, 96px); line-height: 0.95; font-weight: 600; letter-spacing: -0.05em">Changelog</h1>
+</div>
+<div style="flex: 1 1 420px; padding: clamp(40px, 6vw, 72px) 32px; display: flex; flex-direction: column; justify-content: flex-end; gap: 20px; background: rgba(255,255,255,0.025)">
+<p style="margin: 0; font-size: 18px; line-height: 1.55; color: rgba(255,255,255,0.6); max-width: 40ch">Every release and what changed in it, newest first.</p>
+<a href="#releases" style="font-family: 'Geist Mono', monospace; font-size: 13px; letter-spacing: 0.06em; text-transform: uppercase">All releases on GitHub →</a>
+</div>
+</header>
+
+<section aria-label="Nightly snapshot" style="border: 1px solid rgba(255,216,77,0.35); background: rgba(255,216,77,0.04)">
+<div style="display: flex; flex-wrap: wrap; align-items: stretch">
+<div style="flex: 1 1 300px; padding: 24px 32px; display: flex; flex-direction: column; gap: 6px; border-right: 1px solid rgba(255,216,77,0.18)">
+<span style="display: inline-flex; align-items: center; gap: 10px; font-size: 18px; font-weight: 500"><span aria-hidden="true" style="width: 8px; height: 8px; background: #ffd84d"></span>Nightly snapshot</span>
+<span style="font-family: 'Geist Mono', monospace; font-size: 13px; color: rgba(255,255,255,0.6)">Built from main · {{snap.date}}</span>
+</div>
+<p style="flex: 2 1 380px; margin: 0; padding: 24px 32px; align-self: center; font-size: 15px; line-height: 1.55; color: rgba(255,255,255,0.6)">Changes on main that no release has yet. Untested and replaced by the next build, so back up your server folder first.</p>
+<button type="button" class="kbtn" onClick="{{toggleSnap}}" aria-expanded="{{snapExpanded}}" style="flex: 0 0 220px; box-sizing: border-box; white-space: nowrap; border: 0; border-left: 1px solid rgba(255,216,77,0.18); background: transparent; color: #ffd84d; padding: 0 32px; min-height: 72px; font-family: 'Geist Mono', monospace; font-size: 13px; letter-spacing: 0.06em; text-transform: uppercase; cursor: pointer">{{snapLabel}}</button>
+</div>
+<sc-if value="{{snapOpen}}" hint-placeholder-val="{{false}}">
+<div style="display: flex; flex-wrap: wrap; border-top: 1px solid rgba(255,216,77,0.18)">
+<sc-for list="{{snap.sections}}" as="sec" hint-placeholder-count="2">
+<div style="flex: 1 1 420px; min-width: 0; padding: 8px 32px 24px">
+<div style="display: flex; justify-content: space-between; padding: 16px 0 12px; font-family: 'Geist Mono', monospace; font-size: 12px; letter-spacing: 0.1em; text-transform: uppercase; color: rgba(255,255,255,0.6)"><span>{{sec.name}}</span><span>{{sec.count}}</span></div>
+<sc-for list="{{sec.all}}" as="item" hint-placeholder-count="6">
+<div style="padding: 10px 0; border-top: 1px solid rgba(255,255,255,0.06); font-size: 15px; line-height: 1.5; color: rgba(255,255,255,0.85)">{{item}}</div>
+</sc-for>
+</div>
+</sc-for>
+</div>
+</sc-if>
+</section>
+
+<sc-for list="{{releases}}" as="r" hint-placeholder-count="3">
+<article style="display: flex; flex-wrap: wrap; border: 1px solid {{r.border}}">
+<div style="flex: 1 1 340px; max-width: 100%; box-sizing: border-box; border-right: 1px solid rgba(255,255,255,0.06); background: rgba(255,255,255,0.025)">
+<div style="position: sticky; top: 16px; padding: 32px; display: flex; flex-direction: column; gap: 14px">
+<sc-if value="{{r.latest}}" hint-placeholder-val="{{false}}"><span style="display: inline-flex; align-items: center; gap: 8px; font-family: 'Geist Mono', monospace; font-size: 12px; letter-spacing: 0.1em; color: rgba(255,255,255,0.6)"><span aria-hidden="true" style="width: 8px; height: 8px; background: #4ade80"></span>LATEST</span></sc-if>
+<h2 style="margin: 0; font-size: clamp(24px, 2.2vw, 32px); line-height: 1; font-weight: 600; letter-spacing: -0.035em; white-space: nowrap">{{r.tag}}</h2>
+<span style="font-family: 'Geist Mono', monospace; font-size: 13px; color: rgba(255,255,255,0.6)">{{r.date}}</span>
+<span style="font-size: 14px; line-height: 1.5; color: rgba(255,255,255,0.6)">{{r.summary}}</span>
+<div style="display: flex; flex-wrap: wrap; gap: 8px; padding-top: 10px">
+<sc-if value="{{r.latest}}" hint-placeholder-val="{{false}}"><a href="#download" style="display: inline-flex; align-items: center; min-height: 44px; padding: 0 18px; background: #4ade80; color: #05060a; font-family: 'Geist Mono', monospace; font-size: 12px; font-weight: 500; letter-spacing: 0.06em; text-transform: uppercase">Download</a></sc-if>
+<a href="{{r.url}}" style="display: inline-flex; align-items: center; min-height: 44px; padding: 0 18px; border: 1px solid rgba(255,255,255,0.12); font-family: 'Geist Mono', monospace; font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase">On GitHub</a>
+</div>
+</div>
+</div>
+<div style="flex: 999 1 560px; min-width: 0; display: flex; flex-direction: column">
+<div style="display: flex; flex-wrap: wrap; flex: 1 1 auto">
+<sc-for list="{{r.sections}}" as="sec" hint-placeholder-count="2">
+<div style="flex: 1 1 360px; min-width: 0; padding: 8px 32px 24px">
+<div style="display: flex; justify-content: space-between; padding: 24px 0 12px; font-family: 'Geist Mono', monospace; font-size: 12px; letter-spacing: 0.1em; text-transform: uppercase; color: rgba(255,255,255,0.6)"><span>{{sec.name}}</span><span>{{sec.count}}</span></div>
+<sc-for list="{{sec.shown}}" as="item" hint-placeholder-count="6">
+<div style="padding: 10px 0; border-top: 1px solid rgba(255,255,255,0.06); font-size: 15px; line-height: 1.5; color: rgba(255,255,255,0.85)">{{item}}</div>
+</sc-for>
+<sc-if value="{{sec.hasMore}}" hint-placeholder-val="{{false}}">
+<button type="button" class="kbtn" onClick="{{sec.toggle}}" aria-expanded="{{sec.expanded}}" style="width: 100%; text-align: left; border: 0; border-top: 1px solid rgba(255,255,255,0.06); background: transparent; color: #ffffff; padding: 12px 0; min-height: 44px; font-family: 'Geist Mono', monospace; font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase; cursor: pointer">{{sec.toggleLabel}}</button>
+</sc-if>
+</div>
+</sc-for>
+</div>
+<sc-if value="{{r.hasNote}}" hint-placeholder-val="{{false}}">
+<p style="margin: 0; padding: 16px 32px; border-top: 1px solid rgba(255,255,255,0.06); font-family: 'Geist Mono', monospace; font-size: 12px; line-height: 1.6; color: rgba(255,255,255,0.6)">{{r.note}}</p>
+</sc-if>
+</div>
+</article>
+</sc-for>
+
+<div aria-hidden="true" style="height: 56px"></div>
+
+<footer style="border: 1px solid rgba(255,255,255,0.06); background: rgba(255,255,255,0.025)">
+<div style="display: flex; flex-wrap: wrap">
+<div style="flex: 1.6 1 320px; padding: 40px 32px; display: flex; flex-direction: column; gap: 14px">
+<a href="Home.dc.html" style="display: inline-flex; align-items: center; gap: 10px; font-weight: 600; font-size: 20px; letter-spacing: -0.02em; color: #ffffff"><svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><rect x="1" y="1" width="7" height="7" fill="none" stroke="currentColor" stroke-width="1.5"></rect><rect x="10" y="1" width="7" height="7" fill="none" stroke="currentColor" stroke-width="1.5"></rect><rect x="1" y="10" width="16" height="7" fill="none" stroke="currentColor" stroke-width="1.5"></rect></svg>Konnekt</a>
+<p style="margin: 0; font-size: 15px; line-height: 1.5; color: rgba(255,255,255,0.6); max-width: 32ch">A desktop dashboard for the Minecraft servers you host.</p>
+<span style="font-family: 'Geist Mono', monospace; font-size: 13px; color: rgba(255,255,255,0.6)">v0.2.0-alpha.2 · Windows and Linux</span>
+</div>
+<nav aria-label="Product" style="flex: 1 1 160px; padding: 40px 32px; border-left: 1px solid rgba(255,255,255,0.06); display: flex; flex-direction: column; gap: 14px"><span style="font-family: 'Geist Mono', monospace; font-size: 12px; letter-spacing: 0.1em; color: rgba(255,255,255,0.6)">PRODUCT</span><a href="#download" style="color: rgba(255,255,255,0.85); font-size: 15px">Download</a><a href="#demo" style="color: rgba(255,255,255,0.85); font-size: 15px">Try the demo</a><a href="Changelog.dc.html" style="color: rgba(255,255,255,0.85); font-size: 15px">Changelog</a></nav>
+<nav aria-label="Learn" style="flex: 1 1 160px; padding: 40px 32px; border-left: 1px solid rgba(255,255,255,0.06); display: flex; flex-direction: column; gap: 14px"><span style="font-family: 'Geist Mono', monospace; font-size: 12px; letter-spacing: 0.1em; color: rgba(255,255,255,0.6)">LEARN</span><a href="Home.dc.html" style="color: rgba(255,255,255,0.85); font-size: 15px">Features</a><a href="#docs" style="color: rgba(255,255,255,0.85); font-size: 15px">Docs</a><a href="Roadmap.dc.html" style="color: rgba(255,255,255,0.85); font-size: 15px">Roadmap</a></nav>
+<nav aria-label="Source" style="flex: 1 1 160px; padding: 40px 32px; border-left: 1px solid rgba(255,255,255,0.06); display: flex; flex-direction: column; gap: 14px"><span style="font-family: 'Geist Mono', monospace; font-size: 12px; letter-spacing: 0.1em; color: rgba(255,255,255,0.6)">SOURCE</span><a href="#github" style="color: rgba(255,255,255,0.85); font-size: 15px">GitHub</a><a href="#issues" style="color: rgba(255,255,255,0.85); font-size: 15px">Issues</a><a href="#licence" style="color: rgba(255,255,255,0.85); font-size: 15px">Licence, CC0</a></nav>
+</div>
+<div style="display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px 24px; padding: 20px 32px; border-top: 1px solid rgba(255,255,255,0.06); font-family: 'Geist Mono', monospace; font-size: 13px; color: rgba(255,255,255,0.6)">
+<span>Alpha software. A side project mostly written by Claude. <a href="#disclaimer" style="color: rgba(255,255,255,0.85); text-decoration: underline">Full statement</a></span>
+<span>© 2026 Konnekt</span>
+</div>
+</footer>
+
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":3900}}'>
+const RELEASES = [{"tag":"snapshot","date":"2026-10-20","secs":{"Features":["Add Remote Access to Settings, with device and change approval on the desktop","Fit the remote dashboard to a browser: sign out, its own server and no dead buttons","Reach the remote dashboard from anywhere through a Cloudflare tunnel","Lay the dashboard out for a phone's width","Choose a font for each type token in Settings","Draw the tunnel address as a QR code","Add a hardware acceleration setting for the Linux window","Let a scheduled backup target the active world","Show and create world backups in the Backups tile","Show and restore a world's backups in the Worlds tile","Show which scheduler blocks stop the server","Add bucket destinations to Settings","Add the Upload to Bucket block","Add the Distant Horizons snapshot block","Add the Publish DH Snapshot block and the download page","Prune old Distant Horizons snapshots after a publish","Add a private link for Distant Horizons snapshots","Warn when a config file no longer parses","Warn when the heap allocation approaches physical RAM","Run a named Cloudflare tunnel on the user's own hostname","Add the local MCP bridge for Claude on the same computer","Serve MCP on the remote listener for Claude's connectors","Sign Claude's connectors in with OAuth on the remote listener","Show and control Claude's access in Settings"],"Fixes":["Stop redistributing the ITF brand fonts","Fail a backup when the zip writer's final flush fails","Restore only the world's own folders from a multi-root archive","Load settings on a first run with no settings file","Show why a mod install failed where it was started","Cancel the scheduler editor's re-measure when it closes","Stop a graph save or import from overwriting another server's graph","Stop a deleted server.properties showing as the default max players","Keep server.properties and its backups owner-only","Stop backups following symlinks out of the world folder","Clear the leftover transform on a tile maximized from the navbar","Ask before a server switch discards unsaved editor changes","Stop the Server Manager showing the previous server's install summary","Stop the loader panel offering another server's builds","Refuse world actions on folders that are not worlds","Stop the Worlds camera jumping after a long frame","Keep the scheduler quick-add menu inside the window","Scroll the dashboard with the wheel even when the pointer is over a tile","Stop the empty scheduler editor asking to discard changes","Glide the dashboard on smooth scrolling again","Smooth the Worlds camera and keep every planet on screen in the solar view","Refuse a second backup while one is running","Skip Distant Horizons databases in backups of a running server","Retry an upload whose connection fails mid-request","Skip parts the bucket already has when a publish resumes","Stop a crashed server after a short grace","Save form edits to indented TOML config keys","Keep a failed scheduler run's reason on screen","Report server CPU as a share of the whole machine","Let the wheel scroll inside tiles again","Keep the scheduler's warning on one line and shorten the DH block name","Name the busy server when a loader update is refused"]},"note":null},{"tag":"v0.2.0-alpha.2","date":"2026-10-01","secs":{"Features":["Rework the Commands tile around commands linked from Kommands","Bind Backspace as a delete key in the graph editor","Give tiles figure-first faces with three layouts and a header menu","Scroll the mouse wheel on Firefox's spring physics","Warn before installing a client-only mod on a server"],"Fixes":["Sanitize mod descriptions and add a Content-Security-Policy","Refuse a server id that is not a single path segment","Refuse console commands that carry a line break","Refuse a backup that cannot pause the world saves","Survive a file deleted while config files or mods are being listed","Never fire a time-of-day trigger whose time cannot be parsed","Treat a response cut off mid-transfer as a failure","Show the error when the first-launch command buttons fail to save","Show only the selected server's data after a server switch","Back up every dimension of a world, not just the overworld","Run each schedule against the server it was written for","Keep the active server id pointing at a server that exists","Compare scheduler condition operands numerically","Warn about unsaved scheduler changes when switching or creating graphs","Theme the players roster sort control","Replace the scheduler's native dropdowns with a themed combobox","Teach the attribute field one spelling of an attribute name","Stop a command preset from silently overriding a typed command","Theme the server loader dropdown","Put the scheduler editor's controls back on the token layer","Run the Linux webview hardware accelerated by default","Stop a tile resize from selecting text across the dashboard","Point an RPM install at dnf instead of offering an update that cannot apply","Read a stopped server's player limit from server.properties","Keep the scheduler on the selected server across a server switch","Keep mod enable and uninstall inside the mods folder","Refuse mod downloads that cannot be verified"]},"note":"52 pull requests are not listed: 18 changed nothing that ships in this build, 34 maintenance or documentation."},{"tag":"v0.2.0-alpha.1","date":"2026-09-08","secs":{"Features":["Implement in-place auto-updater with download, verify, and install","Tile-crate drag reordering, layout-save robustness, README disclaimer + CC0 license","Support NeoForge and modern Forge servers","Narrate manager actions as tagged console lines","Add a server lifecycle state machine with console-based ready detection","Enable snapshot builds to self-update through a dedicated channel","Recolour the Solarized and Mocha skins and add Forest","Manage servers and update their NeoForge build","Ship a hand-tuned default tile layout","Pair each skin with its accent colour","Make the left navbar resizable","Show where a dragged crate row will land instead of reordering under the pointer","Move disconnect out of the sidebar rows and into the server manager","Open the layouts panel upwards and confirm before resetting presets","Replace the sidebar and tile glyphs with Lucide icons","Mark console narration with an outlined block and a status dot","Refactor navbar sections as collapsible cards with persistent state","Give the Commands tile a maximized library and Kommands-linked commands","Hold a single instance lock, raising the running window instead","Replace the system title bar with the app's own","Add Overview tile with server dashboard and performance chart"],"Fixes":["Stop the scheduler tile showing stale times and failed changes as saved","Stop backups from silently overwriting each other","Create the app data directory at every write, not only at startup","Fix animation timings that silently ignored the shared design values","Stop four stores from showing a failed write as saved","Show an unreachable server as unreachable, not as an empty one","Write a log file a bug reporter can attach","Fix console output stream dying on overlong lines","Write config and app-data files atomically","Quiesce world duplication while the server is running","Capture and report the server exit code on unexpected stop","Serialize power actions under one per-server lock","Use the Konnekt icon as the app icon on Windows and Linux","Give stop a longer grace window with visible escalation and a force stop","Fix the Gradient background setting having no effect","Stop Settings taking down the app without a Wails backend","Fix first-scroll stutter by pacing chunk warm-up and splitting heavy tiles","Correct the default tile arrangement","Fix missing Settings hover, the stuck layout highlight, and skins under light mode","Fix modal and sidebar headings rendering as synthetic bold","Draw the app's close, expand and edit controls from one icon set","Stop long navbar labels wrapping, and start every row on one edge","Handle missing Wails bridge in browser-only dev preset","Track players on servers that colour their console output","Track Bedrock players and show IPv6 addresses","Detect mods and plugins added outside the app","Read a NeoForge install's Minecraft version instead of guessing at it","Act on the server each call names","Act on the server each call names","Identify renamed mod files by hash and replace them on install","Keep a failing tile from taking the whole dashboard down","Stop the performance tile re-rendering in a loop when it has no history","Write frontend errors to konnekt.log","Report a backup that fails after its zip closes","Write eula.txt atomically through the config editor service","Show gigabyte sizes and one date format across the tiles","Raise the EULA prompt above the server manager and Settings","Open tile overlays over the window, not inside the tile","Report a failed restore as a restore failure","Refuse symlink escapes from the config editor's working directory","Stop click handlers from throwing when no backend is attached","Order prerelease counters as numbers so alpha.10 outranks alpha.9"]},"note":"77 pull requests are not listed: 47 changed nothing that ships in this build, 30 maintenance or documentation."},{"tag":"v0.1.0-alpha.1","date":"2026-07-16","secs":{"Included":["Multi-server management (add/configure servers, start/stop/restart, EULA flow)","Live console with real-time log streaming and quick-command buttons","Stats & performance monitoring (TPS, RAM, player count, uptime history)","Player management (kick/ban/pardon)","Visual scheduler (node-based triggers/actions for automation)","World management with 3D visualizer, world switching, backups, NBT inspection","Manual and scheduled backups with safe restore","Server config editor (server.properties, JSON/YAML/TOML)","Mod/plugin browsing and install via Modrinth, with dependency resolution","Customizable, draggable/resizable tile dashboard with layout presets","In-app + native OS notifications","In-place auto-updater: checks GitHub Releases, downloads, verifies, and installs updates without leaving the app"]},"note":null}];
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const SHOWN = 6;
+function longDate(iso) {
+  const p = iso.split('-');
+  return MONTHS[Number(p[1]) - 1] + ' ' + Number(p[2]) + ', ' + p[0];
+}
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { snapOpen: false, open: {} };
+  }
+  renderVals() {
+    const { snapOpen, open } = this.state;
+    const snapshot = RELEASES[0];
+    const releases = RELEASES.slice(1);
+    const snapSections = Object.keys(snapshot.secs).map((name) => ({ name, count: snapshot.secs[name].length, all: snapshot.secs[name] }));
+    return {
+      releaseCount: releases.length,
+      snap: { date: longDate(snapshot.date), sections: snapSections },
+      snapOpen,
+      snapExpanded: snapOpen ? 'true' : 'false',
+      snapLabel: (snapOpen ? 'Hide ' : 'Show ') + snapSections.reduce((n, s) => n + s.count, 0) + ' changes',
+      toggleSnap: () => this.setState({ snapOpen: !snapOpen }),
+      releases: releases.map((r, i) => {
+        const names = Object.keys(r.secs);
+        return {
+          tag: r.tag,
+          date: longDate(r.date),
+          latest: i === 0,
+          border: i === 0 ? 'rgba(74,222,128,0.18)' : 'rgba(255,255,255,0.06)',
+          url: 'https://github.com/kollektiv-mc/Konnekt/releases/tag/' + r.tag,
+          summary: i === releases.length - 1 ? 'The first public alpha. Windows only.' : names.map((n) => r.secs[n].length + ' ' + n.toLowerCase()).join(', ') + '.',
+          hasNote: !!r.note,
+          note: r.note,
+          sections: names.map((name) => {
+            const key = r.tag + '/' + name;
+            const items = r.secs[name];
+            const expanded = !!open[key];
+            return {
+              name,
+              count: items.length,
+              shown: expanded ? items : items.slice(0, SHOWN),
+              hasMore: items.length > SHOWN,
+              expanded: expanded ? 'true' : 'false',
+              toggleLabel: expanded ? 'Show fewer' : 'Show all ' + items.length,
+              toggle: () => this.setState({ open: { ...open, [key]: !expanded } }),
+            };
+          }),
+        };
+      }),
+    };
+  }
+}
+</script>
+</body>
+</html>
