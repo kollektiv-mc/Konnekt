@@ -443,9 +443,12 @@ input[type='number']::-webkit-outer-spin-button {
   }
 }
 
-/* Modal/dialog enter animation — shared by Settings, Quick-Commands, and the
-   mods preview/dependency dialogs so every popup enters consistently instead
-   of popping in with no motion. */
+/* Modal/dialog enter and exit animation — shared by Settings, the server
+   manager, the Quick-Commands confirms and the mods preview/dependency dialogs
+   so every popup moves consistently instead of popping in and out. The exit
+   (hooks/usePresence.ts) is the entrance reversed: the panel fades and drops a
+   little, the overlay fades, both forwards so nothing flashes back to full
+   between the last frame and the unmount. */
 @keyframes modal-overlay-in {
   from {
     opacity: 0;
@@ -464,11 +467,35 @@ input[type='number']::-webkit-outer-spin-button {
     transform: translateY(0) scale(1);
   }
 }
+@keyframes modal-overlay-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+@keyframes modal-panel-out {
+  from {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+}
 .modal-overlay-in {
   animation: modal-overlay-in var(--duration-fast) var(--ease-standard);
 }
 .modal-panel-in {
   animation: modal-panel-in var(--duration-panel) var(--ease-standard);
+}
+.modal-overlay-out {
+  animation: modal-overlay-out var(--duration-fast) var(--ease-standard) forwards;
+}
+.modal-panel-out {
+  animation: modal-panel-out var(--duration-panel) var(--ease-standard) forwards;
 }
 
 /* In-app bubbles (components/Toasts.tsx): in from the right edge they sit
@@ -511,6 +538,8 @@ input[type='number']::-webkit-outer-spin-button {
   }
   .modal-overlay-in,
   .modal-panel-in,
+  .modal-overlay-out,
+  .modal-panel-out,
   .toast-in,
   .toast-out {
     animation: none !important;

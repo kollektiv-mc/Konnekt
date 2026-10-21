@@ -34,6 +34,7 @@ import { FontSettings } from './settings/FontSettings'
 import { WebviewGpuSetting } from './settings/WebviewGpuSetting'
 import { CHANGELOG_URL, countItems, releaseLabel, splitSections } from '../lib/changelog'
 import { useReleaseNotes } from '../hooks/useReleaseNotes'
+import { usePresence } from '../hooks/usePresence'
 import { EVENTS } from '../lib/constants'
 import { releaseUrlToOpen } from '../lib/releaseUrl'
 import { isDevBuild, isSnapshotVersion } from '../hooks/useUpdateCheck'
@@ -132,6 +133,7 @@ export function SettingsModal({ open, onClose, initialSection }: Props) {
     id === 'remote' || id === 'general' || id === 'destinations'
   const nav = NAV.filter((n) => !hostOnly(n.id) || !isRemoteBrowser())
   const overlayRef = useRef<HTMLDivElement>(null)
+  const presence = usePresence(open)
   // Fetched once here rather than in each pane: General needs it to say whether
   // this build already follows the snapshot channel, and About both displays it
   // and gates the install button on it. Null outside a Wails context.
@@ -170,17 +172,21 @@ export function SettingsModal({ open, onClose, initialSection }: Props) {
     return () => window.removeEventListener('keydown', onKey)
   }, [open, onClose])
 
-  if (!open) return null
+  if (!presence.mounted) return null
 
   return (
     <div
       ref={overlayRef}
-      className="modal-overlay-in z-modal fixed inset-0 flex items-center justify-center bg-[rgba(0,0,0,0.65)]"
+      inert={presence.inert}
+      className={`${presence.overlayClass} z-modal fixed inset-0 flex items-center justify-center bg-[rgba(0,0,0,0.65)]`}
       onClick={(e) => {
         if (e.target === overlayRef.current) onClose()
       }}
     >
-      <div className="modal-panel-in bg-canvas border-border-subtle border-hairline flex h-[480px] w-[640px] overflow-hidden rounded-xl shadow-[0_24px_64px_rgba(0,0,0,0.5)] max-sm:h-[calc(100dvh-1rem)] max-sm:w-[calc(100vw-1rem)] max-sm:flex-col">
+      <div
+        onAnimationEnd={presence.onAnimationEnd}
+        className={`${presence.panelClass} bg-canvas border-border-subtle border-hairline flex h-[480px] w-[640px] overflow-hidden rounded-xl shadow-[0_24px_64px_rgba(0,0,0,0.5)] max-sm:h-[calc(100dvh-1rem)] max-sm:w-[calc(100vw-1rem)] max-sm:flex-col`}
+      >
         {/* Left nav. On a phone's width it is a scrolling row above the content,
             so the content keeps the full width; its heading is the title bar's job. */}
         <div className="bg-surface border-border-subtle border-r-hairline max-sm:border-b-hairline flex w-40 shrink-0 flex-col gap-0.5 p-3 max-sm:w-full max-sm:flex-row max-sm:overflow-x-auto max-sm:border-r-0 max-sm:p-2">
