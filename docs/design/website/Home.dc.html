@@ -16,7 +16,12 @@ a{color:#ffffff;text-decoration:none}a:hover{color:#4ade80}
 @keyframes kspin{to{transform:rotate(360deg)}}
 .kspin{transform-box:fill-box;transform-origin:center;animation:kspin 90s linear infinite}
 .kspin-rev{transform-box:fill-box;transform-origin:center;animation:kspin 140s linear infinite reverse}
-.kstrip{transition:flex-grow 520ms cubic-bezier(0.4,0,0.2,1)}
+.kstrip{position:relative;transition:flex-grow 520ms cubic-bezier(0.4,0,0.2,1),background-color 520ms ease}
+@keyframes kfadein{from{opacity:0}to{opacity:1}}
+@keyframes kfadeout{from{opacity:1}to{opacity:0}}
+.kin{animation:kfadein 280ms ease 200ms both}
+.kout{position:absolute;top:0;left:0;height:100%;pointer-events:none;animation:kfadeout 220ms ease both}
+.kbtnin{animation:kfadein 300ms ease 240ms both}
 .kstrip button:hover{background:rgba(255,255,255,0.05)}
 @media (max-width:760px){
 .karch{flex-direction:column!important;height:auto!important}
@@ -34,7 +39,7 @@ html{scroll-snap-type:y proximity}
 .kglow{position:absolute;inset:-1px;overflow:hidden;pointer-events:none;padding:1px;-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);mask-composite:exclude}
 .kglow::before{content:"";position:absolute;top:50%;left:50%;width:180%;aspect-ratio:1;background:conic-gradient(from 0deg,transparent 0deg,rgba(74,222,128,0.55) 16deg,transparent 42deg,transparent 180deg,rgba(74,222,128,0.55) 196deg,transparent 222deg,transparent 360deg);transform:translate(-50%,-50%) rotate(0deg);animation:kglow 14s linear infinite}
 @keyframes kglow{to{transform:translate(-50%,-50%) rotate(360deg)}}
-@media (prefers-reduced-motion:reduce){.kspin,.kspin-rev,.kglow::before{animation:none}.kstrip{transition:none}html{scroll-behavior:auto}}
+@media (prefers-reduced-motion:reduce){.kspin,.kspin-rev,.kglow::before{animation:none}.kstrip{transition:none}.kin,.kbtnin{animation:none}.kout{display:none}html{scroll-behavior:auto}}
 </style>
 </helmet>
 <div style="background: #05060a; color: #ffffff; font-family: 'Geist', system-ui, sans-serif; min-height: 100vh; padding: 16px clamp(12px, 2vw, 24px) 24px">
@@ -43,7 +48,7 @@ html{scroll-snap-type:y proximity}
 <div id="ksec0" class="ksnap-start" style="display: flex; flex-direction: column; gap: 16px; filter: {{s0f}}; opacity: {{s0o}}; transform: {{s0t}}; transition: filter 500ms ease, opacity 500ms ease, transform 500ms cubic-bezier(0.2,0.7,0.2,1), border-color 500ms ease, box-shadow 500ms ease">
 <nav id="knav" style="display: flex; flex-wrap: wrap; align-items: stretch; border: 1px solid rgba(255,255,255,0.06); background: rgba(255,255,255,0.025)">
 <a href="#top" style="display: flex; align-items: center; gap: 10px; padding: 0 32px; min-height: 72px; border-right: 1px solid rgba(255,255,255,0.06); font-weight: 600; font-size: 20px; letter-spacing: -0.02em; color: #ffffff">
-<svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><rect x="1" y="1" width="7" height="7" fill="none" stroke="currentColor" stroke-width="1.5"></rect><rect x="10" y="1" width="7" height="7" fill="none" stroke="currentColor" stroke-width="1.5"></rect><rect x="1" y="10" width="16" height="7" fill="none" stroke="currentColor" stroke-width="1.5"></rect></svg>
+<svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true"><defs><mask id="k-nav-behind" maskUnits="userSpaceOnUse" x="0" y="0" width="24" height="24"><rect width="24" height="24" fill="#fff"/><polygon points="12,4.47 17.62,7.71 17.62,14.2 12,17.45 6.38,14.2 6.38,7.71" fill="#000" stroke="#000" stroke-width="3" stroke-linejoin="round"/></mask><mask id="k-nav-cube" maskUnits="userSpaceOnUse" x="0" y="0" width="24" height="24"><rect width="24" height="24" fill="#fff"/><path d="M2.9126 13.537A9.1533 5.2814 0 0 0 21.0874 13.537" stroke="#000" stroke-width="5.7" fill="none"/></mask></defs><ellipse cx="12.0000" cy="12.9047" rx="9.1533" ry="5.2814" fill="none" stroke="#4ade80" stroke-width="2.7" mask="url(#k-nav-behind)"/><g mask="url(#k-nav-cube)"><polygon points="12,4.47 17.62,7.71 17.62,14.2 12,17.45 6.38,14.2 6.38,7.71" fill="#22c55e"/><polygon points="12,4.47 17.62,7.71 12,10.96 6.38,7.71" fill="#4ade80"/><polygon points="6.38,7.71 12,10.96 12,17.45 6.38,14.2" fill="#22c55e"/><polygon points="12,10.96 17.62,7.71 17.62,14.2 12,17.45" fill="#16a34a"/></g><path d="M2.876 12.4827A9.1533 5.2814 0 1 0 21.124 12.4827" fill="none" stroke="#4ade80" stroke-width="2.7"/></svg>
 Konnekt</a>
 <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 28px; padding: 0 32px; flex: 1 1 360px; min-height: 72px; font-size: 15px">
 <a href="#ksec1" style="color: rgba(255,255,255,0.6)">Features</a>
@@ -119,8 +124,8 @@ Download</a>
 <div class="karch" style="display: flex; height: 600px">
 <sc-for list="{{features}}" as="f" hint-placeholder-count="9">
 <div class="kstrip" style="flex-grow: {{f.grow}}; flex-shrink: 1; flex-basis: 0px; min-width: 64px; overflow: hidden; border-right: 1px solid rgba(255,255,255,0.06); background: {{f.bg}}">
-<sc-if value="{{f.active}}" hint-placeholder-val="{{false}}">
-<div class="kpanel" style="min-width: 680px; height: 100%; box-sizing: border-box; padding: 28px 32px; display: flex; flex-direction: column; gap: 22px; border-top: 2px solid #4ade80">
+<sc-if value="{{f.panel}}" hint-placeholder-val="{{false}}">
+<div class="kpanel {{f.pcls}}" style="min-width: 680px; height: 100%; box-sizing: border-box; padding: 28px 32px; display: flex; flex-direction: column; gap: 22px; border-top: 2px solid #4ade80">
 <div style="display: flex; justify-content: space-between; align-items: baseline; gap: 16px"><h3 style="margin: 0; font-size: 26px; font-weight: 600; letter-spacing: -0.02em">{{f.name}}</h3><span style="font-family: 'Geist Mono', monospace; font-size: 13px; color: rgba(255,255,255,0.6)">{{f.n}} / 09</span></div>
 <video src="{{f.video}}" poster="{{f.poster}}" autoplay="" muted="" loop="" playsinline="" aria-label="{{f.name}}, in action" style="display: block; width: 100%; aspect-ratio: 1836 / 684; object-fit: cover; background: #05060a; border: 1px solid rgba(255,255,255,0.06)"></video>
 <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px">
@@ -131,7 +136,7 @@ Download</a>
 </div>
 </sc-if>
 <sc-if value="{{f.inactive}}" hint-placeholder-val="{{true}}">
-<button type="button" class="kstripbtn" onClick="{{f.pick}}" aria-label="Show {{f.name}}" style="width: 100%; height: 100%; border: 0; background: transparent; color: #ffffff; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: space-between; padding: 28px 0; font-family: 'Geist Mono', monospace; font-size: 13px; gap: 16px">
+<button type="button" class="kstripbtn kbtnin" onClick="{{f.pick}}" aria-label="Show {{f.name}}" style="width: 100%; height: 100%; border: 0; background: transparent; color: #ffffff; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: space-between; padding: 28px 0; font-family: 'Geist Mono', monospace; font-size: 13px; gap: 16px">
 <span style="color: rgba(255,255,255,0.6)">{{f.n}}</span>
 <span class="kvl" style="writing-mode: vertical-rl; transform: rotate(180deg); letter-spacing: 0.08em; text-transform: uppercase; white-space: nowrap">{{f.name}}</span>
 <span aria-hidden="true" style="font-size: 20px; color: #4ade80">+</span>
@@ -196,7 +201,7 @@ Download</a>
 <footer class="ksnap-end" style="border: 1px solid rgba(255,255,255,0.06); background: rgba(255,255,255,0.025)">
 <div style="display: flex; flex-wrap: wrap">
 <div style="flex: 1.6 1 320px; padding: 40px 32px; display: flex; flex-direction: column; gap: 14px">
-<a href="#top" style="display: inline-flex; align-items: center; gap: 10px; font-weight: 600; font-size: 20px; letter-spacing: -0.02em; color: #ffffff"><svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><rect x="1" y="1" width="7" height="7" fill="none" stroke="currentColor" stroke-width="1.5"></rect><rect x="10" y="1" width="7" height="7" fill="none" stroke="currentColor" stroke-width="1.5"></rect><rect x="1" y="10" width="16" height="7" fill="none" stroke="currentColor" stroke-width="1.5"></rect></svg>Konnekt</a>
+<a href="#top" style="display: inline-flex; align-items: center; gap: 10px; font-weight: 600; font-size: 20px; letter-spacing: -0.02em; color: #ffffff"><svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true"><defs><mask id="k-foot-behind" maskUnits="userSpaceOnUse" x="0" y="0" width="24" height="24"><rect width="24" height="24" fill="#fff"/><polygon points="12,4.47 17.62,7.71 17.62,14.2 12,17.45 6.38,14.2 6.38,7.71" fill="#000" stroke="#000" stroke-width="3" stroke-linejoin="round"/></mask><mask id="k-foot-cube" maskUnits="userSpaceOnUse" x="0" y="0" width="24" height="24"><rect width="24" height="24" fill="#fff"/><path d="M2.9126 13.537A9.1533 5.2814 0 0 0 21.0874 13.537" stroke="#000" stroke-width="5.7" fill="none"/></mask></defs><ellipse cx="12.0000" cy="12.9047" rx="9.1533" ry="5.2814" fill="none" stroke="#4ade80" stroke-width="2.7" mask="url(#k-foot-behind)"/><g mask="url(#k-foot-cube)"><polygon points="12,4.47 17.62,7.71 17.62,14.2 12,17.45 6.38,14.2 6.38,7.71" fill="#22c55e"/><polygon points="12,4.47 17.62,7.71 12,10.96 6.38,7.71" fill="#4ade80"/><polygon points="6.38,7.71 12,10.96 12,17.45 6.38,14.2" fill="#22c55e"/><polygon points="12,10.96 17.62,7.71 17.62,14.2 12,17.45" fill="#16a34a"/></g><path d="M2.876 12.4827A9.1533 5.2814 0 1 0 21.124 12.4827" fill="none" stroke="#4ade80" stroke-width="2.7"/></svg>Konnekt</a>
 <p style="margin: 0; font-size: 15px; line-height: 1.5; color: rgba(255,255,255,0.6); max-width: 32ch">A desktop dashboard for the Minecraft servers you host.</p>
 <span style="font-family: 'Geist Mono', monospace; font-size: 13px; color: rgba(255,255,255,0.6)">v0.2.0-alpha.2 · Windows and Linux</span>
 </div>
@@ -228,7 +233,7 @@ const FEATURES = [
 class Component extends DCLogic {
   constructor(props) {
     super(props);
-    this.state = { active: 0, step: 0, sec: -1 };
+    this.state = { active: 0, prev: -1, step: 0, sec: -1 };
   }
   componentDidMount() {
     this.timer = setInterval(() => this.setState((s) => ({ step: (s.step + 1) % 10 })), 900);
@@ -246,6 +251,7 @@ class Component extends DCLogic {
   }
   componentWillUnmount() {
     clearInterval(this.timer);
+    clearTimeout(this.fade);
     cancelAnimationFrame(this.frame);
     window.removeEventListener('scroll', this.onScroll, { capture: true });
     window.removeEventListener('resize', this.onScroll);
@@ -266,8 +272,15 @@ class Component extends DCLogic {
     }
     return best;
   }
+  pick(i) {
+    if (i === this.state.active) return;
+    // The closing panel stays mounted for one fade, over the strip it is leaving.
+    clearTimeout(this.fade);
+    this.setState({ prev: this.state.active, active: i });
+    this.fade = setTimeout(() => this.setState({ prev: -1 }), 560);
+  }
   renderVals() {
-    const { active, step, sec } = this.state;
+    const { active, prev, step, sec } = this.state;
     const focus = {};
     for (let i = 0; i < 4; i++) {
       const dim = sec !== -1 && sec !== i;
@@ -283,11 +296,12 @@ class Component extends DCLogic {
     return {
       features: FEATURES.map((f, i) => ({
         ...f,
-        active: i === active,
+        panel: i === active || i === prev,
+        pcls: i === active ? 'kin' : 'kout',
         inactive: i !== active,
         grow: i === active ? 12 : 1,
         bg: i === active ? '#10111a' : '#05060a',
-        pick: () => this.setState({ active: i }),
+        pick: () => this.pick(i),
       })),
       ...focus,
       n0: lit(0), n1: lit(1), n2: lit(2), n3: lit(3),
