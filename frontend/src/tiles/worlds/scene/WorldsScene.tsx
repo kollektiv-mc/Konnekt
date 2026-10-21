@@ -445,9 +445,12 @@ export function WorldsScene({
           250ms is deliberate, not a near-miss of --duration-panel: it is hand-matched to the
           view-offset shift's exponential damp above (MOTION.HUD_LAMBDA, 4.5, in motion.ts), which
           has no fixed duration to share a token with. Moving it to 280ms desyncs the panel from
-          the shift. */}
+          the shift.
+          bg-overlay, not bg-surface: surface is a translucent tint (alpha 0.025 in dark), so over
+          the 3D scene the panel read as no background at all. Overlay is the opaque floating-panel
+          surface. */}
         <div
-          className={`border-r-border-subtle bg-surface border-r-hairline absolute top-0 bottom-0 left-0 z-10 flex w-1/3 flex-col overflow-y-auto px-5 pt-4 pb-6 transition-transform duration-[250ms] ease-[cubic-bezier(0.25,0,0.25,1)] ${
+          className={`border-r-border-subtle bg-overlay border-r-hairline absolute top-0 bottom-0 left-0 z-10 flex w-1/3 flex-col overflow-y-auto px-5 pt-4 pb-6 transition-transform duration-[250ms] ease-[cubic-bezier(0.25,0,0.25,1)] ${
             hudOpen ? 'pointer-events-auto translate-x-0' : 'pointer-events-none -translate-x-full'
           }`}
         >
