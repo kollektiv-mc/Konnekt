@@ -54,6 +54,7 @@ function handlers() {
       paste: vi.fn(),
       deleteSelected: vi.fn(),
       select: vi.fn(),
+      openDocs: vi.fn(),
     },
     onToggleEnabled: vi.fn(),
     onRun: vi.fn(),
@@ -390,9 +391,11 @@ describe('the edit menu', () => {
       /^Deselect all/,
       /^Select by type/,
       /^Select by name/,
+      /^Open docs/,
     ]) {
       expect(button(name)).toBeTruthy()
     }
+    expect(button(/^Open docs/).textContent).toContain('F1')
     expect(button(/^Undo/).textContent).toContain('Ctrl+Z')
     expect(button(/^Redo/).textContent).toContain('Ctrl+Shift+Z')
     expect(button(/^Cut/).textContent).toContain('Ctrl+X')
@@ -417,6 +420,7 @@ describe('the edit menu', () => {
       /^Deselect all/,
       /^Select by type/,
       /^Select by name/,
+      /^Open docs/,
     ]) {
       expect(button(name).disabled).toBe(true)
     }
@@ -430,6 +434,24 @@ describe('the edit menu', () => {
     }
     // Nothing has been copied yet.
     expect(button(/^Paste/).disabled).toBe(true)
+  })
+
+  it('opens the docs of the one selected block', () => {
+    const h = setup({ nodes: canvas })
+    openEdit()
+    fireEvent.click(button(/^Open docs/))
+    expect(h.edit.openDocs).toHaveBeenCalledOnce()
+  })
+
+  it('has no docs to open with several blocks selected', () => {
+    setup({
+      nodes: [
+        node('a', 'action.command', 'Command', true),
+        node('c', 'trigger.cron', 'Cron', true),
+      ],
+    })
+    openEdit()
+    expect(button(/^Open docs/).disabled).toBe(true)
   })
 
   it('enables paste when something is on the clipboard', () => {

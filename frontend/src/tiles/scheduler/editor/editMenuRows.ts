@@ -16,6 +16,8 @@ export interface EditMenuState {
   hasNodes: boolean
   /** The block types on the canvas, for the select-by-type rows. */
   types: { blockType: string; label: string }[]
+  /** The type of the one selected block, whose docs page can open; null for none or several. */
+  docsBlockType: string | null
 }
 
 /**
@@ -31,7 +33,8 @@ export function editMenuState(canvas: {
   canUndo: boolean
   canRedo: boolean
 }): EditMenuState {
-  const selectedNodes = canvas.nodes.filter((n) => n.selected).length
+  const selected = canvas.nodes.filter((n) => n.selected)
+  const selectedNodes = selected.length
   return {
     canUndo: canvas.canUndo,
     canRedo: canvas.canRedo,
@@ -40,6 +43,7 @@ export function editMenuState(canvas: {
     deleteCount: selectedNodes + canvas.edges.filter((e) => e.selected).length,
     hasNodes: canvas.nodes.length > 0,
     types: typesPresent(canvas.nodes, (bt) => canvas.defMap.get(bt)?.label ?? bt),
+    docsBlockType: selectedNodes === 1 ? selected[0].data.blockType : null,
   }
 }
 
@@ -52,6 +56,7 @@ export interface EditMenuActions {
   paste: () => void
   deleteSelected: () => void
   select: (spec: SelectionSpec) => void
+  openDocs: () => void
 }
 
 export type EditRow =
@@ -189,6 +194,15 @@ export function editMenuRows(state: EditMenuState, actions: EditMenuActions): Ed
       placeholder: 'name contains',
       disabled: !state.hasNodes,
       onSubmit: (query) => actions.select({ kind: 'name', query }),
+    },
+    { kind: 'divider', id: 'd-select' },
+    {
+      kind: 'item',
+      id: 'docs',
+      label: 'Open docs',
+      shortcut: 'F1',
+      disabled: state.docsBlockType === null,
+      onSelect: actions.openDocs,
     },
   ]
 }

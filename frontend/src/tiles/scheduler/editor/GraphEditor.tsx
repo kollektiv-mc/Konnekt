@@ -77,7 +77,8 @@ import {
   type HistoryState,
   type GraphSnapshot,
 } from './graphHistory'
-import { EventsOn } from '../../../../wailsjs/runtime/runtime'
+import { BrowserOpenURL, EventsOn } from '../../../../wailsjs/runtime/runtime'
+import { blockDocsUrl } from '../../../lib/docs'
 import { EVENTS, scheduleRunToastKey } from '../../../lib/constants'
 import { useUiStore } from '../../../stores/useUiStore'
 import { useSchedulerStore } from '../../../stores/useSchedulerStore'
@@ -395,6 +396,23 @@ function GraphEditorInner({
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
   }, [doUndo, doRedo])
+
+  // ── F1 opens the selected block's docs page ──────────────────────────────
+  // Only for exactly one block: with none or several there is no one page to
+  // open, and F1 does nothing.
+  const openDocs = useCallback(() => {
+    const selected = nodesRef.current.filter((n) => n.selected)
+    if (selected.length === 1) BrowserOpenURL(blockDocsUrl(selected[0].data.blockType))
+  }, [])
+  useEffect(() => {
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key !== 'F1') return
+      e.preventDefault()
+      openDocs()
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [openDocs])
 
   // ── Subscribe to live run events ──────────────────────────────────────────
   // The engine emits these for every graph; we only reflect the loaded one.
@@ -1154,6 +1172,7 @@ function GraphEditorInner({
     paste: () => pasteClipboard(false),
     deleteSelected: handleDeleteSelected,
     select: selectNodes,
+    openDocs,
   }
   const nodeMenuAt = nodeMenu?.flow ?? null
   const nodeMenuRows = editMenuRows(
