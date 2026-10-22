@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { act, renderHook } from '@testing-library/react'
 import type { AnimationEvent } from 'react'
-import { usePresence, useRetained } from './usePresence'
+import { cssTimeMs, usePresence, useRetained } from './usePresence'
 
 const ended = (animationName: string) => ({ animationName }) as AnimationEvent
 
@@ -61,6 +61,21 @@ describe('usePresence', () => {
 
     act(() => void vi.advanceTimersByTime(200))
     expect(result.current.mounted).toBe(false)
+  })
+
+  it('waits out a token the minifier wrote in seconds', () => {
+    document.documentElement.style.setProperty('--duration-panel', '.28s')
+    const { result, rerender } = renderHook(({ open }) => usePresence(open), {
+      initialProps: { open: true },
+    })
+    rerender({ open: false })
+
+    act(() => void vi.advanceTimersByTime(200))
+    expect(result.current.mounted).toBe(true)
+
+    act(() => void vi.advanceTimersByTime(200))
+    expect(result.current.mounted).toBe(false)
+    document.documentElement.style.removeProperty('--duration-panel')
   })
 
   it('cancels the exit when reopened mid-exit', () => {
@@ -179,5 +194,19 @@ describe('useRetained', () => {
 
     rerender({ v: 'ban' })
     expect(result.current).toBe('ban')
+  })
+})
+
+describe('cssTimeMs', () => {
+  it('reads milliseconds and seconds alike', () => {
+    expect(cssTimeMs('280ms')).toBe(280)
+    expect(cssTimeMs(' .28s')).toBe(280)
+    expect(cssTimeMs('0.5s')).toBe(500)
+  })
+
+  it('is NaN for an empty, zero or unreadable value', () => {
+    expect(cssTimeMs('')).toBeNaN()
+    expect(cssTimeMs('0s')).toBeNaN()
+    expect(cssTimeMs('fast')).toBeNaN()
   })
 })

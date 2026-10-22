@@ -31,19 +31,19 @@ function reducedMotion(): boolean {
   return window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false
 }
 
-// The token is written `150ms` in the source and read back as `.15s` from a
-// production build, whose CSS minifier shortens it. Reading it as a bare number
-// took that for 0.15 milliseconds and cut every exit short at the slack alone.
-function tokenMs(raw: string): number {
-  const text = raw.trim()
-  const n = parseFloat(text)
-  return text.endsWith('ms') || !text.endsWith('s') ? n : n * 1000
+// A CSS time in milliseconds. The built stylesheet is minified, which writes
+// the token's 280ms as .28s, so the unit has to be read rather than assumed:
+// parsing it as milliseconds cut every exit to the slack alone.
+export function cssTimeMs(value: string): number {
+  const n = parseFloat(value)
+  if (!Number.isFinite(n) || n <= 0) return NaN
+  return value.trim().endsWith('ms') ? n : n * 1000
 }
 
 function exitMs(kind: PresenceKind): number {
   const { token, fallbackMs } = KINDS[kind]
-  const ms = tokenMs(getComputedStyle(document.documentElement).getPropertyValue(token))
-  return (Number.isFinite(ms) && ms > 0 ? ms : fallbackMs) + SLACK_MS
+  const ms = cssTimeMs(getComputedStyle(document.documentElement).getPropertyValue(token))
+  return (Number.isFinite(ms) ? ms : fallbackMs) + SLACK_MS
 }
 
 /**
