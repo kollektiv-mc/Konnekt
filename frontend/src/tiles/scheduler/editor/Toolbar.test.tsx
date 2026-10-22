@@ -1,5 +1,5 @@
 import { describe, it, expect, afterEach, beforeEach, vi } from 'vitest'
-import { render, screen, cleanup, fireEvent, within } from '@testing-library/react'
+import { render, screen, cleanup, fireEvent, within, waitFor, act } from '@testing-library/react'
 import type { Edge as FlowEdge } from '@xyflow/react'
 import type { models } from '../../../../wailsjs/go/models'
 import { NO_GRAPH_KEYS } from './blockMeta'
@@ -156,13 +156,82 @@ describe('the toolbar bar', () => {
     expect(toggle.compareDocumentPosition(overflow) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
   })
 
-  it('offers del with the selection count, and nothing with no selection', () => {
-    const h = setup({ nodes: canvas })
-    fireEvent.click(button('del 1'))
-    expect(h.edit.deleteSelected).toHaveBeenCalledOnce()
-    cleanup()
+  it('has no del button on the bar, with or without a selection', () => {
+    setup({ nodes: canvas })
+    expect(screen.queryByRole('button', { name: /^del/ })).toBeNull()
+  })
+})
+
+// The bar's geometry as classes: jsdom lays nothing out, so what can be pinned
+// is that each segment states its own width and that the state does not change it.
+const segmentOf = (el: HTMLElement) => el.parentElement as HTMLElement
+const widthClass = (el: HTMLElement) => Array.from(el.classList).find((c) => /^w-\d+$/.test(c))
+
+describe('the bar does not shift', () => {
+  it('gives the picker one fixed width, dirty or clean, long name or short', () => {
     setup()
-    expect(screen.queryByRole('button', { name: /^del / })).toBeNull()
+    const clean = widthClass(segmentOf(button(/Nightly/)))
+    expect(clean).toBe('w-60')
+    cleanup()
+    setup({ dirty: true, graphName: 'A graph name far longer than the picker could ever hold' })
+    expect(widthClass(segmentOf(button(/A graph name/)))).toBe(clean)
+  })
+
+  it('lays the unsaved dot over the name instead of beside it', () => {
+    setup({ dirty: true })
+    const dot = screen.getByTitle('Unsaved changes')
+    expect(dot.classList).toContain('absolute')
+    // The name's field is a sibling that fades out, not a text node with the dot after it.
+    const name = within(button(/Nightly/)).getByText('Nightly')
+    expect(name.className).toContain('mask-image')
+    expect(name.contains(dot)).toBe(false)
+  })
+
+  it('gives [on] and [off] the same width', () => {
+    setup({ graphEnabled: true })
+    const on = widthClass(segmentOf(button('[on]')))
+    cleanup()
+    setup({ graphEnabled: false })
+    expect(on).toBe('w-12')
+    expect(widthClass(segmentOf(button('[off]')))).toBe(on)
+  })
+
+  it('keeps a slot for the warning count when there are none', () => {
+    setup()
+    const quiet = screen.getByTitle('No warnings')
+    const slot = widthClass(segmentOf(quiet))
+    expect(slot).toBeTruthy()
+    cleanup()
+    setup({ warnings: ['one', 'two'] })
+    expect(widthClass(segmentOf(button('2 warnings')))).toBe(slot)
+  })
+
+  it('puts the status outside the bars, right-aligned in the gap', () => {
+    setup({ runStatus: { text: 'running…', failed: false } })
+    const status = screen.getByText('running…')
+    expect(status.closest('[class*="border-hairline"]')).toBeNull()
+    expect(status.parentElement?.className).toContain('justify-end')
+  })
+
+  it('makes every segment the same height', () => {
+    setup({ graphEnabled: true, warnings: ['x'] })
+    const segs = [
+      button(/Nightly/),
+      button('add'),
+      button('edit'),
+      button('1 warning'),
+      button('run'),
+      button('[on]'),
+      button('Graph actions'),
+    ]
+    for (const b of segs) expect(b.classList).toContain('h-6')
+  })
+
+  it('shows no pointer cursor on the bar or in its menus', () => {
+    setup({ nodes: canvas })
+    openEdit()
+    for (const b of screen.getAllByRole('button'))
+      expect(b.className).not.toContain('cursor-pointer')
   })
 })
 
@@ -191,7 +260,8 @@ describe('the graph menu', () => {
   it('names an unsaved new graph in the list', () => {
     setup({ graphId: '', graphName: 'Fresh' })
     fireEvent.click(button(/Fresh/))
-    expect(screen.getAllByRole('button', { name: 'Fresh' })).toHaveLength(1)
+    // The picker itself, and the one row for the graph that is not saved yet.
+    expect(screen.getAllByRole('button', { name: 'Fresh' })).toHaveLength(2)
   })
 })
 
@@ -404,7 +474,7 @@ describe('the edit menu', () => {
     expect(h.edit.select).toHaveBeenNthCalledWith(2, { kind: 'none' })
   })
 
-  it('expands the types present and selects by the one picked', () => {
+  it('opens the types present in a fly-out and selects by the one picked', () => {
     const h = setup({ nodes: canvas })
     openEdit()
     fireEvent.click(button(/^Select by type/))
@@ -413,11 +483,68 @@ describe('the edit menu', () => {
     expect(h.edit.select).toHaveBeenCalledWith({ kind: 'type', blockType: 'trigger.cron' })
   })
 
+  it('puts the fly-out in the body, outside the popover and its overflow', () => {
+    setup({ nodes: canvas })
+    openEdit()
+    const row = button(/^Select by type/)
+    const popover = row.closest('.overflow-hidden') as HTMLElement
+    fireEvent.click(row)
+    const flyout = screen.getByRole('menu', { name: 'Select by type' })
+    expect(flyout.parentElement).toBe(document.body)
+    expect(popover.contains(flyout)).toBe(false)
+    expect(flyout.className).toContain('fixed')
+    // The popover holds the same rows it did: nothing was inserted into it.
+    expect(within(popover).queryByRole('button', { name: 'Cron' })).toBeNull()
+    expect(row.getAttribute('aria-expanded')).toBe('true')
+  })
+
+  it('opens the fly-out on hover, and folds it when another row is hovered', async () => {
+    setup({ nodes: canvas })
+    openEdit()
+    fireEvent.mouseEnter(button(/^Select by type/).parentElement as HTMLElement)
+    expect(screen.getByRole('menu', { name: 'Select by type' })).toBeTruthy()
+    // Hover alone leaves focus where it was.
+    expect(document.activeElement).not.toBe(button('Cron'))
+
+    fireEvent.mouseEnter(button(/^Undo/).parentElement as HTMLElement)
+    await waitFor(() => expect(screen.queryByRole('menu', { name: 'Select by type' })).toBeNull())
+  })
+
+  it('opens the fly-out from the keyboard and focuses into it', () => {
+    setup({ nodes: canvas })
+    openEdit()
+    fireEvent.keyDown(button(/^Select by type/), { key: 'ArrowRight' })
+    expect(document.activeElement).toBe(button('Command'))
+    fireEvent.keyDown(button('Command'), { key: 'ArrowDown' })
+    expect(document.activeElement).toBe(button('Cron'))
+  })
+
+  it('folds the fly-out back to its row on Escape or the left arrow', async () => {
+    setup({ nodes: canvas })
+    openEdit()
+    const row = button(/^Select by type/)
+    fireEvent.keyDown(row, { key: 'ArrowRight' })
+    const onWindow = vi.fn()
+    window.addEventListener('keydown', onWindow)
+    fireEvent.keyDown(button('Command'), { key: 'Escape' })
+    window.removeEventListener('keydown', onWindow)
+    expect(onWindow).not.toHaveBeenCalled()
+    await waitFor(() => expect(screen.queryByRole('menu', { name: 'Select by type' })).toBeNull())
+    expect(document.activeElement).toBe(row)
+    // The edit menu itself is still open.
+    expect(button(/^Undo/)).toBeTruthy()
+
+    fireEvent.keyDown(row, { key: 'ArrowRight' })
+    fireEvent.keyDown(button('Command'), { key: 'ArrowLeft' })
+    await waitFor(() => expect(screen.queryByRole('menu', { name: 'Select by type' })).toBeNull())
+  })
+
   it('selects by name on Enter, and not on a blank query', () => {
     const h = setup({ nodes: canvas })
     openEdit()
     fireEvent.click(button(/^Select by name/))
-    const input = screen.getByLabelText('Select by name')
+    const input = screen.getByRole('textbox', { name: 'Select by name' })
+    expect(document.activeElement).toBe(input)
     fireEvent.keyDown(input, { key: 'Enter' })
     expect(h.edit.select).not.toHaveBeenCalled()
 
@@ -426,15 +553,17 @@ describe('the edit menu', () => {
     expect(h.edit.select).toHaveBeenCalledWith({ kind: 'name', query: 'cro' })
   })
 
-  it('folds the name row back up on Escape without closing the editor', () => {
+  it('folds the name fly-out on Escape without closing the editor', async () => {
     setup({ nodes: canvas })
     openEdit()
     fireEvent.click(button(/^Select by name/))
     const onWindow = vi.fn()
     window.addEventListener('keydown', onWindow)
-    fireEvent.keyDown(screen.getByLabelText('Select by name'), { key: 'Escape' })
+    fireEvent.keyDown(screen.getByRole('textbox', { name: 'Select by name' }), { key: 'Escape' })
     window.removeEventListener('keydown', onWindow)
-    expect(screen.queryByLabelText('Select by name')).toBeNull()
+    await waitFor(() =>
+      expect(screen.queryByRole('textbox', { name: 'Select by name' })).toBeNull(),
+    )
     expect(onWindow).not.toHaveBeenCalled()
   })
 
@@ -447,6 +576,118 @@ describe('the edit menu', () => {
     expect(rows.length).toBe(3)
     for (const row of rows) expect(row.closest(`.${NO_GRAPH_KEYS}`)).not.toBeNull()
     for (const row of rows) expect(row.classList).toContain(NO_GRAPH_KEYS)
+  })
+})
+
+describe('switching and dismissing', () => {
+  // A real press is a pointerdown and then a click; fireEvent.click alone skips
+  // the first half, which is what the dismissal listens to.
+  const press = (el: Element) => {
+    fireEvent.pointerDown(el)
+    fireEvent.click(el)
+  }
+
+  it('opens edit in one click with the graph list open', () => {
+    setup({ nodes: canvas })
+    press(button(/Nightly/))
+    expect(button('Weekly')).toBeTruthy()
+    press(button('edit'))
+    expect(button(/^Undo/)).toBeTruthy()
+    expect(screen.queryByRole('button', { name: 'Weekly' })).toBeNull()
+  })
+
+  it('opens the overflow menu in one click with edit open', () => {
+    setup()
+    press(button('edit'))
+    press(button('Graph actions'))
+    expect(button('Save')).toBeTruthy()
+    expect(screen.queryByRole('button', { name: /^Undo/ })).toBeNull()
+  })
+
+  it('closes a menu when its own button is pressed again', () => {
+    setup()
+    press(button('edit'))
+    press(button('edit'))
+    expect(screen.queryByRole('button', { name: /^Undo/ })).toBeNull()
+  })
+
+  it('closes any open menu when add opens the quick-add list', () => {
+    const h = setup()
+    openEdit()
+    fireEvent.click(button('add'))
+    expect(h.onAdd).toHaveBeenCalledOnce()
+    expect(screen.queryByRole('button', { name: /^Undo/ })).toBeNull()
+  })
+
+  it('closes on a press outside, and lets that press carry on', () => {
+    setup()
+    openEdit()
+    const canvas = document.createElement('div')
+    document.body.appendChild(canvas)
+    const seen = vi.fn((e: Event) => e.defaultPrevented)
+    canvas.addEventListener('pointerdown', seen)
+    const down = new Event('pointerdown', { bubbles: true, cancelable: true })
+    act(() => void canvas.dispatchEvent(down))
+    canvas.remove()
+
+    expect(seen).toHaveBeenCalledOnce()
+    expect(down.defaultPrevented).toBe(false)
+    expect(screen.queryByRole('button', { name: /^Undo/ })).toBeNull()
+  })
+
+  it('has no full-screen backdrop in front of the canvas', () => {
+    setup()
+    openEdit()
+    expect(document.querySelector('.fixed.inset-0')).toBeNull()
+  })
+
+  it('stays open for a press inside the menu, on its row, or in a fly-out', () => {
+    setup({ nodes: canvas })
+    openEdit()
+    fireEvent.pointerDown(button(/^Undo/))
+    fireEvent.click(button(/^Select by type/))
+    fireEvent.pointerDown(button('Cron'))
+    expect(button(/^Undo/)).toBeTruthy()
+    expect(button('Cron')).toBeTruthy()
+  })
+
+  it('closes on Escape before the tile does', () => {
+    setup()
+    openEdit()
+    const onWindow = vi.fn()
+    window.addEventListener('keydown', onWindow)
+    fireEvent.keyDown(document.body, { key: 'Escape' })
+    window.removeEventListener('keydown', onWindow)
+    expect(onWindow).not.toHaveBeenCalled()
+    expect(screen.queryByRole('button', { name: /^Undo/ })).toBeNull()
+  })
+
+  it('does not hijack Escape typed into the rename field', () => {
+    setup()
+    openOverflow()
+    fireEvent.click(button('Rename'))
+    fireEvent.keyDown(screen.getByLabelText('Graph name'), { key: 'Escape' })
+    expect(button('Rename')).toBeTruthy()
+  })
+})
+
+describe('menus fade out', () => {
+  it('keeps the rows, hidden from the tree, while the exit plays, then drops them', async () => {
+    setup()
+    openEdit()
+    fireEvent.click(button('edit'))
+    // Out of the accessibility tree at once, still in the document.
+    expect(screen.queryByRole('button', { name: /^Undo/ })).toBeNull()
+    expect(screen.getByText('Undo').closest('[aria-hidden="true"]')).not.toBeNull()
+    await waitFor(() => expect(screen.queryByText('Undo')).toBeNull())
+  })
+
+  it('opens a new menu at once while the old one is still fading', () => {
+    setup()
+    openEdit()
+    fireEvent.click(button('Graph actions'))
+    expect(button('Save')).toBeTruthy()
+    expect(screen.getByText('Undo').closest('[aria-hidden="true"]')).not.toBeNull()
   })
 })
 
@@ -473,7 +714,7 @@ describe('the overflow menu', () => {
     fireEvent.change(input, { target: { value: '  Hourly  ' } })
     fireEvent.keyDown(input, { key: 'Enter' })
     expect(h.onRename).toHaveBeenCalledWith('Hourly')
-    expect(screen.queryByLabelText('Graph name')).toBeNull()
+    expect(screen.queryByRole('textbox', { name: 'Graph name' })).toBeNull()
   })
 
   it('does not rename to a blank or an unchanged name', () => {

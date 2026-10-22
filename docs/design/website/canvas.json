@@ -1,0 +1,116 @@
+{
+  "v": 3,
+  "attachments": {},
+  "boards": {
+    "Home.dc.html": {
+      "expand": "fill",
+      "h": 3900,
+      "is_interactive": true,
+      "title": "Home",
+      "w": 1440,
+      "x": 0,
+      "y": 0
+    },
+    "Roadmap.dc.html": {
+      "expand": "fill",
+      "h": 5600,
+      "is_interactive": true,
+      "title": "Roadmap",
+      "w": 1440,
+      "x": 1520,
+      "y": 0
+    },
+    "Changelog.dc.html": {
+      "expand": "fill",
+      "h": 3900,
+      "is_interactive": true,
+      "title": "Changelog",
+      "w": 1440,
+      "x": 3040,
+      "y": 0
+    },
+    "Docs.dc.html": {
+      "expand": "fill",
+      "h": 2335,
+      "is_interactive": true,
+      "title": "Docs",
+      "w": 1440,
+      "x": 0,
+      "y": 6200
+    },
+    "DocsGuide.dc.html": {
+      "expand": "fill",
+      "h": 3398,
+      "is_interactive": true,
+      "title": "Docs template \u00b7 Guide",
+      "w": 1440,
+      "x": 1520,
+      "y": 6200
+    },
+    "DocsBlock.dc.html": {
+      "expand": "fill",
+      "h": 2751,
+      "is_interactive": true,
+      "title": "Docs template \u00b7 Block reference",
+      "w": 1440,
+      "x": 3040,
+      "y": 6200
+    },
+    "DocsSettings.dc.html": {
+      "expand": "fill",
+      "h": 2146,
+      "is_interactive": true,
+      "title": "Docs template \u00b7 Settings reference",
+      "w": 1440,
+      "x": 4560,
+      "y": 6200
+    },
+    "DocsConcept.dc.html": {
+      "expand": "fill",
+      "h": 2209,
+      "is_interactive": true,
+      "title": "Docs template \u00b7 Concept",
+      "w": 1440,
+      "x": 6080,
+      "y": 6200
+    }
+  },
+  "createdOnFiles": {
+    "at": "2026-10-21T15:25:00Z",
+    "v": 1
+  },
+  "designSystems": [],
+  "launch": {
+    "view": "canvas"
+  },
+  "notes": {
+    "site": {
+      "kind": "title1",
+      "maxW": 4480,
+      "text": "Konnekt website, Blocks",
+      "w": 240,
+      "x": 0,
+      "y": -300
+    },
+    "docs": {
+      "kind": "title1",
+      "maxW": 7520,
+      "text": "Docs, home and one template per kind of page",
+      "w": 240,
+      "x": 0,
+      "y": 5900
+    }
+  },
+  "order": [
+    "Home.dc.html",
+    "Roadmap.dc.html",
+    "Changelog.dc.html",
+    "Docs.dc.html",
+    "DocsGuide.dc.html",
+    "DocsBlock.dc.html",
+    "DocsSettings.dc.html",
+    "DocsConcept.dc.html"
+  ],
+  "pages": [],
+  "title": "Konnekt website"
+}

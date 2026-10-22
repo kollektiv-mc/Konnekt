@@ -15,12 +15,13 @@ interface MenuRowProps {
   leading?: ReactNode
   /** Whatever ends the row in place of a shortcut, such as a fly-out's chevron. */
   trailing?: ReactNode
-  /** Nesting depth under an expanded row, for the inset. */
-  indent?: boolean
+  /** The row opens a fly-out; `expanded` says whether it is open. */
+  hasPopup?: boolean
   expanded?: boolean
   /** Makes the row a switch and says whether it is on; the caller draws the mark. */
   checked?: boolean
   title?: string
+  onKeyDown?: (e: React.KeyboardEvent<HTMLButtonElement>) => void
 }
 
 /**
@@ -42,27 +43,33 @@ export function MenuRow({
   active = false,
   leading,
   trailing,
-  indent = false,
+  hasPopup = false,
   expanded,
   checked,
   title,
+  onKeyDown,
 }: MenuRowProps) {
   const tone = active ? 'text-accent' : danger ? 'text-danger' : 'text-text-primary'
+  // A row whose fly-out is open stays lit, so the fly-out says which row it is from.
   const surface = active
     ? 'bg-[color-mix(in_srgb,var(--accent)_10%,transparent)]'
-    : 'bg-transparent hover:bg-hover'
+    : expanded
+      ? 'bg-hover'
+      : 'bg-transparent hover:bg-hover'
   return (
     <button
       type="button"
       onClick={onClick}
       disabled={disabled}
-      aria-expanded={expanded}
+      aria-haspopup={hasPopup ? 'menu' : undefined}
+      aria-expanded={hasPopup ? (expanded ?? false) : undefined}
       role={checked === undefined ? undefined : 'switch'}
       aria-checked={checked}
       title={title}
-      className={`flex w-full cursor-pointer items-center gap-2 py-1.5 text-left font-mono text-xs whitespace-nowrap transition-colors disabled:cursor-default disabled:opacity-50 disabled:hover:bg-transparent ${
-        indent ? 'pr-3 pl-6' : 'px-3'
-      } ${tone} ${surface} ${NO_GRAPH_KEYS}`}
+      onKeyDown={onKeyDown}
+      // The default arrow, here and on the bar: a button in the editor does not
+      // change the cursor (#697).
+      className={`flex w-full items-center gap-2 px-3 py-1.5 text-left font-mono text-xs whitespace-nowrap transition-colors disabled:opacity-50 disabled:hover:bg-transparent ${tone} ${surface} ${NO_GRAPH_KEYS}`}
     >
       {leading}
       <span className="min-w-0 flex-1 truncate">{label}</span>
