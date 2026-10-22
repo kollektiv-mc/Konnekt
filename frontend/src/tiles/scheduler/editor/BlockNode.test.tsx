@@ -214,3 +214,11 @@ describe('the warning a node reports after its work is done', () => {
     expect(screen.getByText(`warning: ${WARNING}`)).toBeTruthy()
   })
 })
+
+describe('the cursor glow', () => {
+  it('is on a plain node, in the category colour', () => {
+    const root = renderNode('action.command', { command: 'save-all' })
+    expect(root.className).toContain('node-glow')
+    expect(root.style.getPropertyValue('--node-glow')).toMatch(/^#|^rgb/)
+  })
+})

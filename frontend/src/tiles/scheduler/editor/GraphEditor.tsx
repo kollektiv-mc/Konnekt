@@ -53,6 +53,7 @@ import {
 } from './graphMapping'
 import { CloseConfirmDialog } from './CloseConfirmDialog'
 import { useDirtyGuard } from './useDirtyGuard'
+import { useNodeGlow } from './useNodeGlow'
 import {
   emptyHistory,
   record as recordHistory,
@@ -250,6 +251,7 @@ function GraphEditorInner({
     flow: { x: number; y: number }
   } | null>(null)
   const canvasWrapperRef = useRef<HTMLDivElement>(null)
+  useNodeGlow(canvasWrapperRef)
   const mousePos = useRef<{ x: number; y: number }>({ x: 0, y: 0 })
 
   // Track cursor so Tab opens the quick-add menu at the pointer, not canvas center.
