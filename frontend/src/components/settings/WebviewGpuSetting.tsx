@@ -14,7 +14,7 @@ const OPTIONS: { value: Exclude<WebviewGpu, ''>; label: string }[] = [
 /**
  * The Linux webview's hardware acceleration policy (#421). Go reads it once,
  * before the window is created, so a change applies on the next launch and the
- * row says so. Shown on Linux only: Wails ignores the policy everywhere else,
+ * row says so once it has been changed. Shown on Linux only: Wails ignores the policy everywhere else,
  * and a browser served by Remote Access reports `web`, which hides it there too.
  * An empty value is "never chosen" and resolves to On, the same as Go's
  * resolver in webviewgpu.go.
@@ -27,6 +27,8 @@ export function WebviewGpuSetting({
   onChange: (v: WebviewGpu) => void
 }) {
   const [linux, setLinux] = useState(false)
+  // Go reads the policy once at startup, so the row says so once it was changed.
+  const [changed, setChanged] = useState(false)
   useEffect(() => {
     let live = true
     // readOr: with no Wails runtime the call throws before a promise exists.
@@ -42,9 +44,16 @@ export function WebviewGpuSetting({
   return (
     <SettingRow
       label="Hardware acceleration"
-      description="Turn it down if the window flickers, tears or runs the GPU hot. Applies the next time Konnekt starts."
+      note={changed ? 'Applies on the next launch.' : undefined}
     >
-      <Segmented options={OPTIONS} value={value || 'always'} onChange={onChange} />
+      <Segmented
+        options={OPTIONS}
+        value={value || 'always'}
+        onChange={(next) => {
+          setChanged(true)
+          onChange(next)
+        }}
+      />
     </SettingRow>
   )
 }

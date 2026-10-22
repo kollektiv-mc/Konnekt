@@ -66,17 +66,14 @@ export function ClaudeSection({
   // for a named tunnel (§ S9.10), and for the password every sign-in asks for.
   const connectorsReady = connectors.url !== '' && passwordSet
   const connectorsNote = !passwordSet
-    ? ' Set the password below first.'
+    ? 'Set the password below first.'
     : connectors.url === ''
-      ? ' Set up your own address under Tunnel first.'
-      : ''
+      ? 'Set up your own address under Tunnel first.'
+      : undefined
 
   return (
     <>
-      <SettingRow
-        label="Claude on this computer"
-        description="Let Claude Code and Claude Desktop on this computer use Konnekt's tools. Nothing leaves the machine, and a command that could change the host still asks here."
-      >
+      <SettingRow label="Claude on this computer">
         <Toggle checked={local.enabled} disabled={disabled} onChange={onLocal} />
       </SettingRow>
 
@@ -92,10 +89,7 @@ export function ClaudeSection({
         </div>
       )}
 
-      <SettingRow
-        label="Claude connectors"
-        description={`Let claude.ai, Claude Desktop and Claude Code reach Konnekt's tools through your own address. Each one signs in with the Remote Access password and your approval here, and the listener stays up for them.${connectorsNote}`}
-      >
+      <SettingRow label="Claude connectors" note={connectorsNote}>
         <Toggle
           checked={connectors.enabled}
           disabled={disabled || (!connectors.enabled && !connectorsReady)}

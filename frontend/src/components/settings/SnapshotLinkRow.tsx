@@ -1,13 +1,10 @@
 import { useState } from 'react'
 import { useDestinationsStore } from '../../stores/useDestinationsStore'
 import type { Destination, SnapshotLinkResult } from '../../stores/useDestinationsStore'
-import { BrowserOpenURL } from '../../../wailsjs/runtime/runtime'
 import { errMsg } from '../../lib/ipc'
 import { Toggle } from '../ui/Toggle'
 import { CopyButton } from './CopyButton'
 import { ACCENT_BUTTON, DANGER_BUTTON, QUIET_BUTTON } from './controls'
-
-const ACCESS_TUTORIAL_URL = 'https://developers.cloudflare.com/r2/tutorials/cloudflare-access/'
 
 type Confirming = 'mode' | 'rotate' | null
 
@@ -15,14 +12,6 @@ interface Note {
   text: string
   /** True for a refusal or for a link that could not be fully retired. */
   bad: boolean
-}
-
-function openAccessTutorial() {
-  try {
-    BrowserOpenURL(ACCESS_TUTORIAL_URL)
-  } catch {
-    /* non-Wails context */
-  }
 }
 
 /**
@@ -137,30 +126,6 @@ export function SnapshotLinkRow({ destination }: { destination: Destination }) {
           {note.text}
         </p>
       )}
-
-      <div className="text-text-muted text-1xs flex flex-col gap-0.5">
-        <p>
-          A private link is a shared secret, not access control: anyone holding it can pass it on,
-          and rotating it is the only way to revoke it.
-        </p>
-        <p>
-          R2&apos;s public buckets do not list their contents; another provider&apos;s might, which
-          would expose the parts.
-        </p>
-        <p>
-          For sign-in, put Cloudflare Access in front of the bucket&apos;s domain.{' '}
-          <a
-            href={ACCESS_TUTORIAL_URL}
-            onClick={(e) => {
-              e.preventDefault()
-              openAccessTutorial()
-            }}
-            className="text-accent underline"
-          >
-            How to set it up
-          </a>
-        </p>
-      </div>
     </div>
   )
 }

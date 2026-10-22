@@ -121,10 +121,7 @@ export function RemoteAccessPane() {
         />
       ))}
 
-      <SettingRow
-        label="Remote access"
-        description={`Serve this dashboard to a browser you have approved. Off until you switch it on, and it switches itself off after 30 minutes without use.${passwordSet ? '' : ' Set a password first.'}`}
-      >
+      <SettingRow label="Remote access" note={passwordSet ? undefined : 'Set a password first.'}>
         <Toggle
           checked={access.running}
           disabled={disabled || !passwordSet}

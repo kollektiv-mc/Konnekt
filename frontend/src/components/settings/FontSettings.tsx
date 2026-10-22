@@ -122,11 +122,7 @@ export function FontSettings({ fonts, onChange }: Props) {
 
   return (
     <div className="border-border-subtle border-b-hairline py-3">
-      <span className="text-text-primary text-sm">Fonts</span>
-      <p className="text-text-muted mt-0.5 mb-3 text-xs">
-        Installed fonts, or any name you type. Empty is the default; a name that is not installed
-        falls back to it.
-      </p>
+      <span className="text-text-primary mb-3 block text-sm">Fonts</span>
       <div className="flex flex-col gap-2">
         {FONT_ROLES.map((role) => (
           <div
