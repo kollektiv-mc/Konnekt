@@ -163,6 +163,19 @@ describe('the toolbar menus drive the editor', () => {
     expect(screen.getByPlaceholderText('search blocks…')).toBeTruthy()
   })
 
+  it('closes the quick-add list on a second press of add', async () => {
+    const { container } = renderEditor()
+    await loaded(container)
+
+    fireEvent.click(button('add'))
+    expect(screen.getByPlaceholderText('search blocks…')).toBeTruthy()
+    // The press on the button is not a press outside, so the click toggles the
+    // list shut rather than the press closing it and the click reopening it.
+    fireEvent.pointerDown(button('add'))
+    fireEvent.click(button('add'))
+    await waitFor(() => expect(screen.queryByPlaceholderText('search blocks…')).toBeNull())
+  })
+
   it('opens edit in one click with the quick-add list open', async () => {
     const { container } = renderEditor()
     await loaded(container)
