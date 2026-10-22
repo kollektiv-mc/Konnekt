@@ -177,4 +177,4 @@ scaffold a Beta feature during alpha.
 `.claude/rules/` holds what only matters in one part of the tree, each scoped
 by `paths:` so it costs no context until you open a matching file:
 `tile-system.md`, `builds-and-releases.md`, `frontend-style.md`, `ipc.md`,
-`backend.md`, `dependencies.md` and `aislop.md`.
+`backend.md`, `dependencies.md`, `aislop.md` and `copy.md`.
