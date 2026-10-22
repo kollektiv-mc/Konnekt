@@ -24,8 +24,8 @@ describe('WebviewGpuSetting', () => {
     render(<WebviewGpuSetting value="" onChange={() => {}} />)
     await settle()
     expect(screen.getByText('Hardware acceleration')).toBeTruthy()
-    expect(screen.getByText(/next time Konnekt starts/)).toBeTruthy()
     expect(pressed()).toBe('On')
+    expect(screen.queryByText(/next launch/)).toBeNull()
   })
 
   it('shows and writes the stored policy', async () => {
@@ -34,8 +34,10 @@ describe('WebviewGpuSetting', () => {
     render(<WebviewGpuSetting value="ondemand" onChange={onChange} />)
     await settle()
     expect(pressed()).toBe('On demand')
+    expect(screen.queryByText(/next launch/)).toBeNull()
     fireEvent.click(screen.getByRole('button', { name: 'Off' }))
     expect(onChange).toHaveBeenCalledWith('never')
+    expect(screen.getByText('Applies on the next launch.')).toBeTruthy()
   })
 
   it.each(['windows', 'darwin', 'web'])('is hidden on %s, which ignores the policy', async (p) => {

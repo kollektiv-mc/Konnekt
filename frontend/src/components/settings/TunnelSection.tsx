@@ -153,10 +153,8 @@ function NamedForm({ named, locked, onSave, onForget }: NamedProps) {
     <div className="mt-3">
       <span className="text-text-secondary text-xs">Your own address</span>
       <p className="text-text-muted mt-0.5 mb-2 text-xs">
-        Keep one address across runs with a tunnel on your Cloudflare account. In the Cloudflare
-        dashboard, create a tunnel, route a hostname you own to{' '}
-        <span className="font-mono">http://127.0.0.1:{portOk ? port : 'PORT'}</span>, and paste its
-        token here. Remote access then listens on that port.
+        Route the hostname to{' '}
+        <span className="font-mono">http://127.0.0.1:{portOk ? port : 'PORT'}</span>.
       </p>
       <div className="flex flex-wrap items-center gap-2">
         <input
@@ -207,10 +205,10 @@ function NamedForm({ named, locked, onSave, onForget }: NamedProps) {
 /**
  * The public way in (#46): a Cloudflare tunnel to the loopback listener, a
  * quick one by default or the user's own named one once configured (#512).
- * It says what switching it on means before the switch, in the one place the
- * decision is made: the address is public, the sign-in is what stands in front
- * of the dashboard, and Cloudflare terminates the TLS and so can read what
- * passes, the password included.
+ * The address is public, the sign-in is what stands in front of the
+ * dashboard, and Cloudflare terminates the TLS and so can read what passes,
+ * the password included. The row keeps that last part, a warning nothing
+ * else gives; the rest is for the docs Settings reference (#653).
  */
 export function TunnelSection({
   tunnel,
@@ -227,12 +225,10 @@ export function TunnelSection({
       <div className="flex items-center justify-between gap-4">
         <div>
           <span className="text-text-primary text-sm">Reach it from anywhere</span>
+          {/* The one line kept from the old description: it is a warning,
+              not an explanation, and nothing else tells the user. */}
           <p className="text-text-muted mt-0.5 text-xs">
-            {isNamed(tunnel)
-              ? 'Opens your own address through Cloudflare.'
-              : 'Opens a public address through Cloudflare.'}{' '}
-            Anyone who has the address reaches the sign-in page, and only a device you approve gets
-            further. Cloudflare carries the traffic and can read it, your password included.
+            Cloudflare carries the traffic and can read it, your password included.
             {listening ? '' : ' Switch remote access on first.'}
           </p>
         </div>

@@ -440,8 +440,7 @@ function AppearancePane({ settings, update }: { settings: AppSettings; update: U
     <div>
       {/* Skin gallery */}
       <div className="border-border-subtle border-b-hairline py-3">
-        <span className="text-text-primary text-sm">Skin</span>
-        <p className="text-text-muted mt-0.5 mb-3 text-xs">Built-in surface and border palette.</p>
+        <span className="text-text-primary mb-3 block text-sm">Skin</span>
         <div
           role="group"
           aria-label="Skin"
@@ -459,10 +458,7 @@ function AppearancePane({ settings, update }: { settings: AppSettings; update: U
         </div>
       </div>
 
-      {/* Mode. The description is deliberately fixed rather than explaining the
-          dark-only case: a two-line variant reflows every row below it as the
-          skin changes. The greyed-out Light option carries that on its own. */}
-      <SettingRow label="Mode" description="Light, dark, or follow your OS preference.">
+      <SettingRow label="Mode">
         <Segmented
           options={themeOptions}
           value={shownTheme}
@@ -473,12 +469,7 @@ function AppearancePane({ settings, update }: { settings: AppSettings; update: U
       {/* Accent color */}
       <div className="border-border-subtle border-b-hairline py-3">
         <div className="mb-3 flex items-center justify-between gap-4">
-          <div>
-            <span className="text-text-primary text-sm">Accent color</span>
-            <p className="text-text-muted mt-0.5 text-xs">
-              Highlights, active states, and status indicators.
-            </p>
-          </div>
+          <span className="text-text-primary text-sm">Accent color</span>
           <div
             className="h-6 w-6 shrink-0 rounded-full [outline:1.5px_solid_var(--border-hover)] [outline-offset:2px]"
             // eslint-disable-next-line no-restricted-syntax -- settings.accentColor is a runtime user-chosen hex, not a static token
@@ -493,7 +484,7 @@ function AppearancePane({ settings, update }: { settings: AppSettings; update: U
       </div>
 
       {/* Background style */}
-      <SettingRow label="Background" description="Subtle accent glow behind the interface.">
+      <SettingRow label="Background">
         <Segmented
           options={BG_STYLE_OPTIONS}
           value={settings.backgroundStyle}
@@ -547,10 +538,7 @@ function AppearancePane({ settings, update }: { settings: AppSettings; update: U
 
             {/* Status colors */}
             <div className="border-border-subtle border-b-hairline py-3">
-              <span className="text-text-primary text-sm">Status colors</span>
-              <p className="text-text-muted mt-0.5 mb-3 text-xs">
-                Used for success, warnings, and errors across the app.
-              </p>
+              <span className="text-text-primary mb-3 block text-sm">Status colors</span>
               <div className="flex flex-col gap-3">
                 {(
                   [
@@ -573,20 +561,14 @@ function AppearancePane({ settings, update }: { settings: AppSettings; update: U
 
             {/* Wheel physics. Read per notch by lib/springScroll.ts, so it takes
                 effect on the next notch with no restart. */}
-            <SettingRow
-              label="Smooth scrolling"
-              description="Glide under each mouse wheel notch on spring physics instead of stepping. Touchpads and the OS reduced-motion setting are left alone."
-            >
+            <SettingRow label="Smooth scrolling">
               <Toggle
                 checked={settings.smoothScrolling}
                 onChange={(v) => update({ smoothScrolling: v })}
               />
             </SettingRow>
 
-            <SettingRow
-              label="Classic tile faces"
-              description="The compact tile faces from before the figure-first ones. Per-tile layouts do not apply while this is on."
-            >
+            <SettingRow label="Classic tile faces">
               <Toggle
                 checked={settings.classicTileFaces}
                 onChange={(v) => update({ classicTileFaces: v })}
@@ -612,44 +594,35 @@ function GeneralPane({
 }) {
   return (
     <div>
-      <SettingRow
-        label="Auto-start active server"
-        description="Automatically start the selected server when Konnekt launches."
-      >
+      <SettingRow label="Auto-start active server">
         <Toggle
           checked={settings.autoStartActiveServer}
           onChange={(v) => update({ autoStartActiveServer: v })}
         />
       </SettingRow>
-      <SettingRow
-        label="Confirm before stopping"
-        description="Show a confirmation dialog before stopping a running server."
-      >
+      <SettingRow label="Confirm before stopping">
         <Toggle
           checked={settings.confirmBeforeStop}
           onChange={(v) => update({ confirmBeforeStop: v })}
         />
       </SettingRow>
-      <SettingRow
-        label="Stop grace period"
-        description="How long a stop may wait for the server to shut down and save before Konnekt force kills it (seconds)."
-      >
-        <input
-          type="number"
-          min={5}
-          max={600}
-          step={5}
-          value={settings.stopGraceSeconds}
-          onChange={(e) =>
-            update({ stopGraceSeconds: Math.min(600, Math.max(5, Number(e.target.value))) })
-          }
-          className="bg-hover border-border-subtle text-text-primary hover:border-border-hover focus:border-border-hover border-hairline w-20 rounded px-2 py-1 text-right text-xs transition-colors outline-none"
-        />
+      <SettingRow label="Stop grace period">
+        <div className="flex items-center gap-2">
+          <input
+            type="number"
+            min={5}
+            max={600}
+            step={5}
+            value={settings.stopGraceSeconds}
+            onChange={(e) =>
+              update({ stopGraceSeconds: Math.min(600, Math.max(5, Number(e.target.value))) })
+            }
+            className="bg-hover border-border-subtle text-text-primary hover:border-border-hover focus:border-border-hover border-hairline w-20 rounded px-2 py-1 text-right text-xs transition-colors outline-none"
+          />
+          <span className="text-text-muted text-xs">seconds</span>
+        </div>
       </SettingRow>
-      <SettingRow
-        label="Check for updates on startup"
-        description="Silently check for a new release when Konnekt launches and notify if one is found."
-      >
+      <SettingRow label="Check for updates on startup">
         <Toggle
           checked={settings.checkUpdatesOnStartup}
           onChange={(v) => update({ checkUpdatesOnStartup: v })}
@@ -657,16 +630,16 @@ function GeneralPane({
       </SettingRow>
       <SettingRow
         label="Update channel"
-        description={
+        note={
           isSnapshotVersion(version ?? '')
-            ? 'Snapshot builds are rebuilt from the newest code every night. They are untested and can be broken. This build is one, so it follows the snapshot channel until you install a release.'
-            : 'Snapshot builds are rebuilt from the newest code every night. They are untested and can be broken.'
+            ? 'This build is a snapshot, so it follows the snapshot channel until you install a release.'
+            : undefined
         }
       >
         {/* Deliberately shows the stored setting even on a snapshot build,
             where the service overrides it. Forcing the displayed value to
             "Snapshot" would misreport what is on disk and what happens once a
-            release is installed. The description says so instead. */}
+            release is installed. The note under the label says so instead. */}
         <Segmented
           options={UPDATE_CHANNEL_OPTIONS}
           value={settings.updateChannel}
@@ -683,16 +656,13 @@ function GeneralPane({
 function ConsolePane({ settings, update }: { settings: AppSettings; update: UpdateFn }) {
   return (
     <div>
-      <SettingRow
-        label="Show timestamps"
-        description="Prefix each log line with the server timestamp."
-      >
+      <SettingRow label="Show timestamps">
         <Toggle
           checked={settings.consoleTimestamps}
           onChange={(v) => update({ consoleTimestamps: v })}
         />
       </SettingRow>
-      <SettingRow label="Buffer size" description="Maximum number of log lines kept in memory.">
+      <SettingRow label="Buffer size">
         <input
           type="number"
           min={100}
@@ -716,13 +686,10 @@ function NotificationsPane({ settings, update }: { settings: AppSettings; update
   return (
     <div>
       <span className={PANE_HEADING}>Desktop</span>
-      <SettingRow label="Crash alerts" description="Notify when the server stops unexpectedly.">
+      <SettingRow label="Crash alerts">
         <Toggle checked={settings.notifyOnCrash} onChange={(v) => update({ notifyOnCrash: v })} />
       </SettingRow>
-      <SettingRow
-        label="Player join/leave alerts"
-        description="Notify when a player joins or leaves the server."
-      >
+      <SettingRow label="Player join/leave alerts">
         <Toggle checked={settings.notifyOnJoin} onChange={(v) => update({ notifyOnJoin: v })} />
       </SettingRow>
       {/* Bubbles that hold a message's full text in the corner of the window
@@ -730,7 +697,7 @@ function NotificationsPane({ settings, update }: { settings: AppSettings; update
           turned off, so a category added later starts on. */}
       <span className={`${PANE_HEADING} mt-5`}>In-app bubbles</span>
       {TOAST_CATEGORIES.map((c) => (
-        <SettingRow key={c.id} label={c.label} description={c.description}>
+        <SettingRow key={c.id} label={c.label}>
           <Toggle
             label={c.label}
             checked={!settings.toastsOff[c.id]}

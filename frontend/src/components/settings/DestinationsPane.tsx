@@ -105,7 +105,7 @@ function DestinationEditor({ initial, onClose }: EditorProps) {
   return (
     <div className={SECTION}>
       <div className="grid grid-cols-2 gap-3 max-sm:grid-cols-1">
-        <Field label="Name" help="What a scheduler graph calls this bucket.">
+        <Field label="Name">
           <input
             aria-label="Name"
             value={draft.name}
@@ -114,7 +114,7 @@ function DestinationEditor({ initial, onClose }: EditorProps) {
             className={TEXT_INPUT}
           />
         </Field>
-        <Field label="Endpoint" help="The S3 address, host only.">
+        <Field label="Endpoint">
           <input
             aria-label="Endpoint"
             placeholder="https://<account>.r2.cloudflarestorage.com"
@@ -124,7 +124,7 @@ function DestinationEditor({ initial, onClose }: EditorProps) {
             className={TEXT_INPUT}
           />
         </Field>
-        <Field label="Region" help="auto for Cloudflare R2.">
+        <Field label="Region">
           <input
             aria-label="Region"
             value={draft.region}
@@ -142,19 +142,17 @@ function DestinationEditor({ initial, onClose }: EditorProps) {
             className={TEXT_INPUT}
           />
         </Field>
-        <Field label="Prefix" help="Optional. Uploads go under this folder.">
+        <Field label="Prefix">
           <input
             aria-label="Prefix"
+            placeholder="Optional"
             value={draft.prefix}
             disabled={busy}
             onChange={(e) => set({ prefix: e.target.value })}
             className={TEXT_INPUT}
           />
         </Field>
-        <Field
-          label="Public base URL"
-          help="Optional. The custom domain the bucket is served from."
-        >
+        <Field label="Public base URL">
           <input
             aria-label="Public base URL"
             placeholder="https://files.example.com"
@@ -176,11 +174,7 @@ function DestinationEditor({ initial, onClose }: EditorProps) {
         </Field>
         <Field
           label="Secret access key"
-          help={
-            draft.secretSet
-              ? 'A secret is saved. Leave this blank to keep it.'
-              : 'Stored on this computer, never shown again.'
-          }
+          help={draft.secretSet ? 'A secret is saved. Leave this blank to keep it.' : undefined}
         >
           <input
             type="password"
@@ -275,13 +269,6 @@ export function DestinationsPane() {
           Couldn&apos;t do that: {error}
         </div>
       )}
-
-      <div className={SECTION}>
-        <p className="text-text-muted text-xs">
-          Buckets Konnekt can upload to, such as Cloudflare R2 or any S3-compatible store. The
-          secret stays on this computer and is never shown again.
-        </p>
-      </div>
 
       {loaded && destinations.length === 0 && editing === null && (
         <p className="text-text-muted py-3 text-xs">No destination yet.</p>
