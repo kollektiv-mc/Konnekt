@@ -1,5 +1,5 @@
 import { describe, it, expect, afterEach, vi } from 'vitest'
-import { render, screen, cleanup } from '@testing-library/react'
+import { render, screen, cleanup, fireEvent } from '@testing-library/react'
 import { ReactFlowProvider, type Edge, type NodeProps } from '@xyflow/react'
 import { models } from '../../../../wailsjs/go/models'
 import { BlockNode } from './BlockNode'
@@ -39,12 +39,13 @@ function renderNode(
   edges: Edge[] = [],
   downtimeMs?: number,
   warning?: string,
+  onToggleCollapse: (id: string) => void = () => {},
 ): HTMLElement {
   const ctx: SchedulerCtxValue = {
     blockDefs: new Map([commandDef, declaringDef].map((d) => [d.id, d])),
     edges,
     collapsed: new Set(),
-    onToggleCollapse: () => {},
+    onToggleCollapse,
     nodeRunState: new Map(),
     nodeDowntimeMs: downtimeMs === undefined ? new Map() : new Map([['n1', downtimeMs]]),
     nodeWarning: warning === undefined ? new Map() : new Map([['n1', warning]]),
@@ -68,37 +69,39 @@ function renderNode(
 }
 
 const BADGE = 'Stops the server'
+// The icon is the node's only carrier of the effect; its name and tooltip are the text.
+const stopIcon = () => screen.queryByRole('img', { name: /^Stops the server/ })
 
-describe('the Stops the server badge', () => {
+describe('the server-stopping icon', () => {
   it('shows on the Stop preset', () => {
     renderNode('action.command', { command: '__stop__' })
-    expect(screen.getByText(BADGE)).toBeTruthy()
+    expect(stopIcon()).toBeTruthy()
   })
 
   it('shows on the Restart preset', () => {
     renderNode('action.command', { command: '__restart__' })
-    expect(screen.getByText(BADGE)).toBeTruthy()
+    expect(stopIcon()).toBeTruthy()
   })
 
   it('shows on a block that declares the effect', () => {
     renderNode('action.declares', {})
-    expect(screen.getByText(BADGE)).toBeTruthy()
+    expect(stopIcon()).toBeTruthy()
   })
 
   it('is absent from a command node with another command', () => {
     renderNode('action.command', { command: 'save-all' })
-    expect(screen.queryByText(BADGE)).toBeNull()
+    expect(stopIcon()).toBeNull()
   })
 
   it('is absent from a command node with the Start preset', () => {
     renderNode('action.command', { command: '__start__' })
-    expect(screen.queryByText(BADGE)).toBeNull()
+    expect(stopIcon()).toBeNull()
   })
 
   it('is absent from a command node whose command is wired in', () => {
     const wired = { id: 'e', source: 's', target: 'n1', targetHandle: 'data:command' } as Edge
     renderNode('action.command', { command: '__stop__' }, [wired])
-    expect(screen.queryByText(BADGE)).toBeNull()
+    expect(stopIcon()).toBeNull()
   })
 
   it('is not mistaken for a wire into some other port or node', () => {
@@ -107,31 +110,39 @@ describe('the Stops the server badge', () => {
       { id: 'e2', source: 's', target: 'other', targetHandle: 'data:command' },
     ] as Edge[]
     renderNode('action.command', { command: '__stop__' }, elsewhere)
-    expect(screen.getByText(BADGE)).toBeTruthy()
+    expect(stopIcon()).toBeTruthy()
   })
 
-  it('makes the node taller by exactly the badge line', () => {
+  it('replaces the status line: no "Stops the server" text, no extra height', () => {
     const plain = renderNode('action.command', { command: 'save-all' })
     const plainH = plain.style.height
     cleanup()
     const stopping = renderNode('action.command', { command: '__stop__' })
-    // The ports and the hint line are the same in both, so the only difference
-    // is the 20px badge line.
+    expect(screen.queryByText(BADGE)).toBeNull()
     expect(plainH).not.toBe('')
-    expect(parseFloat(stopping.style.height) - parseFloat(plainH)).toBe(20)
+    expect(stopping.style.height).toBe(plainH)
+  })
+
+  it('sits in the header, after the collapse chevron', () => {
+    renderNode('action.command', { command: '__stop__' })
+    const chevron = screen.getByTitle('Collapse ports')
+    expect(chevron.compareDocumentPosition(stopIcon() as Node)).toBe(
+      Node.DOCUMENT_POSITION_FOLLOWING,
+    )
   })
 })
 
-describe('the downtime figure on a server-stopping node', () => {
-  it('shows the measured downtime beside the badge', () => {
-    renderNode('action.declares', {}, [], 130_000)
-    expect(screen.getByText(BADGE)).toBeTruthy()
-    expect(screen.getByText('downtime 2m 10s')).toBeTruthy()
+describe('the tooltip on the server-stopping icon', () => {
+  it('explains the effect when no downtime is known', () => {
+    renderNode('action.declares', {})
+    expect(stopIcon()?.getAttribute('title')).toBe(BADGE)
   })
 
-  it('is absent when the last run reported none', () => {
-    renderNode('action.declares', {})
-    expect(screen.queryByText(/downtime/)).toBeNull()
+  it('adds the measured downtime when the last run reported one', () => {
+    renderNode('action.declares', {}, [], 130_000)
+    const icon = stopIcon()
+    expect(icon?.getAttribute('title')).toBe('Stops the server; last downtime 2m 10s')
+    expect(icon?.getAttribute('aria-label')).toBe('Stops the server; last downtime 2m 10s')
   })
 
   it('does not change the node height', () => {
@@ -140,12 +151,29 @@ describe('the downtime figure on a server-stopping node', () => {
     cleanup()
     const withFigure = renderNode('action.declares', {}, [], 45_000)
     expect(withFigure.style.height).toBe(withoutH)
-    expect(screen.getByText('downtime 45s')).toBeTruthy()
   })
 
-  it('needs the badge: a node that stops nothing shows no figure', () => {
+  it('needs the effect: a node that stops nothing shows no figure', () => {
     renderNode('action.command', { command: 'save-all' }, [], 130_000)
-    expect(screen.queryByText(/downtime/)).toBeNull()
+    expect(screen.queryByTitle(/downtime/)).toBeNull()
+  })
+})
+
+describe('the collapse chevron', () => {
+  it('is revealed by hovering the node, which carries the group', () => {
+    const root = renderNode('action.command', { command: 'save-all' })
+    expect(root.className).toMatch(/\bgroup\b/)
+    const chevron = screen.getByTitle('Collapse ports')
+    expect(chevron.className).toContain('opacity-0')
+    expect(chevron.className).toContain('group-hover:opacity-100')
+    expect(chevron.className).toContain('nodrag')
+  })
+
+  it('still toggles the ports when clicked', () => {
+    const onToggle = vi.fn()
+    renderNode('action.command', { command: 'save-all' }, [], undefined, undefined, onToggle)
+    fireEvent.click(screen.getByTitle('Collapse ports'))
+    expect(onToggle).toHaveBeenCalledWith('n1')
   })
 })
 
@@ -156,7 +184,7 @@ describe('the warning a node reports after its work is done', () => {
     renderNode('action.command', { command: 'save-all' }, [], undefined, WARNING)
     const line = screen.getByText(`warning: ${WARNING}`)
     expect(line.className).toContain('text-text-muted')
-    expect(screen.queryByText(BADGE)).toBeNull()
+    expect(stopIcon()).toBeNull()
   })
 
   it('carries the whole text as a tooltip, since the line is truncated', () => {
@@ -176,13 +204,13 @@ describe('the warning a node reports after its work is done', () => {
     const warned = renderNode('action.command', { command: 'save-all' }, [], undefined, WARNING)
     expect(parseFloat(warned.style.height) - plainH).toBe(20)
     cleanup()
-    // A node that already has the badge line shares it rather than adding a second.
+    // The server-stopping icon is in the header, so it does not add a line of its own.
     const stopping = renderNode('action.declares', {})
     const stoppingH = parseFloat(stopping.style.height)
     cleanup()
     const both = renderNode('action.declares', {}, [], 45_000, WARNING)
-    expect(parseFloat(both.style.height)).toBe(stoppingH)
-    expect(screen.getByText('downtime 45s')).toBeTruthy()
+    expect(parseFloat(both.style.height) - stoppingH).toBe(20)
+    expect(stopIcon()).toBeTruthy()
     expect(screen.getByText(`warning: ${WARNING}`)).toBeTruthy()
   })
 })

@@ -2,7 +2,9 @@
 import React, { memo, useContext } from 'react'
 import { Handle, Position, type NodeProps } from '@xyflow/react'
 import { SchedulerCtx } from './schedulerContext'
+import { Icon } from '../../../components/ui/Icon'
 import { fmtDowntime } from '../../../lib/format'
+import { TriangleAlert } from '../../../lib/icons'
 import {
   CATEGORY_ICON,
   categoryColor,
@@ -21,8 +23,9 @@ import type { models } from '../../../../wailsjs/go/models'
 
 const HEADER_H = 30
 const INFO_H = 20
-// The effect badge is a line in the hint line's style, so it takes the same height.
-const BADGE_H = INFO_H
+// The status line (the last run's warning) is a line in the hint line's style, so
+// it takes the same height.
+const STATUS_H = INFO_H
 const ROW_H = 22
 const PAD = 6
 
@@ -131,10 +134,10 @@ export const BlockNode = memo(function BlockNode({ data, selected }: NodeProps<B
   ).includes(NODE_EFFECT_STOPS_SERVER)
 
   const bodyH = Math.max(1, leftPorts.length, rightPorts.length) * ROW_H + PAD * 2
-  // One line carries the effect badge, the measured downtime and the last run's
-  // warning, so a node with none of them is as tall as ever.
-  const hasStatusLine = stopsServer || warning !== undefined
-  const aboveBodyH = HEADER_H + (hint !== undefined ? INFO_H : 0) + (hasStatusLine ? BADGE_H : 0)
+  // The line holds only what the last run could not finish; the server-stopping
+  // effect lives in the header (a warning icon), so it adds no height.
+  const hasStatusLine = warning !== undefined
+  const aboveBodyH = HEADER_H + (hint !== undefined ? INFO_H : 0) + (hasStatusLine ? STATUS_H : 0)
   const totalH = aboveBodyH + bodyH
   const portTop = aboveBodyH + PAD
 
@@ -162,9 +165,14 @@ export const BlockNode = memo(function BlockNode({ data, selected }: NodeProps<B
 
   const hasExpandablePorts = dataIns.length > visibleDataIns.length || dataIns.length > 0
 
+  const stopsServerTip =
+    downtimeMs !== undefined
+      ? `Stops the server; last downtime ${fmtDowntime(downtimeMs)}`
+      : 'Stops the server'
+
   return (
     <div
-      className={`node-entrance bg-elevated relative min-w-[180px] overflow-hidden rounded ${stateClass} ${borderClass}`}
+      className={`node-entrance group bg-elevated relative min-w-[180px] overflow-hidden rounded ${stateClass} ${borderClass}`}
       // eslint-disable-next-line no-restricted-syntax -- height is computed from port count; --node-anim-delay is a per-node CSS custom property; default-state borderColor comes from the per-category CATEGORY_COLOR map, not a static value
       style={
         {
@@ -193,10 +201,20 @@ export const BlockNode = memo(function BlockNode({ data, selected }: NodeProps<B
         {hasExpandablePorts && (
           <span
             onClick={() => onToggleCollapse(nd.id as string)}
-            className="nodrag text-text-faint text-3xs shrink-0 cursor-pointer pl-1 font-mono select-none"
+            className="nodrag text-text-faint text-3xs shrink-0 cursor-pointer pl-1 font-mono opacity-0 transition-opacity select-none group-hover:opacity-100"
             title={isCollapsed ? 'Expand ports' : 'Collapse ports'}
           >
             {isCollapsed ? '▸' : '▾'}
+          </span>
+        )}
+        {stopsServer && (
+          <span
+            role="img"
+            aria-label={stopsServerTip}
+            title={stopsServerTip}
+            className="text-text-faint flex shrink-0 items-center"
+          >
+            <Icon icon={TriangleAlert} size="xs" />
           </span>
         )}
       </div>
@@ -208,19 +226,12 @@ export const BlockNode = memo(function BlockNode({ data, selected }: NodeProps<B
         </div>
       )}
 
-      {/* Effect badge, with the measured downtime of the last run beside it, and
-          what the last run could not finish (the node still completed) */}
-      {hasStatusLine && (
+      {/* What the last run could not finish (the node still completed) */}
+      {warning !== undefined && (
         <div className="text-warning border-border-subtle border-b-hairline text-3xs flex h-5 items-center justify-between gap-2 truncate px-2.5 font-mono">
-          {stopsServer && <span>Stops the server</span>}
-          {stopsServer && downtimeMs !== undefined && (
-            <span className="text-text-muted">downtime {fmtDowntime(downtimeMs)}</span>
-          )}
-          {warning !== undefined && (
-            <span className="text-text-muted min-w-0 truncate" title={warning}>
-              warning: {warning}
-            </span>
-          )}
+          <span className="text-text-muted min-w-0 truncate" title={warning}>
+            warning: {warning}
+          </span>
         </div>
       )}
 
