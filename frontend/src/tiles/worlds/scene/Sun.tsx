@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import * as THREE from 'three'
 import { SpinningCube } from './SpinningCube'
+import { FACE_GLOW } from './faceGlow'
 
 interface Props {
   radius?: number
@@ -51,6 +52,7 @@ export function Sun({ radius = 0.55 }: Props) {
         color="#ffd84d"
         emissive="#ffc200"
         emissiveIntensity={1.2}
+        faceGlow={FACE_GLOW}
       />
     </group>
   )
