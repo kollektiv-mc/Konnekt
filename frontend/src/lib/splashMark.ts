@@ -125,6 +125,18 @@ export function orbitPath(from: number, to: number): string {
   return `M${ax} ${ay}A${ORBIT.rx} ${ORBIT.ry} 0 ${span > Math.PI ? 1 : 0} 1 ${bx} ${by}`
 }
 
+/**
+ * Everything but the node's disc, as a clip path for the orbit's front. The
+ * node goes behind the block on the orbit's centre line, but the front pass
+ * reaches above that line, so near either end a node just gone behind sits
+ * partly under it and would be cut flat. The disc is a second subpath, a hole
+ * under the even-odd clip rule; the front pass's own clips are rects, and a
+ * clip cannot both cut a hole and stop at an edge the hole crosses.
+ */
+export function exceptDisc({ x, y, r }: { x: number; y: number; r: number }): string {
+  return `M-4 -4h32v32h-32zM${x - r} ${y}a${r} ${r} 0 1 0 ${2 * r} 0a${r} ${r} 0 1 0 ${-2 * r} 0z`
+}
+
 /** Milliseconds: when each part starts and how long it runs. */
 export const SPLASH_MS = {
   /** The block's turn; its quint ease has it still by the time the node lands. */
