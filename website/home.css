@@ -91,7 +91,8 @@
 }
 
 /* A ring turns about the centre of the art; its worlds turn back about their
-   own marker by the same amount, so they travel the ring and stay upright. */
+   own marker by the same amount, so they travel the ring and stay upright.
+   Both rings share one period, so no two labels ever pass over each other. */
 .orbit {
   transform-origin: 210px 205px;
   animation: spin 160s linear infinite;
@@ -100,11 +101,6 @@
 .world {
   transform-origin: 0 0;
   animation: spin 160s linear infinite reverse;
-}
-
-.orbit-in,
-.orbit-in .world {
-  animation-duration: 110s;
 }
 
 @keyframes spin {
