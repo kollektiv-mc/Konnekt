@@ -1,0 +1,561 @@
+/* The docs: the home, and the page template every docs page is laid out on.
+   On top of site.css. A page's kind is told apart by the shape of its marker,
+   never by a colour of its own: guide a filled square, concept an outline in
+   the accent, reference an outline in secondary text, settings a dashed one. */
+
+/* ── Kind ───────────────────────────────────────────────────────────────── */
+
+.kind {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-site-mono);
+  font-size: 12px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.kind::before {
+  content: '';
+  box-sizing: border-box;
+  width: 10px;
+  height: 10px;
+  border: 1.5px solid var(--text-secondary);
+}
+
+.kind[data-kind='guide']::before {
+  border-color: var(--accent);
+  background: var(--accent);
+}
+
+.kind[data-kind='concept']::before {
+  border-color: var(--accent);
+}
+
+.kind[data-kind='settings']::before {
+  border-style: dashed;
+}
+
+/* ── Docs home ──────────────────────────────────────────────────────────── */
+
+.doc-search-side {
+  justify-content: center;
+}
+
+.doc-search-side .search {
+  flex: none;
+  padding: 0 28px;
+  border: var(--hairline);
+}
+
+/* A shelf: a label cell, then its pages as a grid of rows. The grid's own
+   last column and row would draw a second hairline against the block's, so
+   it sits one pixel out under the clip. */
+.shelf {
+  display: flex;
+  flex-wrap: wrap;
+}
+
+.shelf-label {
+  flex: 0 0 200px;
+  display: flex;
+  align-items: center;
+  padding: 22px 28px;
+  border-right: var(--hairline);
+  background: var(--bg-surface);
+}
+
+h2.label {
+  margin: 0;
+  font-weight: 400;
+}
+
+.shelf-rows {
+  flex: 1 1 0;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.shelf-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  margin: 0 -1px -1px 0;
+}
+
+/* A page's one-line summary shows only on hover or focus, in a row that keeps
+   its height: the title rests low by the summary's height and rises as the
+   summary fades in, so nothing below it moves. Touch has no hover, so there
+   the summary simply shows. */
+.page-link {
+  display: flex;
+  flex-direction: column;
+  padding: 22px 20px;
+  border-right: var(--hairline);
+  border-bottom: var(--hairline);
+  transition: background-color var(--duration-fast) var(--ease-standard);
+}
+
+.page-link:hover,
+.page-link:focus-visible {
+  background: var(--hover-surface);
+}
+
+.page-link-move {
+  display: flex;
+  flex-direction: column;
+  font-size: 16px;
+  transform: translateY(12px);
+  transition: transform var(--duration-fast) var(--ease-lift);
+}
+
+.page-link-sum {
+  padding-top: 4px;
+  overflow: hidden;
+  font-size: 13px;
+  line-height: 20px;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  opacity: 0;
+  transition: opacity var(--duration-fast) var(--ease-standard);
+}
+
+.page-link:hover .page-link-move,
+.page-link:focus-visible .page-link-move {
+  transform: none;
+}
+
+.page-link:hover .page-link-sum,
+.page-link:focus-visible .page-link-sum {
+  opacity: 1;
+}
+
+@media (hover: none) {
+  .page-link-move {
+    transform: none;
+  }
+
+  .page-link-sum {
+    opacity: 1;
+  }
+}
+
+.page-link[hidden],
+.shelf[hidden] {
+  display: none;
+}
+
+.doc-empty {
+  margin: 0;
+  padding: 32px var(--pad);
+  color: var(--text-secondary);
+}
+
+.shelf-prose {
+  flex: 1 1 480px;
+  padding: 28px var(--pad);
+}
+
+/* ── Page head: kind and trail, title, lead, and the facts beside them ──── */
+
+.doc-head {
+  display: flex;
+  flex-wrap: wrap;
+}
+
+.doc-head-main {
+  flex: 2 1 560px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: clamp(36px, 5vw, 64px) var(--pad);
+  border-right: var(--hairline);
+}
+
+.doc-trail {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 24px;
+}
+
+.doc-crumbs {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  font-family: var(--font-site-mono);
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.doc-crumbs li + li::before {
+  content: '/';
+  padding: 0 0.6ch;
+}
+
+.doc-crumbs a {
+  color: var(--text-secondary);
+}
+
+.doc-crumbs [aria-current] {
+  color: var(--text-primary);
+}
+
+.doc-head h1 {
+  margin: 0;
+  max-width: 14ch;
+  font-size: clamp(48px, 6vw, 80px);
+  line-height: 0.95;
+  font-weight: 600;
+  letter-spacing: -0.05em;
+}
+
+.doc-lead {
+  margin: 0;
+  max-width: 56ch;
+  font-size: 18px;
+  line-height: 1.55;
+  color: var(--text-secondary);
+}
+
+.doc-facts {
+  flex: 1 1 300px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  margin: 0;
+  background: var(--bg-surface);
+}
+
+.doc-fact {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 18px 28px;
+  border-top: var(--hairline);
+}
+
+.doc-fact dd {
+  margin: 0;
+  font-size: 15px;
+}
+
+/* ── Sections: a number and a title, then the body ──────────────────────── */
+
+.doc-band {
+  padding: 32px var(--pad);
+}
+
+.doc-band h2 {
+  font-size: clamp(30px, 3vw, 40px);
+}
+
+.doc-body {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 28px var(--pad);
+}
+
+/* One sentence per line: the prose breaks after each with <br>, and the
+   measure is wide enough that a line holds one. */
+.doc-prose {
+  margin: 0;
+  max-width: 72ch;
+  font-size: 16px;
+  line-height: 1.6;
+}
+
+.doc-prose b {
+  font-weight: 600;
+}
+
+.doc-prose a,
+.doc-note a,
+.doc-table a,
+.doc-check a {
+  text-decoration: underline;
+  text-decoration-color: var(--border-hover);
+  text-underline-offset: 3px;
+}
+
+.doc-section code,
+.shelf code {
+  padding: 1px 6px;
+  border: var(--hairline);
+  background: var(--bg-overlay);
+  font-family: var(--font-site-mono);
+  font-size: 0.88em;
+}
+
+.doc-section pre {
+  margin: 0;
+  padding: 18px 20px;
+  overflow-x: auto;
+  border: var(--hairline);
+  background: var(--bg-overlay);
+  font-family: var(--font-site-mono);
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.doc-section pre code {
+  padding: 0;
+  border: 0;
+  background: none;
+  font-size: inherit;
+}
+
+/* "Before you start": an empty box per thing to have in place. */
+.doc-checks {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.doc-check {
+  display: flex;
+  gap: 16px;
+  padding: 16px 0;
+  border-top: var(--hairline);
+}
+
+.doc-check::before {
+  content: '';
+  flex: none;
+  box-sizing: border-box;
+  width: 14px;
+  height: 14px;
+  margin-top: 4px;
+  border: 1.5px solid var(--text-secondary);
+}
+
+.doc-check-text {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 16px;
+}
+
+.doc-check-desc {
+  font-size: 15px;
+  line-height: 1.55;
+  color: var(--text-secondary);
+}
+
+/* A table of fields and what to set them to. Scrolls inside its own box
+   rather than widening the page on a phone. */
+.doc-table-wrap {
+  overflow-x: auto;
+  border: var(--hairline);
+  background: var(--bg-surface);
+}
+
+.doc-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+.doc-table th {
+  padding: 12px 20px;
+  font-family: var(--font-site-mono);
+  font-size: 12px;
+  font-weight: 400;
+  letter-spacing: 0.1em;
+  text-align: left;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+
+.doc-table td {
+  padding: 14px 20px;
+  border-top: var(--hairline);
+  vertical-align: top;
+}
+
+.doc-table td:first-child {
+  width: 220px;
+}
+
+/* A note beside the steps. The tint says which kind, the label stays plain:
+   see also in the accent, heads up in sun. */
+.doc-note {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  padding: 16px 20px;
+  border: 1px solid rgb(var(--accent-rgb) / 0.33);
+  background: rgb(var(--accent-rgb) / 0.05);
+  font-size: 15px;
+  line-height: 1.55;
+}
+
+.doc-note[data-tone='warn'] {
+  border-color: rgb(var(--sun-rgb) / 0.33);
+  background: rgb(var(--sun-rgb) / 0.05);
+}
+
+.doc-note .label {
+  padding-top: 2px;
+  white-space: nowrap;
+}
+
+.doc-note p {
+  flex: 1 1 320px;
+  margin: 0;
+}
+
+/* ── Related pages ──────────────────────────────────────────────────────── */
+
+.doc-related {
+  display: flex;
+  flex-wrap: wrap;
+}
+
+.doc-related .shelf-label {
+  flex-basis: 180px;
+}
+
+.related-link {
+  flex: 1 1 180px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 22px 28px;
+  border-right: var(--hairline);
+  font-size: 16px;
+  transition: background-color var(--duration-fast) var(--ease-standard);
+}
+
+.related-link:last-child {
+  border-right: 0;
+}
+
+.related-link:hover {
+  background: var(--hover-surface);
+}
+
+.related-link .kind {
+  font-size: 11px;
+}
+
+/* ── Questions ──────────────────────────────────────────────────────────── */
+
+.doc-faq {
+  margin: 0;
+}
+
+.doc-faq details {
+  border-top: var(--hairline);
+}
+
+.doc-faq details:first-child {
+  border-top: 0;
+}
+
+.doc-faq summary {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px 0;
+  font-size: 17px;
+  list-style: none;
+  cursor: pointer;
+}
+
+.doc-faq summary::-webkit-details-marker {
+  display: none;
+}
+
+.doc-faq summary::after {
+  content: '+';
+  font-family: var(--font-site-mono);
+  color: var(--text-secondary);
+}
+
+.doc-faq details[open] summary::after {
+  content: '\2212';
+}
+
+.doc-faq summary:hover {
+  color: var(--accent);
+}
+
+.doc-faq .doc-prose {
+  padding: 0 0 20px;
+  color: var(--text-secondary);
+}
+
+/* ── Platform status ────────────────────────────────────────────────────── */
+/* Release channels take their stage colour from site.css. A platform only in
+   the snapshot is in sun, the colour the site gives everything not yet
+   released; one with no build is the dashed outline the roadmap's Later is. */
+
+.status {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-site-mono);
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  color: var(--stage-ink);
+}
+
+[data-stage='snapshot'] {
+  --stage-color: var(--sun);
+  --stage-ink: var(--sun);
+}
+
+[data-stage='source'] {
+  --stage-color: var(--text-primary);
+  --stage-ink: var(--text-secondary);
+}
+
+[data-stage='source'] .marker {
+  background: transparent;
+  border: 1.5px dashed var(--stage-ink);
+}
+
+.doc-list {
+  margin: 0;
+  padding-left: 20px;
+  font-size: 15px;
+  line-height: 1.7;
+  color: var(--text-secondary);
+}
+
+@media (max-width: 760px) {
+  .shelf-label,
+  .doc-related .shelf-label {
+    flex-basis: 100%;
+    border-right: 0;
+    border-bottom: var(--hairline);
+  }
+
+  .doc-head-main {
+    border-right: 0;
+    border-bottom: var(--hairline);
+  }
+
+  .related-link {
+    border-right: 0;
+    border-bottom: var(--hairline);
+  }
+
+  .doc-table td:first-child {
+    width: auto;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .page-link-move,
+  .page-link-sum {
+    transition: none;
+  }
+}

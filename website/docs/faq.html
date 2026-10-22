@@ -1,0 +1,296 @@
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Konnekt docs: FAQ</title>
+    <meta name="description" content="FAQ: Common questions, short answers." />
+    <link rel="canonical" href="https://konnekt.pages.dev/docs/faq.html" />
+
+    <meta property="og:site_name" content="Konnekt" />
+    <meta property="og:title" content="Konnekt docs: FAQ" />
+    <meta property="og:description" content="FAQ: Common questions, short answers." />
+    <meta property="og:url" content="https://konnekt.pages.dev/docs/faq.html" />
+    <meta property="og:type" content="website" />
+    <meta property="og:image" content="https://konnekt.pages.dev/assets/img/social-card.png" />
+    <meta property="og:image:width" content="1715" />
+    <meta property="og:image:height" content="1123" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Konnekt docs: FAQ" />
+    <meta name="twitter:description" content="FAQ: Common questions, short answers." />
+    <meta name="twitter:image" content="https://konnekt.pages.dev/assets/img/social-card.png" />
+
+    <meta name="theme-color" content="#05060a" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/assets/img/favicon-16.png" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/assets/img/favicon-32.png" />
+    <link rel="icon" type="image/png" sizes="256x256" href="/assets/img/favicon.png" />
+    <link rel="apple-touch-icon" href="/assets/img/app-icon.png" />
+    <link
+      rel="preload"
+      href="/assets/fonts/Geist-Variable.woff2"
+      as="font"
+      type="font/woff2"
+      crossorigin
+    />
+    <link rel="stylesheet" href="/tokens.css" />
+    <link rel="stylesheet" href="/site.css" />
+    <link rel="stylesheet" href="/docs.css" />
+    <script>
+      document.documentElement.className = document.documentElement.className.replace('no-js', '')
+    </script>
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to content</a>
+    <div class="page">
+      <div class="group">
+        <!-- Canonical nav. Byte-identical on every page, hrefs included; site.js
+           marks the current page and scrolls same-page anchors. -->
+        <nav class="nav block block-raised" id="nav" aria-label="Main">
+          <a class="nav-brand" href="/index.html"
+            ><img
+              class="mark"
+              src="/assets/img/mark-24.svg"
+              width="24"
+              height="24"
+              alt=""
+            />Konnekt</a
+          >
+          <ul class="nav-links">
+            <li><a href="/index.html#features">Features</a></li>
+            <li><a href="/index.html#scheduler">Scheduler</a></li>
+            <li><a href="/docs.html">Docs</a></li>
+            <li><a href="/roadmap.html">Roadmap</a></li>
+            <li><a href="/changelog.html">Changelog</a></li>
+          </ul>
+          <a
+            class="nav-side"
+            href="https://github.com/kollektiv-mc/Konnekt"
+            target="_blank"
+            rel="noopener"
+            >GitHub</a
+          >
+          <a class="btn btn-primary" href="/download.html"
+            ><svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true">
+              <path
+                d="M7 1v9M3 6.5 7 10.5 11 6.5M1.5 13h11"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.6"
+              /></svg
+            >Download</a
+          >
+        </nav>
+        <main id="main" class="group">
+          <header class="doc-head block">
+            <div class="doc-head-main">
+              <div class="doc-trail">
+                <span class="kind" data-kind="reference">Reference</span>
+                <nav aria-label="Breadcrumb">
+                  <ol class="doc-crumbs">
+                    <li><a href="/docs.html">Docs</a></li>
+                    <li><a href="/docs.html#new-here">New here</a></li>
+                    <li><span aria-current="page">FAQ</span></li>
+                  </ol>
+                </nav>
+              </div>
+              <h1>FAQ</h1>
+              <p class="doc-lead">Short answers to what people ask first.</p>
+            </div>
+            <dl class="doc-facts">
+              <div class="doc-fact">
+                <dt class="label">Topics</dt>
+                <dd>Licence · Privacy · Servers · Updates</dd>
+              </div>
+            </dl>
+          </header>
+
+          <section class="doc-section block" id="konnekt" aria-labelledby="konnekt-title">
+            <div class="band doc-band">
+              <div class="band-title">
+                <span class="num">01</span>
+                <h2 id="konnekt-title">Konnekt</h2>
+              </div>
+            </div>
+            <div class="doc-body">
+              <div class="doc-faq">
+                <details>
+                  <summary>Is it free?</summary>
+                  <p class="doc-prose">
+                    Yes, under the
+                    <a
+                      href="https://github.com/kollektiv-mc/Konnekt/blob/main/LICENSE"
+                      target="_blank"
+                      rel="noopener"
+                      >MIT licence</a
+                    >: keep the copyright notice, and the rest is yours.<br />
+                    No accounts, no tiers, no subscriptions.
+                  </p>
+                </details>
+                <details>
+                  <summary>Does it phone home?</summary>
+                  <p class="doc-prose">
+                    No telemetry, analytics or crash reporting.<br />
+                    It reaches the network in three cases: GitHub for update checks, Modrinth for
+                    mods, and your own server over RCON.
+                  </p>
+                </details>
+                <details>
+                  <summary>Where does it store my data?</summary>
+                  <p class="doc-prose">
+                    Your server files stay where they are.<br />
+                    Konnekt's own state (servers, layouts, presets, scheduled tasks) is JSON in the
+                    OS application-data directory.
+                  </p>
+                </details>
+                <details>
+                  <summary>Is it stable?</summary>
+                  <p class="doc-prose">
+                    It's alpha.<br />
+                    The core is functional and in daily use, but expect rough edges.<br />
+                    The <a href="/roadmap.html">roadmap</a> has what is next.
+                  </p>
+                </details>
+              </div>
+            </div>
+          </section>
+
+          <section class="doc-section block" id="servers" aria-labelledby="servers-title">
+            <div class="band doc-band">
+              <div class="band-title">
+                <span class="num">02</span>
+                <h2 id="servers-title">Servers</h2>
+              </div>
+            </div>
+            <div class="doc-body">
+              <div class="doc-faq">
+                <details>
+                  <summary>Which server types work?</summary>
+                  <p class="doc-prose">
+                    Vanilla, Paper, Spigot and Bukkit, and modded Fabric, Forge and NeoForge.<br />
+                    The loader is detected automatically.<br />
+                    Bedrock is not supported.
+                  </p>
+                </details>
+                <details>
+                  <summary>The server stops as soon as I start it</summary>
+                  <p class="doc-prose">
+                    On a first run that is almost always the EULA.<br />
+                    Minecraft will not start until you have accepted it, and says so in the log on
+                    its way out.<br />
+                    Konnekt watches for that line and offers to write <code>eula.txt</code> for you,
+                    then starts the server again.
+                  </p>
+                </details>
+                <details>
+                  <summary>Can I manage a server on another machine?</summary>
+                  <p class="doc-prose">
+                    No, Konnekt manages servers on the machine it runs on.<br />
+                    Web access is a later <a href="/roadmap.html">roadmap</a> item.
+                  </p>
+                </details>
+              </div>
+            </div>
+          </section>
+
+          <section class="doc-section block" id="updates" aria-labelledby="updates-title">
+            <div class="band doc-band">
+              <div class="band-title">
+                <span class="num">03</span>
+                <h2 id="updates-title">Updates</h2>
+              </div>
+            </div>
+            <div class="doc-body">
+              <div class="doc-faq">
+                <details>
+                  <summary>Can I run the newest code?</summary>
+                  <p class="doc-prose">
+                    Yes: snapshots are built from the newest code whenever it changes, and published
+                    as pre-releases.<br />
+                    They're untested, so Konnekt warns before installing one.<br />
+                    Take the first from the <a href="/download.html">download page</a>.<br />
+                    After that a snapshot offers you the next one itself, and a release once one
+                    overtakes it.<br />
+                    To follow snapshots from a stable build, switch the channel in <b>Settings</b>,
+                    <b>General</b>.
+                  </p>
+                </details>
+              </div>
+            </div>
+          </section>
+
+          <nav class="doc-related block" aria-label="Related">
+            <div class="shelf-label"><span class="label">Related</span></div>
+            <a class="related-link" href="/docs/install.html"
+              ><span class="kind" data-kind="guide">Guide</span>Install Konnekt</a
+            >
+            <a class="related-link" href="/docs/first-server.html"
+              ><span class="kind" data-kind="guide">Guide</span>Your first server</a
+            >
+            <a class="related-link" href="/docs/requirements.html"
+              ><span class="kind" data-kind="reference">Reference</span>Requirements and
+              platforms</a
+            >
+          </nav>
+        </main>
+      </div>
+
+      <!-- Canonical footer. Byte-identical on every page. -->
+      <footer class="block block-raised snap-end">
+        <div class="footer-cols">
+          <div class="footer-about">
+            <a class="footer-brand" href="/index.html"
+              ><img
+                class="mark"
+                src="/assets/img/mark-24.svg"
+                width="24"
+                height="24"
+                alt=""
+              />Konnekt</a
+            >
+            <p>A desktop dashboard for the Minecraft servers you host.</p>
+            <span class="meta"><span data-release-tag></span>Windows and Linux</span>
+          </div>
+          <nav class="footer-col" aria-label="Product">
+            <span class="label">Product</span>
+            <a href="/download.html">Download</a>
+            <a href="https://konnekt-demo.pages.dev/" target="_blank" rel="noopener"
+              >Try the demo</a
+            >
+            <a href="/changelog.html">Changelog</a>
+          </nav>
+          <nav class="footer-col" aria-label="Learn">
+            <span class="label">Learn</span>
+            <a href="/index.html#features">Features</a>
+            <a href="/docs.html">Docs</a>
+            <a href="/roadmap.html">Roadmap</a>
+          </nav>
+          <nav class="footer-col" aria-label="Source">
+            <span class="label">Source</span>
+            <a href="https://github.com/kollektiv-mc/Konnekt" target="_blank" rel="noopener"
+              >GitHub</a
+            >
+            <a href="https://github.com/kollektiv-mc/Konnekt/issues" target="_blank" rel="noopener"
+              >Issues</a
+            >
+            <a
+              href="https://github.com/kollektiv-mc/Konnekt/blob/main/LICENSE"
+              target="_blank"
+              rel="noopener"
+              >MIT licence</a
+            >
+          </nav>
+        </div>
+        <div class="footer-base">
+          <span
+            >Alpha software. A side project mostly written by Claude.
+            <a href="/docs.html#disclaimer">Full statement</a></span
+          >
+          <span>&copy; 2026 Konnekt</span>
+        </div>
+      </footer>
+    </div>
+
+    <script src="/release.js"></script>
+    <script src="/site.js"></script>
+  </body>
+</html>

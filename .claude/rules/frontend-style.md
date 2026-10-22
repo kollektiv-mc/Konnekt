@@ -28,6 +28,9 @@ it ahead of its base sheet. That is `/site.css` for a page in the redesign
 (`docs/design/website/`) and `/styles.css` for one not yet moved, never both.
 Each base sheet keeps only the page vocabulary that is not a token (`--pad`,
 `--nav-h`, `--lift-shadow`), and a page's own sheet (`home.css`) follows it.
+The docs add one shared sheet between the two, `docs.css`, which is the
+template every docs page is laid out on; a page under `website/docs/` with
+more of its own (`docs/first-server.css`) links that last.
 
 Styling is Tailwind utilities over that layer, plus `lib/theme.ts`'s
 `applySkin()`. Inline `style={{}}` is reserved for genuinely dynamic or
