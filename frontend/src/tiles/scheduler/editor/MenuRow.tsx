@@ -74,7 +74,11 @@ export function MenuRow({
   )
 }
 
-/** The hairline between groups of rows. */
+/**
+ * The hairline between groups of rows. Flush with the rows on both sides, so a
+ * hovered row's fill meets the line rather than stopping short of it; the rows'
+ * own padding is the space around the text.
+ */
 export function MenuDivider() {
-  return <div role="separator" className="border-border-subtle border-t-hairline my-1" />
+  return <div role="separator" className="border-border-subtle border-t-hairline" />
 }

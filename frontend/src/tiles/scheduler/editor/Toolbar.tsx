@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState } from 'react'
-import type { ReactNode } from 'react'
+import type { ReactNode, RefObject } from 'react'
 import type { Edge as FlowEdge } from '@xyflow/react'
 import { Popover } from '../../../components/ui/Popover'
 import { Icon } from '../../../components/ui/Icon'
@@ -37,6 +37,14 @@ interface ToolbarProps {
   onNewGraph: () => void
   /** Opens the quick-add list with its corner at this viewport point. */
   onAdd: (at: { x: number; y: number }) => void
+  /** The quick-add list is open, from this button or any other way in. */
+  addOpen?: boolean
+  /**
+   * The add button, held by the editor so the quick-add list can tell a press
+   * on it from a press outside and let its click close the list (a toggle, like
+   * the bar's other menus).
+   */
+  addButtonRef?: RefObject<HTMLButtonElement | null>
   edit: EditMenuActions
   onToggleEnabled: () => void
   onRun: () => void
@@ -120,6 +128,8 @@ export function Toolbar({
   onLoadGraph,
   onNewGraph,
   onAdd,
+  addOpen = false,
+  addButtonRef,
   edit,
   onToggleEnabled,
   onRun,
@@ -140,7 +150,8 @@ export function Toolbar({
   const editPresence = usePresence(menu === 'edit', 'menu')
   const overflowPresence = usePresence(menu === 'overflow', 'menu')
   const graphButton = useRef<HTMLButtonElement>(null)
-  const addButton = useRef<HTMLButtonElement>(null)
+  const ownAddButton = useRef<HTMLButtonElement>(null)
+  const addButton = addButtonRef ?? ownAddButton
   const editButton = useRef<HTMLButtonElement>(null)
   const overflowButton = useRef<HTMLButtonElement>(null)
   // The rename draft lives in the overflow menu's own row; null is the row at
@@ -283,7 +294,7 @@ export function Toolbar({
           <button
             ref={addButton}
             type="button"
-            className={`${segmentClass('text-text-muted', IDLE_FILL)} px-3`}
+            className={`${segmentClass('text-text-muted', addOpen ? 'bg-hover' : IDLE_FILL)} px-3`}
             onClick={() => {
               setMenu(null)
               const r = addButton.current?.getBoundingClientRect()
