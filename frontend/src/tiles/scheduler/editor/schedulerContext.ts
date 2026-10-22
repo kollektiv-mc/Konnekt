@@ -24,6 +24,10 @@ export interface SchedulerCtxValue {
   // Static analysis: node/edge ids that participate in a control-flow cycle.
   cycleNodes: Set<string>
   cycleEdges: Set<string>
+  // The editor's undo recorder. A wire edits its own corner points through
+  // React Flow's setEdges, so it snapshots the pre-edit graph through this
+  // rather than the editor threading a handler into every edge.
+  recordPre: (tag?: string | null) => void
 }
 
 export const SchedulerCtx = createContext<SchedulerCtxValue>({
@@ -37,4 +41,5 @@ export const SchedulerCtx = createContext<SchedulerCtxValue>({
   firedEdges: new Set(),
   cycleNodes: new Set(),
   cycleEdges: new Set(),
+  recordPre: () => {},
 })
