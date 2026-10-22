@@ -2,69 +2,96 @@ package services
 
 import (
 	"reflect"
+	"strings"
 	"testing"
 
 	"konnekt/backend/models"
 )
 
-// runGate executes one gate block against the given config and returns its
-// "value" output, going through the registry so the id and the executor are
-// tested as registered rather than as wired up by the test.
-func runGate(t *testing.T, id string, cfg map[string]interface{}) interface{} {
+// runCondition executes Condition against cfg and returns the branch it took
+// and the value of its "result" output.
+func runCondition(t *testing.T, cfg map[string]interface{}) (port string, result interface{}) {
 	t.Helper()
-	reg := NewBlockRegistry()
-	registerLogicBlocks(reg)
-	entry, ok := reg.Get(id)
-	if !ok {
-		t.Fatalf("%s is not registered", id)
-	}
 	ec := &ExecContext{Config: cfg, dataOut: map[string]interface{}{}}
-	if res := entry.exec(ec); res.Err != nil {
-		t.Fatalf("%s: %v", id, res.Err)
+	res := execCondition(ec)
+	if res.Err != nil {
+		t.Fatalf("unexpected error: %v", res.Err)
 	}
-	return ec.dataOut["value"]
+	return res.Port, ec.dataOut["result"]
 }
 
-func TestLogicGatesTruthTables(t *testing.T) {
-	// Rows are (a, b) = (0,0), (0,1), (1,0), (1,1).
+func conditionDef(t *testing.T) models.BlockDef {
+	t.Helper()
+	entry, ok := newTestScheduler(t).registry.Get("control.condition")
+	if !ok {
+		t.Fatal("control.condition is not registered")
+	}
+	return entry.def
+}
+
+func portFor(want bool) string {
+	if want {
+		return "onTrue"
+	}
+	return "onFalse"
+}
+
+func TestConditionGateTruthTables(t *testing.T) {
+	// Rows are (A, B) = (0,0), (0,1), (1,0), (1,1).
 	tables := []struct {
-		id   string
-		want [4]float64
+		op   string
+		want [4]bool
 	}{
-		{"control.and", [4]float64{0, 0, 0, 1}},
-		{"control.or", [4]float64{0, 1, 1, 1}},
-		{"control.xor", [4]float64{0, 1, 1, 0}},
-		{"control.nand", [4]float64{1, 1, 1, 0}},
-		{"control.nor", [4]float64{1, 0, 0, 0}},
+		{"and", [4]bool{false, false, false, true}},
+		{"or", [4]bool{false, true, true, true}},
+		{"xor", [4]bool{false, true, true, false}},
+		{"nand", [4]bool{true, true, true, false}},
+		{"nor", [4]bool{true, false, false, false}},
 	}
 	for _, tb := range tables {
 		for i, want := range tb.want {
 			a, b := i/2 == 1, i%2 == 1
-			t.Run(tb.id, func(t *testing.T) {
-				got := runGate(t, tb.id, map[string]interface{}{"a": a, "b": b})
-				if got != want {
-					t.Errorf("a=%v b=%v: value = %v, want %v", a, b, got, want)
+			t.Run(tb.op, func(t *testing.T) {
+				port, result := runCondition(t, map[string]interface{}{"op": tb.op, "left": a, "right": b})
+				wantResult := float64(0)
+				if want {
+					wantResult = 1
+				}
+				if port != portFor(want) || result != wantResult {
+					t.Errorf("a=%v b=%v: port %q result %v, want %q %v", a, b, port, result, portFor(want), wantResult)
 				}
 			})
 		}
 	}
 }
 
-func TestLogicNotInvertsAndIgnoresB(t *testing.T) {
+// An unchecked "is true" flips its operand, which is what NOT used to do, and a
+// missing box counts as checked.
+func TestConditionIsTrueBoxesFlipOperands(t *testing.T) {
 	cases := []struct {
 		name string
 		cfg  map[string]interface{}
-		want float64
+		want bool
 	}{
-		{"false becomes 1", map[string]interface{}{"a": false}, 1},
-		{"true becomes 0", map[string]interface{}{"a": true}, 0},
-		{"b is ignored when a is false", map[string]interface{}{"a": false, "b": false}, 1},
-		{"b is ignored when a is true", map[string]interface{}{"a": true, "b": false}, 0},
+		{"boxes unset read A and B as they are", map[string]interface{}{"op": "and", "left": true, "right": true}, true},
+		{"both checked behaves as before", map[string]interface{}{"op": "and", "left": true, "right": true, "leftTrue": true, "rightTrue": true}, true},
+		{"unchecked A flips A", map[string]interface{}{"op": "and", "left": false, "right": true, "leftTrue": false}, true},
+		{"unchecked A flips a true A", map[string]interface{}{"op": "and", "left": true, "right": true, "leftTrue": false}, false},
+		{"unchecked B flips B", map[string]interface{}{"op": "and", "left": true, "right": false, "rightTrue": false}, true},
+		{"both unchecked is NOR of the values", map[string]interface{}{"op": "and", "left": false, "right": false, "leftTrue": false, "rightTrue": false}, true},
+		{"unchecked A makes OR a NOT-A or B", map[string]interface{}{"op": "or", "left": true, "right": false, "leftTrue": false}, false},
+		{"unchecked A, wired one", map[string]interface{}{"op": "or", "left": float64(1), "right": false, "leftTrue": false}, false},
+		{"unchecked A, wired zero", map[string]interface{}{"op": "or", "left": float64(0), "right": false, "leftTrue": false}, true},
+		{"XOR with one flipped operand", map[string]interface{}{"op": "xor", "left": true, "right": true, "rightTrue": false}, true},
+		{"NAND with both flipped", map[string]interface{}{"op": "nand", "left": false, "right": false, "leftTrue": false, "rightTrue": false}, false},
+		{"NOR with A flipped", map[string]interface{}{"op": "nor", "left": true, "right": false, "leftTrue": false}, true},
+		{"checkbox spelled as text false", map[string]interface{}{"op": "or", "left": true, "right": false, "leftTrue": "false"}, false},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			if got := runGate(t, "control.not", c.cfg); got != c.want {
-				t.Errorf("value = %v, want %v", got, c.want)
+			port, _ := runCondition(t, c.cfg)
+			if port != portFor(c.want) {
+				t.Errorf("port = %q, want %q", port, portFor(c.want))
 			}
 		})
 	}
@@ -72,7 +99,7 @@ func TestLogicNotInvertsAndIgnoresB(t *testing.T) {
 
 // A wired value arrives as float64 0/1 and a literal as text, so a gate has to
 // read every spelling the engine can hand it the same way.
-func TestLogicGatesReadEveryInputSpelling(t *testing.T) {
+func TestConditionGateReadsEveryInputSpelling(t *testing.T) {
 	cases := []struct {
 		name string
 		v    interface{}
@@ -97,274 +124,227 @@ func TestLogicGatesReadEveryInputSpelling(t *testing.T) {
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			want := float64(0)
-			if c.want {
-				want = 1
-			}
 			// OR with a false B reads A alone.
-			got := runGate(t, "control.or", map[string]interface{}{"a": c.v, "b": false})
-			if got != want {
-				t.Errorf("OR(%#v, false) = %v, want %v", c.v, got, want)
+			port, _ := runCondition(t, map[string]interface{}{"op": "or", "left": c.v, "right": false})
+			if port != portFor(c.want) {
+				t.Errorf("OR(%#v, false) took %q, want %q", c.v, port, portFor(c.want))
 			}
 		})
 	}
-
-	t.Run("an input left unset is false", func(t *testing.T) {
-		if got := runGate(t, "control.nor", map[string]interface{}{}); got != float64(1) {
-			t.Errorf("NOR with nothing set = %v, want 1", got)
-		}
-	})
 }
 
-func TestLogicGateDefinitions(t *testing.T) {
-	reg := NewBlockRegistry()
-	registerLogicBlocks(reg)
-
-	wantLabels := map[string]string{
-		"control.and": "AND", "control.or": "OR", "control.xor": "XOR",
-		"control.not": "NOT", "control.nand": "NAND", "control.nor": "NOR",
-	}
-	// The gates plus Compare, which is tested on its own below.
-	if n := len(reg.Defs()); n != len(wantLabels)+1 {
-		t.Fatalf("registered %d blocks, want %d", n, len(wantLabels)+1)
-	}
-	for id, label := range wantLabels {
-		entry, ok := reg.Get(id)
-		if !ok {
-			t.Errorf("%s is not registered", id)
-			continue
-		}
-		def := entry.def
-		if def.Label != label || def.Category != "control" {
-			t.Errorf("%s: label %q category %q, want %q control", id, def.Label, def.Category, label)
-		}
-		if len(def.ControlInputs) != 0 || len(def.ControlOutputs) != 0 || !isPureData(def) {
-			t.Errorf("%s must be pure data (no control ports)", id)
-		}
-		wantIns := []string{"a", "b"}
-		if id == "control.not" {
-			wantIns = []string{"a"}
-		}
-		var ins, cfgKeys []string
-		for _, p := range def.DataInputs {
-			ins = append(ins, p.ID)
-			if p.Type != "bool" {
-				t.Errorf("%s input %s has type %q, want bool", id, p.ID, p.Type)
-			}
-		}
-		for _, f := range def.ConfigSchema {
-			cfgKeys = append(cfgKeys, f.Key)
-		}
-		// Port id == config key, so each input has a field for when it is unwired.
-		if !reflect.DeepEqual(ins, wantIns) || !reflect.DeepEqual(cfgKeys, wantIns) {
-			t.Errorf("%s: inputs %v, config %v, want both %v", id, ins, cfgKeys, wantIns)
-		}
-		if len(def.DataOutputs) != 1 || def.DataOutputs[0].ID != "value" || def.DataOutputs[0].Type != "bool" {
-			t.Errorf("%s outputs = %+v, want one bool value", id, def.DataOutputs)
-		}
-	}
-}
-
-func TestBuiltinRegistryHasTheGates(t *testing.T) {
-	reg := newTestScheduler(t).registry
-	for _, id := range []string{
-		"control.and", "control.or", "control.xor", "control.not", "control.nand", "control.nor",
-	} {
-		if _, ok := reg.Get(id); !ok {
-			t.Errorf("%s missing from the built-in registry", id)
-		}
-	}
-}
-
-func TestExecConditionIsTrueAndIsFalse(t *testing.T) {
+func TestConditionComparisonsIgnoreIsTrueBoxes(t *testing.T) {
 	cases := []struct {
-		name     string
-		left     interface{}
-		right    interface{}
-		op       string
-		wantPort string
+		name string
+		cfg  map[string]interface{}
+		want bool
 	}{
-		{"is true on wired one", float64(1), nil, "true", "onTrue"},
-		{"is true on wired zero", float64(0), nil, "true", "onFalse"},
-		{"is false on wired zero", float64(0), nil, "false", "onTrue"},
-		{"is false on wired one", float64(1), nil, "false", "onFalse"},
-		{"is true on bool", true, nil, "true", "onTrue"},
-		{"is true on text true", "true", nil, "true", "onTrue"},
-		{"is false on text false", "false", nil, "false", "onTrue"},
-		{"is true on empty left", "", nil, "true", "onFalse"},
-		{"is false on empty left", "", nil, "false", "onTrue"},
-		{"right operand is ignored by is true", float64(1), "0", "true", "onTrue"},
-		{"right operand is ignored by is false", float64(0), "1", "false", "onTrue"},
+		{"gt with boxes unchecked", map[string]interface{}{"op": "gt", "left": "10", "right": "9", "leftTrue": false, "rightTrue": false}, true},
+		{"lt with boxes unchecked", map[string]interface{}{"op": "lt", "left": "10", "right": "9", "leftTrue": false, "rightTrue": false}, false},
+		{"eq with boxes unchecked", map[string]interface{}{"op": "eq", "left": "a", "right": "a", "leftTrue": false}, true},
+		{"ne with boxes unchecked", map[string]interface{}{"op": "ne", "left": "a", "right": "a", "rightTrue": false}, false},
+		{"contains with boxes unchecked", map[string]interface{}{"op": "contains", "left": "hello", "right": "ell", "leftTrue": false}, true},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			cfg := map[string]interface{}{"left": c.left, "op": c.op}
-			if c.right != nil {
-				cfg["right"] = c.right
-			}
-			if got := execCondition(&ExecContext{Config: cfg}).Port; got != c.wantPort {
-				t.Errorf("port = %q, want %q", got, c.wantPort)
+			if port, _ := runCondition(t, c.cfg); port != portFor(c.want) {
+				t.Errorf("port = %q, want %q", port, portFor(c.want))
 			}
 		})
 	}
 }
 
-// Gates feeding a Condition through the engine: the gate is pulled when the
-// Condition reads its wired left operand, and "is true" branches on the result.
-func TestRunGraphGateDrivesCondition(t *testing.T) {
-	cases := []struct {
-		name        string
-		a, b        string
-		wantVisited string
-	}{
-		{"both true takes onTrue", "true", "true", "yes"},
-		{"one false takes onFalse", "true", "false", "no"},
-	}
-	for _, c := range cases {
-		t.Run(c.name, func(t *testing.T) {
-			s := newTestScheduler(t)
-			var visited []string
-			registerTestMarker(s.registry, &visited)
-
-			g := models.Graph{
-				ID: "gate",
-				Nodes: []models.Node{
-					{ID: "t1", Type: "trigger.player", Config: map[string]interface{}{"type": "Joined"}},
-					{ID: "ca", Type: "data.constant", Config: map[string]interface{}{"type": "Boolean", "value": c.a}},
-					{ID: "cb", Type: "data.constant", Config: map[string]interface{}{"type": "Boolean", "value": c.b}},
-					{ID: "and", Type: "control.and"},
-					{ID: "cond", Type: "control.condition", Config: map[string]interface{}{"op": "true"}},
-					{ID: "yes", Type: "test.marker", Config: map[string]interface{}{"markerId": "yes"}},
-					{ID: "no", Type: "test.marker", Config: map[string]interface{}{"markerId": "no"}},
-				},
-				Edges: []models.Edge{
-					{ID: "e1", Kind: "control", Source: "t1", SourcePort: "onComplete", Target: "cond", TargetPort: "trigger"},
-					{ID: "e2", Kind: "control", Source: "cond", SourcePort: "onTrue", Target: "yes", TargetPort: "trigger"},
-					{ID: "e3", Kind: "control", Source: "cond", SourcePort: "onFalse", Target: "no", TargetPort: "trigger"},
-					{ID: "d1", Kind: "data", Source: "ca", SourcePort: "value", Target: "and", TargetPort: "a"},
-					{ID: "d2", Kind: "data", Source: "cb", SourcePort: "value", Target: "and", TargetPort: "b"},
-					{ID: "d3", Kind: "data", Source: "and", SourcePort: "value", Target: "cond", TargetPort: "left"},
-				},
-			}
-
-			rec := s.runGraph(g, "t1", "manual", seed("t1"))
-			if rec.Status != "success" {
-				t.Fatalf("status = %q, want success (error: %s)", rec.Status, rec.Error)
-			}
-			if len(visited) != 1 || visited[0] != c.wantVisited {
-				t.Errorf("visited = %v, want [%s]", visited, c.wantVisited)
-			}
-		})
-	}
-}
-
-// The data panel previews a gate by running it, like Constant and Math.
-func TestPreviewNodeShowsGateOutput(t *testing.T) {
-	s := newTestScheduler(t)
-	g := models.Graph{
-		ID: "g1",
-		Nodes: []models.Node{
-			{ID: "x", Type: "control.xor", Config: map[string]interface{}{"a": true, "b": false}},
-		},
-	}
-	p, err := s.PreviewNode(g, "x")
-	if err != nil {
-		t.Fatalf("PreviewNode: %v", err)
-	}
-	if !p.OK || !reflect.DeepEqual(p.Console, []string{"Value = 1"}) {
-		t.Errorf("preview = ok %v, console %q, want ok with %q", p.OK, p.Console, "Value = 1")
-	}
-}
-
-func TestExecCompare(t *testing.T) {
+// A wired true is float64 1, which the literal text "true" never matched.
+func TestConditionEqReadsBooleansAsTruthiness(t *testing.T) {
 	cases := []struct {
 		name        string
 		left, right interface{}
 		op          string
-		want        float64
+		want        bool
 	}{
-		{"eq true", "5", "5", "eq", 1},
-		{"eq false", "5", "6", "eq", 0},
-		{"ne true", "5", "6", "ne", 1},
-		{"gt numeric across digit counts", "10", "9", "gt", 1},
-		{"gt numeric, smaller left", "9", "10", "gt", 0},
-		{"lt on wired float", float64(8.5), "15", "lt", 1},
-		{"lt on wired float, above", float64(19.9), "15", "lt", 0},
-		{"gt wired against wired", float64(2), float64(0), "gt", 1},
-		{"text gt is lexicographic", "banana", "apple", "gt", 1},
-		{"text eq", "green", "green", "eq", 1},
-		{"contains true", "hello world", "world", "contains", 1},
-		{"contains false", "hello world", "xyz", "contains", 0},
-		{"contains never goes numeric", "1234", "23", "contains", 1},
-		{"unknown op falls back to eq", "1.0", "1", "whatever", 1},
+		{"wired one == true", float64(1), "true", "eq", true},
+		{"wired zero == true", float64(0), "true", "eq", false},
+		{"wired zero == false", float64(0), "false", "eq", true},
+		{"wired one == false", float64(1), "false", "eq", false},
+		{"wired one != true", float64(1), "true", "ne", false},
+		{"wired zero != true", float64(0), "true", "ne", true},
+		{"wired one != false", float64(1), "false", "ne", true},
+		{"true on the left", "true", float64(1), "eq", true},
+		{"false on the left", "false", float64(1), "eq", false},
+		{"bool == text true", true, "true", "eq", true},
+		{"bool false == text true", false, "true", "eq", false},
+		{"text case and padding", float64(1), " True ", "eq", true},
+		{"any non-zero number is true", float64(7), "true", "eq", true},
+		{"text number is true", "1", "true", "eq", true},
+		{"text true == text true", "true", "true", "eq", true},
+		{"text true != text false", "true", "false", "ne", true},
+		{"other side not boolean falls back to text", "yes", "true", "eq", false},
+		{"text false vs unrecognised text is not equal", "false", "yes", "eq", false},
+		{"text false vs empty is not equal", "false", "", "eq", false},
+		{"bool vs numeric spelling stays unequal", true, "1", "eq", false},
+		{"gt keeps comparing as text", float64(1), "true", "gt", false},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			ec := &ExecContext{
-				Config:  map[string]interface{}{"left": c.left, "right": c.right, "op": c.op},
-				dataOut: map[string]interface{}{},
-			}
-			if res := execCompare(ec); res.Err != nil {
-				t.Fatalf("unexpected error: %v", res.Err)
-			}
-			if got := ec.dataOut["value"]; got != c.want {
-				t.Errorf("value = %v, want %v", got, c.want)
+			cfg := map[string]interface{}{"left": c.left, "right": c.right, "op": c.op}
+			if port, _ := runCondition(t, cfg); port != portFor(c.want) {
+				t.Errorf("port = %q, want %q", port, portFor(c.want))
 			}
 		})
 	}
 }
 
-func TestCompareDefinition(t *testing.T) {
-	reg := NewBlockRegistry()
-	registerLogicBlocks(reg)
-	entry, ok := reg.Get("control.compare")
-	if !ok {
-		t.Fatal("control.compare is not registered")
+func TestConditionResultOutputMatchesBranch(t *testing.T) {
+	cases := []struct {
+		name string
+		cfg  map[string]interface{}
+		want float64
+	}{
+		{"eq true", map[string]interface{}{"op": "eq", "left": "5", "right": "5"}, 1},
+		{"eq false", map[string]interface{}{"op": "eq", "left": "5", "right": "6"}, 0},
+		{"ne true", map[string]interface{}{"op": "ne", "left": "5", "right": "6"}, 1},
+		{"gt numeric across digit counts", map[string]interface{}{"op": "gt", "left": "10", "right": "9"}, 1},
+		{"gt numeric, smaller left", map[string]interface{}{"op": "gt", "left": "9", "right": "10"}, 0},
+		{"lt on wired float", map[string]interface{}{"op": "lt", "left": float64(8.5), "right": "15"}, 1},
+		{"lt on wired float, above", map[string]interface{}{"op": "lt", "left": float64(19.9), "right": "15"}, 0},
+		{"text gt is lexicographic", map[string]interface{}{"op": "gt", "left": "banana", "right": "apple"}, 1},
+		{"contains true", map[string]interface{}{"op": "contains", "left": "hello world", "right": "world"}, 1},
+		{"contains false", map[string]interface{}{"op": "contains", "left": "hello world", "right": "xyz"}, 0},
+		{"contains never goes numeric", map[string]interface{}{"op": "contains", "left": "1234", "right": "23"}, 1},
+		{"unknown op falls back to eq", map[string]interface{}{"op": "whatever", "left": "1.0", "right": "1"}, 1},
+		{"and true", map[string]interface{}{"op": "and", "left": true, "right": true}, 1},
+		{"and false", map[string]interface{}{"op": "and", "left": true, "right": false}, 0},
+		{"nor flipped", map[string]interface{}{"op": "nor", "left": true, "right": false, "leftTrue": false}, 1},
 	}
-	def := entry.def
-	if def.Label != "Compare" || def.Category != "control" || !isPureData(def) {
-		t.Errorf("label %q category %q pure %v", def.Label, def.Category, isPureData(def))
-	}
-	if len(def.DataOutputs) != 1 || def.DataOutputs[0].ID != "value" || def.DataOutputs[0].Type != "bool" {
-		t.Errorf("outputs = %+v, want one bool value", def.DataOutputs)
-	}
-	var ins, keys, ops []string
-	for _, p := range def.DataInputs {
-		ins = append(ins, p.ID)
-	}
-	for _, f := range def.ConfigSchema {
-		keys = append(keys, f.Key)
-		if f.Key == "op" {
-			for _, o := range f.Options {
-				ops = append(ops, o.Value)
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			port, result := runCondition(t, c.cfg)
+			if result != c.want {
+				t.Errorf("result = %v, want %v", result, c.want)
 			}
-		}
-	}
-	if !reflect.DeepEqual(ins, []string{"left", "right"}) || !reflect.DeepEqual(keys, []string{"left", "op", "right"}) {
-		t.Errorf("inputs %v, config %v", ins, keys)
-	}
-	// The unary operators belong to Condition alone: Compare has no use for them.
-	if !reflect.DeepEqual(ops, []string{"eq", "ne", "gt", "lt", "contains"}) {
-		t.Errorf("operators = %v", ops)
-	}
-
-	cond, _ := newTestScheduler(t).registry.Get("control.condition")
-	var condOps []string
-	for _, f := range cond.def.ConfigSchema {
-		if f.Key == "op" {
-			for _, o := range f.Options {
-				condOps = append(condOps, o.Value)
+			if port != portFor(c.want == 1) {
+				t.Errorf("port = %q disagrees with result %v", port, c.want)
 			}
-		}
-	}
-	if !reflect.DeepEqual(condOps, []string{"eq", "ne", "gt", "lt", "contains", "true", "false"}) {
-		t.Errorf("condition operators = %v", condOps)
+		})
 	}
 }
 
-// The issue's acceptance case: two thresholds combined to drive one branch.
-// Constants stand in for Read Attribute, which delivers the same float64.
-func TestRunGraphCompareAndGateDriveBranch(t *testing.T) {
+func TestConditionDefinition(t *testing.T) {
+	def := conditionDef(t)
+
+	if def.Label != "Condition" || def.Category != "control" {
+		t.Errorf("label %q category %q", def.Label, def.Category)
+	}
+	if !reflect.DeepEqual(def.ControlInputs, []string{"trigger"}) ||
+		!reflect.DeepEqual(def.ControlOutputs, []string{"onTrue", "onFalse"}) {
+		t.Errorf("control ports in %v out %v", def.ControlInputs, def.ControlOutputs)
+	}
+
+	var ins []models.DataPort
+	ins = append(ins, def.DataInputs...)
+	wantIns := []models.DataPort{{ID: "left", Label: "A", Type: "string"}, {ID: "right", Label: "B", Type: "string"}}
+	if !reflect.DeepEqual(ins, wantIns) {
+		t.Errorf("data inputs = %+v, want %+v", ins, wantIns)
+	}
+	wantOut := []models.DataPort{{ID: "result", Label: "Result", Type: "bool"}}
+	if !reflect.DeepEqual(def.DataOutputs, wantOut) {
+		t.Errorf("data outputs = %+v, want %+v", def.DataOutputs, wantOut)
+	}
+
+	fields := map[string]models.ConfigField{}
+	var keys []string
+	for _, f := range def.ConfigSchema {
+		fields[f.Key] = f
+		keys = append(keys, f.Key)
+	}
+	if !reflect.DeepEqual(keys, []string{"op", "left", "right", "leftTrue", "rightTrue"}) {
+		t.Errorf("config keys = %v", keys)
+	}
+
+	var ops []string
+	for _, o := range fields["op"].Options {
+		ops = append(ops, o.Value)
+	}
+	if !reflect.DeepEqual(ops, []string{"eq", "ne", "gt", "lt", "contains", "and", "or", "xor", "nand", "nor"}) {
+		t.Errorf("operators = %v", ops)
+	}
+	var labels []string
+	for _, o := range fields["op"].Options {
+		labels = append(labels, o.Label)
+	}
+	if !reflect.DeepEqual(labels, []string{"==", "!=", ">", "<", "contains", "AND", "OR", "XOR", "NAND", "NOR"}) {
+		t.Errorf("operator labels = %v", labels)
+	}
+	if fields["op"].Default != "eq" {
+		t.Errorf("operator default = %v, want eq", fields["op"].Default)
+	}
+}
+
+// The layout is data: A and B on one row, the checkboxes on the next, and the
+// checkboxes shown only for a gate.
+func TestConditionFieldsDeclareLayoutAndVisibility(t *testing.T) {
+	fields := map[string]models.ConfigField{}
+	for _, f := range conditionDef(t).ConfigSchema {
+		fields[f.Key] = f
+	}
+
+	for _, k := range []string{"left", "right"} {
+		f := fields[k]
+		if f.Row != "values" || f.ShowWhen != nil {
+			t.Errorf("%s: row %q showWhen %+v, want row values and always shown", k, f.Row, f.ShowWhen)
+		}
+	}
+	if fields["left"].Label != "A" || fields["right"].Label != "B" {
+		t.Errorf("labels %q and %q, want A and B", fields["left"].Label, fields["right"].Label)
+	}
+	if fields["op"].Row != "" || fields["op"].ShowWhen != nil {
+		t.Errorf("operator should sit on its own line, always shown")
+	}
+
+	wantWhen := &models.FieldWhen{Key: "op", Values: []string{"and", "or", "xor", "nand", "nor"}}
+	for _, k := range []string{"leftTrue", "rightTrue"} {
+		f := fields[k]
+		if f.Type != "bool" || f.Label != "is true" || f.Default != true {
+			t.Errorf("%s: type %q label %q default %v", k, f.Type, f.Label, f.Default)
+		}
+		if f.Row != "truth" {
+			t.Errorf("%s: row %q, want truth", k, f.Row)
+		}
+		if !reflect.DeepEqual(f.ShowWhen, wantWhen) {
+			t.Errorf("%s: showWhen = %+v, want %+v", k, f.ShowWhen, wantWhen)
+		}
+	}
+}
+
+func TestConditionDescriptionFollowsCopyRules(t *testing.T) {
+	d := conditionDef(t).Description
+	switch {
+	case len(d) > 100:
+		t.Errorf("description is %d characters, want at most 100", len(d))
+	case !strings.HasSuffix(d, "."):
+		t.Errorf("description %q does not end with a period", d)
+	case strings.Contains(d, ". "):
+		t.Errorf("description %q is more than one sentence", d)
+	case strings.ContainsAny(d, "\u2014\u2013"):
+		t.Errorf("description %q has a dash", d)
+	}
+}
+
+func TestBuiltinRegistryHasNoSeparateGateBlocks(t *testing.T) {
+	reg := newTestScheduler(t).registry
+	for _, id := range []string{
+		"control.and", "control.or", "control.xor", "control.not",
+		"control.nand", "control.nor", "control.compare",
+	} {
+		if _, ok := reg.Get(id); ok {
+			t.Errorf("%s is registered; Condition replaces it", id)
+		}
+	}
+}
+
+// The Result output lets one Condition feed another: a threshold on the first
+// is wired into an AND on the second.
+func TestRunGraphConditionResultFeedsCondition(t *testing.T) {
 	cases := []struct {
 		name         string
 		tps, players string
@@ -374,46 +354,90 @@ func TestRunGraphCompareAndGateDriveBranch(t *testing.T) {
 		{"low tps with nobody takes onFalse", "8", "0", "no"},
 		{"healthy tps takes onFalse", "19.9", "3", "no"},
 	}
+	cfg := func(kv ...interface{}) map[string]interface{} {
+		m := map[string]interface{}{}
+		for i := 0; i < len(kv); i += 2 {
+			m[kv[i].(string)] = kv[i+1]
+		}
+		return m
+	}
+	data := func(id, src, sp, tgt, tp string) models.Edge {
+		return models.Edge{ID: id, Kind: "data", Source: src, SourcePort: sp, Target: tgt, TargetPort: tp}
+	}
+	ctrl := func(id, src, sp, tgt string) models.Edge {
+		return models.Edge{ID: id, Kind: "control", Source: src, SourcePort: sp, Target: tgt, TargetPort: "trigger"}
+	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
 			s := newTestScheduler(t)
 			var visited []string
 			registerTestMarker(s.registry, &visited)
-			cfg := func(kv ...interface{}) map[string]interface{} {
-				m := map[string]interface{}{}
-				for i := 0; i < len(kv); i += 2 {
-					m[kv[i].(string)] = kv[i+1]
-				}
-				return m
-			}
-			data := func(id, src, sp, tgt, tp string) models.Edge {
-				return models.Edge{ID: id, Kind: "data", Source: src, SourcePort: sp, Target: tgt, TargetPort: tp}
-			}
-			ctrl := func(id, src, sp, tgt string) models.Edge {
-				return models.Edge{ID: id, Kind: "control", Source: src, SourcePort: sp, Target: tgt, TargetPort: "trigger"}
-			}
 			g := models.Graph{
-				ID: "cmp",
+				ID: "chain",
 				Nodes: []models.Node{
 					{ID: "t1", Type: "trigger.player", Config: cfg("type", "Joined")},
 					{ID: "tps", Type: "data.constant", Config: cfg("type", "Float", "value", c.tps)},
 					{ID: "ppl", Type: "data.constant", Config: cfg("type", "Integer", "value", c.players)},
-					{ID: "low", Type: "control.compare", Config: cfg("op", "lt", "right", "15")},
-					{ID: "any", Type: "control.compare", Config: cfg("op", "gt", "right", "0")},
-					{ID: "and", Type: "control.and"},
-					{ID: "cond", Type: "control.condition", Config: cfg("op", "true")},
+					{ID: "low", Type: "control.condition", Config: cfg("op", "lt", "right", "15")},
+					{ID: "any", Type: "control.condition", Config: cfg("op", "gt", "right", "0")},
+					{ID: "both", Type: "control.condition", Config: cfg("op", "and")},
 					{ID: "yes", Type: "test.marker", Config: cfg("markerId", "yes")},
 					{ID: "no", Type: "test.marker", Config: cfg("markerId", "no")},
 				},
 				Edges: []models.Edge{
-					ctrl("c1", "t1", "onComplete", "cond"),
-					ctrl("c2", "cond", "onTrue", "yes"),
-					ctrl("c3", "cond", "onFalse", "no"),
+					ctrl("c1", "t1", "onComplete", "low"),
+					ctrl("c2", "low", "onTrue", "any"),
+					ctrl("c3", "low", "onFalse", "both"),
+					ctrl("c4", "any", "onTrue", "both"),
+					ctrl("c5", "any", "onFalse", "both"),
+					ctrl("c6", "both", "onTrue", "yes"),
+					ctrl("c7", "both", "onFalse", "no"),
 					data("d1", "tps", "value", "low", "left"),
 					data("d2", "ppl", "value", "any", "left"),
-					data("d3", "low", "value", "and", "a"),
-					data("d4", "any", "value", "and", "b"),
-					data("d5", "and", "value", "cond", "left"),
+					data("d3", "low", "result", "both", "left"),
+					data("d4", "any", "result", "both", "right"),
+				},
+			}
+			rec := s.runGraph(g, "t1", "manual", seed("t1"))
+			if rec.Status != "success" {
+				t.Fatalf("status = %q (error: %s)", rec.Status, rec.Error)
+			}
+			if len(visited) != 1 || visited[0] != c.want {
+				t.Errorf("visited = %v, want [%s]", visited, c.want)
+			}
+		})
+	}
+}
+
+// A wired boolean compared with == true, end to end through the engine.
+func TestRunGraphWiredBooleanEqualsTrue(t *testing.T) {
+	cases := []struct {
+		name  string
+		value string
+		want  string
+	}{
+		{"true takes onTrue", "true", "yes"},
+		{"false takes onFalse", "false", "no"},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			s := newTestScheduler(t)
+			var visited []string
+			registerTestMarker(s.registry, &visited)
+			g := models.Graph{
+				ID: "eqtrue",
+				Nodes: []models.Node{
+					{ID: "t1", Type: "trigger.player", Config: map[string]interface{}{"type": "Joined"}},
+					{ID: "flag", Type: "data.constant", Config: map[string]interface{}{"type": "Boolean", "value": c.value}},
+					{ID: "cond", Type: "control.condition", Config: map[string]interface{}{"op": "eq", "right": "true"}},
+					{ID: "yes", Type: "test.marker", Config: map[string]interface{}{"markerId": "yes"}},
+					{ID: "no", Type: "test.marker", Config: map[string]interface{}{"markerId": "no"}},
+				},
+				Edges: []models.Edge{
+					{ID: "e1", Kind: "control", Source: "t1", SourcePort: "onComplete", Target: "cond", TargetPort: "trigger"},
+					{ID: "e2", Kind: "control", Source: "cond", SourcePort: "onTrue", Target: "yes", TargetPort: "trigger"},
+					{ID: "e3", Kind: "control", Source: "cond", SourcePort: "onFalse", Target: "no", TargetPort: "trigger"},
+					{ID: "d1", Kind: "data", Source: "flag", SourcePort: "value", Target: "cond", TargetPort: "left"},
 				},
 			}
 			rec := s.runGraph(g, "t1", "manual", seed("t1"))

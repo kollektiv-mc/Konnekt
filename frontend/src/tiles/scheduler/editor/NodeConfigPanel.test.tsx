@@ -173,3 +173,172 @@ describe('NodeConfigPanel optional destination field', () => {
     expect(names).not.toContain('None')
   })
 })
+
+// A def shaped like Condition's: an operator, two values on one row, and two
+// checkboxes on the next that only a gate operator shows.
+const gateWhen = { key: 'op', values: ['and', 'or'] }
+const layoutDef = models.BlockDef.createFrom({
+  id: 'control.layout',
+  category: 'control',
+  label: 'Layout',
+  description: 'Fields that declare a row and a condition.',
+  configSchema: [
+    {
+      key: 'op',
+      label: 'Operator',
+      type: 'select',
+      default: 'eq',
+      options: [
+        { label: '==', value: 'eq' },
+        { label: 'AND', value: 'and' },
+        { label: 'OR', value: 'or' },
+      ],
+    },
+    { key: 'left', label: 'A', type: 'string', row: 'values' },
+    { key: 'right', label: 'B', type: 'string', row: 'values' },
+    {
+      key: 'leftTrue',
+      label: 'is true',
+      type: 'bool',
+      default: true,
+      showWhen: gateWhen,
+      row: 'truth',
+    },
+    {
+      key: 'rightTrue',
+      label: 'is true',
+      type: 'bool',
+      default: true,
+      showWhen: gateWhen,
+      row: 'truth',
+    },
+  ],
+})
+
+describe('NodeConfigPanel showWhen', () => {
+  beforeEach(() => vi.clearAllMocks())
+
+  it('hides a field while the field it names has another value', () => {
+    renderPanel({ op: 'eq' }, vi.fn(), layoutDef)
+    expect(screen.queryAllByRole('checkbox')).toHaveLength(0)
+    expect(screen.queryByText('is true')).toBeNull()
+  })
+
+  it('shows it once the named field has a listed value', () => {
+    renderPanel({ op: 'and' }, vi.fn(), layoutDef)
+    expect(screen.getAllByRole('checkbox')).toHaveLength(2)
+    expect(screen.getAllByText('is true')).toHaveLength(2)
+  })
+
+  it('reads the named field default when nothing is stored for it', () => {
+    renderPanel({}, vi.fn(), layoutDef)
+    expect(screen.queryAllByRole('checkbox')).toHaveLength(0)
+
+    cleanup()
+    const gateByDefault = models.BlockDef.createFrom({
+      ...layoutDef,
+      configSchema: layoutDef.configSchema.map((f) =>
+        f.key === 'op' ? { ...f, default: 'or' } : f,
+      ),
+    })
+    renderPanel({}, vi.fn(), gateByDefault)
+    expect(screen.getAllByRole('checkbox')).toHaveLength(2)
+  })
+
+  it('draws a checkbox from the stored value and reports a change', () => {
+    const onChange = renderPanel({ op: 'or', leftTrue: false }, vi.fn(), layoutDef)
+    const [left, right] = screen.getAllByRole('checkbox') as HTMLInputElement[]
+    expect(left.checked).toBe(false)
+    expect(right.checked).toBe(true)
+
+    fireEvent.click(left)
+    expect(onChange).toHaveBeenCalledWith('leftTrue', true)
+  })
+
+  it('writes nothing for a hidden field when another is edited', () => {
+    const onChange = renderPanel({ op: 'eq', left: 'x', leftTrue: false }, vi.fn(), layoutDef)
+    fireEvent.change(screen.getByDisplayValue('x'), { target: { value: 'y' } })
+    expect(onChange).toHaveBeenCalledTimes(1)
+    expect(onChange).toHaveBeenCalledWith('left', 'y')
+  })
+
+  it('shows every field of a def that declares no condition', () => {
+    renderPanel({ destination: 'a', source: 'b' })
+    expect(screen.getByDisplayValue('b')).toBeTruthy()
+  })
+})
+
+describe('NodeConfigPanel row', () => {
+  beforeEach(() => vi.clearAllMocks())
+
+  const rowOf = (el: HTMLElement) => el.closest('[data-row]')
+
+  it('puts consecutive fields with the same row in one line', () => {
+    renderPanel({ op: 'and', left: 'x', right: 'y' }, vi.fn(), layoutDef)
+    const left = rowOf(screen.getByDisplayValue('x'))
+    const right = rowOf(screen.getByDisplayValue('y'))
+    expect(left).not.toBeNull()
+    expect(left).toBe(right)
+    expect(left?.getAttribute('data-row')).toBe('values')
+    expect(left?.className).toContain('grid-flow-col')
+    expect(left?.className).toContain('auto-cols-fr')
+  })
+
+  it('puts the checkboxes in a line of their own, under the values', () => {
+    renderPanel({ op: 'and', left: 'x', right: 'y' }, vi.fn(), layoutDef)
+    const [a, b] = screen.getAllByRole('checkbox')
+    expect(rowOf(a)).toBe(rowOf(b))
+    expect(rowOf(a)?.getAttribute('data-row')).toBe('truth')
+    expect(rowOf(a)).not.toBe(rowOf(screen.getByDisplayValue('x')))
+
+    const lines = Array.from(document.querySelectorAll('[data-row]')).map((n) =>
+      n.getAttribute('data-row'),
+    )
+    expect(lines).toEqual(['values', 'truth'])
+  })
+
+  it('keeps a field with no row on a line of its own', () => {
+    renderPanel({ op: 'eq', left: 'x', right: 'y' }, vi.fn(), layoutDef)
+    expect(rowOf(screen.getByRole('combobox', { name: 'Operator' }))).toBeNull()
+  })
+
+  it('labels each value and shows the checkboxes beside their labels', () => {
+    renderPanel({ op: 'and' }, vi.fn(), layoutDef)
+    expect(screen.getByText('A')).toBeTruthy()
+    expect(screen.getByText('B')).toBeTruthy()
+  })
+
+  it('does not join two separate runs that share a row name', () => {
+    const def = models.BlockDef.createFrom({
+      ...layoutDef,
+      configSchema: [
+        { key: 'a', label: 'One', type: 'string', row: 'r' },
+        { key: 'b', label: 'Two', type: 'string' },
+        { key: 'c', label: 'Three', type: 'string', row: 'r' },
+      ],
+    })
+    renderPanel({ a: '1', b: '2', c: '3' }, vi.fn(), def)
+    expect(rowOf(screen.getByDisplayValue('1'))).not.toBe(rowOf(screen.getByDisplayValue('3')))
+    expect(rowOf(screen.getByDisplayValue('2'))).toBeNull()
+  })
+
+  it('closes the gap when a hidden field sat between two of one row', () => {
+    const def = models.BlockDef.createFrom({
+      ...layoutDef,
+      configSchema: [
+        { key: 'op', label: 'Operator', type: 'select', default: 'eq', options: [] },
+        { key: 'a', label: 'One', type: 'string', row: 'r' },
+        {
+          key: 'h',
+          label: 'Hidden',
+          type: 'string',
+          row: 'r',
+          showWhen: { key: 'op', values: ['x'] },
+        },
+        { key: 'c', label: 'Three', type: 'string', row: 'r' },
+      ],
+    })
+    renderPanel({ a: '1', c: '3' }, vi.fn(), def)
+    expect(rowOf(screen.getByDisplayValue('1'))).toBe(rowOf(screen.getByDisplayValue('3')))
+  })
+})

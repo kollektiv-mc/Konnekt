@@ -110,6 +110,20 @@ export namespace models {
 	        this.lodsSkipped = source["lodsSkipped"];
 	    }
 	}
+	export class FieldWhen {
+	    key: string;
+	    values: string[];
+	
+	    static createFrom(source: any = {}) {
+	        return new FieldWhen(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.key = source["key"];
+	        this.values = source["values"];
+	    }
+	}
 	export class FieldOption {
 	    label: string;
 	    value: string;
@@ -131,6 +145,8 @@ export namespace models {
 	    default?: any;
 	    required?: boolean;
 	    options?: FieldOption[];
+	    showWhen?: FieldWhen;
+	    row?: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new ConfigField(source);
@@ -144,6 +160,8 @@ export namespace models {
 	        this.default = source["default"];
 	        this.required = source["required"];
 	        this.options = this.convertValues(source["options"], FieldOption);
+	        this.showWhen = this.convertValues(source["showWhen"], FieldWhen);
+	        this.row = source["row"];
 	    }
 	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {
@@ -497,6 +515,7 @@ export namespace models {
 	        this.targetPort = source["targetPort"];
 	    }
 	}
+	
 	
 	export class Position {
 	    x: number;
