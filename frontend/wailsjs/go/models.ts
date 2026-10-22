@@ -18,6 +18,7 @@ export namespace models {
 	    toastsOff: Record<string, boolean>;
 	    schedulerPaletteCollapsed: boolean;
 	    schedulerPaletteClosedCategories: Record<string, boolean>;
+	    schedulerCurvedEdges: boolean;
 	    consoleQuickCommandsCollapsed: boolean;
 	    classicTileFaces: boolean;
 	    navClosedSections: Record<string, boolean>;
@@ -52,6 +53,7 @@ export namespace models {
 	        this.toastsOff = source["toastsOff"];
 	        this.schedulerPaletteCollapsed = source["schedulerPaletteCollapsed"];
 	        this.schedulerPaletteClosedCategories = source["schedulerPaletteClosedCategories"];
+	        this.schedulerCurvedEdges = source["schedulerCurvedEdges"];
 	        this.consoleQuickCommandsCollapsed = source["consoleQuickCommandsCollapsed"];
 	        this.classicTileFaces = source["classicTileFaces"];
 	        this.navClosedSections = source["navClosedSections"];

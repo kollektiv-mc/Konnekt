@@ -60,6 +60,7 @@ export interface AppSettings {
   toastsOff: Record<string, boolean>
   schedulerPaletteCollapsed: boolean
   schedulerPaletteClosedCategories: Record<string, boolean>
+  schedulerCurvedEdges: boolean
   consoleQuickCommandsCollapsed: boolean
   classicTileFaces: boolean
   navClosedSections: Record<string, boolean>

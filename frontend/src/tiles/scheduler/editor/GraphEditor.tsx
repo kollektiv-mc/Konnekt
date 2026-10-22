@@ -162,6 +162,8 @@ function GraphEditorInner({
   onPreviewNode,
 }: GraphEditorProps) {
   const { screenToFlowPosition } = useReactFlow()
+  const curvedEdges = useSettingsStore((s) => s.settings.schedulerCurvedEdges)
+  const updateSettings = useSettingsStore((s) => s.update)
   const updateNodeInternals = useUpdateNodeInternals()
 
   const defMap = useMemo(() => new Map(blockDefs.map((d) => [d.id, d])), [blockDefs])
@@ -1018,6 +1020,7 @@ function GraphEditorInner({
       cycleNodes,
       cycleEdges,
       recordPre,
+      curvedEdges,
     }),
     [
       defMap,
@@ -1032,6 +1035,7 @@ function GraphEditorInner({
       cycleNodes,
       cycleEdges,
       recordPre,
+      curvedEdges,
     ],
   )
 
@@ -1102,6 +1106,13 @@ function GraphEditorInner({
           onLoadGraph={(g) => confirm.guard(() => loadGraph(g))}
           onNewGraph={() => confirm.guard(handleNew)}
           onAdd={openAddMenu}
+          view={{
+            curvedEdges,
+            onToggleCurvedEdges: () =>
+              // Swallowed: `update` reverts the flag itself on a refused write
+              // and the settings modal shows why, as for the palette.
+              updateSettings({ schedulerCurvedEdges: !curvedEdges }).catch(() => {}),
+          }}
           edit={{
             undo: doUndo,
             redo: doRedo,

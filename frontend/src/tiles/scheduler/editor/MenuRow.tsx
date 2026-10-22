@@ -18,6 +18,8 @@ interface MenuRowProps {
   /** Nesting depth under an expanded row, for the inset. */
   indent?: boolean
   expanded?: boolean
+  /** Makes the row a switch and says whether it is on; the caller draws the mark. */
+  checked?: boolean
   title?: string
 }
 
@@ -42,6 +44,7 @@ export function MenuRow({
   trailing,
   indent = false,
   expanded,
+  checked,
   title,
 }: MenuRowProps) {
   const tone = active ? 'text-accent' : danger ? 'text-danger' : 'text-text-primary'
@@ -54,6 +57,8 @@ export function MenuRow({
       onClick={onClick}
       disabled={disabled}
       aria-expanded={expanded}
+      role={checked === undefined ? undefined : 'switch'}
+      aria-checked={checked}
       title={title}
       className={`flex w-full cursor-pointer items-center gap-2 py-1.5 text-left font-mono text-xs whitespace-nowrap transition-colors disabled:cursor-default disabled:opacity-50 disabled:hover:bg-transparent ${
         indent ? 'pr-3 pl-6' : 'px-3'

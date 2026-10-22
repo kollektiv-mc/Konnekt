@@ -226,6 +226,7 @@ func (s *ConfigService) GetAppSettings() (models.AppSettings, error) {
 		ToastsOff:                        map[string]bool{},
 		SchedulerPaletteCollapsed:        true,
 		SchedulerPaletteClosedCategories: map[string]bool{},
+		SchedulerCurvedEdges:             true,
 		NavClosedSections:                map[string]bool{"widgets": true, "layouts": true},
 		CheckUpdatesOnStartup:            true,
 		UpdateChannel:                    UpdateChannelStable,

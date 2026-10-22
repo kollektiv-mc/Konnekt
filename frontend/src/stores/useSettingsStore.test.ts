@@ -34,6 +34,7 @@ const DEFAULTS = {
   toastsOff: {} as Record<string, boolean>,
   schedulerPaletteCollapsed: true,
   schedulerPaletteClosedCategories: {},
+  schedulerCurvedEdges: true,
   consoleQuickCommandsCollapsed: false,
   classicTileFaces: false,
   navClosedSections: { widgets: true, layouts: true } as Record<string, boolean>,

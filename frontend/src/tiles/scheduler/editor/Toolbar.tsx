@@ -15,6 +15,12 @@ import { MenuDivider, MenuRow } from './MenuRow'
 import type { RunStatus } from './runStatus'
 import { typesPresent } from './selection'
 
+/** The View menu's choices. The editor owns the preference; the bar only flips it. */
+export interface ViewOptions {
+  curvedEdges: boolean
+  onToggleCurvedEdges: () => void
+}
+
 interface ToolbarProps {
   graphs: models.Graph[]
   /** Null before anything loads, '' for a graph that has not been saved yet. */
@@ -38,6 +44,7 @@ interface ToolbarProps {
   /** Opens the quick-add list with its corner at this viewport point. */
   onAdd: (at: { x: number; y: number }) => void
   edit: EditMenuActions
+  view: ViewOptions
   onToggleEnabled: () => void
   onRun: () => void
   onSave: () => void
@@ -99,6 +106,7 @@ export function Toolbar({
   onNewGraph,
   onAdd,
   edit,
+  view,
   onToggleEnabled,
   onRun,
   onSave,
@@ -111,6 +119,7 @@ export function Toolbar({
 }: ToolbarProps) {
   const graphMenu = usePopover()
   const editMenu = usePopover()
+  const viewMenu = usePopover()
   const overflowMenu = usePopover()
   const addButton = useRef<HTMLButtonElement>(null)
   // The rename draft lives in the overflow menu's own row; null is the row at
@@ -254,6 +263,31 @@ export function Toolbar({
           align="left"
         >
           {editMenu.open && <EditMenuRows rows={rows} onDone={editMenu.close} />}
+        </Popover>
+      </div>
+
+      {/* View: how the canvas looks and behaves, as switches. Unlike the edit
+          rows these stay open when flipped, so a choice shows on the canvas
+          beside the menu and the next one is a click away. */}
+      <div className="relative shrink-0">
+        <button type="button" className={menuButtonClass(viewMenu.open)} onClick={viewMenu.toggle}>
+          view
+        </button>
+        <Popover open={viewMenu.open} onClose={viewMenu.close} width={200} align="left">
+          {viewMenu.open && (
+            <MenuRow
+              label="Curved connectors"
+              checked={view.curvedEdges}
+              leading={
+                <Icon
+                  icon={Check}
+                  size="xs"
+                  className={`text-accent ${view.curvedEdges ? 'opacity-100' : 'opacity-0'}`}
+                />
+              }
+              onClick={view.onToggleCurvedEdges}
+            />
+          )}
         </Popover>
       </div>
 

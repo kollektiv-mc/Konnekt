@@ -28,6 +28,10 @@ export interface SchedulerCtxValue {
   // React Flow's setEdges, so it snapshots the pre-edit graph through this
   // rather than the editor threading a handler into every edge.
   recordPre: (tag?: string | null) => void
+  // The View menu's Curved connectors choice (#692). Read by every wire, which
+  // is what lets it redraw them all without the edges array, the undo history or
+  // the unsaved flag ever hearing about it.
+  curvedEdges: boolean
 }
 
 export const SchedulerCtx = createContext<SchedulerCtxValue>({
@@ -42,4 +46,5 @@ export const SchedulerCtx = createContext<SchedulerCtxValue>({
   cycleNodes: new Set(),
   cycleEdges: new Set(),
   recordPre: () => {},
+  curvedEdges: true,
 })

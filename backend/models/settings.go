@@ -33,6 +33,13 @@ type AppSettings struct {
 	SchedulerPaletteCollapsed        bool            `json:"schedulerPaletteCollapsed"`
 	SchedulerPaletteClosedCategories map[string]bool `json:"schedulerPaletteClosedCategories"`
 
+	// SchedulerCurvedEdges draws the scheduler editor's connections as smooth
+	// curves that leave and enter their ports horizontally, rather than as
+	// straight lines through their corner points (#692). One choice for every
+	// graph. On by default; a settings file written before the field existed
+	// unmarshals onto that default (services.GetAppSettings).
+	SchedulerCurvedEdges bool `json:"schedulerCurvedEdges"`
+
 	ConsoleQuickCommandsCollapsed bool `json:"consoleQuickCommandsCollapsed"`
 
 	// ClassicTileFaces shows the compact tile faces from before the

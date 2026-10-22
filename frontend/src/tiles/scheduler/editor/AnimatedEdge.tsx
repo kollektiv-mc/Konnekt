@@ -2,7 +2,13 @@ import { useContext, useRef, useState, type CSSProperties, type PointerEvent } f
 import { useReactFlow, type EdgeProps } from '@xyflow/react'
 import { SchedulerCtx } from './schedulerContext'
 import type { Point } from '../../../lib/sortable'
-import { edgePath, edgeWaypoints, insertWaypoint, withWaypoints } from './edgeGeometry'
+import {
+  curvedEdgePath,
+  edgePath,
+  edgeWaypoints,
+  insertWaypoint,
+  withWaypoints,
+} from './edgeGeometry'
 
 // Pointer travel, in screen px, before a press on a corner counts as a drag
 // rather than the first half of a double-click, so a click leaves no undo entry.
@@ -19,7 +25,7 @@ export function AnimatedEdge({
   data,
   selected,
 }: EdgeProps) {
-  const { firedEdges, cycleEdges, recordPre } = useContext(SchedulerCtx)
+  const { firedEdges, cycleEdges, recordPre, curvedEdges } = useContext(SchedulerCtx)
   const { setEdges, screenToFlowPosition } = useReactFlow()
   const [animDone, setAnimDone] = useState(false)
   const [hovered, setHovered] = useState(false)
@@ -29,7 +35,8 @@ export function AnimatedEdge({
   const waypoints = edgeWaypoints(data)
   const source: Point = { x: sourceX, y: sourceY }
   const target: Point = { x: targetX, y: targetY }
-  const d = edgePath([source, ...waypoints, target])
+  const points = [source, ...waypoints, target]
+  const d = curvedEdges ? curvedEdgePath(points) : edgePath(points)
 
   // Corners live on `edge.data.waypoints`; every edit goes through setEdges and
   // so out through the editor's onEdgesChange, which is what marks the graph
