@@ -79,6 +79,8 @@ export function GetLocalMCPState():Promise<models.LocalMCPState>;
 
 export function GetLogPath():Promise<string>;
 
+export function GetLogTail():Promise<string>;
+
 export function GetPhysicalMemoryMB():Promise<number>;
 
 export function GetPlayerDetail(arg1:string,arg2:string):Promise<models.Player>;

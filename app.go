@@ -394,6 +394,12 @@ func (a *App) GetLogPath() (string, error) {
 	return services.LogPath(a.dataDir), nil
 }
 
+// GetLogTail returns the end of the app log for Settings' Help pane to copy,
+// sized to paste into a GitHub issue whole (services.LogTailBytes).
+func (a *App) GetLogTail() (string, error) {
+	return services.ReadLogTail(a.dataDir, services.LogTailBytes)
+}
+
 // LogClientError writes an error the frontend caught into konnekt.log, next to
 // the backend's own diagnostics. React reports a caught render error through
 // console.error, and an uncaught exception or an unhandled rejection goes to

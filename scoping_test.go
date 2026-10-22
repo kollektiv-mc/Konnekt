@@ -77,6 +77,7 @@ var serverlessMethods = map[string]string{
 	"ListFontFamilies":         "the fonts installed on this machine, not a server's",
 	"GetDataDir":               "app-level",
 	"GetLogPath":               "app-level; one log file for the app",
+	"GetLogTail":               "app-level; one log file for the app",
 	"LogClientError":           "app-level",
 	"GetAppVersion":            "app-level",
 	"GetPhysicalMemoryMB":      "the machine's RAM, not a server's",
