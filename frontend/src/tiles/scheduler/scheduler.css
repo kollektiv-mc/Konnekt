@@ -159,6 +159,27 @@
 .node-panel-swap {
   animation: node-panel-swap 110ms ease-out both;
 }
+/* Config/data switch: the incoming pane slides a few pixels in from the side
+   the tab highlight moved toward. */
+@keyframes node-panel-tab-in {
+  from {
+    opacity: 0;
+    translate: var(--tab-in-from, 0) 0;
+  }
+  to {
+    opacity: 1;
+    translate: 0 0;
+  }
+}
+.node-panel-tab-in {
+  animation: node-panel-tab-in var(--duration-fast) var(--ease-standard) both;
+}
+.node-panel-tab-in-config {
+  --tab-in-from: -6px;
+}
+.node-panel-tab-in-data {
+  --tab-in-from: 6px;
+}
 .node-panel-host .react-flow__minimap {
   transition: transform var(--duration-panel) var(--ease-standard);
 }
@@ -167,7 +188,8 @@
   transform: translateX(-16rem);
 }
 @media (prefers-reduced-motion: reduce) {
-  .node-panel-swap {
+  .node-panel-swap,
+  .node-panel-tab-in {
     animation: none !important;
   }
   .node-panel-host .react-flow__minimap {

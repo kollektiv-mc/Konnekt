@@ -65,8 +65,24 @@ describe('NodePanel', () => {
 
   it('reports a tab click through onTab', () => {
     const { props } = setup()
-    fireEvent.click(screen.getByRole('button', { name: 'data' }))
+    fireEvent.click(screen.getByRole('tab', { name: 'data' }))
     expect(props.onTab).toHaveBeenCalledWith('data')
+  })
+
+  it('slides the tab highlight under the chosen tab', () => {
+    const { again } = setup()
+    const indicator = screen.getByTestId('node-panel-tab-indicator')
+    expect(indicator.className).toContain('translate-x-0')
+    expect(screen.getByRole('tab', { name: 'config' }).getAttribute('aria-selected')).toBe('true')
+    again({ tab: 'data' })
+    expect(indicator.className).toContain('translate-x-full')
+    expect(screen.getByRole('tab', { name: 'data' }).getAttribute('aria-selected')).toBe('true')
+  })
+
+  it('brings the data pane in from the right', async () => {
+    setup({ tab: 'data' })
+    await act(async () => {})
+    expect(screen.getByText('Data preview').closest('.node-panel-tab-in-data')).toBeTruthy()
   })
 
   it('opts out of the graph key handler', () => {

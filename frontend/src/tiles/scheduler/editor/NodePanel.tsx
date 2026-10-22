@@ -73,15 +73,27 @@ export function NodePanel({ node, def, edges, tab, onTab, onChange, getGraph, on
     >
       {mounted && held && (
         <>
-          <div className="border-border-subtle border-b-hairline flex shrink-0">
+          {/* One highlight under both tabs that slides to the picked one, rather
+              than a fill per button that would only blink across. */}
+          <div
+            role="tablist"
+            className="border-border-subtle border-b-hairline relative flex shrink-0"
+          >
+            <div
+              aria-hidden="true"
+              data-testid="node-panel-tab-indicator"
+              className={`bg-surface border-accent ease-standard duration-fast pointer-events-none absolute inset-y-0 left-0 w-1/2 border-b transition-transform motion-reduce:transition-none ${
+                tab === 'config' ? 'translate-x-0' : 'translate-x-full'
+              }`}
+            />
             {(['config', 'data'] as const).map((t) => (
               <button
                 key={t}
+                role="tab"
+                aria-selected={tab === t}
                 onClick={() => onTab(t)}
-                className={`flex-1 border-b py-1.5 font-mono text-xs ${
-                  tab === t
-                    ? 'bg-surface text-text-primary border-accent'
-                    : 'text-text-faint border-transparent bg-transparent'
+                className={`duration-fast relative flex-1 border-b border-transparent bg-transparent py-1.5 font-mono text-xs transition-colors ${
+                  tab === t ? 'text-text-primary' : 'text-text-faint'
                 }`}
               >
                 {t}
@@ -91,17 +103,21 @@ export function NodePanel({ node, def, edges, tab, onTab, onChange, getGraph, on
 
           {/* Keyed on the node so the dip replays for each one picked. */}
           <div key={held.node.id} className={shown.swap ? 'node-panel-swap' : undefined}>
-            {tab === 'config' ? (
-              <NodeConfigPanel
-                nodeId={held.node.id}
-                data={held.node.data as NodeData}
-                def={held.def}
-                edges={edges}
-                onChange={onChange}
-              />
-            ) : (
-              <NodeDataPanel graph={getGraph()} nodeId={held.node.id} onPreview={onPreview} />
-            )}
+            {/* Keyed on the tab too, so the pane comes in from the side the
+                highlight moved to. */}
+            <div key={tab} className={`node-panel-tab-in node-panel-tab-in-${tab}`}>
+              {tab === 'config' ? (
+                <NodeConfigPanel
+                  nodeId={held.node.id}
+                  data={held.node.data as NodeData}
+                  def={held.def}
+                  edges={edges}
+                  onChange={onChange}
+                />
+              ) : (
+                <NodeDataPanel graph={getGraph()} nodeId={held.node.id} onPreview={onPreview} />
+              )}
+            </div>
           </div>
         </>
       )}
