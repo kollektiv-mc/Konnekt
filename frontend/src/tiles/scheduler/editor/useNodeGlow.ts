@@ -1,6 +1,6 @@
 import { useEffect, type RefObject } from 'react'
 
-// The radius of the gradient in scheduler.css (`.node-glow-halo`). A node whose
+// The radius of the gradient in scheduler.css (`.node-glow-ring`). A node whose
 // box is further than this from the cursor is entirely outside the light, so it is
 // skipped rather than repainted.
 export const GLOW_REACH_PX = 220
@@ -39,7 +39,7 @@ export function withinGlowReach(
 }
 
 /**
- * Feeds `--mx`/`--my` to every node under `wrapperRef`, for the halo in
+ * Feeds `--mx`/`--my` to every node under `wrapperRef`, for the ring in
  * scheduler.css. One `pointermove` listener on the canvas, coalesced to one
  * write per animation frame, rather than a listener per node.
  *
@@ -92,7 +92,7 @@ export function useNodeGlow(wrapperRef: RefObject<HTMLElement | null>): void {
       schedule()
     }
 
-    // The halo fades by CSS; the positions stay put so it fades out from where
+    // The ring fades by CSS; the positions stay put so it fades out from where
     // the cursor was.
     const onLeave = () => wrapper.setAttribute(IDLE_ATTR, '')
 
