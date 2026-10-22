@@ -96,6 +96,11 @@ h2 {
   font-family: var(--font-site-mono);
 }
 
+button {
+  font: inherit;
+  color: inherit;
+}
+
 .skip-link {
   position: absolute;
   left: var(--gutter);
@@ -338,6 +343,39 @@ h2 {
   color: var(--text-secondary);
 }
 
+/* ── Page hero: the title in one half, what the page is about in the other ─ */
+
+.page-hero {
+  display: flex;
+  flex-wrap: wrap;
+}
+
+.page-hero-title,
+.page-hero-side {
+  flex: 1 1 420px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: clamp(40px, 6vw, 72px) var(--pad);
+}
+
+.page-hero-title {
+  border-right: var(--hairline);
+}
+
+.page-hero h1 {
+  margin: 0;
+  font-size: clamp(56px, 7vw, 96px);
+  line-height: 0.95;
+  font-weight: 600;
+  letter-spacing: -0.05em;
+}
+
+.page-hero-side {
+  justify-content: flex-end;
+  background: var(--bg-surface);
+}
+
 /* ── Stages: one colour per release stage, from the status tokens ────────
    Alpha danger, beta sun, release accent, later a dashed outline in
    secondary text. --stage-color tints, --stage-ink writes, and .marker is the
@@ -494,6 +532,15 @@ h2 {
   .footer-col {
     border-left: 0;
     border-top: var(--hairline);
+  }
+
+  .page-hero-title {
+    border-right: 0;
+    border-bottom: var(--hairline);
+  }
+
+  .page-hero-side {
+    padding-block: 24px;
   }
 }
 
