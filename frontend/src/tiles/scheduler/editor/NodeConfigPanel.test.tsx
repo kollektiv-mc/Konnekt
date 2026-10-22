@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
-import { render, screen, cleanup, fireEvent, waitFor } from '@testing-library/react'
+import { act, render, screen, cleanup, fireEvent, waitFor } from '@testing-library/react'
+import { TOOLTIP_DELAY_MS } from '../../../components/ui/Tooltip'
 import * as App from '../../../../wailsjs/go/main/App'
 import { models } from '../../../../wailsjs/go/models'
 import { useDestinationsStore } from '../../../stores/useDestinationsStore'
@@ -298,15 +299,18 @@ describe('NodeConfigPanel row', () => {
     expect(lines).toEqual(['values', 'truth'])
   })
 
-  it('draws a hint under its line, and only while the field shows', () => {
-    renderPanel({ op: 'and' }, vi.fn(), layoutDef)
-    const hint = screen.getByText('Unchecking a box flips it.')
-    expect(hint.closest('[data-row]')).toBeNull()
-    expect(hint.previousElementSibling?.getAttribute('data-row')).toBe('truth')
-    cleanup()
-
-    renderPanel({ op: 'eq' }, vi.fn(), layoutDef)
-    expect(screen.queryByText('Unchecking a box flips it.')).toBeNull()
+  it('gives a hint as the tooltip, never a line in the panel', () => {
+    vi.useFakeTimers()
+    try {
+      renderPanel({ op: 'and' }, vi.fn(), layoutDef)
+      expect(screen.queryByText('Unchecking a box flips it.')).toBeNull()
+      const [a] = screen.getAllByRole('checkbox')
+      fireEvent.pointerEnter(a.closest('label') as HTMLElement)
+      act(() => vi.advanceTimersByTime(TOOLTIP_DELAY_MS))
+      expect(screen.getByText('Unchecking a box flips it.')).toBeTruthy()
+    } finally {
+      vi.useRealTimers()
+    }
   })
 
   it('keeps a field with no row on a line of its own', () => {

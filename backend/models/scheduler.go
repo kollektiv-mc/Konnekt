@@ -119,8 +119,8 @@ type ConfigField struct {
 	// Row groups fields into one line: consecutive fields with the same Row are
 	// drawn side by side in equal columns. Empty means a line of its own.
 	Row string `json:"row,omitempty"`
-	// Hint is help drawn under the field's line, across its full width, for a
-	// field whose label cannot say what it does.
+	// Hint is the field's tooltip, one short line for a field whose label
+	// cannot say what it does. Never a line of text in the panel.
 	Hint string `json:"hint,omitempty"`
 }
 

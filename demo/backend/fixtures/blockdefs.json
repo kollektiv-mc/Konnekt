@@ -626,7 +626,7 @@
           ]
         },
         "row": "truth",
-        "hint": "A value is true when it is true or a number other than 0. Unchecking a box flips it, so unchecked A means NOT A."
+        "hint": "Unchecked flips the value, so unchecked A is NOT A."
       },
       {
         "key": "rightTrue",
@@ -643,7 +643,8 @@
             "nor"
           ]
         },
-        "row": "truth"
+        "row": "truth",
+        "hint": "Unchecked flips the value, so unchecked A is NOT A."
       }
     ],
     "source": "native"

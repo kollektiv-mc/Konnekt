@@ -1,6 +1,7 @@
 ---
 paths:
   - "frontend/src/**/*.tsx"
+  - "backend/services/scheduler_blocks*.go"
   - "website/**"
   - "docs/design/website/**"
 ---

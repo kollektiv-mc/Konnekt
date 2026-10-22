@@ -314,13 +314,13 @@ func TestConditionFieldsDeclareLayoutAndVisibility(t *testing.T) {
 			t.Errorf("%s: showWhen = %+v, want %+v", k, f.ShowWhen, wantWhen)
 		}
 	}
-	// One hint for the line, so it is drawn once under both boxes.
-	if fields["leftTrue"].Hint == "" || fields["rightTrue"].Hint != "" {
-		t.Errorf("hints %q and %q, want one on leftTrue only",
-			fields["leftTrue"].Hint, fields["rightTrue"].Hint)
-	}
-	if strings.ContainsAny(fields["leftTrue"].Hint, "\u2014\u2013") {
-		t.Errorf("hint %q has a dash", fields["leftTrue"].Hint)
+	// Each box's tooltip: one short sentence, held to the copy rules.
+	for _, k := range []string{"leftTrue", "rightTrue"} {
+		h := fields[k].Hint
+		if h == "" || len(h) > 60 || strings.Count(h, ".") != 1 ||
+			strings.ContainsAny(h, "\u2014\u2013") {
+			t.Errorf("%s: hint %q, want one sentence of at most 60 characters", k, h)
+		}
 	}
 }
 
