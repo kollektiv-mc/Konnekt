@@ -314,14 +314,6 @@ func TestConditionFieldsDeclareLayoutAndVisibility(t *testing.T) {
 			t.Errorf("%s: showWhen = %+v, want %+v", k, f.ShowWhen, wantWhen)
 		}
 	}
-	// Each box's tooltip: one short sentence, held to the copy rules.
-	for _, k := range []string{"leftTrue", "rightTrue"} {
-		h := fields[k].Hint
-		if h == "" || len(h) > 60 || strings.Count(h, ".") != 1 ||
-			strings.ContainsAny(h, "\u2014\u2013") {
-			t.Errorf("%s: hint %q, want one sentence of at most 60 characters", k, h)
-		}
-	}
 }
 
 func TestConditionDescriptionFollowsCopyRules(t *testing.T) {

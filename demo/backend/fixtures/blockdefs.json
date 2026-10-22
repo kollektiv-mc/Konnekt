@@ -625,8 +625,7 @@
             "nor"
           ]
         },
-        "row": "truth",
-        "hint": "Unchecked flips the value, so unchecked A is NOT A."
+        "row": "truth"
       },
       {
         "key": "rightTrue",
@@ -643,8 +642,7 @@
             "nor"
           ]
         },
-        "row": "truth",
-        "hint": "Unchecked flips the value, so unchecked A is NOT A."
+        "row": "truth"
       }
     ],
     "source": "native"

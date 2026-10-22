@@ -3,7 +3,6 @@ import type { Edge } from '@xyflow/react'
 import type { models } from '../../../../wailsjs/go/models'
 import type { NodeData } from './graphMapping'
 import { Combobox } from '../../../components/ui/Combobox'
-import { Tooltip } from '../../../components/ui/Tooltip'
 import { DestinationField } from './DestinationField'
 import { WIRED_BG_CLASS, WIRED_BORDER_CLASS, WIRED_TEXT_CLASS } from './blockMeta'
 
@@ -79,20 +78,18 @@ function FieldControl({ field, val, isWired, onChange }: FieldControlProps) {
   // An unwired bool is a checkbox named by its label, with no heading above it.
   if (field.type === 'bool' && !isWired) {
     return (
-      <Tooltip text={field.hint}>
-        <label className="flex min-w-0 items-center gap-2">
-          <input
-            type="checkbox"
-            checked={Boolean(val)}
-            onChange={(e) => onChange(field.key, e.target.checked)}
-            className="accent-accent"
-          />
-          <span className="text-text-muted font-mono text-xs">
-            {field.label}
-            {field.required && <span className="text-danger">*</span>}
-          </span>
-        </label>
-      </Tooltip>
+      <label className="flex min-w-0 items-center gap-2">
+        <input
+          type="checkbox"
+          checked={Boolean(val)}
+          onChange={(e) => onChange(field.key, e.target.checked)}
+          className="accent-accent"
+        />
+        <span className="text-text-muted font-mono text-xs">
+          {field.label}
+          {field.required && <span className="text-danger">*</span>}
+        </span>
+      </label>
     )
   }
 

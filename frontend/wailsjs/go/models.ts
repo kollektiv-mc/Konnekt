@@ -153,7 +153,6 @@ export namespace models {
 	    options?: FieldOption[];
 	    showWhen?: FieldWhen;
 	    row?: string;
-	    hint?: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new ConfigField(source);
@@ -169,7 +168,6 @@ export namespace models {
 	        this.options = this.convertValues(source["options"], FieldOption);
 	        this.showWhen = this.convertValues(source["showWhen"], FieldWhen);
 	        this.row = source["row"];
-	        this.hint = source["hint"];
 	    }
 	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {
