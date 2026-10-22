@@ -31,14 +31,27 @@ export function placeQuickAdd(pos: Point, panel: Size, viewport: Size): Placemen
     maxTop,
   )
 
-  const flyoutFitsRight = primaryLeft + panel.w * 2 <= viewport.w
   const flyoutLeft = clamp(
-    flyoutFitsRight ? primaryLeft + panel.w : primaryLeft - panel.w,
+    flyoutGoesRight(primaryLeft, panel.w, viewport.w)
+      ? primaryLeft + panel.w
+      : primaryLeft - panel.w,
     0,
     maxLeft,
   )
 
   return { primaryLeft, primaryTop, flyoutLeft }
+}
+
+// Which way the fly-outs open. The side is picked once, for both levels a
+// fly-out can reach (a category's list, then a group's panel), so a group never
+// has to jump back across the menu because the second level ran out of room
+// where the first had it. Every panel shares the primary's width. Only when
+// neither side has room for both levels does it fall back to the side with room
+// for one, and the group panel then finds its own place (placeGroupPanelLeft).
+function flyoutGoesRight(primaryLeft: number, width: number, viewportWidth: number): boolean {
+  if (primaryLeft + width * 3 <= viewportWidth) return true
+  if (primaryLeft - width * 2 >= 0) return false
+  return primaryLeft + width * 2 <= viewportWidth
 }
 
 // Where the fly-out's top edge goes: level with the category row the pointer is

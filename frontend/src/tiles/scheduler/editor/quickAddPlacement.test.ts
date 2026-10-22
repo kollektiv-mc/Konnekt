@@ -49,6 +49,23 @@ describe('placeQuickAdd', () => {
     expect(p.flyoutLeft).toBe(440)
   })
 
+  it('opens the fly-out left when only one level fits on the right', () => {
+    const p = placeQuickAdd({ x: 600, y: 50 }, panel, vp)
+    expect(p.flyoutLeft).toBe(440)
+    expect(placeGroupPanelLeft(p.primaryLeft, p.flyoutLeft, panel.w, vp.w)).toBe(280)
+  })
+
+  it('opens the fly-out right when only one level fits on the left', () => {
+    const p = placeQuickAdd({ x: 200, y: 50 }, panel, vp)
+    expect(p.flyoutLeft).toBe(360)
+    expect(placeGroupPanelLeft(p.primaryLeft, p.flyoutLeft, panel.w, vp.w)).toBe(520)
+  })
+
+  it('falls back to room for one level when neither side has two', () => {
+    const p = placeQuickAdd({ x: 200, y: 50 }, panel, { w: 600, h: 600 })
+    expect(p.flyoutLeft).toBe(360)
+  })
+
   it('rounds fractional cursor positions to whole pixels', () => {
     const p = placeQuickAdd({ x: 100.6, y: 50.4 }, panel, vp)
     expect(p.primaryLeft).toBe(101)
