@@ -165,18 +165,20 @@
     )
   }
 
-  // ── Merged pull requests, by title ─────────────────────────────────────
-  // The title is the only key a release body offers: release-notes.py writes
-  // each bullet as the pull request's title with its whitespace collapsed and
-  // nothing else, deliberately, so the notes are not a wall of attribution.
-  // Matching back on it is exact rather than fuzzy — measured against the live
-  // snapshot, all 54 of its bullets resolved to a pull request.
+  // ── Merged pull requests, by the line they wrote ──────────────────────
+  // A bullet is the only key a release body offers. release-notes.py writes
+  // one bullet per line of a pull request's `## Changelog` section, or, for a
+  // pull request without one, a single bullet of its title, each with its
+  // whitespace collapsed and nothing else, deliberately, so the notes are not
+  // a wall of attribution. Matching back on that text is exact rather than
+  // fuzzy: measured against the live snapshot, all 54 of its bullets resolved
+  // to a pull request.
   //
   // Paging costs requests, and the rest of this file draws on 60 an hour
   // unauthenticated, so the map is cached for an hour: a reader who reloads or
   // comes back spends nothing, and a first visit spends three. A browser with
   // storage blocked pays the requests every time and is otherwise unaffected.
-  var PULLS_KEY = 'konnekt:merged-pulls:v1'
+  var PULLS_KEY = 'konnekt:merged-pulls:v2'
   var PULLS_TTL_MS = 60 * 60 * 1000
   var PULLS_PER_PAGE = 100
   // A stop for a repo that has grown past what the short-page check would
@@ -188,60 +190,108 @@
     try {
       var entry = JSON.parse(window.localStorage.getItem(PULLS_KEY))
       if (!entry || Date.now() - entry.at > PULLS_TTL_MS) return null
-      return entry.byTitle || null
+      return entry.byLine || null
     } catch {
       return null // no storage, a quota error, or an entry from an older shape
     }
   }
 
-  function writePullCache(byTitle) {
+  function writePullCache(byLine) {
     try {
-      window.localStorage.setItem(PULLS_KEY, JSON.stringify({ at: Date.now(), byTitle: byTitle }))
+      window.localStorage.setItem(PULLS_KEY, JSON.stringify({ at: Date.now(), byLine: byLine }))
     } catch {
       /* The map is still good for this page load. */
     }
   }
 
+  // Backticks go too: a bullet's `code` renders as <code>, so the page reads
+  // the line back without them, while the body it came from still has them.
   function normalizeTitle(text) {
     return String(text || '')
+      .replace(/`/g, '')
       .split(/\s+/)
       .join(' ')
       .trim()
   }
 
-  // Resolves to a { title: { number, mergedAt } } map, and to whatever it had
+  // ── A pull request's Changelog section ─────────────────────────────────
+  // The text of each `- type: text` line under a `## Changelog` heading, as
+  // .github/scripts/changelog-section.py reads it: HTML comments removed
+  // first, so the template's example is not an entry, and the section ending
+  // at the next heading of its level or higher. A section with any line that
+  // is not an entry yields nothing, because the generator ignores such a
+  // section whole and files the pull request by its title instead.
+  var SECTION_HEADING = /^\s{0,3}(#{1,6})\s+(.*?)\s*#*\s*$/
+  var SECTION_ENTRY = /^\s*[-*+]\s+([A-Za-z]+)\s*:\s*(.*?)\s*$/
+  var SECTION_TYPES = ['feature', 'fix', 'bug', 'chore', 'docs', 'skip']
+  var SECTION_MAX = 200
+
+  function changelogLines(body) {
+    var text = String(body || '')
+      .replace(/<!--[\s\S]*?-->/g, function (comment) {
+        return comment.replace(/[^\n]/g, '')
+      })
+      .replace(/\r\n/g, '\n')
+    var level = 0
+    var found = []
+    var lines = text.split('\n')
+    for (var i = 0; i < lines.length; i++) {
+      var heading = SECTION_HEADING.exec(lines[i])
+      if (!level) {
+        if (heading && heading[2].trim().toLowerCase() === 'changelog') level = heading[1].length
+        continue
+      }
+      if (heading && heading[1].length <= level) break
+      if (!lines[i].trim()) continue
+      var entry = SECTION_ENTRY.exec(lines[i])
+      if (!entry) return []
+      var line = entry[2]
+        .split(/\s+/)
+        .join(' ')
+        .replace(/^[#> ]+/, '')
+      if (SECTION_TYPES.indexOf(entry[1].toLowerCase()) === -1) return []
+      if (!line || line.length > SECTION_MAX) return []
+      found.push(line)
+    }
+    return found
+  }
+
+  // Resolves to a { line: { number, mergedAt } } map, and to whatever it had
   // when something goes wrong: a partial map decorates the lines it can and
   // leaves the rest alone, which is the same thing an empty one does.
   function fetchMergedPulls() {
     var cached = readPullCache()
     if (cached) return Promise.resolve(cached)
 
-    var byTitle = {}
+    var byLine = {}
     function page(n) {
-      if (n > PULLS_MAX_PAGES) return Promise.resolve(byTitle)
+      if (n > PULLS_MAX_PAGES) return Promise.resolve(byLine)
       return fetch(API + '/pulls?state=closed&per_page=' + PULLS_PER_PAGE + '&page=' + n, {
         headers: { Accept: 'application/vnd.github+json' },
       })
         .then(function (res) {
-          if (!res.ok) return byTitle
+          if (!res.ok) return byLine
           return res.json().then(function (list) {
-            if (!Array.isArray(list) || !list.length) return byTitle
+            if (!Array.isArray(list) || !list.length) return byLine
             list.forEach(function (pull) {
               if (!pull.merged_at) return
-              var title = normalizeTitle(pull.title)
-              // The list comes back newest first, and first seen wins. Two
-              // merged pull requests sharing a title is rare enough that
-              // either is as defensible as the other.
-              if (title && !byTitle[title]) {
-                byTitle[title] = { number: pull.number, mergedAt: pull.merged_at }
-              }
+              var merged = { number: pull.number, mergedAt: pull.merged_at }
+              // The title too when there is a section: a section the
+              // generator could not use leaves the title as the bullet. The
+              // list comes back newest first, and first seen wins. Two merged
+              // pull requests sharing a line is rare enough that either is as
+              // defensible as the other.
+              ;[pull.title].concat(changelogLines(pull.body)).forEach(function (text) {
+                var key = normalizeTitle(text)
+                if (key && !byLine[key]) byLine[key] = merged
+              })
             })
             // A short page is the end of the list.
-            return list.length < PULLS_PER_PAGE ? byTitle : page(n + 1)
+            return list.length < PULLS_PER_PAGE ? byLine : page(n + 1)
           })
         })
         .catch(function () {
-          return byTitle
+          return byLine
         })
     }
 
@@ -329,6 +379,7 @@
     formatDate: formatDate,
     formatShortDate: formatShortDate,
     normalizeTitle: normalizeTitle,
+    changelogLines: changelogLines,
     shortSha: shortSha,
     fetchMergedPulls: fetchMergedPulls,
     pullUrl: function (number) {

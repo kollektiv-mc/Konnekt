@@ -92,7 +92,7 @@
   }
 
   // The accounting footer release-notes.py writes after the last section,
-  // which changesOnly cuts off: "52 pull requests are not listed: …".
+  // which changesOnly cuts off: "52 changes are not listed: …".
   var NOT_LISTED = /^_([^\n]*\bnot listed\b[^\n]*)_\s*$/im
   var GENERATED = /^##\s+What's changed\s*$/im
 
@@ -222,17 +222,18 @@
     errorEl.hidden = false
   }
 
-  // ── One line, one pull request ─────────────────────────────────────────
-  // Each bullet in a generated release body is a merged pull request's title,
-  // so a title that resolves against the map turns its whole line into a link
-  // to that pull request with the merge date after it. A line that resolves
-  // against nothing is left as it rendered: hand-written notes and a
-  // rate-limited fetch both land there, and an invented date would be worse
-  // than none.
+  // ── One line, its pull request ─────────────────────────────────────────
+  // Each bullet in a generated release body is a line of a merged pull
+  // request's Changelog section, or its title, so a bullet that resolves
+  // against the map turns its whole line into a link to that pull request
+  // with the merge date after it. Several lines can link the same one. A line
+  // that resolves against nothing is left as it rendered: hand-written notes
+  // and a rate-limited fetch both land there, and an invented date would be
+  // worse than none.
   function decorate(root, pulls) {
     if (!pulls) return
     ;[].slice.call(root.querySelectorAll('.changes-list li')).forEach(function (li) {
-      // A title carrying its own markdown link would nest anchors.
+      // A line carrying its own markdown link would nest anchors.
       if (li.querySelector('a')) return
       var pull = pulls[R.normalizeTitle(li.textContent)]
       if (!pull) return

@@ -150,6 +150,47 @@ check(
   "## What's changed\n\n* A thing",
 )
 
+// ── changelogLines ────────────────────────────────────────────────────────
+// The changelog page links each bullet back to its pull request by the text
+// of the bullet, and a pull request with a Changelog section is written as
+// one bullet per line of it. These mirror the cases in
+// .github/scripts/release-notes_test.py, so the page and the generator agree
+// about which lines a body has.
+const { changelogLines, normalizeTitle } = sandbox.window.KonnektRelease
+
+function lines(name, body, want) {
+  check(name, JSON.stringify(changelogLines(body)), JSON.stringify(want))
+}
+
+lines(
+  'one line per change',
+  '## Why\n\nSo.\n\n## Changelog\n\n- feature: Add a thing\n- fix: Make `x` opaque\n\n## How it was verified\n\n- feature: not this',
+  ['Add a thing', 'Make `x` opaque'],
+)
+lines('no section', '## Why\n\n- feature: not a section', [])
+lines('an empty body', null, [])
+lines(
+  "the template's commented example",
+  '## Changelog\n\n<!--\n- feature: Add servers from a plus\n-->\n\n## How it was verified',
+  [],
+)
+lines('a malformed line voids the section', '## Changelog\n\n- feature: Fine\n- Not an entry', [])
+lines('an unknown type voids the section', '## Changelog\n\n- feature: Fine\n- tweak: No', [])
+lines('a deeper heading is part of the section', '## Changelog\n\n- fix: One\n### Notes\n', [])
+lines('bug is accepted beside fix', '## Changelog\n\n* Bug:  Two   spaces', ['Two spaces'])
+lines('runs to the end of the body', '# Changelog\r\n- docs: Last', ['Last'])
+
+// A bullet reads back without its backticks once rendered, so the key drops
+// them on both sides.
+check('backticks are not part of the key', normalizeTitle('Make `x`  opaque'), 'Make x opaque')
+
+// The footer counts changes now that one pull request can carry several.
+check(
+  'footer counted in changes',
+  changesOnly("## What's changed\n\n### Fixes\n* One thing\n\n_3 changes are not listed: 3 maintenance or documentation._"),
+  "## What's changed\n\n### Fixes\n* One thing",
+)
+
 // ── searchIssues ──────────────────────────────────────────────────────────
 // The roadmap's done marks come from this list. It read one page of 100 while
 // the repo held 246 issues, so a row whose issue fell off that page lost its
