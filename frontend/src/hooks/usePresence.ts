@@ -14,11 +14,20 @@ function reducedMotion(): boolean {
   return window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false
 }
 
+// A CSS time in milliseconds. The built stylesheet is minified, which writes
+// the token's 280ms as .28s, so the unit has to be read rather than assumed:
+// parsing it as milliseconds cut every exit to the slack alone.
+export function cssTimeMs(value: string): number {
+  const n = parseFloat(value)
+  if (!Number.isFinite(n) || n <= 0) return NaN
+  return value.trim().endsWith('ms') ? n : n * 1000
+}
+
 function exitMs(): number {
-  const ms = parseFloat(
+  const ms = cssTimeMs(
     getComputedStyle(document.documentElement).getPropertyValue('--duration-panel'),
   )
-  return (Number.isFinite(ms) && ms > 0 ? ms : FALLBACK_MS) + SLACK_MS
+  return (Number.isFinite(ms) ? ms : FALLBACK_MS) + SLACK_MS
 }
 
 /**
