@@ -60,6 +60,10 @@ and blur ([Streamline on 16 px icons](https://design.streamlinehq.com/16x16-icon
 | 24 | 17 to 24 px | Orbit 2.7, gap 1.5, no node |
 | 16 | 16 px and below | Its own 16 grid, orbit 1.4, gap 0.9, no node; the block's three vertical edges sit on whole pixels (x = 3, 8 and 13), so it stays sharp in a tab |
 
+Sizes are device pixels. A mark laid out at 24 px on a 2× screen is drawn at
+48, so it takes the full cut: the website's nav and footer choose between
+`mark-24` and the full mark with a `<picture>` on `min-resolution: 2dppx`.
+
 <img src="mark-16-on-dark.svg" width="16" alt="16 px"> <img src="mark-24-on-dark.svg" width="24" alt="24 px"> <img src="mark-on-dark.svg" width="32" alt="32 px"> <img src="mark-on-dark.svg" width="64" alt="64 px"> <img src="mark-on-dark.svg" width="128" alt="128 px">
 
 ## Colour
@@ -109,5 +113,5 @@ uses it, since `accent` has no light value today.
 2. **Favicon.** Done. `website/assets/img/favicon-16.png` is `app-icon-16.svg`,
    `favicon-32.png` and `favicon.png` (256) are `app-icon.svg`, and every page
    links all three by size.
-3. **Website and app header.** Not done. Use the lockup in place of the text-only wordmark.
+3. **Website and app header.** The website's nav and footer show the mark beside the wordmark, as above. The app header is not done: use the lockup in place of the text-only wordmark.
 4. **Token.** Not done. Add the light-ground `#15803d` to kollektiv before step 3 needs it.

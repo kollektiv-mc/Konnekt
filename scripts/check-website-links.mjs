@@ -113,6 +113,14 @@ for (const page of pages) {
     checkRef(value, page, attr)
   }
 
+  // A srcset lists candidates, each a URL with an optional descriptor.
+  for (const [, value] of body.matchAll(/\bsrcset="([^"]*)"/g)) {
+    for (const candidate of value.split(',')) {
+      refCount++
+      checkRef(candidate.trim().split(/\s+/)[0], page, 'srcset')
+    }
+  }
+
   // Two-pass, so attribute order inside the tag does not matter.
   for (const [tag] of body.matchAll(/<meta\b[^>]*>/g)) {
     const key = (tag.match(/\b(?:property|name)="([^"]+)"/) || [])[1]
