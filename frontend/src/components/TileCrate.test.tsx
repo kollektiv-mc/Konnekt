@@ -58,3 +58,24 @@ describe('TileCrate sections', () => {
     }
   })
 })
+
+// A row still in the crate shows a handle; a row whose tile is out on the
+// canvas is an empty slot and shows none.
+describe('TileCrate handle', () => {
+  beforeEach(() => {
+    useSettingsStore.setState((s) => ({
+      settings: { ...s.settings, navClosedSections: {}, crateOrder: [] },
+    }))
+  })
+
+  it('marks only the rows whose tile is still in the crate', () => {
+    const [placed, stashed] = TILE_REGISTRY
+    useTileStore.setState({ activeTileIds: [placed.id] })
+
+    render(<TileCrate />)
+
+    const row = (label: string) => screen.getByText(label).closest('button')!
+    expect(row(placed.label).querySelector('[data-testid="crate-handle"]')).toBeNull()
+    expect(row(stashed.label).querySelector('[data-testid="crate-handle"]')).not.toBeNull()
+  })
+})
