@@ -78,7 +78,7 @@ export function NodePanel({ node, def, edges, tab, onTab, onChange, getGraph, on
               <button
                 key={t}
                 onClick={() => onTab(t)}
-                className={`flex-1 cursor-pointer border-b py-1.5 font-mono text-xs ${
+                className={`flex-1 border-b py-1.5 font-mono text-xs ${
                   tab === t
                     ? 'bg-surface text-text-primary border-accent'
                     : 'text-text-faint border-transparent bg-transparent'

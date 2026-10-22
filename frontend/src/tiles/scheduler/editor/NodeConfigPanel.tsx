@@ -92,7 +92,7 @@ export function NodeConfigPanel({ nodeId, data, def, edges, onChange }: Props) {
                 ← data edge
               </div>
             ) : field.type === 'bool' ? (
-              <label className="flex cursor-pointer items-center gap-2">
+              <label className="flex items-center gap-2">
                 <input
                   type="checkbox"
                   checked={Boolean(val)}

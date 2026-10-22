@@ -156,7 +156,7 @@ export function QuickAddMenu({ blockDefs, screenPos, onPick, onClose, leaving = 
         key={def.id}
         title={def.description}
         onClick={() => onPick(def)}
-        className="text-text-primary text-1xs cursor-pointer border-l-2 border-l-transparent px-3 py-[5px] font-mono select-none"
+        className="text-text-primary text-1xs border-l-2 border-l-transparent px-3 py-[5px] font-mono select-none"
         onMouseEnter={(e) => {
           const el = e.currentTarget as HTMLDivElement
           el.style.borderLeftColor = activeColor
@@ -224,7 +224,7 @@ export function QuickAddMenu({ blockDefs, screenPos, onPick, onClose, leaving = 
                     title={def.description}
                     onClick={() => onPick(def)}
                     onMouseEnter={() => setHighlightIdx(i)}
-                    className={`text-text-primary text-1xs flex cursor-pointer items-center gap-1.5 border-l-2 px-3 py-1 font-mono select-none ${
+                    className={`text-text-primary text-1xs flex items-center gap-1.5 border-l-2 px-3 py-1 font-mono select-none ${
                       isHilit ? `bg-hover ${borderClass}` : 'border-l-transparent bg-transparent'
                     }`}
                   >

@@ -49,7 +49,7 @@ export function BlockPalette({ blockDefs, onAdd }: Props) {
         onClick={() => onAdd(def)}
         onDragStart={(e) => e.dataTransfer.setData('blockType', def.id)}
         title={def.description}
-        className={`bg-surface border-border-subtle text-text-primary border-hairline text-1xs mb-0.5 cursor-pointer rounded px-2 py-1 font-mono select-none ${indented ? 'ml-3' : ''}`}
+        className={`bg-surface border-border-subtle text-text-primary border-hairline text-1xs mb-0.5 rounded px-2 py-1 font-mono select-none ${indented ? 'ml-3' : ''}`}
         onMouseEnter={(e) => ((e.currentTarget as HTMLDivElement).style.borderColor = color)}
         onMouseLeave={(e) =>
           ((e.currentTarget as HTMLDivElement).style.borderColor = 'var(--border-subtle)')
@@ -93,7 +93,7 @@ export function BlockPalette({ blockDefs, onAdd }: Props) {
             return (
               <div key={cat} className="mb-3">
                 <div
-                  className={`mb-1 flex cursor-pointer items-center gap-1 font-mono text-xs uppercase select-none ${textClass}`}
+                  className={`mb-1 flex items-center gap-1 font-mono text-xs uppercase select-none ${textClass}`}
                   onClick={() => toggleCategory(cat)}
                 >
                   <span className="text-3xs">{isClosed ? '▸' : '▾'}</span>
@@ -115,7 +115,7 @@ export function BlockPalette({ blockDefs, onAdd }: Props) {
                           type="button"
                           aria-expanded={isOpen}
                           onClick={() => toggleGroup(key)}
-                          className="text-text-secondary border-border-subtle hover:bg-hover border-hairline text-1xs mb-0.5 flex w-full cursor-pointer items-center gap-1 rounded border-dashed bg-transparent px-2 py-1 text-left font-mono transition-colors select-none"
+                          className="text-text-secondary border-border-subtle hover:bg-hover border-hairline text-1xs mb-0.5 flex w-full items-center gap-1 rounded border-dashed bg-transparent px-2 py-1 text-left font-mono transition-colors select-none"
                         >
                           <span className="text-3xs">{isOpen ? '▾' : '▸'}</span>
                           <span className="min-w-0 flex-1 truncate">{entry.name}</span>
@@ -134,7 +134,7 @@ export function BlockPalette({ blockDefs, onAdd }: Props) {
         onClick={toggleCollapsed}
         title={collapsed ? 'Expand blocks' : 'Collapse blocks'}
         aria-label={collapsed ? 'Expand blocks' : 'Collapse blocks'}
-        className="hover:bg-hover text-text-faint text-1xs flex w-5 shrink-0 cursor-pointer items-center justify-center font-mono transition-colors select-none"
+        className="hover:bg-hover text-text-faint text-1xs flex w-5 shrink-0 items-center justify-center font-mono transition-colors select-none"
       >
         {collapsed ? '›' : '‹'}
       </button>
