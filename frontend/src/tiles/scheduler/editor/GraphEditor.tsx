@@ -30,6 +30,8 @@ import { AnimatedEdge } from './AnimatedEdge'
 import { BlockPalette, PaletteToggle } from './BlockPalette'
 import { GRID_DOT_OFFSET, GRID_DOT_SIZE, GRID_GAP, SNAP_GRID } from './canvasGrid'
 import { NodePanel } from './NodePanel'
+import { NodeMenuHost } from './NodeMenuHost'
+import type { NodeMenuRequest } from './NodeMenuHost'
 import { QuickAddHost } from './QuickAddHost'
 import type { QuickAddRequest } from './QuickAddHost'
 import { Toolbar } from './Toolbar'
@@ -60,6 +62,7 @@ import {
   type ClipboardSlice,
 } from './clipboard'
 import { CloseConfirmDialog } from './CloseConfirmDialog'
+import { editMenuRows, editMenuState, type EditMenuActions } from './editMenuRows'
 import { applySelection, type SelectionSpec } from './selection'
 import { useDirtyGuard } from './useDirtyGuard'
 import { useNodeGlow } from './useNodeGlow'
@@ -257,6 +260,9 @@ function GraphEditorInner({
   const edgesRef = useRef<FlowEdge[]>([])
 
   const [quickAdd, setQuickAdd] = useState<QuickAddRequest | null>(null)
+  // The edit menu a right-click on a block opens (#181). It and quick-add are
+  // never open together: each opening clears the other.
+  const [nodeMenu, setNodeMenu] = useState<NodeMenuRequest | null>(null)
   const canvasWrapperRef = useRef<HTMLDivElement>(null)
   useNodeGlow(canvasWrapperRef)
   const mousePos = useRef<{ x: number; y: number }>({ x: 0, y: 0 })
@@ -447,19 +453,39 @@ function GraphEditorInner({
     }
   }, [])
 
-  // ── Right-click on canvas → open quick-add ───────────────────────────────
-  // Capture-phase native listener fires before WebView2 can show its native menu.
+  // ── Right-click on canvas ─────────────────────────────────────────────────
+  // A block opens the edit menu on the selection; the empty canvas (and an edge,
+  // as before) opens quick-add. Capture-phase native listener fires before
+  // WebView2 can show its native menu.
   useEffect(() => {
     const el = canvasWrapperRef.current
     if (!el) return
     const handler = (e: MouseEvent) => {
       e.preventDefault()
-      const flow = screenToFlowPosition({ x: e.clientX, y: e.clientY })
-      setQuickAdd({ screen: { x: e.clientX, y: e.clientY }, flow })
+      const screen = { x: e.clientX, y: e.clientY }
+      const flow = screenToFlowPosition(screen)
+      const hit = e.target instanceof Element ? e.target.closest('.react-flow__node') : null
+      const id = hit?.getAttribute('data-id') ?? null
+      if (id === null || !nodesRef.current.some((n) => n.id === id)) {
+        setNodeMenu(null)
+        setQuickAdd({ screen, flow })
+        return
+      }
+      // A block outside the selection becomes the selection, alone; one inside
+      // it leaves the selection as it is, so the menu acts on all of it.
+      if (!nodesRef.current.find((n) => n.id === id)?.selected) {
+        setNodes((ns) =>
+          ns.map((n) => (!!n.selected === (n.id === id) ? n : { ...n, selected: n.id === id })),
+        )
+        setEdges((es) => es.map((x) => (x.selected ? { ...x, selected: false } : x)))
+        setSelectedNodeId(id)
+      }
+      setQuickAdd(null)
+      setNodeMenu({ screen, flow })
     }
     el.addEventListener('contextmenu', handler, true)
     return () => el.removeEventListener('contextmenu', handler, true)
-  }, [screenToFlowPosition])
+  }, [screenToFlowPosition, setNodes, setEdges])
 
   // ── Tab key → open quick-add at cursor position ──────────────────────────
   useEffect(() => {
@@ -470,6 +496,7 @@ function GraphEditorInner({
       e.preventDefault()
       const { x: sx, y: sy } = mousePos.current
       const flow = screenToFlowPosition({ x: sx, y: sy })
+      setNodeMenu(null)
       setQuickAdd({ screen: { x: sx, y: sy }, flow })
     }
     window.addEventListener('keydown', onKeyDown)
@@ -618,11 +645,13 @@ function GraphEditorInner({
   const onNodeClick = useCallback((_: React.MouseEvent, node: FlowNode) => {
     setSelectedNodeId(node.id)
     setQuickAdd(null)
+    setNodeMenu(null)
   }, [])
 
   const onPaneClick = useCallback(() => {
     setSelectedNodeId(null)
     setQuickAdd(null)
+    setNodeMenu(null)
   }, [])
 
   // ── Config editing ────────────────────────────────────────────────────────
@@ -822,11 +851,14 @@ function GraphEditorInner({
     return true
   }, [copySelected, handleDeleteSelected])
 
+  // `at` is a flow point to land on, for a menu that opened where the user
+  // pointed: the pointer has moved off the canvas by the time a row is picked,
+  // so the spot is the one the menu was opened at, not the pointer's now.
   const pasteClipboard = useCallback(
-    (followCursor = false): boolean => {
+    (followCursor = false, at: { x: number; y: number } | null = null): boolean => {
       const slice = readClipboard()
       if (!slice) return false
-      const anchor = canvasAnchor(followCursor)
+      const anchor = at ?? canvasAnchor(followCursor)
       placeSlice(slice, pasteDelta(slice, anchor, pasteStep(anchor)))
       return true
     },
@@ -1067,6 +1099,7 @@ function GraphEditorInner({
   const addButtonRef = useRef<HTMLButtonElement>(null)
   const openAddMenu = useCallback(
     (at: { x: number; y: number }) => {
+      setNodeMenu(null)
       setQuickAdd((cur) =>
         cur ? null : { screen: at, flow: canvasAnchor(false) ?? screenToFlowPosition(at) },
       )
@@ -1082,6 +1115,30 @@ function GraphEditorInner({
       setEdges((es) => applySelection([], es, spec).edges)
     },
     [setNodes, setEdges],
+  )
+
+  // The Edit menu's actions, shared by the toolbar's menu and the node's
+  // right-click menu; the latter swaps in a paste that lands where it opened.
+  const editActions: EditMenuActions = {
+    undo: doUndo,
+    redo: doRedo,
+    cut: cutSelected,
+    copy: copySelected,
+    duplicate: duplicateSelected,
+    paste: () => pasteClipboard(false),
+    deleteSelected: handleDeleteSelected,
+    select: selectNodes,
+  }
+  const nodeMenuAt = nodeMenu?.flow ?? null
+  const nodeMenuRows = editMenuRows(
+    editMenuState({
+      nodes,
+      edges,
+      defMap,
+      canUndo: canUndo(history),
+      canRedo: canRedo(history),
+    }),
+    { ...editActions, paste: () => pasteClipboard(false, nodeMenuAt) },
   )
 
   // Save as copy: the canvas as it is now goes to a new graph (a blank id is
@@ -1142,16 +1199,7 @@ function GraphEditorInner({
           }}
           addOpen={quickAdd !== null}
           addButtonRef={addButtonRef}
-          edit={{
-            undo: doUndo,
-            redo: doRedo,
-            cut: cutSelected,
-            copy: copySelected,
-            duplicate: duplicateSelected,
-            paste: () => pasteClipboard(false),
-            deleteSelected: handleDeleteSelected,
-            select: selectNodes,
-          }}
+          edit={editActions}
           onToggleEnabled={handleToggleEnabled}
           onRun={requestRun}
           onSave={handleSave}
@@ -1243,6 +1291,8 @@ function GraphEditorInner({
           </div>
         </div>
       </div>
+
+      <NodeMenuHost request={nodeMenu} rows={nodeMenuRows} onClose={() => setNodeMenu(null)} />
 
       <QuickAddHost
         request={quickAdd}

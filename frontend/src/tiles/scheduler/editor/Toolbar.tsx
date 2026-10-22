@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react'
+import { useRef, useState } from 'react'
 import type { ReactNode, RefObject } from 'react'
 import type { Edge as FlowEdge } from '@xyflow/react'
 import { Popover } from '../../../components/ui/Popover'
@@ -7,14 +7,12 @@ import { Check, Ellipsis, Plus, TriangleAlert } from '../../../lib/icons'
 import { usePresence } from '../../../hooks/usePresence'
 import type { models } from '../../../../wailsjs/go/models'
 import { NO_GRAPH_KEYS } from './blockMeta'
-import { hasClipboard } from './clipboard'
 import { EditMenuRows } from './EditMenu'
-import { editMenuRows, type EditMenuActions } from './editMenuRows'
+import { editMenuRows, editMenuState, type EditMenuActions } from './editMenuRows'
 import { shortGraphId } from './graphId'
 import type { BlockFlowNode } from './graphMapping'
 import { MenuDivider, MenuRow } from './MenuRow'
 import type { RunStatus } from './runStatus'
-import { typesPresent } from './selection'
 
 /** The View menu's choices. The editor owns the preference; the bar only flips it. */
 export interface ViewOptions {
@@ -206,27 +204,9 @@ export function Toolbar({
     closeMenu('overflow')
   }
 
-  const selectedNodes = nodes.filter((n) => n.selected).length
-  const selectedCount = selectedNodes + edges.filter((e) => e.selected).length
-
-  const types = useMemo(
-    () => typesPresent(nodes, (bt) => defMap.get(bt)?.label ?? bt),
-    [nodes, defMap],
-  )
   // The clipboard is module state, not React state, so nothing re-renders the
   // bar when a copy lands. Opening the menu does, which is when this is read.
-  const rows = editMenuRows(
-    {
-      canUndo,
-      canRedo,
-      canPaste: hasClipboard(),
-      hasNodeSelection: selectedNodes > 0,
-      deleteCount: selectedCount,
-      hasNodes: nodes.length > 0,
-      types,
-    },
-    edit,
-  )
+  const rows = editMenuRows(editMenuState({ nodes, edges, defMap, canUndo, canRedo }), edit)
 
   const graphLabel =
     graphId === null && graphs.length === 0 ? '— no graphs —' : graphName || 'Untitled'
