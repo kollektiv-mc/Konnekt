@@ -28,11 +28,16 @@ const (
 	dhSnapshotTimeoutSeconds = 3 * 60 * 60
 )
 
+// dhBlockGroup is the palette and quick-add group both Distant Horizons blocks
+// share, so DH Snapshot and Publish DH Snapshot sit under one row rather than
+// loose among the generic actions.
+const dhBlockGroup = "Distant Horizons"
+
 // registerDHSnapshotBlock registers action.dhSnapshot. It lives beside
 // registerBuiltins rather than in it, like registerUploadBlock.
 func registerDHSnapshotBlock(r *BlockRegistry) {
 	must(r.RegisterBlock(models.BlockDef{
-		ID: dhSnapshotBlockID, Category: "action", Label: "DH Snapshot",
+		ID: dhSnapshotBlockID, Category: "action", Group: dhBlockGroup, Label: "DH Snapshot",
 		Description: "Stops the server to copy its Distant Horizons data into a staged snapshot, then starts it again. " +
 			"Players are warned first, over RCON or the console. A server that is already stopped is copied as it is " +
 			"and left stopped. Only the parts that changed since the last snapshot " +

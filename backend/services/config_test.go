@@ -285,7 +285,7 @@ func TestAppSettingsCollectionsNeverMarshalAsNull(t *testing.T) {
 		{name: "file lacking the keys", file: `{"theme":"light"}`},
 		{
 			name: "keys set to null",
-			file: `{"crateOrder":null,"schedulerPaletteClosedCategories":null,"navClosedSections":null,"toastsOff":null}`,
+			file: `{"crateOrder":null,"schedulerPaletteClosedCategories":null,"schedulerPaletteOpenGroups":null,"navClosedSections":null,"toastsOff":null}`,
 		},
 	}
 	for _, tt := range tests {
@@ -314,6 +314,9 @@ func TestAppSettingsCollectionsNeverMarshalAsNull(t *testing.T) {
 			}
 			if raw := string(wire["schedulerPaletteClosedCategories"]); raw != "{}" {
 				t.Errorf("schedulerPaletteClosedCategories = %s, want {}", raw)
+			}
+			if raw := string(wire["schedulerPaletteOpenGroups"]); raw != "{}" {
+				t.Errorf("schedulerPaletteOpenGroups = %s, want {}", raw)
 			}
 			// A null here must fall back to the first-run shape, not to an
 			// empty map that would open the two sections that start closed.

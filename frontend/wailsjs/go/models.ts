@@ -18,6 +18,7 @@ export namespace models {
 	    toastsOff: Record<string, boolean>;
 	    schedulerPaletteCollapsed: boolean;
 	    schedulerPaletteClosedCategories: Record<string, boolean>;
+	    schedulerPaletteOpenGroups: Record<string, boolean>;
 	    consoleQuickCommandsCollapsed: boolean;
 	    classicTileFaces: boolean;
 	    navClosedSections: Record<string, boolean>;
@@ -52,6 +53,7 @@ export namespace models {
 	        this.toastsOff = source["toastsOff"];
 	        this.schedulerPaletteCollapsed = source["schedulerPaletteCollapsed"];
 	        this.schedulerPaletteClosedCategories = source["schedulerPaletteClosedCategories"];
+	        this.schedulerPaletteOpenGroups = source["schedulerPaletteOpenGroups"];
 	        this.consoleQuickCommandsCollapsed = source["consoleQuickCommandsCollapsed"];
 	        this.classicTileFaces = source["classicTileFaces"];
 	        this.navClosedSections = source["navClosedSections"];
@@ -193,6 +195,7 @@ export namespace models {
 	    configSchema: ConfigField[];
 	    source: string;
 	    primitive?: string;
+	    group?: string;
 	    timeoutSeconds?: number;
 	    effects?: string[];
 	
@@ -214,6 +217,7 @@ export namespace models {
 	        this.configSchema = this.convertValues(source["configSchema"], ConfigField);
 	        this.source = source["source"];
 	        this.primitive = source["primitive"];
+	        this.group = source["group"];
 	        this.timeoutSeconds = source["timeoutSeconds"];
 	        this.effects = source["effects"];
 	    }

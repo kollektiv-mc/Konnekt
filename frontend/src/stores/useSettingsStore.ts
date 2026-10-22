@@ -29,6 +29,7 @@ const DEFAULTS: AppSettings = {
   toastsOff: {},
   schedulerPaletteCollapsed: true,
   schedulerPaletteClosedCategories: {},
+  schedulerPaletteOpenGroups: {},
   consoleQuickCommandsCollapsed: false,
   classicTileFaces: false,
   // Servers and Tiles open, Widgets and Layouts closed: the two a first run
@@ -112,6 +113,7 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
         updateChannel,
         webviewGpu,
         schedulerPaletteClosedCategories: s.schedulerPaletteClosedCategories ?? {},
+        schedulerPaletteOpenGroups: s.schedulerPaletteOpenGroups ?? {},
         navClosedSections: s.navClosedSections ?? DEFAULTS.navClosedSections,
         toastsOff: s.toastsOff ?? DEFAULTS.toastsOff,
         // null for a settings file that predates the field, and for one whose

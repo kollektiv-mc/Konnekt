@@ -57,6 +57,25 @@ export function placeFlyoutTop(
   return clamp(Math.round(primaryTop + rowOffset), 0, Math.max(0, viewportHeight - flyoutHeight))
 }
 
+// Where a group's own panel goes, beside the fly-out it opened from. It keeps
+// going the way the fly-out went (right of a right-hand fly-out, left of a
+// left-hand one); when that side has no room it takes the far side of the
+// primary panel instead, which is free whichever way the fly-out went, so it
+// never lands on top of the panel the pointer came from.
+export function placeGroupPanelLeft(
+  primaryLeft: number,
+  flyoutLeft: number,
+  panelWidth: number,
+  viewportWidth: number,
+): number {
+  const maxLeft = Math.max(0, viewportWidth - panelWidth)
+  const goesRight = flyoutLeft >= primaryLeft
+  const onward = goesRight ? flyoutLeft + panelWidth : flyoutLeft - panelWidth
+  if (onward >= 0 && onward <= maxLeft) return onward
+  const farSide = goesRight ? primaryLeft - panelWidth : primaryLeft + panelWidth
+  return clamp(farSide, 0, maxLeft)
+}
+
 function clamp(n: number, lo: number, hi: number): number {
   return Math.min(Math.max(n, lo), hi)
 }

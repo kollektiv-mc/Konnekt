@@ -60,6 +60,8 @@ export interface AppSettings {
   toastsOff: Record<string, boolean>
   schedulerPaletteCollapsed: boolean
   schedulerPaletteClosedCategories: Record<string, boolean>
+  /** Palette block groups expanded, keyed `category/group`. A missing key is closed. Never null. */
+  schedulerPaletteOpenGroups: Record<string, boolean>
   consoleQuickCommandsCollapsed: boolean
   classicTileFaces: boolean
   navClosedSections: Record<string, boolean>

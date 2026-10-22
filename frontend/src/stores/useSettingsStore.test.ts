@@ -34,6 +34,7 @@ const DEFAULTS = {
   toastsOff: {} as Record<string, boolean>,
   schedulerPaletteCollapsed: true,
   schedulerPaletteClosedCategories: {},
+  schedulerPaletteOpenGroups: {},
   consoleQuickCommandsCollapsed: false,
   classicTileFaces: false,
   navClosedSections: { widgets: true, layouts: true } as Record<string, boolean>,
@@ -166,6 +167,17 @@ describe('useSettingsStore', () => {
     })
     await useSettingsStore.getState().load()
     expect(useSettingsStore.getState().settings.toastsOff).toEqual({})
+  })
+
+  // A settings file from before block groups has no key, so the palette indexes
+  // a map that is not there unless load supplies one.
+  it('reads a null schedulerPaletteOpenGroups as every group closed', async () => {
+    vi.mocked(App.GetAppSettings).mockResolvedValue({
+      ...DEFAULTS,
+      schedulerPaletteOpenGroups: null as unknown as Record<string, boolean>,
+    })
+    await useSettingsStore.getState().load()
+    expect(useSettingsStore.getState().settings.schedulerPaletteOpenGroups).toEqual({})
   })
 
   describe('fonts', () => {

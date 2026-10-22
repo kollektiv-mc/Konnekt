@@ -34,7 +34,7 @@ const (
 // registerBuiltins rather than in it, like registerDHSnapshotBlock.
 func registerDHPublishBlock(r *BlockRegistry) {
 	must(r.RegisterBlock(models.BlockDef{
-		ID: dhPublishBlockID, Category: "action", Label: "Publish DH Snapshot",
+		ID: dhPublishBlockID, Category: "action", Group: dhBlockGroup, Label: "Publish DH Snapshot",
 		Description: "Uploads a staged Distant Horizons snapshot to a saved bucket destination, builds each level's whole " +
 			"database in the bucket from the uploaded parts, and writes the download page. latest.json is written last, " +
 			"so a reader never sees a snapshot whose files are missing. Afterwards it keeps the newest snapshots and deletes the " +

@@ -226,6 +226,7 @@ func (s *ConfigService) GetAppSettings() (models.AppSettings, error) {
 		ToastsOff:                        map[string]bool{},
 		SchedulerPaletteCollapsed:        true,
 		SchedulerPaletteClosedCategories: map[string]bool{},
+		SchedulerPaletteOpenGroups:       map[string]bool{},
 		NavClosedSections:                map[string]bool{"widgets": true, "layouts": true},
 		CheckUpdatesOnStartup:            true,
 		UpdateChannel:                    UpdateChannelStable,
@@ -253,6 +254,9 @@ func (s *ConfigService) GetAppSettings() (models.AppSettings, error) {
 	}
 	if settings.SchedulerPaletteClosedCategories == nil {
 		settings.SchedulerPaletteClosedCategories = defaults.SchedulerPaletteClosedCategories
+	}
+	if settings.SchedulerPaletteOpenGroups == nil {
+		settings.SchedulerPaletteOpenGroups = defaults.SchedulerPaletteOpenGroups
 	}
 	if settings.NavClosedSections == nil {
 		settings.NavClosedSections = defaults.NavClosedSections

@@ -33,6 +33,12 @@ type AppSettings struct {
 	SchedulerPaletteCollapsed        bool            `json:"schedulerPaletteCollapsed"`
 	SchedulerPaletteClosedCategories map[string]bool `json:"schedulerPaletteClosedCategories"`
 
+	// SchedulerPaletteOpenGroups marks which block groups the palette has
+	// expanded, keyed "category/group" ("action/Distant Horizons"). The opposite
+	// polarity to the closed categories: a group starts collapsed, so a key that
+	// is not there is closed and a group added later needs no migration.
+	SchedulerPaletteOpenGroups map[string]bool `json:"schedulerPaletteOpenGroups"`
+
 	ConsoleQuickCommandsCollapsed bool `json:"consoleQuickCommandsCollapsed"`
 
 	// ClassicTileFaces shows the compact tile faces from before the
