@@ -12,7 +12,6 @@ import { ServerInstallModal } from './components/ServerInstallModal'
 import { LoaderUpdateDialog } from './components/ServerManager/LoaderUpdateDialog'
 import { DisconnectConfirm } from './components/DisconnectConfirm'
 import { EulaModal } from './components/EulaModal'
-import { SettingsModal } from './components/SettingsModal'
 import type { SettingsSection } from './components/SettingsModal'
 import { useInstallStore } from './stores/useInstallStore'
 import { useLoaderStore } from './stores/useLoaderStore'
@@ -24,7 +23,6 @@ import { emitNotification } from './lib/notify'
 import { failedRunToast, showToast } from './lib/toast'
 import type { RunFinished } from './lib/toast'
 import { useNotificationsStore } from './stores/useNotificationsStore'
-import { prefetchHeavyChunks } from './lib/prefetch'
 import { useUpdateCheck } from './hooks/useUpdateCheck'
 import { useServerStatusSync } from './hooks/useServerStatus'
 import { useConsoleSync } from './hooks/useConsoleSync'
@@ -59,6 +57,11 @@ function titled(title: string, serverID?: string): string {
 // and the entry chunk has a budget. The store that holds them is eager, so a
 // bubble raised before the chunk arrives is drawn when it does.
 const Toasts = lazy(() => import('./components/Toasts').then((m) => ({ default: m.Toasts })))
+// Fetched with the first open: the entry chunk has a budget, and Settings is
+// the largest dialog nothing needs before the user asks for it.
+const SettingsModal = lazy(() =>
+  import('./components/SettingsModal').then((m) => ({ default: m.SettingsModal })),
+)
 const RemoteBanner = lazy(() =>
   import('./components/RemoteChrome').then((m) => ({ default: m.RemoteBanner })),
 )
@@ -80,6 +83,10 @@ function App() {
   // always the selected one: a schedule can start another server (#236).
   const [eulaFor, setEulaFor] = useState<string | null>(null)
   const [settingsOpen, setSettingsOpen] = useState(false)
+  // Kept mounted from the first open, so closing runs the exit animation
+  // rather than unmounting the dialog mid-frame.
+  const [settingsLayer, setSettingsLayer] = useState(false)
+  if (settingsOpen && !settingsLayer) setSettingsLayer(true)
   // The section Settings opens on, set by the title bar's Remote chip and
   // cleared by the gear, so the gear opens Settings on its own default.
   const [settingsSection, setSettingsSection] = useState<SettingsSection | undefined>(undefined)
@@ -102,12 +109,6 @@ function App() {
 
   useEffect(() => {
     useSettingsStore.getState().load()
-  }, [])
-
-  // Warm the heavy lazy-loaded tile chunks (worlds scene, charts) during
-  // idle time so the first tile open doesn't stutter on a cold fetch+eval.
-  useEffect(() => {
-    prefetchHeavyChunks()
   }, [])
 
   useUpdateCheck(settingsLoaded && checkUpdatesOnStartup)
@@ -741,11 +742,15 @@ function App() {
 
       {eulaFor !== null && <EulaModal serverId={eulaFor} onClose={() => setEulaFor(null)} />}
 
-      <SettingsModal
-        open={settingsOpen}
-        onClose={() => setSettingsOpen(false)}
-        initialSection={settingsSection}
-      />
+      {settingsLayer && (
+        <Suspense fallback={null}>
+          <SettingsModal
+            open={settingsOpen}
+            onClose={() => setSettingsOpen(false)}
+            initialSection={settingsSection}
+          />
+        </Suspense>
+      )}
 
       {/* Every overlay below is rendered here, after <main>, on purpose, and
           for two reasons that are not the z-index: <aside> goes

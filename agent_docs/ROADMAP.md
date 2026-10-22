@@ -35,7 +35,7 @@ were shipped early during Alpha. Their status below reflects reality.
       native OS stack. JetBrains Mono and Inter were the original plan and were
       never shipped. The webfont files were later removed for licensing (#442):
       the families stay first in the stacks, which fall back to system faces
-- [x] Startup splash screen (Satoshi Black "Konnekt" in accent green, 1s fade+glow animation; Satoshi is no longer bundled, see above)
+- [x] Startup splash screen: the Konnekt mark builds itself (the block spins in, the node draws the orbit) and fades, 1.45s once the dashboard's mount has settled (at most 0.7s); the finished mark held 0.6s under reduced motion
 - [x] Tile layout system (react-grid-layout, drag, resize, snap)
 - [x] Font choice per `--font-*` token (Settings > Appearance, desktop only):
       installed families suggested from a Go listing of the platform font

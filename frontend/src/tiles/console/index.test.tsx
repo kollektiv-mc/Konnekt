@@ -40,7 +40,8 @@ afterEach(cleanup)
 // panel, and the command input stayed enabled with failures going to
 // console.error (agent_docs/HEALTH_CHECKLIST.md's ErrorBoundary item;
 // HEALTH_LOG.md 2026-08-20). The checklist assumed verifying this needed a GUI.
-// It does not — jsdom is enough.
+// It does not — jsdom is enough. Since 2026-10-21 a stopped or quiet server
+// shows an empty pane on purpose; only the unreachable case still speaks.
 describe('ConsoleTile offline state', () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -49,21 +50,29 @@ describe('ConsoleTile offline state', () => {
     useServerStore.setState({ status: OFFLINE, reachable: true })
   })
 
-  it('says the server is offline instead of rendering a blank panel', () => {
+  it('shows an empty pane for a stopped server', () => {
     render(<ConsoleTile serverId="srv1" />)
-    expect(screen.getByText('Server offline — start it to see output.')).toBeTruthy()
+    expect(screen.queryByText('Server offline — start it to see output.')).toBeNull()
+    expect(screen.queryByText('Server unreachable — no output.')).toBeNull()
   })
 
-  it('distinguishes an unreachable backend from a stopped server', () => {
+  it('still says so when the backend is unreachable', () => {
     useServerStore.setState({ status: OFFLINE, reachable: false })
     render(<ConsoleTile serverId="srv1" />)
     expect(screen.getByText('Server unreachable — no output.')).toBeTruthy()
+    expect(screen.queryByText('Server offline — start it to see output.')).toBeNull()
   })
 
-  it('says it is waiting when the server is up but has not logged yet', () => {
+  it('shows an empty pane when the server is up but has not logged yet', () => {
     useServerStore.setState({ status: ONLINE, reachable: true })
     render(<ConsoleTile serverId="srv1" />)
-    expect(screen.getByText('Waiting for output…')).toBeTruthy()
+    expect(screen.queryByText('Waiting for output…')).toBeNull()
+    expect(screen.queryByText('Server unreachable — no output.')).toBeNull()
+  })
+
+  it('keeps the offline placeholder on the command input', () => {
+    render(<ConsoleTile serverId="srv1" />)
+    expect(commandInput().placeholder).toBe('Server offline')
   })
 
   it('disables the command input and Send while the server is down', () => {

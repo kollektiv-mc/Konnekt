@@ -344,16 +344,17 @@ export function ConsoleTile({ serverId, maximized, layout = 'default' }: TilePro
         className={`min-h-0 flex-1 overflow-y-auto px-3 py-2 font-mono text-xs select-text ${leading}`}
       >
         {lines.length === 0 ? (
-          // Was a bare empty <div>: an unreachable server, a stopped one and a
-          // server that simply has not logged anything yet all rendered as a
-          // blank panel (HEALTH_LOG.md, 2026-08-20).
-          <div className="text-text-faint py-2 font-mono text-xs">
-            {!reachable
-              ? 'Server unreachable — no output.'
-              : running
-                ? 'Waiting for output…'
-                : 'Server offline — start it to see output.'}
-          </div>
+          // 2026-08-20 this was a bare empty <div> and an unreachable server, a
+          // stopped one and a quiet one were indistinguishable, so each got a
+          // sentence (HEALTH_LOG.md). On 2026-10-21 Sandro asked for an empty
+          // console when there is nothing to show, so a stopped or quiet server
+          // is an empty pane again. The unreachable case still speaks: it is a
+          // real failure, not an absence of output.
+          !reachable ? (
+            <div className="text-text-faint py-2 font-mono text-xs">
+              Server unreachable — no output.
+            </div>
+          ) : null
         ) : filtered.length === 0 ? (
           <div className="text-text-faint py-2 font-mono text-xs">No matching lines</div>
         ) : (

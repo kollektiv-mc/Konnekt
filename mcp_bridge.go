@@ -143,6 +143,14 @@ func (u *mcpUpstream) close() {
 // bearerTransport puts the endpoint's secret on every request. The client is
 // built for one loopback endpoint and nothing else, so the header goes on
 // every request it makes.
+//
+// Each request dials its own connection rather than reusing a kept-alive one.
+// A call written to a kept connection that the app closed as it quit fails
+// with a bare EOF, which cannot be told apart from the app dying mid-call, so
+// the bridge would refuse to send it again and report the app as not
+// answering rather than not running. A fresh dial to an app that quit is
+// refused before a byte is sent, which callNeverSent can prove. One loopback
+// connect per tool call costs nothing a person would notice.
 type bearerTransport struct {
 	secret string
 }
@@ -150,8 +158,10 @@ type bearerTransport struct {
 func (b bearerTransport) RoundTrip(r *http.Request) (*http.Response, error) {
 	r = r.Clone(r.Context())
 	r.Header.Set("Authorization", "Bearer "+b.secret)
-	return http.DefaultTransport.RoundTrip(r)
+	return bridgeConnections.RoundTrip(r)
 }
+
+var bridgeConnections = &http.Transport{DisableKeepAlives: true}
 
 // mcpBridgeCommand is what a client registers: this executable, then "mcp".
 // Settings shows it (#515) beside the `claude mcp add` line.

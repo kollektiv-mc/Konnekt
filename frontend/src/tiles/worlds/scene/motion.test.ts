@@ -1,6 +1,15 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import * as THREE from 'three'
-import { MAX_DELTA, MOTION, clampDelta, dampFactor, springDamp } from './motion'
+import {
+  MAX_DELTA,
+  MOTION,
+  REDUCED_MOTION_QUERY,
+  advanceTumble,
+  clampDelta,
+  dampFactor,
+  prefersReducedMotion,
+  springDamp,
+} from './motion'
 
 describe('clampDelta', () => {
   it('passes a normal frame through', () => {
@@ -82,5 +91,42 @@ describe('springDamp', () => {
     const before = velocity.x
     springDamp(current, new THREE.Vector3(2, 0, 0), velocity, MOTION.CAM_SMOOTH_TIME, 1 / 60)
     expect(velocity.x).toBeGreaterThan(before * 0.9)
+  })
+})
+
+describe('advanceTumble', () => {
+  it('turns both axes by their rate over the step', () => {
+    const rot = { x: 0, y: 0 }
+    advanceTumble(rot, 1 / 60, false)
+    expect(rot.x).toBeCloseTo(MOTION.CUBE_SPIN_X / 60, 12)
+    expect(rot.y).toBeCloseTo(MOTION.CUBE_SPIN_Y / 60, 12)
+  })
+
+  it('holds the pose it has under reduced motion', () => {
+    const rot = { x: 0.3, y: 0.7 }
+    advanceTumble(rot, 1 / 60, true)
+    expect(rot).toEqual({ x: 0.3, y: 0.7 })
+  })
+
+  it('clamps a stalled frame like every other step in the scene', () => {
+    const rot = { x: 0, y: 0 }
+    advanceTumble(rot, 5, false)
+    expect(rot.y).toBeCloseTo(MOTION.CUBE_SPIN_Y * MAX_DELTA, 12)
+  })
+})
+
+describe('prefersReducedMotion', () => {
+  afterEach(() => vi.unstubAllGlobals())
+
+  it('is false where matchMedia does not exist', () => {
+    vi.stubGlobal('matchMedia', undefined)
+    expect(prefersReducedMotion()).toBe(false)
+  })
+
+  it('reads the reduce query', () => {
+    const matchMedia = vi.fn((q: string) => ({ matches: q === REDUCED_MOTION_QUERY }))
+    vi.stubGlobal('matchMedia', matchMedia)
+    expect(prefersReducedMotion()).toBe(true)
+    expect(matchMedia).toHaveBeenCalledWith('(prefers-reduced-motion: reduce)')
   })
 })
