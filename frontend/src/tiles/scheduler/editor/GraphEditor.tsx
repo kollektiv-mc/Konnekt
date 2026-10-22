@@ -33,6 +33,7 @@ import { NodePanel } from './NodePanel'
 import { QuickAddHost } from './QuickAddHost'
 import type { QuickAddRequest } from './QuickAddHost'
 import { Toolbar } from './Toolbar'
+import { centerNodes, takeMeasured } from './centerOnMeasure'
 import { RUN_RUNNING, runOutcome, type RunStatus } from './runStatus'
 import { useNotificationsStore } from '../../../stores/useNotificationsStore'
 import type { ToastInput } from '../../../stores/useNotificationsStore'
@@ -646,10 +647,14 @@ function GraphEditorInner({
   )
 
   // ── Add block ─────────────────────────────────────────────────────────────
+  // A block placed at a point (a drop, the quick-add list) is centred on it once
+  // measured (takeMeasured); one added with no point keeps the stagger.
+  const centerPending = useRef(new Set<string>())
   const addBlock = useCallback(
     (def: models.BlockDef, position?: { x: number; y: number }) => {
       recordPre()
       const id = randId()
+      if (position) centerPending.current.add(id)
       const pos = position ?? { x: 80 + nodes.length * 30, y: 80 + nodes.length * 20 }
       setNodes((ns) => [
         ...ns,
@@ -996,8 +1001,12 @@ function GraphEditorInner({
     (changes: NodeChange<BlockFlowNode>[]) => {
       if (changes.some((c) => c.type === 'remove')) recordPre()
       onNodesChange(changes)
+      if (centerPending.current.size > 0) {
+        const sizes = takeMeasured(changes, centerPending.current)
+        if (sizes.size > 0) setNodes((ns) => centerNodes(ns, sizes))
+      }
     },
-    [onNodesChange, recordPre],
+    [onNodesChange, recordPre, setNodes],
   )
   const handleEdgesChange = useCallback(
     (changes: EdgeChange<FlowEdge>[]) => {
