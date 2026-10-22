@@ -51,6 +51,8 @@
   --font-title: 'Excon', var(--font-sans);
   --font-mono: ui-monospace, 'Cascadia Code', 'SF Mono', 'Segoe UI Mono', 'Consolas', 'Liberation Mono', monospace;
   --font-display: 'Satoshi', var(--font-sans);
+  --font-site: 'Geist', var(--font-sans);
+  --font-site-mono: 'Geist Mono', var(--font-mono);
 
   /* Radius. Concentric radii matter at hairline border weights — mismatched
      values rasterise unevenly and read as a rendering bug. */

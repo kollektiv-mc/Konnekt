@@ -1,9 +1,9 @@
 // Holds the home page's feature showcase, main.js's scene table and
 // demo/scenes/ to one list.
 //
-// The showcase (website/index.html) has a tab per scene, named in data-scene.
-// main.js carries the demo's origin and the same scenes in the same order,
-// each with the tile its "Open in the demo" link frames, as constants: a URL
+// The showcase (website/index.html) has a strip per scene, named in data-scene.
+// home.js carries the demo's origin and the same scenes in the same order,
+// each with the tile its "Open the demo" link frames, as constants: a URL
 // built from text read off the page is what CodeQL reports as DOM text
 // reinterpreted as HTML, so nothing there reads the attributes back.
 // demo/record.mjs films exactly the scenes demo/scenes/index.mjs exports.
@@ -14,16 +14,16 @@
 // earlier.
 //
 // What it checks:
-//   1. main.js's table names the scenes, all of them, in the recorder's order
+//   1. home.js's table names the scenes, all of them, in the recorder's order
 //   2. Each entry's tile is the tile its scene frames (the ?tile= link)
-//   3. The tabs name the same scenes in the same order
-//   4. The markup's own clip URLs (the first tab's sources and poster) are
+//   3. The strips name the same scenes in the same order
+//   4. The markup's own clip URLs (the first strip's sources and poster) are
 //      the demo origin plus /scenes/<first id>
 //   5. The hero's "Try the demo" points at the same origin
 //
 // Zero dependencies, same as check-website-links.mjs. The scene modules are
 // imported for real rather than parsed: they are plain data with no browser
-// globals, and importing is the check that they load at all. main.js is
+// globals, and importing is the check that they load at all. home.js is
 // parsed by regex, the same bargain the link checker makes with the HTML:
 // the input is this repo's own hand-written source, Prettier-normalised.
 import { readFileSync } from "node:fs";
@@ -42,12 +42,12 @@ const { SCENES } = await import(
 const problems = [];
 const fail = (m) => problems.push(m);
 
-const js = readFileSync(path.join(ROOT, "website/main.js"), "utf8");
+const js = readFileSync(path.join(ROOT, "website/home.js"), "utf8");
 const demo = (js.match(/\bvar DEMO = '([^']+)'/) || [])[1];
 const table = js.match(/\bvar SCENES = \[([\s\S]*?)\n\s*\]/);
 if (!demo || !table) {
   console.error(
-    "check-website-scenes: no `var DEMO = '…'` or `var SCENES = [ … ]` in website/main.js",
+    "check-website-scenes: no `var DEMO = '…'` or `var SCENES = [ … ]` in website/home.js",
   );
   process.exit(1);
 }
@@ -56,12 +56,12 @@ const jsScenes = [
   ...table[1].matchAll(/\{\s*id:\s*'([^']*)',\s*tile:\s*'([^']*)'\s*\}/g),
 ].map((m) => ({ id: m[1], tile: m[2] }));
 
-// 1 + 2 — main.js's table against the recorder's scenes
+// 1 + 2 — home.js's table against the recorder's scenes
 const sceneIds = SCENES.map((s) => s.id);
 const jsIds = jsScenes.map((s) => s.id);
 if (jsIds.join(",") !== sceneIds.join(",")) {
   fail(
-    `main.js's SCENES and demo/scenes/index.mjs disagree\n    main.js: ${jsIds.join(", ")}\n    demo:    ${sceneIds.join(", ")}`,
+    `home.js's SCENES and demo/scenes/index.mjs disagree\n    home.js: ${jsIds.join(", ")}\n    demo:    ${sceneIds.join(", ")}`,
   );
 }
 for (const entry of jsScenes) {
@@ -70,25 +70,26 @@ for (const entry of jsScenes) {
   const tile = scene.frame.tile ?? "";
   if (entry.tile !== tile)
     fail(
-      `main.js has tile '${entry.tile}' for "${entry.id}" but the scene frames "${tile}"`,
+      `home.js has tile '${entry.tile}' for "${entry.id}" but the scene frames "${tile}"`,
     );
 }
 
-// 3 — the tabs
+// 3 — the strips
 const tabs = [
-  ...html.matchAll(/<button\b[^>]*\bclass="showcase-tab"[^>]*>/g),
+  ...html.matchAll(/<div\b[^>]*\bclass="strip(?: is-open)?"[^>]*>/g),
 ].map(([tag]) => (tag.match(/\bdata-scene="([^"]*)"/) || [])[1]);
 if (tabs.join(",") !== sceneIds.join(",")) {
   fail(
-    `the tabs and demo/scenes/index.mjs disagree\n    site:  ${tabs.join(", ")}\n    demo:  ${sceneIds.join(", ")}`,
+    `the strips and demo/scenes/index.mjs disagree\n    site:  ${tabs.join(", ")}\n    demo:  ${sceneIds.join(", ")}`,
   );
 }
 
 // 4 — the clip URLs the markup carries itself
 const first = sceneIds[0];
-const media =
-  html.match(/<figure class="showcase-media[\s\S]*?<\/figure>/)?.[0] ?? "";
-for (const [, url] of media.matchAll(/\b(?:src|poster)="([^"]+)"/g)) {
+const media = html.match(/<video\b[\s\S]*?<\/video>/)?.[0] ?? "";
+const urls = [...media.matchAll(/\b(?:src|poster)="([^"]+)"/g)];
+if (urls.length === 0) fail("the first strip's video carries no clip URL");
+for (const [, url] of urls) {
   const want = `${demo}/scenes/${first}.`;
   if (!url.startsWith(want)) fail(`clip URL "${url}" is not under ${want}…`);
 }
@@ -107,5 +108,5 @@ if (problems.length) {
   process.exit(1);
 }
 console.log(
-  `✓ website showcase: ${tabs.length} tabs match ${SCENES.length} scenes, clips under ${demo}/scenes/`,
+  `✓ website showcase: ${tabs.length} strips match ${SCENES.length} scenes, clips under ${demo}/scenes/`,
 );
