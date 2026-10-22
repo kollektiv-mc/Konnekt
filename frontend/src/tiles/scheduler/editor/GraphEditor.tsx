@@ -51,6 +51,16 @@ import {
   type NodeData,
   type BlockFlowNode,
 } from './graphMapping'
+import {
+  captureSelection,
+  clipboardAction,
+  instantiateSlice,
+  pasteDelta,
+  pasteStep,
+  readClipboard,
+  writeClipboard,
+  type ClipboardSlice,
+} from './clipboard'
 import { CloseConfirmDialog } from './CloseConfirmDialog'
 import { useDirtyGuard } from './useDirtyGuard'
 import {
@@ -744,6 +754,99 @@ function GraphEditorInner({
     )
     setSelectedNodeId(null)
   }, [nodes, edges, setNodes, setEdges, recordPre])
+
+  // ── Copy, cut, paste, duplicate (#128) ────────────────────────────────────
+  // Where a paste lands, in flow coordinates: under the pointer when it is over
+  // the canvas, since that is where the user is looking, and at the canvas
+  // centre otherwise. A click on a menu leaves the pointer on the toolbar, which
+  // is off the canvas, so the centre is what a menu-driven paste uses.
+  const canvasAnchor = useCallback(
+    (followCursor: boolean) => {
+      const rect = canvasWrapperRef.current?.getBoundingClientRect()
+      if (!rect) return null
+      const { x, y } = mousePos.current
+      const over =
+        followCursor && x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom
+      return screenToFlowPosition(
+        over ? { x, y } : { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 },
+      )
+    },
+    [screenToFlowPosition],
+  )
+
+  // Adds the copy as one history entry and makes it the selection, so the next
+  // Delete, cut or Ctrl+D acts on what was just placed rather than on whatever
+  // was selected before.
+  const placeSlice = useCallback(
+    (slice: ClipboardSlice, delta: { x: number; y: number }) => {
+      const placed = instantiateSlice(slice, delta)
+      recordPre()
+      setNodes((ns) => [
+        ...ns.map((n) => (n.selected ? { ...n, selected: false } : n)),
+        ...placed.nodes,
+      ])
+      setEdges((es) => [
+        ...es.map((e) => (e.selected ? { ...e, selected: false } : e)),
+        ...placed.edges,
+      ])
+      setSelectedNodeId(placed.nodes.length === 1 ? placed.nodes[0].id : null)
+    },
+    [setNodes, setEdges, recordPre],
+  )
+
+  // Each of these says whether it did anything, so the key handler only takes
+  // the browser's own Ctrl+C or Ctrl+V when it had something to do.
+  const copySelected = useCallback((): boolean => {
+    const slice = captureSelection(nodesRef.current, edgesRef.current)
+    if (!slice) return false
+    writeClipboard(slice)
+    return true
+  }, [])
+
+  // Copy, then the ordinary delete, which is what records the undo entry.
+  const cutSelected = useCallback((): boolean => {
+    if (!copySelected()) return false
+    handleDeleteSelected()
+    return true
+  }, [copySelected, handleDeleteSelected])
+
+  const pasteClipboard = useCallback(
+    (followCursor = false): boolean => {
+      const slice = readClipboard()
+      if (!slice) return false
+      const anchor = canvasAnchor(followCursor)
+      placeSlice(slice, pasteDelta(slice, anchor, pasteStep(anchor)))
+      return true
+    },
+    [canvasAnchor, placeSlice],
+  )
+
+  // Copy and paste in one, without the clipboard: duplicating must not replace
+  // what the user has copied.
+  const duplicateSelected = useCallback((): boolean => {
+    const slice = captureSelection(nodesRef.current, edgesRef.current)
+    if (!slice) return false
+    placeSlice(slice, pasteDelta(slice, null, 0))
+    return true
+  }, [placeSlice])
+
+  useEffect(() => {
+    function onKeyDown(e: KeyboardEvent) {
+      const action = clipboardAction(e, document.activeElement)
+      if (!action) return
+      const done =
+        action === 'copy'
+          ? copySelected()
+          : action === 'cut'
+            ? cutSelected()
+            : action === 'paste'
+              ? pasteClipboard(true)
+              : duplicateSelected()
+      if (done) e.preventDefault()
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [copySelected, cutSelected, pasteClipboard, duplicateSelected])
 
   // ── Toggle enabled ────────────────────────────────────────────────────────
   const handleToggleEnabled = useCallback(async () => {
