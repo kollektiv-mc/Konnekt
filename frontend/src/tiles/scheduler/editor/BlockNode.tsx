@@ -315,15 +315,15 @@ export const BlockNode = memo(function BlockNode({ data, selected }: NodeProps<B
           </Handle>
         ))}
       </div>
-      {/* The cursor glow (useNodeGlow). A sibling rather than a pseudo-element
-        of the node, which clips its overflow, so the light can spill past the
-        border; z-index -1 puts it under the node within React Flow's node
-        wrapper, which is a stacking context. */}
+      {/* The cursor glow (useNodeGlow): a ring over the node's own border. A
+        sibling rather than a pseudo-element of the node, which clips its overflow
+        at the padding box and would cut the border off; `rounded` is the node's
+        own radius, so the two corners match. */}
       {stateClass === 'node-glow' && (
         <div
           aria-hidden
-          className="node-glow-halo"
-          // eslint-disable-next-line no-restricted-syntax -- the halo takes the node's per-category colour (CATEGORY_COLOR)
+          className="node-glow-ring rounded"
+          // eslint-disable-next-line no-restricted-syntax -- the ring takes the node's per-category colour (CATEGORY_COLOR)
           style={{ '--node-glow': color } as React.CSSProperties}
         />
       )}

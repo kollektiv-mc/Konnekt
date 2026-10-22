@@ -193,4 +193,14 @@ describe('the cursor glow', () => {
     expect(root.className).toContain('node-glow')
     expect(root.style.getPropertyValue('--node-glow')).toMatch(/^#|^rgb/)
   })
+
+  it('draws its ring beside the node, not inside it', () => {
+    const root = renderNode('action.command', { command: 'save-all' })
+    const ring = root.nextElementSibling as HTMLElement
+    expect(ring.className).toContain('node-glow-ring')
+    expect(ring.style.getPropertyValue('--node-glow')).toBe(
+      root.style.getPropertyValue('--node-glow'),
+    )
+    expect(root.querySelector('.node-glow-ring')).toBeNull()
+  })
 })
