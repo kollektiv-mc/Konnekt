@@ -29,7 +29,8 @@ import { BlockNode } from './BlockNode'
 import { AnimatedEdge } from './AnimatedEdge'
 import { BlockPalette } from './BlockPalette'
 import { NodePanel } from './NodePanel'
-import { QuickAddMenu } from './QuickAddMenu'
+import { QuickAddHost } from './QuickAddHost'
+import type { QuickAddRequest } from './QuickAddHost'
 import { Toolbar } from './Toolbar'
 import { RUN_RUNNING, runOutcome, type RunStatus } from './runStatus'
 import { useNotificationsStore } from '../../../stores/useNotificationsStore'
@@ -250,10 +251,7 @@ function GraphEditorInner({
   const graphIdRef = useRef<string | null>(null)
   const edgesRef = useRef<FlowEdge[]>([])
 
-  const [quickAdd, setQuickAdd] = useState<{
-    screen: { x: number; y: number }
-    flow: { x: number; y: number }
-  } | null>(null)
+  const [quickAdd, setQuickAdd] = useState<QuickAddRequest | null>(null)
   const canvasWrapperRef = useRef<HTMLDivElement>(null)
   useNodeGlow(canvasWrapperRef)
   const mousePos = useRef<{ x: number; y: number }>({ x: 0, y: 0 })
@@ -1196,17 +1194,15 @@ function GraphEditorInner({
         </div>
       </div>
 
-      {quickAdd && (
-        <QuickAddMenu
-          blockDefs={blockDefs}
-          screenPos={quickAdd.screen}
-          onPick={(def) => {
-            addBlock(def, quickAdd.flow)
-            setQuickAdd(null)
-          }}
-          onClose={() => setQuickAdd(null)}
-        />
-      )}
+      <QuickAddHost
+        request={quickAdd}
+        blockDefs={blockDefs}
+        onPick={(def, flow) => {
+          addBlock(def, flow)
+          setQuickAdd(null)
+        }}
+        onClose={() => setQuickAdd(null)}
+      />
 
       <CloseConfirmDialog
         open={confirm.pending}

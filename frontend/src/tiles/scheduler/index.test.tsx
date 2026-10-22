@@ -54,8 +54,13 @@ const graphsByServer: Record<string, models.Graph[]> = {
   b: [graph('gb1', 'B first')],
 }
 
-/** The graph selector's label: the name of the graph the editor holds. */
-const selected = () => screen.getByText('☰').closest('button')?.textContent?.replace('☰', '')
+/** The graph selector's label: the name of the graph the editor holds. The picker is the bar's first button. */
+const selected = () =>
+  screen
+    .getByRole('button', { name: 'edit' })
+    .closest('.border-b-hairline')
+    ?.querySelector('button')
+    ?.textContent?.trim()
 
 // A server switch remounts the tile (Dashboard keys it `${tile.id}:${serverId}`),
 // but the store outlives the remount. GraphEditor's auto-load effect runs before

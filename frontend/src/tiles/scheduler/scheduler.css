@@ -244,3 +244,38 @@
     display: none;
   }
 }
+
+/* Menu open and close (the quick-add list, the edit menu's fly-outs): the same
+   quick scale and fade the toolbar's popovers play, which are a transition in
+   components/ui/Popover.tsx. These are keyframes because the panel is mounted
+   for the open and unmounted after the close (hooks/usePresence.ts, kind
+   'menu'), and a mounting element has no previous state to transition from.
+   `transform` here, not Tailwind's scale-* utilities: those set the separate
+   `scale` property and a transition on `transform` would never run for them.
+   The origin is set inline on each panel, at the corner it opens from.
+   `backwards` on the entrance so the panel holds no transform once it is
+   open, and `forwards` on the exit so it stays gone until it unmounts. */
+@keyframes menu-in {
+  from {
+    opacity: 0;
+    transform: scaleY(0.85) translateY(-6px);
+  }
+}
+@keyframes menu-out {
+  to {
+    opacity: 0;
+    transform: scaleY(0.85) translateY(-6px);
+  }
+}
+.menu-in {
+  animation: menu-in var(--duration-fast) var(--ease-standard) backwards;
+}
+.menu-out {
+  animation: menu-out var(--duration-fast) var(--ease-standard) forwards;
+}
+@media (prefers-reduced-motion: reduce) {
+  .menu-in,
+  .menu-out {
+    animation: none !important;
+  }
+}

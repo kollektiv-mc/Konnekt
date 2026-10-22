@@ -1,12 +1,29 @@
 import { useCallback, useEffect, useState } from 'react'
 import type { AnimationEvent } from 'react'
 
-// The keyframes that end a dialog's exit (style.css). The panel's is the longer
-// of the pair, so its end is the end of the exit.
-const PANEL_OUT = 'modal-panel-out'
-// Used where the token cannot be read (jsdom loads no stylesheet), and kept in
-// step with --duration-panel.
-const FALLBACK_MS = 280
+// What ends an exit, per kind. A dialog's is the panel's keyframes (style.css),
+// the longer of the pair, so its end is the end of the exit. A menu's is the
+// one `menu-out` keyframe (scheduler.css), at the faster duration. The
+// fallback is used where the token cannot be read (jsdom loads no stylesheet),
+// and is kept in step with the token.
+const KINDS = {
+  dialog: {
+    out: 'modal-panel-out',
+    token: '--duration-panel',
+    fallbackMs: 280,
+    inClass: 'modal-panel-in',
+    outClass: 'modal-panel-out',
+  },
+  menu: {
+    out: 'menu-out',
+    token: '--duration-fast',
+    fallbackMs: 150,
+    inClass: 'menu-in',
+    outClass: 'menu-out',
+  },
+} as const
+
+export type PresenceKind = keyof typeof KINDS
 // Past the animation's own end, so animationend wins whenever it fires.
 const SLACK_MS = 60
 
@@ -23,11 +40,10 @@ export function cssTimeMs(value: string): number {
   return value.trim().endsWith('ms') ? n : n * 1000
 }
 
-function exitMs(): number {
-  const ms = cssTimeMs(
-    getComputedStyle(document.documentElement).getPropertyValue('--duration-panel'),
-  )
-  return (Number.isFinite(ms) ? ms : FALLBACK_MS) + SLACK_MS
+function exitMs(kind: PresenceKind): number {
+  const { token, fallbackMs } = KINDS[kind]
+  const ms = cssTimeMs(getComputedStyle(document.documentElement).getPropertyValue(token))
+  return (Number.isFinite(ms) ? ms : fallbackMs) + SLACK_MS
 }
 
 /**
@@ -43,8 +59,14 @@ function exitMs(): number {
  * a second time by the keyboard during the exit), hang `onAnimationEnd` on the
  * panel (or an ancestor of it), and render nothing while `mounted` is false. Escape and close handlers belong to `open`, not
  * `mounted`, so they are already off by the time `leaving` is true.
+ *
+ * `kind` 'menu' is the same for a menu or a fly-out: its panel takes
+ * `panelClass` (`menu-in` / `menu-out`), and the exit is one `--duration-fast`
+ * long. A menu whose panel animates by a transition of its own (`Popover`)
+ * takes only `mounted` from it, to keep its rows drawn while that plays; no
+ * animation event arrives, so the timeout is what unmounts them.
  */
-export function usePresence(open: boolean) {
+export function usePresence(open: boolean, kind: PresenceKind = 'dialog') {
   const [mounted, setMounted] = useState(open)
   // Derived during render rather than in an effect, so an opening dialog is
   // drawn in the frame it is asked for, and a reduced-motion one is gone in it.
@@ -55,15 +77,15 @@ export function usePresence(open: boolean) {
 
   useEffect(() => {
     if (!leaving) return
-    const timer = setTimeout(() => setMounted(false), exitMs())
+    const timer = setTimeout(() => setMounted(false), exitMs(kind))
     return () => clearTimeout(timer)
-  }, [leaving])
+  }, [leaving, kind])
 
   const onAnimationEnd = useCallback(
     (e: AnimationEvent) => {
-      if (leaving && e.animationName === PANEL_OUT) setMounted(false)
+      if (leaving && e.animationName === KINDS[kind].out) setMounted(false)
     },
-    [leaving],
+    [leaving, kind],
   )
 
   return {
@@ -72,7 +94,7 @@ export function usePresence(open: boolean) {
     inert: leaving,
     onAnimationEnd,
     overlayClass: leaving ? 'modal-overlay-out pointer-events-none' : 'modal-overlay-in',
-    panelClass: leaving ? 'modal-panel-out pointer-events-none' : 'modal-panel-in',
+    panelClass: leaving ? `${KINDS[kind].outClass} pointer-events-none` : KINDS[kind].inClass,
   }
 }
 
