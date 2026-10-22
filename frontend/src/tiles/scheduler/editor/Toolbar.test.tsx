@@ -64,7 +64,6 @@ function handlers() {
     onErrorClick: vi.fn(),
     onRunStatusClick: vi.fn(),
     onSelectNode: vi.fn(),
-    onWarningsClick: vi.fn(),
   }
 }
 
@@ -796,11 +795,10 @@ describe('the warnings list', () => {
   const openList = () => fireEvent.click(button('3 warnings'))
 
   it('opens from the count, below it, rather than raising the bubble', () => {
-    const h = setup({ nodes: canvas, warnings })
+    setup({ nodes: canvas, warnings })
     expect(screen.queryByText(GRAPH_WIDE)).toBeNull()
     openList()
     expect(screen.getByText(GRAPH_WIDE)).toBeTruthy()
-    expect(h.onWarningsClick).not.toHaveBeenCalled()
     expect(button('3 warnings').getAttribute('aria-expanded')).toBe('true')
   })
 
@@ -833,13 +831,6 @@ describe('the warnings list', () => {
     fireEvent.click(screen.getByText('Cron is odd.'))
     expect(h.onSelectNode).toHaveBeenCalledWith('c')
     expect(button('3 warnings').getAttribute('aria-expanded')).toBe('false')
-  })
-
-  it('still reopens the bubble from the footer', () => {
-    const h = setup({ nodes: canvas, warnings })
-    openList()
-    fireEvent.click(button('Show as notification'))
-    expect(h.onWarningsClick).toHaveBeenCalledOnce()
   })
 
   it('does not stay open once the last warning is gone', () => {

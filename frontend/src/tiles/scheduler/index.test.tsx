@@ -350,7 +350,7 @@ describe('the scheduler editor warns about a stop', () => {
     expect((screen.getByRole('button', { name: 'Save' }) as HTMLButtonElement).disabled).toBe(false)
   })
 
-  it('reopens a dismissed bubble, and keeps it after close', async () => {
+  it('keeps a dismissed bubble closed, and keeps it after close', async () => {
     vi.mocked(App.GetScheduleGraphs).mockResolvedValue([withCommand('__stop__')])
     vi.mocked(App.GetScheduleGraphWarnings).mockResolvedValue(RCON_ADVICE)
     const { unmount } = render(<SchedulerTile serverId="alpha" maximized />)
@@ -358,18 +358,16 @@ describe('the scheduler editor warns about a stop', () => {
 
     act(() => useNotificationsStore.getState().dismissToast(toasts()[0].id))
     expect(toasts()).toEqual([])
-    // The count opens the list, whose footer raises the bubble again.
+    // The count opens the list and leaves the bubble dismissed.
     fireEvent.click(warningButton() as HTMLElement)
+    expect(screen.queryByRole('button', { name: 'Show as notification' })).toBeNull()
     expect(toasts()).toEqual([])
-    fireEvent.click(screen.getByRole('button', { name: 'Show as notification' }))
-    expect(toasts()).toHaveLength(1)
 
-    // Closing the scheduler leaves it up, and reopening counts no repeat.
+    // Reopening the scheduler on the same warnings does not raise it again.
     unmount()
-    expect(toasts()).toHaveLength(1)
     render(<SchedulerTile serverId="alpha" maximized />)
     await waitFor(() => expect(warningButton()).not.toBeNull())
-    expect(toasts()).toEqual([expect.objectContaining({ count: 1 })])
+    expect(toasts()).toEqual([])
   })
 
   it('asks before saving a dirty graph to run it', async () => {

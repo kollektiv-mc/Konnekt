@@ -1025,30 +1025,23 @@ function GraphEditorInner({
     [warnings, nodes],
   )
   const nodeAdvice = useMemo(() => warningsByNode(warnings), [warnings])
-  const showWarningToast = useCallback(
-    (force = false) => {
-      if (!warningText) return
-      const open = useNotificationsStore
-        .getState()
-        .toasts.some((t) => t.key === TOAST_WARNING && t.text === warningText)
-      if (open && !force) return
-      showToast(
-        {
-          key: TOAST_WARNING,
-          category: 'warnings',
-          tone: 'warn',
-          title: 'Scheduler warning',
-          text: warningText,
-        },
-        force,
-      )
-    },
-    [warningText],
-  )
   useEffect(() => {
-    if (warningText) showWarningToast()
-    else withdrawToast(TOAST_WARNING)
-  }, [warningText, showWarningToast])
+    if (!warningText) {
+      withdrawToast(TOAST_WARNING)
+      return
+    }
+    const open = useNotificationsStore
+      .getState()
+      .toasts.some((t) => t.key === TOAST_WARNING && t.text === warningText)
+    if (open) return
+    showToast({
+      key: TOAST_WARNING,
+      category: 'warnings',
+      tone: 'warn',
+      title: 'Scheduler warning',
+      text: warningText,
+    })
+  }, [warningText])
 
   // Wrap ReactFlow's own change handlers so a Delete-key removal (which never
   // goes through handleDeleteSelected) still records an undo entry.
@@ -1248,7 +1241,6 @@ function GraphEditorInner({
             showRunStatus(null)
           }}
           onSelectNode={revealNode}
-          onWarningsClick={() => showWarningToast(true)}
         />
 
         {/* ── Main content ─────────────────────────────────────────────── */}

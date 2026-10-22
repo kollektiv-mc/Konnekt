@@ -66,8 +66,6 @@ interface ToolbarProps {
   onRunStatusClick: (status: RunStatus) => void
   /** A warning that names a block was picked in the list: select it and show it. */
   onSelectNode: (nodeId: string) => void
-  /** The list's footer: raise the warnings as a notification bubble again. */
-  onWarningsClick: () => void
 }
 
 type MenuId = 'graph' | 'edit' | 'view' | 'overflow' | 'warnings'
@@ -173,7 +171,6 @@ export function Toolbar({
   onErrorClick,
   onRunStatusClick,
   onSelectNode,
-  onWarningsClick,
 }: ToolbarProps) {
   // One menu open at a time, so opening one is closing the others. Each
   // popover's presence keeps its rows drawn while it fades (see usePresence);
@@ -484,10 +481,6 @@ export function Toolbar({
                       rows={warningList}
                       onPick={(id) => {
                         onSelectNode(id)
-                        closeMenu('warnings')
-                      }}
-                      onNotify={() => {
-                        onWarningsClick()
                         closeMenu('warnings')
                       }}
                     />
