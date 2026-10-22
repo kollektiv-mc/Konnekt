@@ -31,14 +31,11 @@ import { AnimatedEdge } from './AnimatedEdge'
 import { BlockPalette } from './BlockPalette'
 import { NodePanel } from './NodePanel'
 import { QuickAddMenu } from './QuickAddMenu'
+import { Toolbar } from './Toolbar'
 import { RUN_RUNNING, runOutcome, type RunStatus } from './runStatus'
-import { Popover } from '../../../components/ui/Popover'
-import { Icon } from '../../../components/ui/Icon'
-import { Check, TriangleAlert } from '../../../lib/icons'
 import { useNotificationsStore } from '../../../stores/useNotificationsStore'
 import type { ToastInput } from '../../../stores/useNotificationsStore'
 import { useSettingsStore } from '../../../stores/useSettingsStore'
-import { usePopover } from '../../../hooks/usePopover'
 import {
   graphToFlow,
   flowToGraph,
@@ -50,7 +47,18 @@ import {
   type NodeData,
   type BlockFlowNode,
 } from './graphMapping'
+import {
+  captureSelection,
+  clipboardAction,
+  instantiateSlice,
+  pasteDelta,
+  pasteStep,
+  readClipboard,
+  writeClipboard,
+  type ClipboardSlice,
+} from './clipboard'
 import { CloseConfirmDialog } from './CloseConfirmDialog'
+import { applySelection, type SelectionSpec } from './selection'
 import { useDirtyGuard } from './useDirtyGuard'
 import { useNodeGlow } from './useNodeGlow'
 import {
@@ -163,8 +171,6 @@ function GraphEditorInner({
   const [graphName, setGraphName] = useState('')
   const [graphEnabled, setGraphEnabled] = useState(false)
   const [createdAt, setCreatedAt] = useState(0)
-  const [nameEditing, setNameEditing] = useState(false)
-  const graphMenu = usePopover()
 
   // ── Canvas state ──────────────────────────────────────────────────────────
   const [nodes, setNodes, onNodesChange] = useNodesState<BlockFlowNode>([])
@@ -746,6 +752,99 @@ function GraphEditorInner({
     setSelectedNodeId(null)
   }, [nodes, edges, setNodes, setEdges, recordPre])
 
+  // ── Copy, cut, paste, duplicate (#128) ────────────────────────────────────
+  // Where a paste lands, in flow coordinates: under the pointer when it is over
+  // the canvas, since that is where the user is looking, and at the canvas
+  // centre otherwise. A click on a menu leaves the pointer on the toolbar, which
+  // is off the canvas, so the centre is what a menu-driven paste uses.
+  const canvasAnchor = useCallback(
+    (followCursor: boolean) => {
+      const rect = canvasWrapperRef.current?.getBoundingClientRect()
+      if (!rect) return null
+      const { x, y } = mousePos.current
+      const over =
+        followCursor && x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom
+      return screenToFlowPosition(
+        over ? { x, y } : { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 },
+      )
+    },
+    [screenToFlowPosition],
+  )
+
+  // Adds the copy as one history entry and makes it the selection, so the next
+  // Delete, cut or Ctrl+D acts on what was just placed rather than on whatever
+  // was selected before.
+  const placeSlice = useCallback(
+    (slice: ClipboardSlice, delta: { x: number; y: number }) => {
+      const placed = instantiateSlice(slice, delta)
+      recordPre()
+      setNodes((ns) => [
+        ...ns.map((n) => (n.selected ? { ...n, selected: false } : n)),
+        ...placed.nodes,
+      ])
+      setEdges((es) => [
+        ...es.map((e) => (e.selected ? { ...e, selected: false } : e)),
+        ...placed.edges,
+      ])
+      setSelectedNodeId(placed.nodes.length === 1 ? placed.nodes[0].id : null)
+    },
+    [setNodes, setEdges, recordPre],
+  )
+
+  // Each of these says whether it did anything, so the key handler only takes
+  // the browser's own Ctrl+C or Ctrl+V when it had something to do.
+  const copySelected = useCallback((): boolean => {
+    const slice = captureSelection(nodesRef.current, edgesRef.current)
+    if (!slice) return false
+    writeClipboard(slice)
+    return true
+  }, [])
+
+  // Copy, then the ordinary delete, which is what records the undo entry.
+  const cutSelected = useCallback((): boolean => {
+    if (!copySelected()) return false
+    handleDeleteSelected()
+    return true
+  }, [copySelected, handleDeleteSelected])
+
+  const pasteClipboard = useCallback(
+    (followCursor = false): boolean => {
+      const slice = readClipboard()
+      if (!slice) return false
+      const anchor = canvasAnchor(followCursor)
+      placeSlice(slice, pasteDelta(slice, anchor, pasteStep(anchor)))
+      return true
+    },
+    [canvasAnchor, placeSlice],
+  )
+
+  // Copy and paste in one, without the clipboard: duplicating must not replace
+  // what the user has copied.
+  const duplicateSelected = useCallback((): boolean => {
+    const slice = captureSelection(nodesRef.current, edgesRef.current)
+    if (!slice) return false
+    placeSlice(slice, pasteDelta(slice, null, 0))
+    return true
+  }, [placeSlice])
+
+  useEffect(() => {
+    function onKeyDown(e: KeyboardEvent) {
+      const action = clipboardAction(e, document.activeElement)
+      if (!action) return
+      const done =
+        action === 'copy'
+          ? copySelected()
+          : action === 'cut'
+            ? cutSelected()
+            : action === 'paste'
+              ? pasteClipboard(true)
+              : duplicateSelected()
+      if (done) e.preventDefault()
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [copySelected, cutSelected, pasteClipboard, duplicateSelected])
+
   // ── Toggle enabled ────────────────────────────────────────────────────────
   const handleToggleEnabled = useCallback(async () => {
     if (!graphId) return
@@ -936,14 +1035,47 @@ function GraphEditorInner({
     ],
   )
 
-  // ── Toolbar button className helper ───────────────────────────────────────
-  function btnClass(active = false, danger = false): string {
-    const base = 'cursor-pointer rounded border-hairline px-2 py-0.5 text-1xs font-mono'
-    const borderClass = danger ? 'border-danger' : 'border-border-subtle'
-    if (active) return `${base} ${borderClass} bg-accent text-black`
-    if (danger) return `${base} ${borderClass} bg-transparent text-danger`
-    return `${base} ${borderClass} bg-surface text-text-muted`
-  }
+  // ── Toolbar handlers ──────────────────────────────────────────────────────
+  // The quick-add list from the toolbar's add button: opened under the button,
+  // adding at the middle of the canvas, since a click on the bar has no canvas
+  // position of its own the way a right-click or Tab does.
+  const openAddMenu = useCallback(
+    (at: { x: number; y: number }) => {
+      setQuickAdd({ screen: at, flow: canvasAnchor(false) ?? screenToFlowPosition(at) })
+    },
+    [canvasAnchor, screenToFlowPosition],
+  )
+
+  // Selection is view state, not an edit, so it records no history entry. The
+  // two arrays go through the same pure helper, each against an empty other.
+  const selectNodes = useCallback(
+    (spec: SelectionSpec) => {
+      setNodes((ns) => applySelection(ns, [], spec).nodes)
+      setEdges((es) => applySelection([], es, spec).edges)
+    },
+    [setNodes, setEdges],
+  )
+
+  // Save as copy: the canvas as it is now goes to a new graph (a blank id is
+  // what makes the backend mint one), switched off so the copy does not fire
+  // beside the original, and the editor moves onto it. Unsaved edits travel with
+  // the copy and the original keeps its last save, which is what a save-as does
+  // anywhere else.
+  const handleDuplicateGraph = useCallback(async () => {
+    setSaving(true)
+    try {
+      const copy = flowToGraph(
+        { id: '', name: `${graphName || 'Untitled'} copy`, enabled: false, createdAt: 0 },
+        nodes,
+        edges,
+      )
+      loadGraph(await onSave(copy))
+    } catch {
+      /* the store records the failure and the toolbar shows it */
+    } finally {
+      setSaving(false)
+    }
+  }, [graphName, nodes, edges, onSave, loadGraph])
 
   return (
     <SchedulerCtx.Provider value={ctxValue}>
@@ -952,216 +1084,50 @@ function GraphEditorInner({
           tile's surface (style.css). */}
       <div className="lazy-panel-in flex h-full flex-col">
         {/* ── Toolbar ──────────────────────────────────────────────────── */}
-        <div
-          className={`border-border-subtle bg-surface border-b-hairline flex shrink-0 flex-wrap items-center gap-2 px-3 py-1.5 ${NO_GRAPH_KEYS}`}
-        >
-          {/* Graph selector */}
-          <div className="relative shrink-0">
-            <button
-              onClick={graphMenu.toggle}
-              className={`border-border-subtle text-text-primary border-hairline text-1xs flex max-w-[160px] shrink-0 items-center gap-1 rounded px-1.5 py-0.5 font-mono whitespace-nowrap transition-colors ${
-                graphMenu.open ? 'bg-hover' : 'bg-canvas'
-              }`}
-            >
-              <span className="text-text-faint text-2xs">☰</span>
-              <span className="truncate">
-                {graphs.length === 0
-                  ? '— no graphs —'
-                  : graphId === ''
-                    ? '— new graph —'
-                    : (graphs.find((g) => g.id === graphId)?.name ?? graphId ?? '— new graph —')}
-              </span>
-            </button>
-
-            <Popover
-              open={graphMenu.open}
-              onClose={graphMenu.close}
-              width={180}
-              maxHeight={280}
-              align="left"
-            >
-              {graphs.length === 0 && (
-                <div className="text-text-faint px-3 py-1.5 font-mono text-xs">— no graphs —</div>
-              )}
-              {graphs.map((g) => {
-                const active = g.id === graphId
-                return (
-                  <button
-                    key={g.id}
-                    onClick={() => {
-                      confirm.guard(() => loadGraph(g))
-                      graphMenu.close()
-                    }}
-                    className={`flex w-full items-center gap-2 px-3 py-1.5 text-left font-mono text-xs transition-colors ${
-                      active
-                        ? 'text-accent bg-[color-mix(in_srgb,var(--accent)_10%,transparent)]'
-                        : 'text-text-primary bg-transparent'
-                    }`}
-                    onMouseEnter={(e) => {
-                      if (!active)
-                        (e.currentTarget as HTMLElement).style.background = 'var(--hover-surface)'
-                    }}
-                    onMouseLeave={(e) => {
-                      if (!active) (e.currentTarget as HTMLElement).style.background = 'transparent'
-                    }}
-                  >
-                    <Icon
-                      icon={Check}
-                      size="xs"
-                      className={`text-accent ${active ? 'opacity-100' : 'opacity-0'}`}
-                    />
-                    <span className="min-w-0 truncate">{g.name || g.id}</span>
-                  </button>
-                )
-              })}
-              {graphId === '' && (
-                <div className="text-accent flex w-full items-center gap-2 px-3 py-1.5 text-left font-mono text-xs">
-                  <Icon icon={Check} size="xs" />— new graph —
-                </div>
-              )}
-            </Popover>
-          </div>
-
-          {/* Graph name */}
-          {nameEditing ? (
-            <input
-              autoFocus
-              value={graphName}
-              onChange={(e) => setGraphName(e.target.value)}
-              onBlur={() => setNameEditing(false)}
-              onKeyDown={(e) => e.key === 'Enter' && setNameEditing(false)}
-              className="bg-canvas border-accent text-text-primary border-hairline text-1xs w-[140px] rounded px-1.5 py-0.5 font-mono outline-none"
-            />
-          ) : (
-            <span
-              onClick={() => setNameEditing(true)}
-              className="text-text-muted border-border-subtle border-b-hairline text-1xs flex min-w-[60px] cursor-text items-center gap-1.5 border-dashed font-mono"
-              title="Click to rename"
-            >
-              {graphName || 'Untitled'}
-              {dirty && (
-                <span
-                  className="bg-accent h-1.5 w-1.5 shrink-0 rounded-full"
-                  title="Unsaved changes"
-                />
-              )}
-            </span>
-          )}
-
-          <div className="bg-border-subtle h-4 w-[0.5px]" />
-
-          <button className={btnClass()} onClick={() => confirm.guard(handleNew)}>
-            new
-          </button>
-
-          {graphId && (
-            <button className={btnClass(graphEnabled)} onClick={handleToggleEnabled}>
-              {graphEnabled ? '[on]' : '[off]'}
-            </button>
-          )}
-
-          <button
-            className={`${btnClass()} ${!canUndo(history) ? 'opacity-50' : ''}`}
-            onClick={doUndo}
-            disabled={!canUndo(history)}
-            title="Undo (Ctrl+Z)"
-          >
-            undo
-          </button>
-          <button
-            className={`${btnClass()} ${!canRedo(history) ? 'opacity-50' : ''}`}
-            onClick={doRedo}
-            disabled={!canRedo(history)}
-            title="Redo (Ctrl+Shift+Z)"
-          >
-            redo
-          </button>
-
-          <div className="flex-1" />
-
-          {/* IPC errors and a failed run take the transient status slot and
-              stay until clicked. Two words here, whatever the message: the
-              message is in a bubble, and the click moves it there if that was
-              dismissed or its category is turned off. */}
-          {schedulerError ? (
-            <button
-              type="button"
-              onClick={() => {
-                showErrorToast(true)
-                clearSchedulerError()
-              }}
-              className="text-danger text-2xs shrink-0 font-mono whitespace-nowrap"
-              title={schedulerError}
-            >
-              scheduler error
-            </button>
-          ) : (
-            runStatus &&
-            (runStatus.failed ? (
-              <button
-                type="button"
-                onClick={() => {
-                  reopenRunToast(runStatus)
-                  showRunStatus(null)
-                }}
-                className="text-danger text-2xs shrink-0 font-mono whitespace-nowrap"
-                title={runStatus.detail}
-              >
-                {runStatus.text}
-              </button>
-            ) : (
-              <span className="text-text-faint text-2xs shrink-0 font-mono whitespace-nowrap">
-                {runStatus.text}
-              </span>
-            ))
-          )}
-
-          {(() => {
-            const selCount =
-              nodes.filter((n) => n.selected).length + edges.filter((e) => e.selected).length
-            return selCount > 0 ? (
-              <button className={btnClass(false, true)} onClick={handleDeleteSelected}>
-                del {selCount}
-              </button>
-            ) : null
-          })()}
-
-          {/* The icon and a count, never the text: a bar that grows moves every
-              control beside it, and a cut sentence cannot be read. The warnings
-              are in a bubble, which this reopens. */}
-          {warnings.length > 0 && (
-            <button
-              type="button"
-              onClick={() => showWarningToast(true)}
-              className="text-warning text-2xs flex shrink-0 items-center gap-1 font-mono whitespace-nowrap"
-              title={warningText}
-              aria-label={warnings.length === 1 ? '1 warning' : `${warnings.length} warnings`}
-            >
-              <Icon icon={TriangleAlert} size="xs" />
-              {warnings.length}
-            </button>
-          )}
-
-          {graphId && (
-            <button className={btnClass()} onClick={handleRun}>
-              run
-            </button>
-          )}
-
-          <button
-            className={`${btnClass()} ${saving ? 'opacity-50' : ''}`}
-            onClick={handleSave}
-            disabled={saving}
-          >
-            {saving ? '...' : 'save'}
-          </button>
-
-          {graphId && (
-            <button className={btnClass(false, true)} onClick={handleDelete}>
-              del graph
-            </button>
-          )}
-        </div>
+        <Toolbar
+          graphs={graphs}
+          graphId={graphId}
+          graphName={graphName}
+          graphEnabled={graphEnabled}
+          dirty={dirty}
+          saving={saving}
+          nodes={nodes}
+          edges={edges}
+          defMap={defMap}
+          canUndo={canUndo(history)}
+          canRedo={canRedo(history)}
+          runStatus={runStatus}
+          schedulerError={schedulerError}
+          warnings={warnings}
+          onLoadGraph={(g) => confirm.guard(() => loadGraph(g))}
+          onNewGraph={() => confirm.guard(handleNew)}
+          onAdd={openAddMenu}
+          edit={{
+            undo: doUndo,
+            redo: doRedo,
+            cut: cutSelected,
+            copy: copySelected,
+            duplicate: duplicateSelected,
+            paste: () => pasteClipboard(false),
+            deleteSelected: handleDeleteSelected,
+            select: selectNodes,
+          }}
+          onToggleEnabled={handleToggleEnabled}
+          onRun={handleRun}
+          onSave={handleSave}
+          onRename={setGraphName}
+          onDuplicateGraph={handleDuplicateGraph}
+          onDeleteGraph={handleDelete}
+          onErrorClick={() => {
+            showErrorToast(true)
+            clearSchedulerError()
+          }}
+          onRunStatusClick={(status) => {
+            reopenRunToast(status)
+            showRunStatus(null)
+          }}
+          onWarningsClick={() => showWarningToast(true)}
+        />
 
         {/* ── Main content ─────────────────────────────────────────────── */}
         <div className="flex flex-1 overflow-hidden">
