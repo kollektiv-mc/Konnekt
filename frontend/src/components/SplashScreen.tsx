@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { flushSync } from 'react-dom'
 import {
   cubeView,
+  exceptDisc,
   FACE,
   GAP,
   NODE_R,
@@ -83,6 +84,10 @@ export function SplashScreen({ onDone }: { onDone?: () => void }) {
         <circle r={NODE_R} fill={FACE.top} />
       </g>
     ) : null
+  // A node behind the block is drawn before the orbit's front, which leaves
+  // out its disc, gap ring included.
+  const behind =
+    node && !nodeInFront ? { x: nx, y: ny, r: (NODE_R + GAP) * frame.nodeScale } : undefined
   // A point pair stringifies as `x,y`, which is SVG's own points syntax.
   const pts = (p: readonly (readonly [number, number])[]) => p.join(' ')
 
@@ -107,6 +112,11 @@ export function SplashScreen({ onDone }: { onDone?: () => void }) {
           <clipPath id="splash-front-ink">
             <rect x="-4" y={ORBIT.cy - 1.2} width="32" height="20" />
           </clipPath>
+          {behind ? (
+            <clipPath id="splash-front-node">
+              <path d={exceptDisc(behind)} clipRule="evenodd" />
+            </clipPath>
+          ) : null}
         </defs>
         <path d={orbit} stroke={FACE.top} strokeWidth={STROKE} />
         {nodeInFront ? null : node}
@@ -122,13 +132,20 @@ export function SplashScreen({ onDone }: { onDone?: () => void }) {
             <polygon key={i} points={pts(face.points)} fill={face.fill} />
           ))}
         </g>
-        <path
-          d={orbit}
-          className="stroke-canvas"
-          strokeWidth={STROKE + 2 * GAP}
-          clipPath="url(#splash-front-gap)"
-        />
-        <path d={orbit} stroke={FACE.top} strokeWidth={STROKE} clipPath="url(#splash-front-ink)" />
+        <g clipPath={behind ? 'url(#splash-front-node)' : undefined}>
+          <path
+            d={orbit}
+            className="stroke-canvas"
+            strokeWidth={STROKE + 2 * GAP}
+            clipPath="url(#splash-front-gap)"
+          />
+          <path
+            d={orbit}
+            stroke={FACE.top}
+            strokeWidth={STROKE}
+            clipPath="url(#splash-front-ink)"
+          />
+        </g>
         {nodeInFront ? node : null}
       </svg>
     </div>
