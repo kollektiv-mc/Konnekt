@@ -11,7 +11,7 @@ import { EditMenuRows } from './EditMenu'
 import { editMenuRows, editMenuState, type EditMenuActions } from './editMenuRows'
 import { shortGraphId } from './graphId'
 import type { BlockFlowNode } from './graphMapping'
-import { warningLine, warningRows } from './graphWarnings'
+import { warningRows } from './graphWarnings'
 import { MenuDivider, MenuRow } from './MenuRow'
 import type { RunStatus } from './runStatus'
 import { WarningsMenu } from './WarningsMenu'
@@ -443,10 +443,9 @@ export function Toolbar({
       <div className={GROUP}>
         {/* The icon and a count, never the text: a bar that grows moves every
             control beside it, and a cut sentence cannot be read. The count opens
-            a list of the warnings by block, below it, whose footer raises the
-            bubble again. The slot is there at zero too,
-            quiet, so a warning arriving fills it rather than pushing the rest
-            of the bar along. */}
+            a list of the warnings by block, below it. The slot is there at zero
+            too, quiet, so a warning arriving fills it rather than pushing the
+            rest of the bar along. */}
         <Segment className="w-11">
           {warnings.length > 0 ? (
             <>
@@ -458,7 +457,6 @@ export function Toolbar({
                   'text-warning',
                   menu === 'warnings' ? 'bg-hover' : IDLE_FILL,
                 )}
-                title={warningList.map(warningLine).join('\n')}
                 aria-label={warnings.length === 1 ? '1 warning' : `${warnings.length} warnings`}
                 aria-haspopup="menu"
                 aria-expanded={menu === 'warnings'}
@@ -489,7 +487,7 @@ export function Toolbar({
               </Popover>
             </>
           ) : (
-            <span className={segmentClass('text-text-faint', 'bg-transparent')} title="No warnings">
+            <span className={segmentClass('text-text-faint', 'bg-transparent')}>
               <Icon icon={TriangleAlert} size="xs" />0
             </span>
           )}

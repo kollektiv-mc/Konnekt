@@ -213,7 +213,7 @@ describe('the bar does not shift', () => {
 
   it('keeps a slot for the warning count when there are none', () => {
     setup()
-    const quiet = screen.getByTitle('No warnings')
+    const quiet = screen.getByText('0')
     const slot = widthClass(segmentOf(quiet))
     expect(slot).toBeTruthy()
     cleanup()
