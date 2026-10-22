@@ -19,7 +19,7 @@ import { useUiStore } from './stores/useUiStore'
 import { useServerConfigStore } from './stores/useServerConfigStore'
 import { useSettingsStore } from './stores/useSettingsStore'
 import { useProcessesStore } from './stores/useProcessesStore'
-import { emitNotification } from './lib/notify'
+import { deliverScheduleNotify, emitNotification } from './lib/notify'
 import { failedRunToast, showToast } from './lib/toast'
 import type { RunFinished } from './lib/toast'
 import { useNotificationsStore } from './stores/useNotificationsStore'
@@ -550,23 +550,11 @@ function App() {
     }
   }, [])
 
-  // Scheduler notify block → in-app notification
+  // Scheduler notify block → in-app and/or desktop notification, per its deliver choice
   useEffect(() => {
     let cleanup: (() => void) | undefined
     try {
-      cleanup = EventsOn(EVENTS.SCHEDULE_NOTIFY, (data: { kind: string; message: string }) => {
-        const kind = (['info', 'warn', 'error'].includes(data.kind) ? data.kind : 'info') as
-          'info' | 'warn' | 'error'
-        emitNotification(kind, data.message)
-        // A Notify block is a message the user wrote to be read, so it gets a
-        // bubble too: an error one counts as an error, the rest as advice.
-        showToast({
-          category: kind === 'error' ? 'errors' : 'warnings',
-          tone: kind,
-          title: 'Scheduler',
-          text: data.message,
-        })
-      })
+      cleanup = EventsOn(EVENTS.SCHEDULE_NOTIFY, deliverScheduleNotify)
     } catch {
       /* non-Wails context */
     }
