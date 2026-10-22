@@ -21,11 +21,12 @@ describe('showToast', () => {
   })
 
   it('shows every category while nothing is turned off', () => {
+    // One at a time: there are more categories than the stack holds.
     for (const c of TOAST_CATEGORIES) {
       expect(toastsEnabled(c.id)).toBe(true)
-      showToast({ ...CRASH, category: c.id })
+      showToast({ ...CRASH, category: c.id, key: c.id })
+      expect(useNotificationsStore.getState().toasts.at(-1)?.category).toBe(c.id)
     }
-    expect(useNotificationsStore.getState().toasts).toHaveLength(TOAST_CATEGORIES.length)
   })
 
   it('holds back a category that is turned off, and only that one', () => {
@@ -45,7 +46,8 @@ describe('showToast', () => {
 })
 
 describe('failedRunToast', () => {
-  it('raises a failed run, keyed by its graph', () => {
+  // A re-run that fails again is news, even with the same reason.
+  it('raises a failed run, keyed by its graph, every time', () => {
     expect(
       failedRunToast({ graphId: 'g1', graphName: 'Nightly', status: 'failed', error: 'no RCON' }),
     ).toEqual({
@@ -54,6 +56,7 @@ describe('failedRunToast', () => {
       tone: 'error',
       title: 'Run failed: Nightly',
       text: 'no RCON',
+      resurface: true,
     })
   })
 
