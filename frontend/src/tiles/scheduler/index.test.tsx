@@ -9,12 +9,15 @@ import { useNotificationsStore } from '../../stores/useNotificationsStore'
 import { useSettingsStore } from '../../stores/useSettingsStore'
 import { ServerSelector } from '../../components/ServerSelector'
 import type { ServerConfig } from '../../types'
-import { EventsOn } from '../../../wailsjs/runtime/runtime'
+import { BrowserOpenURL, EventsOn } from '../../../wailsjs/runtime/runtime'
 import { EVENTS } from '../../lib/constants'
 import { SchedulerTile } from './index'
 
 vi.mock('../../../wailsjs/go/main/App')
-vi.mock('../../../wailsjs/runtime/runtime', () => ({ EventsOn: vi.fn(() => () => {}) }))
+vi.mock('../../../wailsjs/runtime/runtime', () => ({
+  EventsOn: vi.fn(() => () => {}),
+  BrowserOpenURL: vi.fn(),
+}))
 
 // The first import of the editor chunk (React Flow) is what was eating waitFor's 1 s budget on a cold run.
 beforeAll(async () => {
@@ -520,6 +523,25 @@ describe('the scheduler editor warns about a stop', () => {
     expect(panel()?.getAttribute('aria-hidden')).toBe('true')
     openPanelFromList()
     expect(panel()?.getAttribute('aria-hidden')).toBe('false')
+  })
+
+  it('opens the docs of the selected block on F1, never without one', async () => {
+    vi.mocked(App.GetScheduleGraphs).mockResolvedValue([withCommand('__stop__')])
+    vi.mocked(App.GetScheduleGraphWarnings).mockResolvedValue(RCON_ADVICE)
+    vi.mocked(App.PreviewScheduleNode).mockResolvedValue({
+      attributes: [],
+      console: [],
+    } as unknown as models.NodePreview)
+    render(<SchedulerTile serverId="alpha" maximized />)
+    await waitFor(() => expect(warningButton()).not.toBeNull())
+    fireEvent.keyDown(window, { key: 'F1' })
+    expect(BrowserOpenURL).not.toHaveBeenCalled()
+
+    openPanelFromList()
+    fireEvent.keyDown(window, { key: 'F1' })
+    expect(BrowserOpenURL).toHaveBeenCalledWith(
+      'https://konnekt.pages.dev/docs/blocks/action-command',
+    )
   })
 
   // A failure outlives the highlight, which clears when the run does, and goes
