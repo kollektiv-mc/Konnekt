@@ -1,0 +1,1168 @@
+/* Your first server: each step carries a small moving picture of the panel it
+   describes, played by first-server.js. On top of site.css and docs.css. */
+
+/* ── A step: the prose, and the picture beside it ───────────────────────── */
+
+.step-body {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 24px 40px;
+}
+
+.step-body .doc-prose {
+  flex: 1 1 360px;
+}
+
+/* The picture is drawn at the app's own small size and enlarged as a whole,
+   so the pointer still lands on the buttons it travels to by coordinate. */
+.demo-stage {
+  flex: none;
+  display: flex;
+  justify-content: center;
+}
+
+.demo-stage .demo {
+  zoom: 1.5;
+}
+
+@media (max-width: 760px) {
+  .demo-stage {
+    flex: 1 1 100%;
+  }
+
+  .demo-stage .demo {
+    zoom: 1.35;
+  }
+}
+
+/* ── The demo stage ───────────────────────────────────────────────────── */
+/* A fixed panel beside the prose rather than above it: four steps stacked as
+   columns would leave each one too narrow to read the mock-up in. What is
+   inside is the app's own type, spacing and colours at a smaller size — a
+   picture of the panel being described, not a working copy of it.
+
+   Everything below rests in its *finished* state: the form filled in, the
+   server running, the EULA up. That is what a card shows when it is not its
+   turn, so a demo ending and a demo idle look the same, and the run can hand
+   over without anything snapping back to an empty box. The animations play
+   once from empty and hold there.
+
+   Getting from that finished frame back to empty is the wind-back below: a
+   card starting its turn eases itself clear over --demo-rewind-ms first, and
+   the animation is delayed by exactly that long so it takes over on the frame
+   the ease lands. */
+.demo {
+  --demo-ms: 4600ms;
+  --demo-rewind-ms: 420ms;
+  position: relative;
+  flex: 0 0 217px;
+  height: 158px;
+  border-radius: 9px;
+  border: 0.5px solid var(--border-subtle);
+  background: var(--bg-base);
+  overflow: hidden;
+}
+
+/* Fixed width, centred, rather than filling the stage. The pointer travels to
+   a button by coordinate, and a panel that reflowed with the card would leave
+   it clicking empty space at some width. */
+.mock {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: 197px;
+  margin-left: -98px;
+  padding: 10px;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  color: var(--text-secondary);
+}
+
+.mock p {
+  margin: 0;
+}
+
+/* Two moments use this, and both are a card changing state without an
+   animation driving it: one is a card being interrupted — a hover taking over,
+   the run moving on — where the animation is dropped and the value underneath
+   is the finished state again, and the other is the wind-back at the top of a
+   turn, where .is-playing names the empty frame and the animation has not
+   started yet. Easing covers both, so neither reads as a cut.
+
+   Every property any demo animates has to appear here, on every element that
+   animates it, or that one property is the thing that snaps while the rest of
+   the card eases — which reads as the whole card cutting. The field border
+   and the pointer were exactly that. */
+.mock-type,
+.mock-field,
+.mock-modal,
+.mock-status,
+.mock-btn,
+.mock-bar,
+.mock-bar-fill,
+.mock-cursor,
+.mock-log > span,
+.mock-install-log > span {
+  transition:
+    opacity var(--demo-rewind-ms) var(--ease-standard),
+    background-color var(--demo-rewind-ms) var(--ease-standard),
+    border-color var(--demo-rewind-ms) var(--ease-standard),
+    transform var(--demo-rewind-ms) var(--ease-standard),
+    width var(--demo-rewind-ms) var(--ease-standard);
+}
+
+.mock-title {
+  margin-bottom: 7px;
+  font-family: var(--font-title);
+  font-size: 8px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+/* The app's own input: white/5 on a hairline, brighter while focused. */
+.mock-field {
+  height: 17px;
+  margin-bottom: 5px;
+  padding: 0 5px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--hover-surface);
+  border: 0.5px solid var(--border-subtle);
+  border-radius: 3px;
+  color: var(--text-primary);
+}
+
+.mock-browse {
+  margin-left: auto;
+  color: var(--text-faint);
+}
+
+/* Typed text is a width reveal in `ch`, stepped so it lands letter by letter
+   rather than sliding open. Each field sets --n to its own length, and rests
+   at that width: typed already. */
+.mock-type {
+  display: inline-block;
+  width: calc(var(--n) * 1ch);
+  overflow: hidden;
+  white-space: nowrap;
+  vertical-align: bottom;
+}
+
+.f1 .mock-type {
+  --n: 8;
+}
+.f2 .mock-type {
+  --n: 10;
+}
+.f3 .mock-type {
+  --n: 17;
+}
+.f4 .mock-type {
+  --n: 13;
+}
+.i1 .mock-type {
+  --n: 14;
+}
+.j1 .mock-type {
+  --n: 9;
+}
+
+.mock-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 17px;
+  padding: 0 9px;
+  border-radius: 3px;
+  border: 0.5px solid rgb(var(--accent-rgb) / 0.3);
+  color: var(--accent);
+  font-size: 9px;
+}
+
+/* The two buttons that get pressed rest pressed. */
+.mock-add,
+.mock-join-go {
+  background: rgb(var(--accent-rgb) / 0.1);
+}
+
+.mock-add {
+  margin-top: 2px;
+  align-self: flex-start;
+}
+
+/* ── Step 2: the installer ────────────────────────────────────────────── */
+.mock-install {
+  display: grid;
+  place-items: center;
+  background: rgb(0 0 0 / 0.45);
+}
+
+/* The modal, which this step now has to itself: the EULA step was the other
+   one that used it, and there is no second size to be wide against any more,
+   so the `.mock-modal-wide` that paired with it is gone and its descendant
+   rules hang off `.mock-install` instead. That class carried a
+   `width: 185px; gap: 5px` which never applied — `.mock-modal` set both
+   further down the sheet at equal specificity, so the wide modal has always
+   drawn at 172px. The values here are the ones it has been drawing. */
+.mock-modal {
+  position: relative;
+  width: 172px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 9px;
+  border-radius: 7px;
+  background: var(--bg-overlay);
+  border: 0.5px solid var(--border-subtle);
+}
+
+.mock-modal-head {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-family: var(--font-title);
+  font-size: 9px;
+  color: var(--text-primary);
+}
+
+.mock-modal-foot {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding-top: 5px;
+  border-top: 0.5px solid var(--border-subtle);
+}
+
+.mock-dismiss {
+  padding: 0 4px;
+  font-size: 8px;
+  color: var(--text-faint);
+}
+
+.mock-info {
+  color: var(--warning);
+  font-family: var(--font-mono);
+  font-weight: 700;
+}
+
+.mock-install .mock-field {
+  margin-bottom: 0;
+  height: 15px;
+}
+
+/* One line that cycles, not three stacked: the modal has to fit a 158px stage.
+   It rests on the last of them. */
+.mock-install-log {
+  display: grid;
+  height: 15px;
+  padding: 0 5px;
+  align-items: center;
+  border-radius: 3px;
+  background: var(--bg-surface);
+  border: 0.5px solid var(--border-subtle);
+  font-size: 7.5px;
+  color: var(--text-muted);
+}
+
+.mock-install-log > span {
+  grid-area: 1 / 1;
+  opacity: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mock-install-log .il3 {
+  opacity: 1;
+}
+
+/* The installer reports no percentage — useProcessesStore holds it at zero
+   while it runs and only finish() sets it to 100 — so this fills at the end
+   rather than pretending to measure anything on the way. */
+.mock-bar {
+  height: 2px;
+  border-radius: 999px;
+  background: var(--border-subtle);
+  overflow: hidden;
+}
+
+.mock-bar-fill {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--accent);
+}
+
+.mock-install-btn,
+.mock-added-btn {
+  grid-area: 1 / 1;
+  height: 15px;
+  font-size: 8px;
+}
+
+.mock-install-btn {
+  opacity: 0;
+}
+
+.mock-install .mock-modal-foot {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 5px;
+}
+
+.mock-install .mock-dismiss {
+  grid-area: 1 / 2;
+}
+
+/* ── Step 3: the console ──────────────────────────────────────────────── */
+/* Three status pills share one cell and cross-fade, since the text of a single
+   pill cannot be animated. Start and Stop share the other cell for the same
+   reason: pressing Start is what turns it into Stop. Both rest on the running
+   end of that. */
+.mock-console-head {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  padding-bottom: 7px;
+  margin-bottom: 8px;
+  border-bottom: 0.5px solid var(--border-subtle);
+}
+
+.mock-status {
+  grid-area: 1 / 1;
+  justify-self: start;
+  padding: 1px 6px;
+  border-radius: 999px;
+  border: 0.5px solid;
+  font-size: 8px;
+  letter-spacing: 0.06em;
+  opacity: 0;
+}
+
+.s-stopped {
+  color: var(--danger);
+  border-color: rgb(var(--danger-rgb) / 0.35);
+  background: rgb(var(--danger-rgb) / 0.08);
+}
+
+.s-starting {
+  color: var(--sun);
+  border-color: rgb(var(--sun-rgb) / 0.35);
+  background: rgb(var(--sun-rgb) / 0.08);
+}
+
+.s-running {
+  color: var(--accent);
+  border-color: rgb(var(--accent-rgb) / 0.35);
+  background: rgb(var(--accent-rgb) / 0.08);
+  opacity: 1;
+}
+
+.mock-start,
+.mock-stop {
+  grid-area: 1 / 2;
+  justify-self: end;
+  height: 15px;
+  font-size: 8px;
+}
+
+.mock-start {
+  opacity: 0;
+}
+
+.mock-stop {
+  border-color: rgb(var(--danger-rgb) / 0.3);
+  color: var(--danger);
+}
+
+.mock-log {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 8px;
+  color: var(--text-muted);
+}
+
+.mock-log > span {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mock-log .l4 {
+  color: var(--accent);
+}
+
+/* ── Step 4: joining ──────────────────────────────────────────────────── */
+/* The one panel on this page that is not Konnekt's. Joining happens in
+   Minecraft, so this is its Direct Connection screen: the same parts in the
+   same order as the real one, the title over the address under its label over
+   the two stacked buttons, drawn in this page's type and tokens rather than in
+   Minecraft's own. A pixel copy at 197px would be unreadable and would not sit
+   beside the three app panels above it.
+
+   Centred where every Konnekt panel here is left-aligned, which is the thing
+   that says at a glance that you have left the app, and the only thing: the
+   stage keeps the same --bg-base the other three sit on, so four cards in a
+   row still read as one set. */
+.mock-join {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 20px;
+  text-align: center;
+}
+
+.mock-join-title {
+  font-family: var(--font-title);
+  font-size: 10px;
+  color: var(--text-primary);
+}
+
+/* The title and this sit as one centred group rather than the title pinning to
+   the top with this centred under it, which left the whole panel reading high
+   against the three beside it. The screen this is of has a tall window to
+   spend; a 158px tile does not. */
+.mock-join-body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.mock-join-label {
+  text-align: left;
+  font-size: 8px;
+  color: var(--text-faint);
+}
+
+/* The field is the app's, so the typed reveal and the focus edge are the two
+   animations step 1 already runs. Only the spacing differs: this column sets
+   its own. */
+.mock-join .mock-field {
+  height: 16px;
+  margin-bottom: 0;
+}
+
+/* Full width and stacked, and set well below the field, which is the shape of
+   the screen. Join takes the accent as the button that does something, the way
+   every other pressed button in these panels does. Cancel stays neutral, and is
+   never pressed. */
+.mock-join-go,
+.mock-join-cancel {
+  height: 16px;
+  font-size: 8px;
+}
+
+.mock-join-go {
+  margin-top: 14px;
+}
+
+.mock-join-cancel {
+  border-color: var(--border-subtle);
+  color: var(--text-muted);
+}
+
+/* The pointer, drawn rather than an image so it takes the palette. It is the
+   one thing that never rests visible: a still frame of a finished panel should
+   not have a cursor sitting on it. */
+.mock-cursor {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  border: 1px solid var(--text-primary);
+  background: rgb(255 255 255 / 0.15);
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Invisible at rest, but not *nowhere* at rest. Every other element's resting
+   value is already its animation's last frame, which is what lets a card that
+   loses its turn mid-run ease to that frame instead of cutting to it. The
+   pointer had no resting position at all, so an interrupted card teleported it
+   to the top-left corner on the way out while everything around it eased.
+   These are each cursor animation's own 100%: where it was left standing after
+   the click it just made. */
+.step[data-demo='add'] .mock-cursor {
+  transform: translate(42px, 124px) scale(1);
+}
+.step[data-demo='install'] .mock-cursor {
+  transform: translate(77px, 109px) scale(1);
+}
+.step[data-demo='start'] .mock-cursor {
+  transform: translate(161px, 15px) scale(1);
+}
+.step[data-demo='join'] .mock-cursor {
+  transform: translate(94px, 106px) scale(1);
+}
+
+/* ── The run ──────────────────────────────────────────────────────────── */
+/* 4.6s, played once and held on the last frame — about twice the pace of the
+   first pass at this, which spent three of its eight seconds holding a result
+   the resting state now shows anyway.
+
+   `forwards` is what makes the hand-over free: the animation's last frame and
+   the element's resting value are the same picture, so docs.js can take the
+   class off whenever the run moves on without anything jumping.
+
+   It is also, deliberately, not `both`. A backwards fill put the element on
+   the animation's 0% the instant .is-playing landed, which is a filled form
+   blinking blank and a modal vanishing between two frames. Instead each rule
+   below carries that 0% as a plain declaration and the animation waits
+   --demo-rewind-ms before it starts: the transition above eases the card back
+   to empty over the delay, and the animation picks it up from the frame it
+   arrives on. Those declarations have to stay equal to their own 0%, or the
+   seam opens up again. */
+@keyframes demo-focus-1 {
+  0%,
+  2% {
+    border-color: var(--border-subtle);
+  }
+  5%,
+  15% {
+    border-color: rgb(var(--accent-rgb) / 0.45);
+  }
+  19%,
+  100% {
+    border-color: var(--border-subtle);
+  }
+}
+
+@keyframes demo-focus-2 {
+  0%,
+  16% {
+    border-color: var(--border-subtle);
+  }
+  19%,
+  29% {
+    border-color: rgb(var(--accent-rgb) / 0.45);
+  }
+  33%,
+  100% {
+    border-color: var(--border-subtle);
+  }
+}
+
+@keyframes demo-focus-3 {
+  0%,
+  30% {
+    border-color: var(--border-subtle);
+  }
+  33%,
+  43% {
+    border-color: rgb(var(--accent-rgb) / 0.45);
+  }
+  47%,
+  100% {
+    border-color: var(--border-subtle);
+  }
+}
+
+@keyframes demo-focus-4 {
+  0%,
+  44% {
+    border-color: var(--border-subtle);
+  }
+  47%,
+  57% {
+    border-color: rgb(var(--accent-rgb) / 0.45);
+  }
+  61%,
+  100% {
+    border-color: var(--border-subtle);
+  }
+}
+
+@keyframes demo-type-1 {
+  0%,
+  4% {
+    width: 0;
+  }
+  16%,
+  100% {
+    width: calc(var(--n) * 1ch);
+  }
+}
+
+@keyframes demo-type-2 {
+  0%,
+  18% {
+    width: 0;
+  }
+  30%,
+  100% {
+    width: calc(var(--n) * 1ch);
+  }
+}
+
+@keyframes demo-type-3 {
+  0%,
+  32% {
+    width: 0;
+  }
+  44%,
+  100% {
+    width: calc(var(--n) * 1ch);
+  }
+}
+
+@keyframes demo-type-4 {
+  0%,
+  46% {
+    width: 0;
+  }
+  58%,
+  100% {
+    width: calc(var(--n) * 1ch);
+  }
+}
+
+/* Pressed, and staying pressed: the resting state is the pressed one. */
+@keyframes demo-press {
+  0%,
+  78% {
+    background-color: rgb(var(--accent-rgb) / 0);
+    transform: scale(1);
+  }
+  83% {
+    background-color: rgb(var(--accent-rgb) / 0.2);
+    transform: scale(0.95);
+  }
+  90%,
+  100% {
+    background-color: rgb(var(--accent-rgb) / 0.1);
+    transform: scale(1);
+  }
+}
+
+@keyframes demo-cursor-add {
+  0%,
+  56% {
+    opacity: 0;
+    transform: translate(150px, 40px) scale(1);
+  }
+  62% {
+    opacity: 1;
+    transform: translate(150px, 40px) scale(1);
+  }
+  78%,
+  80% {
+    opacity: 1;
+    transform: translate(42px, 124px) scale(1);
+  }
+  84% {
+    opacity: 1;
+    transform: translate(42px, 124px) scale(0.68);
+  }
+  90% {
+    opacity: 1;
+    transform: translate(42px, 124px) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(42px, 124px) scale(1);
+  }
+}
+
+.step[data-demo='add'].is-playing .f1 {
+  animation: demo-focus-1 var(--demo-ms) var(--ease-standard) var(--demo-rewind-ms) forwards;
+}
+.step[data-demo='add'].is-playing .f2 {
+  animation: demo-focus-2 var(--demo-ms) var(--ease-standard) var(--demo-rewind-ms) forwards;
+}
+.step[data-demo='add'].is-playing .f3 {
+  animation: demo-focus-3 var(--demo-ms) var(--ease-standard) var(--demo-rewind-ms) forwards;
+}
+.step[data-demo='add'].is-playing .f4 {
+  animation: demo-focus-4 var(--demo-ms) var(--ease-standard) var(--demo-rewind-ms) forwards;
+}
+.step[data-demo='add'].is-playing .f1 .mock-type {
+  animation: demo-type-1 var(--demo-ms) steps(14, end) var(--demo-rewind-ms) forwards;
+  width: 0;
+}
+.step[data-demo='add'].is-playing .f2 .mock-type {
+  animation: demo-type-2 var(--demo-ms) steps(14, end) var(--demo-rewind-ms) forwards;
+  width: 0;
+}
+.step[data-demo='add'].is-playing .f3 .mock-type {
+  animation: demo-type-3 var(--demo-ms) steps(18, end) var(--demo-rewind-ms) forwards;
+  width: 0;
+}
+.step[data-demo='add'].is-playing .f4 .mock-type {
+  animation: demo-type-4 var(--demo-ms) steps(15, end) var(--demo-rewind-ms) forwards;
+  width: 0;
+}
+.step[data-demo='add'].is-playing .mock-add {
+  animation: demo-press var(--demo-ms) var(--ease-standard) var(--demo-rewind-ms) forwards;
+  background-color: rgb(var(--accent-rgb) / 0);
+}
+.step[data-demo='add'].is-playing .mock-cursor {
+  animation: demo-cursor-add var(--demo-ms) var(--ease-standard) var(--demo-rewind-ms) forwards;
+}
+
+/* Step 2 — a folder is picked, the install runs, and the button becomes the
+   one that adds what it produced. */
+@keyframes demo-install-in {
+  0% {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  10%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes demo-type-install {
+  0%,
+  12% {
+    width: 0;
+  }
+  28%,
+  100% {
+    width: calc(var(--n) * 1ch);
+  }
+}
+
+@keyframes demo-cursor-install {
+  0%,
+  30% {
+    opacity: 0;
+    transform: translate(150px, 30px) scale(1);
+  }
+  36% {
+    opacity: 1;
+    transform: translate(150px, 30px) scale(1);
+  }
+  50%,
+  52% {
+    opacity: 1;
+    transform: translate(77px, 109px) scale(1);
+  }
+  56% {
+    opacity: 1;
+    transform: translate(77px, 109px) scale(0.68);
+  }
+  62% {
+    opacity: 1;
+    transform: translate(77px, 109px) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(77px, 109px) scale(1);
+  }
+}
+
+@keyframes demo-press-install {
+  0%,
+  52% {
+    background-color: rgb(var(--accent-rgb) / 0);
+    opacity: 1;
+    transform: scale(1);
+  }
+  56% {
+    background-color: rgb(var(--accent-rgb) / 0.2);
+    opacity: 1;
+    transform: scale(0.95);
+  }
+  62%,
+  86% {
+    background-color: rgb(var(--accent-rgb) / 0.1);
+    opacity: 1;
+    transform: scale(1);
+  }
+  92%,
+  100% {
+    background-color: rgb(var(--accent-rgb) / 0);
+    opacity: 0;
+    transform: scale(1);
+  }
+}
+
+@keyframes demo-swap-in {
+  0%,
+  86% {
+    opacity: 0;
+  }
+  92%,
+  100% {
+    opacity: 1;
+  }
+}
+
+@keyframes demo-il-1 {
+  0%,
+  60% {
+    opacity: 0;
+  }
+  64%,
+  70% {
+    opacity: 1;
+  }
+  74%,
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes demo-il-2 {
+  0%,
+  72% {
+    opacity: 0;
+  }
+  76%,
+  82% {
+    opacity: 1;
+  }
+  86%,
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes demo-il-3 {
+  0%,
+  84% {
+    opacity: 0;
+  }
+  88%,
+  100% {
+    opacity: 1;
+  }
+}
+
+@keyframes demo-bar {
+  0%,
+  56% {
+    opacity: 0;
+  }
+  62%,
+  100% {
+    opacity: 1;
+  }
+}
+
+@keyframes demo-bar-fill {
+  0%,
+  86% {
+    width: 0;
+  }
+  94%,
+  100% {
+    width: 100%;
+  }
+}
+
+.step[data-demo='install'].is-playing .mock-modal {
+  animation: demo-install-in var(--demo-ms) var(--ease-standard) var(--demo-rewind-ms) forwards;
+  opacity: 0;
+  transform: scale(0.96);
+}
+.step[data-demo='install'].is-playing .i1 .mock-type {
+  animation: demo-type-install var(--demo-ms) steps(16, end) var(--demo-rewind-ms) forwards;
+  width: 0;
+}
+.step[data-demo='install'].is-playing .mock-cursor {
+  animation: demo-cursor-install var(--demo-ms) var(--ease-standard) var(--demo-rewind-ms) forwards;
+}
+.step[data-demo='install'].is-playing .mock-install-btn {
+  animation: demo-press-install var(--demo-ms) var(--ease-standard) var(--demo-rewind-ms) forwards;
+  opacity: 1;
+  background-color: rgb(var(--accent-rgb) / 0);
+}
+.step[data-demo='install'].is-playing .mock-added-btn {
+  animation: demo-swap-in var(--demo-ms) var(--ease-standard) var(--demo-rewind-ms) forwards;
+  opacity: 0;
+}
+.step[data-demo='install'].is-playing .mock-bar {
+  animation: demo-bar var(--demo-ms) var(--ease-standard) var(--demo-rewind-ms) forwards;
+  opacity: 0;
+}
+.step[data-demo='install'].is-playing .mock-bar-fill {
+  animation: demo-bar-fill var(--demo-ms) var(--ease-standard) var(--demo-rewind-ms) forwards;
+  width: 0;
+}
+.step[data-demo='install'].is-playing .il1 {
+  animation: demo-il-1 var(--demo-ms) var(--ease-standard) var(--demo-rewind-ms) forwards;
+}
+.step[data-demo='install'].is-playing .il2 {
+  animation: demo-il-2 var(--demo-ms) var(--ease-standard) var(--demo-rewind-ms) forwards;
+}
+.step[data-demo='install'].is-playing .il3 {
+  animation: demo-il-3 var(--demo-ms) var(--ease-standard) var(--demo-rewind-ms) forwards;
+  opacity: 0;
+}
+
+/* Step 3 — Start is pressed, becomes Stop, and the status walks
+   stopped → starting → running with the log filling in behind it. */
+@keyframes demo-cursor-start {
+  0%,
+  4% {
+    opacity: 0;
+    transform: translate(52px, 132px) scale(1);
+  }
+  10% {
+    opacity: 1;
+    transform: translate(52px, 132px) scale(1);
+  }
+  26%,
+  28% {
+    opacity: 1;
+    transform: translate(161px, 15px) scale(1);
+  }
+  32% {
+    opacity: 1;
+    transform: translate(161px, 15px) scale(0.68);
+  }
+  38% {
+    opacity: 1;
+    transform: translate(161px, 15px) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(161px, 15px) scale(1);
+  }
+}
+
+@keyframes demo-press-start {
+  0%,
+  28% {
+    background-color: rgb(var(--accent-rgb) / 0);
+    opacity: 1;
+    transform: scale(1);
+  }
+  32% {
+    background-color: rgb(var(--accent-rgb) / 0.2);
+    opacity: 1;
+    transform: scale(0.95);
+  }
+  38% {
+    background-color: rgb(var(--accent-rgb) / 0.1);
+    opacity: 1;
+    transform: scale(1);
+  }
+  46%,
+  100% {
+    background-color: rgb(var(--accent-rgb) / 0);
+    opacity: 0;
+    transform: scale(1);
+  }
+}
+
+@keyframes demo-stop-in {
+  0%,
+  40% {
+    opacity: 0;
+  }
+  48%,
+  100% {
+    opacity: 1;
+  }
+}
+
+@keyframes demo-status-stopped {
+  0%,
+  34% {
+    opacity: 1;
+  }
+  42%,
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes demo-status-starting {
+  0%,
+  36% {
+    opacity: 0;
+  }
+  44%,
+  70% {
+    opacity: 1;
+  }
+  78%,
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes demo-status-running {
+  0%,
+  72% {
+    opacity: 0;
+  }
+  80%,
+  100% {
+    opacity: 1;
+  }
+}
+
+@keyframes demo-line-1 {
+  0%,
+  44% {
+    opacity: 0;
+  }
+  50%,
+  100% {
+    opacity: 1;
+  }
+}
+
+@keyframes demo-line-2 {
+  0%,
+  54% {
+    opacity: 0;
+  }
+  60%,
+  100% {
+    opacity: 1;
+  }
+}
+
+@keyframes demo-line-3 {
+  0%,
+  64% {
+    opacity: 0;
+  }
+  70%,
+  100% {
+    opacity: 1;
+  }
+}
+
+@keyframes demo-line-4 {
+  0%,
+  76% {
+    opacity: 0;
+  }
+  82%,
+  100% {
+    opacity: 1;
+  }
+}
+
+.step[data-demo='start'].is-playing .mock-cursor {
+  animation: demo-cursor-start var(--demo-ms) var(--ease-standard) var(--demo-rewind-ms) forwards;
+}
+.step[data-demo='start'].is-playing .mock-start {
+  animation: demo-press-start var(--demo-ms) var(--ease-standard) var(--demo-rewind-ms) forwards;
+  opacity: 1;
+  background-color: rgb(var(--accent-rgb) / 0);
+}
+.step[data-demo='start'].is-playing .mock-stop {
+  animation: demo-stop-in var(--demo-ms) var(--ease-standard) var(--demo-rewind-ms) forwards;
+  opacity: 0;
+}
+.step[data-demo='start'].is-playing .s-stopped {
+  animation: demo-status-stopped var(--demo-ms) var(--ease-standard) var(--demo-rewind-ms) forwards;
+  opacity: 1;
+}
+.step[data-demo='start'].is-playing .s-starting {
+  animation: demo-status-starting var(--demo-ms) var(--ease-standard) var(--demo-rewind-ms) forwards;
+}
+.step[data-demo='start'].is-playing .s-running {
+  animation: demo-status-running var(--demo-ms) var(--ease-standard) var(--demo-rewind-ms) forwards;
+  opacity: 0;
+}
+.step[data-demo='start'].is-playing .l1 {
+  animation: demo-line-1 var(--demo-ms) var(--ease-standard) var(--demo-rewind-ms) forwards;
+  opacity: 0;
+}
+.step[data-demo='start'].is-playing .l2 {
+  animation: demo-line-2 var(--demo-ms) var(--ease-standard) var(--demo-rewind-ms) forwards;
+  opacity: 0;
+}
+.step[data-demo='start'].is-playing .l3 {
+  animation: demo-line-3 var(--demo-ms) var(--ease-standard) var(--demo-rewind-ms) forwards;
+  opacity: 0;
+}
+.step[data-demo='start'].is-playing .l4 {
+  animation: demo-line-4 var(--demo-ms) var(--ease-standard) var(--demo-rewind-ms) forwards;
+  opacity: 0;
+}
+
+/* Step 4 — the address is typed into an empty field and Join Server is
+   pressed. Nothing arrives and nothing dims: it is one screen, already open,
+   being filled in, which is the same shape as step 1 and the reason it reuses
+   step 1's two field animations. */
+@keyframes demo-focus-join {
+  0%,
+  6% {
+    border-color: var(--border-subtle);
+  }
+  12%,
+  48% {
+    border-color: rgb(var(--accent-rgb) / 0.45);
+  }
+  55%,
+  100% {
+    border-color: var(--border-subtle);
+  }
+}
+
+@keyframes demo-type-join {
+  0%,
+  18% {
+    width: 0;
+  }
+  44%,
+  100% {
+    width: calc(var(--n) * 1ch);
+  }
+}
+
+/* The same shape as step 1's: the field takes focus and fills itself, and the
+   pointer is only in the panel for the click at the end of it. It is there to
+   say which button gets pressed, not to mime the typing. */
+@keyframes demo-cursor-join {
+  0%,
+  56% {
+    opacity: 0;
+    transform: translate(155px, 146px) scale(1);
+  }
+  62% {
+    opacity: 1;
+    transform: translate(155px, 146px) scale(1);
+  }
+  78%,
+  80% {
+    opacity: 1;
+    transform: translate(94px, 106px) scale(1);
+  }
+  84% {
+    opacity: 1;
+    transform: translate(94px, 106px) scale(0.68);
+  }
+  90% {
+    opacity: 1;
+    transform: translate(94px, 106px) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(94px, 106px) scale(1);
+  }
+}
+
+.step[data-demo='join'].is-playing .j1 {
+  animation: demo-focus-join var(--demo-ms) var(--ease-standard) var(--demo-rewind-ms) forwards;
+}
+.step[data-demo='join'].is-playing .j1 .mock-type {
+  animation: demo-type-join var(--demo-ms) steps(9, end) var(--demo-rewind-ms) forwards;
+  width: 0;
+}
+.step[data-demo='join'].is-playing .mock-cursor {
+  animation: demo-cursor-join var(--demo-ms) var(--ease-standard) var(--demo-rewind-ms) forwards;
+}
+.step[data-demo='join'].is-playing .mock-join-go {
+  animation: demo-press var(--demo-ms) var(--ease-standard) var(--demo-rewind-ms) forwards;
+  background-color: rgb(var(--accent-rgb) / 0);
+}
