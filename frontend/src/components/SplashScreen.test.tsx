@@ -39,6 +39,32 @@ describe('SplashScreen', () => {
     expect(onDone).toHaveBeenCalledOnce()
   })
 
+  it('keeps the orbit front off the node behind the block', () => {
+    vi.stubGlobal('requestAnimationFrame', (cb: FrameRequestCallback) =>
+      setTimeout(() => cb(Date.now()), 16),
+    )
+    vi.stubGlobal('cancelAnimationFrame', (id: number) => clearTimeout(id))
+    const { container } = render(<SplashScreen />)
+    const svg = container.querySelector('svg')!
+    let behind = 0
+    // Through the lap, frame by frame: whenever the node is drawn before the
+    // block, the orbit's front is clipped to leave out its disc.
+    for (let i = 0; i < 60; i++) {
+      act(() => {
+        vi.advanceTimersByTime(16)
+      })
+      const children = [...svg.children]
+      const node = svg.querySelector(':scope > g[transform]')
+      if (!node) continue
+      const isBehind =
+        children.indexOf(node) < children.indexOf(svg.querySelector(':scope > g[opacity]')!)
+      if (isBehind) behind++
+      expect(svg.querySelector('#splash-front-node') !== null).toBe(isBehind)
+      expect(svg.querySelector('g[clip-path="url(#splash-front-node)"]') !== null).toBe(isBehind)
+    }
+    expect(behind).toBeGreaterThan(0)
+  })
+
   it('shows the finished mark at once under reduced motion', () => {
     vi.stubGlobal('matchMedia', (query: string) => ({ matches: query.includes('reduce') }))
     const { container } = render(<SplashScreen />)

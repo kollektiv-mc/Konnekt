@@ -45,14 +45,21 @@ export interface ToastInput {
   tone: ToastTone
   title: string
   text: string
+  /**
+   * Each arrival is news, so it shows even when a bubble with the same key and
+   * text was dismissed: a failed run, which a re-run can fail with the same
+   * reason. Without it a dismissal holds until the text changes, which suits a
+   * condition that is still standing, like a graph's warnings.
+   */
+  resurface?: boolean
 }
 
 let notifId = 0
 const MAX_ITEMS = 200
 let toastId = 0
-// Enough to cover a burst without the stack outgrowing the window; the column
-// scrolls past what fits.
-export const MAX_TOASTS = 20
+// A short stack in the corner rather than a wall of cards: a new bubble past
+// the third takes the place of the oldest, which leaves from the top.
+export const MAX_TOASTS = 3
 
 function clock(): string {
   return new Date().toLocaleTimeString([], {
@@ -76,8 +83,9 @@ interface NotificationsStore {
    */
   dismissedToasts: Record<string, string>
   /**
-   * Opens a bubble, or updates the open one with the same key. `force` is for
-   * the user asking to see it again, and overrides an earlier dismissal.
+   * Opens a bubble, or updates the open one with the same key; one that
+   * resurfaces moves to the bottom, where the newest sits. `force` is for the user asking to
+   * see it again, and overrides an earlier dismissal.
    */
   showToast: (input: ToastInput, force?: boolean) => void
   dismissToast: (id: number) => void
@@ -103,7 +111,7 @@ export const useNotificationsStore = create<NotificationsStore>((set) => ({
     set((s) => {
       let dismissedToasts = s.dismissedToasts
       if (key in dismissedToasts) {
-        if (!force && dismissedToasts[key] === input.text) return s
+        if (!force && !input.resurface && dismissedToasts[key] === input.text) return s
         dismissedToasts = { ...dismissedToasts }
         delete dismissedToasts[key]
       }
@@ -114,7 +122,17 @@ export const useNotificationsStore = create<NotificationsStore>((set) => ({
         // A forced reopen of a bubble that is already up is the user looking
         // for it, not a repeat, so it does not bump the count.
         const next = { ...open, ...input, key, timestamp, count: force ? open.count : count }
-        return { dismissedToasts, toasts: s.toasts.map((t) => (t.id === open.id ? next : t)) }
+        // News moves down to the newest place: an arrival that resurfaces (a
+        // failed run) or the user asking for the bubble. It keeps its id, so
+        // the card glides there rather than leaving and arriving again. A
+        // standing condition (a TPS reading, a graph's warnings as it is
+        // edited) updates where it is, so a reading every few seconds does
+        // not reshuffle the stack.
+        const moves = force || input.resurface === true
+        const toasts = moves
+          ? [...s.toasts.filter((t) => t.id !== open.id), next]
+          : s.toasts.map((t) => (t.id === open.id ? next : t))
+        return { dismissedToasts, toasts }
       }
       const toast: Toast = { ...input, key, id: ++toastId, timestamp, count: 1 }
       return { dismissedToasts, toasts: [...s.toasts.slice(-(MAX_TOASTS - 1)), toast] }

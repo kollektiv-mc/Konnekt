@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   cubeView,
+  exceptDisc,
   FACE,
   orbitPath,
   orbitPoint,
@@ -39,6 +40,13 @@ describe('splash mark', () => {
     expect(end.nodeT - end.orbitFrom).toBeCloseTo(2 * Math.PI)
     expect(orbitPath(end.orbitFrom, end.nodeT)).toMatch(/Z$/)
     expect(orbitPath(0, 0)).toBe('')
+  })
+
+  it('cuts the node out of the orbit front as a second subpath', () => {
+    const d = exceptDisc({ x: 3, y: 12, r: 2 })
+    // The whole canvas, then a circle through (1, 12) and (5, 12).
+    expect(d.match(/M/g)).toHaveLength(2)
+    expect(d).toMatch(/^M-4 -4h32v32h-32zM1 12a2 2 0 1 0 4 0a2 2 0 1 0 -4 0z$/)
   })
 
   it('starts with the block hidden, low and turned', () => {

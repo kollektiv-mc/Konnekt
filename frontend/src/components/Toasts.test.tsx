@@ -82,6 +82,40 @@ describe('Toasts', () => {
     expect(screen.queryByRole('region', { name: 'Notifications' })).toBeNull()
   })
 
+  it('fades the dismiss-all row in once a second bubble arrives', () => {
+    const { showToast } = useNotificationsStore.getState()
+    showToast({ category: 'warnings', tone: 'warn', title: 'Low TPS', text: 'TPS 12' })
+    render(<Toasts />)
+    const row = screen.getByText('Dismiss all').parentElement as HTMLElement
+    expect(row.className).toContain('opacity-0')
+    expect(row.hasAttribute('inert')).toBe(true)
+
+    act(() => showToast({ category: 'update', tone: 'info', title: 'Update', text: 'v1.2.0' }))
+    expect(row.className).toContain('opacity-100')
+    expect(row.hasAttribute('inert')).toBe(false)
+    expect(screen.getByRole('button', { name: 'Dismiss all' })).toBeTruthy()
+  })
+
+  it('draws a resurfacing bubble at the bottom, under the older ones', () => {
+    const { showToast } = useNotificationsStore.getState()
+    const tps = {
+      key: 'run',
+      category: 'errors',
+      tone: 'error',
+      title: 'Run failed',
+      resurface: true,
+    } as const
+    showToast({ ...tps, text: 'TPS 12' })
+    showToast({ category: 'update', tone: 'info', title: 'Update', text: 'v1.2.0' })
+    render(<Toasts />)
+    act(() => showToast({ ...tps, text: 'TPS 12' }))
+    const titles = [...document.querySelectorAll('[role="alert"], [role="status"]')].map(
+      (el) => el.textContent ?? '',
+    )
+    expect(titles[0]).toContain('Update')
+    expect(titles[1]).toContain('Run failed')
+  })
+
   it('slides a new bubble in from the right', () => {
     render(<Toasts />)
     act(() =>
@@ -124,20 +158,18 @@ describe('Toasts', () => {
       render(<Toasts />)
       expect(animate).not.toHaveBeenCalled()
 
-      // The lower card fades where it is, so no card moves until it is gone.
-      // (The "Dismiss all" row going is only the column giving up its height.)
+      // The lower card fades where it is, so nothing moves until it is gone,
+      // and the "Dismiss all" row fades out in its place rather than going.
       fireEvent.click(screen.getAllByRole('button', { name: 'Dismiss' })[1])
-      expect(animate.mock.calls.map((c) => c[0])).toEqual([
-        [{ paddingTop: '100px' }, { paddingTop: '0px' }],
-      ])
-      animate.mockClear()
+      expect(animate).not.toHaveBeenCalled()
       act(() => document.querySelectorAll('.toast-out').forEach(endAnimation))
 
-      // The card above drops one card's height, from where it was, and the
-      // column gives that height up at the same pace, so the card is not
-      // clipped at its top on the way down.
+      // The card above and the row over it drop one card's height, from where
+      // they were, and the column gives that height up at the same pace, so
+      // neither is clipped at its top on the way down.
       expect(animate.mock.calls.map((c) => c[0])).toEqual([
         [{ paddingTop: '100px' }, { paddingTop: '0px' }],
+        [{ transform: 'translateY(-100px)' }, { transform: 'translateY(0)' }],
         [{ transform: 'translateY(-100px)' }, { transform: 'translateY(0)' }],
       ])
       expect(screen.getByText('TPS 12')).toBeTruthy()

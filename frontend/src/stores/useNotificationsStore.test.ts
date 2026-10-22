@@ -87,6 +87,15 @@ describe('useNotificationsStore toasts', () => {
     expect(toasts()).toHaveLength(1)
   })
 
+  it('shows a dismissed bubble again when it resurfaces', () => {
+    const failed = { ...RUN, resurface: true }
+    showToast(failed)
+    dismissToast(toasts()[0].id)
+    showToast(failed)
+    expect(toasts()).toHaveLength(1)
+    expect(useNotificationsStore.getState().dismissedToasts).toEqual({})
+  })
+
   it('shows a dismissed bubble again when forced, and forgets the dismissal', () => {
     showToast(RUN)
     dismissToast(toasts()[0].id)
@@ -119,6 +128,27 @@ describe('useNotificationsStore toasts', () => {
     expect(toasts()).toEqual([])
     showToast(RUN)
     expect(toasts()).toHaveLength(1)
+  })
+
+  it('moves a resurfacing bubble down to the newest place', () => {
+    showToast({ ...RUN, resurface: true })
+    showToast({ ...RUN, key: 'other' })
+    const id = toasts()[0].id
+    showToast({ ...RUN, resurface: true })
+    expect(toasts().map((t) => t.key)).toEqual(['other', 'scheduler:run'])
+    expect(toasts()[1]).toMatchObject({ id, count: 2 })
+  })
+
+  it('updates a standing condition in place', () => {
+    showToast(RUN)
+    showToast({ ...RUN, key: 'other' })
+    showToast(RUN)
+    showToast({ ...RUN, text: 'a newer reason' })
+    expect(toasts().map((t) => t.key)).toEqual(['scheduler:run', 'other'])
+  })
+
+  it('stacks three bubbles at most', () => {
+    expect(MAX_TOASTS).toBe(3)
   })
 
   it('caps the stack, dropping the oldest', () => {
