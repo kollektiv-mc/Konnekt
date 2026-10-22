@@ -38,7 +38,12 @@ function handlers() {
     onLoadGraph: vi.fn(),
     onNewGraph: vi.fn(),
     onAdd: vi.fn(),
-    view: { curvedEdges: true, onToggleCurvedEdges: vi.fn() },
+    view: {
+      curvedEdges: true,
+      onToggleCurvedEdges: vi.fn(),
+      snapToGrid: false,
+      onToggleSnapToGrid: vi.fn(),
+    },
     edit: {
       undo: vi.fn(),
       redo: vi.fn(),
@@ -286,7 +291,14 @@ describe('the view menu', () => {
   })
 
   it('shows curved connectors off, with the mark hidden', () => {
-    setup({ view: { curvedEdges: false, onToggleCurvedEdges: vi.fn() } })
+    setup({
+      view: {
+        curvedEdges: false,
+        onToggleCurvedEdges: vi.fn(),
+        snapToGrid: false,
+        onToggleSnapToGrid: vi.fn(),
+      },
+    })
     openView()
     expect(curved().getAttribute('aria-checked')).toBe('false')
     expect(curved().querySelector('svg')?.getAttribute('class')).toContain('opacity-0')
@@ -294,11 +306,46 @@ describe('the view menu', () => {
 
   it('flips the preference and stays open for the next choice', () => {
     const onToggleCurvedEdges = vi.fn()
-    setup({ view: { curvedEdges: true, onToggleCurvedEdges } })
+    setup({
+      view: {
+        curvedEdges: true,
+        onToggleCurvedEdges,
+        snapToGrid: false,
+        onToggleSnapToGrid: vi.fn(),
+      },
+    })
     openView()
     fireEvent.click(curved())
     expect(onToggleCurvedEdges).toHaveBeenCalledOnce()
     expect(curved()).toBeTruthy()
+  })
+
+  it('has snap to grid second, off until chosen', () => {
+    const view = { curvedEdges: true, onToggleCurvedEdges: vi.fn(), snapToGrid: false }
+    const onToggleSnapToGrid = vi.fn()
+    setup({ view: { ...view, onToggleSnapToGrid } })
+    openView()
+    const rows = screen.getAllByRole('switch')
+    expect(rows.map((r) => r.textContent)).toEqual(['Curved connectors', 'Snap to grid'])
+    expect(rows[1].getAttribute('aria-checked')).toBe('false')
+    fireEvent.click(rows[1])
+    expect(onToggleSnapToGrid).toHaveBeenCalledOnce()
+    expect(view.onToggleCurvedEdges).not.toHaveBeenCalled()
+  })
+
+  it('shows snap to grid on, with the mark visible', () => {
+    setup({
+      view: {
+        curvedEdges: true,
+        onToggleCurvedEdges: vi.fn(),
+        snapToGrid: true,
+        onToggleSnapToGrid: vi.fn(),
+      },
+    })
+    openView()
+    const snap = screen.getByRole('switch', { name: 'Snap to grid' })
+    expect(snap.getAttribute('aria-checked')).toBe('true')
+    expect(snap.querySelector('svg')?.getAttribute('class')).toContain('opacity-100')
   })
 })
 

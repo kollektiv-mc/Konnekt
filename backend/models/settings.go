@@ -45,6 +45,12 @@ type AppSettings struct {
 	// unmarshals onto that default (services.GetAppSettings).
 	SchedulerCurvedEdges bool `json:"schedulerCurvedEdges"`
 
+	// SchedulerSnapToGrid makes a node, and a connection's corner point, snap
+	// to the dots of the editor's background grid while it is dragged (#693).
+	// One choice for every graph; positions already saved are never moved by
+	// turning it on. Off by default, which is the zero value.
+	SchedulerSnapToGrid bool `json:"schedulerSnapToGrid"`
+
 	ConsoleQuickCommandsCollapsed bool `json:"consoleQuickCommandsCollapsed"`
 
 	// ClassicTileFaces shows the compact tile faces from before the

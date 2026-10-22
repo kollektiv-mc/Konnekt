@@ -63,6 +63,7 @@ export interface AppSettings {
   /** Palette block groups expanded, keyed `category/group`. A missing key is closed. Never null. */
   schedulerPaletteOpenGroups: Record<string, boolean>
   schedulerCurvedEdges: boolean
+  schedulerSnapToGrid: boolean
   consoleQuickCommandsCollapsed: boolean
   classicTileFaces: boolean
   navClosedSections: Record<string, boolean>

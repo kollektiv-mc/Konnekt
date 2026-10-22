@@ -36,6 +36,7 @@ const DEFAULTS = {
   schedulerPaletteClosedCategories: {},
   schedulerPaletteOpenGroups: {},
   schedulerCurvedEdges: true,
+  schedulerSnapToGrid: false,
   consoleQuickCommandsCollapsed: false,
   classicTileFaces: false,
   navClosedSections: { widgets: true, layouts: true } as Record<string, boolean>,

@@ -31,6 +31,7 @@ const DEFAULTS: AppSettings = {
   schedulerPaletteClosedCategories: {},
   schedulerPaletteOpenGroups: {},
   schedulerCurvedEdges: true,
+  schedulerSnapToGrid: false,
   consoleQuickCommandsCollapsed: false,
   classicTileFaces: false,
   // Servers and Tiles open, Widgets and Layouts closed: the two a first run

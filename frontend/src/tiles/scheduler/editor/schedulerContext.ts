@@ -32,6 +32,8 @@ export interface SchedulerCtxValue {
   // is what lets it redraw them all without the edges array, the undo history or
   // the unsaved flag ever hearing about it.
   curvedEdges: boolean
+  // Snap to grid (#693): a corner point being placed lands on the grid.
+  snapToGrid: boolean
 }
 
 export const SchedulerCtx = createContext<SchedulerCtxValue>({
@@ -47,4 +49,5 @@ export const SchedulerCtx = createContext<SchedulerCtxValue>({
   cycleEdges: new Set(),
   recordPre: () => {},
   curvedEdges: true,
+  snapToGrid: false,
 })

@@ -54,6 +54,7 @@ function renderNode(
     cycleEdges: new Set(),
     recordPre: () => {},
     curvedEdges: true,
+    snapToGrid: false,
   }
   const props = {
     id: 'n1',
