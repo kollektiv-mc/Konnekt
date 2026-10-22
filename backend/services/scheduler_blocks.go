@@ -278,9 +278,7 @@ func registerBuiltins(r *BlockRegistry) {
 		ID: "control.condition", Category: "control", Label: "Condition",
 		Description: "Branches based on a comparison. Two values that are both " +
 			"numbers compare numerically, so 9 is less than 10; anything else " +
-			"compares as text. \"contains\" always compares as text. \"is true\" and " +
-			"\"is false\" test whether the left value is true and ignore the right one, " +
-			"so a gate's output can drive a branch directly.",
+			"compares as text. \"contains\" always compares as text.",
 		ControlInputs: []string{"trigger"}, ControlOutputs: []string{"onTrue", "onFalse"},
 		DataInputs: []models.DataPort{
 			{ID: "left", Label: "A", Type: "string"},

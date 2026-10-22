@@ -560,7 +560,7 @@
     "id": "control.compare",
     "category": "control",
     "label": "Compare",
-    "description": "Outputs true when the comparison of A and B holds; two numbers compare numerically, anything else as text.",
+    "description": "Outputs whether A and B pass the chosen comparison.",
     "isTrigger": false,
     "controlInputs": null,
     "controlOutputs": null,
@@ -631,7 +631,7 @@
     "id": "control.condition",
     "category": "control",
     "label": "Condition",
-    "description": "Branches based on a comparison. Two values that are both numbers compare numerically, so 9 is less than 10; anything else compares as text. \"contains\" always compares as text. \"is true\" and \"is false\" test whether the left value is true and ignore the right one, so a gate's output can drive a branch directly.",
+    "description": "Branches based on a comparison. Two values that are both numbers compare numerically, so 9 is less than 10; anything else compares as text. \"contains\" always compares as text.",
     "isTrigger": false,
     "controlInputs": [
       "trigger"

@@ -64,7 +64,7 @@ func registerLogicBlocks(r *BlockRegistry) {
 	// Condition's (port id == config key), and it shares Condition's comparison.
 	must(r.RegisterBlock(models.BlockDef{
 		ID: "control.compare", Category: "control", Label: "Compare",
-		Description: "Outputs true when the comparison of A and B holds; two numbers compare numerically, anything else as text.",
+		Description: "Outputs whether A and B pass the chosen comparison.",
 		DataInputs: []models.DataPort{
 			{ID: "left", Label: "A", Type: "string"},
 			{ID: "right", Label: "B", Type: "string"},
