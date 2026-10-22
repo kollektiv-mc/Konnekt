@@ -1,0 +1,312 @@
+/* The changelog page, on top of site.css. The snapshot is drawn in --sun,
+   the colour the site gives everything not yet released. */
+
+/* ── Snapshot ───────────────────────────────────────────────────────────── */
+
+.snapshot {
+  border-color: rgb(var(--sun-rgb) / 0.35);
+  background: rgb(var(--sun-rgb) / 0.04);
+}
+
+.snapshot-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+}
+
+.snapshot-name {
+  flex: 1 1 300px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 24px var(--pad);
+  border-right: 1px solid rgb(var(--sun-rgb) / 0.18);
+}
+
+.snapshot-name h2 {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  font-size: 18px;
+  font-weight: 500;
+}
+
+.snapshot-dot {
+  width: 8px;
+  height: 8px;
+  background: var(--sun);
+}
+
+.snapshot-warning {
+  flex: 2 1 380px;
+  align-self: center;
+  margin: 0;
+  padding: 24px var(--pad);
+  font-size: 15px;
+  line-height: 1.55;
+  color: var(--text-secondary);
+}
+
+.snapshot-toggle {
+  flex: 0 0 220px;
+  min-height: 72px;
+  padding: 0 var(--pad);
+  border: 0;
+  border-left: 1px solid rgb(var(--sun-rgb) / 0.18);
+  background: transparent;
+  color: var(--sun);
+  font-family: var(--font-site-mono);
+  font-size: 13px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.snapshot-toggle:hover {
+  background: rgb(var(--sun-rgb) / 0.06);
+}
+
+.snapshot-body {
+  display: flex;
+  flex-wrap: wrap;
+  border-top: 1px solid rgb(var(--sun-rgb) / 0.18);
+}
+
+.snapshot-body[hidden] {
+  display: none;
+}
+
+.snapshot-body .changes {
+  flex: 1 1 420px;
+}
+
+/* ── Releases ───────────────────────────────────────────────────────────── */
+
+.cl-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--stack);
+}
+
+.release {
+  display: flex;
+  flex-wrap: wrap;
+}
+
+.release.is-latest {
+  border-color: rgb(var(--accent-rgb) / 0.18);
+}
+
+.release-side {
+  flex: 1 1 340px;
+  max-width: 100%;
+  border-right: var(--hairline);
+  background: var(--bg-surface);
+}
+
+.release-sticky {
+  position: sticky;
+  top: var(--stack);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: var(--pad);
+}
+
+.release-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-site-mono);
+  font-size: 12px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+
+.release-dot {
+  width: 8px;
+  height: 8px;
+  background: var(--accent);
+}
+
+.release-tag {
+  margin: 0;
+  font-size: clamp(24px, 2.2vw, 32px);
+  line-height: 1;
+  font-weight: 600;
+  letter-spacing: -0.035em;
+  white-space: nowrap;
+}
+
+.release-summary {
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--text-secondary);
+}
+
+.release-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding-top: 10px;
+}
+
+.btn-small {
+  min-height: 44px;
+  padding: 0 18px;
+  font-size: 12px;
+}
+
+.release-main {
+  flex: 999 1 560px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.release-sections {
+  flex: 1 1 auto;
+  display: flex;
+  flex-wrap: wrap;
+}
+
+.release-sections > .md {
+  padding: 24px var(--pad);
+  color: var(--text-secondary);
+}
+
+.release-note {
+  margin: 0;
+  padding: 16px var(--pad);
+  border-top: var(--hairline);
+  font-family: var(--font-site-mono);
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--text-secondary);
+}
+
+.changes {
+  flex: 1 1 360px;
+  min-width: 0;
+  padding: 8px var(--pad) 24px;
+}
+
+.changes-head {
+  display: flex;
+  justify-content: space-between;
+  padding: 24px 0 12px;
+  font-family: var(--font-site-mono);
+  font-size: 12px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+
+.changes-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.changes-list li {
+  padding: 10px 0;
+  border-top: var(--hairline);
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+.changes-list li[hidden] {
+  display: none;
+}
+
+.change-pr {
+  display: block;
+  color: var(--text-primary);
+}
+
+.change-date {
+  font-family: var(--font-site-mono);
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.changes-list code {
+  font-family: var(--font-site-mono);
+  font-size: 0.9em;
+}
+
+.changes-more {
+  width: 100%;
+  min-height: 44px;
+  padding: 12px 0;
+  border: 0;
+  border-top: var(--hairline);
+  background: transparent;
+  font-family: var(--font-site-mono);
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  text-align: left;
+  cursor: pointer;
+}
+
+.changes-more:hover {
+  color: var(--accent);
+}
+
+/* ── Loading and errors ─────────────────────────────────────────────────── */
+
+.cl-state {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+  margin: 0;
+  padding: var(--pad-band) var(--pad);
+  font-family: var(--font-site-mono);
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.cl-state[hidden] {
+  display: none;
+}
+
+.cl-state p {
+  margin: 0;
+}
+
+.cl-state-title {
+  font-family: var(--font-site);
+  font-size: 18px;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+@media (max-width: 760px) {
+  .snapshot-name,
+  .release-side {
+    border-right: 0;
+  }
+
+  .snapshot-toggle {
+    flex-basis: 100%;
+    border-left: 0;
+    border-top: 1px solid rgb(var(--sun-rgb) / 0.18);
+  }
+
+  .release-side {
+    border-bottom: var(--hairline);
+  }
+
+  .release-sticky {
+    position: static;
+  }
+}
+
+.cl-list[hidden] {
+  display: none;
+}
