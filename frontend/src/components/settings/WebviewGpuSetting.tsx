@@ -14,8 +14,8 @@ const OPTIONS: { value: Exclude<WebviewGpu, ''>; label: string }[] = [
 /**
  * The Linux webview's hardware acceleration policy (#421). Go reads it once,
  * before the window is created, so a change applies on the next launch and the
- * row says so once it has been changed. Shown on Linux only: Wails ignores the policy everywhere else,
- * and a browser served by Remote Access reports `web`, which hides it there too.
+ * row says so once it has been changed. Shown on Linux only: Wails ignores
+ * the policy everywhere else, and a browser served by Remote Access reports `web`, which hides it there too.
  * An empty value is "never chosen" and resolves to On, the same as Go's
  * resolver in webviewgpu.go.
  */

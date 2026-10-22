@@ -207,7 +207,8 @@ function NamedForm({ named, locked, onSave, onForget }: NamedProps) {
  * quick one by default or the user's own named one once configured (#512).
  * The address is public, the sign-in is what stands in front of the
  * dashboard, and Cloudflare terminates the TLS and so can read what passes,
- * the password included. The docs say so; the row no longer does.
+ * the password included. The row no longer says so; the docs Settings
+ * reference (#653) is where it belongs.
  */
 export function TunnelSection({
   tunnel,
