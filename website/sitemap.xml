@@ -43,6 +43,42 @@
     <priority>0.7</priority>
   </url>
   <url>
+    <loc>https://konnekt.pages.dev/docs/settings/appearance.html</loc>
+    <lastmod>2026-10-22</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.5</priority>
+  </url>
+  <url>
+    <loc>https://konnekt.pages.dev/docs/settings/general.html</loc>
+    <lastmod>2026-10-22</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.5</priority>
+  </url>
+  <url>
+    <loc>https://konnekt.pages.dev/docs/settings/console.html</loc>
+    <lastmod>2026-10-22</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.5</priority>
+  </url>
+  <url>
+    <loc>https://konnekt.pages.dev/docs/settings/notifications.html</loc>
+    <lastmod>2026-10-22</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.5</priority>
+  </url>
+  <url>
+    <loc>https://konnekt.pages.dev/docs/settings/destinations.html</loc>
+    <lastmod>2026-10-22</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.5</priority>
+  </url>
+  <url>
+    <loc>https://konnekt.pages.dev/docs/settings/remote-access.html</loc>
+    <lastmod>2026-10-22</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.5</priority>
+  </url>
+  <url>
     <loc>https://konnekt.pages.dev/roadmap.html</loc>
     <lastmod>2026-08-14</lastmod>
     <changefreq>monthly</changefreq>

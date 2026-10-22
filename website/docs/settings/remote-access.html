@@ -1,0 +1,611 @@
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Konnekt docs: Remote Access</title>
+    <meta
+      name="description"
+      content="Remote Access: Serve the dashboard to a browser, open a tunnel to it, give Claude access, and manage who signs in."
+    />
+    <link rel="canonical" href="https://konnekt.pages.dev/docs/settings/remote-access.html" />
+
+    <meta property="og:site_name" content="Konnekt" />
+    <meta property="og:title" content="Konnekt docs: Remote Access" />
+    <meta
+      property="og:description"
+      content="Remote Access: Serve the dashboard to a browser, open a tunnel to it, give Claude access, and manage who signs in."
+    />
+    <meta property="og:url" content="https://konnekt.pages.dev/docs/settings/remote-access.html" />
+    <meta property="og:type" content="website" />
+    <meta property="og:image" content="https://konnekt.pages.dev/assets/img/social-card.png" />
+    <meta property="og:image:width" content="1715" />
+    <meta property="og:image:height" content="1123" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Konnekt docs: Remote Access" />
+    <meta
+      name="twitter:description"
+      content="Remote Access: Serve the dashboard to a browser, open a tunnel to it, give Claude access, and manage who signs in."
+    />
+    <meta name="twitter:image" content="https://konnekt.pages.dev/assets/img/social-card.png" />
+
+    <meta name="theme-color" content="#05060a" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/assets/img/favicon-16.png" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/assets/img/favicon-32.png" />
+    <link rel="icon" type="image/png" sizes="256x256" href="/assets/img/favicon.png" />
+    <link rel="apple-touch-icon" href="/assets/img/app-icon.png" />
+    <link
+      rel="preload"
+      href="/assets/fonts/Geist-Variable.woff2"
+      as="font"
+      type="font/woff2"
+      crossorigin
+    />
+    <link rel="stylesheet" href="/tokens.css" />
+    <link rel="stylesheet" href="/site.css" />
+    <link rel="stylesheet" href="/docs.css" />
+    <script>
+      document.documentElement.className = document.documentElement.className.replace('no-js', '')
+    </script>
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to content</a>
+    <div class="page">
+      <div class="group">
+        <!-- Canonical nav. Byte-identical on every page, hrefs included; site.js
+           marks the current page and scrolls same-page anchors. -->
+        <nav class="nav block block-raised" id="nav" aria-label="Main">
+          <a class="nav-brand" href="/index.html"
+            ><picture
+              ><source media="(min-resolution: 2dppx)" srcset="/assets/img/mark.svg" />
+              <img
+                class="mark"
+                src="/assets/img/mark-24.svg"
+                width="24"
+                height="24"
+                alt="" /></picture
+            >Konnekt</a
+          >
+          <ul class="nav-links">
+            <li><a href="/index.html#features">Features</a></li>
+            <li><a href="/index.html#scheduler">Scheduler</a></li>
+            <li><a href="/docs.html">Docs</a></li>
+            <li><a href="/roadmap.html">Roadmap</a></li>
+            <li><a href="/changelog.html">Changelog</a></li>
+          </ul>
+          <a
+            class="nav-side"
+            href="https://github.com/kollektiv-mc/Konnekt"
+            target="_blank"
+            rel="noopener"
+            >GitHub</a
+          >
+          <a class="btn btn-primary" href="/download.html"
+            ><svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true">
+              <path
+                d="M7 1v9M3 6.5 7 10.5 11 6.5M1.5 13h11"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.6"
+              /></svg
+            >Download</a
+          >
+        </nav>
+        <main id="main" class="group">
+          <header class="doc-head block">
+            <div class="doc-head-main">
+              <div class="doc-trail">
+                <span class="kind" data-kind="settings">Settings</span>
+                <nav aria-label="Breadcrumb">
+                  <ol class="doc-crumbs">
+                    <li><a href="/docs.html">Docs</a></li>
+                    <li><a href="/docs.html#settings">Settings</a></li>
+                    <li><span aria-current="page">Remote Access</span></li>
+                  </ol>
+                </nav>
+              </div>
+              <h1>Remote Access</h1>
+              <p class="doc-lead">
+                Serves the dashboard to a browser and to Claude, on this computer or through a
+                tunnel.
+              </p>
+            </div>
+            <dl class="doc-facts">
+              <div class="doc-fact">
+                <dt class="label">Topics</dt>
+                <dd>Remote access · Tunnel · Claude</dd>
+              </div>
+            </dl>
+          </header>
+
+          <section
+            class="doc-section block"
+            id="remote-access"
+            aria-labelledby="remote-access-title"
+          >
+            <div class="band doc-band">
+              <div class="band-title">
+                <span class="num">01</span>
+                <h2 id="remote-access-title">Remote access</h2>
+              </div>
+            </div>
+            <div class="doc-body">
+              <p class="doc-prose">
+                <b>Remote access</b> serves Konnekt's dashboard to a web browser.<br />
+                It is off each time Konnekt starts.<br />
+                The switch stays off, with <b>Set a password first.</b> beside it, until a password
+                exists.
+              </p>
+              <ol class="doc-list">
+                <li>Set a password in <a href="#password">Password</a>.</li>
+                <li>Switch on <b>Remote access</b>.</li>
+                <li>
+                  Open the address next to <b>On this computer</b> in a browser, or press
+                  <b>Open ↗</b>.
+                </li>
+                <li>Sign in with the password.</li>
+                <li>
+                  Check that the card <b>A browser is waiting to be approved</b> shows the code the
+                  browser shows.
+                </li>
+                <li>Type a name for the device on the card, then press <b>Approve</b>.</li>
+              </ol>
+              <p class="doc-prose">
+                The same card opens as a dialog over the desktop, and a notification announces
+                it.<br />
+                <b>Deny</b> refuses the browser.<br />
+                An unanswered request expires after five minutes.<br />
+                Once a device is approved, it signs in with the password alone.
+              </p>
+              <p class="doc-prose">
+                <b>On this computer</b> is the address Remote access listens on.<br />
+                It is <code>http://127.0.0.1</code> and a port Konnekt picks when Remote access
+                starts.<br />
+                It serves plain HTTP and accepts connections from this computer only.<br />
+                Other computers reach it through a tunnel, covered in
+                <a href="#tunnel">Tunnel</a>.
+              </p>
+              <p class="doc-prose">
+                Remote access switches itself off after 30 minutes without use, unless
+                <a href="#claude-connectors">Claude connectors</a> hold it open.<br />
+                Closing Konnekt switches it off too, and a tunnel stops with it.
+              </p>
+              <p class="doc-prose"><b>What a remote browser cannot do</b></p>
+              <ul class="doc-list">
+                <li>Change anything in this pane: it is desktop only.</li>
+                <li>Open a file picker or a folder: <b>About</b> shows the data folder as text.</li>
+                <li>Read the log, or change which server the desktop shows.</li>
+                <li>
+                  Install an update: <b>Update Konnekt from the desktop.</b> stands in its place.
+                </li>
+                <li>
+                  Keep Appearance, Console or Notifications changes past a reload:
+                  <b>Changes here apply to this browser until it reloads.</b>
+                </li>
+                <li>
+                  Change a server's settings or files, app settings, installs or scheduled tasks
+                  without a yes: each waits for <b>Allow once</b> on the desktop.
+                </li>
+              </ul>
+              <p class="doc-prose">
+                That prompt reads <b>wants to make a change</b> and refuses itself after 60 seconds.
+              </p>
+            </div>
+          </section>
+
+          <section class="doc-section block" id="tunnel" aria-labelledby="tunnel-title">
+            <div class="band doc-band">
+              <div class="band-title">
+                <span class="num">02</span>
+                <h2 id="tunnel-title">Tunnel</h2>
+              </div>
+            </div>
+            <div class="doc-body">
+              <p class="doc-prose" id="reach-it-from-anywhere">
+                <b>Reach it from anywhere</b> opens a Cloudflare quick tunnel to the dashboard.<br />
+                It needs <b>Remote access</b> on first, and says
+                <b>Switch remote access on first.</b> until then.<br />
+                Cloudflare sits between the browser and Konnekt and can read the traffic, your
+                password included.
+              </p>
+              <p class="doc-prose">
+                Konnekt runs <code>cloudflared</code>, Cloudflare's tunnel program, with
+                <code>tunnel --no-autoupdate --url http://127.0.0.1:<i>port</i></code
+                >.<br />
+                It downloads a fixed release from the <code>cloudflare/cloudflared</code> releases
+                on GitHub when it has no verified copy.<br />
+                Konnekt checks the file's size and SHA-256 against values built into the app, before
+                every run.<br />
+                The file lives in the <code>bin</code> folder of the data directory.<br />
+                Konnekt knows the download for Windows x86-64 and for Linux x86-64 and ARM64.
+              </p>
+              <p class="doc-prose">
+                The tunnel's address ends in <code>trycloudflare.com</code>, with a QR code for a
+                phone camera.<br />
+                The address is new every time the tunnel starts.<br />
+                A device approved through it is forgotten when the tunnel closes, and is approved
+                again on the next one.<br />
+                If the tunnel is not up within 45 seconds, the pane shows
+                <b>The tunnel did not open.</b> and the last lines <code>cloudflared</code> printed.
+              </p>
+              <p class="doc-prose">
+                Switching Remote access off closes the tunnel, and so does its idle switch-off.
+              </p>
+              <p class="doc-prose" id="your-own-address">
+                <b>Your own address</b> is a named tunnel on your own Cloudflare account.<br />
+                Its address stays the same across runs, and a device approved through it stays
+                approved.<br />
+                <a href="#claude-connectors">Claude connectors</a> need it.
+              </p>
+              <ol class="doc-list">
+                <li>In the Cloudflare dashboard, create a tunnel.</li>
+                <li>
+                  Route a hostname you own to <code>http://127.0.0.1:<i>port</i></code
+                  >, with a port from 1024 to 65535.
+                </li>
+                <li>Copy the tunnel's token.</li>
+                <li>
+                  In Konnekt, fill in <b>Hostname</b>, <b>Port</b> and <b>Tunnel token</b>, then
+                  press <b>Save</b>.
+                </li>
+                <li>Switch on <b>Remote access</b>, then <b>Reach it from anywhere</b>.</li>
+              </ol>
+              <div class="doc-table-wrap">
+                <table class="doc-table">
+                  <thead>
+                    <tr>
+                      <th scope="col">Setting</th>
+                      <th scope="col">What it does</th>
+                      <th scope="col">Default</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td>Hostname</td>
+                      <td>
+                        The name you routed, such as <code>dash.example.net</code>, with at least
+                        two labels and no wildcard, scheme, port or path.
+                      </td>
+                      <td>None</td>
+                    </tr>
+                    <tr>
+                      <td>Port</td>
+                      <td>
+                        The port your route points at, from 1024 to 65535. Remote access listens on
+                        it while the address is saved.
+                      </td>
+                      <td>None</td>
+                    </tr>
+                    <tr>
+                      <td>Tunnel token</td>
+                      <td>
+                        The token from Cloudflare, kept in its own file and passed to
+                        <code>cloudflared</code> as a file path.
+                      </td>
+                      <td>None</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <p class="doc-prose">
+                The token is never shown again, and a blank field on a later save keeps the stored
+                one.<br />
+                <b>Change</b> and <b>Forget token</b> are locked while a tunnel runs.<br />
+                <b>Forget token</b> deletes the token, the hostname and the port, and removes the
+                devices approved on that hostname.<br />
+                <b>Reach it from anywhere</b> then opens a quick tunnel again.<br />
+                A named tunnel counts as up once <code>cloudflared</code> registers a connection,
+                and the address is <code>https://</code> and your hostname.
+              </p>
+              <ul class="doc-list">
+                <li>
+                  <code>the hostname is not a DNS name</code>: use a name like
+                  <code>dash.example.net</code>.
+                </li>
+                <li>
+                  <code>the tunnel token is not usable</code>: paste the whole token, without spaces
+                  or line breaks.
+                </li>
+                <li>
+                  <code
+                    >remote access is not listening on the named tunnel's port: it listens on
+                    <i>address</i> and the tunnel expects port <i>port</i>; switch remote access off
+                    and on</code
+                  >: do that, and the listener moves to the saved port.
+                </li>
+              </ul>
+            </div>
+          </section>
+
+          <section class="doc-section block" id="claude" aria-labelledby="claude-title">
+            <div class="band doc-band">
+              <div class="band-title">
+                <span class="num">03</span>
+                <h2 id="claude-title">Claude</h2>
+              </div>
+            </div>
+            <div class="doc-body">
+              <p class="doc-prose" id="claude-on-this-computer">
+                <b>Claude on this computer</b> lets Claude Code and Claude Desktop on this computer
+                use Konnekt's tools.<br />
+                It is off by default, and it works without Remote access.<br />
+                Konnekt opens a second listener on <code>127.0.0.1</code>, guarded by a secret it
+                makes at every start.<br />
+                Claude starts <code>konnekt mcp</code>, a small bridge program, which forwards each
+                call to that listener.<br />
+                The bridge lists the tools even when Konnekt is closed.
+              </p>
+              <ol class="doc-list">
+                <li>Switch on <b>Claude on this computer</b>.</li>
+                <li>
+                  For Claude Code, copy the line beside <b>Claude Code</b> and run it in a terminal.
+                </li>
+                <li>
+                  For Claude Desktop, copy the <b>Claude Desktop config</b> entry and merge it into
+                  the <code>mcpServers</code> object of Claude Desktop's config file.
+                </li>
+              </ol>
+              <p class="doc-prose">
+                The Claude Code line is
+                <code>claude mcp add --transport stdio konnekt -- <i>path</i> mcp</code>.<br />
+                The entry is a <code>konnekt</code> server whose <code>command</code> is that path
+                and whose <code>args</code> is <code>["mcp"]</code>.<br />
+                The path is the Konnekt executable that is running.<br />
+                While it listens, the pane reads <b>Listening on</b> an address, and
+                <b>Register Konnekt once; Claude finds it again after a restart.</b><br />
+                If it reads <b>Not listening.</b>, switch it off and on again, or check
+                <code>konnekt.log</code>.<br />
+                A call while Konnekt is closed fails with
+                <code
+                  >Konnekt is not running, or "Allow Claude on this computer" is off in its
+                  Settings</code
+                >.
+              </p>
+              <p class="doc-prose"><b>What Claude can do</b></p>
+              <ul class="doc-list">
+                <li>
+                  See: <code>list_servers</code>, <code>server_status</code>,
+                  <code>server_summary</code>, <code>players</code>, <code>stats_history</code>,
+                  <code>console_tail</code>, <code>last_stop</code>, <code>backups</code>,
+                  <code>worlds</code>, <code>schedules</code> and <code>schedule_next_runs</code>.
+                </li>
+                <li>
+                  Operate: <code>start_server</code>, <code>stop_server</code>,
+                  <code>restart_server</code>, <code>kick_player</code>, <code>ban_player</code>,
+                  <code>pardon_player</code>, <code>create_backup</code> and
+                  <code>run_schedule</code>.
+                </li>
+                <li>
+                  Type in the console with <code>send_command</code>: every call waits for you to
+                  press <b>Allow once</b>, and is refused if you do not.
+                </li>
+              </ul>
+              <p class="doc-prose">
+                No tool force stops a server, restores or deletes a backup, changes a world or
+                removes a mod.<br />
+                No tool edits a server's settings or files either.<br />
+                Console lines, player names, ban reasons and world names reach Claude marked as text
+                that players wrote.
+              </p>
+              <p class="doc-prose" id="claude-connectors">
+                <b>Claude connectors</b> let claude.ai, Claude Desktop and Claude Code reach the
+                same tools through the internet.<br />
+                They are off by default.<br />
+                The switch stays off until a password is set, with
+                <b>Set the password below first.</b> beside it.<br />
+                It then waits for <a href="#your-own-address">Your own address</a>, with
+                <b>Set up your own address under Tunnel first.</b> beside it.<br />
+                A quick tunnel is not enough, because its address changes.
+              </p>
+              <ol class="doc-list">
+                <li>Save <a href="#your-own-address">Your own address</a>.</li>
+                <li>Switch on <b>Remote access</b>, then <b>Reach it from anywhere</b>.</li>
+                <li>Switch on <b>Claude connectors</b>.</li>
+                <li>
+                  In claude.ai or Claude Desktop, add a connector and paste the connector URL.
+                </li>
+                <li>
+                  In Claude Code, run the line beside <b>Claude Code</b>, which is
+                  <code>claude mcp add --transport http konnekt <i>url</i></code
+                  >.
+                </li>
+              </ol>
+              <p class="doc-prose">
+                The connector URL is <code>https://</code>, your hostname and
+                <code>/mcp</code>.<br />
+                It answers only while Remote access and the tunnel are on.<br />
+                While the switch is on and an own address is saved, the 30-minute idle switch-off is
+                held back.<br />
+                The title bar then adds <b>Claude</b> to its label.
+              </p>
+              <p class="doc-prose"><b>Signing in a connector</b></p>
+              <ol class="doc-list">
+                <li>Claude opens a Konnekt page called <b>Connect</b> and the client's name.</li>
+                <li>
+                  Tick the permissions: <b>See your servers, players, console and schedules</b> is
+                  ticked, and
+                  <b>Start, stop and restart servers, run commands and manage players</b>
+                  is not.
+                </li>
+                <li>Type the Remote Access password and press <b>Allow</b>.</li>
+                <li>
+                  Press <b>Allow</b> on the dialog on the desktop, which reads
+                  <b>wants to connect to Konnekt</b>.
+                </li>
+              </ol>
+              <p class="doc-prose">
+                The page waits for the desktop and checks again every two seconds.<br />
+                It expires after five minutes, and a connector has no device code to type.<br />
+                A connector that holds only the first permission signs in again when it needs the
+                second.<br />
+                Konnekt accepts sign-ins from Claude's own clients only.
+              </p>
+              <p class="doc-prose">
+                <b>Connected clients</b> lists each one with its name and the host it was sent back
+                to.<br />
+                Each reads <b>Sees and operates servers</b> or
+                <b>Sees servers, players, console and schedules</b>.<br />
+                It also shows when the client connected and <b>Last used</b>, or
+                <b>Not used yet</b>.<br />
+                Until one signs in, the list reads <b>None yet.</b><br />
+                <b>Revoke</b> ends one client's access at its next call.<br />
+                <b>Revoke all</b> appears when two or more are connected, and each signs in again
+                from scratch.
+              </p>
+              <p class="doc-prose">
+                Konnekt holds at most 16 connectors.<br />
+                A connector ends 90 days after you approved it, or 30 days after its last use.<br />
+                Changing the password ends every connector.
+              </p>
+            </div>
+          </section>
+
+          <section class="doc-section block" id="password" aria-labelledby="password-title">
+            <div class="band doc-band">
+              <div class="band-title">
+                <span class="num">04</span>
+                <h2 id="password-title">Password</h2>
+              </div>
+            </div>
+            <div class="doc-body">
+              <p class="doc-prose">
+                The password is 12 to 256 characters.<br />
+                Konnekt keeps only an argon2id hash of it.<br />
+                Changing it signs every device out, and ends every Claude connector.<br />
+                Devices stay approved and sign in again with the new password.
+              </p>
+              <p class="doc-prose">
+                A browser that types five wrong passwords in a row must wait.<br />
+                The wait starts at 5 seconds, doubles with each miss and tops out at 15 minutes.<br />
+                A device that is already approved has its own count.<br />
+                An hour without a miss clears it.
+              </p>
+            </div>
+          </section>
+
+          <section
+            class="doc-section block"
+            id="approved-devices"
+            aria-labelledby="approved-devices-title"
+          >
+            <div class="band doc-band">
+              <div class="band-title">
+                <span class="num">05</span>
+                <h2 id="approved-devices-title">Approved devices</h2>
+              </div>
+            </div>
+            <div class="doc-body">
+              <p class="doc-prose">A <b>signed in</b> tag marks a device with a live session.</p>
+              <ul class="doc-list">
+                <li>
+                  <b>Remove</b> forgets the device and ends its sessions, so its next sign-in needs
+                  approval again.
+                </li>
+                <li><b>Sign out everywhere</b> ends every session, and devices stay approved.</li>
+              </ul>
+              <p class="doc-prose">
+                A session ends after an hour without use, or 12 hours after sign-in.<br />
+                A browser remembers its approval for a year.<br />
+                A device name is 1 to 40 printable characters, and no two devices share one.<br />
+                At most 16 devices can be approved.<br />
+                A browser whose request was denied or expired sees
+                <b>The request was declined or has expired. Sign in again.</b>
+              </p>
+              <ul class="doc-list">
+                <li>
+                  <code>the device name must be 1 to 40 printable characters</code>: type a shorter
+                  name.
+                </li>
+                <li>
+                  <code>another device already has that name</code>: pick a name no other device
+                  has.
+                </li>
+                <li>
+                  <code>at most 16 devices can be approved; remove one first</code>: press
+                  <b>Remove</b> on one you no longer use.
+                </li>
+                <li>
+                  <code>that request has expired or was already answered</code>: sign in again from
+                  the browser.
+                </li>
+              </ul>
+            </div>
+          </section>
+
+          <nav class="doc-related block" aria-label="Related">
+            <div class="shelf-label"><span class="label">Related</span></div>
+            <a class="related-link" href="/docs/settings/notifications.html"
+              ><span class="kind" data-kind="settings">Settings</span>Notifications</a
+            >
+            <a class="related-link" href="/docs/first-server.html"
+              ><span class="kind" data-kind="guide">Guide</span>Your first server</a
+            >
+            <a class="related-link" href="/docs/faq.html"
+              ><span class="kind" data-kind="reference">Reference</span>FAQ</a
+            >
+          </nav>
+        </main>
+      </div>
+
+      <!-- Canonical footer. Byte-identical on every page. -->
+      <footer class="block block-raised">
+        <div class="footer-cols">
+          <div class="footer-about">
+            <a class="footer-brand" href="/index.html"
+              ><picture
+                ><source media="(min-resolution: 2dppx)" srcset="/assets/img/mark.svg" />
+                <img
+                  class="mark"
+                  src="/assets/img/mark-24.svg"
+                  width="24"
+                  height="24"
+                  alt="" /></picture
+              >Konnekt</a
+            >
+            <p>A desktop dashboard for the Minecraft servers you host.</p>
+            <span class="meta"><span data-release-tag></span>Windows and Linux</span>
+          </div>
+          <nav class="footer-col" aria-label="Product">
+            <span class="label">Product</span>
+            <a href="/download.html">Download</a>
+            <a href="https://konnekt-demo.pages.dev/" target="_blank" rel="noopener"
+              >Try the demo</a
+            >
+            <a href="/changelog.html">Changelog</a>
+          </nav>
+          <nav class="footer-col" aria-label="Learn">
+            <span class="label">Learn</span>
+            <a href="/index.html#features">Features</a>
+            <a href="/docs.html">Docs</a>
+            <a href="/roadmap.html">Roadmap</a>
+          </nav>
+          <nav class="footer-col" aria-label="Source">
+            <span class="label">Source</span>
+            <a href="https://github.com/kollektiv-mc/Konnekt" target="_blank" rel="noopener"
+              >GitHub</a
+            >
+            <a href="https://github.com/kollektiv-mc/Konnekt/issues" target="_blank" rel="noopener"
+              >Issues</a
+            >
+            <a
+              href="https://github.com/kollektiv-mc/Konnekt/blob/main/LICENSE"
+              target="_blank"
+              rel="noopener"
+              >MIT licence</a
+            >
+          </nav>
+        </div>
+        <div class="footer-base">
+          <span
+            >Alpha software. A side project mostly written by Claude.
+            <a href="/docs.html#disclaimer">Full statement</a></span
+          >
+          <span>&copy; 2026 Konnekt</span>
+        </div>
+      </footer>
+    </div>
+
+    <script src="/release.js"></script>
+    <script src="/site.js"></script>
+  </body>
+</html>

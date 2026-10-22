@@ -1,0 +1,310 @@
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Konnekt docs: Notifications</title>
+    <meta
+      name="description"
+      content="Notifications: Which events raise an operating system notification, and which raise an in-app bubble"
+    />
+    <link rel="canonical" href="https://konnekt.pages.dev/docs/settings/notifications.html" />
+
+    <meta property="og:site_name" content="Konnekt" />
+    <meta property="og:title" content="Konnekt docs: Notifications" />
+    <meta
+      property="og:description"
+      content="Notifications: Which events raise an operating system notification, and which raise an in-app bubble"
+    />
+    <meta property="og:url" content="https://konnekt.pages.dev/docs/settings/notifications.html" />
+    <meta property="og:type" content="website" />
+    <meta property="og:image" content="https://konnekt.pages.dev/assets/img/social-card.png" />
+    <meta property="og:image:width" content="1715" />
+    <meta property="og:image:height" content="1123" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Konnekt docs: Notifications" />
+    <meta
+      name="twitter:description"
+      content="Notifications: Which events raise an operating system notification, and which raise an in-app bubble"
+    />
+    <meta name="twitter:image" content="https://konnekt.pages.dev/assets/img/social-card.png" />
+
+    <meta name="theme-color" content="#05060a" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/assets/img/favicon-16.png" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/assets/img/favicon-32.png" />
+    <link rel="icon" type="image/png" sizes="256x256" href="/assets/img/favicon.png" />
+    <link rel="apple-touch-icon" href="/assets/img/app-icon.png" />
+    <link
+      rel="preload"
+      href="/assets/fonts/Geist-Variable.woff2"
+      as="font"
+      type="font/woff2"
+      crossorigin
+    />
+    <link rel="stylesheet" href="/tokens.css" />
+    <link rel="stylesheet" href="/site.css" />
+    <link rel="stylesheet" href="/docs.css" />
+    <script>
+      document.documentElement.className = document.documentElement.className.replace('no-js', '')
+    </script>
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to content</a>
+    <div class="page">
+      <div class="group">
+        <!-- Canonical nav. Byte-identical on every page, hrefs included; site.js
+           marks the current page and scrolls same-page anchors. -->
+        <nav class="nav block block-raised" id="nav" aria-label="Main">
+          <a class="nav-brand" href="/index.html"
+            ><picture
+              ><source media="(min-resolution: 2dppx)" srcset="/assets/img/mark.svg" />
+              <img
+                class="mark"
+                src="/assets/img/mark-24.svg"
+                width="24"
+                height="24"
+                alt="" /></picture
+            >Konnekt</a
+          >
+          <ul class="nav-links">
+            <li><a href="/index.html#features">Features</a></li>
+            <li><a href="/index.html#scheduler">Scheduler</a></li>
+            <li><a href="/docs.html">Docs</a></li>
+            <li><a href="/roadmap.html">Roadmap</a></li>
+            <li><a href="/changelog.html">Changelog</a></li>
+          </ul>
+          <a
+            class="nav-side"
+            href="https://github.com/kollektiv-mc/Konnekt"
+            target="_blank"
+            rel="noopener"
+            >GitHub</a
+          >
+          <a class="btn btn-primary" href="/download.html"
+            ><svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true">
+              <path
+                d="M7 1v9M3 6.5 7 10.5 11 6.5M1.5 13h11"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.6"
+              /></svg
+            >Download</a
+          >
+        </nav>
+        <main id="main" class="group">
+          <header class="doc-head block">
+            <div class="doc-head-main">
+              <div class="doc-trail">
+                <span class="kind" data-kind="settings">Settings</span>
+                <nav aria-label="Breadcrumb">
+                  <ol class="doc-crumbs">
+                    <li><a href="/docs.html">Docs</a></li>
+                    <li><a href="/docs.html#settings">Settings</a></li>
+                    <li><span aria-current="page">Notifications</span></li>
+                  </ol>
+                </nav>
+              </div>
+              <h1>Notifications</h1>
+              <p class="doc-lead">
+                Which events raise an operating system notification, and which raise an in-app
+                bubble.
+              </p>
+            </div>
+            <dl class="doc-facts">
+              <div class="doc-fact">
+                <dt class="label">Topics</dt>
+                <dd>Notifications</dd>
+              </div>
+            </dl>
+          </header>
+
+          <section class="doc-section block" id="desktop" aria-labelledby="desktop-title">
+            <div class="band doc-band">
+              <div class="band-title">
+                <span class="num">01</span>
+                <h2 id="desktop-title">Desktop</h2>
+              </div>
+            </div>
+            <div class="doc-body">
+              <p class="doc-prose">
+                The operating system raises these.<br />
+                The first one asks the system for permission to show notifications.<br />
+                The Notifications tile logs every event, whatever these are set to.<br />
+                A <b>Notify</b> block set to deliver to the desktop ignores them.<br />
+                A device waiting for remote access approval always notifies.
+              </p>
+              <div class="doc-table-wrap">
+                <table class="doc-table">
+                  <thead>
+                    <tr>
+                      <th scope="col">Setting</th>
+                      <th scope="col">What it does</th>
+                      <th scope="col">Default</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td>Warnings and info</td>
+                      <td>
+                        Notifies on a server start, a finished backup, restore or install, a loader
+                        update, low TPS, or auto-save staying off.
+                      </td>
+                      <td>Off</td>
+                    </tr>
+                    <tr>
+                      <td>Errors</td>
+                      <td>
+                        Notifies when a backup, restore, server install, loader update or scheduler
+                        run fails.
+                      </td>
+                      <td>Off</td>
+                    </tr>
+                    <tr>
+                      <td>Server crash</td>
+                      <td>Notifies when a server stops unexpectedly.</td>
+                      <td>Off</td>
+                    </tr>
+                    <tr>
+                      <td>Update available</td>
+                      <td>Notifies when the startup check finds a newer Konnekt version.</td>
+                      <td>Off</td>
+                    </tr>
+                    <tr>
+                      <td>Player join/leave</td>
+                      <td>Notifies when a player joins or leaves a server.</td>
+                      <td>Off</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </section>
+
+          <section
+            class="doc-section block"
+            id="in-app-bubbles"
+            aria-labelledby="in-app-bubbles-title"
+          >
+            <div class="band doc-band">
+              <div class="band-title">
+                <span class="num">02</span>
+                <h2 id="in-app-bubbles-title">In-app bubbles</h2>
+              </div>
+            </div>
+            <div class="doc-body">
+              <p class="doc-prose">
+                A bubble sits in the corner of the window until dismissed, and holds the full text.
+              </p>
+              <div class="doc-table-wrap">
+                <table class="doc-table">
+                  <thead>
+                    <tr>
+                      <th scope="col">Setting</th>
+                      <th scope="col">What it does</th>
+                      <th scope="col">Default</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td>Warnings and info</td>
+                      <td>
+                        Shows scheduler graph warnings, <b>Notify</b> block messages of kind Info or
+                        Warning, low TPS, and auto-save staying off.
+                      </td>
+                      <td>On</td>
+                    </tr>
+                    <tr>
+                      <td>Errors</td>
+                      <td>
+                        Shows failed scheduler runs, backups, restores, installs and loader updates,
+                        scheduler errors, and <b>Notify</b> block errors.
+                      </td>
+                      <td>On</td>
+                    </tr>
+                    <tr>
+                      <td>Server crash</td>
+                      <td>Shows a bubble when a server stops unexpectedly.</td>
+                      <td>On</td>
+                    </tr>
+                    <tr>
+                      <td>Update available</td>
+                      <td>Shows a bubble when the startup check finds a newer Konnekt version.</td>
+                      <td>On</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </section>
+
+          <nav class="doc-related block" aria-label="Related">
+            <div class="shelf-label"><span class="label">Related</span></div>
+            <a class="related-link" href="/docs/settings/general.html#updates"
+              ><span class="kind" data-kind="settings">Settings</span>General</a
+            >
+          </nav>
+        </main>
+      </div>
+
+      <!-- Canonical footer. Byte-identical on every page. -->
+      <footer class="block block-raised">
+        <div class="footer-cols">
+          <div class="footer-about">
+            <a class="footer-brand" href="/index.html"
+              ><picture
+                ><source media="(min-resolution: 2dppx)" srcset="/assets/img/mark.svg" />
+                <img
+                  class="mark"
+                  src="/assets/img/mark-24.svg"
+                  width="24"
+                  height="24"
+                  alt="" /></picture
+              >Konnekt</a
+            >
+            <p>A desktop dashboard for the Minecraft servers you host.</p>
+            <span class="meta"><span data-release-tag></span>Windows and Linux</span>
+          </div>
+          <nav class="footer-col" aria-label="Product">
+            <span class="label">Product</span>
+            <a href="/download.html">Download</a>
+            <a href="https://konnekt-demo.pages.dev/" target="_blank" rel="noopener"
+              >Try the demo</a
+            >
+            <a href="/changelog.html">Changelog</a>
+          </nav>
+          <nav class="footer-col" aria-label="Learn">
+            <span class="label">Learn</span>
+            <a href="/index.html#features">Features</a>
+            <a href="/docs.html">Docs</a>
+            <a href="/roadmap.html">Roadmap</a>
+          </nav>
+          <nav class="footer-col" aria-label="Source">
+            <span class="label">Source</span>
+            <a href="https://github.com/kollektiv-mc/Konnekt" target="_blank" rel="noopener"
+              >GitHub</a
+            >
+            <a href="https://github.com/kollektiv-mc/Konnekt/issues" target="_blank" rel="noopener"
+              >Issues</a
+            >
+            <a
+              href="https://github.com/kollektiv-mc/Konnekt/blob/main/LICENSE"
+              target="_blank"
+              rel="noopener"
+              >MIT licence</a
+            >
+          </nav>
+        </div>
+        <div class="footer-base">
+          <span
+            >Alpha software. A side project mostly written by Claude.
+            <a href="/docs.html#disclaimer">Full statement</a></span
+          >
+          <span>&copy; 2026 Konnekt</span>
+        </div>
+      </footer>
+    </div>
+
+    <script src="/release.js"></script>
+    <script src="/site.js"></script>
+  </body>
+</html>
