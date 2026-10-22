@@ -1,8 +1,12 @@
-import { describe, it, expect } from 'vitest'
-import { render, fireEvent } from '@testing-library/react'
-import { Position, type EdgeProps } from '@xyflow/react'
+import { describe, it, expect, afterEach, vi } from 'vitest'
+import { render, fireEvent, cleanup, waitFor } from '@testing-library/react'
+import { Position, ReactFlowProvider, useEdges, type Edge, type EdgeProps } from '@xyflow/react'
 import { AnimatedEdge } from './AnimatedEdge'
-import { SchedulerCtx } from './schedulerContext'
+import { SchedulerCtx, type SchedulerCtxValue } from './schedulerContext'
+import { edgeWaypoints } from './edgeGeometry'
+
+// Vitest runs with `globals: false`, so RTL cannot register its own auto-cleanup.
+afterEach(cleanup)
 
 // AnimatedEdge only reads a subset of EdgeProps; cast the minimal shape through
 // `unknown` rather than filling in every optional field xyflow's type carries —
@@ -24,10 +28,62 @@ function edgeProps(overrides: Partial<EdgeProps> = {}): EdgeProps {
 
 function renderEdge(overrides: Partial<EdgeProps> = {}) {
   return render(
-    <svg>
-      <AnimatedEdge {...edgeProps(overrides)} />
-    </svg>,
+    <ReactFlowProvider>
+      <svg>
+        <AnimatedEdge {...edgeProps(overrides)} />
+      </svg>
+    </ReactFlowProvider>,
   )
+}
+
+function ctxValue(overrides: Partial<SchedulerCtxValue> = {}): SchedulerCtxValue {
+  return {
+    blockDefs: new Map(),
+    edges: [],
+    collapsed: new Set(),
+    onToggleCollapse: () => {},
+    nodeRunState: new Map(),
+    nodeDowntimeMs: new Map(),
+    nodeWarning: new Map(),
+    firedEdges: new Set(),
+    cycleNodes: new Set(),
+    cycleEdges: new Set(),
+    recordPre: () => {},
+    ...overrides,
+  }
+}
+
+// An edge whose data lives in React Flow's store, the way the editor holds it,
+// so the corner edits (which go through setEdges) can be read back.
+function LiveEdge({ selected = true }: { selected?: boolean }) {
+  const stored = useEdges().find((e) => e.id === 'e1')
+  return (
+    <svg>
+      <AnimatedEdge {...edgeProps({ data: stored?.data, selected })} />
+    </svg>
+  )
+}
+
+function Probe({ onEdges }: { onEdges: (edges: Edge[]) => void }) {
+  onEdges(useEdges())
+  return null
+}
+
+function renderLive(waypoints: { x: number; y: number }[], selected = true) {
+  const recordPre = vi.fn()
+  let latest: Edge[] = []
+  const utils = render(
+    <ReactFlowProvider
+      defaultEdges={[{ id: 'e1', source: 'a', target: 'b', data: { kind: 'control', waypoints } }]}
+    >
+      <SchedulerCtx.Provider value={ctxValue({ recordPre })}>
+        <LiveEdge selected={selected} />
+        <Probe onEdges={(e) => (latest = e)} />
+      </SchedulerCtx.Provider>
+    </ReactFlowProvider>,
+  )
+  settle(utils.container)
+  return { ...utils, recordPre, corners: () => edgeWaypoints(latest[0]?.data) }
 }
 
 // The entrance animation branch renders first; settle it so tests exercise the
@@ -126,27 +182,107 @@ describe('AnimatedEdge', () => {
 
   it('lets a fired edge win over selection', () => {
     const { container } = render(
-      <SchedulerCtx.Provider
-        value={{
-          blockDefs: new Map(),
-          edges: [],
-          collapsed: new Set(),
-          onToggleCollapse: () => {},
-          nodeRunState: new Map(),
-          nodeDowntimeMs: new Map(),
-          nodeWarning: new Map(),
-          firedEdges: new Set(['e1']),
-          cycleNodes: new Set(),
-          cycleEdges: new Set(),
-        }}
-      >
-        <svg>
-          <AnimatedEdge {...edgeProps({ selected: true })} />
-        </svg>
-      </SchedulerCtx.Provider>,
+      <ReactFlowProvider>
+        <SchedulerCtx.Provider value={ctxValue({ firedEdges: new Set(['e1']) })}>
+          <svg>
+            <AnimatedEdge {...edgeProps({ selected: true })} />
+          </svg>
+        </SchedulerCtx.Provider>
+      </ReactFlowProvider>,
     )
     settle(container)
     const path = container.querySelector('.react-flow__edge-path')
     expect(path?.getAttribute('style')).toContain('drop-shadow')
+  })
+
+  it('draws a straight line between the endpoints when there are no corners', () => {
+    const { container } = renderEdge()
+    expect(container.querySelector('.react-flow__edge-path')?.getAttribute('d')).toBe('M0,0 L100,0')
+  })
+
+  it('routes the visible path and the hit target through the corners', () => {
+    const { container } = renderEdge({ data: { waypoints: [{ x: 50, y: 40 }] } })
+    const d = container.querySelector('.react-flow__edge-path')?.getAttribute('d') ?? ''
+    expect(d).toContain('Q50,40')
+    expect(container.querySelector('.react-flow__edge-interaction')?.getAttribute('d')).toBe(d)
+  })
+
+  it('keeps the draw-in normalisation on a routed edge', () => {
+    const { container } = renderEdge({ data: { waypoints: [{ x: 50, y: 40 }] } })
+    expect(container.querySelector('.edge-draw-in')?.getAttribute('pathLength')).toBe('1')
+  })
+})
+
+describe('AnimatedEdge corners', () => {
+  const corner = [{ x: 50, y: 40 }]
+
+  it('hides the handles until the wire is hovered or selected', () => {
+    const { container } = renderLive(corner, false)
+    expect(container.querySelector('[data-corner]')).toBeNull()
+    fireEvent.mouseEnter(container.querySelector('.react-flow__edge-interaction')!)
+    expect(container.querySelector('[data-corner]')).not.toBeNull()
+  })
+
+  it('shows a handle per corner on a selected wire', () => {
+    const { container } = renderLive([...corner, { x: 80, y: 40 }])
+    expect(container.querySelectorAll('[data-corner]')).toHaveLength(2)
+  })
+
+  it('shows no handles on a straight wire, even selected', () => {
+    const { container } = renderLive([])
+    expect(container.querySelector('[data-corner]')).toBeNull()
+  })
+
+  it('adds a corner at the cursor on double-click and records one undo entry', async () => {
+    const { container, recordPre, corners } = renderLive([])
+    fireEvent.doubleClick(container.querySelector('.react-flow__edge-interaction')!, {
+      clientX: 40,
+      clientY: 12,
+    })
+    await waitFor(() => expect(corners()).toEqual([{ x: 40, y: 12 }]))
+    expect(recordPre).toHaveBeenCalledTimes(1)
+  })
+
+  it('removes a corner on double-click and records one undo entry', async () => {
+    const { container, recordPre, corners } = renderLive(corner)
+    fireEvent.doubleClick(container.querySelector('[data-corner="0"]')!)
+    await waitFor(() => expect(corners()).toEqual([]))
+    expect(recordPre).toHaveBeenCalledTimes(1)
+  })
+
+  it('does not add a corner when a corner is double-clicked', async () => {
+    const { container, corners } = renderLive(corner)
+    fireEvent.doubleClick(container.querySelector('[data-corner="0"]')!)
+    await waitFor(() => expect(corners()).toEqual([]))
+  })
+
+  it('moves a corner with the pointer and records the drag once', async () => {
+    const { container, recordPre, corners } = renderLive(corner)
+    const handle = container.querySelector('[data-corner="0"]')!
+    fireEvent.pointerDown(handle, { clientX: 50, clientY: 40, button: 0 })
+    fireEvent.pointerMove(handle, { clientX: 60, clientY: 55 })
+    fireEvent.pointerMove(handle, { clientX: 70, clientY: 70 })
+    fireEvent.pointerUp(handle, { clientX: 70, clientY: 70 })
+    await waitFor(() => expect(corners()).toEqual([{ x: 70, y: 70 }]))
+    expect(recordPre).toHaveBeenCalledTimes(1)
+  })
+
+  it('leaves no undo entry for a press that never moves', () => {
+    const { container, recordPre, corners } = renderLive(corner)
+    const handle = container.querySelector('[data-corner="0"]')!
+    fireEvent.pointerDown(handle, { clientX: 50, clientY: 40, button: 0 })
+    fireEvent.pointerMove(handle, { clientX: 51, clientY: 40 })
+    fireEvent.pointerUp(handle, { clientX: 51, clientY: 40 })
+    expect(recordPre).not.toHaveBeenCalled()
+    expect(corners()).toEqual(corner)
+  })
+
+  it('keeps the handles up for the whole drag, even off the wire', () => {
+    const { container } = renderLive(corner, false)
+    fireEvent.mouseEnter(container.querySelector('.react-flow__edge-interaction')!)
+    const handle = container.querySelector('[data-corner="0"]')!
+    fireEvent.pointerDown(handle, { clientX: 50, clientY: 40, button: 0 })
+    fireEvent.mouseLeave(container.querySelector('g')!)
+    expect(container.querySelector('[data-corner]')).not.toBeNull()
   })
 })

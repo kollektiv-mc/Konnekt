@@ -39,6 +39,11 @@ type Edge struct {
 	SourcePort string `json:"sourcePort"` // control: "onComplete"/"onFailed"/etc; data: port id
 	Target     string `json:"target"`     // target node id
 	TargetPort string `json:"targetPort"` // control: "in"; data: port id
+	// Waypoints are the corner points the editor routes the line through, in
+	// canvas coordinates and in order from source to target. An editor hint
+	// only, like Node.Position: the engine never reads them, and an edge saved
+	// before they existed has none and draws straight.
+	Waypoints []Position `json:"waypoints,omitempty"`
 }
 
 // ─── Block descriptor (served to frontend, renders blocks generically) ────────

@@ -106,7 +106,7 @@ function withdrawToast(key: string): void {
 }
 
 const nodeTypes = { block: BlockNode }
-const edgeTypes = { smoothstep: AnimatedEdge }
+const edgeTypes = { wire: AnimatedEdge }
 
 const NODE_BASE_MS = 80
 const NODE_STAGGER = 25
@@ -535,7 +535,7 @@ function GraphEditorInner({
           {
             ...connection,
             id: randId(),
-            type: 'smoothstep',
+            type: 'wire',
             style: isData ? DATA_EDGE_STYLE : undefined,
             data: { kind: isData ? 'data' : 'control' } as Record<string, unknown>,
           },
@@ -918,6 +918,7 @@ function GraphEditorInner({
       firedEdges,
       cycleNodes,
       cycleEdges,
+      recordPre,
     }),
     [
       defMap,
@@ -930,6 +931,7 @@ function GraphEditorInner({
       firedEdges,
       cycleNodes,
       cycleEdges,
+      recordPre,
     ],
   )
 
