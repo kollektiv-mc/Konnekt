@@ -118,9 +118,9 @@ prefix or suffix, no em dashes. The area label is load-bearing, because
 `CONTRIBUTING.md` holds the title rules and the `type:` ladder with its worked
 cases. Five things it does not say:
 
-- **Label each pull request twice**: one `type:` and one `area:` from
-  `.github/labels.yml`, a specific area over `area:ui`. The `pr-labelled`
-  status stays pending until both are on, so a pull request cannot merge.
+- **One pull request per piece of work, a `## Changelog` line per change**,
+  never a pull request per tweak. Label it with an `area:` (specific over
+  `area:ui`) and, without a section, a `type:`; `pr-labelled` waits for both.
 - **No em dashes** in titles, bodies or commit messages. Use a comma, a colon,
   or two sentences.
 - `.github/scripts/release-notes.py` drops any pull request whose files all sit
@@ -177,4 +177,4 @@ scaffold a Beta feature during alpha.
 `.claude/rules/` holds what only matters in one part of the tree, each scoped
 by `paths:` so it costs no context until you open a matching file:
 `tile-system.md`, `builds-and-releases.md`, `frontend-style.md`, `ipc.md`,
-`backend.md`, `dependencies.md` and `aislop.md`.
+`backend.md`, `dependencies.md`, `aislop.md` and `copy.md`.

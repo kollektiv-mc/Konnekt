@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Konnekt roadmap</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&amp;family=Geist+Mono:wght@400;500&amp;display=swap">
+<style>
+body{margin:0;background:#05060a}
+a{color:#ffffff;text-decoration:none}a:hover{color:#4ade80}
+.kbtn{transition:background 150ms ease,color 150ms ease}
+.kbtn:hover{background:rgba(255,255,255,0.05)}
+.krow:hover{background:rgba(255,255,255,0.025)}
+.ksearch::placeholder{color:rgba(255,255,255,0.4)}
+.ksearch:focus{outline:none}
+.ksearchbox:focus-within{box-shadow:inset 0 -2px 0 #4ade80}
+</style>
+</helmet>
+<div style="background: #05060a; color: #ffffff; font-family: 'Geist', system-ui, sans-serif; min-height: 100vh; padding: 16px clamp(12px, 2vw, 24px) 24px">
+<div style="max-width: 1280px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px">
+
+<nav style="display: flex; flex-wrap: wrap; align-items: stretch; border: 1px solid rgba(255,255,255,0.06); background: rgba(255,255,255,0.025)">
+<a href="Home.dc.html" style="display: flex; align-items: center; gap: 10px; padding: 0 32px; min-height: 72px; border-right: 1px solid rgba(255,255,255,0.06); font-weight: 600; font-size: 20px; letter-spacing: -0.02em; color: #ffffff">
+<svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true"><defs><mask id="k-nav-behind" maskUnits="userSpaceOnUse" x="0" y="0" width="24" height="24"><rect width="24" height="24" fill="#fff"/><polygon points="12,4.47 17.62,7.71 17.62,14.2 12,17.45 6.38,14.2 6.38,7.71" fill="#000" stroke="#000" stroke-width="3" stroke-linejoin="round"/></mask><mask id="k-nav-cube" maskUnits="userSpaceOnUse" x="0" y="0" width="24" height="24"><rect width="24" height="24" fill="#fff"/><path d="M2.9126 13.537A9.1533 5.2814 0 0 0 21.0874 13.537" stroke="#000" stroke-width="5.7" fill="none"/></mask></defs><ellipse cx="12.0000" cy="12.9047" rx="9.1533" ry="5.2814" fill="none" stroke="#4ade80" stroke-width="2.7" mask="url(#k-nav-behind)"/><g mask="url(#k-nav-cube)"><polygon points="12,4.47 17.62,7.71 17.62,14.2 12,17.45 6.38,14.2 6.38,7.71" fill="#22c55e"/><polygon points="12,4.47 17.62,7.71 12,10.96 6.38,7.71" fill="#4ade80"/><polygon points="6.38,7.71 12,10.96 12,17.45 6.38,14.2" fill="#22c55e"/><polygon points="12,10.96 17.62,7.71 17.62,14.2 12,17.45" fill="#16a34a"/></g><path d="M2.876 12.4827A9.1533 5.2814 0 1 0 21.124 12.4827" fill="none" stroke="#4ade80" stroke-width="2.7"/></svg>
+Konnekt</a>
+<div style="display: flex; flex-wrap: wrap; align-items: center; gap: 28px; padding: 0 32px; flex: 1 1 360px; min-height: 72px; font-size: 15px">
+<a href="Home.dc.html" style="color: rgba(255,255,255,0.6)">Features</a>
+<a href="#docs" style="color: rgba(255,255,255,0.6)">Docs</a>
+<a href="Roadmap.dc.html" aria-current="page" style="color: #ffffff">Roadmap</a>
+<a href="Changelog.dc.html" style="color: rgba(255,255,255,0.6)">Changelog</a>
+</div>
+<a href="#github" style="display: flex; align-items: center; padding: 0 28px; min-height: 72px; border-left: 1px solid rgba(255,255,255,0.06); font-size: 15px; color: rgba(255,255,255,0.6)">GitHub</a>
+<a href="#download" style="display: flex; align-items: center; justify-content: center; gap: 10px; padding: 0 40px; min-height: 72px; background: #4ade80; color: #05060a; font-family: 'Geist Mono', monospace; font-size: 14px; font-weight: 500; letter-spacing: 0.06em; text-transform: uppercase">
+<svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><path d="M7 1v9M3 6.5 7 10.5 11 6.5M1.5 13h11" fill="none" stroke="currentColor" stroke-width="1.6"></path></svg>
+Download</a>
+</nav>
+
+<header style="display: flex; flex-wrap: wrap; border: 1px solid rgba(255,255,255,0.06)">
+<div style="flex: 1 1 420px; padding: clamp(40px, 6vw, 72px) 32px; display: flex; flex-direction: column; gap: 16px; border-right: 1px solid rgba(255,255,255,0.06)">
+<span style="font-family: 'Geist Mono', monospace; font-size: 13px; color: rgba(255,255,255,0.6)">{{total}} features · 5 areas</span>
+<h1 style="margin: 0; font-size: clamp(56px, 7vw, 96px); line-height: 0.95; font-weight: 600; letter-spacing: -0.05em">Roadmap</h1>
+</div>
+<div style="flex: 1 1 420px; padding: clamp(40px, 6vw, 72px) 32px; display: flex; flex-direction: column; justify-content: flex-end; gap: 20px; background: rgba(255,255,255,0.025)">
+<p style="margin: 0; font-size: 18px; line-height: 1.55; color: rgba(255,255,255,0.6); max-width: 40ch">Every feature, filed where it lives in the app. Each one says when it ships, and links its issue where there is one.</p>
+<a href="#issues" style="font-family: 'Geist Mono', monospace; font-size: 13px; letter-spacing: 0.06em; text-transform: uppercase">Issues on GitHub →</a>
+</div>
+</header>
+
+<section aria-label="Filter by stage" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); border: 1px solid rgba(255,255,255,0.06)">
+<sc-for list="{{stages}}" as="st" hint-placeholder-count="4">
+<button type="button" class="kbtn" onClick="{{st.pick}}" aria-pressed="{{st.pressed}}" style="text-align: left; border: 0; border-right: 1px solid rgba(255,255,255,0.06); background: {{st.bg}}; box-shadow: {{st.ring}}; color: #ffffff; padding: 28px 32px; display: flex; flex-direction: column; gap: 14px; cursor: pointer; font-family: inherit">
+<span style="display: flex; justify-content: space-between; align-items: center; width: 100%"><span style="display: inline-flex; align-items: center; gap: 10px; font-size: 18px; font-weight: 500"><span aria-hidden="true" style="{{st.marker}}"></span>{{st.title}}</span><span style="font-size: 40px; font-weight: 600; letter-spacing: -0.04em; line-height: 1; color: {{st.ink}}">{{st.count}}</span></span>
+<span style="font-size: 14px; line-height: 1.5; color: rgba(255,255,255,0.6)">{{st.note}}</span>
+</button>
+</sc-for>
+</section>
+
+<section aria-label="Feature explorer" style="border: 1px solid rgba(255,255,255,0.06)">
+<div style="display: flex; flex-wrap: wrap; align-items: stretch; border-bottom: 1px solid rgba(255,255,255,0.06)">
+<label class="ksearchbox" style="flex: 1 1 320px; display: flex; align-items: center; gap: 14px; padding: 0 32px; min-height: 64px; font-family: 'Geist Mono', monospace; font-size: 15px; color: rgba(255,255,255,0.6)">
+<span aria-hidden="true">/</span>
+<input class="ksearch" type="search" value="{{q}}" onChange="{{onSearch}}" placeholder="filter features" aria-label="Filter features by name" style="flex: 1; min-width: 0; background: transparent; border: 0; color: #ffffff; font: inherit; padding: 0">
+</label>
+<div role="status" style="display: flex; align-items: center; gap: 16px; padding: 0 32px; min-height: 64px; border-left: 1px solid rgba(255,255,255,0.06); font-family: 'Geist Mono', monospace; font-size: 13px; color: rgba(255,255,255,0.6)">
+<span>{{status}}</span>
+<sc-if value="{{filtered}}" hint-placeholder-val="{{false}}"><button type="button" class="kbtn" onClick="{{clear}}" style="border: 1px solid rgba(255,255,255,0.12); background: transparent; color: #ffffff; font: inherit; padding: 6px 12px; cursor: pointer">clear</button></sc-if>
+</div>
+</div>
+<div style="display: flex; flex-wrap: wrap">
+<div role="group" aria-label="Areas" style="flex: 1 1 240px; max-width: 100%; box-sizing: border-box; padding: 20px 0; border-right: 1px solid rgba(255,255,255,0.06); display: flex; flex-direction: column">
+<sc-for list="{{areas}}" as="ar" hint-placeholder-count="6">
+<button type="button" class="kbtn" onClick="{{ar.pick}}" aria-pressed="{{ar.pressed}}" style="display: flex; justify-content: space-between; align-items: center; gap: 12px; border: 0; background: transparent; color: {{ar.color}}; padding: 12px 32px; min-height: 44px; font-family: 'Geist Mono', monospace; font-size: 14px; text-align: left; cursor: pointer">
+<span style="display: inline-flex; align-items: center; gap: 10px"><span aria-hidden="true" style="width: 6px; height: 6px; background: {{ar.dot}}"></span>{{ar.name}}</span><span style="color: rgba(255,255,255,0.6)">{{ar.count}}</span>
+</button>
+</sc-for>
+</div>
+<div style="flex: 999 1 640px; min-width: 0">
+<sc-for list="{{groups}}" as="g" hint-placeholder-count="4">
+<div>
+<div style="display: flex; justify-content: space-between; gap: 16px; padding: 14px 32px; background: rgba(255,255,255,0.025); border-bottom: 1px solid rgba(255,255,255,0.06); font-family: 'Geist Mono', monospace; font-size: 13px; color: rgba(255,255,255,0.6)"><span>{{g.path}}</span><span>{{g.count}}</span></div>
+<sc-for list="{{g.items}}" as="it" hint-placeholder-count="4">
+<div class="krow" style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px 24px; padding: 14px 32px; border-bottom: 1px solid rgba(255,255,255,0.06)">
+<span style="font-size: 16px">{{it.name}}</span>
+<span style="display: inline-flex; align-items: center; gap: 20px; font-family: 'Geist Mono', monospace; font-size: 12px; letter-spacing: 0.08em; color: rgba(255,255,255,0.6)">
+<sc-if value="{{it.hasIssue}}" hint-placeholder-val="{{false}}"><a href="{{it.issueUrl}}" style="color: rgba(255,255,255,0.6); letter-spacing: 0">#{{it.issue}}</a></sc-if>
+<span style="display: inline-flex; align-items: center; gap: 8px; min-width: 96px; color: {{it.ink}}"><span aria-hidden="true" style="{{it.marker}}"></span>{{it.label}}</span>
+</span>
+</div>
+</sc-for>
+</div>
+</sc-for>
+<sc-if value="{{empty}}" hint-placeholder-val="{{false}}">
+<p style="margin: 0; padding: 48px 32px; font-size: 16px; color: rgba(255,255,255,0.6)">Nothing matches. Try another word, or clear the filters.</p>
+</sc-if>
+</div>
+</div>
+</section>
+
+<div aria-hidden="true" style="height: 56px"></div>
+
+<footer style="border: 1px solid rgba(255,255,255,0.06); background: rgba(255,255,255,0.025)">
+<div style="display: flex; flex-wrap: wrap">
+<div style="flex: 1.6 1 320px; padding: 40px 32px; display: flex; flex-direction: column; gap: 14px">
+<a href="Home.dc.html" style="display: inline-flex; align-items: center; gap: 10px; font-weight: 600; font-size: 20px; letter-spacing: -0.02em; color: #ffffff"><svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true"><defs><mask id="k-foot-behind" maskUnits="userSpaceOnUse" x="0" y="0" width="24" height="24"><rect width="24" height="24" fill="#fff"/><polygon points="12,4.47 17.62,7.71 17.62,14.2 12,17.45 6.38,14.2 6.38,7.71" fill="#000" stroke="#000" stroke-width="3" stroke-linejoin="round"/></mask><mask id="k-foot-cube" maskUnits="userSpaceOnUse" x="0" y="0" width="24" height="24"><rect width="24" height="24" fill="#fff"/><path d="M2.9126 13.537A9.1533 5.2814 0 0 0 21.0874 13.537" stroke="#000" stroke-width="5.7" fill="none"/></mask></defs><ellipse cx="12.0000" cy="12.9047" rx="9.1533" ry="5.2814" fill="none" stroke="#4ade80" stroke-width="2.7" mask="url(#k-foot-behind)"/><g mask="url(#k-foot-cube)"><polygon points="12,4.47 17.62,7.71 17.62,14.2 12,17.45 6.38,14.2 6.38,7.71" fill="#22c55e"/><polygon points="12,4.47 17.62,7.71 12,10.96 6.38,7.71" fill="#4ade80"/><polygon points="6.38,7.71 12,10.96 12,17.45 6.38,14.2" fill="#22c55e"/><polygon points="12,10.96 17.62,7.71 17.62,14.2 12,17.45" fill="#16a34a"/></g><path d="M2.876 12.4827A9.1533 5.2814 0 1 0 21.124 12.4827" fill="none" stroke="#4ade80" stroke-width="2.7"/></svg>Konnekt</a>
+<p style="margin: 0; font-size: 15px; line-height: 1.5; color: rgba(255,255,255,0.6); max-width: 32ch">A desktop dashboard for the Minecraft servers you host.</p>
+<span style="font-family: 'Geist Mono', monospace; font-size: 13px; color: rgba(255,255,255,0.6)">v0.2.0-alpha.2 · Windows and Linux</span>
+</div>
+<nav aria-label="Product" style="flex: 1 1 160px; padding: 40px 32px; border-left: 1px solid rgba(255,255,255,0.06); display: flex; flex-direction: column; gap: 14px"><span style="font-family: 'Geist Mono', monospace; font-size: 12px; letter-spacing: 0.1em; color: rgba(255,255,255,0.6)">PRODUCT</span><a href="#download" style="color: rgba(255,255,255,0.85); font-size: 15px">Download</a><a href="#demo" style="color: rgba(255,255,255,0.85); font-size: 15px">Try the demo</a><a href="Changelog.dc.html" style="color: rgba(255,255,255,0.85); font-size: 15px">Changelog</a></nav>
+<nav aria-label="Learn" style="flex: 1 1 160px; padding: 40px 32px; border-left: 1px solid rgba(255,255,255,0.06); display: flex; flex-direction: column; gap: 14px"><span style="font-family: 'Geist Mono', monospace; font-size: 12px; letter-spacing: 0.1em; color: rgba(255,255,255,0.6)">LEARN</span><a href="Home.dc.html" style="color: rgba(255,255,255,0.85); font-size: 15px">Features</a><a href="#docs" style="color: rgba(255,255,255,0.85); font-size: 15px">Docs</a><a href="Roadmap.dc.html" style="color: rgba(255,255,255,0.85); font-size: 15px">Roadmap</a></nav>
+<nav aria-label="Source" style="flex: 1 1 160px; padding: 40px 32px; border-left: 1px solid rgba(255,255,255,0.06); display: flex; flex-direction: column; gap: 14px"><span style="font-family: 'Geist Mono', monospace; font-size: 12px; letter-spacing: 0.1em; color: rgba(255,255,255,0.6)">SOURCE</span><a href="#github" style="color: rgba(255,255,255,0.85); font-size: 15px">GitHub</a><a href="#issues" style="color: rgba(255,255,255,0.85); font-size: 15px">Issues</a><a href="#licence" style="color: rgba(255,255,255,0.85); font-size: 15px">Licence, CC0</a></nav>
+</div>
+<div style="display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px 24px; padding: 20px 32px; border-top: 1px solid rgba(255,255,255,0.06); font-family: 'Geist Mono', monospace; font-size: 13px; color: rgba(255,255,255,0.6)">
+<span>Alpha software. A side project mostly written by Claude. <a href="#disclaimer" style="color: rgba(255,255,255,0.85); text-decoration: underline">Full statement</a></span>
+<span>© 2026 Konnekt</span>
+</div>
+</footer>
+
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":5600}}'>
+const ENTRIES = [["dashboard/tiles/console","live log streaming","alpha",null],["dashboard/tiles/console","inline command input","alpha",null],["dashboard/tiles/console","quick commands","alpha",null],["dashboard/tiles/console","custom commands","alpha",null],["dashboard/tiles/stats","status and uptime","alpha",null],["dashboard/tiles/stats","players online","alpha",null],["dashboard/tiles/stats","TPS and RAM","alpha",null],["dashboard/tiles/performance","1-hour history","alpha",null],["dashboard/tiles/performance","summary table","alpha",null],["dashboard/tiles/performance","24-hour and 7-day history","beta","39"],["dashboard/tiles/players","online list","alpha",null],["dashboard/tiles/players","kick and ban","alpha",null],["dashboard/tiles/players","player profiles","beta","36"],["dashboard/tiles/players","skin preview","beta","37"],["dashboard/tiles/worlds","3D world browser","alpha",null],["dashboard/tiles/worlds","world metadata","alpha",null],["dashboard/tiles/worlds","switch active world","alpha",null],["dashboard/tiles/worlds","rename, duplicate, delete","alpha",null],["dashboard/tiles/worlds","per-world backups","beta","23"],["dashboard/tiles/backups","manual backup","alpha",null],["dashboard/tiles/backups","scheduled backups","alpha",null],["dashboard/tiles/backups","restore","alpha",null],["dashboard/tiles/backups","live progress","alpha",null],["dashboard/tiles/backups","multi-dimension backup","beta","26"],["dashboard/tiles/backups","retention and pruning","beta","27"],["dashboard/tiles/backups","cancel in progress","beta","28"],["dashboard/tiles/backups","concurrency guard","beta","29"],["dashboard/tiles/backups","restore integrity check","beta","30"],["dashboard/tiles/backups","import an external backup","beta","31"],["dashboard/tiles/backups","world-specific segment","beta","24"],["dashboard/tiles/scheduler","node graph editor","alpha",null],["dashboard/tiles/scheduler","triggers, conditions, actions","alpha",null],["dashboard/tiles/scheduler","run history and next runs","alpha",null],["dashboard/tiles/scheduler","world-specific backup action","beta","25"],["dashboard/tiles/config","config file list","alpha",null],["dashboard/tiles/config","form editor","alpha",null],["dashboard/tiles/config","raw text editor","alpha",null],["dashboard/tiles/config","grouped fields","beta","32"],["dashboard/tiles/config","gamerule editor","beta","32"],["dashboard/tiles/config","MOTD preview","beta","32"],["dashboard/tiles/mods","Modrinth search and install","alpha",null],["dashboard/tiles/mods","dependency resolution","alpha",null],["dashboard/tiles/mods","loader detection","alpha",null],["dashboard/tiles/mods","inline changelogs","alpha",null],["dashboard/tiles/mods","CurseForge and full manager","beta","35"],["dashboard/tiles/notifications","in-app feed","alpha",null],["dashboard/tiles/notifications","desktop notifications","alpha",null],["dashboard/tiles","file explorer","beta","33"],["dashboard/tiles","audit log","beta","34"],["dashboard/layout","drag, resize and snap","alpha",null],["dashboard/layout","tile crate","alpha",null],["dashboard/layout","maximise a tile","alpha",null],["dashboard/layout","layout presets","alpha",null],["server","start, stop, restart","alpha",null],["server","multiple server configs","alpha",null],["server","EULA flow","alpha",null],["server","RCON set up for you","beta","99"],["server","server switching everywhere","beta",null],["server","public server IP","beta","38"],["server","run servers concurrently","later","57"],["settings","theme","alpha",null],["settings","notification toggles","alpha",null],["settings","configurable shortcuts","beta","41"],["settings","global JVM defaults","beta","42"],["remote access","event hub groundwork","alpha",null],["remote access","remote service","later","43"],["remote access","browser runtime shim","later","44"],["remote access","password and token auth","later","45"],["remote access","tunnel transport","later","46"],["remote access","remote-mode adaptations","later","47"],["release","windows and linux builds","alpha",null],["release","in-app updater","alpha",null],["release","rpm package","alpha",null],["release","signed and notarised builds","beta",null],["release","published macOS builds","release",null],["release","windows installer","release",null],["release","debian package","release",null],["release","versioned on-disk state","release",null],["release","data-loss test coverage","release",null],["release","docs for every tile","release",null]];
+const STAGES = [
+  { id: 'alpha', title: 'Alpha', label: 'ALPHA', note: 'Shipped. In the build you can download today.', rgb: '248,113,113', ink: '#f87171', marker: 'display: inline-block; width: 10px; height: 10px; background: #f87171' },
+  { id: 'beta', title: 'Beta', label: 'BETA', note: 'Next. Filed as issues and being worked through.', rgb: '255,216,77', ink: '#ffd84d', marker: 'display: inline-block; width: 10px; height: 10px; background: #ffd84d' },
+  { id: 'release', title: 'Full release', label: 'RELEASE', note: 'Planned. What a 1.0 needs beyond features.', rgb: '74,222,128', ink: '#4ade80', marker: 'display: inline-block; width: 10px; height: 10px; background: #4ade80' },
+  { id: 'later', title: 'Later', label: 'LATER', note: 'Someday. Not scheduled, and not forgotten.', rgb: '255,255,255', ink: 'rgba(255,255,255,0.6)', marker: 'display: inline-block; width: 10px; height: 10px; box-sizing: border-box; border: 1.5px dashed rgba(255,255,255,0.6)' },
+];
+const AREAS = ['dashboard', 'server', 'settings', 'remote access', 'release'];
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { stage: null, area: null, q: '' };
+  }
+  renderVals() {
+    const { stage, area, q } = this.state;
+    const needle = q.trim().toLowerCase();
+    const byStage = {};
+    STAGES.forEach((s) => { byStage[s.id] = s; });
+    const inArea = (e) => !area || e[0] === area || e[0].startsWith(area + '/');
+    const shown = ENTRIES.filter((e) => inArea(e) && (!stage || e[2] === stage) && (!needle || e[1].toLowerCase().includes(needle) || e[0].includes(needle)));
+    const groups = [];
+    const index = {};
+    shown.forEach((e) => {
+      if (!(e[0] in index)) {
+        index[e[0]] = groups.length;
+        groups.push({ path: e[0].split('/').join(' / ') + ' /', items: [] });
+      }
+      const s = byStage[e[2]];
+      groups[index[e[0]]].items.push({
+        name: e[1], label: s.label, marker: s.marker, ink: s.ink,
+        hasIssue: !!e[3], issue: e[3], issueUrl: 'https://github.com/kollektiv-mc/Konnekt/issues/' + e[3],
+      });
+    });
+    groups.forEach((g) => { g.count = g.items.length; });
+    const filtered = !!(stage || area || needle);
+    return {
+      total: ENTRIES.length,
+      q,
+      onSearch: (ev) => this.setState({ q: ev.target.value }),
+      clear: () => this.setState({ stage: null, area: null, q: '' }),
+      filtered,
+      status: shown.length + (shown.length === 1 ? ' feature' : ' features') + (filtered ? ' shown' : ' across 5 areas'),
+      stages: STAGES.map((s) => ({
+        ...s,
+        count: ENTRIES.filter((e) => inArea(e) && e[2] === s.id).length,
+        pressed: stage === s.id ? 'true' : 'false',
+        bg: stage === s.id ? 'rgba(' + s.rgb + ',0.07)' : 'transparent',
+        ring: stage === s.id ? 'inset 0 3px 0 ' + s.ink : 'inset 0 1px 0 rgba(' + s.rgb + ',0.25)',
+        pick: () => this.setState({ stage: stage === s.id ? null : s.id }),
+      })),
+      areas: [{ id: null, name: 'all areas' }].concat(AREAS.map((a) => ({ id: a, name: a + '/' }))).map((a) => ({
+        name: a.name,
+        count: ENTRIES.filter((e) => !a.id || e[0] === a.id || e[0].startsWith(a.id + '/')).length,
+        pressed: area === a.id ? 'true' : 'false',
+        color: area === a.id ? '#ffffff' : 'rgba(255,255,255,0.6)',
+        dot: area === a.id ? '#4ade80' : 'transparent',
+        pick: () => this.setState({ area: a.id }),
+      })),
+      groups,
+      empty: shown.length === 0,
+    };
+  }
+}
+</script>
+</body>
+</html>
