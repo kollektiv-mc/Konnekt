@@ -657,6 +657,17 @@ split before raising again: candidates are the mods tile's `BrowsePanel` and
 through `tiles/mods/index.tsx`, and the backups tile's carousel and solar
 system, same shape.
 
+The budget is already shaping code it has no business shaping (2026-10-22).
+Notification side effects sit in four modules split by the chunk graph rather
+than by meaning: `lib/notify.ts` (lazy chunks import it, so it may take no
+store), `lib/appNotify.ts` and `lib/scheduleNotify.ts` (entry-only, because
+taking the settings store or `toast.ts` into `notify.ts` split the entry over
+budget), and `lib/toast.ts`, whose four-line category gate is copied into
+`GraphEditor.tsx` because importing it from that lazy chunk cost 2.3 KB of
+entry. Each file says why, but a reader cannot tell from the tree where a
+notification is sent. Once a split frees headroom, fold them back into one
+module and drop the copy.
+
 **P2 — What is still open from the first-scroll work** (filed 2026-08-29)
 
 The warm-up's own contribution to the first scroll is closed (HEALTH_LOG,
