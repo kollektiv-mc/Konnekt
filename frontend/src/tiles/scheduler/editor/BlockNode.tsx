@@ -193,7 +193,7 @@ export const BlockNode = memo(function BlockNode({ data, selected }: NodeProps<B
         {hasExpandablePorts && (
           <span
             onClick={() => onToggleCollapse(nd.id as string)}
-            className="nodrag text-text-faint text-3xs shrink-0 cursor-pointer pl-1 font-mono select-none"
+            className="nodrag text-text-faint text-3xs shrink-0 pl-1 font-mono select-none"
             title={isCollapsed ? 'Expand ports' : 'Collapse ports'}
           >
             {isCollapsed ? '▸' : '▾'}

@@ -935,7 +935,7 @@ function GraphEditorInner({
 
   // ── Toolbar button className helper ───────────────────────────────────────
   function btnClass(active = false, danger = false): string {
-    const base = 'cursor-pointer rounded border-hairline px-2 py-0.5 text-1xs font-mono'
+    const base = 'rounded border-hairline px-2 py-0.5 text-1xs font-mono'
     const borderClass = danger ? 'border-danger' : 'border-border-subtle'
     if (active) return `${base} ${borderClass} bg-accent text-black`
     if (danger) return `${base} ${borderClass} bg-transparent text-danger`
@@ -1032,7 +1032,7 @@ function GraphEditorInner({
           ) : (
             <span
               onClick={() => setNameEditing(true)}
-              className="text-text-muted border-border-subtle border-b-hairline text-1xs flex min-w-[60px] cursor-text items-center gap-1.5 border-dashed font-mono"
+              className="text-text-muted border-border-subtle border-b-hairline text-1xs flex min-w-[60px] items-center gap-1.5 border-dashed font-mono"
               title="Click to rename"
             >
               {graphName || 'Untitled'}
@@ -1211,7 +1211,7 @@ function GraphEditorInner({
                   <button
                     key={tab}
                     onClick={() => setPanelTab(tab)}
-                    className={`flex-1 cursor-pointer border-b py-1.5 font-mono text-xs ${
+                    className={`flex-1 border-b py-1.5 font-mono text-xs ${
                       panelTab === tab
                         ? 'bg-surface text-text-primary border-accent'
                         : 'text-text-faint border-transparent bg-transparent'

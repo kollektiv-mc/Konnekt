@@ -4,6 +4,16 @@
 .react-flow {
   background: var(--bg-base);
 }
+/* The dashboard keeps the default arrow everywhere (body in style.css), and
+   the editor matches it. React Flow's stylesheet hands the pane, nodes,
+   edges, handles and the selection a grab, grabbing, pointer, crosshair or
+   move cursor, through selectors up to three classes deep, so one important
+   override answers all of them rather than a patch per selector. Text fields
+   keep the I-beam style.css gives them. */
+.react-flow,
+.react-flow *:not(input, textarea, [contenteditable], [contenteditable] *) {
+  cursor: default !important;
+}
 .react-flow__background pattern circle,
 .react-flow__background pattern path {
   fill: var(--border-subtle) !important;

@@ -33,7 +33,7 @@ export function BlockPalette({ blockDefs, onAdd }: Props) {
   if (collapsed) {
     return (
       <div
-        className={`bg-canvas border-border-subtle border-r-hairline flex w-5 shrink-0 cursor-pointer items-center justify-center ${NO_GRAPH_KEYS}`}
+        className={`bg-canvas border-border-subtle border-r-hairline flex w-5 shrink-0 items-center justify-center ${NO_GRAPH_KEYS}`}
         onClick={toggleCollapsed}
         title="Expand blocks"
       >
@@ -49,11 +49,7 @@ export function BlockPalette({ blockDefs, onAdd }: Props) {
       <div className="px-2 py-2">
         <div className="text-text-faint mb-2 flex items-center font-mono text-xs">
           <span className="flex-1">blocks</span>
-          <span
-            onClick={toggleCollapsed}
-            title="Collapse palette"
-            className="cursor-pointer pl-1 select-none"
-          >
+          <span onClick={toggleCollapsed} title="Collapse palette" className="pl-1 select-none">
             ‹
           </span>
         </div>
@@ -69,7 +65,7 @@ export function BlockPalette({ blockDefs, onAdd }: Props) {
           return (
             <div key={cat} className="mb-3">
               <div
-                className={`mb-1 flex cursor-pointer items-center gap-1 font-mono text-xs uppercase select-none ${textClass}`}
+                className={`mb-1 flex items-center gap-1 font-mono text-xs uppercase select-none ${textClass}`}
                 onClick={() => toggleCategory(cat)}
               >
                 <span className="text-3xs">{isClosed ? '▸' : '▾'}</span>
@@ -85,7 +81,7 @@ export function BlockPalette({ blockDefs, onAdd }: Props) {
                     onClick={() => onAdd(def)}
                     onDragStart={(e) => e.dataTransfer.setData('blockType', def.id)}
                     title={def.description}
-                    className="bg-surface border-border-subtle text-text-primary border-hairline text-1xs mb-0.5 cursor-pointer rounded px-2 py-1 font-mono select-none"
+                    className="bg-surface border-border-subtle text-text-primary border-hairline text-1xs mb-0.5 rounded px-2 py-1 font-mono select-none"
                     onMouseEnter={(e) =>
                       ((e.currentTarget as HTMLDivElement).style.borderColor = color)
                     }
