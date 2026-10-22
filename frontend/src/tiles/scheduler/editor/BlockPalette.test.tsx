@@ -67,6 +67,15 @@ describe('the palette edge strip', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Collapse blocks' }))
     expect(update).toHaveBeenCalledWith({ schedulerPaletteCollapsed: true })
   })
+
+  it('keeps a collapsed list out of reach while it is hidden', () => {
+    setCollapsed(true)
+    render(<BlockPalette blockDefs={defs} onAdd={() => {}} />)
+
+    const list = screen.getByText('blocks').closest('[aria-hidden]')
+    expect(list?.getAttribute('aria-hidden')).toBe('true')
+    expect(list?.hasAttribute('inert')).toBe(true)
+  })
 })
 
 describe('block groups in the palette', () => {
