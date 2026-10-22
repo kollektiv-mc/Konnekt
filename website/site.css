@@ -148,6 +148,59 @@ button {
   background: var(--bg-surface);
 }
 
+/* A jump to a section (#features from the nav) leaves the page's own gap
+   above it, rather than putting it hard against the top of the window. */
+.page [id] {
+  scroll-margin-top: var(--group-gap);
+}
+
+/* ── Loading: a pulse while GitHub answers, a fade when it has ───────────── */
+/* What a page fetches arrives behind a small pulsing square, the site's
+   marker shape, and fades in when it lands rather than cutting in a moment
+   after the page. The fade is opacity alone, so it never fights the focus
+   lift's transform. */
+
+.loader {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--font-site-mono);
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.loader::before {
+  content: '';
+  flex: none;
+  width: 8px;
+  height: 8px;
+  background: var(--accent);
+  animation: loader-pulse calc(var(--duration-panel) * 3) var(--ease-standard) infinite alternate;
+}
+
+@keyframes loader-pulse {
+  from {
+    opacity: 0.2;
+  }
+}
+
+.appear {
+  animation: appear var(--duration-panel) var(--ease-standard) both;
+}
+
+@keyframes appear {
+  from {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .loader::before,
+  .appear {
+    animation: none;
+  }
+}
+
 /* ── Focus: the group nearest the middle of the screen lifts ───────────── */
 
 [data-focus],

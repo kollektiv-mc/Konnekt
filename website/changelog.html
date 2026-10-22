@@ -92,7 +92,7 @@
         <main id="main" class="group">
           <header class="page-hero block">
             <div class="page-hero-title">
-              <span class="meta" id="cl-count" hidden></span>
+              <span class="meta appear" id="cl-count" hidden></span>
               <h1>Changelog</h1>
             </div>
             <div class="page-hero-side">
@@ -111,7 +111,7 @@
                above the list, closed, rather than joining it. Filled by
                changelog.js and hidden until GitHub confirms a snapshot exists. -->
           <section
-            class="snapshot block"
+            class="snapshot block appear"
             id="cl-snapshot"
             aria-labelledby="cl-snapshot-title"
             hidden
@@ -140,11 +140,13 @@
             <div class="snapshot-body" id="cl-snapshot-body" hidden></div>
           </section>
 
-          <p class="cl-state block" id="cl-loading">Loading releases</p>
+          <p class="cl-state block" id="cl-loading" role="status">
+            <span class="loader">Loading releases</span>
+          </p>
 
-          <div class="cl-list" id="cl-list" hidden></div>
+          <div class="cl-list appear" id="cl-list" hidden></div>
 
-          <div class="cl-state block" id="cl-error" hidden>
+          <div class="cl-state block appear" id="cl-error" hidden>
             <p class="cl-state-title" id="cl-error-title">Could not load the changelog</p>
             <p id="cl-error-msg"></p>
             <a

@@ -137,67 +137,6 @@
     }
   }
 
-  // ── Settle ─────────────────────────────────────────────────────────────
-  // Once a scroll comes to rest a little short of a section, the page eases
-  // the rest of the way: the hero to the very top of the page, the rest to
-  // the middle of the screen. Only within SETTLE_PX and a share of the
-  // screen, so a scroll that stops anywhere else stays exactly where it
-  // stopped. CSS scroll snapping was tried first and pulled too far, with no
-  // way to set how far.
-  //
-  // Only this page, only with a mouse or trackpad on a wide screen, never
-  // under reduced motion, and never toward a section the page cannot scroll
-  // to: one past the end of the page would hold the reader short of the
-  // footer.
-  var SETTLE_PX = 120
-  var SETTLE_SHARE = 0.12
-  var SETTLE_IDLE_MS = 160
-  var settleTargets = [].slice.call(document.querySelectorAll('[data-settle]'))
-  var settleMedia = window.matchMedia('(min-width: 861px) and (pointer: fine)')
-
-  // From layout rather than getBoundingClientRect, which would include the
-  // focused group's lift and land it a few pixels off.
-  function settleTo(el) {
-    if (el.getAttribute('data-settle') === 'top') return 0
-    if (el.offsetHeight > window.innerHeight) return null
-    var top = 0
-    for (var n = el; n; n = n.offsetParent) top += n.offsetTop
-    return top + el.offsetHeight / 2 - window.innerHeight / 2
-  }
-
-  function settle() {
-    if (!settleMedia.matches) return
-    var y = window.scrollY
-    var max = document.documentElement.scrollHeight - window.innerHeight
-    var reach = Math.min(SETTLE_PX, window.innerHeight * SETTLE_SHARE)
-    var best = null
-    settleTargets.forEach(function (el) {
-      var to = settleTo(el)
-      if (to === null || to < 0 || to > max) return
-      var off = Math.abs(to - y)
-      if (off > 1 && off <= reach && (best === null || off < Math.abs(best - y))) best = to
-    })
-    if (best !== null) window.scrollTo({ top: best, behavior: 'smooth' })
-  }
-
-  if (settleTargets.length && !reduceMotion) {
-    // scrollend waits out momentum and smooth scrolls; without it, a short
-    // quiet spell stands in.
-    if ('onscrollend' in window) {
-      window.addEventListener('scrollend', settle)
-    } else {
-      var settleTimer = 0
-      window.addEventListener(
-        'scroll',
-        function () {
-          window.clearTimeout(settleTimer)
-          settleTimer = window.setTimeout(settle, SETTLE_IDLE_MS)
-        },
-        { passive: true },
-      )
-    }
-  }
-
   // ── Scheduler graph ────────────────────────────────────────────────────
   // The trigger lights, then its wire fills, then the next block, and so on,
   // one step every STEP_MS; the graph holds lit for two steps and starts

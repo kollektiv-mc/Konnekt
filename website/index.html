@@ -70,7 +70,7 @@
   <body>
     <a class="skip-link" href="#main">Skip to content</a>
     <div class="page">
-      <div class="group" data-focus data-settle="top">
+      <div class="group">
         <!-- Canonical nav. Byte-identical on every page, hrefs included; site.js
            marks the current page and scrolls same-page anchors. -->
         <nav class="nav block block-raised" id="nav" aria-label="Main">
@@ -108,7 +108,7 @@
             >Download</a
           >
         </nav>
-        <main id="main" class="group">
+        <main id="main" class="group" data-focus>
           <header class="hero block" id="top">
             <div class="hero-copy">
               <h1>Your Minecraft server, in one window.</h1>
@@ -190,13 +190,7 @@
         </main>
       </div>
 
-      <section
-        class="block"
-        id="features"
-        data-focus
-        data-settle="center"
-        aria-labelledby="features-title"
-      >
+      <section class="block" id="features" data-focus aria-labelledby="features-title">
         <div class="band">
           <div class="band-title">
             <span class="num">01</span>
@@ -585,13 +579,7 @@
         </div>
       </section>
 
-      <section
-        class="block"
-        id="scheduler"
-        data-focus
-        data-settle="center"
-        aria-labelledby="scheduler-title"
-      >
+      <section class="block" id="scheduler" data-focus aria-labelledby="scheduler-title">
         <div class="band">
           <div class="band-title">
             <span class="num">02</span>
@@ -639,7 +627,7 @@
         </div>
       </section>
 
-      <div class="group" data-focus data-settle="center">
+      <div class="group" data-focus>
         <section class="local block" id="local" aria-labelledby="local-title">
           <div class="local-head">
             <span class="num">03</span>

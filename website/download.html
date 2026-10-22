@@ -96,10 +96,10 @@
               <h1>Download</h1>
             </div>
             <div class="page-hero-side dl-primary-side">
-              <p class="dl-state" id="dl-loading" role="status">Loading the latest release</p>
-              <!-- Filled by download.js with the build for the platform it detects. -->
-              <div id="dl-primary" hidden></div>
-              <div class="dl-state" id="dl-error" hidden>
+              <!-- Filled by download.js with the build for the platform it detects,
+               its details waiting behind an indicator until the release is read. -->
+              <div id="dl-primary"></div>
+              <div class="dl-state appear" id="dl-error" hidden>
                 <p class="dl-state-title" id="dl-error-title">Could not reach GitHub</p>
                 <p id="dl-error-msg"></p>
                 <a
@@ -113,7 +113,9 @@
             </div>
           </header>
 
-          <section class="block" id="dl-all" aria-labelledby="dl-all-title" hidden>
+          <!-- Present from the first frame: download.js fills each card's size, or
+           marks it missing, once the release is read. -->
+          <section class="block" id="dl-all" aria-labelledby="dl-all-title">
             <div class="band">
               <div class="band-title">
                 <span class="num">01</span>
@@ -121,22 +123,21 @@
               </div>
             </div>
             <div class="dl-grid-wrap"><div class="dl-grid" id="dl-grid"></div></div>
-            <p class="dl-foot" id="dl-footnote"></p>
+            <p class="dl-foot">
+              <a
+                href="https://github.com/kollektiv-mc/Konnekt/releases"
+                target="_blank"
+                rel="noopener"
+                >All releases on GitHub</a
+              >
+            </p>
           </section>
 
-          <p class="dl-loading block" id="dl-snapshot-loading" role="status">
-            Loading snapshot builds
-          </p>
-
           <!-- The rolling `snapshot` prerelease, built from main by
-           .github/workflows/snapshot.yml. Hidden until download.js confirms it
-           exists and carries assets: a missing one must not read as a broken page. -->
-          <section
-            class="block dl-snapshot"
-            id="dl-snapshot"
-            aria-labelledby="dl-snapshot-title"
-            hidden
-          >
+           .github/workflows/snapshot.yml. The section is always here; its builds
+           load behind the indicator, and a missing snapshot says so in a line
+           rather than leaving a hole. -->
+          <section class="block dl-snapshot" id="dl-snapshot" aria-labelledby="dl-snapshot-title">
             <div class="band">
               <div class="band-title">
                 <span class="num">02</span>
@@ -153,19 +154,28 @@
                 Back up your server folder first.
               </p>
             </div>
-            <div class="dl-grid-wrap"><div class="dl-grid" id="dl-snapshot-grid"></div></div>
-            <p class="dl-foot" id="dl-snapshot-footnote"></p>
+            <p class="dl-loading appear" id="dl-snapshot-none" hidden></p>
+            <div class="dl-grid-wrap" id="dl-snapshot-builds">
+              <div class="dl-grid" id="dl-snapshot-grid"></div>
+            </div>
+            <p class="dl-foot">
+              <a
+                href="https://github.com/kollektiv-mc/Konnekt/releases/tag/snapshot"
+                target="_blank"
+                rel="noopener"
+                >Snapshot notes on GitHub</a
+              >
+            </p>
           </section>
 
           <!-- Static rather than rendered by download.js: it is the same two commands
            for every release, and it has to survive a GitHub outage, which is when a
            reader most wants a second way to check what they already have. Closed
-           until asked for; download.js opens it for a link to #verify, and numbers
-           it after the snapshot when there is one. -->
+           until asked for; download.js opens it for a link to #verify. -->
           <section class="block dl-verify" id="verify" aria-labelledby="verify-title">
             <details id="verify-details">
               <summary class="band">
-                <span class="num" id="verify-num">02</span>
+                <span class="num">03</span>
                 <h2 id="verify-title">Verify your download</h2>
               </summary>
               <div class="dl-body">

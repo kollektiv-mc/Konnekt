@@ -28,6 +28,11 @@
   padding: 0 32px;
 }
 
+.dl-primary-inner .btn.is-waiting {
+  opacity: 0.5;
+  cursor: progress;
+}
+
 .dl-state {
   margin: 0;
   color: var(--text-secondary);
@@ -107,6 +112,24 @@
 
 .dl-card.is-unavailable .dl-card-name {
   color: var(--text-secondary);
+}
+
+/* Waiting on the release, or without one: drawn, but nothing to pick. */
+.dl-card:disabled {
+  cursor: default;
+}
+
+.dl-card.is-waiting {
+  cursor: progress;
+}
+
+.dl-card:disabled:hover,
+.dl-card.is-waiting:hover {
+  background: transparent;
+}
+
+.dl-card-meta.loader {
+  display: flex;
 }
 
 .dl-foot {

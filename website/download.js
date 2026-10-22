@@ -18,21 +18,16 @@
   var R = window.KonnektRelease
   if (!R) return
 
-  var loadingEl = document.getElementById('dl-loading')
-  var allEl = document.getElementById('dl-all')
   var errorEl = document.getElementById('dl-error')
   var errorMsg = document.getElementById('dl-error-msg')
   var errorTitle = document.getElementById('dl-error-title')
   var versionPill = document.getElementById('dl-version')
   var primaryEl = document.getElementById('dl-primary')
   var gridEl = document.getElementById('dl-grid')
-  var footnoteEl = document.getElementById('dl-footnote')
-  var snapshotEl = document.getElementById('dl-snapshot')
-  var snapshotLoadingEl = document.getElementById('dl-snapshot-loading')
   var snapshotMetaEl = document.getElementById('dl-snapshot-meta')
   var snapshotGridEl = document.getElementById('dl-snapshot-grid')
-  var snapshotFootnoteEl = document.getElementById('dl-snapshot-footnote')
-  var verifyNumEl = document.getElementById('verify-num')
+  var snapshotNoneEl = document.getElementById('dl-snapshot-none')
+  var snapshotBuildsEl = document.getElementById('dl-snapshot-builds')
 
   function el(tag, cls, text) {
     var n = document.createElement(tag)
@@ -81,7 +76,8 @@
   function swapPrimary(render) {
     // The first render is the page arriving, which needs no swap. Anything
     // without the Web Animations API, or asking for less motion, gets the
-    // plain swap.
+    // plain swap. The release landing on the waiting card is a swap like any
+    // other, so it fades in rather than cutting.
     if (!seeded || reduceMotion || !primaryInner.animate) {
       seeded = true
       render()
@@ -163,6 +159,24 @@
     primaryInner.appendChild(btn)
   }
 
+  // The same three slots again while the release loads, so the card is there
+  // from the first frame at the height it will keep, and only its details
+  // wait behind the indicator.
+  function renderPrimaryLoading(platform) {
+    primaryInner.innerHTML = ''
+    primaryInner.appendChild(
+      el('h2', null, platform ? 'Konnekt for ' + platform.name : 'Choose your platform'),
+    )
+    primaryInner.appendChild(el('p', 'meta loader', 'Loading the latest release'))
+    var btn = el(
+      'span',
+      'btn ' + (platform ? 'btn-primary' : 'btn-secondary') + ' is-waiting',
+      platform ? 'Download for ' + platform.name : 'Build from source',
+    )
+    btn.setAttribute('aria-disabled', 'true')
+    primaryInner.appendChild(btn)
+  }
+
   // The same three slots as above, filled differently, so the card keeps its
   // height: switching platforms should change what the card says about the
   // build, not what it says it is about.
@@ -179,31 +193,69 @@
     primaryInner.appendChild(btn)
   }
 
-  function renderOthers(primaryPlatform, assets) {
+  // A card's icon, name and description come from the platform table, so
+  // they are there from the first frame. Only the last line waits on GitHub,
+  // and it is a line of its own so that what it says, however long, never
+  // reflows the lines above it. `size` is the text for it, or null while the
+  // release is still loading.
+  function fillCard(card, p, size, fade) {
+    card.appendChild(el('span', 'dl-card-icon', p.tag))
+    var text = el('span')
+    text.appendChild(el('span', 'dl-card-name', p.name))
+    text.appendChild(el('span', 'dl-card-meta', p.desc))
+    text.appendChild(
+      size == null
+        ? el('span', 'dl-card-meta loader', 'Loading')
+        : el('span', fade ? 'dl-card-meta appear' : 'dl-card-meta', size),
+    )
+    card.appendChild(text)
+  }
+
+  // With assets null the release is still loading, and every card waits
+  // behind the indicator. With `failed`, there is no release to pick from,
+  // and every card says why in its last line instead. Only the release's
+  // arrival fades; a platform switch redraws the grid as it is.
+  var cardsLoaded = false
+  function renderOthers(primaryPlatform, assets, failed) {
     gridEl.innerHTML = ''
     PLATFORMS.forEach(function (p) {
       if (primaryPlatform && p.id === primaryPlatform.id) return
-      var asset = R.matchAsset(p, assets)
+      var asset = assets ? R.matchAsset(p, assets) : null
       var card = el('button', 'dl-card')
       card.type = 'button'
-      if (!asset) card.className += ' is-unavailable'
-      card.addEventListener('click', function () {
-        selectPlatform(p)
-      })
-      card.appendChild(el('span', 'dl-card-icon', p.tag))
-      var meta = el('span')
-      meta.appendChild(el('span', 'dl-card-name', p.name))
-      var line = asset ? p.desc + ' · ' + R.formatBytes(asset.size) : p.desc
-      meta.appendChild(el('span', 'dl-card-meta', line))
-      card.appendChild(meta)
+      if (failed) {
+        card.disabled = true
+        card.className += ' is-unavailable'
+        fillCard(card, p, failed, true)
+      } else if (!assets) {
+        card.disabled = true
+        card.className += ' is-waiting'
+        fillCard(card, p, null)
+      } else {
+        if (!asset) card.className += ' is-unavailable'
+        card.addEventListener('click', function () {
+          selectPlatform(p)
+        })
+        fillCard(card, p, asset ? R.formatBytes(asset.size) : 'Not in this release', !cardsLoaded)
+      }
       gridEl.appendChild(card)
     })
+    if (assets) cardsLoaded = true
   }
 
   // ── Snapshot channel ─────────────────────────────────────────────────────
   // The rolling `snapshot` prerelease, rebuilt from main. Unlike the grid
   // above it lists only platforms that actually have an asset: the release
-  // above already says which platforms exist.
+  // above already says which platforms exist. Until it is read, every
+  // platform waits there, as in the grid above.
+
+  function renderSnapshotLoading() {
+    PLATFORMS.forEach(function (p) {
+      var card = el('span', 'dl-card is-waiting')
+      fillCard(card, p, null)
+      snapshotGridEl.appendChild(card)
+    })
+  }
 
   function renderSnapshot(rel) {
     snapshotGridEl.innerHTML = ''
@@ -215,35 +267,29 @@
       var card = el('a', 'dl-card')
       card.href = asset.browser_download_url
       card.setAttribute('download', '')
-      card.appendChild(el('span', 'dl-card-icon', p.tag))
-      var meta = el('span')
-      meta.appendChild(el('span', 'dl-card-name', p.name))
-      meta.appendChild(el('span', 'dl-card-meta', p.desc + ' · ' + R.formatBytes(asset.size)))
-      card.appendChild(meta)
+      fillCard(card, p, R.formatBytes(asset.size), true)
       snapshotGridEl.appendChild(card)
       count++
     })
 
     // A published snapshot with nothing attached (an interrupted build) has
-    // nothing to offer — leave the section hidden.
-    if (!count) return
+    // nothing to offer.
+    if (!count) {
+      snapshotNone('No snapshot builds are published right now.')
+      return
+    }
 
     var sha = R.shortSha(rel.target_commitish)
     var built = R.formatDate(rel.published_at)
     snapshotMetaEl.textContent = [built ? 'built ' + built : '', sha ? 'commit ' + sha : '']
       .filter(Boolean)
       .join(' · ')
+  }
 
-    snapshotFootnoteEl.innerHTML = ''
-    var link = el('a', null, 'Snapshot notes on GitHub')
-    link.href = R.SNAPSHOT_URL
-    link.target = '_blank'
-    link.rel = 'noopener'
-    snapshotFootnoteEl.appendChild(link)
-
-    show(snapshotEl)
-    // Verify follows the snapshot, so it takes the next number once there is one.
-    if (verifyNumEl) verifyNumEl.textContent = '03'
+  function snapshotNone(text) {
+    hide(snapshotBuildsEl)
+    snapshotNoneEl.textContent = text
+    show(snapshotNoneEl)
   }
 
   function render(rel) {
@@ -258,27 +304,26 @@
 
     // An undetected platform, or one with no published build, seeds nothing,
     // so the grid below lists every build and the card asks which you want.
-    var detected = R.platformById(R.detectPlatform())
-    selectPlatform(detected && detected.match ? detected : null)
-
-    footnoteEl.innerHTML = ''
-    var relLink = el('a', null, 'All releases on GitHub')
-    relLink.href = R.RELEASES_URL
-    relLink.target = '_blank'
-    relLink.rel = 'noopener'
-    footnoteEl.appendChild(relLink)
-
-    hide(loadingEl)
-    show(primaryEl)
-    show(allEl)
+    selectPlatform(seed)
   }
 
   function setPill(text) {
     versionPill.textContent = text
   }
 
+  // The platform the visitor is on, or null for one with no published build.
+  // It decides which card the hero holds and so which the grid leaves out.
+  var detected = R.platformById(R.detectPlatform())
+  var seed = detected && detected.match ? detected : null
+  renderPrimaryLoading(seed)
+  seeded = true
+  renderOthers(seed, null)
+  renderSnapshotLoading()
+
+  // Without a release the cards stop waiting, and say why.
   function showEmpty() {
-    hide(loadingEl)
+    renderOthers(seed, null, 'Not released yet')
+    hide(primaryEl)
     setPill('Not yet released')
     errorTitle.textContent = 'No public build yet'
     errorMsg.textContent = 'No release has been published yet.'
@@ -286,7 +331,8 @@
   }
 
   function showError(msg) {
-    hide(loadingEl)
+    renderOthers(seed, null, 'Release unavailable')
+    hide(primaryEl)
     setPill('Version unavailable')
     errorTitle.textContent = "Couldn't reach GitHub"
     errorMsg.textContent = msg
@@ -314,16 +360,17 @@
     })
 
   // Second request, deliberately independent of the one above: a 404 (no
-  // snapshot published), a rate limit or an outage leaves the section hidden
-  // and the release download working, which is what the page is for. Either
-  // way the placeholder goes: it says a request is in flight, so it must not
-  // outlive one.
+  // snapshot published), a rate limit or an outage says so in the section and
+  // leaves the release download working, which is what the page is for.
+  // Either way the waiting cards go: they say a request is in flight, so they
+  // must not outlive one.
   R.fetchSnapshot()
     .then(function (res) {
-      hide(snapshotLoadingEl)
       if (res.ok && res.data) renderSnapshot(res.data)
+      else if (res.status === 404) snapshotNone('No snapshot is published right now.')
+      else snapshotNone('Could not reach GitHub for the snapshot builds.')
     })
     .catch(function () {
-      hide(snapshotLoadingEl)
+      snapshotNone('Could not reach GitHub for the snapshot builds.')
     })
 })()

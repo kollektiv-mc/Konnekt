@@ -240,7 +240,13 @@
   // The markup an authored row uses, so every style applies to it.
   // data-github stays on it so the DOM shows which rows the tracker wrote.
   function buildRow(issue, stage) {
-    var li = mk('li', 'row')
+    // Fades in once. The filters hide rows with the hidden attribute, and an
+    // animation restarts on the way back from display: none, so the class goes
+    // when it has run rather than replaying on every filter change.
+    var li = mk('li', 'row appear')
+    li.addEventListener('animationend', function () {
+      li.classList.remove('appear')
+    })
     li.setAttribute('data-stage', stage)
     li.setAttribute('data-github', '')
     // The form prefixes every request's title, which is noise in a list that
@@ -277,9 +283,22 @@
     if (m) referenced[m[1]] = a.closest('.row')
   })
 
+  // Says a request is in flight, and then what came of it, so the rows the
+  // tracker adds never arrive unannounced.
+  var syncNote = mk('span', 'rm-sync loader', 'syncing with GitHub')
+  statusEl.parentNode.insertBefore(syncNote, clearBtn)
+
+  function settleSync(text) {
+    syncNote.className = 'rm-sync appear'
+    syncNote.textContent = text
+  }
+
   R.fetchIssues()
     .then(function (res) {
-      if (!res.ok || !res.data || !res.data.length) return
+      if (!res.ok || !res.data) {
+        settleSync('could not sync with GitHub')
+        return
+      }
 
       var shipped = []
       var open = []
@@ -341,14 +360,10 @@
         apply()
       }
 
-      var note = mk(
-        'span',
-        'rm-sync',
-        filed ? 'synced with GitHub · ' + filed + ' filed since' : 'synced with GitHub',
-      )
-      statusEl.parentNode.insertBefore(note, clearBtn)
+      settleSync(filed ? 'synced with GitHub · ' + filed + ' filed since' : 'synced with GitHub')
     })
     .catch(function () {
-      /* The page is the roadmap without this. */
+      // The page is the roadmap without this.
+      settleSync('could not sync with GitHub')
     })
 })()
