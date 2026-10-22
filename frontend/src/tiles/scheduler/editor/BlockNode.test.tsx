@@ -51,6 +51,7 @@ function renderNode(
     firedEdges: new Set(),
     cycleNodes: new Set(),
     cycleEdges: new Set(),
+    recordPre: () => {},
   }
   const props = {
     id: 'n1',

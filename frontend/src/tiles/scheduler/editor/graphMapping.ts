@@ -2,6 +2,7 @@ import type { Node as FlowNode, Edge as FlowEdge, Connection } from '@xyflow/rea
 import { models } from '../../../../wailsjs/go/models'
 import { resolveDataPortType, portTypesCompatible } from './portTypes'
 import { DATA_EDGE_STYLE } from './blockMeta'
+import { edgeWaypoints } from './edgeGeometry'
 
 export interface NodeData extends Record<string, unknown> {
   blockType: string
@@ -35,9 +36,12 @@ export function graphToFlow(
       target: e.target,
       sourceHandle: `${isData ? 'data' : 'ctrl'}:${e.sourcePort}`,
       targetHandle: `${isData ? 'data' : 'ctrl'}:${e.targetPort}`,
-      type: 'smoothstep',
+      type: 'wire',
       style: isData ? DATA_EDGE_STYLE : undefined,
-      data: { kind: e.kind } as Record<string, unknown>,
+      data: {
+        kind: e.kind,
+        ...(e.waypoints?.length ? { waypoints: edgeWaypoints({ waypoints: e.waypoints }) } : {}),
+      } as Record<string, unknown>,
     }
   })
 
@@ -68,6 +72,7 @@ export function flowToGraph(
       const srcH = e.sourceHandle ?? ''
       const tgtH = e.targetHandle ?? ''
       const kind = srcH.startsWith('data:') ? 'data' : 'control'
+      const waypoints = edgeWaypoints(e.data)
       return {
         id: e.id,
         kind,
@@ -75,6 +80,8 @@ export function flowToGraph(
         sourcePort: srcH.replace(/^(ctrl|data):/, ''),
         target: e.target,
         targetPort: tgtH.replace(/^(ctrl|data):/, ''),
+        // Left out when empty so a plain edge serializes as it always did.
+        ...(waypoints.length ? { waypoints } : {}),
       }
     }),
   })
@@ -124,8 +131,9 @@ export function randId(): string {
 // against a last-saved snapshot. Deliberately excludes fields that change
 // without representing a real edit: React Flow `selected`/`dimensions`,
 // `_animDelay` (load-only stagger, already absent from flowToGraph output),
-// and `_collapsed` (a view toggle, not graph content). Node `position` is
-// included on purpose — dragging a node counts as an unsaved change.
+// and `_collapsed` (a view toggle, not graph content). Node `position` and edge
+// `waypoints` are included on purpose — dragging a node or a corner counts as an
+// unsaved change.
 export function graphSignature(
   meta: Pick<models.Graph, 'name' | 'enabled'>,
   nodes: FlowNode[],
@@ -146,6 +154,7 @@ export function graphSignature(
       .map((e) => {
         const srcH = e.sourceHandle ?? ''
         const tgtH = e.targetHandle ?? ''
+        const waypoints = edgeWaypoints(e.data)
         return {
           id: e.id,
           kind: srcH.startsWith('data:') ? 'data' : 'control',
@@ -153,6 +162,8 @@ export function graphSignature(
           sourcePort: srcH.replace(/^(ctrl|data):/, ''),
           target: e.target,
           targetPort: tgtH.replace(/^(ctrl|data):/, ''),
+          // Corners are content: moving one is an unsaved change.
+          ...(waypoints.length ? { waypoints } : {}),
         }
       })
       .sort((a, b) => a.id.localeCompare(b.id)),

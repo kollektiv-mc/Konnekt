@@ -246,6 +246,47 @@ describe('graphToFlow -> flowToGraph round-trip', () => {
   })
 })
 
+describe('edge waypoints', () => {
+  const meta = { id: 'g1', name: 'g', enabled: true, createdAt: 1 }
+  const defMap = new Map([['action.log', def('action.log')]])
+  const corners = [
+    { x: 40, y: 10 },
+    { x: 40.5, y: -30 },
+  ]
+
+  function withCorners(waypoints?: { x: number; y: number }[]): models.Graph {
+    const edge = { ...graphEdge('e1', 'control', 'n1', 'out', 'n2', 'in'), waypoints }
+    return {
+      ...meta,
+      nodes: [graphNode('n1', 'action.log'), graphNode('n2', 'action.log')],
+      edges: [edge],
+    } as unknown as models.Graph
+  }
+
+  it('carries the corners onto the flow edge and stamps the wire type', () => {
+    const { edges } = graphToFlow(withCorners(corners), defMap)
+    expect(edges[0].type).toBe('wire')
+    expect(edges[0].data).toEqual({ kind: 'control', waypoints: corners })
+  })
+
+  it('loads an edge saved before corners existed as a straight one', () => {
+    const { edges } = graphToFlow(withCorners(undefined), defMap)
+    expect(edges[0].data).toEqual({ kind: 'control' })
+    expect(flowToGraph(meta, [], edges).edges[0].waypoints).toBeUndefined()
+  })
+
+  it('round-trips the corners in order', () => {
+    const { nodes, edges } = graphToFlow(withCorners(corners), defMap)
+    const saved = flowToGraph(meta, nodes, edges)
+    expect(saved.edges[0].waypoints).toEqual(corners)
+  })
+
+  it('does not write an empty list for an edge whose corners were removed', () => {
+    const edge = flowEdge('e1', 'a', 'b', 'ctrl:out', 'ctrl:in', { kind: 'control', waypoints: [] })
+    expect(flowToGraph(meta, [], [edge]).edges[0].waypoints).toBeUndefined()
+  })
+})
+
 describe('isValidConnection', () => {
   // Each def carries both an output and an input 'value' port so a node can
   // play either the source or target role in different tests.
@@ -435,5 +476,22 @@ describe('graphSignature', () => {
       data: { ...n1.data, _animDelay: 123 },
     }
     expect(graphSignature(meta, [n1], [])).toBe(graphSignature(meta, [n2], []))
+  })
+
+  it('changes when a corner is added, moved or removed', () => {
+    const plain = flowEdge('e1', 'n1', 'n2', 'ctrl:out', 'ctrl:in', { kind: 'control' })
+    const routed = (x: number) => ({
+      ...plain,
+      data: { kind: 'control', waypoints: [{ x, y: 5 }] },
+    })
+    expect(graphSignature(meta, [], [plain])).not.toBe(graphSignature(meta, [], [routed(10)]))
+    expect(graphSignature(meta, [], [routed(10)])).not.toBe(graphSignature(meta, [], [routed(11)]))
+    expect(graphSignature(meta, [], [routed(10)])).not.toBe(graphSignature(meta, [], [plain]))
+  })
+
+  it('treats an empty corner list as no corners', () => {
+    const plain = flowEdge('e1', 'n1', 'n2', 'ctrl:out', 'ctrl:in', { kind: 'control' })
+    const emptied = { ...plain, data: { kind: 'control', waypoints: [] } }
+    expect(graphSignature(meta, [], [plain])).toBe(graphSignature(meta, [], [emptied]))
   })
 })
