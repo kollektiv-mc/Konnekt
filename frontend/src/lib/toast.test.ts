@@ -56,7 +56,6 @@ describe('failedRunToast', () => {
       tone: 'error',
       title: 'Run failed: Nightly',
       text: 'no RCON',
-      resurface: true,
     })
   })
 

@@ -26,7 +26,7 @@ export function deliverScheduleNotify(data: ScheduleNotify): void {
   if (toApp) {
     useNotificationsStore.getState().push(kind, data.message)
     // A Notify block is a message the user wrote to be read, so it gets a
-    // bubble too: an error one counts as an error, the rest as advice.
+    // bubble too: an error one counts as an error, the rest as a warning.
     showToast({
       category: kind === 'error' ? 'errors' : 'warnings',
       tone: kind,

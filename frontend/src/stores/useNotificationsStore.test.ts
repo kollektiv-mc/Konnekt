@@ -77,31 +77,48 @@ describe('useNotificationsStore toasts', () => {
     ])
   })
 
-  it('remembers a dismissal of the same text, and shows a new one', () => {
+  const WARN: ToastInput = {
+    key: 'scheduler:warning',
+    category: 'warnings',
+    tone: 'warn',
+    title: 'Scheduler warning',
+    text: 'Command: stops the server',
+    standing: true,
+  }
+
+  // A failed run, a crash: each arrival is news, so dismissing one never
+  // silences the next, even with the same reason.
+  it('shows news again after a dismissal, and remembers nothing', () => {
     showToast(RUN)
     dismissToast(toasts()[0].id)
     expect(toasts()).toEqual([])
     showToast(RUN)
+    expect(toasts()).toHaveLength(1)
+    expect(useNotificationsStore.getState().dismissedToasts).toEqual({})
+  })
+
+  // A graph's warnings: shown until dismissed once, then never again this
+  // session, whichever graph's text it would carry next.
+  it('keeps a standing bubble dismissed whatever its text becomes', () => {
+    showToast(WARN)
+    dismissToast(toasts()[0].id)
+    showToast(WARN)
+    showToast({ ...WARN, text: 'another graph' })
     expect(toasts()).toEqual([])
-    showToast({ ...RUN, text: 'news' })
-    expect(toasts()).toHaveLength(1)
   })
 
-  it('shows a dismissed bubble again when it resurfaces', () => {
-    const failed = { ...RUN, resurface: true }
-    showToast(failed)
+  it('shows a dismissed standing bubble when forced, and forgets the dismissal', () => {
+    showToast(WARN)
     dismissToast(toasts()[0].id)
-    showToast(failed)
+    showToast(WARN, true)
     expect(toasts()).toHaveLength(1)
     expect(useNotificationsStore.getState().dismissedToasts).toEqual({})
   })
 
-  it('shows a dismissed bubble again when forced, and forgets the dismissal', () => {
-    showToast(RUN)
-    dismissToast(toasts()[0].id)
-    showToast(RUN, true)
-    expect(toasts()).toHaveLength(1)
-    expect(useNotificationsStore.getState().dismissedToasts).toEqual({})
+  it('does not count a standing bubble raised again as it was', () => {
+    showToast(WARN)
+    showToast(WARN)
+    expect(toasts()[0].count).toBe(1)
   })
 
   it('does not count a forced reopen of a bubble that is already up', () => {
@@ -110,41 +127,40 @@ describe('useNotificationsStore toasts', () => {
     expect(toasts()[0].count).toBe(1)
   })
 
-  it('dismisses every bubble at once, remembering each', () => {
+  it('dismisses every bubble at once, remembering the standing ones', () => {
     showToast(RUN)
-    showToast({ ...RUN, key: 'other' })
+    showToast(WARN)
     dismissAllToasts()
     expect(toasts()).toEqual([])
     showToast(RUN)
-    showToast({ ...RUN, key: 'other' })
-    expect(toasts()).toEqual([])
+    showToast(WARN)
+    expect(toasts().map((t) => t.key)).toEqual(['scheduler:run'])
   })
 
-  // A withdrawal is the condition clearing, not the user saying no: the same
-  // text shows again the next time it arises.
+  // A withdrawal is the condition clearing, not the user saying no: the
+  // bubble shows again the next time it arises.
   it('withdraws by key without remembering a dismissal', () => {
-    showToast(RUN)
-    withdrawToast('scheduler:run')
+    showToast(WARN)
+    withdrawToast('scheduler:warning')
     expect(toasts()).toEqual([])
-    showToast(RUN)
+    showToast(WARN)
     expect(toasts()).toHaveLength(1)
   })
 
-  it('moves a resurfacing bubble down to the newest place', () => {
-    showToast({ ...RUN, resurface: true })
+  it('moves a repeated piece of news down to the newest place', () => {
+    showToast(RUN)
     showToast({ ...RUN, key: 'other' })
     const id = toasts()[0].id
-    showToast({ ...RUN, resurface: true })
+    showToast(RUN)
     expect(toasts().map((t) => t.key)).toEqual(['other', 'scheduler:run'])
     expect(toasts()[1]).toMatchObject({ id, count: 2 })
   })
 
   it('updates a standing condition in place', () => {
-    showToast(RUN)
+    showToast(WARN)
     showToast({ ...RUN, key: 'other' })
-    showToast(RUN)
-    showToast({ ...RUN, text: 'a newer reason' })
-    expect(toasts().map((t) => t.key)).toEqual(['scheduler:run', 'other'])
+    showToast({ ...WARN, text: 'a newer warning' })
+    expect(toasts().map((t) => t.key)).toEqual(['scheduler:warning', 'other'])
   })
 
   it('stacks three bubbles at most', () => {
