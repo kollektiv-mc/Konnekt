@@ -387,9 +387,19 @@ function scaffold(def) {
 
 // ── The index's list ────────────────────────────────────────────────────────
 
+// A lead's words without its markup. The text is escaped again wherever it is
+// written; stripping until nothing changes, then dropping any stray angle
+// bracket, keeps a tag split by an earlier pass from surviving as one.
 const leadOf = (html) => {
   const m = html.match(/<p class="doc-lead">([\s\S]*?)<\/p>/)
-  return m ? m[1].replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim() : ''
+  if (!m) return ''
+  let text = m[1]
+  let prev
+  do {
+    prev = text
+    text = text.replace(/<[^<>]*>/g, '')
+  } while (text !== prev)
+  return text.replace(/[<>]/g, '').replace(/\s+/g, ' ').trim()
 }
 
 function indexList(pages) {
