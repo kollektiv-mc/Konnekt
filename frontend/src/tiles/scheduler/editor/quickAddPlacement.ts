@@ -41,6 +41,22 @@ export function placeQuickAdd(pos: Point, panel: Size, viewport: Size): Placemen
   return { primaryLeft, primaryTop, flyoutLeft }
 }
 
+// Where the fly-out's top edge goes: level with the category row the pointer is
+// on, so moving straight right lands on its first entry instead of crossing the
+// rows below it (#672). `rowOffset` is the row's top measured from the primary
+// panel's top, not a viewport coordinate, so it stays right if the primary panel
+// moves (flipped up, then resized by a search) after the row was measured. A list
+// too tall for the room below the row slides up to stay inside the window, and
+// one taller than the window pins to the top edge, like the primary panel does.
+export function placeFlyoutTop(
+  primaryTop: number,
+  rowOffset: number,
+  flyoutHeight: number,
+  viewportHeight: number,
+): number {
+  return clamp(Math.round(primaryTop + rowOffset), 0, Math.max(0, viewportHeight - flyoutHeight))
+}
+
 function clamp(n: number, lo: number, hi: number): number {
   return Math.min(Math.max(n, lo), hi)
 }

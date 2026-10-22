@@ -9,7 +9,7 @@ import {
   NO_GRAPH_KEYS,
   orderedCategories,
 } from './blockMeta'
-import { placeQuickAdd, type Size } from './quickAddPlacement'
+import { placeFlyoutTop, placeQuickAdd, type Size } from './quickAddPlacement'
 
 // First-paint guess only; the primary panel is measured before the browser paints.
 const INITIAL_PANEL: Size = { w: 160, h: 0 }
@@ -27,7 +27,11 @@ export function QuickAddMenu({ blockDefs, screenPos, onPick, onClose }: Props) {
   const [highlightIdx, setHighlightIdx] = useState(0)
   const inputRef = useRef<HTMLInputElement>(null)
   const panelRef = useRef<HTMLDivElement>(null)
+  const flyoutRef = useRef<HTMLDivElement>(null)
   const [panelSize, setPanelSize] = useState<Size>(INITIAL_PANEL)
+  const [flyoutHeight, setFlyoutHeight] = useState(0)
+  // The hovered category row's top, from the primary panel's top (#672).
+  const [rowOffset, setRowOffset] = useState(0)
   const categories = orderedCategories(blockDefs)
 
   useEffect(() => {
@@ -84,12 +88,27 @@ export function QuickAddMenu({ blockDefs, screenPos, onPick, onClose }: Props) {
     setPanelSize((prev) => (prev.w === width && prev.h === height ? prev : { w: width, h: height }))
   }, [rowCount])
 
-  const { primaryLeft, primaryTop, flyoutLeft } = placeQuickAdd(screenPos, panelSize, {
-    w: window.innerWidth,
-    h: window.innerHeight,
-  })
+  const viewport = { w: window.innerWidth, h: window.innerHeight }
+  const { primaryLeft, primaryTop, flyoutLeft } = placeQuickAdd(screenPos, panelSize, viewport)
+  const flyoutTop = placeFlyoutTop(primaryTop, rowOffset, flyoutHeight, viewport.h)
 
   const activeDefs = activeCategory ? blockDefs.filter((d) => d.category === activeCategory) : []
+
+  // The fly-out is measured like the primary panel, so the clamp to the window
+  // uses its real height. Re-run per category, since each list is a different
+  // length.
+  useLayoutEffect(() => {
+    const el = flyoutRef.current
+    if (!el) return
+    const { height } = el.getBoundingClientRect()
+    setFlyoutHeight((prev) => (prev === height ? prev : height))
+  }, [activeCategory, isSearching, activeDefs.length])
+
+  function hoverCategory(cat: string, row: HTMLElement) {
+    const panel = panelRef.current
+    if (panel) setRowOffset(row.getBoundingClientRect().top - panel.getBoundingClientRect().top)
+    setActiveCategory(cat)
+  }
   const activeColor = categoryColor(activeCategory ?? '')
 
   // Both panels share it, so NO_GRAPH_KEYS lands on both. The menu is portaled
@@ -159,7 +178,7 @@ export function QuickAddMenu({ blockDefs, screenPos, onPick, onClose }: Props) {
               return (
                 <div
                   key={cat}
-                  onMouseEnter={() => setActiveCategory(cat)}
+                  onMouseEnter={(e) => hoverCategory(cat, e.currentTarget)}
                   className={`text-1xs flex cursor-default items-center gap-1.5 border-l-2 px-3 py-[5px] font-mono select-none ${textClass} ${
                     isActive ? `bg-hover ${borderClass}` : 'border-l-transparent bg-transparent'
                   }`}
@@ -177,9 +196,10 @@ export function QuickAddMenu({ blockDefs, screenPos, onPick, onClose }: Props) {
       {/* Fly-out for category browse — hidden when searching */}
       {!isSearching && activeCategory && (
         <div
+          ref={flyoutRef}
           className={panelClass}
           // eslint-disable-next-line no-restricted-syntax -- left/top are viewport-computed positions (clamped against window dimensions)
-          style={{ left: flyoutLeft, top: primaryTop }}
+          style={{ left: flyoutLeft, top: flyoutTop }}
         >
           {activeDefs.map((def) => (
             <div

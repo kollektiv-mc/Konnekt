@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { placeQuickAdd } from './quickAddPlacement'
+import { placeFlyoutTop, placeQuickAdd } from './quickAddPlacement'
 
 const panel = { w: 160, h: 100 }
 const vp = { w: 1000, h: 600 }
@@ -57,5 +57,42 @@ describe('placeQuickAdd', () => {
 
   it('uses the measured width, not a fixed one', () => {
     expect(placeQuickAdd({ x: 900, y: 0 }, { w: 200, h: 100 }, vp).primaryLeft).toBe(700)
+  })
+})
+
+describe('placeFlyoutTop', () => {
+  it('lines the fly-out up with a row near the top of the panel', () => {
+    expect(placeFlyoutTop(50, 28, 120, 600)).toBe(78)
+  })
+
+  it('keeps the first row level with the panel when the offset is zero', () => {
+    expect(placeFlyoutTop(50, 0, 120, 600)).toBe(50)
+  })
+
+  it('slides up when a lower row would push the fly-out past the bottom', () => {
+    // Row at 500, fly-out 200 tall in a 600 window: its bottom must be 600.
+    expect(placeFlyoutTop(400, 100, 200, 600)).toBe(400)
+  })
+
+  it('stays put when the fly-out fits exactly against the bottom', () => {
+    expect(placeFlyoutTop(400, 80, 120, 600)).toBe(480)
+  })
+
+  it('pins to the top edge when taller than the window', () => {
+    expect(placeFlyoutTop(100, 60, 700, 600)).toBe(0)
+  })
+
+  it('never goes above the window for a negative top', () => {
+    expect(placeFlyoutTop(-40, 10, 100, 600)).toBe(0)
+  })
+
+  it('rounds a fractional row position to whole pixels', () => {
+    expect(placeFlyoutTop(50.4, 27.3, 100, 600)).toBe(78)
+  })
+
+  it('leaves the side flip to placeQuickAdd, whatever the row', () => {
+    const near = placeQuickAdd({ x: 950, y: 50 }, panel, vp)
+    expect(near.flyoutLeft).toBe(630)
+    expect(placeFlyoutTop(near.primaryTop, 90, 120, vp.h)).toBe(140)
   })
 })
