@@ -1,8 +1,11 @@
 package services
 
 import (
+	"bytes"
+	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"log/slog"
 	"os"
 	"path/filepath"
@@ -24,6 +27,10 @@ const (
 	// maxLogBytes is the size at which the current log is rotated. One previous
 	// file is kept, so the on-disk cost is bounded at roughly twice this.
 	maxLogBytes = 2 << 20 // 2 MiB
+	// LogTailBytes is how much of the log ReadLogTail returns: under the 65,536
+	// characters GitHub takes in an issue body, with room left for the form's
+	// other fields, so a copied log pastes into a report whole.
+	LogTailBytes = 48 << 10 // 48 KiB
 )
 
 // logFile is the open handle behind the default logger, kept so CloseLogger can
@@ -76,6 +83,40 @@ func InitLogger(dataDir string) (*slog.Logger, error) {
 	logger := slog.New(slog.NewTextHandler(w, &slog.HandlerOptions{Level: slog.LevelInfo}))
 	slog.SetDefault(logger)
 	return logger, openErr
+}
+
+// ReadLogTail returns the last max bytes of the log in dataDir, starting at a
+// line boundary so a report never opens on half a record. A log that does not
+// exist yet reads as empty: nothing has gone wrong worth a line.
+func ReadLogTail(dataDir string, max int64) (string, error) {
+	f, err := os.Open(LogPath(dataDir))
+	if errors.Is(err, fs.ErrNotExist) {
+		return "", nil
+	}
+	if err != nil {
+		return "", fmt.Errorf("open log: %w", err)
+	}
+	defer f.Close()
+
+	info, err := f.Stat()
+	if err != nil {
+		return "", fmt.Errorf("stat log: %w", err)
+	}
+	start := info.Size() - max
+	if start < 0 {
+		start = 0
+	}
+	data, err := io.ReadAll(io.NewSectionReader(f, start, info.Size()-start))
+	if err != nil {
+		return "", fmt.Errorf("read log: %w", err)
+	}
+	if start > 0 {
+		// The cut landed mid-line, possibly mid-rune: drop up to the next line.
+		if i := bytes.IndexByte(data, '\n'); i >= 0 {
+			data = data[i+1:]
+		}
+	}
+	return string(data), nil
 }
 
 // CloseLogger releases the log file. Safe to call when InitLogger failed to open

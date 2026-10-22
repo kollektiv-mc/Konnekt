@@ -259,6 +259,7 @@ export const api = {
   GetAppVersion: read("demo"),
   GetDataDir: read("/home/mc/.config/konnekt"),
   GetLogPath: read("/home/mc/.config/konnekt/konnekt.log"),
+  GetLogTail: read(""),
   // The visitor's machine is not the demo's host; a typical desktop stands in.
   GetPhysicalMemoryMB: read(16384),
   OpenDataDir: refuse("Opening the data folder"),

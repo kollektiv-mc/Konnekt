@@ -154,6 +154,10 @@ export function GetLogPath() {
   return window['go']['main']['App']['GetLogPath']();
 }
 
+export function GetLogTail() {
+  return window['go']['main']['App']['GetLogTail']();
+}
+
 export function GetPhysicalMemoryMB() {
   return window['go']['main']['App']['GetPhysicalMemoryMB']();
 }

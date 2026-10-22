@@ -184,3 +184,34 @@ func TestInitLoggerSetsTheDefaultLogger(t *testing.T) {
 		t.Errorf("slog default did not reach the file, got %q", data)
 	}
 }
+
+func TestReadLogTailReadsAMissingLogAsEmpty(t *testing.T) {
+	got, err := ReadLogTail(t.TempDir(), LogTailBytes)
+	if err != nil || got != "" {
+		t.Fatalf("ReadLogTail on no log = %q, %v; want empty, nil", got, err)
+	}
+}
+
+func TestReadLogTailReturnsASmallLogWhole(t *testing.T) {
+	dir := t.TempDir()
+	want := "first\nsecond\n"
+	if err := os.WriteFile(LogPath(dir), []byte(want), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	got, err := ReadLogTail(dir, LogTailBytes)
+	if err != nil || got != want {
+		t.Fatalf("ReadLogTail = %q, %v; want %q", got, err, want)
+	}
+}
+
+func TestReadLogTailStartsAtALineBoundary(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(LogPath(dir), []byte("aaaa\nbbbb\ncccc\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	// The last 12 bytes start at "aa\nbbbb...", mid-line.
+	got, err := ReadLogTail(dir, 12)
+	if err != nil || got != "bbbb\ncccc\n" {
+		t.Fatalf("ReadLogTail = %q, %v; want the two whole lines", got, err)
+	}
+}

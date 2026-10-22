@@ -162,6 +162,7 @@ var neverRemote = map[string]string{
 	"OpenWorldFolder":   "opens a folder on the desktop",
 	"ListFontFamilies":  "the desktop's installed fonts: a remote browser cannot use them, and which faces a machine has is not the host's to share",
 	"ModInstallLocal":   "a native file dialog on the desktop",
+	"GetLogTail":        "the log's contents name remote callers and their addresses; what goes in a bug report is the desktop's to copy",
 	"SetActiveServerID": "would change what the desktop is looking at (§ S8.11); a browser keeps its own selection (lib/remoteRuntime.ts)",
 
 	// The desktop's own control over remote access. A session that could call

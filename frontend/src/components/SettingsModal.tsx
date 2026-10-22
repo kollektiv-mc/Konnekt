@@ -32,6 +32,7 @@ import type { models } from '../../wailsjs/go/models'
 import { isRemoteBrowser, readOr } from '../lib/ipc'
 import { PlainDataDir, ReloadNote, UpdateFromDesktop } from './settings/RemoteNotes'
 import { FontSettings } from './settings/FontSettings'
+import { HelpPane } from './settings/HelpPane'
 import { WebviewGpuSetting } from './settings/WebviewGpuSetting'
 import { CHANGELOG_URL, countItems, releaseLabel, splitSections } from '../lib/changelog'
 import { useReleaseNotes } from '../hooks/useReleaseNotes'
@@ -59,6 +60,7 @@ export type SettingsSection =
   | 'destinations'
   | 'remote'
   | 'changelog'
+  | 'help'
   | 'about'
 
 const NAV: { id: SettingsSection; label: string }[] = [
@@ -69,6 +71,7 @@ const NAV: { id: SettingsSection; label: string }[] = [
   { id: 'destinations', label: 'Destinations' },
   { id: 'remote', label: 'Remote Access' },
   { id: 'changelog', label: "What's New" },
+  { id: 'help', label: 'Help' },
   { id: 'about', label: 'About' },
 ]
 
@@ -326,6 +329,7 @@ export function SettingsModal({ open, onClose, initialSection }: Props) {
                 </Suspense>
               )}
               {section === 'changelog' && <ChangelogPane />}
+              {section === 'help' && <HelpPane version={version} />}
               {section === 'about' && <AboutPane version={version} />}
             </div>
           </div>
