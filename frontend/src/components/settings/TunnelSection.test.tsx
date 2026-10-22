@@ -202,7 +202,7 @@ describe('TunnelSection', () => {
   describe('the named tunnel form (#512)', () => {
     it('offers the three fields and Save only once they are filled', () => {
       const { onSaveNamed } = setup()
-      expect(screen.getByText(/Keep one address across runs/)).toBeTruthy()
+      expect(screen.getByText(/Route the hostname to/)).toBeTruthy()
       expect(tokenInput().type).toBe('password')
       expect(saveButton().disabled).toBe(true)
       fireEvent.change(hostInput(), { target: { value: 'Dash.Example.net' } })
@@ -265,7 +265,6 @@ describe('TunnelSection', () => {
       setup({ status: 'running', url: 'https://dash.example.net', named: NAMED })
       expect(screen.getByText(/The address stays the same across runs/)).toBeTruthy()
       expect(screen.queryByText(/The address is new every time\./)).toBeNull()
-      expect(screen.getByText(/Opens your own address through Cloudflare\./)).toBeTruthy()
     })
 
     it.each<Status>(['downloading', 'starting', 'running'])('locks the form while %s', (status) => {

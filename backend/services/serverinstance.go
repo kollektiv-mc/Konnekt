@@ -55,6 +55,16 @@ type instanceDeps struct {
 	// group kill would no-op there.
 	killTree func(pid int)
 
+	// termTree is killTree's polite twin, SIGTERM to the group (false where the
+	// platform has none), and termWait is how long a delivered one gets before
+	// the kill follows (termTree and termWait in production).
+	termTree func(pid int) bool
+	termWait time.Duration
+
+	// exitDeadline is how long a process may outlive a crash report or a
+	// completed world save before it is ended (#579).
+	exitDeadline time.Duration
+
 	// quiesceWait is how long PrepareForBackup gives a stdin save-all to flush
 	// when RCON is unavailable and there is nothing to block on.
 	quiesceWait time.Duration
@@ -101,8 +111,11 @@ type serverInstance struct {
 	expectedStop bool
 	// crashed is set by the console's crash-report line and cleared by the
 	// next start(); it shortens the grace of any stop that follows.
-	crashed  bool
-	lastStop models.ServerStopped
+	crashed bool
+	// deadlineArmed keeps watchExitDeadline to one goroutine per boot, however
+	// many crash and save lines arrive; start() clears it.
+	deadlineArmed bool
+	lastStop      models.ServerStopped
 
 	// stats fields — set on Start, read by accessors
 	maxRAMMB   int
@@ -146,7 +159,11 @@ type serverInstance struct {
 	tpsMu         sync.RWMutex
 	currentTPS    float64
 	tpsLastUpdate time.Time
-	rconFlavor    string // "paper", "forge", "vanilla", or "" (unknown — re-detect next poll)
+	// tpsLost reports TPS as unknown rather than falling back to the log: set
+	// when RCON stops answering after it had answered, or by a crash report,
+	// since either way the tick loop the log figure assumes may be gone.
+	tpsLost    bool
+	rconFlavor string // "paper", "forge", "vanilla", or "" (unknown — re-detect next poll)
 
 	// --- logTPSMu: log-derived TPS fallback (always active while running)
 	logTPSMu       sync.RWMutex

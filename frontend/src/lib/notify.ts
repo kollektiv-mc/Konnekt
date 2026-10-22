@@ -5,28 +5,16 @@ import type { NotifKind, ToastCategory } from '../stores/useNotificationsStore'
 export type DesktopCategory = ToastCategory | 'join'
 
 /**
- * The desktop categories in the order Settings lists them, with the words it
+ * The desktop categories in the order Settings lists them, with the label it
  * uses. `AppSettings.desktopOn` is keyed by `id`, and a key that is not there
  * is off.
  */
-export const DESKTOP_CATEGORIES: readonly {
-  id: DesktopCategory
-  label: string
-  description: string
-}[] = [
-  {
-    id: 'warnings',
-    label: 'Warnings and info',
-    description: 'Low TPS, a server starting, and finished backups, restores and installs.',
-  },
-  {
-    id: 'errors',
-    label: 'Errors',
-    description: 'Failed scheduler runs, backups, restores, installs and loader updates.',
-  },
-  { id: 'crash', label: 'Server crash', description: 'A server stopping unexpectedly.' },
-  { id: 'update', label: 'Update available', description: 'A newer Konnekt release.' },
-  { id: 'join', label: 'Player join/leave', description: 'A player joining or leaving a server.' },
+export const DESKTOP_CATEGORIES: readonly { id: DesktopCategory; label: string }[] = [
+  { id: 'warnings', label: 'Warnings and info' },
+  { id: 'errors', label: 'Errors' },
+  { id: 'crash', label: 'Server crash' },
+  { id: 'update', label: 'Update available' },
+  { id: 'join', label: 'Player join/leave' },
 ]
 
 const TITLES: Record<NotifKind, string> = {

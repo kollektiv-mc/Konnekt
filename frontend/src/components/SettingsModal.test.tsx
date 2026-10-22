@@ -361,8 +361,6 @@ describe('SettingsModal skin and light mode', () => {
     settings({ theme: 'dark', skinId: 'default' })
   })
 
-  const MODE_DESCRIPTION = 'Light, dark, or follow your OS preference.'
-
   it('offers light mode for the default skin', () => {
     settings({ skinId: 'default' })
     openAppearance()
@@ -377,19 +375,18 @@ describe('SettingsModal skin and light mode', () => {
     expect(modeOption(/Light/).hasAttribute('disabled')).toBe(true)
   })
 
-  // The disabled option is the whole signal. A description that grew a second
-  // line for the dark-only case reflowed every row below it as the skin changed,
-  // so the copy is fixed and the lock speaks for itself.
-  it('keeps the Mode description fixed across skins so the pane does not reflow', () => {
+  // The disabled option is the whole signal. A line that grew for the dark-only
+  // case would reflow every row below it as the skin changed.
+  it('adds no copy to the Mode row for a dark-only skin', () => {
     settings({ skinId: 'default' })
     const { unmount } = openAppearance()
-    expect(screen.getAllByText(MODE_DESCRIPTION)).toHaveLength(1)
+    expect(screen.getAllByText('Mode')).toHaveLength(1)
     unmount()
 
     for (const skinId of ['midnight', 'nord', 'forest']) {
       settings({ skinId })
       const view = openAppearance()
-      expect(screen.getAllByText(MODE_DESCRIPTION)).toHaveLength(1)
+      expect(screen.getAllByText('Mode')).toHaveLength(1)
       expect(screen.queryByText(/dark-only/)).toBeNull()
       view.unmount()
     }
@@ -458,18 +455,18 @@ describe('SettingsModal skin and light mode', () => {
       openAppearance()
 
       expect(advancedToggle().getAttribute('aria-expanded')).toBe('false')
-      for (const group of ['Fonts', 'Status colors', 'Smooth scrolling']) {
+      for (const group of ['Fonts', 'Status colors', 'Smooth scrolling', 'Classic tile faces']) {
         expect(isInert(group)).toBe(true)
       }
     })
 
-    it('reveals fonts, status colors and smooth scrolling when opened', () => {
+    it('reveals fonts, colors, scrolling and tile faces when opened', () => {
       openAppearance()
 
       fireEvent.click(advancedToggle())
 
       expect(advancedToggle().getAttribute('aria-expanded')).toBe('true')
-      for (const group of ['Fonts', 'Status colors', 'Smooth scrolling']) {
+      for (const group of ['Fonts', 'Status colors', 'Smooth scrolling', 'Classic tile faces']) {
         expect(isInert(group)).toBe(false)
       }
       expect(screen.getByRole('combobox', { name: 'Code' })).toBeTruthy()
@@ -585,6 +582,34 @@ describe('SettingsModal skin accent pairing', () => {
 
     await waitFor(() => expect(App.SaveAppSettings).toHaveBeenCalledTimes(1))
     expect(useSettingsStore.getState().settings.accentColor).toBe('#ff0000')
+  })
+})
+
+// The channel row shows the stored setting even on a snapshot build, where the
+// service overrides it, so the one line it carries is that state.
+describe('SettingsModal update channel row', () => {
+  const SNAPSHOT_NOTE = /This build is a snapshot/
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    vi.mocked(isRemoteBrowser).mockReturnValue(false)
+  })
+
+  const openGeneral = async (version: string) => {
+    vi.mocked(App.GetAppVersion).mockResolvedValue(version)
+    render(<SettingsModal open onClose={() => {}} />)
+    fireEvent.click(screen.getByRole('button', { name: 'General' }))
+    return screen.findByText('Update channel')
+  }
+
+  it('says a snapshot build follows the snapshot channel', async () => {
+    await openGeneral('0.2.0-snapshot.202608290400.abc1234')
+    expect(await screen.findByText(SNAPSHOT_NOTE)).toBeTruthy()
+  })
+
+  it('carries no line on a release build', async () => {
+    await openGeneral('0.1.0')
+    expect(screen.queryByText(SNAPSHOT_NOTE)).toBeNull()
   })
 })
 

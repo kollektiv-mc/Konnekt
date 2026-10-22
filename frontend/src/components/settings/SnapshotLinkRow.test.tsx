@@ -1,14 +1,12 @@
 import { describe, it, expect, afterEach, beforeEach, vi } from 'vitest'
 import { render, screen, fireEvent, waitFor, cleanup, act } from '@testing-library/react'
 import * as App from '../../../wailsjs/go/main/App'
-import { BrowserOpenURL } from '../../../wailsjs/runtime/runtime'
 import { useDestinationsStore } from '../../stores/useDestinationsStore'
 import type { Destination, SnapshotLinkResult } from '../../stores/useDestinationsStore'
 import { DestinationsPane } from './DestinationsPane'
 import { SnapshotLinkRow } from './SnapshotLinkRow'
 
 vi.mock('../../../wailsjs/go/main/App')
-vi.mock('../../../wailsjs/runtime/runtime', () => ({ BrowserOpenURL: vi.fn() }))
 
 afterEach(cleanup)
 
@@ -67,15 +65,11 @@ describe('SnapshotLinkRow', () => {
     expect(button('Rotate link for R2 snapshots')).toBeTruthy()
   })
 
-  it('says what a private link is, what R2 lists, and where sign-in comes from', () => {
+  it('carries no explanatory copy beside the mode and the copy button', () => {
     render(<SnapshotLinkRow destination={dest()} />)
-    expect(screen.getByText(/shared secret, not access control/)).toBeTruthy()
-    expect(screen.getByText(/do not list their contents; another provider/)).toBeTruthy()
-    expect(screen.getByText(/put Cloudflare Access in front of the bucket/)).toBeTruthy()
-    fireEvent.click(screen.getByRole('link', { name: 'How to set it up' }))
-    expect(BrowserOpenURL).toHaveBeenCalledWith(
-      'https://developers.cloudflare.com/r2/tutorials/cloudflare-access/',
-    )
+    expect(screen.getByText('Snapshot link')).toBeTruthy()
+    expect(screen.queryByText(/shared secret/)).toBeNull()
+    expect(screen.queryByRole('link')).toBeNull()
   })
 
   it('fetches the link only when Copy link is clicked, and copies it', async () => {

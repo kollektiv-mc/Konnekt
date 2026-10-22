@@ -4,26 +4,17 @@ import { useSettingsStore } from '../stores/useSettingsStore'
 import { scheduleRunToastKey } from './constants'
 
 /**
- * The categories in the order Settings lists them, with the words it uses.
+ * The categories in the order Settings lists them, with the label it uses.
  * `AppSettings.toastsOff` is keyed by `id`, and a key that is not there is on.
  */
 export const TOAST_CATEGORIES: readonly {
   id: ToastCategory
   label: string
-  description: string
 }[] = [
-  {
-    id: 'warnings',
-    label: 'Warnings and info',
-    description: "The scheduler's graph warnings, Notify block messages and low TPS.",
-  },
-  {
-    id: 'errors',
-    label: 'Errors',
-    description: 'Failed scheduler runs, backups, restores, installs and loader updates.',
-  },
-  { id: 'crash', label: 'Server crash', description: 'A server stopping unexpectedly.' },
-  { id: 'update', label: 'Update available', description: 'A newer Konnekt release.' },
+  { id: 'warnings', label: 'Warnings and info' },
+  { id: 'errors', label: 'Errors' },
+  { id: 'crash', label: 'Server crash' },
+  { id: 'update', label: 'Update available' },
 ]
 
 export function toastsEnabled(category: ToastCategory): boolean {
