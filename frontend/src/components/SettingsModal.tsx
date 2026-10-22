@@ -500,15 +500,6 @@ function AppearancePane({ settings, update }: { settings: AppSettings; update: U
           onChange={(backgroundStyle) => update({ backgroundStyle })}
         />
       </SettingRow>
-      <SettingRow
-        label="Classic tile faces"
-        description="The compact tile faces from before the figure-first ones. Per-tile layouts do not apply while this is on."
-      >
-        <Toggle
-          checked={settings.classicTileFaces}
-          onChange={(v) => update({ classicTileFaces: v })}
-        />
-      </SettingRow>
 
       <WebviewGpuSetting
         value={settings.webviewGpu}
@@ -589,6 +580,16 @@ function AppearancePane({ settings, update }: { settings: AppSettings; update: U
               <Toggle
                 checked={settings.smoothScrolling}
                 onChange={(v) => update({ smoothScrolling: v })}
+              />
+            </SettingRow>
+
+            <SettingRow
+              label="Classic tile faces"
+              description="The compact tile faces from before the figure-first ones. Per-tile layouts do not apply while this is on."
+            >
+              <Toggle
+                checked={settings.classicTileFaces}
+                onChange={(v) => update({ classicTileFaces: v })}
               />
             </SettingRow>
           </div>
