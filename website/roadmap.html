@@ -34,1633 +34,1438 @@
     <link rel="icon" type="image/png" sizes="32x32" href="/assets/img/favicon-32.png" />
     <link rel="icon" type="image/png" sizes="256x256" href="/assets/img/favicon.png" />
     <link rel="apple-touch-icon" href="/assets/img/app-icon.png" />
+    <link
+      rel="preload"
+      href="/assets/fonts/Geist-Variable.woff2"
+      as="font"
+      type="font/woff2"
+      crossorigin
+    />
     <link rel="stylesheet" href="/tokens.css" />
-    <link rel="stylesheet" href="/styles.css" />
+    <link rel="stylesheet" href="/site.css" />
+    <link rel="stylesheet" href="/roadmap.css" />
     <script>
       document.documentElement.className = document.documentElement.className.replace('no-js', '')
     </script>
   </head>
   <body>
-    <!-- Canonical nav. Byte-identical on every page, hrefs included — main.js
-         marks the current page and intercepts same-page anchors. -->
-    <nav class="nav" id="nav">
-      <div class="nav-inner">
-        <span class="nav-brand">
-          <a href="/index.html" class="wordmark">Konnekt</a>
-          <span class="brand-tag">ALPHA</span>
-        </span>
-        <button
-          class="nav-toggle"
-          id="nav-toggle"
-          type="button"
-          aria-expanded="false"
-          aria-controls="nav-menu"
-          aria-label="Menu"
-        >
-          ≡
-        </button>
-        <div class="nav-menu" id="nav-menu">
+    <a class="skip-link" href="#main">Skip to content</a>
+    <div class="page">
+      <div class="group">
+        <!-- Canonical nav. Byte-identical on every page, hrefs included; site.js
+           marks the current page and scrolls same-page anchors. -->
+        <nav class="nav block block-raised" id="nav" aria-label="Main">
+          <a class="nav-brand" href="/index.html"
+            ><img
+              class="mark"
+              src="/assets/img/mark-24.svg"
+              width="24"
+              height="24"
+              alt=""
+            />Konnekt</a
+          >
           <ul class="nav-links">
             <li><a href="/index.html#features">Features</a></li>
+            <li><a href="/index.html#scheduler">Scheduler</a></li>
             <li><a href="/docs.html">Docs</a></li>
             <li><a href="/roadmap.html">Roadmap</a></li>
             <li><a href="/changelog.html">Changelog</a></li>
           </ul>
-          <div class="nav-actions">
-            <a
-              class="btn btn-secondary btn-sm"
-              href="https://github.com/kollektiv-mc/Konnekt"
-              target="_blank"
-              rel="noopener"
-              >View on GitHub</a
-            >
-            <a class="btn btn-primary btn-sm" href="/download.html">Download</a>
-          </div>
-        </div>
-      </div>
-    </nav>
+          <a
+            class="nav-side"
+            href="https://github.com/kollektiv-mc/Konnekt"
+            target="_blank"
+            rel="noopener"
+            >GitHub</a
+          >
+          <a class="btn btn-primary" href="/download.html"
+            ><svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true">
+              <path
+                d="M7 1v9M3 6.5 7 10.5 11 6.5M1.5 13h11"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.6"
+              /></svg
+            >Download</a
+          >
+        </nav>
+        <main id="main" class="group">
+          <header class="rm-hero block">
+            <div class="rm-hero-title">
+              <span class="meta" id="rm-total">80 features &middot; 5 areas</span>
+              <h1>Roadmap</h1>
+            </div>
+            <div class="rm-hero-side">
+              <a
+                class="band-link"
+                href="https://github.com/kollektiv-mc/Konnekt/issues"
+                target="_blank"
+                rel="noopener"
+                >Issues on GitHub &rarr;</a
+              >
+            </div>
+          </header>
 
-    <main class="subpage">
-      <div class="container">
-        <div class="subpage-head">
-          <span class="eyebrow">[/] roadmap</span>
-          <h1>Where it's <span class="accent">going</span></h1>
-          <p>
-            Every feature, filed where it lives in the app. The chip on each one says when it ships.
-          </p>
-        </div>
+          <!-- The stages, the areas and every row are static markup on purpose:
+               the page is the whole roadmap with JavaScript off, and
+               check-website-links.mjs resolves every href in it. roadmap.js adds
+               the filters and reads GitHub for what is done and what was filed
+               since; it derives every count from the rows, so nothing here is
+               counted by hand once it runs.
 
-        <!-- The tree is hand-curated public copy, and static markup on purpose: it
-             works with JavaScript off, check-website-links.mjs can resolve every
-             href in it, and Prettier formats it. roadmap.js only adds search,
-             sorting, filtering and keyboard navigation on top.
-
-             agent_docs/ROADMAP.md and the GitHub issues stay the source of
-             truth. A new entry needs a data-stage of alpha, beta, release or
-             later, and an issue link where one exists; roadmap.js derives the
-             counts, the dots, the stage totals and every id but the five area
-             ones from the markup, so nothing here has to be counted or kept
-             unique by hand.
-
-             data-search on a leaf is the words that should find it but are not
-             in its name. It was a printed description until the column was
-             costing the names the width to spell themselves out, and it is
-             worth keeping accurate: it is the only reason searching "stdout"
-             or "gamerules" returns anything. Nothing renders it, so it is
-             indexing, not copy, and it is not a place for a sentence. -->
-        <div class="rm-page">
-          <div class="rm-stages" role="group" aria-label="Filter by stage">
-            <button
-              class="rm-stage-card rm-stage-alpha"
-              type="button"
-              data-stage="alpha"
-              aria-pressed="false"
-            >
-              <span class="rm-stage-top">
-                <span class="rm-stage-title">Alpha</span>
-                <span class="rm-stage-count">44</span>
+               agent_docs/ROADMAP.md and the GitHub issues stay the source of
+               truth. A row needs a data-stage of alpha, beta, release or later,
+               and an issue link where one exists. data-search is the words that
+               should find a row but are not in its name. Nothing renders it. -->
+          <div class="stages block" role="group" aria-label="Filter by stage">
+            <button type="button" class="stage stage-alpha" data-stage="alpha" aria-pressed="false">
+              <span class="stage-top">
+                <span class="stage-title"
+                  ><span class="marker" aria-hidden="true"></span>Alpha</span
+                >
+                <span class="stage-count">44</span>
               </span>
-              <span class="rm-stage-note">Shipped. It is in the build you can download today.</span>
+              <span class="stage-note">Shipped. In the build you can download today.</span>
+            </button>
+            <button type="button" class="stage stage-beta" data-stage="beta" aria-pressed="false">
+              <span class="stage-top">
+                <span class="stage-title"><span class="marker" aria-hidden="true"></span>Beta</span>
+                <span class="stage-count">24</span>
+              </span>
+              <span class="stage-note">Next. Filed as issues and being worked through.</span>
             </button>
             <button
-              class="rm-stage-card rm-stage-beta"
               type="button"
-              data-stage="beta"
-              aria-pressed="false"
-            >
-              <span class="rm-stage-top">
-                <span class="rm-stage-title">Beta</span>
-                <span class="rm-stage-count">24</span>
-              </span>
-              <span class="rm-stage-note">Next. Filed as issues and being worked through.</span>
-            </button>
-            <button
-              class="rm-stage-card rm-stage-release"
-              type="button"
+              class="stage stage-release"
               data-stage="release"
               aria-pressed="false"
             >
-              <span class="rm-stage-top">
-                <span class="rm-stage-title">Full release</span>
-                <span class="rm-stage-count">6</span>
+              <span class="stage-top">
+                <span class="stage-title"
+                  ><span class="marker" aria-hidden="true"></span>Full release</span
+                >
+                <span class="stage-count">6</span>
               </span>
-              <span class="rm-stage-note">Planned. What a 1.0 needs beyond features.</span>
+              <span class="stage-note">Planned. What a 1.0 needs beyond features.</span>
             </button>
-            <button
-              class="rm-stage-card rm-stage-later"
-              type="button"
-              data-stage="later"
-              aria-pressed="false"
-            >
-              <span class="rm-stage-top">
-                <span class="rm-stage-title">Later</span>
-                <span class="rm-stage-count">6</span>
+            <button type="button" class="stage stage-later" data-stage="later" aria-pressed="false">
+              <span class="stage-top">
+                <span class="stage-title"
+                  ><span class="marker" aria-hidden="true"></span>Later</span
+                >
+                <span class="stage-count">6</span>
               </span>
-              <span class="rm-stage-note">Someday. Not scheduled, and not forgotten.</span>
+              <span class="stage-note">Someday. Not scheduled, and not forgotten.</span>
             </button>
           </div>
 
-          <section class="rm-explorer" aria-label="Feature explorer">
-            <div class="rm-toolbar">
-              <div class="rm-search">
-                <span class="rm-search-icon" aria-hidden="true">/</span>
+          <section class="explorer block" aria-label="Feature explorer">
+            <div class="explorer-bar">
+              <label class="search">
+                <span aria-hidden="true">/</span>
                 <input
                   type="search"
                   id="rm-search"
-                  class="rm-search-input"
                   placeholder="filter features"
                   autocomplete="off"
                   spellcheck="false"
                   aria-label="Filter features by name"
                 />
-              </div>
-              <div class="rm-sort" role="group" aria-label="Sort by">
-                <span class="rm-sort-label">sort</span>
-                <button type="button" class="rm-sort-btn" data-sort="order" aria-pressed="true">
-                  roadmap
-                </button>
-                <button type="button" class="rm-sort-btn" data-sort="name" aria-pressed="false">
-                  name
-                </button>
-                <button type="button" class="rm-sort-btn" data-sort="stage" aria-pressed="false">
-                  stage
-                </button>
-                <button
-                  type="button"
-                  class="rm-dir"
-                  id="rm-dir"
-                  aria-pressed="false"
-                  aria-label="Reverse the sort order"
-                >
-                  <span class="rm-dir-mark" aria-hidden="true"></span>
-                </button>
-              </div>
-              <div class="rm-fold" role="group" aria-label="Folders">
-                <button type="button" class="rm-fold-btn" data-fold="expand">expand all</button>
-                <button type="button" class="rm-fold-btn" data-fold="collapse">collapse all</button>
-              </div>
+              </label>
+              <p class="explorer-status" role="status">
+                <span id="rm-status">80 features across 5 areas</span>
+                <button type="button" class="clear" id="rm-clear" hidden>clear</button>
+              </p>
             </div>
-
-            <p class="rm-status" id="rm-status" role="status">
-              <span id="rm-status-text">80 features across 5 areas</span>
-              <button type="button" class="rm-clear is-hidden" id="rm-clear">clear</button>
-            </p>
-
-            <ul class="rm-tree" id="rm-tree">
-              <li class="rm-node rm-node-folder">
-                <details class="rm-folder" id="rm-dashboard" open>
-                  <summary class="rm-row rm-row-folder">
-                    <span class="rm-label"><span class="rm-name">dashboard/</span></span>
-                    <span class="rm-count">53</span>
-                    <span class="rm-dots" aria-hidden="true"
-                      ><i class="rm-dot rm-dot-alpha"></i><i class="rm-dot rm-dot-beta"></i
-                    ></span>
-                  </summary>
-                  <ul class="rm-children">
-                    <li class="rm-node rm-node-folder">
-                      <details class="rm-folder" open>
-                        <summary class="rm-row rm-row-folder">
-                          <span class="rm-label"><span class="rm-name">tiles/</span></span>
-                          <span class="rm-count">49</span>
-                          <span class="rm-dots" aria-hidden="true"
-                            ><i class="rm-dot rm-dot-alpha"></i><i class="rm-dot rm-dot-beta"></i
-                          ></span>
-                        </summary>
-                        <ul class="rm-children">
-                          <li class="rm-node rm-node-folder">
-                            <details class="rm-folder">
-                              <summary class="rm-row rm-row-folder">
-                                <span class="rm-label"><span class="rm-name">console/</span></span>
-                                <span class="rm-count">4</span>
-                                <span class="rm-dots" aria-hidden="true"
-                                  ><i class="rm-dot rm-dot-alpha"></i
-                                ></span>
-                              </summary>
-                              <ul class="rm-children">
-                                <li
-                                  class="rm-node rm-node-leaf"
-                                  data-stage="alpha"
-                                  data-search="Server stdout as it happens"
-                                >
-                                  <div class="rm-row rm-row-leaf">
-                                    <span class="rm-label"
-                                      ><span class="rm-name">live log streaming</span></span
-                                    >
-                                    <span class="tag tag-stage">ALPHA</span>
-                                  </div>
-                                </li>
-                                <li
-                                  class="rm-node rm-node-leaf"
-                                  data-stage="alpha"
-                                  data-search="Type straight into the running server"
-                                >
-                                  <div class="rm-row rm-row-leaf">
-                                    <span class="rm-label"
-                                      ><span class="rm-name">inline command input</span></span
-                                    >
-                                    <span class="tag tag-stage">ALPHA</span>
-                                  </div>
-                                </li>
-                                <li
-                                  class="rm-node rm-node-leaf"
-                                  data-stage="alpha"
-                                  data-search="Save, list, weather, time, kick, ban"
-                                >
-                                  <div class="rm-row rm-row-leaf">
-                                    <span class="rm-label"
-                                      ><span class="rm-name">quick commands</span></span
-                                    >
-                                    <span class="tag tag-stage">ALPHA</span>
-                                  </div>
-                                </li>
-                                <li
-                                  class="rm-node rm-node-leaf"
-                                  data-stage="alpha"
-                                  data-search="Your own buttons, stored per server"
-                                >
-                                  <div class="rm-row rm-row-leaf">
-                                    <span class="rm-label"
-                                      ><span class="rm-name">custom commands</span></span
-                                    >
-                                    <span class="tag tag-stage">ALPHA</span>
-                                  </div>
-                                </li>
-                              </ul>
-                            </details>
-                          </li>
-                          <li class="rm-node rm-node-folder">
-                            <details class="rm-folder">
-                              <summary class="rm-row rm-row-folder">
-                                <span class="rm-label"><span class="rm-name">stats/</span></span>
-                                <span class="rm-count">3</span>
-                                <span class="rm-dots" aria-hidden="true"
-                                  ><i class="rm-dot rm-dot-alpha"></i
-                                ></span>
-                              </summary>
-                              <ul class="rm-children">
-                                <li
-                                  class="rm-node rm-node-leaf"
-                                  data-stage="alpha"
-                                  data-search="Running state, and how long for"
-                                >
-                                  <div class="rm-row rm-row-leaf">
-                                    <span class="rm-label"
-                                      ><span class="rm-name">status and uptime</span></span
-                                    >
-                                    <span class="tag tag-stage">ALPHA</span>
-                                  </div>
-                                </li>
-                                <li
-                                  class="rm-node rm-node-leaf"
-                                  data-stage="alpha"
-                                  data-search="Live count from the log stream"
-                                >
-                                  <div class="rm-row rm-row-leaf">
-                                    <span class="rm-label"
-                                      ><span class="rm-name">players online</span></span
-                                    >
-                                    <span class="tag tag-stage">ALPHA</span>
-                                  </div>
-                                </li>
-                                <li
-                                  class="rm-node rm-node-leaf"
-                                  data-stage="alpha"
-                                  data-search="Colour banded, RCON with a log fallback"
-                                >
-                                  <div class="rm-row rm-row-leaf">
-                                    <span class="rm-label"
-                                      ><span class="rm-name">TPS and RAM</span></span
-                                    >
-                                    <span class="tag tag-stage">ALPHA</span>
-                                  </div>
-                                </li>
-                              </ul>
-                            </details>
-                          </li>
-                          <li class="rm-node rm-node-folder">
-                            <details class="rm-folder">
-                              <summary class="rm-row rm-row-folder">
-                                <span class="rm-label"
-                                  ><span class="rm-name">performance/</span></span
-                                >
-                                <span class="rm-count">3</span>
-                                <span class="rm-dots" aria-hidden="true"
-                                  ><i class="rm-dot rm-dot-alpha"></i
-                                  ><i class="rm-dot rm-dot-beta"></i
-                                ></span>
-                              </summary>
-                              <ul class="rm-children">
-                                <li
-                                  class="rm-node rm-node-leaf"
-                                  data-stage="alpha"
-                                  data-search="TPS, RAM and CPU charted"
-                                >
-                                  <div class="rm-row rm-row-leaf">
-                                    <span class="rm-label"
-                                      ><span class="rm-name">1-hour history</span></span
-                                    >
-                                    <span class="tag tag-stage">ALPHA</span>
-                                  </div>
-                                </li>
-                                <li
-                                  class="rm-node rm-node-leaf"
-                                  data-stage="alpha"
-                                  data-search="Sortable, with toggleable series"
-                                >
-                                  <div class="rm-row rm-row-leaf">
-                                    <span class="rm-label"
-                                      ><span class="rm-name">summary table</span></span
-                                    >
-                                    <span class="tag tag-stage">ALPHA</span>
-                                  </div>
-                                </li>
-                                <li
-                                  class="rm-node rm-node-leaf"
-                                  data-stage="beta"
-                                  data-search="Longer windows, persisted to disk"
-                                >
-                                  <div class="rm-row rm-row-leaf">
-                                    <span class="rm-label"
-                                      ><span class="rm-name">24-hour and 7-day history</span></span
-                                    >
-                                    <span class="tag tag-stage">BETA</span>
-                                    <a
-                                      class="rm-issue"
-                                      href="https://github.com/kollektiv-mc/Konnekt/issues/39"
-                                      target="_blank"
-                                      rel="noopener"
-                                      aria-label="Issue 39 on GitHub"
-                                      >#39</a
-                                    >
-                                  </div>
-                                </li>
-                              </ul>
-                            </details>
-                          </li>
-                          <li class="rm-node rm-node-folder">
-                            <details class="rm-folder">
-                              <summary class="rm-row rm-row-folder">
-                                <span class="rm-label"><span class="rm-name">players/</span></span>
-                                <span class="rm-count">4</span>
-                                <span class="rm-dots" aria-hidden="true"
-                                  ><i class="rm-dot rm-dot-alpha"></i
-                                  ><i class="rm-dot rm-dot-beta"></i
-                                ></span>
-                              </summary>
-                              <ul class="rm-children">
-                                <li
-                                  class="rm-node rm-node-leaf"
-                                  data-stage="alpha"
-                                  data-search="Who is on, polled while the server runs"
-                                >
-                                  <div class="rm-row rm-row-leaf">
-                                    <span class="rm-label"
-                                      ><span class="rm-name">online list</span></span
-                                    >
-                                    <span class="tag tag-stage">ALPHA</span>
-                                  </div>
-                                </li>
-                                <li
-                                  class="rm-node rm-node-leaf"
-                                  data-stage="alpha"
-                                  data-search="With an optional reason"
-                                >
-                                  <div class="rm-row rm-row-leaf">
-                                    <span class="rm-label"
-                                      ><span class="rm-name">kick and ban</span></span
-                                    >
-                                    <span class="tag tag-stage">ALPHA</span>
-                                  </div>
-                                </li>
-                                <li
-                                  class="rm-node rm-node-leaf"
-                                  data-stage="beta"
-                                  data-search="Playtime, history and per-player notes"
-                                >
-                                  <div class="rm-row rm-row-leaf">
-                                    <span class="rm-label"
-                                      ><span class="rm-name">player profiles</span></span
-                                    >
-                                    <span class="tag tag-stage">BETA</span>
-                                    <a
-                                      class="rm-issue"
-                                      href="https://github.com/kollektiv-mc/Konnekt/issues/36"
-                                      target="_blank"
-                                      rel="noopener"
-                                      aria-label="Issue 36 on GitHub"
-                                      >#36</a
-                                    >
-                                  </div>
-                                </li>
-                                <li
-                                  class="rm-node rm-node-leaf"
-                                  data-stage="beta"
-                                  data-search="The skin a player wears, rendered in 3D"
-                                >
-                                  <div class="rm-row rm-row-leaf">
-                                    <span class="rm-label"
-                                      ><span class="rm-name">skin preview</span></span
-                                    >
-                                    <span class="tag tag-stage">BETA</span>
-                                    <a
-                                      class="rm-issue"
-                                      href="https://github.com/kollektiv-mc/Konnekt/issues/37"
-                                      target="_blank"
-                                      rel="noopener"
-                                      aria-label="Issue 37 on GitHub"
-                                      >#37</a
-                                    >
-                                  </div>
-                                </li>
-                              </ul>
-                            </details>
-                          </li>
-                          <li class="rm-node rm-node-folder">
-                            <details class="rm-folder">
-                              <summary class="rm-row rm-row-folder">
-                                <span class="rm-label"><span class="rm-name">worlds/</span></span>
-                                <span class="rm-count">5</span>
-                                <span class="rm-dots" aria-hidden="true"
-                                  ><i class="rm-dot rm-dot-alpha"></i
-                                  ><i class="rm-dot rm-dot-beta"></i
-                                ></span>
-                              </summary>
-                              <ul class="rm-children">
-                                <li
-                                  class="rm-node rm-node-leaf"
-                                  data-stage="alpha"
-                                  data-search="Every save orbiting the server"
-                                >
-                                  <div class="rm-row rm-row-leaf">
-                                    <span class="rm-label"
-                                      ><span class="rm-name">3D world browser</span></span
-                                    >
-                                    <span class="tag tag-stage">ALPHA</span>
-                                  </div>
-                                </li>
-                                <li
-                                  class="rm-node rm-node-leaf"
-                                  data-stage="alpha"
-                                  data-search="Seed, size, game mode, last played"
-                                >
-                                  <div class="rm-row rm-row-leaf">
-                                    <span class="rm-label"
-                                      ><span class="rm-name">world metadata</span></span
-                                    >
-                                    <span class="tag tag-stage">ALPHA</span>
-                                  </div>
-                                </li>
-                                <li
-                                  class="rm-node rm-node-leaf"
-                                  data-stage="alpha"
-                                  data-search="With a guided restart when running"
-                                >
-                                  <div class="rm-row rm-row-leaf">
-                                    <span class="rm-label"
-                                      ><span class="rm-name">switch active world</span></span
-                                    >
-                                    <span class="tag tag-stage">ALPHA</span>
-                                  </div>
-                                </li>
-                                <li
-                                  class="rm-node rm-node-leaf"
-                                  data-stage="alpha"
-                                  data-search="Housekeeping without leaving the app"
-                                >
-                                  <div class="rm-row rm-row-leaf">
-                                    <span class="rm-label"
-                                      ><span class="rm-name">rename, duplicate, delete</span></span
-                                    >
-                                    <span class="tag tag-stage">ALPHA</span>
-                                  </div>
-                                </li>
-                                <li
-                                  class="rm-node rm-node-leaf"
-                                  data-stage="beta"
-                                  data-search="Create, list and restore from here"
-                                >
-                                  <div class="rm-row rm-row-leaf">
-                                    <span class="rm-label"
-                                      ><span class="rm-name">per-world backups</span></span
-                                    >
-                                    <span class="tag tag-stage">BETA</span>
-                                    <a
-                                      class="rm-issue"
-                                      href="https://github.com/kollektiv-mc/Konnekt/issues/23"
-                                      target="_blank"
-                                      rel="noopener"
-                                      aria-label="Issue 23 on GitHub"
-                                      >#23</a
-                                    >
-                                  </div>
-                                </li>
-                              </ul>
-                            </details>
-                          </li>
-                          <li class="rm-node rm-node-folder">
-                            <details class="rm-folder">
-                              <summary class="rm-row rm-row-folder">
-                                <span class="rm-label"><span class="rm-name">backups/</span></span>
-                                <span class="rm-count">11</span>
-                                <span class="rm-dots" aria-hidden="true"
-                                  ><i class="rm-dot rm-dot-alpha"></i
-                                  ><i class="rm-dot rm-dot-beta"></i
-                                ></span>
-                              </summary>
-                              <ul class="rm-children">
-                                <li
-                                  class="rm-node rm-node-leaf"
-                                  data-stage="alpha"
-                                  data-search="Zip the server directory on demand"
-                                >
-                                  <div class="rm-row rm-row-leaf">
-                                    <span class="rm-label"
-                                      ><span class="rm-name">manual backup</span></span
-                                    >
-                                    <span class="tag tag-stage">ALPHA</span>
-                                  </div>
-                                </li>
-                                <li
-                                  class="rm-node rm-node-leaf"
-                                  data-stage="alpha"
-                                  data-search="Driven by a scheduler graph"
-                                >
-                                  <div class="rm-row rm-row-leaf">
-                                    <span class="rm-label"
-                                      ><span class="rm-name">scheduled backups</span></span
-                                    >
-                                    <span class="tag tag-stage">ALPHA</span>
-                                  </div>
-                                </li>
-                                <li
-                                  class="rm-node rm-node-leaf"
-                                  data-stage="alpha"
-                                  data-search="Extract and swap, rolled back on failure"
-                                >
-                                  <div class="rm-row rm-row-leaf">
-                                    <span class="rm-label"
-                                      ><span class="rm-name">restore</span></span
-                                    >
-                                    <span class="tag tag-stage">ALPHA</span>
-                                  </div>
-                                </li>
-                                <li
-                                  class="rm-node rm-node-leaf"
-                                  data-stage="alpha"
-                                  data-search="A shared progress bar and notifications"
-                                >
-                                  <div class="rm-row rm-row-leaf">
-                                    <span class="rm-label"
-                                      ><span class="rm-name">live progress</span></span
-                                    >
-                                    <span class="tag tag-stage">ALPHA</span>
-                                  </div>
-                                </li>
-                                <li
-                                  class="rm-node rm-node-leaf"
-                                  data-stage="beta"
-                                  data-search="Include world_nether and world_the_end"
-                                >
-                                  <div class="rm-row rm-row-leaf">
-                                    <span class="rm-label"
-                                      ><span class="rm-name">multi-dimension backup</span></span
-                                    >
-                                    <span class="tag tag-stage">BETA</span>
-                                    <a
-                                      class="rm-issue"
-                                      href="https://github.com/kollektiv-mc/Konnekt/issues/26"
-                                      target="_blank"
-                                      rel="noopener"
-                                      aria-label="Issue 26 on GitHub"
-                                      >#26</a
-                                    >
-                                  </div>
-                                </li>
-                                <li
-                                  class="rm-node rm-node-leaf"
-                                  data-stage="beta"
-                                  data-search="Keep the last few, drop the rest"
-                                >
-                                  <div class="rm-row rm-row-leaf">
-                                    <span class="rm-label"
-                                      ><span class="rm-name">retention and pruning</span></span
-                                    >
-                                    <span class="tag tag-stage">BETA</span>
-                                    <a
-                                      class="rm-issue"
-                                      href="https://github.com/kollektiv-mc/Konnekt/issues/27"
-                                      target="_blank"
-                                      rel="noopener"
-                                      aria-label="Issue 27 on GitHub"
-                                      >#27</a
-                                    >
-                                  </div>
-                                </li>
-                                <li
-                                  class="rm-node rm-node-leaf"
-                                  data-stage="beta"
-                                  data-search="Stop a running backup cleanly"
-                                >
-                                  <div class="rm-row rm-row-leaf">
-                                    <span class="rm-label"
-                                      ><span class="rm-name">cancel in progress</span></span
-                                    >
-                                    <span class="tag tag-stage">BETA</span>
-                                    <a
-                                      class="rm-issue"
-                                      href="https://github.com/kollektiv-mc/Konnekt/issues/28"
-                                      target="_blank"
-                                      rel="noopener"
-                                      aria-label="Issue 28 on GitHub"
-                                      >#28</a
-                                    >
-                                  </div>
-                                </li>
-                                <li
-                                  class="rm-node rm-node-leaf"
-                                  data-stage="beta"
-                                  data-search="One backup at a time, enforced"
-                                >
-                                  <div class="rm-row rm-row-leaf">
-                                    <span class="rm-label"
-                                      ><span class="rm-name">concurrency guard</span></span
-                                    >
-                                    <span class="tag tag-stage">BETA</span>
-                                    <a
-                                      class="rm-issue"
-                                      href="https://github.com/kollektiv-mc/Konnekt/issues/29"
-                                      target="_blank"
-                                      rel="noopener"
-                                      aria-label="Issue 29 on GitHub"
-                                      >#29</a
-                                    >
-                                  </div>
-                                </li>
-                                <li
-                                  class="rm-node rm-node-leaf"
-                                  data-stage="beta"
-                                  data-search="Catch a corrupt zip before it lands"
-                                >
-                                  <div class="rm-row rm-row-leaf">
-                                    <span class="rm-label"
-                                      ><span class="rm-name">restore integrity check</span></span
-                                    >
-                                    <span class="tag tag-stage">BETA</span>
-                                    <a
-                                      class="rm-issue"
-                                      href="https://github.com/kollektiv-mc/Konnekt/issues/30"
-                                      target="_blank"
-                                      rel="noopener"
-                                      aria-label="Issue 30 on GitHub"
-                                      >#30</a
-                                    >
-                                  </div>
-                                </li>
-                                <li
-                                  class="rm-node rm-node-leaf"
-                                  data-stage="beta"
-                                  data-search="Restore a zip from somewhere else"
-                                >
-                                  <div class="rm-row rm-row-leaf">
-                                    <span class="rm-label"
-                                      ><span class="rm-name">import an external backup</span></span
-                                    >
-                                    <span class="tag tag-stage">BETA</span>
-                                    <a
-                                      class="rm-issue"
-                                      href="https://github.com/kollektiv-mc/Konnekt/issues/31"
-                                      target="_blank"
-                                      rel="noopener"
-                                      aria-label="Issue 31 on GitHub"
-                                      >#31</a
-                                    >
-                                  </div>
-                                </li>
-                                <li
-                                  class="rm-node rm-node-leaf"
-                                  data-stage="beta"
-                                  data-search="Per-world backups managed in one place"
-                                >
-                                  <div class="rm-row rm-row-leaf">
-                                    <span class="rm-label"
-                                      ><span class="rm-name">world-specific segment</span></span
-                                    >
-                                    <span class="tag tag-stage">BETA</span>
-                                    <a
-                                      class="rm-issue"
-                                      href="https://github.com/kollektiv-mc/Konnekt/issues/24"
-                                      target="_blank"
-                                      rel="noopener"
-                                      aria-label="Issue 24 on GitHub"
-                                      >#24</a
-                                    >
-                                  </div>
-                                </li>
-                              </ul>
-                            </details>
-                          </li>
-                          <li class="rm-node rm-node-folder">
-                            <details class="rm-folder">
-                              <summary class="rm-row rm-row-folder">
-                                <span class="rm-label"
-                                  ><span class="rm-name">scheduler/</span></span
-                                >
-                                <span class="rm-count">4</span>
-                                <span class="rm-dots" aria-hidden="true"
-                                  ><i class="rm-dot rm-dot-alpha"></i
-                                  ><i class="rm-dot rm-dot-beta"></i
-                                ></span>
-                              </summary>
-                              <ul class="rm-children">
-                                <li
-                                  class="rm-node rm-node-leaf"
-                                  data-stage="alpha"
-                                  data-search="Drag blocks onto a canvas and wire them"
-                                >
-                                  <div class="rm-row rm-row-leaf">
-                                    <span class="rm-label"
-                                      ><span class="rm-name">node graph editor</span></span
-                                    >
-                                    <span class="tag tag-stage">ALPHA</span>
-                                  </div>
-                                </li>
-                                <li
-                                  class="rm-node rm-node-leaf"
-                                  data-stage="alpha"
-                                  data-search="Seventeen blocks, branching, live values"
-                                >
-                                  <div class="rm-row rm-row-leaf">
-                                    <span class="rm-label"
-                                      ><span class="rm-name"
-                                        >triggers, conditions, actions</span
-                                      ></span
-                                    >
-                                    <span class="tag tag-stage">ALPHA</span>
-                                  </div>
-                                </li>
-                                <li
-                                  class="rm-node rm-node-leaf"
-                                  data-stage="alpha"
-                                  data-search="What fired, and what fires next"
-                                >
-                                  <div class="rm-row rm-row-leaf">
-                                    <span class="rm-label"
-                                      ><span class="rm-name">run history and next runs</span></span
-                                    >
-                                    <span class="tag tag-stage">ALPHA</span>
-                                  </div>
-                                </li>
-                                <li
-                                  class="rm-node rm-node-leaf"
-                                  data-stage="beta"
-                                  data-search="Back up one world from a graph"
-                                >
-                                  <div class="rm-row rm-row-leaf">
-                                    <span class="rm-label"
-                                      ><span class="rm-name"
-                                        >world-specific backup action</span
-                                      ></span
-                                    >
-                                    <span class="tag tag-stage">BETA</span>
-                                    <a
-                                      class="rm-issue"
-                                      href="https://github.com/kollektiv-mc/Konnekt/issues/25"
-                                      target="_blank"
-                                      rel="noopener"
-                                      aria-label="Issue 25 on GitHub"
-                                      >#25</a
-                                    >
-                                  </div>
-                                </li>
-                              </ul>
-                            </details>
-                          </li>
-                          <li class="rm-node rm-node-folder">
-                            <details class="rm-folder">
-                              <summary class="rm-row rm-row-folder">
-                                <span class="rm-label"><span class="rm-name">config/</span></span>
-                                <span class="rm-count">6</span>
-                                <span class="rm-dots" aria-hidden="true"
-                                  ><i class="rm-dot rm-dot-alpha"></i
-                                  ><i class="rm-dot rm-dot-beta"></i
-                                ></span>
-                              </summary>
-                              <ul class="rm-children">
-                                <li
-                                  class="rm-node rm-node-leaf"
-                                  data-stage="alpha"
-                                  data-search="properties, JSON, YAML and TOML"
-                                >
-                                  <div class="rm-row rm-row-leaf">
-                                    <span class="rm-label"
-                                      ><span class="rm-name">config file list</span></span
-                                    >
-                                    <span class="tag tag-stage">ALPHA</span>
-                                  </div>
-                                </li>
-                                <li
-                                  class="rm-node rm-node-leaf"
-                                  data-stage="alpha"
-                                  data-search="Typed widgets, one per key"
-                                >
-                                  <div class="rm-row rm-row-leaf">
-                                    <span class="rm-label"
-                                      ><span class="rm-name">form editor</span></span
-                                    >
-                                    <span class="tag tag-stage">ALPHA</span>
-                                  </div>
-                                </li>
-                                <li
-                                  class="rm-node rm-node-leaf"
-                                  data-stage="alpha"
-                                  data-search="Dirty tracking, save and revert"
-                                >
-                                  <div class="rm-row rm-row-leaf">
-                                    <span class="rm-label"
-                                      ><span class="rm-name">raw text editor</span></span
-                                    >
-                                    <span class="tag tag-stage">ALPHA</span>
-                                  </div>
-                                </li>
-                                <li
-                                  class="rm-node rm-node-leaf"
-                                  data-stage="beta"
-                                  data-search="Related keys collected into sections"
-                                >
-                                  <div class="rm-row rm-row-leaf">
-                                    <span class="rm-label"
-                                      ><span class="rm-name">grouped fields</span></span
-                                    >
-                                    <span class="tag tag-stage">BETA</span>
-                                    <a
-                                      class="rm-issue"
-                                      href="https://github.com/kollektiv-mc/Konnekt/issues/32"
-                                      target="_blank"
-                                      rel="noopener"
-                                      aria-label="Issue 32 on GitHub"
-                                      >#32</a
-                                    >
-                                  </div>
-                                </li>
-                                <li
-                                  class="rm-node rm-node-leaf"
-                                  data-stage="beta"
-                                  data-search="Gamerules as toggles, not strings"
-                                >
-                                  <div class="rm-row rm-row-leaf">
-                                    <span class="rm-label"
-                                      ><span class="rm-name">gamerule editor</span></span
-                                    >
-                                    <span class="tag tag-stage">BETA</span>
-                                    <a
-                                      class="rm-issue"
-                                      href="https://github.com/kollektiv-mc/Konnekt/issues/32"
-                                      target="_blank"
-                                      rel="noopener"
-                                      aria-label="Issue 32 on GitHub"
-                                      >#32</a
-                                    >
-                                  </div>
-                                </li>
-                                <li
-                                  class="rm-node rm-node-leaf"
-                                  data-stage="beta"
-                                  data-search="See the message before it ships"
-                                >
-                                  <div class="rm-row rm-row-leaf">
-                                    <span class="rm-label"
-                                      ><span class="rm-name">MOTD preview</span></span
-                                    >
-                                    <span class="tag tag-stage">BETA</span>
-                                    <a
-                                      class="rm-issue"
-                                      href="https://github.com/kollektiv-mc/Konnekt/issues/32"
-                                      target="_blank"
-                                      rel="noopener"
-                                      aria-label="Issue 32 on GitHub"
-                                      >#32</a
-                                    >
-                                  </div>
-                                </li>
-                              </ul>
-                            </details>
-                          </li>
-                          <li class="rm-node rm-node-folder">
-                            <details class="rm-folder">
-                              <summary class="rm-row rm-row-folder">
-                                <span class="rm-label"><span class="rm-name">mods/</span></span>
-                                <span class="rm-count">5</span>
-                                <span class="rm-dots" aria-hidden="true"
-                                  ><i class="rm-dot rm-dot-alpha"></i
-                                  ><i class="rm-dot rm-dot-beta"></i
-                                ></span>
-                              </summary>
-                              <ul class="rm-children">
-                                <li
-                                  class="rm-node rm-node-leaf"
-                                  data-stage="alpha"
-                                  data-search="Find and add without opening a browser"
-                                >
-                                  <div class="rm-row rm-row-leaf">
-                                    <span class="rm-label"
-                                      ><span class="rm-name"
-                                        >Modrinth search and install</span
-                                      ></span
-                                    >
-                                    <span class="tag tag-stage">ALPHA</span>
-                                  </div>
-                                </li>
-                                <li
-                                  class="rm-node rm-node-leaf"
-                                  data-stage="alpha"
-                                  data-search="Pulls in what a mod needs"
-                                >
-                                  <div class="rm-row rm-row-leaf">
-                                    <span class="rm-label"
-                                      ><span class="rm-name">dependency resolution</span></span
-                                    >
-                                    <span class="tag tag-stage">ALPHA</span>
-                                  </div>
-                                </li>
-                                <li
-                                  class="rm-node rm-node-leaf"
-                                  data-stage="alpha"
-                                  data-search="Knows Fabric from Forge from Paper"
-                                >
-                                  <div class="rm-row rm-row-leaf">
-                                    <span class="rm-label"
-                                      ><span class="rm-name">loader detection</span></span
-                                    >
-                                    <span class="tag tag-stage">ALPHA</span>
-                                  </div>
-                                </li>
-                                <li
-                                  class="rm-node rm-node-leaf"
-                                  data-stage="alpha"
-                                  data-search="Read what changed before updating"
-                                >
-                                  <div class="rm-row rm-row-leaf">
-                                    <span class="rm-label"
-                                      ><span class="rm-name">inline changelogs</span></span
-                                    >
-                                    <span class="tag tag-stage">ALPHA</span>
-                                  </div>
-                                </li>
-                                <li
-                                  class="rm-node rm-node-leaf"
-                                  data-stage="beta"
-                                  data-search="A second source, and update management"
-                                >
-                                  <div class="rm-row rm-row-leaf">
-                                    <span class="rm-label"
-                                      ><span class="rm-name"
-                                        >CurseForge and full manager</span
-                                      ></span
-                                    >
-                                    <span class="tag tag-stage">BETA</span>
-                                    <a
-                                      class="rm-issue"
-                                      href="https://github.com/kollektiv-mc/Konnekt/issues/35"
-                                      target="_blank"
-                                      rel="noopener"
-                                      aria-label="Issue 35 on GitHub"
-                                      >#35</a
-                                    >
-                                  </div>
-                                </li>
-                              </ul>
-                            </details>
-                          </li>
-                          <li class="rm-node rm-node-folder">
-                            <details class="rm-folder">
-                              <summary class="rm-row rm-row-folder">
-                                <span class="rm-label"
-                                  ><span class="rm-name">notifications/</span></span
-                                >
-                                <span class="rm-count">2</span>
-                                <span class="rm-dots" aria-hidden="true"
-                                  ><i class="rm-dot rm-dot-alpha"></i
-                                ></span>
-                              </summary>
-                              <ul class="rm-children">
-                                <li
-                                  class="rm-node rm-node-leaf"
-                                  data-stage="alpha"
-                                  data-search="Reverse chronological and colour coded"
-                                >
-                                  <div class="rm-row rm-row-leaf">
-                                    <span class="rm-label"
-                                      ><span class="rm-name">in-app feed</span></span
-                                    >
-                                    <span class="tag tag-stage">ALPHA</span>
-                                  </div>
-                                </li>
-                                <li
-                                  class="rm-node rm-node-leaf"
-                                  data-stage="alpha"
-                                  data-search="Crashes, joins and failures at the OS level"
-                                >
-                                  <div class="rm-row rm-row-leaf">
-                                    <span class="rm-label"
-                                      ><span class="rm-name">desktop notifications</span></span
-                                    >
-                                    <span class="tag tag-stage">ALPHA</span>
-                                  </div>
-                                </li>
-                              </ul>
-                            </details>
-                          </li>
-                          <li
-                            class="rm-node rm-node-leaf"
-                            data-stage="beta"
-                            data-search="Browse and edit the server directory"
-                          >
-                            <div class="rm-row rm-row-leaf">
-                              <span class="rm-label"
-                                ><span class="rm-name">file explorer</span></span
-                              >
-                              <span class="tag tag-stage">BETA</span>
-                              <a
-                                class="rm-issue"
-                                href="https://github.com/kollektiv-mc/Konnekt/issues/33"
-                                target="_blank"
-                                rel="noopener"
-                                aria-label="Issue 33 on GitHub"
-                                >#33</a
-                              >
-                            </div>
-                          </li>
-                          <li
-                            class="rm-node rm-node-leaf"
-                            data-stage="beta"
-                            data-search="A record of what the app did, and when"
-                          >
-                            <div class="rm-row rm-row-leaf">
-                              <span class="rm-label"><span class="rm-name">audit log</span></span>
-                              <span class="tag tag-stage">BETA</span>
-                              <a
-                                class="rm-issue"
-                                href="https://github.com/kollektiv-mc/Konnekt/issues/34"
-                                target="_blank"
-                                rel="noopener"
-                                aria-label="Issue 34 on GitHub"
-                                >#34</a
-                              >
-                            </div>
-                          </li>
-                        </ul>
-                      </details>
+            <div class="explorer-body">
+              <div class="areas" role="group" aria-label="Areas">
+                <button type="button" class="area" data-area="" aria-pressed="true">
+                  <span class="area-name"
+                    ><span class="area-dot" aria-hidden="true"></span>all areas</span
+                  >
+                  <span class="area-count">80</span>
+                </button>
+                <button type="button" class="area" data-area="dashboard" aria-pressed="false">
+                  <span class="area-name"
+                    ><span class="area-dot" aria-hidden="true"></span>dashboard/</span
+                  >
+                  <span class="area-count">53</span>
+                </button>
+                <button type="button" class="area" data-area="server" aria-pressed="false">
+                  <span class="area-name"
+                    ><span class="area-dot" aria-hidden="true"></span>server/</span
+                  >
+                  <span class="area-count">7</span>
+                </button>
+                <button type="button" class="area" data-area="settings" aria-pressed="false">
+                  <span class="area-name"
+                    ><span class="area-dot" aria-hidden="true"></span>settings/</span
+                  >
+                  <span class="area-count">4</span>
+                </button>
+                <button type="button" class="area" data-area="remote access" aria-pressed="false">
+                  <span class="area-name"
+                    ><span class="area-dot" aria-hidden="true"></span>remote access/</span
+                  >
+                  <span class="area-count">6</span>
+                </button>
+                <button type="button" class="area" data-area="release" aria-pressed="false">
+                  <span class="area-name"
+                    ><span class="area-dot" aria-hidden="true"></span>release/</span
+                  >
+                  <span class="area-count">10</span>
+                </button>
+              </div>
+              <div class="rm-groups" id="rm-groups">
+                <section class="rm-group" id="rm-console" data-path="dashboard/tiles/console">
+                  <h2 class="rm-path">
+                    <span>dashboard / tiles / console /</span><span class="rm-count">4</span>
+                  </h2>
+                  <ul class="rows">
+                    <li class="row" data-stage="alpha" data-search="Server stdout as it happens">
+                      <span class="row-name">live log streaming</span>
+                      <span class="row-meta">
+                        <span class="row-stage"
+                          ><span class="marker" aria-hidden="true"></span>ALPHA</span
+                        >
+                      </span>
                     </li>
-                    <li class="rm-node rm-node-folder">
-                      <details class="rm-folder">
-                        <summary class="rm-row rm-row-folder">
-                          <span class="rm-label"><span class="rm-name">layout/</span></span>
-                          <span class="rm-count">4</span>
-                          <span class="rm-dots" aria-hidden="true"
-                            ><i class="rm-dot rm-dot-alpha"></i
-                          ></span>
-                        </summary>
-                        <ul class="rm-children">
-                          <li
-                            class="rm-node rm-node-leaf"
-                            data-stage="alpha"
-                            data-search="Tiles land on a grid"
-                          >
-                            <div class="rm-row rm-row-leaf">
-                              <span class="rm-label"
-                                ><span class="rm-name">drag, resize and snap</span></span
-                              >
-                              <span class="tag tag-stage">ALPHA</span>
-                            </div>
-                          </li>
-                          <li
-                            class="rm-node rm-node-leaf"
-                            data-stage="alpha"
-                            data-search="Park a tile without losing it"
-                          >
-                            <div class="rm-row rm-row-leaf">
-                              <span class="rm-label"><span class="rm-name">tile crate</span></span>
-                              <span class="tag tag-stage">ALPHA</span>
-                            </div>
-                          </li>
-                          <li
-                            class="rm-node rm-node-leaf"
-                            data-stage="alpha"
-                            data-search="Fill the canvas, then restore"
-                          >
-                            <div class="rm-row rm-row-leaf">
-                              <span class="rm-label"
-                                ><span class="rm-name">maximise a tile</span></span
-                              >
-                              <span class="tag tag-stage">ALPHA</span>
-                            </div>
-                          </li>
-                          <li
-                            class="rm-node rm-node-leaf"
-                            data-stage="alpha"
-                            data-search="Save, restore and delete named layouts"
-                          >
-                            <div class="rm-row rm-row-leaf">
-                              <span class="rm-label"
-                                ><span class="rm-name">layout presets</span></span
-                              >
-                              <span class="tag tag-stage">ALPHA</span>
-                            </div>
-                          </li>
-                        </ul>
-                      </details>
+                    <li
+                      class="row"
+                      data-stage="alpha"
+                      data-search="Type straight into the running server"
+                    >
+                      <span class="row-name">inline command input</span>
+                      <span class="row-meta">
+                        <span class="row-stage"
+                          ><span class="marker" aria-hidden="true"></span>ALPHA</span
+                        >
+                      </span>
+                    </li>
+                    <li
+                      class="row"
+                      data-stage="alpha"
+                      data-search="Save, list, weather, time, kick, ban"
+                    >
+                      <span class="row-name">quick commands</span>
+                      <span class="row-meta">
+                        <span class="row-stage"
+                          ><span class="marker" aria-hidden="true"></span>ALPHA</span
+                        >
+                      </span>
+                    </li>
+                    <li
+                      class="row"
+                      data-stage="alpha"
+                      data-search="Your own buttons, stored per server"
+                    >
+                      <span class="row-name">custom commands</span>
+                      <span class="row-meta">
+                        <span class="row-stage"
+                          ><span class="marker" aria-hidden="true"></span>ALPHA</span
+                        >
+                      </span>
                     </li>
                   </ul>
-                </details>
-              </li>
-              <li class="rm-node rm-node-folder">
-                <details class="rm-folder" id="rm-server">
-                  <summary class="rm-row rm-row-folder">
-                    <span class="rm-label"><span class="rm-name">server/</span></span>
-                    <span class="rm-count">7</span>
-                    <span class="rm-dots" aria-hidden="true"
-                      ><i class="rm-dot rm-dot-alpha"></i><i class="rm-dot rm-dot-beta"></i
-                      ><i class="rm-dot rm-dot-later"></i
-                    ></span>
-                  </summary>
-                  <ul class="rm-children">
+                </section>
+                <section class="rm-group" id="rm-stats" data-path="dashboard/tiles/stats">
+                  <h2 class="rm-path">
+                    <span>dashboard / tiles / stats /</span><span class="rm-count">3</span>
+                  </h2>
+                  <ul class="rows">
                     <li
-                      class="rm-node rm-node-leaf"
+                      class="row"
+                      data-stage="alpha"
+                      data-search="Running state, and how long for"
+                    >
+                      <span class="row-name">status and uptime</span>
+                      <span class="row-meta">
+                        <span class="row-stage"
+                          ><span class="marker" aria-hidden="true"></span>ALPHA</span
+                        >
+                      </span>
+                    </li>
+                    <li class="row" data-stage="alpha" data-search="Live count from the log stream">
+                      <span class="row-name">players online</span>
+                      <span class="row-meta">
+                        <span class="row-stage"
+                          ><span class="marker" aria-hidden="true"></span>ALPHA</span
+                        >
+                      </span>
+                    </li>
+                    <li
+                      class="row"
+                      data-stage="alpha"
+                      data-search="Colour banded, RCON with a log fallback"
+                    >
+                      <span class="row-name">TPS and RAM</span>
+                      <span class="row-meta">
+                        <span class="row-stage"
+                          ><span class="marker" aria-hidden="true"></span>ALPHA</span
+                        >
+                      </span>
+                    </li>
+                  </ul>
+                </section>
+                <section
+                  class="rm-group"
+                  id="rm-performance"
+                  data-path="dashboard/tiles/performance"
+                >
+                  <h2 class="rm-path">
+                    <span>dashboard / tiles / performance /</span><span class="rm-count">3</span>
+                  </h2>
+                  <ul class="rows">
+                    <li class="row" data-stage="alpha" data-search="TPS, RAM and CPU charted">
+                      <span class="row-name">1-hour history</span>
+                      <span class="row-meta">
+                        <span class="row-stage"
+                          ><span class="marker" aria-hidden="true"></span>ALPHA</span
+                        >
+                      </span>
+                    </li>
+                    <li
+                      class="row"
+                      data-stage="alpha"
+                      data-search="Sortable, with toggleable series"
+                    >
+                      <span class="row-name">summary table</span>
+                      <span class="row-meta">
+                        <span class="row-stage"
+                          ><span class="marker" aria-hidden="true"></span>ALPHA</span
+                        >
+                      </span>
+                    </li>
+                    <li
+                      class="row"
+                      data-stage="beta"
+                      data-search="Longer windows, persisted to disk"
+                    >
+                      <span class="row-name">24-hour and 7-day history</span>
+                      <span class="row-meta">
+                        <a
+                          class="row-issue"
+                          href="https://github.com/kollektiv-mc/Konnekt/issues/39"
+                          target="_blank"
+                          rel="noopener"
+                          >#39</a
+                        >
+                        <span class="row-stage"
+                          ><span class="marker" aria-hidden="true"></span>BETA</span
+                        >
+                      </span>
+                    </li>
+                  </ul>
+                </section>
+                <section class="rm-group" id="rm-players" data-path="dashboard/tiles/players">
+                  <h2 class="rm-path">
+                    <span>dashboard / tiles / players /</span><span class="rm-count">4</span>
+                  </h2>
+                  <ul class="rows">
+                    <li
+                      class="row"
+                      data-stage="alpha"
+                      data-search="Who is on, polled while the server runs"
+                    >
+                      <span class="row-name">online list</span>
+                      <span class="row-meta">
+                        <span class="row-stage"
+                          ><span class="marker" aria-hidden="true"></span>ALPHA</span
+                        >
+                      </span>
+                    </li>
+                    <li class="row" data-stage="alpha" data-search="With an optional reason">
+                      <span class="row-name">kick and ban</span>
+                      <span class="row-meta">
+                        <span class="row-stage"
+                          ><span class="marker" aria-hidden="true"></span>ALPHA</span
+                        >
+                      </span>
+                    </li>
+                    <li
+                      class="row"
+                      data-stage="beta"
+                      data-search="Playtime, history and per-player notes"
+                    >
+                      <span class="row-name">player profiles</span>
+                      <span class="row-meta">
+                        <a
+                          class="row-issue"
+                          href="https://github.com/kollektiv-mc/Konnekt/issues/36"
+                          target="_blank"
+                          rel="noopener"
+                          >#36</a
+                        >
+                        <span class="row-stage"
+                          ><span class="marker" aria-hidden="true"></span>BETA</span
+                        >
+                      </span>
+                    </li>
+                    <li
+                      class="row"
+                      data-stage="beta"
+                      data-search="The skin a player wears, rendered in 3D"
+                    >
+                      <span class="row-name">skin preview</span>
+                      <span class="row-meta">
+                        <a
+                          class="row-issue"
+                          href="https://github.com/kollektiv-mc/Konnekt/issues/37"
+                          target="_blank"
+                          rel="noopener"
+                          >#37</a
+                        >
+                        <span class="row-stage"
+                          ><span class="marker" aria-hidden="true"></span>BETA</span
+                        >
+                      </span>
+                    </li>
+                  </ul>
+                </section>
+                <section class="rm-group" id="rm-worlds" data-path="dashboard/tiles/worlds">
+                  <h2 class="rm-path">
+                    <span>dashboard / tiles / worlds /</span><span class="rm-count">5</span>
+                  </h2>
+                  <ul class="rows">
+                    <li class="row" data-stage="alpha" data-search="Every save orbiting the server">
+                      <span class="row-name">3D world browser</span>
+                      <span class="row-meta">
+                        <span class="row-stage"
+                          ><span class="marker" aria-hidden="true"></span>ALPHA</span
+                        >
+                      </span>
+                    </li>
+                    <li
+                      class="row"
+                      data-stage="alpha"
+                      data-search="Seed, size, game mode, last played"
+                    >
+                      <span class="row-name">world metadata</span>
+                      <span class="row-meta">
+                        <span class="row-stage"
+                          ><span class="marker" aria-hidden="true"></span>ALPHA</span
+                        >
+                      </span>
+                    </li>
+                    <li
+                      class="row"
+                      data-stage="alpha"
+                      data-search="With a guided restart when running"
+                    >
+                      <span class="row-name">switch active world</span>
+                      <span class="row-meta">
+                        <span class="row-stage"
+                          ><span class="marker" aria-hidden="true"></span>ALPHA</span
+                        >
+                      </span>
+                    </li>
+                    <li
+                      class="row"
+                      data-stage="alpha"
+                      data-search="Housekeeping without leaving the app"
+                    >
+                      <span class="row-name">rename, duplicate, delete</span>
+                      <span class="row-meta">
+                        <span class="row-stage"
+                          ><span class="marker" aria-hidden="true"></span>ALPHA</span
+                        >
+                      </span>
+                    </li>
+                    <li
+                      class="row"
+                      data-stage="beta"
+                      data-search="Create, list and restore from here"
+                    >
+                      <span class="row-name">per-world backups</span>
+                      <span class="row-meta">
+                        <a
+                          class="row-issue"
+                          href="https://github.com/kollektiv-mc/Konnekt/issues/23"
+                          target="_blank"
+                          rel="noopener"
+                          >#23</a
+                        >
+                        <span class="row-stage"
+                          ><span class="marker" aria-hidden="true"></span>BETA</span
+                        >
+                      </span>
+                    </li>
+                  </ul>
+                </section>
+                <section class="rm-group" id="rm-backups" data-path="dashboard/tiles/backups">
+                  <h2 class="rm-path">
+                    <span>dashboard / tiles / backups /</span><span class="rm-count">11</span>
+                  </h2>
+                  <ul class="rows">
+                    <li
+                      class="row"
+                      data-stage="alpha"
+                      data-search="Zip the server directory on demand"
+                    >
+                      <span class="row-name">manual backup</span>
+                      <span class="row-meta">
+                        <span class="row-stage"
+                          ><span class="marker" aria-hidden="true"></span>ALPHA</span
+                        >
+                      </span>
+                    </li>
+                    <li class="row" data-stage="alpha" data-search="Driven by a scheduler graph">
+                      <span class="row-name">scheduled backups</span>
+                      <span class="row-meta">
+                        <span class="row-stage"
+                          ><span class="marker" aria-hidden="true"></span>ALPHA</span
+                        >
+                      </span>
+                    </li>
+                    <li
+                      class="row"
+                      data-stage="alpha"
+                      data-search="Extract and swap, rolled back on failure"
+                    >
+                      <span class="row-name">restore</span>
+                      <span class="row-meta">
+                        <span class="row-stage"
+                          ><span class="marker" aria-hidden="true"></span>ALPHA</span
+                        >
+                      </span>
+                    </li>
+                    <li
+                      class="row"
+                      data-stage="alpha"
+                      data-search="A shared progress bar and notifications"
+                    >
+                      <span class="row-name">live progress</span>
+                      <span class="row-meta">
+                        <span class="row-stage"
+                          ><span class="marker" aria-hidden="true"></span>ALPHA</span
+                        >
+                      </span>
+                    </li>
+                    <li
+                      class="row"
+                      data-stage="beta"
+                      data-search="Include world_nether and world_the_end"
+                    >
+                      <span class="row-name">multi-dimension backup</span>
+                      <span class="row-meta">
+                        <a
+                          class="row-issue"
+                          href="https://github.com/kollektiv-mc/Konnekt/issues/26"
+                          target="_blank"
+                          rel="noopener"
+                          >#26</a
+                        >
+                        <span class="row-stage"
+                          ><span class="marker" aria-hidden="true"></span>BETA</span
+                        >
+                      </span>
+                    </li>
+                    <li
+                      class="row"
+                      data-stage="beta"
+                      data-search="Keep the last few, drop the rest"
+                    >
+                      <span class="row-name">retention and pruning</span>
+                      <span class="row-meta">
+                        <a
+                          class="row-issue"
+                          href="https://github.com/kollektiv-mc/Konnekt/issues/27"
+                          target="_blank"
+                          rel="noopener"
+                          >#27</a
+                        >
+                        <span class="row-stage"
+                          ><span class="marker" aria-hidden="true"></span>BETA</span
+                        >
+                      </span>
+                    </li>
+                    <li class="row" data-stage="beta" data-search="Stop a running backup cleanly">
+                      <span class="row-name">cancel in progress</span>
+                      <span class="row-meta">
+                        <a
+                          class="row-issue"
+                          href="https://github.com/kollektiv-mc/Konnekt/issues/28"
+                          target="_blank"
+                          rel="noopener"
+                          >#28</a
+                        >
+                        <span class="row-stage"
+                          ><span class="marker" aria-hidden="true"></span>BETA</span
+                        >
+                      </span>
+                    </li>
+                    <li class="row" data-stage="beta" data-search="One backup at a time, enforced">
+                      <span class="row-name">concurrency guard</span>
+                      <span class="row-meta">
+                        <a
+                          class="row-issue"
+                          href="https://github.com/kollektiv-mc/Konnekt/issues/29"
+                          target="_blank"
+                          rel="noopener"
+                          >#29</a
+                        >
+                        <span class="row-stage"
+                          ><span class="marker" aria-hidden="true"></span>BETA</span
+                        >
+                      </span>
+                    </li>
+                    <li
+                      class="row"
+                      data-stage="beta"
+                      data-search="Catch a corrupt zip before it lands"
+                    >
+                      <span class="row-name">restore integrity check</span>
+                      <span class="row-meta">
+                        <a
+                          class="row-issue"
+                          href="https://github.com/kollektiv-mc/Konnekt/issues/30"
+                          target="_blank"
+                          rel="noopener"
+                          >#30</a
+                        >
+                        <span class="row-stage"
+                          ><span class="marker" aria-hidden="true"></span>BETA</span
+                        >
+                      </span>
+                    </li>
+                    <li
+                      class="row"
+                      data-stage="beta"
+                      data-search="Restore a zip from somewhere else"
+                    >
+                      <span class="row-name">import an external backup</span>
+                      <span class="row-meta">
+                        <a
+                          class="row-issue"
+                          href="https://github.com/kollektiv-mc/Konnekt/issues/31"
+                          target="_blank"
+                          rel="noopener"
+                          >#31</a
+                        >
+                        <span class="row-stage"
+                          ><span class="marker" aria-hidden="true"></span>BETA</span
+                        >
+                      </span>
+                    </li>
+                    <li
+                      class="row"
+                      data-stage="beta"
+                      data-search="Per-world backups managed in one place"
+                    >
+                      <span class="row-name">world-specific segment</span>
+                      <span class="row-meta">
+                        <a
+                          class="row-issue"
+                          href="https://github.com/kollektiv-mc/Konnekt/issues/24"
+                          target="_blank"
+                          rel="noopener"
+                          >#24</a
+                        >
+                        <span class="row-stage"
+                          ><span class="marker" aria-hidden="true"></span>BETA</span
+                        >
+                      </span>
+                    </li>
+                  </ul>
+                </section>
+                <section class="rm-group" id="rm-scheduler" data-path="dashboard/tiles/scheduler">
+                  <h2 class="rm-path">
+                    <span>dashboard / tiles / scheduler /</span><span class="rm-count">4</span>
+                  </h2>
+                  <ul class="rows">
+                    <li
+                      class="row"
+                      data-stage="alpha"
+                      data-search="Drag blocks onto a canvas and wire them"
+                    >
+                      <span class="row-name">node graph editor</span>
+                      <span class="row-meta">
+                        <span class="row-stage"
+                          ><span class="marker" aria-hidden="true"></span>ALPHA</span
+                        >
+                      </span>
+                    </li>
+                    <li
+                      class="row"
+                      data-stage="alpha"
+                      data-search="Seventeen blocks, branching, live values"
+                    >
+                      <span class="row-name">triggers, conditions, actions</span>
+                      <span class="row-meta">
+                        <span class="row-stage"
+                          ><span class="marker" aria-hidden="true"></span>ALPHA</span
+                        >
+                      </span>
+                    </li>
+                    <li
+                      class="row"
+                      data-stage="alpha"
+                      data-search="What fired, and what fires next"
+                    >
+                      <span class="row-name">run history and next runs</span>
+                      <span class="row-meta">
+                        <span class="row-stage"
+                          ><span class="marker" aria-hidden="true"></span>ALPHA</span
+                        >
+                      </span>
+                    </li>
+                    <li class="row" data-stage="beta" data-search="Back up one world from a graph">
+                      <span class="row-name">world-specific backup action</span>
+                      <span class="row-meta">
+                        <a
+                          class="row-issue"
+                          href="https://github.com/kollektiv-mc/Konnekt/issues/25"
+                          target="_blank"
+                          rel="noopener"
+                          >#25</a
+                        >
+                        <span class="row-stage"
+                          ><span class="marker" aria-hidden="true"></span>BETA</span
+                        >
+                      </span>
+                    </li>
+                  </ul>
+                </section>
+                <section class="rm-group" id="rm-config" data-path="dashboard/tiles/config">
+                  <h2 class="rm-path">
+                    <span>dashboard / tiles / config /</span><span class="rm-count">6</span>
+                  </h2>
+                  <ul class="rows">
+                    <li
+                      class="row"
+                      data-stage="alpha"
+                      data-search="properties, JSON, YAML and TOML"
+                    >
+                      <span class="row-name">config file list</span>
+                      <span class="row-meta">
+                        <span class="row-stage"
+                          ><span class="marker" aria-hidden="true"></span>ALPHA</span
+                        >
+                      </span>
+                    </li>
+                    <li class="row" data-stage="alpha" data-search="Typed widgets, one per key">
+                      <span class="row-name">form editor</span>
+                      <span class="row-meta">
+                        <span class="row-stage"
+                          ><span class="marker" aria-hidden="true"></span>ALPHA</span
+                        >
+                      </span>
+                    </li>
+                    <li
+                      class="row"
+                      data-stage="alpha"
+                      data-search="Dirty tracking, save and revert"
+                    >
+                      <span class="row-name">raw text editor</span>
+                      <span class="row-meta">
+                        <span class="row-stage"
+                          ><span class="marker" aria-hidden="true"></span>ALPHA</span
+                        >
+                      </span>
+                    </li>
+                    <li
+                      class="row"
+                      data-stage="beta"
+                      data-search="Related keys collected into sections"
+                    >
+                      <span class="row-name">grouped fields</span>
+                      <span class="row-meta">
+                        <a
+                          class="row-issue"
+                          href="https://github.com/kollektiv-mc/Konnekt/issues/32"
+                          target="_blank"
+                          rel="noopener"
+                          >#32</a
+                        >
+                        <span class="row-stage"
+                          ><span class="marker" aria-hidden="true"></span>BETA</span
+                        >
+                      </span>
+                    </li>
+                    <li
+                      class="row"
+                      data-stage="beta"
+                      data-search="Gamerules as toggles, not strings"
+                    >
+                      <span class="row-name">gamerule editor</span>
+                      <span class="row-meta">
+                        <a
+                          class="row-issue"
+                          href="https://github.com/kollektiv-mc/Konnekt/issues/32"
+                          target="_blank"
+                          rel="noopener"
+                          >#32</a
+                        >
+                        <span class="row-stage"
+                          ><span class="marker" aria-hidden="true"></span>BETA</span
+                        >
+                      </span>
+                    </li>
+                    <li class="row" data-stage="beta" data-search="See the message before it ships">
+                      <span class="row-name">MOTD preview</span>
+                      <span class="row-meta">
+                        <a
+                          class="row-issue"
+                          href="https://github.com/kollektiv-mc/Konnekt/issues/32"
+                          target="_blank"
+                          rel="noopener"
+                          >#32</a
+                        >
+                        <span class="row-stage"
+                          ><span class="marker" aria-hidden="true"></span>BETA</span
+                        >
+                      </span>
+                    </li>
+                  </ul>
+                </section>
+                <section class="rm-group" id="rm-mods" data-path="dashboard/tiles/mods">
+                  <h2 class="rm-path">
+                    <span>dashboard / tiles / mods /</span><span class="rm-count">5</span>
+                  </h2>
+                  <ul class="rows">
+                    <li
+                      class="row"
+                      data-stage="alpha"
+                      data-search="Find and add without opening a browser"
+                    >
+                      <span class="row-name">Modrinth search and install</span>
+                      <span class="row-meta">
+                        <span class="row-stage"
+                          ><span class="marker" aria-hidden="true"></span>ALPHA</span
+                        >
+                      </span>
+                    </li>
+                    <li class="row" data-stage="alpha" data-search="Pulls in what a mod needs">
+                      <span class="row-name">dependency resolution</span>
+                      <span class="row-meta">
+                        <span class="row-stage"
+                          ><span class="marker" aria-hidden="true"></span>ALPHA</span
+                        >
+                      </span>
+                    </li>
+                    <li
+                      class="row"
+                      data-stage="alpha"
+                      data-search="Knows Fabric from Forge from Paper"
+                    >
+                      <span class="row-name">loader detection</span>
+                      <span class="row-meta">
+                        <span class="row-stage"
+                          ><span class="marker" aria-hidden="true"></span>ALPHA</span
+                        >
+                      </span>
+                    </li>
+                    <li
+                      class="row"
+                      data-stage="alpha"
+                      data-search="Read what changed before updating"
+                    >
+                      <span class="row-name">inline changelogs</span>
+                      <span class="row-meta">
+                        <span class="row-stage"
+                          ><span class="marker" aria-hidden="true"></span>ALPHA</span
+                        >
+                      </span>
+                    </li>
+                    <li
+                      class="row"
+                      data-stage="beta"
+                      data-search="A second source, and update management"
+                    >
+                      <span class="row-name">CurseForge and full manager</span>
+                      <span class="row-meta">
+                        <a
+                          class="row-issue"
+                          href="https://github.com/kollektiv-mc/Konnekt/issues/35"
+                          target="_blank"
+                          rel="noopener"
+                          >#35</a
+                        >
+                        <span class="row-stage"
+                          ><span class="marker" aria-hidden="true"></span>BETA</span
+                        >
+                      </span>
+                    </li>
+                  </ul>
+                </section>
+                <section
+                  class="rm-group"
+                  id="rm-notifications"
+                  data-path="dashboard/tiles/notifications"
+                >
+                  <h2 class="rm-path">
+                    <span>dashboard / tiles / notifications /</span><span class="rm-count">2</span>
+                  </h2>
+                  <ul class="rows">
+                    <li
+                      class="row"
+                      data-stage="alpha"
+                      data-search="Reverse chronological and colour coded"
+                    >
+                      <span class="row-name">in-app feed</span>
+                      <span class="row-meta">
+                        <span class="row-stage"
+                          ><span class="marker" aria-hidden="true"></span>ALPHA</span
+                        >
+                      </span>
+                    </li>
+                    <li
+                      class="row"
+                      data-stage="alpha"
+                      data-search="Crashes, joins and failures at the OS level"
+                    >
+                      <span class="row-name">desktop notifications</span>
+                      <span class="row-meta">
+                        <span class="row-stage"
+                          ><span class="marker" aria-hidden="true"></span>ALPHA</span
+                        >
+                      </span>
+                    </li>
+                  </ul>
+                </section>
+                <section class="rm-group" id="rm-tiles" data-path="dashboard/tiles">
+                  <h2 class="rm-path">
+                    <span>dashboard / tiles /</span><span class="rm-count">2</span>
+                  </h2>
+                  <ul class="rows">
+                    <li
+                      class="row"
+                      data-stage="beta"
+                      data-search="Browse and edit the server directory"
+                    >
+                      <span class="row-name">file explorer</span>
+                      <span class="row-meta">
+                        <a
+                          class="row-issue"
+                          href="https://github.com/kollektiv-mc/Konnekt/issues/33"
+                          target="_blank"
+                          rel="noopener"
+                          >#33</a
+                        >
+                        <span class="row-stage"
+                          ><span class="marker" aria-hidden="true"></span>BETA</span
+                        >
+                      </span>
+                    </li>
+                    <li
+                      class="row"
+                      data-stage="beta"
+                      data-search="A record of what the app did, and when"
+                    >
+                      <span class="row-name">audit log</span>
+                      <span class="row-meta">
+                        <a
+                          class="row-issue"
+                          href="https://github.com/kollektiv-mc/Konnekt/issues/34"
+                          target="_blank"
+                          rel="noopener"
+                          >#34</a
+                        >
+                        <span class="row-stage"
+                          ><span class="marker" aria-hidden="true"></span>BETA</span
+                        >
+                      </span>
+                    </li>
+                  </ul>
+                </section>
+                <section class="rm-group" id="rm-layout" data-path="dashboard/layout">
+                  <h2 class="rm-path">
+                    <span>dashboard / layout /</span><span class="rm-count">4</span>
+                  </h2>
+                  <ul class="rows">
+                    <li class="row" data-stage="alpha" data-search="Tiles land on a grid">
+                      <span class="row-name">drag, resize and snap</span>
+                      <span class="row-meta">
+                        <span class="row-stage"
+                          ><span class="marker" aria-hidden="true"></span>ALPHA</span
+                        >
+                      </span>
+                    </li>
+                    <li class="row" data-stage="alpha" data-search="Park a tile without losing it">
+                      <span class="row-name">tile crate</span>
+                      <span class="row-meta">
+                        <span class="row-stage"
+                          ><span class="marker" aria-hidden="true"></span>ALPHA</span
+                        >
+                      </span>
+                    </li>
+                    <li class="row" data-stage="alpha" data-search="Fill the canvas, then restore">
+                      <span class="row-name">maximise a tile</span>
+                      <span class="row-meta">
+                        <span class="row-stage"
+                          ><span class="marker" aria-hidden="true"></span>ALPHA</span
+                        >
+                      </span>
+                    </li>
+                    <li
+                      class="row"
+                      data-stage="alpha"
+                      data-search="Save, restore and delete named layouts"
+                    >
+                      <span class="row-name">layout presets</span>
+                      <span class="row-meta">
+                        <span class="row-stage"
+                          ><span class="marker" aria-hidden="true"></span>ALPHA</span
+                        >
+                      </span>
+                    </li>
+                  </ul>
+                </section>
+                <section class="rm-group" id="rm-server" data-path="server">
+                  <h2 class="rm-path"><span>server /</span><span class="rm-count">7</span></h2>
+                  <ul class="rows">
+                    <li
+                      class="row"
                       data-stage="alpha"
                       data-search="Spawns Java, and shuts it down cleanly"
                     >
-                      <div class="rm-row rm-row-leaf">
-                        <span class="rm-label"
-                          ><span class="rm-name">start, stop, restart</span></span
+                      <span class="row-name">start, stop, restart</span>
+                      <span class="row-meta">
+                        <span class="row-stage"
+                          ><span class="marker" aria-hidden="true"></span>ALPHA</span
                         >
-                        <span class="tag tag-stage">ALPHA</span>
-                      </div>
+                      </span>
                     </li>
                     <li
-                      class="rm-node rm-node-leaf"
+                      class="row"
                       data-stage="alpha"
                       data-search="Jar, JVM arguments and directory each"
                     >
-                      <div class="rm-row rm-row-leaf">
-                        <span class="rm-label"
-                          ><span class="rm-name">multiple server configs</span></span
+                      <span class="row-name">multiple server configs</span>
+                      <span class="row-meta">
+                        <span class="row-stage"
+                          ><span class="marker" aria-hidden="true"></span>ALPHA</span
                         >
-                        <span class="tag tag-stage">ALPHA</span>
-                      </div>
+                      </span>
                     </li>
                     <li
-                      class="rm-node rm-node-leaf"
+                      class="row"
                       data-stage="alpha"
                       data-search="Detects it, accepts it, restarts"
                     >
-                      <div class="rm-row rm-row-leaf">
-                        <span class="rm-label"><span class="rm-name">EULA flow</span></span>
-                        <span class="tag tag-stage">ALPHA</span>
-                      </div>
+                      <span class="row-name">EULA flow</span>
+                      <span class="row-meta">
+                        <span class="row-stage"
+                          ><span class="marker" aria-hidden="true"></span>ALPHA</span
+                        >
+                      </span>
                     </li>
                     <li
-                      class="rm-node rm-node-leaf"
+                      class="row"
                       data-stage="beta"
                       data-search="Enabled and configured on first run"
                     >
-                      <div class="rm-row rm-row-leaf">
-                        <span class="rm-label"
-                          ><span class="rm-name">RCON set up for you</span></span
-                        >
-                        <span class="tag tag-stage">BETA</span>
+                      <span class="row-name">RCON set up for you</span>
+                      <span class="row-meta">
                         <a
-                          class="rm-issue"
+                          class="row-issue"
                           href="https://github.com/kollektiv-mc/Konnekt/issues/99"
                           target="_blank"
                           rel="noopener"
-                          aria-label="Issue 99 on GitHub"
                           >#99</a
                         >
-                      </div>
+                        <span class="row-stage"
+                          ><span class="marker" aria-hidden="true"></span>BETA</span
+                        >
+                      </span>
                     </li>
                     <li
-                      class="rm-node rm-node-leaf"
+                      class="row"
                       data-stage="beta"
                       data-search="Every tile follows the active server"
                     >
-                      <div class="rm-row rm-row-leaf">
-                        <span class="rm-label"
-                          ><span class="rm-name">server switching everywhere</span></span
+                      <span class="row-name">server switching everywhere</span>
+                      <span class="row-meta">
+                        <span class="row-stage"
+                          ><span class="marker" aria-hidden="true"></span>BETA</span
                         >
-                        <span class="tag tag-stage">BETA</span>
-                      </div>
+                      </span>
                     </li>
-                    <li
-                      class="rm-node rm-node-leaf"
-                      data-stage="beta"
-                      data-search="A playit.gg tunnel, for friends"
-                    >
-                      <div class="rm-row rm-row-leaf">
-                        <span class="rm-label"><span class="rm-name">public server IP</span></span>
-                        <span class="tag tag-stage">BETA</span>
+                    <li class="row" data-stage="beta" data-search="A playit.gg tunnel, for friends">
+                      <span class="row-name">public server IP</span>
+                      <span class="row-meta">
                         <a
-                          class="rm-issue"
+                          class="row-issue"
                           href="https://github.com/kollektiv-mc/Konnekt/issues/38"
                           target="_blank"
                           rel="noopener"
-                          aria-label="Issue 38 on GitHub"
                           >#38</a
                         >
-                      </div>
-                    </li>
-                    <li
-                      class="rm-node rm-node-leaf"
-                      data-stage="later"
-                      data-search="More than one at a time"
-                    >
-                      <div class="rm-row rm-row-leaf">
-                        <span class="rm-label"
-                          ><span class="rm-name">run servers concurrently</span></span
+                        <span class="row-stage"
+                          ><span class="marker" aria-hidden="true"></span>BETA</span
                         >
-                        <span class="tag tag-stage">LATER</span>
+                      </span>
+                    </li>
+                    <li class="row" data-stage="later" data-search="More than one at a time">
+                      <span class="row-name">run servers concurrently</span>
+                      <span class="row-meta">
                         <a
-                          class="rm-issue"
+                          class="row-issue"
                           href="https://github.com/kollektiv-mc/Konnekt/issues/57"
                           target="_blank"
                           rel="noopener"
-                          aria-label="Issue 57 on GitHub"
                           >#57</a
                         >
-                      </div>
+                        <span class="row-stage"
+                          ><span class="marker" aria-hidden="true"></span>LATER</span
+                        >
+                      </span>
                     </li>
                   </ul>
-                </details>
-              </li>
-              <li class="rm-node rm-node-folder">
-                <details class="rm-folder" id="rm-settings">
-                  <summary class="rm-row rm-row-folder">
-                    <span class="rm-label"><span class="rm-name">settings/</span></span>
-                    <span class="rm-count">4</span>
-                    <span class="rm-dots" aria-hidden="true"
-                      ><i class="rm-dot rm-dot-alpha"></i><i class="rm-dot rm-dot-beta"></i
-                    ></span>
-                  </summary>
-                  <ul class="rm-children">
-                    <li
-                      class="rm-node rm-node-leaf"
-                      data-stage="alpha"
-                      data-search="Skin the whole dashboard"
-                    >
-                      <div class="rm-row rm-row-leaf">
-                        <span class="rm-label"><span class="rm-name">theme</span></span>
-                        <span class="tag tag-stage">ALPHA</span>
-                      </div>
+                </section>
+                <section class="rm-group" id="rm-settings" data-path="settings">
+                  <h2 class="rm-path"><span>settings /</span><span class="rm-count">4</span></h2>
+                  <ul class="rows">
+                    <li class="row" data-stage="alpha" data-search="Skin the whole dashboard">
+                      <span class="row-name">theme</span>
+                      <span class="row-meta">
+                        <span class="row-stage"
+                          ><span class="marker" aria-hidden="true"></span>ALPHA</span
+                        >
+                      </span>
                     </li>
                     <li
-                      class="rm-node rm-node-leaf"
+                      class="row"
                       data-stage="alpha"
                       data-search="Choose what is allowed to interrupt you"
                     >
-                      <div class="rm-row rm-row-leaf">
-                        <span class="rm-label"
-                          ><span class="rm-name">notification toggles</span></span
+                      <span class="row-name">notification toggles</span>
+                      <span class="row-meta">
+                        <span class="row-stage"
+                          ><span class="marker" aria-hidden="true"></span>ALPHA</span
                         >
-                        <span class="tag tag-stage">ALPHA</span>
-                      </div>
+                      </span>
                     </li>
                     <li
-                      class="rm-node rm-node-leaf"
+                      class="row"
                       data-stage="beta"
                       data-search="Rebind keys, stored with your settings"
                     >
-                      <div class="rm-row rm-row-leaf">
-                        <span class="rm-label"
-                          ><span class="rm-name">configurable shortcuts</span></span
-                        >
-                        <span class="tag tag-stage">BETA</span>
+                      <span class="row-name">configurable shortcuts</span>
+                      <span class="row-meta">
                         <a
-                          class="rm-issue"
+                          class="row-issue"
                           href="https://github.com/kollektiv-mc/Konnekt/issues/41"
                           target="_blank"
                           rel="noopener"
-                          aria-label="Issue 41 on GitHub"
                           >#41</a
                         >
-                      </div>
+                        <span class="row-stage"
+                          ><span class="marker" aria-hidden="true"></span>BETA</span
+                        >
+                      </span>
                     </li>
                     <li
-                      class="rm-node rm-node-leaf"
+                      class="row"
                       data-stage="beta"
                       data-search="Defaults every new server inherits"
                     >
-                      <div class="rm-row rm-row-leaf">
-                        <span class="rm-label"
-                          ><span class="rm-name">global JVM defaults</span></span
-                        >
-                        <span class="tag tag-stage">BETA</span>
+                      <span class="row-name">global JVM defaults</span>
+                      <span class="row-meta">
                         <a
-                          class="rm-issue"
+                          class="row-issue"
                           href="https://github.com/kollektiv-mc/Konnekt/issues/42"
                           target="_blank"
                           rel="noopener"
-                          aria-label="Issue 42 on GitHub"
                           >#42</a
                         >
-                      </div>
+                        <span class="row-stage"
+                          ><span class="marker" aria-hidden="true"></span>BETA</span
+                        >
+                      </span>
                     </li>
                   </ul>
-                </details>
-              </li>
-              <li class="rm-node rm-node-folder">
-                <details class="rm-folder" id="rm-remote-access">
-                  <summary class="rm-row rm-row-folder">
-                    <span class="rm-label"><span class="rm-name">remote access/</span></span>
-                    <span class="rm-count">6</span>
-                    <span class="rm-dots" aria-hidden="true"
-                      ><i class="rm-dot rm-dot-alpha"></i><i class="rm-dot rm-dot-later"></i
-                    ></span>
-                  </summary>
-                  <ul class="rm-children">
+                </section>
+                <section class="rm-group" id="rm-remote-access" data-path="remote access">
+                  <h2 class="rm-path">
+                    <span>remote access /</span><span class="rm-count">6</span>
+                  </h2>
+                  <ul class="rows">
                     <li
-                      class="rm-node rm-node-leaf"
+                      class="row"
                       data-stage="alpha"
                       data-search="One emit path, ready to fan out"
                     >
-                      <div class="rm-row rm-row-leaf">
-                        <span class="rm-label"
-                          ><span class="rm-name">event hub groundwork</span></span
+                      <span class="row-name">event hub groundwork</span>
+                      <span class="row-meta">
+                        <span class="row-stage"
+                          ><span class="marker" aria-hidden="true"></span>ALPHA</span
                         >
-                        <span class="tag tag-stage">ALPHA</span>
-                      </div>
+                      </span>
                     </li>
                     <li
-                      class="rm-node rm-node-leaf"
+                      class="row"
                       data-stage="later"
                       data-search="An HTTP and WebSocket server in the app"
                     >
-                      <div class="rm-row rm-row-leaf">
-                        <span class="rm-label"><span class="rm-name">remote service</span></span>
-                        <span class="tag tag-stage">LATER</span>
+                      <span class="row-name">remote service</span>
+                      <span class="row-meta">
                         <a
-                          class="rm-issue"
+                          class="row-issue"
                           href="https://github.com/kollektiv-mc/Konnekt/issues/43"
                           target="_blank"
                           rel="noopener"
-                          aria-label="Issue 43 on GitHub"
                           >#43</a
                         >
-                      </div>
+                        <span class="row-stage"
+                          ><span class="marker" aria-hidden="true"></span>LATER</span
+                        >
+                      </span>
                     </li>
                     <li
-                      class="rm-node rm-node-leaf"
+                      class="row"
                       data-stage="later"
                       data-search="Tiles run remotely with no changes"
                     >
-                      <div class="rm-row rm-row-leaf">
-                        <span class="rm-label"
-                          ><span class="rm-name">browser runtime shim</span></span
-                        >
-                        <span class="tag tag-stage">LATER</span>
+                      <span class="row-name">browser runtime shim</span>
+                      <span class="row-meta">
                         <a
-                          class="rm-issue"
+                          class="row-issue"
                           href="https://github.com/kollektiv-mc/Konnekt/issues/44"
                           target="_blank"
                           rel="noopener"
-                          aria-label="Issue 44 on GitHub"
                           >#44</a
                         >
-                      </div>
+                        <span class="row-stage"
+                          ><span class="marker" aria-hidden="true"></span>LATER</span
+                        >
+                      </span>
                     </li>
                     <li
-                      class="rm-node rm-node-leaf"
+                      class="row"
                       data-stage="later"
                       data-search="One password, then session tokens"
                     >
-                      <div class="rm-row rm-row-leaf">
-                        <span class="rm-label"
-                          ><span class="rm-name">password and token auth</span></span
-                        >
-                        <span class="tag tag-stage">LATER</span>
+                      <span class="row-name">password and token auth</span>
+                      <span class="row-meta">
                         <a
-                          class="rm-issue"
+                          class="row-issue"
                           href="https://github.com/kollektiv-mc/Konnekt/issues/45"
                           target="_blank"
                           rel="noopener"
-                          aria-label="Issue 45 on GitHub"
                           >#45</a
                         >
-                      </div>
+                        <span class="row-stage"
+                          ><span class="marker" aria-hidden="true"></span>LATER</span
+                        >
+                      </span>
                     </li>
                     <li
-                      class="rm-node rm-node-leaf"
+                      class="row"
                       data-stage="later"
                       data-search="cloudflared, with no configuration"
                     >
-                      <div class="rm-row rm-row-leaf">
-                        <span class="rm-label"><span class="rm-name">tunnel transport</span></span>
-                        <span class="tag tag-stage">LATER</span>
+                      <span class="row-name">tunnel transport</span>
+                      <span class="row-meta">
                         <a
-                          class="rm-issue"
+                          class="row-issue"
                           href="https://github.com/kollektiv-mc/Konnekt/issues/46"
                           target="_blank"
                           rel="noopener"
-                          aria-label="Issue 46 on GitHub"
                           >#46</a
                         >
-                      </div>
+                        <span class="row-stage"
+                          ><span class="marker" aria-hidden="true"></span>LATER</span
+                        >
+                      </span>
                     </li>
                     <li
-                      class="rm-node rm-node-leaf"
+                      class="row"
                       data-stage="later"
                       data-search="File pickers and downloads, remotely"
                     >
-                      <div class="rm-row rm-row-leaf">
-                        <span class="rm-label"
-                          ><span class="rm-name">remote-mode adaptations</span></span
-                        >
-                        <span class="tag tag-stage">LATER</span>
+                      <span class="row-name">remote-mode adaptations</span>
+                      <span class="row-meta">
                         <a
-                          class="rm-issue"
+                          class="row-issue"
                           href="https://github.com/kollektiv-mc/Konnekt/issues/47"
                           target="_blank"
                           rel="noopener"
-                          aria-label="Issue 47 on GitHub"
                           >#47</a
                         >
-                      </div>
+                        <span class="row-stage"
+                          ><span class="marker" aria-hidden="true"></span>LATER</span
+                        >
+                      </span>
                     </li>
                   </ul>
-                </details>
-              </li>
-              <li class="rm-node rm-node-folder">
-                <details class="rm-folder" id="rm-release">
-                  <summary class="rm-row rm-row-folder">
-                    <span class="rm-label"><span class="rm-name">release/</span></span>
-                    <span class="rm-count">10</span>
-                    <span class="rm-dots" aria-hidden="true"
-                      ><i class="rm-dot rm-dot-alpha"></i><i class="rm-dot rm-dot-beta"></i
-                      ><i class="rm-dot rm-dot-release"></i
-                    ></span>
-                  </summary>
-                  <ul class="rm-children">
+                </section>
+                <section class="rm-group" id="rm-release" data-path="release">
+                  <h2 class="rm-path"><span>release /</span><span class="rm-count">10</span></h2>
+                  <ul class="rows">
                     <li
-                      class="rm-node rm-node-leaf"
+                      class="row"
                       data-stage="alpha"
                       data-search="One native binary each, per tag"
                     >
-                      <div class="rm-row rm-row-leaf">
-                        <span class="rm-label"
-                          ><span class="rm-name">windows and linux builds</span></span
+                      <span class="row-name">windows and linux builds</span>
+                      <span class="row-meta">
+                        <span class="row-stage"
+                          ><span class="marker" aria-hidden="true"></span>ALPHA</span
                         >
-                        <span class="tag tag-stage">ALPHA</span>
-                      </div>
+                      </span>
                     </li>
                     <li
-                      class="rm-node rm-node-leaf"
+                      class="row"
                       data-stage="alpha"
                       data-search="Checksum verified, rolls back on failure"
                     >
-                      <div class="rm-row rm-row-leaf">
-                        <span class="rm-label"><span class="rm-name">in-app updater</span></span>
-                        <span class="tag tag-stage">ALPHA</span>
-                      </div>
-                    </li>
-                    <li
-                      class="rm-node rm-node-leaf"
-                      data-stage="alpha"
-                      data-search="Alongside the bare executables"
-                    >
-                      <div class="rm-row rm-row-leaf">
-                        <span class="rm-label"><span class="rm-name">rpm package</span></span>
-                        <span class="tag tag-stage">ALPHA</span>
-                      </div>
-                    </li>
-                    <li
-                      class="rm-node rm-node-leaf"
-                      data-stage="beta"
-                      data-search="No warning on a first launch"
-                    >
-                      <div class="rm-row rm-row-leaf">
-                        <span class="rm-label"
-                          ><span class="rm-name">signed and notarised builds</span></span
+                      <span class="row-name">in-app updater</span>
+                      <span class="row-meta">
+                        <span class="row-stage"
+                          ><span class="marker" aria-hidden="true"></span>ALPHA</span
                         >
-                        <span class="tag tag-stage">BETA</span>
-                      </div>
+                      </span>
                     </li>
-                    <li
-                      class="rm-node rm-node-leaf"
-                      data-stage="release"
-                      data-search="Builds from source today"
-                    >
-                      <div class="rm-row rm-row-leaf">
-                        <span class="rm-label"
-                          ><span class="rm-name">published macOS builds</span></span
+                    <li class="row" data-stage="alpha" data-search="Alongside the bare executables">
+                      <span class="row-name">rpm package</span>
+                      <span class="row-meta">
+                        <span class="row-stage"
+                          ><span class="marker" aria-hidden="true"></span>ALPHA</span
                         >
-                        <span class="tag tag-stage">RELEASE</span>
-                      </div>
+                      </span>
+                    </li>
+                    <li class="row" data-stage="beta" data-search="No warning on a first launch">
+                      <span class="row-name">signed and notarised builds</span>
+                      <span class="row-meta">
+                        <span class="row-stage"
+                          ><span class="marker" aria-hidden="true"></span>BETA</span
+                        >
+                      </span>
+                    </li>
+                    <li class="row" data-stage="release" data-search="Builds from source today">
+                      <span class="row-name">published macOS builds</span>
+                      <span class="row-meta">
+                        <span class="row-stage"
+                          ><span class="marker" aria-hidden="true"></span>RELEASE</span
+                        >
+                      </span>
                     </li>
                     <li
-                      class="rm-node rm-node-leaf"
+                      class="row"
                       data-stage="release"
                       data-search="Rather than a bare executable"
                     >
-                      <div class="rm-row rm-row-leaf">
-                        <span class="rm-label"><span class="rm-name">windows installer</span></span>
-                        <span class="tag tag-stage">RELEASE</span>
-                      </div>
+                      <span class="row-name">windows installer</span>
+                      <span class="row-meta">
+                        <span class="row-stage"
+                          ><span class="marker" aria-hidden="true"></span>RELEASE</span
+                        >
+                      </span>
+                    </li>
+                    <li class="row" data-stage="release" data-search="A .deb beside the .rpm">
+                      <span class="row-name">debian package</span>
+                      <span class="row-meta">
+                        <span class="row-stage"
+                          ><span class="marker" aria-hidden="true"></span>RELEASE</span
+                        >
+                      </span>
                     </li>
                     <li
-                      class="rm-node rm-node-leaf"
-                      data-stage="release"
-                      data-search="A .deb beside the .rpm"
-                    >
-                      <div class="rm-row rm-row-leaf">
-                        <span class="rm-label"><span class="rm-name">debian package</span></span>
-                        <span class="tag tag-stage">RELEASE</span>
-                      </div>
-                    </li>
-                    <li
-                      class="rm-node rm-node-leaf"
+                      class="row"
                       data-stage="release"
                       data-search="Migrations, so settings survive updates"
                     >
-                      <div class="rm-row rm-row-leaf">
-                        <span class="rm-label"
-                          ><span class="rm-name">versioned on-disk state</span></span
+                      <span class="row-name">versioned on-disk state</span>
+                      <span class="row-meta">
+                        <span class="row-stage"
+                          ><span class="marker" aria-hidden="true"></span>RELEASE</span
                         >
-                        <span class="tag tag-stage">RELEASE</span>
-                      </div>
+                      </span>
                     </li>
                     <li
-                      class="rm-node rm-node-leaf"
+                      class="row"
                       data-stage="release"
                       data-search="On backups, restores, worlds and config"
                     >
-                      <div class="rm-row rm-row-leaf">
-                        <span class="rm-label"
-                          ><span class="rm-name">data-loss test coverage</span></span
+                      <span class="row-name">data-loss test coverage</span>
+                      <span class="row-meta">
+                        <span class="row-stage"
+                          ><span class="marker" aria-hidden="true"></span>RELEASE</span
                         >
-                        <span class="tag tag-stage">RELEASE</span>
-                      </div>
+                      </span>
                     </li>
                     <li
-                      class="rm-node rm-node-leaf"
+                      class="row"
                       data-stage="release"
                       data-search="The current docs stop after getting started"
                     >
-                      <div class="rm-row rm-row-leaf">
-                        <span class="rm-label"
-                          ><span class="rm-name">docs for every tile</span></span
+                      <span class="row-name">docs for every tile</span>
+                      <span class="row-meta">
+                        <span class="row-stage"
+                          ><span class="marker" aria-hidden="true"></span>RELEASE</span
                         >
-                        <span class="tag tag-stage">RELEASE</span>
-                      </div>
+                      </span>
                     </li>
                   </ul>
-                </details>
-              </li>
-            </ul>
-
-            <p class="rm-empty is-hidden" id="rm-empty">Nothing here matches that.</p>
+                </section>
+                <p class="rm-empty" id="rm-empty" hidden>
+                  Nothing matches. Try another word, or clear the filters.
+                </p>
+              </div>
+            </div>
           </section>
-
-          <p class="rm-note">
-            Bugs found in daily use are fixed as they surface rather than listed here. Everything
-            with a number links to its
-            <a href="https://github.com/kollektiv-mc/Konnekt/issues" target="_blank" rel="noopener"
-              >issue on GitHub</a
-            >, which is where the detail lives.
-          </p>
-        </div>
+        </main>
       </div>
-    </main>
 
-    <!-- Canonical footer. Identical on every page. -->
-    <footer>
-      <div class="container">
-        <div class="disclaimer">
-          <span class="disclaimer-badge">NOTE</span>
-          <p>
-            Alpha software. A side project mostly written by Claude.
-            <a href="/docs.html#disclaimer">Full statement</a>.
-          </p>
-        </div>
-        <div class="footer-inner">
-          <div class="footer-left">
-            <span class="wordmark" style="font-size: 15px">Konnekt</span>
-            <span class="brand-tag">ALPHA</span>
-          </div>
-          <div class="footer-links">
-            <a href="https://github.com/kollektiv-mc/Konnekt" target="_blank" rel="noopener"
-              >GitHub</a
+      <!-- Canonical footer. Byte-identical on every page. -->
+      <footer class="block block-raised snap-end">
+        <div class="footer-cols">
+          <div class="footer-about">
+            <a class="footer-brand" href="/index.html"
+              ><img
+                class="mark"
+                src="/assets/img/mark-24.svg"
+                width="24"
+                height="24"
+                alt=""
+              />Konnekt</a
             >
+            <p>A desktop dashboard for the Minecraft servers you host.</p>
+            <span class="meta"><span data-release-tag></span>Windows and Linux</span>
+          </div>
+          <nav class="footer-col" aria-label="Product">
+            <span class="label">Product</span>
+            <a href="/download.html">Download</a>
+            <a href="https://konnekt-demo.pages.dev/" target="_blank" rel="noopener"
+              >Try the demo</a
+            >
+            <a href="/changelog.html">Changelog</a>
+          </nav>
+          <nav class="footer-col" aria-label="Learn">
+            <span class="label">Learn</span>
             <a href="/index.html#features">Features</a>
             <a href="/docs.html">Docs</a>
             <a href="/roadmap.html">Roadmap</a>
-            <a href="/download.html">Download</a>
-            <a href="/changelog.html">Changelog</a>
-          </div>
-          <span class="footer-copy">&copy; 2026 Konnekt</span>
+          </nav>
+          <nav class="footer-col" aria-label="Source">
+            <span class="label">Source</span>
+            <a href="https://github.com/kollektiv-mc/Konnekt" target="_blank" rel="noopener"
+              >GitHub</a
+            >
+            <a href="https://github.com/kollektiv-mc/Konnekt/issues" target="_blank" rel="noopener"
+              >Issues</a
+            >
+            <a
+              href="https://github.com/kollektiv-mc/Konnekt/blob/main/LICENSE"
+              target="_blank"
+              rel="noopener"
+              >Licence, CC0</a
+            >
+          </nav>
         </div>
-      </div>
-    </footer>
+        <div class="footer-base">
+          <span
+            >Alpha software. A side project mostly written by Claude.
+            <a href="/docs.html#disclaimer">Full statement</a></span
+          >
+          <span>&copy; 2026 Konnekt</span>
+        </div>
+      </footer>
+    </div>
 
-    <script src="/main.js"></script>
     <script src="/release.js"></script>
+    <script src="/site.js"></script>
     <script src="/roadmap.js"></script>
   </body>
 </html>
