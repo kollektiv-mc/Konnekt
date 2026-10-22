@@ -38,10 +38,7 @@ const dhBlockGroup = "Distant Horizons"
 func registerDHSnapshotBlock(r *BlockRegistry) {
 	must(r.RegisterBlock(models.BlockDef{
 		ID: dhSnapshotBlockID, Category: "action", Group: dhBlockGroup, Label: "DH Snapshot",
-		Description: "Stops the server to copy its Distant Horizons data into a staged snapshot, then starts it again. " +
-			"Players are warned first, over RCON or the console. A server that is already stopped is copied as it is " +
-			"and left stopped. Only the parts that changed since the last snapshot " +
-			"are staged, and the staged folder wires into Upload to Bucket.",
+		Description:   "Stages a snapshot of the server's Distant Horizons data, restarting a running server for the copy.",
 		ControlInputs: []string{"trigger"}, ControlOutputs: []string{"onComplete", "onFailed"},
 		DataOutputs: []models.DataPort{
 			{ID: "folder", Label: "Staged folder", Type: "string"},

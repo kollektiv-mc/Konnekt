@@ -198,7 +198,7 @@ func registerBuiltins(r *BlockRegistry) {
 
 	must(r.RegisterBlock(models.BlockDef{
 		ID: "data.writeAttribute", Category: "data", Label: "Write Attribute",
-		Description:   "Writes a server attribute (e.g. @server.motd) or defines a custom in-flow attribute (@myvalue). Value may be an expression like @{ @players.count * 2 }.",
+		Description:   "Writes a server attribute such as @server.motd, or a custom attribute for the blocks after it.",
 		ControlInputs: []string{"trigger"}, ControlOutputs: []string{"onComplete", "onFailed"},
 		DataInputs: []models.DataPort{{ID: "value", Label: "Value", Type: "string"}},
 		ConfigSchema: []models.ConfigField{
@@ -276,9 +276,7 @@ func registerBuiltins(r *BlockRegistry) {
 
 	must(r.RegisterBlock(models.BlockDef{
 		ID: "control.condition", Category: "control", Label: "Condition",
-		Description: "Branches based on a comparison. Two values that are both " +
-			"numbers compare numerically, so 9 is less than 10; anything else " +
-			"compares as text. \"contains\" always compares as text.",
+		Description:   "Branches on a comparison, as numbers when both values are numbers and as text otherwise.",
 		ControlInputs: []string{"trigger"}, ControlOutputs: []string{"onTrue", "onFalse"},
 		DataInputs: []models.DataPort{
 			{ID: "left", Label: "A", Type: "string"},
