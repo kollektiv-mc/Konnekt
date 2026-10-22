@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Docs template, settings reference</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&amp;family=Geist+Mono:wght@400;500&amp;display=swap">
+<style>
+body{margin:0;background:#05060a}
+a{color:#ffffff;text-decoration:none}a:hover{color:#4ade80}
+.krow{transition:background 150ms ease}
+p,span,div,a{text-wrap:pretty}h1,h2{text-wrap:balance}.krow:hover{background:rgba(255,255,255,0.04)}
+
+</style>
+</helmet>
+<div style="background: #05060a; color: #ffffff; font-family: 'Geist', system-ui, sans-serif; min-height: 100vh; padding: 16px clamp(12px, 2vw, 24px) 24px">
+<div style="max-width: 1280px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px">
+
+<nav style="display: flex; flex-wrap: wrap; align-items: stretch; border: 1px solid rgba(255,255,255,0.06); background: rgba(255,255,255,0.025)">
+<a href="Home.dc.html" style="display: flex; align-items: center; gap: 10px; padding: 0 32px; min-height: 72px; border-right: 1px solid rgba(255,255,255,0.06); font-weight: 600; font-size: 20px; letter-spacing: -0.02em; color: #ffffff">
+<svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true"><defs><mask id="k-nav-behind" maskUnits="userSpaceOnUse" x="0" y="0" width="24" height="24"><rect width="24" height="24" fill="#fff"/><polygon points="12,4.47 17.62,7.71 17.62,14.2 12,17.45 6.38,14.2 6.38,7.71" fill="#000" stroke="#000" stroke-width="3" stroke-linejoin="round"/></mask><mask id="k-nav-cube" maskUnits="userSpaceOnUse" x="0" y="0" width="24" height="24"><rect width="24" height="24" fill="#fff"/><path d="M2.9126 13.537A9.1533 5.2814 0 0 0 21.0874 13.537" stroke="#000" stroke-width="5.7" fill="none"/></mask></defs><ellipse cx="12.0000" cy="12.9047" rx="9.1533" ry="5.2814" fill="none" stroke="#4ade80" stroke-width="2.7" mask="url(#k-nav-behind)"/><g mask="url(#k-nav-cube)"><polygon points="12,4.47 17.62,7.71 17.62,14.2 12,17.45 6.38,14.2 6.38,7.71" fill="#22c55e"/><polygon points="12,4.47 17.62,7.71 12,10.96 6.38,7.71" fill="#4ade80"/><polygon points="6.38,7.71 12,10.96 12,17.45 6.38,14.2" fill="#22c55e"/><polygon points="12,10.96 17.62,7.71 17.62,14.2 12,17.45" fill="#16a34a"/></g><path d="M2.876 12.4827A9.1533 5.2814 0 1 0 21.124 12.4827" fill="none" stroke="#4ade80" stroke-width="2.7"/></svg>
+Konnekt</a>
+<div style="display: flex; flex-wrap: wrap; align-items: center; gap: 28px; padding: 0 32px; flex: 1 1 360px; min-height: 72px; font-size: 15px">
+<a href="Home.dc.html" style="color: rgba(255,255,255,0.6)">Features</a>
+<a href="Docs.dc.html" aria-current="page" style="color: #ffffff">Docs</a>
+<a href="Roadmap.dc.html" style="color: rgba(255,255,255,0.6)">Roadmap</a>
+<a href="Changelog.dc.html" style="color: rgba(255,255,255,0.6)">Changelog</a>
+</div>
+<a href="#github" style="display: flex; align-items: center; padding: 0 28px; min-height: 72px; border-left: 1px solid rgba(255,255,255,0.06); font-size: 15px; color: rgba(255,255,255,0.6)">GitHub</a>
+<a href="#download" style="display: flex; align-items: center; justify-content: center; gap: 10px; padding: 0 40px; min-height: 72px; background: #4ade80; color: #05060a; font-family: 'Geist Mono', monospace; font-size: 14px; font-weight: 500; letter-spacing: 0.06em; text-transform: uppercase">
+<svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><path d="M7 1v9M3 6.5 7 10.5 11 6.5M1.5 13h11" fill="none" stroke="currentColor" stroke-width="1.6"></path></svg>
+Download</a>
+</nav>
+
+<header style="display: flex; flex-wrap: wrap; border: 1px solid rgba(255,255,255,0.06)">
+<div style="flex: 2 1 560px; padding: clamp(36px, 5vw, 64px) 32px; display: flex; flex-direction: column; gap: 18px; border-right: 1px solid rgba(255,255,255,0.06)">
+<div style="display: flex; flex-wrap: wrap; gap: 12px 24px; align-items: center"><span style="display: inline-flex; align-items: center; gap: 8px; font-family: 'Geist Mono', monospace; font-size: 12px; letter-spacing: 0.1em; color: rgba(255,255,255,0.6); white-space: nowrap"><span aria-hidden="true" style="display: inline-block; width: 10px; height: 10px; box-sizing: border-box; border: 1.5px dashed rgba(255,255,255,0.6)"></span>SETTINGS</span><span style="font-family: 'Geist Mono', monospace; font-size: 13px; color: rgba(255,255,255,0.6)">Docs / Settings / <span style="color: #ffffff">Remote Access</span></span></div>
+<h1 style="margin: 0; font-size: clamp(48px, 6vw, 80px); line-height: 0.95; font-weight: 600; letter-spacing: -0.05em; max-width: 14ch; text-wrap: balance">Remote Access</h1>
+<p style="margin: 0; font-size: 18px; line-height: 1.55; color: rgba(255,255,255,0.6); max-width: 56ch">Serve the dashboard to a browser you have approved, reach it from outside your network, and let Claude in. Everything here is off until you switch it on.</p>
+</div>
+<div style="flex: 1 1 300px; background: rgba(255,255,255,0.025); display: flex; flex-direction: column; justify-content: flex-end"><div style="display: flex; flex-direction: column; gap: 6px; padding: 18px 28px; border-top: 1px solid rgba(255,255,255,0.06)"><span style="font-family: 'Geist Mono', monospace; font-size: 12px; color: rgba(255,255,255,0.6)">TOPICS</span><span style="font-size: 15px; color: rgba(255,255,255,0.85)">Remote access · Phone · Claude</span></div></div>
+</header>
+<nav aria-label="Settings panes" style="display: flex; flex-wrap: wrap; border: 1px solid rgba(255,255,255,0.06)"><a href="#" style="padding: 12px 24px; font-size: 15px; border-right: 1px solid rgba(255,255,255,0.06); color: rgba(255,255,255,0.6)">Appearance</a><a href="#" style="padding: 12px 24px; font-size: 15px; border-right: 1px solid rgba(255,255,255,0.06); color: rgba(255,255,255,0.6)">General</a><a href="#" style="padding: 12px 24px; font-size: 15px; border-right: 1px solid rgba(255,255,255,0.06); color: rgba(255,255,255,0.6)">Console</a><a href="#" style="padding: 12px 24px; font-size: 15px; border-right: 1px solid rgba(255,255,255,0.06); color: rgba(255,255,255,0.6)">Notifications</a><a href="#" style="padding: 12px 24px; font-size: 15px; border-right: 1px solid rgba(255,255,255,0.06); color: rgba(255,255,255,0.6)">Destinations</a><a href="DocsSettings.dc.html" style="padding: 12px 24px; font-size: 15px; border-right: 1px solid rgba(255,255,255,0.06); color: #ffffff; box-shadow: inset 0 -2px 0 #4ade80">Remote Access</a></nav>
+<section style="border: 1px solid rgba(255,255,255,0.06)">
+<div style="display: flex; align-items: baseline; gap: 20px; padding: 22px 28px; background: rgba(255,255,255,0.025)"><span style="font-family: 'Geist Mono', monospace; font-size: 13px; color: rgba(255,255,255,0.6)">01</span><h2 style="margin: 0; font-size: 26px; font-weight: 600; letter-spacing: -0.03em">Access</h2></div>
+<div style="display: grid; grid-template-columns: 260px 1fr 280px; font-family: 'Geist Mono', monospace; font-size: 12px; letter-spacing: 0.1em; color: rgba(255,255,255,0.6)">
+<div style="padding: 10px 28px">SETTING</div><div style="padding: 10px 28px">WHAT IT DOES</div><div style="padding: 10px 28px">DEFAULT</div></div>
+<div class="krow" style="display: grid; grid-template-columns: 260px 1fr 280px; border-top: 1px solid rgba(255,255,255,0.06)">
+<div style="padding: 18px 28px; font-size: 16px">Remote access</div>
+<div style="padding: 18px 28px; font-size: 15px; line-height: 1.55; color: rgba(255,255,255,0.85)">Serves the dashboard to approved browsers. Turns off after 30 idle minutes.</div>
+<div style="padding: 18px 28px; font-family: 'Geist Mono', monospace; font-size: 13px; color: rgba(255,255,255,0.6)">Off · needs a password</div></div><div class="krow" style="display: grid; grid-template-columns: 260px 1fr 280px; border-top: 1px solid rgba(255,255,255,0.06)">
+<div style="padding: 18px 28px; font-size: 16px">Password</div>
+<div style="padding: 18px 28px; font-size: 15px; line-height: 1.55; color: rgba(255,255,255,0.85)">What a browser signs in with. Changing it signs every device out.</div>
+<div style="padding: 18px 28px; font-family: 'Geist Mono', monospace; font-size: 13px; color: rgba(255,255,255,0.6)">None · 12+ characters</div></div><div class="krow" style="display: grid; grid-template-columns: 260px 1fr 280px; border-top: 1px solid rgba(255,255,255,0.06)">
+<div style="padding: 18px 28px; font-size: 16px">Approved devices</div>
+<div style="padding: 18px 28px; font-size: 15px; line-height: 1.55; color: rgba(255,255,255,0.85)">Browsers that signed in and were approved here, on the desktop. Remove one to sign it out.</div>
+<div style="padding: 18px 28px; font-family: 'Geist Mono', monospace; font-size: 13px; color: rgba(255,255,255,0.6)">None</div></div><div style="padding: 0 28px 20px"><div style="display: flex; gap: 16px; padding: 16px 20px; border: 1px solid #ffd84d55; background: #ffd84d0d"><span style="font-family: 'Geist Mono', monospace; font-size: 12px; letter-spacing: 0.1em; color: #ffd84d; white-space: nowrap; padding-top: 2px">NOTE</span><span style="font-size: 15px; line-height: 1.55; color: rgba(255,255,255,0.85)">A new browser waits at sign-in until you approve it on this computer.</span></div></div></section>
+<section style="border: 1px solid rgba(255,255,255,0.06)">
+<div style="display: flex; align-items: baseline; gap: 20px; padding: 22px 28px; background: rgba(255,255,255,0.025)"><span style="font-family: 'Geist Mono', monospace; font-size: 13px; color: rgba(255,255,255,0.6)">02</span><h2 style="margin: 0; font-size: 26px; font-weight: 600; letter-spacing: -0.03em">Reach it from anywhere</h2></div>
+<div style="display: grid; grid-template-columns: 260px 1fr 280px; font-family: 'Geist Mono', monospace; font-size: 12px; letter-spacing: 0.1em; color: rgba(255,255,255,0.6)">
+<div style="padding: 10px 28px">SETTING</div><div style="padding: 10px 28px">WHAT IT DOES</div><div style="padding: 10px 28px">DEFAULT</div></div>
+<div class="krow" style="display: grid; grid-template-columns: 260px 1fr 280px; border-top: 1px solid rgba(255,255,255,0.06)">
+<div style="padding: 18px 28px; font-size: 16px">Tunnel</div>
+<div style="padding: 18px 28px; font-size: 15px; line-height: 1.55; color: rgba(255,255,255,0.85)">A Cloudflare tunnel to the dashboard, with a QR code for a phone. Without your own address, the address changes every time.</div>
+<div style="padding: 18px 28px; font-family: 'Geist Mono', monospace; font-size: 13px; color: rgba(255,255,255,0.6)">Off</div></div><div class="krow" style="display: grid; grid-template-columns: 260px 1fr 280px; border-top: 1px solid rgba(255,255,255,0.06)">
+<div style="padding: 18px 28px; font-size: 16px">Hostname</div>
+<div style="padding: 18px 28px; font-size: 15px; line-height: 1.55; color: rgba(255,255,255,0.85)">Your own address, routed in the Cloudflare dashboard to the port below.</div>
+<div style="padding: 18px 28px; font-family: 'Geist Mono', monospace; font-size: 13px; color: rgba(255,255,255,0.6)">None</div></div><div class="krow" style="display: grid; grid-template-columns: 260px 1fr 280px; border-top: 1px solid rgba(255,255,255,0.06)">
+<div style="padding: 18px 28px; font-size: 16px">Port</div>
+<div style="padding: 18px 28px; font-size: 15px; line-height: 1.55; color: rgba(255,255,255,0.85)">The local port remote access listens on when a named tunnel is set.</div>
+<div style="padding: 18px 28px; font-family: 'Geist Mono', monospace; font-size: 13px; color: rgba(255,255,255,0.6)"></div></div><div class="krow" style="display: grid; grid-template-columns: 260px 1fr 280px; border-top: 1px solid rgba(255,255,255,0.06)">
+<div style="padding: 18px 28px; font-size: 16px">Tunnel token</div>
+<div style="padding: 18px 28px; font-size: 15px; line-height: 1.55; color: rgba(255,255,255,0.85)">The token Cloudflare gives the named tunnel. Stored on this computer, never shown again.</div>
+<div style="padding: 18px 28px; font-family: 'Geist Mono', monospace; font-size: 13px; color: rgba(255,255,255,0.6)">None</div></div></section>
+<section style="border: 1px solid rgba(255,255,255,0.06)">
+<div style="display: flex; align-items: baseline; gap: 20px; padding: 22px 28px; background: rgba(255,255,255,0.025)"><span style="font-family: 'Geist Mono', monospace; font-size: 13px; color: rgba(255,255,255,0.6)">03</span><h2 style="margin: 0; font-size: 26px; font-weight: 600; letter-spacing: -0.03em">Claude</h2></div>
+<div style="display: grid; grid-template-columns: 260px 1fr 280px; font-family: 'Geist Mono', monospace; font-size: 12px; letter-spacing: 0.1em; color: rgba(255,255,255,0.6)">
+<div style="padding: 10px 28px">SETTING</div><div style="padding: 10px 28px">WHAT IT DOES</div><div style="padding: 10px 28px">DEFAULT</div></div>
+<div class="krow" style="display: grid; grid-template-columns: 260px 1fr 280px; border-top: 1px solid rgba(255,255,255,0.06)">
+<div style="padding: 18px 28px; font-size: 16px">Claude on this computer</div>
+<div style="padding: 18px 28px; font-size: 15px; line-height: 1.55; color: rgba(255,255,255,0.85)">Lets Claude Code and Claude Desktop on this computer use Konnekt's tools. Nothing leaves the machine, and a command that could change the host still asks here.</div>
+<div style="padding: 18px 28px; font-family: 'Geist Mono', monospace; font-size: 13px; color: rgba(255,255,255,0.6)">Off</div></div><div class="krow" style="display: grid; grid-template-columns: 260px 1fr 280px; border-top: 1px solid rgba(255,255,255,0.06)">
+<div style="padding: 18px 28px; font-size: 16px">Claude connectors</div>
+<div style="padding: 18px 28px; font-size: 15px; line-height: 1.55; color: rgba(255,255,255,0.85)">Lets claude.ai, Claude Desktop and Claude Code reach Konnekt through your own address. Each signs in with the password and your approval here.</div>
+<div style="padding: 18px 28px; font-family: 'Geist Mono', monospace; font-size: 13px; color: rgba(255,255,255,0.6)">Off · needs a hostname</div></div><div class="krow" style="display: grid; grid-template-columns: 260px 1fr 280px; border-top: 1px solid rgba(255,255,255,0.06)">
+<div style="padding: 18px 28px; font-size: 16px">Connected clients</div>
+<div style="padding: 18px 28px; font-size: 15px; line-height: 1.55; color: rgba(255,255,255,0.85)">Every Claude client that holds access. Revoke one, or all.</div>
+<div style="padding: 18px 28px; font-family: 'Geist Mono', monospace; font-size: 13px; color: rgba(255,255,255,0.6)">None</div></div></section>
+<section aria-label="Related" style="display: flex; flex-wrap: wrap; border: 1px solid rgba(255,255,255,0.06)"><div style="flex: 0 0 180px; padding: 22px 28px; border-right: 1px solid rgba(255,255,255,0.06); background: rgba(255,255,255,0.025); display: flex; align-items: center"><span style="font-family: 'Geist Mono', monospace; font-size: 12px; color: rgba(255,255,255,0.6)">RELATED</span></div><a class="krow" href="#" style="flex: 1 1 180px; padding: 22px 28px; border-right: 1px solid rgba(255,255,255,0.06); display: flex; flex-direction: column; gap: 10px"><span style="display: inline-flex; align-items: center; gap: 8px; font-family: 'Geist Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: rgba(255,255,255,0.6); white-space: nowrap"><span aria-hidden="true" style="display: inline-block; width: 10px; height: 10px; background: #4ade80"></span>GUIDE</span><span style="font-size: 16px">Use it from your phone</span></a><a class="krow" href="#" style="flex: 1 1 180px; padding: 22px 28px; border-right: 1px solid rgba(255,255,255,0.06); display: flex; flex-direction: column; gap: 10px"><span style="display: inline-flex; align-items: center; gap: 8px; font-family: 'Geist Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: rgba(255,255,255,0.6); white-space: nowrap"><span aria-hidden="true" style="display: inline-block; width: 10px; height: 10px; background: #4ade80"></span>GUIDE</span><span style="font-size: 16px">Use your own address</span></a><a class="krow" href="#" style="flex: 1 1 180px; padding: 22px 28px; border-right: 1px solid rgba(255,255,255,0.06); display: flex; flex-direction: column; gap: 10px"><span style="display: inline-flex; align-items: center; gap: 8px; font-family: 'Geist Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: rgba(255,255,255,0.6); white-space: nowrap"><span aria-hidden="true" style="display: inline-block; width: 10px; height: 10px; background: #4ade80"></span>GUIDE</span><span style="font-size: 16px">Connect Claude</span></a><a class="krow" href="DocsConcept.dc.html" style="flex: 1 1 180px; padding: 22px 28px; border-right: 1px solid rgba(255,255,255,0.06); display: flex; flex-direction: column; gap: 10px"><span style="display: inline-flex; align-items: center; gap: 8px; font-family: 'Geist Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: rgba(255,255,255,0.6); white-space: nowrap"><span aria-hidden="true" style="display: inline-block; width: 10px; height: 10px; box-sizing: border-box; border: 1.5px solid #4ade80"></span>CONCEPT</span><span style="font-size: 16px">How remote access works</span></a></section>
+
+<div aria-hidden="true" style="height: 40px"></div>
+
+<footer style="border: 1px solid rgba(255,255,255,0.06); background: rgba(255,255,255,0.025)">
+<div style="display: flex; flex-wrap: wrap">
+<div style="flex: 1.6 1 320px; padding: 40px 32px; display: flex; flex-direction: column; gap: 14px">
+<a href="Home.dc.html" style="display: inline-flex; align-items: center; gap: 10px; font-weight: 600; font-size: 20px; letter-spacing: -0.02em; color: #ffffff"><svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true"><defs><mask id="k-foot-behind" maskUnits="userSpaceOnUse" x="0" y="0" width="24" height="24"><rect width="24" height="24" fill="#fff"/><polygon points="12,4.47 17.62,7.71 17.62,14.2 12,17.45 6.38,14.2 6.38,7.71" fill="#000" stroke="#000" stroke-width="3" stroke-linejoin="round"/></mask><mask id="k-foot-cube" maskUnits="userSpaceOnUse" x="0" y="0" width="24" height="24"><rect width="24" height="24" fill="#fff"/><path d="M2.9126 13.537A9.1533 5.2814 0 0 0 21.0874 13.537" stroke="#000" stroke-width="5.7" fill="none"/></mask></defs><ellipse cx="12.0000" cy="12.9047" rx="9.1533" ry="5.2814" fill="none" stroke="#4ade80" stroke-width="2.7" mask="url(#k-foot-behind)"/><g mask="url(#k-foot-cube)"><polygon points="12,4.47 17.62,7.71 17.62,14.2 12,17.45 6.38,14.2 6.38,7.71" fill="#22c55e"/><polygon points="12,4.47 17.62,7.71 12,10.96 6.38,7.71" fill="#4ade80"/><polygon points="6.38,7.71 12,10.96 12,17.45 6.38,14.2" fill="#22c55e"/><polygon points="12,10.96 17.62,7.71 17.62,14.2 12,17.45" fill="#16a34a"/></g><path d="M2.876 12.4827A9.1533 5.2814 0 1 0 21.124 12.4827" fill="none" stroke="#4ade80" stroke-width="2.7"/></svg>Konnekt</a>
+<p style="margin: 0; font-size: 15px; line-height: 1.5; color: rgba(255,255,255,0.6); max-width: 32ch">A desktop dashboard for the Minecraft servers you host.</p>
+<span style="font-family: 'Geist Mono', monospace; font-size: 13px; color: rgba(255,255,255,0.6)">v0.2.0-alpha.2 · Windows and Linux</span>
+</div>
+<nav aria-label="Product" style="flex: 1 1 160px; padding: 40px 32px; border-left: 1px solid rgba(255,255,255,0.06); display: flex; flex-direction: column; gap: 14px"><span style="font-family: 'Geist Mono', monospace; font-size: 12px; letter-spacing: 0.1em; color: rgba(255,255,255,0.6)">PRODUCT</span><a href="#download" style="color: rgba(255,255,255,0.85); font-size: 15px">Download</a><a href="#demo" style="color: rgba(255,255,255,0.85); font-size: 15px">Try the demo</a><a href="Changelog.dc.html" style="color: rgba(255,255,255,0.85); font-size: 15px">Changelog</a></nav>
+<nav aria-label="Learn" style="flex: 1 1 160px; padding: 40px 32px; border-left: 1px solid rgba(255,255,255,0.06); display: flex; flex-direction: column; gap: 14px"><span style="font-family: 'Geist Mono', monospace; font-size: 12px; letter-spacing: 0.1em; color: rgba(255,255,255,0.6)">LEARN</span><a href="Home.dc.html" style="color: rgba(255,255,255,0.85); font-size: 15px">Features</a><a href="Docs.dc.html" style="color: rgba(255,255,255,0.85); font-size: 15px">Docs</a><a href="Roadmap.dc.html" style="color: rgba(255,255,255,0.85); font-size: 15px">Roadmap</a></nav>
+<nav aria-label="Source" style="flex: 1 1 160px; padding: 40px 32px; border-left: 1px solid rgba(255,255,255,0.06); display: flex; flex-direction: column; gap: 14px"><span style="font-family: 'Geist Mono', monospace; font-size: 12px; letter-spacing: 0.1em; color: rgba(255,255,255,0.6)">SOURCE</span><a href="#github" style="color: rgba(255,255,255,0.85); font-size: 15px">GitHub</a><a href="#issues" style="color: rgba(255,255,255,0.85); font-size: 15px">Issues</a><a href="#licence" style="color: rgba(255,255,255,0.85); font-size: 15px">Licence, CC0</a></nav>
+</div>
+<div style="display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px 24px; padding: 20px 32px; border-top: 1px solid rgba(255,255,255,0.06); font-family: 'Geist Mono', monospace; font-size: 13px; color: rgba(255,255,255,0.6)">
+<span>Alpha software. A side project mostly written by Claude. <a href="#disclaimer" style="color: rgba(255,255,255,0.85); text-decoration: underline">Full statement</a></span>
+<span>© 2026 Konnekt</span>
+</div>
+</footer>
+
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":2146}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>
