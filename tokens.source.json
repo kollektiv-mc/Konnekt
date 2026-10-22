@@ -101,7 +101,9 @@
         "Liberation Mono",
         "monospace"
       ],
-      "display": ["Satoshi", "@sans"]
+      "display": ["Satoshi", "@sans"],
+      "site": ["Geist", "@sans"],
+      "site-mono": ["Geist Mono", "@mono"]
     },
     "size": {
       "unit": "px",

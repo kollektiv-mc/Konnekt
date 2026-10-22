@@ -34,7 +34,7 @@ import path from 'node:path'
 
 const SITE = path.join(import.meta.dirname, '..', 'website')
 const ORIGIN = 'https://konnekt.pages.dev'
-const REQUIRED_STYLESHEETS = ['/tokens.css', '/styles.css']
+const REQUIRED_STYLESHEETS = ['/tokens.css', '/site.css']
 const URL_META = new Set(['og:image', 'og:url', 'twitter:image'])
 
 // A check that could not run is a failure to report, not a silent pass — the
@@ -50,9 +50,15 @@ const fail = (file, message) => problems.push({ file, message })
 const strip = (html) =>
   html.replace(/<!--[\s\S]*?-->/g, ' ').replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, ' ')
 
-const pages = readdirSync(SITE)
-  .filter((f) => f.endsWith('.html'))
-  .sort()
+// Every file under website/, subfolders included, relative to it: the docs'
+// pages sit in docs/ beside the docs home.
+const walk = (dir) =>
+  readdirSync(path.join(SITE, dir), { withFileTypes: true }).flatMap((entry) => {
+    const rel = dir ? `${dir}/${entry.name}` : entry.name
+    return entry.isDirectory() ? walk(rel) : [rel]
+  })
+const files = walk('').sort()
+const pages = files.filter((f) => f.endsWith('.html'))
 
 const raw = new Map(pages.map((p) => [p, readFileSync(path.join(SITE, p), 'utf8')]))
 const clean = new Map(pages.map((p) => [p, strip(raw.get(p))]))
@@ -127,7 +133,7 @@ for (const page of pages) {
 
 // 3 — CSS url() references, resolved against the stylesheet that holds them.
 let assetCount = 0
-for (const sheet of readdirSync(SITE).filter((f) => f.endsWith('.css'))) {
+for (const sheet of files.filter((f) => f.endsWith('.css'))) {
   const css = readFileSync(path.join(SITE, sheet), 'utf8')
   for (const [, value] of css.matchAll(/url\(\s*['"]?([^'")]+)['"]?\s*\)/g)) {
     if (value.startsWith('data:')) continue

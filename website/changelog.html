@@ -34,164 +34,191 @@
     <link rel="icon" type="image/png" sizes="32x32" href="/assets/img/favicon-32.png" />
     <link rel="icon" type="image/png" sizes="256x256" href="/assets/img/favicon.png" />
     <link rel="apple-touch-icon" href="/assets/img/app-icon.png" />
+    <link
+      rel="preload"
+      href="/assets/fonts/Geist-Variable.woff2"
+      as="font"
+      type="font/woff2"
+      crossorigin
+    />
     <link rel="stylesheet" href="/tokens.css" />
-    <link rel="stylesheet" href="/styles.css" />
+    <link rel="stylesheet" href="/site.css" />
+    <link rel="stylesheet" href="/changelog.css" />
     <script>
       document.documentElement.className = document.documentElement.className.replace('no-js', '')
     </script>
   </head>
   <body>
-    <!-- Canonical nav. Byte-identical on every page, hrefs included — main.js
-         marks the current page and intercepts same-page anchors. -->
-    <nav class="nav" id="nav">
-      <div class="nav-inner">
-        <span class="nav-brand">
-          <a href="/index.html" class="wordmark">Konnekt</a>
-          <span class="brand-tag">ALPHA</span>
-        </span>
-        <button
-          class="nav-toggle"
-          id="nav-toggle"
-          type="button"
-          aria-expanded="false"
-          aria-controls="nav-menu"
-          aria-label="Menu"
-        >
-          ≡
-        </button>
-        <div class="nav-menu" id="nav-menu">
+    <a class="skip-link" href="#main">Skip to content</a>
+    <div class="page">
+      <div class="group">
+        <!-- Canonical nav. Byte-identical on every page, hrefs included; site.js
+           marks the current page and scrolls same-page anchors. -->
+        <nav class="nav block block-raised" id="nav" aria-label="Main">
+          <a class="nav-brand" href="/index.html"
+            ><img
+              class="mark"
+              src="/assets/img/mark-24.svg"
+              width="24"
+              height="24"
+              alt=""
+            />Konnekt</a
+          >
           <ul class="nav-links">
-            <li><a href="/index.html#about">About</a></li>
             <li><a href="/index.html#features">Features</a></li>
+            <li><a href="/index.html#scheduler">Scheduler</a></li>
             <li><a href="/docs.html">Docs</a></li>
             <li><a href="/roadmap.html">Roadmap</a></li>
             <li><a href="/changelog.html">Changelog</a></li>
           </ul>
-          <div class="nav-actions">
-            <a
-              class="btn btn-secondary btn-sm"
-              href="https://github.com/kollektiv-mc/Konnekt"
-              target="_blank"
-              rel="noopener"
-              >View on GitHub</a
-            >
-            <a class="btn btn-primary btn-sm" href="/download.html">Download</a>
-          </div>
-        </div>
-      </div>
-    </nav>
-
-    <main class="subpage">
-      <div class="container">
-        <div class="subpage-head">
-          <span class="eyebrow">() changelog</span>
-          <h1>What's <span class="accent">new</span></h1>
-          <p>Every release and what changed.</p>
-        </div>
-
-        <div class="state-box" id="cl-loading">
-          <div class="spinner"></div>
-          Loading…
-        </div>
-
-        <!-- The rolling `snapshot` prerelease, whose notes cover everything on
-             main ahead of the newest release. It isn't a version, so it sits
-             above the list as a closed disclosure rather than joining it: this
-             page is a record of what shipped, and an entry that changes under
-             you every night isn't part of that record. Filled by changelog.js
-             and hidden until GitHub confirms a snapshot exists. -->
-        <div class="changelog changelog-snapshot is-hidden" id="cl-snapshot">
-          <details class="release release-pending">
-            <summary class="release-summary">
-              <span class="release-version"
-                >Pre-release <span class="release-latest is-snapshot">SNAPSHOT</span></span
-              >
-              <span class="release-date" id="cl-snapshot-meta"></span>
-            </summary>
-            <!-- Warning above the changes, then the changes. The warning used
-                 to arrive inside the release body, which the page now trims to
-                 its "What's changed" section (release.js's changesOnly). It is
-                 not decoration: this is the one entry on this page describing a
-                 build nobody tested, and it is read before the list of what is
-                 in it. Same .disclaimer component the download page's snapshot
-                 card uses.
-                 The wrapper is what carries the rule under the card head, since
-                 the body is no longer the .md alone. -->
-            <div class="snapshot-notes">
-              <div class="disclaimer">
-                <span class="disclaimer-badge">UNSTABLE</span>
-                <p>
-                  Built automatically from the newest code, so it carries changes the latest release
-                  doesn't have yet. None of it is properly tested: a snapshot can be broken, is
-                  replaced by the next one, and won't update itself. Back up your server directory
-                  first.
-                </p>
-              </div>
-              <div class="md" id="cl-snapshot-body"></div>
+          <a
+            class="nav-side"
+            href="https://github.com/kollektiv-mc/Konnekt"
+            target="_blank"
+            rel="noopener"
+            >GitHub</a
+          >
+          <a class="btn btn-primary" href="/download.html"
+            ><svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true">
+              <path
+                d="M7 1v9M3 6.5 7 10.5 11 6.5M1.5 13h11"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.6"
+              /></svg
+            >Download</a
+          >
+        </nav>
+        <main id="main" class="group">
+          <header class="page-hero block">
+            <div class="page-hero-title">
+              <span class="meta appear" id="cl-count" hidden></span>
+              <h1>Changelog</h1>
             </div>
-            <p class="release-source">
+            <div class="page-hero-side">
               <a
-                href="https://github.com/kollektiv-mc/Konnekt/releases/tag/snapshot"
+                class="band-link"
+                href="https://github.com/kollektiv-mc/Konnekt/releases"
                 target="_blank"
                 rel="noopener"
-                >Snapshot notes on GitHub</a
+                >All releases on GitHub &rarr;</a
               >
-            </p>
-          </details>
-        </div>
+            </div>
+          </header>
 
-        <div class="changelog is-hidden" id="cl-list"></div>
+          <!-- The rolling `snapshot` prerelease, whose notes cover everything on
+               main ahead of the newest release. It is not a version, so it sits
+               above the list, closed, rather than joining it. Filled by
+               changelog.js and hidden until GitHub confirms a snapshot exists. -->
+          <section
+            class="snapshot block appear"
+            id="cl-snapshot"
+            aria-labelledby="cl-snapshot-title"
+            hidden
+          >
+            <div class="snapshot-head">
+              <div class="snapshot-name">
+                <h2 id="cl-snapshot-title">
+                  <span class="snapshot-dot" aria-hidden="true"></span>Nightly snapshot
+                </h2>
+                <span class="meta" id="cl-snapshot-meta">Built from main</span>
+              </div>
+              <p class="snapshot-warning">
+                Changes on main that no release has yet. Untested, and replaced by each new build.
+                Back up your server folder first.
+              </p>
+              <button
+                type="button"
+                class="snapshot-toggle"
+                id="cl-snapshot-toggle"
+                aria-expanded="false"
+                aria-controls="cl-snapshot-body"
+              >
+                Show changes
+              </button>
+            </div>
+            <div class="snapshot-body" id="cl-snapshot-body" hidden></div>
+          </section>
 
-        <div class="state-box is-error is-hidden" id="cl-error">
-          <p class="state-title" id="cl-error-title">Couldn't load the changelog</p>
-          <p id="cl-error-msg"></p>
-          <p style="margin-top: 18px">
+          <p class="cl-state block" id="cl-loading" role="status">
+            <span class="loader">Loading releases</span>
+          </p>
+
+          <div class="cl-list appear" id="cl-list" hidden></div>
+
+          <div class="cl-state block appear" id="cl-error" hidden>
+            <p class="cl-state-title" id="cl-error-title">Could not load the changelog</p>
+            <p id="cl-error-msg"></p>
             <a
-              class="btn btn-secondary btn-sm"
+              class="btn btn-secondary"
               href="https://github.com/kollektiv-mc/Konnekt/releases"
               target="_blank"
               rel="noopener"
-              >Open releases on GitHub</a
+              >Releases on GitHub</a
             >
-          </p>
-        </div>
-      </div>
-    </main>
-
-    <!-- Canonical footer. Identical on every page. -->
-    <footer>
-      <div class="container">
-        <div class="disclaimer">
-          <span class="disclaimer-badge">NOTE</span>
-          <p>
-            Alpha software. A side project mostly written by Claude.
-            <a href="/docs.html#disclaimer">Full statement</a>.
-          </p>
-        </div>
-        <div class="footer-inner">
-          <div class="footer-left">
-            <span class="wordmark" style="font-size: 15px">Konnekt</span>
-            <span class="brand-tag">ALPHA</span>
           </div>
-          <div class="footer-links">
-            <a href="https://github.com/kollektiv-mc/Konnekt" target="_blank" rel="noopener"
-              >GitHub</a
+        </main>
+      </div>
+
+      <!-- Canonical footer. Byte-identical on every page. -->
+      <footer class="block block-raised">
+        <div class="footer-cols">
+          <div class="footer-about">
+            <a class="footer-brand" href="/index.html"
+              ><img
+                class="mark"
+                src="/assets/img/mark-24.svg"
+                width="24"
+                height="24"
+                alt=""
+              />Konnekt</a
             >
-            <a href="/index.html#about">About</a>
+            <p>A desktop dashboard for the Minecraft servers you host.</p>
+            <span class="meta"><span data-release-tag></span>Windows and Linux</span>
+          </div>
+          <nav class="footer-col" aria-label="Product">
+            <span class="label">Product</span>
+            <a href="/download.html">Download</a>
+            <a href="https://konnekt-demo.pages.dev/" target="_blank" rel="noopener"
+              >Try the demo</a
+            >
+            <a href="/changelog.html">Changelog</a>
+          </nav>
+          <nav class="footer-col" aria-label="Learn">
+            <span class="label">Learn</span>
             <a href="/index.html#features">Features</a>
             <a href="/docs.html">Docs</a>
             <a href="/roadmap.html">Roadmap</a>
-            <a href="/download.html">Download</a>
-            <a href="/changelog.html">Changelog</a>
-          </div>
-          <span class="footer-copy">&copy; 2026 Konnekt</span>
+          </nav>
+          <nav class="footer-col" aria-label="Source">
+            <span class="label">Source</span>
+            <a href="https://github.com/kollektiv-mc/Konnekt" target="_blank" rel="noopener"
+              >GitHub</a
+            >
+            <a href="https://github.com/kollektiv-mc/Konnekt/issues" target="_blank" rel="noopener"
+              >Issues</a
+            >
+            <a
+              href="https://github.com/kollektiv-mc/Konnekt/blob/main/LICENSE"
+              target="_blank"
+              rel="noopener"
+              >MIT licence</a
+            >
+          </nav>
         </div>
-      </div>
-    </footer>
+        <div class="footer-base">
+          <span
+            >Alpha software. A side project mostly written by Claude.
+            <a href="/docs.html#disclaimer">Full statement</a></span
+          >
+          <span>&copy; 2026 Konnekt</span>
+        </div>
+      </footer>
+    </div>
 
-    <script src="/main.js"></script>
     <script src="/release.js"></script>
     <script src="/markdown.js"></script>
+    <script src="/site.js"></script>
     <script src="/changelog.js"></script>
   </body>
 </html>

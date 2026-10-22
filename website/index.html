@@ -34,8 +34,16 @@
     <link rel="icon" type="image/png" sizes="32x32" href="/assets/img/favicon-32.png" />
     <link rel="icon" type="image/png" sizes="256x256" href="/assets/img/favicon.png" />
     <link rel="apple-touch-icon" href="/assets/img/app-icon.png" />
+    <link
+      rel="preload"
+      href="/assets/fonts/Geist-Variable.woff2"
+      as="font"
+      type="font/woff2"
+      crossorigin
+    />
     <link rel="stylesheet" href="/tokens.css" />
-    <link rel="stylesheet" href="/styles.css" />
+    <link rel="stylesheet" href="/site.css" />
+    <link rel="stylesheet" href="/home.css" />
     <script>
       document.documentElement.className = document.documentElement.className.replace('no-js', '')
     </script>
@@ -60,939 +68,664 @@
     </script>
   </head>
   <body>
-    <!-- Canonical nav. Byte-identical on every page, hrefs included — main.js
-         marks the current page and intercepts same-page anchors. -->
-    <nav class="nav" id="nav">
-      <div class="nav-inner">
-        <span class="nav-brand">
-          <a href="/index.html" class="wordmark">Konnekt</a>
-          <span class="brand-tag">ALPHA</span>
-        </span>
-        <button
-          class="nav-toggle"
-          id="nav-toggle"
-          type="button"
-          aria-expanded="false"
-          aria-controls="nav-menu"
-          aria-label="Menu"
-        >
-          ≡
-        </button>
-        <div class="nav-menu" id="nav-menu">
+    <a class="skip-link" href="#main">Skip to content</a>
+    <div class="page">
+      <div class="group">
+        <!-- Canonical nav. Byte-identical on every page, hrefs included; site.js
+           marks the current page and scrolls same-page anchors. -->
+        <nav class="nav block block-raised" id="nav" aria-label="Main">
+          <a class="nav-brand" href="/index.html"
+            ><img
+              class="mark"
+              src="/assets/img/mark-24.svg"
+              width="24"
+              height="24"
+              alt=""
+            />Konnekt</a
+          >
           <ul class="nav-links">
-            <li><a href="/index.html#about">About</a></li>
             <li><a href="/index.html#features">Features</a></li>
+            <li><a href="/index.html#scheduler">Scheduler</a></li>
             <li><a href="/docs.html">Docs</a></li>
             <li><a href="/roadmap.html">Roadmap</a></li>
             <li><a href="/changelog.html">Changelog</a></li>
           </ul>
-          <div class="nav-actions">
-            <a
-              class="btn btn-secondary btn-sm"
-              href="https://github.com/kollektiv-mc/Konnekt"
-              target="_blank"
-              rel="noopener"
-              >View on GitHub</a
-            >
-            <a class="btn btn-primary btn-sm" href="/download.html">Download</a>
-          </div>
-        </div>
-      </div>
-    </nav>
-
-    <!-- data-nav marks a section for the right-hand section rail main.js builds,
-         and supplies its label. Only this page carries them. -->
-    <header class="hero section-full" id="top" data-nav="Top">
-      <div class="hero-inner">
-        <!-- The same pill the download page wears over its own title, filled
-             from the same release by the same helper, so the front page cannot
-             claim a version the download page disagrees with. It says
-             "checking latest…" until GitHub answers and stays on that if it
-             never does. -->
-        <span
-          class="version-pill hero-version hero-fade"
-          id="hero-version"
-          style="--fade-delay: 120ms"
-          ><span class="dot"></span> checking latest…</span
-        >
-        <h1>
-          <span class="hero-lead">
-            <span class="hw" style="--i: 0">Run</span>
-            <span class="hw" style="--i: 1">your</span>
-            <span class="hw" style="--i: 2">server</span>
-            <span class="hw" style="--i: 3">like</span>
-          </span>
-          <span class="accent hero-mission">mission control.</span>
-        </h1>
-        <p class="hero-fade" style="--fade-delay: 900ms">
-          Console, scheduling, worlds and backups in one local-first desktop app.
-        </p>
-        <div class="hero-actions hero-fade" style="--fade-delay: 1020ms">
-          <a class="btn btn-primary" href="/download.html">Download Konnekt</a>
-          <!-- The real dashboard, built for a browser and backed by fixtures:
-               demo/ in the repository, published by .github/workflows/demo.yml
-               to its own Pages project. A new tab, because it is an app of its
-               own with its own scroll and keyboard, not a page of this site. -->
           <a
-            class="btn btn-secondary"
-            href="https://konnekt-demo.pages.dev/"
-            target="_blank"
-            rel="noopener"
-            >Try the demo</a
-          >
-          <a
-            class="btn btn-secondary"
+            class="nav-side"
             href="https://github.com/kollektiv-mc/Konnekt"
             target="_blank"
             rel="noopener"
-            >View on GitHub</a
+            >GitHub</a
           >
-        </div>
-      </div>
-    </header>
-
-    <section class="section-full" id="about" data-nav="About">
-      <div class="container">
-        <!-- Title, then the app, then what it is, then what it runs. The shot
-             takes the full column: it is a dashboard of tiles, and at half a
-             page a tile stops being legible as one. -->
-        <div class="about-stack">
-          <div class="section-head reveal">
-            <span class="eyebrow">[i] about</span>
-            <h2>Everything in one window</h2>
-          </div>
-          <figure class="about-shot reveal" style="--reveal-delay: 60ms">
-            <!-- A button, not a bare image with a click handler: it opens
-                 something, so it is reachable by keyboard and announces itself
-                 as doing so. main.js copies this image's own src and alt into
-                 the overlay, so the enlarged view cannot drift from it. -->
-            <button class="about-shot-open" type="button" id="about-shot-open">
-              <!-- The frame is what crops and fades; the hint is its sibling
-                   rather than its child, or the mask would dissolve the label
-                   along with the bottom of the picture. -->
-              <span class="about-shot-frame">
-                <img
-                  src="/assets/img/overview.png"
-                  alt="Konnekt's dashboard: a grid of tiles over one server, among them the live console, server stats and performance history."
-                  loading="lazy"
-                  decoding="async"
-                />
-              </span>
-              <span class="about-shot-hint" aria-hidden="true">Enlarge</span>
-            </button>
-          </figure>
-          <div class="about-copy reveal" style="--reveal-delay: 120ms">
-            <p>
-              Konnekt is a desktop app for Minecraft servers you host yourself. One window in place
-              of a terminal, an RCON client and a file browser sitting open side by side.
-            </p>
-            <p>
-              Konnekt runs on your own machine, against server folders you already have. The
-              dashboard is a grid of tiles you arrange yourself, and the automation is a node graph
-              rather than a cron line.
-            </p>
-          </div>
-          <!-- Two facts, each a label over a row of tags and nothing else. They were
-               cards, which put a bordered box around six words and had them
-               competing with the feature grid one scroll below for the same kind of
-               attention. The alpha status they used to sit beside is already stated
-               by the footer badge and the disclaimer above it. -->
-          <dl class="about-facts">
-            <div class="about-fact reveal" style="--reveal-delay: 180ms">
-              <dt>Servers</dt>
-              <dd class="fact-pills">
-                <span class="pill">Vanilla</span>
-                <span class="pill">Paper</span>
-                <span class="pill">Spigot</span>
-                <span class="pill">Bukkit</span>
-                <span class="pill">Fabric</span>
-                <span class="pill">NeoForge</span>
-              </dd>
-            </div>
-            <div class="about-fact reveal" style="--reveal-delay: 240ms">
-              <dt>Platforms</dt>
-              <!-- Narrower than the servers' box so these break 2/1; see
-                   --pills-w in styles.css. -->
-              <dd class="fact-pills" style="--pills-w: 150px">
-                <span class="pill">Windows</span>
-                <span class="pill">Linux</span>
-                <span class="pill">macOS</span>
-              </dd>
-            </div>
-          </dl>
-        </div>
-      </div>
-    </section>
-
-    <section class="section-full" id="features" data-nav="Features">
-      <div class="container">
-        <div class="section-head reveal">
-          <span class="eyebrow">&gt;_ features</span>
-          <h2>What's inside</h2>
-          <p>The tools Konnekt gives you to run your servers.</p>
-        </div>
-        <!-- The features, each shown running rather than described: a row of
-             tabs, one box that plays the picked feature's clip, and the three
-             points that go with it. The clips are filmed from the demo by
-             demo/record.mjs on every build of it and served beside it under
-             /scenes/, so what plays here can never be older than the demo the
-             button opens; scripts/check-website-scenes.mjs holds the two lists
-             together. The scheduler section below is the same shape around a
-             drawn reel. This one is footage.
-
-             Every tab's points stay in the markup, hidden, so the page reads
-             whole without JS and to a crawler; main.js swaps which one shows
-             and which clip plays. The demo's origin and the tile each tab opens
-             the demo on (?tile=, demo/backend/frame.js) live in main.js, as
-             constants, so no URL is ever built from text read off this page. -->
-        <div class="showcase">
-          <div class="showcase-tabs reveal" role="tablist" aria-label="Features">
-            <button
-              class="showcase-tab"
-              role="tab"
-              type="button"
-              id="showcase-tab-dashboard"
-              aria-selected="true"
-              aria-controls="showcase-panel-dashboard"
-              data-scene="dashboard"
-            >
-              Tile dashboard</button
-            ><button
-              class="showcase-tab"
-              role="tab"
-              type="button"
-              id="showcase-tab-console"
-              aria-selected="false"
-              aria-controls="showcase-panel-console"
-              tabindex="-1"
-              data-scene="console"
-            >
-              Live console</button
-            ><button
-              class="showcase-tab"
-              role="tab"
-              type="button"
-              id="showcase-tab-players"
-              aria-selected="false"
-              aria-controls="showcase-panel-players"
-              tabindex="-1"
-              data-scene="players"
-            >
-              Players</button
-            ><button
-              class="showcase-tab"
-              role="tab"
-              type="button"
-              id="showcase-tab-performance"
-              aria-selected="false"
-              aria-controls="showcase-panel-performance"
-              tabindex="-1"
-              data-scene="performance"
-            >
-              Performance</button
-            ><button
-              class="showcase-tab"
-              role="tab"
-              type="button"
-              id="showcase-tab-worlds"
-              aria-selected="false"
-              aria-controls="showcase-panel-worlds"
-              tabindex="-1"
-              data-scene="worlds"
-            >
-              Worlds</button
-            ><button
-              class="showcase-tab"
-              role="tab"
-              type="button"
-              id="showcase-tab-backups"
-              aria-selected="false"
-              aria-controls="showcase-panel-backups"
-              tabindex="-1"
-              data-scene="backups"
-            >
-              Backups</button
-            ><button
-              class="showcase-tab"
-              role="tab"
-              type="button"
-              id="showcase-tab-config"
-              aria-selected="false"
-              aria-controls="showcase-panel-config"
-              tabindex="-1"
-              data-scene="config"
-            >
-              Config editor</button
-            ><button
-              class="showcase-tab"
-              role="tab"
-              type="button"
-              id="showcase-tab-mods"
-              aria-selected="false"
-              aria-controls="showcase-panel-mods"
-              tabindex="-1"
-              data-scene="mods"
-            >
-              Mods &amp; plugins</button
-            ><button
-              class="showcase-tab"
-              role="tab"
-              type="button"
-              id="showcase-tab-servers"
-              aria-selected="false"
-              aria-controls="showcase-panel-servers"
-              tabindex="-1"
-              data-scene="servers"
-            >
-              Multi-server
-            </button>
-          </div>
-          <figure class="showcase-media reveal" style="--reveal-delay: 80ms">
-            <!-- Muted and inline is what every browser allows to autoplay
-                 (main.js only plays it while it is on screen); no controls,
-                 because the tabs are the controls and the demo is the thing
-                 to interact with. The first feature's sources are here so the
-                 poster shows without JS; the rest are built from data-demo. -->
-            <video
-              class="showcase-video"
-              muted
-              playsinline
-              preload="none"
-              poster="https://konnekt-demo.pages.dev/scenes/dashboard.webp"
-              aria-label="Tile dashboard, in action"
-            >
-              <source
-                src="https://konnekt-demo.pages.dev/scenes/dashboard.webm"
-                type="video/webm"
-              />
-              <source src="https://konnekt-demo.pages.dev/scenes/dashboard.mp4" type="video/mp4" />
-            </video>
-            <a
-              class="btn btn-secondary btn-sm showcase-open"
-              href="https://konnekt-demo.pages.dev/"
-              target="_blank"
-              rel="noopener"
-              >Open in the demo</a
-            >
-          </figure>
-          <ul
-            class="showcase-points reveal"
-            style="--reveal-delay: 140ms"
-            role="tabpanel"
-            id="showcase-panel-dashboard"
-            aria-labelledby="showcase-tab-dashboard"
+          <a class="btn btn-primary" href="/download.html"
+            ><svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true">
+              <path
+                d="M7 1v9M3 6.5 7 10.5 11 6.5M1.5 13h11"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.6"
+              /></svg
+            >Download</a
           >
-            <li>
-              <h3>Drag, resize and snap every tile</h3>
-              <p>Pick a tile up by its title bar and the rest of the grid makes room.</p>
-            </li>
-            <li>
-              <h3>Crate the ones you are not using</h3>
-              <p>Close a tile and it waits in the sidebar until you want it back.</p>
-            </li>
-            <li>
-              <h3>Save and switch layout presets</h3>
-              <p>Console focus, compact, essentials, or your own, one click apart.</p>
-            </li>
-          </ul>
-          <ul
-            class="showcase-points"
-            role="tabpanel"
-            id="showcase-panel-console"
-            aria-labelledby="showcase-tab-console"
-            hidden
-          >
-            <li>
-              <h3>Live log streaming</h3>
-              <p>
-                Every line the server prints, as it prints it, with Konnekt's own narration boxed.
+        </nav>
+        <main id="main" class="group" data-focus>
+          <header class="hero block" id="top">
+            <div class="hero-copy">
+              <h1>Your Minecraft server, in one window.</h1>
+              <p class="lead">
+                Console, scheduling, worlds and backups in a local-first desktop app.
               </p>
-            </li>
-            <li>
-              <h3>Send commands inline</h3>
-              <p>Type at the prompt and the reply lands in the same stream.</p>
-            </li>
-            <li>
-              <h3>Filter and search output</h3>
-              <p>Narrow the scrollback to one kind of line, or to a word.</p>
-            </li>
-          </ul>
-          <ul
-            class="showcase-points"
-            role="tabpanel"
-            id="showcase-panel-players"
-            aria-labelledby="showcase-tab-players"
-            hidden
-          >
-            <li>
-              <h3>See who is online</h3>
-              <p>A card per player, lit while they are on.</p>
-            </li>
-            <li>
-              <h3>Kick or ban with a reason</h3>
-              <p>The reason goes with the command, and the roster follows when they go.</p>
-            </li>
-            <li>
-              <h3>Op, whitelist and ban state</h3>
-              <p>Each player's standing, in one panel.</p>
-            </li>
-          </ul>
-          <ul
-            class="showcase-points"
-            role="tabpanel"
-            id="showcase-panel-performance"
-            aria-labelledby="showcase-tab-performance"
-            hidden
-          >
-            <li>
-              <h3>Live TPS, CPU and memory</h3>
-              <p>Read straight off the process and the tick, nothing installed on the server.</p>
-            </li>
-            <li>
-              <h3>An hour of charted history</h3>
-              <p>A sample every ten seconds, kept for an hour, so a dip has a shape.</p>
-            </li>
-            <li>
-              <h3>No plugins to install</h3>
-              <p>Konnekt watches the process it started; the server never knows.</p>
-            </li>
-          </ul>
-          <ul
-            class="showcase-points"
-            role="tabpanel"
-            id="showcase-panel-worlds"
-            aria-labelledby="showcase-tab-worlds"
-            hidden
-          >
-            <li>
-              <h3>Each world as its own planet</h3>
-              <p>Its nether and end as moons, sized by what they take on disk.</p>
-            </li>
-            <li>
-              <h3>Seed, size and version</h3>
-              <p>Read from the level data, not typed in.</p>
-            </li>
-            <li>
-              <h3>Switch, rename or duplicate</h3>
-              <p>Change the active world without opening server.properties.</p>
-            </li>
-          </ul>
-          <ul
-            class="showcase-points"
-            role="tabpanel"
-            id="showcase-panel-backups"
-            aria-labelledby="showcase-tab-backups"
-            hidden
-          >
-            <li>
-              <h3>Manual or scheduled</h3>
-              <p>Back up now, or let a schedule do it with world saves paused.</p>
-            </li>
-            <li>
-              <h3>Browse restore points</h3>
-              <p>A carousel of every backup, tagged and searchable.</p>
-            </li>
-            <li>
-              <h3>Roll back in two clicks</h3>
-              <p>Restore with the server stopped, and that backup is the world.</p>
-            </li>
-          </ul>
-          <ul
-            class="showcase-points"
-            role="tabpanel"
-            id="showcase-panel-config"
-            aria-labelledby="showcase-tab-config"
-            hidden
-          >
-            <li>
-              <h3>server.properties as a form</h3>
-              <p>Every setting under a name you can read, not a key you have to know.</p>
-            </li>
-            <li>
-              <h3>Syntax-highlighted raw mode</h3>
-              <p>The file itself, in an editor, when the form is not enough.</p>
-            </li>
-            <li>
-              <h3>YAML, JSON and TOML aware</h3>
-              <p>Plugin and mod configs open in the same place.</p>
-            </li>
-          </ul>
-          <ul
-            class="showcase-points"
-            role="tabpanel"
-            id="showcase-panel-mods"
-            aria-labelledby="showcase-tab-mods"
-            hidden
-          >
-            <li>
-              <h3>Install from Modrinth</h3>
-              <p>Search, pick a version, and it lands in the right folder.</p>
-            </li>
-            <li>
-              <h3>Dependencies resolve automatically</h3>
-              <p>What a plugin needs comes along with it.</p>
-            </li>
-            <li>
-              <h3>Changelogs read inline</h3>
-              <p>See what a version changed before you take it.</p>
-            </li>
-          </ul>
-          <ul
-            class="showcase-points"
-            role="tabpanel"
-            id="showcase-panel-servers"
-            aria-labelledby="showcase-tab-servers"
-            hidden
-          >
-            <li>
-              <h3>All your servers in one app</h3>
-              <p>Survival, creative, a test server: one list in the sidebar.</p>
-            </li>
-            <li>
-              <h3>Own jar, folder and JVM args</h3>
-              <p>Each server keeps its own launch settings.</p>
-            </li>
-            <li>
-              <h3>Switch with one click</h3>
-              <p>The whole dashboard follows the server you pick.</p>
-            </li>
-          </ul>
-        </div>
-      </div>
-    </section>
+              <div class="actions">
+                <a class="btn btn-primary" href="/download.html">Download Konnekt</a>
+                <!-- The real dashboard, built for a browser and backed by fixtures:
+                     demo/ in the repository, published by .github/workflows/demo.yml
+                     to its own Pages project. A new tab, because it is an app of its
+                     own, not a page of this site. -->
+                <a
+                  class="btn btn-secondary"
+                  href="https://konnekt-demo.pages.dev/"
+                  target="_blank"
+                  rel="noopener"
+                  >Try the demo</a
+                >
+              </div>
+              <span class="meta"
+                ><span data-release-tag></span>Windows and Linux &middot; free, MIT</span
+              >
+            </div>
+            <div class="hero-side">
+              <svg
+                class="hero-art"
+                viewBox="0 0 400 360"
+                width="360"
+                height="324"
+                aria-hidden="true"
+              >
+                <g class="spin">
+                  <circle cx="200" cy="180" r="168" stroke-opacity="0.25" stroke-dasharray="0 9" />
+                </g>
+                <g class="spin-rev">
+                  <circle cx="200" cy="180" r="122" stroke-opacity="0.18" stroke-dasharray="0 8" />
+                </g>
+                <circle cx="200" cy="180" r="78" stroke-opacity="0.1" stroke-dasharray="0 7" />
+                <g class="hero-cube">
+                  <path d="M200 138 L240 161 L200 184 L160 161 Z" />
+                  <path d="M160 161 L160 207 L200 230 L200 184" />
+                  <path d="M240 161 L240 207 L200 230" />
+                </g>
+                <g class="hero-plus">
+                  <path d="M82 52 v14 M75 59 h14" />
+                  <path d="M318 240 v14 M311 247 h14" />
+                  <path d="M120 302 v14 M113 309 h14" />
+                </g>
+                <g class="hero-labels">
+                  <text x="96" y="50">survival :25565</text>
+                  <text x="96" y="64" class="faint">19.9 tps</text>
+                  <text x="334" y="240">creative</text>
+                  <text x="334" y="254" class="faint">:25566</text>
+                  <text x="134" y="322">modded :25567</text>
+                  <text x="134" y="336" class="faint">offline</text>
+                </g>
+              </svg>
+              <div class="console" aria-hidden="true">
+                <div class="faint">[14:02:11] Starting minecraft server version 1.21.1</div>
+                <div>[14:02:17] Done (6.129s)! For help, type "help"</div>
+                <div>[14:03:40] Frangfurd joined the game</div>
+                <div class="console-prompt"><span class="console-dot"></span>&gt; save-all</div>
+              </div>
+            </div>
+          </header>
 
-    <section class="section-full" id="scheduler" data-nav="Scheduler">
-      <div class="container">
-        <div class="spotlight">
-          <div class="section-head reveal">
-            <span class="eyebrow">() scheduler</span>
-            <h2>Automate with a graph</h2>
-            <p>Wire triggers, conditions and commands on a canvas.</p>
+          <section class="works block" aria-labelledby="works-label">
+            <span class="label works-label" id="works-label">Works with</span>
+            <ul class="works-list">
+              <li>Vanilla</li>
+              <li>Paper</li>
+              <li>Spigot</li>
+              <li>Bukkit</li>
+              <li>Fabric</li>
+              <li>NeoForge</li>
+            </ul>
+          </section>
+        </main>
+      </div>
+
+      <section class="block" id="features" data-focus aria-labelledby="features-title">
+        <div class="band">
+          <div class="band-title">
+            <span class="num">01</span>
+            <h2 id="features-title">Features</h2>
           </div>
-          <div class="spotlight-media reveal" style="--reveal-delay: 80ms">
-            <!-- Node-graph motif. Static SVG, animated purely in CSS (.sf-* in
-                 styles.css). Node fills, the left category bar and the port
-                 colours all mirror the app's blockMeta.ts, and every block and
-                 port drawn here exists in backend/services/scheduler_blocks.go —
-                 these are four automations you could actually build, not props.
-                 Geometry: a 1040x360 frame with 55 units clear left and right,
-                 190x64 nodes, and five frames stacked 360 apart for the reel.
-                 Each .sf-pulse also declares its own path's length in its style
-                 attribute, rounded a couple of units up. Edit a `d` here and that
-                 number has to move with it, or the dash stops clearing the ends
-                 of the edge it runs along (styles.css, .sf-pulse). -->
-            <svg
-              class="sf"
-              viewBox="0 0 1040 360"
-              role="img"
-              aria-label="A scheduler canvas panning through four automations: restart on crash, nightly backup when empty, warned timed restart, and a low-TPS alert."
+          <a
+            class="band-link"
+            id="demo-link"
+            href="https://konnekt-demo.pages.dev/"
+            target="_blank"
+            rel="noopener"
+            >Open the demo &rarr;</a
+          >
+        </div>
+        <div class="archive">
+          <div class="strip is-open" data-scene="dashboard">
+            <button
+              type="button"
+              class="strip-btn"
+              aria-expanded="true"
+              aria-controls="feature-dashboard"
             >
-              <defs>
-                <pattern id="sf-dots" width="24" height="24" patternUnits="userSpaceOnUse">
-                  <circle class="sf-dot" cx="1" cy="1" r="1" />
-                </pattern>
-              </defs>
-
-              <!-- One reel of five stacked frames, panned by .sf-reel in styles.css.
-                   The grid is a child of the reel, not a background on the canvas, so
-                   it travels with the nodes; 360 is a whole number of 24-unit pattern
-                   tiles, so it stays seamless across every frame. -->
-              <g class="sf-reel">
-                <rect class="sf-grid" x="0" y="0" width="1040" height="1800" fill="url(#sf-dots)" />
-
-                <!-- auto restart on crash -->
-                <g class="sf-frame" transform="translate(0 0)" style="--t0: 0s">
-                  <text class="sf-caption" x="55" y="340">AUTO RESTART ON CRASH</text>
-                  <path class="sf-edge" d="M 245 180 C 335 180 335 180 425 180" />
-                  <path class="sf-edge" d="M 615 166 C 705 166 705 84 795 84" />
-                  <path class="sf-edge" d="M 615 194 C 705 194 705 276 795 276" />
-                  <path
-                    class="sf-pulse"
-                    style="--d: 0.85s; --len: 182px"
-                    d="M 245 180 C 335 180 335 180 425 180"
-                  />
-                  <path
-                    class="sf-pulse"
-                    style="--d: 1.95s; --len: 206px"
-                    d="M 615 166 C 705 166 705 84 795 84"
-                  />
-                  <path
-                    class="sf-pulse"
-                    style="--d: 2.25s; --len: 206px"
-                    d="M 615 194 C 705 194 705 276 795 276"
-                  />
-                  <g class="sf-node" style="--nc: #7c3aed; --d: 0.35s">
-                    <rect class="sf-box" x="55" y="148" width="190" height="64" rx="10" />
-                    <rect class="sf-bar" x="63" y="162" width="3" height="36" rx="1.5" />
-                    <text class="sf-title" x="76" y="176">Server</text>
-                    <text class="sf-sub" x="76" y="195">crashed</text>
-                    <circle class="sf-port" cx="245" cy="180" r="5" style="--pc: #22c55e" />
-                  </g>
-                  <g class="sf-node" style="--nc: #0369a1; --d: 1.45s">
-                    <rect class="sf-box" x="425" y="148" width="190" height="64" rx="10" />
-                    <rect class="sf-bar" x="433" y="162" width="3" height="36" rx="1.5" />
-                    <text class="sf-title" x="446" y="176">Restart server</text>
-                    <text class="sf-sub" x="446" y="195">command</text>
-                    <circle class="sf-port" cx="425" cy="180" r="5" style="--pc: #7c3aed" />
-                    <circle class="sf-port" cx="615" cy="166" r="5" style="--pc: #22c55e" />
-                    <circle class="sf-port" cx="615" cy="194" r="5" style="--pc: #ef4444" />
-                  </g>
-                  <g class="sf-node" style="--nc: #047857; --d: 2.55s">
-                    <rect class="sf-box" x="795" y="52" width="190" height="64" rx="10" />
-                    <rect class="sf-bar" x="803" y="66" width="3" height="36" rx="1.5" />
-                    <text class="sf-title" x="816" y="80">Notify</text>
-                    <text class="sf-sub" x="816" y="99">info</text>
-                    <circle class="sf-port" cx="795" cy="84" r="5" style="--pc: #7c3aed" />
-                  </g>
-                  <g class="sf-node" style="--nc: #047857; --d: 2.85s">
-                    <rect class="sf-box" x="795" y="244" width="190" height="64" rx="10" />
-                    <rect class="sf-bar" x="803" y="258" width="3" height="36" rx="1.5" />
-                    <text class="sf-title" x="816" y="272">Notify</text>
-                    <text class="sf-sub" x="816" y="291">error</text>
-                    <circle class="sf-port" cx="795" cy="276" r="5" style="--pc: #7c3aed" />
-                  </g>
-                </g>
-                <!-- nightly backup when empty -->
-                <g class="sf-frame" transform="translate(0 360)" style="--t0: 6s">
-                  <text class="sf-caption" x="55" y="340">NIGHTLY BACKUP WHEN EMPTY</text>
-                  <path class="sf-edge" d="M 245 180 C 273 180 273 180 301 180" />
-                  <path class="sf-edge" d="M 491 166 C 519 166 519 124 547 124" />
-                  <path class="sf-edge" d="M 737 124 C 765 124 765 124 793 124" />
-                  <path
-                    class="sf-pulse"
-                    style="--d: 0.85s; --len: 58px"
-                    d="M 245 180 C 273 180 273 180 301 180"
-                  />
-                  <path
-                    class="sf-pulse"
-                    style="--d: 1.95s; --len: 76px"
-                    d="M 491 166 C 519 166 519 124 547 124"
-                  />
-                  <path
-                    class="sf-pulse"
-                    style="--d: 3.05s; --len: 58px"
-                    d="M 737 124 C 765 124 765 124 793 124"
-                  />
-                  <g class="sf-node" style="--nc: #7c3aed; --d: 0.35s">
-                    <rect class="sf-box" x="55" y="148" width="190" height="64" rx="10" />
-                    <rect class="sf-bar" x="63" y="162" width="3" height="36" rx="1.5" />
-                    <text class="sf-title" x="76" y="176">Time of day</text>
-                    <text class="sf-sub" x="76" y="195">04:00</text>
-                    <circle class="sf-port" cx="245" cy="180" r="5" style="--pc: #22c55e" />
-                  </g>
-                  <g class="sf-node" style="--nc: #b45309; --d: 1.45s">
-                    <rect class="sf-box" x="301" y="148" width="190" height="64" rx="10" />
-                    <rect class="sf-bar" x="309" y="162" width="3" height="36" rx="1.5" />
-                    <text class="sf-title" x="322" y="176">@players.count</text>
-                    <text class="sf-sub" x="322" y="195">condition == 0</text>
-                    <circle class="sf-port" cx="301" cy="180" r="5" style="--pc: #7c3aed" />
-                    <circle class="sf-port" cx="491" cy="166" r="5" style="--pc: #22c55e" />
-                    <circle class="sf-port" cx="491" cy="194" r="5" style="--pc: #f97316" />
-                  </g>
-                  <g class="sf-node" style="--nc: #0369a1; --d: 2.55s">
-                    <rect class="sf-box" x="547" y="92" width="190" height="64" rx="10" />
-                    <rect class="sf-bar" x="555" y="106" width="3" height="36" rx="1.5" />
-                    <text class="sf-title" x="568" y="120">Create backup</text>
-                    <text class="sf-sub" x="568" y="139">action</text>
-                    <circle class="sf-port" cx="547" cy="124" r="5" style="--pc: #7c3aed" />
-                    <circle class="sf-port" cx="737" cy="124" r="5" style="--pc: #22c55e" />
-                  </g>
-                  <g class="sf-node" style="--nc: #047857; --d: 3.65s">
-                    <rect class="sf-box" x="793" y="92" width="190" height="64" rx="10" />
-                    <rect class="sf-bar" x="801" y="106" width="3" height="36" rx="1.5" />
-                    <text class="sf-title" x="814" y="120">Notify</text>
-                    <text class="sf-sub" x="814" y="139">info</text>
-                    <circle class="sf-port" cx="793" cy="124" r="5" style="--pc: #7c3aed" />
-                  </g>
-                </g>
-                <!-- timed restart with warning -->
-                <g class="sf-frame" transform="translate(0 720)" style="--t0: 12s">
-                  <text class="sf-caption" x="55" y="340">TIMED RESTART WITH WARNING</text>
-                  <path class="sf-edge" d="M 245 180 C 273 180 273 180 301 180" />
-                  <path class="sf-edge" d="M 491 180 C 519 180 519 180 547 180" />
-                  <path class="sf-edge" d="M 737 180 C 765 180 765 180 793 180" />
-                  <path
-                    class="sf-pulse"
-                    style="--d: 0.85s; --len: 58px"
-                    d="M 245 180 C 273 180 273 180 301 180"
-                  />
-                  <path
-                    class="sf-pulse"
-                    style="--d: 1.95s; --len: 58px"
-                    d="M 491 180 C 519 180 519 180 547 180"
-                  />
-                  <path
-                    class="sf-pulse"
-                    style="--d: 3.05s; --len: 58px"
-                    d="M 737 180 C 765 180 765 180 793 180"
-                  />
-                  <g class="sf-node" style="--nc: #7c3aed; --d: 0.35s">
-                    <rect class="sf-box" x="55" y="148" width="190" height="64" rx="10" />
-                    <rect class="sf-bar" x="63" y="162" width="3" height="36" rx="1.5" />
-                    <text class="sf-title" x="76" y="176">Interval</text>
-                    <text class="sf-sub" x="76" y="195">every 6h</text>
-                    <circle class="sf-port" cx="245" cy="180" r="5" style="--pc: #22c55e" />
-                  </g>
-                  <g class="sf-node" style="--nc: #0369a1; --d: 1.45s">
-                    <rect class="sf-box" x="301" y="148" width="190" height="64" rx="10" />
-                    <rect class="sf-bar" x="309" y="162" width="3" height="36" rx="1.5" />
-                    <text class="sf-title" x="322" y="176">Broadcast</text>
-                    <text class="sf-sub" x="322" y="195">say restart 60s</text>
-                    <circle class="sf-port" cx="301" cy="180" r="5" style="--pc: #7c3aed" />
-                    <circle class="sf-port" cx="491" cy="180" r="5" style="--pc: #22c55e" />
-                  </g>
-                  <g class="sf-node" style="--nc: #0369a1; --d: 2.55s">
-                    <rect class="sf-box" x="547" y="148" width="190" height="64" rx="10" />
-                    <rect class="sf-bar" x="555" y="162" width="3" height="36" rx="1.5" />
-                    <text class="sf-title" x="568" y="176">Delay</text>
-                    <text class="sf-sub" x="568" y="195">60 seconds</text>
-                    <circle class="sf-port" cx="547" cy="180" r="5" style="--pc: #7c3aed" />
-                    <circle class="sf-port" cx="737" cy="180" r="5" style="--pc: #22c55e" />
-                  </g>
-                  <g class="sf-node" style="--nc: #0369a1; --d: 3.65s">
-                    <rect class="sf-box" x="793" y="148" width="190" height="64" rx="10" />
-                    <rect class="sf-bar" x="801" y="162" width="3" height="36" rx="1.5" />
-                    <text class="sf-title" x="814" y="176">Restart server</text>
-                    <text class="sf-sub" x="814" y="195">command</text>
-                    <circle class="sf-port" cx="793" cy="180" r="5" style="--pc: #7c3aed" />
-                  </g>
-                </g>
-                <!-- low tps alert -->
-                <g class="sf-frame" transform="translate(0 1080)" style="--t0: 18s">
-                  <text class="sf-caption" x="55" y="340">LOW TPS ALERT</text>
-                  <path class="sf-edge" d="M 245 180 C 335 180 335 180 425 180" />
-                  <path class="sf-edge" d="M 615 180 C 705 180 705 180 795 180" />
-                  <path
-                    class="sf-pulse"
-                    style="--d: 0.85s; --len: 182px"
-                    d="M 245 180 C 335 180 335 180 425 180"
-                  />
-                  <path
-                    class="sf-pulse"
-                    style="--d: 1.95s; --len: 182px"
-                    d="M 615 180 C 705 180 705 180 795 180"
-                  />
-                  <g class="sf-node" style="--nc: #7c3aed; --d: 0.35s">
-                    <rect class="sf-box" x="55" y="148" width="190" height="64" rx="10" />
-                    <rect class="sf-bar" x="63" y="162" width="3" height="36" rx="1.5" />
-                    <text class="sf-title" x="76" y="176">TPS below 14</text>
-                    <text class="sf-sub" x="76" y="195">trigger</text>
-                    <circle class="sf-port" cx="245" cy="180" r="5" style="--pc: #22c55e" />
-                  </g>
-                  <g class="sf-node" style="--nc: #0369a1; --d: 1.45s">
-                    <rect class="sf-box" x="425" y="148" width="190" height="64" rx="10" />
-                    <rect class="sf-bar" x="433" y="162" width="3" height="36" rx="1.5" />
-                    <text class="sf-title" x="446" y="176">save-all</text>
-                    <text class="sf-sub" x="446" y="195">rcon command</text>
-                    <circle class="sf-port" cx="425" cy="180" r="5" style="--pc: #7c3aed" />
-                    <circle class="sf-port" cx="615" cy="180" r="5" style="--pc: #22c55e" />
-                  </g>
-                  <g class="sf-node" style="--nc: #047857; --d: 2.55s">
-                    <rect class="sf-box" x="795" y="148" width="190" height="64" rx="10" />
-                    <rect class="sf-bar" x="803" y="162" width="3" height="36" rx="1.5" />
-                    <text class="sf-title" x="816" y="176">Notify</text>
-                    <text class="sf-sub" x="816" y="195">warning</text>
-                    <circle class="sf-port" cx="795" cy="180" r="5" style="--pc: #7c3aed" />
-                  </g>
-                </g>
-                <!-- auto restart on crash -->
-                <g class="sf-frame" transform="translate(0 1440)" style="--t0: 24s">
-                  <text class="sf-caption" x="55" y="340">AUTO RESTART ON CRASH</text>
-                  <path class="sf-edge" d="M 245 180 C 335 180 335 180 425 180" />
-                  <path class="sf-edge" d="M 615 166 C 705 166 705 84 795 84" />
-                  <path class="sf-edge" d="M 615 194 C 705 194 705 276 795 276" />
-                  <path
-                    class="sf-pulse"
-                    style="--d: 0.85s; --len: 182px"
-                    d="M 245 180 C 335 180 335 180 425 180"
-                  />
-                  <path
-                    class="sf-pulse"
-                    style="--d: 1.95s; --len: 206px"
-                    d="M 615 166 C 705 166 705 84 795 84"
-                  />
-                  <path
-                    class="sf-pulse"
-                    style="--d: 2.25s; --len: 206px"
-                    d="M 615 194 C 705 194 705 276 795 276"
-                  />
-                  <g class="sf-node" style="--nc: #7c3aed; --d: 0.35s">
-                    <rect class="sf-box" x="55" y="148" width="190" height="64" rx="10" />
-                    <rect class="sf-bar" x="63" y="162" width="3" height="36" rx="1.5" />
-                    <text class="sf-title" x="76" y="176">Server</text>
-                    <text class="sf-sub" x="76" y="195">crashed</text>
-                    <circle class="sf-port" cx="245" cy="180" r="5" style="--pc: #22c55e" />
-                  </g>
-                  <g class="sf-node" style="--nc: #0369a1; --d: 1.45s">
-                    <rect class="sf-box" x="425" y="148" width="190" height="64" rx="10" />
-                    <rect class="sf-bar" x="433" y="162" width="3" height="36" rx="1.5" />
-                    <text class="sf-title" x="446" y="176">Restart server</text>
-                    <text class="sf-sub" x="446" y="195">command</text>
-                    <circle class="sf-port" cx="425" cy="180" r="5" style="--pc: #7c3aed" />
-                    <circle class="sf-port" cx="615" cy="166" r="5" style="--pc: #22c55e" />
-                    <circle class="sf-port" cx="615" cy="194" r="5" style="--pc: #ef4444" />
-                  </g>
-                  <g class="sf-node" style="--nc: #047857; --d: 2.55s">
-                    <rect class="sf-box" x="795" y="52" width="190" height="64" rx="10" />
-                    <rect class="sf-bar" x="803" y="66" width="3" height="36" rx="1.5" />
-                    <text class="sf-title" x="816" y="80">Notify</text>
-                    <text class="sf-sub" x="816" y="99">info</text>
-                    <circle class="sf-port" cx="795" cy="84" r="5" style="--pc: #7c3aed" />
-                  </g>
-                  <g class="sf-node" style="--nc: #047857; --d: 2.85s">
-                    <rect class="sf-box" x="795" y="244" width="190" height="64" rx="10" />
-                    <rect class="sf-bar" x="803" y="258" width="3" height="36" rx="1.5" />
-                    <text class="sf-title" x="816" y="272">Notify</text>
-                    <text class="sf-sub" x="816" y="291">error</text>
-                    <circle class="sf-port" cx="795" cy="276" r="5" style="--pc: #7c3aed" />
-                  </g>
-                </g>
-              </g>
-            </svg>
-          </div>
-          <!-- One point per block category in scheduler_blocks.go: trigger, data,
-               action, control. Ordered the way a graph is built, left to right. -->
-          <ul class="spotlight-points reveal" style="--reveal-delay: 140ms">
-            <li>
-              <h3>Triggers</h3>
-              <p>A time, an interval, or something the server did.</p>
-            </li>
-            <li>
-              <h3>Attributes</h3>
-              <p>Read live server values, and write settings back.</p>
-            </li>
-            <li>
-              <h3>Actions</h3>
-              <p>Commands, backups, delays, notifications, webhooks.</p>
-            </li>
-            <li>
-              <h3>Conditions</h3>
-              <p>Compare values and branch. Failures get their own path.</p>
-            </li>
-          </ul>
-        </div>
-      </div>
-    </section>
-
-    <section class="section-full" id="privacy" data-nav="Local-first">
-      <div class="container">
-        <div class="section-head reveal">
-          <span class="eyebrow">[#] local-first</span>
-          <h2>Your server, your machine</h2>
-          <p>A desktop app, not a hosted panel. No account, nothing to sign up for.</p>
-        </div>
-        <div class="feat-grid">
-          <article class="feat reveal" style="--reveal-delay: 0ms">
-            <div class="feat-inner">
-              <span class="feat-icon" aria-hidden="true">⊘</span>
-              <h3 class="feat-title">No telemetry</h3>
-              <div class="feat-detail">
-                <ul>
-                  <li>No analytics or usage tracking</li>
-                  <li>No crash reporting</li>
-                  <li>Nothing phones home on launch</li>
-                </ul>
+              <span class="num">01</span>
+              <span class="strip-name">Tile dashboard</span>
+              <span class="strip-plus" aria-hidden="true">+</span>
+            </button>
+            <div class="strip-panel" id="feature-dashboard">
+              <div class="strip-head">
+                <h3 tabindex="-1">Tile dashboard</h3>
+                <span class="num">01 / 09</span>
               </div>
+              <video
+                class="strip-video"
+                poster="https://konnekt-demo.pages.dev/scenes/dashboard.webp"
+                muted
+                loop
+                playsinline
+                preload="metadata"
+                aria-label="Tile dashboard, in action"
+              >
+                <source
+                  src="https://konnekt-demo.pages.dev/scenes/dashboard.webm"
+                  type="video/webm"
+                />
+                <source
+                  src="https://konnekt-demo.pages.dev/scenes/dashboard.mp4"
+                  type="video/mp4"
+                />
+              </video>
+              <ul class="points">
+                <li>
+                  <h4>Drag, resize and snap</h4>
+                  <p>Pick a tile up by its title bar and the grid makes room.</p>
+                </li>
+                <li>
+                  <h4>Crate what you do not use</h4>
+                  <p>A closed tile waits in the sidebar until you want it back.</p>
+                </li>
+                <li>
+                  <h4>Layout presets</h4>
+                  <p>Console focus, compact, essentials, or your own.</p>
+                </li>
+              </ul>
             </div>
-          </article>
-
-          <article class="feat reveal" style="--reveal-delay: 60ms">
-            <div class="feat-inner">
-              <span class="feat-icon" aria-hidden="true">▤</span>
-              <h3 class="feat-title">Stays on disk</h3>
-              <div class="feat-detail">
-                <ul>
-                  <li>Your server folders, untouched</li>
-                  <li>Settings as JSON on your disk</li>
-                  <li>Backups where you point them</li>
-                </ul>
-              </div>
-            </div>
-          </article>
-
-          <article class="feat reveal" style="--reveal-delay: 120ms">
-            <div class="feat-inner">
-              <span class="feat-icon" aria-hidden="true">⇄</span>
-              <h3 class="feat-title">Network, only on request</h3>
-              <div class="feat-detail">
-                <ul>
-                  <li>GitHub, to check for updates</li>
-                  <li>Modrinth, when you browse mods</li>
-                  <li>Your own server, over RCON</li>
-                </ul>
-              </div>
-            </div>
-          </article>
-        </div>
-      </div>
-    </section>
-
-    <section class="cta section-full" id="download" data-nav="Download">
-      <div class="container">
-        <div class="cta-panel reveal">
-          <!-- Two lights running the panel's edge; see .cta-glow in styles.css.
-               Absolutely positioned, so it is out of flow and never becomes a
-               flex item of the panel. -->
-          <span class="cta-glow" aria-hidden="true"></span>
-          <span class="eyebrow">[&gt;] download</span>
-          <h2>Get <span class="accent">Konnekt</span></h2>
-          <p>Free and open source.</p>
-          <div class="cta-actions">
-            <a class="btn btn-primary" href="/download.html">Download Konnekt</a>
-            <a class="btn btn-secondary" href="/changelog.html">Changelog</a>
           </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- Canonical footer. Identical on every page. -->
-    <footer>
-      <div class="container">
-        <div class="disclaimer">
-          <span class="disclaimer-badge">NOTE</span>
-          <p>
-            Alpha software. A side project mostly written by Claude.
-            <a href="/docs.html#disclaimer">Full statement</a>.
-          </p>
-        </div>
-        <div class="footer-inner">
-          <div class="footer-left">
-            <span class="wordmark" style="font-size: 15px">Konnekt</span>
-            <span class="brand-tag">ALPHA</span>
-          </div>
-          <div class="footer-links">
-            <a href="https://github.com/kollektiv-mc/Konnekt" target="_blank" rel="noopener"
-              >GitHub</a
+          <div class="strip" data-scene="console">
+            <button
+              type="button"
+              class="strip-btn"
+              aria-expanded="false"
+              aria-controls="feature-console"
             >
-            <a href="/index.html#about">About</a>
+              <span class="num">02</span>
+              <span class="strip-name">Live console</span>
+              <span class="strip-plus" aria-hidden="true">+</span>
+            </button>
+            <div class="strip-panel" id="feature-console">
+              <div class="strip-head">
+                <h3 tabindex="-1">Live console</h3>
+                <span class="num">02 / 09</span>
+              </div>
+              <video
+                class="strip-video"
+                muted
+                loop
+                playsinline
+                preload="none"
+                aria-label="Live console, in action"
+              ></video>
+              <ul class="points">
+                <li>
+                  <h4>Live log streaming</h4>
+                  <p>The log as the server writes it.</p>
+                </li>
+                <li>
+                  <h4>Send commands inline</h4>
+                  <p>Type at the prompt and the reply lands in the same stream.</p>
+                </li>
+                <li>
+                  <h4>Filter and search</h4>
+                  <p>Narrow the scrollback to one kind of line, or to a word.</p>
+                </li>
+              </ul>
+            </div>
+          </div>
+          <div class="strip" data-scene="players">
+            <button
+              type="button"
+              class="strip-btn"
+              aria-expanded="false"
+              aria-controls="feature-players"
+            >
+              <span class="num">03</span>
+              <span class="strip-name">Players</span>
+              <span class="strip-plus" aria-hidden="true">+</span>
+            </button>
+            <div class="strip-panel" id="feature-players">
+              <div class="strip-head">
+                <h3 tabindex="-1">Players</h3>
+                <span class="num">03 / 09</span>
+              </div>
+              <video
+                class="strip-video"
+                muted
+                loop
+                playsinline
+                preload="none"
+                aria-label="Players, in action"
+              ></video>
+              <ul class="points">
+                <li>
+                  <h4>See who is online</h4>
+                  <p>A card per player, lit while they are on.</p>
+                </li>
+                <li>
+                  <h4>Kick or ban with a reason</h4>
+                  <p>The reason goes with the command.</p>
+                </li>
+                <li>
+                  <h4>Op, whitelist and bans</h4>
+                  <p>Each player&rsquo;s standing, in one panel.</p>
+                </li>
+              </ul>
+            </div>
+          </div>
+          <div class="strip" data-scene="performance">
+            <button
+              type="button"
+              class="strip-btn"
+              aria-expanded="false"
+              aria-controls="feature-performance"
+            >
+              <span class="num">04</span>
+              <span class="strip-name">Performance</span>
+              <span class="strip-plus" aria-hidden="true">+</span>
+            </button>
+            <div class="strip-panel" id="feature-performance">
+              <div class="strip-head">
+                <h3 tabindex="-1">Performance</h3>
+                <span class="num">04 / 09</span>
+              </div>
+              <video
+                class="strip-video"
+                muted
+                loop
+                playsinline
+                preload="none"
+                aria-label="Performance, in action"
+              ></video>
+              <ul class="points">
+                <li>
+                  <h4>Live TPS, CPU and memory</h4>
+                  <p>Read off the process and the tick.</p>
+                </li>
+                <li>
+                  <h4>An hour of history</h4>
+                  <p>A sample every ten seconds, kept for an hour.</p>
+                </li>
+                <li>
+                  <h4>No plugins to install</h4>
+                  <p>The server never knows it is watched.</p>
+                </li>
+              </ul>
+            </div>
+          </div>
+          <div class="strip" data-scene="worlds">
+            <button
+              type="button"
+              class="strip-btn"
+              aria-expanded="false"
+              aria-controls="feature-worlds"
+            >
+              <span class="num">05</span>
+              <span class="strip-name">Worlds</span>
+              <span class="strip-plus" aria-hidden="true">+</span>
+            </button>
+            <div class="strip-panel" id="feature-worlds">
+              <div class="strip-head">
+                <h3 tabindex="-1">Worlds</h3>
+                <span class="num">05 / 09</span>
+              </div>
+              <video
+                class="strip-video"
+                muted
+                loop
+                playsinline
+                preload="none"
+                aria-label="Worlds, in action"
+              ></video>
+              <ul class="points">
+                <li>
+                  <h4>Each world as a planet</h4>
+                  <p>Its nether and end as moons, sized by disk use.</p>
+                </li>
+                <li>
+                  <h4>Seed, size and version</h4>
+                  <p>Read from the level data, not typed in.</p>
+                </li>
+                <li>
+                  <h4>Switch, rename, duplicate</h4>
+                  <p>Change worlds without opening server.properties.</p>
+                </li>
+              </ul>
+            </div>
+          </div>
+          <div class="strip" data-scene="backups">
+            <button
+              type="button"
+              class="strip-btn"
+              aria-expanded="false"
+              aria-controls="feature-backups"
+            >
+              <span class="num">06</span>
+              <span class="strip-name">Backups</span>
+              <span class="strip-plus" aria-hidden="true">+</span>
+            </button>
+            <div class="strip-panel" id="feature-backups">
+              <div class="strip-head">
+                <h3 tabindex="-1">Backups</h3>
+                <span class="num">06 / 09</span>
+              </div>
+              <video
+                class="strip-video"
+                muted
+                loop
+                playsinline
+                preload="none"
+                aria-label="Backups, in action"
+              ></video>
+              <ul class="points">
+                <li>
+                  <h4>Manual or scheduled</h4>
+                  <p>World saves paused while it runs.</p>
+                </li>
+                <li>
+                  <h4>Browse restore points</h4>
+                  <p>Every backup, tagged and searchable.</p>
+                </li>
+                <li>
+                  <h4>Roll back in two clicks</h4>
+                  <p>Restore with the server stopped.</p>
+                </li>
+              </ul>
+            </div>
+          </div>
+          <div class="strip" data-scene="config">
+            <button
+              type="button"
+              class="strip-btn"
+              aria-expanded="false"
+              aria-controls="feature-config"
+            >
+              <span class="num">07</span>
+              <span class="strip-name">Config editor</span>
+              <span class="strip-plus" aria-hidden="true">+</span>
+            </button>
+            <div class="strip-panel" id="feature-config">
+              <div class="strip-head">
+                <h3 tabindex="-1">Config editor</h3>
+                <span class="num">07 / 09</span>
+              </div>
+              <video
+                class="strip-video"
+                muted
+                loop
+                playsinline
+                preload="none"
+                aria-label="Config editor, in action"
+              ></video>
+              <ul class="points">
+                <li>
+                  <h4>server.properties as a form</h4>
+                  <p>Every setting under a readable name.</p>
+                </li>
+                <li>
+                  <h4>Raw mode</h4>
+                  <p>The file itself, syntax highlighted.</p>
+                </li>
+                <li>
+                  <h4>YAML, JSON and TOML</h4>
+                  <p>Plugin and mod configs open in the same place.</p>
+                </li>
+              </ul>
+            </div>
+          </div>
+          <div class="strip" data-scene="mods">
+            <button
+              type="button"
+              class="strip-btn"
+              aria-expanded="false"
+              aria-controls="feature-mods"
+            >
+              <span class="num">08</span>
+              <span class="strip-name">Mods and plugins</span>
+              <span class="strip-plus" aria-hidden="true">+</span>
+            </button>
+            <div class="strip-panel" id="feature-mods">
+              <div class="strip-head">
+                <h3 tabindex="-1">Mods and plugins</h3>
+                <span class="num">08 / 09</span>
+              </div>
+              <video
+                class="strip-video"
+                muted
+                loop
+                playsinline
+                preload="none"
+                aria-label="Mods and plugins, in action"
+              ></video>
+              <ul class="points">
+                <li>
+                  <h4>Install from Modrinth</h4>
+                  <p>Search, pick a version, it lands in the right folder.</p>
+                </li>
+                <li>
+                  <h4>Dependencies resolve</h4>
+                  <p>What a plugin needs comes along with it.</p>
+                </li>
+                <li>
+                  <h4>Changelogs inline</h4>
+                  <p>See what a version changed before you take it.</p>
+                </li>
+              </ul>
+            </div>
+          </div>
+          <div class="strip" data-scene="servers">
+            <button
+              type="button"
+              class="strip-btn"
+              aria-expanded="false"
+              aria-controls="feature-servers"
+            >
+              <span class="num">09</span>
+              <span class="strip-name">Multi-server</span>
+              <span class="strip-plus" aria-hidden="true">+</span>
+            </button>
+            <div class="strip-panel" id="feature-servers">
+              <div class="strip-head">
+                <h3 tabindex="-1">Multi-server</h3>
+                <span class="num">09 / 09</span>
+              </div>
+              <video
+                class="strip-video"
+                muted
+                loop
+                playsinline
+                preload="none"
+                aria-label="Multi-server, in action"
+              ></video>
+              <ul class="points">
+                <li>
+                  <h4>Every server in one app</h4>
+                  <p>Survival, creative, a test server: one list.</p>
+                </li>
+                <li>
+                  <h4>Own jar, folder and JVM args</h4>
+                  <p>Each server keeps its launch settings.</p>
+                </li>
+                <li>
+                  <h4>Switch with one click</h4>
+                  <p>The whole dashboard follows the server you pick.</p>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="block" id="scheduler" data-focus aria-labelledby="scheduler-title">
+        <div class="band">
+          <div class="band-title">
+            <span class="num">02</span>
+            <h2 id="scheduler-title">Scheduler</h2>
+          </div>
+        </div>
+        <div class="flow" id="flow">
+          <div class="node">
+            <span class="node-kind">Trigger</span>
+            Daily at 04:00
+          </div>
+          <span class="wire" aria-hidden="true"><span></span></span>
+          <div class="node">
+            <span class="node-kind">Condition</span>
+            Players online = 0
+          </div>
+          <span class="wire" aria-hidden="true"><span></span></span>
+          <div class="node">
+            <span class="node-kind">Action</span>
+            Back up world
+          </div>
+          <span class="wire" aria-hidden="true"><span></span></span>
+          <div class="node">
+            <span class="node-kind">Action</span>
+            Notify
+          </div>
+        </div>
+        <div class="cells">
+          <div class="cell">
+            <h3>Triggers</h3>
+            <p>A time, an interval, or something the server did.</p>
+          </div>
+          <div class="cell">
+            <h3>Attributes</h3>
+            <p>Read live server values, and write settings back.</p>
+          </div>
+          <div class="cell">
+            <h3>Conditions</h3>
+            <p>Compare values and branch. Failures get their own path.</p>
+          </div>
+          <div class="cell">
+            <h3>Actions</h3>
+            <p>Commands, backups, delays, notifications, webhooks.</p>
+          </div>
+        </div>
+      </section>
+
+      <div class="group" data-focus>
+        <section class="local block" id="local" aria-labelledby="local-title">
+          <div class="local-head">
+            <span class="num">03</span>
+            <h2 id="local-title">Local-first</h2>
+          </div>
+          <div class="cell">
+            <h3>No telemetry</h3>
+            <p>No analytics, no crash reports. Nothing phones home.</p>
+          </div>
+          <div class="cell">
+            <h3>Stays on disk</h3>
+            <p>Settings as JSON on your disk. Backups where you point them.</p>
+          </div>
+          <div class="cell">
+            <h3>Network on request</h3>
+            <p>GitHub, Modrinth, and your own server over RCON.</p>
+          </div>
+        </section>
+
+        <section class="get block" id="download" aria-labelledby="get-title">
+          <span class="get-glow" aria-hidden="true"></span>
+          <span class="meta" data-release-line hidden></span>
+          <h2 id="get-title">Get Konnekt<span class="get-dot">.</span></h2>
+          <p>Free and open source, for Windows and Linux.</p>
+          <div class="actions">
+            <a class="btn btn-primary btn-large" href="/download.html"
+              ><svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true">
+                <path
+                  d="M7 1v9M3 6.5 7 10.5 11 6.5M1.5 13h11"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.6"
+                /></svg
+              >Download Konnekt</a
+            >
+            <a class="btn btn-secondary btn-large" href="/changelog.html">Changelog</a>
+          </div>
+        </section>
+      </div>
+
+      <!-- Canonical footer. Byte-identical on every page. -->
+      <footer class="block block-raised">
+        <div class="footer-cols">
+          <div class="footer-about">
+            <a class="footer-brand" href="/index.html"
+              ><img
+                class="mark"
+                src="/assets/img/mark-24.svg"
+                width="24"
+                height="24"
+                alt=""
+              />Konnekt</a
+            >
+            <p>A desktop dashboard for the Minecraft servers you host.</p>
+            <span class="meta"><span data-release-tag></span>Windows and Linux</span>
+          </div>
+          <nav class="footer-col" aria-label="Product">
+            <span class="label">Product</span>
+            <a href="/download.html">Download</a>
+            <a href="https://konnekt-demo.pages.dev/" target="_blank" rel="noopener"
+              >Try the demo</a
+            >
+            <a href="/changelog.html">Changelog</a>
+          </nav>
+          <nav class="footer-col" aria-label="Learn">
+            <span class="label">Learn</span>
             <a href="/index.html#features">Features</a>
             <a href="/docs.html">Docs</a>
             <a href="/roadmap.html">Roadmap</a>
-            <a href="/download.html">Download</a>
-            <a href="/changelog.html">Changelog</a>
-          </div>
-          <span class="footer-copy">&copy; 2026 Konnekt</span>
+          </nav>
+          <nav class="footer-col" aria-label="Source">
+            <span class="label">Source</span>
+            <a href="https://github.com/kollektiv-mc/Konnekt" target="_blank" rel="noopener"
+              >GitHub</a
+            >
+            <a href="https://github.com/kollektiv-mc/Konnekt/issues" target="_blank" rel="noopener"
+              >Issues</a
+            >
+            <a
+              href="https://github.com/kollektiv-mc/Konnekt/blob/main/LICENSE"
+              target="_blank"
+              rel="noopener"
+              >MIT licence</a
+            >
+          </nav>
         </div>
-      </div>
-    </footer>
-
-    <!-- The enlarged screenshot. Empty and hidden until it is opened, and
-         filled from the figure above so there is one source for the file and
-         one for the alt text. Above the nav's z-index 100; see .shot-lightbox. -->
-    <div
-      class="shot-lightbox"
-      id="shot-lightbox"
-      role="dialog"
-      aria-modal="true"
-      aria-label="Konnekt's dashboard, enlarged"
-      tabindex="-1"
-    >
-      <img id="shot-lightbox-img" alt="" />
+        <div class="footer-base">
+          <span
+            >Alpha software. A side project mostly written by Claude.
+            <a href="/docs.html#disclaimer">Full statement</a></span
+          >
+          <span>&copy; 2026 Konnekt</span>
+        </div>
+      </footer>
     </div>
 
     <script src="/release.js"></script>
-    <script src="/main.js"></script>
-    <!-- Landing page only: the hero and download backdrops. -->
-    <script src="/backdrop.js"></script>
+    <script src="/site.js"></script>
+    <script src="/home.js"></script>
   </body>
 </html>

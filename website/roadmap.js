@@ -1,510 +1,133 @@
-/* Roadmap page — search, sort, filter and keyboard navigation over the feature
-   tree in roadmap.html.
+/* Roadmap page: the stage and area filters, the search, and what GitHub says
+   is done or newly filed.
 
-   The tree itself is static markup, so this file is pure enhancement: with it
-   removed the page is still the whole roadmap and <details> still opens. That
-   is also why nothing here builds a row — it only reads what the page already
-   says, and every count, dot and stage total is derived from the markup rather
-   than restated in a second place that could disagree with it. */
+   The rows are static markup, so this file is enhancement: with it removed the
+   page is still the whole roadmap. Every count is derived from the rows rather
+   than restated in a second place that could disagree with them. */
 ;(function () {
-  var tree = document.getElementById('rm-tree')
-  if (!tree) return
+  var groupsEl = document.getElementById('rm-groups')
+  if (!groupsEl) return
 
-  var STAGES = ['alpha', 'beta', 'release', 'later']
-  // Shorter than the FAQ's 220ms on purpose: a tree is browsed several clicks
-  // deep, so the panel duration is paid on every one of them.
-  var FOLD_MS = 140
-  var TARGET_MS = 1200
+  var AREA_COUNT = document.querySelectorAll('.area[data-area]:not([data-area=""])').length
 
-  var statusText = document.getElementById('rm-status-text')
+  var searchEl = document.getElementById('rm-search')
+  var statusEl = document.getElementById('rm-status')
   var clearBtn = document.getElementById('rm-clear')
   var emptyEl = document.getElementById('rm-empty')
-  var searchEl = document.getElementById('rm-search')
-  var dirBtn = document.getElementById('rm-dir')
+  var totalEl = document.getElementById('rm-total')
+  var stageBtns = [].slice.call(document.querySelectorAll('.stage[data-stage]'))
+  var areaBtns = [].slice.call(document.querySelectorAll('.area[data-area]'))
 
-  // ── Index ───────────────────────────────────────────────────────────────
-  // One pass at load. Everything the toolbar needs later is read off this map
-  // rather than out of the DOM again: sorting a list is then a comparison over
-  // numbers and strings, and filtering is a substring test, neither of which
-  // touches layout.
-  var info = new Map()
-  var nodes = [].slice.call(tree.querySelectorAll('.rm-node'))
-  var lists = [tree].concat([].slice.call(tree.querySelectorAll('.rm-children')))
-  var folders = []
-  var leaves = []
-  var usedIds = {}
+  var state = { stage: '', area: '', q: '' }
 
-  function slugify(name) {
-    var base =
-      'rm-' +
-      name
-        .toLowerCase()
-        .replace(/\/$/, '')
-        .replace(/[^a-z0-9]+/g, '-')
-        .replace(/^-+|-+$/g, '')
-    var id = base
-    var n = 2
-    while (usedIds[id]) id = base + '-' + n++
-    usedIds[id] = true
-    return id
-  }
+  // ── Index ──────────────────────────────────────────────────────────────
+  // One record per row, rebuilt whenever GitHub adds rows. Filtering is then a
+  // comparison over strings that never touches layout until the end.
+  var rows = []
 
-  // The five area folders carry hand-written ids, because those are the ones
-  // worth linking to from outside. Claim them before anything is generated so
-  // a generated id can never collide with one.
-  ;[].slice.call(tree.querySelectorAll('[id]')).forEach(function (el) {
-    usedIds[el.id] = true
-  })
-
-  function indexNode(el, i) {
-    var isFolder = el.classList.contains('rm-node-folder')
-    var details = isFolder ? el.querySelector(':scope > .rm-folder') : null
-    var nameEl = el.querySelector('.rm-name')
-    var name = nameEl.textContent
-
-    var rec = {
-      el: el,
-      folder: isFolder,
-      details: details,
-      row: el.querySelector('.rm-row'),
-      nameEl: nameEl,
-      name: name,
-      key: name.replace(/\/$/, '').toLowerCase(),
-      stage: isFolder ? -1 : STAGES.indexOf(el.getAttribute('data-stage')),
-      order: i,
-      countEl: isFolder ? el.querySelector('.rm-count') : null,
-      dotsEl: isFolder ? el.querySelector('.rm-dots') : null,
-      kids: [],
-      visible: true,
-    }
-
-    info.set(el, rec)
-    if (isFolder) folders.push(rec)
-    else leaves.push(rec)
-
-    var target = isFolder ? details : el
-    if (!target.id) target.id = slugify(name)
-
-    // The issue a row names, which is what the sync matches on.
-    var link = isFolder ? null : el.querySelector('.rm-issue')
-    var num = link ? Number(link.getAttribute('href').split('/').pop()) : 0
-    if (num) {
-      rec.issue = num
-      referenced[num] = rec
-    }
-
-    return rec
-  }
-
-  // Parent, and the path a search matches against. Searching a tree means
-  // searching paths: typing "backups" should bring back the folder and
-  // everything in it, not only the four rows whose own text happens to repeat
-  // the word, so a leaf carries its ancestors' names.
-  //
-  // A leaf's data-search is the rest of it: the one-line description the row
-  // used to print, kept as an index once the column was dropped. "stdout" is
-  // not in any name on the page, and it is still the word someone types to
-  // find the console. Nothing paints it, so a row matched only through it
-  // comes back with no highlight on it — which is the honest thing for text
-  // the row is not showing.
-  function linkNode(rec) {
-    var parentList = rec.el.parentNode
-    var parentNode = parentList === tree ? null : parentList.closest('.rm-node')
-    rec.parent = parentNode ? info.get(parentNode) : null
-
-    var path = rec.name
-    for (var p = rec.parent; p; p = p.parent) path = p.name + ' ' + path
-    rec.hay = (path + ' ' + (rec.el.getAttribute('data-search') || '')).toLowerCase()
-  }
-
-  // Derived from the tree rather than stored: re-run after the sync adds rows
-  // and every count on the page is right again without a second bookkeeping
-  // path that could disagree with the first.
-  function recount() {
-    folders.forEach(function (f) {
-      f.kids = []
-    })
-    leaves.forEach(function (leaf) {
-      for (var p = leaf.parent; p; p = p.parent) p.kids.push(leaf)
-    })
-    folders.forEach(setFolderStage)
-    countStages()
-  }
-
-  // The stage cards' totals. Authored into the markup so the page is right
-  // without JavaScript, and recomputed here so it stays right when the sync
-  // adds to it.
-  function countStages() {
-    document.querySelectorAll('.rm-stage-card').forEach(function (card) {
-      var stage = card.getAttribute('data-stage')
-      var n = leaves.filter(function (leaf) {
-        return STAGES[leaf.stage] === stage
-      }).length
-      card.querySelector('.rm-stage-count').textContent = n
+  function index() {
+    rows = [].slice.call(groupsEl.querySelectorAll('.row')).map(function (el) {
+      var group = el.closest('.rm-group')
+      var path = group.getAttribute('data-path') || ''
+      var name = el.querySelector('.row-name').textContent
+      return {
+        el: el,
+        group: group,
+        path: path,
+        stage: el.getAttribute('data-stage'),
+        text: (name + ' ' + path + ' ' + (el.getAttribute('data-search') || '')).toLowerCase(),
+      }
     })
   }
 
-  var referenced = {}
-  nodes.forEach(indexNode)
-  nodes.forEach(function (el) {
-    linkNode(info.get(el))
-  })
-
-  // Everything the status line and the stage cards say is counted from the
-  // markup at load, not only when a filter runs: the authored numbers are what
-  // the page shows without JavaScript, and they should not be able to drift
-  // from the tree they describe once it is running.
-
-  // A folder's stage is the last thing it is waiting on, not the first: sorted
-  // by when each one is finished, an area with nothing but shipped work comes
-  // before an area still waiting on a Beta tile, which comes before one waiting
-  // on Later. Taking the earliest instead would tie every folder on Alpha —
-  // all five areas contain something that shipped — and collapse the stage
-  // sort into the name sort.
-  function setFolderStage(f) {
-    f.stage = f.kids.reduce(function (max, l) {
-      return Math.max(max, l.stage)
-    }, 0)
+  function inArea(row, area) {
+    return !area || row.path === area || row.path.indexOf(area + '/') === 0
   }
 
-  recount()
-
-  // ── Filtering ───────────────────────────────────────────────────────────
-  var query = ''
-  var lastQuery = null
-  var active = {}
-  var savedOpen = null
-
-  function stageFiltered() {
-    return STAGES.some(function (s) {
-      return active[s]
-    })
-  }
-
-  function filtering() {
-    return query !== '' || stageFiltered()
-  }
-
-  // Rebuilt from text nodes rather than from a string of HTML: the names are
-  // this page's own copy, but a <mark> assembled by concatenation is the habit
-  // that eventually meets text that isn't.
-  function paint(el, text, q) {
-    el.textContent = ''
-    if (!q) {
-      el.textContent = text
-      return
-    }
-    var lower = text.toLowerCase()
-    var i = 0
-    var at
-    while ((at = lower.indexOf(q, i)) !== -1) {
-      if (at > i) el.appendChild(document.createTextNode(text.slice(i, at)))
-      var m = document.createElement('mark')
-      m.textContent = text.slice(at, at + q.length)
-      el.appendChild(m)
-      i = at + q.length
-    }
-    el.appendChild(document.createTextNode(text.slice(i)))
-  }
-
+  // ── Filtering ──────────────────────────────────────────────────────────
   function apply() {
-    var byStage = stageFiltered()
+    var needle = state.q.trim().toLowerCase()
     var shown = 0
 
-    leaves.forEach(function (leaf) {
-      var ok =
-        (!byStage || active[STAGES[leaf.stage]]) && (query === '' || leaf.hay.indexOf(query) !== -1)
-      leaf.visible = ok
-      leaf.el.classList.toggle('is-filtered', !ok)
-      if (ok) shown++
+    rows.forEach(function (row) {
+      var on =
+        inArea(row, state.area) &&
+        (!state.stage || row.stage === state.stage) &&
+        (!needle || row.text.indexOf(needle) !== -1)
+      row.el.hidden = !on
+      if (on) shown++
     })
 
-    // Only when the text changed: a stage toggle cannot move a highlight, and
-    // repainting every name for it would be work with nothing to show for it.
-    if (query !== lastQuery) {
-      leaves.forEach(function (leaf) {
-        paint(leaf.nameEl, leaf.name, query)
-      })
-      lastQuery = query
-    }
-
-    if (filtering() && savedOpen === null) {
-      savedOpen = folders.filter(function (f) {
-        return f.details.open
-      })
-    }
-
-    folders.forEach(function (f) {
-      var live = f.kids.filter(function (l) {
-        return l.visible
-      })
-      f.visible = live.length > 0
-      f.el.classList.toggle('is-filtered', !f.visible)
-      f.countEl.textContent = live.length
-      f.dotsEl.textContent = ''
-      STAGES.forEach(function (s, si) {
-        if (
-          !live.some(function (l) {
-            return l.stage === si
-          })
-        )
-          return
-        var dot = document.createElement('i')
-        dot.className = 'rm-dot rm-dot-' + s
-        f.dotsEl.appendChild(dot)
-      })
-      // Opened outright rather than through the animation: a filter is a
-      // change of view, not a gesture on one folder, and animating twenty of
-      // them at once is the thing that would make typing feel slow.
-      if (filtering() && f.visible) setOpen(f, true)
+    groupsEl.querySelectorAll('.rm-group').forEach(function (group) {
+      var visible = group.querySelectorAll('.row:not([hidden])').length
+      group.hidden = visible === 0
+      group.querySelector('.rm-count').textContent = visible
     })
 
-    if (!filtering() && savedOpen) {
-      folders.forEach(function (f) {
-        setOpen(f, savedOpen.indexOf(f) !== -1)
-      })
-      savedOpen = null
-    }
-
-    emptyEl.classList.toggle('is-hidden', shown > 0)
-    tree.classList.toggle('is-hidden', shown === 0)
-    clearBtn.classList.toggle('is-hidden', !filtering())
-    statusText.textContent = filtering()
-      ? 'showing ' + shown + ' of ' + leaves.length
-      : leaves.length + ' features across ' + tree.children.length + ' areas'
-  }
-
-  // Bypasses the height animation and any close it interrupts, so a folder
-  // opened by the filter cannot be left mid-flight with `is-closing` on it.
-  function setOpen(rec, open) {
-    rec.details.classList.remove('is-closing')
-    rec.details.open = open
-  }
-
-  // ── Sorting ─────────────────────────────────────────────────────────────
-  var mode = 'order'
-  var desc = false
-
-  function compare(a, b) {
-    var A = info.get(a)
-    var B = info.get(b)
-    // Folders above files, the way a file manager does it, and independent of
-    // the direction toggle: reversing the sort should not turn the tree inside
-    // out.
-    if (A.folder !== B.folder) return A.folder ? -1 : 1
-
-    var r = 0
-    if (mode === 'order') r = A.order - B.order
-    else if (mode === 'name') r = A.key < B.key ? -1 : A.key > B.key ? 1 : 0
-    else r = A.stage - B.stage || (A.key < B.key ? -1 : A.key > B.key ? 1 : 0)
-
-    return desc ? -r : r
-  }
-
-  function sortTree() {
-    lists.forEach(function (list) {
-      var items = [].slice.call(list.children)
-      items.sort(compare)
-      var frag = document.createDocumentFragment()
-      items.forEach(function (li) {
-        frag.appendChild(li)
-      })
-      list.appendChild(frag)
+    stageBtns.forEach(function (btn) {
+      var s = btn.getAttribute('data-stage')
+      btn.setAttribute('aria-pressed', state.stage === s ? 'true' : 'false')
+      btn.querySelector('.stage-count').textContent = rows.filter(function (row) {
+        return row.stage === s && inArea(row, state.area)
+      }).length
     })
+
+    areaBtns.forEach(function (btn) {
+      var a = btn.getAttribute('data-area')
+      btn.setAttribute('aria-pressed', state.area === a ? 'true' : 'false')
+      btn.querySelector('.area-count').textContent = rows.filter(function (row) {
+        return inArea(row, a)
+      }).length
+    })
+
+    var filtered = !!(state.stage || state.area || needle)
+    statusEl.textContent =
+      shown +
+      (shown === 1 ? ' feature' : ' features') +
+      (filtered ? ' shown' : ' across ' + AREA_COUNT + ' areas')
+    clearBtn.hidden = !filtered
+    emptyEl.hidden = shown !== 0
+    if (totalEl) totalEl.textContent = rows.length + ' features · ' + AREA_COUNT + ' areas'
   }
 
-  // ── Controls ────────────────────────────────────────────────────────────
-  // Search runs on a frame rather than on every input event: holding a key
-  // down fires faster than the screen updates, and the work is wasted.
-  var queued = false
+  // ── Controls ───────────────────────────────────────────────────────────
+  stageBtns.forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var s = btn.getAttribute('data-stage')
+      state.stage = state.stage === s ? '' : s
+      apply()
+    })
+  })
+
+  areaBtns.forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      state.area = btn.getAttribute('data-area')
+      apply()
+    })
+  })
+
   searchEl.addEventListener('input', function () {
-    if (queued) return
-    queued = true
-    window.requestAnimationFrame(function () {
-      queued = false
-      query = searchEl.value.trim().toLowerCase()
-      apply()
-    })
-  })
-
-  searchEl.addEventListener('keydown', function (e) {
-    if (e.key === 'Escape' && searchEl.value !== '') {
-      e.stopPropagation()
-      searchEl.value = ''
-      query = ''
-      apply()
-    }
-  })
-
-  document.querySelectorAll('.rm-stage-card').forEach(function (card) {
-    card.addEventListener('click', function () {
-      var stage = card.getAttribute('data-stage')
-      active[stage] = !active[stage]
-      card.setAttribute('aria-pressed', active[stage] ? 'true' : 'false')
-      apply()
-    })
-  })
-
-  document.querySelectorAll('.rm-sort-btn').forEach(function (btn) {
-    btn.addEventListener('click', function () {
-      mode = btn.getAttribute('data-sort')
-      document.querySelectorAll('.rm-sort-btn').forEach(function (other) {
-        other.setAttribute('aria-pressed', other === btn ? 'true' : 'false')
-      })
-      sortTree()
-    })
-  })
-
-  dirBtn.addEventListener('click', function () {
-    desc = !desc
-    dirBtn.setAttribute('aria-pressed', desc ? 'true' : 'false')
-    sortTree()
-  })
-
-  document.querySelectorAll('.rm-fold-btn').forEach(function (btn) {
-    btn.addEventListener('click', function () {
-      var open = btn.getAttribute('data-fold') === 'expand'
-      folders.forEach(function (f) {
-        setOpen(f, open)
-      })
-      savedOpen = null
-    })
+    state.q = searchEl.value
+    apply()
   })
 
   clearBtn.addEventListener('click', function () {
+    state = { stage: '', area: '', q: '' }
     searchEl.value = ''
-    query = ''
-    STAGES.forEach(function (s) {
-      active[s] = false
-    })
-    document.querySelectorAll('.rm-stage-card').forEach(function (card) {
-      card.setAttribute('aria-pressed', 'false')
-    })
     apply()
     searchEl.focus()
   })
 
-  // ── Folder animation ────────────────────────────────────────────────────
-  folders.forEach(function (f) {
-    window.KonnektDisclose(f.details, FOLD_MS)
-  })
-
-  // ── Keyboard ────────────────────────────────────────────────────────────
-  // Roving focus, the way a file tree behaves: Tab reaches the tree once, and
-  // the arrows walk it from there. The rows are still <summary> elements, so
-  // Enter and Space keep toggling a folder without anything here.
-  var KEYS = ['ArrowDown', 'ArrowUp', 'ArrowRight', 'ArrowLeft', 'Home', 'End']
-
-  tree.querySelectorAll('.rm-row').forEach(function (row, i) {
-    row.setAttribute('tabindex', i === 0 ? '0' : '-1')
-  })
-
-  // Answered from the tree's own state rather than from layout: a closed
-  // <details> no longer hides its contents with display:none in every engine —
-  // Chrome uses content-visibility so the panel can be animated — and an
-  // offsetParent test quietly reports every collapsed row as visible there.
-  function onScreen(rec) {
-    if (rec.el.classList.contains('is-filtered')) return false
-    for (var p = rec.parent; p; p = p.parent) {
-      if (p.el.classList.contains('is-filtered') || !p.details.open) return false
-    }
-    return true
-  }
-
-  function visibleRows() {
-    return nodes
-      .map(function (el) {
-        return info.get(el)
-      })
-      .filter(onScreen)
-      .map(function (rec) {
-        return rec.row
-      })
-  }
-
-  function focusRow(row) {
-    if (!row) return
-    tree.querySelectorAll('.rm-row[tabindex="0"]').forEach(function (old) {
-      old.setAttribute('tabindex', '-1')
-    })
-    row.setAttribute('tabindex', '0')
-    row.focus()
-  }
-
-  tree.addEventListener('keydown', function (e) {
-    if (KEYS.indexOf(e.key) === -1) return
-    var row = e.target.closest ? e.target.closest('.rm-row') : null
-    if (!row) return
-
-    var rec = info.get(row.closest('.rm-node'))
-    var rows = visibleRows()
-    var i = rows.indexOf(row)
-    e.preventDefault()
-
-    if (e.key === 'ArrowDown') focusRow(rows[i + 1])
-    else if (e.key === 'ArrowUp') focusRow(rows[i - 1])
-    else if (e.key === 'Home') focusRow(rows[0])
-    else if (e.key === 'End') focusRow(rows[rows.length - 1])
-    else if (e.key === 'ArrowRight') {
-      // Clicked rather than opened directly, so the keyboard gets the same
-      // animation the mouse does.
-      if (rec.folder && !rec.details.open) row.click()
-      else if (rec.folder) focusRow(rows[i + 1])
-    } else if (e.key === 'ArrowLeft') {
-      if (rec.folder && rec.details.open) row.click()
-      else if (rec.parent) focusRow(rec.parent.row)
-    }
-  })
-
-  // ── Deep links ──────────────────────────────────────────────────────────
-  // #rm-file-explorer opens everything above it and marks it once. Nothing
-  // here writes the hash back: a folder opening is not a page you navigated to.
-  function revealHash() {
-    var id = window.location.hash.slice(1)
-    if (!id) return
-    var el = document.getElementById(id)
-    if (!el || !tree.contains(el)) return
-
-    var node = el.closest('.rm-node')
-    for (var p = info.get(node).parent; p; p = p.parent) setOpen(p, true)
-
-    tree.querySelectorAll('.is-target').forEach(function (old) {
-      old.classList.remove('is-target')
-    })
-    node.classList.add('is-target')
-    window.setTimeout(function () {
-      node.classList.remove('is-target')
-    }, TARGET_MS)
-
-    var target = info.get(node).row
-    focusRow(target)
-    target.scrollIntoView({
-      behavior: document.documentElement.classList.contains('reduce-motion') ? 'auto' : 'smooth',
-      block: 'center',
-    })
-  }
-
-  window.addEventListener('hashchange', revealHash)
-  revealHash()
-
-  // Once, with nothing filtered, so the status line is counted from the tree
-  // rather than left on the number the markup was written with.
+  index()
   apply()
 
-  // ── GitHub sync ─────────────────────────────────────────────────────────
-  // The tree above is the editorial layer: its names, its data-search terms and
-  // its structure are written for this page, and none of that exists on an
-  // issue — the suite's label taxonomy stops at `area:ui`, so there is no
-  // per-tile information to build a hierarchy from, and an issue title reads
-  // like "Backups tile: manage all world-specific backups in the
-  // 'World-specific' segment", which is not a line for a marketing page.
-  //
-  // What GitHub is authoritative about is the other half: whether a planned
-  // thing is done, and what has been filed since this page was written. That is
-  // all this reads back, and all of it is additive. The page is already the
-  // whole roadmap before the request resolves, so a rate limit, an outage or an
-  // offline visitor leaves it exactly as authored — no banner, no spinner, no
-  // empty state. changelog.js swallows its snapshot failure the same way.
+  // ── GitHub sync ────────────────────────────────────────────────────────
+  // The rows are the editorial layer: their names, search terms and grouping
+  // are written for this page, and none of that exists on an issue. What
+  // GitHub is authoritative about is the other half: whether a planned thing
+  // is done, and what has been filed since this page was written. That is all
+  // this reads back, and all of it is additive, so a rate limit, an outage or
+  // an offline visitor leaves the page exactly as authored.
   var R = window.KonnektRelease
   if (!R || !R.fetchIssues) return
 
@@ -514,13 +137,12 @@
   var STAGE_LABEL = { alpha: 'ALPHA', beta: 'BETA', release: 'RELEASE', later: 'LATER' }
 
   // Both issue forms share a required "Which part of Konnekt?" dropdown, and
-  // GitHub renders the answer into the body under that heading. It files an
-  // issue that carries none of the labels below. The options are fixed by
-  // .github/ISSUE_TEMPLATE/*.yml, and
-  // frontend/scripts/check-issue-templates.mjs already keeps the two forms
-  // holding the same list. An answer this does not know lands in requested/,
-  // which is also where "Something else, or not sure" goes.
-  var AREA_FOLDERS = {
+  // GitHub renders the answer into the body under that heading. The options
+  // are fixed by .github/ISSUE_TEMPLATE/*.yml, and
+  // frontend/scripts/check-issue-templates.mjs keeps the two forms holding the
+  // same list. An answer this does not know lands in requested/, which is also
+  // where "Something else, or not sure" goes.
+  var AREA_GROUPS = {
     console: 'rm-console',
     commands: 'rm-console',
     stats: 'rm-stats',
@@ -538,15 +160,11 @@
     updater: 'rm-release',
   }
 
-  // The labels this files by: the per-area `area:` labels in
-  // .github/labels.yml, one per answer above, plus `area:remote`. A form is only
-  // one way to file an issue, and one filed any other way has no dropdown
-  // heading to parse, so until the label was read every maintainer-filed issue
-  // landed in requested/ beside the folder it belongs in. Remote Access is not a
-  // tile, so the form has no option for it at all and the label is the only
-  // place that fact lives. `area:ui`, `area:build` and `area:agents` name no
-  // folder, so an issue carrying only those falls through to its form answer.
-  var LABEL_FOLDERS = {
+  // The per-area `area:` labels in .github/labels.yml, plus `area:remote`. A
+  // form is one way to file an issue, and one filed any other way has no
+  // dropdown heading to parse. `area:ui`, `area:build` and `area:agents` name
+  // no group, so an issue carrying only those falls through to its form answer.
+  var LABEL_GROUPS = {
     'area:console': 'rm-console',
     'area:commands': 'rm-console',
     'area:stats': 'rm-stats',
@@ -592,95 +210,96 @@
   }
 
   // Built the first time something needs it, so a quiet week leaves no empty
-  // folder sitting at the bottom of the tree.
-  var requestedRec = null
+  // group at the bottom of the page.
+  var requestedEl = null
 
   function requested() {
-    if (requestedRec) return requestedRec
-
-    var li = mk('li', 'rm-node rm-node-folder')
-    li.setAttribute('data-github', '')
-    var details = mk('details', 'rm-folder')
-    var row = mk('summary', 'rm-row rm-row-folder')
-    row.setAttribute('tabindex', '-1')
-    var label = mk('span', 'rm-label')
-    label.appendChild(mk('span', 'rm-name', 'requested/'))
-    var dots = mk('span', 'rm-dots')
-    dots.setAttribute('aria-hidden', 'true')
-
-    row.appendChild(label)
-    row.appendChild(mk('span', 'rm-count'))
-    row.appendChild(dots)
-    details.appendChild(row)
-    details.appendChild(mk('ul', 'rm-children'))
-    li.appendChild(details)
-    tree.appendChild(li)
-
-    requestedRec = indexNode(li, nodes.length)
-    linkNode(requestedRec)
-    window.KonnektDisclose(details, FOLD_MS)
-    return requestedRec
+    if (requestedEl) return requestedEl
+    requestedEl = mk('section', 'rm-group')
+    requestedEl.id = 'rm-requested'
+    requestedEl.setAttribute('data-path', 'requested')
+    var head = mk('h2', 'rm-path')
+    head.appendChild(mk('span', null, 'requested /'))
+    head.appendChild(mk('span', 'rm-count'))
+    requestedEl.appendChild(head)
+    requestedEl.appendChild(mk('ul', 'rows'))
+    groupsEl.insertBefore(requestedEl, emptyEl)
+    return requestedEl
   }
 
   // The label wins over the form answer: it is a maintainer's decision, where
-  // the answer is whatever a reporter picked as the closest option. Both
-  // resolve through the same lookup and fall back to the same folder.
-  function folderFor(area, labels) {
-    var id = AREA_FOLDERS[area]
+  // the answer is whatever a reporter picked as the closest option.
+  function groupFor(area, labels) {
+    var id = AREA_GROUPS[area]
     labels.forEach(function (label) {
-      if (LABEL_FOLDERS[label]) id = LABEL_FOLDERS[label]
+      if (LABEL_GROUPS[label]) id = LABEL_GROUPS[label]
     })
-    var el = id ? document.getElementById(id) : null
-    return el ? info.get(el.closest('.rm-node')) : requested()
+    return (id && document.getElementById(id)) || requested()
   }
 
-  // Same markup an authored row uses, so every style, the search highlight and
-  // the row fade apply to it without a rule of its own. data-github is left on
-  // it so it stays visible in the DOM which rows this page wrote and which the
-  // tracker did.
-  function buildLeaf(issue, stage) {
-    var li = mk('li', 'rm-node rm-node-leaf')
+  // The markup an authored row uses, so every style applies to it.
+  // data-github stays on it so the DOM shows which rows the tracker wrote.
+  function buildRow(issue, stage) {
+    // Fades in once. The filters hide rows with the hidden attribute, and an
+    // animation restarts on the way back from display: none, so the class goes
+    // when it has run rather than replaying on every filter change.
+    var li = mk('li', 'row appear')
+    li.addEventListener('animationend', function () {
+      li.classList.remove('appear')
+    })
     li.setAttribute('data-stage', stage)
     li.setAttribute('data-github', '')
-
-    var row = mk('div', 'rm-row rm-row-leaf')
-    row.setAttribute('tabindex', '-1')
-
-    var label = mk('span', 'rm-label')
-    // The form prefixes every request's title, which is noise in a column that
+    // The form prefixes every request's title, which is noise in a list that
     // is nothing but features.
-    label.appendChild(mk('span', 'rm-name', issue.title.replace(/^\[Feature\]:\s*/i, '')))
+    li.appendChild(mk('span', 'row-name', issue.title.replace(/^\[Feature\]:\s*/i, '')))
 
-    var link = mk('a', 'rm-issue', '#' + issue.number)
+    var meta = mk('span', 'row-meta')
+    var link = mk('a', 'row-issue', '#' + issue.number)
     link.href = issue.html_url
     link.target = '_blank'
     link.rel = 'noopener'
-    link.setAttribute('aria-label', 'Issue ' + issue.number + ' on GitHub')
-
-    row.appendChild(label)
-    row.appendChild(mk('span', 'tag tag-stage', STAGE_LABEL[stage]))
-    row.appendChild(link)
-    li.appendChild(row)
+    meta.appendChild(link)
+    var tag = mk('span', 'row-stage')
+    var marker = mk('span', 'marker')
+    marker.setAttribute('aria-hidden', 'true')
+    tag.appendChild(marker)
+    tag.appendChild(document.createTextNode(STAGE_LABEL[stage]))
+    meta.appendChild(tag)
+    li.appendChild(meta)
     return li
   }
 
-  // A closed issue is merged, not released, so the stage chip is left alone and
-  // the mark is not green: green now means a full release, which a merged beta
-  // issue is not yet. The leaf's own marker fills in, the way a shipped one is.
-  function markDone(rec) {
-    if (rec.el.classList.contains('is-done')) return
-    rec.el.classList.add('is-done')
-    var mark = mk('span', 'rm-done', '✓')
-    mark.title = 'Closed on GitHub'
-    mark.appendChild(mk('span', 'sr-only', ' done'))
-    rec.nameEl.parentNode.appendChild(mark)
+  function markDone(row) {
+    if (row.classList.contains('is-done')) return
+    row.classList.add('is-done')
+    var meta = row.querySelector('.row-meta')
+    meta.insertBefore(mk('span', 'row-done', 'done'), meta.firstChild)
+  }
+
+  // Every row that links an issue, by number.
+  var referenced = {}
+  groupsEl.querySelectorAll('.row-issue').forEach(function (a) {
+    var m = /\/issues\/(\d+)$/.exec(a.getAttribute('href') || '')
+    if (m) referenced[m[1]] = a.closest('.row')
+  })
+
+  // Says a request is in flight, and then what came of it, so the rows the
+  // tracker adds never arrive unannounced.
+  var syncNote = mk('span', 'rm-sync loader', 'syncing with GitHub')
+  statusEl.parentNode.insertBefore(syncNote, clearBtn)
+
+  function settleSync(text) {
+    syncNote.className = 'rm-sync appear'
+    syncNote.textContent = text
   }
 
   R.fetchIssues()
     .then(function (res) {
-      if (!res.ok || !res.data || !res.data.length) return
+      if (!res.ok || !res.data) {
+        settleSync('could not sync with GitHub')
+        return
+      }
 
-      var added = 0
       var shipped = []
       var open = []
       res.data.forEach(function (issue) {
@@ -692,16 +311,12 @@
 
         // Only planned work, and only once a person has looked at it. The form
         // stamps status:needs-triage on everything it files, so nothing reaches
-        // the public roadmap unread, and clearing that one label is what puts
-        // an item here, with no edit to this site at all. Bugs stay off by the
-        // rule the note under the tree already states: they are fixed as they
-        // surface rather than listed.
+        // the public roadmap unread. Bugs stay off: they are fixed as they
+        // surface rather than listed. A bug label wins over a feature label
+        // rather than tying (#53 carries both).
         var labels = labelsOf(issue)
         if (labels.indexOf('status:needs-triage') !== -1) return
         if (labels.indexOf('type:feature') === -1 && labels.indexOf('enhancement') === -1) return
-        // A bug label wins over a feature label rather than tying: #53 carries
-        // both, and it is a report that a column switcher is broken, which is
-        // not a roadmap entry in either direction.
         if (labels.indexOf('type:bug') !== -1 || labels.indexOf('bug') !== -1) return
 
         if (issue.state === 'open') open.push(issue)
@@ -711,58 +326,44 @@
       })
 
       // Only the newest few: a closed issue no row links is history, and the
-      // whole of it would bury the open work in every folder. Appended after
-      // the open rows, so within a folder the done ones sit last.
+      // whole of it would bury the open work. Added after the open rows, so
+      // within a group the done ones sit last.
       shipped.sort(function (a, b) {
         return String(b.closed_at || '').localeCompare(String(a.closed_at || ''))
       })
       shipped = shipped.slice(0, SHIPPED_MAX)
 
+      var filed = 0
       function addRow(issue, done) {
         var labels = labelsOf(issue)
-        // milestone:remote-access and no milestone at all are both Later, which
-        // is what that card says: not scheduled, and not forgotten. A closed
-        // row has been built, so with no milestone it is read as alpha, the
-        // stage a merged tile belongs to, and the done mark says the rest.
+        // milestone:remote-access and no milestone at all are both Later: not
+        // scheduled, and not forgotten. A closed row has been built, so with no
+        // milestone it is read as alpha, and the done mark says the rest.
         var stage = labels.indexOf('milestone:beta') !== -1 ? 'beta' : done ? 'alpha' : 'later'
         if (done && labels.indexOf('milestone:later') !== -1) stage = 'later'
         if (done && labels.indexOf('milestone:remote-access') !== -1) stage = 'later'
-        var folder = folderFor(areaOf(issue.body), labels)
-        var li = buildLeaf(issue, stage)
-
-        folder.el.querySelector('.rm-children').appendChild(li)
-        var rec = indexNode(li, nodes.length + added)
-        linkNode(rec)
-        if (done) markDone(rec)
-        added++
+        var row = buildRow(issue, stage)
+        groupFor(areaOf(issue.body), labels).querySelector('.rows').appendChild(row)
+        if (done) markDone(row)
+        else filed++
       }
 
       open.forEach(function (issue) {
         addRow(issue, false)
       })
-      var filed = added
       shipped.forEach(function (issue) {
         addRow(issue, true)
       })
 
-      if (added) {
-        // Document order is what the keyboard walks and what the roadmap sort
-        // restores, so both caches are taken again rather than appended to.
-        nodes = [].slice.call(tree.querySelectorAll('.rm-node'))
-        lists = [tree].concat([].slice.call(tree.querySelectorAll('.rm-children')))
-        recount()
-        sortTree()
+      if (open.length || shipped.length) {
+        index()
         apply()
       }
 
-      var note = mk(
-        'span',
-        'rm-sync',
-        filed ? 'synced with GitHub · ' + filed + ' filed since' : 'synced with GitHub',
-      )
-      document.getElementById('rm-status').appendChild(note)
+      settleSync(filed ? 'synced with GitHub · ' + filed + ' filed since' : 'synced with GitHub')
     })
     .catch(function () {
-      /* The page is the roadmap without this. */
+      // The page is the roadmap without this.
+      settleSync('could not sync with GitHub')
     })
 })()

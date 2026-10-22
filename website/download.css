@@ -1,0 +1,239 @@
+/* The download page, on top of site.css. The snapshot is drawn in --sun, the
+   colour the site gives everything not yet released. */
+
+/* ── The build for this machine, beside the title ───────────────────────── */
+
+.dl-primary-side {
+  justify-content: center;
+}
+
+.dl-primary-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 14px;
+}
+
+.dl-primary-inner h2 {
+  margin: 0;
+  font-size: clamp(28px, 3vw, 40px);
+  line-height: 1.05;
+  font-weight: 600;
+  letter-spacing: -0.04em;
+}
+
+.dl-primary-inner .btn {
+  margin-top: 10px;
+  min-height: 56px;
+  padding: 0 32px;
+}
+
+.dl-primary-inner .btn.is-waiting {
+  opacity: 0.5;
+  cursor: progress;
+}
+
+.dl-state {
+  margin: 0;
+  color: var(--text-secondary);
+}
+
+.dl-state-title {
+  margin: 0 0 8px;
+  font-size: 20px;
+  font-weight: 500;
+}
+
+.dl-state p {
+  margin: 0 0 20px;
+}
+
+/* ── A grid of builds ───────────────────────────────────────────────────── */
+/* Its own last column and row would draw a second hairline against the
+   block's, so it sits one pixel out under the clip. */
+
+.dl-grid-wrap {
+  overflow: hidden;
+}
+
+.dl-body + .dl-grid-wrap {
+  border-top: var(--hairline);
+}
+
+.dl-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  margin: 0 -1px -1px 0;
+}
+
+.dl-card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 24px var(--pad);
+  border: 0;
+  border-right: var(--hairline);
+  border-bottom: var(--hairline);
+  background: transparent;
+  color: var(--text-primary);
+  text-align: left;
+  cursor: pointer;
+  transition: background-color var(--duration-fast) var(--ease-standard);
+}
+
+.dl-card:hover {
+  background: var(--hover-surface);
+  color: var(--text-primary);
+}
+
+.dl-card-icon {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border: var(--hairline);
+  font-family: var(--font-site-mono);
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.dl-card-name {
+  display: block;
+  font-size: 16px;
+}
+
+.dl-card-meta {
+  display: block;
+  margin-top: 4px;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.dl-card.is-unavailable .dl-card-name {
+  color: var(--text-secondary);
+}
+
+/* Waiting on the release, or without one: drawn, but nothing to pick. */
+.dl-card:disabled {
+  cursor: default;
+}
+
+.dl-card.is-waiting {
+  cursor: progress;
+}
+
+.dl-card:disabled:hover,
+.dl-card.is-waiting:hover {
+  background: transparent;
+}
+
+.dl-card-meta.loader {
+  display: flex;
+}
+
+.dl-foot {
+  margin: 0;
+  padding: 18px var(--pad);
+  border-top: var(--hairline);
+}
+
+.dl-foot a {
+  font-family: var(--font-site-mono);
+  font-size: 13px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+/* ── Prose and commands ─────────────────────────────────────────────────── */
+
+.dl-body {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 28px var(--pad);
+}
+
+.dl-prose {
+  margin: 0;
+  max-width: 72ch;
+  font-size: 16px;
+  line-height: 1.6;
+}
+
+.dl-prose a {
+  text-decoration: underline;
+  text-decoration-color: var(--border-hover);
+  text-underline-offset: 3px;
+}
+
+.dl-loading {
+  margin: 0;
+  padding: 24px var(--pad);
+  color: var(--text-secondary);
+}
+
+/* ── Snapshot ───────────────────────────────────────────────────────────── */
+
+.dl-snapshot {
+  border-color: rgb(var(--sun-rgb) / 0.35);
+  background: rgb(var(--sun-rgb) / 0.04);
+}
+
+.dl-snapshot .band {
+  border-bottom-color: rgb(var(--sun-rgb) / 0.18);
+  background: rgb(var(--sun-rgb) / 0.05);
+}
+
+.dl-snapshot .num {
+  color: var(--sun);
+}
+
+.dl-snapshot .dl-card,
+.dl-snapshot .dl-foot,
+.dl-snapshot .dl-grid-wrap {
+  border-color: rgb(var(--sun-rgb) / 0.18);
+}
+
+/* ── Verify your download: a smaller band that opens ────────────────────── */
+/* Closed, it is the band alone, so its hairline under the band would double
+   the block's own. A + or − after the title says which way it goes, as the
+   docs' questions do. */
+
+.dl-verify summary {
+  justify-content: flex-start;
+  align-items: baseline;
+  gap: 20px;
+  padding-block: 22px;
+  border-bottom: 0;
+  list-style: none;
+  cursor: pointer;
+}
+
+.dl-verify summary::-webkit-details-marker {
+  display: none;
+}
+
+.dl-verify summary::after {
+  content: '+';
+  margin-left: auto;
+  font-family: var(--font-site-mono);
+  color: var(--text-secondary);
+}
+
+.dl-verify details[open] summary {
+  border-bottom: var(--hairline);
+}
+
+.dl-verify details[open] summary::after {
+  content: '\2212';
+}
+
+.dl-verify summary h2 {
+  font-size: clamp(20px, 2vw, 24px);
+  letter-spacing: -0.02em;
+}
+
+.dl-verify summary:hover h2 {
+  color: var(--accent);
+}

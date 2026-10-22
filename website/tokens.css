@@ -8,8 +8,8 @@
  * scripts/sync-tokens.sh, then `pnpm gen:tokens` from `frontend/`.
  */
 
-/* Linked by every page ahead of /styles.css, which reads these and adds the
-   page vocabulary that is not a token (--max-width, --nav-h, --section-y). */
+/* Linked by every page ahead of /site.css, which reads these and adds the
+   page vocabulary that is not a token (--pad, --nav-h, --lift-shadow). */
 :root {
   --bg-base: #05060a;
   --bg-elevated: rgba(18, 20, 30, 0.82);
@@ -37,6 +37,8 @@
   --font-title: 'Excon', var(--font-sans);
   --font-mono: ui-monospace, 'Cascadia Code', 'SF Mono', 'Segoe UI Mono', 'Consolas', 'Liberation Mono', monospace;
   --font-display: 'Satoshi', var(--font-sans);
+  --font-site: 'Geist', var(--font-sans);
+  --font-site-mono: 'Geist Mono', var(--font-mono);
 
   --duration-fast: 150ms;
   --duration-panel: 280ms;
