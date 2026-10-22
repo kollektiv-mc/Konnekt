@@ -158,6 +158,13 @@ jobs:
       # without an error when an issue falls off the last page read.
       - run: node scripts/check-release-notes-extract.mjs
 
+      # The scheduler's block pages under website/docs/blocks/ are what F1 in
+      # the editor opens (frontend/src/lib/docs.ts). Their ports and fields are
+      # generated from demo/backend/fixtures/blockdefs.json, which demo.yml
+      # holds to the Go registry, so a block added or changed without its page
+      # regenerated and written is red here rather than a stale or 404 page.
+      - run: node scripts/gen-block-docs.mjs --check
+
   # .claude/suite.json declares three sections. CI has always covered
   # `commands` as literal steps above and in the backend jobs, but nothing ever
   # ran `invariants` or `generated` — they only executed when a human invoked

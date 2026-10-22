@@ -1,0 +1,420 @@
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Konnekt docs: Write Attribute block</title>
+    <meta
+      name="description"
+      content="Write Attribute: Writes a server attribute such as server.motd, or defines a custom attribute for the blocks after it."
+    />
+    <link rel="canonical" href="https://konnekt.pages.dev/docs/blocks/data-writeAttribute.html" />
+
+    <meta property="og:site_name" content="Konnekt" />
+    <meta property="og:title" content="Konnekt docs: Write Attribute block" />
+    <meta
+      property="og:description"
+      content="Write Attribute: Writes a server attribute such as server.motd, or defines a custom attribute for the blocks after it."
+    />
+    <meta
+      property="og:url"
+      content="https://konnekt.pages.dev/docs/blocks/data-writeAttribute.html"
+    />
+    <meta property="og:type" content="website" />
+    <meta property="og:image" content="https://konnekt.pages.dev/assets/img/social-card.png" />
+    <meta property="og:image:width" content="1715" />
+    <meta property="og:image:height" content="1123" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Konnekt docs: Write Attribute block" />
+    <meta
+      name="twitter:description"
+      content="Write Attribute: Writes a server attribute such as server.motd, or defines a custom attribute for the blocks after it."
+    />
+    <meta name="twitter:image" content="https://konnekt.pages.dev/assets/img/social-card.png" />
+
+    <meta name="theme-color" content="#05060a" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/assets/img/favicon-16.png" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/assets/img/favicon-32.png" />
+    <link rel="icon" type="image/png" sizes="256x256" href="/assets/img/favicon.png" />
+    <link rel="apple-touch-icon" href="/assets/img/app-icon.png" />
+    <link
+      rel="preload"
+      href="/assets/fonts/Geist-Variable.woff2"
+      as="font"
+      type="font/woff2"
+      crossorigin
+    />
+    <link rel="stylesheet" href="/tokens.css" />
+    <link rel="stylesheet" href="/site.css" />
+    <link rel="stylesheet" href="/docs.css" />
+    <link rel="stylesheet" href="/docs/blocks/blocks.css" />
+    <link rel="stylesheet" href="/docs/blocks/ports.css" />
+    <script>
+      document.documentElement.className = document.documentElement.className.replace('no-js', '')
+    </script>
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to content</a>
+    <div class="page">
+      <div class="group">
+        <!-- Canonical nav. Byte-identical on every page, hrefs included; site.js
+           marks the current page and scrolls same-page anchors. -->
+        <nav class="nav block block-raised" id="nav" aria-label="Main">
+          <a class="nav-brand" href="/index.html"
+            ><picture
+              ><source media="(min-resolution: 2dppx)" srcset="/assets/img/mark.svg" />
+              <img
+                class="mark"
+                src="/assets/img/mark-24.svg"
+                width="24"
+                height="24"
+                alt="" /></picture
+            >Konnekt</a
+          >
+          <ul class="nav-links">
+            <li><a href="/index.html#features">Features</a></li>
+            <li><a href="/index.html#scheduler">Scheduler</a></li>
+            <li><a href="/docs.html">Docs</a></li>
+            <li><a href="/roadmap.html">Roadmap</a></li>
+            <li><a href="/changelog.html">Changelog</a></li>
+          </ul>
+          <a
+            class="nav-side"
+            href="https://github.com/kollektiv-mc/Konnekt"
+            target="_blank"
+            rel="noopener"
+            >GitHub</a
+          >
+          <a class="btn btn-primary" href="/download.html"
+            ><svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true">
+              <path
+                d="M7 1v9M3 6.5 7 10.5 11 6.5M1.5 13h11"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.6"
+              /></svg
+            >Download</a
+          >
+        </nav>
+        <main id="main" class="group">
+          <header class="doc-head block">
+            <div class="doc-head-main">
+              <div class="doc-trail">
+                <span class="kind" data-kind="reference">Reference</span>
+                <nav aria-label="Breadcrumb">
+                  <ol class="doc-crumbs">
+                    <li><a href="/docs.html">Docs</a></li>
+                    <li><a href="/docs.html#scheduler">Scheduler</a></li>
+                    <li><a href="/docs/blocks/">Scheduler blocks</a></li>
+                    <li><span aria-current="page">Write Attribute</span></li>
+                  </ol>
+                </nav>
+              </div>
+              <h1>Write Attribute</h1>
+              <p class="doc-lead">
+                Writes a server attribute such as server.motd, or defines a custom attribute for the
+                blocks after it.
+              </p>
+            </div>
+            <dl class="doc-facts">
+              <div class="doc-fact">
+                <dt class="label">Category</dt>
+                <dd>Data</dd>
+              </div>
+              <div class="doc-fact">
+                <dt class="label">Topics</dt>
+                <dd>Scheduler · Server properties</dd>
+              </div>
+            </dl>
+          </header>
+
+          <!-- gen:ports -->
+          <section class="doc-section block" id="ports" aria-labelledby="ports-title">
+            <div class="band doc-band">
+              <div class="band-title">
+                <span class="num">01</span>
+                <h2 id="ports-title">Ports</h2>
+              </div>
+            </div>
+            <div class="port-stage">
+              <div class="port-canvas">
+                <div class="port-node" data-category="data">
+                  <div class="port-node-head">
+                    <span>Write Attribute</span><span class="port-node-cat">data</span>
+                  </div>
+                  <div class="port-cols">
+                    <ul class="port-col port-in" aria-label="Inputs">
+                      <li class="port-col-label" aria-hidden="true">in</li>
+                      <li class="port" data-shape="control" data-port="trigger">
+                        <span>trigger</span><span class="port-type">control</span>
+                      </li>
+                      <li class="port" data-shape="data" data-type="string">
+                        <span>Value</span><span class="port-type">string</span>
+                      </li>
+                    </ul>
+                    <ul class="port-col port-out" aria-label="Outputs">
+                      <li class="port-col-label" aria-hidden="true">out</li>
+                      <li class="port" data-shape="control" data-port="onComplete">
+                        <span>onComplete</span><span class="port-type">control</span>
+                      </li>
+                      <li class="port" data-shape="control" data-port="onFailed">
+                        <span>onFailed</span><span class="port-type">control</span>
+                      </li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+              <div class="port-legend">
+                <span class="label">Ports</span>
+                <span class="port-key" data-shape="control">Control</span>
+                <span class="port-key" data-shape="data">Data</span>
+                <hr />
+                <span class="label">Data types</span>
+                <span class="port-key" data-shape="data" data-type="string"
+                  ><code>string</code></span
+                >
+                <span class="port-key" data-shape="data" data-type="number"
+                  ><code>number</code></span
+                >
+                <span class="port-key" data-shape="data" data-type="bool"><code>bool</code></span>
+                <p class="doc-prose">
+                  Strings accept any data input.<br />
+                  Numbers accept boolean input.
+                </p>
+              </div>
+            </div>
+          </section>
+          <!-- /gen:ports -->
+
+          <!-- gen:fields -->
+          <section class="doc-section block" id="fields" aria-labelledby="fields-title">
+            <div class="band doc-band">
+              <div class="band-title">
+                <span class="num">02</span>
+                <h2 id="fields-title">Fields</h2>
+              </div>
+            </div>
+            <div class="doc-body">
+              <div class="doc-table-wrap">
+                <table class="doc-table">
+                  <thead>
+                    <tr>
+                      <th scope="col">Field</th>
+                      <th scope="col">What it does</th>
+                      <th scope="col">Default</th>
+                      <th scope="col">Limits</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr data-field="attribute">
+                      <td>Attribute</td>
+                      <td>
+                        The attribute to write; a name that is not built in defines a custom
+                        attribute.
+                      </td>
+                      <td><code>server.motd</code></td>
+                      <td>
+                        <ul class="field-options">
+                          <li><code>players.max</code></li>
+                          <li><code>server.motd</code></li>
+                          <li><code>server.whitelist</code></li>
+                          <li><code>server.port</code></li>
+                          <li><code>server.gamemode</code></li>
+                          <li><code>server.world</code></li>
+                        </ul>
+                      </td>
+                    </tr>
+                    <tr data-field="value">
+                      <td>Value</td>
+                      <td>The value to write; a wired Value replaces it.</td>
+                      <td>None</td>
+                      <td>No line breaks in a server attribute.</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </section>
+          <!-- /gen:fields -->
+
+          <section class="doc-section block" id="run" aria-labelledby="run-title">
+            <div class="band doc-band">
+              <div class="band-title">
+                <span class="num">03</span>
+                <h2 id="run-title">What a run does</h2>
+              </div>
+            </div>
+            <div class="doc-body">
+              <p class="doc-prose">
+                A built-in attribute is written to <code>server.properties</code> in the server's
+                folder.<br />The server is not restarted.<br />A leading <code>@</code> in the name
+                is ignored.<br />A wired Value replaces the Value field.
+              </p>
+              <div class="doc-table-wrap">
+                <table class="doc-table">
+                  <thead>
+                    <tr>
+                      <th scope="col">Attribute</th>
+                      <th scope="col">Writes</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td><code>players.max</code></td>
+                      <td><code>max-players</code></td>
+                    </tr>
+                    <tr>
+                      <td><code>server.motd</code></td>
+                      <td><code>motd</code></td>
+                    </tr>
+                    <tr>
+                      <td><code>server.whitelist</code></td>
+                      <td>
+                        <code>white-list</code>, and sends <code>whitelist on</code> to a running
+                        server for <code>true</code> or <code>1</code>, otherwise
+                        <code>whitelist off</code>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td><code>server.port</code></td>
+                      <td><code>server-port</code></td>
+                    </tr>
+                    <tr>
+                      <td><code>server.gamemode</code></td>
+                      <td>
+                        <code>gamemode</code>, and sends <code>defaultgamemode</code> with the value
+                        to a running server
+                      </td>
+                    </tr>
+                    <tr>
+                      <td><code>server.world</code></td>
+                      <td><code>level-name</code></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <p class="doc-prose">
+                The read-only attributes fail the block: <code>tps</code>,
+                <code>players.count</code>, <code>ram.used</code>, <code>ram.left</code>,
+                <code>ram.total</code> and <code>server.status</code>.
+              </p>
+              <p class="doc-prose">
+                Any other name defines a custom attribute for the rest of this run.<br />Its value
+                is kept as typed.<br />An <code>@attribute</code> inside it is read again each time
+                the custom attribute is used.<br />The custom attribute is gone when the run
+                ends.<br /><a href="/docs/blocks/data-serverAttribute.html">Read Attribute</a> reads
+                it.
+              </p>
+              <p class="doc-prose">
+                It leaves by <code>onComplete</code> when the attribute is written or defined, and
+                by <code>onFailed</code> on an error.
+              </p>
+            </div>
+          </section>
+
+          <section class="doc-section block" id="errors" aria-labelledby="errors-title">
+            <div class="band doc-band">
+              <div class="band-title">
+                <span class="num">04</span>
+                <h2 id="errors-title">Errors</h2>
+              </div>
+            </div>
+            <div class="doc-body">
+              <div class="doc-table-wrap">
+                <table class="doc-table">
+                  <thead>
+                    <tr>
+                      <th scope="col">Message says</th>
+                      <th scope="col">Do</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td>attribute @<i>name</i> is read-only</td>
+                      <td>Choose one of the writable attributes.</td>
+                    </tr>
+                    <tr>
+                      <td>property value must be a single line</td>
+                      <td>Remove the line breaks from the value.</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </section>
+
+          <nav class="doc-related block" aria-label="Related">
+            <div class="shelf-label"><span class="label">Related</span></div>
+            <a class="related-link" href="/docs/blocks/data-serverAttribute.html"
+              ><span class="kind" data-kind="reference">Reference</span>Read Attribute</a
+            ><a class="related-link" href="/docs/blocks/action-command.html"
+              ><span class="kind" data-kind="reference">Reference</span>Command</a
+            ><a class="related-link" href="/docs/blocks/control-condition.html"
+              ><span class="kind" data-kind="reference">Reference</span>Condition</a
+            >
+          </nav>
+        </main>
+      </div>
+
+      <!-- Canonical footer. Byte-identical on every page. -->
+      <footer class="block block-raised">
+        <div class="footer-cols">
+          <div class="footer-about">
+            <a class="footer-brand" href="/index.html"
+              ><picture
+                ><source media="(min-resolution: 2dppx)" srcset="/assets/img/mark.svg" />
+                <img
+                  class="mark"
+                  src="/assets/img/mark-24.svg"
+                  width="24"
+                  height="24"
+                  alt="" /></picture
+              >Konnekt</a
+            >
+            <p>A desktop dashboard for the Minecraft servers you host.</p>
+            <span class="meta"><span data-release-tag></span>Windows and Linux</span>
+          </div>
+          <nav class="footer-col" aria-label="Product">
+            <span class="label">Product</span>
+            <a href="/download.html">Download</a>
+            <a href="https://konnekt-demo.pages.dev/" target="_blank" rel="noopener"
+              >Try the demo</a
+            >
+            <a href="/changelog.html">Changelog</a>
+          </nav>
+          <nav class="footer-col" aria-label="Learn">
+            <span class="label">Learn</span>
+            <a href="/index.html#features">Features</a>
+            <a href="/docs.html">Docs</a>
+            <a href="/roadmap.html">Roadmap</a>
+          </nav>
+          <nav class="footer-col" aria-label="Source">
+            <span class="label">Source</span>
+            <a href="https://github.com/kollektiv-mc/Konnekt" target="_blank" rel="noopener"
+              >GitHub</a
+            >
+            <a href="https://github.com/kollektiv-mc/Konnekt/issues" target="_blank" rel="noopener"
+              >Issues</a
+            >
+            <a
+              href="https://github.com/kollektiv-mc/Konnekt/blob/main/LICENSE"
+              target="_blank"
+              rel="noopener"
+              >MIT licence</a
+            >
+          </nav>
+        </div>
+        <div class="footer-base">
+          <span
+            >Alpha software. A side project mostly written by Claude.
+            <a href="/docs.html#disclaimer">Full statement</a></span
+          >
+          <span>&copy; 2026 Konnekt</span>
+        </div>
+      </footer>
+    </div>
+
+    <script src="/release.js"></script>
+    <script src="/site.js"></script>
+  </body>
+</html>

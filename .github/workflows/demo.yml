@@ -34,7 +34,7 @@ on:
     paths:
       - "frontend/**"
       - "demo/**"
-      - "backend/services/scheduler_blocks.go"
+      - "backend/services/scheduler_blocks*.go"
       - ".github/workflows/demo.yml"
   release:
     types: [published]
