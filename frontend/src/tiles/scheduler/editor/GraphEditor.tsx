@@ -922,6 +922,7 @@ function GraphEditorInner({
     }),
     [
       defMap,
+      // aislop-ignore-next-line code-quality/duplicate-block -- a memo's dependency list mirrors the object it builds
       edges,
       collapsed,
       onToggleCollapse,

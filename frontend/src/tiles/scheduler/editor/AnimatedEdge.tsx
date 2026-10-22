@@ -1,7 +1,8 @@
 import { useContext, useRef, useState, type CSSProperties, type PointerEvent } from 'react'
 import { useReactFlow, type EdgeProps } from '@xyflow/react'
 import { SchedulerCtx } from './schedulerContext'
-import { edgePath, edgeWaypoints, insertWaypoint, withWaypoints, type Point } from './edgeGeometry'
+import type { Point } from '../../../lib/sortable'
+import { edgePath, edgeWaypoints, insertWaypoint, withWaypoints } from './edgeGeometry'
 
 // Pointer travel, in screen px, before a press on a corner counts as a drag
 // rather than the first half of a double-click, so a click leaves no undo entry.

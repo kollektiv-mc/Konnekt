@@ -3,10 +3,7 @@
 // of @xyflow imports so graphMapping, which the whole editor leans on, can read
 // waypoints without pulling the library into a module that does not need it.
 
-export interface Point {
-  x: number
-  y: number
-}
+import type { Point } from '../../../lib/sortable'
 
 // How far a corner is rounded off, in canvas units. Clamped per corner to half
 // of each adjoining segment, so two close corners never overshoot each other.
