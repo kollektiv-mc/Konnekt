@@ -59,10 +59,46 @@
   border: 1px solid var(--border-hover) !important;
 }
 
-/* Selection */
-.react-flow__selection {
-  border: 1px solid var(--accent);
-  background: rgba(0, 0, 0, 0.04);
+/* Selection: the drag box while it is drawn, and the rectangle React Flow leaves
+   round the selected nodes after it. Both take the dashboard context menu's edge
+   (components/ui/ContextMenu.tsx): the floating-layer surface, `--bg-overlay`,
+   with no border and no shadow, so the edge is only the surface meeting the
+   canvas. Here it is translucent, since the nodes sit under it, and the menu's
+   near-square corner is rounded off to fit a box this much larger.
+
+   `.react-flow` in front of each selector outranks xyflow's own rule for the
+   same properties whichever stylesheet loads last. */
+.react-flow .react-flow__selection,
+.react-flow .react-flow__nodesselection-rect {
+  border: none;
+  border-radius: var(--radius-xl);
+  background: color-mix(in srgb, var(--bg-overlay) 55%, transparent);
+}
+
+/* The rectangle is exactly the bounds of the selected nodes, which is also its
+   hit area for dragging them, so it stays that size and only the fill grows: a
+   pseudo-element reaching 12px past it on every side. A pointer on the pseudo-
+   element is a pointer on the rectangle, so dragging the margin moves the
+   selection like dragging between the nodes does. */
+.react-flow .react-flow__nodesselection-rect {
+  background: none;
+}
+
+/* Both sit under the nodes, whose layer is z-index 2, so a translucent fill tints
+   the canvas rather than dimming what it encloses. The rectangle keeps its hit
+   area on the empty canvas between the nodes; a node is still the target of a
+   drag that starts on it, and a selected node drags the whole selection. */
+.react-flow .react-flow__nodesselection,
+.react-flow .react-flow__selection {
+  z-index: 1;
+}
+
+.react-flow .react-flow__nodesselection-rect::before {
+  content: '';
+  position: absolute;
+  inset: -12px;
+  border-radius: inherit;
+  background: color-mix(in srgb, var(--bg-overlay) 55%, transparent);
 }
 
 /* Hide attribution */
