@@ -6,7 +6,7 @@
     <title>Konnekt: Minecraft server dashboard</title>
     <meta
       name="description"
-      content="A tile-based desktop dashboard for your Minecraft server. Console, scheduler, worlds, backups. Local-first."
+      content="A tile-based desktop dashboard for your Minecraft servers. Console, scheduler, worlds, backups. Local-first."
     />
     <link rel="canonical" href="https://konnekt.pages.dev/" />
 
@@ -14,7 +14,7 @@
     <meta property="og:title" content="Konnekt: Minecraft server dashboard" />
     <meta
       property="og:description"
-      content="A tile-based desktop dashboard for your Minecraft server. Console, scheduler, worlds, backups. Local-first."
+      content="A tile-based desktop dashboard for your Minecraft servers. Console, scheduler, worlds, backups. Local-first."
     />
     <meta property="og:url" content="https://konnekt.pages.dev/" />
     <meta property="og:type" content="website" />
@@ -25,7 +25,7 @@
     <meta name="twitter:title" content="Konnekt: Minecraft server dashboard" />
     <meta
       name="twitter:description"
-      content="A tile-based desktop dashboard for your Minecraft server. Console, scheduler, worlds, backups. Local-first."
+      content="A tile-based desktop dashboard for your Minecraft servers. Console, scheduler, worlds, backups. Local-first."
     />
     <meta name="twitter:image" content="https://konnekt.pages.dev/assets/img/social-card.png" />
 
@@ -113,7 +113,7 @@
         <main id="main" class="group" data-focus>
           <header class="hero block" id="top">
             <div class="hero-copy">
-              <h1>Your Minecraft server, in one window.</h1>
+              <h1>Your Minecraft servers, in one window.</h1>
               <p class="lead">
                 Console, scheduling, worlds and backups in a local-first desktop app.
               </p>
@@ -136,44 +136,70 @@
               >
             </div>
             <div class="hero-side">
+              <!-- Three worlds orbit the server, each upright: its ring turns about
+                   the centre and the world turns back by the same amount. Every
+                   cube edge is its own path cut into six by pathLength, so a dot
+                   lands on each corner instead of dashes piling up there. -->
               <svg
                 class="hero-art"
-                viewBox="0 0 400 360"
-                width="360"
-                height="324"
+                viewBox="0 0 420 420"
+                width="380"
+                height="380"
                 aria-hidden="true"
               >
-                <g class="spin">
-                  <circle cx="200" cy="180" r="168" stroke-opacity="0.25" stroke-dasharray="0 9" />
+                <circle cx="210" cy="205" r="72" stroke-opacity="0.1" stroke-dasharray="0 7" />
+                <g class="orbit">
+                  <circle cx="210" cy="205" r="112" stroke-opacity="0.18" stroke-dasharray="0 8" />
+                  <g transform="translate(172 310)">
+                    <g class="world">
+                      <path d="M0 -7 v14 M-7 0 h14" />
+                      <text y="24">neoforge 1.21.1</text>
+                      <text y="38" class="faint">20.0 tps</text>
+                    </g>
+                  </g>
                 </g>
-                <g class="spin-rev">
-                  <circle cx="200" cy="180" r="122" stroke-opacity="0.18" stroke-dasharray="0 8" />
+                <g class="orbit">
+                  <circle cx="210" cy="205" r="168" stroke-opacity="0.25" stroke-dasharray="0 9" />
+                  <g transform="translate(102 76)">
+                    <g class="world">
+                      <path d="M0 -7 v14 M-7 0 h14" />
+                      <text y="24">survival rpg</text>
+                      <text y="38" class="faint">19.9 tps</text>
+                    </g>
+                  </g>
+                  <g transform="translate(368 262)">
+                    <g class="world">
+                      <path d="M0 -7 v14 M-7 0 h14" />
+                      <text y="24">freebuild</text>
+                      <text y="38" class="faint">offline</text>
+                    </g>
+                  </g>
                 </g>
-                <circle cx="200" cy="180" r="78" stroke-opacity="0.1" stroke-dasharray="0 7" />
                 <g class="hero-cube">
-                  <path d="M200 138 L240 161 L200 184 L160 161 Z" />
-                  <path d="M160 161 L160 207 L200 230 L200 184" />
-                  <path d="M240 161 L240 207 L200 230" />
-                </g>
-                <g class="hero-plus">
-                  <path d="M82 52 v14 M75 59 h14" />
-                  <path d="M318 240 v14 M311 247 h14" />
-                  <path d="M120 302 v14 M113 309 h14" />
-                </g>
-                <g class="hero-labels">
-                  <text x="96" y="50">survival :25565</text>
-                  <text x="96" y="64" class="faint">19.9 tps</text>
-                  <text x="334" y="240">creative</text>
-                  <text x="334" y="254" class="faint">:25566</text>
-                  <text x="134" y="322">modded :25567</text>
-                  <text x="134" y="336" class="faint">offline</text>
+                  <path pathLength="6" d="M210 159 L250 182" />
+                  <path pathLength="6" d="M250 182 L210 205" />
+                  <path pathLength="6" d="M210 205 L170 182" />
+                  <path pathLength="6" d="M170 182 L210 159" />
+                  <path pathLength="6" d="M170 182 V228" />
+                  <path pathLength="6" d="M170 228 L210 251" />
+                  <path pathLength="6" d="M210 251 V205" />
+                  <path pathLength="6" d="M250 182 V228" />
+                  <path pathLength="6" d="M250 228 L210 251" />
                 </g>
               </svg>
               <div class="console" aria-hidden="true">
-                <div class="faint">[14:02:11] Starting minecraft server version 1.21.1</div>
-                <div>[14:02:17] Done (6.129s)! For help, type "help"</div>
-                <div>[14:03:40] Frangfurd joined the game</div>
-                <div class="console-prompt"><span class="console-dot"></span>&gt; save-all</div>
+                <div class="console-log">
+                  <div class="faint">[14:02:11] Starting minecraft server version 1.21.1</div>
+                  <div>[14:02:17] Done (6.129s)! For help, type "help"</div>
+                  <div>[14:03:40] Snadrochka joined the game</div>
+                </div>
+                <div class="console-prompt">
+                  <span class="console-dot"></span>
+                  <span
+                    >&gt; <span class="console-input">save-all</span
+                    ><span class="console-caret"></span
+                  ></span>
+                </div>
               </div>
             </div>
           </header>
