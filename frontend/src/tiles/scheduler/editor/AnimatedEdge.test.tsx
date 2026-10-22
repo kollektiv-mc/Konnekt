@@ -135,6 +135,8 @@ describe('AnimatedEdge', () => {
           nodeRunState: new Map(),
           nodeDowntimeMs: new Map(),
           nodeWarning: new Map(),
+          nodeAdvice: new Map(),
+          nodeFailure: new Map(),
           firedEdges: new Set(['e1']),
           cycleNodes: new Set(),
           cycleEdges: new Set(),

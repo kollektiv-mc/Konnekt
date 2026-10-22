@@ -32,6 +32,7 @@ import { NodePanel } from './NodePanel'
 import { QuickAddHost } from './QuickAddHost'
 import type { QuickAddRequest } from './QuickAddHost'
 import { Toolbar } from './Toolbar'
+import { warningLine, warningRows, warningsByNode } from './graphWarnings'
 import { RUN_RUNNING, runOutcome, type RunStatus } from './runStatus'
 import { useNotificationsStore } from '../../../stores/useNotificationsStore'
 import type { ToastInput } from '../../../stores/useNotificationsStore'
@@ -88,6 +89,7 @@ interface NodeEvt {
   firedPort?: string
   downtimeMs?: number
   warning?: string
+  error?: string
 }
 
 const RUN_CLEAR_MS = 2400
@@ -160,7 +162,7 @@ function GraphEditorInner({
   onRun,
   onPreviewNode,
 }: GraphEditorProps) {
-  const { screenToFlowPosition } = useReactFlow()
+  const { screenToFlowPosition, fitView } = useReactFlow()
   const updateNodeInternals = useUpdateNodeInternals()
 
   const defMap = useMemo(() => new Map(blockDefs.map((d) => [d.id, d])), [blockDefs])
@@ -244,6 +246,7 @@ function GraphEditorInner({
   const [nodeRunState, setNodeRunState] = useState<Map<string, NodeRunState>>(new Map())
   const [nodeDowntimeMs, setNodeDowntimeMs] = useState<Map<string, number>>(new Map())
   const [nodeWarning, setNodeWarning] = useState<Map<string, string>>(new Map())
+  const [nodeFailure, setNodeFailure] = useState<Map<string, string>>(new Map())
   const [firedEdges, setFiredEdges] = useState<Set<string>>(new Set())
   const clearTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   // Refs so the event handlers (registered once) read current graph + edges.
@@ -399,6 +402,7 @@ function GraphEditorInner({
         reset()
         setNodeDowntimeMs(new Map())
         setNodeWarning(new Map())
+        setNodeFailure(new Map())
       })
       offNodeStart = EventsOn(EVENTS.SCHEDULE_NODE_STARTED, (p: NodeEvt) => {
         if (p.graphId !== graphIdRef.current) return
@@ -413,6 +417,9 @@ function GraphEditorInner({
         if (downtimeMs) setNodeDowntimeMs((m) => new Map(m).set(p.nodeId, downtimeMs))
         const warning = p.warning
         if (warning) setNodeWarning((m) => new Map(m).set(p.nodeId, warning))
+        // Kept past the highlight, which clears when the run does: the block's
+        // triangle stays red until the next run says otherwise.
+        if (p.status === 'failed') setNodeFailure((m) => new Map(m).set(p.nodeId, p.error ?? ''))
         const fired = `ctrl:${p.firedPort ?? ''}`
         setFiredEdges((s) => {
           const next = new Set(s)
@@ -492,6 +499,7 @@ function GraphEditorInner({
       setCreatedAt(g.createdAt)
       setSelectedNodeId(null)
       setNodeRunState(new Map())
+      setNodeFailure(new Map())
       setFiredEdges(new Set())
       setSavedSig(graphSignature({ name: g.name, enabled: g.enabled }, animNodes, animEdges))
       setHistory(emptyHistory())
@@ -925,7 +933,7 @@ function GraphEditorInner({
         .join(','),
     [nodes, edges, defMap],
   )
-  const [warnings, setWarnings] = useState<string[]>([])
+  const [warnings, setWarnings] = useState<models.GraphWarning[]>([])
   useEffect(() => {
     if (stopSig === '') {
       setWarnings([])
@@ -958,7 +966,12 @@ function GraphEditorInner({
   // It outlives the editor, so closing the scheduler does not take the warning
   // with it, and it goes when the canvas no longer earns it. Reopening the same
   // canvas finds it already up and leaves it be, rather than counting a repeat.
-  const warningText = warnings.join('\n')
+  // One warning to a line, each led by the block it is about.
+  const warningText = useMemo(
+    () => warningRows(warnings, nodes).map(warningLine).join('\n'),
+    [warnings, nodes],
+  )
+  const nodeAdvice = useMemo(() => warningsByNode(warnings), [warnings])
   const showWarningToast = useCallback(
     (force = false) => {
       if (!warningText) return
@@ -1010,6 +1023,8 @@ function GraphEditorInner({
       nodeRunState,
       nodeDowntimeMs,
       nodeWarning,
+      nodeAdvice,
+      nodeFailure,
       firedEdges,
       cycleNodes,
       cycleEdges,
@@ -1022,6 +1037,8 @@ function GraphEditorInner({
       nodeRunState,
       nodeDowntimeMs,
       nodeWarning,
+      nodeAdvice,
+      nodeFailure,
       firedEdges,
       cycleNodes,
       cycleEdges,
@@ -1041,6 +1058,20 @@ function GraphEditorInner({
       )
     },
     [canvasAnchor, screenToFlowPosition],
+  )
+
+  // A warning's row in the toolbar list: select that block, open its panel, and
+  // bring it into view. No more zoom than the canvas has now when it is already
+  // close, and never past 1, so a lone block is not blown up to fill the pane.
+  const revealNode = useCallback(
+    (id: string) => {
+      setNodes((ns) =>
+        ns.map((n) => (!!n.selected === (n.id === id) ? n : { ...n, selected: n.id === id })),
+      )
+      setSelectedNodeId(id)
+      void fitView({ nodes: [{ id }], maxZoom: 1, padding: 0.6, duration: 300 })
+    },
+    [setNodes, fitView],
   )
 
   // Selection is view state, not an edit, so it records no history entry. The
@@ -1125,6 +1156,7 @@ function GraphEditorInner({
             reopenRunToast(status)
             showRunStatus(null)
           }}
+          onSelectNode={revealNode}
           onWarningsClick={() => showWarningToast(true)}
         />
 
@@ -1182,6 +1214,8 @@ function GraphEditorInner({
               tab={panelTab}
               onTab={setPanelTab}
               onChange={updateNodeConfig}
+              warnings={selectedNode ? nodeAdvice.get(selectedNode.id) : undefined}
+              failure={selectedNode ? nodeFailure.get(selectedNode.id) : undefined}
               getGraph={() =>
                 flowToGraph(
                   { id: graphId ?? '', name: graphName, enabled: graphEnabled, createdAt },

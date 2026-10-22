@@ -152,7 +152,7 @@ func (s *SchedulerService) executeGraph(
 	// afterwards. Checked here, before any node runs, so a graph that stops the
 	// server for a snapshot never gets as far as stopping it only to find the
 	// upload has nowhere to go.
-	if issues := validateGraphDestinations(g, s.registry, s.deps.destinations); len(issues) > 0 {
+	if issues := issueSentences(g, s.registry, validateGraphDestinations(g, s.registry, s.deps.destinations)); len(issues) > 0 {
 		now := time.Now().UnixMilli()
 		rec := models.RunRecord{
 			ID: newID(), GraphID: g.ID, GraphName: g.Name,
@@ -169,7 +169,7 @@ func (s *SchedulerService) executeGraph(
 
 	// A snapshot count that cannot be kept fails the run before anything is
 	// uploaded, rather than after, when it could only be told as a prune warning.
-	if issues := validateGraphRetention(g); len(issues) > 0 {
+	if issues := issueSentences(g, s.registry, validateGraphRetention(g)); len(issues) > 0 {
 		now := time.Now().UnixMilli()
 		rec := models.RunRecord{
 			ID: newID(), GraphID: g.ID, GraphName: g.Name,
@@ -297,6 +297,11 @@ func (s *SchedulerService) executeGraph(
 		}
 		if result.Warning != "" {
 			finished["warning"] = result.Warning
+		}
+		// The editor keeps a failed node's reason beside its marker until the next
+		// run, which the status alone cannot give it.
+		if errStr != "" {
+			finished["error"] = errStr
 		}
 		s.bus.Emit(EventScheduleNodeFinished, finished)
 

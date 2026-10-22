@@ -465,13 +465,13 @@ func TestDHPublishBlockThroughTheEngineTakesTheWiredFolder(t *testing.T) {
 
 func TestDHPublishValidationNeedsADestination(t *testing.T) {
 	f := newUploadFixture(t)
-	if issues := validateGraphDestinations(publishGraph("srv1", map[string]interface{}{}, false), f.s.registry, f.dests); len(issues) != 1 || !strings.Contains(issues[0], "no destination chosen") {
+	if issues := validateGraphDestinations(publishGraph("srv1", map[string]interface{}{}, false), f.s.registry, f.dests); len(issues) != 1 || !strings.Contains(issues[0].Text, "no destination chosen") {
 		t.Errorf("none: issues = %q", issues)
 	}
 	if issues := validateGraphDestinations(publishGraph("srv1", publishConfig(), false), f.s.registry, f.dests); len(issues) != 0 {
 		t.Errorf("a saved destination: issues = %q", issues)
 	}
-	if issues := validateGraphDestinations(publishGraph("srv1", map[string]interface{}{"destination": "gone"}, false), f.s.registry, f.dests); len(issues) != 1 || !strings.Contains(issues[0], `"gone" does not exist`) {
+	if issues := validateGraphDestinations(publishGraph("srv1", map[string]interface{}{"destination": "gone"}, false), f.s.registry, f.dests); len(issues) != 1 || !strings.Contains(issues[0].Text, `"gone" does not exist`) {
 		t.Errorf("a missing one: issues = %q", issues)
 	}
 }

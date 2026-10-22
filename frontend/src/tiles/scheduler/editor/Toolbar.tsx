@@ -12,9 +12,11 @@ import { EditMenuRows } from './EditMenu'
 import { editMenuRows, type EditMenuActions } from './editMenuRows'
 import { shortGraphId } from './graphId'
 import type { BlockFlowNode } from './graphMapping'
+import { warningLine, warningRows } from './graphWarnings'
 import { MenuDivider, MenuRow } from './MenuRow'
 import type { RunStatus } from './runStatus'
 import { typesPresent } from './selection'
+import { WarningsMenu } from './WarningsMenu'
 
 interface ToolbarProps {
   graphs: models.Graph[]
@@ -31,7 +33,7 @@ interface ToolbarProps {
   canRedo: boolean
   runStatus: RunStatus | null
   schedulerError: string | null
-  warnings: string[]
+  warnings: models.GraphWarning[]
 
   // The editor owns the state and the handlers; the bar only calls them.
   onLoadGraph: (g: models.Graph) => void
@@ -55,10 +57,13 @@ interface ToolbarProps {
   onDeleteGraph: () => void
   onErrorClick: () => void
   onRunStatusClick: (status: RunStatus) => void
+  /** A warning that names a block was picked in the list: select it and show it. */
+  onSelectNode: (nodeId: string) => void
+  /** The list's footer: raise the warnings as a notification bubble again. */
   onWarningsClick: () => void
 }
 
-type MenuId = 'graph' | 'edit' | 'overflow'
+type MenuId = 'graph' | 'edit' | 'overflow' | 'warnings'
 
 // The bar is two groups, each one bordered box of flush segments split by a
 // hairline. Every segment is the same height and a fixed height at that, so
@@ -140,6 +145,7 @@ export function Toolbar({
   onDeleteGraph,
   onErrorClick,
   onRunStatusClick,
+  onSelectNode,
   onWarningsClick,
 }: ToolbarProps) {
   // One menu open at a time, so opening one is closing the others. Each
@@ -150,16 +156,22 @@ export function Toolbar({
   const graphPresence = usePresence(menu === 'graph', 'menu')
   const editPresence = usePresence(menu === 'edit', 'menu')
   const overflowPresence = usePresence(menu === 'overflow', 'menu')
+  const warningsPresence = usePresence(menu === 'warnings', 'menu')
   const graphButton = useRef<HTMLButtonElement>(null)
   const ownAddButton = useRef<HTMLButtonElement>(null)
   const addButton = addButtonRef ?? ownAddButton
   const editButton = useRef<HTMLButtonElement>(null)
   const overflowButton = useRef<HTMLButtonElement>(null)
+  const warningsButton = useRef<HTMLButtonElement>(null)
   // The rename draft lives in the overflow menu's own row; null is the row at
   // rest. Opening the menu clears it, so a reopen starts from the name again.
   // It is cleared on open rather than on close so the row does not flip back
   // to "Rename" while the menu is still fading out.
   const [renameDraft, setRenameDraft] = useState<string | null>(null)
+
+  // The list goes with its last warning: a menu id left open with no button to
+  // own it would open the list by itself on the next one.
+  if (menu === 'warnings' && warnings.length === 0) setMenu(null)
 
   const toggleMenu = (id: MenuId) => {
     if (id === 'overflow' && menu !== 'overflow') setRenameDraft(null)
@@ -196,6 +208,9 @@ export function Toolbar({
     },
     edit,
   )
+
+  // Read when the list is drawn: the label is the node's as it is on the canvas.
+  const warningList = warningRows(warnings, nodes)
 
   const graphLabel =
     graphId === null && graphs.length === 0 ? '— no graphs —' : graphName || 'Untitled'
@@ -382,22 +397,56 @@ export function Toolbar({
 
       <div className={GROUP}>
         {/* The icon and a count, never the text: a bar that grows moves every
-            control beside it, and a cut sentence cannot be read. The warnings
-            are in a bubble, which this reopens. The slot is there at zero too,
+            control beside it, and a cut sentence cannot be read. The count opens
+            a list of the warnings by block, below it, whose footer raises the
+            bubble again. The slot is there at zero too,
             quiet, so a warning arriving fills it rather than pushing the rest
             of the bar along. */}
         <Segment className="w-11">
           {warnings.length > 0 ? (
-            <button
-              type="button"
-              onClick={onWarningsClick}
-              className={segmentClass('text-warning', IDLE_FILL)}
-              title={warnings.join('\n')}
-              aria-label={warnings.length === 1 ? '1 warning' : `${warnings.length} warnings`}
-            >
-              <Icon icon={TriangleAlert} size="xs" />
-              {warnings.length}
-            </button>
+            <>
+              <button
+                ref={warningsButton}
+                type="button"
+                onClick={() => toggleMenu('warnings')}
+                className={segmentClass(
+                  'text-warning',
+                  menu === 'warnings' ? 'bg-hover' : IDLE_FILL,
+                )}
+                title={warningList.map(warningLine).join('\n')}
+                aria-label={warnings.length === 1 ? '1 warning' : `${warnings.length} warnings`}
+                aria-haspopup="menu"
+                aria-expanded={menu === 'warnings'}
+              >
+                <Icon icon={TriangleAlert} size="xs" />
+                {warnings.length}
+              </button>
+              <Popover
+                open={menu === 'warnings'}
+                onClose={() => closeMenu('warnings')}
+                dismiss="pointerdown"
+                trigger={warningsButton}
+                width={320}
+                maxHeight={280}
+                align="right"
+              >
+                {warningsPresence.mounted && (
+                  <div {...fading(warningsPresence.leaving)}>
+                    <WarningsMenu
+                      rows={warningList}
+                      onPick={(id) => {
+                        onSelectNode(id)
+                        closeMenu('warnings')
+                      }}
+                      onNotify={() => {
+                        onWarningsClick()
+                        closeMenu('warnings')
+                      }}
+                    />
+                  </div>
+                )}
+              </Popover>
+            </>
           ) : (
             <span className={segmentClass('text-text-faint', 'bg-transparent')} title="No warnings">
               <Icon icon={TriangleAlert} size="xs" />0

@@ -163,7 +163,7 @@ export const api = {
   GetScheduleNextRuns: read(NEXT_RUNS),
   GetScheduleRunHistory: read([]),
   // The demo's server is running with RCON up, which is the case with nothing to
-  // warn about.
+  // warn about. An answer is a list of { nodeId, text }, one per block it is about.
   GetScheduleGraphWarnings: read([]),
   SaveScheduleGraph: mutate((_serverId, g) => state.saveGraph(g)),
   DeleteScheduleGraph: mutate((_serverId, id) => state.deleteGraph(id)),

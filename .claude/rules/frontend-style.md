@@ -121,9 +121,13 @@ rather than adding a font feature the fonts do not carry.
 **A status or warning in a toolbar, header or node is one line and never
 grows it.** A short fixed label goes there; a message that can run to a
 sentence goes in a bubble. The scheduler editor's toolbar shows `run failed`,
-`scheduler error` or `1 warning`, `whitespace-nowrap` with the full text in
+`scheduler error` or a warning count, `whitespace-nowrap` with the full text in
 `title`, and the text itself in an in-app bubble (`components/Toasts.tsx`,
-raised through `lib/toast.ts`) that clicking the label reopens. Cutting the
+raised through `lib/toast.ts`) that clicking the label reopens. The count opens
+a list of the warnings by block instead (a warning names its node, and its row
+selects that block), whose footer reopens the bubble; the block's header
+triangle is grey while it has a warning and red once it failed in the last run,
+and the server-stopping marker is the separate power icon. Cutting the
 text with `truncate` was tried first (#598): the bar stopped moving, but the
 DH Snapshot advice ended in an ellipsis, and an S3 error wrapped the bar to
 four lines before that (#629). A span that must hold variable text still takes

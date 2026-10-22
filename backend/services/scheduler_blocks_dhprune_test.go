@@ -58,7 +58,7 @@ func TestValidateGraphRetentionRejects0And1Point5AndAccepts3(t *testing.T) {
 	}
 	for _, keep := range []interface{}{float64(0), 1.5, float64(-1), "zero", true} {
 		issues := validateGraphRetention(graph(map[string]interface{}{"keep": keep}))
-		if len(issues) != 1 || !strings.Contains(issues[0], "p1") || !strings.Contains(issues[0], "whole number of at least 1") {
+		if len(issues) != 1 || issues[0].NodeID != "p1" || !strings.Contains(issues[0].Text, "whole number of at least 1") {
 			t.Errorf("keep %v: issues = %q", keep, issues)
 		}
 	}
@@ -86,7 +86,7 @@ func TestDHPublishInvalidKeepFailsBeforeSending(t *testing.T) {
 	g := publishGraph("srv1", cfg, false)
 
 	warnings, err := f.s.GraphWarnings("srv1", g)
-	if err != nil || len(warnings) != 1 || !strings.Contains(warnings[0], "whole number of at least 1") {
+	if err != nil || len(warnings) != 1 || warnings[0].NodeID != "u1" || !strings.Contains(warnings[0].Text, "whole number of at least 1") {
 		t.Errorf("GraphWarnings = %q (%v): the editor should be told while the graph is built", warnings, err)
 	}
 	rec := f.run(g)

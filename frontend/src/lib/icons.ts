@@ -52,6 +52,10 @@ export {
   Search,
   Trash2,
   TriangleAlert,
+  // The scheduler's blocks: a node that stops the server is marked with Power,
+  // kept apart from TriangleAlert, which a node with a warning or a failed run
+  // wears. One shape for two meanings was read as "this is a problem".
+  Power,
   // Window controls, in the app's own title bar. Deliberately not Maximize2 /
   // Minimize2, which the tile header already uses: the two bars sit one above
   // the other and the same glyph in both would say the window and the tile do

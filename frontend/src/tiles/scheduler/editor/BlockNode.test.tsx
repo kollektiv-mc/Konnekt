@@ -40,6 +40,7 @@ function renderNode(
   downtimeMs?: number,
   warning?: string,
   onToggleCollapse: (id: string) => void = () => {},
+  flags: { advice?: string[]; failure?: string } = {},
 ): HTMLElement {
   const ctx: SchedulerCtxValue = {
     blockDefs: new Map([commandDef, declaringDef].map((d) => [d.id, d])),
@@ -49,6 +50,8 @@ function renderNode(
     nodeRunState: new Map(),
     nodeDowntimeMs: downtimeMs === undefined ? new Map() : new Map([['n1', downtimeMs]]),
     nodeWarning: warning === undefined ? new Map() : new Map([['n1', warning]]),
+    nodeAdvice: flags.advice === undefined ? new Map() : new Map([['n1', flags.advice]]),
+    nodeFailure: flags.failure === undefined ? new Map() : new Map([['n1', flags.failure]]),
     firedEdges: new Set(),
     cycleNodes: new Set(),
     cycleEdges: new Set(),
@@ -129,6 +132,80 @@ describe('the server-stopping icon', () => {
     expect(chevron.compareDocumentPosition(stopIcon() as Node)).toBe(
       Node.DOCUMENT_POSITION_FOLLOWING,
     )
+  })
+})
+
+// The header's triangle means "look at this block" and nothing else: the
+// server-stopping effect has the power icon beside it.
+describe('the warning triangle in the header', () => {
+  const ADVICE = 'RCON is not confirmed, so players get no warning first.'
+  const flag = () => screen.queryByTestId('node-flag')
+
+  it('is absent from a block with no advice and no failure', () => {
+    renderNode('action.command', { command: 'save-all' })
+    expect(flag()).toBeNull()
+  })
+
+  it('shows grey, naming the warning, when the block has advice', () => {
+    renderNode('action.command', { command: '__stop__' }, [], undefined, undefined, undefined, {
+      advice: [ADVICE],
+    })
+    expect(flag()?.className).toContain('text-text-faint')
+    expect(flag()?.className).not.toContain('text-danger')
+    expect(flag()?.getAttribute('aria-label')).toBe(ADVICE)
+    expect(flag()?.getAttribute('title')).toBe(ADVICE)
+  })
+
+  it('turns red, naming the failure, when the block failed in the last run', () => {
+    renderNode('action.command', { command: 'save-all' }, [], undefined, undefined, undefined, {
+      failure: 'bucket unreachable',
+    })
+    expect(flag()?.className).toContain('text-danger')
+    expect(flag()?.className).not.toContain('text-text-faint')
+    expect(flag()?.getAttribute('aria-label')).toBe('Failed in the last run: bucket unreachable')
+  })
+
+  it('names a failure that came with no text', () => {
+    renderNode('action.command', { command: 'save-all' }, [], undefined, undefined, undefined, {
+      failure: '',
+    })
+    expect(flag()?.getAttribute('aria-label')).toBe('Failed in the last run')
+  })
+
+  it('stays red and lists both when a failed block also has advice', () => {
+    renderNode('action.command', { command: '__stop__' }, [], undefined, undefined, undefined, {
+      advice: [ADVICE],
+      failure: 'boom',
+    })
+    expect(flag()?.className).toContain('text-danger')
+    expect(flag()?.getAttribute('aria-label')).toBe(`Failed in the last run: boom\n${ADVICE}`)
+  })
+
+  it('is a different symbol from the one that marks a stop', () => {
+    renderNode('action.command', { command: '__stop__' }, [], undefined, undefined, undefined, {
+      advice: [ADVICE],
+    })
+    const stop = stopIcon() as HTMLElement
+    expect(stop).not.toBe(flag())
+    expect(stop.innerHTML).not.toBe((flag() as HTMLElement).innerHTML)
+    expect(stop.className).not.toContain('text-danger')
+  })
+
+  it('adds no height to the node', () => {
+    const plain = renderNode('action.command', { command: 'save-all' }).style.height
+    cleanup()
+    const flagged = renderNode(
+      'action.command',
+      { command: 'save-all' },
+      [],
+      undefined,
+      undefined,
+      undefined,
+      {
+        failure: 'x',
+      },
+    )
+    expect(flagged.style.height).toBe(plain)
   })
 })
 

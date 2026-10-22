@@ -418,7 +418,7 @@ func TestGraphWarningsReportsAnUploadWithNowhereToGo(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(got) != 1 || !strings.Contains(got[0], `"Gone" does not exist`) {
+	if len(got) != 1 || got[0].NodeID != "u1" || !strings.Contains(got[0].Text, `"Gone" does not exist`) {
 		t.Errorf("warnings = %q", got)
 	}
 	got, err = f.s.GraphWarnings("srv1", uploadGraph("srv1", okConfig(), false))
@@ -457,7 +457,7 @@ func TestValidateGraphDestinations(t *testing.T) {
 				}
 				return
 			}
-			if len(issues) != 1 || !strings.Contains(issues[0], tc.want) || !strings.Contains(issues[0], "Upload to Bucket (u1)") {
+			if len(issues) != 1 || !strings.Contains(issues[0].Text, tc.want) || issues[0].NodeID != "u1" {
 				t.Fatalf("issues = %q, want one naming the node and containing %q", issues, tc.want)
 			}
 		})
@@ -469,7 +469,7 @@ func TestValidateGraphDestinations(t *testing.T) {
 		t.Fatal(err)
 	}
 	issues := validateGraphDestinations(node(okConfig()), reg, f.dests)
-	if len(issues) != 1 || !strings.Contains(issues[0], "could not be read") {
+	if len(issues) != 1 || !strings.Contains(issues[0].Text, "could not be read") {
 		t.Errorf("corrupt list: issues = %q", issues)
 	}
 }

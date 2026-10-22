@@ -968,7 +968,7 @@ func (a *App) ImportScheduleGraphJSON(serverID string, raw string) (models.Graph
 	return a.schedulerService.ImportGraphJSON(serverID, raw)
 }
 
-func (a *App) GetScheduleGraphWarnings(serverID string, g models.Graph) ([]string, error) {
+func (a *App) GetScheduleGraphWarnings(serverID string, g models.Graph) ([]models.GraphWarning, error) {
 	return a.schedulerService.GraphWarnings(serverID, g)
 }
 

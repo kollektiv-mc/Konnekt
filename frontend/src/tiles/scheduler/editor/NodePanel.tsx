@@ -19,6 +19,10 @@ interface Props {
   onChange: (key: string, value: unknown) => void
   /** Called only while the data tab is showing, so a config edit never pays for it. */
   getGraph: () => models.Graph
+  /** What the backend says about the selected node, shown on the data tab. */
+  warnings?: readonly string[]
+  /** The selected node's error in the last run; absent when it did not fail. */
+  failure?: string
   onPreview: (graph: models.Graph, nodeId: string) => Promise<models.NodePreview>
 }
 
@@ -39,7 +43,18 @@ interface Props {
  * `animationend` handler are for dialogs and go unused. The slide itself is
  * `motion-reduce:transition-none`.
  */
-export function NodePanel({ node, def, edges, tab, onTab, onChange, getGraph, onPreview }: Props) {
+export function NodePanel({
+  node,
+  def,
+  edges,
+  tab,
+  onTab,
+  onChange,
+  getGraph,
+  warnings,
+  failure,
+  onPreview,
+}: Props) {
   const open = node !== undefined
   const { mounted } = usePresence(open)
   const selection = useMemo(() => (node ? { node, def } : null), [node, def])
@@ -115,7 +130,13 @@ export function NodePanel({ node, def, edges, tab, onTab, onChange, getGraph, on
                   onChange={onChange}
                 />
               ) : (
-                <NodeDataPanel graph={getGraph()} nodeId={held.node.id} onPreview={onPreview} />
+                <NodeDataPanel
+                  graph={getGraph()}
+                  nodeId={held.node.id}
+                  warnings={warnings}
+                  failure={failure}
+                  onPreview={onPreview}
+                />
               )}
             </div>
           </div>
