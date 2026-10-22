@@ -4,7 +4,7 @@ import { useUiStore } from '../stores/useUiStore'
 import { switchServer } from '../lib/switchServer'
 import { IconButton } from './ui/IconButton'
 import { NavSection } from './ui/NavSection'
-import { Maximize2 } from '../lib/icons'
+import { Maximize2, Plus } from '../lib/icons'
 import { Icon } from './ui/Icon'
 import { ServerRow } from './ServerRow'
 import { NEW_SERVER } from './ServerManager/ServerList'
@@ -31,20 +31,27 @@ export function ServerSelector() {
   }, [loadConfigs])
 
   return (
-    // The manage-servers control rides on the section header rather than inside
-    // the list, which is where a tile's own controls sit too. It is passed to
+    // Both controls ride on the section header rather than inside the list,
+    // which is where a tile's own controls sit too. They are passed to
     // NavSection rather than rendered here because a control nested inside the
-    // disclosure button would be a button inside a button.
+    // disclosure button would be a button inside a button. Adding sits beside
+    // managing so the list holds servers and nothing else, and both glyphs are
+    // the header's size rather than a crate row's.
     <NavSection
       id="servers"
       title="Servers"
       action={
-        <IconButton
-          onClick={() => openServerManager(activeId || NEW_SERVER)}
-          title="Manage servers"
-        >
-          <Icon icon={Maximize2} />
-        </IconButton>
+        <>
+          <IconButton onClick={() => openServerManager(NEW_SERVER)} title="Add server">
+            <Icon icon={Plus} size="sm" />
+          </IconButton>
+          <IconButton
+            onClick={() => openServerManager(activeId || NEW_SERVER)}
+            title="Manage servers"
+          >
+            <Icon icon={Maximize2} size="sm" />
+          </IconButton>
+        </>
       }
     >
       {/* p-1, not p-2: the card's own inset is the padding this used to supply,
@@ -71,17 +78,6 @@ export function ServerSelector() {
             {error}
           </div>
         )}
-
-        <button
-          onClick={() => openServerManager(NEW_SERVER)}
-          className="text-text-faint hover:bg-hover hover:text-text-secondary mt-1 flex items-center gap-2 rounded py-1.5 pr-1 pl-2 text-xs transition-colors"
-        >
-          {/* Sized to the status dot above it, not to the glyph, so this row's
-              label starts in the same column as the server names. The plus
-              overflows its 6px box symmetrically and stays centred on the dot. */}
-          <span className="w-1.5 text-center">+</span>
-          <span>Add server</span>
-        </button>
       </div>
     </NavSection>
   )

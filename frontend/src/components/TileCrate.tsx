@@ -264,30 +264,16 @@ export function TileCrate() {
           else itemRefs.current.delete(tile.id)
         }}
         onMouseDown={(e) => onMouseDown(tile, group, e)}
-        // The recess means "this one is out on the canvas" — the row is the
-        // socket the tile was pulled from, so it reads as empty while the tile
-        // is elsewhere and fills back in when it comes home. It used to be the
-        // other way round, which said the opposite of what the drag does.
+        // A row still in the crate carries a handle on its right edge: the tile
+        // is sitting in the tray, ready to be pulled out. A row whose tile is
+        // out on the canvas has none and reads as an empty slot. Filling the
+        // whole row grey said the same thing more loudly than it needed to.
         //
-        // The label stays `text-text-primary` in both states. Dimming it
-        // alongside the background made an off-canvas row read as disabled,
-        // and every one of these rows is clickable whichever side it is on:
-        // the background is what carries the state, on its own.
-        className={`border-hairline text-text-primary flex cursor-default items-center gap-2 rounded-lg px-2 py-2 text-left transition-all ${
-          dragging ? '' : 'hover:border-border-subtle'
-        } ${
-          // A row still in the crate is a thing sitting in a tray: it carries
-          // the soft grey. A row whose tile is out on the canvas is an empty
-          // slot, so it carries nothing and reads as flat.
-          //
-          // This is the opposite of the recess that shipped first, which put
-          // the dark fill on the on-canvas rows. That read as disabled rather
-          // than as absent — a filled box says "here is something" whichever
-          // direction the fill goes, and the row that has something is the one
-          // still holding a tile.
-          onCanvas
-            ? `bg-transparent ${dragging ? '' : 'hover:bg-hover'}`
-            : `bg-hover ${dragging ? '' : 'hover:bg-white/10'}`
+        // The label stays `text-text-primary` in both states. Dimming it made
+        // an off-canvas row read as disabled, and every one of these rows is
+        // clickable whichever side it is on.
+        className={`border-hairline text-text-primary relative flex cursor-default items-center gap-2 rounded-lg px-2 py-2 text-left transition-all ${
+          dragging ? '' : 'hover:border-border-subtle hover:bg-hover'
         } ${
           // The border colour is picked here rather than appended to a
           // `border-transparent` base: both are border-colour utilities, and
@@ -308,6 +294,13 @@ export function TileCrate() {
             measured against and re-flows the list the moment the navbar is
             dragged narrow. */}
         <span className="flex-1 truncate text-xs font-medium">{tile.label}</span>
+        {!onCanvas && (
+          <span
+            aria-hidden
+            data-testid="crate-handle"
+            className="bg-border-hover absolute top-1/4 right-1.5 h-1/2 w-0.5 rounded-full"
+          />
+        )}
       </button>
     )
   }
