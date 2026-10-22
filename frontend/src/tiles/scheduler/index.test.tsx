@@ -301,6 +301,8 @@ describe('the scheduler editor warns about a stop', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
+    // Every canvas is asked about now, so no test inherits another's advice.
+    vi.mocked(App.GetScheduleGraphWarnings).mockResolvedValue([])
     vi.stubGlobal(
       'DOMMatrixReadOnly',
       class {
@@ -433,12 +435,14 @@ describe('the scheduler editor warns about a stop', () => {
     }
   })
 
-  it('never asks about a graph with nothing that stops the server', async () => {
+  // A destination or retention warning is about a block that stops nothing,
+  // so a graph without a stop is asked about too.
+  it('asks about a graph with nothing that stops the server', async () => {
     vi.mocked(App.GetScheduleGraphs).mockResolvedValue([withCommand('save-all')])
     render(<SchedulerTile serverId="alpha" maximized />)
     await waitFor(() => expect(selected()).toBe('Only'))
 
-    expect(App.GetScheduleGraphWarnings).not.toHaveBeenCalled()
+    await waitFor(() => expect(App.GetScheduleGraphWarnings).toHaveBeenCalled())
     expect(warningButton()).toBeNull()
     expect(toasts()).toEqual([])
   })

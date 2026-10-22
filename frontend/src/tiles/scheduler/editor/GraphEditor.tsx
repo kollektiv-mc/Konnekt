@@ -913,29 +913,30 @@ function GraphEditorInner({
 
   // ── Warnings ──────────────────────────────────────────────────────────────
   // Advice about the canvas, never a gate: it sits beside Save and neither a
-  // save nor a run waits on it. Today's one warning is a stop with RCON not
-  // confirmed, which the backend answers from the server's own state, so the
-  // ask is made when the set of stopping nodes changes or the server changes
-  // state (RCON is confirmed once the server has started), not on every drag.
-  const stopSig = useMemo(
+  // save nor a run waits on it. The backend answers from each block's type and
+  // config (a destination not chosen, a retention out of range) and, for a
+  // stop, from the server's own state, so the ask is made when a block, its
+  // config or what stops the server changes, or the server changes state
+  // (RCON is confirmed once the server has started), not on every drag.
+  const warnSig = useMemo(
     () =>
-      nodes
-        .filter((n) => {
+      JSON.stringify(
+        nodes.map((n) => {
           const nd = n.data as NodeData
-          return nodeEffects(
+          const stops = nodeEffects(
             defMap.get(nd.blockType),
             nd.blockType,
             nd.config,
             isCommandHandleWired(n.id, edges),
           ).includes(NODE_EFFECT_STOPS_SERVER)
-        })
-        .map((n) => n.id)
-        .join(','),
+          return [n.id, nd.blockType, nd.config, stops]
+        }),
+      ),
     [nodes, edges, defMap],
   )
   const [warnings, setWarnings] = useState<models.GraphWarning[]>([])
   useEffect(() => {
-    if (stopSig === '') {
+    if (nodesRef.current.length === 0) {
       setWarnings([])
       return
     }
@@ -954,13 +955,13 @@ function GraphEditorInner({
       })
       .catch(() => {
         // Advice only: a failed ask leaves no warning rather than a banner, and
-        // the next change to the stopping nodes or the server asks again.
+        // the next change to the blocks or the server asks again.
         if (current) setWarnings([])
       })
     return () => {
       current = false
     }
-  }, [stopSig, serverState, askGraphWarnings])
+  }, [warnSig, serverState, askGraphWarnings])
 
   // The warnings in full go to a bubble; the toolbar says how many there are.
   // It outlives the editor, so closing the scheduler does not take the warning
