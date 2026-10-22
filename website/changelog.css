@@ -1,44 +1,6 @@
 /* The changelog page, on top of site.css. The snapshot is drawn in --sun,
    the colour the site gives everything not yet released. */
 
-button {
-  font: inherit;
-  color: inherit;
-}
-
-/* ── Hero ───────────────────────────────────────────────────────────────── */
-
-.cl-hero {
-  display: flex;
-  flex-wrap: wrap;
-}
-
-.cl-hero-title,
-.cl-hero-side {
-  flex: 1 1 420px;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  padding: clamp(40px, 6vw, 72px) var(--pad);
-}
-
-.cl-hero-title {
-  border-right: var(--hairline);
-}
-
-.cl-hero h1 {
-  margin: 0;
-  font-size: clamp(56px, 7vw, 96px);
-  line-height: 0.95;
-  font-weight: 600;
-  letter-spacing: -0.05em;
-}
-
-.cl-hero-side {
-  justify-content: flex-end;
-  background: var(--bg-surface);
-}
-
 /* ── Snapshot ───────────────────────────────────────────────────────────── */
 
 .snapshot {
@@ -325,15 +287,6 @@ button {
 }
 
 @media (max-width: 760px) {
-  .cl-hero-title {
-    border-right: 0;
-    border-bottom: var(--hairline);
-  }
-
-  .cl-hero-side {
-    padding-block: 24px;
-  }
-
   .snapshot-name,
   .release-side {
     border-right: 0;
