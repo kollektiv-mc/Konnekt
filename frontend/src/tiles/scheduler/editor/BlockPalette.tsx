@@ -60,28 +60,26 @@ export function BlockPalette({ blockDefs, onAdd }: Props) {
     )
   }
 
-  if (collapsed) {
-    return (
-      <button
-        type="button"
-        onClick={toggleCollapsed}
-        title="Expand blocks"
-        aria-label="Expand blocks"
-        className={`bg-canvas border-border-subtle border-r-hairline hover:bg-hover text-text-faint text-1xs flex w-5 shrink-0 cursor-pointer items-center justify-center font-mono transition-colors select-none ${NO_GRAPH_KEYS}`}
-      >
-        ›
-      </button>
-    )
-  }
-
-  // The scroll area and the edge strip are siblings, so the strip stays the
-  // palette's full height while the list scrolls beside it.
+  // One shell for both states, so collapsing and expanding animate its width
+  // rather than swapping one element for another. The list keeps a fixed width
+  // inside it, so the text is clipped by the narrowing shell instead of
+  // reflowing, and it fades as it goes. Collapsed, it stays mounted but inert,
+  // out of the tab order and the accessibility tree. The edge strip is the
+  // shell's last child either way, the full height, on the right.
   return (
     <div
-      className={`bg-canvas border-border-subtle border-r-hairline flex w-48 shrink-0 ${NO_GRAPH_KEYS}`}
+      className={`bg-canvas border-border-subtle border-r-hairline duration-panel ease-standard flex shrink-0 overflow-hidden transition-[width] motion-reduce:transition-none ${
+        collapsed ? 'w-5' : 'w-48'
+      } ${NO_GRAPH_KEYS}`}
     >
-      <div className="min-w-0 flex-1 overflow-y-auto">
-        <div className="px-2 py-2">
+      <div
+        inert={collapsed}
+        aria-hidden={collapsed}
+        className={`duration-panel ease-standard min-w-0 flex-1 overflow-x-hidden overflow-y-auto transition-opacity motion-reduce:transition-none ${
+          collapsed ? 'opacity-0' : 'opacity-100'
+        }`}
+      >
+        <div className="w-[calc(12rem-1.25rem)] px-2 py-2">
           <div className="text-text-faint mb-2 font-mono text-xs">blocks</div>
 
           {categories.map((cat) => {
@@ -134,11 +132,11 @@ export function BlockPalette({ blockDefs, onAdd }: Props) {
       <button
         type="button"
         onClick={toggleCollapsed}
-        title="Collapse blocks"
-        aria-label="Collapse blocks"
+        title={collapsed ? 'Expand blocks' : 'Collapse blocks'}
+        aria-label={collapsed ? 'Expand blocks' : 'Collapse blocks'}
         className="hover:bg-hover text-text-faint text-1xs flex w-5 shrink-0 cursor-pointer items-center justify-center font-mono transition-colors select-none"
       >
-        ‹
+        {collapsed ? '›' : '‹'}
       </button>
     </div>
   )
