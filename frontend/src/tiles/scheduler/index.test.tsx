@@ -158,10 +158,10 @@ describe('switching server from the sidebar with the scheduler editor maximized'
       </>,
     )
     await waitFor(() => expect(selected()).toBe('Only'))
-    fireEvent.click(screen.getByTitle('Click to rename'))
+    fireEvent.click(screen.getByRole('button', { name: 'Graph actions' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Rename' }))
     const input = screen.getByDisplayValue('Only')
     fireEvent.change(input, { target: { value: 'Only, edited' } })
-    // The dirty dot is on the label, which the input replaces while editing.
     fireEvent.keyDown(input, { key: 'Enter' })
     await waitFor(() => expect(screen.getByTitle('Unsaved changes')).toBeTruthy())
   }
@@ -333,7 +333,8 @@ describe('the scheduler editor warns about a stop', () => {
     )
     expect(App.GetScheduleGraphWarnings).toHaveBeenCalledWith('alpha', expect.anything())
     // Never a gate: Save is still there and enabled.
-    expect((screen.getByRole('button', { name: 'save' }) as HTMLButtonElement).disabled).toBe(false)
+    fireEvent.click(screen.getByRole('button', { name: 'Graph actions' }))
+    expect((screen.getByRole('button', { name: 'Save' }) as HTMLButtonElement).disabled).toBe(false)
   })
 
   it('reopens a dismissed bubble, and keeps it after close', async () => {

@@ -38,6 +38,7 @@ export {
   ChevronRight,
   CircleCheck,
   CircleX,
+  Ellipsis,
   Maximize2,
   Minimize2,
   Pencil,
