@@ -1,6 +1,7 @@
 import { useState, useEffect, useLayoutEffect, useRef, useMemo } from 'react'
 import { createPortal } from 'react-dom'
 import type { models } from '../../../../wailsjs/go/models'
+import { Tooltip } from '../../../components/ui/Tooltip'
 import { useOutsideDismiss } from '../../../hooks/useOutsideDismiss'
 import {
   CATEGORY_ICON,
@@ -152,27 +153,27 @@ export function QuickAddMenu({ blockDefs, screenPos, onPick, onClose, leaving = 
   // panel: the pointer has left the group row for a plain block.
   function blockRow(def: models.BlockDef, inFlyout: boolean) {
     return (
-      <div
-        key={def.id}
-        title={def.description}
-        onClick={() => onPick(def)}
-        className="text-text-primary text-1xs border-l-2 border-l-transparent px-3 py-[5px] font-mono select-none"
-        onMouseEnter={(e) => {
-          const el = e.currentTarget as HTMLDivElement
-          el.style.borderLeftColor = activeColor
-          el.style.background = 'var(--hover-surface)'
-          // A member of the group panel itself is where the pointer is headed,
-          // so only the fly-out's own blocks close it.
-          if (inFlyout) setActiveGroup(null)
-        }}
-        onMouseLeave={(e) => {
-          const el = e.currentTarget as HTMLDivElement
-          el.style.borderLeftColor = 'transparent'
-          el.style.background = 'transparent'
-        }}
-      >
-        {def.label}
-      </div>
+      <Tooltip key={def.id} text={def.description}>
+        <div
+          onClick={() => onPick(def)}
+          className="text-text-primary text-1xs border-l-2 border-l-transparent px-3 py-[5px] font-mono select-none"
+          onMouseEnter={(e) => {
+            const el = e.currentTarget as HTMLDivElement
+            el.style.borderLeftColor = activeColor
+            el.style.background = 'var(--hover-surface)'
+            // A member of the group panel itself is where the pointer is headed,
+            // so only the fly-out's own blocks close it.
+            if (inFlyout) setActiveGroup(null)
+          }}
+          onMouseLeave={(e) => {
+            const el = e.currentTarget as HTMLDivElement
+            el.style.borderLeftColor = 'transparent'
+            el.style.background = 'transparent'
+          }}
+        >
+          {def.label}
+        </div>
+      </Tooltip>
     )
   }
 
@@ -219,20 +220,20 @@ export function QuickAddMenu({ blockDefs, screenPos, onPick, onClose, leaving = 
                 const isHilit = i === highlightIdx
                 const borderClass = categoryBorderClass(def.category)
                 return (
-                  <div
-                    key={def.id}
-                    title={def.description}
-                    onClick={() => onPick(def)}
-                    onMouseEnter={() => setHighlightIdx(i)}
-                    className={`text-text-primary text-1xs flex items-center gap-1.5 border-l-2 px-3 py-1 font-mono select-none ${
-                      isHilit ? `bg-hover ${borderClass}` : 'border-l-transparent bg-transparent'
-                    }`}
-                  >
-                    <span className="flex-1">{def.label}</span>
-                    <span className="text-text-faint text-3xs uppercase">
-                      {def.group ?? def.category}
-                    </span>
-                  </div>
+                  <Tooltip key={def.id} text={def.description}>
+                    <div
+                      onClick={() => onPick(def)}
+                      onMouseEnter={() => setHighlightIdx(i)}
+                      className={`text-text-primary text-1xs flex items-center gap-1.5 border-l-2 px-3 py-1 font-mono select-none ${
+                        isHilit ? `bg-hover ${borderClass}` : 'border-l-transparent bg-transparent'
+                      }`}
+                    >
+                      <span className="flex-1">{def.label}</span>
+                      <span className="text-text-faint text-3xs uppercase">
+                        {def.group ?? def.category}
+                      </span>
+                    </div>
+                  </Tooltip>
                 )
               })
             )

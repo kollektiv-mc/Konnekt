@@ -8,6 +8,7 @@ import {
 } from './blockMeta'
 import { blockEntries, groupKey } from './blockGroups'
 import { useSettingsStore } from '../../../stores/useSettingsStore'
+import { Tooltip } from '../../../components/ui/Tooltip'
 
 interface Props {
   blockDefs: models.BlockDef[]
@@ -43,20 +44,20 @@ export function BlockPalette({ blockDefs, onAdd }: Props) {
   // grouped block lands on the canvas exactly like a loose one.
   function blockRow(def: models.BlockDef, color: string, indented: boolean) {
     return (
-      <div
-        key={def.id}
-        draggable
-        onClick={() => onAdd(def)}
-        onDragStart={(e) => e.dataTransfer.setData('blockType', def.id)}
-        title={def.description}
-        className={`bg-surface border-border-subtle text-text-primary border-hairline text-1xs mb-0.5 rounded px-2 py-1 font-mono select-none ${indented ? 'ml-3' : ''}`}
-        onMouseEnter={(e) => ((e.currentTarget as HTMLDivElement).style.borderColor = color)}
-        onMouseLeave={(e) =>
-          ((e.currentTarget as HTMLDivElement).style.borderColor = 'var(--border-subtle)')
-        }
-      >
-        {def.label}
-      </div>
+      <Tooltip key={def.id} text={def.description}>
+        <div
+          draggable
+          onClick={() => onAdd(def)}
+          onDragStart={(e) => e.dataTransfer.setData('blockType', def.id)}
+          className={`bg-surface border-border-subtle text-text-primary border-hairline text-1xs mb-0.5 rounded px-2 py-1 font-mono select-none ${indented ? 'ml-3' : ''}`}
+          onMouseEnter={(e) => ((e.currentTarget as HTMLDivElement).style.borderColor = color)}
+          onMouseLeave={(e) =>
+            ((e.currentTarget as HTMLDivElement).style.borderColor = 'var(--border-subtle)')
+          }
+        >
+          {def.label}
+        </div>
+      </Tooltip>
     )
   }
 
