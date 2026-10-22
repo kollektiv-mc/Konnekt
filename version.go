@@ -11,4 +11,4 @@ package main
 // has to keep them outranking the newest release or the snapshot channel goes
 // quiet. Bump it whenever a tag catches up with it — see
 // .claude/rules/builds-and-releases.md, and mirror it in wails.json.
-var Version = "0.2.0-dev"
+var Version = "0.2.1-dev"
