@@ -1,10 +1,10 @@
 import { useMemo, useRef, useState } from 'react'
+import type { ReactNode } from 'react'
 import type { Edge as FlowEdge } from '@xyflow/react'
 import { Popover } from '../../../components/ui/Popover'
 import { Icon } from '../../../components/ui/Icon'
-import { IconButton } from '../../../components/ui/IconButton'
-import { Check, Ellipsis, Plus, TriangleAlert } from '../../../lib/icons'
-import { usePopover } from '../../../hooks/usePopover'
+import { Check, Ellipsis, Plus, TriangleAlert, Workflow } from '../../../lib/icons'
+import { usePresence } from '../../../hooks/usePresence'
 import type { models } from '../../../../wailsjs/go/models'
 import { NO_GRAPH_KEYS } from './blockMeta'
 import { hasClipboard } from './clipboard'
@@ -49,27 +49,49 @@ interface ToolbarProps {
   onWarningsClick: () => void
 }
 
-// A small bordered button, the toolbar's one control shape. `active` fills it.
-function btnClass(active = false, danger = false): string {
-  const base = 'cursor-pointer rounded border-hairline px-2 py-0.5 text-1xs font-mono'
-  const borderClass = danger ? 'border-danger' : 'border-border-subtle'
-  if (active) return `${base} ${borderClass} bg-accent text-black`
-  if (danger) return `${base} ${borderClass} bg-transparent text-danger`
-  return `${base} ${borderClass} bg-surface text-text-muted`
-}
+type MenuId = 'graph' | 'edit' | 'overflow'
 
-// A button that opens a menu: the same shape, held in the hover surface while
-// its menu is open so the bar says which one the menu belongs to.
-function menuButtonClass(open: boolean): string {
-  const base =
-    'border-border-subtle text-text-muted border-hairline text-1xs shrink-0 cursor-pointer rounded px-2 py-0.5 font-mono transition-colors'
-  return `${base} ${open ? 'bg-hover' : 'bg-surface hover:bg-hover'}`
-}
+// The bar is two groups, each one bordered box of flush segments split by a
+// hairline. Every segment is the same height and a fixed height at that, so
+// the baseline is shared by construction rather than by matching paddings.
+const GROUP = 'border-border-subtle border-hairline bg-surface flex shrink-0 rounded'
+const SEGMENT_H = 'h-6'
 
 /**
- * The editor's toolbar: the graph picker with its name and unsaved dot, the add
- * and edit menus, then on the right the status slot, run, the on/off toggle and
- * an overflow menu for what acts on the graph as a whole.
+ * One cell of a group. It is the anchor a menu's popover hangs from, and it
+ * owns the corner radius and the divider: the first cell has no divider and
+ * rounds the group's left corners, the last rounds its right, and the button
+ * inside takes whichever it got (`rounded-[inherit]`), so a hover fill never
+ * squares off a rounded corner. Give it a width to fix one.
+ */
+function Segment({ children, className = '' }: { children: ReactNode; className?: string }) {
+  return (
+    <div
+      className={`border-border-subtle border-l-hairline relative flex shrink-0 first:rounded-l first:border-l-0 last:rounded-r ${className}`}
+    >
+      {children}
+    </div>
+  )
+}
+
+// A segment's button or label: the same box whatever is in it. The tone and the
+// fill are the caller's, so there is one colour utility on it, not two to race.
+function segmentClass(tone: string, fill: string): string {
+  return `${SEGMENT_H} text-1xs flex w-full items-center justify-center gap-1 rounded-[inherit] px-2 font-mono whitespace-nowrap transition-colors ${tone} ${fill}`
+}
+const IDLE_FILL = 'bg-transparent hover:bg-hover'
+
+/**
+ * The editor's toolbar: on the left one connected bar of the graph picker (its
+ * name and unsaved dot), add and edit; on the right another of the warning
+ * count, run, the on/off toggle and an overflow menu for what acts on the graph
+ * as a whole. The run status sits in the gap between them.
+ *
+ * Nothing on the bar moves another item. The picker and the toggle have one
+ * width in every state, the unsaved dot is overlaid on the picker's right end
+ * rather than added beside the name, the warning count has a slot of its own
+ * whether or not there is one, and the status lives in the gap, right-aligned,
+ * so it grows into space nothing else is using.
  *
  * Pulled out of GraphEditor (#133) so the menus have somewhere to grow. It
  * holds only what is about the bar itself: which menu is open, and the draft of
@@ -109,23 +131,36 @@ export function Toolbar({
   onRunStatusClick,
   onWarningsClick,
 }: ToolbarProps) {
-  const graphMenu = usePopover()
-  const editMenu = usePopover()
-  const overflowMenu = usePopover()
+  // One menu open at a time, so opening one is closing the others. Each
+  // popover's presence keeps its rows drawn while it fades (see usePresence);
+  // the popover's own panel animates by transition, and a new menu opens at
+  // once while the old one is still fading.
+  const [menu, setMenu] = useState<MenuId | null>(null)
+  const graphPresence = usePresence(menu === 'graph', 'menu')
+  const editPresence = usePresence(menu === 'edit', 'menu')
+  const overflowPresence = usePresence(menu === 'overflow', 'menu')
+  const graphButton = useRef<HTMLButtonElement>(null)
   const addButton = useRef<HTMLButtonElement>(null)
+  const editButton = useRef<HTMLButtonElement>(null)
+  const overflowButton = useRef<HTMLButtonElement>(null)
   // The rename draft lives in the overflow menu's own row; null is the row at
-  // rest. The menu closing drops it, so a reopen starts from the name again.
+  // rest. Opening the menu clears it, so a reopen starts from the name again.
+  // It is cleared on open rather than on close so the row does not flip back
+  // to "Rename" while the menu is still fading out.
   const [renameDraft, setRenameDraft] = useState<string | null>(null)
 
-  const closeOverflow = () => {
-    overflowMenu.close()
-    setRenameDraft(null)
+  const toggleMenu = (id: MenuId) => {
+    if (id === 'overflow' && menu !== 'overflow') setRenameDraft(null)
+    setMenu((cur) => (cur === id ? null : id))
   }
+  // A close that names its own menu, so a late close from one popover cannot
+  // shut the menu that has since opened beside it.
+  const closeMenu = (id: MenuId) => setMenu((cur) => (cur === id ? null : cur))
 
   const commitRename = () => {
     const name = (renameDraft ?? '').trim()
     if (name !== '' && name !== graphName) onRename(name)
-    closeOverflow()
+    closeMenu('overflow')
   }
 
   const selectedNodes = nodes.filter((n) => n.selected).length
@@ -153,246 +188,309 @@ export function Toolbar({
   const graphLabel =
     graphId === null && graphs.length === 0 ? '— no graphs —' : graphName || 'Untitled'
 
+  // The rows of a fading menu are out of the accessibility tree and the tab
+  // order, so a menu that is closing is not one a keystroke can still reach.
+  const fading = (leaving: boolean) => ({ 'aria-hidden': leaving || undefined, inert: leaving })
+
   return (
     <div
       className={`border-border-subtle bg-surface border-b-hairline flex shrink-0 flex-wrap items-center gap-2 px-3 py-1.5 ${NO_GRAPH_KEYS}`}
     >
-      {/* Graph selector: the list, a way to start a new graph, and beside the
-          name the dot that says the canvas has unsaved changes. */}
-      <div className="relative shrink-0">
-        <button
-          onClick={graphMenu.toggle}
-          className={`border-border-subtle text-text-primary border-hairline text-1xs flex max-w-[220px] shrink-0 items-center gap-1.5 rounded px-1.5 py-0.5 font-mono whitespace-nowrap transition-colors ${
-            graphMenu.open ? 'bg-hover' : 'bg-canvas'
-          }`}
-        >
-          <span className="text-text-faint text-2xs">☰</span>
-          <span className="truncate">{graphLabel}</span>
-          {dirty && (
-            <span className="bg-accent h-1.5 w-1.5 shrink-0 rounded-full" title="Unsaved changes" />
-          )}
-        </button>
-
-        <Popover
-          open={graphMenu.open}
-          onClose={graphMenu.close}
-          width={180}
-          maxHeight={280}
-          align="left"
-        >
-          {graphMenu.open && (
-            <>
-              {graphs.length === 0 && graphId !== '' && (
-                <div className="text-text-faint px-3 py-1.5 font-mono text-xs">— no graphs —</div>
-              )}
-              {graphs.map((g) => {
-                const active = g.id === graphId
-                return (
-                  <MenuRow
-                    key={g.id}
-                    label={g.name || g.id}
-                    active={active}
-                    leading={
-                      <Icon
-                        icon={Check}
-                        size="xs"
-                        className={`text-accent ${active ? 'opacity-100' : 'opacity-0'}`}
-                      />
-                    }
-                    onClick={() => {
-                      onLoadGraph(g)
-                      graphMenu.close()
-                    }}
-                  />
-                )
-              })}
-              {graphId === '' && (
-                <MenuRow
-                  label={graphName || 'Untitled'}
-                  active
-                  leading={<Icon icon={Check} size="xs" className="text-accent" />}
-                  onClick={graphMenu.close}
-                />
-              )}
-              <MenuDivider />
-              <MenuRow
-                label="New graph"
-                leading={<Icon icon={Plus} size="xs" className="text-text-faint" />}
-                onClick={() => {
-                  onNewGraph()
-                  graphMenu.close()
-                }}
+      <div className={GROUP}>
+        {/* Graph selector: the list and a way to start a new graph. The unsaved
+            dot is laid over the right end of the name's field, and the name
+            fades out before it (a mask, not an ellipsis, so nothing ends in
+            "..." and nothing runs under the dot). Both the field and the room
+            for the dot are there whether or not the dot is. */}
+        <Segment className="w-60">
+          <button
+            ref={graphButton}
+            type="button"
+            onClick={() => toggleMenu('graph')}
+            className={`${segmentClass('text-text-primary', menu === 'graph' ? 'bg-hover' : IDLE_FILL)} relative justify-start pr-5`}
+          >
+            <Icon icon={Workflow} size="xs" className="text-text-faint shrink-0" />
+            <span className="min-w-0 flex-1 overflow-hidden [mask-image:linear-gradient(to_right,black_calc(100%_-_1.5rem),transparent)] text-left [-webkit-mask-image:linear-gradient(to_right,black_calc(100%_-_1.5rem),transparent)]">
+              {graphLabel}
+            </span>
+            {dirty && (
+              <span
+                className="bg-accent absolute top-1/2 right-2 h-1.5 w-1.5 -translate-y-1/2 rounded-full"
+                title="Unsaved changes"
               />
-            </>
-          )}
-        </Popover>
+            )}
+          </button>
+          <Popover
+            open={menu === 'graph'}
+            onClose={() => closeMenu('graph')}
+            dismiss="pointerdown"
+            trigger={graphButton}
+            width={240}
+            maxHeight={280}
+            align="left"
+          >
+            {graphPresence.mounted && (
+              <div {...fading(graphPresence.leaving)}>
+                {graphs.length === 0 && graphId !== '' && (
+                  <div className="text-text-faint px-3 py-1.5 font-mono text-xs">— no graphs —</div>
+                )}
+                {graphs.map((g) => {
+                  const active = g.id === graphId
+                  return (
+                    <MenuRow
+                      key={g.id}
+                      label={g.name || g.id}
+                      active={active}
+                      leading={
+                        <Icon
+                          icon={Check}
+                          size="xs"
+                          className={`text-accent ${active ? 'opacity-100' : 'opacity-0'}`}
+                        />
+                      }
+                      onClick={() => {
+                        onLoadGraph(g)
+                        closeMenu('graph')
+                      }}
+                    />
+                  )
+                })}
+                {graphId === '' && (
+                  <MenuRow
+                    label={graphName || 'Untitled'}
+                    active
+                    leading={<Icon icon={Check} size="xs" className="text-accent" />}
+                    onClick={() => closeMenu('graph')}
+                  />
+                )}
+                <MenuDivider />
+                <MenuRow
+                  label="New graph"
+                  leading={<Icon icon={Plus} size="xs" className="text-text-faint" />}
+                  onClick={() => {
+                    onNewGraph()
+                    closeMenu('graph')
+                  }}
+                />
+              </div>
+            )}
+          </Popover>
+        </Segment>
+
+        {/* Add: the quick-add list, which is not a popover of ours, so the
+            button closes whatever menu is open and says where its corner goes. */}
+        <Segment>
+          <button
+            ref={addButton}
+            type="button"
+            className={`${segmentClass('text-text-muted', IDLE_FILL)} px-3`}
+            onClick={() => {
+              setMenu(null)
+              const r = addButton.current?.getBoundingClientRect()
+              onAdd(r ? { x: r.left, y: r.bottom + 4 } : { x: 0, y: 0 })
+            }}
+          >
+            add
+          </button>
+        </Segment>
+
+        <Segment>
+          <button
+            ref={editButton}
+            type="button"
+            className={`${segmentClass('text-text-muted', menu === 'edit' ? 'bg-hover' : IDLE_FILL)} px-3`}
+            onClick={() => toggleMenu('edit')}
+          >
+            edit
+          </button>
+          <Popover
+            open={menu === 'edit'}
+            onClose={() => closeMenu('edit')}
+            dismiss="pointerdown"
+            trigger={editButton}
+            width={224}
+            align="left"
+          >
+            {editPresence.mounted && (
+              <div {...fading(editPresence.leaving)}>
+                <EditMenuRows
+                  rows={rows}
+                  active={menu === 'edit'}
+                  onDone={() => closeMenu('edit')}
+                />
+              </div>
+            )}
+          </Popover>
+        </Segment>
       </div>
 
-      {/* Add: the quick-add list, which is not a popover of ours, so the button
-          only says where its corner goes. */}
-      <button
-        ref={addButton}
-        type="button"
-        className={menuButtonClass(false)}
-        onClick={() => {
-          const r = addButton.current?.getBoundingClientRect()
-          onAdd(r ? { x: r.left, y: r.bottom + 4 } : { x: 0, y: 0 })
-        }}
-      >
-        add
-      </button>
-
-      <div className="relative shrink-0">
-        <button type="button" className={menuButtonClass(editMenu.open)} onClick={editMenu.toggle}>
-          edit
-        </button>
-        <Popover
-          open={editMenu.open}
-          onClose={editMenu.close}
-          width={224}
-          maxHeight={360}
-          align="left"
-        >
-          {editMenu.open && <EditMenuRows rows={rows} onDone={editMenu.close} />}
-        </Popover>
-      </div>
-
-      <div className="flex-1" />
-
-      {/* IPC errors and a failed run take the transient status slot and
-          stay until clicked. Two words here, whatever the message: the
-          message is in a bubble, and the click moves it there if that was
-          dismissed or its category is turned off. */}
-      {schedulerError ? (
-        <button
-          type="button"
-          onClick={onErrorClick}
-          className="text-danger text-2xs shrink-0 font-mono whitespace-nowrap"
-          title={schedulerError}
-        >
-          scheduler error
-        </button>
-      ) : (
-        runStatus &&
-        (runStatus.failed ? (
+      {/* The status takes the gap between the groups and is right-aligned in
+          it, so it grows into room nothing else is using and the bar never
+          moves for it. IPC errors and a failed run stay until clicked. Two
+          words here, whatever the message: the message is in a bubble, and the
+          click moves it there if that was dismissed or its category is turned
+          off. */}
+      <div className="flex min-w-0 flex-1 items-center justify-end">
+        {schedulerError ? (
           <button
             type="button"
-            onClick={() => onRunStatusClick(runStatus)}
+            onClick={onErrorClick}
             className="text-danger text-2xs shrink-0 font-mono whitespace-nowrap"
-            title={runStatus.detail}
+            title={schedulerError}
           >
-            {runStatus.text}
+            scheduler error
           </button>
         ) : (
-          <span className="text-text-faint text-2xs shrink-0 font-mono whitespace-nowrap">
-            {runStatus.text}
-          </span>
-        ))
-      )}
+          runStatus &&
+          (runStatus.failed ? (
+            <button
+              type="button"
+              onClick={() => onRunStatusClick(runStatus)}
+              className="text-danger text-2xs shrink-0 font-mono whitespace-nowrap"
+              title={runStatus.detail}
+            >
+              {runStatus.text}
+            </button>
+          ) : (
+            <span className="text-text-faint text-2xs shrink-0 font-mono whitespace-nowrap">
+              {runStatus.text}
+            </span>
+          ))
+        )}
+      </div>
 
-      {selectedCount > 0 && (
-        <button className={btnClass(false, true)} onClick={edit.deleteSelected}>
-          del {selectedCount}
-        </button>
-      )}
-
-      {/* The icon and a count, never the text: a bar that grows moves every
-          control beside it, and a cut sentence cannot be read. The warnings
-          are in a bubble, which this reopens. */}
-      {warnings.length > 0 && (
-        <button
-          type="button"
-          onClick={onWarningsClick}
-          className="text-warning text-2xs flex shrink-0 items-center gap-1 font-mono whitespace-nowrap"
-          title={warnings.join('\n')}
-          aria-label={warnings.length === 1 ? '1 warning' : `${warnings.length} warnings`}
-        >
-          <Icon icon={TriangleAlert} size="xs" />
-          {warnings.length}
-        </button>
-      )}
-
-      {graphId && (
-        <button className={btnClass()} onClick={onRun}>
-          run
-        </button>
-      )}
-
-      {graphId && (
-        <button
-          className={btnClass(graphEnabled)}
-          onClick={onToggleEnabled}
-          aria-pressed={graphEnabled}
-        >
-          {graphEnabled ? '[on]' : '[off]'}
-        </button>
-      )}
-
-      {/* Overflow: what acts on the graph as a whole rather than on its nodes. */}
-      <div className="relative shrink-0">
-        <IconButton
-          title="Graph actions"
-          onClick={overflowMenu.toggle}
-          className={overflowMenu.open ? 'bg-hover' : ''}
-        >
-          <Icon icon={Ellipsis} size="sm" />
-        </IconButton>
-        <Popover open={overflowMenu.open} onClose={closeOverflow} width={176} align="right">
-          {overflowMenu.open && (
-            <>
-              <MenuRow
-                label={saving ? 'Saving...' : 'Save'}
-                disabled={saving}
-                onClick={() => {
-                  onSave()
-                  closeOverflow()
-                }}
-              />
-              {renameDraft === null ? (
-                <MenuRow label="Rename" onClick={() => setRenameDraft(graphName)} />
-              ) : (
-                <div className={`px-3 py-1 ${NO_GRAPH_KEYS}`}>
-                  <input
-                    autoFocus
-                    type="text"
-                    aria-label="Graph name"
-                    value={renameDraft}
-                    onChange={(e) => setRenameDraft(e.target.value)}
-                    onFocus={(e) => e.currentTarget.select()}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') commitRename()
-                      else if (e.key === 'Escape') {
-                        // Escape closes the maximized tile from a window listener;
-                        // here it only backs out of the rename.
-                        e.stopPropagation()
-                        setRenameDraft(null)
-                      }
-                    }}
-                    className="bg-canvas border-accent text-text-primary border-hairline text-1xs w-full rounded px-1.5 py-0.5 font-mono outline-none"
-                  />
-                </div>
-              )}
-              <MenuRow
-                label="Duplicate graph"
-                disabled={!graphId || saving}
-                onClick={() => {
-                  onDuplicateGraph()
-                  closeOverflow()
-                }}
-              />
-              <MenuDivider />
-              <MenuRow
-                label="Delete graph"
-                danger
-                disabled={!graphId}
-                onClick={() => {
-                  onDeleteGraph()
-                  closeOverflow()
-                }}
-              />
-            </>
+      <div className={GROUP}>
+        {/* The icon and a count, never the text: a bar that grows moves every
+            control beside it, and a cut sentence cannot be read. The warnings
+            are in a bubble, which this reopens. The slot is there at zero too,
+            quiet, so a warning arriving fills it rather than pushing the rest
+            of the bar along. */}
+        <Segment className="w-11">
+          {warnings.length > 0 ? (
+            <button
+              type="button"
+              onClick={onWarningsClick}
+              className={segmentClass('text-warning', IDLE_FILL)}
+              title={warnings.join('\n')}
+              aria-label={warnings.length === 1 ? '1 warning' : `${warnings.length} warnings`}
+            >
+              <Icon icon={TriangleAlert} size="xs" />
+              {warnings.length}
+            </button>
+          ) : (
+            <span className={segmentClass('text-text-faint', 'bg-transparent')} title="No warnings">
+              <Icon icon={TriangleAlert} size="xs" />0
+            </span>
           )}
-        </Popover>
+        </Segment>
+
+        {graphId && (
+          <Segment>
+            <button
+              type="button"
+              className={`${segmentClass('text-text-muted', IDLE_FILL)} px-3`}
+              onClick={onRun}
+            >
+              run
+            </button>
+          </Segment>
+        )}
+
+        {graphId && (
+          <Segment className="w-12">
+            <button
+              type="button"
+              className={segmentClass(
+                graphEnabled ? 'text-black' : 'text-text-muted',
+                graphEnabled ? 'bg-accent' : IDLE_FILL,
+              )}
+              onClick={onToggleEnabled}
+              aria-pressed={graphEnabled}
+            >
+              {graphEnabled ? '[on]' : '[off]'}
+            </button>
+          </Segment>
+        )}
+
+        {/* Overflow: what acts on the graph as a whole rather than on its nodes. */}
+        <Segment className="w-8">
+          <button
+            ref={overflowButton}
+            type="button"
+            title="Graph actions"
+            aria-label="Graph actions"
+            onClick={() => toggleMenu('overflow')}
+            className={segmentClass(
+              'text-text-muted hover:text-text-primary',
+              menu === 'overflow' ? 'bg-hover' : IDLE_FILL,
+            )}
+          >
+            <Icon icon={Ellipsis} size="sm" />
+          </button>
+          <Popover
+            open={menu === 'overflow'}
+            onClose={() => closeMenu('overflow')}
+            dismiss="pointerdown"
+            trigger={overflowButton}
+            width={176}
+            align="right"
+          >
+            {overflowPresence.mounted && (
+              <div {...fading(overflowPresence.leaving)}>
+                <MenuRow
+                  label={saving ? 'Saving...' : 'Save'}
+                  disabled={saving}
+                  onClick={() => {
+                    onSave()
+                    closeMenu('overflow')
+                  }}
+                />
+                {renameDraft === null ? (
+                  <MenuRow label="Rename" onClick={() => setRenameDraft(graphName)} />
+                ) : (
+                  <div className={`px-3 py-1 ${NO_GRAPH_KEYS}`}>
+                    <input
+                      autoFocus
+                      type="text"
+                      aria-label="Graph name"
+                      value={renameDraft}
+                      onChange={(e) => setRenameDraft(e.target.value)}
+                      onFocus={(e) => e.currentTarget.select()}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') commitRename()
+                        else if (e.key === 'Escape') {
+                          // Escape closes the maximized tile from a window listener;
+                          // here it only backs out of the rename.
+                          e.stopPropagation()
+                          setRenameDraft(null)
+                        }
+                      }}
+                      className="bg-canvas border-accent text-text-primary border-hairline text-1xs w-full rounded px-1.5 py-0.5 font-mono outline-none"
+                    />
+                  </div>
+                )}
+                <MenuRow
+                  label="Duplicate graph"
+                  disabled={!graphId || saving}
+                  onClick={() => {
+                    onDuplicateGraph()
+                    closeMenu('overflow')
+                  }}
+                />
+                <MenuDivider />
+                <MenuRow
+                  label="Delete graph"
+                  danger
+                  disabled={!graphId}
+                  onClick={() => {
+                    onDeleteGraph()
+                    closeMenu('overflow')
+                  }}
+                />
+              </div>
+            )}
+          </Popover>
+        </Segment>
       </div>
     </div>
   )

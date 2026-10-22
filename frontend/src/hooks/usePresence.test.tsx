@@ -106,6 +106,64 @@ describe('usePresence', () => {
   })
 })
 
+describe('usePresence as a menu', () => {
+  beforeEach(() => vi.useFakeTimers())
+  afterEach(() => vi.useRealTimers())
+
+  it('plays the menu keyframes, not the dialog ones', () => {
+    const { result, rerender } = renderHook(({ open }) => usePresence(open, 'menu'), {
+      initialProps: { open: true },
+    })
+    expect(result.current.panelClass).toBe('menu-in')
+    rerender({ open: false })
+    expect(result.current.panelClass).toContain('menu-out')
+    expect(result.current.panelClass).toContain('pointer-events-none')
+  })
+
+  it('ends on its own keyframes and ignores the dialog panel exit', () => {
+    const { result, rerender } = renderHook(({ open }) => usePresence(open, 'menu'), {
+      initialProps: { open: true },
+    })
+    rerender({ open: false })
+    act(() => result.current.onAnimationEnd(ended('modal-panel-out')))
+    expect(result.current.mounted).toBe(true)
+    act(() => result.current.onAnimationEnd(ended('menu-out')))
+    expect(result.current.mounted).toBe(false)
+  })
+
+  it('times out at the fast duration, well before a dialog would', () => {
+    const { result, rerender } = renderHook(({ open }) => usePresence(open, 'menu'), {
+      initialProps: { open: true },
+    })
+    rerender({ open: false })
+    act(() => void vi.advanceTimersByTime(100))
+    expect(result.current.mounted).toBe(true)
+    act(() => void vi.advanceTimersByTime(150))
+    expect(result.current.mounted).toBe(false)
+  })
+})
+
+describe('usePresence reading the duration token', () => {
+  beforeEach(() => vi.useFakeTimers())
+  afterEach(() => {
+    vi.useRealTimers()
+    document.documentElement.style.removeProperty('--duration-fast')
+  })
+
+  // A production build's CSS minifier writes 150ms as .15s.
+  it.each(['.15s', '150ms'])('waits the full exit when the token reads %s', (value) => {
+    document.documentElement.style.setProperty('--duration-fast', value)
+    const { result, rerender } = renderHook(({ open }) => usePresence(open, 'menu'), {
+      initialProps: { open: true },
+    })
+    rerender({ open: false })
+    act(() => void vi.advanceTimersByTime(150))
+    expect(result.current.mounted).toBe(true)
+    act(() => void vi.advanceTimersByTime(100))
+    expect(result.current.mounted).toBe(false)
+  })
+})
+
 describe('useRetained', () => {
   it('keeps the last value once it is cleared', () => {
     const { result, rerender } = renderHook(({ v }: { v: string | null }) => useRetained(v), {
