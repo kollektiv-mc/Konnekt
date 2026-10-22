@@ -10,32 +10,48 @@
 # blocking, but sent a "run failed" notification on every pull request in the
 # seconds between opening it and labelling it.
 #
+# What it asks for: an `area:` label, and either a `## Changelog` section in
+# the body or a `type:` label. A section lists each change with its own type,
+# so one pull request can carry several; without one, the `type:` label files
+# the whole pull request by its title. A section with a malformed line holds
+# the status pending and names the line. A pull request with no section but a
+# `type:` label passes, with a warning on the run and in the status
+# description, because a branch rule that requires `pr-labelled` cannot merge
+# anything that is not green: the warning has to be one that still merges.
+#
 # Why a status and not a job that waits: a job cannot stay pending until a
 # person acts. It holds a runner, is billed for the minutes, and dies at its
 # timeout. A commit status costs one API call and stays `pending` for as long
-# as the labels are missing. The job that posts it always succeeds, so it is
+# as something is missing. The job that posts it always succeeds, so it is
 # named `post-status` to keep it from reading as the gate. GitHub requires every
 # check and status that carries a required name to pass, so a branch rule
 # requiring `pr-labelled` is held by this status with nothing to reconfigure.
 #
-# Why a gate at all: a merged pull request's `type:` label is the only input to
-# the release notes, and its `area:` label is the issue-side rule holding on the
-# pull-request side, so what a change touches is recorded in one vocabulary
-# whether it is asked for or delivered. Before Konnekt gated this, 24 of the 41
-# pull requests in its first release window carried no label, and the generator
-# had to guess from titles. kollektiv's docs/conventions.md, § Release notes and
-# pull request labelling, is the rule; this is the check.
+# Why a gate at all: the Changelog section, or failing it the `type:` label, is
+# the only input to the release notes, and the `area:` label is the issue-side
+# rule holding on the pull-request side, so what a change touches is recorded in
+# one vocabulary whether it is asked for or delivered. Before Konnekt gated
+# this, 24 of the 41 pull requests in its first release window carried no
+# label, and the generator had to guess from titles. DOCS below is the rule;
+# this is the check.
 #
 # Why `pull_request_target`: under `pull_request` the token is read-only for a
 # pull request from a fork, and for Dependabot's, so the status could never be
 # written there. The usual hazard of that trigger is checking out and running
-# the pull request's code with a write token. Nothing here is checked out or
-# run; the job reads label names and writes one status.
+# the pull request's code with a write token. Nothing from the pull request is
+# checked out or run. The one script that runs is the Changelog parser,
+# `.github/scripts/changelog-section.py`, fetched from the *base* branch, which
+# is code that has already been reviewed and merged; the body it parses is
+# passed to it on stdin and never reaches a shell. A base branch without the
+# parser (a repo that has not taken this version yet) is judged on labels
+# alone, as before.
 name: pr-labelled
 
 on:
   pull_request_target:
-    types: [opened, synchronize, reopened, labeled, unlabeled]
+    # `edited` is the body changing: adding or fixing a Changelog section has
+    # to be able to turn the status green without a push.
+    types: [opened, edited, synchronize, reopened, labeled, unlabeled]
 
 permissions: {}
 
@@ -49,37 +65,67 @@ jobs:
   post-status:
     runs-on: ubuntu-latest
     permissions:
+      contents: read
       pull-requests: read
       statuses: write
     steps:
-      # Labels are read from the API rather than the event payload, because the
-      # payload is a snapshot from when the event fired and a queued run would
-      # otherwise post a verdict on labels that have since changed. Via env
-      # rather than interpolated into the script: label names are
-      # attacker-shaped text as far as a shell is concerned, and `${{ }}` inside
-      # a run block is substituted before bash ever sees it.
-      - name: 'Post pr-labelled: pending until a type: and an area: label are on'
+      # Labels and body are read from the API rather than the event payload,
+      # because the payload is a snapshot from when the event fired and a
+      # queued run would otherwise post a verdict on a pull request that has
+      # since changed. Via env and files rather than interpolated into the
+      # script: label names and bodies are attacker-shaped text as far as a
+      # shell is concerned, and `${{ }}` inside a run block is substituted
+      # before bash ever sees it.
+      - name: 'Post pr-labelled: pending until an area: label and a Changelog section or a type: label'
         env:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
           NUMBER: ${{ github.event.pull_request.number }}
           SHA: ${{ github.event.pull_request.head.sha }}
+          BASE: ${{ github.event.pull_request.base.ref }}
           DOCS: https://github.com/kollektiv-mc/Kollektiv/blob/main/docs/conventions.md#which-type-label
         run: |
-          labels=$(gh api "repos/$REPO/pulls/$NUMBER" --jq "[.labels[].name]")
+          gh api "repos/$REPO/pulls/$NUMBER" > "$RUNNER_TEMP/pull.json"
+          jq -r '.body // ""' "$RUNNER_TEMP/pull.json" > "$RUNNER_TEMP/body.md"
+          labels=$(jq -c '[.labels[].name]' "$RUNNER_TEMP/pull.json")
           echo "labels: $labels"
           has() { echo "$labels" | jq -e --arg p "$1" 'any(.[]; startswith($p))' > /dev/null; }
-          state=pending
-          if has type: && has area:; then
-            state=success
-            description="Has a type: and an area: label"
-          elif has area:; then
-            description="Waiting for a type: label"
-          elif has type:; then
-            description="Waiting for an area: label"
+
+          # The parser from the base branch, or nothing: a 404 means this repo's
+          # base has not taken the version that added it.
+          section='{"entries": [], "errors": []}'
+          if gh api -H "Accept: application/vnd.github.raw+json" \
+               "repos/$REPO/contents/.github/scripts/changelog-section.py?ref=$BASE" \
+               > "$RUNNER_TEMP/changelog-section.py" 2> /dev/null; then
+            section=$(python3 -I "$RUNNER_TEMP/changelog-section.py" < "$RUNNER_TEMP/body.md")
           else
-            description="Waiting for a type: and an area: label"
+            echo "no .github/scripts/changelog-section.py on $BASE: judging labels only"
           fi
+          entries=$(echo "$section" | jq '.entries | length')
+          errors=$(echo "$section" | jq -r '.errors | join("; ")')
+          echo "changelog: $entries entries${errors:+, errors: $errors}"
+
+          state=pending
+          if [ -n "$errors" ]; then
+            description="Changelog section: $errors"
+          elif ! has area:; then
+            if [ "$entries" -gt 0 ] || has type:; then
+              description="Waiting for an area: label"
+            else
+              description="Waiting for an area: label and a Changelog section or a type: label"
+            fi
+          elif [ "$entries" -gt 0 ]; then
+            state=success
+            description="Changelog section with $entries entries, and an area: label"
+          elif has type:; then
+            state=success
+            description="No Changelog section: the notes will use the title"
+            echo "::warning title=No Changelog section::The release notes will list this pull request once, by its title, under its type: label. Add a ## Changelog section to list its changes one by one."
+          else
+            description="Waiting for a Changelog section or a type: label"
+          fi
+          # A status description is capped at 140 characters by the API.
+          description=${description:0:140}
           echo "$state: $description"
           gh api "repos/$REPO/statuses/$SHA" \
             -f state="$state" -f context=pr-labelled \

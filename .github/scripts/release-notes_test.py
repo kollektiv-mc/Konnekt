@@ -15,7 +15,9 @@ should have seen rather than what they did see.
 
 from __future__ import annotations
 
+import contextlib
 import importlib.util
+import io
 import pathlib
 import sys
 
@@ -160,6 +162,134 @@ check(
     notes.FEATURES,
 )
 
+# ── The Changelog section ─────────────────────────────────────────────────
+# One pull request, several changes. The parser is the one the pr-labelled gate
+# runs, so these cases are also what the gate accepts and refuses.
+parse = notes.changelog_section.parse
+
+
+def body_pull(body: str, *labels: str, title: str = "A title") -> dict:
+    return {**pull(title, *labels), "number": 1, "body": body}
+
+
+TEMPLATE_BODY = """## Why
+
+Because.
+
+## Changelog
+
+<!--
+One line per change: - type: text
+- feature: An example that must never be read
+-->
+
+## How it was verified
+
+Ran it.
+"""
+
+check("no body", parse(None), ([], []))
+check("no section", parse("## Why\n\nBecause."), ([], []))
+check("the template's own example is a comment", parse(TEMPLATE_BODY), ([], []))
+check(
+    "three types in one pull request",
+    parse(
+        "## Changelog\n\n- feature: Add servers from a plus\n"
+        "- fix: Make the world info panel opaque\n* chore: Load Settings on first open\n"
+    ),
+    (
+        [
+            ("feature", "Add servers from a plus"),
+            ("fix", "Make the world info panel opaque"),
+            ("chore", "Load Settings on first open"),
+        ],
+        [],
+    ),
+)
+check(
+    "bug means fix, case and spacing do not matter",
+    parse("### changelog\n-   BUG :  Keep   the line  "),
+    ([("fix", "Keep the line")], []),
+)
+check(
+    "the next heading ends the section",
+    parse("## Changelog\n- docs: Explain it\n## How it was verified\n- ran: it"),
+    ([("docs", "Explain it")], []),
+)
+check(
+    "a deeper heading does not end it, and is an error",
+    parse("## Changelog\n### Fixes\n- fix: A fix"),
+    ([("fix", "A fix")], ["line 1 is not '- type: text'"]),
+)
+check(
+    "an unknown type names its line",
+    parse("## Changelog\n\n- feature: Fine\n- bgu: Typo"),
+    ([("feature", "Fine")], ["line 3: unknown type 'bgu'"]),
+)
+check(
+    "an empty entry is an error",
+    parse("## Changelog\n- fix:   "),
+    ([], ["line 1: no text after 'fix:'"]),
+)
+check(
+    "prose is an error",
+    parse("## Changelog\nSome words"),
+    ([], ["line 1 is not '- type: text'"]),
+)
+check(
+    "markup at the start of an entry is dropped",
+    parse("## Changelog\n- feature: ## Loud"),
+    ([("feature", "Loud")], []),
+)
+check(
+    "CRLF bodies, as GitHub stores them",
+    parse("## Changelog\r\n\r\n- fix: One\r\n- skip: Two\r\n"),
+    ([("fix", "One"), ("skip", "Two")], []),
+)
+
+# entries_for: the section wins over the label, and its absence falls back.
+check(
+    "section entries are filed by their own types",
+    notes.entries_for(
+        body_pull(
+            "## Changelog\n- feature: New thing\n- fix: Old thing\n- docs: Words",
+            "type:chore",
+        )
+    ),
+    [
+        (notes.FEATURES, "* New thing"),
+        (notes.FIXES, "* Old thing"),
+        (notes.QUIET, "* Words"),
+    ],
+)
+check(
+    "no section falls back to label and title",
+    notes.entries_for(body_pull("Just a body", "type:bug", title="Fix the thing")),
+    [(notes.FIXES, "* Fix the thing")],
+)
+check(
+    "an empty section falls back too",
+    notes.entries_for(body_pull(TEMPLATE_BODY, "type:feature", title="Do the thing")),
+    [(notes.FEATURES, "* Do the thing")],
+)
+# The generator says on stderr that it ignored the section; that line belongs in
+# a release job's log, not in this test's output.
+with contextlib.redirect_stderr(io.StringIO()):
+    malformed = notes.entries_for(
+        body_pull("## Changelog\n- feature: Fine\n- bgu: Typo", "type:bug", title="T")
+    )
+check("a malformed section is not half-used", malformed, [(notes.FIXES, "* T")])
+check(
+    "changelog:skip silences a section",
+    notes.entries_for(body_pull("## Changelog\n- feature: Hidden", "changelog:skip")),
+    [(notes.SKIP, "")],
+)
+check(
+    "a section without any label still files",
+    notes.entries_for(body_pull("## Changelog\n- fix: Unlabelled but described")),
+    [(notes.FIXES, "* Unlabelled but described")],
+)
+
 # ── The path filter ────────────────────────────────────────────────────────
 # Against a fixture rather than the repo's own changelog.json, so this file is
 # byte-identical wherever it sits: in a product beside the script it tests, and
@@ -242,17 +372,17 @@ check("nothing left out", notes.footer(0, 0), "")
 check(
     "both reasons",
     notes.footer(17, 6),
-    "_23 pull requests are not listed: 17 changed nothing that ships in this build, 6 maintenance or documentation._",
+    "_23 changes are not listed: 17 changed nothing that ships in this build, 6 maintenance or documentation._",
 )
 check(
     "one reason only",
     notes.footer(0, 1),
-    "_1 pull request is not listed: 1 maintenance or documentation._",
+    "_1 change is not listed: 1 maintenance or documentation._",
 )
 check(
     "not-shipped only",
     notes.footer(3, 0),
-    "_3 pull requests are not listed: 3 changed nothing that ships in this build._",
+    "_3 changes are not listed: 3 changed nothing that ships in this build._",
 )
 
 # ── Config loading ─────────────────────────────────────────────────────────

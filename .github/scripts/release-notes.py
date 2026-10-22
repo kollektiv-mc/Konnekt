@@ -24,10 +24,17 @@ follows from that:
   * Work that ships nowhere near the binary is not in the notes at all. The
     paths that mean this are per-repo facts and live in .github/changelog.json,
     not in this file.
-  * A `type:` label decides the section. A title is prose written for a
-    reviewer; a label is a deliberate statement about what the change is, and
-    CI's `pr-labelled` job is what makes it a reliable one.
-  * The title is never read. Guessing from the leading verb once promoted "Add
+  * One pull request can carry several changes. Its body's `## Changelog`
+    section lists them, one `- type: text` line each, and each line is its own
+    entry under the section its type names. The parser is
+    changelog-section.py beside this file, the same one the `pr-labelled` gate
+    runs, so a line the gate accepted is a line filed here the same way.
+  * Without a section, the `type:` label decides the section and the title is
+    the entry, which is how every pull request was filed before the section
+    existed and how Dependabot's and Renovate's still are. A title is prose
+    written for a reviewer; a label is a deliberate statement about what the
+    change is, and CI's `pr-labelled` job is what makes it a reliable one.
+  * The title is never read for a category. Guessing from the leading verb once promoted "Add
     a Full release roadmap section and a nightly snapshot build channel" — a
     website and CI change — into the section users read first, so the guess was
     narrowed to the sections where being wrong is cheap, and has now been
@@ -38,9 +45,10 @@ follows from that:
     than being categorised from prose. Which label to apply is the author's
     decision, and the ladder for making it belongs next to them, in the
     product's CONTRIBUTING.md and pull request template.
-  * Maintenance and documentation are counted, not listed. `type:chore` and
-    `type:docs` are real work that changed nothing a user can observe; the
-    footer says how many there were and the full-changelog link has them all.
+  * Maintenance and documentation are counted, not listed. `chore` and `docs`
+    entries, and `type:chore` and `type:docs` pull requests without a section,
+    are real work that changed nothing a user can observe; the footer says how
+    many there were and the full-changelog link has them all.
 
 Reads:
 
@@ -62,6 +70,7 @@ notes never costs the build.
 
 from __future__ import annotations
 
+import importlib.util
 import json
 import os
 import pathlib
@@ -98,6 +107,23 @@ QUIET, SKIP = "quiet", "skip"
 API = os.environ.get("GITHUB_API_URL", "https://api.github.com").rstrip("/")
 
 DEFAULT_CONFIG = pathlib.Path(__file__).resolve().parent.parent / "changelog.json"
+
+# The Changelog-section parser, loaded from beside this file rather than
+# imported: its name has a dash, like this file's, and it is vendored next to
+# it as a pair.
+_PARSER_PATH = pathlib.Path(__file__).resolve().parent / "changelog-section.py"
+_spec = importlib.util.spec_from_file_location("changelog_section", _PARSER_PATH)
+changelog_section = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(changelog_section)
+
+# What each section type in a pull request body files under.
+ENTRY_SECTIONS = {
+    "feature": FEATURES,
+    "fix": FIXES,
+    "chore": QUIET,
+    "docs": QUIET,
+    "skip": SKIP,
+}
 
 # A hundred-odd calls go into one changelog, so a request that fails for a
 # reason unrelated to what was asked gets a few more chances before the run is
@@ -274,12 +300,43 @@ def entry(pull: dict) -> str:
     return f"* {title}"
 
 
+def entries_for(pull: dict) -> list[tuple[str, str]]:
+    """Every (section, bullet) a pull request contributes to the notes.
+
+    Its Changelog section when it has a usable one, otherwise one entry from
+    its label and title. A `changelog:skip` label still silences the whole
+    pull request, section and all: it is the explicit escape hatch, and a
+    section is no reason to stop honouring it.
+
+    A section with a malformed line is not used at all, and the pull request
+    falls back to its label. The gate holds such a pull request pending, so
+    reaching this means it merged around the gate; filing half a section would
+    publish a set of lines nobody approved as a set.
+    """
+    if section_for(pull) == SKIP:
+        return [(SKIP, "")]
+    found, errors = changelog_section.parse(pull.get("body"))
+    if errors:
+        print(
+            f"#{pull.get('number')}: Changelog section ignored ({'; '.join(errors)})",
+            file=sys.stderr,
+        )
+    elif found:
+        return [(ENTRY_SECTIONS[kind], f"* {text}") for kind, text in found]
+    return [(section_for(pull), entry(pull))]
+
+
 def footer(not_shipped: int, quiet: int) -> str:
     """One line accounting for what was left out, or "" when nothing was.
 
     Said out loud rather than passed over: a changelog that silently drops two
     thirds of the merged work reads as a quiet release, and the reader has no
     way to tell that from an accurate one.
+
+    Counted in changes rather than pull requests, because one pull request can
+    carry several. A pull request without a Changelog section is one change.
+    The cut that What's New and the websites make matches "not listed", not
+    this sentence, so the wording is free to say what it counts.
     """
     clauses = []
     if not_shipped:
@@ -289,7 +346,7 @@ def footer(not_shipped: int, quiet: int) -> str:
     if not clauses:
         return ""
     total = not_shipped + quiet
-    noun = "pull request is" if total == 1 else "pull requests are"
+    noun = "change is" if total == 1 else "changes are"
     return f"_{total} {noun} not listed: {', '.join(clauses)}._"
 
 
@@ -322,18 +379,21 @@ def main() -> int:
     quiet = 0
 
     for pull in merged_pulls(repo, commits):
-        section = section_for(pull)
-        if section == SKIP:
+        found = [
+            (section, line) for section, line in entries_for(pull) if section != SKIP
+        ]
+        if not found:
             continue
         # The path check costs a request per pull request, so it runs after the
-        # cheap label read — a skipped or quiet pull request never needs it.
+        # cheap reads: a skipped pull request never needs it.
         if not touches_app(repo, pull["number"], non_app_paths):
-            not_shipped += 1
+            not_shipped += len(found)
             continue
-        if section == QUIET:
-            quiet += 1
-            continue
-        grouped[section].append(entry(pull))
+        for section, line in found:
+            if section == QUIET:
+                quiet += 1
+            else:
+                grouped[section].append(line)
 
     lines = ["## What's changed", ""]
     for section in SECTIONS:
