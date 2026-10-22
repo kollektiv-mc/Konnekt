@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { Fragment, useMemo } from 'react'
 import type { Edge } from '@xyflow/react'
 import type { models } from '../../../../wailsjs/go/models'
 import type { NodeData } from './graphMapping'
@@ -202,21 +202,30 @@ export function NodeConfigPanel({ nodeId, data, def, edges, onChange }: Props) {
       <div className="text-text-muted text-xs">{def.description}</div>
 
       {toLines(shown).map((line) => (
-        <div
-          key={line.map((f) => f.key).join('+')}
-          data-row={line[0].row || undefined}
-          className="grid auto-cols-fr grid-flow-col gap-2"
-        >
-          {line.map((field) => (
-            <FieldControl
-              key={field.key}
-              field={field}
-              val={data.config?.[field.key] ?? field.default ?? ''}
-              isWired={wiredKeys.has(field.key)}
-              onChange={onChange}
-            />
-          ))}
-        </div>
+        <Fragment key={line.map((f) => f.key).join('+')}>
+          <div
+            data-row={line[0].row || undefined}
+            className="grid auto-cols-fr grid-flow-col gap-2"
+          >
+            {line.map((field) => (
+              <FieldControl
+                key={field.key}
+                field={field}
+                val={data.config?.[field.key] ?? field.default ?? ''}
+                isWired={wiredKeys.has(field.key)}
+                onChange={onChange}
+              />
+            ))}
+          </div>
+          {/* Under the whole line rather than one column of it. */}
+          {line
+            .filter((f) => f.hint)
+            .map((f) => (
+              <span key={f.key} className="text-text-faint text-3xs -mt-1">
+                {f.hint}
+              </span>
+            ))}
+        </Fragment>
       ))}
     </div>
   )

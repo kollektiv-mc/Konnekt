@@ -314,6 +314,14 @@ func TestConditionFieldsDeclareLayoutAndVisibility(t *testing.T) {
 			t.Errorf("%s: showWhen = %+v, want %+v", k, f.ShowWhen, wantWhen)
 		}
 	}
+	// One hint for the line, so it is drawn once under both boxes.
+	if fields["leftTrue"].Hint == "" || fields["rightTrue"].Hint != "" {
+		t.Errorf("hints %q and %q, want one on leftTrue only",
+			fields["leftTrue"].Hint, fields["rightTrue"].Hint)
+	}
+	if strings.ContainsAny(fields["leftTrue"].Hint, "\u2014\u2013") {
+		t.Errorf("hint %q has a dash", fields["leftTrue"].Hint)
+	}
 }
 
 func TestConditionDescriptionFollowsCopyRules(t *testing.T) {
