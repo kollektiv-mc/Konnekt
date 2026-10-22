@@ -5,6 +5,16 @@
    with a published build are offered: macOS builds from source, which the
    docs cover. */
 ;(function () {
+  // Verify your download starts closed. A link to #verify (the install guide
+  // has one) means the reader came for it, so it opens, there and on any later
+  // jump to it from this page.
+  var verifyDetails = document.getElementById('verify-details')
+  function openVerify() {
+    if (verifyDetails && window.location.hash === '#verify') verifyDetails.open = true
+  }
+  openVerify()
+  window.addEventListener('hashchange', openVerify)
+
   var R = window.KonnektRelease
   if (!R) return
 
@@ -22,6 +32,7 @@
   var snapshotMetaEl = document.getElementById('dl-snapshot-meta')
   var snapshotGridEl = document.getElementById('dl-snapshot-grid')
   var snapshotFootnoteEl = document.getElementById('dl-snapshot-footnote')
+  var verifyNumEl = document.getElementById('verify-num')
 
   function el(tag, cls, text) {
     var n = document.createElement(tag)
@@ -231,6 +242,8 @@
     snapshotFootnoteEl.appendChild(link)
 
     show(snapshotEl)
+    // Verify follows the snapshot, so it takes the next number once there is one.
+    if (verifyNumEl) verifyNumEl.textContent = '03'
   }
 
   function render(rel) {

@@ -124,41 +124,6 @@
             <p class="dl-foot" id="dl-footnote"></p>
           </section>
 
-          <!-- Static rather than rendered by download.js: it is the same two commands
-           for every release, and it has to survive a GitHub outage, which is when a
-           reader most wants a second way to check what they already have. -->
-          <section class="block" id="verify" aria-labelledby="verify-title">
-            <div class="band">
-              <div class="band-title">
-                <span class="num">02</span>
-                <h2 id="verify-title">Verify your download</h2>
-              </div>
-            </div>
-            <div class="dl-body">
-              <p class="dl-prose">
-                Every release is built by a public GitHub Actions workflow.<br />
-                Each file carries a signed build provenance attestation, which binds its digest to
-                that workflow, this repository and the commit it was built from.<br />
-                No signing key is held anywhere, so there is none to leak.<br />
-                With the
-                <a href="https://cli.github.com/" target="_blank" rel="noopener">GitHub CLI</a>,
-                check any file you downloaded:
-              </p>
-              <pre><code>gh attestation verify &lt;file&gt; --repo kollektiv-mc/Konnekt</code></pre>
-              <p class="dl-prose">
-                Without <code>gh</code>, the <code>checksums.txt</code> published beside the
-                binaries confirms the download arrived intact:
-              </p>
-              <pre><code>sha256sum -c checksums.txt</code></pre>
-              <p class="dl-prose">
-                A checksum says the bytes are the ones that were published.<br />
-                The attestation says who published them.<br />
-                Windows builds are not code signed yet, so a first launch still shows a SmartScreen
-                warning: <a href="/roadmap.html#rm-release">that one is on the roadmap</a>.
-              </p>
-            </div>
-          </section>
-
           <p class="dl-loading block" id="dl-snapshot-loading" role="status">
             Loading snapshot builds
           </p>
@@ -174,7 +139,7 @@
           >
             <div class="band">
               <div class="band-title">
-                <span class="num">03</span>
+                <span class="num">02</span>
                 <h2 id="dl-snapshot-title">Snapshot</h2>
               </div>
               <span class="meta" id="dl-snapshot-meta"></span>
@@ -191,11 +156,49 @@
             <div class="dl-grid-wrap"><div class="dl-grid" id="dl-snapshot-grid"></div></div>
             <p class="dl-foot" id="dl-snapshot-footnote"></p>
           </section>
+
+          <!-- Static rather than rendered by download.js: it is the same two commands
+           for every release, and it has to survive a GitHub outage, which is when a
+           reader most wants a second way to check what they already have. Closed
+           until asked for; download.js opens it for a link to #verify, and numbers
+           it after the snapshot when there is one. -->
+          <section class="block dl-verify" id="verify" aria-labelledby="verify-title">
+            <details id="verify-details">
+              <summary class="band">
+                <span class="num" id="verify-num">02</span>
+                <h2 id="verify-title">Verify your download</h2>
+              </summary>
+              <div class="dl-body">
+                <p class="dl-prose">
+                  Every release is built by a public GitHub Actions workflow.<br />
+                  Each file carries a signed build provenance attestation, which binds its digest to
+                  that workflow, this repository and the commit it was built from.<br />
+                  No signing key is held anywhere, so there is none to leak.<br />
+                  With the
+                  <a href="https://cli.github.com/" target="_blank" rel="noopener">GitHub CLI</a>,
+                  check any file you downloaded:
+                </p>
+                <pre><code>gh attestation verify &lt;file&gt; --repo kollektiv-mc/Konnekt</code></pre>
+                <p class="dl-prose">
+                  Without <code>gh</code>, the <code>checksums.txt</code> published beside the
+                  binaries confirms the download arrived intact:
+                </p>
+                <pre><code>sha256sum -c checksums.txt</code></pre>
+                <p class="dl-prose">
+                  A checksum says the bytes are the ones that were published.<br />
+                  The attestation says who published them.<br />
+                  Windows builds are not code signed yet, so a first launch still shows a
+                  SmartScreen warning:
+                  <a href="/roadmap.html#rm-release">that one is on the roadmap</a>.
+                </p>
+              </div>
+            </details>
+          </section>
         </main>
       </div>
 
       <!-- Canonical footer. Byte-identical on every page. -->
-      <footer class="block block-raised snap-end">
+      <footer class="block block-raised">
         <div class="footer-cols">
           <div class="footer-about">
             <a class="footer-brand" href="/index.html"

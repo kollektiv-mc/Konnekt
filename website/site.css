@@ -179,24 +179,6 @@ button {
   }
 }
 
-@media (min-width: 861px) and (pointer: fine) {
-  html {
-    scroll-snap-type: y proximity;
-  }
-
-  .snap-start {
-    scroll-snap-align: start;
-  }
-
-  .snap {
-    scroll-snap-align: center;
-  }
-
-  .snap-end {
-    scroll-snap-align: end;
-  }
-}
-
 /* ── Nav ────────────────────────────────────────────────────────────────── */
 
 .nav {

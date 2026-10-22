@@ -171,3 +171,46 @@
 .dl-snapshot .dl-grid-wrap {
   border-color: rgb(var(--sun-rgb) / 0.18);
 }
+
+/* ── Verify your download: a smaller band that opens ────────────────────── */
+/* Closed, it is the band alone, so its hairline under the band would double
+   the block's own. A + or − after the title says which way it goes, as the
+   docs' questions do. */
+
+.dl-verify summary {
+  justify-content: flex-start;
+  align-items: baseline;
+  gap: 20px;
+  padding-block: 22px;
+  border-bottom: 0;
+  list-style: none;
+  cursor: pointer;
+}
+
+.dl-verify summary::-webkit-details-marker {
+  display: none;
+}
+
+.dl-verify summary::after {
+  content: '+';
+  margin-left: auto;
+  font-family: var(--font-site-mono);
+  color: var(--text-secondary);
+}
+
+.dl-verify details[open] summary {
+  border-bottom: var(--hairline);
+}
+
+.dl-verify details[open] summary::after {
+  content: '\2212';
+}
+
+.dl-verify summary h2 {
+  font-size: clamp(20px, 2vw, 24px);
+  letter-spacing: -0.02em;
+}
+
+.dl-verify summary:hover h2 {
+  color: var(--accent);
+}
