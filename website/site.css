@@ -338,6 +338,48 @@ h2 {
   color: var(--text-secondary);
 }
 
+/* ── Stages: one colour per release stage, from the status tokens ────────
+   Alpha danger, beta sun, release accent, later a dashed outline in
+   secondary text. --stage-color tints, --stage-ink writes, and .marker is the
+   square that carries it. The roadmap and the docs' platform table use it. */
+
+.stage-alpha,
+[data-stage='alpha'] {
+  --stage-color: var(--danger);
+  --stage-ink: var(--danger);
+}
+
+.stage-beta,
+[data-stage='beta'] {
+  --stage-color: var(--sun);
+  --stage-ink: var(--sun);
+}
+
+.stage-release,
+[data-stage='release'] {
+  --stage-color: var(--accent);
+  --stage-ink: var(--accent);
+}
+
+.stage-later,
+[data-stage='later'] {
+  --stage-color: var(--text-primary);
+  --stage-ink: var(--text-secondary);
+}
+
+.marker {
+  display: inline-block;
+  flex: none;
+  width: 10px;
+  height: 10px;
+  background: var(--stage-ink);
+}
+
+[data-stage='later'] .marker {
+  background: transparent;
+  border: 1.5px dashed var(--stage-ink);
+}
+
 /* ── Search: a field that stands alone, "/" focuses it (site.js) ───────── */
 
 .search {
