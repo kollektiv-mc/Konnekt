@@ -29,8 +29,7 @@ import { SchedulerCtx, type NodeRunState } from './schedulerContext'
 import { BlockNode } from './BlockNode'
 import { AnimatedEdge } from './AnimatedEdge'
 import { BlockPalette } from './BlockPalette'
-import { NodeConfigPanel } from './NodeConfigPanel'
-import { NodeDataPanel } from './NodeDataPanel'
+import { NodePanel } from './NodePanel'
 import { QuickAddMenu } from './QuickAddMenu'
 import { RUN_RUNNING, runOutcome, type RunStatus } from './runStatus'
 import { Popover } from '../../../components/ui/Popover'
@@ -1165,84 +1164,65 @@ function GraphEditorInner({
           {/* Block palette */}
           <BlockPalette blockDefs={blockDefs} onAdd={(def) => addBlock(def)} />
 
-          {/* ReactFlow canvas */}
-          <div ref={canvasWrapperRef} className="flex-1" onDrop={onDrop} onDragOver={onDragOver}>
-            <ReactFlow
-              nodes={nodes}
-              edges={edges}
-              nodeTypes={nodeTypes}
-              edgeTypes={edgeTypes}
-              onNodesChange={handleNodesChange}
-              onEdgesChange={handleEdgesChange}
-              onConnect={onConnect}
-              onNodeClick={onNodeClick}
-              onNodeDragStart={onNodeDragStart}
-              onNodeDragStop={onNodeDragStop}
-              onPaneClick={onPaneClick}
-              isValidConnection={isValidConnection}
-              fitView
-              fitViewOptions={{ padding: 0.2 }}
-              deleteKeyCode={DELETE_KEYS}
-              panOnDrag={[1, 2]}
-              selectionOnDrag
-            >
-              <Background variant={BackgroundVariant.Dots} gap={20} size={1} />
-              <Controls showInteractive={false} />
-              <MiniMap
-                // eslint-disable-next-line no-restricted-syntax -- overrides xyflow's default 10px Panel offset; a stylesheet className would race the library's own CSS specificity
-                style={{ bottom: 8, right: 8 }}
-                nodeColor={(n) => {
-                  const bt = (n.data as NodeData | undefined)?.blockType ?? ''
-                  const category = bt.split('.')[0]
-                  return CATEGORY_COLOR[category] ?? CATEGORY_COLOR.notify
-                }}
-              />
-            </ReactFlow>
-          </div>
-
-          {/* Node config / data panel */}
-          {selectedNode && (
-            <div
-              className={`border-border-subtle bg-canvas border-l-hairline flex w-56 shrink-0 flex-col overflow-y-auto ${NO_GRAPH_KEYS}`}
-            >
-              {/* Tabs */}
-              <div className="border-border-subtle border-b-hairline flex shrink-0">
-                {(['config', 'data'] as const).map((tab) => (
-                  <button
-                    key={tab}
-                    onClick={() => setPanelTab(tab)}
-                    className={`flex-1 cursor-pointer border-b py-1.5 font-mono text-xs ${
-                      panelTab === tab
-                        ? 'bg-surface text-text-primary border-accent'
-                        : 'text-text-faint border-transparent bg-transparent'
-                    }`}
-                  >
-                    {tab}
-                  </button>
-                ))}
-              </div>
-
-              {panelTab === 'config' ? (
-                <NodeConfigPanel
-                  nodeId={selectedNode.id}
-                  data={selectedNode.data as NodeData}
-                  def={selectedDef}
-                  edges={edges as FlowEdge[]}
-                  onChange={updateNodeConfig}
+          {/* ReactFlow canvas, with the node panel floating over its right edge.
+              The panel is a sibling of the canvas wrapper rather than a child,
+              so the wrapper's capture-phase right-click (quick-add) and its drop
+              target stop at the canvas, as they did when the panel was a column. */}
+          <div
+            className={`node-panel-host relative flex-1 ${selectedNode ? 'node-panel-open' : ''}`}
+          >
+            <div ref={canvasWrapperRef} className="h-full" onDrop={onDrop} onDragOver={onDragOver}>
+              <ReactFlow
+                nodes={nodes}
+                edges={edges}
+                nodeTypes={nodeTypes}
+                edgeTypes={edgeTypes}
+                onNodesChange={handleNodesChange}
+                onEdgesChange={handleEdgesChange}
+                onConnect={onConnect}
+                onNodeClick={onNodeClick}
+                onNodeDragStart={onNodeDragStart}
+                onNodeDragStop={onNodeDragStop}
+                onPaneClick={onPaneClick}
+                isValidConnection={isValidConnection}
+                fitView
+                fitViewOptions={{ padding: 0.2 }}
+                deleteKeyCode={DELETE_KEYS}
+                panOnDrag={[1, 2]}
+                selectionOnDrag
+              >
+                <Background variant={BackgroundVariant.Dots} gap={20} size={1} />
+                <Controls showInteractive={false} />
+                <MiniMap
+                  // eslint-disable-next-line no-restricted-syntax -- overrides xyflow's default 10px Panel offset; a stylesheet className would race the library's own CSS specificity
+                  style={{ bottom: 8, right: 8 }}
+                  nodeColor={(n) => {
+                    const bt = (n.data as NodeData | undefined)?.blockType ?? ''
+                    const category = bt.split('.')[0]
+                    return CATEGORY_COLOR[category] ?? CATEGORY_COLOR.notify
+                  }}
                 />
-              ) : (
-                <NodeDataPanel
-                  graph={flowToGraph(
-                    { id: graphId ?? '', name: graphName, enabled: graphEnabled, createdAt },
-                    nodes,
-                    edges,
-                  )}
-                  nodeId={selectedNode.id}
-                  onPreview={onPreviewNode}
-                />
-              )}
+              </ReactFlow>
             </div>
-          )}
+
+            {/* Node config / data panel: floats over the canvas, never resizes it */}
+            <NodePanel
+              node={selectedNode}
+              def={selectedDef}
+              edges={edges as FlowEdge[]}
+              tab={panelTab}
+              onTab={setPanelTab}
+              onChange={updateNodeConfig}
+              getGraph={() =>
+                flowToGraph(
+                  { id: graphId ?? '', name: graphName, enabled: graphEnabled, createdAt },
+                  nodes,
+                  edges,
+                )
+              }
+              onPreview={onPreviewNode}
+            />
+          </div>
         </div>
       </div>
 
