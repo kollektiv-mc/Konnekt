@@ -4,10 +4,10 @@ imperative mood, sentence case, no trailing period, one line, no em dashes.
 Say what changed, not which files moved. "Support NeoForge and modern Forge
 servers", not "Update serverlaunch.go".
 
-Keep one pull request to one concern. The release notes list a merged pull
-request once, under one heading, by its title, so a change that carries a
-feature and a website pass and a CI tweak cannot be described honestly by any
-single line.
+One pull request can carry several changes: list each in the Changelog
+section below and the release notes list each on its own line. Split only
+when a part is risky on its own, has to be revertable on its own, or ships at
+a different time.
 -->
 
 ## Why
@@ -19,6 +19,20 @@ so detail is free. -->
 
 <!-- The shape of the change. Enough that a reviewer knows where to look. -->
 
+## Changelog
+
+<!--
+One line per change, as public release-notes copy with the same rules as the
+title. The type is feature, fix, chore, docs or skip, chosen by the test at
+the bottom. chore and docs are counted in the notes, not listed.
+
+- feature: Add servers from a plus in the Servers header
+- fix: Make the world info panel opaque
+
+Leave the section empty for a single change and the notes use the title and
+the type: label instead (the pr-labelled status warns that it did).
+-->
+
 ## How it was verified
 
 <!-- What you actually ran, and what it said. Name the gates:
@@ -28,8 +42,9 @@ pnpm typecheck / lint / test / format:check, go vet ./... / go test ./...,
 ---
 
 <!--
-Which label. The label is the only thing that files this in the release notes;
-nothing reads the title. Ask these in order and stop at the first yes:
+Which type, for each Changelog line or, without a section, for the type: label.
+The type is the only thing that files a change in the release notes; nothing
+reads the title for one. Ask these in order and stop at the first yes:
 
   1. Can a user of Konnekt tell the difference? If nothing they can see, run or
      click changed, it is type:chore - or type:docs when the change is
@@ -47,7 +62,6 @@ something they never had -> type:feature. They cannot tell -> type:chore.
 Full version, with the cases this gets wrong: CONTRIBUTING.md.
 -->
 
-- [ ] Labelled by the test above rather than by the title's verb: `type:feature`, `type:bug`, `type:docs` or `type:chore`. The label alone decides which release-notes section this lands in.
-- [ ] Labelled with an `area:` too, from `.github/labels.yml`. The `pr-labelled` status checks the two separately and stays pending until both are on, so a `type:` on its own still cannot merge. Prefer a specific area over `area:ui`, as on an issue.
-- [ ] One concern. A change that is honestly half repair and half new capability is two pull requests, not a judgement call.
+- [ ] A Changelog line per change, or a `type:` label (`type:feature`, `type:bug`, `type:docs`, `type:chore`) for a single change. Typed by the test above rather than by the verb.
+- [ ] Labelled with an `area:` from `.github/labels.yml`. The `pr-labelled` status stays pending until the area and one of the two above are there. Prefer a specific area over `area:ui`, as on an issue.
 - [ ] Generated files were regenerated rather than hand-edited (`frontend/wailsjs/`, the token layer, lockfiles).
