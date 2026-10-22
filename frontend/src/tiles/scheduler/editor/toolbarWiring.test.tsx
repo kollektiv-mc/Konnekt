@@ -2,6 +2,8 @@ import { describe, it, expect, beforeAll, beforeEach, afterEach, vi } from 'vite
 import { render, screen, cleanup, fireEvent, waitFor } from '@testing-library/react'
 import { models } from '../../../../wailsjs/go/models'
 import { clearClipboard } from './clipboard'
+import * as App from '../../../../wailsjs/go/main/App'
+import { useSettingsStore } from '../../../stores/useSettingsStore'
 
 vi.mock('../../../../wailsjs/go/main/App')
 vi.mock('../../../../wailsjs/runtime/runtime', () => ({
@@ -125,6 +127,31 @@ describe('the toolbar menus drive the editor', () => {
     fireEvent.keyDown(input, { key: 'Enter' })
 
     await waitFor(() => expect(selectedNodes(container)).toHaveLength(2))
+  })
+
+  it('persists curved connectors from the view menu without touching the graph', async () => {
+    const before = useSettingsStore.getState().settings
+    const { container } = renderEditor()
+    await loaded(container)
+
+    fireEvent.click(button('view'))
+    const row = screen.getByRole('switch', { name: 'Curved connectors' })
+    expect(row.getAttribute('aria-checked')).toBe('true')
+    fireEvent.click(row)
+
+    await waitFor(() =>
+      expect(App.SaveAppSettings).toHaveBeenCalledWith(
+        expect.objectContaining({ schedulerCurvedEdges: false }),
+      ),
+    )
+    expect(
+      screen.getByRole('switch', { name: 'Curved connectors' }).getAttribute('aria-checked'),
+    ).toBe('false')
+    // A view preference is not an edit: no unsaved dot, nothing to undo.
+    expect(screen.queryByTitle('Unsaved changes')).toBeNull()
+    fireEvent.click(button('edit'))
+    expect(button(/^Undo/).disabled).toBe(true)
+    useSettingsStore.setState({ settings: before })
   })
 
   it('opens the quick-add list from the add button', async () => {

@@ -38,6 +38,12 @@ type AppSettings struct {
 	// polarity to the closed categories: a group starts collapsed, so a key that
 	// is not there is closed and a group added later needs no migration.
 	SchedulerPaletteOpenGroups map[string]bool `json:"schedulerPaletteOpenGroups"`
+	// SchedulerCurvedEdges draws the scheduler editor's connections as smooth
+	// curves that leave and enter their ports horizontally, rather than as
+	// straight lines through their corner points (#692). One choice for every
+	// graph. On by default; a settings file written before the field existed
+	// unmarshals onto that default (services.GetAppSettings).
+	SchedulerCurvedEdges bool `json:"schedulerCurvedEdges"`
 
 	ConsoleQuickCommandsCollapsed bool `json:"consoleQuickCommandsCollapsed"`
 

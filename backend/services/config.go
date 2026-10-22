@@ -227,6 +227,7 @@ func (s *ConfigService) GetAppSettings() (models.AppSettings, error) {
 		SchedulerPaletteCollapsed:        true,
 		SchedulerPaletteClosedCategories: map[string]bool{},
 		SchedulerPaletteOpenGroups:       map[string]bool{},
+		SchedulerCurvedEdges:             true,
 		NavClosedSections:                map[string]bool{"widgets": true, "layouts": true},
 		CheckUpdatesOnStartup:            true,
 		UpdateChannel:                    UpdateChannelStable,

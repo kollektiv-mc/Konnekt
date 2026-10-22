@@ -15,6 +15,12 @@ import { MenuDivider, MenuRow } from './MenuRow'
 import type { RunStatus } from './runStatus'
 import { typesPresent } from './selection'
 
+/** The View menu's choices. The editor owns the preference; the bar only flips it. */
+export interface ViewOptions {
+  curvedEdges: boolean
+  onToggleCurvedEdges: () => void
+}
+
 interface ToolbarProps {
   graphs: models.Graph[]
   /** Null before anything loads, '' for a graph that has not been saved yet. */
@@ -38,6 +44,7 @@ interface ToolbarProps {
   /** Opens the quick-add list with its corner at this viewport point. */
   onAdd: (at: { x: number; y: number }) => void
   edit: EditMenuActions
+  view: ViewOptions
   onToggleEnabled: () => void
   onRun: () => void
   onSave: () => void
@@ -49,7 +56,7 @@ interface ToolbarProps {
   onWarningsClick: () => void
 }
 
-type MenuId = 'graph' | 'edit' | 'overflow'
+type MenuId = 'graph' | 'edit' | 'view' | 'overflow'
 
 // The bar is two groups, each one bordered box of flush segments split by a
 // hairline. Every segment is the same height and a fixed height at that, so
@@ -121,6 +128,7 @@ export function Toolbar({
   onNewGraph,
   onAdd,
   edit,
+  view,
   onToggleEnabled,
   onRun,
   onSave,
@@ -138,10 +146,12 @@ export function Toolbar({
   const [menu, setMenu] = useState<MenuId | null>(null)
   const graphPresence = usePresence(menu === 'graph', 'menu')
   const editPresence = usePresence(menu === 'edit', 'menu')
+  const viewPresence = usePresence(menu === 'view', 'menu')
   const overflowPresence = usePresence(menu === 'overflow', 'menu')
   const graphButton = useRef<HTMLButtonElement>(null)
   const addButton = useRef<HTMLButtonElement>(null)
   const editButton = useRef<HTMLButtonElement>(null)
+  const viewButton = useRef<HTMLButtonElement>(null)
   const overflowButton = useRef<HTMLButtonElement>(null)
   // The rename draft lives in the overflow menu's own row; null is the row at
   // rest. Opening the menu clears it, so a reopen starts from the name again.
@@ -317,6 +327,45 @@ export function Toolbar({
                   rows={rows}
                   active={menu === 'edit'}
                   onDone={() => closeMenu('edit')}
+                />
+              </div>
+            )}
+          </Popover>
+        </Segment>
+
+        {/* View: how the canvas looks and behaves, as switches. Unlike the edit
+            rows these stay open when flipped, so a choice shows on the canvas
+            beside the menu and the next one is a click away. */}
+        <Segment>
+          <button
+            ref={viewButton}
+            type="button"
+            className={`${segmentClass('text-text-muted', menu === 'view' ? 'bg-hover' : IDLE_FILL)} px-3`}
+            onClick={() => toggleMenu('view')}
+          >
+            view
+          </button>
+          <Popover
+            open={menu === 'view'}
+            onClose={() => closeMenu('view')}
+            dismiss="pointerdown"
+            trigger={viewButton}
+            width={200}
+            align="left"
+          >
+            {viewPresence.mounted && (
+              <div {...fading(viewPresence.leaving)}>
+                <MenuRow
+                  label="Curved connectors"
+                  checked={view.curvedEdges}
+                  leading={
+                    <Icon
+                      icon={Check}
+                      size="xs"
+                      className={`text-accent ${view.curvedEdges ? 'opacity-100' : 'opacity-0'}`}
+                    />
+                  }
+                  onClick={view.onToggleCurvedEdges}
                 />
               </div>
             )}

@@ -26,12 +26,14 @@ function edgeProps(overrides: Partial<EdgeProps> = {}): EdgeProps {
   } as unknown as EdgeProps
 }
 
-function renderEdge(overrides: Partial<EdgeProps> = {}) {
+function renderEdge(overrides: Partial<EdgeProps> = {}, ctx: Partial<SchedulerCtxValue> = {}) {
   return render(
     <ReactFlowProvider>
-      <svg>
-        <AnimatedEdge {...edgeProps(overrides)} />
-      </svg>
+      <SchedulerCtx.Provider value={ctxValue(ctx)}>
+        <svg>
+          <AnimatedEdge {...edgeProps(overrides)} />
+        </svg>
+      </SchedulerCtx.Provider>
     </ReactFlowProvider>,
   )
 }
@@ -49,6 +51,8 @@ function ctxValue(overrides: Partial<SchedulerCtxValue> = {}): SchedulerCtxValue
     cycleNodes: new Set(),
     cycleEdges: new Set(),
     recordPre: () => {},
+    // Straight by default: most of these tests read the line's own geometry.
+    curvedEdges: false,
     ...overrides,
   }
 }
@@ -69,14 +73,18 @@ function Probe({ onEdges }: { onEdges: (edges: Edge[]) => void }) {
   return null
 }
 
-function renderLive(waypoints: { x: number; y: number }[], selected = true) {
+function renderLive(
+  waypoints: { x: number; y: number }[],
+  selected = true,
+  ctx: Partial<SchedulerCtxValue> = {},
+) {
   const recordPre = vi.fn()
   let latest: Edge[] = []
   const utils = render(
     <ReactFlowProvider
       defaultEdges={[{ id: 'e1', source: 'a', target: 'b', data: { kind: 'control', waypoints } }]}
     >
-      <SchedulerCtx.Provider value={ctxValue({ recordPre })}>
+      <SchedulerCtx.Provider value={ctxValue({ recordPre, ...ctx })}>
         <LiveEdge selected={selected} />
         <Probe onEdges={(e) => (latest = e)} />
       </SchedulerCtx.Provider>
@@ -207,6 +215,25 @@ describe('AnimatedEdge', () => {
     expect(container.querySelector('.react-flow__edge-interaction')?.getAttribute('d')).toBe(d)
   })
 
+  it('draws a curve leaving and entering horizontally when curved connectors are on', () => {
+    const { container } = renderEdge({ sourceY: 0, targetY: 100 }, { curvedEdges: true })
+    expect(container.querySelector('.react-flow__edge-path')?.getAttribute('d')).toBe(
+      'M0,0 C50,0 50,100 100,100',
+    )
+  })
+
+  it('curves through the corners and gives the hit target the same path', () => {
+    const { container } = renderEdge(
+      { data: { waypoints: [{ x: 50, y: 40 }] } },
+      { curvedEdges: true },
+    )
+    const d = container.querySelector('.react-flow__edge-path')?.getAttribute('d') ?? ''
+    expect(d).toContain('C')
+    expect(d).not.toContain('L')
+    expect(d).toContain(' 50,40 ')
+    expect(container.querySelector('.react-flow__edge-interaction')?.getAttribute('d')).toBe(d)
+  })
+
   it('keeps the draw-in normalisation on a routed edge', () => {
     const { container } = renderEdge({ data: { waypoints: [{ x: 50, y: 40 }] } })
     expect(container.querySelector('.edge-draw-in')?.getAttribute('pathLength')).toBe('1')
@@ -275,6 +302,34 @@ describe('AnimatedEdge corners', () => {
     fireEvent.pointerUp(handle, { clientX: 51, clientY: 40 })
     expect(recordPre).not.toHaveBeenCalled()
     expect(corners()).toEqual(corner)
+  })
+
+  it('edits corners the same way with curved connectors on', async () => {
+    const { container, recordPre, corners } = renderLive(
+      [
+        { x: 30, y: 0 },
+        { x: 70, y: 0 },
+      ],
+      true,
+      { curvedEdges: true },
+    )
+    // Near the last stretch (second corner to target), so it lands at the end.
+    fireEvent.doubleClick(container.querySelector('.react-flow__edge-interaction')!, {
+      clientX: 85,
+      clientY: 2,
+    })
+    await waitFor(() => expect(corners()).toHaveLength(3))
+    expect(corners()[2]).toEqual({ x: 85, y: 2 })
+
+    const handle = container.querySelector('[data-corner="0"]')!
+    fireEvent.pointerDown(handle, { clientX: 30, clientY: 0, button: 0 })
+    fireEvent.pointerMove(handle, { clientX: 40, clientY: 20 })
+    fireEvent.pointerUp(handle, { clientX: 40, clientY: 20 })
+    await waitFor(() => expect(corners()[0]).toEqual({ x: 40, y: 20 }))
+
+    fireEvent.doubleClick(container.querySelector('[data-corner="1"]')!)
+    await waitFor(() => expect(corners()).toHaveLength(2))
+    expect(recordPre).toHaveBeenCalledTimes(3)
   })
 
   it('keeps the handles up for the whole drag, even off the wire', () => {

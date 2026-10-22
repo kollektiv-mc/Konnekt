@@ -197,6 +197,11 @@ func TestAppSettingsFillGapsInAnOlderFileWithDefaults(t *testing.T) {
 	if !got.SmoothScrolling {
 		t.Error("SmoothScrolling = false, want the default true for a key the file lacks")
 	}
+	// The same trap again for the scheduler's curved connectors (#692): a file
+	// from before the field must not turn the curves off.
+	if !got.SchedulerCurvedEdges {
+		t.Error("SchedulerCurvedEdges = false, want the default true for a key the file lacks")
+	}
 	// The navbar opens on Servers and Tiles and folds Widgets and Layouts away.
 	// Only the closed ones are named: a key that is not there is open, so this
 	// map is the whole first-run shape and asserting it whole is what catches a

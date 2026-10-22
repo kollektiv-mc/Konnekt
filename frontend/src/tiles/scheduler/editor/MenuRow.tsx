@@ -18,6 +18,8 @@ interface MenuRowProps {
   /** The row opens a fly-out; `expanded` says whether it is open. */
   hasPopup?: boolean
   expanded?: boolean
+  /** Makes the row a switch and says whether it is on; the caller draws the mark. */
+  checked?: boolean
   title?: string
   onKeyDown?: (e: React.KeyboardEvent<HTMLButtonElement>) => void
 }
@@ -43,6 +45,7 @@ export function MenuRow({
   trailing,
   hasPopup = false,
   expanded,
+  checked,
   title,
   onKeyDown,
 }: MenuRowProps) {
@@ -60,6 +63,8 @@ export function MenuRow({
       disabled={disabled}
       aria-haspopup={hasPopup ? 'menu' : undefined}
       aria-expanded={hasPopup ? (expanded ?? false) : undefined}
+      role={checked === undefined ? undefined : 'switch'}
+      aria-checked={checked}
       title={title}
       onKeyDown={onKeyDown}
       // The default arrow, here and on the bar: a button in the editor does not

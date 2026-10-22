@@ -38,6 +38,7 @@ function handlers() {
     onLoadGraph: vi.fn(),
     onNewGraph: vi.fn(),
     onAdd: vi.fn(),
+    view: { curvedEdges: true, onToggleCurvedEdges: vi.fn() },
     edit: {
       undo: vi.fn(),
       redo: vi.fn(),
@@ -256,6 +257,48 @@ describe('the graph menu', () => {
     fireEvent.click(button(/Fresh/))
     // The picker itself, and the one row for the graph that is not saved yet.
     expect(screen.getAllByRole('button', { name: 'Fresh' })).toHaveLength(2)
+  })
+})
+
+describe('the view menu', () => {
+  const openView = () => fireEvent.click(button('view'))
+  const curved = () => screen.getByRole('switch', { name: 'Curved connectors' })
+
+  it('sits right after the edit button', () => {
+    setup()
+    expect(
+      button('edit').compareDocumentPosition(button('view')) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy()
+  })
+
+  it('is closed until the button is pressed', () => {
+    setup()
+    expect(screen.queryByRole('switch')).toBeNull()
+    openView()
+    expect(curved()).toBeTruthy()
+  })
+
+  it('shows curved connectors on, with the mark visible', () => {
+    setup()
+    openView()
+    expect(curved().getAttribute('aria-checked')).toBe('true')
+    expect(curved().querySelector('svg')?.getAttribute('class')).toContain('opacity-100')
+  })
+
+  it('shows curved connectors off, with the mark hidden', () => {
+    setup({ view: { curvedEdges: false, onToggleCurvedEdges: vi.fn() } })
+    openView()
+    expect(curved().getAttribute('aria-checked')).toBe('false')
+    expect(curved().querySelector('svg')?.getAttribute('class')).toContain('opacity-0')
+  })
+
+  it('flips the preference and stays open for the next choice', () => {
+    const onToggleCurvedEdges = vi.fn()
+    setup({ view: { curvedEdges: true, onToggleCurvedEdges } })
+    openView()
+    fireEvent.click(curved())
+    expect(onToggleCurvedEdges).toHaveBeenCalledOnce()
+    expect(curved()).toBeTruthy()
   })
 })
 
