@@ -202,6 +202,10 @@ func TestAppSettingsFillGapsInAnOlderFileWithDefaults(t *testing.T) {
 	if !got.SchedulerCurvedEdges {
 		t.Error("SchedulerCurvedEdges = false, want the default true for a key the file lacks")
 	}
+	// Its sibling is the other way round: off, which is what the zero value says.
+	if got.SchedulerSnapToGrid {
+		t.Error("SchedulerSnapToGrid = true, want the default false for a key the file lacks")
+	}
 	// The navbar opens on Servers and Tiles and folds Widgets and Layouts away.
 	// Only the closed ones are named: a key that is not there is open, so this
 	// map is the whole first-run shape and asserting it whole is what catches a

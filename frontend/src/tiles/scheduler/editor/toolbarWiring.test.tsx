@@ -153,6 +153,28 @@ describe('the toolbar menus drive the editor', () => {
     useSettingsStore.setState({ settings: before })
   })
 
+  it('persists snap to grid from the view menu, off until chosen', async () => {
+    const before = useSettingsStore.getState().settings
+    const { container } = renderEditor()
+    await loaded(container)
+
+    fireEvent.click(button('view'))
+    const row = screen.getByRole('switch', { name: 'Snap to grid' })
+    expect(row.getAttribute('aria-checked')).toBe('false')
+    fireEvent.click(row)
+
+    await waitFor(() =>
+      expect(App.SaveAppSettings).toHaveBeenCalledWith(
+        expect.objectContaining({ schedulerSnapToGrid: true, schedulerCurvedEdges: true }),
+      ),
+    )
+    expect(screen.getByRole('switch', { name: 'Snap to grid' }).getAttribute('aria-checked')).toBe(
+      'true',
+    )
+    expect(screen.queryByTitle('Unsaved changes')).toBeNull()
+    useSettingsStore.setState({ settings: before })
+  })
+
   it('opens the quick-add list from the add button', async () => {
     const { container } = renderEditor()
     await loaded(container)

@@ -53,6 +53,7 @@ function ctxValue(overrides: Partial<SchedulerCtxValue> = {}): SchedulerCtxValue
     recordPre: () => {},
     // Straight by default: most of these tests read the line's own geometry.
     curvedEdges: false,
+    snapToGrid: false,
     ...overrides,
   }
 }
@@ -292,6 +293,24 @@ describe('AnimatedEdge corners', () => {
     fireEvent.pointerUp(handle, { clientX: 70, clientY: 70 })
     await waitFor(() => expect(corners()).toEqual([{ x: 70, y: 70 }]))
     expect(recordPre).toHaveBeenCalledTimes(1)
+  })
+
+  it('snaps a dragged corner to the grid when snap to grid is on', async () => {
+    const { container, corners } = renderLive(corner, true, { snapToGrid: true })
+    const handle = container.querySelector('[data-corner="0"]')!
+    fireEvent.pointerDown(handle, { clientX: 50, clientY: 40, button: 0 })
+    fireEvent.pointerMove(handle, { clientX: 63, clientY: 57 })
+    fireEvent.pointerUp(handle, { clientX: 63, clientY: 57 })
+    await waitFor(() => expect(corners()).toEqual([{ x: 60, y: 60 }]))
+  })
+
+  it('snaps a new corner to the grid when snap to grid is on', async () => {
+    const { container, corners } = renderLive([], true, { snapToGrid: true })
+    fireEvent.doubleClick(container.querySelector('.react-flow__edge-interaction')!, {
+      clientX: 43,
+      clientY: 12,
+    })
+    await waitFor(() => expect(corners()).toEqual([{ x: 40, y: 20 }]))
   })
 
   it('leaves no undo entry for a press that never moves', () => {

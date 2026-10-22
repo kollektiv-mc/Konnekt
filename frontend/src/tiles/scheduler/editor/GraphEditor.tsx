@@ -29,6 +29,7 @@ import { SchedulerCtx, type NodeRunState } from './schedulerContext'
 import { BlockNode } from './BlockNode'
 import { AnimatedEdge } from './AnimatedEdge'
 import { BlockPalette } from './BlockPalette'
+import { GRID_DOT_OFFSET, GRID_DOT_SIZE, GRID_GAP, SNAP_GRID } from './canvasGrid'
 import { NodeConfigPanel } from './NodeConfigPanel'
 import { NodeDataPanel } from './NodeDataPanel'
 import { QuickAddMenu } from './QuickAddMenu'
@@ -163,6 +164,7 @@ function GraphEditorInner({
 }: GraphEditorProps) {
   const { screenToFlowPosition } = useReactFlow()
   const curvedEdges = useSettingsStore((s) => s.settings.schedulerCurvedEdges)
+  const snapToGrid = useSettingsStore((s) => s.settings.schedulerSnapToGrid)
   const updateSettings = useSettingsStore((s) => s.update)
   const updateNodeInternals = useUpdateNodeInternals()
 
@@ -1021,6 +1023,7 @@ function GraphEditorInner({
       cycleEdges,
       recordPre,
       curvedEdges,
+      snapToGrid,
     }),
     [
       defMap,
@@ -1036,6 +1039,7 @@ function GraphEditorInner({
       cycleEdges,
       recordPre,
       curvedEdges,
+      snapToGrid,
     ],
   )
 
@@ -1112,6 +1116,9 @@ function GraphEditorInner({
               // Swallowed: `update` reverts the flag itself on a refused write
               // and the settings modal shows why, as for the palette.
               updateSettings({ schedulerCurvedEdges: !curvedEdges }).catch(() => {}),
+            snapToGrid,
+            onToggleSnapToGrid: () =>
+              updateSettings({ schedulerSnapToGrid: !snapToGrid }).catch(() => {}),
           }}
           edit={{
             undo: doUndo,
@@ -1165,8 +1172,15 @@ function GraphEditorInner({
               deleteKeyCode={DELETE_KEYS}
               panOnDrag={[1, 2]}
               selectionOnDrag
+              snapToGrid={snapToGrid}
+              snapGrid={SNAP_GRID}
             >
-              <Background variant={BackgroundVariant.Dots} gap={20} size={1} />
+              <Background
+                variant={BackgroundVariant.Dots}
+                gap={GRID_GAP}
+                size={GRID_DOT_SIZE}
+                offset={GRID_DOT_OFFSET}
+              />
               <Controls showInteractive={false} />
               <MiniMap
                 // eslint-disable-next-line no-restricted-syntax -- overrides xyflow's default 10px Panel offset; a stylesheet className would race the library's own CSS specificity

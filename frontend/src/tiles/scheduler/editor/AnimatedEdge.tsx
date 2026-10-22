@@ -1,6 +1,7 @@
 import { useContext, useRef, useState, type CSSProperties, type PointerEvent } from 'react'
 import { useReactFlow, type EdgeProps } from '@xyflow/react'
 import { SchedulerCtx } from './schedulerContext'
+import { snapPoint } from './canvasGrid'
 import type { Point } from '../../../lib/sortable'
 import {
   curvedEdgePath,
@@ -25,7 +26,7 @@ export function AnimatedEdge({
   data,
   selected,
 }: EdgeProps) {
-  const { firedEdges, cycleEdges, recordPre, curvedEdges } = useContext(SchedulerCtx)
+  const { firedEdges, cycleEdges, recordPre, curvedEdges, snapToGrid } = useContext(SchedulerCtx)
   const { setEdges, screenToFlowPosition } = useReactFlow()
   const [animDone, setAnimDone] = useState(false)
   const [hovered, setHovered] = useState(false)
@@ -48,8 +49,16 @@ export function AnimatedEdge({
       ),
     )
 
+  // Where a pointer at this screen position puts a corner. Snapping is done here
+  // rather than left to screenToFlowPosition, which would also snap on the
+  // store's own flag: one place decides, and it is the same rounding either way.
+  const placeAt = (clientX: number, clientY: number): Point => {
+    const at = screenToFlowPosition({ x: clientX, y: clientY }, { snapToGrid: false })
+    return snapToGrid ? snapPoint(at) : at
+  }
+
   const addCorner = (clientX: number, clientY: number) => {
-    const at = screenToFlowPosition({ x: clientX, y: clientY })
+    const at = placeAt(clientX, clientY)
     recordPre()
     editWaypoints((current) => insertWaypoint(source, current, target, at))
   }
@@ -79,7 +88,7 @@ export function AnimatedEdge({
       // The first real movement is the one undo entry for the whole drag.
       recordPre()
     }
-    const at = screenToFlowPosition({ x: e.clientX, y: e.clientY })
+    const at = placeAt(e.clientX, e.clientY)
     editWaypoints((current) => current.map((p, i) => (i === g.index ? at : p)))
   }
   const endDrag = () => {

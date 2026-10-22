@@ -19,6 +19,8 @@ import { typesPresent } from './selection'
 export interface ViewOptions {
   curvedEdges: boolean
   onToggleCurvedEdges: () => void
+  snapToGrid: boolean
+  onToggleSnapToGrid: () => void
 }
 
 interface ToolbarProps {
@@ -71,6 +73,25 @@ function menuButtonClass(open: boolean): string {
   const base =
     'border-border-subtle text-text-muted border-hairline text-1xs shrink-0 cursor-pointer rounded px-2 py-0.5 font-mono transition-colors'
   return `${base} ${open ? 'bg-hover' : 'bg-surface hover:bg-hover'}`
+}
+
+// A menu row that is a switch: the check shows when it is on and keeps its room
+// when it is off, so the label does not move as it flips.
+function SwitchRow({ label, on, onToggle }: { label: string; on: boolean; onToggle: () => void }) {
+  return (
+    <MenuRow
+      label={label}
+      checked={on}
+      leading={
+        <Icon
+          icon={Check}
+          size="xs"
+          className={`text-accent ${on ? 'opacity-100' : 'opacity-0'}`}
+        />
+      }
+      onClick={onToggle}
+    />
+  )
 }
 
 /**
@@ -275,18 +296,18 @@ export function Toolbar({
         </button>
         <Popover open={viewMenu.open} onClose={viewMenu.close} width={200} align="left">
           {viewMenu.open && (
-            <MenuRow
-              label="Curved connectors"
-              checked={view.curvedEdges}
-              leading={
-                <Icon
-                  icon={Check}
-                  size="xs"
-                  className={`text-accent ${view.curvedEdges ? 'opacity-100' : 'opacity-0'}`}
-                />
-              }
-              onClick={view.onToggleCurvedEdges}
-            />
+            <>
+              <SwitchRow
+                label="Curved connectors"
+                on={view.curvedEdges}
+                onToggle={view.onToggleCurvedEdges}
+              />
+              <SwitchRow
+                label="Snap to grid"
+                on={view.snapToGrid}
+                onToggle={view.onToggleSnapToGrid}
+              />
+            </>
           )}
         </Popover>
       </div>

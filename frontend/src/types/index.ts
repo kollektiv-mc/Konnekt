@@ -61,6 +61,7 @@ export interface AppSettings {
   schedulerPaletteCollapsed: boolean
   schedulerPaletteClosedCategories: Record<string, boolean>
   schedulerCurvedEdges: boolean
+  schedulerSnapToGrid: boolean
   consoleQuickCommandsCollapsed: boolean
   classicTileFaces: boolean
   navClosedSections: Record<string, boolean>
