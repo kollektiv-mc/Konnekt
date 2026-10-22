@@ -458,18 +458,18 @@ describe('SettingsModal skin and light mode', () => {
       openAppearance()
 
       expect(advancedToggle().getAttribute('aria-expanded')).toBe('false')
-      for (const group of ['Fonts', 'Status colors', 'Smooth scrolling']) {
+      for (const group of ['Fonts', 'Status colors', 'Smooth scrolling', 'Classic tile faces']) {
         expect(isInert(group)).toBe(true)
       }
     })
 
-    it('reveals fonts, status colors and smooth scrolling when opened', () => {
+    it('reveals fonts, colors, scrolling and tile faces when opened', () => {
       openAppearance()
 
       fireEvent.click(advancedToggle())
 
       expect(advancedToggle().getAttribute('aria-expanded')).toBe('true')
-      for (const group of ['Fonts', 'Status colors', 'Smooth scrolling']) {
+      for (const group of ['Fonts', 'Status colors', 'Smooth scrolling', 'Classic tile faces']) {
         expect(isInert(group)).toBe(false)
       }
       expect(screen.getByRole('combobox', { name: 'Code' })).toBeTruthy()
