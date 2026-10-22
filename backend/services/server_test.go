@@ -40,6 +40,10 @@ func curInst(s *ServerService) *serverInstance { return s.cur() }
 // different servers — which is exactly the confusion #239 exists to remove.
 func newServerFixture() (*ServerService, *EventBus) {
 	s := NewServerService()
+	// No SIGTERM by default: the fixture children are not group leaders, so the
+	// real group signal would be an ESRCH no-op, and a fakeLaunch child that
+	// is one would be ended by it. Tests of the SIGTERM leg set their own.
+	s.termTree = func(int) bool { return false }
 	bus := NewEventBus() // no ctx: Emit skips the Wails runtime and only fans out in-process
 	s.SetBus(bus)
 	s.setCurrent(s.instanceFor(fixtureServerID))
