@@ -1248,7 +1248,7 @@
     "id": "action.notify",
     "category": "notify",
     "label": "Notify",
-    "description": "Sends an in-app notification.",
+    "description": "Shows a message in the app, as a desktop notification, or both.",
     "isTrigger": false,
     "controlInputs": [
       "trigger"
@@ -1290,6 +1290,26 @@
         "label": "Message",
         "type": "string",
         "required": true
+      },
+      {
+        "key": "deliver",
+        "label": "Deliver to",
+        "type": "select",
+        "default": "both",
+        "options": [
+          {
+            "label": "In-app",
+            "value": "inApp"
+          },
+          {
+            "label": "Desktop",
+            "value": "desktop"
+          },
+          {
+            "label": "In-app and desktop",
+            "value": "both"
+          }
+        ]
       }
     ],
     "source": "native"

@@ -258,7 +258,7 @@ func registerBuiltins(r *BlockRegistry) {
 
 	must(r.RegisterBlock(models.BlockDef{
 		ID: "action.notify", Category: "notify", Label: "Notify",
-		Description:   "Sends an in-app notification.",
+		Description:   "Shows a message in the app, as a desktop notification, or both.",
 		ControlInputs: []string{"trigger"}, ControlOutputs: []string{"onComplete"},
 		DataInputs: []models.DataPort{{ID: "message", Label: "Message", Type: "string"}},
 		ConfigSchema: []models.ConfigField{
@@ -268,6 +268,12 @@ func registerBuiltins(r *BlockRegistry) {
 					{Label: "Error", Value: "error"},
 				}},
 			{Key: "message", Label: "Message", Type: "string", Required: true},
+			{Key: "deliver", Label: "Deliver to", Type: "select", Default: NotifyBoth,
+				Options: []models.FieldOption{
+					{Label: "In-app", Value: NotifyInApp},
+					{Label: "Desktop", Value: NotifyDesktop},
+					{Label: "In-app and desktop", Value: NotifyBoth},
+				}},
 		},
 		Source: "native",
 	}, execNotify))
@@ -555,13 +561,39 @@ func execDelay(e *ExecContext) ExecResult {
 	}
 }
 
+// The values of the Notify block's "deliver" field, and of the "deliver" key in
+// the schedule:notify payload: where the message goes. In-app is the bubble
+// plus the Notifications tile entry, desktop is the operating system's own
+// notification, and both is what every Notify block did before the field
+// existed.
+const (
+	NotifyInApp   = "inApp"
+	NotifyDesktop = "desktop"
+	NotifyBoth    = "both"
+)
+
+// notifyDeliver normalises a stored "deliver" value. A graph saved before the
+// field existed has none, and an unrecognised value is no reason to drop the
+// message, so both mean "both".
+func notifyDeliver(v string) string {
+	switch v {
+	case NotifyInApp, NotifyDesktop:
+		return v
+	}
+	return NotifyBoth
+}
+
 func execNotify(e *ExecContext) ExecResult {
 	kind := e.GetString("kind")
 	if kind == "" {
 		kind = "info"
 	}
 	msg := e.GetString("message")
-	e.Emit(EventScheduleNotify, map[string]interface{}{"kind": kind, "message": msg})
+	e.Emit(EventScheduleNotify, map[string]interface{}{
+		"kind":    kind,
+		"message": msg,
+		"deliver": notifyDeliver(e.GetString("deliver")),
+	})
 	return ExecResult{Port: "onComplete"}
 }
 
