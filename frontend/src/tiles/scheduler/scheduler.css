@@ -96,6 +96,61 @@
   animation: edge-draw-in var(--duration-panel) ease-out both;
 }
 
+/* Node panel (editor/NodePanel.tsx). Picking another node while the panel is
+   open dips the contents and brings them back, 110ms in all and with no
+   movement, so it reads as a change of subject rather than a transition. The
+   minimap sits against the same edge the panel does, so it steps left of it
+   while a node is selected (the wrapper carries node-panel-open) and rides the
+   panel's own timing. */
+@keyframes node-panel-swap {
+  from {
+    opacity: 0.2;
+  }
+  to {
+    opacity: 1;
+  }
+}
+.node-panel-swap {
+  animation: node-panel-swap 110ms ease-out both;
+}
+/* Config/data switch: the incoming pane slides a few pixels in from the side
+   the tab highlight moved toward. */
+@keyframes node-panel-tab-in {
+  from {
+    opacity: 0;
+    translate: var(--tab-in-from, 0) 0;
+  }
+  to {
+    opacity: 1;
+    translate: 0 0;
+  }
+}
+.node-panel-tab-in {
+  animation: node-panel-tab-in var(--duration-fast) var(--ease-standard) both;
+}
+.node-panel-tab-in-config {
+  --tab-in-from: -6px;
+}
+.node-panel-tab-in-data {
+  --tab-in-from: 6px;
+}
+.node-panel-host .react-flow__minimap {
+  transition: transform var(--duration-panel) var(--ease-standard);
+}
+.node-panel-open .react-flow__minimap {
+  /* w-60 panel + its 0.5rem inset + 0.5rem of air */
+  transform: translateX(-16rem);
+}
+@media (prefers-reduced-motion: reduce) {
+  .node-panel-swap,
+  .node-panel-tab-in {
+    animation: none !important;
+  }
+  .node-panel-host .react-flow__minimap {
+    transition: none !important;
+  }
+}
+
 /* Live run highlight: pulsing glow on the currently-executing node */
 @keyframes node-run-pulse {
   0%,
