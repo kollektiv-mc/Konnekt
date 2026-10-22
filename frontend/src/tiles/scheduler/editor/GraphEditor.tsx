@@ -1045,9 +1045,13 @@ function GraphEditorInner({
   // The quick-add list from the toolbar's add button: opened under the button,
   // adding at the middle of the canvas, since a click on the bar has no canvas
   // position of its own the way a right-click or Tab does.
+  // A second press closes it, as the bar's other menus do.
+  const addButtonRef = useRef<HTMLButtonElement>(null)
   const openAddMenu = useCallback(
     (at: { x: number; y: number }) => {
-      setQuickAdd({ screen: at, flow: canvasAnchor(false) ?? screenToFlowPosition(at) })
+      setQuickAdd((cur) =>
+        cur ? null : { screen: at, flow: canvasAnchor(false) ?? screenToFlowPosition(at) },
+      )
     },
     [canvasAnchor, screenToFlowPosition],
   )
@@ -1118,6 +1122,8 @@ function GraphEditorInner({
             onToggleSnapToGrid: () =>
               updateSettings({ schedulerSnapToGrid: !snapToGrid }).catch(() => {}),
           }}
+          addOpen={quickAdd !== null}
+          addButtonRef={addButtonRef}
           edit={{
             undo: doUndo,
             redo: doRedo,
@@ -1227,6 +1233,7 @@ function GraphEditorInner({
           setQuickAdd(null)
         }}
         onClose={() => setQuickAdd(null)}
+        trigger={addButtonRef}
       />
 
       <CloseConfirmDialog

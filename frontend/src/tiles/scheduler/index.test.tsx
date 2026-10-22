@@ -54,12 +54,13 @@ const graphsByServer: Record<string, models.Graph[]> = {
   b: [graph('gb1', 'B first')],
 }
 
-/** The graph selector's label: the name of the graph the editor holds. The picker is the bar's first button. */
+/** The graph selector's label: the name of the graph the editor holds. The picker is the bar's
+    first button, and its first visible span is the name (the short id before it is aria-hidden). */
 const selected = () =>
   screen
     .getByRole('button', { name: 'edit' })
     .closest('.border-b-hairline')
-    ?.querySelector('button')
+    ?.querySelector('button > span:not([aria-hidden])')
     ?.textContent?.trim()
 
 // A server switch remounts the tile (Dashboard keys it `${tile.id}:${serverId}`),

@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import type { RefObject } from 'react'
 import type { models } from '../../../../wailsjs/go/models'
 import { usePresence, useRetained } from '../../../hooks/usePresence'
 import { QuickAddMenu } from './QuickAddMenu'
@@ -15,6 +16,8 @@ interface Props {
   blockDefs: models.BlockDef[]
   onPick: (def: models.BlockDef, flow: { x: number; y: number }) => void
   onClose: () => void
+  /** The add button, which toggles the list (see QuickAddMenu). */
+  trigger?: RefObject<HTMLElement | null>
 }
 
 /**
@@ -29,7 +32,7 @@ interface Props {
  * leaving menu answers to nothing, so a second pick or close mid-fade is
  * ignored.
  */
-export function QuickAddHost({ request, blockDefs, onPick, onClose }: Props) {
+export function QuickAddHost({ request, blockDefs, onPick, onClose, trigger }: Props) {
   const shown = useRetained(request)
   const presence = usePresence(request !== null, 'menu')
   const [seen, setSeen] = useState(request)
@@ -46,6 +49,7 @@ export function QuickAddHost({ request, blockDefs, onPick, onClose }: Props) {
       blockDefs={blockDefs}
       screenPos={shown.screen}
       leaving={presence.leaving}
+      trigger={trigger}
       onPick={(def) => {
         if (!presence.leaving) onPick(def, shown.flow)
       }}
