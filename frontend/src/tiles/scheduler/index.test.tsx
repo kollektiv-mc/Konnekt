@@ -352,7 +352,9 @@ describe('the scheduler editor warns about a stop', () => {
     expect(toasts()).toHaveLength(1)
     render(<SchedulerTile serverId="alpha" maximized />)
     await waitFor(() => expect(warningButton()).not.toBeNull())
-    expect(toasts()).toEqual([expect.objectContaining({ count: 1 })])
+    // Waited for, like the first render's bubble: the remount's effect can
+    // land after the button does, and a loaded CI runner reads it in between.
+    await waitFor(() => expect(toasts()).toEqual([expect.objectContaining({ count: 1 })]))
   })
 
   // The message that wrapped the toolbar to four lines. The toolbar keeps two
