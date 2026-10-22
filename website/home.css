@@ -1,0 +1,680 @@
+/* The home page, on top of site.css. */
+
+/* ── Hero ───────────────────────────────────────────────────────────────── */
+
+.hero {
+  display: flex;
+  flex-wrap: wrap;
+}
+
+.hero-copy {
+  flex: 1 1 560px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 28px;
+  padding: clamp(48px, 6vw, 96px) var(--pad);
+  border-right: var(--hairline);
+}
+
+.hero h1 {
+  margin: 0;
+  max-width: 12ch;
+  font-size: clamp(44px, 6vw, 84px);
+  line-height: 0.98;
+  font-weight: 600;
+  letter-spacing: -0.045em;
+}
+
+.lead {
+  margin: 0;
+  max-width: 34ch;
+  font-size: 20px;
+  line-height: 1.5;
+  color: var(--text-secondary);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding-top: 8px;
+}
+
+.hero-side {
+  flex: 1 1 400px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 40px;
+  padding: 48px var(--pad);
+}
+
+.hero-art {
+  align-self: center;
+  max-width: 100%;
+  height: auto;
+  overflow: visible;
+  color: var(--text-primary);
+}
+
+.hero-art circle {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+
+.hero-cube {
+  fill: none;
+  stroke: var(--text-secondary);
+  stroke-width: 1.5;
+  stroke-dasharray: 2 4;
+}
+
+.hero-plus {
+  stroke: var(--accent);
+  stroke-width: 1.5;
+}
+
+.hero-labels {
+  font-family: var(--font-site-mono);
+  font-size: 11px;
+  fill: var(--text-secondary);
+}
+
+.hero-labels .faint {
+  fill: var(--text-muted);
+}
+
+.spin,
+.spin-rev {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: spin 90s linear infinite;
+}
+
+.spin-rev {
+  animation-duration: 140s;
+  animation-direction: reverse;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.console {
+  padding: 18px 22px;
+  border: var(--hairline);
+  background: var(--bg-overlay);
+  font-family: var(--font-site-mono);
+  font-size: 13px;
+  line-height: 1.9;
+  color: var(--text-secondary);
+}
+
+.console .faint {
+  color: var(--text-muted);
+}
+
+.console-prompt {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-top: 6px;
+  color: var(--text-primary);
+}
+
+.console-dot {
+  width: 8px;
+  height: 8px;
+  background: var(--accent);
+}
+
+/* ── Works with ─────────────────────────────────────────────────────────── */
+
+.works {
+  display: flex;
+  flex-wrap: wrap;
+}
+
+.works-label {
+  flex: 0 1 200px;
+  display: flex;
+  align-items: center;
+  padding: 28px var(--pad);
+  border-right: var(--hairline);
+  letter-spacing: 0.14em;
+}
+
+.works-list {
+  flex: 1 1 600px;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px 32px;
+  margin: 0;
+  padding: 28px var(--pad);
+  list-style: none;
+  font-size: 24px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  color: var(--text-secondary);
+}
+
+/* ── Features: strips that open sideways ─────────────────────────────────
+   One strip is open at a time and takes twelve shares of the row; the rest
+   keep one each and show their name on its side. The panel inside is wider
+   than a strip on the way open, so it is clipped rather than reflowed while
+   the strip grows. home.js moves the open strip; without it the first stays
+   open and the rest are listed below it. */
+
+.archive {
+  --strip-ms: 520ms;
+  display: flex;
+  height: 600px;
+}
+
+.strip {
+  position: relative;
+  flex: 1 1 0;
+  min-width: 64px;
+  overflow: hidden;
+  border-right: var(--hairline);
+  background: var(--bg-base);
+  transition:
+    flex-grow var(--strip-ms) var(--ease-standard),
+    background-color var(--strip-ms) ease;
+}
+
+.strip:last-child {
+  border-right: 0;
+}
+
+.strip.is-open {
+  flex-grow: 12;
+  background: var(--bg-overlay);
+}
+
+.strip-btn {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 28px 0;
+  border: 0;
+  background: transparent;
+  color: var(--text-primary);
+  font-family: var(--font-site-mono);
+  font-size: 13px;
+  cursor: pointer;
+  animation: fade-in 300ms ease 240ms both;
+}
+
+.strip-btn:hover {
+  background: var(--hover-surface);
+}
+
+.strip-name {
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.strip-plus {
+  font-size: 20px;
+  color: var(--accent);
+}
+
+.strip.is-open .strip-btn {
+  display: none;
+}
+
+.strip-panel {
+  display: none;
+  flex-direction: column;
+  gap: 22px;
+  min-width: 680px;
+  height: 100%;
+  padding: 28px var(--pad);
+  border-top: 2px solid var(--accent);
+}
+
+.strip.is-open .strip-panel {
+  display: flex;
+  animation: fade-in 280ms ease 200ms both;
+}
+
+/* The strip being left keeps its panel for one fade, over the strip itself. */
+.strip.is-closing .strip-panel {
+  display: flex;
+  position: absolute;
+  inset: 0 auto 0 0;
+  pointer-events: none;
+  animation: fade-out 220ms ease both;
+}
+
+.strip-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 16px;
+}
+
+.strip-head h3 {
+  margin: 0;
+  font-size: 26px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.strip-head h3:focus {
+  outline: none;
+}
+
+.strip-video {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1836 / 684;
+  object-fit: cover;
+  background: var(--bg-base);
+  border: var(--hairline);
+}
+
+.points {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 24px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.points li {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border-hover);
+}
+
+.points h4 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 500;
+}
+
+.points p {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--text-secondary);
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes fade-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+/* Without the script nothing can open a strip, so every panel is listed. */
+.no-js .archive {
+  flex-direction: column;
+  height: auto;
+}
+
+.no-js .strip-btn {
+  display: none;
+}
+
+.no-js .strip-panel {
+  display: flex;
+  min-width: 0;
+}
+
+.no-js .strip-video:not([poster]) {
+  display: none;
+}
+
+/* ── Scheduler ──────────────────────────────────────────────────────────── */
+
+.flow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  row-gap: 16px;
+  padding: 64px var(--pad);
+  font-family: var(--font-site-mono);
+  font-size: 14px;
+}
+
+.node {
+  min-width: 170px;
+  padding: 18px 22px;
+  border: 1px solid var(--border-hover);
+  background: var(--bg-overlay);
+  transition: border-color 300ms ease;
+}
+
+.node.is-lit {
+  border-color: var(--accent);
+}
+
+.node-kind {
+  display: block;
+  padding-bottom: 8px;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+
+.wire {
+  width: 56px;
+  height: 2px;
+  background: var(--border-hover);
+}
+
+.wire span {
+  display: block;
+  width: 0;
+  height: 2px;
+  background: var(--accent);
+  transition: width 600ms linear;
+}
+
+.wire.is-lit span {
+  width: 100%;
+}
+
+.cells {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  border-top: var(--hairline);
+}
+
+.cell {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: var(--pad);
+}
+
+.cells .cell + .cell {
+  border-left: var(--hairline);
+}
+
+.cell h3 {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 500;
+}
+
+.cell p {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--text-secondary);
+}
+
+/* ── Local-first and the download block ─────────────────────────────────── */
+
+.local {
+  display: flex;
+  flex-wrap: wrap;
+}
+
+.local-head {
+  flex: 1.3 1 300px;
+  display: flex;
+  align-items: baseline;
+  gap: 20px;
+  padding: var(--pad);
+  background: var(--bg-surface);
+}
+
+.local-head h2 {
+  margin: 0;
+  font-size: clamp(32px, 3.4vw, 44px);
+  line-height: 1;
+  font-weight: 600;
+  letter-spacing: -0.04em;
+}
+
+.local .cell {
+  flex: 1 1 220px;
+  border-left: var(--hairline);
+}
+
+.local .cell h3 {
+  font-size: 18px;
+}
+
+.get {
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  padding: clamp(72px, 9vw, 128px) var(--pad);
+  border-color: rgb(var(--accent-rgb) / 0.18);
+  background-color: var(--bg-elevated);
+  background-image: radial-gradient(
+    120% 90% at 50% 0%,
+    rgb(var(--accent-rgb) / 0.07),
+    transparent 62%
+  );
+  text-align: center;
+}
+
+[data-focus].is-focus > .get {
+  border-color: rgb(var(--accent-rgb) / 0.18);
+}
+
+.get h2 {
+  margin: 0;
+  font-size: clamp(56px, 8vw, 112px);
+  line-height: 0.95;
+  font-weight: 600;
+  letter-spacing: -0.05em;
+}
+
+.get-dot {
+  color: var(--accent);
+}
+
+.get p {
+  margin: 0;
+  font-size: 19px;
+  line-height: 1.5;
+  color: var(--text-secondary);
+}
+
+.get .actions {
+  justify-content: center;
+  padding-top: 16px;
+}
+
+.btn-large {
+  min-height: 64px;
+  font-size: 15px;
+}
+
+.btn-large.btn-primary {
+  gap: 12px;
+  padding: 0 44px;
+}
+
+.btn-large.btn-secondary {
+  padding: 0 32px;
+  background: var(--bg-base);
+}
+
+/* Two lights running the block's edge: a conic gradient spun behind a
+   one-pixel mask of the border. */
+.get-glow {
+  position: absolute;
+  inset: -1px;
+  overflow: hidden;
+  padding: 1px;
+  pointer-events: none;
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  mask-composite: exclude;
+}
+
+.get-glow::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 180%;
+  aspect-ratio: 1;
+  background: conic-gradient(
+    from 0deg,
+    transparent 0deg,
+    rgb(var(--accent-rgb) / 0.55) 16deg,
+    transparent 42deg,
+    transparent 180deg,
+    rgb(var(--accent-rgb) / 0.55) 196deg,
+    transparent 222deg,
+    transparent 360deg
+  );
+  transform: translate(-50%, -50%) rotate(0deg);
+  animation: glow 14s linear infinite;
+}
+
+@keyframes glow {
+  to {
+    transform: translate(-50%, -50%) rotate(360deg);
+  }
+}
+
+/* ── Narrow screens ─────────────────────────────────────────────────────── */
+
+@media (max-width: 760px) {
+  .hero-copy {
+    border-right: 0;
+    border-bottom: var(--hairline);
+  }
+
+  .works-label {
+    flex-basis: 100%;
+    border-right: 0;
+    border-bottom: var(--hairline);
+  }
+
+  .archive {
+    flex-direction: column;
+    height: auto;
+  }
+
+  .strip {
+    flex-basis: auto;
+    border-right: 0;
+    border-bottom: var(--hairline);
+  }
+
+  .strip-btn {
+    flex-direction: row;
+    min-height: 56px;
+    padding: 0 20px;
+  }
+
+  .strip-name {
+    writing-mode: horizontal-tb;
+    transform: none;
+  }
+
+  .strip-panel {
+    min-width: 0;
+  }
+
+  .strip.is-closing .strip-panel {
+    display: none;
+  }
+
+  .points {
+    grid-template-columns: 1fr;
+  }
+
+  .flow {
+    flex-direction: column;
+  }
+
+  .node {
+    width: 100%;
+  }
+
+  .wire {
+    width: 2px;
+    height: 24px;
+  }
+
+  .wire span {
+    width: 2px;
+    height: 0;
+    transition-property: height;
+  }
+
+  .wire.is-lit span {
+    width: 2px;
+    height: 100%;
+  }
+
+  .cells .cell + .cell,
+  .local .cell {
+    border-left: 0;
+    border-top: var(--hairline);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spin,
+  .spin-rev,
+  .get-glow::before {
+    animation: none;
+  }
+
+  .strip,
+  .wire span,
+  .node {
+    transition: none;
+  }
+
+  .strip-btn,
+  .strip.is-open .strip-panel {
+    animation: none;
+  }
+
+  .strip.is-closing .strip-panel {
+    display: none;
+  }
+}

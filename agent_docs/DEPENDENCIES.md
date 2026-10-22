@@ -182,6 +182,15 @@ Not a module and not in any lockfile, so nothing here is seen by Dependabot or
 |---|---|---|
 | `cloudflared` | `backend/services/tunnel.go` (`tunnelVersion`, `tunnelPins`) | The Remote Access tunnel (#46). Fetched from the release's own GitHub URL the first time the tunnel is switched on, cached under `<data dir>/bin/`, and checked against the pinned byte size and SHA-256 before every execution (`agent_docs/SECURITY_CHECKLIST.md` § S8.10). To move to a new release: take the version and each platform asset's size and SHA-256 from the release, where GitHub's own asset digest and the checksum in the release notes agree, change the three constants per platform, and run `go test ./backend/services -run Tunnel`. Run with `--no-autoupdate`, so it never replaces itself with something unpinned. macOS is not pinned: Cloudflare ships it as a `.tgz` and Konnekt is not built for it. |
 
+## Files vendored into the website
+
+Committed as files rather than installed, so nothing here is seen by
+Dependabot either. A bump is a pull request that replaces the file.
+
+| File | From | What it is for |
+|---|---|---|
+| `website/assets/fonts/Geist-Variable.woff2`, `GeistMono-Variable.woff2` | npm `geist` 1.8.2, `dist/fonts/` | The site's `--font-site` and `--font-site-mono` families (kollektiv `design/tokens.json`). SIL Open Font Licence, beside them as `OFL.txt`, which allows serving them from a public repository where the ITF families do not (#442). Variable files, one per family, since the site uses three weights of each. |
+
 ## Removed
 
 - `@react-three/postprocessing` and `postprocessing` — added with the worlds

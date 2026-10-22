@@ -37,6 +37,8 @@
   --font-title: 'Excon', var(--font-sans);
   --font-mono: ui-monospace, 'Cascadia Code', 'SF Mono', 'Segoe UI Mono', 'Consolas', 'Liberation Mono', monospace;
   --font-display: 'Satoshi', var(--font-sans);
+  --font-site: 'Geist', var(--font-sans);
+  --font-site-mono: 'Geist Mono', var(--font-mono);
 
   --duration-fast: 150ms;
   --duration-panel: 280ms;
