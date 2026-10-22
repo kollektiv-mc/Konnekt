@@ -298,7 +298,7 @@ export function TileCrate() {
           <span
             aria-hidden
             data-testid="crate-handle"
-            className="bg-border-hover absolute top-1/4 right-1.5 h-1/2 w-0.5 rounded-full"
+            className="bg-border-hover/70 absolute top-1/4 right-1.5 h-1/2 w-0.5 rounded-full"
           />
         )}
       </button>
