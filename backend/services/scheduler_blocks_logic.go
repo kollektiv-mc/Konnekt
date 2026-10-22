@@ -58,6 +58,35 @@ func registerLogicBlocks(r *BlockRegistry) {
 			Source:       "native",
 		}, execGate(g.eval)))
 	}
+
+	// Compare is what turns a number or text comparison into a bool, so a
+	// threshold such as TPS below 15 can feed a gate. Its ports and fields are
+	// Condition's (port id == config key), and it shares Condition's comparison.
+	must(r.RegisterBlock(models.BlockDef{
+		ID: "control.compare", Category: "control", Label: "Compare",
+		Description: "Outputs true when the comparison of A and B holds; two numbers compare numerically, anything else as text.",
+		DataInputs: []models.DataPort{
+			{ID: "left", Label: "A", Type: "string"},
+			{ID: "right", Label: "B", Type: "string"},
+		},
+		DataOutputs: []models.DataPort{{ID: "value", Label: "Value", Type: "bool"}},
+		ConfigSchema: []models.ConfigField{
+			{Key: "left", Label: "Left value", Type: "string", Required: true},
+			{Key: "op", Label: "Operator", Type: "select", Default: "eq", Options: comparisonOptions()},
+			{Key: "right", Label: "Right value", Type: "string", Required: true},
+		},
+		Source: "native",
+	}, execCompare))
+}
+
+// execCompare outputs compareValues as float64 1 or 0, like the gates.
+func execCompare(e *ExecContext) ExecResult {
+	if compareValues(e, e.GetString("op")) {
+		e.SetOutput("value", float64(1))
+	} else {
+		e.SetOutput("value", float64(0))
+	}
+	return ExecResult{Port: "onComplete"}
 }
 
 // execGate builds the executor for one truth function. The output is float64

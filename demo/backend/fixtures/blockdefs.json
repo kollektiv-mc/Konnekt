@@ -557,6 +557,77 @@
     "source": "native"
   },
   {
+    "id": "control.compare",
+    "category": "control",
+    "label": "Compare",
+    "description": "Outputs true when the comparison of A and B holds; two numbers compare numerically, anything else as text.",
+    "isTrigger": false,
+    "controlInputs": null,
+    "controlOutputs": null,
+    "dataInputs": [
+      {
+        "id": "left",
+        "label": "A",
+        "type": "string"
+      },
+      {
+        "id": "right",
+        "label": "B",
+        "type": "string"
+      }
+    ],
+    "dataOutputs": [
+      {
+        "id": "value",
+        "label": "Value",
+        "type": "bool"
+      }
+    ],
+    "configSchema": [
+      {
+        "key": "left",
+        "label": "Left value",
+        "type": "string",
+        "required": true
+      },
+      {
+        "key": "op",
+        "label": "Operator",
+        "type": "select",
+        "default": "eq",
+        "options": [
+          {
+            "label": "==",
+            "value": "eq"
+          },
+          {
+            "label": "!=",
+            "value": "ne"
+          },
+          {
+            "label": "\u003e",
+            "value": "gt"
+          },
+          {
+            "label": "\u003c",
+            "value": "lt"
+          },
+          {
+            "label": "contains",
+            "value": "contains"
+          }
+        ]
+      },
+      {
+        "key": "right",
+        "label": "Right value",
+        "type": "string",
+        "required": true
+      }
+    ],
+    "source": "native"
+  },
+  {
     "id": "control.condition",
     "category": "control",
     "label": "Condition",

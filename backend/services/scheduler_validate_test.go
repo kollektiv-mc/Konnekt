@@ -277,6 +277,10 @@ func TestValidateGraphDataTypesWithGates(t *testing.T) {
 		{"unresolved constant -> gate allowed", "data.constant", "control.and", "a", nil, false},
 		{"String constant -> gate blocked", "data.constant", "control.and", "a", map[string]interface{}{"type": "String"}, true},
 		{"Float constant -> gate blocked", "data.constant", "control.or", "b", map[string]interface{}{"type": "Float"}, true},
+		{"compare -> gate a", "control.compare", "control.and", "a", nil, false},
+		{"compare -> condition left", "control.compare", "control.condition", "left", nil, false},
+		{"Float constant -> compare left", "data.constant", "control.compare", "left", map[string]interface{}{"type": "Float"}, false},
+		{"gate -> compare left", "control.and", "control.compare", "left", nil, false},
 		{"gate -> math input", "control.and", "data.mathOp", "a", nil, false},
 	}
 	for _, tt := range tests {
