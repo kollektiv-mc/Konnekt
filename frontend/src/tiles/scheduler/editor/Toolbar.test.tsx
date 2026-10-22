@@ -4,6 +4,7 @@ import type { Edge as FlowEdge } from '@xyflow/react'
 import type { models } from '../../../../wailsjs/go/models'
 import { NO_GRAPH_KEYS } from './blockMeta'
 import { clearClipboard, writeClipboard } from './clipboard'
+import { NO_SHORT_ID } from './graphId'
 import type { BlockFlowNode } from './graphMapping'
 import { Toolbar } from './Toolbar'
 
@@ -119,6 +120,17 @@ describe('the toolbar bar', () => {
     expect(screen.queryByRole('button', { name: 'new' })).toBeNull()
     expect(screen.queryByTitle('Click to rename')).toBeNull()
     expect(screen.queryByRole('textbox')).toBeNull()
+  })
+
+  it('shows the graph short id in place of an icon', () => {
+    setup({ graphId: '3f9a0c7e12b4d5e6' })
+    expect(screen.getByTestId('graph-short-id').textContent).toBe('3f9a')
+    expect(button(/^Nightly$/)).toBeTruthy()
+  })
+
+  it('shows the id placeholder for an unsaved graph', () => {
+    setup({ graphId: '', graphName: 'Draft' })
+    expect(screen.getByTestId('graph-short-id').textContent).toBe(NO_SHORT_ID)
   })
 
   it('says so when there is no graph', () => {

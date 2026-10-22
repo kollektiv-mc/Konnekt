@@ -1,4 +1,5 @@
 import { useState, useEffect, useLayoutEffect, useRef, useMemo } from 'react'
+import type { RefObject } from 'react'
 import { createPortal } from 'react-dom'
 import type { models } from '../../../../wailsjs/go/models'
 import { useOutsideDismiss } from '../../../hooks/useOutsideDismiss'
@@ -22,9 +23,22 @@ interface Props {
   onClose: () => void
   /** An exit is playing (QuickAddHost keeps the menu mounted for it). */
   leaving?: boolean
+  /**
+   * The toolbar's add button. A press on it is not a press outside, so its own
+   * click can close the list rather than the press closing it and the click
+   * opening it again.
+   */
+  trigger?: RefObject<HTMLElement | null>
 }
 
-export function QuickAddMenu({ blockDefs, screenPos, onPick, onClose, leaving = false }: Props) {
+export function QuickAddMenu({
+  blockDefs,
+  screenPos,
+  onPick,
+  onClose,
+  leaving = false,
+  trigger,
+}: Props) {
   const [query, setQuery] = useState('')
   const [activeCategory, setActiveCategory] = useState<string | null>(null)
   const [highlightIdx, setHighlightIdx] = useState(0)
@@ -95,7 +109,7 @@ export function QuickAddMenu({ blockDefs, screenPos, onPick, onClose, leaving = 
 
   // A press outside closes it, with no backdrop to eat that press: the one
   // that closes the menu also pans, selects or opens the next menu.
-  useOutsideDismiss(!leaving, onClose, [panelRef, flyoutRef], true)
+  useOutsideDismiss(!leaving, onClose, [panelRef, flyoutRef, trigger], true)
 
   const activeDefs = activeCategory ? blockDefs.filter((d) => d.category === activeCategory) : []
   const activeColor = categoryColor(activeCategory ?? '')
