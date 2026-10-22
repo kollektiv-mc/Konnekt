@@ -2,7 +2,6 @@ import { cloneElement, useEffect, useId, useLayoutEffect, useRef, useState } fro
 import type { PointerEvent, ReactElement } from 'react'
 import { createPortal } from 'react-dom'
 import { placeTooltip } from './tooltipPlacement'
-import type { Size } from './tooltipPlacement'
 
 /** How long the pointer has to rest on the anchor before the tooltip appears. */
 export const TOOLTIP_DELAY_MS = 1000
@@ -117,7 +116,7 @@ function Bubble({ id, text, anchor }: { id: string; text: string; anchor: HTMLEl
     const card = ref.current
     if (!card) return
     const { width, height } = card.getBoundingClientRect()
-    const size: Size = { w: width, h: height }
+    const size = { w: width, h: height }
     const next = placeTooltip(
       anchor.getBoundingClientRect(),
       size,
