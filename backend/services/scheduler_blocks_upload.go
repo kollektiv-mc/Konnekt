@@ -30,9 +30,7 @@ const (
 func registerUploadBlock(r *BlockRegistry) {
 	must(r.RegisterBlock(models.BlockDef{
 		ID: uploadBlockID, Category: "action", Label: "Upload to Bucket",
-		Description: "Uploads a file, or the contents of a folder, to a saved bucket destination, under the key prefix. " +
-			"Objects already in the bucket at the same size are skipped, so a run that stopped carries on where it left off. " +
-			"The source is a path inside the server's folder, or its backups.",
+		Description:   "Uploads a file or folder from the server to a bucket, skipping what is already there.",
 		ControlInputs: []string{"trigger"}, ControlOutputs: []string{"onComplete", "onFailed"},
 		// Port id == config key (resolveDataInputs), so a wired value outranks the
 		// field. The destination is not a port: it is chosen from Settings.
