@@ -514,6 +514,120 @@
     "timeoutSeconds": 43200
   },
   {
+    "id": "control.and",
+    "category": "control",
+    "label": "AND",
+    "description": "Outputs true when both A and B are true.",
+    "isTrigger": false,
+    "controlInputs": null,
+    "controlOutputs": null,
+    "dataInputs": [
+      {
+        "id": "a",
+        "label": "A",
+        "type": "bool"
+      },
+      {
+        "id": "b",
+        "label": "B",
+        "type": "bool"
+      }
+    ],
+    "dataOutputs": [
+      {
+        "id": "value",
+        "label": "Value",
+        "type": "bool"
+      }
+    ],
+    "configSchema": [
+      {
+        "key": "a",
+        "label": "A",
+        "type": "bool",
+        "default": false
+      },
+      {
+        "key": "b",
+        "label": "B",
+        "type": "bool",
+        "default": false
+      }
+    ],
+    "source": "native"
+  },
+  {
+    "id": "control.compare",
+    "category": "control",
+    "label": "Compare",
+    "description": "Outputs whether A and B pass the chosen comparison.",
+    "isTrigger": false,
+    "controlInputs": null,
+    "controlOutputs": null,
+    "dataInputs": [
+      {
+        "id": "left",
+        "label": "A",
+        "type": "string"
+      },
+      {
+        "id": "right",
+        "label": "B",
+        "type": "string"
+      }
+    ],
+    "dataOutputs": [
+      {
+        "id": "value",
+        "label": "Value",
+        "type": "bool"
+      }
+    ],
+    "configSchema": [
+      {
+        "key": "left",
+        "label": "Left value",
+        "type": "string",
+        "required": true
+      },
+      {
+        "key": "op",
+        "label": "Operator",
+        "type": "select",
+        "default": "eq",
+        "options": [
+          {
+            "label": "==",
+            "value": "eq"
+          },
+          {
+            "label": "!=",
+            "value": "ne"
+          },
+          {
+            "label": "\u003e",
+            "value": "gt"
+          },
+          {
+            "label": "\u003c",
+            "value": "lt"
+          },
+          {
+            "label": "contains",
+            "value": "contains"
+          }
+        ]
+      },
+      {
+        "key": "right",
+        "label": "Right value",
+        "type": "string",
+        "required": true
+      }
+    ],
+    "source": "native"
+  },
+  {
     "id": "control.condition",
     "category": "control",
     "label": "Condition",
@@ -571,6 +685,14 @@
           {
             "label": "contains",
             "value": "contains"
+          },
+          {
+            "label": "is true",
+            "value": "true"
+          },
+          {
+            "label": "is false",
+            "value": "false"
           }
         ]
       },
@@ -579,6 +701,210 @@
         "label": "Right value",
         "type": "string",
         "required": true
+      }
+    ],
+    "source": "native"
+  },
+  {
+    "id": "control.nand",
+    "category": "control",
+    "label": "NAND",
+    "description": "Outputs false only when both A and B are true.",
+    "isTrigger": false,
+    "controlInputs": null,
+    "controlOutputs": null,
+    "dataInputs": [
+      {
+        "id": "a",
+        "label": "A",
+        "type": "bool"
+      },
+      {
+        "id": "b",
+        "label": "B",
+        "type": "bool"
+      }
+    ],
+    "dataOutputs": [
+      {
+        "id": "value",
+        "label": "Value",
+        "type": "bool"
+      }
+    ],
+    "configSchema": [
+      {
+        "key": "a",
+        "label": "A",
+        "type": "bool",
+        "default": false
+      },
+      {
+        "key": "b",
+        "label": "B",
+        "type": "bool",
+        "default": false
+      }
+    ],
+    "source": "native"
+  },
+  {
+    "id": "control.nor",
+    "category": "control",
+    "label": "NOR",
+    "description": "Outputs true only when neither A nor B is true.",
+    "isTrigger": false,
+    "controlInputs": null,
+    "controlOutputs": null,
+    "dataInputs": [
+      {
+        "id": "a",
+        "label": "A",
+        "type": "bool"
+      },
+      {
+        "id": "b",
+        "label": "B",
+        "type": "bool"
+      }
+    ],
+    "dataOutputs": [
+      {
+        "id": "value",
+        "label": "Value",
+        "type": "bool"
+      }
+    ],
+    "configSchema": [
+      {
+        "key": "a",
+        "label": "A",
+        "type": "bool",
+        "default": false
+      },
+      {
+        "key": "b",
+        "label": "B",
+        "type": "bool",
+        "default": false
+      }
+    ],
+    "source": "native"
+  },
+  {
+    "id": "control.not",
+    "category": "control",
+    "label": "NOT",
+    "description": "Outputs the opposite of A.",
+    "isTrigger": false,
+    "controlInputs": null,
+    "controlOutputs": null,
+    "dataInputs": [
+      {
+        "id": "a",
+        "label": "A",
+        "type": "bool"
+      }
+    ],
+    "dataOutputs": [
+      {
+        "id": "value",
+        "label": "Value",
+        "type": "bool"
+      }
+    ],
+    "configSchema": [
+      {
+        "key": "a",
+        "label": "A",
+        "type": "bool",
+        "default": false
+      }
+    ],
+    "source": "native"
+  },
+  {
+    "id": "control.or",
+    "category": "control",
+    "label": "OR",
+    "description": "Outputs true when A or B, or both, are true.",
+    "isTrigger": false,
+    "controlInputs": null,
+    "controlOutputs": null,
+    "dataInputs": [
+      {
+        "id": "a",
+        "label": "A",
+        "type": "bool"
+      },
+      {
+        "id": "b",
+        "label": "B",
+        "type": "bool"
+      }
+    ],
+    "dataOutputs": [
+      {
+        "id": "value",
+        "label": "Value",
+        "type": "bool"
+      }
+    ],
+    "configSchema": [
+      {
+        "key": "a",
+        "label": "A",
+        "type": "bool",
+        "default": false
+      },
+      {
+        "key": "b",
+        "label": "B",
+        "type": "bool",
+        "default": false
+      }
+    ],
+    "source": "native"
+  },
+  {
+    "id": "control.xor",
+    "category": "control",
+    "label": "XOR",
+    "description": "Outputs true when exactly one of A and B is true.",
+    "isTrigger": false,
+    "controlInputs": null,
+    "controlOutputs": null,
+    "dataInputs": [
+      {
+        "id": "a",
+        "label": "A",
+        "type": "bool"
+      },
+      {
+        "id": "b",
+        "label": "B",
+        "type": "bool"
+      }
+    ],
+    "dataOutputs": [
+      {
+        "id": "value",
+        "label": "Value",
+        "type": "bool"
+      }
+    ],
+    "configSchema": [
+      {
+        "key": "a",
+        "label": "A",
+        "type": "bool",
+        "default": false
+      },
+      {
+        "key": "b",
+        "label": "B",
+        "type": "bool",
+        "default": false
       }
     ],
     "source": "native"

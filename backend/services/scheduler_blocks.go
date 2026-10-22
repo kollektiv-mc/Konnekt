@@ -287,16 +287,17 @@ func registerBuiltins(r *BlockRegistry) {
 		ConfigSchema: []models.ConfigField{
 			{Key: "left", Label: "Left value", Type: "string", Required: true},
 			{Key: "op", Label: "Operator", Type: "select", Default: "eq",
-				Options: []models.FieldOption{
-					{Label: "==", Value: "eq"}, {Label: "!=", Value: "ne"},
-					{Label: ">", Value: "gt"}, {Label: "<", Value: "lt"},
-					{Label: "contains", Value: "contains"},
-				}},
+				Options: append(comparisonOptions(),
+					// Unary: they read only the left operand, so a gate's output
+					// needs no constant on the other side to be branched on.
+					models.FieldOption{Label: "is true", Value: "true"},
+					models.FieldOption{Label: "is false", Value: "false"})},
 			{Key: "right", Label: "Right value", Type: "string", Required: true},
 		},
 		Source: "native",
 	}, execCondition))
 
+	registerLogicBlocks(r)
 	registerUploadBlock(r)
 	registerDHSnapshotBlock(r)
 	registerDHPublishBlock(r)
@@ -567,9 +568,41 @@ func execNotify(e *ExecContext) ExecResult {
 }
 
 func execCondition(e *ExecContext) ExecResult {
+	op := e.GetString("op")
+
+	// The unary operators test the left operand's truthiness and never look at
+	// the right, so they answer before the comparison below is set up. The raw
+	// value is read, not the string, because a wired true arrives as float64 1
+	// and the text "1" would have to be parsed back.
+	if op == "true" || op == "false" {
+		if truthy(e.Config["left"]) == (op == "true") {
+			return ExecResult{Port: "onTrue"}
+		}
+		return ExecResult{Port: "onFalse"}
+	}
+
+	if compareValues(e, op) {
+		return ExecResult{Port: "onTrue"}
+	}
+	return ExecResult{Port: "onFalse"}
+}
+
+// comparisonOptions is the operator list Condition and Compare share. It returns
+// a fresh slice because Condition appends to it.
+func comparisonOptions() []models.FieldOption {
+	return []models.FieldOption{
+		{Label: "==", Value: "eq"}, {Label: "!=", Value: "ne"},
+		{Label: ">", Value: "gt"}, {Label: "<", Value: "lt"},
+		{Label: "contains", Value: "contains"},
+	}
+}
+
+// compareValues answers one comparison of the node's "left" and "right" under
+// op (eq, ne, gt, lt, contains). Condition branches on it and Compare outputs
+// it, so the two cannot drift apart.
+func compareValues(e *ExecContext, op string) bool {
 	left := e.GetString("left")
 	right := e.GetString("right")
-	op := e.GetString("op")
 
 	// Two numeric operands compare as numbers. Comparing the rendered strings
 	// instead made "9" > "10" true, so every threshold rule branched wrong the
@@ -613,10 +646,7 @@ func execCondition(e *ExecContext) ExecResult {
 		result = cmp == 0
 	}
 
-	if result {
-		return ExecResult{Port: "onTrue"}
-	}
-	return ExecResult{Port: "onFalse"}
+	return result
 }
 
 func must(err error) {
