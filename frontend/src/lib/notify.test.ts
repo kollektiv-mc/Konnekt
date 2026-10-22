@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
-import { deliverScheduleNotify, emitDesktopNotification, emitNotification } from './notify'
+import { emitDesktopNotification, emitNotification } from './notify'
+import { deliverScheduleNotify } from './scheduleNotify'
 import { useNotificationsStore } from '../stores/useNotificationsStore'
 import { useSettingsStore } from '../stores/useSettingsStore'
 
