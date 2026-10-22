@@ -1,9 +1,14 @@
-/* Changelog page — lists GitHub releases, rendered by markdown.js. */
+/* Changelog page: GitHub releases as blocks, newest first, with the nightly
+   snapshot above them. Release bodies are rendered by markdown.js. */
 ;(function () {
   var R = window.KonnektRelease
   var MD = window.KonnektMarkdown
   if (!R || !MD) return
 
+  // Lines a section shows before "Show all".
+  var SHOWN = 6
+
+  var countEl = document.getElementById('cl-count')
   var loadingEl = document.getElementById('cl-loading')
   var listEl = document.getElementById('cl-list')
   var errorEl = document.getElementById('cl-error')
@@ -12,6 +17,7 @@
   var snapshotEl = document.getElementById('cl-snapshot')
   var snapshotMetaEl = document.getElementById('cl-snapshot-meta')
   var snapshotBodyEl = document.getElementById('cl-snapshot-body')
+  var snapshotToggle = document.getElementById('cl-snapshot-toggle')
 
   function el(tag, cls, text) {
     var n = document.createElement(tag)
@@ -20,30 +26,214 @@
     return n
   }
 
+  // ── Sections ───────────────────────────────────────────────────────────
+  // A release body renders to headings and lists. A section is a heading and
+  // the bulleted lines under it: "Features", "Fixes", or on the hand-written
+  // first release "What's included". Paragraphs and numbered steps (install
+  // instructions) are left out; GitHub has them. A body with no such section
+  // at all is shown rendered whole rather than as nothing.
+  function sectionsOf(markdown) {
+    var doc = document.createElement('div')
+    // aislop-ignore-next-line security/innerhtml -- MD.render HTML-escapes its input before formatting and restricts link schemes (markdown.js)
+    doc.innerHTML = MD.render(markdown)
+    var sections = []
+    var current = null
+    ;[].slice.call(doc.children).forEach(function (node) {
+      if (/^H[1-6]$/.test(node.tagName)) {
+        current = { name: node.textContent.trim(), items: [] }
+        sections.push(current)
+      } else if (node.tagName === 'UL') {
+        if (!current) {
+          current = { name: 'Changes', items: [] }
+          sections.push(current)
+        }
+        ;[].slice.call(node.children).forEach(function (li) {
+          current.items.push(li)
+        })
+      }
+    })
+    return {
+      doc: doc,
+      sections: sections.filter(function (s) {
+        return s.items.length
+      }),
+    }
+  }
+
+  function renderSection(sec, all) {
+    var wrap = el('div', 'changes')
+    var head = el('div', 'changes-head')
+    head.appendChild(el('span', null, sec.name))
+    head.appendChild(el('span', null, String(sec.items.length)))
+    wrap.appendChild(head)
+
+    var list = el('ul', 'changes-list')
+    sec.items.forEach(function (li, i) {
+      if (!all && i >= SHOWN) li.hidden = true
+      list.appendChild(li)
+    })
+    wrap.appendChild(list)
+
+    if (!all && sec.items.length > SHOWN) {
+      var more = el('button', 'changes-more', 'Show all ' + sec.items.length)
+      more.type = 'button'
+      more.setAttribute('aria-expanded', 'false')
+      more.addEventListener('click', function () {
+        var open = more.getAttribute('aria-expanded') !== 'true'
+        more.setAttribute('aria-expanded', open ? 'true' : 'false')
+        more.textContent = open ? 'Show fewer' : 'Show all ' + sec.items.length
+        sec.items.forEach(function (li, i) {
+          if (i >= SHOWN) li.hidden = !open
+        })
+      })
+      wrap.appendChild(more)
+    }
+    return wrap
+  }
+
+  // The accounting footer release-notes.py writes after the last section,
+  // which changesOnly cuts off: "52 pull requests are not listed: …".
+  var NOT_LISTED = /^_([^\n]*\bnot listed\b[^\n]*)_\s*$/im
+  var GENERATED = /^##\s+What's changed\s*$/im
+
+  function renderRelease(rel, isLatest) {
+    var tag = rel.tag_name || rel.name || 'Untitled'
+    var parsed = sectionsOf(R.changesOnly(rel.body))
+
+    var card = el('article', 'release block' + (isLatest ? ' is-latest' : ''))
+    var side = el('div', 'release-side')
+    var sticky = el('div', 'release-sticky')
+    if (isLatest) {
+      var badge = el('span', 'release-badge')
+      var dot = el('span', 'release-dot')
+      dot.setAttribute('aria-hidden', 'true')
+      badge.appendChild(dot)
+      badge.appendChild(document.createTextNode('Latest'))
+      sticky.appendChild(badge)
+    }
+    sticky.appendChild(el('h2', 'release-tag', tag))
+    var date = R.formatDate(rel.published_at)
+    if (date) sticky.appendChild(el('span', 'meta', date))
+    // Counted only for a generated body, whose sections are Features and Fixes.
+    // A hand-written one names its own, which do not read as a count.
+    if (GENERATED.test(String(rel.body || '')) && parsed.sections.length) {
+      sticky.appendChild(
+        el(
+          'span',
+          'release-summary',
+          parsed.sections
+            .map(function (s) {
+              return s.items.length + ' ' + s.name.toLowerCase()
+            })
+            .join(', ') + '.',
+        ),
+      )
+    }
+    var actions = el('div', 'release-actions')
+    if (isLatest) {
+      var dl = el('a', 'btn btn-primary btn-small', 'Download')
+      dl.href = '/download.html'
+      actions.appendChild(dl)
+    }
+    var gh = el('a', 'btn btn-secondary btn-small', 'On GitHub')
+    gh.href = rel.html_url || R.RELEASES_URL
+    gh.target = '_blank'
+    gh.rel = 'noopener'
+    actions.appendChild(gh)
+    sticky.appendChild(actions)
+    side.appendChild(sticky)
+    card.appendChild(side)
+
+    var main = el('div', 'release-main')
+    var cols = el('div', 'release-sections')
+    if (parsed.sections.length) {
+      parsed.sections.forEach(function (sec) {
+        cols.appendChild(renderSection(sec, false))
+      })
+    } else {
+      parsed.doc.className = 'md'
+      cols.appendChild(parsed.doc)
+    }
+    main.appendChild(cols)
+    var note = NOT_LISTED.exec(String(rel.body || ''))
+    if (note) main.appendChild(el('p', 'release-note', note[1]))
+    card.appendChild(main)
+    return card
+  }
+
+  // The snapshot's notes are generated against the newest release, not the
+  // previous snapshot (.github/workflows/snapshot.yml), so the body is already
+  // everything not yet released.
+  function renderSnapshot(rel) {
+    var parsed = sectionsOf(R.changesOnly(rel.body))
+    if (!parsed.sections.length) return
+    var total = 0
+    parsed.sections.forEach(function (sec) {
+      total += sec.items.length
+      snapshotBodyEl.appendChild(renderSection(sec, true))
+    })
+
+    var built = R.formatDate(rel.published_at)
+    var sha = R.shortSha(rel.target_commitish)
+    snapshotMetaEl.textContent = ['Built from main', built, sha ? 'commit ' + sha : '']
+      .filter(Boolean)
+      .join(' · ')
+
+    var label = function (open) {
+      return (open ? 'Hide ' : 'Show ') + total + (total === 1 ? ' change' : ' changes')
+    }
+    snapshotToggle.textContent = label(false)
+    snapshotToggle.addEventListener('click', function () {
+      var open = snapshotToggle.getAttribute('aria-expanded') !== 'true'
+      snapshotToggle.setAttribute('aria-expanded', open ? 'true' : 'false')
+      snapshotToggle.textContent = label(open)
+      snapshotBodyEl.hidden = !open
+    })
+    snapshotEl.hidden = false
+  }
+
+  function render(releases) {
+    // The rolling `snapshot` prerelease is a moving build of main, not a
+    // released version; it has its own block above the list.
+    var visible = releases.filter(function (r) {
+      return !r.draft && r.tag_name !== R.SNAPSHOT_TAG
+    })
+    if (!visible.length) {
+      showState('No releases yet', 'Nothing has been published.')
+      return
+    }
+    visible.forEach(function (rel, idx) {
+      listEl.appendChild(renderRelease(rel, idx === 0))
+    })
+    var first = R.formatDate(visible[visible.length - 1].published_at)
+    countEl.textContent =
+      visible.length +
+      (visible.length === 1 ? ' release' : ' releases') +
+      (first ? ' since ' + first : '')
+    countEl.hidden = false
+    loadingEl.hidden = true
+    listEl.hidden = false
+  }
+
+  function showState(title, msg) {
+    loadingEl.hidden = true
+    errorTitle.textContent = title
+    errorMsg.textContent = msg
+    errorEl.hidden = false
+  }
+
   // ── One line, one pull request ─────────────────────────────────────────
   // Each bullet in a generated release body is a merged pull request's title,
   // so a title that resolves against the map turns its whole line into a link
   // to that pull request with the merge date after it. A line that resolves
-  // against nothing is left exactly as it renders now: hand-written notes
-  // (v0.1.0-alpha.1 has no generated section at all) and a rate-limited fetch
-  // both land there, and an invented date would be worse than none.
-  //
-  // The whole line is the target rather than the date alone. What a reader
-  // wants is the change, not a stamp at the end of it, and a 7-character hit
-  // area beside a sentence is the worse click of the two.
+  // against nothing is left as it rendered: hand-written notes and a
+  // rate-limited fetch both land there, and an invented date would be worse
+  // than none.
   function decorate(root, pulls) {
     if (!pulls) return
-    ;[].slice.call(root.querySelectorAll('.md li')).forEach(function (li) {
-      // A title carrying its own markdown link would nest anchors, which is
-      // invalid and would swallow the inner one's target. Rare, and cheaper to
-      // skip than to unpick.
-      if (li.querySelector('a') || li.querySelector('.change-pr')) return
-
-      // textContent against the pull request's own title, both whitespace
-      // collapsed, which is exactly what release-notes.py wrote the bullet
-      // from. A title carrying markdown would render to something other than
-      // its source and miss — none of the repo's 113 merged titles has a
-      // backtick, asterisk or bracket in it, and a miss costs a plain line.
+    ;[].slice.call(root.querySelectorAll('.changes-list li')).forEach(function (li) {
+      // A title carrying its own markdown link would nest anchors.
+      if (li.querySelector('a')) return
       var pull = pulls[R.normalizeTitle(li.textContent)]
       if (!pull) return
 
@@ -56,8 +246,6 @@
       var short = R.formatShortDate(pull.mergedAt)
       if (short) {
         var stamp = el('span', 'change-date', short)
-        // The long date and the number, for anyone who wants to know what the
-        // line points at before clicking it.
         stamp.title = 'Merged ' + R.formatDate(pull.mergedAt) + ' in #' + pull.number
         link.appendChild(document.createTextNode(' '))
         link.appendChild(stamp)
@@ -66,103 +254,15 @@
     })
   }
 
-  function renderRelease(rel, isLatest) {
-    var wrap = el('article', 'release')
-
-    var head = el('div', 'release-head')
-    var version = el('h2', 'release-version')
-    version.appendChild(document.createTextNode(rel.name || rel.tag_name || 'Untitled'))
-    if (isLatest) version.appendChild(el('span', 'release-latest', 'LATEST'))
-    if (rel.prerelease) version.appendChild(el('span', 'release-latest', 'PRE-RELEASE'))
-    head.appendChild(version)
-    var date = R.formatDate(rel.published_at)
-    if (date) head.appendChild(el('span', 'release-date', date))
-    wrap.appendChild(head)
-
-    var body = el('div', 'md')
-    var notes = R.changesOnly(rel.body)
-    if (notes) {
-      // aislop-ignore-next-line security/innerhtml -- MD.render HTML-escapes its input before formatting and restricts link schemes (markdown.js)
-      body.innerHTML = MD.render(notes)
-    } else {
-      body.appendChild(el('p', null, 'No notes.'))
-    }
-    wrap.appendChild(body)
-    return wrap
-  }
-
-  // The snapshot's notes are generated against the newest release, not against
-  // the previous snapshot (.github/workflows/snapshot.yml), so the body is
-  // already "everything not yet released" and needs no assembling here.
-  //
-  // Only the changes are shown. The body's preamble says what a snapshot is and
-  // that it can be broken, which this card already carries above — see the
-  // disclaimer in changelog.html, which used to be that preamble's job.
-  function renderSnapshot(rel) {
-    var notes = R.changesOnly(rel.body)
-    if (!notes) return
-    // aislop-ignore-next-line security/innerhtml -- MD.render HTML-escapes its input before formatting and restricts link schemes (markdown.js)
-    snapshotBodyEl.innerHTML = MD.render(notes)
-
-    var built = R.formatDate(rel.published_at)
-    var sha = R.shortSha(rel.target_commitish)
-    snapshotMetaEl.textContent = [built ? 'built ' + built : '', sha ? 'commit ' + sha : '']
-      .filter(Boolean)
-      .join(' · ')
-
-    snapshotEl.classList.remove('is-hidden')
-  }
-
-  function render(releases) {
-    var visible = releases.filter(function (r) {
-      // The rolling `snapshot` prerelease is a moving build of main, not a
-      // released version. It would sit at the top of this list wearing a
-      // LATEST badge, above the releases it isn't one of; it belongs on the
-      // download page instead.
-      return !r.draft && r.tag_name !== R.SNAPSHOT_TAG
-    })
-    if (!visible.length) {
-      showEmpty()
-      return
-    }
-    listEl.innerHTML = ''
-    visible.forEach(function (rel, idx) {
-      listEl.appendChild(renderRelease(rel, idx === 0))
-    })
-    loadingEl.classList.add('is-hidden')
-    listEl.classList.remove('is-hidden')
-  }
-
-  function showEmpty() {
-    loadingEl.classList.add('is-hidden')
-    errorEl.classList.remove('is-error')
-    errorTitle.textContent = 'No releases yet'
-    errorMsg.textContent = 'No releases published yet.'
-    errorEl.classList.remove('is-hidden')
-  }
-
-  function showError(msg) {
-    loadingEl.classList.add('is-hidden')
-    errorTitle.textContent = "Couldn't load the changelog"
-    errorMsg.textContent = msg
-    errorEl.classList.remove('is-hidden')
-  }
-
-  // In flight from the first frame alongside the pair below, but deliberately
-  // not part of it: the dates are decoration on a page that is a changelog
-  // without them, and three more requests are not worth holding the first paint
-  // for. It decorates whatever has rendered by the time it lands, and on a
-  // repeat visit the cache makes that the first frame anyway.
+  // In flight from the first frame, but not awaited with the pair below: the
+  // dates are decoration on a page that is a changelog without them.
   var pullsPromise = R.fetchMergedPulls().catch(function () {
     return null
   })
 
-  // Both requests are awaited together so the page resolves once. Rendering
-  // the snapshot on its own clock would drop a block in above the list after
-  // it had already been read. The snapshot is the optional half: a 404 (none
-  // published), a rate limit or an outage leaves it out and the list alone is
-  // still the changelog, so its failure is swallowed here rather than
-  // rejecting the pair.
+  // Both awaited together so the page resolves once. The snapshot is the
+  // optional half: a 404 (none published), a rate limit or an outage leaves it
+  // out and the list alone is still the changelog.
   Promise.all([
     R.fetchList(),
     R.fetchSnapshot().catch(function () {
@@ -176,11 +276,12 @@
       if (snapshot.ok && snapshot.data) renderSnapshot(snapshot.data)
 
       if (list.status === 404) {
-        showEmpty()
+        showState('No releases yet', 'Nothing has been published.')
         return
       }
       if (!list.ok) {
-        showError(
+        showState(
+          'Could not load the changelog',
           list.status === 403
             ? 'GitHub rate limit hit. Try again later.'
             : 'GitHub returned status ' + list.status + '.',
@@ -190,11 +291,10 @@
       render(Array.isArray(list.data) ? list.data : [])
     })
     .catch(function () {
-      showError('Check your connection and try again.')
+      showState('Could not load the changelog', 'Check your connection and try again.')
     })
-    // After the page has resolved either way, and swallowing its own failures:
-    // this runs past the catch above, so a throw in here would otherwise put
-    // "check your connection" over a changelog that rendered fine.
+    // After the page has resolved either way, swallowing its own failures, so
+    // a throw in here never puts an error over a changelog that rendered.
     .then(function () {
       return pullsPromise
         .then(function (pulls) {
