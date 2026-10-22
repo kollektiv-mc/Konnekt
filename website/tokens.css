@@ -8,8 +8,8 @@
  * scripts/sync-tokens.sh, then `pnpm gen:tokens` from `frontend/`.
  */
 
-/* Linked by every page ahead of /styles.css, which reads these and adds the
-   page vocabulary that is not a token (--max-width, --nav-h, --section-y). */
+/* Linked by every page ahead of /site.css, which reads these and adds the
+   page vocabulary that is not a token (--pad, --nav-h, --lift-shadow). */
 :root {
   --bg-base: #05060a;
   --bg-elevated: rgba(18, 20, 30, 0.82);

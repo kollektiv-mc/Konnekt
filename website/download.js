@@ -1,14 +1,15 @@
-/* Download page — detects platform and wires the download buttons from the
+/* Download page: detects the platform and wires the download buttons from the
    latest GitHub release's assets. The detected platform seeds the primary
    card; the "All downloads" grid below switches it, so a visitor on Linux can
-   still reach the Windows build (or read how to build the one that isn't
-   published) without leaving for GitHub. */
+   still reach the Windows build without leaving for GitHub. Only platforms
+   with a published build are offered: macOS builds from source, which the
+   docs cover. */
 ;(function () {
   var R = window.KonnektRelease
   if (!R) return
 
   var loadingEl = document.getElementById('dl-loading')
-  var contentEl = document.getElementById('dl-content')
+  var allEl = document.getElementById('dl-all')
   var errorEl = document.getElementById('dl-error')
   var errorMsg = document.getElementById('dl-error-msg')
   var errorTitle = document.getElementById('dl-error-title')
@@ -30,11 +31,15 @@
   }
 
   function show(node) {
-    node.classList.remove('is-hidden')
+    node.hidden = false
   }
   function hide(node) {
-    node.classList.add('is-hidden')
+    node.hidden = true
   }
+
+  var PLATFORMS = R.PLATFORMS.filter(function (p) {
+    return p.match
+  })
 
   // The release being shown. renderOthers' click handlers re-enter the render
   // path long after fetchLatest resolved, so what they need is held here
@@ -42,38 +47,30 @@
   var current = { assets: [], version: '' }
 
   // Everything the primary card says lives in here rather than directly in
-  // #dl-primary. The card is chrome — a border, a background and a shadow that
-  // should sit still while its contents change — and this is the one box that
-  // survives a re-render, so it is what the swap below animates.
+  // #dl-primary, the one box that survives a re-render, so it is what the
+  // swap below animates.
   var primaryInner = el('div', 'dl-primary-inner')
   primaryEl.appendChild(primaryInner)
 
   // ── Swapping the primary card ────────────────────────────────────────────
   // Picking a platform rewrites the card's contents in one synchronous pass,
-  // which lands as a hard cut in the middle of a page where everything else
-  // arrives on an animation. A short fade and a shade of scale either side of
-  // the swap reads as the same card answering a different question.
+  // which lands as a hard cut. A short fade and a shade of scale either side
+  // of the swap reads as the same card answering a different question.
   //
-  // Only the contents, and only this card's. The card's own frame holds still,
-  // per primaryInner above; and the grid below is rebuilt element by element,
-  // so its cards already carry .dl-grid > .dl-card's staggered intro-in —
-  // fading the grid as a whole on top of that would just muddy it.
-  //
-  // The duration comes off the shared motion token rather than a number of its
-  // own, the way backdrop.js takes its colours off the palette tokens.
+  // The duration and easing come off the shared motion tokens rather than
+  // numbers of their own.
   var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
-  var SWAP_MS =
-    parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--duration-fast')) ||
-    150
-  var SWAP_EASE = 'cubic-bezier(0.4, 0, 0.2, 1)'
+  var rootStyle = getComputedStyle(document.documentElement)
+  var SWAP_MS = parseFloat(rootStyle.getPropertyValue('--duration-fast')) || 150
+  var SWAP_EASE = rootStyle.getPropertyValue('--ease-standard').trim() || 'ease'
   var swapAnim = null
   var swapTimer = 0
   var seeded = false
 
   function swapPrimary(render) {
-    // The first render is the page arriving, and .download-primary has its own
-    // intro-in for that. Anything without the Web Animations API, or asking for
-    // less motion, gets the plain swap.
+    // The first render is the page arriving, which needs no swap. Anything
+    // without the Web Animations API, or asking for less motion, gets the
+    // plain swap.
     if (!seeded || reduceMotion || !primaryInner.animate) {
       seeded = true
       render()
@@ -141,47 +138,39 @@
 
   function renderPrimaryAvailable(platform, asset, version) {
     primaryInner.innerHTML = ''
-    primaryInner.appendChild(el('div', 'dl-os-icon', platform.tag))
     primaryInner.appendChild(el('h2', null, 'Konnekt for ' + platform.name))
     primaryInner.appendChild(
       el(
         'p',
-        'dl-meta',
+        'meta',
         [version, R.formatBytes(asset.size), platform.desc].filter(Boolean).join(' · '),
       ),
     )
-    var btn = el('a', 'btn btn-primary', 'Download ' + platform.tag + ' build')
+    var btn = el('a', 'btn btn-primary', 'Download for ' + platform.name)
     btn.href = asset.browser_download_url
     btn.setAttribute('download', '')
     primaryInner.appendChild(btn)
   }
 
-  // The same four slots as above, filled differently. Nothing pins the card's
-  // height, so dropping the .dl-meta line here — as this used to — pulled the
-  // button up by a line and its 22px margin the moment you picked a platform
-  // with no build, which read as the card twitching rather than as an answer.
-  // The heading stays "Konnekt for ..." for the same reason: switching
-  // platforms should change what the card says about the build, not what it
-  // says it is about.
+  // The same three slots as above, filled differently, so the card keeps its
+  // height: switching platforms should change what the card says about the
+  // build, not what it says it is about.
   function renderPrimaryUnavailable(platform) {
     primaryInner.innerHTML = ''
-    primaryInner.appendChild(el('div', 'dl-os-icon', platform ? platform.tag : '?'))
     primaryInner.appendChild(
       el('h2', null, platform ? 'Konnekt for ' + platform.name : 'Choose your platform'),
     )
     primaryInner.appendChild(
-      el('p', 'dl-meta', platform ? 'No ' + platform.name + ' build yet' : 'Pick a platform below'),
+      el('p', 'meta', platform ? 'Not in this release' : 'Every build is listed below'),
     )
-    var btn = el('a', 'btn btn-primary', 'Build from source')
-    btn.href = R.REPO_URL
-    btn.target = '_blank'
-    btn.rel = 'noopener'
+    var btn = el('a', 'btn btn-secondary', 'Build from source')
+    btn.href = '/docs/install.html#build-from-source'
     primaryInner.appendChild(btn)
   }
 
   function renderOthers(primaryPlatform, assets) {
     gridEl.innerHTML = ''
-    R.PLATFORMS.forEach(function (p) {
+    PLATFORMS.forEach(function (p) {
       if (primaryPlatform && p.id === primaryPlatform.id) return
       var asset = R.matchAsset(p, assets)
       var card = el('button', 'dl-card')
@@ -203,14 +192,13 @@
   // ── Snapshot channel ─────────────────────────────────────────────────────
   // The rolling `snapshot` prerelease, rebuilt from main. Unlike the grid
   // above it lists only platforms that actually have an asset: the release
-  // above already says which platforms exist, and repeating "Coming soon"
-  // here would read as a promise about snapshots specifically.
+  // above already says which platforms exist.
 
   function renderSnapshot(rel) {
     snapshotGridEl.innerHTML = ''
     var count = 0
 
-    R.PLATFORMS.forEach(function (p) {
+    PLATFORMS.forEach(function (p) {
       var asset = R.matchAsset(p, rel.assets || [])
       if (!asset) return
       var card = el('a', 'dl-card')
@@ -250,19 +238,15 @@
     var date = R.formatDate(rel.published_at)
     var assets = rel.assets || []
 
-    versionPill.innerHTML = ''
-    versionPill.appendChild(el('span', 'dot'))
-    versionPill.appendChild(
-      document.createTextNode(' ' + [version, date].filter(Boolean).join(' · ')),
-    )
+    versionPill.textContent = [version, date].filter(Boolean).join(' · ')
 
     current.assets = assets
     current.version = version
 
-    // An undetected platform seeds nothing, so the grid below lists every
-    // platform and the primary card asks which one you want.
-    var detected = R.detectPlatform()
-    selectPlatform(detected === 'unknown' ? null : R.platformById(detected))
+    // An undetected platform, or one with no published build, seeds nothing,
+    // so the grid below lists every build and the card asks which you want.
+    var detected = R.platformById(R.detectPlatform())
+    selectPlatform(detected && detected.match ? detected : null)
 
     footnoteEl.innerHTML = ''
     var relLink = el('a', null, 'All releases on GitHub')
@@ -272,19 +256,17 @@
     footnoteEl.appendChild(relLink)
 
     hide(loadingEl)
-    show(contentEl)
+    show(primaryEl)
+    show(allEl)
   }
 
   function setPill(text) {
-    versionPill.innerHTML = ''
-    versionPill.appendChild(el('span', 'dot'))
-    versionPill.appendChild(document.createTextNode(' ' + text))
+    versionPill.textContent = text
   }
 
   function showEmpty() {
     hide(loadingEl)
-    setPill('alpha · not yet released')
-    errorEl.classList.remove('is-error')
+    setPill('Not yet released')
     errorTitle.textContent = 'No public build yet'
     errorMsg.textContent = 'No release has been published yet.'
     show(errorEl)
@@ -292,7 +274,7 @@
 
   function showError(msg) {
     hide(loadingEl)
-    setPill('version unavailable')
+    setPill('Version unavailable')
     errorTitle.textContent = "Couldn't reach GitHub"
     errorMsg.textContent = msg
     show(errorEl)

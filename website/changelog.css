@@ -74,10 +74,6 @@
   border-top: 1px solid rgb(var(--sun-rgb) / 0.18);
 }
 
-.snapshot-body[hidden] {
-  display: none;
-}
-
 .snapshot-body .changes {
   flex: 1 1 420px;
 }
@@ -218,10 +214,6 @@
   line-height: 1.5;
 }
 
-.changes-list li[hidden] {
-  display: none;
-}
-
 .change-pr {
   display: block;
   color: var(--text-primary);
@@ -271,10 +263,6 @@
   color: var(--text-secondary);
 }
 
-.cl-state[hidden] {
-  display: none;
-}
-
 .cl-state p {
   margin: 0;
 }
@@ -305,8 +293,4 @@
   .release-sticky {
     position: static;
   }
-}
-
-.cl-list[hidden] {
-  display: none;
 }

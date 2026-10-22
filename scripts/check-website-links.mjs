@@ -12,8 +12,7 @@
 //   2. Every #fragment resolves to an id on the page it points at
 //   3. Every CSS url() resolves, relative to the stylesheet
 //   4. sitemap.xml both ways: every <loc> resolves, and every page is listed
-//   5. Every page links the stylesheets in REQUIRED_STYLESHEETS, and exactly
-//      one of PAGE_STYLESHEETS
+//   5. Every page links the stylesheets in REQUIRED_STYLESHEETS
 //
 // What it deliberately does NOT check:
 //   - Anything a .js file builds at runtime. No JS is parsed at all, which is
@@ -35,9 +34,7 @@ import path from 'node:path'
 
 const SITE = path.join(import.meta.dirname, '..', 'website')
 const ORIGIN = 'https://konnekt.pages.dev'
-const REQUIRED_STYLESHEETS = ['/tokens.css']
-// Pages move from styles.css to site.css one at a time; each links one of them.
-const PAGE_STYLESHEETS = ['/styles.css', '/site.css']
+const REQUIRED_STYLESHEETS = ['/tokens.css', '/site.css']
 const URL_META = new Set(['og:image', 'og:url', 'twitter:image'])
 
 // A check that could not run is a failure to report, not a silent pass — the
@@ -132,8 +129,6 @@ for (const page of pages) {
   for (const required of REQUIRED_STYLESHEETS) {
     if (!sheets.includes(required)) fail(page, `does not link ${required}`)
   }
-  const base = PAGE_STYLESHEETS.filter((s) => sheets.includes(s))
-  if (base.length !== 1) fail(page, `links ${base.length} of ${PAGE_STYLESHEETS.join(', ')}, not one`)
 }
 
 // 3 — CSS url() references, resolved against the stylesheet that holds them.

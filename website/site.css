@@ -1,7 +1,7 @@
 /* The site's shared sheet, in the "Blocks" style of docs/design/website/: every
    section a bordered block on the page ground, square corners, a numbered head
    band, Geist and Geist Mono. Pages link /tokens.css, then this, then their own
-   sheet (home.css, …). Pages not yet moved to it still link /styles.css.
+   sheet (home.css, …).
 
    Colours, font stacks, durations and easings are tokens, generated into
    /tokens.css from the vendored tokens.source.json. Never redeclare one here:
@@ -94,6 +94,12 @@ h2 {
 
 .mono {
   font-family: var(--font-site-mono);
+}
+
+/* The attribute wins over any display a class sets, so a script can hide a
+   flex or grid element without a rule of its own for it. */
+[hidden] {
+  display: none !important;
 }
 
 button {
@@ -293,6 +299,14 @@ button {
   background: var(--hover-surface);
 }
 
+/* A row of buttons. */
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding-top: 8px;
+}
+
 /* ── Head band: a number and a title ────────────────────────────────────── */
 
 .band {
@@ -343,6 +357,34 @@ button {
   color: var(--text-secondary);
 }
 
+/* ── Code: inline in prose, and blocks of commands ──────────────────────── */
+
+code {
+  padding: 1px 6px;
+  border: var(--hairline);
+  background: var(--bg-overlay);
+  font-family: var(--font-site-mono);
+  font-size: 0.88em;
+}
+
+pre {
+  margin: 0;
+  padding: 18px 20px;
+  overflow-x: auto;
+  border: var(--hairline);
+  background: var(--bg-overlay);
+  font-family: var(--font-site-mono);
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+pre code {
+  padding: 0;
+  border: 0;
+  background: none;
+  font-size: inherit;
+}
+
 /* ── Page hero: the title in one half, what the page is about in the other ─ */
 
 .page-hero {
@@ -374,6 +416,13 @@ button {
 .page-hero-side {
   justify-content: flex-end;
   background: var(--bg-surface);
+}
+
+.page-hero-side > p {
+  margin: 0;
+  font-size: 18px;
+  line-height: 1.55;
+  color: var(--text-secondary);
 }
 
 /* ── Stages: one colour per release stage, from the status tokens ────────
