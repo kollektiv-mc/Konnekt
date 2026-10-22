@@ -385,3 +385,7 @@ button {
     padding: 8px 20px;
   }
 }
+
+.row[hidden] {
+  display: none;
+}
