@@ -319,6 +319,7 @@ function GraphEditorInner({
           tone: 'error',
           title: 'Scheduler error',
           text: schedulerError,
+          standing: true,
         },
         force,
       )
@@ -1017,8 +1018,9 @@ function GraphEditorInner({
 
   // The warnings in full go to a bubble; the toolbar says how many there are.
   // It outlives the editor, so closing the scheduler does not take the warning
-  // with it, and it goes when the canvas no longer earns it. Reopening the same
-  // canvas finds it already up and leaves it be, rather than counting a repeat.
+  // with it, and it goes when the canvas no longer earns it. A standing bubble:
+  // once dismissed it stays dismissed for the session, on every graph, and the
+  // toolbar's list is where the warnings are read from then on.
   // One warning to a line, each led by the block it is about.
   const warningText = useMemo(
     () => warningRows(warnings, nodes).map(warningLine).join('\n'),
@@ -1030,16 +1032,13 @@ function GraphEditorInner({
       withdrawToast(TOAST_WARNING)
       return
     }
-    const open = useNotificationsStore
-      .getState()
-      .toasts.some((t) => t.key === TOAST_WARNING && t.text === warningText)
-    if (open) return
     showToast({
       key: TOAST_WARNING,
       category: 'warnings',
       tone: 'warn',
       title: 'Scheduler warning',
       text: warningText,
+      standing: true,
     })
   }, [warningText])
 

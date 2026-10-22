@@ -96,14 +96,13 @@ describe('Toasts', () => {
     expect(screen.getByRole('button', { name: 'Dismiss all' })).toBeTruthy()
   })
 
-  it('draws a resurfacing bubble at the bottom, under the older ones', () => {
+  it('draws a repeated bubble at the bottom, under the older ones', () => {
     const { showToast } = useNotificationsStore.getState()
     const tps = {
       key: 'run',
       category: 'errors',
       tone: 'error',
       title: 'Run failed',
-      resurface: true,
     } as const
     showToast({ ...tps, text: 'TPS 12' })
     showToast({ category: 'update', tone: 'info', title: 'Update', text: 'v1.2.0' })

@@ -37,6 +37,8 @@ export interface Toast {
   timestamp: string
   /** How many times this exact text arrived while the bubble was open. */
   count: number
+  /** See `ToastInput.standing`. */
+  standing?: boolean
 }
 
 export interface ToastInput {
@@ -46,12 +48,14 @@ export interface ToastInput {
   title: string
   text: string
   /**
-   * Each arrival is news, so it shows even when a bubble with the same key and
-   * text was dismissed: a failed run, which a re-run can fail with the same
-   * reason. Without it a dismissal holds until the text changes, which suits a
-   * condition that is still standing, like a graph's warnings.
+   * A condition that holds until something changes (a graph's warnings, a
+   * scheduler error) rather than something that happened. It updates in place
+   * as its text changes, and once dismissed it stays dismissed for the session
+   * whatever its text becomes: the indicator that stands in for it brings it
+   * back with `force`. Every other bubble is news each time it arrives (a
+   * failed run, a crash), so a dismissal only closes it.
    */
-  resurface?: boolean
+  standing?: boolean
 }
 
 let notifId = 0
@@ -70,6 +74,13 @@ function clock(): string {
   })
 }
 
+/** Adds the standing ones among `toasts` to the dismissed keys; news is not remembered. */
+function remember(dismissed: Record<string, true>, toasts: readonly Toast[]): Record<string, true> {
+  const standing = toasts.filter((t) => t.standing)
+  if (standing.length === 0) return dismissed
+  return { ...dismissed, ...Object.fromEntries(standing.map((t) => [t.key, true as const])) }
+}
+
 interface NotificationsStore {
   items: NotifItem[]
   push: (kind: NotifKind, text: string) => void
@@ -77,15 +88,12 @@ interface NotificationsStore {
 
   /** Oldest first; the layer draws the newest at the bottom, nearest the corner. */
   toasts: Toast[]
+  /** The keys of the standing bubbles dismissed this session. */
+  dismissedToasts: Record<string, true>
   /**
-   * The text each key was dismissed with, for the session. The same text under
-   * the same key stays dismissed; a different one is news and shows again.
-   */
-  dismissedToasts: Record<string, string>
-  /**
-   * Opens a bubble, or updates the open one with the same key; one that
-   * resurfaces moves to the bottom, where the newest sits. `force` is for the user asking to
-   * see it again, and overrides an earlier dismissal.
+   * Opens a bubble, or updates the open one with the same key. News moves it
+   * to the bottom, where the newest sits. `force` is for the user asking to see
+   * it again, and overrides an earlier dismissal.
    */
   showToast: (input: ToastInput, force?: boolean) => void
   dismissToast: (id: number) => void
@@ -111,24 +119,25 @@ export const useNotificationsStore = create<NotificationsStore>((set) => ({
     set((s) => {
       let dismissedToasts = s.dismissedToasts
       if (key in dismissedToasts) {
-        if (!force && !input.resurface && dismissedToasts[key] === input.text) return s
+        if (!force) return s
         dismissedToasts = { ...dismissedToasts }
         delete dismissedToasts[key]
       }
       const timestamp = clock()
       const open = s.toasts.find((t) => t.key === key)
       if (open) {
-        const count = open.text === input.text ? open.count + 1 : 1
-        // A forced reopen of a bubble that is already up is the user looking
-        // for it, not a repeat, so it does not bump the count.
-        const next = { ...open, ...input, key, timestamp, count: force ? open.count : count }
-        // News moves down to the newest place: an arrival that resurfaces (a
-        // failed run) or the user asking for the bubble. It keeps its id, so
-        // the card glides there rather than leaving and arriving again. A
-        // standing condition (a TPS reading, a graph's warnings as it is
-        // edited) updates where it is, so a reading every few seconds does
-        // not reshuffle the stack.
-        const moves = force || input.resurface === true
+        // A standing condition raised again as it was (an editor reopening on
+        // the same graph) is not news, and neither is the user looking for a
+        // bubble that is already up: neither counts as a repeat.
+        const same = open.text === input.text
+        if (same && input.standing && !force) return s
+        const count = force ? open.count : same ? open.count + 1 : 1
+        const next = { ...open, ...input, key, timestamp, count }
+        // News moves down to the newest place, keeping its id so the card
+        // glides there rather than leaving and arriving again. A standing
+        // condition updates where it is, so a graph's warnings changing as it
+        // is edited do not reshuffle the stack.
+        const moves = force || !input.standing
         const toasts = moves
           ? [...s.toasts.filter((t) => t.id !== open.id), next]
           : s.toasts.map((t) => (t.id === open.id ? next : t))
@@ -144,17 +153,11 @@ export const useNotificationsStore = create<NotificationsStore>((set) => ({
       if (!toast) return s
       return {
         toasts: s.toasts.filter((t) => t.id !== id),
-        dismissedToasts: { ...s.dismissedToasts, [toast.key]: toast.text },
+        dismissedToasts: remember(s.dismissedToasts, [toast]),
       }
     }),
   dismissAllToasts: () =>
-    set((s) => ({
-      toasts: [],
-      dismissedToasts: {
-        ...s.dismissedToasts,
-        ...Object.fromEntries(s.toasts.map((t) => [t.key, t.text])),
-      },
-    })),
+    set((s) => ({ toasts: [], dismissedToasts: remember(s.dismissedToasts, s.toasts) })),
   withdrawToast: (key) =>
     set((s) =>
       s.toasts.some((t) => t.key === key) ? { toasts: s.toasts.filter((t) => t.key !== key) } : s,
