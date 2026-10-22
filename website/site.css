@@ -298,6 +298,14 @@ button {
   flex: none;
 }
 
+/* The <picture> around the mark (the full mark on high-density screens, the
+   24 cut otherwise) is a box of the mark's own size, so the mark sits where
+   it did without one rather than on a text baseline. */
+picture:has(> .mark) {
+  display: flex;
+  flex: none;
+}
+
 /* ── Buttons ────────────────────────────────────────────────────────────── */
 
 .btn {
