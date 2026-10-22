@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { act, renderHook } from '@testing-library/react'
 import type { AnimationEvent } from 'react'
-import { usePresence, useRetained } from './usePresence'
+import { cssTimeMs, usePresence, useRetained } from './usePresence'
 
 const ended = (animationName: string) => ({ animationName }) as AnimationEvent
 
@@ -63,6 +63,21 @@ describe('usePresence', () => {
     expect(result.current.mounted).toBe(false)
   })
 
+  it('waits out a token the minifier wrote in seconds', () => {
+    document.documentElement.style.setProperty('--duration-panel', '.28s')
+    const { result, rerender } = renderHook(({ open }) => usePresence(open), {
+      initialProps: { open: true },
+    })
+    rerender({ open: false })
+
+    act(() => void vi.advanceTimersByTime(200))
+    expect(result.current.mounted).toBe(true)
+
+    act(() => void vi.advanceTimersByTime(200))
+    expect(result.current.mounted).toBe(false)
+    document.documentElement.style.removeProperty('--duration-panel')
+  })
+
   it('cancels the exit when reopened mid-exit', () => {
     const { result, rerender } = renderHook(({ open }) => usePresence(open), {
       initialProps: { open: true },
@@ -106,6 +121,64 @@ describe('usePresence', () => {
   })
 })
 
+describe('usePresence as a menu', () => {
+  beforeEach(() => vi.useFakeTimers())
+  afterEach(() => vi.useRealTimers())
+
+  it('plays the menu keyframes, not the dialog ones', () => {
+    const { result, rerender } = renderHook(({ open }) => usePresence(open, 'menu'), {
+      initialProps: { open: true },
+    })
+    expect(result.current.panelClass).toBe('menu-in')
+    rerender({ open: false })
+    expect(result.current.panelClass).toContain('menu-out')
+    expect(result.current.panelClass).toContain('pointer-events-none')
+  })
+
+  it('ends on its own keyframes and ignores the dialog panel exit', () => {
+    const { result, rerender } = renderHook(({ open }) => usePresence(open, 'menu'), {
+      initialProps: { open: true },
+    })
+    rerender({ open: false })
+    act(() => result.current.onAnimationEnd(ended('modal-panel-out')))
+    expect(result.current.mounted).toBe(true)
+    act(() => result.current.onAnimationEnd(ended('menu-out')))
+    expect(result.current.mounted).toBe(false)
+  })
+
+  it('times out at the fast duration, well before a dialog would', () => {
+    const { result, rerender } = renderHook(({ open }) => usePresence(open, 'menu'), {
+      initialProps: { open: true },
+    })
+    rerender({ open: false })
+    act(() => void vi.advanceTimersByTime(100))
+    expect(result.current.mounted).toBe(true)
+    act(() => void vi.advanceTimersByTime(150))
+    expect(result.current.mounted).toBe(false)
+  })
+})
+
+describe('usePresence reading the duration token', () => {
+  beforeEach(() => vi.useFakeTimers())
+  afterEach(() => {
+    vi.useRealTimers()
+    document.documentElement.style.removeProperty('--duration-fast')
+  })
+
+  // A production build's CSS minifier writes 150ms as .15s.
+  it.each(['.15s', '150ms'])('waits the full exit when the token reads %s', (value) => {
+    document.documentElement.style.setProperty('--duration-fast', value)
+    const { result, rerender } = renderHook(({ open }) => usePresence(open, 'menu'), {
+      initialProps: { open: true },
+    })
+    rerender({ open: false })
+    act(() => void vi.advanceTimersByTime(150))
+    expect(result.current.mounted).toBe(true)
+    act(() => void vi.advanceTimersByTime(100))
+    expect(result.current.mounted).toBe(false)
+  })
+})
+
 describe('useRetained', () => {
   it('keeps the last value once it is cleared', () => {
     const { result, rerender } = renderHook(({ v }: { v: string | null }) => useRetained(v), {
@@ -121,5 +194,19 @@ describe('useRetained', () => {
 
     rerender({ v: 'ban' })
     expect(result.current).toBe('ban')
+  })
+})
+
+describe('cssTimeMs', () => {
+  it('reads milliseconds and seconds alike', () => {
+    expect(cssTimeMs('280ms')).toBe(280)
+    expect(cssTimeMs(' .28s')).toBe(280)
+    expect(cssTimeMs('0.5s')).toBe(500)
+  })
+
+  it('is NaN for an empty, zero or unreadable value', () => {
+    expect(cssTimeMs('')).toBeNaN()
+    expect(cssTimeMs('0s')).toBeNaN()
+    expect(cssTimeMs('fast')).toBeNaN()
   })
 })

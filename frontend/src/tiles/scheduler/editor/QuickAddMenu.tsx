@@ -1,6 +1,7 @@
 import { useState, useEffect, useLayoutEffect, useRef, useMemo } from 'react'
 import { createPortal } from 'react-dom'
 import type { models } from '../../../../wailsjs/go/models'
+import { useOutsideDismiss } from '../../../hooks/useOutsideDismiss'
 import {
   CATEGORY_ICON,
   categoryBorderClass,
@@ -19,14 +20,17 @@ interface Props {
   screenPos: { x: number; y: number }
   onPick: (def: models.BlockDef) => void
   onClose: () => void
+  /** An exit is playing (QuickAddHost keeps the menu mounted for it). */
+  leaving?: boolean
 }
 
-export function QuickAddMenu({ blockDefs, screenPos, onPick, onClose }: Props) {
+export function QuickAddMenu({ blockDefs, screenPos, onPick, onClose, leaving = false }: Props) {
   const [query, setQuery] = useState('')
   const [activeCategory, setActiveCategory] = useState<string | null>(null)
   const [highlightIdx, setHighlightIdx] = useState(0)
   const inputRef = useRef<HTMLInputElement>(null)
   const panelRef = useRef<HTMLDivElement>(null)
+  const flyoutRef = useRef<HTMLDivElement>(null)
   const [panelSize, setPanelSize] = useState<Size>(INITIAL_PANEL)
   const categories = orderedCategories(blockDefs)
 
@@ -89,28 +93,32 @@ export function QuickAddMenu({ blockDefs, screenPos, onPick, onClose }: Props) {
     h: window.innerHeight,
   })
 
+  // A press outside closes it, with no backdrop to eat that press: the one
+  // that closes the menu also pans, selects or opens the next menu.
+  useOutsideDismiss(!leaving, onClose, [panelRef, flyoutRef], true)
+
   const activeDefs = activeCategory ? blockDefs.filter((d) => d.category === activeCategory) : []
   const activeColor = categoryColor(activeCategory ?? '')
 
   // Both panels share it, so NO_GRAPH_KEYS lands on both. The menu is portaled
   // to body, well outside the canvas, but React Flow binds its keys to the
   // document, so being elsewhere in the tree guards nothing (#159).
-  const panelClass = `fixed z-popover w-40 bg-overlay border-hairline border-border-subtle rounded-lg overflow-hidden ${NO_GRAPH_KEYS}`
+  const panelClass = `fixed z-popover w-40 bg-overlay border-hairline border-border-subtle rounded-lg overflow-hidden ${NO_GRAPH_KEYS} ${leaving ? 'menu-out pointer-events-none' : 'menu-in'}`
+  // Both panels grow from the corner the menu opened at, which is the far one
+  // where placeQuickAdd flipped it.
+  const originX = primaryLeft < screenPos.x ? 'right' : 'left'
+  const originY = primaryTop < screenPos.y ? 'bottom' : 'top'
 
   // Portaled to body so the menu escapes the maximized tile's stacking
   // context; z-popover carries it over the maximize overlay (lib/layers.ts).
-  // Backdrop and panels share the value: the panels are later siblings.
   return createPortal(
     <>
-      {/* Dismiss backdrop */}
-      <div className="z-popover fixed inset-0" onClick={onClose} />
-
       {/* Primary panel */}
       <div
         ref={panelRef}
         className={panelClass}
         // eslint-disable-next-line no-restricted-syntax -- left/top are viewport-computed positions (clamped against window dimensions)
-        style={{ left: primaryLeft, top: primaryTop }}
+        style={{ left: primaryLeft, top: primaryTop, transformOrigin: `${originX} ${originY}` }}
       >
         {/* Search input */}
         <div className="border-border-subtle border-b-hairline flex items-center gap-1 px-3 py-[5px]">
@@ -177,9 +185,14 @@ export function QuickAddMenu({ blockDefs, screenPos, onPick, onClose }: Props) {
       {/* Fly-out for category browse — hidden when searching */}
       {!isSearching && activeCategory && (
         <div
+          ref={flyoutRef}
           className={panelClass}
           // eslint-disable-next-line no-restricted-syntax -- left/top are viewport-computed positions (clamped against window dimensions)
-          style={{ left: flyoutLeft, top: primaryTop }}
+          style={{
+            left: flyoutLeft,
+            top: primaryTop,
+            transformOrigin: `${flyoutLeft < primaryLeft ? 'right' : 'left'} ${originY}`,
+          }}
         >
           {activeDefs.map((def) => (
             <div

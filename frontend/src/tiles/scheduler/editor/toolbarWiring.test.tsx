@@ -78,6 +78,7 @@ function renderEditor(onSave = vi.fn(async (g: models.Graph) => g)) {
 }
 
 const flowNodes = (c: HTMLElement) => c.querySelectorAll('.react-flow__node')
+const selectedNodes = (c: HTMLElement) => c.querySelectorAll('.react-flow__node.selected')
 const button = (name: string | RegExp) => screen.getByRole('button', { name }) as HTMLButtonElement
 
 async function loaded(container: HTMLElement) {
@@ -91,7 +92,7 @@ describe('the toolbar menus drive the editor', () => {
 
     fireEvent.click(button('edit'))
     fireEvent.click(button(/^Select all/))
-    await waitFor(() => expect(button('del 2')).toBeTruthy())
+    await waitFor(() => expect(selectedNodes(container)).toHaveLength(2))
 
     fireEvent.click(button('edit'))
     fireEvent.click(button(/^Delete 2/))
@@ -121,11 +122,11 @@ describe('the toolbar menus drive the editor', () => {
 
     fireEvent.click(button('edit'))
     fireEvent.click(button(/^Select by name/))
-    const input = screen.getByLabelText('Select by name')
+    const input = screen.getByRole('textbox', { name: 'Select by name' })
     fireEvent.change(input, { target: { value: 'comm' } })
     fireEvent.keyDown(input, { key: 'Enter' })
 
-    await waitFor(() => expect(button('del 2')).toBeTruthy())
+    await waitFor(() => expect(selectedNodes(container)).toHaveLength(2))
   })
 
   it('persists curved connectors from the view menu without touching the graph', async () => {
@@ -160,6 +161,65 @@ describe('the toolbar menus drive the editor', () => {
     expect(screen.queryByPlaceholderText('search blocks…')).toBeNull()
     fireEvent.click(button('add'))
     expect(screen.getByPlaceholderText('search blocks…')).toBeTruthy()
+  })
+
+  it('opens edit in one click with the quick-add list open', async () => {
+    const { container } = renderEditor()
+    await loaded(container)
+
+    fireEvent.click(button('add'))
+    expect(screen.getByPlaceholderText('search blocks…')).toBeTruthy()
+    // A press is a pointerdown and a click: the first closes the list, and it is
+    // not a backdrop, so the click lands on the button.
+    fireEvent.pointerDown(button('edit'))
+    fireEvent.click(button('edit'))
+    expect(button(/^Undo/)).toBeTruthy()
+    await waitFor(() => expect(screen.queryByPlaceholderText('search blocks…')).toBeNull())
+  })
+
+  it('closes the quick-add list on a press on the canvas, and lets it through', async () => {
+    const { container } = renderEditor()
+    await loaded(container)
+
+    fireEvent.click(button('add'))
+    const pane = container.querySelector('.react-flow__pane') as HTMLElement
+    const reached = vi.fn()
+    pane.addEventListener('pointerdown', reached)
+    fireEvent.pointerDown(pane)
+    expect(reached).toHaveBeenCalledOnce()
+    await waitFor(() => expect(screen.queryByPlaceholderText('search blocks…')).toBeNull())
+  })
+
+  it('keeps the quick-add list drawn but out of reach while it fades', async () => {
+    const { container } = renderEditor()
+    await loaded(container)
+
+    fireEvent.click(button('add'))
+    const field = screen.getByPlaceholderText('search blocks…')
+    const panel = field.closest('.fixed') as HTMLElement
+    expect(panel.className).toContain('menu-in')
+
+    const onWindow = vi.fn()
+    window.addEventListener('keydown', onWindow)
+    fireEvent.keyDown(field, { key: 'Escape' })
+    window.removeEventListener('keydown', onWindow)
+    // One Escape closes the list and does not go on to close the maximized tile.
+    expect(onWindow).not.toHaveBeenCalled()
+    expect(panel.className).toContain('menu-out')
+    expect(panel.className).toContain('pointer-events-none')
+    await waitFor(() => expect(screen.queryByPlaceholderText('search blocks…')).toBeNull())
+  })
+
+  it('starts each quick-add opening from a clean search', async () => {
+    const { container } = renderEditor()
+    await loaded(container)
+
+    fireEvent.click(button('add'))
+    fireEvent.change(screen.getByPlaceholderText('search blocks…'), { target: { value: 'zzz' } })
+    fireEvent.keyDown(window, { key: 'Escape' })
+    // Reopened mid-fade: not the same menu with the old query in it.
+    fireEvent.click(button('add'))
+    expect((screen.getByPlaceholderText('search blocks…') as HTMLInputElement).value).toBe('')
   })
 
   it('adds the picked block to the canvas', async () => {
