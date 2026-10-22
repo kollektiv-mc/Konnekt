@@ -18,7 +18,7 @@ contact_links:
     about: Report it privately through GitHub. Please do not open a public issue for a security problem.
 
   - name: Docs and FAQ
-    url: https://konnekt.pages.dev/docs.html#faq
+    url: https://konnekt.pages.dev/docs/faq.html
     about: Requirements, platform support, building from source, and the questions that come up most.
 
   - name: Roadmap

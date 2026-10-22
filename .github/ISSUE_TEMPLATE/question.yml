@@ -14,7 +14,7 @@ body:
   - type: markdown
     attributes:
       value: |
-        The [docs and FAQ](https://konnekt.pages.dev/docs.html#faq) cover setup, platform support
+        The [docs and FAQ](https://konnekt.pages.dev/docs/faq.html) cover setup, platform support
         and building from source, so they are worth a quick look first. If they do not answer it,
         ask here. A question that turns out to be a gap in the docs is a useful thing to receive.
 

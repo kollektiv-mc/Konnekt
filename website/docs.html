@@ -6,7 +6,7 @@
     <title>Konnekt: docs</title>
     <meta
       name="description"
-      content="What Konnekt needs to run, which platforms are supported, how to get started, and how to build it from source."
+      content="Installing Konnekt, your first server, what runs where, and the questions people ask first."
     />
     <link rel="canonical" href="https://konnekt.pages.dev/docs.html" />
 
@@ -14,7 +14,7 @@
     <meta property="og:title" content="Konnekt: docs" />
     <meta
       property="og:description"
-      content="What Konnekt needs to run, which platforms are supported, how to get started, and how to build it from source."
+      content="Installing Konnekt, your first server, what runs where, and the questions people ask first."
     />
     <meta property="og:url" content="https://konnekt.pages.dev/docs.html" />
     <meta property="og:type" content="website" />
@@ -25,7 +25,7 @@
     <meta name="twitter:title" content="Konnekt: docs" />
     <meta
       name="twitter:description"
-      content="What Konnekt needs to run, which platforms are supported, how to get started, and how to build it from source."
+      content="Installing Konnekt, your first server, what runs where, and the questions people ask first."
     />
     <meta name="twitter:image" content="https://konnekt.pages.dev/assets/img/social-card.png" />
 
@@ -34,440 +34,127 @@
     <link rel="icon" type="image/png" sizes="32x32" href="/assets/img/favicon-32.png" />
     <link rel="icon" type="image/png" sizes="256x256" href="/assets/img/favicon.png" />
     <link rel="apple-touch-icon" href="/assets/img/app-icon.png" />
+    <link
+      rel="preload"
+      href="/assets/fonts/Geist-Variable.woff2"
+      as="font"
+      type="font/woff2"
+      crossorigin
+    />
     <link rel="stylesheet" href="/tokens.css" />
-    <link rel="stylesheet" href="/styles.css" />
+    <link rel="stylesheet" href="/site.css" />
+    <link rel="stylesheet" href="/docs.css" />
     <script>
       document.documentElement.className = document.documentElement.className.replace('no-js', '')
     </script>
   </head>
   <body>
-    <!-- Canonical nav. Byte-identical on every page, hrefs included — main.js
-         marks the current page and intercepts same-page anchors. -->
-    <nav class="nav" id="nav">
-      <div class="nav-inner">
-        <span class="nav-brand">
-          <a href="/index.html" class="wordmark">Konnekt</a>
-          <span class="brand-tag">ALPHA</span>
-        </span>
-        <button
-          class="nav-toggle"
-          id="nav-toggle"
-          type="button"
-          aria-expanded="false"
-          aria-controls="nav-menu"
-          aria-label="Menu"
-        >
-          ≡
-        </button>
-        <div class="nav-menu" id="nav-menu">
+    <a class="skip-link" href="#main">Skip to content</a>
+    <div class="page">
+      <div class="group">
+        <!-- Canonical nav. Byte-identical on every page, hrefs included; site.js
+           marks the current page and scrolls same-page anchors. -->
+        <nav class="nav block block-raised" id="nav" aria-label="Main">
+          <a class="nav-brand" href="/index.html"
+            ><img
+              class="mark"
+              src="/assets/img/mark-24.svg"
+              width="24"
+              height="24"
+              alt=""
+            />Konnekt</a
+          >
           <ul class="nav-links">
             <li><a href="/index.html#features">Features</a></li>
+            <li><a href="/index.html#scheduler">Scheduler</a></li>
             <li><a href="/docs.html">Docs</a></li>
             <li><a href="/roadmap.html">Roadmap</a></li>
             <li><a href="/changelog.html">Changelog</a></li>
           </ul>
-          <div class="nav-actions">
-            <a
-              class="btn btn-secondary btn-sm"
-              href="https://github.com/kollektiv-mc/Konnekt"
-              target="_blank"
-              rel="noopener"
-              >View on GitHub</a
-            >
-            <a class="btn btn-primary btn-sm" href="/download.html">Download</a>
-          </div>
-        </div>
-      </div>
-    </nav>
+          <a
+            class="nav-side"
+            href="https://github.com/kollektiv-mc/Konnekt"
+            target="_blank"
+            rel="noopener"
+            >GitHub</a
+          >
+          <a class="btn btn-primary" href="/download.html"
+            ><svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true">
+              <path
+                d="M7 1v9M3 6.5 7 10.5 11 6.5M1.5 13h11"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.6"
+              /></svg
+            >Download</a
+          >
+        </nav>
+        <main id="main" class="group">
+          <header class="page-hero block">
+            <div class="page-hero-title"><h1>Docs</h1></div>
+            <div class="page-hero-side doc-search-side">
+              <label class="search">
+                <span aria-hidden="true">/</span>
+                <input
+                  type="search"
+                  id="doc-search"
+                  placeholder="search docs"
+                  autocomplete="off"
+                  spellcheck="false"
+                  aria-label="Search the docs by title and summary"
+                />
+              </label>
+            </div>
+          </header>
 
-    <main class="subpage">
-      <div class="container">
-        <div class="subpage-head">
-          <span class="eyebrow">() docs</span>
-          <h1>Getting <span class="accent">started</span></h1>
-          <p>What Konnekt needs, where it runs, and how to point it at your first server.</p>
-        </div>
-
-        <div class="doc-page">
-          <nav class="doc-toc" aria-label="On this page">
-            <a href="#requirements">Requirements</a>
-            <a href="#platforms">Platform support</a>
-            <a href="#start">First server</a>
-            <a href="#build">Build from source</a>
-            <a href="#faq">FAQ</a>
-            <a href="#disclaimer">Fair warning</a>
-          </nav>
-
-          <section class="doc-section reveal" id="requirements">
-            <h2>Requirements</h2>
-            <p class="doc-lead">
-              Konnekt is one file, with no runtime to install beside it. Three things on top of
-              that:
-            </p>
-            <ul class="req-grid">
-              <li class="req">
-                <span class="req-icon" aria-hidden="true">◈</span>
-                <h3>A server jar</h3>
-                <p>
-                  The Minecraft server you already run. Konnekt manages it, it doesn't fetch one.
-                </p>
-              </li>
-              <li class="req">
-                <span class="req-icon" aria-hidden="true">◎</span>
-                <h3>Java</h3>
-                <p>Your <em>server</em> needs it to run. Konnekt itself doesn't.</p>
-              </li>
-              <li class="req">
-                <span class="req-icon" aria-hidden="true">▤</span>
-                <h3>Windows or Linux</h3>
-                <p>64-bit. macOS builds from source today.</p>
-              </li>
-            </ul>
-          </section>
-
-          <section class="doc-section reveal" id="platforms">
-            <h2>Platform support</h2>
-            <div class="md">
-              <div class="table-wrap">
-                <table class="doc-table">
-                  <thead>
-                    <tr>
-                      <th>Platform</th>
-                      <th>Build</th>
-                      <th>Status</th>
-                    </tr>
-                  </thead>
-                  <!-- The status cells are authored with what is published today and
-                       corrected by docs.js from the GitHub releases API, so a new
-                       channel shows up here without an edit. -->
-                  <tbody>
-                    <tr data-platform="windows">
-                      <td>Windows (x86-64)</td>
-                      <td><code>konnekt-windows-amd64.exe</code></td>
-                      <td data-stage="alpha"><span class="tag tag-stage">ALPHA</span></td>
-                    </tr>
-                    <tr data-platform="linux">
-                      <td>Linux (x86-64)</td>
-                      <td><code>konnekt-linux-amd64</code></td>
-                      <td><span class="tag tag-wip">SNAPSHOT</span></td>
-                    </tr>
-                    <tr data-platform="fedora">
-                      <td>Fedora / RHEL (x86-64)</td>
-                      <td><code>.x86_64.rpm</code></td>
-                      <td><span class="tag tag-wip">SNAPSHOT</span></td>
-                    </tr>
-                    <tr data-platform="mac">
-                      <td>macOS</td>
-                      <td>Build from source</td>
-                      <td><span class="tag tag-later">SOURCE</span></td>
-                    </tr>
-                  </tbody>
-                </table>
+          <section class="shelf block" id="new-here" aria-labelledby="new-here-title">
+            <div class="shelf-label"><h2 class="label" id="new-here-title">New here</h2></div>
+            <div class="shelf-rows">
+              <div class="shelf-grid">
+                <a class="page-link" href="/docs/install.html"
+                  ><span class="page-link-move"
+                    ><span class="page-link-title">Install Konnekt</span
+                    ><span class="page-link-sum">Windows or Linux, one file.</span></span
+                  ></a
+                >
+                <a class="page-link" href="/docs/first-server.html"
+                  ><span class="page-link-move"
+                    ><span class="page-link-title">Your first server</span
+                    ><span class="page-link-sum">Add, start and join a server.</span></span
+                  ></a
+                >
+                <a class="page-link" href="/docs/requirements.html"
+                  ><span class="page-link-move"
+                    ><span class="page-link-title">Requirements and platforms</span
+                    ><span class="page-link-sum">What runs where.</span></span
+                  ></a
+                >
+                <a class="page-link" href="/docs/faq.html"
+                  ><span class="page-link-move"
+                    ><span class="page-link-title">FAQ</span
+                    ><span class="page-link-sum">Common questions, short answers.</span></span
+                  ></a
+                >
               </div>
-              <ul class="note-list">
-                <li>Rocky and RHEL 9 are not compatible.</li>
-                <li>Linux needs <code>webkit2gtk4.1</code> and <code>gtk3</code> at runtime.</li>
-                <li>macOS has no published build; it builds from source.</li>
-              </ul>
             </div>
           </section>
 
-          <section class="doc-section reveal" id="start">
-            <h2>Your first server</h2>
-            <ol class="step-grid">
-              <li class="step" data-demo="add">
-                <!-- Mockups of the app's own panels, in its type and colours,
-                     bar the last one, which is Minecraft's join screen because
-                     that is where joining happens. Decorative: what they say is
-                     said in the prose beside them too, so a screen reader loses
-                     nothing by skipping them. -->
-                <div class="demo" aria-hidden="true">
-                  <div class="mock mock-form">
-                    <div class="mock-title">Servers</div>
-                    <div class="mock-field f1"><span class="mock-type">Survival</span></div>
-                    <div class="mock-field f2">
-                      <span class="mock-type">server.jar</span><span class="mock-browse">…</span>
-                    </div>
-                    <div class="mock-field f3">
-                      <span class="mock-type">/home/mc/survival</span
-                      ><span class="mock-browse">…</span>
-                    </div>
-                    <div class="mock-field f4"><span class="mock-type">-Xms1G -Xmx4G</span></div>
-                    <div class="mock-btn mock-add">Add server</div>
-                    <span class="mock-cursor"></span>
-                  </div>
-                </div>
-                <div class="step-body">
-                  <div class="step-head">
-                    <span class="step-n" aria-hidden="true">1</span>
-                    <h3>Add a server</h3>
-                  </div>
-                  <p>
-                    Point it at the jar and the folder it lives in, then name it and give it RAM.
-                  </p>
-                </div>
-              </li>
+          <p class="doc-empty block" id="doc-empty" role="status" hidden>No page matches that.</p>
 
-              <!-- Optional, and folded away because of it: this step only
-                   happens if what you have is an installer rather than a
-                   server jar. -->
-              <li class="step step-fold" data-demo="install">
-                <details class="fold">
-                  <summary class="step-summary">
-                    <span class="doc-collapse-mark" aria-hidden="true"></span>
-                    <span class="step-n" aria-hidden="true">2</span>
-                    <h3>Install a server</h3>
-                    <span class="step-hint">Forge and NeoForge</span>
-                  </summary>
-                  <div class="step-inner">
-                    <div class="demo" aria-hidden="true">
-                      <div class="mock mock-install">
-                        <div class="mock-modal">
-                          <div class="mock-modal-head">
-                            <span class="mock-info">[i]</span><span>Installer detected</span>
-                          </div>
-                          <div class="mock-field i1">
-                            <span class="mock-type">/home/mc/forge</span
-                            ><span class="mock-browse">…</span>
-                          </div>
-                          <div class="mock-install-log">
-                            <span class="il1">Running installer…</span>
-                            <span class="il2">Extracting libraries</span>
-                            <span class="il3">Downloading server</span>
-                          </div>
-                          <div class="mock-bar"><span class="mock-bar-fill"></span></div>
-                          <div class="mock-modal-foot">
-                            <span class="mock-btn mock-install-btn">Install server</span>
-                            <span class="mock-btn mock-added-btn">Add server</span>
-                            <span class="mock-dismiss">Close</span>
-                          </div>
-                        </div>
-                        <span class="mock-cursor"></span>
-                      </div>
-                    </div>
-                    <div class="step-body">
-                      <p>
-                        Hand it a Forge or NeoForge installer instead and it runs the install for
-                        you, then adds what comes out.
-                      </p>
-                    </div>
-                  </div>
-                </details>
-              </li>
-
-              <li class="step" data-demo="start">
-                <div class="demo" aria-hidden="true">
-                  <div class="mock mock-console">
-                    <div class="mock-console-head">
-                      <span class="mock-status s-stopped">STOPPED</span>
-                      <span class="mock-status s-starting">STARTING</span>
-                      <span class="mock-status s-running">RUNNING</span>
-                      <span class="mock-btn mock-start">Start</span>
-                      <span class="mock-btn mock-stop">Stop</span>
-                    </div>
-                    <div class="mock-log">
-                      <span class="l1">Starting minecraft server 1.21</span>
-                      <span class="l2">Loading properties</span>
-                      <span class="l3">Preparing level "world"</span>
-                      <span class="l4">Done (6.129s)! For help, type "help"</span>
-                    </div>
-                    <span class="mock-cursor"></span>
-                  </div>
-                </div>
-                <div class="step-body">
-                  <div class="step-head">
-                    <span class="step-n" aria-hidden="true">3</span>
-                    <h3>Start it</h3>
-                  </div>
-                  <p>The console streams the log live and takes commands inline.</p>
-                </div>
-              </li>
-
-              <!-- The one panel here that is not Konnekt's. Joining happens in
-                   Minecraft, so this is its Direct Connection screen rather than
-                   one of the app's, drawn in this page's type and tokens. -->
-              <li class="step" data-demo="join">
-                <div class="demo" aria-hidden="true">
-                  <div class="mock mock-join">
-                    <div class="mock-join-title">Direct Connection</div>
-                    <div class="mock-join-body">
-                      <div class="mock-join-label">Server Address</div>
-                      <div class="mock-field j1"><span class="mock-type">localhost</span></div>
-                      <div class="mock-btn mock-join-go">Join Server</div>
-                      <div class="mock-btn mock-join-cancel">Cancel</div>
-                    </div>
-                    <span class="mock-cursor"></span>
-                  </div>
-                </div>
-                <div class="step-body">
-                  <div class="step-head">
-                    <span class="step-n" aria-hidden="true">4</span>
-                    <h3>Join it</h3>
-                  </div>
-                  <p>
-                    The server runs on the machine you are sitting at, so its address is
-                    <code>localhost</code>. Put that into Minecraft under Multiplayer, Direct
-                    Connection as the Server Address, then Join Server.
-                  </p>
-                </div>
-              </li>
-            </ol>
-
-            <p class="step-note">
-              Player list and commands need <code>enable-rcon</code> on in
-              <code>server.properties</code> until
-              <a
-                href="https://github.com/kollektiv-mc/Konnekt/issues/99"
-                target="_blank"
-                rel="noopener"
-                >Konnekt sets it up for you</a
-              >.
-            </p>
-          </section>
-
-          <section class="doc-section fold-snapshot reveal" id="build">
-            <details class="doc-collapse">
-              <summary>
-                <span class="doc-collapse-mark" aria-hidden="true"></span>
-                <span>Build from source</span>
-                <span class="tag tag-wip">SNAPSHOT</span>
-              </summary>
-              <div class="md">
-                <p>
-                  A source build is the newest code, so it is a snapshot: newer than the release,
-                  and untested.
-                </p>
-                <p>
-                  Requires <a href="https://go.dev/" target="_blank" rel="noopener">Go</a>,
-                  <a href="https://nodejs.org/" target="_blank" rel="noopener">Node.js</a> with
-                  <a href="https://pnpm.io/" target="_blank" rel="noopener">pnpm</a>, and the
-                  <a
-                    href="https://wails.io/docs/gettingstarted/installation"
-                    target="_blank"
-                    rel="noopener"
-                    >Wails CLI</a
-                  >. On Linux you also need the <code>webkit2gtk</code> and <code>gtk3</code>
-                  development packages.
-                </p>
-                <pre><code>git clone https://github.com/kollektiv-mc/Konnekt
-cd Konnekt
-pnpm install
-wails dev</code></pre>
-                <p>
-                  Run <code>wails doctor</code> first; it reports what your distro is missing. If
-                  WebKit detection fails, add the build tag:
-                </p>
-                <pre><code>wails build -tags webkit2_41
-wails dev -tags webkit2_41</code></pre>
-              </div>
-            </details>
-          </section>
-
-          <section class="doc-section reveal" id="faq">
-            <h2>FAQ</h2>
-            <div class="faq">
-              <details>
-                <summary>Is it free?</summary>
-                <div class="md">
-                  <p>
-                    Yes. Released under the
-                    <a
-                      href="https://github.com/kollektiv-mc/Konnekt/blob/main/LICENSE"
-                      target="_blank"
-                      rel="noopener"
-                      >MIT licence</a
-                    >: keep the copyright notice, and the rest is yours. No accounts, no tiers, no
-                    subscriptions.
-                  </p>
-                </div>
-              </details>
-              <details>
-                <summary>Does it phone home?</summary>
-                <div class="md">
-                  <p>
-                    No telemetry, analytics or crash reporting. Konnekt reaches the network in three
-                    cases: GitHub for update checks, Modrinth for mods, and your own server over
-                    RCON.
-                  </p>
-                </div>
-              </details>
-              <details>
-                <summary>Which server types work?</summary>
-                <div class="md">
-                  <p>
-                    Vanilla, Paper/Spigot/Bukkit, and modded Fabric, Forge and NeoForge. The loader
-                    is detected automatically. Bedrock isn't supported.
-                  </p>
-                </div>
-              </details>
-              <details>
-                <summary>The server stops as soon as I start it</summary>
-                <div class="md">
-                  <p>
-                    On a first run that is almost always the EULA: Minecraft will not start until
-                    you have accepted it, and says so in the log on its way out. Konnekt watches for
-                    that line and offers to write <code>eula.txt</code> for you, then starts the
-                    server again.
-                  </p>
-                </div>
-              </details>
-              <details>
-                <summary>Where does it store my data?</summary>
-                <div class="md">
-                  <p>
-                    Your server files stay where they are. Konnekt's own state (servers, layouts,
-                    presets, scheduled tasks) is JSON in the OS application-data directory.
-                  </p>
-                </div>
-              </details>
-              <details>
-                <summary>Is it stable?</summary>
-                <div class="md">
-                  <p>
-                    It's alpha. The core is functional and in daily use, but expect rough edges. See
-                    the <a href="/roadmap.html">roadmap</a>.
-                  </p>
-                </div>
-              </details>
-              <details>
-                <summary>Can I run the newest code?</summary>
-                <div class="md">
-                  <p>
-                    Yes. Snapshots are built from the newest code whenever it changes and published
-                    as pre-releases, so you can run features and fixes before they reach a release.
-                    They're untested, so Konnekt warns before installing one. Grab the first from
-                    the <a href="/download.html">download page</a>; after that a snapshot offers you
-                    the next one itself, and a release once one overtakes it. Settings &gt; General
-                    has the channel if you want to follow snapshots from a stable build.
-                  </p>
-                </div>
-              </details>
-              <details>
-                <summary>Can I manage a server on another machine?</summary>
-                <div class="md">
-                  <p>
-                    No. Konnekt manages servers on the machine it runs on. Web access is a later
-                    <a href="/roadmap.html">roadmap</a> item.
-                  </p>
-                </div>
-              </details>
-            </div>
-          </section>
-
-          <section class="doc-section reveal" id="disclaimer">
-            <h2>Fair warning</h2>
-            <div class="md">
-              <p>
+          <section class="shelf block" id="disclaimer" aria-labelledby="disclaimer-title">
+            <div class="shelf-label"><h2 class="label" id="disclaimer-title">Fair warning</h2></div>
+            <div class="shelf-prose">
+              <p class="doc-prose">
                 This is a personal side project which was built to run my own Minecraft servers the
-                way I want, rather than to match what a wider community might expect from it. Most
-                of the code comes from Claude, with me reading over its shoulder rather than writing
-                it myself; I'm not a programmer, just someone putting AI tools to use for something
-                I needed. So don't expect a polished, textbook-clean codebase. It works for me, and
-                that's the bar I'm holding it to.
-              </p>
-              <p>
+                way I want, rather than to match what a wider community might expect from it.<br />
+                Most of the code comes from Claude, with me reading over its shoulder rather than
+                writing it myself; I'm not a programmer, just someone putting AI tools to use for
+                something I needed.<br />
+                So don't expect a polished, textbook-clean codebase.<br />
+                It works for me, and that's the bar I'm holding it to.<br />
                 I have no interest in gatekeeping any of this, so take the code and do what you want
-                with it: fork it, extend it, rebuild it, whatever. It's released under the
+                with it: fork it, extend it, rebuild it, whatever.<br />
+                It's released under the
                 <a
                   href="https://github.com/kollektiv-mc/Konnekt/blob/main/LICENSE"
                   target="_blank"
@@ -477,42 +164,67 @@ wails dev -tags webkit2_41</code></pre>
               </p>
             </div>
           </section>
-        </div>
+        </main>
       </div>
-    </main>
 
-    <!-- Canonical footer. Identical on every page. -->
-    <footer>
-      <div class="container">
-        <div class="disclaimer">
-          <span class="disclaimer-badge">NOTE</span>
-          <p>
-            Alpha software. A side project mostly written by Claude.
-            <a href="/docs.html#disclaimer">Full statement</a>.
-          </p>
-        </div>
-        <div class="footer-inner">
-          <div class="footer-left">
-            <span class="wordmark" style="font-size: 15px">Konnekt</span>
-            <span class="brand-tag">ALPHA</span>
-          </div>
-          <div class="footer-links">
-            <a href="https://github.com/kollektiv-mc/Konnekt" target="_blank" rel="noopener"
-              >GitHub</a
+      <!-- Canonical footer. Byte-identical on every page. -->
+      <footer class="block block-raised snap-end">
+        <div class="footer-cols">
+          <div class="footer-about">
+            <a class="footer-brand" href="/index.html"
+              ><img
+                class="mark"
+                src="/assets/img/mark-24.svg"
+                width="24"
+                height="24"
+                alt=""
+              />Konnekt</a
             >
+            <p>A desktop dashboard for the Minecraft servers you host.</p>
+            <span class="meta"><span data-release-tag></span>Windows and Linux</span>
+          </div>
+          <nav class="footer-col" aria-label="Product">
+            <span class="label">Product</span>
+            <a href="/download.html">Download</a>
+            <a href="https://konnekt-demo.pages.dev/" target="_blank" rel="noopener"
+              >Try the demo</a
+            >
+            <a href="/changelog.html">Changelog</a>
+          </nav>
+          <nav class="footer-col" aria-label="Learn">
+            <span class="label">Learn</span>
             <a href="/index.html#features">Features</a>
             <a href="/docs.html">Docs</a>
             <a href="/roadmap.html">Roadmap</a>
-            <a href="/download.html">Download</a>
-            <a href="/changelog.html">Changelog</a>
-          </div>
-          <span class="footer-copy">&copy; 2026 Konnekt</span>
+          </nav>
+          <nav class="footer-col" aria-label="Source">
+            <span class="label">Source</span>
+            <a href="https://github.com/kollektiv-mc/Konnekt" target="_blank" rel="noopener"
+              >GitHub</a
+            >
+            <a href="https://github.com/kollektiv-mc/Konnekt/issues" target="_blank" rel="noopener"
+              >Issues</a
+            >
+            <a
+              href="https://github.com/kollektiv-mc/Konnekt/blob/main/LICENSE"
+              target="_blank"
+              rel="noopener"
+              >MIT licence</a
+            >
+          </nav>
         </div>
-      </div>
-    </footer>
+        <div class="footer-base">
+          <span
+            >Alpha software. A side project mostly written by Claude.
+            <a href="/docs.html#disclaimer">Full statement</a></span
+          >
+          <span>&copy; 2026 Konnekt</span>
+        </div>
+      </footer>
+    </div>
 
-    <script src="/main.js"></script>
     <script src="/release.js"></script>
+    <script src="/site.js"></script>
     <script src="/docs.js"></script>
   </body>
 </html>
