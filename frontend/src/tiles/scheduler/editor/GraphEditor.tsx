@@ -28,7 +28,7 @@ import {
 import { SchedulerCtx, type NodeRunState } from './schedulerContext'
 import { BlockNode } from './BlockNode'
 import { AnimatedEdge } from './AnimatedEdge'
-import { BlockPalette } from './BlockPalette'
+import { BlockPalette, PaletteToggle } from './BlockPalette'
 import { NodeConfigPanel } from './NodeConfigPanel'
 import { NodeDataPanel } from './NodeDataPanel'
 import { QuickAddMenu } from './QuickAddMenu'
@@ -1166,7 +1166,12 @@ function GraphEditorInner({
           <BlockPalette blockDefs={blockDefs} onAdd={(def) => addBlock(def)} />
 
           {/* ReactFlow canvas */}
-          <div ref={canvasWrapperRef} className="flex-1" onDrop={onDrop} onDragOver={onDragOver}>
+          <div
+            ref={canvasWrapperRef}
+            className="relative flex-1"
+            onDrop={onDrop}
+            onDragOver={onDragOver}
+          >
             <ReactFlow
               nodes={nodes}
               edges={edges}
@@ -1198,6 +1203,7 @@ function GraphEditorInner({
                 }}
               />
             </ReactFlow>
+            <PaletteToggle />
           </div>
 
           {/* Node config / data panel */}

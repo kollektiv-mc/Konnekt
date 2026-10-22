@@ -66,4 +66,8 @@ export {
   // The in-app notification bubbles: one glyph per tone, and the update one.
   CircleArrowUp,
   Info,
+  // The scheduler's block-browser toggle: a shut box while the browser is
+  // closed, the same box opened while it is out. Lucide's one closed/open pair.
+  Package,
+  PackageOpen,
 } from 'lucide-react'

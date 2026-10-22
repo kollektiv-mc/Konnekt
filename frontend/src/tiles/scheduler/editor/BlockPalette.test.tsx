@@ -1,7 +1,7 @@
 import { describe, it, expect, afterEach, beforeEach, vi } from 'vitest'
 import { render, screen, cleanup, fireEvent } from '@testing-library/react'
 import type { models } from '../../../../wailsjs/go/models'
-import { BlockPalette } from './BlockPalette'
+import { BlockPalette, PaletteToggle } from './BlockPalette'
 import { useSettingsStore } from '../../../stores/useSettingsStore'
 
 vi.mock('../../../../wailsjs/go/main/App')
@@ -49,26 +49,48 @@ function setCollapsed(collapsed: boolean, openGroups: Record<string, boolean> = 
   })
 }
 
-describe('the palette edge strip', () => {
+describe('the block browser toggle', () => {
   beforeEach(() => update.mockClear())
 
-  it('expands a collapsed palette from the whole strip', () => {
+  it('opens a closed browser', () => {
     setCollapsed(true)
-    render(<BlockPalette blockDefs={defs} onAdd={() => {}} />)
+    render(<PaletteToggle />)
 
-    fireEvent.click(screen.getByRole('button', { name: 'Expand blocks' }))
+    const toggle = screen.getByRole('button', { name: 'Open blocks' })
+    expect(toggle.getAttribute('aria-expanded')).toBe('false')
+    fireEvent.click(toggle)
     expect(update).toHaveBeenCalledWith({ schedulerPaletteCollapsed: false })
   })
 
-  it('collapses an open palette from the whole strip', () => {
+  it('closes an open browser', () => {
     setCollapsed(false)
-    render(<BlockPalette blockDefs={defs} onAdd={() => {}} />)
+    render(<PaletteToggle />)
 
-    fireEvent.click(screen.getByRole('button', { name: 'Collapse blocks' }))
+    const toggle = screen.getByRole('button', { name: 'Close blocks' })
+    expect(toggle.getAttribute('aria-expanded')).toBe('true')
+    fireEvent.click(toggle)
     expect(update).toHaveBeenCalledWith({ schedulerPaletteCollapsed: true })
   })
 
-  it('keeps a collapsed list out of reach while it is hidden', () => {
+  it('shows a shut box when closed and an open one when open', () => {
+    setCollapsed(true)
+    const { rerender } = render(<PaletteToggle />)
+    expect(document.querySelector('.lucide-package')).toBeTruthy()
+
+    setCollapsed(false)
+    rerender(<PaletteToggle />)
+    expect(document.querySelector('.lucide-package-open')).toBeTruthy()
+  })
+})
+
+describe('the block browser', () => {
+  it('has no edge strip of its own', () => {
+    setCollapsed(false)
+    render(<BlockPalette blockDefs={defs} onAdd={() => {}} />)
+    expect(screen.queryByRole('button')).toBeNull()
+  })
+
+  it('keeps a closed list out of reach while it is hidden', () => {
     setCollapsed(true)
     render(<BlockPalette blockDefs={defs} onAdd={() => {}} />)
 
