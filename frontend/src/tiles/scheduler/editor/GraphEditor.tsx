@@ -732,6 +732,15 @@ function GraphEditorInner({
     }
   }, [handleSave, onRun, showRunStatus])
 
+  // A run uses the saved graph (the backend runs it by id), so running unsaved
+  // changes means saving them. That is the user's call, not a side effect of
+  // run: a dirty graph asks first, a clean one runs straight away.
+  const [runAsk, setRunAsk] = useState(false)
+  const requestRun = useCallback(() => {
+    if (dirtyRef.current) setRunAsk(true)
+    else void handleRun()
+  }, [handleRun])
+
   // ── Delete selected nodes + their edges ───────────────────────────────────
   const handleDeleteSelected = useCallback(() => {
     const selectedIds = new Set(nodes.filter((n) => n.selected).map((n) => n.id))
@@ -1140,7 +1149,7 @@ function GraphEditorInner({
           )}
 
           {graphId && (
-            <button className={btnClass()} onClick={handleRun}>
+            <button className={btnClass()} onClick={requestRun}>
               run
             </button>
           )}
@@ -1277,6 +1286,20 @@ function GraphEditorInner({
               return
             }
             confirm.proceed()
+          }}
+        />
+      )}
+      {runAsk && (
+        <CloseConfirmDialog
+          saving={saving}
+          body="Run uses the saved graph. Save your changes and run it?"
+          confirmLabel="Save & run"
+          onCancel={() => setRunAsk(false)}
+          onSaveAndContinue={() => {
+            // handleRun saves first and stops there if the save fails, with
+            // the reason in the toolbar, as it always has.
+            setRunAsk(false)
+            void handleRun()
           }}
         />
       )}
