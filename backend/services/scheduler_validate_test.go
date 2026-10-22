@@ -256,42 +256,31 @@ func TestValidateGraphDataTypesWalksEveryEdge(t *testing.T) {
 	}
 }
 
-// The gates are checked against the real registry, so a port type changed in
-// logic.go cannot drift from what the validator accepts.
-func TestValidateGraphDataTypesWithGates(t *testing.T) {
+// Condition's Result is a bool output, checked against the real registry so a
+// port type changed in the block cannot drift from what the validator accepts.
+func TestValidateGraphDataTypesWithConditionResult(t *testing.T) {
 	reg := newTestScheduler(t).registry
-	boolConst := map[string]interface{}{"type": "Boolean"}
 
 	tests := []struct {
 		name      string
 		src, tgt  string
+		srcPort   string
 		tgtPort   string
-		srcConfig map[string]interface{}
 		wantIssue bool
 	}{
-		{"gate -> gate a", "control.and", "control.or", "a", nil, false},
-		{"gate -> gate b", "control.nor", "control.xor", "b", nil, false},
-		{"gate -> not", "control.nand", "control.not", "a", nil, false},
-		{"gate -> condition left", "control.and", "control.condition", "left", nil, false},
-		{"Boolean constant -> gate", "data.constant", "control.and", "a", boolConst, false},
-		{"unresolved constant -> gate allowed", "data.constant", "control.and", "a", nil, false},
-		{"String constant -> gate blocked", "data.constant", "control.and", "a", map[string]interface{}{"type": "String"}, true},
-		{"Float constant -> gate blocked", "data.constant", "control.or", "b", map[string]interface{}{"type": "Float"}, true},
-		{"compare -> gate a", "control.compare", "control.and", "a", nil, false},
-		{"compare -> condition left", "control.compare", "control.condition", "left", nil, false},
-		{"Float constant -> compare left", "data.constant", "control.compare", "left", map[string]interface{}{"type": "Float"}, false},
-		{"gate -> compare left", "control.and", "control.compare", "left", nil, false},
-		{"gate -> math input", "control.and", "data.mathOp", "a", nil, false},
+		{"result -> condition left", "control.condition", "control.condition", "result", "left", false},
+		{"result -> condition right", "control.condition", "control.condition", "result", "right", false},
+		{"result -> math input", "control.condition", "data.mathOp", "result", "a", false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			g := models.Graph{
 				Nodes: []models.Node{
-					{ID: "src", Type: tt.src, Config: tt.srcConfig},
+					{ID: "src", Type: tt.src},
 					{ID: "tgt", Type: tt.tgt},
 				},
 				Edges: []models.Edge{
-					{ID: "e1", Kind: "data", Source: "src", SourcePort: "value", Target: "tgt", TargetPort: tt.tgtPort},
+					{ID: "e1", Kind: "data", Source: "src", SourcePort: tt.srcPort, Target: "tgt", TargetPort: tt.tgtPort},
 				},
 			}
 			issues := validateGraphDataTypes(g, reg)

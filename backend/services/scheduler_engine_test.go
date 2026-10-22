@@ -420,7 +420,7 @@ func TestExecCondition(t *testing.T) {
 		t.Run(c.name, func(t *testing.T) {
 			ec := &ExecContext{Config: map[string]interface{}{
 				"left": c.left, "right": c.right, "op": c.op,
-			}}
+			}, dataOut: map[string]interface{}{}}
 			res := execCondition(ec)
 			if res.Port != c.wantPort {
 				t.Errorf("port = %q, want %q", res.Port, c.wantPort)

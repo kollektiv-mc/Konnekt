@@ -112,6 +112,21 @@ type ConfigField struct {
 	Default  interface{}   `json:"default,omitempty"`
 	Required bool          `json:"required,omitempty"`
 	Options  []FieldOption `json:"options,omitempty"` // for "select"
+	// ShowWhen shows the field only while another field of the same node has one
+	// of the listed values. A hidden field keeps its stored value; it is only
+	// not drawn.
+	ShowWhen *FieldWhen `json:"showWhen,omitempty"`
+	// Row groups fields into one line: consecutive fields with the same Row are
+	// drawn side by side in equal columns. Empty means a line of its own.
+	Row string `json:"row,omitempty"`
+}
+
+// FieldWhen is a ConfigField's visibility condition. Key names a sibling field
+// and Values the values of it that show this one; where that field has no stored
+// value, its Default is what counts.
+type FieldWhen struct {
+	Key    string   `json:"key"`
+	Values []string `json:"values"`
 }
 
 type FieldOption struct {

@@ -7,100 +7,127 @@ import (
 	"konnekt/backend/models"
 )
 
-// logicGate is one boolean gate: its block id and label, the sentence the config
-// panel shows, how many inputs it reads, and the truth function over them.
-// Registering from a table keeps the six blocks from drifting apart, which six
-// near-identical literals would.
-type logicGate struct {
-	id, label, description string
-	unary                  bool
-	eval                   func(a, b bool) bool
+// gateOps are Condition's logic operators: the option value, its label and the
+// truth function over the two operands. One table feeds the operator list, the
+// "is true" fields' visibility and the executor, so the three cannot drift.
+var gateOps = []struct {
+	value, label string
+	eval         func(a, b bool) bool
+}{
+	{"and", "AND", func(a, b bool) bool { return a && b }},
+	{"or", "OR", func(a, b bool) bool { return a || b }},
+	{"xor", "XOR", func(a, b bool) bool { return a != b }},
+	{"nand", "NAND", func(a, b bool) bool { return !(a && b) }},
+	{"nor", "NOR", func(a, b bool) bool { return !(a || b) }},
 }
 
-var logicGates = []logicGate{
-	{"control.and", "AND", "Outputs true when both A and B are true.", false,
-		func(a, b bool) bool { return a && b }},
-	{"control.or", "OR", "Outputs true when A or B, or both, are true.", false,
-		func(a, b bool) bool { return a || b }},
-	{"control.xor", "XOR", "Outputs true when exactly one of A and B is true.", false,
-		func(a, b bool) bool { return a != b }},
-	{"control.not", "NOT", "Outputs the opposite of A.", true,
-		func(a, _ bool) bool { return !a }},
-	{"control.nand", "NAND", "Outputs false only when both A and B are true.", false,
-		func(a, b bool) bool { return !(a && b) }},
-	{"control.nor", "NOR", "Outputs true only when neither A nor B is true.", false,
-		func(a, b bool) bool { return !(a || b) }},
+// conditionOptions is Condition's operator list: the comparisons, then the gates.
+func conditionOptions() []models.FieldOption {
+	opts := []models.FieldOption{
+		{Label: "==", Value: "eq"}, {Label: "!=", Value: "ne"},
+		{Label: ">", Value: "gt"}, {Label: "<", Value: "lt"},
+		{Label: "contains", Value: "contains"},
+	}
+	for _, g := range gateOps {
+		opts = append(opts, models.FieldOption{Label: g.label, Value: g.value})
+	}
+	return opts
 }
 
-// registerLogicBlocks registers the gate blocks. They live beside
-// registerBuiltins rather than in it, which is already the largest function in
-// the tree.
-//
-// A gate has no control ports, so isPureData treats it as a pull-evaluated value
-// node: it runs when something downstream reads it, and the data panel's preview
-// runs it the same way. The category is "control" so the gates list beside
-// Condition, which is where their output is usually wired.
-func registerLogicBlocks(r *BlockRegistry) {
-	for _, g := range logicGates {
-		// Port id == config key (resolveDataInputs), so a wired value outranks
-		// the checkbox of the same key, which only supplies an unwired input.
-		inputs := []models.DataPort{{ID: "a", Label: "A", Type: "bool"}}
-		fields := []models.ConfigField{{Key: "a", Label: "A", Type: "bool", Default: false}}
-		if !g.unary {
-			inputs = append(inputs, models.DataPort{ID: "b", Label: "B", Type: "bool"})
-			fields = append(fields, models.ConfigField{Key: "b", Label: "B", Type: "bool", Default: false})
+// gateOpValues lists the gate operators' option values, for the "is true"
+// fields' ShowWhen.
+func gateOpValues() []string {
+	vals := make([]string, 0, len(gateOps))
+	for _, g := range gateOps {
+		vals = append(vals, g.value)
+	}
+	return vals
+}
+
+// conditionConfigSchema is Condition's config. The two operands sit side by side
+// (Row "values") with the "is true" checkboxes under them (Row "truth"), shown
+// only for a gate operator. Port id == config key (resolveDataInputs), so a wired
+// value outranks the field of the same key; the checkboxes have no port.
+func conditionConfigSchema() []models.ConfigField {
+	gate := &models.FieldWhen{Key: "op", Values: gateOpValues()}
+	return []models.ConfigField{
+		{Key: "op", Label: "Operator", Type: "select", Default: "eq", Options: conditionOptions()},
+		{Key: "left", Label: "A", Type: "string", Required: true, Row: "values"},
+		{Key: "right", Label: "B", Type: "string", Required: true, Row: "values"},
+		{Key: "leftTrue", Label: "is true", Type: "bool", Default: true, ShowWhen: gate, Row: "truth"},
+		{Key: "rightTrue", Label: "is true", Type: "bool", Default: true, ShowWhen: gate, Row: "truth"},
+	}
+}
+
+// gateEval returns the truth function for op, or nil when op is not a gate.
+func gateEval(op string) func(a, b bool) bool {
+	for _, g := range gateOps {
+		if g.value == op {
+			return g.eval
 		}
-		must(r.RegisterBlock(models.BlockDef{
-			ID: g.id, Category: "control", Label: g.label, Description: g.description,
-			DataInputs:   inputs,
-			DataOutputs:  []models.DataPort{{ID: "value", Label: "Value", Type: "bool"}},
-			ConfigSchema: fields,
-			Source:       "native",
-		}, execGate(g.eval)))
 	}
-
-	// Compare is what turns a number or text comparison into a bool, so a
-	// threshold such as TPS below 15 can feed a gate. Its ports and fields are
-	// Condition's (port id == config key), and it shares Condition's comparison.
-	must(r.RegisterBlock(models.BlockDef{
-		ID: "control.compare", Category: "control", Label: "Compare",
-		Description: "Outputs whether A and B pass the chosen comparison.",
-		DataInputs: []models.DataPort{
-			{ID: "left", Label: "A", Type: "string"},
-			{ID: "right", Label: "B", Type: "string"},
-		},
-		DataOutputs: []models.DataPort{{ID: "value", Label: "Value", Type: "bool"}},
-		ConfigSchema: []models.ConfigField{
-			{Key: "left", Label: "Left value", Type: "string", Required: true},
-			{Key: "op", Label: "Operator", Type: "select", Default: "eq", Options: comparisonOptions()},
-			{Key: "right", Label: "Right value", Type: "string", Required: true},
-		},
-		Source: "native",
-	}, execCompare))
+	return nil
 }
 
-// execCompare outputs compareValues as float64 1 or 0, like the gates.
-func execCompare(e *ExecContext) ExecResult {
-	if compareValues(e, e.GetString("op")) {
-		e.SetOutput("value", float64(1))
-	} else {
-		e.SetOutput("value", float64(0))
+// operandIsTrue reads one gate operand. A checked "is true" box (the default,
+// so a missing value counts as checked) takes the operand as it is and an
+// unchecked one flips it, which is what NOT was.
+func operandIsTrue(e *ExecContext, valueKey, flagKey string) bool {
+	want := true
+	if v, ok := e.Config[flagKey]; ok && v != nil {
+		want = truthy(v)
 	}
-	return ExecResult{Port: "onComplete"}
+	return truthy(e.Config[valueKey]) == want
 }
 
-// execGate builds the executor for one truth function. The output is float64
-// 0/1, the engine's convention for a bool (see execConstant), so it wires into
-// Condition, another gate or a Write Attribute without a conversion.
-func execGate(eval func(a, b bool) bool) ExecFunc {
-	return func(e *ExecContext) ExecResult {
-		if eval(truthy(e.Config["a"]), truthy(e.Config["b"])) {
-			e.SetOutput("value", float64(1))
-		} else {
-			e.SetOutput("value", float64(0))
+// boolOperand reads a value as a boolean when it plausibly is one: a bool, a
+// number or the text "true" or "false". Anything else (names, MOTDs) is not.
+func boolOperand(v interface{}) (value, ok bool) {
+	switch x := v.(type) {
+	case bool:
+		return x, true
+	case string:
+		switch strings.ToLower(strings.TrimSpace(x)) {
+		case "true":
+			return true, true
+		case "false":
+			return false, true
 		}
-		return ExecResult{Port: "onComplete"}
+	case nil:
+		return false, false
 	}
+	f, err := toFloat(v)
+	if err != nil || math.IsNaN(f) || math.IsInf(f, 0) {
+		return false, false
+	}
+	return f != 0, true
+}
+
+// isBoolText reports whether v is the text "true" or "false".
+func isBoolText(v interface{}) bool {
+	s, ok := v.(string)
+	if !ok {
+		return false
+	}
+	t := strings.ToLower(strings.TrimSpace(s))
+	return t == "true" || t == "false"
+}
+
+// boolEquality answers eq and ne by truthiness when one operand is the text
+// "true" or "false" and the other can be read as a boolean, so a wired true
+// (float64 1) equals a literal "true". decided is false when the rule does not
+// apply and the comparison stays numeric or textual.
+func boolEquality(e *ExecContext) (equal, decided bool) {
+	l, r := e.Config["left"], e.Config["right"]
+	if !isBoolText(l) && !isBoolText(r) {
+		return false, false
+	}
+	lb, lok := boolOperand(l)
+	rb, rok := boolOperand(r)
+	if !lok || !rok {
+		return false, false
+	}
+	return lb == rb, true
 }
 
 // truthy reads a resolved config or wired value as a boolean. A bool is itself

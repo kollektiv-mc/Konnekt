@@ -282,26 +282,17 @@ func registerBuiltins(r *BlockRegistry) {
 
 	must(r.RegisterBlock(models.BlockDef{
 		ID: "control.condition", Category: "control", Label: "Condition",
-		Description:   "Branches on a comparison, as numbers when both values are numbers and as text otherwise.",
+		Description:   "Branches on a comparison or a logic gate of A and B.",
 		ControlInputs: []string{"trigger"}, ControlOutputs: []string{"onTrue", "onFalse"},
 		DataInputs: []models.DataPort{
 			{ID: "left", Label: "A", Type: "string"},
 			{ID: "right", Label: "B", Type: "string"},
 		},
-		ConfigSchema: []models.ConfigField{
-			{Key: "left", Label: "Left value", Type: "string", Required: true},
-			{Key: "op", Label: "Operator", Type: "select", Default: "eq",
-				Options: append(comparisonOptions(),
-					// Unary: they read only the left operand, so a gate's output
-					// needs no constant on the other side to be branched on.
-					models.FieldOption{Label: "is true", Value: "true"},
-					models.FieldOption{Label: "is false", Value: "false"})},
-			{Key: "right", Label: "Right value", Type: "string", Required: true},
-		},
-		Source: "native",
+		DataOutputs:  []models.DataPort{{ID: "result", Label: "Result", Type: "bool"}},
+		ConfigSchema: conditionConfigSchema(),
+		Source:       "native",
 	}, execCondition))
 
-	registerLogicBlocks(r)
 	registerUploadBlock(r)
 	registerDHSnapshotBlock(r)
 	registerDHPublishBlock(r)
@@ -597,42 +588,42 @@ func execNotify(e *ExecContext) ExecResult {
 	return ExecResult{Port: "onComplete"}
 }
 
+// execCondition decides one outcome, publishes it as the "result" output so a
+// Condition can feed another, and branches on it. A gate operator reads A and B
+// as booleans through their "is true" boxes; every other operator compares.
 func execCondition(e *ExecContext) ExecResult {
 	op := e.GetString("op")
 
-	// The unary operators test the left operand's truthiness and never look at
-	// the right, so they answer before the comparison below is set up. The raw
-	// value is read, not the string, because a wired true arrives as float64 1
-	// and the text "1" would have to be parsed back.
-	if op == "true" || op == "false" {
-		if truthy(e.Config["left"]) == (op == "true") {
-			return ExecResult{Port: "onTrue"}
-		}
-		return ExecResult{Port: "onFalse"}
+	var outcome bool
+	if eval := gateEval(op); eval != nil {
+		outcome = eval(operandIsTrue(e, "left", "leftTrue"), operandIsTrue(e, "right", "rightTrue"))
+	} else {
+		outcome = compareValues(e, op)
 	}
 
-	if compareValues(e, op) {
+	// float64 0/1 is the engine's convention for a bool (see execConstant).
+	if outcome {
+		e.SetOutput("result", float64(1))
 		return ExecResult{Port: "onTrue"}
 	}
+	e.SetOutput("result", float64(0))
 	return ExecResult{Port: "onFalse"}
 }
 
-// comparisonOptions is the operator list Condition and Compare share. It returns
-// a fresh slice because Condition appends to it.
-func comparisonOptions() []models.FieldOption {
-	return []models.FieldOption{
-		{Label: "==", Value: "eq"}, {Label: "!=", Value: "ne"},
-		{Label: ">", Value: "gt"}, {Label: "<", Value: "lt"},
-		{Label: "contains", Value: "contains"},
-	}
-}
-
 // compareValues answers one comparison of the node's "left" and "right" under
-// op (eq, ne, gt, lt, contains). Condition branches on it and Compare outputs
-// it, so the two cannot drift apart.
+// op (eq, ne, gt, lt, contains).
 func compareValues(e *ExecContext, op string) bool {
 	left := e.GetString("left")
 	right := e.GetString("right")
+
+	// A wired boolean arrives as float64 1 or 0, so == true would compare 1 with
+	// "true" as text and never match. When one side is the text true or false,
+	// equality reads both as booleans.
+	if op == "eq" || op == "ne" {
+		if equal, decided := boolEquality(e); decided {
+			return equal == (op == "eq")
+		}
+	}
 
 	// Two numeric operands compare as numbers. Comparing the rendered strings
 	// instead made "9" > "10" true, so every threshold rule branched wrong the

@@ -86,25 +86,32 @@ go vet ./... && go test ./...
 
 ### Pull requests
 
-Merged pull request titles become the public release notes, so a title is
-copy, not a note to a reviewer.
+Merged pull requests become the public release notes: each line of a pull
+request's Changelog section, or the title of one without, so both are copy,
+not a note to a reviewer.
 
 - **Title:** imperative mood, sentence case, no trailing period, one line, no
   em dashes. Say what changed, not which files moved.
-- **Label it** `type:feature`, `type:bug`, `type:docs` or `type:chore`. This is
-  required, CI fails without it, and the label alone decides which section of
-  the release notes the change lands in. Which one to use is below.
-- **One pull request, one concern.** The notes list a merged pull request once,
-  under one heading, by its title. A change carrying a feature *and* a website
-  pass *and* a CI tweak cannot be described honestly by any single line.
-- **Body:** why the change exists and how you verified it. The body never
-  reaches the notes, so detail is free.
+- **List the changes** in the body's `## Changelog` section, one
+  `- type: text` line each (`feature`, `fix`, `chore`, `docs` or `skip`). Each
+  line is release-notes copy with the same rules as the title, and each lands
+  on its own line under the section its type names. Which type is below.
+- **Or label it** `type:feature`, `type:bug`, `type:docs` or `type:chore` when
+  it is one change and has no section: the label files it, by its title. CI's
+  `pr-labelled` status needs one of the two, and warns when it falls back to
+  the title.
+- **One pull request per piece of work.** A session's small fixes and tweaks
+  are one pull request with a Changelog line each. Split only when a part is
+  risky on its own, has to be revertable on its own, or ships at a different
+  time.
+- **Body:** why the change exists and how you verified it. Only its Changelog
+  section reaches the notes, so detail elsewhere is free.
 
-### Which `type:` label
+### Which type
 
-The label is the only input to the release notes. Nothing reads the title, and
-nothing infers a category from a verb, so the label is a statement of fact
-rather than a preference. Ask these in order and stop at the first yes:
+The type, on a Changelog line or as the `type:` label, is the only input to
+where a change lands in the release notes. Nothing infers a category from the
+text or a verb, so the type is a statement of fact rather than a preference. Ask these in order and stop at the first yes:
 
 1. **Can a user of Konnekt tell the difference?** If nothing they can see, run
    or click changed, it is `type:chore`, or `type:docs` when the change is
@@ -133,13 +140,13 @@ Where this goes wrong in practice:
   ask what the user loses. Something goes back to being broken is `type:bug`.
   They lose something they never had is `type:feature`. They cannot tell is
   `type:chore`.
-- **One concern per pull request is what makes this answerable at all.** A
-  change that is honestly half repair and half new capability is two pull
-  requests, not a judgement call.
+- **A change that is honestly half repair and half new capability is two
+  Changelog lines**, one `fix:` and one `feature:`.
 
 `changelog:skip` is separate from all of this: it leaves a pull request out of
 the notes entirely, for work that fits no section and is not worth a line. It
-does not replace a `type:` label, which CI still requires.
+silences a Changelog section too, and does not replace one or a `type:` label,
+one of which CI still requires.
 
 ### Things not to edit by hand
 

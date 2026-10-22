@@ -12,6 +12,7 @@ frontend/wailsjs
 .claude/suite-memory.py
 .github/scripts/release-notes.py
 .github/scripts/release-notes_test.py
+.github/scripts/changelog-section.py
 
 # Generated token layer (see agent_docs/CLAUDE.md, Code style).
 frontend/src/styles
