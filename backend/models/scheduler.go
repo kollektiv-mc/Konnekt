@@ -46,6 +46,15 @@ type Edge struct {
 	Waypoints []Position `json:"waypoints,omitempty"`
 }
 
+// GraphWarning is one piece of advice about a graph that is not an error. NodeID
+// names the node it is about, so the editor can mark that block and list the
+// advice under its label; it is empty for advice about the graph as a whole.
+// Text carries no block name, which the editor adds from the node it names.
+type GraphWarning struct {
+	NodeID string `json:"nodeId"`
+	Text   string `json:"text"`
+}
+
 // ─── Block descriptor (served to frontend, renders blocks generically) ────────
 
 type BlockDef struct {

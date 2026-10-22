@@ -9,6 +9,8 @@ import { useNotificationsStore } from '../../stores/useNotificationsStore'
 import { useSettingsStore } from '../../stores/useSettingsStore'
 import { ServerSelector } from '../../components/ServerSelector'
 import type { ServerConfig } from '../../types'
+import { EventsOn } from '../../../wailsjs/runtime/runtime'
+import { EVENTS } from '../../lib/constants'
 import { SchedulerTile } from './index'
 
 vi.mock('../../../wailsjs/go/main/App')
@@ -275,6 +277,8 @@ describe('the scheduler editor warns about a stop', () => {
   const toasts = () => useNotificationsStore.getState().toasts
   const warningButton = () => screen.queryByRole('button', { name: /^\d+ warnings?$/ })
   const RCON_WARNING = 'This graph stops the server, but RCON is not confirmed for it.'
+  // The backend names the node a warning is about; the one command node is n1.
+  const RCON_ADVICE = [{ nodeId: 'n1', text: RCON_WARNING }] as models.GraphWarning[]
 
   const commandDef = {
     id: 'action.command',
@@ -298,6 +302,8 @@ describe('the scheduler editor warns about a stop', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
+    // Every canvas is asked about now, so no test inherits another's advice.
+    vi.mocked(App.GetScheduleGraphWarnings).mockResolvedValue([])
     vi.stubGlobal(
       'DOMMatrixReadOnly',
       class {
@@ -320,7 +326,7 @@ describe('the scheduler editor warns about a stop', () => {
 
   it('shows the answer beside Save and asks for the server it edits', async () => {
     vi.mocked(App.GetScheduleGraphs).mockResolvedValue([withCommand('__stop__')])
-    vi.mocked(App.GetScheduleGraphWarnings).mockResolvedValue([RCON_WARNING])
+    vi.mocked(App.GetScheduleGraphWarnings).mockResolvedValue(RCON_ADVICE)
     render(<SchedulerTile serverId="alpha" maximized />)
 
     await waitFor(() => expect(warningButton()).not.toBeNull())
@@ -334,7 +340,7 @@ describe('the scheduler editor warns about a stop', () => {
           category: 'warnings',
           tone: 'warn',
           title: 'Scheduler warning',
-          text: RCON_WARNING,
+          text: `Command: ${RCON_WARNING}`,
         }),
       ]),
     )
@@ -346,13 +352,16 @@ describe('the scheduler editor warns about a stop', () => {
 
   it('reopens a dismissed bubble, and keeps it after close', async () => {
     vi.mocked(App.GetScheduleGraphs).mockResolvedValue([withCommand('__stop__')])
-    vi.mocked(App.GetScheduleGraphWarnings).mockResolvedValue([RCON_WARNING])
+    vi.mocked(App.GetScheduleGraphWarnings).mockResolvedValue(RCON_ADVICE)
     const { unmount } = render(<SchedulerTile serverId="alpha" maximized />)
     await waitFor(() => expect(toasts()).toHaveLength(1))
 
     act(() => useNotificationsStore.getState().dismissToast(toasts()[0].id))
     expect(toasts()).toEqual([])
+    // The count opens the list, whose footer raises the bubble again.
     fireEvent.click(warningButton() as HTMLElement)
+    expect(toasts()).toEqual([])
+    fireEvent.click(screen.getByRole('button', { name: 'Show as notification' }))
     expect(toasts()).toHaveLength(1)
 
     // Closing the scheduler leaves it up, and reopening counts no repeat.
@@ -473,12 +482,14 @@ describe('the scheduler editor warns about a stop', () => {
     }
   })
 
-  it('never asks about a graph with nothing that stops the server', async () => {
+  // A destination or retention warning is about a block that stops nothing,
+  // so a graph without a stop is asked about too.
+  it('asks about a graph with nothing that stops the server', async () => {
     vi.mocked(App.GetScheduleGraphs).mockResolvedValue([withCommand('save-all')])
     render(<SchedulerTile serverId="alpha" maximized />)
     await waitFor(() => expect(selected()).toBe('Only'))
 
-    expect(App.GetScheduleGraphWarnings).not.toHaveBeenCalled()
+    await waitFor(() => expect(App.GetScheduleGraphWarnings).toHaveBeenCalled())
     expect(warningButton()).toBeNull()
     expect(toasts()).toEqual([])
   })
@@ -491,6 +502,61 @@ describe('the scheduler editor warns about a stop', () => {
     await waitFor(() => expect(App.GetScheduleGraphWarnings).toHaveBeenCalled())
     expect(warningButton()).toBeNull()
     expect(toasts()).toEqual([])
+  })
+
+  // The count's list goes to the block: its row selects the node, which opens
+  // the panel. (The canvas draws no nodes in jsdom, so the block's own triangle
+  // is held in BlockNode.test.tsx.)
+  const panel = () => document.querySelector('[aria-hidden][class*="bg-overlay"]')
+  const openPanelFromList = () => {
+    fireEvent.click(warningButton() as HTMLElement)
+    fireEvent.click(screen.getByText(RCON_WARNING))
+  }
+
+  it('selects the block, and opens its panel, from a list row', async () => {
+    vi.mocked(App.GetScheduleGraphs).mockResolvedValue([withCommand('__stop__')])
+    vi.mocked(App.GetScheduleGraphWarnings).mockResolvedValue(RCON_ADVICE)
+    render(<SchedulerTile serverId="alpha" maximized />)
+    await waitFor(() => expect(warningButton()).not.toBeNull())
+
+    expect(panel()?.getAttribute('aria-hidden')).toBe('true')
+    openPanelFromList()
+    expect(panel()?.getAttribute('aria-hidden')).toBe('false')
+  })
+
+  // A failure outlives the highlight, which clears when the run does, and goes
+  // when the next run starts. The data tab says what the node was warned about
+  // and what failed.
+  it('shows a node its warning and its last-run failure', async () => {
+    vi.mocked(App.GetScheduleGraphs).mockResolvedValue([withCommand('__stop__')])
+    vi.mocked(App.GetScheduleGraphWarnings).mockResolvedValue(RCON_ADVICE)
+    vi.mocked(App.PreviewScheduleNode).mockResolvedValue({
+      attributes: [],
+      console: [],
+    } as unknown as models.NodePreview)
+    render(<SchedulerTile serverId="alpha" maximized />)
+    await waitFor(() => expect(warningButton()).not.toBeNull())
+    openPanelFromList()
+    fireEvent.click(screen.getByRole('tab', { name: 'data' }))
+    expect(screen.getByTestId('node-warnings').textContent).toContain(RCON_WARNING)
+    expect(screen.queryByTestId('node-last-run')).toBeNull()
+
+    const on = (name: string) => {
+      const call = vi.mocked(EventsOn).mock.calls.find((c) => c[0] === name)
+      return call?.[1] as (p: unknown) => void
+    }
+    act(() =>
+      on(EVENTS.SCHEDULE_NODE_FINISHED)({
+        graphId: 'g1',
+        nodeId: 'n1',
+        status: 'failed',
+        error: 'bucket unreachable',
+      }),
+    )
+    expect(screen.getByTestId('node-last-run').textContent).toContain('failed: bucket unreachable')
+
+    act(() => on(EVENTS.SCHEDULE_RUN_STARTED)({ graphId: 'g1' }))
+    expect(screen.queryByTestId('node-last-run')).toBeNull()
   })
 
   it('leaves no warning, and no banner, when the ask fails', async () => {

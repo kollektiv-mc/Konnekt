@@ -124,8 +124,8 @@ func validateGraphDataTypes(g models.Graph, reg *BlockRegistry) []string {
 	return issues
 }
 
-// rconUnconfirmedWarning is the one warning graphWarnings produces. Worded as
-// "not confirmed" because ServerService.RconConfig reports ok only once the
+// rconUnconfirmedWarning is the advice for a node that stops the server. Worded
+// as "not confirmed" because ServerService.RconConfig reports ok only once the
 // server has started with RCON enabled, so a server that has never been started
 // reads the same as one with RCON off.
 const rconUnconfirmedWarning = "Stops the server with no warning to players: RCON is not confirmed. " +
@@ -137,27 +137,54 @@ const rconUnconfirmedWarning = "Stops the server with no warning to players: RCO
 const dhSnapshotConsoleWarning = "DH Snapshot warns players through the console, as RCON is not confirmed. " +
 	"It is confirmed once the server has started with enable-rcon on."
 
-// graphWarnings returns advice about g that is not an error: a graph that
+// graphWarnings returns advice about g that is not an error: every node that
 // stops the server while RCON is not confirmed cannot warn players before it
 // does, except through the console for the snapshot block, which says so in a
-// line of its own. Pure and side-effect free. Unlike validateGraphDataTypes it
-// never refuses anything: SaveGraph stays permissive and the editor only shows
-// the text beside Save, so a save or a run is never blocked by it.
-func graphWarnings(g models.Graph, reg *BlockRegistry, rconAvailable bool) []string {
+// line of its own. Each piece of advice names the node it is about. Pure and
+// side-effect free. Unlike validateGraphDataTypes it never refuses anything:
+// SaveGraph stays permissive and the editor only shows the text beside Save, so
+// a save or a run is never blocked by it.
+func graphWarnings(g models.Graph, reg *BlockRegistry, rconAvailable bool) []models.GraphWarning {
 	if rconAvailable {
 		return nil
 	}
-	var warnings []string
-	if graphStopsServerExcept(g, reg, dhSnapshotBlockID) {
-		warnings = append(warnings, rconUnconfirmedWarning)
+	stoppers := make(map[string]bool)
+	for _, n := range nodesThatStopServer(g, reg, dhSnapshotBlockID) {
+		stoppers[n.ID] = true
 	}
+	var warnings []models.GraphWarning
 	for _, n := range g.Nodes {
-		if n.Type == dhSnapshotBlockID {
-			warnings = append(warnings, dhSnapshotConsoleWarning)
-			break
+		switch {
+		case n.Type == dhSnapshotBlockID:
+			warnings = append(warnings, models.GraphWarning{NodeID: n.ID, Text: dhSnapshotConsoleWarning})
+		case stoppers[n.ID]:
+			warnings = append(warnings, models.GraphWarning{NodeID: n.ID, Text: rconUnconfirmedWarning})
 		}
 	}
 	return warnings
+}
+
+// issueSentences renders warnings the way a run's error text carries them: one
+// sentence each, led by the block's label and the node's id so a reader of the
+// history, who has no editor beside them, can tell which node is meant.
+func issueSentences(g models.Graph, reg *BlockRegistry, issues []models.GraphWarning) []string {
+	typeOf := make(map[string]string, len(g.Nodes))
+	for _, n := range g.Nodes {
+		typeOf[n.ID] = n.Type
+	}
+	out := make([]string, 0, len(issues))
+	for _, w := range issues {
+		if w.NodeID == "" {
+			out = append(out, w.Text)
+			continue
+		}
+		if entry, ok := reg.Get(typeOf[w.NodeID]); ok {
+			out = append(out, fmt.Sprintf("%s (%s): %s", entry.def.Label, w.NodeID, w.Text))
+			continue
+		}
+		out = append(out, fmt.Sprintf("Node %s: %s", w.NodeID, w.Text))
+	}
+	return out
 }
 
 // validateGraphDestinations checks every node whose block has a destination
@@ -169,10 +196,10 @@ func graphWarnings(g models.Graph, reg *BlockRegistry, rconAvailable bool) []str
 // this install never had.
 //
 // It reads the field by its type rather than by block id, so the next block that
-// uploads gets the same check. Returns one sentence per bad node; nil means the
-// graph is clean. Pure apart from reading the destination list.
-func validateGraphDestinations(g models.Graph, reg *BlockRegistry, dests *DestinationService) []string {
-	var issues []string
+// uploads gets the same check. Returns one issue per bad node, naming it; nil
+// means the graph is clean. Pure apart from reading the destination list.
+func validateGraphDestinations(g models.Graph, reg *BlockRegistry, dests *DestinationService) []models.GraphWarning {
+	var issues []models.GraphWarning
 	for _, n := range g.Nodes {
 		entry, ok := reg.Get(n.Type)
 		if !ok {
@@ -182,7 +209,9 @@ func validateGraphDestinations(g models.Graph, reg *BlockRegistry, dests *Destin
 			if f.Type != destinationFieldType {
 				continue
 			}
-			who := fmt.Sprintf("%s (%s)", entry.def.Label, n.ID)
+			bad := func(text string) {
+				issues = append(issues, models.GraphWarning{NodeID: n.ID, Text: text})
+			}
 			name := ""
 			if v, ok := n.Config[f.Key].(string); ok {
 				name = strings.TrimSpace(v)
@@ -191,20 +220,20 @@ func validateGraphDestinations(g models.Graph, reg *BlockRegistry, dests *Destin
 				// An optional destination (the snapshot block's, where none means
 				// the staging folder's own index) may be left empty.
 				if f.Required {
-					issues = append(issues, who+": no destination chosen.")
+					bad("no destination chosen.")
 				}
 				continue
 			}
 			if dests == nil {
-				issues = append(issues, who+": destinations are not available.")
+				bad("destinations are not available.")
 				continue
 			}
 			_, found, err := dests.Lookup(name)
 			switch {
 			case err != nil:
-				issues = append(issues, fmt.Sprintf("%s: the saved destinations could not be read.", who))
+				bad("the saved destinations could not be read.")
 			case !found:
-				issues = append(issues, fmt.Sprintf("%s: the destination %q does not exist. It was deleted or renamed in Settings, or this graph came from another install.", who, name))
+				bad(fmt.Sprintf("the destination %q does not exist. It was deleted or renamed in Settings, or this graph came from another install.", name))
 			}
 		}
 	}
@@ -215,9 +244,9 @@ func validateGraphDestinations(g models.Graph, reg *BlockRegistry, dests *Destin
 // empty or absent is the default, anything else must be a whole number of at
 // least 1. A value that is not a number yet (a {{wire}} or an @attribute) cannot
 // be judged before the run resolves it, and the block checks it again then.
-// Returns one sentence per bad node; nil means the graph is clean.
-func validateGraphRetention(g models.Graph) []string {
-	var issues []string
+// Returns one issue per bad node, naming it; nil means the graph is clean.
+func validateGraphRetention(g models.Graph) []models.GraphWarning {
+	var issues []models.GraphWarning
 	for _, n := range g.Nodes {
 		if n.Type != dhPublishBlockID {
 			continue
@@ -226,7 +255,7 @@ func validateGraphRetention(g models.Graph) []string {
 			continue
 		}
 		if _, err := parseDHKeep(n.Config["keep"]); err != nil {
-			issues = append(issues, fmt.Sprintf("Publish DH Snapshot (%s): %s.", n.ID, err))
+			issues = append(issues, models.GraphWarning{NodeID: n.ID, Text: err.Error() + "."})
 		}
 	}
 	return issues

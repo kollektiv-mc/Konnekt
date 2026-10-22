@@ -63,32 +63,33 @@ function handlers() {
     onDeleteGraph: vi.fn(),
     onErrorClick: vi.fn(),
     onRunStatusClick: vi.fn(),
+    onSelectNode: vi.fn(),
     onWarningsClick: vi.fn(),
   }
 }
 
 type Overrides = Partial<React.ComponentProps<typeof Toolbar>>
 
+const BASE = {
+  graphs,
+  graphId: 'g1',
+  graphName: 'Nightly',
+  graphEnabled: false,
+  dirty: false,
+  saving: false,
+  nodes: [] as BlockFlowNode[],
+  edges: [] as FlowEdge[],
+  defMap,
+  canUndo: false,
+  canRedo: false,
+  runStatus: null,
+  schedulerError: null,
+  warnings: [] as models.GraphWarning[],
+}
+
 function setup(overrides: Overrides = {}) {
   const h = handlers()
-  const props: React.ComponentProps<typeof Toolbar> = {
-    graphs,
-    graphId: 'g1',
-    graphName: 'Nightly',
-    graphEnabled: false,
-    dirty: false,
-    saving: false,
-    nodes: [],
-    edges: [],
-    defMap,
-    canUndo: false,
-    canRedo: false,
-    runStatus: null,
-    schedulerError: null,
-    warnings: [],
-    ...h,
-    ...overrides,
-  }
+  const props: React.ComponentProps<typeof Toolbar> = { ...BASE, ...h, ...overrides }
   render(<Toolbar {...props} />)
   return h
 }
@@ -96,6 +97,9 @@ function setup(overrides: Overrides = {}) {
 const button = (name: string | RegExp) => screen.getByRole('button', { name }) as HTMLButtonElement
 const openEdit = () => fireEvent.click(button('edit'))
 const openOverflow = () => fireEvent.click(button('Graph actions'))
+
+const warn = (nodeId: string, ...texts: string[]) =>
+  texts.map((text) => ({ nodeId, text })) as models.GraphWarning[]
 
 const canvas = [
   node('a', 'action.command', 'Command', true),
@@ -142,16 +146,15 @@ describe('the toolbar bar', () => {
   it('keeps run, the toggle, the warning count and the status in plain view', () => {
     const h = setup({
       graphEnabled: true,
-      warnings: ['stops the server', 'another'],
+      warnings: warn('a', 'stops the server', 'another'),
       runStatus: { text: 'run failed', failed: true, detail: 'why' },
     })
     fireEvent.click(button('run'))
     fireEvent.click(button('[on]'))
-    fireEvent.click(button('2 warnings'))
+    expect(button('2 warnings')).toBeTruthy()
     fireEvent.click(button('run failed'))
     expect(h.onRun).toHaveBeenCalledOnce()
     expect(h.onToggleEnabled).toHaveBeenCalledOnce()
-    expect(h.onWarningsClick).toHaveBeenCalledOnce()
     expect(h.onRunStatusClick).toHaveBeenCalledWith(expect.objectContaining({ text: 'run failed' }))
   })
 
@@ -214,7 +217,7 @@ describe('the bar does not shift', () => {
     const slot = widthClass(segmentOf(quiet))
     expect(slot).toBeTruthy()
     cleanup()
-    setup({ warnings: ['one', 'two'] })
+    setup({ warnings: warn('a', 'one', 'two') })
     expect(widthClass(segmentOf(button('2 warnings')))).toBe(slot)
   })
 
@@ -226,7 +229,7 @@ describe('the bar does not shift', () => {
   })
 
   it('makes every segment the same height', () => {
-    setup({ graphEnabled: true, warnings: ['x'] })
+    setup({ graphEnabled: true, warnings: warn('a', 'x') })
     const segs = [
       button(/Nightly/),
       button('add'),
@@ -779,5 +782,72 @@ describe('the overflow menu', () => {
     setup()
     openOverflow()
     expect(screen.queryByRole('button', { name: /export|import/i })).toBeNull()
+  })
+})
+
+describe('the warnings list', () => {
+  const STOP = 'Stops the server with no warning to players: RCON is not confirmed.'
+  const GRAPH_WIDE = 'This graph has no trigger.'
+  const warnings = [
+    { nodeId: 'a', text: STOP },
+    { nodeId: 'c', text: 'Cron is odd.' },
+    { nodeId: '', text: GRAPH_WIDE },
+  ] as models.GraphWarning[]
+  const openList = () => fireEvent.click(button('3 warnings'))
+
+  it('opens from the count, below it, rather than raising the bubble', () => {
+    const h = setup({ nodes: canvas, warnings })
+    expect(screen.queryByText(GRAPH_WIDE)).toBeNull()
+    openList()
+    expect(screen.getByText(GRAPH_WIDE)).toBeTruthy()
+    expect(h.onWarningsClick).not.toHaveBeenCalled()
+    expect(button('3 warnings').getAttribute('aria-expanded')).toBe('true')
+  })
+
+  it('lists each warning under the label of its block', () => {
+    setup({ nodes: canvas, warnings })
+    openList()
+    const row = screen.getByText(STOP).closest('button') as HTMLElement
+    expect(within(row).getByText('Command')).toBeTruthy()
+    const cron = screen.getByText('Cron is odd.').closest('button') as HTMLElement
+    expect(within(cron).getByText('Cron')).toBeTruthy()
+  })
+
+  it('lists a graph-wide warning with no block, and nothing to click', () => {
+    setup({ nodes: canvas, warnings })
+    openList()
+    const text = screen.getByText(GRAPH_WIDE)
+    expect(text.closest('button')).toBeNull()
+    expect(text.parentElement?.children).toHaveLength(1)
+  })
+
+  it('reads a warning for a block no longer on the canvas as graph-wide', () => {
+    setup({ nodes: [], warnings: warn('gone', STOP) })
+    fireEvent.click(button('1 warning'))
+    expect(screen.getByText(STOP).closest('button')).toBeNull()
+  })
+
+  it('selects the block, and closes, when its row is picked', () => {
+    const h = setup({ nodes: canvas, warnings })
+    openList()
+    fireEvent.click(screen.getByText('Cron is odd.'))
+    expect(h.onSelectNode).toHaveBeenCalledWith('c')
+    expect(button('3 warnings').getAttribute('aria-expanded')).toBe('false')
+  })
+
+  it('still reopens the bubble from the footer', () => {
+    const h = setup({ nodes: canvas, warnings })
+    openList()
+    fireEvent.click(button('Show as notification'))
+    expect(h.onWarningsClick).toHaveBeenCalledOnce()
+  })
+
+  it('does not stay open once the last warning is gone', () => {
+    const props = { ...BASE, ...handlers(), nodes: canvas, warnings }
+    const { rerender } = render(<Toolbar {...props} />)
+    fireEvent.click(button('3 warnings'))
+    rerender(<Toolbar {...props} warnings={[]} />)
+    rerender(<Toolbar {...props} warnings={warnings} />)
+    expect(button('3 warnings').getAttribute('aria-expanded')).toBe('false')
   })
 })

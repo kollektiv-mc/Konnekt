@@ -4,7 +4,7 @@ import { Handle, Position, type NodeProps } from '@xyflow/react'
 import { SchedulerCtx } from './schedulerContext'
 import { Icon } from '../../../components/ui/Icon'
 import { fmtDowntime } from '../../../lib/format'
-import { TriangleAlert } from '../../../lib/icons'
+import { Power, TriangleAlert } from '../../../lib/icons'
 import {
   CATEGORY_ICON,
   categoryColor,
@@ -54,6 +54,8 @@ export const BlockNode = memo(function BlockNode({ data, selected }: NodeProps<B
     nodeRunState,
     nodeDowntimeMs,
     nodeWarning,
+    nodeAdvice,
+    nodeFailure,
     cycleNodes,
   } = useContext(SchedulerCtx)
   const def = blockDefs.get(nd.blockType)
@@ -61,6 +63,8 @@ export const BlockNode = memo(function BlockNode({ data, selected }: NodeProps<B
   const runState = nodeRunState.get(nd.id as string)
   const downtimeMs = nodeDowntimeMs.get(nd.id as string)
   const warning = nodeWarning.get(nd.id as string)
+  const advice = nodeAdvice.get(nd.id as string)
+  const failure = nodeFailure.get(nd.id as string)
   const inCycle = cycleNodes.has(nd.id as string)
 
   const color = categoryColor(def?.category ?? '')
@@ -135,7 +139,7 @@ export const BlockNode = memo(function BlockNode({ data, selected }: NodeProps<B
 
   const bodyH = Math.max(1, leftPorts.length, rightPorts.length) * ROW_H + PAD * 2
   // The line holds only what the last run could not finish; the server-stopping
-  // effect lives in the header (a warning icon), so it adds no height.
+  // effect and any advice live in the header (icons), so they add no height.
   const hasStatusLine = warning !== undefined
   const aboveBodyH = HEADER_H + (hint !== undefined ? INFO_H : 0) + (hasStatusLine ? STATUS_H : 0)
   const totalH = aboveBodyH + bodyH
@@ -172,6 +176,15 @@ export const BlockNode = memo(function BlockNode({ data, selected }: NodeProps<B
     downtimeMs !== undefined
       ? `Stops the server; last downtime ${fmtDowntime(downtimeMs)}`
       : 'Stops the server'
+
+  // The triangle is the block's "look at this": grey while the backend has
+  // advice about it, red once it failed in the last run. It says which in its
+  // name, the failure first, so the reason is there without opening the panel.
+  const failed = failure !== undefined
+  const flagTip = [
+    ...(failed ? [failure ? `Failed in the last run: ${failure}` : 'Failed in the last run'] : []),
+    ...(advice ?? []),
+  ].join('\n')
 
   return (
     <>
@@ -218,6 +231,17 @@ export const BlockNode = memo(function BlockNode({ data, selected }: NodeProps<B
               aria-label={stopsServerTip}
               title={stopsServerTip}
               className="text-text-faint flex shrink-0 items-center"
+            >
+              <Icon icon={Power} size="xs" />
+            </span>
+          )}
+          {flagTip !== '' && (
+            <span
+              role="img"
+              aria-label={flagTip}
+              title={flagTip}
+              data-testid="node-flag"
+              className={`flex shrink-0 items-center ${failed ? 'text-danger' : 'text-text-faint'}`}
             >
               <Icon icon={TriangleAlert} size="xs" />
             </span>

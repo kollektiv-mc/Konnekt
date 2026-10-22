@@ -47,6 +47,8 @@ function ctxValue(overrides: Partial<SchedulerCtxValue> = {}): SchedulerCtxValue
     nodeRunState: new Map(),
     nodeDowntimeMs: new Map(),
     nodeWarning: new Map(),
+    nodeAdvice: new Map(),
+    nodeFailure: new Map(),
     firedEdges: new Set(),
     cycleNodes: new Set(),
     cycleEdges: new Set(),

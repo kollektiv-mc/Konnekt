@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"reflect"
 	"runtime"
 	"strings"
 	"testing"
@@ -723,11 +724,11 @@ func TestGraphWarningsSnapshotBlockWarnsViaConsole(t *testing.T) {
 	snap := dhGraph("srv1", dhBlockConfig())
 
 	got := graphWarnings(snap, reg, false)
-	if len(got) != 1 || got[0] != dhSnapshotConsoleWarning {
-		t.Fatalf("warnings = %v, want only the console advice", got)
+	if len(got) != 1 || got[0].Text != dhSnapshotConsoleWarning || got[0].NodeID != "u1" {
+		t.Fatalf("warnings = %v, want only the console advice, on the snapshot node", got)
 	}
-	if !containsAll(got[0], "RCON is not confirmed", "through the", "console") || strings.Contains(got[0], "cannot be sent") {
-		t.Errorf("text = %q", got[0])
+	if !containsAll(got[0].Text, "RCON is not confirmed", "through the", "console") || strings.Contains(got[0].Text, "cannot be sent") {
+		t.Errorf("text = %q", got[0].Text)
 	}
 	if got := graphWarnings(snap, reg, true); len(got) != 0 {
 		t.Errorf("with RCON: warnings = %v", got)
@@ -738,8 +739,12 @@ func TestGraphWarningsSnapshotBlockWarnsViaConsole(t *testing.T) {
 	snap.Nodes = append(snap.Nodes, stop.Nodes[1])
 	snap.Nodes[len(snap.Nodes)-1].ID = "stop"
 	got = graphWarnings(snap, reg, false)
-	if len(got) != 2 || got[0] != rconUnconfirmedWarning || got[1] != dhSnapshotConsoleWarning {
-		t.Errorf("warnings = %v", got)
+	want := []models.GraphWarning{
+		{NodeID: "u1", Text: dhSnapshotConsoleWarning},
+		{NodeID: "stop", Text: rconUnconfirmedWarning},
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("warnings = %v, want %v", got, want)
 	}
 }
 
@@ -750,7 +755,7 @@ func TestGraphWarningsMethodAsksRconForASnapshotGraph(t *testing.T) {
 	g := dhGraph(fixtureServerID, dhBlockConfig())
 
 	got, err := s.GraphWarnings(fixtureServerID, g)
-	if err != nil || len(got) != 1 || got[0] != dhSnapshotConsoleWarning {
+	if err != nil || len(got) != 1 || got[0].Text != dhSnapshotConsoleWarning {
 		t.Fatalf("without RCON: %v, %v", got, err)
 	}
 	enableRcon(srv, "127.0.0.1:25575")
@@ -780,12 +785,12 @@ func TestSnapshotNodeDestinationOptionalButMustExist(t *testing.T) {
 		t.Errorf("a saved destination: issues = %q", issues)
 	}
 	issues := validateGraphDestinations(node("gone"), reg, f.dests)
-	if len(issues) != 1 || !strings.Contains(issues[0], `"gone" does not exist`) {
+	if len(issues) != 1 || !strings.Contains(issues[0].Text, `"gone" does not exist`) {
 		t.Errorf("a missing destination: issues = %q", issues)
 	}
 	// Upload to Bucket's destination is still required.
 	up := uploadGraph("srv1", map[string]interface{}{"source": "x"}, false)
-	if issues := validateGraphDestinations(up, reg, f.dests); len(issues) != 1 || !strings.Contains(issues[0], "no destination chosen") {
+	if issues := validateGraphDestinations(up, reg, f.dests); len(issues) != 1 || !strings.Contains(issues[0].Text, "no destination chosen") {
 		t.Errorf("upload with none: issues = %q", issues)
 	}
 }

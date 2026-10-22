@@ -63,6 +63,29 @@ describe('NodePanel', () => {
     expect(screen.getByText('Data preview')).toBeTruthy()
   })
 
+  describe('the data tab', () => {
+    it('lists the warnings of the node and its last-run error', async () => {
+      setup({ tab: 'data', warnings: ['Stops the server with no warning.'], failure: 'boom' })
+      await act(async () => {})
+      const warnings = screen.getByTestId('node-warnings')
+      expect(warnings.textContent).toContain('Stops the server with no warning.')
+      expect(screen.getByTestId('node-last-run').textContent).toContain('failed: boom')
+    })
+
+    it('says a failure with no text only failed', async () => {
+      setup({ tab: 'data', failure: '' })
+      await act(async () => {})
+      expect(screen.getByTestId('node-last-run').textContent).toBe('last runfailed')
+    })
+
+    it('has neither section for a node with nothing to report', async () => {
+      setup({ tab: 'data' })
+      await act(async () => {})
+      expect(screen.queryByTestId('node-warnings')).toBeNull()
+      expect(screen.queryByTestId('node-last-run')).toBeNull()
+    })
+  })
+
   it('reports a tab click through onTab', () => {
     const { props } = setup()
     fireEvent.click(screen.getByRole('tab', { name: 'data' }))
