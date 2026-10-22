@@ -9,6 +9,8 @@ import {
 import { blockEntries, groupKey } from './blockGroups'
 import { useSettingsStore } from '../../../stores/useSettingsStore'
 import { Tooltip } from '../../../components/ui/Tooltip'
+import { Icon } from '../../../components/ui/Icon'
+import { Package, PackageOpen } from '../../../lib/icons'
 
 interface Props {
   blockDefs: models.BlockDef[]
@@ -23,12 +25,8 @@ export function BlockPalette({ blockDefs, onAdd }: Props) {
 
   const categories = orderedCategories(blockDefs)
 
-  // Both swallow: `update` reverts the collapse state itself, so the panel
-  // springs back on a refused write and the settings modal shows why.
-  function toggleCollapsed() {
-    update({ schedulerPaletteCollapsed: !collapsed }).catch(() => {})
-  }
-
+  // Swallowed: `update` reverts the setting itself on a refused write, and
+  // the settings modal shows why.
   function toggleCategory(cat: string) {
     update({ schedulerPaletteClosedCategories: { ...closed, [cat]: !closed[cat] } }).catch(() => {})
   }
@@ -61,16 +59,16 @@ export function BlockPalette({ blockDefs, onAdd }: Props) {
     )
   }
 
-  // One shell for both states, so collapsing and expanding animate its width
+  // One shell for both states, so closing and opening animate its width
   // rather than swapping one element for another. The list keeps a fixed width
   // inside it, so the text is clipped by the narrowing shell instead of
-  // reflowing, and it fades as it goes. Collapsed, it stays mounted but inert,
-  // out of the tab order and the accessibility tree. The edge strip is the
-  // shell's last child either way, the full height, on the right.
+  // reflowing, and it fades as it goes. Closed, it is no width at all and stays
+  // mounted but inert, out of the tab order and the accessibility tree. It is
+  // opened and closed from PaletteToggle, on the canvas beside it.
   return (
     <div
-      className={`bg-canvas border-border-subtle border-r-hairline duration-panel ease-standard flex shrink-0 overflow-hidden transition-[width] motion-reduce:transition-none ${
-        collapsed ? 'w-5' : 'w-48'
+      className={`bg-canvas border-border-subtle duration-panel ease-standard flex shrink-0 overflow-hidden transition-[width] motion-reduce:transition-none ${
+        collapsed ? 'w-0' : 'border-r-hairline w-48'
       } ${NO_GRAPH_KEYS}`}
     >
       <div
@@ -80,7 +78,7 @@ export function BlockPalette({ blockDefs, onAdd }: Props) {
           collapsed ? 'opacity-0' : 'opacity-100'
         }`}
       >
-        <div className="w-[calc(12rem-1.25rem)] px-2 py-2">
+        <div className="w-48 px-2 py-2">
           <div className="text-text-faint mb-2 font-mono text-xs">blocks</div>
 
           {categories.map((cat) => {
@@ -130,15 +128,34 @@ export function BlockPalette({ blockDefs, onAdd }: Props) {
           })}
         </div>
       </div>
-      <button
-        type="button"
-        onClick={toggleCollapsed}
-        title={collapsed ? 'Expand blocks' : 'Collapse blocks'}
-        aria-label={collapsed ? 'Expand blocks' : 'Collapse blocks'}
-        className="hover:bg-hover text-text-faint text-1xs flex w-5 shrink-0 items-center justify-center font-mono transition-colors select-none"
-      >
-        {collapsed ? '›' : '‹'}
-      </button>
     </div>
+  )
+}
+
+/**
+ * Opens and closes the block browser. It sits in the canvas's top-left
+ * corner, so it rides the browser's edge as the browser slides out and back.
+ * A miss lands on the canvas rather than outside the tile, where a click would
+ * close the editor or raise the unsaved-changes prompt. The box is shut while
+ * the browser is closed and open while it is out.
+ */
+export function PaletteToggle() {
+  const { settings, update } = useSettingsStore()
+  const collapsed = settings.schedulerPaletteCollapsed
+  const label = collapsed ? 'Open blocks' : 'Close blocks'
+  return (
+    <button
+      type="button"
+      // Swallowed: `update` reverts the setting itself on a refused write.
+      onClick={() => update({ schedulerPaletteCollapsed: !collapsed }).catch(() => {})}
+      title={label}
+      aria-label={label}
+      aria-expanded={!collapsed}
+      className={`bg-surface border-border-subtle hover:bg-hover hover:text-text-primary border-hairline absolute top-2 left-2 z-10 flex h-7 w-7 items-center justify-center rounded transition-colors ${
+        collapsed ? 'text-text-muted' : 'text-text-primary'
+      } ${NO_GRAPH_KEYS}`}
+    >
+      <Icon icon={collapsed ? Package : PackageOpen} size="sm" />
+    </button>
   )
 }

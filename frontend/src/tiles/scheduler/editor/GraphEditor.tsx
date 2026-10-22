@@ -27,7 +27,7 @@ import {
 import { SchedulerCtx, type NodeRunState } from './schedulerContext'
 import { BlockNode } from './BlockNode'
 import { AnimatedEdge } from './AnimatedEdge'
-import { BlockPalette } from './BlockPalette'
+import { BlockPalette, PaletteToggle } from './BlockPalette'
 import { GRID_DOT_OFFSET, GRID_DOT_SIZE, GRID_GAP, SNAP_GRID } from './canvasGrid'
 import { NodePanel } from './NodePanel'
 import { QuickAddHost } from './QuickAddHost'
@@ -1212,6 +1212,7 @@ function GraphEditorInner({
                 />
               </ReactFlow>
             </div>
+            <PaletteToggle />
 
             {/* Node config / data panel: floats over the canvas, never resizes it */}
             <NodePanel
