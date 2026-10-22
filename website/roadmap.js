@@ -118,15 +118,6 @@
     searchEl.focus()
   })
 
-  // "/" jumps to the search, as the glyph beside it says.
-  document.addEventListener('keydown', function (e) {
-    if (e.key !== '/' || e.ctrlKey || e.metaKey || e.altKey) return
-    var t = e.target
-    if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return
-    e.preventDefault()
-    searchEl.focus()
-  })
-
   index()
   apply()
 
