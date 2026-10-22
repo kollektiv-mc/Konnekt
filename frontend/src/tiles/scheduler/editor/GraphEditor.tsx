@@ -1021,6 +1021,7 @@ function GraphEditorInner({
     }),
     [
       defMap,
+      // aislop-ignore-next-line code-quality/duplicate-block -- a memo's dependency list mirrors the object it builds
       edges,
       collapsed,
       onToggleCollapse,
@@ -1207,28 +1208,27 @@ function GraphEditorInner({
         />
       )}
 
-      {confirm.pending && (
-        <CloseConfirmDialog
-          saving={saving}
-          onCancel={confirm.cancel}
-          onDiscard={() => {
-            // Mark clean first: the close path re-enters the close guard, which
-            // reads dirtyRef and would otherwise put the dialog straight back.
-            setSavedSig(graphSignature({ name: graphName, enabled: graphEnabled }, nodes, edges))
-            confirm.proceed()
-          }}
-          onSaveAndContinue={async () => {
-            // null means the save failed. The store has recorded the message and
-            // the toolbar renders it, so drop the pending action and leave the
-            // graph loaded rather than continuing past a failure (#124).
-            if ((await handleSave()) === null) {
-              confirm.cancel()
-              return
-            }
-            confirm.proceed()
-          }}
-        />
-      )}
+      <CloseConfirmDialog
+        open={confirm.pending}
+        saving={saving}
+        onCancel={confirm.cancel}
+        onDiscard={() => {
+          // Mark clean first: the close path re-enters the close guard, which
+          // reads dirtyRef and would otherwise put the dialog straight back.
+          setSavedSig(graphSignature({ name: graphName, enabled: graphEnabled }, nodes, edges))
+          confirm.proceed()
+        }}
+        onSaveAndContinue={async () => {
+          // null means the save failed. The store has recorded the message and
+          // the toolbar renders it, so drop the pending action and leave the
+          // graph loaded rather than continuing past a failure (#124).
+          if ((await handleSave()) === null) {
+            confirm.cancel()
+            return
+          }
+          confirm.proceed()
+        }}
+      />
     </SchedulerCtx.Provider>
   )
 }

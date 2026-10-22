@@ -1,6 +1,8 @@
 import { useEffect } from 'react'
+import { usePresence } from '../../../hooks/usePresence'
 
 interface Props {
+  open: boolean
   saving: boolean
   onCancel: () => void
   onDiscard: () => void
@@ -14,8 +16,19 @@ interface Props {
 // useDirtyGuard, so the wording here stays neutral about which of the three
 // asked. z-dialog, inside the maximize overlay's own stacking context, so the
 // value orders it against the editor, not against the app (lib/layers.ts).
-export function CloseConfirmDialog({ saving, onCancel, onDiscard, onSaveAndContinue }: Props) {
+// Stays mounted through its exit animation (usePresence), so the caller passes
+// `open` rather than mounting it conditionally.
+export function CloseConfirmDialog({
+  open,
+  saving,
+  onCancel,
+  onDiscard,
+  onSaveAndContinue,
+}: Props) {
+  const presence = usePresence(open)
+
   useEffect(() => {
+    if (!open) return
     const handler = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         e.stopPropagation()
@@ -24,11 +37,18 @@ export function CloseConfirmDialog({ saving, onCancel, onDiscard, onSaveAndConti
     }
     window.addEventListener('keydown', handler, true)
     return () => window.removeEventListener('keydown', handler, true)
-  }, [onCancel])
+  }, [open, onCancel])
 
+  if (!presence.mounted) return null
   return (
-    <div className="z-dialog fixed inset-0 flex items-center justify-center bg-black/65">
-      <div className="bg-canvas border-border-subtle w-full max-w-md rounded-xl border p-5">
+    <div
+      inert={presence.inert}
+      className={`${presence.overlayClass} z-dialog fixed inset-0 flex items-center justify-center bg-black/65`}
+    >
+      <div
+        onAnimationEnd={presence.onAnimationEnd}
+        className={`${presence.panelClass} bg-canvas border-border-subtle w-full max-w-md rounded-xl border p-5`}
+      >
         <h2 className="text-text-primary mb-1 text-sm font-semibold">Unsaved changes</h2>
         <p className="text-text-muted mb-4 text-xs">
           This graph has unsaved changes, including node moves. Save them first, or discard them?

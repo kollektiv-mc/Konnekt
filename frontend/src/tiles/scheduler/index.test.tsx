@@ -220,7 +220,8 @@ describe('switching server from the sidebar with the scheduler editor maximized'
 
     expect(App.SetActiveServerID).not.toHaveBeenCalled()
     expect(useServerConfigStore.getState().activeId).toBe('alpha')
-    expect(screen.queryByText('Unsaved changes')).toBeNull()
+    // The dialog plays its exit before it unmounts (usePresence).
+    await waitFor(() => expect(screen.queryByText('Unsaved changes')).toBeNull())
     expect(screen.getByTitle('Unsaved changes')).toBeTruthy()
   })
 
