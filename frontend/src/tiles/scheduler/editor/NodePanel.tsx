@@ -65,7 +65,7 @@ export function NodePanel({ node, def, edges, tab, onTab, onChange, getGraph, on
       // Also what keeps focus out of the closed panel, parked off to the side.
       inert={!open}
       aria-hidden={!open}
-      className={`border-border-subtle bg-overlay border-hairline duration-panel ease-standard absolute top-2 right-2 bottom-2 z-10 flex w-60 flex-col overflow-y-auto rounded-lg transition-[transform,opacity] motion-reduce:transition-none ${NO_GRAPH_KEYS} ${
+      className={`border-border-subtle bg-overlay border-hairline duration-panel ease-standard absolute top-2 right-2 bottom-2 z-10 flex w-60 flex-col overflow-y-auto rounded-lg transition-[translate,opacity] motion-reduce:transition-none ${NO_GRAPH_KEYS} ${
         open
           ? 'translate-x-0 opacity-100'
           : 'pointer-events-none translate-x-[calc(100%+0.75rem)] opacity-0'
