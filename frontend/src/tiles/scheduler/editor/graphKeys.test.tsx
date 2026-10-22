@@ -63,16 +63,15 @@ describe('the editor chrome opts out of graph key handling', () => {
   it('covers everything in the block palette, focusable today or not', () => {
     const { container } = render(<BlockPalette blockDefs={defs} onAdd={() => {}} />)
 
-    // The palette's rows are clickable divs, so nothing in it takes focus and
-    // the opt-out is not load-bearing here yet. It is on the root anyway, so
-    // the day a row becomes a button it is already covered rather than
-    // silently deleting the selected node.
+    // The open palette's collapse strip is a button, so it takes focus and
+    // the opt-out is load-bearing: without it Delete on a focused strip would
+    // remove the selected node. The rows are still clickable divs.
     const all = Array.from(container.querySelectorAll('*'))
     expect(all.length).toBeGreaterThan(0)
     for (const el of all) {
       expect(reactFlowIgnores(el)).toBe(true)
     }
-    expect(focusable(container)).toHaveLength(0)
+    expect(focusable(container).map((el) => el.nodeName)).toEqual(['BUTTON'])
   })
 
   it('covers the quick-add menu, which is portaled outside the canvas', () => {
