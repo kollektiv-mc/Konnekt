@@ -9,6 +9,7 @@ import {
   NO_GRAPH_KEYS,
   orderedCategories,
 } from './blockMeta'
+import { Tooltip } from '../../../components/ui/Tooltip'
 import { placeQuickAdd, type Size } from './quickAddPlacement'
 
 // First-paint guess only; the primary panel is measured before the browser paints.
@@ -135,18 +136,18 @@ export function QuickAddMenu({ blockDefs, screenPos, onPick, onClose }: Props) {
                 const isHilit = i === highlightIdx
                 const borderClass = categoryBorderClass(def.category)
                 return (
-                  <div
-                    key={def.id}
-                    title={def.description}
-                    onClick={() => onPick(def)}
-                    onMouseEnter={() => setHighlightIdx(i)}
-                    className={`text-text-primary text-1xs flex cursor-pointer items-center gap-1.5 border-l-2 px-3 py-1 font-mono select-none ${
-                      isHilit ? `bg-hover ${borderClass}` : 'border-l-transparent bg-transparent'
-                    }`}
-                  >
-                    <span className="flex-1">{def.label}</span>
-                    <span className="text-text-faint text-3xs uppercase">{def.category}</span>
-                  </div>
+                  <Tooltip key={def.id} text={def.description}>
+                    <div
+                      onClick={() => onPick(def)}
+                      onMouseEnter={() => setHighlightIdx(i)}
+                      className={`text-text-primary text-1xs flex cursor-pointer items-center gap-1.5 border-l-2 px-3 py-1 font-mono select-none ${
+                        isHilit ? `bg-hover ${borderClass}` : 'border-l-transparent bg-transparent'
+                      }`}
+                    >
+                      <span className="flex-1">{def.label}</span>
+                      <span className="text-text-faint text-3xs uppercase">{def.category}</span>
+                    </div>
+                  </Tooltip>
                 )
               })
             )
@@ -182,24 +183,24 @@ export function QuickAddMenu({ blockDefs, screenPos, onPick, onClose }: Props) {
           style={{ left: flyoutLeft, top: primaryTop }}
         >
           {activeDefs.map((def) => (
-            <div
-              key={def.id}
-              title={def.description}
-              onClick={() => onPick(def)}
-              className="text-text-primary text-1xs cursor-pointer border-l-2 border-l-transparent px-3 py-[5px] font-mono select-none"
-              onMouseEnter={(e) => {
-                const el = e.currentTarget as HTMLDivElement
-                el.style.borderLeftColor = activeColor
-                el.style.background = 'var(--hover-surface)'
-              }}
-              onMouseLeave={(e) => {
-                const el = e.currentTarget as HTMLDivElement
-                el.style.borderLeftColor = 'transparent'
-                el.style.background = 'transparent'
-              }}
-            >
-              {def.label}
-            </div>
+            <Tooltip key={def.id} text={def.description}>
+              <div
+                onClick={() => onPick(def)}
+                className="text-text-primary text-1xs cursor-pointer border-l-2 border-l-transparent px-3 py-[5px] font-mono select-none"
+                onMouseEnter={(e) => {
+                  const el = e.currentTarget as HTMLDivElement
+                  el.style.borderLeftColor = activeColor
+                  el.style.background = 'var(--hover-surface)'
+                }}
+                onMouseLeave={(e) => {
+                  const el = e.currentTarget as HTMLDivElement
+                  el.style.borderLeftColor = 'transparent'
+                  el.style.background = 'transparent'
+                }}
+              >
+                {def.label}
+              </div>
+            </Tooltip>
           ))}
         </div>
       )}

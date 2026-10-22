@@ -6,6 +6,7 @@ import {
   NO_GRAPH_KEYS,
   orderedCategories,
 } from './blockMeta'
+import { Tooltip } from '../../../components/ui/Tooltip'
 import { useSettingsStore } from '../../../stores/useSettingsStore'
 
 interface Props {
@@ -79,23 +80,23 @@ export function BlockPalette({ blockDefs, onAdd }: Props) {
 
               {!isClosed &&
                 defs.map((def) => (
-                  <div
-                    key={def.id}
-                    draggable
-                    onClick={() => onAdd(def)}
-                    onDragStart={(e) => e.dataTransfer.setData('blockType', def.id)}
-                    title={def.description}
-                    className="bg-surface border-border-subtle text-text-primary border-hairline text-1xs mb-0.5 cursor-pointer rounded px-2 py-1 font-mono select-none"
-                    onMouseEnter={(e) =>
-                      ((e.currentTarget as HTMLDivElement).style.borderColor = color)
-                    }
-                    onMouseLeave={(e) =>
-                      ((e.currentTarget as HTMLDivElement).style.borderColor =
-                        'var(--border-subtle)')
-                    }
-                  >
-                    {def.label}
-                  </div>
+                  <Tooltip key={def.id} text={def.description}>
+                    <div
+                      draggable
+                      onClick={() => onAdd(def)}
+                      onDragStart={(e) => e.dataTransfer.setData('blockType', def.id)}
+                      className="bg-surface border-border-subtle text-text-primary border-hairline text-1xs mb-0.5 cursor-pointer rounded px-2 py-1 font-mono select-none"
+                      onMouseEnter={(e) =>
+                        ((e.currentTarget as HTMLDivElement).style.borderColor = color)
+                      }
+                      onMouseLeave={(e) =>
+                        ((e.currentTarget as HTMLDivElement).style.borderColor =
+                          'var(--border-subtle)')
+                      }
+                    >
+                      {def.label}
+                    </div>
+                  </Tooltip>
                 ))}
             </div>
           )
