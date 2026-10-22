@@ -19,6 +19,7 @@ import { Icon } from './ui/Icon'
 import { Collapsible } from './ui/Collapsible'
 import { SettingRow } from './ui/SettingRow'
 import { TOAST_CATEGORIES } from '../lib/toast'
+import { DESKTOP_CATEGORIES } from '../lib/notify'
 import {
   OpenDataDir,
   GetAppVersion,
@@ -714,16 +715,18 @@ const PANE_HEADING =
 function NotificationsPane({ settings, update }: { settings: AppSettings; update: UpdateFn }) {
   return (
     <div>
+      {/* The operating system's notification. Stored as the categories turned
+          on, so a category added later starts off. */}
       <span className={PANE_HEADING}>Desktop</span>
-      <SettingRow label="Crash alerts" description="Notify when the server stops unexpectedly.">
-        <Toggle checked={settings.notifyOnCrash} onChange={(v) => update({ notifyOnCrash: v })} />
-      </SettingRow>
-      <SettingRow
-        label="Player join/leave alerts"
-        description="Notify when a player joins or leaves the server."
-      >
-        <Toggle checked={settings.notifyOnJoin} onChange={(v) => update({ notifyOnJoin: v })} />
-      </SettingRow>
+      {DESKTOP_CATEGORIES.map((c) => (
+        <SettingRow key={c.id} label={c.label} description={c.description}>
+          <Toggle
+            label={`${c.label} (desktop)`}
+            checked={Boolean(settings.desktopOn[c.id])}
+            onChange={(v) => update({ desktopOn: { ...settings.desktopOn, [c.id]: v } })}
+          />
+        </SettingRow>
+      ))}
       {/* Bubbles that hold a message's full text in the corner of the window
           until dismissed (components/Toasts.tsx). Stored as the categories
           turned off, so a category added later starts on. */}

@@ -19,15 +19,20 @@ type AppSettings struct {
 	ConsoleBufferLines int  `json:"consoleBufferLines"`
 	ConsoleTimestamps  bool `json:"consoleTimestamps"`
 
-	NotifyOnCrash bool `json:"notifyOnCrash"`
-	NotifyOnJoin  bool `json:"notifyOnJoin"`
+	// DesktopOn marks which categories send an operating system notification,
+	// keyed like ToastsOff plus "join" (frontend/src/lib/notify.ts). The
+	// opposite polarity: a key that is not there is off, so a category added
+	// later starts quiet. The Notifications tile logs every event whatever
+	// this says. Nil only in a settings file from before the map, which
+	// services.GetAppSettings seeds from that file's notifyOnCrash and
+	// notifyOnJoin.
+	DesktopOn map[string]bool `json:"desktopOn"`
 
 	// ToastsOff marks which in-app notification bubble categories the user has
 	// turned off, keyed by category ("warnings", "errors", "crash", "update";
 	// frontend/src/lib/toast.ts). A key that is not there is on, so a settings
 	// file written before this field existed shows every bubble, and a category
-	// added later starts on without a migration. Separate from NotifyOnCrash,
-	// which is the desktop notification.
+	// added later starts on without a migration.
 	ToastsOff map[string]bool `json:"toastsOff"`
 
 	SchedulerPaletteCollapsed        bool            `json:"schedulerPaletteCollapsed"`

@@ -294,7 +294,7 @@ func TestAppSettingsCollectionsNeverMarshalAsNull(t *testing.T) {
 		{name: "file lacking the keys", file: `{"theme":"light"}`},
 		{
 			name: "keys set to null",
-			file: `{"crateOrder":null,"schedulerPaletteClosedCategories":null,"schedulerPaletteOpenGroups":null,"navClosedSections":null,"toastsOff":null}`,
+			file: `{"crateOrder":null,"schedulerPaletteClosedCategories":null,"schedulerPaletteOpenGroups":null,"navClosedSections":null,"toastsOff":null,"desktopOn":null}`,
 		},
 	}
 	for _, tt := range tests {
@@ -335,6 +335,42 @@ func TestAppSettingsCollectionsNeverMarshalAsNull(t *testing.T) {
 			// Empty means every bubble category is on; the toggles read it as a map.
 			if raw := string(wire["toastsOff"]); raw != "{}" {
 				t.Errorf("toastsOff = %s, want {}", raw)
+			}
+			// Empty means no desktop category is on.
+			if raw := string(wire["desktopOn"]); raw != "{}" {
+				t.Errorf("desktopOn = %s, want {}", raw)
+			}
+		})
+	}
+}
+
+// A file from before desktopOn keeps its two desktop toggles, and a file that
+// has the map is read as it is, whatever the old keys still say.
+func TestDesktopOnCarriesOverTheOldToggles(t *testing.T) {
+	tests := []struct {
+		name, file string
+		want       map[string]bool
+	}{
+		{"both old toggles on", `{"notifyOnCrash":true,"notifyOnJoin":true}`,
+			map[string]bool{"crash": true, "join": true}},
+		{"crash only", `{"notifyOnCrash":true,"notifyOnJoin":false}`,
+			map[string]bool{"crash": true}},
+		{"neither", `{"theme":"dark"}`, map[string]bool{}},
+		{"map wins over old keys", `{"notifyOnCrash":true,"desktopOn":{"errors":true}}`,
+			map[string]bool{"errors": true}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s := newTestConfigService(t)
+			if err := WriteDataFile(s.dataDir, "app_settings.json", []byte(tt.file)); err != nil {
+				t.Fatalf("setup: %v", err)
+			}
+			got, err := s.GetAppSettings()
+			if err != nil {
+				t.Fatalf("GetAppSettings: %v", err)
+			}
+			if !reflect.DeepEqual(got.DesktopOn, tt.want) {
+				t.Errorf("DesktopOn = %v, want %v", got.DesktopOn, tt.want)
 			}
 		})
 	}

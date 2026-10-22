@@ -13,8 +13,7 @@ export namespace models {
 	    stopGraceSeconds: number;
 	    consoleBufferLines: number;
 	    consoleTimestamps: boolean;
-	    notifyOnCrash: boolean;
-	    notifyOnJoin: boolean;
+	    desktopOn: Record<string, boolean>;
 	    toastsOff: Record<string, boolean>;
 	    schedulerPaletteCollapsed: boolean;
 	    schedulerPaletteClosedCategories: Record<string, boolean>;
@@ -50,8 +49,7 @@ export namespace models {
 	        this.stopGraceSeconds = source["stopGraceSeconds"];
 	        this.consoleBufferLines = source["consoleBufferLines"];
 	        this.consoleTimestamps = source["consoleTimestamps"];
-	        this.notifyOnCrash = source["notifyOnCrash"];
-	        this.notifyOnJoin = source["notifyOnJoin"];
+	        this.desktopOn = source["desktopOn"];
 	        this.toastsOff = source["toastsOff"];
 	        this.schedulerPaletteCollapsed = source["schedulerPaletteCollapsed"];
 	        this.schedulerPaletteClosedCategories = source["schedulerPaletteClosedCategories"];

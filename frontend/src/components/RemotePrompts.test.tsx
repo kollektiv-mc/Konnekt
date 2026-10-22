@@ -2,11 +2,11 @@ import { describe, it, expect, afterEach, beforeEach, vi } from 'vitest'
 import { render, screen, fireEvent, cleanup, act } from '@testing-library/react'
 import { useRemoteStore } from '../stores/useRemoteStore'
 import type { RemoteAccessState } from '../stores/useRemoteStore'
-import { emitNotification } from '../lib/notify'
+import { emitRequestNotification } from '../lib/notify'
 import { LAYER, declaredLayer } from '../lib/layers'
 import { RemotePrompts } from './RemotePrompts'
 
-vi.mock('../lib/notify', () => ({ emitNotification: vi.fn() }))
+vi.mock('../lib/notify', () => ({ emitRequestNotification: vi.fn() }))
 
 // A stand-in for settings/PendingDeviceCard, so this file tests the prompt and
 // not the card (which has a test of its own).
@@ -123,7 +123,7 @@ describe('RemotePrompts', () => {
     expect(screen.queryByText('ConnectorSignIn')).toBeNull()
     fireEvent.click(screen.getByRole('button', { name: 'Allow' }))
     expect(actions.answerApproval).toHaveBeenCalledWith('a1', true)
-    expect(vi.mocked(emitNotification)).toHaveBeenCalledWith(
+    expect(vi.mocked(emitRequestNotification)).toHaveBeenCalledWith(
       'warn',
       'Pixel is asking to connect to Konnekt',
     )
@@ -134,7 +134,7 @@ describe('RemotePrompts', () => {
     expect(screen.getByText('Pixel wants to run a console command')).toBeTruthy()
     expect(screen.getByText('SendCommand')).toBeTruthy()
     expect(screen.getByRole('button', { name: 'Allow once' })).toBeTruthy()
-    expect(vi.mocked(emitNotification)).toHaveBeenLastCalledWith(
+    expect(vi.mocked(emitRequestNotification)).toHaveBeenLastCalledWith(
       'warn',
       'Pixel is asking to run a console command',
     )
@@ -264,21 +264,21 @@ describe('RemotePrompts', () => {
     seed([approval()], [pendingDevice()])
     const { rerender } = render(<RemotePrompts />)
 
-    expect(emitNotification).toHaveBeenCalledTimes(2)
-    const texts = vi.mocked(emitNotification).mock.calls.map((c) => c[1])
+    expect(emitRequestNotification).toHaveBeenCalledTimes(2)
+    const texts = vi.mocked(emitRequestNotification).mock.calls.map((c) => c[1])
     expect(texts).toContain('Pixel is asking to make a change through remote access')
     expect(texts).toContain('A device is waiting to be approved for remote access')
     for (const t of texts) {
       expect(t).not.toContain('Xmx')
       expect(t).not.toContain('K7QX2M')
     }
-    expect(vi.mocked(emitNotification).mock.calls.every((c) => c[0] === 'warn')).toBe(true)
+    expect(vi.mocked(emitRequestNotification).mock.calls.every((c) => c[0] === 'warn')).toBe(true)
 
     rerender(<RemotePrompts />)
-    expect(emitNotification).toHaveBeenCalledTimes(2)
+    expect(emitRequestNotification).toHaveBeenCalledTimes(2)
 
     act(() => seed([approval(), approval({ id: 'a2' })], [pendingDevice()]))
-    expect(emitNotification).toHaveBeenCalledTimes(3)
+    expect(emitRequestNotification).toHaveBeenCalledTimes(3)
   })
 
   it('sits on the dialog layer, above a modal', () => {

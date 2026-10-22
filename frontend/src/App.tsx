@@ -19,7 +19,7 @@ import { useUiStore } from './stores/useUiStore'
 import { useServerConfigStore } from './stores/useServerConfigStore'
 import { useSettingsStore } from './stores/useSettingsStore'
 import { useProcessesStore } from './stores/useProcessesStore'
-import { emitNotification } from './lib/notify'
+import { emitNotification } from './lib/appNotify'
 import { deliverScheduleNotify } from './lib/scheduleNotify'
 import { failedRunToast, showToast } from './lib/toast'
 import type { RunFinished } from './lib/toast'
@@ -189,9 +189,7 @@ function App() {
             title: titled('Server crashed', payload?.serverID),
             text,
           })
-          if (useSettingsStore.getState().settings.notifyOnCrash) {
-            emitNotification('crash', text)
-          }
+          emitNotification('crash', text)
         },
       )
     } catch {
@@ -213,10 +211,7 @@ function App() {
       // server.go emits {name, ip} — not a bare string.
       cleanup = EventsOn(EVENTS.PLAYER_JOINED, (d?: { name?: string }) => {
         if (!d?.name) return
-        const { settings } = useSettingsStore.getState()
-        if (settings.notifyOnJoin) {
-          emitNotification('join', `${d.name} joined the game`)
-        }
+        emitNotification('join', `${d.name} joined the game`)
       })
     } catch {
       /* non-Wails context */
@@ -258,7 +253,7 @@ function App() {
       })
       c5 = EventsOn(EVENTS.BACKUP_FAILED, (data?: { serverID?: string; error?: string }) => {
         useProcessesStore.getState().finish(data?.serverID ?? 'backup', 'failed')
-        emitNotification('crash', `Backup failed${data?.error ? ': ' + data.error : ''}`)
+        emitNotification('crash', `Backup failed${data?.error ? ': ' + data.error : ''}`, 'errors')
         showToast({
           category: 'errors',
           tone: 'error',
@@ -269,7 +264,7 @@ function App() {
       // No processes row to finish: a restore never opens one. Restore used
       // to fail through BACKUP_FAILED and toast as a failed backup (#280).
       c6 = EventsOn(EVENTS.RESTORE_FAILED, (data?: { error?: string }) => {
-        emitNotification('crash', `Restore failed${data?.error ? ': ' + data.error : ''}`)
+        emitNotification('crash', `Restore failed${data?.error ? ': ' + data.error : ''}`, 'errors')
         showToast({
           category: 'errors',
           tone: 'error',
@@ -420,7 +415,11 @@ function App() {
         EventsOn(EVENTS.INSTALL_FAILED, (d?: { error?: string }) => {
           useProcessesStore.getState().finish(current, 'failed')
           useInstallStore.getState().fail(d?.error ?? 'The installer failed.')
-          emitNotification('crash', `Server install failed${d?.error ? ': ' + d.error : ''}`)
+          emitNotification(
+            'crash',
+            `Server install failed${d?.error ? ': ' + d.error : ''}`,
+            'errors',
+          )
           showToast({
             category: 'errors',
             tone: 'error',
@@ -486,7 +485,11 @@ function App() {
           useLoaderStore
             .getState()
             .failUpdate(d?.error ?? 'The loader update failed.', d?.rolledBack ?? false)
-          emitNotification('crash', `Loader update failed${d?.error ? ': ' + d.error : ''}`)
+          emitNotification(
+            'crash',
+            `Loader update failed${d?.error ? ': ' + d.error : ''}`,
+            'errors',
+          )
           showToast({
             category: 'errors',
             tone: 'error',
@@ -587,17 +590,14 @@ function App() {
     }
   }, [])
 
-  // Player left notifications — shares the join toggle (player-activity alerts)
+  // Player left notifications: shares the join desktop toggle
   useEffect(() => {
     let cleanup: (() => void) | undefined
     try {
       // server.go emits {name} — not a bare string.
       cleanup = EventsOn(EVENTS.PLAYER_LEFT, (d?: { name?: string }) => {
         if (!d?.name) return
-        const { settings } = useSettingsStore.getState()
-        if (settings.notifyOnJoin) {
-          emitNotification('join', `${d.name} left the game`)
-        }
+        emitNotification('join', `${d.name} left the game`)
       })
     } catch {
       /* non-Wails context */

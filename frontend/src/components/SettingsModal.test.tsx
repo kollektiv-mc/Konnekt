@@ -204,7 +204,7 @@ describe('SettingsModal with no Wails bridge', () => {
     const panes = [
       ['General', 'Auto-start active server'],
       ['Console', 'Show timestamps'],
-      ['Notifications', 'Crash alerts'],
+      ['Notifications', 'Player join/leave'],
       ['Remote Access', 'Approved devices'],
       ["What's New", 'View full changelog on GitHub ↗'],
       ['About', 'Version'],
@@ -885,6 +885,26 @@ describe('SettingsModal in-app bubbles', () => {
       update: true,
       errors: true,
     })
+  })
+
+  it('shows desktop categories off unless stored on, and writes one key', async () => {
+    useSettingsStore.setState({
+      settings: { ...useSettingsStore.getState().settings, desktopOn: { crash: true } },
+    })
+    render(<SettingsModal open onClose={() => {}} />)
+    fireEvent.click(screen.getByRole('button', { name: 'Notifications' }))
+
+    const sw = (name: string) => screen.getByRole('switch', { name: `${name} (desktop)` })
+    expect(sw('Server crash').getAttribute('aria-checked')).toBe('true')
+    for (const name of ['Warnings and info', 'Errors', 'Update available', 'Player join/leave']) {
+      expect(sw(name).getAttribute('aria-checked')).toBe('false')
+    }
+
+    fireEvent.click(sw('Errors'))
+    await waitFor(() => expect(App.SaveAppSettings).toHaveBeenCalledTimes(1))
+    const saved = vi.mocked(App.SaveAppSettings).mock.calls[0][0]
+    expect(saved.desktopOn).toEqual({ crash: true, errors: true })
+    expect(saved.toastsOff).toEqual({ update: true })
   })
 })
 

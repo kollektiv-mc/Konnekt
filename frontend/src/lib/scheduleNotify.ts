@@ -34,5 +34,6 @@ export function deliverScheduleNotify(data: ScheduleNotify): void {
       text: data.message,
     })
   }
+  // The block's own choice, so no desktop toggle in Settings applies to it.
   if (toDesktop) emitDesktopNotification(kind, data.message)
 }

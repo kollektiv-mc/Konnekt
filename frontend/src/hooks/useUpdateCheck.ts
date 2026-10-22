@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { CheckForUpdates, GetAppVersion } from '../../wailsjs/go/main/App'
-import { emitNotification } from '../lib/notify'
+import { emitNotification } from '../lib/appNotify'
 import { showToast } from '../lib/toast'
 
 // A build from the snapshot channel, stamped `<base>-snapshot.<date>.<sha7>`
@@ -44,7 +44,7 @@ export function useUpdateCheck(enabled: boolean): void {
           // Settings.
           const label =
             info.channel === 'snapshot' ? 'Snapshot update available' : 'Update available'
-          emitNotification('info', `${label}: ${info.latestVersion}`)
+          emitNotification('info', `${label}: ${info.latestVersion}`, 'update')
           showToast({
             key: 'update',
             category: 'update',

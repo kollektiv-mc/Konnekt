@@ -54,8 +54,8 @@ export interface AppSettings {
   stopGraceSeconds: number
   consoleBufferLines: number
   consoleTimestamps: boolean
-  notifyOnCrash: boolean
-  notifyOnJoin: boolean
+  /** Desktop notification categories turned on (lib/notify.ts). A missing key is off. Never null. */
+  desktopOn: Record<string, boolean>
   /** Bubble categories turned off (lib/toast.ts). A missing key is on. Never null. */
   toastsOff: Record<string, boolean>
   schedulerPaletteCollapsed: boolean

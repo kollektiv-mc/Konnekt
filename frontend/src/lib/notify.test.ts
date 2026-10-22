@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
-import { emitDesktopNotification, emitNotification } from './notify'
+import { emitDesktopNotification, emitRequestNotification } from './notify'
+import { emitNotification } from './appNotify'
 import { deliverScheduleNotify } from './scheduleNotify'
 import { useNotificationsStore } from '../stores/useNotificationsStore'
 import { useSettingsStore } from '../stores/useSettingsStore'
@@ -21,7 +22,7 @@ beforeEach(() => {
   vi.stubGlobal('Notification', FakeNotification)
   useNotificationsStore.setState({ items: [], toasts: [], dismissedToasts: {} })
   useSettingsStore.setState({
-    settings: { ...useSettingsStore.getState().settings, toastsOff: {} },
+    settings: { ...useSettingsStore.getState().settings, toastsOff: {}, desktopOn: {} },
   })
 })
 
@@ -29,11 +30,52 @@ afterEach(() => {
   vi.unstubAllGlobals()
 })
 
+const desktopOn = (on: Record<string, boolean>) =>
+  useSettingsStore.setState({
+    settings: { ...useSettingsStore.getState().settings, desktopOn: on },
+  })
+
 describe('emitNotification', () => {
-  it('still logs to the tile and fires the desktop notification', () => {
+  it('logs to the tile and fires the desktop when its category is on', () => {
+    desktopOn({ crash: true })
     emitNotification('crash', 'boom')
     expect(logged()).toEqual(['boom'])
     expect(created).toEqual([{ title: 'Server Crashed', body: 'boom' }])
+  })
+
+  it('still logs to the tile with its desktop category off', () => {
+    emitNotification('crash', 'boom')
+    emitNotification('join', 'Steve joined the game')
+    expect(logged()).toEqual(['boom', 'Steve joined the game'])
+    expect(created).toEqual([])
+  })
+
+  it.each([
+    ['error', 'errors'],
+    ['warn', 'warnings'],
+    ['info', 'warnings'],
+    ['join', 'join'],
+  ] as const)('files a %s under %s when the caller names none', (kind, category) => {
+    desktopOn({ [category]: true })
+    emitNotification(kind, 'x')
+    expect(created).toHaveLength(1)
+  })
+
+  it('files under the category the caller names, over its kind', () => {
+    desktopOn({ crash: true })
+    emitNotification('crash', 'Backup failed', 'errors')
+    expect(created).toEqual([])
+    desktopOn({ errors: true })
+    emitNotification('crash', 'Backup failed', 'errors')
+    expect(created).toHaveLength(1)
+  })
+})
+
+describe('emitRequestNotification', () => {
+  it('logs and fires the desktop with every category off', () => {
+    emitRequestNotification('warn', 'A device is waiting')
+    expect(logged()).toEqual(['A device is waiting'])
+    expect(created).toHaveLength(1)
   })
 })
 

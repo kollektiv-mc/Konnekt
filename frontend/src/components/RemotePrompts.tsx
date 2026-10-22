@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useRemoteStore } from '../stores/useRemoteStore'
 import type { RemoteApproval, RemotePendingDevice } from '../stores/useRemoteStore'
-import { emitNotification } from '../lib/notify'
+import { emitRequestNotification } from '../lib/notify'
 import { PendingDeviceCard } from './settings/PendingDeviceCard'
 
 type Waiting =
@@ -97,7 +97,7 @@ export function RemotePrompts() {
     for (const item of waitingItems(approvals, pending)) {
       if (announced.current.has(item.id)) continue
       announced.current.add(item.id)
-      emitNotification(
+      emitRequestNotification(
         'warn',
         item.kind === 'device'
           ? 'A device is waiting to be approved for remote access'
