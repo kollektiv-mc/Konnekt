@@ -19,6 +19,11 @@ const KIND_LABEL: Record<string, string> = {
   the_end: 'The End',
 }
 
+// Edge length per unit of `radius`: the cube with the same volume as the sphere it replaced
+// ((4*pi/3)^(1/3) = 1.61), so a world and a moon keep their visual weight. The material, colour,
+// emissive and lighting are unchanged; only the geometry moved.
+const CUBE_EDGE = 1.6
+
 // Moon orbit params (local to the focused planet's group)
 const MOON_ORBIT: Record<
   string,
@@ -163,7 +168,7 @@ function MoonBody({
         }}
         onPointerOut={() => setHovered(false)}
       >
-        <sphereGeometry args={[radius, 24, 24]} />
+        <boxGeometry args={[radius * CUBE_EDGE, radius * CUBE_EDGE, radius * CUBE_EDGE]} />
         <meshStandardMaterial
           color={color}
           emissive={color}
@@ -356,7 +361,7 @@ export function Planet({
 
   return (
     <group ref={groupRef}>
-      {/* Planet sphere */}
+      {/* Planet body: a cube, spinning on Y */}
       <mesh
         ref={meshRef}
         onClick={handleClick}
@@ -366,7 +371,7 @@ export function Planet({
         }}
         onPointerOut={() => setHovered(false)}
       >
-        <sphereGeometry args={[radius, 32, 32]} />
+        <boxGeometry args={[radius * CUBE_EDGE, radius * CUBE_EDGE, radius * CUBE_EDGE]} />
         <meshStandardMaterial
           color={color}
           emissive={color}
