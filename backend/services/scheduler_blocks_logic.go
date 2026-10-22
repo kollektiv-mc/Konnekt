@@ -44,6 +44,11 @@ func gateOpValues() []string {
 	return vals
 }
 
+// isTrueHint answers what the "is true" boxes do, which their label alone did
+// not: they choose whether the gate takes an operand as it is or flipped.
+const isTrueHint = "A value is true when it is true or a number other than 0. " +
+	"Unchecking a box flips it, so unchecked A means NOT A."
+
 // conditionConfigSchema is Condition's config. The two operands sit side by side
 // (Row "values") with the "is true" checkboxes under them (Row "truth"), shown
 // only for a gate operator. Port id == config key (resolveDataInputs), so a wired
@@ -54,7 +59,7 @@ func conditionConfigSchema() []models.ConfigField {
 		{Key: "op", Label: "Operator", Type: "select", Default: "eq", Options: conditionOptions()},
 		{Key: "left", Label: "A", Type: "string", Required: true, Row: "values"},
 		{Key: "right", Label: "B", Type: "string", Required: true, Row: "values"},
-		{Key: "leftTrue", Label: "is true", Type: "bool", Default: true, ShowWhen: gate, Row: "truth"},
+		{Key: "leftTrue", Label: "is true", Type: "bool", Default: true, ShowWhen: gate, Row: "truth", Hint: isTrueHint},
 		{Key: "rightTrue", Label: "is true", Type: "bool", Default: true, ShowWhen: gate, Row: "truth"},
 	}
 }

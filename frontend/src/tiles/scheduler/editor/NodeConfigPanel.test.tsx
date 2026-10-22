@@ -203,6 +203,7 @@ const layoutDef = models.BlockDef.createFrom({
       default: true,
       showWhen: gateWhen,
       row: 'truth',
+      hint: 'Unchecking a box flips it.',
     },
     {
       key: 'rightTrue',
@@ -295,6 +296,17 @@ describe('NodeConfigPanel row', () => {
       n.getAttribute('data-row'),
     )
     expect(lines).toEqual(['values', 'truth'])
+  })
+
+  it('draws a hint under its line, and only while the field shows', () => {
+    renderPanel({ op: 'and' }, vi.fn(), layoutDef)
+    const hint = screen.getByText('Unchecking a box flips it.')
+    expect(hint.closest('[data-row]')).toBeNull()
+    expect(hint.previousElementSibling?.getAttribute('data-row')).toBe('truth')
+    cleanup()
+
+    renderPanel({ op: 'eq' }, vi.fn(), layoutDef)
+    expect(screen.queryByText('Unchecking a box flips it.')).toBeNull()
   })
 
   it('keeps a field with no row on a line of its own', () => {
