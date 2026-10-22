@@ -363,6 +363,52 @@ describe('the scheduler editor warns about a stop', () => {
     expect(toasts()).toEqual([expect.objectContaining({ count: 1 })])
   })
 
+  it('asks before saving a dirty graph to run it', async () => {
+    vi.mocked(App.GetScheduleGraphs).mockResolvedValue([withCommand('save-all')])
+    vi.mocked(App.SaveScheduleGraph).mockImplementation(async (_id, g) => g)
+    vi.mocked(App.RunScheduleGraphNow).mockResolvedValue({
+      status: 'success',
+      nodes: [],
+    } as unknown as models.RunRecord)
+    render(<SchedulerTile serverId="alpha" maximized />)
+    await waitFor(() => expect(selected()).toBe('Only'))
+    fireEvent.click(screen.getByRole('button', { name: 'Graph actions' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Rename' }))
+    const input = screen.getByDisplayValue('Only')
+    fireEvent.change(input, { target: { value: 'Only, edited' } })
+    fireEvent.keyDown(input, { key: 'Enter' })
+    await waitFor(() => expect(screen.getByTitle('Unsaved changes')).toBeTruthy())
+
+    // Cancel leaves the changes unsaved and runs nothing.
+    fireEvent.click(screen.getByRole('button', { name: 'run' }))
+    expect(screen.getByText('Run uses the saved graph. Save your changes and run it?')).toBeTruthy()
+    expect(screen.queryByRole('button', { name: 'Discard' })).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
+    expect(App.SaveScheduleGraph).not.toHaveBeenCalled()
+    expect(App.RunScheduleGraphNow).not.toHaveBeenCalled()
+    expect(screen.getByTitle('Unsaved changes')).toBeTruthy()
+
+    fireEvent.click(screen.getByRole('button', { name: 'run' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Save & run' }))
+    await waitFor(() => expect(App.RunScheduleGraphNow).toHaveBeenCalled())
+    expect(App.SaveScheduleGraph).toHaveBeenCalled()
+  })
+
+  it('runs a saved graph without asking', async () => {
+    vi.mocked(App.GetScheduleGraphs).mockResolvedValue([withCommand('save-all')])
+    vi.mocked(App.SaveScheduleGraph).mockImplementation(async (_id, g) => g)
+    vi.mocked(App.RunScheduleGraphNow).mockResolvedValue({
+      status: 'success',
+      nodes: [],
+    } as unknown as models.RunRecord)
+    render(<SchedulerTile serverId="alpha" maximized />)
+    await waitFor(() => expect(selected()).toBe('Only'))
+
+    fireEvent.click(screen.getByRole('button', { name: 'run' }))
+    expect(screen.queryByRole('button', { name: 'Save & run' })).toBeNull()
+    await waitFor(() => expect(App.RunScheduleGraphNow).toHaveBeenCalled())
+  })
+
   // The message that wrapped the toolbar to four lines. The toolbar keeps two
   // words; the reason is in the bubble, whole.
   it('shows a failed run as two words, with the reason in a bubble', async () => {
