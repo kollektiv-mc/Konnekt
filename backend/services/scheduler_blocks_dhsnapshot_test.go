@@ -121,6 +121,33 @@ func TestDHSnapshotBlockIsInTheRegistryAndWearsTheBadge(t *testing.T) {
 	}
 }
 
+func TestDHBlocksShareOneGroupAndUploadStaysLoose(t *testing.T) {
+	reg := NewBlockRegistry()
+	registerBuiltins(reg)
+	group := func(id string) string {
+		entry, ok := reg.Get(id)
+		if !ok {
+			t.Fatalf("%s is not registered", id)
+		}
+		return entry.def.Group
+	}
+
+	if got := group(dhSnapshotBlockID); got != "Distant Horizons" {
+		t.Errorf("DH Snapshot group = %q", got)
+	}
+	if group(dhPublishBlockID) != group(dhSnapshotBlockID) {
+		t.Errorf("the two DH blocks are in different groups")
+	}
+	// Upload to Bucket is generic: it serves any flow, not only DH ones.
+	if got := group(uploadBlockID); got != "" {
+		t.Errorf("Upload to Bucket group = %q, want ungrouped", got)
+	}
+	// The group is a palette row, so it has the label's room.
+	if n := len(dhBlockGroup); n > maxBlockLabelLen {
+		t.Errorf("group name is %d characters, the palette fits %d", n, maxBlockLabelLen)
+	}
+}
+
 func TestDHSnapshotTimeoutMakesRoomInTheRunCap(t *testing.T) {
 	shrinkTimeouts(t, 60*time.Second, 30*time.Minute)
 	s := newTestScheduler(t)

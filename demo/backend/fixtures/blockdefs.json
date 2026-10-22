@@ -225,6 +225,7 @@
       }
     ],
     "source": "native",
+    "group": "Distant Horizons",
     "timeoutSeconds": 43200
   },
   {
@@ -298,6 +299,7 @@
       }
     ],
     "source": "native",
+    "group": "Distant Horizons",
     "timeoutSeconds": 10800,
     "effects": [
       "stopsServer"

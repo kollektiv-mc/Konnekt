@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { placeFlyoutTop, placeQuickAdd } from './quickAddPlacement'
+import { placeFlyoutTop, placeGroupPanelLeft, placeQuickAdd } from './quickAddPlacement'
 
 const panel = { w: 160, h: 100 }
 const vp = { w: 1000, h: 600 }
@@ -94,5 +94,29 @@ describe('placeFlyoutTop', () => {
     const near = placeQuickAdd({ x: 950, y: 50 }, panel, vp)
     expect(near.flyoutLeft).toBe(630)
     expect(placeFlyoutTop(near.primaryTop, 90, 120, vp.h)).toBe(140)
+  })
+})
+
+describe('placeGroupPanelLeft', () => {
+  it('continues to the right of a right-hand fly-out', () => {
+    expect(placeGroupPanelLeft(100, 260, 160, 1000)).toBe(420)
+  })
+
+  it('continues to the left of a flipped fly-out', () => {
+    expect(placeGroupPanelLeft(790, 630, 160, 1000)).toBe(470)
+  })
+
+  it('takes the far side of the primary panel when the right is out of room', () => {
+    // Fly-out at 600..760 in a 900 window: a third panel would end at 920.
+    expect(placeGroupPanelLeft(440, 600, 160, 900)).toBe(280)
+  })
+
+  it('takes the far side of the primary panel when the left is out of room', () => {
+    // Fly-out flipped to 0..160 with the primary at 160: nothing fits left of it.
+    expect(placeGroupPanelLeft(160, 0, 160, 1000)).toBe(320)
+  })
+
+  it('stays inside the window in a window too narrow for any side', () => {
+    expect(placeGroupPanelLeft(20, 0, 160, 200)).toBe(40)
   })
 })

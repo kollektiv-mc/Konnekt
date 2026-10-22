@@ -6,6 +6,7 @@ import {
   NO_GRAPH_KEYS,
   orderedCategories,
 } from './blockMeta'
+import { blockEntries, groupKey } from './blockGroups'
 import { useSettingsStore } from '../../../stores/useSettingsStore'
 
 interface Props {
@@ -17,6 +18,7 @@ export function BlockPalette({ blockDefs, onAdd }: Props) {
   const { settings, update } = useSettingsStore()
   const collapsed = settings.schedulerPaletteCollapsed
   const closed = settings.schedulerPaletteClosedCategories
+  const openGroups = settings.schedulerPaletteOpenGroups
 
   const categories = orderedCategories(blockDefs)
 
@@ -28,6 +30,34 @@ export function BlockPalette({ blockDefs, onAdd }: Props) {
 
   function toggleCategory(cat: string) {
     update({ schedulerPaletteClosedCategories: { ...closed, [cat]: !closed[cat] } }).catch(() => {})
+  }
+
+  function toggleGroup(key: string) {
+    update({ schedulerPaletteOpenGroups: { ...openGroups, [key]: !openGroups[key] } }).catch(
+      () => {},
+    )
+  }
+
+  // One block row, for the category list and for the members of an open group
+  // alike. The drag payload is the block's own id wherever the row sits, so a
+  // grouped block lands on the canvas exactly like a loose one.
+  function blockRow(def: models.BlockDef, color: string, indented: boolean) {
+    return (
+      <div
+        key={def.id}
+        draggable
+        onClick={() => onAdd(def)}
+        onDragStart={(e) => e.dataTransfer.setData('blockType', def.id)}
+        title={def.description}
+        className={`bg-surface border-border-subtle text-text-primary border-hairline text-1xs mb-0.5 cursor-pointer rounded px-2 py-1 font-mono select-none ${indented ? 'ml-3' : ''}`}
+        onMouseEnter={(e) => ((e.currentTarget as HTMLDivElement).style.borderColor = color)}
+        onMouseLeave={(e) =>
+          ((e.currentTarget as HTMLDivElement).style.borderColor = 'var(--border-subtle)')
+        }
+      >
+        {def.label}
+      </div>
+    )
   }
 
   if (collapsed) {
@@ -74,25 +104,28 @@ export function BlockPalette({ blockDefs, onAdd }: Props) {
                 </div>
 
                 {!isClosed &&
-                  defs.map((def) => (
-                    <div
-                      key={def.id}
-                      draggable
-                      onClick={() => onAdd(def)}
-                      onDragStart={(e) => e.dataTransfer.setData('blockType', def.id)}
-                      title={def.description}
-                      className="bg-surface border-border-subtle text-text-primary border-hairline text-1xs mb-0.5 cursor-pointer rounded px-2 py-1 font-mono select-none"
-                      onMouseEnter={(e) =>
-                        ((e.currentTarget as HTMLDivElement).style.borderColor = color)
-                      }
-                      onMouseLeave={(e) =>
-                        ((e.currentTarget as HTMLDivElement).style.borderColor =
-                          'var(--border-subtle)')
-                      }
-                    >
-                      {def.label}
-                    </div>
-                  ))}
+                  blockEntries(defs).map((entry) => {
+                    if (entry.kind === 'block') return blockRow(entry.def, color, false)
+                    const key = groupKey(cat, entry.name)
+                    const isOpen = !!openGroups[key]
+                    // Dashed and transparent where a block row is solid, so a
+                    // dropdown reads as a heading for the rows under it rather
+                    // than as one more block to drag.
+                    return (
+                      <div key={key}>
+                        <button
+                          type="button"
+                          aria-expanded={isOpen}
+                          onClick={() => toggleGroup(key)}
+                          className="text-text-secondary border-border-subtle hover:bg-hover border-hairline text-1xs mb-0.5 flex w-full cursor-pointer items-center gap-1 rounded border-dashed bg-transparent px-2 py-1 text-left font-mono transition-colors select-none"
+                        >
+                          <span className="text-3xs">{isOpen ? '▾' : '▸'}</span>
+                          <span className="min-w-0 flex-1 truncate">{entry.name}</span>
+                        </button>
+                        {isOpen && entry.defs.map((def) => blockRow(def, color, true))}
+                      </div>
+                    )
+                  })}
               </div>
             )
           })}

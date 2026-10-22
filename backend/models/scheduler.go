@@ -56,6 +56,11 @@ type BlockDef struct {
 	ConfigSchema   []ConfigField `json:"configSchema"`
 	Source         string        `json:"source"`              // "native" | "manifest"
 	Primitive      string        `json:"primitive,omitempty"` // manifest blocks only
+	// Group names a sub-heading inside the category: blocks that share one within
+	// a category are shown together, as a single dropdown row in the palette and a
+	// single fly-out row in quick-add. Empty means ungrouped. Display only, and
+	// not part of a block's identity, so saved graphs are unaffected.
+	Group string `json:"group,omitempty"`
 	// TimeoutSeconds is the longest this block may run before the engine cancels
 	// it. Zero (the field absent) means the engine's default per-node limit; a
 	// block that legitimately runs for minutes or hours declares its own. The
