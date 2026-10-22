@@ -21,7 +21,6 @@ import {
   CATEGORY_COLOR,
   DATA_EDGE_STYLE,
   isCommandHandleWired,
-  NO_GRAPH_KEYS,
   nodeEffects,
   NODE_EFFECT_STOPS_SERVER,
 } from './blockMeta'
