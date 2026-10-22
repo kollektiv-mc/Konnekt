@@ -39,4 +39,10 @@ describe('centerNodes', () => {
     expect(a.position).toEqual({ x: 20, y: 160 })
     expect(b.position).toEqual({ x: 5, y: 5 })
   })
+
+  it('lands the centred node on the snap grid when given one', () => {
+    const sizes = new Map([['a', { width: 160, height: 81 }]])
+    const [a] = centerNodes([node('a', 113, 207)], sizes, [20, 20])
+    expect(a.position).toEqual({ x: 40, y: 160 })
+  })
 })

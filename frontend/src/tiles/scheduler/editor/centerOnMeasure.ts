@@ -30,16 +30,25 @@ export function takeMeasured<N extends Node>(
   return sizes
 }
 
-/** Moves each measured node back by half its size, so its centre is where its corner was. */
-export function centerNodes<N extends Node>(nodes: N[], sizes: Map<string, Size>): N[] {
+/**
+ * Moves each measured node back by half its size, so its centre is where its
+ * corner was. With a snap grid the result lands on the grid, as a dragged node
+ * would: React Flow snaps only what the pointer moves, never a position set.
+ */
+export function centerNodes<N extends Node>(
+  nodes: N[],
+  sizes: Map<string, Size>,
+  snap?: [number, number],
+): N[] {
+  const [sx, sy] = snap ?? [1, 1]
   return nodes.map((n) => {
     const size = sizes.get(n.id)
     if (!size) return n
     return {
       ...n,
       position: {
-        x: Math.round(n.position.x - size.width / 2),
-        y: Math.round(n.position.y - size.height / 2),
+        x: Math.round((n.position.x - size.width / 2) / sx) * sx,
+        y: Math.round((n.position.y - size.height / 2) / sy) * sy,
       },
     }
   })

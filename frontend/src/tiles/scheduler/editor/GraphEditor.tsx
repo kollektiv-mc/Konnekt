@@ -1058,10 +1058,11 @@ function GraphEditorInner({
       onNodesChange(changes)
       if (centerPending.current.size > 0) {
         const sizes = takeMeasured(changes, centerPending.current)
-        if (sizes.size > 0) setNodes((ns) => centerNodes(ns, sizes))
+        if (sizes.size > 0)
+          setNodes((ns) => centerNodes(ns, sizes, snapToGrid ? SNAP_GRID : undefined))
       }
     },
-    [onNodesChange, recordPre, setNodes],
+    [onNodesChange, recordPre, setNodes, snapToGrid],
   )
   const handleEdgesChange = useCallback(
     (changes: EdgeChange<FlowEdge>[]) => {
