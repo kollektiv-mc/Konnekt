@@ -15,7 +15,7 @@
       id: 'windows',
       name: 'Windows',
       tag: 'Win',
-      desc: '64-bit installer (.exe)',
+      desc: 'Portable 64-bit .exe',
       match: function (name) {
         return name === 'konnekt-windows-amd64.exe'
       },

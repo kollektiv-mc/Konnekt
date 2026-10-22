@@ -34,211 +34,224 @@
     <link rel="icon" type="image/png" sizes="32x32" href="/assets/img/favicon-32.png" />
     <link rel="icon" type="image/png" sizes="256x256" href="/assets/img/favicon.png" />
     <link rel="apple-touch-icon" href="/assets/img/app-icon.png" />
+    <link
+      rel="preload"
+      href="/assets/fonts/Geist-Variable.woff2"
+      as="font"
+      type="font/woff2"
+      crossorigin
+    />
     <link rel="stylesheet" href="/tokens.css" />
-    <link rel="stylesheet" href="/styles.css" />
+    <link rel="stylesheet" href="/site.css" />
+    <link rel="stylesheet" href="/download.css" />
     <script>
       document.documentElement.className = document.documentElement.className.replace('no-js', '')
     </script>
   </head>
   <body>
-    <!-- Canonical nav. Byte-identical on every page, hrefs included — main.js
-         marks the current page and intercepts same-page anchors. -->
-    <nav class="nav" id="nav">
-      <div class="nav-inner">
-        <span class="nav-brand">
-          <a href="/index.html" class="wordmark">Konnekt</a>
-          <span class="brand-tag">ALPHA</span>
-        </span>
-        <button
-          class="nav-toggle"
-          id="nav-toggle"
-          type="button"
-          aria-expanded="false"
-          aria-controls="nav-menu"
-          aria-label="Menu"
-        >
-          ≡
-        </button>
-        <div class="nav-menu" id="nav-menu">
+    <a class="skip-link" href="#main">Skip to content</a>
+    <div class="page">
+      <div class="group">
+        <!-- Canonical nav. Byte-identical on every page, hrefs included; site.js
+           marks the current page and scrolls same-page anchors. -->
+        <nav class="nav block block-raised" id="nav" aria-label="Main">
+          <a class="nav-brand" href="/index.html"
+            ><img
+              class="mark"
+              src="/assets/img/mark-24.svg"
+              width="24"
+              height="24"
+              alt=""
+            />Konnekt</a
+          >
           <ul class="nav-links">
             <li><a href="/index.html#features">Features</a></li>
+            <li><a href="/index.html#scheduler">Scheduler</a></li>
             <li><a href="/docs.html">Docs</a></li>
             <li><a href="/roadmap.html">Roadmap</a></li>
             <li><a href="/changelog.html">Changelog</a></li>
           </ul>
-          <div class="nav-actions">
-            <a
-              class="btn btn-secondary btn-sm"
-              href="https://github.com/kollektiv-mc/Konnekt"
-              target="_blank"
-              rel="noopener"
-              >View on GitHub</a
-            >
-            <a class="btn btn-primary btn-sm" href="/download.html">Download</a>
-          </div>
-        </div>
-      </div>
-    </nav>
-
-    <main class="subpage">
-      <div class="container">
-        <div class="subpage-head">
-          <span class="version-pill" id="dl-version"
-            ><span class="dot"></span> checking latest…</span
+          <a
+            class="nav-side"
+            href="https://github.com/kollektiv-mc/Konnekt"
+            target="_blank"
+            rel="noopener"
+            >GitHub</a
           >
-          <h1>Download <span class="accent">Konnekt</span></h1>
-        </div>
-
-        <!-- Loading -->
-        <div class="state-box" id="dl-loading">
-          <div class="spinner"></div>
-          Loading…
-        </div>
-
-        <!-- Loaded content -->
-        <div id="dl-content" class="is-hidden">
-          <div class="download-primary" id="dl-primary"></div>
-          <div class="download-others">
-            <h3>All downloads</h3>
-            <div class="dl-grid" id="dl-grid"></div>
-          </div>
-
-          <!-- Closes out the release channel, so it sits with the grid it
-               belongs to rather than at the foot of the page, where it read as
-               a second footnote to the snapshot section under it. -->
-          <p class="dl-footnote" id="dl-footnote"></p>
-
-          <!-- Placeholder for the section below. The snapshot is a second,
-               independent GitHub request, so it can still be in flight once the
-               release above has rendered; without this the page simply looked
-               like it had no snapshot channel until one appeared under the
-               cursor. Replaced by whichever outcome download.js reaches, the
-               empty one included. -->
-          <p class="snapshot-loading" id="dl-snapshot-loading" role="status">
-            <span class="spinner spinner-inline" aria-hidden="true"></span>
-            Loading snapshot builds…
-          </p>
-
-          <!-- Snapshot channel — the rolling `snapshot` prerelease built from
-               main by .github/workflows/snapshot.yml. Stays hidden until
-               download.js confirms it exists and carries assets: it's a
-               convenience, and a missing one must not read as a broken page.
-               Lives inside #dl-content so a GitHub outage collapses to the one
-               error box rather than leaving this stranded under it.
-
-               The same closed disclosure card as the changelog's pre-release
-               entry, and for the same reason: this page is about the build you
-               should be running, and an untested rolling build should not sit
-               open under it. main.js animates any details.release-pending, so
-               the shared class is what gives this one its open/close motion. -->
-          <details class="release release-pending download-snapshot is-hidden" id="dl-snapshot">
-            <summary class="release-summary">
-              <h3 class="release-version">
-                Pre-release
-                <span class="release-latest is-snapshot">SNAPSHOT</span>
-              </h3>
-              <span class="release-date" id="dl-snapshot-meta"></span>
-            </summary>
-            <div class="snapshot-body">
-              <div class="disclaimer">
-                <span class="disclaimer-badge">UNSTABLE</span>
-                <p>
-                  Built automatically from the newest code, so they carry features and fixes the
-                  release above doesn't have yet. None of it is properly tested: a snapshot can be
-                  broken, and each one is replaced by the next. Konnekt offers you that next one
-                  in-app, so you only download from here once. Back up your server directory first.
-                </p>
-              </div>
-              <div class="dl-grid" id="dl-snapshot-grid"></div>
-              <p class="dl-footnote" id="dl-snapshot-footnote"></p>
+          <a class="btn btn-primary" href="/download.html"
+            ><svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true">
+              <path
+                d="M7 1v9M3 6.5 7 10.5 11 6.5M1.5 13h11"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.6"
+              /></svg
+            >Download</a
+          >
+        </nav>
+        <main id="main" class="group">
+          <header class="page-hero block">
+            <div class="page-hero-title">
+              <span class="meta" id="dl-version">Checking the latest release</span>
+              <h1>Download</h1>
             </div>
-          </details>
-        </div>
+            <div class="page-hero-side dl-primary-side">
+              <p class="dl-state" id="dl-loading" role="status">Loading the latest release</p>
+              <!-- Filled by download.js with the build for the platform it detects. -->
+              <div id="dl-primary" hidden></div>
+              <div class="dl-state" id="dl-error" hidden>
+                <p class="dl-state-title" id="dl-error-title">Could not reach GitHub</p>
+                <p id="dl-error-msg"></p>
+                <a
+                  class="btn btn-secondary"
+                  href="https://github.com/kollektiv-mc/Konnekt/releases"
+                  target="_blank"
+                  rel="noopener"
+                  >Releases on GitHub</a
+                >
+              </div>
+            </div>
+          </header>
 
-        <!-- Error / empty -->
-        <div class="state-box is-error is-hidden" id="dl-error">
-          <p class="state-title" id="dl-error-title">Couldn't reach GitHub</p>
-          <p id="dl-error-msg"></p>
-          <p style="margin-top: 18px">
-            <a
-              class="btn btn-secondary btn-sm"
-              href="https://github.com/kollektiv-mc/Konnekt/releases"
-              target="_blank"
-              rel="noopener"
-              >Open releases on GitHub</a
-            >
+          <section class="block" id="dl-all" aria-labelledby="dl-all-title" hidden>
+            <div class="band">
+              <div class="band-title">
+                <span class="num">01</span>
+                <h2 id="dl-all-title">All downloads</h2>
+              </div>
+            </div>
+            <div class="dl-grid-wrap"><div class="dl-grid" id="dl-grid"></div></div>
+            <p class="dl-foot" id="dl-footnote"></p>
+          </section>
+
+          <!-- Static rather than rendered by download.js: it is the same two commands
+           for every release, and it has to survive a GitHub outage, which is when a
+           reader most wants a second way to check what they already have. -->
+          <section class="block" id="verify" aria-labelledby="verify-title">
+            <div class="band">
+              <div class="band-title">
+                <span class="num">02</span>
+                <h2 id="verify-title">Verify your download</h2>
+              </div>
+            </div>
+            <div class="dl-body">
+              <p class="dl-prose">
+                Every release is built by a public GitHub Actions workflow.<br />
+                Each file carries a signed build provenance attestation, which binds its digest to
+                that workflow, this repository and the commit it was built from.<br />
+                No signing key is held anywhere, so there is none to leak.<br />
+                With the
+                <a href="https://cli.github.com/" target="_blank" rel="noopener">GitHub CLI</a>,
+                check any file you downloaded:
+              </p>
+              <pre><code>gh attestation verify &lt;file&gt; --repo kollektiv-mc/Konnekt</code></pre>
+              <p class="dl-prose">
+                Without <code>gh</code>, the <code>checksums.txt</code> published beside the
+                binaries confirms the download arrived intact:
+              </p>
+              <pre><code>sha256sum -c checksums.txt</code></pre>
+              <p class="dl-prose">
+                A checksum says the bytes are the ones that were published.<br />
+                The attestation says who published them.<br />
+                Windows builds are not code signed yet, so a first launch still shows a SmartScreen
+                warning: <a href="/roadmap.html#rm-release">that one is on the roadmap</a>.
+              </p>
+            </div>
+          </section>
+
+          <p class="dl-loading block" id="dl-snapshot-loading" role="status">
+            Loading snapshot builds
           </p>
-        </div>
 
-        <!-- Verification. Static rather than rendered by download.js, for two
-             reasons: it is the same two commands for every release, and it has
-             to survive a GitHub outage, which is exactly when a reader is most
-             likely to want a second way to confirm what they already have. That
-             is why it sits outside #dl-content rather than inside it. -->
-        <details class="dl-verify doc-collapse reveal" id="verify">
-          <summary>
-            <span class="doc-collapse-mark" aria-hidden="true"></span>
-            <span>Verify your download</span>
-          </summary>
-          <div class="md">
-            <p>
-              Every release is built by a public GitHub Actions workflow, and each file carries a
-              signed build provenance attestation: its digest is bound to that workflow, to this
-              repository and to the commit it was built from, and recorded in a public transparency
-              log. No signing key is held anywhere, so there is none to leak. With the
-              <a href="https://cli.github.com/" target="_blank" rel="noopener">GitHub CLI</a>
-              installed, check any file you downloaded:
-            </p>
-            <pre><code>gh attestation verify &lt;file&gt; --repo kollektiv-mc/Konnekt</code></pre>
-            <p>
-              Without <code>gh</code>, the <code>checksums.txt</code> published beside the binaries
-              confirms the download arrived intact:
-            </p>
-            <pre><code>sha256sum -c checksums.txt</code></pre>
-            <p class="step-note">
-              The two answer different questions. A checksum says the bytes are the ones that were
-              published; the attestation says who published them, and it cannot be written by anyone
-              who is not that workflow in this repository. Windows builds are not code signed yet,
-              so a first launch still shows a SmartScreen warning:
-              <a href="/roadmap.html#rm-release">that one is on the roadmap</a>.
-            </p>
-          </div>
-        </details>
+          <!-- The rolling `snapshot` prerelease, built from main by
+           .github/workflows/snapshot.yml. Hidden until download.js confirms it
+           exists and carries assets: a missing one must not read as a broken page. -->
+          <section
+            class="block dl-snapshot"
+            id="dl-snapshot"
+            aria-labelledby="dl-snapshot-title"
+            hidden
+          >
+            <div class="band">
+              <div class="band-title">
+                <span class="num">03</span>
+                <h2 id="dl-snapshot-title">Snapshot</h2>
+              </div>
+              <span class="meta" id="dl-snapshot-meta"></span>
+            </div>
+            <div class="dl-body">
+              <p class="dl-prose">
+                Built from the newest code, so it carries what the release above does not have
+                yet.<br />
+                None of it is properly tested, and each snapshot is replaced by the next.<br />
+                Konnekt offers you that next one itself, so you download from here once.<br />
+                Back up your server folder first.
+              </p>
+            </div>
+            <div class="dl-grid-wrap"><div class="dl-grid" id="dl-snapshot-grid"></div></div>
+            <p class="dl-foot" id="dl-snapshot-footnote"></p>
+          </section>
+        </main>
       </div>
-    </main>
 
-    <!-- Canonical footer. Identical on every page. -->
-    <footer>
-      <div class="container">
-        <div class="disclaimer">
-          <span class="disclaimer-badge">NOTE</span>
-          <p>
-            Alpha software. A side project mostly written by Claude.
-            <a href="/docs.html#disclaimer">Full statement</a>.
-          </p>
-        </div>
-        <div class="footer-inner">
-          <div class="footer-left">
-            <span class="wordmark" style="font-size: 15px">Konnekt</span>
-            <span class="brand-tag">ALPHA</span>
-          </div>
-          <div class="footer-links">
-            <a href="https://github.com/kollektiv-mc/Konnekt" target="_blank" rel="noopener"
-              >GitHub</a
+      <!-- Canonical footer. Byte-identical on every page. -->
+      <footer class="block block-raised snap-end">
+        <div class="footer-cols">
+          <div class="footer-about">
+            <a class="footer-brand" href="/index.html"
+              ><img
+                class="mark"
+                src="/assets/img/mark-24.svg"
+                width="24"
+                height="24"
+                alt=""
+              />Konnekt</a
             >
+            <p>A desktop dashboard for the Minecraft servers you host.</p>
+            <span class="meta"><span data-release-tag></span>Windows and Linux</span>
+          </div>
+          <nav class="footer-col" aria-label="Product">
+            <span class="label">Product</span>
+            <a href="/download.html">Download</a>
+            <a href="https://konnekt-demo.pages.dev/" target="_blank" rel="noopener"
+              >Try the demo</a
+            >
+            <a href="/changelog.html">Changelog</a>
+          </nav>
+          <nav class="footer-col" aria-label="Learn">
+            <span class="label">Learn</span>
             <a href="/index.html#features">Features</a>
             <a href="/docs.html">Docs</a>
             <a href="/roadmap.html">Roadmap</a>
-            <a href="/download.html">Download</a>
-            <a href="/changelog.html">Changelog</a>
-          </div>
-          <span class="footer-copy">&copy; 2026 Konnekt</span>
+          </nav>
+          <nav class="footer-col" aria-label="Source">
+            <span class="label">Source</span>
+            <a href="https://github.com/kollektiv-mc/Konnekt" target="_blank" rel="noopener"
+              >GitHub</a
+            >
+            <a href="https://github.com/kollektiv-mc/Konnekt/issues" target="_blank" rel="noopener"
+              >Issues</a
+            >
+            <a
+              href="https://github.com/kollektiv-mc/Konnekt/blob/main/LICENSE"
+              target="_blank"
+              rel="noopener"
+              >MIT licence</a
+            >
+          </nav>
         </div>
-      </div>
-    </footer>
+        <div class="footer-base">
+          <span
+            >Alpha software. A side project mostly written by Claude.
+            <a href="/docs.html#disclaimer">Full statement</a></span
+          >
+          <span>&copy; 2026 Konnekt</span>
+        </div>
+      </footer>
+    </div>
 
-    <script src="/main.js"></script>
     <script src="/release.js"></script>
+    <script src="/site.js"></script>
     <script src="/download.js"></script>
   </body>
 </html>

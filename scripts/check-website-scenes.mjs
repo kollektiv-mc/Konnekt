@@ -1,4 +1,4 @@
-// Holds the home page's feature showcase, main.js's scene table and
+// Holds the home page's feature showcase, home.js's scene table and
 // demo/scenes/ to one list.
 //
 // The showcase (website/index.html) has a strip per scene, named in data-scene.

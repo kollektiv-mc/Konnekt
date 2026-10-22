@@ -63,7 +63,7 @@
     }
 
     // Losing a turn part-way through should read as the card settling onto its
-    // finished frame, not cutting to it, and styles.css eases every property
+    // finished frame, not cutting to it, and first-server.css eases every property
     // any demo animates. That ease is not enough on its own: a transition
     // starts when an element's *underlying* value changes, not when the value
     // it is rendering does, and dropping .is-playing is only the first of those

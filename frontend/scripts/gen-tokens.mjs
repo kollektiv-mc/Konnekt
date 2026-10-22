@@ -332,8 +332,8 @@ function emitWebsiteCss(src) {
 
   push(BANNER('tokens.source.json'))
   push()
-  push(`/* Linked by every page ahead of /styles.css, which reads these and adds the`)
-  push(`   page vocabulary that is not a token (--max-width, --nav-h, --section-y). */`)
+  push(`/* Linked by every page ahead of /site.css, which reads these and adds the`)
+  push(`   page vocabulary that is not a token (--pad, --nav-h, --lift-shadow). */`)
   push(`:root {`)
   for (const [group, tokens] of Object.entries(src.color)) {
     for (const [name, token] of Object.entries(tokens)) {
