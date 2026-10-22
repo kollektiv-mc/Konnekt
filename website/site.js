@@ -7,8 +7,11 @@
   // ── Nav ────────────────────────────────────────────────────────────────
   // The nav is byte-identical on every page, so which page you are on is
   // marked here rather than in the markup.
+  //
+  // Pages serves /docs.html as /docs and /docs/index.html as /docs/, so the
+  // extension and a trailing index are dropped before anything is compared.
   function normalisePath(path) {
-    return path.replace(/\/index\.html$/, '/').replace(/\/+$/, '/') || '/'
+    return path.replace(/\/index(\.html)?$/, '/').replace(/\.html$/, '') || '/'
   }
 
   var here = normalisePath(window.location.pathname)
@@ -17,13 +20,25 @@
     nav.querySelectorAll('a[href]').forEach(function (link) {
       // A section link (#features) points at the home page, but marking it
       // current wherever that page is open would light two links at once.
-      if (
-        !link.hash &&
-        link.host === window.location.host &&
-        normalisePath(link.pathname) === here
-      ) {
+      if (link.hash || link.host !== window.location.host) return
+      var path = normalisePath(link.pathname)
+      // /docs is current on /docs/install too: the pages under a section are
+      // that section's.
+      if (path === here || (path !== '/' && here.indexOf(path + '/') === 0)) {
         link.setAttribute('aria-current', 'page')
       }
+    })
+  }
+
+  // "/" jumps to the page's search field, as the glyph beside it says.
+  var search = document.querySelector('.search input')
+  if (search) {
+    document.addEventListener('keydown', function (e) {
+      if (e.key !== '/' || e.ctrlKey || e.metaKey || e.altKey) return
+      var t = e.target
+      if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return
+      e.preventDefault()
+      search.focus()
     })
   }
 
