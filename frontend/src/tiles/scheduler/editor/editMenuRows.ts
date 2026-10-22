@@ -1,4 +1,8 @@
-import type { SelectionSpec } from './selection'
+import type { Edge as FlowEdge } from '@xyflow/react'
+import type { models } from '../../../../wailsjs/go/models'
+import { hasClipboard } from './clipboard'
+import type { BlockFlowNode } from './graphMapping'
+import { typesPresent, type SelectionSpec } from './selection'
 
 /** What the rows need to know about the canvas to say what they can do. */
 export interface EditMenuState {
@@ -12,6 +16,31 @@ export interface EditMenuState {
   hasNodes: boolean
   /** The block types on the canvas, for the select-by-type rows. */
   types: { blockType: string; label: string }[]
+}
+
+/**
+ * The state the rows read, taken from the canvas. The toolbar's menu and the
+ * node's right-click menu both call this, so the two cannot disagree about what
+ * is disabled. The clipboard is module state, not React state, so nothing
+ * re-renders on a copy: a caller reads this when the menu opens or renders.
+ */
+export function editMenuState(canvas: {
+  nodes: readonly BlockFlowNode[]
+  edges: readonly FlowEdge[]
+  defMap: ReadonlyMap<string, models.BlockDef>
+  canUndo: boolean
+  canRedo: boolean
+}): EditMenuState {
+  const selectedNodes = canvas.nodes.filter((n) => n.selected).length
+  return {
+    canUndo: canvas.canUndo,
+    canRedo: canvas.canRedo,
+    canPaste: hasClipboard(),
+    hasNodeSelection: selectedNodes > 0,
+    deleteCount: selectedNodes + canvas.edges.filter((e) => e.selected).length,
+    hasNodes: canvas.nodes.length > 0,
+    types: typesPresent(canvas.nodes, (bt) => canvas.defMap.get(bt)?.label ?? bt),
+  }
 }
 
 export interface EditMenuActions {
@@ -58,8 +87,8 @@ const MOD = typeof navigator !== 'undefined' && /mac/i.test(navigator.userAgent)
 
 /**
  * The Edit menu as data. The toolbar renders it in a popover through
- * `EditMenuRows`; the node's right-click menu (#181) is meant to take the same
- * list and render it in its own surface, so the set, the order, the shortcuts
+ * `EditMenuRows`; the node's right-click menu (`NodeMenu`, #181) takes the same
+ * list and renders it in its own surface, so the set, the order, the shortcuts
  * and the rules for what is disabled live here and in one place.
  *
  * A row that has nothing to act on is disabled rather than left out: the menu
