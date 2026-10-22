@@ -31,14 +31,62 @@ export function placeQuickAdd(pos: Point, panel: Size, viewport: Size): Placemen
     maxTop,
   )
 
-  const flyoutFitsRight = primaryLeft + panel.w * 2 <= viewport.w
   const flyoutLeft = clamp(
-    flyoutFitsRight ? primaryLeft + panel.w : primaryLeft - panel.w,
+    flyoutGoesRight(primaryLeft, panel.w, viewport.w)
+      ? primaryLeft + panel.w
+      : primaryLeft - panel.w,
     0,
     maxLeft,
   )
 
   return { primaryLeft, primaryTop, flyoutLeft }
+}
+
+// Which way the fly-outs open. The side is picked once, for both levels a
+// fly-out can reach (a category's list, then a group's panel), so a group never
+// has to jump back across the menu because the second level ran out of room
+// where the first had it. Every panel shares the primary's width. Only when
+// neither side has room for both levels does it fall back to the side with room
+// for one, and the group panel then finds its own place (placeGroupPanelLeft).
+function flyoutGoesRight(primaryLeft: number, width: number, viewportWidth: number): boolean {
+  if (primaryLeft + width * 3 <= viewportWidth) return true
+  if (primaryLeft - width * 2 >= 0) return false
+  return primaryLeft + width * 2 <= viewportWidth
+}
+
+// Where the fly-out's top edge goes: level with the category row the pointer is
+// on, so moving straight right lands on its first entry instead of crossing the
+// rows below it (#672). `rowOffset` is the row's top measured from the primary
+// panel's top, not a viewport coordinate, so it stays right if the primary panel
+// moves (flipped up, then resized by a search) after the row was measured. A list
+// too tall for the room below the row slides up to stay inside the window, and
+// one taller than the window pins to the top edge, like the primary panel does.
+export function placeFlyoutTop(
+  primaryTop: number,
+  rowOffset: number,
+  flyoutHeight: number,
+  viewportHeight: number,
+): number {
+  return clamp(Math.round(primaryTop + rowOffset), 0, Math.max(0, viewportHeight - flyoutHeight))
+}
+
+// Where a group's own panel goes, beside the fly-out it opened from. It keeps
+// going the way the fly-out went (right of a right-hand fly-out, left of a
+// left-hand one); when that side has no room it takes the far side of the
+// primary panel instead, which is free whichever way the fly-out went, so it
+// never lands on top of the panel the pointer came from.
+export function placeGroupPanelLeft(
+  primaryLeft: number,
+  flyoutLeft: number,
+  panelWidth: number,
+  viewportWidth: number,
+): number {
+  const maxLeft = Math.max(0, viewportWidth - panelWidth)
+  const goesRight = flyoutLeft >= primaryLeft
+  const onward = goesRight ? flyoutLeft + panelWidth : flyoutLeft - panelWidth
+  if (onward >= 0 && onward <= maxLeft) return onward
+  const farSide = goesRight ? primaryLeft - panelWidth : primaryLeft + panelWidth
+  return clamp(farSide, 0, maxLeft)
 }
 
 function clamp(n: number, lo: number, hi: number): number {

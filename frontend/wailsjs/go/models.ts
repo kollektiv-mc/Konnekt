@@ -13,11 +13,13 @@ export namespace models {
 	    stopGraceSeconds: number;
 	    consoleBufferLines: number;
 	    consoleTimestamps: boolean;
-	    notifyOnCrash: boolean;
-	    notifyOnJoin: boolean;
+	    desktopOn: Record<string, boolean>;
 	    toastsOff: Record<string, boolean>;
 	    schedulerPaletteCollapsed: boolean;
 	    schedulerPaletteClosedCategories: Record<string, boolean>;
+	    schedulerPaletteOpenGroups: Record<string, boolean>;
+	    schedulerCurvedEdges: boolean;
+	    schedulerSnapToGrid: boolean;
 	    consoleQuickCommandsCollapsed: boolean;
 	    classicTileFaces: boolean;
 	    navClosedSections: Record<string, boolean>;
@@ -47,11 +49,13 @@ export namespace models {
 	        this.stopGraceSeconds = source["stopGraceSeconds"];
 	        this.consoleBufferLines = source["consoleBufferLines"];
 	        this.consoleTimestamps = source["consoleTimestamps"];
-	        this.notifyOnCrash = source["notifyOnCrash"];
-	        this.notifyOnJoin = source["notifyOnJoin"];
+	        this.desktopOn = source["desktopOn"];
 	        this.toastsOff = source["toastsOff"];
 	        this.schedulerPaletteCollapsed = source["schedulerPaletteCollapsed"];
 	        this.schedulerPaletteClosedCategories = source["schedulerPaletteClosedCategories"];
+	        this.schedulerPaletteOpenGroups = source["schedulerPaletteOpenGroups"];
+	        this.schedulerCurvedEdges = source["schedulerCurvedEdges"];
+	        this.schedulerSnapToGrid = source["schedulerSnapToGrid"];
 	        this.consoleQuickCommandsCollapsed = source["consoleQuickCommandsCollapsed"];
 	        this.classicTileFaces = source["classicTileFaces"];
 	        this.navClosedSections = source["navClosedSections"];
@@ -110,6 +114,20 @@ export namespace models {
 	        this.lodsSkipped = source["lodsSkipped"];
 	    }
 	}
+	export class FieldWhen {
+	    key: string;
+	    values: string[];
+	
+	    static createFrom(source: any = {}) {
+	        return new FieldWhen(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.key = source["key"];
+	        this.values = source["values"];
+	    }
+	}
 	export class FieldOption {
 	    label: string;
 	    value: string;
@@ -131,6 +149,8 @@ export namespace models {
 	    default?: any;
 	    required?: boolean;
 	    options?: FieldOption[];
+	    showWhen?: FieldWhen;
+	    row?: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new ConfigField(source);
@@ -144,6 +164,8 @@ export namespace models {
 	        this.default = source["default"];
 	        this.required = source["required"];
 	        this.options = this.convertValues(source["options"], FieldOption);
+	        this.showWhen = this.convertValues(source["showWhen"], FieldWhen);
+	        this.row = source["row"];
 	    }
 	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {
@@ -193,6 +215,7 @@ export namespace models {
 	    configSchema: ConfigField[];
 	    source: string;
 	    primitive?: string;
+	    group?: string;
 	    timeoutSeconds?: number;
 	    effects?: string[];
 	
@@ -214,6 +237,7 @@ export namespace models {
 	        this.configSchema = this.convertValues(source["configSchema"], ConfigField);
 	        this.source = source["source"];
 	        this.primitive = source["primitive"];
+	        this.group = source["group"];
 	        this.timeoutSeconds = source["timeoutSeconds"];
 	        this.effects = source["effects"];
 	    }
@@ -475,29 +499,6 @@ export namespace models {
 	        this.message = source["message"];
 	    }
 	}
-	export class Edge {
-	    id: string;
-	    kind: string;
-	    source: string;
-	    sourcePort: string;
-	    target: string;
-	    targetPort: string;
-	
-	    static createFrom(source: any = {}) {
-	        return new Edge(source);
-	    }
-	
-	    constructor(source: any = {}) {
-	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.id = source["id"];
-	        this.kind = source["kind"];
-	        this.source = source["source"];
-	        this.sourcePort = source["sourcePort"];
-	        this.target = source["target"];
-	        this.targetPort = source["targetPort"];
-	    }
-	}
-	
 	export class Position {
 	    x: number;
 	    y: number;
@@ -512,6 +513,50 @@ export namespace models {
 	        this.y = source["y"];
 	    }
 	}
+	export class Edge {
+	    id: string;
+	    kind: string;
+	    source: string;
+	    sourcePort: string;
+	    target: string;
+	    targetPort: string;
+	    waypoints?: Position[];
+	
+	    static createFrom(source: any = {}) {
+	        return new Edge(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.kind = source["kind"];
+	        this.source = source["source"];
+	        this.sourcePort = source["sourcePort"];
+	        this.target = source["target"];
+	        this.targetPort = source["targetPort"];
+	        this.waypoints = this.convertValues(source["waypoints"], Position);
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	
+	
 	export class Node {
 	    id: string;
 	    type: string;
@@ -591,6 +636,20 @@ export namespace models {
 		    }
 		    return a;
 		}
+	}
+	export class GraphWarning {
+	    nodeId: string;
+	    text: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new GraphWarning(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.nodeId = source["nodeId"];
+	        this.text = source["text"];
+	    }
 	}
 	export class InstalledMod {
 	    fileName: string;

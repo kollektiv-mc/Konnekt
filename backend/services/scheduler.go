@@ -224,11 +224,12 @@ func (s *SchedulerService) GetBlockDefs() ([]models.BlockDef, error) {
 }
 
 // GraphWarnings reports advice about a graph the editor holds, saved or not, for
-// the server it is being edited against. It is a read: nothing is stored and
-// nothing blocks. The graph is passed in rather than looked up by id because
+// the server it is being edited against. Each warning names the node it is about
+// (GraphWarning.NodeID), so the editor can mark that block. It is a read:
+// nothing is stored and nothing blocks. The graph is passed in rather than looked up by id because
 // the editor asks about what is on the canvas, which is usually ahead of what
 // was saved.
-func (s *SchedulerService) GraphWarnings(serverID string, g models.Graph) ([]string, error) {
+func (s *SchedulerService) GraphWarnings(serverID string, g models.Graph) ([]models.GraphWarning, error) {
 	rconOK := false
 	// Asked only when it can change the answer, so a graph with no stopping
 	// node never touches the server service.
@@ -241,7 +242,7 @@ func (s *SchedulerService) GraphWarnings(serverID string, g models.Graph) ([]str
 	warnings = append(warnings, validateGraphDestinations(g, s.registry, s.deps.destinations)...)
 	warnings = append(warnings, validateGraphRetention(g)...)
 	if warnings == nil {
-		warnings = []string{}
+		warnings = []models.GraphWarning{}
 	}
 	return warnings, nil
 }

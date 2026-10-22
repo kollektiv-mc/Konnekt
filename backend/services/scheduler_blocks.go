@@ -198,7 +198,7 @@ func registerBuiltins(r *BlockRegistry) {
 
 	must(r.RegisterBlock(models.BlockDef{
 		ID: "data.writeAttribute", Category: "data", Label: "Write Attribute",
-		Description:   "Writes a server attribute (e.g. @server.motd) or defines a custom in-flow attribute (@myvalue). Value may be an expression like @{ @players.count * 2 }.",
+		Description:   "Writes a server attribute such as @server.motd, or a custom attribute for the blocks after it.",
 		ControlInputs: []string{"trigger"}, ControlOutputs: []string{"onComplete", "onFailed"},
 		DataInputs: []models.DataPort{{ID: "value", Label: "Value", Type: "string"}},
 		ConfigSchema: []models.ConfigField{
@@ -258,7 +258,7 @@ func registerBuiltins(r *BlockRegistry) {
 
 	must(r.RegisterBlock(models.BlockDef{
 		ID: "action.notify", Category: "notify", Label: "Notify",
-		Description:   "Sends an in-app notification.",
+		Description:   "Shows a message in the app, as a desktop notification, or both.",
 		ControlInputs: []string{"trigger"}, ControlOutputs: []string{"onComplete"},
 		DataInputs: []models.DataPort{{ID: "message", Label: "Message", Type: "string"}},
 		ConfigSchema: []models.ConfigField{
@@ -268,6 +268,12 @@ func registerBuiltins(r *BlockRegistry) {
 					{Label: "Error", Value: "error"},
 				}},
 			{Key: "message", Label: "Message", Type: "string", Required: true},
+			{Key: "deliver", Label: "Deliver to", Type: "select", Default: NotifyBoth,
+				Options: []models.FieldOption{
+					{Label: "In-app", Value: NotifyInApp},
+					{Label: "Desktop", Value: NotifyDesktop},
+					{Label: "In-app and desktop", Value: NotifyBoth},
+				}},
 		},
 		Source: "native",
 	}, execNotify))
@@ -276,25 +282,15 @@ func registerBuiltins(r *BlockRegistry) {
 
 	must(r.RegisterBlock(models.BlockDef{
 		ID: "control.condition", Category: "control", Label: "Condition",
-		Description: "Branches based on a comparison. Two values that are both " +
-			"numbers compare numerically, so 9 is less than 10; anything else " +
-			"compares as text. \"contains\" always compares as text.",
+		Description:   "Branches on a comparison or a logic gate of A and B.",
 		ControlInputs: []string{"trigger"}, ControlOutputs: []string{"onTrue", "onFalse"},
 		DataInputs: []models.DataPort{
 			{ID: "left", Label: "A", Type: "string"},
 			{ID: "right", Label: "B", Type: "string"},
 		},
-		ConfigSchema: []models.ConfigField{
-			{Key: "left", Label: "Left value", Type: "string", Required: true},
-			{Key: "op", Label: "Operator", Type: "select", Default: "eq",
-				Options: []models.FieldOption{
-					{Label: "==", Value: "eq"}, {Label: "!=", Value: "ne"},
-					{Label: ">", Value: "gt"}, {Label: "<", Value: "lt"},
-					{Label: "contains", Value: "contains"},
-				}},
-			{Key: "right", Label: "Right value", Type: "string", Required: true},
-		},
-		Source: "native",
+		DataOutputs:  []models.DataPort{{ID: "result", Label: "Result", Type: "bool"}},
+		ConfigSchema: conditionConfigSchema(),
+		Source:       "native",
 	}, execCondition))
 
 	registerUploadBlock(r)
@@ -556,20 +552,78 @@ func execDelay(e *ExecContext) ExecResult {
 	}
 }
 
+// The values of the Notify block's "deliver" field, and of the "deliver" key in
+// the schedule:notify payload: where the message goes. In-app is the bubble
+// plus the Notifications tile entry, desktop is the operating system's own
+// notification, and both is what every Notify block did before the field
+// existed.
+const (
+	NotifyInApp   = "inApp"
+	NotifyDesktop = "desktop"
+	NotifyBoth    = "both"
+)
+
+// notifyDeliver normalises a stored "deliver" value. A graph saved before the
+// field existed has none, and an unrecognised value is no reason to drop the
+// message, so both mean "both".
+func notifyDeliver(v string) string {
+	switch v {
+	case NotifyInApp, NotifyDesktop:
+		return v
+	}
+	return NotifyBoth
+}
+
 func execNotify(e *ExecContext) ExecResult {
 	kind := e.GetString("kind")
 	if kind == "" {
 		kind = "info"
 	}
 	msg := e.GetString("message")
-	e.Emit(EventScheduleNotify, map[string]interface{}{"kind": kind, "message": msg})
+	e.Emit(EventScheduleNotify, map[string]interface{}{
+		"kind":    kind,
+		"message": msg,
+		"deliver": notifyDeliver(e.GetString("deliver")),
+	})
 	return ExecResult{Port: "onComplete"}
 }
 
+// execCondition decides one outcome, publishes it as the "result" output so a
+// Condition can feed another, and branches on it. A gate operator reads A and B
+// as booleans through their "is true" boxes; every other operator compares.
 func execCondition(e *ExecContext) ExecResult {
+	op := e.GetString("op")
+
+	var outcome bool
+	if eval := gateEval(op); eval != nil {
+		outcome = eval(operandIsTrue(e, "left", "leftTrue"), operandIsTrue(e, "right", "rightTrue"))
+	} else {
+		outcome = compareValues(e, op)
+	}
+
+	// float64 0/1 is the engine's convention for a bool (see execConstant).
+	if outcome {
+		e.SetOutput("result", float64(1))
+		return ExecResult{Port: "onTrue"}
+	}
+	e.SetOutput("result", float64(0))
+	return ExecResult{Port: "onFalse"}
+}
+
+// compareValues answers one comparison of the node's "left" and "right" under
+// op (eq, ne, gt, lt, contains).
+func compareValues(e *ExecContext, op string) bool {
 	left := e.GetString("left")
 	right := e.GetString("right")
-	op := e.GetString("op")
+
+	// A wired boolean arrives as float64 1 or 0, so == true would compare 1 with
+	// "true" as text and never match. When one side is the text true or false,
+	// equality reads both as booleans.
+	if op == "eq" || op == "ne" {
+		if equal, decided := boolEquality(e); decided {
+			return equal == (op == "eq")
+		}
+	}
 
 	// Two numeric operands compare as numbers. Comparing the rendered strings
 	// instead made "9" > "10" true, so every threshold rule branched wrong the
@@ -613,10 +667,7 @@ func execCondition(e *ExecContext) ExecResult {
 		result = cmp == 0
 	}
 
-	if result {
-		return ExecResult{Port: "onTrue"}
-	}
-	return ExecResult{Port: "onFalse"}
+	return result
 }
 
 func must(err error) {

@@ -9,6 +9,8 @@ import { useNotificationsStore } from '../../stores/useNotificationsStore'
 import { useSettingsStore } from '../../stores/useSettingsStore'
 import { ServerSelector } from '../../components/ServerSelector'
 import type { ServerConfig } from '../../types'
+import { EventsOn } from '../../../wailsjs/runtime/runtime'
+import { EVENTS } from '../../lib/constants'
 import { SchedulerTile } from './index'
 
 vi.mock('../../../wailsjs/go/main/App')
@@ -54,8 +56,14 @@ const graphsByServer: Record<string, models.Graph[]> = {
   b: [graph('gb1', 'B first')],
 }
 
-/** The graph selector's label: the name of the graph the editor holds. */
-const selected = () => screen.getByText('☰').closest('button')?.textContent?.replace('☰', '')
+/** The graph selector's label: the name of the graph the editor holds. The picker is the bar's
+    first button, and its first visible span is the name (the short id before it is aria-hidden). */
+const selected = () =>
+  screen
+    .getByRole('button', { name: 'edit' })
+    .closest('.border-b-hairline')
+    ?.querySelector('button > span:not([aria-hidden])')
+    ?.textContent?.trim()
 
 // A server switch remounts the tile (Dashboard keys it `${tile.id}:${serverId}`),
 // but the store outlives the remount. GraphEditor's auto-load effect runs before
@@ -158,10 +166,10 @@ describe('switching server from the sidebar with the scheduler editor maximized'
       </>,
     )
     await waitFor(() => expect(selected()).toBe('Only'))
-    fireEvent.click(screen.getByTitle('Click to rename'))
+    fireEvent.click(screen.getByRole('button', { name: 'Graph actions' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Rename' }))
     const input = screen.getByDisplayValue('Only')
     fireEvent.change(input, { target: { value: 'Only, edited' } })
-    // The dirty dot is on the label, which the input replaces while editing.
     fireEvent.keyDown(input, { key: 'Enter' })
     await waitFor(() => expect(screen.getByTitle('Unsaved changes')).toBeTruthy())
   }
@@ -220,7 +228,8 @@ describe('switching server from the sidebar with the scheduler editor maximized'
 
     expect(App.SetActiveServerID).not.toHaveBeenCalled()
     expect(useServerConfigStore.getState().activeId).toBe('alpha')
-    expect(screen.queryByText('Unsaved changes')).toBeNull()
+    // The dialog plays its exit before it unmounts (usePresence).
+    await waitFor(() => expect(screen.queryByText('Unsaved changes')).toBeNull())
     expect(screen.getByTitle('Unsaved changes')).toBeTruthy()
   })
 
@@ -268,6 +277,8 @@ describe('the scheduler editor warns about a stop', () => {
   const toasts = () => useNotificationsStore.getState().toasts
   const warningButton = () => screen.queryByRole('button', { name: /^\d+ warnings?$/ })
   const RCON_WARNING = 'This graph stops the server, but RCON is not confirmed for it.'
+  // The backend names the node a warning is about; the one command node is n1.
+  const RCON_ADVICE = [{ nodeId: 'n1', text: RCON_WARNING }] as models.GraphWarning[]
 
   const commandDef = {
     id: 'action.command',
@@ -291,6 +302,8 @@ describe('the scheduler editor warns about a stop', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
+    // Every canvas is asked about now, so no test inherits another's advice.
+    vi.mocked(App.GetScheduleGraphWarnings).mockResolvedValue([])
     vi.stubGlobal(
       'DOMMatrixReadOnly',
       class {
@@ -313,7 +326,7 @@ describe('the scheduler editor warns about a stop', () => {
 
   it('shows the answer beside Save and asks for the server it edits', async () => {
     vi.mocked(App.GetScheduleGraphs).mockResolvedValue([withCommand('__stop__')])
-    vi.mocked(App.GetScheduleGraphWarnings).mockResolvedValue([RCON_WARNING])
+    vi.mocked(App.GetScheduleGraphWarnings).mockResolvedValue(RCON_ADVICE)
     render(<SchedulerTile serverId="alpha" maximized />)
 
     await waitFor(() => expect(warningButton()).not.toBeNull())
@@ -327,34 +340,80 @@ describe('the scheduler editor warns about a stop', () => {
           category: 'warnings',
           tone: 'warn',
           title: 'Scheduler warning',
-          text: RCON_WARNING,
+          text: `Command: ${RCON_WARNING}`,
         }),
       ]),
     )
     expect(App.GetScheduleGraphWarnings).toHaveBeenCalledWith('alpha', expect.anything())
     // Never a gate: Save is still there and enabled.
-    expect((screen.getByRole('button', { name: 'save' }) as HTMLButtonElement).disabled).toBe(false)
+    fireEvent.click(screen.getByRole('button', { name: 'Graph actions' }))
+    expect((screen.getByRole('button', { name: 'Save' }) as HTMLButtonElement).disabled).toBe(false)
   })
 
-  it('reopens a dismissed bubble, and keeps it after close', async () => {
+  it('keeps a dismissed bubble closed, and keeps it after close', async () => {
     vi.mocked(App.GetScheduleGraphs).mockResolvedValue([withCommand('__stop__')])
-    vi.mocked(App.GetScheduleGraphWarnings).mockResolvedValue([RCON_WARNING])
+    vi.mocked(App.GetScheduleGraphWarnings).mockResolvedValue(RCON_ADVICE)
     const { unmount } = render(<SchedulerTile serverId="alpha" maximized />)
     await waitFor(() => expect(toasts()).toHaveLength(1))
 
     act(() => useNotificationsStore.getState().dismissToast(toasts()[0].id))
     expect(toasts()).toEqual([])
+    // The count opens the list and leaves the bubble dismissed.
     fireEvent.click(warningButton() as HTMLElement)
-    expect(toasts()).toHaveLength(1)
+    expect(screen.queryByRole('button', { name: 'Show as notification' })).toBeNull()
+    expect(toasts()).toEqual([])
 
-    // Closing the scheduler leaves it up, and reopening counts no repeat.
+    // Reopening the scheduler on the same warnings does not raise it again.
     unmount()
-    expect(toasts()).toHaveLength(1)
     render(<SchedulerTile serverId="alpha" maximized />)
     await waitFor(() => expect(warningButton()).not.toBeNull())
-    // Waited for, like the first render's bubble: the remount's effect can
-    // land after the button does, and a loaded CI runner reads it in between.
-    await waitFor(() => expect(toasts()).toEqual([expect.objectContaining({ count: 1 })]))
+    expect(toasts()).toEqual([])
+  })
+
+  it('asks before saving a dirty graph to run it', async () => {
+    vi.mocked(App.GetScheduleGraphs).mockResolvedValue([withCommand('save-all')])
+    vi.mocked(App.SaveScheduleGraph).mockImplementation(async (_id, g) => g)
+    vi.mocked(App.RunScheduleGraphNow).mockResolvedValue({
+      status: 'success',
+      nodes: [],
+    } as unknown as models.RunRecord)
+    render(<SchedulerTile serverId="alpha" maximized />)
+    await waitFor(() => expect(selected()).toBe('Only'))
+    fireEvent.click(screen.getByRole('button', { name: 'Graph actions' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Rename' }))
+    const input = screen.getByDisplayValue('Only')
+    fireEvent.change(input, { target: { value: 'Only, edited' } })
+    fireEvent.keyDown(input, { key: 'Enter' })
+    await waitFor(() => expect(screen.getByTitle('Unsaved changes')).toBeTruthy())
+
+    // Cancel leaves the changes unsaved and runs nothing.
+    fireEvent.click(screen.getByRole('button', { name: 'run' }))
+    expect(screen.getByText('Run uses the saved graph. Save your changes and run it?')).toBeTruthy()
+    expect(screen.queryByRole('button', { name: 'Discard' })).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
+    expect(App.SaveScheduleGraph).not.toHaveBeenCalled()
+    expect(App.RunScheduleGraphNow).not.toHaveBeenCalled()
+    expect(screen.getByTitle('Unsaved changes')).toBeTruthy()
+
+    fireEvent.click(screen.getByRole('button', { name: 'run' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Save & run' }))
+    await waitFor(() => expect(App.RunScheduleGraphNow).toHaveBeenCalled())
+    expect(App.SaveScheduleGraph).toHaveBeenCalled()
+  })
+
+  it('runs a saved graph without asking', async () => {
+    vi.mocked(App.GetScheduleGraphs).mockResolvedValue([withCommand('save-all')])
+    vi.mocked(App.SaveScheduleGraph).mockImplementation(async (_id, g) => g)
+    vi.mocked(App.RunScheduleGraphNow).mockResolvedValue({
+      status: 'success',
+      nodes: [],
+    } as unknown as models.RunRecord)
+    render(<SchedulerTile serverId="alpha" maximized />)
+    await waitFor(() => expect(selected()).toBe('Only'))
+
+    fireEvent.click(screen.getByRole('button', { name: 'run' }))
+    expect(screen.queryByRole('button', { name: 'Save & run' })).toBeNull()
+    await waitFor(() => expect(App.RunScheduleGraphNow).toHaveBeenCalled())
   })
 
   // The message that wrapped the toolbar to four lines. The toolbar keeps two
@@ -421,12 +480,14 @@ describe('the scheduler editor warns about a stop', () => {
     }
   })
 
-  it('never asks about a graph with nothing that stops the server', async () => {
+  // A destination or retention warning is about a block that stops nothing,
+  // so a graph without a stop is asked about too.
+  it('asks about a graph with nothing that stops the server', async () => {
     vi.mocked(App.GetScheduleGraphs).mockResolvedValue([withCommand('save-all')])
     render(<SchedulerTile serverId="alpha" maximized />)
     await waitFor(() => expect(selected()).toBe('Only'))
 
-    expect(App.GetScheduleGraphWarnings).not.toHaveBeenCalled()
+    await waitFor(() => expect(App.GetScheduleGraphWarnings).toHaveBeenCalled())
     expect(warningButton()).toBeNull()
     expect(toasts()).toEqual([])
   })
@@ -439,6 +500,61 @@ describe('the scheduler editor warns about a stop', () => {
     await waitFor(() => expect(App.GetScheduleGraphWarnings).toHaveBeenCalled())
     expect(warningButton()).toBeNull()
     expect(toasts()).toEqual([])
+  })
+
+  // The count's list goes to the block: its row selects the node, which opens
+  // the panel. (The canvas draws no nodes in jsdom, so the block's own triangle
+  // is held in BlockNode.test.tsx.)
+  const panel = () => document.querySelector('[aria-hidden][class*="bg-overlay"]')
+  const openPanelFromList = () => {
+    fireEvent.click(warningButton() as HTMLElement)
+    fireEvent.click(screen.getByText(RCON_WARNING))
+  }
+
+  it('selects the block, and opens its panel, from a list row', async () => {
+    vi.mocked(App.GetScheduleGraphs).mockResolvedValue([withCommand('__stop__')])
+    vi.mocked(App.GetScheduleGraphWarnings).mockResolvedValue(RCON_ADVICE)
+    render(<SchedulerTile serverId="alpha" maximized />)
+    await waitFor(() => expect(warningButton()).not.toBeNull())
+
+    expect(panel()?.getAttribute('aria-hidden')).toBe('true')
+    openPanelFromList()
+    expect(panel()?.getAttribute('aria-hidden')).toBe('false')
+  })
+
+  // A failure outlives the highlight, which clears when the run does, and goes
+  // when the next run starts. The data tab says what the node was warned about
+  // and what failed.
+  it('shows a node its warning and its last-run failure', async () => {
+    vi.mocked(App.GetScheduleGraphs).mockResolvedValue([withCommand('__stop__')])
+    vi.mocked(App.GetScheduleGraphWarnings).mockResolvedValue(RCON_ADVICE)
+    vi.mocked(App.PreviewScheduleNode).mockResolvedValue({
+      attributes: [],
+      console: [],
+    } as unknown as models.NodePreview)
+    render(<SchedulerTile serverId="alpha" maximized />)
+    await waitFor(() => expect(warningButton()).not.toBeNull())
+    openPanelFromList()
+    fireEvent.click(screen.getByRole('tab', { name: 'data' }))
+    expect(screen.getByTestId('node-warnings').textContent).toContain(RCON_WARNING)
+    expect(screen.queryByTestId('node-last-run')).toBeNull()
+
+    const on = (name: string) => {
+      const call = vi.mocked(EventsOn).mock.calls.find((c) => c[0] === name)
+      return call?.[1] as (p: unknown) => void
+    }
+    act(() =>
+      on(EVENTS.SCHEDULE_NODE_FINISHED)({
+        graphId: 'g1',
+        nodeId: 'n1',
+        status: 'failed',
+        error: 'bucket unreachable',
+      }),
+    )
+    expect(screen.getByTestId('node-last-run').textContent).toContain('failed: bucket unreachable')
+
+    act(() => on(EVENTS.SCHEDULE_RUN_STARTED)({ graphId: 'g1' }))
+    expect(screen.queryByTestId('node-last-run')).toBeNull()
   })
 
   it('leaves no warning, and no banner, when the ask fails', async () => {

@@ -34,11 +34,8 @@ const (
 // registerBuiltins rather than in it, like registerDHSnapshotBlock.
 func registerDHPublishBlock(r *BlockRegistry) {
 	must(r.RegisterBlock(models.BlockDef{
-		ID: dhPublishBlockID, Category: "action", Label: "Publish DH Snapshot",
-		Description: "Uploads a staged Distant Horizons snapshot to a saved bucket destination, builds each level's whole " +
-			"database in the bucket from the uploaded parts, and writes the download page. latest.json is written last, " +
-			"so a reader never sees a snapshot whose files are missing. Afterwards it keeps the newest snapshots and deletes the " +
-			"older ones and the parts only they used; a failure to do that is a warning, not a failed run. The server is not touched.",
+		ID: dhPublishBlockID, Category: "action", Group: dhBlockGroup, Label: "Publish DH Snapshot",
+		Description:   "Uploads a staged Distant Horizons snapshot to a bucket and publishes its download page.",
 		ControlInputs: []string{"trigger"}, ControlOutputs: []string{"onComplete", "onFailed"},
 		// Port id == config key (resolveDataInputs), so the snapshot block's
 		// folder output wires straight in and outranks the field.

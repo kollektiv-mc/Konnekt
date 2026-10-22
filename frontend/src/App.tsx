@@ -19,7 +19,8 @@ import { useUiStore } from './stores/useUiStore'
 import { useServerConfigStore } from './stores/useServerConfigStore'
 import { useSettingsStore } from './stores/useSettingsStore'
 import { useProcessesStore } from './stores/useProcessesStore'
-import { emitNotification } from './lib/notify'
+import { emitNotification } from './lib/appNotify'
+import { deliverScheduleNotify } from './lib/scheduleNotify'
 import { failedRunToast, showToast } from './lib/toast'
 import type { RunFinished } from './lib/toast'
 import { useNotificationsStore } from './stores/useNotificationsStore'
@@ -188,9 +189,7 @@ function App() {
             title: titled('Server crashed', payload?.serverID),
             text,
           })
-          if (useSettingsStore.getState().settings.notifyOnCrash) {
-            emitNotification('crash', text)
-          }
+          emitNotification('crash', text)
         },
       )
     } catch {
@@ -212,10 +211,7 @@ function App() {
       // server.go emits {name, ip} — not a bare string.
       cleanup = EventsOn(EVENTS.PLAYER_JOINED, (d?: { name?: string }) => {
         if (!d?.name) return
-        const { settings } = useSettingsStore.getState()
-        if (settings.notifyOnJoin) {
-          emitNotification('join', `${d.name} joined the game`)
-        }
+        emitNotification('join', `${d.name} joined the game`)
       })
     } catch {
       /* non-Wails context */
@@ -257,7 +253,7 @@ function App() {
       })
       c5 = EventsOn(EVENTS.BACKUP_FAILED, (data?: { serverID?: string; error?: string }) => {
         useProcessesStore.getState().finish(data?.serverID ?? 'backup', 'failed')
-        emitNotification('crash', `Backup failed${data?.error ? ': ' + data.error : ''}`)
+        emitNotification('crash', `Backup failed${data?.error ? ': ' + data.error : ''}`, 'errors')
         showToast({
           category: 'errors',
           tone: 'error',
@@ -268,7 +264,7 @@ function App() {
       // No processes row to finish: a restore never opens one. Restore used
       // to fail through BACKUP_FAILED and toast as a failed backup (#280).
       c6 = EventsOn(EVENTS.RESTORE_FAILED, (data?: { error?: string }) => {
-        emitNotification('crash', `Restore failed${data?.error ? ': ' + data.error : ''}`)
+        emitNotification('crash', `Restore failed${data?.error ? ': ' + data.error : ''}`, 'errors')
         showToast({
           category: 'errors',
           tone: 'error',
@@ -419,7 +415,11 @@ function App() {
         EventsOn(EVENTS.INSTALL_FAILED, (d?: { error?: string }) => {
           useProcessesStore.getState().finish(current, 'failed')
           useInstallStore.getState().fail(d?.error ?? 'The installer failed.')
-          emitNotification('crash', `Server install failed${d?.error ? ': ' + d.error : ''}`)
+          emitNotification(
+            'crash',
+            `Server install failed${d?.error ? ': ' + d.error : ''}`,
+            'errors',
+          )
           showToast({
             category: 'errors',
             tone: 'error',
@@ -485,7 +485,11 @@ function App() {
           useLoaderStore
             .getState()
             .failUpdate(d?.error ?? 'The loader update failed.', d?.rolledBack ?? false)
-          emitNotification('crash', `Loader update failed${d?.error ? ': ' + d.error : ''}`)
+          emitNotification(
+            'crash',
+            `Loader update failed${d?.error ? ': ' + d.error : ''}`,
+            'errors',
+          )
           showToast({
             category: 'errors',
             tone: 'error',
@@ -550,23 +554,11 @@ function App() {
     }
   }, [])
 
-  // Scheduler notify block → in-app notification
+  // Scheduler notify block → in-app and/or desktop notification, per its deliver choice
   useEffect(() => {
     let cleanup: (() => void) | undefined
     try {
-      cleanup = EventsOn(EVENTS.SCHEDULE_NOTIFY, (data: { kind: string; message: string }) => {
-        const kind = (['info', 'warn', 'error'].includes(data.kind) ? data.kind : 'info') as
-          'info' | 'warn' | 'error'
-        emitNotification(kind, data.message)
-        // A Notify block is a message the user wrote to be read, so it gets a
-        // bubble too: an error one counts as an error, the rest as advice.
-        showToast({
-          category: kind === 'error' ? 'errors' : 'warnings',
-          tone: kind,
-          title: 'Scheduler',
-          text: data.message,
-        })
-      })
+      cleanup = EventsOn(EVENTS.SCHEDULE_NOTIFY, deliverScheduleNotify)
     } catch {
       /* non-Wails context */
     }
@@ -598,17 +590,14 @@ function App() {
     }
   }, [])
 
-  // Player left notifications — shares the join toggle (player-activity alerts)
+  // Player left notifications: shares the join desktop toggle
   useEffect(() => {
     let cleanup: (() => void) | undefined
     try {
       // server.go emits {name} — not a bare string.
       cleanup = EventsOn(EVENTS.PLAYER_LEFT, (d?: { name?: string }) => {
         if (!d?.name) return
-        const { settings } = useSettingsStore.getState()
-        if (settings.notifyOnJoin) {
-          emitNotification('join', `${d.name} left the game`)
-        }
+        emitNotification('join', `${d.name} left the game`)
       })
     } catch {
       /* non-Wails context */

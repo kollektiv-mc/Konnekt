@@ -39,6 +39,20 @@ type Edge struct {
 	SourcePort string `json:"sourcePort"` // control: "onComplete"/"onFailed"/etc; data: port id
 	Target     string `json:"target"`     // target node id
 	TargetPort string `json:"targetPort"` // control: "in"; data: port id
+	// Waypoints are the corner points the editor routes the line through, in
+	// canvas coordinates and in order from source to target. An editor hint
+	// only, like Node.Position: the engine never reads them, and an edge saved
+	// before they existed has none and draws straight.
+	Waypoints []Position `json:"waypoints,omitempty"`
+}
+
+// GraphWarning is one piece of advice about a graph that is not an error. NodeID
+// names the node it is about, so the editor can mark that block and list the
+// advice under its label; it is empty for advice about the graph as a whole.
+// Text carries no block name, which the editor adds from the node it names.
+type GraphWarning struct {
+	NodeID string `json:"nodeId"`
+	Text   string `json:"text"`
 }
 
 // ─── Block descriptor (served to frontend, renders blocks generically) ────────
@@ -56,6 +70,11 @@ type BlockDef struct {
 	ConfigSchema   []ConfigField `json:"configSchema"`
 	Source         string        `json:"source"`              // "native" | "manifest"
 	Primitive      string        `json:"primitive,omitempty"` // manifest blocks only
+	// Group names a sub-heading inside the category: blocks that share one within
+	// a category are shown together, as a single dropdown row in the palette and a
+	// single fly-out row in quick-add. Empty means ungrouped. Display only, and
+	// not part of a block's identity, so saved graphs are unaffected.
+	Group string `json:"group,omitempty"`
 	// TimeoutSeconds is the longest this block may run before the engine cancels
 	// it. Zero (the field absent) means the engine's default per-node limit; a
 	// block that legitimately runs for minutes or hours declares its own. The
@@ -93,6 +112,21 @@ type ConfigField struct {
 	Default  interface{}   `json:"default,omitempty"`
 	Required bool          `json:"required,omitempty"`
 	Options  []FieldOption `json:"options,omitempty"` // for "select"
+	// ShowWhen shows the field only while another field of the same node has one
+	// of the listed values. A hidden field keeps its stored value; it is only
+	// not drawn.
+	ShowWhen *FieldWhen `json:"showWhen,omitempty"`
+	// Row groups fields into one line: consecutive fields with the same Row are
+	// drawn side by side in equal columns. Empty means a line of its own.
+	Row string `json:"row,omitempty"`
+}
+
+// FieldWhen is a ConfigField's visibility condition. Key names a sibling field
+// and Values the values of it that show this one; where that field has no stored
+// value, its Default is what counts.
+type FieldWhen struct {
+	Key    string   `json:"key"`
+	Values []string `json:"values"`
 }
 
 type FieldOption struct {

@@ -4,6 +4,16 @@
 .react-flow {
   background: var(--bg-base);
 }
+/* The dashboard keeps the default arrow everywhere (body in style.css), and
+   the editor matches it. React Flow's stylesheet hands the pane, nodes,
+   edges, handles and the selection a grab, grabbing, pointer, crosshair or
+   move cursor, through selectors up to three classes deep, so one important
+   override answers all of them rather than a patch per selector. Text fields
+   keep the I-beam style.css gives them. */
+.react-flow,
+.react-flow *:not(input, textarea, [contenteditable], [contenteditable] *) {
+  cursor: default !important;
+}
 .react-flow__background pattern circle,
 .react-flow__background pattern path {
   fill: var(--border-subtle) !important;
@@ -59,10 +69,46 @@
   border: 1px solid var(--border-hover) !important;
 }
 
-/* Selection */
-.react-flow__selection {
-  border: 1px solid var(--accent);
-  background: rgba(0, 0, 0, 0.04);
+/* Selection: the drag box while it is drawn, and the rectangle React Flow leaves
+   round the selected nodes after it. Both take the dashboard context menu's edge
+   (components/ui/ContextMenu.tsx): the floating-layer surface, `--bg-overlay`,
+   with no border and no shadow, so the edge is only the surface meeting the
+   canvas. Here it is translucent, since the nodes sit under it, and the menu's
+   near-square corner is rounded off to fit a box this much larger.
+
+   `.react-flow` in front of each selector outranks xyflow's own rule for the
+   same properties whichever stylesheet loads last. */
+.react-flow .react-flow__selection,
+.react-flow .react-flow__nodesselection-rect {
+  border: none;
+  border-radius: var(--radius-xl);
+  background: color-mix(in srgb, var(--bg-overlay) 55%, transparent);
+}
+
+/* The rectangle is exactly the bounds of the selected nodes, which is also its
+   hit area for dragging them, so it stays that size and only the fill grows: a
+   pseudo-element reaching 12px past it on every side. A pointer on the pseudo-
+   element is a pointer on the rectangle, so dragging the margin moves the
+   selection like dragging between the nodes does. */
+.react-flow .react-flow__nodesselection-rect {
+  background: none;
+}
+
+/* Both sit under the nodes, whose layer is z-index 2, so a translucent fill tints
+   the canvas rather than dimming what it encloses. The rectangle keeps its hit
+   area on the empty canvas between the nodes; a node is still the target of a
+   drag that starts on it, and a selected node drags the whole selection. */
+.react-flow .react-flow__nodesselection,
+.react-flow .react-flow__selection {
+  z-index: 1;
+}
+
+.react-flow .react-flow__nodesselection-rect::before {
+  content: '';
+  position: absolute;
+  inset: -12px;
+  border-radius: inherit;
+  background: color-mix(in srgb, var(--bg-overlay) 55%, transparent);
 }
 
 /* Hide attribution */
@@ -96,6 +142,61 @@
   animation: edge-draw-in var(--duration-panel) ease-out both;
 }
 
+/* Node panel (editor/NodePanel.tsx). Picking another node while the panel is
+   open dips the contents and brings them back, 110ms in all and with no
+   movement, so it reads as a change of subject rather than a transition. The
+   minimap sits against the same edge the panel does, so it steps left of it
+   while a node is selected (the wrapper carries node-panel-open) and rides the
+   panel's own timing. */
+@keyframes node-panel-swap {
+  from {
+    opacity: 0.2;
+  }
+  to {
+    opacity: 1;
+  }
+}
+.node-panel-swap {
+  animation: node-panel-swap 110ms ease-out both;
+}
+/* Config/data switch: the incoming pane slides a few pixels in from the side
+   the tab highlight moved toward. */
+@keyframes node-panel-tab-in {
+  from {
+    opacity: 0;
+    translate: var(--tab-in-from, 0) 0;
+  }
+  to {
+    opacity: 1;
+    translate: 0 0;
+  }
+}
+.node-panel-tab-in {
+  animation: node-panel-tab-in var(--duration-fast) var(--ease-standard) both;
+}
+.node-panel-tab-in-config {
+  --tab-in-from: -6px;
+}
+.node-panel-tab-in-data {
+  --tab-in-from: 6px;
+}
+.node-panel-host .react-flow__minimap {
+  transition: transform var(--duration-panel) var(--ease-standard);
+}
+.node-panel-open .react-flow__minimap {
+  /* w-60 panel + its 0.5rem inset + 0.5rem of air */
+  transform: translateX(-16rem);
+}
+@media (prefers-reduced-motion: reduce) {
+  .node-panel-swap,
+  .node-panel-tab-in {
+    animation: none !important;
+  }
+  .node-panel-host .react-flow__minimap {
+    transition: none !important;
+  }
+}
+
 /* Live run highlight: pulsing glow on the currently-executing node */
 @keyframes node-run-pulse {
   0%,
@@ -114,4 +215,99 @@
    vocabulary — a heartbeat, not a UI transition. */
 .node-running {
   animation: node-run-pulse 1.1s ease-in-out infinite;
+}
+
+/* Cursor proximity glow (editor/useNodeGlow.ts): the website's tile ring, kept
+   to the scheduler and at about half its strength. useNodeGlow writes --mx/--my
+   (node-local, unscaled px) on each `.react-flow__node`, and the ring BlockNode
+   renders beside a plain node inherits them, so one pointer listener lights
+   every node near the cursor and a far node's gradient is all transparent.
+
+   The ring is the gradient masked down to its own 1px padding, as on the
+   website: paint the rectangle, subtract the content box, and only the edge is
+   left. It lies exactly over the node's 1px border, and a node's border is its
+   category colour at full strength, so the gradient is a lighter tint of that
+   colour: the edge nearest the pointer brightens, and nothing is drawn outside
+   the node. It is a sibling of the node, not a pseudo-element, because the node
+   clips its overflow at the padding box and would cut the ring off.
+
+   Gated on the mask like the website's: without it the gradient would fill the
+   node, so those browsers keep the plain border. */
+.node-glow-ring {
+  display: none;
+}
+
+@supports (mask-composite: exclude) or (-webkit-mask-composite: xor) {
+  .node-glow-ring {
+    display: block;
+    position: absolute;
+    inset: 0;
+    padding: 1px;
+    pointer-events: none;
+    /* Off-node default, so a node the pointer has not reached shows nothing. */
+    background: radial-gradient(
+      220px circle at var(--mx, -999px) var(--my, -999px),
+      color-mix(in srgb, var(--node-glow) 40%, white 60%),
+      transparent 60%
+    );
+    opacity: 0.8;
+    -webkit-mask:
+      linear-gradient(#000 0 0) content-box,
+      linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask:
+      linear-gradient(#000 0 0) content-box,
+      linear-gradient(#000 0 0);
+    mask-composite: exclude;
+    transition: opacity var(--duration-panel) var(--ease-standard);
+  }
+}
+
+/* The pointer left the canvas: fade the light out where it was rather than
+   snapping it off. */
+[data-glow-idle] .node-glow-ring {
+  opacity: 0;
+}
+
+/* The glow is decoration that follows the pointer, so it goes with the rest of
+   the motion. */
+@media (prefers-reduced-motion: reduce) {
+  .node-glow-ring {
+    display: none;
+  }
+}
+
+/* Menu open and close (the quick-add list, the edit menu's fly-outs): the same
+   quick scale and fade the toolbar's popovers play, which are a transition in
+   components/ui/Popover.tsx. These are keyframes because the panel is mounted
+   for the open and unmounted after the close (hooks/usePresence.ts, kind
+   'menu'), and a mounting element has no previous state to transition from.
+   `transform` here, not Tailwind's scale-* utilities: those set the separate
+   `scale` property and a transition on `transform` would never run for them.
+   The origin is set inline on each panel, at the corner it opens from.
+   `backwards` on the entrance so the panel holds no transform once it is
+   open, and `forwards` on the exit so it stays gone until it unmounts. */
+@keyframes menu-in {
+  from {
+    opacity: 0;
+    transform: scaleY(0.85) translateY(-6px);
+  }
+}
+@keyframes menu-out {
+  to {
+    opacity: 0;
+    transform: scaleY(0.85) translateY(-6px);
+  }
+}
+.menu-in {
+  animation: menu-in var(--duration-fast) var(--ease-standard) backwards;
+}
+.menu-out {
+  animation: menu-out var(--duration-fast) var(--ease-standard) forwards;
+}
+@media (prefers-reduced-motion: reduce) {
+  .menu-in,
+  .menu-out {
+    animation: none !important;
+  }
 }

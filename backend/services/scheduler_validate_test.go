@@ -255,3 +255,38 @@ func TestValidateGraphDataTypesWalksEveryEdge(t *testing.T) {
 		t.Errorf("empty graph = %v, want nil", got)
 	}
 }
+
+// Condition's Result is a bool output, checked against the real registry so a
+// port type changed in the block cannot drift from what the validator accepts.
+func TestValidateGraphDataTypesWithConditionResult(t *testing.T) {
+	reg := newTestScheduler(t).registry
+
+	tests := []struct {
+		name      string
+		src, tgt  string
+		srcPort   string
+		tgtPort   string
+		wantIssue bool
+	}{
+		{"result -> condition left", "control.condition", "control.condition", "result", "left", false},
+		{"result -> condition right", "control.condition", "control.condition", "result", "right", false},
+		{"result -> math input", "control.condition", "data.mathOp", "result", "a", false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			g := models.Graph{
+				Nodes: []models.Node{
+					{ID: "src", Type: tt.src},
+					{ID: "tgt", Type: tt.tgt},
+				},
+				Edges: []models.Edge{
+					{ID: "e1", Kind: "data", Source: "src", SourcePort: tt.srcPort, Target: "tgt", TargetPort: tt.tgtPort},
+				},
+			}
+			issues := validateGraphDataTypes(g, reg)
+			if tt.wantIssue != (len(issues) > 0) {
+				t.Errorf("issues = %v, wantIssue %v", issues, tt.wantIssue)
+			}
+		})
+	}
+}

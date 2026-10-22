@@ -2,7 +2,9 @@
 import React, { memo, useContext } from 'react'
 import { Handle, Position, type NodeProps } from '@xyflow/react'
 import { SchedulerCtx } from './schedulerContext'
+import { Icon } from '../../../components/ui/Icon'
 import { fmtDowntime } from '../../../lib/format'
+import { Power, TriangleAlert } from '../../../lib/icons'
 import {
   CATEGORY_ICON,
   categoryColor,
@@ -21,8 +23,9 @@ import type { models } from '../../../../wailsjs/go/models'
 
 const HEADER_H = 30
 const INFO_H = 20
-// The effect badge is a line in the hint line's style, so it takes the same height.
-const BADGE_H = INFO_H
+// The status line (the last run's warning) is a line in the hint line's style, so
+// it takes the same height.
+const STATUS_H = INFO_H
 const ROW_H = 22
 const PAD = 6
 
@@ -51,6 +54,8 @@ export const BlockNode = memo(function BlockNode({ data, selected }: NodeProps<B
     nodeRunState,
     nodeDowntimeMs,
     nodeWarning,
+    nodeAdvice,
+    nodeFailure,
     cycleNodes,
   } = useContext(SchedulerCtx)
   const def = blockDefs.get(nd.blockType)
@@ -58,6 +63,8 @@ export const BlockNode = memo(function BlockNode({ data, selected }: NodeProps<B
   const runState = nodeRunState.get(nd.id as string)
   const downtimeMs = nodeDowntimeMs.get(nd.id as string)
   const warning = nodeWarning.get(nd.id as string)
+  const advice = nodeAdvice.get(nd.id as string)
+  const failure = nodeFailure.get(nd.id as string)
   const inCycle = cycleNodes.has(nd.id as string)
 
   const color = categoryColor(def?.category ?? '')
@@ -131,10 +138,10 @@ export const BlockNode = memo(function BlockNode({ data, selected }: NodeProps<B
   ).includes(NODE_EFFECT_STOPS_SERVER)
 
   const bodyH = Math.max(1, leftPorts.length, rightPorts.length) * ROW_H + PAD * 2
-  // One line carries the effect badge, the measured downtime and the last run's
-  // warning, so a node with none of them is as tall as ever.
-  const hasStatusLine = stopsServer || warning !== undefined
-  const aboveBodyH = HEADER_H + (hint !== undefined ? INFO_H : 0) + (hasStatusLine ? BADGE_H : 0)
+  // The line holds only what the last run could not finish; the server-stopping
+  // effect and any advice live in the header (icons), so they add no height.
+  const hasStatusLine = warning !== undefined
+  const aboveBodyH = HEADER_H + (hint !== undefined ? INFO_H : 0) + (hasStatusLine ? STATUS_H : 0)
   const totalH = aboveBodyH + bodyH
   const portTop = aboveBodyH + PAD
 
@@ -156,159 +163,205 @@ export const BlockNode = memo(function BlockNode({ data, selected }: NodeProps<B
   } else if (selected) {
     borderClass = 'border-accent border-thick'
   } else {
+    // Only the plain state glows: the run-state, cycle and selected borders are
+    // themselves the signal, and a category-coloured glow over them would muddy it.
     borderClass = 'border'
     borderStyle = { borderColor: color }
+    stateClass = 'node-glow'
   }
 
   const hasExpandablePorts = dataIns.length > visibleDataIns.length || dataIns.length > 0
 
+  const stopsServerTip =
+    downtimeMs !== undefined
+      ? `Stops the server; last downtime ${fmtDowntime(downtimeMs)}`
+      : 'Stops the server'
+
+  // The triangle is the block's "look at this": grey while the backend has
+  // advice about it, red once it failed in the last run. It says which in its
+  // name, the failure first, so the reason is there without opening the panel.
+  const failed = failure !== undefined
+  const flagTip = [
+    ...(failed ? [failure ? `Failed in the last run: ${failure}` : 'Failed in the last run'] : []),
+    ...(advice ?? []),
+  ].join('\n')
+
   return (
-    <div
-      className={`node-entrance bg-elevated relative min-w-[180px] overflow-hidden rounded ${stateClass} ${borderClass}`}
-      // eslint-disable-next-line no-restricted-syntax -- height is computed from port count; --node-anim-delay is a per-node CSS custom property; default-state borderColor comes from the per-category CATEGORY_COLOR map, not a static value
-      style={
-        {
-          '--node-anim-delay': `${data._animDelay ?? 0}ms`,
-          height: totalH,
-          ...borderStyle,
-        } as React.CSSProperties
-      }
-    >
-      {/* Header */}
+    <>
       <div
-        className="flex h-[30px] items-center gap-1.5 px-2.5"
-        // eslint-disable-next-line no-restricted-syntax -- border color is derived from the per-category CATEGORY_COLOR map
-        style={{ borderBottom: `0.5px solid ${color}20` }}
+        className={`node-entrance group bg-elevated relative min-w-[180px] overflow-hidden rounded ${stateClass} ${borderClass}`}
+        // eslint-disable-next-line no-restricted-syntax -- height is computed from port count; --node-anim-delay and --node-glow are per-node CSS custom properties; default-state borderColor comes from the per-category CATEGORY_COLOR map, not a static value
+        style={
+          {
+            '--node-anim-delay': `${data._animDelay ?? 0}ms`,
+            '--node-glow': color,
+            height: totalH,
+            ...borderStyle,
+          } as React.CSSProperties
+        }
       >
-        <span
-          className="text-2xs shrink-0 font-mono font-bold tracking-wider"
-          // eslint-disable-next-line no-restricted-syntax -- color varies per block category (CATEGORY_COLOR)
-          style={{ color }}
+        {/* Header */}
+        <div
+          className="flex h-[30px] items-center gap-1.5 px-2.5"
+          // eslint-disable-next-line no-restricted-syntax -- border color is derived from the per-category CATEGORY_COLOR map
+          style={{ borderBottom: `0.5px solid ${color}20` }}
         >
-          {icon}
-        </span>
-        <span className="text-text-primary text-1xs flex-1 truncate font-mono font-semibold">
-          {nd.label}
-        </span>
-        {hasExpandablePorts && (
           <span
-            onClick={() => onToggleCollapse(nd.id as string)}
-            className="nodrag text-text-faint text-3xs shrink-0 cursor-pointer pl-1 font-mono select-none"
-            title={isCollapsed ? 'Expand ports' : 'Collapse ports'}
+            className="text-2xs shrink-0 font-mono font-bold tracking-wider"
+            // eslint-disable-next-line no-restricted-syntax -- color varies per block category (CATEGORY_COLOR)
+            style={{ color }}
           >
-            {isCollapsed ? '▸' : '▾'}
+            {icon}
           </span>
-        )}
-      </div>
-
-      {/* Config hint */}
-      {hint !== undefined && (
-        <div className="text-text-faint border-border-subtle border-b-hairline text-3xs flex h-5 items-center truncate px-2.5 font-mono">
-          {String(hint)}
-        </div>
-      )}
-
-      {/* Effect badge, with the measured downtime of the last run beside it, and
-          what the last run could not finish (the node still completed) */}
-      {hasStatusLine && (
-        <div className="text-warning border-border-subtle border-b-hairline text-3xs flex h-5 items-center justify-between gap-2 truncate px-2.5 font-mono">
-          {stopsServer && <span>Stops the server</span>}
-          {stopsServer && downtimeMs !== undefined && (
-            <span className="text-text-muted">downtime {fmtDowntime(downtimeMs)}</span>
+          <span className="text-text-primary text-1xs flex-1 truncate font-mono font-semibold">
+            {nd.label}
+          </span>
+          {hasExpandablePorts && (
+            <span
+              onClick={() => onToggleCollapse(nd.id as string)}
+              className="nodrag text-text-faint text-3xs shrink-0 pl-1 font-mono opacity-0 transition-opacity select-none group-hover:opacity-100"
+              title={isCollapsed ? 'Expand ports' : 'Collapse ports'}
+            >
+              {isCollapsed ? '▸' : '▾'}
+            </span>
           )}
-          {warning !== undefined && (
-            <span className="text-text-muted min-w-0 truncate" title={warning}>
-              warning: {warning}
+          {stopsServer && (
+            <span
+              role="img"
+              aria-label={stopsServerTip}
+              title={stopsServerTip}
+              className="text-text-faint flex shrink-0 items-center"
+            >
+              <Icon icon={Power} size="xs" />
+            </span>
+          )}
+          {flagTip !== '' && (
+            <span
+              role="img"
+              aria-label={flagTip}
+              title={flagTip}
+              data-testid="node-flag"
+              className={`flex shrink-0 items-center ${failed ? 'text-danger' : 'text-text-faint'}`}
+            >
+              <Icon icon={TriangleAlert} size="xs" />
             </span>
           )}
         </div>
-      )}
 
-      {/* Left port labels */}
-      {leftPorts.map((p, i) => (
-        <div
-          key={p.id}
-          className="text-3xs absolute left-3.5 flex h-[22px] items-center font-mono"
-          // eslint-disable-next-line no-restricted-syntax -- top is computed from port index/count; color is the port's data-type/control color
-          style={{ top: portTop + i * ROW_H, color: p.color }}
-        >
-          {p.label}
-        </div>
-      ))}
+        {/* Config hint */}
+        {hint !== undefined && (
+          <div className="text-text-faint border-border-subtle border-b-hairline text-3xs flex h-5 items-center truncate px-2.5 font-mono">
+            {String(hint)}
+          </div>
+        )}
 
-      {/* Right port labels */}
-      {rightPorts.map((p, i) => (
-        <div
-          key={p.id}
-          className="text-3xs absolute right-3.5 flex h-[22px] items-center text-right font-mono"
-          // eslint-disable-next-line no-restricted-syntax -- top is computed from port index/count; color is the port's data-type/control color
-          style={{ top: portTop + i * ROW_H, color: p.color }}
-        >
-          {p.label}
-        </div>
-      ))}
+        {/* What the last run could not finish (the node still completed) */}
+        {warning !== undefined && (
+          <div className="text-warning border-border-subtle border-b-hairline text-3xs flex h-5 items-center justify-between gap-2 truncate px-2.5 font-mono">
+            <span className="text-text-muted min-w-0 truncate" title={warning}>
+              warning: {warning}
+            </span>
+          </div>
+        )}
 
-      {/* Left handles (visible) — the Handle box itself is the grab area,
+        {/* Left port labels */}
+        {leftPorts.map((p, i) => (
+          <div
+            key={p.id}
+            className="text-3xs absolute left-3.5 flex h-[22px] items-center font-mono"
+            // eslint-disable-next-line no-restricted-syntax -- top is computed from port index/count; color is the port's data-type/control color
+            style={{ top: portTop + i * ROW_H, color: p.color }}
+          >
+            {p.label}
+          </div>
+        ))}
+
+        {/* Right port labels */}
+        {rightPorts.map((p, i) => (
+          <div
+            key={p.id}
+            className="text-3xs absolute right-3.5 flex h-[22px] items-center text-right font-mono"
+            // eslint-disable-next-line no-restricted-syntax -- top is computed from port index/count; color is the port's data-type/control color
+            style={{ top: portTop + i * ROW_H, color: p.color }}
+          >
+            {p.label}
+          </div>
+        ))}
+
+        {/* Left handles (visible) — the Handle box itself is the grab area,
           oversized vs. the small decorative dot rendered inside it. */}
-      {leftPorts.map((p, i) => (
-        <Handle
-          key={p.id}
-          id={p.id}
-          type="target"
-          position={Position.Left}
-          // The Handle's own box is xyflow's actual grab/drop hit area, not just
-          // its visual dot — sized well past the visible dot (below) so
-          // connections are easy to grab. Border comes from scheduler.css's
-          // `.react-flow__handle` rule (needs `!important` to beat xyflow's own
-          // inline-styled default).
-          className="bg-hover flex h-[18px] w-[18px] items-center justify-center rounded-full"
-          // eslint-disable-next-line no-restricted-syntax -- top is computed from port index/count
-          style={{ top: portTop + i * ROW_H + ROW_H / 2 }}
-        >
-          <span
-            className={`pointer-events-none block ${p.isData ? 'h-1.5 w-1.5 rounded-sm' : 'h-2 w-2 rounded-full'}`}
-            // eslint-disable-next-line no-restricted-syntax -- port color varies by data-type/control-port kind
-            style={{ background: p.color }}
-          />
-        </Handle>
-      ))}
+        {leftPorts.map((p, i) => (
+          <Handle
+            key={p.id}
+            id={p.id}
+            type="target"
+            position={Position.Left}
+            // The Handle's own box is xyflow's actual grab/drop hit area, not just
+            // its visual dot — sized well past the visible dot (below) so
+            // connections are easy to grab. Border comes from scheduler.css's
+            // `.react-flow__handle` rule (needs `!important` to beat xyflow's own
+            // inline-styled default).
+            className="bg-hover flex h-[18px] w-[18px] items-center justify-center rounded-full"
+            // eslint-disable-next-line no-restricted-syntax -- top is computed from port index/count
+            style={{ top: portTop + i * ROW_H + ROW_H / 2 }}
+          >
+            <span
+              className={`pointer-events-none block ${p.isData ? 'h-1.5 w-1.5 rounded-sm' : 'h-2 w-2 rounded-full'}`}
+              // eslint-disable-next-line no-restricted-syntax -- port color varies by data-type/control-port kind
+              style={{ background: p.color }}
+            />
+          </Handle>
+        ))}
 
-      {/* Hidden handles for collapsed data-in ports — keeps existing edges valid */}
-      {hiddenDataIns.map((p) => (
-        <Handle
-          key={p.id}
-          id={p.id}
-          type="target"
-          position={Position.Left}
-          className="pointer-events-none h-0 w-0 opacity-0"
-          // eslint-disable-next-line no-restricted-syntax -- top is computed from port index/count
-          style={{ top: portTop + ROW_H / 2 }}
+        {/* Hidden handles for collapsed data-in ports — keeps existing edges valid */}
+        {hiddenDataIns.map((p) => (
+          <Handle
+            key={p.id}
+            id={p.id}
+            type="target"
+            position={Position.Left}
+            className="pointer-events-none h-0 w-0 opacity-0"
+            // eslint-disable-next-line no-restricted-syntax -- top is computed from port index/count
+            style={{ top: portTop + ROW_H / 2 }}
+          />
+        ))}
+
+        {/* Right handles — same oversized-hit-area / small-dot split as the left side. */}
+        {rightPorts.map((p, i) => (
+          <Handle
+            key={p.id}
+            id={p.id}
+            type="source"
+            position={Position.Right}
+            // The Handle's own box is xyflow's actual grab/drop hit area, not just
+            // its visual dot — sized well past the visible dot (below) so
+            // connections are easy to grab. Border comes from scheduler.css's
+            // `.react-flow__handle` rule (needs `!important` to beat xyflow's own
+            // inline-styled default).
+            className="bg-hover flex h-[18px] w-[18px] items-center justify-center rounded-full"
+            // eslint-disable-next-line no-restricted-syntax -- top is computed from port index/count
+            style={{ top: portTop + i * ROW_H + ROW_H / 2 }}
+          >
+            <span
+              className={`pointer-events-none block ${p.isData ? 'h-1.5 w-1.5 rounded-sm' : 'h-2 w-2 rounded-full'}`}
+              // eslint-disable-next-line no-restricted-syntax -- port color varies by data-type/control-port kind
+              style={{ background: p.color }}
+            />
+          </Handle>
+        ))}
+      </div>
+      {/* The cursor glow (useNodeGlow): a ring over the node's own border. A
+        sibling rather than a pseudo-element of the node, which clips its overflow
+        at the padding box and would cut the border off; `rounded` is the node's
+        own radius, so the two corners match. */}
+      {stateClass === 'node-glow' && (
+        <div
+          aria-hidden
+          className="node-glow-ring rounded"
+          // eslint-disable-next-line no-restricted-syntax -- the ring takes the node's per-category colour (CATEGORY_COLOR)
+          style={{ '--node-glow': color } as React.CSSProperties}
         />
-      ))}
-
-      {/* Right handles — same oversized-hit-area / small-dot split as the left side. */}
-      {rightPorts.map((p, i) => (
-        <Handle
-          key={p.id}
-          id={p.id}
-          type="source"
-          position={Position.Right}
-          // The Handle's own box is xyflow's actual grab/drop hit area, not just
-          // its visual dot — sized well past the visible dot (below) so
-          // connections are easy to grab. Border comes from scheduler.css's
-          // `.react-flow__handle` rule (needs `!important` to beat xyflow's own
-          // inline-styled default).
-          className="bg-hover flex h-[18px] w-[18px] items-center justify-center rounded-full"
-          // eslint-disable-next-line no-restricted-syntax -- top is computed from port index/count
-          style={{ top: portTop + i * ROW_H + ROW_H / 2 }}
-        >
-          <span
-            className={`pointer-events-none block ${p.isData ? 'h-1.5 w-1.5 rounded-sm' : 'h-2 w-2 rounded-full'}`}
-            // eslint-disable-next-line no-restricted-syntax -- port color varies by data-type/control-port kind
-            style={{ background: p.color }}
-          />
-        </Handle>
-      ))}
-    </div>
+      )}
+    </>
   )
 })

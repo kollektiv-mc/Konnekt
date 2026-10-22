@@ -5,12 +5,16 @@ import { CUSTOM_ATTR_TEXT_CLASS } from './blockMeta'
 interface Props {
   graph: models.Graph
   nodeId: string
+  /** What the backend says about this node (GraphWarning), if anything. */
+  warnings?: readonly string[]
+  /** This node's error in the last run; '' for a failure with no text, absent when it did not fail. */
+  failure?: string
   onPreview: (graph: models.Graph, nodeId: string) => Promise<models.NodePreview>
 }
 
 // Live dry-run "spreadsheet": attributes the node references/defines with their
 // current values, plus a console line for what the block would do. No side effects.
-export function NodeDataPanel({ graph, nodeId, onPreview }: Props) {
+export function NodeDataPanel({ graph, nodeId, warnings = [], failure, onPreview }: Props) {
   const [preview, setPreview] = useState<models.NodePreview | null>(null)
   const [error, setError] = useState<string | null>(null)
 
@@ -36,6 +40,26 @@ export function NodeDataPanel({ graph, nodeId, onPreview }: Props) {
       <div className="text-text-primary font-mono text-xs font-semibold">Data preview</div>
 
       {error && <div className="text-danger font-mono text-xs">{error}</div>}
+
+      {warnings.length > 0 && (
+        <div className="flex flex-col gap-1" data-testid="node-warnings">
+          <span className={labelClass}>warnings</span>
+          {warnings.map((w, i) => (
+            <span key={i} className="text-text-secondary font-mono text-xs">
+              {w}
+            </span>
+          ))}
+        </div>
+      )}
+
+      {failure !== undefined && (
+        <div className="flex flex-col gap-1" data-testid="node-last-run">
+          <span className={labelClass}>last run</span>
+          <span className="text-danger font-mono text-xs">
+            {failure ? `failed: ${failure}` : 'failed'}
+          </span>
+        </div>
+      )}
 
       {/* Attribute table */}
       <div className="flex flex-col gap-1">

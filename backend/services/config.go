@@ -223,9 +223,12 @@ func (s *ConfigService) GetAppSettings() (models.AppSettings, error) {
 		BackgroundStyle:                  "solid",
 		StopGraceSeconds:                 60,
 		ConsoleBufferLines:               1000,
+		DesktopOn:                        map[string]bool{},
 		ToastsOff:                        map[string]bool{},
 		SchedulerPaletteCollapsed:        true,
 		SchedulerPaletteClosedCategories: map[string]bool{},
+		SchedulerPaletteOpenGroups:       map[string]bool{},
+		SchedulerCurvedEdges:             true,
 		NavClosedSections:                map[string]bool{"widgets": true, "layouts": true},
 		CheckUpdatesOnStartup:            true,
 		UpdateChannel:                    UpdateChannelStable,
@@ -242,6 +245,9 @@ func (s *ConfigService) GetAppSettings() (models.AppSettings, error) {
 		return defaults, err
 	}
 	settings := defaults
+	// Nil rather than the default, so a file with no desktopOn key is told
+	// apart from one that turned every category off.
+	settings.DesktopOn = nil
 	if err := json.Unmarshal(data, &settings); err != nil {
 		return defaults, err
 	}
@@ -254,13 +260,41 @@ func (s *ConfigService) GetAppSettings() (models.AppSettings, error) {
 	if settings.SchedulerPaletteClosedCategories == nil {
 		settings.SchedulerPaletteClosedCategories = defaults.SchedulerPaletteClosedCategories
 	}
+	if settings.SchedulerPaletteOpenGroups == nil {
+		settings.SchedulerPaletteOpenGroups = defaults.SchedulerPaletteOpenGroups
+	}
 	if settings.NavClosedSections == nil {
 		settings.NavClosedSections = defaults.NavClosedSections
 	}
 	if settings.ToastsOff == nil {
 		settings.ToastsOff = defaults.ToastsOff
 	}
+	if settings.DesktopOn == nil {
+		settings.DesktopOn = legacyDesktopOn(data)
+	}
 	return settings, nil
+}
+
+// legacyDesktopOn carries a settings file from before DesktopOn over to it:
+// its two desktop toggles were notifyOnCrash and notifyOnJoin, and every other
+// event reached the desktop with no toggle, which the new categories replace
+// with off. An unreadable file has already failed the caller's unmarshal.
+func legacyDesktopOn(data []byte) map[string]bool {
+	var old struct {
+		NotifyOnCrash bool `json:"notifyOnCrash"`
+		NotifyOnJoin  bool `json:"notifyOnJoin"`
+	}
+	on := map[string]bool{}
+	if json.Unmarshal(data, &old) != nil {
+		return on
+	}
+	if old.NotifyOnCrash {
+		on["crash"] = true
+	}
+	if old.NotifyOnJoin {
+		on["join"] = true
+	}
+	return on
 }
 
 // StopGrace returns the configured stop grace as a duration, for the callers

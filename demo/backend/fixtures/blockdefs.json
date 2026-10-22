@@ -142,7 +142,7 @@
     "id": "action.dhPublish",
     "category": "action",
     "label": "Publish DH Snapshot",
-    "description": "Uploads a staged Distant Horizons snapshot to a saved bucket destination, builds each level's whole database in the bucket from the uploaded parts, and writes the download page. latest.json is written last, so a reader never sees a snapshot whose files are missing. Afterwards it keeps the newest snapshots and deletes the older ones and the parts only they used; a failure to do that is a warning, not a failed run. The server is not touched.",
+    "description": "Uploads a staged Distant Horizons snapshot to a bucket and publishes its download page.",
     "isTrigger": false,
     "controlInputs": [
       "trigger"
@@ -225,13 +225,14 @@
       }
     ],
     "source": "native",
+    "group": "Distant Horizons",
     "timeoutSeconds": 43200
   },
   {
     "id": "action.dhSnapshot",
     "category": "action",
     "label": "DH Snapshot",
-    "description": "Stops the server to copy its Distant Horizons data into a staged snapshot, then starts it again. Players are warned first, over RCON or the console. A server that is already stopped is copied as it is and left stopped. Only the parts that changed since the last snapshot are staged, and the staged folder wires into Upload to Bucket.",
+    "description": "Stages a snapshot of the server's Distant Horizons data, restarting a running server for the copy.",
     "isTrigger": false,
     "controlInputs": [
       "trigger"
@@ -298,6 +299,7 @@
       }
     ],
     "source": "native",
+    "group": "Distant Horizons",
     "timeoutSeconds": 10800,
     "effects": [
       "stopsServer"
@@ -453,7 +455,7 @@
     "id": "action.upload",
     "category": "action",
     "label": "Upload to Bucket",
-    "description": "Uploads a file, or the contents of a folder, to a saved bucket destination, under the key prefix. Objects already in the bucket at the same size are skipped, so a run that stopped carries on where it left off. The source is a path inside the server's folder, or its backups.",
+    "description": "Uploads a file or folder from the server to a bucket, skipping what is already there.",
     "isTrigger": false,
     "controlInputs": [
       "trigger"
@@ -517,7 +519,7 @@
     "id": "control.condition",
     "category": "control",
     "label": "Condition",
-    "description": "Branches based on a comparison. Two values that are both numbers compare numerically, so 9 is less than 10; anything else compares as text. \"contains\" always compares as text.",
+    "description": "Branches on a comparison or a logic gate of A and B.",
     "isTrigger": false,
     "controlInputs": [
       "trigger"
@@ -538,14 +540,14 @@
         "type": "string"
       }
     ],
-    "dataOutputs": null,
-    "configSchema": [
+    "dataOutputs": [
       {
-        "key": "left",
-        "label": "Left value",
-        "type": "string",
-        "required": true
-      },
+        "id": "result",
+        "label": "Result",
+        "type": "bool"
+      }
+    ],
+    "configSchema": [
       {
         "key": "op",
         "label": "Operator",
@@ -571,14 +573,76 @@
           {
             "label": "contains",
             "value": "contains"
+          },
+          {
+            "label": "AND",
+            "value": "and"
+          },
+          {
+            "label": "OR",
+            "value": "or"
+          },
+          {
+            "label": "XOR",
+            "value": "xor"
+          },
+          {
+            "label": "NAND",
+            "value": "nand"
+          },
+          {
+            "label": "NOR",
+            "value": "nor"
           }
         ]
       },
       {
-        "key": "right",
-        "label": "Right value",
+        "key": "left",
+        "label": "A",
         "type": "string",
-        "required": true
+        "required": true,
+        "row": "values"
+      },
+      {
+        "key": "right",
+        "label": "B",
+        "type": "string",
+        "required": true,
+        "row": "values"
+      },
+      {
+        "key": "leftTrue",
+        "label": "is true",
+        "type": "bool",
+        "default": true,
+        "showWhen": {
+          "key": "op",
+          "values": [
+            "and",
+            "or",
+            "xor",
+            "nand",
+            "nor"
+          ]
+        },
+        "row": "truth"
+      },
+      {
+        "key": "rightTrue",
+        "label": "is true",
+        "type": "bool",
+        "default": true,
+        "showWhen": {
+          "key": "op",
+          "values": [
+            "and",
+            "or",
+            "xor",
+            "nand",
+            "nor"
+          ]
+        },
+        "row": "truth"
       }
     ],
     "source": "native"
@@ -856,7 +920,7 @@
     "id": "data.writeAttribute",
     "category": "data",
     "label": "Write Attribute",
-    "description": "Writes a server attribute (e.g. @server.motd) or defines a custom in-flow attribute (@myvalue). Value may be an expression like @{ @players.count * 2 }.",
+    "description": "Writes a server attribute such as @server.motd, or a custom attribute for the blocks after it.",
     "isTrigger": false,
     "controlInputs": [
       "trigger"
@@ -920,7 +984,7 @@
     "id": "action.notify",
     "category": "notify",
     "label": "Notify",
-    "description": "Sends an in-app notification.",
+    "description": "Shows a message in the app, as a desktop notification, or both.",
     "isTrigger": false,
     "controlInputs": [
       "trigger"
@@ -962,6 +1026,26 @@
         "label": "Message",
         "type": "string",
         "required": true
+      },
+      {
+        "key": "deliver",
+        "label": "Deliver to",
+        "type": "select",
+        "default": "both",
+        "options": [
+          {
+            "label": "In-app",
+            "value": "inApp"
+          },
+          {
+            "label": "Desktop",
+            "value": "desktop"
+          },
+          {
+            "label": "In-app and desktop",
+            "value": "both"
+          }
+        ]
       }
     ],
     "source": "native"

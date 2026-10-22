@@ -24,11 +24,13 @@ const DEFAULTS: AppSettings = {
   stopGraceSeconds: 60,
   consoleBufferLines: 1000,
   consoleTimestamps: false,
-  notifyOnCrash: false,
-  notifyOnJoin: false,
+  desktopOn: {},
   toastsOff: {},
   schedulerPaletteCollapsed: true,
   schedulerPaletteClosedCategories: {},
+  schedulerPaletteOpenGroups: {},
+  schedulerCurvedEdges: true,
+  schedulerSnapToGrid: false,
   consoleQuickCommandsCollapsed: false,
   classicTileFaces: false,
   // Servers and Tiles open, Widgets and Layouts closed: the two a first run
@@ -112,8 +114,10 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
         updateChannel,
         webviewGpu,
         schedulerPaletteClosedCategories: s.schedulerPaletteClosedCategories ?? {},
+        schedulerPaletteOpenGroups: s.schedulerPaletteOpenGroups ?? {},
         navClosedSections: s.navClosedSections ?? DEFAULTS.navClosedSections,
         toastsOff: s.toastsOff ?? DEFAULTS.toastsOff,
+        desktopOn: s.desktopOn ?? DEFAULTS.desktopOn,
         // null for a settings file that predates the field, and for one whose
         // `fonts` was written as null; the picker reads this as a map.
         fonts: s.fonts ?? DEFAULTS.fonts,
@@ -139,7 +143,7 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
   /**
    * Applies the patch before the write so the control the user just touched
    * moves at once, then rolls the whole settings object back if the backend
-   * refuses it. `confirmBeforeStop` and `notifyOnCrash` are safety toggles a
+   * refuses it. `confirmBeforeStop` and the crash desktop alert are safety toggles a
    * user would otherwise believe are on for the rest of the session and gone at
    * the next start (HEALTH_LOG.md, 2026-08-20).
    *

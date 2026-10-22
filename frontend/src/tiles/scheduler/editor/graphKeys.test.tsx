@@ -1,7 +1,7 @@
 import { describe, it, expect, afterEach, vi } from 'vitest'
 import { render, screen, cleanup } from '@testing-library/react'
 import type { models } from '../../../../wailsjs/go/models'
-import { BlockPalette } from './BlockPalette'
+import { BlockPalette, PaletteToggle } from './BlockPalette'
 import { QuickAddMenu } from './QuickAddMenu'
 import { Combobox } from '../../../components/ui/Combobox'
 import { NO_GRAPH_KEYS } from './blockMeta'
@@ -63,16 +63,20 @@ describe('the editor chrome opts out of graph key handling', () => {
   it('covers everything in the block palette, focusable today or not', () => {
     const { container } = render(<BlockPalette blockDefs={defs} onAdd={() => {}} />)
 
-    // The palette's rows are clickable divs, so nothing in it takes focus and
-    // the opt-out is not load-bearing here yet. It is on the root anyway, so
-    // the day a row becomes a button it is already covered rather than
-    // silently deleting the selected node.
+    // The rows are clickable divs, nothing in the palette takes focus today;
+    // the opt-out covers them anyway, so a focusable row added later is safe.
     const all = Array.from(container.querySelectorAll('*'))
     expect(all.length).toBeGreaterThan(0)
     for (const el of all) {
       expect(reactFlowIgnores(el)).toBe(true)
     }
-    expect(focusable(container)).toHaveLength(0)
+  })
+
+  it('covers the block browser toggle, which sits on the canvas', () => {
+    // A focused button inside the canvas: without the opt-out, Delete on it
+    // would remove the selected node.
+    render(<PaletteToggle />)
+    expect(reactFlowIgnores(screen.getByRole('button', { name: /blocks/ }))).toBe(true)
   })
 
   it('covers the quick-add menu, which is portaled outside the canvas', () => {

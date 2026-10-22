@@ -330,16 +330,17 @@ describe('useSchedulerStore', () => {
   // The warnings are advice about the canvas: they go out for the server the
   // store holds, and a failed ask is the editor's to interpret, not a banner.
   it('graphWarnings asks for the held server and returns the advice', async () => {
-    vi.mocked(App.GetScheduleGraphWarnings).mockResolvedValue(['RCON is not confirmed'])
+    const advice = [{ nodeId: 'n1', text: 'RCON is not confirmed' }] as models.GraphWarning[]
+    vi.mocked(App.GetScheduleGraphWarnings).mockResolvedValue(advice)
     const g = graph('g1')
-    await expect(useSchedulerStore.getState().graphWarnings(g)).resolves.toEqual([
-      'RCON is not confirmed',
-    ])
+    await expect(useSchedulerStore.getState().graphWarnings(g)).resolves.toEqual(advice)
     expect(App.GetScheduleGraphWarnings).toHaveBeenCalledWith(SERVER, g)
   })
 
   it('graphWarnings treats a null answer as no warnings', async () => {
-    vi.mocked(App.GetScheduleGraphWarnings).mockResolvedValue(null as unknown as string[])
+    vi.mocked(App.GetScheduleGraphWarnings).mockResolvedValue(
+      null as unknown as models.GraphWarning[],
+    )
     await expect(useSchedulerStore.getState().graphWarnings(graph('g1'))).resolves.toEqual([])
   })
 

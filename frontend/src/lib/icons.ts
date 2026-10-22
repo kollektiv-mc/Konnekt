@@ -38,6 +38,7 @@ export {
   ChevronRight,
   CircleCheck,
   CircleX,
+  Ellipsis,
   Maximize2,
   Minimize2,
   Pencil,
@@ -51,6 +52,10 @@ export {
   Search,
   Trash2,
   TriangleAlert,
+  // The scheduler's blocks: a node that stops the server is marked with Power,
+  // kept apart from TriangleAlert, which a node with a warning or a failed run
+  // wears. One shape for two meanings was read as "this is a problem".
+  Power,
   // Window controls, in the app's own title bar. Deliberately not Maximize2 /
   // Minimize2, which the tile header already uses: the two bars sit one above
   // the other and the same glyph in both would say the window and the tile do
@@ -66,4 +71,8 @@ export {
   // The in-app notification bubbles: one glyph per tone, and the update one.
   CircleArrowUp,
   Info,
+  // The scheduler's block-browser toggle: a shut box while the browser is
+  // closed, the same box opened while it is out. Lucide's one closed/open pair.
+  Package,
+  PackageOpen,
 } from 'lucide-react'

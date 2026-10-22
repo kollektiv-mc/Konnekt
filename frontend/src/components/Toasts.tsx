@@ -70,6 +70,9 @@ function ToastCard({
 
 type Shown = { toast: Toast; leaving: boolean }
 
+// The glide map's key for the "Dismiss all" row; bubble ids start at 1.
+const DISMISS_ALL_ROW = 0
+
 function reducedMotion(): boolean {
   return window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false
 }
@@ -94,20 +97,18 @@ function glideOffset(el: HTMLElement, glide: Animation | undefined): number {
 }
 
 /**
- * The cards on screen: the store's bubbles, in the order they arrived, plus the
- * ones it has just let go of, kept until their exit animation ends. With
- * reduced motion there is no animation to wait for, so they go at once.
+ * The cards on screen: the store's bubbles, in its order (oldest at the top,
+ * a repeat moved down to the newest place), plus the ones it has just let go
+ * of, kept where they were until their exit animation ends. With reduced
+ * motion there is no animation to wait for, so they go at once.
  */
 function reconcileToasts(shown: Shown[], toasts: Toast[], instant: boolean): Shown[] {
-  const live = new Map(toasts.map((t) => [t.id, t]))
-  const next: Shown[] = []
-  for (const s of shown) {
-    const current = live.get(s.toast.id)
-    if (current) next.push({ toast: current, leaving: false })
-    else if (!instant) next.push({ toast: s.toast, leaving: true })
-  }
-  const known = new Set(shown.map((s) => s.toast.id))
-  for (const t of toasts) if (!known.has(t.id)) next.push({ toast: t, leaving: false })
+  const live = new Set(toasts.map((t) => t.id))
+  const next: Shown[] = toasts.map((toast) => ({ toast, leaving: false }))
+  if (instant) return next
+  shown.forEach((s, i) => {
+    if (!live.has(s.toast.id)) next.splice(Math.min(i, next.length), 0, { ...s, leaving: true })
+  })
   return next
 }
 
@@ -194,6 +195,7 @@ export function Toasts() {
   }
 
   if (shown.length === 0) return null
+  const showDismissAll = toasts.length > 1
   return (
     <section
       ref={column}
@@ -205,13 +207,23 @@ export function Toasts() {
       // landing.
       className="z-toast pointer-events-none fixed right-0 bottom-3 box-content flex max-h-[calc(100vh_-_4rem)] w-96 max-w-[calc(100vw_-_1.5rem)] flex-col gap-2 overflow-x-hidden overflow-y-auto pr-3"
     >
-      {toasts.length > 1 && (
-        <div className="pointer-events-auto flex justify-end">
-          <button type="button" onClick={dismissAll} className={`${QUIET_BUTTON} bg-overlay`}>
-            Dismiss all
-          </button>
-        </div>
-      )}
+      {/* Mounted with the stack and faded in once there are two bubbles, so it
+          eases in and out rather than popping, and glides with the cards: it
+          is measured like one (key 0, which no bubble has). Hidden, it keeps
+          its room above a single card, where the column lets the pointer
+          through, so showing it moves nothing. */}
+      <div
+        ref={cardRef(DISMISS_ALL_ROW)}
+        inert={!showDismissAll}
+        aria-hidden={!showDismissAll || undefined}
+        className={`duration-panel ease-standard flex justify-end transition-[opacity,translate] motion-reduce:transition-none ${
+          showDismissAll ? 'pointer-events-auto opacity-100' : 'translate-y-2 opacity-0'
+        }`}
+      >
+        <button type="button" onClick={dismissAll} className={`${QUIET_BUTTON} bg-overlay`}>
+          Dismiss all
+        </button>
+      </div>
       {shown.map(({ toast, leaving }) => (
         <ToastCard
           key={toast.id}

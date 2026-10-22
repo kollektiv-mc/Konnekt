@@ -29,11 +29,13 @@ const DEFAULTS = {
   stopGraceSeconds: 60,
   consoleBufferLines: 1000,
   consoleTimestamps: false,
-  notifyOnCrash: false,
-  notifyOnJoin: false,
+  desktopOn: {} as Record<string, boolean>,
   toastsOff: {} as Record<string, boolean>,
   schedulerPaletteCollapsed: true,
   schedulerPaletteClosedCategories: {},
+  schedulerPaletteOpenGroups: {},
+  schedulerCurvedEdges: true,
+  schedulerSnapToGrid: false,
   consoleQuickCommandsCollapsed: false,
   classicTileFaces: false,
   navClosedSections: { widgets: true, layouts: true } as Record<string, boolean>,
@@ -168,6 +170,17 @@ describe('useSettingsStore', () => {
     expect(useSettingsStore.getState().settings.toastsOff).toEqual({})
   })
 
+  // A settings file from before block groups has no key, so the palette indexes
+  // a map that is not there unless load supplies one.
+  it('reads a null schedulerPaletteOpenGroups as every group closed', async () => {
+    vi.mocked(App.GetAppSettings).mockResolvedValue({
+      ...DEFAULTS,
+      schedulerPaletteOpenGroups: null as unknown as Record<string, boolean>,
+    })
+    await useSettingsStore.getState().load()
+    expect(useSettingsStore.getState().settings.schedulerPaletteOpenGroups).toEqual({})
+  })
+
   describe('fonts', () => {
     it('applies the stored choice to the document on load', async () => {
       vi.mocked(App.GetAppSettings).mockResolvedValue({
@@ -233,22 +246,22 @@ describe('useSettingsStore', () => {
 
     it('keeps the optimistic update when there is no Wails bridge to save to', async () => {
       vi.mocked(App.SaveAppSettings).mockRejectedValue(new Error('no wails bridge'))
-      await useSettingsStore.getState().update({ notifyOnCrash: true })
-      expect(useSettingsStore.getState().settings.notifyOnCrash).toBe(true)
+      await useSettingsStore.getState().update({ confirmBeforeStop: true })
+      expect(useSettingsStore.getState().settings.confirmBeforeStop).toBe(true)
       expect(useSettingsStore.getState().error).toBeNull()
     })
 
-    // notifyOnCrash and confirmBeforeStop are safety toggles. This store used to
+    // The crash desktop alert and confirmBeforeStop are safety toggles. This store used to
     // keep the flipped switch after a refused write, so the user believed a
     // guard was armed for the rest of the session and it was gone at the next
     // start (HEALTH_LOG.md, 2026-08-20).
     it('reverts the optimistic update and records the error when the backend rejects', async () => {
       attachBridge()
       vi.mocked(App.SaveAppSettings).mockRejectedValue(new Error('disk full'))
-      await expect(useSettingsStore.getState().update({ notifyOnCrash: true })).rejects.toThrow(
-        'disk full',
-      )
-      expect(useSettingsStore.getState().settings.notifyOnCrash).toBe(false)
+      await expect(
+        useSettingsStore.getState().update({ desktopOn: { crash: true } }),
+      ).rejects.toThrow('disk full')
+      expect(useSettingsStore.getState().settings.desktopOn).toEqual({})
       expect(useSettingsStore.getState().error).toBe('disk full')
     })
 
@@ -264,7 +277,7 @@ describe('useSettingsStore', () => {
     it('clears a stale error after a later write succeeds', async () => {
       attachBridge()
       useSettingsStore.setState({ error: 'disk full' })
-      await useSettingsStore.getState().update({ notifyOnJoin: true })
+      await useSettingsStore.getState().update({ desktopOn: { join: true } })
       expect(useSettingsStore.getState().error).toBeNull()
     })
   })

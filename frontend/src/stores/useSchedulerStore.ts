@@ -66,7 +66,7 @@ interface SchedulerStore {
   setEnabled: (id: string, enabled: boolean) => Promise<void>
   runGraph: (id: string) => Promise<models.RunRecord>
   previewNode: (g: models.Graph, nodeId: string) => Promise<models.NodePreview>
-  graphWarnings: (g: models.Graph) => Promise<string[]>
+  graphWarnings: (g: models.Graph) => Promise<models.GraphWarning[]>
 }
 
 export const useSchedulerStore = create<SchedulerStore>((set, get) => ({

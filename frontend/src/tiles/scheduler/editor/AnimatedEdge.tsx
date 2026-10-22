@@ -1,6 +1,19 @@
-import { useContext, useState, type CSSProperties } from 'react'
-import { getSmoothStepPath, type EdgeProps } from '@xyflow/react'
+import { useContext, useRef, useState, type CSSProperties, type PointerEvent } from 'react'
+import { useReactFlow, type EdgeProps } from '@xyflow/react'
 import { SchedulerCtx } from './schedulerContext'
+import { snapPoint } from './canvasGrid'
+import type { Point } from '../../../lib/sortable'
+import {
+  curvedEdgePath,
+  edgePath,
+  edgeWaypoints,
+  insertWaypoint,
+  withWaypoints,
+} from './edgeGeometry'
+
+// Pointer travel, in screen px, before a press on a corner counts as a drag
+// rather than the first half of a double-click, so a click leaves no undo entry.
+const DRAG_THRESHOLD_PX = 3
 
 export function AnimatedEdge({
   id,
@@ -8,25 +21,80 @@ export function AnimatedEdge({
   sourceY,
   targetX,
   targetY,
-  sourcePosition,
-  targetPosition,
   style,
   markerEnd,
   data,
   selected,
 }: EdgeProps) {
-  const { firedEdges, cycleEdges } = useContext(SchedulerCtx)
+  const { firedEdges, cycleEdges, recordPre, curvedEdges, snapToGrid } = useContext(SchedulerCtx)
+  const { setEdges, screenToFlowPosition } = useReactFlow()
   const [animDone, setAnimDone] = useState(false)
   const [hovered, setHovered] = useState(false)
+  const [draggingCorner, setDraggingCorner] = useState<number | null>(null)
+  const drag = useRef<{ index: number; x: number; y: number; moved: boolean } | null>(null)
 
-  const [d] = getSmoothStepPath({
-    sourceX,
-    sourceY,
-    sourcePosition,
-    targetX,
-    targetY,
-    targetPosition,
-  })
+  const waypoints = edgeWaypoints(data)
+  const source: Point = { x: sourceX, y: sourceY }
+  const target: Point = { x: targetX, y: targetY }
+  const points = [source, ...waypoints, target]
+  const d = curvedEdges ? curvedEdgePath(points) : edgePath(points)
+
+  // Corners live on `edge.data.waypoints`; every edit goes through setEdges and
+  // so out through the editor's onEdgesChange, which is what marks the graph
+  // dirty (graphSignature reads them) and lets undo restore them.
+  const editWaypoints = (change: (current: Point[]) => Point[]) =>
+    setEdges((es) =>
+      es.map((e) =>
+        e.id === id ? { ...e, data: withWaypoints(e.data, change(edgeWaypoints(e.data))) } : e,
+      ),
+    )
+
+  // Where a pointer at this screen position puts a corner. Snapping is done here
+  // rather than left to screenToFlowPosition, which would also snap on the
+  // store's own flag: one place decides, and it is the same rounding either way.
+  const placeAt = (clientX: number, clientY: number): Point => {
+    const at = screenToFlowPosition({ x: clientX, y: clientY }, { snapToGrid: false })
+    return snapToGrid ? snapPoint(at) : at
+  }
+
+  const addCorner = (clientX: number, clientY: number) => {
+    const at = placeAt(clientX, clientY)
+    recordPre()
+    editWaypoints((current) => insertWaypoint(source, current, target, at))
+  }
+  const removeCorner = (index: number) => {
+    recordPre()
+    editWaypoints((current) => current.filter((_, i) => i !== index))
+  }
+
+  const startDrag = (e: PointerEvent<SVGGElement>, index: number) => {
+    if (e.button !== 0) return
+    // Keep the press from reaching the pane (selection box) and the node layer.
+    e.stopPropagation()
+    // Capture keeps the moves coming when the pointer outruns the handle (and
+    // leaves the canvas). Absent in jsdom, hence the guard.
+    if (typeof e.currentTarget.setPointerCapture === 'function') {
+      e.currentTarget.setPointerCapture(e.pointerId)
+    }
+    drag.current = { index, x: e.clientX, y: e.clientY, moved: false }
+    setDraggingCorner(index)
+  }
+  const moveDrag = (e: PointerEvent<SVGGElement>) => {
+    const g = drag.current
+    if (!g) return
+    if (!g.moved) {
+      if (Math.hypot(e.clientX - g.x, e.clientY - g.y) < DRAG_THRESHOLD_PX) return
+      g.moved = true
+      // The first real movement is the one undo entry for the whole drag.
+      recordPre()
+    }
+    const at = placeAt(e.clientX, e.clientY)
+    editWaypoints((current) => current.map((p, i) => (i === g.index ? at : p)))
+  }
+  const endDrag = () => {
+    drag.current = null
+    setDraggingCorner(null)
+  }
   const delay = ((data as Record<string, unknown> | undefined)?._animDelay as number) ?? 0
   const isData = (data as Record<string, unknown> | undefined)?.kind === 'data'
   const baseDash = isData ? '4 2' : undefined
@@ -68,54 +136,88 @@ export function AnimatedEdge({
   // mid-line or between dash gaps.
   const interaction = (
     <path
-      className="react-flow__edge-interaction"
+      // nopan: xyflow's zoom filter skips a double-click inside .nopan, which
+      // would otherwise zoom the canvas instead of adding a corner.
+      className="react-flow__edge-interaction nopan"
       d={d}
       fill="none"
       stroke="transparent"
       strokeWidth={20}
       // eslint-disable-next-line no-restricted-syntax -- xyflow SVG hit-test override, not expressible as a Tailwind utility on this element
       style={{ pointerEvents: 'stroke' }}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
+      onDoubleClick={(e) => {
+        e.stopPropagation()
+        addCorner(e.clientX, e.clientY)
+      }}
+    >
+      <title>Double-click to add a corner</title>
+    </path>
+  )
+
+  // Corner handles show while the wire is hovered or selected, and stay up for
+  // the length of a drag, when the pointer may have left the wire behind. Each
+  // is a small dot inside a larger transparent hit circle, so it is easy to
+  // grab. They sit inside the hover group below, so moving from the line onto a
+  // handle does not read as leaving the wire.
+  const showCorners = waypoints.length > 0 && (hovered || selected || draggingCorner !== null)
+  const corners = showCorners
+    ? waypoints.map((p, i) => (
+        <g
+          // Positional: a corner has no identity beyond its place in the list.
+          key={i}
+          className="nodrag nopan pointer-events-auto cursor-grab active:cursor-grabbing"
+          data-corner={i}
+          onPointerDown={(e) => startDrag(e, i)}
+          onPointerMove={moveDrag}
+          onPointerUp={endDrag}
+          onLostPointerCapture={endDrag}
+          onDoubleClick={(e) => {
+            e.stopPropagation()
+            removeCorner(i)
+          }}
+        >
+          <title>Drag to move, double-click to remove</title>
+          <circle cx={p.x} cy={p.y} r={9} className="fill-transparent" />
+          <circle cx={p.x} cy={p.y} r={4} className="fill-accent stroke-canvas" strokeWidth={1.5} />
+        </g>
+      ))
+    : null
+
+  // Entrance phase: normalize pathLength to 1 and animate stroke-dashoffset.
+  const visible = !animDone ? (
+    <path
+      id={id}
+      className="react-flow__edge-path edge-draw-in"
+      d={d}
+      pathLength={1}
+      onAnimationEnd={() => setAnimDone(true)}
+      // eslint-disable-next-line no-restricted-syntax -- xyflow-provided style spread + per-instance animation delay + computed run-state highlight
+      style={{
+        ...style,
+        strokeDasharray: 1,
+        animationDelay: `${delay}ms`,
+        ...highlight,
+        pointerEvents: 'none',
+      }}
+      markerEnd={markerEnd}
+    />
+  ) : (
+    <path
+      id={id}
+      className="react-flow__edge-path"
+      d={d}
+      // eslint-disable-next-line no-restricted-syntax -- xyflow-provided style spread + computed run-state highlight
+      style={{ ...style, strokeDasharray: baseDash, ...highlight, pointerEvents: 'none' }}
+      markerEnd={markerEnd}
     />
   )
 
-  // Entrance phase: normalize pathLength to 1 and animate stroke-dashoffset.
-  if (!animDone) {
-    return (
-      <>
-        {interaction}
-        <path
-          id={id}
-          className="react-flow__edge-path edge-draw-in"
-          d={d}
-          pathLength={1}
-          onAnimationEnd={() => setAnimDone(true)}
-          // eslint-disable-next-line no-restricted-syntax -- xyflow-provided style spread + per-instance animation delay + computed run-state highlight
-          style={{
-            ...style,
-            strokeDasharray: 1,
-            animationDelay: `${delay}ms`,
-            ...highlight,
-            pointerEvents: 'none',
-          }}
-          markerEnd={markerEnd}
-        />
-      </>
-    )
-  }
-
+  // One group so hover covers the line and its corner handles together.
   return (
-    <>
+    <g onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}>
       {interaction}
-      <path
-        id={id}
-        className="react-flow__edge-path"
-        d={d}
-        // eslint-disable-next-line no-restricted-syntax -- xyflow-provided style spread + computed run-state highlight
-        style={{ ...style, strokeDasharray: baseDash, ...highlight, pointerEvents: 'none' }}
-        markerEnd={markerEnd}
-      />
-    </>
+      {visible}
+      {corners}
+    </g>
   )
 }

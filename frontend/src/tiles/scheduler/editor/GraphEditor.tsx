@@ -21,25 +21,26 @@ import {
   CATEGORY_COLOR,
   DATA_EDGE_STYLE,
   isCommandHandleWired,
-  NO_GRAPH_KEYS,
   nodeEffects,
   NODE_EFFECT_STOPS_SERVER,
 } from './blockMeta'
 import { SchedulerCtx, type NodeRunState } from './schedulerContext'
 import { BlockNode } from './BlockNode'
 import { AnimatedEdge } from './AnimatedEdge'
-import { BlockPalette } from './BlockPalette'
-import { NodeConfigPanel } from './NodeConfigPanel'
-import { NodeDataPanel } from './NodeDataPanel'
-import { QuickAddMenu } from './QuickAddMenu'
+import { BlockPalette, PaletteToggle } from './BlockPalette'
+import { GRID_DOT_OFFSET, GRID_DOT_SIZE, GRID_GAP, SNAP_GRID } from './canvasGrid'
+import { NodePanel } from './NodePanel'
+import { NodeMenuHost } from './NodeMenuHost'
+import type { NodeMenuRequest } from './NodeMenuHost'
+import { QuickAddHost } from './QuickAddHost'
+import type { QuickAddRequest } from './QuickAddHost'
+import { Toolbar } from './Toolbar'
+import { centerNodes, takeMeasured } from './centerOnMeasure'
+import { warningLine, warningRows, warningsByNode } from './graphWarnings'
 import { RUN_RUNNING, runOutcome, type RunStatus } from './runStatus'
-import { Popover } from '../../../components/ui/Popover'
-import { Icon } from '../../../components/ui/Icon'
-import { Check, TriangleAlert } from '../../../lib/icons'
 import { useNotificationsStore } from '../../../stores/useNotificationsStore'
 import type { ToastInput } from '../../../stores/useNotificationsStore'
 import { useSettingsStore } from '../../../stores/useSettingsStore'
-import { usePopover } from '../../../hooks/usePopover'
 import {
   graphToFlow,
   flowToGraph,
@@ -51,8 +52,21 @@ import {
   type NodeData,
   type BlockFlowNode,
 } from './graphMapping'
+import {
+  captureSelection,
+  clipboardAction,
+  instantiateSlice,
+  pasteDelta,
+  pasteStep,
+  readClipboard,
+  writeClipboard,
+  type ClipboardSlice,
+} from './clipboard'
 import { CloseConfirmDialog } from './CloseConfirmDialog'
+import { editMenuRows, editMenuState, type EditMenuActions } from './editMenuRows'
+import { applySelection, type SelectionSpec } from './selection'
 import { useDirtyGuard } from './useDirtyGuard'
+import { useNodeGlow } from './useNodeGlow'
 import {
   emptyHistory,
   record as recordHistory,
@@ -81,6 +95,7 @@ interface NodeEvt {
   firedPort?: string
   downtimeMs?: number
   warning?: string
+  error?: string
 }
 
 const RUN_CLEAR_MS = 2400
@@ -106,7 +121,7 @@ function withdrawToast(key: string): void {
 }
 
 const nodeTypes = { block: BlockNode }
-const edgeTypes = { smoothstep: AnimatedEdge }
+const edgeTypes = { wire: AnimatedEdge }
 
 const NODE_BASE_MS = 80
 const NODE_STAGGER = 25
@@ -153,7 +168,10 @@ function GraphEditorInner({
   onRun,
   onPreviewNode,
 }: GraphEditorProps) {
-  const { screenToFlowPosition } = useReactFlow()
+  const { screenToFlowPosition, fitView } = useReactFlow()
+  const curvedEdges = useSettingsStore((s) => s.settings.schedulerCurvedEdges)
+  const snapToGrid = useSettingsStore((s) => s.settings.schedulerSnapToGrid)
+  const updateSettings = useSettingsStore((s) => s.update)
   const updateNodeInternals = useUpdateNodeInternals()
 
   const defMap = useMemo(() => new Map(blockDefs.map((d) => [d.id, d])), [blockDefs])
@@ -163,8 +181,6 @@ function GraphEditorInner({
   const [graphName, setGraphName] = useState('')
   const [graphEnabled, setGraphEnabled] = useState(false)
   const [createdAt, setCreatedAt] = useState(0)
-  const [nameEditing, setNameEditing] = useState(false)
-  const graphMenu = usePopover()
 
   // ── Canvas state ──────────────────────────────────────────────────────────
   const [nodes, setNodes, onNodesChange] = useNodesState<BlockFlowNode>([])
@@ -239,17 +255,19 @@ function GraphEditorInner({
   const [nodeRunState, setNodeRunState] = useState<Map<string, NodeRunState>>(new Map())
   const [nodeDowntimeMs, setNodeDowntimeMs] = useState<Map<string, number>>(new Map())
   const [nodeWarning, setNodeWarning] = useState<Map<string, string>>(new Map())
+  const [nodeFailure, setNodeFailure] = useState<Map<string, string>>(new Map())
   const [firedEdges, setFiredEdges] = useState<Set<string>>(new Set())
   const clearTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   // Refs so the event handlers (registered once) read current graph + edges.
   const graphIdRef = useRef<string | null>(null)
   const edgesRef = useRef<FlowEdge[]>([])
 
-  const [quickAdd, setQuickAdd] = useState<{
-    screen: { x: number; y: number }
-    flow: { x: number; y: number }
-  } | null>(null)
+  const [quickAdd, setQuickAdd] = useState<QuickAddRequest | null>(null)
+  // The edit menu a right-click on a block opens (#181). It and quick-add are
+  // never open together: each opening clears the other.
+  const [nodeMenu, setNodeMenu] = useState<NodeMenuRequest | null>(null)
   const canvasWrapperRef = useRef<HTMLDivElement>(null)
+  useNodeGlow(canvasWrapperRef)
   const mousePos = useRef<{ x: number; y: number }>({ x: 0, y: 0 })
 
   // Track cursor so Tab opens the quick-add menu at the pointer, not canvas center.
@@ -397,6 +415,7 @@ function GraphEditorInner({
         reset()
         setNodeDowntimeMs(new Map())
         setNodeWarning(new Map())
+        setNodeFailure(new Map())
       })
       offNodeStart = EventsOn(EVENTS.SCHEDULE_NODE_STARTED, (p: NodeEvt) => {
         if (p.graphId !== graphIdRef.current) return
@@ -411,6 +430,9 @@ function GraphEditorInner({
         if (downtimeMs) setNodeDowntimeMs((m) => new Map(m).set(p.nodeId, downtimeMs))
         const warning = p.warning
         if (warning) setNodeWarning((m) => new Map(m).set(p.nodeId, warning))
+        // Kept past the highlight, which clears when the run does: the block's
+        // triangle stays red until the next run says otherwise.
+        if (p.status === 'failed') setNodeFailure((m) => new Map(m).set(p.nodeId, p.error ?? ''))
         const fired = `ctrl:${p.firedPort ?? ''}`
         setFiredEdges((s) => {
           const next = new Set(s)
@@ -438,19 +460,39 @@ function GraphEditorInner({
     }
   }, [])
 
-  // ── Right-click on canvas → open quick-add ───────────────────────────────
-  // Capture-phase native listener fires before WebView2 can show its native menu.
+  // ── Right-click on canvas ─────────────────────────────────────────────────
+  // A block opens the edit menu on the selection; the empty canvas (and an edge,
+  // as before) opens quick-add. Capture-phase native listener fires before
+  // WebView2 can show its native menu.
   useEffect(() => {
     const el = canvasWrapperRef.current
     if (!el) return
     const handler = (e: MouseEvent) => {
       e.preventDefault()
-      const flow = screenToFlowPosition({ x: e.clientX, y: e.clientY })
-      setQuickAdd({ screen: { x: e.clientX, y: e.clientY }, flow })
+      const screen = { x: e.clientX, y: e.clientY }
+      const flow = screenToFlowPosition(screen)
+      const hit = e.target instanceof Element ? e.target.closest('.react-flow__node') : null
+      const id = hit?.getAttribute('data-id') ?? null
+      if (id === null || !nodesRef.current.some((n) => n.id === id)) {
+        setNodeMenu(null)
+        setQuickAdd({ screen, flow })
+        return
+      }
+      // A block outside the selection becomes the selection, alone; one inside
+      // it leaves the selection as it is, so the menu acts on all of it.
+      if (!nodesRef.current.find((n) => n.id === id)?.selected) {
+        setNodes((ns) =>
+          ns.map((n) => (!!n.selected === (n.id === id) ? n : { ...n, selected: n.id === id })),
+        )
+        setEdges((es) => es.map((x) => (x.selected ? { ...x, selected: false } : x)))
+        setSelectedNodeId(id)
+      }
+      setQuickAdd(null)
+      setNodeMenu({ screen, flow })
     }
     el.addEventListener('contextmenu', handler, true)
     return () => el.removeEventListener('contextmenu', handler, true)
-  }, [screenToFlowPosition])
+  }, [screenToFlowPosition, setNodes, setEdges])
 
   // ── Tab key → open quick-add at cursor position ──────────────────────────
   useEffect(() => {
@@ -461,6 +503,7 @@ function GraphEditorInner({
       e.preventDefault()
       const { x: sx, y: sy } = mousePos.current
       const flow = screenToFlowPosition({ x: sx, y: sy })
+      setNodeMenu(null)
       setQuickAdd({ screen: { x: sx, y: sy }, flow })
     }
     window.addEventListener('keydown', onKeyDown)
@@ -490,6 +533,7 @@ function GraphEditorInner({
       setCreatedAt(g.createdAt)
       setSelectedNodeId(null)
       setNodeRunState(new Map())
+      setNodeFailure(new Map())
       setFiredEdges(new Set())
       setSavedSig(graphSignature({ name: g.name, enabled: g.enabled }, animNodes, animEdges))
       setHistory(emptyHistory())
@@ -535,7 +579,7 @@ function GraphEditorInner({
           {
             ...connection,
             id: randId(),
-            type: 'smoothstep',
+            type: 'wire',
             style: isData ? DATA_EDGE_STYLE : undefined,
             data: { kind: isData ? 'data' : 'control' } as Record<string, unknown>,
           },
@@ -609,11 +653,13 @@ function GraphEditorInner({
   const onNodeClick = useCallback((_: React.MouseEvent, node: FlowNode) => {
     setSelectedNodeId(node.id)
     setQuickAdd(null)
+    setNodeMenu(null)
   }, [])
 
   const onPaneClick = useCallback(() => {
     setSelectedNodeId(null)
     setQuickAdd(null)
+    setNodeMenu(null)
   }, [])
 
   // ── Config editing ────────────────────────────────────────────────────────
@@ -638,10 +684,14 @@ function GraphEditorInner({
   )
 
   // ── Add block ─────────────────────────────────────────────────────────────
+  // A block placed at a point (a drop, the quick-add list) is centred on it once
+  // measured (takeMeasured); one added with no point keeps the stagger.
+  const centerPending = useRef(new Set<string>())
   const addBlock = useCallback(
     (def: models.BlockDef, position?: { x: number; y: number }) => {
       recordPre()
       const id = randId()
+      if (position) centerPending.current.add(id)
       const pos = position ?? { x: 80 + nodes.length * 30, y: 80 + nodes.length * 20 }
       setNodes((ns) => [
         ...ns,
@@ -732,6 +782,15 @@ function GraphEditorInner({
     }
   }, [handleSave, onRun, showRunStatus])
 
+  // A run uses the saved graph (the backend runs it by id), so running unsaved
+  // changes means saving them. That is the user's call, not a side effect of
+  // run: a dirty graph asks first, a clean one runs straight away.
+  const [runAsk, setRunAsk] = useState(false)
+  const requestRun = useCallback(() => {
+    if (dirtyRef.current) setRunAsk(true)
+    else void handleRun()
+  }, [handleRun])
+
   // ── Delete selected nodes + their edges ───────────────────────────────────
   const handleDeleteSelected = useCallback(() => {
     const selectedIds = new Set(nodes.filter((n) => n.selected).map((n) => n.id))
@@ -744,6 +803,102 @@ function GraphEditorInner({
     )
     setSelectedNodeId(null)
   }, [nodes, edges, setNodes, setEdges, recordPre])
+
+  // ── Copy, cut, paste, duplicate (#128) ────────────────────────────────────
+  // Where a paste lands, in flow coordinates: under the pointer when it is over
+  // the canvas, since that is where the user is looking, and at the canvas
+  // centre otherwise. A click on a menu leaves the pointer on the toolbar, which
+  // is off the canvas, so the centre is what a menu-driven paste uses.
+  const canvasAnchor = useCallback(
+    (followCursor: boolean) => {
+      const rect = canvasWrapperRef.current?.getBoundingClientRect()
+      if (!rect) return null
+      const { x, y } = mousePos.current
+      const over =
+        followCursor && x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom
+      return screenToFlowPosition(
+        over ? { x, y } : { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 },
+      )
+    },
+    [screenToFlowPosition],
+  )
+
+  // Adds the copy as one history entry and makes it the selection, so the next
+  // Delete, cut or Ctrl+D acts on what was just placed rather than on whatever
+  // was selected before.
+  const placeSlice = useCallback(
+    (slice: ClipboardSlice, delta: { x: number; y: number }) => {
+      const placed = instantiateSlice(slice, delta)
+      recordPre()
+      setNodes((ns) => [
+        ...ns.map((n) => (n.selected ? { ...n, selected: false } : n)),
+        ...placed.nodes,
+      ])
+      setEdges((es) => [
+        ...es.map((e) => (e.selected ? { ...e, selected: false } : e)),
+        ...placed.edges,
+      ])
+      setSelectedNodeId(placed.nodes.length === 1 ? placed.nodes[0].id : null)
+    },
+    [setNodes, setEdges, recordPre],
+  )
+
+  // Each of these says whether it did anything, so the key handler only takes
+  // the browser's own Ctrl+C or Ctrl+V when it had something to do.
+  const copySelected = useCallback((): boolean => {
+    const slice = captureSelection(nodesRef.current, edgesRef.current)
+    if (!slice) return false
+    writeClipboard(slice)
+    return true
+  }, [])
+
+  // Copy, then the ordinary delete, which is what records the undo entry.
+  const cutSelected = useCallback((): boolean => {
+    if (!copySelected()) return false
+    handleDeleteSelected()
+    return true
+  }, [copySelected, handleDeleteSelected])
+
+  // `at` is a flow point to land on, for a menu that opened where the user
+  // pointed: the pointer has moved off the canvas by the time a row is picked,
+  // so the spot is the one the menu was opened at, not the pointer's now.
+  const pasteClipboard = useCallback(
+    (followCursor = false, at: { x: number; y: number } | null = null): boolean => {
+      const slice = readClipboard()
+      if (!slice) return false
+      const anchor = at ?? canvasAnchor(followCursor)
+      placeSlice(slice, pasteDelta(slice, anchor, pasteStep(anchor)))
+      return true
+    },
+    [canvasAnchor, placeSlice],
+  )
+
+  // Copy and paste in one, without the clipboard: duplicating must not replace
+  // what the user has copied.
+  const duplicateSelected = useCallback((): boolean => {
+    const slice = captureSelection(nodesRef.current, edgesRef.current)
+    if (!slice) return false
+    placeSlice(slice, pasteDelta(slice, null, 0))
+    return true
+  }, [placeSlice])
+
+  useEffect(() => {
+    function onKeyDown(e: KeyboardEvent) {
+      const action = clipboardAction(e, document.activeElement)
+      if (!action) return
+      const done =
+        action === 'copy'
+          ? copySelected()
+          : action === 'cut'
+            ? cutSelected()
+            : action === 'paste'
+              ? pasteClipboard(true)
+              : duplicateSelected()
+      if (done) e.preventDefault()
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [copySelected, cutSelected, pasteClipboard, duplicateSelected])
 
   // ── Toggle enabled ────────────────────────────────────────────────────────
   const handleToggleEnabled = useCallback(async () => {
@@ -810,29 +965,30 @@ function GraphEditorInner({
 
   // ── Warnings ──────────────────────────────────────────────────────────────
   // Advice about the canvas, never a gate: it sits beside Save and neither a
-  // save nor a run waits on it. Today's one warning is a stop with RCON not
-  // confirmed, which the backend answers from the server's own state, so the
-  // ask is made when the set of stopping nodes changes or the server changes
-  // state (RCON is confirmed once the server has started), not on every drag.
-  const stopSig = useMemo(
+  // save nor a run waits on it. The backend answers from each block's type and
+  // config (a destination not chosen, a retention out of range) and, for a
+  // stop, from the server's own state, so the ask is made when a block, its
+  // config or what stops the server changes, or the server changes state
+  // (RCON is confirmed once the server has started), not on every drag.
+  const warnSig = useMemo(
     () =>
-      nodes
-        .filter((n) => {
+      JSON.stringify(
+        nodes.map((n) => {
           const nd = n.data as NodeData
-          return nodeEffects(
+          const stops = nodeEffects(
             defMap.get(nd.blockType),
             nd.blockType,
             nd.config,
             isCommandHandleWired(n.id, edges),
           ).includes(NODE_EFFECT_STOPS_SERVER)
-        })
-        .map((n) => n.id)
-        .join(','),
+          return [n.id, nd.blockType, nd.config, stops]
+        }),
+      ),
     [nodes, edges, defMap],
   )
-  const [warnings, setWarnings] = useState<string[]>([])
+  const [warnings, setWarnings] = useState<models.GraphWarning[]>([])
   useEffect(() => {
-    if (stopSig === '') {
+    if (nodesRef.current.length === 0) {
       setWarnings([])
       return
     }
@@ -851,43 +1007,41 @@ function GraphEditorInner({
       })
       .catch(() => {
         // Advice only: a failed ask leaves no warning rather than a banner, and
-        // the next change to the stopping nodes or the server asks again.
+        // the next change to the blocks or the server asks again.
         if (current) setWarnings([])
       })
     return () => {
       current = false
     }
-  }, [stopSig, serverState, askGraphWarnings])
+  }, [warnSig, serverState, askGraphWarnings])
 
   // The warnings in full go to a bubble; the toolbar says how many there are.
   // It outlives the editor, so closing the scheduler does not take the warning
   // with it, and it goes when the canvas no longer earns it. Reopening the same
   // canvas finds it already up and leaves it be, rather than counting a repeat.
-  const warningText = warnings.join('\n')
-  const showWarningToast = useCallback(
-    (force = false) => {
-      if (!warningText) return
-      const open = useNotificationsStore
-        .getState()
-        .toasts.some((t) => t.key === TOAST_WARNING && t.text === warningText)
-      if (open && !force) return
-      showToast(
-        {
-          key: TOAST_WARNING,
-          category: 'warnings',
-          tone: 'warn',
-          title: 'Scheduler warning',
-          text: warningText,
-        },
-        force,
-      )
-    },
-    [warningText],
+  // One warning to a line, each led by the block it is about.
+  const warningText = useMemo(
+    () => warningRows(warnings, nodes).map(warningLine).join('\n'),
+    [warnings, nodes],
   )
+  const nodeAdvice = useMemo(() => warningsByNode(warnings), [warnings])
   useEffect(() => {
-    if (warningText) showWarningToast()
-    else withdrawToast(TOAST_WARNING)
-  }, [warningText, showWarningToast])
+    if (!warningText) {
+      withdrawToast(TOAST_WARNING)
+      return
+    }
+    const open = useNotificationsStore
+      .getState()
+      .toasts.some((t) => t.key === TOAST_WARNING && t.text === warningText)
+    if (open) return
+    showToast({
+      key: TOAST_WARNING,
+      category: 'warnings',
+      tone: 'warn',
+      title: 'Scheduler warning',
+      text: warningText,
+    })
+  }, [warningText])
 
   // Wrap ReactFlow's own change handlers so a Delete-key removal (which never
   // goes through handleDeleteSelected) still records an undo entry.
@@ -895,8 +1049,13 @@ function GraphEditorInner({
     (changes: NodeChange<BlockFlowNode>[]) => {
       if (changes.some((c) => c.type === 'remove')) recordPre()
       onNodesChange(changes)
+      if (centerPending.current.size > 0) {
+        const sizes = takeMeasured(changes, centerPending.current)
+        if (sizes.size > 0)
+          setNodes((ns) => centerNodes(ns, sizes, snapToGrid ? SNAP_GRID : undefined))
+      }
     },
-    [onNodesChange, recordPre],
+    [onNodesChange, recordPre, setNodes, snapToGrid],
   )
   const handleEdgesChange = useCallback(
     (changes: EdgeChange<FlowEdge>[]) => {
@@ -915,32 +1074,119 @@ function GraphEditorInner({
       nodeRunState,
       nodeDowntimeMs,
       nodeWarning,
+      nodeAdvice,
+      nodeFailure,
       firedEdges,
       cycleNodes,
       cycleEdges,
+      recordPre,
+      curvedEdges,
+      snapToGrid,
     }),
     [
       defMap,
+      // aislop-ignore-next-line code-quality/duplicate-block -- a memo's dependency list mirrors the object it builds
       edges,
       collapsed,
       onToggleCollapse,
       nodeRunState,
       nodeDowntimeMs,
       nodeWarning,
+      nodeAdvice,
+      nodeFailure,
       firedEdges,
       cycleNodes,
       cycleEdges,
+      recordPre,
+      curvedEdges,
+      snapToGrid,
     ],
   )
 
-  // ── Toolbar button className helper ───────────────────────────────────────
-  function btnClass(active = false, danger = false): string {
-    const base = 'cursor-pointer rounded border-hairline px-2 py-0.5 text-1xs font-mono'
-    const borderClass = danger ? 'border-danger' : 'border-border-subtle'
-    if (active) return `${base} ${borderClass} bg-accent text-black`
-    if (danger) return `${base} ${borderClass} bg-transparent text-danger`
-    return `${base} ${borderClass} bg-surface text-text-muted`
+  // ── Toolbar handlers ──────────────────────────────────────────────────────
+  // The quick-add list from the toolbar's add button: opened under the button,
+  // adding at the middle of the canvas, since a click on the bar has no canvas
+  // position of its own the way a right-click or Tab does.
+  // A second press closes it, as the bar's other menus do.
+  const addButtonRef = useRef<HTMLButtonElement>(null)
+  const openAddMenu = useCallback(
+    (at: { x: number; y: number }) => {
+      setNodeMenu(null)
+      setQuickAdd((cur) =>
+        cur ? null : { screen: at, flow: canvasAnchor(false) ?? screenToFlowPosition(at) },
+      )
+    },
+    [canvasAnchor, screenToFlowPosition],
+  )
+
+  // A warning's row in the toolbar list: select that block, open its panel, and
+  // bring it into view. No more zoom than the canvas has now when it is already
+  // close, and never past 1, so a lone block is not blown up to fill the pane.
+  const revealNode = useCallback(
+    (id: string) => {
+      setNodes((ns) =>
+        ns.map((n) => (!!n.selected === (n.id === id) ? n : { ...n, selected: n.id === id })),
+      )
+      setSelectedNodeId(id)
+      void fitView({ nodes: [{ id }], maxZoom: 1, padding: 0.6, duration: 300 })
+    },
+    [setNodes, fitView],
+  )
+
+  // Selection is view state, not an edit, so it records no history entry. The
+  // two arrays go through the same pure helper, each against an empty other.
+  const selectNodes = useCallback(
+    (spec: SelectionSpec) => {
+      setNodes((ns) => applySelection(ns, [], spec).nodes)
+      setEdges((es) => applySelection([], es, spec).edges)
+    },
+    [setNodes, setEdges],
+  )
+
+  // The Edit menu's actions, shared by the toolbar's menu and the node's
+  // right-click menu; the latter swaps in a paste that lands where it opened.
+  const editActions: EditMenuActions = {
+    undo: doUndo,
+    redo: doRedo,
+    cut: cutSelected,
+    copy: copySelected,
+    duplicate: duplicateSelected,
+    paste: () => pasteClipboard(false),
+    deleteSelected: handleDeleteSelected,
+    select: selectNodes,
   }
+  const nodeMenuAt = nodeMenu?.flow ?? null
+  const nodeMenuRows = editMenuRows(
+    editMenuState({
+      nodes,
+      edges,
+      defMap,
+      canUndo: canUndo(history),
+      canRedo: canRedo(history),
+    }),
+    { ...editActions, paste: () => pasteClipboard(false, nodeMenuAt) },
+  )
+
+  // Save as copy: the canvas as it is now goes to a new graph (a blank id is
+  // what makes the backend mint one), switched off so the copy does not fire
+  // beside the original, and the editor moves onto it. Unsaved edits travel with
+  // the copy and the original keeps its last save, which is what a save-as does
+  // anywhere else.
+  const handleDuplicateGraph = useCallback(async () => {
+    setSaving(true)
+    try {
+      const copy = flowToGraph(
+        { id: '', name: `${graphName || 'Untitled'} copy`, enabled: false, createdAt: 0 },
+        nodes,
+        edges,
+      )
+      loadGraph(await onSave(copy))
+    } catch {
+      /* the store records the failure and the toolbar shows it */
+    } finally {
+      setSaving(false)
+    }
+  }, [graphName, nodes, edges, onSave, loadGraph])
 
   return (
     <SchedulerCtx.Provider value={ctxValue}>
@@ -949,337 +1195,178 @@ function GraphEditorInner({
           tile's surface (style.css). */}
       <div className="lazy-panel-in flex h-full flex-col">
         {/* ── Toolbar ──────────────────────────────────────────────────── */}
-        <div
-          className={`border-border-subtle bg-surface border-b-hairline flex shrink-0 flex-wrap items-center gap-2 px-3 py-1.5 ${NO_GRAPH_KEYS}`}
-        >
-          {/* Graph selector */}
-          <div className="relative shrink-0">
-            <button
-              onClick={graphMenu.toggle}
-              className={`border-border-subtle text-text-primary border-hairline text-1xs flex max-w-[160px] shrink-0 items-center gap-1 rounded px-1.5 py-0.5 font-mono whitespace-nowrap transition-colors ${
-                graphMenu.open ? 'bg-hover' : 'bg-canvas'
-              }`}
-            >
-              <span className="text-text-faint text-2xs">☰</span>
-              <span className="truncate">
-                {graphs.length === 0
-                  ? '— no graphs —'
-                  : graphId === ''
-                    ? '— new graph —'
-                    : (graphs.find((g) => g.id === graphId)?.name ?? graphId ?? '— new graph —')}
-              </span>
-            </button>
-
-            <Popover
-              open={graphMenu.open}
-              onClose={graphMenu.close}
-              width={180}
-              maxHeight={280}
-              align="left"
-            >
-              {graphs.length === 0 && (
-                <div className="text-text-faint px-3 py-1.5 font-mono text-xs">— no graphs —</div>
-              )}
-              {graphs.map((g) => {
-                const active = g.id === graphId
-                return (
-                  <button
-                    key={g.id}
-                    onClick={() => {
-                      confirm.guard(() => loadGraph(g))
-                      graphMenu.close()
-                    }}
-                    className={`flex w-full items-center gap-2 px-3 py-1.5 text-left font-mono text-xs transition-colors ${
-                      active
-                        ? 'text-accent bg-[color-mix(in_srgb,var(--accent)_10%,transparent)]'
-                        : 'text-text-primary bg-transparent'
-                    }`}
-                    onMouseEnter={(e) => {
-                      if (!active)
-                        (e.currentTarget as HTMLElement).style.background = 'var(--hover-surface)'
-                    }}
-                    onMouseLeave={(e) => {
-                      if (!active) (e.currentTarget as HTMLElement).style.background = 'transparent'
-                    }}
-                  >
-                    <Icon
-                      icon={Check}
-                      size="xs"
-                      className={`text-accent ${active ? 'opacity-100' : 'opacity-0'}`}
-                    />
-                    <span className="min-w-0 truncate">{g.name || g.id}</span>
-                  </button>
-                )
-              })}
-              {graphId === '' && (
-                <div className="text-accent flex w-full items-center gap-2 px-3 py-1.5 text-left font-mono text-xs">
-                  <Icon icon={Check} size="xs" />— new graph —
-                </div>
-              )}
-            </Popover>
-          </div>
-
-          {/* Graph name */}
-          {nameEditing ? (
-            <input
-              autoFocus
-              value={graphName}
-              onChange={(e) => setGraphName(e.target.value)}
-              onBlur={() => setNameEditing(false)}
-              onKeyDown={(e) => e.key === 'Enter' && setNameEditing(false)}
-              className="bg-canvas border-accent text-text-primary border-hairline text-1xs w-[140px] rounded px-1.5 py-0.5 font-mono outline-none"
-            />
-          ) : (
-            <span
-              onClick={() => setNameEditing(true)}
-              className="text-text-muted border-border-subtle border-b-hairline text-1xs flex min-w-[60px] cursor-text items-center gap-1.5 border-dashed font-mono"
-              title="Click to rename"
-            >
-              {graphName || 'Untitled'}
-              {dirty && (
-                <span
-                  className="bg-accent h-1.5 w-1.5 shrink-0 rounded-full"
-                  title="Unsaved changes"
-                />
-              )}
-            </span>
-          )}
-
-          <div className="bg-border-subtle h-4 w-[0.5px]" />
-
-          <button className={btnClass()} onClick={() => confirm.guard(handleNew)}>
-            new
-          </button>
-
-          {graphId && (
-            <button className={btnClass(graphEnabled)} onClick={handleToggleEnabled}>
-              {graphEnabled ? '[on]' : '[off]'}
-            </button>
-          )}
-
-          <button
-            className={`${btnClass()} ${!canUndo(history) ? 'opacity-50' : ''}`}
-            onClick={doUndo}
-            disabled={!canUndo(history)}
-            title="Undo (Ctrl+Z)"
-          >
-            undo
-          </button>
-          <button
-            className={`${btnClass()} ${!canRedo(history) ? 'opacity-50' : ''}`}
-            onClick={doRedo}
-            disabled={!canRedo(history)}
-            title="Redo (Ctrl+Shift+Z)"
-          >
-            redo
-          </button>
-
-          <div className="flex-1" />
-
-          {/* IPC errors and a failed run take the transient status slot and
-              stay until clicked. Two words here, whatever the message: the
-              message is in a bubble, and the click moves it there if that was
-              dismissed or its category is turned off. */}
-          {schedulerError ? (
-            <button
-              type="button"
-              onClick={() => {
-                showErrorToast(true)
-                clearSchedulerError()
-              }}
-              className="text-danger text-2xs shrink-0 font-mono whitespace-nowrap"
-              title={schedulerError}
-            >
-              scheduler error
-            </button>
-          ) : (
-            runStatus &&
-            (runStatus.failed ? (
-              <button
-                type="button"
-                onClick={() => {
-                  reopenRunToast(runStatus)
-                  showRunStatus(null)
-                }}
-                className="text-danger text-2xs shrink-0 font-mono whitespace-nowrap"
-                title={runStatus.detail}
-              >
-                {runStatus.text}
-              </button>
-            ) : (
-              <span className="text-text-faint text-2xs shrink-0 font-mono whitespace-nowrap">
-                {runStatus.text}
-              </span>
-            ))
-          )}
-
-          {(() => {
-            const selCount =
-              nodes.filter((n) => n.selected).length + edges.filter((e) => e.selected).length
-            return selCount > 0 ? (
-              <button className={btnClass(false, true)} onClick={handleDeleteSelected}>
-                del {selCount}
-              </button>
-            ) : null
-          })()}
-
-          {/* The icon and a count, never the text: a bar that grows moves every
-              control beside it, and a cut sentence cannot be read. The warnings
-              are in a bubble, which this reopens. */}
-          {warnings.length > 0 && (
-            <button
-              type="button"
-              onClick={() => showWarningToast(true)}
-              className="text-warning text-2xs flex shrink-0 items-center gap-1 font-mono whitespace-nowrap"
-              title={warningText}
-              aria-label={warnings.length === 1 ? '1 warning' : `${warnings.length} warnings`}
-            >
-              <Icon icon={TriangleAlert} size="xs" />
-              {warnings.length}
-            </button>
-          )}
-
-          {graphId && (
-            <button className={btnClass()} onClick={handleRun}>
-              run
-            </button>
-          )}
-
-          <button
-            className={`${btnClass()} ${saving ? 'opacity-50' : ''}`}
-            onClick={handleSave}
-            disabled={saving}
-          >
-            {saving ? '...' : 'save'}
-          </button>
-
-          {graphId && (
-            <button className={btnClass(false, true)} onClick={handleDelete}>
-              del graph
-            </button>
-          )}
-        </div>
+        <Toolbar
+          graphs={graphs}
+          graphId={graphId}
+          graphName={graphName}
+          graphEnabled={graphEnabled}
+          dirty={dirty}
+          saving={saving}
+          nodes={nodes}
+          edges={edges}
+          defMap={defMap}
+          canUndo={canUndo(history)}
+          canRedo={canRedo(history)}
+          runStatus={runStatus}
+          schedulerError={schedulerError}
+          warnings={warnings}
+          onLoadGraph={(g) => confirm.guard(() => loadGraph(g))}
+          onNewGraph={() => confirm.guard(handleNew)}
+          onAdd={openAddMenu}
+          view={{
+            curvedEdges,
+            onToggleCurvedEdges: () =>
+              // Swallowed: `update` reverts the flag itself on a refused write
+              // and the settings modal shows why, as for the palette.
+              updateSettings({ schedulerCurvedEdges: !curvedEdges }).catch(() => {}),
+            snapToGrid,
+            onToggleSnapToGrid: () =>
+              updateSettings({ schedulerSnapToGrid: !snapToGrid }).catch(() => {}),
+          }}
+          addOpen={quickAdd !== null}
+          addButtonRef={addButtonRef}
+          edit={editActions}
+          onToggleEnabled={handleToggleEnabled}
+          onRun={requestRun}
+          onSave={handleSave}
+          onRename={setGraphName}
+          onDuplicateGraph={handleDuplicateGraph}
+          onDeleteGraph={handleDelete}
+          onErrorClick={() => {
+            showErrorToast(true)
+            clearSchedulerError()
+          }}
+          onRunStatusClick={(status) => {
+            reopenRunToast(status)
+            showRunStatus(null)
+          }}
+          onSelectNode={revealNode}
+        />
 
         {/* ── Main content ─────────────────────────────────────────────── */}
         <div className="flex flex-1 overflow-hidden">
           {/* Block palette */}
           <BlockPalette blockDefs={blockDefs} onAdd={(def) => addBlock(def)} />
 
-          {/* ReactFlow canvas */}
-          <div ref={canvasWrapperRef} className="flex-1" onDrop={onDrop} onDragOver={onDragOver}>
-            <ReactFlow
-              nodes={nodes}
-              edges={edges}
-              nodeTypes={nodeTypes}
-              edgeTypes={edgeTypes}
-              onNodesChange={handleNodesChange}
-              onEdgesChange={handleEdgesChange}
-              onConnect={onConnect}
-              onNodeClick={onNodeClick}
-              onNodeDragStart={onNodeDragStart}
-              onNodeDragStop={onNodeDragStop}
-              onPaneClick={onPaneClick}
-              isValidConnection={isValidConnection}
-              fitView
-              fitViewOptions={{ padding: 0.2 }}
-              deleteKeyCode={DELETE_KEYS}
-              panOnDrag={[1, 2]}
-              selectionOnDrag
-            >
-              <Background variant={BackgroundVariant.Dots} gap={20} size={1} />
-              <Controls showInteractive={false} />
-              <MiniMap
-                // eslint-disable-next-line no-restricted-syntax -- overrides xyflow's default 10px Panel offset; a stylesheet className would race the library's own CSS specificity
-                style={{ bottom: 8, right: 8 }}
-                nodeColor={(n) => {
-                  const bt = (n.data as NodeData | undefined)?.blockType ?? ''
-                  const category = bt.split('.')[0]
-                  return CATEGORY_COLOR[category] ?? CATEGORY_COLOR.notify
-                }}
-              />
-            </ReactFlow>
-          </div>
-
-          {/* Node config / data panel */}
-          {selectedNode && (
-            <div
-              className={`border-border-subtle bg-canvas border-l-hairline flex w-56 shrink-0 flex-col overflow-y-auto ${NO_GRAPH_KEYS}`}
-            >
-              {/* Tabs */}
-              <div className="border-border-subtle border-b-hairline flex shrink-0">
-                {(['config', 'data'] as const).map((tab) => (
-                  <button
-                    key={tab}
-                    onClick={() => setPanelTab(tab)}
-                    className={`flex-1 cursor-pointer border-b py-1.5 font-mono text-xs ${
-                      panelTab === tab
-                        ? 'bg-surface text-text-primary border-accent'
-                        : 'text-text-faint border-transparent bg-transparent'
-                    }`}
-                  >
-                    {tab}
-                  </button>
-                ))}
-              </div>
-
-              {panelTab === 'config' ? (
-                <NodeConfigPanel
-                  nodeId={selectedNode.id}
-                  data={selectedNode.data as NodeData}
-                  def={selectedDef}
-                  edges={edges as FlowEdge[]}
-                  onChange={updateNodeConfig}
+          {/* ReactFlow canvas, with the node panel floating over its right edge.
+              The panel is a sibling of the canvas wrapper rather than a child,
+              so the wrapper's capture-phase right-click (quick-add) and its drop
+              target stop at the canvas, as they did when the panel was a column. */}
+          <div
+            className={`node-panel-host relative flex-1 ${selectedNode ? 'node-panel-open' : ''}`}
+          >
+            <div ref={canvasWrapperRef} className="h-full" onDrop={onDrop} onDragOver={onDragOver}>
+              <ReactFlow
+                nodes={nodes}
+                edges={edges}
+                nodeTypes={nodeTypes}
+                edgeTypes={edgeTypes}
+                onNodesChange={handleNodesChange}
+                onEdgesChange={handleEdgesChange}
+                onConnect={onConnect}
+                onNodeClick={onNodeClick}
+                onNodeDragStart={onNodeDragStart}
+                onNodeDragStop={onNodeDragStop}
+                onPaneClick={onPaneClick}
+                isValidConnection={isValidConnection}
+                fitView
+                fitViewOptions={{ padding: 0.2 }}
+                deleteKeyCode={DELETE_KEYS}
+                panOnDrag={[1, 2]}
+                selectionOnDrag
+                snapToGrid={snapToGrid}
+                snapGrid={SNAP_GRID}
+              >
+                <Background
+                  variant={BackgroundVariant.Dots}
+                  gap={GRID_GAP}
+                  size={GRID_DOT_SIZE}
+                  offset={GRID_DOT_OFFSET}
                 />
-              ) : (
-                <NodeDataPanel
-                  graph={flowToGraph(
-                    { id: graphId ?? '', name: graphName, enabled: graphEnabled, createdAt },
-                    nodes,
-                    edges,
-                  )}
-                  nodeId={selectedNode.id}
-                  onPreview={onPreviewNode}
+                <Controls showInteractive={false} />
+                <MiniMap
+                  // eslint-disable-next-line no-restricted-syntax -- overrides xyflow's default 10px Panel offset; a stylesheet className would race the library's own CSS specificity
+                  style={{ bottom: 8, right: 8 }}
+                  nodeColor={(n) => {
+                    const bt = (n.data as NodeData | undefined)?.blockType ?? ''
+                    const category = bt.split('.')[0]
+                    return CATEGORY_COLOR[category] ?? CATEGORY_COLOR.notify
+                  }}
                 />
-              )}
+              </ReactFlow>
             </div>
-          )}
+            <PaletteToggle />
+
+            {/* Node config / data panel: floats over the canvas, never resizes it */}
+            <NodePanel
+              node={selectedNode}
+              def={selectedDef}
+              edges={edges as FlowEdge[]}
+              tab={panelTab}
+              onTab={setPanelTab}
+              onChange={updateNodeConfig}
+              warnings={selectedNode ? nodeAdvice.get(selectedNode.id) : undefined}
+              failure={selectedNode ? nodeFailure.get(selectedNode.id) : undefined}
+              getGraph={() =>
+                flowToGraph(
+                  { id: graphId ?? '', name: graphName, enabled: graphEnabled, createdAt },
+                  nodes,
+                  edges,
+                )
+              }
+              onPreview={onPreviewNode}
+            />
+          </div>
         </div>
       </div>
 
-      {quickAdd && (
-        <QuickAddMenu
-          blockDefs={blockDefs}
-          screenPos={quickAdd.screen}
-          onPick={(def) => {
-            addBlock(def, quickAdd.flow)
-            setQuickAdd(null)
-          }}
-          onClose={() => setQuickAdd(null)}
-        />
-      )}
+      <NodeMenuHost request={nodeMenu} rows={nodeMenuRows} onClose={() => setNodeMenu(null)} />
 
-      {confirm.pending && (
-        <CloseConfirmDialog
-          saving={saving}
-          onCancel={confirm.cancel}
-          onDiscard={() => {
-            // Mark clean first: the close path re-enters the close guard, which
-            // reads dirtyRef and would otherwise put the dialog straight back.
-            setSavedSig(graphSignature({ name: graphName, enabled: graphEnabled }, nodes, edges))
-            confirm.proceed()
-          }}
-          onSaveAndContinue={async () => {
-            // null means the save failed. The store has recorded the message and
-            // the toolbar renders it, so drop the pending action and leave the
-            // graph loaded rather than continuing past a failure (#124).
-            if ((await handleSave()) === null) {
-              confirm.cancel()
-              return
-            }
-            confirm.proceed()
-          }}
-        />
-      )}
+      <QuickAddHost
+        request={quickAdd}
+        blockDefs={blockDefs}
+        onPick={(def, flow) => {
+          addBlock(def, flow)
+          setQuickAdd(null)
+        }}
+        onClose={() => setQuickAdd(null)}
+        trigger={addButtonRef}
+      />
+
+      <CloseConfirmDialog
+        open={confirm.pending}
+        saving={saving}
+        onCancel={confirm.cancel}
+        onDiscard={() => {
+          // Mark clean first: the close path re-enters the close guard, which
+          // reads dirtyRef and would otherwise put the dialog straight back.
+          setSavedSig(graphSignature({ name: graphName, enabled: graphEnabled }, nodes, edges))
+          confirm.proceed()
+        }}
+        onSaveAndContinue={async () => {
+          // null means the save failed. The store has recorded the message and
+          // the toolbar renders it, so drop the pending action and leave the
+          // graph loaded rather than continuing past a failure (#124).
+          if ((await handleSave()) === null) {
+            confirm.cancel()
+            return
+          }
+          confirm.proceed()
+        }}
+      />
+      <CloseConfirmDialog
+        open={runAsk}
+        saving={saving}
+        body="Run uses the saved graph. Save your changes and run it?"
+        confirmLabel="Save & run"
+        onCancel={() => setRunAsk(false)}
+        onSaveAndContinue={() => {
+          // handleRun saves first and stops there if the save fails, with
+          // the reason in the toolbar, as it always has.
+          setRunAsk(false)
+          void handleRun()
+        }}
+      />
     </SchedulerCtx.Provider>
   )
 }

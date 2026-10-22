@@ -77,8 +77,18 @@ body {
 
 /* Where text is meant to be selected. The console pane carries
    `select-text` itself; editable fields, including CodeMirror's contenteditable
-   content, get it here so no field has to remember to ask. */
-input,
+   content, get it here so no field has to remember to ask. An input that takes
+   no text (a checkbox, a radio, a slider) is a control and keeps the arrow. */
+input:not(
+  [type='checkbox'],
+  [type='radio'],
+  [type='range'],
+  [type='color'],
+  [type='button'],
+  [type='submit'],
+  [type='reset'],
+  [type='file']
+),
 textarea,
 [contenteditable],
 .select-text {

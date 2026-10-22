@@ -2,6 +2,7 @@ package services
 
 import (
 	"encoding/json"
+	"errors"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -153,11 +154,47 @@ func TestGraphWarnings(t *testing.T) {
 	}
 }
 
+// Each warning names the node it is about, and graph order decides the list.
+func TestGraphWarningsAttachEachToItsNode(t *testing.T) {
+	reg := NewBlockRegistry()
+	registerBuiltins(reg)
+	g := stopGraph(t, "__stop__", false)
+	g.Nodes = append(g.Nodes,
+		models.Node{ID: "b", Type: commandBlockID, Config: map[string]interface{}{"command": "__restart__"}},
+		models.Node{ID: "c", Type: commandBlockID, Config: map[string]interface{}{"command": "save-all"}},
+		models.Node{ID: "d", Type: dhSnapshotBlockID, Config: map[string]interface{}{}},
+	)
+	got := graphWarnings(g, reg, false)
+	want := []models.GraphWarning{
+		{NodeID: "a", Text: rconUnconfirmedWarning},
+		{NodeID: "b", Text: rconUnconfirmedWarning},
+		{NodeID: "d", Text: dhSnapshotConsoleWarning},
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("warnings = %v, want %v", got, want)
+	}
+}
+
+func TestIssueSentencesLeadWithTheBlockLabel(t *testing.T) {
+	reg := NewBlockRegistry()
+	registerBuiltins(reg)
+	g := stopGraph(t, "save-all", false)
+	got := issueSentences(g, reg, []models.GraphWarning{
+		{NodeID: "a", Text: "boom."},
+		{NodeID: "", Text: "graph wide."},
+		{NodeID: "ghost", Text: "gone."},
+	})
+	want := []string{"Command (a): boom.", "graph wide.", "Node ghost: gone."}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("sentences = %q, want %q", got, want)
+	}
+}
+
 func TestGraphWarningsSaysRconIsNotConfirmed(t *testing.T) {
 	reg := NewBlockRegistry()
 	registerBuiltins(reg)
 	got := graphWarnings(stopGraph(t, "__stop__", false), reg, false)
-	if len(got) != 1 || !containsAll(got[0], "RCON is not confirmed", "warning to players") {
+	if len(got) != 1 || !containsAll(got[0].Text, "RCON is not confirmed", "warning to players") {
 		t.Errorf("warning = %v", got)
 	}
 }
@@ -207,5 +244,43 @@ func TestGraphWarningsMethodReadsRconFromTheServer(t *testing.T) {
 	got, err = s.GraphWarnings("other", g)
 	if err != nil || len(got) != 1 {
 		t.Fatalf("other server: warnings = %v, err = %v, want one warning", got, err)
+	}
+}
+
+// The editor keeps a failed node's reason beside its marker, so the event that
+// finishes a node carries the error, and only for a node that failed.
+func TestNodeFinishedEventCarriesTheErrorOfAFailedNode(t *testing.T) {
+	s := newTestScheduler(t)
+	var finished []map[string]interface{}
+	s.bus.Tap(func(event string, data any) {
+		if m, ok := data.(map[string]interface{}); ok && event == EventScheduleNodeFinished {
+			finished = append(finished, m)
+		}
+	})
+	must(s.registry.RegisterBlock(models.BlockDef{
+		ID: "test.maybefail", Category: "action",
+		ControlInputs: []string{"trigger"}, ControlOutputs: []string{"onComplete", "onFailed"},
+	}, func(e *ExecContext) ExecResult {
+		if e.GetString("fail") != "" {
+			return ExecResult{Port: "onFailed", Err: errors.New("bucket unreachable")}
+		}
+		return ExecResult{Port: "onComplete"}
+	}))
+
+	for _, tt := range []struct{ fail, want string }{{"", ""}, {"yes", "bucket unreachable"}} {
+		finished = nil
+		g := slowGraph("test.maybefail")
+		g.Nodes[1].Config = map[string]interface{}{"fail": tt.fail}
+		s.runGraph(g, "t1", "manual", seed("t1"))
+		awaitIdle(t, s)
+		var got interface{}
+		for _, m := range finished {
+			if m["nodeId"] == "a1" {
+				got = m["error"]
+			}
+		}
+		if tt.want == "" && got != nil || tt.want != "" && got != tt.want {
+			t.Errorf("fail=%q: event error = %v, want %q", tt.fail, got, tt.want)
+		}
 	}
 }

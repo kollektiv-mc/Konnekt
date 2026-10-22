@@ -62,5 +62,6 @@ export function failedRunToast(p: RunFinished | undefined): ToastInput | null {
     tone: 'error',
     title: `Run failed: ${p.graphName || 'Untitled'}`,
     text: p.error || 'unknown error',
+    resurface: true,
   }
 }

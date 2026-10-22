@@ -19,19 +19,42 @@ type AppSettings struct {
 	ConsoleBufferLines int  `json:"consoleBufferLines"`
 	ConsoleTimestamps  bool `json:"consoleTimestamps"`
 
-	NotifyOnCrash bool `json:"notifyOnCrash"`
-	NotifyOnJoin  bool `json:"notifyOnJoin"`
+	// DesktopOn marks which categories send an operating system notification,
+	// keyed like ToastsOff plus "join" (frontend/src/lib/notify.ts). The
+	// opposite polarity: a key that is not there is off, so a category added
+	// later starts quiet. The Notifications tile logs every event whatever
+	// this says. Nil only in a settings file from before the map, which
+	// services.GetAppSettings seeds from that file's notifyOnCrash and
+	// notifyOnJoin.
+	DesktopOn map[string]bool `json:"desktopOn"`
 
 	// ToastsOff marks which in-app notification bubble categories the user has
 	// turned off, keyed by category ("warnings", "errors", "crash", "update";
 	// frontend/src/lib/toast.ts). A key that is not there is on, so a settings
 	// file written before this field existed shows every bubble, and a category
-	// added later starts on without a migration. Separate from NotifyOnCrash,
-	// which is the desktop notification.
+	// added later starts on without a migration.
 	ToastsOff map[string]bool `json:"toastsOff"`
 
 	SchedulerPaletteCollapsed        bool            `json:"schedulerPaletteCollapsed"`
 	SchedulerPaletteClosedCategories map[string]bool `json:"schedulerPaletteClosedCategories"`
+
+	// SchedulerPaletteOpenGroups marks which block groups the palette has
+	// expanded, keyed "category/group" ("action/Distant Horizons"). The opposite
+	// polarity to the closed categories: a group starts collapsed, so a key that
+	// is not there is closed and a group added later needs no migration.
+	SchedulerPaletteOpenGroups map[string]bool `json:"schedulerPaletteOpenGroups"`
+	// SchedulerCurvedEdges draws the scheduler editor's connections as smooth
+	// curves that leave and enter their ports horizontally, rather than as
+	// straight lines through their corner points (#692). One choice for every
+	// graph. On by default; a settings file written before the field existed
+	// unmarshals onto that default (services.GetAppSettings).
+	SchedulerCurvedEdges bool `json:"schedulerCurvedEdges"`
+
+	// SchedulerSnapToGrid makes a node, and a connection's corner point, snap
+	// to the dots of the editor's background grid while it is dragged (#693).
+	// One choice for every graph; positions already saved are never moved by
+	// turning it on. Off by default, which is the zero value.
+	SchedulerSnapToGrid bool `json:"schedulerSnapToGrid"`
 
 	ConsoleQuickCommandsCollapsed bool `json:"consoleQuickCommandsCollapsed"`
 

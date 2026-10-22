@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Check, ChevronRight } from '../../lib/icons'
+import { Flyout } from './Flyout'
+import type { FlyoutAnchor } from '../../lib/flyoutPlacement'
 import { Icon } from './Icon'
 
 export interface MenuItem {
@@ -38,8 +40,6 @@ const EDGE = 8
 // corner has to be 3 − 4, which is none. A rounded row inside a near-square
 // panel is the mismatch a nested radius always produces.
 const PAD = 4
-// Room between a panel and its fly-out.
-const GAP = 4
 
 /** Keeps a panel of `count` rows inside the viewport. */
 function clamp(x: number, y: number, count: number): MenuPosition {
@@ -64,7 +64,8 @@ function clamp(x: number, y: number, count: number): MenuPosition {
 // Rows are inset from the panel edge on every side, so a hovered row is a
 // highlight inside the panel rather than a stripe that reaches its edge on
 // the sides and stops short of it at the top and bottom.
-const PANEL = 'fixed z-popover bg-overlay overflow-hidden rounded-sm p-1'
+const PANEL_SURFACE = 'bg-overlay overflow-hidden rounded-sm p-1'
+const PANEL = `fixed z-popover ${PANEL_SURFACE}`
 
 function Row({
   item,
@@ -122,8 +123,9 @@ function Row({
  * backdrop closes it rather than opening a second one; Escape closes it too.
  *
  * An item with `children` opens a fly-out beside it on hover or click. The
- * fly-out sits `GAP` past the panel's right edge, level with its row, and is
- * clamped like the panel. Opening is idempotent: hovering the row again while
+ * fly-out (`Flyout`) sits past the panel's right edge, level with its row,
+ * flips to the left where the right has no room, and is clamped like the
+ * panel. Opening is idempotent: hovering the row again while
  * its fly-out is open leaves the fly-out where it is, rather than measuring a
  * second anchor and nudging it. One level: nothing here needs a third.
  *
@@ -136,7 +138,7 @@ function Row({
  * right-clicking another tile's header opens that tile's menu in one gesture.
  */
 export function ContextMenu({ at, items, onClose, label }: Props) {
-  const [open, setOpen] = useState<{ id: string; at: MenuPosition } | null>(null)
+  const [open, setOpen] = useState<{ id: string; anchor: FlyoutAnchor } | null>(null)
   const panelRef = useRef<HTMLDivElement>(null)
   const rows = useRef(new Map<string, HTMLDivElement>())
   const pos = clamp(at.x, at.y, items.length)
@@ -146,9 +148,12 @@ export function ContextMenu({ at, items, onClose, label }: Props) {
       if (prev?.id === id) return prev
       const panel = panelRef.current?.getBoundingClientRect()
       const row = rows.current.get(id)?.getBoundingClientRect()
-      const x = panel ? panel.right + GAP : pos.x + PANEL_W + GAP
-      const y = row ? row.top - PAD : pos.y
-      return { id, at: { x, y } }
+      const anchor = {
+        left: panel?.left ?? pos.x,
+        right: panel?.right ?? pos.x + PANEL_W,
+        top: row ? row.top - PAD : pos.y,
+      }
+      return { id, anchor }
     })
   }
 
@@ -161,8 +166,6 @@ export function ContextMenu({ at, items, onClose, label }: Props) {
   }, [onClose])
 
   const child = open ? items.find((i) => i.id === open.id) : undefined
-  const childPos =
-    child?.children && open ? clamp(open.at.x, open.at.y, child.children.length) : null
 
   return createPortal(
     <>
@@ -210,18 +213,12 @@ export function ContextMenu({ at, items, onClose, label }: Props) {
           </div>
         ))}
       </div>
-      {child?.children && childPos && (
-        <div
-          role="menu"
-          aria-label={child.label}
-          className={`${PANEL} w-44`}
-          // eslint-disable-next-line no-restricted-syntax -- left/top are viewport-computed positions (clamped against window dimensions)
-          style={{ left: childPos.x, top: childPos.y }}
-        >
+      {child?.children && open && (
+        <Flyout anchor={open.anchor} label={child.label} className={`${PANEL_SURFACE} w-44`}>
           {child.children.map((item) => (
             <Row key={item.id} item={item} onDone={onClose} />
           ))}
-        </div>
+        </Flyout>
       )}
     </>,
     document.body,
