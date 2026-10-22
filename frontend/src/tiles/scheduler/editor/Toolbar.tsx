@@ -3,13 +3,14 @@ import type { ReactNode, RefObject } from 'react'
 import type { Edge as FlowEdge } from '@xyflow/react'
 import { Popover } from '../../../components/ui/Popover'
 import { Icon } from '../../../components/ui/Icon'
-import { Check, Ellipsis, Plus, TriangleAlert, Workflow } from '../../../lib/icons'
+import { Check, Ellipsis, Plus, TriangleAlert } from '../../../lib/icons'
 import { usePresence } from '../../../hooks/usePresence'
 import type { models } from '../../../../wailsjs/go/models'
 import { NO_GRAPH_KEYS } from './blockMeta'
 import { hasClipboard } from './clipboard'
 import { EditMenuRows } from './EditMenu'
 import { editMenuRows, type EditMenuActions } from './editMenuRows'
+import { shortGraphId } from './graphId'
 import type { BlockFlowNode } from './graphMapping'
 import { MenuDivider, MenuRow } from './MenuRow'
 import type { RunStatus } from './runStatus'
@@ -220,7 +221,16 @@ export function Toolbar({
             onClick={() => toggleMenu('graph')}
             className={`${segmentClass('text-text-primary', menu === 'graph' ? 'bg-hover' : IDLE_FILL)} relative justify-start pr-5`}
           >
-            <Icon icon={Workflow} size="xs" className="text-text-faint shrink-0" />
+            {/* The graph's short id where an icon would sit, so the selector
+                does not repeat the tile header's scheduler icon beside it.
+                Hidden from the accessible name, which stays the graph's. */}
+            <span
+              aria-hidden="true"
+              data-testid="graph-short-id"
+              className="text-text-faint text-2xs w-7 shrink-0 text-left font-mono"
+            >
+              {shortGraphId(graphId)}
+            </span>
             <span className="min-w-0 flex-1 overflow-hidden [mask-image:linear-gradient(to_right,black_calc(100%_-_1.5rem),transparent)] text-left [-webkit-mask-image:linear-gradient(to_right,black_calc(100%_-_1.5rem),transparent)]">
               {graphLabel}
             </span>
