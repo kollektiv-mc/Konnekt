@@ -54,10 +54,10 @@ const sw = () => screen.getByRole('switch') as HTMLButtonElement
 
 describe('TunnelSection', () => {
   describe('off, with the listener running', () => {
-    it('names itself and carries no explanation', () => {
+    it('names itself and says Cloudflare can read the traffic', () => {
       setup()
       expect(screen.getByText('Reach it from anywhere')).toBeTruthy()
-      expect(screen.queryByText(/Cloudflare/)).toBeNull()
+      expect(screen.getByText(/can read it, your password included/)).toBeTruthy()
       expect(screen.queryByText(/Switch remote access on first\./)).toBeNull()
     })
 
