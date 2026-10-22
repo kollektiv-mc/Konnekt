@@ -89,6 +89,15 @@ describe('ServerSelector', () => {
     expect(s.serverManagerSelection).toBe('new')
   })
 
+  // A plus on the section header, beside Manage servers, so the list below it
+  // holds servers and nothing else.
+  it('offers Add server as a header icon, not a list row', () => {
+    render(<ServerSelector />)
+    const add = screen.getByRole('button', { name: 'Add server' })
+    expect(add.textContent).toBe('')
+    expect(add.nextElementSibling?.getAttribute('title')).toBe('Manage servers')
+  })
+
   // Disconnect moved into the manager, one step behind the edit control,
   // rather than sitting a click away from the control that selects a server.
   it('offers no disconnect of its own', () => {
