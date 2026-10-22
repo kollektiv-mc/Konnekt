@@ -100,3 +100,9 @@ func hideConsoleWindow(cmd *exec.Cmd) {
 func killTree(pid int) {
 	_ = exec.Command("taskkill", "/F", "/T", "/PID", strconv.Itoa(pid)).Run() //nolint:errcheck // best-effort escalation; already the last-resort fallback
 }
+
+// termTree has no Windows equivalent worth sending. taskkill without /F posts
+// WM_CLOSE, which a windowless java.exe never reads, and a console control
+// event needs a console Konnekt does not share with the server. Reporting
+// false sends the caller straight to killTree rather than waiting on nothing.
+func termTree(int) bool { return false }

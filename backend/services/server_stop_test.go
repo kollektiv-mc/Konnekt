@@ -269,7 +269,7 @@ func TestStopAfterCrashLineUsesShortGrace(t *testing.T) {
 
 	crashBanners, graceBanner := 0, false
 	for _, line := range consoleLines(s) {
-		if strings.Contains(line, "Server crashed; a stop now force kills") {
+		if strings.Contains(line, "Server crashed; its process is ended in") {
 			crashBanners++
 		}
 		if strings.Contains(line, "Server already crashed, force killing the process tree in 60ms") {
@@ -343,4 +343,216 @@ func TestCrashFlagClearsOnNextBoot(t *testing.T) {
 	if err := s.Stop(fixtureServerID, 0); err != nil {
 		t.Errorf("cleanup Stop = %v, want nil", err)
 	}
+}
+
+// recordTermTree replaces the termTree seam: it reports the signal delivered
+// and runs each onTerm hook, standing in for a JVM that exits on SIGTERM. With
+// no hooks it is a JVM that ignores it.
+func recordTermTree(s *ServerService, onTerm ...func()) func() int {
+	var mu sync.Mutex
+	calls := 0
+	s.termTree = func(int) bool {
+		mu.Lock()
+		calls++
+		mu.Unlock()
+		for _, f := range onTerm {
+			f()
+		}
+		return true
+	}
+	return func() int {
+		mu.Lock()
+		defer mu.Unlock()
+		return calls
+	}
+}
+
+func waitForState(t *testing.T, s *ServerService, want string) {
+	t.Helper()
+	deadline := time.Now().Add(2 * time.Second)
+	for time.Now().Before(deadline) {
+		if s.State(fixtureServerID) == want {
+			return
+		}
+		time.Sleep(5 * time.Millisecond)
+	}
+	t.Fatalf("State() = %q, want %q", s.State(fixtureServerID), want)
+}
+
+// The crash path never prints "Stopping the server", so the crash line itself
+// takes the server off Online, and the TPS it shows is unknown rather than a
+// figure from a tick loop that is gone (#579).
+func TestCrashLineShowsStoppingAndUnknownTPS(t *testing.T) {
+	s, _ := newServerFixture()
+	release, _ := fakeRunningServer(t, s)
+	recordKillTree(t, s, release)
+	in := curInst(s)
+	in.recordRconTPS(19.8, true)
+
+	in.streamOutput(strings.NewReader(crashLine))
+
+	if got := s.State(fixtureServerID); got != "stopping" {
+		t.Errorf("State() after a crash line = %q, want stopping", got)
+	}
+	if got := in.CurrentTPS(); got != -1 {
+		t.Errorf("CurrentTPS() after a crash line = %v, want -1", got)
+	}
+	if err := s.Stop(fixtureServerID, 50*time.Millisecond); err != nil {
+		t.Errorf("cleanup Stop = %v", err)
+	}
+}
+
+// Stop after a crash marks expectedStop, and used to file the crash as a
+// deliberate stop: no notification, no Crashed trigger. The crash wins.
+func TestStopAfterCrashIsStillRecordedAsCrash(t *testing.T) {
+	s, _ := newServerFixture()
+	release, _ := fakeRunningServer(t, s)
+	recordKillTree(t, s, release)
+	s.crashedStopGrace = 40 * time.Millisecond
+
+	curInst(s).streamOutput(strings.NewReader(crashLine))
+	if err := s.Stop(fixtureServerID, time.Minute); err != nil {
+		t.Fatalf("Stop = %v", err)
+	}
+
+	if got := s.GetLastStop(fixtureServerID); got.Expected {
+		t.Errorf("GetLastStop() = %+v, want Expected:false for a crash", got)
+	}
+	waitForConsoleLine(t, s, fixtureServerID, "Server process exited after a crash")
+}
+
+// A clean /stop whose JVM a mod's thread holds open: once the world save is
+// done the exit deadline sends SIGTERM, the process ends on it with no kill,
+// and the stop stays the deliberate one it was.
+func TestExitDeadlineEndsLingeringJVMWithSIGTERM(t *testing.T) {
+	s, _ := newServerFixture()
+	release, _ := fakeRunningServer(t, s)
+	kills := recordKillTree(t, s, release)
+	terms := recordTermTree(s, release)
+	s.exitDeadline = 40 * time.Millisecond
+
+	curInst(s).streamOutput(strings.NewReader(
+		"[12:00:00] [Server thread/INFO]: Stopping the server\n" +
+			"[12:00:01] [Server thread/INFO]: ThreadedAnvilChunkStorage: All dimensions are saved\n"))
+
+	waitForState(t, s, "offline")
+	if got := terms(); got != 1 {
+		t.Errorf("termTree calls = %d, want 1", got)
+	}
+	if got := kills(); len(got) != 0 {
+		t.Errorf("killTree calls = %v, want none after a SIGTERM that worked", got)
+	}
+	if got := s.GetLastStop(fixtureServerID); !got.Expected {
+		t.Errorf("GetLastStop() = %+v, want Expected:true for a clean /stop", got)
+	}
+	waitForConsoleLine(t, s, fixtureServerID, "its Java process is still running")
+}
+
+// Stop sends SIGTERM at the halfway warning, and a process that ignores it
+// is still killed at the end of the grace, no later.
+func TestStopSendsSIGTERMThenKillsWhenIgnored(t *testing.T) {
+	s, _ := newServerFixture()
+	release, _ := fakeRunningServer(t, s)
+	kills := recordKillTree(t, s, release)
+	terms := recordTermTree(s)
+	s.termWait = time.Hour // stop() must not wait on it
+
+	if err := s.Stop(fixtureServerID, 80*time.Millisecond); err != nil {
+		t.Fatalf("Stop = %v", err)
+	}
+
+	if got := terms(); got != 1 {
+		t.Errorf("termTree calls = %d, want 1", got)
+	}
+	if got := kills(); len(got) != 1 {
+		t.Errorf("killTree calls = %v, want exactly one", got)
+	}
+	waitForConsoleLine(t, s, fixtureServerID, "sent it SIGTERM")
+}
+
+// A JVM that ends on SIGTERM ends a stop at the halfway mark, with no kill.
+func TestStopEndsOnSIGTERMWithoutAKill(t *testing.T) {
+	s, _ := newServerFixture()
+	release, _ := fakeRunningServer(t, s)
+	kills := recordKillTree(t, s)
+	recordTermTree(s, release)
+
+	if err := s.Stop(fixtureServerID, 80*time.Millisecond); err != nil {
+		t.Fatalf("Stop = %v", err)
+	}
+	if got := kills(); len(got) != 0 {
+		t.Errorf("killTree calls = %v, want none after a SIGTERM that worked", got)
+	}
+	if got := s.GetLastStop(fixtureServerID); !got.Expected {
+		t.Errorf("GetLastStop() = %+v, want Expected:true", got)
+	}
+}
+
+// The exit deadline's own escalation: a JVM that ignores its SIGTERM is
+// killed once termWait passes, and the console says why.
+func TestExitDeadlineKillsAfterAnIgnoredSIGTERM(t *testing.T) {
+	s, _ := newServerFixture()
+	release, _ := fakeRunningServer(t, s)
+	kills := recordKillTree(t, s, release)
+	recordTermTree(s)
+	s.exitDeadline = 20 * time.Millisecond
+	s.termWait = 20 * time.Millisecond
+
+	curInst(s).streamOutput(strings.NewReader(crashLine))
+
+	waitForState(t, s, "offline")
+	if got := kills(); len(got) != 1 {
+		t.Errorf("killTree calls = %v, want exactly one", got)
+	}
+	if got := s.GetLastStop(fixtureServerID); got.Expected {
+		t.Errorf("GetLastStop() = %+v, want Expected:false for a crash", got)
+	}
+	waitForConsoleLine(t, s, fixtureServerID, "after SIGTERM, force killing")
+}
+
+// RCON that answered and then stops answering is unknown TPS, not the log
+// fallback's 20; one that never answered keeps the fallback.
+func TestRCONTPSLostAfterWorkingIsUnknown(t *testing.T) {
+	in := newServerInstance(fixtureServerID, NewServerService().instanceDeps)
+	in.logTPS = 20
+
+	in.recordRconTPS(0, false)
+	if got := in.CurrentTPS(); got != 20 {
+		t.Errorf("CurrentTPS() with RCON never answering = %v, want the log's 20", got)
+	}
+	in.recordRconTPS(18.5, true)
+	if got := in.CurrentTPS(); got != 18.5 {
+		t.Errorf("CurrentTPS() after an answer = %v, want 18.5", got)
+	}
+	in.recordRconTPS(0, false)
+	if got := in.CurrentTPS(); got != -1 {
+		t.Errorf("CurrentTPS() after RCON went quiet = %v, want -1", got)
+	}
+	in.recordRconTPS(19, true)
+	if got := in.CurrentTPS(); got != 19 {
+		t.Errorf("CurrentTPS() after RCON came back = %v, want 19", got)
+	}
+}
+
+// The save line on a server that is staying up (a backup's save-all flush)
+// arms nothing: only a shutdown starts the exit deadline.
+func TestWorldsSavedWhileRunningArmsNoDeadline(t *testing.T) {
+	s, _ := newServerFixture()
+	release, _ := fakeRunningServer(t, s)
+	recordKillTree(t, s, release)
+	terms := recordTermTree(s, release)
+	s.exitDeadline = 20 * time.Millisecond
+
+	curInst(s).streamOutput(strings.NewReader(
+		"[12:00:01] [Server thread/INFO]: ThreadedAnvilChunkStorage: All dimensions are saved\n"))
+	time.Sleep(100 * time.Millisecond)
+
+	if got := s.State(fixtureServerID); got != "running" {
+		t.Errorf("State() = %q, want running", got)
+	}
+	if got := terms(); got != 0 {
+		t.Errorf("termTree calls = %d, want none on a running server", got)
+	}
+	release()
+	waitForState(t, s, "offline")
 }

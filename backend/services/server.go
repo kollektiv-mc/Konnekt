@@ -125,6 +125,12 @@ var (
 	// Anchored at the start of the log message like every server-line matcher
 	// here, so chat cannot spoof it (#619).
 	reServerCrash = regexp.MustCompile(`^(?:Encountered an unexpected exception|This crash report has been saved to:|We were unable to save this crash report to disk)`)
+	// reWorldsSaved is the last line of the dedicated server's world save, on
+	// /stop and on the crash path alike. After it nothing is left to protect,
+	// so a JVM still alive is one a mod's non-daemon thread is holding open,
+	// and watchExitDeadline starts counting (#579). A literal in
+	// MinecraftServer, so the same under every mapping and loader.
+	reWorldsSaved = regexp.MustCompile(`^ThreadedAnvilChunkStorage: All dimensions are saved$`)
 	// reServerReady is the Minecraft "Done (3.541s)!" ready line, shared by
 	// vanilla, Fabric, Quilt, Paper/Purpur and Forge/NeoForge (their log
 	// prefixes differ, the Done line does not). Anchored at the start of the
@@ -171,6 +177,19 @@ const (
 // configured grace protects nothing and only delays the kill. Only ever
 // shortens a grace; a quit's 8 s stays 8 s.
 const crashedStopGrace = 10 * time.Second
+
+// exitDeadline is how long a process may outlive a crash report or a finished
+// world save before Konnekt ends it. Without one, a server whose mods leave
+// non-daemon threads behind showed Online with healthy vitals until the
+// vanilla watchdog fired a minute later, or forever after a clean /stop, where
+// the watchdog never runs (#579).
+const exitDeadline = 30 * time.Second
+
+// termWait is what a delivered SIGTERM gets before the SIGKILL follows. A JVM
+// runs its shutdown hooks on SIGTERM, and the dedicated server's hook saves the
+// world when the server has not stopped already, so this is a short save's
+// worth rather than a token pause.
+const termWait = 10 * time.Second
 
 // quiesceFlushWait is the grace a stdin-driven save-all gets to reach disk
 // when RCON is unavailable, since that path has nothing to block on.
@@ -273,6 +292,9 @@ func NewServerService() *ServerService {
 			startingTimeout:  startingDeadline,
 			crashedStopGrace: crashedStopGrace,
 			killTree:         killTree,
+			termTree:         termTree,
+			termWait:         termWait,
+			exitDeadline:     exitDeadline,
 			quiesceWait:      quiesceFlushWait,
 			workingDir:       func(string) (string, error) { return "", errNoWorkingDir },
 		},
@@ -548,6 +570,7 @@ func (s *serverInstance) start(jarPath string, jvmArgs []string, workingDir stri
 	s.startTime = time.Now()
 	s.expectedStop = false
 	s.crashed = false
+	s.deadlineArmed = false
 	s.setStateLocked(stateStarting, false)
 
 	s.logBufMu.Lock()
@@ -586,6 +609,7 @@ func (s *serverInstance) start(jarPath string, jvmArgs []string, workingDir stri
 	s.tpsMu.Lock()
 	s.currentTPS = -1
 	s.tpsLastUpdate = time.Time{}
+	s.tpsLost = false
 	s.tpsMu.Unlock()
 	s.logTPSMu.Lock()
 	s.logTPS = 20.0
@@ -639,14 +663,28 @@ func (s *serverInstance) streamOutput(r io.Reader) {
 		if reServerCrash.MatchString(msg) {
 			s.mu.Lock()
 			// Narrated once per boot, on the first of the crash path's lines.
-			// The flag outlives this boot until start() clears it, which is
-			// harmless: nothing reads it on an offline instance.
+			// The flag outlives this boot until start() clears it; waitForExit
+			// reads it to record the exit as a crash whatever stop followed.
 			first := !s.crashed
 			s.crashed = true
+			// The crash path never prints reServerStop's line, so this is
+			// the only thing that takes a crashed server off Online. Gated
+			// like that transition, for the same late-line reason.
+			if s.state == stateStarting || s.state == stateRunning {
+				s.setStateLocked(stateStopping, false)
+			}
 			s.mu.Unlock()
 			if first {
-				s.NarrateFailed(fmt.Sprintf("Server crashed; a stop now force kills the process after %s if it has not exited by itself", s.crashedStopGrace))
+				s.tpsMu.Lock()
+				s.tpsLost = true
+				s.tpsMu.Unlock()
+				s.NarrateFailed(fmt.Sprintf("Server crashed; its process is ended in %s unless it exits first, or in %s if you stop it", s.exitDeadline, s.crashedStopGrace))
+				s.armExitDeadline()
 			}
+		}
+
+		if reWorldsSaved.MatchString(msg) {
+			s.armExitDeadline()
 		}
 
 		if reServerReady.MatchString(msg) {
@@ -804,7 +842,12 @@ func (s *serverInstance) waitForExit() {
 	s.stopTPSPoll()
 
 	s.mu.Lock()
-	expected := s.expectedStop
+	// A crash wins over a stop: the crash path's own shutdown, a Stop pressed
+	// after it, or the exit deadline all mark expectedStop, and none of them
+	// makes the crash deliberate. The notification and the scheduler's Crashed
+	// trigger both read Expected (#579).
+	crashed := s.crashed
+	expected := s.expectedStop && !crashed
 	s.running = false
 	s.cachedProc = nil
 	s.setStateLocked(stateOffline, false)
@@ -825,7 +868,10 @@ func (s *serverInstance) waitForExit() {
 	// channel this boot created is what the line always meant.
 	exited := s.exited
 	s.mu.Unlock()
-	if !expected {
+	switch {
+	case crashed:
+		s.NarrateFailed("Server process exited after a crash (" + exitLabel(exitCode) + ")")
+	case !expected:
 		s.NarrateFailed("Server process exited unexpectedly (" + exitLabel(exitCode) + ")")
 	}
 	s.bus.Emit(EventServerStopped, models.ServerStoppedEvent{ServerStopped: stop, ServerID: s.id})
@@ -956,13 +1002,24 @@ func (s *serverInstance) stop(grace time.Duration) error {
 	// Two-stage wait so a slow world save is narrated instead of looking like
 	// a hang: a warning at half the grace, the kill at its end (#110). The
 	// state stays stopping throughout; waitForExit flips it offline.
+	//
+	// The warning also sends SIGTERM where the platform has one (#579). A JVM
+	// whose server already stopped and a mod's thread is holding open ends on
+	// it; one still saving runs the dedicated server's shutdown hook, which
+	// waits for that save rather than cutting it short. Sent at the halfway
+	// mark rather than after the grace so a stop, a quit's included, never
+	// takes longer than it did.
 	half := grace / 2
 	select {
 	case <-exited:
 		return nil
 	case <-time.After(half):
 	}
-	s.Narrate(fmt.Sprintf("Still waiting for the server to stop (%s before force kill)", grace-half))
+	if s.termTree(pid) {
+		s.Narrate(fmt.Sprintf("Still waiting for the server to stop, sent it SIGTERM (%s before force kill)", grace-half))
+	} else {
+		s.Narrate(fmt.Sprintf("Still waiting for the server to stop (%s before force kill)", grace-half))
+	}
 
 	select {
 	case <-exited:
@@ -973,6 +1030,66 @@ func (s *serverInstance) stop(grace time.Duration) error {
 	s.killTree(pid)
 	<-exited
 	return nil
+}
+
+// endTree is the exit deadline's escalation: SIGTERM first where the platform
+// has one, then the kill once termWait passes without an exit. Returns when the
+// process is gone. Safe beside a stop() escalating the same process: both
+// signals tolerate a process that has already died.
+func (s *serverInstance) endTree(pid int, exited <-chan struct{}) {
+	if s.termTree(pid) {
+		select {
+		case <-exited:
+			return
+		case <-time.After(s.termWait):
+		}
+		s.Narrate(fmt.Sprintf("Server still running %s after SIGTERM, force killing the process tree", s.termWait))
+	}
+	s.killTree(pid)
+	<-exited
+}
+
+// armExitDeadline starts this boot's exit deadline, once: after a crash report
+// or a finished world save the process has exitDeadline to end by itself.
+//
+// Only while stopping. A save-all flush (the backup quiesce sends one) is a
+// plausible source of the same save line on a server that is staying up, and a
+// deadline armed by it would end a healthy server. Every real shutdown has
+// reached stopping by the time its save finishes: /stop through reServerStop,
+// Konnekt's own stop through stop(), and a crash through the line above. A
+// line from a process that has already gone arms nothing either.
+func (s *serverInstance) armExitDeadline() {
+	s.mu.Lock()
+	if !s.running || s.state != stateStopping || s.deadlineArmed || s.cmd == nil || s.cmd.Process == nil {
+		s.mu.Unlock()
+		return
+	}
+	s.deadlineArmed = true
+	pid, exited := s.cmd.Process.Pid, s.exited
+	s.mu.Unlock()
+	go s.watchExitDeadline(pid, exited)
+}
+
+// watchExitDeadline is armExitDeadline's goroutine. It marks the stop expected
+// before ending the process, the way stop() does, so a clean /stop whose JVM a
+// mod held open is still recorded as the deliberate stop it was; waitForExit
+// keeps a crash a crash regardless.
+func (s *serverInstance) watchExitDeadline(pid int, exited <-chan struct{}) {
+	select {
+	case <-exited:
+		return
+	case <-time.After(s.exitDeadline):
+	}
+	s.mu.Lock()
+	if s.exited != exited {
+		s.mu.Unlock()
+		return
+	}
+	s.expectedStop = true
+	s.setStateLocked(stateStopping, false)
+	s.mu.Unlock()
+	s.NarrateFailed(fmt.Sprintf("The server shut down %s ago but its Java process is still running, most likely held open by a mod's thread; ending it", s.exitDeadline))
+	s.endTree(pid, exited)
 }
 
 // ForceStop kills the server process tree immediately, the escape hatch for
@@ -1028,6 +1145,7 @@ func (s *serverInstance) stopTPSPoll() {
 	s.tpsMu.Lock()
 	s.currentTPS = -1
 	s.tpsLastUpdate = time.Time{}
+	s.tpsLost = false
 	s.rconFlavor = "" // reset so next server start re-detects flavor
 	s.tpsMu.Unlock()
 	s.logTPSMu.Lock()
@@ -1046,22 +1164,31 @@ func (s *serverInstance) pollTPS(stop chan struct{}) {
 	defer ticker.Stop()
 
 	for {
-		if tps, ok := s.queryTPSViaRcon(); ok {
-			s.tpsMu.Lock()
-			s.currentTPS = tps
-			s.tpsLastUpdate = time.Now()
-			s.tpsMu.Unlock()
-		} else {
-			s.tpsMu.Lock()
-			s.tpsLastUpdate = time.Time{}
-			s.tpsMu.Unlock()
-		}
+		s.recordRconTPS(s.queryTPSViaRcon())
 
 		select {
 		case <-stop:
 			return
 		case <-ticker.C:
 		}
+	}
+}
+
+// recordRconTPS stores one poll's result. currentTPS survives a failed poll, so
+// a value there on failure means RCON answered earlier this boot, and a server
+// that stops answering after that is unknown rather than the log's 20 (#579).
+func (s *serverInstance) recordRconTPS(tps float64, ok bool) {
+	s.tpsMu.Lock()
+	defer s.tpsMu.Unlock()
+	if ok {
+		s.currentTPS = tps
+		s.tpsLastUpdate = time.Now()
+		s.tpsLost = false
+		return
+	}
+	s.tpsLastUpdate = time.Time{}
+	if s.currentTPS >= 0 {
+		s.tpsLost = true
 	}
 }
 
@@ -1539,8 +1666,12 @@ func (s *serverInstance) CurrentTPS() float64 {
 	s.tpsMu.RLock()
 	rconTPS := s.currentTPS
 	lastUpdate := s.tpsLastUpdate
+	lost := s.tpsLost
 	s.tpsMu.RUnlock()
 
+	if lost {
+		return -1
+	}
 	if rconTPS >= 0 && !lastUpdate.IsZero() && time.Since(lastUpdate) < 15*time.Second {
 		return rconTPS
 	}

@@ -26,3 +26,13 @@ func hideConsoleWindow(cmd *exec.Cmd) {}
 func killTree(pid int) {
 	_ = syscall.Kill(-pid, syscall.SIGKILL) //nolint:errcheck // best-effort; most commonly fails because the process already exited
 }
+
+// termTree asks the same process group to exit. A JVM takes SIGTERM as
+// Runtime.exit: its shutdown hooks run, the dedicated server's own among them,
+// and the non-daemon threads a mod leaves behind cannot hold it open the way
+// they hold open a server whose main thread has merely returned (#579).
+// Reports whether the signal was delivered, so the caller knows a wait for it
+// means something.
+func termTree(pid int) bool {
+	return syscall.Kill(-pid, syscall.SIGTERM) == nil
+}
