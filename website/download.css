@@ -201,7 +201,7 @@
 
 /* The snapshot channel's edge lights in its own colour under the cursor. */
 .dl-snapshot {
-  --glow-rgb: var(--sun-rgb);
+  --glow-color: var(--sun);
 }
 
 /* ── Verify your download: a smaller band that opens ────────────────────── */

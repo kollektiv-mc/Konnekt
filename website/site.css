@@ -50,7 +50,7 @@
   /* The light an outer block's edge picks up near the cursor (site.js). The
      size is the gradient's, and site.js's GLOW_REACH matches it. */
   --glow-size: 320px;
-  --glow-rgb: var(--accent-rgb);
+  --glow-color: var(--accent);
 }
 
 /* Moving between the site's own pages crosses over rather than cutting, and
@@ -249,14 +249,20 @@ summary h3 {
 /* site.js writes --mx/--my (px, block-relative) on each outermost block
    within reach of the pointer; the ring is that radial gradient masked down to
    its own 1px padding, which lies over the block's hairline. Without the mask
-   it would fill the block, so browsers that cannot do it get nothing. */
+   it would fill the block, so browsers that cannot do it get nothing.
 
-.block:not(.block .block) {
+   A block of parts that each stand for something else (.glow-parts: the
+   roadmap's stages) lights per part instead, each in its own --glow-color.
+   site.js's GLOW_TARGETS is this same selector. */
+
+.block:not(.block .block):not(.glow-parts),
+.glow-parts > * {
   position: relative;
 }
 
 @supports (mask-composite: exclude) or (-webkit-mask-composite: xor) {
-  .block:not(.block .block)::after {
+  .block:not(.block .block):not(.glow-parts)::after,
+  .glow-parts > *::after {
     content: '';
     position: absolute;
     inset: -1px;
@@ -264,7 +270,7 @@ summary h3 {
     pointer-events: none;
     background: radial-gradient(
       var(--glow-size) circle at var(--mx, -999px) var(--my, -999px),
-      rgb(var(--glow-rgb) / 0.3),
+      color-mix(in srgb, var(--glow-color) 30%, transparent),
       transparent 60%
     );
     -webkit-mask:
@@ -279,7 +285,8 @@ summary h3 {
   }
 
   /* The pointer left the window: the light fades where it was. */
-  [data-glow-idle] .block:not(.block .block)::after {
+  [data-glow-idle] .block:not(.block .block):not(.glow-parts)::after,
+  [data-glow-idle] .glow-parts > *::after {
     opacity: 0;
   }
 }
@@ -725,7 +732,8 @@ pre code {
     transition: none;
   }
 
-  .block:not(.block .block)::after {
+  .block:not(.block .block):not(.glow-parts)::after,
+  .glow-parts > *::after {
     display: none;
   }
 
