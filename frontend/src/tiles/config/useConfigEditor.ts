@@ -77,15 +77,19 @@ export function useConfigEditor(serverId: string) {
     [serverId, selectedRelPath],
   )
 
-  const save = useCallback(async () => {
-    if (!selectedRelPath || !isDirty) return
+  // Resolves false when the write failed, with the reason in saveError, so a
+  // caller holding an action behind the save knows not to run it.
+  const save = useCallback(async (): Promise<boolean> => {
+    if (!selectedRelPath || !isDirty) return true
     setSaving(true)
     setSaveError(null)
     try {
       await WriteConfigFile(serverId, selectedRelPath, content)
       setOriginalContent(content)
+      return true
     } catch (e) {
       setSaveError(String(e))
+      return false
     } finally {
       setSaving(false)
     }

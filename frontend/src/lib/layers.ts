@@ -19,7 +19,7 @@
 // |         | PlayerDetailPopup                                               |
 // | dialog  | a confirm or progress box that opens on top of a modal:         |
 // |         | DisconnectConfirm, ServerInstallModal, LoaderUpdateDialog,      |
-// |         | DependencyDialog, CloseConfirmDialog, the command confirms,     |
+// |         | DependencyDialog, UnsavedChangesDialog, the command confirms,   |
 // |         | and EulaModal, which is raised by an event rather than a click  |
 // |         | and so has to beat whichever modal was already open (#256)      |
 // | toast   | the in-app notification bubbles (Toasts): above a modal or  |
