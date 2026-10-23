@@ -32,6 +32,13 @@
     empty.hidden = found > 0
   }
 
-  input.addEventListener('input', apply)
+  // Typing eases the page to its new length and fades back in what a shorter
+  // query brings back (site.js).
+  var main = input.closest('main') || document.body
+  input.addEventListener('input', function () {
+    var M = window.KonnektMotion
+    if (M) M.resize(main, apply)
+    else apply()
+  })
   apply()
 })()

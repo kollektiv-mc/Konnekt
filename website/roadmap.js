@@ -91,30 +91,40 @@
   }
 
   // ── Controls ───────────────────────────────────────────────────────────
+  // A change from a control eases the explorer to its new height and fades
+  // the rows it brings in (site.js), rather than snapping the page below.
+  var explorerEl = groupsEl.closest('.explorer') || groupsEl
+
+  function update() {
+    var M = window.KonnektMotion
+    if (M) M.resize(explorerEl, apply)
+    else apply()
+  }
+
   stageBtns.forEach(function (btn) {
     btn.addEventListener('click', function () {
       var s = btn.getAttribute('data-stage')
       state.stage = state.stage === s ? '' : s
-      apply()
+      update()
     })
   })
 
   areaBtns.forEach(function (btn) {
     btn.addEventListener('click', function () {
       state.area = btn.getAttribute('data-area')
-      apply()
+      update()
     })
   })
 
   searchEl.addEventListener('input', function () {
     state.q = searchEl.value
-    apply()
+    update()
   })
 
   clearBtn.addEventListener('click', function () {
     state = { stage: '', area: '', q: '' }
     searchEl.value = ''
-    apply()
+    update()
     searchEl.focus()
   })
 
