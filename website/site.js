@@ -236,6 +236,7 @@
   // reach and clears a block once it falls out of it. Mouse and pen only: a
   // touch has no hover, and the light would stick where it last landed.
   var GLOW_REACH = 320
+  var GLOW_TARGETS = '.block:not(.block .block):not(.glow-parts), .glow-parts > *'
   if (!reduceMotion && window.matchMedia('(hover: hover) and (pointer: fine)').matches) {
     var html = document.documentElement
     var pointer = null
@@ -245,7 +246,7 @@
     var paintGlow = function () {
       glowFrame = 0
       if (!pointer) return
-      var blocks = [].slice.call(document.querySelectorAll('.block:not(.block .block)'))
+      var blocks = [].slice.call(document.querySelectorAll(GLOW_TARGETS))
       // Every read before any write, so the writes force no layout per block.
       var measured = blocks.map(function (el) {
         var r = el.getBoundingClientRect()

@@ -4,7 +4,7 @@
 /* ── Snapshot ───────────────────────────────────────────────────────────── */
 
 .snapshot {
-  --glow-rgb: var(--sun-rgb);
+  --glow-color: var(--sun);
   border-color: rgb(var(--sun-rgb) / 0.35);
   background: rgb(var(--sun-rgb) / 0.04);
 }
