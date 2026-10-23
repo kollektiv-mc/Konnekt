@@ -60,6 +60,20 @@
     }
   }
 
+  // Opening and closing ease the box's height (site.js); without site.js the
+  // change simply happens.
+  function resize(box, change, leaving) {
+    var M = window.KonnektMotion
+    if (M) {
+      M.resize(box, change, leaving)
+      return
+    }
+    if (change) change()
+    leaving.forEach(function (el) {
+      el.hidden = true
+    })
+  }
+
   function renderSection(sec, all) {
     var wrap = el('div', 'changes')
     var head = el('div', 'changes-head')
@@ -82,9 +96,20 @@
         var open = more.getAttribute('aria-expanded') !== 'true'
         more.setAttribute('aria-expanded', open ? 'true' : 'false')
         more.textContent = open ? 'Show fewer' : 'Show all ' + sec.items.length
-        sec.items.forEach(function (li, i) {
-          if (i >= SHOWN) li.hidden = !open
-        })
+        var rest = sec.items.slice(SHOWN)
+        if (open) {
+          resize(
+            wrap,
+            function () {
+              rest.forEach(function (li) {
+                li.hidden = false
+              })
+            },
+            [],
+          )
+        } else {
+          resize(wrap, null, rest)
+        }
       })
       wrap.appendChild(more)
     }
@@ -187,7 +212,17 @@
       var open = snapshotToggle.getAttribute('aria-expanded') !== 'true'
       snapshotToggle.setAttribute('aria-expanded', open ? 'true' : 'false')
       snapshotToggle.textContent = label(open)
-      snapshotBodyEl.hidden = !open
+      if (open) {
+        resize(
+          snapshotEl,
+          function () {
+            snapshotBodyEl.hidden = false
+          },
+          [],
+        )
+      } else {
+        resize(snapshotEl, null, [snapshotBodyEl])
+      }
     })
     snapshotEl.hidden = false
   }

@@ -509,9 +509,10 @@
   font-size: 18px;
 }
 
+/* No overflow clip: a clip stops at the padding box, which would cut off
+   everything drawn over the border, the running lights and the cursor's. */
 .get {
   position: relative;
-  overflow: hidden;
   display: flex;
   flex-direction: column;
   align-items: center;

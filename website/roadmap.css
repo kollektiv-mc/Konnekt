@@ -18,9 +18,11 @@
   box-shadow: inset 0 1px 0 color-mix(in srgb, var(--stage-color) 25%, transparent);
   text-align: left;
   cursor: pointer;
+  /* Picking a stage and letting it go both fade, at a panel's pace rather
+     than a hover's, so the colour reads as arriving and leaving. */
   transition:
-    background-color var(--duration-fast) var(--ease-standard),
-    box-shadow var(--duration-fast) var(--ease-standard);
+    background-color var(--duration-panel) var(--ease-standard),
+    box-shadow var(--duration-panel) var(--ease-standard);
 }
 
 .stage:last-child {
@@ -144,6 +146,7 @@
 .area-dot {
   width: 6px;
   height: 6px;
+  transition: background-color var(--duration-fast) var(--ease-standard);
 }
 
 .area[aria-pressed='true'] .area-dot {

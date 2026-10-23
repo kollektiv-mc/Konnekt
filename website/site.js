@@ -96,6 +96,201 @@
   arriveAtHash()
   window.addEventListener('load', arriveAtHash)
 
+  // ── Resize ─────────────────────────────────────────────────────────────
+  // What opens, closes or refilters takes its box from the old height to the
+  // new one over a panel's duration rather than jumping, and what it reveals
+  // fades in. A page script hands its change to KonnektMotion.resize and the
+  // motion is the same everywhere. Under reduced motion the change just
+  // happens.
+  //
+  // `leaving` lists elements the change hides: they stay drawn, fading, while
+  // the box closes over them, and take their hidden attribute when it has.
+  // `done` runs then too. A resize started on a box mid-animation starts from
+  // where the box is, so a quick second click reverses rather than jumps.
+  var rootStyle = getComputedStyle(document.documentElement)
+  var PANEL_MS = parseFloat(rootStyle.getPropertyValue('--duration-panel')) || 280
+  var EASE = rootStyle.getPropertyValue('--ease-standard').trim() || 'ease'
+  var running = typeof WeakMap === 'function' ? new WeakMap() : null
+
+  function fade(el, show) {
+    var frames = [
+      { opacity: 0, transform: 'translateY(4px)' },
+      { opacity: 1, transform: 'none' },
+    ]
+    return el.animate(show ? frames : frames.reverse(), {
+      duration: PANEL_MS,
+      easing: EASE,
+      fill: show ? 'none' : 'forwards',
+    })
+  }
+
+  function resize(box, change, leaving, done) {
+    leaving = leaving || []
+    if (reduceMotion || !running || typeof box.animate !== 'function') {
+      if (change) change()
+      leaving.forEach(function (el) {
+        el.hidden = true
+      })
+      if (done) done()
+      return
+    }
+
+    var from = box.getBoundingClientRect().height
+    var prev = running.get(box)
+    if (prev) prev.cancel()
+
+    var before = [].slice.call(box.querySelectorAll('[hidden]'))
+    if (change) change()
+    leaving.forEach(function (el) {
+      el.hidden = true
+    })
+    var to = box.getBoundingClientRect().height
+    leaving.forEach(function (el) {
+      el.hidden = false
+    })
+
+    // Only the outermost of what appeared fades, so a group and its rows do
+    // not both start from nothing.
+    var shown = before.filter(function (el) {
+      return !el.hidden
+    })
+    shown.forEach(function (el) {
+      var nested = shown.some(function (other) {
+        return other !== el && other.contains(el)
+      })
+      if (!nested) fade(el, true)
+    })
+    var fades = leaving.map(function (el) {
+      return fade(el, false)
+    })
+
+    // Held at the end height until settle has hidden what was leaving, so no
+    // frame shows the box at its full height in between.
+    var anim = box.animate(
+      { height: [from + 'px', to + 'px'] },
+      { duration: Math.abs(from - to) < 1 ? 0 : PANEL_MS, easing: EASE, fill: 'forwards' },
+    )
+    box.classList.add('is-resizing')
+    running.set(box, anim)
+
+    function settle(finished) {
+      anim.onfinish = anim.oncancel = null
+      if (running.get(box) === anim) running.delete(box)
+      leaving.forEach(function (el) {
+        el.hidden = true
+      })
+      fades.forEach(function (f) {
+        f.cancel()
+      })
+      if (finished && done) done()
+      anim.cancel()
+      box.classList.remove('is-resizing')
+    }
+    anim.onfinish = function () {
+      settle(true)
+    }
+    anim.oncancel = function () {
+      settle(false)
+    }
+  }
+
+  window.KonnektMotion = { resize: resize }
+
+  // Every <details> on the site opens and closes through resize. Closing, its
+  // content stays until the box has shut over it; the open attribute, and with
+  // it the summary's + or −, goes last.
+  document.addEventListener('click', function (e) {
+    var summary = e.target.closest ? e.target.closest('summary') : null
+    var details = summary && summary.parentElement
+    if (!details || details.tagName !== 'DETAILS' || details.firstElementChild !== summary) return
+    if (reduceMotion || !running) return
+    e.preventDefault()
+    var content = [].slice.call(details.children).filter(function (el) {
+      return el !== summary
+    })
+    var closing = details.open && !details.hasAttribute('data-closing')
+    if (closing) {
+      details.setAttribute('data-closing', '')
+      resize(details, null, content, function () {
+        details.open = false
+        details.removeAttribute('data-closing')
+        content.forEach(function (el) {
+          el.hidden = false
+        })
+      })
+    } else {
+      details.removeAttribute('data-closing')
+      resize(details, function () {
+        details.open = true
+        content.forEach(function (el) {
+          el.hidden = false
+        })
+      })
+    }
+  })
+
+  // ── Glow ───────────────────────────────────────────────────────────────
+  // The edge of every outermost block lights up nearest the cursor, brighter
+  // the closer it is, as the scheduler's nodes do in the app. One listener for
+  // the page, coalesced to a frame, writes --mx/--my on each block within
+  // reach and clears a block once it falls out of it. Mouse and pen only: a
+  // touch has no hover, and the light would stick where it last landed.
+  var GLOW_REACH = 320
+  if (!reduceMotion && window.matchMedia('(hover: hover) and (pointer: fine)').matches) {
+    var html = document.documentElement
+    var pointer = null
+    var glowFrame = 0
+    var lit = []
+
+    var paintGlow = function () {
+      glowFrame = 0
+      if (!pointer) return
+      var blocks = [].slice.call(document.querySelectorAll('.block:not(.block .block)'))
+      // Every read before any write, so the writes force no layout per block.
+      var measured = blocks.map(function (el) {
+        var r = el.getBoundingClientRect()
+        var near =
+          pointer.x > r.left - GLOW_REACH &&
+          pointer.x < r.right + GLOW_REACH &&
+          pointer.y > r.top - GLOW_REACH &&
+          pointer.y < r.bottom + GLOW_REACH
+        return { el: el, x: pointer.x - r.left, y: pointer.y - r.top, near: near }
+      })
+      var nowLit = []
+      measured.forEach(function (m) {
+        if (m.near) {
+          m.el.style.setProperty('--mx', Math.round(m.x) + 'px')
+          m.el.style.setProperty('--my', Math.round(m.y) + 'px')
+          nowLit.push(m.el)
+        } else if (lit.indexOf(m.el) !== -1) {
+          m.el.style.removeProperty('--mx')
+          m.el.style.removeProperty('--my')
+        }
+      })
+      lit = nowLit
+    }
+
+    var scheduleGlow = function () {
+      if (!glowFrame) glowFrame = window.requestAnimationFrame(paintGlow)
+    }
+
+    document.addEventListener(
+      'pointermove',
+      function (e) {
+        if (e.pointerType && e.pointerType !== 'mouse' && e.pointerType !== 'pen') return
+        pointer = { x: e.clientX, y: e.clientY }
+        html.removeAttribute('data-glow-idle')
+        scheduleGlow()
+      },
+      { passive: true },
+    )
+    // Scrolling and the focus lift move blocks under a still cursor.
+    window.addEventListener('scroll', scheduleGlow, { passive: true })
+    html.addEventListener('pointerleave', function () {
+      html.setAttribute('data-glow-idle', '')
+    })
+  }
+
   // ── Release line ───────────────────────────────────────────────────────
   // [data-release-tag] gains the latest tag and a separator, and
   // [data-release-line] the tag and its date. The markup reads correctly

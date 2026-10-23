@@ -71,13 +71,40 @@
       video.load()
     }
 
+    // A play the browser refuses is tried again rather than left on the
+    // poster: once the clip can play, for a request cut short by loading, and
+    // at the reader's next press or key, for one refused for want of a user
+    // gesture (Safari in Low Power Mode, a browser set to block autoplay).
+    // Before this, only a press on a strip tried again.
+    var retryArmed = false
+    var retryOnGesture = function () {
+      if (retryArmed) return
+      retryArmed = true
+      var again = function () {
+        retryArmed = false
+        ;['pointerdown', 'keydown', 'touchend'].forEach(function (type) {
+          document.removeEventListener(type, again, true)
+        })
+        play()
+      }
+      ;['pointerdown', 'keydown', 'touchend'].forEach(function (type) {
+        document.addEventListener(type, again, true)
+      })
+    }
+
     var play = function () {
       var video = videoOf(current)
       if (!onScreen || reduceMotion || !video || typeof video.play !== 'function') return
+      if (!video.paused) return
       var p = video.play()
       if (p && p.catch) {
-        p.catch(function () {
-          /* Autoplay refused, or the clip is unreachable: the poster stays. */
+        p.catch(function (err) {
+          if (videoOf(current) !== video || !onScreen) return
+          if (err && err.name === 'NotAllowedError') retryOnGesture()
+          else if (video.readyState < 3 && !video.error) {
+            video.addEventListener('canplay', play, { once: true })
+          }
+          /* Otherwise the clip is unreachable, and the poster stays. */
         })
       }
     }
@@ -119,22 +146,41 @@
       })
     })
 
+    // On screen means half the open clip is, rather than a share of the whole
+    // archive: on a phone the strips stack into a column taller than the
+    // screen, and a share of that can be out of reach while the clip is in
+    // full view. Every clip is observed; only the open one's entry counts, and
+    // a strip that opens off screen starts when it scrolls in.
     if ('IntersectionObserver' in window) {
-      new IntersectionObserver(
+      var seen = []
+      var observer = new IntersectionObserver(
         function (entries) {
-          var visible = entries[0].isIntersecting
+          entries.forEach(function (entry) {
+            seen[strips.indexOf(entry.target.closest('.strip'))] = entry.isIntersecting
+          })
+          var visible = !!seen[current]
           if (visible === onScreen) return
           onScreen = visible
           var video = videoOf(current)
           if (visible) play()
           else if (video && video.pause) video.pause()
         },
-        { threshold: 0.4 },
-      ).observe(archive)
+        { threshold: 0.5 },
+      )
+      strips.forEach(function (s, i) {
+        var video = videoOf(i)
+        if (video) observer.observe(video)
+      })
     } else {
       onScreen = true
       play()
     }
+
+    // A tab brought back to the front resumes the clip a browser paused
+    // behind it.
+    document.addEventListener('visibilitychange', function () {
+      if (!document.hidden) play()
+    })
   }
 
   // ── Hero console ───────────────────────────────────────────────────────
