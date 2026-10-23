@@ -17,7 +17,9 @@ export interface DirtyGuard {
 }
 
 /**
- * One unsaved-changes dialog serving every graph-replacing action (#124).
+ * One unsaved-changes dialog serving every action that replaces what an editor
+ * holds. Written for the scheduler editor (#124), and shared with the config
+ * editor, whose file switch and close used the browser's own confirm.
  *
  * The scheduler editor used to guard exactly one exit, closing the maximized
  * tile, with the continuation written into the dialog's own button. Switching

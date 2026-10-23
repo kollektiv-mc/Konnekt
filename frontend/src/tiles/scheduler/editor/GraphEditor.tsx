@@ -62,10 +62,10 @@ import {
   writeClipboard,
   type ClipboardSlice,
 } from './clipboard'
-import { CloseConfirmDialog } from './CloseConfirmDialog'
+import { UnsavedChangesDialog } from '../../../components/UnsavedChangesDialog'
 import { editMenuRows, editMenuState, type EditMenuActions } from './editMenuRows'
 import { applySelection, type SelectionSpec } from './selection'
-import { useDirtyGuard } from './useDirtyGuard'
+import { useDirtyGuard } from '../../../hooks/useDirtyGuard'
 import { useNodeGlow } from './useNodeGlow'
 import {
   emptyHistory,
@@ -1351,9 +1351,10 @@ function GraphEditorInner({
         trigger={addButtonRef}
       />
 
-      <CloseConfirmDialog
+      <UnsavedChangesDialog
         open={confirm.pending}
         saving={saving}
+        body="This graph has unsaved changes, including node moves. Save them first, or discard them?"
         onCancel={confirm.cancel}
         onDiscard={() => {
           // Mark clean first: the close path re-enters the close guard, which
@@ -1372,7 +1373,7 @@ function GraphEditorInner({
           confirm.proceed()
         }}
       />
-      <CloseConfirmDialog
+      <UnsavedChangesDialog
         open={runAsk}
         saving={saving}
         body="Run uses the saved graph. Save your changes and run it?"

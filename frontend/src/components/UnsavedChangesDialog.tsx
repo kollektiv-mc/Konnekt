@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { usePresence } from '../../../hooks/usePresence'
+import { usePresence } from '../hooks/usePresence'
 
 interface Props {
   open: boolean
@@ -8,26 +8,24 @@ interface Props {
   /** Left out where throwing the changes away is not one of the choices (run). */
   onDiscard?: () => void
   onSaveAndContinue: () => void
-  /** What the save is for, when it is not the neutral "continue". */
+  /** The line under the title: what holds the changes, or what the save is for. */
   body?: string
   confirmLabel?: string
 }
 
-const DEFAULT_BODY =
-  'This graph has unsaved changes, including node moves. Save them first, or discard them?'
+const DEFAULT_BODY = 'You have unsaved changes. Save them first, or discard them?'
 
-// Shown before anything replaces what the scheduler editor holds while the
-// graph has unsaved changes: closing the maximized tile (Escape / backdrop /
-// restore button / navbar), switching graphs from the dropdown, or starting a
-// new one (#124). What happens after the choice is the caller's, carried by
-// useDirtyGuard, so the wording here stays neutral about which of the three
-// asked. Run asks through it too, with its own wording and no discard: a run
-// uses the saved graph, so it needs the changes saved first. z-dialog, inside
-// the maximize overlay's own stacking context, so the value orders it against
-// the editor, not against the app (lib/layers.ts).
+// Shown before anything replaces what an editor holds while it has unsaved
+// changes. The scheduler editor (#124) and the config editor ask through it.
+// What happens after the choice is the caller's, carried by
+// hooks/useDirtyGuard.ts, so the wording stays neutral about which action
+// asked. A caller whose save is the only way on (the scheduler's run) leaves
+// out `onDiscard` and passes its own wording. z-dialog, inside the maximize
+// overlay's own stacking context, so the value orders it against the editor,
+// not against the app (lib/layers.ts).
 // Stays mounted through its exit animation (usePresence), so the caller passes
 // `open` rather than mounting it conditionally.
-export function CloseConfirmDialog({
+export function UnsavedChangesDialog({
   open,
   saving,
   onCancel,
