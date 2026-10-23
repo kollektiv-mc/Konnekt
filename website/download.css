@@ -56,7 +56,10 @@
   overflow: hidden;
 }
 
-.dl-body + .dl-grid-wrap {
+/* A sibling rather than the next element: the snapshot's "none" line sits
+   between its prose and its grid, hidden while there are builds. */
+.dl-body ~ .dl-grid-wrap,
+.dl-body ~ .dl-loading {
   border-top: var(--hairline);
 }
 
@@ -191,8 +194,14 @@
 
 .dl-snapshot .dl-card,
 .dl-snapshot .dl-foot,
-.dl-snapshot .dl-grid-wrap {
+.dl-snapshot .dl-grid-wrap,
+.dl-snapshot .dl-loading {
   border-color: rgb(var(--sun-rgb) / 0.18);
+}
+
+/* The snapshot channel's edge lights in its own colour under the cursor. */
+.dl-snapshot {
+  --glow-rgb: var(--sun-rgb);
 }
 
 /* ── Verify your download: a smaller band that opens ────────────────────── */

@@ -1,0 +1,174 @@
+/* A scheduler block's page: the port diagram and its legend, on top of
+   docs.css. The diagram copies the editor's node: control ports round, data
+   ports square, each on the edge of the side it belongs to. Their colours are
+   the editor's own, generated into ports.css beside this file from
+   frontend/src/tiles/scheduler/editor/blockMeta.ts. */
+
+.port-stage {
+  display: flex;
+  flex-wrap: wrap;
+}
+
+.port-canvas {
+  flex: 2 1 420px;
+  display: flex;
+  justify-content: center;
+  padding: clamp(32px, 5vw, 56px) var(--pad);
+}
+
+.port-node {
+  width: min(100%, 420px);
+  border: var(--hairline);
+  border-left: 3px solid var(--category-color, var(--text-secondary));
+  background: var(--bg-overlay);
+}
+
+.port-node-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 16px;
+  padding: 14px 20px;
+  border-bottom: var(--hairline);
+  font-size: 17px;
+}
+
+.port-node-cat {
+  font-family: var(--font-site-mono);
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.port-cols {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+}
+
+.port-col {
+  margin: 0;
+  padding: 8px 0;
+  list-style: none;
+}
+
+.port-col-label {
+  padding: 4px 20px;
+  font-family: var(--font-site-mono);
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.port-out .port-col-label,
+.port-out .port {
+  text-align: right;
+  align-items: flex-end;
+}
+
+.port {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 20px;
+  font-size: 15px;
+}
+
+.port-type {
+  font-family: var(--font-site-mono);
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+/* The handle: on the node's left edge for an input, its right for an output. */
+.port::before,
+.port-key::before {
+  content: '';
+  box-sizing: border-box;
+  width: 14px;
+  height: 14px;
+  border: 2.5px solid var(--port-color, var(--text-secondary));
+  background: var(--bg-base);
+}
+
+.port::before {
+  position: absolute;
+  top: 50%;
+  margin-top: -7px;
+}
+
+.port-in .port::before {
+  left: -8px;
+}
+
+.port-out .port::before {
+  right: -8px;
+}
+
+.port[data-shape='control']::before,
+.port-key[data-shape='control']::before {
+  border-radius: 50%;
+}
+
+.port-none {
+  padding: 10px 20px;
+  font-size: 15px;
+  color: var(--text-muted);
+}
+
+/* The legend beside the node. */
+.port-legend {
+  flex: 1 1 260px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 32px 28px;
+  border-left: var(--hairline);
+  background: var(--bg-surface);
+}
+
+.port-key {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  font-size: 15px;
+}
+
+.port-key::before {
+  flex: none;
+}
+
+.port-legend hr {
+  width: 100%;
+  margin: 4px 0;
+  border: 0;
+  border-top: var(--hairline);
+}
+
+.port-legend .doc-prose {
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+
+/* Four columns stay readable on a phone by scrolling inside their box. */
+#fields .doc-table {
+  min-width: 640px;
+}
+
+/* A field's choices, in the Limits column, wrapped in a row so a long
+   list does not stretch the table. */
+.field-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+@media (max-width: 760px) {
+  .port-legend {
+    border-left: 0;
+    border-top: var(--hairline);
+  }
+}

@@ -36,6 +36,7 @@
 
 .hero-side {
   flex: 1 1 400px;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -60,36 +61,46 @@
 
 .hero-cube {
   fill: none;
-  stroke: var(--text-secondary);
-  stroke-width: 1.5;
-  stroke-dasharray: 2 4;
+  stroke: var(--text-primary);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-dasharray: 0 1;
+  /* On the group, not the stroke: two edges' dots meet on every corner, and
+     a translucent stroke would draw that one dot brighter. */
+  opacity: 0.6;
 }
 
-.hero-plus {
+.world path {
   stroke: var(--accent);
   stroke-width: 1.5;
 }
 
-.hero-labels {
+.world text {
   font-family: var(--font-site-mono);
   font-size: 11px;
+  text-anchor: middle;
   fill: var(--text-secondary);
+  /* Knocks the ring's dots out from under the letters as a world passes. */
+  stroke: var(--bg-base);
+  stroke-width: 4px;
+  paint-order: stroke;
 }
 
-.hero-labels .faint {
+.world .faint {
   fill: var(--text-muted);
 }
 
-.spin,
-.spin-rev {
-  transform-box: fill-box;
-  transform-origin: center;
-  animation: spin 90s linear infinite;
+/* A ring turns about the centre of the art; its worlds turn back about their
+   own marker by the same amount, so they travel the ring and stay upright.
+   Both rings share one period, so no two labels ever pass over each other. */
+.orbit {
+  transform-origin: 210px 205px;
+  animation: spin 160s linear infinite;
 }
 
-.spin-rev {
-  animation-duration: 140s;
-  animation-direction: reverse;
+.world {
+  transform-origin: 0 0;
+  animation: spin 160s linear infinite reverse;
 }
 
 @keyframes spin {
@@ -112,6 +123,24 @@
   color: var(--text-muted);
 }
 
+/* One line each, however narrow the column: a wrapped line would make the
+   box grow and shrink as the log scrolls. */
+.console-log > div {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.console-log > .is-new {
+  animation: appear-line 240ms ease-out;
+}
+
+@keyframes appear-line {
+  from {
+    opacity: 0;
+  }
+}
+
 .console-prompt {
   display: flex;
   align-items: center;
@@ -124,6 +153,22 @@
   width: 8px;
   height: 8px;
   background: var(--accent);
+}
+
+.console-caret {
+  display: inline-block;
+  width: 7px;
+  height: 15px;
+  margin-left: 2px;
+  vertical-align: text-bottom;
+  background: var(--text-secondary);
+  animation: blink 1s steps(1) infinite;
+}
+
+@keyframes blink {
+  50% {
+    opacity: 0;
+  }
 }
 
 /* ── Works with ─────────────────────────────────────────────────────────── */
@@ -464,9 +509,10 @@
   font-size: 18px;
 }
 
+/* No overflow clip: a clip stops at the padding box, which would cut off
+   everything drawn over the border, the running lights and the cursor's. */
 .get {
   position: relative;
-  overflow: hidden;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -650,8 +696,9 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .spin,
-  .spin-rev,
+  .orbit,
+  .world,
+  .console-caret,
   .get-glow::before {
     animation: none;
   }

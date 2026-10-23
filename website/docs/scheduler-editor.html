@@ -1,0 +1,683 @@
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Konnekt docs: Scheduler editor</title>
+    <meta
+      name="description"
+      content="Scheduler editor: The scheduler editor, opened by maximizing the Scheduler tile, wires blocks into graphs that run on a trigger."
+    />
+    <link rel="canonical" href="https://konnekt.pages.dev/docs/scheduler-editor.html" />
+
+    <meta property="og:site_name" content="Konnekt" />
+    <meta property="og:title" content="Konnekt docs: Scheduler editor" />
+    <meta
+      property="og:description"
+      content="Scheduler editor: The scheduler editor, opened by maximizing the Scheduler tile, wires blocks into graphs that run on a trigger."
+    />
+    <meta property="og:url" content="https://konnekt.pages.dev/docs/scheduler-editor.html" />
+    <meta property="og:type" content="website" />
+    <meta property="og:image" content="https://konnekt.pages.dev/assets/img/social-card.png" />
+    <meta property="og:image:width" content="1715" />
+    <meta property="og:image:height" content="1123" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Konnekt docs: Scheduler editor" />
+    <meta
+      name="twitter:description"
+      content="Scheduler editor: The scheduler editor, opened by maximizing the Scheduler tile, wires blocks into graphs that run on a trigger."
+    />
+    <meta name="twitter:image" content="https://konnekt.pages.dev/assets/img/social-card.png" />
+
+    <meta name="theme-color" content="#05060a" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/assets/img/favicon-16.png" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/assets/img/favicon-32.png" />
+    <link rel="icon" type="image/png" sizes="256x256" href="/assets/img/favicon.png" />
+    <link rel="apple-touch-icon" href="/assets/img/app-icon.png" />
+    <link
+      rel="preload"
+      href="/assets/fonts/Geist-Variable.woff2"
+      as="font"
+      type="font/woff2"
+      crossorigin
+    />
+    <link rel="stylesheet" href="/tokens.css" />
+    <link rel="stylesheet" href="/site.css" />
+    <link rel="stylesheet" href="/docs.css" />
+    <script>
+      document.documentElement.className = document.documentElement.className.replace('no-js', '')
+    </script>
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to content</a>
+    <div class="page">
+      <div class="group">
+        <!-- Canonical nav. Byte-identical on every page, hrefs included; site.js
+           marks the current page and scrolls same-page anchors. -->
+        <nav class="nav block block-raised" id="nav" aria-label="Main">
+          <a class="nav-brand" href="/index.html"
+            ><picture
+              ><source media="(min-resolution: 2dppx)" srcset="/assets/img/mark.svg" />
+              <img
+                class="mark"
+                src="/assets/img/mark-24.svg"
+                width="24"
+                height="24"
+                alt="" /></picture
+            >Konnekt</a
+          >
+          <ul class="nav-links">
+            <li><a href="/index.html#features">Features</a></li>
+            <li><a href="/index.html#scheduler">Scheduler</a></li>
+            <li><a href="/docs.html">Docs</a></li>
+            <li><a href="/roadmap.html">Roadmap</a></li>
+            <li><a href="/changelog.html">Changelog</a></li>
+          </ul>
+          <a
+            class="nav-side"
+            href="https://github.com/kollektiv-mc/Konnekt"
+            target="_blank"
+            rel="noopener"
+            >GitHub</a
+          >
+          <a class="btn btn-primary" href="/download.html"
+            ><svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true">
+              <path
+                d="M7 1v9M3 6.5 7 10.5 11 6.5M1.5 13h11"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.6"
+              /></svg
+            >Download</a
+          >
+        </nav>
+        <main id="main" class="group">
+          <header class="doc-head block">
+            <div class="doc-head-main">
+              <div class="doc-trail">
+                <span class="kind" data-kind="reference">Reference</span>
+                <nav aria-label="Breadcrumb">
+                  <ol class="doc-crumbs">
+                    <li><a href="/docs.html">Docs</a></li>
+                    <li><a href="/docs.html#scheduler">Scheduler</a></li>
+                    <li><span aria-current="page">Scheduler editor</span></li>
+                  </ol>
+                </nav>
+              </div>
+              <h1>Scheduler editor</h1>
+              <p class="doc-lead">
+                The scheduler editor, opened by maximizing the <b>Scheduler</b> tile, wires blocks
+                into graphs that run on a trigger.
+              </p>
+            </div>
+            <dl class="doc-facts">
+              <div class="doc-fact">
+                <dt class="label">Topics</dt>
+                <dd>Scheduler</dd>
+              </div>
+            </dl>
+          </header>
+
+          <section class="doc-section block" id="toolbar" aria-labelledby="toolbar-title">
+            <div class="band doc-band">
+              <div class="band-title">
+                <span class="num">01</span>
+                <h2 id="toolbar-title">Toolbar</h2>
+              </div>
+            </div>
+            <div class="doc-body">
+              <div class="doc-table-wrap">
+                <table class="doc-table">
+                  <thead>
+                    <tr>
+                      <th scope="col">Control</th>
+                      <th scope="col">What it does</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td>Graph picker</td>
+                      <td>
+                        Shows the open graph. A dot on its right marks unsaved changes. Click it to
+                        list this server's graphs and open one.
+                      </td>
+                    </tr>
+                    <tr>
+                      <td><b>New graph</b></td>
+                      <td>
+                        In the picker. Opens a blank graph named New graph, which is not saved until
+                        you save it.
+                      </td>
+                    </tr>
+                    <tr>
+                      <td><b>add</b></td>
+                      <td>
+                        Opens the block list under the button. A pick lands at the middle of the
+                        canvas.
+                      </td>
+                    </tr>
+                    <tr>
+                      <td><b>edit</b></td>
+                      <td>Opens the edit menu.</td>
+                    </tr>
+                    <tr>
+                      <td><b>edit</b>, <b>Select all</b></td>
+                      <td>Selects every block and every wire.</td>
+                    </tr>
+                    <tr>
+                      <td><b>edit</b>, <b>Deselect all</b></td>
+                      <td>Clears the selection.</td>
+                    </tr>
+                    <tr>
+                      <td><b>edit</b>, <b>Select by type</b></td>
+                      <td>
+                        Lists the block types on the canvas. Pick one to select every block of that
+                        type.
+                      </td>
+                    </tr>
+                    <tr>
+                      <td><b>edit</b>, <b>Select by name</b></td>
+                      <td>
+                        Selects the blocks whose name contains the text you type. Press Enter to
+                        apply it.
+                      </td>
+                    </tr>
+                    <tr>
+                      <td><b>view</b></td>
+                      <td>Opens <b>Curved connectors</b> and <b>Snap to grid</b>.</td>
+                    </tr>
+                    <tr>
+                      <td>Warning count</td>
+                      <td>A triangle and a number. Click it to list the warnings.</td>
+                    </tr>
+                    <tr>
+                      <td><b>run</b></td>
+                      <td>Runs the graph now. It appears only once the graph is saved.</td>
+                    </tr>
+                    <tr>
+                      <td><b>[on]</b> and <b>[off]</b></td>
+                      <td>
+                        Switches the graph on or off. It appears only once the graph is saved.
+                      </td>
+                    </tr>
+                    <tr>
+                      <td><b>Graph actions</b></td>
+                      <td>The button with three dots.</td>
+                    </tr>
+                    <tr>
+                      <td><b>Graph actions</b>, <b>Save</b></td>
+                      <td>Saves the graph. It reads Saving... while it works.</td>
+                    </tr>
+                    <tr>
+                      <td><b>Graph actions</b>, <b>Rename</b></td>
+                      <td>Shows a name field. Enter applies the name and Escape backs out.</td>
+                    </tr>
+                    <tr>
+                      <td><b>Graph actions</b>, <b>Duplicate graph</b></td>
+                      <td>
+                        Saves the canvas as a new graph named after the old one plus copy, switched
+                        off, and opens it.
+                      </td>
+                    </tr>
+                    <tr>
+                      <td><b>Graph actions</b>, <b>Delete graph</b></td>
+                      <td>Deletes the open graph with no prompt, then opens a blank graph.</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </section>
+
+          <section
+            class="doc-section block"
+            id="keyboard-shortcuts"
+            aria-labelledby="keyboard-shortcuts-title"
+          >
+            <div class="band doc-band">
+              <div class="band-title">
+                <span class="num">02</span>
+                <h2 id="keyboard-shortcuts-title">Keyboard shortcuts</h2>
+              </div>
+            </div>
+            <div class="doc-body">
+              <div class="doc-table-wrap">
+                <table class="doc-table">
+                  <thead>
+                    <tr>
+                      <th scope="col">Keys</th>
+                      <th scope="col">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td><code>Ctrl+Z</code></td>
+                      <td><b>Undo</b>. The editor keeps the last 10 changes.</td>
+                    </tr>
+                    <tr>
+                      <td><code>Ctrl+Shift+Z</code> or <code>Ctrl+Y</code></td>
+                      <td><b>Redo</b>.</td>
+                    </tr>
+                    <tr>
+                      <td><code>Ctrl+X</code></td>
+                      <td><b>Cut</b>. Copies the selected blocks, then deletes them.</td>
+                    </tr>
+                    <tr>
+                      <td><code>Ctrl+C</code></td>
+                      <td><b>Copy</b>. Takes the selected blocks and the wires between them.</td>
+                    </tr>
+                    <tr>
+                      <td><code>Ctrl+V</code></td>
+                      <td>
+                        <b>Paste</b>. Lands under the pointer over the canvas, and at its middle
+                        from a menu.
+                      </td>
+                    </tr>
+                    <tr>
+                      <td><code>Ctrl+D</code></td>
+                      <td>
+                        <b>Duplicate</b>. Places a copy down and to the right, and leaves the
+                        clipboard alone.
+                      </td>
+                    </tr>
+                    <tr>
+                      <td><code>Delete</code> or <code>Backspace</code></td>
+                      <td>Deletes the selected blocks and wires.</td>
+                    </tr>
+                    <tr>
+                      <td><code>Tab</code></td>
+                      <td>Opens the block list at the pointer.</td>
+                    </tr>
+                    <tr>
+                      <td><code>F1</code></td>
+                      <td><b>Open docs</b>. Opens the selected block's page in your browser.</td>
+                    </tr>
+                    <tr>
+                      <td><code>Escape</code></td>
+                      <td>Closes the block list or the unsaved-changes dialog.</td>
+                    </tr>
+                    <tr>
+                      <td><code>Alt</code> and drag a block</td>
+                      <td>Leaves a copy behind with the same wires.</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <p class="doc-prose">
+                Ctrl is Cmd on macOS.<br />
+                Undo, redo, cut, copy, paste, duplicate and Tab do nothing while a text field has
+                focus.
+              </p>
+            </div>
+          </section>
+
+          <section
+            class="doc-section block"
+            id="adding-blocks"
+            aria-labelledby="adding-blocks-title"
+          >
+            <div class="band doc-band">
+              <div class="band-title">
+                <span class="num">03</span>
+                <h2 id="adding-blocks-title">Adding blocks</h2>
+              </div>
+            </div>
+            <div class="doc-body">
+              <div class="doc-table-wrap">
+                <table class="doc-table">
+                  <thead>
+                    <tr>
+                      <th scope="col">Way</th>
+                      <th scope="col">What happens</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td><b>Open blocks</b></td>
+                      <td>
+                        The button at the top left of the canvas. It opens the block browser, and
+                        reads Close blocks while open.
+                      </td>
+                    </tr>
+                    <tr>
+                      <td>Category heads</td>
+                      <td>
+                        The browser lists trigger, data, action, control and notify. Click a head to
+                        fold it.
+                      </td>
+                    </tr>
+                    <tr>
+                      <td>Dashed rows</td>
+                      <td>
+                        A group of blocks, such as Distant Horizons. Click it to show its blocks.
+                      </td>
+                    </tr>
+                    <tr>
+                      <td>Click a block</td>
+                      <td>
+                        Adds it and selects it. Each new block lands a step down and right of the
+                        one before.
+                      </td>
+                    </tr>
+                    <tr>
+                      <td>Drag a block</td>
+                      <td>Adds it centred on the drop point.</td>
+                    </tr>
+                    <tr>
+                      <td>Hover a block</td>
+                      <td>Shows the block's description.</td>
+                    </tr>
+                    <tr>
+                      <td><b>add</b>, <code>Tab</code> or right-click on empty canvas</td>
+                      <td>
+                        Opens the quick-add list. The pick lands at the middle of the canvas, or at
+                        the pointer.
+                      </td>
+                    </tr>
+                    <tr>
+                      <td><b>search blocks…</b></td>
+                      <td>
+                        In the quick-add list. Matches name, category, group and description. Arrow
+                        keys move, Enter adds.
+                      </td>
+                    </tr>
+                    <tr>
+                      <td>Quick-add categories</td>
+                      <td>
+                        Hover a category for its blocks, and a group for the blocks inside it.
+                      </td>
+                    </tr>
+                    <tr>
+                      <td>Right-click a block</td>
+                      <td>Opens the edit rows at the pointer, acting on the selection.</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </section>
+
+          <section class="doc-section block" id="view-options" aria-labelledby="view-options-title">
+            <div class="band doc-band">
+              <div class="band-title">
+                <span class="num">04</span>
+                <h2 id="view-options-title">View options</h2>
+              </div>
+            </div>
+            <div class="doc-body">
+              <div class="doc-table-wrap">
+                <table class="doc-table">
+                  <thead>
+                    <tr>
+                      <th scope="col">Option</th>
+                      <th scope="col">What it does</th>
+                      <th scope="col">Default</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td><b>Curved connectors</b></td>
+                      <td>
+                        Draws wires as smooth curves that enter and leave ports sideways. Off draws
+                        straight lines.
+                      </td>
+                      <td><code>On</code></td>
+                    </tr>
+                    <tr>
+                      <td><b>Snap to grid</b></td>
+                      <td>
+                        Snaps dragged blocks and wire corners to the dots of the background grid.
+                      </td>
+                      <td><code>Off</code></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <p class="doc-prose">
+                Both choices apply to every graph.<br />
+                The menu stays open while you flip them.<br />
+                Double-click a wire to add a corner.<br />
+                Drag a corner to move it, and double-click it to remove it.
+              </p>
+            </div>
+          </section>
+
+          <section class="doc-section block" id="warnings" aria-labelledby="warnings-title">
+            <div class="band doc-band">
+              <div class="band-title">
+                <span class="num">05</span>
+                <h2 id="warnings-title">Warnings</h2>
+              </div>
+            </div>
+            <div class="doc-body">
+              <div class="doc-table-wrap">
+                <table class="doc-table">
+                  <thead>
+                    <tr>
+                      <th scope="col">Warning</th>
+                      <th scope="col">Shown on</th>
+                      <th scope="col">Do</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td>
+                        Stops the server with no warning to players: RCON is not confirmed. It is
+                        confirmed once the server has started with enable-rcon on.
+                      </td>
+                      <td><b>Command</b> set to <b>Stop Server</b> or <b>Restart Server</b></td>
+                      <td>Turn on <code>enable-rcon</code> and start the server once.</td>
+                    </tr>
+                    <tr>
+                      <td>
+                        DH Snapshot warns players through the console, as RCON is not confirmed. It
+                        is confirmed once the server has started with enable-rcon on.
+                      </td>
+                      <td><b>DH Snapshot</b></td>
+                      <td>Turn on <code>enable-rcon</code> and start the server once.</td>
+                    </tr>
+                    <tr>
+                      <td>no destination chosen.</td>
+                      <td><b>Upload to Bucket</b> and <b>Publish DH Snapshot</b></td>
+                      <td>Pick a destination in the <b>Destination</b> field.</td>
+                    </tr>
+                    <tr>
+                      <td>
+                        the destination "<i>name</i>" does not exist. It was deleted or renamed in
+                        Settings, or this graph came from another install.
+                      </td>
+                      <td>
+                        <b>Upload to Bucket</b>, <b>Publish DH Snapshot</b> and <b>DH Snapshot</b>
+                      </td>
+                      <td>Pick another destination, or add the missing one in Settings.</td>
+                    </tr>
+                    <tr>
+                      <td>keep must be a whole number of at least 1, not <i>value</i>.</td>
+                      <td><b>Publish DH Snapshot</b></td>
+                      <td>Set <b>Snapshots to keep (at least 1)</b> to a whole number.</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <p class="doc-prose">
+                Click a row to select the block and bring it into view.<br />
+                The same text shows under <b>warnings</b> on the block's <b>data</b> tab.<br />
+                Warnings do not block saving or running.
+              </p>
+            </div>
+          </section>
+
+          <section
+            class="doc-section block"
+            id="saving-and-running"
+            aria-labelledby="saving-and-running-title"
+          >
+            <div class="band doc-band">
+              <div class="band-title">
+                <span class="num">06</span>
+                <h2 id="saving-and-running-title">Saving and running</h2>
+              </div>
+            </div>
+            <div class="doc-body">
+              <div class="doc-table-wrap">
+                <table class="doc-table">
+                  <thead>
+                    <tr>
+                      <th scope="col">Action</th>
+                      <th scope="col">What happens</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td><b>Graph actions</b>, <b>Save</b></td>
+                      <td>
+                        Writes the blocks, wires, positions and name. A new graph gets its id here.
+                      </td>
+                    </tr>
+                    <tr>
+                      <td><b>run</b></td>
+                      <td>
+                        Runs the saved graph. It works on a graph that is off, and needs exactly one
+                        trigger block.
+                      </td>
+                    </tr>
+                    <tr>
+                      <td><b>run</b> with unsaved changes</td>
+                      <td>
+                        Asks first:
+                        <b>Run uses the saved graph. Save your changes and run it?</b> The buttons
+                        are <b>Cancel</b> and <b>Save &amp; run</b>.
+                      </td>
+                    </tr>
+                    <tr>
+                      <td><b>[on]</b></td>
+                      <td>
+                        The graph's triggers can fire. This is written at once, without saving the
+                        canvas.
+                      </td>
+                    </tr>
+                    <tr>
+                      <td><b>[off]</b></td>
+                      <td>The graph's triggers do not fire.</td>
+                    </tr>
+                    <tr>
+                      <td>
+                        Closing the tile, switching server, switching graph or <b>New graph</b>
+                      </td>
+                      <td>
+                        With unsaved changes, opens <b>Unsaved changes</b> with <b>Cancel</b>,
+                        <b>Discard</b> and <b>Save &amp; continue</b>. Escape cancels.
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <div class="doc-table-wrap">
+                <table class="doc-table">
+                  <thead>
+                    <tr>
+                      <th scope="col">Status</th>
+                      <th scope="col">Meaning</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td><b>running…</b></td>
+                      <td>The run has not finished.</td>
+                    </tr>
+                    <tr>
+                      <td><b>done (N nodes)</b></td>
+                      <td>The run finished. N is the number of blocks recorded in it.</td>
+                    </tr>
+                    <tr>
+                      <td><b>already running</b></td>
+                      <td>This graph already has a run in progress, so nothing started.</td>
+                    </tr>
+                    <tr>
+                      <td><b>run failed</b></td>
+                      <td>The run failed. Click it to show the reason. It stays until clicked.</td>
+                    </tr>
+                    <tr>
+                      <td><b>scheduler error</b></td>
+                      <td>A save, delete or toggle was refused. Click it to show the message.</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </section>
+
+          <nav class="doc-related block" aria-label="Related">
+            <div class="shelf-label"><span class="label">Related</span></div>
+            <a class="related-link" href="/docs/blocks/"
+              ><span class="kind" data-kind="reference">Reference</span>Scheduler blocks</a
+            >
+            <a class="related-link" href="/docs/cron.html"
+              ><span class="kind" data-kind="reference">Reference</span>Cron expressions</a
+            >
+          </nav>
+        </main>
+      </div>
+
+      <!-- Canonical footer. Byte-identical on every page. -->
+      <footer class="block block-raised">
+        <div class="footer-cols">
+          <div class="footer-about">
+            <a class="footer-brand" href="/index.html"
+              ><picture
+                ><source media="(min-resolution: 2dppx)" srcset="/assets/img/mark.svg" />
+                <img
+                  class="mark"
+                  src="/assets/img/mark-24.svg"
+                  width="24"
+                  height="24"
+                  alt="" /></picture
+              >Konnekt</a
+            >
+            <p>A desktop dashboard for the Minecraft servers you host.</p>
+            <span class="meta"><span data-release-tag></span>Windows and Linux</span>
+          </div>
+          <nav class="footer-col" aria-label="Product">
+            <span class="label">Product</span>
+            <a href="/download.html">Download</a>
+            <a href="https://konnekt-demo.pages.dev/" target="_blank" rel="noopener"
+              >Try the demo</a
+            >
+            <a href="/changelog.html">Changelog</a>
+          </nav>
+          <nav class="footer-col" aria-label="Learn">
+            <span class="label">Learn</span>
+            <a href="/index.html#features">Features</a>
+            <a href="/docs.html">Docs</a>
+            <a href="/roadmap.html">Roadmap</a>
+          </nav>
+          <nav class="footer-col" aria-label="Source">
+            <span class="label">Source</span>
+            <a href="https://github.com/kollektiv-mc/Konnekt" target="_blank" rel="noopener"
+              >GitHub</a
+            >
+            <a href="https://github.com/kollektiv-mc/Konnekt/issues" target="_blank" rel="noopener"
+              >Issues</a
+            >
+            <a
+              href="https://github.com/kollektiv-mc/Konnekt/blob/main/LICENSE"
+              target="_blank"
+              rel="noopener"
+              >MIT licence</a
+            >
+          </nav>
+        </div>
+        <div class="footer-base">
+          <span
+            >Alpha software. A side project mostly written by Claude.
+            <a href="/docs.html#disclaimer">Full statement</a></span
+          >
+          <span>&copy; 2026 Konnekt</span>
+        </div>
+      </footer>
+    </div>
+
+    <script src="/release.js"></script>
+    <script src="/site.js"></script>
+  </body>
+</html>

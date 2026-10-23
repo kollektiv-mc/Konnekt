@@ -1,0 +1,65 @@
+/* GENERATED FILE, DO NOT EDIT.
+ *
+ * The scheduler editor's colours, written by scripts/gen-block-docs.mjs from
+ * frontend/src/tiles/scheduler/editor/blockMeta.ts. Like the editor's, they are
+ * the graph's own and not design tokens. */
+
+[data-category='trigger'] {
+  --category-color: #7c3aed;
+}
+
+[data-category='action'] {
+  --category-color: #0369a1;
+}
+
+[data-category='control'] {
+  --category-color: #b45309;
+}
+
+[data-category='notify'] {
+  --category-color: #047857;
+}
+
+[data-category='data'] {
+  --category-color: #0e7490;
+}
+
+[data-shape='control'] {
+  --port-color: #94a3b8;
+}
+
+[data-shape='control'][data-port='trigger'] {
+  --port-color: #7c3aed;
+}
+
+[data-shape='control'][data-port='onComplete'] {
+  --port-color: #22c55e;
+}
+
+[data-shape='control'][data-port='onFailed'] {
+  --port-color: #ef4444;
+}
+
+[data-shape='control'][data-port='onTrue'] {
+  --port-color: #22c55e;
+}
+
+[data-shape='control'][data-port='onFalse'] {
+  --port-color: #f97316;
+}
+
+[data-shape='data'] {
+  --port-color: #6b7280;
+}
+
+[data-shape='data'][data-type='string'] {
+  --port-color: #60a5fa;
+}
+
+[data-shape='data'][data-type='number'] {
+  --port-color: #a3e635;
+}
+
+[data-shape='data'][data-type='bool'] {
+  --port-color: #fb923c;
+}

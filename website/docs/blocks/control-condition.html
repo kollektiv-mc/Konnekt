@@ -1,0 +1,472 @@
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Konnekt docs: Condition block</title>
+    <meta
+      name="description"
+      content="Condition: Branches on a comparison of A and B, or on a logic gate over the two."
+    />
+    <link rel="canonical" href="https://konnekt.pages.dev/docs/blocks/control-condition.html" />
+
+    <meta property="og:site_name" content="Konnekt" />
+    <meta property="og:title" content="Konnekt docs: Condition block" />
+    <meta
+      property="og:description"
+      content="Condition: Branches on a comparison of A and B, or on a logic gate over the two."
+    />
+    <meta
+      property="og:url"
+      content="https://konnekt.pages.dev/docs/blocks/control-condition.html"
+    />
+    <meta property="og:type" content="website" />
+    <meta property="og:image" content="https://konnekt.pages.dev/assets/img/social-card.png" />
+    <meta property="og:image:width" content="1715" />
+    <meta property="og:image:height" content="1123" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Konnekt docs: Condition block" />
+    <meta
+      name="twitter:description"
+      content="Condition: Branches on a comparison of A and B, or on a logic gate over the two."
+    />
+    <meta name="twitter:image" content="https://konnekt.pages.dev/assets/img/social-card.png" />
+
+    <meta name="theme-color" content="#05060a" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/assets/img/favicon-16.png" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/assets/img/favicon-32.png" />
+    <link rel="icon" type="image/png" sizes="256x256" href="/assets/img/favicon.png" />
+    <link rel="apple-touch-icon" href="/assets/img/app-icon.png" />
+    <link
+      rel="preload"
+      href="/assets/fonts/Geist-Variable.woff2"
+      as="font"
+      type="font/woff2"
+      crossorigin
+    />
+    <link rel="stylesheet" href="/tokens.css" />
+    <link rel="stylesheet" href="/site.css" />
+    <link rel="stylesheet" href="/docs.css" />
+    <link rel="stylesheet" href="/docs/blocks/blocks.css" />
+    <link rel="stylesheet" href="/docs/blocks/ports.css" />
+    <script>
+      document.documentElement.className = document.documentElement.className.replace('no-js', '')
+    </script>
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to content</a>
+    <div class="page">
+      <div class="group">
+        <!-- Canonical nav. Byte-identical on every page, hrefs included; site.js
+           marks the current page and scrolls same-page anchors. -->
+        <nav class="nav block block-raised" id="nav" aria-label="Main">
+          <a class="nav-brand" href="/index.html"
+            ><picture
+              ><source media="(min-resolution: 2dppx)" srcset="/assets/img/mark.svg" />
+              <img
+                class="mark"
+                src="/assets/img/mark-24.svg"
+                width="24"
+                height="24"
+                alt="" /></picture
+            >Konnekt</a
+          >
+          <ul class="nav-links">
+            <li><a href="/index.html#features">Features</a></li>
+            <li><a href="/index.html#scheduler">Scheduler</a></li>
+            <li><a href="/docs.html">Docs</a></li>
+            <li><a href="/roadmap.html">Roadmap</a></li>
+            <li><a href="/changelog.html">Changelog</a></li>
+          </ul>
+          <a
+            class="nav-side"
+            href="https://github.com/kollektiv-mc/Konnekt"
+            target="_blank"
+            rel="noopener"
+            >GitHub</a
+          >
+          <a class="btn btn-primary" href="/download.html"
+            ><svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true">
+              <path
+                d="M7 1v9M3 6.5 7 10.5 11 6.5M1.5 13h11"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.6"
+              /></svg
+            >Download</a
+          >
+        </nav>
+        <main id="main" class="group">
+          <header class="doc-head block">
+            <div class="doc-head-main">
+              <div class="doc-trail">
+                <span class="kind" data-kind="reference">Reference</span>
+                <nav aria-label="Breadcrumb">
+                  <ol class="doc-crumbs">
+                    <li><a href="/docs.html">Docs</a></li>
+                    <li><a href="/docs.html#scheduler">Scheduler</a></li>
+                    <li><a href="/docs/blocks/">Scheduler blocks</a></li>
+                    <li><span aria-current="page">Condition</span></li>
+                  </ol>
+                </nav>
+              </div>
+              <h1>Condition</h1>
+              <p class="doc-lead">
+                Branches on a comparison of A and B, or on a logic gate over the two.
+              </p>
+            </div>
+            <dl class="doc-facts">
+              <div class="doc-fact">
+                <dt class="label">Category</dt>
+                <dd>Control</dd>
+              </div>
+              <div class="doc-fact">
+                <dt class="label">Topics</dt>
+                <dd>Scheduler</dd>
+              </div>
+            </dl>
+          </header>
+
+          <!-- gen:ports -->
+          <section class="doc-section block" id="ports" aria-labelledby="ports-title">
+            <div class="band doc-band">
+              <div class="band-title">
+                <span class="num">01</span>
+                <h2 id="ports-title">Ports</h2>
+              </div>
+            </div>
+            <div class="port-stage">
+              <div class="port-canvas">
+                <div class="port-node" data-category="control">
+                  <div class="port-node-head">
+                    <span>Condition</span><span class="port-node-cat">control</span>
+                  </div>
+                  <div class="port-cols">
+                    <ul class="port-col port-in" aria-label="Inputs">
+                      <li class="port-col-label" aria-hidden="true">in</li>
+                      <li class="port" data-shape="control" data-port="trigger">
+                        <span>trigger</span><span class="port-type">control</span>
+                      </li>
+                      <li class="port" data-shape="data" data-type="string">
+                        <span>A</span><span class="port-type">string</span>
+                      </li>
+                      <li class="port" data-shape="data" data-type="string">
+                        <span>B</span><span class="port-type">string</span>
+                      </li>
+                    </ul>
+                    <ul class="port-col port-out" aria-label="Outputs">
+                      <li class="port-col-label" aria-hidden="true">out</li>
+                      <li class="port" data-shape="control" data-port="onTrue">
+                        <span>onTrue</span><span class="port-type">control</span>
+                      </li>
+                      <li class="port" data-shape="control" data-port="onFalse">
+                        <span>onFalse</span><span class="port-type">control</span>
+                      </li>
+                      <li class="port" data-shape="data" data-type="bool">
+                        <span>Result</span><span class="port-type">bool</span>
+                      </li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+              <div class="port-legend">
+                <span class="label">Ports</span>
+                <span class="port-key" data-shape="control">Control</span>
+                <span class="port-key" data-shape="data">Data</span>
+                <hr />
+                <span class="label">Data types</span>
+                <span class="port-key" data-shape="data" data-type="string"
+                  ><code>string</code></span
+                >
+                <span class="port-key" data-shape="data" data-type="number"
+                  ><code>number</code></span
+                >
+                <span class="port-key" data-shape="data" data-type="bool"><code>bool</code></span>
+                <p class="doc-prose">
+                  Strings accept any data input.<br />
+                  Numbers accept boolean input.
+                </p>
+              </div>
+            </div>
+          </section>
+          <!-- /gen:ports -->
+
+          <!-- gen:fields -->
+          <section class="doc-section block" id="fields" aria-labelledby="fields-title">
+            <div class="band doc-band">
+              <div class="band-title">
+                <span class="num">02</span>
+                <h2 id="fields-title">Fields</h2>
+              </div>
+            </div>
+            <div class="doc-body">
+              <div class="doc-table-wrap">
+                <table class="doc-table">
+                  <thead>
+                    <tr>
+                      <th scope="col">Field</th>
+                      <th scope="col">What it does</th>
+                      <th scope="col">Default</th>
+                      <th scope="col">Limits</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr data-field="op">
+                      <td>Operator</td>
+                      <td>Chooses a comparison of A and B, or a logic gate over them.</td>
+                      <td><code>==</code></td>
+                      <td>
+                        <ul class="field-options">
+                          <li><code>==</code></li>
+                          <li><code>!=</code></li>
+                          <li><code>&gt;</code></li>
+                          <li><code>&lt;</code></li>
+                          <li><code>contains</code></li>
+                          <li><code>AND</code></li>
+                          <li><code>OR</code></li>
+                          <li><code>XOR</code></li>
+                          <li><code>NAND</code></li>
+                          <li><code>NOR</code></li>
+                        </ul>
+                      </td>
+                    </tr>
+                    <tr data-field="left">
+                      <td>A</td>
+                      <td>The first operand; a wired A replaces it.</td>
+                      <td>None</td>
+                      <td>None</td>
+                    </tr>
+                    <tr data-field="right">
+                      <td>B</td>
+                      <td>The second operand; a wired B replaces it.</td>
+                      <td>None</td>
+                      <td>None</td>
+                    </tr>
+                    <tr data-field="leftTrue">
+                      <td>is true</td>
+                      <td>For a gate, reads A as it is when checked and flipped when unchecked.</td>
+                      <td>On</td>
+                      <td>Shown only for the gate operators.</td>
+                    </tr>
+                    <tr data-field="rightTrue">
+                      <td>is true</td>
+                      <td>For a gate, reads B as it is when checked and flipped when unchecked.</td>
+                      <td>On</td>
+                      <td>Shown only for the gate operators.</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </section>
+          <!-- /gen:fields -->
+
+          <section class="doc-section block" id="run" aria-labelledby="run-title">
+            <div class="band doc-band">
+              <div class="band-title">
+                <span class="num">03</span>
+                <h2 id="run-title">What a run does</h2>
+              </div>
+            </div>
+            <div class="doc-body">
+              <p class="doc-prose">
+                Decides one outcome from A and B, then leaves by <code>onTrue</code> or
+                <code>onFalse</code>.<br />Neither port is an error.<br />A wired A or B replaces
+                its field.<br /><b>Result</b> carries the outcome as 1 for true and 0 for false, so
+                it can feed another Condition.
+              </p>
+              <div class="doc-table-wrap">
+                <table class="doc-table">
+                  <thead>
+                    <tr>
+                      <th scope="col">Operator</th>
+                      <th scope="col">True when</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td><code>==</code></td>
+                      <td>A equals B.</td>
+                    </tr>
+                    <tr>
+                      <td><code>!=</code></td>
+                      <td>A does not equal B.</td>
+                    </tr>
+                    <tr>
+                      <td><code>&gt;</code></td>
+                      <td>A is greater than B.</td>
+                    </tr>
+                    <tr>
+                      <td><code>&lt;</code></td>
+                      <td>A is less than B.</td>
+                    </tr>
+                    <tr>
+                      <td><code>contains</code></td>
+                      <td>The text of A contains the text of B, and case matters.</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <p class="doc-prose">
+                Two numbers are compared as numbers, so <code>9</code> is less than
+                <code>10</code>.<br />A number is a wired number, or text that reads as one, such as
+                <code>10</code>.<br />Anything else is compared as text, and case matters.
+              </p>
+              <p class="doc-prose">
+                <code>==</code> and <code>!=</code> compare as booleans when either side is the text
+                <code>true</code> or <code>false</code>.<br />The other side must read as a boolean
+                too.<br />A boolean, a number, or the text <code>true</code> or
+                <code>false</code> does.<br />A number is true unless it is 0.<br />A wired true
+                arrives as 1, so it equals the text <code>true</code>.
+              </p>
+              <p class="doc-prose">
+                The gate operators <code>AND</code>, <code>OR</code>, <code>XOR</code>,
+                <code>NAND</code> and <code>NOR</code> do not compare.<br />They read A and B as
+                true or false, then combine the two.
+              </p>
+              <p class="doc-prose">
+                A value is true when it is the boolean true or a number other than 0.<br />The text
+                <code>true</code> in any capitals is true, and so is text that reads as a number
+                other than 0.<br />Everything else is false, including empty text, text such as
+                <code>yes</code>, and a value that was not set.
+              </p>
+              <p class="doc-prose">
+                Each operand has an <b>is true</b> box, shown only for a gate operator.<br />Checked,
+                which is the default, the operand is used as it is.<br />Unchecked, the operand is
+                flipped: true becomes false and false becomes true.<br />So <code>AND</code> with
+                the box under A unchecked is true when A is false and B is true.<br />
+                The gates combine A and B as their boxes leave them.
+              </p>
+              <div class="doc-table-wrap">
+                <table class="doc-table">
+                  <thead>
+                    <tr>
+                      <th scope="col">A</th>
+                      <th scope="col">B</th>
+                      <th scope="col">AND</th>
+                      <th scope="col">OR</th>
+                      <th scope="col">XOR</th>
+                      <th scope="col">NAND</th>
+                      <th scope="col">NOR</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td>False</td>
+                      <td>False</td>
+                      <td>False</td>
+                      <td>False</td>
+                      <td>False</td>
+                      <td>True</td>
+                      <td>True</td>
+                    </tr>
+                    <tr>
+                      <td>False</td>
+                      <td>True</td>
+                      <td>False</td>
+                      <td>True</td>
+                      <td>True</td>
+                      <td>True</td>
+                      <td>False</td>
+                    </tr>
+                    <tr>
+                      <td>True</td>
+                      <td>False</td>
+                      <td>False</td>
+                      <td>True</td>
+                      <td>True</td>
+                      <td>True</td>
+                      <td>False</td>
+                    </tr>
+                    <tr>
+                      <td>True</td>
+                      <td>True</td>
+                      <td>True</td>
+                      <td>True</td>
+                      <td>False</td>
+                      <td>False</td>
+                      <td>False</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </section>
+
+          <nav class="doc-related block" aria-label="Related">
+            <div class="shelf-label"><span class="label">Related</span></div>
+            <a class="related-link" href="/docs/blocks/data-constant.html"
+              ><span class="kind" data-kind="reference">Reference</span>Constant</a
+            ><a class="related-link" href="/docs/blocks/data-serverAttribute.html"
+              ><span class="kind" data-kind="reference">Reference</span>Read Attribute</a
+            ><a class="related-link" href="/docs/blocks/data-mathOp.html"
+              ><span class="kind" data-kind="reference">Reference</span>Math</a
+            ><a class="related-link" href="/docs/blocks/action-httpRequest.html"
+              ><span class="kind" data-kind="reference">Reference</span>HTTP Request</a
+            >
+          </nav>
+        </main>
+      </div>
+
+      <!-- Canonical footer. Byte-identical on every page. -->
+      <footer class="block block-raised">
+        <div class="footer-cols">
+          <div class="footer-about">
+            <a class="footer-brand" href="/index.html"
+              ><picture
+                ><source media="(min-resolution: 2dppx)" srcset="/assets/img/mark.svg" />
+                <img
+                  class="mark"
+                  src="/assets/img/mark-24.svg"
+                  width="24"
+                  height="24"
+                  alt="" /></picture
+              >Konnekt</a
+            >
+            <p>A desktop dashboard for the Minecraft servers you host.</p>
+            <span class="meta"><span data-release-tag></span>Windows and Linux</span>
+          </div>
+          <nav class="footer-col" aria-label="Product">
+            <span class="label">Product</span>
+            <a href="/download.html">Download</a>
+            <a href="https://konnekt-demo.pages.dev/" target="_blank" rel="noopener"
+              >Try the demo</a
+            >
+            <a href="/changelog.html">Changelog</a>
+          </nav>
+          <nav class="footer-col" aria-label="Learn">
+            <span class="label">Learn</span>
+            <a href="/index.html#features">Features</a>
+            <a href="/docs.html">Docs</a>
+            <a href="/roadmap.html">Roadmap</a>
+          </nav>
+          <nav class="footer-col" aria-label="Source">
+            <span class="label">Source</span>
+            <a href="https://github.com/kollektiv-mc/Konnekt" target="_blank" rel="noopener"
+              >GitHub</a
+            >
+            <a href="https://github.com/kollektiv-mc/Konnekt/issues" target="_blank" rel="noopener"
+              >Issues</a
+            >
+            <a
+              href="https://github.com/kollektiv-mc/Konnekt/blob/main/LICENSE"
+              target="_blank"
+              rel="noopener"
+              >MIT licence</a
+            >
+          </nav>
+        </div>
+        <div class="footer-base">
+          <span
+            >Alpha software. A side project mostly written by Claude.
+            <a href="/docs.html#disclaimer">Full statement</a></span
+          >
+          <span>&copy; 2026 Konnekt</span>
+        </div>
+      </footer>
+    </div>
+
+    <script src="/release.js"></script>
+    <script src="/site.js"></script>
+  </body>
+</html>

@@ -46,6 +46,24 @@
   --dim-opacity: 0.72;
   --focus-ms: 500ms;
   --ease-lift: cubic-bezier(0.2, 0.7, 0.2, 1);
+
+  /* The light an outer block's edge picks up near the cursor (site.js). The
+     size is the gradient's, and site.js's GLOW_REACH matches it. */
+  --glow-size: 320px;
+  --glow-rgb: var(--accent-rgb);
+}
+
+/* Moving between the site's own pages crosses over rather than cutting, and
+   the nav, the same on every page, holds still through it. A browser without
+   cross-document view transitions navigates as before. */
+@media (prefers-reduced-motion: no-preference) {
+  @view-transition {
+    navigation: auto;
+  }
+}
+
+.nav {
+  view-transition-name: nav;
 }
 
 *,
@@ -105,6 +123,25 @@ h2 {
 button {
   font: inherit;
   color: inherit;
+}
+
+/* Every control eases between its states, so a page needs no transition of
+   its own for a hover or a pressed state to fade. A page rule that sets its
+   own transition replaces this one. */
+button,
+summary,
+.btn {
+  transition:
+    color var(--duration-fast) var(--ease-standard),
+    background-color var(--duration-fast) var(--ease-standard),
+    border-color var(--duration-fast) var(--ease-standard),
+    box-shadow var(--duration-fast) var(--ease-standard),
+    opacity var(--duration-fast) var(--ease-standard);
+}
+
+summary h2,
+summary h3 {
+  transition: color var(--duration-fast) var(--ease-standard);
 }
 
 .skip-link {
@@ -198,6 +235,52 @@ button {
   .loader::before,
   .appear {
     animation: none;
+  }
+}
+
+/* ── Resize: what opens, closes or refilters (site.js) ────────────────── */
+/* A box animating its height clips what it is growing over or closing on. */
+
+.is-resizing {
+  overflow: clip;
+}
+
+/* ── Glow: the outer blocks' edges light up near the cursor ─────────────── */
+/* site.js writes --mx/--my (px, block-relative) on each outermost block
+   within reach of the pointer; the ring is that radial gradient masked down to
+   its own 1px padding, which lies over the block's hairline. Without the mask
+   it would fill the block, so browsers that cannot do it get nothing. */
+
+.block:not(.block .block) {
+  position: relative;
+}
+
+@supports (mask-composite: exclude) or (-webkit-mask-composite: xor) {
+  .block:not(.block .block)::after {
+    content: '';
+    position: absolute;
+    inset: -1px;
+    padding: 1px;
+    pointer-events: none;
+    background: radial-gradient(
+      var(--glow-size) circle at var(--mx, -999px) var(--my, -999px),
+      rgb(var(--glow-rgb) / 0.85),
+      transparent 60%
+    );
+    -webkit-mask:
+      linear-gradient(#000 0 0) content-box,
+      linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask:
+      linear-gradient(#000 0 0) content-box,
+      linear-gradient(#000 0 0);
+    mask-composite: exclude;
+    transition: opacity var(--duration-panel) var(--ease-standard);
+  }
+
+  /* The pointer left the window: the light fades where it was. */
+  [data-glow-idle] .block:not(.block .block)::after {
+    opacity: 0;
   }
 }
 
@@ -640,6 +723,10 @@ pre code {
   [data-focus],
   [data-focus] > .block {
     transition: none;
+  }
+
+  .block:not(.block .block)::after {
+    display: none;
   }
 
   [data-focus].is-dim {

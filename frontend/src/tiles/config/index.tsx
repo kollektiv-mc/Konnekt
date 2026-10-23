@@ -3,6 +3,8 @@ import { RestartServer } from '../../../wailsjs/go/main/App'
 import { hasWailsBridge } from '../../lib/ipc'
 import { useServerStore } from '../../stores/useServerStore'
 import { useUiStore } from '../../stores/useUiStore'
+import { UnsavedChangesDialog } from '../../components/UnsavedChangesDialog'
+import { useDirtyGuard } from '../../hooks/useDirtyGuard'
 import type { TileProps } from '../../types'
 import { FileList } from './FileList'
 import { useConfigEditor } from './useConfigEditor'
@@ -70,34 +72,31 @@ export function ConfigTile({ serverId, maximized }: TileProps) {
     revert,
   } = useConfigEditor(serverId)
 
-  // Veto a close or a server switch while the open file has unsaved edits (#450).
+  // Veto a close, a server switch or a file switch while the open file has
+  // unsaved edits (#450), behind the same dialog the scheduler editor uses.
   // Both read through refs so the guard keeps one identity across keystrokes
   // instead of re-registering on each, and it is only registered while this
   // editor is maximized, since the compact face holds nothing to lose.
   const setCloseGuard = useUiStore((s) => s.setCloseGuard)
   const isDirtyRef = useRef(false)
-  const revertRef = useRef(revert)
   useEffect(() => {
     isDirtyRef.current = isDirty
-    revertRef.current = revert
-  }, [isDirty, revert])
+  }, [isDirty])
+  const confirm = useDirtyGuard(() => isDirtyRef.current)
+  // Pulled out for the effect's dependency list: the hook's callbacks are
+  // stable, the object holding them is not.
+  const { hold: holdConfirm } = confirm
   useEffect(() => {
     if (!maximized) return
     setCloseGuard((proceed) => {
       if (!isDirtyRef.current) return false
-      // Cancelling still returns true: the guard has answered, and the close or
-      // switch is dropped rather than run.
-      if (window.confirm('You have unsaved changes. Discard them?')) {
-        revertRef.current()
-        // Close re-enters this guard through the store before the render that
-        // refreshes the ref above, so mark it clean here or it would ask again.
-        isDirtyRef.current = false
-        proceed()
-      }
+      // Holding still returns true: the guard has answered, and the close or
+      // switch runs from the dialog or not at all.
+      holdConfirm(proceed)
       return true
     })
     return () => setCloseGuard(null)
-  }, [maximized, setCloseGuard])
+  }, [maximized, setCloseGuard, holdConfirm])
 
   // Summary view when tile is not maximized
   if (!maximized) {
@@ -108,6 +107,26 @@ export function ConfigTile({ serverId, maximized }: TileProps) {
     await save()
   }
 
+  // A close re-enters the close guard through the store before the render that
+  // refreshes isDirtyRef, so both ways on mark it clean first or it would ask
+  // again.
+  function discardAndContinue() {
+    revert()
+    isDirtyRef.current = false
+    confirm.proceed()
+  }
+
+  async function saveAndContinue() {
+    // A failed save leaves its reason in the editor's header; drop the held
+    // action and keep the file open rather than continue past it.
+    if (!(await save())) {
+      confirm.cancel()
+      return
+    }
+    isDirtyRef.current = false
+    confirm.proceed()
+  }
+
   function handleRestart() {
     // A write, so `hasWailsBridge()` rather than the `.catch()` alone (see
     // lib/ipc.ts): with no bridge the binding throws inside the click
@@ -115,13 +134,9 @@ export function ConfigTile({ serverId, maximized }: TileProps) {
     if (hasWailsBridge()) RestartServer(serverId).catch(() => {})
   }
 
-  async function handleSelect(relPath: string) {
-    if (isDirty && selectedRelPath !== relPath) {
-      const ok = window.confirm('You have unsaved changes. Discard and switch files?')
-      if (!ok) return
-      revert()
-    }
-    await selectFile(relPath)
+  function handleSelect(relPath: string) {
+    if (relPath === selectedRelPath) return
+    confirm.guard(() => void selectFile(relPath))
   }
 
   return (
@@ -173,6 +188,15 @@ export function ConfigTile({ serverId, maximized }: TileProps) {
           onRestart={handleRestart}
         />
       </Suspense>
+
+      <UnsavedChangesDialog
+        open={confirm.pending}
+        saving={saving}
+        body="This file has unsaved changes. Save them first, or discard them?"
+        onCancel={confirm.cancel}
+        onDiscard={discardAndContinue}
+        onSaveAndContinue={() => void saveAndContinue()}
+      />
     </div>
   )
 }

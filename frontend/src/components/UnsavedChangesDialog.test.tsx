@@ -1,6 +1,6 @@
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { CloseConfirmDialog } from './CloseConfirmDialog'
+import { UnsavedChangesDialog } from './UnsavedChangesDialog'
 
 // jsdom has no AnimationEvent, so React listens for the prefixed name; see
 // components/commands/CommandDialogs.test.tsx for the same helper.
@@ -13,7 +13,7 @@ function panelExitEnds(panel: Element | null) {
 afterEach(cleanup)
 
 const dialog = (open: boolean, onCancel = () => {}) => (
-  <CloseConfirmDialog
+  <UnsavedChangesDialog
     open={open}
     saving={false}
     onCancel={onCancel}
@@ -22,7 +22,7 @@ const dialog = (open: boolean, onCancel = () => {}) => (
   />
 )
 
-describe('CloseConfirmDialog', () => {
+describe('UnsavedChangesDialog', () => {
   it('renders nothing while closed', () => {
     render(dialog(false))
     expect(screen.queryByText('Unsaved changes')).toBeNull()

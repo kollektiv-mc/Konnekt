@@ -71,13 +71,40 @@
       video.load()
     }
 
+    // A play the browser refuses is tried again rather than left on the
+    // poster: once the clip can play, for a request cut short by loading, and
+    // at the reader's next press or key, for one refused for want of a user
+    // gesture (Safari in Low Power Mode, a browser set to block autoplay).
+    // Before this, only a press on a strip tried again.
+    var retryArmed = false
+    var retryOnGesture = function () {
+      if (retryArmed) return
+      retryArmed = true
+      var again = function () {
+        retryArmed = false
+        ;['pointerdown', 'keydown', 'touchend'].forEach(function (type) {
+          document.removeEventListener(type, again, true)
+        })
+        play()
+      }
+      ;['pointerdown', 'keydown', 'touchend'].forEach(function (type) {
+        document.addEventListener(type, again, true)
+      })
+    }
+
     var play = function () {
       var video = videoOf(current)
       if (!onScreen || reduceMotion || !video || typeof video.play !== 'function') return
+      if (!video.paused) return
       var p = video.play()
       if (p && p.catch) {
-        p.catch(function () {
-          /* Autoplay refused, or the clip is unreachable: the poster stays. */
+        p.catch(function (err) {
+          if (videoOf(current) !== video || !onScreen) return
+          if (err && err.name === 'NotAllowedError') retryOnGesture()
+          else if (video.readyState < 3 && !video.error) {
+            video.addEventListener('canplay', play, { once: true })
+          }
+          /* Otherwise the clip is unreachable, and the poster stays. */
         })
       }
     }
@@ -119,21 +146,139 @@
       })
     })
 
+    // On screen means half the open clip is, rather than a share of the whole
+    // archive: on a phone the strips stack into a column taller than the
+    // screen, and a share of that can be out of reach while the clip is in
+    // full view. Every clip is observed; only the open one's entry counts, and
+    // a strip that opens off screen starts when it scrolls in.
     if ('IntersectionObserver' in window) {
-      new IntersectionObserver(
+      var seen = []
+      var observer = new IntersectionObserver(
         function (entries) {
-          var visible = entries[0].isIntersecting
+          entries.forEach(function (entry) {
+            seen[strips.indexOf(entry.target.closest('.strip'))] = entry.isIntersecting
+          })
+          var visible = !!seen[current]
           if (visible === onScreen) return
           onScreen = visible
           var video = videoOf(current)
           if (visible) play()
           else if (video && video.pause) video.pause()
         },
-        { threshold: 0.4 },
-      ).observe(archive)
+        { threshold: 0.5 },
+      )
+      strips.forEach(function (s, i) {
+        var video = videoOf(i)
+        if (video) observer.observe(video)
+      })
     } else {
       onScreen = true
       play()
+    }
+
+    // A tab brought back to the front resumes the clip a browser paused
+    // behind it.
+    document.addEventListener('visibilitychange', function () {
+      if (!document.hidden) play()
+    })
+  }
+
+  // ── Hero console ───────────────────────────────────────────────────────
+  // A server left running: players come and go, and every few seconds a
+  // command is typed at the prompt and answered. The replies are vanilla
+  // 1.21.1's own wording, from its en_us.json. The page's lines are the first
+  // frame, with save-all already typed, and under reduced motion the only one.
+  var LOG_LINES = 3
+  var TYPE_MS = 75
+  var SCRIPT = [
+    { cmd: 'save-all', out: ['Saving the game (this may take a moment!)', 'Saved the game'] },
+    { out: ['crocodealer420 joined the game'] },
+    { cmd: 'whitelist add frogipogi', out: ['Added frogipogi to the whitelist'] },
+    { out: ['<Snadrochka> anyone got spare diamonds'] },
+    { cmd: 'time set day', out: ['Set the time to 1000'] },
+    { out: ['frogipogi joined the game'] },
+    { cmd: 'op Matzzz__', out: ['Made Matzzz__ a server operator'] },
+    { out: ['ceramichello left the game'] },
+    { cmd: 'weather clear', out: ['Set the weather to clear'] },
+    { out: ['<trex007> who turned the rain off'] },
+    { cmd: 'say restart at 18:00', out: ['[Server] restart at 18:00'] },
+    { out: ['ascalon joined the game'] },
+    {
+      cmd: 'kick trex007',
+      out: ['Kicked trex007: Kicked by an operator', 'trex007 left the game'],
+    },
+  ]
+
+  var consoleEl = document.querySelector('.hero .console')
+  var log = consoleEl && consoleEl.querySelector('.console-log')
+  var input = consoleEl && consoleEl.querySelector('.console-input')
+
+  if (log && input && !reduceMotion) {
+    // The script flattened into one list of timed actions, so pausing is a
+    // cleared timer and resuming runs the same action again.
+    var actions = []
+    SCRIPT.forEach(function (step) {
+      if (step.cmd) {
+        for (var c = 1; c <= step.cmd.length; c++) {
+          actions.push({ wait: c === 1 ? 900 : TYPE_MS, input: step.cmd.slice(0, c) })
+        }
+        actions.push({ wait: 600, input: '' })
+      }
+      step.out.forEach(function (line, k) {
+        actions.push({ wait: k ? 160 : 240, line: line })
+      })
+      actions.push({ wait: 2400 })
+    })
+
+    // The first step's command is the one the page already shows typed.
+    var at = SCRIPT[0].cmd.length
+    // Seconds past 14:03:40, the page's last line, as the log's own clock.
+    var elapsed = 0
+    var consoleTimer = 0
+
+    var stamp = function () {
+      var t = 14 * 3600 + 3 * 60 + 40 + Math.floor(elapsed / 1000)
+      return [Math.floor(t / 3600) % 24, Math.floor(t / 60) % 60, t % 60]
+        .map(function (n) {
+          return (n < 10 ? '0' : '') + n
+        })
+        .join(':')
+    }
+
+    // The page's first frame holds a moment before save-all is entered.
+    var firstWait = 1800
+
+    var run = function () {
+      var action = actions[at]
+      var wait = firstWait || action.wait
+      firstWait = 0
+      consoleTimer = window.setTimeout(function () {
+        elapsed += wait
+        if (action.input !== undefined) input.textContent = action.input
+        if (action.line) {
+          var row = document.createElement('div')
+          row.className = 'is-new'
+          row.textContent = '[' + stamp() + '] ' + action.line
+          log.appendChild(row)
+          while (log.children.length > LOG_LINES) log.removeChild(log.firstElementChild)
+        }
+        at = (at + 1) % actions.length
+        run()
+      }, wait)
+    }
+
+    var pauseConsole = function () {
+      window.clearTimeout(consoleTimer)
+      consoleTimer = 0
+    }
+
+    if ('IntersectionObserver' in window) {
+      new IntersectionObserver(function (entries) {
+        pauseConsole()
+        if (entries[0].isIntersecting) run()
+      }).observe(consoleEl)
+    } else {
+      run()
     }
   }
 
