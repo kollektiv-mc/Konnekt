@@ -264,7 +264,7 @@ summary h3 {
     pointer-events: none;
     background: radial-gradient(
       var(--glow-size) circle at var(--mx, -999px) var(--my, -999px),
-      rgb(var(--glow-rgb) / 0.85),
+      rgb(var(--glow-rgb) / 0.3),
       transparent 60%
     );
     -webkit-mask:
