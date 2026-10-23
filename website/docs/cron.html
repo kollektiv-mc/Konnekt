@@ -1,0 +1,387 @@
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Konnekt docs: Cron expressions</title>
+    <meta
+      name="description"
+      content="Cron expressions: The Cron Schedule block fires when the clock matches a five-field expression."
+    />
+    <link rel="canonical" href="https://konnekt.pages.dev/docs/cron.html" />
+
+    <meta property="og:site_name" content="Konnekt" />
+    <meta property="og:title" content="Konnekt docs: Cron expressions" />
+    <meta
+      property="og:description"
+      content="Cron expressions: The Cron Schedule block fires when the clock matches a five-field expression."
+    />
+    <meta property="og:url" content="https://konnekt.pages.dev/docs/cron.html" />
+    <meta property="og:type" content="website" />
+    <meta property="og:image" content="https://konnekt.pages.dev/assets/img/social-card.png" />
+    <meta property="og:image:width" content="1715" />
+    <meta property="og:image:height" content="1123" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Konnekt docs: Cron expressions" />
+    <meta
+      name="twitter:description"
+      content="Cron expressions: The Cron Schedule block fires when the clock matches a five-field expression."
+    />
+    <meta name="twitter:image" content="https://konnekt.pages.dev/assets/img/social-card.png" />
+
+    <meta name="theme-color" content="#05060a" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/assets/img/favicon-16.png" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/assets/img/favicon-32.png" />
+    <link rel="icon" type="image/png" sizes="256x256" href="/assets/img/favicon.png" />
+    <link rel="apple-touch-icon" href="/assets/img/app-icon.png" />
+    <link
+      rel="preload"
+      href="/assets/fonts/Geist-Variable.woff2"
+      as="font"
+      type="font/woff2"
+      crossorigin
+    />
+    <link rel="stylesheet" href="/tokens.css" />
+    <link rel="stylesheet" href="/site.css" />
+    <link rel="stylesheet" href="/docs.css" />
+    <script>
+      document.documentElement.className = document.documentElement.className.replace('no-js', '')
+    </script>
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to content</a>
+    <div class="page">
+      <div class="group">
+        <!-- Canonical nav. Byte-identical on every page, hrefs included; site.js
+           marks the current page and scrolls same-page anchors. -->
+        <nav class="nav block block-raised" id="nav" aria-label="Main">
+          <a class="nav-brand" href="/index.html"
+            ><picture
+              ><source media="(min-resolution: 2dppx)" srcset="/assets/img/mark.svg" />
+              <img
+                class="mark"
+                src="/assets/img/mark-24.svg"
+                width="24"
+                height="24"
+                alt="" /></picture
+            >Konnekt</a
+          >
+          <ul class="nav-links">
+            <li><a href="/index.html#features">Features</a></li>
+            <li><a href="/index.html#scheduler">Scheduler</a></li>
+            <li><a href="/docs.html">Docs</a></li>
+            <li><a href="/roadmap.html">Roadmap</a></li>
+            <li><a href="/changelog.html">Changelog</a></li>
+          </ul>
+          <a
+            class="nav-side"
+            href="https://github.com/kollektiv-mc/Konnekt"
+            target="_blank"
+            rel="noopener"
+            >GitHub</a
+          >
+          <a class="btn btn-primary" href="/download.html"
+            ><svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true">
+              <path
+                d="M7 1v9M3 6.5 7 10.5 11 6.5M1.5 13h11"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.6"
+              /></svg
+            >Download</a
+          >
+        </nav>
+        <main id="main" class="group">
+          <header class="doc-head block">
+            <div class="doc-head-main">
+              <div class="doc-trail">
+                <span class="kind" data-kind="reference">Reference</span>
+                <nav aria-label="Breadcrumb">
+                  <ol class="doc-crumbs">
+                    <li><a href="/docs.html">Docs</a></li>
+                    <li><a href="/docs.html#scheduler">Scheduler</a></li>
+                    <li><span aria-current="page">Cron expressions</span></li>
+                  </ol>
+                </nav>
+              </div>
+              <h1>Cron expressions</h1>
+              <p class="doc-lead">
+                The <b>Cron Schedule</b> block fires when the clock matches a five-field expression.
+              </p>
+            </div>
+            <dl class="doc-facts">
+              <div class="doc-fact">
+                <dt class="label">Topics</dt>
+                <dd>Scheduler</dd>
+              </div>
+            </dl>
+          </header>
+
+          <section class="doc-section block" id="fields" aria-labelledby="fields-title">
+            <div class="band doc-band">
+              <div class="band-title">
+                <span class="num">01</span>
+                <h2 id="fields-title">Fields</h2>
+              </div>
+            </div>
+            <div class="doc-body">
+              <div class="doc-table-wrap">
+                <table class="doc-table">
+                  <thead>
+                    <tr>
+                      <th scope="col">Field</th>
+                      <th scope="col">Values</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td>Minute</td>
+                      <td><code>0</code> to <code>59</code></td>
+                    </tr>
+                    <tr>
+                      <td>Hour</td>
+                      <td><code>0</code> to <code>23</code></td>
+                    </tr>
+                    <tr>
+                      <td>Day of month</td>
+                      <td><code>1</code> to <code>31</code></td>
+                    </tr>
+                    <tr>
+                      <td>Month</td>
+                      <td><code>1</code> to <code>12</code></td>
+                    </tr>
+                    <tr>
+                      <td>Day of week</td>
+                      <td><code>0</code> to <code>6</code>, where <code>0</code> is Sunday</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <p class="doc-prose">
+                Write the five fields in that order, separated by spaces.<br />
+                The block checks the clock at the start of each minute.<br />
+                It uses the time zone of this computer.<br />
+                Day of month and day of week must both match.<br />
+                A block fires at most once a minute, and only while its graph is on.
+              </p>
+            </div>
+          </section>
+
+          <section class="doc-section block" id="syntax" aria-labelledby="syntax-title">
+            <div class="band doc-band">
+              <div class="band-title">
+                <span class="num">02</span>
+                <h2 id="syntax-title">Syntax</h2>
+              </div>
+            </div>
+            <div class="doc-body">
+              <div class="doc-table-wrap">
+                <table class="doc-table">
+                  <thead>
+                    <tr>
+                      <th scope="col">Form</th>
+                      <th scope="col">Example</th>
+                      <th scope="col">Means</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td>Any value</td>
+                      <td><code>*</code></td>
+                      <td>Every value of the field.</td>
+                    </tr>
+                    <tr>
+                      <td>Value</td>
+                      <td><code>30</code></td>
+                      <td>Exactly that value.</td>
+                    </tr>
+                    <tr>
+                      <td>Range</td>
+                      <td><code>9-17</code></td>
+                      <td>Every value from the first to the second, both included.</td>
+                    </tr>
+                    <tr>
+                      <td>List</td>
+                      <td><code>0,15,45</code></td>
+                      <td>Any listed value. An item can be a value or a range.</td>
+                    </tr>
+                    <tr>
+                      <td>Step</td>
+                      <td><code>*/10</code></td>
+                      <td>
+                        Every value divisible by the step. Day of month <code>*/10</code> is the
+                        10th, 20th and 30th.
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </section>
+
+          <section class="doc-section block" id="examples" aria-labelledby="examples-title">
+            <div class="band doc-band">
+              <div class="band-title">
+                <span class="num">03</span>
+                <h2 id="examples-title">Examples</h2>
+              </div>
+            </div>
+            <div class="doc-body">
+              <div class="doc-table-wrap">
+                <table class="doc-table">
+                  <thead>
+                    <tr>
+                      <th scope="col">Expression</th>
+                      <th scope="col">Runs</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td><code>* * * * *</code></td>
+                      <td>Every minute.</td>
+                    </tr>
+                    <tr>
+                      <td><code>*/5 * * * *</code></td>
+                      <td>Every 5 minutes, on the minutes 0, 5, 10 and so on.</td>
+                    </tr>
+                    <tr>
+                      <td><code>0 * * * *</code></td>
+                      <td>At the start of every hour.</td>
+                    </tr>
+                    <tr>
+                      <td><code>0,30 * * * *</code></td>
+                      <td>At the start and the middle of every hour.</td>
+                    </tr>
+                    <tr>
+                      <td><code>30 9 * * *</code></td>
+                      <td>Every day at 09:30.</td>
+                    </tr>
+                    <tr>
+                      <td><code>0 */6 * * *</code></td>
+                      <td>At 00:00, 06:00, 12:00 and 18:00.</td>
+                    </tr>
+                    <tr>
+                      <td><code>0 4 * * 1-5</code></td>
+                      <td>At 04:00 from Monday to Friday.</td>
+                    </tr>
+                    <tr>
+                      <td><code>0 0 * * 0</code></td>
+                      <td>At midnight on Sunday.</td>
+                    </tr>
+                    <tr>
+                      <td><code>0 12 1 * *</code></td>
+                      <td>At 12:00 on the 1st of each month.</td>
+                    </tr>
+                    <tr>
+                      <td><code>15 3 1 1 *</code></td>
+                      <td>At 03:15 on 1 January.</td>
+                    </tr>
+                    <tr>
+                      <td><code>0 9 13 * 5</code></td>
+                      <td>At 09:00 on a day that is both the 13th and a Friday.</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </section>
+
+          <section class="doc-section block" id="limits" aria-labelledby="limits-title">
+            <div class="band doc-band">
+              <div class="band-title">
+                <span class="num">04</span>
+                <h2 id="limits-title">Limits</h2>
+              </div>
+            </div>
+            <div class="doc-body">
+              <p class="doc-prose">
+                An expression that does not have five fields never matches.<br />
+                A value the parser cannot read never matches, and nothing reports it.<br />
+                That covers names such as <code>MON</code> or <code>JAN</code>, macros such as
+                <code>@hourly</code>, and <code>7</code> for Sunday.<br />
+                A step works only as <code>*/n</code>, so <code>1-5/2</code> and
+                <code>5/15</code> never match.<br />
+                A range that wraps, such as <code>22-2</code>, never matches.<br />
+                The next run is looked up 14 days ahead.<br />
+                A rarer schedule shows no next run time.
+              </p>
+            </div>
+          </section>
+
+          <nav class="doc-related block" aria-label="Related">
+            <div class="shelf-label"><span class="label">Related</span></div>
+            <a class="related-link" href="/docs/blocks/trigger-cron.html"
+              ><span class="kind" data-kind="reference">Reference</span>Cron Schedule</a
+            >
+            <a class="related-link" href="/docs/scheduler-editor.html"
+              ><span class="kind" data-kind="reference">Reference</span>Scheduler editor</a
+            >
+            <a class="related-link" href="/docs/blocks/"
+              ><span class="kind" data-kind="reference">Reference</span>Scheduler blocks</a
+            >
+          </nav>
+        </main>
+      </div>
+
+      <!-- Canonical footer. Byte-identical on every page. -->
+      <footer class="block block-raised">
+        <div class="footer-cols">
+          <div class="footer-about">
+            <a class="footer-brand" href="/index.html"
+              ><picture
+                ><source media="(min-resolution: 2dppx)" srcset="/assets/img/mark.svg" />
+                <img
+                  class="mark"
+                  src="/assets/img/mark-24.svg"
+                  width="24"
+                  height="24"
+                  alt="" /></picture
+              >Konnekt</a
+            >
+            <p>A desktop dashboard for the Minecraft servers you host.</p>
+            <span class="meta"><span data-release-tag></span>Windows and Linux</span>
+          </div>
+          <nav class="footer-col" aria-label="Product">
+            <span class="label">Product</span>
+            <a href="/download.html">Download</a>
+            <a href="https://konnekt-demo.pages.dev/" target="_blank" rel="noopener"
+              >Try the demo</a
+            >
+            <a href="/changelog.html">Changelog</a>
+          </nav>
+          <nav class="footer-col" aria-label="Learn">
+            <span class="label">Learn</span>
+            <a href="/index.html#features">Features</a>
+            <a href="/docs.html">Docs</a>
+            <a href="/roadmap.html">Roadmap</a>
+          </nav>
+          <nav class="footer-col" aria-label="Source">
+            <span class="label">Source</span>
+            <a href="https://github.com/kollektiv-mc/Konnekt" target="_blank" rel="noopener"
+              >GitHub</a
+            >
+            <a href="https://github.com/kollektiv-mc/Konnekt/issues" target="_blank" rel="noopener"
+              >Issues</a
+            >
+            <a
+              href="https://github.com/kollektiv-mc/Konnekt/blob/main/LICENSE"
+              target="_blank"
+              rel="noopener"
+              >MIT licence</a
+            >
+          </nav>
+        </div>
+        <div class="footer-base">
+          <span
+            >Alpha software. A side project mostly written by Claude.
+            <a href="/docs.html#disclaimer">Full statement</a></span
+          >
+          <span>&copy; 2026 Konnekt</span>
+        </div>
+      </footer>
+    </div>
+
+    <script src="/release.js"></script>
+    <script src="/site.js"></script>
+  </body>
+</html>

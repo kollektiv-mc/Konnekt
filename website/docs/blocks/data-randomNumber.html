@@ -1,0 +1,317 @@
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Konnekt docs: Random Number block</title>
+    <meta
+      name="description"
+      content="Random Number: Outputs a random number between Min and Max."
+    />
+    <link rel="canonical" href="https://konnekt.pages.dev/docs/blocks/data-randomNumber.html" />
+
+    <meta property="og:site_name" content="Konnekt" />
+    <meta property="og:title" content="Konnekt docs: Random Number block" />
+    <meta
+      property="og:description"
+      content="Random Number: Outputs a random number between Min and Max."
+    />
+    <meta
+      property="og:url"
+      content="https://konnekt.pages.dev/docs/blocks/data-randomNumber.html"
+    />
+    <meta property="og:type" content="website" />
+    <meta property="og:image" content="https://konnekt.pages.dev/assets/img/social-card.png" />
+    <meta property="og:image:width" content="1715" />
+    <meta property="og:image:height" content="1123" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Konnekt docs: Random Number block" />
+    <meta
+      name="twitter:description"
+      content="Random Number: Outputs a random number between Min and Max."
+    />
+    <meta name="twitter:image" content="https://konnekt.pages.dev/assets/img/social-card.png" />
+
+    <meta name="theme-color" content="#05060a" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/assets/img/favicon-16.png" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/assets/img/favicon-32.png" />
+    <link rel="icon" type="image/png" sizes="256x256" href="/assets/img/favicon.png" />
+    <link rel="apple-touch-icon" href="/assets/img/app-icon.png" />
+    <link
+      rel="preload"
+      href="/assets/fonts/Geist-Variable.woff2"
+      as="font"
+      type="font/woff2"
+      crossorigin
+    />
+    <link rel="stylesheet" href="/tokens.css" />
+    <link rel="stylesheet" href="/site.css" />
+    <link rel="stylesheet" href="/docs.css" />
+    <link rel="stylesheet" href="/docs/blocks/blocks.css" />
+    <link rel="stylesheet" href="/docs/blocks/ports.css" />
+    <script>
+      document.documentElement.className = document.documentElement.className.replace('no-js', '')
+    </script>
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to content</a>
+    <div class="page">
+      <div class="group">
+        <!-- Canonical nav. Byte-identical on every page, hrefs included; site.js
+           marks the current page and scrolls same-page anchors. -->
+        <nav class="nav block block-raised" id="nav" aria-label="Main">
+          <a class="nav-brand" href="/index.html"
+            ><picture
+              ><source media="(min-resolution: 2dppx)" srcset="/assets/img/mark.svg" />
+              <img
+                class="mark"
+                src="/assets/img/mark-24.svg"
+                width="24"
+                height="24"
+                alt="" /></picture
+            >Konnekt</a
+          >
+          <ul class="nav-links">
+            <li><a href="/index.html#features">Features</a></li>
+            <li><a href="/index.html#scheduler">Scheduler</a></li>
+            <li><a href="/docs.html">Docs</a></li>
+            <li><a href="/roadmap.html">Roadmap</a></li>
+            <li><a href="/changelog.html">Changelog</a></li>
+          </ul>
+          <a
+            class="nav-side"
+            href="https://github.com/kollektiv-mc/Konnekt"
+            target="_blank"
+            rel="noopener"
+            >GitHub</a
+          >
+          <a class="btn btn-primary" href="/download.html"
+            ><svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true">
+              <path
+                d="M7 1v9M3 6.5 7 10.5 11 6.5M1.5 13h11"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.6"
+              /></svg
+            >Download</a
+          >
+        </nav>
+        <main id="main" class="group">
+          <header class="doc-head block">
+            <div class="doc-head-main">
+              <div class="doc-trail">
+                <span class="kind" data-kind="reference">Reference</span>
+                <nav aria-label="Breadcrumb">
+                  <ol class="doc-crumbs">
+                    <li><a href="/docs.html">Docs</a></li>
+                    <li><a href="/docs.html#scheduler">Scheduler</a></li>
+                    <li><a href="/docs/blocks/">Scheduler blocks</a></li>
+                    <li><span aria-current="page">Random Number</span></li>
+                  </ol>
+                </nav>
+              </div>
+              <h1>Random Number</h1>
+              <p class="doc-lead">Outputs a random number between Min and Max.</p>
+            </div>
+            <dl class="doc-facts">
+              <div class="doc-fact">
+                <dt class="label">Category</dt>
+                <dd>Data</dd>
+              </div>
+              <div class="doc-fact">
+                <dt class="label">Topics</dt>
+                <dd>Scheduler</dd>
+              </div>
+            </dl>
+          </header>
+
+          <!-- gen:ports -->
+          <section class="doc-section block" id="ports" aria-labelledby="ports-title">
+            <div class="band doc-band">
+              <div class="band-title">
+                <span class="num">01</span>
+                <h2 id="ports-title">Ports</h2>
+              </div>
+            </div>
+            <div class="port-stage">
+              <div class="port-canvas">
+                <div class="port-node" data-category="data">
+                  <div class="port-node-head">
+                    <span>Random Number</span><span class="port-node-cat">data</span>
+                  </div>
+                  <div class="port-cols">
+                    <ul class="port-col port-in" aria-label="Inputs">
+                      <li class="port-col-label" aria-hidden="true">in</li>
+                      <li class="port" data-shape="data" data-type="number">
+                        <span>Min</span><span class="port-type">number</span>
+                      </li>
+                      <li class="port" data-shape="data" data-type="number">
+                        <span>Max</span><span class="port-type">number</span>
+                      </li>
+                    </ul>
+                    <ul class="port-col port-out" aria-label="Outputs">
+                      <li class="port-col-label" aria-hidden="true">out</li>
+                      <li class="port" data-shape="data" data-type="number">
+                        <span>Value</span><span class="port-type">number</span>
+                      </li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+              <div class="port-legend">
+                <span class="label">Ports</span>
+                <span class="port-key" data-shape="control">Control</span>
+                <span class="port-key" data-shape="data">Data</span>
+                <hr />
+                <span class="label">Data types</span>
+                <span class="port-key" data-shape="data" data-type="string"
+                  ><code>string</code></span
+                >
+                <span class="port-key" data-shape="data" data-type="number"
+                  ><code>number</code></span
+                >
+                <span class="port-key" data-shape="data" data-type="bool"><code>bool</code></span>
+                <p class="doc-prose">
+                  Strings accept any data input.<br />
+                  Numbers accept boolean input.
+                </p>
+              </div>
+            </div>
+          </section>
+          <!-- /gen:ports -->
+
+          <!-- gen:fields -->
+          <section class="doc-section block" id="fields" aria-labelledby="fields-title">
+            <div class="band doc-band">
+              <div class="band-title">
+                <span class="num">02</span>
+                <h2 id="fields-title">Fields</h2>
+              </div>
+            </div>
+            <div class="doc-body">
+              <div class="doc-table-wrap">
+                <table class="doc-table">
+                  <thead>
+                    <tr>
+                      <th scope="col">Field</th>
+                      <th scope="col">What it does</th>
+                      <th scope="col">Default</th>
+                      <th scope="col">Limits</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr data-field="min">
+                      <td>Min</td>
+                      <td>The lowest number the block can output; a wired Min replaces it.</td>
+                      <td><code>1</code></td>
+                      <td>None</td>
+                    </tr>
+                    <tr data-field="max">
+                      <td>Max</td>
+                      <td>The highest number the block can output; a wired Max replaces it.</td>
+                      <td><code>100</code></td>
+                      <td>A value below Min is raised to Min.</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </section>
+          <!-- /gen:fields -->
+
+          <section class="doc-section block" id="run" aria-labelledby="run-title">
+            <div class="band doc-band">
+              <div class="band-title">
+                <span class="num">03</span>
+                <h2 id="run-title">What a run does</h2>
+              </div>
+            </div>
+            <div class="doc-body">
+              <p class="doc-prose">
+                This block has no control ports.<br />It runs when a block that uses its
+                <b>Value</b> runs.<br />A wired Min or Max replaces its field.<br />
+                The number is picked once per run, so every block using it in that run gets the same
+                number.
+              </p>
+              <p class="doc-prose">
+                The number can have decimals, and it does not exceed <b>Max</b>.<br />If
+                <b>Max</b> is below <b>Min</b>, the number is <b>Min</b>.
+              </p>
+            </div>
+          </section>
+
+          <nav class="doc-related block" aria-label="Related">
+            <div class="shelf-label"><span class="label">Related</span></div>
+            <a class="related-link" href="/docs/blocks/data-mathOp.html"
+              ><span class="kind" data-kind="reference">Reference</span>Math</a
+            ><a class="related-link" href="/docs/blocks/control-condition.html"
+              ><span class="kind" data-kind="reference">Reference</span>Condition</a
+            ><a class="related-link" href="/docs/blocks/data-constant.html"
+              ><span class="kind" data-kind="reference">Reference</span>Constant</a
+            >
+          </nav>
+        </main>
+      </div>
+
+      <!-- Canonical footer. Byte-identical on every page. -->
+      <footer class="block block-raised">
+        <div class="footer-cols">
+          <div class="footer-about">
+            <a class="footer-brand" href="/index.html"
+              ><picture
+                ><source media="(min-resolution: 2dppx)" srcset="/assets/img/mark.svg" />
+                <img
+                  class="mark"
+                  src="/assets/img/mark-24.svg"
+                  width="24"
+                  height="24"
+                  alt="" /></picture
+              >Konnekt</a
+            >
+            <p>A desktop dashboard for the Minecraft servers you host.</p>
+            <span class="meta"><span data-release-tag></span>Windows and Linux</span>
+          </div>
+          <nav class="footer-col" aria-label="Product">
+            <span class="label">Product</span>
+            <a href="/download.html">Download</a>
+            <a href="https://konnekt-demo.pages.dev/" target="_blank" rel="noopener"
+              >Try the demo</a
+            >
+            <a href="/changelog.html">Changelog</a>
+          </nav>
+          <nav class="footer-col" aria-label="Learn">
+            <span class="label">Learn</span>
+            <a href="/index.html#features">Features</a>
+            <a href="/docs.html">Docs</a>
+            <a href="/roadmap.html">Roadmap</a>
+          </nav>
+          <nav class="footer-col" aria-label="Source">
+            <span class="label">Source</span>
+            <a href="https://github.com/kollektiv-mc/Konnekt" target="_blank" rel="noopener"
+              >GitHub</a
+            >
+            <a href="https://github.com/kollektiv-mc/Konnekt/issues" target="_blank" rel="noopener"
+              >Issues</a
+            >
+            <a
+              href="https://github.com/kollektiv-mc/Konnekt/blob/main/LICENSE"
+              target="_blank"
+              rel="noopener"
+              >MIT licence</a
+            >
+          </nav>
+        </div>
+        <div class="footer-base">
+          <span
+            >Alpha software. A side project mostly written by Claude.
+            <a href="/docs.html#disclaimer">Full statement</a></span
+          >
+          <span>&copy; 2026 Konnekt</span>
+        </div>
+      </footer>
+    </div>
+
+    <script src="/release.js"></script>
+    <script src="/site.js"></script>
+  </body>
+</html>

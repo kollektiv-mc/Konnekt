@@ -1,0 +1,412 @@
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Konnekt docs: HTTP Request block</title>
+    <meta
+      name="description"
+      content="HTTP Request: Sends an HTTP request to a URL and outputs the status and the response body."
+    />
+    <link rel="canonical" href="https://konnekt.pages.dev/docs/blocks/action-httpRequest.html" />
+
+    <meta property="og:site_name" content="Konnekt" />
+    <meta property="og:title" content="Konnekt docs: HTTP Request block" />
+    <meta
+      property="og:description"
+      content="HTTP Request: Sends an HTTP request to a URL and outputs the status and the response body."
+    />
+    <meta
+      property="og:url"
+      content="https://konnekt.pages.dev/docs/blocks/action-httpRequest.html"
+    />
+    <meta property="og:type" content="website" />
+    <meta property="og:image" content="https://konnekt.pages.dev/assets/img/social-card.png" />
+    <meta property="og:image:width" content="1715" />
+    <meta property="og:image:height" content="1123" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Konnekt docs: HTTP Request block" />
+    <meta
+      name="twitter:description"
+      content="HTTP Request: Sends an HTTP request to a URL and outputs the status and the response body."
+    />
+    <meta name="twitter:image" content="https://konnekt.pages.dev/assets/img/social-card.png" />
+
+    <meta name="theme-color" content="#05060a" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/assets/img/favicon-16.png" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/assets/img/favicon-32.png" />
+    <link rel="icon" type="image/png" sizes="256x256" href="/assets/img/favicon.png" />
+    <link rel="apple-touch-icon" href="/assets/img/app-icon.png" />
+    <link
+      rel="preload"
+      href="/assets/fonts/Geist-Variable.woff2"
+      as="font"
+      type="font/woff2"
+      crossorigin
+    />
+    <link rel="stylesheet" href="/tokens.css" />
+    <link rel="stylesheet" href="/site.css" />
+    <link rel="stylesheet" href="/docs.css" />
+    <link rel="stylesheet" href="/docs/blocks/blocks.css" />
+    <link rel="stylesheet" href="/docs/blocks/ports.css" />
+    <script>
+      document.documentElement.className = document.documentElement.className.replace('no-js', '')
+    </script>
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to content</a>
+    <div class="page">
+      <div class="group">
+        <!-- Canonical nav. Byte-identical on every page, hrefs included; site.js
+           marks the current page and scrolls same-page anchors. -->
+        <nav class="nav block block-raised" id="nav" aria-label="Main">
+          <a class="nav-brand" href="/index.html"
+            ><picture
+              ><source media="(min-resolution: 2dppx)" srcset="/assets/img/mark.svg" />
+              <img
+                class="mark"
+                src="/assets/img/mark-24.svg"
+                width="24"
+                height="24"
+                alt="" /></picture
+            >Konnekt</a
+          >
+          <ul class="nav-links">
+            <li><a href="/index.html#features">Features</a></li>
+            <li><a href="/index.html#scheduler">Scheduler</a></li>
+            <li><a href="/docs.html">Docs</a></li>
+            <li><a href="/roadmap.html">Roadmap</a></li>
+            <li><a href="/changelog.html">Changelog</a></li>
+          </ul>
+          <a
+            class="nav-side"
+            href="https://github.com/kollektiv-mc/Konnekt"
+            target="_blank"
+            rel="noopener"
+            >GitHub</a
+          >
+          <a class="btn btn-primary" href="/download.html"
+            ><svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true">
+              <path
+                d="M7 1v9M3 6.5 7 10.5 11 6.5M1.5 13h11"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.6"
+              /></svg
+            >Download</a
+          >
+        </nav>
+        <main id="main" class="group">
+          <header class="doc-head block">
+            <div class="doc-head-main">
+              <div class="doc-trail">
+                <span class="kind" data-kind="reference">Reference</span>
+                <nav aria-label="Breadcrumb">
+                  <ol class="doc-crumbs">
+                    <li><a href="/docs.html">Docs</a></li>
+                    <li><a href="/docs.html#scheduler">Scheduler</a></li>
+                    <li><a href="/docs/blocks/">Scheduler blocks</a></li>
+                    <li><span aria-current="page">HTTP Request</span></li>
+                  </ol>
+                </nav>
+              </div>
+              <h1>HTTP Request</h1>
+              <p class="doc-lead">
+                Sends an HTTP request to a URL and outputs the status and the response body.
+              </p>
+            </div>
+            <dl class="doc-facts">
+              <div class="doc-fact">
+                <dt class="label">Category</dt>
+                <dd>Action</dd>
+              </div>
+              <div class="doc-fact">
+                <dt class="label">Topics</dt>
+                <dd>Scheduler · HTTP</dd>
+              </div>
+            </dl>
+          </header>
+
+          <!-- gen:ports -->
+          <section class="doc-section block" id="ports" aria-labelledby="ports-title">
+            <div class="band doc-band">
+              <div class="band-title">
+                <span class="num">01</span>
+                <h2 id="ports-title">Ports</h2>
+              </div>
+            </div>
+            <div class="port-stage">
+              <div class="port-canvas">
+                <div class="port-node" data-category="action">
+                  <div class="port-node-head">
+                    <span>HTTP Request</span><span class="port-node-cat">action</span>
+                  </div>
+                  <div class="port-cols">
+                    <ul class="port-col port-in" aria-label="Inputs">
+                      <li class="port-col-label" aria-hidden="true">in</li>
+                      <li class="port" data-shape="control" data-port="trigger">
+                        <span>trigger</span><span class="port-type">control</span>
+                      </li>
+                      <li class="port" data-shape="data" data-type="string">
+                        <span>URL</span><span class="port-type">string</span>
+                      </li>
+                      <li class="port" data-shape="data" data-type="string">
+                        <span>Request body</span><span class="port-type">string</span>
+                      </li>
+                      <li class="port" data-shape="data" data-type="string">
+                        <span>Content-Type</span><span class="port-type">string</span>
+                      </li>
+                    </ul>
+                    <ul class="port-col port-out" aria-label="Outputs">
+                      <li class="port-col-label" aria-hidden="true">out</li>
+                      <li class="port" data-shape="control" data-port="onComplete">
+                        <span>onComplete</span><span class="port-type">control</span>
+                      </li>
+                      <li class="port" data-shape="control" data-port="onFailed">
+                        <span>onFailed</span><span class="port-type">control</span>
+                      </li>
+                      <li class="port" data-shape="data" data-type="number">
+                        <span>HTTP status</span><span class="port-type">number</span>
+                      </li>
+                      <li class="port" data-shape="data" data-type="string">
+                        <span>Response body</span><span class="port-type">string</span>
+                      </li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+              <div class="port-legend">
+                <span class="label">Ports</span>
+                <span class="port-key" data-shape="control">Control</span>
+                <span class="port-key" data-shape="data">Data</span>
+                <hr />
+                <span class="label">Data types</span>
+                <span class="port-key" data-shape="data" data-type="string"
+                  ><code>string</code></span
+                >
+                <span class="port-key" data-shape="data" data-type="number"
+                  ><code>number</code></span
+                >
+                <span class="port-key" data-shape="data" data-type="bool"><code>bool</code></span>
+                <p class="doc-prose">
+                  Strings accept any data input.<br />
+                  Numbers accept boolean input.
+                </p>
+              </div>
+            </div>
+          </section>
+          <!-- /gen:ports -->
+
+          <!-- gen:fields -->
+          <section class="doc-section block" id="fields" aria-labelledby="fields-title">
+            <div class="band doc-band">
+              <div class="band-title">
+                <span class="num">02</span>
+                <h2 id="fields-title">Fields</h2>
+              </div>
+            </div>
+            <div class="doc-body">
+              <div class="doc-table-wrap">
+                <table class="doc-table">
+                  <thead>
+                    <tr>
+                      <th scope="col">Field</th>
+                      <th scope="col">What it does</th>
+                      <th scope="col">Default</th>
+                      <th scope="col">Limits</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr data-field="method">
+                      <td>Method</td>
+                      <td>The HTTP method of the request.</td>
+                      <td><code>POST</code></td>
+                      <td>
+                        <ul class="field-options">
+                          <li><code>GET</code></li>
+                          <li><code>POST</code></li>
+                          <li><code>PUT</code></li>
+                          <li><code>PATCH</code></li>
+                          <li><code>DELETE</code></li>
+                        </ul>
+                      </td>
+                    </tr>
+                    <tr data-field="url">
+                      <td>URL</td>
+                      <td>The address to request.</td>
+                      <td>None</td>
+                      <td>Cannot be empty; <code>http</code> or <code>https</code> only.</td>
+                    </tr>
+                    <tr data-field="body">
+                      <td>Request body</td>
+                      <td>The text sent as the request body.</td>
+                      <td>None</td>
+                      <td>None</td>
+                    </tr>
+                    <tr data-field="contentType">
+                      <td>Content-Type</td>
+                      <td>The <code>Content-Type</code> header sent with the body.</td>
+                      <td><code>application/json</code></td>
+                      <td>None</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </section>
+          <!-- /gen:fields -->
+
+          <section class="doc-section block" id="run" aria-labelledby="run-title">
+            <div class="band doc-band">
+              <div class="band-title">
+                <span class="num">03</span>
+                <h2 id="run-title">What a run does</h2>
+              </div>
+            </div>
+            <div class="doc-body">
+              <p class="doc-prose">
+                Sends one request with a 30 s timeout and follows up to 10 redirects.<br />A wired
+                URL, Request body or Content-Type replaces its field.<br />An empty Request body
+                sends no body and no <code>Content-Type</code> header.<br />An empty Content-Type
+                sends <code>application/json</code>.<br />The block does not filter addresses, so a
+                URL on the local network works.
+              </p>
+              <p class="doc-prose">
+                It leaves by <code>onComplete</code> when the status is below 400.<br />It leaves by
+                <code>onFailed</code> on a status of 400 or above, and on a connection error.
+              </p>
+              <p class="doc-prose">
+                <b>HTTP status</b> carries the status code whenever a response arrived, failed or
+                not.<br /><b>Response body</b> carries the body as text once the whole body has been
+                read.<br />A body over 1 MiB fails the block and sets no <b>Response body</b>.
+              </p>
+            </div>
+          </section>
+
+          <section class="doc-section block" id="errors" aria-labelledby="errors-title">
+            <div class="band doc-band">
+              <div class="band-title">
+                <span class="num">04</span>
+                <h2 id="errors-title">Errors</h2>
+              </div>
+            </div>
+            <div class="doc-body">
+              <div class="doc-table-wrap">
+                <table class="doc-table">
+                  <thead>
+                    <tr>
+                      <th scope="col">Message says</th>
+                      <th scope="col">Do</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td>url is empty</td>
+                      <td>Fill in <b>URL</b> or wire one in.</td>
+                    </tr>
+                    <tr>
+                      <td>HTTP <i>status</i>: <i>response body</i></td>
+                      <td>
+                        The service answered 400 or above; check the request and what the service
+                        expects.
+                      </td>
+                    </tr>
+                    <tr>
+                      <td>HTTP <i>status</i>: response body exceeds 1048576 bytes</td>
+                      <td>Request something smaller; the block keeps 1 MiB at most.</td>
+                    </tr>
+                    <tr>
+                      <td>HTTP <i>status</i>: read response: <i>reason</i></td>
+                      <td>
+                        The connection broke while the body was read; check the service and the
+                        network.
+                      </td>
+                    </tr>
+                    <tr>
+                      <td><i>Method</i> "<i>url</i>": <i>reason</i></td>
+                      <td>
+                        Check the address, that the service is reachable and that it answers within
+                        30 s.
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </section>
+
+          <nav class="doc-related block" aria-label="Related">
+            <div class="shelf-label"><span class="label">Related</span></div>
+            <a class="related-link" href="/docs/blocks/control-condition.html"
+              ><span class="kind" data-kind="reference">Reference</span>Condition</a
+            ><a class="related-link" href="/docs/blocks/action-notify.html"
+              ><span class="kind" data-kind="reference">Reference</span>Notify</a
+            ><a class="related-link" href="/docs/blocks/data-constant.html"
+              ><span class="kind" data-kind="reference">Reference</span>Constant</a
+            >
+          </nav>
+        </main>
+      </div>
+
+      <!-- Canonical footer. Byte-identical on every page. -->
+      <footer class="block block-raised">
+        <div class="footer-cols">
+          <div class="footer-about">
+            <a class="footer-brand" href="/index.html"
+              ><picture
+                ><source media="(min-resolution: 2dppx)" srcset="/assets/img/mark.svg" />
+                <img
+                  class="mark"
+                  src="/assets/img/mark-24.svg"
+                  width="24"
+                  height="24"
+                  alt="" /></picture
+              >Konnekt</a
+            >
+            <p>A desktop dashboard for the Minecraft servers you host.</p>
+            <span class="meta"><span data-release-tag></span>Windows and Linux</span>
+          </div>
+          <nav class="footer-col" aria-label="Product">
+            <span class="label">Product</span>
+            <a href="/download.html">Download</a>
+            <a href="https://konnekt-demo.pages.dev/" target="_blank" rel="noopener"
+              >Try the demo</a
+            >
+            <a href="/changelog.html">Changelog</a>
+          </nav>
+          <nav class="footer-col" aria-label="Learn">
+            <span class="label">Learn</span>
+            <a href="/index.html#features">Features</a>
+            <a href="/docs.html">Docs</a>
+            <a href="/roadmap.html">Roadmap</a>
+          </nav>
+          <nav class="footer-col" aria-label="Source">
+            <span class="label">Source</span>
+            <a href="https://github.com/kollektiv-mc/Konnekt" target="_blank" rel="noopener"
+              >GitHub</a
+            >
+            <a href="https://github.com/kollektiv-mc/Konnekt/issues" target="_blank" rel="noopener"
+              >Issues</a
+            >
+            <a
+              href="https://github.com/kollektiv-mc/Konnekt/blob/main/LICENSE"
+              target="_blank"
+              rel="noopener"
+              >MIT licence</a
+            >
+          </nav>
+        </div>
+        <div class="footer-base">
+          <span
+            >Alpha software. A side project mostly written by Claude.
+            <a href="/docs.html#disclaimer">Full statement</a></span
+          >
+          <span>&copy; 2026 Konnekt</span>
+        </div>
+      </footer>
+    </div>
+
+    <script src="/release.js"></script>
+    <script src="/site.js"></script>
+  </body>
+</html>
