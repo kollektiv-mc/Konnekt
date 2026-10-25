@@ -29,21 +29,34 @@ describe('useUiStore closeGuard', () => {
   })
 
   it('sets and clears the guard function', () => {
-    const guard = () => true
+    const guard = vi.fn(() => true)
     useUiStore.getState().setCloseGuard(guard)
-    expect(useUiStore.getState().closeGuard).toBe(guard)
+    expect(useUiStore.getState().closeGuard?.(() => {})).toBe(true)
+    expect(guard).toHaveBeenCalledOnce()
 
     useUiStore.getState().setCloseGuard(null)
     expect(useUiStore.getState().closeGuard).toBeNull()
   })
 
   it('stores a distinct guard set by a later mount without merging state', () => {
-    const first = () => true
+    const first = vi.fn(() => true)
     const second = () => false
     useUiStore.getState().setCloseGuard(first)
     useUiStore.getState().setCloseGuard(second)
-    expect(useUiStore.getState().closeGuard).toBe(second)
     expect(useUiStore.getState().closeGuard?.(() => {})).toBe(false)
+    expect(first).not.toHaveBeenCalled()
+  })
+
+  // A component subscribed to the whole store keeps the snapshot it last
+  // rendered. Its guard must not still reach the tile that set it (#767).
+  it('lets go of a cleared guard held in an older snapshot', () => {
+    const guard = vi.fn(() => true)
+    useUiStore.getState().setCloseGuard(guard)
+    const stale = useUiStore.getState().closeGuard
+
+    useUiStore.getState().setCloseGuard(null)
+    expect(stale?.(() => {})).toBe(false)
+    expect(guard).not.toHaveBeenCalled()
   })
 
   it('hands the guard the action it is vetoing, to run or to drop', () => {

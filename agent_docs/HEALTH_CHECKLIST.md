@@ -1123,6 +1123,15 @@ corrected the same day)
   runner, which has to earn the minutes on its own. #321 is rewritten to that
   and dropped to p3.
 
+**P3 — Typing in a multi-megabyte config file** (found 2026-10-25 with #767)
+
+#767 moved files over 128 KB to the raw editor, which opens and idles fine at
+10 MB. Typing there still costs about 100 ms a keystroke in Chromium: each
+change turns CodeMirror's document back into one string for `onChange`, and
+`parseProblem` parses all of it again. Debouncing the parse, or keeping the
+text in CodeMirror and reading it out only on save, would remove most of it.
+Not worth doing until a real file that size is one people edit by hand.
+
 **Release follow-ups** (deferred)
 - `wails.json`'s `productVersion` is not stamped from the tag, so the Windows
   exe's file properties report the `-dev` base (`0.2.0-dev` on `v0.2.0-alpha.1`)

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import type { ConfigField } from './inferType'
 import { parsePropertiesFields, applyPropertyEdit } from './parseProperties'
 import { parseYamlFields, applyYamlEdit } from './parseYaml'
@@ -64,15 +64,17 @@ function Field({
 export function ConfigForm({ format, content, onChange }: Props) {
   const isProperties = format === 'properties'
 
-  let fields: ConfigField[] = []
-  try {
-    if (isProperties) fields = parsePropertiesFields(content)
-    else if (format === 'yaml') fields = parseYamlFields(content)
-    else if (format === 'json') fields = parseJsonFields(content)
-    else if (format === 'toml') fields = parseTomlFields(content)
-  } catch {
-    // leave fields empty; form shows "No fields detected"
-  }
+  const fields = useMemo(() => {
+    try {
+      if (isProperties) return parsePropertiesFields(content)
+      if (format === 'yaml') return parseYamlFields(content)
+      if (format === 'json') return parseJsonFields(content)
+      if (format === 'toml') return parseTomlFields(content)
+    } catch {
+      // leave fields empty; form shows "No fields detected"
+    }
+    return [] as ConfigField[]
+  }, [isProperties, format, content])
 
   function handleEdit(path: (string | number)[], value: unknown) {
     try {

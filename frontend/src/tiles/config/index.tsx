@@ -21,7 +21,9 @@ const SIDEBAR_MAX = 480
 const SIDEBAR_DEFAULT = 208 // w-52
 
 export function ConfigTile({ serverId, maximized }: TileProps) {
-  const { status } = useServerStore()
+  // The one field it reads. The whole store changes on every status poll, and
+  // each change re-rendered the open editor.
+  const running = useServerStore((s) => s.status.running)
   const [search, setSearch] = useState('')
   const [sidebarWidth, setSidebarWidth] = useState(SIDEBAR_DEFAULT)
   const dragging = useRef(false)
@@ -182,7 +184,7 @@ export function ConfigTile({ serverId, maximized }: TileProps) {
           loading={loadingContent}
           saving={saving}
           saveError={saveError}
-          isRunning={status.running}
+          isRunning={running}
           onSave={handleSaveAndMaybeRestart}
           onRevert={revert}
           onRestart={handleRestart}

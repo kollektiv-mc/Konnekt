@@ -1,5 +1,24 @@
 import { create } from 'zustand'
 
+type CloseGuard = (proceed: () => void) => boolean
+
+// What the store actually holds for a guard: a forwarder to a slot that
+// setCloseGuard empties when the guard is replaced or cleared. Built here, at
+// module level, so the forwarder closes over the slot and nothing else.
+//
+// Holding the tile's own function kept that tile alive after it closed (#767).
+// A guard written inline in a component shares V8's context for that render
+// with every other closure there, and those reach the component's state, so
+// the config editor's guard reached the whole open file. A component that
+// subscribes to this entire store (TileCrate, Dashboard) keeps the snapshot it
+// last rendered, guard included, until it next re-renders, which can be never.
+// With the slot emptied, a stale snapshot holds an empty forwarder.
+function forwardingGuard(slot: { fn: CloseGuard | null }): CloseGuard {
+  return (proceed) => slot.fn?.(proceed) ?? false
+}
+
+let liveGuard: { fn: CloseGuard | null } | null = null
+
 interface UiStore {
   // Fullscreen request raised by the navbar; consumed + cleared by Dashboard.
   maximizeRequest: { id: string; rect: DOMRect | null } | null
@@ -32,8 +51,8 @@ interface UiStore {
   // shows its own confirm UI, and calls `proceed` if and when the user agrees
   // (or never, on cancel). A guard that only wants to swallow the request, like
   // the command library closing its own dialog, may ignore `proceed`.
-  closeGuard: ((proceed: () => void) => boolean) | null
-  setCloseGuard: (fn: ((proceed: () => void) => boolean) | null) => void
+  closeGuard: CloseGuard | null
+  setCloseGuard: (fn: CloseGuard | null) => void
 
   // The server manager, and the sidebar's disconnect confirm.
   //
@@ -78,7 +97,11 @@ export const useUiStore = create<UiStore>((set) => ({
   },
 
   closeGuard: null,
-  setCloseGuard: (fn) => set({ closeGuard: fn }),
+  setCloseGuard: (fn) => {
+    if (liveGuard) liveGuard.fn = null
+    liveGuard = fn ? { fn } : null
+    set({ closeGuard: liveGuard ? forwardingGuard(liveGuard) : null })
+  },
 
   serverManagerOpen: false,
   serverManagerSelection: '',
