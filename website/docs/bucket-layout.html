@@ -1,0 +1,425 @@
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Konnekt docs: What ends up in the bucket</title>
+    <meta
+      name="description"
+      content="What ends up in the bucket: The keys Konnekt writes under a destination's prefix for uploads and snapshots, and when it deletes them."
+    />
+    <link rel="canonical" href="https://konnekt.pages.dev/docs/bucket-layout.html" />
+
+    <meta property="og:site_name" content="Konnekt" />
+    <meta property="og:title" content="Konnekt docs: What ends up in the bucket" />
+    <meta
+      property="og:description"
+      content="What ends up in the bucket: The keys Konnekt writes under a destination's prefix for uploads and snapshots, and when it deletes them."
+    />
+    <meta property="og:url" content="https://konnekt.pages.dev/docs/bucket-layout.html" />
+    <meta property="og:type" content="website" />
+    <meta property="og:image" content="https://konnekt.pages.dev/assets/img/social-card.png" />
+    <meta property="og:image:width" content="1715" />
+    <meta property="og:image:height" content="1123" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Konnekt docs: What ends up in the bucket" />
+    <meta
+      name="twitter:description"
+      content="What ends up in the bucket: The keys Konnekt writes under a destination's prefix for uploads and snapshots, and when it deletes them."
+    />
+    <meta name="twitter:image" content="https://konnekt.pages.dev/assets/img/social-card.png" />
+
+    <meta name="theme-color" content="#05060a" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/assets/img/favicon-16.png" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/assets/img/favicon-32.png" />
+    <link rel="icon" type="image/png" sizes="256x256" href="/assets/img/favicon.png" />
+    <link rel="apple-touch-icon" href="/assets/img/app-icon.png" />
+    <link
+      rel="preload"
+      href="/assets/fonts/Geist-Variable.woff2"
+      as="font"
+      type="font/woff2"
+      crossorigin
+    />
+    <link rel="stylesheet" href="/tokens.css" />
+    <link rel="stylesheet" href="/site.css" />
+    <link rel="stylesheet" href="/docs.css" />
+    <script>
+      document.documentElement.className = document.documentElement.className.replace('no-js', '')
+    </script>
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to content</a>
+    <div class="page">
+      <div class="group">
+        <!-- Canonical nav. Byte-identical on every page, hrefs included; site.js
+           marks the current page and scrolls same-page anchors. -->
+        <nav class="nav block block-raised" id="nav" aria-label="Main">
+          <a class="nav-brand" href="/index.html"
+            ><picture
+              ><source media="(min-resolution: 2dppx)" srcset="/assets/img/mark.svg" />
+              <img
+                class="mark"
+                src="/assets/img/mark-24.svg"
+                width="24"
+                height="24"
+                alt="" /></picture
+            >Konnekt</a
+          >
+          <ul class="nav-links">
+            <li><a href="/index.html#features">Features</a></li>
+            <li><a href="/index.html#scheduler">Scheduler</a></li>
+            <li><a href="/docs.html">Docs</a></li>
+            <li><a href="/roadmap.html">Roadmap</a></li>
+            <li><a href="/changelog.html">Changelog</a></li>
+          </ul>
+          <a
+            class="nav-side"
+            href="https://github.com/kollektiv-mc/Konnekt"
+            target="_blank"
+            rel="noopener"
+            >GitHub</a
+          >
+          <a class="btn btn-primary" href="/download.html"
+            ><svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true">
+              <path
+                d="M7 1v9M3 6.5 7 10.5 11 6.5M1.5 13h11"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.6"
+              /></svg
+            >Download</a
+          >
+        </nav>
+        <main id="main" class="group">
+          <header class="doc-head block">
+            <div class="doc-head-main">
+              <div class="doc-trail">
+                <span class="kind" data-kind="reference">Reference</span>
+                <nav aria-label="Breadcrumb">
+                  <ol class="doc-crumbs">
+                    <li><a href="/docs.html">Docs</a></li>
+                    <li><a href="/docs.html#destinations">Destinations and Distant Horizons</a></li>
+                    <li><span aria-current="page">What ends up in the bucket</span></li>
+                  </ol>
+                </nav>
+              </div>
+              <h1>What ends up in the bucket</h1>
+              <p class="doc-lead">
+                The keys Konnekt writes under a destination's prefix for uploads and snapshots, and
+                when it deletes them.
+              </p>
+            </div>
+            <dl class="doc-facts">
+              <div class="doc-fact">
+                <dt class="label">Topics</dt>
+                <dd>Destinations · Distant Horizons</dd>
+              </div>
+            </dl>
+          </header>
+
+          <section class="doc-section block" id="key-prefix" aria-labelledby="key-prefix-title">
+            <div class="band doc-band">
+              <div class="band-title">
+                <span class="num">01</span>
+                <h2 id="key-prefix-title">Key prefix</h2>
+              </div>
+            </div>
+            <div class="doc-body">
+              <p class="doc-prose">
+                Every key starts with the destination's <b>Prefix</b>, then the block's
+                <b>Key prefix</b>.<br />
+                <code>&lt;prefix&gt;</code> stands for both.<br />
+                With both blank, keys start at the bucket's root.
+              </p>
+            </div>
+          </section>
+          <section
+            class="doc-section block"
+            id="upload-to-bucket"
+            aria-labelledby="upload-to-bucket-title"
+          >
+            <div class="band doc-band">
+              <div class="band-title">
+                <span class="num">02</span>
+                <h2 id="upload-to-bucket-title">Upload to Bucket</h2>
+              </div>
+            </div>
+            <div class="doc-body">
+              <div class="doc-table-wrap">
+                <table class="doc-table">
+                  <thead>
+                    <tr>
+                      <th scope="col">Key</th>
+                      <th scope="col">Holds</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td><code>&lt;prefix&gt;/&lt;path inside Source&gt;</code></td>
+                      <td>One object per file, with folders kept as key segments.</td>
+                    </tr>
+                    <tr>
+                      <td><code>&lt;prefix&gt;/&lt;file name&gt;</code></td>
+                      <td>The object for a Source that is a single file.</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <p class="doc-prose">
+                The block deletes nothing.<br />
+                An object that exists at the same size is skipped, and any other is replaced.
+              </p>
+            </div>
+          </section>
+          <section
+            class="doc-section block"
+            id="publish-dh-snapshot"
+            aria-labelledby="publish-dh-snapshot-title"
+          >
+            <div class="band doc-band">
+              <div class="band-title">
+                <span class="num">03</span>
+                <h2 id="publish-dh-snapshot-title">Publish DH Snapshot</h2>
+              </div>
+            </div>
+            <div class="doc-body">
+              <div class="doc-table-wrap">
+                <table class="doc-table">
+                  <thead>
+                    <tr>
+                      <th scope="col">Key</th>
+                      <th scope="col">Holds</th>
+                      <th scope="col">Replaced or deleted</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td><code>&lt;prefix&gt;/latest.json</code></td>
+                      <td>
+                        A pointer to the newest snapshot's <code>index.json</code>: its format,
+                        <code>createdAt</code> and the path.
+                      </td>
+                      <td>Rewritten by each publish, as its last write.</td>
+                    </tr>
+                    <tr>
+                      <td><code>&lt;prefix&gt;/snapshots/&lt;stamp&gt;/index.json</code></td>
+                      <td>
+                        The snapshot: Distant Horizons version, server folder, and for each level
+                        its folder, size, SHA-256 and parts.
+                      </td>
+                      <td>Deleted with its snapshot.</td>
+                    </tr>
+                    <tr>
+                      <td><code>&lt;prefix&gt;/snapshots/&lt;stamp&gt;/index.html</code></td>
+                      <td>
+                        The download page, listing each level's file with its size and the folder to
+                        put it in.
+                      </td>
+                      <td>Deleted with its snapshot.</td>
+                    </tr>
+                    <tr>
+                      <td>
+                        <code
+                          >&lt;prefix&gt;/snapshots/&lt;stamp&gt;/&lt;level
+                          folder&gt;/DistantHorizons.sqlite</code
+                        >
+                      </td>
+                      <td>One level's whole database, built inside the bucket from its parts.</td>
+                      <td>Deleted with its snapshot.</td>
+                    </tr>
+                    <tr>
+                      <td><code>&lt;prefix&gt;/parts/&lt;sha256&gt;</code></td>
+                      <td>
+                        A slice of a database, named by its SHA-256 and up to 8 MiB, shared by every
+                        snapshot that uses it.
+                      </td>
+                      <td>Deleted when no kept snapshot lists it.</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <p class="doc-prose">
+                <code>&lt;stamp&gt;</code> is the snapshot's UTC time, such as
+                <code>20261012T040000Z</code>.<br />
+                <code>&lt;level folder&gt;</code> is
+                <code>&lt;levelKeyPrefix&gt;@&lt;namespace&gt;@@&lt;path&gt;</code>, such as
+                <code>myserver@minecraft@@overworld</code>.
+              </p>
+            </div>
+          </section>
+          <section class="doc-section block" id="private-link" aria-labelledby="private-link-title">
+            <div class="band doc-band">
+              <div class="band-title">
+                <span class="num">04</span>
+                <h2 id="private-link-title">Private link</h2>
+              </div>
+            </div>
+            <div class="doc-body">
+              <div class="doc-table-wrap">
+                <table class="doc-table">
+                  <thead>
+                    <tr>
+                      <th scope="col">Key</th>
+                      <th scope="col">Holds</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td><code>&lt;prefix&gt;/&lt;token&gt;/latest.json</code></td>
+                      <td>The pointer, as in the public layout.</td>
+                    </tr>
+                    <tr>
+                      <td><code>&lt;prefix&gt;/&lt;token&gt;/snapshots/&lt;stamp&gt;/…</code></td>
+                      <td>The same snapshot files as in the public layout.</td>
+                    </tr>
+                    <tr>
+                      <td><code>&lt;prefix&gt;/parts/&lt;sha256&gt;</code></td>
+                      <td>The parts, which stay where they are.</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <p class="doc-prose">
+                <code>&lt;token&gt;</code> is 26 random lowercase letters and digits.<br />
+                The destination's
+                <a href="/docs/settings/destinations.html#snapshot-link">Snapshot link</a> row
+                switches between the two layouts.
+              </p>
+            </div>
+          </section>
+          <section class="doc-section block" id="deletions" aria-labelledby="deletions-title">
+            <div class="band doc-band">
+              <div class="band-title">
+                <span class="num">05</span>
+                <h2 id="deletions-title">Deletions</h2>
+              </div>
+            </div>
+            <div class="doc-body">
+              <div class="doc-table-wrap">
+                <table class="doc-table">
+                  <thead>
+                    <tr>
+                      <th scope="col">When</th>
+                      <th scope="col">Deletes</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td>A publish finishes</td>
+                      <td>
+                        Snapshots beyond the newest <b>Snapshots to keep</b>, except the one
+                        <code>latest.json</code> points at. Then every part no kept snapshot lists.
+                      </td>
+                    </tr>
+                    <tr>
+                      <td>The next publish after a cut-off one</td>
+                      <td>
+                        A folder without <code>index.json</code>, once it is older than the oldest
+                        snapshot kept.
+                      </td>
+                    </tr>
+                    <tr>
+                      <td>The link switches or rotates</td>
+                      <td>
+                        The old address's <code>latest.json</code> first, then its whole
+                        <code>snapshots/</code> folder. Only the snapshot
+                        <code>latest.json</code> points at moves to the new address.
+                      </td>
+                    </tr>
+                    <tr>
+                      <td>A destination is deleted in Settings</td>
+                      <td>Nothing in the bucket.</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <p class="doc-prose">
+                A cleanup only touches folders named like a stamp and parts named like a SHA-256.<br />
+                If it cannot read what it needs, it deletes nothing, and the publish reports a
+                warning.<br />
+                The next publish cleans up again.
+              </p>
+            </div>
+          </section>
+
+          <nav class="doc-related block" aria-label="Related">
+            <div class="shelf-label"><span class="label">Related</span></div>
+            <a class="related-link" href="/docs/settings/destinations.html"
+              ><span class="kind" data-kind="settings">Settings</span>Destinations</a
+            >
+            <a class="related-link" href="/docs/dh-publish.html"
+              ><span class="kind" data-kind="guide">Guide</span>Publish Distant Horizons LODs</a
+            >
+            <a class="related-link" href="/docs/blocks/action-upload.html"
+              ><span class="kind" data-kind="reference">Reference</span>Upload to Bucket</a
+            >
+            <a class="related-link" href="/docs/blocks/action-dhPublish.html"
+              ><span class="kind" data-kind="reference">Reference</span>Publish DH Snapshot</a
+            >
+          </nav>
+        </main>
+      </div>
+
+      <!-- Canonical footer. Byte-identical on every page. -->
+      <footer class="block block-raised">
+        <div class="footer-cols">
+          <div class="footer-about">
+            <a class="footer-brand" href="/index.html"
+              ><picture
+                ><source media="(min-resolution: 2dppx)" srcset="/assets/img/mark.svg" />
+                <img
+                  class="mark"
+                  src="/assets/img/mark-24.svg"
+                  width="24"
+                  height="24"
+                  alt="" /></picture
+              >Konnekt</a
+            >
+            <p>A desktop dashboard for the Minecraft servers you host.</p>
+            <span class="meta"><span data-release-tag></span>Windows and Linux</span>
+          </div>
+          <nav class="footer-col" aria-label="Product">
+            <span class="label">Product</span>
+            <a href="/download.html">Download</a>
+            <a href="https://konnekt-demo.pages.dev/" target="_blank" rel="noopener"
+              >Try the demo</a
+            >
+            <a href="/changelog.html">Changelog</a>
+          </nav>
+          <nav class="footer-col" aria-label="Learn">
+            <span class="label">Learn</span>
+            <a href="/index.html#features">Features</a>
+            <a href="/docs.html">Docs</a>
+            <a href="/roadmap.html">Roadmap</a>
+          </nav>
+          <nav class="footer-col" aria-label="Source">
+            <span class="label">Source</span>
+            <a href="https://github.com/kollektiv-mc/Konnekt" target="_blank" rel="noopener"
+              >GitHub</a
+            >
+            <a href="https://github.com/kollektiv-mc/Konnekt/issues" target="_blank" rel="noopener"
+              >Issues</a
+            >
+            <a
+              href="https://github.com/kollektiv-mc/Konnekt/blob/main/LICENSE"
+              target="_blank"
+              rel="noopener"
+              >MIT licence</a
+            >
+          </nav>
+        </div>
+        <div class="footer-base">
+          <span
+            >Alpha software. A side project mostly written by Claude.
+            <a href="/docs.html#disclaimer">Full statement</a></span
+          >
+          <span>&copy; 2026 Konnekt</span>
+        </div>
+      </footer>
+    </div>
+
+    <script src="/release.js"></script>
+    <script src="/site.js"></script>
+  </body>
+</html>

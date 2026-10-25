@@ -1,0 +1,469 @@
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Konnekt docs: Save a Cloudflare R2 bucket</title>
+    <meta
+      name="description"
+      content="Save a Cloudflare R2 bucket: Connect a Cloudflare R2 bucket to Konnekt so scheduler blocks can upload to it."
+    />
+    <link rel="canonical" href="https://konnekt.pages.dev/docs/r2-bucket.html" />
+
+    <meta property="og:site_name" content="Konnekt" />
+    <meta property="og:title" content="Konnekt docs: Save a Cloudflare R2 bucket" />
+    <meta
+      property="og:description"
+      content="Save a Cloudflare R2 bucket: Connect a Cloudflare R2 bucket to Konnekt so scheduler blocks can upload to it."
+    />
+    <meta property="og:url" content="https://konnekt.pages.dev/docs/r2-bucket.html" />
+    <meta property="og:type" content="website" />
+    <meta property="og:image" content="https://konnekt.pages.dev/assets/img/social-card.png" />
+    <meta property="og:image:width" content="1715" />
+    <meta property="og:image:height" content="1123" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Konnekt docs: Save a Cloudflare R2 bucket" />
+    <meta
+      name="twitter:description"
+      content="Save a Cloudflare R2 bucket: Connect a Cloudflare R2 bucket to Konnekt so scheduler blocks can upload to it."
+    />
+    <meta name="twitter:image" content="https://konnekt.pages.dev/assets/img/social-card.png" />
+
+    <meta name="theme-color" content="#05060a" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/assets/img/favicon-16.png" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/assets/img/favicon-32.png" />
+    <link rel="icon" type="image/png" sizes="256x256" href="/assets/img/favicon.png" />
+    <link rel="apple-touch-icon" href="/assets/img/app-icon.png" />
+    <link
+      rel="preload"
+      href="/assets/fonts/Geist-Variable.woff2"
+      as="font"
+      type="font/woff2"
+      crossorigin
+    />
+    <link rel="stylesheet" href="/tokens.css" />
+    <link rel="stylesheet" href="/site.css" />
+    <link rel="stylesheet" href="/docs.css" />
+    <script>
+      document.documentElement.className = document.documentElement.className.replace('no-js', '')
+    </script>
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to content</a>
+    <div class="page">
+      <div class="group">
+        <!-- Canonical nav. Byte-identical on every page, hrefs included; site.js
+           marks the current page and scrolls same-page anchors. -->
+        <nav class="nav block block-raised" id="nav" aria-label="Main">
+          <a class="nav-brand" href="/index.html"
+            ><picture
+              ><source media="(min-resolution: 2dppx)" srcset="/assets/img/mark.svg" />
+              <img
+                class="mark"
+                src="/assets/img/mark-24.svg"
+                width="24"
+                height="24"
+                alt="" /></picture
+            >Konnekt</a
+          >
+          <ul class="nav-links">
+            <li><a href="/index.html#features">Features</a></li>
+            <li><a href="/index.html#scheduler">Scheduler</a></li>
+            <li><a href="/docs.html">Docs</a></li>
+            <li><a href="/roadmap.html">Roadmap</a></li>
+            <li><a href="/changelog.html">Changelog</a></li>
+          </ul>
+          <a
+            class="nav-side"
+            href="https://github.com/kollektiv-mc/Konnekt"
+            target="_blank"
+            rel="noopener"
+            >GitHub</a
+          >
+          <a class="btn btn-primary" href="/download.html"
+            ><svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true">
+              <path
+                d="M7 1v9M3 6.5 7 10.5 11 6.5M1.5 13h11"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.6"
+              /></svg
+            >Download</a
+          >
+        </nav>
+        <main id="main" class="group">
+          <header class="doc-head block">
+            <div class="doc-head-main">
+              <div class="doc-trail">
+                <span class="kind" data-kind="guide">Guide</span>
+                <nav aria-label="Breadcrumb">
+                  <ol class="doc-crumbs">
+                    <li><a href="/docs.html">Docs</a></li>
+                    <li><a href="/docs.html#destinations">Destinations and Distant Horizons</a></li>
+                    <li><span aria-current="page">Save a Cloudflare R2 bucket</span></li>
+                  </ol>
+                </nav>
+              </div>
+              <h1>Save a Cloudflare R2 bucket</h1>
+              <p class="doc-lead">
+                Connect a Cloudflare R2 bucket to Konnekt so scheduler blocks can upload to it.
+              </p>
+            </div>
+            <dl class="doc-facts">
+              <div class="doc-fact">
+                <dt class="label">Duration</dt>
+                <dd>~10 min</dd>
+              </div>
+              <div class="doc-fact">
+                <dt class="label">Requirements</dt>
+                <dd>A Cloudflare account with R2</dd>
+              </div>
+              <div class="doc-fact">
+                <dt class="label">Topics</dt>
+                <dd>Destinations</dd>
+              </div>
+            </dl>
+          </header>
+
+          <section
+            class="doc-section block"
+            id="before-you-start"
+            aria-labelledby="before-you-start-title"
+          >
+            <div class="band doc-band">
+              <div class="band-title">
+                <span class="num">00</span>
+                <h2 id="before-you-start-title">Before you start</h2>
+              </div>
+            </div>
+            <div class="doc-body">
+              <ul class="doc-checks">
+                <li class="doc-check">
+                  <span class="doc-check-text"
+                    ><span>A Cloudflare account with R2</span
+                    ><span class="doc-check-desc"
+                      >Cloudflare issues an R2 token only after R2 is purchased on the
+                      account.</span
+                    ></span
+                  >
+                </li>
+                <li class="doc-check">
+                  <span class="doc-check-text"
+                    ><span>A public address for the bucket</span
+                    ><span class="doc-check-desc"
+                      >Only snapshot links need it. Step 04 adds it.</span
+                    ></span
+                  >
+                </li>
+              </ul>
+            </div>
+          </section>
+          <section
+            class="doc-section block"
+            id="create-the-bucket"
+            aria-labelledby="create-the-bucket-title"
+          >
+            <div class="band doc-band">
+              <div class="band-title">
+                <span class="num">01</span>
+                <h2 id="create-the-bucket-title">Create the bucket</h2>
+              </div>
+            </div>
+            <div class="doc-body">
+              <ol class="doc-list">
+                <li>In the Cloudflare dashboard, open <b>R2 object storage</b>.</li>
+                <li>
+                  Select <b>Create bucket</b>, name it, then select <b>Create bucket</b> again.
+                </li>
+                <li>Open the bucket's <b>Settings</b> tab and find <b>S3 API</b>.</li>
+              </ol>
+              <p class="doc-prose">
+                The endpoint is
+                <code>https://&lt;account id&gt;.r2.cloudflarestorage.com</code>.<br />
+                A bucket in a jurisdiction uses a host such as
+                <code>&lt;account id&gt;.eu.r2.cloudflarestorage.com</code>.<br />
+                Konnekt takes the host only, so leave off anything after it.
+              </p>
+            </div>
+          </section>
+          <section
+            class="doc-section block"
+            id="create-an-api-token"
+            aria-labelledby="create-an-api-token-title"
+          >
+            <div class="band doc-band">
+              <div class="band-title">
+                <span class="num">02</span>
+                <h2 id="create-an-api-token-title">Create an API token</h2>
+              </div>
+            </div>
+            <div class="doc-body">
+              <ol class="doc-list">
+                <li>
+                  On the R2 overview, under <b>Account Details</b>, select <b>Manage</b> next to
+                  <b>API Tokens</b>.
+                </li>
+                <li>Select <b>Create Account API token</b> or <b>Create User API token</b>.</li>
+                <li>Under <b>Permissions</b>, choose <b>Object Read and Write</b>.</li>
+                <li>Scope the token to the bucket from step 01.</li>
+                <li>
+                  Create the token, then copy the <b>Access Key ID</b> and the
+                  <b>Secret Access Key</b>.
+                </li>
+              </ol>
+              <p class="doc-prose">
+                Konnekt lists, reads, writes and deletes objects in the bucket.<br />
+                A token that only reads cannot upload.
+              </p>
+            </div>
+          </section>
+          <section
+            class="doc-section block"
+            id="add-the-destination"
+            aria-labelledby="add-the-destination-title"
+          >
+            <div class="band doc-band">
+              <div class="band-title">
+                <span class="num">03</span>
+                <h2 id="add-the-destination-title">Add the destination</h2>
+              </div>
+            </div>
+            <div class="doc-body">
+              <ol class="doc-list">
+                <li>Open Settings, then <b>Destinations</b>.</li>
+                <li>Select <b>Add destination</b>.</li>
+                <li>Fill in the fields.</li>
+                <li>Select <b>Test</b>, then <b>Save</b>.</li>
+              </ol>
+              <div class="doc-table-wrap">
+                <table class="doc-table">
+                  <thead>
+                    <tr>
+                      <th scope="col">Field</th>
+                      <th scope="col">Value</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td>Name</td>
+                      <td>Any name: scheduler blocks pick the bucket by it.</td>
+                    </tr>
+                    <tr>
+                      <td>Endpoint</td>
+                      <td>The host from step 01.</td>
+                    </tr>
+                    <tr>
+                      <td>Region</td>
+                      <td><code>auto</code>.</td>
+                    </tr>
+                    <tr>
+                      <td>Bucket</td>
+                      <td>The bucket's name.</td>
+                    </tr>
+                    <tr>
+                      <td>Prefix</td>
+                      <td>A folder for Konnekt's objects, or blank.</td>
+                    </tr>
+                    <tr>
+                      <td>Public base URL</td>
+                      <td>Blank until step 04.</td>
+                    </tr>
+                    <tr>
+                      <td>Access key ID</td>
+                      <td>The <b>Access Key ID</b> from step 02.</td>
+                    </tr>
+                    <tr>
+                      <td>Secret access key</td>
+                      <td>The <b>Secret Access Key</b> from step 02.</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <p class="doc-prose">
+                <b>Test</b> writes nothing to the bucket.<br />
+                Each field is described on
+                <a href="/docs/settings/destinations.html#fields">Destinations</a>.
+              </p>
+            </div>
+          </section>
+          <section
+            class="doc-section block"
+            id="add-a-public-address"
+            aria-labelledby="add-a-public-address-title"
+          >
+            <div class="band doc-band">
+              <div class="band-title">
+                <span class="num">04</span>
+                <h2 id="add-a-public-address-title">Add a public address</h2>
+              </div>
+            </div>
+            <div class="doc-body">
+              <p class="doc-prose">
+                A snapshot link is the <b>Public base URL</b> followed by the object's key.<br />
+                Without one, the link points at the bucket's own S3 address.<br />
+                That address opens only for a bucket that serves objects publicly.
+              </p>
+              <div class="doc-table-wrap">
+                <table class="doc-table">
+                  <thead>
+                    <tr>
+                      <th scope="col">Address</th>
+                      <th scope="col">Steps in the bucket's Settings</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td>Custom domain</td>
+                      <td>
+                        Under <b>Custom Domains</b>, select <b>Add</b>, enter a domain on a zone in
+                        the same account, select <b>Continue</b>, then <b>Connect Domain</b>. Wait
+                        for <b>Active</b>.
+                      </td>
+                    </tr>
+                    <tr>
+                      <td><code>r2.dev</code></td>
+                      <td>
+                        Under <b>Public Development URL</b>, select <b>Enable</b>, type
+                        <code>allow</code>, then select <b>Allow</b>. Cloudflare rate-limits it and
+                        intends it for non-production use.
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <ol class="doc-list">
+                <li>In Settings, <b>Destinations</b>, select <b>Edit</b> on the destination.</li>
+                <li>
+                  Enter the address in <b>Public base URL</b>, such as
+                  <code>https://files.example.com</code>.
+                </li>
+                <li>Select <b>Save</b>.</li>
+              </ol>
+              <p class="doc-prose">
+                Only snapshot links use it, and <b>Upload to Bucket</b> does not.
+              </p>
+            </div>
+          </section>
+          <section
+            class="doc-section block"
+            id="when-it-refuses"
+            aria-labelledby="when-it-refuses-title"
+          >
+            <div class="band doc-band">
+              <div class="band-title">
+                <span class="num">05</span>
+                <h2 id="when-it-refuses-title">When it refuses</h2>
+              </div>
+            </div>
+            <div class="doc-body">
+              <div class="doc-table-wrap">
+                <table class="doc-table">
+                  <thead>
+                    <tr>
+                      <th scope="col">Error</th>
+                      <th scope="col">Do</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td>
+                        the bucket refused the upload (<em>status</em> <em>code</em>): check the
+                        destination's access key and secret, and that the key may write to the
+                        bucket
+                      </td>
+                      <td>
+                        Create the token again with <b>Object Read and Write</b> on this bucket.
+                        <b>Test</b> writes nothing, so it does not show whether a token can write.
+                      </td>
+                    </tr>
+                    <tr>
+                      <td>public base URL must be an http(s) address</td>
+                      <td>Start <b>Public base URL</b> with <code>https://</code>.</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </section>
+
+          <nav class="doc-related block" aria-label="Related">
+            <div class="shelf-label"><span class="label">Related</span></div>
+            <a class="related-link" href="/docs/settings/destinations.html"
+              ><span class="kind" data-kind="settings">Settings</span>Destinations</a
+            >
+            <a class="related-link" href="/docs/dh-publish.html"
+              ><span class="kind" data-kind="guide">Guide</span>Publish Distant Horizons LODs</a
+            >
+            <a class="related-link" href="/docs/blocks/action-upload.html"
+              ><span class="kind" data-kind="reference">Reference</span>Upload to Bucket</a
+            >
+            <a class="related-link" href="/docs/bucket-layout.html"
+              ><span class="kind" data-kind="reference">Reference</span>What ends up in the
+              bucket</a
+            >
+          </nav>
+        </main>
+      </div>
+
+      <!-- Canonical footer. Byte-identical on every page. -->
+      <footer class="block block-raised">
+        <div class="footer-cols">
+          <div class="footer-about">
+            <a class="footer-brand" href="/index.html"
+              ><picture
+                ><source media="(min-resolution: 2dppx)" srcset="/assets/img/mark.svg" />
+                <img
+                  class="mark"
+                  src="/assets/img/mark-24.svg"
+                  width="24"
+                  height="24"
+                  alt="" /></picture
+              >Konnekt</a
+            >
+            <p>A desktop dashboard for the Minecraft servers you host.</p>
+            <span class="meta"><span data-release-tag></span>Windows and Linux</span>
+          </div>
+          <nav class="footer-col" aria-label="Product">
+            <span class="label">Product</span>
+            <a href="/download.html">Download</a>
+            <a href="https://konnekt-demo.pages.dev/" target="_blank" rel="noopener"
+              >Try the demo</a
+            >
+            <a href="/changelog.html">Changelog</a>
+          </nav>
+          <nav class="footer-col" aria-label="Learn">
+            <span class="label">Learn</span>
+            <a href="/index.html#features">Features</a>
+            <a href="/docs.html">Docs</a>
+            <a href="/roadmap.html">Roadmap</a>
+          </nav>
+          <nav class="footer-col" aria-label="Source">
+            <span class="label">Source</span>
+            <a href="https://github.com/kollektiv-mc/Konnekt" target="_blank" rel="noopener"
+              >GitHub</a
+            >
+            <a href="https://github.com/kollektiv-mc/Konnekt/issues" target="_blank" rel="noopener"
+              >Issues</a
+            >
+            <a
+              href="https://github.com/kollektiv-mc/Konnekt/blob/main/LICENSE"
+              target="_blank"
+              rel="noopener"
+              >MIT licence</a
+            >
+          </nav>
+        </div>
+        <div class="footer-base">
+          <span
+            >Alpha software. A side project mostly written by Claude.
+            <a href="/docs.html#disclaimer">Full statement</a></span
+          >
+          <span>&copy; 2026 Konnekt</span>
+        </div>
+      </footer>
+    </div>
+
+    <script src="/release.js"></script>
+    <script src="/site.js"></script>
+  </body>
+</html>

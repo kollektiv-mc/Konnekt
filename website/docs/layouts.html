@@ -1,0 +1,382 @@
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Konnekt docs: Tiles and layouts</title>
+    <meta
+      name="description"
+      content="Tiles and layouts: Arrange the dashboard's tiles on a grid, then save the arrangement as a layout."
+    />
+    <link rel="canonical" href="https://konnekt.pages.dev/docs/layouts.html" />
+
+    <meta property="og:site_name" content="Konnekt" />
+    <meta property="og:title" content="Konnekt docs: Tiles and layouts" />
+    <meta
+      property="og:description"
+      content="Tiles and layouts: Arrange the dashboard's tiles on a grid, then save the arrangement as a layout."
+    />
+    <meta property="og:url" content="https://konnekt.pages.dev/docs/layouts.html" />
+    <meta property="og:type" content="website" />
+    <meta property="og:image" content="https://konnekt.pages.dev/assets/img/social-card.png" />
+    <meta property="og:image:width" content="1715" />
+    <meta property="og:image:height" content="1123" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Konnekt docs: Tiles and layouts" />
+    <meta
+      name="twitter:description"
+      content="Tiles and layouts: Arrange the dashboard's tiles on a grid, then save the arrangement as a layout."
+    />
+    <meta name="twitter:image" content="https://konnekt.pages.dev/assets/img/social-card.png" />
+
+    <meta name="theme-color" content="#05060a" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/assets/img/favicon-16.png" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/assets/img/favicon-32.png" />
+    <link rel="icon" type="image/png" sizes="256x256" href="/assets/img/favicon.png" />
+    <link rel="apple-touch-icon" href="/assets/img/app-icon.png" />
+    <link
+      rel="preload"
+      href="/assets/fonts/Geist-Variable.woff2"
+      as="font"
+      type="font/woff2"
+      crossorigin
+    />
+    <link rel="stylesheet" href="/tokens.css" />
+    <link rel="stylesheet" href="/site.css" />
+    <link rel="stylesheet" href="/docs.css" />
+    <script>
+      document.documentElement.className = document.documentElement.className.replace('no-js', '')
+    </script>
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to content</a>
+    <div class="page">
+      <div class="group">
+        <!-- Canonical nav. Byte-identical on every page, hrefs included; site.js
+           marks the current page and scrolls same-page anchors. -->
+        <nav class="nav block block-raised" id="nav" aria-label="Main">
+          <a class="nav-brand" href="/index.html"
+            ><picture
+              ><source media="(min-resolution: 2dppx)" srcset="/assets/img/mark.svg" />
+              <img
+                class="mark"
+                src="/assets/img/mark-24.svg"
+                width="24"
+                height="24"
+                alt="" /></picture
+            >Konnekt</a
+          >
+          <ul class="nav-links">
+            <li><a href="/index.html#features">Features</a></li>
+            <li><a href="/index.html#scheduler">Scheduler</a></li>
+            <li><a href="/docs.html">Docs</a></li>
+            <li><a href="/roadmap.html">Roadmap</a></li>
+            <li><a href="/changelog.html">Changelog</a></li>
+          </ul>
+          <a
+            class="nav-side"
+            href="https://github.com/kollektiv-mc/Konnekt"
+            target="_blank"
+            rel="noopener"
+            >GitHub</a
+          >
+          <a class="btn btn-primary" href="/download.html"
+            ><svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true">
+              <path
+                d="M7 1v9M3 6.5 7 10.5 11 6.5M1.5 13h11"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.6"
+              /></svg
+            >Download</a
+          >
+        </nav>
+        <main id="main" class="group">
+          <header class="doc-head block">
+            <div class="doc-head-main">
+              <div class="doc-trail">
+                <span class="kind" data-kind="concept">Concept</span>
+                <nav aria-label="Breadcrumb">
+                  <ol class="doc-crumbs">
+                    <li><a href="/docs.html">Docs</a></li>
+                    <li><a href="/docs.html#dashboard">Dashboard</a></li>
+                    <li><span aria-current="page">Tiles and layouts</span></li>
+                  </ol>
+                </nav>
+              </div>
+              <h1>Tiles and layouts</h1>
+              <p class="doc-lead">
+                Arrange the dashboard's tiles on a grid, then save the arrangement as a layout.
+              </p>
+            </div>
+            <dl class="doc-facts">
+              <div class="doc-fact">
+                <dt class="label">Duration</dt>
+                <dd>~3 min</dd>
+              </div>
+              <div class="doc-fact">
+                <dt class="label">Topics</dt>
+                <dd>Tiles · Layouts</dd>
+              </div>
+            </dl>
+          </header>
+
+          <section class="doc-section block" id="grid" aria-labelledby="grid-title">
+            <div class="band doc-band">
+              <div class="band-title">
+                <span class="num">01</span>
+                <h2 id="grid-title">The grid</h2>
+              </div>
+            </div>
+            <div class="doc-body">
+              <p class="doc-prose">
+                The <b>Tiles</b> section of the navbar lists every tile.<br />
+                Drag a row onto the grid to place the tile where you drop it.<br />
+                Shift-click a row to place it without dragging.<br />
+                A plain click maximizes the tile instead.<br />
+                Drag rows inside the section to change their order.
+              </p>
+              <p class="doc-prose">
+                Remove a tile with the X in its header, or right-click the header and choose
+                <b>Remove</b>.<br />
+                Drag a tile by its header to move it.<br />
+                Drag its bottom-right corner to resize it.
+              </p>
+              <div class="doc-table-wrap">
+                <table class="doc-table">
+                  <thead>
+                    <tr>
+                      <th scope="col">Size</th>
+                      <th scope="col">Columns</th>
+                      <th scope="col">Rows</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td>New tile</td>
+                      <td><code>3</code></td>
+                      <td><code>8</code></td>
+                    </tr>
+                    <tr>
+                      <td>Smallest</td>
+                      <td><code>2</code></td>
+                      <td><code>4</code></td>
+                    </tr>
+                    <tr>
+                      <td>Largest</td>
+                      <td><code>6</code></td>
+                      <td><code>16</code></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <p class="doc-prose">
+                The grid has six columns, and each row is <code>40 px</code> high.<br />
+                Tiles snap to those cells and settle upward, leaving no gap over a tile.<br />
+                Double-click a tile's header, or press its maximize button, to fill the dashboard
+                with it.<br />
+                Press <b>Esc</b> to return.
+              </p>
+            </div>
+          </section>
+
+          <section class="doc-section block" id="tile-layout" aria-labelledby="tile-layout-title">
+            <div class="band doc-band">
+              <div class="band-title">
+                <span class="num">02</span>
+                <h2 id="tile-layout-title">Layout per tile</h2>
+              </div>
+            </div>
+            <div class="doc-body">
+              <p class="doc-prose">
+                Right-click a tile's header and choose <b>Layout</b>, then <b>Detailed</b>,
+                <b>Default</b> or <b>Expanded</b>.<br />
+                <b>Default</b> sets the key figure large over the detail.<br />
+                <b>Detailed</b> sets it small and packs in more.<br />
+                <b>Expanded</b> keeps the figure alone and spreads it over the tile.
+              </p>
+              <p class="doc-prose">
+                In Console, <b>Detailed</b> tightens the line spacing.<br />
+                <b>Expanded</b> shows the notable lines and folds each run of the rest into one row.
+              </p>
+              <p class="doc-prose">
+                Commands, Config and Notifications have no <b>Layout</b> entry.<br />
+                A maximized tile ignores it.<br />
+                Each tile keeps its own choice, and applying a saved layout never changes it.<br />
+                The Classic tile faces setting in
+                <a href="/docs/settings/appearance.html#advanced">Appearance</a> replaces these
+                faces.
+              </p>
+            </div>
+          </section>
+
+          <section class="doc-section block" id="saved" aria-labelledby="saved-title">
+            <div class="band doc-band">
+              <div class="band-title">
+                <span class="num">03</span>
+                <h2 id="saved-title">Saved layouts</h2>
+              </div>
+            </div>
+            <div class="doc-body">
+              <p class="doc-prose">
+                The <b>Layouts</b> section of the navbar lists them, and starts collapsed.<br />
+                Default, Console Focus, Compact and Essentials come with Konnekt.<br />
+                Click a name to apply it.
+              </p>
+              <p class="doc-prose">
+                A layout holds positions and sizes, not which tiles are on the grid.<br />
+                Applying one moves and resizes the tiles already there.<br />
+                A tile it does not mention is placed after the others.
+              </p>
+              <ol class="doc-list">
+                <li>Arrange the grid.</li>
+                <li>
+                  Type a name in the field under the list, then press <b>Enter</b> or <b>Save</b>.
+                </li>
+              </ol>
+              <p class="doc-prose">
+                An empty field saves over the highlighted layout, whose name the field shows.<br />
+                A name that exists is replaced.<br />
+                The X beside a name deletes it, except on Default.
+              </p>
+              <p class="doc-prose">
+                <b>↺ Reset to defaults</b> asks for a second click, labelled <b>↺ Confirm reset</b>,
+                and disarms itself after <code>4 s</code>.<br />
+                It rewrites the four layouts that come with Konnekt and applies Default.<br />
+                Layouts saved under other names stay.
+              </p>
+            </div>
+          </section>
+
+          <section class="doc-section block" id="storage" aria-labelledby="storage-title">
+            <div class="band doc-band">
+              <div class="band-title">
+                <span class="num">04</span>
+                <h2 id="storage-title">What is saved</h2>
+              </div>
+            </div>
+            <div class="doc-body">
+              <div class="doc-table-wrap">
+                <table class="doc-table">
+                  <thead>
+                    <tr>
+                      <th scope="col">Item</th>
+                      <th scope="col">Saved</th>
+                      <th scope="col">File</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td>Positions and sizes</td>
+                      <td>After a drop, a resize, or applying a layout.</td>
+                      <td><code>active_layout.json</code></td>
+                    </tr>
+                    <tr>
+                      <td>Tiles on the grid</td>
+                      <td>When you add or remove one.</td>
+                      <td><code>active_tiles.json</code></td>
+                    </tr>
+                    <tr>
+                      <td>Layout per tile</td>
+                      <td>When you choose one.</td>
+                      <td><code>tile_layouts.json</code></td>
+                    </tr>
+                    <tr>
+                      <td>Saved layouts</td>
+                      <td>When you save, delete or reset.</td>
+                      <td><code>layout_presets.json</code></td>
+                    </tr>
+                    <tr>
+                      <td>Order of the Tiles section</td>
+                      <td>When you drop a row.</td>
+                      <td><code>app_settings.json</code></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <p class="doc-prose">
+                The files sit in the data folder and are read again on the next launch.<br />
+                One grid serves every server: switching servers keeps the arrangement and reloads
+                each tile.<br />
+                A first launch puts all eleven tiles on the grid in the Default layout.
+              </p>
+            </div>
+          </section>
+
+          <nav class="doc-related block" aria-label="Related">
+            <div class="shelf-label"><span class="label">Related</span></div>
+            <a class="related-link" href="/docs/tiles.html"
+              ><span class="kind" data-kind="reference">Reference</span>Tiles</a
+            >
+            <a class="related-link" href="/docs/settings/appearance.html"
+              ><span class="kind" data-kind="settings">Settings</span>Appearance</a
+            >
+            <a class="related-link" href="/docs/first-server.html"
+              ><span class="kind" data-kind="guide">Guide</span>Your first server</a
+            >
+          </nav>
+        </main>
+      </div>
+
+      <!-- Canonical footer. Byte-identical on every page. -->
+      <footer class="block block-raised">
+        <div class="footer-cols">
+          <div class="footer-about">
+            <a class="footer-brand" href="/index.html"
+              ><picture
+                ><source media="(min-resolution: 2dppx)" srcset="/assets/img/mark.svg" />
+                <img
+                  class="mark"
+                  src="/assets/img/mark-24.svg"
+                  width="24"
+                  height="24"
+                  alt="" /></picture
+              >Konnekt</a
+            >
+            <p>A desktop dashboard for the Minecraft servers you host.</p>
+            <span class="meta"><span data-release-tag></span>Windows and Linux</span>
+          </div>
+          <nav class="footer-col" aria-label="Product">
+            <span class="label">Product</span>
+            <a href="/download.html">Download</a>
+            <a href="https://konnekt-demo.pages.dev/" target="_blank" rel="noopener"
+              >Try the demo</a
+            >
+            <a href="/changelog.html">Changelog</a>
+          </nav>
+          <nav class="footer-col" aria-label="Learn">
+            <span class="label">Learn</span>
+            <a href="/index.html#features">Features</a>
+            <a href="/docs.html">Docs</a>
+            <a href="/roadmap.html">Roadmap</a>
+          </nav>
+          <nav class="footer-col" aria-label="Source">
+            <span class="label">Source</span>
+            <a href="https://github.com/kollektiv-mc/Konnekt" target="_blank" rel="noopener"
+              >GitHub</a
+            >
+            <a href="https://github.com/kollektiv-mc/Konnekt/issues" target="_blank" rel="noopener"
+              >Issues</a
+            >
+            <a
+              href="https://github.com/kollektiv-mc/Konnekt/blob/main/LICENSE"
+              target="_blank"
+              rel="noopener"
+              >MIT licence</a
+            >
+          </nav>
+        </div>
+        <div class="footer-base">
+          <span
+            >Alpha software. A side project mostly written by Claude.
+            <a href="/docs.html#disclaimer">Full statement</a></span
+          >
+          <span>&copy; 2026 Konnekt</span>
+        </div>
+      </footer>
+    </div>
+
+    <script src="/release.js"></script>
+    <script src="/site.js"></script>
+  </body>
+</html>
