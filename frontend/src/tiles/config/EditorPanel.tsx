@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import CodeMirror from '@uiw/react-codemirror'
 import { json } from '@codemirror/lang-json'
 import { yaml } from '@codemirror/lang-yaml'
@@ -51,7 +51,18 @@ const FORMAT_COLORS: Record<string, string> = {
   text: 'text-zinc-400',
 }
 
+// Past this many characters a file opens in the raw editor only. The form
+// renders every field as live inputs, with no windowing: a 10 MB JSON object
+// came to about 100,000 elements and a 10 MB textarea, kept the main thread
+// busy for as long as it was open, and stayed mounted under the faded-out
+// panel for most of a minute after closing (#767). CodeMirror renders only the
+// lines in view, so the raw editor holds the same file at about 2,000 nodes.
+// Measured on dense JSON in Chromium: 128 KB of fields opened in under a
+// second and sat idle, 256 KB took 2.4 s, 512 KB never went idle.
+export const FORM_MAX_CHARS = 128 * 1024
+
 function formSupported(format: string, content: string): boolean {
+  if (content.length > FORM_MAX_CHARS) return false
   if (format === 'properties') return true
   if (format === 'yaml') return yamlIsFormSafe(content)
   if (format === 'json') {
@@ -69,15 +80,20 @@ function formSupported(format: string, content: string): boolean {
 interface ViewToggleProps {
   mode: 'form' | 'raw'
   supported: boolean
+  tooLarge: boolean
   onChange: (m: 'form' | 'raw') => void
 }
 
-function ViewToggle({ mode, supported, onChange }: ViewToggleProps) {
+function ViewToggle({ mode, supported, tooLarge, onChange }: ViewToggleProps) {
   if (!supported) {
     return (
       <span
         className="text-text-faint text-2xs shrink-0 font-mono"
-        title="Form view unavailable — file format not supported or contains constructs that can't be safely round-tripped"
+        title={
+          tooLarge
+            ? `Form view is off for files over ${FORM_MAX_CHARS / 1024} KB`
+            : "Form view unavailable — file format not supported or contains constructs that can't be safely round-tripped"
+        }
       >
         Raw only
       </span>
@@ -127,8 +143,17 @@ export function EditorPanel({
   onRevert,
   onRestart,
 }: Props) {
-  const canForm = file ? formSupported(file.format, content) : false
-  const problem = file && !loading ? parseProblem(file.format, content) : null
+  // Each of these parses the whole text, so once per change of it rather than
+  // once per render: the tile re-renders for reasons that leave the file alone.
+  const format = file?.format
+  const canForm = useMemo(
+    () => (format ? formSupported(format, content) : false),
+    [format, content],
+  )
+  const problem = useMemo(
+    () => (format && !loading ? parseProblem(format, content) : null),
+    [format, content, loading],
+  )
   const [viewMode, setViewMode] = useState<'form' | 'raw'>('form')
 
   // When switching to a file that doesn't support form, force raw
@@ -166,7 +191,12 @@ export function EditorPanel({
           {FORMAT_LABELS[file.format] ?? file.format}
         </span>
 
-        <ViewToggle mode={viewMode} supported={canForm} onChange={setViewMode} />
+        <ViewToggle
+          mode={viewMode}
+          supported={canForm}
+          tooLarge={content.length > FORM_MAX_CHARS}
+          onChange={setViewMode}
+        />
 
         {isDirty && <span className="text-text-faint text-2xs shrink-0">●</span>}
 
