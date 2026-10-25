@@ -1,0 +1,434 @@
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Konnekt docs: Destinations</title>
+    <meta
+      name="description"
+      content="Destinations: Saved S3-compatible buckets that scheduler blocks upload to"
+    />
+    <link rel="canonical" href="https://konnekt.pages.dev/docs/settings/destinations.html" />
+
+    <meta property="og:site_name" content="Konnekt" />
+    <meta property="og:title" content="Konnekt docs: Destinations" />
+    <meta
+      property="og:description"
+      content="Destinations: Saved S3-compatible buckets that scheduler blocks upload to"
+    />
+    <meta property="og:url" content="https://konnekt.pages.dev/docs/settings/destinations.html" />
+    <meta property="og:type" content="website" />
+    <meta property="og:image" content="https://konnekt.pages.dev/assets/img/social-card.png" />
+    <meta property="og:image:width" content="1715" />
+    <meta property="og:image:height" content="1123" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Konnekt docs: Destinations" />
+    <meta
+      name="twitter:description"
+      content="Destinations: Saved S3-compatible buckets that scheduler blocks upload to"
+    />
+    <meta name="twitter:image" content="https://konnekt.pages.dev/assets/img/social-card.png" />
+
+    <meta name="theme-color" content="#05060a" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/assets/img/favicon-16.png" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/assets/img/favicon-32.png" />
+    <link rel="icon" type="image/png" sizes="256x256" href="/assets/img/favicon.png" />
+    <link rel="apple-touch-icon" href="/assets/img/app-icon.png" />
+    <link
+      rel="preload"
+      href="/assets/fonts/Geist-Variable.woff2"
+      as="font"
+      type="font/woff2"
+      crossorigin
+    />
+    <link rel="stylesheet" href="/tokens.css" />
+    <link rel="stylesheet" href="/site.css" />
+    <link rel="stylesheet" href="/docs.css" />
+    <script>
+      document.documentElement.className = document.documentElement.className.replace('no-js', '')
+    </script>
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to content</a>
+    <div class="page">
+      <div class="group">
+        <!-- Canonical nav. Byte-identical on every page, hrefs included; site.js
+           marks the current page and scrolls same-page anchors. -->
+        <nav class="nav block block-raised" id="nav" aria-label="Main">
+          <a class="nav-brand" href="/index.html"
+            ><picture
+              ><source media="(min-resolution: 2dppx)" srcset="/assets/img/mark.svg" />
+              <img
+                class="mark"
+                src="/assets/img/mark-24.svg"
+                width="24"
+                height="24"
+                alt="" /></picture
+            >Konnekt</a
+          >
+          <ul class="nav-links">
+            <li><a href="/index.html#features">Features</a></li>
+            <li><a href="/index.html#scheduler">Scheduler</a></li>
+            <li><a href="/docs.html">Docs</a></li>
+            <li><a href="/roadmap.html">Roadmap</a></li>
+            <li><a href="/changelog.html">Changelog</a></li>
+          </ul>
+          <a
+            class="nav-side"
+            href="https://github.com/kollektiv-mc/Konnekt"
+            target="_blank"
+            rel="noopener"
+            >GitHub</a
+          >
+          <a class="btn btn-primary" href="/download.html"
+            ><svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true">
+              <path
+                d="M7 1v9M3 6.5 7 10.5 11 6.5M1.5 13h11"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.6"
+              /></svg
+            >Download</a
+          >
+        </nav>
+        <main id="main" class="group">
+          <header class="doc-head block">
+            <div class="doc-head-main">
+              <div class="doc-trail">
+                <span class="kind" data-kind="settings">Settings</span>
+                <nav aria-label="Breadcrumb">
+                  <ol class="doc-crumbs">
+                    <li><a href="/docs.html">Docs</a></li>
+                    <li><a href="/docs.html#settings">Settings</a></li>
+                    <li><span aria-current="page">Destinations</span></li>
+                  </ol>
+                </nav>
+              </div>
+              <h1>Destinations</h1>
+              <p class="doc-lead">Saved S3-compatible buckets that scheduler blocks upload to.</p>
+            </div>
+            <dl class="doc-facts">
+              <div class="doc-fact">
+                <dt class="label">Topics</dt>
+                <dd>Destinations · Backups · Distant Horizons</dd>
+              </div>
+            </dl>
+          </header>
+
+          <section class="doc-section block" id="add" aria-labelledby="add-title">
+            <div class="band doc-band">
+              <div class="band-title">
+                <span class="num">01</span>
+                <h2 id="add-title">Add a destination</h2>
+              </div>
+            </div>
+            <div class="doc-body">
+              <ol class="doc-list">
+                <li>Open Settings, then <b>Destinations</b>.</li>
+                <li>Select <b>Add destination</b>.</li>
+                <li>Fill in the <a href="#fields">fields</a>.</li>
+                <li>Select <b>Test</b> to check the credentials and the bucket.</li>
+                <li>Select <b>Save</b>.</li>
+              </ol>
+              <p class="doc-prose">
+                <b>Save</b> and <b>Test</b> stay disabled until <b>Name</b>, <b>Endpoint</b>,
+                <b>Bucket</b>, <b>Access key ID</b> and a secret are filled in.<br />
+                <b>Test</b> writes nothing to the bucket.<br />
+                The <b>Upload to Bucket</b> and <b>Publish DH Snapshot</b> blocks pick a destination
+                by name.<br />
+                A graph names the destination and never carries its credentials.
+              </p>
+              <p class="doc-prose">
+                The destination's settings are saved in <code>destinations.json</code> in the app's
+                data folder.<br />
+                The secret access key is saved in a file of its own, in the
+                <code>destination_secrets</code> folder beside it.<br />
+                That file is written with owner-only permissions, and the secret is never shown
+                again.<br />
+                Deleting a destination removes its secret file too.
+              </p>
+            </div>
+          </section>
+
+          <section class="doc-section block" id="fields" aria-labelledby="fields-title">
+            <div class="band doc-band">
+              <div class="band-title">
+                <span class="num">02</span>
+                <h2 id="fields-title">Fields</h2>
+              </div>
+            </div>
+            <div class="doc-body">
+              <div class="doc-table-wrap">
+                <table class="doc-table">
+                  <thead>
+                    <tr>
+                      <th scope="col">Field</th>
+                      <th scope="col">What it does</th>
+                      <th scope="col">Default</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td>Name</td>
+                      <td>Required: what a scheduler block calls this bucket.</td>
+                      <td>None</td>
+                    </tr>
+                    <tr>
+                      <td>Endpoint</td>
+                      <td>
+                        Required: the provider's S3 address, host only, such as
+                        <code>https://&lt;account&gt;.r2.cloudflarestorage.com</code> for R2.
+                      </td>
+                      <td>None</td>
+                    </tr>
+                    <tr>
+                      <td>Region</td>
+                      <td>
+                        The signing region, <code>auto</code> for R2 and the provider's own name
+                        elsewhere.
+                      </td>
+                      <td><code>auto</code></td>
+                    </tr>
+                    <tr>
+                      <td>Bucket</td>
+                      <td>Required: the bucket's name, without a slash.</td>
+                      <td>None</td>
+                    </tr>
+                    <tr>
+                      <td>Prefix</td>
+                      <td>A folder inside the bucket that uploads go under.</td>
+                      <td>None</td>
+                    </tr>
+                    <tr>
+                      <td>Public base URL</td>
+                      <td>
+                        The <code>http</code> or <code>https</code> address the bucket is served
+                        from, such as a custom domain.
+                      </td>
+                      <td>None</td>
+                    </tr>
+                    <tr>
+                      <td>Access key ID</td>
+                      <td>Required: the ID of the key pair the provider issued.</td>
+                      <td>None</td>
+                    </tr>
+                    <tr>
+                      <td>Secret access key</td>
+                      <td>
+                        Required on a new destination; blank on a saved one keeps the stored secret.
+                      </td>
+                      <td>None</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <p class="doc-prose">
+                Names are unique in any letter case.<br />
+                An endpoint without <code>https://</code> in front gets it added.<br />
+                A blank region is saved as <code>auto</code>.<br />
+                A prefix loses any slash at either end, and a block's own <b>Key prefix</b> goes
+                after it.<br />
+                A published snapshot's links use the public base URL, and the bucket's own address
+                when there is none.
+              </p>
+            </div>
+          </section>
+
+          <section
+            class="doc-section block"
+            id="snapshot-link"
+            aria-labelledby="snapshot-link-title"
+          >
+            <div class="band doc-band">
+              <div class="band-title">
+                <span class="num">03</span>
+                <h2 id="snapshot-link-title">Snapshot link</h2>
+              </div>
+            </div>
+            <div class="doc-body">
+              <p class="doc-prose">
+                Each saved destination has a <b>Snapshot link</b> row, for the Distant Horizons
+                snapshot a <b>Publish DH Snapshot</b> block uploads.<br />
+                The link is the address of the snapshot's <code>latest.json</code>, which is what
+                you give to the people who download the snapshot.<br />
+                <b>Copy link</b> puts it on the clipboard.<br />
+                It is empty until a snapshot has been published to the destination.
+              </p>
+              <p class="doc-prose">
+                The switch next to the row chooses between <b>Public</b> and
+                <b>Private link</b>.<br />
+                Public keeps the snapshot at a fixed address under the destination's prefix.<br />
+                A private link moves it into a folder named by a random token, so only someone given
+                the link can find it.<br />
+                Switching the mode moves the latest snapshot, which takes a few minutes, and asks
+                first.<br />
+                Once a snapshot is published, the address used before the switch stops working.
+              </p>
+              <p class="doc-prose">
+                <b>Rotate link</b> appears in private mode.<br />
+                It moves the latest snapshot under a new token and deletes the old address.<br />
+                Everyone holding the old link loses access, and has to be sent the new one.<br />
+                If the old files cannot all be deleted, the row says the previous link may still
+                work.<br />
+                Switch the mode or rotate again to finish removing them.
+              </p>
+              <p class="doc-prose">
+                A publish and a link change cannot run together on one destination.<br />
+                The token is saved in a <code>.link</code> file beside the secret, and removed with
+                the destination.
+              </p>
+            </div>
+          </section>
+
+          <section class="doc-section block" id="errors" aria-labelledby="errors-title">
+            <div class="band doc-band">
+              <div class="band-title">
+                <span class="num">04</span>
+                <h2 id="errors-title">Errors</h2>
+              </div>
+            </div>
+            <div class="doc-body">
+              <div class="doc-table-wrap">
+                <table class="doc-table">
+                  <thead>
+                    <tr>
+                      <th scope="col">Error</th>
+                      <th scope="col">Do</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td>
+                        Wrong credentials: <em>host</em> refused the access key or secret
+                        (<em>status</em>).
+                      </td>
+                      <td>
+                        Check <b>Access key ID</b> and <b>Secret access key</b> against the
+                        provider.
+                      </td>
+                    </tr>
+                    <tr>
+                      <td>Bucket not found: <em>host</em> has no bucket named <em>name</em>.</td>
+                      <td>Check <b>Bucket</b>, and that the key can see it.</td>
+                    </tr>
+                    <tr>
+                      <td>
+                        Could not reach <em>host</em>. Check the endpoint and your connection.
+                      </td>
+                      <td>Check <b>Endpoint</b> for typos, then your network.</td>
+                    </tr>
+                    <tr>
+                      <td>
+                        <em>host</em> rejected the check (status <em>status</em> <em>code</em>).
+                        Check the region and endpoint.
+                      </td>
+                      <td>Set <b>Region</b> to what the provider documents.</td>
+                    </tr>
+                    <tr>
+                      <td>endpoint must be a host only, without a path or credentials</td>
+                      <td>Remove everything after the host from <b>Endpoint</b>.</td>
+                    </tr>
+                    <tr>
+                      <td>a destination named "<em>name</em>" already exists</td>
+                      <td>Pick another <b>Name</b>.</td>
+                    </tr>
+                    <tr>
+                      <td>
+                        nothing has been published to this destination yet, so there is no link to
+                        copy: run a Publish DH Snapshot block first
+                      </td>
+                      <td>Run the block once, then select <b>Copy link</b> again.</td>
+                    </tr>
+                    <tr>
+                      <td>
+                        a snapshot is being taken or published to this destination: change the link
+                        when it has finished
+                      </td>
+                      <td>Wait for the run to end, then switch or rotate again.</td>
+                    </tr>
+                    <tr>
+                      <td>
+                        destination "<em>name</em>" no longer exists; choose another in the Upload
+                        to Bucket block or add it in Settings
+                      </td>
+                      <td>
+                        Add the destination again with the same name, or pick another in the block.
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </section>
+
+          <nav class="doc-related block" aria-label="Related">
+            <div class="shelf-label"><span class="label">Related</span></div>
+            <a class="related-link" href="/docs/settings/notifications.html"
+              ><span class="kind" data-kind="settings">Settings</span>Notifications</a
+            >
+          </nav>
+        </main>
+      </div>
+
+      <!-- Canonical footer. Byte-identical on every page. -->
+      <footer class="block block-raised">
+        <div class="footer-cols">
+          <div class="footer-about">
+            <a class="footer-brand" href="/index.html"
+              ><picture
+                ><source media="(min-resolution: 2dppx)" srcset="/assets/img/mark.svg" />
+                <img
+                  class="mark"
+                  src="/assets/img/mark-24.svg"
+                  width="24"
+                  height="24"
+                  alt="" /></picture
+              >Konnekt</a
+            >
+            <p>A desktop dashboard for the Minecraft servers you host.</p>
+            <span class="meta"><span data-release-tag></span>Windows and Linux</span>
+          </div>
+          <nav class="footer-col" aria-label="Product">
+            <span class="label">Product</span>
+            <a href="/download.html">Download</a>
+            <a href="https://konnekt-demo.pages.dev/" target="_blank" rel="noopener"
+              >Try the demo</a
+            >
+            <a href="/changelog.html">Changelog</a>
+          </nav>
+          <nav class="footer-col" aria-label="Learn">
+            <span class="label">Learn</span>
+            <a href="/index.html#features">Features</a>
+            <a href="/docs.html">Docs</a>
+            <a href="/roadmap.html">Roadmap</a>
+          </nav>
+          <nav class="footer-col" aria-label="Source">
+            <span class="label">Source</span>
+            <a href="https://github.com/kollektiv-mc/Konnekt" target="_blank" rel="noopener"
+              >GitHub</a
+            >
+            <a href="https://github.com/kollektiv-mc/Konnekt/issues" target="_blank" rel="noopener"
+              >Issues</a
+            >
+            <a
+              href="https://github.com/kollektiv-mc/Konnekt/blob/main/LICENSE"
+              target="_blank"
+              rel="noopener"
+              >MIT licence</a
+            >
+          </nav>
+        </div>
+        <div class="footer-base">
+          <span
+            >Alpha software. A side project mostly written by Claude.
+            <a href="/docs.html#disclaimer">Full statement</a></span
+          >
+          <span>&copy; 2026 Konnekt</span>
+        </div>
+      </footer>
+    </div>
+
+    <script src="/release.js"></script>
+    <script src="/site.js"></script>
+  </body>
+</html>

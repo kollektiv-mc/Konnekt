@@ -351,6 +351,12 @@ h2.label {
   width: 220px;
 }
 
+/* Three columns and more stay readable on a phone by scrolling inside the
+   wrap rather than squeezing the middle one to a word a line. */
+.doc-table:has(th:nth-child(3)) {
+  min-width: 560px;
+}
+
 /* A note beside the steps. The tint says which kind, the label stays plain:
    see also in the accent, heads up in sun. */
 .doc-note {

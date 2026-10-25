@@ -1,0 +1,408 @@
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Konnekt docs: Appearance</title>
+    <meta
+      name="description"
+      content="Appearance: The look of the dashboard: skin, colors, fonts, scrolling and hardware acceleration."
+    />
+    <link rel="canonical" href="https://konnekt.pages.dev/docs/settings/appearance.html" />
+
+    <meta property="og:site_name" content="Konnekt" />
+    <meta property="og:title" content="Konnekt docs: Appearance" />
+    <meta
+      property="og:description"
+      content="Appearance: The look of the dashboard: skin, colors, fonts, scrolling and hardware acceleration."
+    />
+    <meta property="og:url" content="https://konnekt.pages.dev/docs/settings/appearance.html" />
+    <meta property="og:type" content="website" />
+    <meta property="og:image" content="https://konnekt.pages.dev/assets/img/social-card.png" />
+    <meta property="og:image:width" content="1715" />
+    <meta property="og:image:height" content="1123" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Konnekt docs: Appearance" />
+    <meta
+      name="twitter:description"
+      content="Appearance: The look of the dashboard: skin, colors, fonts, scrolling and hardware acceleration."
+    />
+    <meta name="twitter:image" content="https://konnekt.pages.dev/assets/img/social-card.png" />
+
+    <meta name="theme-color" content="#05060a" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/assets/img/favicon-16.png" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/assets/img/favicon-32.png" />
+    <link rel="icon" type="image/png" sizes="256x256" href="/assets/img/favicon.png" />
+    <link rel="apple-touch-icon" href="/assets/img/app-icon.png" />
+    <link
+      rel="preload"
+      href="/assets/fonts/Geist-Variable.woff2"
+      as="font"
+      type="font/woff2"
+      crossorigin
+    />
+    <link rel="stylesheet" href="/tokens.css" />
+    <link rel="stylesheet" href="/site.css" />
+    <link rel="stylesheet" href="/docs.css" />
+    <script>
+      document.documentElement.className = document.documentElement.className.replace('no-js', '')
+    </script>
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to content</a>
+    <div class="page">
+      <div class="group">
+        <!-- Canonical nav. Byte-identical on every page, hrefs included; site.js
+           marks the current page and scrolls same-page anchors. -->
+        <nav class="nav block block-raised" id="nav" aria-label="Main">
+          <a class="nav-brand" href="/index.html"
+            ><picture
+              ><source media="(min-resolution: 2dppx)" srcset="/assets/img/mark.svg" />
+              <img
+                class="mark"
+                src="/assets/img/mark-24.svg"
+                width="24"
+                height="24"
+                alt="" /></picture
+            >Konnekt</a
+          >
+          <ul class="nav-links">
+            <li><a href="/index.html#features">Features</a></li>
+            <li><a href="/index.html#scheduler">Scheduler</a></li>
+            <li><a href="/docs.html">Docs</a></li>
+            <li><a href="/roadmap.html">Roadmap</a></li>
+            <li><a href="/changelog.html">Changelog</a></li>
+          </ul>
+          <a
+            class="nav-side"
+            href="https://github.com/kollektiv-mc/Konnekt"
+            target="_blank"
+            rel="noopener"
+            >GitHub</a
+          >
+          <a class="btn btn-primary" href="/download.html"
+            ><svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true">
+              <path
+                d="M7 1v9M3 6.5 7 10.5 11 6.5M1.5 13h11"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.6"
+              /></svg
+            >Download</a
+          >
+        </nav>
+        <main id="main" class="group">
+          <header class="doc-head block">
+            <div class="doc-head-main">
+              <div class="doc-trail">
+                <span class="kind" data-kind="settings">Settings</span>
+                <nav aria-label="Breadcrumb">
+                  <ol class="doc-crumbs">
+                    <li><a href="/docs.html">Docs</a></li>
+                    <li><a href="/docs.html#settings">Settings</a></li>
+                    <li><span aria-current="page">Appearance</span></li>
+                  </ol>
+                </nav>
+              </div>
+              <h1>Appearance</h1>
+              <p class="doc-lead">
+                The look of the dashboard: skin, colors, fonts, scrolling and hardware acceleration.
+              </p>
+            </div>
+            <dl class="doc-facts">
+              <div class="doc-fact">
+                <dt class="label">Topics</dt>
+                <dd>Skins · Colors · Fonts · Hardware acceleration</dd>
+              </div>
+            </dl>
+          </header>
+
+          <section class="doc-section block" id="look" aria-labelledby="look-title">
+            <div class="band doc-band">
+              <div class="band-title">
+                <span class="num">01</span>
+                <h2 id="look-title">Look</h2>
+              </div>
+            </div>
+            <div class="doc-body">
+              <div class="doc-table-wrap">
+                <table class="doc-table">
+                  <thead>
+                    <tr>
+                      <th scope="col">Setting</th>
+                      <th scope="col">What it does</th>
+                      <th scope="col">Default</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td><b>Skin</b></td>
+                      <td>
+                        Six palettes for surfaces and borders: Default, Midnight, Nord, Solarized,
+                        Mocha and Forest.
+                      </td>
+                      <td><code>Default</code></td>
+                    </tr>
+                    <tr>
+                      <td><b>Mode</b></td>
+                      <td>
+                        Light, Dark, or System, which follows the operating system, with Light on
+                        the Default skin only.
+                      </td>
+                      <td><code>Dark</code></td>
+                    </tr>
+                    <tr>
+                      <td><b>Accent color</b></td>
+                      <td>
+                        Colors highlights and active states, from six presets or a custom picker.
+                      </td>
+                      <td><code>#4ade80</code></td>
+                    </tr>
+                    <tr>
+                      <td><b>Background</b></td>
+                      <td>Solid, or Gradient, a faint accent glow from the top right corner.</td>
+                      <td><code>Solid</code></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <p class="doc-prose">
+                Picking a skin also sets its accent color: Green for Default and Forest, Violet for
+                Midnight, Blue for Nord, Rose for Solarized and Amber for Mocha.<br />
+                Change the accent afterwards to override it.<br />
+                Every skin except Default is dark only, and <b>Light</b> is greyed out on them.<br />
+                Picking one while Mode is Light switches Mode to Dark.<br />
+                With System, those skins stay dark whatever the operating system prefers.
+              </p>
+            </div>
+          </section>
+
+          <section
+            class="doc-section block"
+            id="hardware-acceleration"
+            aria-labelledby="hardware-acceleration-title"
+          >
+            <div class="band doc-band">
+              <div class="band-title">
+                <span class="num">02</span>
+                <h2 id="hardware-acceleration-title">Hardware acceleration</h2>
+              </div>
+            </div>
+            <div class="doc-body">
+              <p class="doc-prose">
+                Hardware acceleration is a Linux setting.<br />
+                Windows, macOS and a
+                <a href="/docs/settings/remote-access.html">Remote Access</a> browser do not use it,
+                so the row is hidden there.<br />
+                On Linux it sets how the window's webview, WebKitGTK, uses the GPU.
+              </p>
+              <div class="doc-table-wrap">
+                <table class="doc-table">
+                  <thead>
+                    <tr>
+                      <th scope="col">Option</th>
+                      <th scope="col">What it does</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td><b>On</b></td>
+                      <td>
+                        The GPU always draws and scrolls the window, as WebKitGTK does by default.
+                      </td>
+                    </tr>
+                    <tr>
+                      <td><b>On demand</b></td>
+                      <td>The page content decides when the GPU is used.</td>
+                    </tr>
+                    <tr>
+                      <td><b>Off</b></td>
+                      <td>The CPU draws every frame, with no GPU compositing.</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <p class="doc-prose">
+                A fresh install uses On.<br />
+                Step down to On demand, then Off, if the window flickers, tears or runs the GPU
+                hot.<br />
+                A change applies after you restart Konnekt.<br />
+                Until then the row shows <b>Applies on the next launch.</b>
+              </p>
+              <div class="doc-note">
+                <span class="label">NVIDIA</span>
+                <p>
+                  With On or On demand, Konnekt turns off WebKitGTK's DMA-BUF transport on the
+                  proprietary NVIDIA driver.<br />
+                  Acceleration stays on, and frames pass through shared memory instead.<br />
+                  A <code>WEBKIT_DISABLE_DMABUF_RENDERER</code> you set yourself is left alone.
+                </p>
+              </div>
+              <p class="doc-prose">
+                If the window is blank at launch, Settings is out of reach.<br />
+                The environment variable <code>KONNEKT_WEBVIEW_GPU</code> wins over the row while it
+                is set.<br />
+                Its values are <code>always</code>, <code>ondemand</code> and <code>never</code>.
+              </p>
+              <ol class="doc-list">
+                <li>
+                  Set <code>KONNEKT_WEBVIEW_GPU</code> to <code>never</code> and start Konnekt.
+                </li>
+                <li>
+                  Open Settings, then Appearance, and set <b>Hardware acceleration</b> to Off.
+                </li>
+                <li>Close Konnekt, remove the variable, and start it again.</li>
+              </ol>
+            </div>
+          </section>
+
+          <section class="doc-section block" id="advanced" aria-labelledby="advanced-title">
+            <div class="band doc-band">
+              <div class="band-title">
+                <span class="num">03</span>
+                <h2 id="advanced-title">Advanced</h2>
+              </div>
+            </div>
+            <div class="doc-body">
+              <div class="doc-table-wrap">
+                <table class="doc-table">
+                  <thead>
+                    <tr>
+                      <th scope="col">Setting</th>
+                      <th scope="col">What it does</th>
+                      <th scope="col">Default</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td><b>Fonts</b></td>
+                      <td>Sets the font family for Body, Titles, Wordmark and Code.</td>
+                      <td><code>Default</code></td>
+                    </tr>
+                    <tr>
+                      <td><b>Status colors</b></td>
+                      <td>
+                        Sets the Success, Warning and Error colors, each from a few presets or a
+                        custom picker.
+                      </td>
+                      <td><code>#22c55e</code>, <code>#f59e0b</code>, <code>#f87171</code></td>
+                    </tr>
+                    <tr>
+                      <td><b>Smooth scrolling</b></td>
+                      <td>
+                        Glides under each mouse wheel notch on spring physics instead of stepping.
+                      </td>
+                      <td><code>On</code></td>
+                    </tr>
+                    <tr>
+                      <td><b>Classic tile faces</b></td>
+                      <td>Shows the compact tile faces from before the figure-first ones.</td>
+                      <td><code>Off</code></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <p class="doc-prose">
+                Pick an installed font or type any name for each of the four.<br />
+                An empty field keeps the default, and a name that is not installed falls back to
+                it.<br />
+                Wordmark is the Konnekt name in the title bar.<br />
+                Fonts is desktop only: a
+                <a href="/docs/settings/remote-access.html">Remote Access</a> browser cannot list
+                this computer's fonts, so the row is hidden there.
+              </p>
+              <p class="doc-prose">
+                Status colors left at their defaults use darker values in Light mode.<br />
+                A color you pick is used as is.
+              </p>
+              <p class="doc-prose">
+                Smooth scrolling leaves touchpads, Ctrl or Shift scrolling and the operating
+                system's reduced-motion setting alone.<br />
+                It takes effect on the next wheel notch, with no restart.
+              </p>
+              <p class="doc-prose">
+                Classic tile faces applies to the Overview, Players, Performance, Scheduler, Worlds,
+                Backups and Plugins tiles.<br />
+                Their layout options do not change a classic face.
+              </p>
+            </div>
+          </section>
+
+          <nav class="doc-related block" aria-label="Related">
+            <div class="shelf-label"><span class="label">Related</span></div>
+            <a class="related-link" href="/docs/settings/general.html"
+              ><span class="kind" data-kind="settings">Settings</span>General</a
+            >
+            <a class="related-link" href="/docs/settings/remote-access.html"
+              ><span class="kind" data-kind="settings">Settings</span>Remote Access</a
+            >
+            <a class="related-link" href="/docs/requirements.html"
+              ><span class="kind" data-kind="reference">Reference</span>Requirements and
+              platforms</a
+            >
+          </nav>
+        </main>
+      </div>
+
+      <!-- Canonical footer. Byte-identical on every page. -->
+      <footer class="block block-raised">
+        <div class="footer-cols">
+          <div class="footer-about">
+            <a class="footer-brand" href="/index.html"
+              ><picture
+                ><source media="(min-resolution: 2dppx)" srcset="/assets/img/mark.svg" />
+                <img
+                  class="mark"
+                  src="/assets/img/mark-24.svg"
+                  width="24"
+                  height="24"
+                  alt="" /></picture
+              >Konnekt</a
+            >
+            <p>A desktop dashboard for the Minecraft servers you host.</p>
+            <span class="meta"><span data-release-tag></span>Windows and Linux</span>
+          </div>
+          <nav class="footer-col" aria-label="Product">
+            <span class="label">Product</span>
+            <a href="/download.html">Download</a>
+            <a href="https://konnekt-demo.pages.dev/" target="_blank" rel="noopener"
+              >Try the demo</a
+            >
+            <a href="/changelog.html">Changelog</a>
+          </nav>
+          <nav class="footer-col" aria-label="Learn">
+            <span class="label">Learn</span>
+            <a href="/index.html#features">Features</a>
+            <a href="/docs.html">Docs</a>
+            <a href="/roadmap.html">Roadmap</a>
+          </nav>
+          <nav class="footer-col" aria-label="Source">
+            <span class="label">Source</span>
+            <a href="https://github.com/kollektiv-mc/Konnekt" target="_blank" rel="noopener"
+              >GitHub</a
+            >
+            <a href="https://github.com/kollektiv-mc/Konnekt/issues" target="_blank" rel="noopener"
+              >Issues</a
+            >
+            <a
+              href="https://github.com/kollektiv-mc/Konnekt/blob/main/LICENSE"
+              target="_blank"
+              rel="noopener"
+              >MIT licence</a
+            >
+          </nav>
+        </div>
+        <div class="footer-base">
+          <span
+            >Alpha software. A side project mostly written by Claude.
+            <a href="/docs.html#disclaimer">Full statement</a></span
+          >
+          <span>&copy; 2026 Konnekt</span>
+        </div>
+      </footer>
+    </div>
+
+    <script src="/release.js"></script>
+    <script src="/site.js"></script>
+  </body>
+</html>
