@@ -1,0 +1,449 @@
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Konnekt docs: Tiles</title>
+    <meta
+      name="description"
+      content="Tiles: Eleven tiles that show and control the selected server."
+    />
+    <link rel="canonical" href="https://konnekt.pages.dev/docs/tiles.html" />
+
+    <meta property="og:site_name" content="Konnekt" />
+    <meta property="og:title" content="Konnekt docs: Tiles" />
+    <meta
+      property="og:description"
+      content="Tiles: Eleven tiles that show and control the selected server."
+    />
+    <meta property="og:url" content="https://konnekt.pages.dev/docs/tiles.html" />
+    <meta property="og:type" content="website" />
+    <meta property="og:image" content="https://konnekt.pages.dev/assets/img/social-card.png" />
+    <meta property="og:image:width" content="1715" />
+    <meta property="og:image:height" content="1123" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Konnekt docs: Tiles" />
+    <meta
+      name="twitter:description"
+      content="Tiles: Eleven tiles that show and control the selected server."
+    />
+    <meta name="twitter:image" content="https://konnekt.pages.dev/assets/img/social-card.png" />
+
+    <meta name="theme-color" content="#05060a" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/assets/img/favicon-16.png" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/assets/img/favicon-32.png" />
+    <link rel="icon" type="image/png" sizes="256x256" href="/assets/img/favicon.png" />
+    <link rel="apple-touch-icon" href="/assets/img/app-icon.png" />
+    <link
+      rel="preload"
+      href="/assets/fonts/Geist-Variable.woff2"
+      as="font"
+      type="font/woff2"
+      crossorigin
+    />
+    <link rel="stylesheet" href="/tokens.css" />
+    <link rel="stylesheet" href="/site.css" />
+    <link rel="stylesheet" href="/docs.css" />
+    <script>
+      document.documentElement.className = document.documentElement.className.replace('no-js', '')
+    </script>
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to content</a>
+    <div class="page">
+      <div class="group">
+        <!-- Canonical nav. Byte-identical on every page, hrefs included; site.js
+           marks the current page and scrolls same-page anchors. -->
+        <nav class="nav block block-raised" id="nav" aria-label="Main">
+          <a class="nav-brand" href="/index.html"
+            ><picture
+              ><source media="(min-resolution: 2dppx)" srcset="/assets/img/mark.svg" />
+              <img
+                class="mark"
+                src="/assets/img/mark-24.svg"
+                width="24"
+                height="24"
+                alt="" /></picture
+            >Konnekt</a
+          >
+          <ul class="nav-links">
+            <li><a href="/index.html#features">Features</a></li>
+            <li><a href="/index.html#scheduler">Scheduler</a></li>
+            <li><a href="/docs.html">Docs</a></li>
+            <li><a href="/roadmap.html">Roadmap</a></li>
+            <li><a href="/changelog.html">Changelog</a></li>
+          </ul>
+          <a
+            class="nav-side"
+            href="https://github.com/kollektiv-mc/Konnekt"
+            target="_blank"
+            rel="noopener"
+            >GitHub</a
+          >
+          <a class="btn btn-primary" href="/download.html"
+            ><svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true">
+              <path
+                d="M7 1v9M3 6.5 7 10.5 11 6.5M1.5 13h11"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.6"
+              /></svg
+            >Download</a
+          >
+        </nav>
+        <main id="main" class="group">
+          <header class="doc-head block">
+            <div class="doc-head-main">
+              <div class="doc-trail">
+                <span class="kind" data-kind="reference">Reference</span>
+                <nav aria-label="Breadcrumb">
+                  <ol class="doc-crumbs">
+                    <li><a href="/docs.html">Docs</a></li>
+                    <li><a href="/docs.html#dashboard">Dashboard</a></li>
+                    <li><span aria-current="page">Tiles</span></li>
+                  </ol>
+                </nav>
+              </div>
+              <h1>Tiles</h1>
+              <p class="doc-lead">Eleven tiles that show and control the selected server.</p>
+            </div>
+            <dl class="doc-facts">
+              <div class="doc-fact">
+                <dt class="label">Topics</dt>
+                <dd>Tiles</dd>
+              </div>
+            </dl>
+          </header>
+
+          <section class="doc-section block" id="console" aria-labelledby="console-title">
+            <div class="band doc-band">
+              <div class="band-title">
+                <span class="num">01</span>
+                <h2 id="console-title">Console</h2>
+              </div>
+            </div>
+            <div class="doc-body">
+              <p class="doc-prose">
+                Shows the selected server's log as it arrives.<br />
+                Type a command in the field and press <b>Send</b> once the server is running.<br />
+                <b>clr</b> clears the log.<br />
+                The arrow at the top left opens a search box and a level filter: <b>All</b>,
+                <b>Warn</b> or <b>Error</b>.
+              </p>
+              <p class="doc-prose">
+                Maximized, it adds a <b>Commands</b> rail beside the log.<br />
+                Timestamps and the number of lines kept are set in
+                <a href="/docs/settings/console.html">Console</a>.
+              </p>
+            </div>
+          </section>
+
+          <section class="doc-section block" id="overview" aria-labelledby="overview-title">
+            <div class="band doc-band">
+              <div class="band-title">
+                <span class="num">02</span>
+                <h2 id="overview-title">Overview</h2>
+              </div>
+            </div>
+            <div class="doc-body">
+              <p class="doc-prose">
+                Shows the server's state, then <b>Players</b>, <b>TPS</b>, <b>Uptime</b> and
+                <b>Memory</b>.<br />
+                The state reads Online, Offline, Starting, Stopping or Unreachable.
+              </p>
+              <p class="doc-prose">
+                Maximized, it rolls up other tiles.<br />
+                It charts the last hour of CPU, RAM and players.<br />
+                Short views of <b>Players</b>, <b>Active world</b>, <b>Backups</b> and
+                <b>Schedules</b> follow.<br />
+                Each has a button that opens its own tile.<br />
+                Overview only reads from the other tiles and changes nothing in them.
+              </p>
+            </div>
+          </section>
+
+          <section class="doc-section block" id="players" aria-labelledby="players-title">
+            <div class="band doc-band">
+              <div class="band-title">
+                <span class="num">03</span>
+                <h2 id="players-title">Players</h2>
+              </div>
+            </div>
+            <div class="doc-body">
+              <p class="doc-prose">
+                Shows how many players are online and lists them with their operator level.<br />
+                Click a player for their status, OP level, whitelist entry and ban reason.<br />
+                There, <b>kick</b> and <b>ban</b> work on online players and take an optional
+                reason.<br />
+                <b>pardon</b> appears for a banned player.<br />
+                The list refreshes when anyone joins or leaves, and when the server starts or stops.
+              </p>
+              <p class="doc-prose">
+                Maximized, it adds a search box and sorting by <b>Name</b> or <b>OP level</b>.
+              </p>
+            </div>
+          </section>
+
+          <section
+            class="doc-section block"
+            id="quick-commands"
+            aria-labelledby="quick-commands-title"
+          >
+            <div class="band doc-band">
+              <div class="band-title">
+                <span class="num">04</span>
+                <h2 id="quick-commands-title">Commands</h2>
+              </div>
+            </div>
+            <div class="doc-body">
+              <p class="doc-prose">
+                Shows one button per command, and a click runs it on the selected server.<br />
+                A first launch adds six: <b>Start</b>, <b>Stop</b>, <b>Restart</b>,
+                <b>Force Stop</b>, <b>Save All</b> and <b>TPS</b>.<br />
+                <b>Force Stop</b> always asks first.<br />
+                <b>Stop</b> and <b>Restart</b> ask when <b>Confirm before stopping</b> is on in
+                <a href="/docs/settings/general.html#server">General</a>.
+              </p>
+              <p class="doc-prose">
+                Maximized, it lists every button to rename, edit, copy, delete and reorder.<br />
+                Add one by typing a command, picking a preset, or linking a saved command from
+                Kommands.
+              </p>
+            </div>
+          </section>
+
+          <section class="doc-section block" id="performance" aria-labelledby="performance-title">
+            <div class="band doc-band">
+              <div class="band-title">
+                <span class="num">05</span>
+                <h2 id="performance-title">Performance</h2>
+              </div>
+            </div>
+            <div class="doc-body">
+              <p class="doc-prose">
+                Shows <b>TPS</b>, <b>CPU</b> and <b>RAM</b> with a chart of recent samples.<br />
+                Konnekt takes a sample every 10 seconds and keeps the last hour.
+              </p>
+              <p class="doc-prose">
+                Maximized, the chart covers <b>5m</b>, <b>15m</b> or <b>1h</b>.<br />
+                Click a series in its legend to hide it.<br />
+                A table lists each sample, sortable by any column, with a min·avg·max row.
+              </p>
+            </div>
+          </section>
+
+          <section class="doc-section block" id="scheduler" aria-labelledby="scheduler-title">
+            <div class="band doc-band">
+              <div class="band-title">
+                <span class="num">06</span>
+                <h2 id="scheduler-title">Scheduler</h2>
+              </div>
+            </div>
+            <div class="doc-body">
+              <p class="doc-prose">
+                Shows how many graphs are armed and when the next one runs.<br />
+                Maximized, it opens the graph editor.<br />
+                Graphs are covered in <a href="/docs/graphs.html">Graphs</a> and
+                <a href="/docs/scheduler-editor.html">Scheduler editor</a>.
+              </p>
+            </div>
+          </section>
+
+          <section class="doc-section block" id="worlds" aria-labelledby="worlds-title">
+            <div class="band doc-band">
+              <div class="band-title">
+                <span class="num">07</span>
+                <h2 id="worlds-title">Worlds</h2>
+              </div>
+            </div>
+            <div class="doc-body">
+              <p class="doc-prose">
+                Shows how many worlds the server has, their total size and which one is active.
+              </p>
+              <p class="doc-prose">
+                Maximized, it draws each world as a planet in a 3D scene.<br />
+                Click one to open its card: <b>set active</b>, <b>backup</b>, <b>open folder</b>,
+                <b>rename</b>, <b>duplicate</b> and <b>delete</b>.<br />
+                <b>set active</b> on a running server offers to stop it first, and to start it again
+                after.<br />
+                <b>delete</b> is missing for the active world and off while the server runs.<br />
+                The card also lists the world's backups, each with <b>restore</b> and <b>delete</b>.
+              </p>
+            </div>
+          </section>
+
+          <section class="doc-section block" id="backups" aria-labelledby="backups-title">
+            <div class="band doc-band">
+              <div class="band-title">
+                <span class="num">08</span>
+                <h2 id="backups-title">Backups</h2>
+              </div>
+            </div>
+            <div class="doc-body">
+              <p class="doc-prose">
+                Shows <b>Last full backup</b>, its size and how many archives are kept.<br />
+                <b>Back up now</b> takes a full server backup.<br />
+                On a running server it asks whether to back up now or stop the server first.
+              </p>
+              <p class="doc-prose">
+                Maximized, it lists backups under <b>Server</b> and <b>Worlds</b>.<br />
+                Each can be renamed, tagged and deleted.<br />
+                <b>restore</b> needs the server stopped.<br />
+                <b>schedule</b> opens the Scheduler, where the
+                <a href="/docs/blocks/action-backup.html">Backup</a> block runs backups on a timer.
+              </p>
+            </div>
+          </section>
+
+          <section
+            class="doc-section block"
+            id="server-config"
+            aria-labelledby="server-config-title"
+          >
+            <div class="band doc-band">
+              <div class="band-title">
+                <span class="num">09</span>
+                <h2 id="server-config-title">Config</h2>
+              </div>
+            </div>
+            <div class="doc-body">
+              <p class="doc-prose">
+                Shows the main <code>server.properties</code> values.<br />
+                Click an on/off value to flip it, and a value with fixed choices to cycle through
+                them.<br />
+                Double-click any other value to edit it.<br />
+                Each change is written to the file at once.
+              </p>
+              <p class="doc-prose">
+                Maximized, it lists the server, plugin and mod config files, with a search box.<br />
+                A file opens in a <b>Form</b> or <b>Raw</b> editor, with <b>Save</b> and
+                <b>Revert</b>.<br />
+                A file the form cannot edit safely opens as <b>Raw only</b>.<br />
+                On a running server, changes apply after a restart.
+              </p>
+            </div>
+          </section>
+
+          <section
+            class="doc-section block"
+            id="notifications"
+            aria-labelledby="notifications-title"
+          >
+            <div class="band doc-band">
+              <div class="band-title">
+                <span class="num">10</span>
+                <h2 id="notifications-title">Notifications</h2>
+              </div>
+            </div>
+            <div class="doc-body">
+              <p class="doc-prose">
+                Lists events as they happen: joins, info, warnings, errors and crashes.<br />
+                The filter at the top left narrows it to <b>Joins</b>, <b>Info</b>, <b>Warn</b> or
+                <b>Errors</b>.<br />
+                <b>Clear all</b> empties the list.<br />
+                It keeps the latest 200 until Konnekt closes.<br />
+                Which events also raise a bubble or a desktop alert is set in
+                <a href="/docs/settings/notifications.html">Notifications</a>.
+              </p>
+            </div>
+          </section>
+
+          <section class="doc-section block" id="mods" aria-labelledby="mods-title">
+            <div class="band doc-band">
+              <div class="band-title">
+                <span class="num">11</span>
+                <h2 id="mods-title">Plugins</h2>
+              </div>
+            </div>
+            <div class="doc-body">
+              <p class="doc-prose">
+                Lists the server's installed plugins, or its mods on a server that does not load
+                plugins.<br />
+                Each one switches on or off, by renaming its file between <code>.jar</code> and
+                <code>.jar.disabled</code>.<br />
+                While the server runs, the tile says <b>restart needed for changes</b>.
+              </p>
+              <p class="doc-prose">
+                Maximized, <b>Add Content</b> searches Modrinth and installs from it.<br />
+                <b>Add Files</b> adds jars from this computer, in the desktop app.
+              </p>
+            </div>
+          </section>
+
+          <nav class="doc-related block" aria-label="Related">
+            <div class="shelf-label"><span class="label">Related</span></div>
+            <a class="related-link" href="/docs/layouts.html"
+              ><span class="kind" data-kind="concept">Concept</span>Tiles and layouts</a
+            >
+            <a class="related-link" href="/docs/settings/appearance.html"
+              ><span class="kind" data-kind="settings">Settings</span>Appearance</a
+            >
+            <a class="related-link" href="/docs/first-server.html"
+              ><span class="kind" data-kind="guide">Guide</span>Your first server</a
+            >
+          </nav>
+        </main>
+      </div>
+
+      <!-- Canonical footer. Byte-identical on every page. -->
+      <footer class="block block-raised">
+        <div class="footer-cols">
+          <div class="footer-about">
+            <a class="footer-brand" href="/index.html"
+              ><picture
+                ><source media="(min-resolution: 2dppx)" srcset="/assets/img/mark.svg" />
+                <img
+                  class="mark"
+                  src="/assets/img/mark-24.svg"
+                  width="24"
+                  height="24"
+                  alt="" /></picture
+              >Konnekt</a
+            >
+            <p>A desktop dashboard for the Minecraft servers you host.</p>
+            <span class="meta"><span data-release-tag></span>Windows and Linux</span>
+          </div>
+          <nav class="footer-col" aria-label="Product">
+            <span class="label">Product</span>
+            <a href="/download.html">Download</a>
+            <a href="https://konnekt-demo.pages.dev/" target="_blank" rel="noopener"
+              >Try the demo</a
+            >
+            <a href="/changelog.html">Changelog</a>
+          </nav>
+          <nav class="footer-col" aria-label="Learn">
+            <span class="label">Learn</span>
+            <a href="/index.html#features">Features</a>
+            <a href="/docs.html">Docs</a>
+            <a href="/roadmap.html">Roadmap</a>
+          </nav>
+          <nav class="footer-col" aria-label="Source">
+            <span class="label">Source</span>
+            <a href="https://github.com/kollektiv-mc/Konnekt" target="_blank" rel="noopener"
+              >GitHub</a
+            >
+            <a href="https://github.com/kollektiv-mc/Konnekt/issues" target="_blank" rel="noopener"
+              >Issues</a
+            >
+            <a
+              href="https://github.com/kollektiv-mc/Konnekt/blob/main/LICENSE"
+              target="_blank"
+              rel="noopener"
+              >MIT licence</a
+            >
+          </nav>
+        </div>
+        <div class="footer-base">
+          <span
+            >Alpha software. A side project mostly written by Claude.
+            <a href="/docs.html#disclaimer">Full statement</a></span
+          >
+          <span>&copy; 2026 Konnekt</span>
+        </div>
+      </footer>
+    </div>
+
+    <script src="/release.js"></script>
+    <script src="/site.js"></script>
+  </body>
+</html>

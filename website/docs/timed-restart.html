@@ -1,0 +1,401 @@
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Konnekt docs: Warn, then restart every 6 hours</title>
+    <meta
+      name="description"
+      content="Warn, then restart every 6 hours: Tell players a restart is coming, then restart the server every 6 hours."
+    />
+    <link rel="canonical" href="https://konnekt.pages.dev/docs/timed-restart.html" />
+
+    <meta property="og:site_name" content="Konnekt" />
+    <meta property="og:title" content="Konnekt docs: Warn, then restart every 6 hours" />
+    <meta
+      property="og:description"
+      content="Warn, then restart every 6 hours: Tell players a restart is coming, then restart the server every 6 hours."
+    />
+    <meta property="og:url" content="https://konnekt.pages.dev/docs/timed-restart.html" />
+    <meta property="og:type" content="website" />
+    <meta property="og:image" content="https://konnekt.pages.dev/assets/img/social-card.png" />
+    <meta property="og:image:width" content="1715" />
+    <meta property="og:image:height" content="1123" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Konnekt docs: Warn, then restart every 6 hours" />
+    <meta
+      name="twitter:description"
+      content="Warn, then restart every 6 hours: Tell players a restart is coming, then restart the server every 6 hours."
+    />
+    <meta name="twitter:image" content="https://konnekt.pages.dev/assets/img/social-card.png" />
+
+    <meta name="theme-color" content="#05060a" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/assets/img/favicon-16.png" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/assets/img/favicon-32.png" />
+    <link rel="icon" type="image/png" sizes="256x256" href="/assets/img/favicon.png" />
+    <link rel="apple-touch-icon" href="/assets/img/app-icon.png" />
+    <link
+      rel="preload"
+      href="/assets/fonts/Geist-Variable.woff2"
+      as="font"
+      type="font/woff2"
+      crossorigin
+    />
+    <link rel="stylesheet" href="/tokens.css" />
+    <link rel="stylesheet" href="/site.css" />
+    <link rel="stylesheet" href="/docs.css" />
+    <script>
+      document.documentElement.className = document.documentElement.className.replace('no-js', '')
+    </script>
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to content</a>
+    <div class="page">
+      <div class="group">
+        <!-- Canonical nav. Byte-identical on every page, hrefs included; site.js
+           marks the current page and scrolls same-page anchors. -->
+        <nav class="nav block block-raised" id="nav" aria-label="Main">
+          <a class="nav-brand" href="/index.html"
+            ><picture
+              ><source media="(min-resolution: 2dppx)" srcset="/assets/img/mark.svg" />
+              <img
+                class="mark"
+                src="/assets/img/mark-24.svg"
+                width="24"
+                height="24"
+                alt="" /></picture
+            >Konnekt</a
+          >
+          <ul class="nav-links">
+            <li><a href="/index.html#features">Features</a></li>
+            <li><a href="/index.html#scheduler">Scheduler</a></li>
+            <li><a href="/docs.html">Docs</a></li>
+            <li><a href="/roadmap.html">Roadmap</a></li>
+            <li><a href="/changelog.html">Changelog</a></li>
+          </ul>
+          <a
+            class="nav-side"
+            href="https://github.com/kollektiv-mc/Konnekt"
+            target="_blank"
+            rel="noopener"
+            >GitHub</a
+          >
+          <a class="btn btn-primary" href="/download.html"
+            ><svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true">
+              <path
+                d="M7 1v9M3 6.5 7 10.5 11 6.5M1.5 13h11"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.6"
+              /></svg
+            >Download</a
+          >
+        </nav>
+        <main id="main" class="group">
+          <header class="doc-head block">
+            <div class="doc-head-main">
+              <div class="doc-trail">
+                <span class="kind" data-kind="guide">Guide</span>
+                <nav aria-label="Breadcrumb">
+                  <ol class="doc-crumbs">
+                    <li><a href="/docs.html">Docs</a></li>
+                    <li><a href="/docs.html#scheduler">Scheduler</a></li>
+                    <li><span aria-current="page">Warn, then restart every 6 hours</span></li>
+                  </ol>
+                </nav>
+              </div>
+              <h1>Warn, then restart every 6 hours</h1>
+              <p class="doc-lead">
+                Tell players a restart is coming, then restart the server every 6 hours.
+              </p>
+            </div>
+            <dl class="doc-facts">
+              <div class="doc-fact">
+                <dt class="label">Duration</dt>
+                <dd>~8 min</dd>
+              </div>
+              <div class="doc-fact">
+                <dt class="label">Requirements</dt>
+                <dd>A running server · An open Konnekt</dd>
+              </div>
+              <div class="doc-fact">
+                <dt class="label">Topics</dt>
+                <dd>Scheduler · Console</dd>
+              </div>
+            </dl>
+          </header>
+
+          <section
+            class="doc-section block"
+            id="before-you-start"
+            aria-labelledby="before-you-start-title"
+          >
+            <div class="band doc-band">
+              <div class="band-title">
+                <span class="num">00</span>
+                <h2 id="before-you-start-title">Before you start</h2>
+              </div>
+            </div>
+            <div class="doc-body">
+              <ul class="doc-checks">
+                <li class="doc-check">
+                  <span class="doc-check-text"
+                    ><span>Konnekt left open</span
+                    ><span class="doc-check-desc"
+                      >Graphs run only while Konnekt is open. The 6-hour timer lives in memory, so
+                      closing Konnekt resets it.</span
+                    ></span
+                  >
+                </li>
+                <li class="doc-check">
+                  <span class="doc-check-text"
+                    ><span>The scheduler editor</span
+                    ><span class="doc-check-desc"
+                      >Maximize the Scheduler tile to open it.</span
+                    ></span
+                  >
+                </li>
+              </ul>
+            </div>
+          </section>
+          <section
+            class="doc-section block"
+            id="add-the-trigger"
+            aria-labelledby="add-the-trigger-title"
+          >
+            <div class="band doc-band">
+              <div class="band-title">
+                <span class="num">01</span>
+                <h2 id="add-the-trigger-title">Add the trigger</h2>
+              </div>
+            </div>
+            <div class="doc-body">
+              <p class="doc-prose">
+                Open the editor and select <b>Open blocks</b>, then
+                <a href="/docs/blocks/trigger-interval.html"><b>Interval</b></a
+                >.
+              </p>
+              <div class="doc-table-wrap">
+                <table class="doc-table">
+                  <thead>
+                    <tr>
+                      <th scope="col">Field</th>
+                      <th scope="col">Set to</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td>Interval (minutes)</td>
+                      <td><code>360</code></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <p class="doc-prose">
+                The first check that sees the graph on starts the timer.<br />
+                The first restart comes 6 hours after that.<br />
+                For fixed times, use
+                <a href="/docs/blocks/trigger-cron.html"><b>Cron Schedule</b></a> with
+                <code>0 */6 * * *</code> instead.
+              </p>
+            </div>
+          </section>
+          <section
+            class="doc-section block"
+            id="warn-the-players"
+            aria-labelledby="warn-the-players-title"
+          >
+            <div class="band doc-band">
+              <div class="band-title">
+                <span class="num">02</span>
+                <h2 id="warn-the-players-title">Warn the players</h2>
+              </div>
+            </div>
+            <div class="doc-body">
+              <p class="doc-prose">
+                Add two <a href="/docs/blocks/action-command.html"><b>Command</b></a> blocks and two
+                <a href="/docs/blocks/action-delay.html"><b>Delay</b></a> blocks.<br />
+                Wire them in table order, each <b>onComplete</b> to the next block's
+                <b>trigger</b>.<br />
+                Start from <b>onComplete</b> on <b>Interval</b>.
+              </p>
+              <div class="doc-table-wrap">
+                <table class="doc-table">
+                  <thead>
+                    <tr>
+                      <th scope="col">Block</th>
+                      <th scope="col">Field</th>
+                      <th scope="col">Set to</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td>Command</td>
+                      <td>Command</td>
+                      <td><code>say The server restarts in 1 minute.</code></td>
+                    </tr>
+                    <tr>
+                      <td>Delay</td>
+                      <td>Seconds</td>
+                      <td><code>50</code></td>
+                    </tr>
+                    <tr>
+                      <td>Command</td>
+                      <td>Command</td>
+                      <td><code>say The server restarts in 10 seconds.</code></td>
+                    </tr>
+                    <tr>
+                      <td>Delay</td>
+                      <td>Seconds</td>
+                      <td><code>10</code></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <p class="doc-prose">
+                One <b>Delay</b> waits 60 seconds at most, and a longer wait fails.<br />
+                For an earlier warning, chain more <b>Delay</b> blocks.
+              </p>
+            </div>
+          </section>
+          <section
+            class="doc-section block"
+            id="add-the-restart"
+            aria-labelledby="add-the-restart-title"
+          >
+            <div class="band doc-band">
+              <div class="band-title">
+                <span class="num">03</span>
+                <h2 id="add-the-restart-title">Add the restart</h2>
+              </div>
+            </div>
+            <div class="doc-body">
+              <p class="doc-prose">Add a third <b>Command</b>.</p>
+              <div class="doc-table-wrap">
+                <table class="doc-table">
+                  <thead>
+                    <tr>
+                      <th scope="col">Field</th>
+                      <th scope="col">Set to</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td>Command</td>
+                      <td><code>Restart Server</code></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <p class="doc-prose">
+                Drag from <b>onComplete</b> on the last <b>Delay</b> to <b>trigger</b> on the new
+                <b>Command</b>.<br />
+                It stops the server, waits for it to exit, and starts it again.
+              </p>
+              <div class="doc-note">
+                <span class="label">Heads up</span>
+                <p>
+                  The editor may warn that RCON is not confirmed for this block.<br />
+                  The <code>say</code> lines already warn players through the console.<br />
+                  A warning does not stop the graph from saving or running.
+                </p>
+              </div>
+            </div>
+          </section>
+          <section class="doc-section block" id="switch-it-on" aria-labelledby="switch-it-on-title">
+            <div class="band doc-band">
+              <div class="band-title">
+                <span class="num">04</span>
+                <h2 id="switch-it-on-title">Switch it on</h2>
+              </div>
+            </div>
+            <div class="doc-body">
+              <ol class="doc-list">
+                <li>Select <b>Graph actions</b>, then <b>Save</b>.</li>
+                <li>Select <b>[off]</b> so it reads <b>[on]</b>.</li>
+              </ol>
+              <p class="doc-prose">
+                <b>run</b> starts the graph at once: the warnings go out, and the server restarts a
+                minute later.<br />
+                A new graph starts off, and nothing fires until it is on.
+              </p>
+            </div>
+          </section>
+
+          <nav class="doc-related block" aria-label="Related">
+            <div class="shelf-label"><span class="label">Related</span></div>
+            <a class="related-link" href="/docs/blocks/trigger-interval.html"
+              ><span class="kind" data-kind="reference">Reference</span>Interval</a
+            ><a class="related-link" href="/docs/blocks/action-delay.html"
+              ><span class="kind" data-kind="reference">Reference</span>Delay</a
+            ><a class="related-link" href="/docs/blocks/action-command.html"
+              ><span class="kind" data-kind="reference">Reference</span>Command</a
+            ><a class="related-link" href="/docs/cron.html"
+              ><span class="kind" data-kind="reference">Reference</span>Cron expressions</a
+            >
+          </nav>
+        </main>
+      </div>
+
+      <!-- Canonical footer. Byte-identical on every page. -->
+      <footer class="block block-raised">
+        <div class="footer-cols">
+          <div class="footer-about">
+            <a class="footer-brand" href="/index.html"
+              ><picture
+                ><source media="(min-resolution: 2dppx)" srcset="/assets/img/mark.svg" />
+                <img
+                  class="mark"
+                  src="/assets/img/mark-24.svg"
+                  width="24"
+                  height="24"
+                  alt="" /></picture
+              >Konnekt</a
+            >
+            <p>A desktop dashboard for the Minecraft servers you host.</p>
+            <span class="meta"><span data-release-tag></span>Windows and Linux</span>
+          </div>
+          <nav class="footer-col" aria-label="Product">
+            <span class="label">Product</span>
+            <a href="/download.html">Download</a>
+            <a href="https://konnekt-demo.pages.dev/" target="_blank" rel="noopener"
+              >Try the demo</a
+            >
+            <a href="/changelog.html">Changelog</a>
+          </nav>
+          <nav class="footer-col" aria-label="Learn">
+            <span class="label">Learn</span>
+            <a href="/index.html#features">Features</a>
+            <a href="/docs.html">Docs</a>
+            <a href="/roadmap.html">Roadmap</a>
+          </nav>
+          <nav class="footer-col" aria-label="Source">
+            <span class="label">Source</span>
+            <a href="https://github.com/kollektiv-mc/Konnekt" target="_blank" rel="noopener"
+              >GitHub</a
+            >
+            <a href="https://github.com/kollektiv-mc/Konnekt/issues" target="_blank" rel="noopener"
+              >Issues</a
+            >
+            <a
+              href="https://github.com/kollektiv-mc/Konnekt/blob/main/LICENSE"
+              target="_blank"
+              rel="noopener"
+              >MIT licence</a
+            >
+          </nav>
+        </div>
+        <div class="footer-base">
+          <span
+            >Alpha software. A side project mostly written by Claude.
+            <a href="/docs.html#disclaimer">Full statement</a></span
+          >
+          <span>&copy; 2026 Konnekt</span>
+        </div>
+      </footer>
+    </div>
+
+    <script src="/release.js"></script>
+    <script src="/site.js"></script>
+  </body>
+</html>

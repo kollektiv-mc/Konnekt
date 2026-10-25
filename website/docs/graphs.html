@@ -1,0 +1,304 @@
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Konnekt docs: How a graph runs</title>
+    <meta
+      name="description"
+      content="How a graph runs: A graph is a set of wired blocks that a trigger starts and that then run one at a time."
+    />
+    <link rel="canonical" href="https://konnekt.pages.dev/docs/graphs.html" />
+
+    <meta property="og:site_name" content="Konnekt" />
+    <meta property="og:title" content="Konnekt docs: How a graph runs" />
+    <meta
+      property="og:description"
+      content="How a graph runs: A graph is a set of wired blocks that a trigger starts and that then run one at a time."
+    />
+    <meta property="og:url" content="https://konnekt.pages.dev/docs/graphs.html" />
+    <meta property="og:type" content="website" />
+    <meta property="og:image" content="https://konnekt.pages.dev/assets/img/social-card.png" />
+    <meta property="og:image:width" content="1715" />
+    <meta property="og:image:height" content="1123" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Konnekt docs: How a graph runs" />
+    <meta
+      name="twitter:description"
+      content="How a graph runs: A graph is a set of wired blocks that a trigger starts and that then run one at a time."
+    />
+    <meta name="twitter:image" content="https://konnekt.pages.dev/assets/img/social-card.png" />
+
+    <meta name="theme-color" content="#05060a" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/assets/img/favicon-16.png" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/assets/img/favicon-32.png" />
+    <link rel="icon" type="image/png" sizes="256x256" href="/assets/img/favicon.png" />
+    <link rel="apple-touch-icon" href="/assets/img/app-icon.png" />
+    <link
+      rel="preload"
+      href="/assets/fonts/Geist-Variable.woff2"
+      as="font"
+      type="font/woff2"
+      crossorigin
+    />
+    <link rel="stylesheet" href="/tokens.css" />
+    <link rel="stylesheet" href="/site.css" />
+    <link rel="stylesheet" href="/docs.css" />
+    <script>
+      document.documentElement.className = document.documentElement.className.replace('no-js', '')
+    </script>
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to content</a>
+    <div class="page">
+      <div class="group">
+        <!-- Canonical nav. Byte-identical on every page, hrefs included; site.js
+           marks the current page and scrolls same-page anchors. -->
+        <nav class="nav block block-raised" id="nav" aria-label="Main">
+          <a class="nav-brand" href="/index.html"
+            ><picture
+              ><source media="(min-resolution: 2dppx)" srcset="/assets/img/mark.svg" />
+              <img
+                class="mark"
+                src="/assets/img/mark-24.svg"
+                width="24"
+                height="24"
+                alt="" /></picture
+            >Konnekt</a
+          >
+          <ul class="nav-links">
+            <li><a href="/index.html#features">Features</a></li>
+            <li><a href="/index.html#scheduler">Scheduler</a></li>
+            <li><a href="/docs.html">Docs</a></li>
+            <li><a href="/roadmap.html">Roadmap</a></li>
+            <li><a href="/changelog.html">Changelog</a></li>
+          </ul>
+          <a
+            class="nav-side"
+            href="https://github.com/kollektiv-mc/Konnekt"
+            target="_blank"
+            rel="noopener"
+            >GitHub</a
+          >
+          <a class="btn btn-primary" href="/download.html"
+            ><svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true">
+              <path
+                d="M7 1v9M3 6.5 7 10.5 11 6.5M1.5 13h11"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.6"
+              /></svg
+            >Download</a
+          >
+        </nav>
+        <main id="main" class="group">
+          <header class="doc-head block">
+            <div class="doc-head-main">
+              <div class="doc-trail">
+                <span class="kind" data-kind="concept">Concept</span>
+                <nav aria-label="Breadcrumb">
+                  <ol class="doc-crumbs">
+                    <li><a href="/docs.html">Docs</a></li>
+                    <li><a href="/docs.html#scheduler">Scheduler</a></li>
+                    <li><span aria-current="page">How a graph runs</span></li>
+                  </ol>
+                </nav>
+              </div>
+              <h1>How a graph runs</h1>
+              <p class="doc-lead">
+                A graph is a set of wired blocks that a trigger starts and that then run one at a
+                time.
+              </p>
+            </div>
+            <dl class="doc-facts">
+              <div class="doc-fact">
+                <dt class="label">Duration</dt>
+                <dd>~3 min</dd>
+              </div>
+              <div class="doc-fact">
+                <dt class="label">Topics</dt>
+                <dd>Scheduler</dd>
+              </div>
+            </dl>
+          </header>
+
+          <section class="doc-section block" id="start" aria-labelledby="start-title">
+            <div class="band doc-band">
+              <div class="band-title">
+                <span class="num">01</span>
+                <h2 id="start-title">What starts a run</h2>
+              </div>
+            </div>
+            <div class="doc-body">
+              <p class="doc-prose">
+                A graph belongs to the server it was built on.<br />
+                A server can have any number of graphs.
+              </p>
+              <p class="doc-prose">
+                A graph fires only while it is switched on.<br />
+                A new graph starts off.<br />
+                <b>run</b> works on a graph that is off.
+              </p>
+              <p class="doc-prose">
+                Time triggers check the clock once a minute.<br />
+                They fire whether or not the server is running.<br />
+                Event triggers fire when their own server reports the event.<br />
+                Event triggers wait out their <b>Cooldown (seconds)</b> between firings.
+              </p>
+              <p class="doc-prose">
+                Graphs run only while Konnekt is open.<br />
+                Closing Konnekt stops the scheduler, and stops a running server too.<br />
+                A time that passes while it is closed is not made up.
+              </p>
+            </div>
+          </section>
+          <section
+            class="doc-section block"
+            id="control-and-data"
+            aria-labelledby="control-and-data-title"
+          >
+            <div class="band doc-band">
+              <div class="band-title">
+                <span class="num">02</span>
+                <h2 id="control-and-data-title">Control and data</h2>
+              </div>
+            </div>
+            <div class="doc-body">
+              <p class="doc-prose">
+                Control wires set the order.<br />
+                Each block leaves by one control port, such as <b>onComplete</b> or
+                <b>onTrue</b>.<br />
+                Only the blocks wired to that port run next.<br />
+                Blocks wired to the same port run one after another, in an order not to rely on.<br />
+                Chain them with a wire when the order matters.<br />
+                A block that no control wire reaches never runs.
+              </p>
+              <p class="doc-prose">
+                Data wires carry values.<br />
+                A wired value replaces the block's own field.<br />
+                A wire that has no value yet leaves the field in use.
+              </p>
+              <p class="doc-prose">
+                Blocks with no control ports, such as <b>Read Attribute</b>, <b>Constant</b> and
+                <b>Math</b>, run when a block that needs their value runs.<br />
+                They run once per run, and every block wired to them gets that value.<br />
+                The outputs of other blocks, such as the <b>Backup filename</b> of
+                <b>Create Backup</b>, exist once that block has run.<br />
+                A block wired to one that has not run yet reads nothing.
+              </p>
+            </div>
+          </section>
+          <section
+            class="doc-section block"
+            id="failures-and-limits"
+            aria-labelledby="failures-and-limits-title"
+          >
+            <div class="band doc-band">
+              <div class="band-title">
+                <span class="num">03</span>
+                <h2 id="failures-and-limits-title">Failures and limits</h2>
+              </div>
+            </div>
+            <div class="doc-body">
+              <p class="doc-prose">
+                A block that fails leaves by <b>onFailed</b>.<br />
+                The blocks wired there run, so a graph can handle its own failure.<br />
+                With nothing wired there, that branch ends and the other branches carry on.<br />
+                The run is marked failed either way, with the reason of the first failure.
+              </p>
+              <p class="doc-prose">
+                A failed run raises a <b>Run failed</b> bubble with the reason and adds it to
+                Notifications.<br />
+                It also writes the reason to the server's console, unless the block already did.
+              </p>
+              <p class="doc-prose">
+                A graph runs once at a time.<br />
+                A trigger that fires during a run starts nothing, and is not queued.<br />
+                Different graphs run at the same time.
+              </p>
+              <p class="doc-prose">
+                A block is cut off after 60 s, except the upload and Distant Horizons blocks, which
+                have longer limits.<br />
+                A run is cut off after 30 minutes, or longer when its blocks have longer limits.<br />
+                A run also stops after 500 block executions, which ends a loop.
+              </p>
+            </div>
+          </section>
+
+          <nav class="doc-related block" aria-label="Related">
+            <div class="shelf-label"><span class="label">Related</span></div>
+            <a class="related-link" href="/docs/scheduler-editor.html"
+              ><span class="kind" data-kind="reference">Reference</span>Scheduler editor</a
+            ><a class="related-link" href="/docs/blocks/"
+              ><span class="kind" data-kind="reference">Reference</span>Scheduler blocks</a
+            ><a class="related-link" href="/docs/nightly-backup.html"
+              ><span class="kind" data-kind="guide">Guide</span>Back up every night when empty</a
+            ><a class="related-link" href="/docs/crash-restart.html"
+              ><span class="kind" data-kind="guide">Guide</span>Restart after a crash</a
+            >
+          </nav>
+        </main>
+      </div>
+
+      <!-- Canonical footer. Byte-identical on every page. -->
+      <footer class="block block-raised">
+        <div class="footer-cols">
+          <div class="footer-about">
+            <a class="footer-brand" href="/index.html"
+              ><picture
+                ><source media="(min-resolution: 2dppx)" srcset="/assets/img/mark.svg" />
+                <img
+                  class="mark"
+                  src="/assets/img/mark-24.svg"
+                  width="24"
+                  height="24"
+                  alt="" /></picture
+              >Konnekt</a
+            >
+            <p>A desktop dashboard for the Minecraft servers you host.</p>
+            <span class="meta"><span data-release-tag></span>Windows and Linux</span>
+          </div>
+          <nav class="footer-col" aria-label="Product">
+            <span class="label">Product</span>
+            <a href="/download.html">Download</a>
+            <a href="https://konnekt-demo.pages.dev/" target="_blank" rel="noopener"
+              >Try the demo</a
+            >
+            <a href="/changelog.html">Changelog</a>
+          </nav>
+          <nav class="footer-col" aria-label="Learn">
+            <span class="label">Learn</span>
+            <a href="/index.html#features">Features</a>
+            <a href="/docs.html">Docs</a>
+            <a href="/roadmap.html">Roadmap</a>
+          </nav>
+          <nav class="footer-col" aria-label="Source">
+            <span class="label">Source</span>
+            <a href="https://github.com/kollektiv-mc/Konnekt" target="_blank" rel="noopener"
+              >GitHub</a
+            >
+            <a href="https://github.com/kollektiv-mc/Konnekt/issues" target="_blank" rel="noopener"
+              >Issues</a
+            >
+            <a
+              href="https://github.com/kollektiv-mc/Konnekt/blob/main/LICENSE"
+              target="_blank"
+              rel="noopener"
+              >MIT licence</a
+            >
+          </nav>
+        </div>
+        <div class="footer-base">
+          <span
+            >Alpha software. A side project mostly written by Claude.
+            <a href="/docs.html#disclaimer">Full statement</a></span
+          >
+          <span>&copy; 2026 Konnekt</span>
+        </div>
+      </footer>
+    </div>
+
+    <script src="/release.js"></script>
+    <script src="/site.js"></script>
+  </body>
+</html>
