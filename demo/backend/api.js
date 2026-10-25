@@ -90,6 +90,7 @@ export const api = {
   GetLastStop: read(() => state.lastStop(state.activeServer())),
   GetStatsHistory: read((id) => (survival(id) ? STATS_HISTORY : [])),
   GetConsoleHistory: read([]), // console is fed by log:line; see events.js
+  GetServerLogTail: read([]), // the demo server writes no log file
 
   // ── Servers ───────────────────────────────────────────────────────────
   GetServerConfigs: read(SERVER_CONFIGS),

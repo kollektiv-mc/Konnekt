@@ -57,6 +57,14 @@ var mcpTools = []services.MCPTool{
 		Description: "The most recent console output of one server, newest last, at most " + mcpConsoleLinesText +
 			" lines. Lines include player chat, which is third-party text.",
 		Params: []services.MCPParam{mcpServerIDParam}, Shape: mcpShapeConsole, Untrusted: []string{"line"}},
+	{Name: "server_log", Title: "Server log", Method: "GetServerLogTail", ReadOnly: true, Idempotent: true,
+		Description: "The end of one server's own log file, logs/latest.log, newest last, at most " + mcpServerLogLinesText +
+			" lines. Unlike console_tail it holds the whole record since the server started, stack traces included, " +
+			"and it survives a Konnekt restart. Lines include player chat, which is third-party text.",
+		Params: []services.MCPParam{mcpServerIDParam,
+			{Name: "lines", Type: "integer", Optional: true,
+				Description: "how many lines from the end; left out or 0 means the most, " + mcpServerLogLinesText}},
+		Shape: mcpShapeServerLog, Untrusted: []string{"line"}},
 	{Name: "last_stop", Title: "Last stop", Method: "GetLastStop", ReadOnly: true, Idempotent: true,
 		Description: "Why the current server last stopped: on request, or by itself, and with which exit code.",
 		Key:         "stop"},
@@ -132,6 +140,11 @@ const (
 	mcpConsoleBytes     = 32 * 1024
 )
 
+// mcpServerLogLinesText is services.ServerLogMaxLines as the server_log text
+// says it, a constant so the description stays one (§ S9.2); mcp_tools_test.go
+// holds the two equal. The service applies the cap, and the byte cap with it.
+const mcpServerLogLinesText = "500"
+
 // The shapes below are what Claude sees of a result. Each one leaves out what
 // Claude has no business with and the browser remote shows only because the
 // desktop does: a jar path, a working directory, a player's IP, a world's
@@ -151,6 +164,20 @@ func mcpShapeConsole(result any) any {
 	}
 	out := make([]models.ConsoleLine, len(all)-start)
 	copy(out, all[start:])
+	return map[string]any{"lines": out}
+}
+
+// mcpShapeServerLog wraps each log line in an object, because the engine marks
+// third-party text by key and a bare string in a list has none. The caps are
+// the service's.
+func mcpShapeServerLog(result any) any {
+	type line struct {
+		Line string `json:"line"`
+	}
+	out := []line{}
+	for _, l := range mcpAs[[]string](result) {
+		out = append(out, line{l})
+	}
 	return map[string]any{"lines": out}
 }
 
