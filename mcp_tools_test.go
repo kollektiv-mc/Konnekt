@@ -131,6 +131,28 @@ func (s *mcpStubApp) GetServerLogTail(_ string, lines int) ([]string, error) {
 	return []string{"[12:00:00] [Server thread/INFO]: Starting minecraft server version 1.21.1", mcpInjectedLine}, nil
 }
 
+func (s *mcpStubApp) ListConfigFiles(string) ([]models.ConfigFile, error) {
+	s.called("ListConfigFiles")
+	return []models.ConfigFile{{RelPath: "server.properties", Name: "server.properties", Category: "server",
+		Format: "properties", SizeBytes: 100, Modified: 1}}, nil
+}
+
+// mcpStubProperties is a server.properties with the RCON password that no
+// result may carry (#763).
+const mcpStubProperties = "motd=Hello\nrcon.password=hunter2\nrcon.port=25575\n"
+
+func (s *mcpStubApp) ReadConfigFile(_, relPath string) (string, error) {
+	s.called("ReadConfigFile " + relPath)
+	return mcpStubProperties, nil
+}
+
+func (s *mcpStubApp) ModListInstalled(string) ([]models.InstalledMod, error) {
+	s.called("ModListInstalled")
+	return []models.InstalledMod{{FileName: "sodium.jar", DisplayName: "Sodium", IconURL: "https://cdn.modrinth.com/i.png",
+		ModID: "sodium", Source: "modrinth", Provider: "modrinth", ProjectID: "AANobbMI", VersionID: "v-1",
+		VersionNumber: "0.6.0", Loader: "fabric", TargetFolder: "mods", Enabled: true}}, nil
+}
+
 func (s *mcpStubApp) GetLastStop() (models.ServerStopped, error) {
 	s.called("GetLastStop")
 	return models.ServerStopped{Expected: true}, nil
@@ -197,18 +219,20 @@ var mcpStubInputs = map[string]any{
 	"scheduleID": "g-1",
 	"command":    "list",
 	"lines":      50,
+	"path":       "server.properties",
 }
 
 // mcpNeverShown is what no tool result may carry: the stub's jar path and
 // working directory, the player's IP, the world's path on disk and its seed,
 // and the graph's nodes.
-var mcpNeverShown = []string{"/srv", "-Xmx4G", "10.0.0.7", "123456789", "trigger.time", "run.sh"}
+var mcpNeverShown = []string{"/srv", "-Xmx4G", "10.0.0.7", "123456789", "trigger.time", "run.sh", "hunter2", "cdn.modrinth.com"}
 
 // mcpExpectedKey is the member each tool's structuredContent carries.
 var mcpExpectedKey = map[string]string{
 	"list_servers": "servers", "server_status": "status", "server_summary": "summary", "players": "players",
 	"stats_history": "snapshots", "console_tail": "lines", "server_log": "lines", "last_stop": "stop", "backups": "backups",
 	"worlds": "worlds", "schedules": "schedules", "schedule_next_runs": "nextRuns",
+	"config_files": "files", "config_file": "text", "mods": "mods",
 	"start_server": "done", "stop_server": "done", "restart_server": "done", "kick_player": "done",
 	"ban_player": "done", "pardon_player": "done", "create_backup": "backup", "run_schedule": "run",
 	"send_command": "done",
@@ -453,6 +477,43 @@ func TestMCPServerLogPassesTheLineCount(t *testing.T) {
 	empty, err := json.Marshal(mcpShapeServerLog(nil))
 	if err != nil || string(empty) != `{"lines":[]}` {
 		t.Errorf("nil log: %s, %v", empty, err)
+	}
+}
+
+// #763: config_file hands the path through and never the credential values,
+// in any of the formats the editor lists.
+func TestMCPConfigFileRedactsCredentialValues(t *testing.T) {
+	stub := &mcpStubApp{}
+	cs := newMCPCatalogClient(t, stub, nil)
+	res, err := cs.CallTool(context.Background(), &mcp.CallToolParams{Name: "config_file",
+		Arguments: map[string]any{"serverID": "srv-1", "path": "server.properties"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	body := res.Content[0].(*mcp.TextContent).Text
+	if res.IsError || len(stub.calls) != 1 || stub.calls[0] != "ReadConfigFile server.properties" {
+		t.Fatalf("error %v, calls %v", res.IsError, stub.calls)
+	}
+	if strings.Contains(body, "hunter2") || !strings.Contains(body, `rcon.password=REDACTED\nrcon.port=25575`) {
+		t.Errorf("result: %s", body)
+	}
+
+	cases := map[string]string{
+		"motd=Hello":                       "motd=Hello",
+		"rcon.password=hunter2":            "rcon.password=REDACTED",
+		"rcon.password=":                   "rcon.password=",
+		"  password: 'pg-secret'":          "  password: REDACTED",
+		"BotToken: MTIz.abc":               "BotToken: REDACTED",
+		"api-key = \"k\" # comment":        "api-key = REDACTED",
+		"  \"client_secret\": \"s\",":      "  \"client_secret\": REDACTED",
+		"database.passwd=x\r":              "database.passwd=REDACTED",
+		"tokens-per-player: 3":             "tokens-per-player: REDACTED",
+		"# the password is set in Konnekt": "# the password is set in Konnekt",
+	}
+	for in, want := range cases {
+		if got := mcpRedactSecrets(in); got != want {
+			t.Errorf("%q -> %q, want %q", in, got, want)
+		}
 	}
 }
 
