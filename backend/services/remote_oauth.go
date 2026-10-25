@@ -441,6 +441,13 @@ func (a *RemoteAuth) resolveClient(ctx context.Context, clientID string) (remote
 // resources, inline style only, forms to this origin only, never framed.
 const remoteConsentCSP = "default-src 'none'; style-src 'unsafe-inline'; form-action 'self'; frame-ancestors 'none'; base-uri 'none'"
 
+// remoteConsentReferrerPolicy replaces the guard's no-referrer on the consent
+// page. Under no-referrer a browser posts a form with "Origin: null", which
+// the guard refuses as an unexpected origin, so the form could never be sent.
+// same-origin gives the post its real Origin and still sends nothing to the
+// client the sign-in ends at.
+const remoteConsentReferrerPolicy = "same-origin"
+
 type remoteScopeView struct {
 	Scope   string
 	Text    string
@@ -511,6 +518,7 @@ button[value=allow]{background:#2f6feb;border-color:#2f6feb;color:#fff}
 
 func writeRemoteConsentPage(w http.ResponseWriter, status int, view remoteConsentView) {
 	w.Header().Set("Content-Security-Policy", remoteConsentCSP)
+	w.Header().Set("Referrer-Policy", remoteConsentReferrerPolicy)
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.WriteHeader(status)
 	if err := remoteConsentTemplate.Execute(w, view); err != nil {
