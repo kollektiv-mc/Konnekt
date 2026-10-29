@@ -4,7 +4,7 @@ import { TILE_LAYOUTS, type TileLayout } from '../../types'
 const LABELS: Record<TileLayout, string> = {
   detailed: 'Detailed',
   default: 'Default',
-  expanded: 'Expanded',
+  compact: 'Compact',
 }
 
 interface Props {

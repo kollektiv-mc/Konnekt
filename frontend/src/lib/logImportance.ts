@@ -1,7 +1,7 @@
 import type { LogLine } from '../stores/useConsoleStore'
 
 /**
- * Which console lines are worth a glance, for the console tile's expanded
+ * Which console lines are worth a glance, for the console tile's compact
  * layout, which shows those and folds the rest.
  *
  * Every line the store already tints is notable: warnings, errors, the

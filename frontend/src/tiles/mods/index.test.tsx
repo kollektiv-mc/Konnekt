@@ -112,7 +112,8 @@ describe('ModsTile', () => {
     installLocal.mockRejectedValueOnce('ModInstallLocal refused: nobody answered')
     render(<ModsTile serverId="alpha" maximized />)
 
-    fireEvent.click(screen.getByRole('button', { name: 'Add Files' }))
+    // The maximized face is lazy, so it arrives a tick after the render.
+    fireEvent.click(await screen.findByRole('button', { name: 'Add Files' }))
 
     const alert = await screen.findByRole('alert')
     expect(alert.textContent).toBe('ModInstallLocal refused: nobody answered')
@@ -122,14 +123,14 @@ describe('ModsTile', () => {
     await waitFor(() => expect(screen.queryByRole('alert')).toBeNull())
   })
 
-  it('offers Add Files on the desktop and not in a remote browser', () => {
+  it('offers Add Files on the desktop and not in a remote browser', async () => {
     const { unmount } = render(<ModsTile serverId="alpha" maximized />)
-    expect(screen.getByRole('button', { name: 'Add Files' })).toBeTruthy()
+    expect(await screen.findByRole('button', { name: 'Add Files' })).toBeTruthy()
     unmount()
 
     vi.mocked(isRemoteBrowser).mockReturnValue(true)
     render(<ModsTile serverId="alpha" maximized />)
+    expect(await screen.findByRole('button', { name: /Add Content|Add Mod/ })).toBeTruthy()
     expect(screen.queryByRole('button', { name: 'Add Files' })).toBeNull()
-    expect(screen.getByRole('button', { name: /Add Content|Add Mod/ })).toBeTruthy()
   })
 })

@@ -1,5 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import type { ConfigField } from './inferType'
+import { MC_COLORS } from '../motd'
+import { MotdPreviewLine } from '../MotdLine'
 
 // Shared chrome for text-style inputs (TextInput, TextArea, Select's trigger,
 // ChipList's chips) — file-local since nothing outside form/ consumes it.
@@ -274,29 +276,6 @@ export function ChipList({
 
 /* ── MOTD Builder ─────────────────────────────────────────── */
 
-const MC_COLORS: { code: string; hex: string; label: string }[] = [
-  { code: '0', hex: '#000000', label: 'Black' },
-  { code: '1', hex: '#0000AA', label: 'Dark Blue' },
-  { code: '2', hex: '#00AA00', label: 'Dark Green' },
-  { code: '3', hex: '#00AAAA', label: 'Dark Aqua' },
-  { code: '4', hex: '#AA0000', label: 'Dark Red' },
-  { code: '5', hex: '#AA00AA', label: 'Dark Purple' },
-  { code: '6', hex: '#FFAA00', label: 'Gold' },
-  { code: '7', hex: '#AAAAAA', label: 'Gray' },
-  { code: '8', hex: '#555555', label: 'Dark Gray' },
-  { code: '9', hex: '#5555FF', label: 'Blue' },
-  { code: 'a', hex: '#55FF55', label: 'Green' },
-  { code: 'b', hex: '#55FFFF', label: 'Aqua' },
-  { code: 'c', hex: '#FF5555', label: 'Red' },
-  { code: 'd', hex: '#FF55FF', label: 'Light Purple' },
-  { code: 'e', hex: '#FFFF55', label: 'Yellow' },
-  { code: 'f', hex: '#FFFFFF', label: 'White' },
-]
-
-const COLOR_MAP: Record<string, string> = Object.fromEntries(
-  MC_COLORS.map(({ code, hex }) => [code, hex]),
-)
-
 const FORMAT_BUTTONS: Array<{ code: string; label: string; name: string; className?: string }> = [
   { code: '§l', label: 'B', name: 'Bold', className: 'font-bold' },
   { code: '§o', label: 'I', name: 'Italic', className: 'italic' },
@@ -304,105 +283,6 @@ const FORMAT_BUTTONS: Array<{ code: string; label: string; name: string; classNa
   { code: '§m', label: 'S', name: 'Strikethrough', className: 'line-through' },
   { code: '§k', label: '✦', name: 'Obfuscated' },
 ]
-
-interface MotdSegment {
-  text: string
-  color: string | null
-  bold: boolean
-  italic: boolean
-  underline: boolean
-  strike: boolean
-  obfuscated: boolean
-}
-
-function parseMotdLine(raw: string): MotdSegment[] {
-  // Normalise § unicode escapes to § before parsing
-  const input = raw.replace(/\\u00a7/gi, '§')
-  const segments: MotdSegment[] = []
-  let cur: MotdSegment = {
-    text: '',
-    color: null,
-    bold: false,
-    italic: false,
-    underline: false,
-    strike: false,
-    obfuscated: false,
-  }
-
-  let i = 0
-  while (i < input.length) {
-    if (input[i] === '§' && i + 1 < input.length) {
-      if (cur.text) {
-        segments.push({ ...cur })
-        cur = { ...cur, text: '' }
-      }
-      const c = input[i + 1].toLowerCase()
-      if (COLOR_MAP[c] !== undefined) {
-        cur = {
-          text: '',
-          color: COLOR_MAP[c],
-          bold: false,
-          italic: false,
-          underline: false,
-          strike: false,
-          obfuscated: false,
-        }
-      } else if (c === 'l') cur = { ...cur, bold: true, text: '' }
-      else if (c === 'o') cur = { ...cur, italic: true, text: '' }
-      else if (c === 'n') cur = { ...cur, underline: true, text: '' }
-      else if (c === 'm') cur = { ...cur, strike: true, text: '' }
-      else if (c === 'k') cur = { ...cur, obfuscated: true, text: '' }
-      else if (c === 'r')
-        cur = {
-          text: '',
-          color: null,
-          bold: false,
-          italic: false,
-          underline: false,
-          strike: false,
-          obfuscated: false,
-        }
-      i += 2
-    } else {
-      cur.text += input[i]
-      i++
-    }
-  }
-  if (cur.text) segments.push(cur)
-  return segments
-}
-
-function MotdPreviewLine({ raw, placeholder }: { raw: string; placeholder?: string }) {
-  const segments = parseMotdLine(raw)
-  if (!segments.length) {
-    return <span className="text-text-faint italic">{placeholder ?? ' '}</span>
-  }
-  return (
-    <>
-      {segments.map((seg, i) => {
-        const decoration = [seg.underline && 'underline', seg.strike && 'line-through']
-          .filter(Boolean)
-          .join(' ')
-        return (
-          <span
-            key={i}
-            // eslint-disable-next-line no-restricted-syntax -- per-segment styling parsed from Minecraft MOTD formatting codes, continuously variable
-            style={{
-              color: seg.color ?? 'var(--text-primary)',
-              fontWeight: seg.bold ? 'bold' : undefined,
-              fontStyle: seg.italic ? 'italic' : undefined,
-              textDecoration: decoration || undefined,
-              opacity: seg.obfuscated ? 0.6 : undefined,
-              letterSpacing: seg.obfuscated ? '0.05em' : undefined,
-            }}
-          >
-            {seg.obfuscated ? seg.text.replace(/\S/g, '?') : seg.text}
-          </span>
-        )
-      })}
-    </>
-  )
-}
 
 function splitMotd(raw: string): [string, string] {
   const idx = raw.indexOf('\\n')

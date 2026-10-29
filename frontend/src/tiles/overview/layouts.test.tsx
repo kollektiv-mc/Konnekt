@@ -35,8 +35,8 @@ describe('Overview compact face layouts', () => {
     expect(screen.queryByText('Memory free')).toBeNull()
   })
 
-  it('expanded: the figures only', () => {
-    render(<OverviewTile serverId="srv1" layout="expanded" />)
+  it('compact: the figures only', () => {
+    render(<OverviewTile serverId="srv1" layout="compact" />)
     expect(screen.getByText('2h 14m')).toBeTruthy()
     expect(screen.queryByText('4218 / 8192 MB')).toBeNull()
   })

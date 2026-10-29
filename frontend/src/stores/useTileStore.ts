@@ -23,12 +23,18 @@ interface TileStore {
   clearError: () => void
 }
 
+// `compact` was stored as `expanded` before the menu said what it does. Read
+// back under its new name, so a tile keeps its face across the rename; the
+// next write saves the new word.
+const RENAMED: Record<string, TileLayout> = { expanded: 'compact' }
+
 /** Drops anything in a saved file that is not a layout the app knows. */
 export function readTileLayouts(
   raw: Record<string, string> | null | undefined,
 ): Record<string, TileLayout> {
   const layouts: Record<string, TileLayout> = {}
-  for (const [id, layout] of Object.entries(raw ?? {})) {
+  for (const [id, saved] of Object.entries(raw ?? {})) {
+    const layout = RENAMED[saved] ?? saved
     if (isTileLayout(layout) && layout !== 'default') layouts[id] = layout
   }
   return layouts

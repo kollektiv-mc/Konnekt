@@ -20,7 +20,7 @@ interface Props {
  * the detail under it, and the button holds the bottom edge: the default
  * layout's shape. World backups are only counted, beside the archives, and
  * never take the figure: the question here is whether the whole server is safe.
- * Expanded keeps the figure and the button; detailed sets the figure small and
+ * Compact keeps the figure and the button; detailed sets the figure small and
  * lists the archives kept.
  */
 export function BackupsSummary({ serverId, layout = 'default' }: Props) {
@@ -73,7 +73,7 @@ export function BackupsSummary({ serverId, layout = 'default' }: Props) {
   return (
     <div className="relative flex h-full flex-col gap-2 px-3 py-2">
       <div
-        className={`flex min-h-0 flex-1 flex-col gap-1 ${layout === 'expanded' ? 'justify-center' : ''}`}
+        className={`flex min-h-0 flex-1 flex-col gap-1 ${layout === 'compact' ? 'justify-center' : ''}`}
       >
         {latest ? (
           <>
@@ -82,7 +82,7 @@ export function BackupsSummary({ serverId, layout = 'default' }: Props) {
               label="Last full backup"
               value={relativeMs(latest.createdAt)}
             />
-            {layout !== 'expanded' && (
+            {layout !== 'compact' && (
               <span className="text-text-muted text-xs">
                 {fmtBytes(latest.sizeBytes)} · {serverBackups.length}{' '}
                 {serverBackups.length === 1 ? 'archive' : 'archives'} kept
@@ -98,7 +98,7 @@ export function BackupsSummary({ serverId, layout = 'default' }: Props) {
               value="never"
               valueClass="text-text-faint"
             />
-            {layout !== 'expanded' && worldCount > 0 && (
+            {layout !== 'compact' && worldCount > 0 && (
               <span className="text-text-muted text-xs">{worldNote}</span>
             )}
           </>

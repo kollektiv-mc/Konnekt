@@ -24,7 +24,7 @@ interface Props {
  * "3 / 4 armed" is the figure, the soonest run sits at the end of the same
  * line, and the graphs are the detail under it: the default layout's shape.
  * The two centred counters this replaced said the same thing in twice the
- * height and left the next-run time for a footer. Expanded keeps the line
+ * height and left the next-run time for a footer. Compact keeps the line
  * alone, centred; detailed sets it small and gives each row its block count.
  */
 export function SchedulerSummary({
@@ -47,7 +47,7 @@ export function SchedulerSummary({
 
   return (
     <div
-      className={`flex h-full flex-col gap-2 overflow-hidden px-3 py-2 ${layout === 'expanded' ? 'justify-center' : ''}`}
+      className={`flex h-full flex-col gap-2 overflow-hidden px-3 py-2 ${layout === 'compact' ? 'justify-center' : ''}`}
     >
       <Headline
         size={layout === 'detailed' ? 'sm' : 'lg'}
@@ -64,7 +64,7 @@ export function SchedulerSummary({
         }
       />
 
-      {layout !== 'expanded' && (
+      {layout !== 'compact' && (
         <div className="min-h-0 flex-1 overflow-y-auto">
           {graphs.length === 0 ? (
             <div className="flex h-full items-center justify-center">

@@ -19,15 +19,19 @@ describe('useTileStore layouts', () => {
 
   it('reads only the layouts it knows, and never stores default', () => {
     expect(
-      readTileLayouts({ stats: 'detailed', players: 'expanded', worlds: 'default', mods: 'huge' }),
-    ).toEqual({ stats: 'detailed', players: 'expanded' })
+      readTileLayouts({ stats: 'detailed', players: 'compact', worlds: 'default', mods: 'huge' }),
+    ).toEqual({ stats: 'detailed', players: 'compact' })
     expect(readTileLayouts(undefined)).toEqual({})
   })
 
+  it('reads a saved expanded as compact', () => {
+    expect(readTileLayouts({ stats: 'expanded' })).toEqual({ stats: 'compact' })
+  })
+
   it('loads the saved layouts with the active list', async () => {
-    vi.mocked(App.GetTileLayouts).mockResolvedValue({ stats: 'expanded' })
+    vi.mocked(App.GetTileLayouts).mockResolvedValue({ stats: 'compact' })
     await useTileStore.getState().loadTiles()
-    expect(useTileStore.getState().layouts).toEqual({ stats: 'expanded' })
+    expect(useTileStore.getState().layouts).toEqual({ stats: 'compact' })
   })
 
   it('persists a choice and drops the key for default', async () => {
@@ -42,12 +46,12 @@ describe('useTileStore layouts', () => {
 
   it('reverts and records the reason when the bridge refuses the write', async () => {
     attachBridge()
-    useTileStore.setState({ layouts: { stats: 'expanded' } })
+    useTileStore.setState({ layouts: { stats: 'compact' } })
     vi.mocked(App.SaveTileLayouts).mockRejectedValue(new Error('disk full'))
     await expect(useTileStore.getState().setLayout('stats', 'detailed')).rejects.toThrow(
       'disk full',
     )
-    expect(useTileStore.getState().layouts).toEqual({ stats: 'expanded' })
+    expect(useTileStore.getState().layouts).toEqual({ stats: 'compact' })
     expect(useTileStore.getState().error).toBe('disk full')
   })
 
