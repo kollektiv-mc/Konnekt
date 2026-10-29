@@ -3,6 +3,12 @@ import { ReadConfigFile, WriteConfigFile } from '../../../wailsjs/go/main/App'
 import { PROPERTIES_SCHEMA } from './form/propertiesSchema'
 import { applyPropertyEdit } from './form/parseProperties'
 import type { FieldType } from './form/inferType'
+import { decodeEscapes } from './motd'
+import { MotdPreviewLine } from './MotdLine'
+import { fitItems, useGridFit } from '../../hooks/useGridFit'
+import { IconButton } from '../../components/ui/IconButton'
+import { Icon } from '../../components/ui/Icon'
+import { RotateCw } from '../../lib/icons'
 
 // Flat list of keys in relevance order — identity first, power-user settings last
 const ORDERED_KEYS: string[] = [
@@ -73,17 +79,15 @@ function parseRawProps(raw: string): Record<string, string> {
   return map
 }
 
-function stripCodes(raw: string): string {
-  return raw
-    .split('\\n')[0]
-    .replace(/§[0-9a-fklmnor]/gi, '')
-    .trim()
-}
+// Shown masked: a glance at the dashboard should not put a password on screen.
+const SECRET_KEYS = new Set(['rcon.password'])
 
 function displayValue(key: string, rawVal: string, type: FieldType): string {
-  if (key === 'motd') return stripCodes(rawVal) || rawVal
   if (type === 'boolean') return rawVal === 'true' ? 'On' : 'Off'
-  return rawVal
+  if (SECRET_KEYS.has(key) && rawVal) return '••••••'
+  // The file's escapes (`minecraft\:normal`, `\u00e9`) are how Java stores the
+  // value, not what it is.
+  return decodeEscapes(rawVal).replace(/\\(.)/g, '$1')
 }
 
 function valueColorClass(type: FieldType, rawVal: string): string {
@@ -91,7 +95,7 @@ function valueColorClass(type: FieldType, rawVal: string): string {
   return 'text-text-primary'
 }
 
-interface RowProps {
+interface CellProps {
   propKey: string
   label: string
   type: FieldType
@@ -108,7 +112,13 @@ interface RowProps {
   onCycle: () => void
 }
 
-function PropRow({
+/**
+ * One setting as label over value, so the two read as a pair at any width.
+ * The row it replaced set the label at the left edge and the value at the
+ * right, which on a wide tile put the whole tile between them. Every cell is
+ * one height, which `useGridFit` counts on.
+ */
+function PropCell({
   propKey,
   label,
   type,
@@ -123,7 +133,7 @@ function PropRow({
   onEditCancel,
   onToggle,
   onCycle,
-}: RowProps) {
+}: CellProps) {
   const inputRef = useRef<HTMLInputElement>(null)
   // prevent blur from committing when pressing Escape
   const cancelledRef = useRef(false)
@@ -141,8 +151,8 @@ function PropRow({
   const colorClass = valueColorClass(type, rawVal)
 
   return (
-    <div className="border-border-subtle border-b-hairline flex items-center gap-2 py-1">
-      <span className="text-text-muted min-w-0 flex-1 truncate text-xs" title={label}>
+    <li className="flex h-8 min-w-0 flex-col justify-center">
+      <span className="text-text-muted text-2xs truncate leading-tight" title={label}>
         {label}
       </span>
 
@@ -163,26 +173,35 @@ function PropRow({
           onBlur={() => {
             if (!cancelledRef.current) onEditCommit()
           }}
-          className="bg-canvas border-accent text-text-primary w-28 min-w-0 shrink-0 rounded border px-1 text-right font-mono text-xs outline-none"
+          className="bg-canvas border-accent text-text-primary w-full min-w-0 rounded border px-1 font-mono text-xs leading-tight outline-none"
         />
       ) : (
         <span
-          className={`max-w-[55%] shrink-0 truncate text-right font-mono text-xs font-medium transition-opacity ${colorClass} ${
+          className={`truncate font-mono text-xs leading-tight font-medium transition-opacity ${colorClass} ${
             saving ? 'opacity-40' : 'opacity-100'
           } ${isInteractive ? 'cursor-pointer' : 'cursor-default'}`}
-          title={isInteractive ? undefined : 'Double-click to edit'}
+          title={isInteractive ? undefined : `${disp} · double-click to edit`}
           onClick={
             type === 'boolean' ? onToggle : type === 'enum' && options?.length ? onCycle : undefined
           }
           onDoubleClick={!isInteractive ? onStartEdit : undefined}
         >
-          {disp || <span className="text-text-faint">—</span>}
+          {disp || <span className="text-text-faint">none</span>}
         </span>
       )}
-    </div>
+    </li>
   )
 }
 
+/**
+ * The Config tile's canvas face: server.properties at a glance, never scrolled.
+ *
+ * The MOTD leads, rendered the way a client shows it, and the settings follow
+ * as a wrapping grid of cells in `ORDERED_KEYS`' order, identity first. What
+ * does not fit gives its last cell to a count of the rest; the maximized
+ * editor holds all of them. A switch or a choice still flips with a click and
+ * a value still edits on a double-click, as the rows did.
+ */
 export function ConfigSummary({ serverId }: Props) {
   const [rawContent, setRawContent] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -203,6 +222,12 @@ export function ConfigSummary({ serverId }: Props) {
   useEffect(() => {
     load()
   }, [load])
+
+  const props = rawContent ? parseRawProps(rawContent) : {}
+  // Only show keys that exist in the file (don't pollute with all possible keys)
+  const keys = ORDERED_KEYS.filter((k) => k !== 'motd' && k in props)
+  const [measure, capacity] = useGridFit(keys.length)
+  const { shown, more } = fitItems(keys, capacity)
 
   async function commit(key: string, rawStringValue: string) {
     if (!rawContent) return
@@ -243,26 +268,40 @@ export function ConfigSummary({ serverId }: Props) {
     )
   }
 
-  const props = parseRawProps(rawContent)
-
-  // Only show keys that exist in the file (don't pollute with all possible keys)
-  const rows = ORDERED_KEYS.filter((k) => k in props)
+  // The first line only: the second is the server list's, and one line is
+  // what a glance has room for.
+  const motd = (props.motd ?? '').split('\\n')[0]
 
   return (
-    <div className="flex h-full flex-col overflow-hidden">
-      <div className="flex-1 overflow-y-auto py-1.5 pr-5 pl-3">
-        {rows.map((key) => {
+    <div className="flex h-full flex-col gap-2 overflow-hidden px-3 py-2">
+      <div className="flex shrink-0 items-center gap-2">
+        <span
+          className="min-w-0 flex-1 truncate font-mono text-sm"
+          title={decodeEscapes(motd).replace(/§./g, '')}
+        >
+          <MotdPreviewLine raw={motd} placeholder="A Minecraft Server" />
+        </span>
+        <IconButton onClick={load} title="Reload from disk">
+          <Icon icon={RotateCw} size="sm" />
+        </IconButton>
+      </div>
+
+      <ul
+        ref={measure}
+        aria-label="Server properties"
+        className="grid min-h-0 flex-1 auto-rows-min grid-cols-[repeat(auto-fill,minmax(7.5rem,1fr))] content-start gap-x-4 gap-y-2 overflow-hidden"
+      >
+        {shown.map((key) => {
           const schema = PROPERTIES_SCHEMA[key]
           const type: FieldType = schema?.type === 'motd' ? 'string' : (schema?.type ?? 'string')
-          const label = schema?.label ?? key
           const options = schema?.options
           const rawVal = props[key] ?? ''
 
           return (
-            <PropRow
+            <PropCell
               key={key}
               propKey={key}
-              label={label}
+              label={schema?.label ?? key}
               type={type}
               rawVal={rawVal}
               options={options}
@@ -288,23 +327,10 @@ export function ConfigSummary({ serverId }: Props) {
             />
           )
         })}
-      </div>
-
-      <div className="border-border-subtle border-t-hairline flex shrink-0 items-center justify-start px-3 py-1">
-        <button
-          onClick={load}
-          className="text-text-faint text-2xs font-mono transition-colors"
-          onMouseEnter={(e) => {
-            ;(e.currentTarget as HTMLButtonElement).style.color = 'var(--text-secondary)'
-          }}
-          onMouseLeave={(e) => {
-            ;(e.currentTarget as HTMLButtonElement).style.color = 'var(--text-faint)'
-          }}
-          title="Reload from disk"
-        >
-          ↻
-        </button>
-      </div>
+        {more > 0 && (
+          <li className="text-text-muted flex h-8 items-center font-mono text-xs">+{more} more</li>
+        )}
+      </ul>
     </div>
   )
 }

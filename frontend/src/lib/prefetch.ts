@@ -20,6 +20,7 @@ const CHUNKS: ReadonlyArray<() => Promise<unknown>> = [
   () => import('../tiles/performance/charts'),
   () => import('../tiles/scheduler/editor/GraphEditor'),
   () => import('../tiles/config/EditorPanel'),
+  () => import('../tiles/mods/ModsLibrary'),
   () => import('../tiles/mods/MarkdownBody'),
   () => import('../tiles/worlds/scene/WorldsScene'),
   // Last: only a setting most installs never touch asks for it.

@@ -75,4 +75,6 @@ export {
   // closed, the same box opened while it is out. Lucide's one closed/open pair.
   Package,
   PackageOpen,
+  // The Config tile's canvas face: read server.properties from disk again.
+  RotateCw,
 } from 'lucide-react'
