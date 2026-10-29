@@ -146,6 +146,11 @@ func (f *oauthFixture) startConsent(t *testing.T, path string) (id, csrf string,
 	if csp := w.Header().Get("Content-Security-Policy"); csp != remoteConsentCSP {
 		t.Errorf("consent CSP %q", csp)
 	}
+	// postForm sends the page's own Origin, which a browser does only when
+	// the page's policy is not no-referrer: under that it sends "null".
+	if rp := w.Header().Get("Referrer-Policy"); rp != "same-origin" {
+		t.Errorf("consent Referrer-Policy %q: the browser would post the form with Origin: null", rp)
+	}
 	body = w.Body.String()
 	idm, cm := requestField.FindStringSubmatch(body), csrfField.FindStringSubmatch(body)
 	if idm == nil || cm == nil {

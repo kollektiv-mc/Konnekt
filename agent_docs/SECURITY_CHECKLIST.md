@@ -375,8 +375,12 @@ Verify: a test where an unapproved device's valid password yields no session.
 **S8.7 Security headers are HTTP headers.**
 Holds when: responses carry the CSP as a header with `frame-ancestors 'none'`
 added (a `<meta>` policy cannot set `frame-ancestors`), plus
-`X-Content-Type-Options: nosniff` and `Referrer-Policy: no-referrer`.
-Verify: an `httptest` test asserting each header on `/`.
+`X-Content-Type-Options: nosniff` and `Referrer-Policy: no-referrer`. The one
+exception is the OAuth consent page (§ S9), which sends
+`Referrer-Policy: same-origin`: under `no-referrer` a browser posts its form
+with `Origin: null`, which the Origin check refuses.
+Verify: an `httptest` test asserting each header on `/`, and the consent tests
+asserting `same-origin` on the page.
 
 **S8.8 Remote access is off unless switched on, and visibly on.**
 Holds when: it defaults to off, stops after an idle period (the one exception
