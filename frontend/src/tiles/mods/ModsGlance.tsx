@@ -53,14 +53,16 @@ export function ModsGlance({ mods, updates, loading, error, kind, layout }: Prop
   const detailed = layout === 'detailed'
   // Every cell one height, which useGridFit counts on: two lines in the
   // detailed layout, whether or not a mod reports a version.
-  const cell = detailed ? 'h-9 items-start' : 'h-6 items-center'
+  const cell = detailed ? 'h-7 items-start' : 'h-6 items-center'
 
   return (
     <ul
       ref={measure}
       aria-label={`Installed ${kind}`}
-      className={`grid min-h-0 flex-1 auto-rows-min grid-cols-[repeat(auto-fill,minmax(9rem,1fr))] content-start gap-x-3 overflow-hidden px-3 pb-3 ${
-        detailed ? 'gap-y-2' : 'gap-y-1.5'
+      // A full grid spreads the rows over the height whole rows leave over,
+      // rather than leaving it as a gap under the last one.
+      className={`grid min-h-0 flex-1 auto-rows-min grid-cols-[repeat(auto-fill,minmax(9rem,1fr))] gap-x-3 overflow-hidden px-3 pb-1.5 ${detailed ? 'gap-y-0.5' : 'gap-y-1'} ${
+        more > 0 ? 'content-between' : 'content-start'
       }`}
     >
       {shown.map((mod) => {
@@ -72,20 +74,20 @@ export function ModsGlance({ mods, updates, loading, error, kind, layout }: Prop
             title={update ? `${mod.displayName}: update available` : mod.displayName}
           >
             <span
-              className={`h-1.5 w-1.5 shrink-0 rounded-full ${detailed ? 'mt-1.5' : ''} ${
+              className={`h-1.5 w-1.5 shrink-0 rounded-full ${detailed ? 'mt-1' : ''} ${
                 update ? 'bg-warning' : mod.enabled ? 'bg-success' : 'bg-text-faint'
               }`}
             />
             <span className="flex min-w-0 flex-col">
               <span
-                className={`truncate text-xs leading-snug ${
+                className={`truncate text-xs ${detailed ? 'leading-tight' : 'leading-snug'} ${
                   mod.enabled ? 'text-text-primary' : 'text-text-muted'
                 }`}
               >
                 {mod.displayName}
               </span>
               {detailed && mod.versionNumber && (
-                <span className="text-text-faint text-2xs truncate font-mono leading-snug">
+                <span className="text-text-faint text-2xs truncate font-mono leading-tight">
                   {mod.versionNumber}
                 </span>
               )}

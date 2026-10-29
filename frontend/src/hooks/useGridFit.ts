@@ -36,7 +36,9 @@ export function fitItems<T>(items: readonly T[], capacity: number | null) {
  * place, its classes, and a font-size setting that rescales them is followed
  * rather than fought. Every cell has to share one height for the count to be
  * right. `count` is how many items the grid holds; a change measures again,
- * since an empty grid has no cell to take a row height from.
+ * since an empty grid has no cell to take a row height from. The first cell
+ * is observed beside the box, because a cell that changes height (a tile
+ * switched to its detailed layout) leaves the box as it was.
  */
 export function useGridFit(count: number): [RefCallback<HTMLElement>, number | null] {
   const [capacity, setCapacity] = useState<number | null>(null)
@@ -63,6 +65,7 @@ export function useGridFit(count: number): [RefCallback<HTMLElement>, number | n
       measure()
       const observer = new ResizeObserver(measure)
       observer.observe(el)
+      if (el.firstElementChild) observer.observe(el.firstElementChild)
       return () => observer.disconnect()
     },
     [count],
