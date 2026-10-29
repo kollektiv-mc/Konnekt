@@ -111,18 +111,18 @@ describe('the toolbar bar', () => {
   it('shows the graph name with the unsaved dot beside it', () => {
     setup({ dirty: true })
     const picker = button(/Nightly/)
-    expect(within(picker).getByTitle('Unsaved changes')).toBeTruthy()
+    expect(within(picker).getByLabelText('Unsaved changes')).toBeTruthy()
   })
 
   it('has no dot on a clean graph', () => {
     setup()
-    expect(screen.queryByTitle('Unsaved changes')).toBeNull()
+    expect(screen.queryByLabelText('Unsaved changes')).toBeNull()
   })
 
   it('has neither a new button nor a rename field of its own', () => {
     setup()
     expect(screen.queryByRole('button', { name: 'new' })).toBeNull()
-    expect(screen.queryByTitle('Click to rename')).toBeNull()
+    expect(screen.queryByLabelText('Click to rename')).toBeNull()
     expect(screen.queryByRole('textbox')).toBeNull()
   })
 
@@ -194,7 +194,7 @@ describe('the bar does not shift', () => {
 
   it('lays the unsaved dot over the name instead of beside it', () => {
     setup({ dirty: true })
-    const dot = screen.getByTitle('Unsaved changes')
+    const dot = screen.getByLabelText('Unsaved changes')
     expect(dot.classList).toContain('absolute')
     // The name's field is a sibling that fades out, not a text node with the dot after it.
     const name = within(button(/Nightly/)).getByText('Nightly')

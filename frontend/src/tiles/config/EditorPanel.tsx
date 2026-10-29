@@ -80,24 +80,12 @@ function formSupported(format: string, content: string): boolean {
 interface ViewToggleProps {
   mode: 'form' | 'raw'
   supported: boolean
-  tooLarge: boolean
   onChange: (m: 'form' | 'raw') => void
 }
 
-function ViewToggle({ mode, supported, tooLarge, onChange }: ViewToggleProps) {
+function ViewToggle({ mode, supported, onChange }: ViewToggleProps) {
   if (!supported) {
-    return (
-      <span
-        className="text-text-faint text-2xs shrink-0 font-mono"
-        title={
-          tooLarge
-            ? `Form view is off for files over ${FORM_MAX_CHARS / 1024} KB`
-            : "Form view unavailable — file format not supported or contains constructs that can't be safely round-tripped"
-        }
-      >
-        Raw only
-      </span>
-    )
+    return <span className="text-text-faint text-2xs shrink-0 font-mono">Raw only</span>
   }
   return (
     <div className="border-border-subtle flex shrink-0 items-center overflow-hidden rounded border">
@@ -178,10 +166,7 @@ export function EditorPanel({
     <div className="lazy-panel-in flex min-w-0 flex-1 flex-col overflow-hidden">
       {/* Header */}
       <div className="border-border-subtle flex shrink-0 flex-wrap items-center gap-2 border-b px-3 py-1.5">
-        <span
-          className="text-text-muted min-w-0 flex-1 truncate font-mono text-xs"
-          title={file.relPath}
-        >
+        <span className="text-text-muted min-w-0 flex-1 truncate font-mono text-xs">
           {file.relPath}
         </span>
 
@@ -191,12 +176,7 @@ export function EditorPanel({
           {FORMAT_LABELS[file.format] ?? file.format}
         </span>
 
-        <ViewToggle
-          mode={viewMode}
-          supported={canForm}
-          tooLarge={content.length > FORM_MAX_CHARS}
-          onChange={setViewMode}
-        />
+        <ViewToggle mode={viewMode} supported={canForm} onChange={setViewMode} />
 
         {isDirty && <span className="text-text-faint text-2xs shrink-0">●</span>}
 

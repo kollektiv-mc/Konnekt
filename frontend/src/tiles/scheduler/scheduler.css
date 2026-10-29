@@ -49,7 +49,9 @@
   background: var(--border-subtle);
 }
 .react-flow__controls-button svg {
-  fill: var(--text-muted);
+  /* Lucide strokes in currentColor (CanvasControls); a fill would close its paths. */
+  fill: none;
+  color: var(--text-muted);
 }
 
 /* Mini map */

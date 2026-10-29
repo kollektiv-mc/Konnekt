@@ -136,7 +136,7 @@ export function ContentCard({
         </p>
 
         {installError && (
-          <p role="alert" title={installError} className="text-danger mb-1.5 line-clamp-2 text-xs">
+          <p role="alert" className="text-danger mb-1.5 line-clamp-2 text-xs">
             {installError}
           </p>
         )}
@@ -179,7 +179,9 @@ export function ContentCard({
         <button
           onClick={handleQuickInstall}
           disabled={busy || alreadyInstalled}
-          title={showGrey ? 'Already installed' : done ? 'Installed!' : 'Install latest version'}
+          aria-label={
+            showGrey ? 'Already installed' : done ? 'Installed!' : 'Install latest version'
+          }
           className={`absolute right-2 bottom-2 z-[1] flex h-[22px] w-[22px] items-center justify-center rounded-md bg-transparent pb-px text-sm leading-none [transition:opacity_200ms_ease] ${
             showGrey
               ? 'border-border-subtle text-text-faint border-hairline'

@@ -168,7 +168,6 @@ function WorldNode({
             onClick={onClick}
             onMouseEnter={() => setHovered(true)}
             onMouseLeave={() => setHovered(false)}
-            title={cfg.world.name}
           >
             <WireframeSphere
               size={cfg.renderSize}
@@ -251,7 +250,6 @@ function SunNode({
           onClick={onClick}
           onMouseEnter={() => setHovered(true)}
           onMouseLeave={() => setHovered(false)}
-          title="Server"
         >
           <WireframeSphere size={renderSize} strokeWidth={strokeForScale(currentScale)} />
         </div>

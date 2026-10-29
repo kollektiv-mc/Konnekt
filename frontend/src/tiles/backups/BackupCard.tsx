@@ -51,11 +51,7 @@ export function BackupCard({
         </div>
         {(backup.world || backup.tags.length > 0) && (
           <div className="flex flex-wrap gap-1">
-            {backup.world && (
-              <Tag tone="accent" title="World backed up">
-                {backup.world}
-              </Tag>
-            )}
+            {backup.world && <Tag tone="accent">{backup.world}</Tag>}
             {backup.tags.map((tag) => (
               <TagPillReadOnly key={tag} tag={tag} />
             ))}
@@ -84,7 +80,6 @@ export function BackupCard({
             }}
             disabled={serverRunning}
             className="text-accent border-hairline flex-1 cursor-pointer rounded-md border-[color-mix(in_srgb,var(--accent)_35%,transparent)] bg-[color-mix(in_srgb,var(--accent)_10%,transparent)] py-1.5 font-mono text-xs disabled:cursor-not-allowed disabled:opacity-30"
-            title={serverRunning ? 'Stop the server before restoring' : 'Restore this backup'}
             onMouseEnter={(e) => {
               if (!serverRunning) (e.currentTarget as HTMLButtonElement).style.opacity = '0.75'
             }}

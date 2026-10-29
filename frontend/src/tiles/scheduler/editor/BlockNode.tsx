@@ -220,7 +220,7 @@ export const BlockNode = memo(function BlockNode({ data, selected }: NodeProps<B
             <span
               onClick={() => onToggleCollapse(nd.id as string)}
               className="nodrag text-text-faint text-3xs shrink-0 pl-1 font-mono opacity-0 transition-opacity select-none group-hover:opacity-100"
-              title={isCollapsed ? 'Expand ports' : 'Collapse ports'}
+              aria-label={isCollapsed ? 'Expand ports' : 'Collapse ports'}
             >
               {isCollapsed ? '▸' : '▾'}
             </span>
@@ -229,7 +229,6 @@ export const BlockNode = memo(function BlockNode({ data, selected }: NodeProps<B
             <span
               role="img"
               aria-label={stopsServerTip}
-              title={stopsServerTip}
               className="text-text-faint flex shrink-0 items-center"
             >
               <Icon icon={Power} size="xs" />
@@ -239,7 +238,6 @@ export const BlockNode = memo(function BlockNode({ data, selected }: NodeProps<B
             <span
               role="img"
               aria-label={flagTip}
-              title={flagTip}
               data-testid="node-flag"
               className={`flex shrink-0 items-center ${failed ? 'text-danger' : 'text-text-faint'}`}
             >
@@ -258,9 +256,7 @@ export const BlockNode = memo(function BlockNode({ data, selected }: NodeProps<B
         {/* What the last run could not finish (the node still completed) */}
         {warning !== undefined && (
           <div className="text-warning border-border-subtle border-b-hairline text-3xs flex h-5 items-center justify-between gap-2 truncate px-2.5 font-mono">
-            <span className="text-text-muted min-w-0 truncate" title={warning}>
-              warning: {warning}
-            </span>
+            <span className="text-text-muted min-w-0 truncate">warning: {warning}</span>
           </div>
         )}
 

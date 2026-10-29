@@ -22,9 +22,7 @@ export function WorldSection() {
         </SectionEmpty>
       ) : (
         <div className="flex h-full flex-col justify-center gap-1 px-3 py-2">
-          <div className="text-text-primary truncate font-mono text-sm" title={active.name}>
-            {active.name}
-          </div>
+          <div className="text-text-primary truncate font-mono text-sm">{active.name}</div>
           <div className="text-accent font-mono text-lg">{fmtBytes(active.totalSize)}</div>
           <div className="text-text-faint truncate font-mono text-xs">
             {[

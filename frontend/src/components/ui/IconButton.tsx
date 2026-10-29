@@ -2,8 +2,11 @@ import type { ReactNode } from 'react'
 
 interface Props {
   onClick: () => void
-  /** Both the tooltip and the accessible name — the icon carries neither. */
-  title: string
+  /**
+   * The accessible name, since the icon carries none. Never a `title`: Konnekt
+   * shows no native WebView tooltips (see `eslint.config.js`).
+   */
+  label: string
   children: ReactNode
   tone?: 'muted' | 'danger'
   className?: string
@@ -39,7 +42,7 @@ const TONES = {
  */
 export function IconButton({
   onClick,
-  title,
+  label,
   children,
   tone = 'muted',
   className = '',
@@ -50,8 +53,7 @@ export function IconButton({
       type="button"
       onClick={onClick}
       onMouseDown={onMouseDown}
-      title={title}
-      aria-label={title}
+      aria-label={label}
       className={`flex h-6 w-6 shrink-0 cursor-pointer items-center justify-center rounded transition-colors ${TONES[tone]} ${className}`}
     >
       {children}

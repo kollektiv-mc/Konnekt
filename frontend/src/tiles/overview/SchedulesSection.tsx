@@ -46,10 +46,7 @@ export function SchedulesSection({ serverId }: { serverId: string }) {
                 <span className="text-text-primary flex-1 truncate font-mono text-xs">
                   {g.name || g.id}
                 </span>
-                <span
-                  className="text-text-faint shrink-0 font-mono text-xs"
-                  title={next > 0 ? 'Next scheduled run' : 'Runs on an event, not a clock'}
-                >
+                <span className="text-text-faint shrink-0 font-mono text-xs">
                   {next > 0 ? untilMs(next) : '—'}
                 </span>
               </div>

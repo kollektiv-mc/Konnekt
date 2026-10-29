@@ -297,12 +297,12 @@ const COLOR_MAP: Record<string, string> = Object.fromEntries(
   MC_COLORS.map(({ code, hex }) => [code, hex]),
 )
 
-const FORMAT_BUTTONS: Array<{ code: string; label: string; title: string; className?: string }> = [
-  { code: '§l', label: 'B', title: 'Bold', className: 'font-bold' },
-  { code: '§o', label: 'I', title: 'Italic', className: 'italic' },
-  { code: '§n', label: 'U', title: 'Underline', className: 'underline' },
-  { code: '§m', label: 'S', title: 'Strikethrough', className: 'line-through' },
-  { code: '§k', label: '✦', title: 'Obfuscated' },
+const FORMAT_BUTTONS: Array<{ code: string; label: string; name: string; className?: string }> = [
+  { code: '§l', label: 'B', name: 'Bold', className: 'font-bold' },
+  { code: '§o', label: 'I', name: 'Italic', className: 'italic' },
+  { code: '§n', label: 'U', name: 'Underline', className: 'underline' },
+  { code: '§m', label: 'S', name: 'Strikethrough', className: 'line-through' },
+  { code: '§k', label: '✦', name: 'Obfuscated' },
 ]
 
 interface MotdSegment {
@@ -509,7 +509,7 @@ export function MotdWidget({
               {MC_COLORS.map(({ code, hex, label }) => (
                 <button
                   key={code}
-                  title={`${label}  §${code}`}
+                  aria-label={label}
                   onClick={() => insertCode(`§${code}`)}
                   className="h-5 w-5 flex-shrink-0 rounded-full transition-transform hover:scale-110 focus:outline-none"
                   // eslint-disable-next-line no-restricted-syntax -- per-swatch color from the MC_COLORS data table; can't be static Tailwind classes
@@ -529,10 +529,10 @@ export function MotdWidget({
               Style
             </span>
             <div className="flex items-center gap-1.5">
-              {FORMAT_BUTTONS.map(({ code, label, title, className }) => (
+              {FORMAT_BUTTONS.map(({ code, label, name, className }) => (
                 <button
                   key={code}
-                  title={`${title}  ${code}`}
+                  aria-label={name}
                   onClick={() => insertCode(code)}
                   className={`border-border-subtle text-text-muted hover:text-accent h-7 w-8 rounded border bg-transparent font-mono text-xs transition-colors focus:outline-none ${className ?? ''}`}
                 >
@@ -541,7 +541,6 @@ export function MotdWidget({
               ))}
               <div className="bg-border-subtle mx-0.5 h-5 w-px" />
               <button
-                title="Reset  §r"
                 onClick={() => insertCode('§r')}
                 className="border-border-subtle text-text-faint hover:text-accent h-7 rounded border bg-transparent px-2 font-mono text-xs transition-colors focus:outline-none"
               >

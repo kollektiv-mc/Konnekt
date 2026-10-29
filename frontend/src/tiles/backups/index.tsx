@@ -196,7 +196,6 @@ function BackupRow({
               startEditName()
             }}
             className="text-text-secondary text-left font-mono text-xs transition-colors"
-            title="Click to rename"
             onMouseEnter={(e) => {
               ;(e.currentTarget as HTMLButtonElement).style.color = 'var(--text-primary)'
             }}
@@ -207,11 +206,7 @@ function BackupRow({
             {displayLabel}
           </button>
         )}
-        {backup.world && (
-          <Tag tone="accent" title="World backed up">
-            {backup.world}
-          </Tag>
-        )}
+        {backup.world && <Tag tone="accent">{backup.world}</Tag>}
         {backup.tags.map((tag) => (
           <TagPill key={tag} tag={tag} onRemove={() => removeTag(tag)} />
         ))}
@@ -271,7 +266,6 @@ function BackupRow({
               }}
               disabled={serverRunning}
               className="text-accent transition-colors disabled:cursor-not-allowed disabled:opacity-30"
-              title={serverRunning ? 'Stop the server before restoring' : 'Restore this backup'}
               onMouseEnter={(e) => {
                 if (!serverRunning) (e.currentTarget as HTMLButtonElement).style.opacity = '0.7'
               }}
@@ -537,7 +531,7 @@ function BackupsTileExpanded({ serverId }: { serverId: string }) {
           <button
             onClick={openDir}
             className="text-text-faint shrink-0 font-mono text-xs transition-colors"
-            title="Open backup folder"
+            aria-label="Open backup folder"
             onMouseEnter={(e) => {
               ;(e.currentTarget as HTMLButtonElement).style.color = 'var(--text-secondary)'
             }}
@@ -552,7 +546,6 @@ function BackupsTileExpanded({ serverId }: { serverId: string }) {
         <button
           onClick={openScheduler}
           className="border-border-subtle text-text-muted shrink-0 rounded border bg-transparent px-2 py-0.5 font-mono text-xs transition-colors"
-          title="Set up scheduled backups in the Scheduler tile"
           onMouseEnter={(e) => {
             const b = e.currentTarget as HTMLButtonElement
             b.style.borderColor = 'var(--border-hover)'
@@ -570,7 +563,6 @@ function BackupsTileExpanded({ serverId }: { serverId: string }) {
         <button
           onClick={handleCreateClick}
           disabled={creating || stopping || noWorlds}
-          title={noWorlds ? 'This server has no worlds to back up' : undefined}
           className="border-accent text-accent shrink-0 rounded border bg-transparent px-2 py-0.5 font-mono text-xs transition-colors disabled:opacity-40"
           onMouseEnter={(e) => {
             if (!creating && !stopping && !noWorlds)

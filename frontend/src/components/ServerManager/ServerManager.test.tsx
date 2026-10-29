@@ -342,14 +342,14 @@ describe('ServerManager Browse buttons', () => {
   it('offers both on the desktop', async () => {
     renderManager()
     await screen.findByDisplayValue('/srv/alpha')
-    expect(screen.getAllByTitle('Browse')).toHaveLength(2)
+    expect(screen.getAllByLabelText('Browse')).toHaveLength(2)
   })
 
   it('leaves the path inputs and drops both in a remote browser', async () => {
     vi.mocked(isRemoteBrowser).mockReturnValue(true)
     renderManager()
     await screen.findByDisplayValue('/srv/alpha')
-    expect(screen.queryAllByTitle('Browse')).toHaveLength(0)
+    expect(screen.queryAllByLabelText('Browse')).toHaveLength(0)
     expect(screen.getByPlaceholderText('Install folder')).toBeTruthy()
   })
 })

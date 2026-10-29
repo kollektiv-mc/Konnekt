@@ -34,9 +34,7 @@ function SetupLine({ label, text }: { label: string; text: string }) {
     <div className="mt-2 flex items-center justify-between gap-3">
       <div className="flex min-w-0 flex-col gap-0.5">
         <span className="text-text-secondary text-xs">{label}</span>
-        <span className="text-text-muted text-1xs truncate font-mono" title={text}>
-          {text}
-        </span>
+        <span className="text-text-muted text-1xs truncate font-mono">{text}</span>
       </div>
       <CopyButton text={text} />
     </div>

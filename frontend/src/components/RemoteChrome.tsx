@@ -35,12 +35,7 @@ export function RemoteSession() {
   return (
     <>
       {device !== '' && (
-        <span
-          title={`Signed in as ${device}`}
-          className="text-2xs text-muted mr-1 max-w-40 truncate max-sm:hidden"
-        >
-          {device}
-        </span>
+        <span className="text-2xs text-muted mr-1 max-w-40 truncate max-sm:hidden">{device}</span>
       )}
       <button
         type="button"

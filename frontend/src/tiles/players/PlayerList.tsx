@@ -57,13 +57,9 @@ export function PlayerList({ players, reachable, onSelectPlayer, detailed }: Pro
               {relativeMs(p.lastOnline)}
             </span>
           )}
-          {p.opLevel > 0 && <Tag title={`Operator level ${p.opLevel}`}>OP{p.opLevel}</Tag>}
-          {detailed && p.whitelisted && <Tag title="Whitelisted">WL</Tag>}
-          {detailed && p.banned && (
-            <Tag tone="danger" title={p.banReason || 'Banned'}>
-              BAN
-            </Tag>
-          )}
+          {p.opLevel > 0 && <Tag>OP{p.opLevel}</Tag>}
+          {detailed && p.whitelisted && <Tag>WL</Tag>}
+          {detailed && p.banned && <Tag tone="danger">BAN</Tag>}
         </button>
       ))}
     </div>

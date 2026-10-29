@@ -3,7 +3,7 @@ import type { models } from '../../../wailsjs/go/models'
 import { untilMs } from '../../lib/format'
 import { Headline } from '../../components/ui/Figure'
 import type { TileLayout } from '../../types'
-import { DOWNTIME_TOOLTIP, stoppingGraphIds } from './editor/blockMeta'
+import { stoppingGraphIds } from './editor/blockMeta'
 
 interface Props {
   graphs: models.Graph[]
@@ -55,11 +55,9 @@ export function SchedulerSummary({
         unit="armed"
         aside={
           error ? (
-            <span className="text-danger" title={error}>
-              unavailable
-            </span>
+            <span className="text-danger">unavailable</span>
           ) : soonest ? (
-            <span title={soonestStops ? DOWNTIME_TOOLTIP : undefined}>
+            <span>
               {soonestStops ? 'next downtime' : 'next'} {untilMs(soonest)}
             </span>
           ) : undefined
@@ -97,16 +95,7 @@ export function SchedulerSummary({
                     </span>
                   )}
                   {g.enabled && (
-                    <span
-                      className="text-text-faint shrink-0 font-mono text-xs"
-                      title={
-                        next > 0
-                          ? stops
-                            ? DOWNTIME_TOOLTIP
-                            : 'Next scheduled run'
-                          : 'Runs on an event, not a clock'
-                      }
-                    >
+                    <span className="text-text-faint shrink-0 font-mono text-xs">
                       {next > 0 ? `${stops ? 'next downtime ' : ''}${untilMs(next)}` : 'on trigger'}
                     </span>
                   )}

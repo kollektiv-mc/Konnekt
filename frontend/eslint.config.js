@@ -51,6 +51,20 @@ export default tseslint.config(
           message:
             'Prefer Tailwind utility classes over inline style={{}}. Inline styles are only for dynamic/computed values.',
         },
+        // Konnekt shows no native WebView tooltips: a `title` attribute on a DOM
+        // element, or an SVG <title>, is the browser's own hover box, which no
+        // CSS or setting turns off. Name a control with `aria-label`; where a
+        // hover hint earns its place, use `components/ui/Tooltip`. A capitalised
+        // component's `title` prop (a section heading) is not matched.
+        {
+          selector: "JSXOpeningElement[name.name=/^[a-z]/] > JSXAttribute[name.name='title']",
+          message:
+            'No native title tooltips. Use aria-label for an accessible name, or components/ui/Tooltip for a hover hint.',
+        },
+        {
+          selector: "JSXOpeningElement[name.name='title']",
+          message: 'An SVG <title> shows as a native tooltip. Use aria-label on the shape instead.',
+        },
       ],
     },
   },

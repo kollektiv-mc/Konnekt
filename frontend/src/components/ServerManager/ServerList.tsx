@@ -39,7 +39,6 @@ export function ServerList({ configs, selected, activeId, onSelect }: Props) {
                   className={`h-1.5 w-1.5 shrink-0 rounded-full ${
                     cfg.id === activeId ? 'bg-accent' : 'bg-text-faint'
                   }`}
-                  title={cfg.id === activeId ? 'Active server' : undefined}
                 />
                 <span className="truncate text-xs">{cfg.name}</span>
               </span>

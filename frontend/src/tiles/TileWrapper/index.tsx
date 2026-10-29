@@ -84,13 +84,6 @@ export function TileWrapper({
                 }
               : undefined
           }
-          title={
-            maximizable && !maximized
-              ? hasLayouts
-                ? 'Double-click to maximize · right-click for layout'
-                : 'Double-click to maximize'
-              : undefined
-          }
         >
           <div className="flex items-center gap-2">
             <Icon icon={icon} size="sm" className="text-text-muted" />
@@ -103,7 +96,7 @@ export function TileWrapper({
               <IconButton
                 onClick={() => onToggleMaximize?.(id)}
                 onMouseDown={(e) => e.stopPropagation()}
-                title={maximized ? 'Restore tile' : 'Maximize tile'}
+                label={maximized ? 'Restore tile' : 'Maximize tile'}
               >
                 {maximized ? <Icon icon={Minimize2} /> : <Icon icon={Maximize2} />}
               </IconButton>
@@ -112,7 +105,7 @@ export function TileWrapper({
               <IconButton
                 onClick={() => onRemove(id)}
                 onMouseDown={(e) => e.stopPropagation()}
-                title="Remove tile"
+                label="Remove tile"
               >
                 <Icon icon={X} />
               </IconButton>

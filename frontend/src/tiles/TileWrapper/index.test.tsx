@@ -72,14 +72,14 @@ describe('TileWrapper error containment', () => {
   it('keeps Remove working on a failed tile', () => {
     const onRemove = vi.fn()
     render(wrap(<Broken message="widget exploded" />, { onRemove }))
-    fireEvent.click(screen.getByTitle('Remove tile'))
+    fireEvent.click(screen.getByLabelText('Remove tile'))
     expect(onRemove).toHaveBeenCalledWith('performance')
   })
 
   it('keeps Maximize working on a failed tile', () => {
     const onToggleMaximize = vi.fn()
     render(wrap(<Broken message="widget exploded" />, { onToggleMaximize }))
-    fireEvent.click(screen.getByTitle('Maximize tile'))
+    fireEvent.click(screen.getByLabelText('Maximize tile'))
     expect(onToggleMaximize).toHaveBeenCalledWith('performance')
   })
 
@@ -87,7 +87,7 @@ describe('TileWrapper error containment', () => {
     const onToggleMaximize = vi.fn()
     render(wrap(<Broken message="widget exploded" />, { maximized: true, onToggleMaximize }))
     expect(screen.getByText('tile failed to render')).toBeTruthy()
-    fireEvent.click(screen.getByTitle('Restore tile'))
+    fireEvent.click(screen.getByLabelText('Restore tile'))
     expect(onToggleMaximize).toHaveBeenCalledWith('performance')
   })
 

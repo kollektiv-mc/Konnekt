@@ -205,7 +205,7 @@ export function ContentDetailPanel({
             </div>
           </div>
 
-          <IconButton onClick={onClose} title="Close">
+          <IconButton onClick={onClose} label="Close">
             <Icon icon={X} />
           </IconButton>
         </div>

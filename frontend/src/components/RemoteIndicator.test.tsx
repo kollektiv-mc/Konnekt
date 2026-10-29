@@ -72,7 +72,7 @@ describe('RemoteIndicator', () => {
     seed()
     render(<RemoteIndicator onOpen={() => {}} />)
     expect(chip().textContent).toBe('Remote on')
-    expect(chip().getAttribute('title')).toBe('Remote access is on. Click to manage.')
+    expect(chip().getAttribute('aria-label')).toBe('Remote access is on. Click to manage.')
   })
 
   it.each([

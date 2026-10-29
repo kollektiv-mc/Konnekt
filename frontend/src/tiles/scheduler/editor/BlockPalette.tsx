@@ -148,7 +148,6 @@ export function PaletteToggle() {
       type="button"
       // Swallowed: `update` reverts the setting itself on a refused write.
       onClick={() => update({ schedulerPaletteCollapsed: !collapsed }).catch(() => {})}
-      title={label}
       aria-label={label}
       aria-expanded={!collapsed}
       className={`bg-surface border-border-subtle hover:bg-hover hover:text-text-primary border-hairline absolute top-2 left-2 z-10 flex h-7 w-7 items-center justify-center rounded transition-colors ${

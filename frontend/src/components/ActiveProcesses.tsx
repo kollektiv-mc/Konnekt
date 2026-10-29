@@ -57,7 +57,6 @@ export function ActiveProcesses() {
               {clickable ? (
                 <button
                   onClick={() => openView(p.view!)}
-                  title={failed ? 'Show what went wrong' : 'Show this job'}
                   className="text-text-muted hover:text-text-primary min-w-0 flex-1 truncate text-left font-mono text-xs transition-colors"
                 >
                   {p.label}
@@ -89,7 +88,6 @@ export function ActiveProcesses() {
               {failed && (
                 <button
                   onClick={() => dismiss(p.id)}
-                  title="Dismiss"
                   aria-label="Dismiss"
                   className="text-text-faint hover:text-text-secondary shrink-0 px-0.5 transition-colors"
                 >

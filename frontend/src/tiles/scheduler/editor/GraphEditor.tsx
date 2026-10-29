@@ -3,7 +3,6 @@ import {
   ReactFlow,
   Background,
   BackgroundVariant,
-  Controls,
   MiniMap,
   addEdge,
   useNodesState,
@@ -27,6 +26,7 @@ import {
 import { SchedulerCtx, type NodeRunState } from './schedulerContext'
 import { BlockNode } from './BlockNode'
 import { AnimatedEdge } from './AnimatedEdge'
+import { CanvasControls } from './CanvasControls'
 import { BlockPalette, PaletteToggle } from './BlockPalette'
 import { GRID_DOT_OFFSET, GRID_DOT_SIZE, GRID_GAP, SNAP_GRID } from './canvasGrid'
 import { NodePanel } from './NodePanel'
@@ -1301,8 +1301,11 @@ function GraphEditorInner({
                   size={GRID_DOT_SIZE}
                   offset={GRID_DOT_OFFSET}
                 />
-                <Controls showInteractive={false} />
+                <CanvasControls />
                 <MiniMap
+                  // Empty, so xyflow draws no SVG <title>, which the WebView shows
+                  // as a native tooltip over the whole map.
+                  ariaLabel=""
                   // eslint-disable-next-line no-restricted-syntax -- overrides xyflow's default 10px Panel offset; a stylesheet className would race the library's own CSS specificity
                   style={{ bottom: 8, right: 8 }}
                   nodeColor={(n) => {
