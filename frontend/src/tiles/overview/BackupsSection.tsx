@@ -21,10 +21,7 @@ const OLDER_SHOWN = 3
 function KindTag({ backup }: { backup: Backup }) {
   const label = backup.kind === 'world' ? (backup.world ?? 'world') : 'server'
   return (
-    <span
-      className="border-border-subtle text-text-faint border-hairline text-2xs shrink-0 truncate rounded px-1 font-mono"
-      title={backup.kind === 'world' ? `World backup: ${label}` : 'Full server backup'}
-    >
+    <span className="border-border-subtle text-text-faint border-hairline text-2xs shrink-0 truncate rounded px-1 font-mono">
       {label}
     </span>
   )
@@ -38,7 +35,7 @@ function Latest({ backup }: { backup: Backup }) {
         <span className="text-text-primary font-mono text-sm">{fmtBytes(backup.sizeBytes)}</span>
         <KindTag backup={backup} />
       </div>
-      <div className="text-text-faint truncate font-mono text-xs" title={fmtDate(backup.createdAt)}>
+      <div className="text-text-faint truncate font-mono text-xs">
         {relativeMs(backup.createdAt)} · {fmtDate(backup.createdAt)}
       </div>
     </div>

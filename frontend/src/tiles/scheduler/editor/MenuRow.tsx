@@ -20,7 +20,6 @@ interface MenuRowProps {
   expanded?: boolean
   /** Makes the row a switch and says whether it is on; the caller draws the mark. */
   checked?: boolean
-  title?: string
   onKeyDown?: (e: React.KeyboardEvent<HTMLButtonElement>) => void
 }
 
@@ -46,7 +45,6 @@ export function MenuRow({
   hasPopup = false,
   expanded,
   checked,
-  title,
   onKeyDown,
 }: MenuRowProps) {
   const tone = active ? 'text-accent' : danger ? 'text-danger' : 'text-text-primary'
@@ -65,7 +63,6 @@ export function MenuRow({
       aria-expanded={hasPopup ? (expanded ?? false) : undefined}
       role={checked === undefined ? undefined : 'switch'}
       aria-checked={checked}
-      title={title}
       onKeyDown={onKeyDown}
       // The default arrow, here and on the bar: a button in the editor does not
       // change the cursor (#697).

@@ -278,7 +278,7 @@ export function ConfigSummary({ serverId }: Props) {
         >
           <MotdPreviewLine raw={motd} placeholder="A Minecraft Server" />
         </span>
-        <IconButton onClick={load} title="Reload from disk">
+        <IconButton onClick={load} label="Reload from disk">
           <Icon icon={RotateCw} size="sm" />
         </IconButton>
       </div>

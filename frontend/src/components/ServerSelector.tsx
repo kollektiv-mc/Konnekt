@@ -42,12 +42,12 @@ export function ServerSelector() {
       title="Servers"
       action={
         <>
-          <IconButton onClick={() => openServerManager(NEW_SERVER)} title="Add server">
+          <IconButton onClick={() => openServerManager(NEW_SERVER)} label="Add server">
             <Icon icon={Plus} size="sm" />
           </IconButton>
           <IconButton
             onClick={() => openServerManager(activeId || NEW_SERVER)}
-            title="Manage servers"
+            label="Manage servers"
           >
             <Icon icon={Maximize2} size="sm" />
           </IconButton>

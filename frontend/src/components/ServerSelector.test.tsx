@@ -73,7 +73,7 @@ describe('ServerSelector', () => {
 
   it('the edit control opens the manager on that server', () => {
     render(<ServerSelector />)
-    fireEvent.click(screen.getAllByTitle('Edit')[1])
+    fireEvent.click(screen.getAllByLabelText('Edit')[1])
 
     const s = useUiStore.getState()
     expect(s.serverManagerOpen).toBe(true)
@@ -95,14 +95,14 @@ describe('ServerSelector', () => {
     render(<ServerSelector />)
     const add = screen.getByRole('button', { name: 'Add server' })
     expect(add.textContent).toBe('')
-    expect(add.nextElementSibling?.getAttribute('title')).toBe('Manage servers')
+    expect(add.nextElementSibling?.getAttribute('aria-label')).toBe('Manage servers')
   })
 
   // Disconnect moved into the manager, one step behind the edit control,
   // rather than sitting a click away from the control that selects a server.
   it('offers no disconnect of its own', () => {
     render(<ServerSelector />)
-    expect(screen.queryByTitle('Disconnect')).toBeNull()
+    expect(screen.queryByLabelText('Disconnect')).toBeNull()
   })
 
   // Every overlay moved to App: <aside> goes pointer-events-none during a

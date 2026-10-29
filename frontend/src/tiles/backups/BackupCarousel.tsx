@@ -140,7 +140,7 @@ export function BackupCarousel({
         onMouseLeave={(e) => {
           if (!atStart) (e.currentTarget as HTMLButtonElement).style.opacity = '0.6'
         }}
-        title="Previous backup (←)"
+        aria-label="Previous backup"
       >
         ‹
       </button>
@@ -156,7 +156,7 @@ export function BackupCarousel({
         onMouseLeave={(e) => {
           if (!atEnd) (e.currentTarget as HTMLButtonElement).style.opacity = '0.6'
         }}
-        title="Next backup (→)"
+        aria-label="Next backup"
       >
         ›
       </button>

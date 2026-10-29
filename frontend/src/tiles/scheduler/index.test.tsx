@@ -174,7 +174,7 @@ describe('switching server from the sidebar with the scheduler editor maximized'
     const input = screen.getByDisplayValue('Only')
     fireEvent.change(input, { target: { value: 'Only, edited' } })
     fireEvent.keyDown(input, { key: 'Enter' })
-    await waitFor(() => expect(screen.getByTitle('Unsaved changes')).toBeTruthy())
+    await waitFor(() => expect(screen.getByLabelText('Unsaved changes')).toBeTruthy())
   }
 
   beforeEach(() => {
@@ -233,7 +233,7 @@ describe('switching server from the sidebar with the scheduler editor maximized'
     expect(useServerConfigStore.getState().activeId).toBe('alpha')
     // The dialog plays its exit before it unmounts (usePresence).
     await waitFor(() => expect(screen.queryByText('Unsaved changes')).toBeNull())
-    expect(screen.getByTitle('Unsaved changes')).toBeTruthy()
+    expect(screen.getByLabelText('Unsaved changes')).toBeTruthy()
   })
 
   it('switches at once when the editor is clean', async () => {
@@ -387,7 +387,7 @@ describe('the scheduler editor warns about a stop', () => {
     const input = screen.getByDisplayValue('Only')
     fireEvent.change(input, { target: { value: 'Only, edited' } })
     fireEvent.keyDown(input, { key: 'Enter' })
-    await waitFor(() => expect(screen.getByTitle('Unsaved changes')).toBeTruthy())
+    await waitFor(() => expect(screen.getByLabelText('Unsaved changes')).toBeTruthy())
 
     // Cancel leaves the changes unsaved and runs nothing.
     fireEvent.click(screen.getByRole('button', { name: 'run' }))
@@ -396,7 +396,7 @@ describe('the scheduler editor warns about a stop', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
     expect(App.SaveScheduleGraph).not.toHaveBeenCalled()
     expect(App.RunScheduleGraphNow).not.toHaveBeenCalled()
-    expect(screen.getByTitle('Unsaved changes')).toBeTruthy()
+    expect(screen.getByLabelText('Unsaved changes')).toBeTruthy()
 
     fireEvent.click(screen.getByRole('button', { name: 'run' }))
     fireEvent.click(screen.getByRole('button', { name: 'Save & run' }))
@@ -473,7 +473,6 @@ describe('the scheduler editor warns about a stop', () => {
 
       fireEvent.click(screen.getByRole('button', { name: 'run' }))
       const indicator = await screen.findByRole('button', { name: 'run failed' })
-      expect(indicator.getAttribute('title')).toBe('the reason')
       expect(toasts()).toEqual([])
 
       fireEvent.click(indicator)

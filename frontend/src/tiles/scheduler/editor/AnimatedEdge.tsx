@@ -149,9 +149,7 @@ export function AnimatedEdge({
         e.stopPropagation()
         addCorner(e.clientX, e.clientY)
       }}
-    >
-      <title>Double-click to add a corner</title>
-    </path>
+    />
   )
 
   // Corner handles show while the wire is hovered or selected, and stay up for
@@ -176,7 +174,6 @@ export function AnimatedEdge({
             removeCorner(i)
           }}
         >
-          <title>Drag to move, double-click to remove</title>
           <circle cx={p.x} cy={p.y} r={9} className="fill-transparent" />
           <circle cx={p.x} cy={p.y} r={4} className="fill-accent stroke-canvas" strokeWidth={1.5} />
         </g>

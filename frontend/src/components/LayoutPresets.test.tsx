@@ -3,6 +3,7 @@ import { render, screen, fireEvent, cleanup } from '@testing-library/react'
 import * as App from '../../wailsjs/go/main/App'
 import { LayoutPresets } from './LayoutPresets'
 import { useLayoutStore } from '../stores/useLayoutStore'
+import { useTileStore } from '../stores/useTileStore'
 
 vi.mock('../../wailsjs/go/main/App')
 
@@ -84,5 +85,38 @@ describe('LayoutPresets selection styling', () => {
     for (const name of ['Default', 'Wide']) {
       expect(presetButton(name).className).toContain('hover:bg-hover')
     }
+  })
+})
+
+describe('applying a layout', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    vi.mocked(App.SaveActiveLayout).mockResolvedValue(undefined)
+    vi.mocked(App.SaveActiveTiles).mockResolvedValue(undefined)
+    useTileStore.setState({ activeTileIds: ['console', 'stats', 'worlds', 'mods'], error: null })
+    useLayoutStore.setState({
+      presets: [
+        preset('Default'),
+        {
+          name: 'Focus',
+          layout: JSON.stringify([
+            { i: 'console', x: 0, y: 0, w: 4, h: 8 },
+            { i: 'stats', x: 4, y: 0, w: 2, h: 4 },
+          ]),
+        },
+      ],
+      activePresetName: 'Default',
+      currentLayout: [],
+      error: null,
+    })
+  })
+
+  it('puts back in the crate the tiles it leaves out', async () => {
+    render(<LayoutPresets />)
+    fireEvent.click(presetButton('Focus'))
+    await vi.waitFor(() =>
+      expect(useTileStore.getState().activeTileIds).toEqual(['console', 'stats']),
+    )
+    expect(App.SaveActiveTiles).toHaveBeenCalledWith(['console', 'stats'])
   })
 })

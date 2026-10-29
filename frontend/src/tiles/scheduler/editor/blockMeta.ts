@@ -243,11 +243,3 @@ export function stoppingGraphIds(
   const defs = new Map(blockDefs.map((d) => [d.id, d]))
   return new Set(graphs.filter((g) => g.enabled && graphStopsServer(g, defs)).map((g) => g.id))
 }
-
-/**
- * Why a summary's "next downtime" is a lower bound: the clock gives when the
- * graph's trigger fires, and the stop lands after it by any delay and warning
- * lead upstream of the stopping block.
- */
-export const DOWNTIME_TOOLTIP =
-  'Next scheduled run of a graph that stops the server. The stop lands a little after this, by any delay or warning before it.'

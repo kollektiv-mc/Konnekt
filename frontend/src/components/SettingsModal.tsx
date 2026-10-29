@@ -292,7 +292,7 @@ export function SettingsModal({ open, onClose, initialSection }: Props) {
             <span className="text-text-primary text-sm font-semibold">
               {nav.find((n) => n.id === section)?.label}
             </span>
-            <IconButton onClick={onClose} title="Close">
+            <IconButton onClick={onClose} label="Close">
               <Icon icon={X} />
             </IconButton>
           </div>
@@ -371,7 +371,6 @@ function ColorField({
           outline: !isPreset ? `2.5px solid ${value}` : '2.5px solid transparent',
           outlineOffset: 2,
         }}
-        title="Custom color"
       >
         {isPreset && (
           <span className="text-text-muted text-2xs absolute inset-0 flex items-center justify-center">
@@ -380,6 +379,7 @@ function ColorField({
         )}
         <input
           type="color"
+          aria-label="Custom color"
           value={value}
           onChange={(e) => onChange(e.target.value)}
           className="absolute h-0 w-0 opacity-0"
@@ -1004,7 +1004,6 @@ function AboutPane({ version }: { version: string | null }) {
               onMouseLeave={(e) => {
                 ;(e.currentTarget as HTMLButtonElement).style.color = 'var(--text-muted)'
               }}
-              title={dataDir ? `Open ${dataDir}` : 'Open config folder'}
             >
               <span className="max-w-56 truncate">{dataDir ?? 'Open folder'}</span> ↗
             </button>
@@ -1013,12 +1012,7 @@ function AboutPane({ version }: { version: string | null }) {
         {logPath && (
           <div className="text-text-secondary flex items-center justify-between gap-3 text-xs">
             <span className="shrink-0">Log file</span>
-            <span
-              className="text-text-muted text-1xs truncate font-mono"
-              title={`${logPath} — attach this to a bug report`}
-            >
-              {logPath}
-            </span>
+            <span className="text-text-muted text-1xs truncate font-mono">{logPath}</span>
           </div>
         )}
       </div>

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useLayoutStore } from '../stores/useLayoutStore'
+import { useTileStore } from '../stores/useTileStore'
 import { SaveLayoutPreset } from '../../wailsjs/go/main/App'
 import { DEFAULT_LAYOUT_PRESETS } from '../lib/constants'
 import { hasWailsBridge } from '../lib/ipc'
@@ -14,6 +15,7 @@ const RESET_CONFIRM_MS = 4000
 export function LayoutPresets() {
   const { presets, activePresetName, error, savePreset, loadPreset, loadPresets, deletePreset } =
     useLayoutStore()
+  const setActiveTiles = useTileStore((s) => s.setActiveTiles)
   const [newName, setNewName] = useState('')
   const [saving, setSaving] = useState(false)
   const [resetting, setResetting] = useState(false)
@@ -27,6 +29,16 @@ export function LayoutPresets() {
     const t = setTimeout(() => setConfirmingReset(false), RESET_CONFIRM_MS)
     return () => clearTimeout(t)
   }, [confirmingReset])
+
+  // A layout says which tiles are on the board, not only where they sit, so a
+  // tile it leaves out goes back to the crate. Placing positions alone stacked
+  // every unlisted tile under the layout at full size, which made Essentials,
+  // a six-tile layout, read as every tile with six of them on top. A refused
+  // write is recorded in the tile store's `error`.
+  const applyPreset = (name: string) => {
+    const ids = loadPreset(name)
+    if (ids.length > 0) setActiveTiles(ids).catch(() => {})
+  }
 
   const handleReset = async () => {
     setResetting(true)
@@ -43,7 +55,7 @@ export function LayoutPresets() {
         }
       }
       await loadPresets()
-      loadPreset('Default')
+      applyPreset('Default')
     } finally {
       setResetting(false)
     }
@@ -119,7 +131,7 @@ export function LayoutPresets() {
                   reset, and stranded that grey there for good — one more row
                   each time the selection moved. */}
             <button
-              onClick={() => loadPreset(preset.name)}
+              onClick={() => applyPreset(preset.name)}
               // Truncates rather than wraps: a wrapped name makes its row
               // taller than the others and re-flows the list.
               className={`flex-1 cursor-pointer truncate rounded py-1.5 pr-1 pl-2 text-left text-xs transition-all ${
@@ -133,7 +145,7 @@ export function LayoutPresets() {
             {preset.name !== 'Default' && (
               <IconButton
                 onClick={() => handleDelete(preset.name)}
-                title="Delete preset"
+                label="Delete preset"
                 tone="danger"
               >
                 <Icon icon={X} />

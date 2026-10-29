@@ -32,18 +32,11 @@ export function LinkBadge({ link, onAcknowledge, onUnlink }: LinkBadgeProps) {
   if (link.status === 'broken') {
     return (
       <>
-        <Tag
-          tone="warning"
-          title="Not in Kommands any more, unlinked or deleted there. This still runs the last text it was given."
-        >
+        <Tag tone="warning">
           <Icon icon={TriangleAlert} size="xs" />
           Unlinked in Kommands
         </Tag>
-        <button
-          onClick={onUnlink}
-          className={ACTION}
-          title="Stop following Kommands and keep this as a command of this server's own"
-        >
+        <button onClick={onUnlink} className={ACTION}>
           Keep
         </button>
       </>
@@ -53,15 +46,11 @@ export function LinkBadge({ link, onAcknowledge, onUnlink }: LinkBadgeProps) {
   if (link.status === 'changed') {
     return (
       <>
-        <Tag tone="accent" title="An edit in Kommands was applied to this command">
+        <Tag tone="accent">
           <Icon icon={Link2} size="xs" />
           Updated in Kommands
         </Tag>
-        <button
-          onClick={onAcknowledge}
-          className={ACTION}
-          title="Keep the update and clear this badge"
-        >
+        <button onClick={onAcknowledge} className={ACTION}>
           Got it
         </button>
       </>
@@ -69,7 +58,7 @@ export function LinkBadge({ link, onAcknowledge, onUnlink }: LinkBadgeProps) {
   }
 
   return (
-    <Tag title="Follows its original in Kommands. Edit or unlink it there; take a copy to change it here.">
+    <Tag>
       <Icon icon={Link2} size="xs" />
       Kommands
     </Tag>

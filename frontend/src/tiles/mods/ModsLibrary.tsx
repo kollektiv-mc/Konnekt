@@ -112,7 +112,7 @@ export function ModsLibrary({
               className={`text-text-muted border-border-subtle border-hairline shrink-0 rounded bg-transparent px-2 py-1 font-mono text-xs transition-colors ${
                 refreshing ? 'opacity-50' : 'opacity-100'
               }`}
-              title="Refresh"
+              aria-label="Refresh"
               onMouseEnter={(e) => {
                 ;(e.currentTarget as HTMLButtonElement).style.background = 'var(--hover-surface)'
               }}

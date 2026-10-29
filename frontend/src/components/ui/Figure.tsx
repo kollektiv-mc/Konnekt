@@ -35,16 +35,15 @@ interface FigureProps {
   size?: FigureSize
   /** A tone for the value, such as the TPS banding. Defaults to primary ink. */
   valueClass?: string
-  title?: string
 }
 
 /**
  * Label over value. For a grid of figures (Overview's four, Performance's
  * three) and for a single headline with its caption (Backups' last run).
  */
-export function Figure({ label, value, size = 'lg', valueClass, title }: FigureProps) {
+export function Figure({ label, value, size = 'lg', valueClass }: FigureProps) {
   return (
-    <div className="flex min-w-0 flex-col" title={title}>
+    <div className="flex min-w-0 flex-col">
       <span className={`text-text-muted ${LABEL_SIZE[size]}`}>{label}</span>
       <span
         className={`truncate font-mono leading-tight font-medium ${VALUE_SIZE[size]} ${

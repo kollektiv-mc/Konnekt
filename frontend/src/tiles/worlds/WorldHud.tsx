@@ -402,7 +402,6 @@ export function WorldHud({
                       className={BTN()}
                       onClick={() => setPending({ action: 'restore', filename: b.filename })}
                       disabled={busy || running}
-                      title={running ? 'Stop the server before restoring a backup' : undefined}
                     >
                       restore
                     </button>

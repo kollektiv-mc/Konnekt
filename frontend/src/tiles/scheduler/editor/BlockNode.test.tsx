@@ -131,7 +131,7 @@ describe('the server-stopping icon', () => {
 
   it('sits in the header, after the collapse chevron', () => {
     renderNode('action.command', { command: '__stop__' })
-    const chevron = screen.getByTitle('Collapse ports')
+    const chevron = screen.getByLabelText('Collapse ports')
     expect(chevron.compareDocumentPosition(stopIcon() as Node)).toBe(
       Node.DOCUMENT_POSITION_FOLLOWING,
     )
@@ -156,7 +156,7 @@ describe('the warning triangle in the header', () => {
     expect(flag()?.className).toContain('text-text-faint')
     expect(flag()?.className).not.toContain('text-danger')
     expect(flag()?.getAttribute('aria-label')).toBe(ADVICE)
-    expect(flag()?.getAttribute('title')).toBe(ADVICE)
+    expect(flag()?.getAttribute('aria-label')).toBe(ADVICE)
   })
 
   it('turns red, naming the failure, when the block failed in the last run', () => {
@@ -215,13 +215,13 @@ describe('the warning triangle in the header', () => {
 describe('the tooltip on the server-stopping icon', () => {
   it('explains the effect when no downtime is known', () => {
     renderNode('action.declares', {})
-    expect(stopIcon()?.getAttribute('title')).toBe(BADGE)
+    expect(stopIcon()?.getAttribute('aria-label')).toBe(BADGE)
   })
 
   it('adds the measured downtime when the last run reported one', () => {
     renderNode('action.declares', {}, [], 130_000)
     const icon = stopIcon()
-    expect(icon?.getAttribute('title')).toBe('Stops the server; last downtime 2m 10s')
+    expect(icon?.getAttribute('aria-label')).toBe('Stops the server; last downtime 2m 10s')
     expect(icon?.getAttribute('aria-label')).toBe('Stops the server; last downtime 2m 10s')
   })
 
@@ -235,7 +235,7 @@ describe('the tooltip on the server-stopping icon', () => {
 
   it('needs the effect: a node that stops nothing shows no figure', () => {
     renderNode('action.command', { command: 'save-all' }, [], 130_000)
-    expect(screen.queryByTitle(/downtime/)).toBeNull()
+    expect(screen.queryByLabelText(/downtime/)).toBeNull()
   })
 })
 
@@ -243,7 +243,7 @@ describe('the collapse chevron', () => {
   it('is revealed by hovering the node, which carries the group', () => {
     const root = renderNode('action.command', { command: 'save-all' })
     expect(root.className).toMatch(/\bgroup\b/)
-    const chevron = screen.getByTitle('Collapse ports')
+    const chevron = screen.getByLabelText('Collapse ports')
     expect(chevron.className).toContain('opacity-0')
     expect(chevron.className).toContain('group-hover:opacity-100')
     expect(chevron.className).toContain('nodrag')
@@ -252,7 +252,7 @@ describe('the collapse chevron', () => {
   it('still toggles the ports when clicked', () => {
     const onToggle = vi.fn()
     renderNode('action.command', { command: 'save-all' }, [], undefined, undefined, onToggle)
-    fireEvent.click(screen.getByTitle('Collapse ports'))
+    fireEvent.click(screen.getByLabelText('Collapse ports'))
     expect(onToggle).toHaveBeenCalledWith('n1')
   })
 })
@@ -265,11 +265,6 @@ describe('the warning a node reports after its work is done', () => {
     const line = screen.getByText(`warning: ${WARNING}`)
     expect(line.className).toContain('text-text-muted')
     expect(stopIcon()).toBeNull()
-  })
-
-  it('carries the whole text as a tooltip, since the line is truncated', () => {
-    renderNode('action.command', { command: 'save-all' }, [], undefined, WARNING)
-    expect(screen.getByText(`warning: ${WARNING}`).getAttribute('title')).toBe(WARNING)
   })
 
   it('is absent when the last run reported none', () => {

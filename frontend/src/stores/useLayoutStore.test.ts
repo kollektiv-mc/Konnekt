@@ -174,7 +174,7 @@ describe('useLayoutStore', () => {
         activePresetName: 'A',
         currentLayout: [],
       })
-      useLayoutStore.getState().loadPreset('Missing')
+      expect(useLayoutStore.getState().loadPreset('Missing')).toEqual([])
       expect(useLayoutStore.getState().activePresetName).toBe('A')
       expect(App.SaveActiveLayout).not.toHaveBeenCalled()
     })
@@ -189,6 +189,23 @@ describe('useLayoutStore', () => {
       expect(useLayoutStore.getState().activePresetName).toBe('A')
       expect(useLayoutStore.getState().currentLayout).toEqual([{ i: 'a', x: 0, y: 0, w: 1, h: 1 }])
       expect(App.SaveActiveLayout).toHaveBeenCalledWith(layoutStr('a'))
+    })
+
+    it('returns the registered tiles the preset places', () => {
+      useLayoutStore.setState({
+        presets: [
+          {
+            name: 'A',
+            layout: JSON.stringify([
+              { i: 'console', x: 0, y: 0, w: 2, h: 4 },
+              { i: 'gone', x: 2, y: 0, w: 2, h: 4 },
+              { i: 'stats', x: 4, y: 0, w: 2, h: 4 },
+            ]),
+          },
+        ],
+        currentLayout: [],
+      })
+      expect(useLayoutStore.getState().loadPreset('A')).toEqual(['console', 'stats'])
     })
   })
 

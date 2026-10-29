@@ -566,10 +566,12 @@ describe('SettingsModal skin accent pairing', () => {
     const section = within(
       screen.getByText('Accent color').closest('div.border-b-hairline') as HTMLElement,
     )
-    expect(section.getByTitle('Violet').style.outline).toBe(`2.5px solid ${violet}`)
-    expect(section.getByTitle('Custom color').style.outline).toBe('2.5px solid transparent')
+    expect(section.getByLabelText('Violet').style.outline).toBe(`2.5px solid ${violet}`)
+    expect(section.getByLabelText('Custom color').parentElement!.style.outline).toBe(
+      '2.5px solid transparent',
+    )
     // And the skin's own previous accent has let go of the ring.
-    expect(section.getByTitle('Green').style.outline).toBe('2.5px solid transparent')
+    expect(section.getByLabelText('Green').style.outline).toBe('2.5px solid transparent')
   })
 
   // A deliberate accent survives everything except the next skin switch, which

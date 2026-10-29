@@ -119,7 +119,7 @@ export function TitleBar({ onOpenSettings, onOpenRemote }: Props) {
             <RemoteSession />
           </Suspense>
         )}
-        <IconButton className="titlebar-no-drag" onClick={onOpenSettings} title="Settings">
+        <IconButton className="titlebar-no-drag" onClick={onOpenSettings} label="Settings">
           <Icon icon={Settings} />
         </IconButton>
         {!remote && (
@@ -128,13 +128,13 @@ export function TitleBar({ onOpenSettings, onOpenRemote }: Props) {
             button is the only irreversible thing in this bar, and grouping by
             gap alone left it four pixels from a gear that opens a dialog. */}
             <div className="border-l-hairline border-border-subtle mx-1 h-4" />
-            <IconButton className="titlebar-no-drag" onClick={minimize} title="Minimize window">
+            <IconButton className="titlebar-no-drag" onClick={minimize} label="Minimize window">
               <Icon icon={Minus} size="sm" />
             </IconButton>
             <IconButton
               className="titlebar-no-drag"
               onClick={toggleMaximize}
-              title={maximized ? 'Restore window' : 'Maximize window'}
+              label={maximized ? 'Restore window' : 'Maximize window'}
             >
               <Icon icon={maximized ? Copy : Square} size="sm" />
             </IconButton>
@@ -142,7 +142,7 @@ export function TitleBar({ onOpenSettings, onOpenRemote }: Props) {
               className="titlebar-no-drag"
               tone="danger"
               onClick={close}
-              title="Close window"
+              label="Close window"
             >
               <Icon icon={X} size="sm" />
             </IconButton>

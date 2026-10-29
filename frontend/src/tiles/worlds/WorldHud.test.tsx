@@ -130,7 +130,6 @@ describe('WorldHud backups', () => {
     const buttons = screen.getAllByRole('button', { name: 'restore' }) as HTMLButtonElement[]
     for (const b of buttons) {
       expect(b.disabled).toBe(true)
-      expect(b.title).toBe('Stop the server before restoring a backup')
     }
   })
 

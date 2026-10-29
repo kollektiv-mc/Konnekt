@@ -36,11 +36,7 @@ export function WorldsSummary({ worlds, loading, error, layout = 'default' }: Pr
         value={String(worlds.length)}
         unit={worlds.length === 1 ? 'world' : `worlds · ${fmtBytes(total)}`}
         aside={
-          active ? (
-            <span className="text-accent truncate" title="Active world">
-              {active.name} active
-            </span>
-          ) : undefined
+          active ? <span className="text-accent truncate">{active.name} active</span> : undefined
         }
       />
 

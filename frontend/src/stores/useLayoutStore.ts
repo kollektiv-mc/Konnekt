@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import type { LayoutItem } from 'react-grid-layout'
 import type { LayoutPreset } from '../types'
-import { DEFAULT_LAYOUT_PRESETS, COLS } from '../lib/constants'
+import { ALL_TILE_IDS, DEFAULT_LAYOUT_PRESETS, COLS } from '../lib/constants'
 import { GRID_COMPACTOR } from '../lib/gridSizing'
 import { errMsg, hasWailsBridge } from '../lib/ipc'
 import {
@@ -70,7 +70,12 @@ interface LayoutStore {
   error: string | null
   loadPresets: () => Promise<void>
   savePreset: (name: string) => Promise<void>
-  loadPreset: (name: string) => void
+  /**
+   * Places the tiles as the preset has them, and returns the ids it places.
+   * Which tiles are on the board is `useTileStore`'s, so the caller hands the
+   * ids on (see `LayoutPresets`). Empty for a name that is not a preset.
+   */
+  loadPreset: (name: string) => string[]
   deletePreset: (name: string) => Promise<void>
   updateLayout: (layout: readonly LayoutItem[]) => void
   clearError: () => void
@@ -145,10 +150,12 @@ export const useLayoutStore = create<LayoutStore>((set, get) => ({
   loadPreset: (name: string) => {
     const { presets } = get()
     const preset = presets.find((p) => p.name === name)
-    if (!preset) return
+    if (!preset) return []
     const layout = compacted(JSON.parse(preset.layout))
     set({ activePresetName: name, currentLayout: layout })
     persistActiveLayout(set, layout)
+    const known = new Set<string>(ALL_TILE_IDS)
+    return layout.map((l) => l.i).filter((id) => known.has(id))
   },
 
   deletePreset: async (name: string) => {

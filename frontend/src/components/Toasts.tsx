@@ -45,14 +45,12 @@ function ToastCard({
     >
       <div className="flex items-center gap-2">
         <Icon icon={icon} size="sm" className={tone.text} />
-        <span className="text-text-primary min-w-0 flex-1 truncate text-xs" title={toast.title}>
-          {toast.title}
-        </span>
+        <span className="text-text-primary min-w-0 flex-1 truncate text-xs">{toast.title}</span>
         {toast.count > 1 && (
           <span className="text-text-faint text-2xs shrink-0 font-mono">{toast.count} times</span>
         )}
         <span className="text-text-faint text-2xs shrink-0 font-mono">{toast.timestamp}</span>
-        <IconButton title="Dismiss" onClick={onDismiss}>
+        <IconButton label="Dismiss" onClick={onDismiss}>
           <Icon icon={X} size="sm" />
         </IconButton>
       </div>

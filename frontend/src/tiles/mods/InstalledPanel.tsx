@@ -332,7 +332,7 @@ export function InstalledPanel({
                 className={`flex h-6 w-[22px] items-center justify-center font-mono text-xs transition-colors ${
                   numCols === n ? 'bg-hover text-accent' : 'text-text-faint bg-transparent'
                 } ${n < 4 ? 'border-border-subtle border-r-hairline' : 'border-r-hairline border-transparent'}`}
-                title={`${n} column${n > 1 ? 's' : ''}`}
+                aria-label={`${n} column${n > 1 ? 's' : ''}`}
               >
                 {n}
               </button>
@@ -460,7 +460,7 @@ export function InstalledPanel({
                   <button
                     onClick={() => openPreview(mod)}
                     className="border-border-subtle text-text-muted border-hairline relative flex h-[26px] w-[26px] items-center justify-center rounded bg-transparent text-xs transition-colors"
-                    title={
+                    aria-label={
                       hasUpdate
                         ? `Update available: v${updateInfo.latestVersionNumber}`
                         : 'Change version'
@@ -509,7 +509,7 @@ export function InstalledPanel({
                   <button
                     onClick={() => setConfirmUninstall(mod.fileName)}
                     className="border-border-subtle text-text-muted border-hairline flex h-[26px] w-[26px] items-center justify-center rounded bg-transparent text-xs opacity-0 transition-colors group-hover:opacity-100"
-                    title="Uninstall"
+                    aria-label="Uninstall"
                     onMouseEnter={(e) => {
                       ;(e.currentTarget as HTMLElement).style.background =
                         'color-mix(in srgb, var(--danger) 12%, transparent)'

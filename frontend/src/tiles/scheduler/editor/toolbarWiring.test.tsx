@@ -148,7 +148,7 @@ describe('the toolbar menus drive the editor', () => {
       screen.getByRole('switch', { name: 'Curved connectors' }).getAttribute('aria-checked'),
     ).toBe('false')
     // A view preference is not an edit: no unsaved dot, nothing to undo.
-    expect(screen.queryByTitle('Unsaved changes')).toBeNull()
+    expect(screen.queryByLabelText('Unsaved changes')).toBeNull()
     fireEvent.click(button('edit'))
     expect(button(/^Undo/).disabled).toBe(true)
     useSettingsStore.setState({ settings: before })
@@ -172,7 +172,7 @@ describe('the toolbar menus drive the editor', () => {
     expect(screen.getByRole('switch', { name: 'Snap to grid' }).getAttribute('aria-checked')).toBe(
       'true',
     )
-    expect(screen.queryByTitle('Unsaved changes')).toBeNull()
+    expect(screen.queryByLabelText('Unsaved changes')).toBeNull()
     useSettingsStore.setState({ settings: before })
   })
 
@@ -289,7 +289,7 @@ describe('the toolbar menus drive the editor', () => {
     fireEvent.change(input, { target: { value: 'Hourly' } })
     fireEvent.keyDown(input, { key: 'Enter' })
 
-    await waitFor(() => expect(screen.getByTitle('Unsaved changes')).toBeTruthy())
+    await waitFor(() => expect(screen.getByLabelText('Unsaved changes')).toBeTruthy())
     expect(button(/Hourly/)).toBeTruthy()
   })
 

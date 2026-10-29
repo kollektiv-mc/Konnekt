@@ -109,7 +109,7 @@ export function ServerRow({ cfg, active, onSelect, onEdit }: Props) {
         />
         <span className="truncate">{cfg.name}</span>
       </button>
-      <IconButton onClick={onEdit} title="Edit">
+      <IconButton onClick={onEdit} label="Edit">
         <Icon icon={Pencil} />
       </IconButton>
 

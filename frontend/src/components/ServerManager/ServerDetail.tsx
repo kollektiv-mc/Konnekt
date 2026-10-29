@@ -20,9 +20,7 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   return (
     <div className="border-border-subtle border-b-hairline flex items-baseline justify-between gap-4 py-2">
       <span className="text-text-faint text-2xs shrink-0 tracking-wider uppercase">{label}</span>
-      <span className="text-text-secondary min-w-0 truncate font-mono text-xs" title={undefined}>
-        {children}
-      </span>
+      <span className="text-text-secondary min-w-0 truncate font-mono text-xs">{children}</span>
     </div>
   )
 }

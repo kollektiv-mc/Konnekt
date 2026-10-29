@@ -115,7 +115,7 @@ describe('NavSection', () => {
         id="servers"
         title="Servers"
         action={
-          <IconButton onClick={onAction} title="Manage servers">
+          <IconButton onClick={onAction} label="Manage servers">
             <span />
           </IconButton>
         }

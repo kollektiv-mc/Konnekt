@@ -260,7 +260,8 @@ export function Toolbar({
             {dirty && (
               <span
                 className="bg-accent absolute top-1/2 right-2 h-1.5 w-1.5 -translate-y-1/2 rounded-full"
-                title="Unsaved changes"
+                role="img"
+                aria-label="Unsaved changes"
               />
             )}
           </button>
@@ -417,7 +418,6 @@ export function Toolbar({
             type="button"
             onClick={onErrorClick}
             className="text-danger text-2xs shrink-0 font-mono whitespace-nowrap"
-            title={schedulerError}
           >
             scheduler error
           </button>
@@ -428,7 +428,6 @@ export function Toolbar({
               type="button"
               onClick={() => onRunStatusClick(runStatus)}
               className="text-danger text-2xs shrink-0 font-mono whitespace-nowrap"
-              title={runStatus.detail}
             >
               {runStatus.text}
             </button>
@@ -526,7 +525,6 @@ export function Toolbar({
           <button
             ref={overflowButton}
             type="button"
-            title="Graph actions"
             aria-label="Graph actions"
             onClick={() => toggleMenu('overflow')}
             className={segmentClass(
