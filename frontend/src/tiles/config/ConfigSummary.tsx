@@ -152,9 +152,7 @@ function PropCell({
 
   return (
     <li className="flex h-8 min-w-0 flex-col justify-center">
-      <span className="text-text-muted text-2xs truncate leading-tight" title={label}>
-        {label}
-      </span>
+      <span className="text-text-muted text-2xs truncate leading-tight">{label}</span>
 
       {editing ? (
         <input
@@ -180,7 +178,6 @@ function PropCell({
           className={`truncate font-mono text-xs leading-tight font-medium transition-opacity ${colorClass} ${
             saving ? 'opacity-40' : 'opacity-100'
           } ${isInteractive ? 'cursor-pointer' : 'cursor-default'}`}
-          title={isInteractive ? undefined : `${disp} · double-click to edit`}
           onClick={
             type === 'boolean' ? onToggle : type === 'enum' && options?.length ? onCycle : undefined
           }
@@ -277,7 +274,7 @@ export function ConfigSummary({ serverId }: Props) {
       <div className="flex shrink-0 items-center gap-2">
         <span
           className="min-w-0 flex-1 truncate font-mono text-sm"
-          title={decodeEscapes(motd).replace(/§./g, '')}
+          aria-label={decodeEscapes(motd).replace(/§./g, '')}
         >
           <MotdPreviewLine raw={motd} placeholder="A Minecraft Server" />
         </span>

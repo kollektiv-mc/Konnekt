@@ -24,7 +24,7 @@ describe('ConfigSummary', () => {
 
   it('draws the MOTD rather than its escapes', async () => {
     render(<ConfigSummary serverId="a" />)
-    expect(await screen.findByTitle('Survival · hi')).toBeTruthy()
+    expect(await screen.findByLabelText('Survival · hi')).toBeTruthy()
     expect(screen.queryByText(/u00A7/)).toBeNull()
   })
 

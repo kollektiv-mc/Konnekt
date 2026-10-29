@@ -68,11 +68,7 @@ export function ModsGlance({ mods, updates, loading, error, kind, layout }: Prop
       {shown.map((mod) => {
         const update = updates[mod.fileName]?.updateAvailable
         return (
-          <li
-            key={mod.fileName}
-            className={`flex min-w-0 gap-1.5 ${cell}`}
-            title={update ? `${mod.displayName}: update available` : mod.displayName}
-          >
+          <li key={mod.fileName} className={`flex min-w-0 gap-1.5 ${cell}`}>
             <span
               className={`h-1.5 w-1.5 shrink-0 rounded-full ${detailed ? 'mt-1' : ''} ${
                 update ? 'bg-warning' : mod.enabled ? 'bg-success' : 'bg-text-faint'

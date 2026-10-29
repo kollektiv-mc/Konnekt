@@ -24,7 +24,7 @@ describe('ModsGlance', () => {
     expect(names.map((n) => n.textContent)).toEqual(['Alpha', 'Beta', 'Zeta'])
   })
 
-  it('names a waiting update', () => {
+  it('tints the dot of a waiting update', () => {
     const updates = {
       'Spark.jar': {
         fileName: 'Spark.jar',
@@ -34,7 +34,9 @@ describe('ModsGlance', () => {
       },
     }
     render(<ModsGlance {...base} updates={updates} layout="default" mods={[mod('Spark')]} />)
-    expect(screen.getByTitle('Spark: update available')).toBeTruthy()
+    expect(screen.getByText('Spark').parentElement?.previousElementSibling?.className).toContain(
+      'bg-warning',
+    )
   })
 
   it('adds the version only in the detailed layout', () => {
