@@ -95,4 +95,22 @@ describe('useTileStore', () => {
       expect(useTileStore.getState().error).toBe('disk full')
     })
   })
+
+  describe('setActiveTiles', () => {
+    it('replaces the active list and persists it', async () => {
+      useTileStore.setState({ activeTileIds: ['console', 'worlds', 'mods'] })
+      await useTileStore.getState().setActiveTiles(['console', 'stats'])
+      expect(useTileStore.getState().activeTileIds).toEqual(['console', 'stats'])
+      expect(App.SaveActiveTiles).toHaveBeenCalledWith(['console', 'stats'])
+    })
+
+    it('keeps the board and records why when the write fails', async () => {
+      attachBridge()
+      useTileStore.setState({ activeTileIds: ['console', 'worlds'] })
+      vi.mocked(App.SaveActiveTiles).mockRejectedValue(new Error('disk full'))
+      await expect(useTileStore.getState().setActiveTiles(['stats'])).rejects.toThrow('disk full')
+      expect(useTileStore.getState().activeTileIds).toEqual(['console', 'worlds'])
+      expect(useTileStore.getState().error).toBe('disk full')
+    })
+  })
 })
