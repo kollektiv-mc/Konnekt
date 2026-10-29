@@ -103,6 +103,8 @@ export function GetScheduleRunHistory(arg1:string):Promise<Array<models.RunRecor
 
 export function GetServerConfigs():Promise<Array<models.ServerConfig>>;
 
+export function GetServerLogTail(arg1:string,arg2:number):Promise<Array<string>>;
+
 export function GetServerStatus(arg1:string):Promise<models.ServerStatus>;
 
 export function GetServerSummary(arg1:string):Promise<models.ServerSummary>;
