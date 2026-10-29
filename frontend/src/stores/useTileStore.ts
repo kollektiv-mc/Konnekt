@@ -17,6 +17,8 @@ interface TileStore {
   loadTiles: () => Promise<void>
   addTile: (id: string) => Promise<void>
   removeTile: (id: string) => Promise<void>
+  /** Replaces the whole set, as applying a saved layout does. */
+  setActiveTiles: (ids: string[]) => Promise<void>
   setLayout: (id: string, layout: TileLayout) => Promise<void>
   clearError: () => void
 }
@@ -96,6 +98,20 @@ export const useTileStore = create<TileStore>((set, get) => ({
       /* No bridge: nothing to persist to. */
     }
     set({ activeTileIds: next })
+  },
+
+  setActiveTiles: async (ids: string[]) => {
+    set({ error: null })
+    try {
+      await SaveActiveTiles(ids)
+    } catch (e) {
+      if (hasWailsBridge()) {
+        set({ error: errMsg(e) })
+        throw e
+      }
+      /* No bridge: nothing to persist to. */
+    }
+    set({ activeTileIds: ids })
   },
 
   removeTile: async (id: string) => {
