@@ -154,7 +154,9 @@ function ModsSummary({
             detecting
               ? 'detecting server type…'
               : `${installed.length === 1 ? noun : nounPlural} installed · ${enabledCount} on${
-                  updateCount > 0 ? ` · ${updateCount} to update` : ''
+                  updateCount > 0
+                    ? ` · ${updateCount} ${updateCount === 1 ? 'update' : 'updates'} available`
+                    : ''
                 }`
           }
           aside={running ? 'restart needed for changes' : undefined}

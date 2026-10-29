@@ -12,7 +12,7 @@ const mod = (displayName: string, enabled = true): InstalledMod =>
 const base = { updates: {}, loading: false, error: null, kind: 'plugins' as const }
 
 describe('ModsGlance', () => {
-  it('lists enabled ones first, each by name', () => {
+  it('lists them all by name, the disabled ones too', () => {
     render(
       <ModsGlance
         {...base}
@@ -21,7 +21,7 @@ describe('ModsGlance', () => {
       />,
     )
     const names = within(screen.getByRole('list')).getAllByRole('listitem')
-    expect(names.map((n) => n.textContent)).toEqual(['Beta', 'Zeta', 'Alpha'])
+    expect(names.map((n) => n.textContent)).toEqual(['Alpha', 'Beta', 'Zeta'])
   })
 
   it('names a waiting update', () => {

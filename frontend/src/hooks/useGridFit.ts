@@ -52,7 +52,11 @@ export function useGridFit(count: number): [RefCallback<HTMLElement>, number | n
             columns: style.gridTemplateColumns.split(' ').filter(Boolean).length,
             rowHeight: first.getBoundingClientRect().height,
             gap: parseFloat(style.rowGap) || 0,
-            height: el.clientHeight,
+            // clientHeight counts the padding, which no row may sit in.
+            height:
+              el.clientHeight -
+              (parseFloat(style.paddingTop) || 0) -
+              (parseFloat(style.paddingBottom) || 0),
           }),
         )
       }

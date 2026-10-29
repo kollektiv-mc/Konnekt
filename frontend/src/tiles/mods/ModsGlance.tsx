@@ -11,12 +11,14 @@ interface Props {
   layout: TileLayout
 }
 
-/** Enabled first, then by name: what is running reads before what is parked. */
+/**
+ * By name alone. Sorting the disabled ones last pushed them into the "+N more"
+ * count on a full tile, which read as hiding them; the grey dot already says
+ * which they are.
+ */
 function glanceOrder(mods: readonly InstalledMod[]): InstalledMod[] {
-  return [...mods].sort(
-    (a, b) =>
-      Number(b.enabled) - Number(a.enabled) ||
-      a.displayName.localeCompare(b.displayName, undefined, { sensitivity: 'base' }),
+  return [...mods].sort((a, b) =>
+    a.displayName.localeCompare(b.displayName, undefined, { sensitivity: 'base' }),
   )
 }
 
@@ -26,9 +28,10 @@ function glanceOrder(mods: readonly InstalledMod[]): InstalledMod[] {
  *
  * Managing them (toggles, versions, filters, pages) is the maximized face's
  * job; this one answers "what is on this server and is it on" at a glance. A
- * cell is a status dot and the name, plus the version in the detailed layout,
- * and an update that is waiting tints the dot. What does not fit gives its
- * last cell to a count of the rest rather than a scrollbar.
+ * cell is a status dot and the name, with the version on a second line in the
+ * detailed layout. The dot is green when on, grey when off, and takes the
+ * warning tone while an update waits. What does not fit gives its last cell
+ * to a count of the rest rather than a scrollbar.
  */
 export function ModsGlance({ mods, updates, loading, error, kind, layout }: Props) {
   const ordered = glanceOrder(mods)
@@ -47,42 +50,51 @@ export function ModsGlance({ mods, updates, loading, error, kind, layout }: Prop
     )
   }
 
+  const detailed = layout === 'detailed'
+  // Every cell one height, which useGridFit counts on: two lines in the
+  // detailed layout, whether or not a mod reports a version.
+  const cell = detailed ? 'h-9 items-start' : 'h-6 items-center'
+
   return (
     <ul
       ref={measure}
       aria-label={`Installed ${kind}`}
-      className="grid min-h-0 flex-1 auto-rows-min grid-cols-[repeat(auto-fill,minmax(9rem,1fr))] content-start gap-x-3 gap-y-1 overflow-hidden px-3 pb-2"
+      className={`grid min-h-0 flex-1 auto-rows-min grid-cols-[repeat(auto-fill,minmax(9rem,1fr))] content-start gap-x-3 overflow-hidden px-3 pb-3 ${
+        detailed ? 'gap-y-2' : 'gap-y-1.5'
+      }`}
     >
       {shown.map((mod) => {
         const update = updates[mod.fileName]?.updateAvailable
         return (
           <li
             key={mod.fileName}
-            className="flex h-6 min-w-0 items-center gap-1.5"
+            className={`flex min-w-0 gap-1.5 ${cell}`}
             title={update ? `${mod.displayName}: update available` : mod.displayName}
           >
             <span
-              className={`h-1.5 w-1.5 shrink-0 rounded-full ${
-                update ? 'bg-warning' : mod.enabled ? 'bg-success' : 'bg-border-subtle'
+              className={`h-1.5 w-1.5 shrink-0 rounded-full ${detailed ? 'mt-1.5' : ''} ${
+                update ? 'bg-warning' : mod.enabled ? 'bg-success' : 'bg-text-faint'
               }`}
             />
-            <span
-              className={`min-w-0 truncate text-xs ${
-                mod.enabled ? 'text-text-primary' : 'text-text-faint'
-              }`}
-            >
-              {mod.displayName}
-            </span>
-            {layout === 'detailed' && mod.versionNumber && (
-              <span className="text-text-faint text-2xs shrink-0 font-mono">
-                {mod.versionNumber}
+            <span className="flex min-w-0 flex-col">
+              <span
+                className={`truncate text-xs leading-snug ${
+                  mod.enabled ? 'text-text-primary' : 'text-text-muted'
+                }`}
+              >
+                {mod.displayName}
               </span>
-            )}
+              {detailed && mod.versionNumber && (
+                <span className="text-text-faint text-2xs truncate font-mono leading-snug">
+                  {mod.versionNumber}
+                </span>
+              )}
+            </span>
           </li>
         )
       })}
       {more > 0 && (
-        <li className="text-text-muted flex h-6 items-center font-mono text-xs">+{more} more</li>
+        <li className={`text-text-muted flex font-mono text-xs ${cell}`}>+{more} more</li>
       )}
     </ul>
   )
