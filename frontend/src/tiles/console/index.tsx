@@ -129,7 +129,7 @@ function LogRow({
 }
 
 /**
- * A run of quiet lines in the expanded layout: one row with the count, which
+ * A run of quiet lines in the compact layout: one row with the count, which
  * opens in place to show them. The count is the whole point of the row, so
  * it stays visible while the run is open, as the row's header.
  */
@@ -183,7 +183,7 @@ export function ConsoleTile({ serverId, maximized, layout = 'default' }: TilePro
   const [query, setQuery] = useState('')
   const [levelFilter, setLevelFilter] = useState<LevelFilter>('all')
   const [sendError, setSendError] = useState<string | null>(null)
-  // The folds the user has opened in the expanded layout, by the fold's id
+  // The folds the user has opened in the compact layout, by the fold's id
   // (its first line), so an open fold stays open as lines arrive after it.
   const [openFolds, setOpenFolds] = useState<ReadonlySet<number>>(() => new Set())
   const scrollRef = useRef<HTMLDivElement | null>(null)
@@ -214,11 +214,11 @@ export function ConsoleTile({ serverId, maximized, layout = 'default' }: TilePro
     return result
   }, [lines, levelFilter, query])
 
-  // The expanded layout shows what matters and folds each run of chatter
+  // The compact layout shows what matters and folds each run of chatter
   // into one row (lib/logImportance.ts); detailed shows every line at a
   // tighter leading; default is the log as it comes.
   const entries = useMemo(
-    () => (layout === 'expanded' ? foldQuiet(filtered) : filtered),
+    () => (layout === 'compact' ? foldQuiet(filtered) : filtered),
     [filtered, layout],
   )
   const leading = layout === 'detailed' ? 'leading-4' : 'leading-5'

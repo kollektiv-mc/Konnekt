@@ -24,7 +24,7 @@ const SparkChart = lazy(() => import('./charts').then((m) => ({ default: m.Spark
  * performance figure and the bar because the RAM line on the chart is the same
  * number over time.
  *
- * The expanded layout keeps the figures, spread, and drops the chart; the
+ * The compact layout keeps the figures, spread, and drops the chart; the
  * detailed one sets them small and adds the megabytes and the player count.
  *
  * Presentational — it takes the history rather than fetching it, so the tile
@@ -58,7 +58,7 @@ export function PerformanceSummary({
   return (
     <div className="flex h-full flex-col gap-2 px-3 py-2">
       <div
-        className={`flex flex-wrap gap-x-5 gap-y-1 ${layout === 'expanded' ? 'min-h-0 flex-1 content-around' : 'shrink-0'}`}
+        className={`flex flex-wrap gap-x-5 gap-y-1 ${layout === 'compact' ? 'min-h-0 flex-1 content-around' : 'shrink-0'}`}
       >
         <Figure size={size} label="TPS" value={fmtTps(tps)} valueClass={tpsColor(tps)} />
         <Figure size={size} label="CPU" value={`${cpu.toFixed(1)}%`} />
@@ -75,7 +75,7 @@ export function PerformanceSummary({
         )}
       </div>
 
-      {layout === 'expanded' ? null : (
+      {layout === 'compact' ? null : (
         <div className="border-border-subtle border-hairline relative min-h-0 flex-1 overflow-hidden rounded">
           {/* Mounted before there is data, with the copy laid over it: the
               chunk loads and recharts' first render happens on tile mount

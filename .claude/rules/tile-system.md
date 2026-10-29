@@ -19,7 +19,7 @@ A tile's compact face leads with its key figure and keeps its detail below,
 built from `components/ui/Figure.tsx`'s `Figure` and `Headline`. A tile that
 sets `layouts: true` honours `TileProps.layout` (`types/index.ts`'s
 `TileLayout`: `default` sets the figure large over the detail, `detailed`
-sets it small and packs in more, `expanded` keeps the figure alone and spreads
+sets it small and packs in more, `compact` keeps the figure alone and spreads
 it over the tile), chosen per tile from the header's right-click menu at the
 pointer (`components/ui/ContextMenu.tsx`; `TileWrapper/LayoutMenu.tsx` puts
 the layouts in a "Layout" fly-out beside Maximize and Remove) and kept in

@@ -121,7 +121,7 @@ function ModsSummary({
   // server actually reflects, since a toggle here waits for a restart.
   return (
     <div
-      className={`flex h-full min-h-0 flex-col ${!classic && layout === 'expanded' ? 'justify-center' : ''}`}
+      className={`flex h-full min-h-0 flex-col ${!classic && layout === 'compact' ? 'justify-center' : ''}`}
     >
       {classic ? (
         // The classic face's header, behind Settings › Appearance › "Classic
@@ -157,7 +157,7 @@ function ModsSummary({
           />
         </div>
       )}
-      {(classic || layout !== 'expanded') && (
+      {(classic || layout !== 'compact') && (
         <div className="min-h-0 flex-1 overflow-y-auto">
           <InstalledPanel
             mods={installed}

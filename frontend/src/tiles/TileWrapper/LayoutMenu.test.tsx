@@ -52,8 +52,8 @@ describe('the tile header context menu', () => {
     fireEvent.mouseEnter(screen.getByRole('menuitem', { name: /Layout/ }))
     const current = screen.getByRole('menuitemradio', { name: /Detailed/ })
     expect(current.getAttribute('aria-checked')).toBe('true')
-    fireEvent.click(screen.getByRole('menuitemradio', { name: /Expanded/ }))
-    expect(onSetLayout).toHaveBeenCalledWith('stats', 'expanded')
+    fireEvent.click(screen.getByRole('menuitemradio', { name: /Compact/ }))
+    expect(onSetLayout).toHaveBeenCalledWith('stats', 'compact')
     expect(screen.queryByRole('menu')).toBeNull()
   })
 

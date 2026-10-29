@@ -15,7 +15,7 @@ interface Props {
  * they weigh, which one is active, and the list of them with their sizes.
  *
  * The count is the figure, the active world sits at the end of the same line,
- * and the list is the detail below: the default layout's shape. Expanded keeps
+ * and the list is the detail below: the default layout's shape. Compact keeps
  * the line alone, centred; detailed sets it small and adds when each world was
  * last played.
  *
@@ -29,7 +29,7 @@ export function WorldsSummary({ worlds, loading, error, layout = 'default' }: Pr
 
   return (
     <div
-      className={`flex h-full flex-col gap-2 overflow-hidden px-3 py-2 ${layout === 'expanded' ? 'justify-center' : ''}`}
+      className={`flex h-full flex-col gap-2 overflow-hidden px-3 py-2 ${layout === 'compact' ? 'justify-center' : ''}`}
     >
       <Headline
         size={layout === 'detailed' ? 'sm' : 'lg'}
@@ -44,7 +44,7 @@ export function WorldsSummary({ worlds, loading, error, layout = 'default' }: Pr
         }
       />
 
-      {layout !== 'expanded' && (
+      {layout !== 'compact' && (
         <div className="min-h-0 flex-1 overflow-y-auto">
           {loading && (
             <div className="flex h-full items-center justify-center">

@@ -8,7 +8,7 @@ import type { ReactNode } from 'react'
  * how many players, what the TPS is, when the last backup ran. The default
  * layout sets that figure large with its detail below it; the detailed layout
  * (per tile, from the header's context menu) sets it small to pack in more;
- * the expanded one keeps the figure alone and spreads it over the tile. `size`
+ * the compact one keeps the figure alone and spreads it over the tile. `size`
  * is that axis, so a tile never picks its own figure scale and the three
  * layouts stay one decision made in one place.
  *

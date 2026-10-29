@@ -65,7 +65,7 @@ function DetailRow({ label, value }: { label: string; value: string }) {
  * can never be pushed out of the tile by it.
  *
  * Detailed sets the figures small in one row, keeps the bar, and adds the
- * rows the figures do not already say. Expanded is the figures alone, spread.
+ * rows the figures do not already say. Compact is the figures alone, spread.
  *
  * It reads `useServerStore` and nothing else, which is why an Overview sitting
  * on the canvas costs no IPC at all — every section of the maximized dashboard
@@ -102,7 +102,7 @@ export function Vitals({ layout = 'default' }: { layout?: TileLayout }) {
     ? 'grid-cols-4 shrink-0'
     : 'grid-cols-4 tile-tall:grid-cols-2 tile-tall:content-around min-h-0 flex-1'
 
-  const bar = online && layout !== 'expanded' && (
+  const bar = online && layout !== 'compact' && (
     <div className="shrink-0">
       <div className="text-text-muted mb-1 flex justify-between text-xs">
         <span>Memory</span>
