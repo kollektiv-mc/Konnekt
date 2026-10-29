@@ -98,18 +98,6 @@ describe('SchedulerSummary downtime', () => {
     expect(screen.queryByText(/downtime/)).toBeNull()
   })
 
-  it('explains in the tooltip that the stop lands after the trigger', () => {
-    render(
-      <SchedulerSummary
-        graphs={[graph('g1', 'Restart', '__restart__')]}
-        blockDefs={blockDefs}
-        nextRuns={{ g1: soon() }}
-      />,
-    )
-    const row = screen.getAllByText(/^next downtime in 2h$/)[1]
-    expect(row.getAttribute('title')).toMatch(/lands a little after/)
-  })
-
   it('names an event-driven graph as before', () => {
     render(
       <SchedulerSummary

@@ -297,7 +297,7 @@ export function ServerEditForm({
             type="button"
             onClick={onBrowse}
             className="border-border-subtle text-text-muted hover:border-border-hover hover:text-text-primary border-hairline shrink-0 rounded px-2.5 py-1 font-mono text-xs transition-colors"
-            title="Browse"
+            aria-label="Browse"
           >
             …
           </button>

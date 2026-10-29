@@ -3,10 +3,7 @@
 // anyway at best ignores it and at worst refuses to start.
 export function ClientOnlyBadge() {
   return (
-    <span
-      title="Client only: this does not load on a dedicated server"
-      className="text-warning text-2xs shrink-0 rounded bg-white/[0.06] px-1 text-xs"
-    >
+    <span className="text-warning text-2xs shrink-0 rounded bg-white/[0.06] px-1 text-xs">
       client only
     </span>
   )

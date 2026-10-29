@@ -145,7 +145,7 @@ export function LayoutPresets() {
             {preset.name !== 'Default' && (
               <IconButton
                 onClick={() => handleDelete(preset.name)}
-                title="Delete preset"
+                label="Delete preset"
                 tone="danger"
               >
                 <Icon icon={X} />

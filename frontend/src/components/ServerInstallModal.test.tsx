@@ -30,13 +30,13 @@ describe('ServerInstallModal browse button', () => {
 
   it('offers Browse on the desktop', () => {
     render(<ServerInstallModal />)
-    expect(screen.getByTitle('Browse')).toBeTruthy()
+    expect(screen.getByLabelText('Browse')).toBeTruthy()
   })
 
   it('keeps the path input but not Browse in a remote browser', () => {
     vi.mocked(isRemoteBrowser).mockReturnValue(true)
     render(<ServerInstallModal />)
-    expect(screen.queryByTitle('Browse')).toBeNull()
+    expect(screen.queryByLabelText('Browse')).toBeNull()
     expect(screen.getByPlaceholderText('Install directory')).toBeTruthy()
   })
 })

@@ -68,14 +68,14 @@ afterEach(() => {
 describe('BackupsTile open backup folder', () => {
   it('offers the folder button on the desktop', () => {
     render(<BackupsTile serverId="s1" maximized />)
-    expect(screen.getByTitle('Open backup folder')).toBeTruthy()
+    expect(screen.getByLabelText('Open backup folder')).toBeTruthy()
   })
 
   it('does not offer it in a remote browser', () => {
     vi.mocked(isRemoteBrowser).mockReturnValue(true)
     render(<BackupsTile serverId="s1" maximized />)
-    expect(screen.queryByTitle('Open backup folder')).toBeNull()
-    expect(screen.getByTitle('Set up scheduled backups in the Scheduler tile')).toBeTruthy()
+    expect(screen.queryByLabelText('Open backup folder')).toBeNull()
+    expect(screen.getByRole('button', { name: 'schedule' })).toBeTruthy()
   })
 })
 
@@ -106,7 +106,6 @@ describe('BackupsTile world view', () => {
     expect(shown('After the raid')).toBe(true)
     expect(shown('Build plot')).toBe(true)
     expect(shown('Nightly full')).toBe(false)
-    expect(screen.getAllByTitle('World backed up').length).toBeGreaterThan(0)
     expect(screen.getByText('3 world backups')).toBeTruthy()
     expect(screen.queryByText(/coming soon/)).toBeNull()
   })

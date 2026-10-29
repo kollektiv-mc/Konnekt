@@ -138,7 +138,7 @@ export function PlayerDetailPopup({ player: initial, serverId, onClose, onMutate
               </span>
             )}
           </div>
-          <IconButton onClick={onClose} title="Close">
+          <IconButton onClick={onClose} label="Close">
             <Icon icon={X} />
           </IconButton>
         </div>

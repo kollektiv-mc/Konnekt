@@ -70,7 +70,7 @@ export function WorldInfoPanel({ world, onClose }: WorldInfoPanelProps) {
             </div>
           )}
         </div>
-        <IconButton onClick={onClose} title="Close" className="mt-0.5">
+        <IconButton onClick={onClose} label="Close" className="mt-0.5">
           <Icon icon={X} />
         </IconButton>
       </div>

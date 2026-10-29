@@ -252,7 +252,6 @@ export function CommandLibrary({ serverId }: { serverId: string }) {
                 <button
                   key={p.label}
                   onClick={() => void add(makeItem(p)).catch(console.error)}
-                  title={p.value}
                   className="border-border-subtle text-text-secondary hover:border-border-hover hover:bg-hover hover:text-text-primary truncate rounded border px-2 py-1 text-left text-xs transition-all"
                 >
                   {p.label}

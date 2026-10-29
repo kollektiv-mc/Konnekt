@@ -95,7 +95,7 @@ export function ServerInstallModal() {
               onClick={browse}
               disabled={running || done}
               className="border-border-subtle text-text-muted hover:border-border-hover hover:text-text-primary border-hairline shrink-0 rounded px-2 py-1 font-mono text-xs transition-colors disabled:opacity-40"
-              title="Browse"
+              aria-label="Browse"
             >
               …
             </button>

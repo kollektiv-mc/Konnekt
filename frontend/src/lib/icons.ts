@@ -75,4 +75,7 @@ export {
   // closed, the same box opened while it is out. Lucide's one closed/open pair.
   Package,
   PackageOpen,
+  // The scheduler canvas's zoom and fit-view buttons, which replace xyflow's
+  // defaults so they carry no native tooltip (`CanvasControls`).
+  Fullscreen,
 } from 'lucide-react'

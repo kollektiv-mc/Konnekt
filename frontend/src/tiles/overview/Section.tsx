@@ -45,7 +45,7 @@ export function Section({ tileId, label, icon, meta, children }: Props) {
         )}
         <IconButton
           onClick={() => requestMaximize(tileId, null)}
-          title={`Open ${label}`}
+          label={`Open ${label}`}
           className={meta === undefined ? 'ml-auto' : ''}
         >
           <Icon icon={Maximize2} />

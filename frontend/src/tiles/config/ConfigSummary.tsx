@@ -142,9 +142,7 @@ function PropRow({
 
   return (
     <div className="border-border-subtle border-b-hairline flex items-center gap-2 py-1">
-      <span className="text-text-muted min-w-0 flex-1 truncate text-xs" title={label}>
-        {label}
-      </span>
+      <span className="text-text-muted min-w-0 flex-1 truncate text-xs">{label}</span>
 
       {editing ? (
         <input
@@ -170,7 +168,6 @@ function PropRow({
           className={`max-w-[55%] shrink-0 truncate text-right font-mono text-xs font-medium transition-opacity ${colorClass} ${
             saving ? 'opacity-40' : 'opacity-100'
           } ${isInteractive ? 'cursor-pointer' : 'cursor-default'}`}
-          title={isInteractive ? undefined : 'Double-click to edit'}
           onClick={
             type === 'boolean' ? onToggle : type === 'enum' && options?.length ? onCycle : undefined
           }
@@ -300,7 +297,7 @@ export function ConfigSummary({ serverId }: Props) {
           onMouseLeave={(e) => {
             ;(e.currentTarget as HTMLButtonElement).style.color = 'var(--text-faint)'
           }}
-          title="Reload from disk"
+          aria-label="Reload from disk"
         >
           ↻
         </button>

@@ -153,7 +153,6 @@ function QuietFoldRow({
         onClick={onToggle}
         aria-expanded={open}
         className="text-text-faint hover:text-text-muted flex items-center gap-2 text-left transition-colors"
-        title={open ? 'Hide these lines' : 'Show these lines'}
       >
         <span>{open ? '▾' : '▸'}</span>
         <span>
@@ -420,7 +419,6 @@ export function ConsoleTile({ serverId, maximized, layout = 'default' }: TilePro
         <button
           type="submit"
           disabled={!acceptsCommands}
-          title={acceptsCommands ? undefined : 'The server is not running'}
           className="border-border-subtle text-text-secondary border-hairline rounded px-3 py-1 text-xs transition-colors disabled:opacity-40"
           onMouseEnter={(e) => {
             ;(e.currentTarget as HTMLButtonElement).style.color = 'var(--text-primary)'
@@ -445,7 +443,7 @@ export function ConsoleTile({ serverId, maximized, layout = 'default' }: TilePro
             ;(e.currentTarget as HTMLButtonElement).style.color = 'var(--text-faint)'
             ;(e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--border-subtle)'
           }}
-          title="Clear console"
+          aria-label="Clear console"
         >
           clr
         </button>
@@ -469,7 +467,6 @@ export function ConsoleTile({ serverId, maximized, layout = 'default' }: TilePro
           type="button"
           onClick={() => updateSettings({ consoleQuickCommandsCollapsed: false }).catch(() => {})}
           className="border-border-subtle text-text-faint hover:text-text-secondary border-l-hairline flex w-6 shrink-0 items-center justify-center transition-colors max-sm:hidden"
-          title="Show quick commands"
           aria-label="Show quick commands"
         >
           <Icon icon={ChevronLeft} />
@@ -486,7 +483,7 @@ export function ConsoleTile({ serverId, maximized, layout = 'default' }: TilePro
               onClick={() =>
                 updateSettings({ consoleQuickCommandsCollapsed: true }).catch(() => {})
               }
-              title="Hide quick commands"
+              label="Hide quick commands"
             >
               <Icon icon={ChevronRight} />
             </IconButton>

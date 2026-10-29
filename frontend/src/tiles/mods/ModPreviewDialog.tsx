@@ -250,7 +250,7 @@ function ModPreview({
                 Open in Browser
               </button>
             )}
-            <IconButton onClick={onClose} title="Close">
+            <IconButton onClick={onClose} label="Close">
               <Icon icon={X} />
             </IconButton>
           </div>

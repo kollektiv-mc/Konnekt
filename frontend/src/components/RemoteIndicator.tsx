@@ -47,7 +47,6 @@ export function RemoteIndicator({ onOpen }: Props) {
     <button
       type="button"
       onClick={onOpen}
-      title={title}
       aria-label={title}
       className={`titlebar-no-drag border-hairline text-2xs hover:bg-hover mr-1 flex h-6 items-center gap-1.5 rounded px-2 transition-colors ${tone}`}
     >

@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import type { models } from '../../../wailsjs/go/models'
 import { untilMs } from '../../lib/format'
-import { DOWNTIME_TOOLTIP, stoppingGraphIds } from './editor/blockMeta'
+import { stoppingGraphIds } from './editor/blockMeta'
 
 interface Props {
   graphs: models.Graph[]
@@ -70,10 +70,7 @@ export function ClassicSchedulerSummary({ graphs, blockDefs, nextRuns, loading, 
                   {g.name || g.id}
                 </span>
                 {g.enabled && next > 0 && (
-                  <span
-                    className="text-text-faint shrink-0 font-mono text-xs"
-                    title={stops ? DOWNTIME_TOOLTIP : 'Next scheduled run'}
-                  >
+                  <span className="text-text-faint shrink-0 font-mono text-xs">
                     {stops ? 'downtime ' : ''}
                     {untilMs(next)}
                   </span>
@@ -89,14 +86,9 @@ export function ClassicSchedulerSummary({ graphs, blockDefs, nextRuns, loading, 
 
       <div className="px-2 pb-1">
         {error ? (
-          <span className="text-danger font-mono text-xs" title={error}>
-            scheduler unavailable
-          </span>
+          <span className="text-danger font-mono text-xs">scheduler unavailable</span>
         ) : (
-          <span
-            className="text-text-faint font-mono text-xs"
-            title={soonestStops ? DOWNTIME_TOOLTIP : undefined}
-          >
+          <span className="text-text-faint font-mono text-xs">
             {soonest
               ? `${soonestStops ? 'next downtime' : 'next run'} ${untilMs(soonest)}`
               : 'maximize to edit'}

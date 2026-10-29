@@ -34,40 +34,40 @@ function renderCard(props: Partial<Parameters<typeof ContentCard>[0]> = {}) {
 describe('ContentCard install failures', () => {
   it('shows a failed quick install on the card itself', async () => {
     const onInstallLatest = vi.fn().mockRejectedValue('install refused: nobody answered')
-    const { getByTitle, findByRole, getByText } = renderCard({ onInstallLatest })
+    const { getByLabelText, findByRole, getByText } = renderCard({ onInstallLatest })
 
-    fireEvent.click(getByTitle('Install latest version'))
+    fireEvent.click(getByLabelText('Install latest version'))
 
     const alert = await findByRole('alert')
     expect(alert.textContent).toBe('install refused: nobody answered')
     // The card is still there to retry from, with its button free again.
     expect(getByText('Sodium')).toBeTruthy()
     await waitFor(() =>
-      expect(getByTitle('Install latest version').hasAttribute('disabled')).toBe(false),
+      expect(getByLabelText('Install latest version').hasAttribute('disabled')).toBe(false),
     )
   })
 
   it('clears the message when the install is tried again', async () => {
     const onInstallLatest = vi.fn().mockRejectedValueOnce(new Error('boom'))
-    const { getByTitle, findByRole, queryByRole } = renderCard({ onInstallLatest })
+    const { getByLabelText, findByRole, queryByRole } = renderCard({ onInstallLatest })
 
-    fireEvent.click(getByTitle('Install latest version'))
+    fireEvent.click(getByLabelText('Install latest version'))
     expect((await findByRole('alert')).textContent).toBe('boom')
 
     onInstallLatest.mockResolvedValueOnce(undefined)
-    fireEvent.click(getByTitle('Install latest version'))
+    fireEvent.click(getByLabelText('Install latest version'))
     await waitFor(() => expect(queryByRole('alert')).toBeNull())
   })
 
   it('keeps the dependency dialog open and says why a confirmed install failed', async () => {
     const onInstallLatest = vi.fn().mockRejectedValue(new ConfirmInstallError([], 'ver9', true))
     const onInstall = vi.fn().mockRejectedValue(new Error('install refused: desktop said no'))
-    const { getByTitle, findByText, findByRole, getByText } = renderCard({
+    const { getByLabelText, findByText, findByRole, getByText } = renderCard({
       onInstallLatest,
       onInstall,
     })
 
-    fireEvent.click(getByTitle('Install latest version'))
+    fireEvent.click(getByLabelText('Install latest version'))
     fireEvent.click(await findByText('Install anyway'))
 
     const alert = await findByRole('alert')

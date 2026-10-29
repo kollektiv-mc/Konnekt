@@ -35,9 +35,7 @@ export function KommandsPanel({ status, saved, items, onAdd }: KommandsPanelProp
   return (
     <div className="border-border-subtle flex flex-col gap-2 border-t pt-3">
       <div className="flex items-center gap-2">
-        <span className="text-text-secondary text-xs font-semibold" title={status?.path}>
-          Kommands
-        </span>
+        <span className="text-text-secondary text-xs font-semibold">Kommands</span>
         {status?.installed && !status.unsupported && !status.error && (
           <span className="text-text-faint text-2xs">{status.savedCount} linked</span>
         )}
@@ -81,15 +79,12 @@ export function KommandsPanel({ status, saved, items, onAdd }: KommandsPanelProp
               >
                 <div className="min-w-0 flex-1">
                   <div className="text-text-secondary truncate text-xs">{sc.label}</div>
-                  <div className="text-text-faint text-2xs truncate font-mono" title={sc.command}>
-                    {sc.command}
-                  </div>
+                  <div className="text-text-faint text-2xs truncate font-mono">{sc.command}</div>
                 </div>
                 <button
                   onClick={() => onAdd(sc)}
                   disabled={has}
                   aria-label={has ? `${sc.label} is added` : `Add ${sc.label}`}
-                  title={has ? 'Already a command here' : 'Add as a command that follows this'}
                   className="border-border-subtle text-text-secondary hover:border-border-hover hover:bg-hover hover:text-text-primary disabled:hover:border-border-subtle h-6 w-14 shrink-0 rounded border text-xs transition-all disabled:cursor-default disabled:opacity-40 disabled:hover:bg-transparent"
                 >
                   {has ? 'Added' : 'Add'}

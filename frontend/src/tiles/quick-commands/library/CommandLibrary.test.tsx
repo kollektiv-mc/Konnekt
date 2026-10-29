@@ -86,7 +86,6 @@ describe('CommandLibrary link states', () => {
     // The label and command are Kommands'. There is no field to type into,
     // because an edit here would be undone by the next sync; the row can still
     // be deleted, since the user added it and nothing brings it back.
-    expect(screen.getByTitle(/follows its original in Kommands/i)).toBeTruthy()
     expect(screen.queryByLabelText('Command for Kit')).toBeNull()
     expect(screen.queryByLabelText('Label for Kit')).toBeNull()
     expect(screen.getByRole('button', { name: 'Delete Kit' })).toBeTruthy()
@@ -141,12 +140,11 @@ describe('CommandLibrary reordering', () => {
     expect(App.SaveCommandButtons).not.toHaveBeenCalled()
   })
 
-  it('is off while the list is filtered, and says why', async () => {
+  it('is off while the list is filtered', async () => {
     await mount(two)
     fireEvent.change(screen.getByLabelText('Search commands'), { target: { value: 'alp' } })
     const handle = screen.getByRole('button', { name: 'Reorder Alpha' }) as HTMLButtonElement
     expect(handle.disabled).toBe(true)
-    expect(handle.title).toMatch(/clear the search/i)
     fireEvent.keyDown(handle, { key: 'ArrowDown' })
     expect(App.SaveCommandButtons).not.toHaveBeenCalled()
   })

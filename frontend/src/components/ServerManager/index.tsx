@@ -121,7 +121,7 @@ export function ServerManager() {
             <span className="font-title text-text-primary truncate text-sm font-medium">
               {isNew ? 'Add a server' : current.name}
             </span>
-            <IconButton onClick={closeServerManager} title="Close">
+            <IconButton onClick={closeServerManager} label="Close">
               <Icon icon={X} />
             </IconButton>
           </div>

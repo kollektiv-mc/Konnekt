@@ -127,7 +127,6 @@ export function QuickCommandsPanel({ serverId, columns }: QuickCommandsPanelProp
                   item.value !== 'force-stop' &&
                   lifecycle.busy !== null
                 }
-                title={item.value}
                 className="cmd-button border-border-subtle text-text-secondary hover:border-border-hover hover:bg-hover hover:text-text-primary flex min-w-0 flex-col justify-center gap-0.5 rounded border text-left transition-all disabled:opacity-40"
               >
                 <span className="flex items-center gap-1.5">

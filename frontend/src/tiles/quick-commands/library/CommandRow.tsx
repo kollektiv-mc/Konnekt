@@ -104,11 +104,6 @@ export function CommandRow({
         {...handleProps}
         disabled={!canReorder}
         aria-label={`Reorder ${item.label}`}
-        title={
-          canReorder
-            ? 'Drag to reorder, or use the arrow keys'
-            : 'Clear the search and filter to reorder'
-        }
         className={`text-text-faint hover:text-text-secondary flex h-6 w-4 shrink-0 touch-none items-center justify-center ${
           canReorder ? 'cursor-grab active:cursor-grabbing' : 'cursor-not-allowed'
         }`}
@@ -117,9 +112,7 @@ export function CommandRow({
       </button>
 
       {linked ? (
-        <span className={`text-text-primary w-40 shrink-0 ${TEXT}`} title={item.label}>
-          {item.label}
-        </span>
+        <span className={`text-text-primary w-40 shrink-0 ${TEXT}`}>{item.label}</span>
       ) : (
         <input
           type="text"
@@ -131,7 +124,6 @@ export function CommandRow({
             if (e.key === 'Escape') setLabel(item.label)
           }}
           aria-label={`Label for ${item.label}`}
-          title="Click to rename"
           className={`text-text-primary w-40 shrink-0 ${FIELD}`}
         />
       )}
@@ -147,7 +139,6 @@ export function CommandRow({
             if (e.key === 'Escape') setValue(item.value)
           }}
           aria-label={`Command for ${item.label}`}
-          title="Click to edit"
           className={`text-text-secondary min-w-0 flex-1 font-mono ${FIELD}`}
         />
       ) : (
@@ -155,7 +146,6 @@ export function CommandRow({
           className={`min-w-0 flex-1 font-mono ${TEXT} ${
             linked ? 'text-text-secondary' : 'text-text-faint'
           }`}
-          title={linked ? item.value : 'A lifecycle or dialog button has a fixed action'}
         >
           {item.value}
         </span>
@@ -176,7 +166,7 @@ export function CommandRow({
           Run
         </button>
         {linked ? (
-          <IconButton onClick={onDuplicate} title={`Make a copy of ${item.label}`}>
+          <IconButton onClick={onDuplicate} label={`Make a copy of ${item.label}`}>
             <Icon icon={CopyPlus} size="xs" />
           </IconButton>
         ) : (
@@ -184,7 +174,7 @@ export function CommandRow({
           // offered.
           <span aria-hidden className="h-6 w-6 shrink-0" />
         )}
-        <IconButton onClick={onRemove} tone="danger" title={`Delete ${item.label}`}>
+        <IconButton onClick={onRemove} tone="danger" label={`Delete ${item.label}`}>
           <Icon icon={Trash2} size="xs" />
         </IconButton>
       </div>
