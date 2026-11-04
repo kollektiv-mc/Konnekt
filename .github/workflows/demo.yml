@@ -6,13 +6,15 @@
 # Cloudflare Pages project instead, and the site links out to it.
 #
 # Published from three triggers. A release is what the demo is *of*, so a tag
-# rebuilds it and the demo can never be older than the newest build; a nightly
-# run keeps it honest between releases; and workflow_dispatch publishes on
-# demand. A pull request that touches the demo runs the build and its checks
-# but neither films nor publishes, so a binding the demo does not answer is red
-# before it merges. A scene that can no longer find its controls is red at the
-# next nightly run instead, which is the trade for not installing ffmpeg and a
-# browser and filming every scene on every pull request. None of them ever
+# rebuilds it and the demo can never be older than the newest build; a weekly
+# run keeps it honest between releases, and only films when something the demo
+# renders changed since the published one (the `changes` job); and
+# workflow_dispatch publishes on demand, always. A pull request that touches
+# the demo runs the build and its checks but neither films nor publishes, so a
+# binding the demo does not answer is red before it merges. A scene that can no
+# longer find its controls is red at the next weekly run instead, which is the
+# trade for not installing ffmpeg and a browser and filming every scene on
+# every pull request. None of them ever
 # writes frontend/dist, which main.go embeds and check-bundle measures.
 #
 # The website's feature clips are filmed here too (demo/record.mjs), from the
@@ -24,9 +26,10 @@ name: demo
 on:
   # GitHub runs a schedule on the latest commit of the default branch, and
   # delays runs at the start of every hour, so this sits off the hour. In a
-  # public repository it is disabled after 60 days without activity.
+  # public repository it is disabled after 60 days without activity. Mondays,
+  # and skipped by the `changes` job when there is nothing new to film.
   schedule:
-    - cron: "17 3 * * *"
+    - cron: "17 3 * * 1"
   # Nothing else can change what the demo renders. A website-only or docs-only
   # pull request would otherwise build it for no reason. The publish step and
   # the filming are gated on the event, so this never films or deploys.
@@ -51,7 +54,43 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # Whether the weekly run has anything to film. The published demo records
+  # the commit it was filmed from (demo/record.mjs writes it to
+  # scenes/index.json), and the paths below are the pull_request filter above:
+  # the only ones that can change what the demo renders. Unchanged since that
+  # commit means the clips on the site are still the current ones, and the
+  # whole demo job is skipped. Every other trigger films without asking, and
+  # anything this step cannot establish (no published demo, no commit in it,
+  # a commit it cannot fetch) films too, because a wasted run is cheaper than
+  # a stale demo.
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      film: ${{ steps.diff.outputs.film }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        if: github.event_name == 'schedule'
+
+      - id: diff
+        env:
+          EVENT: ${{ github.event_name }}
+          PROJECT: ${{ vars.DEMO_PAGES_PROJECT }}
+        run: |
+          film() { echo "$1"; echo "film=$2" >> "$GITHUB_OUTPUT"; exit 0; }
+          [ "$EVENT" = schedule ] || film "Not a scheduled run: filming." true
+          [ -n "$PROJECT" ] || film "No demo project to compare against: filming." true
+          last=$(curl -fsS --retry 3 "https://$PROJECT.pages.dev/scenes/index.json" | jq -r '.commit // empty') || last=
+          [ -n "$last" ] || film "The published demo names no commit: filming." true
+          git fetch --no-tags --depth=1 origin "$last" || film "Cannot fetch $last, the published demo's commit: filming." true
+          if git diff --quiet "$last" HEAD -- frontend demo 'backend/services/scheduler_blocks*.go' .github/workflows/demo.yml; then
+            film "Nothing the demo renders changed since $last, which is what is published: skipping." false
+          fi
+          git diff --stat "$last" HEAD -- frontend demo 'backend/services/scheduler_blocks*.go' .github/workflows/demo.yml
+          film "Changed since $last: filming." true
+
   demo:
+    needs: changes
+    if: needs.changes.outputs.film == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
