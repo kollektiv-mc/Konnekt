@@ -77,6 +77,20 @@
         "dark": { "hex": "#ffd84d" },
         "light": null
       }
+    },
+    "brand": {
+      "brand-konnekt": {
+        "dark": { "hex": "#4ade80" },
+        "light": { "hex": "#22c55e" }
+      },
+      "brand-kommands": {
+        "dark": { "hex": "#fb923c" },
+        "light": { "hex": "#f97316" }
+      },
+      "brand-kube": {
+        "dark": { "hex": "#a57ffe" },
+        "light": { "hex": "#9362f4" }
+      }
     }
   },
   "type": {

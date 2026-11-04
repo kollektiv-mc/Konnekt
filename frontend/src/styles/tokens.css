@@ -28,6 +28,9 @@
   --color-warning: var(--warning);
   --color-danger: var(--danger);
   --color-sun: var(--sun);
+  --color-brand-konnekt: var(--brand-konnekt);
+  --color-brand-kommands: var(--brand-kommands);
+  --color-brand-kube: var(--brand-kube);
 }
 
 /* Everything else is a plain @theme block, deliberately not `inline`. Under
@@ -153,6 +156,12 @@
   --danger: rgb(var(--danger-rgb));
   --sun-rgb: 255 216 77;
   --sun: rgb(var(--sun-rgb));
+  --brand-konnekt-rgb: 74 222 128;
+  --brand-konnekt: rgb(var(--brand-konnekt-rgb));
+  --brand-kommands-rgb: 251 146 60;
+  --brand-kommands: rgb(var(--brand-kommands-rgb));
+  --brand-kube-rgb: 165 127 254;
+  --brand-kube: rgb(var(--brand-kube-rgb));
 }
 
 [data-theme='light'] {
@@ -170,4 +179,7 @@
   --success-rgb: 22 163 74;
   --warning-rgb: 217 119 6;
   --danger-rgb: 239 68 68;
+  --brand-konnekt-rgb: 34 197 94;
+  --brand-kommands-rgb: 249 115 22;
+  --brand-kube-rgb: 147 98 244;
 }
