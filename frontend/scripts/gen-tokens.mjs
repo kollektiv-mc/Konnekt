@@ -25,6 +25,10 @@ const WEBSITE_OUT = new URL('../../website/tokens.css', import.meta.url)
 
 const SUPPORTED_VERSION = 1
 
+// The colour groups the shared schema says a consumer exposes as separable
+// channels as well as a composed value: status, and each product's brand colour.
+const CHANNEL_GROUPS = new Set(['status', 'brand'])
+
 // Semantic token name -> the utility suffix it is exposed under. Tailwind maps
 // --color-canvas to bg-canvas/text-canvas/border-canvas, so this is where
 // "bg-base" becomes "canvas". It lives here rather than in the shared source
@@ -285,7 +289,7 @@ function emitCss(src) {
         // A null light value means the token inherits its dark one; emitting it
         // again would be a second copy to keep in step for no behavioural gain.
         if (value == null) continue
-        if (group === 'status') {
+        if (CHANNEL_GROUPS.has(group)) {
           // Channel triplets, so alpha composes from one token:
           // rgb(var(--accent-rgb) / 0.2) needs no second --accent-20 token.
           push(`  --${name}-rgb: ${channels(value.hex)};`)
@@ -337,7 +341,7 @@ function emitWebsiteCss(src) {
   push(`:root {`)
   for (const [group, tokens] of Object.entries(src.color)) {
     for (const [name, token] of Object.entries(tokens)) {
-      if (group === 'status') {
+      if (CHANNEL_GROUPS.has(group)) {
         push(`  --${name}-rgb: ${channels(token.dark.hex)};`)
         push(`  --${name}: rgb(var(--${name}-rgb));`)
       } else {

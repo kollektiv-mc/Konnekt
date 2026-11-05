@@ -32,6 +32,12 @@
   --danger: rgb(var(--danger-rgb));
   --sun-rgb: 255 216 77;
   --sun: rgb(var(--sun-rgb));
+  --brand-konnekt-rgb: 74 222 128;
+  --brand-konnekt: rgb(var(--brand-konnekt-rgb));
+  --brand-kommands-rgb: 251 146 60;
+  --brand-kommands: rgb(var(--brand-kommands-rgb));
+  --brand-kube-rgb: 165 127 254;
+  --brand-kube: rgb(var(--brand-kube-rgb));
 
   --font-sans: 'Ranade', system-ui, -apple-system, 'Segoe UI', 'Roboto', 'Helvetica Neue', 'Arial', sans-serif;
   --font-title: 'Excon', var(--font-sans);
