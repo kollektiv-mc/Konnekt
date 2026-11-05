@@ -648,6 +648,24 @@ func (a *App) GetConsoleHistory(serverID string) ([]models.ConsoleLine, error) {
 	return a.serverService.GetConsoleHistory(serverID), nil
 }
 
+// GetServerLogTail returns the end of the named server's own log file,
+// logs/latest.log under its working directory, oldest first and at most lines
+// of them (services.ServerLogMaxLines when lines is zero or over it). The
+// console ring is the live view and dies with Konnekt; the file is the record
+// of a start, a crash or a mod error, which is what the MCP server_log tool
+// reads (#762). The path is fixed, so the only caller-supplied name is the
+// server id, and the config lookup is what resolves it.
+func (a *App) GetServerLogTail(serverID string, lines int) ([]string, error) {
+	cfg, err := a.configService.GetServerConfig(serverID)
+	if err != nil {
+		return nil, err
+	}
+	if cfg.WorkingDir == "" {
+		return nil, fmt.Errorf("server %q has no working directory", serverID)
+	}
+	return services.ReadServerLogTail(cfg.WorkingDir, lines)
+}
+
 func (a *App) GetPlayerRoster(serverID string) ([]models.Player, error) {
 	return a.playerService.GetRoster(serverID)
 }

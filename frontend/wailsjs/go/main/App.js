@@ -202,6 +202,10 @@ export function GetServerConfigs() {
   return window['go']['main']['App']['GetServerConfigs']();
 }
 
+export function GetServerLogTail(arg1, arg2) {
+  return window['go']['main']['App']['GetServerLogTail'](arg1, arg2);
+}
+
 export function GetServerStatus(arg1) {
   return window['go']['main']['App']['GetServerStatus'](arg1);
 }

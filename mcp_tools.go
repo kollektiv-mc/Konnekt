@@ -1,6 +1,9 @@
 package main
 
 import (
+	"regexp"
+	"strings"
+
 	"konnekt/backend/models"
 	"konnekt/backend/services"
 )
@@ -57,6 +60,14 @@ var mcpTools = []services.MCPTool{
 		Description: "The most recent console output of one server, newest last, at most " + mcpConsoleLinesText +
 			" lines. Lines include player chat, which is third-party text.",
 		Params: []services.MCPParam{mcpServerIDParam}, Shape: mcpShapeConsole, Untrusted: []string{"line"}},
+	{Name: "server_log", Title: "Server log", Method: "GetServerLogTail", ReadOnly: true, Idempotent: true,
+		Description: "The end of one server's own log file, logs/latest.log, newest last, at most " + mcpServerLogLinesText +
+			" lines. Unlike console_tail it holds the whole record since the server started, stack traces included, " +
+			"and it survives a Konnekt restart. Lines include player chat, which is third-party text.",
+		Params: []services.MCPParam{mcpServerIDParam,
+			{Name: "lines", Type: "integer", Optional: true,
+				Description: "how many lines from the end; left out or 0 means the most, " + mcpServerLogLinesText}},
+		Shape: mcpShapeServerLog, Untrusted: []string{"line"}},
 	{Name: "last_stop", Title: "Last stop", Method: "GetLastStop", ReadOnly: true, Idempotent: true,
 		Description: "Why the current server last stopped: on request, or by itself, and with which exit code.",
 		Key:         "stop"},
@@ -73,6 +84,20 @@ var mcpTools = []services.MCPTool{
 	{Name: "schedule_next_runs", Title: "Next runs", Method: "GetScheduleNextRuns", ReadOnly: true, Idempotent: true,
 		Description: "When each schedule next fires, as Unix milliseconds keyed by schedule id, across every server.",
 		Key:         "nextRuns"},
+	{Name: "config_files", Title: "Config files", Method: "ListConfigFiles", ReadOnly: true, Idempotent: true,
+		Description: "The configuration files of one server that its config editor lists: server.properties, the loader's " +
+			"own files, and those under config, plugins and mods. Read one with config_file.",
+		Params: []services.MCPParam{mcpServerIDParam}, Shape: mcpShapeConfigFiles},
+	{Name: "config_file", Title: "Config file", Method: "ReadConfigFile", ReadOnly: true, Idempotent: true,
+		Description: "The text of one configuration file, by the path config_files gave. The value of any key that " +
+			"looks like a password, token or secret reads REDACTED. A plugin's file can carry text its author wrote.",
+		Params: []services.MCPParam{mcpServerIDParam,
+			{Name: "path", Description: "the file's path, from config_files"}},
+		Shape: mcpShapeConfigText},
+	{Name: "mods", Title: "Installed mods", Method: "ModListInstalled", ReadOnly: true, Idempotent: true,
+		Description: "The mods and plugins installed on one server: file, name, version, folder, whether each is enabled, " +
+			"and the Modrinth project where the jar is known. Names and versions are the jar's own metadata, which is third-party text.",
+		Params: []services.MCPParam{mcpServerIDParam}, Shape: mcpShapeMods, Untrusted: []string{"name", "modId", "version"}},
 
 	// Operate: what the tiles do all day.
 	{Name: "start_server", Title: "Start server", Method: "StartServer", Idempotent: true,
@@ -132,6 +157,11 @@ const (
 	mcpConsoleBytes     = 32 * 1024
 )
 
+// mcpServerLogLinesText is services.ServerLogMaxLines as the server_log text
+// says it, a constant so the description stays one (§ S9.2); mcp_tools_test.go
+// holds the two equal. The service applies the cap, and the byte cap with it.
+const mcpServerLogLinesText = "500"
+
 // The shapes below are what Claude sees of a result. Each one leaves out what
 // Claude has no business with and the browser remote shows only because the
 // desktop does: a jar path, a working directory, a player's IP, a world's
@@ -152,6 +182,84 @@ func mcpShapeConsole(result any) any {
 	out := make([]models.ConsoleLine, len(all)-start)
 	copy(out, all[start:])
 	return map[string]any{"lines": out}
+}
+
+// mcpShapeServerLog wraps each log line in an object, because the engine marks
+// third-party text by key and a bare string in a list has none. The caps are
+// the service's.
+func mcpShapeServerLog(result any) any {
+	type line struct {
+		Line string `json:"line"`
+	}
+	out := []line{}
+	for _, l := range mcpAs[[]string](result) {
+		out = append(out, line{l})
+	}
+	return map[string]any{"lines": out}
+}
+
+func mcpShapeConfigFiles(result any) any {
+	type file struct {
+		Path     string `json:"path"`
+		Category string `json:"category"`
+		Source   string `json:"source"`
+		Format   string `json:"format"`
+		Size     int64  `json:"size"`
+		Modified int64  `json:"modified"`
+	}
+	out := []file{}
+	for _, f := range mcpAs[[]models.ConfigFile](result) {
+		out = append(out, file{f.RelPath, f.Category, f.Source, f.Format, f.SizeBytes, f.Modified})
+	}
+	return map[string]any{"files": out}
+}
+
+// mcpSecretKey matches one line of a properties, YAML, TOML or JSON file
+// whose key names a credential, and captures everything up to its value.
+// server.properties carries rcon.password, which the desktop editor shows and
+// a phone may read (remote_methods.go), and a plugin's file can carry a
+// database password or a bot token. None of it is Claude's business, and a
+// token in a tool result would sit in a hosted model's context (#763). The
+// match is deliberately wide: a redacted max-tokens is a nuisance, a leaked
+// token is not.
+var mcpSecretKey = regexp.MustCompile(`(?i)^(\s*"?[\w.\-]*(?:password|passwd|secret|token|api[_-]?key)[\w.\-]*"?\s*[:=]\s*)\S`)
+
+// mcpRedactSecrets replaces the value on every line mcpSecretKey matches with
+// REDACTED. An empty value is left as it is: there is nothing to hide, and
+// the reader learns the key is unset.
+func mcpRedactSecrets(text string) string {
+	lines := strings.Split(text, "\n")
+	for i, l := range lines {
+		if m := mcpSecretKey.FindStringSubmatchIndex(l); m != nil {
+			lines[i] = l[:m[3]] + "REDACTED"
+		}
+	}
+	return strings.Join(lines, "\n")
+}
+
+func mcpShapeConfigText(result any) any {
+	return map[string]any{"text": mcpRedactSecrets(mcpAs[string](result))}
+}
+
+// mcpShapeMods leaves out the icon URL, the provider and the version id,
+// which are the mods tile's and say nothing a model needs.
+func mcpShapeMods(result any) any {
+	type mod struct {
+		File      string `json:"file"`
+		Name      string `json:"name"`
+		ModID     string `json:"modId"`
+		Version   string `json:"version"`
+		Folder    string `json:"folder"`
+		Enabled   bool   `json:"enabled"`
+		Loader    string `json:"loader"`
+		Source    string `json:"source"`
+		ProjectID string `json:"projectId"`
+	}
+	out := []mod{}
+	for _, m := range mcpAs[[]models.InstalledMod](result) {
+		out = append(out, mod{m.FileName, m.DisplayName, m.ModID, m.VersionNumber, m.TargetFolder, m.Enabled, m.Loader, m.Source, m.ProjectID})
+	}
+	return map[string]any{"mods": out}
 }
 
 func mcpShapeServers(result any) any {

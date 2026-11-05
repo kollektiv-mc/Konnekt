@@ -75,6 +75,7 @@ var remoteMethods = map[string]services.RemoteMethod{
 	"GetServerStatus":   {Tier: services.RemoteTierRead, Reason: "the status strip"},
 	"GetStatsHistory":   {Tier: services.RemoteTierRead, Reason: "the performance tile"},
 	"GetConsoleHistory": {Tier: services.RemoteTierRead, Reason: "primes the console after a reconnect"},
+	"GetServerLogTail":  {Tier: services.RemoteTierRead, Reason: "the end of the server's own log file, bounded; the console shows the same stream live"},
 
 	// Players.
 	"GetPlayerRoster": {Tier: services.RemoteTierRead, Reason: "the players tile"},
