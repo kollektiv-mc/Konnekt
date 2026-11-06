@@ -14,7 +14,7 @@ export default {
     await tile.locator('button[aria-label="Maximize tile"]').click();
     setCrop(panelCrop(350));
     await wait(1800);
-    const next = page.locator('button[title="Next backup (→)"]');
+    const next = page.locator('button[aria-label="Next backup"]');
     let p = await centre(next);
     await glide(p.x, p.y, 800);
     await next.click();
