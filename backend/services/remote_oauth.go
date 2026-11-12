@@ -664,6 +664,13 @@ func (a *RemoteAuth) serveAuthorize(w http.ResponseWriter, r *http.Request) {
 
 	a.mu.Lock()
 	now := a.now()
+	if a.grantsFullLocked(now) {
+		a.mu.Unlock()
+		slog.Warn("remote: consent refused, grants full", "client", client.Name)
+		remoteConsentError(w, http.StatusForbidden, "Konnekt already has "+strconv.Itoa(remoteMaxGrants)+
+			" connectors signed in. Revoke one in Settings, Remote Access, then try again.")
+		return
+	}
 	a.pruneConsentsLocked(now)
 	if len(a.oauth.consents) >= remoteMaxConsents {
 		a.mu.Unlock()
@@ -951,9 +958,20 @@ func (a *RemoteAuth) exchangeCode(code, verifier, clientID, redirect, resource s
 	hash := remoteTokenHash(code)
 	entry := a.oauth.codes[hash]
 	delete(a.oauth.codes, hash)
-	if entry == nil || entry.client.ID != clientID || (redirect != "" && redirect != entry.redirectURI) || !pkceMatches(verifier, entry.challenge) {
-		slog.Warn("remote: code exchange refused")
-		return remoteTokens{}, errRemoteCode
+	// The log names the check that refused, which the client never learns.
+	var refused string
+	switch {
+	case entry == nil:
+		refused = "no such code"
+	case entry.client.ID != clientID:
+		refused = "another client"
+	case redirect != "" && redirect != entry.redirectURI:
+		refused = "another redirect"
+	case !pkceMatches(verifier, entry.challenge):
+		refused = "verifier"
+	}
+	if refused != "" {
+		return remoteTokens{}, fmt.Errorf("%w: %s", errRemoteCode, refused)
 	}
 	if resource != "" && !strings.EqualFold(resource, entry.resource) {
 		return remoteTokens{}, errRemoteTarget
@@ -966,18 +984,27 @@ func (a *RemoteAuth) exchangeCode(code, verifier, clientID, redirect, resource s
 	return tokens, err
 }
 
+// remoteTokenError answers a refused token request. Every refusal is in the
+// log with its reason, since the client shows the person a generic error
+// and the desktop has already said Allow by now (#789). What goes back to
+// the client stays the generic description.
 func remoteTokenError(w http.ResponseWriter, err error) {
+	code, description := "invalid_request", err.Error()
 	switch {
-	case errors.Is(err, errRemoteCode), errors.Is(err, ErrRemoteBearer):
-		remoteOAuthError(w, http.StatusBadRequest, "invalid_grant", err.Error())
+	case errors.Is(err, errRemoteCode):
+		code, description = "invalid_grant", errRemoteCode.Error()
+	case errors.Is(err, ErrRemoteBearer):
+		code = "invalid_grant"
 	case errors.Is(err, errRemoteTarget):
-		remoteOAuthError(w, http.StatusBadRequest, "invalid_target", err.Error())
+		code = "invalid_target"
 	case errors.Is(err, ErrRemoteGrantsFull), errors.Is(err, ErrRemoteScope), errors.Is(err, ErrRemoteResource):
-		remoteOAuthError(w, http.StatusBadRequest, "invalid_request", err.Error())
 	default:
 		slog.Error("remote: token", "error", err)
 		remoteOAuthError(w, http.StatusInternalServerError, "server_error", "could not issue tokens")
+		return
 	}
+	slog.Warn("remote: token refused", "error", err)
+	remoteOAuthError(w, http.StatusBadRequest, code, description)
 }
 
 func writeRemoteTokens(w http.ResponseWriter, t remoteTokens) {
