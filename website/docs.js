@@ -1,5 +1,6 @@
 /* Docs home: the search. It narrows the home's page links to those whose
-   title and summary hold every word typed, and hides a shelf left with none.
+   title or unshown summary (data-summary) hold every word typed, and hides a
+   shelf left with none.
    With this file missing the home is a plain list of links. */
 ;(function () {
   var input = document.getElementById('doc-search')
@@ -11,7 +12,8 @@
   }
 
   var links = [].slice.call(document.querySelectorAll('.page-link')).map(function (el) {
-    return { el: el, text: el.textContent.toLowerCase() }
+    var text = el.textContent + ' ' + (el.getAttribute('data-summary') || '')
+    return { el: el, text: text.toLowerCase() }
   })
   var shelves = [].slice.call(document.querySelectorAll('.shelf'))
 

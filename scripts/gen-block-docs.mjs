@@ -402,7 +402,7 @@ const leadOf = (html) => {
   return text.replace(/[<>]/g, '').replace(/\s+/g, ' ').trim()
 }
 
-function indexList(pages) {
+function indexList() {
   const cats = [
     ...CATEGORY_ORDER.filter((c) => defs.some((d) => d.category === c)),
     ...[...new Set(defs.map((d) => d.category))].filter((c) => !CATEGORY_ORDER.includes(c)),
@@ -413,12 +413,7 @@ function indexList(pages) {
       const inCat = defs.filter((d) => d.category === cat)
       const ordered = [...inCat.filter((d) => !d.group), ...inCat.filter((d) => d.group)]
       const links = ordered.map(
-        (d) => `<a class="page-link" href="/docs/blocks/${slug(d.id)}.html"
-  ><span class="page-link-move"
-    ><span class="page-link-title">${esc(d.label)}</span
-    ><span class="page-link-sum">${esc(pages.get(d.id) ?? '')}</span></span
-  ></a
->`,
+        (d) => `<a class="page-link" href="/docs/blocks/${slug(d.id)}.html">${esc(d.label)}</a>`,
       )
       return `<section class="shelf block" id="${cat}" aria-labelledby="${cat}-title">
   <div class="shelf-label"><h2 class="label" id="${cat}-title">${esc(categoryName(cat))}</h2></div>
@@ -453,7 +448,6 @@ for (const f of readdirSync(DIR).filter((f) => f.endsWith('.html') && f !== 'ind
   if (!known.has(f.slice(0, -5))) problems.push(`website/docs/blocks/${f} names no registered block`)
 }
 
-const leads = new Map()
 for (const def of defs) {
   const file = path.join(DIR, `${slug(def.id)}.html`)
   let html = existsSync(file) ? readFileSync(file, 'utf8') : null
@@ -468,7 +462,6 @@ for (const def of defs) {
   html = replaceRegion(html, 'fields', fieldsSection(def, cells))
 
   const lead = leadOf(html)
-  leads.set(def.id, lead)
   if (lead) {
     const description = esc(`${def.label}: ${lead}`)
     html = html.replaceAll(
@@ -487,7 +480,7 @@ for (const def of defs) {
 
 const indexFile = path.join(DIR, 'index.html')
 if (existsSync(indexFile)) {
-  await emit(indexFile, replaceRegion(readFileSync(indexFile, 'utf8'), 'index', indexList(leads)))
+  await emit(indexFile, replaceRegion(readFileSync(indexFile, 'utf8'), 'index', indexList()))
 } else {
   problems.push('website/docs/blocks/index.html is missing')
 }
