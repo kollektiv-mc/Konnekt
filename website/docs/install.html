@@ -129,9 +129,9 @@
               <ul class="doc-checks">
                 <li class="doc-check">
                   <span class="doc-check-text"
-                    ><span>A 64-bit Windows or Linux machine</span
+                    ><span>A 64-bit Windows or Linux machine, or a Mac</span
                     ><span class="doc-check-desc"
-                      >macOS has no published build, and builds from source below.</span
+                      >The macOS build runs on Apple silicon and Intel Macs.</span
                     ></span
                   >
                 </li>
@@ -170,7 +170,11 @@
                   <tbody>
                     <tr>
                       <td>Windows</td>
-                      <td><code>konnekt-windows-amd64.exe</code></td>
+                      <td><code>konnekt-windows-amd64-setup.exe</code></td>
+                    </tr>
+                    <tr>
+                      <td>macOS</td>
+                      <td><code>konnekt-darwin-universal.dmg</code></td>
                     </tr>
                     <tr>
                       <td>Linux</td>
@@ -202,8 +206,9 @@
             </div>
             <div class="doc-body">
               <p class="doc-prose">
-                Run <code>konnekt-windows-amd64.exe</code>.<br />
-                There is nothing to install, so keep the file where you want it to live.
+                Run <code>konnekt-windows-amd64-setup.exe</code>.<br />
+                It installs Konnekt for your account, with a Start Menu entry and an uninstaller
+                under Installed apps, and needs no administrator rights.
               </p>
               <div class="doc-note" data-tone="warn">
                 <span class="label">Heads up</span>
@@ -215,10 +220,34 @@
             </div>
           </section>
 
-          <section class="doc-section block" id="linux" aria-labelledby="linux-title">
+          <section class="doc-section block" id="macos" aria-labelledby="macos-title">
             <div class="band doc-band">
               <div class="band-title">
                 <span class="num">03</span>
+                <h2 id="macos-title">macOS</h2>
+              </div>
+            </div>
+            <div class="doc-body">
+              <p class="doc-prose">
+                Open <code>konnekt-darwin-universal.dmg</code> and drag Konnekt into
+                Applications.<br />
+                One build runs on Apple silicon and Intel Macs.
+              </p>
+              <div class="doc-note" data-tone="warn">
+                <span class="label">Heads up</span>
+                <p>
+                  macOS builds are not signed by Apple yet, so the first launch is refused. Open
+                  <b>System Settings</b>, then <b>Privacy &amp; Security</b>, and choose
+                  <b>Open Anyway</b> beside Konnekt.
+                </p>
+              </div>
+            </div>
+          </section>
+
+          <section class="doc-section block" id="linux" aria-labelledby="linux-title">
+            <div class="band doc-band">
+              <div class="band-title">
+                <span class="num">04</span>
                 <h2 id="linux-title">Linux</h2>
               </div>
             </div>
@@ -250,7 +279,7 @@
           >
             <div class="band doc-band">
               <div class="band-title">
-                <span class="num">04</span>
+                <span class="num">05</span>
                 <h2 id="build-from-source-title">Build from source</h2>
               </div>
             </div>
@@ -290,7 +319,7 @@ wails dev -tags webkit2_41</code></pre>
           >
             <div class="band doc-band">
               <div class="band-title">
-                <span class="num">05</span>
+                <span class="num">06</span>
                 <h2 id="check-the-download-title">Check the download</h2>
               </div>
             </div>
@@ -338,7 +367,7 @@ wails dev -tags webkit2_41</code></pre>
               >Konnekt</a
             >
             <p>A desktop dashboard for the Minecraft servers you host.</p>
-            <span class="meta"><span data-release-tag></span>Windows and Linux</span>
+            <span class="meta"><span data-release-tag></span>Windows, macOS and Linux</span>
           </div>
           <nav class="footer-col" aria-label="Product">
             <span class="label">Product</span>

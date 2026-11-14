@@ -15,7 +15,7 @@ on:
   schedule:
     # Nightly. The check job below exits early when main hasn't moved since the
     # last snapshot, so an idle week costs one short job a day rather than
-    # three platform builds.
+    # four platform builds.
     - cron: '0 4 * * *'
   workflow_dispatch:
 
@@ -170,6 +170,87 @@ jobs:
             dist/konnekt-windows-amd64-setup.exe
           if-no-files-found: error
 
+  # macOS ships a DMG holding a universal .app, unsigned in the Developer ID
+  # sense: notarising needs a paid Apple account, and signed and notarised
+  # builds are a Beta item in agent_docs/ROADMAP.md. It is still ad-hoc
+  # signed, because Apple silicon refuses to launch an arm64 binary with no
+  # signature at all and reports the download as "damaged". Ad-hoc signed, it
+  # opens once the user allows it under System Settings > Privacy & Security >
+  # Open Anyway, which the notes below say. The same approach as Kommands'
+  # release.yml.
+  build-macos:
+    needs: check
+    if: needs.check.outputs.build == 'true'
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+        with:
+          version: 11
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
+
+      - run: pnpm install --frozen-lockfile
+        working-directory: frontend
+
+      - name: Install Wails CLI
+        run: go install github.com/wailsapp/wails/v2/cmd/wails@v2.12.0
+
+      # Info.plist takes CFBundleShortVersionString from wails.json's
+      # productVersion, and macOS reads that as numbers only, so the bundle
+      # gets the version's X.Y.Z. The full version reaches the binary through
+      # -X, as on the other platforms.
+      - name: Stamp the bundle version
+        env:
+          FULL_VERSION: ${{ needs.check.outputs.version }}
+        run: |
+          python3 - <<'EOF'
+          import json, os, re, sys
+          full = os.environ["FULL_VERSION"]
+          core = re.sub(r"[-+].*$", "", full.removeprefix("v"))
+          if not re.fullmatch(r"\d+\.\d+\.\d+", core):
+              print(f"::error::cannot derive a numeric bundle version from '{full}'.")
+              sys.exit(1)
+          with open("wails.json") as f:
+              config = json.load(f)
+          config["info"]["productVersion"] = core
+          with open("wails.json", "w") as f:
+              json.dump(config, f, indent=2)
+              f.write("\n")
+          EOF
+
+      - name: Build
+        run: wails build -platform darwin/universal -ldflags "-X main.Version=${{ needs.check.outputs.version }}"
+
+      # The whole bundle, after lipo has assembled the universal binary: a
+      # signature on the binary alone leaves the bundle invalid.
+      - name: Ad-hoc sign
+        run: |
+          codesign --force --deep --sign - build/bin/konnekt.app
+          codesign --verify --deep --strict --verbose=2 build/bin/konnekt.app
+
+      - name: Package DMG
+        run: |
+          mkdir -p dist
+          hdiutil create -volname Konnekt -srcfolder build/bin/konnekt.app \
+            -ov -format UDZO dist/konnekt-darwin-universal.dmg
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: konnekt-darwin-universal
+          path: dist/konnekt-darwin-universal.dmg
+          if-no-files-found: error
+
   build-linux:
     needs: check
     if: needs.check.outputs.build == 'true'
@@ -262,7 +343,7 @@ jobs:
           if-no-files-found: error
 
   publish:
-    needs: [check, build-windows, build-linux, package-rpm]
+    needs: [check, build-windows, build-macos, build-linux, package-rpm]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -292,7 +373,7 @@ jobs:
       # commit, signed against the job's OIDC token. See release.yml's copy of
       # this step for why checksums.txt alone cannot make that claim.
       #
-      # Attested here rather than in the three build jobs so that what is signed
+      # Attested here rather than in the build jobs so that what is signed
       # is exactly what `gh release create` uploads below.
       - name: Attest build provenance
         uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
@@ -359,7 +440,10 @@ jobs:
 
           On Windows, \`konnekt-windows-amd64-setup.exe\` installs it with a
           Start Menu entry and an uninstaller; \`konnekt-windows-amd64.exe\`
-          runs from wherever you put it.
+          is the file the in-app updater fetches. On macOS,
+          \`konnekt-darwin-universal.dmg\` holds the app: drag it into
+          Applications, then allow it once under System Settings, Privacy &
+          Security, Open Anyway.
 
           Version \`$VERSION\`, commit $SHA. Built by GitHub Actions from that
           commit, with a signed build provenance attestation:
