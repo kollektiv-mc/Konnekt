@@ -330,18 +330,14 @@ summary h3 {
   align-items: stretch;
 }
 
-.nav-brand,
-.footer-brand {
+.nav-brand {
   display: flex;
   align-items: center;
   gap: 10px;
+  padding: 0 var(--pad);
   font-weight: 600;
   font-size: 20px;
   letter-spacing: -0.02em;
-}
-
-.nav-brand {
-  padding: 0 var(--pad);
   min-height: var(--nav-h);
   border-right: var(--hairline);
 }
@@ -481,7 +477,7 @@ picture:has(> .mark) {
   text-transform: uppercase;
 }
 
-/* A label over a short list: the footer's columns, the "Works with" row. */
+/* A label over a short list: the "Works with" row. */
 .label {
   font-family: var(--font-site-mono);
   font-size: 12px;
@@ -638,51 +634,25 @@ pre code {
 
 /* ── Footer ─────────────────────────────────────────────────────────────── */
 
-.footer-cols {
-  display: flex;
-  flex-wrap: wrap;
-}
-
-.footer-about {
-  flex: 1.6 1 320px;
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-  padding: var(--pad-band) var(--pad);
-}
-
-.footer-about p {
-  margin: 0;
-  max-width: 32ch;
-  font-size: 15px;
-  line-height: 1.5;
-  color: var(--text-secondary);
-}
-
-.footer-col {
-  flex: 1 1 160px;
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-  padding: var(--pad-band) var(--pad);
-  border-left: var(--hairline);
-  font-size: 15px;
-}
-
-.footer-base {
+/* One line, the same as Kommands' footer: the suite, and what the site is not. */
+.site-foot {
   display: flex;
   flex-wrap: wrap;
   justify-content: space-between;
   gap: 12px 24px;
   padding: 20px var(--pad);
-  border-top: var(--hairline);
   font-family: var(--font-site-mono);
   font-size: 13px;
   color: var(--text-secondary);
 }
 
-.footer-base a {
-  text-decoration: underline;
+.site-foot a {
+  color: inherit;
+  transition: color 150ms;
+}
+
+.site-foot a:hover {
+  color: var(--text-primary);
 }
 
 @media (max-width: 760px) {
@@ -709,11 +679,6 @@ pre code {
 
   .nav .btn {
     padding: 0 24px;
-  }
-
-  .footer-col {
-    border-left: 0;
-    border-top: var(--hairline);
   }
 
   .page-hero-title {
