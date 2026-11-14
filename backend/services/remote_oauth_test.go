@@ -292,6 +292,27 @@ func TestOAuthRegistrationIsBoundedAndPublic(t *testing.T) {
 	}
 }
 
+// A client whose challenge named only konnekt:read is still offered operate,
+// unticked, and gets what the user ticks (#798).
+func TestOAuthConsentOffersOperateUnrequested(t *testing.T) {
+	f := newOAuthFixture(t)
+	client := f.register(t, "http://localhost/callback")
+	redirect := "http://localhost:51234/callback"
+	verifier, challenge := pkce()
+	id, csrf, page := f.startConsent(t, authorizeURL(client, redirect, challenge, "konnekt:read", "xyz"))
+	for _, want := range []string{`value="konnekt:read" checked`, `value="konnekt:operate">`} {
+		if !strings.Contains(page, want) {
+			t.Errorf("page lacks %q:\n%s", want, page)
+		}
+	}
+	back := f.waitForRedirect(t, f.consent(id, csrf, testPassword, "allow", RemoteScopeRead, RemoteScopeOperate))
+	w := f.exchange(back.Query().Get("code"), verifier, client, redirect)
+	tokens := decodeJSON(t, w)
+	if w.Code != http.StatusOK || tokens["scope"] != "konnekt:operate konnekt:read" {
+		t.Fatalf("tokens: %d %v", w.Code, tokens)
+	}
+}
+
 func TestOAuthSignInEndsInAGrant(t *testing.T) {
 	f := newOAuthFixture(t)
 	client := f.register(t, "http://localhost/callback")
