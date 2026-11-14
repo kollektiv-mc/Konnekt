@@ -246,7 +246,7 @@ func (a *RemoteAuth) serveResourceMetadata(w http.ResponseWriter, r *http.Reques
 	writeRemoteJSON(w, http.StatusOK, map[string]any{
 		"resource":                 RemoteResource(r.Host),
 		"authorization_servers":    []string{remoteIssuer(r.Host)},
-		"scopes_supported":         []string{RemoteScopeRead, RemoteScopeOperate},
+		"scopes_supported":         remoteScopesSupported,
 		"bearer_methods_supported": []string{"header"},
 		"resource_name":            "Konnekt",
 	})
@@ -264,7 +264,7 @@ func (a *RemoteAuth) serveServerMetadata(w http.ResponseWriter, r *http.Request)
 		"authorization_endpoint":           issuer + RemoteAuthorizePath,
 		"token_endpoint":                   issuer + RemoteTokenPath,
 		"registration_endpoint":            issuer + RemoteRegisterPath,
-		"scopes_supported":                 []string{RemoteScopeRead, RemoteScopeOperate},
+		"scopes_supported":                 remoteScopesSupported,
 		"response_types_supported":         []string{"code"},
 		"response_modes_supported":         []string{"query"},
 		"grant_types_supported":            []string{"authorization_code", "refresh_token"},
@@ -469,6 +469,10 @@ type remoteConsentView struct {
 	Plain bool
 }
 
+// remoteScopesSupported is every scope a grant can carry, in the order the
+// consent page lists them.
+var remoteScopesSupported = []string{RemoteScopeRead, RemoteScopeOperate}
+
 var remoteScopeText = map[string]string{
 	RemoteScopeRead:    "See your servers, players, console and schedules",
 	RemoteScopeOperate: "Start, stop and restart servers, run commands and manage players",
@@ -543,7 +547,11 @@ func consentView(c *remoteConsent, message string) remoteConsentView {
 	}
 	view := remoteConsentView{Title: "Connect " + c.client.Name + " to Konnekt", Client: c.client.Name, ClientHost: c.client.Host,
 		RedirectHost: host, Loopback: loopback, Message: message, ID: c.id, CSRF: c.csrf}
-	for _, s := range c.scopes {
+	// Every permission is on offer, not only what the client asked for: the
+	// first challenge names konnekt:read alone, and a client that signs in
+	// afresh instead of stepping up would otherwise never be able to grant
+	// operate (#798). Read is ticked; operate is the user's own tick.
+	for _, s := range remoteScopesSupported {
 		view.Scopes = append(view.Scopes, remoteScopeView{Scope: s, Text: remoteScopeText[s], Checked: s == RemoteScopeRead})
 	}
 	return view
@@ -750,7 +758,7 @@ func (a *RemoteAuth) serveConsent(w http.ResponseWriter, r *http.Request) {
 	}
 	var granted []string
 	for _, s := range r.PostForm["scope"] {
-		if slices.Contains(c.scopes, s) {
+		if slices.Contains(remoteScopesSupported, s) {
 			granted = append(granted, s)
 		}
 	}
