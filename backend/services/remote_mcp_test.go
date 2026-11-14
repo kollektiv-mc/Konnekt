@@ -2,6 +2,7 @@ package services
 
 import (
 	"context"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -141,6 +142,25 @@ func TestRemoteMCPRefusesEverythingButABearer(t *testing.T) {
 }
 
 // One credential per surface: the dashboard's RPC never reads a bearer token.
+// Through the tunnel every request arrives on the loopback listener with
+// the public hostname as Host. The SDK's own DNS rebinding check fires only
+// with a real connection's local address, which httptest.NewRequest does
+// not carry, and refused all of them (#797).
+func TestRemoteMCPServesTunnelledRequestsOnLoopback(t *testing.T) {
+	f := newMCPEndpointFixture(t)
+	good := f.token(t, "https://"+testHost+RemoteMCPPath, RemoteScopeRead)
+	loopback := &net.TCPAddr{IP: net.IPv4(127, 0, 0, 1), Port: 8765}
+	ctx := context.WithValue(context.Background(), http.LocalAddrContextKey, loopback)
+	r := httptest.NewRequestWithContext(ctx, http.MethodPost, RemoteMCPPath, strings.NewReader(initializeBody))
+	r.Host = testHost
+	r.Header.Set("Content-Type", "application/json")
+	r.Header.Set("Accept", "application/json, text/event-stream")
+	r.Header.Set("Authorization", "Bearer "+good)
+	if w := do(f.svc.Handler(), r); w.Code != http.StatusOK {
+		t.Fatalf("initialize through the tunnel: %d %s", w.Code, w.Body.String())
+	}
+}
+
 func TestRemoteRPCIgnoresBearerTokens(t *testing.T) {
 	f := newMCPEndpointFixture(t)
 	good := f.token(t, "https://"+testHost+RemoteMCPPath, RemoteScopeRead, RemoteScopeOperate)
