@@ -358,6 +358,31 @@ func TestOAuthSignInEndsInAGrant(t *testing.T) {
 	}
 }
 
+// A full connector list is refused on the consent page, where the reason
+// can be read, not at the token step after the desktop's Allow (#789).
+func TestOAuthConsentRefusesAFullGrantList(t *testing.T) {
+	f := newOAuthFixture(t)
+	for i := 0; i < remoteMaxGrants; i++ {
+		if _, _, err := f.auth.IssueGrant("n", []string{RemoteScopeRead}, testResource); err != nil {
+			t.Fatal(err)
+		}
+	}
+	client := f.register(t, "http://localhost/callback")
+	_, challenge := pkce()
+	path := authorizeURL(client, "http://localhost:51234/callback", challenge, "konnekt:read", "xyz")
+	w := f.get(path)
+	if w.Code != http.StatusForbidden || !strings.Contains(w.Body.String(), "16 connectors signed in") ||
+		strings.Contains(w.Body.String(), `name="password"`) {
+		t.Fatalf("authorize with a full list: %d %s", w.Code, w.Body.String())
+	}
+	if err := f.auth.RevokeGrants(); err != nil {
+		t.Fatal(err)
+	}
+	if w = f.get(path); w.Code != http.StatusOK || !strings.Contains(w.Body.String(), `name="password"`) {
+		t.Fatalf("authorize after revoking: %d", w.Code)
+	}
+}
+
 func TestOAuthCodeIsSingleUseAndBoundToPKCE(t *testing.T) {
 	f := newOAuthFixture(t)
 	client := f.register(t, RemoteClaudeRedirect)

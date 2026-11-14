@@ -404,6 +404,15 @@ func (a *RemoteAuth) RevokeGrants() error {
 // pruneGrantsLocked drops the grants that have ended: ninety days after the
 // consent, thirty days after the last use, or, with no refresh token to come
 // back on, when the access token expired.
+// grantsFullLocked says whether another connector could sign in. The
+// consent page asks before the password, since the token step would refuse
+// after the desktop's Allow and the client shows a generic error for that.
+// Caller holds a.mu.
+func (a *RemoteAuth) grantsFullLocked(now time.Time) bool {
+	a.pruneGrantsLocked(now)
+	return len(a.state.Grants) >= remoteMaxGrants
+}
+
 func (a *RemoteAuth) pruneGrantsLocked(now time.Time) {
 	kept := a.state.Grants[:0]
 	for _, g := range a.state.Grants {

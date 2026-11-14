@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"slices"
 	"sync/atomic"
@@ -40,7 +41,16 @@ func (s *RemoteService) SetMCPServer(server *mcp.Server) {
 	s.mcp = nil
 	if server != nil {
 		s.mcp = mcp.NewStreamableHTTPHandler(func(*http.Request) *mcp.Server { return server },
-			&mcp.StreamableHTTPOptions{Stateless: true})
+			&mcp.StreamableHTTPOptions{
+				Stateless: true,
+				// The SDK answers 403 to a request that arrives on a loopback
+				// address with a Host that is not loopback, which is every
+				// tunnelled request: the listener binds 127.0.0.1 and
+				// cloudflared hands it the public hostname. The guard has
+				// judged Host against its allowlist before the handler runs
+				// (§ S8.3), which is the same DNS rebinding defence (#797).
+				DisableLocalhostProtection: true,
+			})
 	}
 }
 
@@ -136,6 +146,7 @@ func (s *RemoteService) handleMCP(w http.ResponseWriter, r *http.Request) {
 	// through req.Extra.TokenInfo for the caller's name and scopes.
 	// The scope on the challenge is what a client asks for at sign-in;
 	// every grant carries it, since operating a server includes seeing it.
+	rec := &remoteStatusWriter{ResponseWriter: w}
 	require := auth.RequireBearerToken(verifier.VerifyBearer, &auth.RequireBearerTokenOptions{
 		ResourceMetadataURL: remoteResourceMetadataURL(r.Host),
 		Scopes:              []string{RemoteScopeRead},
@@ -155,8 +166,38 @@ func (s *RemoteService) handleMCP(w http.ResponseWriter, r *http.Request) {
 		// anyone with the URL could hold the listener open.
 		s.touch()
 		handler.ServeHTTP(w, r)
-	})).ServeHTTP(w, r)
+	})).ServeHTTP(rec, r)
+	if rec.status >= http.StatusBadRequest && r.Header.Get("Authorization") != "" {
+		// A client that presented a token and was refused further in. Claude
+		// shows the person a generic error for it, so the log carries the
+		// status (#797); a probe with no token is not worth a line.
+		slog.Warn("remote: mcp refused", "status", rec.status)
+	}
 }
+
+// remoteStatusWriter remembers the status a handler answered with. Unwrap
+// keeps http.ResponseController, which the SDK flushes streams through,
+// reaching the real writer.
+type remoteStatusWriter struct {
+	http.ResponseWriter
+	status int
+}
+
+func (w *remoteStatusWriter) WriteHeader(code int) {
+	if w.status == 0 {
+		w.status = code
+	}
+	w.ResponseWriter.WriteHeader(code)
+}
+
+func (w *remoteStatusWriter) Write(b []byte) (int, error) {
+	if w.status == 0 {
+		w.status = http.StatusOK
+	}
+	return w.ResponseWriter.Write(b)
+}
+
+func (w *remoteStatusWriter) Unwrap() http.ResponseWriter { return w.ResponseWriter }
 
 // peekMCPToolCall reads the tool a JSON-RPC body calls, if it is a
 // tools/call, and leaves the body for the transport to read again.
