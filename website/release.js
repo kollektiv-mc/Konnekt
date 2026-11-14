@@ -15,9 +15,11 @@
       id: 'windows',
       name: 'Windows',
       tag: 'Win',
-      desc: 'Portable 64-bit .exe',
+      // The installer only. The bare konnekt-windows-amd64.exe beside it is
+      // the in-app updater's asset, not a download.
+      desc: '64-bit installer',
       match: function (name) {
-        return name === 'konnekt-windows-amd64.exe'
+        return name === 'konnekt-windows-amd64-setup.exe'
       },
     },
     {
@@ -42,10 +44,10 @@
       id: 'mac',
       name: 'macOS',
       tag: 'Mac',
-      // Not "Coming soon": it runs on macOS today, just not as a published
-      // asset. The platform table in docs/requirements.html says the same.
-      desc: 'Build from source',
-      match: null,
+      desc: 'Universal .dmg',
+      match: function (name) {
+        return name === 'konnekt-darwin-universal.dmg'
+      },
     },
   ]
 

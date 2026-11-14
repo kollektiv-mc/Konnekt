@@ -8,7 +8,7 @@
 [![aislop](https://badges.scanaislop.com/score/kollektiv-mc/konnekt.svg)](https://scanaislop.com/kollektiv-mc/konnekt)
 [![Signed builds](https://img.shields.io/badge/builds-attested-2ea44f)](#verifying-a-download)
 [![Release](https://img.shields.io/github/v/release/kollektiv-mc/Konnekt?include_prereleases&sort=semver)](https://github.com/kollektiv-mc/Konnekt/releases)
-[![Platforms](https://img.shields.io/badge/platforms-Windows%20%7C%20Linux%20%7C%20macOS%20from%20source-blue)](#platform-support)
+[![Platforms](https://img.shields.io/badge/platforms-Windows%20%7C%20macOS%20%7C%20Linux-blue)](#platform-support)
 [![Go](https://img.shields.io/github/go-mod/go-version/kollektiv-mc/Konnekt)](go.mod)
 [![License](https://img.shields.io/github/license/kollektiv-mc/Konnekt)](LICENSE)
 
@@ -151,7 +151,7 @@ Konnekt integrates with popular server mods and plugins to extend its core featu
 ## Why Konnekt
 
 - **Local-first.** All app state is stored locally on disk — no account, no cloud dependency, no telemetry required to run your server.
-- **Cross-platform.** Built on [Wails](https://wails.io/); tagged releases ship a Windows build, the rolling snapshot channel adds Linux and an `.rpm` (see [Platform support](#platform-support)), and it also runs as a native app on macOS from source.
+- **Cross-platform.** Built on [Wails](https://wails.io/); releases ship a Windows installer, a macOS `.dmg`, a Linux binary and an `.rpm` (see [Platform support](#platform-support)).
 - **One dashboard, not ten tools.** Console, stats, scheduling, worlds, backups, config, and mods all live in the same window instead of separate scripts and plugins.
 
 ## Tech stack
@@ -177,8 +177,8 @@ nightly code.
 
 - **Windows** — tagged releases and snapshots. `konnekt-windows-amd64-setup.exe`
   installs it for your account, with a Start Menu entry and an uninstaller
-  under Installed apps; `konnekt-windows-amd64.exe` is the same app as a single
-  portable file. Either way it updates itself.
+  under Installed apps, and it updates itself. `konnekt-windows-amd64.exe` is
+  published beside it only because the in-app updater downloads it by name.
 - **Linux** (`konnekt-linux-amd64`, plus an `.rpm` for Rocky/RHEL 10 and
   Fedora) — **snapshots only so far.** The release workflow builds both, but
   those jobs landed after the one tagged release was cut, so the next tag is
@@ -195,8 +195,11 @@ nightly code.
   `KONNEKT_WEBVIEW_GPU=never` (or `ondemand`) in the environment does the same
   and wins over the setting; `konnekt.log` records which policy was chosen and
   why.
-- **macOS** is not published on either channel, but builds from source via
-  `wails build` like any other platform.
+- **macOS** (`konnekt-darwin-universal.dmg`, Apple silicon and Intel) from the
+  first release cut after it landed, and on snapshots. Ad-hoc signed, not
+  notarised, so the first launch needs Open Anyway under System Settings >
+  Privacy & Security. It does not update itself yet, and Remote Access has no
+  tunnel on macOS.
 
 ### Verifying a download
 

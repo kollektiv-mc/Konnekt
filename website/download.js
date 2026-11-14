@@ -1,9 +1,9 @@
 /* Download page: detects the platform and wires the download buttons from the
    latest GitHub release's assets. The detected platform seeds the primary
    card; the "All downloads" grid below switches it, so a visitor on Linux can
-   still reach the Windows build without leaving for GitHub. Only platforms
-   with a published build are offered: macOS builds from source, which the
-   docs cover. */
+   still reach the Windows build without leaving for GitHub. Windows offers
+   the installer and macOS the .dmg; the bare Windows exe a release also
+   carries is the in-app updater's, and release.js never matches it. */
 ;(function () {
   // Verify your download starts closed. A link to #verify (the install guide
   // has one) means the reader came for it, so it opens, there and on any later
