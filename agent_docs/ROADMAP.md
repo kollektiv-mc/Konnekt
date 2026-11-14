@@ -498,9 +498,10 @@ where the decision was actually made — this section records, it does not decid
   build through a shim; there is no native app and no second bundle. See the
   Remote access section above.
 
-A macOS release leg is deferred rather than out of scope, and is tracked in
-`agent_docs/HEALTH_CHECKLIST.md`'s "Release follow-ups". Code-signing and
-notarisation used to sit beside it there; they are Beta work now, above.
+Releases and snapshots carry a macOS DMG (a universal, ad-hoc signed `.app`).
+Its self-update support is tracked in `agent_docs/HEALTH_CHECKLIST.md`'s
+"Release follow-ups". Code-signing and notarisation used to sit there; they are
+Beta work now, above.
 
 ---
 

@@ -1144,9 +1144,12 @@ Not worth doing until a real file that size is one people edit by hand.
   since the commit that staged v0.2.0-alpha.1.
 - Release-tag-gated full `wails build` packaging job — stronger end-to-end
   confidence than the current `go build`/`pnpm build` CI smoke check.
-- macOS release leg + its self-update support (`platformAssetNameFor` is
-  structured to add a per-platform case, but no asset-naming/signing story
-  exists for macOS yet).
+- macOS self-update. Releases and snapshots publish
+  `konnekt-darwin-universal.dmg` (ad-hoc signed, not notarised), but
+  `platformAssetNameFor` has no darwin case, so a DMG build is offered an
+  update whose Download & Install fails. It wants either an in-place swap of
+  the `.app` or a "download the new .dmg" path like the RPM's
+  `PackageUpdateSteps`. Remote Access's tunnel has no darwin pin either.
 - Code-signing / notarization is no longer deferred: it is a Beta item in
   `agent_docs/ROADMAP.md`, because the SmartScreen warning an unsigned build
   trips is the first thing a new user sees and no amount of published

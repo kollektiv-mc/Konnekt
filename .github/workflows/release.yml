@@ -148,9 +148,11 @@ jobs:
         shell: pwsh
         run: wails build -nsis -ldflags "-X main.Version=${{ needs.resolve.outputs.tag }}"
 
-      # The portable exe keeps its name: it is the asset the in-app updater
-      # downloads, matched exactly (update.go's platformAssetNameFor), for an
-      # installed copy and a portable one alike.
+      # The installer is the Windows download. The bare exe is still
+      # published, unadvertised, because it is the asset the in-app updater
+      # downloads, matched exactly (update.go's platformAssetNameFor), and
+      # every copy already installed looks for it by that name. Dropping it
+      # strands them all.
       - name: Stage release assets
         shell: pwsh
         run: |
@@ -164,6 +166,88 @@ jobs:
           path: |
             dist/konnekt-windows-amd64.exe
             dist/konnekt-windows-amd64-setup.exe
+          if-no-files-found: error
+
+  # macOS ships a DMG holding a universal .app, unsigned in the Developer ID
+  # sense: notarising needs a paid Apple account, and signed and notarised
+  # builds are a Beta item in agent_docs/ROADMAP.md. It is still ad-hoc
+  # signed, because Apple silicon refuses to launch an arm64 binary with no
+  # signature at all and reports the download as "damaged". Ad-hoc signed, it
+  # opens once the user allows it under System Settings > Privacy & Security >
+  # Open Anyway, which the notes below say. The same approach as Kommands'
+  # release.yml.
+  build-macos:
+    needs: resolve
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ needs.resolve.outputs.tag }}
+
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+        with:
+          version: 11
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
+
+      - run: pnpm install --frozen-lockfile
+        working-directory: frontend
+
+      - name: Install Wails CLI
+        run: go install github.com/wailsapp/wails/v2/cmd/wails@v2.12.0
+
+      # Info.plist takes CFBundleShortVersionString from wails.json's
+      # productVersion, and macOS reads that as numbers only, so the bundle
+      # gets the version's X.Y.Z. The full version reaches the binary through
+      # -X, as on the other platforms.
+      - name: Stamp the bundle version
+        env:
+          FULL_VERSION: ${{ needs.resolve.outputs.tag }}
+        run: |
+          python3 - <<'EOF'
+          import json, os, re, sys
+          full = os.environ["FULL_VERSION"]
+          core = re.sub(r"[-+].*$", "", full.removeprefix("v"))
+          if not re.fullmatch(r"\d+\.\d+\.\d+", core):
+              print(f"::error::cannot derive a numeric bundle version from '{full}'.")
+              sys.exit(1)
+          with open("wails.json") as f:
+              config = json.load(f)
+          config["info"]["productVersion"] = core
+          with open("wails.json", "w") as f:
+              json.dump(config, f, indent=2)
+              f.write("\n")
+          EOF
+
+      - name: Build
+        run: wails build -platform darwin/universal -ldflags "-X main.Version=${{ needs.resolve.outputs.tag }}"
+
+      # The whole bundle, after lipo has assembled the universal binary: a
+      # signature on the binary alone leaves the bundle invalid.
+      - name: Ad-hoc sign
+        run: |
+          codesign --force --deep --sign - build/bin/konnekt.app
+          codesign --verify --deep --strict --verbose=2 build/bin/konnekt.app
+
+      - name: Package DMG
+        run: |
+          mkdir -p dist
+          hdiutil create -volname Konnekt -srcfolder build/bin/konnekt.app \
+            -ov -format UDZO dist/konnekt-darwin-universal.dmg
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: konnekt-darwin-universal
+          path: dist/konnekt-darwin-universal.dmg
           if-no-files-found: error
 
   build-linux:
@@ -266,7 +350,7 @@ jobs:
           if-no-files-found: error
 
   publish:
-    needs: [resolve, build-windows, build-linux, package-rpm]
+    needs: [resolve, build-windows, build-macos, build-linux, package-rpm]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -305,7 +389,7 @@ jobs:
       # and recorded in a public transparency log. Nothing here holds a signing
       # key, so there is no key to leak and none to rotate.
       #
-      # Attested here rather than in the three build jobs on purpose: these are
+      # Attested here rather than in the build jobs on purpose: these are
       # the exact bytes `gh release create` uploads below, so what is signed is
       # what a person downloads, with no artifact round-trip in between.
       #
@@ -383,17 +467,20 @@ jobs:
           esac
 
           cat >> notes.md <<EOF
-          Windows, Linux and Fedora/RHEL builds are attached below. macOS builds
-          from source.
+          Windows, macOS, Linux and Fedora/RHEL builds are attached below.
 
-          On Windows, \`konnekt-windows-amd64-setup.exe\` installs Konnekt for
-          your account, with a Start Menu entry and an uninstaller under
-          Installed apps. \`konnekt-windows-amd64.exe\` is the same app as a
-          single file that runs from wherever you put it. Either one updates
-          itself.
+          On Windows, download \`konnekt-windows-amd64-setup.exe\`. It installs
+          Konnekt for your account, with a Start Menu entry and an uninstaller
+          under Installed apps. \`konnekt-windows-amd64.exe\` beside it is the
+          file the in-app updater fetches, not a download for you.
 
-          The binaries carry no code-signing certificate, so Windows
-          SmartScreen warns on first launch: choose More info, then Run anyway.
+          On macOS, open \`konnekt-darwin-universal.dmg\` and drag Konnekt into
+          Applications. It runs on Apple silicon and Intel Macs.
+
+          The builds carry no code-signing certificate. Windows SmartScreen
+          warns on first launch: choose More info, then Run anyway. macOS
+          refuses the first launch: open System Settings, Privacy & Security,
+          and choose Open Anyway beside Konnekt.
 
           Every artifact here is built by GitHub Actions from the tagged commit
           and carries a signed build provenance attestation. To check that what

@@ -135,8 +135,8 @@
                       <td>Your <em>server</em> needs it to run. Konnekt itself does not.</td>
                     </tr>
                     <tr>
-                      <td>Windows or Linux, 64-bit</td>
-                      <td>macOS builds from source today.</td>
+                      <td>Windows, Linux or macOS</td>
+                      <td>64-bit Windows and Linux; on a Mac, Apple silicon or Intel.</td>
                     </tr>
                   </tbody>
                 </table>
@@ -168,7 +168,7 @@
                   <tbody>
                     <tr data-platform="windows">
                       <td>Windows (x86-64)</td>
-                      <td><code>konnekt-windows-amd64.exe</code></td>
+                      <td><code>konnekt-windows-amd64-setup.exe</code></td>
                       <td data-stage="alpha">
                         <span class="status"
                           ><span class="marker" aria-hidden="true"></span>ALPHA</span
@@ -194,11 +194,11 @@
                       </td>
                     </tr>
                     <tr data-platform="mac">
-                      <td>macOS</td>
-                      <td>Build from source</td>
-                      <td data-stage="source">
+                      <td>macOS (Apple silicon and Intel)</td>
+                      <td><code>konnekt-darwin-universal.dmg</code></td>
+                      <td data-stage="snapshot">
                         <span class="status"
-                          ><span class="marker" aria-hidden="true"></span>SOURCE</span
+                          ><span class="marker" aria-hidden="true"></span>SNAPSHOT</span
                         >
                       </td>
                     </tr>
@@ -212,8 +212,9 @@
                   36, Ubuntu 22.04, Debian 12, Rocky and RHEL 10, and anything newer.
                 </li>
                 <li>
-                  macOS has no published build, and
-                  <a href="/docs/install.html#build-from-source">builds from source</a>.
+                  On macOS, Konnekt does not update itself yet, and Remote Access has no tunnel:
+                  download each new <code>.dmg</code> from the
+                  <a href="/download.html">download page</a>.
                 </li>
               </ul>
             </div>
@@ -266,7 +267,7 @@
               >Konnekt</a
             >
             <p>A desktop dashboard for the Minecraft servers you host.</p>
-            <span class="meta"><span data-release-tag></span>Windows and Linux</span>
+            <span class="meta"><span data-release-tag></span>Windows, macOS and Linux</span>
           </div>
           <nav class="footer-col" aria-label="Product">
             <span class="label">Product</span>
