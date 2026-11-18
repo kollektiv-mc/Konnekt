@@ -648,7 +648,7 @@ pre code {
 
 .site-foot a {
   color: inherit;
-  transition: color 150ms;
+  transition: color var(--duration-fast) var(--ease-standard);
 }
 
 .site-foot a:hover {
