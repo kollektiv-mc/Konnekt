@@ -1,4 +1,5 @@
 import type { Edge as FlowEdge } from '@xyflow/react'
+import { edgeWaypoints } from './edgeGeometry'
 import { randId, type BlockFlowNode, type NodeData } from './graphMapping'
 
 /** What a copy holds: the selected nodes and the edges wholly inside that set. */
@@ -148,7 +149,9 @@ export function instantiateSlice(
       // Captured edges are internal by construction; this only holds if a slice
       // was built some other way.
       if (!source || !target) return []
-      return [{ ...e, id: randId(), source, target, selected: false, data: cloneEdgeData(e.data) }]
+      return [
+        { ...e, id: randId(), source, target, selected: false, data: cloneEdgeData(e.data, delta) },
+      ]
     }),
   }
 }
@@ -159,10 +162,17 @@ function cloneData(data: NodeData): NodeData {
   return copy
 }
 
-function cloneEdgeData(data: FlowEdge['data']): FlowEdge['data'] {
+// A wire's corner points are canvas positions, so they move with the nodes they
+// join. The moved points are a new array: the slice's own stay put for the next
+// paste. A wire with no usable corners is left as it was. Capture passes no delta.
+function cloneEdgeData(data: FlowEdge['data'], delta: Point = { x: 0, y: 0 }): FlowEdge['data'] {
   if (!data) return data
   const copy = { ...data }
   delete copy._animDelay
+  const corners = edgeWaypoints(copy)
+  if (corners.length > 0) {
+    copy.waypoints = corners.map((p) => ({ x: p.x + delta.x, y: p.y + delta.y }))
+  }
   return copy
 }
 
