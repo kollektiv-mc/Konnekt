@@ -79,7 +79,9 @@ const (
 
 // typedPropertyValue converts a server.properties value to the type
 // builtinAttrs declares for the attribute: server.port is a number and
-// server.whitelist is 1 or 0, the convention server.status uses for a bool.
+// server.whitelist a bool. A bool rather than server.status's 1 or 0, so that
+// @server.whitelist still reads true or false in a command, as the text did,
+// while the expression evaluator's toFloat takes it as 1 or 0.
 // An absent key reads as the game's default. A value that does not parse is an
 // error, so the block fails with a message rather than outputting text that
 // contradicts the declared type. The other attributes are text and pass through.
@@ -106,10 +108,7 @@ func typedPropertyValue(attr, raw string) (interface{}, error) {
 		default:
 			return nil, fmt.Errorf("%s is not true or false: %q", attrToPropertyKey(attr), raw)
 		}
-		if on {
-			return float64(1), nil
-		}
-		return float64(0), nil
+		return on, nil
 	}
 	return raw, nil
 }

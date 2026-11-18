@@ -32,10 +32,10 @@ func TestReadBuiltinAttributeServerTypes(t *testing.T) {
 		{name: "absent port is the game default", attr: "server.port", props: "motd=hi", want: float64(25565)},
 		{name: "no file gives the default port", attr: "server.port", props: "", want: float64(25565)},
 		{name: "unparsable port fails", attr: "server.port", props: "server-port=abc", wantErr: "server-port"},
-		{name: "whitelist true is 1", attr: "server.whitelist", props: "white-list=true", want: float64(1)},
-		{name: "whitelist false is 0", attr: "server.whitelist", props: "white-list=false", want: float64(0)},
-		{name: "whitelist ignores case", attr: "server.whitelist", props: "white-list=TRUE", want: float64(1)},
-		{name: "absent whitelist is the game default", attr: "server.whitelist", props: "motd=hi", want: float64(0)},
+		{name: "whitelist true is true", attr: "server.whitelist", props: "white-list=true", want: true},
+		{name: "whitelist false is false", attr: "server.whitelist", props: "white-list=false", want: false},
+		{name: "whitelist ignores case", attr: "server.whitelist", props: "white-list=TRUE", want: true},
+		{name: "absent whitelist is the game default", attr: "server.whitelist", props: "motd=hi", want: false},
 		{name: "unparsable whitelist fails", attr: "server.whitelist", props: "white-list=maybe", wantErr: "white-list"},
 		{name: "gamemode stays text", attr: "server.gamemode", props: "gamemode=survival", want: "survival"},
 		{name: "motd stays text", attr: "server.motd", props: "motd=Hello there", want: "Hello there"},
@@ -106,5 +106,17 @@ func TestExecServerAttributePortOutputsNumber(t *testing.T) {
 func TestServerGamemodeIsDeclaredString(t *testing.T) {
 	if got := builtinAttrs["server.gamemode"].Type; got != "string" {
 		t.Errorf("server.gamemode declared %q, want string", got)
+	}
+}
+
+// A command that interpolates @server.whitelist reads true or false, as it did
+// when the attribute came back as the property's text.
+func TestServerWhitelistInterpolatesAsTrueOrFalse(t *testing.T) {
+	got, err := readBuiltinAttribute(propsDeps(t, "white-list=true"), testServerID, "server.whitelist")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if s := toStr(got); s != "true" {
+		t.Errorf("toStr(server.whitelist) = %q, want true", s)
 	}
 }
