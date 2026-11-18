@@ -363,9 +363,9 @@ tree.
       unmount — no leaked subscriptions.
       Verify: from `frontend/`, `grep -rn "EventsOn" src` — each call site must
       sit in a `useEffect` whose cleanup invokes the returned unsubscribe.
-      **47 registrations across 13 files**, all clean. Recounted 2026-08-20:
-      this line said "25 across 12" and had been wrong for a while — `App.tsx`
-      alone holds 19. Count with
+      **57 registrations across 15 files**, all clean (recounted 2026-11-18,
+      #769: `App.tsx` alone holds 25; `useRemoteSync.ts` and
+      `SettingsModal.tsx`'s update-progress listener are the newest). Count with
       `grep -rn "EventsOn(" src --include=*.ts --include=*.tsx | grep -v "\.test\."`
       and subtract nothing but comments; the import line spells it `EventsOn }`
       and does not match.
@@ -384,9 +384,10 @@ tree.
 - [x] No frontend data is driven by `useEffect` polling when it should be a
       Wails event listener (CLAUDE.md rule). Every data poll is closed: the
       players tile's 3s poll, then the stats/backups/mods 10s polls (see
-      HEALTH_LOG). The only remaining `setInterval` under `src/` is
-      `App.tsx`'s 150ms console-log batcher, which is a render-batching
-      measure rather than data fetching. Check with
+      HEALTH_LOG). Two `setInterval`s remain under `src/`, and neither
+      fetches data: `hooks/useConsoleSync.ts`'s 150ms console-log batcher, a
+      render-batching measure, and `components/RemotePrompts.tsx`'s 1s clock,
+      which only re-renders an approval's countdown. Check with
       `grep -rn "setInterval" src --include=*.ts --include=*.tsx | grep -v test`.
 - [x] Process lifecycle stays safe: Windows Job Object child cleanup intact
       (`backend/services/server_windows.go`), RCON dial/operation timeouts
@@ -559,10 +560,13 @@ tree.
       not a hazard: it duplicated a *type* two packages had to agree on, while
       these are private runtime stores nothing shares across the boundary.
       Re-confirm rather than re-investigate. The one worth watching is
-      `wails/v2`, three minors behind at v2.12.0 — and note `go.mod`'s pin is
-      what the `frontend/wailsjs/` regeneration check must run against.
+      `wails/v2`: pinned at v2.12.0 while `go list -m -u` reported v2.17.1 on
+      2026-11-18, five minors, and Dependabot is told to ignore it until the
+      upgrade is done on purpose. Note `go.mod`'s pin is what the
+      `frontend/wailsjs/` regeneration check must run against.
 - [x] New Go dependencies were checked against `agent_docs/DEPENDENCIES.md`
-      before being added. All four direct requires present, none dropped.
+      before being added. All nine direct requires present, none dropped
+      (recounted 2026-11-18, #810).
       Verify: every direct require in `go.mod` appears in that file's inventory
       table with a rationale, and nothing in the table has since been dropped.
 - [x] Local-first invariant holds: no `localStorage`/`sessionStorage` usage;
