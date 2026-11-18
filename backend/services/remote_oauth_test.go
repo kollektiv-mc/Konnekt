@@ -495,6 +495,46 @@ func TestOAuthRedirectURIsMatchExactly(t *testing.T) {
 	}
 }
 
+// A page shown again after a failed submit keeps the ticks the user made.
+func TestOAuthConsentRerenderKeepsTicks(t *testing.T) {
+	f := newOAuthFixture(t)
+	client := f.register(t, RemoteClaudeRedirect)
+	_, challenge := pkce()
+	id, csrf, first := f.startConsent(t, authorizeURL(client, RemoteClaudeRedirect, challenge, "", "s"))
+	if !strings.Contains(first, `value="konnekt:read" checked`) || strings.Contains(first, `value="konnekt:operate" checked`) {
+		t.Errorf("first page should tick read only:\n%s", first)
+	}
+	both := []string{`value="konnekt:read" checked`, `value="konnekt:operate" checked`}
+	for name, tc := range map[string]struct {
+		password string
+		status   int
+		scopes   []string
+		want     []string
+		absent   []string
+	}{
+		"wrong password": {"wrong", http.StatusUnauthorized, []string{RemoteScopeOperate}, both, nil},
+		"empty password": {"", http.StatusBadRequest, []string{RemoteScopeRead, RemoteScopeOperate}, both, nil},
+		"read only":      {"", http.StatusBadRequest, []string{RemoteScopeRead}, both[:1], both[1:]},
+		"nothing ticked": {"", http.StatusBadRequest, nil, nil, both},
+	} {
+		w := f.consent(id, csrf, tc.password, "allow", tc.scopes...)
+		body := w.Body.String()
+		if w.Code != tc.status {
+			t.Fatalf("%s: %d, want %d", name, w.Code, tc.status)
+		}
+		for _, want := range tc.want {
+			if !strings.Contains(body, want) {
+				t.Errorf("%s: page lacks %q:\n%s", name, want, body)
+			}
+		}
+		for _, no := range tc.absent {
+			if strings.Contains(body, no) {
+				t.Errorf("%s: page has %q:\n%s", name, no, body)
+			}
+		}
+	}
+}
+
 func TestOAuthConsentNeedsPasswordAndDesktop(t *testing.T) {
 	f := newOAuthFixture(t)
 	client := f.register(t, RemoteClaudeRedirect)

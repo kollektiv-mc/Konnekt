@@ -118,7 +118,6 @@ type remoteConsent struct {
 	redirectURI string
 	state       string
 	challenge   string
-	scopes      []string // asked for
 	resource    string
 	created     time.Time
 	// Past the password the consent waits on the desktop; decided, it holds
@@ -536,8 +535,9 @@ func remoteConsentError(w http.ResponseWriter, status int, message string) {
 	writeRemoteConsentPage(w, status, remoteConsentView{Title: "Konnekt could not start this sign-in", Message: message, Plain: true})
 }
 
-// consentView builds the page for c. Caller holds a.mu.
-func consentView(c *remoteConsent, message string) remoteConsentView {
+// consentView builds the page for c with the scopes in ticked checked.
+// Caller holds a.mu.
+func consentView(c *remoteConsent, message string, ticked []string) remoteConsentView {
 	u, err := url.Parse(c.redirectURI)
 	host := c.redirectURI
 	loopback := false
@@ -550,9 +550,10 @@ func consentView(c *remoteConsent, message string) remoteConsentView {
 	// Every permission is on offer, not only what the client asked for: the
 	// first challenge names konnekt:read alone, and a client that signs in
 	// afresh instead of stepping up would otherwise never be able to grant
-	// operate (#798). Read is ticked; operate is the user's own tick.
+	// operate (#798). The first page ticks read; operate is the user's own
+	// tick, and a page shown again keeps what was posted.
 	for _, s := range remoteScopesSupported {
-		view.Scopes = append(view.Scopes, remoteScopeView{Scope: s, Text: remoteScopeText[s], Checked: s == RemoteScopeRead})
+		view.Scopes = append(view.Scopes, remoteScopeView{Scope: s, Text: remoteScopeText[s], Checked: slices.Contains(ticked, s)})
 	}
 	return view
 }
@@ -645,11 +646,13 @@ func (a *RemoteAuth) serveAuthorize(w http.ResponseWriter, r *http.Request) {
 		a.redirectError(w, r, redirect, state, "invalid_target", "the resource is "+resource)
 		return
 	}
+	// Validation only: the page offers every supported scope whatever was
+	// asked, but an unknown one is still refused.
 	scopes := strings.Fields(q.Get("scope"))
 	if len(scopes) == 0 {
 		scopes = []string{RemoteScopeRead}
 	}
-	if scopes = normalizeRemoteScopes(scopes); scopes == nil {
+	if normalizeRemoteScopes(scopes) == nil {
 		a.redirectError(w, r, redirect, state, "invalid_scope", "scopes are konnekt:read and konnekt:operate")
 		return
 	}
@@ -668,7 +671,7 @@ func (a *RemoteAuth) serveAuthorize(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	c := &remoteConsent{id: id, csrf: csrf, client: client, redirectURI: redirect, state: state,
-		challenge: challenge, scopes: scopes, resource: resource}
+		challenge: challenge, resource: resource}
 
 	a.mu.Lock()
 	now := a.now()
@@ -687,7 +690,7 @@ func (a *RemoteAuth) serveAuthorize(w http.ResponseWriter, r *http.Request) {
 	}
 	c.created = now
 	a.oauth.consents[id] = c
-	view := consentView(c, "")
+	view := consentView(c, "", []string{RemoteScopeRead})
 	a.mu.Unlock()
 	writeRemoteConsentPage(w, http.StatusOK, view)
 }
@@ -773,7 +776,7 @@ func (a *RemoteAuth) serveConsent(w http.ResponseWriter, r *http.Request) {
 		if password == "" {
 			message = "Type the Remote Access password."
 		}
-		view := consentView(c, message)
+		view := consentView(c, message, granted)
 		a.mu.Unlock()
 		writeRemoteConsentPage(w, http.StatusBadRequest, view)
 		return
@@ -789,7 +792,7 @@ func (a *RemoteAuth) serveConsent(w http.ResponseWriter, r *http.Request) {
 			// goes to the waiting page (#622).
 			message = "Already checking the password. Try again in a moment."
 		}
-		view := consentView(c, message)
+		view := consentView(c, message, granted)
 		a.mu.Unlock()
 		w.Header().Set("Retry-After", strconv.Itoa(int(wait/time.Second)+1))
 		writeRemoteConsentPage(w, http.StatusTooManyRequests, view)
@@ -815,7 +818,7 @@ func (a *RemoteAuth) serveConsent(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		// One line per counted failure, never the password (§ S8.9).
 		slog.Warn("remote: consent refused, password", "client", c.client.Name)
-		view := consentView(c, "Wrong password.")
+		view := consentView(c, "Wrong password.", granted)
 		a.mu.Unlock()
 		writeRemoteConsentPage(w, http.StatusUnauthorized, view)
 		return
