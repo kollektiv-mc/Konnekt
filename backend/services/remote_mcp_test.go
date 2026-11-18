@@ -141,7 +141,6 @@ func TestRemoteMCPRefusesEverythingButABearer(t *testing.T) {
 	}
 }
 
-// One credential per surface: the dashboard's RPC never reads a bearer token.
 // Through the tunnel every request arrives on the loopback listener with
 // the public hostname as Host. The SDK's own DNS rebinding check fires only
 // with a real connection's local address, which httptest.NewRequest does
@@ -161,6 +160,7 @@ func TestRemoteMCPServesTunnelledRequestsOnLoopback(t *testing.T) {
 	}
 }
 
+// One credential per surface: the dashboard's RPC never reads a bearer token.
 func TestRemoteRPCIgnoresBearerTokens(t *testing.T) {
 	f := newMCPEndpointFixture(t)
 	good := f.token(t, "https://"+testHost+RemoteMCPPath, RemoteScopeRead, RemoteScopeOperate)
