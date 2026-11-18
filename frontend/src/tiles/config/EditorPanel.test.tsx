@@ -1,5 +1,5 @@
 import { describe, it, expect, afterEach, vi } from 'vitest'
-import { render, screen, cleanup } from '@testing-library/react'
+import { render, screen, cleanup, fireEvent } from '@testing-library/react'
 import type { ConfigFile } from '../../types'
 import { EditorPanel, FORM_MAX_CHARS } from './EditorPanel'
 
@@ -50,6 +50,59 @@ describe('the config editor form view size cap', () => {
     renderPanel(big)
     expect(screen.getByText('Raw only')).toBeTruthy()
     expect(screen.queryByRole('button', { name: 'form' })).toBeNull()
+    expect(screen.getByTestId('raw-editor')).toBeTruthy()
+  })
+})
+
+// Typing is simulated by rerendering with the new text, as the tile does.
+describe('the config editor view choice while typing', () => {
+  const other: ConfigFile = { ...jsonFile, relPath: 'config/other.json', name: 'other.json' }
+  const panel = (content: string, file: ConfigFile = jsonFile) => (
+    <EditorPanel
+      file={file}
+      content={content}
+      onChange={() => {}}
+      isDirty={false}
+      loading={false}
+      saving={false}
+      saveError={null}
+      isRunning={false}
+      onSave={() => {}}
+      onRevert={() => {}}
+      onRestart={() => {}}
+    />
+  )
+  const sized = (n: number) => JSON.stringify({ k: 'x'.repeat(n - 8) })
+
+  it('stays in form view when typing pushes it past the cap', () => {
+    const { rerender } = render(panel(sized(FORM_MAX_CHARS - 10)))
+    expect(screen.queryByTestId('raw-editor')).toBeNull()
+    rerender(panel(sized(FORM_MAX_CHARS + 20)))
+    expect(screen.queryByTestId('raw-editor')).toBeNull()
+    expect(screen.getByRole('button', { name: 'form' })).toBeTruthy()
+  })
+
+  it('keeps a raw choice when the text becomes parseable again', () => {
+    const { rerender } = render(panel('{"a": 1}'))
+    fireEvent.click(screen.getByRole('button', { name: 'raw' }))
+    rerender(panel('{"a": 1,'))
+    expect(screen.getByText('Raw only')).toBeTruthy()
+    rerender(panel('{"a": 12}'))
+    expect(screen.getByTestId('raw-editor')).toBeTruthy()
+  })
+
+  it('resets to form when another file is opened', () => {
+    const { rerender } = render(panel('{"a": 1}'))
+    fireEvent.click(screen.getByRole('button', { name: 'raw' }))
+    expect(screen.getByTestId('raw-editor')).toBeTruthy()
+    rerender(panel('{"b": 2}', other))
+    expect(screen.queryByTestId('raw-editor')).toBeNull()
+  })
+
+  it('opens a file loaded over the cap in raw only', () => {
+    const { rerender } = render(panel(''))
+    rerender(panel(sized(FORM_MAX_CHARS + 20), other))
+    expect(screen.getByText('Raw only')).toBeTruthy()
     expect(screen.getByTestId('raw-editor')).toBeTruthy()
   })
 })

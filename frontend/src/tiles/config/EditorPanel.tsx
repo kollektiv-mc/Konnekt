@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useMemo } from 'react'
 import CodeMirror from '@uiw/react-codemirror'
 import { json } from '@codemirror/lang-json'
 import { yaml } from '@codemirror/lang-yaml'
@@ -61,8 +61,9 @@ const FORMAT_COLORS: Record<string, string> = {
 // second and sat idle, 256 KB took 2.4 s, 512 KB never went idle.
 export const FORM_MAX_CHARS = 128 * 1024
 
-function formSupported(format: string, content: string): boolean {
-  if (content.length > FORM_MAX_CHARS) return false
+// Whether the form can render this text at all. The size cap is separate: it is
+// decided once per opened file, not on every keystroke.
+function formParses(format: string, content: string): boolean {
   if (format === 'properties') return true
   if (format === 'yaml') return yamlIsFormSafe(content)
   if (format === 'json') {
@@ -134,21 +135,35 @@ export function EditorPanel({
   // Each of these parses the whole text, so once per change of it rather than
   // once per render: the tile re-renders for reasons that leave the file alone.
   const format = file?.format
-  const canForm = useMemo(
-    () => (format ? formSupported(format, content) : false),
-    [format, content],
-  )
+  const parses = useMemo(() => (format ? formParses(format, content) : false), [format, content])
   const problem = useMemo(
     () => (format && !loading ? parseProblem(format, content) : null),
     [format, content, loading],
   )
-  const [viewMode, setViewMode] = useState<'form' | 'raw'>('form')
 
-  // When switching to a file that doesn't support form, force raw
-  useEffect(() => {
-    if (!canForm) setViewMode('raw')
-    else setViewMode('form')
-  }, [file?.relPath, canForm])
+  // What the user chose and whether the file was over the size cap when it
+  // finished loading, both belonging to one file. They are reset during render
+  // when another file is opened rather than in an effect, and `content` arrives
+  // together with `loading` turning false, so the size is measured on the text
+  // as loaded: typing past the cap later does not leave the form view.
+  const [view, setView] = useState<{ relPath: string | null; mode: 'form' | 'raw'; big: boolean }>({
+    relPath: null,
+    mode: 'form',
+    big: false,
+  })
+  const loadedPath = file && !loading ? file.relPath : null
+  if (!file && view.relPath !== null) {
+    setView({ relPath: null, mode: 'form', big: false })
+  } else if (loadedPath !== null && view.relPath !== loadedPath) {
+    setView({ relPath: loadedPath, mode: 'form', big: content.length > FORM_MAX_CHARS })
+  }
+
+  // The choice is state and the shown mode is derived: text that stops parsing
+  // shows raw without forgetting the choice, and parsing again does not undo a
+  // switch to raw.
+  const canForm = parses && !view.big
+  const viewMode = canForm ? view.mode : 'raw'
+  const setViewMode = (mode: 'form' | 'raw') => setView((v) => ({ ...v, mode }))
 
   if (!file) {
     return (
