@@ -70,8 +70,10 @@ func readBuiltinAttribute(deps serviceDeps, serverID, name string) (interface{},
 	}
 }
 
-// Defaults the game applies when server.properties lacks the key, or the file
-// does not exist yet.
+// What an absent key reads as. The server writes every key on its first
+// start, so a key is absent only before then. 25565 is every version's port.
+// The whitelist is off by default in every release before 26.3 Snapshot 2,
+// which minecraft.wiki records as turning it on.
 const (
 	defaultServerPort      = 25565
 	defaultServerWhitelist = false
