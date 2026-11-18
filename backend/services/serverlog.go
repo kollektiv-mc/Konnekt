@@ -1,10 +1,8 @@
 package services
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
-	"io"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -35,7 +33,8 @@ const (
 // ReadServerLogTail returns the last lines of workDir's logs/latest.log,
 // oldest first and newest last. lines caps the count; zero or anything out of
 // range means ServerLogMaxLines. The read starts at a line boundary within
-// the last serverLogMaxBytes, so the first line is whole, and a Windows CRLF
+// the last serverLogMaxBytes, so the first line is whole, except that a line
+// longer than that comes back as its last serverLogMaxBytes. A Windows CRLF
 // is trimmed. A log that does not exist reads as empty: a server that never
 // started has none, and that is not an error.
 func ReadServerLogTail(workDir string, lines int) ([]string, error) {
@@ -51,25 +50,9 @@ func ReadServerLogTail(workDir string, lines int) ([]string, error) {
 	}
 	defer f.Close()
 
-	info, err := f.Stat()
+	data, err := readTailWindow(f, serverLogMaxBytes, "server log")
 	if err != nil {
-		return nil, fmt.Errorf("stat server log: %w", err)
-	}
-	start := info.Size() - serverLogMaxBytes
-	if start < 0 {
-		start = 0
-	}
-	data, err := io.ReadAll(io.NewSectionReader(f, start, info.Size()-start))
-	if err != nil {
-		return nil, fmt.Errorf("read server log: %w", err)
-	}
-	if start > 0 {
-		// The cut landed mid-line, possibly mid-rune: drop up to the next line.
-		if i := bytes.IndexByte(data, '\n'); i >= 0 {
-			data = data[i+1:]
-		} else {
-			data = nil
-		}
+		return nil, err
 	}
 	return lastLines(data, lines), nil
 }
