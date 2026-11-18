@@ -135,9 +135,12 @@
       return
     }
 
+    // The old run is read for its height before it is retired, then retired
+    // here and now: its cancel event arrives after this call returns, too late
+    // to leave the new run's change alone.
     var from = box.getBoundingClientRect().height
     var prev = running.get(box)
-    if (prev) prev.cancel()
+    if (prev) prev.retire()
 
     var before = [].slice.call(box.querySelectorAll('[hidden]'))
     if (change) change()
@@ -171,11 +174,12 @@
       { duration: Math.abs(from - to) < 1 ? 0 : PANEL_MS, easing: EASE, fill: 'forwards' },
     )
     box.classList.add('is-resizing')
-    running.set(box, anim)
 
-    function settle(finished) {
+    // A run that has been superseded stops here without calling `done`: it
+    // hides what it was hiding and drops its animations, and the run that
+    // replaced it takes over the box.
+    function end(finished) {
       anim.onfinish = anim.oncancel = null
-      if (running.get(box) === anim) running.delete(box)
       leaving.forEach(function (el) {
         el.hidden = true
       })
@@ -184,6 +188,18 @@
       })
       if (finished && done) done()
       anim.cancel()
+    }
+    var run = {
+      retire: function () {
+        end(false)
+      },
+    }
+    running.set(box, run)
+
+    function settle(finished) {
+      if (running.get(box) !== run) return
+      running.delete(box)
+      end(finished)
       box.classList.remove('is-resizing')
     }
     anim.onfinish = function () {
