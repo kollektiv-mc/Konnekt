@@ -5,6 +5,7 @@ import { DependencyDialog } from './DependencyDialog'
 import { ClientOnlyBadge } from './ClientOnlyBadge'
 import { fmtCount, relativeTime } from '../../lib/format'
 import { errMsg } from '../../lib/ipc'
+import { Tooltip } from '../../components/ui/Tooltip'
 
 interface ContentCardProps {
   project: ModProject
@@ -136,9 +137,11 @@ export function ContentCard({
         </p>
 
         {installError && (
-          <p role="alert" className="text-danger mb-1.5 line-clamp-2 text-xs">
-            {installError}
-          </p>
+          <Tooltip text={installError}>
+            <p role="alert" className="text-danger mb-1.5 line-clamp-2 text-xs">
+              {installError}
+            </p>
+          </Tooltip>
         )}
 
         {/* Stats row */}

@@ -19,6 +19,7 @@ import {
 } from './blockMeta'
 import type { BlockFlowNode, NodeData } from './graphMapping'
 import { resolveDataPortType } from './portTypes'
+import { Tooltip } from '../../../components/ui/Tooltip'
 import type { models } from '../../../../wailsjs/go/models'
 
 const HEADER_H = 30
@@ -256,7 +257,9 @@ export const BlockNode = memo(function BlockNode({ data, selected }: NodeProps<B
         {/* What the last run could not finish (the node still completed) */}
         {warning !== undefined && (
           <div className="text-warning border-border-subtle border-b-hairline text-3xs flex h-5 items-center justify-between gap-2 truncate px-2.5 font-mono">
-            <span className="text-text-muted min-w-0 truncate">warning: {warning}</span>
+            <Tooltip text={warning}>
+              <span className="text-text-muted min-w-0 truncate">warning: {warning}</span>
+            </Tooltip>
           </div>
         )}
 

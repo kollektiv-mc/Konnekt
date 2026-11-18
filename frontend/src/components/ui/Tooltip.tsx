@@ -135,7 +135,7 @@ function Bubble({ id, text, anchor }: { id: string; text: string; anchor: HTMLEl
       id={id}
       role="tooltip"
       // Opacity only, on the shared fade and its token, off under reduced motion.
-      className="border-border-subtle bg-overlay border-hairline z-popover text-text-secondary text-2xs pointer-events-none fixed w-max max-w-60 animate-[lazy-panel-fade-in_var(--duration-fast)_ease-out_both] rounded-lg px-2.5 py-1.5 motion-reduce:animate-none"
+      className="border-border-subtle bg-overlay border-hairline z-popover text-text-secondary text-2xs pointer-events-none fixed w-max max-w-60 animate-[lazy-panel-fade-in_var(--duration-fast)_ease-out_both] rounded-lg px-2.5 py-1.5 break-words motion-reduce:animate-none"
       // eslint-disable-next-line no-restricted-syntax -- anchored to the hovered row's measured viewport position
       style={{ left: pos.left, top: pos.top }}
     >

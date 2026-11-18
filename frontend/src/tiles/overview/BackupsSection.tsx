@@ -4,6 +4,7 @@ import { fmtBytes, fmtDate, relativeMs } from '../../lib/format'
 import { useBackups } from '../backups/useBackups'
 import type { Backup } from '../backups/useBackups'
 import { Section, SectionEmpty } from './Section'
+import { Tooltip } from '../../components/ui/Tooltip'
 
 // The latest gets its own two-line header; these are the ones behind it, enough
 // to see whether backups are still running on schedule, which one number does
@@ -21,9 +22,11 @@ const OLDER_SHOWN = 3
 function KindTag({ backup }: { backup: Backup }) {
   const label = backup.kind === 'world' ? (backup.world ?? 'world') : 'server'
   return (
-    <span className="border-border-subtle text-text-faint border-hairline text-2xs shrink-0 truncate rounded px-1 font-mono">
-      {label}
-    </span>
+    <Tooltip text={label}>
+      <span className="border-border-subtle text-text-faint border-hairline text-2xs shrink-0 truncate rounded px-1 font-mono">
+        {label}
+      </span>
+    </Tooltip>
   )
 }
 
@@ -35,9 +38,11 @@ function Latest({ backup }: { backup: Backup }) {
         <span className="text-text-primary font-mono text-sm">{fmtBytes(backup.sizeBytes)}</span>
         <KindTag backup={backup} />
       </div>
-      <div className="text-text-faint truncate font-mono text-xs">
-        {relativeMs(backup.createdAt)} · {fmtDate(backup.createdAt)}
-      </div>
+      <Tooltip text={`${relativeMs(backup.createdAt)} · ${fmtDate(backup.createdAt)}`}>
+        <div className="text-text-faint truncate font-mono text-xs">
+          {relativeMs(backup.createdAt)} · {fmtDate(backup.createdAt)}
+        </div>
+      </Tooltip>
     </div>
   )
 }

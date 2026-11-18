@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { SendCommand } from '../../wailsjs/go/main/App'
 import { hasWailsBridge } from '../lib/ipc'
 import { Icon } from './ui/Icon'
+import { Tooltip } from './ui/Tooltip'
 import { Link2, TriangleAlert } from '../lib/icons'
 import { COMMAND_GRID, columnsFor } from '../lib/gridColumns'
 import { useElementSize } from '../hooks/useElementSize'
@@ -119,33 +120,34 @@ export function QuickCommandsPanel({ serverId, columns }: QuickCommandsPanelProp
         ) : (
           <div className={grid}>
             {items.map((item) => (
-              <button
-                key={item.id}
-                onClick={() => run(item)}
-                disabled={
-                  item.kind === 'lifecycle' &&
-                  item.value !== 'force-stop' &&
-                  lifecycle.busy !== null
-                }
-                className="cmd-button border-border-subtle text-text-secondary hover:border-border-hover hover:bg-hover hover:text-text-primary flex min-w-0 flex-col justify-center gap-0.5 rounded border text-left transition-all disabled:opacity-40"
-              >
-                <span className="flex items-center gap-1.5">
-                  <span className="cmd-button__label min-w-0 flex-1 truncate">{item.label}</span>
-                  {item.link && <LinkGlyph status={item.link.status} />}
-                </span>
-                {/* Only a plain command has text worth a second line: a
+              <Tooltip key={item.id} text={item.kind === 'cmd' ? item.value : undefined}>
+                <button
+                  onClick={() => run(item)}
+                  disabled={
+                    item.kind === 'lifecycle' &&
+                    item.value !== 'force-stop' &&
+                    lifecycle.busy !== null
+                  }
+                  className="cmd-button border-border-subtle text-text-secondary hover:border-border-hover hover:bg-hover hover:text-text-primary flex min-w-0 flex-col justify-center gap-0.5 rounded border text-left transition-all disabled:opacity-40"
+                >
+                  <span className="flex items-center gap-1.5">
+                    <span className="cmd-button__label min-w-0 flex-1 truncate">{item.label}</span>
+                    {item.link && <LinkGlyph status={item.link.status} />}
+                  </span>
+                  {/* Only a plain command has text worth a second line: a
                     lifecycle or dialog button's value is an internal token.
                     Hidden from the accessible name, which stays the label; the
-                    command is already the button's title. */}
-                {item.kind === 'cmd' && (
-                  <span
-                    aria-hidden
-                    className="cmd-button__value text-text-faint text-2xs truncate font-mono"
-                  >
-                    {item.value}
-                  </span>
-                )}
-              </button>
+                    command is the button's tooltip. */}
+                  {item.kind === 'cmd' && (
+                    <span
+                      aria-hidden
+                      className="cmd-button__value text-text-faint text-2xs truncate font-mono"
+                    >
+                      {item.value}
+                    </span>
+                  )}
+                </button>
+              </Tooltip>
             ))}
           </div>
         )}

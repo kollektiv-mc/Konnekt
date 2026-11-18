@@ -2,6 +2,7 @@ import type { ConnectorsState, LocalMCPState, RemoteGrant } from '../../stores/u
 import { relativeMs } from '../../lib/format'
 import { SettingRow } from '../ui/SettingRow'
 import { Toggle } from '../ui/Toggle'
+import { Tooltip } from '../ui/Tooltip'
 import { CopyButton } from './CopyButton'
 import { DANGER_BUTTON, QUIET_BUTTON } from './controls'
 import {
@@ -34,7 +35,9 @@ function SetupLine({ label, text }: { label: string; text: string }) {
     <div className="mt-2 flex items-center justify-between gap-3">
       <div className="flex min-w-0 flex-col gap-0.5">
         <span className="text-text-secondary text-xs">{label}</span>
-        <span className="text-text-muted text-1xs truncate font-mono">{text}</span>
+        <Tooltip text={text}>
+          <span className="text-text-muted text-1xs truncate font-mono">{text}</span>
+        </Tooltip>
       </div>
       <CopyButton text={text} />
     </div>

@@ -4,6 +4,7 @@ import { untilMs } from '../../lib/format'
 import { Headline } from '../../components/ui/Figure'
 import type { TileLayout } from '../../types'
 import { stoppingGraphIds } from './editor/blockMeta'
+import { Tooltip } from '../../components/ui/Tooltip'
 
 interface Props {
   graphs: models.Graph[]
@@ -55,7 +56,9 @@ export function SchedulerSummary({
         unit="armed"
         aside={
           error ? (
-            <span className="text-danger">unavailable</span>
+            <Tooltip text={error}>
+              <span className="text-danger">unavailable</span>
+            </Tooltip>
           ) : soonest ? (
             <span>
               {soonestStops ? 'next downtime' : 'next'} {untilMs(soonest)}

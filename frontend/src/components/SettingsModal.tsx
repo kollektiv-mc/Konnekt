@@ -16,6 +16,7 @@ import { ColorSwatch } from './ui/ColorSwatch'
 import { IconButton } from './ui/IconButton'
 import { ChevronDown, X } from '../lib/icons'
 import { Icon } from './ui/Icon'
+import { Tooltip } from './ui/Tooltip'
 import { Collapsible } from './ui/Collapsible'
 import { SettingRow } from './ui/SettingRow'
 import { TOAST_CATEGORIES } from '../lib/toast'
@@ -995,24 +996,28 @@ function AboutPane({ version }: { version: string | null }) {
             // OpenDataDir opens a folder on the desktop: not callable from a remote browser.
             <PlainDataDir path={dataDir} />
           ) : (
-            <button
-              onClick={openFolder}
-              className="text-text-muted text-1xs font-mono transition-colors"
-              onMouseEnter={(e) => {
-                ;(e.currentTarget as HTMLButtonElement).style.color = 'var(--accent)'
-              }}
-              onMouseLeave={(e) => {
-                ;(e.currentTarget as HTMLButtonElement).style.color = 'var(--text-muted)'
-              }}
-            >
-              <span className="max-w-56 truncate">{dataDir ?? 'Open folder'}</span> ↗
-            </button>
+            <Tooltip text={dataDir ? `Open ${dataDir}` : 'Open config folder'}>
+              <button
+                onClick={openFolder}
+                className="text-text-muted text-1xs font-mono transition-colors"
+                onMouseEnter={(e) => {
+                  ;(e.currentTarget as HTMLButtonElement).style.color = 'var(--accent)'
+                }}
+                onMouseLeave={(e) => {
+                  ;(e.currentTarget as HTMLButtonElement).style.color = 'var(--text-muted)'
+                }}
+              >
+                <span className="max-w-56 truncate">{dataDir ?? 'Open folder'}</span> ↗
+              </button>
+            </Tooltip>
           )}
         </div>
         {logPath && (
           <div className="text-text-secondary flex items-center justify-between gap-3 text-xs">
             <span className="shrink-0">Log file</span>
-            <span className="text-text-muted text-1xs truncate font-mono">{logPath}</span>
+            <Tooltip text={`${logPath}. Attach this to a bug report.`}>
+              <span className="text-text-muted text-1xs truncate font-mono">{logPath}</span>
+            </Tooltip>
           </div>
         )}
       </div>

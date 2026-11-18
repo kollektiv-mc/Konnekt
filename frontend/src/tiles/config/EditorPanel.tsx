@@ -9,6 +9,7 @@ import { ConfigForm } from './form/ConfigForm'
 import { yamlIsFormSafe } from './form/parseYaml'
 import { tomlIsFormSafe } from './form/parseToml'
 import { parseProblem } from './form/parseProblem'
+import { Tooltip } from '../../components/ui/Tooltip'
 
 function langExtension(format: ConfigFile['format']): Extension[] {
   switch (format) {
@@ -181,9 +182,11 @@ export function EditorPanel({
     <div className="lazy-panel-in flex min-w-0 flex-1 flex-col overflow-hidden">
       {/* Header */}
       <div className="border-border-subtle flex shrink-0 flex-wrap items-center gap-2 border-b px-3 py-1.5">
-        <span className="text-text-muted min-w-0 flex-1 truncate font-mono text-xs">
-          {file.relPath}
-        </span>
+        <Tooltip text={file.relPath}>
+          <span className="text-text-muted min-w-0 flex-1 truncate font-mono text-xs">
+            {file.relPath}
+          </span>
+        </Tooltip>
 
         <span
           className={`text-2xs shrink-0 font-mono ${FORMAT_COLORS[file.format] ?? 'text-zinc-400'}`}

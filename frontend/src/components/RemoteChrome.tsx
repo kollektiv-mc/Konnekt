@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useRemoteClient } from '../hooks/useRemoteClient'
 import { signOut } from '../lib/remoteRuntime'
+import { Tooltip } from './ui/Tooltip'
 
 /**
  * The parts of the window that exist only in a browser served by Remote Access.
@@ -35,7 +36,9 @@ export function RemoteSession() {
   return (
     <>
       {device !== '' && (
-        <span className="text-2xs text-muted mr-1 max-w-40 truncate max-sm:hidden">{device}</span>
+        <Tooltip text={`Signed in as ${device}`}>
+          <span className="text-2xs text-muted mr-1 max-w-40 truncate max-sm:hidden">{device}</span>
+        </Tooltip>
       )}
       <button
         type="button"
