@@ -380,6 +380,45 @@ summary h3 {
   padding: 0 40px;
 }
 
+/* The menu button stands in for the links on phones; elsewhere it is not
+   drawn. Its two bars cross into an X while the menu is open. */
+.nav-menu {
+  display: none;
+  flex: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: var(--nav-h);
+  min-height: var(--nav-h);
+  padding: 0;
+  border: 0;
+  border-left: var(--hairline);
+  background: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.nav-menu:hover,
+.nav-menu[aria-expanded='true'] {
+  color: var(--text-primary);
+}
+
+.nav-menu span {
+  width: 18px;
+  height: 1.5px;
+  background: currentColor;
+  transition: transform var(--duration-fast) var(--ease-standard);
+}
+
+.nav-menu[aria-expanded='true'] span:first-child {
+  transform: translateY(3.75px) rotate(45deg);
+}
+
+.nav-menu[aria-expanded='true'] span:last-child {
+  transform: translateY(-3.75px) rotate(-45deg);
+}
+
 .mark {
   flex: none;
 }
@@ -610,8 +649,11 @@ pre code {
   color: var(--text-secondary);
 }
 
+/* Sized by the row, not by the input's own default width, which on the
+   narrowest phones was wider than the page. */
 .search input {
   flex: 1;
+  width: 0;
   min-width: 0;
   padding: 0;
   border: 0;
@@ -666,19 +708,65 @@ pre code {
     border-right: 0;
   }
 
+  /* On a phone the links are a menu: one row each under the bar, GitHub
+     last, behind the menu button. site.js opens and closes it. Without
+     script there is no button and the menu stays open. */
+  .nav-brand {
+    padding-right: 0;
+  }
+
+  .nav-menu {
+    display: flex;
+    width: 56px;
+  }
+
   .nav-links {
     order: 3;
     flex-basis: 100%;
-    min-height: 56px;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0;
+    min-height: 0;
+    padding: 0;
+    font-size: 17px;
+  }
+
+  .nav-links li {
     border-top: var(--hairline);
   }
 
+  .nav-links a,
   .nav-side {
+    display: flex;
+    align-items: center;
+    min-height: 56px;
+    padding: 0 var(--pad);
+  }
+
+  .nav-side {
+    order: 4;
+    flex-basis: 100%;
+    border-left: 0;
+    border-top: var(--hairline);
+    font-size: 17px;
+  }
+
+  .nav:not(.is-open) .nav-links,
+  .nav:not(.is-open) .nav-side {
     display: none;
   }
 
+  .no-js .nav-menu {
+    display: none;
+  }
+
+  .no-js .nav .nav-links,
+  .no-js .nav .nav-side {
+    display: flex;
+  }
+
   .nav .btn {
-    padding: 0 24px;
+    padding: 0 20px;
   }
 
   .page-hero-title {
@@ -688,6 +776,15 @@ pre code {
 
   .page-hero-side {
     padding-block: 24px;
+  }
+}
+
+/* The narrowest phones keep the download arrow and drop its word, which the
+   hero repeats a few lines down; the link keeps it as its name. */
+@media (max-width: 359px) {
+  .nav .btn {
+    gap: 0;
+    font-size: 0;
   }
 }
 

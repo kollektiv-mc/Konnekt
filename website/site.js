@@ -212,6 +212,79 @@
 
   window.KonnektMotion = { resize: resize }
 
+  // ── Nav menu ───────────────────────────────────────────────────────────
+  // On a phone the links fold behind the menu button. The CSS keeps them
+  // drawn only while the nav is .is-open; opening and closing go through
+  // resize, so the nav grows and shrinks like any other box on the site.
+  var menu = nav && nav.querySelector('.nav-menu')
+  var menuLinks = nav && nav.querySelector('.nav-links')
+  var menuSide = nav && nav.querySelector('.nav-side')
+  if (menu && menuLinks) {
+    var menuItems = [menuLinks, menuSide].filter(Boolean)
+    var setHidden = function (hidden) {
+      menuItems.forEach(function (el) {
+        el.hidden = hidden
+      })
+    }
+
+    var openMenu = function () {
+      menu.setAttribute('aria-expanded', 'true')
+      // Marked hidden first, so resize fades them in as it reveals them.
+      setHidden(true)
+      resize(nav, function () {
+        nav.classList.add('is-open')
+        setHidden(false)
+      })
+    }
+
+    var closeMenu = function () {
+      menu.setAttribute('aria-expanded', 'false')
+      resize(nav, null, menuItems, function () {
+        nav.classList.remove('is-open')
+        setHidden(false)
+      })
+    }
+
+    // At once, for a link on this page: the scroll to its anchor is measured
+    // as it starts, and a nav still closing would move the anchor under it.
+    var closeMenuNow = function () {
+      var run = running && running.get(nav)
+      if (run) {
+        run.retire()
+        running.delete(nav)
+        nav.classList.remove('is-resizing')
+      }
+      menu.setAttribute('aria-expanded', 'false')
+      nav.classList.remove('is-open')
+      setHidden(false)
+    }
+
+    menu.addEventListener('click', function () {
+      if (menu.getAttribute('aria-expanded') === 'true') closeMenu()
+      else openMenu()
+    })
+
+    menuItems.forEach(function (el) {
+      el.addEventListener('click', function (e) {
+        if (e.target.closest('a[href]') && nav.classList.contains('is-open')) closeMenuNow()
+      })
+    })
+
+    nav.addEventListener('keydown', function (e) {
+      if (e.key !== 'Escape' || menu.getAttribute('aria-expanded') !== 'true') return
+      closeMenu()
+      menu.focus()
+    })
+
+    // Widened past the phone layout, the links are back in the bar.
+    var phone = window.matchMedia('(max-width: 760px)')
+    var onPhoneChange = function () {
+      if (!phone.matches) closeMenuNow()
+    }
+    if (phone.addEventListener) phone.addEventListener('change', onPhoneChange)
+    else if (phone.addListener) phone.addListener(onPhoneChange)
+  }
+
   // Every <details> on the site opens and closes through resize. Closing, its
   // content stays until the box has shut over it; the open attribute, and with
   // it the summary's + or −, goes last.
