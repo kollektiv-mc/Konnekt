@@ -624,6 +624,13 @@
     border-bottom: var(--hairline);
   }
 
+  /* Below the hero copy a phone shows it a screen late and cut to the
+     column; hidden, it pauses too, since home.js types only while it is on
+     screen. */
+  .hero .console {
+    display: none;
+  }
+
   .works-label {
     flex-basis: 100%;
     border-right: 0;
