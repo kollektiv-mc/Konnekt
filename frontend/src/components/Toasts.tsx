@@ -4,6 +4,7 @@ import { useNotificationsStore } from '../stores/useNotificationsStore'
 import type { Toast, ToastTone } from '../stores/useNotificationsStore'
 import { Icon } from './ui/Icon'
 import { IconButton } from './ui/IconButton'
+import { Tooltip } from './ui/Tooltip'
 import { CopyButton } from './settings/CopyButton'
 import { QUIET_BUTTON } from './settings/controls'
 import { CircleArrowUp, CircleX, Info, TriangleAlert, X, type LucideIcon } from '../lib/icons'
@@ -45,7 +46,9 @@ function ToastCard({
     >
       <div className="flex items-center gap-2">
         <Icon icon={icon} size="sm" className={tone.text} />
-        <span className="text-text-primary min-w-0 flex-1 truncate text-xs">{toast.title}</span>
+        <Tooltip text={toast.title}>
+          <span className="text-text-primary min-w-0 flex-1 truncate text-xs">{toast.title}</span>
+        </Tooltip>
         {toast.count > 1 && (
           <span className="text-text-faint text-2xs shrink-0 font-mono">{toast.count} times</span>
         )}

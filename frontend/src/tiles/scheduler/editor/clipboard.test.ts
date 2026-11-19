@@ -123,6 +123,23 @@ describe('instantiateSlice', () => {
     expect(s.nodes[0].data.config.command).toBe('a')
   })
 
+  it('moves a wire corner by the delta, as a new array', () => {
+    const s = slice()
+    const corner = [{ x: 60, y: 90 }]
+    s.edges[0] = { ...s.edges[0], data: { kind: 'control', waypoints: corner } }
+    const { edges } = instantiateSlice(s, { x: 5, y: -4 })
+    expect(edges[0].data?.waypoints).toEqual([{ x: 65, y: 86 }])
+    expect(edges[0].data?.waypoints).not.toBe(corner)
+    expect(s.edges[0].data?.waypoints).toEqual([{ x: 60, y: 90 }])
+    instantiateSlice(s, { x: 5, y: -4 })
+    expect(s.edges[0].data?.waypoints).toEqual([{ x: 60, y: 90 }])
+  })
+
+  it('adds no waypoints to a wire that had none', () => {
+    const { edges } = instantiateSlice(slice(), { x: 5, y: -4 })
+    expect(edges[0].data).not.toHaveProperty('waypoints')
+  })
+
   it('carries the edge kind and style, minus the animation stagger', () => {
     const { edges } = instantiateSlice(slice(), { x: 0, y: 0 })
     expect(edges[0].data).toEqual({ kind: 'control' })

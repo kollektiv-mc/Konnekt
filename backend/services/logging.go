@@ -86,8 +86,9 @@ func InitLogger(dataDir string) (*slog.Logger, error) {
 }
 
 // ReadLogTail returns the last max bytes of the log in dataDir, starting at a
-// line boundary so a report never opens on half a record. A log that does not
-// exist yet reads as empty: nothing has gone wrong worth a line.
+// line boundary so a report never opens on half a record. A line longer than
+// max comes back as its last max bytes, cut forward to a whole rune. A log
+// that does not exist yet reads as empty: nothing has gone wrong worth a line.
 func ReadLogTail(dataDir string, max int64) (string, error) {
 	f, err := os.Open(LogPath(dataDir))
 	if errors.Is(err, fs.ErrNotExist) {
@@ -98,9 +99,26 @@ func ReadLogTail(dataDir string, max int64) (string, error) {
 	}
 	defer f.Close()
 
+	data, err := readTailWindow(f, max, "log")
+	if err != nil {
+		return "", err
+	}
+	return string(data), nil
+}
+
+// readTailWindow returns the last max bytes of f, starting at a line boundary.
+// what names the file in the errors it wraps ("stat <what>", "read <what>").
+//
+// A cut that lands mid-line drops everything up to and including the first
+// newline, which always leaves a rune boundary because no UTF-8 continuation
+// byte is '\n'. A newline that ends the window does not count, since it leaves
+// nothing after it. When no other newline is in the window, one line is longer
+// than the window: the window itself is returned, minus any leading
+// continuation bytes so it never opens mid-rune.
+func readTailWindow(f *os.File, max int64, what string) ([]byte, error) {
 	info, err := f.Stat()
 	if err != nil {
-		return "", fmt.Errorf("stat log: %w", err)
+		return nil, fmt.Errorf("stat %s: %w", what, err)
 	}
 	start := info.Size() - max
 	if start < 0 {
@@ -108,15 +126,18 @@ func ReadLogTail(dataDir string, max int64) (string, error) {
 	}
 	data, err := io.ReadAll(io.NewSectionReader(f, start, info.Size()-start))
 	if err != nil {
-		return "", fmt.Errorf("read log: %w", err)
+		return nil, fmt.Errorf("read %s: %w", what, err)
 	}
-	if start > 0 {
-		// The cut landed mid-line, possibly mid-rune: drop up to the next line.
-		if i := bytes.IndexByte(data, '\n'); i >= 0 {
-			data = data[i+1:]
-		}
+	if start == 0 {
+		return data, nil
 	}
-	return string(data), nil
+	if i := bytes.IndexByte(bytes.TrimSuffix(data, []byte("\n")), '\n'); i >= 0 {
+		return data[i+1:], nil
+	}
+	for len(data) > 0 && data[0]&0xC0 == 0x80 {
+		data = data[1:]
+	}
+	return data, nil
 }
 
 // CloseLogger releases the log file. Safe to call when InitLogger failed to open

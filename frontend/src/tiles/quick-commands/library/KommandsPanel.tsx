@@ -1,4 +1,5 @@
 import { useCommandsStore } from '../../../stores/useCommandsStore'
+import { Tooltip } from '../../../components/ui/Tooltip'
 import type {
   CommandButton,
   KommandsSavedCommand,
@@ -35,7 +36,9 @@ export function KommandsPanel({ status, saved, items, onAdd }: KommandsPanelProp
   return (
     <div className="border-border-subtle flex flex-col gap-2 border-t pt-3">
       <div className="flex items-center gap-2">
-        <span className="text-text-secondary text-xs font-semibold">Kommands</span>
+        <Tooltip text={status?.path}>
+          <span className="text-text-secondary text-xs font-semibold">Kommands</span>
+        </Tooltip>
         {status?.installed && !status.unsupported && !status.error && (
           <span className="text-text-faint text-2xs">{status.savedCount} linked</span>
         )}
@@ -79,7 +82,9 @@ export function KommandsPanel({ status, saved, items, onAdd }: KommandsPanelProp
               >
                 <div className="min-w-0 flex-1">
                   <div className="text-text-secondary truncate text-xs">{sc.label}</div>
-                  <div className="text-text-faint text-2xs truncate font-mono">{sc.command}</div>
+                  <Tooltip text={sc.command}>
+                    <div className="text-text-faint text-2xs truncate font-mono">{sc.command}</div>
+                  </Tooltip>
                 </div>
                 <button
                   onClick={() => onAdd(sc)}

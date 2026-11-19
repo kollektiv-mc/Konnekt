@@ -5,6 +5,7 @@ import { BackupRunningDialog } from './BackupRunningDialog'
 import { useBackups } from './useBackups'
 import { fmtBytes, relativeMs } from '../../lib/format'
 import { Figure } from '../../components/ui/Figure'
+import { Tooltip } from '../../components/ui/Tooltip'
 import type { TileLayout } from '../../types'
 
 interface Props {
@@ -110,9 +111,11 @@ export function BackupsSummary({ serverId, layout = 'default' }: Props) {
                 key={b.filename}
                 className="border-border-subtle border-b-hairline flex items-center gap-2 py-1 last:border-0"
               >
-                <span className="text-text-secondary min-w-0 flex-1 truncate font-mono text-xs">
-                  {b.displayName || b.filename}
-                </span>
+                <Tooltip text={b.filename}>
+                  <span className="text-text-secondary min-w-0 flex-1 truncate font-mono text-xs">
+                    {b.displayName || b.filename}
+                  </span>
+                </Tooltip>
                 <span className="text-text-faint text-2xs shrink-0 font-mono">
                   {relativeMs(b.createdAt)}
                 </span>

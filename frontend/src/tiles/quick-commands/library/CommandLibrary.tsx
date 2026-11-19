@@ -17,6 +17,7 @@ import { hasWailsBridge } from '../../../lib/ipc'
 import { CommandRow } from './CommandRow'
 import { KommandsPanel } from './KommandsPanel'
 import type { LibraryFilter } from '../types'
+import { Tooltip } from '../../../components/ui/Tooltip'
 
 const UNGROUPED = 'Ungrouped'
 
@@ -249,13 +250,14 @@ export function CommandLibrary({ serverId }: { serverId: string }) {
             </div>
             <div className="grid grid-cols-2 gap-1">
               {PRESETS.map((p) => (
-                <button
-                  key={p.label}
-                  onClick={() => void add(makeItem(p)).catch(console.error)}
-                  className="border-border-subtle text-text-secondary hover:border-border-hover hover:bg-hover hover:text-text-primary truncate rounded border px-2 py-1 text-left text-xs transition-all"
-                >
-                  {p.label}
-                </button>
+                <Tooltip key={p.label} text={p.value}>
+                  <button
+                    onClick={() => void add(makeItem(p)).catch(console.error)}
+                    className="border-border-subtle text-text-secondary hover:border-border-hover hover:bg-hover hover:text-text-primary truncate rounded border px-2 py-1 text-left text-xs transition-all"
+                  >
+                    {p.label}
+                  </button>
+                </Tooltip>
               ))}
             </div>
           </div>

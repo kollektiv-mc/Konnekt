@@ -1,5 +1,6 @@
 import type { Player } from '../../types'
 import { Tag } from '../../components/ui/Tag'
+import { Tooltip } from '../../components/ui/Tooltip'
 import { relativeMs } from '../../lib/format'
 
 interface Props {
@@ -59,7 +60,13 @@ export function PlayerList({ players, reachable, onSelectPlayer, detailed }: Pro
           )}
           {p.opLevel > 0 && <Tag>OP{p.opLevel}</Tag>}
           {detailed && p.whitelisted && <Tag>WL</Tag>}
-          {detailed && p.banned && <Tag tone="danger">BAN</Tag>}
+          {detailed && p.banned && (
+            <Tooltip text={p.banReason}>
+              <span className="shrink-0">
+                <Tag tone="danger">BAN</Tag>
+              </span>
+            </Tooltip>
+          )}
         </button>
       ))}
     </div>

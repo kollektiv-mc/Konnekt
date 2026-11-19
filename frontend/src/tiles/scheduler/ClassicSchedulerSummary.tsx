@@ -2,6 +2,7 @@ import { useMemo } from 'react'
 import type { models } from '../../../wailsjs/go/models'
 import { untilMs } from '../../lib/format'
 import { stoppingGraphIds } from './editor/blockMeta'
+import { Tooltip } from '../../components/ui/Tooltip'
 
 interface Props {
   graphs: models.Graph[]
@@ -86,7 +87,9 @@ export function ClassicSchedulerSummary({ graphs, blockDefs, nextRuns, loading, 
 
       <div className="px-2 pb-1">
         {error ? (
-          <span className="text-danger font-mono text-xs">scheduler unavailable</span>
+          <Tooltip text={error}>
+            <span className="text-danger font-mono text-xs">scheduler unavailable</span>
+          </Tooltip>
         ) : (
           <span className="text-text-faint font-mono text-xs">
             {soonest

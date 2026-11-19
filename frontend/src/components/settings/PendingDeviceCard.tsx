@@ -38,7 +38,7 @@ export function PendingDeviceCard({ request, onApprove, onDeny }: Props) {
       <span className="text-text-primary text-sm">A browser is waiting to be approved</span>
       <span className="text-accent font-mono text-lg tracking-widest">{request.code}</span>
       {request.userAgent && (
-        <span className="text-text-muted truncate text-xs">{request.userAgent}</span>
+        <span className="text-text-muted text-xs break-words">{request.userAgent}</span>
       )}
       <div className="flex items-center gap-2">
         <input

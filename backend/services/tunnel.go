@@ -52,9 +52,9 @@ type tunnelPin struct {
 	sha256 string
 }
 
-// tunnelPins is keyed runtime.GOOS + "/" + runtime.GOARCH. macOS is absent on
-// purpose: Cloudflare ships it as a .tgz and this project does not build for it
-// today, so it reports ErrTunnelUnsupported rather than guess at an unpacking.
+// tunnelPins is keyed runtime.GOOS + "/" + runtime.GOARCH. macOS is absent:
+// Cloudflare ships it only as a .tgz and nothing here unpacks one, so the
+// macOS build reports ErrTunnelUnsupported rather than guess at an unpacking.
 var tunnelPins = map[string]tunnelPin{
 	"windows/amd64": {
 		asset:  "cloudflared-windows-amd64.exe",

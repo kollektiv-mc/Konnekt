@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"unicode/utf8"
 )
 
 // writeLatestLog puts content at logs/latest.log under a fresh working
@@ -89,5 +90,36 @@ func TestLastLinesHandlesEmptyAndUnterminated(t *testing.T) {
 	}
 	if got := lastLines([]byte("a\nb"), 5); strings.Join(got, "|") != "a|b" {
 		t.Errorf("unterminated: %q", got)
+	}
+}
+
+// A line longer than the byte window comes back as its last bytes rather than
+// as nothing, and never starts mid-rune.
+func TestReadServerLogTailKeepsALongLastLine(t *testing.T) {
+	tests := []struct {
+		name    string
+		content string
+	}{
+		{"ascii line then newline", "a\n" + strings.Repeat("x", 200000) + "\n"},
+		{"ascii line unterminated", "a\n" + strings.Repeat("x", 200000)},
+		{"multi-byte runes", "a\n" + strings.Repeat("é", 100000)},
+		{"three-byte runes", "a\n" + strings.Repeat("€", 100000) + "\n"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := ReadServerLogTail(writeLatestLog(t, tt.content), 0)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(got) != 1 {
+				t.Fatalf("%d lines, want exactly one", len(got))
+			}
+			if n := len(got[0]); n == 0 || n > serverLogMaxBytes {
+				t.Fatalf("line is %d bytes, want 1..%d", n, serverLogMaxBytes)
+			}
+			if !utf8.ValidString(got[0]) {
+				t.Errorf("line starts mid-rune: % x", got[0][:4])
+			}
+		})
 	}
 }

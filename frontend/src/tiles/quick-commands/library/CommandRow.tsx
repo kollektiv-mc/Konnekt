@@ -5,6 +5,7 @@ import { CopyPlus, GripVertical, Trash2 } from '../../../lib/icons'
 import type { Offset, SortableHandleProps } from '../../../hooks/useSortable'
 import type { CommandButton } from '../../../stores/useCommandsStore'
 import { LinkBadge } from './LinkBadge'
+import { Tooltip } from '../../../components/ui/Tooltip'
 
 interface CommandRowProps {
   item: CommandButton
@@ -112,7 +113,9 @@ export function CommandRow({
       </button>
 
       {linked ? (
-        <span className={`text-text-primary w-40 shrink-0 ${TEXT}`}>{item.label}</span>
+        <Tooltip text={item.label}>
+          <span className={`text-text-primary w-40 shrink-0 ${TEXT}`}>{item.label}</span>
+        </Tooltip>
       ) : (
         <input
           type="text"
@@ -142,13 +145,15 @@ export function CommandRow({
           className={`text-text-secondary min-w-0 flex-1 font-mono ${FIELD}`}
         />
       ) : (
-        <span
-          className={`min-w-0 flex-1 font-mono ${TEXT} ${
-            linked ? 'text-text-secondary' : 'text-text-faint'
-          }`}
-        >
-          {item.value}
-        </span>
+        <Tooltip text={linked ? item.value : undefined}>
+          <span
+            className={`min-w-0 flex-1 font-mono ${TEXT} ${
+              linked ? 'text-text-secondary' : 'text-text-faint'
+            }`}
+          >
+            {item.value}
+          </span>
+        </Tooltip>
       )}
 
       {item.link && (

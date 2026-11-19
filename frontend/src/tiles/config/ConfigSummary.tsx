@@ -8,6 +8,7 @@ import { MotdPreviewLine } from './MotdLine'
 import { fitItems, useGridFit } from '../../hooks/useGridFit'
 import { IconButton } from '../../components/ui/IconButton'
 import { Icon } from '../../components/ui/Icon'
+import { Tooltip } from '../../components/ui/Tooltip'
 import { RotateCw } from '../../lib/icons'
 
 // Flat list of keys in relevance order — identity first, power-user settings last
@@ -152,7 +153,9 @@ function PropCell({
 
   return (
     <li className="flex h-8 min-w-0 flex-col justify-center">
-      <span className="text-text-muted text-2xs truncate leading-tight">{label}</span>
+      <Tooltip text={label}>
+        <span className="text-text-muted text-2xs truncate leading-tight">{label}</span>
+      </Tooltip>
 
       {editing ? (
         <input

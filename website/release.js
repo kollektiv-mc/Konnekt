@@ -73,9 +73,13 @@
       ' ' +
       (navigator.platform || '')
     ).toLowerCase()
+    // Phones and tablets cannot open any of these downloads, so they get no
+    // guess and the page lists every build. iPadOS 13+ Safari reports a Mac,
+    // but a Mac has no touch screen.
+    if (/iphone|ipad|ipod|android/.test(hay)) return 'unknown'
     if (/win/.test(hay)) return 'windows'
-    if (/mac|iphone|ipad|ipod/.test(hay)) return 'mac'
-    if (/linux|x11|android|cros/.test(hay)) return 'linux'
+    if (/mac/.test(hay)) return navigator.maxTouchPoints > 1 ? 'unknown' : 'mac'
+    if (/linux|x11|cros/.test(hay)) return 'linux'
     return 'unknown'
   }
 

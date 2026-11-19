@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"unicode/utf8"
 )
 
 // The whole point of this file is that a packaged build has no terminal, so
@@ -213,5 +214,22 @@ func TestReadLogTailStartsAtALineBoundary(t *testing.T) {
 	got, err := ReadLogTail(dir, 12)
 	if err != nil || got != "bbbb\ncccc\n" {
 		t.Fatalf("ReadLogTail = %q, %v; want the two whole lines", got, err)
+	}
+}
+
+// With no newline in the window the tail of the long line is returned, cut
+// forward to a rune boundary.
+func TestReadLogTailKeepsALongLineWholeRunes(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(LogPath(dir), []byte("a\n"+strings.Repeat("é", 50)), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	// 11 bytes cut an odd offset into a run of 2-byte runes.
+	got, err := ReadLogTail(dir, 11)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got == "" || !utf8.ValidString(got) {
+		t.Fatalf("ReadLogTail = % x; want a non-empty valid UTF-8 tail", got)
 	}
 }
