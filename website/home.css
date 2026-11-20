@@ -500,6 +500,12 @@
   height: 100%;
 }
 
+/* A fork leaves its block on a short stem, so the lanes' bar never runs
+   along the block's border. */
+.wire-stem {
+  width: 24px;
+}
+
 .lanes {
   display: flex;
   flex-direction: column;
@@ -825,6 +831,10 @@
 
   .lane > .wire {
     height: 40px;
+  }
+
+  .wire-stem {
+    height: 20px;
   }
 
   .wire span:first-child {
