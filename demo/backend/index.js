@@ -129,8 +129,8 @@ function replayConsole() {
 // alone it is permanently empty, so these give it the four kinds it can show.
 function seedNotifications() {
   events.EventsEmit("server:started");
-  events.EventsEmit("player:joined", { name: "Frangfurd" });
-  events.EventsEmit("player:joined", { name: "Direwolf20" });
+  events.EventsEmit("player:joined", { name: "Snadrochka" });
+  events.EventsEmit("player:joined", { name: "crocodealer420" });
   events.EventsEmit("backup:completed", {
     serverID: SERVER_ID,
     filename: "nightly",

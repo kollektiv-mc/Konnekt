@@ -4,6 +4,10 @@ paths:
   - "backend/services/scheduler_blocks*.go"
   - "website/**"
   - "docs/design/website/**"
+  - "README.md"
+  - "CONTRIBUTING.md"
+  - "SECURITY.md"
+  - "docs/**/*.md"
 ---
 
 # Copy a user reads
@@ -29,5 +33,23 @@ the reason finds it in the body, a tooltip, or the docs.
   sentence. The same fact carries the same label everywhere.
 - **One sentence per line in prose.** A line that wraps to leave one or two
   words gets a shorter sentence, not a wider box.
+
+## Writing for a reader
+
+The same section's second list, for everything written for a reader: UI text,
+docs, the README, issue and pull request bodies, release notes.
+
+- **Write what was asked for and stop.** No extra sections, subtitles, info
+  boxes, tips, notes or summaries to fill space.
+- **A title needs no subtitle that restates it.** A clear control needs no
+  helper text.
+- **Say what something does, not why the system works that way.** Explain a
+  reason only when asked or when the reader would otherwise get it wrong.
+- **No consequence tails.** Drop ", so ...", ", therefore ...", ", which means
+  ..." and "This means ..." when they restate what the sentence implies.
+- **No intros or wrap-ups:** "In this section", "Overall", "In summary", "Note
+  that", "It's worth noting".
+- **Delete any sentence the reader would not miss.**
+- **No em dashes.** Use a comma, a colon, or two sentences.
 
 Nothing gates these. Review does.
