@@ -1,7 +1,7 @@
-/* Players: who is online, one of them opened, kicked with a reason, and
- * someone else arriving. The kick is refused by the demo like every other
- * command, so the leaving is the server's side of it, played through the
- * scene hook exactly as server.go would report a player going.
+/* Players: who is online, and one of them opened and kicked with a reason.
+ * The kick is refused by the demo like every other command, so the leaving is
+ * the server's side of it, played through the scene hook exactly as
+ * server.go would report a player going.
  *
  * The detail popup is portaled out of the tile (#257: a grid tile is
  * transformed, and a transformed ancestor clamps a `fixed` overlay to the
@@ -19,13 +19,15 @@ export default {
   poster: "end",
   async run({ page, tile, frame, wait, glide, type, setCrop }) {
     await wait(900);
-    const korbin = tile.locator("button", { hasText: "Korbin" });
-    let p = await centre(korbin);
+    const player = tile.locator("button", { hasText: "ceramichello" });
+    let p = await centre(player);
     await glide(p.x, p.y, 700);
-    await korbin.click();
+    await player.click();
 
     // The popup's backdrop covers the window; cut a frame around its centre.
-    const popup = page.locator("div.fixed.inset-0", { hasText: "Korbin" });
+    const popup = page.locator("div.fixed.inset-0", {
+      hasText: "ceramichello",
+    });
     const b = await popup.boundingBox();
     setCrop({
       x: frame.x,
@@ -47,9 +49,7 @@ export default {
     await confirm.click();
     setCrop({ x: frame.x, y: frame.y });
     await wait(500);
-    await page.evaluate(() => window.konnektDemo.playerLeft("Korbin"));
-    await wait(1600);
-    await page.evaluate(() => window.konnektDemo.playerJoined("Sable"));
-    await wait(1400);
+    await page.evaluate(() => window.konnektDemo.playerLeft("ceramichello"));
+    await wait(3000);
   },
 };

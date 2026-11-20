@@ -1,300 +1,195 @@
-![Konnekt](docs/images/konnekt_banner.png)
-
 # Konnekt
-(Alpha)
+
+A desktop dashboard for the Minecraft Java servers on your computer.
 
 [![CI](https://github.com/kollektiv-mc/Konnekt/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/kollektiv-mc/Konnekt/actions/workflows/ci.yml)
 [![CodeQL](https://github.com/kollektiv-mc/Konnekt/actions/workflows/codeql.yml/badge.svg?branch=main)](https://github.com/kollektiv-mc/Konnekt/actions/workflows/codeql.yml)
 [![aislop](https://badges.scanaislop.com/score/kollektiv-mc/konnekt.svg)](https://scanaislop.com/kollektiv-mc/konnekt)
-[![Signed builds](https://img.shields.io/badge/builds-attested-2ea44f)](#verifying-a-download)
+[![Signed builds](https://img.shields.io/badge/builds-attested-2ea44f)](#verify-a-download)
 [![Release](https://img.shields.io/github/v/release/kollektiv-mc/Konnekt?include_prereleases&sort=semver)](https://github.com/kollektiv-mc/Konnekt/releases)
-[![Platforms](https://img.shields.io/badge/platforms-Windows%20%7C%20macOS%20%7C%20Linux-blue)](#platform-support)
-[![Go](https://img.shields.io/github/go-mod/go-version/kollektiv-mc/Konnekt)](go.mod)
+[![Platforms](https://img.shields.io/badge/platforms-Windows%20%7C%20macOS%20%7C%20Linux-blue)](#platforms)
 [![License](https://img.shields.io/github/license/kollektiv-mc/Konnekt)](LICENSE)
 
-<!--
-  Every badge above links to the thing it claims, so a reader can check it
-  rather than take it. CI and CodeQL are served by GitHub for this repository
-  and nobody else can publish to those URLs; Release, Go and License are read
-  live from this repository's releases, go.mod and LICENSE. The two static ones
-  restate something documented further down and link to it.
+<!-- Add once its first run has been read (.github/workflows/scorecard.yml):
+[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/kollektiv-mc/Konnekt/badge)](https://scorecard.dev/viewer/?uri=github.com/kollektiv-mc/Konnekt) -->
 
-  Deliberately absent: downloads, stars, and any score this project gives
-  itself. A number a project awards its own code says nothing to someone who
-  has not read the code, which is the whole problem a badge is supposed to
-  solve.
+[Download](https://konnekt.pages.dev/download) ·
+[Docs](https://konnekt.pages.dev/docs) ·
+[Demo](https://konnekt-demo.pages.dev/) ·
+[Roadmap](https://konnekt.pages.dev/roadmap)
 
-  aislop is the one score here, and it is on the page for a specific reason:
-  it is a third-party tool built to detect the patterns AI coding agents leave
-  behind, run against a codebase this README says up front is mostly written by
-  one. That is the most directly relevant outside opinion available, so it goes
-  up whatever it says. Two things a reader should know about it. The score is
-  computed by scanaislop.com, not here, and this project has no account with
-  them: it comes from a public instant scan, so it refreshes when the repository
-  is rescanned rather than on every push, and can lag the code. And the CLI is
-  MIT and runs locally (`npx aislop@latest scan .`), so anyone who doubts the
-  number can recompute it themselves in about five seconds, which is the part
-  that makes it worth showing at all.
-
-  To add once its first run has been read (.github/workflows/scorecard.yml):
-  [![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/kollektiv-mc/Konnekt/badge)](https://scorecard.dev/viewer/?uri=github.com/kollektiv-mc/Konnekt)
--->
-
-## About
-
-Konnekt is a cross-platform desktop control panel for self-hosted Minecraft servers. It wraps everything you'd normally do through a raw console, RCON, or SSH — starting servers, watching logs, managing worlds, scheduling backups, installing mods — into a single native app with a modular, drag-and-drop dashboard.
-
-It's built for Minecraft server admins and hobbyists who self-host vanilla, Paper/Spigot/Bukkit, or modded Fabric/Forge servers and want a real GUI instead of stitching together terminal windows and plugins.
-
-> **Status:** Alpha. Core management, scheduling, worlds, backups, and mods are functional; see [Roadmap](#roadmap) for what's still coming.
+Konnekt is alpha.
+It runs Vanilla, Paper, Spigot, Bukkit, Fabric, Forge and NeoForge servers, one at a time.
 
 ## Features
 
-### Multi-server management (Alpha)
+### Tile dashboard
 
-Add and configure any number of server instances — jar path, JVM arguments, working directory — and start, stop, or restart them independently, with a guided EULA acceptance flow for first-time setup.
+Every part of Konnekt is a tile you drag, resize and snap to a grid.
+Closed tiles wait in the crate.
+Layouts save the arrangement, and four come built in.
+
+![Tile dashboard](docs/images/readme/dashboard.webp)
 
 ### Live console
 
-Stream server logs in real time, send commands directly, and set up your own quick-command buttons for the actions you run most.
+The server log as it is written, with a prompt for commands and quick-command buttons.
+Filter by kind of line, or search for a word.
 
-![Live console](docs/images/live-console.png)
+![Live console](docs/images/readme/console.webp)
 
-### Stats & performance
+### Players
 
-Keep an eye on TPS, RAM usage, player count, and uptime at a glance, with a rolling performance history chart to spot trends and troubleshoot lag.
+Who is online, with kick, ban and pardon.
+Op, whitelist and bans for each player in one panel.
 
-### Player management
+![Players](docs/images/readme/players.webp)
 
-See who's online and kick, ban, or pardon players without leaving the dashboard.
+### Performance
 
-### Visual scheduler
+TPS, CPU, memory and players, with an hour of history.
+Nothing is installed on the server.
 
-A node-based automation editor: wire up triggers (a player joining or leaving, the server stopping, TPS dropping below a threshold, a cron/interval/time-of-day schedule) to actions (run a console command, send an RCON command, trigger a backup, make an HTTP request, wait, start/stop/restart the server) and control/data blocks (conditions, math, randomness, server attributes). Runs are tracked with history and next-run predictions.
+![Performance](docs/images/readme/performance.webp)
 
-Two of those actions publish a server's [Distant Horizons](https://modrinth.com/mod/distanthorizons) LOD data to a bucket on a schedule, so players can download the rendered world instead of waiting for it to stream in. [`docs/distant-horizons.md`](docs/distant-horizons.md) is the setup guide.
+### Worlds
 
-![Visual scheduler](docs/images/visual-scheduler.png)
+Each world as a planet, with its nether and end as moons, sized by disk use.
+Seed, size and version come from the level data.
+Switch, rename, duplicate, back up and delete worlds.
 
-### World management
-
-A 3D visualizer for navigating your server's worlds and dimensions — switch the active world, rename, duplicate, delete, back up individual worlds, and inspect NBT metadata.
-
-![World management](docs/images/world-management-1.png)
-![World management](docs/images/world-management-2.png)
+![Worlds](docs/images/readme/worlds.webp)
 
 ### Backups
 
-Manual or scheduled backups of full servers or individual worlds, with safe restore (validated paths, extract-then-swap), progress feedback, and history.
+Manual or scheduled backups of a server or a single world.
+Restore with the server stopped.
 
-![Backups](docs/images/backups.png)
+![Backups](docs/images/readme/backups.webp)
 
-### Server config editor
+### Config editor
 
-Browse and edit `server.properties` and other config files (JSON/YAML/TOML) through a form view or raw text editor.
+`server.properties` as a form, or the file itself.
+Plugin and mod configs in YAML, JSON and TOML open in the same place.
 
-![Server config editor](docs/images/server-config.png)
+![Config editor](docs/images/readme/config.webp)
 
-### Mods & plugins
+### Mods and plugins
 
-Browse and search Modrinth from inside the app, resolve dependencies, install or uninstall, enable/disable, check for updates, or install a local jar. Konnekt detects your server's loader (Fabric, Forge, Paper, etc.) automatically.
+Search Modrinth, pick a version, and Konnekt installs it with its dependencies.
+Update, disable or remove what is installed, or add a jar of your own.
 
-![Mods and plugins](docs/images/mods-plugins.png)
+![Mods and plugins](docs/images/readme/mods.webp)
 
-### Customizable tile dashboard
+### Servers
 
-Every feature lives in a draggable, resizable tile that snaps to a grid. Stash tiles you're not using in the crate, maximize the ones you need, and save named layout presets.
+Each server keeps its own jar, folder and JVM arguments.
+The dashboard follows the server you pick.
+On a first start, Konnekt offers to accept the EULA.
 
-![Tile dashboard](docs/images/tile-dashboard.png)
+![Servers](docs/images/readme/servers.webp)
 
-### Notifications
+### Scheduler
 
-An in-app notification feed plus native OS desktop notifications for crashes, joins/leaves, backup completion, TPS drops, and scheduler events.
+A graph editor for automation.
+Triggers (a schedule, a player joining, a crash, a TPS drop) start blocks that run commands, back up, wait, upload to a bucket or call a URL.
+Each block has a [docs page](https://konnekt.pages.dev/docs/blocks/).
+
+![Scheduler](docs/images/readme/scheduler.webp)
+
+### Remote Access
+
+The dashboard in a browser on another device, through a tunnel, behind a password and a per-device approval.
+Claude Code, Claude Desktop and claude.ai can read and operate your servers through Konnekt's MCP tools.
+[Remote Access docs](https://konnekt.pages.dev/docs/settings/remote-access).
+
+### Notifications and updates
+
+Desktop notifications and in-app bubbles for crashes, joins, backups and scheduled runs.
+Konnekt updates itself on Windows and Linux, from releases or nightly snapshots.
+An RPM install shows the steps to update it instead.
 
 ## Compatibility
 
-Konnekt integrates with popular server mods and plugins to extend its core features. Click a mod to see feature-level detail.
+| Name | Status | What Konnekt does |
+| --- | --- | --- |
+| [Distant Horizons](https://modrinth.com/mod/distanthorizons) | Compatible | Snapshots a server's LOD data and publishes it to a bucket from the scheduler. [Guide](https://konnekt.pages.dev/docs/dh-publish) |
+| [playit.gg](https://playit.gg) | Planned ([#38](https://github.com/kollektiv-mc/Konnekt/issues/38)) | A public address for the server through a playit.gg tunnel |
+| [Tailscale](https://tailscale.com) | Planned ([#818](https://github.com/kollektiv-mc/Konnekt/issues/818)) | To be assessed |
+| [Multiverse](https://github.com/Multiverse/Multiverse-Core) | Planned | Its worlds in the Worlds tile, world connections, portals and signs |
+| [BlueMap](https://bluemap.bluecolored.de) | Planned | The map in Konnekt |
+| [WorldGuard](https://enginehub.org/worldguard) | Planned | Regions in Konnekt |
 
-### Compatible
+## Platforms
 
-<details>
-<summary><img src="docs/images/mod-icon-placeholder.svg" width="20" height="20" align="absmiddle"> <strong>Multiverse</strong></summary>
+| Platform | File | Notes |
+| --- | --- | --- |
+| Windows | `konnekt-windows-amd64-setup.exe` | Installs for your account. Not code signed, so SmartScreen warns on first launch. |
+| macOS, Apple silicon and Intel | `konnekt-darwin-universal.dmg` | Not notarised: allow it under System Settings, Privacy & Security. No self-update or tunnel yet. |
+| Linux | `konnekt-linux-amd64` | Needs webkit2gtk-4.1 and gtk3: Fedora 36, Ubuntu 22.04, Debian 12, Rocky and RHEL 10, or newer. |
+| Fedora, Rocky and RHEL 10 | `konnekt-<version>-1.el10.x86_64.rpm` | Rocky and RHEL 9 are not supported. |
 
-- Multi-World & Dimension management
+Releases are on the [releases page](https://github.com/kollektiv-mc/Konnekt/releases).
+The `snapshot` prerelease is rebuilt from `main` and is untested.
+Settings, General switches the update channel.
+`konnekt-windows-amd64.exe` is attached only for the in-app updater.
 
-</details>
+### Verify a download
 
-### Planned
-
-<details>
-<summary><img src="docs/images/mod-icon-placeholder.svg" width="20" height="20" align="absmiddle"> <strong>Multiverse</strong></summary>
-
-- Visual world connections
-- In-world portal & sign management
-
-</details>
-
-<details>
-<summary><img src="docs/images/mod-icon-placeholder.svg" width="20" height="20" align="absmiddle"> <strong>BlueMap</strong></summary>
-
-- Map viewer integration
-
-</details>
-
-<details>
-<summary><img src="docs/images/mod-icon-placeholder.svg" width="20" height="20" align="absmiddle"> <strong>WorldGuard</strong></summary>
-
-- Region protection integration
-
-</details>
-
-## Why Konnekt
-
-- **Local-first.** All app state is stored locally on disk — no account, no cloud dependency, no telemetry required to run your server.
-- **Cross-platform.** Built on [Wails](https://wails.io/); releases ship a Windows installer, a macOS `.dmg`, a Linux binary and an `.rpm` (see [Platform support](#platform-support)).
-- **One dashboard, not ten tools.** Console, stats, scheduling, worlds, backups, config, and mods all live in the same window instead of separate scripts and plugins.
-
-## Tech stack
-
-- **Backend:** Go, via [Wails v2](https://wails.io/) for native windowing and Go↔JS bindings
-- **Frontend:** React 19, TypeScript, Vite, Tailwind CSS v4
-- **State:** Zustand
-- **Visual scheduler:** [React Flow](https://reactflow.dev/) on the frontend, a graph execution engine in Go on the backend
-- **World visualizer:** three.js / @react-three/fiber
-- **Config editing:** CodeMirror
-
-## Platform support
-
-Prebuilt binaries come from two channels: tagged releases, and the rolling
-`snapshot` prerelease rebuilt from `main`. Both are on the
-[releases page](https://github.com/kollektiv-mc/Konnekt/releases); the snapshot
-is a prerelease, so GitHub keeps it out of the default view.
-
-Both channels update in place from inside the app. Stable is the default;
-Settings > General switches to snapshots, and a snapshot build follows that
-channel on its own. Installing a snapshot warns first, because it is untested
-nightly code.
-
-- **Windows** — tagged releases and snapshots. `konnekt-windows-amd64-setup.exe`
-  installs it for your account, with a Start Menu entry and an uninstaller
-  under Installed apps, and it updates itself. `konnekt-windows-amd64.exe` is
-  published beside it only because the in-app updater downloads it by name.
-- **Linux** (`konnekt-linux-amd64`, plus an `.rpm` for Rocky/RHEL 10 and
-  Fedora) — **snapshots only so far.** The release workflow builds both, but
-  those jobs landed after the one tagged release was cut, so the next tag is
-  the first to carry them. They are built against webkit2gtk-4.1, which covers
-  Rocky/RHEL 10, Fedora 36+, Ubuntu 22.04+, and Debian 12+. **Rocky/RHEL 9 is
-  not supported**: EL9 never received webkit2gtk-4.1, and EL10 dropped
-  webkit2gtk-4.0, so the two are not binary-compatible.
-  The webview runs hardware accelerated, WebKitGTK's own default. On the
-  proprietary NVIDIA driver Konnekt sets `WEBKIT_DISABLE_DMABUF_RENDERER=1`
-  for itself before the window opens, which is the standard fix for the blank
-  window that driver otherwise shows, and never overrides a value you set. If
-  a machine still misbehaves, Settings > Appearance > Hardware acceleration
-  turns it down from the next launch. If the window never appears at all,
-  `KONNEKT_WEBVIEW_GPU=never` (or `ondemand`) in the environment does the same
-  and wins over the setting; `konnekt.log` records which policy was chosen and
-  why.
-- **macOS** (`konnekt-darwin-universal.dmg`, Apple silicon and Intel) from the
-  first release cut after it landed, and on snapshots. Ad-hoc signed, not
-  notarised, so the first launch needs Open Anyway under System Settings >
-  Privacy & Security. It does not update itself yet, and Remote Access has no
-  tunnel on macOS.
-
-### Verifying a download
-
-The binaries carry no code-signing certificate, so Windows SmartScreen warns on
-first launch. That warning is about a certificate this project does not buy, not
-about where the file came from, and there is a better answer to the second
-question than clicking through.
-
-Every artifact on both channels is built by GitHub Actions and carries a signed
-build provenance attestation: its digest is bound to this repository, this
-workflow and the exact commit it was built from, signed with a short-lived
-[Sigstore](https://www.sigstore.dev/) certificate and recorded in a public
-transparency log. To check one, with the [GitHub CLI](https://cli.github.com/):
+Every file is built by GitHub Actions and carries a signed build provenance attestation.
+With the [GitHub CLI](https://cli.github.com/):
 
 ```bash
-gh attestation verify konnekt-windows-amd64.exe --repo kollektiv-mc/Konnekt
+gh attestation verify konnekt-windows-amd64-setup.exe --repo kollektiv-mc/Konnekt
 ```
 
-It passes only for a file this repository's workflow actually produced. A
-tampered binary, or one from anywhere else, fails, and no key held by this
-project can be stolen to make it pass.
-
-Without `gh`, each release also ships `checksums.txt`, which confirms the
-download arrived intact:
+Each release also ships `checksums.txt`:
 
 ```bash
 sha256sum -c checksums.txt --ignore-missing
 ```
 
-The app's own updater checks that same checksum before replacing itself.
+## Build from source
 
-## Getting started
-
-Requires [Go](https://go.dev/), [Node.js](https://nodejs.org/) with [pnpm](https://pnpm.io/), and the [Wails CLI](https://wails.io/docs/gettingstarted/installation). On Linux you'll also need `webkit2gtk` and `gtk3` development packages — run `wails doctor` to see exactly what's missing for your distro.
+Needs [Go](https://go.dev/), [Node.js](https://nodejs.org/) with [pnpm](https://pnpm.io/), and the [Wails CLI](https://wails.io/docs/gettingstarted/installation).
+On Linux, also the webkit2gtk and gtk3 development packages: `wails doctor` lists what is missing.
 
 ```bash
-# install dependencies
 pnpm install
-
-# run in development mode with hot reload
-wails dev
-
-# build a production binary
-wails build
+wails dev      # with hot reload
+wails build    # a production binary
 ```
 
-## Roadmap
-
-See [`agent_docs/ROADMAP.md`](agent_docs/ROADMAP.md) for the full scope.
+Go and Wails v2 on the backend, React 19, TypeScript, Vite, Tailwind CSS v4 and Zustand on the frontend.
+[`agent_docs/CLAUDE.md`](agent_docs/CLAUDE.md) has the architecture and the checks CI runs.
 
 ## Fair warning
 
-This is a personal side project which was built to run my own Minecraft servers the way I want, rather than to match what a wider community might expect from it. Most of the code comes from Claude, with me reading over its shoulder rather than writing it myself; I'm not a programmer, just someone putting AI tools to use for something I needed. So don't expect a polished, textbook-clean codebase. It works for me, and that's the bar I'm holding it to.
+This is a personal side project, built to run my own Minecraft servers the way I want.
+Most of the code comes from Claude, with me reading over its shoulder.
+I'm not a programmer, so don't expect a textbook-clean codebase.
+It works for me, and that's the bar I'm holding it to.
 
-What I can point at instead of my own judgement is what runs on every change,
-none of which takes my word for anything:
+What runs on every change instead of my judgement:
 
-- Every push and pull request goes through typecheck, lint, formatting, the
-  frontend and Go test suites, a production build, a bundle-size budget and a
-  coverage floor on both sides, on Windows and Linux. Nothing merges red.
-- [CodeQL](.github/workflows/codeql.yml) reads the Go, TypeScript, Python and
-  the workflows themselves for the things a linter cannot see: where a path, a
-  JVM argument or something fetched from Modrinth ends up.
-- Every published binary carries a [signed build provenance
-  attestation](#verifying-a-download), so you can check that what you downloaded
-  is what the workflow built from this source, without trusting me at all.
-- [OpenSSF Scorecard](.github/workflows/scorecard.yml) audits the repository
-  from outside on a schedule and publishes the result where I cannot edit it.
+- Typecheck, lint, formatting, both test suites, a production build, a bundle budget and a coverage floor, on Windows and Linux. Nothing merges red.
+- [CodeQL](.github/workflows/codeql.yml) over the Go, TypeScript, Python and the workflows.
+- A [signed build provenance attestation](#verify-a-download) on every published binary.
+- [OpenSSF Scorecard](.github/workflows/scorecard.yml), published where I cannot edit it.
 
-None of that makes the code good. It does mean the claims on this page are
-checkable by someone who has never met me, which is the most a README can
-honestly offer.
-
-I have no interest in gatekeeping any of this, so take the code and do what you want with it — fork it, extend it, rebuild it, whatever. It's released under the [MIT licence](LICENSE): keep the copyright notice, and the rest is yours.
+Take the code and do what you want with it.
+It's under the [MIT licence](LICENSE): keep the copyright notice, and the rest is yours.
 
 ## Contributing
 
-Bug reports and feature requests go through
-[GitHub Issues](https://github.com/kollektiv-mc/Konnekt/issues/new/choose), which
-offers a short form for each. You do not need to be technical to file a good
-one: the forms ask only for things you can see, everything technical is
-optional, and a screenshot is often worth more than any of it.
-
-[`CONTRIBUTING.md`](CONTRIBUTING.md) covers what happens to an issue after you
-file it and how to send code. To report a vulnerability privately, see
-[`SECURITY.md`](SECURITY.md) rather than opening an issue.
+Bugs and feature requests go through [GitHub Issues](https://github.com/kollektiv-mc/Konnekt/issues/new/choose), which has a short form for each.
+[`CONTRIBUTING.md`](CONTRIBUTING.md) covers what happens next and how to send code.
+Report a vulnerability privately through [`SECURITY.md`](SECURITY.md).
 
 ## Documentation
 
-- [`CONTRIBUTING.md`](CONTRIBUTING.md) — how to report a bug, request a feature, or send code
-- [`SECURITY.md`](SECURITY.md) — supported versions and how to report a vulnerability
-- [`docs/distant-horizons.md`](docs/distant-horizons.md) — publishing Distant Horizons data: the bucket, the scheduler graph and its values, the player's download
-- [`agent_docs/CLAUDE.md`](agent_docs/CLAUDE.md) — architecture and stack overview
-- [`agent_docs/ROADMAP.md`](agent_docs/ROADMAP.md) — full feature roadmap
-- [`agent_docs/DEPENDENCIES.md`](agent_docs/DEPENDENCIES.md) — dependency notes
-- [`agent_docs/HEALTH_CHECKLIST.md`](agent_docs/HEALTH_CHECKLIST.md) — codebase health checklist (evergreen yardstick + open backlog)
-- [`agent_docs/HEALTH_LOG.md`](agent_docs/HEALTH_LOG.md) — completed remediation history
-- [`agent_docs/health-log/`](agent_docs/health-log/) — earlier months of that history, one file per month
+- [Website docs](https://konnekt.pages.dev/docs): guides, every scheduler block, every setting
+- [`docs/distant-horizons.md`](docs/distant-horizons.md): publishing Distant Horizons data
+- [`agent_docs/ROADMAP.md`](agent_docs/ROADMAP.md): the roadmap in full
+- [`agent_docs/HEALTH_CHECKLIST.md`](agent_docs/HEALTH_CHECKLIST.md): the codebase health yardstick and open backlog
+- [`agent_docs/DEPENDENCIES.md`](agent_docs/DEPENDENCIES.md): every dependency and why

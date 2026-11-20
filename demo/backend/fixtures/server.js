@@ -125,7 +125,7 @@ export const STATS_HISTORY = Array.from({ length: 120 }, (_, i) => {
 
 export const PLAYERS = [
   {
-    name: "Frangfurd",
+    name: "Snadrochka",
     uuid: "069a79f4-44e9-4726-a5be-fca90e38aaf5",
     online: true,
     ip: "192.168.1.24",
@@ -138,7 +138,7 @@ export const PLAYERS = [
     groups: ["owner", "staff"],
   },
   {
-    name: "Direwolf20",
+    name: "crocodealer420",
     uuid: "853c80ef-3c37-49fd-aa49-938b674adae6",
     online: true,
     ip: "192.168.1.31",
@@ -151,7 +151,7 @@ export const PLAYERS = [
     groups: ["builder"],
   },
   {
-    name: "Aletheia",
+    name: "frogipogi",
     uuid: "61699b2e-d327-4a01-9f1e-0ea8c3f06bc6",
     online: true,
     ip: "192.168.1.47",
@@ -164,7 +164,7 @@ export const PLAYERS = [
     groups: ["member"],
   },
   {
-    name: "Korbin",
+    name: "ceramichello",
     uuid: "4566e69f-c907-48ee-8d71-d7ba5aa00d20",
     online: true,
     ip: "192.168.1.52",
@@ -175,32 +175,6 @@ export const PLAYERS = [
     banReason: "",
     primaryGroup: "member",
     groups: ["member"],
-  },
-  {
-    name: "Sable",
-    uuid: "d8d5a923-7b20-43d8-883b-1150148d6955",
-    online: false,
-    ip: "192.168.1.18",
-    lastOnline: hoursAgo(19),
-    opLevel: 0,
-    whitelisted: true,
-    banned: false,
-    banReason: "",
-    primaryGroup: "member",
-    groups: ["member"],
-  },
-  {
-    name: "Grieferman",
-    uuid: "f84c6a79-0a4e-45e0-879b-cd49ebd4c4e2",
-    online: false,
-    ip: "10.0.0.91",
-    lastOnline: daysAgo(6),
-    opLevel: 0,
-    whitelisted: false,
-    banned: true,
-    banReason: "Griefing spawn",
-    primaryGroup: "member",
-    groups: [],
   },
 ];
 
@@ -275,21 +249,21 @@ export const CONSOLE_LINES = [
   [null, "Timings Reset"],
   [
     null,
-    "Frangfurd[/192.168.1.24:53114] logged in with entity id 214 at (128.5, 71.0, -244.5)",
+    "Snadrochka[/192.168.1.24:53114] logged in with entity id 214 at (128.5, 71.0, -244.5)",
   ],
-  [null, "Frangfurd joined the game"],
+  [null, "Snadrochka joined the game"],
   [
     null,
-    "Direwolf20[/192.168.1.31:49022] logged in with entity id 289 at (96.5, 64.0, -201.5)",
+    "crocodealer420[/192.168.1.31:49022] logged in with entity id 289 at (96.5, 64.0, -201.5)",
   ],
-  [null, "Direwolf20 joined the game"],
-  [null, "<Frangfurd> anyone got spare diamonds"],
-  [null, "<Direwolf20> check the shulker in the vault"],
+  [null, "crocodealer420 joined the game"],
+  [null, "<Snadrochka> anyone got spare diamonds"],
+  [null, "<crocodealer420> check the shulker in the vault"],
   [
     null,
-    "Aletheia[/192.168.1.47:51880] logged in with entity id 401 at (12.5, 78.0, 340.5)",
+    "frogipogi[/192.168.1.47:51880] logged in with entity id 401 at (12.5, 78.0, 340.5)",
   ],
-  [null, "Aletheia joined the game"],
+  [null, "frogipogi joined the game"],
   ["manager", "Scheduled backup started", "progress"],
   [null, "Automatic saving is now disabled"],
   [null, "Saving the game (this may take a moment!)"],
@@ -298,13 +272,13 @@ export const CONSOLE_LINES = [
   [null, "Automatic saving is now enabled"],
   [
     null,
-    "Korbin[/192.168.1.52:60411] logged in with entity id 508 at (204.5, 69.0, 88.5)",
+    "ceramichello[/192.168.1.52:60411] logged in with entity id 508 at (204.5, 69.0, 88.5)",
   ],
-  [null, "Korbin joined the game"],
-  [null, "<Aletheia> the nether portal at spawn is broken again"],
+  [null, "ceramichello joined the game"],
+  [null, "<frogipogi> the nether portal at spawn is broken again"],
   [
     null,
     "Can't keep up! Is the server overloaded? Running 2841ms or 56 ticks behind",
   ],
-  [null, "<Direwolf20> ill fix it"],
+  [null, "<crocodealer420> ill fix it"],
 ];
