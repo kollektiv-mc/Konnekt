@@ -105,7 +105,6 @@
                 </nav>
               </div>
               <h1>FAQ</h1>
-              <p class="doc-lead">Short answers to what people ask first.</p>
             </div>
             <dl class="doc-facts">
               <div class="doc-fact">
@@ -141,9 +140,10 @@
                   <summary>Does it phone home?</summary>
                   <p class="doc-prose">
                     No telemetry, analytics or crash reporting.<br />
-                    It reaches the network in three cases: GitHub for update checks, Modrinth and
-                    CurseForge for mods, and your own server over RCON. CurseForge is reached only
-                    once you add your own API key.
+                    On its own it contacts GitHub, to check for updates.<br />
+                    Everything else follows something you set up: Modrinth for mods, CurseForge once
+                    you add an API key, NeoForge's Maven for a loader, your buckets, Cloudflare for
+                    a tunnel, and any address an HTTP Request block names.
                   </p>
                 </details>
                 <details>
@@ -197,7 +197,8 @@
                   <summary>Can I manage a server on another machine?</summary>
                   <p class="doc-prose">
                     No, Konnekt manages servers on the machine it runs on.<br />
-                    Web access is a later <a href="/roadmap.html">roadmap</a> item.
+                    <a href="/docs/settings/remote-access.html">Remote Access</a> opens that
+                    machine's dashboard in a browser elsewhere.
                   </p>
                 </details>
               </div>

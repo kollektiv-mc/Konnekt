@@ -244,27 +244,127 @@
   color: var(--text-muted);
 }
 
+/* ── Phones ─────────────────────────────────────────────────────────────── */
+
+/* The page was the wide layout wrapped: four tall stage blocks before the
+   first feature, the status line broken a word a line, area names floating
+   as loose text, and a row's tags landing beside its name or under it by
+   length alone. On a phone each part takes a shape of its own. */
 @media (max-width: 760px) {
+  /* The stages, two by two: name and count on one line, a pressable cell
+     each. Their notes are for the wide page. */
+  .stages {
+    grid-template-columns: 1fr 1fr;
+  }
+
   .stage {
+    gap: 0;
+    padding: 16px 20px;
     border-right: 0;
     border-bottom: var(--hairline);
   }
 
+  .stage:nth-child(odd) {
+    border-right: var(--hairline);
+  }
+
+  .stage:nth-last-child(-n + 2) {
+    border-bottom: 0;
+  }
+
+  .stage-title {
+    font-size: 15px;
+  }
+
+  .stage-count {
+    font-size: 24px;
+  }
+
+  .stage-note {
+    display: none;
+  }
+
+  /* Status on one line, the sync note under it, clear at the end. */
   .explorer-status {
     flex-basis: 100%;
+    flex-wrap: wrap;
+    gap: 4px 16px;
+    min-height: 0;
+    padding-block: 14px;
     border-left: 0;
     border-top: var(--hairline);
   }
 
+  #rm-status {
+    white-space: nowrap;
+  }
+
+  .rm-sync {
+    order: 3;
+    flex-basis: 100%;
+  }
+
+  .clear {
+    margin-left: auto;
+  }
+
+  /* The areas as a row of chips, each with an edge, the picked one filled. */
   .areas {
     flex-direction: row;
     flex-wrap: wrap;
-    padding: 12px 0;
+    gap: 8px;
+    padding: 16px 20px;
     border-right: 0;
     border-bottom: var(--hairline);
   }
 
   .area {
-    padding: 8px 20px;
+    gap: 8px;
+    min-height: 36px;
+    padding: 0 12px;
+    border: 1px solid var(--border-subtle);
+    font-size: 13px;
+  }
+
+  .area[aria-pressed='true'] {
+    border-color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 10%, transparent);
+  }
+
+  .area-dot {
+    display: none;
+  }
+
+  .area-count {
+    color: var(--text-muted);
+  }
+
+  /* A row is its name, then its tags on a line of their own under it, the
+     stage first: the same shape whatever the name's length. */
+  .row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+  }
+
+  .row-meta {
+    gap: 14px;
+  }
+
+  .row-stage {
+    order: -1;
+    min-width: 0;
+  }
+
+  .row-done {
+    order: 1;
+  }
+}
+
+/* A tap leaves :hover on what was tapped, which would light a chip that is
+   not picked. */
+@media (max-width: 760px) and (hover: none) {
+  .area:hover:not([aria-pressed='true']) {
+    color: var(--text-secondary);
   }
 }

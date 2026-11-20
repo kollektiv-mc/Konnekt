@@ -74,6 +74,7 @@ go vet ./...  |  go test ./...
 node scripts/check-website-links.mjs   # hrefs, assets, sitemap
 node demo/build.mjs                    # browser demo, with its drift checks
 node demo/record.mjs                   # website clips; needs ffmpeg
+node demo/readme.mjs                   # README images, from those clips
 npx --yes aislop@0.16.0 scan
 ```
 
