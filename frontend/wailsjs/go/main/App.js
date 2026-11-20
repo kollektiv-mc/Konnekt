@@ -270,12 +270,20 @@ export function LogClientError(arg1, arg2, arg3) {
   return window['go']['main']['App']['LogClientError'](arg1, arg2, arg3);
 }
 
-export function ModCategories(arg1) {
-  return window['go']['main']['App']['ModCategories'](arg1);
+export function ModCategories(arg1, arg2) {
+  return window['go']['main']['App']['ModCategories'](arg1, arg2);
 }
 
 export function ModCheckUpdates(arg1) {
   return window['go']['main']['App']['ModCheckUpdates'](arg1);
+}
+
+export function ModClearCurseForgeKey() {
+  return window['go']['main']['App']['ModClearCurseForgeKey']();
+}
+
+export function ModCurseForgeStatus() {
+  return window['go']['main']['App']['ModCurseForgeStatus']();
 }
 
 export function ModGetAllVersions(arg1) {
@@ -314,8 +322,12 @@ export function ModResolveDependencies(arg1, arg2) {
   return window['go']['main']['App']['ModResolveDependencies'](arg1, arg2);
 }
 
-export function ModSearch(arg1, arg2, arg3, arg4, arg5) {
-  return window['go']['main']['App']['ModSearch'](arg1, arg2, arg3, arg4, arg5);
+export function ModSearch(arg1, arg2, arg3, arg4, arg5, arg6) {
+  return window['go']['main']['App']['ModSearch'](arg1, arg2, arg3, arg4, arg5, arg6);
+}
+
+export function ModSetCurseForgeKey(arg1) {
+  return window['go']['main']['App']['ModSetCurseForgeKey'](arg1);
 }
 
 export function ModSetEnabled(arg1, arg2, arg3) {

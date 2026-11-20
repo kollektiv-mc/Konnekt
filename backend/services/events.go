@@ -63,6 +63,9 @@ const (
 	EventModInstalled       = "mod:installed"        // {serverID, fileName}
 	EventModInstallFailed   = "mod:install-failed"   // {serverID, fileName, error}
 	EventModChanged         = "mod:changed"          // {serverID} — list changed (enable/disable/uninstall)
+	// EventModSourcesChanged says a content source was switched on or off:
+	// today, a CurseForge API key saved or removed. No payload.
+	EventModSourcesChanged = "mod:sources-changed"
 
 	// Forge/NeoForge server-installer lifecycle. The installer reports no
 	// percentage, only log lines, so install:log is the progress signal.

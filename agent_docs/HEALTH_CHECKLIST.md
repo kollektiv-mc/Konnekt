@@ -391,12 +391,14 @@ tree.
       `grep -rn "setInterval" src --include=*.ts --include=*.tsx | grep -v test`.
 - [x] Process lifecycle stays safe: Windows Job Object child cleanup intact
       (`backend/services/server_windows.go`), RCON dial/operation timeouts
-      present (`backend/services/rcon.go`), Modrinth HTTP client keeps its
-      timeout + 429/`Retry-After` retry handling (`backend/services/modrinth.go`).
+      present (`backend/services/rcon.go`), the mod providers' HTTP clients
+      keep their timeout + 429/`Retry-After` retry handling (shared by Modrinth
+      and CurseForge in `backend/services/provider_http.go`).
       Verify: `grep -n "JobObject" backend/services/server_windows.go`,
       `grep -n "Timeout" backend/services/rcon.go`, and
-      `grep -nE "Retry-After|429|Timeout" backend/services/modrinth.go` — all
-      three must still match.
+      `grep -nE "Retry-After|429" backend/services/provider_http.go` and
+      `grep -n "Timeout" backend/services/modrinth.go backend/services/curseforge.go`:
+      all must still match.
 - [x] A failure that happens outside the window's lifetime still leaves a trace
       on disk. A packaged GUI build has no terminal, so anything written to
       stdout/stderr is gone, and `EventBus` emissions die with the window.
@@ -646,6 +648,18 @@ tree.
 The remaining, not-yet-closed follow-ups. Each item's full remediation write-up
 moves to `agent_docs/HEALTH_LOG.md` once it's done — keep this section short and
 current. Priorities mirror the pillars above.
+
+**P2: CurseForge jars are not identified, and no release key is wired**
+(filed 2026-11-20)
+
+The identify pass still asks Modrinth only, so a jar added by hand that
+CurseForge carries stays "local" and gets no updates; CurseForge's
+fingerprint endpoint (MurmurHash2 over the jar with whitespace removed) is
+the way in (#249, #250). Separately, `curseForgeBuiltInKey` in
+`backend/services/curseforge_key.go` is empty and nothing in the release
+workflow sets it: if Overwolf approves a key for Konnekt, pass it as
+`-ldflags "-X konnekt/backend/services.curseForgeBuiltInKey=..."` from a
+repository secret, never a committed value.
 
 **P2 — The entry chunk is at its budget** (filed 2026-09-21)
 

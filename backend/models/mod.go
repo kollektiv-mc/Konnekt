@@ -33,6 +33,16 @@ type ModProject struct {
 	// ClientOnly is true when every version of the project declares an
 	// environment that does not load on a dedicated server.
 	ClientOnly bool `json:"clientOnly"`
+	// Source is the provider the project came from: "modrinth" or
+	// "curseforge".
+	Source string `json:"source"`
+	// PageURL is the project's own page on its provider's website. Set for
+	// CurseForge, where it is the way to a file Konnekt may not download.
+	PageURL string `json:"pageUrl"`
+	// ManualDownload is true when the author has turned off third-party
+	// distribution on CurseForge: Konnekt can show the project but cannot
+	// download its files, so the only install is by hand from PageURL.
+	ManualDownload bool `json:"manualDownload"`
 }
 
 // ModCategory is a Modrinth content category tag.
@@ -52,16 +62,23 @@ type ModGalleryImg struct {
 
 // ModVersion is one release of a Modrinth project.
 type ModVersion struct {
-	ID            string          `json:"id"`
-	ProjectID     string          `json:"projectId"`
-	Name          string          `json:"name"`
-	VersionNumber string          `json:"versionNumber"`
-	VersionType   string          `json:"versionType"` // "release" | "beta" | "alpha"
-	GameVersions  []string        `json:"gameVersions"`
-	Loaders       []string        `json:"loaders"`
-	FileName      string          `json:"fileName"`
-	FileURL       string          `json:"fileUrl"`
-	SHA512        string          `json:"sha512"`
+	ID            string   `json:"id"`
+	ProjectID     string   `json:"projectId"`
+	Name          string   `json:"name"`
+	VersionNumber string   `json:"versionNumber"`
+	VersionType   string   `json:"versionType"` // "release" | "beta" | "alpha"
+	GameVersions  []string `json:"gameVersions"`
+	Loaders       []string `json:"loaders"`
+	FileName      string   `json:"fileName"`
+	FileURL       string   `json:"fileUrl"`
+	SHA512        string   `json:"sha512"`
+	// SHA1 is the digest CurseForge publishes, which has no SHA-512. An
+	// install verifies against SHA512 when there is one and SHA1 otherwise.
+	SHA1 string `json:"sha1"`
+	// PageURL is where to fetch this file by hand. An empty FileURL with a
+	// PageURL is a CurseForge file whose author opted out of third-party
+	// downloads: identified, shown, never installed by Konnekt.
+	PageURL       string          `json:"pageUrl"`
 	FileSize      int64           `json:"fileSize"`
 	Dependencies  []ModDependency `json:"dependencies"`
 	DatePublished string          `json:"datePublished"`
@@ -94,8 +111,8 @@ type InstalledMod struct {
 	DisplayName   string `json:"displayName"`
 	IconURL       string `json:"iconUrl"` // Modrinth project icon (empty for local)
 	ModID         string `json:"modId"`
-	Source        string `json:"source"`   // "modrinth" | "local"
-	Provider      string `json:"provider"` // "modrinth" | ""
+	Source        string `json:"source"`   // "modrinth" | "curseforge" | "local"
+	Provider      string `json:"provider"` // "modrinth" | "curseforge" | ""
 	ProjectID     string `json:"projectId"`
 	VersionID     string `json:"versionId"`
 	VersionNumber string `json:"versionNumber"`
@@ -140,4 +157,14 @@ type JarMeta struct {
 	// ClientOnly is fabric.mod.json's environment, or quilt.mod.json's
 	// minecraft.environment, saying "client".
 	ClientOnly bool `json:"clientOnly"`
+}
+
+// CurseForgeStatus says whether CurseForge can be searched, and where its API
+// key comes from. It never carries the key itself.
+type CurseForgeStatus struct {
+	// KeySet is true when a key the user saved is on disk.
+	KeySet bool `json:"keySet"`
+	// BuiltIn is true when this build carries Konnekt's own key, which a saved
+	// key takes precedence over.
+	BuiltIn bool `json:"builtIn"`
 }

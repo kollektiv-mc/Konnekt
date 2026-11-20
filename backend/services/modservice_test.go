@@ -36,9 +36,17 @@ type fakeModProvider struct {
 	onGetVersion  func(versionID string)
 	hashCalls     int
 	getProjectHit int
+	// id is what ID answers; empty is "modrinth". A test standing one in
+	// for CurseForge sets "curseforge".
+	id string
 }
 
-func (f *fakeModProvider) ID() string { return "modrinth" }
+func (f *fakeModProvider) ID() string {
+	if f.id != "" {
+		return f.id
+	}
+	return "modrinth"
+}
 
 func (f *fakeModProvider) GetVersion(_ context.Context, versionID string) (models.ModVersion, error) {
 	if f.onGetVersion != nil {
@@ -1244,14 +1252,14 @@ func TestCategoriesAndMoreByAuthorRejectAnUnknownServer(t *testing.T) {
 
 	// The known server answers, which is what makes the refusals below the
 	// server lookup's and not the provider's.
-	if got, err := s.Categories(testServerID); err != nil || len(got) != 1 {
+	if got, err := s.Categories(testServerID, ""); err != nil || len(got) != 1 {
 		t.Fatalf("Categories(known) = %v, %v; want one category and no error", got, err)
 	}
 	if got, err := s.MoreByAuthor(testServerID, "someone", ""); err != nil || len(got) != 1 {
 		t.Fatalf("MoreByAuthor(known) = %v, %v; want one project and no error", got, err)
 	}
 
-	if _, err := s.Categories("no-such-server"); err == nil {
+	if _, err := s.Categories("no-such-server", ""); err == nil {
 		t.Error("Categories(unknown server) = nil error, want an error")
 	}
 	if _, err := s.MoreByAuthor("no-such-server", "someone", ""); err == nil {

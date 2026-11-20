@@ -1,11 +1,8 @@
 package services
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
 	"fmt"
-	"io"
 	"log/slog"
 	"net/http"
 	"net/url"
@@ -341,78 +338,29 @@ func (c *ModrinthClient) describeDependency(ctx context.Context, projectID strin
 
 // --- HTTP helper ---
 
+// api is the client's providerAPI, built per call from the fields tests set
+// directly. The 429 back-off lives there, shared with CurseForge's client.
+func (c *ModrinthClient) api() providerAPI {
+	return providerAPI{
+		name:    "modrinth",
+		http:    c.http,
+		baseURL: c.baseURL,
+		headers: func(h http.Header) error {
+			h.Set("User-Agent", modrinthUserAgent)
+			return nil
+		},
+	}
+}
+
 // doJSON performs a GET against the Modrinth API, handling rate-limits (429)
 // with up to 3 retries and honoring the Retry-After header.
 func (c *ModrinthClient) doJSON(ctx context.Context, path string, out any) error {
-	return c.do(ctx, http.MethodGet, path, nil, out)
+	return c.api().getJSON(ctx, path, out)
 }
 
-// doJSONPost is doJSON with a JSON request body. It exists so the one piece of
-// this that is easy to get wrong — the 429 back-off — has a single
-// implementation; the body is re-encoded per attempt because a retry cannot
-// re-read a consumed reader.
+// doJSONPost is doJSON with a JSON request body.
 func (c *ModrinthClient) doJSONPost(ctx context.Context, path string, body, out any) error {
-	encoded, err := json.Marshal(body)
-	if err != nil {
-		return fmt.Errorf("modrinth: encode request: %w", err)
-	}
-	return c.do(ctx, http.MethodPost, path, encoded, out)
-}
-
-func (c *ModrinthClient) do(ctx context.Context, method, path string, body []byte, out any) error {
-	reqURL := c.baseURL + path
-	const maxRetries = 3
-
-	for attempt := 0; attempt < maxRetries; attempt++ {
-		var reqBody io.Reader
-		if body != nil {
-			reqBody = bytes.NewReader(body)
-		}
-		req, err := http.NewRequestWithContext(ctx, method, reqURL, reqBody)
-		if err != nil {
-			return fmt.Errorf("modrinth: build request: %w", err)
-		}
-		req.Header.Set("User-Agent", modrinthUserAgent)
-		if body != nil {
-			req.Header.Set("Content-Type", "application/json")
-		}
-
-		resp, err := c.http.Do(req)
-		if err != nil {
-			return fmt.Errorf("modrinth: %w", err)
-		}
-
-		body, err := io.ReadAll(resp.Body)
-		resp.Body.Close()
-		if err != nil {
-			return fmt.Errorf("modrinth: read response: %w", err)
-		}
-
-		if resp.StatusCode == http.StatusTooManyRequests {
-			wait := 2 * time.Second
-			if ra := resp.Header.Get("Retry-After"); ra != "" {
-				if secs, err := strconv.Atoi(ra); err == nil {
-					wait = time.Duration(secs) * time.Second
-				}
-			}
-			select {
-			case <-ctx.Done():
-				return ctx.Err()
-			case <-time.After(wait):
-			}
-			continue
-		}
-
-		if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-			return fmt.Errorf("modrinth: HTTP %d: %s", resp.StatusCode, truncate(string(body), 200))
-		}
-
-		if err := json.Unmarshal(body, out); err != nil {
-			return fmt.Errorf("modrinth: decode response: %w", err)
-		}
-		return nil
-	}
-	return fmt.Errorf("modrinth: exceeded retry limit for %s", path)
+	return c.api().postJSON(ctx, path, body, out)
 }
 
 // --- Facet helpers ---
@@ -569,6 +517,7 @@ func mrHitToProject(h mrSearchHit) models.ModProject {
 		DateModified: h.DateModified,
 		Categories:   h.Categories,
 		ClientOnly:   modrinthClientOnly(h.Environment...),
+		Source:       "modrinth",
 	}
 }
 
@@ -597,6 +546,7 @@ func mrProjectToModel(p mrProject) models.ModProject {
 		Categories:   p.Categories,
 		Gallery:      gallery,
 		ClientOnly:   modrinthClientOnly(p.Environment...),
+		Source:       "modrinth",
 	}
 }
 

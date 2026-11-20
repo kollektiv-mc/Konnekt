@@ -1010,11 +1010,14 @@ var validModSortIndex = map[string]bool{
 	"follows":   true,
 }
 
-func (a *App) ModSearch(serverID, query string, offset int, categories []string, sort string) (models.ModSearchResult, error) {
+// ModSearch searches one source: "modrinth" (or empty) or "curseforge". The
+// tile picks the source rather than merging both, because offsets do not
+// compose across providers with different counts and orderings (#251).
+func (a *App) ModSearch(serverID, query string, offset int, categories []string, sort, source string) (models.ModSearchResult, error) {
 	if !validModSortIndex[sort] {
 		sort = ""
 	}
-	return a.modService.Search(serverID, query, offset, categories, sort)
+	return a.modService.Search(serverID, query, offset, categories, sort, source)
 }
 
 func (a *App) ModGetProject(projectID string) (models.ModProject, error) {
@@ -1061,8 +1064,23 @@ func (a *App) ModUninstall(serverID, fileName string) error {
 	return a.modService.Uninstall(serverID, fileName)
 }
 
-func (a *App) ModCategories(serverID string) ([]string, error) {
-	return a.modService.Categories(serverID)
+func (a *App) ModCategories(serverID, source string) ([]string, error) {
+	return a.modService.Categories(serverID, source)
+}
+
+// ModCurseForgeStatus says whether CurseForge has an API key, never the key.
+func (a *App) ModCurseForgeStatus() (models.CurseForgeStatus, error) {
+	return a.modService.CurseForgeStatus(), nil
+}
+
+// ModSetCurseForgeKey checks a CurseForge API key and saves it if it works.
+func (a *App) ModSetCurseForgeKey(key string) error {
+	return a.modService.SetCurseForgeKey(key)
+}
+
+// ModClearCurseForgeKey deletes the saved CurseForge API key.
+func (a *App) ModClearCurseForgeKey() error {
+	return a.modService.ClearCurseForgeKey()
 }
 
 func (a *App) ModMoreByAuthor(serverID, username, excludeProjectID string) ([]models.ModProject, error) {

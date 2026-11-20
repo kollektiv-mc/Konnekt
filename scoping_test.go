@@ -38,14 +38,15 @@ import (
 // a serverID fails the test, which is the point: the author decides which it
 // is, in writing.
 var globalEvents = map[string]string{
-	"EventInstallStarted":  "the installer creates a server that does not exist yet",
-	"EventInstallLog":      "same installer; the loader update reuses it, and the frontend already routes the line by which job is running",
-	"EventInstallFinished": "same installer",
-	"EventInstallFailed":   "same installer",
-	"EventUpdateProgress":  "Konnekt updating itself",
-	"EventRemoteChanged":   "remote access belongs to the app, not to a server",
-	"EventCommandsChanged": "the Kommands link belongs to the app, not to a server",
-	"EventScheduleNotify":  "a block's message to the user, shown app-wide; the block already ran against its graph's own server (#236)",
+	"EventInstallStarted":    "the installer creates a server that does not exist yet",
+	"EventInstallLog":        "same installer; the loader update reuses it, and the frontend already routes the line by which job is running",
+	"EventInstallFinished":   "same installer",
+	"EventInstallFailed":     "same installer",
+	"EventUpdateProgress":    "Konnekt updating itself",
+	"EventRemoteChanged":     "remote access belongs to the app, not to a server",
+	"EventCommandsChanged":   "the Kommands link belongs to the app, not to a server",
+	"EventModSourcesChanged": "the CurseForge key belongs to the app, and every server's mods tile searches with it",
+	"EventScheduleNotify":    "a block's message to the user, shown app-wide; the block already ran against its graph's own server (#236)",
 	"EventScheduleNextRuns": "one map keyed by graph id across every server; graph ids are unique and a graph belongs to one server, " +
 		"so the reader scopes by graph rather than by a second id",
 }
@@ -129,6 +130,9 @@ var serverlessMethods = map[string]string{
 	"RevokeRemoteSessions":       "remote access belongs to the app",
 	"AnswerRemoteApproval":       "remote access belongs to the app; the call it answers carried its own server id",
 	"ModGetAllVersions":          "a provider lookup, not a server operation",
+	"ModCurseForgeStatus":        "the CurseForge key belongs to the app, not a server",
+	"ModSetCurseForgeKey":        "the CurseForge key belongs to the app, not a server",
+	"ModClearCurseForgeKey":      "the CurseForge key belongs to the app, not a server",
 
 	"GetSnapshotLink":        "the link belongs to a destination, not a server",
 	"RotateSnapshotLink":     "the link belongs to a destination, not a server",

@@ -36,6 +36,7 @@ import { PlainDataDir, ReloadNote, UpdateFromDesktop } from './settings/RemoteNo
 import { FontSettings } from './settings/FontSettings'
 import { HelpPane } from './settings/HelpPane'
 import { WebviewGpuSetting } from './settings/WebviewGpuSetting'
+import { ModSourcesPane } from './settings/ModSourcesPane'
 import { CHANGELOG_URL, countItems, releaseLabel, splitSections } from '../lib/changelog'
 import { useReleaseNotes } from '../hooks/useReleaseNotes'
 import { usePresence } from '../hooks/usePresence'
@@ -60,6 +61,7 @@ export type SettingsSection =
   | 'console'
   | 'notifications'
   | 'destinations'
+  | 'sources'
   | 'remote'
   | 'changelog'
   | 'help'
@@ -71,6 +73,7 @@ const NAV: { id: SettingsSection; label: string }[] = [
   { id: 'console', label: 'Console' },
   { id: 'notifications', label: 'Notifications' },
   { id: 'destinations', label: 'Destinations' },
+  { id: 'sources', label: 'Mod sources' },
   { id: 'remote', label: 'Remote Access' },
   { id: 'changelog', label: "What's New" },
   { id: 'help', label: 'Help' },
@@ -149,9 +152,10 @@ export function SettingsModal({ open, onClose, initialSection }: Props) {
   }
   // A browser served by the listener cannot call any Remote Access method,
   // General holds host behaviour that its in-memory settings could not keep, and
-  // a bucket's credential is typed at the desktop, not into a browser.
+  // a bucket's or CurseForge's credential is typed at the desktop, not into a
+  // browser.
   const hostOnly = (id: SettingsSection) =>
-    id === 'remote' || id === 'general' || id === 'destinations'
+    id === 'remote' || id === 'general' || id === 'destinations' || id === 'sources'
   const nav = NAV.filter((n) => !hostOnly(n.id) || !isRemoteBrowser())
   const overlayRef = useRef<HTMLDivElement>(null)
   const presence = usePresence(open)
@@ -325,6 +329,7 @@ export function SettingsModal({ open, onClose, initialSection }: Props) {
                   <DestinationsPane />
                 </Suspense>
               )}
+              {section === 'sources' && nav.some((n) => n.id === 'sources') && <ModSourcesPane />}
               {section === 'remote' && nav.some((n) => n.id === 'remote') && (
                 <Suspense fallback={null}>
                   <RemoteAccessPane />

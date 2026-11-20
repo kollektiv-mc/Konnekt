@@ -150,6 +150,7 @@ var remoteMethods = map[string]services.RemoteMethod{
 	"ModCategories":          {Tier: services.RemoteTierRead, Reason: "a provider lookup"},
 	"ModMoreByAuthor":        {Tier: services.RemoteTierRead, Reason: "a provider lookup"},
 	"ModCheckUpdates":        {Tier: services.RemoteTierRead, Reason: "a provider lookup"},
+	"ModCurseForgeStatus":    {Tier: services.RemoteTierRead, Reason: "whether a CurseForge key is set; the key is never sent"},
 }
 
 // neverRemote are the bound methods a remote client can never reach, each
@@ -192,4 +193,9 @@ var neverRemote = map[string]string{
 	// be shown there and kept in the pending list until answered.
 	"SaveDestination": "carries the secret access key as an argument; a credential is typed at the desktop only",
 	"TestDestination": "carries the secret access key as an argument; a credential is typed at the desktop only",
+
+	// The CurseForge API key is a credential too, typed at the desktop for
+	// the same reason.
+	"ModSetCurseForgeKey":   "carries the CurseForge API key as an argument; a credential is typed at the desktop only",
+	"ModClearCurseForgeKey": "the CurseForge API key is the desktop's to manage, as setting it is",
 }

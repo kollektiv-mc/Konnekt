@@ -10,7 +10,6 @@ import {
   ModListInstalled,
   ModSetEnabled,
   ModUninstall,
-  ModCategories,
   ModMoreByAuthor,
   ModCheckUpdates,
   ModInstallLocal,
@@ -19,12 +18,34 @@ import {
 import { models } from '../../../wailsjs/go/models'
 import { EVENTS } from '../../lib/constants'
 import { readOr } from '../../lib/ipc'
+import { useModSource, type CurseForgeStatus, type ModSource } from './useModSource'
 
 export type ModProject = models.ModProject
 export type ModVersion = models.ModVersion
 export type ModSearchResult = models.ModSearchResult
 export type ResolvedDependency = models.ResolvedDependency
 export type InstalledMod = models.InstalledMod
+export type { CurseForgeStatus, ModSource } from './useModSource'
+
+/** A file Konnekt may not download: its CurseForge author turned off
+ *  downloads in other apps, so the only install is by hand from its page. */
+export function isManualOnly(v: Pick<ModVersion, 'fileUrl' | 'pageUrl'>): boolean {
+  return !v.fileUrl && !!v.pageUrl
+}
+
+// Thrown by installLatest when the newest file can only be fetched by hand.
+// The caller catches it and shows the link instead of an error.
+export class ManualDownloadError extends Error {
+  readonly pageUrl: string
+  constructor(pageUrl: string) {
+    super('Download by hand from CurseForge')
+    this.pageUrl = pageUrl
+  }
+}
+
+export function isManualDownloadError(e: unknown): e is ManualDownloadError {
+  return e instanceof ManualDownloadError
+}
 
 // Thrown by installLatest when the install needs a yes from the user first:
 // dependencies to choose, or a version that will not load on a dedicated
@@ -70,6 +91,11 @@ interface ModsState {
   checkUpdates: () => Promise<void>
 
   // Browse panel
+  source: ModSource
+  setSource: (source: ModSource) => void
+  // Null until the first answer. CurseForge needs an API key, and the panel
+  // says so instead of searching when there is none.
+  curseForge: CurseForgeStatus | null
   searchResults: ModProject[]
   searchTotal: number
   searchOffset: number
@@ -119,7 +145,7 @@ export function useMods(serverId: string): ModsState {
   const [searchLoading, setSearchLoading] = useState(false)
   const [searchError, setSearchError] = useState<string | null>(null)
 
-  const [categories, setCategories] = useState<string[]>([])
+  const { source, setSource: setSourceState, curseForge, categories } = useModSource(serverId)
 
   const [selectedProject, setSelectedProject] = useState<ModProject | null>(null)
   const [projectLoading, setProjectLoading] = useState(false)
@@ -232,28 +258,13 @@ export function useMods(serverId: string): ModsState {
     return () => window.removeEventListener('focus', rescan)
   }, [serverId])
 
-  const loadCategories = useCallback(async () => {
-    if (!serverId) return
-    try {
-      const cats = (await ModCategories(serverId)) as string[]
-      setCategories(cats ?? [])
-    } catch {
-      // best-effort; UI falls back gracefully
-    }
-  }, [serverId])
-
-  // Load categories once on mount
-  useEffect(() => {
-    loadCategories()
-  }, [loadCategories])
-
   const search = useCallback(
     async (query: string, cats: string[], offset = 0, sort = '') => {
       setSearchLoading(true)
       setSearchError(null)
       setSearchOffset(offset)
       try {
-        const result = (await ModSearch(serverId, query, offset, cats, sort)) as ModSearchResult
+        const result = await ModSearch(serverId, query, offset, cats, sort, source)
         setSearchResults(result?.hits ?? [])
         setSearchTotal(result?.total ?? 0)
       } catch (e) {
@@ -263,7 +274,7 @@ export function useMods(serverId: string): ModsState {
         setSearchLoading(false)
       }
     },
-    [serverId],
+    [serverId, source],
   )
 
   const selectProject = useCallback(async (hit: ModProject) => {
@@ -294,6 +305,17 @@ export function useMods(serverId: string): ModsState {
     setVersions([])
     setVersionsError(null)
   }, [])
+
+  const setSource = useCallback(
+    (next: ModSource) => {
+      setSourceState(next)
+      setSearchResults([])
+      setSearchTotal(0)
+      setSearchError(null)
+      clearProject()
+    },
+    [setSourceState, clearProject],
+  )
 
   // A rejection here used to leave `versions` empty with nothing else changed,
   // so a failed call and a mod with no build for this server rendered as the
@@ -378,6 +400,7 @@ export function useMods(serverId: string): ModsState {
         const v = (await ModGetVersions(serverId, projectId)) as ModVersion[]
         if (!v || v.length === 0) throw new Error('No compatible version found')
         const latest = v[0]
+        if (isManualOnly(latest)) throw new ManualDownloadError(latest.pageUrl)
         const deps = (await ModResolveDependencies(serverId, latest.id)) as ResolvedDependency[]
         const nonTrivial = (deps ?? []).filter((d) => !d.alreadyInstalled)
         if (nonTrivial.length > 0 || latest.clientOnly) {
@@ -386,7 +409,7 @@ export function useMods(serverId: string): ModsState {
         }
         await ModInstall(serverId, [latest.id])
       } catch (e: unknown) {
-        if (isConfirmInstallError(e)) throw e // re-throw for the confirm dialog
+        if (isConfirmInstallError(e) || isManualDownloadError(e)) throw e // dialog or link
         setInstallError(String(e))
         throw e
       } finally {
@@ -466,6 +489,9 @@ export function useMods(serverId: string): ModsState {
     changeVersion,
     updates,
     checkUpdates,
+    source,
+    setSource,
+    curseForge,
     searchResults,
     searchTotal,
     searchOffset,

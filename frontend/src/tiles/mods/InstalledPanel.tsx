@@ -48,7 +48,14 @@ interface Props {
 
 type SortKey = 'name' | 'date' | 'size' | 'updated'
 type StatusFilter = 'all' | 'enabled' | 'disabled'
-type SourceFilter = 'all' | 'modrinth' | 'local'
+type SourceFilter = 'all' | 'modrinth' | 'curseforge' | 'local'
+
+const SOURCE_FILTER_LABELS: Record<SourceFilter, string> = {
+  all: 'All',
+  modrinth: 'Modrinth',
+  curseforge: 'CurseForge',
+  local: 'Local',
+}
 
 const SORT_OPTIONS: { value: SortKey; label: string }[] = [
   { value: 'date', label: 'Date installed' },
@@ -175,9 +182,9 @@ function FilterMenu({
         <div className="text-text-faint border-border-subtle border-t-hairline border-b-hairline text-2xs px-3 py-1.5 font-mono text-xs">
           Source
         </div>
-        {(['all', 'modrinth', 'local'] as SourceFilter[]).map((v) => {
+        {(['all', 'modrinth', 'curseforge', 'local'] as SourceFilter[]).map((v) => {
           const isActive = sourceFilter === v
-          const label = v === 'all' ? 'All' : v.charAt(0).toUpperCase() + v.slice(1)
+          const label = SOURCE_FILTER_LABELS[v]
           return (
             <button
               key={v}
@@ -289,7 +296,7 @@ export function InstalledPanel({
 
   const openPreview = async (mod: InstalledMod) => {
     setPreviewMod(mod)
-    if (mod.source === 'modrinth' && mod.projectId) {
+    if (mod.source !== 'local' && mod.projectId) {
       await onSelectProject(mod)
     }
   }
@@ -418,7 +425,7 @@ export function InstalledPanel({
                   {numCols === 1 && (
                     <span
                       className={`text-2xs shrink-0 rounded px-1 text-xs ${
-                        mod.source === 'modrinth'
+                        mod.source !== 'local'
                           ? 'bg-accent/[0.12] text-accent'
                           : 'text-text-muted bg-white/[0.06]'
                       }`}
@@ -456,7 +463,7 @@ export function InstalledPanel({
                     version (EssentialsX ships its modules that way) knows its
                     project but is not itself a version, so there is nothing to
                     switch between. */}
-                {mod.source === 'modrinth' && mod.projectId && mod.versionId && (
+                {mod.source !== 'local' && mod.projectId && mod.versionId && (
                   <button
                     onClick={() => openPreview(mod)}
                     className="border-border-subtle text-text-muted border-hairline relative flex h-[26px] w-[26px] items-center justify-center rounded bg-transparent text-xs transition-colors"

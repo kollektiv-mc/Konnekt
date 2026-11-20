@@ -97,7 +97,7 @@ Browse and edit `server.properties` and other config files (JSON/YAML/TOML) thro
 
 ### Mods & plugins
 
-Browse and search Modrinth from inside the app, resolve dependencies, install or uninstall, enable/disable, check for updates, or install a local jar. Konnekt detects your server's loader (Fabric, Forge, Paper, etc.) automatically.
+Browse and search Modrinth or CurseForge from inside the app (CurseForge with your own API key, added in Settings), resolve dependencies, install or uninstall, enable/disable, check for updates, or install a local jar. Konnekt detects your server's loader (Fabric, Forge, Paper, etc.) automatically.
 
 ![Mods and plugins](docs/images/mods-plugins.png)
 

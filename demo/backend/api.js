@@ -185,6 +185,8 @@ export const api = {
   ModListInstalled: read((id) => (survival(id) ? INSTALLED_MODS : [])),
   ModCheckUpdates: read((id) => (survival(id) ? MOD_UPDATES : [])),
   ModRescan: async () => undefined, // a no-op scan is honest: nothing changed
+  // Only Modrinth is live here. CurseForge needs an API key the demo does not
+  // have, so it reports none and the tile says so instead of searching.
   ModSearch: (id, query, offset, categories, sort) =>
     modrinth.search(
       query,
@@ -202,7 +204,13 @@ export const api = {
       configFor(id).mcVersion,
     ),
   ModGetAllVersions: (projectID) => modrinth.getAllVersions(projectID),
-  ModCategories: (id) => modrinth.categories(configFor(id).loader),
+  ModCategories: (id, source) =>
+    source === "curseforge"
+      ? Promise.resolve([])
+      : modrinth.categories(configFor(id).loader),
+  ModCurseForgeStatus: read({ keySet: false, builtIn: false }),
+  ModSetCurseForgeKey: refuse("Saving a CurseForge key"),
+  ModClearCurseForgeKey: refuse("Removing a CurseForge key"),
   ModMoreByAuthor: (id, username, exclude) =>
     modrinth.moreByAuthor(username, exclude, configFor(id).loader),
   ModResolveDependencies: read([]),

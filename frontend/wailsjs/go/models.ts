@@ -452,6 +452,20 @@ export namespace models {
 	        this.outcome = source["outcome"];
 	    }
 	}
+	export class CurseForgeStatus {
+	    keySet: boolean;
+	    builtIn: boolean;
+	
+	    static createFrom(source: any = {}) {
+	        return new CurseForgeStatus(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.keySet = source["keySet"];
+	        this.builtIn = source["builtIn"];
+	    }
+	}
 	
 	export class Destination {
 	    id: string;
@@ -880,6 +894,9 @@ export namespace models {
 	    categories: string[];
 	    gallery: ModGalleryImg[];
 	    clientOnly: boolean;
+	    source: string;
+	    pageUrl: string;
+	    manualDownload: boolean;
 	
 	    static createFrom(source: any = {}) {
 	        return new ModProject(source);
@@ -901,6 +918,9 @@ export namespace models {
 	        this.categories = source["categories"];
 	        this.gallery = this.convertValues(source["gallery"], ModGalleryImg);
 	        this.clientOnly = source["clientOnly"];
+	        this.source = source["source"];
+	        this.pageUrl = source["pageUrl"];
+	        this.manualDownload = source["manualDownload"];
 	    }
 	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {
@@ -984,6 +1004,8 @@ export namespace models {
 	    fileName: string;
 	    fileUrl: string;
 	    sha512: string;
+	    sha1: string;
+	    pageUrl: string;
 	    fileSize: number;
 	    dependencies: ModDependency[];
 	    datePublished: string;
@@ -1005,6 +1027,8 @@ export namespace models {
 	        this.fileName = source["fileName"];
 	        this.fileUrl = source["fileUrl"];
 	        this.sha512 = source["sha512"];
+	        this.sha1 = source["sha1"];
+	        this.pageUrl = source["pageUrl"];
 	        this.fileSize = source["fileSize"];
 	        this.dependencies = this.convertValues(source["dependencies"], ModDependency);
 	        this.datePublished = source["datePublished"];

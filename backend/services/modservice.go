@@ -2,10 +2,12 @@ package services
 
 import (
 	"context"
+	"crypto/sha1" //nolint:gosec // CurseForge publishes SHA-1 and MD5 only; see downloadVerified
 	"crypto/sha512"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"hash"
 	"io"
 	"log/slog"
 	"net/http"
@@ -32,8 +34,8 @@ type modManifestItem struct {
 	DisplayName   string `json:"displayName"`
 	IconURL       string `json:"iconUrl,omitempty"`
 	ModID         string `json:"modId"`
-	Source        string `json:"source"`   // "modrinth" | "local"
-	Provider      string `json:"provider"` // "modrinth" | ""
+	Source        string `json:"source"`   // "modrinth" | "curseforge" | "local"
+	Provider      string `json:"provider"` // "modrinth" | "curseforge" | ""
 	ProjectID     string `json:"projectId"`
 	VersionID     string `json:"versionId"`
 	VersionNumber string `json:"versionNumber"`
@@ -77,10 +79,17 @@ type downloadPolicy struct {
 	hosts []string
 	// client is nil outside tests, which swap in an httptest TLS client.
 	client *http.Client
+	// header adds what the CDN wants on top of the User-Agent. CurseForge's
+	// has refused a download without the API key since July 2026.
+	header func(http.Header)
 }
 
 // modrinthDownloads is the policy for files the Modrinth API points at.
 var modrinthDownloads = downloadPolicy{hosts: []string{"cdn.modrinth.com"}}
+
+// curseForgeDownloadHosts are where CurseForge's downloadUrl points: edge
+// serves the file and has redirected to mediafilez.
+var curseForgeDownloadHosts = []string{"edge.forgecdn.net", "mediafilez.forgecdn.net"}
 
 func (p downloadPolicy) check(u *url.URL) error {
 	if u.Scheme != "https" || !slices.Contains(p.hosts, u.Hostname()) {
@@ -105,8 +114,11 @@ func (p downloadPolicy) httpClient() *http.Client {
 }
 
 // validSHA512 reports whether h is a hex SHA-512 digest.
-func validSHA512(h string) bool {
-	if len(h) != sha512.Size*2 {
+func validSHA512(h string) bool { return validHexDigest(h, sha512.Size) }
+
+// validHexDigest reports whether h is a hex digest of size bytes.
+func validHexDigest(h string, size int) bool {
+	if len(h) != size*2 {
 		return false
 	}
 	_, err := hex.DecodeString(h)
@@ -120,10 +132,22 @@ type updateCacheEntry struct {
 
 // ModService manages mod/plugin installation, listing, and lifecycle.
 type ModService struct {
-	cfg         *ConfigService
-	srv         *ServerService
-	provider    ModProvider
-	downloads   downloadPolicy
+	cfg *ConfigService
+	srv *ServerService
+	// provider is Modrinth, the default source and the only one that
+	// identifies jars by hash. curseforge is consulted for ids carrying its
+	// prefix and for searches that name it (providerFor, providerNamed).
+	provider   ModProvider
+	curseforge ModProvider
+	// checkCurseForgeKey asks CurseForge whether a key works before it is
+	// saved. A field so tests need no network.
+	checkCurseForgeKey func(ctx context.Context, key string) error
+	downloads          downloadPolicy
+	cfDownloads        downloadPolicy
+	cfKeyMu            sync.Mutex
+	cfKey              string
+	cfKeyLoaded        bool
+
 	ctx         context.Context
 	dataDir     string
 	bus         *EventBus
@@ -152,7 +176,7 @@ type ModService struct {
 }
 
 func NewModService(cfg *ConfigService, srv *ServerService) *ModService {
-	return &ModService{
+	s := &ModService{
 		cfg:       cfg,
 		srv:       srv,
 		provider:  NewModrinthClient(),
@@ -160,6 +184,49 @@ func NewModService(cfg *ConfigService, srv *ServerService) *ModService {
 		lastSig:   make(map[string]uint64),
 		stop:      make(chan struct{}),
 	}
+	cf := NewCurseForgeClient(s.curseForgeAPIKey)
+	s.curseforge = cf
+	s.checkCurseForgeKey = cf.CheckKey
+	s.cfDownloads = downloadPolicy{
+		hosts: curseForgeDownloadHosts,
+		header: func(h http.Header) {
+			if k := s.curseForgeAPIKey(); k != "" {
+				h.Set("x-api-key", k)
+			}
+		},
+	}
+	return s
+}
+
+// providerFor is the provider that issued id, a project or version id.
+// CurseForge's carry curseForgeIDPrefix; anything else is Modrinth's, which is
+// every id a manifest written before CurseForge existed holds.
+func (s *ModService) providerFor(id string) ModProvider {
+	if isCurseForgeID(id) {
+		return s.curseforge
+	}
+	return s.provider
+}
+
+// providerNamed is the provider a search asked for by name. Empty is
+// Modrinth, so a caller that predates the source picker keeps working.
+func (s *ModService) providerNamed(source string) (ModProvider, error) {
+	switch source {
+	case "", "modrinth":
+		return s.provider, nil
+	case "curseforge":
+		return s.curseforge, nil
+	default:
+		return nil, fmt.Errorf("unknown mod source %q", source)
+	}
+}
+
+// downloadsFor is the download policy for files the named provider points at.
+func (s *ModService) downloadsFor(providerID string) downloadPolicy {
+	if providerID == "curseforge" {
+		return s.cfDownloads
+	}
+	return s.downloads
 }
 
 func (s *ModService) SetContext(ctx context.Context) { s.ctx = ctx }
@@ -168,32 +235,41 @@ func (s *ModService) SetBus(b *EventBus)             { s.bus = b }
 
 // --- Modrinth browse & install ---
 
-func (s *ModService) Search(serverID, query string, offset int, categories []string, sort string) (models.ModSearchResult, error) {
+func (s *ModService) Search(serverID, query string, offset int, categories []string, sort, source string) (models.ModSearchResult, error) {
+	p, err := s.providerNamed(source)
+	if err != nil {
+		return models.ModSearchResult{}, err
+	}
 	cfg, err := s.serverConfig(serverID)
 	if err != nil {
 		return models.ModSearchResult{}, err
 	}
 	q := models.ModSearchQuery{Query: query, Offset: offset, Categories: categories, Sort: sort}
 	mcVersion, loader := resolveTarget(cfg)
-	return s.provider.Search(s.ctx, q, mcVersion, loader)
+	return p.Search(s.ctx, q, mcVersion, loader)
 }
 
-func (s *ModService) Categories(serverID string) ([]string, error) {
-	all, err := s.provider.GetCategories(s.ctx)
+func (s *ModService) Categories(serverID, source string) ([]string, error) {
+	p, err := s.providerNamed(source)
+	if err != nil {
+		return nil, err
+	}
+	cfg, err := s.serverConfig(serverID)
+	if err != nil {
+		return nil, err
+	}
+	all, err := p.GetCategories(s.ctx)
 	if err != nil {
 		return nil, err
 	}
 	// Determine the project type for this server to prefer its category set.
 	// Modrinth only tags content categories with "mod"; there is no "plugin" taxonomy.
 	// So for plugin loaders we fall back to "mod" categories — they work as search
-	// facets regardless of project type.
-	cfg, err := s.serverConfig(serverID)
-	if err != nil {
-		return nil, err
-	}
+	// facets regardless of project type. CurseForge's Bukkit section has
+	// categories of its own, so there a plugin server gets those.
 	_, loader := resolveTarget(cfg)
 	projectType := "mod"
-	if info, ok := loaderProjectType[loader]; ok && info.projectType != "plugin" {
+	if info, ok := loaderProjectType[loader]; ok && (info.projectType != "plugin" || p.ID() == "curseforge") {
 		projectType = info.projectType
 	}
 	var names []string
@@ -206,7 +282,7 @@ func (s *ModService) Categories(serverID string) ([]string, error) {
 }
 
 func (s *ModService) MoreByAuthor(serverID, username, excludeProjectID string) ([]models.ModProject, error) {
-	projects, err := s.provider.GetProjectsByAuthor(s.ctx, username)
+	projects, err := s.providerFor(excludeProjectID).GetProjectsByAuthor(s.ctx, username)
 	if err != nil {
 		return nil, err
 	}
@@ -237,7 +313,7 @@ func (s *ModService) MoreByAuthor(serverID, username, excludeProjectID string) (
 }
 
 func (s *ModService) GetProject(projectID string) (models.ModProject, error) {
-	return s.provider.GetProject(s.ctx, projectID)
+	return s.providerFor(projectID).GetProject(s.ctx, projectID)
 }
 
 func (s *ModService) GetVersions(serverID, projectID string) ([]models.ModVersion, error) {
@@ -246,11 +322,11 @@ func (s *ModService) GetVersions(serverID, projectID string) ([]models.ModVersio
 		return nil, err
 	}
 	mcVersion, loader := resolveTarget(cfg)
-	return s.provider.GetVersions(s.ctx, projectID, mcVersion, loader)
+	return s.providerFor(projectID).GetVersions(s.ctx, projectID, mcVersion, loader)
 }
 
 func (s *ModService) GetAllVersions(projectID string) ([]models.ModVersion, error) {
-	return s.provider.GetAllVersions(s.ctx, projectID)
+	return s.providerFor(projectID).GetAllVersions(s.ctx, projectID)
 }
 
 func (s *ModService) ResolveDependencies(serverID, versionID string) ([]models.ResolvedDependency, error) {
@@ -270,10 +346,11 @@ func (s *ModService) ResolveDependencies(serverID, versionID string) ([]models.R
 		}
 	}
 	mcVersion, loader := resolveTarget(cfg)
-	return s.provider.ResolveDependencies(s.ctx, versionID, mcVersion, loader, installedMap)
+	return s.providerFor(versionID).ResolveDependencies(s.ctx, versionID, mcVersion, loader, installedMap)
 }
 
-// Install downloads and installs one or more Modrinth version IDs to the server's
+// Install downloads and installs one or more version IDs, Modrinth's or
+// CurseForge's, to the server's
 // mods/ or plugins/ directory. Allowed while the server is running (the mod files
 // are not locked); the frontend should notify the user that a restart is required.
 func (s *ModService) Install(serverID string, versionIDs []string) error {
@@ -304,9 +381,13 @@ func (s *ModService) Install(serverID string, versionIDs []string) error {
 	projectCache := make(map[string]projectMeta)
 
 	for _, versionID := range versionIDs {
-		version, err := s.provider.GetVersion(s.ctx, versionID)
+		provider := s.providerFor(versionID)
+		version, err := provider.GetVersion(s.ctx, versionID)
 		if err != nil {
 			return fmt.Errorf("fetch version %s: %w", versionID, err)
+		}
+		if version.FileURL == "" && version.PageURL != "" {
+			return &ManualDownloadError{FileName: version.FileName, PageURL: version.PageURL}
 		}
 		if version.FileName == "" || version.FileURL == "" {
 			return fmt.Errorf("version %s has no downloadable file", versionID)
@@ -322,7 +403,8 @@ func (s *ModService) Install(serverID string, versionIDs []string) error {
 
 		finalPath := filepath.Join(targetDir, safeFileName)
 
-		if err := s.downloadVerified(serverID, safeFileName, version.FileURL, version.SHA512, finalPath); err != nil {
+		sha, err := s.downloadVerified(serverID, s.downloadsFor(provider.ID()), safeFileName, version, finalPath)
+		if err != nil {
 			s.bus.Emit(EventModInstallFailed, map[string]any{
 				"serverID": serverID,
 				"fileName": safeFileName,
@@ -389,7 +471,7 @@ func (s *ModService) Install(serverID string, versionIDs []string) error {
 				displayName = pm.title
 				iconURL = pm.iconURL
 			} else {
-				if proj, perr := s.provider.GetProject(s.ctx, version.ProjectID); perr == nil && proj.Title != "" {
+				if proj, perr := provider.GetProject(s.ctx, version.ProjectID); perr == nil && proj.Title != "" {
 					projectCache[version.ProjectID] = projectMeta{proj.Title, proj.IconURL}
 					displayName = proj.Title
 					iconURL = proj.IconURL
@@ -411,12 +493,12 @@ func (s *ModService) Install(serverID string, versionIDs []string) error {
 			DisplayName:   displayName,
 			IconURL:       iconURL,
 			ModID:         meta.ID,
-			Source:        "modrinth",
-			Provider:      "modrinth",
+			Source:        provider.ID(),
+			Provider:      provider.ID(),
 			ProjectID:     version.ProjectID,
 			VersionID:     version.ID,
 			VersionNumber: version.VersionNumber,
-			SHA512:        version.SHA512,
+			SHA512:        sha,
 			HashChecked:   true,
 			Loader:        loader,
 			TargetFolder:  targetFolder,
@@ -586,30 +668,55 @@ func (s *ModService) discardSuperseded(aside []string) {
 	}
 }
 
-// downloadVerified streams a file from url to finalPath, verifying the sha512
-// hash while downloading. Uses a temp file in the same directory for atomicity.
+// ManualDownloadError is an install refused because the file's author has
+// turned off downloads in other apps. The tile shows the page instead.
+type ManualDownloadError struct {
+	FileName string
+	PageURL  string
+}
+
+func (e *ManualDownloadError) Error() string {
+	return fmt.Sprintf("%s can only be downloaded from its CurseForge page: its author has turned off downloads in other apps (%s)", e.FileName, e.PageURL)
+}
+
+// downloadVerified streams a version's file to finalPath through a temp file in
+// the same directory, verifying it while it downloads, and returns the file's
+// SHA-512 for the manifest.
+//
+// The digest it checks against is the provider's SHA-512 where there is one,
+// which is every Modrinth file, and its SHA-1 otherwise, which is every
+// CurseForge file: CurseForge publishes SHA-1 and MD5 and nothing stronger.
+// SHA-1 is enough to catch a truncated or swapped file; what vouches for the
+// file's origin is the https-only host list the URL and every redirect are held
+// to, the same as for Modrinth.
 //
 // Everything that can be refused without the network is refused before the temp
 // file exists: a missing or malformed hash used to switch verification off and
 // install the jar unchecked, and a hash under 16 characters panicked in the
 // mismatch message (#434).
-func (s *ModService) downloadVerified(serverID, fileName, fileURL, expectedSHA512, finalPath string) error {
-	expectedSHA512 = strings.ToLower(expectedSHA512)
-	if !validSHA512(expectedSHA512) {
-		return fmt.Errorf("download %s refused: the provider gave no valid SHA-512 to verify it against", fileName)
+func (s *ModService) downloadVerified(serverID string, policy downloadPolicy, fileName string, version models.ModVersion, finalPath string) (string, error) {
+	var check hash.Hash
+	var want, algo string
+	switch sha512Hex, sha1Hex := strings.ToLower(version.SHA512), strings.ToLower(version.SHA1); {
+	case validSHA512(sha512Hex):
+		want, algo = sha512Hex, "sha512"
+	case validHexDigest(sha1Hex, sha1.Size):
+		check, want, algo = sha1.New(), sha1Hex, "sha1" //nolint:gosec // see the comment above
+	default:
+		return "", fmt.Errorf("download %s refused: the provider gave no valid SHA-512 or SHA-1 to verify it against", fileName)
 	}
-	u, err := url.Parse(fileURL)
+	u, err := url.Parse(version.FileURL)
 	if err != nil {
-		return fmt.Errorf("download %s: bad URL: %w", fileName, err)
+		return "", fmt.Errorf("download %s: bad URL: %w", fileName, err)
 	}
-	if err := s.downloads.check(u); err != nil {
-		return err
+	if err := policy.check(u); err != nil {
+		return "", err
 	}
 
 	destDir := filepath.Dir(finalPath)
 	tmp, err := os.CreateTemp(destDir, ".konnekt-dl-*")
 	if err != nil {
-		return fmt.Errorf("create temp file: %w", err)
+		return "", fmt.Errorf("create temp file: %w", err)
 	}
 	tmpPath := tmp.Name()
 	cleanup := true
@@ -624,33 +731,40 @@ func (s *ModService) downloadVerified(serverID, fileName, fileURL, expectedSHA51
 	defer cancel()
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u.String(), nil)
 	if err != nil {
-		return fmt.Errorf("build download request: %w", err)
+		return "", fmt.Errorf("build download request: %w", err)
 	}
 	req.Header.Set("User-Agent", modrinthUserAgent)
+	if policy.header != nil {
+		policy.header(req.Header)
+	}
 
-	resp, err := s.downloads.httpClient().Do(req)
+	resp, err := policy.httpClient().Do(req)
 	if err != nil {
-		return fmt.Errorf("download %s: %w", fileName, err)
+		return "", fmt.Errorf("download %s: %w", fileName, err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return fmt.Errorf("download %s: HTTP %d", fileName, resp.StatusCode)
+		return "", fmt.Errorf("download %s: HTTP %d", fileName, resp.StatusCode)
 	}
 
-	hasher := sha512.New()
+	sha := sha512.New()
+	sinks := []io.Writer{sha}
+	if check != nil {
+		sinks = append(sinks, check)
+	}
 	total := resp.ContentLength // -1 if unknown
 	var written int64
 
 	buf := make([]byte, 32*1024)
-	reader := io.TeeReader(resp.Body, hasher)
+	reader := io.TeeReader(resp.Body, io.MultiWriter(sinks...))
 	lastPct := -1
 
 	for {
 		n, err := reader.Read(buf)
 		if n > 0 {
 			if _, werr := tmp.Write(buf[:n]); werr != nil {
-				return fmt.Errorf("write temp file: %w", werr)
+				return "", fmt.Errorf("write temp file: %w", werr)
 			}
 			written += int64(n)
 			if total > 0 {
@@ -669,21 +783,26 @@ func (s *ModService) downloadVerified(serverID, fileName, fileURL, expectedSHA51
 			break
 		}
 		if err != nil {
-			return fmt.Errorf("read download stream: %w", err)
+			return "", fmt.Errorf("read download stream: %w", err)
 		}
 	}
 
-	if got := hex.EncodeToString(hasher.Sum(nil)); got != expectedSHA512 {
-		return fmt.Errorf("sha512 mismatch for %s: got %s want %s", fileName, got[:16]+"…", expectedSHA512[:16]+"…")
+	got512 := hex.EncodeToString(sha.Sum(nil))
+	got := got512
+	if check != nil {
+		got = hex.EncodeToString(check.Sum(nil))
+	}
+	if got != want {
+		return "", fmt.Errorf("%s mismatch for %s: got %s want %s", algo, fileName, got[:16]+"…", want[:16]+"…")
 	}
 
 	tmp.Close()
 	cleanup = false
 	if err := os.Rename(tmpPath, finalPath); err != nil {
 		os.Remove(tmpPath)
-		return fmt.Errorf("move to final path: %w", err)
+		return "", fmt.Errorf("move to final path: %w", err)
 	}
-	return nil
+	return got512, nil
 }
 
 // --- Installed manager ---
@@ -1087,9 +1206,9 @@ func (s *ModService) saveManifest(serverID string, m *modManifest) error {
 	return nil
 }
 
-// CheckUpdates fetches the latest compatible version for each Modrinth-sourced
-// installed mod. Results are cached for updateCacheTTL to avoid hammering the
-// Modrinth API on every library open/poll.
+// CheckUpdates fetches the latest compatible version for each installed mod a
+// provider knows, asking the provider that issued it. Results are cached for
+// updateCacheTTL to avoid hammering the APIs on every library open/poll.
 //
 // Returns a slice, not the map[fileName]ModUpdateInfo it used to: Wails' binding
 // generator does not descend into map values, so the map shape left
@@ -1119,10 +1238,10 @@ func (s *ModService) CheckUpdates(serverID string) ([]models.ModUpdateInfo, erro
 
 	result := make([]models.ModUpdateInfo, 0, len(installed))
 	for _, mod := range installed {
-		if mod.Source != "modrinth" || mod.ProjectID == "" || mod.VersionID == "" {
+		if mod.Source == "local" || mod.ProjectID == "" || mod.VersionID == "" {
 			continue
 		}
-		versions, verr := s.provider.GetVersions(s.ctx, mod.ProjectID, mcVersion, loader)
+		versions, verr := s.providerFor(mod.ProjectID).GetVersions(s.ctx, mod.ProjectID, mcVersion, loader)
 		if verr != nil || len(versions) == 0 {
 			continue
 		}
