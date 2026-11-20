@@ -22,6 +22,7 @@ import * as state from "./state.js";
 import * as frame from "./frame.js";
 import {
   SERVER_ID,
+  CREATIVE_ID,
   SERVER_CONFIG,
   SERVER_CONFIGS,
   STATS_HISTORY,
@@ -32,7 +33,12 @@ import {
 import { WORLDS, BACKUP_WORLDS, CREATIVE_WORLDS } from "./fixtures/worlds.js";
 import { BACKUPS } from "./fixtures/backups.js";
 import { RELEASE_NOTES } from "./fixtures/releases.js";
-import { INSTALLED_MODS, MOD_UPDATES } from "./fixtures/mods.js";
+import {
+  INSTALLED_MODS,
+  MOD_UPDATES,
+  PACK_PLAN,
+  PACK_STATE,
+} from "./fixtures/mods.js";
 import { CONFIG_FILES, readConfigFile } from "./fixtures/config.js";
 import { GRAPHS, NEXT_RUNS } from "./fixtures/scheduler.js";
 import BLOCK_DEFS from "./fixtures/blockdefs.json" with { type: "json" };
@@ -210,6 +216,17 @@ export const api = {
   ModInstallLocal: refuse("Adding a local file"),
   ModSetEnabled: refuse("Enabling a plugin"),
   ModUninstall: refuse("Removing a plugin"),
+  ModSyncState: read((id) =>
+    id === CREATIVE_ID ? PACK_STATE : { source: null, history: [] },
+  ),
+  ModPlanSync: read((id) => {
+    if (id !== CREATIVE_ID) throw new Error("no pack is set for this server");
+    return PACK_PLAN;
+  }),
+  ModSetPackSource: refuse("Choosing a pack"),
+  ModClearPackSource: refuse("Unbinding a pack"),
+  ModApplySync: refuse("Syncing a pack"),
+  ModRollbackSync: refuse("Rolling back a sync"),
 
   // ── Commands ──────────────────────────────────────────────────────────
   // `seeded: false` with no items is what makes useCommandsStore synthesise

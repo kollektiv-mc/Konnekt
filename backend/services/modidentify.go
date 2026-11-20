@@ -236,6 +236,9 @@ func (s *ModService) identifyUnknownLocked(serverID string) (bool, error) {
 				item.InstalledAt = existing.InstalledAt
 			}
 			item.DependencyOf = existing.DependencyOf
+			// A row a pack sync owns stays owned: identifying the file is
+			// about its project, not about who put it there (#454).
+			item.Pack = existing.Pack
 		}
 
 		if version, ok := found[c.hash]; ok {

@@ -53,6 +53,8 @@ export const CTRL_PORT_COLOR: Record<string, string> = {
   onFailed: '#ef4444',
   onTrue: '#22c55e',
   onFalse: '#f97316',
+  onUpdate: '#f59e0b',
+  onUpToDate: '#22c55e',
 }
 
 // Square handles for data ports; colored by data type

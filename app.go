@@ -62,6 +62,7 @@ func NewApp() *App {
 	sched.SetDestinations(destinations)
 	mods := services.NewModService(cfg, srv)
 	mods.SetBus(bus)
+	sched.SetMods(mods)
 	update := services.NewUpdateService()
 	update.SetBus(bus)
 	installer := services.NewInstallerService()
@@ -1084,6 +1085,42 @@ func (a *App) ModInstallLocal(serverID string) error {
 		return err
 	}
 	return a.modService.InstallLocal(serverID, paths)
+}
+
+// ── Modpack sync (#454, #456) ─────────────────────────────────────────
+
+func (a *App) ModSyncState(serverID string) (models.ModSyncState, error) {
+	return a.modService.ModSyncState(serverID)
+}
+
+// ModSetPackSource binds the server to a pack, or changes its exclude and
+// include lists. The server is the serverID argument, whatever src says.
+func (a *App) ModSetPackSource(serverID string, src models.PackSource) error {
+	src.ServerID = serverID
+	return a.modService.SetPackSource(src)
+}
+
+func (a *App) ModClearPackSource(serverID string) error {
+	return a.modService.ClearPackSource(serverID)
+}
+
+// ModPlanSync resolves the pack and stages its downloads, leaving mods/ as
+// it is, and returns what Apply would do.
+func (a *App) ModPlanSync(serverID string) (models.ModSyncPlan, error) {
+	return a.modService.PlanModSync(serverID)
+}
+
+// ModApplySync applies the plan the person read: planID is its PlanID, and a
+// plan that has changed since is refused rather than applied.
+func (a *App) ModApplySync(serverID, planID string) (models.ModSyncPlan, error) {
+	if planID == "" {
+		return models.ModSyncPlan{}, errors.New("no plan to apply")
+	}
+	return a.modService.ApplyModSync(serverID, planID)
+}
+
+func (a *App) ModRollbackSync(serverID string) (models.ModSyncRecord, error) {
+	return a.modService.RollbackModSync(serverID)
 }
 
 func (a *App) DetectServerLoader(serverID string) (models.ServerConfig, error) {

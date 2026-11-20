@@ -63,6 +63,7 @@ const (
 	EventModInstalled       = "mod:installed"        // {serverID, fileName}
 	EventModInstallFailed   = "mod:install-failed"   // {serverID, fileName, error}
 	EventModChanged         = "mod:changed"          // {serverID} — list changed (enable/disable/uninstall)
+	EventModSyncChanged     = "mod:sync-changed"     // {serverID} — pack source or sync history changed (#454)
 
 	// Forge/NeoForge server-installer lifecycle. The installer reports no
 	// percentage, only log lines, so install:log is the progress signal.

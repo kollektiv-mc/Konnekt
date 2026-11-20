@@ -3,6 +3,8 @@ import { useState } from 'react'
 import type { useMods, InstalledMod } from './useMods'
 import { InstalledPanel } from './InstalledPanel'
 import { BrowsePanel } from './BrowsePanel'
+import { PackPanel } from './PackPanel'
+import { usePackSync } from './usePackSync'
 import { modToProject } from './modToProject'
 import { useProcessesStore } from '../../stores/useProcessesStore'
 import { errMsg, isRemoteBrowser } from '../../lib/ipc'
@@ -11,7 +13,7 @@ import { errMsg, isRemoteBrowser } from '../../lib/ipc'
 // Behind `lazy()` in `index.tsx`, with everything it pulls in, because the
 // canvas face no longer needs any of it; warmed by `lib/prefetch.ts`.
 
-type ModsView = 'library' | 'browse'
+type ModsView = 'library' | 'browse' | 'pack'
 
 export function ModsLibrary({
   serverId,
@@ -29,6 +31,7 @@ export function ModsLibrary({
   const [addError, setAddError] = useState<string | null>(null)
   const noun = kind === 'plugins' ? 'Plugin' : 'Mod'
   const modProcess = useProcessesStore((s) => s.processes['mod:' + serverId])
+  const sync = usePackSync(serverId)
 
   function openBrowse() {
     setAddError(null)
@@ -74,7 +77,7 @@ export function ModsLibrary({
     <div className="flex h-full min-h-0 flex-col">
       {/* Header */}
       <div className="border-border-subtle border-b-hairline flex shrink-0 items-center gap-2 px-3 py-2">
-        {view === 'browse' ? (
+        {view !== 'library' ? (
           <>
             <button
               onClick={openLibrary}
@@ -88,7 +91,9 @@ export function ModsLibrary({
             >
               ← Library
             </button>
-            <span className="text-text-secondary flex-1 text-xs font-semibold">Add {noun}</span>
+            <span className="text-text-secondary flex-1 text-xs font-semibold">
+              {view === 'pack' ? 'Pack' : `Add ${noun}`}
+            </span>
           </>
         ) : (
           <>
@@ -122,6 +127,14 @@ export function ModsLibrary({
             >
               {refreshing ? '…' : '↺'}
             </button>
+            {kind === 'mods' && (
+              <button
+                onClick={() => setView('pack')}
+                className="text-text-secondary border-border-subtle border-hairline hover:bg-hover shrink-0 rounded bg-transparent px-3 py-1 text-xs font-semibold transition-colors"
+              >
+                Pack
+              </button>
+            )}
             {/* Add Files: ModInstallLocal is a native file dialog, not callable from a remote browser. */}
             {!isRemoteBrowser() && (
               <button
@@ -176,7 +189,9 @@ export function ModsLibrary({
 
       {/* Content */}
       <div className="min-h-0 flex-1 overflow-hidden">
-        {view === 'library' ? (
+        {view === 'pack' ? (
+          <PackPanel sync={sync} />
+        ) : view === 'library' ? (
           <InstalledPanel
             mods={mods.installed}
             loading={mods.installedLoading}

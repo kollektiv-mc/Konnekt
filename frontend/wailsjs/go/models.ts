@@ -667,6 +667,7 @@ export namespace models {
 	    sizeBytes: number;
 	    installedAt: number;
 	    clientOnly: boolean;
+	    pack: boolean;
 	
 	    static createFrom(source: any = {}) {
 	        return new InstalledMod(source);
@@ -689,6 +690,7 @@ export namespace models {
 	        this.sizeBytes = source["sizeBytes"];
 	        this.installedAt = source["installedAt"];
 	        this.clientOnly = source["clientOnly"];
+	        this.pack = source["pack"];
 	    }
 	}
 	export class KommandsSavedCommand {
@@ -955,6 +957,186 @@ export namespace models {
 		    return a;
 		}
 	}
+	export class ModSyncRecord {
+	    id: string;
+	    appliedAt: number;
+	    packName: string;
+	    packVersion: string;
+	    fingerprint: string;
+	    added: number;
+	    updated: number;
+	    removed: number;
+	    disabled: number;
+	    rolledBack: boolean;
+	
+	    static createFrom(source: any = {}) {
+	        return new ModSyncRecord(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.appliedAt = source["appliedAt"];
+	        this.packName = source["packName"];
+	        this.packVersion = source["packVersion"];
+	        this.fingerprint = source["fingerprint"];
+	        this.added = source["added"];
+	        this.updated = source["updated"];
+	        this.removed = source["removed"];
+	        this.disabled = source["disabled"];
+	        this.rolledBack = source["rolledBack"];
+	    }
+	}
+	export class ModSyncRow {
+	    action: string;
+	    fileName: string;
+	    from?: string;
+	    name: string;
+	    key: string;
+	    side: string;
+	    reason: string;
+	    note?: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new ModSyncRow(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.action = source["action"];
+	        this.fileName = source["fileName"];
+	        this.from = source["from"];
+	        this.name = source["name"];
+	        this.key = source["key"];
+	        this.side = source["side"];
+	        this.reason = source["reason"];
+	        this.note = source["note"];
+	    }
+	}
+	export class ModSyncPlan {
+	    serverID: string;
+	    planId: string;
+	    packName: string;
+	    packVersion: string;
+	    minecraft: string;
+	    loader: string;
+	    loaderVersion: string;
+	    fingerprint: string;
+	    rows: ModSyncRow[];
+	    blockers: string[];
+	    warnings: string[];
+	    added: number;
+	    updated: number;
+	    removed: number;
+	    disabled: number;
+	    kept: number;
+	    adopted: number;
+	    skipped: number;
+	    upToDate: boolean;
+	    last?: ModSyncRecord;
+	
+	    static createFrom(source: any = {}) {
+	        return new ModSyncPlan(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.serverID = source["serverID"];
+	        this.planId = source["planId"];
+	        this.packName = source["packName"];
+	        this.packVersion = source["packVersion"];
+	        this.minecraft = source["minecraft"];
+	        this.loader = source["loader"];
+	        this.loaderVersion = source["loaderVersion"];
+	        this.fingerprint = source["fingerprint"];
+	        this.rows = this.convertValues(source["rows"], ModSyncRow);
+	        this.blockers = source["blockers"];
+	        this.warnings = source["warnings"];
+	        this.added = source["added"];
+	        this.updated = source["updated"];
+	        this.removed = source["removed"];
+	        this.disabled = source["disabled"];
+	        this.kept = source["kept"];
+	        this.adopted = source["adopted"];
+	        this.skipped = source["skipped"];
+	        this.upToDate = source["upToDate"];
+	        this.last = this.convertValues(source["last"], ModSyncRecord);
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	
+	
+	export class PackSource {
+	    serverID: string;
+	    format: string;
+	    location: string;
+	    address: string;
+	    exclude: string[];
+	    include: string[];
+	
+	    static createFrom(source: any = {}) {
+	        return new PackSource(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.serverID = source["serverID"];
+	        this.format = source["format"];
+	        this.location = source["location"];
+	        this.address = source["address"];
+	        this.exclude = source["exclude"];
+	        this.include = source["include"];
+	    }
+	}
+	export class ModSyncState {
+	    source?: PackSource;
+	    history: ModSyncRecord[];
+	
+	    static createFrom(source: any = {}) {
+	        return new ModSyncState(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.source = this.convertValues(source["source"], PackSource);
+	        this.history = this.convertValues(source["history"], ModSyncRecord);
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
 	export class ModUpdateInfo {
 	    fileName: string;
 	    updateAvailable: boolean;
@@ -1110,6 +1292,7 @@ export namespace models {
 	        this.warning = source["warning"];
 	    }
 	}
+	
 	export class Player {
 	    name: string;
 	    uuid: string;

@@ -295,6 +295,7 @@ func registerBuiltins(r *BlockRegistry) {
 
 	registerUploadBlock(r)
 	registerDHSnapshotBlock(r)
+	registerModpackBlocks(r)
 	registerDHPublishBlock(r)
 }
 
