@@ -11,6 +11,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -450,7 +451,8 @@ func TestCurseForgeKeyIsCheckedSavedAndCleared(t *testing.T) {
 	if err != nil {
 		t.Fatalf("key file: %v", err)
 	}
-	if perm := info.Mode().Perm(); perm&0o077 != 0 {
+	// Windows has no Unix mode bits: os.Stat reports 0666 for any writable file.
+	if perm := info.Mode().Perm(); runtime.GOOS != "windows" && perm&0o077 != 0 {
 		t.Errorf("key file mode = %o, want owner-only", perm)
 	}
 
