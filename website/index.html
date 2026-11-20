@@ -623,27 +623,171 @@
             <h2 id="scheduler-title">Scheduler</h2>
           </div>
         </div>
-        <div class="flow" id="flow">
-          <div class="node">
-            <span class="node-kind">Trigger</span>
-            Daily at 04:00
+        <div class="flows" id="flows">
+          <div class="flow is-shown" data-name="Nightly backup">
+            <div class="node">
+              <span class="node-kind">Time of Day</span>
+              04:00
+            </div>
+            <span class="wire" aria-hidden="true"><span></span></span>
+            <div class="pair">
+              <div class="feed">
+                <div class="node">
+                  <span class="node-kind">Read Attribute</span>
+                  players.count
+                </div>
+                <span class="wire wire-data" aria-hidden="true"><span></span></span>
+              </div>
+              <div class="node">
+                <span class="node-kind">Condition</span>
+                A == 0
+              </div>
+            </div>
+            <span class="wire" aria-hidden="true"><span></span></span>
+            <div class="node">
+              <span class="node-kind">Create Backup</span>
+              Full server
+            </div>
+            <span class="wire" aria-hidden="true"><span></span></span>
+            <div class="node">
+              <span class="node-kind">Notify</span>
+              Backup done
+            </div>
           </div>
-          <span class="wire" aria-hidden="true"><span></span></span>
-          <div class="node">
-            <span class="node-kind">Condition</span>
-            Players online = 0
+          <div class="flow" data-name="Crash restart">
+            <div class="node">
+              <span class="node-kind">Server</span>
+              Crashed
+            </div>
+            <span class="wire" aria-hidden="true"><span></span></span>
+            <div class="node">
+              <span class="node-kind">Command</span>
+              Restart Server
+            </div>
+            <div class="lanes">
+              <div class="lane">
+                <span class="wire" aria-hidden="true"
+                  ><span></span><span class="port">onComplete</span></span
+                >
+                <div class="node">
+                  <span class="node-kind">Notify</span>
+                  Back after a crash
+                </div>
+              </div>
+              <div class="lane">
+                <span class="wire" aria-hidden="true"
+                  ><span></span><span class="port">onFailed</span></span
+                >
+                <div class="node">
+                  <span class="node-kind">Notify</span>
+                  Restart failed
+                </div>
+              </div>
+            </div>
           </div>
-          <span class="wire" aria-hidden="true"><span></span></span>
-          <div class="node">
-            <span class="node-kind">Action</span>
-            Back up world
+          <div class="flow" data-name="Distant Horizons">
+            <div class="node">
+              <span class="node-kind">Cron Schedule</span>
+              0 4 * * 0
+            </div>
+            <span class="wire" aria-hidden="true"><span></span></span>
+            <div class="node">
+              <span class="node-kind">DH Snapshot</span>
+              Stop, copy, start
+            </div>
+            <span class="wire" aria-hidden="true"><span></span></span>
+            <div class="node">
+              <span class="node-kind">Publish DH Snapshot</span>
+              R2 bucket
+            </div>
+            <div class="lanes">
+              <div class="lane">
+                <span class="wire" aria-hidden="true"
+                  ><span></span><span class="port">onComplete</span></span
+                >
+                <div class="node">
+                  <span class="node-kind">HTTP Request</span>
+                  POST webhook
+                </div>
+              </div>
+              <div class="lane">
+                <span class="wire" aria-hidden="true"
+                  ><span></span><span class="port">onFailed</span></span
+                >
+                <div class="node">
+                  <span class="node-kind">Notify</span>
+                  Publish failed
+                </div>
+              </div>
+            </div>
           </div>
-          <span class="wire" aria-hidden="true"><span></span></span>
-          <div class="node">
-            <span class="node-kind">Action</span>
-            Notify
+          <div class="flow" data-name="Low TPS">
+            <div class="node">
+              <span class="node-kind">TPS Below Threshold</span>
+              14
+            </div>
+            <span class="wire" aria-hidden="true"><span></span></span>
+            <div class="pair">
+              <div class="feed">
+                <div class="node">
+                  <span class="node-kind">Read Attribute</span>
+                  ram.left
+                </div>
+                <span class="wire wire-data" aria-hidden="true"><span></span></span>
+              </div>
+              <div class="node">
+                <span class="node-kind">Condition</span>
+                A &lt; 1024
+              </div>
+            </div>
+            <div class="lanes">
+              <div class="lane">
+                <span class="wire" aria-hidden="true"
+                  ><span></span><span class="port">onTrue</span></span
+                >
+                <div class="node">
+                  <span class="node-kind">Command</span>
+                  Restart Server
+                </div>
+              </div>
+              <div class="lane">
+                <span class="wire" aria-hidden="true"
+                  ><span></span><span class="port">onFalse</span></span
+                >
+                <div class="node">
+                  <span class="node-kind">Notify</span>
+                  TPS below 14
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="flow" data-name="First player">
+            <div class="node">
+              <span class="node-kind">Player</span>
+              Joined
+            </div>
+            <span class="wire" aria-hidden="true"><span></span></span>
+            <div class="pair">
+              <div class="feed">
+                <div class="node">
+                  <span class="node-kind">Read Attribute</span>
+                  players.count
+                </div>
+                <span class="wire wire-data" aria-hidden="true"><span></span></span>
+              </div>
+              <div class="node">
+                <span class="node-kind">Condition</span>
+                A == 1
+              </div>
+            </div>
+            <span class="wire" aria-hidden="true"><span></span></span>
+            <div class="node">
+              <span class="node-kind">HTTP Request</span>
+              POST webhook
+            </div>
           </div>
         </div>
+        <div class="flow-picks" id="flow-picks" hidden></div>
         <div class="cells">
           <div class="cell">
             <h3>Triggers</h3>
