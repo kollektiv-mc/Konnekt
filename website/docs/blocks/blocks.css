@@ -150,7 +150,8 @@
   color: var(--text-secondary);
 }
 
-/* Four columns stay readable on a phone by scrolling inside their box. */
+/* Four columns stay readable on a narrow screen by scrolling inside their
+   box. On a phone, with script, they stack instead (docs.css). */
 #fields .doc-table {
   min-width: 640px;
 }
@@ -170,5 +171,9 @@
   .port-legend {
     border-left: 0;
     border-top: var(--hairline);
+  }
+
+  #fields .doc-table.is-labelled {
+    min-width: 0;
   }
 }

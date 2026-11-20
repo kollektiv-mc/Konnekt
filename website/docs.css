@@ -308,8 +308,9 @@ h2.label {
   width: 220px;
 }
 
-/* Three columns and more stay readable on a phone by scrolling inside the
-   wrap rather than squeezing the middle one to a word a line. */
+/* Three columns and more stay readable on a narrow screen by scrolling
+   inside the wrap rather than squeezing the middle one to a word a line. On a
+   phone, with script, they stack instead (the narrow-screen rules below). */
 .doc-table:has(th:nth-child(3)) {
   min-width: 560px;
 }
@@ -467,6 +468,64 @@ h2.label {
     flex-basis: 100%;
     border-right: 0;
     border-bottom: var(--hairline);
+  }
+
+  /* Its own line under the label: at a basis of 0 it fitted beside the
+     full-width label at no width at all, and the shelf drew empty. */
+  .shelf-rows {
+    flex-basis: 100%;
+  }
+
+  /* A table whose cells site.js has labelled reads as one card per row: the
+     first cell as its title, each other cell under its column's name. Without
+     the labels it scrolls inside its wrap, as on a wide screen. */
+  .doc-table.is-labelled,
+  .doc-table.is-labelled tbody,
+  .doc-table.is-labelled tr,
+  .doc-table.is-labelled td {
+    display: block;
+  }
+
+  /* Beats the three-column min-width below, whose :has() outranks a class. */
+  .doc-table-wrap .doc-table.is-labelled {
+    min-width: 0;
+  }
+
+  .doc-table.is-labelled thead {
+    display: none;
+  }
+
+  .doc-table.is-labelled tr {
+    padding: 16px 20px;
+  }
+
+  .doc-table.is-labelled tr + tr {
+    border-top: var(--hairline);
+  }
+
+  .doc-table.is-labelled td {
+    padding: 0;
+    border-top: 0;
+    overflow-wrap: anywhere;
+  }
+
+  .doc-table.is-labelled td:empty {
+    display: none;
+  }
+
+  .doc-table.is-labelled td + td {
+    margin-top: 12px;
+  }
+
+  .doc-table.is-labelled td + td::before {
+    content: attr(data-label);
+    display: block;
+    margin-bottom: 4px;
+    font-family: var(--font-site-mono);
+    font-size: 12px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-secondary);
   }
 
   .doc-head-main {

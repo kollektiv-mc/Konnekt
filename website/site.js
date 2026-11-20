@@ -212,6 +212,23 @@
 
   window.KonnektMotion = { resize: resize }
 
+  // ── Doc tables ─────────────────────────────────────────────────────────
+  // On a phone docs.css stacks a table into one card per row, with each cell
+  // under its column's name. The name comes from the header, copied onto the
+  // cell here, so the pages stay plain tables.
+  document.querySelectorAll('table.doc-table').forEach(function (table) {
+    var heads = [].map.call(table.querySelectorAll('thead th'), function (th) {
+      return th.textContent.trim()
+    })
+    if (!heads.length) return
+    ;[].forEach.call(table.querySelectorAll('tbody tr'), function (row) {
+      ;[].forEach.call(row.cells, function (cell, i) {
+        if (heads[i]) cell.setAttribute('data-label', heads[i])
+      })
+    })
+    table.classList.add('is-labelled')
+  })
+
   // ── Nav menu ───────────────────────────────────────────────────────────
   // On a phone the links fold behind the menu button. The CSS keeps them
   // drawn only while the nav is .is-open; opening and closing go through
