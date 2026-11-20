@@ -396,22 +396,46 @@
 
 /* ── Scheduler ──────────────────────────────────────────────────────────── */
 
-.flow {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: center;
-  row-gap: 16px;
-  padding: 64px var(--pad);
+/* Five example graphs share one grid cell, so the block is as tall as the
+   tallest and nothing below moves when the shown one changes. A Condition's
+   Read Attribute sits above it on a dashed data wire; a block with two
+   outputs forks into lanes. */
+.flows {
+  /* The wires' track is opaque, --border-hover laid over the page, so where
+     two wires join the corner is not drawn twice as bright. */
+  --wire-track: color-mix(in srgb, var(--text-primary) 12%, var(--bg-base));
+  display: grid;
+  padding: 48px var(--pad) 0;
   font-family: var(--font-site-mono);
   font-size: 14px;
 }
 
+.flow {
+  grid-area: 1 / 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding-top: 108px;
+  opacity: 0;
+  visibility: hidden;
+  transition:
+    opacity 400ms ease,
+    visibility 0s linear 400ms;
+}
+
+.flow.is-shown {
+  opacity: 1;
+  visibility: visible;
+  transition: opacity 400ms ease;
+}
+
 .node {
-  min-width: 170px;
+  flex: none;
+  min-width: 150px;
   padding: 18px 22px;
   border: 1px solid var(--border-hover);
   background: var(--bg-overlay);
+  white-space: nowrap;
   transition: border-color 300ms ease;
 }
 
@@ -429,12 +453,14 @@
 }
 
 .wire {
-  width: 56px;
+  position: relative;
+  flex: none;
+  width: 48px;
   height: 2px;
-  background: var(--border-hover);
+  background: var(--wire-track);
 }
 
-.wire span {
+.wire span:first-child {
   display: block;
   width: 0;
   height: 2px;
@@ -442,8 +468,146 @@
   transition: width 600ms linear;
 }
 
-.wire.is-lit span {
+.wire.is-lit span:first-child {
   width: 100%;
+}
+
+.pair {
+  position: relative;
+}
+
+.feed {
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  transform: translateX(-50%);
+}
+
+.wire-data {
+  width: 2px;
+  height: 32px;
+  mask: repeating-linear-gradient(to bottom, #000 0 4px, transparent 4px 8px);
+}
+
+.wire-data span:first-child {
+  width: 2px;
+  height: 0;
+  transition-property: height;
+}
+
+.wire-data.is-lit span:first-child {
+  width: 2px;
+  height: 100%;
+}
+
+/* A fork leaves its block on a short stem, so the lanes' bar never runs
+   along the block's border. */
+.wire-stem {
+  width: 24px;
+}
+
+.lanes {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.lane {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+/* Each lane draws its half of the fork, from the stem to its own row: the
+   track underneath, and over it a fill that grows from the stem when the run
+   takes that lane. The lane's wire fills once the fork has. */
+.lane::before,
+.lane::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  width: 2px;
+}
+
+.lane::before {
+  background: var(--wire-track);
+}
+
+.lane::after {
+  background: var(--accent);
+  transform: scaleY(0);
+  transition: transform 300ms linear;
+}
+
+.lane:first-child::before,
+.lane:first-child::after {
+  top: calc(50% - 1px);
+  bottom: -13px;
+  transform-origin: bottom;
+}
+
+.lane:last-child::before,
+.lane:last-child::after {
+  top: -13px;
+  bottom: calc(50% - 1px);
+  transform-origin: top;
+}
+
+.lane.is-lit::after {
+  transform: none;
+}
+
+.lane.is-lit > .wire span:first-child {
+  transition-delay: 300ms;
+}
+
+.lane > .wire {
+  width: 112px;
+}
+
+.port {
+  position: absolute;
+  bottom: 8px;
+  left: 12px;
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+.flow-picks {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 4px 24px;
+  padding: 40px var(--pad) 32px;
+  font-family: var(--font-site-mono);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.flow-pick {
+  padding: 6px 0;
+  border: 0;
+  border-bottom: 1px solid transparent;
+  background: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.flow-pick:hover {
+  color: var(--text-primary);
+}
+
+.flow-pick[aria-pressed='true'] {
+  border-bottom-color: var(--accent);
+  color: var(--text-primary);
+}
+
+.no-js .flows {
+  padding-bottom: 64px;
 }
 
 .cells {
@@ -618,6 +782,109 @@
 
 /* ── Narrow screens ─────────────────────────────────────────────────────── */
 
+/* One column below the width the widest graph needs: the feed stacks above
+   its Condition, and the lanes sit side by side under a fork. */
+@media (max-width: 1080px) {
+  .flow {
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: flex-start;
+    justify-self: center;
+    width: min(100%, 460px);
+    padding-top: 0;
+  }
+
+  .pair,
+  .feed,
+  .lane {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .feed {
+    position: static;
+    transform: none;
+  }
+
+  .lanes {
+    flex-direction: row;
+    gap: 16px;
+  }
+
+  .lane {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+
+  .lane::before,
+  .lane::after {
+    top: 0;
+    bottom: auto;
+    width: auto;
+    height: 2px;
+  }
+
+  .lane::after {
+    transform: scaleX(0);
+  }
+
+  .lane:first-child::before,
+  .lane:first-child::after {
+    top: 0;
+    bottom: auto;
+    left: calc(50% - 1px);
+    right: -9px;
+    transform-origin: right;
+  }
+
+  .lane:last-child::before,
+  .lane:last-child::after {
+    top: 0;
+    bottom: auto;
+    left: -9px;
+    right: calc(50% - 1px);
+    transform-origin: left;
+  }
+
+  .node {
+    min-width: 0;
+    white-space: normal;
+  }
+
+  .wire,
+  .lane > .wire {
+    align-self: center;
+    width: 2px;
+    height: 24px;
+  }
+
+  .lane > .wire {
+    height: 40px;
+  }
+
+  .wire-stem {
+    height: 20px;
+  }
+
+  .wire span:first-child {
+    width: 2px;
+    height: 0;
+    transition-property: height;
+  }
+
+  .wire.is-lit span:first-child {
+    width: 2px;
+    height: 100%;
+  }
+
+  .port {
+    bottom: auto;
+    top: 12px;
+    left: 10px;
+  }
+}
+
 @media (max-width: 760px) {
   .hero-copy {
     border-right: 0;
@@ -671,30 +938,6 @@
     grid-template-columns: 1fr;
   }
 
-  .flow {
-    flex-direction: column;
-  }
-
-  .node {
-    width: 100%;
-  }
-
-  .wire {
-    width: 2px;
-    height: 24px;
-  }
-
-  .wire span {
-    width: 2px;
-    height: 0;
-    transition-property: height;
-  }
-
-  .wire.is-lit span {
-    width: 2px;
-    height: 100%;
-  }
-
   .cells .cell + .cell,
   .local .cell {
     border-left: 0;
@@ -712,7 +955,10 @@
 
   .strip,
   .wire span,
-  .node {
+  .node,
+  .lane::after,
+  .flow,
+  .flow.is-shown {
     transition: none;
   }
 
