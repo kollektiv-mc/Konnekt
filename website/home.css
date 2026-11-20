@@ -401,6 +401,9 @@
    Read Attribute sits above it on a dashed data wire; a block with two
    outputs forks into lanes. */
 .flows {
+  /* The wires' track is opaque, --border-hover laid over the page, so where
+     two wires join the corner is not drawn twice as bright. */
+  --wire-track: color-mix(in srgb, var(--text-primary) 12%, var(--bg-base));
   display: grid;
   padding: 48px var(--pad) 0;
   font-family: var(--font-site-mono);
@@ -454,7 +457,7 @@
   flex: none;
   width: 48px;
   height: 2px;
-  background: var(--border-hover);
+  background: var(--wire-track);
 }
 
 .wire span:first-child {
@@ -518,29 +521,47 @@
   align-items: center;
 }
 
-/* Each lane draws its half of the fork, from the incoming wire to its own
-   row, and lights it when the run takes that lane. */
-.lane::before {
+/* Each lane draws its half of the fork, from the stem to its own row: the
+   track underneath, and over it a fill that grows from the stem when the run
+   takes that lane. The lane's wire fills once the fork has. */
+.lane::before,
+.lane::after {
   content: '';
   position: absolute;
   left: 0;
   width: 2px;
-  background: var(--border-hover);
-  transition: background-color 300ms ease;
 }
 
-.lane:first-child::before {
-  top: 50%;
-  bottom: -12px;
+.lane::before {
+  background: var(--wire-track);
 }
 
-.lane:last-child::before {
-  top: -12px;
-  bottom: 50%;
-}
-
-.lane.is-lit::before {
+.lane::after {
   background: var(--accent);
+  transform: scaleY(0);
+  transition: transform 300ms linear;
+}
+
+.lane:first-child::before,
+.lane:first-child::after {
+  top: calc(50% - 1px);
+  bottom: -13px;
+  transform-origin: bottom;
+}
+
+.lane:last-child::before,
+.lane:last-child::after {
+  top: -13px;
+  bottom: calc(50% - 1px);
+  transform-origin: top;
+}
+
+.lane.is-lit::after {
+  transform: none;
+}
+
+.lane.is-lit > .wire span:first-child {
+  transition-delay: 300ms;
 }
 
 .lane > .wire {
@@ -796,25 +817,34 @@
     min-width: 0;
   }
 
-  .lane::before {
+  .lane::before,
+  .lane::after {
     top: 0;
     bottom: auto;
     width: auto;
     height: 2px;
   }
 
-  .lane:first-child::before {
-    top: 0;
-    bottom: auto;
-    left: 50%;
-    right: -8px;
+  .lane::after {
+    transform: scaleX(0);
   }
 
-  .lane:last-child::before {
+  .lane:first-child::before,
+  .lane:first-child::after {
     top: 0;
     bottom: auto;
-    left: -8px;
-    right: 50%;
+    left: calc(50% - 1px);
+    right: -9px;
+    transform-origin: right;
+  }
+
+  .lane:last-child::before,
+  .lane:last-child::after {
+    top: 0;
+    bottom: auto;
+    left: -9px;
+    right: calc(50% - 1px);
+    transform-origin: left;
   }
 
   .node {
@@ -926,7 +956,7 @@
   .strip,
   .wire span,
   .node,
-  .lane::before,
+  .lane::after,
   .flow,
   .flow.is-shown {
     transition: none;
