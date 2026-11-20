@@ -126,7 +126,9 @@
 
                agent_docs/ROADMAP.md and the GitHub issues stay the source of
                truth. A row needs a data-stage of alpha, beta, release or later,
-               and an issue link where one exists. data-search is the words that
+               and an issue link where one exists. Alpha is what ships today, so
+               an alpha row is done here; a linked row is marked done by
+               roadmap.js once its issue closes. data-search is the words that
                should find a row but are not in its name. Nothing renders it. -->
           <div class="stages block glow-parts" role="group" aria-label="Filter by stage">
             <button type="button" class="stage stage-alpha" data-stage="alpha" aria-pressed="false">
@@ -233,45 +235,53 @@
                     <span>dashboard / tiles / console /</span><span class="rm-count">4</span>
                   </h2>
                   <ul class="rows">
-                    <li class="row" data-stage="alpha" data-search="Server stdout as it happens">
+                    <li
+                      class="row is-done"
+                      data-stage="alpha"
+                      data-search="Server stdout as it happens"
+                    >
                       <span class="row-name">live log streaming</span>
                       <span class="row-meta">
+                        <span class="row-done">done</span>
                         <span class="row-stage"
                           ><span class="marker" aria-hidden="true"></span>ALPHA</span
                         >
                       </span>
                     </li>
                     <li
-                      class="row"
+                      class="row is-done"
                       data-stage="alpha"
                       data-search="Type straight into the running server"
                     >
                       <span class="row-name">inline command input</span>
                       <span class="row-meta">
+                        <span class="row-done">done</span>
                         <span class="row-stage"
                           ><span class="marker" aria-hidden="true"></span>ALPHA</span
                         >
                       </span>
                     </li>
                     <li
-                      class="row"
+                      class="row is-done"
                       data-stage="alpha"
                       data-search="Save, list, weather, time, kick, ban"
                     >
                       <span class="row-name">quick commands</span>
                       <span class="row-meta">
+                        <span class="row-done">done</span>
                         <span class="row-stage"
                           ><span class="marker" aria-hidden="true"></span>ALPHA</span
                         >
                       </span>
                     </li>
                     <li
-                      class="row"
+                      class="row is-done"
                       data-stage="alpha"
                       data-search="Your own buttons, stored per server"
                     >
                       <span class="row-name">custom commands</span>
                       <span class="row-meta">
+                        <span class="row-done">done</span>
                         <span class="row-stage"
                           ><span class="marker" aria-hidden="true"></span>ALPHA</span
                         >
@@ -285,32 +295,39 @@
                   </h2>
                   <ul class="rows">
                     <li
-                      class="row"
+                      class="row is-done"
                       data-stage="alpha"
                       data-search="Running state, and how long for"
                     >
                       <span class="row-name">status and uptime</span>
                       <span class="row-meta">
-                        <span class="row-stage"
-                          ><span class="marker" aria-hidden="true"></span>ALPHA</span
-                        >
-                      </span>
-                    </li>
-                    <li class="row" data-stage="alpha" data-search="Live count from the log stream">
-                      <span class="row-name">players online</span>
-                      <span class="row-meta">
+                        <span class="row-done">done</span>
                         <span class="row-stage"
                           ><span class="marker" aria-hidden="true"></span>ALPHA</span
                         >
                       </span>
                     </li>
                     <li
-                      class="row"
+                      class="row is-done"
+                      data-stage="alpha"
+                      data-search="Live count from the log stream"
+                    >
+                      <span class="row-name">players online</span>
+                      <span class="row-meta">
+                        <span class="row-done">done</span>
+                        <span class="row-stage"
+                          ><span class="marker" aria-hidden="true"></span>ALPHA</span
+                        >
+                      </span>
+                    </li>
+                    <li
+                      class="row is-done"
                       data-stage="alpha"
                       data-search="Colour banded, RCON with a log fallback"
                     >
                       <span class="row-name">TPS and RAM</span>
                       <span class="row-meta">
+                        <span class="row-done">done</span>
                         <span class="row-stage"
                           ><span class="marker" aria-hidden="true"></span>ALPHA</span
                         >
@@ -327,21 +344,27 @@
                     <span>dashboard / tiles / performance /</span><span class="rm-count">3</span>
                   </h2>
                   <ul class="rows">
-                    <li class="row" data-stage="alpha" data-search="TPS, RAM and CPU charted">
+                    <li
+                      class="row is-done"
+                      data-stage="alpha"
+                      data-search="TPS, RAM and CPU charted"
+                    >
                       <span class="row-name">1-hour history</span>
                       <span class="row-meta">
+                        <span class="row-done">done</span>
                         <span class="row-stage"
                           ><span class="marker" aria-hidden="true"></span>ALPHA</span
                         >
                       </span>
                     </li>
                     <li
-                      class="row"
+                      class="row is-done"
                       data-stage="alpha"
                       data-search="Sortable, with toggleable series"
                     >
                       <span class="row-name">summary table</span>
                       <span class="row-meta">
+                        <span class="row-done">done</span>
                         <span class="row-stage"
                           ><span class="marker" aria-hidden="true"></span>ALPHA</span
                         >
@@ -374,20 +397,26 @@
                   </h2>
                   <ul class="rows">
                     <li
-                      class="row"
+                      class="row is-done"
                       data-stage="alpha"
                       data-search="Who is on, polled while the server runs"
                     >
                       <span class="row-name">online list</span>
                       <span class="row-meta">
+                        <span class="row-done">done</span>
                         <span class="row-stage"
                           ><span class="marker" aria-hidden="true"></span>ALPHA</span
                         >
                       </span>
                     </li>
-                    <li class="row" data-stage="alpha" data-search="With an optional reason">
+                    <li
+                      class="row is-done"
+                      data-stage="alpha"
+                      data-search="With an optional reason"
+                    >
                       <span class="row-name">kick and ban</span>
                       <span class="row-meta">
+                        <span class="row-done">done</span>
                         <span class="row-stage"
                           ><span class="marker" aria-hidden="true"></span>ALPHA</span
                         >
@@ -438,45 +467,53 @@
                     <span>dashboard / tiles / worlds /</span><span class="rm-count">5</span>
                   </h2>
                   <ul class="rows">
-                    <li class="row" data-stage="alpha" data-search="Every save orbiting the server">
+                    <li
+                      class="row is-done"
+                      data-stage="alpha"
+                      data-search="Every save orbiting the server"
+                    >
                       <span class="row-name">3D world browser</span>
                       <span class="row-meta">
+                        <span class="row-done">done</span>
                         <span class="row-stage"
                           ><span class="marker" aria-hidden="true"></span>ALPHA</span
                         >
                       </span>
                     </li>
                     <li
-                      class="row"
+                      class="row is-done"
                       data-stage="alpha"
                       data-search="Seed, size, game mode, last played"
                     >
                       <span class="row-name">world metadata</span>
                       <span class="row-meta">
+                        <span class="row-done">done</span>
                         <span class="row-stage"
                           ><span class="marker" aria-hidden="true"></span>ALPHA</span
                         >
                       </span>
                     </li>
                     <li
-                      class="row"
+                      class="row is-done"
                       data-stage="alpha"
                       data-search="With a guided restart when running"
                     >
                       <span class="row-name">switch active world</span>
                       <span class="row-meta">
+                        <span class="row-done">done</span>
                         <span class="row-stage"
                           ><span class="marker" aria-hidden="true"></span>ALPHA</span
                         >
                       </span>
                     </li>
                     <li
-                      class="row"
+                      class="row is-done"
                       data-stage="alpha"
                       data-search="Housekeeping without leaving the app"
                     >
                       <span class="row-name">rename, duplicate, delete</span>
                       <span class="row-meta">
+                        <span class="row-done">done</span>
                         <span class="row-stage"
                           ><span class="marker" aria-hidden="true"></span>ALPHA</span
                         >
@@ -509,44 +546,52 @@
                   </h2>
                   <ul class="rows">
                     <li
-                      class="row"
+                      class="row is-done"
                       data-stage="alpha"
                       data-search="Zip the server directory on demand"
                     >
                       <span class="row-name">manual backup</span>
                       <span class="row-meta">
-                        <span class="row-stage"
-                          ><span class="marker" aria-hidden="true"></span>ALPHA</span
-                        >
-                      </span>
-                    </li>
-                    <li class="row" data-stage="alpha" data-search="Driven by a scheduler graph">
-                      <span class="row-name">scheduled backups</span>
-                      <span class="row-meta">
+                        <span class="row-done">done</span>
                         <span class="row-stage"
                           ><span class="marker" aria-hidden="true"></span>ALPHA</span
                         >
                       </span>
                     </li>
                     <li
-                      class="row"
+                      class="row is-done"
+                      data-stage="alpha"
+                      data-search="Driven by a scheduler graph"
+                    >
+                      <span class="row-name">scheduled backups</span>
+                      <span class="row-meta">
+                        <span class="row-done">done</span>
+                        <span class="row-stage"
+                          ><span class="marker" aria-hidden="true"></span>ALPHA</span
+                        >
+                      </span>
+                    </li>
+                    <li
+                      class="row is-done"
                       data-stage="alpha"
                       data-search="Extract and swap, rolled back on failure"
                     >
                       <span class="row-name">restore</span>
                       <span class="row-meta">
+                        <span class="row-done">done</span>
                         <span class="row-stage"
                           ><span class="marker" aria-hidden="true"></span>ALPHA</span
                         >
                       </span>
                     </li>
                     <li
-                      class="row"
+                      class="row is-done"
                       data-stage="alpha"
                       data-search="A shared progress bar and notifications"
                     >
                       <span class="row-name">live progress</span>
                       <span class="row-meta">
+                        <span class="row-done">done</span>
                         <span class="row-stage"
                           ><span class="marker" aria-hidden="true"></span>ALPHA</span
                         >
@@ -685,36 +730,39 @@
                   </h2>
                   <ul class="rows">
                     <li
-                      class="row"
+                      class="row is-done"
                       data-stage="alpha"
                       data-search="Drag blocks onto a canvas and wire them"
                     >
                       <span class="row-name">node graph editor</span>
                       <span class="row-meta">
+                        <span class="row-done">done</span>
                         <span class="row-stage"
                           ><span class="marker" aria-hidden="true"></span>ALPHA</span
                         >
                       </span>
                     </li>
                     <li
-                      class="row"
+                      class="row is-done"
                       data-stage="alpha"
                       data-search="Seventeen blocks, branching, live values"
                     >
                       <span class="row-name">triggers, conditions, actions</span>
                       <span class="row-meta">
+                        <span class="row-done">done</span>
                         <span class="row-stage"
                           ><span class="marker" aria-hidden="true"></span>ALPHA</span
                         >
                       </span>
                     </li>
                     <li
-                      class="row"
+                      class="row is-done"
                       data-stage="alpha"
                       data-search="What fired, and what fires next"
                     >
                       <span class="row-name">run history and next runs</span>
                       <span class="row-meta">
+                        <span class="row-done">done</span>
                         <span class="row-stage"
                           ><span class="marker" aria-hidden="true"></span>ALPHA</span
                         >
@@ -743,32 +791,39 @@
                   </h2>
                   <ul class="rows">
                     <li
-                      class="row"
+                      class="row is-done"
                       data-stage="alpha"
                       data-search="properties, JSON, YAML and TOML"
                     >
                       <span class="row-name">config file list</span>
                       <span class="row-meta">
-                        <span class="row-stage"
-                          ><span class="marker" aria-hidden="true"></span>ALPHA</span
-                        >
-                      </span>
-                    </li>
-                    <li class="row" data-stage="alpha" data-search="Typed widgets, one per key">
-                      <span class="row-name">form editor</span>
-                      <span class="row-meta">
+                        <span class="row-done">done</span>
                         <span class="row-stage"
                           ><span class="marker" aria-hidden="true"></span>ALPHA</span
                         >
                       </span>
                     </li>
                     <li
-                      class="row"
+                      class="row is-done"
+                      data-stage="alpha"
+                      data-search="Typed widgets, one per key"
+                    >
+                      <span class="row-name">form editor</span>
+                      <span class="row-meta">
+                        <span class="row-done">done</span>
+                        <span class="row-stage"
+                          ><span class="marker" aria-hidden="true"></span>ALPHA</span
+                        >
+                      </span>
+                    </li>
+                    <li
+                      class="row is-done"
                       data-stage="alpha"
                       data-search="Dirty tracking, save and revert"
                     >
                       <span class="row-name">raw text editor</span>
                       <span class="row-meta">
+                        <span class="row-done">done</span>
                         <span class="row-stage"
                           ><span class="marker" aria-hidden="true"></span>ALPHA</span
                         >
@@ -835,44 +890,52 @@
                   </h2>
                   <ul class="rows">
                     <li
-                      class="row"
+                      class="row is-done"
                       data-stage="alpha"
                       data-search="Find and add without opening a browser"
                     >
                       <span class="row-name">Modrinth search and install</span>
                       <span class="row-meta">
-                        <span class="row-stage"
-                          ><span class="marker" aria-hidden="true"></span>ALPHA</span
-                        >
-                      </span>
-                    </li>
-                    <li class="row" data-stage="alpha" data-search="Pulls in what a mod needs">
-                      <span class="row-name">dependency resolution</span>
-                      <span class="row-meta">
+                        <span class="row-done">done</span>
                         <span class="row-stage"
                           ><span class="marker" aria-hidden="true"></span>ALPHA</span
                         >
                       </span>
                     </li>
                     <li
-                      class="row"
+                      class="row is-done"
+                      data-stage="alpha"
+                      data-search="Pulls in what a mod needs"
+                    >
+                      <span class="row-name">dependency resolution</span>
+                      <span class="row-meta">
+                        <span class="row-done">done</span>
+                        <span class="row-stage"
+                          ><span class="marker" aria-hidden="true"></span>ALPHA</span
+                        >
+                      </span>
+                    </li>
+                    <li
+                      class="row is-done"
                       data-stage="alpha"
                       data-search="Knows Fabric from Forge from Paper"
                     >
                       <span class="row-name">loader detection</span>
                       <span class="row-meta">
+                        <span class="row-done">done</span>
                         <span class="row-stage"
                           ><span class="marker" aria-hidden="true"></span>ALPHA</span
                         >
                       </span>
                     </li>
                     <li
-                      class="row"
+                      class="row is-done"
                       data-stage="alpha"
                       data-search="Read what changed before updating"
                     >
                       <span class="row-name">inline changelogs</span>
                       <span class="row-meta">
+                        <span class="row-done">done</span>
                         <span class="row-stage"
                           ><span class="marker" aria-hidden="true"></span>ALPHA</span
                         >
@@ -909,24 +972,26 @@
                   </h2>
                   <ul class="rows">
                     <li
-                      class="row"
+                      class="row is-done"
                       data-stage="alpha"
                       data-search="Reverse chronological and colour coded"
                     >
                       <span class="row-name">in-app feed</span>
                       <span class="row-meta">
+                        <span class="row-done">done</span>
                         <span class="row-stage"
                           ><span class="marker" aria-hidden="true"></span>ALPHA</span
                         >
                       </span>
                     </li>
                     <li
-                      class="row"
+                      class="row is-done"
                       data-stage="alpha"
                       data-search="Crashes, joins and failures at the OS level"
                     >
                       <span class="row-name">desktop notifications</span>
                       <span class="row-meta">
+                        <span class="row-done">done</span>
                         <span class="row-stage"
                           ><span class="marker" aria-hidden="true"></span>ALPHA</span
                         >
@@ -984,37 +1049,49 @@
                     <span>dashboard / layout /</span><span class="rm-count">4</span>
                   </h2>
                   <ul class="rows">
-                    <li class="row" data-stage="alpha" data-search="Tiles land on a grid">
+                    <li class="row is-done" data-stage="alpha" data-search="Tiles land on a grid">
                       <span class="row-name">drag, resize and snap</span>
                       <span class="row-meta">
-                        <span class="row-stage"
-                          ><span class="marker" aria-hidden="true"></span>ALPHA</span
-                        >
-                      </span>
-                    </li>
-                    <li class="row" data-stage="alpha" data-search="Park a tile without losing it">
-                      <span class="row-name">tile crate</span>
-                      <span class="row-meta">
-                        <span class="row-stage"
-                          ><span class="marker" aria-hidden="true"></span>ALPHA</span
-                        >
-                      </span>
-                    </li>
-                    <li class="row" data-stage="alpha" data-search="Fill the canvas, then restore">
-                      <span class="row-name">maximise a tile</span>
-                      <span class="row-meta">
+                        <span class="row-done">done</span>
                         <span class="row-stage"
                           ><span class="marker" aria-hidden="true"></span>ALPHA</span
                         >
                       </span>
                     </li>
                     <li
-                      class="row"
+                      class="row is-done"
+                      data-stage="alpha"
+                      data-search="Park a tile without losing it"
+                    >
+                      <span class="row-name">tile crate</span>
+                      <span class="row-meta">
+                        <span class="row-done">done</span>
+                        <span class="row-stage"
+                          ><span class="marker" aria-hidden="true"></span>ALPHA</span
+                        >
+                      </span>
+                    </li>
+                    <li
+                      class="row is-done"
+                      data-stage="alpha"
+                      data-search="Fill the canvas, then restore"
+                    >
+                      <span class="row-name">maximise a tile</span>
+                      <span class="row-meta">
+                        <span class="row-done">done</span>
+                        <span class="row-stage"
+                          ><span class="marker" aria-hidden="true"></span>ALPHA</span
+                        >
+                      </span>
+                    </li>
+                    <li
+                      class="row is-done"
                       data-stage="alpha"
                       data-search="Save, restore and delete named layouts"
                     >
                       <span class="row-name">layout presets</span>
                       <span class="row-meta">
+                        <span class="row-done">done</span>
                         <span class="row-stage"
                           ><span class="marker" aria-hidden="true"></span>ALPHA</span
                         >
@@ -1026,36 +1103,39 @@
                   <h2 class="rm-path"><span>server /</span><span class="rm-count">7</span></h2>
                   <ul class="rows">
                     <li
-                      class="row"
+                      class="row is-done"
                       data-stage="alpha"
                       data-search="Spawns Java, and shuts it down cleanly"
                     >
                       <span class="row-name">start, stop, restart</span>
                       <span class="row-meta">
+                        <span class="row-done">done</span>
                         <span class="row-stage"
                           ><span class="marker" aria-hidden="true"></span>ALPHA</span
                         >
                       </span>
                     </li>
                     <li
-                      class="row"
+                      class="row is-done"
                       data-stage="alpha"
                       data-search="Jar, JVM arguments and directory each"
                     >
                       <span class="row-name">multiple server configs</span>
                       <span class="row-meta">
+                        <span class="row-done">done</span>
                         <span class="row-stage"
                           ><span class="marker" aria-hidden="true"></span>ALPHA</span
                         >
                       </span>
                     </li>
                     <li
-                      class="row"
+                      class="row is-done"
                       data-stage="alpha"
                       data-search="Detects it, accepts it, restarts"
                     >
                       <span class="row-name">EULA flow</span>
                       <span class="row-meta">
+                        <span class="row-done">done</span>
                         <span class="row-stage"
                           ><span class="marker" aria-hidden="true"></span>ALPHA</span
                         >
@@ -1127,21 +1207,27 @@
                 <section class="rm-group" id="rm-settings" data-path="settings">
                   <h2 class="rm-path"><span>settings /</span><span class="rm-count">4</span></h2>
                   <ul class="rows">
-                    <li class="row" data-stage="alpha" data-search="Skin the whole dashboard">
+                    <li
+                      class="row is-done"
+                      data-stage="alpha"
+                      data-search="Skin the whole dashboard"
+                    >
                       <span class="row-name">theme</span>
                       <span class="row-meta">
+                        <span class="row-done">done</span>
                         <span class="row-stage"
                           ><span class="marker" aria-hidden="true"></span>ALPHA</span
                         >
                       </span>
                     </li>
                     <li
-                      class="row"
+                      class="row is-done"
                       data-stage="alpha"
                       data-search="Choose what is allowed to interrupt you"
                     >
                       <span class="row-name">notification toggles</span>
                       <span class="row-meta">
+                        <span class="row-done">done</span>
                         <span class="row-stage"
                           ><span class="marker" aria-hidden="true"></span>ALPHA</span
                         >
@@ -1193,12 +1279,13 @@
                   </h2>
                   <ul class="rows">
                     <li
-                      class="row"
+                      class="row is-done"
                       data-stage="alpha"
                       data-search="One emit path, ready to fan out"
                     >
                       <span class="row-name">event hub groundwork</span>
                       <span class="row-meta">
+                        <span class="row-done">done</span>
                         <span class="row-stage"
                           ><span class="marker" aria-hidden="true"></span>ALPHA</span
                         >
@@ -1305,32 +1392,39 @@
                   <h2 class="rm-path"><span>release /</span><span class="rm-count">10</span></h2>
                   <ul class="rows">
                     <li
-                      class="row"
+                      class="row is-done"
                       data-stage="alpha"
                       data-search="One native binary each, per tag"
                     >
                       <span class="row-name">windows and linux builds</span>
                       <span class="row-meta">
+                        <span class="row-done">done</span>
                         <span class="row-stage"
                           ><span class="marker" aria-hidden="true"></span>ALPHA</span
                         >
                       </span>
                     </li>
                     <li
-                      class="row"
+                      class="row is-done"
                       data-stage="alpha"
                       data-search="Checksum verified, rolls back on failure"
                     >
                       <span class="row-name">in-app updater</span>
                       <span class="row-meta">
+                        <span class="row-done">done</span>
                         <span class="row-stage"
                           ><span class="marker" aria-hidden="true"></span>ALPHA</span
                         >
                       </span>
                     </li>
-                    <li class="row" data-stage="alpha" data-search="Alongside the bare executables">
+                    <li
+                      class="row is-done"
+                      data-stage="alpha"
+                      data-search="Alongside the bare executables"
+                    >
                       <span class="row-name">rpm package</span>
                       <span class="row-meta">
+                        <span class="row-done">done</span>
                         <span class="row-stage"
                           ><span class="marker" aria-hidden="true"></span>ALPHA</span
                         >
@@ -1344,17 +1438,27 @@
                         >
                       </span>
                     </li>
-                    <li class="row" data-stage="alpha" data-search="One universal .dmg, per tag">
+                    <li
+                      class="row is-done"
+                      data-stage="alpha"
+                      data-search="One universal .dmg, per tag"
+                    >
                       <span class="row-name">macos builds</span>
                       <span class="row-meta">
+                        <span class="row-done">done</span>
                         <span class="row-stage"
                           ><span class="marker" aria-hidden="true"></span>ALPHA</span
                         >
                       </span>
                     </li>
-                    <li class="row" data-stage="alpha" data-search="One setup .exe, per tag">
+                    <li
+                      class="row is-done"
+                      data-stage="alpha"
+                      data-search="One setup .exe, per tag"
+                    >
                       <span class="row-name">windows installer</span>
                       <span class="row-meta">
+                        <span class="row-done">done</span>
                         <span class="row-stage"
                           ><span class="marker" aria-hidden="true"></span>ALPHA</span
                         >
