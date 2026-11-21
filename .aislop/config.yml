@@ -1,8 +1,8 @@
-# This repo's aislop config. The policy is base.yml beside it, vendored from
-# kollektiv by its scripts/sync-aislop.sh and never edited here: which engines
+# This repo's aislop config. The policy is base.yml beside it, locked by the
+# AllesSandro template and never edited here: which engines
 # run, which two style rules are off and why, the scoring, failBelow 100,
 # telemetry off. Only this tree's numbers live in this file. Run locally with
-# `npx --yes aislop@0.16.0 scan`; CI runs `aislop ci` through the vendored
+# `npx --yes aislop@0.16.0 scan`; CI runs `aislop ci` through the template's
 # .github/workflows/aislop.yml, which pins aislop and ruff.
 #
 # The `./` is load-bearing: aislop resolves `extends` relative to this file, and

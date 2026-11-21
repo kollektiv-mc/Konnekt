@@ -71,7 +71,7 @@ against a design that was already decided differently.
 Setup, prerequisites and the dev loop are in the
 [README](README.md#getting-started). Architecture, conventions and the full
 command list live in
-[`agent_docs/CLAUDE.md`](agent_docs/CLAUDE.md); it is worth a read before a
+[`AGENTS.md`](AGENTS.md); it is worth a read before a
 first change, because a few things are load-bearing in ways that are not
 obvious from the code.
 

@@ -46,9 +46,9 @@ SHELL_KEYWORDS = {
 #
 # npx is deliberately not here. `npx --yes <package>` fetches and runs a tool
 # against whatever directory it is in, package.json or not, which is how the
-# aislop gate runs in kollektiv, a repo with no JavaScript. Listing it did two
-# wrong things: kollektiv's aislop check was skipped on sight, and in a product
-# an aislop failure with no node_modules installed was reported as
+# aislop gate runs in a repo with no JavaScript. Listing it did two wrong
+# things: that repo's aislop check was skipped on sight, and in a JavaScript
+# project an aislop failure with no node_modules installed was reported as
 # "dependencies not installed" rather than as the failure it was.
 PROJECT_MANIFESTS = {
     "pnpm": "package.json",
@@ -119,11 +119,11 @@ def runnable(run, cwd, root, shell=None):
     a failure. Two different absences count:
 
     The binary is not installed. And — the one that matters most right now — the
-    binary is installed but the project it drives does not exist yet. Kommands is
-    pre-scaffold: it has no package.json, and every one of its health.commands
-    entries is a pnpm invocation. Without this second probe all four report as
-    failures, when what they are is unrunnable. docs/adopting.md says exactly
-    that: an entry that cannot run yet is skipped with a reason, never failed and
+    binary is installed but the project it drives does not exist yet. A repo
+    before its scaffold has no package.json while every one of its
+    health.commands entries is a pnpm invocation. Without this second probe they
+    all report as failures, when what they are is unrunnable. docs/adopting.md
+    says exactly that: an entry that cannot run yet is skipped with a reason, never failed and
     never passed.
 
     Returns (True, "") or (False, reason).
@@ -176,8 +176,7 @@ def runnable(run, cwd, root, shell=None):
 
 
 # The pin CI installs, written as pip would take it. Every adopting repo carries
-# it: a product in its vendored .github/workflows/aislop.yml, kollektiv inline in
-# ci.yml, because kollektiv is not a product and carries those steps itself.
+# it, in its vendored .github/workflows/aislop.yml or inline in ci.yml.
 RUFF_PIN = re.compile(r"\bruff==(\d+(?:\.\d+)*)")
 
 # What `ruff --version` answers with.
@@ -319,7 +318,7 @@ def missing_build_output(output, cwd):
 
         # Asked with a trailing separator first: the target does not exist, so
         # git cannot see it was a directory, and an entry written `dist/` matches
-        # directories only. The real Konnekt case answered "not ignored" without
+        # directories only. A real case answered "not ignored" without
         # it. Run from cwd rather than src_dir because only cwd is certain to
         # exist, and `git -C` on a missing directory exits 128.
         posix = target.replace(os.sep, "/")
@@ -342,7 +341,7 @@ def environmental_failure(run, cwd, root, output=""):
 
     Applied only after a command has actually failed, never before it runs.
     Pre-skipping anything that looked unrunnable was the obvious design and the
-    wrong one: Konnekt's gen:tokens is a plain node script with no imports, so it
+    wrong one: a generator that is a plain node script with no imports
     regenerates correctly with node_modules absent. Skipping it on sight threw
     away a check that genuinely passes.
 
@@ -352,12 +351,12 @@ def environmental_failure(run, cwd, root, output=""):
     that a failing check is the same lie in the other direction as calling an
     empty grep a pass.
 
-    The Go case is the same shape one language over. Both desktop products embed
-    their Vite build and both gitignore it, so `go vet ./...` on a fresh clone
-    fails in the root package before reading a line of Go. Konnekt reported that
-    as two red checks on every cloud session; Kommands avoided it by narrowing
-    its go entries to the packages that do not embed, which buys a green table by
-    never checking the package most likely to break.
+    The Go case is the same shape one language over. A desktop app that embeds
+    its Vite build and gitignores it fails `go vet ./...` on a fresh clone in
+    the root package before reading a line of Go. Reporting that as red checks
+    on every cloud session is wrong, and narrowing the go entries to the
+    packages that do not embed buys a green table by never checking the package
+    most likely to break.
     """
     first = run.strip().split()[0] if run.strip() else ""
     tool = os.path.basename(first)
@@ -377,8 +376,8 @@ def find_upwards(name, cwd, root):
     """Find `name` in cwd, then upwards as far as the repo root. Path or None.
 
     Upwards because a workspace puts the manifest — and often the installed
-    dependencies — above the directory a command runs in. Konnekt runs pnpm from
-    frontend/ and go from the root out of one health.commands list.
+    dependencies — above the directory a command runs in. One health.commands
+    list can run pnpm from frontend/ and go from the root.
     """
     current = os.path.abspath(cwd)
     root = os.path.abspath(root)

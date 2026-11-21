@@ -14,7 +14,7 @@ detailed, per-session narrative of gaps already closed — lives in
 `agent_docs/HEALTH_LOG.md`, not here. That log keeps its last months under a
 cap; earlier ones are the files under `agent_docs/health-log/`.
 
-See `agent_docs/CLAUDE.md` for architecture conventions and build commands, and
+See `AGENTS.md` for architecture conventions and build commands, and
 `agent_docs/ROADMAP.md` for feature scope. This doc doesn't duplicate either —
 it's the quality gate that sits alongside them.
 
@@ -204,7 +204,7 @@ tree.
       — `.gitignore` covers them.
 - [x] No stray root-level scratch/design docs left un-triaged (either promoted
       into `agent_docs/` or deleted once the work lands).
-- [x] `agent_docs/CLAUDE.md` and `agent_docs/ROADMAP.md` still reflect the
+- [x] `AGENTS.md` and `agent_docs/ROADMAP.md` still reflect the
       actual stack/structure/scope — update them when they drift.
       Verify: read CLAUDE.md's "Project structure" and "Build & dev commands"
       against the real tree and `frontend/package.json`'s `scripts`. Both are
@@ -420,7 +420,7 @@ tree.
       `components/ErrorBoundary.test.tsx`; on the Go side
       `go test . -run LogClientError` pins the line and the per-field clamp.
 - [x] Store write actions record the failure and rethrow rather than applying
-      the optimistic update anyway, per `agent_docs/CLAUDE.md`'s IPC
+      the optimistic update anyway, per `AGENTS.md`'s IPC
       conventions. `useSchedulerStore` is the reference shape. This line read
       "all five comply" from 2026-08-20 until a side-by-side read on
       2026-09-08 found two sites that did not rethrow (#315, closed 2026-09-12,
@@ -1050,7 +1050,7 @@ issue #263; the documentation half closed 2026-09-05)
   it can take, and the file's "mocking the API would only test the mock" stance
   needs a sentence saying why this one gets a stub), then sync.
 - The guarantee also dies at the merge button: a squash rewrites the child's
-  commits and it drops out of the notes. `agent_docs/CLAUDE.md` now says stacked
+  commits and it drops out of the notes. `AGENTS.md` now says stacked
   pull requests land as merge commits. The repository still allows squash and
   rebase merges; restricting it to "Create a merge commit" is an admin setting,
   not a change in this tree.

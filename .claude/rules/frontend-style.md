@@ -6,9 +6,36 @@ paths:
 
 # Frontend style
 
-Moved out of `agent_docs/CLAUDE.md` so it costs no context until you open a
-file it applies to. The short universal rules (no `any`, named exports,
-functional components, the inline-style ban) stay there.
+Moved out of `AGENTS.md` so it costs no context until you open a file it
+applies to. The short universal rules (no `any`, the inline-style ban) stay
+there.
+
+## Code style
+
+- Functional components only, no class components.
+- `import type` for type-only imports.
+- Named exports; a default export only for page-level components.
+- Styling is Tailwind utilities over the CSS-variable token layer.
+- Keep the entry bundle under the 175 KB gzip budget (`pnpm check-bundle`);
+  heavy per-tile dependencies are lazy-loaded and warmed from
+  `lib/prefetch.ts`.
+
+## More commands
+
+```bash
+# from frontend/
+pnpm check-tokens      # every token-named class compiles
+pnpm check-prefetch    # every lazy chunk is in the warm list
+pnpm format:website    # Prettier over website/
+
+# from the repo root
+node scripts/check-website-links.mjs   # hrefs, assets, sitemap
+node demo/record.mjs                   # website clips; needs ffmpeg
+node demo/readme.mjs                   # README images, from those clips
+npx --yes aislop@0.16.0 scan
+```
+
+`demo/build.mjs` fails on drift against the generated bindings.
 
 ## Tokens are not edited here
 

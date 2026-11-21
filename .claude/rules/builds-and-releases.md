@@ -87,7 +87,7 @@ keeps the two answering the same.
 ## Release notes
 
 `.github/scripts/release-notes.py` writes the body for both channels, and
-`agent_docs/CLAUDE.md` covers what reaches it. Its output starts at
+`AGENTS.md` covers what reaches it. Its output starts at
 `## What's changed` and is nothing but the changes, because that section is all
 the website's changelog shows (`website/release.js`'s `changesOnly`), and
 all the app's Settings > What's New reads (`backend/services/release_notes.go`,

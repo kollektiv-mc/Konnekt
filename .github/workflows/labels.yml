@@ -1,0 +1,43 @@
+# Locked: comes from sandrogekeler/AllesSandro and is re-applied by every
+# template update. Change it there, not here (AllesSandro docs/updating.md).
+#
+# Creates or updates the repo's labels from .github/labels.json, which is
+# project-owned: the type:/p0-p3 taxonomy arrives from the template and the
+# project adds its own area: labels. A personal account has no default labels
+# for new repos (that is an organization setting), so this is how a fresh repo
+# gets the labels pr-labelled and the issue forms depend on.
+#
+# Non-destructive: labels not in the file are left alone.
+name: labels
+
+on:
+  push:
+    branches: [main]
+    paths: ['.github/labels.json']
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: labels
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Apply .github/labels.json
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          jq -c '.labels[]' .github/labels.json | while read -r l; do
+            name=$(jq -r .name <<<"$l"); color=$(jq -r .color <<<"$l"); desc=$(jq -r '.description // ""' <<<"$l")
+            gh label create "$name" --repo "$REPO" --color "$color" --description "$desc" --force
+          done

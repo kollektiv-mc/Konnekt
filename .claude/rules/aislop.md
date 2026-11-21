@@ -10,17 +10,17 @@ paths:
 `scanaislop/aislop` (MIT, run through `npx`, nothing installed) scores the tree
 for what AI-assisted code leaves behind: ignored errors, double casts,
 duplicated blocks, oversized functions, `innerHTML` sinks. CI runs `aislop ci`
-and fails below 100, through `.github/workflows/aislop.yml`, a shared workflow
-vendored from kollektiv by its `scripts/sync-workflows.sh` and never edited
-here, which pins aislop and ruff once for the whole suite.
+and fails below 100, through `.github/workflows/aislop.yml`, a workflow locked
+by the AllesSandro template and never edited here, which pins aislop and ruff
+once for every repo.
 
 **ruff has to be present or aislop's Python engines silently run nothing**, and
 the pinned version is what the gate judges against. A newer or older ruff on
 your `PATH` scores a different rule set, which is how a local run can report
 100 against a tree CI then fails.
 
-`.aislop/base.yml` is the suite's policy, vendored from kollektiv by its
-`scripts/sync-aislop.sh` and never edited here: what is counted, and which two
+`.aislop/base.yml` is the shared policy, locked by the AllesSandro template and
+never edited here: what is counted, and which two
 style rules are off and why. `.aislop/config.yml` extends it (`extends:
 ./base.yml`, and the `./` is load-bearing) and holds only this tree's size
 limits, a **ratchet** held at today's largest function and file. Lower them as

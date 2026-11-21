@@ -7,7 +7,7 @@ paths:
 
 # IPC conventions
 
-The two short rules stay in `agent_docs/CLAUDE.md`, because they must hold
+The two short rules stay in `AGENTS.md`, because they must hold
 before any file is opened: **Go owns all side effects**, and **IPC goes through
 the generated bindings only**, imported from `wailsjs/go/`, never raw
 `window.go` or a string-based call. The rest is here.

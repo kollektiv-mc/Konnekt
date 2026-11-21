@@ -12,7 +12,7 @@ That is the whole required context — do **not** re-read `survey/wings.md` (onl
 it if the *why* behind a behavior is unclear; the issue names the relevant §), and do
 not re-derive the triage. Code pointers in the issues were verified 2026-08-21;
 re-verify them against the current tree before editing, and expect drift. Conventions,
-gates and the definition of done are `agent_docs/CLAUDE.md`'s — they are not repeated
+gates and the definition of done are `AGENTS.md`'s — they are not repeated
 here.
 
 ## The set at a glance
@@ -67,7 +67,7 @@ These apply to every issue in the set and are easy to violate one issue at a tim
 4. **New Go logic ships with tests** and minds the `backend/services` coverage floor
    (a ratchet — raise, never lower). The concurrency-sensitive issues (#109, #110)
    need race-shaped tests, not just happy paths.
-5. **One issue, one PR**, labeled per the ladder in `agent_docs/CLAUDE.md`. The
+5. **One issue, one PR**, labeled per the ladder in `AGENTS.md`. The
    issues carry suggested `type:` labels; re-judge at PR time with the ladder, not
    the diff size.
 

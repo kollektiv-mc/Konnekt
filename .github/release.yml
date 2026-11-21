@@ -1,6 +1,7 @@
-# Layout for GitHub's auto-generated release notes. Vendored into every product
-# as .github/release.yml by kollektiv's scripts/sync-notes.sh, beside the
-# generator; edit it there.
+# Locked: comes from sandrogekeler/AllesSandro and is re-applied by every
+# template update. Change it there, not here (AllesSandro docs/updating.md).
+#
+# Layout for GitHub's auto-generated release notes.
 #
 # This is a fallback, not the normal path: a release workflow reads this file
 # only when .github/scripts/release-notes.py could not produce a body, which is

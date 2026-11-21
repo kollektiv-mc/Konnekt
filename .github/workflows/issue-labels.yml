@@ -80,7 +80,7 @@ jobs:
           $MARKER
           This issue has had \`status:needs-triage\` cleared but is still missing: **$MISSING**
 
-          Every issue carries one \`type:\`, one \`area:\` and one \`p0\`-\`p3\`. The area labels are listed in \`.github/labels.yml\`; the reasoning is under "Labelling an issue" in \`agent_docs/CLAUDE.md\`.
+          Every issue carries one \`type:\`, one \`area:\` and one \`p0\`-\`p3\`. The area labels are listed in \`.github/labels.yml\`; the reasoning is under "Labelling an issue" in \`AGENTS.md\`.
 
           Worth doing rather than ignoring: the area label decides which folder this lands in on the [roadmap page](https://konnekt.pages.dev/roadmap.html), and an issue with no priority mirrors into Linear below \`p3\`, where it reads as work nobody wants done.
           EOF

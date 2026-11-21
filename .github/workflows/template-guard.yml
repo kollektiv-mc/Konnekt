@@ -1,0 +1,37 @@
+# Locked: comes from sandrogekeler/AllesSandro and is re-applied by every
+# template update. Change it there, not here (AllesSandro docs/updating.md).
+#
+# Fails when a template update left Copier's conflict markers in the tree.
+# Renovate commits a conflicted file as-is and flags the PR with a red
+# `renovate/artifacts` check; this is the second lock, which also catches a
+# `copier update` run by hand. Resolve as in AllesSandro docs/updating.md.
+#
+# Copier's markers are labelled "before updating" / "after updating", so this
+# never matches an ordinary git conflict or a test fixture containing <<<<<<<.
+name: template-guard
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  markers:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: No unresolved template-update conflicts
+        run: |
+          if git grep -nE '^(<<<<<<< before updating|>>>>>>> after updating)$' -- . ':!*.rej'; then
+            echo "::error::Unresolved Copier merge conflict above. See https://github.com/sandrogekeler/AllesSandro/blob/main/docs/updating.md"
+            exit 1
+          fi
+          if git ls-files -- '*.rej' | grep -q .; then
+            echo "::error::Copier .rej files are committed:"; git ls-files -- '*.rej'; exit 1
+          fi
+          echo "No template conflicts."

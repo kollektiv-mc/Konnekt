@@ -1,7 +1,6 @@
-# Vendored into every product in suite.repos.json as
-# .github/workflows/pr-labelled.yml by scripts/sync-workflows.sh. Edit it here.
-# The next sync overwrites the copy in a product, the same way it overwrites a
-# hand-edited tokens.source.json.
+# Locked: comes from sandrogekeler/AllesSandro and is re-applied by every
+# template update. Change it there, not here (AllesSandro docs/updating.md).
+#
 #
 # The pull-request label gate. It reports as a commit status named
 # `pr-labelled` rather than as a job that fails: a pull request opened without
@@ -30,9 +29,8 @@
 # Why a gate at all: the Changelog section, or failing it the `type:` label, is
 # the only input to the release notes, and the `area:` label is the issue-side
 # rule holding on the pull-request side, so what a change touches is recorded in
-# one vocabulary whether it is asked for or delivered. Before Konnekt gated
-# this, 24 of the 41 pull requests in its first release window carried no
-# label, and the generator had to guess from titles. DOCS below is the rule;
+# one vocabulary whether it is asked for or delivered. Without the gate, pull
+# requests arrive with no label and the generator has to guess from titles. DOCS below is the rule;
 # this is the check.
 #
 # Why `pull_request_target`: under `pull_request` the token is read-only for a
@@ -83,7 +81,7 @@ jobs:
           NUMBER: ${{ github.event.pull_request.number }}
           SHA: ${{ github.event.pull_request.head.sha }}
           BASE: ${{ github.event.pull_request.base.ref }}
-          DOCS: https://github.com/kollektiv-mc/Kollektiv/blob/main/docs/conventions.md#which-type-label
+          DOCS: https://github.com/sandrogekeler/AllesSandro/blob/main/docs/conventions.md#labels
         run: |
           gh api "repos/$REPO/pulls/$NUMBER" > "$RUNNER_TEMP/pull.json"
           jq -r '.body // ""' "$RUNNER_TEMP/pull.json" > "$RUNNER_TEMP/body.md"

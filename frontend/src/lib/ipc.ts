@@ -24,7 +24,7 @@ export const errMsg = (e: unknown) => (e instanceof Error ? e.message : String(e
  * failed write: revert it, record the message, rethrow.
  *
  * This reads `window.go`'s *presence* and never calls through it, so
- * `agent_docs/CLAUDE.md`'s "IPC via generated bindings only" rule still holds.
+ * `AGENTS.md`'s "IPC via generated bindings only" rule still holds.
  */
 export function hasWailsBridge(): boolean {
   return typeof window !== 'undefined' && 'go' in window
@@ -88,7 +88,7 @@ export async function readOr<T, F>(call: () => Promise<T>, fallback: F): Promise
   try {
     return await call()
   } catch {
-    // aislop-ignore-next-line ai-slop/hidden-fallback -- the sanctioned no-bridge read path, see agent_docs/CLAUDE.md IPC conventions
+    // aislop-ignore-next-line ai-slop/hidden-fallback -- the sanctioned no-bridge read path, see AGENTS.md IPC conventions
     return fallback
   }
 }

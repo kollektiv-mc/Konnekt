@@ -370,7 +370,7 @@ Verify: tests for the hash format, and for the Nth failed attempt being refused.
 **S8.5 Sessions are unguessable, scoped and revocable.**
 Holds when: tokens come from `crypto/rand` with at least 128 bits, travel in an
 `HttpOnly; Secure; SameSite=Strict` cookie, expire, and can all be revoked from
-the desktop. No token in `localStorage` (banned by `agent_docs/CLAUDE.md`
+the desktop. No token in `localStorage` (banned by `AGENTS.md`
 anyway) or in a URL.
 Verify: `grep -rn 'math/rand' backend/services/remote*.go` finds nothing; tests
 for expiry and revocation.

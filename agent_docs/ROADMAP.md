@@ -481,7 +481,7 @@ where the decision was actually made — this section records, it does not decid
 - **A cloud backend or hosted account system.** Konnekt is local-first: state
   persists as JSON in the Wails app data directory and nothing calls home except
   the update check and the content providers behind the mods tile (Modrinth,
-  and CurseForge with the user's own key, today; Hangar under Beta). See `agent_docs/CLAUDE.md`'s
+  and CurseForge with the user's own key, today; Hangar under Beta). See `AGENTS.md`'s
   opening line and its "Do not" rule against `localStorage`/`sessionStorage`.
   Remote Access (above) is a tunnel to the user's own machine, not a service.
 - **SpigotMC as a content source.** SpigotMC publishes no API. The only route

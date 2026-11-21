@@ -292,10 +292,9 @@ check(
 
 # ── The path filter ────────────────────────────────────────────────────────
 # Against a fixture rather than the repo's own changelog.json, so this file is
-# byte-identical wherever it sits: in a product beside the script it tests, and
-# in kollektiv/plugins/suite-kit/ where it is the master copy and there is no
-# product config to read. The real config is checked separately at the bottom,
-# where it exists.
+# the same in every project and in the template, where there is no project
+# config to read. The real config is checked separately at the bottom, where it
+# exists.
 NON_APP = (
     ".claude/",
     ".github/",
@@ -392,9 +391,7 @@ try:
 except notes.ApiError:
     pass
 
-# This repo's own config, when this copy is the one sitting in a product. In
-# kollektiv there is no product beside it, and the fixture above is the whole
-# test — a master copy has nothing of its own to validate.
+# This project's own config, when there is one beside the script.
 CONFIG = HERE.parent / "changelog.json"
 REPO = HERE.parent.parent
 if CONFIG.exists():
@@ -403,9 +400,8 @@ if CONFIG.exists():
     # The path classes that leaked real pull requests into Konnekt's notes. A
     # product that has one of these must exclude it, and dropping it reopens a
     # bug that has already happened once; a product with no website/ or
-    # CONTRIBUTING.md is not asked to name paths it does not have. This test
-    # is vendored into every product, so it can only assert what is true of
-    # each of them.
+    # CONTRIBUTING.md is not asked to name paths it does not have. Every
+    # project gets this test, so it asserts only what is true of all of them.
     for prefix in ("website/", ".github/", ".claude/", "README.md", "CONTRIBUTING.md"):
         if (REPO / prefix.rstrip("/")).exists():
             check(f"config still excludes {prefix}", prefix in configured, True)

@@ -1,14 +1,14 @@
-# The suite's aislop policy. Vendored into every product as .aislop/base.yml by
-# scripts/sync-aislop.sh; each product's .aislop/config.yml extends it and adds
-# only what is true of that one tree. Edit it here. A product's copy is
-# overwritten on the next sync and reported as drift in between.
+# The shared aislop policy. Every project receives it as .aislop/base.yml from
+# the AllesSandro template; each project's .aislop/config.yml extends it and adds
+# only what is true of that one tree. Edit it in AllesSandro: a project's copy
+# is re-applied on the next template update.
 #
 # What is shared and what is not, because the split is the whole point:
 #
 #   shared    Which engines run, which rules are off and why, how findings are
 #             weighted, that the gate is "no unsuppressed finding" (failBelow
 #             100), and that telemetry is off. A finding should mean the same
-#             thing in Konnekt, Kommands and here.
+#             thing in every project.
 #   per-repo  The size ratchet (quality.maxFunctionLoc, quality.maxFileLoc): a
 #             number held at that tree's largest function and file, lowered as
 #             they shrink, never raised. And .aislopignore, which is that repo's
@@ -16,8 +16,7 @@
 #
 # aislop (scanaislop/aislop, MIT) scores a tree for what AI-assisted code leaves
 # behind: ignored errors, double casts, duplicated blocks, oversized functions,
-# innerHTML sinks. This file was Konnekt's, generalised: the decisions below were
-# taken there on 2026-09-08 (its HEALTH_LOG) and hold suite-wide.
+# innerHTML sinks.
 version: 1
 
 engines:

@@ -1,0 +1,5 @@
+# Locked files from AllesSandro: a formatter rewriting them turns every
+# template update into a conflict. Add this project's own entries below.
+.github/workflows/
+.aislop/base.yml
+.copier-answers.yml

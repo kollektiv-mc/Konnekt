@@ -1,0 +1,20 @@
+# Changes here will be overwritten by Copier. Do not edit by hand.
+_commit: v0.9.0
+_src_path: https://github.com/sandrogekeler/AllesSandro.git
+aislop: true
+claude_action: false
+copyright_holder: kollektiv-mc
+default_branch: main
+description: Desktop dashboard for Minecraft servers.
+frontend_dir: frontend
+kind: wails-desktop
+languages:
+- go
+- typescript
+license: MIT
+owner: kollektiv-mc
+project_name: Konnekt
+public: true
+release_notes: true
+repo_name: Konnekt
+tracking: github-issues

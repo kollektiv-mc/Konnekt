@@ -70,7 +70,7 @@ three JSON files under the app data dir, so renaming it would orphan every
 saved layout. Do not "tidy" it to `overview`.
 
 Overview is also the **one sanctioned exception** to "tiles are self-contained,
-no cross-tile dependencies" (`agent_docs/CLAUDE.md`). It imports five other
+no cross-tile dependencies" (`AGENTS.md`). It imports five other
 tiles' hooks and presentational components: backups, performance, players,
 scheduler and worlds. Three rules keep that from rotting:
 it only ever reads, never writes through another tile's actions; it never

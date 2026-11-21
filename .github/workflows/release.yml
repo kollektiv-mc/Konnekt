@@ -265,7 +265,7 @@ jobs:
     steps:
       # actions/checkout needs git; everything else here is the toolchain wails
       # build needs (webkit2gtk-4.1 pins the glibc 2.35 / libsoup3 floor this
-      # binary targets — see agent_docs/CLAUDE.md's Rocky Linux 10 build note).
+      # binary targets — see .claude/rules/builds-and-releases.md).
       - name: Install build dependencies
         run: |
           apt-get update

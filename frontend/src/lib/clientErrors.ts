@@ -42,7 +42,7 @@ export function reportClientError(
     .join('\n')
   try {
     // The empty catch is the contract stated above, not the swallowed
-    // rejection `agent_docs/CLAUDE.md`'s IPC conventions warn against: there is
+    // rejection `AGENTS.md`'s IPC conventions warn against: there is
     // no optimistic state to revert and nobody to rethrow to.
     LogClientError(origin, message, stack).catch(() => {})
   } catch {
