@@ -35,6 +35,11 @@
       "description": "CI, health checks, schema and drift validation."
     },
     {
+      "name": "area:build",
+      "color": "fef2c0",
+      "description": "Build tooling, dependencies and packaging."
+    },
+    {
       "name": "area:agents",
       "color": "f9e2ae",
       "description": "suite-kit skills, agents, and Claude Code configuration."
