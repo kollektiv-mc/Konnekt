@@ -99,3 +99,72 @@ export const MOD_UPDATES = [
     latestVersionNumber: "1.4.40",
   },
 ];
+
+/* The creative server follows a packwiz pack, so the mods tile's Pack view has
+   a source, a past sync and a plan to show. Checking returns the plan; applying
+   and changing the source are refused like every other mod write. */
+export const PACK_STATE = {
+  source: {
+    serverID: "demo-creative",
+    format: "packwiz",
+    location: "url",
+    address: "https://packs.example.net/creative/pack.toml",
+    exclude: [],
+    include: [],
+  },
+  history: [
+    {
+      id: "sync-1",
+      appliedAt: daysAgo(6),
+      packName: "Creative",
+      packVersion: "1.2.0",
+      fingerprint: "",
+      added: 4,
+      updated: 0,
+      removed: 0,
+      disabled: 0,
+      rolledBack: false,
+    },
+  ],
+};
+
+const row = (action, fileName, name, side, reason, extra = {}) => ({
+  action,
+  fileName,
+  name,
+  key: name.toLowerCase().replaceAll(" ", "-"),
+  side,
+  reason,
+  ...extra,
+});
+
+export const PACK_PLAN = {
+  serverID: "demo-creative",
+  planId: "demo-plan",
+  packName: "Creative",
+  packVersion: "1.3.0",
+  minecraft: "1.21.1",
+  loader: "fabric",
+  loaderVersion: "0.16.5",
+  fingerprint: "",
+  rows: [
+    row("update", "sodium-fabric-0.6.5.jar", "Sodium", "both", "newer in the pack", {
+      from: "sodium-fabric-0.6.3.jar",
+    }),
+    row("add", "worldedit-mod-7.3.8.jar", "WorldEdit", "both", "new in the pack"),
+    row("skip", "iris-fabric-1.8.1.jar", "Iris", "client", "client side"),
+    row("keep", "fabric-api-0.116.1.jar", "Fabric API", "both", "already installed"),
+    row("keep", "lithium-fabric-0.15.0.jar", "Lithium", "both", "already installed"),
+  ],
+  blockers: [],
+  warnings: [],
+  added: 1,
+  updated: 1,
+  removed: 0,
+  disabled: 0,
+  kept: 2,
+  adopted: 0,
+  skipped: 1,
+  upToDate: false,
+  last: PACK_STATE.history[0],
+};

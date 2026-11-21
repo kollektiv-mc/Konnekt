@@ -48,6 +48,14 @@
   --port-color: #f97316;
 }
 
+[data-shape='control'][data-port='onUpdate'] {
+  --port-color: #f59e0b;
+}
+
+[data-shape='control'][data-port='onUpToDate'] {
+  --port-color: #22c55e;
+}
+
 [data-shape='data'] {
   --port-color: #6b7280;
 }

@@ -44,6 +44,8 @@ type serviceDeps struct {
 	// dataDir is the app data directory, for the one block that stages files in
 	// it (action.dhSnapshot). Set by SetDataDir.
 	dataDir string
+	// mods is the mod service, for the modpack blocks. Set by SetMods.
+	mods *ModService
 }
 
 // ExecContext is the per-node execution surface handed to a block executor.

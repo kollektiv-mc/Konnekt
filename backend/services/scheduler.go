@@ -73,6 +73,11 @@ func (s *SchedulerService) SetDestinations(d *DestinationService) {
 	s.deps.destinations = d
 }
 
+// SetMods gives the modpack blocks the mod service, the same way.
+func (s *SchedulerService) SetMods(m *ModService) {
+	s.deps.mods = m
+}
+
 // SetDataDir loads graphs from disk and manifest blocks from the blocks/ subfolder.
 // Must be called before SetContext so triggers see graphs on first evaluation.
 func (s *SchedulerService) SetDataDir(dir string) {

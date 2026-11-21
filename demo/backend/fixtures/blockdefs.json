@@ -397,6 +397,85 @@
     "source": "native"
   },
   {
+    "id": "action.modpackCheck",
+    "category": "action",
+    "label": "Check Modpack",
+    "description": "Checks whether the server's mods differ from its bound pack, and stages the downloads.",
+    "isTrigger": false,
+    "controlInputs": [
+      "trigger"
+    ],
+    "controlOutputs": [
+      "onUpdate",
+      "onUpToDate",
+      "onFailed"
+    ],
+    "dataInputs": null,
+    "dataOutputs": [
+      {
+        "id": "version",
+        "label": "Applied version",
+        "type": "string"
+      },
+      {
+        "id": "newVersion",
+        "label": "Pack version",
+        "type": "string"
+      },
+      {
+        "id": "changes",
+        "label": "Files to change",
+        "type": "number"
+      }
+    ],
+    "configSchema": null,
+    "source": "native",
+    "group": "Modpack",
+    "timeoutSeconds": 1800
+  },
+  {
+    "id": "action.modpackSync",
+    "category": "action",
+    "label": "Sync Modpack",
+    "description": "Brings a stopped server's mods in line with its bound pack.",
+    "isTrigger": false,
+    "controlInputs": [
+      "trigger"
+    ],
+    "controlOutputs": [
+      "onComplete",
+      "onUpToDate",
+      "onFailed"
+    ],
+    "dataInputs": null,
+    "dataOutputs": [
+      {
+        "id": "version",
+        "label": "Pack version",
+        "type": "string"
+      },
+      {
+        "id": "added",
+        "label": "Added",
+        "type": "number"
+      },
+      {
+        "id": "updated",
+        "label": "Updated",
+        "type": "number"
+      },
+      {
+        "id": "removed",
+        "label": "Removed",
+        "type": "number"
+      }
+    ],
+    "configSchema": null,
+    "source": "native",
+    "group": "Modpack",
+    "timeoutSeconds": 1800
+  },
+  {
     "id": "action.rcon",
     "category": "action",
     "label": "RCON Command",

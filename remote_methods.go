@@ -150,6 +150,16 @@ var remoteMethods = map[string]services.RemoteMethod{
 	"ModCategories":          {Tier: services.RemoteTierRead, Reason: "a provider lookup"},
 	"ModMoreByAuthor":        {Tier: services.RemoteTierRead, Reason: "a provider lookup"},
 	"ModCheckUpdates":        {Tier: services.RemoteTierRead, Reason: "a provider lookup"},
+
+	// Modpack sync. Choosing the pack is choosing what code the server runs,
+	// so binding one waits for the desktop. Applying a plan installs only
+	// from that bound pack, every file checked against its hash.
+	"ModSyncState":       {Tier: services.RemoteTierRead, Reason: "the mods tile's pack section"},
+	"ModSetPackSource":   {Tier: services.RemoteTierAdmin, Reason: "chooses where the server's jars come from (§ S8.2)"},
+	"ModClearPackSource": {Tier: services.RemoteTierOperate, Reason: "unbinds the pack; no file is touched"},
+	"ModPlanSync":        {Tier: services.RemoteTierOperate, Reason: "downloads the bound pack into the cache; mods/ is not touched"},
+	"ModApplySync":       {Tier: services.RemoteTierOperate, Reason: "installs only from the pack the desktop bound, each file checked against its hash"},
+	"ModRollbackSync":    {Tier: services.RemoteTierOperate, Reason: "puts back the mods folder a sync replaced"},
 }
 
 // neverRemote are the bound methods a remote client can never reach, each
