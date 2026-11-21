@@ -1,27 +1,10 @@
-# Vendored into every product in suite.repos.json as .github/workflows/scorecard.yml
-# by scripts/sync-workflows.sh. Edit it here. The next sync overwrites the copy
-# in a product, the same way it overwrites a hand-edited tokens.source.json.
+# Locked: comes from sandrogekeler/AllesSandro and is re-applied by every
+# template update. Change it there, not here (AllesSandro docs/updating.md).
 #
-# OpenSSF Scorecard: an outside audit of a repository's supply chain, run on a
-# schedule and published where anyone can read the per-check breakdown.
-#
-# The reason this is worth having in this suite specifically. Most of the code
-# comes from Claude, with a person reading over its shoulder, which is an honest
-# thing to say and also the first thing a stranger has to decide what to do
-# with. Nothing a repository asserts about itself can settle that, because a
-# project's own claims about its own quality are worth exactly nothing to
-# someone who has not read the code. Scorecard is not the repository's opinion:
-# it runs 18 checks from outside, scores each one, and publishes the result at
-# a URL that is not under the repository's control. A low score is visible too,
-# which is the whole point of using it rather than a self-assessment.
-#
-# What it actually looks at: whether releases are signed, whether CI runs on
-# every change, whether a static analyser runs, whether dependencies are pinned
-# and updated, whether a security policy exists, whether the code is reviewed
-# before it lands. Each product's answers are in its own SECURITY.md, ci.yml,
-# codeql.yml and dependabot.yml, where it has them, and this reports on them
-# rather than adding anything of its own. A product without one of those files
-# scores lower on that check, which is information, not a failure.
+# OpenSSF Scorecard: scores the repo's supply-chain hygiene (pinned actions,
+# token permissions, branch protection) and uploads the result to code scanning.
+# Rendered only for a public repository: the action supports a private one only
+# with GitHub Advanced Security (scorecard-action's README).
 name: Scorecard
 
 on:
@@ -77,12 +60,12 @@ jobs:
 
       # Kept for 5 days so a score that moves can be diffed against the previous
       # run without re-running the analysis.
-      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: scorecard-results
           path: results.sarif
           retention-days: 5
 
-      - uses: github/codeql-action/upload-sarif@24c54180a607b1449ed407dd24f251e4e9147c8d # v4.38.3
+      - uses: github/codeql-action/upload-sarif@2892aa5e19bbd11bc0cff5427e3b750a04d9e3c2 # v4.38.2
         with:
           sarif_file: results.sarif

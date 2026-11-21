@@ -1,7 +1,7 @@
 # Builds the browser demo and publishes it.
 #
 # Separate from the site. website/ has no build step, no package.json and no
-# node_modules — agent_docs/CLAUDE.md is explicit about that — and dropping a
+# node_modules — AGENTS.md is explicit about that — and dropping a
 # built bundle into it would take that property away. The demo is its own
 # Cloudflare Pages project instead, and the site links out to it.
 #

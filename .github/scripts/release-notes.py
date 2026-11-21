@@ -82,8 +82,7 @@ import urllib.request
 
 # Labels are the whole of the decision. A label is a deliberate statement about
 # what a change is; a title is copy written for a reader, and the two are not
-# the same claim. Names come from the suite's taxonomy in kollektiv's
-# design/labels.json.
+# the same claim. Names come from the taxonomy in .github/labels.json.
 FEATURE_LABELS = {"type:feature", "feature", "enhancement"}
 FIX_LABELS = {"type:bug", "bug"}
 
@@ -164,7 +163,7 @@ def api(path: str, **params: object) -> object:
         headers={
             "Accept": "application/vnd.github+json",
             "Authorization": f"Bearer {os.environ['GH_TOKEN']}",
-            "User-Agent": "konnekt-release-notes",
+            "User-Agent": "release-notes",
             "X-GitHub-Api-Version": "2022-11-28",
         },
     )

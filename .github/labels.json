@@ -1,0 +1,93 @@
+{
+  "$comment": [
+    "Written by kollektiv's scripts/sync-labels.sh from design/labels.json.",
+    "Edit it there. .github/workflows/labels.yml applies this file on push to main."
+  ],
+  "labels": [
+    {
+      "name": "type:feature",
+      "color": "bb87fc",
+      "description": "New capability: the product can now do something it never offered."
+    },
+    {
+      "name": "type:bug",
+      "color": "eb5757",
+      "description": "Existing behavior is wrong. Still a bug when the repair adds new code or new UI."
+    },
+    {
+      "name": "type:chore",
+      "color": "8792a2",
+      "description": "No user-visible change: refactors, tests, CI, deps. Counted in the notes, not listed."
+    },
+    {
+      "name": "type:docs",
+      "color": "0b84a5",
+      "description": "Documentation only. Counted in the release notes, not listed."
+    },
+    {
+      "name": "area:tokens",
+      "color": "d4c5f9",
+      "description": "design/tokens.json and its vendored consumers."
+    },
+    {
+      "name": "area:ci",
+      "color": "c5e8b7",
+      "description": "CI, health checks, schema and drift validation."
+    },
+    {
+      "name": "area:agents",
+      "color": "f9e2ae",
+      "description": "suite-kit skills, agents, and Claude Code configuration."
+    },
+    {
+      "name": "area:ui",
+      "color": "aed9e0",
+      "description": "User-facing interface work."
+    },
+    {
+      "name": "area:schema",
+      "color": "e0aed9",
+      "description": "A data schema or a generated-data pipeline."
+    },
+    {
+      "name": "area:release",
+      "color": "f5b7b1",
+      "description": "Build, packaging, or release process."
+    },
+    {
+      "name": "p0",
+      "color": "b60205",
+      "description": "Drop everything."
+    },
+    {
+      "name": "p1",
+      "color": "d93f0b",
+      "description": "High priority, next up."
+    },
+    {
+      "name": "p2",
+      "color": "fbca04",
+      "description": "Medium priority, normal queue."
+    },
+    {
+      "name": "p3",
+      "color": "c2e0c6",
+      "description": "Low priority, nice to have."
+    },
+    {
+      "name": "blocked",
+      "color": "5319e7",
+      "description": "Cannot proceed until a stated dependency clears."
+    },
+    {
+      "name": "health-check",
+      "color": "1d76db",
+      "description": "Filed by /suite-kit:health-sweep. Carries a Health-Check-Key line."
+    },
+    {
+      "name": "changelog:skip",
+      "color": "8792a2",
+      "description": "Leave this pull request out of the release notes entirely."
+    }
+  ]
+}

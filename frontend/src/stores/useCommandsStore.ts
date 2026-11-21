@@ -67,7 +67,7 @@ interface CommandsStore {
  * and text are Kommands', so what this side offers on it is to acknowledge an
  * update, keep it as its own once the original is gone, or take a copy.
  *
- * Write actions follow the convention in agent_docs/CLAUDE.md: they apply
+ * Write actions follow the convention in AGENTS.md: they apply
  * optimistically, and on a real rejection they revert, record the message and
  * rethrow so the caller can react. `hasWailsBridge()` is what separates a real
  * rejection from the browser-only `frontend-dev` preset, where every binding

@@ -21,7 +21,7 @@ jobs:
   # commit status that stays pending until both labels are on, and triggers on
   # `labeled`/`unlabeled` so adding the missing label turns it green without an
   # empty commit. The history that made it a gate is in that file and
-  # agent_docs/CLAUDE.md's "Commits & pull requests".
+  # AGENTS.md's "Pull requests".
 
   # Release tooling never runs until a release is being cut — which is the worst
   # moment to find out it is wrong. Both scripts are pure and offline, so both
@@ -208,7 +208,7 @@ jobs:
       # by .claude/suite-memory.py). It sat at 201 from #537 (2026-10-06) until
       # #595, because only the local health run reported it and every pull
       # request in between noted the failure as main's. A line added to
-      # agent_docs/CLAUDE.md is paid for in the same pull request from now on.
+      # AGENTS.md is paid for in the same pull request from now on.
       - name: Invariants, generated files and the memory budget
         run: ./.claude/suite-check.py --section invariants --section generated --section memory --require-runnable
 

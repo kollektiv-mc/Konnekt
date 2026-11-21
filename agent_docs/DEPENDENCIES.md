@@ -1,6 +1,6 @@
 # Konnekt — Dependency Policy & Inventory
 
-Referenced by `agent_docs/CLAUDE.md` ("Do not add new Go dependencies without
+Referenced by `AGENTS.md` ("Do not add new Go dependencies without
 checking `agent_docs/DEPENDENCIES.md`") and
 `agent_docs/HEALTH_CHECKLIST.md`'s Scalable pillar. Keep this current when
 dependencies are added, removed, or repurposed — it's a decision record, not a
@@ -13,7 +13,7 @@ system packages Go modules don't cover, since Wails links against the host's
 webkit2gtk: `libgtk-3-dev`/`gtk3-devel` and `libwebkit2gtk-4.1-dev`/
 `webkit2gtk4.1-devel` (`webkit2gtk4.1` + `gtk3` at runtime — see
 `build/linux/konnekt.spec`'s `Requires:`). No Rocky/RHEL 9 equivalent exists;
-see `agent_docs/CLAUDE.md`'s "Linux builds" section for why.
+see `AGENTS.md`'s "Linux builds" section for why.
 
 ## Policy
 

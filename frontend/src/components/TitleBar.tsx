@@ -160,7 +160,7 @@ export function TitleBar({ onOpenSettings, onOpenRemote }: Props) {
  * bindings dereference `window.go`, so with no Wails process behind the page
  * every one of these throws a TypeError synchronously — the `frontend-dev`
  * preset in `.claude/launch.json` and the jsdom tests both. This is the
- * sanctioned no-bridge case from `agent_docs/CLAUDE.md`, and the simplest one
+ * sanctioned no-bridge case from `AGENTS.md`, and the simplest one
  * of them: these commands hold no state to revert, write nothing, and in a
  * browser tab there is no window to minimise, so there is nothing to report
  * either.

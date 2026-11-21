@@ -83,7 +83,6 @@ body:
       label: How do you handle this today?
       description: Whatever you do instead, even if it is "give up and use the terminal". It tells us how much the gap costs.
 
-  # >>> suite:priority. Vendored from kollektiv by scripts/sync-priority.sh. Edit it there.
   - type: dropdown
     id: priority
     attributes:
@@ -95,7 +94,6 @@ body:
         - 'Minor: it would be nice, but it is not in my way'
     validations:
       required: true
-  # <<< suite:priority
 
   - type: textarea
     id: extra

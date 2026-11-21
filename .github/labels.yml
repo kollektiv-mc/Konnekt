@@ -12,17 +12,15 @@
 #
 #   Suite-owned: `type:*`, `area:ui`, `area:agents`, `p0`-`p3` and
 #   `changelog:skip` come from kollektiv's design/labels.json. Its
-#   scripts/sync-labels.sh runs `gh label create`/`gh label edit` from that
-#   source against every repo in suite.repos.json, which lists Konnekt. The
-#   colors and descriptions below are copied verbatim from it and have to stay
-#   that way: a local edit is both invisible and reported as drift on the next
-#   sync. kollektiv's docs/conventions.md is blunt about the scope of this:
+#   scripts/sync-labels.sh writes them into .github/labels.json, which
+#   .github/workflows/labels.yml applies to GitHub. The colors and descriptions
+#   below are copied verbatim from it and have to stay that way: a local edit is
+#   both invisible and reported as drift on the next sync. kollektiv's docs/conventions.md is blunt about the scope of this:
 #   "A repo does not invent its own type or priority labels."
 #
 #   Konnekt-owned: the per-area `area:*` labels, `milestone:*` and `status:*`.
-#   sync-labels.sh is explicitly non-destructive ("nothing here deletes a label
-#   — including ones outside this taxonomy, since a repo may carry its own
-#   labels this suite doesn't govern"), so these are safe to define here. They
+#   The labels workflow never deletes a label, so these are safe to define
+#   here. They
 #   also have no sync of their own: creating them on GitHub is a manual
 #   `gh label create` per label, which is why this file is the only reviewable
 #   record of what should exist.
@@ -41,7 +39,7 @@
 # The label is the *only* input to that sorting - nothing reads the title - so
 # these descriptions have to be decidable by whoever applies one, in the label
 # picker, without opening a document. They are the short form of the ladder in
-# CONTRIBUTING.md and agent_docs/CLAUDE.md: can a user tell the difference at
+# CONTRIBUTING.md and AGENTS.md: can a user tell the difference at
 # all (no -> chore/docs), was the app already meant to do it (yes -> bug),
 # otherwise feature. What went wrong before these were sharpened was #97, a
 # repair filed as a feature because the repair happened to add a row of UI.

@@ -10,7 +10,7 @@
 # Every pull request opened from here is labelled, because CI's `pr-labelled`
 # job fails a pull request carrying no `type:` and no `area:` and a bot cannot
 # add them after the fact. `type:chore` is correct by the ladder in
-# agent_docs/CLAUDE.md: a dependency bump changes nothing a user can observe,
+# AGENTS.md: a dependency bump changes nothing a user can observe,
 # however large the diff.
 #
 # Grouped, and this is the setting that decides whether the config survives

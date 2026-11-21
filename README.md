@@ -164,7 +164,7 @@ wails build    # a production binary
 ```
 
 Go and Wails v2 on the backend, React 19, TypeScript, Vite, Tailwind CSS v4 and Zustand on the frontend.
-[`agent_docs/CLAUDE.md`](agent_docs/CLAUDE.md) has the architecture and the checks CI runs.
+[`AGENTS.md`](AGENTS.md) has the architecture and the checks CI runs.
 
 ## Fair warning
 

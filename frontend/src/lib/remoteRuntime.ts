@@ -21,7 +21,7 @@ import { REMOTE_MARK } from './ipc'
  * seq, whether the replay had a gap, and the run id). Nothing here persists:
  * the session is a cookie the server sets, and the event position is a
  * variable, because a token or a cursor in `localStorage` or a URL is banned by
- * § S8.5 and by `agent_docs/CLAUDE.md`.
+ * § S8.5 and by `AGENTS.md`.
  */
 
 export interface RemoteRuntimeOptions {
@@ -192,7 +192,7 @@ async function send(method: string, args: unknown[]): Promise<unknown> {
  *   would rearrange the screen of whoever is sitting at it. Named presets are
  *   still saved for real: that is a deliberate act, not a drag.
  *
- * In memory only: `localStorage` is banned (`agent_docs/CLAUDE.md`), and a
+ * In memory only: `localStorage` is banned (`AGENTS.md`), and a
  * reload re-reading the desktop's values is the honest behaviour for a view
  * that was never saved.
  */

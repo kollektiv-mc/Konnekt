@@ -16,7 +16,7 @@
   // Only the open strip's clip plays, and only while it is on screen. Reduced
   // motion plays nothing: the poster and the points still change, and the demo
   // link is the way to see it move.
-  // aislop-ignore-next-line ai-slop/hardcoded-url -- the demo site's canonical address, see agent_docs/CLAUDE.md
+  // aislop-ignore-next-line ai-slop/hardcoded-url -- the demo site's canonical address, see AGENTS.md
   var DEMO = 'https://konnekt-demo.pages.dev'
   var SCENES = [
     { id: 'dashboard', tile: '' },
