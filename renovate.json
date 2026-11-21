@@ -3,7 +3,7 @@
   "description": "Project-owned (seeded from AllesSandro). Renovate only keeps this repo in step with the AllesSandro template; Dependabot owns dependency updates. See AllesSandro docs/updating.md.",
   "extends": ["config:recommended"],
   "enabledManagers": ["copier"],
-  "labels": ["type:chore", "area:ci"],
+  "labels": ["type:chore", "area:build"],
   "dependencyDashboard": false,
   "copier": {
     "commitMessageTopic": "AllesSandro template"
