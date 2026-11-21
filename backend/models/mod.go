@@ -125,6 +125,9 @@ type InstalledMod struct {
 	// version it was installed or identified as says it does not load on a
 	// dedicated server.
 	ClientOnly bool `json:"clientOnly"`
+	// Pack is true when a pack sync owns this file (#454): it is updated
+	// and removed with the pack, and offered no update of its own.
+	Pack bool `json:"pack"`
 }
 
 // ModUpdateInfo holds the result of an update check for one installed mod.

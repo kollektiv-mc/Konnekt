@@ -137,11 +137,15 @@ export function ListWorlds(arg1:string):Promise<Array<models.WorldSystem>>;
 
 export function LogClientError(arg1:string,arg2:string,arg3:string):Promise<void>;
 
+export function ModApplySync(arg1:string,arg2:string):Promise<models.ModSyncPlan>;
+
 export function ModCategories(arg1:string,arg2:string):Promise<Array<string>>;
 
 export function ModCheckUpdates(arg1:string):Promise<Array<models.ModUpdateInfo>>;
 
 export function ModClearCurseForgeKey():Promise<void>;
+
+export function ModClearPackSource(arg1:string):Promise<void>;
 
 export function ModCurseForgeStatus():Promise<models.CurseForgeStatus>;
 
@@ -159,15 +163,23 @@ export function ModListInstalled(arg1:string):Promise<Array<models.InstalledMod>
 
 export function ModMoreByAuthor(arg1:string,arg2:string,arg3:string):Promise<Array<models.ModProject>>;
 
+export function ModPlanSync(arg1:string):Promise<models.ModSyncPlan>;
+
 export function ModRescan(arg1:string):Promise<void>;
 
 export function ModResolveDependencies(arg1:string,arg2:string):Promise<Array<models.ResolvedDependency>>;
+
+export function ModRollbackSync(arg1:string):Promise<models.ModSyncRecord>;
 
 export function ModSearch(arg1:string,arg2:string,arg3:number,arg4:Array<string>,arg5:string,arg6:string):Promise<models.ModSearchResult>;
 
 export function ModSetCurseForgeKey(arg1:string):Promise<void>;
 
 export function ModSetEnabled(arg1:string,arg2:string,arg3:boolean):Promise<void>;
+
+export function ModSetPackSource(arg1:string,arg2:models.PackSource):Promise<void>;
+
+export function ModSyncState(arg1:string):Promise<models.ModSyncState>;
 
 export function ModUninstall(arg1:string,arg2:string):Promise<void>;
 

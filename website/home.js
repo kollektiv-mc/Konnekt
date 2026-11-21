@@ -282,39 +282,143 @@
     }
   }
 
-  // ── Scheduler graph ────────────────────────────────────────────────────
-  // The trigger lights, then its wire fills, then the next block, and so on,
-  // one step every STEP_MS; the graph holds lit for two steps and starts
-  // again.
-  // Under reduced motion it is drawn lit and still.
+  // ── Scheduler graphs ───────────────────────────────────────────────────
+  // Five example graphs take turns. A page load starts on a random one, never
+  // the one the last load started on, then steps through the rest in order.
+  // In the shown graph the trigger lights, then its wire, then the next block,
+  // one step every STEP_MS. A Read Attribute lights a step before its
+  // Condition, and at a fork the run takes one lane, picked at random. The
+  // graph holds lit for HOLD_STEPS, then the next one fades in.
+  // Under reduced motion the graph is drawn lit and still, and only the names
+  // below it change it.
   var STEP_MS = 900
-  var flow = document.getElementById('flow')
-  if (!flow) return
-  var parts = [].slice.call(flow.children)
-  var steps = parts.length + 3
+  var HOLD_STEPS = 3
+  var LAST_KEY = 'konnekt.flow.last'
+  var flowBox = document.getElementById('flows')
+  var picks = document.getElementById('flow-picks')
+  if (!flowBox || !picks) return
+  var flows = [].slice.call(flowBox.querySelectorAll('.flow'))
+  if (!flows.length) return
 
-  if (reduceMotion) {
-    parts.forEach(function (el) {
-      el.classList.add('is-lit')
-    })
-    return
+  // Steps for one run: an array of steps, each the elements lit together.
+  var stepsFor = function (flow) {
+    var steps = []
+    var walk = function (parts) {
+      parts.forEach(function (el) {
+        if (el.classList.contains('pair')) {
+          var feed = el.querySelector('.feed')
+          steps.push([].slice.call(feed.children))
+          steps.push([el.querySelector(':scope > .node')])
+        } else if (el.classList.contains('lanes')) {
+          var lanes = [].slice.call(el.children)
+          var lane = lanes[Math.floor(Math.random() * lanes.length)]
+          var inLane = [].slice.call(lane.children)
+          steps.push([lane, inLane[0]])
+          walk(inLane.slice(1))
+        } else {
+          steps.push([el])
+        }
+      })
+    }
+    walk([].slice.call(flow.children))
+    return steps
   }
 
+  // Storage can be blocked or full. The cost is only that the next load may
+  // start on this load's graph, so a failure answers NaN or false and the page
+  // carries on.
+  var readLast = function () {
+    try {
+      return parseInt(window.localStorage.getItem(LAST_KEY), 10)
+    } catch {
+      return NaN
+    }
+  }
+
+  var writeLast = function (i) {
+    try {
+      window.localStorage.setItem(LAST_KEY, String(i))
+      return true
+    } catch {
+      return false
+    }
+  }
+
+  var start = Math.floor(Math.random() * flows.length)
+  if (flows.length > 1 && start === readLast()) start = (start + 1) % flows.length
+  writeLast(start)
+
+  var buttons = flows.map(function (flow, i) {
+    var btn = document.createElement('button')
+    btn.type = 'button'
+    btn.className = 'flow-pick'
+    btn.textContent = flow.getAttribute('data-name')
+    btn.addEventListener('click', function () {
+      show(i)
+      restart()
+    })
+    picks.appendChild(btn)
+    return btn
+  })
+  picks.hidden = false
+
+  var current = -1
+  var steps = []
   var step = 0
   var timer = 0
-  var tick = function () {
-    step = (step + 1) % steps
-    parts.forEach(function (el, k) {
-      el.classList.toggle('is-lit', step > k)
+  var onScreen = false
+
+  var clearLit = function (flow) {
+    ;[].forEach.call(flow.querySelectorAll('.is-lit'), function (el) {
+      el.classList.remove('is-lit')
     })
   }
+
+  var show = function (i) {
+    current = i
+    flows.forEach(function (flow, k) {
+      var on = k === i
+      flow.classList.toggle('is-shown', on)
+      if (on) flow.removeAttribute('aria-hidden')
+      else flow.setAttribute('aria-hidden', 'true')
+      buttons[k].setAttribute('aria-pressed', on ? 'true' : 'false')
+    })
+    clearLit(flows[i])
+    steps = stepsFor(flows[i])
+    step = 0
+    if (reduceMotion) {
+      steps.forEach(function (els) {
+        els.forEach(function (el) {
+          el.classList.add('is-lit')
+        })
+      })
+    }
+  }
+
+  var tick = function () {
+    if (step < steps.length) {
+      steps[step].forEach(function (el) {
+        el.classList.add('is-lit')
+      })
+    }
+    step += 1
+    if (step >= steps.length + HOLD_STEPS) show((current + 1) % flows.length)
+  }
+
+  var restart = function () {
+    window.clearInterval(timer)
+    timer = onScreen && !reduceMotion ? window.setInterval(tick, STEP_MS) : 0
+  }
+
+  show(start)
 
   if ('IntersectionObserver' in window) {
     new IntersectionObserver(function (entries) {
-      window.clearInterval(timer)
-      timer = entries[0].isIntersecting ? window.setInterval(tick, STEP_MS) : 0
-    }).observe(flow)
+      onScreen = entries[0].isIntersecting
+      restart()
+    }).observe(flowBox)
   } else {
-    timer = window.setInterval(tick, STEP_MS)
+    onScreen = true
+    restart()
   }
 })()

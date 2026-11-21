@@ -55,6 +55,11 @@ type modManifestItem struct {
 	// installed or identified as. Kept because a Forge or NeoForge jar has no
 	// field of its own that says so.
 	ClientOnly bool `json:"clientOnly,omitempty"`
+	// Pack is the pack entry this file was installed or adopted for by a
+	// pack sync (#454), its Key in a ModSyncRow; empty for a file nothing
+	// syncs. A sync replaces and removes only files with one, so a mod added
+	// by hand outside the pack is never touched.
+	Pack string `json:"pack,omitempty"`
 }
 
 // modManifestVersion is the manifest's schema version, and the trigger for the
@@ -894,6 +899,7 @@ func (s *ModService) ListInstalled(serverID string) ([]models.InstalledMod, erro
 				mod.InstalledAt = manifestItem.InstalledAt
 				mod.IconURL = manifestItem.IconURL
 				mod.ClientOnly = mod.ClientOnly || manifestItem.ClientOnly
+				mod.Pack = manifestItem.Pack != ""
 				if manifestItem.Loader != "" {
 					mod.Loader = manifestItem.Loader
 				}
@@ -1238,7 +1244,10 @@ func (s *ModService) CheckUpdates(serverID string) ([]models.ModUpdateInfo, erro
 
 	result := make([]models.ModUpdateInfo, 0, len(installed))
 	for _, mod := range installed {
-		if mod.Source == "local" || mod.ProjectID == "" || mod.VersionID == "" {
+		// A pack-synced mod moves with its pack, never on its own: updating
+		// one by hand is drift the next sync would undo.
+		remote := mod.Source == "modrinth" || mod.Source == "curseforge"
+		if !remote || mod.ProjectID == "" || mod.VersionID == "" || mod.Pack {
 			continue
 		}
 		versions, verr := s.providerFor(mod.ProjectID).GetVersions(s.ctx, mod.ProjectID, mcVersion, loader)

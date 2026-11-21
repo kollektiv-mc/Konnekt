@@ -270,6 +270,10 @@ export function LogClientError(arg1, arg2, arg3) {
   return window['go']['main']['App']['LogClientError'](arg1, arg2, arg3);
 }
 
+export function ModApplySync(arg1, arg2) {
+  return window['go']['main']['App']['ModApplySync'](arg1, arg2);
+}
+
 export function ModCategories(arg1, arg2) {
   return window['go']['main']['App']['ModCategories'](arg1, arg2);
 }
@@ -280,6 +284,10 @@ export function ModCheckUpdates(arg1) {
 
 export function ModClearCurseForgeKey() {
   return window['go']['main']['App']['ModClearCurseForgeKey']();
+}
+
+export function ModClearPackSource(arg1) {
+  return window['go']['main']['App']['ModClearPackSource'](arg1);
 }
 
 export function ModCurseForgeStatus() {
@@ -314,12 +322,20 @@ export function ModMoreByAuthor(arg1, arg2, arg3) {
   return window['go']['main']['App']['ModMoreByAuthor'](arg1, arg2, arg3);
 }
 
+export function ModPlanSync(arg1) {
+  return window['go']['main']['App']['ModPlanSync'](arg1);
+}
+
 export function ModRescan(arg1) {
   return window['go']['main']['App']['ModRescan'](arg1);
 }
 
 export function ModResolveDependencies(arg1, arg2) {
   return window['go']['main']['App']['ModResolveDependencies'](arg1, arg2);
+}
+
+export function ModRollbackSync(arg1) {
+  return window['go']['main']['App']['ModRollbackSync'](arg1);
 }
 
 export function ModSearch(arg1, arg2, arg3, arg4, arg5, arg6) {
@@ -332,6 +348,14 @@ export function ModSetCurseForgeKey(arg1) {
 
 export function ModSetEnabled(arg1, arg2, arg3) {
   return window['go']['main']['App']['ModSetEnabled'](arg1, arg2, arg3);
+}
+
+export function ModSetPackSource(arg1, arg2) {
+  return window['go']['main']['App']['ModSetPackSource'](arg1, arg2);
+}
+
+export function ModSyncState(arg1) {
+  return window['go']['main']['App']['ModSyncState'](arg1);
 }
 
 export function ModUninstall(arg1, arg2) {

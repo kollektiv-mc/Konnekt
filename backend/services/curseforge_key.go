@@ -128,11 +128,3 @@ func (s *ModService) announceSources() {
 		s.bus.Emit(EventModSourcesChanged, nil)
 	}
 }
-
-// baseContext is the app's context, or Background before startup has set one.
-func (s *ModService) baseContext() context.Context {
-	if s.ctx != nil {
-		return s.ctx
-	}
-	return context.Background()
-}

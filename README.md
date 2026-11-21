@@ -1,3 +1,5 @@
+![Konnekt](docs/images/readme/banner.webp)
+
 # Konnekt
 
 A desktop dashboard for the Minecraft Java servers on your computer.
