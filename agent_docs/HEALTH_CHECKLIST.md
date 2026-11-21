@@ -649,17 +649,17 @@ The remaining, not-yet-closed follow-ups. Each item's full remediation write-up
 moves to `agent_docs/HEALTH_LOG.md` once it's done — keep this section short and
 current. Priorities mirror the pillars above.
 
-**P2: CurseForge jars are not identified, and no release key is wired**
+**P2: CurseForge jars are not identified, and the release key is pending**
 (filed 2026-11-20)
 
 The identify pass still asks Modrinth only, so a jar added by hand that
 CurseForge carries stays "local" and gets no updates; CurseForge's
 fingerprint endpoint (MurmurHash2 over the jar with whitespace removed) is
-the way in (#249, #250). Separately, `curseForgeBuiltInKey` in
-`backend/services/curseforge_key.go` is empty and nothing in the release
-workflow sets it: if Overwolf approves a key for Konnekt, pass it as
-`-ldflags "-X konnekt/backend/services.curseForgeBuiltInKey=..."` from a
-repository secret, never a committed value.
+the way in (#249, #250). Separately, Konnekt applied to Overwolf for its own key on
+2026-11-21. `release.yml` already passes the `CURSEFORGE_API_KEY` repository
+secret into `curseForgeBuiltInKey` on all three platforms, so approval needs
+only that secret added; until then the secret is unset and release builds
+ship with no key. Never commit the value.
 
 **P2 — The entry chunk is at its budget** (filed 2026-09-21)
 
