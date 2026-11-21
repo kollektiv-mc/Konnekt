@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react'
 import type { ModProject, ModVersion, ResolvedDependency } from './useMods'
-import { isConfirmInstallError } from './useMods'
+import { isConfirmInstallError, isManualDownloadError, isManualOnly } from './useMods'
+import { ManualDownloadLink } from './ManualDownloadLink'
+import { MANUAL_DOWNLOAD_REASON, openPage } from './manualDownload'
 import { ClientOnlyBadge } from './ClientOnlyBadge'
 import { DependencyDialog } from './DependencyDialog'
 import { ContentCard } from './ContentCard'
@@ -62,6 +64,8 @@ export function ContentDetailPanel({
   const [installing2, setInstalling2] = useState(false)
   const [actionError, setActionError] = useState<string | null>(null)
   const [depError, setDepError] = useState<string | null>(null)
+  const [manualUrl, setManualUrl] = useState<string | null>(null)
+  const manual = project.manualDownload && !!project.pageUrl
 
   useEffect(() => {
     setTab('about')
@@ -70,6 +74,7 @@ export function ContentDetailPanel({
     setDeps(null)
     setActionError(null)
     setDepError(null)
+    setManualUrl(null)
   }, [project.id])
 
   useEffect(() => {
@@ -88,7 +93,12 @@ export function ContentDetailPanel({
   }, [tab]) // intentionally omit stable refs
 
   const handleInstallClick = async () => {
+    if (manual) {
+      openPage(project.pageUrl)
+      return
+    }
     setActionError(null)
+    setManualUrl(null)
     setInstalling2(true)
     try {
       await onInstallLatest(project.id)
@@ -98,6 +108,8 @@ export function ContentDetailPanel({
         setPendingVersionId(e.versionId)
         setPendingClientOnly(e.clientOnly)
         setDepError(null)
+      } else if (isManualDownloadError(e)) {
+        setManualUrl(e.pageUrl)
       } else {
         setActionError(errMsg(e))
       }
@@ -214,13 +226,15 @@ export function ContentDetailPanel({
         <div className="border-border-subtle border-b-hairline shrink-0 px-4 py-2.5">
           <button
             onClick={handleInstallClick}
-            disabled={isInstalling}
+            disabled={isInstalling && !manual}
+            aria-label={manual ? `Download on CurseForge. ${MANUAL_DOWNLOAD_REASON}` : undefined}
             className={`bg-accent text-canvas w-full rounded py-1.5 text-xs font-semibold transition-opacity ${
-              isInstalling ? 'opacity-60' : 'opacity-100'
+              isInstalling && !manual ? 'opacity-60' : 'opacity-100'
             }`}
           >
-            {isInstalling ? 'Installing…' : 'Install'}
+            {manual ? 'Download on CurseForge ↗' : isInstalling ? 'Installing…' : 'Install'}
           </button>
+          {manualUrl && <ManualDownloadLink url={manualUrl} className="mt-1.5" />}
           {shownError && (
             <div role="alert" className="text-danger mt-1.5 text-xs">
               {shownError}
@@ -408,15 +422,19 @@ function VersionRow({
           </div>
         )}
       </div>
-      <button
-        onClick={onInstall}
-        disabled={installing}
-        className={`text-accent border-hairline shrink-0 rounded border-[color-mix(in_srgb,var(--accent)_30%,transparent)] bg-[color-mix(in_srgb,var(--accent)_15%,transparent)] px-2.5 py-1 text-xs font-medium transition-opacity ${
-          installing ? 'opacity-50' : 'opacity-100'
-        }`}
-      >
-        Install
-      </button>
+      {isManualOnly(version) ? (
+        <ManualDownloadLink url={version.pageUrl} label="Download" className="shrink-0 py-1" />
+      ) : (
+        <button
+          onClick={onInstall}
+          disabled={installing}
+          className={`text-accent border-hairline shrink-0 rounded border-[color-mix(in_srgb,var(--accent)_30%,transparent)] bg-[color-mix(in_srgb,var(--accent)_15%,transparent)] px-2.5 py-1 text-xs font-medium transition-opacity ${
+            installing ? 'opacity-50' : 'opacity-100'
+          }`}
+        >
+          Install
+        </button>
+      )}
     </div>
   )
 }

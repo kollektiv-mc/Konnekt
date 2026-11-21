@@ -78,7 +78,8 @@ Plugin and mod configs in YAML, JSON and TOML open in the same place.
 
 ### Mods and plugins
 
-Search Modrinth, pick a version, and Konnekt installs it with its dependencies.
+Search Modrinth or CurseForge, pick a version, and Konnekt installs it with its dependencies.
+CurseForge needs your own API key, added in Settings.
 Update, disable or remove what is installed, or add a jar of your own.
 
 ![Mods and plugins](docs/images/readme/mods.webp)

@@ -199,10 +199,12 @@ historical). Individual Beta tasks are filed in
 - **Tiles — beta.** Server Config tile enhancements (grouped fields, gamerule
   editor, MOTD preview), a File explorer tile, an Audit log tile, a Mod/plugin
   manager tile (Modrinth + Hangar + CurseForge), a Player profiles tile, a
-  Player skin preview tile. Hangar is PaperMC's own plugin repository and is
-  sequenced ahead of CurseForge: its API is public and unmetered where
-  CurseForge's needs a per-developer key a desktop binary cannot hold, and it
-  is the source that covers Paper/Velocity plugins Modrinth does not carry.
+  Player skin preview tile. CurseForge search and install shipped ahead of
+  Hangar (#253, #254) with the user's own API key, pasted in Settings, Mod
+  sources; a release-build key fills the empty slot in
+  `backend/services/curseforge_key.go` only if Overwolf approves one for
+  Konnekt. Hangar is PaperMC's own plugin repository, the source that covers
+  Paper/Velocity plugins Modrinth does not carry.
   SpigotMC is deliberately not on this list, and the reason is under
   "Explicitly out of scope" below.
 - **Features — beta.** Public server IP via playit.gg tunnel, extended (24h/7-day)
@@ -478,8 +480,8 @@ where the decision was actually made — this section records, it does not decid
 
 - **A cloud backend or hosted account system.** Konnekt is local-first: state
   persists as JSON in the Wails app data directory and nothing calls home except
-  the update check and the content providers behind the mods tile (Modrinth
-  today; Hangar and CurseForge under Beta). See `agent_docs/CLAUDE.md`'s
+  the update check and the content providers behind the mods tile (Modrinth,
+  and CurseForge with the user's own key, today; Hangar under Beta). See `agent_docs/CLAUDE.md`'s
   opening line and its "Do not" rule against `localStorage`/`sessionStorage`.
   Remote Access (above) is a tunnel to the user's own machine, not a service.
 - **SpigotMC as a content source.** SpigotMC publishes no API. The only route

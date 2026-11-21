@@ -1,6 +1,12 @@
 // aislop-ignore-file code-quality/duplicate-block -- #313
 import { useState, useEffect, useRef, useCallback } from 'react'
-import type { ModProject, ModVersion, ResolvedDependency } from './useMods'
+import type {
+  CurseForgeStatus,
+  ModProject,
+  ModSource,
+  ModVersion,
+  ResolvedDependency,
+} from './useMods'
 import { ContentCard } from './ContentCard'
 import { ContentDetailPanel } from './ContentDetailPanel'
 import { Pagination } from './Pagination'
@@ -17,6 +23,9 @@ interface Props {
   loading: boolean
   error: string | null
   categories: string[]
+  source: ModSource
+  onSourceChange: (source: ModSource) => void
+  curseForge: CurseForgeStatus | null
   selectedProject: ModProject | null
   projectLoading: boolean
   versions: ModVersion[]
@@ -39,6 +48,50 @@ interface Props {
 const DEFAULT_PANEL_WIDTH = 440
 const MIN_PANEL_WIDTH = 300 // narrowest the detail panel can get
 const MIN_GRID_WIDTH = 232 // narrowest the grid can get: 1 card (200px) + padding (24px) + gap (8px)
+
+const SOURCES: { value: ModSource; label: string }[] = [
+  { value: 'modrinth', label: 'Modrinth' },
+  { value: 'curseforge', label: 'CurseForge' },
+]
+
+// ─── Source picker ─────────────────────────────────────────────────────────────
+
+function SourcePicker({
+  source,
+  onChange,
+}: {
+  source: ModSource
+  onChange: (source: ModSource) => void
+}) {
+  return (
+    <div
+      role="radiogroup"
+      aria-label="Source"
+      className="border-border-subtle border-hairline flex shrink-0 overflow-hidden rounded"
+    >
+      {SOURCES.map((opt) => {
+        const active = opt.value === source
+        return (
+          <button
+            key={opt.value}
+            role="radio"
+            aria-checked={active}
+            onClick={() => {
+              if (!active) onChange(opt.value)
+            }}
+            className={`px-2 py-1 font-mono text-xs whitespace-nowrap transition-colors ${
+              active
+                ? 'text-accent bg-[color-mix(in_srgb,var(--accent)_12%,transparent)]'
+                : 'text-text-muted hover:bg-hover bg-transparent'
+            }`}
+          >
+            {opt.label}
+          </button>
+        )
+      })}
+    </div>
+  )
+}
 
 const SORT_OPTIONS: { value: string; label: string }[] = [
   { value: '', label: 'Relevance' },
@@ -196,6 +249,9 @@ export function BrowsePanel({
   loading,
   error,
   categories,
+  source,
+  onSourceChange,
+  curseForge,
   selectedProject,
   projectLoading,
   versions,
@@ -282,11 +338,23 @@ export function BrowsePanel({
 
   const gridCols = `repeat(${numCols}, 1fr)`
 
-  // ── Debounced search — query / categories / sort changes ─────────────────────
+  // CurseForge answers nothing without an API key, so with none the panel
+  // says where to add one instead of searching.
+  const needsKey = source === 'curseforge' && !(curseForge?.keySet || curseForge?.builtIn)
+  const sourceLabel = SOURCES.find((o) => o.value === source)?.label ?? 'Modrinth'
+
+  // Categories are each source's own, so a switch drops the selection.
+  const changeSource = (next: ModSource) => {
+    setSelectedCats([])
+    onSourceChange(next)
+  }
+
+  // ── Debounced search — query / categories / sort / source changes ────────────
   useEffect(() => {
+    if (needsKey) return
     const t = setTimeout(() => onSearch(query, selectedCats, 0, sortBy), 300)
     return () => clearTimeout(t)
-  }, [query, selectedCats, sortBy]) // intentionally omit onSearch
+  }, [query, selectedCats, sortBy, source, needsKey]) // intentionally omit onSearch
 
   // ── More by author ────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -315,6 +383,7 @@ export function BrowsePanel({
     <div className="flex h-full min-h-0 flex-col">
       {/* Search bar + Sort + Categories controls */}
       <div className="border-border-subtle border-b-hairline flex shrink-0 items-center gap-2 px-3 py-2">
+        <SourcePicker source={source} onChange={changeSource} />
         <div
           className="border-border-subtle bg-canvas border-hairline flex flex-1 items-center gap-2 rounded px-2 py-1"
           onFocusCapture={(e) => {
@@ -328,7 +397,7 @@ export function BrowsePanel({
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search Modrinth…"
+            placeholder={`Search ${sourceLabel}…`}
             className="text-text-primary caret-accent min-w-0 flex-1 bg-transparent font-mono text-xs outline-none"
           />
           {query && (
@@ -390,16 +459,21 @@ export function BrowsePanel({
       <div ref={mainRowRef} className="flex min-h-0 flex-1 overflow-hidden">
         <div ref={containerRef} className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
           <div className="min-h-0 flex-1 overflow-y-auto p-3">
-            {loading && displayResults.length === 0 && (
+            {needsKey && (
+              <div className="text-text-muted py-4 text-center text-xs">
+                CurseForge needs an API key. Add one in Settings, under Mod sources.
+              </div>
+            )}
+            {!needsKey && loading && displayResults.length === 0 && (
               <div className="text-text-muted animate-pulse py-4 text-center text-xs">
                 Searching…
               </div>
             )}
-            {!loading && !error && displayResults.length === 0 && (
+            {!needsKey && !loading && !error && displayResults.length === 0 && (
               <div className="text-text-muted py-4 text-center text-xs">
                 {query || selectedCats.length > 0
                   ? 'No results. Try different keywords or categories.'
-                  : 'Search Modrinth for mods and plugins.'}
+                  : `Search ${sourceLabel} for mods and plugins.`}
               </div>
             )}
 

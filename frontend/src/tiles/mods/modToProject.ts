@@ -18,5 +18,6 @@ export function modToProject(mod: InstalledMod) {
     dateModified: '',
     categories: [],
     gallery: [],
+    source: mod.provider || 'modrinth',
   })
 }

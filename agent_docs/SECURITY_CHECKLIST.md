@@ -13,7 +13,7 @@ turns out wrong or untestable is corrected here with the reason. Only
 running Konnekt. Two reaches matter:
 
 - **Network:** input that arrives from a third party. GitHub release metadata
-  and assets, the Modrinth API and CDN, the NeoForge Maven, server log lines
+  and assets, the Modrinth and CurseForge APIs and CDNs, the NeoForge Maven, server log lines
   written by players, and whatever a scheduler HTTP block talks to.
 - **Bridge:** a bound method on `App`. Today only the local WebView can call
   one, so a bridge-only gap is hardening, not a vulnerability. Two things
@@ -85,7 +85,9 @@ and checksum pair?
 **S1.3 Download URLs are pinned to scheme and host.**
 Holds when: every URL taken from an API response is checked for `https` and an
 expected host before it is fetched: GitHub release assets, Modrinth `FileURL`,
-NeoForge Maven.
+CurseForge `downloadUrl` (`curseForgeDownloadHosts`, the only download that
+carries the API key), NeoForge Maven. A CurseForge project page reaches the
+system browser only as https on curseforge.com (`curseForgePageURL`).
 Verify: `grep -rn 'DownloadURL\|FileURL\|BrowserDownloadURL\|maven.neoforged' --include=*.go backend | grep -v _test`
 and read each fetch.
 Probe: return `http://` or another host from a stubbed API (the tests use
@@ -97,11 +99,12 @@ response body is read with an unbounded `io.ReadAll`.
 Verify: `grep -rn 'http.Client{\|io.ReadAll(' --include=*.go backend | grep -v _test`.
 Probe: a server that never finishes the body, or sends 10 GB.
 
-**S1.5 Mod jars are verified against Modrinth's SHA-512, and a missing hash
+**S1.5 Mod jars are verified against the provider's hash, and a missing hash
 refuses.**
-Holds when: `downloadVerified` (`backend/services/modservice.go`) refuses a
-version whose `hashes.sha512` is empty instead of skipping the check, and a test
-covers both a mismatch and a missing hash.
+Holds when: `downloadVerified` (`backend/services/modservice.go`) checks
+Modrinth's SHA-512, or CurseForge's SHA-1 where that is all it publishes,
+refuses a version with neither instead of skipping the check, and a test covers
+a mismatch and a missing hash.
 Verify: read `downloadVerified`; `grep -n 'sha512\|SHA512' backend/services/modservice_test.go`.
 
 **S1.6 Loader installers are verified against a published hash.**
@@ -135,7 +138,10 @@ through `WritePrivateDataFile`, which is `0600`. So is each bucket destination's
 secret access key (#480): one file per destination under
 `<dataDir>/destination_secrets/` (a `0700` directory), named by the destination's
 id, which `DestinationService` validates before it names a path. `destinations.json`
-beside it holds no secret.
+beside it holds no secret. The CurseForge API key is `<dataDir>/curseforge_api_key`,
+written through `WritePrivateDataFile` and never returned over the bridge
+(`ModCurseForgeStatus` says only whether one is set, and its setter and clearer
+are in `neverRemote`).
 Verify: `grep -rn 'writeFileAtomic(\|OpenFile(\|WriteFile(' --include=*.go backend | grep -v _test`
 and check the mode at each call that can touch `server.properties`.
 

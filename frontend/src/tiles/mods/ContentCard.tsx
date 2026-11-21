@@ -1,7 +1,9 @@
 import { useState } from 'react'
 import type { ModProject, ResolvedDependency } from './useMods'
-import { isConfirmInstallError } from './useMods'
+import { isConfirmInstallError, isManualDownloadError } from './useMods'
 import { DependencyDialog } from './DependencyDialog'
+import { ManualDownloadLink } from './ManualDownloadLink'
+import { MANUAL_DOWNLOAD_REASON, openPage } from './manualDownload'
 import { ClientOnlyBadge } from './ClientOnlyBadge'
 import { fmtCount, relativeTime } from '../../lib/format'
 import { errMsg } from '../../lib/ipc'
@@ -37,6 +39,12 @@ export function ContentCard({
   // hook's installError reaches only the detail panel, and only when it is open.
   const [installError, setInstallError] = useState<string | null>(null)
   const [depError, setDepError] = useState<string | null>(null)
+  // Set when the newest file turned out to be one Konnekt may not download,
+  // though the project as a whole allows it.
+  const [manualUrl, setManualUrl] = useState<string | null>(null)
+  // The author turned off downloads in other apps for the whole project, so
+  // the + opens its page rather than installing.
+  const manual = project.manualDownload && !!project.pageUrl
 
   const busy = quickInstalling || installing
   // done = just installed → treat same as installed (grey dim +, no checkmark)
@@ -44,8 +52,13 @@ export function ContentCard({
 
   const handleQuickInstall = async (e: React.MouseEvent) => {
     e.stopPropagation()
+    if (manual) {
+      openPage(project.pageUrl)
+      return
+    }
     if (busy || alreadyInstalled) return
     setInstallError(null)
+    setManualUrl(null)
     setQuickInstalling(true)
     try {
       await onInstallLatest(project.id)
@@ -57,6 +70,8 @@ export function ContentCard({
         setPendingVersionId(err.versionId)
         setPendingClientOnly(err.clientOnly)
         setDepError(null)
+      } else if (isManualDownloadError(err)) {
+        setManualUrl(err.pageUrl)
       } else {
         setInstallError(errMsg(err))
       }
@@ -144,6 +159,8 @@ export function ContentCard({
           </Tooltip>
         )}
 
+        {manualUrl && <ManualDownloadLink url={manualUrl} className="mb-1.5 self-start" />}
+
         {/* Stats row */}
         <div className="mb-1.5 flex items-center gap-2">
           {project.clientOnly && <ClientOnlyBadge />}
@@ -181,9 +198,15 @@ export function ContentCard({
         {/* Quick-install button — bottom-left, green border, fades when card not hovered */}
         <button
           onClick={handleQuickInstall}
-          disabled={busy || alreadyInstalled}
+          disabled={!manual && (busy || alreadyInstalled)}
           aria-label={
-            showGrey ? 'Already installed' : done ? 'Installed!' : 'Install latest version'
+            manual
+              ? `Download on CurseForge. ${MANUAL_DOWNLOAD_REASON}`
+              : showGrey
+                ? 'Already installed'
+                : done
+                  ? 'Installed!'
+                  : 'Install latest version'
           }
           className={`absolute right-2 bottom-2 z-[1] flex h-[22px] w-[22px] items-center justify-center rounded-md bg-transparent pb-px text-sm leading-none [transition:opacity_200ms_ease] ${
             showGrey
@@ -205,7 +228,7 @@ export function ContentCard({
             }
           }}
         >
-          {quickInstalling ? '…' : '+'}
+          {quickInstalling ? '…' : manual ? '↗' : '+'}
         </button>
       </div>
     </>

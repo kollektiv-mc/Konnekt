@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react'
 import type { ResolvedDependency } from './useMods'
+import { isManualOnly } from './useMods'
+import { ManualDownloadLink } from './ManualDownloadLink'
 import { usePresence, useRetained } from '../../hooks/usePresence'
 
 interface Props {
@@ -65,7 +67,9 @@ function DependencyPrompt({
   const handleConfirm = () => {
     const ids = [primaryVersionId]
     for (const dep of dependencies) {
-      if (dep.alreadyInstalled) continue
+      // A file Konnekt may not download is the user's to fetch from its page;
+      // its id in the list would only fail the whole install.
+      if (dep.alreadyInstalled || isManualOnly(dep.version)) continue
       if (dep.required || optionalSelected.has(dep.version.id)) {
         ids.push(dep.version.id)
       }
@@ -75,6 +79,7 @@ function DependencyPrompt({
 
   const required = dependencies.filter((d) => d.required)
   const optional = dependencies.filter((d) => !d.required)
+  const manualRequired = required.some((d) => !d.alreadyInstalled && isManualOnly(d.version))
 
   // z-dialog because ModPreviewDialog (z-modal) is one of the surfaces that
   // opens this, and it renders before that dialog's backdrop, so the value is
@@ -136,6 +141,12 @@ function DependencyPrompt({
           </div>
         )}
 
+        {manualRequired && (
+          <p className="text-warning mb-3 text-xs">
+            Download the linked mods yourself, then add them with Add Files.
+          </p>
+        )}
+
         {error && (
           <p role="alert" className="text-danger mb-3 text-xs break-words">
             {error}
@@ -175,19 +186,22 @@ function DepRow({
   locked: boolean
   onChange?: () => void
 }) {
+  const manual = !dep.alreadyInstalled && isManualOnly(dep.version)
   return (
     <div
       className={`bg-surface flex items-center gap-2 rounded px-2 py-1.5 ${
         dep.alreadyInstalled ? 'opacity-50' : 'opacity-100'
       }`}
     >
-      <input
-        type="checkbox"
-        checked={dep.alreadyInstalled ? true : checked}
-        disabled={locked || dep.alreadyInstalled}
-        onChange={onChange}
-        className="accent-accent shrink-0"
-      />
+      {!manual && (
+        <input
+          type="checkbox"
+          checked={dep.alreadyInstalled ? true : checked}
+          disabled={locked || dep.alreadyInstalled}
+          onChange={onChange}
+          className="accent-accent shrink-0"
+        />
+      )}
       <div className="min-w-0 flex-1">
         <span className="text-text-primary text-xs">{dep.projectTitle}</span>
         {dep.version.versionNumber && (
@@ -196,6 +210,9 @@ function DepRow({
           </span>
         )}
       </div>
+      {manual && (
+        <ManualDownloadLink url={dep.version.pageUrl} label="Download" className="shrink-0" />
+      )}
       {dep.alreadyInstalled && (
         <span className="text-text-muted text-2xs shrink-0 rounded bg-white/[0.06] px-1 text-xs">
           installed

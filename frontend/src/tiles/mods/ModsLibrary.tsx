@@ -68,8 +68,10 @@ export function ModsLibrary({
 
   function openInBrowser(mod: InstalledMod) {
     if (!mod.projectId) return
-    // Switch to browse, then select the project to open the detail panel.
+    // Switch to browse on the mod's own source, then select the project to
+    // open the detail panel.
     setView('browse')
+    mods.setSource(mod.provider === 'curseforge' ? 'curseforge' : 'modrinth')
     mods.selectProject(modToProject(mod))
   }
 
@@ -226,6 +228,9 @@ export function ModsLibrary({
             loading={mods.searchLoading}
             error={mods.searchError}
             categories={mods.categories}
+            source={mods.source}
+            onSourceChange={mods.setSource}
+            curseForge={mods.curseForge}
             selectedProject={mods.selectedProject}
             projectLoading={mods.projectLoading}
             versions={mods.versions}

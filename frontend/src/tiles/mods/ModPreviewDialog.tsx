@@ -7,7 +7,9 @@ import type {
   ModUpdateInfo,
   ResolvedDependency,
 } from './useMods'
+import { isManualOnly } from './useMods'
 import { DependencyDialog } from './DependencyDialog'
+import { ManualDownloadLink } from './ManualDownloadLink'
 import { usePresence } from '../../hooks/usePresence'
 import { ClientOnlyBadge } from './ClientOnlyBadge'
 import { ModAboutBody } from './ModAboutBody'
@@ -80,12 +82,13 @@ function ModPreview({
   const [switchingVersionId, setSwitchingVersionId] = useState<string | null>(null)
   const [depError, setDepError] = useState<string | null>(null)
 
-  const isModrinth = mod.source === 'modrinth' && !!mod.projectId
+  // A provider's mod, Modrinth's or CurseForge's: one with a project to show.
+  const isRemote = mod.source !== 'local' && !!mod.projectId
   // Versions stay browsable for anything with a project, but switching needs a
   // version to switch *from*: a secondary file of a version (an EssentialsX
   // module, say) has a project and no version of its own, and "switching" it
   // would download the primary jar over a plugin that is not the same plugin.
-  const canSwitchVersion = isModrinth && !!mod.versionId
+  const canSwitchVersion = isRemote && !!mod.versionId
   const switchBusy = installing || changingVersion || switchingVersionId !== null
 
   useEffect(() => {
@@ -97,7 +100,7 @@ function ModPreview({
   }, [onClose, leaving])
 
   useEffect(() => {
-    if (tab === 'versions' && isModrinth && versions.length === 0 && !versionsLoading) {
+    if (tab === 'versions' && isRemote && versions.length === 0 && !versionsLoading) {
       onGetVersions(mod.projectId)
     }
   }, [tab]) // intentional: only re-run when tab changes
@@ -232,7 +235,7 @@ function ModPreview({
           </div>
 
           <div className="flex shrink-0 items-center gap-2">
-            {isModrinth && (
+            {isRemote && (
               <button
                 onClick={() => {
                   onOpenInBrowser()
@@ -257,7 +260,7 @@ function ModPreview({
         </div>
 
         {/* Tabs (only for Modrinth mods) */}
-        {isModrinth && (
+        {isRemote && (
           <div className="border-border-subtle border-b-hairline flex shrink-0 items-center gap-0 px-4">
             {(['about', 'versions'] as Tab[]).map((t) => (
               <button
@@ -275,7 +278,7 @@ function ModPreview({
 
         {/* Body */}
         <div className="min-h-0 flex-1 overflow-y-auto">
-          {!isModrinth ? (
+          {!isRemote ? (
             // Local mod — simple info card
             <div className="space-y-2 px-4 py-4">
               <div>
@@ -394,7 +397,14 @@ function ModPreview({
                             {v.datePublished ? ` · ${relativeTime(v.datePublished)}` : ''}
                           </div>
                         </div>
-                        {!isCurrent && canSwitchVersion && (
+                        {!isCurrent && canSwitchVersion && isManualOnly(v) && (
+                          <ManualDownloadLink
+                            url={v.pageUrl}
+                            label="Download"
+                            className="shrink-0"
+                          />
+                        )}
+                        {!isCurrent && canSwitchVersion && !isManualOnly(v) && (
                           <button
                             onClick={() => handleVersionInstall(v.id)}
                             disabled={switchBusy}

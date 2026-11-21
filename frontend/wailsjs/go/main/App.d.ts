@@ -139,11 +139,15 @@ export function LogClientError(arg1:string,arg2:string,arg3:string):Promise<void
 
 export function ModApplySync(arg1:string,arg2:string):Promise<models.ModSyncPlan>;
 
-export function ModCategories(arg1:string):Promise<Array<string>>;
+export function ModCategories(arg1:string,arg2:string):Promise<Array<string>>;
 
 export function ModCheckUpdates(arg1:string):Promise<Array<models.ModUpdateInfo>>;
 
+export function ModClearCurseForgeKey():Promise<void>;
+
 export function ModClearPackSource(arg1:string):Promise<void>;
+
+export function ModCurseForgeStatus():Promise<models.CurseForgeStatus>;
 
 export function ModGetAllVersions(arg1:string):Promise<Array<models.ModVersion>>;
 
@@ -167,7 +171,9 @@ export function ModResolveDependencies(arg1:string,arg2:string):Promise<Array<mo
 
 export function ModRollbackSync(arg1:string):Promise<models.ModSyncRecord>;
 
-export function ModSearch(arg1:string,arg2:string,arg3:number,arg4:Array<string>,arg5:string):Promise<models.ModSearchResult>;
+export function ModSearch(arg1:string,arg2:string,arg3:number,arg4:Array<string>,arg5:string,arg6:string):Promise<models.ModSearchResult>;
+
+export function ModSetCurseForgeKey(arg1:string):Promise<void>;
 
 export function ModSetEnabled(arg1:string,arg2:string,arg3:boolean):Promise<void>;
 
