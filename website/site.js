@@ -1,6 +1,6 @@
 /* Shared behaviour for the pages on site.css: the nav, the release line, and
-   the group that lifts as it reaches the middle of the screen. All of it is
-   enhancement; with this file missing every page still reads and links. */
+   the motion every page shares. All of it is enhancement; with this file
+   missing every page still reads and links. */
 ;(function () {
   var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
 
@@ -42,23 +42,6 @@
     })
   }
 
-  // A jump to one of the groups that lift (#features from the nav) puts it in
-  // the middle of the screen, where the lift is, rather than against the top.
-  // One taller than the screen starts a gap below the top instead, as every
-  // other anchor does through scroll-margin-top. Measured through offsetTop,
-  // which leaves out the lift's own transform.
-  function scrollToTarget(target, behavior) {
-    if (!target.hasAttribute('data-focus')) {
-      target.scrollIntoView({ behavior: behavior, block: 'start' })
-      return
-    }
-    var top = 0
-    for (var n = target; n; n = n.offsetParent) top += n.offsetTop
-    var gap = parseFloat(getComputedStyle(target).scrollMarginTop) || 0
-    var room = window.innerHeight - target.offsetHeight
-    window.scrollTo({ top: room >= 2 * gap ? top - room / 2 : top - gap, behavior: behavior })
-  }
-
   // Same-page anchors scroll rather than reload. Without this they are
   // ordinary links that land on the anchor, which is fine.
   document.addEventListener('click', function (e) {
@@ -68,33 +51,9 @@
     var target = document.getElementById(link.hash.slice(1))
     if (!target) return
     e.preventDefault()
-    scrollToTarget(target, reduceMotion ? 'auto' : 'smooth')
+    target.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'start' })
     history.pushState(null, '', link.hash)
   })
-
-  // Arriving from another page (/index.html#features from the docs), the
-  // browser has already put the group at the top; this moves it to where a
-  // click on this page would have. Again once everything has loaded, since
-  // the browser's own jump to the anchor can land after this script runs,
-  // unless the reader has started scrolling by then. A reload or a step back
-  // through history restores where the reader was, which stays.
-  var navEntry = performance.getEntriesByType && performance.getEntriesByType('navigation')[0]
-  var moved = !!navEntry && navEntry.type !== 'navigate'
-  function arriveAtHash() {
-    var target = window.location.hash && document.getElementById(window.location.hash.slice(1))
-    if (target && target.hasAttribute('data-focus') && !moved) scrollToTarget(target, 'auto')
-  }
-  ;['wheel', 'touchstart', 'keydown', 'mousedown'].forEach(function (type) {
-    window.addEventListener(
-      type,
-      function () {
-        moved = true
-      },
-      { once: true, passive: true },
-    )
-  })
-  arriveAtHash()
-  window.addEventListener('load', arriveAtHash)
 
   // ── Resize ─────────────────────────────────────────────────────────────
   // What opens, closes or refilters takes its box from the old height to the
@@ -391,7 +350,7 @@
       },
       { passive: true },
     )
-    // Scrolling and the focus lift move blocks under a still cursor.
+    // Scrolling moves blocks under a still cursor.
     window.addEventListener('scroll', scheduleGlow, { passive: true })
     html.addEventListener('pointerleave', function () {
       html.setAttribute('data-glow-idle', '')
@@ -423,53 +382,4 @@
         /* The markup already says what it says. */
       })
   }
-
-  // ── Focus ──────────────────────────────────────────────────────────────
-  // Of the [data-focus] groups, the one under the middle of the screen (or
-  // nearest it) lifts and the others soften. Nothing is focused while the
-  // whole page fits on screen, or under reduced motion.
-  var groups = [].slice.call(document.querySelectorAll('[data-focus]'))
-  if (!groups.length || reduceMotion) return
-
-  var current = null
-  var frame = 0
-
-  function nearest() {
-    var vh = window.innerHeight
-    if (document.documentElement.scrollHeight <= vh + 4) return null
-    var mid = vh / 2
-    var best = null
-    var bestDist = Infinity
-    groups.forEach(function (el) {
-      var r = el.getBoundingClientRect()
-      var dist =
-        r.top <= mid && r.bottom >= mid
-          ? 0
-          : Math.min(Math.abs(r.top - mid), Math.abs(r.bottom - mid))
-      if (dist < bestDist) {
-        best = el
-        bestDist = dist
-      }
-    })
-    return best
-  }
-
-  function update() {
-    frame = 0
-    var next = nearest()
-    if (next === current) return
-    current = next
-    groups.forEach(function (el) {
-      el.classList.toggle('is-focus', el === current)
-      el.classList.toggle('is-dim', current !== null && el !== current)
-    })
-  }
-
-  function schedule() {
-    if (!frame) frame = window.requestAnimationFrame(update)
-  }
-
-  window.addEventListener('scroll', schedule, { passive: true })
-  window.addEventListener('resize', schedule)
-  update()
 })()

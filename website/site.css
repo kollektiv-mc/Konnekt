@@ -37,16 +37,6 @@
   --nav-h: 72px;
   --hairline: 1px solid var(--border-subtle);
 
-  /* The focused group lifts and the others soften (site.js). The shadow is the
-     one drop shadow on the site; the suite has no shadow token on purpose, so
-     it stays here rather than in the token set. */
-  --lift: -6px;
-  --lift-shadow: 0 28px 56px -24px rgb(0 0 0 / 0.9);
-  --dim-blur: 1.5px;
-  --dim-opacity: 0.72;
-  --focus-ms: 500ms;
-  --ease-lift: cubic-bezier(0.2, 0.7, 0.2, 1);
-
   /* The light an outer block's edge picks up near the cursor (site.js). The
      size is the gradient's, and site.js's GLOW_REACH matches it. */
   --glow-size: 320px;
@@ -194,8 +184,7 @@ summary h3 {
 /* ── Loading: a pulse while GitHub answers, a fade when it has ───────────── */
 /* What a page fetches arrives behind a small pulsing square, the site's
    marker shape, and fades in when it lands rather than cutting in a moment
-   after the page. The fade is opacity alone, so it never fights the focus
-   lift's transform. */
+   after the page. */
 
 .loader {
   display: inline-flex;
@@ -288,37 +277,6 @@ summary h3 {
   [data-glow-idle] .block:not(.block .block):not(.glow-parts)::after,
   [data-glow-idle] .glow-parts > *::after {
     opacity: 0;
-  }
-}
-
-/* ── Focus: the group nearest the middle of the screen lifts ───────────── */
-
-[data-focus],
-[data-focus] > .block {
-  transition:
-    filter var(--focus-ms) ease,
-    opacity var(--focus-ms) ease,
-    transform var(--focus-ms) var(--ease-lift),
-    border-color var(--focus-ms) ease,
-    box-shadow var(--focus-ms) ease;
-}
-
-/* Not on phones: there a blurred block is one you are about to read, and a
-   column of them is mostly that. */
-@media (min-width: 861px) {
-  [data-focus].is-dim {
-    filter: blur(var(--dim-blur));
-    opacity: var(--dim-opacity);
-  }
-
-  [data-focus].is-focus {
-    transform: translateY(var(--lift));
-  }
-
-  [data-focus].is-focus.block,
-  [data-focus].is-focus > .block {
-    border-color: var(--border-hover);
-    box-shadow: var(--lift-shadow);
   }
 }
 
@@ -789,22 +747,8 @@ pre code {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  [data-focus],
-  [data-focus] > .block {
-    transition: none;
-  }
-
   .block:not(.block .block):not(.glow-parts)::after,
   .glow-parts > *::after {
     display: none;
-  }
-
-  [data-focus].is-dim {
-    filter: none;
-    opacity: 1;
-  }
-
-  [data-focus].is-focus {
-    transform: none;
   }
 }
