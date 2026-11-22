@@ -692,10 +692,6 @@
   text-align: center;
 }
 
-[data-focus].is-focus > .get {
-  border-color: rgb(var(--accent-rgb) / 0.18);
-}
-
 .get h2 {
   margin: 0;
   font-size: clamp(56px, 8vw, 112px);

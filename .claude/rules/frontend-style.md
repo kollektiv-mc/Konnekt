@@ -53,7 +53,7 @@ else, bar the one `@theme` block for the overlay layering scale below.
 the marketing site, which has no Tailwind and no build step; every page links
 it ahead of its base sheet, `/site.css`, the "Blocks" style of
 `docs/design/website/`. The base sheet keeps only the page vocabulary that is
-not a token (`--pad`, `--nav-h`, `--lift-shadow`), and a page's own sheet
+not a token (`--pad`, `--nav-h`, `--group-gap`), and a page's own sheet
 (`home.css`) follows it.
 The docs add one shared sheet between the two, `docs.css`, which is the
 template every docs page is laid out on; a page under `website/docs/` with

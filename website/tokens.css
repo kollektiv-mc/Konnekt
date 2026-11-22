@@ -9,7 +9,7 @@
  */
 
 /* Linked by every page ahead of /site.css, which reads these and adds the
-   page vocabulary that is not a token (--pad, --nav-h, --lift-shadow). */
+   page vocabulary that is not a token (--pad, --nav-h, --group-gap). */
 :root {
   --bg-base: #05060a;
   --bg-elevated: rgba(18, 20, 30, 0.82);
