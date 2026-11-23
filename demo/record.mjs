@@ -38,8 +38,11 @@
  * screencast both hand over the viewport at CSS size, one device pixel per
  * CSS pixel, and the recorder then re-encodes to VP8 at about a megabit —
  * 12px console text came out visibly soft. A clip screenshot can ask for
- * more pixels per CSS pixel: 1.5x by default (DEMO_SCALE changes it), which
- * is 1836x684 frames, near crisp in an 1120px box on a 2x display.
+ * more pixels per CSS pixel: 2x by default (DEMO_SCALE changes it), which
+ * is 2448x912 frames. VP9 and H.264 as browsers play them keep colour at
+ * half the resolution (4:2:0), and at 1.5x that smeared coloured text,
+ * status dots and chart lines; at 2x colour has one sample per CSS pixel.
+ * 4:4:4 would do the same at 1.5x, but Safari cannot play it.
  *
  * The scenes are the load-bearing part and the reason this runs in CI: a
  * tile whose controls move so that a scene cannot find them fails the demo
@@ -49,7 +52,8 @@
  * Environment: DEMO_FFMPEG names the ffmpeg binary (default: ffmpeg on PATH,
  * built with libvpx-vp9, libx264 and libwebp), DEMO_CHROMIUM overrides
  * Playwright's own Chromium, DEMO_SCALE sets pixels per CSS pixel, and
- * DEMO_KEEP_FRAMES keeps the PNGs under demo/.frames for inspection.
+ * DEMO_KEEP_FRAMES keeps the PNGs under demo/.frames, which demo/readme.mjs
+ * encodes from.
  */
 
 import { createRequire } from "node:module";
@@ -79,7 +83,7 @@ const require = createRequire(path.join(FRONTEND, "package.json"));
 const { chromium } = require("playwright");
 
 const FFMPEG = process.env.DEMO_FFMPEG || "ffmpeg";
-const SCALE = Number(process.env.DEMO_SCALE || 1.5);
+const SCALE = Number(process.env.DEMO_SCALE || 2);
 const VIEWPORT = { width: 1440, height: 900 };
 // One tile across all six columns at nine rows, in CSS pixels, measured in
 // the viewport above. Tile scenes assert their tile is this size; window
@@ -338,7 +342,8 @@ async function film(scene) {
 
   // ── Encode ────────────────────────────────────────────────────────────
   // Already cut to the frame; the filter only keeps both sides even for
-  // yuv420p.
+  // yuv420p. At 2x, VP9 at CRF 38 measured within half a dB of CRF 33 and a
+  // fifth smaller: the error is the chroma subsampling, not the quantiser.
   const vf = "scale=trunc(iw/2)*2:trunc(ih/2)*2";
   const input = [
     "-framerate",
@@ -360,7 +365,7 @@ async function film(scene) {
   // prettier-ignore
   ff([
     ...input, "-vf", vf, "-an",
-    "-c:v", "libvpx-vp9", "-b:v", "0", "-crf", "33", "-row-mt", "1",
+    "-c:v", "libvpx-vp9", "-b:v", "0", "-crf", "38", "-row-mt", "1",
     "-deadline", "good", "-cpu-used", "2", "-pix_fmt", "yuv420p",
     webm,
   ]);

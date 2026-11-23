@@ -1,11 +1,15 @@
 /* Makes the README's images from the demo.
  *
- *   node demo/build.mjs && node demo/record.mjs && node demo/readme.mjs
+ *   node demo/build.mjs && DEMO_KEEP_FRAMES=1 node demo/record.mjs &&
+ *   node demo/readme.mjs
  *
  * Each filmed scene becomes an animated WebP, because a README plays no video
- * that lives in the repository. Two stills come from the demo itself: the
- * banner, and the scheduler editor, which has no scene. Everything
- * lands in docs/images/readme/, overwriting what is there.
+ * that lives in the repository. It is encoded from the recorder's lossless
+ * frames: encoded from the mp4, every frame carried that clip's compression
+ * noise, which blurred the colours and kept WebP from reusing the parts of
+ * the frame that did not change. Two stills come from the demo itself: the
+ * banner, and the scheduler editor, which has no scene. Everything lands in
+ * docs/images/readme/, overwriting what is there.
  *
  * Environment: DEMO_FFMPEG and DEMO_CHROMIUM as for record.mjs.
  */
@@ -20,6 +24,7 @@ const DEMO = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(DEMO, "..");
 const DIST = path.join(DEMO, "dist");
 const OUT = path.join(ROOT, "docs", "images", "readme");
+const FRAMES = path.join(DEMO, ".frames");
 const FFMPEG = process.env.DEMO_FFMPEG || "ffmpeg";
 
 const require = createRequire(path.join(ROOT, "frontend", "package.json"));
@@ -42,25 +47,30 @@ mkdirSync(OUT, { recursive: true });
 
 // ── Clips ───────────────────────────────────────────────────────────────
 for (const scene of SCENES) {
-  const clip = path.join(DIST, "scenes", `${scene.id}.mp4`);
-  if (!existsSync(clip)) {
-    console.error(`readme: no ${scene.id}.mp4, run \`node demo/record.mjs\``);
+  const frames = path.join(FRAMES, scene.id);
+  if (!existsSync(path.join(frames, "f00000.png"))) {
+    console.error(
+      `readme: no frames for ${scene.id}, run \`DEMO_KEEP_FRAMES=1 node demo/record.mjs\``,
+    );
     process.exit(1);
   }
   const out = path.join(OUT, `${scene.id}.webp`);
+  // 1224px is the clip's width in CSS pixels, whatever DEMO_SCALE filmed it at.
   execFileSync(FFMPEG, [
     "-y",
     "-loglevel",
     "error",
+    "-framerate",
+    "30",
     "-i",
-    clip,
+    path.join(frames, "f%05d.png"),
     "-vf",
-    "fps=15,scale=960:-2:flags=lanczos",
+    "fps=15,scale=1224:-2:flags=lanczos",
     "-an",
     "-c:v",
     "libwebp_anim",
     "-quality",
-    "70",
+    "80",
     "-compression_level",
     "6",
     "-loop",
