@@ -110,6 +110,47 @@ h2.label {
   padding: 28px var(--pad);
 }
 
+/* Fair warning: closed, the label band alone; a + or − says which way it
+   goes, as the download page's Verify band does. */
+
+.doc-disclaimer details {
+  flex: 1 1 100%;
+  min-width: 0;
+}
+
+.doc-disclaimer summary {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  padding: 22px 28px;
+  background: var(--bg-surface);
+  list-style: none;
+  cursor: pointer;
+}
+
+.doc-disclaimer summary::-webkit-details-marker {
+  display: none;
+}
+
+.doc-disclaimer summary::after {
+  content: '+';
+  font-family: var(--font-site-mono);
+  color: var(--text-secondary);
+}
+
+.doc-disclaimer details[open] summary {
+  border-bottom: var(--hairline);
+}
+
+.doc-disclaimer details[open] summary::after {
+  content: '\2212';
+}
+
+.doc-disclaimer summary:hover h2 {
+  color: var(--accent);
+}
+
 /* ── Page head: kind and trail, title, lead, and the facts beside them ──── */
 
 .doc-head {
