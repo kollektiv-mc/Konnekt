@@ -22,15 +22,15 @@ import * as state from "./state.js";
 import * as frame from "./frame.js";
 import {
   SERVER_ID,
-  CREATIVE_ID,
-  SERVER_CONFIG,
   SERVER_CONFIGS,
   STATS_HISTORY,
   PLAYERS,
+  daysAgo,
+  minutesAgo,
   configFor,
   summaryFor,
 } from "./fixtures/server.js";
-import { WORLDS, BACKUP_WORLDS, CREATIVE_WORLDS } from "./fixtures/worlds.js";
+import { WORLDS, BACKUP_WORLDS, SURVIVAL_WORLDS } from "./fixtures/worlds.js";
 import { BACKUPS } from "./fixtures/backups.js";
 import { RELEASE_NOTES } from "./fixtures/releases.js";
 import {
@@ -38,9 +38,16 @@ import {
   MOD_UPDATES,
   PACK_PLAN,
   PACK_STATE,
+  SURVIVAL_PLUGINS,
+  SURVIVAL_PLUGIN_UPDATES,
 } from "./fixtures/mods.js";
-import { CONFIG_FILES, readConfigFile } from "./fixtures/config.js";
-import { GRAPHS, NEXT_RUNS } from "./fixtures/scheduler.js";
+import { configFiles, readConfigFile } from "./fixtures/config.js";
+import { DESTINATIONS, NEXT_RUNS } from "./fixtures/scheduler.js";
+import {
+  COMMAND_BUTTONS,
+  KOMMANDS_SAVED,
+  KOMMANDS_STATUS,
+} from "./fixtures/commands.js";
 import BLOCK_DEFS from "./fixtures/blockdefs.json" with { type: "json" };
 
 /** Resolves a copy, so a tile that mutates what it is handed cannot poison the
@@ -71,9 +78,9 @@ const mutate =
   async (...args) =>
     structuredClone(await fn(...args));
 
-/** Only the first server has history, a roster, backups and plugins; the
- *  second is offline and empty, which is what makes a switch visible. */
-const survival = (id) => id === SERVER_ID;
+/** Only the first server has history, a roster and backups; the second is
+ *  offline and mostly empty, which is what makes a switch visible. */
+const first = (id) => id === SERVER_ID;
 
 export const api = {
   // ── Server lifecycle ──────────────────────────────────────────────────
@@ -94,7 +101,7 @@ export const api = {
     running: state.running(id),
   })),
   GetLastStop: read(() => state.lastStop(state.activeServer())),
-  GetStatsHistory: read((id) => (survival(id) ? STATS_HISTORY : [])),
+  GetStatsHistory: read((id) => (first(id) ? STATS_HISTORY : [])),
   GetConsoleHistory: read([]), // console is fed by log:line; see events.js
   GetServerLogTail: read([]), // the demo server writes no log file
 
@@ -115,15 +122,30 @@ export const api = {
   AbortInstall: refuse("Cancelling an install"),
 
   // ── Loader ────────────────────────────────────────────────────────────
-  GetLoaderStatus: read((id) => ({
-    loader: configFor(id).loader,
-    installedVersion: configFor(id).loaderVersion,
-    mcVersion: configFor(id).mcVersion,
-    source: "",
-    managed: false,
-    reason: `Konnekt cannot update ${configFor(id).loader} servers yet.`,
-  })),
-  ListLoaderVersions: read([]),
+  // NeoForge is the loader Konnekt manages (loader.go), and a run.sh install
+  // is the "script" source it can update; Paper it cannot.
+  GetLoaderStatus: read((id) => {
+    const { loader, loaderVersion, mcVersion } = configFor(id);
+    const managed = loader === "neoforge";
+    return {
+      loader,
+      installedVersion: loaderVersion,
+      mcVersion,
+      source: managed ? "script" : "",
+      managed,
+      reason: managed ? "" : `Konnekt cannot update ${loader} servers yet.`,
+    };
+  }),
+  ListLoaderVersions: read((id) =>
+    configFor(id).loader === "neoforge"
+      ? ["21.1.267", "21.1.266", "21.1.265"].map((version, i) => ({
+          version,
+          mcVersion: "1.21.1",
+          stable: true,
+          latest: i === 0,
+        }))
+      : [],
+  ),
   UpdateLoader: refuse("Updating the loader"),
 
   // ── Players ───────────────────────────────────────────────────────────
@@ -136,8 +158,8 @@ export const api = {
   PardonPlayer: refuse("Pardoning a player"),
 
   // ── Worlds ────────────────────────────────────────────────────────────
-  ListWorlds: read((id) => (survival(id) ? WORLDS : CREATIVE_WORLDS)),
-  GetBackupWorlds: read((id) => (survival(id) ? BACKUP_WORLDS : [])),
+  ListWorlds: read((id) => (first(id) ? WORLDS : SURVIVAL_WORLDS)),
+  GetBackupWorlds: read((id) => (first(id) ? BACKUP_WORLDS : [])),
   SetActiveWorld: refuse("Switching worlds"),
   RenameWorld: refuse("Renaming a world"),
   DuplicateWorld: refuse("Duplicating a world"),
@@ -146,7 +168,7 @@ export const api = {
   OpenWorldFolder: refuse("Opening the world folder"),
 
   // ── Backups ───────────────────────────────────────────────────────────
-  ListBackups: read((id) => (survival(id) ? BACKUPS : [])),
+  ListBackups: read((id) => (first(id) ? BACKUPS : [])),
   CreateBackup: refuse("Creating a backup"),
   RestoreBackup: refuse("Restoring a backup"),
   DeleteBackup: refuse("Deleting a backup"),
@@ -154,8 +176,8 @@ export const api = {
   OpenBackupDir: refuse("Opening the backup folder"),
 
   // ── Config files ──────────────────────────────────────────────────────
-  ListConfigFiles: read(CONFIG_FILES),
-  ReadConfigFile: read(async (_id, relPath) => readConfigFile(relPath)),
+  ListConfigFiles: read((id) => configFiles(id)),
+  ReadConfigFile: read(async (id, relPath) => readConfigFile(id, relPath)),
   WriteConfigFile: refuse("Saving a config file"),
 
   // ── Scheduler ─────────────────────────────────────────────────────────
@@ -188,8 +210,12 @@ export const api = {
 
   // ── Mods and plugins ──────────────────────────────────────────────────
   // Browsing is live; installing is not.
-  ModListInstalled: read((id) => (survival(id) ? INSTALLED_MODS : [])),
-  ModCheckUpdates: read((id) => (survival(id) ? MOD_UPDATES : [])),
+  ModListInstalled: read((id) =>
+    first(id) ? INSTALLED_MODS : SURVIVAL_PLUGINS,
+  ),
+  ModCheckUpdates: read((id) =>
+    first(id) ? MOD_UPDATES : SURVIVAL_PLUGIN_UPDATES,
+  ),
   ModRescan: async () => undefined, // a no-op scan is honest: nothing changed
   // Only Modrinth is live here. CurseForge needs an API key the demo does not
   // have, so it reports none and the tile says so instead of searching.
@@ -225,10 +251,10 @@ export const api = {
   ModSetEnabled: refuse("Enabling a plugin"),
   ModUninstall: refuse("Removing a plugin"),
   ModSyncState: read((id) =>
-    id === CREATIVE_ID ? PACK_STATE : { source: null, history: [] },
+    first(id) ? PACK_STATE : { source: null, history: [] },
   ),
   ModPlanSync: read((id) => {
-    if (id !== CREATIVE_ID) throw new Error("no pack is set for this server");
+    if (!first(id)) throw new Error("no pack is set for this server");
     return PACK_PLAN;
   }),
   ModSetPackSource: refuse("Choosing a pack"),
@@ -237,30 +263,14 @@ export const api = {
   ModRollbackSync: refuse("Rolling back a sync"),
 
   // ── Commands ──────────────────────────────────────────────────────────
-  // `seeded: false` with no items is what makes useCommandsStore synthesise
-  // the app's own default button grid. A rejection here would leave the tile
-  // empty instead, so this is a fixture that deliberately returns nothing.
-  GetCommandButtons: read({ seeded: false, items: [] }),
+  // A seeded set with three buttons linked from Kommands (fixtures/commands.js).
+  GetCommandButtons: read(COMMAND_BUTTONS),
   GetCustomCommands: read([]),
-  // Succeeds, and it has to: seeding is a *write*. The store synthesises the
-  // default grid and immediately saves it back, so refusing here fired the
-  // demo notice the instant the page loaded, before anyone had clicked
-  // anything. Editing the buttons then sticks for the session, which is the
-  // same bargain the layout and scheduler writes make.
+  // Succeeds, so editing the buttons sticks for the session in the store,
+  // which is the same bargain the layout and scheduler writes make.
   SaveCommandButtons: mutate(() => undefined),
-  RefreshKommands: read({
-    installed: false,
-    path: "",
-    unsupported: false,
-    version: 0,
-    error: "",
-    savedCount: 0,
-    linkedCount: 0,
-    rejected: 0,
-    brokenCount: 0,
-    changedCount: 0,
-  }),
-  GetKommandsCommands: read([]),
+  RefreshKommands: read(KOMMANDS_STATUS),
+  GetKommandsCommands: read(KOMMANDS_SAVED),
 
   // ── Layout and tiles ──────────────────────────────────────────────────
   // All of these succeed. Dragging, resizing and adding tiles is the headline
@@ -300,23 +310,38 @@ export const api = {
     "Tahoma",
     "Verdana",
   ]),
-  // Remote Access is the desktop's own, and the demo has no listener to start:
-  // the pane renders in its off state and every action says why not.
+  // Remote Access shown running through a named tunnel on the user's own
+  // domain. The demo has no listener, so every action refuses and says why.
   GetRemoteAccessState: read({
-    passwordSet: false,
-    running: false,
-    addr: "",
-    clients: 0,
-    devices: [],
+    passwordSet: true,
+    running: true,
+    addr: "127.0.0.1:8765",
+    clients: 1,
+    devices: [
+      {
+        id: "dev-phone",
+        name: "Phone",
+        approvedAt: daysAgo(20),
+        lastSeen: minutesAgo(12),
+        sessions: 1,
+      },
+      {
+        id: "dev-laptop",
+        name: "Work laptop",
+        approvedAt: daysAgo(41),
+        lastSeen: daysAgo(3),
+        sessions: 0,
+      },
+    ],
     pendingDevices: [],
     approvals: [],
     tunnel: {
-      status: "off",
-      url: "",
+      status: "running",
+      url: "https://konnekt.example.gg",
       error: "",
       percent: 0,
       version: "",
-      named: { hostname: "", port: 0, tokenSet: false },
+      named: { hostname: "konnekt.example.gg", port: 8765, tokenSet: true },
     },
     connectors: { enabled: false, url: "", grants: [] },
     localMcp: { enabled: false, running: false, addr: "", command: "", executable: "" },
@@ -339,8 +364,8 @@ export const api = {
   RevokeRemoteSessions: refuse("Remote access"),
   AnswerRemoteApproval: refuse("Remote access"),
   // Bucket destinations hold a credential and test it against a live endpoint,
-  // so the demo lists none and refuses every write.
-  ListDestinations: read([]),
+  // so the demo lists the DH graph's one and refuses every write.
+  ListDestinations: read(DESTINATIONS),
   SaveDestination: refuse("Saving a bucket destination"),
   DeleteDestination: refuse("Deleting a bucket destination"),
   TestDestination: refuse("Testing a bucket destination"),

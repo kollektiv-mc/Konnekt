@@ -14,7 +14,7 @@
  *
  * The maximized tile's Server view shows kind === 'server' and its Worlds view
  * shows kind === 'world', so the world-kind entries fill that segment and the
- * Overview section's KindTag. They span three of the survival server's worlds
+ * Overview section's KindTag. They span three of the first server's worlds
  * (fixtures/worlds.js), two of them twice, so the world filter has something
  * to narrow.
  */
@@ -54,7 +54,7 @@ export const BACKUPS = [
   }),
   entry(47144, daysAgo(3), 96.05, { tags: ["auto", "nightly"] }),
   entry(46802, daysAgo(6), 94.7, {
-    displayName: "Pre-plugin-sweep",
+    displayName: "Before Create 6",
     tags: ["manual"],
   }),
   // World-kind entries: the Worlds segment of the maximized tile, and the

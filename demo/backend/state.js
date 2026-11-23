@@ -17,8 +17,8 @@ import {
   SERVER_ID,
   SERVER_STATUS,
   STARTED_AT,
-  CREATIVE_ID,
-  CREATIVE_STATUS,
+  SURVIVAL_ID,
+  SURVIVAL_STATUS,
   PLAYERS,
   configFor,
   bootLines,
@@ -47,9 +47,9 @@ const servers = new Map([
     },
   ],
   [
-    CREATIVE_ID,
+    SURVIVAL_ID,
     {
-      status: structuredClone(CREATIVE_STATUS),
+      status: structuredClone(SURVIVAL_STATUS),
       startedAt: 0,
       lastStop: { expected: true, exitCode: 0 },
     },

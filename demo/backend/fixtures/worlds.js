@@ -39,7 +39,7 @@ export const WORLDS = [
     totalSize: Math.round(4.21 * GB),
     modified: minutesAgo(2),
     dimensions: dimensions(
-      "/home/mc/survival/Overworld",
+      "/home/mc/creative/Overworld",
       [Math.round(3.02 * GB), Math.round(880 * MB), Math.round(340 * MB)],
       minutesAgo(2),
     ),
@@ -47,7 +47,7 @@ export const WORLDS = [
       found: true,
       levelName: "Overworld",
       version: "1.21.1",
-      gameMode: "survival",
+      gameMode: "creative",
       difficulty: "normal",
       hardcore: false,
       lastPlayed: minutesAgo(2),
@@ -63,7 +63,7 @@ export const WORLDS = [
     totalSize: Math.round(1.84 * GB),
     modified: daysAgo(4),
     dimensions: dimensions(
-      "/home/mc/survival/Middleworld",
+      "/home/mc/creative/Middleworld",
       [Math.round(1.41 * GB), Math.round(310 * MB), Math.round(122 * MB)],
       daysAgo(4),
     ),
@@ -87,7 +87,7 @@ export const WORLDS = [
     totalSize: Math.round(822 * MB),
     modified: daysAgo(23),
     dimensions: dimensions(
-      "/home/mc/survival/Underworld",
+      "/home/mc/creative/Underworld",
       [Math.round(602 * MB), Math.round(158 * MB), Math.round(62 * MB)],
       daysAgo(23),
     ),
@@ -119,32 +119,31 @@ export const BACKUP_WORLDS = WORLDS.map((w) => ({
   meta: { ...w.meta, lastPlayed: hoursAgo(1) },
 }));
 
-/* The second server's one world, an overworld alone: the flat creative build
-   world that server exists for, and the case WorldsScene skips the planetary
-   view for. */
-export const CREATIVE_WORLDS = [
+/* The second server's one world, an overworld alone: the case WorldsScene
+   skips the planetary view for. */
+export const SURVIVAL_WORLDS = [
   {
-    name: "Creative",
+    name: "Survival",
     active: true,
     totalSize: Math.round(640 * MB),
     modified: daysAgo(1),
     dimensions: [
       {
         kind: "overworld",
-        path: "/home/mc/creative/Creative",
+        path: "/home/mc/survival/Survival",
         size: Math.round(640 * MB),
         modified: daysAgo(1),
       },
     ],
     meta: {
       found: true,
-      levelName: "Creative",
+      levelName: "Survival",
       version: "1.21.1",
-      gameMode: "creative",
-      difficulty: "peaceful",
+      gameMode: "survival",
+      difficulty: "normal",
       hardcore: false,
       lastPlayed: daysAgo(1),
-      seed: "creative-flat",
+      seed: "2851137740921385504",
       spawnX: 0,
       spawnY: 64,
       spawnZ: 0,
