@@ -551,6 +551,7 @@ pre code {
 .search-side {
   display: grid;
   grid-template-rows: minmax(20px, 1fr) auto minmax(20px, 1fr);
+  justify-content: stretch;
   padding-block: clamp(20px, 3vw, 40px);
 }
 
@@ -561,6 +562,7 @@ pre code {
 }
 
 .search-side .band-link {
+  grid-row: 3;
   align-self: start;
 }
 

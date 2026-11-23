@@ -70,13 +70,7 @@
 }
 
 .snapshot-body {
-  display: flex;
-  flex-wrap: wrap;
   border-top: 1px solid rgb(var(--sun-rgb) / 0.18);
-}
-
-.snapshot-body .changes {
-  flex: 1 1 420px;
 }
 
 /* ── Releases ───────────────────────────────────────────────────────────── */
@@ -199,8 +193,6 @@
 
 .release-sections {
   flex: 1 1 auto;
-  display: flex;
-  flex-wrap: wrap;
 }
 
 .release-sections > .md {
@@ -219,9 +211,11 @@
 }
 
 .changes {
-  flex: 1 1 360px;
-  min-width: 0;
   padding: 8px var(--pad) 24px;
+}
+
+.changes + .changes {
+  border-top: var(--hairline);
 }
 
 .changes-head {
@@ -264,7 +258,7 @@
   font-size: 0.9em;
 }
 
-/* One per release, under every section and across both columns. */
+/* One per release, under every section. */
 .changes-more {
   width: 100%;
   min-height: 44px;
