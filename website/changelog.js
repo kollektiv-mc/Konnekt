@@ -141,7 +141,7 @@
   // An older release's build for this visitor's system, downloaded directly.
   // Releases before the Windows installer have only the bare exe, which was
   // their Windows download. No build for the system, or no system guessed:
-  // no button, and On GitHub lists what there is.
+  // no button, and the GitHub button lists what there is.
   function olderBuild(rel) {
     var platform = R.platformById(R.detectPlatform())
     var assets = rel.assets || []
@@ -202,7 +202,7 @@
         actions.appendChild(old)
       }
     }
-    var gh = el('a', 'btn btn-secondary btn-small', 'On GitHub')
+    var gh = el('a', 'btn btn-secondary btn-small', 'GitHub')
     gh.href = rel.html_url || R.RELEASES_URL
     gh.target = '_blank'
     gh.rel = 'noopener'
