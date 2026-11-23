@@ -70,7 +70,13 @@
 }
 
 .snapshot-body {
+  display: flex;
+  flex-wrap: wrap;
   border-top: 1px solid rgb(var(--sun-rgb) / 0.18);
+}
+
+.snapshot-body .changes {
+  flex: 1 1 420px;
 }
 
 /* ── Releases ───────────────────────────────────────────────────────────── */
@@ -163,17 +169,20 @@
   border-bottom: var(--hairline);
 }
 
+/* Two columns lined up with Features and Fixes, filled top to bottom; one
+   where two would not fit. */
 .release-highlights ul {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
+  columns: 2 260px;
+  column-gap: calc(2 * var(--pad));
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
 .release-highlights li {
+  break-inside: avoid;
   display: flex;
+  padding-bottom: 6px;
   align-items: baseline;
   gap: 14px;
   font-size: 18px;
@@ -193,6 +202,8 @@
 
 .release-sections {
   flex: 1 1 auto;
+  display: flex;
+  flex-wrap: wrap;
 }
 
 .release-sections > .md {
@@ -211,11 +222,9 @@
 }
 
 .changes {
+  flex: 1 1 360px;
+  min-width: 0;
   padding: 8px var(--pad) 24px;
-}
-
-.changes + .changes {
-  border-top: var(--hairline);
 }
 
 .changes-head {
@@ -258,7 +267,7 @@
   font-size: 0.9em;
 }
 
-/* One per release, under every section. */
+/* One per release, under every section and across both columns. */
 .changes-more {
   width: 100%;
   min-height: 44px;
