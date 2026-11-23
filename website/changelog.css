@@ -169,11 +169,32 @@
   border-bottom: var(--hairline);
 }
 
-.release-highlights p {
+.release-highlights ul {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
   margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.release-highlights li {
+  display: flex;
+  align-items: baseline;
+  gap: 14px;
   font-size: 18px;
   line-height: 1.5;
   color: var(--text-primary);
+}
+
+/* The site's square marker, in the accent, centred on the first line. */
+.release-highlights li::before {
+  content: '';
+  flex: none;
+  width: 6px;
+  height: 6px;
+  background: var(--accent);
+  transform: translateY(-3px);
 }
 
 .release-sections {

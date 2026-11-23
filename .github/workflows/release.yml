@@ -33,7 +33,7 @@ on:
         type: string
         required: true
       highlights:
-        description: 'One line on the major changes, shown above the lists. Optional.'
+        description: 'The major changes, separated by semicolons. Each becomes a bullet above the lists. Optional.'
         type: string
         required: false
 
@@ -474,14 +474,22 @@ jobs:
           # long as the tags are and there is nothing to remember to delete.
           : > notes.md
 
-          # The hand-written line on what matters in this release, first so it
-          # is the first thing read on GitHub. The website's changelog shows
-          # it above the lists (website/release.js highlightsOf); a tag push
-          # has no inputs and gets no section. Whitespace is collapsed so the
-          # section stays one paragraph.
-          highlights=$(printf '%s' "$HIGHLIGHTS" | tr -s '[:space:]' ' ' | sed 's/^ //; s/ $//')
-          if [ -n "$highlights" ]; then
-            printf '## Highlights\n\n%s\n\n' "$highlights" >> notes.md
+          # The hand-written list of what matters in this release, first so
+          # it is the first thing read on GitHub. The input is one line, so
+          # semicolons separate the items; each becomes a bullet with its first
+          # letter capitalised. The website's changelog shows the bullets above
+          # the lists (website/release.js highlightsOf); a tag push has no
+          # inputs and gets no section.
+          items=()
+          IFS=';' read -ra parts <<< "$(printf '%s' "$HIGHLIGHTS" | tr -s '[:space:]' ' ')"
+          for part in "${parts[@]}"; do
+            part=$(printf '%s' "$part" | sed 's/^ *//; s/ *$//')
+            [ -n "$part" ] && items+=("* ${part^}")
+          done
+          if [ "${#items[@]}" -gt 0 ]; then
+            printf '## Highlights\n\n' >> notes.md
+            printf '%s\n' "${items[@]}" >> notes.md
+            printf '\n' >> notes.md
           fi
 
           case "$TAG" in

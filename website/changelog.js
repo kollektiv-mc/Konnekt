@@ -188,10 +188,14 @@
 
     var main = el('div', 'release-main')
     var highlights = R.highlightsOf(rel.body)
-    if (highlights) {
+    if (highlights.length) {
       var hl = el('div', 'release-highlights')
       hl.appendChild(el('div', 'changes-head', 'Highlights'))
-      hl.appendChild(el('p', null, highlights))
+      var hlList = el('ul')
+      highlights.forEach(function (item) {
+        hlList.appendChild(el('li', null, item))
+      })
+      hl.appendChild(hlList)
       main.appendChild(hl)
     }
     var cols = el('div', 'release-sections')
