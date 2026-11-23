@@ -544,6 +544,28 @@ pre code {
   background: var(--bg-surface);
 }
 
+/* A hero side holding a page's search: the box centred on its own, and a
+   link under it. Both outer rows keep room for that link whether or not the
+   page has one, so the box sits at the same height on every page. Its
+   padding is low enough that the title, not the side, sets the hero's height. */
+.search-side {
+  display: grid;
+  grid-template-rows: minmax(20px, 1fr) auto minmax(20px, 1fr);
+  justify-content: stretch;
+  padding-block: clamp(20px, 3vw, 40px);
+}
+
+.search-side .search {
+  grid-row: 2;
+  padding: 0 28px;
+  border: var(--hairline);
+}
+
+.search-side .band-link {
+  grid-row: 3;
+  align-self: start;
+}
+
 .page-hero-side > p {
   margin: 0;
   font-size: 18px;

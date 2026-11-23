@@ -19,7 +19,7 @@
   flex: 1 1 300px;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  justify-content: center;
   padding: 24px var(--pad);
   border-right: 1px solid rgb(var(--sun-rgb) / 0.18);
 }
@@ -164,6 +164,42 @@
   flex-direction: column;
 }
 
+.release-highlights {
+  padding: 8px var(--pad) 24px;
+  border-bottom: var(--hairline);
+}
+
+/* Two columns lined up with Features and Fixes, filled top to bottom; one
+   where two would not fit. */
+.release-highlights ul {
+  columns: 2 260px;
+  column-gap: calc(2 * var(--pad));
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.release-highlights li {
+  break-inside: avoid;
+  display: flex;
+  padding-bottom: 6px;
+  align-items: baseline;
+  gap: 14px;
+  font-size: 18px;
+  line-height: 1.5;
+  color: var(--text-primary);
+}
+
+/* The site's square marker, in the accent, centred on the first line. */
+.release-highlights li::before {
+  content: '';
+  flex: none;
+  width: 6px;
+  height: 6px;
+  background: var(--accent);
+  transform: translateY(-3px);
+}
+
 .release-sections {
   flex: 1 1 auto;
   display: flex;
@@ -231,10 +267,11 @@
   font-size: 0.9em;
 }
 
+/* One per release, under every section and across both columns. */
 .changes-more {
   width: 100%;
   min-height: 44px;
-  padding: 12px 0;
+  padding: 12px var(--pad);
   border: 0;
   border-top: var(--hairline);
   background: transparent;

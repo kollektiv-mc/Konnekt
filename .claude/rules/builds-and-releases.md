@@ -18,12 +18,19 @@ Only relevant when cutting a release.
 
 ## Cutting a release
 
-Actions tab, **Release**, **Run workflow**, on `main`. Two inputs: the channel
+Actions tab, **Release**, **Run workflow**, on `main`. Two required inputs: the channel
 (`alpha`, `beta`, `stable`) and the `X.Y.Z` the build belongs to. The `resolve`
 job turns those into the tag and creates it: the next free counter for a
 prerelease (`v0.2.0-alpha.3` after `v0.2.0-alpha.2`, counted per channel and
 per core) or the bare `v0.2.0` for stable. `.github/scripts/release-tag.py` is
 the decision, `release-tag_test.py` pins it, and CI runs the test.
+
+The optional third input, highlights, lists the release's major changes by
+hand, separated by semicolons. Each becomes a bullet, first letter capitalised,
+in a `## Highlights` section at the top of the release body, and the website's
+changelog shows the bullets above the Features and Fixes lists. A release cut
+from a pushed tag has none; add the section on GitHub by editing the release,
+with one `* ` bullet per line.
 
 The ladder each version climbs is `alpha.N`, then `beta.N`, then the bare
 version. Nothing forces a version through every rung, but an alpha cannot

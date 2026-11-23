@@ -141,6 +141,34 @@
     return rest.trim()
   }
 
+  // The bullets above a release's lists: the list under a "## Highlights"
+  // heading, which release.yml writes from its highlights input and a
+  // maintainer can add to an older release on GitHub. It sits above "What's
+  // changed", so changesOnly never returns it. The list ends at the first line
+  // that is not a bullet; [] when there is none.
+  var HIGHLIGHTS = /^##\s+Highlights\s*$/im
+  var BULLET = /^[-*+]\s+(.*)$/
+
+  function highlightsOf(body) {
+    var text = String(body || '').replace(/\r\n/g, '\n')
+    var start = text.search(HIGHLIGHTS)
+    if (start === -1) return []
+    var lines = text.slice(start).split('\n').slice(1)
+    var items = []
+    for (var i = 0; i < lines.length; i++) {
+      var line = lines[i].trim()
+      if (!line) {
+        if (items.length) break
+        continue
+      }
+      var bullet = BULLET.exec(line)
+      if (!bullet) break
+      var item = normalizeTitle(bullet[1])
+      if (item) items.push(item)
+    }
+    return items
+  }
+
   function formatDate(iso) {
     if (!iso) return ''
     var d = new Date(iso)
@@ -392,6 +420,7 @@
       return 'https://github.com/' + OWNER_REPO + '/pull/' + number
     },
     changesOnly: changesOnly,
+    highlightsOf: highlightsOf,
     fetchLatest: function () {
       return get('/releases/latest')
     },

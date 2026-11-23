@@ -21,7 +21,6 @@
   var errorEl = document.getElementById('dl-error')
   var errorMsg = document.getElementById('dl-error-msg')
   var errorTitle = document.getElementById('dl-error-title')
-  var versionPill = document.getElementById('dl-version')
   var primaryEl = document.getElementById('dl-primary')
   var gridEl = document.getElementById('dl-grid')
   var snapshotMetaEl = document.getElementById('dl-snapshot-meta')
@@ -294,10 +293,7 @@
 
   function render(rel) {
     var version = rel.tag_name || ''
-    var date = R.formatDate(rel.published_at)
     var assets = rel.assets || []
-
-    versionPill.textContent = [version, date].filter(Boolean).join(' · ')
 
     current.assets = assets
     current.version = version
@@ -305,10 +301,6 @@
     // An undetected platform, or one with no published build, seeds nothing,
     // so the grid below lists every build and the card asks which you want.
     selectPlatform(seed)
-  }
-
-  function setPill(text) {
-    versionPill.textContent = text
   }
 
   // The platform the visitor is on, or null for one with no published build.
@@ -324,7 +316,6 @@
   function showEmpty() {
     renderOthers(seed, null, 'Not released yet')
     hide(primaryEl)
-    setPill('Not yet released')
     errorTitle.textContent = 'No public build yet'
     errorMsg.textContent = 'No release has been published yet.'
     show(errorEl)
@@ -333,7 +324,6 @@
   function showError(msg) {
     renderOthers(seed, null, 'Release unavailable')
     hide(primaryEl)
-    setPill('Version unavailable')
     errorTitle.textContent = "Couldn't reach GitHub"
     errorMsg.textContent = msg
     show(errorEl)

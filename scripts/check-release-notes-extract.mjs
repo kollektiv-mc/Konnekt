@@ -191,6 +191,33 @@ check(
   "## What's changed\n\n### Fixes\n* One thing",
 )
 
+// ── highlightsOf ──────────────────────────────────────────────────────────
+// The bullets above a release's lists, from the "## Highlights" section
+// release.yml writes first in the body. A release without one shows nothing
+// there, and the section never leaks into what changesOnly returns. Arrays
+// come back from the sandbox's realm, so they are compared as JSON.
+const { highlightsOf } = sandbox.window.KonnektRelease
+const list = (body) => JSON.stringify(highlightsOf(body))
+const WITH_HIGHLIGHTS = `## Highlights\n\n* Distant Horizons scheduler blocks\n* Claude MCP connector\n\nPre-release.\n\n${SNAPSHOT}`
+check(
+  'highlights bullets',
+  list(WITH_HIGHLIGHTS),
+  '["Distant Horizons scheduler blocks","Claude MCP connector"]',
+)
+check('highlights stay out of the changes', changesOnly(WITH_HIGHLIGHTS), EXPECTED)
+check('no highlights section', list(SNAPSHOT), '[]')
+check('empty body', list(null), '[]')
+// Added by hand on GitHub: CRLF, dashes, code spans, and straight before the
+// next heading.
+check(
+  'hand-edited highlights',
+  list('## highlights\r\n\r\n- Remote `access`\r\n- CurseForge mods\r\n## What\'s changed\r\n* A thing'),
+  '["Remote access","CurseForge mods"]',
+)
+check('heading with no list', list("## Highlights\n\n## What's changed\n* A thing"), '[]')
+// A paragraph is not a list: nothing is shown rather than prose as a bullet.
+check('a paragraph instead of bullets', list('## Highlights\n\nOne line of prose\n'), '[]')
+
 // ── searchIssues ──────────────────────────────────────────────────────────
 // The roadmap's done marks come from this list. It read one page of 100 while
 // the repo held 246 issues, so a row whose issue fell off that page lost its

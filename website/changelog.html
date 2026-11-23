@@ -103,10 +103,20 @@
         <main id="main" class="group">
           <header class="page-hero block">
             <div class="page-hero-title">
-              <span class="meta appear" id="cl-count" hidden></span>
               <h1>Changelog</h1>
             </div>
-            <div class="page-hero-side">
+            <div class="page-hero-side search-side">
+              <label class="search">
+                <span aria-hidden="true">/</span>
+                <input
+                  type="search"
+                  id="cl-search"
+                  placeholder="search changelog"
+                  autocomplete="off"
+                  spellcheck="false"
+                  aria-label="Search the changelog by change"
+                />
+              </label>
               <a
                 class="band-link"
                 href="https://github.com/kollektiv-mc/Konnekt/releases"
@@ -132,7 +142,6 @@
                 <h2 id="cl-snapshot-title">
                   <span class="snapshot-dot" aria-hidden="true"></span>Nightly snapshot
                 </h2>
-                <span class="meta" id="cl-snapshot-meta">Built from main</span>
               </div>
               <p class="snapshot-warning">
                 Changes on main that no release has yet. Untested, and replaced by each new build.
@@ -156,6 +165,8 @@
           </p>
 
           <div class="cl-list appear" id="cl-list" hidden></div>
+
+          <p class="cl-state block" id="cl-empty" role="status" hidden>No change matches that.</p>
 
           <div class="cl-state block appear" id="cl-error" hidden>
             <p class="cl-state-title" id="cl-error-title">Could not load the changelog</p>

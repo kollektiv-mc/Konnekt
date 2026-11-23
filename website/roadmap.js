@@ -14,7 +14,6 @@
   var statusEl = document.getElementById('rm-status')
   var clearBtn = document.getElementById('rm-clear')
   var emptyEl = document.getElementById('rm-empty')
-  var totalEl = document.getElementById('rm-total')
   var stageBtns = [].slice.call(document.querySelectorAll('.stage[data-stage]'))
   var areaBtns = [].slice.call(document.querySelectorAll('.area[data-area]'))
 
@@ -87,7 +86,6 @@
       (filtered ? ' shown' : ' across ' + AREA_COUNT + ' areas')
     clearBtn.hidden = !filtered
     emptyEl.hidden = shown !== 0
-    if (totalEl) totalEl.textContent = rows.length + ' features · ' + AREA_COUNT + ' areas'
   }
 
   // ── Controls ───────────────────────────────────────────────────────────
@@ -125,7 +123,8 @@
     state = { stage: '', area: '', q: '' }
     searchEl.value = ''
     update()
-    searchEl.focus()
+    // The search sits in the page header; focusing it must not scroll there.
+    searchEl.focus({ preventScroll: true })
   })
 
   index()
@@ -283,7 +282,10 @@
     if (row.classList.contains('is-done')) return
     row.classList.add('is-done')
     var meta = row.querySelector('.row-meta')
-    meta.insertBefore(mk('span', 'row-done', 'done'), meta.firstChild)
+    var tick = mk('span', 'row-done')
+    tick.setAttribute('role', 'img')
+    tick.setAttribute('aria-label', 'done')
+    meta.insertBefore(tick, meta.firstChild)
   }
 
   // Every row that links an issue, by number.
