@@ -15,7 +15,6 @@
   var errorMsg = document.getElementById('cl-error-msg')
   var errorTitle = document.getElementById('cl-error-title')
   var snapshotEl = document.getElementById('cl-snapshot')
-  var snapshotMetaEl = document.getElementById('cl-snapshot-meta')
   var snapshotBodyEl = document.getElementById('cl-snapshot-body')
   var snapshotToggle = document.getElementById('cl-snapshot-toggle')
 
@@ -204,12 +203,6 @@
       total += sec.items.length
       snapshotBodyEl.appendChild(renderSection(sec, true))
     })
-
-    var built = R.formatDate(rel.published_at)
-    var sha = R.shortSha(rel.target_commitish)
-    snapshotMetaEl.textContent = ['Built from main', built, sha ? 'commit ' + sha : '']
-      .filter(Boolean)
-      .join(' · ')
 
     var label = function (open) {
       return (open ? 'Hide ' : 'Show ') + total + (total === 1 ? ' change' : ' changes')
