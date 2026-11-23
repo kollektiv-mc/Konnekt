@@ -151,16 +151,15 @@
   padding-top: 10px;
 }
 
-/* The latest release's Download in grey, for every release before it. */
+/* The latest release's Download, outlined in grey, for every release before it. */
 .btn-older {
-  background: var(--text-secondary);
-  color: var(--bg-base);
-  font-weight: 500;
+  border: 1px solid var(--text-muted);
+  color: var(--text-secondary);
 }
 
 .btn-older:hover {
-  background: var(--text-primary);
-  color: var(--bg-base);
+  color: var(--text-primary);
+  background: var(--hover-surface);
 }
 
 .btn-small {
