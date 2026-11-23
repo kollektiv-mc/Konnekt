@@ -1,4 +1,5 @@
-/* Two schedules, wired from real blocks.
+/* Four schedules, wired from real blocks. The Distant Horizons one comes
+ * first because the graph editor opens on the first graph in the list.
  *
  * The palette itself is not here — it is generated into blockdefs.json by
  * demo/tools/dump-blockdefs, because backend/services/scheduler_blocks.go is
@@ -32,7 +33,78 @@ const control = (id, source, sourcePort, target) => ({
   targetPort: "trigger",
 });
 
+/* The one bucket the DH graph publishes to. A Destination as ListDestinations
+   returns it: the secret is never sent to the frontend, only that it is set. */
+export const DESTINATIONS = [
+  {
+    id: "dest-lod",
+    name: "LOD bucket",
+    endpoint: "https://0f3c9a7e21d84b6c.r2.cloudflarestorage.com",
+    region: "auto",
+    bucket: "creative-lod",
+    prefix: "",
+    publicBaseUrl: "https://lod.example.gg",
+    accessKeyId: "8b1f…c42a",
+    secretSet: true,
+    privateLink: false,
+  },
+];
+
 export const GRAPHS = [
+  {
+    id: "graph-dh-snapshot",
+    name: "Distant Horizons",
+    enabled: true,
+    createdAt: daysAgo(18),
+    updatedAt: daysAgo(2),
+    nodes: [
+      node("d1", "trigger.cron", { cron: "0 4 * * 0" }, 40, 140),
+      node(
+        "d2",
+        "action.dhSnapshot",
+        {
+          destination: "LOD bucket",
+          leadSeconds: 300,
+          message:
+            "The server will stop in {time} for a world snapshot and be back shortly.",
+        },
+        320,
+        140,
+      ),
+      node(
+        "d3",
+        "action.dhPublish",
+        { destination: "LOD bucket", keep: 3 },
+        620,
+        140,
+      ),
+      node(
+        "d4",
+        "action.httpRequest",
+        {
+          method: "POST",
+          url: "https://hooks.example.gg/lod",
+          body: '{"content":"New LOD snapshot is up"}',
+          contentType: "application/json",
+        },
+        920,
+        60,
+      ),
+      node(
+        "d5",
+        "action.notify",
+        { kind: "error", message: "Publish failed", deliver: "both" },
+        920,
+        240,
+      ),
+    ],
+    edges: [
+      control("de1", "d1", "onComplete", "d2"),
+      control("de2", "d2", "onComplete", "d3"),
+      control("de3", "d3", "onComplete", "d4"),
+      control("de4", "d3", "onFailed", "d5"),
+    ],
+  },
   {
     id: "graph-auto-restart",
     name: "Auto Restart",
@@ -121,10 +193,20 @@ export const GRAPHS = [
   },
 ];
 
+/* `0 4 * * 0` in the visitor's own time zone, as the scheduler reads cron. */
+function nextSundayAt4() {
+  const d = new Date();
+  d.setHours(4, 0, 0, 0);
+  d.setDate(d.getDate() + ((7 - d.getDay()) % 7));
+  if (d.getTime() <= Date.now()) d.setDate(d.getDate() + 7);
+  return d.getTime();
+}
+
 /* graphID → next fire time, in Unix ms. Only enabled graphs get one — a
    disabled graph has no next run, and the summary counts on that to render
-   "2 active" against three total. */
+   "3 active" against four total. */
 export const NEXT_RUNS = {
+  "graph-dh-snapshot": nextSundayAt4(),
   "graph-auto-restart": minutesAgo(-386), // ~06:26 from now
   "graph-bluemap": minutesAgo(-19),
 };

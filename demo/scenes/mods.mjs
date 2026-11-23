@@ -20,7 +20,7 @@ export default {
     let p = await centre(filter);
     await glide(p.x - 300, p.y, 600);
     await filter.click();
-    await type("luck", 110);
+    await type("dist", 110);
     await wait(1500);
     await filter.fill("");
     await wait(900);

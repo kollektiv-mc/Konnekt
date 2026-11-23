@@ -5,7 +5,7 @@
  * from "1h ago" and a world played this morning.
  */
 
-export const SERVER_ID = "demo-survival";
+export const SERVER_ID = "demo-creative";
 
 const now = Date.now();
 export const BOOT = now;
@@ -13,39 +13,41 @@ export const minutesAgo = (m) => now - m * 60_000;
 export const hoursAgo = (h) => now - h * 3_600_000;
 export const daysAgo = (d) => now - d * 86_400_000;
 
-/* Paper on 1.21.1 — chosen so the mods tile says "plugins" (the noun comes
-   from config.loader ∈ PLUGIN_LOADERS) and the Modrinth facets below ask for
-   plugins, which is the busier and better-illustrated half of Modrinth. */
+/* NeoForge on 1.21.1 with Distant Horizons, so the mods tile, the DH snapshot
+   graph and the pack sync all describe one server. A modern NeoForge install
+   has no runnable jar: Konnekt launches it from run.sh's argfiles
+   (backend/services/serverlaunch.go), so run.sh is what the config names. */
 export const SERVER_CONFIG = {
   id: SERVER_ID,
+  name: "Creative",
+  jarPath: "/home/mc/creative/run.sh",
+  jvmArgs: ["-Xms2G", "-Xmx6G"],
+  workingDir: "/home/mc/creative",
+  mcVersion: "1.21.1",
+  loader: "neoforge",
+  loaderVersion: "21.1.267",
+};
+
+/* A second server, so that switching is something the demo can show. Paper,
+   so the mods tile's noun changes to "plugins" with it (the noun comes from
+   config.loader ∈ PLUGIN_LOADERS), and offline, so the switch reads as a
+   change of server rather than a re-skin: an offline dashboard is a visibly
+   different picture, and an honest one, since nothing but the Start button
+   brings it up. */
+export const SURVIVAL_ID = "demo-survival";
+
+export const SURVIVAL_CONFIG = {
+  id: SURVIVAL_ID,
   name: "Survival",
   jarPath: "/home/mc/survival/paper-1.21.1.jar",
-  jvmArgs: ["-Xms2G", "-Xmx6G"],
+  jvmArgs: ["-Xms1G", "-Xmx4G"],
   workingDir: "/home/mc/survival",
   mcVersion: "1.21.1",
   loader: "paper",
   loaderVersion: "",
 };
 
-/* A second server, so that switching is something the demo can show. Fabric,
-   so the plugins tile's noun changes with it, and offline, so the switch reads
-   as a change of server rather than a re-skin: an offline dashboard is a
-   visibly different picture, and an honest one, since nothing but the Start
-   button brings it up. */
-export const CREATIVE_ID = "demo-creative";
-
-export const CREATIVE_CONFIG = {
-  id: CREATIVE_ID,
-  name: "Creative",
-  jarPath: "/home/mc/creative/fabric-server-mc.1.21.1-loader.0.16.5.jar",
-  jvmArgs: ["-Xms1G", "-Xmx4G"],
-  workingDir: "/home/mc/creative",
-  mcVersion: "1.21.1",
-  loader: "fabric",
-  loaderVersion: "0.16.5",
-};
-
-export const SERVER_CONFIGS = [SERVER_CONFIG, CREATIVE_CONFIG];
+export const SERVER_CONFIGS = [SERVER_CONFIG, SURVIVAL_CONFIG];
 
 /** The config behind an id the app passed, falling back to the first server. */
 export const configFor = (id) =>
@@ -59,7 +61,7 @@ export const SERVER_STATUS = {
   running: true,
   state: "running",
   uptime: "3h 12m 0s",
-  players: 4,
+  players: 5,
   maxPlayers: 20,
   tps: 19.8,
   ramUsed: 4312,
@@ -70,7 +72,7 @@ export const SERVER_STATUS = {
    rather than sitting on a string. */
 export const STARTED_AT = now - (3 * 60 + 12) * 60_000;
 
-export const CREATIVE_STATUS = {
+export const SURVIVAL_STATUS = {
   running: false,
   state: "offline",
   uptime: "0s",
@@ -83,26 +85,26 @@ export const CREATIVE_STATUS = {
 
 export const SERVER_SUMMARY = {
   mcVersion: "1.21.1",
+  loader: "neoforge",
+  workingDir: "/home/mc/creative",
+  launchFile: "run.sh",
+  running: true,
+  loaderVersion: "21.1.267",
+  loaderSource: "script",
+};
+
+export const SURVIVAL_SUMMARY = {
+  mcVersion: "1.21.1",
   loader: "paper",
   workingDir: "/home/mc/survival",
   launchFile: "paper-1.21.1.jar",
-  running: true,
+  running: false,
   loaderVersion: "",
   loaderSource: "",
 };
 
-export const CREATIVE_SUMMARY = {
-  mcVersion: "1.21.1",
-  loader: "fabric",
-  workingDir: "/home/mc/creative",
-  launchFile: "fabric-server-mc.1.21.1-loader.0.16.5.jar",
-  running: false,
-  loaderVersion: "0.16.5",
-  loaderSource: "",
-};
-
 export const summaryFor = (id) =>
-  id === CREATIVE_ID ? CREATIVE_SUMMARY : SERVER_SUMMARY;
+  id === SURVIVAL_ID ? SURVIVAL_SUMMARY : SERVER_SUMMARY;
 
 /* Both performance charts need at least two points, and the maximized view
    offers a 1h window, so this covers an hour at 30s spacing. Generated rather
@@ -119,14 +121,16 @@ export const STATS_HISTORY = Array.from({ length: 120 }, (_, i) => {
     ramUsedMB: Math.round(3600 + dip * 900 + Math.sin(t * 9) * 180),
     ramTotalMB: 6144,
     cpuPercent: Math.round((28 + dip * 44 + Math.sin(t * 13) * 6) * 10) / 10,
-    players: i < 40 ? 2 : i < 78 ? 5 : 4,
+    players: i < 40 ? 2 : i < 78 ? 4 : 5,
   };
 });
 
+/* The names from the website's hero console, with their own Mojang UUIDs, so
+   the avatars mc-heads.net draws from the UUID are their real skins. */
 export const PLAYERS = [
   {
     name: "Snadrochka",
-    uuid: "069a79f4-44e9-4726-a5be-fca90e38aaf5",
+    uuid: "5d818448-9c12-4adb-b41b-bda6a2d5938d",
     online: true,
     ip: "192.168.1.24",
     lastOnline: minutesAgo(1),
@@ -139,7 +143,7 @@ export const PLAYERS = [
   },
   {
     name: "crocodealer420",
-    uuid: "853c80ef-3c37-49fd-aa49-938b674adae6",
+    uuid: "34a873a3-fb2b-48f9-a5ae-d94138e19660",
     online: true,
     ip: "192.168.1.31",
     lastOnline: minutesAgo(1),
@@ -152,7 +156,7 @@ export const PLAYERS = [
   },
   {
     name: "frogipogi",
-    uuid: "61699b2e-d327-4a01-9f1e-0ea8c3f06bc6",
+    uuid: "6a1cf547-d5cd-42c7-a005-12fff7f50e8d",
     online: true,
     ip: "192.168.1.47",
     lastOnline: minutesAgo(1),
@@ -165,7 +169,7 @@ export const PLAYERS = [
   },
   {
     name: "ceramichello",
-    uuid: "4566e69f-c907-48ee-8d71-d7ba5aa00d20",
+    uuid: "7ec2b595-cfe5-41a7-9d66-016072fb2ee1",
     online: true,
     ip: "192.168.1.52",
     lastOnline: minutesAgo(1),
@@ -176,6 +180,19 @@ export const PLAYERS = [
     primaryGroup: "member",
     groups: ["member"],
   },
+  {
+    name: "Matzzz__",
+    uuid: "5189b741-510d-45ae-b81b-c5bef6205dd8",
+    online: true,
+    ip: "192.168.1.58",
+    lastOnline: minutesAgo(1),
+    opLevel: 3,
+    whitelisted: true,
+    banned: false,
+    banReason: "",
+    primaryGroup: "staff",
+    groups: ["staff"],
+  },
 ];
 
 /* What a server prints between the jar starting and its ready line. Replayed
@@ -185,21 +202,32 @@ export const PLAYERS = [
    for any two servers of the same version. */
 const BOOT_PROFILE = {
   [SERVER_ID]: {
-    gameType: "SURVIVAL",
+    gameType: "CREATIVE",
     level: "Overworld",
     port: 25565,
-    loaderLine: "Paper: Using Java 21 (Eclipse Adoptium 21.0.4+7)",
+    loaderLine: "Loading Minecraft 1.21.1 with NeoForge 21.1.267",
+    modLines: [
+      "[Lithium] Applying 47 mixin patches",
+      "[FerriteCore] Reduced memory footprint by 312 MB",
+      "[Create] Registered 1,204 blocks and items",
+      "[DistantHorizons] Server-side LOD generation enabled",
+    ],
   },
-  [CREATIVE_ID]: {
-    gameType: "CREATIVE",
-    level: "Creative",
+  [SURVIVAL_ID]: {
+    gameType: "SURVIVAL",
+    level: "Survival",
     port: 25566,
-    loaderLine: "Loading Minecraft 1.21.1 with Fabric Loader 0.16.5",
+    loaderLine: "Paper: Using Java 21 (Eclipse Adoptium 21.0.4+7)",
+    modLines: [
+      "[ViaVersion] Enabling ViaVersion v5.1.1",
+      "[LuckPerms] Enabling LuckPerms v5.4.145",
+      "[Chunky] Enabling Chunky v1.4.36",
+    ],
   },
 };
 
 export const bootLines = (id) => {
-  const { gameType, level, port, loaderLine } =
+  const { gameType, level, port, loaderLine, modLines } =
     BOOT_PROFILE[id] ?? BOOT_PROFILE[SERVER_ID];
   return [
     `Starting minecraft server version ${configFor(id).mcVersion}`,
@@ -219,9 +247,7 @@ export const bootLines = (id) => {
     "Time elapsed: 902 ms",
     "Preparing start region for dimension minecraft:the_end",
     "Time elapsed: 611 ms",
-    "[Sodium] Loaded configuration file",
-    "[Lithium] Applying 47 mixin patches",
-    "[FerriteCore] Reduced memory footprint by 312 MB",
+    ...modLines,
     'Done (6.129s)! For help, type "help"',
   ];
 };
@@ -257,8 +283,8 @@ export const CONSOLE_LINES = [
     "crocodealer420[/192.168.1.31:49022] logged in with entity id 289 at (96.5, 64.0, -201.5)",
   ],
   [null, "crocodealer420 joined the game"],
-  [null, "<Snadrochka> anyone got spare diamonds"],
-  [null, "<crocodealer420> check the shulker in the vault"],
+  [null, "<Snadrochka> who has the brass for the new train station"],
+  [null, "<crocodealer420> check the vault, two stacks"],
   [
     null,
     "frogipogi[/192.168.1.47:51880] logged in with entity id 401 at (12.5, 78.0, 340.5)",
@@ -281,4 +307,10 @@ export const CONSOLE_LINES = [
     "Can't keep up! Is the server overloaded? Running 2841ms or 56 ticks behind",
   ],
   [null, "<crocodealer420> ill fix it"],
+  [
+    null,
+    "Matzzz__[/192.168.1.58:55207] logged in with entity id 612 at (-40.5, 112.0, 16.5)",
+  ],
+  [null, "Matzzz__ joined the game"],
+  [null, "<Matzzz__> the LODs from the tower are wild"],
 ];
