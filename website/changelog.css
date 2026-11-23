@@ -151,17 +151,6 @@
   padding-top: 10px;
 }
 
-/* The latest release's Download, outlined in grey, for every release before it. */
-.btn-older {
-  border: 1px solid var(--text-muted);
-  color: var(--text-secondary);
-}
-
-.btn-older:hover {
-  color: var(--text-primary);
-  background: var(--hover-surface);
-}
-
 .btn-small {
   min-height: 44px;
   padding: 0 18px;

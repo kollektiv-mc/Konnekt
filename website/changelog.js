@@ -195,7 +195,7 @@
     } else {
       var build = olderBuild(rel)
       if (build) {
-        var old = el('a', 'btn btn-older btn-small', 'Download')
+        var old = el('a', 'btn btn-secondary btn-small', 'Download')
         old.href = build.asset.browser_download_url
         old.setAttribute('download', '')
         old.setAttribute('aria-label', 'Download ' + tag + ' for ' + build.platform.name)
