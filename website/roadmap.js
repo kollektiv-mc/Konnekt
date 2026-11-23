@@ -282,7 +282,10 @@
     if (row.classList.contains('is-done')) return
     row.classList.add('is-done')
     var meta = row.querySelector('.row-meta')
-    meta.insertBefore(mk('span', 'row-done', 'done'), meta.firstChild)
+    var tick = mk('span', 'row-done')
+    tick.setAttribute('role', 'img')
+    tick.setAttribute('aria-label', 'done')
+    meta.insertBefore(tick, meta.firstChild)
   }
 
   // Every row that links an issue, by number.
