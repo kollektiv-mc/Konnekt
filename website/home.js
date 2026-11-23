@@ -1,4 +1,6 @@
-/* The home page: the feature strips and the scheduler's running graph. */
+/* The home page: the feature strips and the scheduler's running graph.
+   Each section runs in its own function, so a var one declares is not
+   another's: the clips and the graph both keep a current and an onScreen. */
 ;(function () {
   var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
 
@@ -16,271 +18,275 @@
   // Only the open strip's clip plays, and only while it is on screen. Reduced
   // motion plays nothing: the poster and the points still change, and the demo
   // link is the way to see it move.
-  // aislop-ignore-next-line ai-slop/hardcoded-url -- the demo site's canonical address, see AGENTS.md
-  var DEMO = 'https://konnekt-demo.pages.dev'
-  var SCENES = [
-    { id: 'dashboard', tile: '' },
-    { id: 'console', tile: 'console' },
-    { id: 'players', tile: 'players' },
-    { id: 'performance', tile: 'performance' },
-    { id: 'worlds', tile: 'worlds' },
-    { id: 'backups', tile: 'backups' },
-    { id: 'config', tile: 'server-config' },
-    { id: 'mods', tile: 'mods' },
-    { id: 'servers', tile: '' },
-  ]
-  // How long a closing panel stays over its strip: the strip's width
-  // transition, so the two finish together.
-  var CLOSE_MS = 560
+  ;(function () {
+    // aislop-ignore-next-line ai-slop/hardcoded-url -- the demo site's canonical address, see AGENTS.md
+    var DEMO = 'https://konnekt-demo.pages.dev'
+    var SCENES = [
+      { id: 'dashboard', tile: '' },
+      { id: 'console', tile: 'console' },
+      { id: 'players', tile: 'players' },
+      { id: 'performance', tile: 'performance' },
+      { id: 'worlds', tile: 'worlds' },
+      { id: 'backups', tile: 'backups' },
+      { id: 'config', tile: 'server-config' },
+      { id: 'mods', tile: 'mods' },
+      { id: 'servers', tile: '' },
+    ]
+    // How long a closing panel stays over its strip: the strip's width
+    // transition, so the two finish together.
+    var CLOSE_MS = 560
 
-  var archive = document.querySelector('.archive')
-  var strips = archive ? [].slice.call(archive.querySelectorAll('.strip')) : []
-  var demoLink = document.getElementById('demo-link')
+    var archive = document.querySelector('.archive')
+    var strips = archive ? [].slice.call(archive.querySelectorAll('.strip')) : []
+    var demoLink = document.getElementById('demo-link')
 
-  // A strip count that is not the table's means the page and this script have
-  // drifted; the check would have said so, but nothing below may guess.
-  if (strips.length === SCENES.length) {
-    var current = Math.max(
-      0,
-      strips.findIndex(function (s) {
-        return s.classList.contains('is-open')
-      }),
-    )
-    var onScreen = false
-    var closeTimer = 0
+    // A strip count that is not the table's means the page and this script have
+    // drifted; the check would have said so, but nothing below may guess.
+    if (strips.length === SCENES.length) {
+      var current = Math.max(
+        0,
+        strips.findIndex(function (s) {
+          return s.classList.contains('is-open')
+        }),
+      )
+      var onScreen = false
+      var closeTimer = 0
 
-    var videoOf = function (i) {
-      return strips[i].querySelector('video')
-    }
+      var videoOf = function (i) {
+        return strips[i].querySelector('video')
+      }
 
-    var load = function (i) {
-      var video = videoOf(i)
-      if (!video || video.getAttribute('poster')) return
-      var scene = SCENES[i]
-      video.poster = DEMO + '/scenes/' + scene.id + '.webp'
-      ;[
-        ['webm', 'video/webm'],
-        ['mp4', 'video/mp4'],
-      ].forEach(function (kind) {
-        var source = document.createElement('source')
-        source.src = DEMO + '/scenes/' + scene.id + '.' + kind[0]
-        source.type = kind[1]
-        video.appendChild(source)
-      })
-      video.preload = 'metadata'
-      video.load()
-    }
-
-    // A play the browser refuses is tried again rather than left on the
-    // poster: once the clip can play, for a request cut short by loading, and
-    // at the reader's next press or key, for one refused for want of a user
-    // gesture (Safari in Low Power Mode, a browser set to block autoplay).
-    // Before this, only a press on a strip tried again.
-    var retryArmed = false
-    var retryOnGesture = function () {
-      if (retryArmed) return
-      retryArmed = true
-      var again = function () {
-        retryArmed = false
-        ;['pointerdown', 'keydown', 'touchend'].forEach(function (type) {
-          document.removeEventListener(type, again, true)
+      var load = function (i) {
+        var video = videoOf(i)
+        if (!video || video.getAttribute('poster')) return
+        var scene = SCENES[i]
+        video.poster = DEMO + '/scenes/' + scene.id + '.webp'
+        ;[
+          ['webm', 'video/webm'],
+          ['mp4', 'video/mp4'],
+        ].forEach(function (kind) {
+          var source = document.createElement('source')
+          source.src = DEMO + '/scenes/' + scene.id + '.' + kind[0]
+          source.type = kind[1]
+          video.appendChild(source)
         })
+        video.preload = 'metadata'
+        video.load()
+      }
+
+      // A play the browser refuses is tried again rather than left on the
+      // poster: once the clip can play, for a request cut short by loading, and
+      // at the reader's next press or key, for one refused for want of a user
+      // gesture (Safari in Low Power Mode, a browser set to block autoplay).
+      // Before this, only a press on a strip tried again.
+      var retryArmed = false
+      var retryOnGesture = function () {
+        if (retryArmed) return
+        retryArmed = true
+        var again = function () {
+          retryArmed = false
+          ;['pointerdown', 'keydown', 'touchend'].forEach(function (type) {
+            document.removeEventListener(type, again, true)
+          })
+          play()
+        }
+        ;['pointerdown', 'keydown', 'touchend'].forEach(function (type) {
+          document.addEventListener(type, again, true)
+        })
+      }
+
+      var play = function () {
+        var video = videoOf(current)
+        if (!onScreen || reduceMotion || !video || typeof video.play !== 'function') return
+        if (!video.paused) return
+        var p = video.play()
+        if (p && p.catch) {
+          p.catch(function (err) {
+            if (videoOf(current) !== video || !onScreen) return
+            if (err && err.name === 'NotAllowedError') retryOnGesture()
+            else if (video.readyState < 3 && !video.error) {
+              video.addEventListener('canplay', play, { once: true })
+            }
+            /* Otherwise the clip is unreachable, and the poster stays. */
+          })
+        }
+      }
+
+      var open = function (i) {
+        if (i === current) return
+        var prev = current
+        current = i
+        var prevVideo = videoOf(prev)
+        if (prevVideo && prevVideo.pause) prevVideo.pause()
+
+        window.clearTimeout(closeTimer)
+        strips.forEach(function (s) {
+          s.classList.remove('is-closing')
+        })
+        strips[prev].classList.add('is-closing')
+        closeTimer = window.setTimeout(function () {
+          strips[prev].classList.remove('is-closing')
+        }, CLOSE_MS)
+
+        strips.forEach(function (s, k) {
+          var on = k === current
+          s.classList.toggle('is-open', on)
+          s.querySelector('.strip-btn').setAttribute('aria-expanded', on ? 'true' : 'false')
+        })
+        if (demoLink) {
+          var tile = SCENES[current].tile
+          demoLink.href = DEMO + '/' + (tile ? '?tile=' + tile : '')
+        }
+        load(current)
+        play()
+        // The button that was pressed is gone, so focus goes to what it opened.
+        strips[current].querySelector('h3').focus({ preventScroll: true })
+      }
+
+      strips.forEach(function (strip, i) {
+        strip.querySelector('.strip-btn').addEventListener('click', function () {
+          open(i)
+        })
+      })
+
+      // On screen means half the open clip is, rather than a share of the whole
+      // archive: on a phone the strips stack into a column taller than the
+      // screen, and a share of that can be out of reach while the clip is in
+      // full view. Every clip is observed; only the open one's entry counts, and
+      // a strip that opens off screen starts when it scrolls in.
+      if ('IntersectionObserver' in window) {
+        var seen = []
+        var observer = new IntersectionObserver(
+          function (entries) {
+            entries.forEach(function (entry) {
+              seen[strips.indexOf(entry.target.closest('.strip'))] = entry.isIntersecting
+            })
+            var visible = !!seen[current]
+            if (visible === onScreen) return
+            onScreen = visible
+            var video = videoOf(current)
+            if (visible) play()
+            else if (video && video.pause) video.pause()
+          },
+          { threshold: 0.5 },
+        )
+        strips.forEach(function (s, i) {
+          var video = videoOf(i)
+          if (video) observer.observe(video)
+        })
+      } else {
+        onScreen = true
         play()
       }
-      ;['pointerdown', 'keydown', 'touchend'].forEach(function (type) {
-        document.addEventListener(type, again, true)
+
+      // A tab brought back to the front resumes the clip a browser paused
+      // behind it.
+      document.addEventListener('visibilitychange', function () {
+        if (!document.hidden) play()
       })
     }
-
-    var play = function () {
-      var video = videoOf(current)
-      if (!onScreen || reduceMotion || !video || typeof video.play !== 'function') return
-      if (!video.paused) return
-      var p = video.play()
-      if (p && p.catch) {
-        p.catch(function (err) {
-          if (videoOf(current) !== video || !onScreen) return
-          if (err && err.name === 'NotAllowedError') retryOnGesture()
-          else if (video.readyState < 3 && !video.error) {
-            video.addEventListener('canplay', play, { once: true })
-          }
-          /* Otherwise the clip is unreachable, and the poster stays. */
-        })
-      }
-    }
-
-    var open = function (i) {
-      if (i === current) return
-      var prev = current
-      current = i
-      var prevVideo = videoOf(prev)
-      if (prevVideo && prevVideo.pause) prevVideo.pause()
-
-      window.clearTimeout(closeTimer)
-      strips.forEach(function (s) {
-        s.classList.remove('is-closing')
-      })
-      strips[prev].classList.add('is-closing')
-      closeTimer = window.setTimeout(function () {
-        strips[prev].classList.remove('is-closing')
-      }, CLOSE_MS)
-
-      strips.forEach(function (s, k) {
-        var on = k === current
-        s.classList.toggle('is-open', on)
-        s.querySelector('.strip-btn').setAttribute('aria-expanded', on ? 'true' : 'false')
-      })
-      if (demoLink) {
-        var tile = SCENES[current].tile
-        demoLink.href = DEMO + '/' + (tile ? '?tile=' + tile : '')
-      }
-      load(current)
-      play()
-      // The button that was pressed is gone, so focus goes to what it opened.
-      strips[current].querySelector('h3').focus({ preventScroll: true })
-    }
-
-    strips.forEach(function (strip, i) {
-      strip.querySelector('.strip-btn').addEventListener('click', function () {
-        open(i)
-      })
-    })
-
-    // On screen means half the open clip is, rather than a share of the whole
-    // archive: on a phone the strips stack into a column taller than the
-    // screen, and a share of that can be out of reach while the clip is in
-    // full view. Every clip is observed; only the open one's entry counts, and
-    // a strip that opens off screen starts when it scrolls in.
-    if ('IntersectionObserver' in window) {
-      var seen = []
-      var observer = new IntersectionObserver(
-        function (entries) {
-          entries.forEach(function (entry) {
-            seen[strips.indexOf(entry.target.closest('.strip'))] = entry.isIntersecting
-          })
-          var visible = !!seen[current]
-          if (visible === onScreen) return
-          onScreen = visible
-          var video = videoOf(current)
-          if (visible) play()
-          else if (video && video.pause) video.pause()
-        },
-        { threshold: 0.5 },
-      )
-      strips.forEach(function (s, i) {
-        var video = videoOf(i)
-        if (video) observer.observe(video)
-      })
-    } else {
-      onScreen = true
-      play()
-    }
-
-    // A tab brought back to the front resumes the clip a browser paused
-    // behind it.
-    document.addEventListener('visibilitychange', function () {
-      if (!document.hidden) play()
-    })
-  }
+  })()
 
   // ── Hero console ───────────────────────────────────────────────────────
   // A server left running: players come and go, and every few seconds a
   // command is typed at the prompt and answered. The replies are vanilla
   // 1.21.1's own wording, from its en_us.json. The page's lines are the first
   // frame, with save-all already typed, and under reduced motion the only one.
-  var LOG_LINES = 3
-  var TYPE_MS = 75
-  var SCRIPT = [
-    { cmd: 'save-all', out: ['Saving the game (this may take a moment!)', 'Saved the game'] },
-    { out: ['crocodealer420 joined the game'] },
-    { cmd: 'whitelist add frogipogi', out: ['Added frogipogi to the whitelist'] },
-    { out: ['<Snadrochka> anyone got spare diamonds'] },
-    { cmd: 'time set day', out: ['Set the time to 1000'] },
-    { out: ['frogipogi joined the game'] },
-    { cmd: 'op Matzzz__', out: ['Made Matzzz__ a server operator'] },
-    { out: ['ceramichello left the game'] },
-    { cmd: 'weather clear', out: ['Set the weather to clear'] },
-    { out: ['<trex007> who turned the rain off'] },
-    { cmd: 'say restart at 18:00', out: ['[Server] restart at 18:00'] },
-    { out: ['ascalon joined the game'] },
-    {
-      cmd: 'kick trex007',
-      out: ['Kicked trex007: Kicked by an operator', 'trex007 left the game'],
-    },
-  ]
+  ;(function () {
+    var LOG_LINES = 3
+    var TYPE_MS = 75
+    var SCRIPT = [
+      { cmd: 'save-all', out: ['Saving the game (this may take a moment!)', 'Saved the game'] },
+      { out: ['crocodealer420 joined the game'] },
+      { cmd: 'whitelist add frogipogi', out: ['Added frogipogi to the whitelist'] },
+      { out: ['<Snadrochka> anyone got spare diamonds'] },
+      { cmd: 'time set day', out: ['Set the time to 1000'] },
+      { out: ['frogipogi joined the game'] },
+      { cmd: 'op Matzzz__', out: ['Made Matzzz__ a server operator'] },
+      { out: ['ceramichello left the game'] },
+      { cmd: 'weather clear', out: ['Set the weather to clear'] },
+      { out: ['<trex007> who turned the rain off'] },
+      { cmd: 'say restart at 18:00', out: ['[Server] restart at 18:00'] },
+      { out: ['ascalon joined the game'] },
+      {
+        cmd: 'kick trex007',
+        out: ['Kicked trex007: Kicked by an operator', 'trex007 left the game'],
+      },
+    ]
 
-  var consoleEl = document.querySelector('.hero .console')
-  var log = consoleEl && consoleEl.querySelector('.console-log')
-  var input = consoleEl && consoleEl.querySelector('.console-input')
+    var consoleEl = document.querySelector('.hero .console')
+    var log = consoleEl && consoleEl.querySelector('.console-log')
+    var input = consoleEl && consoleEl.querySelector('.console-input')
 
-  if (log && input && !reduceMotion) {
-    // The script flattened into one list of timed actions, so pausing is a
-    // cleared timer and resuming runs the same action again.
-    var actions = []
-    SCRIPT.forEach(function (step) {
-      if (step.cmd) {
-        for (var c = 1; c <= step.cmd.length; c++) {
-          actions.push({ wait: c === 1 ? 900 : TYPE_MS, input: step.cmd.slice(0, c) })
+    if (log && input && !reduceMotion) {
+      // The script flattened into one list of timed actions, so pausing is a
+      // cleared timer and resuming runs the same action again.
+      var actions = []
+      SCRIPT.forEach(function (step) {
+        if (step.cmd) {
+          for (var c = 1; c <= step.cmd.length; c++) {
+            actions.push({ wait: c === 1 ? 900 : TYPE_MS, input: step.cmd.slice(0, c) })
+          }
+          actions.push({ wait: 600, input: '' })
         }
-        actions.push({ wait: 600, input: '' })
-      }
-      step.out.forEach(function (line, k) {
-        actions.push({ wait: k ? 160 : 240, line: line })
-      })
-      actions.push({ wait: 2400 })
-    })
-
-    // The first step's command is the one the page already shows typed.
-    var at = SCRIPT[0].cmd.length
-    // Seconds past 14:03:40, the page's last line, as the log's own clock.
-    var elapsed = 0
-    var consoleTimer = 0
-
-    var stamp = function () {
-      var t = 14 * 3600 + 3 * 60 + 40 + Math.floor(elapsed / 1000)
-      return [Math.floor(t / 3600) % 24, Math.floor(t / 60) % 60, t % 60]
-        .map(function (n) {
-          return (n < 10 ? '0' : '') + n
+        step.out.forEach(function (line, k) {
+          actions.push({ wait: k ? 160 : 240, line: line })
         })
-        .join(':')
-    }
+        actions.push({ wait: 2400 })
+      })
 
-    // The page's first frame holds a moment before save-all is entered.
-    var firstWait = 1800
+      // The first step's command is the one the page already shows typed.
+      var at = SCRIPT[0].cmd.length
+      // Seconds past 14:03:40, the page's last line, as the log's own clock.
+      var elapsed = 0
+      var consoleTimer = 0
 
-    var run = function () {
-      var action = actions[at]
-      var wait = firstWait || action.wait
-      firstWait = 0
-      consoleTimer = window.setTimeout(function () {
-        elapsed += wait
-        if (action.input !== undefined) input.textContent = action.input
-        if (action.line) {
-          var row = document.createElement('div')
-          row.className = 'is-new'
-          row.textContent = '[' + stamp() + '] ' + action.line
-          log.appendChild(row)
-          while (log.children.length > LOG_LINES) log.removeChild(log.firstElementChild)
-        }
-        at = (at + 1) % actions.length
+      var stamp = function () {
+        var t = 14 * 3600 + 3 * 60 + 40 + Math.floor(elapsed / 1000)
+        return [Math.floor(t / 3600) % 24, Math.floor(t / 60) % 60, t % 60]
+          .map(function (n) {
+            return (n < 10 ? '0' : '') + n
+          })
+          .join(':')
+      }
+
+      // The page's first frame holds a moment before save-all is entered.
+      var firstWait = 1800
+
+      var run = function () {
+        var action = actions[at]
+        var wait = firstWait || action.wait
+        firstWait = 0
+        consoleTimer = window.setTimeout(function () {
+          elapsed += wait
+          if (action.input !== undefined) input.textContent = action.input
+          if (action.line) {
+            var row = document.createElement('div')
+            row.className = 'is-new'
+            row.textContent = '[' + stamp() + '] ' + action.line
+            log.appendChild(row)
+            while (log.children.length > LOG_LINES) log.removeChild(log.firstElementChild)
+          }
+          at = (at + 1) % actions.length
+          run()
+        }, wait)
+      }
+
+      var pauseConsole = function () {
+        window.clearTimeout(consoleTimer)
+        consoleTimer = 0
+      }
+
+      if ('IntersectionObserver' in window) {
+        new IntersectionObserver(function (entries) {
+          pauseConsole()
+          if (entries[0].isIntersecting) run()
+        }).observe(consoleEl)
+      } else {
         run()
-      }, wait)
+      }
     }
-
-    var pauseConsole = function () {
-      window.clearTimeout(consoleTimer)
-      consoleTimer = 0
-    }
-
-    if ('IntersectionObserver' in window) {
-      new IntersectionObserver(function (entries) {
-        pauseConsole()
-        if (entries[0].isIntersecting) run()
-      }).observe(consoleEl)
-    } else {
-      run()
-    }
-  }
+  })()
 
   // ── Scheduler graphs ───────────────────────────────────────────────────
   // Five example graphs take turns. A page load starts on a random one, never
@@ -291,134 +297,136 @@
   // graph holds lit for HOLD_STEPS, then the next one fades in.
   // Under reduced motion the graph is drawn lit and still, and only the names
   // below it change it.
-  var STEP_MS = 900
-  var HOLD_STEPS = 3
-  var LAST_KEY = 'konnekt.flow.last'
-  var flowBox = document.getElementById('flows')
-  var picks = document.getElementById('flow-picks')
-  if (!flowBox || !picks) return
-  var flows = [].slice.call(flowBox.querySelectorAll('.flow'))
-  if (!flows.length) return
+  ;(function () {
+    var STEP_MS = 900
+    var HOLD_STEPS = 3
+    var LAST_KEY = 'konnekt.flow.last'
+    var flowBox = document.getElementById('flows')
+    var picks = document.getElementById('flow-picks')
+    if (!flowBox || !picks) return
+    var flows = [].slice.call(flowBox.querySelectorAll('.flow'))
+    if (!flows.length) return
 
-  // Steps for one run: an array of steps, each the elements lit together.
-  var stepsFor = function (flow) {
+    // Steps for one run: an array of steps, each the elements lit together.
+    var stepsFor = function (flow) {
+      var steps = []
+      var walk = function (parts) {
+        parts.forEach(function (el) {
+          if (el.classList.contains('pair')) {
+            var feed = el.querySelector('.feed')
+            steps.push([].slice.call(feed.children))
+            steps.push([el.querySelector(':scope > .node')])
+          } else if (el.classList.contains('lanes')) {
+            var lanes = [].slice.call(el.children)
+            var lane = lanes[Math.floor(Math.random() * lanes.length)]
+            var inLane = [].slice.call(lane.children)
+            steps.push([lane, inLane[0]])
+            walk(inLane.slice(1))
+          } else {
+            steps.push([el])
+          }
+        })
+      }
+      walk([].slice.call(flow.children))
+      return steps
+    }
+
+    // Storage can be blocked or full. The cost is only that the next load may
+    // start on this load's graph, so a failure answers NaN or false and the page
+    // carries on.
+    var readLast = function () {
+      try {
+        return parseInt(window.localStorage.getItem(LAST_KEY), 10)
+      } catch {
+        return NaN
+      }
+    }
+
+    var writeLast = function (i) {
+      try {
+        window.localStorage.setItem(LAST_KEY, String(i))
+        return true
+      } catch {
+        return false
+      }
+    }
+
+    var start = Math.floor(Math.random() * flows.length)
+    if (flows.length > 1 && start === readLast()) start = (start + 1) % flows.length
+    writeLast(start)
+
+    var buttons = flows.map(function (flow, i) {
+      var btn = document.createElement('button')
+      btn.type = 'button'
+      btn.className = 'flow-pick'
+      btn.textContent = flow.getAttribute('data-name')
+      btn.addEventListener('click', function () {
+        show(i)
+        restart()
+      })
+      picks.appendChild(btn)
+      return btn
+    })
+    picks.hidden = false
+
+    var current = -1
     var steps = []
-    var walk = function (parts) {
-      parts.forEach(function (el) {
-        if (el.classList.contains('pair')) {
-          var feed = el.querySelector('.feed')
-          steps.push([].slice.call(feed.children))
-          steps.push([el.querySelector(':scope > .node')])
-        } else if (el.classList.contains('lanes')) {
-          var lanes = [].slice.call(el.children)
-          var lane = lanes[Math.floor(Math.random() * lanes.length)]
-          var inLane = [].slice.call(lane.children)
-          steps.push([lane, inLane[0]])
-          walk(inLane.slice(1))
-        } else {
-          steps.push([el])
-        }
+    var step = 0
+    var timer = 0
+    var onScreen = false
+
+    var clearLit = function (flow) {
+      ;[].forEach.call(flow.querySelectorAll('.is-lit'), function (el) {
+        el.classList.remove('is-lit')
       })
     }
-    walk([].slice.call(flow.children))
-    return steps
-  }
 
-  // Storage can be blocked or full. The cost is only that the next load may
-  // start on this load's graph, so a failure answers NaN or false and the page
-  // carries on.
-  var readLast = function () {
-    try {
-      return parseInt(window.localStorage.getItem(LAST_KEY), 10)
-    } catch {
-      return NaN
+    var show = function (i) {
+      current = i
+      flows.forEach(function (flow, k) {
+        var on = k === i
+        flow.classList.toggle('is-shown', on)
+        if (on) flow.removeAttribute('aria-hidden')
+        else flow.setAttribute('aria-hidden', 'true')
+        buttons[k].setAttribute('aria-pressed', on ? 'true' : 'false')
+      })
+      clearLit(flows[i])
+      steps = stepsFor(flows[i])
+      step = 0
+      if (reduceMotion) {
+        steps.forEach(function (els) {
+          els.forEach(function (el) {
+            el.classList.add('is-lit')
+          })
+        })
+      }
     }
-  }
 
-  var writeLast = function (i) {
-    try {
-      window.localStorage.setItem(LAST_KEY, String(i))
-      return true
-    } catch {
-      return false
-    }
-  }
-
-  var start = Math.floor(Math.random() * flows.length)
-  if (flows.length > 1 && start === readLast()) start = (start + 1) % flows.length
-  writeLast(start)
-
-  var buttons = flows.map(function (flow, i) {
-    var btn = document.createElement('button')
-    btn.type = 'button'
-    btn.className = 'flow-pick'
-    btn.textContent = flow.getAttribute('data-name')
-    btn.addEventListener('click', function () {
-      show(i)
-      restart()
-    })
-    picks.appendChild(btn)
-    return btn
-  })
-  picks.hidden = false
-
-  var current = -1
-  var steps = []
-  var step = 0
-  var timer = 0
-  var onScreen = false
-
-  var clearLit = function (flow) {
-    ;[].forEach.call(flow.querySelectorAll('.is-lit'), function (el) {
-      el.classList.remove('is-lit')
-    })
-  }
-
-  var show = function (i) {
-    current = i
-    flows.forEach(function (flow, k) {
-      var on = k === i
-      flow.classList.toggle('is-shown', on)
-      if (on) flow.removeAttribute('aria-hidden')
-      else flow.setAttribute('aria-hidden', 'true')
-      buttons[k].setAttribute('aria-pressed', on ? 'true' : 'false')
-    })
-    clearLit(flows[i])
-    steps = stepsFor(flows[i])
-    step = 0
-    if (reduceMotion) {
-      steps.forEach(function (els) {
-        els.forEach(function (el) {
+    var tick = function () {
+      if (step < steps.length) {
+        steps[step].forEach(function (el) {
           el.classList.add('is-lit')
         })
-      })
+      }
+      step += 1
+      if (step >= steps.length + HOLD_STEPS) show((current + 1) % flows.length)
     }
-  }
 
-  var tick = function () {
-    if (step < steps.length) {
-      steps[step].forEach(function (el) {
-        el.classList.add('is-lit')
-      })
+    var restart = function () {
+      window.clearInterval(timer)
+      timer = onScreen && !reduceMotion ? window.setInterval(tick, STEP_MS) : 0
     }
-    step += 1
-    if (step >= steps.length + HOLD_STEPS) show((current + 1) % flows.length)
-  }
 
-  var restart = function () {
-    window.clearInterval(timer)
-    timer = onScreen && !reduceMotion ? window.setInterval(tick, STEP_MS) : 0
-  }
+    show(start)
 
-  show(start)
-
-  if ('IntersectionObserver' in window) {
-    new IntersectionObserver(function (entries) {
-      onScreen = entries[0].isIntersecting
+    if ('IntersectionObserver' in window) {
+      new IntersectionObserver(function (entries) {
+        onScreen = entries[0].isIntersecting
+        restart()
+      }).observe(flowBox)
+    } else {
+      onScreen = true
       restart()
-    }).observe(flowBox)
-  } else {
-    onScreen = true
-    restart()
-  }
+    }
+  })()
 })()
