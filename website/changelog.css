@@ -164,6 +164,18 @@
   flex-direction: column;
 }
 
+.release-highlights {
+  padding: 8px var(--pad) 24px;
+  border-bottom: var(--hairline);
+}
+
+.release-highlights p {
+  margin: 0;
+  font-size: 18px;
+  line-height: 1.5;
+  color: var(--text-primary);
+}
+
 .release-sections {
   flex: 1 1 auto;
   display: flex;

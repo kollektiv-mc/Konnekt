@@ -141,6 +141,30 @@
     return rest.trim()
   }
 
+  // The one-line summary above a release's lists: the paragraph under a
+  // "## Highlights" heading, which release.yml writes from its highlights
+  // input and a maintainer can add to an older release on GitHub. It sits
+  // above "What's changed", so changesOnly never returns it. '' when absent.
+  var HIGHLIGHTS = /^##\s+Highlights\s*$/im
+
+  function highlightsOf(body) {
+    var text = String(body || '').replace(/\r\n/g, '\n')
+    var start = text.search(HIGHLIGHTS)
+    if (start === -1) return ''
+    var lines = text.slice(start).split('\n').slice(1)
+    var kept = []
+    for (var i = 0; i < lines.length; i++) {
+      var line = lines[i].trim()
+      if (!line) {
+        if (kept.length) break
+        continue
+      }
+      if (/^#/.test(line)) break
+      kept.push(line)
+    }
+    return normalizeTitle(kept.join(' '))
+  }
+
   function formatDate(iso) {
     if (!iso) return ''
     var d = new Date(iso)
@@ -392,6 +416,7 @@
       return 'https://github.com/' + OWNER_REPO + '/pull/' + number
     },
     changesOnly: changesOnly,
+    highlightsOf: highlightsOf,
     fetchLatest: function () {
       return get('/releases/latest')
     },

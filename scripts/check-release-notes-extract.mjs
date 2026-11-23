@@ -191,6 +191,29 @@ check(
   "## What's changed\n\n### Fixes\n* One thing",
 )
 
+// ── highlightsOf ──────────────────────────────────────────────────────────
+// The line above a release's lists, from the "## Highlights" section
+// release.yml writes first in the body. A release without one shows nothing
+// there, and the section never leaks into what changesOnly returns.
+const { highlightsOf } = sandbox.window.KonnektRelease
+const WITH_HIGHLIGHTS = `## Highlights\n\nDistant Horizons scheduler blocks, Claude MCP connector\n\nPre-release.\n\n${SNAPSHOT}`
+check(
+  'highlights line',
+  highlightsOf(WITH_HIGHLIGHTS),
+  'Distant Horizons scheduler blocks, Claude MCP connector',
+)
+check('highlights stay out of the changes', changesOnly(WITH_HIGHLIGHTS), EXPECTED)
+check('no highlights section', highlightsOf(SNAPSHOT), '')
+check('empty body', highlightsOf(null), '')
+// Added by hand on GitHub: CRLF, wrapped, with code, and straight before
+// the next heading.
+check(
+  'hand-edited highlights',
+  highlightsOf('## highlights\r\n\r\nRemote `access`,\r\nCurseForge mods\r\n## What\'s changed\r\n* A thing'),
+  'Remote access, CurseForge mods',
+)
+check('heading with no line', highlightsOf("## Highlights\n\n## What's changed\n* A thing"), '')
+
 // ── searchIssues ──────────────────────────────────────────────────────────
 // The roadmap's done marks come from this list. It read one page of 100 while
 // the repo held 246 issues, so a row whose issue fell off that page lost its

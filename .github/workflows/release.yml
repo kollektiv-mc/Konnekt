@@ -32,6 +32,10 @@ on:
         description: 'The X.Y.Z this build belongs to. No v, no suffix.'
         type: string
         required: true
+      highlights:
+        description: 'One line on the major changes, shown above the lists. Optional.'
+        type: string
+        required: false
 
 # One release at a time. Two dispatches side by side would both resolve to the
 # same next counter; run in sequence, the second sees the first's tag and
@@ -457,6 +461,7 @@ jobs:
           REPO: ${{ github.repository }}
           TAG: ${{ needs.resolve.outputs.tag }}
           PRERELEASE: ${{ needs.resolve.outputs.prerelease }}
+          HIGHLIGHTS: ${{ inputs.highlights }}
         run: |
           # The preamble, the same way snapshot.yml writes one. The notes
           # script produces what changed and nothing else, which is what the
@@ -468,6 +473,17 @@ jobs:
           # The pre-release line is decided by the tag, so it is right for as
           # long as the tags are and there is nothing to remember to delete.
           : > notes.md
+
+          # The hand-written line on what matters in this release, first so it
+          # is the first thing read on GitHub. The website's changelog shows
+          # it above the lists (website/release.js highlightsOf); a tag push
+          # has no inputs and gets no section. Whitespace is collapsed so the
+          # section stays one paragraph.
+          highlights=$(printf '%s' "$HIGHLIGHTS" | tr -s '[:space:]' ' ' | sed 's/^ //; s/ $//')
+          if [ -n "$highlights" ]; then
+            printf '## Highlights\n\n%s\n\n' "$highlights" >> notes.md
+          fi
+
           case "$TAG" in
             *-*) printf '%s\n\n' \
               "Pre-release. Expect rough edges and breaking changes between versions." \

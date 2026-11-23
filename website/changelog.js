@@ -170,6 +170,13 @@
     card.appendChild(side)
 
     var main = el('div', 'release-main')
+    var highlights = R.highlightsOf(rel.body)
+    if (highlights) {
+      var hl = el('div', 'release-highlights')
+      hl.appendChild(el('div', 'changes-head', 'Highlights'))
+      hl.appendChild(el('p', null, highlights))
+      main.appendChild(hl)
+    }
     var cols = el('div', 'release-sections')
     if (parsed.sections.length) {
       parsed.sections.forEach(function (sec) {
