@@ -183,6 +183,60 @@
     })
   }
 
+  // ── Hero orbit ─────────────────────────────────────────────────────────
+  // Each world travels its ring on the rings' period (home.css .orbit). A
+  // label that is rotated, or drawn between device pixels, is resampled and
+  // reads soft, so a world only ever moves by a translate rounded to the
+  // device pixel grid, written only when that rounding changes.
+  var ORBIT_MS = 160000
+  var CX = 210
+  var CY = 205
+  var art = document.querySelector('.hero-art')
+  var worlds = art ? [].slice.call(art.querySelectorAll('.world')) : []
+
+  if (worlds.length && !reduceMotion) {
+    var starts = worlds.map(function (world) {
+      var m = world.transform.baseVal.consolidate().matrix
+      return { x: m.e - CX, y: m.f - CY, last: '' }
+    })
+    var orbitFrame = 0
+
+    var drawOrbit = function (now) {
+      orbitFrame = requestAnimationFrame(drawOrbit)
+      var ctm = art.getScreenCTM()
+      if (!ctm) return
+      var dpr = window.devicePixelRatio || 1
+      var snap = function (v, scale, offset) {
+        return (Math.round((v * scale + offset) * dpr) / dpr - offset) / scale
+      }
+      var turn = ((now % ORBIT_MS) / ORBIT_MS) * 2 * Math.PI
+      var cos = Math.cos(turn)
+      var sin = Math.sin(turn)
+      worlds.forEach(function (world, i) {
+        var s = starts[i]
+        var x = snap(CX + s.x * cos - s.y * sin, ctm.a, ctm.e)
+        var y = snap(CY + s.x * sin + s.y * cos, ctm.d, ctm.f)
+        var t = 'translate(' + x + ' ' + y + ')'
+        if (t === s.last) return
+        s.last = t
+        world.setAttribute('transform', t)
+      })
+    }
+
+    var runOrbit = function (on) {
+      cancelAnimationFrame(orbitFrame)
+      if (on) orbitFrame = requestAnimationFrame(drawOrbit)
+    }
+
+    if ('IntersectionObserver' in window) {
+      new IntersectionObserver(function (entries) {
+        runOrbit(entries[0].isIntersecting)
+      }).observe(art)
+    } else {
+      runOrbit(true)
+    }
+  }
+
   // ── Hero console ───────────────────────────────────────────────────────
   // A server left running: players come and go, and every few seconds a
   // command is typed at the prompt and answered. The replies are vanilla
