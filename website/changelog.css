@@ -151,6 +151,18 @@
   padding-top: 10px;
 }
 
+/* The latest release's Download in grey, for every release before it. */
+.btn-older {
+  background: var(--text-secondary);
+  color: var(--bg-base);
+  font-weight: 500;
+}
+
+.btn-older:hover {
+  background: var(--text-primary);
+  color: var(--bg-base);
+}
+
 .btn-small {
   min-height: 44px;
   padding: 0 18px;

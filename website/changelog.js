@@ -138,6 +138,22 @@
   var NOT_LISTED = /^_([^\n]*\bnot listed\b[^\n]*)_\s*$/im
   var GENERATED = /^##\s+What's changed\s*$/im
 
+  // An older release's build for this visitor's system, downloaded directly.
+  // Releases before the Windows installer have only the bare exe, which was
+  // their Windows download. No build for the system, or no system guessed:
+  // no button, and On GitHub lists what there is.
+  function olderBuild(rel) {
+    var platform = R.platformById(R.detectPlatform())
+    var assets = rel.assets || []
+    var asset = R.matchAsset(platform, assets)
+    if (!asset && platform && platform.id === 'windows') {
+      asset = assets.filter(function (a) {
+        return a.name === 'konnekt-windows-amd64.exe'
+      })[0]
+    }
+    return asset ? { asset: asset, platform: platform } : null
+  }
+
   function renderRelease(rel, isLatest) {
     var tag = rel.tag_name || rel.name || 'Untitled'
     var parsed = sectionsOf(R.changesOnly(rel.body))
@@ -176,6 +192,15 @@
       var dl = el('a', 'btn btn-primary btn-small', 'Download')
       dl.href = '/download.html'
       actions.appendChild(dl)
+    } else {
+      var build = olderBuild(rel)
+      if (build) {
+        var old = el('a', 'btn btn-older btn-small', 'Download')
+        old.href = build.asset.browser_download_url
+        old.setAttribute('download', '')
+        old.setAttribute('aria-label', 'Download ' + tag + ' for ' + build.platform.name)
+        actions.appendChild(old)
+      }
     }
     var gh = el('a', 'btn btn-secondary btn-small', 'On GitHub')
     gh.href = rel.html_url || R.RELEASES_URL
