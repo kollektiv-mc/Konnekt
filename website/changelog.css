@@ -243,10 +243,11 @@
   font-size: 0.9em;
 }
 
+/* One per release, under every section and across both columns. */
 .changes-more {
   width: 100%;
   min-height: 44px;
-  padding: 12px 0;
+  padding: 12px var(--pad);
   border: 0;
   border-top: var(--hairline);
   background: transparent;

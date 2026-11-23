@@ -78,7 +78,10 @@
     })
   }
 
-  function renderSection(sec, all) {
+  // `group` is the release the section belongs to, whose one "Show all"
+  // opens every section past its first SHOWN lines. The snapshot passes none
+  // and shows every line.
+  function renderSection(sec, group) {
     var wrap = el('div', 'changes')
     var head = el('div', 'changes-head')
     head.appendChild(el('span', null, sec.name))
@@ -87,38 +90,47 @@
 
     var list = el('ul', 'changes-list')
     sec.items.forEach(function (li, i) {
-      if (!all && i >= SHOWN) li.hidden = true
+      if (group && i >= SHOWN) li.hidden = true
       list.appendChild(li)
     })
     wrap.appendChild(list)
-
-    if (!all && sec.items.length > SHOWN) {
-      var more = el('button', 'changes-more', 'Show all ' + sec.items.length)
-      more.type = 'button'
-      more.setAttribute('aria-expanded', 'false')
-      more.addEventListener('click', function () {
-        var open = more.getAttribute('aria-expanded') !== 'true'
-        more.setAttribute('aria-expanded', open ? 'true' : 'false')
-        more.textContent = open ? 'Show fewer' : 'Show all ' + sec.items.length
-        var rest = sec.items.slice(SHOWN)
-        if (open) {
-          resize(
-            wrap,
-            function () {
-              rest.forEach(function (li) {
-                li.hidden = false
-              })
-            },
-            [],
-          )
-        } else {
-          resize(wrap, null, rest)
-        }
-      })
-      wrap.appendChild(more)
-    }
-    rendered.push({ wrap: wrap, items: sec.items, more: more || null, all: all })
+    rendered.push({ wrap: wrap, items: sec.items, group: group })
     return wrap
+  }
+
+  // One button under all of a release's sections. Only built when some
+  // section has lines past the cut.
+  function renderMore(box, sections, group) {
+    var total = 0
+    var rest = []
+    sections.forEach(function (sec) {
+      total += sec.items.length
+      rest = rest.concat(sec.items.slice(SHOWN))
+    })
+    if (!rest.length) return null
+    var more = el('button', 'changes-more', 'Show all ' + total)
+    more.type = 'button'
+    more.setAttribute('aria-expanded', 'false')
+    more.addEventListener('click', function () {
+      var open = more.getAttribute('aria-expanded') !== 'true'
+      more.setAttribute('aria-expanded', open ? 'true' : 'false')
+      more.textContent = open ? 'Show fewer' : 'Show all ' + total
+      if (open) {
+        resize(
+          box,
+          function () {
+            rest.forEach(function (li) {
+              li.hidden = false
+            })
+          },
+          [],
+        )
+      } else {
+        resize(box, null, rest)
+      }
+    })
+    group.more = more
+    return more
   }
 
   // The accounting footer release-notes.py writes after the last section,
@@ -183,15 +195,20 @@
       main.appendChild(hl)
     }
     var cols = el('div', 'release-sections')
-    if (parsed.sections.length) {
+    var group = parsed.sections.length ? { more: null } : null
+    if (group) {
       parsed.sections.forEach(function (sec) {
-        cols.appendChild(renderSection(sec, false))
+        cols.appendChild(renderSection(sec, group))
       })
     } else {
       parsed.doc.className = 'md'
       cols.appendChild(parsed.doc)
     }
     main.appendChild(cols)
+    if (group) {
+      var more = renderMore(main, parsed.sections, group)
+      if (more) main.appendChild(more)
+    }
     var note = NOT_LISTED.exec(String(rel.body || ''))
     if (note) main.appendChild(el('p', 'release-note', note[1]))
     card.appendChild(main)
@@ -207,7 +224,7 @@
     var total = 0
     parsed.sections.forEach(function (sec) {
       total += sec.items.length
-      snapshotBodyEl.appendChild(renderSection(sec, true))
+      snapshotBodyEl.appendChild(renderSection(sec, null))
     })
 
     var label = function (open) {
@@ -267,7 +284,8 @@
     var searching = q.length > 0
     var hitCards = []
     rendered.forEach(function (sec) {
-      var expanded = !!sec.more && sec.more.getAttribute('aria-expanded') === 'true'
+      var more = sec.group && sec.group.more
+      var expanded = !!more && more.getAttribute('aria-expanded') === 'true'
       var hits = 0
       sec.items.forEach(function (li, i) {
         var text = li.textContent.toLowerCase()
@@ -275,10 +293,10 @@
           return text.indexOf(w) !== -1
         })
         if (hit) hits++
-        li.hidden = searching ? !hit : !sec.all && i >= SHOWN && !expanded
+        li.hidden = searching ? !hit : !!sec.group && i >= SHOWN && !expanded
       })
       sec.wrap.hidden = searching && !hits
-      if (sec.more) sec.more.hidden = searching
+      if (more) more.hidden = searching
       var card = sec.wrap.closest('.release, .snapshot')
       if (hits && card && hitCards.indexOf(card) === -1) hitCards.push(card)
     })
