@@ -14,7 +14,6 @@
   var statusEl = document.getElementById('rm-status')
   var clearBtn = document.getElementById('rm-clear')
   var emptyEl = document.getElementById('rm-empty')
-  var totalEl = document.getElementById('rm-total')
   var stageBtns = [].slice.call(document.querySelectorAll('.stage[data-stage]'))
   var areaBtns = [].slice.call(document.querySelectorAll('.area[data-area]'))
 
@@ -87,7 +86,6 @@
       (filtered ? ' shown' : ' across ' + AREA_COUNT + ' areas')
     clearBtn.hidden = !filtered
     emptyEl.hidden = shown !== 0
-    if (totalEl) totalEl.textContent = rows.length + ' features · ' + AREA_COUNT + ' areas'
   }
 
   // ── Controls ───────────────────────────────────────────────────────────

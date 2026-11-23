@@ -8,7 +8,6 @@
   // Lines a section shows before "Show all".
   var SHOWN = 6
 
-  var countEl = document.getElementById('cl-count')
   var loadingEl = document.getElementById('cl-loading')
   var listEl = document.getElementById('cl-list')
   var errorEl = document.getElementById('cl-error')
@@ -240,12 +239,6 @@
     visible.forEach(function (rel, idx) {
       listEl.appendChild(renderRelease(rel, idx === 0))
     })
-    var first = R.formatDate(visible[visible.length - 1].published_at)
-    countEl.textContent =
-      visible.length +
-      (visible.length === 1 ? ' release' : ' releases') +
-      (first ? ' since ' + first : '')
-    countEl.hidden = false
     loadingEl.hidden = true
     listEl.hidden = false
   }
