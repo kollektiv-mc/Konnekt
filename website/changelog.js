@@ -16,6 +16,12 @@
   var snapshotEl = document.getElementById('cl-snapshot')
   var snapshotBodyEl = document.getElementById('cl-snapshot-body')
   var snapshotToggle = document.getElementById('cl-snapshot-toggle')
+  var searchEl = document.getElementById('cl-search')
+  var emptyEl = document.getElementById('cl-empty')
+
+  // Every section drawn, the snapshot's included, for the search below.
+  var rendered = []
+  var snapshotShown = false
 
   function el(tag, cls, text) {
     var n = document.createElement(tag)
@@ -111,6 +117,7 @@
       })
       wrap.appendChild(more)
     }
+    rendered.push({ wrap: wrap, items: sec.items, more: more || null, all: all })
     return wrap
   }
 
@@ -224,6 +231,8 @@
       }
     })
     snapshotEl.hidden = false
+    snapshotShown = true
+    applySearch()
   }
 
   function render(releases) {
@@ -241,6 +250,59 @@
     })
     loadingEl.hidden = true
     listEl.hidden = false
+    applySearch()
+  }
+
+  // ── Search ─────────────────────────────────────────────────────────────
+  // Narrows every section to the lines holding every word typed, opens the
+  // snapshot's matches, and hides a release left with none. An empty query
+  // puts back each section's "Show all" cut and the snapshot's closed body.
+  function words(text) {
+    return text.toLowerCase().split(/\s+/).filter(Boolean)
+  }
+
+  function applySearch() {
+    if (!searchEl) return
+    var q = words(searchEl.value)
+    var searching = q.length > 0
+    var hitCards = []
+    rendered.forEach(function (sec) {
+      var expanded = !!sec.more && sec.more.getAttribute('aria-expanded') === 'true'
+      var hits = 0
+      sec.items.forEach(function (li, i) {
+        var text = li.textContent.toLowerCase()
+        var hit = q.every(function (w) {
+          return text.indexOf(w) !== -1
+        })
+        if (hit) hits++
+        li.hidden = searching ? !hit : !sec.all && i >= SHOWN && !expanded
+      })
+      sec.wrap.hidden = searching && !hits
+      if (sec.more) sec.more.hidden = searching
+      var card = sec.wrap.closest('.release, .snapshot')
+      if (hits && card && hitCards.indexOf(card) === -1) hitCards.push(card)
+    })
+
+    ;[].slice.call(listEl.querySelectorAll('.release')).forEach(function (card) {
+      card.hidden = searching && hitCards.indexOf(card) === -1
+    })
+    if (snapshotShown) {
+      snapshotEl.hidden = searching && hitCards.indexOf(snapshotEl) === -1
+      snapshotToggle.hidden = searching
+      snapshotBodyEl.hidden = searching
+        ? false
+        : snapshotToggle.getAttribute('aria-expanded') !== 'true'
+    }
+    emptyEl.hidden = !searching || hitCards.length > 0 || listEl.hidden
+  }
+
+  if (searchEl) {
+    var mainEl = searchEl.closest('main') || document.body
+    searchEl.addEventListener('input', function () {
+      var M = window.KonnektMotion
+      if (M) M.resize(mainEl, applySearch)
+      else applySearch()
+    })
   }
 
   function showState(title, msg) {

@@ -105,7 +105,18 @@
             <div class="page-hero-title">
               <h1>Roadmap</h1>
             </div>
-            <div class="page-hero-side">
+            <div class="page-hero-side search-side">
+              <label class="search">
+                <span aria-hidden="true">/</span>
+                <input
+                  type="search"
+                  id="rm-search"
+                  placeholder="search roadmap"
+                  autocomplete="off"
+                  spellcheck="false"
+                  aria-label="Search the roadmap by feature name"
+                />
+              </label>
               <a
                 class="band-link"
                 href="https://github.com/kollektiv-mc/Konnekt/issues"
@@ -173,17 +184,6 @@
 
           <section class="explorer block" aria-label="Feature explorer">
             <div class="explorer-bar">
-              <label class="search">
-                <span aria-hidden="true">/</span>
-                <input
-                  type="search"
-                  id="rm-search"
-                  placeholder="filter features"
-                  autocomplete="off"
-                  spellcheck="false"
-                  aria-label="Filter features by name"
-                />
-              </label>
               <p class="explorer-status" role="status">
                 <span id="rm-status">80 features across 5 areas</span>
                 <button type="button" class="clear" id="rm-clear" hidden>clear</button>

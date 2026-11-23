@@ -123,7 +123,8 @@
     state = { stage: '', area: '', q: '' }
     searchEl.value = ''
     update()
-    searchEl.focus()
+    // The search sits in the page header; focusing it must not scroll there.
+    searchEl.focus({ preventScroll: true })
   })
 
   index()

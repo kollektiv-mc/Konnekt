@@ -544,6 +544,17 @@ pre code {
   background: var(--bg-surface);
 }
 
+/* A hero side holding a page's search: the box centred, a link under it. */
+.search-side {
+  justify-content: center;
+}
+
+.search-side .search {
+  flex: none;
+  padding: 0 28px;
+  border: var(--hairline);
+}
+
 .page-hero-side > p {
   margin: 0;
   font-size: 18px;

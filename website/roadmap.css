@@ -78,13 +78,13 @@
 }
 
 .explorer-status {
+  flex: 1 1 auto;
   display: flex;
   align-items: center;
   gap: 16px;
   min-height: 64px;
   margin: 0;
   padding: 0 var(--pad);
-  border-left: var(--hairline);
   font-family: var(--font-site-mono);
   font-size: 13px;
   color: var(--text-secondary);
@@ -291,8 +291,6 @@
     gap: 4px 16px;
     min-height: 0;
     padding-block: 14px;
-    border-left: 0;
-    border-top: var(--hairline);
   }
 
   #rm-status {

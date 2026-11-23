@@ -40,16 +40,6 @@
 
 /* ── Docs home ──────────────────────────────────────────────────────────── */
 
-.doc-search-side {
-  justify-content: center;
-}
-
-.doc-search-side .search {
-  flex: none;
-  padding: 0 28px;
-  border: var(--hairline);
-}
-
 /* A shelf: a label cell, then its pages as a grid of rows. The grid's own
    last column and row would draw a second hairline against the block's, so
    it sits one pixel out under the clip. */
