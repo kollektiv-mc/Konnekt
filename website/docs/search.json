@@ -1,0 +1,1248 @@
+[
+  {
+    "url": "/docs/blocks/action-backup.html",
+    "title": "Create Backup",
+    "kind": "reference",
+    "lead": "Zips the whole server, or only its active world, into a backup archive.",
+    "sections": [
+      {
+        "id": "ports",
+        "title": "Ports",
+        "text": "Create Backup action in trigger control out onComplete control onFailed control Backup filename string"
+      },
+      {
+        "id": "fields",
+        "title": "Fields",
+        "text": "Field What it does Default Limits Target Chooses between the whole server folder and the active world. Full server Full server Active world"
+      },
+      {
+        "id": "run",
+        "title": "What a run does",
+        "text": "Zips the chosen target and adds the archive to the server's backups. Full server zips the whole server folder. Active world zips the level-name folder from server.properties with its _nether and _the_end folders. On a running server it pauses world saves first and resumes them afterwards. A stopped server is zipped as it is. A running server's Distant Horizons databases are left out of the archive. Those are the DistantHorizons.sqlite files and their -wal and -shm companions. The archive is named like 04817_21_10_26_142530.zip: an id, then day, month, year and time. It leaves by onComplete when the archive is written, and by onFailed on any error. Backup filename carries the archive's file name after a successful run."
+      },
+      {
+        "id": "errors",
+        "title": "Errors",
+        "text": "Message says Do a backup is already running for this server Wait for the running backup or restore to finish. could not pause world saves: reason Enable RCON or start the server from Konnekt, so a save command can reach it. server folder not found: path Check the server's folder in its settings. world folder \"name\" not found Check level-name in server.properties."
+      }
+    ]
+  },
+  {
+    "url": "/docs/blocks/action-command.html",
+    "title": "Command",
+    "kind": "reference",
+    "lead": "Sends a line to the server console, or starts, stops or restarts the server.",
+    "sections": [
+      {
+        "id": "ports",
+        "title": "Ports",
+        "text": "Command action in trigger control Command string out onComplete control onFailed control Command sent string"
+      },
+      {
+        "id": "fields",
+        "title": "Fields",
+        "text": "Field What it does Default Limits Command The console command to send, or one of three server actions. One line only. None Start Server Stop Server Restart Server Save All Freeze Time Set Day Set Night"
+      },
+      {
+        "id": "run",
+        "title": "What a run does",
+        "text": "A wired Command outranks the field. An empty value leaves by onFailed. Otherwise the block leaves by onComplete when the action is done, or by onFailed if it errors. Start Server (__start__) launches the server with its saved jar, JVM arguments and working folder. It leaves as soon as the process is launched, not when the server is ready. Stop Server (__stop__) stops the server and waits for it to exit. It waits up to the Stop grace period in Settings, then force-ends the process. Restart Server (__restart__) stops, then starts. On a stopped server it only starts. Any other value is written to the server console as one line. onComplete means the line was written. The server's reply is not read. The presets Save All, Freeze Time, Set Day and Set Night send save-all, time set 18000, time set day and time set night. Command sent carries the value that ran, such as __stop__ for Stop Server. It is set only when the block succeeds."
+      },
+      {
+        "id": "errors",
+        "title": "Errors",
+        "text": "Message says Do command is empty Fill in Command, or wire a value into it. server already running Use Start Server only while the server is stopped. server not running Make sure the server is up when this block runs. another power action is in progress Wait for the running start, stop or restart to finish. command must be a single line Remove the line break from the command. failed to start server: reason Fix what the reason names, then run again."
+      }
+    ]
+  },
+  {
+    "url": "/docs/blocks/action-delay.html",
+    "title": "Delay",
+    "kind": "reference",
+    "lead": "Waits a set number of seconds, then continues.",
+    "sections": [
+      {
+        "id": "ports",
+        "title": "Ports",
+        "text": "Delay action in trigger control Seconds number out onComplete control onFailed control"
+      },
+      {
+        "id": "fields",
+        "title": "Fields",
+        "text": "Field What it does Default Limits Seconds How long to wait before leaving by onComplete. 5 0 to 60 s. A negative value waits 0 s, and an empty field waits 5 s."
+      },
+      {
+        "id": "run",
+        "title": "What a run does",
+        "text": "The block waits for Seconds, then leaves by onComplete. A wired value outranks the field. The block has no data outputs. A wait longer than 60 seconds is cut off and leaves by onFailed. Chain two Delay blocks for a longer wait."
+      },
+      {
+        "id": "errors",
+        "title": "Errors",
+        "text": "Message says Do timed out after 60s: delay cancelled: context deadline exceeded Use 60 seconds or less in one block."
+      }
+    ]
+  },
+  {
+    "url": "/docs/blocks/action-dhPublish.html",
+    "title": "Publish DH Snapshot",
+    "kind": "reference",
+    "lead": "Uploads a staged Distant Horizons snapshot to a bucket and publishes its download page.",
+    "sections": [
+      {
+        "id": "ports",
+        "title": "Ports",
+        "text": "Publish DH Snapshot action in trigger control Staged folder string out onComplete control onFailed control Snapshot URL string Parts uploaded number Parts skipped number Bytes sent number Levels assembled number Snapshots deleted number Parts deleted number Bytes freed number"
+      },
+      {
+        "id": "fields",
+        "title": "Fields",
+        "text": "Field What it does Default Limits Destination The saved bucket the snapshot is published to. None Must name a saved destination that still exists. Key prefix Text added to the destination's key prefix for every object of the snapshot. None No . or .. segments. Staged folder (default: this server's staging folder) The folder holding the staged snapshot, empty for this server's staging folder. None An absolute path that exists, outside the server's folder and other servers' staging folders. Snapshots to keep (at least 1) How many snapshots stay in the bucket once this one is published. 3 A whole number from 1 to 2147483647."
+      },
+      {
+        "id": "run",
+        "title": "What a run does",
+        "text": "The block holds this server's snapshot claim for the whole run. A snapshot or publish already running for the server fails it. A wired Staged folder replaces the Staged folder field. Reads and checks index.json in the staged folder. Reads the bucket's latest.json to learn which parts are already there. Sends the parts the bucket lacks, and counts a part it already holds as skipped. Assembles each level's whole database inside the bucket, from its parts. Writes the snapshot's index.json and download page, then latest.json last. Deletes snapshots beyond Snapshots to keep, and the parts no kept snapshot uses. A run that stops before latest.json is written leaves the previous snapshot as the current one. The next run resumes, because parts already in the bucket are not sent again. The newest complete snapshots are kept, plus the one latest.json points at. It leaves by onComplete once latest.json is written, and by onFailed on any error. A prune that fails does not fail the block: it leaves by onComplete and records a warning. Snapshot URL is the address of latest.json, under the destination's public base URL if it has one. A private link shows [redacted] in place of its token. Copy that link from the destination's Snapshot link row in Settings. The other outputs count the parts sent and skipped, the levels assembled, and what the prune deleted. Progress and failures appear in the server's console, and the block can run for up to 12 hours."
+      },
+      {
+        "id": "errors",
+        "title": "Errors",
+        "text": "Message says Do destination validation failed: Publish DH Snapshot (node): the destination \"name\" does not exist. It was deleted or renamed in Settings, or this graph came from another install. Pick a destination that exists, or add it in Settings. key prefix \"prefix\" must not contain \"segment\" Remove the . or .. segment from the prefix. the staged folder folder cannot be read: reason Check that the folder exists and can be read. cannot read the previous snapshot from destination: reason Check the destination and the network, then run it again. part hash: reason Run it again; parts already sent are skipped. assemble level folder: reason Run it again; parts already sent are skipped. timed out after 43200s: reason Run it again; parts already sent are skipped."
+      }
+    ]
+  },
+  {
+    "url": "/docs/blocks/action-dhSnapshot.html",
+    "title": "DH Snapshot",
+    "kind": "reference",
+    "lead": "Stages a snapshot of the server's Distant Horizons data, stopping a running server for the copy.",
+    "sections": [
+      {
+        "id": "ports",
+        "title": "Ports",
+        "text": "DH Snapshot action in trigger control out onComplete control onFailed control Staged folder string Bytes changed number Parts changed number Parts in all number Downtime (s) number"
+      },
+      {
+        "id": "fields",
+        "title": "Fields",
+        "text": "Field What it does Default Limits Destination of the last snapshot The bucket of the last published snapshot, which says which parts are already uploaded. None Optional; if set, must name a saved destination. Key prefix Text added to the destination's key prefix when looking for the last snapshot. None No . or .. segments. Staging folder (default: in the app data folder) The folder the snapshot is staged in, empty for this server's own folder in the app data folder. None An absolute path outside the server's folder. Warn players this many seconds before How long before the stop the players are warned. 300 A whole number from 0 to 1800 s; 0 sends no warning. Warning ({time} is the time left) The warning the players read, where {time} becomes the time left. The server will stop in {time} for a world snapshot and be back shortly. None"
+      },
+      {
+        "id": "run",
+        "title": "What a run does",
+        "text": "The block holds this server's snapshot claim for the whole run. A snapshot or publish already running for the server fails it. Parts are slices of the databases, named by their hash. Checks the lead time, the Distant Horizons config, its jar, its databases and the free space. Reads the previous snapshot: the destination's latest.json, or the index.json already in the staging folder. Warns the players in chat at the lead time, and again at 1 minute and 10 seconds when the lead time is longer. Stops the server, waiting up to the Stop grace period from Settings. Reads each dimension's database and stages the parts the previous snapshot lacks, then writes index.json. Starts the server again, whether or not the copy worked. Removes staged parts the new snapshot no longer needs. The warning goes over RCON, or through the server console when RCON is not confirmed. A warning that cannot be sent stops the run with the server still up. A server that is already stopped is copied as it is, nobody is warned, and it stays stopped. It leaves by onComplete when the snapshot is staged, and by onFailed on any error. Staged folder, Bytes changed, Parts changed and Parts in all are set after a successful run. Downtime (s) is set whenever the server was stopped, even if the run failed. Progress and failures appear in the server's console. The block can run for up to 3 hours."
+      },
+      {
+        "id": "errors",
+        "title": "Errors",
+        "text": "Message says Do destination validation failed: DH Snapshot (node): the destination \"name\" does not exist. It was deleted or renamed in Settings, or this graph came from another install. Pick a destination that exists, or clear the field. no DistantHorizons.sqlite found under world folder Let Distant Horizons create its data in the world first. neither RCON nor the server's console can carry the warning, so the players could not be told before the stop: enable RCON (enable-rcon in server.properties) or start the server from Konnekt Enable RCON, start the server from Konnekt, or set the lead time to 0. cannot read the previous snapshot from destination: reason Check the destination and the network, then run it again. could not warn the players, so the server was not stopped: reason Check RCON and the console; the server was left running. could not stop the server: reason Check the server's state, then run it again. copying the databases failed: reason Read the reason; the server was started again. the snapshot was staged, but the server could not be started again: reason Start the server by hand. key prefix \"prefix\" must not contain \"segment\" Remove the . or .. segment from the prefix. timed out after 10800s: reason Run it again; the server is started again when the copy stops."
+      }
+    ]
+  },
+  {
+    "url": "/docs/blocks/action-httpRequest.html",
+    "title": "HTTP Request",
+    "kind": "reference",
+    "lead": "Sends an HTTP request to a URL and outputs the status and the response body.",
+    "sections": [
+      {
+        "id": "ports",
+        "title": "Ports",
+        "text": "HTTP Request action in trigger control URL string Request body string Content-Type string out onComplete control onFailed control HTTP status number Response body string"
+      },
+      {
+        "id": "fields",
+        "title": "Fields",
+        "text": "Field What it does Default Limits Method The HTTP method of the request. POST GET POST PUT PATCH DELETE URL The address to request. None Cannot be empty; http or https only. Request body The text sent as the request body. None None Content-Type The Content-Type header sent with the body. application/json None"
+      },
+      {
+        "id": "run",
+        "title": "What a run does",
+        "text": "Sends one request with a 30 s timeout and follows up to 10 redirects. A wired URL, Request body or Content-Type replaces its field. An empty Request body sends no body and no Content-Type header. An empty Content-Type sends application/json. The block does not filter addresses, so a URL on the local network works. It leaves by onComplete when the status is below 400. It leaves by onFailed on a status of 400 or above, and on a connection error. HTTP status carries the status code whenever a response arrived, failed or not. Response body carries the body as text once the whole body has been read. A body over 1 MiB fails the block and sets no Response body."
+      },
+      {
+        "id": "errors",
+        "title": "Errors",
+        "text": "Message says Do url is empty Fill in URL or wire one in. HTTP status: response body The service answered 400 or above; check the request and what the service expects. HTTP status: response body exceeds 1048576 bytes Request something smaller; the block keeps 1 MiB at most. HTTP status: read response: reason The connection broke while the body was read; check the service and the network. Method \"url\": reason Check the address, that the service is reachable and that it answers within 30 s."
+      }
+    ]
+  },
+  {
+    "url": "/docs/blocks/action-modpackCheck.html",
+    "title": "Check Modpack",
+    "kind": "reference",
+    "lead": "Checks whether the server's mods differ from its bound pack, and stages the downloads.",
+    "sections": [
+      {
+        "id": "ports",
+        "title": "Ports",
+        "text": "Check Modpack action in trigger control out onUpdate control onUpToDate control onFailed control Applied version string Pack version string Files to change number"
+      },
+      { "id": "fields", "title": "Fields", "text": "None." },
+      {
+        "id": "run",
+        "title": "What a run does",
+        "text": "The pack is the one chosen in the mods tile, under Pack. The block takes no address of its own. Reads the pack and checks every file in it against the pack's hashes. Downloads each jar the server lacks into Konnekt's cache, checked against its hash. Works out what a sync would add, update, remove and disable, without touching mods/. It leaves by onUpdate when a sync would change a file, by onUpToDate when it would not, and by onFailed on any error. Applied version is the pack version last synced, empty before the first sync. The block can run for up to 30 minutes."
+      },
+      {
+        "id": "errors",
+        "title": "Errors",
+        "text": "Message says Do no pack is set for this server Choose a pack in the mods tile, under Pack. pack sync is for mod loaders; this server runs loader Pack sync is for mod loaders such as NeoForge and Fabric. read the pack: reason Check the pack address and the network, then run it again."
+      }
+    ]
+  },
+  {
+    "url": "/docs/blocks/action-modpackSync.html",
+    "title": "Sync Modpack",
+    "kind": "reference",
+    "lead": "Brings a stopped server's mods in line with its bound pack.",
+    "sections": [
+      {
+        "id": "ports",
+        "title": "Ports",
+        "text": "Sync Modpack action in trigger control out onComplete control onUpToDate control onFailed control Pack version string Added number Updated number Removed number"
+      },
+      { "id": "fields", "title": "Fields", "text": "None." },
+      {
+        "id": "run",
+        "title": "What a run does",
+        "text": "The pack is the one chosen in the mods tile, under Pack. The block does not stop the server: put a Stop command before it and a Start after. Makes the same plan Check Modpack makes, downloading what is missing. Fails if the plan has any blocker, since nobody is there to read it. Keeps a copy of every file it replaces or removes, so the sync can be rolled back from the mods tile. Moves the new files into mods/. Only files the pack installed are replaced or removed. A mod added by hand stays. It leaves by onComplete when files changed, by onUpToDate when none had to, and by onFailed on any error. The result appears in the server's console. The block can run for up to 30 minutes."
+      },
+      {
+        "id": "errors",
+        "title": "Errors",
+        "text": "Message says Do no pack is set for this server Choose a pack in the mods tile, under Pack. pack sync is for mod loaders; this server runs loader Pack sync is for mod loaders such as NeoForge and Fabric. read the pack: reason Check the pack address and the network, then run it again. the sync cannot be applied: The server is running. Stop it to apply the sync. Stop the server before this block. the sync cannot be applied: The pack expects loader version and the server runs version. Update the server's loader to the pack's version. the sync cannot be applied: file: a CurseForge file the pack does not link directly Put that jar in mods/ by hand, then run it again."
+      }
+    ]
+  },
+  {
+    "url": "/docs/blocks/action-notify.html",
+    "title": "Notify",
+    "kind": "reference",
+    "lead": "Shows a message in the app, as a desktop notification, or both.",
+    "sections": [
+      {
+        "id": "ports",
+        "title": "Ports",
+        "text": "Notify notify in trigger control Message string out onComplete control"
+      },
+      {
+        "id": "fields",
+        "title": "Fields",
+        "text": "Field What it does Default Limits Kind The tone of the message. It also decides which in-app bubble setting can hide it. Info Info Warning Error Message The text of the message. None None Deliver to Where the message goes. In-app and desktop In-app Desktop In-app and desktop"
+      },
+      {
+        "id": "run",
+        "title": "What a run does",
+        "text": "The block reads Kind, Message and Deliver to and sends one message to the app. A wired Message outranks the field. It leaves by onComplete at once, and has no onFailed port. In-app adds the message to the Notifications tile and raises a bubble titled Scheduler. The bubble is hidden when its switch is off in the Notifications pane of Settings. Kind Error uses Errors, and the other kinds use Warnings and info. Desktop sends the operating system's notification only. No switch in Settings applies to it. The first one can ask the operating system for permission, and nothing shows if it is denied. In-app and desktop does both. An empty or unknown Deliver to value does this too."
+      }
+    ]
+  },
+  {
+    "url": "/docs/blocks/action-rcon.html",
+    "title": "RCON Command",
+    "kind": "reference",
+    "lead": "Sends a command over RCON and returns the server's reply.",
+    "sections": [
+      {
+        "id": "ports",
+        "title": "Ports",
+        "text": "RCON Command action in trigger control Command string out onComplete control onFailed control Response string"
+      },
+      {
+        "id": "fields",
+        "title": "Fields",
+        "text": "Field What it does Default Limits Command The command to send over RCON. None Save All Freeze Time Set Day Set Night"
+      },
+      {
+        "id": "run",
+        "title": "What a run does",
+        "text": "A wired Command outranks the field. It connects to the server's RCON port, logs in, sends the command and closes the connection. Each run opens a new connection. onComplete carries the reply in Response, with colour codes removed and spaces trimmed. The reply can be empty. Any error leaves by onFailed. The address and password are the ones server.properties held when the server last started. They count only if enable-rcon was true and rcon.password was set. Its presets match the console presets of the Command block."
+      },
+      {
+        "id": "errors",
+        "title": "Errors",
+        "text": "Message says Do command is empty Fill in Command, or wire a value into it. RCON not enabled or not running Set enable-rcon and rcon.password in server.properties, then start the server. rcon dial: reason Check that the server is running and that rcon.port is right. rcon auth: wrong password Check rcon.password in server.properties, then restart the server."
+      }
+    ]
+  },
+  {
+    "url": "/docs/blocks/action-upload.html",
+    "title": "Upload to Bucket",
+    "kind": "reference",
+    "lead": "Uploads a file or folder from the server to a bucket, skipping what is already there.",
+    "sections": [
+      {
+        "id": "ports",
+        "title": "Ports",
+        "text": "Upload to Bucket action in trigger control Source string Key prefix string out onComplete control onFailed control Objects uploaded number Objects skipped number Bytes sent number"
+      },
+      {
+        "id": "fields",
+        "title": "Fields",
+        "text": "Field What it does Default Limits Destination The saved bucket to upload to, chosen from the destinations in Settings. None Must name a saved destination that still exists. Source (file or folder) The file or folder to upload, relative to the server folder or absolute. None Inside the server folder, its backups folder or its DH staging folder. Key prefix Text added to every object key after the destination's own prefix. None No . or .. segments."
+      },
+      {
+        "id": "run",
+        "title": "What a run does",
+        "text": "Resolves Source against the server folder and refuses anything outside the folders it may read. Lists the files: a folder is walked in name order, and a link to a folder is not entered. Refuses the whole upload, before sending anything, if one file is over 5 GiB. Checks each object in the bucket: one of the same size is skipped, anything else is sent. Stops at the first failure and keeps what was sent, so the next run resumes. Each key is the destination's prefix, then Key prefix, then the file's path below Source. A single file is stored under its file name. Only the size is compared, so a file edited to the same length is not sent again. A wired Source or Key prefix replaces its field. It leaves by onComplete when every file is sent or skipped, and by onFailed on any error. Objects uploaded, Objects skipped and Bytes sent are set after a successful run. Progress and the result appear in the server's console. The block can run for up to 12 hours."
+      },
+      {
+        "id": "errors",
+        "title": "Errors",
+        "text": "Message says Do destination validation failed: Upload to Bucket (node): the destination \"name\" does not exist. It was deleted or renamed in Settings, or this graph came from another install. Pick a destination that exists, or add it in Settings. destination \"name\": reason Correct the destination in Settings. key prefix \"prefix\" must not contain \"segment\" Remove the . or .. segment from the prefix. source path does not exist Check the path of the source. source path is outside the folders a graph may upload from (the server's folder and its backups) Choose a source in the server folder, its backups folder or its DH staging folder. file is a link that is outside the folders a graph may upload from (the server's folder and its backups) Remove the link, or point it inside those folders. source path holds no files to upload Choose a source that holds at least one file. key is size, over the 5 GiB single upload limit, so nothing was uploaded; split it or leave it out of the folder: file is over the 5 GiB single upload limit Split the file or move it out of the folder. object n of total: reason Run it again; objects already sent are skipped. timed out after 43200s: reason Run it again; objects already sent are skipped."
+      }
+    ]
+  },
+  {
+    "url": "/docs/blocks/control-condition.html",
+    "title": "Condition",
+    "kind": "reference",
+    "lead": "Branches on a comparison of A and B, or on a logic gate over the two.",
+    "sections": [
+      {
+        "id": "ports",
+        "title": "Ports",
+        "text": "Condition control in trigger control A string B string out onTrue control onFalse control Result bool"
+      },
+      {
+        "id": "fields",
+        "title": "Fields",
+        "text": "Field What it does Default Limits Operator Chooses a comparison of A and B, or a logic gate over them. == == != > < contains AND OR XOR NAND NOR A The first operand; a wired A replaces it. None None B The second operand; a wired B replaces it. None None is true For a gate, reads A as it is when checked and flipped when unchecked. On Shown only for the gate operators. is true For a gate, reads B as it is when checked and flipped when unchecked. On Shown only for the gate operators."
+      },
+      {
+        "id": "run",
+        "title": "What a run does",
+        "text": "Decides one outcome from A and B, then leaves by onTrue or onFalse. Neither port is an error. A wired A or B replaces its field. Result carries the outcome as 1 for true and 0 for false, so it can feed another Condition. Operator True when == A equals B. != A does not equal B. > A is greater than B. < A is less than B. contains The text of A contains the text of B, and case matters. Two numbers are compared as numbers, so 9 is less than 10. A number is a wired number, or text that reads as one, such as 10. Anything else is compared as text, and case matters. == and != compare as booleans when either side is the text true or false. The other side must read as a boolean too. A boolean, a number, or the text true or false does. A number is true unless it is 0. A wired true arrives as 1, so it equals the text true. The gate operators AND, OR, XOR, NAND and NOR do not compare. They read A and B as true or false, then combine the two. A value is true when it is the boolean true or a number other than 0. The text true in any capitals is true, and so is text that reads as a number other than 0. Everything else is false, including empty text, text such as yes, and a value that was not set. Each operand has an is true box, shown only for a gate operator. Checked, which is the default, the operand is used as it is. Unchecked, the operand is flipped: true becomes false and false becomes true. So AND with the box under A unchecked is true when A is false and B is true. The gates combine A and B as their boxes leave them. A B AND OR XOR NAND NOR False False False False False True True False True False True True True False True False False True True True False True True True True False False False"
+      }
+    ]
+  },
+  {
+    "url": "/docs/blocks/data-constant.html",
+    "title": "Constant",
+    "kind": "reference",
+    "lead": "Outputs a fixed value of a chosen type.",
+    "sections": [
+      { "id": "ports", "title": "Ports", "text": "Constant data in None out Value auto" },
+      {
+        "id": "fields",
+        "title": "Fields",
+        "text": "Field What it does Default Limits Type How the value is read, which also sets the type of the Value port. String String Float Integer Boolean Value The text to output, read as the chosen type. None Float must be a number and Integer a whole number."
+      },
+      {
+        "id": "run",
+        "title": "What a run does",
+        "text": "This block has no control ports. It runs when a block that uses its Value runs. Type Value output Port type String The text as it is. string Float The text as a number, decimals allowed. number Integer The text as a whole number, digits only. number Boolean 1 for the text true or 1, 0 for anything else. bool Boolean matches the text exactly, so True counts as false. A Float or Integer value that does not parse sets no output. No error is shown, and the block that would use the value uses its own field instead."
+      }
+    ]
+  },
+  {
+    "url": "/docs/blocks/data-mathOp.html",
+    "title": "Math",
+    "kind": "reference",
+    "lead": "Outputs the result of arithmetic on two numbers.",
+    "sections": [
+      {
+        "id": "ports",
+        "title": "Ports",
+        "text": "Math data in A number B number out Result number"
+      },
+      {
+        "id": "fields",
+        "title": "Fields",
+        "text": "Field What it does Default Limits A The first number; a wired A replaces it. 0 None Operator The calculation to perform. + add + add - subtract × multiply ÷ divide % mod Δ difference B The second number; a wired B replaces it. 0 Cannot be 0 for divide or mod."
+      },
+      {
+        "id": "run",
+        "title": "What a run does",
+        "text": "This block has no control ports. It runs when a block that uses its Result runs. A wired A or B replaces its field. The result is worked out once per run. Operator Result + add A plus B. - subtract A minus B. × multiply A times B. ÷ divide A divided by B. % mod The remainder of A divided by B, after both have their decimals cut off. Δ difference The gap between A and B, which is not negative. Dividing, or taking the remainder, with B at 0 sets no output. No error is shown, and the block that would use the result uses its own field instead."
+      }
+    ]
+  },
+  {
+    "url": "/docs/blocks/data-randomNumber.html",
+    "title": "Random Number",
+    "kind": "reference",
+    "lead": "Outputs a random number between Min and Max.",
+    "sections": [
+      {
+        "id": "ports",
+        "title": "Ports",
+        "text": "Random Number data in Min number Max number out Value number"
+      },
+      {
+        "id": "fields",
+        "title": "Fields",
+        "text": "Field What it does Default Limits Min The lowest number the block can output; a wired Min replaces it. 1 None Max The highest number the block can output; a wired Max replaces it. 100 A value below Min is raised to Min."
+      },
+      {
+        "id": "run",
+        "title": "What a run does",
+        "text": "This block has no control ports. It runs when a block that uses its Value runs. A wired Min or Max replaces its field. The number is picked once per run, so every block using it in that run gets the same number. The number can have decimals, and it does not exceed Max. If Max is below Min, the number is Min."
+      }
+    ]
+  },
+  {
+    "url": "/docs/blocks/data-serverAttribute.html",
+    "title": "Read Attribute",
+    "kind": "reference",
+    "lead": "Outputs the live value of a server attribute, or of a custom attribute set earlier in the run.",
+    "sections": [
+      { "id": "ports", "title": "Ports", "text": "Read Attribute data in None out Value auto" },
+      {
+        "id": "fields",
+        "title": "Fields",
+        "text": "Field What it does Default Limits Attribute The attribute to read; a name that is not built in reads a custom attribute. tps tps players.count ram.used (MB) ram.left (MB) server.status players.max ram.total (MB) server.whitelist server.port server.gamemode server.motd server.world Data type The type the value must have, which also sets the type of the Value port. Auto Auto String Number Boolean"
+      },
+      {
+        "id": "run",
+        "title": "What a run does",
+        "text": "This block has no control ports. It runs when a block that uses its Value runs, and reads the attribute once per run. Every block using the same Read Attribute in that run gets the same value. Attribute Value tps The server's current ticks per second. players.count The number of players online. players.max The server's player limit. ram.used (MB) The memory the server process uses, in MB. ram.total (MB) The -Xmx memory limit of the server, in MB. ram.left (MB) ram.total minus ram.used, in MB. server.status 1 when the server is running, 0 when it is stopped. server.whitelist The white-list value in server.properties, as text. server.port The server-port value in server.properties, as text. server.gamemode The gamemode value in server.properties, as text. server.motd The motd value in server.properties, as text. server.world The level-name value in server.properties, as text. A name that is not built in is looked up among the custom attributes set earlier in the run. Write Attribute sets them. Data type checks the value before it is output. Auto accepts any value, and the Value port then connects to any input. Number needs a number, Boolean needs a boolean or 1 or 0, and String needs text. A value of the wrong type, or an attribute that cannot be read, sets no output. No error is shown, and the block that would use the value uses its own field instead."
+      }
+    ]
+  },
+  {
+    "url": "/docs/blocks/data-writeAttribute.html",
+    "title": "Write Attribute",
+    "kind": "reference",
+    "lead": "Writes a server attribute such as server.motd, or defines a custom attribute for the blocks after it.",
+    "sections": [
+      {
+        "id": "ports",
+        "title": "Ports",
+        "text": "Write Attribute data in trigger control Value string out onComplete control onFailed control"
+      },
+      {
+        "id": "fields",
+        "title": "Fields",
+        "text": "Field What it does Default Limits Attribute The attribute to write; a name that is not built in defines a custom attribute. server.motd players.max server.motd server.whitelist server.port server.gamemode server.world Value The value to write; a wired Value replaces it. None No line breaks in a server attribute."
+      },
+      {
+        "id": "run",
+        "title": "What a run does",
+        "text": "A built-in attribute is written to server.properties in the server's folder. The server is not restarted. A leading @ in the name is ignored. A wired Value replaces the Value field. Attribute Writes players.max max-players server.motd motd server.whitelist white-list, and sends whitelist on to a running server for true or 1, otherwise whitelist off server.port server-port server.gamemode gamemode, and sends defaultgamemode with the value to a running server server.world level-name The read-only attributes fail the block: tps, players.count, ram.used, ram.left, ram.total and server.status. Any other name defines a custom attribute for the rest of this run. Its value is kept as typed. An @attribute inside it is read again each time the custom attribute is used. The custom attribute is gone when the run ends. Read Attribute reads it. It leaves by onComplete when the attribute is written or defined, and by onFailed on an error."
+      },
+      {
+        "id": "errors",
+        "title": "Errors",
+        "text": "Message says Do attribute @name is read-only Choose one of the writable attributes. property value must be a single line Remove the line breaks from the value."
+      }
+    ]
+  },
+  {
+    "url": "/docs/blocks/",
+    "title": "Scheduler blocks",
+    "kind": "reference",
+    "lead": "The blocks a scheduler graph is built from.",
+    "sections": []
+  },
+  {
+    "url": "/docs/blocks/trigger-backup.html",
+    "title": "Backup",
+    "kind": "reference",
+    "lead": "Starts a run when a backup finishes or fails.",
+    "sections": [
+      {
+        "id": "ports",
+        "title": "Ports",
+        "text": "Backup trigger in Cooldown number out onComplete control onFailed control Backup filename string"
+      },
+      {
+        "id": "fields",
+        "title": "Fields",
+        "text": "Field What it does Default Limits Cooldown (seconds) The shortest time between two firings of this block, finished and failed together. 300 0 s or more. A negative or empty value uses 300 s."
+      },
+      {
+        "id": "run",
+        "title": "What a run does",
+        "text": "A finished backup fires the block and the run leaves by onComplete. A failed backup fires it and the run leaves by onFailed. Backups of one world and backups made by a Create Backup block count too. Backup filename carries the new file's name on onComplete. It is not set on onFailed. A failed restore does not fire the block. One cooldown covers both ports. A value wired into Cooldown is not read. It fires only for the server the backup belongs to."
+      }
+    ]
+  },
+  {
+    "url": "/docs/blocks/trigger-cron.html",
+    "title": "Cron Schedule",
+    "kind": "reference",
+    "lead": "Starts a run whenever the clock matches a cron expression.",
+    "sections": [
+      {
+        "id": "ports",
+        "title": "Ports",
+        "text": "Cron Schedule trigger in Cron string out onComplete control"
+      },
+      {
+        "id": "fields",
+        "title": "Fields",
+        "text": "Field What it does Default Limits Cron expression When to fire, as five cron fields. The syntax is on the cron page. 0 * * * * 5 fields. Any other count never fires."
+      },
+      {
+        "id": "run",
+        "title": "What a run does",
+        "text": "Once a minute, Konnekt checks the expression against the computer's clock. On a match, the block fires and the run leaves by onComplete. It fires at most once in any minute. An empty expression never fires. A field Konnekt cannot read never matches. A value wired into Cron is not read. The run acts on the server the graph belongs to."
+      }
+    ]
+  },
+  {
+    "url": "/docs/blocks/trigger-interval.html",
+    "title": "Interval",
+    "kind": "reference",
+    "lead": "Starts a run every set number of minutes.",
+    "sections": [
+      {
+        "id": "ports",
+        "title": "Ports",
+        "text": "Interval trigger in Interval number out onComplete control"
+      },
+      {
+        "id": "fields",
+        "title": "Fields",
+        "text": "Field What it does Default Limits Interval (minutes) How long to wait between firings. 60 Whole minutes, cut off if fractional. A value of 0 or less, or an empty field, uses 60 min."
+      },
+      {
+        "id": "run",
+        "title": "What a run does",
+        "text": "Konnekt checks time triggers once a minute. The first check that sees the block starts its timer and does not fire. Each later check fires the block once the interval has passed since its last firing. The run starts at this block and leaves by onComplete. The timer is kept in memory, so closing Konnekt resets it. The block has no cooldown: the interval spaces the runs. A value wired into Interval is not read. The run acts on the server the graph belongs to."
+      }
+    ]
+  },
+  {
+    "url": "/docs/blocks/trigger-player.html",
+    "title": "Player",
+    "kind": "reference",
+    "lead": "Starts a run when a player joins or leaves the server.",
+    "sections": [
+      {
+        "id": "ports",
+        "title": "Ports",
+        "text": "Player trigger in Cooldown number out onComplete control Player name string Player IP string"
+      },
+      {
+        "id": "fields",
+        "title": "Fields",
+        "text": "Field What it does Default Limits Type Whether the block fires when a player joins or when one leaves. Joined Joined Left Cooldown (seconds) The shortest time between two firings of this block, all players together. 300 0 s or more. A negative or empty value uses 300 s."
+      },
+      {
+        "id": "run",
+        "title": "What a run does",
+        "text": "Konnekt reads the console of a server it started. Joined fires when a player joins, and Left when one leaves. The run starts at this block and leaves by onComplete. Player name carries the player's name. Player IP carries the address on Joined and is empty on Left. It can also be empty on Joined, when the server logs the address after the join message. The cooldown counts per block, not per player. A player who joins inside the cooldown does not start a run. A value wired into Cooldown is not read. It fires only for the server the graph belongs to."
+      }
+    ]
+  },
+  {
+    "url": "/docs/blocks/trigger-server.html",
+    "title": "Server",
+    "kind": "reference",
+    "lead": "Starts a run when the server starts, stops or crashes.",
+    "sections": [
+      {
+        "id": "ports",
+        "title": "Ports",
+        "text": "Server trigger in Cooldown number out onComplete control"
+      },
+      {
+        "id": "fields",
+        "title": "Fields",
+        "text": "Field What it does Default Limits Type The server event that fires the block. Stopped Stopped Started Crashed Cooldown (seconds) The shortest time between two firings of this block. 300 0 s or more. A negative or empty value uses 300 s."
+      },
+      {
+        "id": "run",
+        "title": "What a run does",
+        "text": "Started fires when Konnekt launches the server process, before the server has finished loading. Stopped fires when the process exits after a deliberate stop, from Konnekt or from the server itself. Crashed fires when it exits any other way, or after the server logged a crash. The run starts at this block and leaves by onComplete. The block has no data outputs. A restart from Konnekt fires Stopped, then Started. The cooldown counts per block. A value wired into Cooldown is not read. It fires only for the server the graph belongs to."
+      }
+    ]
+  },
+  {
+    "url": "/docs/blocks/trigger-timeOfDay.html",
+    "title": "Time of Day",
+    "kind": "reference",
+    "lead": "Starts a run once a day at a set time.",
+    "sections": [
+      {
+        "id": "ports",
+        "title": "Ports",
+        "text": "Time of Day trigger in Time string out onComplete control"
+      },
+      {
+        "id": "fields",
+        "title": "Fields",
+        "text": "Field What it does Default Limits Time (HH:MM) The time of day to fire, on the computer's 24-hour clock. 00:00 00:00 to 23:59. A time that does not parse never fires."
+      },
+      {
+        "id": "run",
+        "title": "What a run does",
+        "text": "Once a minute, Konnekt compares the computer's clock with the Time (HH:MM) field. When the hour and minute match, the block fires and the run leaves by onComplete. It fires at most once per calendar day. Konnekt must be running at that minute. A missed time is not made up. A value wired into Time is not read. The run acts on the server the graph belongs to."
+      }
+    ]
+  },
+  {
+    "url": "/docs/blocks/trigger-tpsThreshold.html",
+    "title": "TPS Below Threshold",
+    "kind": "reference",
+    "lead": "Starts a run when the server's TPS falls below a threshold.",
+    "sections": [
+      {
+        "id": "ports",
+        "title": "Ports",
+        "text": "TPS Below Threshold trigger in Threshold number Cooldown number out onComplete control Current TPS number"
+      },
+      {
+        "id": "fields",
+        "title": "Fields",
+        "text": "Field What it does Default Limits TPS threshold The block fires when TPS is below this value. 14 An empty field uses 14 TPS. Cooldown (seconds) The shortest time between two firings of this block. 300 0 s or more. A negative or empty value uses 300 s."
+      },
+      {
+        "id": "run",
+        "title": "What a run does",
+        "text": "While the server runs, Konnekt takes a stats snapshot every 10 seconds. If the snapshot's TPS is below TPS threshold and the cooldown has passed, the block fires. The run leaves by onComplete, and Current TPS carries that snapshot's value. The server's TPS comes from RCON, polled every 15 seconds, and is capped at 20. Without RCON it is estimated from the server's Can't keep up warnings. A long dip fires again each time the cooldown passes. A value wired into Threshold or Cooldown is not read. It fires only for the server the graph belongs to."
+      }
+    ]
+  },
+  {
+    "url": "/docs/bucket-layout.html",
+    "title": "What ends up in the bucket",
+    "kind": "reference",
+    "lead": "The keys Konnekt writes under a destination's prefix for uploads and snapshots, and when it deletes them.",
+    "sections": [
+      {
+        "id": "key-prefix",
+        "title": "Key prefix",
+        "text": "Every key starts with the destination's Prefix, then the block's Key prefix. <prefix> stands for both. With both blank, keys start at the bucket's root."
+      },
+      {
+        "id": "upload-to-bucket",
+        "title": "Upload to Bucket",
+        "text": "Key Holds <prefix>/<path inside Source> One object per file, with folders kept as key segments. <prefix>/<file name> The object for a Source that is a single file. The block deletes nothing. An object that exists at the same size is skipped, and any other is replaced."
+      },
+      {
+        "id": "publish-dh-snapshot",
+        "title": "Publish DH Snapshot",
+        "text": "Key Holds Replaced or deleted <prefix>/latest.json A pointer to the newest snapshot's index.json: its format, createdAt and the path. Rewritten by each publish, as its last write. <prefix>/snapshots/<stamp>/index.json The snapshot: Distant Horizons version, server folder, and for each level its folder, size, SHA-256 and parts. Deleted with its snapshot. <prefix>/snapshots/<stamp>/index.html The download page, listing each level's file with its size and the folder to put it in. Deleted with its snapshot. <prefix>/snapshots/<stamp>/<level folder>/DistantHorizons.sqlite One level's whole database, built inside the bucket from its parts. Deleted with its snapshot. <prefix>/parts/<sha256> A slice of a database, named by its SHA-256 and up to 8 MiB, shared by every snapshot that uses it. Deleted when no kept snapshot lists it. <stamp> is the snapshot's UTC time, such as 20261012T040000Z. <level folder> is <levelKeyPrefix>@<namespace>@@<path>, such as myserver@minecraft@@overworld."
+      },
+      {
+        "id": "private-link",
+        "title": "Private link",
+        "text": "Key Holds <prefix>/<token>/latest.json The pointer, as in the public layout. <prefix>/<token>/snapshots/<stamp>/… The same snapshot files as in the public layout. <prefix>/parts/<sha256> The parts, which stay where they are. <token> is 26 random lowercase letters and digits. The destination's Snapshot link row switches between the two layouts."
+      },
+      {
+        "id": "deletions",
+        "title": "Deletions",
+        "text": "When Deletes A publish finishes Snapshots beyond the newest Snapshots to keep, except the one latest.json points at. Then every part no kept snapshot lists. The next publish after a cut-off one A folder without index.json, once it is older than the oldest snapshot kept. The link switches or rotates The old address's latest.json first, then its whole snapshots/ folder. Only the snapshot latest.json points at moves to the new address. A destination is deleted in Settings Nothing in the bucket. A cleanup only touches folders named like a stamp and parts named like a SHA-256. If it cannot read what it needs, it deletes nothing, and the publish reports a warning. The next publish cleans up again."
+      }
+    ]
+  },
+  {
+    "url": "/docs/crash-restart.html",
+    "title": "Restart after a crash",
+    "kind": "guide",
+    "lead": "Start the server again each time it crashes.",
+    "sections": [
+      {
+        "id": "before-you-start",
+        "title": "Before you start",
+        "text": "Konnekt left openGraphs run only while Konnekt is open. The scheduler editorMaximize the Scheduler tile to open it."
+      },
+      {
+        "id": "add-the-trigger",
+        "title": "Add the trigger",
+        "text": "Open the editor and select Open blocks, then Server. Field Set to Type Crashed Cooldown (seconds) 300 Crashed does not fire when you press Stop, which counts as Stopped. A crash inside the cooldown does not restart the server. That keeps a server that crashes on boot from restarting in a loop. What counts as a crash is on the Server block page."
+      },
+      {
+        "id": "add-the-restart",
+        "title": "Add the restart",
+        "text": "Add Command. Field Set to Command Restart Server Drag from onComplete on Server to trigger on Command. On a stopped server, Restart Server only starts it, which is the state after a crash."
+      },
+      {
+        "id": "switch-it-on",
+        "title": "Switch it on",
+        "text": "Select Graph actions, then Save. Select [off] so it reads [on]. run restarts the server at once, crash or not. A new graph starts off, and nothing fires until it is on."
+      }
+    ]
+  },
+  {
+    "url": "/docs/cron.html",
+    "title": "Cron expressions",
+    "kind": "reference",
+    "lead": "The Cron Schedule block fires when the clock matches a five-field expression.",
+    "sections": [
+      {
+        "id": "fields",
+        "title": "Fields",
+        "text": "Field Values Minute 0 to 59 Hour 0 to 23 Day of month 1 to 31 Month 1 to 12 Day of week 0 to 6, where 0 is Sunday Write the five fields in that order, separated by spaces. The block checks the clock at the start of each minute. It uses the time zone of this computer. Day of month and day of week must both match. A block fires at most once a minute, and only while its graph is on."
+      },
+      {
+        "id": "syntax",
+        "title": "Syntax",
+        "text": "Form Example Means Any value * Every value of the field. Value 30 Exactly that value. Range 9-17 Every value from the first to the second, both included. List 0,15,45 Any listed value. An item can be a value or a range. Step */10 Every value divisible by the step. Day of month */10 is the 10th, 20th and 30th."
+      },
+      {
+        "id": "examples",
+        "title": "Examples",
+        "text": "Expression Runs * * * * * Every minute. */5 * * * * Every 5 minutes, on the minutes 0, 5, 10 and so on. 0 * * * * At the start of every hour. 0,30 * * * * At the start and the middle of every hour. 30 9 * * * Every day at 09:30. 0 */6 * * * At 00:00, 06:00, 12:00 and 18:00. 0 4 * * 1-5 At 04:00 from Monday to Friday. 0 0 * * 0 At midnight on Sunday. 0 12 1 * * At 12:00 on the 1st of each month. 15 3 1 1 * At 03:15 on 1 January. 0 9 13 * 5 At 09:00 on a day that is both the 13th and a Friday."
+      },
+      {
+        "id": "limits",
+        "title": "Limits",
+        "text": "An expression that does not have five fields never matches. A value the parser cannot read never matches, and nothing reports it. That covers names such as MON or JAN, macros such as @hourly, and 7 for Sunday. A step works only as */n, so 1-5/2 and 5/15 never match. A range that wraps, such as 22-2, never matches. The next run is looked up 14 days ahead. A rarer schedule shows no next run time."
+      }
+    ]
+  },
+  {
+    "url": "/docs/dh-publish.html",
+    "title": "Publish Distant Horizons LODs",
+    "kind": "guide",
+    "lead": "Publish the server's Distant Horizons data to a bucket as a snapshot others can download.",
+    "sections": [
+      {
+        "id": "before-you-start",
+        "title": "Before you start",
+        "text": "Distant Horizons on the serverThe jar is in mods/, and the server has started with it once so config/DistantHorizons.toml exists. Generated Distant Horizons dataAt least one dimension of the world holds a DistantHorizons.sqlite. serverKey and levelKeyPrefix setSet both in config/DistantHorizons.toml to letters, digits, _ and -. They name the folders players put the files in. A way to warn playersTurn on enable-rcon in server.properties, or start the server from Konnekt. A destinationA saved bucket, such as the one from Save a Cloudflare R2 bucket."
+      },
+      {
+        "id": "add-the-trigger",
+        "title": "Add the trigger",
+        "text": "Maximize the Scheduler tile to open the scheduler editor. In the graph picker, select New graph. Select Open blocks at the top left of the canvas. Under trigger, click Cron Schedule. Set Cron expression to 0 4 * * 0. That fires every Sunday at 04:00 on this computer's clock. Pick an hour with few players, because DH Snapshot stops the server for the copy."
+      },
+      {
+        "id": "add-dh-snapshot",
+        "title": "Add DH Snapshot",
+        "text": "Under action, open the Distant Horizons group and click DH Snapshot. Set Destination of the last snapshot to your destination. Connect Cron Schedule's onComplete port to DH Snapshot's trigger port. With a destination set, the block reads the bucket's latest.json and stages only the parts the bucket lacks. Use the same Key prefix here and in step 03, or leave both blank, so the block finds the previous snapshot. The other fields are on the DH Snapshot page."
+      },
+      {
+        "id": "add-publish-dh-snapshot",
+        "title": "Add Publish DH Snapshot",
+        "text": "In the same group, click Publish DH Snapshot. Set Destination to the same destination. Connect DH Snapshot's onComplete port to Publish DH Snapshot's trigger port. Connect DH Snapshot's Staged folder output to Publish DH Snapshot's Staged folder input. The wired folder replaces the field, so a custom staging folder still reaches the publish. Snapshots to keep is 3 unless you change it. The other fields are on the Publish DH Snapshot page."
+      },
+      {
+        "id": "run-it",
+        "title": "Run it",
+        "text": "Open Graph actions and select Save. Select run. Follow the progress in the server's console. Select [on] so the trigger can fire. The first run copies and uploads all of the data, so it takes the longest. Later runs send only the parts that changed. The server stops for the copy and starts again whether or not the copy worked."
+      },
+      {
+        "id": "copy-the-link",
+        "title": "Copy the link",
+        "text": "Open Settings, then Destinations. On the destination's Snapshot link row, select Copy link. The link is the address of the snapshot's latest.json. Give it to the people who download the snapshot. Each snapshot also has an index.html listing every file with its size and target folder. Its address is in What ends up in the bucket."
+      },
+      {
+        "id": "choose-public-or-private",
+        "title": "Choose public or private",
+        "text": "A new destination publishes to a fixed address under its prefix. A private link puts the snapshot behind a random token instead. Switch before the first publish and there is nothing to move. The switch and Rotate link are described under Snapshot link."
+      },
+      {
+        "id": "when-it-refuses",
+        "title": "When it refuses",
+        "text": "Error Do no Distant Horizons jar found in folder: the snapshot reads the version from it Put the Distant Horizons jar in mods/. index.json in folder was staged for a different layout (partsBase value, expected value): run the snapshot again Run DH Snapshot again after switching a link between public and private."
+      }
+    ]
+  },
+  {
+    "url": "/docs/faq.html",
+    "title": "FAQ",
+    "kind": "reference",
+    "lead": "",
+    "sections": [
+      {
+        "id": "konnekt",
+        "title": "Konnekt",
+        "text": "Is it free? Yes, under the MIT licence: keep the copyright notice, and the rest is yours. No accounts, no tiers, no subscriptions. Does it phone home? No telemetry, analytics or crash reporting. On its own it contacts GitHub, to check for updates. Everything else follows something you set up: Modrinth for mods, CurseForge once you add an API key, NeoForge's Maven for a loader, your buckets, Cloudflare for a tunnel, and any address an HTTP Request block names. Where does it store my data? Your server files stay where they are. Konnekt's own state (servers, layouts, presets, scheduled tasks) is JSON in the OS application-data directory. Is it stable? It's alpha. The core is functional and in daily use, but expect rough edges. The roadmap has what is next."
+      },
+      {
+        "id": "servers",
+        "title": "Servers",
+        "text": "Which server types work? Vanilla, Paper, Spigot and Bukkit, and modded Fabric, Forge and NeoForge. The loader is detected automatically. Bedrock is not supported. The server stops as soon as I start it On a first run that is almost always the EULA. Minecraft will not start until you have accepted it, and says so in the log on its way out. Konnekt watches for that line and offers to write eula.txt for you, then starts the server again. Can I manage a server on another machine? No, Konnekt manages servers on the machine it runs on. Remote Access opens that machine's dashboard in a browser elsewhere."
+      },
+      {
+        "id": "updates",
+        "title": "Updates",
+        "text": "Can I run the newest code? Yes: snapshots are built from the newest code whenever it changes, and published as pre-releases. They're untested, so Konnekt warns before installing one. Take the first from the download page. After that a snapshot offers you the next one itself, and a release once one overtakes it. To follow snapshots from a stable build, switch the channel in Settings, General."
+      }
+    ]
+  },
+  {
+    "url": "/docs/first-server.html",
+    "title": "Your first server",
+    "kind": "guide",
+    "lead": "Point Konnekt at a server you already have, start it, and join it from Minecraft.",
+    "sections": [
+      {
+        "id": "before-you-start",
+        "title": "Before you start",
+        "text": "A server jarThe Minecraft server you already run. Konnekt manages it, it does not fetch one. JavaYour server needs it to run. Konnekt itself does not. RCON on in server.propertiesThe player list and commands need enable-rcon until Konnekt sets it up for you."
+      },
+      {
+        "id": "add-a-server",
+        "title": "Add a server",
+        "text": "Point it at the jar and the folder it lives in. Then name it and give it RAM. Servers Survival server.jar … /home/mc/survival… -Xms1G -Xmx4G Add server"
+      },
+      {
+        "id": "install-a-server",
+        "title": "Install a server",
+        "text": "Only for a Forge or NeoForge installer rather than a server jar. Hand it the installer and it runs the install for you. Then it adds what comes out. [i] Installer detected /home/mc/forge… Running installer… Extracting libraries Downloading server Install server Add server Close"
+      },
+      {
+        "id": "start-it",
+        "title": "Start it",
+        "text": "Press Start. The console streams the log live and takes commands inline. STOPPED STARTING RUNNING Start Stop Starting minecraft server 1.21 Loading properties Preparing level \"world\" Done (6.129s)! For help, type \"help\" Heads up A server that stops on its first run is almost always waiting for its EULA. Konnekt offers to write eula.txt for you, then starts it again."
+      },
+      {
+        "id": "join-it",
+        "title": "Join it",
+        "text": "The server runs on the machine you are sitting at, so its address is localhost. In Minecraft, open Multiplayer, then Direct Connection. Enter localhost as the Server Address, then Join Server. Direct Connection Server Address localhost Join Server Cancel"
+      }
+    ]
+  },
+  {
+    "url": "/docs/graphs.html",
+    "title": "How a graph runs",
+    "kind": "concept",
+    "lead": "A graph is a set of wired blocks that a trigger starts and that then run one at a time.",
+    "sections": [
+      {
+        "id": "start",
+        "title": "What starts a run",
+        "text": "A graph belongs to the server it was built on. A server can have any number of graphs. A graph fires only while it is switched on. A new graph starts off. run works on a graph that is off. Time triggers check the clock once a minute. They fire whether or not the server is running. Event triggers fire when their own server reports the event. Event triggers wait out their Cooldown (seconds) between firings. Graphs run only while Konnekt is open. Closing Konnekt stops the scheduler, and stops a running server too. A time that passes while it is closed is not made up."
+      },
+      {
+        "id": "control-and-data",
+        "title": "Control and data",
+        "text": "Control wires set the order. Each block leaves by one control port, such as onComplete or onTrue. Only the blocks wired to that port run next. Blocks wired to the same port run one after another, in an order not to rely on. Chain them with a wire when the order matters. A block that no control wire reaches never runs. Data wires carry values. A wired value replaces the block's own field. A wire that has no value yet leaves the field in use. Blocks with no control ports, such as Read Attribute, Constant and Math, run when a block that needs their value runs. They run once per run, and every block wired to them gets that value. The outputs of other blocks, such as the Backup filename of Create Backup, exist once that block has run. A block wired to one that has not run yet reads nothing."
+      },
+      {
+        "id": "failures-and-limits",
+        "title": "Failures and limits",
+        "text": "A block that fails leaves by onFailed. The blocks wired there run, so a graph can handle its own failure. With nothing wired there, that branch ends and the other branches carry on. The run is marked failed either way, with the reason of the first failure. A failed run raises a Run failed bubble with the reason and adds it to Notifications. It also writes the reason to the server's console, unless the block already did. A graph runs once at a time. A trigger that fires during a run starts nothing, and is not queued. Different graphs run at the same time. A block is cut off after 60 s, except the upload and Distant Horizons blocks, which have longer limits. A run is cut off after 30 minutes, or longer when its blocks have longer limits. A run also stops after 500 block executions, which ends a loop."
+      }
+    ]
+  },
+  {
+    "url": "/docs/install.html",
+    "title": "Install Konnekt",
+    "kind": "guide",
+    "lead": "Download the file for your system and open it.",
+    "sections": [
+      {
+        "id": "before-you-start",
+        "title": "Before you start",
+        "text": "A 64-bit Windows or Linux machine, or a MacThe macOS build runs on Apple silicon and Intel Macs. The machine your server runs onKonnekt manages servers on the machine it runs on."
+      },
+      {
+        "id": "download",
+        "title": "Download",
+        "text": "Open the download page and take the file for your system. Platform File Windows konnekt-windows-amd64-setup.exe macOS konnekt-darwin-universal.dmg Linux konnekt-linux-amd64 Fedora, Rocky and RHEL 10 konnekt-<version>.x86_64.rpm See also Which build is a release and which only a snapshot: Requirements and platforms."
+      },
+      {
+        "id": "windows",
+        "title": "Windows",
+        "text": "Run konnekt-windows-amd64-setup.exe. It installs Konnekt for your account, with a Start Menu entry and an uninstaller under Installed apps, and needs no administrator rights. Heads up Windows builds are not code signed yet, so a first launch shows a SmartScreen warning. Choose More info, then Run anyway."
+      },
+      {
+        "id": "macos",
+        "title": "macOS",
+        "text": "Open konnekt-darwin-universal.dmg and drag Konnekt into Applications. One build runs on Apple silicon and Intel Macs. Heads up macOS builds are not signed by Apple yet, so the first launch is refused. Open System Settings, then Privacy & Security, and choose Open Anyway beside Konnekt."
+      },
+      {
+        "id": "linux",
+        "title": "Linux",
+        "text": "Konnekt needs webkit2gtk4.1 and gtk3 at runtime. Fedora 36, Ubuntu 22.04, Debian 12, Rocky and RHEL 10, and anything newer have both. Make the file executable, then run it. chmod +x konnekt-linux-amd64 ./konnekt-linux-amd64 On Fedora, Rocky or RHEL 10, the package pulls in both libraries and adds Konnekt to your applications. sudo dnf install ./konnekt-*.x86_64.rpm Heads up Rocky and RHEL 9 are not compatible."
+      },
+      {
+        "id": "build-from-source",
+        "title": "Build from source",
+        "text": "A source build is the newest code, so it is a snapshot: newer than the release, and untested. It needs Go, Node.js with pnpm, and the Wails CLI. On Linux it also needs the webkit2gtk and gtk3 development packages. git clone https://github.com/kollektiv-mc/Konnekt cd Konnekt pnpm install wails dev Run wails doctor first: it reports what your system is missing. If WebKit detection fails, add the build tag. wails build -tags webkit2_41 wails dev -tags webkit2_41"
+      },
+      {
+        "id": "check-the-download",
+        "title": "Check the download",
+        "text": "Every release file carries a signed build provenance attestation and a checksum. The commands to check either are on the download page. See also Verify your download."
+      }
+    ]
+  },
+  {
+    "url": "/docs/layouts.html",
+    "title": "Tiles and layouts",
+    "kind": "concept",
+    "lead": "Arrange the dashboard's tiles on a grid, then save the arrangement as a layout.",
+    "sections": [
+      {
+        "id": "grid",
+        "title": "The grid",
+        "text": "The Tiles section of the navbar lists every tile. Drag a row onto the grid to place the tile where you drop it. Shift-click a row to place it without dragging. A plain click maximizes the tile instead. Drag rows inside the section to change their order. Remove a tile with the X in its header, or right-click the header and choose Remove. Drag a tile by its header to move it. Drag its bottom-right corner to resize it. Size Columns Rows New tile 3 8 Smallest 2 4 Largest 6 16 The grid has six columns, and each row is 40 px high. Tiles snap to those cells and settle upward, leaving no gap over a tile. Double-click a tile's header, or press its maximize button, to fill the dashboard with it. Press Esc to return."
+      },
+      {
+        "id": "tile-layout",
+        "title": "Layout per tile",
+        "text": "Right-click a tile's header and choose Layout, then Detailed, Default or Compact. Default sets the key figure large over the detail. Detailed sets it small and packs in more. Compact keeps the figure alone and spreads it over the tile. In Console, Detailed tightens the line spacing. Compact shows the notable lines and folds each run of the rest into one row. Commands, Config and Notifications have no Layout entry. A maximized tile ignores it. Each tile keeps its own choice, and applying a saved layout never changes it. The Classic tile faces setting in Appearance replaces these faces."
+      },
+      {
+        "id": "saved",
+        "title": "Saved layouts",
+        "text": "The Layouts section of the navbar lists them, and starts collapsed. Default, Console Focus, Compact and Essentials come with Konnekt. Click a name to apply it. Default has every tile, with room to spare. Console Focus gives the console most of the screen, beside Overview, Commands and Players. Compact fits every tile on one screen. Essentials fits Console, Commands, Overview, Performance, Players and Notifications on one screen, and nothing else. A layout holds which tiles are on the grid, and where. Applying one removes any tile it does not mention, which stays in the Tiles section to add back. Arrange the grid. Type a name in the field under the list, then press Enter or Save. An empty field saves over the highlighted layout, whose name the field shows. A name that exists is replaced. The X beside a name deletes it, except on Default. ↺ Reset to defaults asks for a second click, labelled ↺ Confirm reset, and disarms itself after 4 s. It rewrites the four layouts that come with Konnekt and applies Default. Layouts saved under other names stay. The layouts that come with Konnekt are written once, on first launch, so a newer version's take effect after a reset."
+      },
+      {
+        "id": "storage",
+        "title": "What is saved",
+        "text": "Item Saved File Positions and sizes After a drop, a resize, or applying a layout. active_layout.json Tiles on the grid When you add or remove one. active_tiles.json Layout per tile When you choose one. tile_layouts.json Saved layouts When you save, delete or reset. layout_presets.json Order of the Tiles section When you drop a row. app_settings.json The files sit in the data folder and are read again on the next launch. One grid serves every server: switching servers keeps the arrangement and reloads each tile. A first launch puts all eleven tiles on the grid in the Default layout."
+      }
+    ]
+  },
+  {
+    "url": "/docs/nightly-backup.html",
+    "title": "Back up every night when empty",
+    "kind": "guide",
+    "lead": "Back up the server at 04:00, but only on nights when no player is online.",
+    "sections": [
+      {
+        "id": "before-you-start",
+        "title": "Before you start",
+        "text": "Konnekt left open overnightGraphs run only while Konnekt is open. The scheduler editorMaximize the Scheduler tile to open it."
+      },
+      {
+        "id": "add-the-trigger",
+        "title": "Add the trigger",
+        "text": "Open the editor and select Open blocks, then Cron Schedule. Field Set to Cron expression 0 4 * * * This fires at 04:00 every day by this computer's clock. Change the second number to change the hour. The other forms are on the cron page."
+      },
+      {
+        "id": "check-for-players",
+        "title": "Check that nobody is online",
+        "text": "Add Condition and Read Attribute. Block Field Set to Read Attribute Attribute players.count Condition Operator == Condition B 0 Drag from onComplete on Cron Schedule to trigger on Condition. Drag from Value on Read Attribute to A on Condition. Read Attribute has no control ports. It reads the player count when Condition runs. Condition leaves by onTrue when the count is 0, and by onFalse otherwise. Nothing is wired to onFalse, so a night with players online ends the run with no backup."
+      },
+      {
+        "id": "add-the-backup",
+        "title": "Add the backup",
+        "text": "Add Create Backup. Leave Target at Full server, or pick Active world to zip only the world. Drag from onTrue on Condition to trigger on Create Backup."
+      },
+      {
+        "id": "switch-it-on",
+        "title": "Switch it on",
+        "text": "Select Graph actions, then Save. Select run to test it. Select [off] so it reads [on]. run starts the graph at once, so with nobody online it makes a real backup. A new graph starts off, and nothing fires until it is on."
+      }
+    ]
+  },
+  {
+    "url": "/docs/r2-bucket.html",
+    "title": "Save a Cloudflare R2 bucket",
+    "kind": "guide",
+    "lead": "Connect a Cloudflare R2 bucket to Konnekt so scheduler blocks can upload to it.",
+    "sections": [
+      {
+        "id": "before-you-start",
+        "title": "Before you start",
+        "text": "A Cloudflare account with R2Cloudflare issues an R2 token only after R2 is purchased on the account. A public address for the bucketOnly snapshot links need it. Step 04 adds it."
+      },
+      {
+        "id": "create-the-bucket",
+        "title": "Create the bucket",
+        "text": "In the Cloudflare dashboard, open R2 object storage. Select Create bucket, name it, then select Create bucket again. Open the bucket's Settings tab and find S3 API. The endpoint is https://<account id>.r2.cloudflarestorage.com. A bucket in a jurisdiction uses a host such as <account id>.eu.r2.cloudflarestorage.com. Konnekt takes the host only, so leave off anything after it."
+      },
+      {
+        "id": "create-an-api-token",
+        "title": "Create an API token",
+        "text": "On the R2 overview, under Account Details, select Manage next to API Tokens. Select Create Account API token or Create User API token. Under Permissions, choose Object Read and Write. Scope the token to the bucket from step 01. Create the token, then copy the Access Key ID and the Secret Access Key. Konnekt lists, reads, writes and deletes objects in the bucket. A token that only reads cannot upload."
+      },
+      {
+        "id": "add-the-destination",
+        "title": "Add the destination",
+        "text": "Open Settings, then Destinations. Select Add destination. Fill in the fields. Select Test, then Save. Field Value Name Any name: scheduler blocks pick the bucket by it. Endpoint The host from step 01. Region auto. Bucket The bucket's name. Prefix A folder for Konnekt's objects, or blank. Public base URL Blank until step 04. Access key ID The Access Key ID from step 02. Secret access key The Secret Access Key from step 02. Test writes nothing to the bucket. Each field is described on Destinations."
+      },
+      {
+        "id": "add-a-public-address",
+        "title": "Add a public address",
+        "text": "A snapshot link is the Public base URL followed by the object's key. Without one, the link points at the bucket's own S3 address. That address opens only for a bucket that serves objects publicly. Address Steps in the bucket's Settings Custom domain Under Custom Domains, select Add, enter a domain on a zone in the same account, select Continue, then Connect Domain. Wait for Active. r2.dev Under Public Development URL, select Enable, type allow, then select Allow. Cloudflare rate-limits it and intends it for non-production use. In Settings, Destinations, select Edit on the destination. Enter the address in Public base URL, such as https://files.example.com. Select Save. Only snapshot links use it, and Upload to Bucket does not."
+      },
+      {
+        "id": "when-it-refuses",
+        "title": "When it refuses",
+        "text": "Error Do the bucket refused the upload (status code): check the destination's access key and secret, and that the key may write to the bucket Create the token again with Object Read and Write on this bucket. Test writes nothing, so it does not show whether a token can write. public base URL must be an http(s) address Start Public base URL with https://."
+      }
+    ]
+  },
+  {
+    "url": "/docs/requirements.html",
+    "title": "Requirements and platforms",
+    "kind": "reference",
+    "lead": "Konnekt needs a 64-bit computer and the server you already run.",
+    "sections": [
+      {
+        "id": "requirements",
+        "title": "Requirements",
+        "text": "Requirement Why A server jar The Minecraft server you already run. Konnekt manages it, it does not fetch one. Java Your server needs it to run. Konnekt itself does not. Windows, Linux or macOS 64-bit Windows and Linux; on a Mac, Apple silicon or Intel."
+      },
+      {
+        "id": "platform-support",
+        "title": "Platform support",
+        "text": "Platform Build Status Windows (x86-64) konnekt-windows-amd64-setup.exe ALPHA Linux (x86-64) konnekt-linux-amd64 ALPHA Fedora, Rocky and RHEL 10 (x86-64) .x86_64.rpm ALPHA macOS (Apple silicon and Intel) konnekt-darwin-universal.dmg ALPHA Rocky and RHEL 9 are not compatible. Linux needs webkit2gtk4.1 and gtk3 at runtime: Fedora 36, Ubuntu 22.04, Debian 12, Rocky and RHEL 10, and anything newer. On macOS, Konnekt does not update itself yet, and Remote Access has no tunnel: download each new .dmg from the download page."
+      },
+      {
+        "id": "server-types",
+        "title": "Server types",
+        "text": "Vanilla, Paper, Spigot and Bukkit, and modded Fabric, Forge and NeoForge. The loader is detected automatically. Bedrock is not supported."
+      }
+    ]
+  },
+  {
+    "url": "/docs/scheduler-editor.html",
+    "title": "Scheduler editor",
+    "kind": "reference",
+    "lead": "The scheduler editor, opened by maximizing the Scheduler tile, wires blocks into graphs that run on a trigger.",
+    "sections": [
+      {
+        "id": "toolbar",
+        "title": "Toolbar",
+        "text": "Control What it does Graph picker Shows the open graph. A dot on its right marks unsaved changes. Click it to list this server's graphs and open one. New graph In the picker. Opens a blank graph named New graph, which is not saved until you save it. add Opens the block list under the button. A pick lands at the middle of the canvas. edit Opens the edit menu. edit, Select all Selects every block and every wire. edit, Deselect all Clears the selection. edit, Select by type Lists the block types on the canvas. Pick one to select every block of that type. edit, Select by name Selects the blocks whose name contains the text you type. Press Enter to apply it. view Opens Curved connectors and Snap to grid. Warning count A triangle and a number. Click it to list the warnings. run Runs the graph now. It appears only once the graph is saved. [on] and [off] Switches the graph on or off. It appears only once the graph is saved. Graph actions The button with three dots. Graph actions, Save Saves the graph. It reads Saving... while it works. Graph actions, Rename Shows a name field. Enter applies the name and Escape backs out. Graph actions, Duplicate graph Saves the canvas as a new graph named after the old one plus copy, switched off, and opens it. Graph actions, Delete graph Deletes the open graph with no prompt, then opens a blank graph."
+      },
+      {
+        "id": "keyboard-shortcuts",
+        "title": "Keyboard shortcuts",
+        "text": "Keys Action Ctrl+Z Undo. The editor keeps the last 10 changes. Ctrl+Shift+Z or Ctrl+Y Redo. Ctrl+X Cut. Copies the selected blocks, then deletes them. Ctrl+C Copy. Takes the selected blocks and the wires between them. Ctrl+V Paste. Lands under the pointer over the canvas, and at its middle from a menu. Ctrl+D Duplicate. Places a copy down and to the right, and leaves the clipboard alone. Delete or Backspace Deletes the selected blocks and wires. Tab Opens the block list at the pointer. F1 Open docs. Opens the selected block's page in your browser. Escape Closes the block list or the unsaved-changes dialog. Alt and drag a block Leaves a copy behind with the same wires. Ctrl is Cmd on macOS. Undo, redo, cut, copy, paste, duplicate and Tab do nothing while a text field has focus."
+      },
+      {
+        "id": "adding-blocks",
+        "title": "Adding blocks",
+        "text": "Way What happens Open blocks The button at the top left of the canvas. It opens the block browser, and reads Close blocks while open. Category heads The browser lists trigger, data, action, control and notify. Click a head to fold it. Dashed rows A group of blocks, such as Distant Horizons. Click it to show its blocks. Click a block Adds it and selects it. Each new block lands a step down and right of the one before. Drag a block Adds it centred on the drop point. Hover a block Shows the block's description. add, Tab or right-click on empty canvas Opens the quick-add list. The pick lands at the middle of the canvas, or at the pointer. search blocks… In the quick-add list. Matches name, category, group and description. Arrow keys move, Enter adds. Quick-add categories Hover a category for its blocks, and a group for the blocks inside it. Right-click a block Opens the edit rows at the pointer, acting on the selection."
+      },
+      {
+        "id": "view-options",
+        "title": "View options",
+        "text": "Option What it does Default Curved connectors Draws wires as smooth curves that enter and leave ports sideways. Off draws straight lines. On Snap to grid Snaps dragged blocks and wire corners to the dots of the background grid. Off Both choices apply to every graph. The menu stays open while you flip them. Double-click a wire to add a corner. Drag a corner to move it, and double-click it to remove it."
+      },
+      {
+        "id": "warnings",
+        "title": "Warnings",
+        "text": "Warning Shown on Do Stops the server with no warning to players: RCON is not confirmed. It is confirmed once the server has started with enable-rcon on. Command set to Stop Server or Restart Server Turn on enable-rcon and start the server once. DH Snapshot warns players through the console, as RCON is not confirmed. It is confirmed once the server has started with enable-rcon on. DH Snapshot Turn on enable-rcon and start the server once. no destination chosen. Upload to Bucket and Publish DH Snapshot Pick a destination in the Destination field. the destination \"name\" does not exist. It was deleted or renamed in Settings, or this graph came from another install. Upload to Bucket, Publish DH Snapshot and DH Snapshot Pick another destination, or add the missing one in Settings. keep must be a whole number of at least 1, not value. Publish DH Snapshot Set Snapshots to keep (at least 1) to a whole number. Click a row to select the block and bring it into view. The same text shows under warnings on the block's data tab. Warnings do not block saving or running."
+      },
+      {
+        "id": "saving-and-running",
+        "title": "Saving and running",
+        "text": "Action What happens Graph actions, Save Writes the blocks, wires, positions and name. A new graph gets its id here. run Runs the saved graph. It works on a graph that is off, and needs exactly one trigger block. run with unsaved changes Asks first: Run uses the saved graph. Save your changes and run it? The buttons are Cancel and Save & run. [on] The graph's triggers can fire. This is written at once, without saving the canvas. [off] The graph's triggers do not fire. Closing the tile, switching server, switching graph or New graph With unsaved changes, opens Unsaved changes with Cancel, Discard and Save & continue. Escape cancels. Status Meaning running… The run has not finished. done (N nodes) The run finished. N is the number of blocks recorded in it. already running This graph already has a run in progress, so nothing started. run failed The run failed. Click it to show the reason. It stays until clicked. scheduler error A save, delete or toggle was refused. Click it to show the message."
+      }
+    ]
+  },
+  {
+    "url": "/docs/settings/appearance.html",
+    "title": "Appearance",
+    "kind": "settings",
+    "lead": "The look of the dashboard: skin, colors, fonts, scrolling and hardware acceleration.",
+    "sections": [
+      {
+        "id": "look",
+        "title": "Look",
+        "text": "Setting What it does Default Skin Six palettes for surfaces and borders: Default, Midnight, Nord, Solarized, Mocha and Forest. Default Mode Light, Dark, or System, which follows the operating system, with Light on the Default skin only. Dark Accent color Colors highlights and active states, from six presets or a custom picker. #4ade80 Background Solid, or Gradient, a faint accent glow from the top right corner. Solid Picking a skin also sets its accent color: Green for Default and Forest, Violet for Midnight, Blue for Nord, Rose for Solarized and Amber for Mocha. Change the accent afterwards to override it. Every skin except Default is dark only, and Light is greyed out on them. Picking one while Mode is Light switches Mode to Dark. With System, those skins stay dark whatever the operating system prefers."
+      },
+      {
+        "id": "hardware-acceleration",
+        "title": "Hardware acceleration",
+        "text": "Hardware acceleration is a Linux setting. Windows, macOS and a Remote Access browser do not use it, so the row is hidden there. On Linux it sets how the window's webview, WebKitGTK, uses the GPU. Option What it does On The GPU always draws and scrolls the window, as WebKitGTK does by default. On demand The page content decides when the GPU is used. Off The CPU draws every frame, with no GPU compositing. A fresh install uses On. Step down to On demand, then Off, if the window flickers, tears or runs the GPU hot. A change applies after you restart Konnekt. Until then the row shows Applies on the next launch. NVIDIA With On or On demand, Konnekt turns off WebKitGTK's DMA-BUF transport on the proprietary NVIDIA driver. Acceleration stays on, and frames pass through shared memory instead. A WEBKIT_DISABLE_DMABUF_RENDERER you set yourself is left alone. If the window is blank at launch, Settings is out of reach. The environment variable KONNEKT_WEBVIEW_GPU wins over the row while it is set. Its values are always, ondemand and never. Set KONNEKT_WEBVIEW_GPU to never and start Konnekt. Open Settings, then Appearance, and set Hardware acceleration to Off. Close Konnekt, remove the variable, and start it again."
+      },
+      {
+        "id": "advanced",
+        "title": "Advanced",
+        "text": "Setting What it does Default Fonts Sets the font family for Body, Titles, Wordmark and Code. Default Status colors Sets the Success, Warning and Error colors, each from a few presets or a custom picker. #22c55e, #f59e0b, #f87171 Smooth scrolling Glides under each mouse wheel notch on spring physics instead of stepping. On Classic tile faces Shows the compact tile faces from before the figure-first ones. Off Pick an installed font or type any name for each of the four. An empty field keeps the default, and a name that is not installed falls back to it. Wordmark is the Konnekt name in the title bar. Fonts is desktop only: a Remote Access browser cannot list this computer's fonts, so the row is hidden there. Status colors left at their defaults use darker values in Light mode. A color you pick is used as is. Smooth scrolling leaves touchpads, Ctrl or Shift scrolling and the operating system's reduced-motion setting alone. It takes effect on the next wheel notch, with no restart. Classic tile faces applies to the Overview, Players, Performance, Scheduler, Worlds, Backups and Plugins tiles. Their layout options do not change a classic face."
+      }
+    ]
+  },
+  {
+    "url": "/docs/settings/console.html",
+    "title": "Console",
+    "kind": "settings",
+    "lead": "How many console lines Konnekt keeps, and whether each one shows its time.",
+    "sections": [
+      {
+        "id": "console-log",
+        "title": "Console log",
+        "text": "Setting What it does Default Show timestamps Prefixes each console line with the time Konnekt received it, as hours, minutes and seconds. Off Buffer size Sets how many console lines Konnekt keeps in memory, at least 100, before the oldest drop off. 1000 lines Timestamps also show on the notes Konnekt adds to the log itself, such as backup progress. The toggle applies to lines already on screen. Switching to another server refills the console from the last 2000 lines Konnekt kept for that server. A larger buffer grows only from live output after that."
+      }
+    ]
+  },
+  {
+    "url": "/docs/settings/destinations.html",
+    "title": "Destinations",
+    "kind": "settings",
+    "lead": "Saved S3-compatible buckets that scheduler blocks upload to.",
+    "sections": [
+      {
+        "id": "add",
+        "title": "Add a destination",
+        "text": "Open Settings, then Destinations. Select Add destination. Fill in the fields. Select Test to check the credentials and the bucket. Select Save. Save and Test stay disabled until Name, Endpoint, Bucket, Access key ID and a secret are filled in. Test writes nothing to the bucket. The Upload to Bucket and Publish DH Snapshot blocks pick a destination by name. A graph names the destination and never carries its credentials. The destination's settings are saved in destinations.json in the app's data folder. The secret access key is saved in a file of its own, in the destination_secrets folder beside it. That file is written with owner-only permissions, and the secret is never shown again. Deleting a destination removes its secret file too."
+      },
+      {
+        "id": "fields",
+        "title": "Fields",
+        "text": "Field What it does Default Name Required: what a scheduler block calls this bucket. None Endpoint Required: the provider's S3 address, host only, such as https://<account>.r2.cloudflarestorage.com for R2. None Region The signing region, auto for R2 and the provider's own name elsewhere. auto Bucket Required: the bucket's name, without a slash. None Prefix A folder inside the bucket that uploads go under. None Public base URL The http or https address the bucket is served from, such as a custom domain. None Access key ID Required: the ID of the key pair the provider issued. None Secret access key Required on a new destination; blank on a saved one keeps the stored secret. None Names are unique in any letter case. An endpoint without https:// in front gets it added. A blank region is saved as auto. A prefix loses any slash at either end, and a block's own Key prefix goes after it. A published snapshot's links use the public base URL, and the bucket's own address when there is none."
+      },
+      {
+        "id": "snapshot-link",
+        "title": "Snapshot link",
+        "text": "Each saved destination has a Snapshot link row, for the Distant Horizons snapshot a Publish DH Snapshot block uploads. The link is the address of the snapshot's latest.json, which is what you give to the people who download the snapshot. Copy link puts it on the clipboard. It is empty until a snapshot has been published to the destination. The switch next to the row chooses between Public and Private link. Public keeps the snapshot at a fixed address under the destination's prefix. A private link moves it into a folder named by a random token, so only someone given the link can find it. Switching the mode moves the latest snapshot, which takes a few minutes, and asks first. Once a snapshot is published, the address used before the switch stops working. Rotate link appears in private mode. It moves the latest snapshot under a new token and deletes the old address. Everyone holding the old link loses access, and has to be sent the new one. If the old files cannot all be deleted, the row says the previous link may still work. Switch the mode or rotate again to finish removing them. A publish and a link change cannot run together on one destination. The token is saved in a .link file beside the secret, and removed with the destination."
+      },
+      {
+        "id": "errors",
+        "title": "Errors",
+        "text": "Error Do Wrong credentials: host refused the access key or secret (status). Check Access key ID and Secret access key against the provider. Bucket not found: host has no bucket named name. Check Bucket, and that the key can see it. Could not reach host. Check the endpoint and your connection. Check Endpoint for typos, then your network. host rejected the check (status status code). Check the region and endpoint. Set Region to what the provider documents. endpoint must be a host only, without a path or credentials Remove everything after the host from Endpoint. a destination named \"name\" already exists Pick another Name. nothing has been published to this destination yet, so there is no link to copy: run a Publish DH Snapshot block first Run the block once, then select Copy link again. a snapshot is being taken or published to this destination: change the link when it has finished Wait for the run to end, then switch or rotate again. destination \"name\" no longer exists; choose another in the Upload to Bucket block or add it in Settings Add the destination again with the same name, or pick another in the block."
+      }
+    ]
+  },
+  {
+    "url": "/docs/settings/general.html",
+    "title": "General",
+    "kind": "settings",
+    "lead": "How servers start and stop, and when Konnekt checks for updates.",
+    "sections": [
+      {
+        "id": "server",
+        "title": "Server",
+        "text": "Setting What it does Default Auto-start active server Starts the active server when Konnekt launches. Off Confirm before stopping Asks before the Stop and Restart buttons act. Off Stop grace period Sets how long a stop waits for the server to exit before a force kill, from 5 to 600 seconds. 60 s The active server is the one picked in the sidebar's Servers list. Konnekt remembers it between launches. Auto-start does nothing when no server has been added. A stop sends stop to the server, then waits. Halfway through the grace period it sends SIGTERM where the platform has it. At the end it force kills the server and everything it started. A server that has already written a crash report waits at most 10 s. The grace period also applies to restarts and to stops from the scheduler. Force stop Force stop always asks for confirmation, whatever Confirm before stopping says."
+      },
+      {
+        "id": "updates",
+        "title": "Updates",
+        "text": "Setting What it does Default Check for updates on startup Checks once at each launch and alerts you when a newer build exists. On Update channel Chooses whether Konnekt offers releases only (Stable) or snapshots too (Snapshot). Stable The check asks GitHub Releases and installs nothing. Install an update from Settings, About. The alert follows the Update available rows in Notifications. A build with -dev in its version, such as a plain source build, skips the check. A snapshot is a build of the newest code, published as a pre-release. It is built nightly when the code has changed. Snapshots are untested and can be broken, so back up your server directory before installing one. Stable never contacts the snapshot release. Snapshot offers whichever is newer, the latest snapshot or the latest release. Snapshot builds A snapshot build follows the snapshot channel until you install a release. Settings still shows the stored channel. It adds the line This build is a snapshot, so it follows the snapshot channel until you install a release. After a release is installed, the stored channel applies again."
+      }
+    ]
+  },
+  {
+    "url": "/docs/settings/notifications.html",
+    "title": "Notifications",
+    "kind": "settings",
+    "lead": "Which events raise an operating system notification, and which raise an in-app bubble.",
+    "sections": [
+      {
+        "id": "desktop",
+        "title": "Desktop",
+        "text": "The operating system raises these. The first one asks the system for permission to show notifications. The Notifications tile logs every event, whatever these are set to. A Notify block set to deliver to the desktop ignores them. A device waiting for remote access approval always notifies. Setting What it does Default Warnings and info Notifies on a server start, a finished backup, restore or install, a loader update, low TPS, or auto-save staying off. Off Errors Notifies when a backup, restore, server install, loader update or scheduler run fails. Off Server crash Notifies when a server stops unexpectedly. Off Update available Notifies when the startup check finds a newer Konnekt version. Off Player join/leave Notifies when a player joins or leaves a server. Off"
+      },
+      {
+        "id": "in-app-bubbles",
+        "title": "In-app bubbles",
+        "text": "A bubble sits in the corner of the window until dismissed, and holds the full text. Setting What it does Default Warnings and info Shows scheduler graph warnings, Notify block messages of kind Info or Warning, low TPS, and auto-save staying off. On Errors Shows failed scheduler runs, backups, restores, installs and loader updates, scheduler errors, and Notify block errors. On Server crash Shows a bubble when a server stops unexpectedly. On Update available Shows a bubble when the startup check finds a newer Konnekt version. On"
+      }
+    ]
+  },
+  {
+    "url": "/docs/settings/remote-access.html",
+    "title": "Remote Access",
+    "kind": "settings",
+    "lead": "Serves the dashboard to a browser and to Claude, on this computer or through a tunnel.",
+    "sections": [
+      {
+        "id": "remote-access",
+        "title": "Remote access",
+        "text": "Remote access serves Konnekt's dashboard to a web browser. It is off each time Konnekt starts. The switch stays off, with Set a password first. beside it, until a password exists. Set a password in Password. Switch on Remote access. Open the address next to On this computer in a browser, or press Open ↗. Sign in with the password. Check that the card A browser is waiting to be approved shows the code the browser shows. Type a name for the device on the card, then press Approve. The same card opens as a dialog over the desktop, and a notification announces it. Deny refuses the browser. An unanswered request expires after five minutes. Once a device is approved, it signs in with the password alone. On this computer is the address Remote access listens on. It is http://127.0.0.1 and a port Konnekt picks when Remote access starts. It serves plain HTTP and accepts connections from this computer only. Other computers reach it through a tunnel, covered in Tunnel. Remote access switches itself off after 30 minutes without use, unless Claude connectors hold it open. Closing Konnekt switches it off too, and a tunnel stops with it. What a remote browser cannot do Change anything in this pane: it is desktop only. Open a file picker or a folder: About shows the data folder as text. Read the log, or change which server the desktop shows. Install an update: Update Konnekt from the desktop. stands in its place. Keep Appearance, Console or Notifications changes past a reload: Changes here apply to this browser until it reloads. Change a server's settings or files, app settings, installs or scheduled tasks without a yes: each waits for Allow once on the desktop. That prompt reads wants to make a change and refuses itself after 60 seconds."
+      },
+      {
+        "id": "tunnel",
+        "title": "Tunnel",
+        "text": "Reach it from anywhere opens a Cloudflare quick tunnel to the dashboard. It needs Remote access on first, and says Switch remote access on first. until then. Cloudflare sits between the browser and Konnekt and can read the traffic, your password included. Konnekt runs cloudflared, Cloudflare's tunnel program, with tunnel --no-autoupdate --url http://127.0.0.1:port. It downloads a fixed release from the cloudflare/cloudflared releases on GitHub when it has no verified copy. Konnekt checks the file's size and SHA-256 against values built into the app, before every run. The file lives in the bin folder of the data directory. Konnekt knows the download for Windows x86-64 and for Linux x86-64 and ARM64. The tunnel's address ends in trycloudflare.com, with a QR code for a phone camera. The address is new every time the tunnel starts. A device approved through it is forgotten when the tunnel closes, and is approved again on the next one. If the tunnel is not up within 45 seconds, the pane shows The tunnel did not open. and the last lines cloudflared printed. Switching Remote access off closes the tunnel, and so does its idle switch-off. Your own address is a named tunnel on your own Cloudflare account. Its address stays the same across runs, and a device approved through it stays approved. Claude connectors need it. In the Cloudflare dashboard, create a tunnel. Route a hostname you own to http://127.0.0.1:port, with a port from 1024 to 65535. Copy the tunnel's token. In Konnekt, fill in Hostname, Port and Tunnel token, then press Save. Switch on Remote access, then Reach it from anywhere. Setting What it does Default Hostname The name you routed, such as dash.example.net, with at least two labels and no wildcard, scheme, port or path. None Port The port your route points at, from 1024 to 65535. Remote access listens on it while the address is saved. None Tunnel token The token from Cloudflare, kept in its own file and passed to cloudflared as a file path. None The token is never shown again, and a blank field on a later save keeps the stored one. Change and Forget token are locked while a tunnel runs. Forget token deletes the token, the hostname and the port, and removes the devices approved on that hostname. Reach it from anywhere then opens a quick tunnel again. A named tunnel counts as up once cloudflared registers a connection, and the address is https:// and your hostname. the hostname is not a DNS name: use a name like dash.example.net. the tunnel token is not usable: paste the whole token, without spaces or line breaks. remote access is not listening on the named tunnel's port: it listens on address and the tunnel expects port port; switch remote access off and on: do that, and the listener moves to the saved port."
+      },
+      {
+        "id": "claude",
+        "title": "Claude",
+        "text": "Claude on this computer lets Claude Code and Claude Desktop on this computer use Konnekt's tools. It is off by default, and it works without Remote access. Konnekt opens a second listener on 127.0.0.1, guarded by a secret it makes at every start. Claude starts konnekt mcp, a small bridge program, which forwards each call to that listener. The bridge lists the tools even when Konnekt is closed. Switch on Claude on this computer. For Claude Code, copy the line beside Claude Code and run it in a terminal. For Claude Desktop, copy the Claude Desktop config entry and merge it into the mcpServers object of Claude Desktop's config file. The Claude Code line is claude mcp add --transport stdio konnekt -- path mcp. The entry is a konnekt server whose command is that path and whose args is [\"mcp\"]. The path is the Konnekt executable that is running. While it listens, the pane reads Listening on an address, and Register Konnekt once; Claude finds it again after a restart. If it reads Not listening., switch it off and on again, or check konnekt.log. A call while Konnekt is closed fails with Konnekt is not running, or \"Allow Claude on this computer\" is off in its Settings. What Claude can do See: list_servers, server_status, server_summary, players, stats_history, console_tail, server_log, last_stop, backups, worlds, schedules, schedule_next_runs, config_files, config_file and mods. Operate: start_server, stop_server, restart_server, kick_player, ban_player, pardon_player, create_backup and run_schedule. Type in the console with send_command: every call waits for you to press Allow once, and is refused if you do not. No tool force stops a server, restores or deletes a backup, changes a world or removes a mod. No tool edits a server's settings or files either. Console lines, player names, ban reasons and world names reach Claude marked as text that players wrote. Claude connectors let claude.ai, Claude Desktop and Claude Code reach the same tools through the internet. They are off by default. The switch stays off until a password is set, with Set the password below first. beside it. It then waits for Your own address, with Set up your own address under Tunnel first. beside it. A quick tunnel is not enough, because its address changes. Save Your own address. Switch on Remote access, then Reach it from anywhere. Switch on Claude connectors. In claude.ai or Claude Desktop, add a connector and paste the connector URL. In Claude Code, run the line beside Claude Code, which is claude mcp add --transport http konnekt url. The connector URL is https://, your hostname and /mcp. It answers only while Remote access and the tunnel are on. While the switch is on and an own address is saved, the 30-minute idle switch-off is held back. The title bar then adds Claude to its label. Signing in a connector Claude opens a Konnekt page called Connect and the client's name. Tick the permissions: See your servers, players, console and schedules is ticked, and Start, stop and restart servers, run commands and manage players is not. Type the Remote Access password and press Allow. Press Allow on the dialog on the desktop, which reads wants to connect to Konnekt. The page waits for the desktop and checks again every two seconds. It expires after five minutes, and a connector has no device code to type. A connector that holds only the first permission signs in again when it needs the second. Both permissions are offered at every sign-in, whatever the client asked for, so a reconnected client can add the second. Konnekt accepts sign-ins from Claude's own clients only. Connected clients lists each one with its name and the host it was sent back to. Each reads Sees and operates servers or Sees servers, players, console and schedules. It also shows when the client connected and Last used, or Not used yet. Until one signs in, the list reads None yet. Revoke ends one client's access at its next call. Revoke all appears when two or more are connected, and each signs in again from scratch. Konnekt holds at most 16 connectors. A 17th sign-in is refused on the sign-in page until one is revoked. A connector ends 90 days after you approved it, or 30 days after its last use. Changing the password ends every connector."
+      },
+      {
+        "id": "password",
+        "title": "Password",
+        "text": "The password is 12 to 256 characters. Konnekt keeps only an argon2id hash of it. Changing it signs every device out, and ends every Claude connector. Devices stay approved and sign in again with the new password. A browser that types five wrong passwords in a row must wait. The wait starts at 5 seconds, doubles with each miss and tops out at 15 minutes. A device that is already approved has its own count. An hour without a miss clears it."
+      },
+      {
+        "id": "approved-devices",
+        "title": "Approved devices",
+        "text": "A signed in tag marks a device with a live session. Remove forgets the device and ends its sessions, so its next sign-in needs approval again. Sign out everywhere ends every session, and devices stay approved. A session ends after an hour without use, or 12 hours after sign-in. A browser remembers its approval for a year. A device name is 1 to 40 printable characters, and no two devices share one. At most 16 devices can be approved. A browser whose request was denied or expired sees The request was declined or has expired. Sign in again. the device name must be 1 to 40 printable characters: type a shorter name. another device already has that name: pick a name no other device has. at most 16 devices can be approved; remove one first: press Remove on one you no longer use. that request has expired or was already answered: sign in again from the browser."
+      }
+    ]
+  },
+  {
+    "url": "/docs/tiles.html",
+    "title": "Tiles",
+    "kind": "reference",
+    "lead": "Eleven tiles that show and control the selected server.",
+    "sections": [
+      {
+        "id": "console",
+        "title": "Console",
+        "text": "Shows the selected server's log as it arrives. Type a command in the field and press Send once the server is running. clr clears the log. The arrow at the top left opens a search box and a level filter: All, Warn or Error. Maximized, it adds a Commands rail beside the log. Timestamps and the number of lines kept are set in Console."
+      },
+      {
+        "id": "overview",
+        "title": "Overview",
+        "text": "Shows the server's state, then Players, TPS, Uptime and Memory. The state reads Online, Offline, Starting, Stopping or Unreachable. Maximized, it rolls up other tiles. It charts the last hour of CPU, RAM and players. Short views of Players, Active world, Backups and Schedules follow. Each has a button that opens its own tile. Overview only reads from the other tiles and changes nothing in them."
+      },
+      {
+        "id": "players",
+        "title": "Players",
+        "text": "Shows how many players are online and lists them with their operator level. Click a player for their status, OP level, whitelist entry and ban reason. There, kick and ban work on online players and take an optional reason. pardon appears for a banned player. The list refreshes when anyone joins or leaves, and when the server starts or stops. Maximized, it adds a search box and sorting by Name or OP level."
+      },
+      {
+        "id": "quick-commands",
+        "title": "Commands",
+        "text": "Shows one button per command, and a click runs it on the selected server. A first launch adds six: Start, Stop, Restart, Force Stop, Save All and TPS. Force Stop always asks first. Stop and Restart ask when Confirm before stopping is on in General. Maximized, it lists every button to rename, edit, copy, delete and reorder. Add one by typing a command, picking a preset, or linking a saved command from Kommands."
+      },
+      {
+        "id": "performance",
+        "title": "Performance",
+        "text": "Shows TPS, CPU and RAM with a chart of recent samples. Konnekt takes a sample every 10 seconds and keeps the last hour. Maximized, the chart covers 5m, 15m or 1h. Click a series in its legend to hide it. A table lists each sample, sortable by any column, with a min·avg·max row."
+      },
+      {
+        "id": "scheduler",
+        "title": "Scheduler",
+        "text": "Shows how many graphs are armed and when the next one runs. Maximized, it opens the graph editor. Graphs are covered in Graphs and Scheduler editor."
+      },
+      {
+        "id": "worlds",
+        "title": "Worlds",
+        "text": "Shows how many worlds the server has, their total size and which one is active. Maximized, it draws each world as a planet in a 3D scene. Click one to open its card: set active, backup, open folder, rename, duplicate and delete. set active on a running server offers to stop it first, and to start it again after. delete is missing for the active world and off while the server runs. The card also lists the world's backups, each with restore and delete."
+      },
+      {
+        "id": "backups",
+        "title": "Backups",
+        "text": "Shows Last full backup, its size and how many archives are kept. Back up now takes a full server backup. On a running server it asks whether to back up now or stop the server first. Maximized, it lists backups under Server and Worlds. Each can be renamed, tagged and deleted. restore needs the server stopped. schedule opens the Scheduler, where the Backup block runs backups on a timer."
+      },
+      {
+        "id": "server-config",
+        "title": "Config",
+        "text": "Shows the MOTD as players see it, then the main server.properties values, as many as fit. The rest are counted in the last cell, and the RCON password is hidden. Click an on/off value to flip it, and a value with fixed choices to cycle through them. Double-click any other value to edit it. Each change is written to the file at once. Maximized, it lists the server, plugin and mod config files, with a search box. A file opens in a Form or Raw editor, with Save and Revert. A file the form cannot edit safely opens as Raw only. On a running server, changes apply after a restart."
+      },
+      {
+        "id": "notifications",
+        "title": "Notifications",
+        "text": "Lists events as they happen: joins, info, warnings, errors and crashes. The filter at the top left narrows it to Joins, Info, Warn or Errors. Clear all empties the list. It keeps the latest 200 until Konnekt closes. Which events also raise a bubble or a desktop alert is set in Notifications."
+      },
+      {
+        "id": "mods",
+        "title": "Plugins",
+        "text": "Lists the server's installed plugins, or its mods on a server that does not load plugins, as many as fit. A green dot is on, a grey one is off, and an orange one has an update. What does not fit is counted in the last cell. While the server runs, the tile says restart needed for changes. Maximized, each one switches on or off, by renaming its file between .jar and .jar.disabled. Add Content searches Modrinth, or CurseForge once you add an API key in Settings, and installs from it. A mod whose author allows downloads on CurseForge only links to its page there instead. Add Files adds jars from this computer, in the desktop app."
+      }
+    ]
+  },
+  {
+    "url": "/docs/timed-restart.html",
+    "title": "Warn, then restart every 6 hours",
+    "kind": "guide",
+    "lead": "Tell players a restart is coming, then restart the server every 6 hours.",
+    "sections": [
+      {
+        "id": "before-you-start",
+        "title": "Before you start",
+        "text": "Konnekt left openGraphs run only while Konnekt is open. The 6-hour timer lives in memory, so closing Konnekt resets it. The scheduler editorMaximize the Scheduler tile to open it."
+      },
+      {
+        "id": "add-the-trigger",
+        "title": "Add the trigger",
+        "text": "Open the editor and select Open blocks, then Interval. Field Set to Interval (minutes) 360 The first check that sees the graph on starts the timer. The first restart comes 6 hours after that. For fixed times, use Cron Schedule with 0 */6 * * * instead."
+      },
+      {
+        "id": "warn-the-players",
+        "title": "Warn the players",
+        "text": "Add two Command blocks and two Delay blocks. Wire them in table order, each onComplete to the next block's trigger. Start from onComplete on Interval. Block Field Set to Command Command say The server restarts in 1 minute. Delay Seconds 50 Command Command say The server restarts in 10 seconds. Delay Seconds 10 One Delay waits 60 seconds at most, and a longer wait fails. For an earlier warning, chain more Delay blocks."
+      },
+      {
+        "id": "add-the-restart",
+        "title": "Add the restart",
+        "text": "Add a third Command. Field Set to Command Restart Server Drag from onComplete on the last Delay to trigger on the new Command. It stops the server, waits for it to exit, and starts it again. Heads up The editor may warn that RCON is not confirmed for this block. The say lines already warn players through the console. A warning does not stop the graph from saving or running."
+      },
+      {
+        "id": "switch-it-on",
+        "title": "Switch it on",
+        "text": "Select Graph actions, then Save. Select [off] so it reads [on]. run starts the graph at once: the warnings go out, and the server restarts a minute later. A new graph starts off, and nothing fires until it is on."
+      }
+    ]
+  }
+]

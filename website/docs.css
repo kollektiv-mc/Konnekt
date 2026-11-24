@@ -95,6 +95,65 @@ h2.label {
   color: var(--text-secondary);
 }
 
+/* Search results (docs.js): a row each, the page and its section, then the
+   words around the match. */
+.doc-results {
+  display: grid;
+}
+
+.result {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  border-right: 0;
+}
+
+.result:last-child {
+  border-bottom: 0;
+}
+
+.result-section {
+  color: var(--text-secondary);
+}
+
+.result-section::before {
+  content: '/';
+  padding: 0 0.6ch;
+}
+
+.result-text {
+  max-width: 90ch;
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--text-secondary);
+}
+
+.result-text mark {
+  background: rgb(var(--accent-rgb) / 0.18);
+  color: var(--text-primary);
+}
+
+/* The block index's head side: its search in the room above the facts. */
+.doc-side {
+  flex: 1 1 300px;
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+  padding-top: 28px;
+  background: var(--bg-surface);
+}
+
+.doc-side .search {
+  flex: none;
+  margin: auto 28px;
+  padding: 0 20px;
+  border: var(--hairline);
+}
+
+.doc-side .doc-facts {
+  flex: none;
+}
+
 .shelf-prose {
   flex: 1 1 480px;
   padding: 28px var(--pad);

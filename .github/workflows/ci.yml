@@ -165,6 +165,11 @@ jobs:
       # regenerated and written is red here rather than a stale or 404 page.
       - run: node scripts/gen-block-docs.mjs --check
 
+      # The docs search (website/docs.js) reads every docs page from
+      # website/docs/search.json. A page edited without the index rewritten is
+      # searched as it was, so a stale index is red here.
+      - run: node scripts/gen-docs-search.mjs --check
+
   # .claude/suite.json declares three sections. CI has always covered
   # `commands` as literal steps above and in the backend jobs, but nothing ever
   # ran `invariants` or `generated` — they only executed when a human invoked
