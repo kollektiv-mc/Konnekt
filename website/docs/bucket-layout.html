@@ -101,6 +101,7 @@
           >
         </nav>
         <main id="main" class="group">
+          <!-- Written by scripts/gen-docs.mjs from docs/website/bucket-layout.md. Edit that file. -->
           <header class="doc-head block">
             <div class="doc-head-main">
               <div class="doc-trail">
@@ -108,7 +109,7 @@
                 <nav aria-label="Breadcrumb">
                   <ol class="doc-crumbs">
                     <li><a href="/docs.html">Docs</a></li>
-                    <li><a href="/docs.html#destinations">Destinations and Distant Horizons</a></li>
+                    <li><a href="/docs.html#settings">Settings</a></li>
                     <li><span aria-current="page">What ends up in the bucket</span></li>
                   </ol>
                 </nav>
@@ -126,7 +127,6 @@
               </div>
             </dl>
           </header>
-
           <section class="doc-section block" id="key-prefix" aria-labelledby="key-prefix-title">
             <div class="band doc-band">
               <div class="band-title">
@@ -170,7 +170,7 @@
                     </tr>
                     <tr>
                       <td><code>&lt;prefix&gt;/&lt;file name&gt;</code></td>
-                      <td>The object for a Source that is a single file.</td>
+                      <td>The object for a <b>Source</b> that is a single file.</td>
                     </tr>
                   </tbody>
                 </table>
@@ -192,69 +192,106 @@
                 <h2 id="publish-dh-snapshot-title">Publish DH Snapshot</h2>
               </div>
             </div>
-            <div class="doc-body">
-              <div class="doc-table-wrap">
-                <table class="doc-table">
-                  <thead>
-                    <tr>
-                      <th scope="col">Key</th>
-                      <th scope="col">Holds</th>
-                      <th scope="col">Replaced or deleted</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr>
-                      <td><code>&lt;prefix&gt;/latest.json</code></td>
-                      <td>
-                        A pointer to the newest snapshot's <code>index.json</code>: its format,
-                        <code>createdAt</code> and the path.
-                      </td>
-                      <td>Rewritten by each publish, as its last write.</td>
-                    </tr>
-                    <tr>
-                      <td><code>&lt;prefix&gt;/snapshots/&lt;stamp&gt;/index.json</code></td>
-                      <td>
-                        The snapshot: Distant Horizons version, server folder, and for each level
-                        its folder, size, SHA-256 and parts.
-                      </td>
-                      <td>Deleted with its snapshot.</td>
-                    </tr>
-                    <tr>
-                      <td><code>&lt;prefix&gt;/snapshots/&lt;stamp&gt;/index.html</code></td>
-                      <td>
-                        The download page, listing each level's file with its size and the folder to
-                        put it in.
-                      </td>
-                      <td>Deleted with its snapshot.</td>
-                    </tr>
-                    <tr>
-                      <td>
-                        <code
-                          >&lt;prefix&gt;/snapshots/&lt;stamp&gt;/&lt;level
-                          folder&gt;/DistantHorizons.sqlite</code
-                        >
-                      </td>
-                      <td>One level's whole database, built inside the bucket from its parts.</td>
-                      <td>Deleted with its snapshot.</td>
-                    </tr>
-                    <tr>
-                      <td><code>&lt;prefix&gt;/parts/&lt;sha256&gt;</code></td>
-                      <td>
-                        A slice of a database, named by its SHA-256 and up to 8 MiB, shared by every
-                        snapshot that uses it.
-                      </td>
-                      <td>Deleted when no kept snapshot lists it.</td>
-                    </tr>
-                  </tbody>
-                </table>
+            <div class="doc-body doc-split">
+              <div class="doc-main">
+                <div class="doc-table-wrap">
+                  <table class="doc-table">
+                    <thead>
+                      <tr>
+                        <th scope="col">Key</th>
+                        <th scope="col">Holds</th>
+                        <th scope="col">Replaced or deleted</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td><code>&lt;prefix&gt;/latest.json</code></td>
+                        <td>
+                          A pointer to the newest snapshot's <code>index.json</code>: its format,
+                          <code>createdAt</code> and the path.
+                        </td>
+                        <td>Rewritten by each publish, as its last write.</td>
+                      </tr>
+                      <tr>
+                        <td><code>&lt;prefix&gt;/snapshots/&lt;stamp&gt;/index.json</code></td>
+                        <td>
+                          The snapshot: Distant Horizons version, server folder, and for each level
+                          its folder, size, SHA-256 and parts.
+                        </td>
+                        <td>Deleted with its snapshot.</td>
+                      </tr>
+                      <tr>
+                        <td><code>&lt;prefix&gt;/snapshots/&lt;stamp&gt;/index.html</code></td>
+                        <td>
+                          The download page, listing each level's file with its size and the folder
+                          to put it in.
+                        </td>
+                        <td>Deleted with its snapshot.</td>
+                      </tr>
+                      <tr>
+                        <td>
+                          <code
+                            >&lt;prefix&gt;/snapshots/&lt;stamp&gt;/&lt;level
+                            folder&gt;/DistantHorizons.sqlite</code
+                          >
+                        </td>
+                        <td>One level's whole database, built inside the bucket from its parts.</td>
+                        <td>Deleted with its snapshot.</td>
+                      </tr>
+                      <tr>
+                        <td><code>&lt;prefix&gt;/parts/&lt;sha256&gt;</code></td>
+                        <td>
+                          A slice of a database, named by its SHA-256 and up to 8 MiB, shared by
+                          every snapshot that uses it.
+                        </td>
+                        <td>Deleted when no kept snapshot lists it.</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+                <ul class="doc-points">
+                  <li>
+                    <code>&lt;stamp&gt;</code> is the snapshot's UTC time, such as
+                    <code>20261012T040000Z</code>.
+                  </li>
+                  <li>
+                    <code>&lt;level folder&gt;</code> is
+                    <code>&lt;levelKeyPrefix&gt;@&lt;namespace&gt;@@&lt;path&gt;</code>, such as
+                    <code>myserver@minecraft@@overworld</code>.
+                  </li>
+                </ul>
               </div>
-              <p class="doc-prose">
-                <code>&lt;stamp&gt;</code> is the snapshot's UTC time, such as
-                <code>20261012T040000Z</code>.<br />
-                <code>&lt;level folder&gt;</code> is
-                <code>&lt;levelKeyPrefix&gt;@&lt;namespace&gt;@@&lt;path&gt;</code>, such as
-                <code>myserver@minecraft@@overworld</code>.
-              </p>
+              <div class="doc-figs">
+                <figure class="fig fig-tree">
+                  <ul class="fig-tree-list">
+                    <li class="fig-tree-row" style="--depth: 0"><code>&lt;prefix&gt;/</code></li>
+                    <li class="fig-tree-row" style="--depth: 1">
+                      <code>latest.json</code
+                      ><span class="fig-tree-note">points at the newest snapshot</span>
+                    </li>
+                    <li class="fig-tree-row" style="--depth: 1"><code>snapshots/</code></li>
+                    <li class="fig-tree-row" style="--depth: 2">
+                      <code>20261012T040000Z/</code><span class="fig-tree-note">one snapshot</span>
+                    </li>
+                    <li class="fig-tree-row" style="--depth: 3"><code>index.json</code></li>
+                    <li class="fig-tree-row" style="--depth: 3">
+                      <code>index.html</code><span class="fig-tree-note">the download page</span>
+                    </li>
+                    <li class="fig-tree-row" style="--depth: 3">
+                      <code>myserver@minecraft@@overworld/</code
+                      ><span class="fig-tree-note">one level</span>
+                    </li>
+                    <li class="fig-tree-row" style="--depth: 4">
+                      <code>DistantHorizons.sqlite</code>
+                    </li>
+                    <li class="fig-tree-row" style="--depth: 1"><code>parts/</code></li>
+                    <li class="fig-tree-row" style="--depth: 2">
+                      <code>&lt;sha256&gt;</code
+                      ><span class="fig-tree-note">a slice of a database</span>
+                    </li>
+                  </ul>
+                </figure>
+              </div>
             </div>
           </section>
           <section class="doc-section block" id="private-link" aria-labelledby="private-link-title">
@@ -264,37 +301,58 @@
                 <h2 id="private-link-title">Private link</h2>
               </div>
             </div>
-            <div class="doc-body">
-              <div class="doc-table-wrap">
-                <table class="doc-table">
-                  <thead>
-                    <tr>
-                      <th scope="col">Key</th>
-                      <th scope="col">Holds</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr>
-                      <td><code>&lt;prefix&gt;/&lt;token&gt;/latest.json</code></td>
-                      <td>The pointer, as in the public layout.</td>
-                    </tr>
-                    <tr>
-                      <td><code>&lt;prefix&gt;/&lt;token&gt;/snapshots/&lt;stamp&gt;/…</code></td>
-                      <td>The same snapshot files as in the public layout.</td>
-                    </tr>
-                    <tr>
-                      <td><code>&lt;prefix&gt;/parts/&lt;sha256&gt;</code></td>
-                      <td>The parts, which stay where they are.</td>
-                    </tr>
-                  </tbody>
-                </table>
+            <div class="doc-body doc-split">
+              <div class="doc-main">
+                <div class="doc-table-wrap">
+                  <table class="doc-table">
+                    <thead>
+                      <tr>
+                        <th scope="col">Key</th>
+                        <th scope="col">Holds</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td><code>&lt;prefix&gt;/&lt;token&gt;/latest.json</code></td>
+                        <td>The pointer, as in the public layout.</td>
+                      </tr>
+                      <tr>
+                        <td><code>&lt;prefix&gt;/&lt;token&gt;/snapshots/&lt;stamp&gt;/…</code></td>
+                        <td>The same snapshot files as in the public layout.</td>
+                      </tr>
+                      <tr>
+                        <td><code>&lt;prefix&gt;/parts/&lt;sha256&gt;</code></td>
+                        <td>The parts, which stay where they are.</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+                <ul class="doc-points">
+                  <li><code>&lt;token&gt;</code> is 26 random lowercase letters and digits.</li>
+                  <li>
+                    The destination's
+                    <a href="/docs/settings/destinations.html#snapshot-link">Snapshot link</a> row
+                    switches between the two layouts.
+                  </li>
+                </ul>
               </div>
-              <p class="doc-prose">
-                <code>&lt;token&gt;</code> is 26 random lowercase letters and digits.<br />
-                The destination's
-                <a href="/docs/settings/destinations.html#snapshot-link">Snapshot link</a> row
-                switches between the two layouts.
-              </p>
+              <div class="doc-figs">
+                <figure class="fig fig-tree">
+                  <ul class="fig-tree-list">
+                    <li class="fig-tree-row" style="--depth: 0"><code>&lt;prefix&gt;/</code></li>
+                    <li class="fig-tree-row" style="--depth: 1">
+                      <code>&lt;token&gt;/</code
+                      ><span class="fig-tree-note">26 random lowercase letters and digits</span>
+                    </li>
+                    <li class="fig-tree-row" style="--depth: 2"><code>latest.json</code></li>
+                    <li class="fig-tree-row" style="--depth: 2"><code>snapshots/</code></li>
+                    <li class="fig-tree-row" style="--depth: 3"><code>20261012T040000Z/</code></li>
+                    <li class="fig-tree-row" style="--depth: 1">
+                      <code>parts/</code><span class="fig-tree-note">stay where they are</span>
+                    </li>
+                  </ul>
+                </figure>
+              </div>
             </div>
           </section>
           <section class="doc-section block" id="deletions" aria-labelledby="deletions-title">
@@ -351,19 +409,15 @@
               </p>
             </div>
           </section>
-
           <nav class="doc-related block" aria-label="Related">
             <div class="shelf-label"><span class="label">Related</span></div>
             <a class="related-link" href="/docs/settings/destinations.html"
               ><span class="kind" data-kind="settings">Settings</span>Destinations</a
-            >
-            <a class="related-link" href="/docs/dh-publish.html"
+            ><a class="related-link" href="/docs/dh-publish.html"
               ><span class="kind" data-kind="guide">Guide</span>Publish Distant Horizons LODs</a
-            >
-            <a class="related-link" href="/docs/blocks/action-upload.html"
+            ><a class="related-link" href="/docs/blocks/action-upload.html"
               ><span class="kind" data-kind="reference">Reference</span>Upload to Bucket</a
-            >
-            <a class="related-link" href="/docs/blocks/action-dhPublish.html"
+            ><a class="related-link" href="/docs/blocks/action-dhPublish.html"
               ><span class="kind" data-kind="reference">Reference</span>Publish DH Snapshot</a
             >
           </nav>

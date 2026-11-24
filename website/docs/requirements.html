@@ -4,12 +4,18 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Konnekt docs: Requirements and platforms</title>
-    <meta name="description" content="Requirements and platforms: What runs where." />
+    <meta
+      name="description"
+      content="Requirements and platforms: Konnekt needs a 64-bit computer and the server you already run."
+    />
     <link rel="canonical" href="https://konnekt.pages.dev/docs/requirements.html" />
 
     <meta property="og:site_name" content="Konnekt" />
     <meta property="og:title" content="Konnekt docs: Requirements and platforms" />
-    <meta property="og:description" content="Requirements and platforms: What runs where." />
+    <meta
+      property="og:description"
+      content="Requirements and platforms: Konnekt needs a 64-bit computer and the server you already run."
+    />
     <meta property="og:url" content="https://konnekt.pages.dev/docs/requirements.html" />
     <meta property="og:type" content="website" />
     <meta property="og:image" content="https://konnekt.pages.dev/assets/img/social-card.png" />
@@ -17,7 +23,10 @@
     <meta property="og:image:height" content="1123" />
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="Konnekt docs: Requirements and platforms" />
-    <meta name="twitter:description" content="Requirements and platforms: What runs where." />
+    <meta
+      name="twitter:description"
+      content="Requirements and platforms: Konnekt needs a 64-bit computer and the server you already run."
+    />
     <meta name="twitter:image" content="https://konnekt.pages.dev/assets/img/social-card.png" />
 
     <meta name="theme-color" content="#05060a" />
@@ -92,6 +101,7 @@
           >
         </nav>
         <main id="main" class="group">
+          <!-- Written by scripts/gen-docs.mjs from docs/website/requirements.md. Edit that file. -->
           <header class="doc-head block">
             <div class="doc-head-main">
               <div class="doc-trail">
@@ -116,7 +126,6 @@
               </div>
             </dl>
           </header>
-
           <section class="doc-section block" id="requirements" aria-labelledby="requirements-title">
             <div class="band doc-band">
               <div class="band-title">
@@ -154,7 +163,6 @@
               </div>
             </div>
           </section>
-
           <section
             class="doc-section block"
             id="platform-support"
@@ -216,21 +224,20 @@
                   </tbody>
                 </table>
               </div>
-              <ul class="doc-list">
+              <ul class="doc-points">
                 <li>Rocky and RHEL 9 are not compatible.</li>
                 <li>
                   Linux needs <code>webkit2gtk4.1</code> and <code>gtk3</code> at runtime: Fedora
                   36, Ubuntu 22.04, Debian 12, Rocky and RHEL 10, and anything newer.
                 </li>
                 <li>
-                  On macOS, Konnekt does not update itself yet, and Remote Access has no tunnel:
-                  download each new <code>.dmg</code> from the
+                  On macOS, Konnekt does not update itself yet, and Remote Access has no tunnel.<br />
+                  Download each new <code>.dmg</code> from the
                   <a href="/download.html">download page</a>.
                 </li>
               </ul>
             </div>
           </section>
-
           <section class="doc-section block" id="server-types" aria-labelledby="server-types-title">
             <div class="band doc-band">
               <div class="band-title">
@@ -239,23 +246,40 @@
               </div>
             </div>
             <div class="doc-body">
-              <p class="doc-prose">
-                Vanilla, Paper, Spigot and Bukkit, and modded Fabric, Forge and NeoForge.<br />
-                The loader is detected automatically.<br />
-                Bedrock is not supported.
-              </p>
+              <div class="doc-table-wrap">
+                <table class="doc-table">
+                  <thead>
+                    <tr>
+                      <th scope="col">Type</th>
+                      <th scope="col">Servers</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td>Plain and plugin</td>
+                      <td>Vanilla, Paper, Spigot and Bukkit</td>
+                    </tr>
+                    <tr>
+                      <td>Modded</td>
+                      <td>Fabric, Forge and NeoForge</td>
+                    </tr>
+                    <tr>
+                      <td>Not supported</td>
+                      <td>Bedrock</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <p class="doc-prose">The loader is detected automatically.</p>
             </div>
           </section>
-
           <nav class="doc-related block" aria-label="Related">
             <div class="shelf-label"><span class="label">Related</span></div>
             <a class="related-link" href="/docs/install.html"
               ><span class="kind" data-kind="guide">Guide</span>Install Konnekt</a
-            >
-            <a class="related-link" href="/docs/first-server.html"
+            ><a class="related-link" href="/docs/first-server.html"
               ><span class="kind" data-kind="guide">Guide</span>Your first server</a
-            >
-            <a class="related-link" href="/docs/faq.html"
+            ><a class="related-link" href="/docs/faq.html"
               ><span class="kind" data-kind="reference">Reference</span>FAQ</a
             >
           </nav>

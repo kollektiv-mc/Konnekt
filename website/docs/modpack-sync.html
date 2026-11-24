@@ -1,0 +1,645 @@
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Konnekt docs: Keep a server in sync with a modpack</title>
+    <meta
+      name="description"
+      content="Keep a server in sync with a modpack: Point a modded server at a packwiz pack, check what changed, apply it, and roll it back."
+    />
+    <link rel="canonical" href="https://konnekt.pages.dev/docs/modpack-sync.html" />
+
+    <meta property="og:site_name" content="Konnekt" />
+    <meta property="og:title" content="Konnekt docs: Keep a server in sync with a modpack" />
+    <meta
+      property="og:description"
+      content="Keep a server in sync with a modpack: Point a modded server at a packwiz pack, check what changed, apply it, and roll it back."
+    />
+    <meta property="og:url" content="https://konnekt.pages.dev/docs/modpack-sync.html" />
+    <meta property="og:type" content="website" />
+    <meta property="og:image" content="https://konnekt.pages.dev/assets/img/social-card.png" />
+    <meta property="og:image:width" content="1715" />
+    <meta property="og:image:height" content="1123" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Konnekt docs: Keep a server in sync with a modpack" />
+    <meta
+      name="twitter:description"
+      content="Keep a server in sync with a modpack: Point a modded server at a packwiz pack, check what changed, apply it, and roll it back."
+    />
+    <meta name="twitter:image" content="https://konnekt.pages.dev/assets/img/social-card.png" />
+
+    <meta name="theme-color" content="#05060a" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/assets/img/favicon-16.png" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/assets/img/favicon-32.png" />
+    <link rel="icon" type="image/png" sizes="256x256" href="/assets/img/favicon.png" />
+    <link rel="apple-touch-icon" href="/assets/img/app-icon.png" />
+    <link
+      rel="preload"
+      href="/assets/fonts/Geist-Variable.woff2"
+      as="font"
+      type="font/woff2"
+      crossorigin
+    />
+    <link rel="stylesheet" href="/tokens.css" />
+    <link rel="stylesheet" href="/site.css" />
+    <link rel="stylesheet" href="/docs.css" />
+    <script>
+      document.documentElement.className = document.documentElement.className.replace('no-js', '')
+    </script>
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to content</a>
+    <div class="page">
+      <div class="group">
+        <!-- Canonical nav. Byte-identical on every page, hrefs included; site.js
+           marks the current page and scrolls same-page anchors. -->
+        <nav class="nav block block-raised" id="nav" aria-label="Main">
+          <a class="nav-brand" href="/index.html"
+            ><picture
+              ><source media="(min-resolution: 2dppx)" srcset="/assets/img/mark.svg" />
+              <img
+                class="mark"
+                src="/assets/img/mark-24.svg"
+                width="24"
+                height="24"
+                alt="" /></picture
+            >Konnekt</a
+          >
+          <button
+            class="nav-menu"
+            type="button"
+            aria-expanded="false"
+            aria-controls="nav-links"
+            aria-label="Menu"
+          >
+            <span></span><span></span>
+          </button>
+          <ul class="nav-links" id="nav-links">
+            <li><a href="/index.html#features">Features</a></li>
+            <li><a href="/index.html#scheduler">Scheduler</a></li>
+            <li><a href="/docs.html">Docs</a></li>
+            <li><a href="/roadmap.html">Roadmap</a></li>
+            <li><a href="/changelog.html">Changelog</a></li>
+          </ul>
+          <a
+            class="nav-side"
+            href="https://github.com/kollektiv-mc/Konnekt"
+            target="_blank"
+            rel="noopener"
+            >GitHub</a
+          >
+          <a class="btn btn-primary" href="/download.html"
+            ><svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true">
+              <path
+                d="M7 1v9M3 6.5 7 10.5 11 6.5M1.5 13h11"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.6"
+              /></svg
+            >Download</a
+          >
+        </nav>
+        <main id="main" class="group">
+          <!-- Written by scripts/gen-docs.mjs from docs/website/modpack-sync.md. Edit that file. -->
+          <header class="doc-head block">
+            <div class="doc-head-main">
+              <div class="doc-trail">
+                <span class="kind" data-kind="guide">Guide</span>
+                <nav aria-label="Breadcrumb">
+                  <ol class="doc-crumbs">
+                    <li><a href="/docs.html">Docs</a></li>
+                    <li><a href="/docs.html#tutorials">Tutorials</a></li>
+                    <li><span aria-current="page">Keep a server in sync with a modpack</span></li>
+                  </ol>
+                </nav>
+              </div>
+              <h1>Keep a server in sync with a modpack</h1>
+              <p class="doc-lead">
+                Point a modded server at a packwiz pack, check what changed, apply it, and roll it
+                back.
+              </p>
+            </div>
+            <dl class="doc-facts">
+              <div class="doc-fact">
+                <dt class="label">Duration</dt>
+                <dd>~10 min</dd>
+              </div>
+              <div class="doc-fact">
+                <dt class="label">Requirements</dt>
+                <dd>A modded server · A packwiz pack</dd>
+              </div>
+              <div class="doc-fact">
+                <dt class="label">Topics</dt>
+                <dd>Mods · Scheduler</dd>
+              </div>
+            </dl>
+          </header>
+          <section
+            class="doc-section block"
+            id="before-you-start"
+            aria-labelledby="before-you-start-title"
+          >
+            <div class="band doc-band">
+              <div class="band-title">
+                <span class="num">00</span>
+                <h2 id="before-you-start-title">Before you start</h2>
+              </div>
+            </div>
+            <div class="doc-body">
+              <ul class="doc-checks">
+                <li class="doc-check">
+                  <span class="doc-check-text"
+                    ><span>A server on a mod loader</span
+                    ><span class="doc-check-desc"
+                      >Such as NeoForge or Fabric, on the Minecraft version the pack is for.</span
+                    ></span
+                  >
+                </li>
+                <li class="doc-check">
+                  <span class="doc-check-text"
+                    ><span>A packwiz pack</span
+                    ><span class="doc-check-desc"
+                      >The <code>https</code> address of its <code>pack.toml</code>, or a folder on
+                      this computer that holds it.</span
+                    ></span
+                  >
+                </li>
+              </ul>
+            </div>
+          </section>
+          <section
+            class="doc-section block"
+            id="what-a-sync-does"
+            aria-labelledby="what-a-sync-does-title"
+          >
+            <div class="band doc-band">
+              <div class="band-title">
+                <span class="num">01</span>
+                <h2 id="what-a-sync-does-title">What a sync does</h2>
+              </div>
+            </div>
+            <div class="doc-body doc-split">
+              <div class="doc-main">
+                <ul class="doc-points">
+                  <li>A sync makes the server's <code>mods/</code> folder match the pack.</li>
+                  <li>
+                    It adds and updates the pack's jars, and removes the ones the pack dropped.
+                  </li>
+                  <li>
+                    It only replaces or removes files the pack installed.<br />
+                    A mod you added by hand stays.
+                  </li>
+                  <li>Client-only mods in the pack are skipped.</li>
+                  <li>
+                    Every downloaded jar is checked against the pack's hash before it is used.
+                  </li>
+                </ul>
+                <div class="doc-note" data-tone="warn">
+                  <span class="label">Heads up</span>
+                  <p>
+                    Only the jars in <code>mods/</code> are synced.<br />
+                    Config files and anything else in the pack are not copied.
+                  </p>
+                </div>
+              </div>
+              <div class="doc-figs">
+                <figure
+                  class="fig fig-flow"
+                  role="img"
+                  aria-label="Graph: Pack pack.toml, then on Check, Plan what would change, then on Apply, mods/ matches the pack, then on Roll back, mods/ as it was before."
+                >
+                  <div class="fig-node">
+                    <span class="fig-kind">Pack</span><span class="fig-value">pack.toml</span>
+                  </div>
+                  <span class="fig-wire"><span class="fig-port">Check</span></span>
+                  <div class="fig-node">
+                    <span class="fig-kind">Plan</span
+                    ><span class="fig-value">what would change</span>
+                  </div>
+                  <span class="fig-wire"><span class="fig-port">Apply</span></span>
+                  <div class="fig-node">
+                    <span class="fig-kind">mods/</span
+                    ><span class="fig-value">matches the pack</span>
+                  </div>
+                  <span class="fig-wire"><span class="fig-port">Roll back</span></span>
+                  <div class="fig-node">
+                    <span class="fig-kind">mods/</span
+                    ><span class="fig-value">as it was before</span>
+                  </div>
+                </figure>
+              </div>
+            </div>
+          </section>
+          <section
+            class="doc-section block"
+            id="choose-the-pack"
+            aria-labelledby="choose-the-pack-title"
+          >
+            <div class="band doc-band">
+              <div class="band-title">
+                <span class="num">02</span>
+                <h2 id="choose-the-pack-title">Choose the pack</h2>
+              </div>
+            </div>
+            <div class="doc-body doc-split">
+              <div class="doc-main">
+                <ol class="doc-steps">
+                  <li>Maximize the server's mods tile.</li>
+                  <li>Select <b>Pack</b>.</li>
+                  <li>Pick <b>URL</b> or <b>Folder</b>.</li>
+                  <li>
+                    Enter the address of <code>pack.toml</code>, or select <b>Browse</b> to pick the
+                    folder.
+                  </li>
+                  <li>Select <b>Save</b>.</li>
+                </ol>
+                <div class="doc-note" data-tone="note">
+                  <span class="label">Note</span>
+                  <p>
+                    A URL must start with <code>https://</code> and end in
+                    <code>/pack.toml</code>.<br />
+                    Plain <code>http</code> works only for an address on this computer, such as
+                    <code>packwiz serve</code>.
+                  </p>
+                </div>
+              </div>
+              <div class="doc-figs">
+                <figure class="fig fig-ui" role="img" aria-label="Mods, with Pack marked.">
+                  <div class="fig-ui-title">Mods</div>
+                  <div class="fig-ui-row">
+                    <span class="fig-ui-text">42 mods</span
+                    ><span class="fig-ui-btn is-hit">Pack</span
+                    ><span class="fig-ui-btn">Add Files</span
+                    ><span class="fig-ui-btn">Add Content</span>
+                  </div>
+                </figure>
+                <figure
+                  class="fig fig-ui"
+                  role="img"
+                  aria-label="Pack, with URL and https://…/pack.toml marked."
+                >
+                  <div class="fig-ui-title">Pack</div>
+                  <div class="fig-ui-row">
+                    <span class="fig-ui-btn is-hit">URL</span><span class="fig-ui-btn">Folder</span>
+                  </div>
+                  <div class="fig-ui-row">
+                    <span class="fig-ui-field is-hit">https://…/pack.toml</span>
+                  </div>
+                  <div class="fig-ui-row"><span class="fig-ui-btn">Save</span></div>
+                </figure>
+              </div>
+            </div>
+          </section>
+          <section
+            class="doc-section block"
+            id="check-what-would-change"
+            aria-labelledby="check-what-would-change-title"
+          >
+            <div class="band doc-band">
+              <div class="band-title">
+                <span class="num">03</span>
+                <h2 id="check-what-would-change-title">Check what would change</h2>
+              </div>
+            </div>
+            <div class="doc-body doc-split">
+              <div class="doc-main">
+                <ol class="doc-steps">
+                  <li>Select <b>Check</b>.</li>
+                  <li>Read the summary line, then the rows.</li>
+                </ol>
+                <div class="doc-note" data-tone="note">
+                  <span class="label">Note</span>
+                  <p>
+                    Check downloads the jars the server lacks into Konnekt's cache.<br />
+                    It does not touch <code>mods/</code>.
+                  </p>
+                </div>
+                <div class="doc-table-wrap">
+                  <table class="doc-table">
+                    <thead>
+                      <tr>
+                        <th scope="col">Row</th>
+                        <th scope="col">Means</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td><b>add</b></td>
+                        <td>The pack has it and the server does not.</td>
+                      </tr>
+                      <tr>
+                        <td><b>update</b></td>
+                        <td>A new version replaces the server's copy.</td>
+                      </tr>
+                      <tr>
+                        <td><b>remove</b></td>
+                        <td>The pack installed it and no longer lists it.</td>
+                      </tr>
+                      <tr>
+                        <td><b>disable</b></td>
+                        <td>Excluded here or client only, so the server's copy is switched off.</td>
+                      </tr>
+                      <tr>
+                        <td><b>keep</b></td>
+                        <td>Already up to date.</td>
+                      </tr>
+                      <tr>
+                        <td><b>adopt</b></td>
+                        <td>
+                          The exact file is already on the server, and the sync takes it over.
+                        </td>
+                      </tr>
+                      <tr>
+                        <td><b>skip</b></td>
+                        <td>Not for this server, such as a client-only mod.</td>
+                      </tr>
+                      <tr>
+                        <td><b>blocked</b></td>
+                        <td>It cannot be downloaded: the row says why.</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+              <div class="doc-figs">
+                <figure class="fig fig-ui" role="img" aria-label="Pack, with Check marked.">
+                  <div class="fig-ui-title">Pack</div>
+                  <div class="fig-ui-row">
+                    <span class="fig-ui-text">My Pack 1.4.0</span
+                    ><span class="fig-ui-btn">Roll back</span
+                    ><span class="fig-ui-btn is-hit">Check</span
+                    ><span class="fig-ui-btn">Apply</span>
+                  </div>
+                  <div class="fig-ui-row">
+                    <span class="fig-ui-text"
+                      >2 to add, 1 to update, 0 to remove, 0 to disable.</span
+                    >
+                  </div>
+                </figure>
+              </div>
+            </div>
+          </section>
+          <section
+            class="doc-section block"
+            id="pick-what-this-server-installs"
+            aria-labelledby="pick-what-this-server-installs-title"
+          >
+            <div class="band doc-band">
+              <div class="band-title">
+                <span class="num">04</span>
+                <h2 id="pick-what-this-server-installs-title">Pick what this server installs</h2>
+              </div>
+            </div>
+            <div class="doc-body">
+              <ol class="doc-steps">
+                <li>Hover over a row.</li>
+                <li>Select <b>Exclude</b> to keep that mod off this server.</li>
+                <li>
+                  On a skipped client-only row, select <b>Install here</b> to install it anyway.
+                </li>
+                <li>Select <b>Reset</b> on a row to undo either choice.</li>
+              </ol>
+              <div class="doc-note" data-tone="note">
+                <span class="label">Note</span>
+                <p>The choices belong to this server, and the plan is made again after each one.</p>
+              </div>
+            </div>
+          </section>
+          <section
+            class="doc-section block"
+            id="apply-the-sync"
+            aria-labelledby="apply-the-sync-title"
+          >
+            <div class="band doc-band">
+              <div class="band-title">
+                <span class="num">05</span>
+                <h2 id="apply-the-sync-title">Apply the sync</h2>
+              </div>
+            </div>
+            <div class="doc-body">
+              <ol class="doc-steps">
+                <li>Stop the server.</li>
+                <li>Select <b>Check</b> again.</li>
+                <li>Select <b>Apply</b>.</li>
+                <li>Start the server.</li>
+              </ol>
+              <div class="doc-note" data-tone="warn">
+                <span class="label">Heads up</span>
+                <p>
+                  <b>Apply</b> stays greyed out while a red line shows above the rows.<br />
+                  A running server is one: stop it first.
+                </p>
+              </div>
+              <div class="doc-note" data-tone="note">
+                <span class="label">Note</span>
+                <p>
+                  The new jars are already downloaded and checked, so applying only moves files.<br />
+                  If the pack or <code>mods/</code> changed since the check, nothing is applied:
+                  check again.
+                </p>
+              </div>
+            </div>
+          </section>
+          <section class="doc-section block" id="roll-back" aria-labelledby="roll-back-title">
+            <div class="band doc-band">
+              <div class="band-title">
+                <span class="num">06</span>
+                <h2 id="roll-back-title">Roll back</h2>
+              </div>
+            </div>
+            <div class="doc-body">
+              <ol class="doc-steps">
+                <li>Stop the server.</li>
+                <li>Select <b>Roll back</b>.</li>
+              </ol>
+              <div class="doc-note" data-tone="note">
+                <span class="label">Note</span>
+                <p>
+                  Each press undoes the newest sync not yet undone, up to the last 3 syncs.<br />
+                  The files it added go, and the files it replaced or removed come back.
+                </p>
+              </div>
+            </div>
+          </section>
+          <section
+            class="doc-section block"
+            id="sync-on-a-schedule"
+            aria-labelledby="sync-on-a-schedule-title"
+          >
+            <div class="band doc-band">
+              <div class="band-title">
+                <span class="num">07</span>
+                <h2 id="sync-on-a-schedule-title">Sync on a schedule</h2>
+              </div>
+            </div>
+            <div class="doc-body doc-split">
+              <div class="doc-main">
+                <ol class="doc-steps">
+                  <li>
+                    Maximize the Scheduler tile to open the
+                    <a href="/docs/scheduler-editor.html">scheduler editor</a>, and select
+                    <b>New graph</b>.
+                  </li>
+                  <li>
+                    Add <b>Cron Schedule</b> and set <b>Cron expression</b> to
+                    <code>0 5 * * *</code>.
+                  </li>
+                  <li>
+                    Under <b>action</b>, open the <b>Modpack</b> group and add
+                    <b>Check Modpack</b>.<br />
+                    Wire <b>onComplete</b> on <b>Cron Schedule</b> to its <b>trigger</b>.
+                  </li>
+                  <li>
+                    Add a <b>Command</b> set to <b>Stop Server</b>, and wire <b>onUpdate</b> on
+                    <b>Check Modpack</b> to its <b>trigger</b>.
+                  </li>
+                  <li>
+                    Add <b>Sync Modpack</b> from the same group, and wire <b>onComplete</b> on the
+                    stop <b>Command</b> to its <b>trigger</b>.
+                  </li>
+                  <li>Add a <b>Command</b> set to <b>Start Server</b>.</li>
+                  <li>
+                    Wire <b>onComplete</b>, <b>onUpToDate</b> and <b>onFailed</b> on
+                    <b>Sync Modpack</b> to its <b>trigger</b>.
+                  </li>
+                  <li>Save the graph and select <b>[on]</b>.</li>
+                </ol>
+                <div class="doc-note" data-tone="warn">
+                  <span class="label">Heads up</span>
+                  <p>
+                    <b>Stop Server</b> stops the server with players on it.<br />
+                    Pick an hour with few players, or warn them first as in
+                    <a href="/docs/timed-restart.html">Warn, then restart every 6 hours</a>.
+                  </p>
+                </div>
+                <div class="doc-note" data-tone="note">
+                  <span class="label">Note</span>
+                  <p>
+                    The server only stops on days the pack changed.<br />
+                    A sync with any red line fails, and the server starts again on the old mods.
+                  </p>
+                </div>
+              </div>
+              <div class="doc-figs">
+                <figure
+                  class="fig fig-flow"
+                  role="img"
+                  aria-label="Graph: Cron Schedule 0 5   , then on onComplete, Check Modpack, then on onUpdate, Command Stop Server, then on onComplete, Sync Modpack, then on onComplete · onUpToDate · onFailed, Command Start Server."
+                >
+                  <div class="fig-node">
+                    <span class="fig-kind">Cron Schedule</span
+                    ><span class="fig-value">0 5 * * *</span>
+                  </div>
+                  <span class="fig-wire"><span class="fig-port">onComplete</span></span>
+                  <div class="fig-node"><span class="fig-kind">Check Modpack</span></div>
+                  <span class="fig-wire"><span class="fig-port">onUpdate</span></span>
+                  <div class="fig-node">
+                    <span class="fig-kind">Command</span><span class="fig-value">Stop Server</span>
+                  </div>
+                  <span class="fig-wire"><span class="fig-port">onComplete</span></span>
+                  <div class="fig-node"><span class="fig-kind">Sync Modpack</span></div>
+                  <span class="fig-wire"
+                    ><span class="fig-port">onComplete · onUpToDate · onFailed</span></span
+                  >
+                  <div class="fig-node">
+                    <span class="fig-kind">Command</span><span class="fig-value">Start Server</span>
+                  </div>
+                </figure>
+              </div>
+            </div>
+          </section>
+          <section
+            class="doc-section block"
+            id="when-it-refuses"
+            aria-labelledby="when-it-refuses-title"
+          >
+            <div class="band doc-band">
+              <div class="band-title">
+                <span class="num">08</span>
+                <h2 id="when-it-refuses-title">When it refuses</h2>
+              </div>
+            </div>
+            <div class="doc-body">
+              <div class="doc-table-wrap">
+                <table class="doc-table">
+                  <thead>
+                    <tr>
+                      <th scope="col">Message says</th>
+                      <th scope="col">Do</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td>pack address: must end in /pack.toml</td>
+                      <td>Use the address of the <code>pack.toml</code> file itself.</td>
+                    </tr>
+                    <tr>
+                      <td>no pack.toml in <em>folder</em></td>
+                      <td>Pick the folder that holds <code>pack.toml</code>.</td>
+                    </tr>
+                    <tr>
+                      <td>pack sync is for mod loaders; this server runs <em>loader</em></td>
+                      <td>Use pack sync on a NeoForge, Fabric or other mod loader server.</td>
+                    </tr>
+                    <tr>
+                      <td>
+                        The pack is for Minecraft <em>version</em> and the server runs
+                        <em>version</em>.
+                      </td>
+                      <td>Point the server at a pack for its version.</td>
+                    </tr>
+                    <tr>
+                      <td>
+                        The pack expects <em>loader</em> <em>version</em> and the server runs
+                        <em>version</em>. Update the server's loader first.
+                      </td>
+                      <td>Update the server's loader to the pack's version.</td>
+                    </tr>
+                    <tr>
+                      <td><em>file</em>: a CurseForge file the pack does not link directly</td>
+                      <td>
+                        Put that jar in <code>mods/</code> by hand, then select <b>Check</b> again.
+                      </td>
+                    </tr>
+                    <tr>
+                      <td>
+                        the pack or the mods folder changed since this plan was made; check again
+                      </td>
+                      <td>Select <b>Check</b>, then <b>Apply</b>.</td>
+                    </tr>
+                    <tr>
+                      <td>the server is running; stop it to roll back</td>
+                      <td>Stop the server, then select <b>Roll back</b>.</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </section>
+          <nav class="doc-related block" aria-label="Related">
+            <div class="shelf-label"><span class="label">Related</span></div>
+            <a class="related-link" href="/docs/blocks/action-modpackCheck.html"
+              ><span class="kind" data-kind="reference">Reference</span>Check Modpack</a
+            ><a class="related-link" href="/docs/blocks/action-modpackSync.html"
+              ><span class="kind" data-kind="reference">Reference</span>Sync Modpack</a
+            ><a class="related-link" href="/docs/tiles.html"
+              ><span class="kind" data-kind="reference">Reference</span>Tiles</a
+            ><a class="related-link" href="/docs/timed-restart.html"
+              ><span class="kind" data-kind="guide">Guide</span>Warn, then restart every 6 hours</a
+            >
+          </nav>
+        </main>
+      </div>
+
+      <!-- Canonical footer. Byte-identical on every page. -->
+      <footer class="site-foot">
+        <span>Konnekt &middot; <a href="https://kommands.pages.dev/">Kommands</a></span>
+        <span>Not affiliated with Mojang or Microsoft</span>
+      </footer>
+    </div>
+
+    <script src="/release.js"></script>
+    <script src="/site.js"></script>
+  </body>
+</html>

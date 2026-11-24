@@ -101,6 +101,7 @@
           >
         </nav>
         <main id="main" class="group">
+          <!-- Written by scripts/gen-docs.mjs from docs/website/settings/general.md. Edit that file. -->
           <header class="doc-head block">
             <div class="doc-head-main">
               <div class="doc-trail">
@@ -125,7 +126,6 @@
               </div>
             </dl>
           </header>
-
           <section class="doc-section block" id="server" aria-labelledby="server-title">
             <div class="band doc-band">
               <div class="band-title">
@@ -133,60 +133,96 @@
                 <h2 id="server-title">Server</h2>
               </div>
             </div>
-            <div class="doc-body">
-              <div class="doc-table-wrap">
-                <table class="doc-table">
-                  <thead>
-                    <tr>
-                      <th scope="col">Setting</th>
-                      <th scope="col">What it does</th>
-                      <th scope="col">Default</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr>
-                      <td><b>Auto-start active server</b></td>
-                      <td>Starts the active server when Konnekt launches.</td>
-                      <td><code>Off</code></td>
-                    </tr>
-                    <tr>
-                      <td><b>Confirm before stopping</b></td>
-                      <td>Asks before the Stop and Restart buttons act.</td>
-                      <td><code>Off</code></td>
-                    </tr>
-                    <tr>
-                      <td><b>Stop grace period</b></td>
-                      <td>
-                        Sets how long a stop waits for the server to exit before a force kill, from
-                        5 to 600 seconds.
-                      </td>
-                      <td><code>60 s</code></td>
-                    </tr>
-                  </tbody>
-                </table>
+            <div class="doc-body doc-split">
+              <div class="doc-main">
+                <div class="doc-table-wrap">
+                  <table class="doc-table">
+                    <thead>
+                      <tr>
+                        <th scope="col">Setting</th>
+                        <th scope="col">What it does</th>
+                        <th scope="col">Default</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td><b>Auto-start active server</b></td>
+                        <td>Starts the active server when Konnekt launches.</td>
+                        <td>Off</td>
+                      </tr>
+                      <tr>
+                        <td><b>Confirm before stopping</b></td>
+                        <td>Asks before the <b>Stop</b> and <b>Restart</b> buttons act.</td>
+                        <td>Off</td>
+                      </tr>
+                      <tr>
+                        <td><b>Stop grace period</b></td>
+                        <td>
+                          Sets how long a stop waits for the server to exit before a force kill,
+                          from 5 to 600 seconds.
+                        </td>
+                        <td>60 s</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+                <ul class="doc-points">
+                  <li>
+                    The active server is the one picked in the sidebar's <b>Servers</b> list.<br />
+                    Konnekt remembers it between launches.
+                  </li>
+                  <li>Auto-start does nothing when no server has been added.</li>
+                  <li>
+                    The grace period also applies to restarts and to stops from the scheduler.
+                  </li>
+                  <li>
+                    <b>Force stop</b> always asks for confirmation, whatever
+                    <b>Confirm before stopping</b> says.
+                  </li>
+                </ul>
+                <p class="doc-prose">A stop runs in this order.</p>
+                <div class="doc-note" data-tone="note">
+                  <span class="label">Note</span>
+                  <p>A server that has already written a crash report waits at most 10 s.</p>
+                </div>
               </div>
-              <p class="doc-prose">
-                The active server is the one picked in the sidebar's Servers list.<br />
-                Konnekt remembers it between launches.<br />
-                Auto-start does nothing when no server has been added.
-              </p>
-              <p class="doc-prose">
-                A stop sends <code>stop</code> to the server, then waits.<br />
-                Halfway through the grace period it sends SIGTERM where the platform has it.<br />
-                At the end it force kills the server and everything it started.<br />
-                A server that has already written a crash report waits at most 10 s.<br />
-                The grace period also applies to restarts and to stops from the scheduler.
-              </p>
-              <div class="doc-note">
-                <span class="label">Force stop</span>
-                <p>
-                  Force stop always asks for confirmation, whatever <b>Confirm before stopping</b>
-                  says.
-                </p>
+              <div class="doc-figs">
+                <figure class="fig fig-ui" role="img" aria-label="Settings · General.">
+                  <div class="fig-ui-title">Settings · General</div>
+                  <div class="fig-ui-row">
+                    <span class="fig-ui-text">Auto-start active server</span
+                    ><span class="fig-ui-btn">Off</span>
+                  </div>
+                  <div class="fig-ui-row">
+                    <span class="fig-ui-text">Confirm before stopping</span
+                    ><span class="fig-ui-btn">Off</span>
+                  </div>
+                  <div class="fig-ui-row">
+                    <span class="fig-ui-text">Stop grace period</span
+                    ><span class="fig-ui-field">60</span><span class="fig-ui-text">seconds</span>
+                  </div>
+                </figure>
+                <figure class="fig fig-timeline">
+                  <ol class="fig-timeline-list">
+                    <li class="">
+                      <span class="fig-when">0</span
+                      ><span class="fig-what">Konnekt sends stop to the server</span>
+                    </li>
+                    <li class="">
+                      <span class="fig-when">Halfway</span
+                      ><span class="fig-what">SIGTERM, where the platform has it</span>
+                    </li>
+                    <li class="is-hit">
+                      <span class="fig-when">End of the grace period</span
+                      ><span class="fig-what"
+                        >Force kill of the server and everything it started</span
+                      >
+                    </li>
+                  </ol>
+                </figure>
               </div>
             </div>
           </section>
-
           <section class="doc-section block" id="updates" aria-labelledby="updates-title">
             <div class="band doc-band">
               <div class="band-title">
@@ -194,55 +230,69 @@
                 <h2 id="updates-title">Updates</h2>
               </div>
             </div>
-            <div class="doc-body">
-              <div class="doc-table-wrap">
-                <table class="doc-table">
-                  <thead>
-                    <tr>
-                      <th scope="col">Setting</th>
-                      <th scope="col">What it does</th>
-                      <th scope="col">Default</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr>
-                      <td><b>Check for updates on startup</b></td>
-                      <td>Checks once at each launch and alerts you when a newer build exists.</td>
-                      <td><code>On</code></td>
-                    </tr>
-                    <tr>
-                      <td><b>Update channel</b></td>
-                      <td>
-                        Chooses whether Konnekt offers releases only (Stable) or snapshots too
-                        (Snapshot).
-                      </td>
-                      <td><code>Stable</code></td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-              <p class="doc-prose">
-                The check asks GitHub Releases and installs nothing.<br />
-                Install an update from <b>Settings</b>, <b>About</b>.<br />
-                The alert follows the <b>Update available</b> rows in
-                <a href="/docs/settings/notifications.html">Notifications</a>.<br />
-                A build with <code>-dev</code> in its version, such as a plain source build, skips
-                the check.
-              </p>
-              <p class="doc-prose">
-                A snapshot is a build of the newest code, published as a pre-release.<br />
-                It is built nightly when the code has changed.<br />
-                Snapshots are untested and can be broken, so back up your server directory before
-                installing one.<br />
-                Stable never contacts the snapshot release.<br />
-                Snapshot offers whichever is newer, the latest snapshot or the latest release.
-              </p>
-              <div class="doc-note">
-                <span class="label">Snapshot builds</span>
-                <p>
+            <div class="doc-body doc-split">
+              <div class="doc-main">
+                <div class="doc-table-wrap">
+                  <table class="doc-table">
+                    <thead>
+                      <tr>
+                        <th scope="col">Setting</th>
+                        <th scope="col">What it does</th>
+                        <th scope="col">Default</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td><b>Check for updates on startup</b></td>
+                        <td>
+                          Checks once at each launch and alerts you when a newer build exists.
+                        </td>
+                        <td>On</td>
+                      </tr>
+                      <tr>
+                        <td><b>Update channel</b></td>
+                        <td>
+                          Chooses whether Konnekt offers releases only (<b>Stable</b>) or snapshots
+                          too (<b>Snapshot</b>).
+                        </td>
+                        <td>Stable</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+                <ul class="doc-points">
+                  <li>
+                    The check asks GitHub Releases and installs nothing.<br />
+                    Install an update from Settings, <b>About</b>.
+                  </li>
+                  <li>
+                    The alert follows the <b>Update available</b> rows in
+                    <a href="/docs/settings/notifications.html">Notifications</a>.
+                  </li>
+                  <li>
+                    A build with <code>-dev</code> in its version, such as a plain source build,
+                    skips the check.
+                  </li>
+                  <li>
+                    <b>Stable</b> never contacts the snapshot release.<br />
+                    <b>Snapshot</b> offers whichever is newer, the latest snapshot or the latest
+                    release.
+                  </li>
+                  <li>
+                    A snapshot is a build of the newest code, published as a pre-release.<br />
+                    It is built nightly when the code has changed.
+                  </li>
+                </ul>
+                <div class="doc-note" data-tone="warn">
+                  <span class="label">Heads up</span>
+                  <p>
+                    Snapshots are untested and can be broken.<br />
+                    Back up your server directory before installing one.
+                  </p>
+                </div>
+                <p class="doc-prose">
                   A snapshot build follows the snapshot channel until you install a release.<br />
-                  Settings still shows the stored channel.<br />
-                  It adds the line
+                  Settings still shows the stored channel, and adds the line
                   <b
                     >This build is a snapshot, so it follows the snapshot channel until you install
                     a release.</b
@@ -250,18 +300,28 @@
                   After a release is installed, the stored channel applies again.
                 </p>
               </div>
+              <div class="doc-figs">
+                <figure class="fig fig-ui" role="img" aria-label="Settings · General.">
+                  <div class="fig-ui-title">Settings · General</div>
+                  <div class="fig-ui-row">
+                    <span class="fig-ui-text">Check for updates on startup</span
+                    ><span class="fig-ui-btn">On</span>
+                  </div>
+                  <div class="fig-ui-row">
+                    <span class="fig-ui-text">Update channel</span
+                    ><span class="fig-ui-btn">Stable</span><span class="fig-ui-btn">Snapshot</span>
+                  </div>
+                </figure>
+              </div>
             </div>
           </section>
-
           <nav class="doc-related block" aria-label="Related">
             <div class="shelf-label"><span class="label">Related</span></div>
             <a class="related-link" href="/docs/settings/notifications.html"
               ><span class="kind" data-kind="settings">Settings</span>Notifications</a
-            >
-            <a class="related-link" href="/docs/first-server.html"
+            ><a class="related-link" href="/docs/first-server.html"
               ><span class="kind" data-kind="guide">Guide</span>Your first server</a
-            >
-            <a class="related-link" href="/docs/faq.html"
+            ><a class="related-link" href="/docs/faq.html"
               ><span class="kind" data-kind="reference">Reference</span>FAQ</a
             >
           </nav>

@@ -6,7 +6,7 @@
     <title>Konnekt docs: Notifications</title>
     <meta
       name="description"
-      content="Notifications: Which events raise an operating system notification, and which raise an in-app bubble"
+      content="Notifications: Which events raise an operating system notification, and which raise an in-app bubble."
     />
     <link rel="canonical" href="https://konnekt.pages.dev/docs/settings/notifications.html" />
 
@@ -14,7 +14,7 @@
     <meta property="og:title" content="Konnekt docs: Notifications" />
     <meta
       property="og:description"
-      content="Notifications: Which events raise an operating system notification, and which raise an in-app bubble"
+      content="Notifications: Which events raise an operating system notification, and which raise an in-app bubble."
     />
     <meta property="og:url" content="https://konnekt.pages.dev/docs/settings/notifications.html" />
     <meta property="og:type" content="website" />
@@ -25,7 +25,7 @@
     <meta name="twitter:title" content="Konnekt docs: Notifications" />
     <meta
       name="twitter:description"
-      content="Notifications: Which events raise an operating system notification, and which raise an in-app bubble"
+      content="Notifications: Which events raise an operating system notification, and which raise an in-app bubble."
     />
     <meta name="twitter:image" content="https://konnekt.pages.dev/assets/img/social-card.png" />
 
@@ -101,6 +101,7 @@
           >
         </nav>
         <main id="main" class="group">
+          <!-- Written by scripts/gen-docs.mjs from docs/website/settings/notifications.md. Edit that file. -->
           <header class="doc-head block">
             <div class="doc-head-main">
               <div class="doc-trail">
@@ -126,7 +127,6 @@
               </div>
             </dl>
           </header>
-
           <section class="doc-section block" id="desktop" aria-labelledby="desktop-title">
             <div class="band doc-band">
               <div class="band-title">
@@ -134,61 +134,107 @@
                 <h2 id="desktop-title">Desktop</h2>
               </div>
             </div>
-            <div class="doc-body">
-              <p class="doc-prose">
-                The operating system raises these.<br />
-                The first one asks the system for permission to show notifications.<br />
-                The Notifications tile logs every event, whatever these are set to.<br />
-                A <b>Notify</b> block set to deliver to the desktop ignores them.<br />
-                A device waiting for remote access approval always notifies.
-              </p>
-              <div class="doc-table-wrap">
-                <table class="doc-table">
-                  <thead>
-                    <tr>
-                      <th scope="col">Setting</th>
-                      <th scope="col">What it does</th>
-                      <th scope="col">Default</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr>
-                      <td>Warnings and info</td>
-                      <td>
-                        Notifies on a server start, a finished backup, restore or install, a loader
-                        update, low TPS, or auto-save staying off.
-                      </td>
-                      <td>Off</td>
-                    </tr>
-                    <tr>
-                      <td>Errors</td>
-                      <td>
-                        Notifies when a backup, restore, server install, loader update or scheduler
-                        run fails.
-                      </td>
-                      <td>Off</td>
-                    </tr>
-                    <tr>
-                      <td>Server crash</td>
-                      <td>Notifies when a server stops unexpectedly.</td>
-                      <td>Off</td>
-                    </tr>
-                    <tr>
-                      <td>Update available</td>
-                      <td>Notifies when the startup check finds a newer Konnekt version.</td>
-                      <td>Off</td>
-                    </tr>
-                    <tr>
-                      <td>Player join/leave</td>
-                      <td>Notifies when a player joins or leaves a server.</td>
-                      <td>Off</td>
-                    </tr>
-                  </tbody>
-                </table>
+            <div class="doc-body doc-split">
+              <div class="doc-main">
+                <p class="doc-prose">The operating system raises these.</p>
+                <div class="doc-table-wrap">
+                  <table class="doc-table">
+                    <thead>
+                      <tr>
+                        <th scope="col">Setting</th>
+                        <th scope="col">What it does</th>
+                        <th scope="col">Default</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td><b>Warnings and info</b></td>
+                        <td>
+                          Notifies on a server start, a finished backup, restore or install, a
+                          loader update, low TPS, or auto-save staying off.
+                        </td>
+                        <td>Off</td>
+                      </tr>
+                      <tr>
+                        <td><b>Errors</b></td>
+                        <td>
+                          Notifies when a backup, restore, server install, loader update or
+                          scheduler run fails.
+                        </td>
+                        <td>Off</td>
+                      </tr>
+                      <tr>
+                        <td><b>Server crash</b></td>
+                        <td>Notifies when a server stops unexpectedly.</td>
+                        <td>Off</td>
+                      </tr>
+                      <tr>
+                        <td><b>Update available</b></td>
+                        <td>
+                          Notifies when the startup check finds a newer Konnekt version, set in
+                          <a href="/docs/settings/general.html#updates">Updates</a>.
+                        </td>
+                        <td>Off</td>
+                      </tr>
+                      <tr>
+                        <td><b>Player join/leave</b></td>
+                        <td>Notifies when a player joins or leaves a server.</td>
+                        <td>Off</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+                <ul class="doc-points">
+                  <li>
+                    The first one you switch on asks the system for permission to show
+                    notifications.
+                  </li>
+                  <li>The Notifications tile logs every event, whatever these are set to.</li>
+                  <li>A <b>Notify</b> block set to deliver to the desktop ignores them.</li>
+                  <li>A device waiting for remote access approval always notifies.</li>
+                </ul>
+              </div>
+              <div class="doc-figs">
+                <figure class="fig fig-ui" role="img" aria-label="Settings · Notifications.">
+                  <div class="fig-ui-title">Settings · Notifications</div>
+                  <div class="fig-ui-row"><span class="fig-ui-text">Desktop</span></div>
+                  <div class="fig-ui-row">
+                    <span class="fig-ui-text">Warnings and info</span
+                    ><span class="fig-ui-btn">Off</span>
+                  </div>
+                  <div class="fig-ui-row">
+                    <span class="fig-ui-text">Errors</span><span class="fig-ui-btn">Off</span>
+                  </div>
+                  <div class="fig-ui-row">
+                    <span class="fig-ui-text">Server crash</span><span class="fig-ui-btn">Off</span>
+                  </div>
+                  <div class="fig-ui-row">
+                    <span class="fig-ui-text">Update available</span
+                    ><span class="fig-ui-btn">Off</span>
+                  </div>
+                  <div class="fig-ui-row">
+                    <span class="fig-ui-text">Player join/leave</span
+                    ><span class="fig-ui-btn">Off</span>
+                  </div>
+                  <div class="fig-ui-row"><span class="fig-ui-text">In-app bubbles</span></div>
+                  <div class="fig-ui-row">
+                    <span class="fig-ui-text">Warnings and info</span
+                    ><span class="fig-ui-btn">On</span>
+                  </div>
+                  <div class="fig-ui-row">
+                    <span class="fig-ui-text">Errors</span><span class="fig-ui-btn">On</span>
+                  </div>
+                  <div class="fig-ui-row">
+                    <span class="fig-ui-text">Server crash</span><span class="fig-ui-btn">On</span>
+                  </div>
+                  <div class="fig-ui-row">
+                    <span class="fig-ui-text">Update available</span
+                    ><span class="fig-ui-btn">On</span>
+                  </div>
+                </figure>
               </div>
             </div>
           </section>
-
           <section
             class="doc-section block"
             id="in-app-bubbles"
@@ -215,15 +261,15 @@
                   </thead>
                   <tbody>
                     <tr>
-                      <td>Warnings and info</td>
+                      <td><b>Warnings and info</b></td>
                       <td>
-                        Shows scheduler graph warnings, <b>Notify</b> block messages of kind Info or
-                        Warning, low TPS, and auto-save staying off.
+                        Shows scheduler graph warnings, <b>Notify</b> block messages of kind
+                        <b>Info</b> or <b>Warning</b>, low TPS, and auto-save staying off.
                       </td>
                       <td>On</td>
                     </tr>
                     <tr>
-                      <td>Errors</td>
+                      <td><b>Errors</b></td>
                       <td>
                         Shows failed scheduler runs, backups, restores, installs and loader updates,
                         scheduler errors, and <b>Notify</b> block errors.
@@ -231,12 +277,12 @@
                       <td>On</td>
                     </tr>
                     <tr>
-                      <td>Server crash</td>
+                      <td><b>Server crash</b></td>
                       <td>Shows a bubble when a server stops unexpectedly.</td>
                       <td>On</td>
                     </tr>
                     <tr>
-                      <td>Update available</td>
+                      <td><b>Update available</b></td>
                       <td>Shows a bubble when the startup check finds a newer Konnekt version.</td>
                       <td>On</td>
                     </tr>
@@ -245,10 +291,9 @@
               </div>
             </div>
           </section>
-
           <nav class="doc-related block" aria-label="Related">
             <div class="shelf-label"><span class="label">Related</span></div>
-            <a class="related-link" href="/docs/settings/general.html#updates"
+            <a class="related-link" href="/docs/settings/general.html"
               ><span class="kind" data-kind="settings">Settings</span>General</a
             >
           </nav>

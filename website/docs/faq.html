@@ -4,12 +4,15 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Konnekt docs: FAQ</title>
-    <meta name="description" content="FAQ: Common questions, short answers." />
+    <meta name="description" content="FAQ: Short answers about Konnekt, servers and updates." />
     <link rel="canonical" href="https://konnekt.pages.dev/docs/faq.html" />
 
     <meta property="og:site_name" content="Konnekt" />
     <meta property="og:title" content="Konnekt docs: FAQ" />
-    <meta property="og:description" content="FAQ: Common questions, short answers." />
+    <meta
+      property="og:description"
+      content="FAQ: Short answers about Konnekt, servers and updates."
+    />
     <meta property="og:url" content="https://konnekt.pages.dev/docs/faq.html" />
     <meta property="og:type" content="website" />
     <meta property="og:image" content="https://konnekt.pages.dev/assets/img/social-card.png" />
@@ -17,7 +20,10 @@
     <meta property="og:image:height" content="1123" />
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="Konnekt docs: FAQ" />
-    <meta name="twitter:description" content="FAQ: Common questions, short answers." />
+    <meta
+      name="twitter:description"
+      content="FAQ: Short answers about Konnekt, servers and updates."
+    />
     <meta name="twitter:image" content="https://konnekt.pages.dev/assets/img/social-card.png" />
 
     <meta name="theme-color" content="#05060a" />
@@ -92,6 +98,7 @@
           >
         </nav>
         <main id="main" class="group">
+          <!-- Written by scripts/gen-docs.mjs from docs/website/faq.md. Edit that file. -->
           <header class="doc-head block">
             <div class="doc-head-main">
               <div class="doc-trail">
@@ -105,6 +112,7 @@
                 </nav>
               </div>
               <h1>FAQ</h1>
+              <p class="doc-lead">Short answers about Konnekt, servers and updates.</p>
             </div>
             <dl class="doc-facts">
               <div class="doc-fact">
@@ -113,7 +121,6 @@
               </div>
             </dl>
           </header>
-
           <section class="doc-section block" id="konnekt" aria-labelledby="konnekt-title">
             <div class="band doc-band">
               <div class="band-title">
@@ -141,10 +148,16 @@
                   <p class="doc-prose">
                     No telemetry, analytics or crash reporting.<br />
                     On its own it contacts GitHub, to check for updates.<br />
-                    Everything else follows something you set up: Modrinth for mods, CurseForge once
-                    you add an API key, NeoForge's Maven for a loader, your buckets, Cloudflare for
-                    a tunnel, and any address an HTTP Request block names.
+                    Everything else follows something you set up:
                   </p>
+                  <ul class="doc-points">
+                    <li>Modrinth for mods</li>
+                    <li>CurseForge once you add an API key</li>
+                    <li>NeoForge's Maven for a loader</li>
+                    <li>Your buckets</li>
+                    <li>Cloudflare for a tunnel</li>
+                    <li>Any address an HTTP Request block names</li>
+                  </ul>
                 </details>
                 <details>
                   <summary>Where does it store my data?</summary>
@@ -165,7 +178,6 @@
               </div>
             </div>
           </section>
-
           <section class="doc-section block" id="servers" aria-labelledby="servers-title">
             <div class="band doc-band">
               <div class="band-title">
@@ -184,7 +196,7 @@
                   </p>
                 </details>
                 <details>
-                  <summary>The server stops as soon as I start it</summary>
+                  <summary>Why does the server stop as soon as I start it?</summary>
                   <p class="doc-prose">
                     On a first run that is almost always the EULA.<br />
                     Minecraft will not start until you have accepted it, and says so in the log on
@@ -204,7 +216,6 @@
               </div>
             </div>
           </section>
-
           <section class="doc-section block" id="updates" aria-labelledby="updates-title">
             <div class="band doc-band">
               <div class="band-title">
@@ -230,16 +241,13 @@
               </div>
             </div>
           </section>
-
           <nav class="doc-related block" aria-label="Related">
             <div class="shelf-label"><span class="label">Related</span></div>
             <a class="related-link" href="/docs/install.html"
               ><span class="kind" data-kind="guide">Guide</span>Install Konnekt</a
-            >
-            <a class="related-link" href="/docs/first-server.html"
+            ><a class="related-link" href="/docs/first-server.html"
               ><span class="kind" data-kind="guide">Guide</span>Your first server</a
-            >
-            <a class="related-link" href="/docs/requirements.html"
+            ><a class="related-link" href="/docs/requirements.html"
               ><span class="kind" data-kind="reference">Reference</span>Requirements and
               platforms</a
             >
