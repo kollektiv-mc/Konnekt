@@ -229,6 +229,7 @@
           </section>
           <!-- /gen:fields -->
 
+          <!-- gen:body -->
           <section class="doc-section block" id="run" aria-labelledby="run-title">
             <div class="band doc-band">
               <div class="band-title">
@@ -236,29 +237,75 @@
                 <h2 id="run-title">What a run does</h2>
               </div>
             </div>
-            <div class="doc-body">
-              <p class="doc-prose">
-                Zips the chosen target and adds the archive to the server's backups.<br />Full
-                server zips the whole server folder.<br />Active world zips the
-                <code>level-name</code> folder from <code>server.properties</code> with its
-                <code>_nether</code> and <code>_the_end</code> folders.
-              </p>
-              <p class="doc-prose">
-                On a running server it pauses world saves first and resumes them afterwards.<br />A
-                stopped server is zipped as it is.<br />A running server's Distant Horizons
-                databases are left out of the archive.<br />Those are the
-                <code>DistantHorizons.sqlite</code> files and their <code>-wal</code> and
-                <code>-shm</code> companions.
-              </p>
-              <p class="doc-prose">
-                The archive is named like <code>04817_21_10_26_142530.zip</code>: an id, then day,
-                month, year and time.<br />It leaves by <code>onComplete</code> when the archive is
-                written, and by <code>onFailed</code> on any error.<br /><b>Backup filename</b>
-                carries the archive's file name after a successful run.
-              </p>
+            <div class="doc-body doc-split">
+              <div class="doc-main">
+                <ol class="doc-steps">
+                  <li>Pause world saves, when the server is running.</li>
+                  <li>Zip the chosen target.</li>
+                  <li>Add the archive to the server's backups.</li>
+                  <li>Resume world saves.</li>
+                  <li>Leave by <b>onComplete</b>, or by <b>onFailed</b> on any error.</li>
+                </ol>
+                <ul class="doc-points">
+                  <li><b>Full server</b> zips the whole server folder.</li>
+                  <li>
+                    <b>Active world</b> zips the <code>level-name</code> folder from
+                    <code>server.properties</code> with its <code>_nether</code> and
+                    <code>_the_end</code> folders.
+                  </li>
+                  <li>A stopped server is zipped as it is.</li>
+                  <li>
+                    The archive is named like <code>04817_21_10_26_142530.zip</code>: an id, then
+                    day, month, year and time.
+                  </li>
+                  <li>
+                    <b>Backup filename</b> carries the archive's file name after a successful run.
+                  </li>
+                </ul>
+                <div class="doc-note" data-tone="warn">
+                  <span class="label">Heads up</span>
+                  <p>
+                    A running server's Distant Horizons databases are left out of the archive.<br />
+                    Those are the <code>DistantHorizons.sqlite</code> files and their
+                    <code>-wal</code> and <code>-shm</code> companions.
+                  </p>
+                </div>
+              </div>
+              <div class="doc-figs">
+                <figure
+                  class="fig fig-flow"
+                  role="img"
+                  aria-label="Graph: Cron Schedule 0 4 * * *, then on onComplete, Create Backup Full server, on onComplete, Notify Backup done, on onFailed, Notify Backup failed."
+                >
+                  <div class="fig-node">
+                    <span class="fig-kind">Cron Schedule</span
+                    ><span class="fig-value">0 4 * * *</span>
+                  </div>
+                  <span class="fig-wire"><span class="fig-port">onComplete</span></span>
+                  <div class="fig-node is-hit">
+                    <span class="fig-kind">Create Backup</span
+                    ><span class="fig-value">Full server</span>
+                  </div>
+                  <div class="fig-lanes">
+                    <div class="fig-lane">
+                      <span class="fig-wire"><span class="fig-port">onComplete</span></span>
+                      <div class="fig-node">
+                        <span class="fig-kind">Notify</span
+                        ><span class="fig-value">Backup done</span>
+                      </div>
+                    </div>
+                    <div class="fig-lane">
+                      <span class="fig-wire"><span class="fig-port">onFailed</span></span>
+                      <div class="fig-node">
+                        <span class="fig-kind">Notify</span
+                        ><span class="fig-value">Backup failed</span>
+                      </div>
+                    </div>
+                  </div>
+                </figure>
+              </div>
             </div>
           </section>
-
           <section class="doc-section block" id="errors" aria-labelledby="errors-title">
             <div class="band doc-band">
               <div class="band-title">
@@ -281,18 +328,18 @@
                       <td>Wait for the running backup or restore to finish.</td>
                     </tr>
                     <tr>
-                      <td>could not pause world saves: <i>reason</i></td>
+                      <td>could not pause world saves: <em>reason</em></td>
                       <td>
                         Enable RCON or start the server from Konnekt, so a save command can reach
                         it.
                       </td>
                     </tr>
                     <tr>
-                      <td>server folder not found: <i>path</i></td>
+                      <td>server folder not found: <em>path</em></td>
                       <td>Check the server's folder in its settings.</td>
                     </tr>
                     <tr>
-                      <td>world folder "<i>name</i>" not found</td>
+                      <td>world folder "<em>name</em>" not found</td>
                       <td>Check <code>level-name</code> in <code>server.properties</code>.</td>
                     </tr>
                   </tbody>
@@ -300,6 +347,7 @@
               </div>
             </div>
           </section>
+          <!-- /gen:body -->
 
           <nav class="doc-related block" aria-label="Related">
             <div class="shelf-label"><span class="label">Related</span></div>

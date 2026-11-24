@@ -255,6 +255,7 @@
           </section>
           <!-- /gen:fields -->
 
+          <!-- gen:body -->
           <section class="doc-section block" id="run" aria-labelledby="run-title">
             <div class="band doc-band">
               <div class="band-title">
@@ -262,43 +263,99 @@
                 <h2 id="run-title">What a run does</h2>
               </div>
             </div>
-            <div class="doc-body">
-              <ol class="doc-list">
-                <li>
-                  Resolves <b>Source</b> against the server folder and refuses anything outside the
-                  folders it may read.
-                </li>
-                <li>
-                  Lists the files: a folder is walked in name order, and a link to a folder is not
-                  entered.
-                </li>
-                <li>
-                  Refuses the whole upload, before sending anything, if one file is over 5 GiB.
-                </li>
-                <li>
-                  Checks each object in the bucket: one of the same size is skipped, anything else
-                  is sent.
-                </li>
-                <li>
-                  Stops at the first failure and keeps what was sent, so the next run resumes.
-                </li>
-              </ol>
-              <p class="doc-prose">
-                Each key is the destination's prefix, then <b>Key prefix</b>, then the file's path
-                below <b>Source</b>.<br />A single file is stored under its file name.<br />Only the
-                size is compared, so a file edited to the same length is not sent again.<br />A
-                wired Source or Key prefix replaces its field.
-              </p>
-              <p class="doc-prose">
-                It leaves by <code>onComplete</code> when every file is sent or skipped, and by
-                <code>onFailed</code> on any error.<br /><b>Objects uploaded</b>,
-                <b>Objects skipped</b> and <b>Bytes sent</b> are set after a successful run.<br />Progress
-                and the result appear in the server's console.<br />The block can run for up to 12
-                hours.
-              </p>
+            <div class="doc-body doc-split">
+              <div class="doc-main">
+                <ol class="doc-steps">
+                  <li>
+                    Resolve <b>Source</b> against the server folder, and refuse anything outside the
+                    folders the block may read.
+                  </li>
+                  <li>
+                    List the files: a folder is walked in name order, and a link to a folder is not
+                    entered.
+                  </li>
+                  <li>
+                    Refuse the whole upload, before sending anything, if one file is over 5 GiB.
+                  </li>
+                  <li>
+                    Check each object in the bucket: one of the same size is skipped, anything else
+                    is sent.
+                  </li>
+                  <li>
+                    Stop at the first failure and keep what was sent, so the next run resumes.
+                  </li>
+                </ol>
+                <div class="doc-note" data-tone="warn">
+                  <span class="label">Heads up</span>
+                  <p>
+                    Only the size is compared.<br />
+                    A file edited to the same length is not sent again.
+                  </p>
+                </div>
+                <ul class="doc-points">
+                  <li>
+                    Each key is the destination's prefix, then <b>Key prefix</b>, then the file's
+                    path below <b>Source</b>.
+                  </li>
+                  <li>A single file is stored under its file name.</li>
+                  <li>A wired <b>Source</b> or <b>Key prefix</b> replaces its field.</li>
+                  <li>
+                    It leaves by <b>onComplete</b> when every file is sent or skipped, and by
+                    <b>onFailed</b> on any error.
+                  </li>
+                  <li>
+                    <b>Objects uploaded</b>, <b>Objects skipped</b> and <b>Bytes sent</b> are set
+                    after a successful run.
+                  </li>
+                </ul>
+                <div class="doc-note" data-tone="note">
+                  <span class="label">Note</span>
+                  <p>
+                    Progress and the result appear in the server's console.<br />
+                    The block can run for up to 12 hours.
+                  </p>
+                </div>
+              </div>
+              <div class="doc-figs">
+                <figure
+                  class="fig fig-flow"
+                  role="img"
+                  aria-label="Graph: Cron Schedule 0 5 * * *, then on onComplete, Create Backup Full server, then on onComplete, Upload to Bucket your destination, on onComplete, Notify Backup uploaded, on onFailed, Notify Upload failed."
+                >
+                  <div class="fig-node">
+                    <span class="fig-kind">Cron Schedule</span
+                    ><span class="fig-value">0 5 * * *</span>
+                  </div>
+                  <span class="fig-wire"><span class="fig-port">onComplete</span></span>
+                  <div class="fig-node">
+                    <span class="fig-kind">Create Backup</span
+                    ><span class="fig-value">Full server</span>
+                  </div>
+                  <span class="fig-wire"><span class="fig-port">onComplete</span></span>
+                  <div class="fig-node is-hit">
+                    <span class="fig-kind">Upload to Bucket</span
+                    ><span class="fig-value">your destination</span>
+                  </div>
+                  <div class="fig-lanes">
+                    <div class="fig-lane">
+                      <span class="fig-wire"><span class="fig-port">onComplete</span></span>
+                      <div class="fig-node">
+                        <span class="fig-kind">Notify</span
+                        ><span class="fig-value">Backup uploaded</span>
+                      </div>
+                    </div>
+                    <div class="fig-lane">
+                      <span class="fig-wire"><span class="fig-port">onFailed</span></span>
+                      <div class="fig-node">
+                        <span class="fig-kind">Notify</span
+                        ><span class="fig-value">Upload failed</span>
+                      </div>
+                    </div>
+                  </div>
+                </figure>
+              </div>
             </div>
           </section>
-
           <section class="doc-section block" id="errors" aria-labelledby="errors-title">
             <div class="band doc-band">
               <div class="band-title">
@@ -318,27 +375,27 @@
                   <tbody>
                     <tr>
                       <td>
-                        destination validation failed: Upload to Bucket (<i>node</i>): the
-                        destination "<i>name</i>" does not exist. It was deleted or renamed in
+                        destination validation failed: Upload to Bucket (<em>node</em>): the
+                        destination "<em>name</em>" does not exist. It was deleted or renamed in
                         Settings, or this graph came from another install.
                       </td>
                       <td>Pick a destination that exists, or add it in Settings.</td>
                     </tr>
                     <tr>
-                      <td>destination "<i>name</i>": <i>reason</i></td>
+                      <td>destination "<em>name</em>": <em>reason</em></td>
                       <td>Correct the destination in Settings.</td>
                     </tr>
                     <tr>
-                      <td>key prefix "<i>prefix</i>" must not contain "<i>segment</i>"</td>
+                      <td>key prefix "<em>prefix</em>" must not contain "<em>segment</em>"</td>
                       <td>Remove the <code>.</code> or <code>..</code> segment from the prefix.</td>
                     </tr>
                     <tr>
-                      <td>source <i>path</i> does not exist</td>
+                      <td>source <em>path</em> does not exist</td>
                       <td>Check the path of the source.</td>
                     </tr>
                     <tr>
                       <td>
-                        source <i>path</i> is outside the folders a graph may upload from (the
+                        source <em>path</em> is outside the folders a graph may upload from (the
                         server's folder and its backups)
                       </td>
                       <td>
@@ -348,29 +405,29 @@
                     </tr>
                     <tr>
                       <td>
-                        <i>file</i> is a link that is outside the folders a graph may upload from
+                        <em>file</em> is a link that is outside the folders a graph may upload from
                         (the server's folder and its backups)
                       </td>
                       <td>Remove the link, or point it inside those folders.</td>
                     </tr>
                     <tr>
-                      <td>source <i>path</i> holds no files to upload</td>
+                      <td>source <em>path</em> holds no files to upload</td>
                       <td>Choose a source that holds at least one file.</td>
                     </tr>
                     <tr>
                       <td>
-                        <i>key</i> is <i>size</i>, over the 5 GiB single upload limit, so nothing
-                        was uploaded; split it or leave it out of the folder: file is over the 5 GiB
-                        single upload limit
+                        <em>key</em> is <em>size</em>, over the 5 GiB single upload limit, so
+                        nothing was uploaded; split it or leave it out of the folder: file is over
+                        the 5 GiB single upload limit
                       </td>
                       <td>Split the file or move it out of the folder.</td>
                     </tr>
                     <tr>
-                      <td>object <i>n</i> of <i>total</i>: <i>reason</i></td>
+                      <td>object <em>n</em> of <em>total</em>: <em>reason</em></td>
                       <td>Run it again; objects already sent are skipped.</td>
                     </tr>
                     <tr>
-                      <td>timed out after 43200s: <i>reason</i></td>
+                      <td>timed out after 43200s: <em>reason</em></td>
                       <td>Run it again; objects already sent are skipped.</td>
                     </tr>
                   </tbody>
@@ -378,6 +435,7 @@
               </div>
             </div>
           </section>
+          <!-- /gen:body -->
 
           <nav class="doc-related block" aria-label="Related">
             <div class="shelf-label"><span class="label">Related</span></div>

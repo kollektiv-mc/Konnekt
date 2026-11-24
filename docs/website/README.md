@@ -4,11 +4,14 @@ Each `<path>.md` here is the source of `website/docs/<path>.html`.
 `node scripts/gen-docs.mjs` writes the pages and the docs home's shelves; CI's
 website job fails when they are stale. Edit the Markdown, never the HTML.
 The block pages under `website/docs/blocks/` come from `gen-block-docs.mjs`
-instead.
+instead: their ports and fields from the block registry, and the sections after
+the fields from `blocks/<page>.md` here, in the same Markdown without front
+matter (`## What a run does {#run}`, `## Errors {#errors}`).
 
 After a change, run in order:
 
 ```sh
+node scripts/gen-block-docs.mjs      # block pages, from blocks/*.md
 node scripts/gen-docs.mjs            # or --page <file>.md while writing one page
 node scripts/gen-docs-search.mjs     # the search index reads the pages
 ```
@@ -124,6 +127,10 @@ their labels as the app shows them.
   has a shape (a graph, a folder, an order in time).
 - **reference**: tables, with a sentence or two above where a table needs it.
 - **settings**: what the pane holds, then its fields as a table, then errors.
+- **block** (`blocks/*.md`): `What a run does` as numbered steps in the order
+  the block works, points for what stands alone, which port it leaves by, a
+  Heads up for what stops a server or loses data, and a `flow` of the block
+  wired in a typical graph with the block marked. Then `Errors` as a table.
 
 ## Writing
 

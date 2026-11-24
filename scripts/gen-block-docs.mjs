@@ -12,6 +12,9 @@
 //   <!-- gen:fields -->  the fields table: label, default and a select's
 //                        choices from the registry; the "What it does" and
 //                        "Limits" cells are kept from the page as written
+//   <!-- gen:body -->    the sections after the fields, such as "What a run
+//                        does" and "Errors", from docs/website/blocks/<page>.md
+//                        in the docs' Markdown (docs/website/README.md)
 //
 // It also writes ports.css (the editor's port colours, read from blockMeta.ts),
 // the index's list of blocks, and each page's description meta from its lead.
@@ -29,10 +32,12 @@
 import { existsSync, readFileSync, readdirSync, writeFileSync } from 'node:fs'
 import path from 'node:path'
 import { pathToFileURL } from 'node:url'
+import { problems as markdownProblems, parseSections, sectionsHtml } from './lib/docs-markdown.mjs'
 
 const ROOT = path.join(import.meta.dirname, '..')
 const SITE = path.join(ROOT, 'website')
 const DIR = path.join(SITE, 'docs/blocks')
+const BODY = path.join(ROOT, 'docs/website/blocks')
 const DEFS = path.join(ROOT, 'demo/backend/fixtures/blockdefs.json')
 const META = path.join(ROOT, 'frontend/src/tiles/scheduler/editor/blockMeta.ts')
 const SHELL = path.join(SITE, 'docs/requirements.html')
@@ -353,29 +358,8 @@ function scaffold(def) {
           <!-- gen:fields -->
           <!-- /gen:fields -->
 
-          <section class="doc-section block" id="run" aria-labelledby="run-title">
-            <div class="band doc-band">
-              <div class="band-title">
-                <span class="num">03</span>
-                <h2 id="run-title">What a run does</h2>
-              </div>
-            </div>
-            <div class="doc-body">
-              <!-- write: what happens when the block runs, and which port it leaves by -->
-            </div>
-          </section>
-
-          <section class="doc-section block" id="errors" aria-labelledby="errors-title">
-            <div class="band doc-band">
-              <div class="band-title">
-                <span class="num">04</span>
-                <h2 id="errors-title">Errors</h2>
-              </div>
-            </div>
-            <div class="doc-body">
-              <!-- write: a Message says / Do table of the errors this block returns -->
-            </div>
-          </section>
+          <!-- gen:body -->
+          <!-- /gen:body -->
 
           <nav class="doc-related block" aria-label="Related">
             <div class="shelf-label"><span class="label">Related</span></div>
@@ -460,6 +444,13 @@ for (const def of defs) {
   const cells = writtenCells(html)
   html = replaceRegion(html, 'ports', portsSection(def))
   html = replaceRegion(html, 'fields', fieldsSection(def, cells))
+  const body = path.join(BODY, `${slug(def.id)}.md`)
+  if (existsSync(body)) {
+    const where = path.relative(ROOT, body)
+    html = replaceRegion(html, 'body', sectionsHtml(parseSections(readFileSync(body, 'utf8'), where), where, 2))
+  } else {
+    problems.push(`docs/website/blocks/${slug(def.id)}.md is missing: write what a run does there`)
+  }
 
   const lead = leadOf(html)
   if (lead) {
@@ -477,6 +468,11 @@ for (const def of defs) {
   }
   await emit(file, html)
 }
+
+for (const f of existsSync(BODY) ? readdirSync(BODY) : []) {
+  if (!known.has(f.replace(/\.md$/, ''))) problems.push(`docs/website/blocks/${f} names no registered block`)
+}
+problems.push(...markdownProblems)
 
 const indexFile = path.join(DIR, 'index.html')
 if (existsSync(indexFile)) {

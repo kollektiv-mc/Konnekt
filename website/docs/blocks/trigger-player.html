@@ -235,6 +235,7 @@
           </section>
           <!-- /gen:fields -->
 
+          <!-- gen:body -->
           <section class="doc-section block" id="run" aria-labelledby="run-title">
             <div class="band doc-band">
               <div class="band-title">
@@ -242,27 +243,55 @@
                 <h2 id="run-title">What a run does</h2>
               </div>
             </div>
-            <div class="doc-body">
-              <p class="doc-prose">
-                Konnekt reads the console of a server it started.<br />
-                <b>Joined</b> fires when a player joins, and <b>Left</b> when one leaves.<br />
-                The run starts at this block and leaves by <code>onComplete</code>.
-              </p>
-              <p class="doc-prose">
-                <b>Player name</b> carries the player's name.<br />
-                <b>Player IP</b> carries the address on <b>Joined</b> and is empty on
-                <b>Left</b>.<br />
-                It can also be empty on <b>Joined</b>, when the server logs the address after the
-                join message.
-              </p>
-              <p class="doc-prose">
-                The cooldown counts per block, not per player.<br />
-                A player who joins inside the cooldown does not start a run.<br />
-                A value wired into <b>Cooldown</b> is not read.<br />
-                It fires only for the server the graph belongs to.
-              </p>
+            <div class="doc-body doc-split">
+              <div class="doc-main">
+                <ol class="doc-steps">
+                  <li>Konnekt reads the console of a server it started.</li>
+                  <li>
+                    <b>Joined</b> fires the block when a player joins, and <b>Left</b> when one
+                    leaves.
+                  </li>
+                  <li>The run starts at this block and leaves by <b>onComplete</b>.</li>
+                </ol>
+                <ul class="doc-points">
+                  <li><b>Player name</b> carries the player's name.</li>
+                  <li><b>Player IP</b> carries the address on <b>Joined</b>.</li>
+                  <li><b>Player IP</b> is empty on <b>Left</b>.</li>
+                  <li>
+                    <b>Player IP</b> can also be empty on <b>Joined</b>, when the server logs the
+                    address after the join message.
+                  </li>
+                  <li>A value wired into <b>Cooldown</b> is not read.</li>
+                  <li>The block fires only for the server the graph belongs to.</li>
+                </ul>
+                <div class="doc-note" data-tone="warn">
+                  <span class="label">Heads up</span>
+                  <p>
+                    The cooldown counts per block, not per player.<br />
+                    A player who joins inside the cooldown does not start a run.
+                  </p>
+                </div>
+              </div>
+              <div class="doc-figs">
+                <figure
+                  class="fig fig-flow"
+                  role="img"
+                  aria-label="Graph: Player Joined, then on onComplete · Player name, Notify Player joined."
+                >
+                  <div class="fig-node is-hit">
+                    <span class="fig-kind">Player</span><span class="fig-value">Joined</span>
+                  </div>
+                  <span class="fig-wire"
+                    ><span class="fig-port">onComplete · Player name</span></span
+                  >
+                  <div class="fig-node">
+                    <span class="fig-kind">Notify</span><span class="fig-value">Player joined</span>
+                  </div>
+                </figure>
+              </div>
             </div>
           </section>
+          <!-- /gen:body -->
 
           <nav class="doc-related block" aria-label="Related">
             <div class="shelf-label"><span class="label">Related</span></div>

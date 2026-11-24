@@ -213,6 +213,7 @@
           </section>
           <!-- /gen:fields -->
 
+          <!-- gen:body -->
           <section class="doc-section block" id="run" aria-labelledby="run-title">
             <div class="band doc-band">
               <div class="band-title">
@@ -220,22 +221,48 @@
                 <h2 id="run-title">What a run does</h2>
               </div>
             </div>
-            <div class="doc-body">
-              <p class="doc-prose">
-                Once a minute, Konnekt compares the computer's clock with the
-                <b>Time (HH:MM)</b> field.<br />
-                When the hour and minute match, the block fires and the run leaves by
-                <code>onComplete</code>.<br />
-                It fires at most once per calendar day.
-              </p>
-              <p class="doc-prose">
-                Konnekt must be running at that minute.<br />
-                A missed time is not made up.<br />
-                A value wired into <b>Time</b> is not read.
-              </p>
-              <p class="doc-prose">The run acts on the server the graph belongs to.</p>
+            <div class="doc-body doc-split">
+              <div class="doc-main">
+                <ol class="doc-steps">
+                  <li>
+                    Once a minute, Konnekt compares the computer's clock with the
+                    <b>Time (HH:MM)</b> field.
+                  </li>
+                  <li>When the hour and minute match, the block fires.</li>
+                  <li>The run leaves by <b>onComplete</b>.</li>
+                </ol>
+                <ul class="doc-points">
+                  <li>It fires at most once per calendar day.</li>
+                  <li>A value wired into <b>Time</b> is not read.</li>
+                  <li>The run acts on the server the graph belongs to.</li>
+                </ul>
+                <div class="doc-note" data-tone="warn">
+                  <span class="label">Heads up</span>
+                  <p>
+                    Konnekt must be running at that minute.<br />
+                    A missed time is not made up.
+                  </p>
+                </div>
+              </div>
+              <div class="doc-figs">
+                <figure
+                  class="fig fig-flow"
+                  role="img"
+                  aria-label="Graph: Time of Day 04:00, then on onComplete, Create Backup Full server."
+                >
+                  <div class="fig-node is-hit">
+                    <span class="fig-kind">Time of Day</span><span class="fig-value">04:00</span>
+                  </div>
+                  <span class="fig-wire"><span class="fig-port">onComplete</span></span>
+                  <div class="fig-node">
+                    <span class="fig-kind">Create Backup</span
+                    ><span class="fig-value">Full server</span>
+                  </div>
+                </figure>
+              </div>
             </div>
           </section>
+          <!-- /gen:body -->
 
           <nav class="doc-related block" aria-label="Related">
             <div class="shelf-label"><span class="label">Related</span></div>

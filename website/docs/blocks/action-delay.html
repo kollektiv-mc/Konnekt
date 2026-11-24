@@ -219,6 +219,7 @@
           </section>
           <!-- /gen:fields -->
 
+          <!-- gen:body -->
           <section class="doc-section block" id="run" aria-labelledby="run-title">
             <div class="band doc-band">
               <div class="band-title">
@@ -226,19 +227,50 @@
                 <h2 id="run-title">What a run does</h2>
               </div>
             </div>
-            <div class="doc-body">
-              <p class="doc-prose">
-                The block waits for <b>Seconds</b>, then leaves by <code>onComplete</code>.<br />
-                A wired value outranks the field.<br />
-                The block has no data outputs.
-              </p>
-              <p class="doc-prose">
-                A wait longer than 60 seconds is cut off and leaves by <code>onFailed</code>.<br />
-                Chain two Delay blocks for a longer wait.
-              </p>
+            <div class="doc-body doc-split">
+              <div class="doc-main">
+                <ol class="doc-steps">
+                  <li>Use the wired value if there is one, otherwise <b>Seconds</b>.</li>
+                  <li>Wait that long.</li>
+                  <li>Leave by <b>onComplete</b>.</li>
+                </ol>
+                <ul class="doc-points">
+                  <li>The block has no data outputs.</li>
+                  <li>A wait longer than 60 seconds is cut off and leaves by <b>onFailed</b>.</li>
+                </ul>
+                <div class="doc-note" data-tone="note">
+                  <span class="label">Note</span>
+                  <p>Chain two <b>Delay</b> blocks for a longer wait.</p>
+                </div>
+              </div>
+              <div class="doc-figs">
+                <figure
+                  class="fig fig-flow"
+                  role="img"
+                  aria-label="Graph: Cron Schedule 0 4 * * *, then on onComplete, Command say Restart in 1 minute, then on onComplete, Delay 60, then on onComplete, Command Restart Server."
+                >
+                  <div class="fig-node">
+                    <span class="fig-kind">Cron Schedule</span
+                    ><span class="fig-value">0 4 * * *</span>
+                  </div>
+                  <span class="fig-wire"><span class="fig-port">onComplete</span></span>
+                  <div class="fig-node">
+                    <span class="fig-kind">Command</span
+                    ><span class="fig-value">say Restart in 1 minute</span>
+                  </div>
+                  <span class="fig-wire"><span class="fig-port">onComplete</span></span>
+                  <div class="fig-node is-hit">
+                    <span class="fig-kind">Delay</span><span class="fig-value">60</span>
+                  </div>
+                  <span class="fig-wire"><span class="fig-port">onComplete</span></span>
+                  <div class="fig-node">
+                    <span class="fig-kind">Command</span
+                    ><span class="fig-value">Restart Server</span>
+                  </div>
+                </figure>
+              </div>
             </div>
           </section>
-
           <section class="doc-section block" id="errors" aria-labelledby="errors-title">
             <div class="band doc-band">
               <div class="band-title">
@@ -265,6 +297,7 @@
               </div>
             </div>
           </section>
+          <!-- /gen:body -->
 
           <nav class="doc-related block" aria-label="Related">
             <div class="shelf-label"><span class="label">Related</span></div>

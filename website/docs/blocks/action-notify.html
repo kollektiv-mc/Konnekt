@@ -248,6 +248,7 @@
           </section>
           <!-- /gen:fields -->
 
+          <!-- gen:body -->
           <section class="doc-section block" id="run" aria-labelledby="run-title">
             <div class="band doc-band">
               <div class="band-title">
@@ -255,33 +256,68 @@
                 <h2 id="run-title">What a run does</h2>
               </div>
             </div>
-            <div class="doc-body">
-              <p class="doc-prose">
-                The block reads <b>Kind</b>, <b>Message</b> and <b>Deliver to</b> and sends one
-                message to the app.<br />
-                A wired <b>Message</b> outranks the field.<br />
-                It leaves by <code>onComplete</code> at once, and has no <code>onFailed</code> port.
-              </p>
-              <p class="doc-prose">
-                <b>In-app</b> adds the message to the Notifications tile and raises a bubble titled
-                Scheduler.<br />
-                The bubble is hidden when its switch is off in the <b>Notifications</b> pane of
-                <b>Settings</b>.<br />
-                Kind <b>Error</b> uses <b>Errors</b>, and the other kinds use
-                <b>Warnings and info</b>.
-              </p>
-              <p class="doc-prose">
-                <b>Desktop</b> sends the operating system's notification only.<br />
-                No switch in Settings applies to it.<br />
-                The first one can ask the operating system for permission, and nothing shows if it
-                is denied.
-              </p>
-              <p class="doc-prose">
-                <b>In-app and desktop</b> does both.<br />
-                An empty or unknown <b>Deliver to</b> value does this too.
-              </p>
+            <div class="doc-body doc-split">
+              <div class="doc-main">
+                <ol class="doc-steps">
+                  <li>Use the wired <b>Message</b> if there is one, otherwise the field.</li>
+                  <li>Read <b>Kind</b> and <b>Deliver to</b>.</li>
+                  <li>Send one message to the app.</li>
+                  <li>Leave by <b>onComplete</b> at once.</li>
+                </ol>
+                <ul class="doc-points">
+                  <li>The block has no <b>onFailed</b> port.</li>
+                  <li>
+                    <b>In-app</b> adds the message to the Notifications tile and raises a bubble
+                    titled Scheduler.
+                  </li>
+                  <li><b>Desktop</b> sends the operating system's notification only.</li>
+                  <li><b>In-app and desktop</b> does both.</li>
+                  <li>
+                    An empty or unknown <b>Deliver to</b> value sends <b>In-app and desktop</b>.
+                  </li>
+                </ul>
+                <div class="doc-note" data-tone="warn">
+                  <span class="label">Heads up</span>
+                  <p>
+                    <b>Desktop</b> shows nothing if the operating system denies permission.<br />
+                    The first desktop notification can ask for it.
+                  </p>
+                </div>
+                <div class="doc-note" data-tone="note">
+                  <span class="label">Note</span>
+                  <p>
+                    The bubble is hidden when its switch is off in the <b>Notifications</b> pane of
+                    <b>Settings</b>.<br />
+                    Kind <b>Error</b> uses <b>Errors</b>, and the other kinds use
+                    <b>Warnings and info</b>.<br />
+                    No switch in Settings applies to <b>Desktop</b>.
+                  </p>
+                </div>
+              </div>
+              <div class="doc-figs">
+                <figure
+                  class="fig fig-flow"
+                  role="img"
+                  aria-label="Graph: Cron Schedule 0 4 * * *, then on onComplete, Create Backup Full server, then on onComplete, Notify Backup done."
+                >
+                  <div class="fig-node">
+                    <span class="fig-kind">Cron Schedule</span
+                    ><span class="fig-value">0 4 * * *</span>
+                  </div>
+                  <span class="fig-wire"><span class="fig-port">onComplete</span></span>
+                  <div class="fig-node">
+                    <span class="fig-kind">Create Backup</span
+                    ><span class="fig-value">Full server</span>
+                  </div>
+                  <span class="fig-wire"><span class="fig-port">onComplete</span></span>
+                  <div class="fig-node is-hit">
+                    <span class="fig-kind">Notify</span><span class="fig-value">Backup done</span>
+                  </div>
+                </figure>
+              </div>
             </div>
           </section>
+          <!-- /gen:body -->
 
           <nav class="doc-related block" aria-label="Related">
             <div class="shelf-label"><span class="label">Related</span></div>

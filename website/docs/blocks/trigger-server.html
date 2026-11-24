@@ -228,6 +228,7 @@
           </section>
           <!-- /gen:fields -->
 
+          <!-- gen:body -->
           <section class="doc-section block" id="run" aria-labelledby="run-title">
             <div class="band doc-band">
               <div class="band-title">
@@ -235,27 +236,56 @@
                 <h2 id="run-title">What a run does</h2>
               </div>
             </div>
-            <div class="doc-body">
-              <p class="doc-prose">
-                <b>Started</b> fires when Konnekt launches the server process, before the server has
-                finished loading.<br />
-                <b>Stopped</b> fires when the process exits after a deliberate stop, from Konnekt or
-                from the server itself.<br />
-                <b>Crashed</b> fires when it exits any other way, or after the server logged a
-                crash.
-              </p>
-              <p class="doc-prose">
-                The run starts at this block and leaves by <code>onComplete</code>.<br />
-                The block has no data outputs.<br />
-                A restart from Konnekt fires <b>Stopped</b>, then <b>Started</b>.
-              </p>
-              <p class="doc-prose">
-                The cooldown counts per block.<br />
-                A value wired into <b>Cooldown</b> is not read.<br />
-                It fires only for the server the graph belongs to.
-              </p>
+            <div class="doc-body doc-split">
+              <div class="doc-main">
+                <ol class="doc-steps">
+                  <li>The server starts, stops or crashes.</li>
+                  <li>
+                    The block fires when the event matches its <b>Type</b>, unless its cooldown has
+                    not passed.
+                  </li>
+                  <li>The run starts at this block and leaves by <b>onComplete</b>.</li>
+                </ol>
+                <ul class="doc-points">
+                  <li><b>Started</b> fires when Konnekt launches the server process.</li>
+                  <li>
+                    <b>Stopped</b> fires when the process exits after a deliberate stop, from
+                    Konnekt or from the server itself.
+                  </li>
+                  <li>
+                    <b>Crashed</b> fires when it exits any other way, or after the server logged a
+                    crash.
+                  </li>
+                  <li>A restart from Konnekt fires <b>Stopped</b>, then <b>Started</b>.</li>
+                  <li>The block has no data outputs.</li>
+                  <li>The cooldown counts per block.</li>
+                  <li>A value wired into <b>Cooldown</b> is not read.</li>
+                  <li>The block fires only for the server the graph belongs to.</li>
+                </ul>
+                <div class="doc-note" data-tone="warn">
+                  <span class="label">Heads up</span>
+                  <p><b>Started</b> fires before the server has finished loading.</p>
+                </div>
+              </div>
+              <div class="doc-figs">
+                <figure
+                  class="fig fig-flow"
+                  role="img"
+                  aria-label="Graph: Server Crashed, then on onComplete, Notify Server crashed."
+                >
+                  <div class="fig-node is-hit">
+                    <span class="fig-kind">Server</span><span class="fig-value">Crashed</span>
+                  </div>
+                  <span class="fig-wire"><span class="fig-port">onComplete</span></span>
+                  <div class="fig-node">
+                    <span class="fig-kind">Notify</span
+                    ><span class="fig-value">Server crashed</span>
+                  </div>
+                </figure>
+              </div>
             </div>
           </section>
+          <!-- /gen:body -->
 
           <nav class="doc-related block" aria-label="Related">
             <div class="shelf-label"><span class="label">Related</span></div>

@@ -218,6 +218,7 @@
           </section>
           <!-- /gen:fields -->
 
+          <!-- gen:body -->
           <section class="doc-section block" id="run" aria-labelledby="run-title">
             <div class="band doc-band">
               <div class="band-title">
@@ -225,53 +226,94 @@
                 <h2 id="run-title">What a run does</h2>
               </div>
             </div>
-            <div class="doc-body">
-              <p class="doc-prose">
-                This block has no control ports.<br />It runs when a block that uses its
-                <b>Value</b> runs.
-              </p>
-              <div class="doc-table-wrap">
-                <table class="doc-table">
-                  <thead>
-                    <tr>
-                      <th scope="col">Type</th>
-                      <th scope="col">Value output</th>
-                      <th scope="col">Port type</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr>
-                      <td><code>String</code></td>
-                      <td>The text as it is.</td>
-                      <td><code>string</code></td>
-                    </tr>
-                    <tr>
-                      <td><code>Float</code></td>
-                      <td>The text as a number, decimals allowed.</td>
-                      <td><code>number</code></td>
-                    </tr>
-                    <tr>
-                      <td><code>Integer</code></td>
-                      <td>The text as a whole number, digits only.</td>
-                      <td><code>number</code></td>
-                    </tr>
-                    <tr>
-                      <td><code>Boolean</code></td>
-                      <td>
-                        1 for the text <code>true</code> or <code>1</code>, 0 for anything else.
-                      </td>
-                      <td><code>bool</code></td>
-                    </tr>
-                  </tbody>
-                </table>
+            <div class="doc-body doc-split">
+              <div class="doc-main">
+                <ol class="doc-steps">
+                  <li>A block that uses <b>Value</b> runs.</li>
+                  <li>This block reads <b>Value</b> as the chosen <b>Type</b>.</li>
+                  <li>It passes the result to that block.</li>
+                </ol>
+                <ul class="doc-points">
+                  <li>This block has no control ports.</li>
+                </ul>
+                <div class="doc-table-wrap">
+                  <table class="doc-table">
+                    <thead>
+                      <tr>
+                        <th scope="col">Type</th>
+                        <th scope="col">Value output</th>
+                        <th scope="col">Port type</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td>String</td>
+                        <td>The text as it is.</td>
+                        <td>string</td>
+                      </tr>
+                      <tr>
+                        <td>Float</td>
+                        <td>The text as a number, decimals allowed.</td>
+                        <td>number</td>
+                      </tr>
+                      <tr>
+                        <td>Integer</td>
+                        <td>The text as a whole number, digits only.</td>
+                        <td>number</td>
+                      </tr>
+                      <tr>
+                        <td>Boolean</td>
+                        <td>
+                          <code>1</code> for the text <code>true</code> or <code>1</code>,
+                          <code>0</code> for anything else.
+                        </td>
+                        <td>bool</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+                <div class="doc-note" data-tone="warn">
+                  <span class="label">Heads up</span>
+                  <p>
+                    A <b>Float</b> or <b>Integer</b> value that does not parse sets no output, and
+                    no error is shown.<br />
+                    The block that would use the value uses its own field instead.
+                  </p>
+                </div>
+                <div class="doc-note" data-tone="note">
+                  <span class="label">Note</span>
+                  <p>
+                    <b>Boolean</b> matches the text exactly, so <code>True</code> counts as false.
+                  </p>
+                </div>
               </div>
-              <p class="doc-prose">
-                Boolean matches the text exactly, so <code>True</code> counts as false.<br />A Float
-                or Integer value that does not parse sets no output.<br />No error is shown, and the
-                block that would use the value uses its own field instead.
-              </p>
+              <div class="doc-figs">
+                <figure
+                  class="fig fig-flow"
+                  role="img"
+                  aria-label="Graph: Cron Schedule 0 4 * * *, then on onComplete, Condition A == B, with Constant 0 as data."
+                >
+                  <div class="fig-node">
+                    <span class="fig-kind">Cron Schedule</span
+                    ><span class="fig-value">0 4 * * *</span>
+                  </div>
+                  <span class="fig-wire"><span class="fig-port">onComplete</span></span>
+                  <div class="fig-row">
+                    <div class="fig-node">
+                      <span class="fig-kind">Condition</span><span class="fig-value">A == B</span>
+                    </div>
+                    <div class="fig-feeds">
+                      <span class="fig-wire fig-wire-data" aria-hidden="true"></span>
+                      <div class="fig-node is-hit is-data">
+                        <span class="fig-kind">Constant</span><span class="fig-value">0</span>
+                      </div>
+                    </div>
+                  </div>
+                </figure>
+              </div>
             </div>
           </section>
+          <!-- /gen:body -->
 
           <nav class="doc-related block" aria-label="Related">
             <div class="shelf-label"><span class="label">Related</span></div>

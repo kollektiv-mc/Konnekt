@@ -246,6 +246,7 @@
           </section>
           <!-- /gen:fields -->
 
+          <!-- gen:body -->
           <section class="doc-section block" id="run" aria-labelledby="run-title">
             <div class="band doc-band">
               <div class="band-title">
@@ -253,74 +254,129 @@
                 <h2 id="run-title">What a run does</h2>
               </div>
             </div>
-            <div class="doc-body">
-              <p class="doc-prose">
-                A built-in attribute is written to <code>server.properties</code> in the server's
-                folder.<br />The server is not restarted.<br />A leading <code>@</code> in the name
-                is ignored.<br />A wired Value replaces the Value field.
-              </p>
-              <div class="doc-table-wrap">
-                <table class="doc-table">
-                  <thead>
-                    <tr>
-                      <th scope="col">Attribute</th>
-                      <th scope="col">Writes</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr>
-                      <td><code>players.max</code></td>
-                      <td><code>max-players</code></td>
-                    </tr>
-                    <tr>
-                      <td><code>server.motd</code></td>
-                      <td><code>motd</code></td>
-                    </tr>
-                    <tr>
-                      <td><code>server.whitelist</code></td>
-                      <td>
-                        <code>white-list</code>, and sends <code>whitelist on</code> to a running
-                        server for <code>true</code> or <code>1</code>, otherwise
-                        <code>whitelist off</code>
-                      </td>
-                    </tr>
-                    <tr>
-                      <td><code>server.port</code></td>
-                      <td><code>server-port</code></td>
-                    </tr>
-                    <tr>
-                      <td><code>server.gamemode</code></td>
-                      <td>
-                        <code>gamemode</code>, and sends <code>defaultgamemode</code> with the value
-                        to a running server
-                      </td>
-                    </tr>
-                    <tr>
-                      <td><code>server.world</code></td>
-                      <td><code>level-name</code></td>
-                    </tr>
-                  </tbody>
-                </table>
+            <div class="doc-body doc-split">
+              <div class="doc-main">
+                <ol class="doc-steps">
+                  <li>Reads the <b>Attribute</b> name. A leading <code>@</code> is ignored.</li>
+                  <li>Reads the value. A wired <b>Value</b> replaces the <b>Value</b> field.</li>
+                  <li>
+                    Writes a built-in attribute to <code>server.properties</code> in the server's
+                    folder, or defines any other name as a custom attribute.
+                  </li>
+                  <li>Leaves by <b>onComplete</b> when the attribute is written or defined.</li>
+                </ol>
+                <ul class="doc-points">
+                  <li>It leaves by <b>onFailed</b> on an error.</li>
+                </ul>
+                <div class="doc-note" data-tone="warn">
+                  <span class="label">Heads up</span>
+                  <p>
+                    The block does not restart the server.<br />
+                    A running server reads <code>server.properties</code> again only when it next
+                    starts.
+                  </p>
+                </div>
+                <div class="doc-table-wrap">
+                  <table class="doc-table">
+                    <thead>
+                      <tr>
+                        <th scope="col">Attribute</th>
+                        <th scope="col">Writes</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td><code>players.max</code></td>
+                        <td><code>max-players</code></td>
+                      </tr>
+                      <tr>
+                        <td><code>server.motd</code></td>
+                        <td><code>motd</code></td>
+                      </tr>
+                      <tr>
+                        <td><code>server.whitelist</code></td>
+                        <td>
+                          <code>white-list</code>, and sends <code>whitelist on</code> to a running
+                          server for <code>true</code> or <code>1</code>, otherwise
+                          <code>whitelist off</code>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td><code>server.port</code></td>
+                        <td><code>server-port</code></td>
+                      </tr>
+                      <tr>
+                        <td><code>server.gamemode</code></td>
+                        <td>
+                          <code>gamemode</code>, and sends <code>defaultgamemode</code> with the
+                          value to a running server
+                        </td>
+                      </tr>
+                      <tr>
+                        <td><code>server.world</code></td>
+                        <td><code>level-name</code></td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+                <ul class="doc-points">
+                  <li>
+                    The read-only attributes fail the block: <code>tps</code>,
+                    <code>players.count</code>, <code>ram.used</code>, <code>ram.left</code>,
+                    <code>ram.total</code> and <code>server.status</code>.
+                  </li>
+                  <li>Any other name defines a custom attribute for the rest of this run.</li>
+                  <li>Its value is kept as typed.</li>
+                  <li>
+                    An <code>@attribute</code> inside it is read again each time the custom
+                    attribute is used.
+                  </li>
+                </ul>
+                <div class="doc-note" data-tone="note">
+                  <span class="label">Note</span>
+                  <p>
+                    The custom attribute is gone when the run ends.<br />
+                    <a href="/docs/blocks/data-serverAttribute.html">Read Attribute</a> reads it.
+                  </p>
+                </div>
               </div>
-              <p class="doc-prose">
-                The read-only attributes fail the block: <code>tps</code>,
-                <code>players.count</code>, <code>ram.used</code>, <code>ram.left</code>,
-                <code>ram.total</code> and <code>server.status</code>.
-              </p>
-              <p class="doc-prose">
-                Any other name defines a custom attribute for the rest of this run.<br />Its value
-                is kept as typed.<br />An <code>@attribute</code> inside it is read again each time
-                the custom attribute is used.<br />The custom attribute is gone when the run
-                ends.<br /><a href="/docs/blocks/data-serverAttribute.html">Read Attribute</a> reads
-                it.
-              </p>
-              <p class="doc-prose">
-                It leaves by <code>onComplete</code> when the attribute is written or defined, and
-                by <code>onFailed</code> on an error.
-              </p>
+              <div class="doc-figs">
+                <figure
+                  class="fig fig-flow"
+                  role="img"
+                  aria-label="Graph: Cron Schedule 0 4 * * *, then on onComplete, Write Attribute server.motd, with Constant Back at 05:00 as data, on onFailed, Notify Write failed."
+                >
+                  <div class="fig-node">
+                    <span class="fig-kind">Cron Schedule</span
+                    ><span class="fig-value">0 4 * * *</span>
+                  </div>
+                  <span class="fig-wire"><span class="fig-port">onComplete</span></span>
+                  <div class="fig-row">
+                    <div class="fig-node is-hit">
+                      <span class="fig-kind">Write Attribute</span
+                      ><span class="fig-value">server.motd</span>
+                    </div>
+                    <div class="fig-feeds">
+                      <span class="fig-wire fig-wire-data" aria-hidden="true"></span>
+                      <div class="fig-node is-data">
+                        <span class="fig-kind">Constant</span
+                        ><span class="fig-value">Back at 05:00</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="fig-lanes">
+                    <div class="fig-lane">
+                      <span class="fig-wire"><span class="fig-port">onFailed</span></span>
+                      <div class="fig-node">
+                        <span class="fig-kind">Notify</span
+                        ><span class="fig-value">Write failed</span>
+                      </div>
+                    </div>
+                  </div>
+                </figure>
+              </div>
             </div>
           </section>
-
           <section class="doc-section block" id="errors" aria-labelledby="errors-title">
             <div class="band doc-band">
               <div class="band-title">
@@ -339,7 +395,7 @@
                   </thead>
                   <tbody>
                     <tr>
-                      <td>attribute @<i>name</i> is read-only</td>
+                      <td>attribute @<em>name</em> is read-only</td>
                       <td>Choose one of the writable attributes.</td>
                     </tr>
                     <tr>
@@ -351,6 +407,7 @@
               </div>
             </div>
           </section>
+          <!-- /gen:body -->
 
           <nav class="doc-related block" aria-label="Related">
             <div class="shelf-label"><span class="label">Related</span></div>

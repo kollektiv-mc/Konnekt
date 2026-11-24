@@ -219,6 +219,7 @@
           </section>
           <!-- /gen:fields -->
 
+          <!-- gen:body -->
           <section class="doc-section block" id="run" aria-labelledby="run-title">
             <div class="band doc-band">
               <div class="band-title">
@@ -226,20 +227,50 @@
                 <h2 id="run-title">What a run does</h2>
               </div>
             </div>
-            <div class="doc-body">
-              <p class="doc-prose">
-                Once a minute, Konnekt checks the expression against the computer's clock.<br />
-                On a match, the block fires and the run leaves by <code>onComplete</code>.<br />
-                It fires at most once in any minute.
-              </p>
-              <p class="doc-prose">
-                An empty expression never fires.<br />
-                A field Konnekt cannot read never matches.<br />
-                A value wired into <b>Cron</b> is not read.
-              </p>
-              <p class="doc-prose">The run acts on the server the graph belongs to.</p>
+            <div class="doc-body doc-split">
+              <div class="doc-main">
+                <ol class="doc-steps">
+                  <li>
+                    Once a minute, Konnekt checks the expression against the computer's clock.
+                  </li>
+                  <li>On a match, the block fires.</li>
+                  <li>The run leaves by <b>onComplete</b>.</li>
+                </ol>
+                <ul class="doc-points">
+                  <li>It fires at most once in any minute.</li>
+                  <li>An empty expression never fires.</li>
+                  <li>A field Konnekt cannot read never matches.</li>
+                  <li>A value wired into <b>Cron</b> is not read.</li>
+                  <li>The run acts on the server the graph belongs to.</li>
+                </ul>
+                <div class="doc-note" data-tone="warn">
+                  <span class="label">Heads up</span>
+                  <p>
+                    An expression with any count of fields other than 5 never fires, and nothing
+                    reports it.
+                  </p>
+                </div>
+              </div>
+              <div class="doc-figs">
+                <figure
+                  class="fig fig-flow"
+                  role="img"
+                  aria-label="Graph: Cron Schedule 0 4 * * *, then on onComplete, Create Backup Full server."
+                >
+                  <div class="fig-node is-hit">
+                    <span class="fig-kind">Cron Schedule</span
+                    ><span class="fig-value">0 4 * * *</span>
+                  </div>
+                  <span class="fig-wire"><span class="fig-port">onComplete</span></span>
+                  <div class="fig-node">
+                    <span class="fig-kind">Create Backup</span
+                    ><span class="fig-value">Full server</span>
+                  </div>
+                </figure>
+              </div>
             </div>
           </section>
+          <!-- /gen:body -->
 
           <nav class="doc-related block" aria-label="Related">
             <div class="shelf-label"><span class="label">Related</span></div>

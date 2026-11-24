@@ -213,6 +213,7 @@
           </section>
           <!-- /gen:fields -->
 
+          <!-- gen:body -->
           <section class="doc-section block" id="run" aria-labelledby="run-title">
             <div class="band doc-band">
               <div class="band-title">
@@ -220,24 +221,46 @@
                 <h2 id="run-title">What a run does</h2>
               </div>
             </div>
-            <div class="doc-body">
-              <p class="doc-prose">Konnekt checks time triggers once a minute.</p>
-              <ol class="doc-list">
-                <li>The first check that sees the block starts its timer and does not fire.</li>
-                <li>
-                  Each later check fires the block once the interval has passed since its last
-                  firing.
-                </li>
-                <li>The run starts at this block and leaves by <code>onComplete</code>.</li>
-              </ol>
-              <p class="doc-prose">
-                The timer is kept in memory, so closing Konnekt resets it.<br />
-                The block has no cooldown: the interval spaces the runs.<br />
-                A value wired into <b>Interval</b> is not read.
-              </p>
-              <p class="doc-prose">The run acts on the server the graph belongs to.</p>
+            <div class="doc-body doc-split">
+              <div class="doc-main">
+                <ol class="doc-steps">
+                  <li>Konnekt checks time triggers once a minute.</li>
+                  <li>The first check that sees the block starts its timer and does not fire.</li>
+                  <li>
+                    Each later check fires the block once the interval has passed since its last
+                    firing.
+                  </li>
+                  <li>The run starts at this block and leaves by <b>onComplete</b>.</li>
+                </ol>
+                <ul class="doc-points">
+                  <li>The block has no cooldown: the interval spaces the runs.</li>
+                  <li>A value wired into <b>Interval</b> is not read.</li>
+                  <li>The run acts on the server the graph belongs to.</li>
+                </ul>
+                <div class="doc-note" data-tone="warn">
+                  <span class="label">Heads up</span>
+                  <p>The timer is kept in memory, so closing Konnekt resets it.</p>
+                </div>
+              </div>
+              <div class="doc-figs">
+                <figure
+                  class="fig fig-flow"
+                  role="img"
+                  aria-label="Graph: Interval 60 min, then on onComplete, Create Backup Full server."
+                >
+                  <div class="fig-node is-hit">
+                    <span class="fig-kind">Interval</span><span class="fig-value">60 min</span>
+                  </div>
+                  <span class="fig-wire"><span class="fig-port">onComplete</span></span>
+                  <div class="fig-node">
+                    <span class="fig-kind">Create Backup</span
+                    ><span class="fig-value">Full server</span>
+                  </div>
+                </figure>
+              </div>
             </div>
           </section>
+          <!-- /gen:body -->
 
           <nav class="doc-related block" aria-label="Related">
             <div class="shelf-label"><span class="label">Related</span></div>
