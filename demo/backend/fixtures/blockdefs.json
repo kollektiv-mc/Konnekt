@@ -142,7 +142,7 @@
     "id": "action.dhPublish",
     "category": "action",
     "label": "Publish DH Snapshot",
-    "description": "Uploads a staged Distant Horizons snapshot to a bucket and publishes its download page.",
+    "description": "Uploads a staged Distant Horizons snapshot to a bucket and publishes it.",
     "isTrigger": false,
     "controlInputs": [
       "trigger"
@@ -177,11 +177,6 @@
       {
         "id": "bytesSent",
         "label": "Bytes sent",
-        "type": "number"
-      },
-      {
-        "id": "levelsAssembled",
-        "label": "Levels assembled",
         "type": "number"
       },
       {

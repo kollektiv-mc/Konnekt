@@ -199,9 +199,6 @@
                             <span>Bytes sent</span><span class="port-type">number</span>
                           </li>
                           <li class="port" data-shape="data" data-type="number">
-                            <span>Levels assembled</span><span class="port-type">number</span>
-                          </li>
-                          <li class="port" data-shape="data" data-type="number">
                             <span>Snapshots deleted</span><span class="port-type">number</span>
                           </li>
                           <li class="port" data-shape="data" data-type="number">
@@ -319,10 +316,7 @@
                         skipped.
                       </li>
                       <li>
-                        Assemble each level's whole database inside the bucket, from its parts.
-                      </li>
-                      <li>
-                        Write the snapshot's <code>index.json</code> and download page, then
+                        Write the snapshot's <code>index.json</code>, then
                         <code>latest.json</code> last.
                       </li>
                       <li>
@@ -333,7 +327,7 @@
                     <div class="doc-note" data-tone="warn">
                       <span class="label">Heads up</span>
                       <p>
-                        Step 6 deletes snapshots and parts from the bucket.<br />
+                        Step 5 deletes snapshots and parts from the bucket.<br />
                         The newest complete snapshots are kept, plus the one
                         <code>latest.json</code> points at.
                       </p>
@@ -364,8 +358,8 @@
                       </li>
                       <li>
                         <b>Parts uploaded</b>, <b>Parts skipped</b>, <b>Bytes sent</b>,
-                        <b>Levels assembled</b>, <b>Snapshots deleted</b>, <b>Parts deleted</b> and
-                        <b>Bytes freed</b> count what the run sent and what the prune removed.
+                        <b>Snapshots deleted</b>, <b>Parts deleted</b> and <b>Bytes freed</b> count
+                        what the run sent and what the prune removed.
                       </li>
                     </ul>
                     <div class="doc-note" data-tone="note">
@@ -465,10 +459,6 @@
                         </tr>
                         <tr>
                           <td>part <em>hash</em>: <em>reason</em></td>
-                          <td>Run it again; parts already sent are skipped.</td>
-                        </tr>
-                        <tr>
-                          <td>assemble <em>level folder</em>: <em>reason</em></td>
                           <td>Run it again; parts already sent are skipped.</td>
                         </tr>
                         <tr>

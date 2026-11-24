@@ -1,16 +1,15 @@
 # Publishing Distant Horizons data
 
 Konnekt can copy a server's [Distant Horizons](https://modrinth.com/mod/distanthorizons)
-LOD data on a schedule, upload it to a bucket, and give players a link to
-download it. A new player then starts with the whole world rendered in the
+LOD data on a schedule, upload it to a bucket, and give a launcher a link to
+download it from. A new player then starts with the whole world rendered in the
 distance instead of waiting for the server to stream it. This page is the setup:
-what the server needs, the bucket, the scheduler graph and its values, and what
-players do with the link.
+what the server needs, the bucket, the scheduler graph and its values, and the
+link.
 
 Two scheduler blocks do the work. **DH Snapshot** warns the
 players, stops the server, copies the LOD databases out, and starts it again.
-**Publish DH Snapshot** uploads the copy to the bucket and writes the download
-page. The server is only down for the copy, and only the parts of each database
+**Publish DH Snapshot** uploads the copy to the bucket. The server is only down for the copy, and only the parts of each database
 that changed since the last run are copied and uploaded. A server that is
 already stopped is copied as it is, with no warning, and left stopped.
 
@@ -81,7 +80,7 @@ Open **Settings** (the gear in the title bar), then **Destinations**, and add on
 | Region | `auto` for R2. |
 | Bucket | The bucket's name. |
 | Prefix | Optional. A folder every upload to this destination goes under, such as `dh`. |
-| Public base URL | The custom domain the bucket is served from, such as `https://files.example.com`. Links in the download page and the published URL are built from it. Without one, links point at the bucket's own S3 address, which players cannot open. |
+| Public base URL | The custom domain the bucket is served from, such as `https://files.example.com`. The published URL is built from it. Without one, links point at the bucket's own S3 address, which players cannot open. |
 | Access key ID | From the token. |
 | Secret access key | From the token. |
 
@@ -167,10 +166,8 @@ no longer exists, says why in red beside **run** until you click it away.
    triggered by the server stopping, or **Start** in the app, is refused until
    the block has started it itself.
 6. **Publish**, with the server running. Parts the bucket does not have are
-   uploaded. The bucket then assembles each dimension's whole database from the
-   parts by copying inside the bucket, so no database is uploaded twice. The
-   index and the download page are written, and `latest.json` last, so a reader
-   never sees a snapshot with files missing. A run cut off before that leaves the
+   uploaded. The index is written, and `latest.json` last, so a reader never
+   sees a snapshot with parts missing. A run cut off before that leaves the
    previous snapshot current, and the next run resumes: a part already in the
    bucket is never sent again.
 7. **Prune.** Snapshots beyond **Snapshots to keep** are deleted, then the parts
@@ -184,25 +181,16 @@ what changed.
 ## 4. Give players the link
 
 Open **Settings**, **Destinations**, and press **Copy link** on the destination.
-That is the link to `latest.json`, which a launcher reads. The same place in the
-bucket also holds a download page for people:
+That is the link to `latest.json`, which a launcher reads:
 
 ```
 https://files.example.com/<prefix>/latest.json
-https://files.example.com/<prefix>/snapshots/<date>/index.html
 ```
 
-The page lists each dimension's file with its size and date, a download link,
-and the folder to put it in. For a player the steps are:
-
-1. Close the game.
-2. Download `DistantHorizons.sqlite` for each dimension.
-3. Put each one in
-   `Distant_Horizons_server_data/<serverId>_<serverKey>/<levelKeyPrefix>@minecraft@@overworld/`
-   (and the matching folder for the other dimensions) inside the game folder,
-   the one that holds `mods` and `saves`. The page prints the exact path.
-4. Start the game and join. DH loads the file and keeps it up to date in game
-   from there.
+The launcher follows it to the index, downloads each dimension's parts, joins
+them in order and checks the whole file's hash. The bucket holds parts only, so
+a player without such a launcher has nothing to download by hand.
+[What ends up in the bucket](#what-ends-up-in-the-bucket) is the format.
 
 A player who has already explored the world does not need the download: DH
 syncs what they have against the server when they join.
@@ -219,8 +207,8 @@ https://files.example.com/<prefix>/<token>/latest.json
 
 **Copy link** then gives out that address, and it is the only place the token
 is shown. **Rotate link** moves the snapshot to a new address, and the old one
-stops working for everyone at once. Switching the mode or rotating takes a few
-minutes, because the published files are copied inside the bucket, and the next
+stops working for everyone at once. Switching the mode or rotating rewrites the
+index and `latest.json` under the new address, and the next
 scheduled publish lands under the new address on its own.
 
 Two things to know. A private link is a shared secret, not access control:
@@ -271,8 +259,6 @@ For a launcher or a script that fetches the snapshot itself:
 ```
 <prefix>/latest.json                                   pointer, written last
 <prefix>/snapshots/<stamp>/index.json                  the snapshot
-<prefix>/snapshots/<stamp>/index.html                  the download page
-<prefix>/snapshots/<stamp>/<level folder>/DistantHorizons.sqlite
 <prefix>/parts/<sha256>                                8 MiB parts, shared by every snapshot
 ```
 

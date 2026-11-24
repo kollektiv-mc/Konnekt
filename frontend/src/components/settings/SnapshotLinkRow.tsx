@@ -16,9 +16,9 @@ interface Note {
 
 /**
  * One saved destination's private snapshot link (#561): the mode, Copy link and,
- * in private mode, Rotate link. A move reassembles the published snapshot in the
- * bucket and changes the address everyone uses, so the mode switch and Rotate
- * each ask first.
+ * in private mode, Rotate link. A move rewrites the published snapshot's index
+ * under a new address and changes the address everyone uses, so the mode switch
+ * and Rotate each ask first.
  *
  * The link itself is fetched on the click that copies it and goes straight to
  * the clipboard. It is never in this component's state or the store's.
@@ -82,8 +82,8 @@ export function SnapshotLinkRow({ destination }: { destination: Destination }) {
         <div className="flex flex-wrap items-center gap-2">
           <span className="text-text-muted text-xs">
             {isPrivate
-              ? 'Make the published snapshot public again? It is moved, which takes a few minutes, and the private link stops working.'
-              : 'Move the published snapshot under a private link? It is moved, which takes a few minutes, and the address everyone uses now stops working.'}
+              ? 'Make the published snapshot public again? The private link stops working.'
+              : 'Move the published snapshot under a private link? The address everyone uses now stops working.'}
           </span>
           <button
             disabled={busy}
@@ -100,8 +100,7 @@ export function SnapshotLinkRow({ destination }: { destination: Destination }) {
       {confirming === 'rotate' && (
         <div className="flex flex-wrap items-center gap-2">
           <span className="text-text-muted text-xs">
-            Everyone with the current link loses access. The snapshot is moved to a new one, which
-            takes a few minutes.
+            Everyone with the current link loses access. The snapshot is moved to a new one.
           </span>
           <button
             disabled={busy}
@@ -118,7 +117,7 @@ export function SnapshotLinkRow({ destination }: { destination: Destination }) {
 
       {busy && (
         <p role="status" className="text-text-muted text-xs">
-          Moving the published snapshot. This can take a few minutes.
+          Moving the published snapshot.
         </p>
       )}
       {note && !busy && (
