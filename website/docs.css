@@ -635,17 +635,20 @@ h2.label {
   bottom: 50%;
 }
 
+/* A branch wire grows with its label, which sits above the line. */
 .fig-lane .fig-wire {
   flex: none;
-  width: 96px;
-  height: 2px;
+  width: auto;
+  min-width: 96px;
+  height: auto;
   margin-left: 0;
+  background: linear-gradient(var(--wire-track), var(--wire-track)) left center / 100% 2px no-repeat;
 }
 
 .fig-lane .fig-port {
-  top: auto;
-  bottom: 6px;
-  left: 12px;
+  position: static;
+  display: block;
+  padding: 0 12px 18px;
   transform: none;
 }
 
@@ -789,6 +792,22 @@ h2.label {
   .doc-figs {
     position: static;
     order: -1;
+  }
+}
+
+/* On a phone the blocks shrink and wrap their words to fit the column. */
+@media (max-width: 600px) {
+  .fig {
+    padding: 16px;
+    overflow-wrap: anywhere;
+  }
+
+  .fig-node {
+    min-width: 0;
+  }
+
+  .fig-lane .fig-wire {
+    min-width: 48px;
   }
 }
 
