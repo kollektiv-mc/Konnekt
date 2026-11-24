@@ -118,6 +118,7 @@
             </div>
           </header>
 
+          <!-- gen:shelves -->
           <section class="shelf block" id="new-here" aria-labelledby="new-here-title">
             <div class="shelf-label"><h2 class="label" id="new-here-title">New here</h2></div>
             <div class="shelf-rows">
@@ -146,7 +147,49 @@
               </div>
             </div>
           </section>
-
+          <section class="shelf block" id="tutorials" aria-labelledby="tutorials-title">
+            <div class="shelf-label"><h2 class="label" id="tutorials-title">Tutorials</h2></div>
+            <div class="shelf-rows">
+              <div class="shelf-grid">
+                <a
+                  class="page-link"
+                  href="/docs/nightly-backup.html"
+                  data-summary="A cron trigger, a player check, a backup."
+                  >Back up every night when empty</a
+                >
+                <a
+                  class="page-link"
+                  href="/docs/crash-restart.html"
+                  data-summary="Start the server again when it dies."
+                  >Restart after a crash</a
+                >
+                <a
+                  class="page-link"
+                  href="/docs/timed-restart.html"
+                  data-summary="Warnings in chat, then a restart."
+                  >Warn, then restart every 6 hours</a
+                >
+                <a
+                  class="page-link"
+                  href="/docs/r2-bucket.html"
+                  data-summary="A destination for uploads and snapshots."
+                  >Save a Cloudflare R2 bucket</a
+                >
+                <a
+                  class="page-link"
+                  href="/docs/dh-publish.html"
+                  data-summary="Share a world's LODs from a bucket."
+                  >Publish Distant Horizons LODs</a
+                >
+                <a
+                  class="page-link"
+                  href="/docs/modpack-sync.html"
+                  data-summary="Check, apply and schedule pack updates."
+                  >Keep a server in sync with a modpack</a
+                >
+              </div>
+            </div>
+          </section>
           <section class="shelf block" id="dashboard" aria-labelledby="dashboard-title">
             <div class="shelf-label"><h2 class="label" id="dashboard-title">Dashboard</h2></div>
             <div class="shelf-rows">
@@ -166,7 +209,6 @@
               </div>
             </div>
           </section>
-
           <section class="shelf block" id="scheduler" aria-labelledby="scheduler-title">
             <div class="shelf-label"><h2 class="label" id="scheduler-title">Scheduler</h2></div>
             <div class="shelf-rows">
@@ -176,24 +218,6 @@
                   href="/docs/graphs.html"
                   data-summary="Triggers, order, data and failures."
                   >How a graph runs</a
-                >
-                <a
-                  class="page-link"
-                  href="/docs/nightly-backup.html"
-                  data-summary="A cron trigger, a player check, a backup."
-                  >Back up every night when empty</a
-                >
-                <a
-                  class="page-link"
-                  href="/docs/crash-restart.html"
-                  data-summary="Start the server again when it dies."
-                  >Restart after a crash</a
-                >
-                <a
-                  class="page-link"
-                  href="/docs/timed-restart.html"
-                  data-summary="Warnings in chat, then a restart."
-                  >Warn, then restart every 6 hours</a
                 >
                 <a
                   class="page-link"
@@ -216,35 +240,6 @@
               </div>
             </div>
           </section>
-
-          <section class="shelf block" id="destinations" aria-labelledby="destinations-title">
-            <div class="shelf-label">
-              <h2 class="label" id="destinations-title">Destinations and Distant Horizons</h2>
-            </div>
-            <div class="shelf-rows">
-              <div class="shelf-grid">
-                <a
-                  class="page-link"
-                  href="/docs/r2-bucket.html"
-                  data-summary="A destination for uploads and snapshots."
-                  >Save a Cloudflare R2 bucket</a
-                >
-                <a
-                  class="page-link"
-                  href="/docs/dh-publish.html"
-                  data-summary="Share a world's LODs from a bucket."
-                  >Publish Distant Horizons LODs</a
-                >
-                <a
-                  class="page-link"
-                  href="/docs/bucket-layout.html"
-                  data-summary="Every key Konnekt writes."
-                  >What ends up in the bucket</a
-                >
-              </div>
-            </div>
-          </section>
-
           <section class="shelf block" id="settings" aria-labelledby="settings-title">
             <div class="shelf-label"><h2 class="label" id="settings-title">Settings</h2></div>
             <div class="shelf-rows">
@@ -281,6 +276,12 @@
                 >
                 <a
                   class="page-link"
+                  href="/docs/bucket-layout.html"
+                  data-summary="Every key Konnekt writes."
+                  >What ends up in the bucket</a
+                >
+                <a
+                  class="page-link"
                   href="/docs/settings/remote-access.html"
                   data-summary="Browser access, the tunnel and Claude."
                   >Remote Access</a
@@ -288,6 +289,7 @@
               </div>
             </div>
           </section>
+          <!-- /gen:shelves -->
 
           <p class="doc-empty block" id="doc-empty" role="status" hidden>No page matches that.</p>
 

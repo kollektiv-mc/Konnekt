@@ -24,6 +24,8 @@ Read the tree rather than a list of it. What it does not tell you:
 - `website/` is the marketing site: plain HTML, CSS and ES modules, no build
   step. Cloudflare Pages deploys it from this branch, configured outside this
   repo, so CI's `website` job is the only pre-merge gate.
+- `website/docs/` pages come from the Markdown in `docs/website/`, whose
+  README has the syntax and the generators to run. Edit the Markdown.
 
 ## Architecture rules
 

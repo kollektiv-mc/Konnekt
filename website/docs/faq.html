@@ -4,12 +4,15 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Konnekt docs: FAQ</title>
-    <meta name="description" content="FAQ: Common questions, short answers." />
+    <meta name="description" content="FAQ: Short answers about Konnekt, servers and updates." />
     <link rel="canonical" href="https://konnekt.pages.dev/docs/faq.html" />
 
     <meta property="og:site_name" content="Konnekt" />
     <meta property="og:title" content="Konnekt docs: FAQ" />
-    <meta property="og:description" content="FAQ: Common questions, short answers." />
+    <meta
+      property="og:description"
+      content="FAQ: Short answers about Konnekt, servers and updates."
+    />
     <meta property="og:url" content="https://konnekt.pages.dev/docs/faq.html" />
     <meta property="og:type" content="website" />
     <meta property="og:image" content="https://konnekt.pages.dev/assets/img/social-card.png" />
@@ -17,7 +20,10 @@
     <meta property="og:image:height" content="1123" />
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="Konnekt docs: FAQ" />
-    <meta name="twitter:description" content="FAQ: Common questions, short answers." />
+    <meta
+      name="twitter:description"
+      content="FAQ: Short answers about Konnekt, servers and updates."
+    />
     <meta name="twitter:image" content="https://konnekt.pages.dev/assets/img/social-card.png" />
 
     <meta name="theme-color" content="#05060a" />
@@ -92,6 +98,7 @@
           >
         </nav>
         <main id="main" class="group">
+          <!-- Written by scripts/gen-docs.mjs from docs/website/faq.md. Edit that file. -->
           <header class="doc-head block">
             <div class="doc-head-main">
               <div class="doc-trail">
@@ -105,6 +112,7 @@
                 </nav>
               </div>
               <h1>FAQ</h1>
+              <p class="doc-lead">Short answers about Konnekt, servers and updates.</p>
             </div>
             <dl class="doc-facts">
               <div class="doc-fact">
@@ -113,133 +121,150 @@
               </div>
             </dl>
           </header>
-
-          <section class="doc-section block" id="konnekt" aria-labelledby="konnekt-title">
-            <div class="band doc-band">
-              <div class="band-title">
-                <span class="num">01</span>
-                <h2 id="konnekt-title">Konnekt</h2>
-              </div>
+          <div class="doc-layout">
+            <nav class="doc-toc" aria-label="On this page">
+              <ol>
+                <li>
+                  <a href="#konnekt"><span class="num">01</span><span>Konnekt</span></a>
+                </li>
+                <li>
+                  <a href="#servers"><span class="num">02</span><span>Servers</span></a>
+                </li>
+                <li>
+                  <a href="#updates"><span class="num">03</span><span>Updates</span></a>
+                </li>
+              </ol>
+            </nav>
+            <div class="doc-flow">
+              <section class="doc-section block" id="konnekt" aria-labelledby="konnekt-title">
+                <div class="band doc-band">
+                  <div class="band-title">
+                    <span class="num">01</span>
+                    <h2 id="konnekt-title">Konnekt</h2>
+                  </div>
+                </div>
+                <div class="doc-body">
+                  <div class="doc-faq">
+                    <details>
+                      <summary>Is it free?</summary>
+                      <p class="doc-prose">
+                        Yes, under the
+                        <a
+                          href="https://github.com/kollektiv-mc/Konnekt/blob/main/LICENSE"
+                          target="_blank"
+                          rel="noopener"
+                          >MIT licence</a
+                        >: keep the copyright notice, and the rest is yours.<br />
+                        No accounts, no tiers, no subscriptions.
+                      </p>
+                    </details>
+                    <details>
+                      <summary>Does it phone home?</summary>
+                      <p class="doc-prose">
+                        No telemetry, analytics or crash reporting.<br />
+                        On its own it contacts GitHub, to check for updates.<br />
+                        Everything else follows something you set up:
+                      </p>
+                      <ul class="doc-points">
+                        <li>Modrinth for mods</li>
+                        <li>CurseForge once you add an API key</li>
+                        <li>NeoForge's Maven for a loader</li>
+                        <li>Your buckets</li>
+                        <li>Cloudflare for a tunnel</li>
+                        <li>Any address an HTTP Request block names</li>
+                      </ul>
+                    </details>
+                    <details>
+                      <summary>Where does it store my data?</summary>
+                      <p class="doc-prose">
+                        Your server files stay where they are.<br />
+                        Konnekt's own state (servers, layouts, presets, scheduled tasks) is JSON in
+                        the OS application-data directory.
+                      </p>
+                    </details>
+                    <details>
+                      <summary>Is it stable?</summary>
+                      <p class="doc-prose">
+                        It's alpha.<br />
+                        The core is functional and in daily use, but expect rough edges.<br />
+                        The <a href="/roadmap.html">roadmap</a> has what is next.
+                      </p>
+                    </details>
+                  </div>
+                </div>
+              </section>
+              <section class="doc-section block" id="servers" aria-labelledby="servers-title">
+                <div class="band doc-band">
+                  <div class="band-title">
+                    <span class="num">02</span>
+                    <h2 id="servers-title">Servers</h2>
+                  </div>
+                </div>
+                <div class="doc-body">
+                  <div class="doc-faq">
+                    <details>
+                      <summary>Which server types work?</summary>
+                      <p class="doc-prose">
+                        Vanilla, Paper, Spigot and Bukkit, and modded Fabric, Forge and NeoForge.<br />
+                        The loader is detected automatically.<br />
+                        Bedrock is not supported.
+                      </p>
+                    </details>
+                    <details>
+                      <summary>Why does the server stop as soon as I start it?</summary>
+                      <p class="doc-prose">
+                        On a first run that is almost always the EULA.<br />
+                        Minecraft will not start until you have accepted it, and says so in the log
+                        on its way out.<br />
+                        Konnekt watches for that line and offers to write <code>eula.txt</code> for
+                        you, then starts the server again.
+                      </p>
+                    </details>
+                    <details>
+                      <summary>Can I manage a server on another machine?</summary>
+                      <p class="doc-prose">
+                        No, Konnekt manages servers on the machine it runs on.<br />
+                        <a href="/docs/settings/remote-access.html">Remote Access</a> opens that
+                        machine's dashboard in a browser elsewhere.
+                      </p>
+                    </details>
+                  </div>
+                </div>
+              </section>
+              <section class="doc-section block" id="updates" aria-labelledby="updates-title">
+                <div class="band doc-band">
+                  <div class="band-title">
+                    <span class="num">03</span>
+                    <h2 id="updates-title">Updates</h2>
+                  </div>
+                </div>
+                <div class="doc-body">
+                  <div class="doc-faq">
+                    <details>
+                      <summary>Can I run the newest code?</summary>
+                      <p class="doc-prose">
+                        Yes: snapshots are built from the newest code whenever it changes, and
+                        published as pre-releases.<br />
+                        They're untested, so Konnekt warns before installing one.<br />
+                        Take the first from the <a href="/download.html">download page</a>.<br />
+                        After that a snapshot offers you the next one itself, and a release once one
+                        overtakes it.<br />
+                        To follow snapshots from a stable build, switch the channel in
+                        <b>Settings</b>, <b>General</b>.
+                      </p>
+                    </details>
+                  </div>
+                </div>
+              </section>
             </div>
-            <div class="doc-body">
-              <div class="doc-faq">
-                <details>
-                  <summary>Is it free?</summary>
-                  <p class="doc-prose">
-                    Yes, under the
-                    <a
-                      href="https://github.com/kollektiv-mc/Konnekt/blob/main/LICENSE"
-                      target="_blank"
-                      rel="noopener"
-                      >MIT licence</a
-                    >: keep the copyright notice, and the rest is yours.<br />
-                    No accounts, no tiers, no subscriptions.
-                  </p>
-                </details>
-                <details>
-                  <summary>Does it phone home?</summary>
-                  <p class="doc-prose">
-                    No telemetry, analytics or crash reporting.<br />
-                    On its own it contacts GitHub, to check for updates.<br />
-                    Everything else follows something you set up: Modrinth for mods, CurseForge once
-                    you add an API key, NeoForge's Maven for a loader, your buckets, Cloudflare for
-                    a tunnel, and any address an HTTP Request block names.
-                  </p>
-                </details>
-                <details>
-                  <summary>Where does it store my data?</summary>
-                  <p class="doc-prose">
-                    Your server files stay where they are.<br />
-                    Konnekt's own state (servers, layouts, presets, scheduled tasks) is JSON in the
-                    OS application-data directory.
-                  </p>
-                </details>
-                <details>
-                  <summary>Is it stable?</summary>
-                  <p class="doc-prose">
-                    It's alpha.<br />
-                    The core is functional and in daily use, but expect rough edges.<br />
-                    The <a href="/roadmap.html">roadmap</a> has what is next.
-                  </p>
-                </details>
-              </div>
-            </div>
-          </section>
-
-          <section class="doc-section block" id="servers" aria-labelledby="servers-title">
-            <div class="band doc-band">
-              <div class="band-title">
-                <span class="num">02</span>
-                <h2 id="servers-title">Servers</h2>
-              </div>
-            </div>
-            <div class="doc-body">
-              <div class="doc-faq">
-                <details>
-                  <summary>Which server types work?</summary>
-                  <p class="doc-prose">
-                    Vanilla, Paper, Spigot and Bukkit, and modded Fabric, Forge and NeoForge.<br />
-                    The loader is detected automatically.<br />
-                    Bedrock is not supported.
-                  </p>
-                </details>
-                <details>
-                  <summary>The server stops as soon as I start it</summary>
-                  <p class="doc-prose">
-                    On a first run that is almost always the EULA.<br />
-                    Minecraft will not start until you have accepted it, and says so in the log on
-                    its way out.<br />
-                    Konnekt watches for that line and offers to write <code>eula.txt</code> for you,
-                    then starts the server again.
-                  </p>
-                </details>
-                <details>
-                  <summary>Can I manage a server on another machine?</summary>
-                  <p class="doc-prose">
-                    No, Konnekt manages servers on the machine it runs on.<br />
-                    <a href="/docs/settings/remote-access.html">Remote Access</a> opens that
-                    machine's dashboard in a browser elsewhere.
-                  </p>
-                </details>
-              </div>
-            </div>
-          </section>
-
-          <section class="doc-section block" id="updates" aria-labelledby="updates-title">
-            <div class="band doc-band">
-              <div class="band-title">
-                <span class="num">03</span>
-                <h2 id="updates-title">Updates</h2>
-              </div>
-            </div>
-            <div class="doc-body">
-              <div class="doc-faq">
-                <details>
-                  <summary>Can I run the newest code?</summary>
-                  <p class="doc-prose">
-                    Yes: snapshots are built from the newest code whenever it changes, and published
-                    as pre-releases.<br />
-                    They're untested, so Konnekt warns before installing one.<br />
-                    Take the first from the <a href="/download.html">download page</a>.<br />
-                    After that a snapshot offers you the next one itself, and a release once one
-                    overtakes it.<br />
-                    To follow snapshots from a stable build, switch the channel in <b>Settings</b>,
-                    <b>General</b>.
-                  </p>
-                </details>
-              </div>
-            </div>
-          </section>
-
+          </div>
           <nav class="doc-related block" aria-label="Related">
             <div class="shelf-label"><span class="label">Related</span></div>
             <a class="related-link" href="/docs/install.html"
               ><span class="kind" data-kind="guide">Guide</span>Install Konnekt</a
-            >
-            <a class="related-link" href="/docs/first-server.html"
+            ><a class="related-link" href="/docs/first-server.html"
               ><span class="kind" data-kind="guide">Guide</span>Your first server</a
-            >
-            <a class="related-link" href="/docs/requirements.html"
+            ><a class="related-link" href="/docs/requirements.html"
               ><span class="kind" data-kind="reference">Reference</span>Requirements and
               platforms</a
             >

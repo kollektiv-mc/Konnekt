@@ -131,131 +131,182 @@
             </dl>
           </header>
 
-          <!-- gen:ports -->
-          <section class="doc-section block" id="ports" aria-labelledby="ports-title">
-            <div class="band doc-band">
-              <div class="band-title">
-                <span class="num">01</span>
-                <h2 id="ports-title">Ports</h2>
-              </div>
-            </div>
-            <div class="port-stage">
-              <div class="port-canvas">
-                <div class="port-node" data-category="trigger">
-                  <div class="port-node-head">
-                    <span>Server</span><span class="port-node-cat">trigger</span>
-                  </div>
-                  <div class="port-cols">
-                    <ul class="port-col port-in" aria-label="Inputs">
-                      <li class="port-col-label" aria-hidden="true">in</li>
-                      <li class="port" data-shape="data" data-type="number">
-                        <span>Cooldown</span><span class="port-type">number</span>
-                      </li>
-                    </ul>
-                    <ul class="port-col port-out" aria-label="Outputs">
-                      <li class="port-col-label" aria-hidden="true">out</li>
-                      <li class="port" data-shape="control" data-port="onComplete">
-                        <span>onComplete</span><span class="port-type">control</span>
-                      </li>
-                    </ul>
+          <div class="doc-layout">
+            <!-- gen:toc -->
+            <nav class="doc-toc" aria-label="On this page">
+              <ol>
+                <li>
+                  <a href="#ports"><span class="num">01</span><span>Ports</span></a>
+                </li>
+                <li>
+                  <a href="#fields"><span class="num">02</span><span>Fields</span></a>
+                </li>
+                <li>
+                  <a href="#run"><span class="num">03</span><span>What a run does</span></a>
+                </li>
+              </ol>
+            </nav>
+            <!-- /gen:toc -->
+            <div class="doc-flow">
+              <!-- gen:ports -->
+              <section class="doc-section block" id="ports" aria-labelledby="ports-title">
+                <div class="band doc-band">
+                  <div class="band-title">
+                    <span class="num">01</span>
+                    <h2 id="ports-title">Ports</h2>
                   </div>
                 </div>
-              </div>
-              <div class="port-legend">
-                <span class="label">Ports</span>
-                <span class="port-key" data-shape="control">Control</span>
-                <span class="port-key" data-shape="data">Data</span>
-                <hr />
-                <span class="label">Data types</span>
-                <span class="port-key" data-shape="data" data-type="string"
-                  ><code>string</code></span
-                >
-                <span class="port-key" data-shape="data" data-type="number"
-                  ><code>number</code></span
-                >
-                <span class="port-key" data-shape="data" data-type="bool"><code>bool</code></span>
-                <p class="doc-prose">
-                  Strings accept any data input.<br />
-                  Numbers accept boolean input.
-                </p>
-              </div>
-            </div>
-          </section>
-          <!-- /gen:ports -->
-
-          <!-- gen:fields -->
-          <section class="doc-section block" id="fields" aria-labelledby="fields-title">
-            <div class="band doc-band">
-              <div class="band-title">
-                <span class="num">02</span>
-                <h2 id="fields-title">Fields</h2>
-              </div>
-            </div>
-            <div class="doc-body">
-              <div class="doc-table-wrap">
-                <table class="doc-table">
-                  <thead>
-                    <tr>
-                      <th scope="col">Field</th>
-                      <th scope="col">What it does</th>
-                      <th scope="col">Default</th>
-                      <th scope="col">Limits</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr data-field="type">
-                      <td>Type</td>
-                      <td>The server event that fires the block.</td>
-                      <td><code>Stopped</code></td>
-                      <td>
-                        <ul class="field-options">
-                          <li><code>Stopped</code></li>
-                          <li><code>Started</code></li>
-                          <li><code>Crashed</code></li>
+                <div class="port-stage">
+                  <div class="port-canvas">
+                    <div class="port-node" data-category="trigger">
+                      <div class="port-node-head">
+                        <span>Server</span><span class="port-node-cat">trigger</span>
+                      </div>
+                      <div class="port-cols">
+                        <ul class="port-col port-in" aria-label="Inputs">
+                          <li class="port-col-label" aria-hidden="true">in</li>
+                          <li class="port" data-shape="data" data-type="number">
+                            <span>Cooldown</span><span class="port-type">number</span>
+                          </li>
                         </ul>
-                      </td>
-                    </tr>
-                    <tr data-field="cooldownSeconds">
-                      <td>Cooldown (seconds)</td>
-                      <td>The shortest time between two firings of this block.</td>
-                      <td><code>300</code></td>
-                      <td>0 s or more. A negative or empty value uses 300 s.</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </section>
-          <!-- /gen:fields -->
+                        <ul class="port-col port-out" aria-label="Outputs">
+                          <li class="port-col-label" aria-hidden="true">out</li>
+                          <li class="port" data-shape="control" data-port="onComplete">
+                            <span>onComplete</span><span class="port-type">control</span>
+                          </li>
+                        </ul>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="port-legend">
+                    <span class="label">Ports</span>
+                    <span class="port-key" data-shape="control">Control</span>
+                    <span class="port-key" data-shape="data">Data</span>
+                    <hr />
+                    <span class="label">Data types</span>
+                    <span class="port-key" data-shape="data" data-type="string"
+                      ><code>string</code></span
+                    >
+                    <span class="port-key" data-shape="data" data-type="number"
+                      ><code>number</code></span
+                    >
+                    <span class="port-key" data-shape="data" data-type="bool"
+                      ><code>bool</code></span
+                    >
+                    <p class="doc-prose">
+                      Strings accept any data input.<br />
+                      Numbers accept boolean input.
+                    </p>
+                  </div>
+                </div>
+              </section>
+              <!-- /gen:ports -->
 
-          <section class="doc-section block" id="run" aria-labelledby="run-title">
-            <div class="band doc-band">
-              <div class="band-title">
-                <span class="num">03</span>
-                <h2 id="run-title">What a run does</h2>
-              </div>
+              <!-- gen:fields -->
+              <section class="doc-section block" id="fields" aria-labelledby="fields-title">
+                <div class="band doc-band">
+                  <div class="band-title">
+                    <span class="num">02</span>
+                    <h2 id="fields-title">Fields</h2>
+                  </div>
+                </div>
+                <div class="doc-body">
+                  <div class="doc-table-wrap">
+                    <table class="doc-table">
+                      <thead>
+                        <tr>
+                          <th scope="col">Field</th>
+                          <th scope="col">What it does</th>
+                          <th scope="col">Default</th>
+                          <th scope="col">Limits</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr data-field="type">
+                          <td>Type</td>
+                          <td>The server event that fires the block.</td>
+                          <td><code>Stopped</code></td>
+                          <td>
+                            <ul class="field-options">
+                              <li><code>Stopped</code></li>
+                              <li><code>Started</code></li>
+                              <li><code>Crashed</code></li>
+                            </ul>
+                          </td>
+                        </tr>
+                        <tr data-field="cooldownSeconds">
+                          <td>Cooldown (seconds)</td>
+                          <td>The shortest time between two firings of this block.</td>
+                          <td><code>300</code></td>
+                          <td>0 s or more. A negative or empty value uses 300 s.</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </section>
+              <!-- /gen:fields -->
+
+              <!-- gen:body -->
+              <section class="doc-section block" id="run" aria-labelledby="run-title">
+                <div class="band doc-band">
+                  <div class="band-title">
+                    <span class="num">03</span>
+                    <h2 id="run-title">What a run does</h2>
+                  </div>
+                </div>
+                <div class="doc-body doc-split">
+                  <div class="doc-main">
+                    <ol class="doc-steps">
+                      <li>The server starts, stops or crashes.</li>
+                      <li>
+                        The block fires when the event matches its <b>Type</b>, unless its cooldown
+                        has not passed.
+                      </li>
+                      <li>The run starts at this block and leaves by <b>onComplete</b>.</li>
+                    </ol>
+                    <ul class="doc-points">
+                      <li><b>Started</b> fires when Konnekt launches the server process.</li>
+                      <li>
+                        <b>Stopped</b> fires when the process exits after a deliberate stop, from
+                        Konnekt or from the server itself.
+                      </li>
+                      <li>
+                        <b>Crashed</b> fires when it exits any other way, or after the server logged
+                        a crash.
+                      </li>
+                      <li>A restart from Konnekt fires <b>Stopped</b>, then <b>Started</b>.</li>
+                      <li>The block has no data outputs.</li>
+                      <li>The cooldown counts per block.</li>
+                      <li>A value wired into <b>Cooldown</b> is not read.</li>
+                      <li>The block fires only for the server the graph belongs to.</li>
+                    </ul>
+                    <div class="doc-note" data-tone="warn">
+                      <span class="label">Heads up</span>
+                      <p><b>Started</b> fires before the server has finished loading.</p>
+                    </div>
+                  </div>
+                  <div class="doc-figs">
+                    <figure
+                      class="fig fig-flow"
+                      role="img"
+                      aria-label="Graph: Server Crashed, then on onComplete, Notify Server crashed."
+                    >
+                      <div class="fig-node is-hit">
+                        <span class="fig-kind">Server</span><span class="fig-value">Crashed</span>
+                      </div>
+                      <span class="fig-wire"><span class="fig-port">onComplete</span></span>
+                      <div class="fig-node">
+                        <span class="fig-kind">Notify</span
+                        ><span class="fig-value">Server crashed</span>
+                      </div>
+                    </figure>
+                  </div>
+                </div>
+              </section>
+              <!-- /gen:body -->
             </div>
-            <div class="doc-body">
-              <p class="doc-prose">
-                <b>Started</b> fires when Konnekt launches the server process, before the server has
-                finished loading.<br />
-                <b>Stopped</b> fires when the process exits after a deliberate stop, from Konnekt or
-                from the server itself.<br />
-                <b>Crashed</b> fires when it exits any other way, or after the server logged a
-                crash.
-              </p>
-              <p class="doc-prose">
-                The run starts at this block and leaves by <code>onComplete</code>.<br />
-                The block has no data outputs.<br />
-                A restart from Konnekt fires <b>Stopped</b>, then <b>Started</b>.
-              </p>
-              <p class="doc-prose">
-                The cooldown counts per block.<br />
-                A value wired into <b>Cooldown</b> is not read.<br />
-                It fires only for the server the graph belongs to.
-              </p>
-            </div>
-          </section>
+          </div>
 
           <nav class="doc-related block" aria-label="Related">
             <div class="shelf-label"><span class="label">Related</span></div>

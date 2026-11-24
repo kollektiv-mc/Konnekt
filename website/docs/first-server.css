@@ -1,36 +1,22 @@
 /* Your first server: each step carries a small moving picture of the panel it
    describes, played by first-server.js. On top of site.css and docs.css. */
 
-/* ── A step: the prose, and the picture beside it ───────────────────────── */
-
-.step-body {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 24px 40px;
-}
-
-.step-body .doc-prose {
-  flex: 1 1 360px;
-}
+/* ── A step: the picture column ───────────────────────────────────────── */
 
 /* The picture is drawn at the app's own small size and enlarged as a whole,
-   so the pointer still lands on the buttons it travels to by coordinate. */
+   so the pointer still lands on the buttons it travels to by coordinate.
+   217 px at 1.5 is 325 px, inside the picture column's 280 to 400. */
 .demo-stage {
-  flex: none;
   display: flex;
   justify-content: center;
+  margin: 0;
 }
 
 .demo-stage .demo {
   zoom: 1.5;
 }
 
-@media (max-width: 760px) {
-  .demo-stage {
-    flex: 1 1 100%;
-  }
-
+@media (max-width: 400px) {
   .demo-stage .demo {
     zoom: 1.35;
   }
@@ -491,16 +477,16 @@
    to the top-left corner on the way out while everything around it eased.
    These are each cursor animation's own 100%: where it was left standing after
    the click it just made. */
-.step[data-demo='add'] .mock-cursor {
+.demo[data-demo='add'] .mock-cursor {
   transform: translate(42px, 124px) scale(1);
 }
-.step[data-demo='install'] .mock-cursor {
+.demo[data-demo='install'] .mock-cursor {
   transform: translate(77px, 109px) scale(1);
 }
-.step[data-demo='start'] .mock-cursor {
+.demo[data-demo='start'] .mock-cursor {
   transform: translate(161px, 15px) scale(1);
 }
-.step[data-demo='join'] .mock-cursor {
+.demo[data-demo='join'] .mock-cursor {
   transform: translate(94px, 106px) scale(1);
 }
 
@@ -672,39 +658,39 @@
   }
 }
 
-.step[data-demo='add'].is-playing .f1 {
+.is-playing .demo[data-demo='add'] .f1 {
   animation: demo-focus-1 var(--demo-ms) var(--ease-standard) var(--demo-rewind-ms) forwards;
 }
-.step[data-demo='add'].is-playing .f2 {
+.is-playing .demo[data-demo='add'] .f2 {
   animation: demo-focus-2 var(--demo-ms) var(--ease-standard) var(--demo-rewind-ms) forwards;
 }
-.step[data-demo='add'].is-playing .f3 {
+.is-playing .demo[data-demo='add'] .f3 {
   animation: demo-focus-3 var(--demo-ms) var(--ease-standard) var(--demo-rewind-ms) forwards;
 }
-.step[data-demo='add'].is-playing .f4 {
+.is-playing .demo[data-demo='add'] .f4 {
   animation: demo-focus-4 var(--demo-ms) var(--ease-standard) var(--demo-rewind-ms) forwards;
 }
-.step[data-demo='add'].is-playing .f1 .mock-type {
+.is-playing .demo[data-demo='add'] .f1 .mock-type {
   animation: demo-type-1 var(--demo-ms) steps(14, end) var(--demo-rewind-ms) forwards;
   width: 0;
 }
-.step[data-demo='add'].is-playing .f2 .mock-type {
+.is-playing .demo[data-demo='add'] .f2 .mock-type {
   animation: demo-type-2 var(--demo-ms) steps(14, end) var(--demo-rewind-ms) forwards;
   width: 0;
 }
-.step[data-demo='add'].is-playing .f3 .mock-type {
+.is-playing .demo[data-demo='add'] .f3 .mock-type {
   animation: demo-type-3 var(--demo-ms) steps(18, end) var(--demo-rewind-ms) forwards;
   width: 0;
 }
-.step[data-demo='add'].is-playing .f4 .mock-type {
+.is-playing .demo[data-demo='add'] .f4 .mock-type {
   animation: demo-type-4 var(--demo-ms) steps(15, end) var(--demo-rewind-ms) forwards;
   width: 0;
 }
-.step[data-demo='add'].is-playing .mock-add {
+.is-playing .demo[data-demo='add'] .mock-add {
   animation: demo-press var(--demo-ms) var(--ease-standard) var(--demo-rewind-ms) forwards;
   background-color: rgb(var(--accent-rgb) / 0);
 }
-.step[data-demo='add'].is-playing .mock-cursor {
+.is-playing .demo[data-demo='add'] .mock-cursor {
   animation: demo-cursor-add var(--demo-ms) var(--ease-standard) var(--demo-rewind-ms) forwards;
 }
 
@@ -862,42 +848,42 @@
   }
 }
 
-.step[data-demo='install'].is-playing .mock-modal {
+.is-playing .demo[data-demo='install'] .mock-modal {
   animation: demo-install-in var(--demo-ms) var(--ease-standard) var(--demo-rewind-ms) forwards;
   opacity: 0;
   transform: scale(0.96);
 }
-.step[data-demo='install'].is-playing .i1 .mock-type {
+.is-playing .demo[data-demo='install'] .i1 .mock-type {
   animation: demo-type-install var(--demo-ms) steps(16, end) var(--demo-rewind-ms) forwards;
   width: 0;
 }
-.step[data-demo='install'].is-playing .mock-cursor {
+.is-playing .demo[data-demo='install'] .mock-cursor {
   animation: demo-cursor-install var(--demo-ms) var(--ease-standard) var(--demo-rewind-ms) forwards;
 }
-.step[data-demo='install'].is-playing .mock-install-btn {
+.is-playing .demo[data-demo='install'] .mock-install-btn {
   animation: demo-press-install var(--demo-ms) var(--ease-standard) var(--demo-rewind-ms) forwards;
   opacity: 1;
   background-color: rgb(var(--accent-rgb) / 0);
 }
-.step[data-demo='install'].is-playing .mock-added-btn {
+.is-playing .demo[data-demo='install'] .mock-added-btn {
   animation: demo-swap-in var(--demo-ms) var(--ease-standard) var(--demo-rewind-ms) forwards;
   opacity: 0;
 }
-.step[data-demo='install'].is-playing .mock-bar {
+.is-playing .demo[data-demo='install'] .mock-bar {
   animation: demo-bar var(--demo-ms) var(--ease-standard) var(--demo-rewind-ms) forwards;
   opacity: 0;
 }
-.step[data-demo='install'].is-playing .mock-bar-fill {
+.is-playing .demo[data-demo='install'] .mock-bar-fill {
   animation: demo-bar-fill var(--demo-ms) var(--ease-standard) var(--demo-rewind-ms) forwards;
   width: 0;
 }
-.step[data-demo='install'].is-playing .il1 {
+.is-playing .demo[data-demo='install'] .il1 {
   animation: demo-il-1 var(--demo-ms) var(--ease-standard) var(--demo-rewind-ms) forwards;
 }
-.step[data-demo='install'].is-playing .il2 {
+.is-playing .demo[data-demo='install'] .il2 {
   animation: demo-il-2 var(--demo-ms) var(--ease-standard) var(--demo-rewind-ms) forwards;
 }
-.step[data-demo='install'].is-playing .il3 {
+.is-playing .demo[data-demo='install'] .il3 {
   animation: demo-il-3 var(--demo-ms) var(--ease-standard) var(--demo-rewind-ms) forwards;
   opacity: 0;
 }
@@ -1050,42 +1036,42 @@
   }
 }
 
-.step[data-demo='start'].is-playing .mock-cursor {
+.is-playing .demo[data-demo='start'] .mock-cursor {
   animation: demo-cursor-start var(--demo-ms) var(--ease-standard) var(--demo-rewind-ms) forwards;
 }
-.step[data-demo='start'].is-playing .mock-start {
+.is-playing .demo[data-demo='start'] .mock-start {
   animation: demo-press-start var(--demo-ms) var(--ease-standard) var(--demo-rewind-ms) forwards;
   opacity: 1;
   background-color: rgb(var(--accent-rgb) / 0);
 }
-.step[data-demo='start'].is-playing .mock-stop {
+.is-playing .demo[data-demo='start'] .mock-stop {
   animation: demo-stop-in var(--demo-ms) var(--ease-standard) var(--demo-rewind-ms) forwards;
   opacity: 0;
 }
-.step[data-demo='start'].is-playing .s-stopped {
+.is-playing .demo[data-demo='start'] .s-stopped {
   animation: demo-status-stopped var(--demo-ms) var(--ease-standard) var(--demo-rewind-ms) forwards;
   opacity: 1;
 }
-.step[data-demo='start'].is-playing .s-starting {
+.is-playing .demo[data-demo='start'] .s-starting {
   animation: demo-status-starting var(--demo-ms) var(--ease-standard) var(--demo-rewind-ms) forwards;
 }
-.step[data-demo='start'].is-playing .s-running {
+.is-playing .demo[data-demo='start'] .s-running {
   animation: demo-status-running var(--demo-ms) var(--ease-standard) var(--demo-rewind-ms) forwards;
   opacity: 0;
 }
-.step[data-demo='start'].is-playing .l1 {
+.is-playing .demo[data-demo='start'] .l1 {
   animation: demo-line-1 var(--demo-ms) var(--ease-standard) var(--demo-rewind-ms) forwards;
   opacity: 0;
 }
-.step[data-demo='start'].is-playing .l2 {
+.is-playing .demo[data-demo='start'] .l2 {
   animation: demo-line-2 var(--demo-ms) var(--ease-standard) var(--demo-rewind-ms) forwards;
   opacity: 0;
 }
-.step[data-demo='start'].is-playing .l3 {
+.is-playing .demo[data-demo='start'] .l3 {
   animation: demo-line-3 var(--demo-ms) var(--ease-standard) var(--demo-rewind-ms) forwards;
   opacity: 0;
 }
-.step[data-demo='start'].is-playing .l4 {
+.is-playing .demo[data-demo='start'] .l4 {
   animation: demo-line-4 var(--demo-ms) var(--ease-standard) var(--demo-rewind-ms) forwards;
   opacity: 0;
 }
@@ -1152,17 +1138,17 @@
   }
 }
 
-.step[data-demo='join'].is-playing .j1 {
+.is-playing .demo[data-demo='join'] .j1 {
   animation: demo-focus-join var(--demo-ms) var(--ease-standard) var(--demo-rewind-ms) forwards;
 }
-.step[data-demo='join'].is-playing .j1 .mock-type {
+.is-playing .demo[data-demo='join'] .j1 .mock-type {
   animation: demo-type-join var(--demo-ms) steps(9, end) var(--demo-rewind-ms) forwards;
   width: 0;
 }
-.step[data-demo='join'].is-playing .mock-cursor {
+.is-playing .demo[data-demo='join'] .mock-cursor {
   animation: demo-cursor-join var(--demo-ms) var(--ease-standard) var(--demo-rewind-ms) forwards;
 }
-.step[data-demo='join'].is-playing .mock-join-go {
+.is-playing .demo[data-demo='join'] .mock-join-go {
   animation: demo-press var(--demo-ms) var(--ease-standard) var(--demo-rewind-ms) forwards;
   background-color: rgb(var(--accent-rgb) / 0);
 }

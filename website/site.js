@@ -188,6 +188,32 @@
     table.classList.add('is-labelled')
   })
 
+  // ── Doc contents ───────────────────────────────────────────────────────
+  // The contents beside a docs page mark the section being read: the last
+  // one whose top has passed a third of the way down the window.
+  var toc = document.querySelector('.doc-toc')
+  if (toc) {
+    var links = [].slice.call(toc.querySelectorAll('a[href^="#"]'))
+    var sections = links.map(function (a) {
+      return document.getElementById(a.hash.slice(1))
+    })
+    var marked = null
+    var mark = function () {
+      var line = window.innerHeight / 3
+      var at = 0
+      sections.forEach(function (s, i) {
+        if (s && s.getBoundingClientRect().top <= line) at = i
+      })
+      if (links[at] === marked) return
+      if (marked) marked.removeAttribute('aria-current')
+      marked = links[at]
+      if (marked) marked.setAttribute('aria-current', 'location')
+    }
+    window.addEventListener('scroll', mark, { passive: true })
+    window.addEventListener('resize', mark)
+    mark()
+  }
+
   // ── Nav menu ───────────────────────────────────────────────────────────
   // On a phone the links fold behind the menu button. The CSS keeps them
   // drawn only while the nav is .is-open; opening and closing go through

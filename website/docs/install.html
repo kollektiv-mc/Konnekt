@@ -4,12 +4,18 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Konnekt docs: Install Konnekt</title>
-    <meta name="description" content="Install Konnekt on Windows, macOS or Linux." />
+    <meta
+      name="description"
+      content="Install Konnekt: Download the file for your system and open it."
+    />
     <link rel="canonical" href="https://konnekt.pages.dev/docs/install.html" />
 
     <meta property="og:site_name" content="Konnekt" />
     <meta property="og:title" content="Konnekt docs: Install Konnekt" />
-    <meta property="og:description" content="Install Konnekt on Windows, macOS or Linux." />
+    <meta
+      property="og:description"
+      content="Install Konnekt: Download the file for your system and open it."
+    />
     <meta property="og:url" content="https://konnekt.pages.dev/docs/install.html" />
     <meta property="og:type" content="website" />
     <meta property="og:image" content="https://konnekt.pages.dev/assets/img/social-card.png" />
@@ -17,7 +23,10 @@
     <meta property="og:image:height" content="1123" />
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="Konnekt docs: Install Konnekt" />
-    <meta name="twitter:description" content="Install Konnekt on Windows, macOS or Linux." />
+    <meta
+      name="twitter:description"
+      content="Install Konnekt: Download the file for your system and open it."
+    />
     <meta name="twitter:image" content="https://konnekt.pages.dev/assets/img/social-card.png" />
 
     <meta name="theme-color" content="#05060a" />
@@ -92,6 +101,7 @@
           >
         </nav>
         <main id="main" class="group">
+          <!-- Written by scripts/gen-docs.mjs from docs/website/install.md. Edit that file. -->
           <header class="doc-head block">
             <div class="doc-head-main">
               <div class="doc-trail">
@@ -122,238 +132,290 @@
               </div>
             </dl>
           </header>
-
-          <section
-            class="doc-section block"
-            id="before-you-start"
-            aria-labelledby="before-you-start-title"
-          >
-            <div class="band doc-band">
-              <div class="band-title">
-                <span class="num">00</span>
-                <h2 id="before-you-start-title">Before you start</h2>
-              </div>
-            </div>
-            <div class="doc-body">
-              <ul class="doc-checks">
-                <li class="doc-check">
-                  <span class="doc-check-text"
-                    ><span>A 64-bit Windows or Linux machine, or a Mac</span
-                    ><span class="doc-check-desc"
-                      >The macOS build runs on Apple silicon and Intel Macs.</span
-                    ></span
+          <div class="doc-layout">
+            <nav class="doc-toc" aria-label="On this page">
+              <ol>
+                <li>
+                  <a href="#before-you-start"
+                    ><span class="num">00</span><span>Before you start</span></a
                   >
                 </li>
-                <li class="doc-check">
-                  <span class="doc-check-text"
-                    ><span>The machine your server runs on</span
-                    ><span class="doc-check-desc"
-                      >Konnekt manages servers on the machine it runs on.</span
-                    ></span
+                <li>
+                  <a href="#download"><span class="num">01</span><span>Download</span></a>
+                </li>
+                <li>
+                  <a href="#windows"><span class="num">02</span><span>Windows</span></a>
+                </li>
+                <li>
+                  <a href="#macos"><span class="num">03</span><span>macOS</span></a>
+                </li>
+                <li>
+                  <a href="#linux"><span class="num">04</span><span>Linux</span></a>
+                </li>
+                <li>
+                  <a href="#build-from-source"
+                    ><span class="num">05</span><span>Build from source</span></a
                   >
                 </li>
-              </ul>
-            </div>
-          </section>
-
-          <section class="doc-section block" id="download" aria-labelledby="download-title">
-            <div class="band doc-band">
-              <div class="band-title">
-                <span class="num">01</span>
-                <h2 id="download-title">Download</h2>
-              </div>
-            </div>
-            <div class="doc-body">
-              <p class="doc-prose">
-                Open the <a href="/download.html">download page</a> and take the file for your
-                system.
-              </p>
-              <div class="doc-table-wrap">
-                <table class="doc-table">
-                  <thead>
-                    <tr>
-                      <th scope="col">Platform</th>
-                      <th scope="col">File</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr>
-                      <td>Windows</td>
-                      <td><code>konnekt-windows-amd64-setup.exe</code></td>
-                    </tr>
-                    <tr>
-                      <td>macOS</td>
-                      <td><code>konnekt-darwin-universal.dmg</code></td>
-                    </tr>
-                    <tr>
-                      <td>Linux</td>
-                      <td><code>konnekt-linux-amd64</code></td>
-                    </tr>
-                    <tr>
-                      <td>Fedora, Rocky and RHEL 10</td>
-                      <td><code>konnekt-&lt;version&gt;.x86_64.rpm</code></td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-              <div class="doc-note">
-                <span class="label">See also</span>
-                <p>
-                  Which build is a release and which only a snapshot:
-                  <a href="/docs/requirements.html#platform-support">Requirements and platforms</a>.
-                </p>
-              </div>
-            </div>
-          </section>
-
-          <section class="doc-section block" id="windows" aria-labelledby="windows-title">
-            <div class="band doc-band">
-              <div class="band-title">
-                <span class="num">02</span>
-                <h2 id="windows-title">Windows</h2>
-              </div>
-            </div>
-            <div class="doc-body">
-              <p class="doc-prose">
-                Run <code>konnekt-windows-amd64-setup.exe</code>.<br />
-                It installs Konnekt for your account, with a Start Menu entry and an uninstaller
-                under Installed apps, and needs no administrator rights.
-              </p>
-              <div class="doc-note" data-tone="warn">
-                <span class="label">Heads up</span>
-                <p>
-                  Windows builds are not code signed yet, so a first launch shows a SmartScreen
-                  warning. Choose <b>More info</b>, then <b>Run anyway</b>.
-                </p>
-              </div>
-            </div>
-          </section>
-
-          <section class="doc-section block" id="macos" aria-labelledby="macos-title">
-            <div class="band doc-band">
-              <div class="band-title">
-                <span class="num">03</span>
-                <h2 id="macos-title">macOS</h2>
-              </div>
-            </div>
-            <div class="doc-body">
-              <p class="doc-prose">
-                Open <code>konnekt-darwin-universal.dmg</code> and drag Konnekt into
-                Applications.<br />
-                One build runs on Apple silicon and Intel Macs.
-              </p>
-              <div class="doc-note" data-tone="warn">
-                <span class="label">Heads up</span>
-                <p>
-                  macOS builds are not signed by Apple yet, so the first launch is refused. Open
-                  <b>System Settings</b>, then <b>Privacy &amp; Security</b>, and choose
-                  <b>Open Anyway</b> beside Konnekt.
-                </p>
-              </div>
-            </div>
-          </section>
-
-          <section class="doc-section block" id="linux" aria-labelledby="linux-title">
-            <div class="band doc-band">
-              <div class="band-title">
-                <span class="num">04</span>
-                <h2 id="linux-title">Linux</h2>
-              </div>
-            </div>
-            <div class="doc-body">
-              <p class="doc-prose">
-                Konnekt needs <code>webkit2gtk4.1</code> and <code>gtk3</code> at runtime.<br />
-                Fedora 36, Ubuntu 22.04, Debian 12, Rocky and RHEL 10, and anything newer have
-                both.<br />
-                Make the file executable, then run it.
-              </p>
-              <pre><code>chmod +x konnekt-linux-amd64
+                <li>
+                  <a href="#check-the-download"
+                    ><span class="num">06</span><span>Check the download</span></a
+                  >
+                </li>
+              </ol>
+            </nav>
+            <div class="doc-flow">
+              <section
+                class="doc-section block"
+                id="before-you-start"
+                aria-labelledby="before-you-start-title"
+              >
+                <div class="band doc-band">
+                  <div class="band-title">
+                    <span class="num">00</span>
+                    <h2 id="before-you-start-title">Before you start</h2>
+                  </div>
+                </div>
+                <div class="doc-body">
+                  <ul class="doc-checks">
+                    <li class="doc-check">
+                      <span class="doc-check-text"
+                        ><span>A 64-bit Windows or Linux machine, or a Mac</span
+                        ><span class="doc-check-desc"
+                          >The macOS build runs on Apple silicon and Intel Macs.</span
+                        ></span
+                      >
+                    </li>
+                    <li class="doc-check">
+                      <span class="doc-check-text"
+                        ><span>The machine your server runs on</span
+                        ><span class="doc-check-desc"
+                          >Konnekt manages servers on the machine it runs on.</span
+                        ></span
+                      >
+                    </li>
+                  </ul>
+                </div>
+              </section>
+              <section class="doc-section block" id="download" aria-labelledby="download-title">
+                <div class="band doc-band">
+                  <div class="band-title">
+                    <span class="num">01</span>
+                    <h2 id="download-title">Download</h2>
+                  </div>
+                </div>
+                <div class="doc-body">
+                  <ol class="doc-steps">
+                    <li>Open the <a href="/download.html">download page</a>.</li>
+                    <li>Take the file for your system.</li>
+                  </ol>
+                  <div class="doc-table-wrap">
+                    <table class="doc-table">
+                      <thead>
+                        <tr>
+                          <th scope="col">Platform</th>
+                          <th scope="col">File</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr>
+                          <td>Windows</td>
+                          <td><code>konnekt-windows-amd64-setup.exe</code></td>
+                        </tr>
+                        <tr>
+                          <td>macOS</td>
+                          <td><code>konnekt-darwin-universal.dmg</code></td>
+                        </tr>
+                        <tr>
+                          <td>Linux</td>
+                          <td><code>konnekt-linux-amd64</code></td>
+                        </tr>
+                        <tr>
+                          <td>Fedora, Rocky and RHEL 10</td>
+                          <td><code>konnekt-&lt;version&gt;.x86_64.rpm</code></td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                  <div class="doc-note" data-tone="tip">
+                    <span class="label">Tip</span>
+                    <p>
+                      Which build is a release and which only a snapshot is on
+                      <a href="/docs/requirements.html#platform-support"
+                        >Requirements and platforms</a
+                      >.
+                    </p>
+                  </div>
+                </div>
+              </section>
+              <section class="doc-section block" id="windows" aria-labelledby="windows-title">
+                <div class="band doc-band">
+                  <div class="band-title">
+                    <span class="num">02</span>
+                    <h2 id="windows-title">Windows</h2>
+                  </div>
+                </div>
+                <div class="doc-body">
+                  <ol class="doc-steps">
+                    <li>Run <code>konnekt-windows-amd64-setup.exe</code>.</li>
+                    <li>If SmartScreen warns, choose <b>More info</b>, then <b>Run anyway</b>.</li>
+                  </ol>
+                  <div class="doc-note" data-tone="warn">
+                    <span class="label">Heads up</span>
+                    <p>
+                      Windows builds are not code signed yet, so a first launch shows a SmartScreen
+                      warning.
+                    </p>
+                  </div>
+                  <div class="doc-note" data-tone="note">
+                    <span class="label">Note</span>
+                    <p>
+                      It installs Konnekt for your account, with a Start Menu entry and an
+                      uninstaller under Installed apps.<br />
+                      It needs no administrator rights.
+                    </p>
+                  </div>
+                </div>
+              </section>
+              <section class="doc-section block" id="macos" aria-labelledby="macos-title">
+                <div class="band doc-band">
+                  <div class="band-title">
+                    <span class="num">03</span>
+                    <h2 id="macos-title">macOS</h2>
+                  </div>
+                </div>
+                <div class="doc-body">
+                  <ol class="doc-steps">
+                    <li>Open <code>konnekt-darwin-universal.dmg</code>.</li>
+                    <li>Drag Konnekt into Applications.</li>
+                    <li>Open Konnekt.</li>
+                    <li>
+                      If macOS refuses, open <b>System Settings</b>, then
+                      <b>Privacy &amp; Security</b>.
+                    </li>
+                    <li>Choose <b>Open Anyway</b> beside Konnekt.</li>
+                  </ol>
+                  <div class="doc-note" data-tone="warn">
+                    <span class="label">Heads up</span>
+                    <p>macOS builds are not signed by Apple yet, so the first launch is refused.</p>
+                  </div>
+                  <div class="doc-note" data-tone="note">
+                    <span class="label">Note</span>
+                    <p>One build runs on Apple silicon and Intel Macs.</p>
+                  </div>
+                </div>
+              </section>
+              <section class="doc-section block" id="linux" aria-labelledby="linux-title">
+                <div class="band doc-band">
+                  <div class="band-title">
+                    <span class="num">04</span>
+                    <h2 id="linux-title">Linux</h2>
+                  </div>
+                </div>
+                <div class="doc-body">
+                  <p class="doc-prose">
+                    Konnekt needs <code>webkit2gtk4.1</code> and <code>gtk3</code> at runtime.<br />
+                    Fedora 36, Ubuntu 22.04, Debian 12, Rocky and RHEL 10, and anything newer have
+                    both.
+                  </p>
+                  <ol class="doc-steps">
+                    <li>Make the file executable.</li>
+                    <li>Run it.</li>
+                  </ol>
+                  <pre><code>chmod +x konnekt-linux-amd64
 ./konnekt-linux-amd64</code></pre>
-              <p class="doc-prose">
-                On Fedora, Rocky or RHEL 10, the package pulls in both libraries and adds Konnekt to
-                your applications.
-              </p>
-              <pre><code>sudo dnf install ./konnekt-*.x86_64.rpm</code></pre>
-              <div class="doc-note" data-tone="warn">
-                <span class="label">Heads up</span>
-                <p>Rocky and RHEL 9 are not compatible.</p>
-              </div>
-            </div>
-          </section>
-
-          <section
-            class="doc-section block"
-            id="build-from-source"
-            aria-labelledby="build-from-source-title"
-          >
-            <div class="band doc-band">
-              <div class="band-title">
-                <span class="num">05</span>
-                <h2 id="build-from-source-title">Build from source</h2>
-              </div>
-            </div>
-            <div class="doc-body">
-              <p class="doc-prose">
-                A source build is the newest code, so it is a snapshot: newer than the release, and
-                untested.<br />
-                It needs <a href="https://go.dev/" target="_blank" rel="noopener">Go</a>,
-                <a href="https://nodejs.org/" target="_blank" rel="noopener">Node.js</a> with
-                <a href="https://pnpm.io/" target="_blank" rel="noopener">pnpm</a>, and the
-                <a
-                  href="https://wails.io/docs/gettingstarted/installation"
-                  target="_blank"
-                  rel="noopener"
-                  >Wails CLI</a
-                >.<br />
-                On Linux it also needs the <code>webkit2gtk</code> and <code>gtk3</code> development
-                packages.
-              </p>
-              <pre><code>git clone https://github.com/kollektiv-mc/Konnekt
+                  <p class="doc-prose">
+                    On Fedora, Rocky or RHEL 10, install the package instead.<br />
+                    It pulls in both libraries and adds Konnekt to your applications.
+                  </p>
+                  <pre><code>sudo dnf install ./konnekt-*.x86_64.rpm</code></pre>
+                  <div class="doc-note" data-tone="warn">
+                    <span class="label">Heads up</span>
+                    <p>Rocky and RHEL 9 are not compatible.</p>
+                  </div>
+                </div>
+              </section>
+              <section
+                class="doc-section block"
+                id="build-from-source"
+                aria-labelledby="build-from-source-title"
+              >
+                <div class="band doc-band">
+                  <div class="band-title">
+                    <span class="num">05</span>
+                    <h2 id="build-from-source-title">Build from source</h2>
+                  </div>
+                </div>
+                <div class="doc-body">
+                  <p class="doc-prose">
+                    A source build is the newest code, so it is a snapshot: newer than the release,
+                    and untested.
+                  </p>
+                  <ul class="doc-points">
+                    <li>
+                      It needs <a href="https://go.dev/" target="_blank" rel="noopener">Go</a>,
+                      <a href="https://nodejs.org/" target="_blank" rel="noopener">Node.js</a> with
+                      <a href="https://pnpm.io/" target="_blank" rel="noopener">pnpm</a>, and the
+                      <a
+                        href="https://wails.io/docs/gettingstarted/installation"
+                        target="_blank"
+                        rel="noopener"
+                        >Wails CLI</a
+                      >.
+                    </li>
+                    <li>
+                      On Linux it also needs the <code>webkit2gtk</code> and
+                      <code>gtk3</code> development packages.
+                    </li>
+                  </ul>
+                  <ol class="doc-steps">
+                    <li>
+                      Run <code>wails doctor</code>, which reports what your system is missing.
+                    </li>
+                    <li>Clone and start it.</li>
+                  </ol>
+                  <pre><code>git clone https://github.com/kollektiv-mc/Konnekt
 cd Konnekt
 pnpm install
 wails dev</code></pre>
-              <p class="doc-prose">
-                Run <code>wails doctor</code> first: it reports what your system is missing.<br />
-                If WebKit detection fails, add the build tag.
-              </p>
-              <pre><code>wails build -tags webkit2_41
+                  <p class="doc-prose">If WebKit detection fails, add the build tag.</p>
+                  <pre><code>wails build -tags webkit2_41
 wails dev -tags webkit2_41</code></pre>
+                </div>
+              </section>
+              <section
+                class="doc-section block"
+                id="check-the-download"
+                aria-labelledby="check-the-download-title"
+              >
+                <div class="band doc-band">
+                  <div class="band-title">
+                    <span class="num">06</span>
+                    <h2 id="check-the-download-title">Check the download</h2>
+                  </div>
+                </div>
+                <div class="doc-body">
+                  <p class="doc-prose">
+                    Every release file carries a signed build provenance attestation and a
+                    checksum.<br />
+                    The commands to check either are on the download page.
+                  </p>
+                  <div class="doc-note" data-tone="tip">
+                    <span class="label">Tip</span>
+                    <p>See <a href="/download.html#verify">Verify your download</a>.</p>
+                  </div>
+                </div>
+              </section>
             </div>
-          </section>
-
-          <section
-            class="doc-section block"
-            id="check-the-download"
-            aria-labelledby="check-the-download-title"
-          >
-            <div class="band doc-band">
-              <div class="band-title">
-                <span class="num">06</span>
-                <h2 id="check-the-download-title">Check the download</h2>
-              </div>
-            </div>
-            <div class="doc-body">
-              <p class="doc-prose">
-                Every release file carries a signed build provenance attestation and a checksum.<br />
-                The commands to check either are on the download page.
-              </p>
-              <div class="doc-note">
-                <span class="label">See also</span>
-                <p><a href="/download.html#verify">Verify your download</a>.</p>
-              </div>
-            </div>
-          </section>
-
+          </div>
           <nav class="doc-related block" aria-label="Related">
             <div class="shelf-label"><span class="label">Related</span></div>
             <a class="related-link" href="/docs/first-server.html"
               ><span class="kind" data-kind="guide">Guide</span>Your first server</a
-            >
-            <a class="related-link" href="/docs/requirements.html"
+            ><a class="related-link" href="/docs/requirements.html"
               ><span class="kind" data-kind="reference">Reference</span>Requirements and
               platforms</a
-            >
-            <a class="related-link" href="/docs/faq.html"
+            ><a class="related-link" href="/docs/faq.html"
               ><span class="kind" data-kind="reference">Reference</span>FAQ</a
             >
           </nav>

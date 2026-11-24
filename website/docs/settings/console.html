@@ -101,6 +101,7 @@
           >
         </nav>
         <main id="main" class="group">
+          <!-- Written by scripts/gen-docs.mjs from docs/website/settings/console.md. Edit that file. -->
           <header class="doc-head block">
             <div class="doc-head-main">
               <div class="doc-trail">
@@ -125,63 +126,93 @@
               </div>
             </dl>
           </header>
-
-          <section class="doc-section block" id="console-log" aria-labelledby="console-log-title">
-            <div class="band doc-band">
-              <div class="band-title">
-                <span class="num">01</span>
-                <h2 id="console-log-title">Console log</h2>
-              </div>
+          <div class="doc-layout">
+            <nav class="doc-toc" aria-label="On this page">
+              <ol>
+                <li>
+                  <a href="#console-log"><span class="num">01</span><span>Console log</span></a>
+                </li>
+              </ol>
+            </nav>
+            <div class="doc-flow">
+              <section
+                class="doc-section block"
+                id="console-log"
+                aria-labelledby="console-log-title"
+              >
+                <div class="band doc-band">
+                  <div class="band-title">
+                    <span class="num">01</span>
+                    <h2 id="console-log-title">Console log</h2>
+                  </div>
+                </div>
+                <div class="doc-body doc-split">
+                  <div class="doc-main">
+                    <div class="doc-table-wrap">
+                      <table class="doc-table">
+                        <thead>
+                          <tr>
+                            <th scope="col">Setting</th>
+                            <th scope="col">What it does</th>
+                            <th scope="col">Default</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <tr>
+                            <td><b>Show timestamps</b></td>
+                            <td>
+                              Prefixes each console line with the time Konnekt received it, as
+                              hours, minutes and seconds.
+                            </td>
+                            <td>Off</td>
+                          </tr>
+                          <tr>
+                            <td><b>Buffer size</b></td>
+                            <td>
+                              Sets how many console lines Konnekt keeps in memory, at least 100,
+                              before the oldest drop off.
+                            </td>
+                            <td>1000 lines</td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                    <ul class="doc-points">
+                      <li>
+                        Timestamps also show on the notes Konnekt adds to the log itself, such as
+                        backup progress.
+                      </li>
+                      <li>The toggle applies to lines already on screen.</li>
+                      <li>
+                        Switching to another server refills the console from the last 2000 lines
+                        Konnekt kept for that server.<br />
+                        A larger buffer grows only from live output after that.
+                      </li>
+                    </ul>
+                  </div>
+                  <div class="doc-figs">
+                    <figure class="fig fig-ui" role="img" aria-label="Settings · Console.">
+                      <div class="fig-ui-title">Settings · Console</div>
+                      <div class="fig-ui-row">
+                        <span class="fig-ui-text">Show timestamps</span
+                        ><span class="fig-ui-btn">Off</span>
+                      </div>
+                      <div class="fig-ui-row">
+                        <span class="fig-ui-text">Buffer size</span
+                        ><span class="fig-ui-field">1000</span
+                        ><span class="fig-ui-text">lines</span>
+                      </div>
+                    </figure>
+                  </div>
+                </div>
+              </section>
             </div>
-            <div class="doc-body">
-              <div class="doc-table-wrap">
-                <table class="doc-table">
-                  <thead>
-                    <tr>
-                      <th scope="col">Setting</th>
-                      <th scope="col">What it does</th>
-                      <th scope="col">Default</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr>
-                      <td><b>Show timestamps</b></td>
-                      <td>
-                        Prefixes each console line with the time Konnekt received it, as hours,
-                        minutes and seconds.
-                      </td>
-                      <td><code>Off</code></td>
-                    </tr>
-                    <tr>
-                      <td><b>Buffer size</b></td>
-                      <td>
-                        Sets how many console lines Konnekt keeps in memory, at least 100, before
-                        the oldest drop off.
-                      </td>
-                      <td><code>1000 lines</code></td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-              <p class="doc-prose">
-                Timestamps also show on the notes Konnekt adds to the log itself, such as backup
-                progress.<br />
-                The toggle applies to lines already on screen.
-              </p>
-              <p class="doc-prose">
-                Switching to another server refills the console from the last 2000 lines Konnekt
-                kept for that server.<br />
-                A larger buffer grows only from live output after that.
-              </p>
-            </div>
-          </section>
-
+          </div>
           <nav class="doc-related block" aria-label="Related">
             <div class="shelf-label"><span class="label">Related</span></div>
             <a class="related-link" href="/docs/settings/appearance.html#advanced"
               ><span class="kind" data-kind="settings">Settings</span>Appearance</a
-            >
-            <a class="related-link" href="/docs/first-server.html"
+            ><a class="related-link" href="/docs/first-server.html"
               ><span class="kind" data-kind="guide">Guide</span>Your first server</a
             >
           </nav>

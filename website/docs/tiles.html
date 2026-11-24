@@ -101,6 +101,7 @@
           >
         </nav>
         <main id="main" class="group">
+          <!-- Written by scripts/gen-docs.mjs from docs/website/tiles.md. Edit that file. -->
           <header class="doc-head block">
             <div class="doc-head-main">
               <div class="doc-trail">
@@ -123,277 +124,413 @@
               </div>
             </dl>
           </header>
-
-          <section class="doc-section block" id="console" aria-labelledby="console-title">
-            <div class="band doc-band">
-              <div class="band-title">
-                <span class="num">01</span>
-                <h2 id="console-title">Console</h2>
-              </div>
+          <div class="doc-layout">
+            <nav class="doc-toc" aria-label="On this page">
+              <ol>
+                <li>
+                  <a href="#console"><span class="num">01</span><span>Console</span></a>
+                </li>
+                <li>
+                  <a href="#overview"><span class="num">02</span><span>Overview</span></a>
+                </li>
+                <li>
+                  <a href="#players"><span class="num">03</span><span>Players</span></a>
+                </li>
+                <li>
+                  <a href="#quick-commands"><span class="num">04</span><span>Commands</span></a>
+                </li>
+                <li>
+                  <a href="#performance"><span class="num">05</span><span>Performance</span></a>
+                </li>
+                <li>
+                  <a href="#scheduler"><span class="num">06</span><span>Scheduler</span></a>
+                </li>
+                <li>
+                  <a href="#worlds"><span class="num">07</span><span>Worlds</span></a>
+                </li>
+                <li>
+                  <a href="#backups"><span class="num">08</span><span>Backups</span></a>
+                </li>
+                <li>
+                  <a href="#server-config"><span class="num">09</span><span>Config</span></a>
+                </li>
+                <li>
+                  <a href="#notifications"><span class="num">10</span><span>Notifications</span></a>
+                </li>
+                <li>
+                  <a href="#mods"><span class="num">11</span><span>Plugins</span></a>
+                </li>
+              </ol>
+            </nav>
+            <div class="doc-flow">
+              <section class="doc-section block" id="console" aria-labelledby="console-title">
+                <div class="band doc-band">
+                  <div class="band-title">
+                    <span class="num">01</span>
+                    <h2 id="console-title">Console</h2>
+                  </div>
+                </div>
+                <div class="doc-body doc-split">
+                  <div class="doc-main">
+                    <p class="doc-prose">Shows the selected server's log as it arrives.</p>
+                    <ul class="doc-points">
+                      <li>
+                        Type a command in the field and press <b>Send</b> once the server is
+                        running.
+                      </li>
+                      <li><b>clr</b> clears the log.</li>
+                      <li>
+                        The arrow at the top left opens a search box and a level filter: <b>All</b>,
+                        <b>Warn</b> or <b>Error</b>.
+                      </li>
+                      <li>Maximized, it adds a Commands rail beside the log.</li>
+                    </ul>
+                    <div class="doc-note" data-tone="tip">
+                      <span class="label">Tip</span>
+                      <p>
+                        Timestamps and the number of lines kept are set in
+                        <a href="/docs/settings/console.html">Console</a>.
+                      </p>
+                    </div>
+                  </div>
+                  <div class="doc-figs">
+                    <figure class="fig fig-ui" role="img" aria-label="Console, with Send marked.">
+                      <div class="fig-ui-title">Console</div>
+                      <div class="fig-ui-row">
+                        <span class="fig-ui-field">command</span
+                        ><span class="fig-ui-btn is-hit">Send</span
+                        ><span class="fig-ui-btn">clr</span>
+                      </div>
+                    </figure>
+                  </div>
+                </div>
+              </section>
+              <section class="doc-section block" id="overview" aria-labelledby="overview-title">
+                <div class="band doc-band">
+                  <div class="band-title">
+                    <span class="num">02</span>
+                    <h2 id="overview-title">Overview</h2>
+                  </div>
+                </div>
+                <div class="doc-body">
+                  <p class="doc-prose">
+                    Shows the server's state, then <b>Players</b>, <b>TPS</b>, <b>Uptime</b> and
+                    <b>Memory</b>.
+                  </p>
+                  <ul class="doc-points">
+                    <li>
+                      The state reads <b>Online</b>, <b>Offline</b>, <b>Starting</b>,
+                      <b>Stopping</b> or <b>Unreachable</b>.
+                    </li>
+                    <li>
+                      Maximized, it rolls up other tiles.<br />
+                      It charts the last hour of CPU, RAM and players.<br />
+                      Short views of <b>Players</b>, <b>Active world</b>, <b>Backups</b> and
+                      <b>Schedules</b> follow.
+                    </li>
+                    <li>Each short view has a button that opens its own tile.</li>
+                    <li>Overview only reads from the other tiles and changes nothing in them.</li>
+                  </ul>
+                </div>
+              </section>
+              <section class="doc-section block" id="players" aria-labelledby="players-title">
+                <div class="band doc-band">
+                  <div class="band-title">
+                    <span class="num">03</span>
+                    <h2 id="players-title">Players</h2>
+                  </div>
+                </div>
+                <div class="doc-body">
+                  <p class="doc-prose">
+                    Shows how many players are online and lists them with their operator level.
+                  </p>
+                  <ul class="doc-points">
+                    <li>
+                      Click a player for their status, OP level, whitelist entry and ban reason.
+                    </li>
+                    <li>
+                      There, <b>kick</b> and <b>ban</b> work on online players and take an optional
+                      reason.
+                    </li>
+                    <li><b>pardon</b> appears for a banned player.</li>
+                    <li>
+                      The list refreshes when anyone joins or leaves, and when the server starts or
+                      stops.
+                    </li>
+                    <li>
+                      Maximized, it adds a search box and sorting by <b>Name</b> or <b>OP level</b>.
+                    </li>
+                  </ul>
+                </div>
+              </section>
+              <section
+                class="doc-section block"
+                id="quick-commands"
+                aria-labelledby="quick-commands-title"
+              >
+                <div class="band doc-band">
+                  <div class="band-title">
+                    <span class="num">04</span>
+                    <h2 id="quick-commands-title">Commands</h2>
+                  </div>
+                </div>
+                <div class="doc-body">
+                  <p class="doc-prose">
+                    Shows one button per command, and a click runs it on the selected server.
+                  </p>
+                  <ul class="doc-points">
+                    <li>
+                      A first launch adds six: <b>Start</b>, <b>Stop</b>, <b>Restart</b>,
+                      <b>Force Stop</b>, <b>Save All</b> and <b>TPS</b>.
+                    </li>
+                    <li><b>Force Stop</b> always asks first.</li>
+                    <li>
+                      <b>Stop</b> and <b>Restart</b> ask when <b>Confirm before stopping</b> is on
+                      in <a href="/docs/settings/general.html#server">General</a>.
+                    </li>
+                    <li>
+                      Maximized, it lists every button to rename, edit, copy, delete and reorder.
+                    </li>
+                    <li>
+                      Add one by typing a command, picking a preset, or linking a saved command from
+                      Kommands.
+                    </li>
+                  </ul>
+                </div>
+              </section>
+              <section
+                class="doc-section block"
+                id="performance"
+                aria-labelledby="performance-title"
+              >
+                <div class="band doc-band">
+                  <div class="band-title">
+                    <span class="num">05</span>
+                    <h2 id="performance-title">Performance</h2>
+                  </div>
+                </div>
+                <div class="doc-body">
+                  <p class="doc-prose">Shows TPS, CPU and RAM with a chart of recent samples.</p>
+                  <ul class="doc-points">
+                    <li>Konnekt takes a sample every 10 seconds and keeps the last hour.</li>
+                    <li>Maximized, the chart covers <b>5m</b>, <b>15m</b> or <b>1h</b>.</li>
+                    <li>Click a series in its legend to hide it.</li>
+                    <li>
+                      A table lists each sample, sortable by any column, with a min·avg·max row.
+                    </li>
+                  </ul>
+                </div>
+              </section>
+              <section class="doc-section block" id="scheduler" aria-labelledby="scheduler-title">
+                <div class="band doc-band">
+                  <div class="band-title">
+                    <span class="num">06</span>
+                    <h2 id="scheduler-title">Scheduler</h2>
+                  </div>
+                </div>
+                <div class="doc-body">
+                  <p class="doc-prose">
+                    Shows how many graphs are armed and when the next one runs.
+                  </p>
+                  <ul class="doc-points">
+                    <li>Maximized, it opens the graph editor.</li>
+                    <li>
+                      Graphs are covered in <a href="/docs/graphs.html">How a graph runs</a> and
+                      <a href="/docs/scheduler-editor.html">Scheduler editor</a>.
+                    </li>
+                  </ul>
+                </div>
+              </section>
+              <section class="doc-section block" id="worlds" aria-labelledby="worlds-title">
+                <div class="band doc-band">
+                  <div class="band-title">
+                    <span class="num">07</span>
+                    <h2 id="worlds-title">Worlds</h2>
+                  </div>
+                </div>
+                <div class="doc-body">
+                  <p class="doc-prose">
+                    Shows how many worlds the server has, their total size and which one is active.
+                  </p>
+                  <ul class="doc-points">
+                    <li>Maximized, it draws each world as a planet in a 3D scene.</li>
+                    <li>
+                      Click one to open its card: <b>set active</b>, <b>backup</b>,
+                      <b>open folder</b>, <b>rename</b>, <b>duplicate</b> and <b>delete</b>.
+                    </li>
+                    <li>
+                      <b>set active</b> on a running server offers to stop it first, and to start it
+                      again after.
+                    </li>
+                    <li>
+                      <b>delete</b> is missing for the active world and off while the server runs.
+                    </li>
+                    <li>
+                      The card also lists the world's backups, each with <b>restore</b> and
+                      <b>delete</b>.
+                    </li>
+                  </ul>
+                </div>
+              </section>
+              <section class="doc-section block" id="backups" aria-labelledby="backups-title">
+                <div class="band doc-band">
+                  <div class="band-title">
+                    <span class="num">08</span>
+                    <h2 id="backups-title">Backups</h2>
+                  </div>
+                </div>
+                <div class="doc-body doc-split">
+                  <div class="doc-main">
+                    <p class="doc-prose">
+                      Shows <b>Last full backup</b>, its size and how many archives are kept.
+                    </p>
+                    <ul class="doc-points">
+                      <li>
+                        <b>Back up now</b> takes a full server backup.<br />
+                        On a running server it asks whether to back up now or stop the server first.
+                      </li>
+                      <li>
+                        Maximized, it lists backups under <b>Server</b> and <b>Worlds</b>.<br />
+                        Each can be renamed, tagged and deleted.
+                      </li>
+                      <li><b>restore</b> needs the server stopped.</li>
+                      <li>
+                        <b>schedule</b> opens the Scheduler, where the
+                        <a href="/docs/blocks/action-backup.html">Backup</a> block runs backups on a
+                        timer.
+                      </li>
+                    </ul>
+                  </div>
+                  <div class="doc-figs">
+                    <figure
+                      class="fig fig-ui"
+                      role="img"
+                      aria-label="Backups, with Back up now marked."
+                    >
+                      <div class="fig-ui-title">Backups</div>
+                      <div class="fig-ui-row">
+                        <span class="fig-ui-text">Last full backup</span>
+                      </div>
+                      <div class="fig-ui-row">
+                        <span class="fig-ui-btn is-hit">Back up now</span>
+                      </div>
+                    </figure>
+                  </div>
+                </div>
+              </section>
+              <section
+                class="doc-section block"
+                id="server-config"
+                aria-labelledby="server-config-title"
+              >
+                <div class="band doc-band">
+                  <div class="band-title">
+                    <span class="num">09</span>
+                    <h2 id="server-config-title">Config</h2>
+                  </div>
+                </div>
+                <div class="doc-body">
+                  <p class="doc-prose">
+                    Shows the MOTD as players see it, then the main
+                    <code>server.properties</code> values, as many as fit.
+                  </p>
+                  <ul class="doc-points">
+                    <li>The rest are counted in the last cell, and the RCON password is hidden.</li>
+                    <li>
+                      Click an on/off value to flip it, and a value with fixed choices to cycle
+                      through them.
+                    </li>
+                    <li>Double-click any other value to edit it.</li>
+                    <li>Each change is written to the file at once.</li>
+                    <li>
+                      Maximized, it lists the server, plugin and mod config files, with a search
+                      box.
+                    </li>
+                    <li>
+                      A file opens in a <b>Form</b> or <b>Raw</b> editor, with <b>Save</b> and
+                      <b>Revert</b>.
+                    </li>
+                    <li>A file the form cannot edit safely opens as <b>Raw</b> only.</li>
+                  </ul>
+                  <div class="doc-note" data-tone="note">
+                    <span class="label">Note</span>
+                    <p>On a running server, changes apply after a restart.</p>
+                  </div>
+                </div>
+              </section>
+              <section
+                class="doc-section block"
+                id="notifications"
+                aria-labelledby="notifications-title"
+              >
+                <div class="band doc-band">
+                  <div class="band-title">
+                    <span class="num">10</span>
+                    <h2 id="notifications-title">Notifications</h2>
+                  </div>
+                </div>
+                <div class="doc-body">
+                  <p class="doc-prose">
+                    Lists events as they happen: joins, info, warnings, errors and crashes.
+                  </p>
+                  <ul class="doc-points">
+                    <li>
+                      The filter at the top left narrows it to <b>Joins</b>, <b>Info</b>,
+                      <b>Warn</b> or <b>Errors</b>.
+                    </li>
+                    <li><b>Clear all</b> empties the list.</li>
+                    <li>It keeps the latest 200 until Konnekt closes.</li>
+                  </ul>
+                  <div class="doc-note" data-tone="tip">
+                    <span class="label">Tip</span>
+                    <p>
+                      Which events also raise a bubble or a desktop alert is set in
+                      <a href="/docs/settings/notifications.html">Notifications</a>.
+                    </p>
+                  </div>
+                </div>
+              </section>
+              <section class="doc-section block" id="mods" aria-labelledby="mods-title">
+                <div class="band doc-band">
+                  <div class="band-title">
+                    <span class="num">11</span>
+                    <h2 id="mods-title">Plugins</h2>
+                  </div>
+                </div>
+                <div class="doc-body">
+                  <p class="doc-prose">
+                    Lists the server's installed plugins, or its mods on a server that does not load
+                    plugins, as many as fit.
+                  </p>
+                  <ul class="doc-points">
+                    <li>A green dot is on, a grey one is off, and an orange one has an update.</li>
+                    <li>What does not fit is counted in the last cell.</li>
+                    <li>While the server runs, the tile says <b>restart needed</b> for changes.</li>
+                    <li>
+                      Maximized, each one switches on or off, by renaming its file between
+                      <code>.jar</code> and <code>.jar.disabled</code>.
+                    </li>
+                    <li>
+                      <b>Add Content</b> searches Modrinth, or CurseForge once you add an API key in
+                      Settings, and installs from it.
+                    </li>
+                    <li>
+                      A mod whose author allows downloads on CurseForge only links to its page there
+                      instead.
+                    </li>
+                    <li><b>Add Files</b> adds jars from this computer, in the desktop app.</li>
+                  </ul>
+                </div>
+              </section>
             </div>
-            <div class="doc-body">
-              <p class="doc-prose">
-                Shows the selected server's log as it arrives.<br />
-                Type a command in the field and press <b>Send</b> once the server is running.<br />
-                <b>clr</b> clears the log.<br />
-                The arrow at the top left opens a search box and a level filter: <b>All</b>,
-                <b>Warn</b> or <b>Error</b>.
-              </p>
-              <p class="doc-prose">
-                Maximized, it adds a <b>Commands</b> rail beside the log.<br />
-                Timestamps and the number of lines kept are set in
-                <a href="/docs/settings/console.html">Console</a>.
-              </p>
-            </div>
-          </section>
-
-          <section class="doc-section block" id="overview" aria-labelledby="overview-title">
-            <div class="band doc-band">
-              <div class="band-title">
-                <span class="num">02</span>
-                <h2 id="overview-title">Overview</h2>
-              </div>
-            </div>
-            <div class="doc-body">
-              <p class="doc-prose">
-                Shows the server's state, then <b>Players</b>, <b>TPS</b>, <b>Uptime</b> and
-                <b>Memory</b>.<br />
-                The state reads Online, Offline, Starting, Stopping or Unreachable.
-              </p>
-              <p class="doc-prose">
-                Maximized, it rolls up other tiles.<br />
-                It charts the last hour of CPU, RAM and players.<br />
-                Short views of <b>Players</b>, <b>Active world</b>, <b>Backups</b> and
-                <b>Schedules</b> follow.<br />
-                Each has a button that opens its own tile.<br />
-                Overview only reads from the other tiles and changes nothing in them.
-              </p>
-            </div>
-          </section>
-
-          <section class="doc-section block" id="players" aria-labelledby="players-title">
-            <div class="band doc-band">
-              <div class="band-title">
-                <span class="num">03</span>
-                <h2 id="players-title">Players</h2>
-              </div>
-            </div>
-            <div class="doc-body">
-              <p class="doc-prose">
-                Shows how many players are online and lists them with their operator level.<br />
-                Click a player for their status, OP level, whitelist entry and ban reason.<br />
-                There, <b>kick</b> and <b>ban</b> work on online players and take an optional
-                reason.<br />
-                <b>pardon</b> appears for a banned player.<br />
-                The list refreshes when anyone joins or leaves, and when the server starts or stops.
-              </p>
-              <p class="doc-prose">
-                Maximized, it adds a search box and sorting by <b>Name</b> or <b>OP level</b>.
-              </p>
-            </div>
-          </section>
-
-          <section
-            class="doc-section block"
-            id="quick-commands"
-            aria-labelledby="quick-commands-title"
-          >
-            <div class="band doc-band">
-              <div class="band-title">
-                <span class="num">04</span>
-                <h2 id="quick-commands-title">Commands</h2>
-              </div>
-            </div>
-            <div class="doc-body">
-              <p class="doc-prose">
-                Shows one button per command, and a click runs it on the selected server.<br />
-                A first launch adds six: <b>Start</b>, <b>Stop</b>, <b>Restart</b>,
-                <b>Force Stop</b>, <b>Save All</b> and <b>TPS</b>.<br />
-                <b>Force Stop</b> always asks first.<br />
-                <b>Stop</b> and <b>Restart</b> ask when <b>Confirm before stopping</b> is on in
-                <a href="/docs/settings/general.html#server">General</a>.
-              </p>
-              <p class="doc-prose">
-                Maximized, it lists every button to rename, edit, copy, delete and reorder.<br />
-                Add one by typing a command, picking a preset, or linking a saved command from
-                Kommands.
-              </p>
-            </div>
-          </section>
-
-          <section class="doc-section block" id="performance" aria-labelledby="performance-title">
-            <div class="band doc-band">
-              <div class="band-title">
-                <span class="num">05</span>
-                <h2 id="performance-title">Performance</h2>
-              </div>
-            </div>
-            <div class="doc-body">
-              <p class="doc-prose">
-                Shows <b>TPS</b>, <b>CPU</b> and <b>RAM</b> with a chart of recent samples.<br />
-                Konnekt takes a sample every 10 seconds and keeps the last hour.
-              </p>
-              <p class="doc-prose">
-                Maximized, the chart covers <b>5m</b>, <b>15m</b> or <b>1h</b>.<br />
-                Click a series in its legend to hide it.<br />
-                A table lists each sample, sortable by any column, with a min·avg·max row.
-              </p>
-            </div>
-          </section>
-
-          <section class="doc-section block" id="scheduler" aria-labelledby="scheduler-title">
-            <div class="band doc-band">
-              <div class="band-title">
-                <span class="num">06</span>
-                <h2 id="scheduler-title">Scheduler</h2>
-              </div>
-            </div>
-            <div class="doc-body">
-              <p class="doc-prose">
-                Shows how many graphs are armed and when the next one runs.<br />
-                Maximized, it opens the graph editor.<br />
-                Graphs are covered in <a href="/docs/graphs.html">Graphs</a> and
-                <a href="/docs/scheduler-editor.html">Scheduler editor</a>.
-              </p>
-            </div>
-          </section>
-
-          <section class="doc-section block" id="worlds" aria-labelledby="worlds-title">
-            <div class="band doc-band">
-              <div class="band-title">
-                <span class="num">07</span>
-                <h2 id="worlds-title">Worlds</h2>
-              </div>
-            </div>
-            <div class="doc-body">
-              <p class="doc-prose">
-                Shows how many worlds the server has, their total size and which one is active.
-              </p>
-              <p class="doc-prose">
-                Maximized, it draws each world as a planet in a 3D scene.<br />
-                Click one to open its card: <b>set active</b>, <b>backup</b>, <b>open folder</b>,
-                <b>rename</b>, <b>duplicate</b> and <b>delete</b>.<br />
-                <b>set active</b> on a running server offers to stop it first, and to start it again
-                after.<br />
-                <b>delete</b> is missing for the active world and off while the server runs.<br />
-                The card also lists the world's backups, each with <b>restore</b> and <b>delete</b>.
-              </p>
-            </div>
-          </section>
-
-          <section class="doc-section block" id="backups" aria-labelledby="backups-title">
-            <div class="band doc-band">
-              <div class="band-title">
-                <span class="num">08</span>
-                <h2 id="backups-title">Backups</h2>
-              </div>
-            </div>
-            <div class="doc-body">
-              <p class="doc-prose">
-                Shows <b>Last full backup</b>, its size and how many archives are kept.<br />
-                <b>Back up now</b> takes a full server backup.<br />
-                On a running server it asks whether to back up now or stop the server first.
-              </p>
-              <p class="doc-prose">
-                Maximized, it lists backups under <b>Server</b> and <b>Worlds</b>.<br />
-                Each can be renamed, tagged and deleted.<br />
-                <b>restore</b> needs the server stopped.<br />
-                <b>schedule</b> opens the Scheduler, where the
-                <a href="/docs/blocks/action-backup.html">Backup</a> block runs backups on a timer.
-              </p>
-            </div>
-          </section>
-
-          <section
-            class="doc-section block"
-            id="server-config"
-            aria-labelledby="server-config-title"
-          >
-            <div class="band doc-band">
-              <div class="band-title">
-                <span class="num">09</span>
-                <h2 id="server-config-title">Config</h2>
-              </div>
-            </div>
-            <div class="doc-body">
-              <p class="doc-prose">
-                Shows the MOTD as players see it, then the main
-                <code>server.properties</code> values, as many as fit.<br />
-                The rest are counted in the last cell, and the RCON password is hidden.<br />
-                Click an on/off value to flip it, and a value with fixed choices to cycle through
-                them.<br />
-                Double-click any other value to edit it.<br />
-                Each change is written to the file at once.
-              </p>
-              <p class="doc-prose">
-                Maximized, it lists the server, plugin and mod config files, with a search box.<br />
-                A file opens in a <b>Form</b> or <b>Raw</b> editor, with <b>Save</b> and
-                <b>Revert</b>.<br />
-                A file the form cannot edit safely opens as <b>Raw only</b>.<br />
-                On a running server, changes apply after a restart.
-              </p>
-            </div>
-          </section>
-
-          <section
-            class="doc-section block"
-            id="notifications"
-            aria-labelledby="notifications-title"
-          >
-            <div class="band doc-band">
-              <div class="band-title">
-                <span class="num">10</span>
-                <h2 id="notifications-title">Notifications</h2>
-              </div>
-            </div>
-            <div class="doc-body">
-              <p class="doc-prose">
-                Lists events as they happen: joins, info, warnings, errors and crashes.<br />
-                The filter at the top left narrows it to <b>Joins</b>, <b>Info</b>, <b>Warn</b> or
-                <b>Errors</b>.<br />
-                <b>Clear all</b> empties the list.<br />
-                It keeps the latest 200 until Konnekt closes.<br />
-                Which events also raise a bubble or a desktop alert is set in
-                <a href="/docs/settings/notifications.html">Notifications</a>.
-              </p>
-            </div>
-          </section>
-
-          <section class="doc-section block" id="mods" aria-labelledby="mods-title">
-            <div class="band doc-band">
-              <div class="band-title">
-                <span class="num">11</span>
-                <h2 id="mods-title">Plugins</h2>
-              </div>
-            </div>
-            <div class="doc-body">
-              <p class="doc-prose">
-                Lists the server's installed plugins, or its mods on a server that does not load
-                plugins, as many as fit.<br />
-                A green dot is on, a grey one is off, and an orange one has an update. What does not
-                fit is counted in the last cell.<br />
-                While the server runs, the tile says <b>restart needed for changes</b>.
-              </p>
-              <p class="doc-prose">
-                Maximized, each one switches on or off, by renaming its file between
-                <code>.jar</code> and <code>.jar.disabled</code>.<br />
-                <b>Add Content</b> searches Modrinth, or CurseForge once you add an API key in
-                Settings, and installs from it. A mod whose author allows downloads on CurseForge
-                only links to its page there instead.<br />
-                <b>Add Files</b> adds jars from this computer, in the desktop app.
-              </p>
-            </div>
-          </section>
-
+          </div>
           <nav class="doc-related block" aria-label="Related">
             <div class="shelf-label"><span class="label">Related</span></div>
             <a class="related-link" href="/docs/layouts.html"
               ><span class="kind" data-kind="concept">Concept</span>Tiles and layouts</a
-            >
-            <a class="related-link" href="/docs/settings/appearance.html"
+            ><a class="related-link" href="/docs/settings/appearance.html"
               ><span class="kind" data-kind="settings">Settings</span>Appearance</a
-            >
-            <a class="related-link" href="/docs/first-server.html"
+            ><a class="related-link" href="/docs/first-server.html"
               ><span class="kind" data-kind="guide">Guide</span>Your first server</a
             >
           </nav>
