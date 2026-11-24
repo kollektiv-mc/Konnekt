@@ -134,316 +134,365 @@
               </div>
             </dl>
           </header>
-          <section
-            class="doc-section block"
-            id="before-you-start"
-            aria-labelledby="before-you-start-title"
-          >
-            <div class="band doc-band">
-              <div class="band-title">
-                <span class="num">00</span>
-                <h2 id="before-you-start-title">Before you start</h2>
-              </div>
-            </div>
-            <div class="doc-body">
-              <ul class="doc-checks">
-                <li class="doc-check">
-                  <span class="doc-check-text"
-                    ><span>Konnekt left open</span
-                    ><span class="doc-check-desc"
-                      >Graphs run only while Konnekt is open.<br />
-                      The 6-hour timer lives in memory, so closing Konnekt resets it.</span
-                    ></span
+          <div class="doc-layout">
+            <nav class="doc-toc" aria-label="On this page">
+              <ol>
+                <li>
+                  <a href="#before-you-start"
+                    ><span class="num">00</span><span>Before you start</span></a
                   >
                 </li>
-                <li class="doc-check">
-                  <span class="doc-check-text"
-                    ><span>The scheduler editor</span
-                    ><span class="doc-check-desc"
-                      >Maximize the Scheduler tile to open it.</span
-                    ></span
+                <li>
+                  <a href="#what-you-build"
+                    ><span class="num">01</span><span>What you build</span></a
                   >
                 </li>
-              </ul>
-            </div>
-          </section>
-          <section
-            class="doc-section block"
-            id="what-you-build"
-            aria-labelledby="what-you-build-title"
-          >
-            <div class="band doc-band">
-              <div class="band-title">
-                <span class="num">01</span>
-                <h2 id="what-you-build-title">What you build</h2>
-              </div>
-            </div>
-            <div class="doc-body doc-split">
-              <div class="doc-main">
-                <p class="doc-prose">
-                  Five blocks that warn twice, then restart the server every 6 hours.
-                </p>
-              </div>
-              <div class="doc-figs">
-                <figure
-                  class="fig fig-flow"
-                  role="img"
-                  aria-label="Graph: Interval 360 minutes, then on onComplete, Command say The server restarts in 1 minute., then on onComplete, Delay 50 s, then on onComplete, Command say The server restarts in 10 seconds., then on onComplete, Delay 10 s, then on onComplete, Command Restart Server."
-                >
-                  <div class="fig-node">
-                    <span class="fig-kind">Interval</span><span class="fig-value">360 minutes</span>
-                  </div>
-                  <span class="fig-wire"><span class="fig-port">onComplete</span></span>
-                  <div class="fig-node">
-                    <span class="fig-kind">Command</span
-                    ><span class="fig-value">say The server restarts in 1 minute.</span>
-                  </div>
-                  <span class="fig-wire"><span class="fig-port">onComplete</span></span>
-                  <div class="fig-node">
-                    <span class="fig-kind">Delay</span><span class="fig-value">50 s</span>
-                  </div>
-                  <span class="fig-wire"><span class="fig-port">onComplete</span></span>
-                  <div class="fig-node">
-                    <span class="fig-kind">Command</span
-                    ><span class="fig-value">say The server restarts in 10 seconds.</span>
-                  </div>
-                  <span class="fig-wire"><span class="fig-port">onComplete</span></span>
-                  <div class="fig-node">
-                    <span class="fig-kind">Delay</span><span class="fig-value">10 s</span>
-                  </div>
-                  <span class="fig-wire"><span class="fig-port">onComplete</span></span>
-                  <div class="fig-node">
-                    <span class="fig-kind">Command</span
-                    ><span class="fig-value">Restart Server</span>
-                  </div>
-                </figure>
-                <figure class="fig fig-timeline">
-                  <ol class="fig-timeline-list">
-                    <li class="">
-                      <span class="fig-when">-60 s</span
-                      ><span class="fig-what">say The server restarts in 1 minute</span>
-                    </li>
-                    <li class="">
-                      <span class="fig-when">-10 s</span
-                      ><span class="fig-what">say The server restarts in 10 seconds</span>
-                    </li>
-                    <li class="">
-                      <span class="fig-when">0</span><span class="fig-what">Restart Server</span>
-                    </li>
-                  </ol>
-                </figure>
-              </div>
-            </div>
-          </section>
-          <section
-            class="doc-section block"
-            id="add-the-trigger"
-            aria-labelledby="add-the-trigger-title"
-          >
-            <div class="band doc-band">
-              <div class="band-title">
-                <span class="num">02</span>
-                <h2 id="add-the-trigger-title">Add the trigger</h2>
-              </div>
-            </div>
-            <div class="doc-body doc-split">
-              <div class="doc-main">
-                <ol class="doc-steps">
-                  <li>Open the editor and select <b>Open blocks</b>.</li>
-                  <li>
-                    Under <b>trigger</b>, click
-                    <a href="/docs/blocks/trigger-interval.html">Interval</a>.
-                  </li>
-                  <li>Set <b>Interval (minutes)</b> to <code>360</code>.</li>
-                </ol>
-                <div class="doc-note" data-tone="note">
-                  <span class="label">Note</span>
-                  <p>
-                    The first check that sees the graph on starts the timer.<br />
-                    The first restart comes 6 hours after that.<br />
-                    For fixed times, use
-                    <a href="/docs/blocks/trigger-cron.html">Cron Schedule</a> with
-                    <code>0 */6 * * *</code> instead.
-                  </p>
-                </div>
-              </div>
-              <div class="doc-figs">
-                <figure class="fig fig-flow" role="img" aria-label="Graph: Interval 360 minutes.">
-                  <div class="fig-node is-hit">
-                    <span class="fig-kind">Interval</span><span class="fig-value">360 minutes</span>
-                  </div>
-                </figure>
-              </div>
-            </div>
-          </section>
-          <section
-            class="doc-section block"
-            id="warn-the-players"
-            aria-labelledby="warn-the-players-title"
-          >
-            <div class="band doc-band">
-              <div class="band-title">
-                <span class="num">03</span>
-                <h2 id="warn-the-players-title">Warn the players</h2>
-              </div>
-            </div>
-            <div class="doc-body doc-split">
-              <div class="doc-main">
-                <ol class="doc-steps">
-                  <li>
-                    Add two <a href="/docs/blocks/action-command.html">Command</a> blocks and two
-                    <a href="/docs/blocks/action-delay.html">Delay</a> blocks.
-                  </li>
-                  <li>
-                    On the first <b>Command</b>, set <b>Command</b> to
-                    <code>say The server restarts in 1 minute.</code>
-                  </li>
-                  <li>On the first <b>Delay</b>, set <b>Seconds</b> to <code>50</code>.</li>
-                  <li>
-                    On the second <b>Command</b>, set <b>Command</b> to
-                    <code>say The server restarts in 10 seconds.</code>
-                  </li>
-                  <li>On the second <b>Delay</b>, set <b>Seconds</b> to <code>10</code>.</li>
-                  <li>
-                    Drag from <b>onComplete</b> on <b>Interval</b> to <b>trigger</b> on the first
-                    <b>Command</b>.
-                  </li>
-                  <li>
-                    Wire each remaining block's <b>onComplete</b> to the next block's
-                    <b>trigger</b>, in the order of steps 2 to 5.
-                  </li>
-                </ol>
-                <div class="doc-note" data-tone="note">
-                  <span class="label">Note</span>
-                  <p>
-                    One <b>Delay</b> waits 60 seconds at most, and a longer wait fails.<br />
-                    For an earlier warning, chain more <b>Delay</b> blocks.
-                  </p>
-                </div>
-              </div>
-              <div class="doc-figs">
-                <figure
-                  class="fig fig-flow"
-                  role="img"
-                  aria-label="Graph: Interval 360 minutes, then on onComplete, Command say The server restarts in 1 minute., then on onComplete, Delay 50 s, then on onComplete, Command say The server restarts in 10 seconds., then on onComplete, Delay 10 s."
-                >
-                  <div class="fig-node">
-                    <span class="fig-kind">Interval</span><span class="fig-value">360 minutes</span>
-                  </div>
-                  <span class="fig-wire"><span class="fig-port">onComplete</span></span>
-                  <div class="fig-node is-hit">
-                    <span class="fig-kind">Command</span
-                    ><span class="fig-value">say The server restarts in 1 minute.</span>
-                  </div>
-                  <span class="fig-wire"><span class="fig-port">onComplete</span></span>
-                  <div class="fig-node is-hit">
-                    <span class="fig-kind">Delay</span><span class="fig-value">50 s</span>
-                  </div>
-                  <span class="fig-wire"><span class="fig-port">onComplete</span></span>
-                  <div class="fig-node is-hit">
-                    <span class="fig-kind">Command</span
-                    ><span class="fig-value">say The server restarts in 10 seconds.</span>
-                  </div>
-                  <span class="fig-wire"><span class="fig-port">onComplete</span></span>
-                  <div class="fig-node is-hit">
-                    <span class="fig-kind">Delay</span><span class="fig-value">10 s</span>
-                  </div>
-                </figure>
-              </div>
-            </div>
-          </section>
-          <section
-            class="doc-section block"
-            id="add-the-restart"
-            aria-labelledby="add-the-restart-title"
-          >
-            <div class="band doc-band">
-              <div class="band-title">
-                <span class="num">04</span>
-                <h2 id="add-the-restart-title">Add the restart</h2>
-              </div>
-            </div>
-            <div class="doc-body doc-split">
-              <div class="doc-main">
-                <ol class="doc-steps">
-                  <li>Add a third <b>Command</b>.</li>
-                  <li>Set <b>Command</b> to <b>Restart Server</b>.</li>
-                  <li>
-                    Drag from <b>onComplete</b> on the last <b>Delay</b> to <b>trigger</b> on the
-                    new <b>Command</b>.
-                  </li>
-                </ol>
-                <div class="doc-note" data-tone="note">
-                  <span class="label">Note</span>
-                  <p>
-                    It stops the server, waits for it to exit, and starts it again.<br />
-                    The editor may warn that RCON is not confirmed for this block.<br />
-                    The <code>say</code> lines already warn players through the console.<br />
-                    A warning does not stop the graph from saving or running.
-                  </p>
-                </div>
-              </div>
-              <div class="doc-figs">
-                <figure
-                  class="fig fig-flow"
-                  role="img"
-                  aria-label="Graph: Interval 360 minutes, then on onComplete, Command say The server restarts in 1 minute., then on onComplete, Delay 50 s, then on onComplete, Command say The server restarts in 10 seconds., then on onComplete, Delay 10 s, then on onComplete, Command Restart Server."
-                >
-                  <div class="fig-node">
-                    <span class="fig-kind">Interval</span><span class="fig-value">360 minutes</span>
-                  </div>
-                  <span class="fig-wire"><span class="fig-port">onComplete</span></span>
-                  <div class="fig-node">
-                    <span class="fig-kind">Command</span
-                    ><span class="fig-value">say The server restarts in 1 minute.</span>
-                  </div>
-                  <span class="fig-wire"><span class="fig-port">onComplete</span></span>
-                  <div class="fig-node">
-                    <span class="fig-kind">Delay</span><span class="fig-value">50 s</span>
-                  </div>
-                  <span class="fig-wire"><span class="fig-port">onComplete</span></span>
-                  <div class="fig-node">
-                    <span class="fig-kind">Command</span
-                    ><span class="fig-value">say The server restarts in 10 seconds.</span>
-                  </div>
-                  <span class="fig-wire"><span class="fig-port">onComplete</span></span>
-                  <div class="fig-node">
-                    <span class="fig-kind">Delay</span><span class="fig-value">10 s</span>
-                  </div>
-                  <span class="fig-wire"><span class="fig-port">onComplete</span></span>
-                  <div class="fig-node is-hit">
-                    <span class="fig-kind">Command</span
-                    ><span class="fig-value">Restart Server</span>
-                  </div>
-                </figure>
-              </div>
-            </div>
-          </section>
-          <section class="doc-section block" id="switch-it-on" aria-labelledby="switch-it-on-title">
-            <div class="band doc-band">
-              <div class="band-title">
-                <span class="num">05</span>
-                <h2 id="switch-it-on-title">Switch it on</h2>
-              </div>
-            </div>
-            <div class="doc-body">
-              <ol class="doc-steps">
-                <li>Select <b>Graph actions</b>, then <b>Save</b>.</li>
-                <li>Select <b>[off]</b> so it reads <b>[on]</b>.</li>
+                <li>
+                  <a href="#add-the-trigger"
+                    ><span class="num">02</span><span>Add the trigger</span></a
+                  >
+                </li>
+                <li>
+                  <a href="#warn-the-players"
+                    ><span class="num">03</span><span>Warn the players</span></a
+                  >
+                </li>
+                <li>
+                  <a href="#add-the-restart"
+                    ><span class="num">04</span><span>Add the restart</span></a
+                  >
+                </li>
+                <li>
+                  <a href="#switch-it-on"><span class="num">05</span><span>Switch it on</span></a>
+                </li>
               </ol>
-              <div class="doc-note" data-tone="warn">
-                <span class="label">Heads up</span>
-                <p>
-                  <b>run</b> starts the graph at once: the warnings go out, and the server restarts
-                  a minute later.
-                </p>
-              </div>
-              <div class="doc-note" data-tone="note">
-                <span class="label">Note</span>
-                <p>A new graph starts off, and nothing fires until it is on.</p>
-              </div>
+            </nav>
+            <div class="doc-flow">
+              <section
+                class="doc-section block"
+                id="before-you-start"
+                aria-labelledby="before-you-start-title"
+              >
+                <div class="band doc-band">
+                  <div class="band-title">
+                    <span class="num">00</span>
+                    <h2 id="before-you-start-title">Before you start</h2>
+                  </div>
+                </div>
+                <div class="doc-body">
+                  <ul class="doc-checks">
+                    <li class="doc-check">
+                      <span class="doc-check-text"
+                        ><span>Konnekt left open</span
+                        ><span class="doc-check-desc"
+                          >Graphs run only while Konnekt is open.<br />
+                          The 6-hour timer lives in memory, so closing Konnekt resets it.</span
+                        ></span
+                      >
+                    </li>
+                    <li class="doc-check">
+                      <span class="doc-check-text"
+                        ><span>The scheduler editor</span
+                        ><span class="doc-check-desc"
+                          >Maximize the Scheduler tile to open it.</span
+                        ></span
+                      >
+                    </li>
+                  </ul>
+                </div>
+              </section>
+              <section
+                class="doc-section block"
+                id="what-you-build"
+                aria-labelledby="what-you-build-title"
+              >
+                <div class="band doc-band">
+                  <div class="band-title">
+                    <span class="num">01</span>
+                    <h2 id="what-you-build-title">What you build</h2>
+                  </div>
+                </div>
+                <div class="doc-body doc-split">
+                  <div class="doc-main">
+                    <p class="doc-prose">
+                      Five blocks that warn twice, then restart the server every 6 hours.
+                    </p>
+                  </div>
+                  <div class="doc-figs">
+                    <figure
+                      class="fig fig-flow"
+                      role="img"
+                      aria-label="Graph: Interval 360 minutes, then on onComplete, Command say The server restarts in 1 minute., then on onComplete, Delay 50 s, then on onComplete, Command say The server restarts in 10 seconds., then on onComplete, Delay 10 s, then on onComplete, Command Restart Server."
+                    >
+                      <div class="fig-node">
+                        <span class="fig-kind">Interval</span
+                        ><span class="fig-value">360 minutes</span>
+                      </div>
+                      <span class="fig-wire"><span class="fig-port">onComplete</span></span>
+                      <div class="fig-node">
+                        <span class="fig-kind">Command</span
+                        ><span class="fig-value">say The server restarts in 1 minute.</span>
+                      </div>
+                      <span class="fig-wire"><span class="fig-port">onComplete</span></span>
+                      <div class="fig-node">
+                        <span class="fig-kind">Delay</span><span class="fig-value">50 s</span>
+                      </div>
+                      <span class="fig-wire"><span class="fig-port">onComplete</span></span>
+                      <div class="fig-node">
+                        <span class="fig-kind">Command</span
+                        ><span class="fig-value">say The server restarts in 10 seconds.</span>
+                      </div>
+                      <span class="fig-wire"><span class="fig-port">onComplete</span></span>
+                      <div class="fig-node">
+                        <span class="fig-kind">Delay</span><span class="fig-value">10 s</span>
+                      </div>
+                      <span class="fig-wire"><span class="fig-port">onComplete</span></span>
+                      <div class="fig-node">
+                        <span class="fig-kind">Command</span
+                        ><span class="fig-value">Restart Server</span>
+                      </div>
+                    </figure>
+                    <figure class="fig fig-timeline">
+                      <ol class="fig-timeline-list">
+                        <li class="">
+                          <span class="fig-when">-60 s</span
+                          ><span class="fig-what">say The server restarts in 1 minute</span>
+                        </li>
+                        <li class="">
+                          <span class="fig-when">-10 s</span
+                          ><span class="fig-what">say The server restarts in 10 seconds</span>
+                        </li>
+                        <li class="">
+                          <span class="fig-when">0</span
+                          ><span class="fig-what">Restart Server</span>
+                        </li>
+                      </ol>
+                    </figure>
+                  </div>
+                </div>
+              </section>
+              <section
+                class="doc-section block"
+                id="add-the-trigger"
+                aria-labelledby="add-the-trigger-title"
+              >
+                <div class="band doc-band">
+                  <div class="band-title">
+                    <span class="num">02</span>
+                    <h2 id="add-the-trigger-title">Add the trigger</h2>
+                  </div>
+                </div>
+                <div class="doc-body doc-split">
+                  <div class="doc-main">
+                    <ol class="doc-steps">
+                      <li>Open the editor and select <b>Open blocks</b>.</li>
+                      <li>
+                        Under <b>trigger</b>, click
+                        <a href="/docs/blocks/trigger-interval.html">Interval</a>.
+                      </li>
+                      <li>Set <b>Interval (minutes)</b> to <code>360</code>.</li>
+                    </ol>
+                    <div class="doc-note" data-tone="note">
+                      <span class="label">Note</span>
+                      <p>
+                        The first check that sees the graph on starts the timer.<br />
+                        The first restart comes 6 hours after that.<br />
+                        For fixed times, use
+                        <a href="/docs/blocks/trigger-cron.html">Cron Schedule</a> with
+                        <code>0 */6 * * *</code> instead.
+                      </p>
+                    </div>
+                  </div>
+                  <div class="doc-figs">
+                    <figure
+                      class="fig fig-flow"
+                      role="img"
+                      aria-label="Graph: Interval 360 minutes."
+                    >
+                      <div class="fig-node is-hit">
+                        <span class="fig-kind">Interval</span
+                        ><span class="fig-value">360 minutes</span>
+                      </div>
+                    </figure>
+                  </div>
+                </div>
+              </section>
+              <section
+                class="doc-section block"
+                id="warn-the-players"
+                aria-labelledby="warn-the-players-title"
+              >
+                <div class="band doc-band">
+                  <div class="band-title">
+                    <span class="num">03</span>
+                    <h2 id="warn-the-players-title">Warn the players</h2>
+                  </div>
+                </div>
+                <div class="doc-body doc-split">
+                  <div class="doc-main">
+                    <ol class="doc-steps">
+                      <li>
+                        Add two <a href="/docs/blocks/action-command.html">Command</a> blocks and
+                        two <a href="/docs/blocks/action-delay.html">Delay</a> blocks.
+                      </li>
+                      <li>
+                        On the first <b>Command</b>, set <b>Command</b> to
+                        <code>say The server restarts in 1 minute.</code>
+                      </li>
+                      <li>On the first <b>Delay</b>, set <b>Seconds</b> to <code>50</code>.</li>
+                      <li>
+                        On the second <b>Command</b>, set <b>Command</b> to
+                        <code>say The server restarts in 10 seconds.</code>
+                      </li>
+                      <li>On the second <b>Delay</b>, set <b>Seconds</b> to <code>10</code>.</li>
+                      <li>
+                        Drag from <b>onComplete</b> on <b>Interval</b> to <b>trigger</b> on the
+                        first <b>Command</b>.
+                      </li>
+                      <li>
+                        Wire each remaining block's <b>onComplete</b> to the next block's
+                        <b>trigger</b>, in the order of steps 2 to 5.
+                      </li>
+                    </ol>
+                    <div class="doc-note" data-tone="note">
+                      <span class="label">Note</span>
+                      <p>
+                        One <b>Delay</b> waits 60 seconds at most, and a longer wait fails.<br />
+                        For an earlier warning, chain more <b>Delay</b> blocks.
+                      </p>
+                    </div>
+                  </div>
+                  <div class="doc-figs">
+                    <figure
+                      class="fig fig-flow"
+                      role="img"
+                      aria-label="Graph: Interval 360 minutes, then on onComplete, Command say The server restarts in 1 minute., then on onComplete, Delay 50 s, then on onComplete, Command say The server restarts in 10 seconds., then on onComplete, Delay 10 s."
+                    >
+                      <div class="fig-node">
+                        <span class="fig-kind">Interval</span
+                        ><span class="fig-value">360 minutes</span>
+                      </div>
+                      <span class="fig-wire"><span class="fig-port">onComplete</span></span>
+                      <div class="fig-node is-hit">
+                        <span class="fig-kind">Command</span
+                        ><span class="fig-value">say The server restarts in 1 minute.</span>
+                      </div>
+                      <span class="fig-wire"><span class="fig-port">onComplete</span></span>
+                      <div class="fig-node is-hit">
+                        <span class="fig-kind">Delay</span><span class="fig-value">50 s</span>
+                      </div>
+                      <span class="fig-wire"><span class="fig-port">onComplete</span></span>
+                      <div class="fig-node is-hit">
+                        <span class="fig-kind">Command</span
+                        ><span class="fig-value">say The server restarts in 10 seconds.</span>
+                      </div>
+                      <span class="fig-wire"><span class="fig-port">onComplete</span></span>
+                      <div class="fig-node is-hit">
+                        <span class="fig-kind">Delay</span><span class="fig-value">10 s</span>
+                      </div>
+                    </figure>
+                  </div>
+                </div>
+              </section>
+              <section
+                class="doc-section block"
+                id="add-the-restart"
+                aria-labelledby="add-the-restart-title"
+              >
+                <div class="band doc-band">
+                  <div class="band-title">
+                    <span class="num">04</span>
+                    <h2 id="add-the-restart-title">Add the restart</h2>
+                  </div>
+                </div>
+                <div class="doc-body doc-split">
+                  <div class="doc-main">
+                    <ol class="doc-steps">
+                      <li>Add a third <b>Command</b>.</li>
+                      <li>Set <b>Command</b> to <b>Restart Server</b>.</li>
+                      <li>
+                        Drag from <b>onComplete</b> on the last <b>Delay</b> to <b>trigger</b> on
+                        the new <b>Command</b>.
+                      </li>
+                    </ol>
+                    <div class="doc-note" data-tone="note">
+                      <span class="label">Note</span>
+                      <p>
+                        It stops the server, waits for it to exit, and starts it again.<br />
+                        The editor may warn that RCON is not confirmed for this block.<br />
+                        The <code>say</code> lines already warn players through the console.<br />
+                        A warning does not stop the graph from saving or running.
+                      </p>
+                    </div>
+                  </div>
+                  <div class="doc-figs">
+                    <figure
+                      class="fig fig-flow"
+                      role="img"
+                      aria-label="Graph: Interval 360 minutes, then on onComplete, Command say The server restarts in 1 minute., then on onComplete, Delay 50 s, then on onComplete, Command say The server restarts in 10 seconds., then on onComplete, Delay 10 s, then on onComplete, Command Restart Server."
+                    >
+                      <div class="fig-node">
+                        <span class="fig-kind">Interval</span
+                        ><span class="fig-value">360 minutes</span>
+                      </div>
+                      <span class="fig-wire"><span class="fig-port">onComplete</span></span>
+                      <div class="fig-node">
+                        <span class="fig-kind">Command</span
+                        ><span class="fig-value">say The server restarts in 1 minute.</span>
+                      </div>
+                      <span class="fig-wire"><span class="fig-port">onComplete</span></span>
+                      <div class="fig-node">
+                        <span class="fig-kind">Delay</span><span class="fig-value">50 s</span>
+                      </div>
+                      <span class="fig-wire"><span class="fig-port">onComplete</span></span>
+                      <div class="fig-node">
+                        <span class="fig-kind">Command</span
+                        ><span class="fig-value">say The server restarts in 10 seconds.</span>
+                      </div>
+                      <span class="fig-wire"><span class="fig-port">onComplete</span></span>
+                      <div class="fig-node">
+                        <span class="fig-kind">Delay</span><span class="fig-value">10 s</span>
+                      </div>
+                      <span class="fig-wire"><span class="fig-port">onComplete</span></span>
+                      <div class="fig-node is-hit">
+                        <span class="fig-kind">Command</span
+                        ><span class="fig-value">Restart Server</span>
+                      </div>
+                    </figure>
+                  </div>
+                </div>
+              </section>
+              <section
+                class="doc-section block"
+                id="switch-it-on"
+                aria-labelledby="switch-it-on-title"
+              >
+                <div class="band doc-band">
+                  <div class="band-title">
+                    <span class="num">05</span>
+                    <h2 id="switch-it-on-title">Switch it on</h2>
+                  </div>
+                </div>
+                <div class="doc-body">
+                  <ol class="doc-steps">
+                    <li>Select <b>Graph actions</b>, then <b>Save</b>.</li>
+                    <li>Select <b>[off]</b> so it reads <b>[on]</b>.</li>
+                  </ol>
+                  <div class="doc-note" data-tone="warn">
+                    <span class="label">Heads up</span>
+                    <p>
+                      <b>run</b> starts the graph at once: the warnings go out, and the server
+                      restarts a minute later.
+                    </p>
+                  </div>
+                  <div class="doc-note" data-tone="note">
+                    <span class="label">Note</span>
+                    <p>A new graph starts off, and nothing fires until it is on.</p>
+                  </div>
+                </div>
+              </section>
             </div>
-          </section>
+          </div>
           <nav class="doc-related block" aria-label="Related">
             <div class="shelf-label"><span class="label">Related</span></div>
             <a class="related-link" href="/docs/blocks/trigger-interval.html"

@@ -130,287 +130,323 @@
               </div>
             </dl>
           </header>
-          <section class="doc-section block" id="grid" aria-labelledby="grid-title">
-            <div class="band doc-band">
-              <div class="band-title">
-                <span class="num">01</span>
-                <h2 id="grid-title">The grid</h2>
-              </div>
-            </div>
-            <div class="doc-body doc-split">
-              <div class="doc-main">
-                <ul class="doc-points">
-                  <li>The <b>Tiles</b> section of the navbar lists every tile.</li>
-                  <li>Drag a row onto the grid to place the tile where you drop it.</li>
-                  <li>Shift-click a row to place it without dragging.</li>
-                  <li>A plain click on a row maximizes the tile instead.</li>
-                  <li>Drag rows inside the section to change their order.</li>
-                  <li>Drag a tile by its header to move it.</li>
-                  <li>Drag its bottom-right corner to resize it.</li>
-                  <li>
-                    Remove a tile with the X in its header, or right-click the header and choose
-                    <b>Remove</b>.
-                  </li>
-                  <li>
-                    Double-click a tile's header, or press its maximize button, to fill the
-                    dashboard with it.<br />
-                    Press <b>Esc</b> to return.
-                  </li>
-                </ul>
-                <div class="doc-table-wrap">
-                  <table class="doc-table">
-                    <thead>
-                      <tr>
-                        <th scope="col">Size</th>
-                        <th scope="col">Columns</th>
-                        <th scope="col">Rows</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <tr>
-                        <td>New tile</td>
-                        <td><code>3</code></td>
-                        <td><code>8</code></td>
-                      </tr>
-                      <tr>
-                        <td>Smallest</td>
-                        <td><code>2</code></td>
-                        <td><code>4</code></td>
-                      </tr>
-                      <tr>
-                        <td>Largest</td>
-                        <td><code>6</code></td>
-                        <td><code>16</code></td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-                <ul class="doc-points">
-                  <li>The grid has six columns, and each row is <code>40 px</code> high.</li>
-                  <li>Tiles snap to those cells and settle upward, leaving no gap over a tile.</li>
-                </ul>
-              </div>
-              <div class="doc-figs">
-                <figure class="fig fig-ui" role="img" aria-label="Tiles.">
-                  <div class="fig-ui-title">Tiles</div>
-                  <div class="fig-ui-row"><span class="fig-ui-text">Console</span></div>
-                  <div class="fig-ui-row"><span class="fig-ui-text">Overview</span></div>
-                  <div class="fig-ui-row"><span class="fig-ui-text">Players</span></div>
-                </figure>
-              </div>
-            </div>
-          </section>
-          <section class="doc-section block" id="tile-layout" aria-labelledby="tile-layout-title">
-            <div class="band doc-band">
-              <div class="band-title">
-                <span class="num">02</span>
-                <h2 id="tile-layout-title">Layout per tile</h2>
-              </div>
-            </div>
-            <div class="doc-body doc-split">
-              <div class="doc-main">
-                <ul class="doc-points">
-                  <li>
-                    Right-click a tile's header and choose <b>Layout</b>, then <b>Detailed</b>,
-                    <b>Default</b> or <b>Compact</b>.
-                  </li>
-                  <li><b>Default</b> sets the key figure large over the detail.</li>
-                  <li><b>Detailed</b> sets it small and packs in more.</li>
-                  <li><b>Compact</b> keeps the figure alone and spreads it over the tile.</li>
-                  <li>
-                    In Console, <b>Detailed</b> tightens the line spacing.<br />
-                    <b>Compact</b> shows the notable lines and folds each run of the rest into one
-                    row.
-                  </li>
-                  <li>Commands, Config and Notifications have no <b>Layout</b> entry.</li>
-                  <li>A maximized tile ignores it.</li>
-                  <li>
-                    Each tile keeps its own choice, and applying a saved layout never changes it.
-                  </li>
-                </ul>
-                <div class="doc-note" data-tone="tip">
-                  <span class="label">Tip</span>
-                  <p>
-                    The Classic tile faces setting in
-                    <a href="/docs/settings/appearance.html#advanced">Appearance</a> replaces these
-                    faces.
-                  </p>
-                </div>
-              </div>
-              <div class="doc-figs">
-                <figure class="fig fig-ui" role="img" aria-label="Right-click on a tile header.">
-                  <div class="fig-ui-title">Right-click on a tile header</div>
-                  <div class="fig-ui-row">
-                    <span class="fig-ui-text">Layout</span><span class="fig-ui-btn">Detailed</span
-                    ><span class="fig-ui-btn">Default</span><span class="fig-ui-btn">Compact</span>
-                  </div>
-                  <div class="fig-ui-row"><span class="fig-ui-text">Maximize</span></div>
-                  <div class="fig-ui-row"><span class="fig-ui-text">Remove</span></div>
-                </figure>
-              </div>
-            </div>
-          </section>
-          <section class="doc-section block" id="saved" aria-labelledby="saved-title">
-            <div class="band doc-band">
-              <div class="band-title">
-                <span class="num">03</span>
-                <h2 id="saved-title">Saved layouts</h2>
-              </div>
-            </div>
-            <div class="doc-body doc-split">
-              <div class="doc-main">
-                <ul class="doc-points">
-                  <li>
-                    The <b>Layouts</b> section of the navbar lists them, and starts collapsed.
-                  </li>
-                  <li>Default, Console Focus, Compact and Essentials come with Konnekt.</li>
-                  <li>A layout holds which tiles are on the grid, and where.</li>
-                  <li>
-                    Applying one removes any tile it does not mention, which stays in the
-                    <b>Tiles</b> section to add back.
-                  </li>
-                </ul>
-                <div class="doc-table-wrap">
-                  <table class="doc-table">
-                    <thead>
-                      <tr>
-                        <th scope="col">Layout</th>
-                        <th scope="col">Holds</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <tr>
-                        <td><b>Default</b></td>
-                        <td>Every tile, with room to spare.</td>
-                      </tr>
-                      <tr>
-                        <td><b>Console Focus</b></td>
-                        <td>
-                          The console with most of the screen, beside Overview, Commands and
-                          Players.
-                        </td>
-                      </tr>
-                      <tr>
-                        <td><b>Compact</b></td>
-                        <td>Every tile on one screen.</td>
-                      </tr>
-                      <tr>
-                        <td><b>Essentials</b></td>
-                        <td>
-                          Console, Commands, Overview, Performance, Players and Notifications on one
-                          screen, and nothing else.
-                        </td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-                <ol class="doc-steps">
-                  <li>Click a name under <b>Layouts</b> to apply it.</li>
-                </ol>
-                <p class="doc-prose">To save your own:</p>
-                <ol class="doc-steps">
-                  <li>Arrange the grid.</li>
-                  <li>Type a name in the field under the list.</li>
-                  <li>Press <b>Enter</b> or select <b>Save</b>.</li>
-                </ol>
-                <ul class="doc-points">
-                  <li>
-                    An empty field saves over the highlighted layout, whose name the field shows.
-                  </li>
-                  <li>A name that exists is replaced.</li>
-                  <li>The X beside a name deletes it, except on Default.</li>
-                </ul>
-                <div class="doc-note" data-tone="warn">
-                  <span class="label">Heads up</span>
-                  <p>
-                    <b>↺ Reset to defaults</b> asks for a second click, labelled
-                    <b>↺ Confirm reset</b>, and disarms itself after <code>4 s</code>.<br />
-                    It rewrites the four layouts that come with Konnekt and applies Default.<br />
-                    Layouts saved under other names stay.
-                  </p>
-                </div>
-                <div class="doc-note" data-tone="note">
-                  <span class="label">Note</span>
-                  <p>
-                    The layouts that come with Konnekt are written once, on first launch.<br />
-                    A newer version's take effect after a reset.
-                  </p>
-                </div>
-              </div>
-              <div class="doc-figs">
-                <figure class="fig fig-ui" role="img" aria-label="Layouts, with Save marked.">
-                  <div class="fig-ui-title">Layouts</div>
-                  <div class="fig-ui-row">
-                    <span class="fig-ui-text">Default</span
-                    ><span class="fig-ui-text">Console Focus</span
-                    ><span class="fig-ui-text">Compact</span
-                    ><span class="fig-ui-text">Essentials</span>
-                  </div>
-                  <div class="fig-ui-row">
-                    <span class="fig-ui-field">Preset name...</span
-                    ><span class="fig-ui-btn is-hit">Save</span>
-                  </div>
-                  <div class="fig-ui-row"><span class="fig-ui-btn">↺ Reset to defaults</span></div>
-                </figure>
-              </div>
-            </div>
-          </section>
-          <section class="doc-section block" id="storage" aria-labelledby="storage-title">
-            <div class="band doc-band">
-              <div class="band-title">
-                <span class="num">04</span>
-                <h2 id="storage-title">What is saved</h2>
-              </div>
-            </div>
-            <div class="doc-body">
-              <div class="doc-table-wrap">
-                <table class="doc-table">
-                  <thead>
-                    <tr>
-                      <th scope="col">Item</th>
-                      <th scope="col">Saved</th>
-                      <th scope="col">File</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr>
-                      <td>Positions and sizes</td>
-                      <td>After a drop, a resize, or applying a layout.</td>
-                      <td><code>active_layout.json</code></td>
-                    </tr>
-                    <tr>
-                      <td>Tiles on the grid</td>
-                      <td>When you add or remove one.</td>
-                      <td><code>active_tiles.json</code></td>
-                    </tr>
-                    <tr>
-                      <td>Layout per tile</td>
-                      <td>When you choose one.</td>
-                      <td><code>tile_layouts.json</code></td>
-                    </tr>
-                    <tr>
-                      <td>Saved layouts</td>
-                      <td>When you save, delete or reset.</td>
-                      <td><code>layout_presets.json</code></td>
-                    </tr>
-                    <tr>
-                      <td>Order of the Tiles section</td>
-                      <td>When you drop a row.</td>
-                      <td><code>app_settings.json</code></td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-              <ul class="doc-points">
-                <li>The files sit in the data folder and are read again on the next launch.</li>
+          <div class="doc-layout">
+            <nav class="doc-toc" aria-label="On this page">
+              <ol>
                 <li>
-                  One grid serves every server: switching servers keeps the arrangement and reloads
-                  each tile.
+                  <a href="#grid"><span class="num">01</span><span>The grid</span></a>
                 </li>
-                <li>A first launch puts all eleven tiles on the grid in the Default layout.</li>
-              </ul>
+                <li>
+                  <a href="#tile-layout"><span class="num">02</span><span>Layout per tile</span></a>
+                </li>
+                <li>
+                  <a href="#saved"><span class="num">03</span><span>Saved layouts</span></a>
+                </li>
+                <li>
+                  <a href="#storage"><span class="num">04</span><span>What is saved</span></a>
+                </li>
+              </ol>
+            </nav>
+            <div class="doc-flow">
+              <section class="doc-section block" id="grid" aria-labelledby="grid-title">
+                <div class="band doc-band">
+                  <div class="band-title">
+                    <span class="num">01</span>
+                    <h2 id="grid-title">The grid</h2>
+                  </div>
+                </div>
+                <div class="doc-body doc-split">
+                  <div class="doc-main">
+                    <ul class="doc-points">
+                      <li>The <b>Tiles</b> section of the navbar lists every tile.</li>
+                      <li>Drag a row onto the grid to place the tile where you drop it.</li>
+                      <li>Shift-click a row to place it without dragging.</li>
+                      <li>A plain click on a row maximizes the tile instead.</li>
+                      <li>Drag rows inside the section to change their order.</li>
+                      <li>Drag a tile by its header to move it.</li>
+                      <li>Drag its bottom-right corner to resize it.</li>
+                      <li>
+                        Remove a tile with the X in its header, or right-click the header and choose
+                        <b>Remove</b>.
+                      </li>
+                      <li>
+                        Double-click a tile's header, or press its maximize button, to fill the
+                        dashboard with it.<br />
+                        Press <b>Esc</b> to return.
+                      </li>
+                    </ul>
+                    <div class="doc-table-wrap">
+                      <table class="doc-table">
+                        <thead>
+                          <tr>
+                            <th scope="col">Size</th>
+                            <th scope="col">Columns</th>
+                            <th scope="col">Rows</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <tr>
+                            <td>New tile</td>
+                            <td><code>3</code></td>
+                            <td><code>8</code></td>
+                          </tr>
+                          <tr>
+                            <td>Smallest</td>
+                            <td><code>2</code></td>
+                            <td><code>4</code></td>
+                          </tr>
+                          <tr>
+                            <td>Largest</td>
+                            <td><code>6</code></td>
+                            <td><code>16</code></td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                    <ul class="doc-points">
+                      <li>The grid has six columns, and each row is <code>40 px</code> high.</li>
+                      <li>
+                        Tiles snap to those cells and settle upward, leaving no gap over a tile.
+                      </li>
+                    </ul>
+                  </div>
+                  <div class="doc-figs">
+                    <figure class="fig fig-ui" role="img" aria-label="Tiles.">
+                      <div class="fig-ui-title">Tiles</div>
+                      <div class="fig-ui-row"><span class="fig-ui-text">Console</span></div>
+                      <div class="fig-ui-row"><span class="fig-ui-text">Overview</span></div>
+                      <div class="fig-ui-row"><span class="fig-ui-text">Players</span></div>
+                    </figure>
+                  </div>
+                </div>
+              </section>
+              <section
+                class="doc-section block"
+                id="tile-layout"
+                aria-labelledby="tile-layout-title"
+              >
+                <div class="band doc-band">
+                  <div class="band-title">
+                    <span class="num">02</span>
+                    <h2 id="tile-layout-title">Layout per tile</h2>
+                  </div>
+                </div>
+                <div class="doc-body doc-split">
+                  <div class="doc-main">
+                    <ul class="doc-points">
+                      <li>
+                        Right-click a tile's header and choose <b>Layout</b>, then <b>Detailed</b>,
+                        <b>Default</b> or <b>Compact</b>.
+                      </li>
+                      <li><b>Default</b> sets the key figure large over the detail.</li>
+                      <li><b>Detailed</b> sets it small and packs in more.</li>
+                      <li><b>Compact</b> keeps the figure alone and spreads it over the tile.</li>
+                      <li>
+                        In Console, <b>Detailed</b> tightens the line spacing.<br />
+                        <b>Compact</b> shows the notable lines and folds each run of the rest into
+                        one row.
+                      </li>
+                      <li>Commands, Config and Notifications have no <b>Layout</b> entry.</li>
+                      <li>A maximized tile ignores it.</li>
+                      <li>
+                        Each tile keeps its own choice, and applying a saved layout never changes
+                        it.
+                      </li>
+                    </ul>
+                    <div class="doc-note" data-tone="tip">
+                      <span class="label">Tip</span>
+                      <p>
+                        The Classic tile faces setting in
+                        <a href="/docs/settings/appearance.html#advanced">Appearance</a> replaces
+                        these faces.
+                      </p>
+                    </div>
+                  </div>
+                  <div class="doc-figs">
+                    <figure
+                      class="fig fig-ui"
+                      role="img"
+                      aria-label="Right-click on a tile header."
+                    >
+                      <div class="fig-ui-title">Right-click on a tile header</div>
+                      <div class="fig-ui-row">
+                        <span class="fig-ui-text">Layout</span
+                        ><span class="fig-ui-btn">Detailed</span
+                        ><span class="fig-ui-btn">Default</span
+                        ><span class="fig-ui-btn">Compact</span>
+                      </div>
+                      <div class="fig-ui-row"><span class="fig-ui-text">Maximize</span></div>
+                      <div class="fig-ui-row"><span class="fig-ui-text">Remove</span></div>
+                    </figure>
+                  </div>
+                </div>
+              </section>
+              <section class="doc-section block" id="saved" aria-labelledby="saved-title">
+                <div class="band doc-band">
+                  <div class="band-title">
+                    <span class="num">03</span>
+                    <h2 id="saved-title">Saved layouts</h2>
+                  </div>
+                </div>
+                <div class="doc-body doc-split">
+                  <div class="doc-main">
+                    <ul class="doc-points">
+                      <li>
+                        The <b>Layouts</b> section of the navbar lists them, and starts collapsed.
+                      </li>
+                      <li>Default, Console Focus, Compact and Essentials come with Konnekt.</li>
+                      <li>A layout holds which tiles are on the grid, and where.</li>
+                      <li>
+                        Applying one removes any tile it does not mention, which stays in the
+                        <b>Tiles</b> section to add back.
+                      </li>
+                    </ul>
+                    <div class="doc-table-wrap">
+                      <table class="doc-table">
+                        <thead>
+                          <tr>
+                            <th scope="col">Layout</th>
+                            <th scope="col">Holds</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <tr>
+                            <td><b>Default</b></td>
+                            <td>Every tile, with room to spare.</td>
+                          </tr>
+                          <tr>
+                            <td><b>Console Focus</b></td>
+                            <td>
+                              The console with most of the screen, beside Overview, Commands and
+                              Players.
+                            </td>
+                          </tr>
+                          <tr>
+                            <td><b>Compact</b></td>
+                            <td>Every tile on one screen.</td>
+                          </tr>
+                          <tr>
+                            <td><b>Essentials</b></td>
+                            <td>
+                              Console, Commands, Overview, Performance, Players and Notifications on
+                              one screen, and nothing else.
+                            </td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                    <ol class="doc-steps">
+                      <li>Click a name under <b>Layouts</b> to apply it.</li>
+                    </ol>
+                    <p class="doc-prose">To save your own:</p>
+                    <ol class="doc-steps">
+                      <li>Arrange the grid.</li>
+                      <li>Type a name in the field under the list.</li>
+                      <li>Press <b>Enter</b> or select <b>Save</b>.</li>
+                    </ol>
+                    <ul class="doc-points">
+                      <li>
+                        An empty field saves over the highlighted layout, whose name the field
+                        shows.
+                      </li>
+                      <li>A name that exists is replaced.</li>
+                      <li>The X beside a name deletes it, except on Default.</li>
+                    </ul>
+                    <div class="doc-note" data-tone="warn">
+                      <span class="label">Heads up</span>
+                      <p>
+                        <b>↺ Reset to defaults</b> asks for a second click, labelled
+                        <b>↺ Confirm reset</b>, and disarms itself after <code>4 s</code>.<br />
+                        It rewrites the four layouts that come with Konnekt and applies Default.<br />
+                        Layouts saved under other names stay.
+                      </p>
+                    </div>
+                    <div class="doc-note" data-tone="note">
+                      <span class="label">Note</span>
+                      <p>
+                        The layouts that come with Konnekt are written once, on first launch.<br />
+                        A newer version's take effect after a reset.
+                      </p>
+                    </div>
+                  </div>
+                  <div class="doc-figs">
+                    <figure class="fig fig-ui" role="img" aria-label="Layouts, with Save marked.">
+                      <div class="fig-ui-title">Layouts</div>
+                      <div class="fig-ui-row">
+                        <span class="fig-ui-text">Default</span
+                        ><span class="fig-ui-text">Console Focus</span
+                        ><span class="fig-ui-text">Compact</span
+                        ><span class="fig-ui-text">Essentials</span>
+                      </div>
+                      <div class="fig-ui-row">
+                        <span class="fig-ui-field">Preset name...</span
+                        ><span class="fig-ui-btn is-hit">Save</span>
+                      </div>
+                      <div class="fig-ui-row">
+                        <span class="fig-ui-btn">↺ Reset to defaults</span>
+                      </div>
+                    </figure>
+                  </div>
+                </div>
+              </section>
+              <section class="doc-section block" id="storage" aria-labelledby="storage-title">
+                <div class="band doc-band">
+                  <div class="band-title">
+                    <span class="num">04</span>
+                    <h2 id="storage-title">What is saved</h2>
+                  </div>
+                </div>
+                <div class="doc-body">
+                  <div class="doc-table-wrap">
+                    <table class="doc-table">
+                      <thead>
+                        <tr>
+                          <th scope="col">Item</th>
+                          <th scope="col">Saved</th>
+                          <th scope="col">File</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr>
+                          <td>Positions and sizes</td>
+                          <td>After a drop, a resize, or applying a layout.</td>
+                          <td><code>active_layout.json</code></td>
+                        </tr>
+                        <tr>
+                          <td>Tiles on the grid</td>
+                          <td>When you add or remove one.</td>
+                          <td><code>active_tiles.json</code></td>
+                        </tr>
+                        <tr>
+                          <td>Layout per tile</td>
+                          <td>When you choose one.</td>
+                          <td><code>tile_layouts.json</code></td>
+                        </tr>
+                        <tr>
+                          <td>Saved layouts</td>
+                          <td>When you save, delete or reset.</td>
+                          <td><code>layout_presets.json</code></td>
+                        </tr>
+                        <tr>
+                          <td>Order of the Tiles section</td>
+                          <td>When you drop a row.</td>
+                          <td><code>app_settings.json</code></td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                  <ul class="doc-points">
+                    <li>The files sit in the data folder and are read again on the next launch.</li>
+                    <li>
+                      One grid serves every server: switching servers keeps the arrangement and
+                      reloads each tile.
+                    </li>
+                    <li>A first launch puts all eleven tiles on the grid in the Default layout.</li>
+                  </ul>
+                </div>
+              </section>
             </div>
-          </section>
+          </div>
           <nav class="doc-related block" aria-label="Related">
             <div class="shelf-label"><span class="label">Related</span></div>
             <a class="related-link" href="/docs/tiles.html"

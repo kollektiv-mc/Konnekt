@@ -132,188 +132,223 @@
               </div>
             </dl>
           </header>
-          <section
-            class="doc-section block"
-            id="before-you-start"
-            aria-labelledby="before-you-start-title"
-          >
-            <div class="band doc-band">
-              <div class="band-title">
-                <span class="num">00</span>
-                <h2 id="before-you-start-title">Before you start</h2>
-              </div>
-            </div>
-            <div class="doc-body">
-              <ul class="doc-checks">
-                <li class="doc-check">
-                  <span class="doc-check-text"
-                    ><span>Konnekt left open</span
-                    ><span class="doc-check-desc"
-                      >Graphs run only while Konnekt is open.</span
-                    ></span
+          <div class="doc-layout">
+            <nav class="doc-toc" aria-label="On this page">
+              <ol>
+                <li>
+                  <a href="#before-you-start"
+                    ><span class="num">00</span><span>Before you start</span></a
                   >
                 </li>
-                <li class="doc-check">
-                  <span class="doc-check-text"
-                    ><span>The scheduler editor</span
-                    ><span class="doc-check-desc"
-                      >Maximize the Scheduler tile to open it.</span
-                    ></span
+                <li>
+                  <a href="#what-you-build"
+                    ><span class="num">01</span><span>What you build</span></a
                   >
                 </li>
-              </ul>
-            </div>
-          </section>
-          <section
-            class="doc-section block"
-            id="what-you-build"
-            aria-labelledby="what-you-build-title"
-          >
-            <div class="band doc-band">
-              <div class="band-title">
-                <span class="num">01</span>
-                <h2 id="what-you-build-title">What you build</h2>
-              </div>
-            </div>
-            <div class="doc-body doc-split">
-              <div class="doc-main">
-                <p class="doc-prose">Two blocks that start the server again after a crash.</p>
-              </div>
-              <div class="doc-figs">
-                <figure
-                  class="fig fig-flow"
-                  role="img"
-                  aria-label="Graph: Server Crashed, then on onComplete, Command Restart Server."
-                >
-                  <div class="fig-node">
-                    <span class="fig-kind">Server</span><span class="fig-value">Crashed</span>
-                  </div>
-                  <span class="fig-wire"><span class="fig-port">onComplete</span></span>
-                  <div class="fig-node">
-                    <span class="fig-kind">Command</span
-                    ><span class="fig-value">Restart Server</span>
-                  </div>
-                </figure>
-              </div>
-            </div>
-          </section>
-          <section
-            class="doc-section block"
-            id="add-the-trigger"
-            aria-labelledby="add-the-trigger-title"
-          >
-            <div class="band doc-band">
-              <div class="band-title">
-                <span class="num">02</span>
-                <h2 id="add-the-trigger-title">Add the trigger</h2>
-              </div>
-            </div>
-            <div class="doc-body doc-split">
-              <div class="doc-main">
-                <ol class="doc-steps">
-                  <li>Open the editor and select <b>Open blocks</b>.</li>
-                  <li>
-                    Under <b>trigger</b>, click
-                    <a href="/docs/blocks/trigger-server.html">Server</a>.
-                  </li>
-                  <li>Set <b>Type</b> to <b>Crashed</b>.</li>
-                  <li>Set <b>Cooldown (seconds)</b> to <code>300</code>.</li>
-                </ol>
-                <div class="doc-note" data-tone="warn">
-                  <span class="label">Heads up</span>
-                  <p>
-                    A crash inside the cooldown does not restart the server.<br />
-                    That keeps a server that crashes on boot from restarting in a loop.
-                  </p>
-                </div>
-                <div class="doc-note" data-tone="note">
-                  <span class="label">Note</span>
-                  <p>
-                    <b>Crashed</b> does not fire when you press Stop, which counts as
-                    <b>Stopped</b>.<br />
-                    What counts as a crash is on the
-                    <a href="/docs/blocks/trigger-server.html">Server block page</a>.
-                  </p>
-                </div>
-              </div>
-              <div class="doc-figs">
-                <figure class="fig fig-flow" role="img" aria-label="Graph: Server Crashed.">
-                  <div class="fig-node is-hit">
-                    <span class="fig-kind">Server</span><span class="fig-value">Crashed</span>
-                  </div>
-                </figure>
-              </div>
-            </div>
-          </section>
-          <section
-            class="doc-section block"
-            id="add-the-restart"
-            aria-labelledby="add-the-restart-title"
-          >
-            <div class="band doc-band">
-              <div class="band-title">
-                <span class="num">03</span>
-                <h2 id="add-the-restart-title">Add the restart</h2>
-              </div>
-            </div>
-            <div class="doc-body doc-split">
-              <div class="doc-main">
-                <ol class="doc-steps">
-                  <li>Add <a href="/docs/blocks/action-command.html">Command</a>.</li>
-                  <li>Set <b>Command</b> to <b>Restart Server</b>.</li>
-                  <li>
-                    Drag from <b>onComplete</b> on <b>Server</b> to <b>trigger</b> on
-                    <b>Command</b>.
-                  </li>
-                </ol>
-                <div class="doc-note" data-tone="note">
-                  <span class="label">Note</span>
-                  <p>
-                    On a stopped server, <b>Restart Server</b> only starts it, which is the state
-                    after a crash.
-                  </p>
-                </div>
-              </div>
-              <div class="doc-figs">
-                <figure
-                  class="fig fig-flow"
-                  role="img"
-                  aria-label="Graph: Server Crashed, then on onComplete, Command Restart Server."
-                >
-                  <div class="fig-node">
-                    <span class="fig-kind">Server</span><span class="fig-value">Crashed</span>
-                  </div>
-                  <span class="fig-wire"><span class="fig-port">onComplete</span></span>
-                  <div class="fig-node is-hit">
-                    <span class="fig-kind">Command</span
-                    ><span class="fig-value">Restart Server</span>
-                  </div>
-                </figure>
-              </div>
-            </div>
-          </section>
-          <section class="doc-section block" id="switch-it-on" aria-labelledby="switch-it-on-title">
-            <div class="band doc-band">
-              <div class="band-title">
-                <span class="num">04</span>
-                <h2 id="switch-it-on-title">Switch it on</h2>
-              </div>
-            </div>
-            <div class="doc-body">
-              <ol class="doc-steps">
-                <li>Select <b>Graph actions</b>, then <b>Save</b>.</li>
-                <li>Select <b>[off]</b> so it reads <b>[on]</b>.</li>
+                <li>
+                  <a href="#add-the-trigger"
+                    ><span class="num">02</span><span>Add the trigger</span></a
+                  >
+                </li>
+                <li>
+                  <a href="#add-the-restart"
+                    ><span class="num">03</span><span>Add the restart</span></a
+                  >
+                </li>
+                <li>
+                  <a href="#switch-it-on"><span class="num">04</span><span>Switch it on</span></a>
+                </li>
               </ol>
-              <div class="doc-note" data-tone="warn">
-                <span class="label">Heads up</span>
-                <p><b>run</b> restarts the server at once, crash or not.</p>
-              </div>
-              <div class="doc-note" data-tone="note">
-                <span class="label">Note</span>
-                <p>A new graph starts off, and nothing fires until it is on.</p>
-              </div>
+            </nav>
+            <div class="doc-flow">
+              <section
+                class="doc-section block"
+                id="before-you-start"
+                aria-labelledby="before-you-start-title"
+              >
+                <div class="band doc-band">
+                  <div class="band-title">
+                    <span class="num">00</span>
+                    <h2 id="before-you-start-title">Before you start</h2>
+                  </div>
+                </div>
+                <div class="doc-body">
+                  <ul class="doc-checks">
+                    <li class="doc-check">
+                      <span class="doc-check-text"
+                        ><span>Konnekt left open</span
+                        ><span class="doc-check-desc"
+                          >Graphs run only while Konnekt is open.</span
+                        ></span
+                      >
+                    </li>
+                    <li class="doc-check">
+                      <span class="doc-check-text"
+                        ><span>The scheduler editor</span
+                        ><span class="doc-check-desc"
+                          >Maximize the Scheduler tile to open it.</span
+                        ></span
+                      >
+                    </li>
+                  </ul>
+                </div>
+              </section>
+              <section
+                class="doc-section block"
+                id="what-you-build"
+                aria-labelledby="what-you-build-title"
+              >
+                <div class="band doc-band">
+                  <div class="band-title">
+                    <span class="num">01</span>
+                    <h2 id="what-you-build-title">What you build</h2>
+                  </div>
+                </div>
+                <div class="doc-body doc-split">
+                  <div class="doc-main">
+                    <p class="doc-prose">Two blocks that start the server again after a crash.</p>
+                  </div>
+                  <div class="doc-figs">
+                    <figure
+                      class="fig fig-flow"
+                      role="img"
+                      aria-label="Graph: Server Crashed, then on onComplete, Command Restart Server."
+                    >
+                      <div class="fig-node">
+                        <span class="fig-kind">Server</span><span class="fig-value">Crashed</span>
+                      </div>
+                      <span class="fig-wire"><span class="fig-port">onComplete</span></span>
+                      <div class="fig-node">
+                        <span class="fig-kind">Command</span
+                        ><span class="fig-value">Restart Server</span>
+                      </div>
+                    </figure>
+                  </div>
+                </div>
+              </section>
+              <section
+                class="doc-section block"
+                id="add-the-trigger"
+                aria-labelledby="add-the-trigger-title"
+              >
+                <div class="band doc-band">
+                  <div class="band-title">
+                    <span class="num">02</span>
+                    <h2 id="add-the-trigger-title">Add the trigger</h2>
+                  </div>
+                </div>
+                <div class="doc-body doc-split">
+                  <div class="doc-main">
+                    <ol class="doc-steps">
+                      <li>Open the editor and select <b>Open blocks</b>.</li>
+                      <li>
+                        Under <b>trigger</b>, click
+                        <a href="/docs/blocks/trigger-server.html">Server</a>.
+                      </li>
+                      <li>Set <b>Type</b> to <b>Crashed</b>.</li>
+                      <li>Set <b>Cooldown (seconds)</b> to <code>300</code>.</li>
+                    </ol>
+                    <div class="doc-note" data-tone="warn">
+                      <span class="label">Heads up</span>
+                      <p>
+                        A crash inside the cooldown does not restart the server.<br />
+                        That keeps a server that crashes on boot from restarting in a loop.
+                      </p>
+                    </div>
+                    <div class="doc-note" data-tone="note">
+                      <span class="label">Note</span>
+                      <p>
+                        <b>Crashed</b> does not fire when you press Stop, which counts as
+                        <b>Stopped</b>.<br />
+                        What counts as a crash is on the
+                        <a href="/docs/blocks/trigger-server.html">Server block page</a>.
+                      </p>
+                    </div>
+                  </div>
+                  <div class="doc-figs">
+                    <figure class="fig fig-flow" role="img" aria-label="Graph: Server Crashed.">
+                      <div class="fig-node is-hit">
+                        <span class="fig-kind">Server</span><span class="fig-value">Crashed</span>
+                      </div>
+                    </figure>
+                  </div>
+                </div>
+              </section>
+              <section
+                class="doc-section block"
+                id="add-the-restart"
+                aria-labelledby="add-the-restart-title"
+              >
+                <div class="band doc-band">
+                  <div class="band-title">
+                    <span class="num">03</span>
+                    <h2 id="add-the-restart-title">Add the restart</h2>
+                  </div>
+                </div>
+                <div class="doc-body doc-split">
+                  <div class="doc-main">
+                    <ol class="doc-steps">
+                      <li>Add <a href="/docs/blocks/action-command.html">Command</a>.</li>
+                      <li>Set <b>Command</b> to <b>Restart Server</b>.</li>
+                      <li>
+                        Drag from <b>onComplete</b> on <b>Server</b> to <b>trigger</b> on
+                        <b>Command</b>.
+                      </li>
+                    </ol>
+                    <div class="doc-note" data-tone="note">
+                      <span class="label">Note</span>
+                      <p>
+                        On a stopped server, <b>Restart Server</b> only starts it, which is the
+                        state after a crash.
+                      </p>
+                    </div>
+                  </div>
+                  <div class="doc-figs">
+                    <figure
+                      class="fig fig-flow"
+                      role="img"
+                      aria-label="Graph: Server Crashed, then on onComplete, Command Restart Server."
+                    >
+                      <div class="fig-node">
+                        <span class="fig-kind">Server</span><span class="fig-value">Crashed</span>
+                      </div>
+                      <span class="fig-wire"><span class="fig-port">onComplete</span></span>
+                      <div class="fig-node is-hit">
+                        <span class="fig-kind">Command</span
+                        ><span class="fig-value">Restart Server</span>
+                      </div>
+                    </figure>
+                  </div>
+                </div>
+              </section>
+              <section
+                class="doc-section block"
+                id="switch-it-on"
+                aria-labelledby="switch-it-on-title"
+              >
+                <div class="band doc-band">
+                  <div class="band-title">
+                    <span class="num">04</span>
+                    <h2 id="switch-it-on-title">Switch it on</h2>
+                  </div>
+                </div>
+                <div class="doc-body">
+                  <ol class="doc-steps">
+                    <li>Select <b>Graph actions</b>, then <b>Save</b>.</li>
+                    <li>Select <b>[off]</b> so it reads <b>[on]</b>.</li>
+                  </ol>
+                  <div class="doc-note" data-tone="warn">
+                    <span class="label">Heads up</span>
+                    <p><b>run</b> restarts the server at once, crash or not.</p>
+                  </div>
+                  <div class="doc-note" data-tone="note">
+                    <span class="label">Note</span>
+                    <p>A new graph starts off, and nothing fires until it is on.</p>
+                  </div>
+                </div>
+              </section>
             </div>
-          </section>
+          </div>
           <nav class="doc-related block" aria-label="Related">
             <div class="shelf-label"><span class="label">Related</span></div>
             <a class="related-link" href="/docs/blocks/trigger-server.html"

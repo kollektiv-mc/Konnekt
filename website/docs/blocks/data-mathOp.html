@@ -128,216 +128,240 @@
             </dl>
           </header>
 
-          <!-- gen:ports -->
-          <section class="doc-section block" id="ports" aria-labelledby="ports-title">
-            <div class="band doc-band">
-              <div class="band-title">
-                <span class="num">01</span>
-                <h2 id="ports-title">Ports</h2>
-              </div>
-            </div>
-            <div class="port-stage">
-              <div class="port-canvas">
-                <div class="port-node" data-category="data">
-                  <div class="port-node-head">
-                    <span>Math</span><span class="port-node-cat">data</span>
-                  </div>
-                  <div class="port-cols">
-                    <ul class="port-col port-in" aria-label="Inputs">
-                      <li class="port-col-label" aria-hidden="true">in</li>
-                      <li class="port" data-shape="data" data-type="number">
-                        <span>A</span><span class="port-type">number</span>
-                      </li>
-                      <li class="port" data-shape="data" data-type="number">
-                        <span>B</span><span class="port-type">number</span>
-                      </li>
-                    </ul>
-                    <ul class="port-col port-out" aria-label="Outputs">
-                      <li class="port-col-label" aria-hidden="true">out</li>
-                      <li class="port" data-shape="data" data-type="number">
-                        <span>Result</span><span class="port-type">number</span>
-                      </li>
-                    </ul>
+          <div class="doc-layout">
+            <!-- gen:toc -->
+            <nav class="doc-toc" aria-label="On this page">
+              <ol>
+                <li>
+                  <a href="#ports"><span class="num">01</span><span>Ports</span></a>
+                </li>
+                <li>
+                  <a href="#fields"><span class="num">02</span><span>Fields</span></a>
+                </li>
+                <li>
+                  <a href="#run"><span class="num">03</span><span>What a run does</span></a>
+                </li>
+              </ol>
+            </nav>
+            <!-- /gen:toc -->
+            <div class="doc-flow">
+              <!-- gen:ports -->
+              <section class="doc-section block" id="ports" aria-labelledby="ports-title">
+                <div class="band doc-band">
+                  <div class="band-title">
+                    <span class="num">01</span>
+                    <h2 id="ports-title">Ports</h2>
                   </div>
                 </div>
-              </div>
-              <div class="port-legend">
-                <span class="label">Ports</span>
-                <span class="port-key" data-shape="control">Control</span>
-                <span class="port-key" data-shape="data">Data</span>
-                <hr />
-                <span class="label">Data types</span>
-                <span class="port-key" data-shape="data" data-type="string"
-                  ><code>string</code></span
-                >
-                <span class="port-key" data-shape="data" data-type="number"
-                  ><code>number</code></span
-                >
-                <span class="port-key" data-shape="data" data-type="bool"><code>bool</code></span>
-                <p class="doc-prose">
-                  Strings accept any data input.<br />
-                  Numbers accept boolean input.
-                </p>
-              </div>
-            </div>
-          </section>
-          <!-- /gen:ports -->
-
-          <!-- gen:fields -->
-          <section class="doc-section block" id="fields" aria-labelledby="fields-title">
-            <div class="band doc-band">
-              <div class="band-title">
-                <span class="num">02</span>
-                <h2 id="fields-title">Fields</h2>
-              </div>
-            </div>
-            <div class="doc-body">
-              <div class="doc-table-wrap">
-                <table class="doc-table">
-                  <thead>
-                    <tr>
-                      <th scope="col">Field</th>
-                      <th scope="col">What it does</th>
-                      <th scope="col">Default</th>
-                      <th scope="col">Limits</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr data-field="a">
-                      <td>A</td>
-                      <td>The first number; a wired A replaces it.</td>
-                      <td><code>0</code></td>
-                      <td>None</td>
-                    </tr>
-                    <tr data-field="op">
-                      <td>Operator</td>
-                      <td>The calculation to perform.</td>
-                      <td><code>+ add</code></td>
-                      <td>
-                        <ul class="field-options">
-                          <li><code>+ add</code></li>
-                          <li><code>- subtract</code></li>
-                          <li><code>× multiply</code></li>
-                          <li><code>÷ divide</code></li>
-                          <li><code>% mod</code></li>
-                          <li><code>Δ difference</code></li>
+                <div class="port-stage">
+                  <div class="port-canvas">
+                    <div class="port-node" data-category="data">
+                      <div class="port-node-head">
+                        <span>Math</span><span class="port-node-cat">data</span>
+                      </div>
+                      <div class="port-cols">
+                        <ul class="port-col port-in" aria-label="Inputs">
+                          <li class="port-col-label" aria-hidden="true">in</li>
+                          <li class="port" data-shape="data" data-type="number">
+                            <span>A</span><span class="port-type">number</span>
+                          </li>
+                          <li class="port" data-shape="data" data-type="number">
+                            <span>B</span><span class="port-type">number</span>
+                          </li>
                         </ul>
-                      </td>
-                    </tr>
-                    <tr data-field="b">
-                      <td>B</td>
-                      <td>The second number; a wired B replaces it.</td>
-                      <td><code>0</code></td>
-                      <td>Cannot be 0 for divide or mod.</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </section>
-          <!-- /gen:fields -->
+                        <ul class="port-col port-out" aria-label="Outputs">
+                          <li class="port-col-label" aria-hidden="true">out</li>
+                          <li class="port" data-shape="data" data-type="number">
+                            <span>Result</span><span class="port-type">number</span>
+                          </li>
+                        </ul>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="port-legend">
+                    <span class="label">Ports</span>
+                    <span class="port-key" data-shape="control">Control</span>
+                    <span class="port-key" data-shape="data">Data</span>
+                    <hr />
+                    <span class="label">Data types</span>
+                    <span class="port-key" data-shape="data" data-type="string"
+                      ><code>string</code></span
+                    >
+                    <span class="port-key" data-shape="data" data-type="number"
+                      ><code>number</code></span
+                    >
+                    <span class="port-key" data-shape="data" data-type="bool"
+                      ><code>bool</code></span
+                    >
+                    <p class="doc-prose">
+                      Strings accept any data input.<br />
+                      Numbers accept boolean input.
+                    </p>
+                  </div>
+                </div>
+              </section>
+              <!-- /gen:ports -->
 
-          <!-- gen:body -->
-          <section class="doc-section block" id="run" aria-labelledby="run-title">
-            <div class="band doc-band">
-              <div class="band-title">
-                <span class="num">03</span>
-                <h2 id="run-title">What a run does</h2>
-              </div>
-            </div>
-            <div class="doc-body doc-split">
-              <div class="doc-main">
-                <ol class="doc-steps">
-                  <li>A block that uses <b>Result</b> runs.</li>
-                  <li>This block reads A and B. A wired A or B replaces its field.</li>
-                  <li>It applies the <b>Operator</b> once per run.</li>
-                  <li>It passes <b>Result</b> to that block.</li>
-                </ol>
-                <ul class="doc-points">
-                  <li>This block has no control ports.</li>
-                </ul>
-                <div class="doc-table-wrap">
-                  <table class="doc-table">
-                    <thead>
-                      <tr>
-                        <th scope="col">Operator</th>
-                        <th scope="col">Result</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <tr>
-                        <td><code>+</code> add</td>
-                        <td>A plus B.</td>
-                      </tr>
-                      <tr>
-                        <td><code>-</code> subtract</td>
-                        <td>A minus B.</td>
-                      </tr>
-                      <tr>
-                        <td><code>×</code> multiply</td>
-                        <td>A times B.</td>
-                      </tr>
-                      <tr>
-                        <td><code>÷</code> divide</td>
-                        <td>A divided by B.</td>
-                      </tr>
-                      <tr>
-                        <td><code>%</code> mod</td>
-                        <td>
-                          The remainder of A divided by B, after both have their decimals cut off.
-                        </td>
-                      </tr>
-                      <tr>
-                        <td><code>Δ</code> difference</td>
-                        <td>The gap between A and B, which is not negative.</td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-                <div class="doc-note" data-tone="warn">
-                  <span class="label">Heads up</span>
-                  <p>
-                    Dividing, or taking the remainder, with B at <code>0</code> sets no output, and
-                    no error is shown.<br />
-                    The block that would use the result uses its own field instead.
-                  </p>
-                </div>
-              </div>
-              <div class="doc-figs">
-                <figure
-                  class="fig fig-flow"
-                  role="img"
-                  aria-label="Graph: Cron Schedule 0 4 * * *, then on onComplete, Condition A &gt; 20, with Math A + B as data, on onTrue, Notify Over 20."
-                >
-                  <div class="fig-node">
-                    <span class="fig-kind">Cron Schedule</span
-                    ><span class="fig-value">0 4 * * *</span>
+              <!-- gen:fields -->
+              <section class="doc-section block" id="fields" aria-labelledby="fields-title">
+                <div class="band doc-band">
+                  <div class="band-title">
+                    <span class="num">02</span>
+                    <h2 id="fields-title">Fields</h2>
                   </div>
-                  <span class="fig-wire"><span class="fig-port">onComplete</span></span>
-                  <div class="fig-row">
-                    <div class="fig-node">
-                      <span class="fig-kind">Condition</span><span class="fig-value">A > 20</span>
+                </div>
+                <div class="doc-body">
+                  <div class="doc-table-wrap">
+                    <table class="doc-table">
+                      <thead>
+                        <tr>
+                          <th scope="col">Field</th>
+                          <th scope="col">What it does</th>
+                          <th scope="col">Default</th>
+                          <th scope="col">Limits</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr data-field="a">
+                          <td>A</td>
+                          <td>The first number; a wired A replaces it.</td>
+                          <td><code>0</code></td>
+                          <td>None</td>
+                        </tr>
+                        <tr data-field="op">
+                          <td>Operator</td>
+                          <td>The calculation to perform.</td>
+                          <td><code>+ add</code></td>
+                          <td>
+                            <ul class="field-options">
+                              <li><code>+ add</code></li>
+                              <li><code>- subtract</code></li>
+                              <li><code>× multiply</code></li>
+                              <li><code>÷ divide</code></li>
+                              <li><code>% mod</code></li>
+                              <li><code>Δ difference</code></li>
+                            </ul>
+                          </td>
+                        </tr>
+                        <tr data-field="b">
+                          <td>B</td>
+                          <td>The second number; a wired B replaces it.</td>
+                          <td><code>0</code></td>
+                          <td>Cannot be 0 for divide or mod.</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </section>
+              <!-- /gen:fields -->
+
+              <!-- gen:body -->
+              <section class="doc-section block" id="run" aria-labelledby="run-title">
+                <div class="band doc-band">
+                  <div class="band-title">
+                    <span class="num">03</span>
+                    <h2 id="run-title">What a run does</h2>
+                  </div>
+                </div>
+                <div class="doc-body doc-split">
+                  <div class="doc-main">
+                    <ol class="doc-steps">
+                      <li>A block that uses <b>Result</b> runs.</li>
+                      <li>This block reads A and B. A wired A or B replaces its field.</li>
+                      <li>It applies the <b>Operator</b> once per run.</li>
+                      <li>It passes <b>Result</b> to that block.</li>
+                    </ol>
+                    <ul class="doc-points">
+                      <li>This block has no control ports.</li>
+                    </ul>
+                    <div class="doc-table-wrap">
+                      <table class="doc-table">
+                        <thead>
+                          <tr>
+                            <th scope="col">Operator</th>
+                            <th scope="col">Result</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <tr>
+                            <td><code>+</code> add</td>
+                            <td>A plus B.</td>
+                          </tr>
+                          <tr>
+                            <td><code>-</code> subtract</td>
+                            <td>A minus B.</td>
+                          </tr>
+                          <tr>
+                            <td><code>×</code> multiply</td>
+                            <td>A times B.</td>
+                          </tr>
+                          <tr>
+                            <td><code>÷</code> divide</td>
+                            <td>A divided by B.</td>
+                          </tr>
+                          <tr>
+                            <td><code>%</code> mod</td>
+                            <td>
+                              The remainder of A divided by B, after both have their decimals cut
+                              off.
+                            </td>
+                          </tr>
+                          <tr>
+                            <td><code>Δ</code> difference</td>
+                            <td>The gap between A and B, which is not negative.</td>
+                          </tr>
+                        </tbody>
+                      </table>
                     </div>
-                    <div class="fig-feeds">
-                      <span class="fig-wire fig-wire-data" aria-hidden="true"></span>
-                      <div class="fig-node is-hit is-data">
-                        <span class="fig-kind">Math</span><span class="fig-value">A + B</span>
-                      </div>
+                    <div class="doc-note" data-tone="warn">
+                      <span class="label">Heads up</span>
+                      <p>
+                        Dividing, or taking the remainder, with B at <code>0</code> sets no output,
+                        and no error is shown.<br />
+                        The block that would use the result uses its own field instead.
+                      </p>
                     </div>
                   </div>
-                  <div class="fig-lanes">
-                    <div class="fig-lane">
-                      <span class="fig-wire"><span class="fig-port">onTrue</span></span>
+                  <div class="doc-figs">
+                    <figure
+                      class="fig fig-flow"
+                      role="img"
+                      aria-label="Graph: Cron Schedule 0 4 * * *, then on onComplete, Condition A &gt; 20, with Math A + B as data, on onTrue, Notify Over 20."
+                    >
                       <div class="fig-node">
-                        <span class="fig-kind">Notify</span><span class="fig-value">Over 20</span>
+                        <span class="fig-kind">Cron Schedule</span
+                        ><span class="fig-value">0 4 * * *</span>
                       </div>
-                    </div>
+                      <span class="fig-wire"><span class="fig-port">onComplete</span></span>
+                      <div class="fig-row">
+                        <div class="fig-node">
+                          <span class="fig-kind">Condition</span
+                          ><span class="fig-value">A > 20</span>
+                        </div>
+                        <div class="fig-feeds">
+                          <span class="fig-wire fig-wire-data" aria-hidden="true"></span>
+                          <div class="fig-node is-hit is-data">
+                            <span class="fig-kind">Math</span><span class="fig-value">A + B</span>
+                          </div>
+                        </div>
+                      </div>
+                      <div class="fig-lanes">
+                        <div class="fig-lane">
+                          <span class="fig-wire"><span class="fig-port">onTrue</span></span>
+                          <div class="fig-node">
+                            <span class="fig-kind">Notify</span
+                            ><span class="fig-value">Over 20</span>
+                          </div>
+                        </div>
+                      </div>
+                    </figure>
                   </div>
-                </figure>
-              </div>
+                </div>
+              </section>
+              <!-- /gen:body -->
             </div>
-          </section>
-          <!-- /gen:body -->
+          </div>
 
           <nav class="doc-related block" aria-label="Related">
             <div class="shelf-label"><span class="label">Related</span></div>

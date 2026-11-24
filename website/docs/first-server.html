@@ -135,242 +135,279 @@
               </div>
             </dl>
           </header>
-          <section
-            class="doc-section block"
-            id="before-you-start"
-            aria-labelledby="before-you-start-title"
-          >
-            <div class="band doc-band">
-              <div class="band-title">
-                <span class="num">00</span>
-                <h2 id="before-you-start-title">Before you start</h2>
-              </div>
-            </div>
-            <div class="doc-body">
-              <ul class="doc-checks">
-                <li class="doc-check">
-                  <span class="doc-check-text"
-                    ><span>A server jar</span
-                    ><span class="doc-check-desc"
-                      >The Minecraft server you already run.<br />
-                      Konnekt manages it, it does not fetch one.</span
-                    ></span
+          <div class="doc-layout">
+            <nav class="doc-toc" aria-label="On this page">
+              <ol>
+                <li>
+                  <a href="#before-you-start"
+                    ><span class="num">00</span><span>Before you start</span></a
                   >
                 </li>
-                <li class="doc-check">
-                  <span class="doc-check-text"
-                    ><span>Java</span
-                    ><span class="doc-check-desc"
-                      >Your server needs it to run.<br />
-                      Konnekt itself does not.</span
-                    ></span
+                <li>
+                  <a href="#add-a-server"><span class="num">01</span><span>Add a server</span></a>
+                </li>
+                <li>
+                  <a href="#install-a-server"
+                    ><span class="num">02</span><span>Install a server</span></a
                   >
                 </li>
-                <li class="doc-check">
-                  <span class="doc-check-text"
-                    ><span>RCON on in <code>server.properties</code></span
-                    ><span class="doc-check-desc"
-                      >The player list and commands need <code>enable-rcon</code> until
-                      <a
-                        href="https://github.com/kollektiv-mc/Konnekt/issues/99"
-                        target="_blank"
-                        rel="noopener"
-                        >Konnekt sets it up for you</a
-                      >.</span
-                    ></span
-                  >
+                <li>
+                  <a href="#start-it"><span class="num">03</span><span>Start it</span></a>
                 </li>
-              </ul>
-            </div>
-          </section>
-          <section class="doc-section block" id="add-a-server" aria-labelledby="add-a-server-title">
-            <div class="band doc-band">
-              <div class="band-title">
-                <span class="num">01</span>
-                <h2 id="add-a-server-title">Add a server</h2>
-              </div>
-            </div>
-            <div class="doc-body doc-split">
-              <div class="doc-main">
-                <ol class="doc-steps">
-                  <li>Select <b>Add server</b> beside <b>Servers</b>.</li>
-                  <li>Set <b>Server file</b> to the jar.</li>
-                  <li>Set <b>Working directory</b> to the folder it lives in.</li>
-                  <li>Set <b>Name</b>.</li>
-                  <li>Set the RAM the server gets.</li>
-                  <li>Select <b>Add server</b>.</li>
-                </ol>
-              </div>
-              <div class="doc-figs">
-                <figure class="demo-stage">
-                  <div class="demo" data-demo="add" aria-hidden="true">
-                    <div class="mock mock-form">
-                      <div class="mock-title">Servers</div>
-                      <div class="mock-field f1"><span class="mock-type">Survival</span></div>
-                      <div class="mock-field f2">
-                        <span class="mock-type">server.jar</span><span class="mock-browse">…</span>
+                <li>
+                  <a href="#join-it"><span class="num">04</span><span>Join it</span></a>
+                </li>
+              </ol>
+            </nav>
+            <div class="doc-flow">
+              <section
+                class="doc-section block"
+                id="before-you-start"
+                aria-labelledby="before-you-start-title"
+              >
+                <div class="band doc-band">
+                  <div class="band-title">
+                    <span class="num">00</span>
+                    <h2 id="before-you-start-title">Before you start</h2>
+                  </div>
+                </div>
+                <div class="doc-body">
+                  <ul class="doc-checks">
+                    <li class="doc-check">
+                      <span class="doc-check-text"
+                        ><span>A server jar</span
+                        ><span class="doc-check-desc"
+                          >The Minecraft server you already run.<br />
+                          Konnekt manages it, it does not fetch one.</span
+                        ></span
+                      >
+                    </li>
+                    <li class="doc-check">
+                      <span class="doc-check-text"
+                        ><span>Java</span
+                        ><span class="doc-check-desc"
+                          >Your server needs it to run.<br />
+                          Konnekt itself does not.</span
+                        ></span
+                      >
+                    </li>
+                    <li class="doc-check">
+                      <span class="doc-check-text"
+                        ><span>RCON on in <code>server.properties</code></span
+                        ><span class="doc-check-desc"
+                          >The player list and commands need <code>enable-rcon</code> until
+                          <a
+                            href="https://github.com/kollektiv-mc/Konnekt/issues/99"
+                            target="_blank"
+                            rel="noopener"
+                            >Konnekt sets it up for you</a
+                          >.</span
+                        ></span
+                      >
+                    </li>
+                  </ul>
+                </div>
+              </section>
+              <section
+                class="doc-section block"
+                id="add-a-server"
+                aria-labelledby="add-a-server-title"
+              >
+                <div class="band doc-band">
+                  <div class="band-title">
+                    <span class="num">01</span>
+                    <h2 id="add-a-server-title">Add a server</h2>
+                  </div>
+                </div>
+                <div class="doc-body doc-split">
+                  <div class="doc-main">
+                    <ol class="doc-steps">
+                      <li>Select <b>Add server</b> beside <b>Servers</b>.</li>
+                      <li>Set <b>Server file</b> to the jar.</li>
+                      <li>Set <b>Working directory</b> to the folder it lives in.</li>
+                      <li>Set <b>Name</b>.</li>
+                      <li>Set the RAM the server gets.</li>
+                      <li>Select <b>Add server</b>.</li>
+                    </ol>
+                  </div>
+                  <div class="doc-figs">
+                    <figure class="demo-stage">
+                      <div class="demo" data-demo="add" aria-hidden="true">
+                        <div class="mock mock-form">
+                          <div class="mock-title">Servers</div>
+                          <div class="mock-field f1"><span class="mock-type">Survival</span></div>
+                          <div class="mock-field f2">
+                            <span class="mock-type">server.jar</span
+                            ><span class="mock-browse">…</span>
+                          </div>
+                          <div class="mock-field f3">
+                            <span class="mock-type">/home/mc/survival</span
+                            ><span class="mock-browse">…</span>
+                          </div>
+                          <div class="mock-field f4">
+                            <span class="mock-type">-Xms1G -Xmx4G</span>
+                          </div>
+                          <div class="mock-btn mock-add">Add server</div>
+                          <span class="mock-cursor"></span>
+                        </div>
                       </div>
-                      <div class="mock-field f3">
-                        <span class="mock-type">/home/mc/survival</span
-                        ><span class="mock-browse">…</span>
-                      </div>
-                      <div class="mock-field f4"><span class="mock-type">-Xms1G -Xmx4G</span></div>
-                      <div class="mock-btn mock-add">Add server</div>
-                      <span class="mock-cursor"></span>
+                    </figure>
+                  </div>
+                </div>
+              </section>
+              <section
+                class="doc-section block"
+                id="install-a-server"
+                aria-labelledby="install-a-server-title"
+              >
+                <div class="band doc-band">
+                  <div class="band-title">
+                    <span class="num">02</span>
+                    <h2 id="install-a-server-title">Install a server</h2>
+                  </div>
+                </div>
+                <div class="doc-body doc-split">
+                  <div class="doc-main">
+                    <p class="doc-prose">
+                      Only for a Forge or NeoForge installer rather than a server jar.
+                    </p>
+                    <ol class="doc-steps">
+                      <li>Set <b>Server file</b> to the installer.</li>
+                      <li>In <b>Installer detected</b>, set the install folder.</li>
+                      <li>Select <b>Install server</b>.</li>
+                      <li>Select <b>Add server</b>.</li>
+                    </ol>
+                    <div class="doc-note" data-tone="note">
+                      <span class="label">Note</span>
+                      <p>Konnekt runs the install for you, then adds what comes out.</p>
                     </div>
                   </div>
-                </figure>
-              </div>
-            </div>
-          </section>
-          <section
-            class="doc-section block"
-            id="install-a-server"
-            aria-labelledby="install-a-server-title"
-          >
-            <div class="band doc-band">
-              <div class="band-title">
-                <span class="num">02</span>
-                <h2 id="install-a-server-title">Install a server</h2>
-              </div>
-            </div>
-            <div class="doc-body doc-split">
-              <div class="doc-main">
-                <p class="doc-prose">
-                  Only for a Forge or NeoForge installer rather than a server jar.
-                </p>
-                <ol class="doc-steps">
-                  <li>Set <b>Server file</b> to the installer.</li>
-                  <li>In <b>Installer detected</b>, set the install folder.</li>
-                  <li>Select <b>Install server</b>.</li>
-                  <li>Select <b>Add server</b>.</li>
-                </ol>
-                <div class="doc-note" data-tone="note">
-                  <span class="label">Note</span>
-                  <p>Konnekt runs the install for you, then adds what comes out.</p>
-                </div>
-              </div>
-              <div class="doc-figs">
-                <figure class="demo-stage">
-                  <div class="demo" data-demo="install" aria-hidden="true">
-                    <div class="mock mock-install">
-                      <div class="mock-modal">
-                        <div class="mock-modal-head">
-                          <span class="mock-info">[i]</span><span>Installer detected</span>
-                        </div>
-                        <div class="mock-field i1">
-                          <span class="mock-type">/home/mc/forge</span
-                          ><span class="mock-browse">…</span>
-                        </div>
-                        <div class="mock-install-log">
-                          <span class="il1">Running installer…</span
-                          ><span class="il2">Extracting libraries</span
-                          ><span class="il3">Downloading server</span>
-                        </div>
-                        <div class="mock-bar"><span class="mock-bar-fill"></span></div>
-                        <div class="mock-modal-foot">
-                          <span class="mock-btn mock-install-btn">Install server</span
-                          ><span class="mock-btn mock-added-btn">Add server</span
-                          ><span class="mock-dismiss">Close</span>
+                  <div class="doc-figs">
+                    <figure class="demo-stage">
+                      <div class="demo" data-demo="install" aria-hidden="true">
+                        <div class="mock mock-install">
+                          <div class="mock-modal">
+                            <div class="mock-modal-head">
+                              <span class="mock-info">[i]</span><span>Installer detected</span>
+                            </div>
+                            <div class="mock-field i1">
+                              <span class="mock-type">/home/mc/forge</span
+                              ><span class="mock-browse">…</span>
+                            </div>
+                            <div class="mock-install-log">
+                              <span class="il1">Running installer…</span
+                              ><span class="il2">Extracting libraries</span
+                              ><span class="il3">Downloading server</span>
+                            </div>
+                            <div class="mock-bar"><span class="mock-bar-fill"></span></div>
+                            <div class="mock-modal-foot">
+                              <span class="mock-btn mock-install-btn">Install server</span
+                              ><span class="mock-btn mock-added-btn">Add server</span
+                              ><span class="mock-dismiss">Close</span>
+                            </div>
+                          </div>
+                          <span class="mock-cursor"></span>
                         </div>
                       </div>
-                      <span class="mock-cursor"></span>
+                    </figure>
+                  </div>
+                </div>
+              </section>
+              <section class="doc-section block" id="start-it" aria-labelledby="start-it-title">
+                <div class="band doc-band">
+                  <div class="band-title">
+                    <span class="num">03</span>
+                    <h2 id="start-it-title">Start it</h2>
+                  </div>
+                </div>
+                <div class="doc-body doc-split">
+                  <div class="doc-main">
+                    <ol class="doc-steps">
+                      <li>Select <b>Start</b>.</li>
+                      <li>Read the log in the console.</li>
+                    </ol>
+                    <div class="doc-note" data-tone="warn">
+                      <span class="label">Heads up</span>
+                      <p>
+                        A server that stops on its first run is almost always waiting for its
+                        EULA.<br />
+                        Konnekt offers to write <code>eula.txt</code> for you, then starts it again.
+                      </p>
+                    </div>
+                    <div class="doc-note" data-tone="note">
+                      <span class="label">Note</span>
+                      <p>The console streams the log live and takes commands inline.</p>
                     </div>
                   </div>
-                </figure>
-              </div>
-            </div>
-          </section>
-          <section class="doc-section block" id="start-it" aria-labelledby="start-it-title">
-            <div class="band doc-band">
-              <div class="band-title">
-                <span class="num">03</span>
-                <h2 id="start-it-title">Start it</h2>
-              </div>
-            </div>
-            <div class="doc-body doc-split">
-              <div class="doc-main">
-                <ol class="doc-steps">
-                  <li>Select <b>Start</b>.</li>
-                  <li>Read the log in the console.</li>
-                </ol>
-                <div class="doc-note" data-tone="warn">
-                  <span class="label">Heads up</span>
-                  <p>
-                    A server that stops on its first run is almost always waiting for its EULA.<br />
-                    Konnekt offers to write <code>eula.txt</code> for you, then starts it again.
-                  </p>
-                </div>
-                <div class="doc-note" data-tone="note">
-                  <span class="label">Note</span>
-                  <p>The console streams the log live and takes commands inline.</p>
-                </div>
-              </div>
-              <div class="doc-figs">
-                <figure class="demo-stage">
-                  <div class="demo" data-demo="start" aria-hidden="true">
-                    <div class="mock mock-console">
-                      <div class="mock-console-head">
-                        <span class="mock-status s-stopped">STOPPED</span
-                        ><span class="mock-status s-starting">STARTING</span
-                        ><span class="mock-status s-running">RUNNING</span
-                        ><span class="mock-btn mock-start">Start</span
-                        ><span class="mock-btn mock-stop">Stop</span>
+                  <div class="doc-figs">
+                    <figure class="demo-stage">
+                      <div class="demo" data-demo="start" aria-hidden="true">
+                        <div class="mock mock-console">
+                          <div class="mock-console-head">
+                            <span class="mock-status s-stopped">STOPPED</span
+                            ><span class="mock-status s-starting">STARTING</span
+                            ><span class="mock-status s-running">RUNNING</span
+                            ><span class="mock-btn mock-start">Start</span
+                            ><span class="mock-btn mock-stop">Stop</span>
+                          </div>
+                          <div class="mock-log">
+                            <span class="l1">Starting minecraft server 1.21</span
+                            ><span class="l2">Loading properties</span
+                            ><span class="l3">Preparing level "world"</span
+                            ><span class="l4">Done (6.129s)! For help, type "help"</span>
+                          </div>
+                          <span class="mock-cursor"></span>
+                        </div>
                       </div>
-                      <div class="mock-log">
-                        <span class="l1">Starting minecraft server 1.21</span
-                        ><span class="l2">Loading properties</span
-                        ><span class="l3">Preparing level "world"</span
-                        ><span class="l4">Done (6.129s)! For help, type "help"</span>
-                      </div>
-                      <span class="mock-cursor"></span>
+                    </figure>
+                  </div>
+                </div>
+              </section>
+              <section class="doc-section block" id="join-it" aria-labelledby="join-it-title">
+                <div class="band doc-band">
+                  <div class="band-title">
+                    <span class="num">04</span>
+                    <h2 id="join-it-title">Join it</h2>
+                  </div>
+                </div>
+                <div class="doc-body doc-split">
+                  <div class="doc-main">
+                    <ol class="doc-steps">
+                      <li>In Minecraft, open <b>Multiplayer</b>.</li>
+                      <li>Select <b>Direct Connection</b>.</li>
+                      <li>Enter <code>localhost</code> as the <b>Server Address</b>.</li>
+                      <li>Select <b>Join Server</b>.</li>
+                    </ol>
+                    <div class="doc-note" data-tone="note">
+                      <span class="label">Note</span>
+                      <p>
+                        The server runs on the machine you are sitting at, so its address is
+                        <code>localhost</code>.
+                      </p>
                     </div>
                   </div>
-                </figure>
-              </div>
-            </div>
-          </section>
-          <section class="doc-section block" id="join-it" aria-labelledby="join-it-title">
-            <div class="band doc-band">
-              <div class="band-title">
-                <span class="num">04</span>
-                <h2 id="join-it-title">Join it</h2>
-              </div>
-            </div>
-            <div class="doc-body doc-split">
-              <div class="doc-main">
-                <ol class="doc-steps">
-                  <li>In Minecraft, open <b>Multiplayer</b>.</li>
-                  <li>Select <b>Direct Connection</b>.</li>
-                  <li>Enter <code>localhost</code> as the <b>Server Address</b>.</li>
-                  <li>Select <b>Join Server</b>.</li>
-                </ol>
-                <div class="doc-note" data-tone="note">
-                  <span class="label">Note</span>
-                  <p>
-                    The server runs on the machine you are sitting at, so its address is
-                    <code>localhost</code>.
-                  </p>
-                </div>
-              </div>
-              <div class="doc-figs">
-                <figure class="demo-stage">
-                  <div class="demo" data-demo="join" aria-hidden="true">
-                    <div class="mock mock-join">
-                      <div class="mock-join-title">Direct Connection</div>
-                      <div class="mock-join-body">
-                        <div class="mock-join-label">Server Address</div>
-                        <div class="mock-field j1"><span class="mock-type">localhost</span></div>
-                        <div class="mock-btn mock-join-go">Join Server</div>
-                        <div class="mock-btn mock-join-cancel">Cancel</div>
+                  <div class="doc-figs">
+                    <figure class="demo-stage">
+                      <div class="demo" data-demo="join" aria-hidden="true">
+                        <div class="mock mock-join">
+                          <div class="mock-join-title">Direct Connection</div>
+                          <div class="mock-join-body">
+                            <div class="mock-join-label">Server Address</div>
+                            <div class="mock-field j1">
+                              <span class="mock-type">localhost</span>
+                            </div>
+                            <div class="mock-btn mock-join-go">Join Server</div>
+                            <div class="mock-btn mock-join-cancel">Cancel</div>
+                          </div>
+                          <span class="mock-cursor"></span>
+                        </div>
                       </div>
-                      <span class="mock-cursor"></span>
-                    </div>
+                    </figure>
                   </div>
-                </figure>
-              </div>
+                </div>
+              </section>
             </div>
-          </section>
+          </div>
           <nav class="doc-related block" aria-label="Related">
             <div class="shelf-label"><span class="label">Related</span></div>
             <a class="related-link" href="/docs/install.html"

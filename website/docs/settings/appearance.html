@@ -126,289 +126,325 @@
               </div>
             </dl>
           </header>
-          <section class="doc-section block" id="look" aria-labelledby="look-title">
-            <div class="band doc-band">
-              <div class="band-title">
-                <span class="num">01</span>
-                <h2 id="look-title">Look</h2>
-              </div>
-            </div>
-            <div class="doc-body doc-split">
-              <div class="doc-main">
-                <div class="doc-table-wrap">
-                  <table class="doc-table">
-                    <thead>
-                      <tr>
-                        <th scope="col">Setting</th>
-                        <th scope="col">What it does</th>
-                        <th scope="col">Default</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <tr>
-                        <td><b>Skin</b></td>
-                        <td>
-                          Six palettes for surfaces and borders: Default, Midnight, Nord, Solarized,
-                          Mocha and Forest.
-                        </td>
-                        <td>Default</td>
-                      </tr>
-                      <tr>
-                        <td><b>Mode</b></td>
-                        <td>
-                          Light, Dark, or System, which follows the operating system, with Light on
-                          the Default skin only.
-                        </td>
-                        <td>Dark</td>
-                      </tr>
-                      <tr>
-                        <td><b>Accent color</b></td>
-                        <td>
-                          Colors highlights and active states, from six presets or a custom picker.
-                        </td>
-                        <td><code>#4ade80</code></td>
-                      </tr>
-                      <tr>
-                        <td><b>Background</b></td>
-                        <td>Solid, or Gradient, a faint accent glow from the top right corner.</td>
-                        <td>Solid</td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-                <ul class="doc-points">
-                  <li>
-                    Picking a skin also sets its accent color: Green for Default and Forest, Violet
-                    for Midnight, Blue for Nord, Rose for Solarized and Amber for Mocha.<br />
-                    Change the accent afterwards to override it.
-                  </li>
-                  <li>
-                    Every skin except Default is dark only, and <b>Light</b> is greyed out on
-                    them.<br />
-                    Picking one while <b>Mode</b> is <b>Light</b> switches <b>Mode</b> to
-                    <b>Dark</b>.
-                  </li>
-                  <li>
-                    With <b>System</b>, those skins stay dark whatever the operating system prefers.
-                  </li>
-                </ul>
-              </div>
-              <div class="doc-figs">
-                <figure class="fig fig-ui" role="img" aria-label="Settings · Appearance.">
-                  <div class="fig-ui-title">Settings · Appearance</div>
-                  <div class="fig-ui-row">
-                    <span class="fig-ui-text">Skin</span><span class="fig-ui-btn">Default</span>
-                  </div>
-                  <div class="fig-ui-row">
-                    <span class="fig-ui-text">Mode</span><span class="fig-ui-btn">Light</span
-                    ><span class="fig-ui-btn">Dark</span><span class="fig-ui-btn">System</span>
-                  </div>
-                  <div class="fig-ui-row">
-                    <span class="fig-ui-text">Accent color</span
-                    ><span class="fig-ui-btn">Green</span>
-                  </div>
-                  <div class="fig-ui-row">
-                    <span class="fig-ui-text">Background</span><span class="fig-ui-btn">Solid</span
-                    ><span class="fig-ui-btn">Gradient</span>
-                  </div>
-                  <div class="fig-ui-row">
-                    <span class="fig-ui-text">Hardware acceleration</span
-                    ><span class="fig-ui-btn">On</span><span class="fig-ui-btn">On demand</span
-                    ><span class="fig-ui-btn">Off</span>
-                  </div>
-                </figure>
-              </div>
-            </div>
-          </section>
-          <section
-            class="doc-section block"
-            id="hardware-acceleration"
-            aria-labelledby="hardware-acceleration-title"
-          >
-            <div class="band doc-band">
-              <div class="band-title">
-                <span class="num">02</span>
-                <h2 id="hardware-acceleration-title">Hardware acceleration</h2>
-              </div>
-            </div>
-            <div class="doc-body">
-              <p class="doc-prose">
-                <b>Hardware acceleration</b> is a Linux setting.<br />
-                It sets how the window's webview, WebKitGTK, uses the GPU.<br />
-                Windows, macOS and a
-                <a href="/docs/settings/remote-access.html">Remote Access</a> browser do not use it,
-                so the row is hidden there.
-              </p>
-              <div class="doc-table-wrap">
-                <table class="doc-table">
-                  <thead>
-                    <tr>
-                      <th scope="col">Option</th>
-                      <th scope="col">What it does</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr>
-                      <td><b>On</b></td>
-                      <td>
-                        The GPU always draws and scrolls the window, as WebKitGTK does by default.
-                      </td>
-                    </tr>
-                    <tr>
-                      <td><b>On demand</b></td>
-                      <td>The page content decides when the GPU is used.</td>
-                    </tr>
-                    <tr>
-                      <td><b>Off</b></td>
-                      <td>The CPU draws every frame, with no GPU compositing.</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-              <ul class="doc-points">
-                <li>A fresh install uses <b>On</b>.</li>
+          <div class="doc-layout">
+            <nav class="doc-toc" aria-label="On this page">
+              <ol>
                 <li>
-                  A change applies after you restart Konnekt.<br />
-                  Until then the row shows <b>Applies on the next launch.</b>
+                  <a href="#look"><span class="num">01</span><span>Look</span></a>
                 </li>
                 <li>
-                  With <b>On</b> or <b>On demand</b>, Konnekt turns off WebKitGTK's DMA-BUF
-                  transport on the proprietary NVIDIA driver.<br />
-                  Acceleration stays on, and frames pass through shared memory instead.<br />
-                  A <code>WEBKIT_DISABLE_DMABUF_RENDERER</code> you set yourself is left alone.
+                  <a href="#hardware-acceleration"
+                    ><span class="num">02</span><span>Hardware acceleration</span></a
+                  >
                 </li>
                 <li>
-                  The environment variable <code>KONNEKT_WEBVIEW_GPU</code> wins over the row while
-                  it is set.<br />
-                  Its values are <code>always</code>, <code>ondemand</code> and <code>never</code>.
+                  <a href="#advanced"><span class="num">03</span><span>Advanced</span></a>
                 </li>
-              </ul>
-              <div class="doc-note" data-tone="tip">
-                <span class="label">Tip</span>
-                <p>
-                  Step down to <b>On demand</b>, then <b>Off</b>, if the window flickers, tears or
-                  runs the GPU hot.
-                </p>
-              </div>
-              <p class="doc-prose">If the window is blank at launch, Settings is out of reach.</p>
-              <ol class="doc-steps">
-                <li>
-                  Set <code>KONNEKT_WEBVIEW_GPU</code> to <code>never</code> and start Konnekt.
-                </li>
-                <li>Open Settings, then <b>Appearance</b>.</li>
-                <li>Set <b>Hardware acceleration</b> to <b>Off</b>.</li>
-                <li>Close Konnekt, remove the variable, and start it again.</li>
               </ol>
-            </div>
-          </section>
-          <section class="doc-section block" id="advanced" aria-labelledby="advanced-title">
-            <div class="band doc-band">
-              <div class="band-title">
-                <span class="num">03</span>
-                <h2 id="advanced-title">Advanced</h2>
-              </div>
-            </div>
-            <div class="doc-body doc-split">
-              <div class="doc-main">
-                <div class="doc-table-wrap">
-                  <table class="doc-table">
-                    <thead>
-                      <tr>
-                        <th scope="col">Setting</th>
-                        <th scope="col">What it does</th>
-                        <th scope="col">Default</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <tr>
-                        <td><b>Fonts</b></td>
-                        <td>
-                          Sets the font family for <b>Body</b>, <b>Titles</b>, <b>Wordmark</b> and
-                          <b>Code</b>.
-                        </td>
-                        <td>Default</td>
-                      </tr>
-                      <tr>
-                        <td><b>Status colors</b></td>
-                        <td>
-                          Sets the <b>Success</b>, <b>Warning</b> and <b>Error</b> colors, each from
-                          a few presets or a custom picker.
-                        </td>
-                        <td><code>#22c55e</code>, <code>#f59e0b</code>, <code>#f87171</code></td>
-                      </tr>
-                      <tr>
-                        <td><b>Smooth scrolling</b></td>
-                        <td>
-                          Glides under each mouse wheel notch on spring physics instead of stepping.
-                        </td>
-                        <td>On</td>
-                      </tr>
-                      <tr>
-                        <td><b>Classic tile faces</b></td>
-                        <td>Shows the compact tile faces from before the figure-first ones.</td>
-                        <td>Off</td>
-                      </tr>
-                    </tbody>
-                  </table>
+            </nav>
+            <div class="doc-flow">
+              <section class="doc-section block" id="look" aria-labelledby="look-title">
+                <div class="band doc-band">
+                  <div class="band-title">
+                    <span class="num">01</span>
+                    <h2 id="look-title">Look</h2>
+                  </div>
                 </div>
-                <ul class="doc-points">
-                  <li>
-                    <b>Fonts</b>: pick an installed font or type any name for each of the four.<br />
-                    An empty field keeps the default, and a name that is not installed falls back to
-                    it.<br />
-                    <b>Wordmark</b> is the Konnekt name in the title bar.
-                  </li>
-                  <li>
-                    <b>Fonts</b> is desktop only: a
-                    <a href="/docs/settings/remote-access.html">Remote Access</a> browser cannot
-                    list this computer's fonts, so the row is hidden there.
-                  </li>
-                  <li>
-                    <b>Status colors</b> left at their defaults use darker values in Light mode.<br />
-                    A color you pick is used as is.
-                  </li>
-                  <li>
-                    <b>Smooth scrolling</b> leaves touchpads, Ctrl or Shift scrolling and the
-                    operating system's reduced-motion setting alone.<br />
-                    It takes effect on the next wheel notch, with no restart.
-                  </li>
-                  <li>
-                    <b>Classic tile faces</b> applies to the Overview, Players, Performance,
-                    Scheduler, Worlds, Backups and Plugins tiles.<br />
-                    Their layout options do not change a classic face.
-                  </li>
-                </ul>
-              </div>
-              <div class="doc-figs">
-                <figure
-                  class="fig fig-ui"
-                  role="img"
-                  aria-label="Settings · Appearance, with Advanced marked."
-                >
-                  <div class="fig-ui-title">Settings · Appearance</div>
-                  <div class="fig-ui-row"><span class="fig-ui-btn is-hit">Advanced</span></div>
-                  <div class="fig-ui-row">
-                    <span class="fig-ui-text">Fonts</span><span class="fig-ui-btn">Body</span
-                    ><span class="fig-ui-btn">Titles</span><span class="fig-ui-btn">Wordmark</span
-                    ><span class="fig-ui-btn">Code</span>
+                <div class="doc-body doc-split">
+                  <div class="doc-main">
+                    <div class="doc-table-wrap">
+                      <table class="doc-table">
+                        <thead>
+                          <tr>
+                            <th scope="col">Setting</th>
+                            <th scope="col">What it does</th>
+                            <th scope="col">Default</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <tr>
+                            <td><b>Skin</b></td>
+                            <td>
+                              Six palettes for surfaces and borders: Default, Midnight, Nord,
+                              Solarized, Mocha and Forest.
+                            </td>
+                            <td>Default</td>
+                          </tr>
+                          <tr>
+                            <td><b>Mode</b></td>
+                            <td>
+                              Light, Dark, or System, which follows the operating system, with Light
+                              on the Default skin only.
+                            </td>
+                            <td>Dark</td>
+                          </tr>
+                          <tr>
+                            <td><b>Accent color</b></td>
+                            <td>
+                              Colors highlights and active states, from six presets or a custom
+                              picker.
+                            </td>
+                            <td><code>#4ade80</code></td>
+                          </tr>
+                          <tr>
+                            <td><b>Background</b></td>
+                            <td>
+                              Solid, or Gradient, a faint accent glow from the top right corner.
+                            </td>
+                            <td>Solid</td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                    <ul class="doc-points">
+                      <li>
+                        Picking a skin also sets its accent color: Green for Default and Forest,
+                        Violet for Midnight, Blue for Nord, Rose for Solarized and Amber for
+                        Mocha.<br />
+                        Change the accent afterwards to override it.
+                      </li>
+                      <li>
+                        Every skin except Default is dark only, and <b>Light</b> is greyed out on
+                        them.<br />
+                        Picking one while <b>Mode</b> is <b>Light</b> switches <b>Mode</b> to
+                        <b>Dark</b>.
+                      </li>
+                      <li>
+                        With <b>System</b>, those skins stay dark whatever the operating system
+                        prefers.
+                      </li>
+                    </ul>
                   </div>
-                  <div class="fig-ui-row">
-                    <span class="fig-ui-text">Status colors</span
-                    ><span class="fig-ui-btn">Success</span><span class="fig-ui-btn">Warning</span
-                    ><span class="fig-ui-btn">Error</span>
+                  <div class="doc-figs">
+                    <figure class="fig fig-ui" role="img" aria-label="Settings · Appearance.">
+                      <div class="fig-ui-title">Settings · Appearance</div>
+                      <div class="fig-ui-row">
+                        <span class="fig-ui-text">Skin</span><span class="fig-ui-btn">Default</span>
+                      </div>
+                      <div class="fig-ui-row">
+                        <span class="fig-ui-text">Mode</span><span class="fig-ui-btn">Light</span
+                        ><span class="fig-ui-btn">Dark</span><span class="fig-ui-btn">System</span>
+                      </div>
+                      <div class="fig-ui-row">
+                        <span class="fig-ui-text">Accent color</span
+                        ><span class="fig-ui-btn">Green</span>
+                      </div>
+                      <div class="fig-ui-row">
+                        <span class="fig-ui-text">Background</span
+                        ><span class="fig-ui-btn">Solid</span
+                        ><span class="fig-ui-btn">Gradient</span>
+                      </div>
+                      <div class="fig-ui-row">
+                        <span class="fig-ui-text">Hardware acceleration</span
+                        ><span class="fig-ui-btn">On</span><span class="fig-ui-btn">On demand</span
+                        ><span class="fig-ui-btn">Off</span>
+                      </div>
+                    </figure>
                   </div>
-                  <div class="fig-ui-row">
-                    <span class="fig-ui-text">Smooth scrolling</span
-                    ><span class="fig-ui-btn">On</span>
+                </div>
+              </section>
+              <section
+                class="doc-section block"
+                id="hardware-acceleration"
+                aria-labelledby="hardware-acceleration-title"
+              >
+                <div class="band doc-band">
+                  <div class="band-title">
+                    <span class="num">02</span>
+                    <h2 id="hardware-acceleration-title">Hardware acceleration</h2>
                   </div>
-                  <div class="fig-ui-row">
-                    <span class="fig-ui-text">Classic tile faces</span
-                    ><span class="fig-ui-btn">Off</span>
+                </div>
+                <div class="doc-body">
+                  <p class="doc-prose">
+                    <b>Hardware acceleration</b> is a Linux setting.<br />
+                    It sets how the window's webview, WebKitGTK, uses the GPU.<br />
+                    Windows, macOS and a
+                    <a href="/docs/settings/remote-access.html">Remote Access</a> browser do not use
+                    it, so the row is hidden there.
+                  </p>
+                  <div class="doc-table-wrap">
+                    <table class="doc-table">
+                      <thead>
+                        <tr>
+                          <th scope="col">Option</th>
+                          <th scope="col">What it does</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr>
+                          <td><b>On</b></td>
+                          <td>
+                            The GPU always draws and scrolls the window, as WebKitGTK does by
+                            default.
+                          </td>
+                        </tr>
+                        <tr>
+                          <td><b>On demand</b></td>
+                          <td>The page content decides when the GPU is used.</td>
+                        </tr>
+                        <tr>
+                          <td><b>Off</b></td>
+                          <td>The CPU draws every frame, with no GPU compositing.</td>
+                        </tr>
+                      </tbody>
+                    </table>
                   </div>
-                </figure>
-              </div>
+                  <ul class="doc-points">
+                    <li>A fresh install uses <b>On</b>.</li>
+                    <li>
+                      A change applies after you restart Konnekt.<br />
+                      Until then the row shows <b>Applies on the next launch.</b>
+                    </li>
+                    <li>
+                      With <b>On</b> or <b>On demand</b>, Konnekt turns off WebKitGTK's DMA-BUF
+                      transport on the proprietary NVIDIA driver.<br />
+                      Acceleration stays on, and frames pass through shared memory instead.<br />
+                      A <code>WEBKIT_DISABLE_DMABUF_RENDERER</code> you set yourself is left alone.
+                    </li>
+                    <li>
+                      The environment variable <code>KONNEKT_WEBVIEW_GPU</code> wins over the row
+                      while it is set.<br />
+                      Its values are <code>always</code>, <code>ondemand</code> and
+                      <code>never</code>.
+                    </li>
+                  </ul>
+                  <div class="doc-note" data-tone="tip">
+                    <span class="label">Tip</span>
+                    <p>
+                      Step down to <b>On demand</b>, then <b>Off</b>, if the window flickers, tears
+                      or runs the GPU hot.
+                    </p>
+                  </div>
+                  <p class="doc-prose">
+                    If the window is blank at launch, Settings is out of reach.
+                  </p>
+                  <ol class="doc-steps">
+                    <li>
+                      Set <code>KONNEKT_WEBVIEW_GPU</code> to <code>never</code> and start Konnekt.
+                    </li>
+                    <li>Open Settings, then <b>Appearance</b>.</li>
+                    <li>Set <b>Hardware acceleration</b> to <b>Off</b>.</li>
+                    <li>Close Konnekt, remove the variable, and start it again.</li>
+                  </ol>
+                </div>
+              </section>
+              <section class="doc-section block" id="advanced" aria-labelledby="advanced-title">
+                <div class="band doc-band">
+                  <div class="band-title">
+                    <span class="num">03</span>
+                    <h2 id="advanced-title">Advanced</h2>
+                  </div>
+                </div>
+                <div class="doc-body doc-split">
+                  <div class="doc-main">
+                    <div class="doc-table-wrap">
+                      <table class="doc-table">
+                        <thead>
+                          <tr>
+                            <th scope="col">Setting</th>
+                            <th scope="col">What it does</th>
+                            <th scope="col">Default</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <tr>
+                            <td><b>Fonts</b></td>
+                            <td>
+                              Sets the font family for <b>Body</b>, <b>Titles</b>,
+                              <b>Wordmark</b> and <b>Code</b>.
+                            </td>
+                            <td>Default</td>
+                          </tr>
+                          <tr>
+                            <td><b>Status colors</b></td>
+                            <td>
+                              Sets the <b>Success</b>, <b>Warning</b> and <b>Error</b> colors, each
+                              from a few presets or a custom picker.
+                            </td>
+                            <td>
+                              <code>#22c55e</code>, <code>#f59e0b</code>, <code>#f87171</code>
+                            </td>
+                          </tr>
+                          <tr>
+                            <td><b>Smooth scrolling</b></td>
+                            <td>
+                              Glides under each mouse wheel notch on spring physics instead of
+                              stepping.
+                            </td>
+                            <td>On</td>
+                          </tr>
+                          <tr>
+                            <td><b>Classic tile faces</b></td>
+                            <td>Shows the compact tile faces from before the figure-first ones.</td>
+                            <td>Off</td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                    <ul class="doc-points">
+                      <li>
+                        <b>Fonts</b>: pick an installed font or type any name for each of the
+                        four.<br />
+                        An empty field keeps the default, and a name that is not installed falls
+                        back to it.<br />
+                        <b>Wordmark</b> is the Konnekt name in the title bar.
+                      </li>
+                      <li>
+                        <b>Fonts</b> is desktop only: a
+                        <a href="/docs/settings/remote-access.html">Remote Access</a> browser cannot
+                        list this computer's fonts, so the row is hidden there.
+                      </li>
+                      <li>
+                        <b>Status colors</b> left at their defaults use darker values in Light
+                        mode.<br />
+                        A color you pick is used as is.
+                      </li>
+                      <li>
+                        <b>Smooth scrolling</b> leaves touchpads, Ctrl or Shift scrolling and the
+                        operating system's reduced-motion setting alone.<br />
+                        It takes effect on the next wheel notch, with no restart.
+                      </li>
+                      <li>
+                        <b>Classic tile faces</b> applies to the Overview, Players, Performance,
+                        Scheduler, Worlds, Backups and Plugins tiles.<br />
+                        Their layout options do not change a classic face.
+                      </li>
+                    </ul>
+                  </div>
+                  <div class="doc-figs">
+                    <figure
+                      class="fig fig-ui"
+                      role="img"
+                      aria-label="Settings · Appearance, with Advanced marked."
+                    >
+                      <div class="fig-ui-title">Settings · Appearance</div>
+                      <div class="fig-ui-row"><span class="fig-ui-btn is-hit">Advanced</span></div>
+                      <div class="fig-ui-row">
+                        <span class="fig-ui-text">Fonts</span><span class="fig-ui-btn">Body</span
+                        ><span class="fig-ui-btn">Titles</span
+                        ><span class="fig-ui-btn">Wordmark</span
+                        ><span class="fig-ui-btn">Code</span>
+                      </div>
+                      <div class="fig-ui-row">
+                        <span class="fig-ui-text">Status colors</span
+                        ><span class="fig-ui-btn">Success</span
+                        ><span class="fig-ui-btn">Warning</span
+                        ><span class="fig-ui-btn">Error</span>
+                      </div>
+                      <div class="fig-ui-row">
+                        <span class="fig-ui-text">Smooth scrolling</span
+                        ><span class="fig-ui-btn">On</span>
+                      </div>
+                      <div class="fig-ui-row">
+                        <span class="fig-ui-text">Classic tile faces</span
+                        ><span class="fig-ui-btn">Off</span>
+                      </div>
+                    </figure>
+                  </div>
+                </div>
+              </section>
             </div>
-          </section>
+          </div>
           <nav class="doc-related block" aria-label="Related">
             <div class="shelf-label"><span class="label">Related</span></div>
             <a class="related-link" href="/docs/settings/general.html"

@@ -811,6 +811,83 @@ h2.label {
   }
 }
 
+/* ── Contents ─────────────────────────────────────────────────────────── */
+/* The page's sections listed down the left, level with the first one, and
+   kept in view while the sections scroll past. site.js marks the one being
+   read. */
+
+.doc-layout {
+  display: grid;
+  grid-template-columns: 200px minmax(0, 1fr);
+  gap: var(--stack);
+  align-items: start;
+}
+
+.doc-flow {
+  display: flex;
+  flex-direction: column;
+  gap: var(--stack);
+  min-width: 0;
+}
+
+.doc-toc {
+  position: sticky;
+  top: 24px;
+  border: var(--hairline);
+}
+
+.doc-toc ol {
+  margin: 0;
+  padding: 10px 0;
+  list-style: none;
+}
+
+.doc-toc a {
+  display: flex;
+  gap: 10px;
+  padding: 8px 16px 8px 14px;
+  border-left: 2px solid transparent;
+  color: var(--text-secondary);
+  font-size: 14px;
+  line-height: 1.35;
+  text-decoration: none;
+  transition:
+    color var(--duration-fast) var(--ease-standard),
+    border-color var(--duration-fast) var(--ease-standard);
+}
+
+.doc-toc a:hover {
+  color: var(--text-primary);
+}
+
+.doc-toc a[aria-current] {
+  border-left-color: var(--accent);
+  color: var(--text-primary);
+}
+
+.doc-toc .num {
+  flex: none;
+  padding-top: 1px;
+  font-family: var(--font-site-mono);
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.doc-toc a[aria-current] .num {
+  color: var(--accent);
+}
+
+@media (max-width: 1100px) {
+  .doc-layout {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .doc-toc {
+    display: none;
+  }
+}
+
 /* ── Related pages ──────────────────────────────────────────────────────── */
 
 .doc-related {

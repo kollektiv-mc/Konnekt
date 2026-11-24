@@ -127,288 +127,333 @@
               </div>
             </dl>
           </header>
-          <section class="doc-section block" id="key-prefix" aria-labelledby="key-prefix-title">
-            <div class="band doc-band">
-              <div class="band-title">
-                <span class="num">01</span>
-                <h2 id="key-prefix-title">Key prefix</h2>
-              </div>
-            </div>
-            <div class="doc-body">
-              <p class="doc-prose">
-                Every key starts with the destination's <b>Prefix</b>, then the block's
-                <b>Key prefix</b>.<br />
-                <code>&lt;prefix&gt;</code> stands for both.<br />
-                With both blank, keys start at the bucket's root.
-              </p>
-            </div>
-          </section>
-          <section
-            class="doc-section block"
-            id="upload-to-bucket"
-            aria-labelledby="upload-to-bucket-title"
-          >
-            <div class="band doc-band">
-              <div class="band-title">
-                <span class="num">02</span>
-                <h2 id="upload-to-bucket-title">Upload to Bucket</h2>
-              </div>
-            </div>
-            <div class="doc-body">
-              <div class="doc-table-wrap">
-                <table class="doc-table">
-                  <thead>
-                    <tr>
-                      <th scope="col">Key</th>
-                      <th scope="col">Holds</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr>
-                      <td><code>&lt;prefix&gt;/&lt;path inside Source&gt;</code></td>
-                      <td>One object per file, with folders kept as key segments.</td>
-                    </tr>
-                    <tr>
-                      <td><code>&lt;prefix&gt;/&lt;file name&gt;</code></td>
-                      <td>The object for a <b>Source</b> that is a single file.</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-              <p class="doc-prose">
-                The block deletes nothing.<br />
-                An object that exists at the same size is skipped, and any other is replaced.
-              </p>
-            </div>
-          </section>
-          <section
-            class="doc-section block"
-            id="publish-dh-snapshot"
-            aria-labelledby="publish-dh-snapshot-title"
-          >
-            <div class="band doc-band">
-              <div class="band-title">
-                <span class="num">03</span>
-                <h2 id="publish-dh-snapshot-title">Publish DH Snapshot</h2>
-              </div>
-            </div>
-            <div class="doc-body doc-split">
-              <div class="doc-main">
-                <div class="doc-table-wrap">
-                  <table class="doc-table">
-                    <thead>
-                      <tr>
-                        <th scope="col">Key</th>
-                        <th scope="col">Holds</th>
-                        <th scope="col">Replaced or deleted</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <tr>
-                        <td><code>&lt;prefix&gt;/latest.json</code></td>
-                        <td>
-                          A pointer to the newest snapshot's <code>index.json</code>: its format,
-                          <code>createdAt</code> and the path.
-                        </td>
-                        <td>Rewritten by each publish, as its last write.</td>
-                      </tr>
-                      <tr>
-                        <td><code>&lt;prefix&gt;/snapshots/&lt;stamp&gt;/index.json</code></td>
-                        <td>
-                          The snapshot: Distant Horizons version, server folder, and for each level
-                          its folder, size, SHA-256 and parts.
-                        </td>
-                        <td>Deleted with its snapshot.</td>
-                      </tr>
-                      <tr>
-                        <td><code>&lt;prefix&gt;/snapshots/&lt;stamp&gt;/index.html</code></td>
-                        <td>
-                          The download page, listing each level's file with its size and the folder
-                          to put it in.
-                        </td>
-                        <td>Deleted with its snapshot.</td>
-                      </tr>
-                      <tr>
-                        <td>
-                          <code
-                            >&lt;prefix&gt;/snapshots/&lt;stamp&gt;/&lt;level
-                            folder&gt;/DistantHorizons.sqlite</code
-                          >
-                        </td>
-                        <td>One level's whole database, built inside the bucket from its parts.</td>
-                        <td>Deleted with its snapshot.</td>
-                      </tr>
-                      <tr>
-                        <td><code>&lt;prefix&gt;/parts/&lt;sha256&gt;</code></td>
-                        <td>
-                          A slice of a database, named by its SHA-256 and up to 8 MiB, shared by
-                          every snapshot that uses it.
-                        </td>
-                        <td>Deleted when no kept snapshot lists it.</td>
-                      </tr>
-                    </tbody>
-                  </table>
+          <div class="doc-layout">
+            <nav class="doc-toc" aria-label="On this page">
+              <ol>
+                <li>
+                  <a href="#key-prefix"><span class="num">01</span><span>Key prefix</span></a>
+                </li>
+                <li>
+                  <a href="#upload-to-bucket"
+                    ><span class="num">02</span><span>Upload to Bucket</span></a
+                  >
+                </li>
+                <li>
+                  <a href="#publish-dh-snapshot"
+                    ><span class="num">03</span><span>Publish DH Snapshot</span></a
+                  >
+                </li>
+                <li>
+                  <a href="#private-link"><span class="num">04</span><span>Private link</span></a>
+                </li>
+                <li>
+                  <a href="#deletions"><span class="num">05</span><span>Deletions</span></a>
+                </li>
+              </ol>
+            </nav>
+            <div class="doc-flow">
+              <section class="doc-section block" id="key-prefix" aria-labelledby="key-prefix-title">
+                <div class="band doc-band">
+                  <div class="band-title">
+                    <span class="num">01</span>
+                    <h2 id="key-prefix-title">Key prefix</h2>
+                  </div>
                 </div>
-                <ul class="doc-points">
-                  <li>
-                    <code>&lt;stamp&gt;</code> is the snapshot's UTC time, such as
-                    <code>20261012T040000Z</code>.
-                  </li>
-                  <li>
-                    <code>&lt;level folder&gt;</code> is
-                    <code>&lt;levelKeyPrefix&gt;@&lt;namespace&gt;@@&lt;path&gt;</code>, such as
-                    <code>myserver@minecraft@@overworld</code>.
-                  </li>
-                </ul>
-              </div>
-              <div class="doc-figs">
-                <figure class="fig fig-tree">
-                  <ul class="fig-tree-list">
-                    <li class="fig-tree-row" style="--depth: 0"><code>&lt;prefix&gt;/</code></li>
-                    <li class="fig-tree-row" style="--depth: 1">
-                      <code>latest.json</code
-                      ><span class="fig-tree-note">points at the newest snapshot</span>
-                    </li>
-                    <li class="fig-tree-row" style="--depth: 1"><code>snapshots/</code></li>
-                    <li class="fig-tree-row" style="--depth: 2">
-                      <code>20261012T040000Z/</code><span class="fig-tree-note">one snapshot</span>
-                    </li>
-                    <li class="fig-tree-row" style="--depth: 3"><code>index.json</code></li>
-                    <li class="fig-tree-row" style="--depth: 3">
-                      <code>index.html</code><span class="fig-tree-note">the download page</span>
-                    </li>
-                    <li class="fig-tree-row" style="--depth: 3">
-                      <code>myserver@minecraft@@overworld/</code
-                      ><span class="fig-tree-note">one level</span>
-                    </li>
-                    <li class="fig-tree-row" style="--depth: 4">
-                      <code>DistantHorizons.sqlite</code>
-                    </li>
-                    <li class="fig-tree-row" style="--depth: 1"><code>parts/</code></li>
-                    <li class="fig-tree-row" style="--depth: 2">
-                      <code>&lt;sha256&gt;</code
-                      ><span class="fig-tree-note">a slice of a database</span>
-                    </li>
-                  </ul>
-                </figure>
-              </div>
-            </div>
-          </section>
-          <section class="doc-section block" id="private-link" aria-labelledby="private-link-title">
-            <div class="band doc-band">
-              <div class="band-title">
-                <span class="num">04</span>
-                <h2 id="private-link-title">Private link</h2>
-              </div>
-            </div>
-            <div class="doc-body doc-split">
-              <div class="doc-main">
-                <div class="doc-table-wrap">
-                  <table class="doc-table">
-                    <thead>
-                      <tr>
-                        <th scope="col">Key</th>
-                        <th scope="col">Holds</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <tr>
-                        <td><code>&lt;prefix&gt;/&lt;token&gt;/latest.json</code></td>
-                        <td>The pointer, as in the public layout.</td>
-                      </tr>
-                      <tr>
-                        <td><code>&lt;prefix&gt;/&lt;token&gt;/snapshots/&lt;stamp&gt;/…</code></td>
-                        <td>The same snapshot files as in the public layout.</td>
-                      </tr>
-                      <tr>
-                        <td><code>&lt;prefix&gt;/parts/&lt;sha256&gt;</code></td>
-                        <td>The parts, which stay where they are.</td>
-                      </tr>
-                    </tbody>
-                  </table>
+                <div class="doc-body">
+                  <p class="doc-prose">
+                    Every key starts with the destination's <b>Prefix</b>, then the block's
+                    <b>Key prefix</b>.<br />
+                    <code>&lt;prefix&gt;</code> stands for both.<br />
+                    With both blank, keys start at the bucket's root.
+                  </p>
                 </div>
-                <ul class="doc-points">
-                  <li><code>&lt;token&gt;</code> is 26 random lowercase letters and digits.</li>
-                  <li>
-                    The destination's
-                    <a href="/docs/settings/destinations.html#snapshot-link">Snapshot link</a> row
-                    switches between the two layouts.
-                  </li>
-                </ul>
-              </div>
-              <div class="doc-figs">
-                <figure class="fig fig-tree">
-                  <ul class="fig-tree-list">
-                    <li class="fig-tree-row" style="--depth: 0"><code>&lt;prefix&gt;/</code></li>
-                    <li class="fig-tree-row" style="--depth: 1">
-                      <code>&lt;token&gt;/</code
-                      ><span class="fig-tree-note">26 random lowercase letters and digits</span>
-                    </li>
-                    <li class="fig-tree-row" style="--depth: 2"><code>latest.json</code></li>
-                    <li class="fig-tree-row" style="--depth: 2"><code>snapshots/</code></li>
-                    <li class="fig-tree-row" style="--depth: 3"><code>20261012T040000Z/</code></li>
-                    <li class="fig-tree-row" style="--depth: 1">
-                      <code>parts/</code><span class="fig-tree-note">stay where they are</span>
-                    </li>
-                  </ul>
-                </figure>
-              </div>
+              </section>
+              <section
+                class="doc-section block"
+                id="upload-to-bucket"
+                aria-labelledby="upload-to-bucket-title"
+              >
+                <div class="band doc-band">
+                  <div class="band-title">
+                    <span class="num">02</span>
+                    <h2 id="upload-to-bucket-title">Upload to Bucket</h2>
+                  </div>
+                </div>
+                <div class="doc-body">
+                  <div class="doc-table-wrap">
+                    <table class="doc-table">
+                      <thead>
+                        <tr>
+                          <th scope="col">Key</th>
+                          <th scope="col">Holds</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr>
+                          <td><code>&lt;prefix&gt;/&lt;path inside Source&gt;</code></td>
+                          <td>One object per file, with folders kept as key segments.</td>
+                        </tr>
+                        <tr>
+                          <td><code>&lt;prefix&gt;/&lt;file name&gt;</code></td>
+                          <td>The object for a <b>Source</b> that is a single file.</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                  <p class="doc-prose">
+                    The block deletes nothing.<br />
+                    An object that exists at the same size is skipped, and any other is replaced.
+                  </p>
+                </div>
+              </section>
+              <section
+                class="doc-section block"
+                id="publish-dh-snapshot"
+                aria-labelledby="publish-dh-snapshot-title"
+              >
+                <div class="band doc-band">
+                  <div class="band-title">
+                    <span class="num">03</span>
+                    <h2 id="publish-dh-snapshot-title">Publish DH Snapshot</h2>
+                  </div>
+                </div>
+                <div class="doc-body doc-split">
+                  <div class="doc-main">
+                    <div class="doc-table-wrap">
+                      <table class="doc-table">
+                        <thead>
+                          <tr>
+                            <th scope="col">Key</th>
+                            <th scope="col">Holds</th>
+                            <th scope="col">Replaced or deleted</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <tr>
+                            <td><code>&lt;prefix&gt;/latest.json</code></td>
+                            <td>
+                              A pointer to the newest snapshot's <code>index.json</code>: its
+                              format, <code>createdAt</code> and the path.
+                            </td>
+                            <td>Rewritten by each publish, as its last write.</td>
+                          </tr>
+                          <tr>
+                            <td><code>&lt;prefix&gt;/snapshots/&lt;stamp&gt;/index.json</code></td>
+                            <td>
+                              The snapshot: Distant Horizons version, server folder, and for each
+                              level its folder, size, SHA-256 and parts.
+                            </td>
+                            <td>Deleted with its snapshot.</td>
+                          </tr>
+                          <tr>
+                            <td><code>&lt;prefix&gt;/snapshots/&lt;stamp&gt;/index.html</code></td>
+                            <td>
+                              The download page, listing each level's file with its size and the
+                              folder to put it in.
+                            </td>
+                            <td>Deleted with its snapshot.</td>
+                          </tr>
+                          <tr>
+                            <td>
+                              <code
+                                >&lt;prefix&gt;/snapshots/&lt;stamp&gt;/&lt;level
+                                folder&gt;/DistantHorizons.sqlite</code
+                              >
+                            </td>
+                            <td>
+                              One level's whole database, built inside the bucket from its parts.
+                            </td>
+                            <td>Deleted with its snapshot.</td>
+                          </tr>
+                          <tr>
+                            <td><code>&lt;prefix&gt;/parts/&lt;sha256&gt;</code></td>
+                            <td>
+                              A slice of a database, named by its SHA-256 and up to 8 MiB, shared by
+                              every snapshot that uses it.
+                            </td>
+                            <td>Deleted when no kept snapshot lists it.</td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                    <ul class="doc-points">
+                      <li>
+                        <code>&lt;stamp&gt;</code> is the snapshot's UTC time, such as
+                        <code>20261012T040000Z</code>.
+                      </li>
+                      <li>
+                        <code>&lt;level folder&gt;</code> is
+                        <code>&lt;levelKeyPrefix&gt;@&lt;namespace&gt;@@&lt;path&gt;</code>, such as
+                        <code>myserver@minecraft@@overworld</code>.
+                      </li>
+                    </ul>
+                  </div>
+                  <div class="doc-figs">
+                    <figure class="fig fig-tree">
+                      <ul class="fig-tree-list">
+                        <li class="fig-tree-row" style="--depth: 0">
+                          <code>&lt;prefix&gt;/</code>
+                        </li>
+                        <li class="fig-tree-row" style="--depth: 1">
+                          <code>latest.json</code
+                          ><span class="fig-tree-note">points at the newest snapshot</span>
+                        </li>
+                        <li class="fig-tree-row" style="--depth: 1"><code>snapshots/</code></li>
+                        <li class="fig-tree-row" style="--depth: 2">
+                          <code>20261012T040000Z/</code
+                          ><span class="fig-tree-note">one snapshot</span>
+                        </li>
+                        <li class="fig-tree-row" style="--depth: 3"><code>index.json</code></li>
+                        <li class="fig-tree-row" style="--depth: 3">
+                          <code>index.html</code
+                          ><span class="fig-tree-note">the download page</span>
+                        </li>
+                        <li class="fig-tree-row" style="--depth: 3">
+                          <code>myserver@minecraft@@overworld/</code
+                          ><span class="fig-tree-note">one level</span>
+                        </li>
+                        <li class="fig-tree-row" style="--depth: 4">
+                          <code>DistantHorizons.sqlite</code>
+                        </li>
+                        <li class="fig-tree-row" style="--depth: 1"><code>parts/</code></li>
+                        <li class="fig-tree-row" style="--depth: 2">
+                          <code>&lt;sha256&gt;</code
+                          ><span class="fig-tree-note">a slice of a database</span>
+                        </li>
+                      </ul>
+                    </figure>
+                  </div>
+                </div>
+              </section>
+              <section
+                class="doc-section block"
+                id="private-link"
+                aria-labelledby="private-link-title"
+              >
+                <div class="band doc-band">
+                  <div class="band-title">
+                    <span class="num">04</span>
+                    <h2 id="private-link-title">Private link</h2>
+                  </div>
+                </div>
+                <div class="doc-body doc-split">
+                  <div class="doc-main">
+                    <div class="doc-table-wrap">
+                      <table class="doc-table">
+                        <thead>
+                          <tr>
+                            <th scope="col">Key</th>
+                            <th scope="col">Holds</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <tr>
+                            <td><code>&lt;prefix&gt;/&lt;token&gt;/latest.json</code></td>
+                            <td>The pointer, as in the public layout.</td>
+                          </tr>
+                          <tr>
+                            <td>
+                              <code>&lt;prefix&gt;/&lt;token&gt;/snapshots/&lt;stamp&gt;/…</code>
+                            </td>
+                            <td>The same snapshot files as in the public layout.</td>
+                          </tr>
+                          <tr>
+                            <td><code>&lt;prefix&gt;/parts/&lt;sha256&gt;</code></td>
+                            <td>The parts, which stay where they are.</td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                    <ul class="doc-points">
+                      <li><code>&lt;token&gt;</code> is 26 random lowercase letters and digits.</li>
+                      <li>
+                        The destination's
+                        <a href="/docs/settings/destinations.html#snapshot-link">Snapshot link</a>
+                        row switches between the two layouts.
+                      </li>
+                    </ul>
+                  </div>
+                  <div class="doc-figs">
+                    <figure class="fig fig-tree">
+                      <ul class="fig-tree-list">
+                        <li class="fig-tree-row" style="--depth: 0">
+                          <code>&lt;prefix&gt;/</code>
+                        </li>
+                        <li class="fig-tree-row" style="--depth: 1">
+                          <code>&lt;token&gt;/</code
+                          ><span class="fig-tree-note">26 random lowercase letters and digits</span>
+                        </li>
+                        <li class="fig-tree-row" style="--depth: 2"><code>latest.json</code></li>
+                        <li class="fig-tree-row" style="--depth: 2"><code>snapshots/</code></li>
+                        <li class="fig-tree-row" style="--depth: 3">
+                          <code>20261012T040000Z/</code>
+                        </li>
+                        <li class="fig-tree-row" style="--depth: 1">
+                          <code>parts/</code><span class="fig-tree-note">stay where they are</span>
+                        </li>
+                      </ul>
+                    </figure>
+                  </div>
+                </div>
+              </section>
+              <section class="doc-section block" id="deletions" aria-labelledby="deletions-title">
+                <div class="band doc-band">
+                  <div class="band-title">
+                    <span class="num">05</span>
+                    <h2 id="deletions-title">Deletions</h2>
+                  </div>
+                </div>
+                <div class="doc-body">
+                  <div class="doc-table-wrap">
+                    <table class="doc-table">
+                      <thead>
+                        <tr>
+                          <th scope="col">When</th>
+                          <th scope="col">Deletes</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr>
+                          <td>A publish finishes</td>
+                          <td>
+                            Snapshots beyond the newest <b>Snapshots to keep</b>, except the one
+                            <code>latest.json</code> points at. Then every part no kept snapshot
+                            lists.
+                          </td>
+                        </tr>
+                        <tr>
+                          <td>The next publish after a cut-off one</td>
+                          <td>
+                            A folder without <code>index.json</code>, once it is older than the
+                            oldest snapshot kept.
+                          </td>
+                        </tr>
+                        <tr>
+                          <td>The link switches or rotates</td>
+                          <td>
+                            The old address's <code>latest.json</code> first, then its whole
+                            <code>snapshots/</code> folder. Only the snapshot
+                            <code>latest.json</code> points at moves to the new address.
+                          </td>
+                        </tr>
+                        <tr>
+                          <td>A destination is deleted in Settings</td>
+                          <td>Nothing in the bucket.</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                  <p class="doc-prose">
+                    A cleanup only touches folders named like a stamp and parts named like a
+                    SHA-256.<br />
+                    If it cannot read what it needs, it deletes nothing, and the publish reports a
+                    warning.<br />
+                    The next publish cleans up again.
+                  </p>
+                </div>
+              </section>
             </div>
-          </section>
-          <section class="doc-section block" id="deletions" aria-labelledby="deletions-title">
-            <div class="band doc-band">
-              <div class="band-title">
-                <span class="num">05</span>
-                <h2 id="deletions-title">Deletions</h2>
-              </div>
-            </div>
-            <div class="doc-body">
-              <div class="doc-table-wrap">
-                <table class="doc-table">
-                  <thead>
-                    <tr>
-                      <th scope="col">When</th>
-                      <th scope="col">Deletes</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr>
-                      <td>A publish finishes</td>
-                      <td>
-                        Snapshots beyond the newest <b>Snapshots to keep</b>, except the one
-                        <code>latest.json</code> points at. Then every part no kept snapshot lists.
-                      </td>
-                    </tr>
-                    <tr>
-                      <td>The next publish after a cut-off one</td>
-                      <td>
-                        A folder without <code>index.json</code>, once it is older than the oldest
-                        snapshot kept.
-                      </td>
-                    </tr>
-                    <tr>
-                      <td>The link switches or rotates</td>
-                      <td>
-                        The old address's <code>latest.json</code> first, then its whole
-                        <code>snapshots/</code> folder. Only the snapshot
-                        <code>latest.json</code> points at moves to the new address.
-                      </td>
-                    </tr>
-                    <tr>
-                      <td>A destination is deleted in Settings</td>
-                      <td>Nothing in the bucket.</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-              <p class="doc-prose">
-                A cleanup only touches folders named like a stamp and parts named like a SHA-256.<br />
-                If it cannot read what it needs, it deletes nothing, and the publish reports a
-                warning.<br />
-                The next publish cleans up again.
-              </p>
-            </div>
-          </section>
+          </div>
           <nav class="doc-related block" aria-label="Related">
             <div class="shelf-label"><span class="label">Related</span></div>
             <a class="related-link" href="/docs/settings/destinations.html"

@@ -131,229 +131,254 @@
             </dl>
           </header>
 
-          <!-- gen:ports -->
-          <section class="doc-section block" id="ports" aria-labelledby="ports-title">
-            <div class="band doc-band">
-              <div class="band-title">
-                <span class="num">01</span>
-                <h2 id="ports-title">Ports</h2>
-              </div>
-            </div>
-            <div class="port-stage">
-              <div class="port-canvas">
-                <div class="port-node" data-category="action">
-                  <div class="port-node-head">
-                    <span>RCON Command</span><span class="port-node-cat">action</span>
-                  </div>
-                  <div class="port-cols">
-                    <ul class="port-col port-in" aria-label="Inputs">
-                      <li class="port-col-label" aria-hidden="true">in</li>
-                      <li class="port" data-shape="control" data-port="trigger">
-                        <span>trigger</span><span class="port-type">control</span>
-                      </li>
-                      <li class="port" data-shape="data" data-type="string">
-                        <span>Command</span><span class="port-type">string</span>
-                      </li>
-                    </ul>
-                    <ul class="port-col port-out" aria-label="Outputs">
-                      <li class="port-col-label" aria-hidden="true">out</li>
-                      <li class="port" data-shape="control" data-port="onComplete">
-                        <span>onComplete</span><span class="port-type">control</span>
-                      </li>
-                      <li class="port" data-shape="control" data-port="onFailed">
-                        <span>onFailed</span><span class="port-type">control</span>
-                      </li>
-                      <li class="port" data-shape="data" data-type="string">
-                        <span>Response</span><span class="port-type">string</span>
-                      </li>
-                    </ul>
+          <div class="doc-layout">
+            <!-- gen:toc -->
+            <nav class="doc-toc" aria-label="On this page">
+              <ol>
+                <li>
+                  <a href="#ports"><span class="num">01</span><span>Ports</span></a>
+                </li>
+                <li>
+                  <a href="#fields"><span class="num">02</span><span>Fields</span></a>
+                </li>
+                <li>
+                  <a href="#run"><span class="num">03</span><span>What a run does</span></a>
+                </li>
+                <li>
+                  <a href="#errors"><span class="num">04</span><span>Errors</span></a>
+                </li>
+              </ol>
+            </nav>
+            <!-- /gen:toc -->
+            <div class="doc-flow">
+              <!-- gen:ports -->
+              <section class="doc-section block" id="ports" aria-labelledby="ports-title">
+                <div class="band doc-band">
+                  <div class="band-title">
+                    <span class="num">01</span>
+                    <h2 id="ports-title">Ports</h2>
                   </div>
                 </div>
-              </div>
-              <div class="port-legend">
-                <span class="label">Ports</span>
-                <span class="port-key" data-shape="control">Control</span>
-                <span class="port-key" data-shape="data">Data</span>
-                <hr />
-                <span class="label">Data types</span>
-                <span class="port-key" data-shape="data" data-type="string"
-                  ><code>string</code></span
-                >
-                <span class="port-key" data-shape="data" data-type="number"
-                  ><code>number</code></span
-                >
-                <span class="port-key" data-shape="data" data-type="bool"><code>bool</code></span>
-                <p class="doc-prose">
-                  Strings accept any data input.<br />
-                  Numbers accept boolean input.
-                </p>
-              </div>
-            </div>
-          </section>
-          <!-- /gen:ports -->
-
-          <!-- gen:fields -->
-          <section class="doc-section block" id="fields" aria-labelledby="fields-title">
-            <div class="band doc-band">
-              <div class="band-title">
-                <span class="num">02</span>
-                <h2 id="fields-title">Fields</h2>
-              </div>
-            </div>
-            <div class="doc-body">
-              <div class="doc-table-wrap">
-                <table class="doc-table">
-                  <thead>
-                    <tr>
-                      <th scope="col">Field</th>
-                      <th scope="col">What it does</th>
-                      <th scope="col">Default</th>
-                      <th scope="col">Limits</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr data-field="command">
-                      <td>Command</td>
-                      <td>The command to send over RCON.</td>
-                      <td>None</td>
-                      <td>
-                        <ul class="field-options">
-                          <li><code>Save All</code></li>
-                          <li><code>Freeze Time</code></li>
-                          <li><code>Set Day</code></li>
-                          <li><code>Set Night</code></li>
+                <div class="port-stage">
+                  <div class="port-canvas">
+                    <div class="port-node" data-category="action">
+                      <div class="port-node-head">
+                        <span>RCON Command</span><span class="port-node-cat">action</span>
+                      </div>
+                      <div class="port-cols">
+                        <ul class="port-col port-in" aria-label="Inputs">
+                          <li class="port-col-label" aria-hidden="true">in</li>
+                          <li class="port" data-shape="control" data-port="trigger">
+                            <span>trigger</span><span class="port-type">control</span>
+                          </li>
+                          <li class="port" data-shape="data" data-type="string">
+                            <span>Command</span><span class="port-type">string</span>
+                          </li>
                         </ul>
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </section>
-          <!-- /gen:fields -->
-
-          <!-- gen:body -->
-          <section class="doc-section block" id="run" aria-labelledby="run-title">
-            <div class="band doc-band">
-              <div class="band-title">
-                <span class="num">03</span>
-                <h2 id="run-title">What a run does</h2>
-              </div>
-            </div>
-            <div class="doc-body doc-split">
-              <div class="doc-main">
-                <ol class="doc-steps">
-                  <li>Use the wired <b>Command</b> if there is one, otherwise the field.</li>
-                  <li>Connect to the server's RCON port.</li>
-                  <li>Log in.</li>
-                  <li>Send the command.</li>
-                  <li>Close the connection.</li>
-                  <li>
-                    Leave by <b>onComplete</b> with the reply in <b>Response</b>, or by
-                    <b>onFailed</b> on any error.
-                  </li>
-                </ol>
-                <ul class="doc-points">
-                  <li>Each run opens a new connection.</li>
-                  <li><b>Response</b> has colour codes removed and spaces trimmed.</li>
-                  <li><b>Response</b> can be empty.</li>
-                  <li>
-                    The presets match the console presets of the
-                    <a href="/docs/blocks/action-command.html">Command block</a>.
-                  </li>
-                </ul>
-                <div class="doc-note" data-tone="warn">
-                  <span class="label">Heads up</span>
-                  <p>
-                    The address and password are the ones <code>server.properties</code> held when
-                    the server last started.<br />
-                    They count only if <code>enable-rcon</code> was <code>true</code> and
-                    <code>rcon.password</code> was set.<br />
-                    A change made while the server runs does not apply until it restarts.
-                  </p>
+                        <ul class="port-col port-out" aria-label="Outputs">
+                          <li class="port-col-label" aria-hidden="true">out</li>
+                          <li class="port" data-shape="control" data-port="onComplete">
+                            <span>onComplete</span><span class="port-type">control</span>
+                          </li>
+                          <li class="port" data-shape="control" data-port="onFailed">
+                            <span>onFailed</span><span class="port-type">control</span>
+                          </li>
+                          <li class="port" data-shape="data" data-type="string">
+                            <span>Response</span><span class="port-type">string</span>
+                          </li>
+                        </ul>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="port-legend">
+                    <span class="label">Ports</span>
+                    <span class="port-key" data-shape="control">Control</span>
+                    <span class="port-key" data-shape="data">Data</span>
+                    <hr />
+                    <span class="label">Data types</span>
+                    <span class="port-key" data-shape="data" data-type="string"
+                      ><code>string</code></span
+                    >
+                    <span class="port-key" data-shape="data" data-type="number"
+                      ><code>number</code></span
+                    >
+                    <span class="port-key" data-shape="data" data-type="bool"
+                      ><code>bool</code></span
+                    >
+                    <p class="doc-prose">
+                      Strings accept any data input.<br />
+                      Numbers accept boolean input.
+                    </p>
+                  </div>
                 </div>
-              </div>
-              <div class="doc-figs">
-                <figure
-                  class="fig fig-flow"
-                  role="img"
-                  aria-label="Graph: Cron Schedule 0 4 * * *, then on onComplete, RCON Command Save All, on onComplete, Notify Saved, on onFailed, Notify RCON failed."
-                >
-                  <div class="fig-node">
-                    <span class="fig-kind">Cron Schedule</span
-                    ><span class="fig-value">0 4 * * *</span>
+              </section>
+              <!-- /gen:ports -->
+
+              <!-- gen:fields -->
+              <section class="doc-section block" id="fields" aria-labelledby="fields-title">
+                <div class="band doc-band">
+                  <div class="band-title">
+                    <span class="num">02</span>
+                    <h2 id="fields-title">Fields</h2>
                   </div>
-                  <span class="fig-wire"><span class="fig-port">onComplete</span></span>
-                  <div class="fig-node is-hit">
-                    <span class="fig-kind">RCON Command</span
-                    ><span class="fig-value">Save All</span>
+                </div>
+                <div class="doc-body">
+                  <div class="doc-table-wrap">
+                    <table class="doc-table">
+                      <thead>
+                        <tr>
+                          <th scope="col">Field</th>
+                          <th scope="col">What it does</th>
+                          <th scope="col">Default</th>
+                          <th scope="col">Limits</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr data-field="command">
+                          <td>Command</td>
+                          <td>The command to send over RCON.</td>
+                          <td>None</td>
+                          <td>
+                            <ul class="field-options">
+                              <li><code>Save All</code></li>
+                              <li><code>Freeze Time</code></li>
+                              <li><code>Set Day</code></li>
+                              <li><code>Set Night</code></li>
+                            </ul>
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
                   </div>
-                  <div class="fig-lanes">
-                    <div class="fig-lane">
+                </div>
+              </section>
+              <!-- /gen:fields -->
+
+              <!-- gen:body -->
+              <section class="doc-section block" id="run" aria-labelledby="run-title">
+                <div class="band doc-band">
+                  <div class="band-title">
+                    <span class="num">03</span>
+                    <h2 id="run-title">What a run does</h2>
+                  </div>
+                </div>
+                <div class="doc-body doc-split">
+                  <div class="doc-main">
+                    <ol class="doc-steps">
+                      <li>Use the wired <b>Command</b> if there is one, otherwise the field.</li>
+                      <li>Connect to the server's RCON port.</li>
+                      <li>Log in.</li>
+                      <li>Send the command.</li>
+                      <li>Close the connection.</li>
+                      <li>
+                        Leave by <b>onComplete</b> with the reply in <b>Response</b>, or by
+                        <b>onFailed</b> on any error.
+                      </li>
+                    </ol>
+                    <ul class="doc-points">
+                      <li>Each run opens a new connection.</li>
+                      <li><b>Response</b> has colour codes removed and spaces trimmed.</li>
+                      <li><b>Response</b> can be empty.</li>
+                      <li>
+                        The presets match the console presets of the
+                        <a href="/docs/blocks/action-command.html">Command block</a>.
+                      </li>
+                    </ul>
+                    <div class="doc-note" data-tone="warn">
+                      <span class="label">Heads up</span>
+                      <p>
+                        The address and password are the ones <code>server.properties</code> held
+                        when the server last started.<br />
+                        They count only if <code>enable-rcon</code> was <code>true</code> and
+                        <code>rcon.password</code> was set.<br />
+                        A change made while the server runs does not apply until it restarts.
+                      </p>
+                    </div>
+                  </div>
+                  <div class="doc-figs">
+                    <figure
+                      class="fig fig-flow"
+                      role="img"
+                      aria-label="Graph: Cron Schedule 0 4 * * *, then on onComplete, RCON Command Save All, on onComplete, Notify Saved, on onFailed, Notify RCON failed."
+                    >
+                      <div class="fig-node">
+                        <span class="fig-kind">Cron Schedule</span
+                        ><span class="fig-value">0 4 * * *</span>
+                      </div>
                       <span class="fig-wire"><span class="fig-port">onComplete</span></span>
-                      <div class="fig-node">
-                        <span class="fig-kind">Notify</span><span class="fig-value">Saved</span>
+                      <div class="fig-node is-hit">
+                        <span class="fig-kind">RCON Command</span
+                        ><span class="fig-value">Save All</span>
                       </div>
-                    </div>
-                    <div class="fig-lane">
-                      <span class="fig-wire"><span class="fig-port">onFailed</span></span>
-                      <div class="fig-node">
-                        <span class="fig-kind">Notify</span
-                        ><span class="fig-value">RCON failed</span>
+                      <div class="fig-lanes">
+                        <div class="fig-lane">
+                          <span class="fig-wire"><span class="fig-port">onComplete</span></span>
+                          <div class="fig-node">
+                            <span class="fig-kind">Notify</span><span class="fig-value">Saved</span>
+                          </div>
+                        </div>
+                        <div class="fig-lane">
+                          <span class="fig-wire"><span class="fig-port">onFailed</span></span>
+                          <div class="fig-node">
+                            <span class="fig-kind">Notify</span
+                            ><span class="fig-value">RCON failed</span>
+                          </div>
+                        </div>
                       </div>
-                    </div>
+                    </figure>
                   </div>
-                </figure>
-              </div>
+                </div>
+              </section>
+              <section class="doc-section block" id="errors" aria-labelledby="errors-title">
+                <div class="band doc-band">
+                  <div class="band-title">
+                    <span class="num">04</span>
+                    <h2 id="errors-title">Errors</h2>
+                  </div>
+                </div>
+                <div class="doc-body">
+                  <div class="doc-table-wrap">
+                    <table class="doc-table">
+                      <thead>
+                        <tr>
+                          <th scope="col">Message says</th>
+                          <th scope="col">Do</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr>
+                          <td>command is empty</td>
+                          <td>Fill in <b>Command</b>, or wire a value into it.</td>
+                        </tr>
+                        <tr>
+                          <td>RCON not enabled or not running</td>
+                          <td>
+                            Set <code>enable-rcon</code> and <code>rcon.password</code> in
+                            <code>server.properties</code>, then start the server.
+                          </td>
+                        </tr>
+                        <tr>
+                          <td>rcon dial: <em>reason</em></td>
+                          <td>
+                            Check that the server is running and that <code>rcon.port</code> is
+                            right.
+                          </td>
+                        </tr>
+                        <tr>
+                          <td>rcon auth: wrong password</td>
+                          <td>
+                            Check <code>rcon.password</code> in <code>server.properties</code>, then
+                            restart the server.
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </section>
+              <!-- /gen:body -->
             </div>
-          </section>
-          <section class="doc-section block" id="errors" aria-labelledby="errors-title">
-            <div class="band doc-band">
-              <div class="band-title">
-                <span class="num">04</span>
-                <h2 id="errors-title">Errors</h2>
-              </div>
-            </div>
-            <div class="doc-body">
-              <div class="doc-table-wrap">
-                <table class="doc-table">
-                  <thead>
-                    <tr>
-                      <th scope="col">Message says</th>
-                      <th scope="col">Do</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr>
-                      <td>command is empty</td>
-                      <td>Fill in <b>Command</b>, or wire a value into it.</td>
-                    </tr>
-                    <tr>
-                      <td>RCON not enabled or not running</td>
-                      <td>
-                        Set <code>enable-rcon</code> and <code>rcon.password</code> in
-                        <code>server.properties</code>, then start the server.
-                      </td>
-                    </tr>
-                    <tr>
-                      <td>rcon dial: <em>reason</em></td>
-                      <td>
-                        Check that the server is running and that <code>rcon.port</code> is right.
-                      </td>
-                    </tr>
-                    <tr>
-                      <td>rcon auth: wrong password</td>
-                      <td>
-                        Check <code>rcon.password</code> in <code>server.properties</code>, then
-                        restart the server.
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </section>
-          <!-- /gen:body -->
+          </div>
 
           <nav class="doc-related block" aria-label="Related">
             <div class="shelf-label"><span class="label">Related</span></div>

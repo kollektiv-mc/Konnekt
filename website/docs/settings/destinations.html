@@ -124,348 +124,377 @@
               </div>
             </dl>
           </header>
-          <section class="doc-section block" id="add" aria-labelledby="add-title">
-            <div class="band doc-band">
-              <div class="band-title">
-                <span class="num">01</span>
-                <h2 id="add-title">Add a destination</h2>
-              </div>
-            </div>
-            <div class="doc-body doc-split">
-              <div class="doc-main">
-                <ol class="doc-steps">
-                  <li>Open Settings, then <b>Destinations</b>.</li>
-                  <li>Select <b>Add destination</b>.</li>
-                  <li>Fill in the <a href="#fields">fields</a>.</li>
-                  <li>Select <b>Test</b> to check the credentials and the bucket.</li>
-                  <li>Select <b>Save</b>.</li>
-                </ol>
-                <div class="doc-note" data-tone="note">
-                  <span class="label">Note</span>
-                  <p>
-                    <b>Save</b> and <b>Test</b> stay disabled until <b>Name</b>, <b>Endpoint</b>,
-                    <b>Bucket</b>, <b>Access key ID</b> and a secret are filled in.<br />
-                    <b>Test</b> writes nothing to the bucket.
-                  </p>
-                </div>
-                <ul class="doc-points">
-                  <li>
-                    The <b>Upload to Bucket</b> and <b>Publish DH Snapshot</b> blocks pick a
-                    destination by name.<br />
-                    A graph names the destination and never carries its credentials.
-                  </li>
-                  <li>
-                    The destination's settings are saved in <code>destinations.json</code> in the
-                    app's data folder.
-                  </li>
-                  <li>
-                    The secret access key is saved in a file of its own, in the
-                    <code>destination_secrets</code> folder beside it.<br />
-                    That file is written with owner-only permissions, and the secret is never shown
-                    again.
-                  </li>
-                  <li>Deleting a destination removes its secret file too.</li>
-                </ul>
-              </div>
-              <div class="doc-figs">
-                <figure
-                  class="fig fig-ui"
-                  role="img"
-                  aria-label="Settings · Destinations, with Add destination and Test marked."
-                >
-                  <div class="fig-ui-title">Settings · Destinations</div>
-                  <div class="fig-ui-row">
-                    <span class="fig-ui-text">No destination yet.</span
-                    ><span class="fig-ui-btn is-hit">Add destination</span>
-                  </div>
-                  <div class="fig-ui-row">
-                    <span class="fig-ui-field">Name</span><span class="fig-ui-field">Endpoint</span
-                    ><span class="fig-ui-field">Region</span>
-                  </div>
-                  <div class="fig-ui-row">
-                    <span class="fig-ui-field">Bucket</span><span class="fig-ui-field">Prefix</span
-                    ><span class="fig-ui-field">Public base URL</span>
-                  </div>
-                  <div class="fig-ui-row">
-                    <span class="fig-ui-field">Access key ID</span
-                    ><span class="fig-ui-field">Secret access key</span>
-                  </div>
-                  <div class="fig-ui-row">
-                    <span class="fig-ui-btn">Save</span><span class="fig-ui-btn is-hit">Test</span
-                    ><span class="fig-ui-btn">Cancel</span>
-                  </div>
-                </figure>
-              </div>
-            </div>
-          </section>
-          <section class="doc-section block" id="fields" aria-labelledby="fields-title">
-            <div class="band doc-band">
-              <div class="band-title">
-                <span class="num">02</span>
-                <h2 id="fields-title">Fields</h2>
-              </div>
-            </div>
-            <div class="doc-body">
-              <div class="doc-table-wrap">
-                <table class="doc-table">
-                  <thead>
-                    <tr>
-                      <th scope="col">Field</th>
-                      <th scope="col">What it does</th>
-                      <th scope="col">Default</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr>
-                      <td><b>Name</b></td>
-                      <td>Required: what a scheduler block calls this bucket.</td>
-                      <td>None</td>
-                    </tr>
-                    <tr>
-                      <td><b>Endpoint</b></td>
-                      <td>
-                        Required: the provider's S3 address, host only, such as
-                        <code>https://&lt;account&gt;.r2.cloudflarestorage.com</code> for R2.
-                      </td>
-                      <td>None</td>
-                    </tr>
-                    <tr>
-                      <td><b>Region</b></td>
-                      <td>
-                        The signing region, <code>auto</code> for R2 and the provider's own name
-                        elsewhere.
-                      </td>
-                      <td><code>auto</code></td>
-                    </tr>
-                    <tr>
-                      <td><b>Bucket</b></td>
-                      <td>Required: the bucket's name, without a slash.</td>
-                      <td>None</td>
-                    </tr>
-                    <tr>
-                      <td><b>Prefix</b></td>
-                      <td>A folder inside the bucket that uploads go under.</td>
-                      <td>None</td>
-                    </tr>
-                    <tr>
-                      <td><b>Public base URL</b></td>
-                      <td>
-                        The <code>http</code> or <code>https</code> address the bucket is served
-                        from, such as a custom domain.
-                      </td>
-                      <td>None</td>
-                    </tr>
-                    <tr>
-                      <td><b>Access key ID</b></td>
-                      <td>Required: the ID of the key pair the provider issued.</td>
-                      <td>None</td>
-                    </tr>
-                    <tr>
-                      <td><b>Secret access key</b></td>
-                      <td>
-                        Required on a new destination; blank on a saved one keeps the stored secret.
-                      </td>
-                      <td>None</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-              <ul class="doc-points">
-                <li>Names are unique in any letter case.</li>
-                <li>An endpoint without <code>https://</code> in front gets it added.</li>
-                <li>A blank region is saved as <code>auto</code>.</li>
+          <div class="doc-layout">
+            <nav class="doc-toc" aria-label="On this page">
+              <ol>
                 <li>
-                  A prefix loses any slash at either end, and a block's own <b>Key prefix</b> goes
-                  after it.
+                  <a href="#add"><span class="num">01</span><span>Add a destination</span></a>
                 </li>
                 <li>
-                  A published snapshot's links use the <b>Public base URL</b>, and the bucket's own
-                  address when there is none.
+                  <a href="#fields"><span class="num">02</span><span>Fields</span></a>
                 </li>
-              </ul>
-            </div>
-          </section>
-          <section
-            class="doc-section block"
-            id="snapshot-link"
-            aria-labelledby="snapshot-link-title"
-          >
-            <div class="band doc-band">
-              <div class="band-title">
-                <span class="num">03</span>
-                <h2 id="snapshot-link-title">Snapshot link</h2>
-              </div>
-            </div>
-            <div class="doc-body doc-split">
-              <div class="doc-main">
-                <p class="doc-prose">
-                  Each saved destination has a <b>Snapshot link</b> row, for the Distant Horizons
-                  snapshot a <b>Publish DH Snapshot</b> block uploads.<br />
-                  The link is the address of the snapshot's <code>latest.json</code>, which is what
-                  you give to the people who download the snapshot.
-                </p>
-                <div class="doc-table-wrap">
-                  <table class="doc-table">
-                    <thead>
-                      <tr>
-                        <th scope="col">Control</th>
-                        <th scope="col">What it does</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <tr>
-                        <td><b>Copy link</b></td>
-                        <td>
-                          Puts the link on the clipboard. It is empty until a snapshot has been
-                          published to the destination.
-                        </td>
-                      </tr>
-                      <tr>
-                        <td>Switch, <b>Public</b> or <b>Private link</b></td>
-                        <td>
-                          <b>Public</b> keeps the snapshot at a fixed address under the
-                          destination's prefix. A private link moves it into a folder named by a
-                          random token, so only someone given the link can find it.
-                        </td>
-                      </tr>
-                      <tr>
-                        <td><b>Rotate link</b></td>
-                        <td>
-                          Appears in private mode. Moves the latest snapshot under a new token and
-                          deletes the old address.
-                        </td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-                <ul class="doc-points">
-                  <li>
-                    Switching the mode moves the latest snapshot, which takes a few minutes, and
-                    asks first.
-                  </li>
-                  <li>A publish and a link change cannot run together on one destination.</li>
-                  <li>
-                    The token is saved in a <code>.link</code> file beside the secret, and removed
-                    with the destination.
-                  </li>
-                </ul>
-                <div class="doc-note" data-tone="warn">
-                  <span class="label">Heads up</span>
-                  <p>
-                    Once a snapshot is published, the address used before a switch or a rotation
-                    stops working.<br />
-                    Everyone holding the old link loses access, and has to be sent the new one.
-                  </p>
-                </div>
-                <div class="doc-note" data-tone="note">
-                  <span class="label">Note</span>
-                  <p>
-                    If the old files cannot all be deleted, the row says the previous link may still
-                    work.<br />
-                    Switch the mode or rotate again to finish removing them.
-                  </p>
-                </div>
-              </div>
-              <div class="doc-figs">
-                <figure
-                  class="fig fig-ui"
-                  role="img"
-                  aria-label="Settings · Destinations, with Copy link marked."
-                >
-                  <div class="fig-ui-title">Settings · Destinations</div>
-                  <div class="fig-ui-row">
-                    <span class="fig-ui-text">my-bucket</span><span class="fig-ui-btn">Edit</span>
+                <li>
+                  <a href="#snapshot-link"><span class="num">03</span><span>Snapshot link</span></a>
+                </li>
+                <li>
+                  <a href="#errors"><span class="num">04</span><span>Errors</span></a>
+                </li>
+              </ol>
+            </nav>
+            <div class="doc-flow">
+              <section class="doc-section block" id="add" aria-labelledby="add-title">
+                <div class="band doc-band">
+                  <div class="band-title">
+                    <span class="num">01</span>
+                    <h2 id="add-title">Add a destination</h2>
                   </div>
-                  <div class="fig-ui-row">
-                    <span class="fig-ui-text">Snapshot link</span
-                    ><span class="fig-ui-text">Private link</span
-                    ><span class="fig-ui-btn is-hit">Copy link</span
-                    ><span class="fig-ui-btn">Rotate link</span>
+                </div>
+                <div class="doc-body doc-split">
+                  <div class="doc-main">
+                    <ol class="doc-steps">
+                      <li>Open Settings, then <b>Destinations</b>.</li>
+                      <li>Select <b>Add destination</b>.</li>
+                      <li>Fill in the <a href="#fields">fields</a>.</li>
+                      <li>Select <b>Test</b> to check the credentials and the bucket.</li>
+                      <li>Select <b>Save</b>.</li>
+                    </ol>
+                    <div class="doc-note" data-tone="note">
+                      <span class="label">Note</span>
+                      <p>
+                        <b>Save</b> and <b>Test</b> stay disabled until <b>Name</b>,
+                        <b>Endpoint</b>, <b>Bucket</b>, <b>Access key ID</b> and a secret are filled
+                        in.<br />
+                        <b>Test</b> writes nothing to the bucket.
+                      </p>
+                    </div>
+                    <ul class="doc-points">
+                      <li>
+                        The <b>Upload to Bucket</b> and <b>Publish DH Snapshot</b> blocks pick a
+                        destination by name.<br />
+                        A graph names the destination and never carries its credentials.
+                      </li>
+                      <li>
+                        The destination's settings are saved in <code>destinations.json</code> in
+                        the app's data folder.
+                      </li>
+                      <li>
+                        The secret access key is saved in a file of its own, in the
+                        <code>destination_secrets</code> folder beside it.<br />
+                        That file is written with owner-only permissions, and the secret is never
+                        shown again.
+                      </li>
+                      <li>Deleting a destination removes its secret file too.</li>
+                    </ul>
                   </div>
-                </figure>
-              </div>
+                  <div class="doc-figs">
+                    <figure
+                      class="fig fig-ui"
+                      role="img"
+                      aria-label="Settings · Destinations, with Add destination and Test marked."
+                    >
+                      <div class="fig-ui-title">Settings · Destinations</div>
+                      <div class="fig-ui-row">
+                        <span class="fig-ui-text">No destination yet.</span
+                        ><span class="fig-ui-btn is-hit">Add destination</span>
+                      </div>
+                      <div class="fig-ui-row">
+                        <span class="fig-ui-field">Name</span
+                        ><span class="fig-ui-field">Endpoint</span
+                        ><span class="fig-ui-field">Region</span>
+                      </div>
+                      <div class="fig-ui-row">
+                        <span class="fig-ui-field">Bucket</span
+                        ><span class="fig-ui-field">Prefix</span
+                        ><span class="fig-ui-field">Public base URL</span>
+                      </div>
+                      <div class="fig-ui-row">
+                        <span class="fig-ui-field">Access key ID</span
+                        ><span class="fig-ui-field">Secret access key</span>
+                      </div>
+                      <div class="fig-ui-row">
+                        <span class="fig-ui-btn">Save</span
+                        ><span class="fig-ui-btn is-hit">Test</span
+                        ><span class="fig-ui-btn">Cancel</span>
+                      </div>
+                    </figure>
+                  </div>
+                </div>
+              </section>
+              <section class="doc-section block" id="fields" aria-labelledby="fields-title">
+                <div class="band doc-band">
+                  <div class="band-title">
+                    <span class="num">02</span>
+                    <h2 id="fields-title">Fields</h2>
+                  </div>
+                </div>
+                <div class="doc-body">
+                  <div class="doc-table-wrap">
+                    <table class="doc-table">
+                      <thead>
+                        <tr>
+                          <th scope="col">Field</th>
+                          <th scope="col">What it does</th>
+                          <th scope="col">Default</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr>
+                          <td><b>Name</b></td>
+                          <td>Required: what a scheduler block calls this bucket.</td>
+                          <td>None</td>
+                        </tr>
+                        <tr>
+                          <td><b>Endpoint</b></td>
+                          <td>
+                            Required: the provider's S3 address, host only, such as
+                            <code>https://&lt;account&gt;.r2.cloudflarestorage.com</code> for R2.
+                          </td>
+                          <td>None</td>
+                        </tr>
+                        <tr>
+                          <td><b>Region</b></td>
+                          <td>
+                            The signing region, <code>auto</code> for R2 and the provider's own name
+                            elsewhere.
+                          </td>
+                          <td><code>auto</code></td>
+                        </tr>
+                        <tr>
+                          <td><b>Bucket</b></td>
+                          <td>Required: the bucket's name, without a slash.</td>
+                          <td>None</td>
+                        </tr>
+                        <tr>
+                          <td><b>Prefix</b></td>
+                          <td>A folder inside the bucket that uploads go under.</td>
+                          <td>None</td>
+                        </tr>
+                        <tr>
+                          <td><b>Public base URL</b></td>
+                          <td>
+                            The <code>http</code> or <code>https</code> address the bucket is served
+                            from, such as a custom domain.
+                          </td>
+                          <td>None</td>
+                        </tr>
+                        <tr>
+                          <td><b>Access key ID</b></td>
+                          <td>Required: the ID of the key pair the provider issued.</td>
+                          <td>None</td>
+                        </tr>
+                        <tr>
+                          <td><b>Secret access key</b></td>
+                          <td>
+                            Required on a new destination; blank on a saved one keeps the stored
+                            secret.
+                          </td>
+                          <td>None</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                  <ul class="doc-points">
+                    <li>Names are unique in any letter case.</li>
+                    <li>An endpoint without <code>https://</code> in front gets it added.</li>
+                    <li>A blank region is saved as <code>auto</code>.</li>
+                    <li>
+                      A prefix loses any slash at either end, and a block's own
+                      <b>Key prefix</b> goes after it.
+                    </li>
+                    <li>
+                      A published snapshot's links use the <b>Public base URL</b>, and the bucket's
+                      own address when there is none.
+                    </li>
+                  </ul>
+                </div>
+              </section>
+              <section
+                class="doc-section block"
+                id="snapshot-link"
+                aria-labelledby="snapshot-link-title"
+              >
+                <div class="band doc-band">
+                  <div class="band-title">
+                    <span class="num">03</span>
+                    <h2 id="snapshot-link-title">Snapshot link</h2>
+                  </div>
+                </div>
+                <div class="doc-body doc-split">
+                  <div class="doc-main">
+                    <p class="doc-prose">
+                      Each saved destination has a <b>Snapshot link</b> row, for the Distant
+                      Horizons snapshot a <b>Publish DH Snapshot</b> block uploads.<br />
+                      The link is the address of the snapshot's <code>latest.json</code>, which is
+                      what you give to the people who download the snapshot.
+                    </p>
+                    <div class="doc-table-wrap">
+                      <table class="doc-table">
+                        <thead>
+                          <tr>
+                            <th scope="col">Control</th>
+                            <th scope="col">What it does</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <tr>
+                            <td><b>Copy link</b></td>
+                            <td>
+                              Puts the link on the clipboard. It is empty until a snapshot has been
+                              published to the destination.
+                            </td>
+                          </tr>
+                          <tr>
+                            <td>Switch, <b>Public</b> or <b>Private link</b></td>
+                            <td>
+                              <b>Public</b> keeps the snapshot at a fixed address under the
+                              destination's prefix. A private link moves it into a folder named by a
+                              random token, so only someone given the link can find it.
+                            </td>
+                          </tr>
+                          <tr>
+                            <td><b>Rotate link</b></td>
+                            <td>
+                              Appears in private mode. Moves the latest snapshot under a new token
+                              and deletes the old address.
+                            </td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                    <ul class="doc-points">
+                      <li>
+                        Switching the mode moves the latest snapshot, which takes a few minutes, and
+                        asks first.
+                      </li>
+                      <li>A publish and a link change cannot run together on one destination.</li>
+                      <li>
+                        The token is saved in a <code>.link</code> file beside the secret, and
+                        removed with the destination.
+                      </li>
+                    </ul>
+                    <div class="doc-note" data-tone="warn">
+                      <span class="label">Heads up</span>
+                      <p>
+                        Once a snapshot is published, the address used before a switch or a rotation
+                        stops working.<br />
+                        Everyone holding the old link loses access, and has to be sent the new one.
+                      </p>
+                    </div>
+                    <div class="doc-note" data-tone="note">
+                      <span class="label">Note</span>
+                      <p>
+                        If the old files cannot all be deleted, the row says the previous link may
+                        still work.<br />
+                        Switch the mode or rotate again to finish removing them.
+                      </p>
+                    </div>
+                  </div>
+                  <div class="doc-figs">
+                    <figure
+                      class="fig fig-ui"
+                      role="img"
+                      aria-label="Settings · Destinations, with Copy link marked."
+                    >
+                      <div class="fig-ui-title">Settings · Destinations</div>
+                      <div class="fig-ui-row">
+                        <span class="fig-ui-text">my-bucket</span
+                        ><span class="fig-ui-btn">Edit</span>
+                      </div>
+                      <div class="fig-ui-row">
+                        <span class="fig-ui-text">Snapshot link</span
+                        ><span class="fig-ui-text">Private link</span
+                        ><span class="fig-ui-btn is-hit">Copy link</span
+                        ><span class="fig-ui-btn">Rotate link</span>
+                      </div>
+                    </figure>
+                  </div>
+                </div>
+              </section>
+              <section class="doc-section block" id="errors" aria-labelledby="errors-title">
+                <div class="band doc-band">
+                  <div class="band-title">
+                    <span class="num">04</span>
+                    <h2 id="errors-title">Errors</h2>
+                  </div>
+                </div>
+                <div class="doc-body">
+                  <div class="doc-table-wrap">
+                    <table class="doc-table">
+                      <thead>
+                        <tr>
+                          <th scope="col">Error</th>
+                          <th scope="col">Do</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr>
+                          <td>
+                            Wrong credentials: <em>host</em> refused the access key or secret
+                            (<em>status</em>).
+                          </td>
+                          <td>
+                            Check <b>Access key ID</b> and <b>Secret access key</b> against the
+                            provider.
+                          </td>
+                        </tr>
+                        <tr>
+                          <td>
+                            Bucket not found: <em>host</em> has no bucket named <em>name</em>.
+                          </td>
+                          <td>Check <b>Bucket</b>, and that the key can see it.</td>
+                        </tr>
+                        <tr>
+                          <td>
+                            Could not reach <em>host</em>. Check the endpoint and your connection.
+                          </td>
+                          <td>Check <b>Endpoint</b> for typos, then your network.</td>
+                        </tr>
+                        <tr>
+                          <td>
+                            <em>host</em> rejected the check (status <em>status code</em>). Check
+                            the region and endpoint.
+                          </td>
+                          <td>Set <b>Region</b> to what the provider documents.</td>
+                        </tr>
+                        <tr>
+                          <td>endpoint must be a host only, without a path or credentials</td>
+                          <td>Remove everything after the host from <b>Endpoint</b>.</td>
+                        </tr>
+                        <tr>
+                          <td>a destination named "<em>name</em>" already exists</td>
+                          <td>Pick another <b>Name</b>.</td>
+                        </tr>
+                        <tr>
+                          <td>
+                            nothing has been published to this destination yet, so there is no link
+                            to copy: run a Publish DH Snapshot block first
+                          </td>
+                          <td>Run the block once, then select <b>Copy link</b> again.</td>
+                        </tr>
+                        <tr>
+                          <td>
+                            a snapshot is being taken or published to this destination: change the
+                            link when it has finished
+                          </td>
+                          <td>Wait for the run to end, then switch or rotate again.</td>
+                        </tr>
+                        <tr>
+                          <td>
+                            destination "<em>name</em>" no longer exists; choose another in the
+                            Upload to Bucket block or add it in Settings
+                          </td>
+                          <td>
+                            Add the destination again with the same name, or pick another in the
+                            block.
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </section>
             </div>
-          </section>
-          <section class="doc-section block" id="errors" aria-labelledby="errors-title">
-            <div class="band doc-band">
-              <div class="band-title">
-                <span class="num">04</span>
-                <h2 id="errors-title">Errors</h2>
-              </div>
-            </div>
-            <div class="doc-body">
-              <div class="doc-table-wrap">
-                <table class="doc-table">
-                  <thead>
-                    <tr>
-                      <th scope="col">Error</th>
-                      <th scope="col">Do</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr>
-                      <td>
-                        Wrong credentials: <em>host</em> refused the access key or secret
-                        (<em>status</em>).
-                      </td>
-                      <td>
-                        Check <b>Access key ID</b> and <b>Secret access key</b> against the
-                        provider.
-                      </td>
-                    </tr>
-                    <tr>
-                      <td>Bucket not found: <em>host</em> has no bucket named <em>name</em>.</td>
-                      <td>Check <b>Bucket</b>, and that the key can see it.</td>
-                    </tr>
-                    <tr>
-                      <td>
-                        Could not reach <em>host</em>. Check the endpoint and your connection.
-                      </td>
-                      <td>Check <b>Endpoint</b> for typos, then your network.</td>
-                    </tr>
-                    <tr>
-                      <td>
-                        <em>host</em> rejected the check (status <em>status code</em>). Check the
-                        region and endpoint.
-                      </td>
-                      <td>Set <b>Region</b> to what the provider documents.</td>
-                    </tr>
-                    <tr>
-                      <td>endpoint must be a host only, without a path or credentials</td>
-                      <td>Remove everything after the host from <b>Endpoint</b>.</td>
-                    </tr>
-                    <tr>
-                      <td>a destination named "<em>name</em>" already exists</td>
-                      <td>Pick another <b>Name</b>.</td>
-                    </tr>
-                    <tr>
-                      <td>
-                        nothing has been published to this destination yet, so there is no link to
-                        copy: run a Publish DH Snapshot block first
-                      </td>
-                      <td>Run the block once, then select <b>Copy link</b> again.</td>
-                    </tr>
-                    <tr>
-                      <td>
-                        a snapshot is being taken or published to this destination: change the link
-                        when it has finished
-                      </td>
-                      <td>Wait for the run to end, then switch or rotate again.</td>
-                    </tr>
-                    <tr>
-                      <td>
-                        destination "<em>name</em>" no longer exists; choose another in the Upload
-                        to Bucket block or add it in Settings
-                      </td>
-                      <td>
-                        Add the destination again with the same name, or pick another in the block.
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </section>
+          </div>
           <nav class="doc-related block" aria-label="Related">
             <div class="shelf-label"><span class="label">Related</span></div>
             <a class="related-link" href="/docs/settings/notifications.html"
