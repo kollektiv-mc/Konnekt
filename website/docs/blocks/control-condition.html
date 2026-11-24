@@ -136,271 +136,374 @@
             </dl>
           </header>
 
-          <!-- gen:ports -->
-          <section class="doc-section block" id="ports" aria-labelledby="ports-title">
-            <div class="band doc-band">
-              <div class="band-title">
-                <span class="num">01</span>
-                <h2 id="ports-title">Ports</h2>
-              </div>
-            </div>
-            <div class="port-stage">
-              <div class="port-canvas">
-                <div class="port-node" data-category="control">
-                  <div class="port-node-head">
-                    <span>Condition</span><span class="port-node-cat">control</span>
-                  </div>
-                  <div class="port-cols">
-                    <ul class="port-col port-in" aria-label="Inputs">
-                      <li class="port-col-label" aria-hidden="true">in</li>
-                      <li class="port" data-shape="control" data-port="trigger">
-                        <span>trigger</span><span class="port-type">control</span>
-                      </li>
-                      <li class="port" data-shape="data" data-type="string">
-                        <span>A</span><span class="port-type">string</span>
-                      </li>
-                      <li class="port" data-shape="data" data-type="string">
-                        <span>B</span><span class="port-type">string</span>
-                      </li>
-                    </ul>
-                    <ul class="port-col port-out" aria-label="Outputs">
-                      <li class="port-col-label" aria-hidden="true">out</li>
-                      <li class="port" data-shape="control" data-port="onTrue">
-                        <span>onTrue</span><span class="port-type">control</span>
-                      </li>
-                      <li class="port" data-shape="control" data-port="onFalse">
-                        <span>onFalse</span><span class="port-type">control</span>
-                      </li>
-                      <li class="port" data-shape="data" data-type="bool">
-                        <span>Result</span><span class="port-type">bool</span>
-                      </li>
-                    </ul>
+          <div class="doc-layout">
+            <!-- gen:toc -->
+            <nav class="doc-toc" aria-label="On this page">
+              <ol>
+                <li>
+                  <a href="#ports"><span class="num">01</span><span>Ports</span></a>
+                </li>
+                <li>
+                  <a href="#fields"><span class="num">02</span><span>Fields</span></a>
+                </li>
+                <li>
+                  <a href="#run"><span class="num">03</span><span>What a run does</span></a>
+                </li>
+              </ol>
+            </nav>
+            <!-- /gen:toc -->
+            <div class="doc-flow">
+              <!-- gen:ports -->
+              <section class="doc-section block" id="ports" aria-labelledby="ports-title">
+                <div class="band doc-band">
+                  <div class="band-title">
+                    <span class="num">01</span>
+                    <h2 id="ports-title">Ports</h2>
                   </div>
                 </div>
-              </div>
-              <div class="port-legend">
-                <span class="label">Ports</span>
-                <span class="port-key" data-shape="control">Control</span>
-                <span class="port-key" data-shape="data">Data</span>
-                <hr />
-                <span class="label">Data types</span>
-                <span class="port-key" data-shape="data" data-type="string"
-                  ><code>string</code></span
-                >
-                <span class="port-key" data-shape="data" data-type="number"
-                  ><code>number</code></span
-                >
-                <span class="port-key" data-shape="data" data-type="bool"><code>bool</code></span>
-                <p class="doc-prose">
-                  Strings accept any data input.<br />
-                  Numbers accept boolean input.
-                </p>
-              </div>
-            </div>
-          </section>
-          <!-- /gen:ports -->
-
-          <!-- gen:fields -->
-          <section class="doc-section block" id="fields" aria-labelledby="fields-title">
-            <div class="band doc-band">
-              <div class="band-title">
-                <span class="num">02</span>
-                <h2 id="fields-title">Fields</h2>
-              </div>
-            </div>
-            <div class="doc-body">
-              <div class="doc-table-wrap">
-                <table class="doc-table">
-                  <thead>
-                    <tr>
-                      <th scope="col">Field</th>
-                      <th scope="col">What it does</th>
-                      <th scope="col">Default</th>
-                      <th scope="col">Limits</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr data-field="op">
-                      <td>Operator</td>
-                      <td>Chooses a comparison of A and B, or a logic gate over them.</td>
-                      <td><code>==</code></td>
-                      <td>
-                        <ul class="field-options">
-                          <li><code>==</code></li>
-                          <li><code>!=</code></li>
-                          <li><code>&gt;</code></li>
-                          <li><code>&lt;</code></li>
-                          <li><code>contains</code></li>
-                          <li><code>AND</code></li>
-                          <li><code>OR</code></li>
-                          <li><code>XOR</code></li>
-                          <li><code>NAND</code></li>
-                          <li><code>NOR</code></li>
+                <div class="port-stage">
+                  <div class="port-canvas">
+                    <div class="port-node" data-category="control">
+                      <div class="port-node-head">
+                        <span>Condition</span><span class="port-node-cat">control</span>
+                      </div>
+                      <div class="port-cols">
+                        <ul class="port-col port-in" aria-label="Inputs">
+                          <li class="port-col-label" aria-hidden="true">in</li>
+                          <li class="port" data-shape="control" data-port="trigger">
+                            <span>trigger</span><span class="port-type">control</span>
+                          </li>
+                          <li class="port" data-shape="data" data-type="string">
+                            <span>A</span><span class="port-type">string</span>
+                          </li>
+                          <li class="port" data-shape="data" data-type="string">
+                            <span>B</span><span class="port-type">string</span>
+                          </li>
                         </ul>
-                      </td>
-                    </tr>
-                    <tr data-field="left">
-                      <td>A</td>
-                      <td>The first operand; a wired A replaces it.</td>
-                      <td>None</td>
-                      <td>None</td>
-                    </tr>
-                    <tr data-field="right">
-                      <td>B</td>
-                      <td>The second operand; a wired B replaces it.</td>
-                      <td>None</td>
-                      <td>None</td>
-                    </tr>
-                    <tr data-field="leftTrue">
-                      <td>is true</td>
-                      <td>For a gate, reads A as it is when checked and flipped when unchecked.</td>
-                      <td>On</td>
-                      <td>Shown only for the gate operators.</td>
-                    </tr>
-                    <tr data-field="rightTrue">
-                      <td>is true</td>
-                      <td>For a gate, reads B as it is when checked and flipped when unchecked.</td>
-                      <td>On</td>
-                      <td>Shown only for the gate operators.</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </section>
-          <!-- /gen:fields -->
+                        <ul class="port-col port-out" aria-label="Outputs">
+                          <li class="port-col-label" aria-hidden="true">out</li>
+                          <li class="port" data-shape="control" data-port="onTrue">
+                            <span>onTrue</span><span class="port-type">control</span>
+                          </li>
+                          <li class="port" data-shape="control" data-port="onFalse">
+                            <span>onFalse</span><span class="port-type">control</span>
+                          </li>
+                          <li class="port" data-shape="data" data-type="bool">
+                            <span>Result</span><span class="port-type">bool</span>
+                          </li>
+                        </ul>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="port-legend">
+                    <span class="label">Ports</span>
+                    <span class="port-key" data-shape="control">Control</span>
+                    <span class="port-key" data-shape="data">Data</span>
+                    <hr />
+                    <span class="label">Data types</span>
+                    <span class="port-key" data-shape="data" data-type="string"
+                      ><code>string</code></span
+                    >
+                    <span class="port-key" data-shape="data" data-type="number"
+                      ><code>number</code></span
+                    >
+                    <span class="port-key" data-shape="data" data-type="bool"
+                      ><code>bool</code></span
+                    >
+                    <p class="doc-prose">
+                      Strings accept any data input.<br />
+                      Numbers accept boolean input.
+                    </p>
+                  </div>
+                </div>
+              </section>
+              <!-- /gen:ports -->
 
-          <section class="doc-section block" id="run" aria-labelledby="run-title">
-            <div class="band doc-band">
-              <div class="band-title">
-                <span class="num">03</span>
-                <h2 id="run-title">What a run does</h2>
-              </div>
+              <!-- gen:fields -->
+              <section class="doc-section block" id="fields" aria-labelledby="fields-title">
+                <div class="band doc-band">
+                  <div class="band-title">
+                    <span class="num">02</span>
+                    <h2 id="fields-title">Fields</h2>
+                  </div>
+                </div>
+                <div class="doc-body">
+                  <div class="doc-table-wrap">
+                    <table class="doc-table">
+                      <thead>
+                        <tr>
+                          <th scope="col">Field</th>
+                          <th scope="col">What it does</th>
+                          <th scope="col">Default</th>
+                          <th scope="col">Limits</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr data-field="op">
+                          <td>Operator</td>
+                          <td>Chooses a comparison of A and B, or a logic gate over them.</td>
+                          <td><code>==</code></td>
+                          <td>
+                            <ul class="field-options">
+                              <li><code>==</code></li>
+                              <li><code>!=</code></li>
+                              <li><code>&gt;</code></li>
+                              <li><code>&lt;</code></li>
+                              <li><code>contains</code></li>
+                              <li><code>AND</code></li>
+                              <li><code>OR</code></li>
+                              <li><code>XOR</code></li>
+                              <li><code>NAND</code></li>
+                              <li><code>NOR</code></li>
+                            </ul>
+                          </td>
+                        </tr>
+                        <tr data-field="left">
+                          <td>A</td>
+                          <td>The first operand; a wired A replaces it.</td>
+                          <td>None</td>
+                          <td>None</td>
+                        </tr>
+                        <tr data-field="right">
+                          <td>B</td>
+                          <td>The second operand; a wired B replaces it.</td>
+                          <td>None</td>
+                          <td>None</td>
+                        </tr>
+                        <tr data-field="leftTrue">
+                          <td>is true</td>
+                          <td>
+                            For a gate, reads A as it is when checked and flipped when unchecked.
+                          </td>
+                          <td>On</td>
+                          <td>Shown only for the gate operators.</td>
+                        </tr>
+                        <tr data-field="rightTrue">
+                          <td>is true</td>
+                          <td>
+                            For a gate, reads B as it is when checked and flipped when unchecked.
+                          </td>
+                          <td>On</td>
+                          <td>Shown only for the gate operators.</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </section>
+              <!-- /gen:fields -->
+
+              <!-- gen:body -->
+              <section class="doc-section block" id="run" aria-labelledby="run-title">
+                <div class="band doc-band">
+                  <div class="band-title">
+                    <span class="num">03</span>
+                    <h2 id="run-title">What a run does</h2>
+                  </div>
+                </div>
+                <div class="doc-body doc-split">
+                  <div class="doc-main">
+                    <ol class="doc-steps">
+                      <li>Reads A and B. A wired A or B replaces its field.</li>
+                      <li>Applies the <b>Operator</b>.</li>
+                      <li>Leaves by <b>onTrue</b> or <b>onFalse</b>.</li>
+                    </ol>
+                    <ul class="doc-points">
+                      <li>Neither port is an error.</li>
+                      <li>
+                        <b>Result</b> carries the outcome as <code>1</code> for true and
+                        <code>0</code> for false, so it can feed another <b>Condition</b>.
+                      </li>
+                    </ul>
+                    <h3 class="doc-sub">Comparisons</h3>
+                    <div class="doc-table-wrap">
+                      <table class="doc-table">
+                        <thead>
+                          <tr>
+                            <th scope="col">Operator</th>
+                            <th scope="col">True when</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <tr>
+                            <td><code>==</code></td>
+                            <td>A equals B.</td>
+                          </tr>
+                          <tr>
+                            <td><code>!=</code></td>
+                            <td>A does not equal B.</td>
+                          </tr>
+                          <tr>
+                            <td><code>&gt;</code></td>
+                            <td>A is greater than B.</td>
+                          </tr>
+                          <tr>
+                            <td><code>&lt;</code></td>
+                            <td>A is less than B.</td>
+                          </tr>
+                          <tr>
+                            <td><code>contains</code></td>
+                            <td>The text of A contains the text of B, and case matters.</td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                    <ul class="doc-points">
+                      <li>
+                        Two numbers are compared as numbers, so <code>9</code> is less than
+                        <code>10</code>.
+                      </li>
+                      <li>
+                        A number is a wired number, or text that reads as one, such as
+                        <code>10</code>.
+                      </li>
+                      <li>Anything else is compared as text, and case matters.</li>
+                    </ul>
+                    <div class="doc-note" data-tone="note">
+                      <span class="label">Note</span>
+                      <p>
+                        <code>==</code> and <code>!=</code> compare as booleans when either side is
+                        the text <code>true</code> or <code>false</code>.<br />
+                        The other side must read as a boolean too: a boolean, a number, or the text
+                        <code>true</code> or <code>false</code>.<br />
+                        A number is true unless it is 0.<br />
+                        A wired true arrives as <code>1</code>, so it equals the text
+                        <code>true</code>.
+                      </p>
+                    </div>
+                    <h3 class="doc-sub">Gates</h3>
+                    <p class="doc-prose">
+                      <code>AND</code>, <code>OR</code>, <code>XOR</code>, <code>NAND</code> and
+                      <code>NOR</code> do not compare.<br />
+                      They read A and B as true or false, then combine the two.
+                    </p>
+                    <ul class="doc-points">
+                      <li>A value is true when it is the boolean true or a number other than 0.</li>
+                      <li>
+                        The text <code>true</code> in any capitals is true, and so is text that
+                        reads as a number other than 0.
+                      </li>
+                      <li>
+                        Everything else is false, including empty text, text such as
+                        <code>yes</code>, and a value that was not set.
+                      </li>
+                      <li>
+                        Each operand has an <b>is true</b> box, shown only for a gate operator.
+                      </li>
+                      <li>Checked, which is the default, the operand is used as it is.</li>
+                      <li>
+                        Unchecked, the operand is flipped: true becomes false and false becomes
+                        true.
+                      </li>
+                    </ul>
+                    <div class="doc-note" data-tone="note">
+                      <span class="label">Note</span>
+                      <p>
+                        <code>AND</code> with the box under A unchecked is true when A is false and
+                        B is true.
+                      </p>
+                    </div>
+                    <div class="doc-table-wrap">
+                      <table class="doc-table">
+                        <thead>
+                          <tr>
+                            <th scope="col">A</th>
+                            <th scope="col">B</th>
+                            <th scope="col">AND</th>
+                            <th scope="col">OR</th>
+                            <th scope="col">XOR</th>
+                            <th scope="col">NAND</th>
+                            <th scope="col">NOR</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <tr>
+                            <td>False</td>
+                            <td>False</td>
+                            <td>False</td>
+                            <td>False</td>
+                            <td>False</td>
+                            <td>True</td>
+                            <td>True</td>
+                          </tr>
+                          <tr>
+                            <td>False</td>
+                            <td>True</td>
+                            <td>False</td>
+                            <td>True</td>
+                            <td>True</td>
+                            <td>True</td>
+                            <td>False</td>
+                          </tr>
+                          <tr>
+                            <td>True</td>
+                            <td>False</td>
+                            <td>False</td>
+                            <td>True</td>
+                            <td>True</td>
+                            <td>True</td>
+                            <td>False</td>
+                          </tr>
+                          <tr>
+                            <td>True</td>
+                            <td>True</td>
+                            <td>True</td>
+                            <td>True</td>
+                            <td>False</td>
+                            <td>False</td>
+                            <td>False</td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                  <div class="doc-figs">
+                    <figure
+                      class="fig fig-flow"
+                      role="img"
+                      aria-label="Graph: Cron Schedule 0 4 * * *, then on onComplete, Condition A == 0, with Read Attribute players.count as data, on onTrue, Create Backup Full server, on onFalse, Notify Players online."
+                    >
+                      <div class="fig-node">
+                        <span class="fig-kind">Cron Schedule</span
+                        ><span class="fig-value">0 4 * * *</span>
+                      </div>
+                      <span class="fig-wire"><span class="fig-port">onComplete</span></span>
+                      <div class="fig-row">
+                        <div class="fig-node is-hit">
+                          <span class="fig-kind">Condition</span
+                          ><span class="fig-value">A == 0</span>
+                        </div>
+                        <div class="fig-feeds">
+                          <span class="fig-wire fig-wire-data" aria-hidden="true"></span>
+                          <div class="fig-node is-data">
+                            <span class="fig-kind">Read Attribute</span
+                            ><span class="fig-value">players.count</span>
+                          </div>
+                        </div>
+                      </div>
+                      <div class="fig-lanes">
+                        <div class="fig-lane">
+                          <span class="fig-wire"><span class="fig-port">onTrue</span></span>
+                          <div class="fig-node">
+                            <span class="fig-kind">Create Backup</span
+                            ><span class="fig-value">Full server</span>
+                          </div>
+                        </div>
+                        <div class="fig-lane">
+                          <span class="fig-wire"><span class="fig-port">onFalse</span></span>
+                          <div class="fig-node">
+                            <span class="fig-kind">Notify</span
+                            ><span class="fig-value">Players online</span>
+                          </div>
+                        </div>
+                      </div>
+                    </figure>
+                  </div>
+                </div>
+              </section>
+              <!-- /gen:body -->
             </div>
-            <div class="doc-body">
-              <p class="doc-prose">
-                Decides one outcome from A and B, then leaves by <code>onTrue</code> or
-                <code>onFalse</code>.<br />Neither port is an error.<br />A wired A or B replaces
-                its field.<br /><b>Result</b> carries the outcome as 1 for true and 0 for false, so
-                it can feed another Condition.
-              </p>
-              <div class="doc-table-wrap">
-                <table class="doc-table">
-                  <thead>
-                    <tr>
-                      <th scope="col">Operator</th>
-                      <th scope="col">True when</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr>
-                      <td><code>==</code></td>
-                      <td>A equals B.</td>
-                    </tr>
-                    <tr>
-                      <td><code>!=</code></td>
-                      <td>A does not equal B.</td>
-                    </tr>
-                    <tr>
-                      <td><code>&gt;</code></td>
-                      <td>A is greater than B.</td>
-                    </tr>
-                    <tr>
-                      <td><code>&lt;</code></td>
-                      <td>A is less than B.</td>
-                    </tr>
-                    <tr>
-                      <td><code>contains</code></td>
-                      <td>The text of A contains the text of B, and case matters.</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-              <p class="doc-prose">
-                Two numbers are compared as numbers, so <code>9</code> is less than
-                <code>10</code>.<br />A number is a wired number, or text that reads as one, such as
-                <code>10</code>.<br />Anything else is compared as text, and case matters.
-              </p>
-              <p class="doc-prose">
-                <code>==</code> and <code>!=</code> compare as booleans when either side is the text
-                <code>true</code> or <code>false</code>.<br />The other side must read as a boolean
-                too.<br />A boolean, a number, or the text <code>true</code> or
-                <code>false</code> does.<br />A number is true unless it is 0.<br />A wired true
-                arrives as 1, so it equals the text <code>true</code>.
-              </p>
-              <p class="doc-prose">
-                The gate operators <code>AND</code>, <code>OR</code>, <code>XOR</code>,
-                <code>NAND</code> and <code>NOR</code> do not compare.<br />They read A and B as
-                true or false, then combine the two.
-              </p>
-              <p class="doc-prose">
-                A value is true when it is the boolean true or a number other than 0.<br />The text
-                <code>true</code> in any capitals is true, and so is text that reads as a number
-                other than 0.<br />Everything else is false, including empty text, text such as
-                <code>yes</code>, and a value that was not set.
-              </p>
-              <p class="doc-prose">
-                Each operand has an <b>is true</b> box, shown only for a gate operator.<br />Checked,
-                which is the default, the operand is used as it is.<br />Unchecked, the operand is
-                flipped: true becomes false and false becomes true.<br />So <code>AND</code> with
-                the box under A unchecked is true when A is false and B is true.<br />
-                The gates combine A and B as their boxes leave them.
-              </p>
-              <div class="doc-table-wrap">
-                <table class="doc-table">
-                  <thead>
-                    <tr>
-                      <th scope="col">A</th>
-                      <th scope="col">B</th>
-                      <th scope="col">AND</th>
-                      <th scope="col">OR</th>
-                      <th scope="col">XOR</th>
-                      <th scope="col">NAND</th>
-                      <th scope="col">NOR</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr>
-                      <td>False</td>
-                      <td>False</td>
-                      <td>False</td>
-                      <td>False</td>
-                      <td>False</td>
-                      <td>True</td>
-                      <td>True</td>
-                    </tr>
-                    <tr>
-                      <td>False</td>
-                      <td>True</td>
-                      <td>False</td>
-                      <td>True</td>
-                      <td>True</td>
-                      <td>True</td>
-                      <td>False</td>
-                    </tr>
-                    <tr>
-                      <td>True</td>
-                      <td>False</td>
-                      <td>False</td>
-                      <td>True</td>
-                      <td>True</td>
-                      <td>True</td>
-                      <td>False</td>
-                    </tr>
-                    <tr>
-                      <td>True</td>
-                      <td>True</td>
-                      <td>True</td>
-                      <td>True</td>
-                      <td>False</td>
-                      <td>False</td>
-                      <td>False</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </section>
+          </div>
 
           <nav class="doc-related block" aria-label="Related">
             <div class="shelf-label"><span class="label">Related</span></div>

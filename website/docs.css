@@ -405,8 +405,9 @@ h2.label {
   min-width: 560px;
 }
 
-/* A note beside the steps. The tint says which kind, the label stays plain:
-   see also in the accent, heads up in sun. */
+/* A callout. The tint says which kind and the label names it: a note is
+   context and stays quiet, a tip points elsewhere in the accent, and a heads
+   up is the one thing not to miss, in sun with a bar down its edge. */
 .doc-note {
   display: flex;
   flex-wrap: wrap;
@@ -418,9 +419,16 @@ h2.label {
   line-height: 1.55;
 }
 
+.doc-note[data-tone='note'] {
+  border-color: var(--border-subtle);
+  background: var(--bg-surface);
+  color: var(--text-secondary);
+}
+
 .doc-note[data-tone='warn'] {
-  border-color: rgb(var(--sun-rgb) / 0.33);
-  background: rgb(var(--sun-rgb) / 0.05);
+  border-color: rgb(var(--sun-rgb) / 0.4);
+  border-left: 3px solid var(--sun);
+  background: rgb(var(--sun-rgb) / 0.06);
 }
 
 .doc-note .label {
@@ -428,9 +436,515 @@ h2.label {
   white-space: nowrap;
 }
 
+.doc-note[data-tone='warn'] .label {
+  color: var(--sun);
+}
+
 .doc-note p {
   flex: 1 1 320px;
   margin: 0;
+}
+
+.doc-note b {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+/* A sub-heading inside a section. */
+.doc-sub {
+  margin: 12px 0 0;
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.doc-sub:first-child {
+  margin-top: 0;
+}
+
+/* ── Steps: one action a row, numbered like an assembly guide ─────────── */
+
+.doc-steps {
+  counter-reset: step;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.doc-steps > li {
+  counter-increment: step;
+  position: relative;
+  min-height: 34px;
+  padding: 14px 0 14px 54px;
+  border-top: var(--hairline);
+  font-size: 17px;
+  line-height: 1.55;
+}
+
+.doc-steps > li:first-child {
+  border-top: 0;
+  padding-top: 4px;
+}
+
+.doc-steps > li::before {
+  content: counter(step);
+  position: absolute;
+  top: 12px;
+  left: 0;
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border: 1px solid rgb(var(--accent-rgb) / 0.45);
+  background: rgb(var(--accent-rgb) / 0.1);
+  font-family: var(--font-site-mono);
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.doc-steps > li:first-child::before {
+  top: 2px;
+}
+
+.doc-steps b {
+  font-weight: 600;
+}
+
+/* Facts a concept rests on, one a row. */
+.doc-points {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 16px;
+  line-height: 1.6;
+}
+
+.doc-points > li {
+  position: relative;
+  padding-left: 24px;
+}
+
+.doc-points > li::before {
+  content: '';
+  position: absolute;
+  top: 0.65em;
+  left: 2px;
+  width: 7px;
+  height: 7px;
+  background: var(--accent);
+}
+
+.doc-points b {
+  font-weight: 600;
+}
+
+.doc-steps a,
+.doc-points a {
+  text-decoration: underline;
+  text-decoration-color: var(--border-hover);
+  text-underline-offset: 3px;
+}
+
+/* ── A section with pictures: the words, and the pictures beside them ──── */
+
+.doc-split {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 400px);
+  align-items: start;
+  gap: 28px 48px;
+}
+
+.doc-main {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  min-width: 0;
+}
+
+.doc-figs {
+  position: sticky;
+  top: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* ── Pictures drawn from text (scripts/gen-docs.mjs) ──────────────────── */
+
+.fig {
+  --wire-track: color-mix(in srgb, var(--text-primary) 16%, var(--bg-base));
+  margin: 0;
+  padding: 24px;
+  border: var(--hairline);
+  background: var(--bg-surface);
+  font-family: var(--font-site-mono);
+  font-size: 13px;
+}
+
+/* flow: a scheduler graph, read top to bottom. */
+.fig-flow {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.fig-node {
+  min-width: 180px;
+  padding: 12px 16px;
+  border: 1px solid var(--border-hover);
+  background: var(--bg-overlay);
+}
+
+.fig-node.is-hit {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgb(var(--accent-rgb) / 0.15);
+}
+
+.fig-node.is-data {
+  min-width: 0;
+  border-style: dashed;
+}
+
+.fig-kind {
+  display: block;
+  font-size: 10.5px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+
+.fig-value {
+  display: block;
+  margin-top: 6px;
+  color: var(--text-primary);
+}
+
+.fig-value code {
+  padding: 0;
+  border: 0;
+  background: none;
+}
+
+.fig-wire {
+  position: relative;
+  display: block;
+  width: 2px;
+  height: 30px;
+  margin-left: 32px;
+  background: var(--wire-track);
+}
+
+.fig-port {
+  position: absolute;
+  top: 50%;
+  left: 12px;
+  transform: translateY(-50%);
+  font-size: 11px;
+  white-space: nowrap;
+  color: var(--text-secondary);
+}
+
+.fig-row,
+.fig-feeds {
+  display: flex;
+  align-items: center;
+}
+
+.fig-wire-data {
+  width: 24px;
+  height: 0;
+  margin: 0;
+  border-top: 2px dashed var(--wire-track);
+  background: none;
+}
+
+/* Branches leave the last block down one stem, one row each. */
+.fig-lanes {
+  display: flex;
+  flex-direction: column;
+  margin-left: 32px;
+  padding-top: 12px;
+}
+
+.fig-lane {
+  position: relative;
+  display: flex;
+  align-items: center;
+  padding: 6px 0;
+}
+
+.fig-lane::before {
+  content: '';
+  position: absolute;
+  top: -12px;
+  bottom: 0;
+  left: 0;
+  width: 2px;
+  background: var(--wire-track);
+}
+
+.fig-lane + .fig-lane::before {
+  top: 0;
+}
+
+.fig-lane:last-child::before {
+  bottom: 50%;
+}
+
+/* A branch wire grows with its label, which sits above the line. */
+.fig-lane .fig-wire {
+  flex: none;
+  width: auto;
+  min-width: 96px;
+  height: auto;
+  margin-left: 0;
+  background: linear-gradient(var(--wire-track), var(--wire-track)) left center / 100% 2px no-repeat;
+}
+
+.fig-lane .fig-port {
+  position: static;
+  display: block;
+  padding: 0 12px 18px;
+  transform: none;
+}
+
+.fig-lane .fig-node {
+  min-width: 0;
+}
+
+/* tree: folders and files. */
+.fig-tree-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.fig-tree-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 2px 16px;
+  padding: 5px 0 5px calc(var(--depth) * 18px);
+  border-top: var(--hairline);
+}
+
+.fig-tree-row:first-child {
+  border-top: 0;
+}
+
+.fig-tree code {
+  padding: 0;
+  border: 0;
+  background: none;
+  font-size: inherit;
+}
+
+.fig-tree-row.is-hit code {
+  color: var(--accent);
+}
+
+.fig-tree-note {
+  font-family: var(--font-site);
+  color: var(--text-secondary);
+}
+
+/* timeline: moments in order. */
+.fig-timeline-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.fig-timeline-list li {
+  display: grid;
+  grid-template-columns: 72px minmax(0, 1fr);
+  gap: 12px;
+  padding: 10px 0;
+  border-top: var(--hairline);
+}
+
+.fig-timeline-list li:first-child {
+  border-top: 0;
+}
+
+.fig-when {
+  color: var(--accent);
+}
+
+.fig-what {
+  font-family: var(--font-site);
+  font-size: 14px;
+}
+
+.fig-timeline-list .is-hit .fig-what {
+  font-weight: 600;
+}
+
+/* ui: a sketch of a panel in the app, with the control to use marked. */
+.fig-ui {
+  padding: 0;
+  font-family: var(--font-site);
+  font-size: 13px;
+}
+
+.fig-ui-title {
+  padding: 10px 16px;
+  border-bottom: var(--hairline);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.fig-ui-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+}
+
+.fig-ui-row + .fig-ui-row {
+  border-top: var(--hairline);
+}
+
+.fig-ui-text {
+  color: var(--text-secondary);
+}
+
+.fig-ui-btn,
+.fig-ui-field {
+  padding: 4px 10px;
+  border: 1px solid var(--border-hover);
+  border-radius: 3px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.fig-ui-field {
+  flex: 1 1 140px;
+  font-family: var(--font-site-mono);
+  font-weight: 400;
+  color: var(--text-muted);
+}
+
+.fig-ui .is-hit {
+  border-color: var(--accent);
+  color: var(--text-primary);
+  box-shadow: 0 0 0 3px rgb(var(--accent-rgb) / 0.2);
+}
+
+.fig-ui code {
+  padding: 0;
+  border: 0;
+  background: none;
+}
+
+@media (max-width: 900px) {
+  .doc-split {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  /* The picture first, then what to do with it. */
+  .doc-figs {
+    position: static;
+    order: -1;
+  }
+}
+
+/* On a phone the blocks shrink and wrap their words to fit the column. */
+@media (max-width: 600px) {
+  .fig {
+    padding: 16px;
+    overflow-wrap: anywhere;
+  }
+
+  .fig-node {
+    min-width: 0;
+  }
+
+  .fig-lane .fig-wire {
+    min-width: 48px;
+  }
+}
+
+/* ── Contents ─────────────────────────────────────────────────────────── */
+/* The page's sections listed down the left, level with the first one, and
+   kept in view while the sections scroll past. site.js marks the one being
+   read. */
+
+.doc-layout {
+  display: grid;
+  grid-template-columns: 200px minmax(0, 1fr);
+  gap: var(--stack);
+  align-items: start;
+}
+
+.doc-flow {
+  display: flex;
+  flex-direction: column;
+  gap: var(--stack);
+  min-width: 0;
+}
+
+.doc-toc {
+  position: sticky;
+  top: 24px;
+  border: var(--hairline);
+}
+
+.doc-toc ol {
+  margin: 0;
+  padding: 10px 0;
+  list-style: none;
+}
+
+.doc-toc a {
+  display: flex;
+  gap: 10px;
+  padding: 8px 16px 8px 14px;
+  border-left: 2px solid transparent;
+  color: var(--text-secondary);
+  font-size: 14px;
+  line-height: 1.35;
+  text-decoration: none;
+  transition:
+    color var(--duration-fast) var(--ease-standard),
+    border-color var(--duration-fast) var(--ease-standard);
+}
+
+.doc-toc a:hover {
+  color: var(--text-primary);
+}
+
+.doc-toc a[aria-current] {
+  border-left-color: var(--accent);
+  color: var(--text-primary);
+}
+
+.doc-toc .num {
+  flex: none;
+  padding-top: 1px;
+  font-family: var(--font-site-mono);
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.doc-toc a[aria-current] .num {
+  color: var(--accent);
+}
+
+@media (max-width: 1100px) {
+  .doc-layout {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .doc-toc {
+    display: none;
+  }
 }
 
 /* ── Related pages ──────────────────────────────────────────────────────── */

@@ -165,6 +165,11 @@ jobs:
       # regenerated and written is red here rather than a stale or 404 page.
       - run: node scripts/gen-block-docs.mjs --check
 
+      # The other docs pages and the docs home's shelves are written from the
+      # Markdown under docs/website/, so a page edited there without its HTML
+      # regenerated, or the HTML edited by hand, is red here.
+      - run: node scripts/gen-docs.mjs --check
+
       # The docs search (website/docs.js) reads every docs page from
       # website/docs/search.json. A page edited without the index rewritten is
       # searched as it was, so a stale index is red here.

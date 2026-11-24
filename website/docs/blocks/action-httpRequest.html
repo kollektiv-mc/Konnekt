@@ -136,213 +136,304 @@
             </dl>
           </header>
 
-          <!-- gen:ports -->
-          <section class="doc-section block" id="ports" aria-labelledby="ports-title">
-            <div class="band doc-band">
-              <div class="band-title">
-                <span class="num">01</span>
-                <h2 id="ports-title">Ports</h2>
-              </div>
-            </div>
-            <div class="port-stage">
-              <div class="port-canvas">
-                <div class="port-node" data-category="action">
-                  <div class="port-node-head">
-                    <span>HTTP Request</span><span class="port-node-cat">action</span>
-                  </div>
-                  <div class="port-cols">
-                    <ul class="port-col port-in" aria-label="Inputs">
-                      <li class="port-col-label" aria-hidden="true">in</li>
-                      <li class="port" data-shape="control" data-port="trigger">
-                        <span>trigger</span><span class="port-type">control</span>
-                      </li>
-                      <li class="port" data-shape="data" data-type="string">
-                        <span>URL</span><span class="port-type">string</span>
-                      </li>
-                      <li class="port" data-shape="data" data-type="string">
-                        <span>Request body</span><span class="port-type">string</span>
-                      </li>
-                      <li class="port" data-shape="data" data-type="string">
-                        <span>Content-Type</span><span class="port-type">string</span>
-                      </li>
-                    </ul>
-                    <ul class="port-col port-out" aria-label="Outputs">
-                      <li class="port-col-label" aria-hidden="true">out</li>
-                      <li class="port" data-shape="control" data-port="onComplete">
-                        <span>onComplete</span><span class="port-type">control</span>
-                      </li>
-                      <li class="port" data-shape="control" data-port="onFailed">
-                        <span>onFailed</span><span class="port-type">control</span>
-                      </li>
-                      <li class="port" data-shape="data" data-type="number">
-                        <span>HTTP status</span><span class="port-type">number</span>
-                      </li>
-                      <li class="port" data-shape="data" data-type="string">
-                        <span>Response body</span><span class="port-type">string</span>
-                      </li>
-                    </ul>
+          <div class="doc-layout">
+            <!-- gen:toc -->
+            <nav class="doc-toc" aria-label="On this page">
+              <ol>
+                <li>
+                  <a href="#ports"><span class="num">01</span><span>Ports</span></a>
+                </li>
+                <li>
+                  <a href="#fields"><span class="num">02</span><span>Fields</span></a>
+                </li>
+                <li>
+                  <a href="#run"><span class="num">03</span><span>What a run does</span></a>
+                </li>
+                <li>
+                  <a href="#errors"><span class="num">04</span><span>Errors</span></a>
+                </li>
+              </ol>
+            </nav>
+            <!-- /gen:toc -->
+            <div class="doc-flow">
+              <!-- gen:ports -->
+              <section class="doc-section block" id="ports" aria-labelledby="ports-title">
+                <div class="band doc-band">
+                  <div class="band-title">
+                    <span class="num">01</span>
+                    <h2 id="ports-title">Ports</h2>
                   </div>
                 </div>
-              </div>
-              <div class="port-legend">
-                <span class="label">Ports</span>
-                <span class="port-key" data-shape="control">Control</span>
-                <span class="port-key" data-shape="data">Data</span>
-                <hr />
-                <span class="label">Data types</span>
-                <span class="port-key" data-shape="data" data-type="string"
-                  ><code>string</code></span
-                >
-                <span class="port-key" data-shape="data" data-type="number"
-                  ><code>number</code></span
-                >
-                <span class="port-key" data-shape="data" data-type="bool"><code>bool</code></span>
-                <p class="doc-prose">
-                  Strings accept any data input.<br />
-                  Numbers accept boolean input.
-                </p>
-              </div>
-            </div>
-          </section>
-          <!-- /gen:ports -->
-
-          <!-- gen:fields -->
-          <section class="doc-section block" id="fields" aria-labelledby="fields-title">
-            <div class="band doc-band">
-              <div class="band-title">
-                <span class="num">02</span>
-                <h2 id="fields-title">Fields</h2>
-              </div>
-            </div>
-            <div class="doc-body">
-              <div class="doc-table-wrap">
-                <table class="doc-table">
-                  <thead>
-                    <tr>
-                      <th scope="col">Field</th>
-                      <th scope="col">What it does</th>
-                      <th scope="col">Default</th>
-                      <th scope="col">Limits</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr data-field="method">
-                      <td>Method</td>
-                      <td>The HTTP method of the request.</td>
-                      <td><code>POST</code></td>
-                      <td>
-                        <ul class="field-options">
-                          <li><code>GET</code></li>
-                          <li><code>POST</code></li>
-                          <li><code>PUT</code></li>
-                          <li><code>PATCH</code></li>
-                          <li><code>DELETE</code></li>
+                <div class="port-stage">
+                  <div class="port-canvas">
+                    <div class="port-node" data-category="action">
+                      <div class="port-node-head">
+                        <span>HTTP Request</span><span class="port-node-cat">action</span>
+                      </div>
+                      <div class="port-cols">
+                        <ul class="port-col port-in" aria-label="Inputs">
+                          <li class="port-col-label" aria-hidden="true">in</li>
+                          <li class="port" data-shape="control" data-port="trigger">
+                            <span>trigger</span><span class="port-type">control</span>
+                          </li>
+                          <li class="port" data-shape="data" data-type="string">
+                            <span>URL</span><span class="port-type">string</span>
+                          </li>
+                          <li class="port" data-shape="data" data-type="string">
+                            <span>Request body</span><span class="port-type">string</span>
+                          </li>
+                          <li class="port" data-shape="data" data-type="string">
+                            <span>Content-Type</span><span class="port-type">string</span>
+                          </li>
                         </ul>
-                      </td>
-                    </tr>
-                    <tr data-field="url">
-                      <td>URL</td>
-                      <td>The address to request.</td>
-                      <td>None</td>
-                      <td>Cannot be empty; <code>http</code> or <code>https</code> only.</td>
-                    </tr>
-                    <tr data-field="body">
-                      <td>Request body</td>
-                      <td>The text sent as the request body.</td>
-                      <td>None</td>
-                      <td>None</td>
-                    </tr>
-                    <tr data-field="contentType">
-                      <td>Content-Type</td>
-                      <td>The <code>Content-Type</code> header sent with the body.</td>
-                      <td><code>application/json</code></td>
-                      <td>None</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </section>
-          <!-- /gen:fields -->
+                        <ul class="port-col port-out" aria-label="Outputs">
+                          <li class="port-col-label" aria-hidden="true">out</li>
+                          <li class="port" data-shape="control" data-port="onComplete">
+                            <span>onComplete</span><span class="port-type">control</span>
+                          </li>
+                          <li class="port" data-shape="control" data-port="onFailed">
+                            <span>onFailed</span><span class="port-type">control</span>
+                          </li>
+                          <li class="port" data-shape="data" data-type="number">
+                            <span>HTTP status</span><span class="port-type">number</span>
+                          </li>
+                          <li class="port" data-shape="data" data-type="string">
+                            <span>Response body</span><span class="port-type">string</span>
+                          </li>
+                        </ul>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="port-legend">
+                    <span class="label">Ports</span>
+                    <span class="port-key" data-shape="control">Control</span>
+                    <span class="port-key" data-shape="data">Data</span>
+                    <hr />
+                    <span class="label">Data types</span>
+                    <span class="port-key" data-shape="data" data-type="string"
+                      ><code>string</code></span
+                    >
+                    <span class="port-key" data-shape="data" data-type="number"
+                      ><code>number</code></span
+                    >
+                    <span class="port-key" data-shape="data" data-type="bool"
+                      ><code>bool</code></span
+                    >
+                    <p class="doc-prose">
+                      Strings accept any data input.<br />
+                      Numbers accept boolean input.
+                    </p>
+                  </div>
+                </div>
+              </section>
+              <!-- /gen:ports -->
 
-          <section class="doc-section block" id="run" aria-labelledby="run-title">
-            <div class="band doc-band">
-              <div class="band-title">
-                <span class="num">03</span>
-                <h2 id="run-title">What a run does</h2>
-              </div>
-            </div>
-            <div class="doc-body">
-              <p class="doc-prose">
-                Sends one request with a 30 s timeout and follows up to 10 redirects.<br />A wired
-                URL, Request body or Content-Type replaces its field.<br />An empty Request body
-                sends no body and no <code>Content-Type</code> header.<br />An empty Content-Type
-                sends <code>application/json</code>.<br />The block does not filter addresses, so a
-                URL on the local network works.
-              </p>
-              <p class="doc-prose">
-                It leaves by <code>onComplete</code> when the status is below 400.<br />It leaves by
-                <code>onFailed</code> on a status of 400 or above, and on a connection error.
-              </p>
-              <p class="doc-prose">
-                <b>HTTP status</b> carries the status code whenever a response arrived, failed or
-                not.<br /><b>Response body</b> carries the body as text once the whole body has been
-                read.<br />A body over 1 MiB fails the block and sets no <b>Response body</b>.
-              </p>
-            </div>
-          </section>
+              <!-- gen:fields -->
+              <section class="doc-section block" id="fields" aria-labelledby="fields-title">
+                <div class="band doc-band">
+                  <div class="band-title">
+                    <span class="num">02</span>
+                    <h2 id="fields-title">Fields</h2>
+                  </div>
+                </div>
+                <div class="doc-body">
+                  <div class="doc-table-wrap">
+                    <table class="doc-table">
+                      <thead>
+                        <tr>
+                          <th scope="col">Field</th>
+                          <th scope="col">What it does</th>
+                          <th scope="col">Default</th>
+                          <th scope="col">Limits</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr data-field="method">
+                          <td>Method</td>
+                          <td>The HTTP method of the request.</td>
+                          <td><code>POST</code></td>
+                          <td>
+                            <ul class="field-options">
+                              <li><code>GET</code></li>
+                              <li><code>POST</code></li>
+                              <li><code>PUT</code></li>
+                              <li><code>PATCH</code></li>
+                              <li><code>DELETE</code></li>
+                            </ul>
+                          </td>
+                        </tr>
+                        <tr data-field="url">
+                          <td>URL</td>
+                          <td>The address to request.</td>
+                          <td>None</td>
+                          <td>Cannot be empty; <code>http</code> or <code>https</code> only.</td>
+                        </tr>
+                        <tr data-field="body">
+                          <td>Request body</td>
+                          <td>The text sent as the request body.</td>
+                          <td>None</td>
+                          <td>None</td>
+                        </tr>
+                        <tr data-field="contentType">
+                          <td>Content-Type</td>
+                          <td>The <code>Content-Type</code> header sent with the body.</td>
+                          <td><code>application/json</code></td>
+                          <td>None</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </section>
+              <!-- /gen:fields -->
 
-          <section class="doc-section block" id="errors" aria-labelledby="errors-title">
-            <div class="band doc-band">
-              <div class="band-title">
-                <span class="num">04</span>
-                <h2 id="errors-title">Errors</h2>
-              </div>
+              <!-- gen:body -->
+              <section class="doc-section block" id="run" aria-labelledby="run-title">
+                <div class="band doc-band">
+                  <div class="band-title">
+                    <span class="num">03</span>
+                    <h2 id="run-title">What a run does</h2>
+                  </div>
+                </div>
+                <div class="doc-body doc-split">
+                  <div class="doc-main">
+                    <ol class="doc-steps">
+                      <li>
+                        Use each wired <b>URL</b>, <b>Request body</b> or <b>Content-Type</b> in
+                        place of its field.
+                      </li>
+                      <li>Send one request with a 30 s timeout, following up to 10 redirects.</li>
+                      <li>Read the whole response body.</li>
+                      <li>Leave by <b>onComplete</b> when the status is below 400.</li>
+                      <li>
+                        Leave by <b>onFailed</b> on a status of 400 or above, and on a connection
+                        error.
+                      </li>
+                    </ol>
+                    <ul class="doc-points">
+                      <li>
+                        An empty <b>Request body</b> sends no body and no
+                        <code>Content-Type</code> header.
+                      </li>
+                      <li>An empty <b>Content-Type</b> sends <code>application/json</code>.</li>
+                      <li>
+                        <b>HTTP status</b> carries the status code whenever a response arrived,
+                        failed or not.
+                      </li>
+                      <li>
+                        <b>Response body</b> carries the body as text once the whole body has been
+                        read.
+                      </li>
+                    </ul>
+                    <div class="doc-note" data-tone="warn">
+                      <span class="label">Heads up</span>
+                      <p>A body over 1 MiB fails the block and sets no <b>Response body</b>.</p>
+                    </div>
+                    <div class="doc-note" data-tone="note">
+                      <span class="label">Note</span>
+                      <p>
+                        The block does not filter addresses, so a URL on the local network works.
+                      </p>
+                    </div>
+                  </div>
+                  <div class="doc-figs">
+                    <figure
+                      class="fig fig-flow"
+                      role="img"
+                      aria-label="Graph: Cron Schedule 0 * * * *, then on onComplete, HTTP Request POST, on onComplete, Notify Request sent, on onFailed, Notify Request failed, with Constant https://example.com/hook as data."
+                    >
+                      <div class="fig-node">
+                        <span class="fig-kind">Cron Schedule</span
+                        ><span class="fig-value">0 * * * *</span>
+                      </div>
+                      <span class="fig-wire"><span class="fig-port">onComplete</span></span>
+                      <div class="fig-row">
+                        <div class="fig-node is-hit">
+                          <span class="fig-kind">HTTP Request</span
+                          ><span class="fig-value">POST</span>
+                        </div>
+                        <div class="fig-feeds">
+                          <span class="fig-wire fig-wire-data" aria-hidden="true"></span>
+                          <div class="fig-node is-data">
+                            <span class="fig-kind">Constant</span
+                            ><span class="fig-value">https://example.com/hook</span>
+                          </div>
+                        </div>
+                      </div>
+                      <div class="fig-lanes">
+                        <div class="fig-lane">
+                          <span class="fig-wire"><span class="fig-port">onComplete</span></span>
+                          <div class="fig-node">
+                            <span class="fig-kind">Notify</span
+                            ><span class="fig-value">Request sent</span>
+                          </div>
+                        </div>
+                        <div class="fig-lane">
+                          <span class="fig-wire"><span class="fig-port">onFailed</span></span>
+                          <div class="fig-node">
+                            <span class="fig-kind">Notify</span
+                            ><span class="fig-value">Request failed</span>
+                          </div>
+                        </div>
+                      </div>
+                    </figure>
+                  </div>
+                </div>
+              </section>
+              <section class="doc-section block" id="errors" aria-labelledby="errors-title">
+                <div class="band doc-band">
+                  <div class="band-title">
+                    <span class="num">04</span>
+                    <h2 id="errors-title">Errors</h2>
+                  </div>
+                </div>
+                <div class="doc-body">
+                  <div class="doc-table-wrap">
+                    <table class="doc-table">
+                      <thead>
+                        <tr>
+                          <th scope="col">Message says</th>
+                          <th scope="col">Do</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr>
+                          <td>url is empty</td>
+                          <td>Fill in <b>URL</b> or wire one in.</td>
+                        </tr>
+                        <tr>
+                          <td>HTTP <em>status</em>: <em>response body</em></td>
+                          <td>
+                            The service answered 400 or above; check the request and what the
+                            service expects.
+                          </td>
+                        </tr>
+                        <tr>
+                          <td>HTTP <em>status</em>: response body exceeds 1048576 bytes</td>
+                          <td>Request something smaller; the block keeps 1 MiB at most.</td>
+                        </tr>
+                        <tr>
+                          <td>HTTP <em>status</em>: read response: <em>reason</em></td>
+                          <td>
+                            The connection broke while the body was read; check the service and the
+                            network.
+                          </td>
+                        </tr>
+                        <tr>
+                          <td><em>Method</em> "<em>url</em>": <em>reason</em></td>
+                          <td>
+                            Check the address, that the service is reachable and that it answers
+                            within 30 s.
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </section>
+              <!-- /gen:body -->
             </div>
-            <div class="doc-body">
-              <div class="doc-table-wrap">
-                <table class="doc-table">
-                  <thead>
-                    <tr>
-                      <th scope="col">Message says</th>
-                      <th scope="col">Do</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr>
-                      <td>url is empty</td>
-                      <td>Fill in <b>URL</b> or wire one in.</td>
-                    </tr>
-                    <tr>
-                      <td>HTTP <i>status</i>: <i>response body</i></td>
-                      <td>
-                        The service answered 400 or above; check the request and what the service
-                        expects.
-                      </td>
-                    </tr>
-                    <tr>
-                      <td>HTTP <i>status</i>: response body exceeds 1048576 bytes</td>
-                      <td>Request something smaller; the block keeps 1 MiB at most.</td>
-                    </tr>
-                    <tr>
-                      <td>HTTP <i>status</i>: read response: <i>reason</i></td>
-                      <td>
-                        The connection broke while the body was read; check the service and the
-                        network.
-                      </td>
-                    </tr>
-                    <tr>
-                      <td><i>Method</i> "<i>url</i>": <i>reason</i></td>
-                      <td>
-                        Check the address, that the service is reachable and that it answers within
-                        30 s.
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </section>
+          </div>
 
           <nav class="doc-related block" aria-label="Related">
             <div class="shelf-label"><span class="label">Related</span></div>

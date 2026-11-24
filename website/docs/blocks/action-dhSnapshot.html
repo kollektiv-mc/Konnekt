@@ -137,281 +137,390 @@
             </dl>
           </header>
 
-          <!-- gen:ports -->
-          <section class="doc-section block" id="ports" aria-labelledby="ports-title">
-            <div class="band doc-band">
-              <div class="band-title">
-                <span class="num">01</span>
-                <h2 id="ports-title">Ports</h2>
-              </div>
-            </div>
-            <div class="port-stage">
-              <div class="port-canvas">
-                <div class="port-node" data-category="action">
-                  <div class="port-node-head">
-                    <span>DH Snapshot</span><span class="port-node-cat">action</span>
-                  </div>
-                  <div class="port-cols">
-                    <ul class="port-col port-in" aria-label="Inputs">
-                      <li class="port-col-label" aria-hidden="true">in</li>
-                      <li class="port" data-shape="control" data-port="trigger">
-                        <span>trigger</span><span class="port-type">control</span>
-                      </li>
-                    </ul>
-                    <ul class="port-col port-out" aria-label="Outputs">
-                      <li class="port-col-label" aria-hidden="true">out</li>
-                      <li class="port" data-shape="control" data-port="onComplete">
-                        <span>onComplete</span><span class="port-type">control</span>
-                      </li>
-                      <li class="port" data-shape="control" data-port="onFailed">
-                        <span>onFailed</span><span class="port-type">control</span>
-                      </li>
-                      <li class="port" data-shape="data" data-type="string">
-                        <span>Staged folder</span><span class="port-type">string</span>
-                      </li>
-                      <li class="port" data-shape="data" data-type="number">
-                        <span>Bytes changed</span><span class="port-type">number</span>
-                      </li>
-                      <li class="port" data-shape="data" data-type="number">
-                        <span>Parts changed</span><span class="port-type">number</span>
-                      </li>
-                      <li class="port" data-shape="data" data-type="number">
-                        <span>Parts in all</span><span class="port-type">number</span>
-                      </li>
-                      <li class="port" data-shape="data" data-type="number">
-                        <span>Downtime (s)</span><span class="port-type">number</span>
-                      </li>
-                    </ul>
+          <div class="doc-layout">
+            <!-- gen:toc -->
+            <nav class="doc-toc" aria-label="On this page">
+              <ol>
+                <li>
+                  <a href="#ports"><span class="num">01</span><span>Ports</span></a>
+                </li>
+                <li>
+                  <a href="#fields"><span class="num">02</span><span>Fields</span></a>
+                </li>
+                <li>
+                  <a href="#run"><span class="num">03</span><span>What a run does</span></a>
+                </li>
+                <li>
+                  <a href="#errors"><span class="num">04</span><span>Errors</span></a>
+                </li>
+              </ol>
+            </nav>
+            <!-- /gen:toc -->
+            <div class="doc-flow">
+              <!-- gen:ports -->
+              <section class="doc-section block" id="ports" aria-labelledby="ports-title">
+                <div class="band doc-band">
+                  <div class="band-title">
+                    <span class="num">01</span>
+                    <h2 id="ports-title">Ports</h2>
                   </div>
                 </div>
-              </div>
-              <div class="port-legend">
-                <span class="label">Ports</span>
-                <span class="port-key" data-shape="control">Control</span>
-                <span class="port-key" data-shape="data">Data</span>
-                <hr />
-                <span class="label">Data types</span>
-                <span class="port-key" data-shape="data" data-type="string"
-                  ><code>string</code></span
-                >
-                <span class="port-key" data-shape="data" data-type="number"
-                  ><code>number</code></span
-                >
-                <span class="port-key" data-shape="data" data-type="bool"><code>bool</code></span>
-                <p class="doc-prose">
-                  Strings accept any data input.<br />
-                  Numbers accept boolean input.
-                </p>
-              </div>
-            </div>
-          </section>
-          <!-- /gen:ports -->
+                <div class="port-stage">
+                  <div class="port-canvas">
+                    <div class="port-node" data-category="action">
+                      <div class="port-node-head">
+                        <span>DH Snapshot</span><span class="port-node-cat">action</span>
+                      </div>
+                      <div class="port-cols">
+                        <ul class="port-col port-in" aria-label="Inputs">
+                          <li class="port-col-label" aria-hidden="true">in</li>
+                          <li class="port" data-shape="control" data-port="trigger">
+                            <span>trigger</span><span class="port-type">control</span>
+                          </li>
+                        </ul>
+                        <ul class="port-col port-out" aria-label="Outputs">
+                          <li class="port-col-label" aria-hidden="true">out</li>
+                          <li class="port" data-shape="control" data-port="onComplete">
+                            <span>onComplete</span><span class="port-type">control</span>
+                          </li>
+                          <li class="port" data-shape="control" data-port="onFailed">
+                            <span>onFailed</span><span class="port-type">control</span>
+                          </li>
+                          <li class="port" data-shape="data" data-type="string">
+                            <span>Staged folder</span><span class="port-type">string</span>
+                          </li>
+                          <li class="port" data-shape="data" data-type="number">
+                            <span>Bytes changed</span><span class="port-type">number</span>
+                          </li>
+                          <li class="port" data-shape="data" data-type="number">
+                            <span>Parts changed</span><span class="port-type">number</span>
+                          </li>
+                          <li class="port" data-shape="data" data-type="number">
+                            <span>Parts in all</span><span class="port-type">number</span>
+                          </li>
+                          <li class="port" data-shape="data" data-type="number">
+                            <span>Downtime (s)</span><span class="port-type">number</span>
+                          </li>
+                        </ul>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="port-legend">
+                    <span class="label">Ports</span>
+                    <span class="port-key" data-shape="control">Control</span>
+                    <span class="port-key" data-shape="data">Data</span>
+                    <hr />
+                    <span class="label">Data types</span>
+                    <span class="port-key" data-shape="data" data-type="string"
+                      ><code>string</code></span
+                    >
+                    <span class="port-key" data-shape="data" data-type="number"
+                      ><code>number</code></span
+                    >
+                    <span class="port-key" data-shape="data" data-type="bool"
+                      ><code>bool</code></span
+                    >
+                    <p class="doc-prose">
+                      Strings accept any data input.<br />
+                      Numbers accept boolean input.
+                    </p>
+                  </div>
+                </div>
+              </section>
+              <!-- /gen:ports -->
 
-          <!-- gen:fields -->
-          <section class="doc-section block" id="fields" aria-labelledby="fields-title">
-            <div class="band doc-band">
-              <div class="band-title">
-                <span class="num">02</span>
-                <h2 id="fields-title">Fields</h2>
-              </div>
-            </div>
-            <div class="doc-body">
-              <div class="doc-table-wrap">
-                <table class="doc-table">
-                  <thead>
-                    <tr>
-                      <th scope="col">Field</th>
-                      <th scope="col">What it does</th>
-                      <th scope="col">Default</th>
-                      <th scope="col">Limits</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr data-field="destination">
-                      <td>Destination of the last snapshot</td>
-                      <td>
-                        The bucket of the last published snapshot, which says which parts are
-                        already uploaded.
-                      </td>
-                      <td>None</td>
-                      <td>Optional; if set, must name a saved destination.</td>
-                    </tr>
-                    <tr data-field="prefix">
-                      <td>Key prefix</td>
-                      <td>
-                        Text added to the destination's key prefix when looking for the last
-                        snapshot.
-                      </td>
-                      <td>None</td>
-                      <td>No <code>.</code> or <code>..</code> segments.</td>
-                    </tr>
-                    <tr data-field="output">
-                      <td>Staging folder (default: in the app data folder)</td>
-                      <td>
-                        The folder the snapshot is staged in, empty for this server's own folder in
-                        the app data folder.
-                      </td>
-                      <td>None</td>
-                      <td>An absolute path outside the server's folder.</td>
-                    </tr>
-                    <tr data-field="leadSeconds">
-                      <td>Warn players this many seconds before</td>
-                      <td>How long before the stop the players are warned.</td>
-                      <td><code>300</code></td>
-                      <td>A whole number from 0 to 1800 s; 0 sends no warning.</td>
-                    </tr>
-                    <tr data-field="message">
-                      <td>Warning ({time} is the time left)</td>
-                      <td>
-                        The warning the players read, where <code>{time}</code> becomes the time
-                        left.
-                      </td>
-                      <td>
-                        <code
-                          >The server will stop in {time} for a world snapshot and be back
-                          shortly.</code
-                        >
-                      </td>
-                      <td>None</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </section>
-          <!-- /gen:fields -->
+              <!-- gen:fields -->
+              <section class="doc-section block" id="fields" aria-labelledby="fields-title">
+                <div class="band doc-band">
+                  <div class="band-title">
+                    <span class="num">02</span>
+                    <h2 id="fields-title">Fields</h2>
+                  </div>
+                </div>
+                <div class="doc-body">
+                  <div class="doc-table-wrap">
+                    <table class="doc-table">
+                      <thead>
+                        <tr>
+                          <th scope="col">Field</th>
+                          <th scope="col">What it does</th>
+                          <th scope="col">Default</th>
+                          <th scope="col">Limits</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr data-field="destination">
+                          <td>Destination of the last snapshot</td>
+                          <td>
+                            The bucket of the last published snapshot, which says which parts are
+                            already uploaded.
+                          </td>
+                          <td>None</td>
+                          <td>Optional; if set, must name a saved destination.</td>
+                        </tr>
+                        <tr data-field="prefix">
+                          <td>Key prefix</td>
+                          <td>
+                            Text added to the destination's key prefix when looking for the last
+                            snapshot.
+                          </td>
+                          <td>None</td>
+                          <td>No <code>.</code> or <code>..</code> segments.</td>
+                        </tr>
+                        <tr data-field="output">
+                          <td>Staging folder (default: in the app data folder)</td>
+                          <td>
+                            The folder the snapshot is staged in, empty for this server's own folder
+                            in the app data folder.
+                          </td>
+                          <td>None</td>
+                          <td>An absolute path outside the server's folder.</td>
+                        </tr>
+                        <tr data-field="leadSeconds">
+                          <td>Warn players this many seconds before</td>
+                          <td>How long before the stop the players are warned.</td>
+                          <td><code>300</code></td>
+                          <td>A whole number from 0 to 1800 s; 0 sends no warning.</td>
+                        </tr>
+                        <tr data-field="message">
+                          <td>Warning ({time} is the time left)</td>
+                          <td>
+                            The warning the players read, where <code>{time}</code> becomes the time
+                            left.
+                          </td>
+                          <td>
+                            <code
+                              >The server will stop in {time} for a world snapshot and be back
+                              shortly.</code
+                            >
+                          </td>
+                          <td>None</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </section>
+              <!-- /gen:fields -->
 
-          <section class="doc-section block" id="run" aria-labelledby="run-title">
-            <div class="band doc-band">
-              <div class="band-title">
-                <span class="num">03</span>
-                <h2 id="run-title">What a run does</h2>
-              </div>
+              <!-- gen:body -->
+              <section class="doc-section block" id="run" aria-labelledby="run-title">
+                <div class="band doc-band">
+                  <div class="band-title">
+                    <span class="num">03</span>
+                    <h2 id="run-title">What a run does</h2>
+                  </div>
+                </div>
+                <div class="doc-body doc-split">
+                  <div class="doc-main">
+                    <ol class="doc-steps">
+                      <li>
+                        Check the lead time, the Distant Horizons config, its jar, its databases and
+                        the free space.
+                      </li>
+                      <li>
+                        Read the previous snapshot: the destination's <code>latest.json</code>, or
+                        the <code>index.json</code> already in the staging folder.
+                      </li>
+                      <li>
+                        Warn the players in chat at the lead time, and again at 1 minute and 10
+                        seconds when the lead time is longer.
+                      </li>
+                      <li>
+                        Stop the server, waiting up to the <b>Stop grace period</b> from Settings.
+                      </li>
+                      <li>
+                        Read each dimension's database and stage the parts the previous snapshot
+                        lacks, then write <code>index.json</code>.
+                      </li>
+                      <li>Start the server again, whether or not the copy worked.</li>
+                      <li>Remove staged parts the new snapshot no longer needs.</li>
+                    </ol>
+                    <div class="doc-note" data-tone="warn">
+                      <span class="label">Heads up</span>
+                      <p>
+                        This block stops a running server for the copy.<br />
+                        A server that is already stopped is copied as it is, nobody is warned, and
+                        it stays stopped.
+                      </p>
+                    </div>
+                    <ul class="doc-points">
+                      <li>The block holds this server's snapshot claim for the whole run.</li>
+                      <li>A snapshot or publish already running for the server fails it.</li>
+                      <li>Parts are slices of the databases, named by their hash.</li>
+                      <li>
+                        The warning goes over RCON, or through the server console when RCON is not
+                        confirmed.
+                      </li>
+                      <li>A warning that cannot be sent stops the run with the server still up.</li>
+                      <li>
+                        It leaves by <b>onComplete</b> when the snapshot is staged, and by
+                        <b>onFailed</b> on any error.
+                      </li>
+                      <li>
+                        <b>Staged folder</b>, <b>Bytes changed</b>, <b>Parts changed</b> and
+                        <b>Parts in all</b> are set after a successful run.
+                      </li>
+                      <li>
+                        <b>Downtime (s)</b> is set whenever the server was stopped, even if the run
+                        failed.
+                      </li>
+                    </ul>
+                    <div class="doc-note" data-tone="note">
+                      <span class="label">Note</span>
+                      <p>
+                        Progress and failures appear in the server's console.<br />
+                        The block can run for up to 3 hours.
+                      </p>
+                    </div>
+                  </div>
+                  <div class="doc-figs">
+                    <figure
+                      class="fig fig-flow"
+                      role="img"
+                      aria-label="Graph: Cron Schedule 0 4 * * 0, then on onComplete, DH Snapshot your destination, on onComplete · Staged folder, Publish DH Snapshot same destination, on onFailed, Notify Snapshot failed."
+                    >
+                      <div class="fig-node">
+                        <span class="fig-kind">Cron Schedule</span
+                        ><span class="fig-value">0 4 * * 0</span>
+                      </div>
+                      <span class="fig-wire"><span class="fig-port">onComplete</span></span>
+                      <div class="fig-node is-hit">
+                        <span class="fig-kind">DH Snapshot</span
+                        ><span class="fig-value">your destination</span>
+                      </div>
+                      <div class="fig-lanes">
+                        <div class="fig-lane">
+                          <span class="fig-wire"
+                            ><span class="fig-port">onComplete · Staged folder</span></span
+                          >
+                          <div class="fig-node">
+                            <span class="fig-kind">Publish DH Snapshot</span
+                            ><span class="fig-value">same destination</span>
+                          </div>
+                        </div>
+                        <div class="fig-lane">
+                          <span class="fig-wire"><span class="fig-port">onFailed</span></span>
+                          <div class="fig-node">
+                            <span class="fig-kind">Notify</span
+                            ><span class="fig-value">Snapshot failed</span>
+                          </div>
+                        </div>
+                      </div>
+                    </figure>
+                    <figure class="fig fig-timeline">
+                      <ol class="fig-timeline-list">
+                        <li class="">
+                          <span class="fig-when">Lead time</span
+                          ><span class="fig-what">Players read the first warning</span>
+                        </li>
+                        <li class="">
+                          <span class="fig-when">-1 min</span
+                          ><span class="fig-what">Second warning</span>
+                        </li>
+                        <li class="">
+                          <span class="fig-when">-10 s</span
+                          ><span class="fig-what">Last warning</span>
+                        </li>
+                        <li class="is-hit">
+                          <span class="fig-when">0</span
+                          ><span class="fig-what">The server stops and the data is copied</span>
+                        </li>
+                        <li class="">
+                          <span class="fig-when">Copied</span
+                          ><span class="fig-what">The server starts again</span>
+                        </li>
+                      </ol>
+                    </figure>
+                  </div>
+                </div>
+              </section>
+              <section class="doc-section block" id="errors" aria-labelledby="errors-title">
+                <div class="band doc-band">
+                  <div class="band-title">
+                    <span class="num">04</span>
+                    <h2 id="errors-title">Errors</h2>
+                  </div>
+                </div>
+                <div class="doc-body">
+                  <div class="doc-table-wrap">
+                    <table class="doc-table">
+                      <thead>
+                        <tr>
+                          <th scope="col">Message says</th>
+                          <th scope="col">Do</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr>
+                          <td>
+                            destination validation failed: DH Snapshot (<em>node</em>): the
+                            destination "<em>name</em>" does not exist. It was deleted or renamed in
+                            Settings, or this graph came from another install.
+                          </td>
+                          <td>Pick a destination that exists, or clear the field.</td>
+                        </tr>
+                        <tr>
+                          <td>no DistantHorizons.sqlite found under <em>world folder</em></td>
+                          <td>Let Distant Horizons create its data in the world first.</td>
+                        </tr>
+                        <tr>
+                          <td>
+                            neither RCON nor the server's console can carry the warning, so the
+                            players could not be told before the stop: enable RCON (enable-rcon in
+                            server.properties) or start the server from Konnekt
+                          </td>
+                          <td>
+                            Enable RCON, start the server from Konnekt, or set the lead time to 0.
+                          </td>
+                        </tr>
+                        <tr>
+                          <td>
+                            cannot read the previous snapshot from <em>destination</em>:
+                            <em>reason</em>
+                          </td>
+                          <td>Check the destination and the network, then run it again.</td>
+                        </tr>
+                        <tr>
+                          <td>
+                            could not warn the players, so the server was not stopped:
+                            <em>reason</em>
+                          </td>
+                          <td>Check RCON and the console; the server was left running.</td>
+                        </tr>
+                        <tr>
+                          <td>could not stop the server: <em>reason</em></td>
+                          <td>Check the server's state, then run it again.</td>
+                        </tr>
+                        <tr>
+                          <td>copying the databases failed: <em>reason</em></td>
+                          <td>Read the reason; the server was started again.</td>
+                        </tr>
+                        <tr>
+                          <td>
+                            the snapshot was staged, but the server could not be started again:
+                            <em>reason</em>
+                          </td>
+                          <td>Start the server by hand.</td>
+                        </tr>
+                        <tr>
+                          <td>key prefix "<em>prefix</em>" must not contain "<em>segment</em>"</td>
+                          <td>
+                            Remove the <code>.</code> or <code>..</code> segment from the prefix.
+                          </td>
+                        </tr>
+                        <tr>
+                          <td>timed out after 10800s: <em>reason</em></td>
+                          <td>Run it again; the server is started again when the copy stops.</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </section>
+              <!-- /gen:body -->
             </div>
-            <div class="doc-body">
-              <p class="doc-prose">
-                The block holds this server's snapshot claim for the whole run.<br />A snapshot or
-                publish already running for the server fails it.<br />Parts are slices of the
-                databases, named by their hash.
-              </p>
-              <ol class="doc-list">
-                <li>
-                  Checks the lead time, the Distant Horizons config, its jar, its databases and the
-                  free space.
-                </li>
-                <li>
-                  Reads the previous snapshot: the destination's <code>latest.json</code>, or the
-                  <code>index.json</code> already in the staging folder.
-                </li>
-                <li>
-                  Warns the players in chat at the lead time, and again at 1 minute and 10 seconds
-                  when the lead time is longer.
-                </li>
-                <li>Stops the server, waiting up to the <b>Stop grace period</b> from Settings.</li>
-                <li>
-                  Reads each dimension's database and stages the parts the previous snapshot lacks,
-                  then writes <code>index.json</code>.
-                </li>
-                <li>Starts the server again, whether or not the copy worked.</li>
-                <li>Removes staged parts the new snapshot no longer needs.</li>
-              </ol>
-              <p class="doc-prose">
-                The warning goes over RCON, or through the server console when RCON is not
-                confirmed.<br />A warning that cannot be sent stops the run with the server still
-                up.<br />A server that is already stopped is copied as it is, nobody is warned, and
-                it stays stopped.
-              </p>
-              <p class="doc-prose">
-                It leaves by <code>onComplete</code> when the snapshot is staged, and by
-                <code>onFailed</code> on any error.<br /><b>Staged folder</b>, <b>Bytes changed</b>,
-                <b>Parts changed</b> and <b>Parts in all</b> are set after a successful run.<br /><b
-                  >Downtime (s)</b
-                >
-                is set whenever the server was stopped, even if the run failed.<br />Progress and
-                failures appear in the server's console.<br />The block can run for up to 3 hours.
-              </p>
-            </div>
-          </section>
-
-          <section class="doc-section block" id="errors" aria-labelledby="errors-title">
-            <div class="band doc-band">
-              <div class="band-title">
-                <span class="num">04</span>
-                <h2 id="errors-title">Errors</h2>
-              </div>
-            </div>
-            <div class="doc-body">
-              <div class="doc-table-wrap">
-                <table class="doc-table">
-                  <thead>
-                    <tr>
-                      <th scope="col">Message says</th>
-                      <th scope="col">Do</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr>
-                      <td>
-                        destination validation failed: DH Snapshot (<i>node</i>): the destination
-                        "<i>name</i>" does not exist. It was deleted or renamed in Settings, or this
-                        graph came from another install.
-                      </td>
-                      <td>Pick a destination that exists, or clear the field.</td>
-                    </tr>
-                    <tr>
-                      <td>no DistantHorizons.sqlite found under <i>world folder</i></td>
-                      <td>Let Distant Horizons create its data in the world first.</td>
-                    </tr>
-                    <tr>
-                      <td>
-                        neither RCON nor the server's console can carry the warning, so the players
-                        could not be told before the stop: enable RCON (enable-rcon in
-                        server.properties) or start the server from Konnekt
-                      </td>
-                      <td>
-                        Enable RCON, start the server from Konnekt, or set the lead time to 0.
-                      </td>
-                    </tr>
-                    <tr>
-                      <td>
-                        cannot read the previous snapshot from <i>destination</i>: <i>reason</i>
-                      </td>
-                      <td>Check the destination and the network, then run it again.</td>
-                    </tr>
-                    <tr>
-                      <td>
-                        could not warn the players, so the server was not stopped: <i>reason</i>
-                      </td>
-                      <td>Check RCON and the console; the server was left running.</td>
-                    </tr>
-                    <tr>
-                      <td>could not stop the server: <i>reason</i></td>
-                      <td>Check the server's state, then run it again.</td>
-                    </tr>
-                    <tr>
-                      <td>copying the databases failed: <i>reason</i></td>
-                      <td>Read the reason; the server was started again.</td>
-                    </tr>
-                    <tr>
-                      <td>
-                        the snapshot was staged, but the server could not be started again:
-                        <i>reason</i>
-                      </td>
-                      <td>Start the server by hand.</td>
-                    </tr>
-                    <tr>
-                      <td>key prefix "<i>prefix</i>" must not contain "<i>segment</i>"</td>
-                      <td>Remove the <code>.</code> or <code>..</code> segment from the prefix.</td>
-                    </tr>
-                    <tr>
-                      <td>timed out after 10800s: <i>reason</i></td>
-                      <td>Run it again; the server is started again when the copy stops.</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </section>
+          </div>
 
           <nav class="doc-related block" aria-label="Related">
             <div class="shelf-label"><span class="label">Related</span></div>

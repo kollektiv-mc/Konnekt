@@ -134,257 +134,355 @@
             </dl>
           </header>
 
-          <!-- gen:ports -->
-          <section class="doc-section block" id="ports" aria-labelledby="ports-title">
-            <div class="band doc-band">
-              <div class="band-title">
-                <span class="num">01</span>
-                <h2 id="ports-title">Ports</h2>
-              </div>
-            </div>
-            <div class="port-stage">
-              <div class="port-canvas">
-                <div class="port-node" data-category="action">
-                  <div class="port-node-head">
-                    <span>Publish DH Snapshot</span><span class="port-node-cat">action</span>
-                  </div>
-                  <div class="port-cols">
-                    <ul class="port-col port-in" aria-label="Inputs">
-                      <li class="port-col-label" aria-hidden="true">in</li>
-                      <li class="port" data-shape="control" data-port="trigger">
-                        <span>trigger</span><span class="port-type">control</span>
-                      </li>
-                      <li class="port" data-shape="data" data-type="string">
-                        <span>Staged folder</span><span class="port-type">string</span>
-                      </li>
-                    </ul>
-                    <ul class="port-col port-out" aria-label="Outputs">
-                      <li class="port-col-label" aria-hidden="true">out</li>
-                      <li class="port" data-shape="control" data-port="onComplete">
-                        <span>onComplete</span><span class="port-type">control</span>
-                      </li>
-                      <li class="port" data-shape="control" data-port="onFailed">
-                        <span>onFailed</span><span class="port-type">control</span>
-                      </li>
-                      <li class="port" data-shape="data" data-type="string">
-                        <span>Snapshot URL</span><span class="port-type">string</span>
-                      </li>
-                      <li class="port" data-shape="data" data-type="number">
-                        <span>Parts uploaded</span><span class="port-type">number</span>
-                      </li>
-                      <li class="port" data-shape="data" data-type="number">
-                        <span>Parts skipped</span><span class="port-type">number</span>
-                      </li>
-                      <li class="port" data-shape="data" data-type="number">
-                        <span>Bytes sent</span><span class="port-type">number</span>
-                      </li>
-                      <li class="port" data-shape="data" data-type="number">
-                        <span>Levels assembled</span><span class="port-type">number</span>
-                      </li>
-                      <li class="port" data-shape="data" data-type="number">
-                        <span>Snapshots deleted</span><span class="port-type">number</span>
-                      </li>
-                      <li class="port" data-shape="data" data-type="number">
-                        <span>Parts deleted</span><span class="port-type">number</span>
-                      </li>
-                      <li class="port" data-shape="data" data-type="number">
-                        <span>Bytes freed</span><span class="port-type">number</span>
-                      </li>
-                    </ul>
-                  </div>
-                </div>
-              </div>
-              <div class="port-legend">
-                <span class="label">Ports</span>
-                <span class="port-key" data-shape="control">Control</span>
-                <span class="port-key" data-shape="data">Data</span>
-                <hr />
-                <span class="label">Data types</span>
-                <span class="port-key" data-shape="data" data-type="string"
-                  ><code>string</code></span
-                >
-                <span class="port-key" data-shape="data" data-type="number"
-                  ><code>number</code></span
-                >
-                <span class="port-key" data-shape="data" data-type="bool"><code>bool</code></span>
-                <p class="doc-prose">
-                  Strings accept any data input.<br />
-                  Numbers accept boolean input.
-                </p>
-              </div>
-            </div>
-          </section>
-          <!-- /gen:ports -->
-
-          <!-- gen:fields -->
-          <section class="doc-section block" id="fields" aria-labelledby="fields-title">
-            <div class="band doc-band">
-              <div class="band-title">
-                <span class="num">02</span>
-                <h2 id="fields-title">Fields</h2>
-              </div>
-            </div>
-            <div class="doc-body">
-              <div class="doc-table-wrap">
-                <table class="doc-table">
-                  <thead>
-                    <tr>
-                      <th scope="col">Field</th>
-                      <th scope="col">What it does</th>
-                      <th scope="col">Default</th>
-                      <th scope="col">Limits</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr data-field="destination">
-                      <td>Destination</td>
-                      <td>The saved bucket the snapshot is published to.</td>
-                      <td>None</td>
-                      <td>Must name a saved destination that still exists.</td>
-                    </tr>
-                    <tr data-field="prefix">
-                      <td>Key prefix</td>
-                      <td>
-                        Text added to the destination's key prefix for every object of the snapshot.
-                      </td>
-                      <td>None</td>
-                      <td>No <code>.</code> or <code>..</code> segments.</td>
-                    </tr>
-                    <tr data-field="folder">
-                      <td>Staged folder (default: this server's staging folder)</td>
-                      <td>
-                        The folder holding the staged snapshot, empty for this server's staging
-                        folder.
-                      </td>
-                      <td>None</td>
-                      <td>
-                        An absolute path that exists, outside the server's folder and other servers'
-                        staging folders.
-                      </td>
-                    </tr>
-                    <tr data-field="keep">
-                      <td>Snapshots to keep (at least 1)</td>
-                      <td>How many snapshots stay in the bucket once this one is published.</td>
-                      <td><code>3</code></td>
-                      <td>A whole number from 1 to 2147483647.</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </section>
-          <!-- /gen:fields -->
-
-          <section class="doc-section block" id="run" aria-labelledby="run-title">
-            <div class="band doc-band">
-              <div class="band-title">
-                <span class="num">03</span>
-                <h2 id="run-title">What a run does</h2>
-              </div>
-            </div>
-            <div class="doc-body">
-              <p class="doc-prose">
-                The block holds this server's snapshot claim for the whole run.<br />A snapshot or
-                publish already running for the server fails it.<br />A wired
-                <b>Staged folder</b> replaces the <b>Staged folder</b> field.
-              </p>
-              <ol class="doc-list">
-                <li>Reads and checks <code>index.json</code> in the staged folder.</li>
+          <div class="doc-layout">
+            <!-- gen:toc -->
+            <nav class="doc-toc" aria-label="On this page">
+              <ol>
                 <li>
-                  Reads the bucket's <code>latest.json</code> to learn which parts are already
-                  there.
+                  <a href="#ports"><span class="num">01</span><span>Ports</span></a>
                 </li>
                 <li>
-                  Sends the parts the bucket lacks, and counts a part it already holds as skipped.
-                </li>
-                <li>Assembles each level's whole database inside the bucket, from its parts.</li>
-                <li>
-                  Writes the snapshot's <code>index.json</code> and download page, then
-                  <code>latest.json</code> last.
+                  <a href="#fields"><span class="num">02</span><span>Fields</span></a>
                 </li>
                 <li>
-                  Deletes snapshots beyond <b>Snapshots to keep</b>, and the parts no kept snapshot
-                  uses.
+                  <a href="#run"><span class="num">03</span><span>What a run does</span></a>
+                </li>
+                <li>
+                  <a href="#errors"><span class="num">04</span><span>Errors</span></a>
                 </li>
               </ol>
-              <p class="doc-prose">
-                A run that stops before <code>latest.json</code> is written leaves the previous
-                snapshot as the current one.<br />The next run resumes, because parts already in the
-                bucket are not sent again.<br />The newest complete snapshots are kept, plus the one
-                <code>latest.json</code> points at.
-              </p>
-              <p class="doc-prose">
-                It leaves by <code>onComplete</code> once <code>latest.json</code> is written, and
-                by <code>onFailed</code> on any error.<br />A prune that fails does not fail the
-                block: it leaves by <code>onComplete</code> and records a warning.<br /><b
-                  >Snapshot URL</b
-                >
-                is the address of <code>latest.json</code>, under the destination's public base URL
-                if it has one.<br />A private link shows <code>[redacted]</code> in place of its
-                token.<br />Copy that link from the destination's <b>Snapshot link</b> row in
-                Settings.<br />The other outputs count the parts sent and skipped, the levels
-                assembled, and what the prune deleted.<br />Progress and failures appear in the
-                server's console, and the block can run for up to 12 hours.
-              </p>
-            </div>
-          </section>
+            </nav>
+            <!-- /gen:toc -->
+            <div class="doc-flow">
+              <!-- gen:ports -->
+              <section class="doc-section block" id="ports" aria-labelledby="ports-title">
+                <div class="band doc-band">
+                  <div class="band-title">
+                    <span class="num">01</span>
+                    <h2 id="ports-title">Ports</h2>
+                  </div>
+                </div>
+                <div class="port-stage">
+                  <div class="port-canvas">
+                    <div class="port-node" data-category="action">
+                      <div class="port-node-head">
+                        <span>Publish DH Snapshot</span><span class="port-node-cat">action</span>
+                      </div>
+                      <div class="port-cols">
+                        <ul class="port-col port-in" aria-label="Inputs">
+                          <li class="port-col-label" aria-hidden="true">in</li>
+                          <li class="port" data-shape="control" data-port="trigger">
+                            <span>trigger</span><span class="port-type">control</span>
+                          </li>
+                          <li class="port" data-shape="data" data-type="string">
+                            <span>Staged folder</span><span class="port-type">string</span>
+                          </li>
+                        </ul>
+                        <ul class="port-col port-out" aria-label="Outputs">
+                          <li class="port-col-label" aria-hidden="true">out</li>
+                          <li class="port" data-shape="control" data-port="onComplete">
+                            <span>onComplete</span><span class="port-type">control</span>
+                          </li>
+                          <li class="port" data-shape="control" data-port="onFailed">
+                            <span>onFailed</span><span class="port-type">control</span>
+                          </li>
+                          <li class="port" data-shape="data" data-type="string">
+                            <span>Snapshot URL</span><span class="port-type">string</span>
+                          </li>
+                          <li class="port" data-shape="data" data-type="number">
+                            <span>Parts uploaded</span><span class="port-type">number</span>
+                          </li>
+                          <li class="port" data-shape="data" data-type="number">
+                            <span>Parts skipped</span><span class="port-type">number</span>
+                          </li>
+                          <li class="port" data-shape="data" data-type="number">
+                            <span>Bytes sent</span><span class="port-type">number</span>
+                          </li>
+                          <li class="port" data-shape="data" data-type="number">
+                            <span>Levels assembled</span><span class="port-type">number</span>
+                          </li>
+                          <li class="port" data-shape="data" data-type="number">
+                            <span>Snapshots deleted</span><span class="port-type">number</span>
+                          </li>
+                          <li class="port" data-shape="data" data-type="number">
+                            <span>Parts deleted</span><span class="port-type">number</span>
+                          </li>
+                          <li class="port" data-shape="data" data-type="number">
+                            <span>Bytes freed</span><span class="port-type">number</span>
+                          </li>
+                        </ul>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="port-legend">
+                    <span class="label">Ports</span>
+                    <span class="port-key" data-shape="control">Control</span>
+                    <span class="port-key" data-shape="data">Data</span>
+                    <hr />
+                    <span class="label">Data types</span>
+                    <span class="port-key" data-shape="data" data-type="string"
+                      ><code>string</code></span
+                    >
+                    <span class="port-key" data-shape="data" data-type="number"
+                      ><code>number</code></span
+                    >
+                    <span class="port-key" data-shape="data" data-type="bool"
+                      ><code>bool</code></span
+                    >
+                    <p class="doc-prose">
+                      Strings accept any data input.<br />
+                      Numbers accept boolean input.
+                    </p>
+                  </div>
+                </div>
+              </section>
+              <!-- /gen:ports -->
 
-          <section class="doc-section block" id="errors" aria-labelledby="errors-title">
-            <div class="band doc-band">
-              <div class="band-title">
-                <span class="num">04</span>
-                <h2 id="errors-title">Errors</h2>
-              </div>
+              <!-- gen:fields -->
+              <section class="doc-section block" id="fields" aria-labelledby="fields-title">
+                <div class="band doc-band">
+                  <div class="band-title">
+                    <span class="num">02</span>
+                    <h2 id="fields-title">Fields</h2>
+                  </div>
+                </div>
+                <div class="doc-body">
+                  <div class="doc-table-wrap">
+                    <table class="doc-table">
+                      <thead>
+                        <tr>
+                          <th scope="col">Field</th>
+                          <th scope="col">What it does</th>
+                          <th scope="col">Default</th>
+                          <th scope="col">Limits</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr data-field="destination">
+                          <td>Destination</td>
+                          <td>The saved bucket the snapshot is published to.</td>
+                          <td>None</td>
+                          <td>Must name a saved destination that still exists.</td>
+                        </tr>
+                        <tr data-field="prefix">
+                          <td>Key prefix</td>
+                          <td>
+                            Text added to the destination's key prefix for every object of the
+                            snapshot.
+                          </td>
+                          <td>None</td>
+                          <td>No <code>.</code> or <code>..</code> segments.</td>
+                        </tr>
+                        <tr data-field="folder">
+                          <td>Staged folder (default: this server's staging folder)</td>
+                          <td>
+                            The folder holding the staged snapshot, empty for this server's staging
+                            folder.
+                          </td>
+                          <td>None</td>
+                          <td>
+                            An absolute path that exists, outside the server's folder and other
+                            servers' staging folders.
+                          </td>
+                        </tr>
+                        <tr data-field="keep">
+                          <td>Snapshots to keep (at least 1)</td>
+                          <td>How many snapshots stay in the bucket once this one is published.</td>
+                          <td><code>3</code></td>
+                          <td>A whole number from 1 to 2147483647.</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </section>
+              <!-- /gen:fields -->
+
+              <!-- gen:body -->
+              <section class="doc-section block" id="run" aria-labelledby="run-title">
+                <div class="band doc-band">
+                  <div class="band-title">
+                    <span class="num">03</span>
+                    <h2 id="run-title">What a run does</h2>
+                  </div>
+                </div>
+                <div class="doc-body doc-split">
+                  <div class="doc-main">
+                    <ol class="doc-steps">
+                      <li>Read and check <code>index.json</code> in the staged folder.</li>
+                      <li>
+                        Read the bucket's <code>latest.json</code> to learn which parts are already
+                        there.
+                      </li>
+                      <li>
+                        Send the parts the bucket lacks, and count a part it already holds as
+                        skipped.
+                      </li>
+                      <li>
+                        Assemble each level's whole database inside the bucket, from its parts.
+                      </li>
+                      <li>
+                        Write the snapshot's <code>index.json</code> and download page, then
+                        <code>latest.json</code> last.
+                      </li>
+                      <li>
+                        Delete snapshots beyond <b>Snapshots to keep</b>, and the parts no kept
+                        snapshot uses.
+                      </li>
+                    </ol>
+                    <div class="doc-note" data-tone="warn">
+                      <span class="label">Heads up</span>
+                      <p>
+                        Step 6 deletes snapshots and parts from the bucket.<br />
+                        The newest complete snapshots are kept, plus the one
+                        <code>latest.json</code> points at.
+                      </p>
+                    </div>
+                    <ul class="doc-points">
+                      <li>The block holds this server's snapshot claim for the whole run.</li>
+                      <li>A snapshot or publish already running for the server fails it.</li>
+                      <li>A wired <b>Staged folder</b> replaces the <b>Staged folder</b> field.</li>
+                      <li>
+                        A run that stops before <code>latest.json</code> is written leaves the
+                        previous snapshot as the current one.
+                      </li>
+                      <li>
+                        The next run resumes, because parts already in the bucket are not sent
+                        again.
+                      </li>
+                      <li>
+                        It leaves by <b>onComplete</b> once <code>latest.json</code> is written, and
+                        by <b>onFailed</b> on any error.
+                      </li>
+                      <li>
+                        A prune that fails does not fail the block: it leaves by
+                        <b>onComplete</b> and records a warning.
+                      </li>
+                      <li>
+                        <b>Snapshot URL</b> is the address of <code>latest.json</code>, under the
+                        destination's public base URL if it has one.
+                      </li>
+                      <li>
+                        <b>Parts uploaded</b>, <b>Parts skipped</b>, <b>Bytes sent</b>,
+                        <b>Levels assembled</b>, <b>Snapshots deleted</b>, <b>Parts deleted</b> and
+                        <b>Bytes freed</b> count what the run sent and what the prune removed.
+                      </li>
+                    </ul>
+                    <div class="doc-note" data-tone="note">
+                      <span class="label">Note</span>
+                      <p>
+                        A private link shows <code>[redacted]</code> in place of its token.<br />
+                        Copy that link from the destination's <b>Snapshot link</b> row in
+                        Settings.<br />
+                        Progress and failures appear in the server's console.<br />
+                        The block can run for up to 12 hours.
+                      </p>
+                    </div>
+                  </div>
+                  <div class="doc-figs">
+                    <figure
+                      class="fig fig-flow"
+                      role="img"
+                      aria-label="Graph: Cron Schedule 0 4 * * 0, then on onComplete, DH Snapshot your destination, then on onComplete · Staged folder, Publish DH Snapshot same destination, on onComplete, Notify Snapshot published, on onFailed, Notify Publish failed."
+                    >
+                      <div class="fig-node">
+                        <span class="fig-kind">Cron Schedule</span
+                        ><span class="fig-value">0 4 * * 0</span>
+                      </div>
+                      <span class="fig-wire"><span class="fig-port">onComplete</span></span>
+                      <div class="fig-node">
+                        <span class="fig-kind">DH Snapshot</span
+                        ><span class="fig-value">your destination</span>
+                      </div>
+                      <span class="fig-wire"
+                        ><span class="fig-port">onComplete · Staged folder</span></span
+                      >
+                      <div class="fig-node is-hit">
+                        <span class="fig-kind">Publish DH Snapshot</span
+                        ><span class="fig-value">same destination</span>
+                      </div>
+                      <div class="fig-lanes">
+                        <div class="fig-lane">
+                          <span class="fig-wire"><span class="fig-port">onComplete</span></span>
+                          <div class="fig-node">
+                            <span class="fig-kind">Notify</span
+                            ><span class="fig-value">Snapshot published</span>
+                          </div>
+                        </div>
+                        <div class="fig-lane">
+                          <span class="fig-wire"><span class="fig-port">onFailed</span></span>
+                          <div class="fig-node">
+                            <span class="fig-kind">Notify</span
+                            ><span class="fig-value">Publish failed</span>
+                          </div>
+                        </div>
+                      </div>
+                    </figure>
+                  </div>
+                </div>
+              </section>
+              <section class="doc-section block" id="errors" aria-labelledby="errors-title">
+                <div class="band doc-band">
+                  <div class="band-title">
+                    <span class="num">04</span>
+                    <h2 id="errors-title">Errors</h2>
+                  </div>
+                </div>
+                <div class="doc-body">
+                  <div class="doc-table-wrap">
+                    <table class="doc-table">
+                      <thead>
+                        <tr>
+                          <th scope="col">Message says</th>
+                          <th scope="col">Do</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr>
+                          <td>
+                            destination validation failed: Publish DH Snapshot (<em>node</em>): the
+                            destination "<em>name</em>" does not exist. It was deleted or renamed in
+                            Settings, or this graph came from another install.
+                          </td>
+                          <td>Pick a destination that exists, or add it in Settings.</td>
+                        </tr>
+                        <tr>
+                          <td>key prefix "<em>prefix</em>" must not contain "<em>segment</em>"</td>
+                          <td>
+                            Remove the <code>.</code> or <code>..</code> segment from the prefix.
+                          </td>
+                        </tr>
+                        <tr>
+                          <td>the staged folder <em>folder</em> cannot be read: <em>reason</em></td>
+                          <td>Check that the folder exists and can be read.</td>
+                        </tr>
+                        <tr>
+                          <td>
+                            cannot read the previous snapshot from <em>destination</em>:
+                            <em>reason</em>
+                          </td>
+                          <td>Check the destination and the network, then run it again.</td>
+                        </tr>
+                        <tr>
+                          <td>part <em>hash</em>: <em>reason</em></td>
+                          <td>Run it again; parts already sent are skipped.</td>
+                        </tr>
+                        <tr>
+                          <td>assemble <em>level folder</em>: <em>reason</em></td>
+                          <td>Run it again; parts already sent are skipped.</td>
+                        </tr>
+                        <tr>
+                          <td>timed out after 43200s: <em>reason</em></td>
+                          <td>Run it again; parts already sent are skipped.</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </section>
+              <!-- /gen:body -->
             </div>
-            <div class="doc-body">
-              <div class="doc-table-wrap">
-                <table class="doc-table">
-                  <thead>
-                    <tr>
-                      <th scope="col">Message says</th>
-                      <th scope="col">Do</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr>
-                      <td>
-                        destination validation failed: Publish DH Snapshot (<i>node</i>): the
-                        destination "<i>name</i>" does not exist. It was deleted or renamed in
-                        Settings, or this graph came from another install.
-                      </td>
-                      <td>Pick a destination that exists, or add it in Settings.</td>
-                    </tr>
-                    <tr>
-                      <td>key prefix "<i>prefix</i>" must not contain "<i>segment</i>"</td>
-                      <td>Remove the <code>.</code> or <code>..</code> segment from the prefix.</td>
-                    </tr>
-                    <tr>
-                      <td>the staged folder <i>folder</i> cannot be read: <i>reason</i></td>
-                      <td>Check that the folder exists and can be read.</td>
-                    </tr>
-                    <tr>
-                      <td>
-                        cannot read the previous snapshot from <i>destination</i>: <i>reason</i>
-                      </td>
-                      <td>Check the destination and the network, then run it again.</td>
-                    </tr>
-                    <tr>
-                      <td>part <i>hash</i>: <i>reason</i></td>
-                      <td>Run it again; parts already sent are skipped.</td>
-                    </tr>
-                    <tr>
-                      <td>assemble <i>level folder</i>: <i>reason</i></td>
-                      <td>Run it again; parts already sent are skipped.</td>
-                    </tr>
-                    <tr>
-                      <td>timed out after 43200s: <i>reason</i></td>
-                      <td>Run it again; parts already sent are skipped.</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </section>
+          </div>
 
           <nav class="doc-related block" aria-label="Related">
             <div class="shelf-label"><span class="label">Related</span></div>

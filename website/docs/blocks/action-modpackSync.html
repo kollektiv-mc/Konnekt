@@ -134,179 +134,250 @@
             </dl>
           </header>
 
-          <!-- gen:ports -->
-          <section class="doc-section block" id="ports" aria-labelledby="ports-title">
-            <div class="band doc-band">
-              <div class="band-title">
-                <span class="num">01</span>
-                <h2 id="ports-title">Ports</h2>
-              </div>
-            </div>
-            <div class="port-stage">
-              <div class="port-canvas">
-                <div class="port-node" data-category="action">
-                  <div class="port-node-head">
-                    <span>Sync Modpack</span><span class="port-node-cat">action</span>
-                  </div>
-                  <div class="port-cols">
-                    <ul class="port-col port-in" aria-label="Inputs">
-                      <li class="port-col-label" aria-hidden="true">in</li>
-                      <li class="port" data-shape="control" data-port="trigger">
-                        <span>trigger</span><span class="port-type">control</span>
-                      </li>
-                    </ul>
-                    <ul class="port-col port-out" aria-label="Outputs">
-                      <li class="port-col-label" aria-hidden="true">out</li>
-                      <li class="port" data-shape="control" data-port="onComplete">
-                        <span>onComplete</span><span class="port-type">control</span>
-                      </li>
-                      <li class="port" data-shape="control" data-port="onUpToDate">
-                        <span>onUpToDate</span><span class="port-type">control</span>
-                      </li>
-                      <li class="port" data-shape="control" data-port="onFailed">
-                        <span>onFailed</span><span class="port-type">control</span>
-                      </li>
-                      <li class="port" data-shape="data" data-type="string">
-                        <span>Pack version</span><span class="port-type">string</span>
-                      </li>
-                      <li class="port" data-shape="data" data-type="number">
-                        <span>Added</span><span class="port-type">number</span>
-                      </li>
-                      <li class="port" data-shape="data" data-type="number">
-                        <span>Updated</span><span class="port-type">number</span>
-                      </li>
-                      <li class="port" data-shape="data" data-type="number">
-                        <span>Removed</span><span class="port-type">number</span>
-                      </li>
-                    </ul>
+          <div class="doc-layout">
+            <!-- gen:toc -->
+            <nav class="doc-toc" aria-label="On this page">
+              <ol>
+                <li>
+                  <a href="#ports"><span class="num">01</span><span>Ports</span></a>
+                </li>
+                <li>
+                  <a href="#fields"><span class="num">02</span><span>Fields</span></a>
+                </li>
+                <li>
+                  <a href="#run"><span class="num">03</span><span>What a run does</span></a>
+                </li>
+                <li>
+                  <a href="#errors"><span class="num">04</span><span>Errors</span></a>
+                </li>
+              </ol>
+            </nav>
+            <!-- /gen:toc -->
+            <div class="doc-flow">
+              <!-- gen:ports -->
+              <section class="doc-section block" id="ports" aria-labelledby="ports-title">
+                <div class="band doc-band">
+                  <div class="band-title">
+                    <span class="num">01</span>
+                    <h2 id="ports-title">Ports</h2>
                   </div>
                 </div>
-              </div>
-              <div class="port-legend">
-                <span class="label">Ports</span>
-                <span class="port-key" data-shape="control">Control</span>
-                <span class="port-key" data-shape="data">Data</span>
-                <hr />
-                <span class="label">Data types</span>
-                <span class="port-key" data-shape="data" data-type="string"
-                  ><code>string</code></span
-                >
-                <span class="port-key" data-shape="data" data-type="number"
-                  ><code>number</code></span
-                >
-                <span class="port-key" data-shape="data" data-type="bool"><code>bool</code></span>
-                <p class="doc-prose">
-                  Strings accept any data input.<br />
-                  Numbers accept boolean input.
-                </p>
-              </div>
-            </div>
-          </section>
-          <!-- /gen:ports -->
+                <div class="port-stage">
+                  <div class="port-canvas">
+                    <div class="port-node" data-category="action">
+                      <div class="port-node-head">
+                        <span>Sync Modpack</span><span class="port-node-cat">action</span>
+                      </div>
+                      <div class="port-cols">
+                        <ul class="port-col port-in" aria-label="Inputs">
+                          <li class="port-col-label" aria-hidden="true">in</li>
+                          <li class="port" data-shape="control" data-port="trigger">
+                            <span>trigger</span><span class="port-type">control</span>
+                          </li>
+                        </ul>
+                        <ul class="port-col port-out" aria-label="Outputs">
+                          <li class="port-col-label" aria-hidden="true">out</li>
+                          <li class="port" data-shape="control" data-port="onComplete">
+                            <span>onComplete</span><span class="port-type">control</span>
+                          </li>
+                          <li class="port" data-shape="control" data-port="onUpToDate">
+                            <span>onUpToDate</span><span class="port-type">control</span>
+                          </li>
+                          <li class="port" data-shape="control" data-port="onFailed">
+                            <span>onFailed</span><span class="port-type">control</span>
+                          </li>
+                          <li class="port" data-shape="data" data-type="string">
+                            <span>Pack version</span><span class="port-type">string</span>
+                          </li>
+                          <li class="port" data-shape="data" data-type="number">
+                            <span>Added</span><span class="port-type">number</span>
+                          </li>
+                          <li class="port" data-shape="data" data-type="number">
+                            <span>Updated</span><span class="port-type">number</span>
+                          </li>
+                          <li class="port" data-shape="data" data-type="number">
+                            <span>Removed</span><span class="port-type">number</span>
+                          </li>
+                        </ul>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="port-legend">
+                    <span class="label">Ports</span>
+                    <span class="port-key" data-shape="control">Control</span>
+                    <span class="port-key" data-shape="data">Data</span>
+                    <hr />
+                    <span class="label">Data types</span>
+                    <span class="port-key" data-shape="data" data-type="string"
+                      ><code>string</code></span
+                    >
+                    <span class="port-key" data-shape="data" data-type="number"
+                      ><code>number</code></span
+                    >
+                    <span class="port-key" data-shape="data" data-type="bool"
+                      ><code>bool</code></span
+                    >
+                    <p class="doc-prose">
+                      Strings accept any data input.<br />
+                      Numbers accept boolean input.
+                    </p>
+                  </div>
+                </div>
+              </section>
+              <!-- /gen:ports -->
 
-          <!-- gen:fields -->
-          <section class="doc-section block" id="fields" aria-labelledby="fields-title">
-            <div class="band doc-band">
-              <div class="band-title">
-                <span class="num">02</span>
-                <h2 id="fields-title">Fields</h2>
-              </div>
-            </div>
-            <div class="doc-body">
-              <p class="doc-prose">None.</p>
-            </div>
-          </section>
-          <!-- /gen:fields -->
+              <!-- gen:fields -->
+              <section class="doc-section block" id="fields" aria-labelledby="fields-title">
+                <div class="band doc-band">
+                  <div class="band-title">
+                    <span class="num">02</span>
+                    <h2 id="fields-title">Fields</h2>
+                  </div>
+                </div>
+                <div class="doc-body">
+                  <p class="doc-prose">None.</p>
+                </div>
+              </section>
+              <!-- /gen:fields -->
 
-          <section class="doc-section block" id="run" aria-labelledby="run-title">
-            <div class="band doc-band">
-              <div class="band-title">
-                <span class="num">03</span>
-                <h2 id="run-title">What a run does</h2>
-              </div>
+              <!-- gen:body -->
+              <section class="doc-section block" id="run" aria-labelledby="run-title">
+                <div class="band doc-band">
+                  <div class="band-title">
+                    <span class="num">03</span>
+                    <h2 id="run-title">What a run does</h2>
+                  </div>
+                </div>
+                <div class="doc-body doc-split">
+                  <div class="doc-main">
+                    <ol class="doc-steps">
+                      <li>
+                        Make the same plan <b>Check Modpack</b> makes, downloading what is missing.
+                      </li>
+                      <li>Fail if the plan has any blocker, since nobody is there to read it.</li>
+                      <li>
+                        Keep a copy of every file it replaces or removes, so the sync can be rolled
+                        back from the mods tile.
+                      </li>
+                      <li>Move the new files into <code>mods/</code>.</li>
+                    </ol>
+                    <div class="doc-note" data-tone="warn">
+                      <span class="label">Heads up</span>
+                      <p>
+                        This block does not stop the server.<br />
+                        Put a <b>Command</b> set to <b>Stop Server</b> before it and one set to
+                        <b>Start Server</b> after.
+                      </p>
+                    </div>
+                    <ul class="doc-points">
+                      <li>The pack is the one chosen in the mods tile, under <b>Pack</b>.</li>
+                      <li>Only files the pack installed are replaced or removed.</li>
+                      <li>A mod added by hand stays.</li>
+                      <li>
+                        It leaves by <b>onComplete</b> when files changed, by <b>onUpToDate</b> when
+                        none had to, and by <b>onFailed</b> on any error.
+                      </li>
+                    </ul>
+                    <div class="doc-note" data-tone="note">
+                      <span class="label">Note</span>
+                      <p>
+                        The result appears in the server's console.<br />
+                        The block can run for up to 30 minutes.
+                      </p>
+                    </div>
+                  </div>
+                  <div class="doc-figs">
+                    <figure
+                      class="fig fig-flow"
+                      role="img"
+                      aria-label="Graph: Cron Schedule 0 5 * * *, then on onComplete, Check Modpack, then on onUpdate, Command Stop Server, then on onComplete, Sync Modpack, on onComplete · onUpToDate · onFailed, Command Start Server."
+                    >
+                      <div class="fig-node">
+                        <span class="fig-kind">Cron Schedule</span
+                        ><span class="fig-value">0 5 * * *</span>
+                      </div>
+                      <span class="fig-wire"><span class="fig-port">onComplete</span></span>
+                      <div class="fig-node"><span class="fig-kind">Check Modpack</span></div>
+                      <span class="fig-wire"><span class="fig-port">onUpdate</span></span>
+                      <div class="fig-node">
+                        <span class="fig-kind">Command</span
+                        ><span class="fig-value">Stop Server</span>
+                      </div>
+                      <span class="fig-wire"><span class="fig-port">onComplete</span></span>
+                      <div class="fig-node is-hit"><span class="fig-kind">Sync Modpack</span></div>
+                      <div class="fig-lanes">
+                        <div class="fig-lane">
+                          <span class="fig-wire"
+                            ><span class="fig-port">onComplete · onUpToDate · onFailed</span></span
+                          >
+                          <div class="fig-node">
+                            <span class="fig-kind">Command</span
+                            ><span class="fig-value">Start Server</span>
+                          </div>
+                        </div>
+                      </div>
+                    </figure>
+                  </div>
+                </div>
+              </section>
+              <section class="doc-section block" id="errors" aria-labelledby="errors-title">
+                <div class="band doc-band">
+                  <div class="band-title">
+                    <span class="num">04</span>
+                    <h2 id="errors-title">Errors</h2>
+                  </div>
+                </div>
+                <div class="doc-body">
+                  <div class="doc-table-wrap">
+                    <table class="doc-table">
+                      <thead>
+                        <tr>
+                          <th scope="col">Message says</th>
+                          <th scope="col">Do</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr>
+                          <td>no pack is set for this server</td>
+                          <td>Choose a pack in the mods tile, under <b>Pack</b>.</td>
+                        </tr>
+                        <tr>
+                          <td>pack sync is for mod loaders; this server runs <em>loader</em></td>
+                          <td>Pack sync is for mod loaders such as NeoForge and Fabric.</td>
+                        </tr>
+                        <tr>
+                          <td>read the pack: <em>reason</em></td>
+                          <td>Check the pack address and the network, then run it again.</td>
+                        </tr>
+                        <tr>
+                          <td>
+                            the sync cannot be applied: The server is running. Stop it to apply the
+                            sync.
+                          </td>
+                          <td>Stop the server before this block.</td>
+                        </tr>
+                        <tr>
+                          <td>
+                            the sync cannot be applied: The pack expects <em>loader version</em> and
+                            the server runs <em>version</em>.
+                          </td>
+                          <td>Update the server's loader to the pack's version.</td>
+                        </tr>
+                        <tr>
+                          <td>
+                            the sync cannot be applied: <em>file</em>: a CurseForge file the pack
+                            does not link directly
+                          </td>
+                          <td>Put that jar in <code>mods/</code> by hand, then run it again.</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </section>
+              <!-- /gen:body -->
             </div>
-            <div class="doc-body">
-              <p class="doc-prose">
-                The pack is the one chosen in the mods tile, under Pack.<br />The block does not
-                stop the server: put a Stop command before it and a Start after.
-              </p>
-              <ol class="doc-list">
-                <li>Makes the same plan Check Modpack makes, downloading what is missing.</li>
-                <li>Fails if the plan has any blocker, since nobody is there to read it.</li>
-                <li>
-                  Keeps a copy of every file it replaces or removes, so the sync can be rolled back
-                  from the mods tile.
-                </li>
-                <li>Moves the new files into <code>mods/</code>.</li>
-              </ol>
-              <p class="doc-prose">
-                Only files the pack installed are replaced or removed.<br />A mod added by hand
-                stays.
-              </p>
-              <p class="doc-prose">
-                It leaves by <code>onComplete</code> when files changed, by
-                <code>onUpToDate</code> when none had to, and by <code>onFailed</code> on any
-                error.<br />The result appears in the server's console.<br />The block can run for
-                up to 30 minutes.
-              </p>
-            </div>
-          </section>
-
-          <section class="doc-section block" id="errors" aria-labelledby="errors-title">
-            <div class="band doc-band">
-              <div class="band-title">
-                <span class="num">04</span>
-                <h2 id="errors-title">Errors</h2>
-              </div>
-            </div>
-            <div class="doc-body">
-              <div class="doc-table-wrap">
-                <table class="doc-table">
-                  <thead>
-                    <tr>
-                      <th scope="col">Message says</th>
-                      <th scope="col">Do</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr>
-                      <td>no pack is set for this server</td>
-                      <td>Choose a pack in the mods tile, under Pack.</td>
-                    </tr>
-                    <tr>
-                      <td>pack sync is for mod loaders; this server runs <i>loader</i></td>
-                      <td>Pack sync is for mod loaders such as NeoForge and Fabric.</td>
-                    </tr>
-                    <tr>
-                      <td>read the pack: <i>reason</i></td>
-                      <td>Check the pack address and the network, then run it again.</td>
-                    </tr>
-                    <tr>
-                      <td>
-                        the sync cannot be applied: The server is running. Stop it to apply the
-                        sync.
-                      </td>
-                      <td>Stop the server before this block.</td>
-                    </tr>
-                    <tr>
-                      <td>
-                        the sync cannot be applied: The pack expects <i>loader version</i> and the
-                        server runs <i>version</i>.
-                      </td>
-                      <td>Update the server's loader to the pack's version.</td>
-                    </tr>
-                    <tr>
-                      <td>
-                        the sync cannot be applied: <i>file</i>: a CurseForge file the pack does not
-                        link directly
-                      </td>
-                      <td>Put that jar in <code>mods/</code> by hand, then run it again.</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </section>
+          </div>
 
           <nav class="doc-related block" aria-label="Related">
             <div class="shelf-label"><span class="label">Related</span></div>

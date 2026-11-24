@@ -137,220 +137,329 @@
             </dl>
           </header>
 
-          <!-- gen:ports -->
-          <section class="doc-section block" id="ports" aria-labelledby="ports-title">
-            <div class="band doc-band">
-              <div class="band-title">
-                <span class="num">01</span>
-                <h2 id="ports-title">Ports</h2>
-              </div>
-            </div>
-            <div class="port-stage">
-              <div class="port-canvas">
-                <div class="port-node" data-category="data">
-                  <div class="port-node-head">
-                    <span>Read Attribute</span><span class="port-node-cat">data</span>
-                  </div>
-                  <div class="port-cols">
-                    <ul class="port-col port-in" aria-label="Inputs">
-                      <li class="port-col-label" aria-hidden="true">in</li>
-                      <li class="port-none">None</li>
-                    </ul>
-                    <ul class="port-col port-out" aria-label="Outputs">
-                      <li class="port-col-label" aria-hidden="true">out</li>
-                      <li class="port" data-shape="data" data-type="auto">
-                        <span>Value</span><span class="port-type">auto</span>
-                      </li>
-                    </ul>
+          <div class="doc-layout">
+            <!-- gen:toc -->
+            <nav class="doc-toc" aria-label="On this page">
+              <ol>
+                <li>
+                  <a href="#ports"><span class="num">01</span><span>Ports</span></a>
+                </li>
+                <li>
+                  <a href="#fields"><span class="num">02</span><span>Fields</span></a>
+                </li>
+                <li>
+                  <a href="#run"><span class="num">03</span><span>What a run does</span></a>
+                </li>
+              </ol>
+            </nav>
+            <!-- /gen:toc -->
+            <div class="doc-flow">
+              <!-- gen:ports -->
+              <section class="doc-section block" id="ports" aria-labelledby="ports-title">
+                <div class="band doc-band">
+                  <div class="band-title">
+                    <span class="num">01</span>
+                    <h2 id="ports-title">Ports</h2>
                   </div>
                 </div>
-              </div>
-              <div class="port-legend">
-                <span class="label">Ports</span>
-                <span class="port-key" data-shape="control">Control</span>
-                <span class="port-key" data-shape="data">Data</span>
-                <hr />
-                <span class="label">Data types</span>
-                <span class="port-key" data-shape="data" data-type="string"
-                  ><code>string</code></span
-                >
-                <span class="port-key" data-shape="data" data-type="number"
-                  ><code>number</code></span
-                >
-                <span class="port-key" data-shape="data" data-type="bool"><code>bool</code></span>
-                <p class="doc-prose">
-                  Strings accept any data input.<br />
-                  Numbers accept boolean input.
-                </p>
-              </div>
-            </div>
-          </section>
-          <!-- /gen:ports -->
-
-          <!-- gen:fields -->
-          <section class="doc-section block" id="fields" aria-labelledby="fields-title">
-            <div class="band doc-band">
-              <div class="band-title">
-                <span class="num">02</span>
-                <h2 id="fields-title">Fields</h2>
-              </div>
-            </div>
-            <div class="doc-body">
-              <div class="doc-table-wrap">
-                <table class="doc-table">
-                  <thead>
-                    <tr>
-                      <th scope="col">Field</th>
-                      <th scope="col">What it does</th>
-                      <th scope="col">Default</th>
-                      <th scope="col">Limits</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr data-field="attribute">
-                      <td>Attribute</td>
-                      <td>
-                        The attribute to read; a name that is not built in reads a custom attribute.
-                      </td>
-                      <td><code>tps</code></td>
-                      <td>
-                        <ul class="field-options">
-                          <li><code>tps</code></li>
-                          <li><code>players.count</code></li>
-                          <li><code>ram.used (MB)</code></li>
-                          <li><code>ram.left (MB)</code></li>
-                          <li><code>server.status</code></li>
-                          <li><code>players.max</code></li>
-                          <li><code>ram.total (MB)</code></li>
-                          <li><code>server.whitelist</code></li>
-                          <li><code>server.port</code></li>
-                          <li><code>server.gamemode</code></li>
-                          <li><code>server.motd</code></li>
-                          <li><code>server.world</code></li>
+                <div class="port-stage">
+                  <div class="port-canvas">
+                    <div class="port-node" data-category="data">
+                      <div class="port-node-head">
+                        <span>Read Attribute</span><span class="port-node-cat">data</span>
+                      </div>
+                      <div class="port-cols">
+                        <ul class="port-col port-in" aria-label="Inputs">
+                          <li class="port-col-label" aria-hidden="true">in</li>
+                          <li class="port-none">None</li>
                         </ul>
-                      </td>
-                    </tr>
-                    <tr data-field="type">
-                      <td>Data type</td>
-                      <td>
-                        The type the value must have, which also sets the type of the Value port.
-                      </td>
-                      <td><code>Auto</code></td>
-                      <td>
-                        <ul class="field-options">
-                          <li><code>Auto</code></li>
-                          <li><code>String</code></li>
-                          <li><code>Number</code></li>
-                          <li><code>Boolean</code></li>
+                        <ul class="port-col port-out" aria-label="Outputs">
+                          <li class="port-col-label" aria-hidden="true">out</li>
+                          <li class="port" data-shape="data" data-type="auto">
+                            <span>Value</span><span class="port-type">auto</span>
+                          </li>
                         </ul>
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </section>
-          <!-- /gen:fields -->
+                      </div>
+                    </div>
+                  </div>
+                  <div class="port-legend">
+                    <span class="label">Ports</span>
+                    <span class="port-key" data-shape="control">Control</span>
+                    <span class="port-key" data-shape="data">Data</span>
+                    <hr />
+                    <span class="label">Data types</span>
+                    <span class="port-key" data-shape="data" data-type="string"
+                      ><code>string</code></span
+                    >
+                    <span class="port-key" data-shape="data" data-type="number"
+                      ><code>number</code></span
+                    >
+                    <span class="port-key" data-shape="data" data-type="bool"
+                      ><code>bool</code></span
+                    >
+                    <p class="doc-prose">
+                      Strings accept any data input.<br />
+                      Numbers accept boolean input.
+                    </p>
+                  </div>
+                </div>
+              </section>
+              <!-- /gen:ports -->
 
-          <section class="doc-section block" id="run" aria-labelledby="run-title">
-            <div class="band doc-band">
-              <div class="band-title">
-                <span class="num">03</span>
-                <h2 id="run-title">What a run does</h2>
-              </div>
+              <!-- gen:fields -->
+              <section class="doc-section block" id="fields" aria-labelledby="fields-title">
+                <div class="band doc-band">
+                  <div class="band-title">
+                    <span class="num">02</span>
+                    <h2 id="fields-title">Fields</h2>
+                  </div>
+                </div>
+                <div class="doc-body">
+                  <div class="doc-table-wrap">
+                    <table class="doc-table">
+                      <thead>
+                        <tr>
+                          <th scope="col">Field</th>
+                          <th scope="col">What it does</th>
+                          <th scope="col">Default</th>
+                          <th scope="col">Limits</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr data-field="attribute">
+                          <td>Attribute</td>
+                          <td>
+                            The attribute to read; a name that is not built in reads a custom
+                            attribute.
+                          </td>
+                          <td><code>tps</code></td>
+                          <td>
+                            <ul class="field-options">
+                              <li><code>tps</code></li>
+                              <li><code>players.count</code></li>
+                              <li><code>ram.used (MB)</code></li>
+                              <li><code>ram.left (MB)</code></li>
+                              <li><code>server.status</code></li>
+                              <li><code>players.max</code></li>
+                              <li><code>ram.total (MB)</code></li>
+                              <li><code>server.whitelist</code></li>
+                              <li><code>server.port</code></li>
+                              <li><code>server.gamemode</code></li>
+                              <li><code>server.motd</code></li>
+                              <li><code>server.world</code></li>
+                            </ul>
+                          </td>
+                        </tr>
+                        <tr data-field="type">
+                          <td>Data type</td>
+                          <td>
+                            The type the value must have, which also sets the type of the Value
+                            port.
+                          </td>
+                          <td><code>Auto</code></td>
+                          <td>
+                            <ul class="field-options">
+                              <li><code>Auto</code></li>
+                              <li><code>String</code></li>
+                              <li><code>Number</code></li>
+                              <li><code>Boolean</code></li>
+                            </ul>
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </section>
+              <!-- /gen:fields -->
+
+              <!-- gen:body -->
+              <section class="doc-section block" id="run" aria-labelledby="run-title">
+                <div class="band doc-band">
+                  <div class="band-title">
+                    <span class="num">03</span>
+                    <h2 id="run-title">What a run does</h2>
+                  </div>
+                </div>
+                <div class="doc-body doc-split">
+                  <div class="doc-main">
+                    <ol class="doc-steps">
+                      <li>A block that uses <b>Value</b> runs.</li>
+                      <li>This block reads the <b>Attribute</b> once per run.</li>
+                      <li>It checks the value against <b>Data type</b>.</li>
+                      <li>It passes <b>Value</b> to that block.</li>
+                    </ol>
+                    <ul class="doc-points">
+                      <li>This block has no control ports.</li>
+                      <li>
+                        Every block using the same <b>Read Attribute</b> in that run gets the same
+                        value.
+                      </li>
+                    </ul>
+                    <div class="doc-table-wrap">
+                      <table class="doc-table">
+                        <thead>
+                          <tr>
+                            <th scope="col">Attribute</th>
+                            <th scope="col">Value</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <tr>
+                            <td><code>tps</code></td>
+                            <td>The server's current ticks per second.</td>
+                          </tr>
+                          <tr>
+                            <td><code>players.count</code></td>
+                            <td>The number of players online.</td>
+                          </tr>
+                          <tr>
+                            <td><code>players.max</code></td>
+                            <td>The server's player limit.</td>
+                          </tr>
+                          <tr>
+                            <td><code>ram.used (MB)</code></td>
+                            <td>The memory the server process uses, in MB.</td>
+                          </tr>
+                          <tr>
+                            <td><code>ram.total (MB)</code></td>
+                            <td>The <code>-Xmx</code> memory limit of the server, in MB.</td>
+                          </tr>
+                          <tr>
+                            <td><code>ram.left (MB)</code></td>
+                            <td><code>ram.total</code> minus <code>ram.used</code>, in MB.</td>
+                          </tr>
+                          <tr>
+                            <td><code>server.status</code></td>
+                            <td>
+                              <code>1</code> when the server is running, <code>0</code> when it is
+                              stopped.
+                            </td>
+                          </tr>
+                          <tr>
+                            <td><code>server.whitelist</code></td>
+                            <td>
+                              The <code>white-list</code> value in <code>server.properties</code>,
+                              as text.
+                            </td>
+                          </tr>
+                          <tr>
+                            <td><code>server.port</code></td>
+                            <td>
+                              The <code>server-port</code> value in <code>server.properties</code>,
+                              as text.
+                            </td>
+                          </tr>
+                          <tr>
+                            <td><code>server.gamemode</code></td>
+                            <td>
+                              The <code>gamemode</code> value in <code>server.properties</code>, as
+                              text.
+                            </td>
+                          </tr>
+                          <tr>
+                            <td><code>server.motd</code></td>
+                            <td>
+                              The <code>motd</code> value in <code>server.properties</code>, as
+                              text.
+                            </td>
+                          </tr>
+                          <tr>
+                            <td><code>server.world</code></td>
+                            <td>
+                              The <code>level-name</code> value in <code>server.properties</code>,
+                              as text.
+                            </td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                    <div class="doc-note" data-tone="warn">
+                      <span class="label">Heads up</span>
+                      <p>
+                        A value of the wrong type, or an attribute that cannot be read, sets no
+                        output, and no error is shown.<br />
+                        The block that would use the value uses its own field instead.
+                      </p>
+                    </div>
+                    <div class="doc-note" data-tone="note">
+                      <span class="label">Note</span>
+                      <p>
+                        A name that is not built in is looked up among the custom attributes set
+                        earlier in the run.<br />
+                        <a href="/docs/blocks/data-writeAttribute.html">Write Attribute</a> sets
+                        them.
+                      </p>
+                    </div>
+                    <div class="doc-table-wrap">
+                      <table class="doc-table">
+                        <thead>
+                          <tr>
+                            <th scope="col">Data type</th>
+                            <th scope="col">Accepts</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <tr>
+                            <td>Auto</td>
+                            <td>Any value. The <b>Value</b> port then connects to any input.</td>
+                          </tr>
+                          <tr>
+                            <td>Number</td>
+                            <td>A number.</td>
+                          </tr>
+                          <tr>
+                            <td>Boolean</td>
+                            <td>A boolean, or <code>1</code> or <code>0</code>.</td>
+                          </tr>
+                          <tr>
+                            <td>String</td>
+                            <td>Text.</td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                  <div class="doc-figs">
+                    <figure
+                      class="fig fig-flow"
+                      role="img"
+                      aria-label="Graph: Cron Schedule 0 4 * * *, then on onComplete, Condition A == 0, with Read Attribute players.count as data, on onTrue, Create Backup Full server."
+                    >
+                      <div class="fig-node">
+                        <span class="fig-kind">Cron Schedule</span
+                        ><span class="fig-value">0 4 * * *</span>
+                      </div>
+                      <span class="fig-wire"><span class="fig-port">onComplete</span></span>
+                      <div class="fig-row">
+                        <div class="fig-node">
+                          <span class="fig-kind">Condition</span
+                          ><span class="fig-value">A == 0</span>
+                        </div>
+                        <div class="fig-feeds">
+                          <span class="fig-wire fig-wire-data" aria-hidden="true"></span>
+                          <div class="fig-node is-hit is-data">
+                            <span class="fig-kind">Read Attribute</span
+                            ><span class="fig-value">players.count</span>
+                          </div>
+                        </div>
+                      </div>
+                      <div class="fig-lanes">
+                        <div class="fig-lane">
+                          <span class="fig-wire"><span class="fig-port">onTrue</span></span>
+                          <div class="fig-node">
+                            <span class="fig-kind">Create Backup</span
+                            ><span class="fig-value">Full server</span>
+                          </div>
+                        </div>
+                      </div>
+                    </figure>
+                  </div>
+                </div>
+              </section>
+              <!-- /gen:body -->
             </div>
-            <div class="doc-body">
-              <p class="doc-prose">
-                This block has no control ports.<br />It runs when a block that uses its
-                <b>Value</b> runs, and reads the attribute once per run.<br />Every block using the
-                same Read Attribute in that run gets the same value.
-              </p>
-              <div class="doc-table-wrap">
-                <table class="doc-table">
-                  <thead>
-                    <tr>
-                      <th scope="col">Attribute</th>
-                      <th scope="col">Value</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr>
-                      <td><code>tps</code></td>
-                      <td>The server's current ticks per second.</td>
-                    </tr>
-                    <tr>
-                      <td><code>players.count</code></td>
-                      <td>The number of players online.</td>
-                    </tr>
-                    <tr>
-                      <td><code>players.max</code></td>
-                      <td>The server's player limit.</td>
-                    </tr>
-                    <tr>
-                      <td><code>ram.used (MB)</code></td>
-                      <td>The memory the server process uses, in MB.</td>
-                    </tr>
-                    <tr>
-                      <td><code>ram.total (MB)</code></td>
-                      <td>The <code>-Xmx</code> memory limit of the server, in MB.</td>
-                    </tr>
-                    <tr>
-                      <td><code>ram.left (MB)</code></td>
-                      <td><code>ram.total</code> minus <code>ram.used</code>, in MB.</td>
-                    </tr>
-                    <tr>
-                      <td><code>server.status</code></td>
-                      <td>1 when the server is running, 0 when it is stopped.</td>
-                    </tr>
-                    <tr>
-                      <td><code>server.whitelist</code></td>
-                      <td>
-                        The <code>white-list</code> value in <code>server.properties</code>, as
-                        text.
-                      </td>
-                    </tr>
-                    <tr>
-                      <td><code>server.port</code></td>
-                      <td>
-                        The <code>server-port</code> value in <code>server.properties</code>, as
-                        text.
-                      </td>
-                    </tr>
-                    <tr>
-                      <td><code>server.gamemode</code></td>
-                      <td>
-                        The <code>gamemode</code> value in <code>server.properties</code>, as text.
-                      </td>
-                    </tr>
-                    <tr>
-                      <td><code>server.motd</code></td>
-                      <td>
-                        The <code>motd</code> value in <code>server.properties</code>, as text.
-                      </td>
-                    </tr>
-                    <tr>
-                      <td><code>server.world</code></td>
-                      <td>
-                        The <code>level-name</code> value in <code>server.properties</code>, as
-                        text.
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-              <p class="doc-prose">
-                A name that is not built in is looked up among the custom attributes set earlier in
-                the run.<br />Write Attribute sets them.
-              </p>
-              <p class="doc-prose">
-                <b>Data type</b> checks the value before it is output.<br />Auto accepts any value,
-                and the Value port then connects to any input.<br />Number needs a number, Boolean
-                needs a boolean or 1 or 0, and String needs text.<br />A value of the wrong type, or
-                an attribute that cannot be read, sets no output.<br />No error is shown, and the
-                block that would use the value uses its own field instead.
-              </p>
-            </div>
-          </section>
+          </div>
 
           <nav class="doc-related block" aria-label="Related">
             <div class="shelf-label"><span class="label">Related</span></div>

@@ -19,7 +19,11 @@
   //
   // Only a card whose picture is on screen takes a turn, which is also what
   // makes this work on touch, where there is no hover to take over with.
-  var steps = [].slice.call(document.querySelectorAll('.step[data-demo]'))
+  var demos = [].slice.call(document.querySelectorAll('.demo[data-demo]'))
+  // A card is the section holding the picture, so hovering its words plays it.
+  var steps = demos.map(function (demo) {
+    return demo.closest('.doc-section')
+  })
   var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
 
   if (steps.length && !reduceMotion) {
@@ -206,7 +210,7 @@
       var observer = new IntersectionObserver(
         function (entries) {
           entries.forEach(function (entry) {
-            var step = entry.target.closest('.step')
+            var step = entry.target.closest('.doc-section')
             var at = visible.indexOf(step)
             if (entry.isIntersecting && at === -1) visible.push(step)
             if (!entry.isIntersecting && at !== -1) visible.splice(at, 1)
@@ -219,8 +223,8 @@
         },
         { threshold: 0.5 },
       )
-      steps.forEach(function (step) {
-        observer.observe(step.querySelector('.demo'))
+      demos.forEach(function (demo) {
+        observer.observe(demo)
       })
     }
   }

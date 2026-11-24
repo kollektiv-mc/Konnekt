@@ -134,129 +134,186 @@
             </dl>
           </header>
 
-          <!-- gen:ports -->
-          <section class="doc-section block" id="ports" aria-labelledby="ports-title">
-            <div class="band doc-band">
-              <div class="band-title">
-                <span class="num">01</span>
-                <h2 id="ports-title">Ports</h2>
-              </div>
-            </div>
-            <div class="port-stage">
-              <div class="port-canvas">
-                <div class="port-node" data-category="trigger">
-                  <div class="port-node-head">
-                    <span>TPS Below Threshold</span><span class="port-node-cat">trigger</span>
-                  </div>
-                  <div class="port-cols">
-                    <ul class="port-col port-in" aria-label="Inputs">
-                      <li class="port-col-label" aria-hidden="true">in</li>
-                      <li class="port" data-shape="data" data-type="number">
-                        <span>Threshold</span><span class="port-type">number</span>
-                      </li>
-                      <li class="port" data-shape="data" data-type="number">
-                        <span>Cooldown</span><span class="port-type">number</span>
-                      </li>
-                    </ul>
-                    <ul class="port-col port-out" aria-label="Outputs">
-                      <li class="port-col-label" aria-hidden="true">out</li>
-                      <li class="port" data-shape="control" data-port="onComplete">
-                        <span>onComplete</span><span class="port-type">control</span>
-                      </li>
-                      <li class="port" data-shape="data" data-type="number">
-                        <span>Current TPS</span><span class="port-type">number</span>
-                      </li>
-                    </ul>
+          <div class="doc-layout">
+            <!-- gen:toc -->
+            <nav class="doc-toc" aria-label="On this page">
+              <ol>
+                <li>
+                  <a href="#ports"><span class="num">01</span><span>Ports</span></a>
+                </li>
+                <li>
+                  <a href="#fields"><span class="num">02</span><span>Fields</span></a>
+                </li>
+                <li>
+                  <a href="#run"><span class="num">03</span><span>What a run does</span></a>
+                </li>
+              </ol>
+            </nav>
+            <!-- /gen:toc -->
+            <div class="doc-flow">
+              <!-- gen:ports -->
+              <section class="doc-section block" id="ports" aria-labelledby="ports-title">
+                <div class="band doc-band">
+                  <div class="band-title">
+                    <span class="num">01</span>
+                    <h2 id="ports-title">Ports</h2>
                   </div>
                 </div>
-              </div>
-              <div class="port-legend">
-                <span class="label">Ports</span>
-                <span class="port-key" data-shape="control">Control</span>
-                <span class="port-key" data-shape="data">Data</span>
-                <hr />
-                <span class="label">Data types</span>
-                <span class="port-key" data-shape="data" data-type="string"
-                  ><code>string</code></span
-                >
-                <span class="port-key" data-shape="data" data-type="number"
-                  ><code>number</code></span
-                >
-                <span class="port-key" data-shape="data" data-type="bool"><code>bool</code></span>
-                <p class="doc-prose">
-                  Strings accept any data input.<br />
-                  Numbers accept boolean input.
-                </p>
-              </div>
-            </div>
-          </section>
-          <!-- /gen:ports -->
+                <div class="port-stage">
+                  <div class="port-canvas">
+                    <div class="port-node" data-category="trigger">
+                      <div class="port-node-head">
+                        <span>TPS Below Threshold</span><span class="port-node-cat">trigger</span>
+                      </div>
+                      <div class="port-cols">
+                        <ul class="port-col port-in" aria-label="Inputs">
+                          <li class="port-col-label" aria-hidden="true">in</li>
+                          <li class="port" data-shape="data" data-type="number">
+                            <span>Threshold</span><span class="port-type">number</span>
+                          </li>
+                          <li class="port" data-shape="data" data-type="number">
+                            <span>Cooldown</span><span class="port-type">number</span>
+                          </li>
+                        </ul>
+                        <ul class="port-col port-out" aria-label="Outputs">
+                          <li class="port-col-label" aria-hidden="true">out</li>
+                          <li class="port" data-shape="control" data-port="onComplete">
+                            <span>onComplete</span><span class="port-type">control</span>
+                          </li>
+                          <li class="port" data-shape="data" data-type="number">
+                            <span>Current TPS</span><span class="port-type">number</span>
+                          </li>
+                        </ul>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="port-legend">
+                    <span class="label">Ports</span>
+                    <span class="port-key" data-shape="control">Control</span>
+                    <span class="port-key" data-shape="data">Data</span>
+                    <hr />
+                    <span class="label">Data types</span>
+                    <span class="port-key" data-shape="data" data-type="string"
+                      ><code>string</code></span
+                    >
+                    <span class="port-key" data-shape="data" data-type="number"
+                      ><code>number</code></span
+                    >
+                    <span class="port-key" data-shape="data" data-type="bool"
+                      ><code>bool</code></span
+                    >
+                    <p class="doc-prose">
+                      Strings accept any data input.<br />
+                      Numbers accept boolean input.
+                    </p>
+                  </div>
+                </div>
+              </section>
+              <!-- /gen:ports -->
 
-          <!-- gen:fields -->
-          <section class="doc-section block" id="fields" aria-labelledby="fields-title">
-            <div class="band doc-band">
-              <div class="band-title">
-                <span class="num">02</span>
-                <h2 id="fields-title">Fields</h2>
-              </div>
-            </div>
-            <div class="doc-body">
-              <div class="doc-table-wrap">
-                <table class="doc-table">
-                  <thead>
-                    <tr>
-                      <th scope="col">Field</th>
-                      <th scope="col">What it does</th>
-                      <th scope="col">Default</th>
-                      <th scope="col">Limits</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr data-field="threshold">
-                      <td>TPS threshold</td>
-                      <td>The block fires when TPS is below this value.</td>
-                      <td><code>14</code></td>
-                      <td>An empty field uses 14 TPS.</td>
-                    </tr>
-                    <tr data-field="cooldownSeconds">
-                      <td>Cooldown (seconds)</td>
-                      <td>The shortest time between two firings of this block.</td>
-                      <td><code>300</code></td>
-                      <td>0 s or more. A negative or empty value uses 300 s.</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </section>
-          <!-- /gen:fields -->
+              <!-- gen:fields -->
+              <section class="doc-section block" id="fields" aria-labelledby="fields-title">
+                <div class="band doc-band">
+                  <div class="band-title">
+                    <span class="num">02</span>
+                    <h2 id="fields-title">Fields</h2>
+                  </div>
+                </div>
+                <div class="doc-body">
+                  <div class="doc-table-wrap">
+                    <table class="doc-table">
+                      <thead>
+                        <tr>
+                          <th scope="col">Field</th>
+                          <th scope="col">What it does</th>
+                          <th scope="col">Default</th>
+                          <th scope="col">Limits</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr data-field="threshold">
+                          <td>TPS threshold</td>
+                          <td>The block fires when TPS is below this value.</td>
+                          <td><code>14</code></td>
+                          <td>An empty field uses 14 TPS.</td>
+                        </tr>
+                        <tr data-field="cooldownSeconds">
+                          <td>Cooldown (seconds)</td>
+                          <td>The shortest time between two firings of this block.</td>
+                          <td><code>300</code></td>
+                          <td>0 s or more. A negative or empty value uses 300 s.</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </section>
+              <!-- /gen:fields -->
 
-          <section class="doc-section block" id="run" aria-labelledby="run-title">
-            <div class="band doc-band">
-              <div class="band-title">
-                <span class="num">03</span>
-                <h2 id="run-title">What a run does</h2>
-              </div>
+              <!-- gen:body -->
+              <section class="doc-section block" id="run" aria-labelledby="run-title">
+                <div class="band doc-band">
+                  <div class="band-title">
+                    <span class="num">03</span>
+                    <h2 id="run-title">What a run does</h2>
+                  </div>
+                </div>
+                <div class="doc-body doc-split">
+                  <div class="doc-main">
+                    <ol class="doc-steps">
+                      <li>
+                        While the server runs, Konnekt takes a stats snapshot every 10 seconds.
+                      </li>
+                      <li>
+                        If the snapshot's TPS is below <b>TPS threshold</b> and the cooldown has
+                        passed, the block fires.
+                      </li>
+                      <li>
+                        The run leaves by <b>onComplete</b>, and <b>Current TPS</b> carries that
+                        snapshot's value.
+                      </li>
+                    </ol>
+                    <ul class="doc-points">
+                      <li>
+                        The server's TPS comes from RCON, polled every 15 seconds, and is capped at
+                        20.
+                      </li>
+                      <li>
+                        Without RCON it is estimated from the server's
+                        <code>Can't keep up</code> warnings.
+                      </li>
+                      <li>A value wired into <b>Threshold</b> or <b>Cooldown</b> is not read.</li>
+                      <li>The block fires only for the server the graph belongs to.</li>
+                    </ul>
+                    <div class="doc-note" data-tone="warn">
+                      <span class="label">Heads up</span>
+                      <p>A long dip fires again each time the cooldown passes.</p>
+                    </div>
+                  </div>
+                  <div class="doc-figs">
+                    <figure
+                      class="fig fig-flow"
+                      role="img"
+                      aria-label="Graph: TPS Below Threshold 14, then on onComplete · Current TPS, Notify Server is lagging."
+                    >
+                      <div class="fig-node is-hit">
+                        <span class="fig-kind">TPS Below Threshold</span
+                        ><span class="fig-value">14</span>
+                      </div>
+                      <span class="fig-wire"
+                        ><span class="fig-port">onComplete · Current TPS</span></span
+                      >
+                      <div class="fig-node">
+                        <span class="fig-kind">Notify</span
+                        ><span class="fig-value">Server is lagging</span>
+                      </div>
+                    </figure>
+                  </div>
+                </div>
+              </section>
+              <!-- /gen:body -->
             </div>
-            <div class="doc-body">
-              <p class="doc-prose">
-                While the server runs, Konnekt takes a stats snapshot every 10 seconds.<br />
-                If the snapshot's TPS is below <b>TPS threshold</b> and the cooldown has passed, the
-                block fires.<br />
-                The run leaves by <code>onComplete</code>, and <b>Current TPS</b> carries that
-                snapshot's value.
-              </p>
-              <p class="doc-prose">
-                The server's TPS comes from RCON, polled every 15 seconds, and is capped at 20.<br />
-                Without RCON it is estimated from the server's <code>Can't keep up</code> warnings.
-              </p>
-              <p class="doc-prose">
-                A long dip fires again each time the cooldown passes.<br />
-                A value wired into <b>Threshold</b> or <b>Cooldown</b> is not read.
-              </p>
-              <p class="doc-prose">It fires only for the server the graph belongs to.</p>
-            </div>
-          </section>
+          </div>
 
           <nav class="doc-related block" aria-label="Related">
             <div class="shelf-label"><span class="label">Related</span></div>
