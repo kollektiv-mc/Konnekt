@@ -176,17 +176,19 @@
     else apply()
   }
 
+  function failed() {
+    empty.textContent = 'Search could not load.'
+    empty.hidden = false
+  }
+
   input.addEventListener('input', function () {
     if (index || !input.value.trim()) return update()
-    load().then(update, function () {
-      empty.textContent = 'Search could not load.'
-      empty.hidden = false
-    })
+    load().then(update, failed)
   })
   // Fetched on focus, so the first keystroke rarely waits.
   input.addEventListener('focus', function () {
-    load().catch(function () {})
+    load().catch(failed)
   })
   // A query kept by the browser's back button searches straight away.
-  if (input.value.trim()) load().then(apply)
+  if (input.value.trim()) load().then(apply, failed)
 })()
