@@ -116,12 +116,26 @@
               <h1>Scheduler blocks</h1>
               <p class="doc-lead">The blocks a scheduler graph is built from.</p>
             </div>
-            <dl class="doc-facts">
-              <div class="doc-fact">
-                <dt class="label">Topics</dt>
-                <dd>Scheduler</dd>
-              </div>
-            </dl>
+            <div class="doc-side">
+              <label class="search">
+                <span aria-hidden="true">/</span>
+                <input
+                  type="search"
+                  id="doc-search"
+                  data-scope="/docs/blocks/"
+                  placeholder="search blocks"
+                  autocomplete="off"
+                  spellcheck="false"
+                  aria-label="Search the scheduler blocks"
+                />
+              </label>
+              <dl class="doc-facts">
+                <div class="doc-fact">
+                  <dt class="label">Topics</dt>
+                  <dd>Scheduler</dd>
+                </div>
+              </dl>
+            </div>
           </header>
 
           <!-- gen:index -->
@@ -193,6 +207,8 @@
             </div>
           </section>
           <!-- /gen:index -->
+          <div class="doc-results block" id="doc-results" hidden></div>
+          <p class="doc-empty block" id="doc-empty" role="status" hidden>No block matches that.</p>
 
           <nav class="doc-related block" aria-label="Related">
             <div class="shelf-label"><span class="label">Related</span></div>
@@ -218,5 +234,6 @@
 
     <script src="/release.js"></script>
     <script src="/site.js"></script>
+    <script src="/docs.js"></script>
   </body>
 </html>
