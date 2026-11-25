@@ -199,6 +199,9 @@
                             <span>Bytes sent</span><span class="port-type">number</span>
                           </li>
                           <li class="port" data-shape="data" data-type="number">
+                            <span>Levels assembled</span><span class="port-type">number</span>
+                          </li>
+                          <li class="port" data-shape="data" data-type="number">
                             <span>Snapshots deleted</span><span class="port-type">number</span>
                           </li>
                           <li class="port" data-shape="data" data-type="number">
@@ -288,6 +291,14 @@
                           <td><code>3</code></td>
                           <td>A whole number from 1 to 2147483647.</td>
                         </tr>
+                        <tr data-field="downloadPage">
+                          <td>Download page</td>
+                          <td>
+                            Publishes a page players download the snapshot from without a launcher.
+                          </td>
+                          <td>Off</td>
+                          <td></td>
+                        </tr>
                       </tbody>
                     </table>
                   </div>
@@ -316,6 +327,10 @@
                         skipped.
                       </li>
                       <li>
+                        With <b>Download page</b> on, build each level's whole database in the
+                        bucket and write the download page.
+                      </li>
+                      <li>
                         Write the snapshot's <code>index.json</code>, then
                         <code>latest.json</code> last.
                       </li>
@@ -327,7 +342,14 @@
                     <div class="doc-note" data-tone="warn">
                       <span class="label">Heads up</span>
                       <p>
-                        Step 5 deletes snapshots and parts from the bucket.<br />
+                        <b>Download page</b> stores the snapshot twice.<br />
+                        It takes about twice the space in the bucket.
+                      </p>
+                    </div>
+                    <div class="doc-note" data-tone="warn">
+                      <span class="label">Heads up</span>
+                      <p>
+                        Step 6 deletes snapshots and parts from the bucket.<br />
                         The newest complete snapshots are kept, plus the one
                         <code>latest.json</code> points at.
                       </p>
@@ -358,8 +380,8 @@
                       </li>
                       <li>
                         <b>Parts uploaded</b>, <b>Parts skipped</b>, <b>Bytes sent</b>,
-                        <b>Snapshots deleted</b>, <b>Parts deleted</b> and <b>Bytes freed</b> count
-                        what the run sent and what the prune removed.
+                        <b>Levels assembled</b>, <b>Snapshots deleted</b>, <b>Parts deleted</b> and
+                        <b>Bytes freed</b> count what the run sent and what the prune removed.
                       </li>
                     </ul>
                     <div class="doc-note" data-tone="note">
@@ -460,6 +482,17 @@
                         <tr>
                           <td>part <em>hash</em>: <em>reason</em></td>
                           <td>Run it again; parts already sent are skipped.</td>
+                        </tr>
+                        <tr>
+                          <td>assemble <em>level folder</em>: <em>reason</em></td>
+                          <td>Run it again; parts already sent are skipped.</td>
+                        </tr>
+                        <tr>
+                          <td>
+                            level <em>level folder</em> has <em>n</em> parts, over the 10000 one
+                            whole file may have
+                          </td>
+                          <td>Turn off <b>Download page</b>.</td>
                         </tr>
                         <tr>
                           <td>timed out after 43200s: <em>reason</em></td>

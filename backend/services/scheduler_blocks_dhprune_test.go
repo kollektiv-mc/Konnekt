@@ -83,6 +83,7 @@ func TestDHPublishInvalidKeepFailsBeforeSending(t *testing.T) {
 	f.stageFor(t, "srv1", "7_alpha", dhPubDBs())
 	cfg := publishConfig()
 	cfg["keep"] = 0.0
+	delete(cfg, "downloadPage")
 	g := publishGraph("srv1", cfg, false)
 
 	warnings, err := f.s.GraphWarnings("srv1", g)

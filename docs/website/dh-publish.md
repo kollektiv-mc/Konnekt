@@ -127,6 +127,12 @@ After: The snapshot uploads to the bucket
 2. On the destination's **Snapshot link** row, select **Copy link**.
 3. Send the link to the people who download the snapshot.
 
+> [!TIP]
+> For players without a launcher, turn on **Download page** on **Publish DH Snapshot**.
+> Each snapshot then gets a page that lists every file and the folder it goes in.
+> The snapshot is stored twice and takes about twice the space in the bucket.
+> The server's console shows the page's address after each run.
+
 ```ui
 # Settings · Destinations
 my-bucket | [Edit]

@@ -240,6 +240,22 @@ func validateGraphDestinations(g models.Graph, reg *BlockRegistry, dests *Destin
 	return issues
 }
 
+// dhDownloadPageWarning is the advice on a Publish DH Snapshot node with
+// Download page on.
+const dhDownloadPageWarning = "Download page stores the snapshot twice. It takes about twice the space in the bucket."
+
+// downloadPageWarnings returns one warning per Publish DH Snapshot node with
+// Download page on. It is advice only: the run does not read it.
+func downloadPageWarnings(g models.Graph) []models.GraphWarning {
+	var warnings []models.GraphWarning
+	for _, n := range g.Nodes {
+		if n.Type == dhPublishBlockID && truthy(n.Config["downloadPage"]) {
+			warnings = append(warnings, models.GraphWarning{NodeID: n.ID, Text: dhDownloadPageWarning})
+		}
+	}
+	return warnings
+}
+
 // validateGraphRetention checks the keep value of every Publish DH Snapshot node:
 // empty or absent is the default, anything else must be a whole number of at
 // least 1. A value that is not a number yet (a {{wire}} or an @attribute) cannot

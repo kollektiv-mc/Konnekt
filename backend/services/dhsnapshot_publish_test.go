@@ -3,12 +3,14 @@ package services
 import (
 	"bytes"
 	"context"
+	"encoding/xml"
 	"fmt"
 	"net/http"
 	"net/url"
 	"os"
 	"path/filepath"
 	"slices"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -16,9 +18,10 @@ import (
 
 // ─── The publish run (#565) ────────────────────────────────────────────────
 //
-// runDHPublish is driven against the in-memory bucket of upload_test.go, so a
-// test can compare a part in the bucket with the database it came from. The
-// databases are byte files; nothing here is SQLite.
+// runDHPublish is driven against the in-memory bucket of upload_test.go, which
+// answers the multipart calls and really assembles what they copy, so a test can
+// compare a finished object with the database it came from. The databases are
+// byte files; nothing here is SQLite.
 
 const (
 	dhPubCreated1  = "20261011T040000Z"
@@ -54,7 +57,7 @@ func newDHPublishFixture(t *testing.T) *dhPublishFixture {
 	b := newFakeBucket(t)
 	f := &dhPublishFixture{t: t, bucket: b, client: newTestS3Client(t, b.s3TestServer)}
 	f.plan = dhPublishPlan{
-		Store: f.client, Label: `"R2"`, KeyPrefix: "dh",
+		Store: f.client, Label: `"R2"`, KeyPrefix: "dh", DownloadPage: true,
 		Narrate: func(line string) { f.narration = append(f.narration, line) },
 	}
 	return f
@@ -118,11 +121,19 @@ func (f *dhPublishFixture) reset() {
 	srv.mu.Unlock()
 }
 
+func (r wireReq) isCreate() bool   { return r.Method == http.MethodPost && r.Query.Has("uploads") }
+func (r wireReq) isCopy() bool     { return r.Method == http.MethodPut && r.Query.Has("partNumber") }
+func (r wireReq) isComplete() bool { return r.Method == http.MethodPost && r.Query.Has("uploadId") }
+func (r wireReq) isAbort() bool    { return r.Method == http.MethodDelete }
+func (r wireReq) isMultipart() bool {
+	return r.isCreate() || r.isCopy() || r.isComplete() || r.isAbort()
+}
+
 // partPuts are the requests that sent a part.
 func partPuts(reqs []wireReq) []wireReq {
 	var out []wireReq
 	for _, r := range reqs {
-		if r.Method == http.MethodPut && strings.Contains(r.Key, "/parts/") {
+		if r.Method == http.MethodPut && !r.isMultipart() && strings.Contains(r.Key, "/parts/") {
 			out = append(out, r)
 		}
 	}
@@ -137,6 +148,10 @@ func ofKind(reqs []wireReq, pred func(wireReq) bool) []wireReq {
 		}
 	}
 	return out
+}
+
+func assembledKey(stamp, folder string) string {
+	return "dh/snapshots/" + stamp + "/" + folder + "/" + dhDatabaseName
 }
 
 func partKey(sum string) string { return "dh/parts/" + sum }
@@ -156,8 +171,8 @@ func TestDHPublishFirstRunSendsAllAndWritesLatestLast(t *testing.T) {
 	for _, l := range ix.Levels {
 		wantBytes += l.Size
 	}
-	if res.PartsUploaded != 6 || res.PartsSkipped != 0 || res.BytesSent != wantBytes {
-		t.Errorf("result = %+v, want 6 parts and %d bytes sent", res, wantBytes)
+	if res.PartsUploaded != 6 || res.PartsSkipped != 0 || res.BytesSent != wantBytes || res.LevelsAssembled != 2 {
+		t.Errorf("result = %+v, want 6 parts and %d bytes sent, 2 levels assembled", res, wantBytes)
 	}
 	if want := f.client.ObjectURL("dh/latest.json"); res.URL != want {
 		t.Errorf("url = %q, want the bucket's own address %q when the destination has no public base", res.URL, want)
@@ -182,15 +197,63 @@ func TestDHPublishFirstRunSendsAllAndWritesLatestLast(t *testing.T) {
 		}
 	}
 
-	// The index after every part, then latest.json as the very last request.
-	indexKey := "dh/snapshots/" + dhPubCreated1 + "/index.json"
-	order := map[string]int{}
-	lastPart := -1
-	for i, r := range reqs {
-		if r.Method == http.MethodPut && strings.Contains(r.Key, "/parts/") {
-			lastPart = i
+	// Each level: create, one copy per part in index order with part numbers from
+	// 1, complete. No request of the assembly carries data.
+	pos := 0
+	for _, l := range ix.Levels {
+		for pos < len(reqs) && !reqs[pos].isMultipart() {
+			pos++
 		}
-		if r.Method == http.MethodPut {
+		if pos >= len(reqs) || !reqs[pos].isCreate() || reqs[pos].Key != assembledKey(dhPubCreated1, l.Folder) {
+			t.Fatalf("level %s: request %d is not its create: %+v", l.Folder, pos, reqs[pos])
+		}
+		pos++
+		for i, part := range l.Parts {
+			r := reqs[pos]
+			if !r.isCopy() || r.Key != assembledKey(dhPubCreated1, l.Folder) {
+				t.Fatalf("level %s: request %d is not a copy into the level: %+v", l.Folder, pos, r)
+			}
+			if r.Query.Get("partNumber") != strconv.Itoa(i+1) || r.Header.Get("X-Amz-Copy-Source") != "/snapshots/"+partKey(part.SHA256) {
+				t.Errorf("level %s part %d: number %q, source %q", l.Folder, i+1, r.Query.Get("partNumber"), r.Header.Get("X-Amz-Copy-Source"))
+			}
+			if len(r.Body) != 0 || r.Header.Get("X-Amz-Copy-Source-Range") != "" {
+				t.Errorf("level %s part %d: body %d bytes, range %q", l.Folder, i+1, len(r.Body), r.Header.Get("X-Amz-Copy-Source-Range"))
+			}
+			pos++
+		}
+		if !reqs[pos].isComplete() || reqs[pos].Key != assembledKey(dhPubCreated1, l.Folder) {
+			t.Fatalf("level %s: request %d is not its complete: %+v", l.Folder, pos, reqs[pos])
+		}
+		var doc struct {
+			Parts []struct{ PartNumber int } `xml:"Part"`
+		}
+		if err := xml.Unmarshal(reqs[pos].Body, &doc); err != nil || len(doc.Parts) != len(l.Parts) {
+			t.Errorf("level %s: complete body %q (%v)", l.Folder, reqs[pos].Body, err)
+		}
+		pos++
+		if !bytes.Equal(f.bucket.object(assembledKey(dhPubCreated1, l.Folder)), dbs[l.Folder]) {
+			t.Errorf("level %s: the assembled object is not the database", l.Folder)
+		}
+	}
+	if n := len(ofKind(reqs, wireReq.isAbort)); n != 0 {
+		t.Errorf("%d aborts in a clean run", n)
+	}
+	if n := f.bucket.openUploads(); n != 0 {
+		t.Errorf("%d uploads left open", n)
+	}
+	var data int
+	for _, r := range ofKind(reqs, wireReq.isMultipart) {
+		data += len(r.Body)
+	}
+	if data > 1000 {
+		t.Errorf("assembly requests carried %d body bytes: they are lists, not data", data)
+	}
+
+	// The index and the page, then latest.json as the very last request.
+	indexKey, pageKey := "dh/snapshots/"+dhPubCreated1+"/index.json", "dh/snapshots/"+dhPubCreated1+"/index.html"
+	order := map[string]int{}
+	for i, r := range reqs {
+		if r.Method == http.MethodPut && !r.isMultipart() {
 			order[r.Key] = i
 		}
 	}
@@ -198,11 +261,19 @@ func TestDHPublishFirstRunSendsAllAndWritesLatestLast(t *testing.T) {
 	if last.Method != http.MethodPut || last.Key != "dh/latest.json" {
 		t.Fatalf("the last request is %s %s, want the PUT of dh/latest.json", last.Method, last.Key)
 	}
-	if i, ok := order[indexKey]; !ok || i > order["dh/latest.json"] || i < lastPart {
-		t.Errorf("the index was written at %d, the last part at %d, latest.json at %d", i, lastPart, order["dh/latest.json"])
+	for _, k := range []string{indexKey, pageKey} {
+		if i, ok := order[k]; !ok || i > order["dh/latest.json"] {
+			t.Errorf("%s was written at %d, latest.json at %d", k, i, order["dh/latest.json"])
+		}
 	}
-	if keys := f.bucket.keys(); slices.ContainsFunc(keys, func(k string) bool { return strings.HasSuffix(k, ".sqlite") || strings.HasSuffix(k, ".html") }) {
-		t.Errorf("the bucket holds more than parts, the index and latest.json: %v", keys)
+	lastComplete := -1
+	for i, r := range reqs {
+		if r.isComplete() {
+			lastComplete = i
+		}
+	}
+	if order[indexKey] < lastComplete || order[pageKey] < lastComplete {
+		t.Error("the index or the page was written before an assembly finished")
 	}
 
 	// What was written.
@@ -213,6 +284,13 @@ func TestDHPublishFirstRunSendsAllAndWritesLatestLast(t *testing.T) {
 	if !bytes.Equal(f.bucket.object(indexKey), staged) {
 		t.Error("the index in the bucket is not the staged bytes")
 	}
+	page, err := renderDHPage(ix)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(f.bucket.object(pageKey), page) || f.bucket.contentType(pageKey) != "text/html; charset=utf-8" {
+		t.Errorf("page: equal=%v, content type %q", bytes.Equal(f.bucket.object(pageKey), page), f.bucket.contentType(pageKey))
+	}
 	if f.bucket.contentType(indexKey) != "application/json" || f.bucket.contentType("dh/latest.json") != "application/json" {
 		t.Errorf("content types: index %q, latest %q", f.bucket.contentType(indexKey), f.bucket.contentType("dh/latest.json"))
 	}
@@ -221,7 +299,7 @@ func TestDHPublishFirstRunSendsAllAndWritesLatestLast(t *testing.T) {
 		t.Errorf("latest.json = %+v (%v)", latest, err)
 	}
 	got := f.narrated()
-	for _, want := range []string{"first publish", "Uploading 6 part(s)", "Upload finished: 6 sent", "Writing dh/latest.json, the last object", "Published: "} {
+	for _, want := range []string{"first publish", "Uploading 6 part(s)", "Upload finished: 6 sent", "Assembling " + dhPubOverworld, "from its 4 part(s)", "Writing dh/latest.json, the last object", "Published: "} {
 		if !strings.Contains(got, want) {
 			t.Errorf("narration lacks %q:\n%s", want, got)
 		}
@@ -263,6 +341,7 @@ func TestDHPublishURLUsesThePublicBaseWhenTheDestinationHasOne(t *testing.T) {
 // --- a second publish ---
 
 func TestDHPublishSecondRunSendsOnlyChangedParts(t *testing.T) {
+	shrinkCopyRange(t, 1500)
 	f := newDHPublishFixture(t)
 	dbs := dhPubDBs()
 	dir1, ix1 := f.stage(dbs, nil, dhPubTime1)
@@ -274,7 +353,7 @@ func TestDHPublishSecondRunSendsOnlyChangedParts(t *testing.T) {
 	dbs2 := dhPubDBs()
 	dbs2[dhPubOverworld] = append([]byte(nil), dbs2[dhPubOverworld]...)
 	dbs2[dhPubOverworld][dhTestPart+5] ^= 0xFF
-	dir2, _ := f.stage(dbs2, &ix1, dhPubTime2)
+	dir2, ix2 := f.stage(dbs2, &ix1, dhPubTime2)
 	f.reset()
 	f.narration = nil
 
@@ -282,8 +361,8 @@ func TestDHPublishSecondRunSendsOnlyChangedParts(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if res.PartsUploaded != 1 || res.PartsSkipped != 5 || res.BytesSent != dhTestPart {
-		t.Fatalf("result = %+v, want 1 part sent (%d bytes), 5 skipped", res, dhTestPart)
+	if res.PartsUploaded != 1 || res.PartsSkipped != 5 || res.BytesSent != dhTestPart || res.LevelsAssembled != 2 {
+		t.Fatalf("result = %+v, want 1 part sent (%d bytes), 5 skipped, 2 levels assembled", res, dhTestPart)
 	}
 	reqs := f.wire()
 	if puts := partPuts(reqs); len(puts) != 1 {
@@ -295,10 +374,121 @@ func TestDHPublishSecondRunSendsOnlyChangedParts(t *testing.T) {
 		}
 	}
 
+	// The overworld changed, so it is built from its parts.
+	overworld := ofKind(reqs, func(r wireReq) bool { return r.isCopy() && r.Key == assembledKey(dhPubCreated2, dhPubOverworld) })
+	if len(overworld) != 4 {
+		t.Fatalf("%d copies for the overworld, want one per part", len(overworld))
+	}
+	for i, r := range overworld {
+		if want := "/snapshots/" + partKey(ix2.Levels[0].Parts[i].SHA256); r.Header.Get("X-Amz-Copy-Source") != want || r.Header.Get("X-Amz-Copy-Source-Range") != "" {
+			t.Errorf("overworld copy %d: source %q, range %q", i+1, r.Header.Get("X-Amz-Copy-Source"), r.Header.Get("X-Amz-Copy-Source-Range"))
+		}
+	}
+	// The nether did not, so it is copied in ranges from last week's file.
+	nether := ofKind(reqs, func(r wireReq) bool { return r.isCopy() && r.Key == assembledKey(dhPubCreated2, dhPubNether) })
+	if len(nether) != 2 {
+		t.Fatalf("%d copies for the nether, want 2 ranges of 1500 bytes over a 2048 byte file", len(nether))
+	}
+	wantSource := "/snapshots/" + s3URIEncode(assembledKey(dhPubCreated1, dhPubNether), false)
+	for i, wantRange := range []string{"bytes=0-1499", "bytes=1500-2047"} {
+		r := nether[i]
+		if r.Header.Get("X-Amz-Copy-Source") != wantSource || r.Header.Get("X-Amz-Copy-Source-Range") != wantRange || r.Query.Get("partNumber") != strconv.Itoa(i+1) || len(r.Body) != 0 {
+			t.Errorf("nether copy %d: source %q, range %q, part %q", i+1, r.Header.Get("X-Amz-Copy-Source"), r.Header.Get("X-Amz-Copy-Source-Range"), r.Query.Get("partNumber"))
+		}
+	}
+	if !strings.Contains(f.narrated(), "by copying the previous snapshot's file in 2 range(s)") {
+		t.Errorf("narration:\n%s", f.narrated())
+	}
+
+	for folder, want := range dbs2 {
+		if !bytes.Equal(f.bucket.object(assembledKey(dhPubCreated2, folder)), want) {
+			t.Errorf("level %s: the new assembled object is not the new database", folder)
+		}
+	}
+	// Last week's snapshot is whole, and latest.json now points at this one.
+	for folder, want := range dbs {
+		if !bytes.Equal(f.bucket.object(assembledKey(dhPubCreated1, folder)), want) {
+			t.Errorf("level %s: the previous snapshot's file changed", folder)
+		}
+	}
 	latest, err := parseDHLatest(f.bucket.object("dh/latest.json"))
 	if err != nil || latest.Index != "snapshots/"+dhPubCreated2+"/index.json" {
 		t.Errorf("latest.json = %+v (%v)", latest, err)
 	}
+}
+
+func shrinkCopyRange(t *testing.T, n int64) {
+	t.Helper()
+	old := dhCopyRangeBytes
+	dhCopyRangeBytes = n
+	t.Cleanup(func() { dhCopyRangeBytes = old })
+}
+
+// A previous file that cannot be confirmed is built from parts.
+func TestDHPublishUnconfirmedPreviousFileIsBuiltFromParts(t *testing.T) {
+	for name, damage := range map[string]func(f *dhPublishFixture){
+		"missing from the bucket": func(f *dhPublishFixture) {
+			f.bucket.mu.Lock()
+			delete(f.bucket.objects, assembledKey(dhPubCreated1, dhPubNether))
+			f.bucket.mu.Unlock()
+		},
+		"a different size": func(f *dhPublishFixture) { f.bucket.put(assembledKey(dhPubCreated1, dhPubNether), []byte("short")) },
+	} {
+		t.Run(name, func(t *testing.T) {
+			f := newDHPublishFixture(t)
+			dir1, ix1 := f.stage(dhPubDBs(), nil, dhPubTime1)
+			if _, err := f.publish(dir1); err != nil {
+				t.Fatal(err)
+			}
+			damage(f)
+			dir2, _ := f.stage(dhPubDBs(), &ix1, dhPubTime2)
+			f.reset()
+			f.narration = nil
+
+			res, err := f.publish(dir2)
+			if err != nil || res.LevelsAssembled != 2 || res.PartsUploaded != 0 {
+				t.Fatalf("result = %+v (%v)", res, err)
+			}
+			for _, r := range ofKind(f.wire(), func(r wireReq) bool { return r.isCopy() && r.Key == assembledKey(dhPubCreated2, dhPubNether) }) {
+				if strings.Contains(r.Header.Get("X-Amz-Copy-Source"), "/snapshots/dh/snapshots/") || r.Header.Get("X-Amz-Copy-Source-Range") != "" {
+					t.Errorf("copy from %q range %q: the previous file was not confirmed", r.Header.Get("X-Amz-Copy-Source"), r.Header.Get("X-Amz-Copy-Source-Range"))
+				}
+			}
+			if !strings.Contains(f.narrated(), "could not be confirmed") {
+				t.Errorf("narration:\n%s", f.narrated())
+			}
+			if !bytes.Equal(f.bucket.object(assembledKey(dhPubCreated2, dhPubNether)), dhPubDBs()[dhPubNether]) {
+				t.Error("the nether was not assembled from parts")
+			}
+		})
+	}
+}
+
+func TestDHPublishPreviousFileHeadErrorFallsBackToParts(t *testing.T) {
+	f := newDHPublishFixture(t)
+	dir1, ix1 := f.stage(dhPubDBs(), nil, dhPubTime1)
+	if _, err := f.publish(dir1); err != nil {
+		t.Fatal(err)
+	}
+	dir2, _ := f.stage(dhPubDBs(), &ix1, dhPubTime2)
+	f.plan.Store = headFails{dhPublishStore: f.client, key: assembledKey(dhPubCreated1, dhPubNether)}
+	res, err := f.publish(dir2)
+	if err != nil || res.LevelsAssembled != 2 {
+		t.Fatalf("result = %+v (%v): a HEAD that fails is a fallback, not a failure", res, err)
+	}
+}
+
+// headFails makes the HEAD of one key fail, as a network error would.
+type headFails struct {
+	dhPublishStore
+	key string
+}
+
+func (h headFails) HeadObject(ctx context.Context, key string) (S3ObjectInfo, bool, error) {
+	if key == h.key {
+		return S3ObjectInfo{}, false, fmt.Errorf("connection reset")
+	}
+	return h.dhPublishStore.HeadObject(ctx, key)
 }
 
 // An earlier run that was cut off had already sent two parts. The listing
@@ -354,7 +544,7 @@ func TestDHPublishARefusedListingFallsBackToIfNoneMatch(t *testing.T) {
 	}
 }
 
-func TestDHPublishRepeatedPartsAreSentOnce(t *testing.T) {
+func TestDHPublishRepeatedPartsAreSentOnceAndCopiedEachTime(t *testing.T) {
 	f := newDHPublishFixture(t)
 	zeros := bytes.Repeat([]byte{7}, 3*dhTestPart)
 	dir, ix := f.stage(map[string][]byte{dhPubOverworld: zeros}, nil, dhPubTime1)
@@ -368,8 +558,11 @@ func TestDHPublishRepeatedPartsAreSentOnce(t *testing.T) {
 	if res.PartsUploaded != 1 || res.BytesSent != dhTestPart {
 		t.Errorf("result = %+v, want the one distinct part sent once", res)
 	}
-	if n := len(partPuts(f.wire())); n != 1 {
-		t.Errorf("%d part PUTs, want one", n)
+	if n := len(ofKind(f.wire(), wireReq.isCopy)); n != 3 {
+		t.Errorf("%d copies, want one per occurrence", n)
+	}
+	if !bytes.Equal(f.bucket.object(assembledKey(dhPubCreated1, dhPubOverworld)), zeros) {
+		t.Error("the assembled object is not the database")
 	}
 }
 
@@ -389,7 +582,7 @@ func TestDHPublishUnstagedPartIsFineIfInBucket(t *testing.T) {
 	dir2, _ := f.stage(dbs, &ix1, dhPubTime2)
 	_ = dir1
 	res, err := f.publish(dir2)
-	if err != nil || res.PartsUploaded != 0 || res.PartsSkipped != 6 {
+	if err != nil || res.PartsUploaded != 0 || res.PartsSkipped != 6 || res.LevelsAssembled != 2 {
 		t.Fatalf("result = %+v (%v)", res, err)
 	}
 	var heads int
@@ -445,6 +638,108 @@ func TestDHPublishPartNeitherStagedNorUpFailsBeforeAnythingIsSent(t *testing.T) 
 				t.Error("latest.json was written")
 			}
 		})
+	}
+}
+
+// --- failure during the assembly ---
+
+func TestDHPublishAssemblyFailureLeavesLatestAlone(t *testing.T) {
+	for name, failAt := range map[string]struct {
+		op string
+		n  int
+	}{
+		"a copy part-way through the first level": {"copy", 3},
+		"a copy of the second level":              {"copy", 6},
+		"the complete of the first level":         {"complete", 1},
+	} {
+		t.Run(name, func(t *testing.T) {
+			f := newDHPublishFixture(t)
+			dir, _ := f.stage(dhPubDBs(), nil, dhPubTime1)
+			f.bucket.setFailMultipart(func(op string, n int) (int, string) {
+				if op == failAt.op && n == failAt.n {
+					return http.StatusForbidden, "AccessDenied"
+				}
+				return 0, ""
+			})
+
+			res, err := f.publish(dir)
+			if err == nil {
+				t.Fatal("the failure was not reported")
+			}
+			if strings.Contains(err.Error(), testSecret) || !strings.Contains(err.Error(), "AccessDenied") {
+				t.Errorf("err = %q", err)
+			}
+			reqs := f.wire()
+			aborts := ofKind(reqs, wireReq.isAbort)
+			if len(aborts) != 1 {
+				t.Fatalf("%d aborts, want one for the upload that failed", len(aborts))
+			}
+			if n := f.bucket.openUploads(); n != 0 {
+				t.Errorf("%d uploads left open: a half-built one would be billed", n)
+			}
+			if aborts[0].Query.Get("uploadId") == "" {
+				t.Error("the abort names no upload")
+			}
+			for _, k := range []string{"dh/latest.json", "dh/snapshots/" + dhPubCreated1 + "/index.json", "dh/snapshots/" + dhPubCreated1 + "/index.html"} {
+				if _, ok := f.bucket.snapshot()[k]; ok {
+					t.Errorf("%s was written after a failed assembly", k)
+				}
+			}
+			if res.URL != "" {
+				t.Errorf("a failed run reports the url %q", res.URL)
+			}
+			if failAt.op == "copy" && failAt.n == 3 && res.LevelsAssembled != 0 {
+				t.Errorf("levels assembled = %d", res.LevelsAssembled)
+			}
+			if failAt.n == 6 && res.LevelsAssembled != 1 {
+				t.Errorf("levels assembled = %d, want the first only", res.LevelsAssembled)
+			}
+		})
+	}
+}
+
+func TestDHPublishAbortFailureIsReportedBesideTheFirstError(t *testing.T) {
+	f := newDHPublishFixture(t)
+	dir, _ := f.stage(dhPubDBs(), nil, dhPubTime1)
+	f.bucket.setFailMultipart(func(op string, n int) (int, string) {
+		switch op {
+		case "copy":
+			return http.StatusForbidden, "AccessDenied"
+		case "abort":
+			return http.StatusForbidden, "AbortDenied"
+		}
+		return 0, ""
+	})
+	_, err := f.publish(dir)
+	if err == nil || !strings.Contains(err.Error(), "AccessDenied") || !strings.Contains(err.Error(), "could not be aborted either") || !strings.Contains(err.Error(), "AbortDenied") {
+		t.Fatalf("err = %v", err)
+	}
+	if strings.Contains(err.Error(), testSecret) || strings.Contains(err.Error(), "\n") {
+		t.Errorf("err = %q", err)
+	}
+}
+
+func TestDHPublishACancelledRunStillAbortsItsOpenUpload(t *testing.T) {
+	f := newDHPublishFixture(t)
+	dir, _ := f.stage(dhPubDBs(), nil, dhPubTime1)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	f.bucket.setFailMultipart(func(op string, n int) (int, string) {
+		if op == "copy" && n == 2 {
+			cancel()
+		}
+		return 0, ""
+	})
+	f.plan.StageDir = dir
+	_, err := runDHPublish(ctx, f.plan)
+	if err == nil {
+		t.Fatal("a cancelled run reported success")
+	}
+	if n := len(ofKind(f.wire(), wireReq.isAbort)); n != 1 || f.bucket.openUploads() != 0 {
+		t.Errorf("%d aborts, %d uploads open: the abort has to outlive the run's own context", n, f.bucket.openUploads())
+	}
+	if _, ok := f.bucket.snapshot()["dh/latest.json"]; ok {
+		t.Error("latest.json was written")
 	}
 }
 
@@ -577,7 +872,7 @@ func TestDHPublishRefusesAStagedPartThatIsALink(t *testing.T) {
 	}
 }
 
-func TestDHPublishFailedPartUploadStopsTheRun(t *testing.T) {
+func TestDHPublishFailedPartUploadStopsTheRunBeforeAssembly(t *testing.T) {
 	f := newDHPublishFixture(t)
 	dir, _ := f.stage(dhPubDBs(), nil, dhPubTime1)
 	f.bucket.setFail(func(_ string, puts int) (int, string) {
@@ -590,13 +885,11 @@ func TestDHPublishFailedPartUploadStopsTheRun(t *testing.T) {
 	if err == nil || !strings.Contains(err.Error(), "refused the upload") || strings.Contains(err.Error(), testSecret) {
 		t.Fatalf("err = %v", err)
 	}
-	if res.PartsUploaded != 2 {
+	if res.PartsUploaded != 2 || res.LevelsAssembled != 0 {
 		t.Errorf("result = %+v", res)
 	}
-	for _, k := range []string{"dh/latest.json", "dh/snapshots/" + dhPubCreated1 + "/index.json"} {
-		if _, ok := f.bucket.snapshot()[k]; ok {
-			t.Errorf("%s was written after a failed part", k)
-		}
+	if n := len(ofKind(f.wire(), wireReq.isMultipart)); n != 0 {
+		t.Errorf("%d multipart requests after a failed part", n)
 	}
 }
 
@@ -618,7 +911,7 @@ func TestDHPublishResumesAfterACutOffRun(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if res.PartsUploaded != 3 || res.PartsSkipped != 3 {
+	if res.PartsUploaded != 3 || res.PartsSkipped != 3 || res.LevelsAssembled != 2 {
 		t.Errorf("result = %+v: the three parts already sent are skipped, the other three sent", res)
 	}
 	if _, ok := f.bucket.snapshot()["dh/latest.json"]; !ok {
@@ -658,7 +951,7 @@ func TestDHPublishProgressIsNarratedNoMoreOftenThanTheInterval(t *testing.T) {
 	progress := func(f *dhPublishFixture) int {
 		n := 0
 		for _, l := range f.narration {
-			if strings.HasPrefix(l, "Upload: ") {
+			if strings.HasPrefix(l, "Upload: ") || strings.HasPrefix(l, "Assembling ") && strings.Contains(l, " copied") {
 				n++
 			}
 		}
@@ -689,7 +982,12 @@ func TestDHPublishProgressIsNarratedNoMoreOftenThanTheInterval(t *testing.T) {
 func TestDHPublishSecretIsInNoErrorOrNarration(t *testing.T) {
 	f := newDHPublishFixture(t)
 	dir, _ := f.stage(dhPubDBs(), nil, dhPubTime1)
-	f.bucket.setFail(func(string, int) (int, string) { return http.StatusForbidden, "SignatureDoesNotMatch" })
+	f.bucket.setFailMultipart(func(op string, n int) (int, string) {
+		if op == "create" {
+			return http.StatusForbidden, "SignatureDoesNotMatch"
+		}
+		return 0, ""
+	})
 	_, err := f.publish(dir)
 	if err == nil {
 		t.Fatal("expected a failure")
@@ -703,6 +1001,21 @@ func TestDHPublishSecretIsInNoErrorOrNarration(t *testing.T) {
 }
 
 // --- the index check ---
+
+// A level over one multipart upload's part count can be published as parts, and
+// is refused only when its whole file is to be assembled.
+func TestCheckDHIndexForAssemblyPartCount(t *testing.T) {
+	l := DHIndexLevel{Folder: dhPubOverworld, Parts: make([]DHPart, s3MaxMultipartParts)}
+	ix := DHIndex{Levels: []DHIndexLevel{l}}
+	if err := checkDHIndexForAssembly(ix); err != nil {
+		t.Fatalf("%d parts: %v", s3MaxMultipartParts, err)
+	}
+	ix.Levels[0].Parts = append(ix.Levels[0].Parts, DHPart{})
+	err := checkDHIndexForAssembly(ix)
+	if err == nil || !strings.Contains(err.Error(), "over the 10000") {
+		t.Errorf("err = %v, want the 10000 limit", err)
+	}
+}
 
 func TestCheckDHIndexForPublish(t *testing.T) {
 	good := func() DHIndex {
@@ -745,5 +1058,43 @@ func TestCheckDHIndexForPublish(t *testing.T) {
 				t.Errorf("err = %v, want it to contain %q", err, tc.want)
 			}
 		})
+	}
+}
+
+// --- Download page off, the default ---
+
+// Without a download page the bucket gets the parts, the index and latest.json,
+// and no whole file, page or copy request.
+func TestDHPublishWithoutDownloadPageSendsPartsOnly(t *testing.T) {
+	f := newDHPublishFixture(t)
+	f.plan.DownloadPage = false
+	dir, ix := f.stage(dhPubDBs(), nil, dhPubTime1)
+
+	res, err := f.publish(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.PartsUploaded != 6 || res.LevelsAssembled != 0 {
+		t.Errorf("result = %+v, want 6 parts uploaded and nothing assembled", res)
+	}
+	want := []string{"dh/latest.json", "dh/snapshots/" + dhPubCreated1 + "/index.json"}
+	for _, l := range ix.Levels {
+		for _, part := range l.Parts {
+			want = append(want, partKey(part.SHA256))
+		}
+	}
+	slices.Sort(want)
+	got := f.bucket.keys()
+	slices.Sort(got)
+	if !slices.Equal(got, slices.Compact(want)) {
+		t.Errorf("bucket = %v\nwant %v", got, want)
+	}
+	for _, r := range f.wire() {
+		if r.isCreate() || r.isCopy() || r.Header.Get("X-Amz-Copy-Source") != "" {
+			t.Errorf("request %s %s assembles or copies with Download page off", r.Method, r.Key)
+		}
+	}
+	if strings.Contains(f.narrated(), "Download page") {
+		t.Errorf("narration names a download page:\n%s", f.narrated())
 	}
 }
