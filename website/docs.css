@@ -121,6 +121,12 @@ h2.label {
   padding: 0 0.6ch;
 }
 
+.result .kind {
+  margin-left: 1.5ch;
+  font-size: 11px;
+  vertical-align: 1px;
+}
+
 .result-text {
   max-width: 90ch;
   font-size: 14px;
@@ -407,7 +413,7 @@ h2.label {
 
 /* A callout. The tint says which kind and the label names it: a note is
    context and stays quiet, a tip points elsewhere in the accent, and a heads
-   up is the one thing not to miss, in sun with a bar down its edge. */
+   up is the one thing not to miss, in sun. */
 .doc-note {
   display: flex;
   flex-wrap: wrap;
@@ -427,7 +433,6 @@ h2.label {
 
 .doc-note[data-tone='warn'] {
   border-color: rgb(var(--sun-rgb) / 0.4);
-  border-left: 3px solid var(--sun);
   background: rgb(var(--sun-rgb) / 0.06);
 }
 

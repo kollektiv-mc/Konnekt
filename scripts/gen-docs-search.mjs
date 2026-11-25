@@ -59,6 +59,15 @@ function text(html) {
     .trim()
 }
 
+// The label a result carries beside its title: the page's kind as its head
+// shows it, except that a block page reads Scheduler block and a guide on the
+// Tutorials shelf reads Tutorial.
+function type(head, url) {
+  if (/^\/docs\/blocks\/.+\.html$/.test(url)) return 'Scheduler block'
+  if (head.includes('href="/docs.html#tutorials"')) return 'Tutorial'
+  return text(head.match(/<span class="kind"[^>]*>([\s\S]*?)<\/span>/)?.[1] ?? '')
+}
+
 // A page is its doc-head (kind, h1, lead) and its doc-sections, each with an
 // id the result links to and one h2. Anything else on the page, such as the
 // block index's shelves or the Related links, is navigation and left out.
@@ -96,10 +105,13 @@ function page(html, url) {
   for (const s of sections) {
     if (!s.text) throw new Error(`gen-docs-search: ${url}#${s.id} has no text`)
   }
+  const label = type(head, url)
+  if (!label) throw new Error(`gen-docs-search: ${url} has no kind in its doc-head`)
   return {
     url,
     title,
     kind: head.match(/data-kind="([^"]+)"/)?.[1] ?? '',
+    type: label,
     lead: text(head.match(/<p class="doc-lead">([\s\S]*?)<\/p>/)?.[1] ?? ''),
     sections,
   }
