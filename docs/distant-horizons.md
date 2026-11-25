@@ -166,8 +166,10 @@ no longer exists, says why in red beside **run** until you click it away.
    triggered by the server stopping, or **Start** in the app, is refused until
    the block has started it itself.
 6. **Publish**, with the server running. Parts the bucket does not have are
-   uploaded. The index is written, and `latest.json` last, so a reader never
-   sees a snapshot with parts missing. A run cut off before that leaves the
+   uploaded. With **Download page** on, the bucket then assembles each
+   dimension's whole database from the parts by copying inside the bucket, and
+   the download page is written. The index is written, and `latest.json` last,
+   so a reader never sees a snapshot with files missing. A run cut off before that leaves the
    previous snapshot current, and the next run resumes: a part already in the
    bucket is never sent again.
 7. **Prune.** Snapshots beyond **Snapshots to keep** are deleted, then the parts
@@ -188,9 +190,33 @@ https://files.example.com/<prefix>/latest.json
 ```
 
 The launcher follows it to the index, downloads each dimension's parts, joins
-them in order and checks the whole file's hash. The bucket holds parts only, so
-a player without such a launcher has nothing to download by hand.
+them in order and checks the whole file's hash.
 [What ends up in the bucket](#what-ends-up-in-the-bucket) is the format.
+
+### Download page
+
+For players without a launcher, turn on **Download page** on the publish node.
+Each snapshot then also holds every dimension's whole `DistantHorizons.sqlite`
+and a page linking them:
+
+```
+https://files.example.com/<prefix>/snapshots/<date>/index.html
+```
+
+It is off by default because it stores the snapshot twice: the bucket holds
+about twice as much, and the node shows a warning while it is on. The run's
+console prints the page's address. The page lists each dimension's file with
+its size and date, a download link, and the folder to put it in. For a player
+the steps are:
+
+1. Close the game.
+2. Download `DistantHorizons.sqlite` for each dimension.
+3. Put each one in
+   `Distant_Horizons_server_data/<serverId>_<serverKey>/<levelKeyPrefix>@minecraft@@overworld/`
+   (and the matching folder for the other dimensions) inside the game folder,
+   the one that holds `mods` and `saves`. The page prints the exact path.
+4. Start the game and join. DH loads the file and keeps it up to date in game
+   from there.
 
 A player who has already explored the world does not need the download: DH
 syncs what they have against the server when they join.
@@ -208,7 +234,9 @@ https://files.example.com/<prefix>/<token>/latest.json
 **Copy link** then gives out that address, and it is the only place the token
 is shown. **Rotate link** moves the snapshot to a new address, and the old one
 stops working for everyone at once. Switching the mode or rotating rewrites the
-index and `latest.json` under the new address, and the next
+index and `latest.json` under the new address. A snapshot with a download page
+takes a few minutes, because its page and whole files are copied inside the
+bucket. The next
 scheduled publish lands under the new address on its own.
 
 Two things to know. A private link is a shared secret, not access control:
@@ -259,6 +287,8 @@ For a launcher or a script that fetches the snapshot itself:
 ```
 <prefix>/latest.json                                   pointer, written last
 <prefix>/snapshots/<stamp>/index.json                  the snapshot
+<prefix>/snapshots/<stamp>/index.html                  the download page, when on
+<prefix>/snapshots/<stamp>/<level folder>/DistantHorizons.sqlite   when on
 <prefix>/parts/<sha256>                                8 MiB parts, shared by every snapshot
 ```
 

@@ -246,6 +246,27 @@
                             <td>Deleted with its snapshot.</td>
                           </tr>
                           <tr>
+                            <td><code>&lt;prefix&gt;/snapshots/&lt;stamp&gt;/index.html</code></td>
+                            <td>
+                              With <b>Download page</b> on: the download page, listing each level's
+                              file with its size and the folder to put it in.
+                            </td>
+                            <td>Deleted with its snapshot.</td>
+                          </tr>
+                          <tr>
+                            <td>
+                              <code
+                                >&lt;prefix&gt;/snapshots/&lt;stamp&gt;/&lt;level
+                                folder&gt;/DistantHorizons.sqlite</code
+                              >
+                            </td>
+                            <td>
+                              With <b>Download page</b> on: one level's whole database, built inside
+                              the bucket from its parts.
+                            </td>
+                            <td>Deleted with its snapshot.</td>
+                          </tr>
+                          <tr>
                             <td><code>&lt;prefix&gt;/parts/&lt;sha256&gt;</code></td>
                             <td>
                               A slice of a database, named by its SHA-256 and up to 8 MiB, shared by
@@ -260,6 +281,11 @@
                       <li>
                         <code>&lt;stamp&gt;</code> is the snapshot's UTC time, such as
                         <code>20261012T040000Z</code>.
+                      </li>
+                      <li>
+                        <code>&lt;level folder&gt;</code> is
+                        <code>&lt;levelKeyPrefix&gt;@&lt;namespace&gt;@@&lt;path&gt;</code>, such as
+                        <code>myserver@minecraft@@overworld</code>.
                       </li>
                     </ul>
                   </div>
@@ -279,6 +305,17 @@
                           ><span class="fig-tree-note">one snapshot</span>
                         </li>
                         <li class="fig-tree-row" style="--depth: 3"><code>index.json</code></li>
+                        <li class="fig-tree-row" style="--depth: 3">
+                          <code>index.html</code
+                          ><span class="fig-tree-note">with Download page on</span>
+                        </li>
+                        <li class="fig-tree-row" style="--depth: 3">
+                          <code>myserver@minecraft@@overworld/</code
+                          ><span class="fig-tree-note">with Download page on</span>
+                        </li>
+                        <li class="fig-tree-row" style="--depth: 4">
+                          <code>DistantHorizons.sqlite</code>
+                        </li>
                         <li class="fig-tree-row" style="--depth: 1"><code>parts/</code></li>
                         <li class="fig-tree-row" style="--depth: 2">
                           <code>&lt;sha256&gt;</code

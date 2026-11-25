@@ -180,6 +180,11 @@
         "type": "number"
       },
       {
+        "id": "levelsAssembled",
+        "label": "Levels assembled",
+        "type": "number"
+      },
+      {
         "id": "snapshotsDeleted",
         "label": "Snapshots deleted",
         "type": "number"
@@ -217,6 +222,12 @@
         "label": "Snapshots to keep (at least 1)",
         "type": "number",
         "default": 3
+      },
+      {
+        "key": "downloadPage",
+        "label": "Download page",
+        "type": "bool",
+        "default": false
       }
     ],
     "source": "native",

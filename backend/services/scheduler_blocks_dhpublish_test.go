@@ -1,6 +1,7 @@
 package services
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"log/slog"
@@ -53,7 +54,7 @@ func (f *uploadFixture) stageFor(t *testing.T, serverID, serverFolder string, db
 }
 
 func publishConfig() map[string]interface{} {
-	return map[string]interface{}{"destination": "R2"}
+	return map[string]interface{}{"destination": "R2", "downloadPage": true}
 }
 
 func publishGraph(serverID string, cfg map[string]interface{}, failMarker bool) models.Graph {
@@ -89,7 +90,7 @@ func TestDHPublishBlockDefinition(t *testing.T) {
 	if got := strings.Join(ins, ","); got != "folder:string" {
 		t.Errorf("data inputs = %s", got)
 	}
-	if got := strings.Join(outs, ","); got != "url:string,partsUploaded:number,partsSkipped:number,bytesSent:number,snapshotsDeleted:number,partsDeleted:number,bytesFreed:number" {
+	if got := strings.Join(outs, ","); got != "url:string,partsUploaded:number,partsSkipped:number,bytesSent:number,levelsAssembled:number,snapshotsDeleted:number,partsDeleted:number,bytesFreed:number" {
 		t.Errorf("data outputs = %s", got)
 	}
 	fields := map[string]models.ConfigField{}
@@ -98,8 +99,11 @@ func TestDHPublishBlockDefinition(t *testing.T) {
 		fields[f.Key] = f
 		keys = append(keys, f.Key)
 	}
-	if got := strings.Join(keys, ","); got != "destination,prefix,folder,keep" {
+	if got := strings.Join(keys, ","); got != "destination,prefix,folder,keep,downloadPage" {
 		t.Errorf("config keys = %s", got)
+	}
+	if f := fields["downloadPage"]; f.Type != "bool" || f.Default != false || len(f.Label) > 20 {
+		t.Errorf("downloadPage = %+v, want a bool field, off by default, label at most 20 characters", f)
 	}
 	if f := fields["destination"]; f.Type != destinationFieldType || !f.Required {
 		t.Errorf("destination = %+v, want a required destination field", f)
@@ -247,7 +251,7 @@ func TestDHPublishBlockPublishesTheRunsServersStagedFolder(t *testing.T) {
 	}
 	wantURL := f.bucket.URL + "/snapshots/dh/snap/latest.json"
 	want := map[string]interface{}{
-		"url": wantURL, "partsUploaded": 6.0, "partsSkipped": 0.0,
+		"url": wantURL, "partsUploaded": 6.0, "partsSkipped": 0.0, "levelsAssembled": 2.0,
 		"bytesSent": float64(3*dhTestPart + 100 + 2*dhTestPart),
 	}
 	for k, v := range want {
@@ -269,7 +273,7 @@ func TestDHPublishBlockPublishesTheRunsServersStagedFolder(t *testing.T) {
 		}
 	}
 	console := f.console("srv1")
-	for _, w := range []string{"Uploading 6 part(s)", `to "R2"`, "Writing the index", "Published: " + wantURL} {
+	for _, w := range []string{"Uploading 6 part(s)", `to "R2"`, "Assembling " + dhPubOverworld, "Published: " + wantURL} {
 		if !strings.Contains(console, w) {
 			t.Errorf("console lacks %q:\n%s", w, console)
 		}
@@ -372,10 +376,10 @@ func TestDHPublishBlockFailureEndsOnFailedAndTheSecretIsNowhere(t *testing.T) {
 
 	f := dhBlockFixture(t)
 	f.stageFor(t, "srv1", "7_alpha", dhPubDBs())
-	// The bucket takes the parts and then refuses the index with a message that
-	// echoes the secret back.
-	f.bucket.setFail(func(key string, _ int) (int, string) {
-		if strings.HasSuffix(key, "/index.json") {
+	// The bucket takes the parts and then refuses the assembly with a message
+	// that echoes the secret back.
+	f.bucket.setFailMultipart(func(op string, n int) (int, string) {
+		if op == "copy" && n == 2 {
 			return http.StatusForbidden, "SignatureDoesNotMatch"
 		}
 		return 0, ""
@@ -398,6 +402,9 @@ func TestDHPublishBlockFailureEndsOnFailedAndTheSecretIsNowhere(t *testing.T) {
 	}
 	if node.FiredPort != "onFailed" || !strings.Contains(node.Error, "SignatureDoesNotMatch") {
 		t.Errorf("node record = %+v", node)
+	}
+	if f.bucket.openUploads() != 0 {
+		t.Error("an upload was left open")
 	}
 	if _, ok := f.bucket.snapshot()["dh/latest.json"]; ok {
 		t.Error("latest.json was written by a failed run")
@@ -617,4 +624,47 @@ func TestDHSnapshotCannotStartWhileAPublishIsRunning(t *testing.T) {
 		t.Error("the claim was not released when the publish ended")
 	}
 	dhRelease("srv1")
+}
+
+func TestDHPublishUploadsThePageWithTheHTMLContentType(t *testing.T) {
+	f := dhBlockFixture(t)
+	f.stageFor(t, "srv1", "7_alpha", dhPubDBs())
+	if res, _ := f.execPublish("srv1", publishConfig()); res.Port != "onComplete" {
+		t.Fatalf("result = %+v", res)
+	}
+	page := "dh/snapshots/" + dhPubCreated1 + "/index.html"
+	if got := f.bucket.contentType(page); got != "text/html; charset=utf-8" {
+		t.Errorf("page content type = %q", got)
+	}
+	body := f.bucket.object(page)
+	if !bytes.Contains(body, []byte("7_alpha")) || !bytes.Contains(body, []byte(dhPubOverworld+"/DistantHorizons.sqlite")) {
+		t.Errorf("page:\n%s", body)
+	}
+}
+
+// The block publishes no download page unless the node turns it on, and the
+// editor warns on the node while it is on.
+func TestDHPublishBlockDownloadPageIsOptIn(t *testing.T) {
+	f := dhBlockFixture(t)
+	f.stageFor(t, "srv1", "7_alpha", dhPubDBs())
+	cfg := publishConfig()
+	delete(cfg, "downloadPage")
+
+	warnings, err := f.s.GraphWarnings("srv1", publishGraph("srv1", cfg, false))
+	if err != nil || len(warnings) != 0 {
+		t.Errorf("off: GraphWarnings = %q (%v), want none", warnings, err)
+	}
+	res, out := f.execPublish("srv1", cfg)
+	if res.Port != "onComplete" || res.Err != nil || out["levelsAssembled"] != 0.0 {
+		t.Fatalf("off: result = %+v, levelsAssembled = %v", res, out["levelsAssembled"])
+	}
+	if _, ok := f.bucket.snapshot()["dh/snapshots/"+dhPubCreated1+"/index.html"]; ok {
+		t.Error("off: a download page was written")
+	}
+
+	cfg["downloadPage"] = true
+	warnings, err = f.s.GraphWarnings("srv1", publishGraph("srv1", cfg, false))
+	if err != nil || len(warnings) != 1 || warnings[0].NodeID != "u1" || !strings.Contains(warnings[0].Text, "twice") {
+		t.Errorf("on: GraphWarnings = %q (%v), want the stores-twice warning on u1", warnings, err)
+	}
 }

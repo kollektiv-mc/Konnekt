@@ -106,6 +106,9 @@ func (s *pruneScene) publishFourth(keep int) (dhPublishResult, error) {
 func folderKeys(stamp string) []string {
 	return []string{
 		"dh/snapshots/" + stamp + "/index.json",
+		"dh/snapshots/" + stamp + "/index.html",
+		assembledKey(stamp, dhPubOverworld),
+		assembledKey(stamp, dhPubNether),
 	}
 }
 
@@ -262,7 +265,8 @@ func TestDHPublishResultCountsWhatThePruneDeleted(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	wantBytes := int64(dhTestPart) // A1, and index.json is in the folder too
+	wantBytes := int64(len(dbs1[dhPubOverworld])+len(dbs1[dhPubNether])) + dhTestPart // the folder's two files and A1
+	// index.json and index.html are in the folder too.
 	if res.SnapshotsDeleted != 1 || res.PartsDeleted != 1 || res.BytesFreed < wantBytes || res.Warning != "" {
 		t.Errorf("result = %+v: want 1 snapshot, 1 part, at least %d bytes, no warning", res, wantBytes)
 	}

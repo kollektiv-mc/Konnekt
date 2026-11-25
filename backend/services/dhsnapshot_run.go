@@ -320,7 +320,7 @@ func (p *dhRunPlan) previousIndex(ctx context.Context) (*DHIndex, bool, error) {
 type dhLatestIndex struct {
 	Index DHIndex
 	// IndexKey is where the index was read from, which is also where the
-	// snapshot's own folder is.
+	// snapshot's own folder is: any assembled files sit beside it.
 	IndexKey string
 }
 

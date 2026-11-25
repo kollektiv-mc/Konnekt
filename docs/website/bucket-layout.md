@@ -38,6 +38,9 @@ An object that exists at the same size is skipped, and any other is replaced.
   snapshots/
     20261012T040000Z/  # one snapshot
       index.json
+      index.html  # with Download page on
+      myserver@minecraft@@overworld/  # with Download page on
+        DistantHorizons.sqlite
   parts/
     <sha256>  # a slice of a database
 ```
@@ -46,9 +49,12 @@ An object that exists at the same size is skipped, and any other is replaced.
 | --- | --- | --- |
 | `<prefix>/latest.json` | A pointer to the newest snapshot's `index.json`: its format, `createdAt` and the path. | Rewritten by each publish, as its last write. |
 | `<prefix>/snapshots/<stamp>/index.json` | The snapshot: Distant Horizons version, server folder, and for each level its folder, size, SHA-256 and parts. | Deleted with its snapshot. |
+| `<prefix>/snapshots/<stamp>/index.html` | With **Download page** on: the download page, listing each level's file with its size and the folder to put it in. | Deleted with its snapshot. |
+| `<prefix>/snapshots/<stamp>/<level folder>/DistantHorizons.sqlite` | With **Download page** on: one level's whole database, built inside the bucket from its parts. | Deleted with its snapshot. |
 | `<prefix>/parts/<sha256>` | A slice of a database, named by its SHA-256 and up to 8 MiB, shared by every snapshot that uses it. | Deleted when no kept snapshot lists it. |
 
 - `<stamp>` is the snapshot's UTC time, such as `20261012T040000Z`.
+- `<level folder>` is `<levelKeyPrefix>@<namespace>@@<path>`, such as `myserver@minecraft@@overworld`.
 
 ## Private link {#private-link}
 

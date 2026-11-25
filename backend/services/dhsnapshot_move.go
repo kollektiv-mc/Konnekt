@@ -26,13 +26,15 @@ import (
 // dhLinkStore is the bucket as a move uses it. *S3Client is the real one.
 type dhLinkStore interface {
 	dhPublishStore
+	CopyObject(ctx context.Context, dstKey, srcKey string) error
 }
 
 // dhMoveResult is what moveDHSnapshotLink did.
 type dhMoveResult struct {
 	// Moved is false when the old base held no latest.json: nothing was published
 	// there, so the move is only the caller's record change.
-	Moved bool
+	Moved           bool
+	LevelsAssembled int
 	// Warning is a note for the person, set by the caller's later steps.
 	Warning string
 }
@@ -48,8 +50,12 @@ func dhBaseKeys(prefix, token string) (SnapshotKeys, error) {
 // layout newToken names, and writes the new base's latest.json last. An empty
 // token is the public layout. It deletes nothing.
 //
-// Only the latest snapshot comes: its index.json, rewritten for the new
-// layout's partsBase.
+// Only the latest snapshot comes: index.json, rewritten for the new layout's
+// partsBase. When that snapshot was published with a download page, the page and
+// the whole files come too: index.html is copied as it is (its links are
+// relative to its own folder), and each level's whole database is built again in
+// the bucket from the old one when it is still there at the right size, else
+// from the parts. A CopyObject is not used for a database: S3 caps one at 5 GiB.
 func moveDHSnapshotLink(ctx context.Context, store dhLinkStore, prefix, oldToken, newToken string, narrate func(string)) (dhMoveResult, error) {
 	var res dhMoveResult
 	if narrate == nil {
@@ -90,7 +96,20 @@ func moveDHSnapshotLink(ctx context.Context, store dhLinkStore, prefix, oldToken
 		return res, fmt.Errorf("latest.json points at %s, not where a publish writes a snapshot, so it was not moved", prev.IndexKey)
 	}
 
+	_, hasPage, err := store.HeadObject(ctx, oldKeys.Page)
+	if err != nil {
+		return res, fmt.Errorf("cannot tell whether the snapshot has a download page: %w", err)
+	}
+
 	narrate("Moving the latest snapshot to the new link")
+	if hasPage {
+		if err := checkDHIndexForAssembly(ix); err != nil {
+			return res, fmt.Errorf("the published snapshot cannot be moved: %w", err)
+		}
+		if err := store.CopyObject(ctx, newKeys.Page, oldKeys.Page); err != nil {
+			return res, fmt.Errorf("copy the download page: %w", err)
+		}
+	}
 	ix.PartsBase = newKeys.PartsBase
 	data, err := ix.Marshal()
 	if err != nil {
@@ -100,12 +119,46 @@ func moveDHSnapshotLink(ctx context.Context, store dhLinkStore, prefix, oldToken
 		return res, fmt.Errorf("write the index: %w", err)
 	}
 
+	if hasPage {
+		for _, l := range ix.Levels {
+			if err := ctx.Err(); err != nil {
+				return res, err
+			}
+			if err := moveDHLevel(ctx, store, oldKeys, newKeys, l, narrate); err != nil {
+				return res, fmt.Errorf("assemble %s: %w", l.Folder, err)
+			}
+			res.LevelsAssembled++
+		}
+	}
+
 	p := &dhPublisher{dhPublishPlan: dhPublishPlan{Store: store, Narrate: narrate}}
 	if err := p.writeLatest(ctx, dhStaged{Index: ix, Keys: newKeys}); err != nil {
 		return res, err
 	}
 	res.Moved = true
 	return res, nil
+}
+
+// moveDHLevel builds level l's database under the new base: by copying ranges of
+// the old assembled file when it is in the bucket at l's size (a few calls for a
+// big file), else from the parts (always enough, many calls). Any trouble
+// confirming the old file means "from the parts".
+func moveDHLevel(ctx context.Context, store dhLinkStore, oldKeys, newKeys SnapshotKeys, l DHIndexLevel, narrate func(string)) error {
+	steps := partCopySteps(newKeys, l)
+	how := fmt.Sprintf("from its %d part(s)", len(steps))
+	src := oldKeys.AssembledKey(l.Folder)
+	if info, found, err := store.HeadObject(ctx, src); err == nil && found && info.Size == l.Size {
+		steps = previousObjectCopies(src, l.Size)
+		how = fmt.Sprintf("by copying the old file in %d range(s)", len(steps))
+	}
+	narrate(fmt.Sprintf("Assembling %s (%s) %s", l.Folder, fmtBytes(l.Size), how))
+	last := time.Now()
+	return assembleDHObject(ctx, store, newKeys.AssembledKey(l.Folder), steps, func(done, total int) {
+		if done < total && time.Since(last) >= uploadProgressEvery {
+			last = time.Now()
+			narrate(fmt.Sprintf("Assembling %s: %d of %d copied", l.Folder, done, total))
+		}
+	})
 }
 
 // dropDHBase deletes a base the move has left: its latest.json first, which is

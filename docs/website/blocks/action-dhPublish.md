@@ -3,11 +3,16 @@
 1. Read and check `index.json` in the staged folder.
 2. Read the bucket's `latest.json` to learn which parts are already there.
 3. Send the parts the bucket lacks, and count a part it already holds as skipped.
-4. Write the snapshot's `index.json`, then `latest.json` last.
-5. Delete snapshots beyond **Snapshots to keep**, and the parts no kept snapshot uses.
+4. With **Download page** on, assemble each level's whole database inside the bucket from its parts, and write the download page.
+5. Write the snapshot's `index.json`, then `latest.json` last.
+6. Delete snapshots beyond **Snapshots to keep**, and the parts no kept snapshot uses.
 
 > [!WARNING]
-> Step 5 deletes snapshots and parts from the bucket.
+> **Download page** stores the snapshot twice: as the parts and as one whole file per level.
+> The bucket then holds about twice as much. It is off unless you turn it on.
+
+> [!WARNING]
+> Step 6 deletes snapshots and parts from the bucket.
 > The newest complete snapshots are kept, plus the one `latest.json` points at.
 
 - The block holds this server's snapshot claim for the whole run.
@@ -18,7 +23,7 @@
 - It leaves by **onComplete** once `latest.json` is written, and by **onFailed** on any error.
 - A prune that fails does not fail the block: it leaves by **onComplete** and records a warning.
 - **Snapshot URL** is the address of `latest.json`, under the destination's public base URL if it has one.
-- **Parts uploaded**, **Parts skipped**, **Bytes sent**, **Snapshots deleted**, **Parts deleted** and **Bytes freed** count what the run sent and what the prune removed.
+- **Parts uploaded**, **Parts skipped**, **Bytes sent**, **Levels assembled**, **Snapshots deleted**, **Parts deleted** and **Bytes freed** count what the run sent and what the prune removed.
 
 > [!NOTE]
 > A private link shows `[redacted]` in place of its token.
@@ -45,4 +50,6 @@ DH Snapshot: your destination
 | the staged folder *folder* cannot be read: *reason* | Check that the folder exists and can be read. |
 | cannot read the previous snapshot from *destination*: *reason* | Check the destination and the network, then run it again. |
 | part *hash*: *reason* | Run it again; parts already sent are skipped. |
+| assemble *level folder*: *reason* | Run it again; parts already sent are skipped. |
+| level *level folder* has *n* parts, over the 10000 one whole file may have: turn off Download page to publish it | Turn off **Download page**. |
 | timed out after 43200s: *reason* | Run it again; parts already sent are skipped. |

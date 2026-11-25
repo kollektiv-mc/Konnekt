@@ -246,6 +246,7 @@ func (s *SchedulerService) GraphWarnings(serverID string, g models.Graph) ([]mod
 	// while the graph is being built, in the same place.
 	warnings = append(warnings, validateGraphDestinations(g, s.registry, s.deps.destinations)...)
 	warnings = append(warnings, validateGraphRetention(g)...)
+	warnings = append(warnings, downloadPageWarnings(g)...)
 	if warnings == nil {
 		warnings = []models.GraphWarning{}
 	}

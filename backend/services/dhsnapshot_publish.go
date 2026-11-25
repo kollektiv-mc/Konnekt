@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -12,19 +13,23 @@ import (
 )
 
 // The run behind action.dhPublish (#565): read the staged snapshot, send the
-// parts the bucket lacks, write the index, and only then latest.json. It owns the
+// parts the bucket lacks, write the index, and only then latest.json. With the
+// node's Download page on, the bucket also assembles each level's whole database
+// from the parts and the run writes a download page beside the index. It owns the
 // order and nothing else; the bucket sits behind one interface so the sequence is
 // testable, and the block (scheduler_blocks_dhpublish.go) is a thin reader of
 // config and services around it.
 //
 // The invariant the order exists for: latest.json is the last object written, so
-// a reader that finds it finds an index whose parts are all already there. A run cut off anywhere before it leaves the previous
+// a reader that finds it finds an index whose parts, and any assembled files and
+// page, are all already there. A run cut off anywhere before it leaves the previous
 // snapshot as the current one, and a second run resumes: parts are named by their
 // hash and are never sent twice.
 
 // dhPublishStore is the bucket as a publish uses it. *S3Client is the real one.
 type dhPublishStore interface {
 	dhPruneStore
+	dhAssembleStore
 	HeadObject(ctx context.Context, key string) (S3ObjectInfo, bool, error)
 	PutObject(ctx context.Context, key, localPath string, opts S3PutOptions) error
 	PutObjectBytes(ctx context.Context, key string, data []byte, opts S3PutOptions) error
@@ -52,15 +57,20 @@ type dhPublishPlan struct {
 	// PublicBaseURL, when the destination has one, is where the published
 	// latest.json is linked from; otherwise the bucket's own object address is.
 	PublicBaseURL string
-	Narrate       func(line string)
+	// DownloadPage stores each level's whole database and an index.html linking
+	// them beside the index, for players without a launcher. It doubles what a
+	// snapshot takes in the bucket, so it is off unless the node turns it on.
+	DownloadPage bool
+	Narrate      func(line string)
 }
 
 // dhPublishResult is what a publish did. It is filled in as far as the run got.
 type dhPublishResult struct {
-	URL           string
-	PartsUploaded int
-	PartsSkipped  int
-	BytesSent     int64
+	URL             string
+	PartsUploaded   int
+	PartsSkipped    int
+	BytesSent       int64
+	LevelsAssembled int
 
 	// What the prune after the publish deleted, and Warning when it could not run
 	// to the end. A failed prune is not a failed publish: the snapshot is up and
@@ -125,6 +135,15 @@ func runDHPublish(ctx context.Context, plan dhPublishPlan) (dhPublishResult, err
 	if err != nil {
 		return res, err
 	}
+	var page []byte
+	if plan.DownloadPage {
+		if err := checkDHIndexForAssembly(st.Index); err != nil {
+			return res, err
+		}
+		if page, err = renderDHPage(st.Index); err != nil {
+			return res, err
+		}
+	}
 	if p.prev, err = readLatestIndex(ctx, plan.Store, st.Keys.Latest); err != nil {
 		return res, fmt.Errorf("cannot read the previous snapshot from %s: %w", plan.Label, err)
 	}
@@ -139,6 +158,15 @@ func runDHPublish(ctx context.Context, plan dhPublishPlan) (dhPublishResult, err
 	if err := p.sendParts(ctx, st, parts, &res); err != nil {
 		return res, err
 	}
+	if plan.DownloadPage {
+		if err := p.assembleLevels(ctx, st, &res); err != nil {
+			return res, err
+		}
+		p.narrate("Writing the download page")
+		if err := plan.Store.PutObjectBytes(ctx, st.Keys.Page, page, S3PutOptions{}); err != nil {
+			return res, readableUploadError(err)
+		}
+	}
 
 	p.narrate("Writing the index")
 	if err := plan.Store.PutObjectBytes(ctx, st.Keys.Index, st.IndexBytes, S3PutOptions{}); err != nil {
@@ -149,6 +177,9 @@ func runDHPublish(ctx context.Context, plan dhPublishPlan) (dhPublishResult, err
 	}
 	res.URL = p.redact(p.publishedURL(st.Keys.Latest))
 	p.narrate("Published: " + res.URL)
+	if plan.DownloadPage {
+		p.narrate("Download page: " + p.redact(p.publishedURL(st.Keys.Page)))
+	}
 	if p.Token != "" {
 		p.narrate("The snapshot is under a private link: copy it from Settings, in the destination's Snapshot link row")
 	}
@@ -225,8 +256,9 @@ func readBounded(p string, limit int64) ([]byte, error) {
 
 // checkDHIndexForPublish refuses an index that cannot be published as stated,
 // and returns the time it was taken. A level needs at least one part; every part
-// but a level's last is the same length, as the snapshot block cuts them; and a
-// folder or hash that would become a path is refused.
+// but a level's last is the same length, as the snapshot block cuts them and as
+// R2 requires of the parts of an upload; and a folder or hash that would become
+// a path is refused.
 func checkDHIndexForPublish(ix DHIndex) (time.Time, error) {
 	if len(ix.Levels) == 0 {
 		return time.Time{}, errors.New("the snapshot has no levels, so there is nothing to publish")
@@ -252,6 +284,17 @@ func checkDHIndexForPublish(ix DHIndex) (time.Time, error) {
 		}
 	}
 	return created, nil
+}
+
+// checkDHIndexForAssembly refuses, before anything is sent, a level with more
+// parts than one multipart upload takes: its whole file cannot be assembled.
+func checkDHIndexForAssembly(ix DHIndex) error {
+	for _, l := range ix.Levels {
+		if len(l.Parts) > s3MaxMultipartParts {
+			return fmt.Errorf("level %s has %d parts, over the %d one whole file may have: turn off Download page to publish it", l.Folder, len(l.Parts), s3MaxMultipartParts)
+		}
+	}
+	return nil
 }
 
 func checkDHLevelForPublish(l DHIndexLevel) error {
@@ -417,6 +460,74 @@ func (p *dhPublisher) sendParts(ctx context.Context, st dhStaged, parts []dhPart
 		p.narrate(fmt.Sprintf("Upload finished: %d sent (%s), %d already there", res.PartsUploaded, fmtBytes(res.BytesSent), res.PartsSkipped))
 	}
 	return nil
+}
+
+// --- assembling ---
+
+// assembleLevels builds each level's whole database in the bucket, in index
+// order, and counts the levels done.
+func (p *dhPublisher) assembleLevels(ctx context.Context, st dhStaged, res *dhPublishResult) error {
+	for _, l := range st.Index.Levels {
+		if err := ctx.Err(); err != nil {
+			return err
+		}
+		if err := p.assembleLevel(ctx, st, l); err != nil {
+			return fmt.Errorf("assemble %s: %w", l.Folder, readableUploadError(err))
+		}
+		res.LevelsAssembled++
+	}
+	return nil
+}
+
+// assembleLevel makes level l's file at its assembled key. A level whose
+// whole-file hash is the same level's in the previous snapshot, and whose
+// previous assembled file is still in the bucket at the right size, is copied
+// from that file in large ranges; any other level, or one whose previous file
+// cannot be confirmed, is built from its parts.
+func (p *dhPublisher) assembleLevel(ctx context.Context, st dhStaged, l DHIndexLevel) error {
+	dest := st.Keys.AssembledKey(l.Folder)
+	steps := partCopySteps(st.Keys, l)
+	how := fmt.Sprintf("from its %d part(s)", len(steps))
+	if src, ok := p.unchangedPreviousFile(ctx, l); ok {
+		steps = previousObjectCopies(src, l.Size)
+		how = fmt.Sprintf("by copying the previous snapshot's file in %d range(s)", len(steps))
+	}
+	p.narrate(fmt.Sprintf("Assembling %s (%s) %s", l.Folder, fmtBytes(l.Size), how))
+	last := time.Now()
+	err := assembleDHObject(ctx, p.Store, dest, steps, func(done, total int) {
+		if done < total && time.Since(last) >= uploadProgressEvery {
+			last = time.Now()
+			p.narrate(fmt.Sprintf("Assembling %s: %d of %d copied", l.Folder, done, total))
+		}
+	})
+	if err != nil {
+		return err
+	}
+	p.narrate("Assembled " + l.Folder)
+	return nil
+}
+
+// unchangedPreviousFile returns the key of the previous snapshot's assembled
+// file for level l when l did not change and that file is in the bucket at l's
+// size. Any trouble confirming it, an error included, means "build it from
+// parts": the copy is an optimisation, and the parts are always enough.
+func (p *dhPublisher) unchangedPreviousFile(ctx context.Context, l DHIndexLevel) (string, bool) {
+	if p.prev == nil {
+		return "", false
+	}
+	for _, pl := range p.prev.Index.Levels {
+		if pl.Folder != l.Folder || pl.SHA256 != l.SHA256 || pl.Size != l.Size {
+			continue
+		}
+		key := path.Join(path.Dir(p.prev.IndexKey), l.Folder, dhDatabaseName)
+		info, found, err := p.Store.HeadObject(ctx, key)
+		if err != nil || !found || info.Size != l.Size {
+			p.narrate(fmt.Sprintf("The previous file for %s could not be confirmed, so it is built from parts instead", l.Folder))
+			return "", false
+		}
+		return key, true
+	}
+	return "", false
 }
 
 // --- the pointer, last ---

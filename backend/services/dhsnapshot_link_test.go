@@ -340,8 +340,8 @@ func snapshotFile(token, name string) string {
 }
 
 // assertSnapshotAt checks that the whole latest snapshot is readable under the
-// layout token names: the pointer, the index with the right partsBase, and
-// every part it names.
+// layout token names: the pointer, the index with the right partsBase, the page,
+// and each level's database byte for byte.
 func (f *linkFixture) assertSnapshotAt(token string) {
 	f.t.Helper()
 	latest, err := parseDHLatest(f.bucket.object(base(token) + "/latest.json"))
@@ -365,7 +365,21 @@ func (f *linkFixture) assertSnapshotAt(token string) {
 	if latest.CreatedAt != ix.CreatedAt || ix.CreatedAt != formatDHCreatedAt(dhPubTime1) {
 		f.t.Errorf("createdAt: latest %q, index %q", latest.CreatedAt, ix.CreatedAt)
 	}
+	page, err := renderDHPage(ix)
+	if err != nil {
+		f.t.Fatal(err)
+	}
+	if !bytes.Equal(f.bucket.object(snapshotFile(token, "index.html")), page) {
+		f.t.Error("the page is not the one rendered for the index")
+	}
+	if f.bucket.contentType(snapshotFile(token, "index.html")) != "text/html; charset=utf-8" {
+		f.t.Errorf("the page's content type is %q", f.bucket.contentType(snapshotFile(token, "index.html")))
+	}
+	dbs := dhPubDBs()
 	for _, l := range ix.Levels {
+		if !bytes.Equal(f.bucket.object(snapshotFile(token, l.Folder+"/"+dhDatabaseName)), dbs[l.Folder]) {
+			f.t.Errorf("level %s under %q is not the database", l.Folder, base(token))
+		}
 		for _, p := range l.Parts {
 			if len(f.bucket.object("dh/parts/"+p.SHA256)) == 0 {
 				f.t.Errorf("part %s is gone", p.SHA256)
@@ -403,6 +417,14 @@ func wireLabel(r wireReq) string {
 			keys[i] = o.Key
 		}
 		return "delete " + strings.Join(keys, ",")
+	case r.isCreate():
+		return "create " + r.Key
+	case r.isComplete():
+		return "complete " + r.Key
+	case r.isCopy():
+		return "partcopy " + r.Key
+	case r.Method == http.MethodPut && r.Header.Get("X-Amz-Copy-Source") != "":
+		return "copy " + r.Key
 	}
 	return strings.ToLower(r.Method) + " " + r.Key
 }
@@ -479,7 +501,10 @@ func TestDHLinkPublicToPrivateMoveOrder(t *testing.T) {
 	order := []string{
 		"get dh/latest.json",
 		"get dh/snapshots/" + dhPubCreated1 + "/index.json",
+		"copy " + snapshotFile(tok, "index.html"),
 		"put " + snapshotFile(tok, "index.json"),
+		"create " + snapshotFile(tok, dhPubOverworld+"/"+dhDatabaseName),
+		"complete " + snapshotFile(tok, dhPubNether+"/"+dhDatabaseName),
 		newLatest,
 		"list dh/snapshots/",
 		"delete dh/latest.json",
@@ -495,9 +520,12 @@ func TestDHLinkPublicToPrivateMoveOrder(t *testing.T) {
 	if at, lastWrite := first(labels, newLatest), last(labels, "put "); at != lastWrite {
 		t.Errorf("latest.json is request %d but the last write is %d: it must come last", at, lastWrite)
 	}
+	if lastComplete := last(labels, "complete "); lastComplete > first(labels, newLatest) {
+		t.Error("a level was still being assembled when latest.json was written")
+	}
 	// No request but the index PUT carries data, and nothing touches a part.
 	for _, r := range f.wire() {
-		if strings.Contains(r.Key, "/parts/") && r.Method != http.MethodGet {
+		if strings.Contains(r.Key, "/parts/") && r.Method != http.MethodGet && !r.isCopy() {
 			t.Errorf("%s %s: a part was touched", r.Method, r.Key)
 		}
 	}
@@ -515,6 +543,14 @@ func TestDHLinkPublicToPrivateMoveOrder(t *testing.T) {
 			t.Errorf("second delete names %s", k)
 		}
 	}
+}
+
+// copiesSoFar is how many UploadPartCopy requests the bucket has seen, so a
+// failure can be aimed at the Nth one after now.
+func (b *fakeBucket) copiesSoFar() int {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	return b.multipartOps["copy"]
 }
 
 func partKeysOf(objs map[string][]byte) []string {
@@ -550,6 +586,63 @@ func TestDHLinkMovedIndexIsTheSameIndexWithOnlyPartsBaseRewritten(t *testing.T) 
 	// The parts the index names resolve from the moved index's own location.
 	if _, ok := f.bucket.snapshot()["dh/parts/"+orig.Levels[0].Parts[0].SHA256]; !ok {
 		t.Error("a part the moved index names is not where partsBase leads")
+	}
+}
+
+// A move rebuilds levels from the old file in ranges, and from parts when it is gone.
+func TestDHLinkMoveRebuildsLevelsFromRangesOrParts(t *testing.T) {
+	shrinkCopyRange(t, 2*dhTestPart)
+	f := newLinkFixture(t)
+	f.publishPublic()
+	// The nether's old file is gone: it must be rebuilt from its parts.
+	f.drop(snapshotFile("", dhPubNether+"/"+dhDatabaseName))
+	f.reset()
+	if _, err := f.set(true); err != nil {
+		t.Fatal(err)
+	}
+	tok := f.token()
+	f.assertSnapshotAt(tok)
+
+	over := assembledKey(dhPubCreated1, dhPubOverworld)
+	var fromOld, fromParts int
+	for _, r := range f.wire() {
+		if !r.isCopy() {
+			continue
+		}
+		src := r.Header.Get("X-Amz-Copy-Source")
+		switch {
+		case r.Key == snapshotFile(tok, dhPubOverworld+"/"+dhDatabaseName):
+			if src != "/snapshots/"+s3URIEncode(over, false) || r.Header.Get("X-Amz-Copy-Source-Range") == "" {
+				t.Errorf("overworld copy from %q range %q: want ranges of the old file", src, r.Header.Get("X-Amz-Copy-Source-Range"))
+			}
+			fromOld++
+		case r.Key == snapshotFile(tok, dhPubNether+"/"+dhDatabaseName):
+			if !strings.HasPrefix(src, "/snapshots/dh/parts/") || r.Header.Get("X-Amz-Copy-Source-Range") != "" {
+				t.Errorf("nether copy from %q: want whole parts", src)
+			}
+			fromParts++
+		}
+	}
+	// 3*1024+100 bytes in 2 KiB ranges is 2 ranges; the nether is 2 parts.
+	if fromOld != 2 || fromParts != 2 {
+		t.Errorf("%d copies from the old file and %d from parts, want 2 and 2", fromOld, fromParts)
+	}
+}
+
+func TestDHLinkMoveNeverUsesCopyObjectForADatabase(t *testing.T) {
+	f := newLinkFixture(t)
+	f.publishPublic()
+	f.bucket.mu.Lock()
+	f.bucket.copies = nil
+	f.bucket.mu.Unlock()
+	if _, err := f.set(true); err != nil {
+		t.Fatal(err)
+	}
+	f.bucket.mu.Lock()
+	copies := append([]string(nil), f.bucket.copies...)
+	f.bucket.mu.Unlock()
+	if len(copies) != 1 || copies[0] != snapshotFile(f.token(), "index.html") {
+		t.Errorf("CopyObject was used for %v, want only index.html (S3 caps one copy at 5 GiB)", copies)
 	}
 }
 
@@ -621,7 +714,9 @@ func TestDHLinkRotateMovesToANewTokenAndRevokesTheOldOne(t *testing.T) {
 	labels := f.labels()
 	for i, want := range []string{
 		"get dh/" + old + "/latest.json",
+		"copy " + snapshotFile(tok, "index.html"),
 		"put " + snapshotFile(tok, "index.json"),
+		"complete " + snapshotFile(tok, dhPubNether+"/"+dhDatabaseName),
 		"put dh/" + tok + "/latest.json",
 		"list dh/" + old + "/snapshots/",
 		"delete dh/" + old + "/latest.json",
@@ -726,8 +821,9 @@ func TestDHLinkEmptyPrefixIsOnlyARecordChange(t *testing.T) {
 func TestDHLinkMoveCutOffKeepsOldLinkAndPendingToken(t *testing.T) {
 	f := newLinkFixture(t)
 	f.publishPublic()
-	f.bucket.setFail(func(key string, _ int) (int, string) {
-		if strings.HasSuffix(key, "/index.json") {
+	copies := f.bucket.copiesSoFar()
+	f.bucket.setFailMultipart(func(op string, n int) (int, string) {
+		if op == "copy" && n == copies+2 {
 			return http.StatusForbidden, "SignatureDoesNotMatch"
 		}
 		return 0, ""
@@ -735,7 +831,7 @@ func TestDHLinkMoveCutOffKeepsOldLinkAndPendingToken(t *testing.T) {
 	f.reset()
 	_, err := f.set(true)
 	if err == nil {
-		t.Fatal("a failed move succeeded")
+		t.Fatal("a failed assembly succeeded")
 	}
 	rec := f.record()
 	pending := rec.Pending
@@ -755,11 +851,14 @@ func TestDHLinkMoveCutOffKeepsOldLinkAndPendingToken(t *testing.T) {
 	if f.has("dh/" + pending + "/latest.json") {
 		t.Error("the new latest.json was written by a failed move")
 	}
+	if f.bucket.openUploads() != 0 {
+		t.Error("an upload was left open")
+	}
 	if n := len(f.bucket.deletedKeys()); n != 0 {
 		t.Errorf("%d keys deleted by a failed move", n)
 	}
 
-	f.bucket.setFail(nil)
+	f.bucket.setFailMultipart(nil)
 	if _, err := f.set(true); err != nil {
 		t.Fatal(err)
 	}
@@ -781,8 +880,8 @@ func TestDHLinkRotationCutOffReusesPendingToken(t *testing.T) {
 		t.Fatal(err)
 	}
 	old := f.token()
-	f.bucket.setFail(func(key string, _ int) (int, string) {
-		if strings.HasSuffix(key, "/latest.json") {
+	f.bucket.setFailMultipart(func(op string, n int) (int, string) {
+		if op == "complete" {
 			return http.StatusInternalServerError, "InternalError"
 		}
 		return 0, ""
@@ -797,7 +896,7 @@ func TestDHLinkRotationCutOffReusesPendingToken(t *testing.T) {
 	f.assertSnapshotAt(old)
 	pending := rec.Pending
 
-	f.bucket.setFail(nil)
+	f.bucket.setFailMultipart(nil)
 	if _, err := f.rotate(); err != nil {
 		t.Fatal(err)
 	}
@@ -937,8 +1036,9 @@ func TestDHLinkAMoveStopsWhenItsContextIsCancelled(t *testing.T) {
 	f := newLinkFixture(t)
 	f.publishPublic()
 	ctx, cancel := context.WithCancel(context.Background())
-	f.bucket.setFail(func(key string, _ int) (int, string) {
-		if strings.HasSuffix(key, "/index.json") {
+	copies := f.bucket.copiesSoFar()
+	f.bucket.setFailMultipart(func(op string, n int) (int, string) {
+		if op == "copy" && n == copies+1 {
 			cancel()
 		}
 		return 0, ""
@@ -949,6 +1049,9 @@ func TestDHLinkAMoveStopsWhenItsContextIsCancelled(t *testing.T) {
 	f.assertSnapshotAt("")
 	if f.token() != "" {
 		t.Error("a cancelled move committed")
+	}
+	if f.bucket.openUploads() != 0 {
+		t.Error("an upload was left open by a cancelled move")
 	}
 }
 
@@ -1103,5 +1206,31 @@ func TestDHLinkMoveToTheSameLayoutIsRefused(t *testing.T) {
 	f.bucket.put(snapshotFile("", "index.json"), []byte(`{"format":1,"createdAt":"x","levels":[]}`))
 	if _, err := moveDHSnapshotLink(context.Background(), f.client, "dh", "", testLinkToken, nil); err == nil {
 		t.Error("an index with no levels was moved")
+	}
+}
+
+// A snapshot published without a download page moves as its index alone.
+func TestDHLinkMoveWithoutPageMovesTheIndexOnly(t *testing.T) {
+	f := newLinkFixture(t)
+	f.plan.DownloadPage = false
+	f.publishPublic()
+	f.reset()
+	res, err := f.set(true)
+	if err != nil || !res.Private {
+		t.Fatalf("set private = %+v, %v", res, err)
+	}
+	tok := f.token()
+	for _, k := range []string{base(tok) + "/latest.json", snapshotFile(tok, "index.json")} {
+		if !f.has(k) {
+			t.Errorf("%s is not in the bucket", k)
+		}
+	}
+	if f.has(snapshotFile(tok, "index.html")) || f.has(snapshotFile(tok, dhPubOverworld+"/"+dhDatabaseName)) {
+		t.Error("the move made a page or a whole file the snapshot never had")
+	}
+	for _, l := range f.labels() {
+		if strings.HasPrefix(l, "copy ") || strings.HasPrefix(l, "create ") || strings.HasPrefix(l, "partcopy ") {
+			t.Errorf("move sent %q for a snapshot without a page", l)
+		}
 	}
 }

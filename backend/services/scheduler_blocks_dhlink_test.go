@@ -76,6 +76,8 @@ func TestDHPublishBlockPrivateModeRedactsTheURL(t *testing.T) {
 	for _, k := range []string{
 		"dh/snap/" + tok + "/latest.json",
 		"dh/snap/" + tok + "/snapshots/" + dhPubCreated1 + "/index.json",
+		"dh/snap/" + tok + "/snapshots/" + dhPubCreated1 + "/index.html",
+		"dh/snap/" + tok + "/snapshots/" + dhPubCreated1 + "/" + dhPubOverworld + "/" + dhDatabaseName,
 	} {
 		if _, ok := objs[k]; !ok {
 			t.Errorf("%s is not in the bucket; have %v", k, f.bucket.keys())
@@ -172,10 +174,10 @@ func TestDHPublishBlockPrivateFailureHidesTheToken(t *testing.T) {
 
 	f, _, tok := privateBlockFixture(t)
 	f.stageForToken(t, "srv1", tok, dhPubDBs())
-	// The bucket takes the parts, then refuses the index, whose key carries the
-	// token, and its own message echoes the secret back.
-	f.bucket.setFail(func(key string, _ int) (int, string) {
-		if strings.HasSuffix(key, "/index.json") {
+	// The bucket takes the parts, then refuses the assembly of a key that carries
+	// the token, and its own message echoes both the secret and the key back.
+	f.bucket.setFailMultipart(func(op string, n int) (int, string) {
+		if op == "copy" && n == 2 {
 			return http.StatusForbidden, "SignatureDoesNotMatch"
 		}
 		return 0, ""
