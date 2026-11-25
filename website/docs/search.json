@@ -3,6 +3,7 @@
     "url": "/docs/blocks/action-backup.html",
     "title": "Create Backup",
     "kind": "reference",
+    "type": "Scheduler block",
     "lead": "Zips the whole server, or only its active world, into a backup archive.",
     "sections": [
       {
@@ -31,6 +32,7 @@
     "url": "/docs/blocks/action-command.html",
     "title": "Command",
     "kind": "reference",
+    "type": "Scheduler block",
     "lead": "Sends a line to the server console, or starts, stops or restarts the server.",
     "sections": [
       {
@@ -59,6 +61,7 @@
     "url": "/docs/blocks/action-delay.html",
     "title": "Delay",
     "kind": "reference",
+    "type": "Scheduler block",
     "lead": "Waits a set number of seconds, then continues.",
     "sections": [
       {
@@ -87,6 +90,7 @@
     "url": "/docs/blocks/action-dhPublish.html",
     "title": "Publish DH Snapshot",
     "kind": "reference",
+    "type": "Scheduler block",
     "lead": "Uploads a staged Distant Horizons snapshot to a bucket and publishes its download page.",
     "sections": [
       {
@@ -115,6 +119,7 @@
     "url": "/docs/blocks/action-dhSnapshot.html",
     "title": "DH Snapshot",
     "kind": "reference",
+    "type": "Scheduler block",
     "lead": "Stages a snapshot of the server's Distant Horizons data, stopping a running server for the copy.",
     "sections": [
       {
@@ -143,6 +148,7 @@
     "url": "/docs/blocks/action-httpRequest.html",
     "title": "HTTP Request",
     "kind": "reference",
+    "type": "Scheduler block",
     "lead": "Sends an HTTP request to a URL and outputs the status and the response body.",
     "sections": [
       {
@@ -171,6 +177,7 @@
     "url": "/docs/blocks/action-modpackCheck.html",
     "title": "Check Modpack",
     "kind": "reference",
+    "type": "Scheduler block",
     "lead": "Checks whether the server's mods differ from its bound pack, and stages the downloads.",
     "sections": [
       {
@@ -195,6 +202,7 @@
     "url": "/docs/blocks/action-modpackSync.html",
     "title": "Sync Modpack",
     "kind": "reference",
+    "type": "Scheduler block",
     "lead": "Brings a stopped server's mods in line with its bound pack.",
     "sections": [
       {
@@ -219,6 +227,7 @@
     "url": "/docs/blocks/action-notify.html",
     "title": "Notify",
     "kind": "reference",
+    "type": "Scheduler block",
     "lead": "Shows a message in the app, as a desktop notification, or both.",
     "sections": [
       {
@@ -242,6 +251,7 @@
     "url": "/docs/blocks/action-rcon.html",
     "title": "RCON Command",
     "kind": "reference",
+    "type": "Scheduler block",
     "lead": "Sends a command over RCON and returns the server's reply.",
     "sections": [
       {
@@ -270,6 +280,7 @@
     "url": "/docs/blocks/action-upload.html",
     "title": "Upload to Bucket",
     "kind": "reference",
+    "type": "Scheduler block",
     "lead": "Uploads a file or folder from the server to a bucket, skipping what is already there.",
     "sections": [
       {
@@ -298,6 +309,7 @@
     "url": "/docs/blocks/control-condition.html",
     "title": "Condition",
     "kind": "reference",
+    "type": "Scheduler block",
     "lead": "Branches on a comparison of A and B, or on a logic gate over the two.",
     "sections": [
       {
@@ -321,6 +333,7 @@
     "url": "/docs/blocks/data-constant.html",
     "title": "Constant",
     "kind": "reference",
+    "type": "Scheduler block",
     "lead": "Outputs a fixed value of a chosen type.",
     "sections": [
       { "id": "ports", "title": "Ports", "text": "Constant data in None out Value auto" },
@@ -340,6 +353,7 @@
     "url": "/docs/blocks/data-mathOp.html",
     "title": "Math",
     "kind": "reference",
+    "type": "Scheduler block",
     "lead": "Outputs the result of arithmetic on two numbers.",
     "sections": [
       {
@@ -363,6 +377,7 @@
     "url": "/docs/blocks/data-randomNumber.html",
     "title": "Random Number",
     "kind": "reference",
+    "type": "Scheduler block",
     "lead": "Outputs a random number between Min and Max.",
     "sections": [
       {
@@ -386,6 +401,7 @@
     "url": "/docs/blocks/data-serverAttribute.html",
     "title": "Read Attribute",
     "kind": "reference",
+    "type": "Scheduler block",
     "lead": "Outputs the live value of a server attribute, or of a custom attribute set earlier in the run.",
     "sections": [
       { "id": "ports", "title": "Ports", "text": "Read Attribute data in None out Value auto" },
@@ -405,6 +421,7 @@
     "url": "/docs/blocks/data-writeAttribute.html",
     "title": "Write Attribute",
     "kind": "reference",
+    "type": "Scheduler block",
     "lead": "Writes a server attribute such as server.motd, or defines a custom attribute for the blocks after it.",
     "sections": [
       {
@@ -433,6 +450,7 @@
     "url": "/docs/blocks/",
     "title": "Scheduler blocks",
     "kind": "reference",
+    "type": "Reference",
     "lead": "The blocks a scheduler graph is built from.",
     "sections": []
   },
@@ -440,6 +458,7 @@
     "url": "/docs/blocks/trigger-backup.html",
     "title": "Backup",
     "kind": "reference",
+    "type": "Scheduler block",
     "lead": "Starts a run when a backup finishes or fails.",
     "sections": [
       {
@@ -463,6 +482,7 @@
     "url": "/docs/blocks/trigger-cron.html",
     "title": "Cron Schedule",
     "kind": "reference",
+    "type": "Scheduler block",
     "lead": "Starts a run whenever the clock matches a cron expression.",
     "sections": [
       {
@@ -486,6 +506,7 @@
     "url": "/docs/blocks/trigger-interval.html",
     "title": "Interval",
     "kind": "reference",
+    "type": "Scheduler block",
     "lead": "Starts a run every set number of minutes.",
     "sections": [
       {
@@ -509,6 +530,7 @@
     "url": "/docs/blocks/trigger-player.html",
     "title": "Player",
     "kind": "reference",
+    "type": "Scheduler block",
     "lead": "Starts a run when a player joins or leaves the server.",
     "sections": [
       {
@@ -532,6 +554,7 @@
     "url": "/docs/blocks/trigger-server.html",
     "title": "Server",
     "kind": "reference",
+    "type": "Scheduler block",
     "lead": "Starts a run when the server starts, stops or crashes.",
     "sections": [
       {
@@ -555,6 +578,7 @@
     "url": "/docs/blocks/trigger-timeOfDay.html",
     "title": "Time of Day",
     "kind": "reference",
+    "type": "Scheduler block",
     "lead": "Starts a run once a day at a set time.",
     "sections": [
       {
@@ -578,6 +602,7 @@
     "url": "/docs/blocks/trigger-tpsThreshold.html",
     "title": "TPS Below Threshold",
     "kind": "reference",
+    "type": "Scheduler block",
     "lead": "Starts a run when the server's TPS falls below a threshold.",
     "sections": [
       {
@@ -601,6 +626,7 @@
     "url": "/docs/bucket-layout.html",
     "title": "What ends up in the bucket",
     "kind": "reference",
+    "type": "Reference",
     "lead": "The keys Konnekt writes under a destination's prefix for uploads and snapshots, and when it deletes them.",
     "sections": [
       {
@@ -634,6 +660,7 @@
     "url": "/docs/crash-restart.html",
     "title": "Restart after a crash",
     "kind": "guide",
+    "type": "Tutorial",
     "lead": "Start the server again each time it crashes.",
     "sections": [
       {
@@ -667,6 +694,7 @@
     "url": "/docs/cron.html",
     "title": "Cron expressions",
     "kind": "reference",
+    "type": "Reference",
     "lead": "The Cron Schedule block fires when the clock matches a five-field expression.",
     "sections": [
       {
@@ -695,6 +723,7 @@
     "url": "/docs/dh-publish.html",
     "title": "Publish Distant Horizons LODs",
     "kind": "guide",
+    "type": "Tutorial",
     "lead": "Publish the server's Distant Horizons data to a bucket as a snapshot others can download.",
     "sections": [
       {
@@ -748,6 +777,7 @@
     "url": "/docs/faq.html",
     "title": "FAQ",
     "kind": "reference",
+    "type": "Reference",
     "lead": "Short answers about Konnekt, servers and updates.",
     "sections": [
       {
@@ -771,6 +801,7 @@
     "url": "/docs/first-server.html",
     "title": "Your first server",
     "kind": "guide",
+    "type": "Guide",
     "lead": "Point Konnekt at a server you already have, start it, and join it from Minecraft.",
     "sections": [
       {
@@ -804,6 +835,7 @@
     "url": "/docs/graphs.html",
     "title": "How a graph runs",
     "kind": "concept",
+    "type": "Concept",
     "lead": "A graph is a set of wired blocks that a trigger starts and that then run one at a time.",
     "sections": [
       {
@@ -827,6 +859,7 @@
     "url": "/docs/install.html",
     "title": "Install Konnekt",
     "kind": "guide",
+    "type": "Guide",
     "lead": "Download the file for your system and open it.",
     "sections": [
       {
@@ -870,6 +903,7 @@
     "url": "/docs/layouts.html",
     "title": "Tiles and layouts",
     "kind": "concept",
+    "type": "Concept",
     "lead": "Arrange the dashboard's tiles on a grid, then save the arrangement as a layout.",
     "sections": [
       {
@@ -898,6 +932,7 @@
     "url": "/docs/modpack-sync.html",
     "title": "Keep a server in sync with a modpack",
     "kind": "guide",
+    "type": "Tutorial",
     "lead": "Point a modded server at a packwiz pack, check what changed, apply it, and roll it back.",
     "sections": [
       {
@@ -951,6 +986,7 @@
     "url": "/docs/nightly-backup.html",
     "title": "Back up every night when empty",
     "kind": "guide",
+    "type": "Tutorial",
     "lead": "Back up the server at 04:00, but only on nights when no player is online.",
     "sections": [
       {
@@ -989,6 +1025,7 @@
     "url": "/docs/r2-bucket.html",
     "title": "Save a Cloudflare R2 bucket",
     "kind": "guide",
+    "type": "Tutorial",
     "lead": "Connect a Cloudflare R2 bucket to Konnekt so scheduler blocks can upload to it.",
     "sections": [
       {
@@ -1027,6 +1064,7 @@
     "url": "/docs/requirements.html",
     "title": "Requirements and platforms",
     "kind": "reference",
+    "type": "Reference",
     "lead": "Konnekt needs a 64-bit computer and the server you already run.",
     "sections": [
       {
@@ -1050,6 +1088,7 @@
     "url": "/docs/scheduler-editor.html",
     "title": "Scheduler editor",
     "kind": "reference",
+    "type": "Reference",
     "lead": "The scheduler editor, opened by maximizing the Scheduler tile, wires blocks into graphs that run on a trigger.",
     "sections": [
       {
@@ -1088,6 +1127,7 @@
     "url": "/docs/settings/appearance.html",
     "title": "Appearance",
     "kind": "settings",
+    "type": "Settings",
     "lead": "The look of the dashboard: skin, colors, fonts, scrolling and hardware acceleration.",
     "sections": [
       {
@@ -1111,6 +1151,7 @@
     "url": "/docs/settings/console.html",
     "title": "Console",
     "kind": "settings",
+    "type": "Settings",
     "lead": "How many console lines Konnekt keeps, and whether each one shows its time.",
     "sections": [
       {
@@ -1124,6 +1165,7 @@
     "url": "/docs/settings/destinations.html",
     "title": "Destinations",
     "kind": "settings",
+    "type": "Settings",
     "lead": "Saved S3-compatible buckets that scheduler blocks upload to.",
     "sections": [
       {
@@ -1152,6 +1194,7 @@
     "url": "/docs/settings/general.html",
     "title": "General",
     "kind": "settings",
+    "type": "Settings",
     "lead": "How servers start and stop, and when Konnekt checks for updates.",
     "sections": [
       {
@@ -1170,6 +1213,7 @@
     "url": "/docs/settings/notifications.html",
     "title": "Notifications",
     "kind": "settings",
+    "type": "Settings",
     "lead": "Which events raise an operating system notification, and which raise an in-app bubble.",
     "sections": [
       {
@@ -1188,6 +1232,7 @@
     "url": "/docs/settings/remote-access.html",
     "title": "Remote Access",
     "kind": "settings",
+    "type": "Settings",
     "lead": "Serves the dashboard to a browser and to Claude, on this computer or through a tunnel.",
     "sections": [
       {
@@ -1221,6 +1266,7 @@
     "url": "/docs/tiles.html",
     "title": "Tiles",
     "kind": "reference",
+    "type": "Reference",
     "lead": "Eleven tiles that show and control the selected server.",
     "sections": [
       {
@@ -1284,6 +1330,7 @@
     "url": "/docs/timed-restart.html",
     "title": "Warn, then restart every 6 hours",
     "kind": "guide",
+    "type": "Tutorial",
     "lead": "Tell players a restart is coming, then restart the server every 6 hours.",
     "sections": [
       {

@@ -148,6 +148,11 @@
       section.textContent = hit.s.s.title
       title.append(section)
     }
+    var type = document.createElement('span')
+    type.className = 'kind'
+    type.setAttribute('data-kind', page.kind)
+    type.textContent = page.type
+    title.append(type)
     link.append(title, snippet(hit.s ? hit.s.s.text : page.lead, q))
     return link
   }
