@@ -54,12 +54,10 @@ func dhSource(t *testing.T, dbs map[string][]byte) DHSnapshotSource {
 	return src
 }
 
-func TestDHPartSizeIsAboveTheMultipartMinimum(t *testing.T) {
+func TestDHPartSizeIs8MiB(t *testing.T) {
+	// Changing it changes every part hash, so every bucket re-uploads everything.
 	if DHPartSize != 8<<20 {
 		t.Errorf("DHPartSize = %d, want 8 MiB", DHPartSize)
-	}
-	if DHPartSize < 5<<20 {
-		t.Error("parts below 5 MiB cannot be assembled with UploadPartCopy")
 	}
 }
 
@@ -325,7 +323,6 @@ func TestSnapshotKeys(t *testing.T) {
 			CreatedAt:   "2026-10-11T04:00:00Z",
 			Latest:      "frangfurd/dh/latest.json",
 			Index:       "frangfurd/dh/snapshots/20261011T040000Z/index.json",
-			Page:        "frangfurd/dh/snapshots/20261011T040000Z/index.html",
 			PartsPrefix: "frangfurd/dh/parts/",
 			PartsBase:   "../../parts/",
 		}
@@ -341,8 +338,7 @@ func TestSnapshotKeys(t *testing.T) {
 			t.Fatal(err)
 		}
 		if k.Latest != "frangfurd/dh/abcdefghijklmnopqrstuvwxyz/latest.json" ||
-			k.Index != "frangfurd/dh/abcdefghijklmnopqrstuvwxyz/snapshots/20261011T040000Z/index.json" ||
-			k.Page != "frangfurd/dh/abcdefghijklmnopqrstuvwxyz/snapshots/20261011T040000Z/index.html" {
+			k.Index != "frangfurd/dh/abcdefghijklmnopqrstuvwxyz/snapshots/20261011T040000Z/index.json" {
 			t.Errorf("small files are not under the token: %+v", k)
 		}
 		if k.PartsPrefix != "frangfurd/dh/parts/" || k.PartsBase != "../../../parts/" {
@@ -374,16 +370,13 @@ func TestSnapshotKeys(t *testing.T) {
 		}
 	})
 
-	t.Run("part and assembled keys", func(t *testing.T) {
+	t.Run("part key", func(t *testing.T) {
 		k, err := snapshotKeys("p", "tok", at)
 		if err != nil {
 			t.Fatal(err)
 		}
 		if got := k.PartKey("abc"); got != "p/parts/abc" {
 			t.Errorf("PartKey = %s", got)
-		}
-		if got := k.AssembledKey("pfx@minecraft@@overworld"); got != "p/tok/snapshots/20261011T040000Z/pfx@minecraft@@overworld/DistantHorizons.sqlite" {
-			t.Errorf("AssembledKey = %s", got)
 		}
 	})
 

@@ -1,7 +1,6 @@
 package services
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"log/slog"
@@ -90,7 +89,7 @@ func TestDHPublishBlockDefinition(t *testing.T) {
 	if got := strings.Join(ins, ","); got != "folder:string" {
 		t.Errorf("data inputs = %s", got)
 	}
-	if got := strings.Join(outs, ","); got != "url:string,partsUploaded:number,partsSkipped:number,bytesSent:number,levelsAssembled:number,snapshotsDeleted:number,partsDeleted:number,bytesFreed:number" {
+	if got := strings.Join(outs, ","); got != "url:string,partsUploaded:number,partsSkipped:number,bytesSent:number,snapshotsDeleted:number,partsDeleted:number,bytesFreed:number" {
 		t.Errorf("data outputs = %s", got)
 	}
 	fields := map[string]models.ConfigField{}
@@ -248,7 +247,7 @@ func TestDHPublishBlockPublishesTheRunsServersStagedFolder(t *testing.T) {
 	}
 	wantURL := f.bucket.URL + "/snapshots/dh/snap/latest.json"
 	want := map[string]interface{}{
-		"url": wantURL, "partsUploaded": 6.0, "partsSkipped": 0.0, "levelsAssembled": 2.0,
+		"url": wantURL, "partsUploaded": 6.0, "partsSkipped": 0.0,
 		"bytesSent": float64(3*dhTestPart + 100 + 2*dhTestPart),
 	}
 	for k, v := range want {
@@ -270,7 +269,7 @@ func TestDHPublishBlockPublishesTheRunsServersStagedFolder(t *testing.T) {
 		}
 	}
 	console := f.console("srv1")
-	for _, w := range []string{"Uploading 6 part(s)", `to "R2"`, "Assembling " + dhPubOverworld, "Published: " + wantURL} {
+	for _, w := range []string{"Uploading 6 part(s)", `to "R2"`, "Writing the index", "Published: " + wantURL} {
 		if !strings.Contains(console, w) {
 			t.Errorf("console lacks %q:\n%s", w, console)
 		}
@@ -373,10 +372,10 @@ func TestDHPublishBlockFailureEndsOnFailedAndTheSecretIsNowhere(t *testing.T) {
 
 	f := dhBlockFixture(t)
 	f.stageFor(t, "srv1", "7_alpha", dhPubDBs())
-	// The bucket takes the parts and then refuses the assembly with a message
-	// that echoes the secret back.
-	f.bucket.setFailMultipart(func(op string, n int) (int, string) {
-		if op == "copy" && n == 2 {
+	// The bucket takes the parts and then refuses the index with a message that
+	// echoes the secret back.
+	f.bucket.setFail(func(key string, _ int) (int, string) {
+		if strings.HasSuffix(key, "/index.json") {
 			return http.StatusForbidden, "SignatureDoesNotMatch"
 		}
 		return 0, ""
@@ -399,9 +398,6 @@ func TestDHPublishBlockFailureEndsOnFailedAndTheSecretIsNowhere(t *testing.T) {
 	}
 	if node.FiredPort != "onFailed" || !strings.Contains(node.Error, "SignatureDoesNotMatch") {
 		t.Errorf("node record = %+v", node)
-	}
-	if f.bucket.openUploads() != 0 {
-		t.Error("an upload was left open")
 	}
 	if _, ok := f.bucket.snapshot()["dh/latest.json"]; ok {
 		t.Error("latest.json was written by a failed run")
@@ -621,20 +617,4 @@ func TestDHSnapshotCannotStartWhileAPublishIsRunning(t *testing.T) {
 		t.Error("the claim was not released when the publish ended")
 	}
 	dhRelease("srv1")
-}
-
-func TestDHPublishUploadsThePageWithTheHTMLContentType(t *testing.T) {
-	f := dhBlockFixture(t)
-	f.stageFor(t, "srv1", "7_alpha", dhPubDBs())
-	if res, _ := f.execPublish("srv1", publishConfig()); res.Port != "onComplete" {
-		t.Fatalf("result = %+v", res)
-	}
-	page := "dh/snapshots/" + dhPubCreated1 + "/index.html"
-	if got := f.bucket.contentType(page); got != "text/html; charset=utf-8" {
-		t.Errorf("page content type = %q", got)
-	}
-	body := f.bucket.object(page)
-	if !bytes.Contains(body, []byte("7_alpha")) || !bytes.Contains(body, []byte(dhPubOverworld+"/DistantHorizons.sqlite")) {
-		t.Errorf("page:\n%s", body)
-	}
 }

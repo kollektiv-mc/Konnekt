@@ -18,10 +18,8 @@ import (
 )
 
 // DHPartSize is the size of one snapshot part. 8 MiB is a PROVISIONAL value,
-// pending dh_churn.py on two real Frangfurd backups (plan.md, "Measure"): it is
-// the smallest size that stays above R2's 5 MiB minimum for UploadPartCopy, so
-// the bucket can assemble whole files from the parts, and a synthetic test
-// changed 33% of 8 MiB parts against 100% of 64 MiB ones. Real churn is
+// pending dh_churn.py on two real Frangfurd backups (plan.md, "Measure"): a
+// synthetic test changed 33% of 8 MiB parts against 100% of 64 MiB ones. Real churn is
 // unmeasured. This is the one place the number lives, and the snapshot block
 // must not merge before the measurement is in.
 //
@@ -46,8 +44,8 @@ type DHIndexLevel struct {
 	// Folder is the client's level folder, "<levelKeyPrefix>@<ns>@@<path>".
 	Folder string `json:"folder"`
 	Size   int64  `json:"size"`
-	// SHA256 is the whole file's hash, so a client can check an assembled
-	// database without trusting the parts one by one.
+	// SHA256 is the whole file's hash, so a client can check the database it
+	// joined from the parts without trusting the parts one by one.
 	SHA256 string   `json:"sha256"`
 	Parts  []DHPart `json:"parts"`
 }
@@ -336,8 +334,6 @@ func stageDHSnapshotRun(src DHSnapshotSource, prev *DHIndex, keys SnapshotKeys, 
 //	<prefix>/parts/<sha256>
 //	<prefix>/latest.json
 //	<prefix>/snapshots/<createdAt>/index.json
-//	<prefix>/snapshots/<createdAt>/index.html
-//	<prefix>/snapshots/<createdAt>/<level folder>/DistantHorizons.sqlite
 //
 // Private layout: everything but parts/ moves under <prefix>/<token>/. The parts
 // stay put because a part's name is the hash of 8 MiB of data, which nobody can
@@ -347,10 +343,9 @@ type SnapshotKeys struct {
 	// CreatedAt is the snapshot's time as the index writes it; the folder under
 	// snapshots/ carries the compact form of the same instant.
 	CreatedAt string
-	// Latest, Index and Page are full object keys.
+	// Latest and Index are full object keys.
 	Latest string
 	Index  string
-	Page   string
 	// PartsPrefix is the parts folder's key, with a trailing slash; a part's key
 	// is PartsPrefix + hash.
 	PartsPrefix string
@@ -362,12 +357,6 @@ type SnapshotKeys struct {
 
 // PartKey is the object key of a part.
 func (k SnapshotKeys) PartKey(sha256 string) string { return k.PartsPrefix + sha256 }
-
-// AssembledKey is the object key of a level's whole database, assembled from
-// its parts in the bucket.
-func (k SnapshotKeys) AssembledKey(levelFolder string) string {
-	return path.Join(k.snapshotDir, levelFolder, dhDatabaseName)
-}
 
 // SnapshotsPrefix is the folder that holds every snapshot's own folder, with a
 // trailing slash: <prefix>/snapshots/ in the public layout, and one level
@@ -406,7 +395,6 @@ func snapshotKeys(prefix, token string, createdAt time.Time) (SnapshotKeys, erro
 		CreatedAt:   formatDHCreatedAt(createdAt),
 		Latest:      path.Join(base, "latest.json"),
 		Index:       path.Join(dir, "index.json"),
-		Page:        path.Join(dir, "index.html"),
 		PartsPrefix: partsPrefix,
 		PartsBase:   strings.Repeat("../", depth) + "parts/",
 		snapshotDir: dir,

@@ -16,8 +16,7 @@ const (
 
 	// dhPublishTimeoutSeconds is the longest the block may run: 12 hours. The
 	// first publish of a Distant Horizons snapshot sends about 20 GB, which a home
-	// upstream of 5 Mbit/s moves in under 9 hours and 10 Mbit/s in under 5, and
-	// the assembly that follows is copies inside the bucket, minutes at most. Every
+	// upstream of 5 Mbit/s moves in under 9 hours and 10 Mbit/s in under 5. Every
 	// later publish sends only the parts that changed. A run that reaches the limit
 	// stops with latest.json untouched, so readers still see the previous
 	// snapshot, and the next run resumes: a part already in the bucket is not sent
@@ -35,7 +34,7 @@ const (
 func registerDHPublishBlock(r *BlockRegistry) {
 	must(r.RegisterBlock(models.BlockDef{
 		ID: dhPublishBlockID, Category: "action", Group: dhBlockGroup, Label: "Publish DH Snapshot",
-		Description:   "Uploads a staged Distant Horizons snapshot to a bucket and publishes its download page.",
+		Description:   "Uploads a staged Distant Horizons snapshot to a bucket and publishes it.",
 		ControlInputs: []string{"trigger"}, ControlOutputs: []string{"onComplete", "onFailed"},
 		// Port id == config key (resolveDataInputs), so the snapshot block's
 		// folder output wires straight in and outranks the field.
@@ -47,7 +46,6 @@ func registerDHPublishBlock(r *BlockRegistry) {
 			{ID: "partsUploaded", Label: "Parts uploaded", Type: "number"},
 			{ID: "partsSkipped", Label: "Parts skipped", Type: "number"},
 			{ID: "bytesSent", Label: "Bytes sent", Type: "number"},
-			{ID: "levelsAssembled", Label: "Levels assembled", Type: "number"},
 			{ID: "snapshotsDeleted", Label: "Snapshots deleted", Type: "number"},
 			{ID: "partsDeleted", Label: "Parts deleted", Type: "number"},
 			{ID: "bytesFreed", Label: "Bytes freed", Type: "number"},
@@ -225,7 +223,6 @@ func execDHPublish(e *ExecContext) ExecResult {
 	e.SetOutput("partsUploaded", float64(res.PartsUploaded))
 	e.SetOutput("partsSkipped", float64(res.PartsSkipped))
 	e.SetOutput("bytesSent", float64(res.BytesSent))
-	e.SetOutput("levelsAssembled", float64(res.LevelsAssembled))
 	e.SetOutput("snapshotsDeleted", float64(res.SnapshotsDeleted))
 	e.SetOutput("partsDeleted", float64(res.PartsDeleted))
 	e.SetOutput("bytesFreed", float64(res.BytesFreed))

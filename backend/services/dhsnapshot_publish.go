@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"path"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -13,22 +12,19 @@ import (
 )
 
 // The run behind action.dhPublish (#565): read the staged snapshot, send the
-// parts the bucket lacks, have the bucket assemble each level's whole database,
-// write the index and the download page, and only then latest.json. It owns the
+// parts the bucket lacks, write the index, and only then latest.json. It owns the
 // order and nothing else; the bucket sits behind one interface so the sequence is
 // testable, and the block (scheduler_blocks_dhpublish.go) is a thin reader of
 // config and services around it.
 //
 // The invariant the order exists for: latest.json is the last object written, so
-// a reader that finds it finds an index whose parts, assembled files and page are
-// all already there. A run cut off anywhere before it leaves the previous
+// a reader that finds it finds an index whose parts are all already there. A run cut off anywhere before it leaves the previous
 // snapshot as the current one, and a second run resumes: parts are named by their
 // hash and are never sent twice.
 
 // dhPublishStore is the bucket as a publish uses it. *S3Client is the real one.
 type dhPublishStore interface {
 	dhPruneStore
-	dhAssembleStore
 	HeadObject(ctx context.Context, key string) (S3ObjectInfo, bool, error)
 	PutObject(ctx context.Context, key, localPath string, opts S3PutOptions) error
 	PutObjectBytes(ctx context.Context, key string, data []byte, opts S3PutOptions) error
@@ -61,11 +57,10 @@ type dhPublishPlan struct {
 
 // dhPublishResult is what a publish did. It is filled in as far as the run got.
 type dhPublishResult struct {
-	URL             string
-	PartsUploaded   int
-	PartsSkipped    int
-	BytesSent       int64
-	LevelsAssembled int
+	URL           string
+	PartsUploaded int
+	PartsSkipped  int
+	BytesSent     int64
 
 	// What the prune after the publish deleted, and Warning when it could not run
 	// to the end. A failed prune is not a failed publish: the snapshot is up and
@@ -130,10 +125,6 @@ func runDHPublish(ctx context.Context, plan dhPublishPlan) (dhPublishResult, err
 	if err != nil {
 		return res, err
 	}
-	page, err := renderDHPage(st.Index)
-	if err != nil {
-		return res, err
-	}
 	if p.prev, err = readLatestIndex(ctx, plan.Store, st.Keys.Latest); err != nil {
 		return res, fmt.Errorf("cannot read the previous snapshot from %s: %w", plan.Label, err)
 	}
@@ -148,15 +139,9 @@ func runDHPublish(ctx context.Context, plan dhPublishPlan) (dhPublishResult, err
 	if err := p.sendParts(ctx, st, parts, &res); err != nil {
 		return res, err
 	}
-	if err := p.assembleLevels(ctx, st, &res); err != nil {
-		return res, err
-	}
 
-	p.narrate("Writing the index and the download page")
+	p.narrate("Writing the index")
 	if err := plan.Store.PutObjectBytes(ctx, st.Keys.Index, st.IndexBytes, S3PutOptions{}); err != nil {
-		return res, readableUploadError(err)
-	}
-	if err := plan.Store.PutObjectBytes(ctx, st.Keys.Page, page, S3PutOptions{}); err != nil {
 		return res, readableUploadError(err)
 	}
 	if err := p.writeLatest(ctx, st); err != nil {
@@ -239,10 +224,9 @@ func readBounded(p string, limit int64) ([]byte, error) {
 }
 
 // checkDHIndexForPublish refuses an index that cannot be published as stated,
-// and returns the time it was taken. A level needs at least one part, and at most
-// as many as one multipart upload takes; every part but a level's last is the
-// same length, which R2 requires of the parts of an upload; and a folder or hash
-// that would become a path is refused.
+// and returns the time it was taken. A level needs at least one part; every part
+// but a level's last is the same length, as the snapshot block cuts them; and a
+// folder or hash that would become a path is refused.
 func checkDHIndexForPublish(ix DHIndex) (time.Time, error) {
 	if len(ix.Levels) == 0 {
 		return time.Time{}, errors.New("the snapshot has no levels, so there is nothing to publish")
@@ -273,9 +257,7 @@ func checkDHIndexForPublish(ix DHIndex) (time.Time, error) {
 func checkDHLevelForPublish(l DHIndexLevel) error {
 	switch {
 	case len(l.Parts) == 0:
-		return errors.New("has no parts, so there is no file to assemble")
-	case len(l.Parts) > s3MaxMultipartParts:
-		return fmt.Errorf("has %d parts, over the %d one assembled file may have", len(l.Parts), s3MaxMultipartParts)
+		return errors.New("has no parts")
 	case !reDHWholeHash.MatchString(l.SHA256):
 		return errors.New("has no whole-file sha256")
 	}
@@ -435,74 +417,6 @@ func (p *dhPublisher) sendParts(ctx context.Context, st dhStaged, parts []dhPart
 		p.narrate(fmt.Sprintf("Upload finished: %d sent (%s), %d already there", res.PartsUploaded, fmtBytes(res.BytesSent), res.PartsSkipped))
 	}
 	return nil
-}
-
-// --- assembling ---
-
-// assembleLevels builds each level's whole database in the bucket, in index
-// order, and counts the levels done.
-func (p *dhPublisher) assembleLevels(ctx context.Context, st dhStaged, res *dhPublishResult) error {
-	for _, l := range st.Index.Levels {
-		if err := ctx.Err(); err != nil {
-			return err
-		}
-		if err := p.assembleLevel(ctx, st, l); err != nil {
-			return fmt.Errorf("assemble %s: %w", l.Folder, readableUploadError(err))
-		}
-		res.LevelsAssembled++
-	}
-	return nil
-}
-
-// assembleLevel makes level l's file at its assembled key. A level whose
-// whole-file hash is the same level's in the previous snapshot, and whose
-// previous assembled file is still in the bucket at the right size, is copied
-// from that file in large ranges; any other level, or one whose previous file
-// cannot be confirmed, is built from its parts.
-func (p *dhPublisher) assembleLevel(ctx context.Context, st dhStaged, l DHIndexLevel) error {
-	dest := st.Keys.AssembledKey(l.Folder)
-	steps := partCopySteps(st.Keys, l)
-	how := fmt.Sprintf("from its %d part(s)", len(steps))
-	if src, ok := p.unchangedPreviousFile(ctx, l); ok {
-		steps = previousObjectCopies(src, l.Size)
-		how = fmt.Sprintf("by copying the previous snapshot's file in %d range(s)", len(steps))
-	}
-	p.narrate(fmt.Sprintf("Assembling %s (%s) %s", l.Folder, fmtBytes(l.Size), how))
-	last := time.Now()
-	err := assembleDHObject(ctx, p.Store, dest, steps, func(done, total int) {
-		if done < total && time.Since(last) >= uploadProgressEvery {
-			last = time.Now()
-			p.narrate(fmt.Sprintf("Assembling %s: %d of %d copied", l.Folder, done, total))
-		}
-	})
-	if err != nil {
-		return err
-	}
-	p.narrate("Assembled " + l.Folder)
-	return nil
-}
-
-// unchangedPreviousFile returns the key of the previous snapshot's assembled
-// file for level l when l did not change and that file is in the bucket at l's
-// size. Any trouble confirming it, an error included, means "build it from
-// parts": the copy is an optimisation, and the parts are always enough.
-func (p *dhPublisher) unchangedPreviousFile(ctx context.Context, l DHIndexLevel) (string, bool) {
-	if p.prev == nil {
-		return "", false
-	}
-	for _, pl := range p.prev.Index.Levels {
-		if pl.Folder != l.Folder || pl.SHA256 != l.SHA256 || pl.Size != l.Size {
-			continue
-		}
-		key := path.Join(path.Dir(p.prev.IndexKey), l.Folder, dhDatabaseName)
-		info, found, err := p.Store.HeadObject(ctx, key)
-		if err != nil || !found || info.Size != l.Size {
-			p.narrate(fmt.Sprintf("The previous file for %s could not be confirmed, so it is built from parts instead", l.Folder))
-			return "", false
-		}
-		return key, true
-	}
-	return "", false
 }
 
 // --- the pointer, last ---

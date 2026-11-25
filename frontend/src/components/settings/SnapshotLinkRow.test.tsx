@@ -172,7 +172,9 @@ describe('SnapshotLinkRow', () => {
     fireEvent.click(button('Rotate link for R2 snapshots'))
     fireEvent.click(button('Confirm rotate'))
 
-    expect((await screen.findByRole('status')).textContent).toContain('few minutes')
+    expect((await screen.findByRole('status')).textContent).toContain(
+      'Moving the published snapshot',
+    )
     expect(modeSwitch().disabled).toBe(true)
     expect(button('Rotate link for R2 snapshots').disabled).toBe(true)
     await act(async () => finish(result({ private: true, message: 'The link was rotated.' })))
