@@ -129,9 +129,9 @@ After: The snapshot uploads to the bucket
 
 > [!TIP]
 > For players without a launcher, turn on **Download page** on **Publish DH Snapshot**.
-> Each snapshot then also has an `index.html` that lists every file and the folder it goes in.
-> It stores the snapshot twice, so the bucket holds about twice as much.
-> Its address is in [What ends up in the bucket](/docs/bucket-layout.html).
+> Each snapshot then gets a page that lists every file and the folder it goes in.
+> The snapshot is stored twice and takes about twice the space in the bucket.
+> The server's console shows the page's address after each run.
 
 ```ui
 # Settings · Destinations

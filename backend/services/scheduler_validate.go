@@ -242,8 +242,7 @@ func validateGraphDestinations(g models.Graph, reg *BlockRegistry, dests *Destin
 
 // dhDownloadPageWarning is the advice on a Publish DH Snapshot node with
 // Download page on.
-const dhDownloadPageWarning = "Download page stores the snapshot twice: as the parts a launcher reads and as one whole file per dimension. " +
-	"The bucket then holds about twice as much."
+const dhDownloadPageWarning = "Download page stores the snapshot twice. It takes about twice the space in the bucket."
 
 // downloadPageWarnings returns one warning per Publish DH Snapshot node with
 // Download page on. It is advice only: the run does not read it.

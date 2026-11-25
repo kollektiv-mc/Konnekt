@@ -291,7 +291,7 @@ func checkDHIndexForPublish(ix DHIndex) (time.Time, error) {
 func checkDHIndexForAssembly(ix DHIndex) error {
 	for _, l := range ix.Levels {
 		if len(l.Parts) > s3MaxMultipartParts {
-			return fmt.Errorf("level %s has %d parts, over the %d one whole file may have: turn off Download page to publish it", l.Folder, len(l.Parts), s3MaxMultipartParts)
+			return fmt.Errorf("level %s has %d parts, over the %d one whole file may have", l.Folder, len(l.Parts), s3MaxMultipartParts)
 		}
 	}
 	return nil

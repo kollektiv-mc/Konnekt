@@ -3,13 +3,13 @@
 1. Read and check `index.json` in the staged folder.
 2. Read the bucket's `latest.json` to learn which parts are already there.
 3. Send the parts the bucket lacks, and count a part it already holds as skipped.
-4. With **Download page** on, assemble each level's whole database inside the bucket from its parts, and write the download page.
+4. With **Download page** on, build each level's whole database in the bucket and write the download page.
 5. Write the snapshot's `index.json`, then `latest.json` last.
 6. Delete snapshots beyond **Snapshots to keep**, and the parts no kept snapshot uses.
 
 > [!WARNING]
-> **Download page** stores the snapshot twice: as the parts and as one whole file per level.
-> The bucket then holds about twice as much. It is off unless you turn it on.
+> **Download page** stores the snapshot twice.
+> It takes about twice the space in the bucket.
 
 > [!WARNING]
 > Step 6 deletes snapshots and parts from the bucket.
@@ -51,5 +51,5 @@ DH Snapshot: your destination
 | cannot read the previous snapshot from *destination*: *reason* | Check the destination and the network, then run it again. |
 | part *hash*: *reason* | Run it again; parts already sent are skipped. |
 | assemble *level folder*: *reason* | Run it again; parts already sent are skipped. |
-| level *level folder* has *n* parts, over the 10000 one whole file may have: turn off Download page to publish it | Turn off **Download page**. |
+| level *level folder* has *n* parts, over the 10000 one whole file may have | Turn off **Download page**. |
 | timed out after 43200s: *reason* | Run it again; parts already sent are skipped. |

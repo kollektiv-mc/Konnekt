@@ -1012,8 +1012,8 @@ func TestCheckDHIndexForAssemblyPartCount(t *testing.T) {
 	}
 	ix.Levels[0].Parts = append(ix.Levels[0].Parts, DHPart{})
 	err := checkDHIndexForAssembly(ix)
-	if err == nil || !strings.Contains(err.Error(), "over the 10000") || !strings.Contains(err.Error(), "Download page") {
-		t.Errorf("err = %v, want the 10000 limit and Download page named", err)
+	if err == nil || !strings.Contains(err.Error(), "over the 10000") {
+		t.Errorf("err = %v, want the 10000 limit", err)
 	}
 }
 

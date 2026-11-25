@@ -294,8 +294,7 @@
                         <tr data-field="downloadPage">
                           <td>Download page</td>
                           <td>
-                            Also stores each level's whole file and a download page, for players
-                            without a launcher. Stores the snapshot twice.
+                            Publishes a page players download the snapshot from without a launcher.
                           </td>
                           <td>Off</td>
                           <td></td>
@@ -328,8 +327,8 @@
                         skipped.
                       </li>
                       <li>
-                        With <b>Download page</b> on, assemble each level's whole database inside
-                        the bucket from its parts, and write the download page.
+                        With <b>Download page</b> on, build each level's whole database in the
+                        bucket and write the download page.
                       </li>
                       <li>
                         Write the snapshot's <code>index.json</code>, then
@@ -343,9 +342,8 @@
                     <div class="doc-note" data-tone="warn">
                       <span class="label">Heads up</span>
                       <p>
-                        <b>Download page</b> stores the snapshot twice: as the parts and as one
-                        whole file per level.<br />
-                        The bucket then holds about twice as much. It is off unless you turn it on.
+                        <b>Download page</b> stores the snapshot twice.<br />
+                        It takes about twice the space in the bucket.
                       </p>
                     </div>
                     <div class="doc-note" data-tone="warn">
@@ -492,7 +490,7 @@
                         <tr>
                           <td>
                             level <em>level folder</em> has <em>n</em> parts, over the 10000 one
-                            whole file may have: turn off Download page to publish it
+                            whole file may have
                           </td>
                           <td>Turn off <b>Download page</b>.</td>
                         </tr>

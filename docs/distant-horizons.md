@@ -203,9 +203,9 @@ and a page linking them:
 https://files.example.com/<prefix>/snapshots/<date>/index.html
 ```
 
-It is off by default because it stores the snapshot twice: the bucket holds
-about twice as much, and the node shows a warning while it is on. The run's
-console prints the page's address. The page lists each dimension's file with
+It is off by default. It stores the snapshot twice and takes about twice the
+space in the bucket, and the node shows a warning while it is on. The server's
+console shows the page's address after each run. The page lists each dimension's file with
 its size and date, a download link, and the folder to put it in. For a player
 the steps are:
 
